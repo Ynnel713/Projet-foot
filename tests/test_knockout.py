@@ -2,11 +2,20 @@ import pytest
 
 from ligue1sim.clubs import Club
 from ligue1sim.knockout import advance_round, generate_bracket, simulate_round, simulate_tie
+from ligue1sim.lineup import club_strength
+from ligue1sim.players import Player
 from ligue1sim.simulation import LeagueContext
 
 
+def _player(note: float, name: str) -> Player:
+    return Player(
+        prenom=name, nom="", nationalite="France", age=25,
+        poste="Central Midfield", note=note, club=name, championnat="TEST",
+    )
+
+
 def _make_clubs(n: int) -> list[Club]:
-    return [Club(name=f"Club {i}", rating=50 + i) for i in range(n)]
+    return [Club(name=f"Club {i}", players=[_player(50 + i, f"Club {i}")]) for i in range(n)]
 
 
 def test_generate_bracket_size_and_byes_for_non_power_of_two():
@@ -19,7 +28,7 @@ def test_generate_bracket_size_and_byes_for_non_power_of_two():
     assert len(byes) == 2
     assert all(t.played for t in byes)
 
-    top2_names = {c.name for c in sorted(clubs, key=lambda c: -c.rating)[:2]}
+    top2_names = {c.name for c in sorted(clubs, key=lambda c: -club_strength(c))[:2]}
     assert {t.home for t in byes} == top2_names
 
 

@@ -1,9 +1,17 @@
 from ligue1sim.clubs import Club
 from ligue1sim.custom_competition import CompetitionFormat, CustomCompetition
+from ligue1sim.players import Player
+
+
+def _player(note: float, name: str) -> Player:
+    return Player(
+        prenom=name, nom="", nationalite="France", age=25,
+        poste="Central Midfield", note=note, club=name, championnat="TEST",
+    )
 
 
 def _make_clubs(n: int) -> list[Club]:
-    return [Club(name=f"Club {i}", rating=100 - i) for i in range(n)]
+    return [Club(name=f"Club {i}", players=[_player(100 - i, f"Club {i}")]) for i in range(n)]
 
 
 def test_league_format_plays_out_like_a_season():

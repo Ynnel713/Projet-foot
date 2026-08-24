@@ -15,6 +15,7 @@ class Match:
     away: str
     home_goals: int | None = None
     away_goals: int | None = None
+    events: "MatchEvents | None" = None
 
     @property
     def played(self) -> bool:

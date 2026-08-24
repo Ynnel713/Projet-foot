@@ -3,9 +3,9 @@ from ligue1sim.schedule import Journee, Match
 from ligue1sim.standings import compute_standings
 
 CLUBS = [
-    Club(name="A", rating=80),
-    Club(name="B", rating=70),
-    Club(name="C", rating=60),
+    Club(name="A"),
+    Club(name="B"),
+    Club(name="C"),
 ]
 
 CALENDAR = [

@@ -16,8 +16,10 @@ from ligue1sim.custom_competition import (
     get_custom_competition,
     start_custom_competition,
 )
+from ligue1sim.events import AvailabilityTracker, PlayerMatchStat, compute_leaderboards
 from ligue1sim.groups import QUALIFIERS_PER_GROUP
 from ligue1sim.knockout import Round
+from ligue1sim.schedule import Match
 from ligue1sim.season import (
     CLUBS_PATH,
     Season,
@@ -32,6 +34,7 @@ st.set_page_config(page_title="Simulateur de championnat", page_icon="⚽", layo
 
 _CLUB_SELECTION_KEY = "perso_selected_clubs"
 _CLUB_TABLE_VERSION_KEY = "perso_table_version"
+_OPEN_MATCH_KEY = "open_match_detail"
 
 _WIZARD_KEYS = [
     "perso_wizard_step",
@@ -77,7 +80,7 @@ def render_home_screen() -> None:
     st.subheader("Choisis un championnat à simuler")
     for championnat in list_championnats(CLUBS_PATH):
         nb_clubs = len(load_clubs(CLUBS_PATH, championnat))
-        if st.button(f"{championnat.title()} ({nb_clubs} clubs)", width="stretch"):
+        if st.button(f"{championnat} ({nb_clubs} clubs)", width="stretch"):
             select_championnat(championnat)
             st.rerun()
 
@@ -88,7 +91,7 @@ def render_home_screen() -> None:
         st.rerun()
 
 
-# --- Championnat officiel (5 grands championnats) ----------------------
+# --- Championnat officiel --------------------------------------------------
 
 
 def render_season_screen() -> None:
@@ -110,7 +113,7 @@ def _render_season_body(
     home_label: str,
     reset_label: str,
 ) -> None:
-    st.title(f"⚽ {season.championnat.title()}")
+    st.title(f"⚽ {season.championnat}")
 
     col_title, col_home, col_reset = st.columns([2, 1, 1])
     with col_title:
@@ -125,15 +128,7 @@ def _render_season_body(
     journee = season.current_journee
 
     st.markdown("### Matchs de la journée")
-    match_rows = [
-        {
-            "Domicile": m.home,
-            "Score": f"{m.home_goals} - {m.away_goals}" if m.played else "—",
-            "Extérieur": m.away,
-        }
-        for m in journee.matches
-    ]
-    st.dataframe(match_rows, hide_index=True, width="stretch")
+    _render_match_rows(journee.matches)
 
     col_simulate, col_next = st.columns(2)
     with col_simulate:
@@ -159,6 +154,9 @@ def _render_season_body(
 
     st.markdown("### Classement")
     st.dataframe(season.standings(), width="stretch")
+
+    _render_leaderboards(season.all_matches)
+    _render_availability_panel(season.suspensions, season.injuries)
 
 
 # --- Assistant Compétition Perso ----------------------------------------
@@ -200,7 +198,7 @@ def _render_team_count_step() -> None:
     elif fmt == CompetitionFormat.KNOCKOUT:
         st.caption(
             "Au moins 2 équipes. Si le nombre n'est pas une puissance de 2, "
-            "les mieux notées sont exemptées du 1er tour."
+            "les mieux classées sont exemptées du 1er tour."
         )
         min_teams, max_teams, default = 2, 64, 16
     else:
@@ -298,7 +296,6 @@ def _render_club_picker_step() -> None:
     selected_filter = st.radio(
         "Filtrer par championnat",
         options=filter_options,
-        format_func=lambda c: c if c == "Tous" else c.title(),
         horizontal=True,
         label_visibility="collapsed",
         key="perso_championnat_filter",
@@ -312,8 +309,7 @@ def _render_club_picker_step() -> None:
         {
             "Sélectionné": [c.name in selected_names for c in displayed_clubs],
             "Club": [c.name for c in displayed_clubs],
-            "Championnat": [c.championnat.title() for c in displayed_clubs],
-            "Note": [c.rating for c in displayed_clubs],
+            "Championnat": [c.championnat for c in displayed_clubs],
         }
     )
     edited = st.data_editor(
@@ -321,7 +317,7 @@ def _render_club_picker_step() -> None:
         hide_index=True,
         width="stretch",
         height=420,
-        disabled=["Club", "Championnat", "Note"],
+        disabled=["Club", "Championnat"],
         column_config={"Sélectionné": st.column_config.CheckboxColumn(required=True)},
         key=f"perso_club_table_{st.session_state[_CLUB_TABLE_VERSION_KEY]}_{selected_filter}",
     )
@@ -391,7 +387,7 @@ def render_knockout_screen(
     round_ = bracket.current_round
     st.subheader(_round_label(round_))
 
-    st.dataframe(_tie_rows(round_), hide_index=True, width="stretch")
+    _render_knockout_ties(round_)
 
     col_sim, col_next = st.columns(2)
     with col_sim:
@@ -413,6 +409,9 @@ def render_knockout_screen(
     if bracket.is_complete:
         st.success(f"🏆 Champion : {bracket.champion}")
 
+    _render_leaderboards(competition.all_matches)
+    _render_availability_panel(competition.suspensions, competition.injuries)
+
 
 def render_hybrid_screen(competition: CustomCompetition) -> None:
     st.title("⚽ Compétition Perso — Championnat + élimination")
@@ -427,12 +426,16 @@ def render_hybrid_screen(competition: CustomCompetition) -> None:
         if st.button("Simuler la journée des poules", type="primary", width="stretch"):
             competition.simulate_groups_matchday()
             st.rerun()
+        _render_leaderboards(competition.all_matches)
+        _render_availability_panel(competition.suspensions, competition.injuries)
     elif competition.bracket is None:
         st.success("Phase de poules terminée !")
         _render_groups_standings(competition)
         if st.button("Lancer la phase à élimination directe", type="primary", width="stretch"):
             competition.start_knockout_from_groups()
             st.rerun()
+        _render_leaderboards(competition.all_matches)
+        _render_availability_panel(competition.suspensions, competition.injuries)
     else:
         render_knockout_screen(competition, title="⚽ Compétition Perso — Phase finale (élimination directe)")
 
@@ -441,35 +444,159 @@ def _render_groups_standings(competition: CustomCompetition) -> None:
     for group in competition.groups:
         st.markdown(f"**{group.name}**")
         st.dataframe(group.standings(), width="stretch")
+        played_matches = [m for journee in group.calendar for m in journee.matches if m.played]
+        if played_matches:
+            with st.expander(f"Matchs joués — {group.name}"):
+                _render_match_rows(played_matches)
 
 
 def _round_label(round_: Round) -> str:
     return _ROUND_NAMES.get(len(round_.ties), f"Tour {round_.number}")
 
 
-def _tie_rows(round_: Round) -> list[dict]:
-    rows = []
+def _render_knockout_ties(round_: Round) -> None:
     for tie in round_.ties:
         if tie.is_bye:
-            rows.append({"Confrontation": f"{tie.home}", "Résultat": "Qualifié d'office (exempt)"})
+            st.write(f"**{tie.home}** — Qualifié d'office (exempt)")
         elif tie.played:
             agg_home, agg_away = tie.aggregate()
-            legs_str = ", ".join(f"{m.home_goals}-{m.away_goals}" for m in tie.legs)
-            rows.append(
-                {
-                    "Confrontation": f"{tie.home} vs {tie.away}",
-                    "Résultat": f"{agg_home}-{agg_away} ({legs_str})",
-                }
-            )
+            st.markdown(f"**{tie.home} vs {tie.away}** — {agg_home}-{agg_away}")
+            _render_match_rows(tie.legs)
         else:
-            rows.append({"Confrontation": f"{tie.home} vs {tie.away}", "Résultat": "—"})
-    return rows
+            st.write(f"**{tie.home} vs {tie.away}** — —")
+
+
+# --- Matchs cliquables + écran de détail ---------------------------------
+
+
+def _render_match_rows(matches: list[Match]) -> None:
+    for index, match in enumerate(matches):
+        col_home, col_score, col_away = st.columns([3, 1, 3])
+        with col_home:
+            st.write(match.home)
+        with col_away:
+            st.write(match.away)
+        with col_score:
+            if match.played and match.events is not None:
+                label = f"{match.home_goals} - {match.away_goals}"
+                if st.button(label, key=f"match_{id(match)}_{index}", width="stretch"):
+                    st.session_state[_OPEN_MATCH_KEY] = match
+                    st.rerun()
+            elif match.played:
+                st.write(f"{match.home_goals} - {match.away_goals}")
+            else:
+                st.write("—")
+
+
+def render_match_detail_screen(match: Match) -> None:
+    events = match.events
+
+    if st.button("← Retour"):
+        st.session_state.pop(_OPEN_MATCH_KEY, None)
+        st.rerun()
+
+    st.title(f"⚽ {match.home} {match.home_goals} - {match.away_goals} {match.away}")
+
+    if events is None:
+        st.info("Pas de détails disponibles pour ce match.")
+        return
+
+    col_home, col_away = st.columns(2)
+    with col_home:
+        st.subheader(f"{match.home} — {events.home_formation}")
+        st.dataframe(_lineup_rows(events.home_lineup), hide_index=True, width="stretch")
+    with col_away:
+        st.subheader(f"{match.away} — {events.away_formation}")
+        st.dataframe(_lineup_rows(events.away_lineup), hide_index=True, width="stretch")
+
+    st.markdown("### Buteurs")
+    if events.goals:
+        for goal in events.goals:
+            assist_text = f" (passe décisive : {goal.assist})" if goal.assist else ""
+            st.write(f"⚽ **{goal.scorer}** ({goal.club_name}){assist_text}")
+    else:
+        st.write("Aucun but inscrit.")
+
+    if events.substitutions:
+        st.markdown("### Remplacements")
+        for sub in events.substitutions:
+            st.write(f"🔄 {sub.club_name} : **{sub.player_on}** entre à la place de {sub.player_off}")
+
+
+def _lineup_rows(stats: list[PlayerMatchStat]) -> list[dict]:
+    return [
+        {
+            "Joueur": s.player_name,
+            "Poste": s.poste,
+            "Statut": "Titulaire" if s.started else "Entrant",
+            "Buts": s.goals,
+            "Passes D.": s.assists,
+            "Carton": _card_label(s),
+            "Note": s.rating,
+        }
+        for s in stats
+    ]
+
+
+def _card_label(stat: PlayerMatchStat) -> str:
+    if stat.red_card_type == "direct":
+        return "🟥"
+    if stat.red_card_type == "second_yellow":
+        return "🟨🟥"
+    if stat.yellow_cards == 1:
+        return "🟨"
+    return ""
+
+
+# --- Classements et indisponibilités (communs à tous les formats) ----------
+
+
+def _render_leaderboards(matches: list[Match]) -> None:
+    buteurs, passeurs = compute_leaderboards(matches)
+    if buteurs.empty and passeurs.empty:
+        return
+    st.markdown("### Classements")
+    col_buteurs, col_passeurs = st.columns(2)
+    with col_buteurs:
+        st.markdown("**Buteurs**")
+        st.dataframe(buteurs.head(15), hide_index=True, width="stretch")
+    with col_passeurs:
+        st.markdown("**Passeurs**")
+        st.dataframe(passeurs.head(15), hide_index=True, width="stretch")
+
+
+def _render_availability_panel(suspensions: AvailabilityTracker, injuries: AvailabilityTracker) -> None:
+    suspended = suspensions.active_bans()
+    injured = injuries.active_bans()
+    if not suspended and not injured:
+        return
+
+    with st.expander("Suspensions et blessures en cours"):
+        col_susp, col_inj = st.columns(2)
+        with col_susp:
+            st.markdown("**Suspensions**")
+            if suspended:
+                st.dataframe(_availability_rows(suspended), hide_index=True, width="stretch")
+            else:
+                st.write("Aucune.")
+        with col_inj:
+            st.markdown("**Blessures**")
+            if injured:
+                st.dataframe(_availability_rows(injured), hide_index=True, width="stretch")
+            else:
+                st.write("Aucune.")
+
+
+def _availability_rows(bans: list[tuple[str, str, int]]) -> list[dict]:
+    return [{"Club": club, "Joueur": player, "Matchs restants": n} for club, player, n in bans]
 
 
 # --- Routage principal ---------------------------------------------------
 
 
-if get_custom_competition() is not None:
+if st.session_state.get(_OPEN_MATCH_KEY) is not None:
+    render_match_detail_screen(st.session_state[_OPEN_MATCH_KEY])
+elif get_custom_competition() is not None:
     render_custom_competition_screen(get_custom_competition())
 elif st.session_state.get("perso_wizard_step") is not None:
     render_custom_wizard()

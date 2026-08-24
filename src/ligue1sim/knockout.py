@@ -10,6 +10,8 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from ligue1sim.clubs import Club
+from ligue1sim.events import AvailabilityTracker, collect_new_bans, settle_trackers
+from ligue1sim.lineup import club_strength
 from ligue1sim.schedule import Match
 from ligue1sim.simulation import LeagueContext, simulate_match
 
@@ -79,7 +81,7 @@ def generate_bracket(clubs: list[Club]) -> Bracket:
     if len(clubs) < 2:
         raise ValueError("Il faut au moins 2 clubs pour un tableau à élimination directe.")
 
-    seeds = sorted(clubs, key=lambda c: -c.rating)
+    seeds = sorted(clubs, key=lambda c: -club_strength(c))
     bracket_size = _next_power_of_two(len(seeds))
     order = _seed_order(bracket_size)
     slots = [seeds[s - 1].name if s <= len(seeds) else None for s in order]
@@ -91,17 +93,36 @@ def generate_bracket(clubs: list[Club]) -> Bracket:
 
 
 def simulate_tie(
-    tie: Tie, legs: int, clubs_by_name: dict[str, Club], context: LeagueContext
+    tie: Tie,
+    legs: int,
+    clubs_by_name: dict[str, Club],
+    context: LeagueContext,
+    suspensions: AvailabilityTracker | None = None,
+    injuries: AvailabilityTracker | None = None,
 ) -> None:
-    """Simule une confrontation non encore jouée (`legs` manches)."""
+    """Simule une confrontation non encore jouée (`legs` manches).
+
+    Chaque manche est un vrai match qu'un joueur suspendu/blessé peut
+    manquer : les indisponibilités sont donc lues et mises à jour manche par
+    manche, pas une fois pour toute la confrontation (voir simulation.simulate_journee
+    pour la même séquence appliquée à une journée de championnat)."""
     if tie.played:
         return
+
+    suspensions = suspensions if suspensions is not None else AvailabilityTracker()
+    injuries = injuries if injuries is not None else AvailabilityTracker()
 
     home_club, away_club = clubs_by_name[tie.home], clubs_by_name[tie.away]
     for leg_index in range(legs):
         host, guest = (home_club, away_club) if leg_index % 2 == 0 else (away_club, home_club)
-        host_goals, guest_goals = simulate_match(host, guest, context)
-        tie.legs.append(Match(host.name, guest.name, host_goals, guest_goals))
+        unavailable_host = suspensions.unavailable_players(host.name) | injuries.unavailable_players(host.name)
+        unavailable_guest = suspensions.unavailable_players(guest.name) | injuries.unavailable_players(guest.name)
+
+        host_goals, guest_goals, events = simulate_match(host, guest, context, unavailable_host, unavailable_guest)
+        tie.legs.append(Match(host.name, guest.name, host_goals, guest_goals, events))
+
+        new_suspensions, new_injuries = ([], []) if events is None else collect_new_bans(events)
+        settle_trackers(suspensions, injuries, {host.name, guest.name}, new_suspensions, new_injuries)
 
     agg_home, agg_away = tie.aggregate()
     if agg_home > agg_away:
@@ -113,10 +134,17 @@ def simulate_tie(
 
 
 def simulate_round(
-    round_: Round, legs: int, clubs_by_name: dict[str, Club], context: LeagueContext
+    round_: Round,
+    legs: int,
+    clubs_by_name: dict[str, Club],
+    context: LeagueContext,
+    suspensions: AvailabilityTracker | None = None,
+    injuries: AvailabilityTracker | None = None,
 ) -> None:
+    suspensions = suspensions if suspensions is not None else AvailabilityTracker()
+    injuries = injuries if injuries is not None else AvailabilityTracker()
     for tie in round_.ties:
-        simulate_tie(tie, legs, clubs_by_name, context)
+        simulate_tie(tie, legs, clubs_by_name, context, suspensions, injuries)
 
 
 def advance_round(bracket: Bracket) -> None:
@@ -136,7 +164,7 @@ def _resolve_tiebreak(home_club: Club, away_club: Club) -> str:
     """Égalité agrégée après toutes les manches : mini séance de tirs au
     but, tirage pondéré par l'écart de note (pas une nouvelle loi de
     Poisson, juste une probabilité logistique façon Elo)."""
-    diff = (home_club.rating - away_club.rating) / 10
+    diff = (club_strength(home_club) - club_strength(away_club)) / 10
     p_home = 1 / (1 + 10 ** (-diff))
     return home_club.name if np.random.random() < p_home else away_club.name
 

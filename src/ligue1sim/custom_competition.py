@@ -10,8 +10,10 @@ from dataclasses import dataclass, field
 import streamlit as st
 
 from ligue1sim.clubs import Club
+from ligue1sim.events import AvailabilityTracker
 from ligue1sim.groups import Group, make_groups, qualified_from_groups, simulate_group_matchday
 from ligue1sim.knockout import Bracket, advance_round, generate_bracket, simulate_round
+from ligue1sim.schedule import Match
 from ligue1sim.season import Season
 from ligue1sim.simulation import LeagueContext
 
@@ -39,14 +41,27 @@ class CustomCompetition:
     bracket: Bracket | None = field(default=None, init=False)
     groups: list[Group] | None = field(default=None, init=False)
     groups_matchday: int = field(default=0, init=False)
+    suspensions: AvailabilityTracker = field(init=False)
+    injuries: AvailabilityTracker = field(init=False)
 
     def __post_init__(self) -> None:
         self.context = LeagueContext.from_clubs(self.clubs)
         if self.format == CompetitionFormat.LEAGUE:
             self.season = Season("Compétition Perso", self.clubs, legs=self.legs)
+            # même objet que la saison : pas de double comptabilité des
+            # indisponibilités pour un format LEAGUE.
+            self.suspensions = self.season.suspensions
+            self.injuries = self.season.injuries
         elif self.format == CompetitionFormat.KNOCKOUT:
+            self.suspensions = AvailabilityTracker()
+            self.injuries = AvailabilityTracker()
             self.bracket = generate_bracket(self.clubs)
         elif self.format == CompetitionFormat.HYBRID:
+            # une seule instance pour toute la durée de la compétition : elle
+            # survit telle quelle à la transition poules -> élimination
+            # (start_knockout_from_groups ne la recrée pas).
+            self.suspensions = AvailabilityTracker()
+            self.injuries = AvailabilityTracker()
             self.groups = make_groups(self.clubs, legs=self.legs)
         else:
             raise ValueError(f"Format de compétition inconnu : {self.format}")
@@ -63,7 +78,9 @@ class CustomCompetition:
         on ignore simplement celles déjà terminées)."""
         for group in self.groups:
             if self.groups_matchday < len(group.calendar):
-                simulate_group_matchday(group, self.groups_matchday, self.context)
+                simulate_group_matchday(
+                    group, self.groups_matchday, self.context, self.suspensions, self.injuries
+                )
         self.groups_matchday += 1
 
     def start_knockout_from_groups(self) -> None:
@@ -74,7 +91,9 @@ class CustomCompetition:
 
     def simulate_bracket_round(self) -> None:
         clubs_by_name = {c.name: c for c in self.clubs}
-        simulate_round(self.bracket.current_round, self.legs, clubs_by_name, self.context)
+        simulate_round(
+            self.bracket.current_round, self.legs, clubs_by_name, self.context, self.suspensions, self.injuries
+        )
 
     def advance_bracket_round(self) -> None:
         advance_round(self.bracket)
@@ -92,6 +111,22 @@ class CustomCompetition:
         if self.format == CompetitionFormat.LEAGUE:
             return self.season.standings().iloc[0]["Club"] if self.season.is_season_over else None
         return self.bracket.champion if self.bracket else None
+
+    @property
+    def all_matches(self) -> list[Match]:
+        """Tous les matchs déjà générés, quel que soit le format/la phase --
+        pour les classements buteurs/passeurs (voir events.compute_leaderboards)."""
+        matches: list[Match] = []
+        if self.season is not None:
+            matches += self.season.all_matches
+        if self.groups is not None:
+            for group in self.groups:
+                matches += [m for journee in group.calendar for m in journee.matches]
+        if self.bracket is not None:
+            for round_ in self.bracket.rounds:
+                for tie in round_.ties:
+                    matches += tie.legs
+        return matches
 
 
 def get_custom_competition() -> CustomCompetition | None:

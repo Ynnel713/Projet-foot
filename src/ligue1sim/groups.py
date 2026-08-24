@@ -9,6 +9,8 @@ from dataclasses import dataclass
 import pandas as pd
 
 from ligue1sim.clubs import Club
+from ligue1sim.events import AvailabilityTracker
+from ligue1sim.lineup import club_strength
 from ligue1sim.schedule import Journee, generate_calendar
 from ligue1sim.simulation import LeagueContext, simulate_journee
 from ligue1sim.standings import compute_standings
@@ -48,7 +50,7 @@ def make_groups(clubs: list[Club], legs: int = 1) -> list[Group]:
         raise ValueError(f"Il faut au moins {2 * QUALIFIERS_PER_GROUP} clubs pour une phase de groupes.")
 
     num_groups = -(-len(clubs) // GROUP_SIZE)  # arrondi à l'entier supérieur
-    seeds = sorted(clubs, key=lambda c: -c.rating)
+    seeds = sorted(clubs, key=lambda c: -club_strength(c))
     buckets: list[list[Club]] = [[] for _ in range(num_groups)]
     for index, club in enumerate(seeds):
         buckets[index % num_groups].append(club)
@@ -61,10 +63,16 @@ def make_groups(clubs: list[Club], legs: int = 1) -> list[Group]:
     return groups
 
 
-def simulate_group_matchday(group: Group, matchday_index: int, context: LeagueContext) -> None:
+def simulate_group_matchday(
+    group: Group,
+    matchday_index: int,
+    context: LeagueContext,
+    suspensions: AvailabilityTracker | None = None,
+    injuries: AvailabilityTracker | None = None,
+) -> None:
     """Simule la journée `matchday_index` (0-indexée) de la poule."""
     clubs_by_name = {c.name: c for c in group.clubs}
-    simulate_journee(group.calendar[matchday_index], clubs_by_name, context)
+    simulate_journee(group.calendar[matchday_index], clubs_by_name, context, suspensions, injuries)
 
 
 def qualified_from_groups(groups: list[Group]) -> list[Club]:

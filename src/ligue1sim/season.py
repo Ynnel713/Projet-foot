@@ -5,11 +5,12 @@ from __future__ import annotations
 import streamlit as st
 
 from ligue1sim.clubs import Club, load_clubs
-from ligue1sim.schedule import Journee, generate_calendar
+from ligue1sim.events import AvailabilityTracker
+from ligue1sim.schedule import Journee, Match, generate_calendar
 from ligue1sim.simulation import LeagueContext, simulate_journee
 from ligue1sim.standings import compute_standings
 
-CLUBS_PATH = "data/clubs.xlsx"
+CLUBS_PATH = "data/joueurs.xlsx"
 _SEASON_KEY = "season"
 _CHAMPIONNAT_KEY = "championnat"
 
@@ -24,6 +25,8 @@ class Season:
         self.context = LeagueContext.from_clubs(clubs)
         self.calendar: list[Journee] = generate_calendar(clubs, legs=legs)
         self.current_journee_number = 1
+        self.suspensions = AvailabilityTracker()
+        self.injuries = AvailabilityTracker()
 
     @property
     def total_journees(self) -> int:
@@ -38,7 +41,9 @@ class Season:
         return self.current_journee_number >= self.total_journees and self.current_journee.played
 
     def simulate_current_journee(self) -> None:
-        simulate_journee(self.current_journee, self.clubs_by_name, self.context)
+        simulate_journee(
+            self.current_journee, self.clubs_by_name, self.context, self.suspensions, self.injuries
+        )
 
     def next_journee(self) -> None:
         if self.current_journee_number < self.total_journees:
@@ -46,6 +51,10 @@ class Season:
 
     def standings(self):
         return compute_standings(self.clubs, self.calendar)
+
+    @property
+    def all_matches(self) -> list[Match]:
+        return [match for journee in self.calendar for match in journee.matches]
 
 
 def get_selected_championnat() -> str | None:

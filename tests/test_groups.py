@@ -2,11 +2,19 @@ import pytest
 
 from ligue1sim.clubs import Club
 from ligue1sim.groups import make_groups, qualified_from_groups, simulate_group_matchday
+from ligue1sim.players import Player
 from ligue1sim.simulation import LeagueContext
 
 
+def _player(note: float, name: str) -> Player:
+    return Player(
+        prenom=name, nom="", nationalite="France", age=25,
+        poste="Central Midfield", note=note, club=name, championnat="TEST",
+    )
+
+
 def _make_clubs(n: int) -> list[Club]:
-    return [Club(name=f"Club {i}", rating=100 - i) for i in range(n)]  # Club 0 = meilleure note
+    return [Club(name=f"Club {i}", players=[_player(100 - i, f"Club {i}")]) for i in range(n)]  # Club 0 = meilleure note
 
 
 def test_make_groups_rejects_too_few_clubs():

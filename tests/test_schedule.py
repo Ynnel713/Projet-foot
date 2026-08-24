@@ -5,7 +5,7 @@ from ligue1sim.schedule import generate_calendar
 
 
 def _make_clubs(n: int) -> list[Club]:
-    return [Club(name=f"Club {i}", rating=70) for i in range(n)]
+    return [Club(name=f"Club {i}") for i in range(n)]
 
 
 @pytest.mark.parametrize("n_clubs,expected_journees,expected_matches", [(18, 34, 9), (20, 38, 10)])
