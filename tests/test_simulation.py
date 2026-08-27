@@ -1,13 +1,21 @@
+import pytest
+
 from ligue1sim.clubs import Club
 from ligue1sim.events import AvailabilityTracker
 from ligue1sim.lineup import select_best_xi
 from ligue1sim.players import Player
 from ligue1sim.schedule import Journee, Match
 from ligue1sim.simulation import (
+    HOME_ADVANTAGE,
+    LEAGUE_AVG_GOALS,
+    FormTracker,
     LeagueContext,
     _attack_strength,
     _defense_strength,
+    _expected_goals,
+    _form_modifier,
     _mid_modifier,
+    _process_form_signal,
     simulate_journee,
     simulate_match,
 )
@@ -167,6 +175,103 @@ class TestSectorStrengths:
         # d'attaque doit refléter les attaquants, pas la moyenne plate.
         assert _attack_strength(lineup) > flat_average + 15
         assert _defense_strength(lineup) < flat_average - 15
+
+
+class TestExpectedGoalsRatioModel:
+    """Le modèle ratio attaque/défense (voir ATTACK_DEFENSE_POWER), qui a
+    remplacé l'ancien exposant brut appliqué à la moyenne plate -- voir la
+    conversation de calibrage associée pour le détail des chiffres mesurés."""
+
+    def _context(self, avg_attack=70.0, avg_defense=70.0, avg_rating=70.0):
+        return LeagueContext(avg_rating=avg_rating, avg_attack=avg_attack, avg_defense=avg_defense)
+
+    def test_average_team_against_average_team_gives_the_league_average_goals(self):
+        context = self._context(avg_attack=70.0, avg_defense=70.0)
+        lam = _expected_goals(70.0, 70.0, context, home_advantage=False)
+        assert lam == pytest.approx(LEAGUE_AVG_GOALS)
+
+    def test_stronger_attack_produces_more_expected_goals(self):
+        context = self._context(avg_attack=70.0, avg_defense=70.0)
+        weak_attack = _expected_goals(60.0, 70.0, context, home_advantage=False)
+        strong_attack = _expected_goals(85.0, 70.0, context, home_advantage=False)
+        assert strong_attack > weak_attack
+
+    def test_stronger_opposing_defense_reduces_expected_goals(self):
+        context = self._context(avg_attack=70.0, avg_defense=70.0)
+        vs_weak_defense = _expected_goals(70.0, 55.0, context, home_advantage=False)
+        vs_strong_defense = _expected_goals(70.0, 90.0, context, home_advantage=False)
+        assert vs_strong_defense < vs_weak_defense
+
+    def test_home_advantage_only_applies_when_requested(self):
+        context = self._context()
+        away_lam = _expected_goals(70.0, 70.0, context, home_advantage=False)
+        home_lam = _expected_goals(70.0, 70.0, context, home_advantage=True)
+        assert home_lam == pytest.approx(away_lam * HOME_ADVANTAGE)
+
+
+class TestFormTracker:
+    """Forme persistante offensive/défensive -- voir la section 'Forme' en
+    tête de simulation.py pour la justification du plafonnage+rétrécissement
+    du signal avant injection dans l'EMA."""
+
+    def test_unknown_club_has_neutral_modifiers(self):
+        form = FormTracker()
+        assert form.offense_modifier("Inconnu FC") == 1.0
+        assert form.defense_modifier("Inconnu FC") == 1.0
+
+    def test_a_single_lucky_match_does_not_saturate_the_form_bound(self):
+        # Un match avec un delta énorme (buts réels très supérieurs à
+        # l'attendu) ne doit pas, à lui seul, pousser la forme jusqu'à sa
+        # borne -- c'est exactement le risque signalé : transformer la
+        # réussite aléatoire d'un match en une modification durable.
+        form = FormTracker()
+        form.record_match("Home FC", "Away FC", lambda_home=1.3, lambda_away=1.3, home_goals=6, away_goals=0)
+
+        modifier = form.offense_modifier("Home FC")
+        assert modifier < 1.10  # nettement en-dessous de la borne haute (1.15)
+
+    def test_repeated_strong_performances_move_form_toward_the_bound_progressively(self):
+        form = FormTracker()
+        for _ in range(20):
+            form.record_match("Home FC", "Away FC", lambda_home=1.3, lambda_away=1.3, home_goals=3, away_goals=0)
+        # Après de nombreux matchs cohéremment au-dessus de l'attendu, la
+        # forme doit s'être rapprochée de la borne haute (jamais dépassée).
+        assert form.offense_modifier("Home FC") > 1.10
+
+    def test_form_modifier_never_exceeds_its_bounds(self):
+        assert _form_modifier(1000.0) == pytest.approx(1.15)
+        assert _form_modifier(-1000.0) == pytest.approx(0.85)
+
+    def test_process_form_signal_clips_before_shrinking(self):
+        # Un écart énorme (buts - lambda = +10) doit être plafonné avant
+        # d'être rétréci, pas rétréci puis laissé filer.
+        huge = _process_form_signal(10.0)
+        moderate = _process_form_signal(1.0)
+        assert huge == moderate * 1.5  # 1.5 = plafond ; 1.0 < plafond, donc juste rétréci
+
+    def test_record_match_updates_both_clubs_in_opposite_defensive_sense(self):
+        form = FormTracker()
+        # Home marque plus que prévu (bonne forme offensive) ET encaisse
+        # moins que prévu pour Away (donc bonne forme défensive pour Home).
+        form.record_match("Home FC", "Away FC", lambda_home=1.0, lambda_away=1.0, home_goals=3, away_goals=0)
+
+        assert form.offense_modifier("Home FC") > 1.0  # a surperformé en attaque
+        assert form.defense_modifier("Home FC") > 1.0  # a encaissé moins que prévu
+        assert form.offense_modifier("Away FC") < 1.0  # a sous-performé en attaque
+        assert form.defense_modifier("Away FC") < 1.0  # a encaissé plus que prévu
+
+
+def test_simulate_match_applies_and_updates_form_when_provided():
+    home = Club(name="Home FC", players=_squad("home"))
+    away = Club(name="Away FC", players=_squad("away"))
+    context = LeagueContext.from_clubs([home, away])
+    form = FormTracker()
+
+    simulate_match(home, away, context, form=form)
+
+    # Le tracker doit avoir été rempli pour les deux clubs après le match.
+    assert "Home FC" in form._forms
+    assert "Away FC" in form._forms
 
 
 def test_ephemeral_tracker_is_used_when_none_is_passed():

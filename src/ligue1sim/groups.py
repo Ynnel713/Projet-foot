@@ -12,7 +12,7 @@ from ligue1sim.clubs import Club
 from ligue1sim.events import AvailabilityTracker
 from ligue1sim.lineup import club_strength
 from ligue1sim.schedule import Journee, generate_calendar
-from ligue1sim.simulation import LeagueContext, simulate_journee
+from ligue1sim.simulation import FormTracker, LeagueContext, simulate_journee
 from ligue1sim.standings import compute_standings
 
 GROUP_SIZE = 4
@@ -69,10 +69,11 @@ def simulate_group_matchday(
     context: LeagueContext,
     suspensions: AvailabilityTracker | None = None,
     injuries: AvailabilityTracker | None = None,
+    form: FormTracker | None = None,
 ) -> None:
     """Simule la journée `matchday_index` (0-indexée) de la poule."""
     clubs_by_name = {c.name: c for c in group.clubs}
-    simulate_journee(group.calendar[matchday_index], clubs_by_name, context, suspensions, injuries)
+    simulate_journee(group.calendar[matchday_index], clubs_by_name, context, suspensions, injuries, form)
 
 
 def qualified_from_groups(groups: list[Group]) -> list[Club]:

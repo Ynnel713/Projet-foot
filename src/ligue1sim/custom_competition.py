@@ -15,7 +15,7 @@ from ligue1sim.groups import Group, make_groups, qualified_from_groups, simulate
 from ligue1sim.knockout import Bracket, advance_round, generate_bracket, simulate_round
 from ligue1sim.schedule import Match
 from ligue1sim.season import Season
-from ligue1sim.simulation import LeagueContext
+from ligue1sim.simulation import FormTracker, LeagueContext
 
 _SESSION_KEY = "custom_competition"
 
@@ -35,6 +35,16 @@ class CustomCompetition:
     format: str
     legs: int
     clubs: list[Club]
+    # Poules déjà construites (ex. tirage par chapeau de la Ligue des
+    # Champions, voir champions_league.py), utilisées telles quelles au lieu
+    # du tirage par force `groups.make_groups` -- ignoré si `format` n'est
+    # pas HYBRID. None (par défaut) : comportement inchangé pour la
+    # Compétition Perso.
+    preset_groups: list[Group] | None = None
+    # Nom d'affichage (ex. "Ligue des Champions") utilisé par app.py à la
+    # place de "Compétition Perso" dans les titres d'écran -- None (par
+    # défaut) : comportement inchangé.
+    label: str | None = None
 
     context: LeagueContext = field(init=False)
     season: Season | None = field(default=None, init=False)
@@ -43,18 +53,21 @@ class CustomCompetition:
     groups_matchday: int = field(default=0, init=False)
     suspensions: AvailabilityTracker = field(init=False)
     injuries: AvailabilityTracker = field(init=False)
+    form: FormTracker = field(init=False)
 
     def __post_init__(self) -> None:
         self.context = LeagueContext.from_clubs(self.clubs)
         if self.format == CompetitionFormat.LEAGUE:
             self.season = Season("Compétition Perso", self.clubs, legs=self.legs)
             # même objet que la saison : pas de double comptabilité des
-            # indisponibilités pour un format LEAGUE.
+            # indisponibilités/forme pour un format LEAGUE.
             self.suspensions = self.season.suspensions
             self.injuries = self.season.injuries
+            self.form = self.season.form
         elif self.format == CompetitionFormat.KNOCKOUT:
             self.suspensions = AvailabilityTracker()
             self.injuries = AvailabilityTracker()
+            self.form = FormTracker()
             self.bracket = generate_bracket(self.clubs)
         elif self.format == CompetitionFormat.HYBRID:
             # une seule instance pour toute la durée de la compétition : elle
@@ -62,7 +75,8 @@ class CustomCompetition:
             # (start_knockout_from_groups ne la recrée pas).
             self.suspensions = AvailabilityTracker()
             self.injuries = AvailabilityTracker()
-            self.groups = make_groups(self.clubs, legs=self.legs)
+            self.form = FormTracker()
+            self.groups = self.preset_groups if self.preset_groups is not None else make_groups(self.clubs, legs=self.legs)
         else:
             raise ValueError(f"Format de compétition inconnu : {self.format}")
 
@@ -79,7 +93,7 @@ class CustomCompetition:
         for group in self.groups:
             if self.groups_matchday < len(group.calendar):
                 simulate_group_matchday(
-                    group, self.groups_matchday, self.context, self.suspensions, self.injuries
+                    group, self.groups_matchday, self.context, self.suspensions, self.injuries, self.form
                 )
         self.groups_matchday += 1
 
@@ -92,7 +106,7 @@ class CustomCompetition:
     def simulate_bracket_round(self) -> None:
         clubs_by_name = {c.name: c for c in self.clubs}
         simulate_round(
-            self.bracket.current_round, self.legs, clubs_by_name, self.context, self.suspensions, self.injuries
+            self.bracket.current_round, self.legs, clubs_by_name, self.context, self.suspensions, self.injuries, self.form
         )
 
     def advance_bracket_round(self) -> None:
@@ -135,6 +149,13 @@ def get_custom_competition() -> CustomCompetition | None:
 
 def start_custom_competition(format: str, legs: int, clubs: list[Club]) -> None:
     st.session_state[_SESSION_KEY] = CustomCompetition(format=format, legs=legs, clubs=clubs)
+
+
+def store_custom_competition(competition: CustomCompetition) -> None:
+    """Stocke une `CustomCompetition` déjà construite ailleurs (ex. tirage
+    par chapeau de la Ligue des Champions, voir champions_league.py) --
+    même emplacement de session que `start_custom_competition`."""
+    st.session_state[_SESSION_KEY] = competition
 
 
 def clear_custom_competition() -> None:

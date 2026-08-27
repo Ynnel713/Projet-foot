@@ -13,7 +13,7 @@ from ligue1sim.clubs import Club
 from ligue1sim.events import AvailabilityTracker, collect_new_bans, settle_trackers
 from ligue1sim.lineup import club_strength
 from ligue1sim.schedule import Match
-from ligue1sim.simulation import LeagueContext, simulate_match
+from ligue1sim.simulation import FormTracker, LeagueContext, simulate_match
 
 
 @dataclass
@@ -99,6 +99,7 @@ def simulate_tie(
     context: LeagueContext,
     suspensions: AvailabilityTracker | None = None,
     injuries: AvailabilityTracker | None = None,
+    form: FormTracker | None = None,
 ) -> None:
     """Simule une confrontation non encore jouée (`legs` manches).
 
@@ -118,7 +119,7 @@ def simulate_tie(
         unavailable_host = suspensions.unavailable_players(host.name) | injuries.unavailable_players(host.name)
         unavailable_guest = suspensions.unavailable_players(guest.name) | injuries.unavailable_players(guest.name)
 
-        host_goals, guest_goals, events = simulate_match(host, guest, context, unavailable_host, unavailable_guest)
+        host_goals, guest_goals, events = simulate_match(host, guest, context, unavailable_host, unavailable_guest, form)
         tie.legs.append(Match(host.name, guest.name, host_goals, guest_goals, events))
 
         new_suspensions, new_injuries = ([], []) if events is None else collect_new_bans(events)
@@ -140,11 +141,12 @@ def simulate_round(
     context: LeagueContext,
     suspensions: AvailabilityTracker | None = None,
     injuries: AvailabilityTracker | None = None,
+    form: FormTracker | None = None,
 ) -> None:
     suspensions = suspensions if suspensions is not None else AvailabilityTracker()
     injuries = injuries if injuries is not None else AvailabilityTracker()
     for tie in round_.ties:
-        simulate_tie(tie, legs, clubs_by_name, context, suspensions, injuries)
+        simulate_tie(tie, legs, clubs_by_name, context, suspensions, injuries, form)
 
 
 def advance_round(bracket: Bracket) -> None:

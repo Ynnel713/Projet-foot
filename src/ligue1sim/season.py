@@ -7,7 +7,7 @@ import streamlit as st
 from ligue1sim.clubs import Club, load_clubs
 from ligue1sim.events import AvailabilityTracker
 from ligue1sim.schedule import Journee, Match, generate_calendar
-from ligue1sim.simulation import LeagueContext, simulate_journee
+from ligue1sim.simulation import FormTracker, LeagueContext, simulate_journee
 from ligue1sim.standings import compute_standings
 
 CLUBS_PATH = "data/joueurs.xlsx"
@@ -27,6 +27,7 @@ class Season:
         self.current_journee_number = 1
         self.suspensions = AvailabilityTracker()
         self.injuries = AvailabilityTracker()
+        self.form = FormTracker()
 
     @property
     def total_journees(self) -> int:
@@ -42,7 +43,7 @@ class Season:
 
     def simulate_current_journee(self) -> None:
         simulate_journee(
-            self.current_journee, self.clubs_by_name, self.context, self.suspensions, self.injuries
+            self.current_journee, self.clubs_by_name, self.context, self.suspensions, self.injuries, self.form
         )
 
     def next_journee(self) -> None:

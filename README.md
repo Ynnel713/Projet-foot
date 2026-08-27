@@ -130,39 +130,72 @@ détail d'un match.
 
 ### Moteur de simulation en détail (`simulation.py`)
 
-```
-AVG_RATING = moyenne des forces des clubs du championnat chargé (club_strength, sans indisponibilité)
-attack(équipe)  = (force_du_jour(équipe) / AVG_RATING) ** 7.0
-defense(équipe) = (AVG_RATING / force_du_jour(équipe)) ** 7.0
+Un club n'a pas une seule force : sa compo du jour (`pick_best_formation`)
+donne une note globale (`rating`, têtes de série/affichage) et quatre notes
+sectorielles -- gardien, défense, milieu, attaque (`Lineup.gk_rating`/
+`def_rating`/`mid_rating`/`att_rating`). Le milieu ne joue pas directement
+dans les buts : il **module légèrement** l'attaque et la défense de sa
+propre équipe selon qu'il est au-dessus ou en-dessous du niveau moyen de
+SA compo (`_mid_modifier`, borné ±10%).
 
-lambda_domicile   = min(2.0, 1.14 * attack(dom) * defense(ext) * 1.10)   # bonus domicile, plafonné
-lambda_exterieur  = min(2.0, 1.14 * attack(ext) * defense(dom))
+```
+force_attaque(équipe)  = att_rating * mid_modifier(équipe)
+force_defense(équipe)  = (0.35*gk_rating + 0.65*def_rating) * mid_modifier(équipe)
+
+attack_ratio  = (force_attaque(équipe) / AVG_ATTACK) ** 1.8
+defense_ratio = (AVG_DEFENSE / force_defense(adversaire)) ** 1.8
+
+lambda_domicile  = min(3.0, 1.14 * attack_ratio(dom) * defense_ratio(ext) * 1.20)  # bonus domicile
+lambda_exterieur = min(3.0, 1.14 * attack_ratio(ext) * defense_ratio(dom))
 
 buts = min(6, Poisson(lambda))
 ```
 
-`force_du_jour` est la force calculée par `club_strength` en tenant compte
-des indisponibilités du moment (voir plus bas) ; `AVG_RATING` reste stable
-sur la saison (calibrage, pas un chiffre affiché). Les constantes
-`LEAGUE_AVG_GOALS` (1.14), `HOME_ADVANTAGE` (1.10), `RATING_EXPONENT` (7.0)
-et `MAX_LAMBDA` (2.0) sont ajustables dans `simulation.py` ; leur calibrage
-(exposant 0.8 initial jugé trop plat -- le 2e du classement finissait
-anormalement bas dans les championnats serrés -- porté à 1.8 puis 1.98 puis
-2.2 puis 5.5 puis 7.0) a été validé par simulation de centaines de saisons
-sur les 5 puis 8 championnats.
+`AVG_ATTACK`/`AVG_DEFENSE` sont les moyennes de ces forces sectorielles sur
+le championnat chargé (`LeagueContext`, stables sur la saison). La formule
+ratio-à-la-moyenne (façon Dixon-Coles) a remplacé en août 2026 un exposant
+brut (`RATING_EXPONENT=7.0`) appliqué à la note globale, historique conservé
+ci-dessous pour mémoire.
 
-Un exposant aussi élevé rend le lambda de l'affiche la plus déséquilibrée
-d'un championnat (le mieux noté à domicile contre le moins bien noté)
-explosif (> 4 buts attendus), avec ~29% de scores type 5-0/6-0 rien que sur
-cette affiche (vérifié sur 3000 tirages) -- beaucoup trop fréquent
-(remonté par l'utilisateur : "quasi un par journée" sur une saison jouée).
-`MAX_LAMBDA` plafonne le lambda de chaque équipe à 2.0 buts attendus quel
-que soit l'écart de force, sans toucher à `RATING_EXPONENT` ni aux
-classements (il ne joue que sur les quelques affiches vraiment
-déséquilibrées, pas sur l'essentiel des matchs) : ce taux retombe à ~3.5%
-sur l'affiche la plus déséquilibrée, et sur une saison Premier League
-complète simulée (380 matchs), seuls 5 scores de ce type sont apparus --
-un tous les 7-8 journées environ, plutôt qu'un par journée.
+**Historique et audit qui a mené au remplacement.** L'exposant avait été
+monté progressivement (0.8 → 1.8 → 1.98 → 2.2 → 5.5 → 7.0) au fil de
+centaines de saisons simulées, uniquement pour que le classement d'une
+saison se sépare suffisamment (champion médian ~87 pts à 7.0, contre ~73 à
+2.2). Un audit complet (mesures sur des dizaines de milliers de matchs) a
+montré que cette approche était un correctif de symptôme : à 7.0, le lambda
+brut atteignait jusqu'à 13.6 buts attendus sur certaines affiches, et
+`MAX_LAMBDA` (alors 2.0) était atteint sur **35% des matchs** -- un plafond
+qui masquait en permanence une formule mal calibrée plutôt qu'un vrai
+garde-fou. Conséquences mesurées : avantage du terrain écrasé par l'écart de
+force (domicile 41% / extérieur 38% au lieu d'un écart réaliste), taux de
+nuls sous la réalité (~21%), et quasiment plus aucune surprise pour un très
+gros favori (1.2% de défaite, 0% de défaite par 3+ buts).
+
+La formule ratio (puissance 1.8, testée de 1.0 à 2.0 sur 122 400 matchs des
+18 vrais clubs de Ligue 1) ne dépasse jamais son plafond en pratique (max
+observé 2.67 sur 3.0) et donne une distribution bien plus réaliste : nuls
+~25-27%, 0-0 ~8-10%, écarts de 3+ buts ~13-17%, clean sheets ~50-54%, et un
+rapport favori/outsider qui laisse une vraie place à la surprise même pour
+un très gros favori (~10-13% de défaite à l'écart de force maximal). Le
+`HOME_ADVANTAGE` a été recalibré à 1.20 (au lieu de 1.10) par un sweep
+isolé : il n'affecte QUE le lambda de l'équipe qui reçoit (jamais celui de
+l'adversaire), et une valeur trop haute (1.30+) érode le taux de nuls/0-0 en
+échange d'un écart domicile/extérieur plus large -- 1.20 est le meilleur
+compromis mesuré.
+
+Contrepartie assumée : sans l'ancien exposant, le classement de saison se
+sépare moins (champion médian ~72 pts au lieu de ~87). Plutôt que de
+réintroduire un exposant artificiel, cette séparation est restaurée par la
+**forme** (voir plus bas) -- une inertie sportive réelle plutôt qu'un second
+levier de force.
+
+`scripts/calibrate_engine.py` simule N saisons via le pipeline réel
+(`Season`) et rapporte tous ces indicateurs -- à relancer après tout
+changement des constantes de `simulation.py` :
+
+```bash
+uv run python scripts/calibrate_engine.py "Ligue 1" 40
+```
 
 Une piste `VARIANCE_SHRINK` (resserrer chaque tirage de buts autour de sa
 moyenne avant arrondi) a été essayée puis abandonnée : en tassant l'écart
@@ -170,17 +203,28 @@ entre le tirage brut et son espérance avant l'arrondi à l'entier, elle fait
 s'écrouler la quasi-totalité des scores sur le même entier dès que les deux
 lambdas sont proches (fréquent en championnat), ce qui fait exploser le
 taux de nuls -- 22-26% (réaliste) à variance pleine, jusqu'à 54% à
-`VARIANCE_SHRINK`=0.45 (vérifié sur 6000 matchs). `RATING_EXPONENT` n'a
-pas ce défaut : il n'agit que sur l'espérance de buts (le lambda), jamais
-sur la variance du tirage Poisson autour de cette espérance -- le taux de
-nuls reste stable (~22-27%) quel que soit l'exposant, vérifié jusqu'à 9.0.
-C'est ce qui a permis de le monter fortement (2.2 -> 7.0) pour séparer
-franchement les classements sans reproduire le problème des nuls : sur des
-saisons Premier League simulées, le champion termine en médiane à 82 pts à
-5.5 (69 à 96) puis 87 pts à 7.0 (80 à 94), contre 73 pts (64-78) à 2.2. À
-9.0 la médiane grimpe déjà à 95 pts (88-101) -- excessif, une bonne partie
-des saisons ressemblerait alors à un record historique ; 7.0 est la valeur
-retenue.
+`VARIANCE_SHRINK`=0.45 (vérifié sur 6000 matchs). Laissée à 1.0 (Poisson
+pur) : la variance du tirage doit rester intacte, seul l'écart de force
+(`ATTACK_DEFENSE_POWER`) doit influencer le résultat.
+
+### Forme (`FormTracker`, dans `simulation.py`)
+
+Chaque club a une forme **offensive** et une forme **défensive**, distinctes
+et persistées par club au fil d'une saison/compétition (même pattern que
+`AvailabilityTracker`) -- testé contre une forme unique : la version séparée
+donne un taux de nuls/0-0/clean-sheets mesurablement plus proche du réel.
+Mise à jour après CHAQUE match avec la **performance réelle** par rapport à
+l'attendu du moment (`buts réels - lambda`), jamais avec le seul résultat :
+gagner 1-0 en étant dominé n'améliore pas la forme offensive.
+
+Le signal brut est bruyant : un seul match à forte variance (ex. 4 buts
+marqués pour 1.3 attendus) sature quasi instantanément une forme bornée
+si on l'injecte tel quel dans l'EMA (vérifié : +0.32 après UN match avec
+alpha=0.12, contre un plafond de ±0.15). Il est donc **plafonné puis
+rétréci** avant d'entrer dans l'EMA (`_process_form_signal`) : un seul match
+chanceux ne doit pas transformer durablement la force d'une équipe. La forme
+module ensuite légèrement l'attaque/la défense du club pour ses matchs
+suivants (borné ±15%, `_form_modifier`), exactement comme `_mid_modifier`.
 
 Une fois le score tiré, si les deux clubs ont un effectif réel (`events.py`,
 `generate_match_events`) :
@@ -291,8 +335,8 @@ buteurs/passeurs, et un panneau "Suspensions et blessures en cours".
 ## Évolutions possibles
 
 - Exposer les constantes de calibrage (`LEAGUE_AVG_GOALS`/`HOME_ADVANTAGE`/
-  `RATING_EXPONENT` dans `simulation.py`, probabilités de cartons/blessures
-  dans `events.py`) comme réglages dans l'UI.
+  `ATTACK_DEFENSE_POWER`/`FORM_ALPHA` dans `simulation.py`, probabilités de
+  cartons/blessures dans `events.py`) comme réglages dans l'UI.
 - Sauvegarder/nommer une Compétition Perso pour y revenir plus tard.
 - Historique de saison, sauvegarde persistante (fichier JSON ou base de
   données).

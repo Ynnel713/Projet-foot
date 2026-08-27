@@ -148,6 +148,7 @@ class Player:
     poste_secondaire: tuple[str, ...] = ()
     finition: float | None = None  # colonne "Finition" (0-100) ; voir events.SCORER_WEIGHT
     categorie: str | None = None  # colonne "Catégorie" (rôle/style, ex. "buteur_axial") ; absente pour la plupart
+    id: int | None = None  # colonne "ID" ; sert à recroiser avec d'autres onglets (voir nations.py)
 
     @property
     def name(self) -> str:

@@ -17,6 +17,7 @@ import pandas as pd
 
 from ligue1sim.players import Player
 
+ID_COLUMN = "ID"
 CHAMPIONNAT_COLUMN = "Championnat"
 CLUB_COLUMN = "Club"
 PRENOM_COLUMN = "Prénom"
@@ -133,6 +134,7 @@ def _build_players(group: pd.DataFrame) -> list[Player]:
         nom = row[NOM_COLUMN] if pd.notna(row.get(NOM_COLUMN)) else ""
         finition = row.get(FINITION_COLUMN)
         categorie = row.get(CATEGORIE_COLUMN)
+        player_id = row.get(ID_COLUMN)
         poste, extra_postes = _split_poste(row[POSTE_COLUMN])
         declared_secondaires = _parse_postes_secondaires(row.get(POSTE_SECONDAIRE_COLUMN))
         players.append(
@@ -148,6 +150,7 @@ def _build_players(group: pd.DataFrame) -> list[Player]:
                 poste_secondaire=extra_postes + declared_secondaires,
                 categorie=str(categorie) if pd.notna(categorie) else None,
                 finition=float(finition) if pd.notna(finition) else None,
+                id=int(player_id) if pd.notna(player_id) else None,
             )
         )
     return players

@@ -10,15 +10,19 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from ligue1sim.clubs import Club, list_championnats, load_all_clubs, load_clubs
+from ligue1sim.champions_league import start_champions_league
+from ligue1sim.clubs import Club, ClubOption, list_championnats, load_all_clubs, load_clubs
 from ligue1sim.custom_competition import (
     CompetitionFormat,
     CustomCompetition,
     clear_custom_competition,
     get_custom_competition,
     start_custom_competition,
+    store_custom_competition,
 )
 from ligue1sim.coaches import coach_name
+from ligue1sim.nations import CHAMPIONNAT_LABEL as NATIONS_CHAMPIONNAT_LABEL
+from ligue1sim.nations import load_national_teams
 from ligue1sim.events import AvailabilityTracker, MatchEvents, PlayerMatchStat, compute_leaderboards
 from ligue1sim.groups import QUALIFIERS_PER_GROUP
 from ligue1sim.kits import jersey_svg
@@ -57,6 +61,7 @@ _CHAMPIONNAT_FLAG = {
 
 _CLUB_SELECTION_KEY = "perso_selected_clubs"
 _CLUB_TABLE_VERSION_KEY = "perso_table_version"
+_PERSO_CLUB_SOURCE_KEY = "perso_club_source"
 _OPEN_MATCH_KEY = "open_match_detail"
 _OPEN_CLUB_KEY = "open_club_detail"
 
@@ -67,6 +72,7 @@ _WIZARD_KEYS = [
     "perso_legs",
     _CLUB_SELECTION_KEY,
     _CLUB_TABLE_VERSION_KEY,
+    _PERSO_CLUB_SOURCE_KEY,
 ]
 
 _FORMAT_CHOICES = [
@@ -140,14 +146,28 @@ def render_home_screen() -> None:
                 _render_championnat_card(championnat)
 
     st.write("")
-    with st.container(border=True):
-        col_text, col_button = st.columns([3, 1], vertical_alignment="center")
-        with col_text:
+    col_perso, col_champions, col_nations = st.columns(3)
+    with col_perso:
+        with st.container(border=True):
             st.markdown("**🏆 Compétition Perso**")
             st.caption("Choisis le format, le nombre d'équipes et les clubs toi-même.")
-        with col_button:
             if st.button("Construire", width="stretch", type="primary", key="home_perso"):
                 st.session_state["perso_wizard_step"] = 1
+                st.rerun()
+    with col_champions:
+        with st.container(border=True):
+            st.markdown("**⭐ Ligue des Champions**")
+            st.caption("36 clubs, poules tirées par chapeau puis élimination directe.")
+            if st.button("Jouer", width="stretch", type="primary", key="home_champions_league"):
+                store_custom_competition(start_champions_league(CLUBS_PATH))
+                st.rerun()
+    with col_nations:
+        with st.container(border=True):
+            st.markdown("**🌍 Sélections nationales**")
+            st.caption("Affronte les meilleures sélections complètes (23/23), format à ton choix.")
+            if st.button("Construire", width="stretch", type="primary", key="home_nations"):
+                st.session_state["perso_wizard_step"] = 1
+                st.session_state[_PERSO_CLUB_SOURCE_KEY] = "nations"
                 st.rerun()
 
 
@@ -234,8 +254,21 @@ def _render_season_body(
 # --- Assistant Compétition Perso ----------------------------------------
 
 
+def _perso_uses_nations() -> bool:
+    return st.session_state.get(_PERSO_CLUB_SOURCE_KEY) == "nations"
+
+
+def _perso_club_pool() -> list[ClubOption]:
+    if _perso_uses_nations():
+        return [
+            ClubOption(name=team.name, players=team.players, championnat=NATIONS_CHAMPIONNAT_LABEL)
+            for team in load_national_teams(CLUBS_PATH)
+        ]
+    return load_all_clubs(CLUBS_PATH)
+
+
 def render_custom_wizard() -> None:
-    st.title("⚽ Compétition Perso")
+    st.title("🌍 Sélections nationales" if _perso_uses_nations() else "⚽ Compétition Perso")
     if st.button("← Retour à l'accueil"):
         _reset_wizard()
         st.rerun()
@@ -279,6 +312,12 @@ def _render_team_count_step() -> None:
             "dernière poule a 3 équipes si l'effectif ne tombe pas juste)."
         )
         min_teams, max_teams, default = 2 * QUALIFIERS_PER_GROUP, 64, 16
+
+    if _perso_uses_nations():
+        available = len(load_national_teams(CLUBS_PATH))
+        max_teams = min(max_teams, available)
+        default = min(default, max_teams)
+        st.caption(f"{available} sélections complètes (23/23) disponibles actuellement.")
 
     count = st.number_input(
         "Nombre d'équipes", min_value=min_teams, max_value=max_teams, value=default, step=1
@@ -335,7 +374,7 @@ def _render_club_picker_step() -> None:
     if _CLUB_TABLE_VERSION_KEY not in st.session_state:
         st.session_state[_CLUB_TABLE_VERSION_KEY] = 0
 
-    all_clubs = load_all_clubs(CLUBS_PATH)
+    all_clubs = _perso_club_pool()
     selected_names = set(st.session_state[_CLUB_SELECTION_KEY])
     names_by_championnat: dict[str, list[str]] = {}
     for c in all_clubs:
@@ -486,7 +525,7 @@ def render_knockout_screen(
 
 
 def render_hybrid_screen(competition: CustomCompetition) -> None:
-    st.title("⚽ Compétition Perso — Championnat + élimination")
+    st.title(f"⚽ {competition.label or 'Compétition Perso'} — Championnat + élimination")
     if st.button("Changer de compétition", key="hybrid_home"):
         clear_custom_competition()
         _reset_wizard()
