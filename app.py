@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import textwrap
 from pathlib import Path
 from typing import Callable
 
@@ -43,7 +44,6 @@ from ligue1sim.season import (
 st.set_page_config(page_title="Simulafoot", page_icon="⚽", layout="wide")
 
 _HOME_SPLASH_PATH = Path(__file__).parent / "assets" / "backgrounds" / "home-splash.jpg"
-_CHAMPIONNATS_PER_ROW = 4
 
 # Drapeau du pays représentatif de chaque championnat (remplace les anciens
 # logos PNG de assets/logos/ -- plus léger visuellement, pas de question de
@@ -58,6 +58,9 @@ _CHAMPIONNAT_FLAG = {
     "Jupiler Pro League": "🇧🇪",
     "Eredivisie": "🇳🇱",
 }
+_CHAMPIONS_LEAGUE_ICON = "⭐"
+_NATIONS_ICON = "🌍"
+_PERSO_ICON = "🏆"
 
 _CLUB_SELECTION_KEY = "perso_selected_clubs"
 _CLUB_TABLE_VERSION_KEY = "perso_table_version"
@@ -104,82 +107,280 @@ def _reset_wizard() -> None:
 
 # --- Écran d'accueil ---------------------------------------------------
 
-
-_HOME_STYLE = """
-<style>
-.ls-championnat-flag { display: flex; justify-content: center; font-size: 3rem; line-height: 1.2; }
-</style>
-"""
-
-_HOME_SPLASH_HEIGHT_VH = 48
+# Hauteur (en vh) de la zone "hero" (wordmark + accroche) au-dessus du fond
+# de stade : pilote à la fois le dégradé d'assombrissement de l'image et la
+# hauteur minimale du bloc hero, pour que les deux restent synchronisés.
+_HOME_HERO_HEIGHT_VH = 42
 
 
-def _home_splash_style() -> str:
-    if not _HOME_SPLASH_PATH.exists():
-        return ""
-    splash_b64 = base64.b64encode(_HOME_SPLASH_PATH.read_bytes()).decode()
-    return f"""
+def _home_css() -> str:
+    """CSS complet de l'écran d'accueil : polices, jetons de couleur, fond de
+    stade, wordmark, sections et système de tuiles rondes cliquables. Scopé à
+    cet écran uniquement (pas d'impact sur le reste de l'appli)."""
+    splash_b64 = base64.b64encode(_HOME_SPLASH_PATH.read_bytes()).decode() if _HOME_SPLASH_PATH.exists() else ""
+    background = (
+        f"""
+        [data-testid="stAppViewContainer"] {{
+            background-image:
+                linear-gradient(to bottom, rgba(9, 12, 18, 0.32) 0%, rgba(9, 12, 18, 0.74) {_HOME_HERO_HEIGHT_VH - 18}vh, var(--sf-bg) {_HOME_HERO_HEIGHT_VH}vh),
+                url("data:image/jpeg;base64,{splash_b64}");
+            background-repeat: no-repeat;
+            background-size: cover;
+            background-position: top center;
+            background-attachment: fixed;
+        }}
+        """
+        if splash_b64
+        else ""
+    )
+    return textwrap.dedent(f"""\
     <style>
-    [data-testid="stAppViewContainer"] {{
-        background-image:
-            linear-gradient(to bottom, rgba(14, 17, 23, 0) 0%, rgba(14, 17, 23, 0.75) {_HOME_SPLASH_HEIGHT_VH - 10}vh, #0e1117 {_HOME_SPLASH_HEIGHT_VH + 8}vh),
-            url("data:image/jpeg;base64,{splash_b64}");
-        background-repeat: no-repeat;
-        background-size: cover;
-        background-position: top center;
-        background-attachment: fixed;
+    @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=Manrope:wght@400;500;600;700&display=swap');
+    :root {{
+        --sf-bg: #090d14;
+        --sf-surface: rgba(24, 30, 44, 0.55);
+        --sf-surface-hover: rgba(36, 45, 62, 0.80);
+        --sf-border: rgba(255, 255, 255, 0.10);
+        --sf-text: #F4F6F9;
+        --sf-text-muted: rgba(244, 246, 249, 0.58);
+        --sf-accent: #FF4B4B;
+        --sf-accent-soft: rgba(255, 75, 75, 0.38);
+        --sf-gold-soft: rgba(217, 180, 94, 0.5);
     }}
+    {background}
+
+    .sf-hero {{
+        min-height: {_HOME_HERO_HEIGHT_VH}vh;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        text-align: center;
+        padding: 2rem 1rem 1.4rem;
+    }}
+    .sf-wordmark {{
+        font-family: "Big Shoulders Display", sans-serif;
+        font-weight: 800;
+        font-size: clamp(2.6rem, 6vw, 4.6rem);
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--sf-text);
+        line-height: 1;
+        margin: 0;
+        text-shadow: 0 2px 28px rgba(0, 0, 0, 0.6);
+    }}
+    .sf-wordmark-rule {{
+        display: flex; align-items: center; justify-content: center; gap: 14px;
+        width: min(220px, 55%);
+        margin: 1.1rem auto 1.2rem;
+    }}
+    .sf-wordmark-rule::before, .sf-wordmark-rule::after {{
+        content: ""; flex: 1; height: 1px;
+        background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.35), transparent);
+    }}
+    .sf-kickoff-dot {{
+        width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+        background: var(--sf-accent);
+        box-shadow: 0 0 14px 3px var(--sf-accent-soft);
+    }}
+    .sf-tagline {{
+        font-family: "Manrope", sans-serif;
+        font-weight: 500;
+        font-size: 1rem;
+        color: var(--sf-text-muted);
+        text-shadow: 0 1px 14px rgba(0, 0, 0, 0.55);
+        margin: 0;
+    }}
+
+    div[class*="st-key-sf_section_"] {{
+        max-width: 1120px;
+        margin: 2.6rem auto 0;
+        padding: 0 1rem;
+    }}
+    .sf-section-title {{
+        font-family: "Big Shoulders Display", sans-serif;
+        font-weight: 700;
+        font-size: 1.05rem;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--sf-text-muted);
+        display: flex; align-items: center; gap: 0.65rem;
+        margin: 0 0 1.4rem;
+    }}
+    .sf-section-title::before {{
+        content: ""; width: 3px; height: 1.05em; border-radius: 2px;
+        background: var(--sf-accent);
+        display: inline-block;
+    }}
+
+    div[class*="st-key-sf_grid_leagues"] {{
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+        gap: 1.7rem 0.8rem;
+    }}
+    div[class*="st-key-sf_grid_intl"] {{
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        max-width: 620px;
+        gap: 1.7rem 1.4rem;
+    }}
+
+    div[class*="st-key-sf_tile_"] {{ position: relative; width: 100%; }}
+    div[class*="st-key-sf_btn_"] {{ position: static !important; width: 100% !important; }}
+    div[class*="st-key-sf_btn_"] button {{
+        position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important;
+        opacity: 0 !important; z-index: 3; cursor: pointer; border-radius: 16px;
+    }}
+    div[class*="st-key-sf_tile_"]:has(button:focus-visible) .sf-tile-badge,
+    div[class*="st-key-sf_banner_"]:has(button:focus-visible) .sf-banner {{
+        outline: 2px solid var(--sf-accent); outline-offset: 3px;
+    }}
+
+    .sf-tile {{
+        display: flex; flex-direction: column; align-items: center; gap: 0.6rem;
+        text-align: center; pointer-events: none;
+    }}
+    .sf-tile-badge {{
+        position: relative;
+        width: 74px; height: 74px;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 2rem;
+        background: var(--sf-surface);
+        border: 1px solid var(--sf-border);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        transition: background 0.18s ease, transform 0.18s ease;
+    }}
+    .sf-tile-badge::after {{
+        content: ""; position: absolute; inset: -16px; border-radius: 50%; z-index: -1;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.12), transparent 70%);
+        opacity: 0.45;
+        transition: opacity 0.18s ease;
+    }}
+    .sf-tile-badge--gold::after {{
+        background: radial-gradient(circle, var(--sf-gold-soft), transparent 70%);
+        opacity: 0.55;
+    }}
+    div[class*="st-key-sf_tile_"]:hover .sf-tile-badge {{
+        background: var(--sf-surface-hover);
+        transform: translateY(-3px);
+    }}
+    div[class*="st-key-sf_tile_"]:hover .sf-tile-badge::after {{ opacity: 0.85; }}
+    .sf-tile-name {{
+        font-family: "Manrope", sans-serif; font-weight: 600; font-size: 0.84rem;
+        color: var(--sf-text); line-height: 1.15;
+    }}
+    .sf-tile-meta {{
+        font-family: "Manrope", sans-serif; font-size: 0.7rem; color: var(--sf-text-muted);
+    }}
+
+    div[class*="st-key-sf_banner_"] {{ position: relative; width: 100%; max-width: 640px; }}
+    .sf-banner {{
+        display: flex; align-items: center; gap: 1.1rem;
+        padding: 1.15rem 1.4rem;
+        border-radius: 18px;
+        background: var(--sf-surface);
+        border: 1px solid var(--sf-border);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        pointer-events: none;
+        transition: background 0.18s ease;
+    }}
+    div[class*="st-key-sf_banner_"]:hover .sf-banner {{ background: var(--sf-surface-hover); }}
+    .sf-banner-icon {{ font-size: 1.8rem; flex-shrink: 0; }}
+    .sf-banner-text {{ text-align: left; flex: 1; }}
+    .sf-banner-title {{
+        font-family: "Manrope", sans-serif; font-weight: 700; font-size: 0.98rem; color: var(--sf-text);
+    }}
+    .sf-banner-desc {{
+        font-family: "Manrope", sans-serif; font-size: 0.8rem; color: var(--sf-text-muted); margin-top: 0.2rem;
+    }}
+    .sf-banner-arrow {{ font-size: 1.2rem; color: var(--sf-text-muted); flex-shrink: 0; }}
     </style>
-    <div style="height: {_HOME_SPLASH_HEIGHT_VH}vh;"></div>
-    """
+    """)
+
+
+def _render_tile(*, key: str, icon: str, name: str, meta: str | None = None, gold: bool = False) -> bool:
+    """Tuile ronde entièrement cliquable (icône + nom + méta optionnelle,
+    aucun bouton "Jouer" séparé) : un vrai `st.button` invisible est
+    superposé pile sur la tuile visuelle via CSS (voir `_home_css`), donc le
+    clic fonctionne sur toute la surface tout en restant un widget Streamlit
+    natif (accessible au clavier, pas de bidouillage fragile)."""
+    badge_class = "sf-tile-badge sf-tile-badge--gold" if gold else "sf-tile-badge"
+    meta_html = f'<div class="sf-tile-meta">{meta}</div>' if meta else ""
+    with st.container(key=f"sf_tile_{key}"):
+        st.markdown(
+            f'<div class="sf-tile"><div class="{badge_class}">{icon}</div>'
+            f'<div class="sf-tile-name">{name}</div>{meta_html}</div>',
+            unsafe_allow_html=True,
+        )
+        clicked = st.button("", key=f"sf_btn_{key}")
+    return clicked
+
+
+def _render_banner(*, key: str, icon: str, title: str, description: str) -> bool:
+    """Bannière large entièrement cliquable, même principe que `_render_tile`
+    -- pour une entrée qui ouvre un parcours (assistant) plutôt qu'une
+    compétition prête à jouer."""
+    with st.container(key=f"sf_banner_{key}"):
+        st.markdown(
+            f'<div class="sf-banner"><div class="sf-banner-icon">{icon}</div>'
+            f'<div class="sf-banner-text"><div class="sf-banner-title">{title}</div>'
+            f'<div class="sf-banner-desc">{description}</div></div>'
+            f'<div class="sf-banner-arrow">→</div></div>',
+            unsafe_allow_html=True,
+        )
+        clicked = st.button("", key=f"sf_btn_{key}")
+    return clicked
 
 
 def render_home_screen() -> None:
-    st.markdown(_HOME_STYLE, unsafe_allow_html=True)
-    st.markdown(_home_splash_style(), unsafe_allow_html=True)
+    st.markdown(_home_css(), unsafe_allow_html=True)
 
-    championnats = list_championnats(CLUBS_PATH)
-    for i in range(0, len(championnats), _CHAMPIONNATS_PER_ROW):
-        row = championnats[i : i + _CHAMPIONNATS_PER_ROW]
-        for col, championnat in zip(st.columns(_CHAMPIONNATS_PER_ROW), row):
-            with col:
-                _render_championnat_card(championnat)
+    st.markdown(
+        '<div class="sf-hero">'
+        '<p class="sf-wordmark">Simulafoot</p>'
+        '<div class="sf-wordmark-rule"><span class="sf-kickoff-dot"></span></div>'
+        '<p class="sf-tagline">Simulateur de football complet — saison 2026-2027</p>'
+        "</div>",
+        unsafe_allow_html=True,
+    )
 
-    st.write("")
-    col_perso, col_champions, col_nations = st.columns(3)
-    with col_perso:
-        with st.container(border=True):
-            st.markdown("**🏆 Compétition Perso**")
-            st.caption("Choisis le format, le nombre d'équipes et les clubs toi-même.")
-            if st.button("Construire", width="stretch", type="primary", key="home_perso"):
-                st.session_state["perso_wizard_step"] = 1
-                st.rerun()
-    with col_champions:
-        with st.container(border=True):
-            st.markdown("**⭐ Ligue des Champions**")
-            st.caption("36 clubs, poules tirées par chapeau puis élimination directe.")
-            if st.button("Jouer", width="stretch", type="primary", key="home_champions_league"):
+    with st.container(key="sf_section_leagues"):
+        st.markdown('<div class="sf-section-title">Championnats nationaux</div>', unsafe_allow_html=True)
+        with st.container(key="sf_grid_leagues"):
+            for championnat in list_championnats(CLUBS_PATH):
+                flag = _CHAMPIONNAT_FLAG.get(championnat, "⚽")
+                nb_clubs = len(load_clubs(CLUBS_PATH, championnat))
+                if _render_tile(key=f"league_{championnat}", icon=flag, name=championnat, meta=f"{nb_clubs} clubs"):
+                    select_championnat(championnat)
+                    st.rerun()
+
+    with st.container(key="sf_section_intl"):
+        st.markdown('<div class="sf-section-title">Compétitions internationales</div>', unsafe_allow_html=True)
+        with st.container(key="sf_grid_intl"):
+            if _render_tile(
+                key="champions_league",
+                icon=_CHAMPIONS_LEAGUE_ICON,
+                name="Ligue des Champions",
+                meta="36 clubs · poules + élimination",
+                gold=True,
+            ):
                 store_custom_competition(start_champions_league(CLUBS_PATH))
                 st.rerun()
-    with col_nations:
-        with st.container(border=True):
-            st.markdown("**🌍 Sélections nationales**")
-            st.caption("Affronte les meilleures sélections complètes (23/23), format à ton choix.")
-            if st.button("Construire", width="stretch", type="primary", key="home_nations"):
+            if _render_tile(
+                key="nations", icon=_NATIONS_ICON, name="Sélections nationales", meta="Sélections complètes (23/23)"
+            ):
                 st.session_state["perso_wizard_step"] = 1
                 st.session_state[_PERSO_CLUB_SOURCE_KEY] = "nations"
                 st.rerun()
 
-
-def _render_championnat_card(championnat: str) -> None:
-    with st.container(border=True):
-        flag = _CHAMPIONNAT_FLAG.get(championnat, "⚽")
-        st.markdown(f'<div class="ls-championnat-flag">{flag}</div>', unsafe_allow_html=True)
-        nb_clubs = len(load_clubs(CLUBS_PATH, championnat))
-        st.markdown(f"**{championnat}**")
-        st.caption(f"{nb_clubs} clubs")
-        if st.button("Jouer", width="stretch", key=f"home_{championnat}"):
-            select_championnat(championnat)
+    with st.container(key="sf_section_perso"):
+        if _render_banner(
+            key="perso",
+            icon=_PERSO_ICON,
+            title="Compétition personnalisée",
+            description="Choisis le format, le nombre d'équipes et les clubs toi-même.",
+        ):
+            st.session_state["perso_wizard_step"] = 1
             st.rerun()
 
 
