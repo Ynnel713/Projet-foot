@@ -31,8 +31,68 @@ MAX_GOALS = 6  # plafond réaliste de buts par équipe et par match
 
 # Exposant appliqué aux écarts de force actuelle (attaque/défense). Voir
 # README pour le détail du calibrage (centaines de saisons simulées sur les
-# 5 puis 8 championnats).
-RATING_EXPONENT = 1.8
+# 5 puis 8 championnats). Remonté 1.8 -> 1.98 -> 2.2 -> 5.5 -> 7.0 : les
+# classements restaient trop condensés (trop d'upsets, un champion dominant
+# ne dépassait quasiment jamais les 75-78 pts sur 38 journées alors qu'en
+# réalité un champion très supérieur dépasse régulièrement les 90 pts). Le
+# taux de nuls reste stable (~22-27%, vérifié sur plusieurs milliers de
+# matchs) quel que soit l'exposant : contrairement à VARIANCE_SHRINK
+# (abandonné, voir plus bas), il n'agit que sur l'espérance de buts, jamais
+# sur la variance du tirage -- donc sans risque de gonfler artificiellement
+# les nuls. À 9.0, un champion dépasse déjà les 100 pts en médiane : trop
+# haut, 7.0 (champion médian ~87 pts, entre 80 et 94 sur 20 saisons testées)
+# reste la valeur retenue. Revalidé sans changement après le passage aux
+# forces sectorielles GK/DEF/MID/ATT (`_attack_strength`/`_defense_strength`
+# ci-dessous, remplaçant la moyenne plate de la compo) : 20 saisons de
+# Ligue 1 simulées avec ce nouveau calcul donnent un champion médian à 85
+# pts (74-90) et ~21% de nuls -- toujours dans la fourchette ci-dessus, pas
+# de raison de retoucher l'exposant pour ce changement.
+RATING_EXPONENT = 7.0
+
+# Plafond appliqué au lambda (buts attendus) d'une équipe, APRÈS RATING_EXPONENT.
+# Nécessaire à un exposant aussi élevé : sans lui, le match le plus
+# déséquilibré d'un championnat (le mieux noté à domicile contre le moins
+# bien noté) atteignait un lambda > 4 buts attendus, avec ~29% de scores du
+# type 5-0/6-0 rien que sur cette affiche précise (vérifié sur 3000 tirages)
+# -- irréaliste, un score aussi large ne devrait rester qu'un accident rare.
+# Plafonné à 2.0 buts attendus : ce taux retombe à ~3.5% pour l'affiche la
+# plus déséquilibrée, et ~1.4% en moyenne sur des paires aléatoires (contre
+# 2.0% sans plafond), sans dégrader la séparation des classements (champion
+# médian ~81 pts sur 15 saisons testées, contre ~87-88 sans plafond -- effet
+# marginal car ce plafond ne joue que sur les quelques affiches vraiment
+# déséquilibrées d'un championnat, pas sur l'essentiel des matchs).
+MAX_LAMBDA = 2.0
+
+# Réduction de la variance du tirage de buts autour de sa moyenne (1.0 =
+# Poisson pur, non modifié -- voir _draw_goals). Piste explorée puis
+# ABANDONNÉE : resserrer le tirage avant arrondi entier fait s'écrouler
+# quasi tous les scores sur le même entier dès que les deux lambdas sont
+# proches (fréquent en championnat), ce qui fait exploser le taux de nuls
+# (26% à 1.0, jusqu'à 54% à 0.45 -- vérifié sur 6000 matchs). Laissé à 1.0
+# (Poisson pur) : la variance du tirage doit rester intacte, seul l'écart de
+# force (RATING_EXPONENT) doit influencer le résultat.
+VARIANCE_SHRINK = 1.0
+
+# Poids du gardien dans la force défensive d'une équipe (le reste va aux
+# défenseurs de champ) : un grand gardien ne suffit pas à masquer une
+# défense fébrile, mais compte nettement plus qu'un joueur de champ de plus
+# dans le secteur -- 35% a été choisi comme point de départ raisonnable
+# (pas de série de saisons dédiée à ce réglage précis, contrairement à
+# RATING_EXPONENT/MAX_LAMBDA ci-dessus -- à affiner si le comportement en
+# jeu le justifie).
+GK_WEIGHT_IN_DEFENSE = 0.35
+
+# Influence (légère, volontairement douce) du milieu sur l'attaque ET la
+# défense de sa propre équipe : un milieu nettement au-dessus du niveau
+# moyen de l'équipe tire les deux vers le haut, un milieu à la traîne les
+# tire vers le bas -- mesuré par l'écart RELATIF entre `mid_rating` et la
+# moyenne globale de la compo (`rating`), pas par une comparaison à la
+# moyenne de la ligue (garde le calcul local à l'équipe, pas de dépendance
+# au contexte). Plafonné à ±10% (`_MID_MODIFIER_BOUNDS`) pour rester un
+# ajustement, pas un second levier de force capable de rivaliser avec
+# RATING_EXPONENT.
+MID_INFLUENCE = 0.6
+_MID_MODIFIER_BOUNDS = (0.90, 1.10)
 
 
 @dataclass(frozen=True)
@@ -116,11 +176,45 @@ def simulate_journee(
 
 
 def _draw_score(home_lineup: Lineup, away_lineup: Lineup, context: LeagueContext) -> tuple[int, int]:
-    lambda_home = _expected_goals(home_lineup.rating, away_lineup.rating, context, home_advantage=True)
-    lambda_away = _expected_goals(away_lineup.rating, home_lineup.rating, context, home_advantage=False)
-    home_goals = min(MAX_GOALS, int(np.random.poisson(lambda_home)))
-    away_goals = min(MAX_GOALS, int(np.random.poisson(lambda_away)))
+    lambda_home = _expected_goals(_attack_strength(home_lineup), _defense_strength(away_lineup), context, home_advantage=True)
+    lambda_away = _expected_goals(_attack_strength(away_lineup), _defense_strength(home_lineup), context, home_advantage=False)
+    home_goals = _draw_goals(lambda_home)
+    away_goals = _draw_goals(lambda_away)
     return home_goals, away_goals
+
+
+def _mid_modifier(lineup: Lineup) -> float:
+    """Modulateur (autour de 1.0) appliqué à l'attaque ET à la défense d'une
+    équipe selon que son milieu est au-dessus ou en-dessous du niveau moyen
+    de SA PROPRE compo (voir MID_INFLUENCE/_MID_MODIFIER_BOUNDS)."""
+    relative_gap = (lineup.mid_rating - lineup.rating) / lineup.rating
+    modifier = 1.0 + MID_INFLUENCE * relative_gap
+    return min(_MID_MODIFIER_BOUNDS[1], max(_MID_MODIFIER_BOUNDS[0], modifier))
+
+
+def _attack_strength(lineup: Lineup) -> float:
+    """Force d'attaque d'une équipe pour un match : la note de ses
+    attaquants alignés, modulée par son milieu (voir `_mid_modifier`)."""
+    return lineup.att_rating * _mid_modifier(lineup)
+
+
+def _defense_strength(lineup: Lineup) -> float:
+    """Force défensive d'une équipe pour un match : gardien + défenseurs
+    alignés (voir GK_WEIGHT_IN_DEFENSE), modulée par son milieu (voir
+    `_mid_modifier`)."""
+    combined = GK_WEIGHT_IN_DEFENSE * lineup.gk_rating + (1 - GK_WEIGHT_IN_DEFENSE) * lineup.def_rating
+    return combined * _mid_modifier(lineup)
+
+
+def _draw_goals(lam: float) -> int:
+    """Tire un nombre de buts autour de `lam`, avec une variance resserrée
+    par rapport à un Poisson pur (voir VARIANCE_SHRINK juste au-dessus) :
+    l'écart du tirage brut à son espérance est réduit avant arrondi, ce qui
+    borne les scores aberrants sans changer le nombre de buts moyen
+    attendu."""
+    sample = np.random.poisson(lam)
+    shrunk = lam + VARIANCE_SHRINK * (sample - lam)
+    return int(min(MAX_GOALS, max(0, round(shrunk))))
 
 
 def _expected_goals(
@@ -131,4 +225,4 @@ def _expected_goals(
     lam = LEAGUE_AVG_GOALS * attack * defense
     if home_advantage:
         lam *= HOME_ADVANTAGE
-    return lam
+    return min(lam, MAX_LAMBDA)

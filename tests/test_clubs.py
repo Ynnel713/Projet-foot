@@ -32,9 +32,9 @@ def test_list_championnats_excludes_autres_clubs_and_returns_the_eight_leagues()
         ("Bundesliga", 18),
         ("Serie A", 20),
         ("Ligue 1", 18),
-        ("Liga Portugal", 18),
-        ("Jupiler Pro League", 18),
         ("Eredivisie", 18),
+        ("Jupiler Pro League", 18),
+        ("Liga Portugal", 18),
     ],
 )
 def test_load_clubs_returns_expected_club_count(championnat, expected_club_count):
@@ -63,8 +63,8 @@ def test_load_clubs_rejects_odd_number_of_clubs(tmp_path):
             "Nom": [f"N{i}" for i in range(33)],
             "Nationalité": ["France"] * 33,
             "Âge": [25] * 33,
-            "Poste": ["Central Midfield"] * 33,
-            "Note /100": [70] * 33,
+            "Poste": ["MC"] * 33,
+            "Moyenne joueur": [70] * 33,
         }
     )
     path = tmp_path / "joueurs.xlsx"
@@ -83,8 +83,8 @@ def test_load_clubs_rejects_understaffed_club(tmp_path):
             "Nom": [f"N{i}" for i in range(25)],
             "Nationalité": ["France"] * 25,
             "Âge": [25] * 25,
-            "Poste": ["Central Midfield"] * 25,
-            "Note /100": [70] * 25,
+            "Poste": ["MC"] * 25,
+            "Moyenne joueur": [70] * 25,
         }
     )
     path = tmp_path / "joueurs.xlsx"
@@ -105,9 +105,6 @@ def test_load_all_clubs_includes_autres_clubs_and_covers_the_whole_file():
         "Bundesliga",
         "Serie A",
         "Ligue 1",
-        "Liga Portugal",
-        "Jupiler Pro League",
-        "Eredivisie",
     } <= championnats
 
     ligue1_clubs = [o for o in options if o.championnat == "Ligue 1"]
@@ -134,8 +131,8 @@ def test_load_clubs_rejects_out_of_range_note(tmp_path):
             "Nom": [f"N{i}" for i in range(22)],
             "Nationalité": ["France"] * 22,
             "Âge": [25] * 22,
-            "Poste": ["Central Midfield"] * 22,
-            "Note /100": [70] * 21 + [150],
+            "Poste": ["MC"] * 22,
+            "Moyenne joueur": [70] * 21 + [150],
         }
     )
     path = tmp_path / "joueurs.xlsx"
@@ -143,6 +140,101 @@ def test_load_clubs_rejects_out_of_range_note(tmp_path):
 
     with pytest.raises(ClubDataError):
         load_clubs(path, "TEST")
+
+
+def test_load_clubs_defaults_to_no_secondary_poste_when_column_absent(tmp_path):
+    df = pd.DataFrame(
+        {
+            "Championnat": ["TEST"] * 22,
+            "Club": ["A"] * 11 + ["B"] * 11,
+            "Prénom": [f"P{i}" for i in range(22)],
+            "Nom": [f"N{i}" for i in range(22)],
+            "Nationalité": ["France"] * 22,
+            "Âge": [25] * 22,
+            "Poste": ["MC"] * 22,
+            "Moyenne joueur": [70] * 22,
+        }
+    )
+    path = tmp_path / "joueurs.xlsx"
+    df.to_excel(path, index=False)
+
+    clubs = load_clubs(path, "TEST")
+    assert all(p.poste_secondaire == () for c in clubs for p in c.players)
+
+
+def test_load_clubs_parses_secondary_postes_when_present(tmp_path):
+    df = pd.DataFrame(
+        {
+            "Championnat": ["TEST"] * 22,
+            "Club": ["A"] * 11 + ["B"] * 11,
+            "Prénom": ["Star"] + [f"P{i}" for i in range(21)],
+            "Nom": ["Player"] + [f"N{i}" for i in range(21)],
+            "Nationalité": ["France"] * 22,
+            "Âge": [25] * 22,
+            "Poste": ["RB"] + ["MC"] * 21,
+            "Moyenne joueur": [70] * 22,
+            "Poste secondaire": ["MC / MDC"] + [None] * 21,
+        }
+    )
+    path = tmp_path / "joueurs.xlsx"
+    df.to_excel(path, index=False)
+
+    clubs = load_clubs(path, "TEST")
+    star = next(p for c in clubs for p in c.players if p.prenom == "Star")
+    others = [p for c in clubs for p in c.players if p.prenom != "Star"]
+
+    assert star.poste_secondaire == ("MC", "MDC")
+    assert all(p.poste_secondaire == () for p in others)
+
+
+def test_load_clubs_splits_a_compound_poste_into_primary_and_secondary(tmp_path):
+    df = pd.DataFrame(
+        {
+            "Championnat": ["TEST"] * 22,
+            "Club": ["A"] * 11 + ["B"] * 11,
+            "Prénom": ["Versatile"] + [f"P{i}" for i in range(21)],
+            "Nom": ["Player"] + [f"N{i}" for i in range(21)],
+            "Nationalité": ["France"] * 22,
+            "Âge": [25] * 22,
+            "Poste": ["AD / AG / BU"] + ["MC"] * 21,
+            "Moyenne joueur": [70] * 22,
+        }
+    )
+    path = tmp_path / "joueurs.xlsx"
+    df.to_excel(path, index=False)
+
+    clubs = load_clubs(path, "TEST")
+    player = next(p for c in clubs for p in c.players if p.prenom == "Versatile")
+
+    # Le premier poste cité est le plus spécialisé : poste principal.
+    assert player.poste == "AD"
+    assert player.poste_secondaire == ("AG", "BU")
+
+
+def test_load_clubs_combines_compound_poste_with_declared_secondary_column(tmp_path):
+    df = pd.DataFrame(
+        {
+            "Championnat": ["TEST"] * 22,
+            "Club": ["A"] * 11 + ["B"] * 11,
+            "Prénom": ["Versatile"] + [f"P{i}" for i in range(21)],
+            "Nom": ["Player"] + [f"N{i}" for i in range(21)],
+            "Nationalité": ["France"] * 22,
+            "Âge": [25] * 22,
+            "Poste": ["AD / AG"] + ["MC"] * 21,
+            "Moyenne joueur": [70] * 22,
+            "Poste secondaire": ["MOC"] + [None] * 21,
+        }
+    )
+    path = tmp_path / "joueurs.xlsx"
+    df.to_excel(path, index=False)
+
+    clubs = load_clubs(path, "TEST")
+    player = next(p for c in clubs for p in c.players if p.prenom == "Versatile")
+
+    # Les postes tirés de la colonne "Poste" (plus spécialisés) passent avant
+    # ceux de la colonne "Poste secondaire" (repli).
+    assert player.poste == "AD"
+    assert player.poste_secondaire == ("AG", "MOC")
 
 
 def test_load_clubs_allows_missing_nom_for_mononym_players(tmp_path):
@@ -154,8 +246,8 @@ def test_load_clubs_allows_missing_nom_for_mononym_players(tmp_path):
             "Nom": [None] + [f"N{i}" for i in range(21)],
             "Nationalité": ["France"] * 22,
             "Âge": [25] * 22,
-            "Poste": ["Central Midfield"] * 22,
-            "Note /100": [70] * 22,
+            "Poste": ["MC"] * 22,
+            "Moyenne joueur": [70] * 22,
         }
     )
     path = tmp_path / "joueurs.xlsx"

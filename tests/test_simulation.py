@@ -1,8 +1,16 @@
 from ligue1sim.clubs import Club
 from ligue1sim.events import AvailabilityTracker
+from ligue1sim.lineup import select_best_xi
 from ligue1sim.players import Player
 from ligue1sim.schedule import Journee, Match
-from ligue1sim.simulation import LeagueContext, simulate_journee, simulate_match
+from ligue1sim.simulation import (
+    LeagueContext,
+    _attack_strength,
+    _defense_strength,
+    _mid_modifier,
+    simulate_journee,
+    simulate_match,
+)
 
 
 def _player(poste: str, note: float, name: str) -> Player:
@@ -19,15 +27,15 @@ def _player(poste: str, note: float, name: str) -> Player:
 
 
 def _squad(club_name: str) -> list[Player]:
-    squad = [_player("Goalkeeper", 70.0, f"{club_name}_gk{i}") for i in range(2)]
-    squad += [_player("Centre-Back", 70.0, f"{club_name}_cb{i}") for i in range(4)]
-    squad += [_player("Left-Back", 70.0, f"{club_name}_lb{i}") for i in range(2)]
-    squad += [_player("Right-Back", 70.0, f"{club_name}_rb{i}") for i in range(2)]
-    squad += [_player("Central Midfield", 70.0, f"{club_name}_cm{i}") for i in range(4)]
-    squad += [_player("Attacking Midfield", 70.0, f"{club_name}_am{i}") for i in range(2)]
-    squad += [_player("Left Winger", 70.0, f"{club_name}_lw{i}") for i in range(2)]
-    squad += [_player("Right Winger", 70.0, f"{club_name}_rw{i}") for i in range(2)]
-    squad += [_player("Centre-Forward", 70.0, f"{club_name}_cf{i}") for i in range(4)]
+    squad = [_player("GK", 70.0, f"{club_name}_gk{i}") for i in range(2)]
+    squad += [_player("DC", 70.0, f"{club_name}_cb{i}") for i in range(4)]
+    squad += [_player("LB", 70.0, f"{club_name}_lb{i}") for i in range(2)]
+    squad += [_player("RB", 70.0, f"{club_name}_rb{i}") for i in range(2)]
+    squad += [_player("MC", 70.0, f"{club_name}_cm{i}") for i in range(4)]
+    squad += [_player("MOC", 70.0, f"{club_name}_am{i}") for i in range(2)]
+    squad += [_player("AG", 70.0, f"{club_name}_lw{i}") for i in range(2)]
+    squad += [_player("AD", 70.0, f"{club_name}_rw{i}") for i in range(2)]
+    squad += [_player("BU", 70.0, f"{club_name}_cf{i}") for i in range(4)]
     return squad
 
 
@@ -106,6 +114,59 @@ def test_suspension_persists_across_two_sequential_journees_sharing_a_tracker():
     simulate_journee(j2, clubs_by_name, context, suspensions=suspensions)
     assert "home_cb0" not in {s.player_name for s in j2.matches[0].events.home_lineup}
     assert "home_cb0" not in suspensions.unavailable_players("Home FC")  # purgée
+
+
+class TestSectorStrengths:
+    def test_mid_modifier_boosts_a_squad_with_an_above_average_midfield(self):
+        players = [_player("GK", 70.0, "gk0")]
+        players += [_player("DC", 70.0, f"cb{i}") for i in range(2)]
+        players += [_player("LB", 70.0, "lb0")]
+        players += [_player("RB", 70.0, "rb0")]
+        players += [_player("MC", 90.0, f"cm{i}") for i in range(2)]  # milieu nettement au-dessus du reste
+        players += [_player("AG", 70.0, "lw0")]
+        players += [_player("AD", 70.0, "rw0")]
+        players += [_player("BU", 70.0, f"cf{i}") for i in range(2)]
+        club = Club(name="Test FC", players=players)
+
+        lineup = select_best_xi(club, "4-4-2")
+
+        assert lineup.mid_rating > lineup.rating
+        assert _mid_modifier(lineup) > 1.0
+
+    def test_mid_modifier_penalizes_a_squad_with_a_below_average_midfield(self):
+        players = [_player("GK", 90.0, "gk0")]
+        players += [_player("DC", 90.0, f"cb{i}") for i in range(2)]
+        players += [_player("LB", 90.0, "lb0")]
+        players += [_player("RB", 90.0, "rb0")]
+        players += [_player("MC", 60.0, f"cm{i}") for i in range(2)]  # milieu nettement en-dessous du reste
+        players += [_player("AG", 90.0, "lw0")]
+        players += [_player("AD", 90.0, "rw0")]
+        players += [_player("BU", 90.0, f"cf{i}") for i in range(2)]
+        club = Club(name="Test FC", players=players)
+
+        lineup = select_best_xi(club, "4-4-2")
+
+        assert lineup.mid_rating < lineup.rating
+        assert _mid_modifier(lineup) < 1.0
+
+    def test_attack_and_defense_strength_use_the_right_sectors_not_the_flat_average(self):
+        players = [_player("GK", 50.0, "gk0")]
+        players += [_player("DC", 50.0, f"cb{i}") for i in range(2)]
+        players += [_player("LB", 50.0, "lb0")]
+        players += [_player("RB", 50.0, "rb0")]
+        players += [_player("MC", 50.0, f"cm{i}") for i in range(2)]
+        players += [_player("AG", 95.0, "lw0")]
+        players += [_player("AD", 95.0, "rw0")]
+        players += [_player("BU", 95.0, f"cf{i}") for i in range(2)]
+        club = Club(name="Test FC", players=players)
+
+        lineup = select_best_xi(club, "4-4-2")
+        flat_average = lineup.rating  # ~66 : ni la force d'attaque, ni la défensive ne doivent s'en approcher
+
+        # Attaque forte (95) mais défense/gardien faibles (50) : la force
+        # d'attaque doit refléter les attaquants, pas la moyenne plate.
+        assert _attack_strength(lineup) > flat_average + 15
+        assert _defense_strength(lineup) < flat_average - 15
 
 
 def test_ephemeral_tracker_is_used_when_none_is_passed():

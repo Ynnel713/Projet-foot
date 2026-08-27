@@ -5,6 +5,11 @@ build/
 dist/
 wheels/
 *.egg-info
+.pytest_cache/
 
 # Virtual environments
 .venv
+
+# Backups ponctuels du classeur joueurs (data/joueurs.xlsx est déjà suivi par
+# git, qui sert lui-même d'historique -- pas besoin de garder ces copies)
+data/*.backup*.xlsx

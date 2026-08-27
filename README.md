@@ -1,4 +1,4 @@
-# Simulateur de championnat 2026-2027
+# Simulafoot 2026-2027
 
 Mini application web qui simule soit une saison complète d'un grand
 championnat européen (Premier League, LaLiga, Bundesliga, Serie A, Ligue 1,
@@ -75,7 +75,7 @@ permet de tester la logique métier sans dépendre de Streamlit.
 ### Modèle de données
 
 `data/joueurs.xlsx` a une ligne par joueur (colonnes : `Prénom`, `Nom`,
-`Nationalité`, `Âge`, `Poste`, `Club`, `Championnat`, `Note /100`). **Il n'y
+`Nationalité`, `Âge`, `Poste`, `Club`, `Championnat`, `Note globale`). **Il n'y
 a pas de note de club** : `Club(name: str, players: list[Player])` ne
 stocke qu'un nom et un effectif. Toute notion de force d'équipe (calibrage
 du moteur Poisson, têtes de série des poules/tableaux) est calculée à la
@@ -92,33 +92,51 @@ complète mais disponible dans le vivier de la Compétition Perso
 
 ### Dispositifs tactiques et compo du jour (`lineup.py`)
 
-Chaque poste Transfermarkt exact est rattaché à un groupe (`GK`/`DEF`/
-`MID`/`ATT`, voir `players.POSITION_GROUP`). Trois dispositifs sont
-possibles, définis par des quotas sur ces groupes :
+Les 6 dispositifs jouables (4-2-3-1, 4-4-2, 4-3-3, 3-4-2-1, 3-5-2, 3-4-3)
+sont définis place par place dans l'onglet **"Dispositifs tactiques"** de
+`data/joueurs.xlsx` : une colonne par dispositif, 11 lignes donnant le poste
+exact attendu à chaque place (certaines places acceptent l'un ou l'autre de
+deux postes, ex. "MC ou MDC" pour un milieu qui peut être relayeur ou
+sentinelle). `lineup.formation_slots()` charge cet onglet ("MO" y est un
+raccourci pour MOC).
 
-| Dispositif | GK | DEF | MID | ATT |
-|---|---|---|---|---|
-| 4-4-2 | 1 | 4 | 4 | 2 |
-| 4-3-3 | 1 | 4 | 3 | 3 |
-| 4-2-3-1 | 1 | 4 | 5 | 1 |
+`select_best_xi` pourvoit chaque place, les plus strictes (un seul poste
+accepté) en premier, en 3 passes :
+1. le meilleur joueur dispo dont le **poste principal** correspond exactement ;
+2. à défaut, le meilleur joueur dont un **poste secondaire déclaré**
+   correspond (voir `Player.poste_secondaire`) ;
+3. en tout dernier recours, si des places restent vides et qu'il reste des
+   joueurs éligibles, les meilleurs joueurs restants quel que soit leur
+   poste -- une équipe aligne toujours 11 joueurs quand son effectif le
+   permet, quitte à dépanner hors de position plutôt que jouer à 10.
 
-`pick_best_formation` essaie les 3 dispositifs avec l'effectif *disponible
-aujourd'hui* (hors blessés/suspendus) et retourne celui qui donne la
-meilleure compo moyenne — un effectif riche en ailiers/attaquants penche
-naturellement vers le 4-3-3, un effectif riche au milieu vers le 4-2-3-1,
-sans configuration manuelle par club. Ce même calcul sert à la fois de
-force d'équipe pour la simulation Poisson (`club_strength`) et de compo
-affichée dans l'écran de détail d'un match.
+Un dispositif absent de l'onglet (ex. une formation préférentielle
+Transfermarkt non répertoriée comme "4-1-4-1") retombe sur l'ancien système
+par quotas génériques GK/DEF/MID/ATT (`parse_formation`, `FORMATIONS`), avec
+un dépannage tolérant les postes tactiquement proches (`players.
+poste_distance`) -- rare en pratique (2 clubs sur l'ensemble des
+championnats chargés à ce jour).
+
+`pick_best_formation` essaie tous les dispositifs connus avec l'effectif
+*disponible aujourd'hui* (hors blessés/suspendus) et retourne celui qui
+donne la meilleure compo moyenne — un effectif riche en ailiers/attaquants
+penche naturellement vers un dispositif à 3 attaquants, un effectif riche au
+milieu vers le 4-2-3-1, sans configuration manuelle par club. Si
+l'entraîneur du club a une formation préférentielle connue (voir
+`coaches.preferred_formations`), elle est imposée plutôt que ce choix
+adaptatif. Ce même calcul sert à la fois de force d'équipe pour la
+simulation Poisson (`club_strength`) et de compo affichée dans l'écran de
+détail d'un match.
 
 ### Moteur de simulation en détail (`simulation.py`)
 
 ```
 AVG_RATING = moyenne des forces des clubs du championnat chargé (club_strength, sans indisponibilité)
-attack(équipe)  = (force_du_jour(équipe) / AVG_RATING) ** 1.8
-defense(équipe) = (AVG_RATING / force_du_jour(équipe)) ** 1.8
+attack(équipe)  = (force_du_jour(équipe) / AVG_RATING) ** 7.0
+defense(équipe) = (AVG_RATING / force_du_jour(équipe)) ** 7.0
 
-lambda_domicile   = 1.14 * attack(dom) * defense(ext) * 1.10   # bonus domicile
-lambda_exterieur  = 1.14 * attack(ext) * defense(dom)
+lambda_domicile   = min(2.0, 1.14 * attack(dom) * defense(ext) * 1.10)   # bonus domicile, plafonné
+lambda_exterieur  = min(2.0, 1.14 * attack(ext) * defense(dom))
 
 buts = min(6, Poisson(lambda))
 ```
@@ -126,11 +144,43 @@ buts = min(6, Poisson(lambda))
 `force_du_jour` est la force calculée par `club_strength` en tenant compte
 des indisponibilités du moment (voir plus bas) ; `AVG_RATING` reste stable
 sur la saison (calibrage, pas un chiffre affiché). Les constantes
-`LEAGUE_AVG_GOALS` (1.14), `HOME_ADVANTAGE` (1.10) et `RATING_EXPONENT`
-(1.8) sont ajustables dans `simulation.py` ; leur calibrage (exposant 1.8
-retenu après un premier essai à 0.8 qui laissait le 2e du classement finir
-anormalement bas dans les championnats serrés) a été validé par simulation
-de centaines de saisons sur les 5 puis 8 championnats.
+`LEAGUE_AVG_GOALS` (1.14), `HOME_ADVANTAGE` (1.10), `RATING_EXPONENT` (7.0)
+et `MAX_LAMBDA` (2.0) sont ajustables dans `simulation.py` ; leur calibrage
+(exposant 0.8 initial jugé trop plat -- le 2e du classement finissait
+anormalement bas dans les championnats serrés -- porté à 1.8 puis 1.98 puis
+2.2 puis 5.5 puis 7.0) a été validé par simulation de centaines de saisons
+sur les 5 puis 8 championnats.
+
+Un exposant aussi élevé rend le lambda de l'affiche la plus déséquilibrée
+d'un championnat (le mieux noté à domicile contre le moins bien noté)
+explosif (> 4 buts attendus), avec ~29% de scores type 5-0/6-0 rien que sur
+cette affiche (vérifié sur 3000 tirages) -- beaucoup trop fréquent
+(remonté par l'utilisateur : "quasi un par journée" sur une saison jouée).
+`MAX_LAMBDA` plafonne le lambda de chaque équipe à 2.0 buts attendus quel
+que soit l'écart de force, sans toucher à `RATING_EXPONENT` ni aux
+classements (il ne joue que sur les quelques affiches vraiment
+déséquilibrées, pas sur l'essentiel des matchs) : ce taux retombe à ~3.5%
+sur l'affiche la plus déséquilibrée, et sur une saison Premier League
+complète simulée (380 matchs), seuls 5 scores de ce type sont apparus --
+un tous les 7-8 journées environ, plutôt qu'un par journée.
+
+Une piste `VARIANCE_SHRINK` (resserrer chaque tirage de buts autour de sa
+moyenne avant arrondi) a été essayée puis abandonnée : en tassant l'écart
+entre le tirage brut et son espérance avant l'arrondi à l'entier, elle fait
+s'écrouler la quasi-totalité des scores sur le même entier dès que les deux
+lambdas sont proches (fréquent en championnat), ce qui fait exploser le
+taux de nuls -- 22-26% (réaliste) à variance pleine, jusqu'à 54% à
+`VARIANCE_SHRINK`=0.45 (vérifié sur 6000 matchs). `RATING_EXPONENT` n'a
+pas ce défaut : il n'agit que sur l'espérance de buts (le lambda), jamais
+sur la variance du tirage Poisson autour de cette espérance -- le taux de
+nuls reste stable (~22-27%) quel que soit l'exposant, vérifié jusqu'à 9.0.
+C'est ce qui a permis de le monter fortement (2.2 -> 7.0) pour séparer
+franchement les classements sans reproduire le problème des nuls : sur des
+saisons Premier League simulées, le champion termine en médiane à 82 pts à
+5.5 (69 à 96) puis 87 pts à 7.0 (80 à 94), contre 73 pts (64-78) à 2.2. À
+9.0 la médiane grimpe déjà à 95 pts (88-101) -- excessif, une bonne partie
+des saisons ressemblerait alors à un record historique ; 7.0 est la valeur
+retenue.
 
 Une fois le score tiré, si les deux clubs ont un effectif réel (`events.py`,
 `generate_match_events`) :

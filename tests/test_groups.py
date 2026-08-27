@@ -9,7 +9,7 @@ from ligue1sim.simulation import LeagueContext
 def _player(note: float, name: str) -> Player:
     return Player(
         prenom=name, nom="", nationalite="France", age=25,
-        poste="Central Midfield", note=note, club=name, championnat="TEST",
+        poste="MC", note=note, club=name, championnat="TEST",
     )
 
 

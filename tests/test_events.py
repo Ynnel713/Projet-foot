@@ -27,15 +27,15 @@ def _player(poste: str, note: float, name: str) -> Player:
 
 
 def _squad(club_name: str, size_per_group: int = 4) -> list[Player]:
-    squad = [_player("Goalkeeper", 70.0, f"{club_name}_gk{i}") for i in range(2)]
-    squad += [_player("Centre-Back", 70.0, f"{club_name}_cb{i}") for i in range(size_per_group)]
-    squad += [_player("Left-Back", 70.0, f"{club_name}_lb{i}") for i in range(2)]
-    squad += [_player("Right-Back", 70.0, f"{club_name}_rb{i}") for i in range(2)]
-    squad += [_player("Central Midfield", 70.0, f"{club_name}_cm{i}") for i in range(size_per_group)]
-    squad += [_player("Attacking Midfield", 70.0, f"{club_name}_am{i}") for i in range(2)]
-    squad += [_player("Left Winger", 70.0, f"{club_name}_lw{i}") for i in range(2)]
-    squad += [_player("Right Winger", 70.0, f"{club_name}_rw{i}") for i in range(2)]
-    squad += [_player("Centre-Forward", 70.0, f"{club_name}_cf{i}") for i in range(size_per_group)]
+    squad = [_player("GK", 70.0, f"{club_name}_gk{i}") for i in range(2)]
+    squad += [_player("DC", 70.0, f"{club_name}_cb{i}") for i in range(size_per_group)]
+    squad += [_player("LB", 70.0, f"{club_name}_lb{i}") for i in range(2)]
+    squad += [_player("RB", 70.0, f"{club_name}_rb{i}") for i in range(2)]
+    squad += [_player("MC", 70.0, f"{club_name}_cm{i}") for i in range(size_per_group)]
+    squad += [_player("MOC", 70.0, f"{club_name}_am{i}") for i in range(2)]
+    squad += [_player("AG", 70.0, f"{club_name}_lw{i}") for i in range(2)]
+    squad += [_player("AD", 70.0, f"{club_name}_rw{i}") for i in range(2)]
+    squad += [_player("BU", 70.0, f"{club_name}_cf{i}") for i in range(size_per_group)]
     return squad
 
 
