@@ -13,6 +13,7 @@ import streamlit as st
 
 from ligue1sim.champions_league import start_champions_league
 from ligue1sim.clubs import Club, ClubOption, list_championnats, load_all_clubs, load_clubs
+from ligue1sim.clubs import clear_cache as clear_clubs_cache
 from ligue1sim.custom_competition import (
     CompetitionFormat,
     CustomCompetition,
@@ -22,11 +23,14 @@ from ligue1sim.custom_competition import (
     store_custom_competition,
 )
 from ligue1sim.coaches import coach_name
+from ligue1sim.coaches import clear_cache as clear_coaches_cache
+from ligue1sim.lineup import clear_cache as clear_lineup_cache
 from ligue1sim.nations import CHAMPIONNAT_LABEL as NATIONS_CHAMPIONNAT_LABEL
 from ligue1sim.nations import load_national_teams
+from ligue1sim.nations import clear_cache as clear_nations_cache
 from ligue1sim.events import AvailabilityTracker, MatchEvents, PlayerMatchStat, compute_leaderboards
 from ligue1sim.groups import QUALIFIERS_PER_GROUP
-from ligue1sim.kits import jersey_svg
+from ligue1sim.kits import primary_color
 from ligue1sim.knockout import Round
 from ligue1sim.pitch_layout import PlacedPlayer, actual_formation_label, place_starting_xi
 from ligue1sim.players import Player
@@ -332,6 +336,19 @@ def _render_banner(*, key: str, icon: str, title: str, description: str) -> bool
     return clicked
 
 
+def _reload_all_data_caches() -> None:
+    """Vide les caches `@lru_cache` de joueurs.xlsx/entraineurs.xlsx (clubs,
+    coaches, dispositifs tactiques, sélections nationales) pour forcer une
+    relecture depuis le disque au prochain accès -- sans ça, une édition du
+    classeur pendant que le serveur Streamlit tourne n'est jamais reprise en
+    compte (le cache vit pour toute la durée du process, pas juste le rerun
+    Streamlit courant)."""
+    clear_clubs_cache()
+    clear_coaches_cache()
+    clear_lineup_cache()
+    clear_nations_cache()
+
+
 def render_home_screen() -> None:
     st.markdown(_home_css(), unsafe_allow_html=True)
 
@@ -343,6 +360,12 @@ def render_home_screen() -> None:
         "</div>",
         unsafe_allow_html=True,
     )
+
+    _, col_reload = st.columns([5, 1])
+    with col_reload:
+        if st.button("🔄 Recharger les données", key="sf_reload_data", width="stretch"):
+            _reload_all_data_caches()
+            st.rerun()
 
     with st.container(key="sf_section_leagues"):
         st.markdown('<div class="sf-section-title">Championnats nationaux</div>', unsafe_allow_html=True)
@@ -830,30 +853,33 @@ def _coach_suffix(coach: str | None) -> str:
 def render_match_detail_screen(match: Match) -> None:
     events = match.events
 
-    if st.button("← Retour"):
-        st.session_state.pop(_OPEN_MATCH_KEY, None)
-        st.rerun()
+    st.markdown(_MATCH_DETAIL_STYLE, unsafe_allow_html=True)
 
-    st.title(f"⚽ {match.home} {match.home_goals} - {match.away_goals} {match.away}")
+    with st.container(key="md_page"):
+        if st.button("← Retour", key="md_back"):
+            st.session_state.pop(_OPEN_MATCH_KEY, None)
+            st.rerun()
 
-    if events is None:
-        st.info("Pas de détails disponibles pour ce match.")
-        return
+        if events is None:
+            st.title(f"⚽ {match.home} {match.home_goals} - {match.away_goals} {match.away}")
+            st.info("Pas de détails disponibles pour ce match.")
+            return
 
-    home_formation = actual_formation_label([s for s in events.home_lineup if s.started])
-    away_formation = actual_formation_label([s for s in events.away_lineup if s.started])
-    home_coach = coach_name(match.home)
-    away_coach = coach_name(match.away)
+        home_formation = actual_formation_label([s for s in events.home_lineup if s.started])
+        away_formation = actual_formation_label([s for s in events.away_lineup if s.started])
+        home_coach = coach_name(match.home)
+        away_coach = coach_name(match.away)
 
-    col_pitch, col_timeline = st.columns([3, 2])
-    with col_pitch:
-        _render_pitch(events)
-        st.caption(
-            f"🏠 **{match.home}**{_coach_suffix(home_coach)} — {home_formation}  ·  "
-            f"🚌 **{match.away}**{_coach_suffix(away_coach)} — {away_formation}"
-        )
-    with col_timeline:
-        _render_match_timeline(match, events)
+        col_pitch, col_timeline = st.columns([7, 3])
+        with col_pitch:
+            _render_scoreboard(match)
+            _render_pitch(events)
+            st.caption(
+                f"🏠 **{match.home}**{_coach_suffix(home_coach)} — {home_formation}  ·  "
+                f"🚌 **{match.away}**{_coach_suffix(away_coach)} — {away_formation}"
+            )
+        with col_timeline:
+            _render_match_timeline(match, events)
 
     with st.expander("Compositions complètes et remplaçants", expanded=True):
         st.caption("Clique sur un joueur pour voir sa fiche (poste, âge, nationalité, note...).")
@@ -867,91 +893,193 @@ def render_match_detail_screen(match: Match) -> None:
 
 
 # --- Vue "stade" (terrain + fil du match) ---------------------------------
-
-_PITCH_STYLE = """
+#
+# Terrain rendu à l'HORIZONTALE (domicile à gauche, attaque vers la droite ;
+# extérieur à droite, attaque vers la gauche). `pitch_layout.place_starting_xi`
+# calcule des coordonnées pensées pour un terrain VERTICAL (x = latéral,
+# y = profondeur du but vers le milieu) -- plutôt que dupliquer cette logique
+# de placement par poste, on permute simplement les axes à l'affichage
+# (CSS left = y, top = x), ce qui fait pivoter le rendu de 90° sans toucher
+# au calcul (voir `_player_token_html`).
+_MATCH_DETAIL_STYLE = """
 <style>
-.ls-pitch {
+@import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=Manrope:wght@400;500;600;700&display=swap');
+
+[data-testid="stAppViewContainer"] {
+    background-image:
+        radial-gradient(rgba(255,255,255,0.028) 1px, transparent 1px),
+        radial-gradient(circle at 15% -10%, rgba(255,75,75,0.06), transparent 45%),
+        linear-gradient(160deg, #0a0e1a 0%, #1a1f2e 100%);
+    background-size: 3px 3px, cover, cover;
+    background-attachment: fixed;
+}
+
+div[class*="st-key-md_page"] { animation: mdFadeIn 0.3s ease; }
+@keyframes mdFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+}
+
+div[class*="st-key-md_back"] button {
+    background: transparent !important;
+    border: 1px solid rgba(255,255,255,0.35) !important;
+    color: #F4F6F9 !important;
+    border-radius: 8px !important;
+    font-family: "Manrope", sans-serif;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+div[class*="st-key-md_back"] button:hover {
+    background: rgba(255,255,255,0.10) !important;
+    border-color: rgba(255,255,255,0.55) !important;
+}
+
+.md-scoreboard {
+    background: rgba(0,0,0,0.7);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 1rem 1.4rem;
+    text-align: center;
+    margin: 0.9rem 0 1rem;
+}
+.md-score-line {
+    font-family: "Big Shoulders Display", sans-serif;
+    font-weight: 800;
+    font-size: clamp(1.6rem, 2.6vw, 2.5rem);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: #ffffff;
+    line-height: 1.15;
+    margin: 0;
+}
+.md-score-num { padding: 0 0.15em; }
+.md-scorers {
+    font-family: "Manrope", sans-serif;
+    font-size: 0.85rem;
+    color: rgba(230,230,235,0.72);
+    margin-top: 0.35rem;
+}
+
+.md-pitch-wrap { display: flex; justify-content: center; }
+.md-pitch {
     position: relative;
     width: 100%;
-    aspect-ratio: 2 / 3;
-    border-radius: 10px;
+    max-width: 800px;
+    aspect-ratio: 8 / 5;
+    border-radius: 12px;
     border: 2px solid rgba(255,255,255,0.4);
     overflow: hidden;
-    background:
-        repeating-linear-gradient(180deg, #2e7d32 0%, #2e7d32 10%, #358a38 10%, #358a38 20%);
+    background: repeating-linear-gradient(90deg, #2e7d32 0%, #2e7d32 10%, #358a38 10%, #358a38 20%);
+    box-shadow: 0 18px 50px rgba(0,0,0,0.5);
     margin-bottom: 0.5rem;
 }
-.ls-halfway {
-    position: absolute; left: 0; top: 50%; width: 100%; height: 2px;
-    background: rgba(255,255,255,0.55); transform: translateY(-50%);
+.md-halfway {
+    position: absolute; top: 0; left: 50%; width: 2px; height: 100%;
+    background: rgba(255,255,255,0.55); transform: translateX(-50%);
 }
-.ls-circle-mid {
-    position: absolute; left: 50%; top: 50%; width: 22%; height: 14.7%;
+.md-circle-mid {
+    position: absolute; left: 50%; top: 50%; width: 15%; height: 26%;
     border: 2px solid rgba(255,255,255,0.55); border-radius: 50%;
     transform: translate(-50%, -50%);
 }
-.ls-goalbox {
-    position: absolute; left: 50%; width: 34%; height: 7%;
-    border: 2px solid rgba(255,255,255,0.55); border-top: none; transform: translateX(-50%);
+.md-goalbox {
+    position: absolute; top: 50%; width: 6%; height: 46%;
+    border: 2px solid rgba(255,255,255,0.55); transform: translateY(-50%);
 }
-.ls-goalbox-top { top: 0; border-top: none; border-bottom: 2px solid rgba(255,255,255,0.55); }
-.ls-goalbox-bottom { bottom: 0; }
-.ls-token {
+.md-goalbox-left { left: 0; border-left: none; }
+.md-goalbox-right { right: 0; border-right: none; }
+
+.md-token {
     position: absolute; transform: translate(-50%, -50%);
-    display: flex; flex-direction: column; align-items: center; width: 92px;
+    display: flex; flex-direction: column; align-items: center; width: 78px;
 }
-.ls-badges {
-    font-size: 13px; line-height: 1; margin-bottom: 3px; white-space: nowrap;
+.md-badges {
+    font-size: 12px; line-height: 1; margin-bottom: 3px; white-space: nowrap;
     text-shadow: 0 1px 2px rgba(0,0,0,0.7);
 }
-.ls-jersey-wrap {
-    position: relative; width: 44px; height: 44px;
-    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5));
-}
-.ls-rating-badge {
-    position: absolute; right: -7px; bottom: -6px;
-    width: 22px; height: 22px; border-radius: 50%;
+.md-jersey-wrap { position: relative; width: 40px; height: 40px; }
+.md-jersey-circle {
+    width: 40px; height: 40px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 10.5px; color: #fff;
+    font-family: "Manrope", sans-serif; font-weight: 800; font-size: 13px;
+    border: 2px solid rgba(255,255,255,0.55);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+}
+.md-rating-badge {
+    position: absolute; right: -6px; bottom: -6px;
+    width: 20px; height: 20px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 10px; color: #fff;
     border: 2px solid rgba(0,0,0,0.3); box-shadow: 0 1px 3px rgba(0,0,0,0.5);
 }
-.ls-rating-badge.ls-circle-good { background: #1e8e3e; }
-.ls-rating-badge.ls-circle-avg { background: #c99a12; }
-.ls-rating-badge.ls-circle-poor { background: #c0392b; }
-.ls-name {
-    font-size: 12px; font-weight: 600; color: #fff; margin-top: 4px;
+.md-rating-good { background: #1e8e3e; }
+.md-rating-avg { background: #c99a12; }
+.md-rating-poor { background: #c0392b; }
+.md-name {
+    font-size: 11px; font-weight: 600; color: #fff; margin-top: 4px;
     white-space: nowrap; text-shadow: 0 1px 2px rgba(0,0,0,0.85);
 }
-.ls-timeline {
-    max-height: 720px; overflow-y: auto; padding-right: 4px;
+
+.md-timeline-card {
+    background: rgba(20,20,30,0.9);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+    padding: 1rem 1rem 0.6rem;
+    margin-top: 0.9rem;
 }
-.ls-timeline-row {
-    display: flex; gap: 10px; padding: 8px 6px; font-size: 14.5px;
-    border-bottom: 1px solid rgba(128,128,128,0.25);
-    border-left: 3px solid transparent;
+.md-timeline-title {
+    font-family: "Manrope", sans-serif; font-weight: 700; font-size: 16px;
+    color: #fff; margin-bottom: 0.8rem;
 }
-.ls-timeline-minute {
-    flex: 0 0 36px; font-weight: 700; opacity: 0.75;
+.md-timeline-list { max-height: 600px; overflow-y: auto; padding-right: 6px; }
+.md-timeline-list::-webkit-scrollbar { width: 6px; }
+.md-timeline-list::-webkit-scrollbar-track { background: transparent; }
+.md-timeline-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 3px; }
+.md-timeline-row {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding-bottom: 12px; margin-bottom: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    font-family: "Manrope", sans-serif; font-size: 13px; color: #e5e7eb;
 }
-.ls-timeline-row--goal {
-    padding: 10px 8px; font-size: 16.5px; font-weight: 700;
-    background: rgba(30,142,62,0.16);
-    border-left: 3px solid #1e8e3e;
-    border-radius: 4px;
+.md-timeline-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.md-minute-badge {
+    flex: 0 0 auto; min-width: 32px; height: 22px; padding: 0 4px;
+    border-radius: 11px; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 11px; color: #0a0e1a;
 }
-.ls-timeline-row--goal .ls-timeline-minute { opacity: 1; color: #1e8e3e; }
-.ls-timeline-row--minor { opacity: 0.72; font-size: 13.5px; }
+.md-minute-badge--goal { background: #22c55e; }
+.md-minute-badge--card { background: #eab308; }
+.md-minute-badge--sub { background: #3b82f6; }
+.md-minute-badge--other { background: #9ca3af; }
+
+@media (max-width: 1200px) {
+    [data-testid="stHorizontalBlock"] { flex-direction: column !important; }
+}
 </style>
 """
 
 
-def _render_pitch(events: MatchEvents) -> None:
-    st.markdown(_PITCH_STYLE, unsafe_allow_html=True)
+def _render_scoreboard(match: Match) -> None:
+    home_scorers = _scorers_caption(match, match.home)
+    away_scorers = _scorers_caption(match, match.away)
+    scorer_parts = [s for s in (home_scorers, away_scorers) if s]
+    scorers_html = f'<div class="md-scorers">{" &nbsp;·&nbsp; ".join(scorer_parts)}</div>' if scorer_parts else ""
+    st.markdown(
+        f'<div class="md-scoreboard">'
+        f'<h1 class="md-score-line">{match.home.upper()} '
+        f'<span class="md-score-num">{match.home_goals}</span> - '
+        f'<span class="md-score-num">{match.away_goals}</span> {match.away.upper()}</h1>'
+        f"{scorers_html}"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
 
+
+def _render_pitch(events: MatchEvents) -> None:
     home_starters = [s for s in events.home_lineup if s.started]
     away_starters = [s for s in events.away_lineup if s.started]
-    # L'équipe à domicile en haut du terrain (gardien près du bord supérieur,
-    # attaque vers le bas) ; l'équipe à l'extérieur en bas (inverse).
+    # L'équipe à domicile "en haut" du repère vertical d'origine devient,
+    # une fois les axes permutés à l'affichage, l'équipe à GAUCHE du terrain
+    # horizontal (attaque vers la droite) ; l'extérieur est à droite.
     placed = place_starting_xi(home_starters, attacking_up=False) + place_starting_xi(
         away_starters, attacking_up=True
     )
@@ -961,12 +1089,14 @@ def _render_pitch(events: MatchEvents) -> None:
 
     st.markdown(
         f"""
-        <div class="ls-pitch">
-            <div class="ls-halfway"></div>
-            <div class="ls-circle-mid"></div>
-            <div class="ls-goalbox ls-goalbox-top"></div>
-            <div class="ls-goalbox ls-goalbox-bottom"></div>
-            {tokens_html}
+        <div class="md-pitch-wrap">
+            <div class="md-pitch">
+                <div class="md-halfway"></div>
+                <div class="md-circle-mid"></div>
+                <div class="md-goalbox md-goalbox-left"></div>
+                <div class="md-goalbox md-goalbox-right"></div>
+                {tokens_html}
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -977,19 +1107,39 @@ def _player_token_html(placed: PlacedPlayer, subbed_off_minute: dict[tuple[str, 
     stat = placed.stat
     minute_off = subbed_off_minute.get((stat.club_name, stat.player_name))
     badges = _player_badges(stat, minute_off)
-    badges_html = f'<div class="ls-badges">{badges}</div>' if badges else ""
-    badge_id = f"{stat.club_name}-{stat.player_name}"
-    jersey = jersey_svg(stat.club_name, size=44, badge_id=badge_id)
+    badges_html = f'<div class="md-badges">{badges}</div>' if badges else ""
+    bg = primary_color(stat.club_name)
+    fg = _contrast_text_color(bg)
+    # left = y, top = x : voir la note en tête de section sur la permutation d'axes.
     return (
-        f'<div class="ls-token" style="left:{placed.x:.1f}%; top:{placed.y:.1f}%;">'
+        f'<div class="md-token" style="left:{placed.y:.1f}%; top:{placed.x:.1f}%;">'
         f"{badges_html}"
-        f'<div class="ls-jersey-wrap">'
-        f"{jersey}"
-        f'<div class="ls-rating-badge ls-circle-{_rating_tier(stat.rating)}">{stat.rating:.1f}</div>'
+        f'<div class="md-jersey-wrap">'
+        f'<div class="md-jersey-circle" style="background:{bg}; color:{fg};">{_initials(stat.player_name)}</div>'
+        f'<div class="md-rating-badge md-rating-{_rating_tier(stat.rating)}">{stat.rating:.1f}</div>'
         f"</div>"
-        f'<div class="ls-name">{_short_name(stat.player_name)}</div>'
+        f'<div class="md-name">{_short_name(stat.player_name)}</div>'
         f"</div>"
     )
+
+
+def _initials(full_name: str) -> str:
+    parts = full_name.split()
+    if len(parts) >= 2:
+        return (parts[0][0] + parts[-1][0]).upper()
+    return full_name[:2].upper() if full_name else "?"
+
+
+def _contrast_text_color(hex_color: str) -> str:
+    """Texte noir ou blanc selon la luminance de `hex_color` (#rrggbb), pour
+    que les initiales restent lisibles sur un maillot clair (ex. Real Madrid,
+    Juventus) comme sur un maillot sombre."""
+    h = hex_color.lstrip("#")
+    if len(h) != 6:
+        return "#ffffff"
+    r, g, b = (int(h[i : i + 2], 16) for i in (0, 2, 4))
+    luminance = 0.299 * r + 0.587 * g + 0.114 * b
+    return "#111111" if luminance > 150 else "#ffffff"
 
 
 def _player_badges(stat: PlayerMatchStat, subbed_off_minute: int | None) -> str:
@@ -1007,9 +1157,9 @@ def _player_badges(stat: PlayerMatchStat, subbed_off_minute: int | None) -> str:
 
 
 def _rating_tier(rating: float) -> str:
-    if rating >= 7.0:
+    if rating > 7.0:
         return "good"
-    if rating >= 6.0:
+    if rating >= 5.0:
         return "avg"
     return "poor"
 
@@ -1022,17 +1172,23 @@ def _short_name(full_name: str) -> str:
 
 
 def _render_match_timeline(match: Match, events: MatchEvents) -> None:
-    st.markdown("#### 📋 Fil du match")
     entries = _match_timeline_entries(match, events)
-    if not entries:
-        st.caption("Aucun fait de jeu à signaler.")
-        return
-    rows = "".join(
-        f'<div class="ls-timeline-row ls-timeline-row--{kind}">'
-        f'<div class="ls-timeline-minute">{minute}\'</div><div>{html}</div></div>'
-        for minute, kind, html in entries
+    if entries:
+        rows = "".join(
+            f'<div class="md-timeline-row">'
+            f'<div class="md-minute-badge md-minute-badge--{kind}">{minute}\'</div>'
+            f"<div>{html}</div></div>"
+            for minute, kind, html in entries
+        )
+    else:
+        rows = '<p style="color: rgba(230,230,235,0.6); font-size: 13px; margin: 0;">Aucun fait de jeu à signaler.</p>'
+    st.markdown(
+        f'<div class="md-timeline-card">'
+        f'<div class="md-timeline-title">📋 Fil du match</div>'
+        f'<div class="md-timeline-list">{rows}</div>'
+        f"</div>",
+        unsafe_allow_html=True,
     )
-    st.markdown(f'<div class="ls-timeline">{rows}</div>', unsafe_allow_html=True)
 
 
 def _match_timeline_entries(match: Match, events: MatchEvents) -> list[tuple[int, str, str]]:
@@ -1055,23 +1211,23 @@ def _match_timeline_entries(match: Match, events: MatchEvents) -> list[tuple[int
     card_icons = {"direct": "🟥", "second_yellow": "🟨🟥", "yellow": "🟨"}
     for card in events.cards:
         entries.append(
-            (card.minute, "minor", f"{card_icons[card.card_type]} <b>{card.player}</b> ({card.club_name})")
+            (card.minute, "card", f"{card_icons[card.card_type]} <b>{card.player}</b> ({card.club_name})")
         )
 
     for sub in events.substitutions:
         entries.append(
             (
                 sub.minute,
-                "minor",
+                "sub",
                 f"🔄 {sub.club_name} : <b>{sub.player_on}</b> entre à la place de {sub.player_off}",
             )
         )
 
     for injury in events.injuries:
-        entries.append((injury.minute, "minor", f"🚑 <b>{injury.player}</b> ({injury.club_name}) — blessure"))
+        entries.append((injury.minute, "other", f"🚑 <b>{injury.player}</b> ({injury.club_name}) — blessure"))
 
     for missed in events.penalties_missed:
-        entries.append((missed.minute, "minor", f"❌ Penalty manqué par <b>{missed.player}</b> ({missed.club_name})"))
+        entries.append((missed.minute, "other", f"❌ Penalty manqué par <b>{missed.player}</b> ({missed.club_name})"))
 
     entries.sort(key=lambda e: e[0])
     return entries

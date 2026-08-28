@@ -253,6 +253,14 @@ def _pattern_overlay(kit: Kit, clip_id: str) -> str:
     return ""
 
 
+def primary_color(club_name: str) -> str:
+    """Couleur principale (hex) du kit de `club_name`, ou celle du kit par
+    défaut si le club n'a pas d'entrée dédiée -- pour représenter un club
+    par une simple pastille de couleur (ex. jeton joueur écran "stade")
+    sans dépendre du rendu SVG complet du maillot."""
+    return CLUB_KIT.get(club_name, _DEFAULT_KIT).primary
+
+
 def jersey_svg(club_name: str, *, size: int = 42, badge_id: str = "") -> str:
     """Icône SVG (chaîne autonome) du maillot d'un club, `size` px de côté.
 
