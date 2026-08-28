@@ -30,7 +30,7 @@ from ligue1sim.nations import load_national_teams
 from ligue1sim.nations import clear_cache as clear_nations_cache
 from ligue1sim.events import AvailabilityTracker, MatchEvents, PlayerMatchStat, compute_leaderboards
 from ligue1sim.groups import QUALIFIERS_PER_GROUP
-from ligue1sim.kits import primary_color
+from ligue1sim.kits import match_kit_colors, primary_color
 from ligue1sim.knockout import Round
 from ligue1sim.pitch_layout import PlacedPlayer, actual_formation_label, place_starting_xi
 from ligue1sim.players import Player
@@ -70,6 +70,12 @@ _CLUB_SELECTION_KEY = "perso_selected_clubs"
 _CLUB_TABLE_VERSION_KEY = "perso_table_version"
 _PERSO_CLUB_SOURCE_KEY = "perso_club_source"
 _OPEN_MATCH_KEY = "open_match_detail"
+# Liste des matchs de la journée/manche où le match ouvert a été trouvé, et
+# son indice dans cette liste -- permet la navigation "Match précédent" /
+# "Match suivant" sans avoir à retrouver la journée depuis l'écran de détail
+# (voir `_render_match_rows`/`render_match_detail_screen`).
+_OPEN_MATCH_LIST_KEY = "open_match_list"
+_OPEN_MATCH_INDEX_KEY = "open_match_index"
 _OPEN_CLUB_KEY = "open_club_detail"
 
 _WIZARD_KEYS = [
@@ -408,6 +414,192 @@ def render_home_screen() -> None:
 
 
 # --- Championnat officiel --------------------------------------------------
+#
+# Palette volontairement distincte de `_home_css`/`_MATCH_DETAIL_STYLE` (gris
+# neutre `#121212`/`#1E1E1E` plutôt que bleu nuit) : écran dense en donnees
+# (liste de matchs + classement complet), pense pour la lisibilite et la
+# densite d'info plutot que pour l'immersion visuelle des ecrans "spectacle"
+# (accueil, detail de match).
+_SEASON_STYLE = """
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+div[class*="st-key-ms_header"] {
+    font-family: "Inter", sans-serif;
+}
+.ms-header-title {
+    font-family: "Inter", sans-serif; font-weight: 700; font-size: 24px; color: #fff;
+    margin: 0 0 0.6rem;
+}
+
+div[class*="st-key-ms_top_btn_"] button, div[class*="st-key-ms_bottom_btn_"] button {
+    background: #2e2e2e !important; border: 1px solid #444 !important; color: #fff !important;
+    border-radius: 8px !important; font-family: "Inter", sans-serif; font-weight: 600;
+    transition: all 0.2s ease;
+}
+div[class*="st-key-ms_top_btn_"] button:hover, div[class*="st-key-ms_bottom_btn_"] button:hover {
+    background: #3e3e3e !important; border-color: #555 !important;
+}
+div[class*="st-key-ms_bottom_btn_"] button { padding: 12px 24px !important; font-size: 1.05rem; }
+
+div[class*="st-key-ms_card_"] {
+    background: #252525; border: 1px solid #333; border-radius: 8px;
+    padding: 12px 18px; margin-bottom: 8px;
+}
+.ms-team { display: flex; align-items: center; gap: 10px; font-family: "Inter", sans-serif; min-width: 0; }
+.ms-team-away { flex-direction: row-reverse; text-align: right; }
+.ms-team-badge {
+    flex: 0 0 auto; width: 24px; height: 24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 800; color: #111;
+    border: 1px solid rgba(255,255,255,0.25);
+}
+.ms-team-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ms-team-name { font-size: 15px; font-weight: 600; color: #fff; }
+.ms-scorers { font-size: 12px; color: #aaaaaa; }
+div[class*="st-key-ms_teamwrap_"] { position: relative; height: 26px; }
+div[class*="st-key-ms_clubbtn_"] { position: static !important; }
+div[class*="st-key-ms_clubbtn_"] button {
+    position: absolute !important; top: 0; left: 0; width: 100% !important; height: 24px !important;
+    opacity: 0 !important; z-index: 2; cursor: pointer;
+}
+/* Le score est un st.button dans les 3 états (joué/pas joué/pas de détail
+   -- voir _render_match_rows), désactivé quand il n'y a rien à ouvrir :
+   même widget partout, donc même hauteur "naturelle" Streamlit sans avoir
+   à la forcer -- sans ça (ex. un simple texte pour l'état "pas joué"), la
+   ligne "score" change de hauteur une fois le match joué et étire toute la
+   carte avec elle (les colonnes d'une rangée Streamlit s'alignent sur la
+   plus haute), ce qui déplace la barre d'actions du bas d'une journée à
+   l'autre. */
+div[class*="st-key-ms_score_"] button, div[class*="st-key-ms_score_"] [data-testid="stBaseButton-secondary"] {
+    background: transparent !important; border: none !important;
+    font-family: "Inter", sans-serif; font-weight: 700 !important; font-size: 20px !important;
+    box-shadow: none !important;
+    height: 32px !important; min-height: 32px !important; padding: 0 !important; line-height: 32px !important;
+}
+/* Le libellé est rendu dans un <p> imbriqué (button > div > span > div > p).
+   Streamlit fixe la couleur du <button> lui-même par un mécanisme qui reste
+   gagnant même face à un `!important` en ligne posé directement dessus
+   (vérifié) -- `color: inherit` sur le <p> hériterait donc de cette même
+   couleur imposée. Il faut fixer une couleur EXPLICITE sur le <p> (jamais
+   `inherit`) : lui, contrairement au <button>, accepte bien un override. */
+div[class*="st-key-ms_score_"] [data-testid="stBaseButton-secondary"] p {
+    color: #fff !important; transition: color 0.2s ease;
+}
+div[class*="st-key-ms_score_"] [data-testid="stBaseButton-secondary"]:hover:not(:disabled) p { color: #00a3ff !important; }
+div[class*="st-key-ms_score_"] [data-testid="stBaseButton-secondary"]:disabled p { color: #555 !important; }
+div[class*="st-key-ms_score_"] [data-testid="stBaseButton-secondary"]:disabled { opacity: 1 !important; cursor: default; }
+
+.ms-standings-title {
+    font-family: "Inter", sans-serif; font-weight: 700; font-size: 1.3rem; color: #fff;
+    margin: 1.6rem 0 0.8rem;
+}
+div[class*="st-key-ms_standings_wrap"] {
+    border: 1px solid #333; border-radius: 10px; overflow: hidden;
+}
+.ms-standings-head {
+    display: grid; grid-template-columns: 44px 2.2fr repeat(8, 1fr);
+    background: #1e1e1e; padding: 10px 14px; gap: 6px;
+    font-family: "Inter", sans-serif; font-weight: 700; font-size: 16px;
+    color: #fff;
+}
+.ms-standings-head span:not(:nth-child(2)) { text-align: center; }
+div[class*="st-key-ms_row_"] { position: relative; }
+div[class*="st-key-ms_rowbtn_"] { position: static !important; }
+div[class*="st-key-ms_rowbtn_"] button {
+    position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important;
+    opacity: 0 !important; z-index: 3; cursor: pointer;
+}
+.ms-standings-row {
+    display: grid; grid-template-columns: 44px 2.2fr repeat(8, 1fr);
+    padding: 9px 14px; gap: 6px; align-items: center;
+    font-family: "Inter", sans-serif; font-size: 14px; color: #ddd;
+    transition: background 0.15s ease;
+}
+.ms-standings-row span:not(:nth-child(2)) { text-align: center; }
+.ms-standings-row .ms-pts { font-weight: 800; color: #fff; }
+.ms-standings-row.ms-row-even { background: #121212; }
+.ms-standings-row.ms-row-odd { background: #181818; }
+div[class*="st-key-ms_row_"]:hover .ms-standings-row { background: #232323; }
+.ms-club-cell {
+    display: flex; align-items: center; gap: 8px; font-weight: 600; color: #fff;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ms-rank { color: #888888; font-weight: 700; }
+.ms-w { color: #4caf50; } .ms-d { color: #aaaaaa; } .ms-l { color: #ef4444; }
+
+/* Menu ☰ (st.popover) : uniquement visible en mobile, la paire de boutons
+   desktop reste l'affichage par défaut (voir _render_season_body). */
+div[class*="st-key-ms_mobile_menu"] { display: none; }
+
+@media (max-width: 900px) {
+    [data-testid="stHorizontalBlock"]:has(div[class*="st-key-ms_card_"]) { flex-direction: column !important; }
+    .ms-standings-head, .ms-standings-row { grid-template-columns: 32px 1.6fr repeat(8, 1fr); font-size: 11px; }
+}
+
+/* --- Mobile (<= 480px) --------------------------------------------------
+   Une seule colonne, pouce-compatible (cible >= 48px), barre d'actions
+   fixée en bas -- CSS uniquement : même DOM qu'en desktop (mêmes widgets
+   Streamlit, mêmes données), juste une disposition différente. Le swipe/
+   tap-long/vibration/pull-to-refresh demandés ailleurs ne sont volontairement
+   pas implémentés : Streamlit reexecute le script Python à chaque
+   interaction (pas de survie d'un event listener JS custom entre les
+   reruns) -- les faire marcher demanderait un vrai composant JS/Python
+   (streamlit.components.v1 ou une lib tierce), hors de portée d'une passe
+   CSS responsive et contraire à la consigne d'éviter les dépendances
+   lourdes. Le bouton "🔄 Recharger les données" (écran d'accueil) couvre
+   déjà le besoin de rafraîchissement manuel. */
+@media (max-width: 480px) {
+    div[class*="st-key-ms_desktop_actions"] { display: none; }
+    div[class*="st-key-ms_mobile_menu"] { display: block; }
+
+    .ms-header-title { font-size: 18px; }
+
+    div[class*="st-key-ms_card_"] { padding: 12px; margin-bottom: 12px; }
+    .ms-team-name { font-size: 16px; }
+    .ms-scorers { font-size: 12px; }
+    .ms-team-badge { width: 20px; height: 20px; }
+
+    /* Barre d'actions fixée en bas, cible tactile 48px (repère Google). */
+    div[class*="st-key-ms_bottom_bar"] {
+        position: fixed; bottom: 0; left: 0; right: 0; z-index: 999;
+        background: #121212; padding: 8px 12px; margin: 0;
+        box-shadow: 0 -4px 8px rgba(0,163,255,0.15);
+    }
+    div[class*="st-key-ms_bottom_btn_"] button {
+        background: #00a3ff !important; border: none !important; color: #fff !important;
+        height: 48px !important; font-size: 16px !important; border-radius: 8px !important;
+        box-shadow: 0 4px 8px rgba(0,163,255,0.3);
+    }
+    /* Marge pour que la barre fixe ne masque pas le bas du classement. */
+    [data-testid="stAppViewContainer"] { padding-bottom: 76px; }
+
+    /* Classement : en-tête collant, icônes W/D/L masquées (gain de place),
+       défilement horizontal plutôt qu'un tassement illisible des colonnes. */
+    div[class*="st-key-ms_standings_wrap"] { overflow-x: auto; }
+    .ms-standings-head {
+        position: sticky; top: 0; z-index: 1;
+        grid-template-columns: 20px 120px repeat(8, 40px);
+        min-width: 580px; font-size: 14px;
+    }
+    .ms-standings-row {
+        grid-template-columns: 20px 120px repeat(8, 40px);
+        min-width: 580px; font-size: 12px;
+    }
+    .ms-club-cell { max-width: 120px; }
+    .ms-icon { display: none; }
+}
+</style>
+"""
+
+
+def _club_initials(club_name: str) -> str:
+    words = [w for w in club_name.split() if not w.isdigit()] or club_name.split()
+    if not words:
+        return "?"
+    if len(words) == 1:
+        return words[0][:2].upper()
+    return (words[0][0] + words[1][0]).upper()
 
 
 def render_season_screen() -> None:
@@ -429,47 +621,60 @@ def _render_season_body(
     home_label: str,
     reset_label: str,
 ) -> None:
-    st.title(f"⚽ {season.championnat}")
+    st.markdown(_SEASON_STYLE, unsafe_allow_html=True)
 
-    col_title, col_home, col_reset = st.columns([2, 1, 1])
-    with col_title:
-        st.subheader(f"Journée {season.current_journee_number} / {season.total_journees}")
-    with col_home:
-        if st.button(home_label, width="stretch"):
-            on_home()
-    with col_reset:
-        if st.button(reset_label, width="stretch"):
-            on_reset()
+    with st.container(key="ms_header"):
+        col_title, col_actions = st.columns([2, 2])
+        with col_title:
+            st.markdown(
+                f'<div class="ms-header-title">⚽ {season.championnat} | '
+                f'Journée {season.current_journee_number} / {season.total_journees}</div>',
+                unsafe_allow_html=True,
+            )
+        with col_actions:
+            # Bouton "Changer de championnat"/"Réinitialiser" côte à côte en
+            # desktop, menu ☰ (st.popover, widget natif -- pas de JS custom
+            # fragile) en mobile : les deux sont toujours montés, CSS
+            # n'affiche que celui adapté à la largeur d'écran (voir
+            # `@media (max-width: 480px)` dans _SEASON_STYLE).
+            with st.container(key="ms_desktop_actions"):
+                col_home, col_reset = st.columns(2)
+                with col_home:
+                    if st.button(home_label, key="ms_top_btn_home", width="stretch"):
+                        on_home()
+                with col_reset:
+                    if st.button(f"🔄 {reset_label}", key="ms_top_btn_reset", width="stretch"):
+                        on_reset()
+            with st.container(key="ms_mobile_menu"):
+                with st.popover("☰", width="stretch"):
+                    if st.button(f"🏆 {home_label}", key="ms_menu_btn_home", width="stretch"):
+                        on_home()
+                    if st.button(f"🔄 {reset_label}", key="ms_menu_btn_reset", width="stretch"):
+                        on_reset()
 
     journee = season.current_journee
 
     st.markdown("### Matchs de la journée")
     _render_match_rows(journee.matches)
 
-    col_simulate, col_next = st.columns(2)
-    with col_simulate:
-        if st.button(
-            "Simuler la journée",
-            type="primary",
-            width="stretch",
-            disabled=journee.played,
-        ):
-            season.simulate_current_journee()
-            st.rerun()
-    with col_next:
-        if st.button(
-            "Journée suivante",
-            width="stretch",
-            disabled=not journee.played or season.current_journee_number >= season.total_journees,
-        ):
-            season.next_journee()
+    # Un seul bouton qui alterne selon l'état de la journée courante :
+    # "Simuler la journée" tant qu'elle n'a pas été jouée, puis "Journée
+    # suivante" une fois jouée -- plutôt que deux boutons dont un seul est
+    # jamais actif à la fois.
+    season_over = journee.played and season.current_journee_number >= season.total_journees
+    if journee.played:
+        label, action = "Journée suivante →", season.next_journee
+    else:
+        label, action = "Simuler la journée", season.simulate_current_journee
+    with st.container(key="ms_bottom_bar"):
+        if st.button(label, key="ms_bottom_btn_toggle", type="primary", width="stretch", disabled=season_over):
+            action()
             st.rerun()
 
     if season.is_season_over:
         st.success("Saison terminée ! Voici le classement final.")
 
-    st.markdown("### Classement")
-    _render_clickable_club_table(season.standings(), key=f"standings_{season.championnat}")
+    _render_standings_table(season.standings(), key=f"standings_{season.championnat}")
 
     _render_leaderboards(season.all_matches)
     _render_availability_panel(season.suspensions, season.injuries)
@@ -805,33 +1010,75 @@ def _render_knockout_ties(round_: Round) -> None:
 
 
 def _render_match_rows(matches: list[Match]) -> None:
+    st.markdown(_SEASON_STYLE, unsafe_allow_html=True)
     for index, match in enumerate(matches):
-        col_home, col_score, col_away = st.columns([3, 1, 3])
-        with col_home:
-            _render_club_link(match.home, key=f"club_link_{id(match)}_{index}_home")
-            _render_scorers_caption(match, match.home)
-        with col_away:
-            _render_club_link(match.away, key=f"club_link_{id(match)}_{index}_away")
-            _render_scorers_caption(match, match.away)
-        with col_score:
-            if match.played and match.events is not None:
-                label = f"{match.home_goals} - {match.away_goals}"
-                if st.button(label, key=f"match_{id(match)}_{index}", width="stretch"):
-                    st.session_state[_OPEN_MATCH_KEY] = match
-                    st.rerun()
-            elif match.played:
-                st.write(f"{match.home_goals} - {match.away_goals}")
-            else:
-                st.write("—")
+        with st.container(key=f"ms_card_{id(match)}_{index}"):
+            col_home, col_score, col_away = st.columns([3, 1, 3])
+            with col_home:
+                _render_team_cell(match, match.home, index, side="home")
+            with col_away:
+                _render_team_cell(match, match.away, index, side="away")
+            with col_score:
+                # Le même widget (st.button, désactivé si pas de détail à
+                # ouvrir) dans les 3 cas plutôt qu'un st.markdown pour l'état
+                # "pas encore joué" : Streamlit donne une hauteur "naturelle"
+                # différente à ses conteneurs internes selon le type de
+                # widget qu'ils contiennent, impossible à égaliser depuis
+                # notre CSS (même avec !important) -- utiliser le même type
+                # de widget partout élimine le problème à la racine plutôt
+                # que d'essayer de forcer deux tailles internes à converger.
+                if match.played and match.events is not None:
+                    if st.button(
+                        f"{match.home_goals} - {match.away_goals}",
+                        key=f"ms_score_{id(match)}_{index}",
+                        width="stretch",
+                    ):
+                        st.session_state[_OPEN_MATCH_KEY] = match
+                        st.session_state[_OPEN_MATCH_LIST_KEY] = matches
+                        st.session_state[_OPEN_MATCH_INDEX_KEY] = index
+                        st.rerun()
+                elif match.played:
+                    st.button(
+                        f"{match.home_goals} - {match.away_goals}",
+                        key=f"ms_score_{id(match)}_{index}",
+                        width="stretch",
+                        disabled=True,
+                    )
+                else:
+                    st.button("—", key=f"ms_score_{id(match)}_{index}", width="stretch", disabled=True)
 
 
-def _render_scorers_caption(match: Match, club_name: str) -> None:
-    """Buteurs de `club_name` dans ce match, sous le lien vers le club, en
-    petit texte du genre "J. Pedro (44'), M. Rogers (77')" -- rien si le club
-    n'a pas marqué (ou match pas encore joué)."""
-    scorers = _scorers_caption(match, club_name)
-    if scorers:
-        st.caption(scorers)
+def _render_team_cell(match: Match, club: str, index: int, *, side: str) -> None:
+    """Nom de club + pastille de couleur (24px, à la place d'un logo -- voir
+    la note de `kits.py` sur l'absence volontaire de logos officiels) et
+    buteurs éventuels sur la même ligne (ex. "AS Monaco (M. Abline 47')"),
+    cliquable pour ouvrir l'effectif (même bouton invisible superposé que
+    `_render_tile`/les cartes joueur de l'écran de match)."""
+    color = primary_color(club)
+    badge = f'<span class="ms-team-badge" style="background:{color};">{_club_initials(club)}</span>'
+    scorers = _scorers_inline(match, club)
+    scorers_html = f' <span class="ms-scorers">({scorers})</span>' if scorers else ""
+    text = f'<span class="ms-team-text"><span class="ms-team-name">{club}</span>{scorers_html}</span>'
+    parts = [badge, text] if side == "home" else [text, badge]
+    with st.container(key=f"ms_teamwrap_{side}_{id(match)}_{index}"):
+        st.markdown(f'<div class="ms-team ms-team-{side}">{"".join(parts)}</div>', unsafe_allow_html=True)
+        if st.button("", key=f"ms_clubbtn_{side}_{id(match)}_{index}"):
+            st.session_state[_OPEN_CLUB_KEY] = club
+            st.rerun()
+
+
+def _scorers_inline(match: Match, club_name: str) -> str | None:
+    """Comme `_scorers_caption`, mais sans parenthèses individuelles autour
+    de chaque minute (ex. "M. Abline 47', M. Biereth 49'") -- pour un
+    affichage "Club (buteurs)" avec une seule paire de parenthèses globale
+    (voir `_render_team_cell`), plutôt que la légende sous le score du
+    détail de match (`_render_scoreboard`) qui garde le format d'origine."""
+    if match.events is None:
+        return None
+    goals = sorted((g for g in match.events.goals if g.club_name == club_name), key=lambda g: g.minute)
+    if not goals:
+        return None
+    return ", ".join(f"{_short_name(g.scorer)} {g.minute}'" for g in goals)
 
 
 def _scorers_caption(match: Match, club_name: str) -> str | None:
@@ -856,9 +1103,7 @@ def render_match_detail_screen(match: Match) -> None:
     st.markdown(_MATCH_DETAIL_STYLE, unsafe_allow_html=True)
 
     with st.container(key="md_page"):
-        if st.button("← Retour", key="md_back"):
-            st.session_state.pop(_OPEN_MATCH_KEY, None)
-            st.rerun()
+        _render_nav_row(match)
 
         if events is None:
             st.title(f"⚽ {match.home} {match.home_goals} - {match.away_goals} {match.away}")
@@ -867,29 +1112,170 @@ def render_match_detail_screen(match: Match) -> None:
 
         home_formation = actual_formation_label([s for s in events.home_lineup if s.started])
         away_formation = actual_formation_label([s for s in events.away_lineup if s.started])
-        home_coach = coach_name(match.home)
-        away_coach = coach_name(match.away)
 
-        col_pitch, col_timeline = st.columns([7, 3])
+        col_pitch, col_timeline = st.columns([3, 1])
         with col_pitch:
             _render_scoreboard(match)
-            _render_pitch(events)
-            st.caption(
-                f"🏠 **{match.home}**{_coach_suffix(home_coach)} — {home_formation}  ·  "
-                f"🚌 **{match.away}**{_coach_suffix(away_coach)} — {away_formation}"
-            )
+            _render_tactical_info(match, home_formation, away_formation)
+            _render_pitch(match, events)
+            _render_bench_chips(match, events)
         with col_timeline:
             _render_match_timeline(match, events)
 
-    with st.expander("Compositions complètes et remplaçants", expanded=True):
+    _render_compositions(match, events, home_formation, away_formation)
+
+
+def _render_nav_row(match: Match) -> None:
+    """Bouton Retour + navigation Match précédent/suivant, quand le match a
+    été ouvert depuis une liste connue (voir `_render_match_rows`) -- pas de
+    navigation possible si on arrive ici autrement (état de session
+    incohérent ou périmé)."""
+    match_list = st.session_state.get(_OPEN_MATCH_LIST_KEY)
+    match_index = st.session_state.get(_OPEN_MATCH_INDEX_KEY)
+    has_nav = (
+        isinstance(match_list, list)
+        and isinstance(match_index, int)
+        and 0 <= match_index < len(match_list)
+        and match_list[match_index] is match
+    )
+
+    col_back, _spacer, col_prev, col_next = st.columns([2, 5, 1.6, 1.6])
+    with col_back:
+        if st.button("← Retour", key="md_back"):
+            st.session_state.pop(_OPEN_MATCH_KEY, None)
+            st.rerun()
+    if has_nav:
+        with col_prev:
+            if st.button("← Match précédent", key="md_prev", disabled=match_index <= 0, width="stretch"):
+                _open_match_at(match_list, match_index - 1)
+        with col_next:
+            if st.button(
+                "Match suivant →", key="md_next", disabled=match_index >= len(match_list) - 1, width="stretch"
+            ):
+                _open_match_at(match_list, match_index + 1)
+
+
+def _open_match_at(match_list: list[Match], index: int) -> None:
+    st.session_state[_OPEN_MATCH_KEY] = match_list[index]
+    st.session_state[_OPEN_MATCH_INDEX_KEY] = index
+    st.rerun()
+
+
+def _render_tactical_info(match: Match, home_formation: str, away_formation: str) -> None:
+    st.markdown(
+        f'<div class="md-tactical">'
+        f"{_tactical_block_html(match.home, coach_name(match.home), home_formation)}"
+        f'<div class="md-tactical-vs">VS</div>'
+        f"{_tactical_block_html(match.away, coach_name(match.away), away_formation)}"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def _tactical_block_html(club: str, coach: str | None, formation: str) -> str:
+    color = primary_color(club)
+    coach_html = f'<div class="md-tactical-coach">👤 {coach}</div>' if coach else ""
+    return (
+        f'<div class="md-tactical-block">'
+        f'<div class="md-tactical-team" style="color:{color};">{club}</div>'
+        f"{coach_html}"
+        f'<div class="md-tactical-formation" style="background:{color}33;">{formation}</div>'
+        f"</div>"
+    )
+
+
+def _render_bench_chips(match: Match, events: MatchEvents) -> None:
+    """Aperçu compact du banc (nom + note) juste sous le terrain, par équipe
+    -- pour un coup d'œil rapide sans avoir à dérouler les compositions
+    complètes (voir `_render_compositions`, repliées par défaut)."""
+    home_subs = [s for s in events.home_lineup if not s.started]
+    away_subs = [s for s in events.away_lineup if not s.started]
+    if not home_subs and not away_subs:
+        return
+    st.markdown(
+        f'<div class="md-bench">'
+        f'<div class="md-bench-title">🪑 Banc de touche</div>'
+        f'<div class="md-bench-row">'
+        f'{_bench_team_html(match.home, home_subs)}'
+        f'{_bench_team_html(match.away, away_subs)}'
+        f"</div></div>",
+        unsafe_allow_html=True,
+    )
+
+
+def _bench_team_html(club: str, subs: list[PlayerMatchStat]) -> str:
+    chips = "".join(
+        f'<span class="md-bench-chip">{_short_name(s.player_name)} '
+        f'<span class="md-rating-pill md-rating-{_rating_tier(s.rating)}" style="position:static;">{s.rating:.1f}</span>'
+        f"</span>"
+        for s in subs
+    )
+    return f'<div class="md-bench-team"><div class="md-bench-team-label">{club}</div><div class="md-bench-chips">{chips}</div></div>'
+
+
+def _render_compositions(match: Match, events: MatchEvents, home_formation: str, away_formation: str) -> None:
+    with st.expander("📋 Voir les compositions détaillées et statistiques", expanded=False):
         st.caption("Clique sur un joueur pour voir sa fiche (poste, âge, nationalité, note...).")
+        sub_on_minute = {(sub.club_name, sub.player_on): sub.minute for sub in events.substitutions}
         col_home, col_away = st.columns(2)
         with col_home:
-            st.subheader(f"{match.home}{_coach_suffix(home_coach)} — {home_formation}")
-            _render_clickable_lineup(events.home_lineup, key=f"lineup_home_{match.home}_{match.away}")
+            st.subheader(f"{match.home}{_coach_suffix(coach_name(match.home))} — {home_formation}")
+            _render_squad_cards(events.home_lineup, sub_on_minute, key_prefix=f"home_{match.home}_{match.away}")
         with col_away:
-            st.subheader(f"{match.away}{_coach_suffix(away_coach)} — {away_formation}")
-            _render_clickable_lineup(events.away_lineup, key=f"lineup_away_{match.home}_{match.away}")
+            st.subheader(f"{match.away}{_coach_suffix(coach_name(match.away))} — {away_formation}")
+            _render_squad_cards(events.away_lineup, sub_on_minute, key_prefix=f"away_{match.home}_{match.away}")
+
+
+def _render_squad_cards(
+    stats: list[PlayerMatchStat], sub_on_minute: dict[tuple[str, str], int], *, key_prefix: str
+) -> None:
+    starters = [s for s in stats if s.started]
+    subs = [s for s in stats if not s.started]
+
+    st.markdown('<div class="md-squad-title">Titulaires</div>', unsafe_allow_html=True)
+    selected = _render_player_card_grid(starters, sub_on_minute, key_prefix=f"{key_prefix}_start")
+    if selected is not None:
+        _render_player_card(selected)
+
+    if subs:
+        st.markdown('<div class="md-squad-title">Remplaçants</div>', unsafe_allow_html=True)
+        selected = _render_player_card_grid(subs, sub_on_minute, key_prefix=f"{key_prefix}_sub")
+        if selected is not None:
+            _render_player_card(selected)
+
+
+def _render_player_card_grid(
+    stats: list[PlayerMatchStat], sub_on_minute: dict[tuple[str, str], int], *, key_prefix: str
+) -> PlayerMatchStat | None:
+    if not stats:
+        return None
+    selected_key = f"md_selected_{key_prefix}"
+    with st.container(key=f"md_grid_{key_prefix}"):
+        for i, stat in enumerate(stats):
+            with st.container(key=f"md_card_{key_prefix}_{i}"):
+                minute_on = sub_on_minute.get((stat.club_name, stat.player_name))
+                st.markdown(_player_card_html(stat, minute_on), unsafe_allow_html=True)
+                if st.button("", key=f"md_cardbtn_{key_prefix}_{i}"):
+                    st.session_state[selected_key] = i
+                    st.rerun()
+    selected_idx = st.session_state.get(selected_key)
+    if isinstance(selected_idx, int) and 0 <= selected_idx < len(stats):
+        return stats[selected_idx]
+    return None
+
+
+def _player_card_html(stat: PlayerMatchStat, minute_on: int | None) -> str:
+    badges = _player_badges(stat, None)
+    badges_html = f'<div class="md-card-badges">{badges}</div>' if badges else ""
+    entered_html = f'<div class="md-card-entered">Entré à la {minute_on}\'</div>' if minute_on is not None else ""
+    return (
+        f'<div class="md-player-card">'
+        f'<div class="md-card-name">{stat.player_name}</div>'
+        f'<div class="md-card-poste">{stat.poste}</div>'
+        f'<div class="md-rating-pill md-rating-{_rating_tier(stat.rating)}">{stat.rating:.1f}</div>'
+        f"{badges_html}{entered_html}"
+        f"</div>"
+    )
 
 
 # --- Vue "stade" (terrain + fil du match) ---------------------------------
@@ -897,10 +1283,14 @@ def render_match_detail_screen(match: Match) -> None:
 # Terrain rendu à l'HORIZONTALE (domicile à gauche, attaque vers la droite ;
 # extérieur à droite, attaque vers la gauche). `pitch_layout.place_starting_xi`
 # calcule des coordonnées pensées pour un terrain VERTICAL (x = latéral,
-# y = profondeur du but vers le milieu) -- plutôt que dupliquer cette logique
-# de placement par poste, on permute simplement les axes à l'affichage
-# (CSS left = y, top = x), ce qui fait pivoter le rendu de 90° sans toucher
-# au calcul (voir `_player_token_html`).
+# y = profondeur du but vers le milieu, conçu pour une vue "derrière le but")
+# -- plutôt que dupliquer cette logique de placement par poste, on permute
+# les axes à l'affichage (CSS left = y, top = 100 - x) pour obtenir une vue
+# "ligne de touche" cohérente avec les conventions d'affichage habituelles
+# (FotMob, SofaScore...) : une équipe qui attaque vers la DROITE a son côté
+# droit (RB, ailier droit...) en BAS de l'écran et son côté gauche en HAUT --
+# le symétrique de `x` brut, pas `x` lui-même, sans quoi les latéraux/ailiers
+# se retrouvent inversés (voir `_player_token_html`).
 _MATCH_DETAIL_STYLE = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=Manrope:wght@400;500;600;700&display=swap');
@@ -963,7 +1353,7 @@ div[class*="st-key-md_back"] button:hover {
 .md-pitch {
     position: relative;
     width: 100%;
-    max-width: 800px;
+    max-width: 900px;
     aspect-ratio: 8 / 5;
     border-radius: 12px;
     border: 2px solid rgba(255,255,255,0.4);
@@ -1019,6 +1409,30 @@ div[class*="st-key-md_back"] button:hover {
     white-space: nowrap; text-shadow: 0 1px 2px rgba(0,0,0,0.85);
 }
 
+.md-bench {
+    margin-top: 0.7rem; padding: 0.7rem 0.9rem;
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+}
+.md-bench-title {
+    font-family: "Manrope", sans-serif; font-weight: 700; font-size: 12px;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: rgba(230,230,235,0.6); margin-bottom: 0.5rem;
+}
+.md-bench-row { display: flex; gap: 1.2rem; flex-wrap: wrap; }
+.md-bench-team { flex: 1; min-width: 220px; }
+.md-bench-team-label {
+    font-family: "Manrope", sans-serif; font-weight: 700; font-size: 12px;
+    color: rgba(230,230,235,0.75); margin-bottom: 0.35rem;
+}
+.md-bench-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.md-bench-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px; padding: 3px 10px 3px 12px;
+    font-family: "Manrope", sans-serif; font-size: 12px; color: #e5e7eb;
+}
+
 .md-timeline-card {
     background: rgba(20,20,30,0.9);
     border: 1px solid rgba(255,255,255,0.1);
@@ -1030,29 +1444,152 @@ div[class*="st-key-md_back"] button:hover {
     font-family: "Manrope", sans-serif; font-weight: 700; font-size: 16px;
     color: #fff; margin-bottom: 0.8rem;
 }
-.md-timeline-list { max-height: 600px; overflow-y: auto; padding-right: 6px; }
-.md-timeline-list::-webkit-scrollbar { width: 6px; }
-.md-timeline-list::-webkit-scrollbar-track { background: transparent; }
-.md-timeline-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 3px; }
-.md-timeline-row {
-    display: flex; gap: 10px; align-items: flex-start;
-    padding-bottom: 12px; margin-bottom: 12px;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-    font-family: "Manrope", sans-serif; font-size: 13px; color: #e5e7eb;
+.md-timeline-list { max-height: 500px; overflow-y: auto; padding-right: 6px; }
+.md-timeline-list::-webkit-scrollbar { width: 4px; }
+.md-timeline-list::-webkit-scrollbar-track { background: #374151; border-radius: 2px; }
+.md-timeline-list::-webkit-scrollbar-thumb { background: #6b7280; border-radius: 2px; }
+/* Chronologie verticale : une fine ligne (1px) traverse tous les
+   événements, chacun étant un "nœud" coloré posé sur cette ligne -- minute
+   à gauche, nœud au centre, description à droite (voir `match-timeline` /
+   `timeline-event` dans `_render_match_timeline`). */
+.match-timeline { position: relative; }
+.match-timeline::before {
+    content: ""; position: absolute;
+    left: 62px; top: 4px; bottom: 4px; width: 1px;
+    background: rgba(255,255,255,0.14);
 }
-.md-timeline-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
-.md-minute-badge {
-    flex: 0 0 auto; min-width: 32px; height: 22px; padding: 0 4px;
-    border-radius: 11px; display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 11px; color: #0a0e1a;
+.timeline-event {
+    display: grid; grid-template-columns: 40px 24px 1fr;
+    column-gap: 10px; align-items: start;
+    margin-bottom: 14px; font-family: "Manrope", sans-serif;
 }
-.md-minute-badge--goal { background: #22c55e; }
-.md-minute-badge--card { background: #eab308; }
-.md-minute-badge--sub { background: #3b82f6; }
-.md-minute-badge--other { background: #9ca3af; }
+.timeline-event:last-child { margin-bottom: 0; }
+.timeline-minute {
+    text-align: right; font-weight: 700; font-size: 12px;
+    color: #e5e7eb; padding-top: 3px;
+}
+.timeline-node {
+    position: relative; z-index: 1;
+    width: 22px; height: 22px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+}
+.timeline-node--goal { background: #10b981; }
+.timeline-node--card_yellow { background: #fbbf24; }
+.timeline-node--card_red { background: #ef4444; }
+.timeline-node--sub { background: #3b82f6; }
+.timeline-node--other { background: #9ca3af; }
+.timeline-desc { font-size: 13px; color: #e5e7eb; padding-top: 3px; }
+.md-sub-line2 { color: rgba(230,230,235,0.55); font-size: 11.5px; margin-top: 1px; }
+.md-halftime-sep {
+    display: grid; grid-template-columns: 40px 24px 1fr; column-gap: 10px;
+    margin: 2px 0 16px; color: rgba(230,230,235,0.5);
+}
+.md-halftime-sep span {
+    grid-column: 2 / 4;
+    display: flex; align-items: center; gap: 10px;
+    font-family: "Manrope", sans-serif; font-size: 10px; font-style: italic;
+    letter-spacing: 0.08em; white-space: nowrap;
+}
+.md-halftime-sep span::before, .md-halftime-sep span::after {
+    content: ""; flex: 1; height: 1px; background: rgba(255,255,255,0.12);
+}
+
+.md-tactical {
+    display: flex; align-items: center; justify-content: center; gap: 1.2rem;
+    margin: 0 0 0.9rem;
+}
+.md-tactical-block { flex: 1; text-align: center; }
+.md-tactical-team {
+    font-family: "Manrope", sans-serif; font-weight: 700; font-size: 16px;
+}
+.md-tactical-coach {
+    font-family: "Manrope", sans-serif; font-size: 13px;
+    color: rgba(230,230,235,0.72); margin-top: 0.2rem;
+}
+.md-tactical-formation {
+    display: inline-block; margin-top: 0.5rem; padding: 0.25rem 0.8rem;
+    border-radius: 8px; font-family: "Big Shoulders Display", sans-serif;
+    font-weight: 800; font-size: 18px; color: #fff;
+}
+.md-tactical-vs {
+    font-family: "Big Shoulders Display", sans-serif; font-weight: 800;
+    font-size: 20px; color: rgba(230,230,235,0.5); padding: 0 0.2rem;
+}
+
+.md-squad-title {
+    font-family: "Manrope", sans-serif; font-weight: 700; font-size: 12px;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: rgba(230,230,235,0.6); margin: 1rem 0 0.6rem;
+}
+div[class*="st-key-md_grid_"] {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.7rem;
+}
+div[class*="st-key-md_card_"] { position: relative; }
+div[class*="st-key-md_cardbtn_"] { position: static !important; width: 100% !important; }
+div[class*="st-key-md_cardbtn_"] button {
+    position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important;
+    opacity: 0 !important; z-index: 3; cursor: pointer; border-radius: 10px;
+}
+.md-player-card {
+    position: relative;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 0.6rem 0.7rem;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+div[class*="st-key-md_card_"]:hover .md-player-card {
+    background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2);
+}
+.md-card-name {
+    font-family: "Manrope", sans-serif; font-weight: 700; font-size: 14px;
+    color: #fff; padding-right: 32px; line-height: 1.25;
+}
+.md-card-poste {
+    font-family: "Manrope", sans-serif; font-size: 11px;
+    color: rgba(230,230,235,0.6); margin-top: 2px;
+}
+.md-rating-pill {
+    position: absolute; top: 0.6rem; right: 0.6rem;
+    min-width: 26px; height: 26px; padding: 0 4px; border-radius: 13px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: "Manrope", sans-serif; font-weight: 700; font-size: 11px; color: #fff;
+}
+.md-card-badges { margin-top: 0.4rem; font-size: 13px; }
+.md-card-entered {
+    margin-top: 0.3rem; font-size: 11px; font-style: italic;
+    color: rgba(230,230,235,0.55);
+}
+
+div[class*="st-key-md_prev"] button, div[class*="st-key-md_next"] button {
+    background: transparent !important;
+    border: 1px solid rgba(255,255,255,0.35) !important;
+    color: #F4F6F9 !important;
+    border-radius: 8px !important;
+    font-family: "Manrope", sans-serif;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+div[class*="st-key-md_prev"] button:hover, div[class*="st-key-md_next"] button:hover {
+    background: rgba(255,255,255,0.10) !important; border-color: rgba(255,255,255,0.55) !important;
+}
+div[class*="st-key-md_prev"] button:disabled, div[class*="st-key-md_next"] button:disabled {
+    opacity: 0.3 !important;
+}
 
 @media (max-width: 1200px) {
     [data-testid="stHorizontalBlock"] { flex-direction: column !important; }
+    div[class*="st-key-md_grid_"] { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 480px) {
+    .md-score-line { font-size: 1.4rem; }
+    .md-token { width: 56px; }
+    .md-jersey-circle, .md-jersey-wrap { width: 32px; height: 32px; }
+    .md-name { font-size: 10px; }
+    .md-badges { font-size: 10px; }
+    div[class*="st-key-md_grid_"] { grid-template-columns: 1fr; }
+    div[class*="st-key-md_prev"], div[class*="st-key-md_next"] { display: none; }
 }
 </style>
 """
@@ -1074,7 +1611,7 @@ def _render_scoreboard(match: Match) -> None:
     )
 
 
-def _render_pitch(events: MatchEvents) -> None:
+def _render_pitch(match: Match, events: MatchEvents) -> None:
     home_starters = [s for s in events.home_lineup if s.started]
     away_starters = [s for s in events.away_lineup if s.started]
     # L'équipe à domicile "en haut" du repère vertical d'origine devient,
@@ -1084,8 +1621,18 @@ def _render_pitch(events: MatchEvents) -> None:
         away_starters, attacking_up=True
     )
 
+    # Couleurs par équipe (pas juste par club) : deux clubs aux couleurs
+    # primaires proches (ex. Monaco/Brest, rouge sur rouge) doivent quand
+    # même rester visuellement distincts sur le terrain -- voir
+    # `kits.match_kit_colors` (bascule sur la couleur secondaire façon
+    # maillot extérieur en cas de clash).
+    (home_fill, home_border), (away_fill, away_border) = match_kit_colors(match.home, match.away)
+    colors_by_club = {match.home: (home_fill, home_border), match.away: (away_fill, away_border)}
+
     subbed_off_minute = {(sub.club_name, sub.player_off): sub.minute for sub in events.substitutions}
-    tokens_html = "".join(_player_token_html(p, subbed_off_minute) for p in placed)
+    tokens_html = "".join(
+        _player_token_html(p, subbed_off_minute, *colors_by_club[p.stat.club_name]) for p in placed
+    )
 
     st.markdown(
         f"""
@@ -1103,19 +1650,21 @@ def _render_pitch(events: MatchEvents) -> None:
     )
 
 
-def _player_token_html(placed: PlacedPlayer, subbed_off_minute: dict[tuple[str, str], int]) -> str:
+def _player_token_html(
+    placed: PlacedPlayer, subbed_off_minute: dict[tuple[str, str], int], fill: str, border: str
+) -> str:
     stat = placed.stat
     minute_off = subbed_off_minute.get((stat.club_name, stat.player_name))
     badges = _player_badges(stat, minute_off)
     badges_html = f'<div class="md-badges">{badges}</div>' if badges else ""
-    bg = primary_color(stat.club_name)
-    fg = _contrast_text_color(bg)
-    # left = y, top = x : voir la note en tête de section sur la permutation d'axes.
+    fg = _contrast_text_color(fill)
+    # left = y, top = 100 - x : voir la note en tête de section sur la permutation d'axes.
     return (
-        f'<div class="md-token" style="left:{placed.y:.1f}%; top:{placed.x:.1f}%;">'
+        f'<div class="md-token" style="left:{placed.y:.1f}%; top:{100 - placed.x:.1f}%;">'
         f"{badges_html}"
         f'<div class="md-jersey-wrap">'
-        f'<div class="md-jersey-circle" style="background:{bg}; color:{fg};">{_initials(stat.player_name)}</div>'
+        f'<div class="md-jersey-circle" style="background:{fill}; color:{fg}; border-color:{border};">'
+        f"{_initials(stat.player_name)}</div>"
         f'<div class="md-rating-badge md-rating-{_rating_tier(stat.rating)}">{stat.rating:.1f}</div>'
         f"</div>"
         f'<div class="md-name">{_short_name(stat.player_name)}</div>'
@@ -1171,27 +1720,51 @@ def _short_name(full_name: str) -> str:
     return f"{parts[0][0]}. {parts[-1]}"
 
 
+# Icône du nœud de chronologie par nature d'événement (voir
+# `.timeline-node--*` pour la couleur associée à chaque valeur).
+_TIMELINE_NODE_ICON = {
+    "goal": "⚽",
+    "card_yellow": "🟨",
+    "card_red": "🟥",
+    "sub": "🔄",
+    "other": "•",
+}
+
+
 def _render_match_timeline(match: Match, events: MatchEvents) -> None:
     entries = _match_timeline_entries(match, events)
     if entries:
-        rows = "".join(
-            f'<div class="md-timeline-row">'
-            f'<div class="md-minute-badge md-minute-badge--{kind}">{minute}\'</div>'
-            f"<div>{html}</div></div>"
-            for minute, kind, html in entries
-        )
+        rows_parts = []
+        halftime_shown = False
+        for minute, kind, html in entries:
+            if not halftime_shown and minute > 45:
+                rows_parts.append('<div class="md-halftime-sep"><span>MI-TEMPS</span></div>')
+                halftime_shown = True
+            icon = _TIMELINE_NODE_ICON.get(kind, "•")
+            rows_parts.append(
+                f'<div class="timeline-event">'
+                f'<div class="timeline-minute">{minute}\'</div>'
+                f'<div class="timeline-node timeline-node--{kind}">{icon}</div>'
+                f'<div class="timeline-desc">{html}</div></div>'
+            )
+        rows = "".join(rows_parts)
     else:
         rows = '<p style="color: rgba(230,230,235,0.6); font-size: 13px; margin: 0;">Aucun fait de jeu à signaler.</p>'
     st.markdown(
         f'<div class="md-timeline-card">'
         f'<div class="md-timeline-title">📋 Fil du match</div>'
-        f'<div class="md-timeline-list">{rows}</div>'
+        f'<div class="md-timeline-list"><div class="match-timeline">{rows}</div></div>'
         f"</div>",
         unsafe_allow_html=True,
     )
 
 
 def _match_timeline_entries(match: Match, events: MatchEvents) -> list[tuple[int, str, str]]:
+    """(minute, kind, html) trié par minute -- `kind` pilote la couleur/icône
+    du nœud de chronologie (voir `_TIMELINE_NODE_ICON`, `.timeline-node--*`) :
+    "goal", "card_yellow", "card_red", "sub" ou "other". La minute n'est
+    volontairement pas répétée dans `html` : elle est déjà affichée à gauche
+    de la ligne de temps (voir `_render_match_timeline`)."""
     entries: list[tuple[int, str, str]] = []
 
     running_score = {match.home: 0, match.away: 0}
@@ -1199,27 +1772,25 @@ def _match_timeline_entries(match: Match, events: MatchEvents) -> list[tuple[int
         running_score[goal.club_name] = running_score.get(goal.club_name, 0) + 1
         score = f"{running_score.get(match.home, 0)}-{running_score.get(match.away, 0)}"
         penalty_text = " (penalty)" if goal.penalty else ""
-        assist_text = f" — passe déc. : {goal.assist}" if goal.assist else ""
+        # Le club n'est volontairement pas répété ici (deja lisible via
+        # l'évolution du score) ; le passeur reste accessible en survol
+        # plutôt que d'alourdir la ligne.
+        title_attr = f' title="Passe déc. : {goal.assist}"' if goal.assist else ""
         entries.append(
-            (
-                goal.minute,
-                "goal",
-                f"⚽ <b>{goal.scorer}</b> ({goal.club_name}){penalty_text} · {score}{assist_text}",
-            )
+            (goal.minute, "goal", f"<span{title_attr}><b>{goal.scorer}</b>{penalty_text} — {score}</span>")
         )
 
-    card_icons = {"direct": "🟥", "second_yellow": "🟨🟥", "yellow": "🟨"}
+    card_kind = {"direct": "card_red", "second_yellow": "card_red", "yellow": "card_yellow"}
     for card in events.cards:
-        entries.append(
-            (card.minute, "card", f"{card_icons[card.card_type]} <b>{card.player}</b> ({card.club_name})")
-        )
+        entries.append((card.minute, card_kind[card.card_type], f"<b>{card.player}</b>"))
 
     for sub in events.substitutions:
         entries.append(
             (
                 sub.minute,
                 "sub",
-                f"🔄 {sub.club_name} : <b>{sub.player_on}</b> entre à la place de {sub.player_off}",
+                f'<div class="md-sub-line1"><b>{sub.player_on}</b> ↻ {sub.player_off}</div>'
+                f'<div class="md-sub-line2">{sub.club_name}</div>',
             )
         )
 
@@ -1231,38 +1802,6 @@ def _match_timeline_entries(match: Match, events: MatchEvents) -> list[tuple[int
 
     entries.sort(key=lambda e: e[0])
     return entries
-
-
-def _render_clickable_lineup(stats: list[PlayerMatchStat], *, key: str) -> None:
-    """Tableau de compo dont chaque ligne (chaque joueur) est cliquable :
-    sélectionner une ligne affiche la fiche du joueur juste en dessous (voir
-    `_render_player_card`)."""
-    event = st.dataframe(
-        _lineup_rows(stats),
-        hide_index=True,
-        width="stretch",
-        on_select="rerun",
-        selection_mode="single-row",
-        key=key,
-    )
-    selected_rows = event.selection.rows if event is not None else []
-    if selected_rows:
-        _render_player_card(stats[selected_rows[0]])
-
-
-def _lineup_rows(stats: list[PlayerMatchStat]) -> list[dict]:
-    return [
-        {
-            "Joueur": s.player_name,
-            "Poste": s.poste,
-            "Statut": "Titulaire" if s.started else "Entrant",
-            "Buts": s.goals,
-            "Passes D.": s.assists,
-            "Carton": _card_label(s),
-            "Note /10": s.rating,
-        }
-        for s in stats
-    ]
 
 
 def _card_label(stat: PlayerMatchStat) -> str:
@@ -1306,17 +1845,6 @@ def _render_player_card(stat: PlayerMatchStat) -> None:
 # cohérent avec l'ordre tactique habituel plutôt que l'ordre d'apparition
 # dans le fichier source.
 _POSTE_DISPLAY_ORDER = ["GK", "DC", "LB", "RB", "MDC", "MC", "MOC", "AG", "AD", "SA", "BU", "ATT"]
-
-
-def _render_club_link(club_name: str, *, key: str) -> None:
-    """Bouton discret (style lien) qui ouvre l'effectif du club -- même
-    principe que les scores cliquables de `_render_match_rows`, mais stocke
-    le NOM du club plutôt que l'objet : un nom de club peut apparaître dans
-    des contextes très divers (classement, buteurs, compo...), alors qu'un
-    seul et même `Club` fait référence pour tous (voir `_find_club`)."""
-    if st.button(club_name, key=key, type="tertiary"):
-        st.session_state[_OPEN_CLUB_KEY] = club_name
-        st.rerun()
 
 
 def _find_club(club_name: str) -> Club | None:
@@ -1390,6 +1918,49 @@ def _render_player_profile_card(player: Player) -> None:
 
     if player.categorie:
         st.write(f"**Style de jeu :** {player.categorie.replace('_', ' ')}")
+
+
+_STANDINGS_HEADER = ["Rang", "Club", "J", "G", "N", "P", "BP", "BC", "Diff", "Pts"]
+
+
+def _render_standings_table(table: pd.DataFrame, *, key: str) -> None:
+    """Classement (voir `standings.compute_standings`, colonnes Rang/Club/J/
+    G/N/P/BP/BC/Diff/Pts) en HTML natif -- pas `st.dataframe` : ses cellules
+    sont peintes sur un <canvas> (glide-data-grid), impossible d'y injecter
+    les icônes ✔/⚫/✖ ou l'alternance de fond ligne par ligne demandées.
+    Chaque ligne reste cliquable (bouton invisible superposé, même principe
+    que `_render_team_cell`) pour ouvrir l'effectif du club."""
+    st.markdown(_SEASON_STYLE, unsafe_allow_html=True)
+    st.markdown('<div class="ms-standings-title">🏆 Classement</div>', unsafe_allow_html=True)
+
+    query = st.text_input("🔍 Filtrer par équipe", key=f"ms_filter_{key}", placeholder="Nom du club...")
+    filtered = table[table["Club"].str.contains(query, case=False, na=False)] if query else table
+
+    head = "".join(f"<span>{col}</span>" for col in _STANDINGS_HEADER)
+    with st.container(key="ms_standings_wrap"):
+        st.markdown(f'<div class="ms-standings-head">{head}</div>', unsafe_allow_html=True)
+        if filtered.empty:
+            st.markdown('<p style="color:#888888; padding: 10px 14px;">Aucun club ne correspond.</p>', unsafe_allow_html=True)
+        for i, (rang, row) in enumerate(filtered.iterrows()):
+            row_class = "ms-row-even" if i % 2 == 0 else "ms-row-odd"
+            badge = f'<span class="ms-team-badge" style="background:{primary_color(row["Club"])};">{_club_initials(row["Club"])}</span>'
+            cells = (
+                f'<span class="ms-rank">{rang}</span>'
+                f'<span class="ms-club-cell">{badge}{row["Club"]}</span>'
+                f'<span>{row["J"]}</span>'
+                f'<span class="ms-w"><span class="ms-icon">✔</span> {row["G"]}</span>'
+                f'<span class="ms-d"><span class="ms-icon">⚫</span> {row["N"]}</span>'
+                f'<span class="ms-l"><span class="ms-icon">✖</span> {row["P"]}</span>'
+                f'<span>{row["BP"]}</span>'
+                f'<span>{row["BC"]}</span>'
+                f'<span>{row["Diff"]:+d}</span>'
+                f'<span class="ms-pts">{row["Pts"]}</span>'
+            )
+            with st.container(key=f"ms_row_{key}_{i}"):
+                st.markdown(f'<div class="ms-standings-row {row_class}">{cells}</div>', unsafe_allow_html=True)
+                if st.button("", key=f"ms_rowbtn_{key}_{i}"):
+                    st.session_state[_OPEN_CLUB_KEY] = row["Club"]
+                    st.rerun()
 
 
 def _render_clickable_club_table(table: pd.DataFrame, *, key: str, hide_index: bool = False) -> None:

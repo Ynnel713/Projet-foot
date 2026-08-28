@@ -261,6 +261,41 @@ def primary_color(club_name: str) -> str:
     return CLUB_KIT.get(club_name, _DEFAULT_KIT).primary
 
 
+def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
+    h = hex_color.lstrip("#")
+    return int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+
+
+def _color_distance(hex_a: str, hex_b: str) -> float:
+    ra, ga, ba = _hex_to_rgb(hex_a)
+    rb, gb, bb = _hex_to_rgb(hex_b)
+    return ((ra - rb) ** 2 + (ga - gb) ** 2 + (ba - bb) ** 2) ** 0.5
+
+# Distance euclidienne RGB en dessous de laquelle deux couleurs primaires
+# sont jugées trop proches pour se distinguer sur un jeton de 40px (ex. le
+# rouge d'AS Monaco #e2001a et celui de Stade Brestois 29 #da291c).
+_CLASH_THRESHOLD = 90.0
+
+
+def match_kit_colors(home_club: str, away_club: str) -> tuple[tuple[str, str], tuple[str, str]]:
+    """(fond, bordure) du jeton joueur pour chaque équipe d'un match --
+    ((fond_domicile, bordure_domicile), (fond_exterieur, bordure_exterieur)).
+
+    Si les couleurs primaires des deux clubs sont trop proches pour se
+    distinguer sur le terrain (ex. deux maillots rouges), l'équipe
+    extérieure bascule sur sa couleur secondaire -- exactement comme un
+    vrai maillot extérieur change de couleur en cas de clash avec le
+    domicile, plutôt que d'introduire une palette arbitraire déconnectée de
+    l'identité du club."""
+    home = CLUB_KIT.get(home_club, _DEFAULT_KIT)
+    away = CLUB_KIT.get(away_club, _DEFAULT_KIT)
+    if _color_distance(home.primary, away.primary) < _CLASH_THRESHOLD:
+        away_colors = (away.secondary, away.primary)
+    else:
+        away_colors = (away.primary, away.secondary)
+    return (home.primary, home.secondary), away_colors
+
+
 def jersey_svg(club_name: str, *, size: int = 42, badge_id: str = "") -> str:
     """Icône SVG (chaîne autonome) du maillot d'un club, `size` px de côté.
 
