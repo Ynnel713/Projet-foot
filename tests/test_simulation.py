@@ -2,7 +2,7 @@ import pytest
 
 from ligue1sim.clubs import Club
 from ligue1sim.events import AvailabilityTracker
-from ligue1sim.lineup import select_best_xi
+from ligue1sim.lineup import bench, select_best_xi
 from ligue1sim.players import Player
 from ligue1sim.schedule import Journee, Match
 from ligue1sim.simulation import (
@@ -11,7 +11,9 @@ from ligue1sim.simulation import (
     FormTracker,
     LeagueContext,
     _attack_strength,
+    _bench_modifier,
     _defense_strength,
+    _draw_score,
     _expected_goals,
     _form_modifier,
     _mid_modifier,
@@ -34,16 +36,16 @@ def _player(poste: str, note: float, name: str) -> Player:
     )
 
 
-def _squad(club_name: str) -> list[Player]:
-    squad = [_player("GK", 70.0, f"{club_name}_gk{i}") for i in range(2)]
-    squad += [_player("DC", 70.0, f"{club_name}_cb{i}") for i in range(4)]
-    squad += [_player("LB", 70.0, f"{club_name}_lb{i}") for i in range(2)]
-    squad += [_player("RB", 70.0, f"{club_name}_rb{i}") for i in range(2)]
-    squad += [_player("MC", 70.0, f"{club_name}_cm{i}") for i in range(4)]
-    squad += [_player("MOC", 70.0, f"{club_name}_am{i}") for i in range(2)]
-    squad += [_player("AG", 70.0, f"{club_name}_lw{i}") for i in range(2)]
-    squad += [_player("AD", 70.0, f"{club_name}_rw{i}") for i in range(2)]
-    squad += [_player("BU", 70.0, f"{club_name}_cf{i}") for i in range(4)]
+def _squad(club_name: str, note: float = 70.0) -> list[Player]:
+    squad = [_player("GK", note, f"{club_name}_gk{i}") for i in range(2)]
+    squad += [_player("DC", note, f"{club_name}_cb{i}") for i in range(4)]
+    squad += [_player("LB", note, f"{club_name}_lb{i}") for i in range(2)]
+    squad += [_player("RB", note, f"{club_name}_rb{i}") for i in range(2)]
+    squad += [_player("MC", note, f"{club_name}_cm{i}") for i in range(4)]
+    squad += [_player("MOC", note, f"{club_name}_am{i}") for i in range(2)]
+    squad += [_player("AG", note, f"{club_name}_lw{i}") for i in range(2)]
+    squad += [_player("AD", note, f"{club_name}_rw{i}") for i in range(2)]
+    squad += [_player("BU", note, f"{club_name}_cf{i}") for i in range(4)]
     return squad
 
 
@@ -272,6 +274,94 @@ def test_simulate_match_applies_and_updates_form_when_provided():
     # Le tracker doit avoir été rempli pour les deux clubs après le match.
     assert "Home FC" in form._forms
     assert "Away FC" in form._forms
+
+
+class TestBenchModifier:
+    """Modulateur de profondeur de banc (voir BENCH_INFLUENCE/
+    _BENCH_MODIFIER_BOUNDS en tête de simulation.py)."""
+
+    def _context(self, avg_rating: float = 70.0) -> LeagueContext:
+        return LeagueContext(avg_rating=avg_rating, avg_attack=70.0, avg_defense=70.0)
+
+    def test_bench_above_league_average_gives_a_bonus(self):
+        club = Club(name="Test FC", players=_squad("home") + [_player("MC", 90.0, f"bench{i}") for i in range(7)])
+        lineup = select_best_xi(club, "4-4-2")
+        reserves = bench(club, lineup)
+
+        assert _bench_modifier(reserves, self._context(avg_rating=70.0)) > 1.0
+
+    def test_bench_below_league_average_gives_a_penalty(self):
+        club = Club(name="Test FC", players=_squad("home") + [_player("MC", 40.0, f"bench{i}") for i in range(7)])
+        lineup = select_best_xi(club, "4-4-2")
+        reserves = bench(club, lineup)
+
+        assert _bench_modifier(reserves, self._context(avg_rating=70.0)) < 1.0
+
+    def test_empty_bench_is_neutral(self):
+        assert _bench_modifier([], self._context()) == 1.0
+
+    def test_modifier_never_exceeds_its_bounds(self):
+        huge_reserves = [_player("MC", 100.0, f"bench{i}") for i in range(7)]
+        tiny_reserves = [_player("MC", 0.1, f"bench{i}") for i in range(7)]
+        assert _bench_modifier(huge_reserves, self._context(avg_rating=1.0)) == pytest.approx(1.06)
+        assert _bench_modifier(tiny_reserves, self._context(avg_rating=100.0)) == pytest.approx(0.94)
+
+
+class TestBigMatchBonus:
+    """Bonus de rivalité entre clubs du top tiers de la ligue (voir
+    BIG_MATCH_BONUS/_BIG_MATCH_FRACTION et LeagueContext.big_match_clubs)."""
+
+    def test_from_clubs_flags_the_top_third_of_clubs_by_rating(self):
+        ratings = [90.0, 85.0, 70.0, 65.0, 60.0, 55.0]  # 6 clubs -> top 2 attendus (round(6/3))
+        clubs = [Club(name=f"Club{i}", players=_squad(f"c{i}", note=r)) for i, r in enumerate(ratings)]
+
+        context = LeagueContext.from_clubs(clubs)
+
+        assert context.big_match_clubs == {"Club0", "Club1"}
+
+    def test_directly_constructed_context_has_no_big_match_clubs(self):
+        context = LeagueContext(avg_rating=70.0, avg_attack=70.0, avg_defense=70.0)
+        assert context.big_match_clubs == frozenset()
+
+    def test_draw_score_raises_both_lambdas_when_both_clubs_are_big_match_clubs(self):
+        home = Club(name="Home FC", players=_squad("home"))
+        away = Club(name="Away FC", players=_squad("away"))
+        home_lineup = select_best_xi(home, "4-4-2")
+        away_lineup = select_best_xi(away, "4-4-2")
+        context_neutral = LeagueContext(avg_rating=70.0, avg_attack=70.0, avg_defense=70.0)
+        context_big_match = LeagueContext(
+            avg_rating=70.0, avg_attack=70.0, avg_defense=70.0, big_match_clubs=frozenset({"Home FC", "Away FC"})
+        )
+
+        _, _, lam_home_neutral, lam_away_neutral = _draw_score(
+            home_lineup, away_lineup, context_neutral, "Home FC", "Away FC", form=None
+        )
+        _, _, lam_home_big, lam_away_big = _draw_score(
+            home_lineup, away_lineup, context_big_match, "Home FC", "Away FC", form=None
+        )
+
+        assert lam_home_big > lam_home_neutral
+        assert lam_away_big > lam_away_neutral
+
+    def test_no_bonus_when_only_one_club_is_a_big_match_club(self):
+        home = Club(name="Home FC", players=_squad("home"))
+        away = Club(name="Away FC", players=_squad("away"))
+        home_lineup = select_best_xi(home, "4-4-2")
+        away_lineup = select_best_xi(away, "4-4-2")
+        context_neutral = LeagueContext(avg_rating=70.0, avg_attack=70.0, avg_defense=70.0)
+        context_one_sided = LeagueContext(
+            avg_rating=70.0, avg_attack=70.0, avg_defense=70.0, big_match_clubs=frozenset({"Home FC"})
+        )
+
+        _, _, lam_home_neutral, lam_away_neutral = _draw_score(
+            home_lineup, away_lineup, context_neutral, "Home FC", "Away FC", form=None
+        )
+        _, _, lam_home_one_sided, lam_away_one_sided = _draw_score(
+            home_lineup, away_lineup, context_one_sided, "Home FC", "Away FC", form=None
+        )
+
+        assert lam_home_one_sided == pytest.approx(lam_home_neutral)
+        assert lam_away_one_sided == pytest.approx(lam_away_neutral)
 
 
 def test_ephemeral_tracker_is_used_when_none_is_passed():

@@ -4,6 +4,15 @@ propres indisponibilités -- pas une réimplémentation séparée des formules)
 et rapporte les indicateurs statistiques utilisés pour valider chaque
 réglage du moteur (voir `simulation.py` pour l'historique de calibrage).
 
+Rapporte à la fois des stats MATCH PAR MATCH et, depuis le calibrage du
+28/08/2026, la distribution du CLASSEMENT DE FIN DE SAISON par club (rang
+moyen, présence en top 3 / dans le trio de relégation) -- le premier
+calibrage (ATTACK_DEFENSE_POWER=1.8) ne vérifiait que les stats
+match-par-match, qui restent quasi identiques à un réglage bien plus élevé
+(2.6) alors que la corrélation force réelle <-> classement final, elle,
+change nettement sur une saison entière. Toujours valider un futur réglage
+sur les DEUX angles, pas seulement le premier.
+
 Usage :
     uv run python scripts/calibrate_engine.py [championnat] [nb_saisons]
 
@@ -35,10 +44,12 @@ def run(championnat: str, n_seasons: int) -> None:
     gap_all: list[float] = []
     champion_points: list[int] = []
     last_points: list[int] = []
+    ranks: dict[str, list[int]] = {c.name: [] for c in clubs}
 
     for _ in range(n_seasons):
         season = Season(championnat, load_clubs(CLUBS_PATH, championnat))
         points = {c.name: 0 for c in season.clubs}
+        goal_diff = {c.name: 0 for c in season.clubs}
         while not season.is_season_over:
             season.simulate_current_journee()
             for match in season.current_journee.matches:
@@ -46,14 +57,23 @@ def run(championnat: str, n_seasons: int) -> None:
                     hg_all.append(match.home_goals)
                     ag_all.append(match.away_goals)
                     gap_all.append(ratings[match.home] - ratings[match.away])
-                    if match.home_goals > match.away_goals:
+                    gd = match.home_goals - match.away_goals
+                    goal_diff[match.home] += gd
+                    goal_diff[match.away] -= gd
+                    if gd > 0:
                         points[match.home] += 3
-                    elif match.home_goals < match.away_goals:
+                    elif gd < 0:
                         points[match.away] += 3
                     else:
                         points[match.home] += 1
                         points[match.away] += 1
             season.next_journee()
+
+        # Classement de fin de saison : points puis différence de buts
+        # (comme en vrai championnat), pour le rang de chaque club.
+        order = sorted(points, key=lambda name: (-points[name], -goal_diff[name]))
+        for rank, name in enumerate(order, start=1):
+            ranks[name].append(rank)
 
         standings = sorted(points.values(), reverse=True)
         champion_points.append(standings[0])
@@ -114,6 +134,20 @@ def run(championnat: str, n_seasons: int) -> None:
         f"Dernier: médiane={np.median(last_points):.0f}   "
         f"Écart 1er-dernier: médiane={np.median(np.array(champion_points) - np.array(last_points)):.0f}"
     )
+
+    print("\n--- Rang de fin de saison par club (trié par note) ---")
+    print("Vérifie que la force réelle d'un club se retrouve dans son classement sur")
+    print("l'ensemble des saisons, pas seulement dans les stats match par match.")
+    nb_clubs = len(clubs)
+    print(f"{'Club':<28s}{'Note':>6s}{'Rang moy.':>10s}{'Top 3':>8s}{'Relég.':>8s}{'(min-max)':>12s}")
+    for name, rating in sorted(ratings.items(), key=lambda kv: -kv[1]):
+        rs = ranks[name]
+        top3 = 100 * sum(1 for r in rs if r <= 3) / len(rs)
+        relegation = 100 * sum(1 for r in rs if r > nb_clubs - 3) / len(rs)
+        print(
+            f"{name:<28s}{rating:6.1f}{np.mean(rs):10.2f}{top3:7.0f}%{relegation:7.0f}%"
+            f"{'(' + str(min(rs)) + '-' + str(max(rs)) + ')':>12s}"
+        )
 
 
 if __name__ == "__main__":
