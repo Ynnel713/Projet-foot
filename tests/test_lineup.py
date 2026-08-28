@@ -303,6 +303,57 @@ class TestSelectBestXiCoherentBricolage:
         assert "close_winger" in names
         assert "far_defender" not in names
 
+    def test_a_much_better_secondary_candidate_wins_the_slot_over_a_weak_primary_match(self):
+        # Cas Barcelone/Hamza Abdelkarim : un très jeune BU (poste principal
+        # exact, mais note faible) ne doit plus systématiquement rafler la
+        # place d'avant-centre. Deux ailiers déclarent BU en poste secondaire
+        # (comme Raphinha/Gordon) : le premier (best_winger) reste à son
+        # poste naturel (AG, où il est imbattable), ce qui libère le second
+        # (backup_winger) pour dépanner en pointe via son poste secondaire,
+        # nettement devant le jeune BU malgré la pénalité de 5%.
+        players = [_player("GK", 70.0, "gk0")]
+        players += [_player("LB", 70.0, "lb0")]
+        players += [_player("RB", 70.0, "rb0")]
+        players += [_player("DC", 70.0, f"cb{i}") for i in range(2)]
+        players += [_player("MDC", 70.0, "dm0")]
+        players += [_player("MC", 70.0, f"cm{i}") for i in range(2)]
+        players += [_player("AD", 70.0, "rw0")]
+        players += [_player("AG", 83.0, "best_winger", poste_secondaire=("BU",))]
+        players += [_player("AG", 80.0, "backup_winger", poste_secondaire=("BU",))]
+        players += [_player("BU", 59.0, "young_striker")]
+        club = Club(name="Test FC", players=players)
+
+        lineup = select_best_xi(club, "4-3-3")
+
+        names = {p.name for p in lineup.players}
+        assert "best_winger" in names
+        assert "backup_winger" in names
+        assert "young_striker" not in names
+
+    def test_primary_match_still_wins_over_a_marginally_better_secondary_candidate(self):
+        # À écart de note faible, le poste principal doit continuer à primer
+        # -- la pénalité (5%) doit rester modeste, pas renverser deux joueurs
+        # de niveau proche. "winger" perd d'abord sa place naturelle d'AG
+        # face à un titulaire mieux noté, puis se présente en BU secondaire
+        # (72 * 0.95 = 68.4) face au titulaire BU (70) : le titulaire l'emporte.
+        players = [_player("GK", 70.0, "gk0")]
+        players += [_player("LB", 70.0, "lb0")]
+        players += [_player("RB", 70.0, "rb0")]
+        players += [_player("DC", 70.0, f"cb{i}") for i in range(2)]
+        players += [_player("MDC", 70.0, "dm0")]
+        players += [_player("MC", 70.0, f"cm{i}") for i in range(2)]
+        players += [_player("AD", 70.0, "rw0")]
+        players += [_player("AG", 85.0, "ag_starter")]
+        players += [_player("AG", 72.0, "winger", poste_secondaire=("BU",))]
+        players += [_player("BU", 70.0, "main_striker")]
+        club = Club(name="Test FC", players=players)
+
+        lineup = select_best_xi(club, "4-3-3")
+
+        names = {p.name for p in lineup.players}
+        assert "main_striker" in names
+        assert "winger" not in names
+
     def test_secondary_poste_lets_a_player_deputize_when_primary_poste_is_too_far(self):
         # Un pur avant-centre est à 2 crans de la défense (bricolage refusé
         # par le poste principal seul -- voir

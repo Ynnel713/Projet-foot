@@ -147,6 +147,18 @@ def _formation_prefix(formation: str) -> str | None:
 # GK/DEF/MID/ATT (dispositif absent de l'onglet "Dispositifs tactiques").
 _MAX_BRICOLAGE_DISTANCE = 1
 
+# Pénalité appliquée à la note d'un joueur quand il n'est considéré pour une
+# place que via un poste secondaire déclaré (pas son poste principal), pour
+# le classement des candidats à cette place dans `_assign_slots`. Un poste
+# secondaire reste une spécialisation moindre qu'un poste principal, donc à
+# écart de note faible le titulaire "naturel" du poste doit continuer à
+# primer -- mais l'écart doit rester modeste pour qu'un joueur nettement
+# meilleur en secondaire (ex. un ailier confirmé) l'emporte sur un jeune
+# joueur médiocre dont c'est le poste principal exact. 5% : suffisant pour
+# trancher un écart de plusieurs points de note, sans jamais renverser deux
+# joueurs de niveau proche.
+_SECONDARY_POSTE_PENALTY = 0.95
+
 
 def select_best_xi(club: Club, formation: str, unavailable: frozenset[str] = frozenset()) -> Lineup:
     """Meilleure compo pour `club` dans le dispositif `formation`, en excluant
@@ -154,16 +166,19 @@ def select_best_xi(club: Club, formation: str, unavailable: frozenset[str] = fro
 
     Si `formation` est un des dispositifs de l'onglet "Dispositifs
     tactiques", chacune des 11 places est pourvue par le meilleur joueur
-    disponible dont le poste principal correspond exactement à ce qu'exige
-    la place (ex. "RB" pour un latéral droit, "MC ou MDC" pour une place de
-    milieu flexible) -- places les plus strictes (un seul poste accepté)
-    pourvues en premier. Si personne au poste principal ne convient, on
-    retombe sur un joueur dont un poste secondaire déclaré correspond (voir
-    `Player.poste_secondaire`). En tout dernier recours, si des places
-    restent vides et qu'il reste des joueurs éligibles, on les complète avec
-    les meilleurs joueurs restants quel que soit leur poste -- une équipe de
-    football aligne toujours 11 joueurs quand son effectif le permet, quitte
-    à dépanner hors de position plutôt que jouer à 10.
+    disponible dont le poste (principal OU secondaire déclaré, voir
+    `Player.poste_secondaire`) correspond à ce qu'exige la place (ex. "RB"
+    pour un latéral droit, "MC ou MDC" pour une place de milieu flexible) --
+    places les plus strictes (un seul poste accepté) pourvues en premier. Un
+    poste secondaire dévalue légèrement la note prise en compte pour ce
+    classement (voir `_SECONDARY_POSTE_PENALTY`) : un joueur nettement mieux
+    noté à ce poste en secondaire prime sur un titulaire "naturel" à peine
+    au niveau, mais un poste principal reste préféré à écart de note égal ou
+    faible. En tout dernier recours, si des places restent vides et qu'il
+    reste des joueurs éligibles, on les complète avec les meilleurs joueurs
+    restants quel que soit leur poste -- une équipe de football aligne
+    toujours 11 joueurs quand son effectif le permet, quitte à dépanner hors
+    de position plutôt que jouer à 10.
 
     Si `formation` n'est PAS dans l'onglet (ex. formation préférentielle
     Transfermarkt non répertoriée), repli sur l'ancien système par quotas
@@ -222,33 +237,40 @@ def _assign_slots(
     xi: list[Player] = []
     player_bands: dict[str, int] = {}
 
-    # places les plus strictes (un seul poste accepté) en premier, pour ne
-    # pas laisser une place flexible ("MC ou MDC") consommer le seul joueur
-    # capable de pourvoir une place rigide voisine.
-    ordered_slots = sorted(slots, key=lambda s: len(s[0]))
+    # Chaque paire (joueur, place) où le joueur peut pourvoir la place --
+    # poste principal (note pleine) ou poste secondaire déclaré (note
+    # pénalisée, voir `_SECONDARY_POSTE_PENALTY`) -- devient un "lien" noté.
+    # Appariement glouton par note décroissante sur l'ensemble des places du
+    # dispositif (à égalité : place la plus stricte d'abord, comme avant,
+    # pour ne pas laisser une place flexible consommer le seul joueur d'une
+    # place rigide voisine). Un joueur excellent à son poste principal ET
+    # capable de dépanner ailleurs en secondaire (ex. un ailier confirmé
+    # susceptible de dépanner en pointe) va donc à la place où il apporte le
+    # plus de valeur -- jamais à une place où sa seule contribution est un
+    # poste secondaire, si son poste principal lui donne mieux ailleurs.
+    # C'est ce qui permet à un ailier bien mieux noté qu'un jeune avant-centre
+    # médiocre de lui prendre sa place, sans pour autant déserter son propre
+    # poste s'il y reste le meilleur choix.
+    links: list[tuple[float, int, int, Player]] = []  # (note ajustée, nb postes acceptés, indice de place, joueur)
+    for slot_index, (options, _band) in enumerate(slots):
+        for p in eligible:
+            if p.poste in options:
+                links.append((p.note, len(options), slot_index, p))
+            elif any(s in options for s in p.poste_secondaire):
+                links.append((p.note * _SECONDARY_POSTE_PENALTY, len(options), slot_index, p))
+    links.sort(key=lambda link: (-link[0], link[1], link[2]))
 
-    unfilled: list[tuple[tuple[str, ...], int]] = []
-    for options, band in ordered_slots:
-        pool = sorted((p for p in eligible if p.name not in used and p.poste in options), key=lambda p: -p.note)
-        if pool:
-            xi.append(pool[0])
-            used.add(pool[0].name)
-            player_bands[pool[0].name] = band
-        else:
-            unfilled.append((options, band))
+    filled_slots: set[int] = set()
+    for _score, _nb_options, slot_index, player in links:
+        if slot_index in filled_slots or player.name in used:
+            continue
+        _options, band = slots[slot_index]
+        xi.append(player)
+        used.add(player.name)
+        player_bands[player.name] = band
+        filled_slots.add(slot_index)
 
-    still_unfilled: list[tuple[tuple[str, ...], int]] = []
-    for options, band in unfilled:
-        pool = sorted(
-            (p for p in eligible if p.name not in used and any(s in options for s in p.poste_secondaire)),
-            key=lambda p: -p.note,
-        )
-        if pool:
-            xi.append(pool[0])
-            used.add(pool[0].name)
-            player_bands[pool[0].name] = band
-        else:
-            still_unfilled.append((options, band))
+    still_unfilled = [slots[i] for i in range(len(slots)) if i not in filled_slots]
 
     # Avant le dernier recours totalement aveugle : dépanner avec le joueur
     # tactiquement le plus proche du poste manquant (ex. un ailier pour
