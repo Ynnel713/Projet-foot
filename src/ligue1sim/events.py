@@ -35,15 +35,16 @@ INJURY_MIN_MATCHES = 1
 INJURY_MAX_MATCHES = 3
 
 # --- Buts/passes -----------------------------------------------------------
-NOTE_EXPONENT = 0.8  # amplifie l'effet de la qualité générale du joueur sur le tirage
-# Amplifie l'effet de la caractéristique "Finition" (0-100, voir
-# data/joueurs.xlsx) sur le tirage du buteur -- sans ça, deux attaquants de
-# note proche se disputent les buts à parts quasi égales même si l'un est un
-# pur finisseur (buteur_axial/poacher) et l'autre un profil plus créatif
-# (trequartista, ailier...), ce qui noyait des buteurs pourtant nettement
-# supérieurs (ex. Haaland hors du top 10 des buteurs malgré une note et une
-# Finition parmi les toutes meilleures de son championnat).
-FINITION_EXPONENT = 2.2
+NOTE_EXPONENT = 0.8  # amplifie l'effet de la qualité générale du joueur sur le tirage des passes décisives
+# Exposant dédié au tirage du buteur, plus fort que NOTE_EXPONENT -- sans ça,
+# deux attaquants de note proche se disputent les buts à parts quasi égales,
+# ce qui noyait des buteurs pourtant nettement supérieurs (ex. Haaland hors
+# du top 10 des buteurs malgré une note parmi les toutes meilleures de son
+# championnat). Avant la suppression des caractéristiques par joueur au
+# profit d'une seule note globale, ce même effet passait par une
+# caractéristique "Finition" dédiée (amplifiée par un exposant 2.2 en plus
+# du NOTE_EXPONENT=0.8 de base) ; les deux sont fusionnés ici (0.8 + 2.2).
+GOAL_NOTE_EXPONENT = 3.0
 UNASSISTED_GOAL_PROBABILITY = 0.25
 SUB_EVENT_WEIGHT = 0.4  # poids réduit des entrants (moins de temps de jeu)
 
@@ -373,13 +374,6 @@ def _play_match_squad(
     return entries, substitutions, starter_injuries
 
 
-def _finishing_skill(player: Player) -> float:
-    """Caractéristique "Finition" (0-100) si connue, sinon repli sur la note
-    générale du joueur (ancien comportement, pour les effectifs synthétiques
-    des tests qui ne renseignent pas cette colonne)."""
-    return player.finition if player.finition is not None else player.note
-
-
 def _generate_goals(club_name: str, squad: list[_SquadEntry], nb_goals: int) -> list[GoalEvent]:
     scorable = [e for e in squad if e.player.group != GOALKEEPER]
     if not scorable or nb_goals <= 0:
@@ -387,10 +381,7 @@ def _generate_goals(club_name: str, squad: list[_SquadEntry], nb_goals: int) -> 
 
     scorer_weights = np.array(
         [
-            SCORER_WEIGHT.get(e.player.poste, 0.0)
-            * (e.player.note**NOTE_EXPONENT)
-            * (_finishing_skill(e.player) ** FINITION_EXPONENT)
-            * e.weight_multiplier
+            SCORER_WEIGHT.get(e.player.poste, 0.0) * (e.player.note**GOAL_NOTE_EXPONENT) * e.weight_multiplier
             for e in scorable
         ]
     )

@@ -114,7 +114,6 @@ def _as_national_player(base: Player, country: str) -> Player:
         club=country,
         championnat=CHAMPIONNAT_LABEL,
         poste_secondaire=base.poste_secondaire,
-        finition=base.finition,
         categorie=base.categorie,
         id=base.id,
     )

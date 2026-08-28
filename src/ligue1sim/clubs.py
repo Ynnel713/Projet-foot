@@ -32,11 +32,6 @@ NOTE_COLUMN = "Moyenne joueur"
 # _validate_no_missing_values -- la quasi-totalité des lignes n'en ont pas.
 POSTE_SECONDAIRE_COLUMN = "Poste secondaire"
 
-# Optionnelle elle aussi (mêmes raisons) : sert à affiner le tirage du
-# buteur parmi les attaquants d'une même équipe (voir events.SCORER_WEIGHT).
-# Un joueur sans valeur retombe sur sa note générale (voir _build_players).
-FINITION_COLUMN = "Finition"
-
 # Rôle/style du joueur (ex. "buteur_axial", "lateral_defensif" -- voir
 # l'onglet "Roles"), renseigné seulement pour les joueurs avec un rôle
 # spécifique attribué. Purement informatif côté UI (fiche joueur) : n'entre
@@ -132,7 +127,6 @@ def _build_players(group: pd.DataFrame) -> list[Player]:
     players = []
     for _, row in group.iterrows():
         nom = row[NOM_COLUMN] if pd.notna(row.get(NOM_COLUMN)) else ""
-        finition = row.get(FINITION_COLUMN)
         categorie = row.get(CATEGORIE_COLUMN)
         player_id = row.get(ID_COLUMN)
         poste, extra_postes = _split_poste(row[POSTE_COLUMN])
@@ -149,7 +143,6 @@ def _build_players(group: pd.DataFrame) -> list[Player]:
                 championnat=row[CHAMPIONNAT_COLUMN],
                 poste_secondaire=extra_postes + declared_secondaires,
                 categorie=str(categorie) if pd.notna(categorie) else None,
-                finition=float(finition) if pd.notna(finition) else None,
                 id=int(player_id) if pd.notna(player_id) else None,
             )
         )
