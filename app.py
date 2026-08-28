@@ -55,6 +55,7 @@ _HOME_SPLASH_PATH = Path(__file__).parent / "assets" / "backgrounds" / "home-spl
 _CHAMPIONNAT_FLAG = {
     "Ligue 1": "🇫🇷",
     "Premier League": "🇬🇧",
+    "Championship": "🇬🇧",
     "LaLiga": "🇪🇸",
     "Bundesliga": "🇩🇪",
     "Serie A": "🇮🇹",

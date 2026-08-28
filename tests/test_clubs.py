@@ -11,9 +11,10 @@ from ligue1sim.clubs import (
 DATA_PATH = "data/joueurs.xlsx"
 
 
-def test_list_championnats_excludes_autres_clubs_and_returns_the_eight_leagues():
+def test_list_championnats_excludes_autres_clubs_and_returns_the_nine_leagues():
     assert list_championnats(DATA_PATH) == [
         "Bundesliga",
+        "Championship",
         "Eredivisie",
         "Jupiler Pro League",
         "LaLiga",
