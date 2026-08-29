@@ -4,11 +4,16 @@ from ligue1sim.nations import load_national_teams
 DATA_PATH = "data/joueurs.xlsx"
 
 
-def test_load_national_teams_returns_only_complete_squads_of_23():
+def test_load_national_teams_returns_only_complete_squads_of_18():
+    # TARGET_QUOTA de scripts/generate_national_teams.py a été abaissé de
+    # 23 à 18 le 29/08/2026 (2 gardiens, 6 défenseurs, 5 milieux, 5
+    # attaquants) : les données scrapées pour 20 sélections manquantes ne
+    # fournissaient pas toujours assez de joueurs bien notés par groupe de
+    # poste pour boucler un 23/23 -- voir la docstring du script.
     teams = load_national_teams(DATA_PATH)
 
     assert len(teams) > 0
-    assert all(len(t.players) == 23 for t in teams)
+    assert all(len(t.players) == 18 for t in teams)
     assert len({t.name for t in teams}) == len(teams)  # pas de doublon de pays
 
 

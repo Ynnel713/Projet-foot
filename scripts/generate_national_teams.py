@@ -21,17 +21,28 @@ nationalité de "Infos principales" sans correspondance dans ce registre
 un avertissement en fin d'exécution, jamais une invention de
 drapeau/continent.
 
-Composition ciblée (TARGET_QUOTA) : 3 gardiens, 7 défenseurs, 6 milieux, 7
-attaquants (23 au total) -- la répartition la plus fréquente parmi les
-sélections déjà COMPLET avant régénération (8 pays sur 70 suivaient très
-exactement ce schéma, ex. Autriche, Pologne, Turquie). Simplification
-assumée par rapport à l'ancien onglet : chaque groupe de poste a son
-propre quota FIXE, sans redistribution entre postes -- le comportement
-précédent semblait redistribuer les quotas selon les postes disponibles
-par pays (les décomptes "manquant(s)" observés ne correspondaient à aucune
-règle de soustraction simple retrouvée), mais son fonctionnement exact n'a
-pas pu être déterminé de façon fiable à partir des seules données
-observées, donc pas reproduit tel quel.
+Composition ciblée (TARGET_QUOTA) : à l'origine 3 gardiens, 7 défenseurs, 6
+milieux, 7 attaquants (23 au total) -- la répartition la plus fréquente
+parmi les sélections déjà COMPLET avant régénération (8 pays sur 70
+suivaient très exactement ce schéma, ex. Autriche, Pologne, Turquie).
+Simplification assumée par rapport à l'ancien onglet : chaque groupe de
+poste a son propre quota FIXE, sans redistribution entre postes -- le
+comportement précédent semblait redistribuer les quotas selon les postes
+disponibles par pays (les décomptes "manquant(s)" observés ne
+correspondaient à aucune règle de soustraction simple retrouvée), mais son
+fonctionnement exact n'a pas pu être déterminé de façon fiable à partir des
+seules données observées, donc pas reproduit tel quel.
+
+Quota abaissé le 29/08/2026 à 2 gardiens, 6 défenseurs, 5 milieux, 5
+attaquants (18 au total) : au moment du scraping des 20 sélections
+manquantes de ce lot (Macédoine du Nord, Bulgarie, Azerbaïdjan, Kazakhstan,
+Guinée, Mauritanie, Togo, Zimbabwe, Costa Rica, Curaçao, Honduras, Panama,
+Pérou, Chine, Indonésie, Irak, Jordanie, Syrie, Qatar, Émirats arabes
+unis), les effectifs récupérés sur Transfermarkt ne fournissaient pas
+toujours assez de joueurs bien notés par groupe de poste pour boucler un
+23/23 -- 18/18 reste un effectif jouable (2 gardiens suffisent pour tenir
+une saison) tout en restant atteignable avec les données réellement
+disponibles.
 
 Nationalité : la colonne "Nationalité" de "Infos principales" mélange
 français et anglais selon la source du scraping d'origine (contamination
@@ -65,8 +76,8 @@ NATION_SHEETS = ["Europe", "Afrique", "Amérique", "Asie", "Océanie"]
 _TITLE_ROW = re.compile(r"^(.+?) — (COMPLET|INCOMPLET)")
 
 GROUP_ORDER = ["GK", "DEF", "MID", "ATT"]
-TARGET_QUOTA: dict[str, int] = {"GK": 3, "DEF": 7, "MID": 6, "ATT": 7}
-SQUAD_SIZE = sum(TARGET_QUOTA.values())  # 23, comme "COMPLET (23/23)"
+TARGET_QUOTA: dict[str, int] = {"GK": 2, "DEF": 6, "MID": 5, "ATT": 5}
+SQUAD_SIZE = sum(TARGET_QUOTA.values())  # 18, comme "COMPLET (18/18)"
 
 GROUP_LABEL = {"GK": "Gardien", "DEF": "Défenseur", "MID": "Milieu", "ATT": "Attaquant"}
 GROUP_LABEL_LOWER = {"GK": "gardien", "DEF": "défenseur", "MID": "milieu", "ATT": "attaquant"}
