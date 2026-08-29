@@ -82,6 +82,48 @@ fatigue. Fabriquer un signal de fatigue sans base réelle aurait été un
 faux-semblant, pas une fonctionnalité. Nécessiterait un vrai système de
 calendrier daté partagé entre compétitions -- hors périmètre de ce
 calibrage.
+
+Cinquième calibrage (29/08/2026, signalé par Olivier : classement de
+Premier League "totalement impossible" -- AFC Bournemouth et Coventry City
+en tête, Manchester City 14e). Investigation (voir `scripts/
+calibrate_engine.py`, sortie complète sur 40 saisons) : la hiérarchie des
+notes est correcte (Arsenal 85.0 en tête, Hull City 71.1 en dernier) et la
+corrélation force réelle <-> points moyens sur plusieurs saisons est
+mesurée à 0.91 -- donc PAS un bug de données ni de calcul de force. Le
+vrai problème : sur 40 saisons à ATTACK_DEFENSE_POWER=2.6 (réglage du
+troisième calibrage ci-dessus, jamais retouché depuis), Arsenal (note la
+plus haute de la ligue) finissait 19e sur 20 dans au moins une saison, et
+Hull City (note la plus basse) finissait 2e dans au moins une saison --
+bien au-delà de toute variance réaliste. Cause racine identifiée : PAS
+ATTACK_DEFENSE_POWER (déjà poussé à 2.6 puis testé jusqu'à 4.0 lors du
+troisième calibrage, sans effet sur ce problème précis -- voir plus haut)
+mais `_FORM_BOUNDS` (±15%), qui module l'attaque ET la défense d'un club à
+CHAQUE match de la saison via un EMA persistant (contrairement à
+MID_INFLUENCE/BENCH_INFLUENCE, recalculés indépendamment à chaque match) :
+un club en série positive prolongée cumule un avantage soutenu sur des
+dizaines de journées, largement capable de renverser un écart de note de
+14 points sur une saison entière.
+
+Hypothèse testée : resserrer `_FORM_BOUNDS` à ±15% aurait dû réduire ces
+extrêmes -- confirmé, mais casse un invariant existant (voir tests
+`TestFormTracker`) : `_FORM_SIGNAL_CLIP`/`_FORM_SIGNAL_SHRINK` n'avaient
+jamais été recalibrés pour la nouvelle borne, donc UN SEUL match extrême
+(6-0 contre 1.3 but attendu) saturait immédiatement la nouvelle borne
+étroite -- exactement le risque qu'`_FORM_SIGNAL_CLIP`/`_FORM_SIGNAL_SHRINK`
+étaient censés empêcher (voir plus haut, "un seul match chanceux ne doit
+pas transformer durablement la force d'une équipe"). Corrigé en resserrant
+`_FORM_SCALE` (1.0 -> 2.5) dans la même proportion que `_FORM_BOUNDS`
+(±15% -> ±6%), ce qui compresse l'amplitude finale du modulateur sans
+changer la dynamique relative de l'EMA : un match extrême isolé reste à
+~60% de la nouvelle borne (comme avant, à l'échelle de l'ancienne borne),
+une série de 20 matchs forts la sature toujours pleinement.
+
+Résultat mesuré sur 40 saisons de Premier League après correctif : Arsenal
+top 3 dans 88% des saisons (55% avant), jamais relégué, pire classement
+8e (19e avant) ; Hull City jamais top 3, meilleur classement 7e (2e avant). Stats match par match quasi inchangées (victoire domicile
+45.6%->46.1%, nul 24.8%->24.1%, moyenne de buts 2.59->2.60) : la forme
+n'a jamais été le levier des indicateurs match par match validés lors des
+calibrages précédents, seulement de la séparation de saison.
 """
 
 from __future__ import annotations
@@ -228,8 +270,8 @@ BIG_MATCH_BONUS = 0.05
 FORM_ALPHA = 0.12  # mémoire de l'EMA : ~1/alpha ~ 8 matchs de mémoire effective
 _FORM_SIGNAL_CLIP = 1.5  # écart (buts réels - lambda) plafonné à cette valeur avant traitement
 _FORM_SIGNAL_SHRINK = 0.5  # puis multiplié par ce facteur -- amortit encore le bruit match-à-match
-_FORM_SCALE = 1.0  # échelle de conversion forme -> modulateur (voir _form_modifier)
-_FORM_BOUNDS = (0.85, 1.15)  # amplitude maximale du modulateur de forme, même esprit que _MID_MODIFIER_BOUNDS
+_FORM_SCALE = 2.5  # échelle de conversion forme -> modulateur (voir _form_modifier)
+_FORM_BOUNDS = (0.94, 1.06)  # amplitude maximale du modulateur de forme -- cinquième calibrage (29/08/2026, voir docstring du module), ancienne valeur (0.85, 1.15)
 
 
 @dataclass(frozen=True)

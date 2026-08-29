@@ -230,7 +230,7 @@ class TestFormTracker:
         form.record_match("Home FC", "Away FC", lambda_home=1.3, lambda_away=1.3, home_goals=6, away_goals=0)
 
         modifier = form.offense_modifier("Home FC")
-        assert modifier < 1.10  # nettement en-dessous de la borne haute (1.15)
+        assert modifier < 1.05  # nettement en-dessous de la borne haute (1.06)
 
     def test_repeated_strong_performances_move_form_toward_the_bound_progressively(self):
         form = FormTracker()
@@ -238,11 +238,11 @@ class TestFormTracker:
             form.record_match("Home FC", "Away FC", lambda_home=1.3, lambda_away=1.3, home_goals=3, away_goals=0)
         # Après de nombreux matchs cohéremment au-dessus de l'attendu, la
         # forme doit s'être rapprochée de la borne haute (jamais dépassée).
-        assert form.offense_modifier("Home FC") > 1.10
+        assert form.offense_modifier("Home FC") == pytest.approx(1.06)
 
     def test_form_modifier_never_exceeds_its_bounds(self):
-        assert _form_modifier(1000.0) == pytest.approx(1.15)
-        assert _form_modifier(-1000.0) == pytest.approx(0.85)
+        assert _form_modifier(1000.0) == pytest.approx(1.06)
+        assert _form_modifier(-1000.0) == pytest.approx(0.94)
 
     def test_process_form_signal_clips_before_shrinking(self):
         # Un écart énorme (buts - lambda = +10) doit être plafonné avant
