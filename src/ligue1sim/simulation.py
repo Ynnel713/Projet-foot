@@ -219,11 +219,20 @@ GK_WEIGHT_IN_DEFENSE = 0.35
 # tire vers le bas -- mesuré par l'écart RELATIF entre `mid_rating` et la
 # moyenne globale de la compo (`rating`), pas par une comparaison à la
 # moyenne de la ligue (garde le calcul local à l'équipe, pas de dépendance
-# au contexte). Plafonné à ±10% (`_MID_MODIFIER_BOUNDS`) pour rester un
+# au contexte).
+#
+# TEST levier 1 étendu (29/08/2026) : appliqué post-exposant, en linéaire
+# direct sur le lambda final (voir _draw_score), au même titre que la forme
+# -- jusqu'ici c'était le seul des trois modulateurs encore pré-exposant, ce
+# qui l'amplifiait aux mêmes ~x2.6 que la forme avant son propre déplacement
+# (swing mesuré ~52 points de classement contre ~31 pour la forme à
+# amplitude équivalente, voir la conversation de calibrage associée).
+# Borne resserrée en conséquence : ±10% (`_MID_MODIFIER_BOUNDS`) n'avait de
+# sens QUE pré-exposant ; ±3%, alignée sur la forme, pour rester un
 # ajustement, pas un second levier de force capable de rivaliser avec
 # ATTACK_DEFENSE_POWER.
 MID_INFLUENCE = 0.6
-_MID_MODIFIER_BOUNDS = (0.90, 1.10)
+_MID_MODIFIER_BOUNDS = (0.97, 1.03)
 
 # Influence de la profondeur du banc (les remplaçants disponibles, hors les
 # 11 titulaires) sur l'attaque ET la défense d'une équipe : un banc mieux
@@ -231,11 +240,16 @@ _MID_MODIFIER_BOUNDS = (0.90, 1.10)
 # donne un léger avantage (rotation sans perte de niveau, joker offensif ou
 # défensif en cours de match), un banc creux un léger désavantage --
 # mesuré par l'écart RELATIF entre la note moyenne du banc et cette
-# moyenne de ligue. Plafonné à ±6% (`_BENCH_MODIFIER_BOUNDS`), plus
-# resserré que MID_INFLUENCE (±10%) : le banc pèse par nature moins sur un
-# match que les 11 qui le débutent.
+# moyenne de ligue.
+#
+# TEST levier 1 étendu (29/08/2026) : même déplacement post-exposant que
+# MID_INFLUENCE ci-dessus (voir _draw_score). Borne resserrée à ±1.5%
+# (`_BENCH_MODIFIER_BOUNDS`), plus étroite que MID_INFLUENCE (±3%) : le banc
+# pèse par nature moins sur un match que les 11 qui le débutent -- même
+# rapport relatif qu'avant ce déplacement (±6% contre ±10%, soit 60% de la
+# borne milieu).
 BENCH_INFLUENCE = 0.5
-_BENCH_MODIFIER_BOUNDS = (0.94, 1.06)
+_BENCH_MODIFIER_BOUNDS = (0.985, 1.015)
 
 # Bonus d'intensité pour un "gros match" -- les deux équipes du top tiers
 # de la ligue (voir `_BIG_MATCH_FRACTION`, calculé par ligue dans
@@ -267,11 +281,38 @@ BIG_MATCH_BONUS = 0.05
 # dépassé), contre +0.09 avec le signal plafonné puis rétréci ci-dessous --
 # un seul match chanceux ne doit pas transformer durablement la force d'une
 # équipe.
-FORM_ALPHA = 0.12  # mémoire de l'EMA : ~1/alpha ~ 8 matchs de mémoire effective
+FORM_ALPHA = 0.25  # TEST levier 2 (29/08/2026) -- mémoire de l'EMA : ~1/alpha ~ 4 matchs (était 0.12, ~8 matchs)
 _FORM_SIGNAL_CLIP = 1.5  # écart (buts réels - lambda) plafonné à cette valeur avant traitement
 _FORM_SIGNAL_SHRINK = 0.5  # puis multiplié par ce facteur -- amortit encore le bruit match-à-match
-_FORM_SCALE = 2.5  # échelle de conversion forme -> modulateur (voir _form_modifier)
-_FORM_BOUNDS = (0.94, 1.06)  # amplitude maximale du modulateur de forme -- cinquième calibrage (29/08/2026, voir docstring du module), ancienne valeur (0.85, 1.15)
+_FORM_SCALE = 10.42  # TEST leviers 1+2 -- échelle de conversion forme -> modulateur (voir _form_modifier). Recalculée pour tenir compte à la fois du nouveau FORM_ALPHA (0.25, qui à lui seul augmente la contribution d'un match) et de la nouvelle borne (0.03) : un match extrême isolé doit rester à ~60% de la borne, comme avant ce calibrage, pas la saturer d'un coup.
+_FORM_BOUNDS = (0.97, 1.03)  # TEST levier 1 (29/08/2026) -- forme appliquée directement sur le lambda (post-exposant), pas sur l'attaque/défense (pré-exposant) : voir _draw_score. Ancienne valeur (0.94, 1.06)
+
+# --- TEST levier 3, v2 (29/08/2026) : bruit résiduel additif symétrique sur
+# log(lambda), PAS un mélange vers une moyenne de ligue fixe (voir
+# _blend_lambda). La v1 (mélange 85%/15% vers un centre = moyenne de ligue)
+# a été mesurée avec un effet de bord non voulu : en régressant TOUT lambda
+# vers un centre commun, elle rapproche aussi les gros favoris de la
+# moyenne match par match, pas seulement les scores vraiment extrêmes --
+# taux de victoire du favori à écart de force 15-20 points mesuré à 71.1%
+# contre 77.2% sans bruit (cible : rester proche de 76-77%). Un bruit
+# additif en log ne tire vers aucun centre : il ajoute une variance
+# symétrique de part et d'autre du lambda calculé, donc resserre les
+# scores extrêmes par pur aléa sans compresser systématiquement l'écart
+# entre un favori et un outsider sur un même match (voir _blend_lambda).
+_LOG_NOISE_HALF_WIDTH = 0.07  # amplitude (+-7%) du bruit additif en log
+
+# Piste explorée puis ABANDONNÉE (29/08/2026) : plusieurs variantes d'un
+# "levier 4" visant à faire dominer davantage le club le mieux noté de sa
+# ligue -- réduction de la variance du bruit ci-dessus selon le rang, alpha
+# de forme plus petit pour le top 5/10, bonus de récupération post-défaite
+# pour le top 5. Les trois ciblaient un GROUPE par un seuil de rang, jamais
+# le seul leader : mesuré sur 100 saisons de Bundesliga, chaque variante
+# profitait presque autant à Dortmund/Leipzig (juste derrière au classement)
+# qu'au favori visé, sans jamais l'isoler -- au global, chaque variante a
+# donné un résultat MOINS bon pour l'objectif recherché que de ne rien
+# ajouter aux leviers 1/2/3 ci-dessus. Ne pas retenter la même famille
+# d'approche (seuil de rang sur un groupe) sans un moyen de cibler
+# spécifiquement le rang 1 et lui seul.
 
 
 @dataclass(frozen=True)
@@ -399,26 +440,74 @@ def _draw_score(
     home_bench_mod: float = 1.0,
     away_bench_mod: float = 1.0,
 ) -> tuple[int, int, float, float]:
-    home_off_mod = form.offense_modifier(home_name) if form is not None else 1.0
-    home_def_mod = form.defense_modifier(home_name) if form is not None else 1.0
-    away_off_mod = form.offense_modifier(away_name) if form is not None else 1.0
-    away_def_mod = form.defense_modifier(away_name) if form is not None else 1.0
+    # TEST levier 1 étendu (29/08/2026) : forme, milieu ET banc ne modulent
+    # plus l'attaque/défense pré-exposant -- les trois sont appliqués
+    # directement au lambda, après le ratio à la puissance
+    # ATTACK_DEFENSE_POWER et après HOME_ADVANTAGE, pour qu'un +-X% de
+    # modulateur reste un +-X% sur les buts attendus au lieu d'être amplifié
+    # par l'exposant (voir docstring du module). La puissance
+    # ATTACK_DEFENSE_POWER (dans _expected_goals) ne s'applique donc plus
+    # qu'au ratio note brute d'attaque/défense (`_attack_strength`/
+    # `_defense_strength`, sans mid/banc) sur la moyenne de la ligue.
     big_match_mod = (
         1.0 + BIG_MATCH_BONUS
         if home_name in context.big_match_clubs and away_name in context.big_match_clubs
         else 1.0
     )
 
-    attack_home = _attack_strength(home_lineup) * home_off_mod * home_bench_mod * big_match_mod
-    defense_home = _defense_strength(home_lineup) * home_def_mod * home_bench_mod
-    attack_away = _attack_strength(away_lineup) * away_off_mod * away_bench_mod * big_match_mod
-    defense_away = _defense_strength(away_lineup) * away_def_mod * away_bench_mod
+    attack_home = _attack_strength(home_lineup) * big_match_mod
+    defense_home = _defense_strength(home_lineup)
+    attack_away = _attack_strength(away_lineup) * big_match_mod
+    defense_away = _defense_strength(away_lineup)
 
     lambda_home = _expected_goals(attack_home, defense_away, context, home_advantage=True)
     lambda_away = _expected_goals(attack_away, defense_home, context, home_advantage=False)
+
+    # Milieu et banc modulent l'attaque ET la défense de LEUR PROPRE équipe
+    # (même modificateur pour les deux, contrairement à la forme qui a des
+    # composantes offensive/défensive séparées) -- donc le lambda d'une
+    # équipe est relevé par SON PROPRE modificateur (meilleur milieu/banc =
+    # plus de buts marqués) et par le modificateur de l'ADVERSAIRE au
+    # dénominateur (meilleur milieu/banc adverse = défense adverse plus
+    # solide = moins de buts marqués), même couplage propre/adverse que la
+    # forme juste en dessous.
+    home_mid_mod, away_mid_mod = _mid_modifier(home_lineup), _mid_modifier(away_lineup)
+    lambda_home *= home_mid_mod / away_mid_mod
+    lambda_away *= away_mid_mod / home_mid_mod
+
+    lambda_home *= home_bench_mod / away_bench_mod
+    lambda_away *= away_bench_mod / home_bench_mod
+
+    if form is not None:
+        # Une équipe en forme offensive marque plus ; une équipe adverse en
+        # mauvaise forme défensive encaisse plus -- même couplage attaque
+        # propre/défense adverse que l'ancien mécanisme pré-exposant, juste
+        # appliqué en linéaire directement sur le lambda plutôt qu'élevé à
+        # la puissance ATTACK_DEFENSE_POWER.
+        lambda_home *= form.offense_modifier(home_name) / form.defense_modifier(away_name)
+        lambda_away *= form.offense_modifier(away_name) / form.defense_modifier(home_name)
+
+    lambda_home = min(MAX_LAMBDA, lambda_home)
+    lambda_away = min(MAX_LAMBDA, lambda_away)
+
+    # TEST levier 3 v2 (29/08/2026) : bruit résiduel additif en log (voir
+    # _blend_lambda) -- resserre les scores extrêmes par pur aléa, sans tirer
+    # systématiquement chaque lambda vers un centre commun.
+    lambda_home = _blend_lambda(lambda_home)
+    lambda_away = _blend_lambda(lambda_away)
+
     home_goals = _draw_goals(lambda_home)
     away_goals = _draw_goals(lambda_away)
     return home_goals, away_goals, lambda_home, lambda_away
+
+
+def _blend_lambda(lam: float) -> float:
+    """TEST levier 3 v2 : ajoute un bruit uniforme symétrique sur log(lambda)
+    (amplitude +-_LOG_NOISE_HALF_WIDTH), puis repasse en espace linéaire --
+    voir la justification de l'abandon du mélange vers un centre fixe (v1)
+    dans le commentaire de _LOG_NOISE_HALF_WIDTH ci-dessus."""
+    noise = np.random.uniform(-_LOG_NOISE_HALF_WIDTH, _LOG_NOISE_HALF_WIDTH)
+    return min(MAX_LAMBDA, lam * float(np.exp(noise)))
 
 
 def _bench_modifier(reserves: list[Player], context: LeagueContext) -> float:
@@ -446,16 +535,17 @@ def _mid_modifier(lineup: Lineup) -> float:
 
 def _attack_strength(lineup: Lineup) -> float:
     """Force d'attaque d'une équipe pour un match : la note de ses
-    attaquants alignés, modulée par son milieu (voir `_mid_modifier`)."""
-    return lineup.att_rating * _mid_modifier(lineup)
+    attaquants alignés. Note brute uniquement -- le milieu (`_mid_modifier`)
+    et le banc (`_bench_modifier`) sont appliqués post-exposant directement
+    sur le lambda final, pas ici (voir _draw_score)."""
+    return lineup.att_rating
 
 
 def _defense_strength(lineup: Lineup) -> float:
     """Force défensive d'une équipe pour un match : gardien + défenseurs
-    alignés (voir GK_WEIGHT_IN_DEFENSE), modulée par son milieu (voir
-    `_mid_modifier`)."""
-    combined = GK_WEIGHT_IN_DEFENSE * lineup.gk_rating + (1 - GK_WEIGHT_IN_DEFENSE) * lineup.def_rating
-    return combined * _mid_modifier(lineup)
+    alignés (voir GK_WEIGHT_IN_DEFENSE). Note brute uniquement, même
+    remarque que `_attack_strength` ci-dessus pour milieu/banc."""
+    return GK_WEIGHT_IN_DEFENSE * lineup.gk_rating + (1 - GK_WEIGHT_IN_DEFENSE) * lineup.def_rating
 
 
 def _draw_goals(lam: float) -> int:

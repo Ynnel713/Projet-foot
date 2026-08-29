@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 from ligue1sim.clubs import Club
@@ -230,7 +231,7 @@ class TestFormTracker:
         form.record_match("Home FC", "Away FC", lambda_home=1.3, lambda_away=1.3, home_goals=6, away_goals=0)
 
         modifier = form.offense_modifier("Home FC")
-        assert modifier < 1.05  # nettement en-dessous de la borne haute (1.06)
+        assert modifier < 1.025  # nettement en-dessous de la borne haute (1.03)
 
     def test_repeated_strong_performances_move_form_toward_the_bound_progressively(self):
         form = FormTracker()
@@ -238,11 +239,11 @@ class TestFormTracker:
             form.record_match("Home FC", "Away FC", lambda_home=1.3, lambda_away=1.3, home_goals=3, away_goals=0)
         # Après de nombreux matchs cohéremment au-dessus de l'attendu, la
         # forme doit s'être rapprochée de la borne haute (jamais dépassée).
-        assert form.offense_modifier("Home FC") == pytest.approx(1.06)
+        assert form.offense_modifier("Home FC") == pytest.approx(1.03)
 
     def test_form_modifier_never_exceeds_its_bounds(self):
-        assert _form_modifier(1000.0) == pytest.approx(1.06)
-        assert _form_modifier(-1000.0) == pytest.approx(0.94)
+        assert _form_modifier(1000.0) == pytest.approx(1.03)
+        assert _form_modifier(-1000.0) == pytest.approx(0.97)
 
     def test_process_form_signal_clips_before_shrinking(self):
         # Un écart énorme (buts - lambda = +10) doit être plafonné avant
@@ -303,8 +304,8 @@ class TestBenchModifier:
     def test_modifier_never_exceeds_its_bounds(self):
         huge_reserves = [_player("MC", 100.0, f"bench{i}") for i in range(7)]
         tiny_reserves = [_player("MC", 0.1, f"bench{i}") for i in range(7)]
-        assert _bench_modifier(huge_reserves, self._context(avg_rating=1.0)) == pytest.approx(1.06)
-        assert _bench_modifier(tiny_reserves, self._context(avg_rating=100.0)) == pytest.approx(0.94)
+        assert _bench_modifier(huge_reserves, self._context(avg_rating=1.0)) == pytest.approx(1.015)
+        assert _bench_modifier(tiny_reserves, self._context(avg_rating=100.0)) == pytest.approx(0.985)
 
 
 class TestBigMatchBonus:
@@ -353,9 +354,15 @@ class TestBigMatchBonus:
             avg_rating=70.0, avg_attack=70.0, avg_defense=70.0, big_match_clubs=frozenset({"Home FC"})
         )
 
+        # Le levier 3 (mélange avec un bruit résiduel, voir _blend_lambda)
+        # tire de l'aléatoire à l'intérieur même du calcul du lambda -- même
+        # graine avant chaque appel pour isoler la seule variable testée ici
+        # (le bonus grosse affiche), pas le bruit résiduel.
+        np.random.seed(0)
         _, _, lam_home_neutral, lam_away_neutral = _draw_score(
             home_lineup, away_lineup, context_neutral, "Home FC", "Away FC", form=None
         )
+        np.random.seed(0)
         _, _, lam_home_one_sided, lam_away_one_sided = _draw_score(
             home_lineup, away_lineup, context_one_sided, "Home FC", "Away FC", form=None
         )
