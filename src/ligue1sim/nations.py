@@ -27,6 +27,26 @@ from ligue1sim.players import Player
 NATION_SHEETS = ["Europe", "Afrique", "Amérique", "Asie", "Océanie"]
 CHAMPIONNAT_LABEL = "Sélection nationale"
 
+# Confédération par onglet -- l'onglet "Amérique" mélange CONMEBOL et
+# CONCACAF (un seul onglet historique), donc on affine par pays via
+# _CONCACAF_NAMES juste en dessous. Un pays hors de ce set sur l'onglet
+# "Amérique" est considéré CONMEBOL par défaut.
+CONFEDERATION_BY_SHEET = {
+    "Europe": "UEFA",
+    "Afrique": "CAF",
+    "Amérique": "CONMEBOL",
+    "Asie": "AFC",
+    "Océanie": "OFC",
+}
+# Fédérations d'Amérique du Nord/centrale/Caraïbes rattachées à la CONCACAF
+# malgré l'onglet "Amérique" générique -- inclut Suriname, qui a rejoint la
+# CONCACAF en 2016 bien que géographiquement en Amérique du Sud.
+_CONCACAF_NAMES = {
+    "Canada", "Costa Rica", "Curaçao", "États-Unis", "Guadeloupe", "Haïti",
+    "Honduras", "Jamaïque", "Martinique", "Mexique", "Panama", "Porto Rico",
+    "République dominicaine", "Suriname", "Trinité-et-Tobago",
+}
+
 _TITLE_ROW = re.compile(r"^(.+?) — (COMPLET|INCOMPLET)")
 _HEADER_MARKER = "Poste"
 
@@ -98,6 +118,33 @@ def _load_all_national_teams(path: str) -> tuple[tuple[Club, ...], frozenset[str
 
 def clear_cache() -> None:
     _load_all_national_teams.cache_clear()
+    _confederation_by_team.cache_clear()
+
+
+@lru_cache(maxsize=None)
+def _confederation_by_team(path: str) -> dict[str, str]:
+    """{nom d'équipe tel que renvoyé par `load_national_teams` (drapeau +
+    pays) : confédération}, en reparcourant les mêmes 5 onglets -- sert à
+    grouper "Sélections nationales" par continent côté UI sans dupliquer le
+    nom du pays."""
+    result: dict[str, str] = {}
+    for sheet in NATION_SHEETS:
+        df = pd.read_excel(path, sheet_name=sheet, header=None)
+        confederation = CONFEDERATION_BY_SHEET[sheet]
+        for country, _, _ in _country_blocks(df):
+            bare_name = country.split(" ", 1)[1] if " " in country else country
+            if confederation == "CONMEBOL" and bare_name in _CONCACAF_NAMES:
+                result[country] = "CONCACAF"
+            else:
+                result[country] = confederation
+    return result
+
+
+def confederation(path: str, team_name: str) -> str:
+    """Confédération de l'équipe `team_name` (tel que renvoyé par
+    `load_national_teams`, ex. "🇧🇷 Brésil"). "?" si inconnue (ne devrait pas
+    arriver pour une équipe issue de `load_national_teams`)."""
+    return _confederation_by_team(path).get(team_name, "?")
 
 
 def _as_national_player(base: Player, country: str) -> Player:

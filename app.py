@@ -26,6 +26,7 @@ from ligue1sim.coaches import coach_name
 from ligue1sim.coaches import clear_cache as clear_coaches_cache
 from ligue1sim.lineup import clear_cache as clear_lineup_cache
 from ligue1sim.nations import CHAMPIONNAT_LABEL as NATIONS_CHAMPIONNAT_LABEL
+from ligue1sim.nations import confederation as national_team_confederation
 from ligue1sim.nations import load_national_teams
 from ligue1sim.nations import clear_cache as clear_nations_cache
 from ligue1sim.events import AvailabilityTracker, MatchEvents, PlayerMatchStat, compute_leaderboards
@@ -49,23 +50,50 @@ st.set_page_config(page_title="Simulafoot", page_icon="⚽", layout="wide")
 
 _HOME_SPLASH_PATH = Path(__file__).parent / "assets" / "backgrounds" / "home-splash.jpg"
 
-# Drapeau du pays représentatif de chaque championnat (remplace les anciens
-# logos PNG de assets/logos/ -- plus léger visuellement, pas de question de
-# droit d'usage de logo de compétition).
-_CHAMPIONNAT_FLAG = {
-    "Ligue 1": "🇫🇷",
-    "Premier League": "🇬🇧",
-    "Championship": "🇬🇧",
-    "LaLiga": "🇪🇸",
-    "Bundesliga": "🇩🇪",
-    "Serie A": "🇮🇹",
-    "Liga Portugal": "🇵🇹",
-    "Jupiler Pro League": "🇧🇪",
-    "Eredivisie": "🇳🇱",
+# Code pays de chaque championnat national, utilisé comme monogramme
+# d'emblème sur l'accueil -- pas d'emoji drapeau : les séquences d'indicateurs
+# régionaux (🇫🇷, 🇩🇪...) ne s'affichent pas de façon fiable sur toutes les
+# configurations (ex. Windows 10 LTSC), et pas de logos PNG (assets/logos/)
+# pour éviter toute question de droit d'usage de logo de compétition.
+_CHAMPIONNAT_COUNTRY = {
+    "Ligue 1": "FRA",
+    "Premier League": "ENG",
+    "Championship": "ENG",
+    "LaLiga": "ESP",
+    "Bundesliga": "GER",
+    "Serie A": "ITA",
+    "Liga Portugal": "POR",
+    "Jupiler Pro League": "BEL",
+    "Eredivisie": "NED",
 }
+# Les 5 grands championnats mis en avant sur l'accueil (bordure et badge
+# dorés) -- les autres restent parfaitement lisibles, juste sans ce
+# traitement : la hiérarchie se fait par surbrillance, pas par dégradation.
+_FEATURED_CHAMPIONNATS = {"Premier League", "LaLiga", "Serie A", "Bundesliga", "Ligue 1"}
 _CHAMPIONS_LEAGUE_ICON = "⭐"
 _NATIONS_ICON = "🌍"
 _PERSO_ICON = "🏆"
+
+# Ordre de parcours du carrousel "Championnats nationaux" -- l'Angleterre a
+# 2 championnats jouables (Premier League/Championship) : un marqueur dédié
+# fait apparaître un choix entre les deux plutôt qu'un seul championnat, sans
+# lui donner deux crans de carrousel (un seul pays affiché à la fois).
+_CAROUSEL_ENGLAND_MARKER = "__ENGLAND__"
+_CAROUSEL_CL_MARKER = "__CHAMPIONS_LEAGUE__"
+_CAROUSEL_ORDER = [
+    "Ligue 1",
+    _CAROUSEL_ENGLAND_MARKER,
+    "LaLiga",
+    "Bundesliga",
+    "Serie A",
+    "Liga Portugal",
+    "Jupiler Pro League",
+    "Eredivisie",
+    _CAROUSEL_CL_MARKER,
+]
+_ENGLAND_CHAMPIONNATS = ["Premier League", "Championship"]
+_CAROUSEL_INDEX_KEY = "sf_carousel_index"
+_BROWSING_CHAMPIONNATS_KEY = "sf_browsing_championnats"
 
 _CLUB_SELECTION_KEY = "perso_selected_clubs"
 _CLUB_TABLE_VERSION_KEY = "perso_table_version"
@@ -156,7 +184,9 @@ def _home_css() -> str:
         --sf-text-muted: rgba(244, 246, 249, 0.58);
         --sf-accent: #FF4B4B;
         --sf-accent-soft: rgba(255, 75, 75, 0.38);
+        --sf-gold: #D9B45E;
         --sf-gold-soft: rgba(217, 180, 94, 0.5);
+        --sf-green: #34D399;
     }}
     {background}
 
@@ -200,146 +230,190 @@ def _home_css() -> str:
         margin: 0;
     }}
 
-    div[class*="st-key-sf_section_"] {{
-        max-width: 1120px;
-        margin: 2.6rem auto 0;
-        padding: 0 1rem;
+    /* --- Trois tuiles d'accueil (Championnats nationaux / Sélections
+       nationales / Compétition perso) ------------------------------------
+       Streamlit imbrique chaque `st.container(key=...)` dans un wrapper
+       interne (`stLayoutWrapper`) sans classe utilisable -- c'est LUI le
+       vrai enfant direct du parent flex/grid, pas le div "st-key-...". */
+    div[class*="st-key-sf_hubs_grid"] {{
+        display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.4rem;
+        max-width: 1080px; margin: 3rem auto 0; padding: 0 1rem;
     }}
-    .sf-section-title {{
-        font-family: "Big Shoulders Display", sans-serif;
-        font-weight: 700;
-        font-size: 1.05rem;
-        letter-spacing: 0.16em;
-        text-transform: uppercase;
-        color: var(--sf-text-muted);
-        display: flex; align-items: center; gap: 0.65rem;
-        margin: 0 0 1.4rem;
+    @media (max-width: 860px) {{
+        div[class*="st-key-sf_hubs_grid"] {{ grid-template-columns: 1fr; max-width: 440px; }}
     }}
-    .sf-section-title::before {{
-        content: ""; width: 3px; height: 1.05em; border-radius: 2px;
-        background: var(--sf-accent);
-        display: inline-block;
-    }}
-
-    div[class*="st-key-sf_grid_leagues"] {{
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
-        gap: 1.7rem 0.8rem;
-    }}
-    div[class*="st-key-sf_grid_intl"] {{
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-        max-width: 620px;
-        gap: 1.7rem 1.4rem;
-    }}
-
-    div[class*="st-key-sf_tile_"] {{ position: relative; width: 100%; }}
-    div[class*="st-key-sf_btn_"] {{ position: static !important; width: 100% !important; }}
-    div[class*="st-key-sf_btn_"] button {{
+    div[class*="st-key-sf_hub_"] {{ position: relative; width: 100%; }}
+    div[class*="st-key-sf_hubbtn_"] {{ position: static !important; width: 100% !important; }}
+    div[class*="st-key-sf_hubbtn_"] button {{
         position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important;
-        opacity: 0 !important; z-index: 3; cursor: pointer; border-radius: 16px;
+        opacity: 0 !important; z-index: 4; cursor: pointer; border-radius: 20px;
     }}
-    div[class*="st-key-sf_tile_"]:has(button:focus-visible) .sf-tile-badge,
-    div[class*="st-key-sf_banner_"]:has(button:focus-visible) .sf-banner {{
-        outline: 2px solid var(--sf-accent); outline-offset: 3px;
+    div[class*="st-key-sf_hub_"]:has(button:focus-visible) .sf-hub-tile {{
+        outline: 2px solid var(--sf-gold); outline-offset: 2px;
     }}
-
-    .sf-tile {{
-        display: flex; flex-direction: column; align-items: center; gap: 0.6rem;
-        text-align: center; pointer-events: none;
-    }}
-    .sf-tile-badge {{
-        position: relative;
-        width: 74px; height: 74px;
-        border-radius: 50%;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 2rem;
+    .sf-hub-tile {{
+        position: relative; height: 100%; min-height: 280px;
+        display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-end;
+        padding: 1.8rem 1.7rem;
+        border-radius: 20px;
         background: var(--sf-surface);
         border: 1px solid var(--sf-border);
         backdrop-filter: blur(8px);
         -webkit-backdrop-filter: blur(8px);
-        transition: background 0.18s ease, transform 0.18s ease;
-    }}
-    .sf-tile-badge::after {{
-        content: ""; position: absolute; inset: -16px; border-radius: 50%; z-index: -1;
-        background: radial-gradient(circle, rgba(255, 255, 255, 0.12), transparent 70%);
-        opacity: 0.45;
-        transition: opacity 0.18s ease;
-    }}
-    .sf-tile-badge--gold::after {{
-        background: radial-gradient(circle, var(--sf-gold-soft), transparent 70%);
-        opacity: 0.55;
-    }}
-    div[class*="st-key-sf_tile_"]:hover .sf-tile-badge {{
-        background: var(--sf-surface-hover);
-        transform: translateY(-3px);
-    }}
-    div[class*="st-key-sf_tile_"]:hover .sf-tile-badge::after {{ opacity: 0.85; }}
-    .sf-tile-name {{
-        font-family: "Manrope", sans-serif; font-weight: 600; font-size: 0.84rem;
-        color: var(--sf-text); line-height: 1.15;
-    }}
-    .sf-tile-meta {{
-        font-family: "Manrope", sans-serif; font-size: 0.7rem; color: var(--sf-text-muted);
-    }}
-
-    div[class*="st-key-sf_banner_"] {{ position: relative; width: 100%; max-width: 640px; }}
-    .sf-banner {{
-        display: flex; align-items: center; gap: 1.1rem;
-        padding: 1.15rem 1.4rem;
-        border-radius: 18px;
-        background: var(--sf-surface);
-        border: 1px solid var(--sf-border);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
+        overflow: hidden;
         pointer-events: none;
-        transition: background 0.18s ease;
+        transition: background 0.2s ease, transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
     }}
-    div[class*="st-key-sf_banner_"]:hover .sf-banner {{ background: var(--sf-surface-hover); }}
-    .sf-banner-icon {{ font-size: 1.8rem; flex-shrink: 0; }}
-    .sf-banner-text {{ text-align: left; flex: 1; }}
-    .sf-banner-title {{
-        font-family: "Manrope", sans-serif; font-weight: 700; font-size: 0.98rem; color: var(--sf-text);
+    /* Signature : un balayage de projecteur traverse la tuile en diagonale au survol. */
+    .sf-hub-tile::before {{
+        content: ""; position: absolute; inset: -20%; z-index: 0;
+        background: radial-gradient(circle at 20% 0%, rgba(255, 255, 255, 0.14), transparent 55%);
+        opacity: 0; transform: translate(-15%, -15%);
+        transition: opacity 0.5s ease, transform 0.6s ease;
     }}
-    .sf-banner-desc {{
-        font-family: "Manrope", sans-serif; font-size: 0.8rem; color: var(--sf-text-muted); margin-top: 0.2rem;
+    div[class*="st-key-sf_hub_"]:hover .sf-hub-tile {{
+        background: var(--sf-surface-hover);
+        transform: translateY(-5px);
+        border-color: var(--sf-gold-soft);
+        box-shadow: 0 18px 34px rgba(0, 0, 0, 0.5), 0 0 26px rgba(217, 180, 94, 0.16);
     }}
-    .sf-banner-arrow {{ font-size: 1.2rem; color: var(--sf-text-muted); flex-shrink: 0; }}
+    div[class*="st-key-sf_hub_"]:hover .sf-hub-tile::before {{ opacity: 1; transform: translate(15%, 15%); }}
+    .sf-hub-tile--custom {{
+        border-style: dashed; border-width: 2px;
+        border-color: rgba(217, 180, 94, 0.4);
+        background: linear-gradient(135deg, rgba(217, 180, 94, 0.06), rgba(52, 211, 153, 0.05));
+    }}
+    div[class*="st-key-sf_hub_"]:hover .sf-hub-tile--custom {{
+        border-style: solid; border-color: var(--sf-green);
+        background: linear-gradient(135deg, rgba(217, 180, 94, 0.09), rgba(52, 211, 153, 0.12));
+    }}
+    .sf-hub-icon {{
+        width: 56px; height: 56px; display: flex; align-items: center; justify-content: center;
+        font-size: 1.6rem; border-radius: 50%; margin-bottom: 1.1rem; position: relative; z-index: 1;
+        background: rgba(255, 255, 255, 0.06); border: 1px solid var(--sf-border);
+    }}
+    .sf-hub-title {{
+        font-family: "Big Shoulders Display", sans-serif; font-weight: 800; font-size: 1.5rem;
+        color: var(--sf-text); line-height: 1.1; position: relative; z-index: 1;
+    }}
+    .sf-hub-desc {{
+        font-family: "Manrope", sans-serif; font-size: 0.85rem; color: var(--sf-text-muted);
+        margin-top: 0.5rem; line-height: 1.4; position: relative; z-index: 1;
+    }}
+    .sf-hub-cta {{
+        margin-top: 1.2rem; font-family: "Manrope", sans-serif; font-weight: 700; font-size: 0.8rem;
+        color: #0b1410; background: var(--sf-green); padding: 0.55rem 1rem; border-radius: 10px;
+        position: relative; z-index: 1;
+        opacity: 0; transform: translateY(8px);
+        transition: opacity 0.15s ease, transform 0.2s ease;
+    }}
+    div[class*="st-key-sf_hub_"]:hover .sf-hub-cta {{ opacity: 1; transform: translateY(0); }}
+    .sf-hub-tile--custom .sf-hub-cta {{ background: var(--sf-gold); }}
+
+    div[class*="st-key-sf_statusbar"] {{ max-width: 1080px; margin: 2.2rem auto 1.6rem; padding: 0 1rem; }}
+    .sf-status-version {{
+        font-family: "Manrope", sans-serif; font-size: 0.72rem; color: var(--sf-text-muted); letter-spacing: 0.04em;
+    }}
+    .sf-status-live {{
+        display: block; text-align: right;
+        font-family: "Manrope", sans-serif; font-size: 0.72rem; color: var(--sf-text-muted);
+    }}
+    .sf-status-dot {{
+        width: 6px; height: 6px; border-radius: 50%; background: var(--sf-green);
+        box-shadow: 0 0 8px 2px rgba(52, 211, 153, 0.5); display: inline-block; margin-right: 0.4rem;
+    }}
+    div[class*="st-key-sf_reload_data"] button {{
+        background: transparent !important;
+        border: 1px solid var(--sf-border) !important;
+        color: var(--sf-text-muted) !important;
+        font-family: "Manrope", sans-serif; font-weight: 600; font-size: 0.75rem;
+        border-radius: 10px !important;
+        transition: border-color 0.15s ease, color 0.15s ease;
+    }}
+    div[class*="st-key-sf_reload_data"] button:hover {{
+        border-color: rgba(255, 255, 255, 0.3) !important; color: var(--sf-text) !important;
+    }}
+
+    /* --- Carrousel "Championnats nationaux" ------------------------------ */
+    div[class*="st-key-sf_carousel_wrap"] {{ max-width: 760px; margin: 2.4rem auto 0; padding: 0 1rem; }}
+    div[class*="st-key-sf_carousel_back"] button {{
+        background: transparent !important; border: 1px solid var(--sf-border) !important;
+        color: var(--sf-text-muted) !important; border-radius: 10px !important;
+        font-family: "Manrope", sans-serif; font-weight: 600; font-size: 0.8rem;
+    }}
+    div[class*="st-key-sf_carousel_back"] button:hover {{
+        color: var(--sf-text) !important; border-color: rgba(255, 255, 255, 0.3) !important;
+    }}
+    div[class*="st-key-sf_carousel_arrow_"] button {{
+        background: var(--sf-surface) !important; border: 1px solid var(--sf-border) !important;
+        color: var(--sf-text) !important; border-radius: 50% !important;
+        width: 52px !important; height: 52px !important; font-size: 1.2rem !important;
+        transition: border-color 0.15s ease, background 0.15s ease;
+    }}
+    div[class*="st-key-sf_carousel_arrow_"] button:hover {{
+        border-color: var(--sf-gold) !important; background: var(--sf-surface-hover) !important;
+    }}
+    .sf-carousel-card {{
+        position: relative; border-radius: 22px; padding: 2.4rem 2rem; margin-top: 1rem;
+        background: var(--sf-surface); border: 1px solid var(--sf-gold-soft);
+        backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+        display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.5rem;
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45), 0 0 30px rgba(217, 180, 94, 0.12);
+        min-height: 260px; justify-content: center;
+    }}
+    .sf-carousel-emblem {{
+        width: 76px; height: 76px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        font-family: "Big Shoulders Display", sans-serif; font-weight: 800; font-size: 1.3rem;
+        background: rgba(217, 180, 94, 0.15); border: 1px solid rgba(217, 180, 94, 0.45); color: var(--sf-gold);
+        margin-bottom: 0.4rem;
+    }}
+    .sf-carousel-country {{
+        font-family: "Manrope", sans-serif; font-weight: 600; font-size: 0.78rem;
+        letter-spacing: 0.1em; text-transform: uppercase; color: var(--sf-text-muted);
+    }}
+    .sf-carousel-name {{
+        font-family: "Big Shoulders Display", sans-serif; font-weight: 800; font-size: 2.1rem;
+        color: var(--sf-text); line-height: 1.05;
+    }}
+    .sf-carousel-meta {{
+        font-family: "Manrope", sans-serif; font-weight: 600; font-size: 0.85rem;
+        color: var(--sf-text-muted); font-variant-numeric: tabular-nums;
+    }}
+    div[class*="st-key-sf_carousel_cta_"] {{ margin-top: 0.8rem; }}
+    div[class*="st-key-sf_carousel_cta_"] button {{
+        background: var(--sf-green) !important; color: #0b1410 !important; border: none !important;
+        font-weight: 700 !important; border-radius: 10px !important; padding: 0.7rem 1.2rem !important;
+    }}
+    div[class*="st-key-sf_carousel_cta_"] button:hover {{ filter: brightness(1.08); }}
+    .sf-carousel-dots {{ display: flex; justify-content: center; gap: 0.4rem; margin: 1.4rem 0 0; }}
+    .sf-carousel-dot {{ width: 7px; height: 7px; border-radius: 4px; background: var(--sf-border); }}
+    .sf-carousel-dot--active {{ background: var(--sf-gold); width: 20px; }}
+
+    @media (prefers-reduced-motion: reduce) {{
+        div[class*="st-key-sf_hubs_grid"] * {{ transition: none !important; animation: none !important; }}
+    }}
     </style>
     """)
 
 
-def _render_tile(*, key: str, icon: str, name: str, meta: str | None = None, gold: bool = False) -> bool:
-    """Tuile ronde entièrement cliquable (icône + nom + méta optionnelle,
-    aucun bouton "Jouer" séparé) : un vrai `st.button` invisible est
-    superposé pile sur la tuile visuelle via CSS (voir `_home_css`), donc le
-    clic fonctionne sur toute la surface tout en restant un widget Streamlit
-    natif (accessible au clavier, pas de bidouillage fragile)."""
-    badge_class = "sf-tile-badge sf-tile-badge--gold" if gold else "sf-tile-badge"
-    meta_html = f'<div class="sf-tile-meta">{meta}</div>' if meta else ""
-    with st.container(key=f"sf_tile_{key}"):
-        st.markdown(
-            f'<div class="sf-tile"><div class="{badge_class}">{icon}</div>'
-            f'<div class="sf-tile-name">{name}</div>{meta_html}</div>',
-            unsafe_allow_html=True,
-        )
-        clicked = st.button("", key=f"sf_btn_{key}")
-    return clicked
-
-
-def _render_banner(*, key: str, icon: str, title: str, description: str) -> bool:
-    """Bannière large entièrement cliquable, même principe que `_render_tile`
-    -- pour une entrée qui ouvre un parcours (assistant) plutôt qu'une
-    compétition prête à jouer."""
-    with st.container(key=f"sf_banner_{key}"):
-        st.markdown(
-            f'<div class="sf-banner"><div class="sf-banner-icon">{icon}</div>'
-            f'<div class="sf-banner-text"><div class="sf-banner-title">{title}</div>'
-            f'<div class="sf-banner-desc">{description}</div></div>'
-            f'<div class="sf-banner-arrow">→</div></div>',
-            unsafe_allow_html=True,
-        )
-        clicked = st.button("", key=f"sf_btn_{key}")
+def _render_hub_tile(*, key: str, icon: str, title: str, description: str, cta: str, custom: bool = False) -> bool:
+    """Tuile d'accueil entièrement cliquable -- même principe que les cartes
+    de l'ancien écran de sélection : un vrai `st.button` invisible superposé
+    pile sur la tuile visuelle via CSS (voir `_home_css`), donc le clic
+    fonctionne sur toute la surface tout en restant un widget Streamlit natif
+    (accessible au clavier)."""
+    classes = "sf-hub-tile sf-hub-tile--custom" if custom else "sf-hub-tile"
+    html = (
+        f'<div class="{classes}">'
+        f'<div class="sf-hub-icon">{icon}</div>'
+        f'<div class="sf-hub-title">{title}</div>'
+        f'<div class="sf-hub-desc">{description}</div>'
+        f'<div class="sf-hub-cta">{cta} →</div>'
+        f"</div>"
+    )
+    with st.container(key=f"sf_hub_{key}"):
+        st.markdown(html, unsafe_allow_html=True)
+        clicked = st.button("", key=f"sf_hubbtn_{key}")
     return clicked
 
 
@@ -368,50 +442,163 @@ def render_home_screen() -> None:
         unsafe_allow_html=True,
     )
 
-    _, col_reload = st.columns([5, 1])
-    with col_reload:
-        if st.button("🔄 Recharger les données", key="sf_reload_data", width="stretch"):
-            _reload_all_data_caches()
+    with st.container(key="sf_hubs_grid"):
+        if _render_hub_tile(
+            key="championnats",
+            icon="⚽",
+            title="Championnats nationaux",
+            description="Les 8 grands championnats européens, un par un : Ligue 1, Premier League, LaLiga...",
+            cta="Parcourir",
+        ):
+            st.session_state[_CAROUSEL_INDEX_KEY] = 0
+            st.session_state[_BROWSING_CHAMPIONNATS_KEY] = True
             st.rerun()
-
-    with st.container(key="sf_section_leagues"):
-        st.markdown('<div class="sf-section-title">Championnats nationaux</div>', unsafe_allow_html=True)
-        with st.container(key="sf_grid_leagues"):
-            for championnat in list_championnats(CLUBS_PATH):
-                flag = _CHAMPIONNAT_FLAG.get(championnat, "⚽")
-                nb_clubs = len(load_clubs(CLUBS_PATH, championnat))
-                if _render_tile(key=f"league_{championnat}", icon=flag, name=championnat, meta=f"{nb_clubs} clubs"):
-                    select_championnat(championnat)
-                    st.rerun()
-
-    with st.container(key="sf_section_intl"):
-        st.markdown('<div class="sf-section-title">Compétitions internationales</div>', unsafe_allow_html=True)
-        with st.container(key="sf_grid_intl"):
-            if _render_tile(
-                key="champions_league",
-                icon=_CHAMPIONS_LEAGUE_ICON,
-                name="Ligue des Champions",
-                meta="36 clubs · poules + élimination",
-                gold=True,
-            ):
-                store_custom_competition(start_champions_league(CLUBS_PATH))
-                st.rerun()
-            if _render_tile(
-                key="nations", icon=_NATIONS_ICON, name="Sélections nationales", meta="Sélections complètes (23/23)"
-            ):
-                st.session_state["perso_wizard_step"] = 1
-                st.session_state[_PERSO_CLUB_SOURCE_KEY] = "nations"
-                st.rerun()
-
-    with st.container(key="sf_section_perso"):
-        if _render_banner(
+        if _render_hub_tile(
+            key="nations",
+            icon=_NATIONS_ICON,
+            title="Sélections nationales",
+            description="Les équipes nationales complètes, groupées par confédération (UEFA, CAF, CONMEBOL...).",
+            cta="Choisir",
+        ):
+            st.session_state["perso_wizard_step"] = 1
+            st.session_state[_PERSO_CLUB_SOURCE_KEY] = "nations"
+            st.rerun()
+        if _render_hub_tile(
             key="perso",
             icon=_PERSO_ICON,
-            title="Compétition personnalisée",
-            description="Choisis le format, le nombre d'équipes et les clubs toi-même.",
+            title="Compétition perso",
+            description="Choisis le format et les équipes toi-même : clubs, sélections nationales, ou un mélange des deux.",
+            cta="Créer",
+            custom=True,
         ):
             st.session_state["perso_wizard_step"] = 1
             st.rerun()
+
+    with st.container(key="sf_statusbar"):
+        col_version, col_reload, col_live = st.columns([2, 1.4, 2])
+        with col_version:
+            st.markdown('<span class="sf-status-version">Simulafoot v0.1.0</span>', unsafe_allow_html=True)
+        with col_reload:
+            if st.button("🔄 Recharger les données", key="sf_reload_data", width="stretch"):
+                _reload_all_data_caches()
+                st.rerun()
+        with col_live:
+            st.markdown(
+                '<span class="sf-status-live"><span class="sf-status-dot"></span>Données à jour</span>',
+                unsafe_allow_html=True,
+            )
+
+
+# --- Carrousel "Championnats nationaux" ---------------------------------
+
+
+def render_championnat_carousel_screen() -> None:
+    st.markdown(_home_css(), unsafe_allow_html=True)
+
+    st.markdown(
+        '<div class="sf-hero" style="min-height: 18vh;">'
+        '<p class="sf-wordmark" style="font-size: clamp(1.8rem, 4vw, 2.8rem);">Championnats nationaux</p>'
+        '<div class="sf-wordmark-rule"><span class="sf-kickoff-dot"></span></div>'
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+    with st.container(key="sf_carousel_wrap"):
+        with st.container(key="sf_carousel_back"):
+            if st.button("← Accueil", key="sf_carousel_back_btn"):
+                st.session_state[_BROWSING_CHAMPIONNATS_KEY] = False
+                st.rerun()
+
+        order = _CAROUSEL_ORDER
+        index = st.session_state.get(_CAROUSEL_INDEX_KEY, 0) % len(order)
+        slide = order[index]
+
+        col_prev, col_card, col_next = st.columns([1, 5, 1])
+        with col_prev:
+            st.markdown("<div style='height: 6.5rem'></div>", unsafe_allow_html=True)
+            with st.container(key="sf_carousel_arrow_prev"):
+                if st.button("←", key="sf_carousel_arrow_prev_btn"):
+                    st.session_state[_CAROUSEL_INDEX_KEY] = (index - 1) % len(order)
+                    st.rerun()
+        with col_next:
+            st.markdown("<div style='height: 6.5rem'></div>", unsafe_allow_html=True)
+            with st.container(key="sf_carousel_arrow_next"):
+                if st.button("→", key="sf_carousel_arrow_next_btn"):
+                    st.session_state[_CAROUSEL_INDEX_KEY] = (index + 1) % len(order)
+                    st.rerun()
+        with col_card:
+            if slide == _CAROUSEL_ENGLAND_MARKER:
+                _render_england_choice()
+            elif slide == _CAROUSEL_CL_MARKER:
+                _render_champions_league_slide()
+            else:
+                _render_carousel_slide(slide)
+
+        dots = "".join(
+            f'<span class="sf-carousel-dot{" sf-carousel-dot--active" if i == index else ""}"></span>'
+            for i in range(len(order))
+        )
+        st.markdown(f'<div class="sf-carousel-dots">{dots}</div>', unsafe_allow_html=True)
+
+
+def _render_carousel_slide(championnat: str) -> None:
+    code = _CHAMPIONNAT_COUNTRY.get(championnat, "—")
+    nb_clubs = len(load_clubs(CLUBS_PATH, championnat))
+    st.markdown(
+        f'<div class="sf-carousel-card">'
+        f'<div class="sf-carousel-emblem">{code}</div>'
+        f'<div class="sf-carousel-country">{code}</div>'
+        f'<div class="sf-carousel-name">{championnat}</div>'
+        f'<div class="sf-carousel-meta">{nb_clubs} clubs</div>'
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+    _, col_btn, _ = st.columns([1, 1, 1])
+    with col_btn:
+        with st.container(key="sf_carousel_cta_league"):
+            if st.button("Jouer →", key="sf_carousel_cta_btn_league", width="stretch"):
+                select_championnat(championnat)
+                st.rerun()
+
+
+def _render_champions_league_slide() -> None:
+    st.markdown(
+        '<div class="sf-carousel-card">'
+        f'<div class="sf-carousel-emblem">{_CHAMPIONS_LEAGUE_ICON}</div>'
+        '<div class="sf-carousel-country">UEFA</div>'
+        '<div class="sf-carousel-name">Ligue des Champions</div>'
+        '<div class="sf-carousel-meta">36 clubs · poules + élimination</div>'
+        "</div>",
+        unsafe_allow_html=True,
+    )
+    _, col_btn, _ = st.columns([1, 1, 1])
+    with col_btn:
+        with st.container(key="sf_carousel_cta_cl"):
+            if st.button("Jouer →", key="sf_carousel_cta_btn_cl", width="stretch"):
+                store_custom_competition(start_champions_league(CLUBS_PATH))
+                st.rerun()
+
+
+def _render_england_choice() -> None:
+    st.markdown(
+        '<div class="sf-carousel-card">'
+        '<div class="sf-carousel-emblem">ENG</div>'
+        '<div class="sf-carousel-country">ENG</div>'
+        '<div class="sf-carousel-name">Angleterre</div>'
+        '<div class="sf-carousel-meta">2 championnats disponibles</div>'
+        "</div>",
+        unsafe_allow_html=True,
+    )
+    cols = st.columns(2)
+    for col, championnat in zip(cols, _ENGLAND_CHAMPIONNATS):
+        with col:
+            nb_clubs = len(load_clubs(CLUBS_PATH, championnat))
+            with st.container(key=f"sf_carousel_cta_{championnat}"):
+                if st.button(
+                    f"{championnat} ({nb_clubs} clubs) →", key=f"sf_carousel_cta_btn_{championnat}", width="stretch"
+                ):
+                    select_championnat(championnat)
+                    st.rerun()
 
 
 # --- Championnat officiel --------------------------------------------------
@@ -689,12 +876,27 @@ def _perso_uses_nations() -> bool:
 
 
 def _perso_club_pool() -> list[ClubOption]:
+    """Vivier de la Compétition Perso. Depuis la tuile "Sélections
+    nationales", uniquement les sélections, groupées par confédération
+    (réutilise le filtre "Championnat" existant du tableau de choix pour
+    grouper par continent -- CONMEBOL et CONCACAF distingués malgré l'onglet
+    "Amérique" unique du classeur source, voir `nations.confederation`).
+    Depuis la tuile "Compétition perso", clubs ET sélections mélangés dans le
+    même vivier, sans restriction : rien n'empêche d'aligner un club et une
+    sélection nationale dans la même compétition."""
+    nations = [
+        ClubOption(
+            name=team.name,
+            players=team.players,
+            championnat=national_team_confederation(CLUBS_PATH, team.name)
+            if _perso_uses_nations()
+            else NATIONS_CHAMPIONNAT_LABEL,
+        )
+        for team in load_national_teams(CLUBS_PATH)
+    ]
     if _perso_uses_nations():
-        return [
-            ClubOption(name=team.name, players=team.players, championnat=NATIONS_CHAMPIONNAT_LABEL)
-            for team in load_national_teams(CLUBS_PATH)
-        ]
-    return load_all_clubs(CLUBS_PATH)
+        return nations
+    return load_all_clubs(CLUBS_PATH) + nations
 
 
 def render_custom_wizard() -> None:
@@ -747,7 +949,7 @@ def _render_team_count_step() -> None:
         available = len(load_national_teams(CLUBS_PATH))
         max_teams = min(max_teams, available)
         default = min(default, max_teams)
-        st.caption(f"{available} sélections complètes (23/23) disponibles actuellement.")
+        st.caption(f"{available} sélections complètes disponibles actuellement.")
 
     count = st.number_input(
         "Nombre d'équipes", min_value=min_teams, max_value=max_teams, value=default, step=1
@@ -1054,7 +1256,7 @@ def _render_team_cell(match: Match, club: str, index: int, *, side: str) -> None
     la note de `kits.py` sur l'absence volontaire de logos officiels) et
     buteurs éventuels sur la même ligne (ex. "AS Monaco (M. Abline 47')"),
     cliquable pour ouvrir l'effectif (même bouton invisible superposé que
-    `_render_tile`/les cartes joueur de l'écran de match)."""
+    `_render_competition_card`/les cartes joueur de l'écran de match)."""
     color = primary_color(club)
     badge = f'<span class="ms-team-badge" style="background:{color};">{_club_initials(club)}</span>'
     scorers = _scorers_inline(match, club)
@@ -2037,5 +2239,7 @@ elif st.session_state.get("perso_wizard_step") is not None:
     render_custom_wizard()
 elif get_selected_championnat() is not None:
     render_season_screen()
+elif st.session_state.get(_BROWSING_CHAMPIONNATS_KEY):
+    render_championnat_carousel_screen()
 else:
     render_home_screen()
