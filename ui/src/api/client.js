@@ -1,6 +1,10 @@
-// VITE_API_URL doit pointer vers l'IP locale du PC (pas localhost) pour être
-// joignable depuis le téléphone -- voir ui/.env.local.
-const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+// Relatif par défaut : le serveur Vite relaie /api vers l'API FastAPI locale
+// (voir server.proxy dans vite.config.js), ce qui marche aussi bien en WiFi
+// local que derrière un tunnel public (ex. cloudflared) exposant uniquement
+// le port du frontend. Ne définir VITE_API_URL (voir ui/.env.local) que pour
+// pointer vers une API qui ne tourne pas sur la même machine que ce serveur
+// Vite.
+const BASE_URL = import.meta.env.VITE_API_URL ?? "";
 
 async function request(path, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {

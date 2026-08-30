@@ -52,5 +52,12 @@ export default defineConfig({
     // ici (dev local temporaire), à ne pas garder tel quel pour un vrai
     // déploiement.
     allowedHosts: true,
+    // Relaie /api vers l'API FastAPI locale : le frontend appelle des
+    // chemins relatifs (voir ui/src/api/client.js), donc un seul tunnel
+    // (sur ce serveur Vite) suffit pour accéder au jeu complet depuis le
+    // téléphone en 5G, sans exposer l'API sur un second tunnel.
+    proxy: {
+      "/api": "http://localhost:8000",
+    },
   },
 });
