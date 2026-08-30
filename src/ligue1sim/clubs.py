@@ -79,10 +79,18 @@ class ClubOption:
         return Club(name=self.name, players=self.players)
 
 
+@lru_cache(maxsize=None)
 def load_all_clubs(path: str | Path) -> list[ClubOption]:
     """Charge tous les clubs du fichier, tous championnats confondus (y
     compris "Autres clubs"), pour un sélecteur libre de type Compétition Perso.
-    """
+
+    Mis en cache (866 groupes club/championnat à reconstruire en objets
+    `Player` sur ~7500 lignes -- coûteux) : sans ce cache, chaque interaction
+    dans le sélecteur de clubs de la Compétition Perso (`app._perso_club_pool`,
+    appelé à chaque rerun Streamlit) refaisait tout le regroupement/parsing
+    depuis zéro, d'où la lenteur perçue. Même pattern que `_load_all_national_teams`
+    côté sélections (voir nations.py) -- `clear_cache()` si le classeur est
+    modifié en cours de session."""
     df = _read(path)
     _validate_columns(df)
     _validate_no_missing_values(df, scope="le fichier de joueurs")
@@ -180,6 +188,7 @@ def clear_cache() -> None:
     les tests et un éventuel rechargement à chaud en session (voir le même
     pattern dans `coaches.clear_cache`/`lineup.clear_cache`)."""
     _read.cache_clear()
+    load_all_clubs.cache_clear()
 
 
 def _validate_columns(df: pd.DataFrame) -> None:

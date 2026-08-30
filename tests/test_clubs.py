@@ -123,6 +123,36 @@ def test_club_option_as_club_carries_players_through():
     assert club.players == option.players
 
 
+def test_load_all_clubs_is_cached_across_calls():
+    """Régression perf (29/08/2026) : `load_all_clubs` recalculait tout le
+    regroupement/parsing (866 groupes club/championnat) à chaque appel, sans
+    cache propre -- contrairement à toutes les autres fonctions de parsing du
+    classeur entier (`_read`, `_load_all_national_teams`...). Chaque
+    interaction du sélecteur de clubs de la Compétition Perso (qui appelle
+    `load_all_clubs` à chaque rerun Streamlit) refaisait ce travail, d'où la
+    lenteur ressentie."""
+    assert load_all_clubs(DATA_PATH) is load_all_clubs(DATA_PATH)
+
+
+def test_at_least_18_players_cleanly_separates_real_clubs_from_stray_rows():
+    """Régression (29/08/2026) : "Autres clubs" contient des centaines de
+    lignes isolées (1 seul joueur rattaché à son club réel dans le classeur),
+    jamais un effectif complet -- voir `app._perso_club_pool`, qui filtre le
+    vivier de la Compétition Perso à `_MIN_PERSO_SQUAD_SIZE=18` pour les
+    exclure. Certaines de ces lignes isolées partagent leur nom avec un vrai
+    club d'un championnat officiel (ex. Atalanta BC en Serie A) -- sans ce
+    filtre, sélectionner le club par son nom (voir `_render_club_picker_step`)
+    l'incluait deux fois dans la compétition, d'où le calendrier généré avec
+    un nombre de journées incohérent selon le club. Ce test verrouille
+    l'hypothèse dont ce filtre dépend : aucun club réel (>=18 joueurs) ne
+    partage son nom avec un autre club réel d'un championnat différent."""
+    options = load_all_clubs(DATA_PATH)
+    real_clubs = [o for o in options if len(o.players) >= 18]
+
+    names = [o.name for o in real_clubs]
+    assert len(names) == len(set(names)), "un nom de club réel est partagé par deux championnats"
+
+
 def test_load_clubs_rejects_out_of_range_note(tmp_path):
     df = pd.DataFrame(
         {
