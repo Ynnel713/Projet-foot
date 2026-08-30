@@ -111,6 +111,27 @@ def list_championnats(path: str | Path) -> list[str]:
     return sorted(championnats)
 
 
+# Vivier de la Compétition Perso (Streamlit ET API) : "Autres clubs" contient
+# des centaines de lignes isolées (1 à quelques joueurs, un joueur rattaché à
+# son club réel dans le classeur, jamais un effectif complet -- voir l'audit
+# du 30/08/2026) -- en dessous de ce seuil, un club n'est pas jouable. "Sans
+# club" (57 joueurs libres) passe ce seuil mais n'est pas une équipe.
+MIN_PERSO_SQUAD_SIZE = 18
+PERSO_EXCLUDED_CLUB_NAMES = frozenset({"Sans club"})
+
+
+def list_perso_clubs(path: str | Path) -> list[ClubOption]:
+    """Vivier de la Compétition Perso : `load_all_clubs` filtré aux clubs
+    réellement jouables (voir MIN_PERSO_SQUAD_SIZE/PERSO_EXCLUDED_CLUB_NAMES
+    ci-dessus). Utilisé par l'écran Streamlit ET par l'API -- un seul
+    endroit pour ce filtre, pour ne pas le laisser diverger entre les deux."""
+    return [
+        c
+        for c in load_all_clubs(path)
+        if len(c.players) >= MIN_PERSO_SQUAD_SIZE and c.name not in PERSO_EXCLUDED_CLUB_NAMES
+    ]
+
+
 def load_clubs(path: str | Path, championnat: str) -> list[Club]:
     """Charge et valide les clubs d'un championnat donné.
 

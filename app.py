@@ -12,7 +12,7 @@ import pandas as pd
 import streamlit as st
 
 from ligue1sim.champions_league import start_champions_league
-from ligue1sim.clubs import Club, ClubOption, list_championnats, load_all_clubs, load_clubs
+from ligue1sim.clubs import Club, ClubOption, list_championnats, list_perso_clubs, load_all_clubs, load_clubs
 from ligue1sim.clubs import clear_cache as clear_clubs_cache
 from ligue1sim.custom_competition import (
     CompetitionFormat,
@@ -876,26 +876,11 @@ def _perso_uses_nations() -> bool:
     return st.session_state.get(_PERSO_CLUB_SOURCE_KEY) == "nations"
 
 
-# "Autres clubs" (hors des 8 championnats simulables) contient de nombreuses
-# entrées à 1-3 joueurs -- des lignes isolées d'un joueur rattaché à son club
-# réel dans le classeur, jamais un effectif complet. Non filtrées, elles
-# encombrent le sélecteur (692 des 866 groupes club/championnat du fichier
-# sont dans "Autres clubs", dont 651 en dessous de ce seuil) ET cassent le
-# calendrier généré : `_render_club_picker_step` sélectionne par NOM de club
-# (voir `selected_names`), donc quand une de ces entrées fantômes partage son
-# nom avec un vrai club d'un championnat officiel (33 cas mesurés, ex.
-# "Atalanta BC" en Serie A ET dans "Autres clubs" avec 1 seul joueur), cocher
-# le club l'inclut deux fois dans `clubs` -- `schedule.generate_calendar`
-# génère alors un calendrier pour N+1 "équipes" dont deux portent le même nom,
-# d'où le nombre de journées jouées incohérent observé au classement.
-_MIN_PERSO_SQUAD_SIZE = 18  # sous ce seuil : effectif incomplet, pas jouable
-
-# "Sans club" (57 joueurs libres, "Autres clubs") passe le filtre de taille
-# ci-dessus mais n'est pas une équipe -- juste le classeur listant les
-# joueurs sans contrat sous un nom de "club" commun. Exclu explicitement du
-# vivier de la Compétition Perso.
-_PERSO_EXCLUDED_CLUB_NAMES = {"Sans club"}
-
+# Filtre du vivier Compétition Perso (effectif >= 18 joueurs, hors "Sans
+# club") : voir `clubs.list_perso_clubs` -- partagé avec l'API FastAPI
+# (api/routers/leagues.py), pour ne pas laisser ce filtre diverger entre les
+# deux interfaces. Cause racine complète (calendrier incohérent avant ce
+# filtre) documentée là-bas.
 
 _STAR_COUNT = 6
 
@@ -908,11 +893,7 @@ def _perso_club_strengths() -> dict[str, float]:
     recalculé (~200ms pour ~220 clubs, `club_strength` reconstruit la
     meilleure compo de chacun) à chaque interaction du sélecteur -- même
     raison que le cache ajouté sur `clubs.load_all_clubs`."""
-    clubs = [
-        c
-        for c in load_all_clubs(CLUBS_PATH)
-        if len(c.players) >= _MIN_PERSO_SQUAD_SIZE and c.name not in _PERSO_EXCLUDED_CLUB_NAMES
-    ]
+    clubs = list_perso_clubs(CLUBS_PATH)
     strengths = {c.name: club_strength(c.as_club()) for c in clubs}
     strengths.update({t.name: club_strength(t) for t in load_national_teams(CLUBS_PATH)})
     return strengths
@@ -943,11 +924,10 @@ def _perso_club_pool() -> list[ClubOption]:
     "Amérique" unique du classeur source, voir `nations.confederation`).
     Depuis la tuile "Compétition perso", clubs ET sélections mélangés dans le
     même vivier, sans restriction : rien n'empêche d'aligner un club et une
-    sélection nationale dans la même compétition. Les clubs à l'effectif
-    incomplet (< `_MIN_PERSO_SQUAD_SIZE`, voir plus haut) ou explicitement
-    exclus (`_PERSO_EXCLUDED_CLUB_NAMES`) sont retirés du vivier -- non
-    filtrés dans `clubs.load_all_clubs` lui-même, dont
-    `nations.py`/`champions_league.py` ont besoin de la liste complète."""
+    sélection nationale dans la même compétition. Les clubs sont filtrés par
+    `clubs.list_perso_clubs` (voir plus haut) -- non filtrés dans
+    `clubs.load_all_clubs` lui-même, dont `nations.py`/`champions_league.py`
+    ont besoin de la liste complète."""
     nations = [
         ClubOption(
             name=team.name,
@@ -960,12 +940,7 @@ def _perso_club_pool() -> list[ClubOption]:
     ]
     if _perso_uses_nations():
         return nations
-    clubs = [
-        c
-        for c in load_all_clubs(CLUBS_PATH)
-        if len(c.players) >= _MIN_PERSO_SQUAD_SIZE and c.name not in _PERSO_EXCLUDED_CLUB_NAMES
-    ]
-    return clubs + nations
+    return list_perso_clubs(CLUBS_PATH) + nations
 
 
 def render_custom_wizard() -> None:
@@ -2128,17 +2103,13 @@ def _find_club(club_name: str) -> Club | None:
     (saison officielle, Compétition Perso, poules...), sans avoir à faire
     transiter l'objet `Club` lui-même à travers chaque tableau cliquable.
 
-    Filtre à `_MIN_PERSO_SQUAD_SIZE` comme `_perso_club_pool` : certaines
-    entrées "Autres clubs" partagent leur nom avec un vrai club d'un
-    championnat officiel (une ligne isolée d'1 joueur, voir
-    `_perso_club_pool`) -- sans ce filtre, `next(...)` pouvait retomber sur
-    cette entrée fantôme au lieu du vrai club (tri alphabétique par
-    championnat, "Autres clubs" avant "Serie A" etc.) et afficher un effectif
-    d'1 joueur pour un club comme Atalanta BC ou la Juventus."""
-    option = next(
-        (o for o in load_all_clubs(CLUBS_PATH) if o.name == club_name and len(o.players) >= _MIN_PERSO_SQUAD_SIZE),
-        None,
-    )
+    Même filtre que `clubs.list_perso_clubs` : certaines entrées "Autres
+    clubs" partagent leur nom avec un vrai club d'un championnat officiel
+    (une ligne isolée d'1 joueur) -- sans ce filtre, `next(...)` pouvait
+    retomber sur cette entrée fantôme au lieu du vrai club (tri alphabétique
+    par championnat, "Autres clubs" avant "Serie A" etc.) et afficher un
+    effectif d'1 joueur pour un club comme Atalanta BC ou la Juventus."""
+    option = next((o for o in list_perso_clubs(CLUBS_PATH) if o.name == club_name), None)
     return option.as_club() if option is not None else None
 
 
