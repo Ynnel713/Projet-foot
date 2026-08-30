@@ -93,13 +93,25 @@ def pitch_view(match: Match) -> PitchViewOut:
     )
 
 
-def group_out(group: Group) -> GroupOut:
-    return GroupOut(name=group.name, is_complete=group.is_complete, standings=_standings_rows(group.standings(), {}))
+def group_out(group: Group, last_played_matchday: int) -> GroupOut:
+    """`last_played_matchday` : indice (0-based) de la dernière journée de
+    poule jouée, -1 si aucune -- même compteur `groups_matchday` partagé par
+    toutes les poules (voir `CustomCompetition.simulate_groups_matchday`)."""
+    current_matches: list[MatchOut] = []
+    if 0 <= last_played_matchday < len(group.calendar):
+        current_matches = [match_out(m) for m in group.calendar[last_played_matchday].matches]
+    return GroupOut(
+        name=group.name,
+        is_complete=group.is_complete,
+        standings=_standings_rows(group.standings(), {}),
+        current_matches=current_matches,
+    )
 
 
 def groups_status(competition: CustomCompetition) -> GroupsStatusOut:
+    last_played_matchday = competition.groups_matchday - 1  # groups_matchday pointe déjà sur la PROCHAINE à jouer
     return GroupsStatusOut(
-        groups=[group_out(g) for g in competition.groups],
+        groups=[group_out(g, last_played_matchday) for g in competition.groups],
         groups_matchday=competition.groups_matchday,
         groups_complete=competition.groups_complete,
         knockout_started=competition.bracket is not None,
@@ -111,7 +123,13 @@ def tie_out(tie: Tie) -> TieOut:
     if tie.played and not tie.is_bye:
         home_goals, away_goals = tie.aggregate()
     return TieOut(
-        home=tie.home, away=tie.away, home_goals=home_goals, away_goals=away_goals, winner=tie.winner, is_bye=tie.is_bye
+        home=tie.home,
+        away=tie.away,
+        legs=[match_out(m) for m in tie.legs],
+        home_goals=home_goals,
+        away_goals=away_goals,
+        winner=tie.winner,
+        is_bye=tie.is_bye,
     )
 
 

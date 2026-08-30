@@ -57,6 +57,23 @@ export default function Groups() {
                 <span className="tabular-nums font-semibold">{row.points}</span>
               </div>
             ))}
+
+            {/* Résultats de la dernière journée jouée -- pas tout
+                l'historique (trop dense sur 9 poules à la fois), juste ce
+                qui vient de se jouer. */}
+            {g.current_matches.length > 0 && (
+              <div className="flex flex-col gap-0.5 mt-1.5 pt-1.5 border-t border-white/5">
+                {g.current_matches.map((m) => (
+                  <div key={`${m.home}-${m.away}`} className="flex items-center justify-between text-[10px] text-gray-400">
+                    <span className="flex-1 min-w-0 truncate">{m.home}</span>
+                    <span className="tabular-nums font-semibold text-gray-200 px-1.5 shrink-0">
+                      {m.home_goals} - {m.away_goals}
+                    </span>
+                    <span className="flex-1 min-w-0 truncate text-right">{m.away}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>

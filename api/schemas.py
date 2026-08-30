@@ -108,6 +108,7 @@ class GroupOut(BaseModel):
     name: str
     is_complete: bool
     standings: list[StandingRow]
+    current_matches: list[MatchOut]  # résultats de la dernière journée de poule jouée (vide si aucune encore)
 
 
 class GroupsStatusOut(BaseModel):
@@ -120,6 +121,7 @@ class GroupsStatusOut(BaseModel):
 class TieOut(BaseModel):
     home: str
     away: str | None  # None uniquement pour une exemption ("bye")
+    legs: list[MatchOut]  # chaque manche jouée (aller/retour), dans l'ordre -- vide si bye ou pas encore commencée
     home_goals: int | None  # score agrégé sur toutes les manches, une fois joué
     away_goals: int | None
     winner: str | None

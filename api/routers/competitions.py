@@ -76,8 +76,12 @@ def create_competition(req: CreateCompetitionRequest) -> CompetitionStatus:
 @router.post("/champions-league", response_model=CompetitionStatus)
 def create_champions_league() -> CompetitionStatus:
     """Nouvelle Ligue des Champions : 36 clubs, poules tirées au sort par
-    chapeau -- voir `champions_league.start_champions_league`."""
-    competition = start_champions_league(CLUBS_PATH)
+    chapeau -- voir `champions_league.start_champions_league`. Aller-retour
+    (legs=2) partout, poules ET élimination directe, comme le format
+    "classique" de la compétition (poules de 4 en double round-robin,
+    confrontations à élimination sur 2 manches -- y compris la finale, non
+    distinguée ici, contrairement à la vraie compétition)."""
+    competition = start_champions_league(CLUBS_PATH, legs=2)
     comp_id = store.create(competition)
     return serialize_status(comp_id, competition)
 
