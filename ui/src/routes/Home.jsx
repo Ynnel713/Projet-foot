@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Trophy, Globe2, Wand2, Star } from "lucide-react";
+import { Trophy, Globe2, Wand2, Star, Medal } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { createChampionsLeague } from "../api/client";
+import { createChampionsLeague, createWorldCup } from "../api/client";
 import { useGameStore } from "../store/useGameStore";
 
 const NAV_TILES = [
@@ -23,22 +23,22 @@ const NAV_TILES = [
 export default function Home() {
   const navigate = useNavigate();
   const setActiveCompetition = useGameStore((s) => s.setActiveCompetition);
-  const [launchingCL, setLaunchingCL] = useState(false);
+  const [launching, setLaunching] = useState(null); // "cl" | "wc" | null
 
-  async function launchChampionsLeague() {
-    setLaunchingCL(true);
+  async function launch(create, key) {
+    setLaunching(key);
     try {
-      const status = await createChampionsLeague();
+      const status = await create();
       setActiveCompetition(status.id, status.championnat, status.format);
       navigate(`/competition/${status.id}/groups`);
     } finally {
-      setLaunchingCL(false);
+      setLaunching(null);
     }
   }
 
   return (
     <div className="h-full flex flex-col items-center justify-center gap-4 p-4">
-      <div className="grid grid-cols-4 gap-4 w-full max-w-4xl">
+      <div className="grid grid-cols-5 gap-4 w-full max-w-5xl">
         {NAV_TILES.map(({ to, icon: Icon, title, description }) => (
           <Tile key={to} icon={Icon} title={title} description={description} onClick={() => navigate(to)} />
         ))}
@@ -48,8 +48,17 @@ export default function Home() {
           title="Ligue des Champions"
           description="36 clubs, poules par chapeau puis élimination directe."
           gold
-          loading={launchingCL}
-          onClick={launchChampionsLeague}
+          loading={launching === "cl"}
+          onClick={() => launch(createChampionsLeague, "cl")}
+        />
+
+        <Tile
+          icon={Medal}
+          title="Coupe du Monde"
+          description="32 sélections, poules par chapeau puis élimination directe."
+          gold
+          loading={launching === "wc"}
+          onClick={() => launch(createWorldCup, "wc")}
         />
 
         <Tile

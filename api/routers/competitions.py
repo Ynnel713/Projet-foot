@@ -18,6 +18,7 @@ from ligue1sim.clubs import load_clubs, list_perso_clubs
 from ligue1sim.custom_competition import CompetitionFormat, CustomCompetition
 from ligue1sim.nations import load_national_teams
 from ligue1sim.season import CLUBS_PATH
+from ligue1sim.world_cup import start_world_cup
 
 from api import store
 from api.schemas import (
@@ -82,6 +83,19 @@ def create_champions_league() -> CompetitionStatus:
     confrontations à élimination sur 2 manches -- y compris la finale, non
     distinguée ici, contrairement à la vraie compétition)."""
     competition = start_champions_league(CLUBS_PATH, legs=2)
+    comp_id = store.create(competition)
+    return serialize_status(comp_id, competition)
+
+
+@router.post("/world-cup", response_model=CompetitionStatus)
+def create_world_cup() -> CompetitionStatus:
+    """Nouvelle Coupe du Monde : les 32 meilleures sélections nationales
+    (force actuelle, pas de vraie qualification par confédération -- voir
+    `world_cup.start_world_cup`), groupes tirés au sort par chapeau. Matchs
+    simples (legs=1) partout, poules ET élimination directe -- contrairement
+    à la Ligue des Champions, une compétition internationale se joue sur
+    quelques semaines, pas en aller-retour."""
+    competition = start_world_cup(CLUBS_PATH, legs=1)
     comp_id = store.create(competition)
     return serialize_status(comp_id, competition)
 

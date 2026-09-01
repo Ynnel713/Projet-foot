@@ -34,8 +34,10 @@ export const getMatches = (id, journee) =>
 export const getPitchView = (id, journee, home, away) =>
   request(`/api/competitions/${id}/pitch?${new URLSearchParams({ journee, home, away })}`);
 
-// Ligue des Champions (format HYBRID : poules puis élimination directe)
+// Ligue des Champions / Coupe du Monde (format HYBRID : poules puis
+// élimination directe -- mêmes écrans Groups.jsx/Bracket.jsx pour les deux).
 export const createChampionsLeague = () => request("/api/competitions/champions-league", { method: "POST" });
+export const createWorldCup = () => request("/api/competitions/world-cup", { method: "POST" });
 export const getGroups = (id) => request(`/api/competitions/${id}/groups`);
 export const simulateGroupsMatchday = (id) =>
   request(`/api/competitions/${id}/groups/simulate-matchday`, { method: "POST" });

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { getNations, createCompetition } from "../api/client";
 import { useGameStore } from "../store/useGameStore";
+import { parseFlaggedName, flagUrl } from "../utils/flags";
 
 const LEGS_LABELS = { 1: "Aller simple", 2: "Aller-retour", 4: "Double aller-retour" };
 
@@ -119,16 +120,22 @@ export default function Nations() {
         <div className="flex-1 min-h-0 overflow-y-auto grid grid-cols-2 gap-1.5 content-start">
           {filtered.map((n) => {
             const isSelected = selected.includes(n.name);
+            const { code, label } = parseFlaggedName(n.name);
             return (
               <button
                 key={n.name}
                 onClick={() => toggle(n.name)}
                 disabled={!isSelected && selected.length >= teamCount}
-                className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm min-h-[44px] text-left ${
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm min-h-[44px] text-left ${
                   isSelected ? "bg-accent/20 border border-accent/50" : "bg-surface border border-transparent"
                 } disabled:opacity-30`}
               >
-                <span className="truncate">{n.name}</span>
+                {code ? (
+                  <img src={flagUrl(code)} alt="" className="h-4 w-6 rounded-sm object-cover shrink-0" />
+                ) : (
+                  <span className="h-4 w-6 shrink-0" />
+                )}
+                <span className="flex-1 min-w-0 truncate">{label}</span>
                 <span className="text-[10px] text-gray-500 shrink-0 pl-2">{n.confederation}</span>
               </button>
             );

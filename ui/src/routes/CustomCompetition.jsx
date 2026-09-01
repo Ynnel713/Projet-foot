@@ -3,6 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { getPersoClubs, getNations, createCompetition } from "../api/client";
 import { useGameStore } from "../store/useGameStore";
+import { parseFlaggedName, flagUrl } from "../utils/flags";
+
+const MAX_TEAM_COUNT = 50;
 
 const LEGS_LABELS = { 1: "Aller simple", 2: "Aller-retour", 4: "Double aller-retour" };
 
@@ -68,7 +71,7 @@ export default function CustomCompetition() {
             <input
               type="range"
               min={2}
-              max={32}
+              max={MAX_TEAM_COUNT}
               step={2}
               value={teamCount}
               onChange={(e) => setTeamCount(Number(e.target.value))}
@@ -126,16 +129,18 @@ export default function CustomCompetition() {
         <div className="flex-1 min-h-0 overflow-y-auto grid grid-cols-2 gap-1.5 content-start">
           {filtered.map((c) => {
             const isSelected = selected.includes(c.name);
+            const { code, label } = parseFlaggedName(c.name);
             return (
               <button
                 key={c.name}
                 onClick={() => toggle(c.name)}
                 disabled={!isSelected && selected.length >= teamCount}
-                className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm min-h-[44px] text-left ${
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm min-h-[44px] text-left ${
                   isSelected ? "bg-accent/20 border border-accent/50" : "bg-surface border border-transparent"
                 } disabled:opacity-30`}
               >
-                <span className="truncate">{c.name}</span>
+                {code && <img src={flagUrl(code)} alt="" className="h-4 w-6 rounded-sm object-cover shrink-0" />}
+                <span className="flex-1 min-w-0 truncate">{label}</span>
                 <span className="text-[10px] text-gray-500 shrink-0 pl-2">{c.category}</span>
               </button>
             );
