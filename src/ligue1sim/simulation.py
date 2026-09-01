@@ -141,7 +141,7 @@ from ligue1sim.events import (
     settle_trackers,
 )
 from ligue1sim.lineup import Lineup, bench, pick_best_formation
-from ligue1sim.players import Player
+from ligue1sim.players import ATTACKER, DEFENDER, GOALKEEPER, Player
 from ligue1sim.schedule import Journee
 
 LEAGUE_AVG_GOALS = 1.14  # buts moyens attendus par équipe et par match, pour une confrontation entre deux équipes de force moyenne
@@ -212,6 +212,40 @@ VARIANCE_SHRINK = 1.0
 # ATTACK_DEFENSE_POWER/MAX_LAMBDA ci-dessus -- à affiner si le comportement
 # en jeu le justifie).
 GK_WEIGHT_IN_DEFENSE = 0.35
+
+# Septième calibrage (01/09/2026, proposition d'Olivier) : avant toute
+# moyenne de secteur, chaque note individuelle est passée par
+# (note/100)^k * 100 -- convexe pour k>1, donc creuse l'écart entre deux
+# notes même pour deux effectifs parfaitement homogènes (85 vs 60 -> 80.3 vs
+# 50.2, écart 25 -> 30.1), SANS dépendre de la variance interne d'un
+# effectif. Isolé ici (n'affecte que la force utilisée par le moteur de
+# match) plutôt que dans lineup.py : ne touche pas la note affichée à
+# l'écran (fiche joueur, classement par note), qui doit rester comparable
+# aux vraies notes scoutées.
+#
+# Deux autres pistes envisagées en même temps, écartées avant tout code :
+# une agrégation non-linéaire (RMS pour l'attaque, moyenne harmonique pour
+# la défense) mesurée sans effet sur les grands clubs testés (écart RMS vs
+# moyenne arithmétique de +0.01 à +0.13 point pour Real Madrid/Bayern/City
+# -- leurs effectifs sont homogènes secteur par secteur, pas "un cador
+# entouré de moyens", donc rien à polariser) ; et remonter MID_INFLUENCE
+# dans l'exposant, qui reproduirait le swing de classement de ~52 points
+# déjà mesuré et corrigé lors du sixième calibrage (voir plus haut) -- pas
+# retesté.
+#
+# k mesuré sur 100 saisons Premier League + Bundesliga : 1.0 (pas de
+# distorsion) donne Bayern 64/100, favori gagne (écart 15-20) 75.5% ; 1.35
+# donne Bayern 80/100 mais favori 84.6% (trop agressif match par match,
+# taux de nuls en recul) ; 1.20 donne Bayern 75/100, favori 80.4% -- encore
+# légèrement au-dessus de la cible (Bayern ~70-72, favori 77-79%) mais
+# retenu comme compromis, sans dilution vers les poursuivants directs
+# (Dortmund reste à 11-18/100 selon la graine, sans la dérive mesurée sur
+# les leviers de variance par rang, abandonnés plus haut).
+_STRENGTH_DISTORTION_K = 1.20
+
+
+def _distort(note: float) -> float:
+    return (note / 100.0) ** _STRENGTH_DISTORTION_K * 100.0
 
 # Influence (légère, volontairement douce) du milieu sur l'attaque ET la
 # défense de sa propre équipe : un milieu nettement au-dessus du niveau
@@ -533,19 +567,31 @@ def _mid_modifier(lineup: Lineup) -> float:
     return min(_MID_MODIFIER_BOUNDS[1], max(_MID_MODIFIER_BOUNDS[0], modifier))
 
 
+def _distorted_group_rating(lineup: Lineup, group: str) -> float:
+    """Comme `lineup._group_rating`, mais chaque note individuelle passe par
+    `_distort` avant la moyenne (voir septième calibrage ci-dessus) --
+    recalculé ici plutôt que dans lineup.py pour ne pas toucher aux notes
+    affichées ailleurs (fiche joueur, classement par note)."""
+    members = [_distort(p.note) for p in lineup.players if p.group == group]
+    return sum(members) / len(members) if members else _distort(lineup.rating)
+
+
 def _attack_strength(lineup: Lineup) -> float:
-    """Force d'attaque d'une équipe pour un match : la note de ses
-    attaquants alignés. Note brute uniquement -- le milieu (`_mid_modifier`)
-    et le banc (`_bench_modifier`) sont appliqués post-exposant directement
-    sur le lambda final, pas ici (voir _draw_score)."""
-    return lineup.att_rating
+    """Force d'attaque d'une équipe pour un match : la note (distordue, voir
+    septième calibrage ci-dessus) de ses attaquants alignés. Le milieu
+    (`_mid_modifier`) et le banc (`_bench_modifier`) sont appliqués
+    post-exposant directement sur le lambda final, pas ici (voir
+    _draw_score)."""
+    return _distorted_group_rating(lineup, ATTACKER)
 
 
 def _defense_strength(lineup: Lineup) -> float:
     """Force défensive d'une équipe pour un match : gardien + défenseurs
-    alignés (voir GK_WEIGHT_IN_DEFENSE). Note brute uniquement, même
-    remarque que `_attack_strength` ci-dessus pour milieu/banc."""
-    return GK_WEIGHT_IN_DEFENSE * lineup.gk_rating + (1 - GK_WEIGHT_IN_DEFENSE) * lineup.def_rating
+    alignés (voir GK_WEIGHT_IN_DEFENSE), notes distordues comme
+    `_attack_strength` ci-dessus."""
+    gk = _distorted_group_rating(lineup, GOALKEEPER)
+    df = _distorted_group_rating(lineup, DEFENDER)
+    return GK_WEIGHT_IN_DEFENSE * gk + (1 - GK_WEIGHT_IN_DEFENSE) * df
 
 
 def _draw_goals(lam: float) -> int:
