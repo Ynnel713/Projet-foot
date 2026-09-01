@@ -25,6 +25,10 @@ class Tie:
     away: str | None
     legs: list[Match] = field(default_factory=list)
     winner: str | None = None
+    # True quand l'agrégat est resté à égalité après toutes les manches et
+    # que le vainqueur a dû être départagé (voir `_resolve_tiebreak`) --
+    # sans ça, l'écran ne montre qu'un score nul sans expliquer qui a gagné.
+    decided_by_penalties: bool = False
 
     def __post_init__(self) -> None:
         if self.away is None:
@@ -132,6 +136,7 @@ def simulate_tie(
         tie.winner = tie.away
     else:
         tie.winner = _resolve_tiebreak(home_club, away_club)
+        tie.decided_by_penalties = True
 
 
 def simulate_round(

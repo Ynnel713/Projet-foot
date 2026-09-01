@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import ScorersLine from "./ScorersLine";
 
 export default function MatchRow({ match, onClick }) {
   const notPlayed = !match.played;
@@ -28,11 +29,7 @@ export default function MatchRow({ match, onClick }) {
         </span>
         <span className="flex-1 min-w-0 text-sm text-right truncate">{match.away}</span>
       </div>
-      {match.scorers?.length > 0 && (
-        <div className="text-[10px] text-gray-500 truncate mt-0.5">
-          ⚽ {match.scorers.map((s) => `${s.player} ${s.minute}'`).join(", ")}
-        </div>
-      )}
+      <ScorersLine scorers={match.scorers} home={match.home} away={match.away} className="mt-0.5" />
     </motion.div>
   );
 }

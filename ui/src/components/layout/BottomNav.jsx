@@ -1,4 +1,4 @@
-import { Trophy, Play, ListOrdered, Users, Swords } from "lucide-react";
+import { Trophy, Play, ListOrdered, Users, Swords, Target } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useGameStore } from "../../store/useGameStore";
 
@@ -17,6 +17,11 @@ export default function BottomNav() {
           base,
           { to: activeCompetitionId ? `/competition/${activeCompetitionId}/groups` : "/", label: "Poules", Icon: Users },
           { to: activeCompetitionId ? `/competition/${activeCompetitionId}/bracket` : "/", label: "Tableau", Icon: Swords },
+          {
+            to: activeCompetitionId ? `/competition/${activeCompetitionId}/leaderboards` : "/",
+            label: "Buteurs",
+            Icon: Target,
+          },
         ]
       : [
           base,

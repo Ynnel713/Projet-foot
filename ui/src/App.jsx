@@ -9,6 +9,7 @@ import Standings from "./routes/Standings";
 import PitchView from "./routes/PitchView";
 import Groups from "./routes/Groups";
 import Bracket from "./routes/Bracket";
+import Leaderboards from "./routes/Leaderboards";
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
           <Route path="/competition/:id/pitch" element={<PitchView />} />
           <Route path="/competition/:id/groups" element={<Groups />} />
           <Route path="/competition/:id/bracket" element={<Bracket />} />
+          <Route path="/competition/:id/leaderboards" element={<Leaderboards />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AppShell>

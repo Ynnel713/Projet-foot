@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getGroups, simulateGroupsMatchday, startKnockout } from "../api/client";
+import ScorersLine from "../components/simulation/ScorersLine";
 
 export default function Groups() {
   const { id } = useParams();
@@ -86,11 +87,7 @@ export default function Groups() {
                       </span>
                       <span className="flex-1 min-w-0 truncate text-right">{m.away}</span>
                     </div>
-                    {m.scorers.length > 0 && (
-                      <div className="text-[9px] text-gray-600 truncate">
-                        ⚽ {m.scorers.map((s) => `${s.player} ${s.minute}'`).join(", ")}
-                      </div>
-                    )}
+                    <ScorersLine scorers={m.scorers} home={m.home} away={m.away} />
                   </button>
                 ))}
               </div>

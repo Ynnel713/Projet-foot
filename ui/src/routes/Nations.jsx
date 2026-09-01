@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { getNations, createCompetition } from "../api/client";
 import { useGameStore } from "../store/useGameStore";
 import { parseFlaggedName, flagUrl } from "../utils/flags";
+import { starRating } from "../utils/stars";
 
 const LEGS_LABELS = { 1: "Aller simple", 2: "Aller-retour", 4: "Double aller-retour" };
 
@@ -27,6 +28,7 @@ export default function Nations() {
     () => pool.filter((n) => confederation === "Toutes" || n.confederation === confederation),
     [pool, confederation],
   );
+  const allStrengths = useMemo(() => pool.map((n) => n.strength), [pool]);
 
   function toggle(name) {
     setSelected((prev) => (prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]));
@@ -126,17 +128,22 @@ export default function Nations() {
                 key={n.name}
                 onClick={() => toggle(n.name)}
                 disabled={!isSelected && selected.length >= teamCount}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm min-h-[44px] text-left ${
+                className={`flex flex-col gap-0.5 px-3 py-2 rounded-lg text-sm min-h-[52px] text-left ${
                   isSelected ? "bg-accent/20 border border-accent/50" : "bg-surface border border-transparent"
                 } disabled:opacity-30`}
               >
-                {code ? (
-                  <img src={flagUrl(code)} alt="" className="h-4 w-6 rounded-sm object-cover shrink-0" />
-                ) : (
-                  <span className="h-4 w-6 shrink-0" />
-                )}
-                <span className="flex-1 min-w-0 truncate">{label}</span>
-                <span className="text-[10px] text-gray-500 shrink-0 pl-2">{n.confederation}</span>
+                <div className="flex items-center gap-2">
+                  {code ? (
+                    <img src={flagUrl(code)} alt="" className="h-4 w-6 rounded-sm object-cover shrink-0" />
+                  ) : (
+                    <span className="h-4 w-6 shrink-0" />
+                  )}
+                  <span className="flex-1 min-w-0 truncate">{label}</span>
+                </div>
+                <div className="flex items-center justify-between text-[10px] text-gray-500">
+                  <span className="truncate">{n.confederation}</span>
+                  <span className="text-gold shrink-0 pl-2">{starRating(n.strength, allStrengths)}</span>
+                </div>
               </button>
             );
           })}

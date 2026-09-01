@@ -7,7 +7,10 @@ import { getPitchView } from "../api/client";
 // moteur (pitch_layout.place_starting_xi) est vertical -- domicile en haut
 // (y 10-42), extérieur en bas (y 58-90), x = position latérale 0-100. On
 // pivote à l'affichage : le "y" du moteur (profondeur) devient la position
-// HORIZONTALE à l'écran, le "x" (latéral) reste la position verticale.
+// HORIZONTALE à l'écran ; le "x" (latéral) devient la position VERTICALE,
+// mais en le MIROITANT (100 - x) -- une simple permutation x<->y n'est pas
+// une rotation à 90° mais une réflexion, qui inverserait gauche/droite
+// (ailiers, latéraux) par rapport à la vraie orientation de chaque équipe.
 export default function PitchView() {
   const { id } = useParams();
   const [params] = useSearchParams();
@@ -95,14 +98,12 @@ function PlayerDot({ player, color }) {
   return (
     <div
       className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-0.5"
-      style={{ left: `${player.y}%`, top: `${player.x}%` }}
+      style={{ left: `${player.y}%`, top: `${100 - player.x}%` }}
     >
       <div className={`h-7 w-7 rounded-full ${color} flex items-center justify-center text-[10px] font-bold shadow`}>
         {initials}
       </div>
-      <span className="text-[9px] text-white/80 whitespace-nowrap max-w-[70px] truncate leading-none">
-        {player.name}
-      </span>
+      <span className="text-[9px] text-white/80 text-center leading-tight w-max max-w-[140px]">{player.name}</span>
       {(player.goals > 0 || player.yellow_cards > 0 || player.red_card) && (
         <span className="text-[9px] leading-none">
           {"⚽".repeat(Math.min(player.goals, 3))}

@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getBracket, simulateBracketRound, advanceBracketRound } from "../api/client";
+import ScorersLine from "../components/simulation/ScorersLine";
 
 export default function Bracket() {
   const { id } = useParams();
@@ -122,6 +123,11 @@ function TieCard({ tie: t, id, navigate, roundNumber, compact = false }) {
           {t.away ?? ""}
         </span>
       </div>
+      {t.decided_by_penalties && (
+        <p className="text-[10px] text-gold text-center -mt-0.5">
+          Aux tirs au but : {t.winner} qualifié
+        </p>
+      )}
 
       {/* Résultat de chaque manche (aller/retour) -- pas seulement l'agrégat,
           pour les confrontations sur plusieurs matchs. Cliquable -> vue
@@ -151,11 +157,7 @@ function TieCard({ tie: t, id, navigate, roundNumber, compact = false }) {
                 </span>
                 <span className="flex-1 min-w-0 truncate">{leg.away}</span>
               </div>
-              {leg.scorers.length > 0 && (
-                <div className="text-[9px] text-gray-600 truncate">
-                  ⚽ {leg.scorers.map((s) => `${s.player} ${s.minute}'`).join(", ")}
-                </div>
-              )}
+              <ScorersLine scorers={leg.scorers} home={leg.home} away={leg.away} className="mt-0.5" />
             </button>
           ))}
         </div>

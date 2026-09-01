@@ -135,6 +135,7 @@ class TieOut(BaseModel):
     away_goals: int | None
     winner: str | None
     is_bye: bool
+    decided_by_penalties: bool = False
 
 
 class RoundOut(BaseModel):
@@ -147,3 +148,14 @@ class BracketOut(BaseModel):
     rounds: list[RoundOut]
     is_complete: bool
     champion: str | None
+
+
+class LeaderboardRow(BaseModel):
+    player: str
+    club: str
+    count: int
+
+
+class LeaderboardsOut(BaseModel):
+    scorers: list[LeaderboardRow]
+    assists: list[LeaderboardRow]

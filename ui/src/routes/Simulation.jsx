@@ -19,7 +19,6 @@ export default function Simulation() {
   const [status, setStatus] = useState(null);
   const [matches, setMatches] = useState([]);
   const [standings, setStandings] = useState([]);
-  const [revealCount, setRevealCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -35,7 +34,6 @@ export default function Simulation() {
       ]);
       setStatus(s);
       setMatches(journeeMatches);
-      setRevealCount(journeeMatches.length); // affichage immédiat, pas d'animation au chargement
       setStandings(standingsRows);
     } catch {
       setError("Compétition introuvable.");
@@ -58,13 +56,11 @@ export default function Simulation() {
         const res = await advanceJournee(id);
         setStatus(res.status);
         setMatches(res.matches_played); // calendrier à venir de la nouvelle journée, pas encore joué
-        setRevealCount(res.matches_played.length); // visible tout de suite, pas d'animation
         setStandings(res.standings);
       } else {
         const res = await simulateCurrent(id);
         setStatus(res.status);
-        setMatches(res.matches_played); // désormais joués, avec les scores
-        setRevealCount(0); // déclenche la révélation progressive ci-dessous
+        setMatches(res.matches_played); // désormais joués, avec les scores -- tous affichés d'un coup
         setStandings(res.standings);
       }
     } catch {
@@ -82,7 +78,6 @@ export default function Simulation() {
       const lastJournee = await getMatches(id, res.status.current_journee);
       setStatus(res.status);
       setMatches(lastJournee);
-      setRevealCount(lastJournee.length);
       setStandings(res.standings);
     } catch {
       setError("Échec de la simulation.");
@@ -90,15 +85,6 @@ export default function Simulation() {
       setLoading(false);
     }
   }
-
-  // Révélation progressive des scores : le résultat est déjà connu (calcul
-  // instantané côté moteur), donc c'est le client qui échelonne l'affichage
-  // -- pas de WebSocket, rien à synchroniser côté serveur.
-  useEffect(() => {
-    if (revealCount >= matches.length) return;
-    const t = setTimeout(() => setRevealCount((c) => c + 1), 350);
-    return () => clearTimeout(t);
-  }, [revealCount, matches]);
 
   if (error) {
     return (
@@ -135,7 +121,7 @@ export default function Simulation() {
         )}
 
         <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-1.5 pb-16">
-          {matches.slice(0, revealCount).map((m) => (
+          {matches.map((m) => (
             <MatchRow key={`${m.home}-${m.away}`} match={m} onClick={() => openPitch(m)} />
           ))}
         </div>

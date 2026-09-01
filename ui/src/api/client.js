@@ -29,6 +29,7 @@ export const simulateCurrent = (id) => request(`/api/competitions/${id}/simulate
 export const advanceJournee = (id) => request(`/api/competitions/${id}/advance`, { method: "POST" });
 export const simulateAll = (id) => request(`/api/competitions/${id}/simulate-all`, { method: "POST" });
 export const getStandings = (id) => request(`/api/competitions/${id}/standings`);
+export const getLeaderboards = (id) => request(`/api/competitions/${id}/leaderboards`);
 export const getMatches = (id, journee) =>
   request(`/api/competitions/${id}/matches${journee ? `?journee=${journee}` : ""}`);
 // `params` : { home, away, journee } (championnat), { home, away, group,

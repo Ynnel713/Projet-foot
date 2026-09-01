@@ -27,6 +27,7 @@ from api.schemas import (
     CompetitionStatus,
     CreateCompetitionRequest,
     GroupsStatusOut,
+    LeaderboardsOut,
     MatchOut,
     PitchViewOut,
     SimulateResponse,
@@ -34,6 +35,7 @@ from api.schemas import (
 from api.serializers import (
     bracket_out,
     groups_status,
+    leaderboards_out,
     match_out,
     pitch_view,
     standings as serialize_standings,
@@ -190,6 +192,14 @@ def simulate_all(comp_id: str) -> SimulateResponse:
 def get_standings(comp_id: str):
     competition = _get_or_404(comp_id)
     return serialize_standings(competition, store.previous_ranks(comp_id))
+
+
+@router.get("/{comp_id}/leaderboards", response_model=LeaderboardsOut)
+def get_leaderboards(comp_id: str) -> LeaderboardsOut:
+    """Classements buteurs/passeurs sur tous les matchs déjà joués, quel que
+    soit le format (championnat, poules, tableau) -- voir
+    `CustomCompetition.all_matches`."""
+    return leaderboards_out(_get_or_404(comp_id))
 
 
 @router.get("/{comp_id}/matches", response_model=list[MatchOut])

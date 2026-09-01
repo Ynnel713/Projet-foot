@@ -4,6 +4,7 @@ exposés par l'API."""
 from __future__ import annotations
 
 from ligue1sim.custom_competition import CustomCompetition
+from ligue1sim.events import compute_leaderboards
 from ligue1sim.groups import Group
 from ligue1sim.knockout import Bracket, Tie
 from ligue1sim.pitch_layout import PlacedPlayer, actual_formation_label, place_starting_xi
@@ -14,6 +15,8 @@ from api.schemas import (
     CompetitionStatus,
     GroupOut,
     GroupsStatusOut,
+    LeaderboardRow,
+    LeaderboardsOut,
     MatchOut,
     PitchViewOut,
     PlacedPlayerOut,
@@ -154,6 +157,7 @@ def tie_out(tie: Tie) -> TieOut:
         away_goals=away_goals,
         winner=tie.winner,
         is_bye=tie.is_bye,
+        decided_by_penalties=tie.decided_by_penalties,
     )
 
 
@@ -162,6 +166,14 @@ def bracket_out(bracket: Bracket) -> BracketOut:
         rounds=[RoundOut(number=r.number, ties=[tie_out(t) for t in r.ties], played=r.played) for r in bracket.rounds],
         is_complete=bracket.is_complete,
         champion=bracket.champion,
+    )
+
+
+def leaderboards_out(competition: CustomCompetition) -> LeaderboardsOut:
+    buteurs, passeurs = compute_leaderboards(competition.all_matches)
+    return LeaderboardsOut(
+        scorers=[LeaderboardRow(player=r.Joueur, club=r.Club, count=r.Buts) for r in buteurs.itertuples()],
+        assists=[LeaderboardRow(player=r.Joueur, club=r.Club, count=r.Passes) for r in passeurs.itertuples()],
     )
 
 
