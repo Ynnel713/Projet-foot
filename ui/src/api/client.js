@@ -31,8 +31,14 @@ export const simulateAll = (id) => request(`/api/competitions/${id}/simulate-all
 export const getStandings = (id) => request(`/api/competitions/${id}/standings`);
 export const getMatches = (id, journee) =>
   request(`/api/competitions/${id}/matches${journee ? `?journee=${journee}` : ""}`);
-export const getPitchView = (id, journee, home, away) =>
-  request(`/api/competitions/${id}/pitch?${new URLSearchParams({ journee, home, away })}`);
+// `params` : { home, away, journee } (championnat), { home, away, group,
+// matchday } (poules), ou { home, away, round_number, leg } (tableau,
+// leg 0=aller/1=retour) -- un seul groupe pertinent à la fois, voir
+// api.routers.competitions.get_pitch_view.
+export const getPitchView = (id, params) => {
+  const clean = Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== null));
+  return request(`/api/competitions/${id}/pitch?${new URLSearchParams(clean)}`);
+};
 
 // Ligue des Champions / Coupe du Monde (format HYBRID : poules puis
 // élimination directe -- mêmes écrans Groups.jsx/Bracket.jsx pour les deux).

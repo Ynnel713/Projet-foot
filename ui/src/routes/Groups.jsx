@@ -60,17 +60,38 @@ export default function Groups() {
 
             {/* Résultats de la dernière journée jouée -- pas tout
                 l'historique (trop dense sur 9 poules à la fois), juste ce
-                qui vient de se jouer. */}
+                qui vient de se jouer. Cliquable -> vue terrain (matchday =
+                groups_matchday - 1, même convention que le backend). */}
             {g.current_matches.length > 0 && (
-              <div className="flex flex-col gap-0.5 mt-1.5 pt-1.5 border-t border-white/5">
+              <div className="flex flex-col gap-1 mt-1.5 pt-1.5 border-t border-white/5">
                 {g.current_matches.map((m) => (
-                  <div key={`${m.home}-${m.away}`} className="flex items-center justify-between text-[10px] text-gray-400">
-                    <span className="flex-1 min-w-0 truncate">{m.home}</span>
-                    <span className="tabular-nums font-semibold text-gray-200 px-1.5 shrink-0">
-                      {m.home_goals} - {m.away_goals}
-                    </span>
-                    <span className="flex-1 min-w-0 truncate text-right">{m.away}</span>
-                  </div>
+                  <button
+                    key={`${m.home}-${m.away}`}
+                    onClick={() =>
+                      navigate(
+                        `/competition/${id}/pitch?${new URLSearchParams({
+                          home: m.home,
+                          away: m.away,
+                          group: g.name,
+                          matchday: data.groups_matchday - 1,
+                        })}`
+                      )
+                    }
+                    className="text-left"
+                  >
+                    <div className="flex items-center justify-between text-[10px] text-gray-400">
+                      <span className="flex-1 min-w-0 truncate">{m.home}</span>
+                      <span className="tabular-nums font-semibold text-gray-200 px-1.5 shrink-0">
+                        {m.home_goals} - {m.away_goals}
+                      </span>
+                      <span className="flex-1 min-w-0 truncate text-right">{m.away}</span>
+                    </div>
+                    {m.scorers.length > 0 && (
+                      <div className="text-[9px] text-gray-600 truncate">
+                        ⚽ {m.scorers.map((s) => `${s.player} ${s.minute}'`).join(", ")}
+                      </div>
+                    )}
+                  </button>
                 ))}
               </div>
             )}

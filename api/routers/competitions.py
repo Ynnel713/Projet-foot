@@ -17,6 +17,7 @@ from ligue1sim.champions_league import start_champions_league
 from ligue1sim.clubs import load_clubs, list_perso_clubs
 from ligue1sim.custom_competition import CompetitionFormat, CustomCompetition
 from ligue1sim.nations import load_national_teams
+from ligue1sim.schedule import Match
 from ligue1sim.season import CLUBS_PATH
 from ligue1sim.world_cup import start_world_cup
 
@@ -204,21 +205,69 @@ def get_matches(comp_id: str, journee: int | None = None) -> list[MatchOut]:
     return [match_out(m) for m in matches]
 
 
-@router.get("/{comp_id}/pitch", response_model=PitchViewOut)
-def get_pitch_view(comp_id: str, journee: int, home: str, away: str) -> PitchViewOut:
-    """Placement des deux compositions sur un terrain partagé (vue "stade"),
-    pour un match déjà joué -- voir `pitch_layout.place_starting_xi`."""
-    competition = _get_or_404(comp_id)
+def _find_match_in_season(competition: CustomCompetition, home: str, away: str, journee: int) -> Match | None:
     season = competition.season
-    if not (1 <= journee <= season.total_journees):
-        raise HTTPException(422, f"Journée hors bornes (1-{season.total_journees}).")
+    if season is None or not (1 <= journee <= season.total_journees):
+        return None
+    return next((m for m in season.calendar[journee - 1].matches if m.home == home and m.away == away), None)
 
-    match = next(
-        (m for m in season.calendar[journee - 1].matches if m.home == home and m.away == away),
-        None,
-    )
+
+def _find_match_in_group(
+    competition: CustomCompetition, home: str, away: str, group_name: str, matchday: int
+) -> Match | None:
+    groups = competition.groups or []
+    group = next((g for g in groups if g.name == group_name), None)
+    if group is None or not (0 <= matchday < len(group.calendar)):
+        return None
+    return next((m for m in group.calendar[matchday].matches if m.home == home and m.away == away), None)
+
+
+def _find_match_in_bracket(
+    competition: CustomCompetition, home: str, away: str, round_number: int, leg: int
+) -> Match | None:
+    bracket = competition.bracket
+    if bracket is None:
+        return None
+    round_ = next((r for r in bracket.rounds if r.number == round_number), None)
+    if round_ is None:
+        return None
+    tie = next((t for t in round_.ties if t.home == home and t.away == away), None)
+    if tie is None or not (0 <= leg < len(tie.legs)):
+        return None
+    return tie.legs[leg]
+
+
+@router.get("/{comp_id}/pitch", response_model=PitchViewOut)
+def get_pitch_view(
+    comp_id: str,
+    home: str,
+    away: str,
+    journee: int | None = None,
+    group: str | None = None,
+    matchday: int | None = None,
+    round_number: int | None = None,
+    leg: int | None = None,
+) -> PitchViewOut:
+    """Placement des deux compositions sur un terrain partagé (vue "stade"),
+    pour un match déjà joué -- voir `pitch_layout.place_starting_xi`. Le
+    match peut venir de trois sources selon le format/la phase de la
+    compétition (un seul groupe de paramètres pertinent à la fois) :
+    `journee` (championnat), `group`+`matchday` (poules), ou
+    `round_number`+`leg` (tableau à élimination, `leg` 0=aller/1=retour)."""
+    competition = _get_or_404(comp_id)
+
+    match = None
+    if journee is not None:
+        match = _find_match_in_season(competition, home, away, journee)
+    elif group is not None and matchday is not None:
+        match = _find_match_in_group(competition, home, away, group, matchday)
+    elif round_number is not None and leg is not None:
+        match = _find_match_in_bracket(competition, home, away, round_number, leg)
+    else:
+        raise HTTPException(422, "Fournis journee, group+matchday, ou round_number+leg.")
+
     if match is None:
-        raise HTTPException(404, "Match introuvable pour cette journée.")
+        raise HTTPException(404, "Match introuvable.")
     if not match.played or match.events is None:
         raise HTTPException(409, "Ce match n'a pas encore été joué (ou n'a pas d'effectif réel).")
 

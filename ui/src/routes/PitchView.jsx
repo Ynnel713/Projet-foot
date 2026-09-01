@@ -15,15 +15,27 @@ export default function PitchView() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
 
-  const journee = params.get("journee");
   const home = params.get("home");
   const away = params.get("away");
+  const journee = params.get("journee");
+  const group = params.get("group");
+  const matchday = params.get("matchday");
+  const roundNumber = params.get("round_number");
+  const leg = params.get("leg");
+
+  // Libellé de contexte : championnat (Journée N), poule (Groupe + journée),
+  // ou tableau (Tour N, Aller/Retour) -- voir les 3 jeux de paramètres
+  // possibles côté API (api.routers.competitions.get_pitch_view).
+  let contextLabel = "";
+  if (journee) contextLabel = `Journée ${journee}`;
+  else if (group) contextLabel = `${group} · Journée ${Number(matchday) + 1}`;
+  else if (roundNumber) contextLabel = `Tour ${roundNumber} · ${leg === "0" ? "Aller" : "Retour"}`;
 
   useEffect(() => {
-    getPitchView(id, journee, home, away)
+    getPitchView(id, { home, away, journee, group, matchday, round_number: roundNumber, leg })
       .then(setData)
       .catch(() => setError("Composition indisponible pour ce match."));
-  }, [id, journee, home, away]);
+  }, [id, home, away, journee, group, matchday, roundNumber, leg]);
 
   if (error) {
     return (
@@ -43,7 +55,7 @@ export default function PitchView() {
         <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-xs text-gray-400">
           <ArrowLeft size={14} /> Retour
         </button>
-        <span className="text-xs text-gray-500">Journée {journee}</span>
+        <span className="text-xs text-gray-500">{contextLabel}</span>
       </div>
 
       <div className="flex items-center justify-center gap-3 shrink-0 text-sm">

@@ -18,18 +18,42 @@ from api.schemas import (
     PitchViewOut,
     PlacedPlayerOut,
     RoundOut,
+    ScorerOut,
     StandingRow,
     TieOut,
 )
 
 
+def _match_summary(home_goals: int, away_goals: int) -> str:
+    diff = abs(home_goals - away_goals)
+    if diff == 0:
+        return f"Match nul {home_goals}-{away_goals}"
+    winner = "domicile" if home_goals > away_goals else "extérieur"
+    if diff == 1:
+        return f"Victoire serrée {home_goals}-{away_goals} ({winner})"
+    if diff >= 3:
+        return f"Large victoire {home_goals}-{away_goals} ({winner})"
+    return f"Victoire {home_goals}-{away_goals} ({winner})"
+
+
 def match_out(match: Match) -> MatchOut:
+    summary = None
+    scorers: list[ScorerOut] = []
+    if match.played:
+        summary = _match_summary(match.home_goals, match.away_goals)
+        if match.events is not None:
+            scorers = [
+                ScorerOut(club=g.club_name, player=g.scorer, minute=g.minute, penalty=g.penalty)
+                for g in sorted(match.events.goals, key=lambda g: g.minute)
+            ]
     return MatchOut(
         home=match.home,
         away=match.away,
         home_goals=match.home_goals,
         away_goals=match.away_goals,
         played=match.played,
+        summary=summary,
+        scorers=scorers,
     )
 
 

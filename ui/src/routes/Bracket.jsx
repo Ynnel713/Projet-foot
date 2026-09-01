@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { getBracket, simulateBracketRound, advanceBracketRound } from "../api/client";
 
 export default function Bracket() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -54,7 +55,7 @@ export default function Bracket() {
         )}
         <div className="flex flex-col gap-1.5">
           {currentRound.ties.map((t) => (
-            <TieCard key={`${t.home}-${t.away ?? "bye"}`} tie={t} />
+            <TieCard key={`${t.home}-${t.away ?? "bye"}`} tie={t} id={id} navigate={navigate} roundNumber={currentRound.number} />
           ))}
         </div>
 
@@ -69,22 +70,14 @@ export default function Bracket() {
                   <h3 className="text-[11px] text-gray-600 mb-1">Tour {r.number}</h3>
                   <div className="flex flex-col gap-1">
                     {r.ties.map((t) => (
-                      <div
+                      <TieCard
                         key={`${t.home}-${t.away ?? "bye"}`}
-                        className="flex items-center justify-between bg-surface/50 rounded-lg px-3 py-1.5 text-xs"
-                      >
-                        <span className={`flex-1 min-w-0 truncate ${t.winner === t.home ? "text-gold" : "text-gray-500"}`}>
-                          {t.home}
-                        </span>
-                        <span className="font-semibold tabular-nums px-3 shrink-0 text-gray-400">
-                          {t.is_bye ? "exempt" : `${t.home_goals} - ${t.away_goals}`}
-                        </span>
-                        <span
-                          className={`flex-1 min-w-0 truncate text-right ${t.winner === t.away ? "text-gold" : "text-gray-500"}`}
-                        >
-                          {t.away ?? ""}
-                        </span>
-                      </div>
+                        tie={t}
+                        id={id}
+                        navigate={navigate}
+                        roundNumber={r.number}
+                        compact
+                      />
                     ))}
                   </div>
                 </div>
@@ -111,34 +104,59 @@ export default function Bracket() {
 
 const LEG_LABELS = ["Aller", "Retour", "Manche 3"];
 
-function TieCard({ tie: t }) {
+function TieCard({ tie: t, id, navigate, roundNumber, compact = false }) {
   return (
-    <div className="bg-surface rounded-lg px-3 py-2">
-      <div className="flex items-center justify-between min-h-[28px] text-sm">
-        <span className={`flex-1 min-w-0 truncate ${t.winner === t.home ? "font-semibold text-gold" : ""}`}>
+    <div className={compact ? "bg-surface/50 rounded-lg px-3 py-1.5" : "bg-surface rounded-lg px-3 py-2"}>
+      <div className={`flex items-center justify-between min-h-[28px] ${compact ? "text-xs" : "text-sm"}`}>
+        <span
+          className={`flex-1 min-w-0 truncate ${t.winner === t.home ? (compact ? "text-gold" : "font-semibold text-gold") : compact ? "text-gray-500" : ""}`}
+        >
           {t.home}
         </span>
-        <span className="font-bold tabular-nums px-3 shrink-0">
+        <span className={`font-bold tabular-nums px-3 shrink-0 ${compact ? "font-semibold text-gray-400" : ""}`}>
           {t.is_bye ? "exempt" : t.home_goals != null ? `${t.home_goals} - ${t.away_goals}` : "– –"}
         </span>
-        <span className={`flex-1 min-w-0 truncate text-right ${t.winner === t.away ? "font-semibold text-gold" : ""}`}>
+        <span
+          className={`flex-1 min-w-0 truncate text-right ${t.winner === t.away ? (compact ? "text-gold" : "font-semibold text-gold") : compact ? "text-gray-500" : ""}`}
+        >
           {t.away ?? ""}
         </span>
       </div>
 
       {/* Résultat de chaque manche (aller/retour) -- pas seulement l'agrégat,
-          pour les confrontations sur plusieurs matchs. */}
+          pour les confrontations sur plusieurs matchs. Cliquable -> vue
+          terrain (round_number/leg, voir api.routers.competitions). */}
       {t.legs.length > 0 && (
         <div className="flex flex-col gap-0.5 mt-1 pt-1 border-t border-white/5">
           {t.legs.map((leg, i) => (
-            <div key={i} className="flex items-center justify-between text-[11px] text-gray-500">
-              <span className="w-12 shrink-0">{LEG_LABELS[i] ?? `Manche ${i + 1}`}</span>
-              <span className="flex-1 min-w-0 truncate text-right">{leg.home}</span>
-              <span className="tabular-nums px-2 shrink-0">
-                {leg.home_goals} - {leg.away_goals}
-              </span>
-              <span className="flex-1 min-w-0 truncate">{leg.away}</span>
-            </div>
+            <button
+              key={i}
+              onClick={() =>
+                navigate(
+                  `/competition/${id}/pitch?${new URLSearchParams({
+                    home: leg.home,
+                    away: leg.away,
+                    round_number: roundNumber,
+                    leg: i,
+                  })}`
+                )
+              }
+              className="text-left"
+            >
+              <div className="flex items-center justify-between text-[11px] text-gray-500">
+                <span className="w-12 shrink-0">{LEG_LABELS[i] ?? `Manche ${i + 1}`}</span>
+                <span className="flex-1 min-w-0 truncate text-right">{leg.home}</span>
+                <span className="tabular-nums px-2 shrink-0">
+                  {leg.home_goals} - {leg.away_goals}
+                </span>
+                <span className="flex-1 min-w-0 truncate">{leg.away}</span>
+              </div>
+              {leg.scorers.length > 0 && (
+                <div className="text-[9px] text-gray-600 truncate">
+                  ⚽ {leg.scorers.map((s) => `${s.player} ${s.minute}'`).join(", ")}
+                </div>
+              )}
+            </button>
           ))}
         </div>
       )}

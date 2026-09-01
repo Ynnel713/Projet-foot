@@ -42,12 +42,21 @@ class CreateCompetitionRequest(BaseModel):
         return self
 
 
+class ScorerOut(BaseModel):
+    club: str
+    player: str
+    minute: int
+    penalty: bool
+
+
 class MatchOut(BaseModel):
     home: str
     away: str
     home_goals: int | None
     away_goals: int | None
     played: bool
+    summary: str | None = None
+    scorers: list[ScorerOut] = []
 
 
 class StandingRow(BaseModel):
