@@ -1,6 +1,6 @@
 @echo off
 setlocal
-set "PATH=%USERPROFILE%\.local\bin;%PATH%"
+set "PATH=%USERPROFILE%\.local\bin;%USERPROFILE%\nodejs;%PATH%"
 cd /d "%~dp0"
 
 rem L'appli est passée de Streamlit à une PWA React + API FastAPI : il faut
