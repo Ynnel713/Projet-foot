@@ -1,6 +1,9 @@
-// VITE_API_URL doit pointer vers l'IP locale du PC (pas localhost) pour être
-// joignable depuis le téléphone -- voir ui/.env.local.
-const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+// Vide par défaut (URL relative) : en usage normal, l'API est servie par le
+// même serveur FastAPI que le frontend buildé (voir api/main.py, qui sert
+// ui/dist) -- un seul port/domaine à exposer, y compris via le tunnel ngrok.
+// VITE_API_URL sert uniquement au dev séparé (`npm run dev` sur le port 5173
+// distinct du backend sur 8000) -- voir ui/.env.local.
+const BASE_URL = import.meta.env.VITE_API_URL ?? "";
 
 async function request(path, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {
