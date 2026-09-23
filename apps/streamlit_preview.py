@@ -13,11 +13,17 @@ Fichier AUTONOME, volontairement NON ajoute a `Lancer l'appli.bat` (brief,
 (voir docs/next_step_canvas.md pour la commande exacte documentee). Ne
 touche ni a `app.py` (l'app Streamlit principale), ni a `ui/` (la PWA React).
 
-Le brief demande le gabarit "frappe_enroulee" -- inexistant dans
+Le premier brief demandait le gabarit "frappe_enroulee" -- inexistant dans
 `animation.templates.BUILDERS` (12 gabarits reels). "decalage_enroulee" est
 le seul nom apparente ("frappe enroulee" decrit la conclusion en enroule de
-ce gabarit) -- substitution documentee dans le retour de tache, pas un
-gabarit invente.
+ce gabarit) -- substitution confirmee comme correcte par Olivier (erratum
+du brief du 23/09/2026 "vertical slice validation"), pas un gabarit
+invente.
+
+Extension (brief "vertical slice validation", Tache 4, 23/09/2026, option
+A) : sélecteur `corner`/`contre_attaque` en plus de `decalage_enroulee` --
+voir docs/next_step_canvas.md pour les notes d'iteration sur ces 2 gabarits
+supplementaires.
 
 Lineup/event synthetiques dupliques depuis `scripts/render_preview.py`
 (meme motif deja repete dans `scripts/preview_motion.py`/
@@ -43,7 +49,8 @@ from ligue1sim.lineup import Lineup  # noqa: E402
 from ligue1sim.pitch_geometry import PitchPoint, Zone  # noqa: E402
 from ligue1sim.players import Player  # noqa: E402
 
-_TEMPLATE_NAME = "decalage_enroulee"
+_AVAILABLE_TEMPLATES = ("decalage_enroulee", "corner", "contre_attaque")
+_DEFAULT_TEMPLATE = "decalage_enroulee"
 _SCORER_CLUB = "Paris Saint-Germain"
 _OPPONENT_CLUB = "AS Monaco"
 _SCORER_ZONE = Zone(col=10, row=4)
@@ -79,11 +86,15 @@ def _goal_event() -> GoalEvent:
 
 
 @st.cache_data
-def build_sequence_json(*, fps: int = _FPS) -> str:
+def build_sequence_json(template_name: str, *, fps: int = _FPS) -> str:
+    # `template_name` fait partie de la clé de cache de st.cache_data (tous
+    # les arguments de la fonction en font partie par defaut) -- un
+    # changement de selection regenere donc bien le JSON, pas de cache
+    # agressif qui bloquerait sur l'ancien gabarit (brief, Tache 4.2).
     lineup = _scorer_lineup()
     event = _goal_event()
     start_positions = {p.id: PitchPoint(x=0.15 + 0.06 * i, y=0.1 + 0.07 * i) for i, p in enumerate(lineup.players)}
-    sequence = BUILDERS[_TEMPLATE_NAME](event, lineup, start_positions)
+    sequence = BUILDERS[template_name](event, lineup, start_positions)
     sequence = enrich_with_background(sequence, _opponent_lineup())
 
     step = 1.0 / fps
@@ -101,7 +112,7 @@ def build_sequence_json(*, fps: int = _FPS) -> str:
     metadata = {
         "duration": sequence.duration,
         "fps_target": fps,
-        "template": _TEMPLATE_NAME,
+        "template": template_name,
         "teams": {
             "scorer": {"name": _SCORER_CLUB, "color_fill": scorer_fill, "color_outline": scorer_outline},
             "opponent": {"name": _OPPONENT_CLUB, "color_fill": opp_fill, "color_outline": opp_outline},
@@ -113,12 +124,17 @@ def build_sequence_json(*, fps: int = _FPS) -> str:
 
 st.set_page_config(page_title="Canvas preview", layout="wide")
 st.title("Rendu canvas -- vertical slice")
+
+template_name = st.selectbox(
+    "Gabarit", _AVAILABLE_TEMPLATES, index=_AVAILABLE_TEMPLATES.index(_DEFAULT_TEMPLATE)
+)
 st.caption(
-    f"Gabarit : {_TEMPLATE_NAME} -- \"frappe_enroulee\" (demande initiale) n'existe pas dans "
-    "animation.templates.BUILDERS, voir docs/next_step_canvas.md pour la substitution documentee."
+    f"Gabarit : {template_name} -- \"frappe_enroulee\" (demande initiale du premier brief) n'existe pas dans "
+    "animation.templates.BUILDERS, voir docs/next_step_canvas.md pour la substitution documentee "
+    "(confirmee correcte)."
 )
 
-sequence_json = build_sequence_json()
+sequence_json = build_sequence_json(template_name)
 html = _CANVAS_HTML.read_text(encoding="utf-8")
 if _PLACEHOLDER not in html:
     st.error(f"placeholder {_PLACEHOLDER!r} introuvable dans {_CANVAS_HTML}")

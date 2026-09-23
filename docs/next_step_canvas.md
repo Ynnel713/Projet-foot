@@ -76,4 +76,29 @@ retour de tâche pour le détail).
   ```bash
   uv run streamlit run apps/streamlit_preview.py --server.port 8600
   ```
-  puis ouvrir `http://localhost:8600` dans un navigateur.
+  puis ouvrir `http://localhost:8600` dans un navigateur. Un `st.selectbox`
+  permet de choisir entre `decalage_enroulee`, `corner` et `contre_attaque`
+  (brief "vertical slice validation", Tâche 4, 23/09/2026).
+
+### Notes d'itération -- extension à 3 gabarits (Tâche 4)
+
+Les 3 gabarits (`decalage_enroulee`, `corner`, `contre_attaque`) se sont
+générés et affichés SANS modification du moteur ni de `render/canvas.html`
+-- `FrameState`/`Sequence.roster` portaient déjà tout ce dont
+`animation.serialize.frame_sequence_to_json` avait besoin pour les trois.
+`scripts/render_preview.py` et `apps/streamlit_preview.py` ont juste reçu un
+paramètre `template_name` (avant : constante figée à
+`decalage_enroulee`) -- seul changement de code, hors moteur.
+
+Ce qui a coincé (pas dans le rendu lui-même, dans l'outillage de capture de
+screenshot pendant cette session) : le navigateur intégré de Claude ne
+compose réellement le `<canvas>` (et donc `canvas.toDataURL()` ne renvoie
+pas une image vide) que lorsque sa fenêtre est effectivement affichée à
+l'écran -- `requestAnimationFrame` semble suspendu tant que le panneau
+navigateur reste masqué derrière un autre panneau (diff, artifact...). Deux
+captures faites sans amener le panneau au premier plan juste avant ont
+donné des PNG entièrement noirs (canvas jamais dessiné). Correction :
+toujours prendre un `screenshot` (qui force l'affichage réel) juste avant
+d'extraire l'image via `toDataURL()`. Aucun rapport avec le code du projet
+-- pas un bug à corriger ici, juste une note pour la prochaine session qui
+génère des captures.

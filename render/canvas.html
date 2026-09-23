@@ -49,6 +49,15 @@ const SEQUENCE_DATA = /*__SEQUENCE_JSON__*/null;
   const duration = SEQUENCE_DATA.duration;
   const teams = SEQUENCE_DATA.metadata.teams;
 
+  // Mode debug (brief "canvas vertical slice", Tache 2, 23/09/2026) --
+  // ?debug=1 dans l'URL : logue chaque frame RENDUE (pas chaque frame du
+  // JSON source) dans la console JS, pour prouver la fluidite de
+  // l'interpolation a l'echelle de la frame (~16ms/60fps), voir
+  // scripts/verify_canvas_smoothness.py. Desactive par defaut (aucun cout
+  // perf hors debug).
+  const DEBUG = new URLSearchParams(window.location.search).get('debug') === '1';
+  let debugFrameIdx = 0;
+
   document.getElementById('label').textContent =
     SEQUENCE_DATA.metadata.template + ' -- ' + teams.scorer.name + ' vs ' + teams.opponent.name +
     ' (' + duration.toFixed(1) + 's, ' + frames.length + ' frames)';
@@ -182,6 +191,13 @@ const SEQUENCE_DATA = /*__SEQUENCE_JSON__*/null;
     ctx.lineWidth = 1;
     ctx.strokeStyle = '#000000';
     ctx.stroke();
+
+    if (DEBUG) {
+      console.log('[canvas-debug] ' + JSON.stringify({
+        frame_idx: debugFrameIdx, t: t, ballon_x: ballX, ballon_y: ballY,
+      }));
+      debugFrameIdx++;
+    }
   }
 
   let playing = true;

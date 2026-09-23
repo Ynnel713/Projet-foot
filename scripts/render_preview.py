@@ -12,8 +12,12 @@ tache, pas un gabarit invente. Meme pipeline que
 pour les 22 joueurs) pour rester coherent avec les scripts de preview
 existants.
 
+Extension (brief "vertical slice validation", Tache 4, 23/09/2026) :
+`--template` accepte aussi "corner" et "contre_attaque" (voir
+docs/next_step_canvas.md pour les notes d'iteration sur ces 2 gabarits).
+
 Usage :
-    uv run python scripts/render_preview.py [--fps N]
+    uv run python scripts/render_preview.py [--template NOM] [--fps N]
 """
 
 from __future__ import annotations
@@ -70,16 +74,16 @@ def _goal_event() -> GoalEvent:
     return GoalEvent(club_name=_SCORER_CLUB, scorer="bu", assist="mc0", minute=34, zone=_SCORER_ZONE, assist_zone=_ASSIST_ZONE)
 
 
-def build_sequence():
+def build_sequence(template_name: str = _TEMPLATE_NAME):
     lineup = _scorer_lineup()
     event = _goal_event()
     start_positions = {p.id: PitchPoint(x=0.15 + 0.06 * i, y=0.1 + 0.07 * i) for i, p in enumerate(lineup.players)}
-    sequence = BUILDERS[_TEMPLATE_NAME](event, lineup, start_positions)
+    sequence = BUILDERS[template_name](event, lineup, start_positions)
     return enrich_with_background(sequence, _opponent_lineup())
 
 
-def build_json(*, fps: int = _DEFAULT_FPS) -> str:
-    sequence = build_sequence()
+def build_json(*, template_name: str = _TEMPLATE_NAME, fps: int = _DEFAULT_FPS) -> str:
+    sequence = build_sequence(template_name)
 
     step = 1.0 / fps
     frames = []
@@ -96,7 +100,7 @@ def build_json(*, fps: int = _DEFAULT_FPS) -> str:
     metadata = {
         "duration": sequence.duration,
         "fps_target": fps,
-        "template": _TEMPLATE_NAME,
+        "template": template_name,
         "teams": {
             "scorer": {"name": _SCORER_CLUB, "color_fill": scorer_fill, "color_outline": scorer_outline},
             "opponent": {"name": _OPPONENT_CLUB, "color_fill": opp_fill, "color_outline": opp_outline},
@@ -106,8 +110,8 @@ def build_json(*, fps: int = _DEFAULT_FPS) -> str:
     return frame_sequence_to_json(frames, metadata)
 
 
-def run(*, fps: int) -> Path:
-    sequence_json = build_json(fps=fps)
+def run(*, template_name: str = _TEMPLATE_NAME, fps: int) -> Path:
+    sequence_json = build_json(template_name=template_name, fps=fps)
     html = _CANVAS_HTML.read_text(encoding="utf-8")
     if _PLACEHOLDER not in html:
         raise ValueError(f"placeholder {_PLACEHOLDER!r} introuvable dans {_CANVAS_HTML} -- injection impossible")
@@ -118,8 +122,11 @@ def run(*, fps: int) -> Path:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--template", default=_TEMPLATE_NAME, help=f"nom du gabarit, animation.templates.BUILDERS (defaut {_TEMPLATE_NAME!r})")
     parser.add_argument("--fps", type=int, default=_DEFAULT_FPS, help=f"images par seconde generees (defaut {_DEFAULT_FPS})")
     args = parser.parse_args()
 
-    output_path = run(fps=args.fps)
-    print(f"HTML autonome genere : {output_path}")
+    if args.template not in BUILDERS:
+        raise SystemExit(f"Gabarit inconnu : {args.template!r} -- choisir parmi {sorted(BUILDERS)}")
+    output_path = run(template_name=args.template, fps=args.fps)
+    print(f"HTML autonome genere ({args.template}) : {output_path}")
