@@ -28,3 +28,10 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ligue1sim"]
+
+[tool.pytest.ini_options]
+# engine/ (brief "narrative engine foundations", 23/09/2026) est un module
+# hors de src/ligue1sim -- pas encore un package installable, juste un
+# fichier unique (voir engine/narrative.py) -- pythonpath le rend
+# importable depuis tests/ sans sys.path.insert() disséminé.
+pythonpath = ["engine"]
