@@ -102,3 +102,49 @@ toujours prendre un `screenshot` (qui force l'affichage réel) juste avant
 d'extraire l'image via `toDataURL()`. Aucun rapport avec le code du projet
 -- pas un bug à corriger ici, juste une note pour la prochaine session qui
 génère des captures.
+
+### Effet Magnus sur `decalage_enroulee` (brief "real Magnus effect", 23/09/2026)
+
+Le tir de `decalage_enroulee` courbe désormais réellement (voir
+`animation.ball._behavior_shot`/`_MAGNUS_K` et
+`animation.templates._DECALAGE_ENROULEE_SHOT_SPIN_RAD_S = 50.0`) -- avant ce
+brief, la "courbure" était un artefact géométrique sans lien avec le spin
+(toujours 0.0, jamais lu), voir l'audit de la Tâche 3 du brief précédent.
+
+**Où la voir à l'écran** : le segment `shot` de `decalage_enroulee` couvre
+`t ∈ [2.4s, 6.0s]` (t_ratio 0.4 -> 1.0 sur une durée totale de 6.0s). La
+courbure suit une parabole (fonction `_hat`, voir `ball.py`) : nulle au
+départ (t=2.4s, sur la ligne droite passeur -> tireur), MAXIMALE à mi-tir
+(**t=4.2s**, écart latéral ≈ 0.98 m sur la géométrie du fixture standard),
+puis revient exactement à 0 à l'arrivée (t=6.0s, le ballon retombe pile sur
+la position visée). Schéma textuel (vue de dessus, axe du tir horizontal) :
+
+```
+depart (t=2.4s)                                          arrivee (t=6.0s)
+   o------.                                                        .------o
+          `.                                                    ,'
+            `.                                                ,'
+              `-.                                          ,-'
+                 `-.                                    ,-'
+                    `--.  <- pic de courbure ~0.98m  ,--'
+                        `--..              ..--'
+                            `--..........--'   (t=4.2s, s=0.5)
+```
+
+Un seul screenshot statique (`decalage_enroulee.png`, capturé à t≈4.2s) ne
+montre PAS la courbe elle-même (`render/canvas.html` ne dessine pas de
+traînée) -- seule la position du ballon à cet instant précis, décalée de la
+ligne droite passeur→tireur. Voir `docs/canvas_json_schema.md` pour la
+source du champ `spin`.
+
+### État des segments `shot` sur `corner`/`contre_attaque` (Tâche 3.3)
+
+- **`corner`** : AUCUN segment tagué `shot` (son dernier segment est
+  `deflect` depuis le brief "corner tags decision", 23/09/2026, voir
+  `templates.py:669`) -- rien à laisser à `spin=0`, la question ne se pose
+  pas pour ce gabarit.
+- **`contre_attaque`** : A un segment `shot` (`templates.py:557`,
+  `physics_tags=((0.4, "shot"),)`) -- laissé à `spin=0.0` (défaut de
+  `build_from_template`, non touché) : tir parfaitement droit. À varier
+  dans un brief séparé si un tir droit systématique sur ce gabarit devient
+  visuellement monotone.

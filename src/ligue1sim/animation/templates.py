@@ -41,7 +41,7 @@ from __future__ import annotations
 
 import logging
 import random
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Callable
 
 from ligue1sim.animation.types import BallState, Keyframe, PlayerId, RosterEntry, Sequence
@@ -858,8 +858,31 @@ def build_recuperation_haute(event: GoalEvent, lineup: Lineup, start_positions: 
     return build_from_template(TEMPLATES["recuperation_haute"], event, lineup, start_positions)
 
 
+# Brief "real Magnus effect" (23/09/2026), Tâche 3 -- SEUL point de vérité
+# pour le spin du tir enroulé de decalage_enroulee (rad/s, voir
+# `BallState.spin` / `animation.ball._MAGNUS_K`) : un futur ajustement de
+# calibration se fait ICI, nulle part ailleurs. Valeur choisie par calcul
+# inverse (pas au jugé) sur la géométrie réelle du gabarit (fixture standard
+# de tests/test_templates.py : distance ≈ 14.6 m, durée du segment shot
+# (0.4->1.0) = 3.6 s) pour une courbure cible d'environ 1 m au pic (~s=0.5,
+# milieu du segment shot) -- voir `_behavior_shot`/`_MAGNUS_K` pour la
+# formule exacte (a = _MAGNUS_K·spin·v, offset_pic = 0.5·a·(durée/2)²).
+# 50.0 rad/s (~8 tours/s) donne 0.98 m sur cette géométrie -- crédible pour
+# une "frappe enroulée" (le nom même du gabarit), visible à l'œil sans être
+# une parabole exagérée. `build_from_template` reste générique et continue
+# de poser `spin=0.0` par défaut (aucun changement au moteur) : ce wrapper
+# poste-traite la Sequence pour renseigner le spin SEULEMENT sur la keyframe
+# où le segment `shot` démarre (celle dont `physics_tag == "shot"`).
+_DECALAGE_ENROULEE_SHOT_SPIN_RAD_S = 50.0
+
+
 def build_decalage_enroulee(event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint]) -> Sequence:
-    return build_from_template(TEMPLATES["decalage_enroulee"], event, lineup, start_positions)
+    sequence = build_from_template(TEMPLATES["decalage_enroulee"], event, lineup, start_positions)
+    keyframes = [
+        replace(kf, ball=replace(kf.ball, spin=_DECALAGE_ENROULEE_SHOT_SPIN_RAD_S)) if kf.physics_tag == "shot" else kf
+        for kf in sequence.keyframes
+    ]
+    return replace(sequence, keyframes=keyframes)
 
 
 def build_penalty(event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint]) -> Sequence:

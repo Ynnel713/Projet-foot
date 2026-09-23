@@ -34,11 +34,16 @@ déclenché par aucun gabarit.
 code. `ball_state_at` calcule sa propre hauteur, en mètres, directement
 depuis les formules ci-dessous -- jamais depuis `ball_height`.
 
-Toute amplitude "aléatoire" (courbure d'un tir, contrôle latéral d'un
+Toute amplitude "aléatoire" encore basée sur un hash (contrôle latéral d'un
 centre, perturbation d'une déviation) est déterministe -- hash sha256 du
 `(event_ref, t de la keyframe de départ)`, même principe que
 `motion._start_offset`/`sequence_generator._deterministic_unit` -- jamais
-`random`/`np.random`, pour un déterminisme bit à bit garanti.
+`random`/`np.random`, pour un déterminisme bit à bit garanti. **Exception
+depuis le 23/09/2026 (brief "real Magnus effect", Tâche 2)** : la courbure
+d'un `shot` n'est plus un hash -- elle vient de `Keyframe.ball.spin`
+(rad/s), via une vraie accélération de Magnus (`a = k · spin · v`, voir
+`_behavior_shot`) -- déterministe aussi, mais pilotée par une donnée
+physique du gabarit plutôt que par un id de séquence.
 
 **Continuité** : garantie DANS un segment (même comportement du début à la
 fin, échantillonné à dt=1/60 -- voir tests/test_ball.py). PAS garantie
@@ -48,6 +53,25 @@ différent avec son propre profil de vitesse local, les recoller en une
 seule spline globalement C1 serait un chantier séparé, hors scope de ce
 brief -- documenté ici plutôt que silencieusement supposé résolu.
 """
+
+# CHANGEMENT -- 2026-09-23 -- hash sha256(event_ref) -> effet Magnus piloté
+# par spin, dans `_behavior_shot` uniquement -- raison : audit de la Tâche 3
+# du brief "canvas vertical slice" (2026-09-23) qui a établi que la
+# "courbure" d'un tir était un pur artefact géométrique (offset perpendiculaire
+# seedé par hash), sans aucun rapport avec `BallState.spin` (toujours 0.0,
+# jamais lu) -- `decalage_enroulee` ne courbait donc jamais réellement selon
+# son spin. Remplacé par une vraie accélération de Magnus (voir `_MAGNUS_K`
+# et `_behavior_shot`) : spin=0 -> trajectoire droite, spin non nul -> courbe
+# dans le sens du signe de `spin`. `cross` et `deflect` gardent leur hash
+# (courbure/perturbation latérale sans notion de spin physique dans leur
+# brief d'origine) -- non touchés ici (scope de la Tâche 2, pas un refacto
+# global de ball.py).
+#
+# AUTRE DETTE REPÉRÉE (signalée, PAS corrigée -- hors scope de ce brief) :
+# `cross`/`deflect` utilisent encore un hash sur `seed_key` pour leur
+# amplitude/côté latéral, sans lien avec une donnée physique du gabarit
+# (contrairement à `shot` désormais) -- même incohérence structurelle que
+# celle trouvée pour `shot`, potentiellement à auditer plus tard.
 
 from __future__ import annotations
 
@@ -171,17 +195,36 @@ def _behavior_pass_lob(start: tuple[float, float], end: tuple[float, float], s: 
 
 
 # --- shot ----------------------------------------------------------------
-# Ligne droite + courbure latérale (offset perpendiculaire en _hat, pic à
-# ~15% de la distance totale, retombe à 0 à l'arrivée -- garantit l'arrivée
-# exacte quelle que soit la courbure). z=0 si distance <= 16 m (tir du sol),
-# sinon une trajectoire modeste (0 m à 16 m -> 0.8 m à 40 m+, clampé) --
-# valeurs non fournies par le brief, extrapolation raisonnable documentée
-# comme telle. < 11 m : tir tendu, AUCUNE courbure (offset forcé à 0).
-_SHOT_CURVE_RATIO = 0.15  # pic de courbure = 15% de la distance totale
+# Ligne droite + courbure latérale de Magnus (offset perpendiculaire en
+# _hat, pic à mi-vol, retombe à 0 à l'arrivée -- garantit l'arrivée exacte
+# quelle que soit la courbure). z=0 si distance <= 16 m (tir du sol), sinon
+# une trajectoire modeste (0 m à 16 m -> 0.8 m à 40 m+, clampé) -- valeurs
+# non fournies par le brief, extrapolation raisonnable documentée comme
+# telle. < 11 m : tir tendu, AUCUNE courbure même à spin élevé (pas le temps
+# de dévier sensiblement sur une distance aussi courte).
+#
+# Magnus (brief "real Magnus effect", 23/09/2026, Tâche 2) : accélération
+# latérale a = _MAGNUS_K * spin * v_base (spin en rad/s, v_base = distance/
+# durée en m/s, a en m/s²) -- _MAGNUS_K est donc SANS UNITE (rad est sans
+# dimension en SI, l'équation reste homogène). Valeur choisie par ordre de
+# grandeur physique réel (pas mesurée sur CE moteur) : a = C_L·ρ·A·r/m ·
+# spin · v, avec C_L≈0.25 (coefficient de portance d'un ballon en rotation),
+# ρ=1.2 kg/m³ (densité de l'air), A=π·r²≈0.038 m² (section du ballon),
+# r=0.11 m (rayon réglementaire), m=0.43 kg (masse réglementaire) ->
+# C_L·ρ·A·r/m ≈ 0.003. Ordre de grandeur attendu : à spin=60 rad/s (~10
+# tours/s, une frappe enroulée marquée) et v_base=20 m/s, a ≈ 3.6 m/s² ;
+# intégrée sur la moitié du temps de vol (cinématique à accélération
+# constante, offset_pic = 0.5·a·(duration/2)²), ça donne une déviation de
+# l'ordre du mètre sur un tir de 1 à 2 s -- cohérent avec un vrai coup-franc
+# enroulé. Le signe de la courbure suit directement le signe de `spin`
+# (Tâche 2.6) ; spin=0 -> aucune courbure, trajectoire parfaitement droite
+# (Tâche 2.4, remplace l'ancien hash sur `event_ref`, voir CHANGEMENT en
+# tête de fichier).
 _SHOT_STRAIGHT_MAX_DIST_M = 11.0  # en dessous : tir tendu, pas de courbure
 _SHOT_AIRBORNE_MIN_DIST_M = 16.0  # en dessous : au ras du sol
 _SHOT_HEIGHT_FAR_M = 0.8
 _SHOT_HEIGHT_FAR_DIST_M = 40.0
+_MAGNUS_K = 0.003  # sans unité, voir justification ci-dessus
 
 
 def _shot_height_max_m(distance_m: float) -> float:
@@ -193,13 +236,14 @@ def _shot_height_max_m(distance_m: float) -> float:
 
 
 def _behavior_shot(
-    start: tuple[float, float], end: tuple[float, float], s: float, duration: float, seed_key: str
+    start: tuple[float, float], end: tuple[float, float], s: float, duration: float, spin: float
 ) -> BallState:
     distance_m = _real_distance_m(start, end)
     px, py = _perp_unit(start, end)
-    curve_sign = 1.0 if _deterministic_unit(seed_key, "shot_curve_side") < 0.5 else -1.0
-    curve_peak_m = 0.0 if distance_m < _SHOT_STRAIGHT_MAX_DIST_M else _SHOT_CURVE_RATIO * distance_m
-    offset_m = curve_sign * curve_peak_m * _hat(s)
+    v_base_m_s = distance_m / duration if duration > 0 else 0.0
+    lateral_accel_m_s2 = _MAGNUS_K * spin * v_base_m_s
+    curve_peak_m = 0.0 if distance_m < _SHOT_STRAIGHT_MAX_DIST_M else 0.5 * lateral_accel_m_s2 * (duration / 2.0) ** 2
+    offset_m = curve_peak_m * _hat(s)
     offset_x = (offset_m / PITCH_LENGTH_M) * px
     offset_y = (offset_m / PITCH_WIDTH_M) * py
 
@@ -211,10 +255,10 @@ def _behavior_shot(
     height_max = _shot_height_max_m(distance_m)
     z = height_max * _hat(s)
 
-    vx = (end[0] - start[0]) / duration + (curve_sign * curve_peak_m / PITCH_LENGTH_M) * px * _hat_derivative(s) / duration
-    vy = (end[1] - start[1]) / duration + (curve_sign * curve_peak_m / PITCH_WIDTH_M) * py * _hat_derivative(s) / duration
+    vx = (end[0] - start[0]) / duration + (curve_peak_m / PITCH_LENGTH_M) * px * _hat_derivative(s) / duration
+    vy = (end[1] - start[1]) / duration + (curve_peak_m / PITCH_WIDTH_M) * py * _hat_derivative(s) / duration
     vz = height_max * _hat_derivative(s) / duration
-    return BallState(x=x, y=y, z=z, spin=0.0, owner_id=None, vx=vx, vy=vy, vz=vz)
+    return BallState(x=x, y=y, z=z, spin=spin, owner_id=None, vx=vx, vy=vy, vz=vz)
 
 
 # --- cross -------------------------------------------------------------------
@@ -400,7 +444,7 @@ def ball_state_at(sequence: Sequence, t: float) -> BallState:
     elif tag == PASS_LOB:
         state = _behavior_pass_lob(start, end, s, duration)
     elif tag == SHOT:
-        state = _behavior_shot(start, end, s, duration, seed_key)
+        state = _behavior_shot(start, end, s, duration, kf_a.ball.spin)
     elif tag == CROSS:
         state = _behavior_cross(start, end, s, duration, seed_key)
     else:

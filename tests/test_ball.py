@@ -27,19 +27,19 @@ _ARRIVAL_Z_TOLERANCE_M = 0.05  # 5 cm
 _VELOCITY_JUMP_RATIO = 0.05  # 5%
 
 
-def _ball(x, y, owner_id="p") -> BallState:
-    return BallState(x=x, y=y, z=0.0, spin=0.0, owner_id=owner_id)
+def _ball(x, y, owner_id="p", spin=0.0) -> BallState:
+    return BallState(x=x, y=y, z=0.0, spin=spin, owner_id=owner_id)
 
 
-def _kf(t, x, y, *, owner_id="p", physics_tag=None, tag="") -> Keyframe:
-    return Keyframe(t=t, ball=_ball(x, y, owner_id), players={"p": (x, y)}, tag=tag, physics_tag=physics_tag)
+def _kf(t, x, y, *, owner_id="p", physics_tag=None, tag="", spin=0.0) -> Keyframe:
+    return Keyframe(t=t, ball=_ball(x, y, owner_id, spin), players={"p": (x, y)}, tag=tag, physics_tag=physics_tag)
 
 
 def _sequence(
-    *, physics_tag=None, start=(0.1, 0.5), end=(0.9, 0.5), duration=2.0, owner_a="p", owner_b="p", event_ref="ref"
+    *, physics_tag=None, start=(0.1, 0.5), end=(0.9, 0.5), duration=2.0, owner_a="p", owner_b="p", event_ref="ref", spin=0.0
 ) -> Sequence:
     keyframes = [
-        _kf(0.0, start[0], start[1], owner_id=owner_a, physics_tag=physics_tag),
+        _kf(0.0, start[0], start[1], owner_id=owner_a, physics_tag=physics_tag, spin=spin),
         _kf(duration, end[0], end[1], owner_id=owner_b),
     ]
     roster = {"p": RosterEntry(nom="X", poste="BU", role="scorer", numero=9, team_side="scorer")}
@@ -180,17 +180,64 @@ class TestShotBehavior:
         assert mid.z > 0.0
 
     def test_very_short_shot_has_no_curvature(self):
-        # < 11m -> tir tendu, pas de courbure : trajectoire exactement rectiligne.
-        sequence = _sequence(physics_tag=SHOT, start=(0.5, 0.5), end=(0.5 + 8 / PITCH_LENGTH_M, 0.5), duration=0.5)
+        # < 11m -> tir tendu, pas de courbure MEME A SPIN ELEVE : trajectoire
+        # exactement rectiligne (pas le temps de dévier sur une distance aussi courte).
+        sequence = _sequence(physics_tag=SHOT, start=(0.5, 0.5), end=(0.5 + 8 / PITCH_LENGTH_M, 0.5), duration=0.5, spin=80.0)
         mid = ball_state_at(sequence, sequence.duration / 2)
         assert mid.y == pytest.approx(0.5, abs=1e-9)
 
     def test_medium_shot_curves_and_returns_to_the_straight_line_at_the_end(self):
-        sequence = _sequence(physics_tag=SHOT, start=(0.1, 0.5), end=(0.1 + 20 / PITCH_LENGTH_M, 0.5), duration=1.5)
+        # Brief "real Magnus effect" (23/09/2026) : la courbure vient désormais
+        # de spin (voir TestShotMagnusEffect pour spin=0 -> pas de courbure).
+        sequence = _sequence(physics_tag=SHOT, start=(0.1, 0.5), end=(0.1 + 20 / PITCH_LENGTH_M, 0.5), duration=1.5, spin=60.0)
         mid = ball_state_at(sequence, sequence.duration / 2)
         end = ball_state_at(sequence, sequence.duration)
         assert mid.y != pytest.approx(0.5, abs=1e-6)  # courbure présente au milieu
         assert end.y == pytest.approx(0.5, abs=1e-6)  # revenue à 0 à l'arrivée
+
+
+class TestShotMagnusEffect:
+    """Brief "real Magnus effect" (23/09/2026), Tâche 2 : `_behavior_shot` lit
+    désormais `Keyframe.ball.spin` (rad/s) au lieu d'un hash sur `event_ref`
+    pour sa courbure -- voir `_MAGNUS_K` dans `ball.py` pour la dérivation
+    physique. spin=0 -> trajectoire droite (2.4), spin≠0 -> déviation
+    mesurable (2.6), et le comportement reste déterministe (2.2)."""
+
+    def test_zero_spin_is_perfectly_straight(self):
+        sequence = _sequence(physics_tag=SHOT, start=(0.1, 0.5), end=(0.1 + 20 / PITCH_LENGTH_M, 0.5), duration=1.5, spin=0.0)
+        mid = ball_state_at(sequence, sequence.duration / 2)
+        assert mid.y == pytest.approx(0.5, abs=1e-9)
+
+    def test_positive_and_negative_spin_curve_in_opposite_directions(self):
+        sequence_pos = _sequence(physics_tag=SHOT, start=(0.1, 0.5), end=(0.1 + 20 / PITCH_LENGTH_M, 0.5), duration=1.5, spin=60.0)
+        sequence_neg = _sequence(physics_tag=SHOT, start=(0.1, 0.5), end=(0.1 + 20 / PITCH_LENGTH_M, 0.5), duration=1.5, spin=-60.0)
+        mid_pos = ball_state_at(sequence_pos, sequence_pos.duration / 2)
+        mid_neg = ball_state_at(sequence_neg, sequence_neg.duration / 2)
+        assert mid_pos.y != pytest.approx(0.5, abs=1e-6)
+        assert mid_neg.y != pytest.approx(0.5, abs=1e-6)
+        # symétriques de part et d'autre de la ligne droite (même |spin|, signe opposé)
+        assert mid_pos.y - 0.5 == pytest.approx(-(mid_neg.y - 0.5), abs=1e-9)
+
+    def test_curve_amplitude_scales_with_spin_magnitude(self):
+        sequence_small = _sequence(physics_tag=SHOT, start=(0.1, 0.5), end=(0.1 + 20 / PITCH_LENGTH_M, 0.5), duration=1.5, spin=20.0)
+        sequence_large = _sequence(physics_tag=SHOT, start=(0.1, 0.5), end=(0.1 + 20 / PITCH_LENGTH_M, 0.5), duration=1.5, spin=60.0)
+        deviation_small = abs(ball_state_at(sequence_small, sequence_small.duration / 2).y - 0.5)
+        deviation_large = abs(ball_state_at(sequence_large, sequence_large.duration / 2).y - 0.5)
+        assert deviation_large > deviation_small
+
+    def test_bit_for_bit_determinism_with_nonzero_spin(self):
+        sequence = _sequence(physics_tag=SHOT, start=(0.1, 0.3), end=(0.85, 0.7), duration=3.0, spin=45.0)
+        t = sequence.duration * 0.37
+        first = ball_state_at(sequence, t)
+        second = ball_state_at(sequence, t)
+        assert first == second
+
+    def test_returned_spin_echoes_input_spin(self):
+        # Le spin d'un tir ne change pas en vol (approximation) -- BallState.spin
+        # doit refléter le spin d'entrée, pas rester à 0.0 comme avant ce brief.
+        sequence = _sequence(physics_tag=SHOT, start=(0.1, 0.5), end=(0.9, 0.5), duration=1.5, spin=42.0)
+        mid = ball_state_at(sequence, sequence.duration / 2)
+        assert mid.spin == 42.0
 
 
 class TestCrossBehavior:
@@ -376,6 +423,42 @@ class TestBallPositionContinuousAcrossDeflectBoundary:
 
     @pytest.mark.parametrize("name", ["corner", "recuperation_haute"])
     def test_ball_position_continuous_across_deflect_boundary(self, name):
+        sequence = self._sequence(name)
+        limit_m = self._V_MAX_M_S * self._DT_S
+        t = 0.0
+        previous = ball_state_at(sequence, t)
+        while t < sequence.duration - self._DT_S:
+            t += self._DT_S
+            current = ball_state_at(sequence, t)
+            jump_m = _xyz_distance_m(previous, current)
+            assert jump_m <= limit_m, (
+                f"{name} t={t:.5f} : saut de position de {jump_m * 100:.3f}cm en {self._DT_S * 1000:.2f}ms "
+                f"(plafond {limit_m * 100:.3f}cm pour v_max={self._V_MAX_M_S}m/s) -- discontinuité de POSITION"
+            )
+            previous = current
+
+
+class TestBallPositionContinuousAcrossShotBoundary:
+    """Brief "real Magnus effect" (23/09/2026), Tâche 2.3 : même méthode que
+    `TestBallPositionContinuousAcrossDeflectBoundary`, appliquée à la
+    frontière d'un segment `shot` -- un tir qui courbe (Magnus) et qui
+    téléporterait à l'entrée de son segment serait pire qu'un tir droit.
+    `decalage_enroulee` (spin non nul depuis la Tâche 3) et `contre_attaque`
+    (spin=0, tir droit, voir le retour de tâche) ont tous deux un segment
+    `shot` -- les deux sont couverts."""
+
+    _HZ = 1000
+    _DT_S = 1.0 / _HZ
+    _V_MAX_M_S = 40.0  # même plafond et même justification que la classe deflect ci-dessus
+
+    def _sequence(self, name: str) -> Sequence:
+        lineup = _deflect_audit_lineup()
+        event = _deflect_audit_event()
+        start_positions = {p.id: PitchPoint(x=0.12 + 0.06 * i, y=0.1 + 0.07 * i) for i, p in enumerate(lineup.players)}
+        return BUILDERS[name](event, lineup, start_positions)
+
+    @pytest.mark.parametrize("name", ["decalage_enroulee", "contre_attaque"])
+    def test_ball_position_continuous_across_shot_boundary(self, name):
         sequence = self._sequence(name)
         limit_m = self._V_MAX_M_S * self._DT_S
         t = 0.0

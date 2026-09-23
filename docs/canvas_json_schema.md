@@ -71,7 +71,7 @@ frame).
 | `players[j].active` | bool | `RosterEntry.role is not None` -- idem, via `metadata["roster"][id]["active"]` (`true` = actif/scripté par le gabarit, `false` = figurant/décor, voir `sequence_generator.enrich_with_background`) |
 | `ball.x` / `.y` | float, [0,1] | `BallState.x` / `BallState.y` (`FrameState.ball`) |
 | `ball.z` | float, **mètres** | `BallState.z` |
-| `ball.spin` | float, rad/s | `BallState.spin` |
+| `ball.spin` | float, rad/s | `BallState.spin` -- **désormais consommé côté moteur** (brief "real Magnus effect", 23/09/2026, Tâche 2) : `animation.ball._behavior_shot` le lit pour calculer la courbure d'un segment `shot` (effet Magnus, `a = k · spin · v`) ; ce champ du JSON reste la même valeur, purement informative pour le rendu (`render/canvas.html` ne l'utilise toujours pas -- inchangé) |
 
 `PlayerMotionState.team`/`.numero`/`.role` n'existent pas : ces trois champs
 vivent sur `Sequence.roster` (statique pour toute la séquence), pas sur

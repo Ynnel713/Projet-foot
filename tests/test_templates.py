@@ -576,7 +576,13 @@ class TestTemplateStructureUnchangedByPhysicsTags:
     ballon change RÉELLEMENT de position (x/y) sur la keyframe "disputée"
     (`Template.ball_position`), ce n'est plus le repli figé sur la dernière
     position connue. Recalculée et vérifiée manuellement à cette occasion,
-    pas une régression."""
+    pas une régression.
+
+    Deuxième exception délibérée (brief "real Magnus effect", 23/09/2026,
+    Tâche 3) : `decalage_enroulee` a une empreinte mise à jour -- sa keyframe
+    de tir porte désormais un `spin` non nul (`build_decalage_enroulee`,
+    `templates.py`), remplaçant le `spin=0.0` par défaut. Recalculée et
+    vérifiée manuellement, pas une régression."""
 
     _EXPECTED_STRUCTURE_HASH = {
         "but_gag": "f41d49b564e507476892e0c8dc83e1a4a980e461357b4e9f6d158126c86184d1",
@@ -585,7 +591,7 @@ class TestTemplateStructureUnchangedByPhysicsTags:
         "corner": "cfc642378285192fb8f4e59ce0a6ec25679b837b273293de8e82e3f1641e7293",
         "coup_franc": "65652dc16b67dc362221250ace6198a26a169ab60203e1fc2b74af280db8d566",
         "debordement_centre_tete": "06543fdddb12bdc4959eb29b0ca83b146bc5f8e312e233f196c9df1225658819",
-        "decalage_enroulee": "7baa9bcc8f4e6f703650a8aef2ca0250701b3305f3948481d924b4ce10e8b403",
+        "decalage_enroulee": "3f373d34b2a6870c46188d262e45dc0852bc1f51f6adc6d19914dc455e05232d",
         "penalty": "7f2c7ebf289a42122153109b2e9d4faff267170513620ea9bf83c940d42b0f91",
         "percee_individuelle": "4fd4c5ef14c5b020821ecf2638a54c0e58c5a8a35e11001e66b458b4cd1633ca",
         "profondeur_1v1": "dd55a79b69a71bf4436c06f08f195a4be89b66ff555ef3117b148b85b88443a7",
