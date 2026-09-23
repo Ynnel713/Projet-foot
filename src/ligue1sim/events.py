@@ -5,10 +5,20 @@ remplacements, note /10 par joueur -- et les registres d'indisponibilité
 Les probabilités ci-dessous (cartons, blessures) sont des constantes
 calibrées à la main, dans le même esprit que LEAGUE_AVG_GOALS/RATING_EXPONENT
 dans simulation.py : ajustables, documentées, pas une vérité absolue.
+
+Chaque événement porte aussi un champ `zone` (position sur le terrain, voir
+ligue1sim.pitch_geometry) pour l'habillage visuel (voir
+docs/simulation_physique_archi.md) -- calculée par un générateur aléatoire
+LOCAL, indépendant du flux `random`/`np.random` global utilisé par tout le
+reste de ce module (voir `_deterministic_rng`). Ce découplage est
+volontaire et critique : les tirages existants (buteur, minute, carton...)
+ne doivent JAMAIS être affectés par l'ajout des zones -- non-régression
+vérifiée sur 1000 matchs, voir tests/test_events_zone.py.
 """
 
 from __future__ import annotations
 
+import hashlib
 import random
 from dataclasses import dataclass, field
 
@@ -17,6 +27,7 @@ import pandas as pd
 
 from ligue1sim.clubs import Club
 from ligue1sim.lineup import Lineup, bench
+from ligue1sim.pitch_geometry import GRID_COLUMNS, GRID_ROWS, Zone
 from ligue1sim.players import ASSIST_WEIGHT, GOALKEEPER, SCORER_WEIGHT, Player
 
 # --- Cartons -----------------------------------------------------------
@@ -78,6 +89,68 @@ RATING_MAX = 10.0
 # sectorielles GK/DEF/MID/ATT, voir simulation.py) -- pas de raison d'y
 # retoucher tant que ce n'est pas explicitement ce qui pose problème.
 RATING_NOISE_STD = 0.3
+
+# --- Zones (habillage visuel, voir docs/simulation_physique_archi.md) ----
+# Point de penalty : position réglementaire fixe (11 m de la ligne de but),
+# pas un tirage -- x = 1 - 11/105 ≈ 0.895 -> colonne GRID_COLUMNS-2 dans la
+# grille normalisée (voir ligue1sim.pitch_geometry), y = 0.5 (axe du but)
+# -> ligne médiane.
+PENALTY_SPOT_ZONE = Zone(col=GRID_COLUMNS - 2, row=GRID_ROWS // 2)
+
+
+def _deterministic_rng(match_id: str, minute: int, player_id: int | str) -> random.Random:
+    """Générateur aléatoire LOCAL et indépendant du flux `random`/`np.random`
+    global utilisé par le reste du module (voir tirage du buteur, des
+    cartons...) -- ne consomme JAMAIS ce flux partagé, pour que l'ajout des
+    zones ne change RIEN aux tirages existants. Seed dérivée d'un hash
+    stable (sha256 -- pas `hash()`, aléatoire d'un process Python à l'autre)
+    de (match_id, minute, player_id) : la même combinaison retombe toujours
+    sur la même zone, pour pouvoir régénérer un habillage visuel sans
+    re-simuler tout le match."""
+    digest = hashlib.sha256(f"{match_id}|{minute}|{player_id}".encode()).digest()
+    return random.Random(int.from_bytes(digest[:8], "big"))
+
+
+def _shot_zone(rng: random.Random) -> Zone:
+    """Zone de tir d'un but, proche de la surface adverse : les 3 dernières
+    colonnes de la grille (~25% du terrain le plus proche du but adverse),
+    n'importe quelle ligne -- un tir peut venir d'un angle large, pas
+    seulement de face."""
+    col = rng.randint(GRID_COLUMNS - 3, GRID_COLUMNS - 1)
+    row = rng.randint(0, GRID_ROWS - 1)
+    return Zone(col=col, row=row)
+
+
+def _assist_zone(rng: random.Random, shot_zone: Zone) -> Zone:
+    """Zone de départ d'une passe décisive : un peu plus reculée que le tir
+    qu'elle prépare (progression du jeu vers le but), latéralement proche
+    pour rester crédible (pas un changement d'aile brusque)."""
+    col = max(0, shot_zone.col - rng.randint(1, 3))
+    row = min(max(shot_zone.row + rng.randint(-1, 1), 0), GRID_ROWS - 1)
+    return Zone(col=col, row=row)
+
+
+def _uniform_pitch_zone(rng: random.Random) -> Zone:
+    """Zone tirée uniformément sur tout le terrain -- pour les événements
+    qui peuvent survenir n'importe où (faute/carton, blessure)."""
+    return Zone(col=rng.randint(0, GRID_COLUMNS - 1), row=rng.randint(0, GRID_ROWS - 1))
+
+
+def _technical_area_zone(rng: random.Random) -> Zone:
+    """Zone technique (bord de touche, près de la ligne médiane) où se fait
+    un remplacement -- approximation la plus proche possible dans une grille
+    qui ne couvre que l'aire de jeu (pas de référentiel dédié au banc de
+    touche, hors du terrain)."""
+    col = min(max(GRID_COLUMNS // 2 + rng.randint(-1, 1), 0), GRID_COLUMNS - 1)
+    row = rng.choice((0, GRID_ROWS - 1))
+    return Zone(col=col, row=row)
+
+
+def _player_seed_id(player: Player) -> int | str:
+    """`Player.id` peut être absent (colonne "ID" vide, ou effectifs
+    synthétiques de test sans ID) -- repli sur le nom, toujours présent,
+    pour ne jamais planter la génération de zone faute d'identifiant."""
+    return player.id if player.id is not None else player.name
 
 
 @dataclass
@@ -149,6 +222,14 @@ class GoalEvent:
     assist: str | None
     minute: int = 1
     penalty: bool = False
+    # Habillage visuel (voir docs/simulation_physique_archi.md) -- zone de
+    # tir du buteur, et zone de départ de la passe décisive (None si aucun
+    # passeur, cf. `assist`). Toujours peuplées par `_generate_goals`, mais
+    # optionnelles au niveau du type pour ne rien casser d'existant
+    # (dataclass frozen, tout code qui construirait un GoalEvent sans ces
+    # champs continue de fonctionner).
+    zone: Zone | None = None
+    assist_zone: Zone | None = None
 
 
 @dataclass(frozen=True)
@@ -157,6 +238,7 @@ class SubstitutionEvent:
     player_off: str
     player_on: str
     minute: int = SUB_MIN_MINUTE
+    zone: Zone | None = None  # zone technique -- voir _technical_area_zone
 
 
 @dataclass(frozen=True)
@@ -165,6 +247,7 @@ class CardEvent:
     player: str
     minute: int
     card_type: str  # "yellow" | "second_yellow" | "direct"
+    zone: Zone | None = None  # zone de la faute -- voir _uniform_pitch_zone
 
 
 @dataclass(frozen=True)
@@ -172,6 +255,7 @@ class InjuryEvent:
     club_name: str
     player: str
     minute: int
+    zone: Zone | None = None  # voir _uniform_pitch_zone
 
 
 @dataclass(frozen=True)
@@ -179,6 +263,7 @@ class PenaltyMissedEvent:
     club_name: str
     player: str
     minute: int
+    zone: Zone | None = None  # toujours PENALTY_SPOT_ZONE en pratique (position fixe)
 
 
 @dataclass(frozen=True)
@@ -203,24 +288,38 @@ def generate_match_events(
     away_goals: int,
     unavailable_home: frozenset[str] = frozenset(),
     unavailable_away: frozenset[str] = frozenset(),
+    match_id: str | None = None,
 ) -> MatchEvents:
     """Construit tout ce qui s'est passé pendant le match à partir du score
-    déjà tiré : remplacements, buteurs/passeurs, cartons, blessures, notes."""
-    home_squad, home_subs, home_starter_injuries = _play_match_squad(home_club, home_lineup, unavailable_home)
-    away_squad, away_subs, away_starter_injuries = _play_match_squad(away_club, away_lineup, unavailable_away)
+    déjà tiré : remplacements, buteurs/passeurs, cartons, blessures, notes.
 
-    goals = _generate_goals(home_club.name, home_squad, home_goals) + _generate_goals(
-        away_club.name, away_squad, away_goals
+    `match_id` : identifiant utilisé pour dériver la zone (voir
+    `_deterministic_rng`) de chaque événement -- une valeur stable permet de
+    régénérer les mêmes zones sans re-simuler. Aucun identifiant de match
+    n'existe encore ailleurs dans le moteur (voir season.py/schedule.py) ;
+    à défaut, synthétisé depuis les seules données déjà disponibles ici
+    (suffisant pour la reproductibilité, pas garanti unique dans l'absolu
+    -- deux matchs strictement identiques entre les mêmes clubs au même
+    score partageraient alors les mêmes zones, sans conséquence puisque
+    c'est purement cosmétique)."""
+    if match_id is None:
+        match_id = f"{home_club.name}|{away_club.name}|{home_goals}-{away_goals}"
+
+    home_squad, home_subs, home_starter_injuries = _play_match_squad(home_club, home_lineup, unavailable_home, match_id)
+    away_squad, away_subs, away_starter_injuries = _play_match_squad(away_club, away_lineup, unavailable_away, match_id)
+
+    goals = _generate_goals(home_club.name, home_squad, home_goals, match_id) + _generate_goals(
+        away_club.name, away_squad, away_goals, match_id
     )
 
     home_result = _result(home_goals, away_goals)
     away_result = _result(away_goals, home_goals)
 
     home_stats, home_cards, home_injuries = _build_stats(
-        home_squad, home_lineup, goals, home_result, away_goals, home_starter_injuries
+        home_squad, home_lineup, goals, home_result, away_goals, home_starter_injuries, match_id
     )
     away_stats, away_cards, away_injuries = _build_stats(
-        away_squad, away_lineup, goals, away_result, home_goals, away_starter_injuries
+        away_squad, away_lineup, goals, away_result, home_goals, away_starter_injuries, match_id
     )
 
     penalties_missed = _generate_missed_penalties(
@@ -285,7 +384,7 @@ class _SquadEntry:
 
 
 def _play_match_squad(
-    club: Club, lineup: Lineup, unavailable: frozenset[str]
+    club: Club, lineup: Lineup, unavailable: frozenset[str], match_id: str
 ) -> tuple[list[_SquadEntry], list[SubstitutionEvent], dict[str, tuple[bool, int, int]]]:
     """Titulaires (poids plein) + remplaçants entrés en jeu (poids réduit),
     la liste des remplacements effectués (pour l'affichage), et les
@@ -324,9 +423,14 @@ def _play_match_squad(
             subbed_off_names.add(player_off.name)
             minute = starter_injuries[player_off.name][2]
             subs_on.append((player_on, minute, lineup.bands.get(player_off.name)))
+            sub_rng = _deterministic_rng(match_id, minute, _player_seed_id(player_on))
             substitutions.append(
                 SubstitutionEvent(
-                    club_name=club.name, player_off=player_off.name, player_on=player_on.name, minute=minute
+                    club_name=club.name,
+                    player_off=player_off.name,
+                    player_on=player_on.name,
+                    minute=minute,
+                    zone=_technical_area_zone(sub_rng),
                 )
             )
 
@@ -351,12 +455,14 @@ def _play_match_squad(
                 player_on = max(pool, key=lambda p: p.note)
                 used_reserve_names.add(player_on.name)
                 subs_on.append((player_on, sub_minutes[index], lineup.bands.get(player_off.name)))
+                sub_rng = _deterministic_rng(match_id, sub_minutes[index], _player_seed_id(player_on))
                 substitutions.append(
                     SubstitutionEvent(
                         club_name=club.name,
                         player_off=player_off.name,
                         player_on=player_on.name,
                         minute=sub_minutes[index],
+                        zone=_technical_area_zone(sub_rng),
                     )
                 )
 
@@ -374,7 +480,7 @@ def _play_match_squad(
     return entries, substitutions, starter_injuries
 
 
-def _generate_goals(club_name: str, squad: list[_SquadEntry], nb_goals: int) -> list[GoalEvent]:
+def _generate_goals(club_name: str, squad: list[_SquadEntry], nb_goals: int, match_id: str) -> list[GoalEvent]:
     scorable = [e for e in squad if e.player.group != GOALKEEPER]
     if not scorable or nb_goals <= 0:
         return []
@@ -395,6 +501,7 @@ def _generate_goals(club_name: str, squad: list[_SquadEntry], nb_goals: int) -> 
         penalty = random.random() < PENALTY_GOAL_PROBABILITY
 
         assist_name = None
+        assist_entry: _SquadEntry | None = None
         if not penalty and random.random() > UNASSISTED_GOAL_PROBABILITY:
             # Seul un joueur effectivement sur le terrain à cette minute peut
             # être crédité d'une passe décisive.
@@ -412,7 +519,22 @@ def _generate_goals(club_name: str, squad: list[_SquadEntry], nb_goals: int) -> 
                     ]
                 )
                 if assist_weights.sum() > 0:
-                    assist_name = _weighted_choice(assist_pool, assist_weights).player.name
+                    assist_entry = _weighted_choice(assist_pool, assist_weights)
+                    assist_name = assist_entry.player.name
+
+        # Zones (habillage visuel) : RNG locale indépendante du flux
+        # random/np.random ci-dessus, voir _deterministic_rng -- ne change
+        # rien au tirage du but lui-même. Un penalty a une zone fixe (le
+        # point de penalty, voir PENALTY_SPOT_ZONE), pas un tirage.
+        if penalty:
+            zone = PENALTY_SPOT_ZONE
+        else:
+            shot_rng = _deterministic_rng(match_id, minute, _player_seed_id(scorer_entry.player))
+            zone = _shot_zone(shot_rng)
+        assist_zone = None
+        if assist_entry is not None:
+            assist_rng = _deterministic_rng(match_id, minute, _player_seed_id(assist_entry.player))
+            assist_zone = _assist_zone(assist_rng, zone)
 
         goals.append(
             GoalEvent(
@@ -421,6 +543,8 @@ def _generate_goals(club_name: str, squad: list[_SquadEntry], nb_goals: int) -> 
                 assist=assist_name,
                 minute=minute,
                 penalty=penalty,
+                zone=zone,
+                assist_zone=assist_zone,
             )
         )
 
@@ -440,6 +564,7 @@ def _build_stats(
     result: str,
     goals_conceded: int,
     starter_injuries: dict[str, tuple[bool, int, int]],
+    match_id: str,
 ) -> tuple[list[PlayerMatchStat], list[CardEvent], list[InjuryEvent]]:
     goals_by_scorer: dict[str, int] = {}
     assists_by_player: dict[str, int] = {}
@@ -484,16 +609,33 @@ def _build_stats(
             )
         )
         if yellow_cards or red_card_type is not None:
+            # Minute capturée dans une variable plutôt que ré-appelée dans
+            # CardEvent(...) : un second appel à _random_minute consommerait
+            # un tirage supplémentaire du flux random global, ce qui
+            # décalerait tous les tirages suivants -- exactement ce que
+            # _deterministic_rng est censé éviter (voir tests de
+            # non-régression, tests/test_events_zone.py).
+            card_minute = _random_minute(*entry.minute_range())
+            card_rng = _deterministic_rng(match_id, card_minute, _player_seed_id(player))
             cards.append(
                 CardEvent(
                     club_name=lineup.club_name,
                     player=player.name,
-                    minute=_random_minute(*entry.minute_range()),
+                    minute=card_minute,
                     card_type=red_card_type or "yellow",
+                    zone=_uniform_pitch_zone(card_rng),
                 )
             )
         if injured:
-            injuries.append(InjuryEvent(club_name=lineup.club_name, player=player.name, minute=injury_minute))
+            injury_rng = _deterministic_rng(match_id, injury_minute, _player_seed_id(player))
+            injuries.append(
+                InjuryEvent(
+                    club_name=lineup.club_name,
+                    player=player.name,
+                    minute=injury_minute,
+                    zone=_uniform_pitch_zone(injury_rng),
+                )
+            )
     return stats, cards, injuries
 
 
@@ -530,7 +672,9 @@ def _generate_missed_penalties(sides: list[tuple[str, list[_SquadEntry]]]) -> li
         weights = np.ones(len(scorable))
     taker = _weighted_choice(scorable, weights)
     minute = _random_minute(*taker.minute_range())
-    return [PenaltyMissedEvent(club_name=club_name, player=taker.player.name, minute=minute)]
+    return [
+        PenaltyMissedEvent(club_name=club_name, player=taker.player.name, minute=minute, zone=PENALTY_SPOT_ZONE)
+    ]
 
 
 def _rate_player(
