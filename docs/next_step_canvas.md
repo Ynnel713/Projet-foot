@@ -148,3 +148,35 @@ source du champ `spin`.
   `build_from_template`, non touché) : tir parfaitement droit. À varier
   dans un brief séparé si un tir droit systématique sur ce gabarit devient
   visuellement monotone.
+
+## Preuve visuelle Magnus
+
+Brief "trajectory stroboscopic proof" (23/09/2026) -- `render/canvas.html`
+ne dessine pas de traînée (choix de design assumé, non modifié), donc un
+script séparé (`scripts/render_trajectory.py`, ne touche ni `ball.py`, ni
+`templates.py`, ni `canvas.html`) trace la trajectoire réelle du ballon
+échantillonnée à 10 instants sur `t ∈ [2.4s, 4.2s]` (première moitié du
+segment `shot` de `decalage_enroulee`, telle que demandée par le brief).
+
+- **Avec le spin réel** (50.0 rad/s) : [docs/previews/canvas/trajectory_decalage_enroulee.png](previews/canvas/trajectory_decalage_enroulee.png)
+- **Avec spin forcé à 0** (comparaison) : [docs/previews/canvas/trajectory_straight_comparison.png](previews/canvas/trajectory_straight_comparison.png)
+
+**Déviation max mesurée** (distance des points échantillonnés à la corde
+reliant le premier et le dernier point) :
+- spin=50.0 rad/s : **0.23 m**
+- spin=0.0 (comparaison) : **0.00 m** (les points tombent exactement sur la
+  corde, par construction)
+
+La courbe est visiblement bombée par rapport à la ligne droite de référence
+sur `trajectory_decalage_enroulee.png` (écart net, pas une nuance de
+quelques pixels) ; `trajectory_straight_comparison.png` montre les 10
+points parfaitement alignés. Les deux images confirment visuellement que le
+Magnus agit.
+
+Nuance à noter (transparence, pas un problème) : ce 0.23 m est mesuré sur
+la fenêtre `t=2.4-4.2s` demandée par CE brief (corde plus courte que le
+segment complet), différent du pic de ~0.98 m documenté plus haut (mesuré
+par rapport à la corde du segment COMPLET `t=2.4-6.0s`, à son point milieu
+t=4.2s) -- deux mesures légitimes, deux référentiels différents, aucune
+contradiction : la fenêtre demandée ici ne couvre que la phase montante de
+la courbe, avant son pic.
