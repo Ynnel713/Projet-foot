@@ -43,15 +43,17 @@ from ligue1sim.players import ATTACKER, DEFENDER, GOALKEEPER, MIDFIELDER, Player
 ANCHOR_SCORER = "scorer_zone"  # event.zone (centre de la zone de tir/but)
 ANCHOR_ASSIST = "assist_zone"  # event.assist_zone si présent, sinon repli sur ANCHOR_SCORER
 ANCHOR_STATIC = "static"  # reste à sa position de départ (progress ignoré)
-ANCHOR_LATERAL_SHIFT = "lateral_shift"  # décalage latéral FIXE (voir _LATERAL_SHIFT_M) depuis le départ -- jamais une vraie course, juste un frémissement (brief du 23/09/2026, penalty.support1/support2)
+ANCHOR_LATERAL_SHIFT = "lateral_shift"  # décalage latéral FIXE (voir _LATERAL_SHIFT_M) depuis le départ -- un pas de côté, jamais une vraie course (brief du 23/09/2026, penalty.support1/support2)
 
-# Amplitude du décalage pour ANCHOR_LATERAL_SHIFT -- 25 cm, milieu de la
-# fourchette 20-30 cm donnée par Olivier pour un "léger frémissement
-# d'anticipation" (penalty). Volontairement minuscule : à l'échelle du
-# terrain (68 m de large), même à progress=1.0 ce n'est que quelques pixels
-# à l'écran -- c'est le but ("léger"), pas un bug si le mouvement reste
-# à peine perceptible.
-_LATERAL_SHIFT_M = 0.25
+# Amplitude du décalage pour ANCHOR_LATERAL_SHIFT -- 1,5 m (une enjambée
+# latérale). Corrigé le 23/09/2026 (suite) : la première valeur (25 cm,
+# combinée au progress=0.05 déjà présent dans le gabarit) donnait un
+# déplacement réel de 1,25 cm -- 0,14 px sur le canvas 1200x780, du
+# "léger frémissement" au sens littéral mais en pratique invisible à
+# l'œil nu. 1,5 m ici, combiné au nouveau progress=0.4 du gabarit (voir
+# penalty.support1/support2), donne 60 cm réels de déplacement final --
+# visible, subtil, crédible pour un joueur qui piétine avant un penalty.
+_LATERAL_SHIFT_M = 1.5
 
 
 @dataclass(frozen=True)
@@ -669,12 +671,13 @@ _TEMPLATE_PENALTY = Template(
         # progress, même petite, ne peut y produire le moindre mouvement
         # (`_lerp(x,x,p)=x`). Restent à l'entrée de la surface : pas
         # ANCHOR_SCORER, ils n'ont aucune raison de converger vers le point
-        # de penalty -- juste un décalage latéral fixe de 25 cm
-        # (_LATERAL_SHIFT_M), progress inchangé (0.05, déjà minuscule et
-        # volontairement conservé : le "frémissement" reste à peine
-        # perceptible, c'est le but).
-        Role("support1", ANCHOR_LATERAL_SHIFT, (RoleFrame(0.0, 0.0), RoleFrame(0.5, 0.05), RoleFrame(0.85, 0.05), RoleFrame(1.0, 0.05))),
-        Role("support2", ANCHOR_LATERAL_SHIFT, (RoleFrame(0.0, 0.0), RoleFrame(0.5, 0.05), RoleFrame(0.85, 0.05), RoleFrame(1.0, 0.05))),
+        # de penalty -- juste un pas de côté fixe (_LATERAL_SHIFT_M, 1,5 m).
+        # Progress relevé 0.05 -> 0.4 (fix "suite 2" du 23/09/2026) : la
+        # première version (25 cm x 0.05 = 1,25 cm réels, 0,14 px) était
+        # mathématiquement non nulle mais visuellement invisible -- 1,5 m x
+        # 0.4 = 60 cm réels, un pas de côté visible et crédible.
+        Role("support1", ANCHOR_LATERAL_SHIFT, (RoleFrame(0.0, 0.0), RoleFrame(0.5, 0.4), RoleFrame(0.85, 0.4), RoleFrame(1.0, 0.4))),
+        Role("support2", ANCHOR_LATERAL_SHIFT, (RoleFrame(0.0, 0.0), RoleFrame(0.5, 0.4), RoleFrame(0.85, 0.4), RoleFrame(1.0, 0.4))),
         # ANCHOR_SCORER, pas ANCHOR_STATIC : le tireur est déjà debout devant
         # le ballon au point de penalty (frame 0 très proche de la zone),
         # pas à sa position de formation d'origine.

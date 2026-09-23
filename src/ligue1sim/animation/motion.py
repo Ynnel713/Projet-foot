@@ -100,21 +100,30 @@ _MAX_START_OFFSET_RATIO = 0.3  # fraction de la durée totale
 
 def _start_offset(player_id: PlayerId, duration: float) -> float:
     """Décalage temporel déterministe (secondes) avant qu'un joueur "non
-    impliqué" (voir `player_roles`) commence à réagir -- même principe que
-    `events._deterministic_rng` (hash sha256, pas `hash()` qui varie d'un
-    process Python à l'autre) : la même combinaison retombe toujours sur le
-    même décalage, dans [0, 0.3 * duration]."""
+    impliqué" (`Sequence.roster[id].role is None`, voir `_reacts_immediately`)
+    commence à réagir -- même principe que `events._deterministic_rng` (hash
+    sha256, pas `hash()` qui varie d'un process Python à l'autre) : la même
+    combinaison retombe toujours sur le même décalage, dans [0, 0.3 *
+    duration]."""
     digest = hashlib.sha256(f"start_offset|{player_id}".encode()).digest()
     fraction = int.from_bytes(digest[:8], "big") / 2**64  # ∈ [0, 1)
     return fraction * _MAX_START_OFFSET_RATIO * duration
 
 
-def _is_primary_role(role: str | None) -> bool:
-    """"Impliqué" au sens fort (comportement 3) : réagit sans délai. Les
-    rôles "scorer"/"assist" pilotent directement l'action -- les rôles
-    "support*" (comportement 4, "runner") réagissent avec un léger temps de
-    retard comme n'importe quel joueur non directement sollicité."""
-    return role in ("scorer", "assist")
+def _reacts_immediately(role: str | None) -> bool:
+    """Fix du 23/09/2026 (brief "reaction delay only for background
+    players") : "non impliqué" (comportement 3, `_start_offset` s'applique)
+    désigne un joueur SANS rôle déclaré par le gabarit (`role is None`),
+    jamais un rôle scripté. Avant ce fix, seuls "scorer"/"assist" étaient
+    exemptés du délai -- "support1"/"support2" (comportement 4, "runner")
+    en héritaient alors qu'ils ont, comme scorer/assist, une trajectoire
+    scriptée (`Role.frames`) que le gabarit leur donne explicitement : un
+    ailier qui récupère le ballon en contre-attaque et attend ~2s avant de
+    bouger est tactiquement absurde (une contre-attaque se définit par la
+    réaction immédiate). TOUT rôle nommé -- présent, ou un futur rôle
+    ajouté à un gabarit -- réagit désormais sans délai ; seul un joueur
+    réellement non scripté (`role is None`) en garde un."""
+    return role is not None
 
 
 # --- Interpolation par courbe de Bézier cubique (comportement 1) ---------
@@ -318,7 +327,7 @@ def _raw_position_at(sequence: Sequence, player_id: PlayerId, t: float) -> tuple
 
     entry = sequence.roster[player_id]
     v_max = max_speed_normalized(entry.poste)
-    offset = 0.0 if _is_primary_role(entry.role) else _start_offset(player_id, sequence.duration)
+    offset = 0.0 if _reacts_immediately(entry.role) else _start_offset(player_id, sequence.duration)
     return _player_position_at(sequence, player_id, t - offset, v_max)
 
 

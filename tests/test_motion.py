@@ -7,6 +7,7 @@ from ligue1sim.animation.motion import (
     MAX_SPEED_MPS,
     _apply_avoidance,
     _ease_progress,
+    _reacts_immediately,
     _real_distance_m,
     _start_offset,
     interpolate,
@@ -216,30 +217,42 @@ class TestFrameStateShape:
         frame = interpolate(sequence, sequence.duration)
         assert frame.players[scorer_id].is_ball_carrier
 
-    def test_primary_roles_have_no_reaction_delay(self):
-        # "scorer" (rôle primaire, voir _is_primary_role) doit être déjà en
-        # mouvement à un instant où "support1" (comportement 4, "runner")
-        # n'a pas encore commencé à réagir -- gabarit "corner", le seul où
-        # support1 bouge réellement (ANCHOR_SCORER, pas ANCHOR_STATIC comme
-        # dans les autres gabarits, voir templates.py).
+    def test_named_roles_react_immediately(self):
+        # Fix du 23/09/2026 (brief "reaction delay only for background
+        # players") : TOUT rôle nommé par le gabarit réagit sans délai, pas
+        # seulement "scorer"/"assist" -- "support1" (comportement 4,
+        # "runner") a lui aussi une trajectoire SCRIPTÉE (Role.frames), donc
+        # aucune raison d'attendre. Gabarit "corner" : le seul où support1
+        # bouge réellement (ANCHOR_SCORER, pas ANCHOR_STATIC comme dans les
+        # autres gabarits, voir templates.py) -- avant ce fix, il serait
+        # resté exactement à sa position de départ à ce t (voir
+        # _start_offset, jusqu'à 30% de la durée de délai).
         lineup = _lineup()
         sequence = _sequence("corner", lineup)
         scorer_id = next(pid for pid, entry in sequence.roster.items() if entry.role == "scorer")
         support_id = next(pid for pid, entry in sequence.roster.items() if entry.role == "support1")
 
-        offset = _start_offset(support_id, sequence.duration)
-        assert offset > 0
-        t = offset / 2
+        # t choisi dans la fenêtre où l'ANCIEN comportement aurait encore
+        # gardé support1 immobile (avant son _start_offset, potentiellement
+        # jusqu'à 30% de la durée) -- désormais il a déjà bougé, comme scorer.
+        old_offset = _start_offset(support_id, sequence.duration)
+        assert old_offset > 0  # sinon ce test ne démontrerait rien
+        t = old_offset / 2
 
         frame = interpolate(sequence, t)
         scorer_start = sequence.keyframes[0].players[scorer_id]
         support_start = sequence.keyframes[0].players[support_id]
 
-        # support1 n'a pas encore atteint son propre décalage : encore
-        # exactement à sa position de keyframe initiale. Le buteur, sans
-        # décalage, a déjà bougé.
-        assert (frame.players[support_id].x, frame.players[support_id].y) == support_start
         assert (frame.players[scorer_id].x, frame.players[scorer_id].y) != scorer_start
+        assert (frame.players[support_id].x, frame.players[support_id].y) != support_start
+
+    def test_reacts_immediately_is_true_for_any_named_role_and_false_for_none(self):
+        # Preuve directe de la nouvelle règle (indépendante de tout gabarit
+        # réel) : "impliqué" = a un rôle déclaré, quel qu'il soit -- y
+        # compris un rôle futur, pas seulement scorer/assist/support1/2.
+        for role in ("scorer", "assist", "support1", "support2", "un_futur_role_quelconque"):
+            assert _reacts_immediately(role) is True
+        assert _reacts_immediately(None) is False
 
 
 def _background_sequence(*, active_pos=(0.1, 0.1), background_start=(0.9, 0.9), drift=(0.03, -0.02), duration=4.0):
