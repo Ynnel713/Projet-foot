@@ -245,27 +245,150 @@ class TestDeflectBehavior:
         assert _real_distance_m((a.x, a.y), (b.x, b.y)) < base_step_m * 5  # quelques fois le pas de base, pas un bond
 
 
+def _deflect_audit_lineup() -> Lineup:
+    """Compo fixe pour l'audit numérique de deflect sur les 12 gabarits
+    réels (Tâches 2/3, brief "ball_owner=None debt" du 23/09/2026) -- même
+    construction que `TestFallbackInferenceOnRealTemplates._lineup` (ce
+    fichier), dupliquée plutôt que réutilisée pour ne pas toucher à cette
+    classe existante (aucun refacto opportuniste)."""
+
+    def mk(poste, name, pid):
+        return Player(prenom=name, nom="", nationalite="France", age=25, poste=poste, note=70.0, club="C", championnat="T", id=pid)
+
+    return Lineup(club_name="Test FC", formation="4-3-3", players=[
+        mk("GK", "gk", 1), mk("DC", "cb0", 2), mk("DC", "cb1", 3), mk("LB", "lb", 4), mk("RB", "rb", 5),
+        mk("MDC", "mdc", 6), mk("MC", "mc0", 7), mk("MC", "mc1", 8), mk("AG", "ag", 9), mk("AD", "ad", 10), mk("BU", "bu", 11),
+    ], rating=70.0)
+
+
+def _deflect_audit_event() -> GoalEvent:
+    return GoalEvent(
+        club_name="Test FC", scorer="bu", assist="mc0", minute=34,
+        zone=Zone(col=10, row=4), assist_zone=Zone(col=7, row=3),
+    )
+
+
+def _deflect_segments_on_real_templates() -> list[tuple[str, Sequence, int]]:
+    """(nom du gabarit, Sequence construite, index i du keyframe de départ)
+    pour CHAQUE segment dont le physics_tag RÉSOLU (explicite ou inféré, voir
+    `_resolve_physics_tag`) vaut `DEFLECT`, sur les 12 gabarits réels --
+    détecté par introspection, aucune liste écrite en dur (brief
+    "ball_owner=None debt", Tâche 2, 23/09/2026)."""
+    lineup = _deflect_audit_lineup()
+    event = _deflect_audit_event()
+    start_positions = {p.id: PitchPoint(x=0.12 + 0.06 * i, y=0.1 + 0.07 * i) for i, p in enumerate(lineup.players)}
+    found: list[tuple[str, Sequence, int]] = []
+    for name in sorted(BUILDERS):
+        sequence = BUILDERS[name](event, lineup, start_positions)
+        for i, (kf_a, kf_b) in enumerate(zip(sequence.keyframes, sequence.keyframes[1:])):
+            is_last_segment = kf_b.t == sequence.keyframes[-1].t
+            if _resolve_physics_tag(sequence, kf_a, is_last_segment=is_last_segment) == DEFLECT:
+                found.append((name, sequence, i))
+    return found
+
+
+_DEFLECT_SEGMENTS = _deflect_segments_on_real_templates()
+
+
 class TestDeflectVelocityRatioBounded:
-    """Brief "ball_owner=None debt" (23/09/2026), Tâche 3 : chiffre exact
+    """Brief "ball_owner=None debt" (23/09/2026), Tâche 2 : chiffre exact
     derrière la tolérance élargie de `TestContinuityAndArrivalPerBehavior`
     (0.25 au lieu de 0.07 pour le SAUT de vitesse entre deux frames
     consécutives) -- ici le ratio vitesse_instantanée/vitesse_base est borné
-    sur l'ENSEMBLE du segment, pas seulement entre deux frames. Si ce ratio
-    dépasse 5.0, le test doit échouer -- pas de réélargissement silencieux
-    de la tolérance."""
+    sur CHAQUE segment réellement tagué `deflect` (explicite ou inféré) des
+    12 gabarits réels, pas sur un cas synthétique ni sur un SAUT entre deux
+    frames. `vitesse_base` = vitesse moyenne sur le segment (distance
+    keyframe à keyframe / durée du segment). Si ce ratio dépasse 5.0, le
+    test doit échouer sur CE gabarit -- pas de réélargissement de la
+    tolérance, pas d'exclusion."""
 
     _MAX_RATIO = 5.0
+    _SAMPLES_PER_SEGMENT = 1000
 
-    def test_deflect_velocity_ratio_bounded(self):
-        sequence = _sequence(physics_tag=DEFLECT, start=(0.1, 0.5), end=(0.9, 0.5), duration=2.0)
-        base_speed_m_s = _real_distance_m((0.1, 0.5), (0.9, 0.5)) / sequence.duration
-        t = 0.0
+    @pytest.mark.parametrize(
+        "name,sequence,segment_index",
+        _DEFLECT_SEGMENTS,
+        ids=[f"{n}@t={seq.keyframes[i].t:.3f}-{seq.keyframes[i + 1].t:.3f}" for n, seq, i in _DEFLECT_SEGMENTS],
+    )
+    def test_deflect_velocity_ratio_bounded(self, name, sequence, segment_index):
+        kf_a = sequence.keyframes[segment_index]
+        kf_b = sequence.keyframes[segment_index + 1]
+        duration = kf_b.t - kf_a.t
+        base_speed_m_s = _real_distance_m((kf_a.ball.x, kf_a.ball.y), (kf_b.ball.x, kf_b.ball.y)) / duration
+
         max_ratio = 0.0
-        while t <= sequence.duration:
+        for i in range(self._SAMPLES_PER_SEGMENT):
+            # Bornes du segment STRICTEMENT exclues (frac dans (0, 1), jamais
+            # 0.0 ni 1.0) : au point t=kf_a.t partagé avec le segment
+            # précédent, `_find_ball_segment` résout vers CE segment
+            # précédent (tie-break documenté, voir Tâche 3) -- l'inclure
+            # mesurerait la vitesse d'un AUTRE comportement, pas de deflect.
+            frac = (i + 1) / (self._SAMPLES_PER_SEGMENT + 1)
+            t = kf_a.t + frac * duration
             ratio = _speed(ball_state_at(sequence, t)) / base_speed_m_s
             max_ratio = max(max_ratio, ratio)
-            t += _DT
-        assert max_ratio < self._MAX_RATIO, f"ratio vitesse_instantanée/vitesse_base = {max_ratio:.3f} (max autorisé {self._MAX_RATIO})"
+
+        assert max_ratio < self._MAX_RATIO, (
+            f"{name} segment [t={kf_a.t:.3f}->t={kf_b.t:.3f}] : ratio max = {max_ratio:.4f} "
+            f"(max autorisé {self._MAX_RATIO})"
+        )
+
+
+def _xyz_distance_m(a: BallState, b: BallState) -> float:
+    """Distance 3D en mètres entre deux `BallState` -- `x`/`y` normalisés
+    (voir `PITCH_LENGTH_M`/`PITCH_WIDTH_M`), `z` déjà en mètres. Contrairement
+    à `ball._real_distance_m` (2D, x/y seulement), utile ici pour un saut
+    visuel qui inclurait la hauteur (ex. bord du segment `cross` de corner,
+    où z n'est pas nul)."""
+    dx_m = (b.x - a.x) * PITCH_LENGTH_M
+    dy_m = (b.y - a.y) * PITCH_WIDTH_M
+    dz_m = b.z - a.z
+    return math.sqrt(dx_m * dx_m + dy_m * dy_m + dz_m * dz_m)
+
+
+class TestBallPositionContinuousAcrossDeflectBoundary:
+    """Brief "ball_owner=None debt" (23/09/2026), Tâche 3 : le retour
+    précédent avait écarté la mesure à 7.75 (ratio vitesse_instantanée/
+    vitesse_base sur `corner`) comme "artefact de script" -- ce test le
+    PROUVE plutôt que de l'affirmer. Le rendu canvas échantillonne en
+    continu (60Hz) et peut tomber n'importe où, y compris près de t=0.6 de
+    `corner` ou t=0.3 de `recuperation_haute` (les deux frontières de
+    segment `deflect`, voir `_DEFLECT_SEGMENTS` ci-dessus) : c'est la
+    POSITION qui doit rester continue pour éviter un saut visible à l'écran
+    -- la VITESSE (dérivée) peut légitimement être discontinue d'un segment
+    à l'autre (changement de comportement physique, voir la docstring de
+    module de `ball.py`, section "Continuité")."""
+
+    _HZ = 1000
+    _DT_S = 1.0 / _HZ
+    # Plafond physique volontairement généreux, pas calibré sur un joueur/
+    # ballon réel : un tir puissant réel culmine vers 30-35 m/s, 40 m/s
+    # laisse de la marge sans masquer un vrai saut -- une discontinuité de
+    # position d'ne serait-ce qu'1cm en 1ms impliquerait déjà 10 m/s
+    # instantanés, donc largement détectable bien avant ce plafond.
+    _V_MAX_M_S = 40.0
+
+    def _sequence(self, name: str) -> Sequence:
+        lineup = _deflect_audit_lineup()
+        event = _deflect_audit_event()
+        start_positions = {p.id: PitchPoint(x=0.12 + 0.06 * i, y=0.1 + 0.07 * i) for i, p in enumerate(lineup.players)}
+        return BUILDERS[name](event, lineup, start_positions)
+
+    @pytest.mark.parametrize("name", ["corner", "recuperation_haute"])
+    def test_ball_position_continuous_across_deflect_boundary(self, name):
+        sequence = self._sequence(name)
+        limit_m = self._V_MAX_M_S * self._DT_S
+        t = 0.0
+        previous = ball_state_at(sequence, t)
+        while t < sequence.duration - self._DT_S:
+            t += self._DT_S
+            current = ball_state_at(sequence, t)
+            jump_m = _xyz_distance_m(previous, current)
+            assert jump_m <= limit_m, (
+                f"{name} t={t:.5f} : saut de position de {jump_m * 100:.3f}cm en {self._DT_S * 1000:.2f}ms "
+                f"(plafond {limit_m * 100:.3f}cm pour v_max={self._V_MAX_M_S}m/s) -- discontinuité de POSITION"
+            )
+            previous = current
 
 
 class TestEdgeCases:

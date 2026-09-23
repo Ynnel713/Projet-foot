@@ -268,6 +268,23 @@ def _behavior_cross(
 # vitesse dépassait largement la tolérance de 5%). Le cosinus surélevé a une
 # dérivée nulle aux DEUX bords de la fenêtre (s=0.85 ET s=1.0), donc une
 # trajectoire C1-continue même à l'entrée de la perturbation.
+#
+# Frontière ENTRE deux segments (ex. le "cross" 0.3->0.6 qui enchaîne sur le
+# "deflect" 0.6->1.0 de corner) : POSITION continue, VITESSE discontinue --
+# ricochet visuel attendu, pas un bug. Vérifié numériquement (brief
+# "ball_owner=None debt", Tâche 3, 23/09/2026,
+# tests/test_ball.py::TestBallPositionContinuousAcrossDeflectBoundary) : à la
+# jonction, x/y/z convergent vers LA MÊME valeur des deux côtés (à <1e-6
+# près, la position du Keyframe partagé), mais vx/vy/vz sautent nettement
+# (ex. vz : -4.6 m/s juste avant -> 0.0 m/s juste après sur corner) --
+# cohérent avec la docstring de module ("PAS garantie D'UN SEGMENT À
+# L'AUTRE quand le comportement change") : un ballon qui change de
+# comportement physique (ici, un centre qui devient une déviation disputée)
+# change légitimement de vitesse sans sauter dans l'espace. Le ratio de
+# vitesse mesuré à 7.75 dans un retour précédent était un artefact de script
+# (échantillonnage pile à la frontière, résolu vers le segment PRÉCÉDENT par
+# `_find_ball_segment`, jamais une vraie mesure de `deflect`) -- pas cette
+# discontinuité-ci.
 _DEFLECT_WINDOW_START = 0.85
 _DEFLECT_AMPLITUDE_RATIO = 0.08
 
