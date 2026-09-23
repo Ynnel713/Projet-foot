@@ -6,17 +6,39 @@ Découpage figé avant d'écrire la moindre ligne de logique, pour éviter les a
 
 Bug trouvé en expliquant un GIF à Olivier (`support1` immobile dans `contre_attaque` malgré `RoleFrame.progress=0.3`) : `ANCHOR_STATIC` fixe la cible = le départ (voir `_anchor_point`), donc TOUT `progress` non nul déclaré à côté d'un `ANCHOR_STATIC` est du code mort -- `_lerp(début, fin, progress)` avec `début == fin` retourne toujours `début`.
 
-- **Fix** : `contre_attaque.support1` passe de `ANCHOR_STATIC` à `ANCHOR_SCORER` (réutilisé tel quel, pas de nouvel anchor créé -- `ANCHOR_ASSIST`/`ANCHOR_SCORER` suffisaient). `support1` récupère le ballon à t=0, progresse 30% vers la zone de tir (le `RoleFrame.progress=0.3` déclaré devient enfin effectif) jusqu'à la passe à `assist` (t_ratio=0.4), puis tient sa position (0.3 → 0.3, inchangé -- il a relâché le ballon). Delta réel : ~7,6 m (> 5% du terrain). Tests : `tests/test_templates.py::TestContreAttaqueSupport1Carries`.
-- **Audit (`TestNoDeadProgressOnStaticAnchor`)** : le même défaut existe sur **5 autres gabarits**, listés comme dette CONNUE et **non corrigée** dans ce tour (à discuter avant d'y toucher) :
-  - `construction_placee.support1`
-  - `profondeur_1v1.assist`
-  - `recuperation_haute.support1` ET `support2`
-  - `penalty.support1` ET `support2` (le commentaire du gabarit prétend un "léger frémissement d'anticipation" -- mathématiquement impossible avec `ANCHOR_STATIC`, le commentaire lui-même est trompeur)
-  - `but_gag.support1` ET `support2`
-
-  Le test passe aujourd'hui grâce à une liste d'exclusion EXPLICITE (`_KNOWN_DEAD_PROGRESS_OFFENDERS`) plutôt qu'en ignorant le problème -- une deuxième assertion (`test_the_known_offenders_list_is_not_stale`) vérifie que chaque nom de la liste correspond toujours à une vraie violation, pour qu'un futur fix silencieux (sans retirer le nom) se fasse remarquer.
+- **Fix initial** : `contre_attaque.support1` passe de `ANCHOR_STATIC` à `ANCHOR_SCORER` (réutilisé tel quel, pas de nouvel anchor créé -- `ANCHOR_ASSIST`/`ANCHOR_SCORER` suffisaient). `support1` récupère le ballon à t=0, progresse vers la zone de tir jusqu'à la passe à `assist` (t_ratio=0.4). **Complété le même jour (voir "suite 3" ci-dessous)** : il ne s'arrête plus net après la passe, il continue d'avancer en décélérant. Tests : `tests/test_templates.py::TestContreAttaqueSupport1Carries`.
+- **Audit (`TestNoDeadProgressOnStaticAnchor`)** : le même défaut a été trouvé sur 5 autres gabarits (8 cas au total) -- **tous corrigés le même jour, voir "suite 3" ci-dessous**. La liste d'exclusion (`_KNOWN_DEAD_PROGRESS_OFFENDERS`) est donc vide aujourd'hui.
 - **`scripts/preview_motion.py` repensé** : applique désormais `enrich_with_background` PAR DÉFAUT (22 joueurs, plus 2-4 ronds sur un terrain vide) -- `--legacy-minimal` restaure l'ancien comportement, documenté comme outil de debug uniquement. Légende : contour doré 3px = actif, contour fin 1px = décor, couleur de remplissage = équipe (`kits.match_kit_colors`), numéro sous chaque rond (`RosterEntry.numero`), petit disque blanc = porteur du ballon. 30 fps par défaut (`--fps`).
 - **GIFs de validation, emplacement CANONIQUE `docs/previews/`** (committés, pas juste générés à la demande) : `une_deux_22players.gif`, `contre_attaque_22players.gif`, `percee_individuelle_22players.gif` -- régénérés avec le pipeline complet (`template → BUILDERS → enrich_with_background → motion.interpolate`).
+
+## Corrections du 23/09/2026 (suite 3) — continuation post-relais + audit role-level + 8 gabarits nettoyés
+
+**Tâche 1 -- `contre_attaque.support1` continue sa course.** Après la passe (t_ratio=0.4), le progress restait figé à 0.3 jusqu'à la fin : un arrêt net, "il a avancé puis a débranché". `RoleFrame(1.0, 0.3)` → `RoleFrame(1.0, 0.4)` : il continue d'avancer en décélérant (~2 m de plus sur 60% de la séquence) au lieu de s'arrêter. **Couplage `ANCHOR_SCORER` documenté comme ASSUMÉ** dans un commentaire au-dessus du rôle (pas corrigé par un nouvel anchor -- `ANCHOR_CARRIER_FORWARD` serait du sur-engineering pour un seul cas) : la direction de `support1` dépend de où tombe `event.zone`, pas d'une direction "devant lui" indépendante -- plausible ici (buteur qui fait son appel globalement dans l'axe), mais pas généralisable tel quel.
+
+**Tâche 2 -- audit passé de gabarit-level à role-level.** `_KNOWN_DEAD_PROGRESS_OFFENDERS` était un `frozenset[str]` de NOMS DE GABARITS : un gabarit exclu l'était ENTIER, masquant tout futur rôle mort ajouté ailleurs dans ce même gabarit. Devenu `frozenset[tuple[str, str]]` de `(gabarit, rôle)`. Angle mort démontré puis corrigé par une preuve en 2 temps (modification temporaire + revert, `git diff --quiet` → 0 après chaque fois) :
+1. Régression simulée sur `penalty.support1` (un rôle qui ÉTAIT dans la liste avant la Tâche 3, ne l'est plus après) → le test échoue.
+2. Rôle fictif `penalty.support3` (jamais listé) avec `ANCHOR_STATIC` + progress non nul → le test échoue aussi.
+
+**Tâche 3 -- 8 cas corrigés** (plus de détail : commentaires au-dessus de chaque `Role` dans `templates.py`) :
+
+| Gabarit.rôle | Avant | Après | Anchor |
+|---|---|---|---|
+| `construction_placee.support1` | 0.2/0.25/**0.25** | 0.2/0.25/**0.35** | `ANCHOR_STATIC` → `ANCHOR_SCORER` |
+| `recuperation_haute.support1` | 0.3/0.4/**0.4** | 0.3/0.4/**0.5** | `ANCHOR_STATIC` → `ANCHOR_SCORER` |
+| `recuperation_haute.support2` | 0.35/0.45/**0.45** | 0.35/0.45/**0.55** | `ANCHOR_STATIC` → `ANCHOR_SCORER` |
+| `profondeur_1v1.assist` | 0.1/**0.1** | 0.15/**0.2** | `ANCHOR_STATIC` → `ANCHOR_SCORER` |
+| `but_gag.support1` | 0.15/0.15/**0.15** | 0.15/0.15/**0.3** | `ANCHOR_STATIC` → `ANCHOR_SCORER` |
+| `but_gag.support2` | 0.1/**0.2**/**0.2** | 0.1/**0.25**/**0.35** | `ANCHOR_STATIC` → `ANCHOR_SCORER` |
+| `penalty.support1` | 0.05/0.05/0.05 (inchangé) | 0.05/0.05/0.05 (inchangé) | `ANCHOR_STATIC` → **`ANCHOR_LATERAL_SHIFT`** (nouveau) |
+| `penalty.support2` | 0.05/0.05/0.05 (inchangé) | 0.05/0.05/0.05 (inchangé) | `ANCHOR_STATIC` → **`ANCHOR_LATERAL_SHIFT`** (nouveau) |
+
+6 des 8 cas réutilisent `ANCHOR_SCORER` (même logique/mêmes réserves que `contre_attaque.support1` -- couplage assumé, documenté à chaque site). **`penalty` est le cas particulier** : le commentaire du gabarit promettait un "léger frémissement d'anticipation", mathématiquement impossible avec `ANCHOR_STATIC` à N'IMPORTE QUELLE valeur de progress. Nouvel anchor `ANCHOR_LATERAL_SHIFT` (`templates.py`) : décalage latéral FIXE de 25 cm depuis le départ (milieu de la fourchette 20-30 cm donnée par Olivier), `progress` inchangé (0.05, volontairement conservé -- déplacement réel ≈1,25 cm, à peine perceptible, "léger" au sens littéral).
+
+`_KNOWN_DEAD_PROGRESS_OFFENDERS` est maintenant `frozenset()` -- vide, vérifié par audit direct (0 violation sur les 12 gabarits).
+
+**Tâche 4 -- 5 GIFs régénérés** dans `docs/previews/` avec le pipeline patché (`scripts/preview_motion.py`, non retouché ce tour) : les 3 précédents + `penalty_22players.gif` et `recuperation_haute_22players.gif` (les deux fixs les plus sensibles visuellement -- frémissement, pressing).
+
+Tests : `tests/test_templates.py::TestContreAttaqueSupport1Carries::test_contre_attaque_support1_continues_after_the_relay` (delta post-relais > 1,5 m), `TestNoDeadProgressOnStaticAnchor` (restructuré, liste vide). **436 tests verts.**
 
 ## Corrections du 23/09/2026 (bilan étape 2.2)
 

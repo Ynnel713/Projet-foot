@@ -34,7 +34,7 @@ from typing import Callable
 from ligue1sim.animation.types import BallState, Keyframe, PlayerId, RosterEntry, Sequence
 from ligue1sim.events import GoalEvent
 from ligue1sim.lineup import Lineup
-from ligue1sim.pitch_geometry import PitchPoint, center_of
+from ligue1sim.pitch_geometry import PITCH_WIDTH_M, PitchPoint, center_of
 from ligue1sim.players import ATTACKER, DEFENDER, GOALKEEPER, MIDFIELDER, Player
 
 # --- Ancrages de fin d'un rôle -------------------------------------------
@@ -43,6 +43,15 @@ from ligue1sim.players import ATTACKER, DEFENDER, GOALKEEPER, MIDFIELDER, Player
 ANCHOR_SCORER = "scorer_zone"  # event.zone (centre de la zone de tir/but)
 ANCHOR_ASSIST = "assist_zone"  # event.assist_zone si présent, sinon repli sur ANCHOR_SCORER
 ANCHOR_STATIC = "static"  # reste à sa position de départ (progress ignoré)
+ANCHOR_LATERAL_SHIFT = "lateral_shift"  # décalage latéral FIXE (voir _LATERAL_SHIFT_M) depuis le départ -- jamais une vraie course, juste un frémissement (brief du 23/09/2026, penalty.support1/support2)
+
+# Amplitude du décalage pour ANCHOR_LATERAL_SHIFT -- 25 cm, milieu de la
+# fourchette 20-30 cm donnée par Olivier pour un "léger frémissement
+# d'anticipation" (penalty). Volontairement minuscule : à l'échelle du
+# terrain (68 m de large), même à progress=1.0 ce n'est que quelques pixels
+# à l'écran -- c'est le but ("léger"), pas un bug si le mouvement reste
+# à peine perceptible.
+_LATERAL_SHIFT_M = 0.25
 
 
 @dataclass(frozen=True)
@@ -250,6 +259,8 @@ def _anchor_point(anchor: str, start: PitchPoint, event: GoalEvent) -> PitchPoin
     if anchor == ANCHOR_ASSIST:
         zone = event.assist_zone if event.assist_zone is not None else event.zone
         return center_of(zone)
+    if anchor == ANCHOR_LATERAL_SHIFT:
+        return PitchPoint(x=start.x, y=start.y + _LATERAL_SHIFT_M / PITCH_WIDTH_M)
     raise ValueError(f"Ancrage de rôle inconnu : {anchor!r}")
 
 
@@ -470,14 +481,21 @@ _TEMPLATE_CONTRE_ATTAQUE = Template(
         # ANCHOR_STATIC fige la cible = le départ, donc TOUT progress non nul
         # à côté est mort -- support1 restait immobile malgré le 0.3 déclaré,
         # alors qu'il porte le ballon à t=0). support1 récupère le ballon
-        # profond, le CONDUIT vers l'avant (30% du chemin vers la zone de tir
-        # -- loin d'y arriver, juste une progression crédible) jusqu'à la
-        # passe à `assist` (t_ratio=0.4), puis tient sa position (0.3 -> 0.3,
-        # inchangé) : il a relâché le ballon, plus de raison de continuer à
-        # sprinter. Cible = zone de TIR (ANCHOR_SCORER), pas la zone de passe
+        # profond, le CONDUIT vers l'avant (30% du chemin vers la zone de tir)
+        # jusqu'à la passe à `assist` (t_ratio=0.4), PUIS CONTINUE d'avancer
+        # en décélérant (0.3 -> 0.4 sur les 60% restants de la séquence,
+        # correction du 23/09/2026 suite 2 : un arrêt net juste après la
+        # passe lisait comme "il a débranché", pas une décélération naturelle
+        # de coureur qui accompagne brièvement l'action avant de ralentir).
+        # Cible = zone de TIR (ANCHOR_SCORER), pas la zone de passe
         # (ANCHOR_ASSIST) : c'est vers le BUT que le porteur progresse, la
-        # passe n'est qu'une étape.
-        Role("support1", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.4, 0.3), RoleFrame(1.0, 0.3))),
+        # passe n'est qu'une étape -- COUPLAGE ASSUMÉ : la direction exacte
+        # de support1 dépend donc de où `event.zone` tombe (le tir peut être
+        # excentré), pas d'une direction "devant lui" indépendante. Dans ce
+        # gabarit, avec le buteur qui fait son appel globalement dans l'axe,
+        # l'effet reste plausible ; pas généralisé à un anchor dédié
+        # (ANCHOR_CARRIER_FORWARD) tant qu'un seul gabarit en a besoin.
+        Role("support1", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.4, 0.3), RoleFrame(1.0, 0.4))),
         Role("assist", ANCHOR_ASSIST, (RoleFrame(0.0, 0.0), RoleFrame(0.4, 0.2), RoleFrame(1.0, 1.0))),
         Role("scorer", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.4, 0.35), RoleFrame(1.0, 1.0))),
     ),
@@ -491,7 +509,13 @@ _TEMPLATE_CONSTRUCTION_PLACEE = Template(
     weight=1.0,
     duration=14.0,
     roles=(
-        Role("support1", ANCHOR_STATIC, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.2), RoleFrame(0.6, 0.25), RoleFrame(1.0, 0.25))),
+        # ANCHOR_SCORER, pas ANCHOR_STATIC (fix du 23/09/2026, même bug que
+        # contre_attaque.support1) : support1 porte le ballon de t=0 à t=0.3
+        # ("circulation") avant de le céder à assist -- un porteur qui
+        # circule sans bouger contredit son propre tag. Progress final relevé
+        # 0.25 -> 0.35 pour éviter le même arrêt net qu'à la Tâche 1 après
+        # la passe. Couplage à event.zone assumé, voir contre_attaque.
+        Role("support1", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.2), RoleFrame(0.6, 0.25), RoleFrame(1.0, 0.35))),
         Role("assist", ANCHOR_ASSIST, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.15), RoleFrame(0.6, 0.5), RoleFrame(1.0, 1.0))),
         Role("scorer", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.1), RoleFrame(0.6, 0.4), RoleFrame(1.0, 1.0))),
     ),
@@ -576,7 +600,12 @@ _TEMPLATE_PROFONDEUR_1V1 = Template(
     weight=0.9,
     duration=6.0,
     roles=(
-        Role("assist", ANCHOR_STATIC, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.1), RoleFrame(1.0, 0.1))),
+        # ANCHOR_SCORER, pas ANCHOR_STATIC (fix du 23/09/2026) : le passeur
+        # en profondeur doit suivre sa passe d'un ou deux pas plutôt que
+        # rester planté après avoir lâché le ballon (t_ratio=0.3). Progress
+        # relevé 0.1 -> 0.15/0.2, couplage à event.zone assumé (voir
+        # contre_attaque).
+        Role("assist", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.15), RoleFrame(1.0, 0.2))),
         Role("scorer", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.3), RoleFrame(1.0, 1.0))),
     ),
     tags=((0.0, "appel"), (0.3, "passe"), (1.0, "1v1")),
@@ -596,8 +625,14 @@ _TEMPLATE_RECUPERATION_HAUTE = Template(
     weight=0.8,
     duration=5.0,
     roles=(
-        Role("support1", ANCHOR_STATIC, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.3), RoleFrame(0.55, 0.4), RoleFrame(1.0, 0.4))),
-        Role("support2", ANCHOR_STATIC, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.35), RoleFrame(0.55, 0.45), RoleFrame(1.0, 0.45))),
+        # ANCHOR_SCORER, pas ANCHOR_STATIC (fix du 23/09/2026) : le
+        # commentaire ci-dessus décrit un pressing ACTIF ("support1/support2
+        # pressent, support1 récupère") -- un presseur immobile contredit
+        # son propre texte. Progress final relevé (0.4->0.5, 0.45->0.55) :
+        # les deux avancent ensemble en pressant vers l'avant, couplage à
+        # event.zone assumé (voir contre_attaque).
+        Role("support1", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.3), RoleFrame(0.55, 0.4), RoleFrame(1.0, 0.5))),
+        Role("support2", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.35), RoleFrame(0.55, 0.45), RoleFrame(1.0, 0.55))),
         Role("scorer", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.2), RoleFrame(0.55, 0.5), RoleFrame(1.0, 1.0))),
     ),
     tags=((0.0, "pressing"), (0.3, "pressing"), (0.55, "recuperation"), (1.0, "tir")),
@@ -628,11 +663,18 @@ _TEMPLATE_PENALTY = Template(
     weight=0.6,
     duration=4.0,
     roles=(
-        # ANCHOR_STATIC : restent à l'entrée de la surface, quasi immobiles
-        # (léger frémissement d'anticipation) -- pas ANCHOR_SCORER, ils
-        # n'ont aucune raison de converger vers le point de penalty.
-        Role("support1", ANCHOR_STATIC, (RoleFrame(0.0, 0.0), RoleFrame(0.5, 0.05), RoleFrame(0.85, 0.05), RoleFrame(1.0, 0.05))),
-        Role("support2", ANCHOR_STATIC, (RoleFrame(0.0, 0.0), RoleFrame(0.5, 0.05), RoleFrame(0.85, 0.05), RoleFrame(1.0, 0.05))),
+        # ANCHOR_LATERAL_SHIFT, pas ANCHOR_STATIC (fix du 23/09/2026) : le
+        # commentaire promettait un "léger frémissement d'anticipation", mais
+        # ANCHOR_STATIC fige la cible = le départ -- AUCUNE valeur de
+        # progress, même petite, ne peut y produire le moindre mouvement
+        # (`_lerp(x,x,p)=x`). Restent à l'entrée de la surface : pas
+        # ANCHOR_SCORER, ils n'ont aucune raison de converger vers le point
+        # de penalty -- juste un décalage latéral fixe de 25 cm
+        # (_LATERAL_SHIFT_M), progress inchangé (0.05, déjà minuscule et
+        # volontairement conservé : le "frémissement" reste à peine
+        # perceptible, c'est le but).
+        Role("support1", ANCHOR_LATERAL_SHIFT, (RoleFrame(0.0, 0.0), RoleFrame(0.5, 0.05), RoleFrame(0.85, 0.05), RoleFrame(1.0, 0.05))),
+        Role("support2", ANCHOR_LATERAL_SHIFT, (RoleFrame(0.0, 0.0), RoleFrame(0.5, 0.05), RoleFrame(0.85, 0.05), RoleFrame(1.0, 0.05))),
         # ANCHOR_SCORER, pas ANCHOR_STATIC : le tireur est déjà debout devant
         # le ballon au point de penalty (frame 0 très proche de la zone),
         # pas à sa position de formation d'origine.
@@ -652,8 +694,14 @@ _TEMPLATE_BUT_GAG = Template(
     weight=0.15,
     duration=5.0,
     roles=(
-        Role("support1", ANCHOR_STATIC, (RoleFrame(0.0, 0.0), RoleFrame(0.35, 0.15), RoleFrame(0.65, 0.15), RoleFrame(1.0, 0.15))),
-        Role("support2", ANCHOR_STATIC, (RoleFrame(0.0, 0.0), RoleFrame(0.35, 0.1), RoleFrame(0.65, 0.2), RoleFrame(1.0, 0.2))),
+        # ANCHOR_SCORER, pas ANCHOR_STATIC (fix du 23/09/2026) : support1
+        # touche le ballon à t=0.35 ("premier_contact"), support2 à t=0.65
+        # ("rebond") -- une déviation implique un léger mouvement du joueur
+        # qui dévie, pas une immobilité totale. Progress final relevé
+        # (0.15->0.3, 0.2->0.35) pour rendre le déplacement effectif après
+        # le contact, couplage à event.zone assumé (voir contre_attaque).
+        Role("support1", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.35, 0.15), RoleFrame(0.65, 0.15), RoleFrame(1.0, 0.3))),
+        Role("support2", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.35, 0.1), RoleFrame(0.65, 0.25), RoleFrame(1.0, 0.35))),
         Role("scorer", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.35, 0.3), RoleFrame(0.65, 0.6), RoleFrame(1.0, 1.0))),
     ),
     tags=((0.0, "centre"), (0.35, "premier_contact"), (0.65, "rebond"), (1.0, "but")),

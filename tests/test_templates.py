@@ -374,7 +374,12 @@ class TestContreAttaqueSupport1Carries:
     """Fix du 23/09/2026 (brief "contre_attaque carrier movement") :
     `support1` récupère le ballon à t=0, le conduit vers l'avant (ANCHOR_SCORER,
     plus ANCHOR_STATIC), puis le relâche à `assist` au ratio prévu -- voir le
-    commentaire sur le rôle dans templates.py pour le raisonnement complet."""
+    commentaire sur le rôle dans templates.py pour le raisonnement complet.
+
+    Fix "suite 2" (même jour, brief "carrier continuation") : support1 ne
+    s'arrête plus net après la passe (0.3 -> 0.3, figé) mais continue
+    d'avancer en décélérant jusqu'à la fin (0.3 -> 0.4) -- voir
+    `test_contre_attaque_support1_continues_after_the_relay`."""
 
     def _sequence(self):
         lineup = _lineup()
@@ -389,6 +394,19 @@ class TestContreAttaqueSupport1Carries:
         last = sequence.keyframes[-1].players[support_id]
         delta_m = _real_distance_m(first, last)
         assert delta_m > 0.05 * PITCH_LENGTH_M, f"delta={delta_m:.2f}m, attendu > {0.05 * PITCH_LENGTH_M:.2f}m"
+
+    def test_contre_attaque_support1_continues_after_the_relay(self):
+        # Brief "carrier continuation" du 23/09/2026 : un arrêt net juste
+        # après la passe (t_ratio=0.4) lisait comme "il a débranché" -- il
+        # doit continuer d'avancer, même modestement, jusqu'à la fin.
+        from ligue1sim.animation.motion import _real_distance_m
+
+        sequence = self._sequence()
+        support_id = next(pid for pid, entry in sequence.roster.items() if entry.role == "support1")
+        at_relay = next(kf.players[support_id] for kf in sequence.keyframes if kf.t == pytest.approx(0.4 * sequence.duration))
+        at_end = sequence.keyframes[-1].players[support_id]
+        delta_m = _real_distance_m(at_relay, at_end)
+        assert delta_m > 1.5, f"delta post-relais={delta_m:.2f}m, attendu > 1.5m (pas un arrêt net)"
 
     def test_contre_attaque_ball_follows_carrier(self):
         from ligue1sim.animation.motion import _real_distance_m
@@ -420,23 +438,24 @@ class TestNoDeadProgressOnStaticAnchor:
     côté est donc du code mort, exactement le bug qui rendait `support1`
     immobile dans `contre_attaque` (voir `TestContreAttaqueSupport1Carries`).
 
-    5 gabarits ont le même défaut, listés ici comme dette CONNUE et NON
-    corrigée dans ce tour (consigne du brief : "liste-les-moi, on en discute
-    avant") -- ce test échouerait sur eux si on ne les excluait pas
-    explicitement. Retirer un nom de cette liste doit correspondre à un vrai
-    fix de son gabarit, jamais à un simple ajustement du test."""
+    Exclusion au niveau du RÔLE, PAS du gabarit (voir brief du 23/09/2026,
+    "suite 2" : un frozenset de noms de gabarits sautait le gabarit ENTIER,
+    masquant tout futur rôle mort ajouté ailleurs dans ce même gabarit --
+    angle mort démontré par modification temporaire + revert, voir
+    docs/simulation_physique_archi.md pour la preuve). Les 8 cas trouvés le
+    23/09/2026 ont tous été corrigés le jour même : cette liste est donc
+    vide -- elle ne le reste que si un futur cas est délibérément laissé
+    statique ET documenté comme tel, jamais par défaut."""
 
-    _KNOWN_DEAD_PROGRESS_OFFENDERS = frozenset(
-        {"but_gag", "construction_placee", "penalty", "profondeur_1v1", "recuperation_haute"}
-    )
+    _KNOWN_DEAD_PROGRESS_OFFENDERS: frozenset[tuple[str, str]] = frozenset()
     _EPSILON = 0.01
 
     def test_no_dead_progress_on_static_anchor(self):
         violations = []
         for name, template in TEMPLATES.items():
-            if name in self._KNOWN_DEAD_PROGRESS_OFFENDERS:
-                continue
             for role in template.roles:
+                if (name, role.name) in self._KNOWN_DEAD_PROGRESS_OFFENDERS:
+                    continue
                 if role.end_anchor != ANCHOR_STATIC:
                     continue
                 for frame in role.frames:
@@ -446,14 +465,17 @@ class TestNoDeadProgressOnStaticAnchor:
         assert not violations, "progress non nul sur ANCHOR_STATIC (code mort) : " + "; ".join(violations)
 
     def test_the_known_offenders_list_is_not_stale(self):
-        # Contre-vérification : si un gabarit de la liste ne viole plus rien
-        # (corrigé sans mettre à jour cette liste), on veut le savoir --
-        # sinon la liste se fige et masque un futur vrai fix.
-        for name in self._KNOWN_DEAD_PROGRESS_OFFENDERS:
+        # Contre-vérification : si un (gabarit, rôle) de la liste ne viole
+        # plus rien (corrigé sans mettre à jour cette liste), on veut le
+        # savoir -- sinon la liste se fige et masque un futur vrai fix.
+        # Vide aujourd'hui (voir docstring de classe) -- cette boucle ne
+        # s'exécute donc sur rien, elle redevient utile dès qu'une entrée y
+        # est réintroduite.
+        for name, role_name in self._KNOWN_DEAD_PROGRESS_OFFENDERS:
             template = TEMPLATES[name]
-            found = any(
-                role.end_anchor == ANCHOR_STATIC and frame.progress is not None and frame.progress > self._EPSILON
-                for role in template.roles
-                for frame in role.frames
+            role = next(r for r in template.roles if r.name == role_name)
+            found = (
+                role.end_anchor == ANCHOR_STATIC
+                and any(f.progress is not None and f.progress > self._EPSILON for f in role.frames)
             )
-            assert found, f"{name} est listé comme dette connue mais ne viole plus rien -- retire-le de la liste"
+            assert found, f"{name}.{role_name} est listé comme dette connue mais ne viole plus rien -- retire-le"
