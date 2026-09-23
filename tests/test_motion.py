@@ -197,11 +197,16 @@ class TestAvoidance:
 
 
 class TestFrameStateShape:
-    def test_ball_field_is_always_none_in_this_phase(self):
+    def test_ball_field_is_populated_since_phase_3_2(self):
+        # Avant le 23/09/2026 (phase 3.2, ball.py), FrameState.ball était
+        # toujours None -- interpolate le peuple désormais via
+        # animation.ball.ball_state_at, seul point d'intégration.
         lineup = _lineup()
         sequence = _sequence("contre_attaque", lineup)
         frame = interpolate(sequence, sequence.duration / 2)
-        assert frame.ball is None
+        assert frame.ball is not None
+        assert isinstance(frame.ball.x, float)
+        assert isinstance(frame.ball.y, float)
 
     def test_covers_every_player_of_the_sequence(self):
         lineup = _lineup()

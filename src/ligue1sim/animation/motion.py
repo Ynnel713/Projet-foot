@@ -56,6 +56,7 @@ import hashlib
 import math
 from dataclasses import dataclass
 
+from ligue1sim.animation.ball import ball_state_at
 from ligue1sim.animation.types import BackgroundTrack, BallState, PlayerId, Sequence
 from ligue1sim.pitch_geometry import PITCH_LENGTH_M, PITCH_WIDTH_M
 
@@ -299,7 +300,7 @@ class PlayerMotionState:
 class FrameState:
     t: float
     players: dict[PlayerId, PlayerMotionState]
-    ball: BallState | None = None  # géré par animation.ball (phase 3.2) -- toujours None ICI (interpolate ne le peuple jamais), mais le TYPE accepte déjà un BallState réel pour ne rien casser côté appelant quand ball.py sera branché
+    ball: BallState | None = None  # peuplé par animation.ball.ball_state_at (phase 3.2, 23/09/2026) -- reste `None` seulement si `interpolate` n'est jamais appelé pour cette valeur par défaut (le défaut sert surtout à la construction directe dans les tests)
 
 
 _VELOCITY_EPSILON_S = 1e-4  # pas de différence finie pour (vx, vy) -- petit, déterministe, pas de dépendance à dt du test
@@ -362,4 +363,4 @@ def interpolate(sequence: Sequence, t: float) -> FrameState:
         )
         for player_id, xy in adjusted_positions.items()
     }
-    return FrameState(t=clamped_t, players=players, ball=None)
+    return FrameState(t=clamped_t, players=players, ball=ball_state_at(sequence, clamped_t))

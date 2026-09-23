@@ -9,8 +9,8 @@ def _ball(x=0.5, y=0.5, owner_id=None) -> BallState:
     return BallState(x=x, y=y, z=0.0, spin=0.0, owner_id=owner_id)
 
 
-def _keyframe(t: float, players: dict, tag: str = "", owner_id=None) -> Keyframe:
-    return Keyframe(t=t, ball=_ball(owner_id=owner_id), players=players, tag=tag)
+def _keyframe(t: float, players: dict, tag: str = "", owner_id=None, physics_tag=None) -> Keyframe:
+    return Keyframe(t=t, ball=_ball(owner_id=owner_id), players=players, tag=tag, physics_tag=physics_tag)
 
 
 def _players(*ids) -> dict:
@@ -304,12 +304,23 @@ class TestToJson:
     def test_keyframe_shape_matches_the_documented_contract(self):
         payload = self._sample_sequence().to_json()
         kf = payload["keyframes"][0]
-        assert set(kf) == {"t", "tag", "ball", "players"}
+        assert set(kf) == {"t", "tag", "physics_tag", "ball", "players"}
         assert kf["t"] == 0.0
         assert kf["tag"] == "recuperation"
-        assert set(kf["ball"]) == {"x", "y", "z", "spin", "owner_id"}
+        assert kf["physics_tag"] is None
+        assert set(kf["ball"]) == {"x", "y", "z", "vx", "vy", "vz", "spin", "owner_id"}
         assert kf["ball"]["owner_id"] == "1"  # PlayerId int converti en chaîne
         assert kf["players"] == {"1": [0.4, 0.5], "2": [0.6, 0.5]}
+
+    def test_physics_tag_is_serialized_when_set(self):
+        sequence = Sequence(
+            event_ref="ref",
+            keyframes=[_keyframe(0.0, {1: (0.4, 0.5)}, tag="tir", physics_tag="shot")],
+            duration=0.0,
+            meta={},
+            roster={1: RosterEntry(nom="X", poste="BU", role="scorer", numero=9, team_side="scorer")},
+        )
+        assert sequence.to_json()["keyframes"][0]["physics_tag"] == "shot"
 
     def test_none_owner_id_stays_none_not_the_string_none(self):
         payload = self._sample_sequence().to_json()

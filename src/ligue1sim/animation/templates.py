@@ -161,6 +161,15 @@ class Template:
     # nul (voir tests/test_templates.py::TestNoRoleReliesOnReactionDelay,
     # brief du 23/09/2026 "structural restart-aware rule").
     starts_at_restart: bool = False
+    # (t_ratio, physics_tag) -- comportement de trajectoire du ballon pour
+    # le segment qui DÉMARRE à ce Keyframe, voir animation.ball et
+    # Keyframe.physics_tag (types.py). Modification chirurgicale du
+    # 23/09/2026 (phase 3.2, brief "tag-driven trajectory with fallback
+    # inference") : SEULS les cas non-ambigus sont taggés explicitement ici
+    # -- tout t_ratio absent de ce tuple reste physics_tag=None, et
+    # animation.ball.ball_state_at infère un comportement par défaut. Ne
+    # PAS chercher à tagger exhaustivement chaque segment de chaque gabarit.
+    physics_tags: tuple[tuple[float, str], ...] = ()
 
 
 def _validate_template(template: Template) -> None:
@@ -310,6 +319,7 @@ def build_from_template(
     tags_by_ratio = dict(template.tags)
     ball_owner_by_ratio = dict(template.ball_owner)
     ball_height_by_ratio = dict(template.ball_height)
+    physics_tags_by_ratio = dict(template.physics_tags)
     timeline = sorted({frame.t_ratio for role in template.roles for frame in role.frames})
 
     keyframes: list[Keyframe] = []
@@ -342,6 +352,7 @@ def build_from_template(
                 ball=BallState(x=ball_x, y=ball_y, z=ball_height_by_ratio.get(t_ratio, 0.0), spin=0.0, owner_id=owner_id),
                 players=players,
                 tag=tags_by_ratio.get(t_ratio, ""),
+                physics_tag=physics_tags_by_ratio.get(t_ratio),
             )
         )
 
@@ -510,6 +521,7 @@ _TEMPLATE_CONTRE_ATTAQUE = Template(
     tags=((0.0, "recuperation"), (0.4, "progression"), (1.0, "tir")),
     ball_owner=((0.0, "support1"), (0.4, "assist"), (1.0, "scorer")),
     context_score=_score_contre_attaque,
+    physics_tags=((0.4, "shot"),),  # dernier segment (0.4 -> 1.0) : le tir au but
 )
 
 _TEMPLATE_CONSTRUCTION_PLACEE = Template(
@@ -530,6 +542,7 @@ _TEMPLATE_CONSTRUCTION_PLACEE = Template(
     tags=((0.0, "recuperation"), (0.3, "circulation"), (0.6, "progression"), (1.0, "tir")),
     ball_owner=((0.0, "support1"), (0.3, "support1"), (0.6, "assist"), (1.0, "scorer")),
     context_score=_score_construction_placee,
+    physics_tags=((0.6, "shot"),),  # dernier segment (0.6 -> 1.0) : le tir au but
 )
 
 _TEMPLATE_DEBORDEMENT = Template(
@@ -544,6 +557,7 @@ _TEMPLATE_DEBORDEMENT = Template(
     ball_owner=((0.0, "assist"), (0.6, "assist"), (1.0, "scorer")),
     ball_height=((0.6, 0.6), (1.0, 0.3)),
     context_score=_score_debordement_centre_tete,
+    physics_tags=((0.6, "shot"),),  # dernier segment (0.6 -> 1.0) : la tête au but
 )
 
 _TEMPLATE_PERCEE_INDIVIDUELLE = Template(
@@ -554,6 +568,7 @@ _TEMPLATE_PERCEE_INDIVIDUELLE = Template(
     tags=((0.0, "controle"), (0.4, "dribble"), (0.75, "dribble"), (1.0, "tir")),
     ball_owner=((0.0, "scorer"), (0.4, "scorer"), (0.75, "scorer"), (1.0, "scorer")),
     context_score=_score_percee_individuelle,
+    physics_tags=((0.75, "shot"),),  # dernier segment (0.75 -> 1.0) : le tir au but
 )
 
 _TEMPLATE_UNE_DEUX = Template(
@@ -567,6 +582,7 @@ _TEMPLATE_UNE_DEUX = Template(
     tags=((0.0, "passe"), (0.5, "remise"), (1.0, "tir")),
     ball_owner=((0.0, "scorer"), (0.5, "assist"), (1.0, "scorer")),
     context_score=_score_une_deux,
+    physics_tags=((0.5, "shot"),),  # dernier segment (0.5 -> 1.0) : le tir au but
 )
 
 _TEMPLATE_COUP_FRANC = Template(
@@ -581,6 +597,7 @@ _TEMPLATE_COUP_FRANC = Template(
     ball_owner=((0.0, "scorer"), (0.7, "scorer"), (1.0, "scorer")),
     context_score=_score_coup_franc,
     starts_at_restart=True,
+    physics_tags=((0.7, "shot"),),  # dernier segment (0.7 -> 1.0) : la frappe
 )
 
 _TEMPLATE_CORNER = Template(
@@ -602,6 +619,13 @@ _TEMPLATE_CORNER = Template(
     ball_owner=((0.0, "assist"), (0.3, "assist"), (0.6, None), (1.0, "scorer")),
     ball_height=((0.0, 0.0), (0.3, 0.0), (0.6, 0.8), (1.0, 0.3)),
     context_score=_score_corner,
+    # dernier segment (0.6 -> 1.0) : shot, même explicitement pour une tête
+    # (voir Modification B du brief "tag-driven trajectory with fallback
+    # inference", 23/09/2026 -- confirmé par l'exemple du brief lui-même).
+    # Le segment 0.3 -> 0.6 (la trajectoire du corner tiré lui-même,
+    # narrative tag "centre" à 0.6, porteur=None à 0.6) N'EST PAS taggé ici
+    # -- ambiguïté cross/deflect non résolue avec Olivier, voir la réponse.
+    physics_tags=((0.6, "shot"),),
 )
 
 _TEMPLATE_PROFONDEUR_1V1 = Template(
@@ -620,6 +644,7 @@ _TEMPLATE_PROFONDEUR_1V1 = Template(
     tags=((0.0, "appel"), (0.3, "passe"), (1.0, "1v1")),
     ball_owner=((0.0, "assist"), (0.3, "scorer"), (1.0, "scorer")),
     context_score=_score_profondeur_1v1,
+    physics_tags=((0.3, "shot"),),  # dernier segment (0.3 -> 1.0) : le 1v1 conclu au tir
 )
 
 _TEMPLATE_RECUPERATION_HAUTE = Template(
@@ -647,6 +672,9 @@ _TEMPLATE_RECUPERATION_HAUTE = Template(
     tags=((0.0, "pressing"), (0.3, "pressing"), (0.55, "recuperation"), (1.0, "tir")),
     ball_owner=((0.0, "support1"), (0.3, None), (0.55, "support1"), (1.0, "scorer")),
     context_score=_score_recuperation_haute,
+    # t=0.3 : porteur=None (ballon disputé pendant le pressing) -> deflect.
+    # 0.55 (dernier segment avant 1.0) : shot, le tir de conclusion.
+    physics_tags=((0.3, "deflect"), (0.55, "shot")),
 )
 
 _TEMPLATE_DECALAGE_ENROULEE = Template(
@@ -660,6 +688,7 @@ _TEMPLATE_DECALAGE_ENROULEE = Template(
     tags=((0.0, "decalage"), (0.4, "controle"), (1.0, "enroulee")),
     ball_owner=((0.0, "assist"), (0.4, "scorer"), (1.0, "scorer")),
     context_score=_score_decalage_enroulee,
+    physics_tags=((0.4, "shot"),),  # dernier segment (0.4 -> 1.0) : l'enroulée
 )
 
 _TEMPLATE_PENALTY = Template(
@@ -694,6 +723,7 @@ _TEMPLATE_PENALTY = Template(
     ball_owner=((0.0, "scorer"), (0.5, "scorer"), (0.85, "scorer"), (1.0, "scorer")),
     context_score=_score_penalty,
     starts_at_restart=True,
+    physics_tags=((0.85, "shot"),),  # dernier segment (0.85 -> 1.0) : le tir
 )
 
 _TEMPLATE_BUT_GAG = Template(
@@ -722,6 +752,7 @@ _TEMPLATE_BUT_GAG = Template(
     # porteur -- repéré visuellement via scripts/preview_templates.py.
     ball_owner=((0.0, "scorer"), (0.35, "support1"), (0.65, "support2"), (1.0, "scorer")),
     context_score=_score_but_gag,
+    physics_tags=((0.65, "shot"),),  # dernier segment (0.65 -> 1.0) : la déviation finale au but
 )
 
 TEMPLATES: dict[str, Template] = {

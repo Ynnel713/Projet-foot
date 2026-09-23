@@ -545,3 +545,53 @@ class TestNoRoleReliesOnReactionDelay:
                         break
 
         assert not violations, "rôle scripté potentiellement dépendant d'un délai externe : " + "; ".join(violations)
+
+
+class TestTemplateStructureUnchangedByPhysicsTags:
+    """Garde-fou demandé avant la Modification B du brief "tag-driven
+    trajectory" (23/09/2026, phase 3.2) : l'ajout des `physics_tag`
+    explicites doit être une modification CHIRURGICALE -- rien d'autre
+    (nombre de keyframes, positions, tags narratifs, `ball_owner`,
+    `ball_height`) ne doit bouger sur les 12 gabarits.
+
+    Empreinte SHA256 du JSON de chaque gabarit, `physics_tag` neutralisé à
+    `None` avant hachage (c'est justement le seul champ qu'on attend voir
+    changer) -- capturée AVANT d'appliquer la Modification B, sur la
+    fixture standard de ce fichier (`_lineup`/`_goal_event`/
+    `_start_positions`). Si ce test échoue, quelque chose d'AUTRE que les
+    `physics_tag` a changé dans un gabarit -- à traiter comme une
+    régression, pas comme un test à mettre à jour à la légère."""
+
+    _EXPECTED_STRUCTURE_HASH = {
+        "but_gag": "f41d49b564e507476892e0c8dc83e1a4a980e461357b4e9f6d158126c86184d1",
+        "construction_placee": "bd570f855aa35b4cf9d2c714e22ffc76a379b8b2a8f0c7e3e713603aee4bff37",
+        "contre_attaque": "718658a38fd6623511674dfbe38e588fb184d3d33f59a49ad50c58c60874b50b",
+        "corner": "375f852fcdf4471ad91b495350f7a1b9076c02ab05eea79aa289a4fc2bcde3bb",
+        "coup_franc": "65652dc16b67dc362221250ace6198a26a169ab60203e1fc2b74af280db8d566",
+        "debordement_centre_tete": "06543fdddb12bdc4959eb29b0ca83b146bc5f8e312e233f196c9df1225658819",
+        "decalage_enroulee": "7baa9bcc8f4e6f703650a8aef2ca0250701b3305f3948481d924b4ce10e8b403",
+        "penalty": "7f2c7ebf289a42122153109b2e9d4faff267170513620ea9bf83c940d42b0f91",
+        "percee_individuelle": "4fd4c5ef14c5b020821ecf2638a54c0e58c5a8a35e11001e66b458b4cd1633ca",
+        "profondeur_1v1": "dd55a79b69a71bf4436c06f08f195a4be89b66ff555ef3117b148b85b88443a7",
+        "recuperation_haute": "af598dd2a84ad31fff862bc5371ce8c2fd96185ec88e93dd10cb7fa5a06ec551",
+        "une_deux": "1d6d30fc696daa9e9e8324b204231f8612a2b20d575e7bbd8eee148c94cca5d5",
+    }
+
+    def _structure_hash(self, name: str) -> str:
+        import hashlib
+        import json
+
+        lineup = _lineup()
+        sequence = BUILDERS[name](_goal_event(), lineup, _start_positions(lineup))
+        payload = sequence.to_json()
+        for kf in payload["keyframes"]:
+            kf["physics_tag"] = None  # neutralisé : seul champ qu'on autorise à changer
+        stable = json.dumps(payload, sort_keys=True)
+        return hashlib.sha256(stable.encode()).hexdigest()
+
+    @pytest.mark.parametrize("name", sorted(BUILDERS))
+    def test_structure_unchanged_except_physics_tag(self, name):
+        assert self._structure_hash(name) == self._EXPECTED_STRUCTURE_HASH[name], (
+            f"{name} : structure changée au-delà de physics_tag (positions/tags narratifs/"
+            "ball_owner/ball_height/nombre de keyframes) -- vérifier le diff"
+        )

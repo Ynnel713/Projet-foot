@@ -35,25 +35,50 @@ PlayerId = int | str
 @dataclass(frozen=True)
 class BallState:
     """État du ballon à un instant donné, référentiel normalisé (voir
-    ligue1sim.pitch_geometry -- x, y ∈ [0, 1])."""
+    ligue1sim.pitch_geometry -- x, y ∈ [0, 1]).
+
+    `vx`/`vy` : vitesse normalisée par seconde, même convention que
+    `motion.PlayerMotionState.vx`/`vy`. `vz` : vitesse verticale en m/s --
+    `z` est en MÈTRES (voir plus bas), pas normalisé comme x/y, donc `vz`
+    ne l'est pas non plus : un `BallState` mélange délibérément deux
+    échelles (position latérale normalisée, hauteur réelle), au lieu de
+    forcer une fausse cohérence entre deux grandeurs qui n'ont pas la même
+    nature. `vx`/`vy`/`vz` par défaut à 0.0 (élargi le 23/09/2026, phase 3.2
+    -- ancien contrat `(x, y, z, spin, owner_id)` préservé, tout code qui
+    construisait un `BallState` sans ces 3 champs continue de fonctionner
+    à l'identique, vitesse nulle)."""
 
     x: float
     y: float
-    z: float  # hauteur au-dessus du sol, 0.0 = au sol
-    spin: float  # rotation du ballon -- intensité relative, unité pas encore fixée (aucun rendu ne la consomme)
+    z: float  # hauteur au-dessus du sol en MÈTRES, 0.0 = au sol -- voir animation.ball pour le calcul (Keyframe.ball.z, lui, reste sur l'échelle héritée non calibrée de Template.ball_height, voir sa docstring)
+    spin: float  # rotation du ballon, radians/seconde (convention fixée le 23/09/2026 -- toujours non consommée par le rendu actuel, mais l'ambiguïté d'unité est levée)
     owner_id: PlayerId | None  # joueur qui a le ballon à cet instant, None si en l'air/disputé
+    vx: float = 0.0
+    vy: float = 0.0
+    vz: float = 0.0
 
 
 @dataclass(frozen=True)
 class Keyframe:
     """Un instant complet et autonome du jeu : le ballon ET tous les
     joueurs suivis, au même instant `t`. Un rendu peut interpoler entre
-    deux Keyframe consécutifs sans avoir besoin d'aucune autre donnée."""
+    deux Keyframe consécutifs sans avoir besoin d'aucune autre donnée.
+
+    `tag` et `physics_tag` sont DEUX champs distincts, jamais l'un pour
+    l'autre (23/09/2026, phase 3.2) : `tag` est narratif (ex.
+    "recuperation", "tir", "centre"...), pour le débogage/l'UI, jamais
+    interprété par le rendu -- 24 valeurs différentes sur les 12 gabarits
+    actuels, aucun rapport avec la physique du ballon. `physics_tag` est LU
+    par `animation.ball.ball_state_at` pour choisir le comportement du
+    segment qui DÉMARRE à ce Keyframe (`"pass_ground"`/`"pass_lob"`/
+    `"shot"`/`"cross"`/`"deflect"`, ou `None` -- dans ce cas `ball_state_at`
+    infère un comportement par défaut, voir sa docstring)."""
 
     t: float  # secondes depuis le début de la Sequence
     ball: BallState
     players: dict[PlayerId, tuple[float, float]]  # position (x, y) normalisée de chaque joueur suivi à cet instant
-    tag: str  # étiquette libre (ex. "recuperation", "tir"...) -- pour le débogage/l'UI, jamais interprétée par le rendu
+    tag: str  # étiquette NARRATIVE libre (ex. "recuperation", "tir"...) -- pour le débogage/l'UI, jamais interprétée par le rendu ; voir physics_tag pour ce qui pilote réellement le ballon
+    physics_tag: str | None = None  # comportement de trajectoire du segment qui démarre ici, voir animation.ball -- None = inféré
 
 
 @dataclass(frozen=True)
@@ -195,7 +220,12 @@ class Sequence:
                     {
                         "t": float,
                         "tag": str,
-                        "ball": {"x": float, "y": float, "z": float, "spin": float, "owner_id": str | None},
+                        "physics_tag": str | None,
+                        "ball": {
+                            "x": float, "y": float, "z": float,
+                            "vx": float, "vy": float, "vz": float,
+                            "spin": float, "owner_id": str | None,
+                        },
                         "players": {"<player_id>": [x, y], ...},
                     },
                     ...
@@ -224,10 +254,14 @@ class Sequence:
                 {
                     "t": kf.t,
                     "tag": kf.tag,
+                    "physics_tag": kf.physics_tag,
                     "ball": {
                         "x": kf.ball.x,
                         "y": kf.ball.y,
                         "z": kf.ball.z,
+                        "vx": kf.ball.vx,
+                        "vy": kf.ball.vy,
+                        "vz": kf.ball.vz,
                         "spin": kf.ball.spin,
                         "owner_id": None if kf.ball.owner_id is None else str(kf.ball.owner_id),
                     },
