@@ -479,3 +479,69 @@ class TestNoDeadProgressOnStaticAnchor:
                 and any(f.progress is not None and f.progress > self._EPSILON for f in role.frames)
             )
             assert found, f"{name}.{role_name} est listé comme dette connue mais ne viole plus rien -- retire-le"
+
+
+class TestNoRoleReliesOnReactionDelay:
+    """Vérification demandée après le fix de `motion._reacts_immediately`
+    (23/09/2026, "reaction delay only for background players") : preuve
+    MÉCANIQUE, au niveau des DONNÉES de `templates.py` (pas du comportement
+    de `motion.py` -- aucun import de `motion` ni d'`interpolate` ici), qu'
+    aucun rôle scripté ne dépendait du délai de réaction supprimé pour
+    "arriver à l'heure".
+
+    Deux invariants structurels :
+    1. Un rôle qui possède le ballon dès `t_ratio=0.0` (`Template.ball_owner`)
+       doit être à sa position de formation à ce même instant -- son premier
+       `RoleFrame` doit avoir `progress=0.0` -- SAUF si `Template.
+       starts_at_restart` (coup franc, penalty : la séquence démarre une
+       fois le tireur déjà en position, pas à sa position de formation, voir
+       le champ sur `Template`). Un progress non nul à t=0 pour un porteur
+       immédiat, sur un gabarit qui N'EST PAS un restart, serait le signe
+       qu'on a compensé un retard (l'ancien délai de réaction) en
+       pré-décalant sa position -- exactement l'anti-pattern signalé dans le
+       brief. Version "suite 6" (23/09/2026) : remplace la liste
+       d'exclusion `(gabarit, rôle)` d'origine par ce champ STRUCTUREL --
+       une liste de noms aurait avalé en silence un futur gabarit légitime
+       (ex. une contre-attaque éclair où le buteur est déjà lancé), alors
+       que `starts_at_restart` force à qualifier explicitement le gabarit
+       lui-même, pas à whitelister un cas après coup.
+    2. La séquence de `progress` déclarée pour CHAQUE rôle doit être
+       non-décroissante (jamais un saut en arrière) -- un rôle scripté ne
+       doit jamais "reculer" pour ensuite rattraper une position, ce qui
+       trahirait une dépendance à un mécanisme externe de correction de
+       timing plutôt qu'une trajectoire cohérente en elle-même. Aucune
+       exception ici, gabarit restart ou non.
+
+    `coup_franc`/`penalty` portent `starts_at_restart=True`. `corner` --
+    aussi un restart -- n'a PAS besoin du flag : son porteur à t=0
+    (`assist`) a bien `progress=0.0` (le gabarit place déjà le tireur de
+    corner à son point de départ réel), donc il ne viole rien de toute
+    façon ; lui ajouter le flag n'aurait aucun effet observable."""
+
+    _EPSILON = 0.01
+
+    def test_no_role_relies_on_reaction_delay(self):
+        violations = []
+        for name, template in TEMPLATES.items():
+            ball_owner_by_ratio = dict(template.ball_owner)
+            for role in template.roles:
+                frames_sorted = sorted(role.frames, key=lambda f: f.t_ratio)
+
+                # Invariant 1 : porteur dès t=0 -> position de formation à
+                # t=0, sauf gabarit "restart" (coup franc, penalty).
+                if not template.starts_at_restart and ball_owner_by_ratio.get(0.0) == role.name:
+                    first_progress = frames_sorted[0].progress
+                    if first_progress is not None and first_progress > self._EPSILON:
+                        violations.append(
+                            f"{name}.{role.name} porte le ballon à t=0 mais progress={first_progress} (attendu 0.0)"
+                        )
+
+                # Invariant 2 : progress jamais décroissant (pas de saut en
+                # arrière) -- s'applique À TOUS les gabarits, restart ou non.
+                progresses = [f.progress for f in frames_sorted if f.progress is not None]
+                for a, b in zip(progresses, progresses[1:]):
+                    if b < a - self._EPSILON:
+                        violations.append(f"{name}.{role.name} : progress décroît {progresses} -- saut en arrière")
+                        break
+
+        assert not violations, "rôle scripté potentiellement dépendant d'un délai externe : " + "; ".join(violations)

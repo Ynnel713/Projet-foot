@@ -155,6 +155,12 @@ class Template:
     ball_owner: tuple[tuple[float, str | None], ...]  # (t_ratio, nom du rôle porteur, ou None)
     context_score: Callable[[TemplateContext], float]
     ball_height: tuple[tuple[float, float], ...] = ()  # (t_ratio, z) -- 0.0 (au sol) si absent pour ce t_ratio
+    # Coup franc/penalty : la séquence démarre une fois le tireur DÉJÀ en
+    # position (près du ballon), pas à sa position de formation -- un rôle
+    # peut donc légitimement porter le ballon dès t=0 avec un progress non
+    # nul (voir tests/test_templates.py::TestNoRoleReliesOnReactionDelay,
+    # brief du 23/09/2026 "structural restart-aware rule").
+    starts_at_restart: bool = False
 
 
 def _validate_template(template: Template) -> None:
@@ -574,6 +580,7 @@ _TEMPLATE_COUP_FRANC = Template(
     tags=((0.0, "placement"), (0.7, "elan"), (1.0, "frappe")),
     ball_owner=((0.0, "scorer"), (0.7, "scorer"), (1.0, "scorer")),
     context_score=_score_coup_franc,
+    starts_at_restart=True,
 )
 
 _TEMPLATE_CORNER = Template(
@@ -686,6 +693,7 @@ _TEMPLATE_PENALTY = Template(
     tags=((0.0, "placement"), (0.5, "attente"), (0.85, "elan"), (1.0, "tir")),
     ball_owner=((0.0, "scorer"), (0.5, "scorer"), (0.85, "scorer"), (1.0, "scorer")),
     context_score=_score_penalty,
+    starts_at_restart=True,
 )
 
 _TEMPLATE_BUT_GAG = Template(
