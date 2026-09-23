@@ -2,6 +2,22 @@
 
 Découpage figé avant d'écrire la moindre ligne de logique, pour éviter les allers-retours de conception une fois le code commencé. Contexte complet : [ETAT_ACTUEL.md](ETAT_ACTUEL.md), section 6.
 
+## Corrections du 23/09/2026 (brief "contre_attaque carrier movement") — `ANCHOR_STATIC` + `progress` mort
+
+Bug trouvé en expliquant un GIF à Olivier (`support1` immobile dans `contre_attaque` malgré `RoleFrame.progress=0.3`) : `ANCHOR_STATIC` fixe la cible = le départ (voir `_anchor_point`), donc TOUT `progress` non nul déclaré à côté d'un `ANCHOR_STATIC` est du code mort -- `_lerp(début, fin, progress)` avec `début == fin` retourne toujours `début`.
+
+- **Fix** : `contre_attaque.support1` passe de `ANCHOR_STATIC` à `ANCHOR_SCORER` (réutilisé tel quel, pas de nouvel anchor créé -- `ANCHOR_ASSIST`/`ANCHOR_SCORER` suffisaient). `support1` récupère le ballon à t=0, progresse 30% vers la zone de tir (le `RoleFrame.progress=0.3` déclaré devient enfin effectif) jusqu'à la passe à `assist` (t_ratio=0.4), puis tient sa position (0.3 → 0.3, inchangé -- il a relâché le ballon). Delta réel : ~7,6 m (> 5% du terrain). Tests : `tests/test_templates.py::TestContreAttaqueSupport1Carries`.
+- **Audit (`TestNoDeadProgressOnStaticAnchor`)** : le même défaut existe sur **5 autres gabarits**, listés comme dette CONNUE et **non corrigée** dans ce tour (à discuter avant d'y toucher) :
+  - `construction_placee.support1`
+  - `profondeur_1v1.assist`
+  - `recuperation_haute.support1` ET `support2`
+  - `penalty.support1` ET `support2` (le commentaire du gabarit prétend un "léger frémissement d'anticipation" -- mathématiquement impossible avec `ANCHOR_STATIC`, le commentaire lui-même est trompeur)
+  - `but_gag.support1` ET `support2`
+
+  Le test passe aujourd'hui grâce à une liste d'exclusion EXPLICITE (`_KNOWN_DEAD_PROGRESS_OFFENDERS`) plutôt qu'en ignorant le problème -- une deuxième assertion (`test_the_known_offenders_list_is_not_stale`) vérifie que chaque nom de la liste correspond toujours à une vraie violation, pour qu'un futur fix silencieux (sans retirer le nom) se fasse remarquer.
+- **`scripts/preview_motion.py` repensé** : applique désormais `enrich_with_background` PAR DÉFAUT (22 joueurs, plus 2-4 ronds sur un terrain vide) -- `--legacy-minimal` restaure l'ancien comportement, documenté comme outil de debug uniquement. Légende : contour doré 3px = actif, contour fin 1px = décor, couleur de remplissage = équipe (`kits.match_kit_colors`), numéro sous chaque rond (`RosterEntry.numero`), petit disque blanc = porteur du ballon. 30 fps par défaut (`--fps`).
+- **GIFs de validation, emplacement CANONIQUE `docs/previews/`** (committés, pas juste générés à la demande) : `une_deux_22players.gif`, `contre_attaque_22players.gif`, `percee_individuelle_22players.gif` -- régénérés avec le pipeline complet (`template → BUILDERS → enrich_with_background → motion.interpolate`).
+
 ## Corrections du 23/09/2026 (bilan étape 2.2)
 
 1. **`goal_diff_after` réellement cassé, corrigé.** Le champ existait dans `TemplateContext` mais n'était lu par AUCUNE fonction `context_score` -- pondérer par score n'avait donc jamais d'effet, quelle que soit la valeur transmise. Renommé `goal_diff_before` (c'est le rapport de force AVANT le but qui influence le style de jeu, pas après), branché sur `_urgency_factor` dans `contre_attaque`/`construction_placee`/`recuperation_haute`/`percee_individuelle`. `sequence_generator.generate_sequence` reçoit maintenant un `MatchState` (`goal_diff_before`, `minute`, `competition_type`) au lieu de toujours passer 0. Effet vérifié par un test statistique (chi² d'homogénéité, seuil table standard -- pas de scipy dans ce projet) sur 500 tirages par contexte, voir `tests/test_templates.py::TestPickTemplateReactsToScore`.

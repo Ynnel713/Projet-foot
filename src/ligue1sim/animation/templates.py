@@ -466,7 +466,18 @@ _TEMPLATE_CONTRE_ATTAQUE = Template(
     weight=1.2,
     duration=8.0,
     roles=(
-        Role("support1", ANCHOR_STATIC, (RoleFrame(0.0, 0.0), RoleFrame(0.4, 0.3), RoleFrame(1.0, 0.3))),
+        # ANCHOR_SCORER, pas ANCHOR_STATIC (bug corrigé le 23/09/2026 : un
+        # ANCHOR_STATIC fige la cible = le départ, donc TOUT progress non nul
+        # à côté est mort -- support1 restait immobile malgré le 0.3 déclaré,
+        # alors qu'il porte le ballon à t=0). support1 récupère le ballon
+        # profond, le CONDUIT vers l'avant (30% du chemin vers la zone de tir
+        # -- loin d'y arriver, juste une progression crédible) jusqu'à la
+        # passe à `assist` (t_ratio=0.4), puis tient sa position (0.3 -> 0.3,
+        # inchangé) : il a relâché le ballon, plus de raison de continuer à
+        # sprinter. Cible = zone de TIR (ANCHOR_SCORER), pas la zone de passe
+        # (ANCHOR_ASSIST) : c'est vers le BUT que le porteur progresse, la
+        # passe n'est qu'une étape.
+        Role("support1", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.4, 0.3), RoleFrame(1.0, 0.3))),
         Role("assist", ANCHOR_ASSIST, (RoleFrame(0.0, 0.0), RoleFrame(0.4, 0.2), RoleFrame(1.0, 1.0))),
         Role("scorer", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.4, 0.35), RoleFrame(1.0, 1.0))),
     ),

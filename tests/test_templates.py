@@ -4,6 +4,7 @@ from collections import Counter
 import pytest
 
 from ligue1sim.animation.templates import (
+    ANCHOR_STATIC,
     BUILDERS,
     TEMPLATES,
     TemplateContext,
@@ -13,7 +14,7 @@ from ligue1sim.animation.templates import (
 )
 from ligue1sim.events import GoalEvent
 from ligue1sim.lineup import Lineup
-from ligue1sim.pitch_geometry import GRID_COLUMNS, GRID_ROWS, PitchPoint, Zone, center_of
+from ligue1sim.pitch_geometry import GRID_COLUMNS, GRID_ROWS, PITCH_LENGTH_M, PitchPoint, Zone, center_of
 from ligue1sim.players import Player
 
 _SCORER_ZONE = Zone(col=10, row=4)
@@ -367,3 +368,92 @@ class TestSegmentSpeedHeadroom:
         lineup = _lineup()
         ratios = {name: self._worst_ratio(name, lineup) for name in BUILDERS}
         assert max(ratios, key=ratios.get) == "une_deux"
+
+
+class TestContreAttaqueSupport1Carries:
+    """Fix du 23/09/2026 (brief "contre_attaque carrier movement") :
+    `support1` récupère le ballon à t=0, le conduit vers l'avant (ANCHOR_SCORER,
+    plus ANCHOR_STATIC), puis le relâche à `assist` au ratio prévu -- voir le
+    commentaire sur le rôle dans templates.py pour le raisonnement complet."""
+
+    def _sequence(self):
+        lineup = _lineup()
+        return BUILDERS["contre_attaque"](_goal_event(), lineup, _start_positions(lineup))
+
+    def test_contre_attaque_support1_moves(self):
+        from ligue1sim.animation.motion import _real_distance_m
+
+        sequence = self._sequence()
+        support_id = next(pid for pid, entry in sequence.roster.items() if entry.role == "support1")
+        first = sequence.keyframes[0].players[support_id]
+        last = sequence.keyframes[-1].players[support_id]
+        delta_m = _real_distance_m(first, last)
+        assert delta_m > 0.05 * PITCH_LENGTH_M, f"delta={delta_m:.2f}m, attendu > {0.05 * PITCH_LENGTH_M:.2f}m"
+
+    def test_contre_attaque_ball_follows_carrier(self):
+        from ligue1sim.animation.motion import _real_distance_m
+
+        sequence = self._sequence()
+        support_id = next(pid for pid, entry in sequence.roster.items() if entry.role == "support1")
+        carried_keyframes = [kf for kf in sequence.keyframes if kf.ball.owner_id == support_id]
+        assert carried_keyframes, "aucun keyframe où support1 porte le ballon -- ball_owner mal câblé"
+        for kf in carried_keyframes:
+            dist_m = _real_distance_m((kf.ball.x, kf.ball.y), kf.players[support_id])
+            assert dist_m < 2.0, f"t={kf.t}: ballon à {dist_m:.2f}m de support1 (tolérance 2m)"
+
+    def test_contre_attaque_ball_transfers_to_assist(self):
+        from ligue1sim.animation.motion import _real_distance_m
+
+        sequence = self._sequence()
+        assist_id = next(pid for pid, entry in sequence.roster.items() if entry.role == "assist")
+        transfer_ratio = next(ratio for ratio, role in TEMPLATES["contre_attaque"].ball_owner if role == "assist")
+        transfer_kf = next(kf for kf in sequence.keyframes if kf.t == pytest.approx(transfer_ratio * sequence.duration))
+
+        assert transfer_kf.ball.owner_id == assist_id
+        dist_m = _real_distance_m((transfer_kf.ball.x, transfer_kf.ball.y), transfer_kf.players[assist_id])
+        assert dist_m < 2.0, f"transfert : ballon à {dist_m:.2f}m de assist (tolérance 2m)"
+
+
+class TestNoDeadProgressOnStaticAnchor:
+    """Tâche 2 du brief du 23/09/2026 : un ANCHOR_STATIC fige la cible = le
+    départ (voir `_anchor_point`) -- tout `RoleFrame.progress` non nul à
+    côté est donc du code mort, exactement le bug qui rendait `support1`
+    immobile dans `contre_attaque` (voir `TestContreAttaqueSupport1Carries`).
+
+    5 gabarits ont le même défaut, listés ici comme dette CONNUE et NON
+    corrigée dans ce tour (consigne du brief : "liste-les-moi, on en discute
+    avant") -- ce test échouerait sur eux si on ne les excluait pas
+    explicitement. Retirer un nom de cette liste doit correspondre à un vrai
+    fix de son gabarit, jamais à un simple ajustement du test."""
+
+    _KNOWN_DEAD_PROGRESS_OFFENDERS = frozenset(
+        {"but_gag", "construction_placee", "penalty", "profondeur_1v1", "recuperation_haute"}
+    )
+    _EPSILON = 0.01
+
+    def test_no_dead_progress_on_static_anchor(self):
+        violations = []
+        for name, template in TEMPLATES.items():
+            if name in self._KNOWN_DEAD_PROGRESS_OFFENDERS:
+                continue
+            for role in template.roles:
+                if role.end_anchor != ANCHOR_STATIC:
+                    continue
+                for frame in role.frames:
+                    if frame.progress is not None and frame.progress > self._EPSILON:
+                        violations.append(f"{name}.{role.name} @ t_ratio={frame.t_ratio} progress={frame.progress}")
+
+        assert not violations, "progress non nul sur ANCHOR_STATIC (code mort) : " + "; ".join(violations)
+
+    def test_the_known_offenders_list_is_not_stale(self):
+        # Contre-vérification : si un gabarit de la liste ne viole plus rien
+        # (corrigé sans mettre à jour cette liste), on veut le savoir --
+        # sinon la liste se fige et masque un futur vrai fix.
+        for name in self._KNOWN_DEAD_PROGRESS_OFFENDERS:
+            template = TEMPLATES[name]
+            found = any(
+                role.end_anchor == ANCHOR_STATIC and frame.progress is not None and frame.progress > self._EPSILON
+                for role in template.roles
+                for frame in role.frames
+            )
+            assert found, f"{name} est listé comme dette connue mais ne viole plus rien -- retire-le de la liste"
