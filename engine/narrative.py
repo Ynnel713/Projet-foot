@@ -44,10 +44,17 @@ import numpy as np
 from random import Random
 
 from ligue1sim.animation.templates import TEMPLATES, TemplateContext, pick_template
-from ligue1sim.events import PENALTY_SPOT_ZONE, GoalEvent, MatchEvents, PlayerMatchStat
+from ligue1sim.events import (
+    PENALTY_SPOT_ZONE,
+    CardEvent,
+    GoalEvent,
+    MatchEvents,
+    PlayerMatchStat,
+    SubstitutionEvent,
+)
 from ligue1sim.lineup import Lineup
 from ligue1sim.pitch_geometry import GRID_COLUMNS, GRID_ROWS, PitchPoint, Zone, center_of
-from ligue1sim.players import GOALKEEPER, position_group
+from ligue1sim.players import GOALKEEPER, Player, position_group
 from ligue1sim.schedule import Match
 
 BUT = "but"
@@ -121,7 +128,24 @@ _MATCH_MINUTES = 90
 # échapperait à une règle formulée sur le couple).
 _MAX_CYCLE_PERIOD = 5
 
-_MAX_DRAW_ATTEMPTS = 200  # retirage contraint (Tâche 5) avant d'abandonner et de remonter
+# Retirage contraint (Tâche 5) avant d'abandonner et de retomber sur le
+# "meilleur essai" (voir _pick_minute et consorts) -- releve de 200 a 5000
+# (brief "canvas player consolidation", 23/09/2026, Tâche 4) : cause
+# identifiee du flake ~1/9 runs sur test_generated_events_respect_anti_repetition
+# (voir retour de tache pour le detail complet) -- PAS une fenetre de
+# tolerance statistique comme le laissait supposer l'intitule de la Tâche 4,
+# mais un espace de recherche combinatoire qui devient tres etroit dans le
+# cas limite d'un match a occasions denses : avec _POISSON_MAX=22 fillers
+# deja tires (Tâche 4 du brief "narrative engine foundations") PLUS un
+# penalty rate (Tâche 2 du brief "canvas player") a placer en plus, les 22
+# minutes deja prises peuvent ne laisser qu'UN SEUL minute valide (a >=3min
+# de toutes les autres, voir _MIN_MINUTE_GAP) sur les 90 possibles -- a 200
+# tirages aleatoires uniformes sur [1,90], la probabilite de RATER cette
+# unique minute valide est (89/90)^200 ~= 10.8%, largement suffisant pour
+# expliquer le flake observe. A 5000 tirages, cette meme probabilite tombe a
+# (89/90)^5000 ~= 4e-25 -- practiquement nul, sans changer la regle
+# elle-meme (toujours >=3min exactement, jamais assoupli).
+_MAX_DRAW_ATTEMPTS = 5000
 
 # Modulation par force des équipes (Tâche 4.2) -- `att_rating` (secteur
 # offensif de la Lineup réellement alignée) plutôt que `rating` (moyenne
@@ -151,15 +175,59 @@ class MatchResult:
     home_goals: int
     away_goals: int
     goals: list[GoalEvent]
-    home_lineup: Lineup  # ratings (pick_best_formation) -- onze de départ
+    # `home_lineup`/`away_lineup.substitutes` désormais peuplés (Tâche 2,
+    # brief "canvas player consolidation", 23/09/2026) -- voir
+    # `_lineup_with_substitutes` : ancienne limite ("home_squad/away_squad
+    # nécessaire pour résoudre le poste d'un buteur remplaçant, absent de
+    # home_lineup/away_lineup") corrigée directement à la source ici, plus
+    # besoin de redescendre jusqu'à `home_squad`/`away_squad` pour ça.
+    home_lineup: Lineup  # ratings (pick_best_formation) -- onze de départ + substitutes
     away_lineup: Lineup
     # Qui a RÉELLEMENT joué (titulaires + entrants, voir MatchEvents) --
-    # nécessaire pour résoudre le poste d'un buteur remplaçant (absent de
-    # `home_lineup`/`away_lineup`, qui ne portent que le onze de départ).
+    # conservé pour compatibilité (`_pick_main_player` etc. en dépendent
+    # toujours), plus la seule source de `home_lineup.substitutes` ci-dessus.
     home_squad: list[PlayerMatchStat]
     away_squad: list[PlayerMatchStat]
     date: str | None = None
     competition_type: str | None = None
+    # Extension du 23/09/2026 (brief "canvas player consolidation", Tâche 1,
+    # décision explicite d'Olivier) : cartons/remplacements RÉELS de ce
+    # match, extraits tels quels de `MatchEvents.cards`/`.substitutions`
+    # (aucune donnée inventée) -- nécessaires pour peupler
+    # `NarrativeEvent`/`Clip.interval_events` côté canvas (voir
+    # `engine/narrative_player.py`).
+    cards: tuple[CardEvent, ...] = ()
+    substitutions: tuple[SubstitutionEvent, ...] = ()
+
+
+def _player_from_stat(stat: PlayerMatchStat) -> Player:
+    """Reconstruit un `Player` complet à partir d'un `PlayerMatchStat` (voir
+    `events.py` -- porte déjà `poste`/`note`/`age`/`nationalite`, un profil
+    joueur "indépendant du match", pas seulement des stats de ce match précis).
+    `prenom=stat.player_name, nom=""` : `Player.name` (`f"{prenom} {nom}".strip()`)
+    redonne alors EXACTEMENT `stat.player_name`, quel que soit son contenu
+    (avec ou sans espace) -- même repli que partout ailleurs dans ce module
+    pour ne jamais désynchroniser un nom entre deux représentations d'un
+    même joueur. `id=None` (inconnu ici) : `templates.player_id_of` retombe
+    déjà sur le nom dans ce cas, comportement existant, pas un nouveau cas
+    à gérer."""
+    return Player(
+        prenom=stat.player_name, nom="", nationalite=stat.nationalite, age=stat.age,
+        poste=stat.poste, note=stat.note, club=stat.club_name, championnat="",
+    )
+
+
+def _lineup_with_substitutes(lineup: Lineup, squad: list[PlayerMatchStat]) -> Lineup:
+    """`lineup` (onze de départ) + `.substitutes` peuplé depuis `squad`
+    (`MatchEvents.home_lineup`/`.away_lineup`, TOUT l'effectif ayant
+    réellement joué -- titulaires ET entrants, voir `PlayerMatchStat.started`)
+    -- Tâche 2, brief "canvas player consolidation", 23/09/2026. Lecture
+    seule sur des données déjà produites par le moteur de résultats, rien
+    d'inventé : un remplaçant qui n'est jamais entré en jeu n'apparaît pas
+    dans `squad` (`_play_match_squad` ne construit d'entrée que pour les
+    entrants réels), donc pas non plus ici."""
+    substitutes = [_player_from_stat(stat) for stat in squad if not stat.started]
+    return replace(lineup, substitutes=substitutes)
 
 
 def match_result_from(
@@ -186,12 +254,14 @@ def match_result_from(
         home_goals=match.home_goals,
         away_goals=match.away_goals,
         goals=list(events.goals),
-        home_lineup=home_lineup,
-        away_lineup=away_lineup,
+        home_lineup=_lineup_with_substitutes(home_lineup, events.home_lineup),
+        away_lineup=_lineup_with_substitutes(away_lineup, events.away_lineup),
         home_squad=list(events.home_lineup),
         away_squad=list(events.away_lineup),
         date=date,
         competition_type=competition_type,
+        cards=tuple(events.cards),
+        substitutions=tuple(events.substitutions),
     )
 
 
@@ -219,6 +289,19 @@ class NarrativeEvent:
     # écrasée par build_timeline une fois l'index final connu -- ne jamais
     # lire cette valeur avant le retour de build_timeline.
     zone: tuple[float, float] = (0.0, 0.0)
+    # Extension du 23/09/2026 (brief "canvas player consolidation", Tache 3,
+    # decision explicite d'Olivier) : MEME modele que `zone` ci-dessus (une
+    # zone de base par gabarit + decalage deterministe seede par l'index
+    # final, voir `_narrative_event_assist_zone`) -- TOUJOURS peuplee,
+    # jamais `None`. Consommee par `narrative_player._build_clip_frames`
+    # comme `GoalEvent.assist_zone` (`ANCHOR_ASSIST` dans
+    # `templates.build_from_template`) -- pour un gabarit SANS role
+    # "assist" (ex. `recuperation_haute`, `penalty`, `but_gag`), cette
+    # valeur existe pour la coherence du schema mais n'est jamais
+    # effectivement consommee (aucun role n'y reference). Meme placeholder
+    # (0.0, 0.0) a la construction, meme avertissement : ne jamais lire
+    # avant le retour de build_timeline.
+    assist_zone: tuple[float, float] = (0.0, 0.0)
 
 
 @dataclass(frozen=True)
@@ -234,14 +317,21 @@ class Timeline:
     competition_type: str | None
     # Extension du 23/09/2026 (brief "canvas player", Tâche 3, décision
     # explicite d'Olivier) : RÉFÉRENCE directe vers les Lineup du MatchResult
-    # d'entrée (onze de DÉPART uniquement -- pas home_squad/away_squad, voir
-    # engine/narrative_player.py pour la limite que ça implique sur un
-    # remplaçant protagoniste), jamais une copie -- nécessaire pour que
+    # d'entrée (onze de départ -- porte aussi `.substitutes` depuis la
+    # Tâche 2 de la consolidation du 23/09/2026, voir
+    # `_lineup_with_substitutes`), jamais une copie -- nécessaire pour que
     # narrative_player.build_clips puisse construire une Sequence réelle
     # sans revenir au MatchResult d'origine (Timeline doit rester
     # auto-suffisante pour le rendu, voir docstring de module).
     home_lineup: Lineup
     away_lineup: Lineup
+    # Extension du 23/09/2026 (brief "canvas player consolidation", Tâche 1,
+    # décision explicite d'Olivier) : RÉFÉRENCE directe vers
+    # `MatchResult.cards`/`.substitutions` (cartons/remplacements réels),
+    # jamais une copie -- nécessaire pour que `narrative_player.build_clips`
+    # peuple `Clip.interval_events` sans revenir au `MatchResult` d'origine.
+    cards: tuple[CardEvent, ...]
+    substitutions: tuple[SubstitutionEvent, ...]
     events: list[NarrativeEvent]
 
 
@@ -322,6 +412,62 @@ def _narrative_event_zone(gabarit: str, index: int) -> tuple[float, float]:
     base = _GABARIT_BASE_ZONE[gabarit]
     digest = hashlib.sha256(f"zone|{gabarit}|{index}".encode()).digest()
     col_fraction = int.from_bytes(digest[:4], "big") / 2**32  # [0, 1)
+    row_fraction = int.from_bytes(digest[4:8], "big") / 2**32
+    col_offset = round((col_fraction * 2 - 1) * _ZONE_JITTER_COLS)
+    row_offset = round((row_fraction * 2 - 1) * _ZONE_JITTER_ROWS)
+    col = min(max(base.col + col_offset, 0), GRID_COLUMNS - 1)
+    row = min(max(base.row + row_offset, 0), GRID_ROWS - 1)
+    point = center_of(Zone(col=col, row=row))
+    return (point.x, point.y)
+
+
+# --- Zone d'assist derivee du gabarit (Tache 3, brief "canvas player
+# consolidation", 23/09/2026, decision explicite d'Olivier) ---------------
+#
+# Meme principe que _GABARIT_BASE_ZONE/_narrative_event_zone ci-dessus, mais
+# pour ANCHOR_ASSIST (templates.py) plutot que ANCHOR_SCORER -- consomme
+# comme GoalEvent.assist_zone par narrative_player._build_clip_frames. Les 3
+# exemples du brief sont repris tels quels : un corner joue a deux part
+# d'une zone proche du tireur (corner, col=11 -- litteralement le coin), un
+# une-deux part d'une zone intermediaire (une_deux, milieu de terrain), un
+# contre part de la moitie defensive (contre_attaque, col=2). Les 4 autres
+# gabarits AVEC un role "assist" (construction_placee, debordement_centre_tete,
+# profondeur_1v1, decalage_enroulee) suivent le meme esprit -- une zone
+# plausible pour le POINT DE DEPART/relais de la passe decisive de ce
+# gabarit precis, plus reculee/excentree que sa zone de tir (_GABARIT_BASE_ZONE).
+# Les gabarits SANS role "assist" (percee_individuelle, coup_franc,
+# recuperation_haute, penalty, but_gag -- voir templates.py, Template.roles)
+# recoivent tout de meme une valeur : jamais consommee par
+# build_from_template pour ces gabarits (aucun role n'y pointe), presente
+# uniquement pour que NarrativeEvent.assist_zone ne soit JAMAIS None (Tache
+# 3.3), coherence de schema plutot qu'un cas particulier a gerer partout.
+_GABARIT_ASSIST_BASE_ZONE: dict[str, Zone] = {
+    "contre_attaque": Zone(col=2, row=4),  # moitie defensive (exemple explicite du brief)
+    "construction_placee": Zone(col=3, row=4),  # circulation profonde, avant la progression vers l'avant
+    "debordement_centre_tete": Zone(col=9, row=1),  # aile, juste avant le centre
+    "une_deux": Zone(col=7, row=4),  # zone intermediaire (exemple explicite du brief)
+    "corner": Zone(col=11, row=0),  # proche du tireur, au coin (exemple explicite du brief)
+    "profondeur_1v1": Zone(col=6, row=4),  # milieu de terrain, avant la passe en profondeur
+    "decalage_enroulee": Zone(col=8, row=3),  # cote fort, juste avant le tireur qui enroule
+    # Gabarits sans role "assist" -- voir le paragraphe ci-dessus.
+    "percee_individuelle": Zone(col=5, row=4),
+    "coup_franc": Zone(col=7, row=4),
+    "recuperation_haute": Zone(col=6, row=4),
+    "penalty": PENALTY_SPOT_ZONE,
+    "but_gag": Zone(col=10, row=4),
+}
+
+
+def _narrative_event_assist_zone(gabarit: str, index: int) -> tuple[float, float]:
+    """MEME mecanique que `_narrative_event_zone` (gabarit + decalage
+    deterministe seede par l'index final) mais sur `_GABARIT_ASSIST_BASE_ZONE`
+    -- sel de hash DIFFERENT ("assist_zone|..." vs "zone|...") pour que le
+    decalage d'assist_zone ne soit jamais exactement correle a celui de
+    zone (deux perturbations independantes, meme si deterministes toutes
+    les deux)."""
+    base = _GABARIT_ASSIST_BASE_ZONE[gabarit]
+    digest = hashlib.sha256(f"assist_zone|{gabarit}|{index}".encode()).digest()
+    col_fraction = int.from_bytes(digest[:4], "big") / 2**32
     row_fraction = int.from_bytes(digest[4:8], "big") / 2**32
     col_offset = round((col_fraction * 2 - 1) * _ZONE_JITTER_COLS)
     row_offset = round((row_fraction * 2 - 1) * _ZONE_JITTER_ROWS)
@@ -619,13 +765,38 @@ def build_timeline(match: MatchResult) -> Timeline:
     n_fillers = total_occasions - len(match.goals)
     n_missed_penalties = _missed_penalty_count(seed)
     generated_events = _generated_events(match, rng, n_fillers, n_missed_penalties)
+    # Repli niveau-sequence (brief "canvas player consolidation", 23/09/2026,
+    # Tache 4) : un penalty rate a un gabarit FIXE ("penalty", voir
+    # _MISSED_PENALTY_PAIR) qui ne passe jamais par _pick_gabarit, donc
+    # jamais verifie contre _has_cyclic_pattern au moment de son insertion --
+    # contrairement a un filler, dont le gabarit est un candidat substituable.
+    # Consequence precise (cas reproduit et trace) : un filler peut etre un
+    # choix VALIDE au moment de son tirage (la sequence est encore trop
+    # courte pour reveler la fenetre p<=5 concernee), puis un penalty rate
+    # inséré PLUS TARD à une position qui referme retroactivement ce motif --
+    # sans qu'aucun retirage individuel n'ait jamais vu la violation. Ce
+    # n'est PAS le meme mecanisme que _MAX_DRAW_ATTEMPTS (repli par candidat)
+    # ci-dessus : ici le repli porte sur la SEQUENCE ENTIERE, seul niveau ou
+    # la violation devient visible. Aucun assouplissement de la regle
+    # (periode <= _MAX_CYCLE_PERIOD reste identique) -- seule la granularite
+    # du retirage change, elle devient en pratique PLUS stricte qu'avant
+    # (couvre aussi les fenetres closes par un penalty raté, invisibles au
+    # niveau candidat).
+    for _ in range(_MAX_DRAW_ATTEMPTS):
+        if not _has_cyclic_pattern([e.gabarit for e in generated_events]):
+            break
+        generated_events = _generated_events(match, rng, n_fillers, n_missed_penalties)
+    # meilleur essai après _MAX_DRAW_ATTEMPTS tentatives, voir docstring de _pick_minute
 
     events = sorted(existing_events + generated_events, key=lambda e: e.minute)  # tri stable, voir docstring
     # Zone (Tâche 3, décision du 23/09/2026) : seedée par la position FINALE
     # (post-tri) -- appliquée ici, pas dans _existing_events/_generated_events,
     # qui ne connaissent pas encore cet ordre final au moment où ils
     # construisent chaque NarrativeEvent (voir _narrative_event_zone).
-    events = [replace(e, zone=_narrative_event_zone(e.gabarit, i)) for i, e in enumerate(events)]
+    events = [
+        replace(e, zone=_narrative_event_zone(e.gabarit, i), assist_zone=_narrative_event_assist_zone(e.gabarit, i))
+        for i, e in enumerate(events)
+    ]
 
     match_id = f"{match.home_team}-{match.away_team}-{match.date}"
     return Timeline(
@@ -635,6 +806,7 @@ def build_timeline(match: MatchResult) -> Timeline:
         home_rating=match.home_lineup.rating, away_rating=match.away_lineup.rating,
         competition_type=match.competition_type,
         home_lineup=match.home_lineup, away_lineup=match.away_lineup,
+        cards=match.cards, substitutions=match.substitutions,
         events=events,
     )
 

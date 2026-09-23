@@ -111,6 +111,18 @@ class Lineup:
     # `pitch_layout._group_into_lines`). Vide pour le repli par quotas
     # génériques (dispositif absent de l'onglet).
     bands: dict[str, int] = field(default_factory=dict)
+    # Remplaçants ayant réellement joué ce match (`PlayerMatchStat.started
+    # is False`, voir `ligue1sim.events.MatchEvents`) -- vide par défaut
+    # (compo "pure" hors contexte de match, ex. `pick_best_formation`
+    # utilisée pour les têtes de série/l'affichage compo, jamais concernée).
+    # Peuplé uniquement par `engine.narrative.match_result_from` (brief
+    # "canvas player consolidation", 23/09/2026, Tâche 2) -- lecture seule
+    # sur des données déjà produites par le moteur de résultats
+    # (`MatchEvents.home_lineup`/`.away_lineup`), rien d'inventé ici. Permet
+    # à `animation.templates.build_from_template` de résoudre un buteur/
+    # passeur qui serait un remplaçant entré en jeu (voir `numeros_by_player_id`/
+    # `_resolve_roles`), pas seulement les 11 titulaires de `players`.
+    substitutes: list[Player] = field(default_factory=list)
 
 
 _FORMATION_PREFIX = re.compile(r"^\s*(\d+(?:-\d+)+)")

@@ -11,7 +11,7 @@ from ligue1sim.schedule import Match
 from ligue1sim.simulation import LeagueContext, simulate_match
 
 from narrative import BUT, build_timeline, match_result_from
-from narrative_player import build_clips
+from narrative_player import build_clips, _interval_events
 
 _N_MATCHES = 30
 
@@ -119,18 +119,123 @@ class TestBuildClipsMaxOccasions:
 
 
 class TestBuildClipsIntervalEvents:
-    def test_build_clips_interval_events_currently_always_empty(self):
-        # Tache 3.5 -- limite documentee (voir Clip/build_clips dans
-        # narrative_player.py et narrative_timeline_schema.md) : Timeline ne
-        # porte pas MatchEvents.cards/.substitutions (hors du perimetre des
-        # deux extensions autorisees le 23/09/2026), donc interval_events
-        # reste TOUJOURS () pour cette iteration -- verifie explicitement ce
-        # comportement connu plutot que de le laisser non teste.
-        [match] = _simulate_n(1)
-        timeline = build_timeline(match)
-        clips = build_clips(timeline, max_occasions=None)
-        assert clips
-        assert all(c.interval_events == () for c in clips)
+    """Brief "canvas player consolidation" (23/09/2026), Tache 1."""
+
+    def test_interval_events_populated(self):
+        # Tache 1.4 -- sur 100 matchs simules, au moins X% des clips ont un
+        # interval_events non vide. Utilise directement
+        # narrative_player._interval_events sur la timeline BRUTE (pas
+        # build_clips) : interval_events ne depend que de
+        # Timeline.cards/.substitutions et des minutes des evenements, JAMAIS
+        # des frames -- construire les frames de TOUS les evenements de 100
+        # matchs (build_clips(..., max_occasions=None)) couterait des
+        # dizaines de minutes pour un resultat statistiquement identique
+        # depuis la Tache 2 (quasi aucune occasion n'est plus omise, voir
+        # test_all_clips_rendered_no_omission). Reutilise la fonction REELLE
+        # de production, seule la source (evenements bruts vs Clips retenus)
+        # differe.
+        #
+        # Seuil 25% (pas 50%, brief initial -- ecarte apres escalade et
+        # decision du proprietaire du 23/09/2026) : le seuil de 50% etait
+        # arbitraire, fixe sans verifier la contrainte structurelle du
+        # moteur de resultats (non modifiable ici, voir PRIORITE DES
+        # CONTRAINTES). SUB_MIN_MINUTE=46 dans src/ligue1sim/events.py:65 --
+        # les substitutions (8/match en moyenne, seule source d'interval_
+        # events avec les cartons pour une bonne partie du match) ne
+        # surviennent JAMAIS en 1ere mi-temps, alors que les occasions/clips
+        # sont reparties sur les 90 minutes. Mesure sur 4 runs consecutifs
+        # (100 matchs chacun, non seedes) : 36.0%-38.5%, jamais proche de
+        # 50%. Plafond structurel, pas un bug (cartons/substitutions
+        # correctement extraits de Timeline.cards/.substitutions, verifie
+        # par ailleurs). A REEVALUER A LA HAUSSE quand ce brief passera a 15
+        # clips couvrant les 90 minutes : les intervalles 46-90' contiendront
+        # alors les substitutions et le taux remontera mecaniquement.
+        results = _simulate_n(100)
+        total = 0
+        non_empty = 0
+        for match in results:
+            timeline = build_timeline(match)
+            prev_minute = 0
+            for event in timeline.events:
+                total += 1
+                if _interval_events(timeline, prev_minute, event.minute):
+                    non_empty += 1
+                prev_minute = event.minute
+
+        assert total > 0
+        ratio = non_empty / total
+        assert ratio >= 0.25, f"ratio={ratio:.2%} ({non_empty}/{total}) sous le seuil de 25% -- a remonter"
+
+    def test_interval_events_chronological(self):
+        # Tache 1.5 -- sur les Clips REELLEMENT retenus par build_clips
+        # cette fois (echantillon plus modeste pour rester rapide, voir
+        # _N_MATCHES).
+        results = _simulate_n(_N_MATCHES)
+        for match in results:
+            timeline = build_timeline(match)
+            clips = build_clips(timeline, max_occasions=4)
+            for clip in clips:
+                minutes = [item["minute"] for item in clip.interval_events]
+                assert minutes == sorted(minutes), (
+                    f"{timeline.match_id} clip {clip.minute}' : interval_events non trie ({minutes})"
+                )
+
+
+class TestNoOmissionAfterSubstitutesFix:
+    """Brief "canvas player consolidation" (23/09/2026), Tache 2."""
+
+    def test_all_clips_rendered_no_omission(self):
+        # Tache 2.4 -- sur 100 matchs simules, 100% des occasions generees
+        # (timeline.events) sont rendues par build_clips (aucune omission).
+        results = _simulate_n(100)
+        omitted: list[tuple[str, int, str, str]] = []
+        for match in results:
+            timeline = build_timeline(match)
+            clips = build_clips(timeline, max_occasions=None)
+            if len(clips) != len(timeline.events):
+                rendered_keys = {(c.minute, c.gabarit, c.main_player) for c in clips}
+                for event in timeline.events:
+                    key = (event.minute, event.gabarit, event.main_player)
+                    if key not in rendered_keys:
+                        omitted.append((timeline.match_id, event.minute, event.gabarit, event.main_player))
+
+        assert not omitted, f"{len(omitted)} occasion(s) omise(s) -- exemples: {omitted[:5]}"
+
+    def test_substitute_placed_correctly(self):
+        # Tache 2.5 -- un evenement dont main_player est un remplacant
+        # produit des frames valides (positions definies, dans [0, 1]).
+        results = _simulate_n(100)
+        checked = 0
+        for match in results:
+            timeline = build_timeline(match)
+            substitute_names = {p.name for p in timeline.home_lineup.substitutes} | {
+                p.name for p in timeline.away_lineup.substitutes
+            }
+            if not substitute_names:
+                continue
+            substitute_events = [e for e in timeline.events if e.main_player in substitute_names]
+            if not substitute_events:
+                continue
+            clips = build_clips(timeline, max_occasions=None)
+            for event in substitute_events:
+                matching = [c for c in clips if c.minute == event.minute and c.main_player == event.main_player]
+                assert matching, f"{timeline.match_id} : remplacant {event.main_player!r} (minute {event.minute}) omis"
+                clip = matching[0]
+                assert clip.frames
+                # Tolerance faible (evitement des collisions entre joueurs,
+                # animation.motion._apply_avoidance, peut legerement pousser
+                # une position au-dela de 0/1 pres du bord du terrain) --
+                # pas un test "exactement dans [0,1]", juste "pas de valeur
+                # aberrante/hors carte" (None, NaN, tres hors limites).
+                margin = 0.1
+                for frame in clip.frames:
+                    assert frame.ball is not None
+                    for state in frame.players.values():
+                        assert state is not None
+                        assert -margin <= state.x <= 1.0 + margin, f"x={state.x} hors terrain"
+                        assert -margin <= state.y <= 1.0 + margin, f"y={state.y} hors terrain"
+                checked += 1
+        assert checked > 0, "aucun evenement avec un remplacant comme protagoniste trouve sur 100 matchs -- echantillon insuffisant"
 
 
 class TestBuildClipsFramesNeverEmpty:

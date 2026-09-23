@@ -242,9 +242,18 @@ def numeros_by_player_id(lineup: Lineup) -> dict[PlayerId, int]:
     reflète l'algorithme d'appariement de `lineup._assign_slots` (tri par
     note décroissante, pas par poste), le gardien n'y est donc PAS garanti
     en première position -- un numéro dérivé de cet ordre brut serait
-    instable et n'aurait "GK=1" que par coïncidence."""
+    instable et n'aurait "GK=1" que par coïncidence.
+
+    `lineup.substitutes` (brief "canvas player consolidation", 23/09/2026,
+    Tâche 2) reçoit des numéros 12+ (même tri groupe+nom, à la suite des 11
+    titulaires) -- vide par défaut, donc AUCUN changement de comportement
+    pour un `Lineup` sans remplaçants (tout le code/tests existants avant
+    cette Tâche 2 continuent de voir exactement les mêmes numéros 1-11)."""
     ordered = sorted(lineup.players, key=lambda p: (_NUMERO_GROUP_ORDER.get(p.group, 4), p.name))
-    return {player_id_of(p): numero for numero, p in enumerate(ordered, start=1)}
+    numeros = {player_id_of(p): numero for numero, p in enumerate(ordered, start=1)}
+    ordered_subs = sorted(lineup.substitutes, key=lambda p: (_NUMERO_GROUP_ORDER.get(p.group, 4), p.name))
+    numeros.update({player_id_of(p): numero for numero, p in enumerate(ordered_subs, start=len(ordered) + 1)})
+    return numeros
 
 
 def _resolve_roles(event: GoalEvent, lineup: Lineup, role_names: tuple[str, ...]) -> dict[str, Player]:
@@ -255,8 +264,16 @@ def _resolve_roles(event: GoalEvent, lineup: Lineup, role_names: tuple[str, ...]
     `build_from_template`). Les rôles génériques ("support1", "support2"...)
     sont comblés par les coéquipiers restants (hors gardien, hors
     scorer/assist déjà pris), triés par nom pour un résultat déterministe :
-    `build_from_template` est une fonction PURE, jamais un tirage."""
-    by_name = {p.name: p for p in lineup.players}
+    `build_from_template` est une fonction PURE, jamais un tirage.
+
+    `lineup.players` ET `lineup.substitutes` (brief "canvas player
+    consolidation", 23/09/2026, Tâche 2) sont tous deux éligibles à
+    n'importe quel rôle -- un buteur/passeur/coéquipier générique peut être
+    un remplaçant entré en jeu, pas seulement un titulaire. `substitutes`
+    vide par défaut : comportement inchangé pour tout appelant antérieur à
+    cette Tâche 2."""
+    roster = list(lineup.players) + list(lineup.substitutes)
+    by_name = {p.name: p for p in roster}
     resolved: dict[str, Player] = {}
     used_names: set[str] = set()
 
@@ -276,7 +293,7 @@ def _resolve_roles(event: GoalEvent, lineup: Lineup, role_names: tuple[str, ...]
 
     remaining_generic = [name for name in role_names if name not in resolved and name != "assist"]
     candidates = sorted(
-        (p for p in lineup.players if p.group != GOALKEEPER and p.name not in used_names), key=lambda p: p.name
+        (p for p in roster if p.group != GOALKEEPER and p.name not in used_names), key=lambda p: p.name
     )
     for role_name, player in zip(remaining_generic, candidates):
         resolved[role_name] = player
@@ -323,7 +340,10 @@ def build_from_template(
     role_ids = {name: player_id_of(player) for name, player in resolved.items()}
     role_starts = {name: start_positions[role_ids[name]] for name in resolved}
     role_by_player_id = {player_id: role_name for role_name, player_id in role_ids.items()}
-    players_by_id = {player_id_of(p): p for p in lineup.players}
+    # + lineup.substitutes (Tâche 2) : un rôle résolu vers un remplaçant
+    # (voir _resolve_roles) doit rester trouvable ici pour construire son
+    # RosterEntry -- substitutes vide par défaut, comportement inchangé sinon.
+    players_by_id = {player_id_of(p): p for p in list(lineup.players) + list(lineup.substitutes)}
     numeros = numeros_by_player_id(lineup)
     roster = {
         player_id: RosterEntry(

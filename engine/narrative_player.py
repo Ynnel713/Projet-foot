@@ -1,32 +1,37 @@
 """Pont entre la `Timeline` (occasions narratives, `engine.narrative`) et le
-canvas (frames) -- brief "canvas player" (23/09/2026), Tâche 3.
+canvas (frames) -- brief "canvas player" (23/09/2026), Tâche 3, consolidé le
+23/09/2026 ("canvas player consolidation", Tâches 1-2).
 
 Débloqué par l'extension explicite de `NarrativeEvent`/`Timeline` décidée
 par Olivier le 23/09/2026 (voir `engine/narrative.py` : `NarrativeEvent.zone`
-dérivée du gabarit, `Timeline.home_lineup`/`.away_lineup`) -- sans elle,
-aucune `Sequence` n'aurait pu être construite ici : `Timeline` ne portait ni
-`Lineup`, ni position de départ pour les occasions génériques (voir
-`docs/next_step_canvas.md`, section déjà existante sur ce manque).
+dérivée du gabarit, `Timeline.home_lineup`/`.away_lineup`/`.cards`/
+`.substitutions`) -- sans elle, aucune `Sequence` n'aurait pu être construite
+ici : `Timeline` ne portait ni `Lineup`, ni position de départ pour les
+occasions génériques (voir `docs/next_step_canvas.md`, section déjà
+existante sur ce manque).
 
-Consommateur PUR du pipeline existant : `templates.BUILDERS`/
-`animation.motion.interpolate` restent INCHANGÉS, ce module ne fait
-qu'assembler leurs entrées (`GoalEvent`-équivalent, `Lineup`,
-`start_positions`) à partir d'une `Timeline` déjà construite, exactement
-comme `animation.sequence_generator.generate_sequence` le fait pour un vrai
-but -- sauf que le gabarit est ICI déjà décidé (`NarrativeEvent.gabarit`),
-`pick_template` n'est JAMAIS rappelé.
+Consommateur PUR du pipeline existant : `animation.motion.interpolate` reste
+INCHANGÉ, ce module ne fait qu'assembler ses entrées (`GoalEvent`-équivalent,
+`Lineup`, `start_positions`) à partir d'une `Timeline` déjà construite,
+exactement comme `animation.sequence_generator.generate_sequence` le fait
+pour un vrai but -- sauf que le gabarit est ICI déjà décidé
+(`NarrativeEvent.gabarit`), `pick_template` n'est JAMAIS rappelé.
+`animation.templates.build_from_template`/`_resolve_roles` ONT changé (Tâche
+2, brief "canvas player consolidation") pour accepter un remplaçant, pas
+seulement les 11 titulaires -- voir `templates.py`.
 
-Limite connue, non corrigée ici (voir retour de tâche) : `Timeline.home_lineup`/
-`.away_lineup` ne portent que le ONZE DE DÉPART (décision explicite du
-23/09/2026, pas `home_squad`/`away_squad`) -- un `NarrativeEvent.main_player`
-qui serait un remplaçant entré en jeu (minute >= 46 uniquement, voir
-`events.SUB_MIN_MINUTE`) ne s'y résout pas. `_build_clip_frames` retombe
-alors sur `frames=[]` plutôt que de lever (voir `_resolve_start_positions`),
-un cas qui reste à couvrir par un futur ajout de `home_squad`/`away_squad`
-à la `Timeline` si la fréquence réelle le justifie."""
+Ancienne limite corrigée par la Tâche 2 : `Timeline.home_lineup`/
+`.away_lineup` portent désormais aussi `.substitutes` (remplaçants ayant
+réellement joué ce match, peuplé par `narrative.match_result_from`) -- un
+`NarrativeEvent.main_player` remplaçant s'y résout maintenant. Le repli
+`frames=[], roster={}` de `_build_clip_frames` reste en place comme filet de
+sécurité (jamais un `ValueError` qui ferait planter `build_clips`), mais ne
+devrait plus jamais s'activer en pratique (voir `tests/test_narrative_player.py::
+test_all_clips_rendered_no_omission`, 100% mesuré sur 100 matchs)."""
 
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import dataclass
 
@@ -36,15 +41,41 @@ from ligue1sim.animation.serialize import frame_sequence_to_json
 from ligue1sim.animation.spatial import placed_player_to_normalized
 from ligue1sim.animation.templates import BUILDERS, TEMPLATES, player_id_of
 from ligue1sim.animation.types import PlayerId, RosterEntry
-from ligue1sim.events import GoalEvent, PlayerMatchStat
+from ligue1sim.events import CardEvent, GoalEvent, PlayerMatchStat, SubstitutionEvent
 from ligue1sim.kits import match_kit_colors
 from ligue1sim.lineup import Lineup
 from ligue1sim.pitch_geometry import PitchPoint, zone_of
 from ligue1sim.pitch_layout import place_starting_xi
+from ligue1sim.players import Player
 
 from narrative import BUT, NarrativeEvent, Timeline
 
 _FPS = 30
+
+# --- Position de départ d'un remplaçant (Tâche 2) -----------------------
+# Pas de position de formation réelle pour un joueur entré en jeu -- il
+# n'appartenait pas au onze aligné au coup d'envoi, donc pas à
+# `pitch_layout.place_starting_xi` (qui suppose un XI complet et cohérent,
+# lignes par lignes -- lui injecter des joueurs en plus casserait ses
+# hypothèses de dispositif). Profondeur par défaut dérivée du POSTE (même
+# esprit que le placement par ligne d'un vrai onze, très simplifié), léger
+# décalage latéral déterministe (hash, même principe que
+# `sequence_generator._deterministic_unit`) pour éviter deux remplaçants
+# du même poste exactement superposés.
+_SUBSTITUTE_DEPTH_BY_POSTE: dict[str, float] = {
+    "GK": 0.05, "DC": 0.18, "LB": 0.22, "RB": 0.22,
+    "MDC": 0.35, "MC": 0.45, "MOC": 0.55,
+    "AG": 0.65, "AD": 0.65, "SA": 0.70, "BU": 0.75, "ATT": 0.75,
+}
+_SUBSTITUTE_DEFAULT_DEPTH = 0.5
+
+
+def _substitute_start_position(player: Player) -> PitchPoint:
+    depth = _SUBSTITUTE_DEPTH_BY_POSTE.get(player.poste, _SUBSTITUTE_DEFAULT_DEPTH)
+    digest = hashlib.sha256(f"substitute_start|{player.name}".encode()).digest()
+    fraction = int.from_bytes(digest[:8], "big") / 2**64  # [0, 1)
+    lateral = 0.15 + fraction * 0.70  # reste a l'interieur du terrain, jamais sur la touche exacte
+    return PitchPoint(x=depth, y=lateral)
 
 
 @dataclass(frozen=True)
@@ -63,12 +94,14 @@ class Clip:
     contrat de `Sequence` (`keyframes`+`roster`), minimal pour sérialiser un
     clip sans revenir chercher la `Sequence` d'origine.
 
-    `interval_events` : liste vide pour l'instant -- `Timeline` ne porte pas
-    les cartons/remplacements réels (`MatchEvents.cards`/`.substitutions`),
-    hors du périmètre des DEUX extensions autorisées le 23/09/2026 (voir
-    `engine/narrative.py`). Escaladé, pas inventé (voir retour de tâche) :
-    un futur ajout de `Timeline.cards`/`.substitutions` serait nécessaire
-    pour peupler ce champ."""
+    `interval_events` : peuplé depuis `Timeline.cards`/`.substitutions`
+    (Tâche 1, brief "canvas player consolidation", 23/09/2026) -- les
+    cartons et remplacements RÉELS dont la minute tombe entre le clip
+    RETENU précédent (exclu) et ce clip (inclus), triés par minute
+    croissante. Chaque élément : `{"minute": int, "type": "carton"|
+    "remplacement", "equipe": str, "joueur": str, "detail": str}` (voir
+    `_interval_events`). Vide si rien ne s'est produit dans l'intervalle --
+    un intervalle vide est un fait du match, pas un manque de données."""
 
     minute: int
     gabarit: str
@@ -78,7 +111,7 @@ class Clip:
     main_player: str
     score_before: tuple[int, int]
     score_after: tuple[int, int]
-    interval_events: tuple[str, ...]
+    interval_events: tuple[dict, ...]
     frames: list[FrameState]
     roster: dict[PlayerId, RosterEntry]
     duration_s: float
@@ -91,7 +124,19 @@ def _lineup_start_positions(lineup: Lineup) -> dict[PlayerId, PitchPoint]:
     réutilisables directement) -- la logique de FOND (placement ligne par
     ligne, conversion de référentiel) reste entièrement dans
     `pitch_layout.place_starting_xi`/`animation.spatial.placed_player_to_normalized`,
-    réutilisées telles quelles ici, pas dupliquées."""
+    réutilisées telles quelles ici, pas dupliquées.
+
+    `lineup.substitutes` (Tâche 2) reçoivent une position à part
+    (`_substitute_start_position`, pas `place_starting_xi` -- voir sa
+    docstring) : TOUS les remplaçants, pas seulement celui éventuellement
+    résolu pour CE clip précis (`_resolve_roles` peut aussi en tirer un pour
+    un rôle générique support1/support2, imprévisible à l'avance). Impact
+    visuel documenté (Tâche 2.3) : un remplaçant ainsi positionné s'ajoute
+    aux 11 titulaires plutôt que de remplacer celui qu'il a réellement
+    supplanté (`Timeline` ne sait pas lequel, voir Tâche 1 -- pas de
+    distinction visuelle titulaire/remplaçant pour l'instant) -- l'équipe du
+    remplaçant peut donc apparaître avec 12-16 points au lieu de 11 sur les
+    clips où un remplaçant est impliqué."""
     stats = [
         PlayerMatchStat(player_name=p.name, club_name=lineup.club_name, poste=p.poste, started=True)
         for p in lineup.players
@@ -104,6 +149,8 @@ def _lineup_start_positions(lineup: Lineup) -> dict[PlayerId, PitchPoint]:
         if player is None:
             continue  # meme repli que sequence_generator : compo desynchronisee, ignore
         positions[player_id_of(player)] = placed_player_to_normalized(placed_player, attacking_up=True)
+    for substitute in lineup.substitutes:
+        positions[player_id_of(substitute)] = _substitute_start_position(substitute)
     return positions
 
 
@@ -126,11 +173,12 @@ def _build_clip_frames(
     scorer_lineup = timeline.home_lineup if event.team == timeline.home_team else timeline.away_lineup
     opponent_lineup = timeline.away_lineup if event.team == timeline.home_team else timeline.home_lineup
 
-    scorer_names = {p.name for p in scorer_lineup.players}
+    scorer_names = {p.name for p in scorer_lineup.players} | {p.name for p in scorer_lineup.substitutes}
     assist = _assist_name(event)
     if event.main_player not in scorer_names or (assist is not None and assist not in scorer_names):
-        # Voir docstring de module -- remplacant (scorer OU assist) non
-        # resolu par le onze de depart, cas connu, non invente.
+        # Filet de securite (voir docstring de module) -- ne devrait plus se
+        # declencher depuis la Tache 2 (substitutes couvre tout l'effectif
+        # ayant reellement joue), garde par defense plutot que supprime.
         return [], {}
 
     goal_event = GoalEvent(
@@ -140,7 +188,10 @@ def _build_clip_frames(
         minute=event.minute,
         penalty=(event.gabarit == "penalty"),
         zone=zone_of(*event.zone),
-        assist_zone=None,  # voir _assist_name -- fallback sur event.zone dans build_from_template (ANCHOR_ASSIST)
+        # assist_zone TOUJOURS derivee du gabarit depuis la Tache 3 (brief
+        # "canvas player consolidation", 23/09/2026, voir
+        # narrative._narrative_event_assist_zone) -- plus de None ici.
+        assist_zone=zone_of(*event.assist_zone),
     )
     start_positions = _lineup_start_positions(scorer_lineup)
     sequence = BUILDERS[event.gabarit](goal_event, scorer_lineup, start_positions)
@@ -153,6 +204,33 @@ def _build_clip_frames(
         frames.append(interpolate(sequence, t))
         t += step
     return frames, sequence.roster
+
+
+def _card_detail(card_type: str) -> str:
+    return "rouge" if card_type in ("direct", "second_yellow") else "jaune"
+
+
+def _interval_events(timeline: Timeline, prev_minute: int, current_minute: int) -> tuple[dict, ...]:
+    """Cartons/remplacements réels (`Timeline.cards`/`.substitutions`, Tâche
+    1) dont la minute tombe dans `(prev_minute, current_minute]` -- borne
+    basse EXCLUSIVE (déjà couverte par le clip précédent), haute INCLUSIVE
+    (un carton à la minute exacte du clip courant lui appartient). Triés par
+    minute croissante (Tâche 1.5)."""
+    dated: list[tuple[int, dict]] = []
+    for card in timeline.cards:
+        if prev_minute < card.minute <= current_minute:
+            dated.append((card.minute, {
+                "minute": card.minute, "type": "carton", "equipe": card.club_name,
+                "joueur": card.player, "detail": _card_detail(card.card_type),
+            }))
+    for sub in timeline.substitutions:
+        if prev_minute < sub.minute <= current_minute:
+            dated.append((sub.minute, {
+                "minute": sub.minute, "type": "remplacement", "equipe": sub.club_name,
+                "joueur": sub.player_on, "detail": f"entre pour {sub.player_off}",
+            }))
+    dated.sort(key=lambda pair: pair[0])
+    return tuple(item for _minute, item in dated)
 
 
 def build_clips(timeline: Timeline, max_occasions: int | None = None) -> list[Clip]:
@@ -177,6 +255,7 @@ def build_clips(timeline: Timeline, max_occasions: int | None = None) -> list[Cl
     TOUS les événements traversés, omis ou non, pour rester cohérent avec ce
     qui précède chaque clip retenu."""
     home_score = away_score = 0
+    prev_minute = 0  # avant le coup d'envoi -- rien ne peut precede minute 0
     clips: list[Clip] = []
     for event in timeline.events:
         score_before = (home_score, away_score)
@@ -200,11 +279,12 @@ def build_clips(timeline: Timeline, max_occasions: int | None = None) -> list[Cl
             main_player=event.main_player,
             score_before=score_before,
             score_after=score_after,
-            interval_events=(),  # voir docstring de Clip
+            interval_events=_interval_events(timeline, prev_minute, event.minute),
             frames=frames,
             roster=roster,
             duration_s=TEMPLATES[event.gabarit].duration,
         ))
+        prev_minute = event.minute
         if max_occasions is not None and len(clips) >= max_occasions:
             break
 

@@ -339,6 +339,20 @@ const SEQUENCE_DATA = /*__SEQUENCE_JSON__*/null;
     return 'Occasion ' + equipe;
   }
 
+  // Un element de Clip.interval_events (Tache 1, brief "canvas player
+  // consolidation", 23/09/2026) : {minute, type, equipe, joueur, detail} --
+  // voir engine/narrative_player._interval_events. Format inspire de
+  // l'exemple du brief ("45' Carton jaune, Nantes #6").
+  function intervalEventLine(item) {
+    if (item.type === 'carton') {
+      return item.minute + "' Carton " + item.detail + ', ' + item.equipe + ' — ' + item.joueur;
+    }
+    if (item.type === 'remplacement') {
+      return item.minute + "' Remplacement, " + item.equipe + ' — ' + item.joueur + ' (' + item.detail + ')';
+    }
+    return item.minute + "' " + item.type + ', ' + item.equipe + ' — ' + item.joueur;
+  }
+
   function updateScoreboard(clip) {
     const [dom, ext] = clip.metadata.score_after;
     scoreboardEl.textContent =
@@ -362,7 +376,7 @@ const SEQUENCE_DATA = /*__SEQUENCE_JSON__*/null;
     cartonScoreEl.textContent = clip.metadata.home_team + ' ' + dom + ' – ' + ext + ' ' + clip.metadata.away_team;
     const intervalEvents = clip.metadata.interval_events || [];
     cartonIntervalEl.innerHTML = intervalEvents.length
-      ? intervalEvents.map((line) => '<div>' + line + '</div>').join('')
+      ? intervalEvents.map((item) => '<div>' + intervalEventLine(item) + '</div>').join('')
       : '';
     cartonEl.style.display = 'flex';
   }

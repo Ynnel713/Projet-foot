@@ -117,7 +117,13 @@ class TestMatchToCanvasEndToEnd:
             assert meta["away_team"] == timeline.away_team
             assert isinstance(meta["score_before"], list) and len(meta["score_before"]) == 2
             assert isinstance(meta["score_after"], list) and len(meta["score_after"]) == 2
-            assert meta["interval_events"] == []
+            # interval_events (Tache 1, consolidation du 23/09/2026) : plus
+            # forcement vide -- verifie la FORME de chaque element plutot
+            # que son absence.
+            assert isinstance(meta["interval_events"], list)
+            for item in meta["interval_events"]:
+                assert set(item) == {"minute", "type", "equipe", "joueur", "detail"}
+                assert item["type"] in ("carton", "remplacement")
 
             frames = clip_json["frames"]
             assert frames, "clip serialise sans frames (malforme)"

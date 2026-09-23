@@ -348,3 +348,34 @@ class TestMissedPenaltyCalibration:
 
         assert not score_violations, f"{len(score_violations)} matchs avec un score recalcule different -- exemples: {score_violations[:3]}"
         assert not outcome_violations, f"{len(outcome_violations)} penaltys rates tagues 'but' -- exemples: {outcome_violations[:3]}"
+
+
+class TestAssistZoneDerived:
+    """Brief "canvas player consolidation" (23/09/2026), Tache 3 --
+    assist_zone toujours derivee du gabarit, jamais laissee au placeholder
+    de construction. Reutilise le fixture timelines_1000 deja partage dans
+    ce fichier (pas de simulation supplementaire)."""
+
+    def test_assist_zone_not_none(self, timelines_1000):
+        checked = 0
+        violations = []
+        for _match, timeline in timelines_1000:
+            for event in timeline.events:
+                checked += 1
+                # assist_zone est un tuple[float, float], jamais Optional --
+                # "None" au sens du brief se traduit ici par "reste au
+                # placeholder de construction (0.0, 0.0)" (voir NarrativeEvent
+                # dans narrative.py) : center_of() ne produit jamais
+                # exactement ce point (grille 12x8, chaque cellule a un
+                # centre a +0.5, jamais 0.0 pile), donc cette valeur ne peut
+                # survenir que si le remplacement par build_timeline n'a pas
+                # eu lieu.
+                if event.assist_zone is None or event.assist_zone == (0.0, 0.0):
+                    violations.append((timeline.match_id, event.minute, event.gabarit))
+                if checked >= 1000:
+                    break
+            if checked >= 1000:
+                break
+
+        assert checked >= 1000
+        assert not violations, f"{len(violations)} assist_zone non derivee -- exemples: {violations[:3]}"

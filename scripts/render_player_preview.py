@@ -5,9 +5,12 @@ produit `render/canvas_player_preview.html`, ouvrable via le serveur statique
 commande exacte).
 
 Match choisi déterministe (seed fixe) mais RETIRÉ jusqu'à obtenir un profil
-utile pour la démonstration/les captures (Tâche 4.7) : le 1er clip retenu une
-occasion (score 0-0 tout du long), et au moins 2 buts parmi les 3 suivants
-(pour que le score change deux fois sur les 4 premiers clips). Ce n'est pas
+utile pour la démonstration/les captures (Tâche 4.7, puis Tâche 6 de la
+consolidation du 23/09/2026) : le 1er clip retenu une occasion (score 0-0
+tout du long), au moins 2 buts parmi les 3 suivants (pour que le score
+change deux fois sur les 4 premiers clips), ET au moins un clip avec un
+`interval_events` non vide (carton/remplacement réel, Tâche 1 de la
+consolidation -- pour la capture `player_interval_events.png`). Ce n'est pas
 un tirage caché -- la seed retenue est imprimée par le script.
 
 Usage :
@@ -69,7 +72,9 @@ def _useful_profile(clips, max_occasions: int) -> bool:
     if clips[0].issue == "but":
         return False
     n_goals_early = sum(1 for c in clips[: min(3, len(clips))] if c.issue == "but")
-    return n_goals_early >= 2
+    if n_goals_early < 2:
+        return False
+    return any(c.interval_events for c in clips)
 
 
 def find_timeline(seed: int, max_occasions: int):
@@ -97,8 +102,10 @@ def find_timeline(seed: int, max_occasions: int):
 
 def run(*, seed: int, max_occasions: int) -> Path:
     timeline, clips = find_timeline(seed, max_occasions)
-    for c in clips:
-        print(f"  {c.minute}' {c.gabarit} ({c.equipe}) -- {c.issue} -- score_after={c.score_after}")
+    for i, c in enumerate(clips):
+        print(f"  [{i}] {c.minute}' {c.gabarit} ({c.equipe}) -- {c.issue} -- score_after={c.score_after}")
+        for item in c.interval_events:
+            print(f"        interval_event: {item}")
 
     payload = clips_to_json(clips, timeline)
     html = _CANVAS_HTML.read_text(encoding="utf-8")
