@@ -11,6 +11,12 @@ modifie ni l'un ni l'autre. Le score final et les buts existants sont un
 INVARIANT ABSOLU -- ce module ne fait qu'habiller un résultat déjà tranché
 d'occasions intercalées, jamais le recalculer.
 
+PRIORITÉ DES CONTRAINTES (brief "constraint priority", 23/09/2026, Tâche 1) :
+  1. Score final inchangé.
+  2. Buts existants à leur minute exacte, buteur exact, gabarit réel (penalty reste penalty).
+  3. Anti-répétition (gabarit+déclinaison, joueur principal) et écart minimum : UNIQUEMENT sur les `generated_events`.
+  4. Le réel prime -- aucune règle n'est appliquée NI vérifiée sur les `existing_events` (buts) : si le réel impose une répétition ou une proximité, on l'accepte.
+
 DETTE -- 2026-09-23 -- `MatchResult` n'existe nulle part dans le moteur de
 résultats (`Match`/`MatchEvents`/`Lineup` sont 3 objets séparés, voir
 `ligue1sim.schedule`/`events`/`lineup`) : aucune notion de DATE dans tout le
@@ -100,19 +106,6 @@ _MAX_DRAW_ATTEMPTS = 200  # retirage contraint (Tâche 5) avant d'abandonner et 
 # écart de rating, sans réduire à néant les occasions de l'équipe la plus
 # faible.
 _RATING_SMOOTHING = 0.7
-
-
-class MinuteCollisionError(RuntimeError):
-    """Deux buts EXISTANTS (donnée du moteur de résultats, pas une erreur de
-    génération narrative) tombent à la même minute -- voir docs/
-    narrative_timeline_schema.md, "Invariants structurels", et brief
-    "narrative engine foundations" Tâche 3.3 : "remontée, pas de correction
-    silencieuse". Mesuré sur 2000 matchs de contrôle (voir retour de tâche) :
-    ~3.95% des matchs simulés ont au moins une collision (même équipe ou
-    équipes opposées, à peu près à parts égales) -- le moteur de résultats
-    n'évite pas les collisions de minute entre deux `GoalEvent`, dette
-    propre au moteur de résultats, non corrigée ici (règle d'escalade :
-    aucun changement au moteur de résultats)."""
 
 
 @dataclass(frozen=True)
@@ -253,32 +246,20 @@ def _squad_lookup(squad: list[PlayerMatchStat]) -> dict[str, PlayerMatchStat]:
     return {p.player_name: p for p in squad}
 
 
-class AntiRepetitionUnsatisfiableError(RuntimeError):
-    """Une règle anti-répétition (Tâche 5) est structurellement impossible à
-    satisfaire sur CE match précis -- PAS une correction silencieuse ni une
-    priorité implicite entre règles (brief, "Si une règle est incompatible
-    avec une autre, remontée -- pas de priorité silencieuse"). Cas identifié
-    en implémentant ce module : deux buts PENALTY réels consécutifs dans la
-    timeline (`GoalEvent.penalty=True`) forcent chacun le gabarit "penalty"
-    (`_score_penalty` renvoie 0.0 pour tout autre gabarit dès que
-    `context.penalty=True`, voir templates.py -- "penalty" est alors le SEUL
-    gabarit éligible) : la règle 5.1 (pas de répétition immédiate du couple)
-    ne peut alors PHYSIQUEMENT pas être respectée, quel que soit le nombre
-    de tentatives. Voir le retour de tâche pour le taux mesuré sur 1000
-    matchs -- non corrigé ici, une décision sur les PARAMÈTRES (pas les
-    règles) reste à prendre avec Olivier."""
-
-
 def _pick_minute(rng: Random, taken_minutes: list[int]) -> int:
+    """Retirage contraint parmi les minutes déjà prises par d'AUTRES
+    `generated_events` UNIQUEMENT (jamais les minutes de buts réels, voir
+    PRIORITÉ DES CONTRAINTES en tête de fichier) -- espace largement
+    suffisant par construction ([1, 90], au plus `_POISSON_MAX` occasions
+    espacées de `_MIN_MINUTE_GAP`min), le repli "meilleur essai" ci-dessous
+    ne devrait donc jamais s'activer en pratique ; gardé par défense plutôt
+    que supprimé, pour ne jamais planter sur un cas limite non anticipé."""
+    candidate = rng.randint(1, _MATCH_MINUTES)
     for _ in range(_MAX_DRAW_ATTEMPTS):
-        candidate = rng.randint(1, _MATCH_MINUTES)
         if all(abs(candidate - m) >= _MIN_MINUTE_GAP for m in taken_minutes):
             return candidate
-    raise AntiRepetitionUnsatisfiableError(
-        f"impossible de placer une occasion respectant l'écart minimum de {_MIN_MINUTE_GAP}min "
-        f"après {_MAX_DRAW_ATTEMPTS} tentatives (minutes déjà prises : {sorted(taken_minutes)}) -- "
-        "remontée Tâche 5 : paramètres à ajuster, pas les règles."
-    )
+        candidate = rng.randint(1, _MATCH_MINUTES)
+    return candidate  # meilleur essai après _MAX_DRAW_ATTEMPTS tentatives, voir docstring
 
 
 def _pick_gabarit(
@@ -287,161 +268,168 @@ def _pick_gabarit(
     last_gabarit_declinaison: tuple[str, str] | None,
     gabarit_sequence: list[str],
 ) -> str:
-    """Retirage contraint (Tâche 5.1/5.7, PAS un filtre post-hoc) : retire
-    tant que le candidat répète le couple (gabarit, déclinaison) précédent
-    OU crée un pattern cyclique de période <= `_MAX_CYCLE_PERIOD` sur la
-    séquence des gabarits. Déclinaison toujours `"default"` pour l'instant
-    (voir docs/narrative_timeline_schema.md) : la règle 5.1 porte déjà sur
-    le couple pour s'assouplir automatiquement quand les déclinaisons
-    s'enrichiront (brief séparé).
-
-    Lève `AntiRepetitionUnsatisfiableError` si aucun candidat valide n'existe
-    (voir sa docstring -- cas confirmé : deux penalties consécutifs)."""
+    """Retirage contraint (Tâche 5.1/5.7 du brief précédent, PAS un filtre
+    post-hoc) parmi les `generated_events` précédents UNIQUEMENT (jamais un
+    but réel adjacent, voir PRIORITÉ DES CONTRAINTES) : retire tant que le
+    candidat répète le couple (gabarit, déclinaison) précédent OU crée un
+    pattern cyclique de période <= `_MAX_CYCLE_PERIOD` sur la séquence des
+    `generated_events`. Repli "meilleur essai" -- voir `_pick_minute`."""
+    candidate = pick_template(context, rng=rng)
     for _ in range(_MAX_DRAW_ATTEMPTS):
-        candidate = pick_template(context, rng=rng)
-        if last_gabarit_declinaison is not None and (candidate, "default") == last_gabarit_declinaison:
-            continue
-        if _has_cyclic_pattern(gabarit_sequence + [candidate]):
-            continue
-        return candidate
-    raise AntiRepetitionUnsatisfiableError(
-        f"impossible de tirer un gabarit respectant les règles anti-répétition après {_MAX_DRAW_ATTEMPTS} "
-        f"tentatives (dernier couple : {last_gabarit_declinaison}, séquence : {gabarit_sequence}, "
-        f"contexte : {context!r}) -- remontée Tâche 5 : paramètres à ajuster, pas les règles."
-    )
-
-
-def _pick_main_player(rng: Random, squad: list[PlayerMatchStat], excluded_names: frozenset[str]) -> PlayerMatchStat:
-    """Retirage contraint (Tâche 5.2) parmi les joueurs de champ (le gardien
-    n'est jamais le protagoniste d'une occasion offensive, même invention
-    premier jet -- pas de donnée réelle pour arbitrer ce cas). `excluded_names`
-    porte le protagoniste de l'événement PRÉCÉDENT et, si l'événement SUIVANT
-    est un but réel déjà connu (la `slots` list est triée en amont), son
-    buteur aussi -- sans ce lookahead, une occasion inventée juste avant un
-    but pouvait retomber par hasard sur le même joueur que ce but (non
-    corrigible a posteriori, le buteur réel est immuable)."""
-    candidates = [p for p in squad if position_group(p.poste) != GOALKEEPER]
-    for _ in range(_MAX_DRAW_ATTEMPTS):
-        candidate = rng.choice(candidates)
-        if candidate.player_name not in excluded_names:
+        pair_repeats = last_gabarit_declinaison is not None and (candidate, "default") == last_gabarit_declinaison
+        if not pair_repeats and not _has_cyclic_pattern(gabarit_sequence + [candidate]):
             return candidate
-    raise AntiRepetitionUnsatisfiableError(
-        f"impossible de tirer un joueur principal hors de {sorted(excluded_names)!r} après {_MAX_DRAW_ATTEMPTS} tentatives."
-    )
+        candidate = pick_template(context, rng=rng)
+    return candidate  # meilleur essai après _MAX_DRAW_ATTEMPTS tentatives, voir docstring de _pick_minute
+
+
+def _pick_main_player(rng: Random, squad: list[PlayerMatchStat], excluded_name: str | None) -> PlayerMatchStat:
+    """Retirage contraint parmi les joueurs de champ (le gardien n'est
+    jamais le protagoniste d'une occasion offensive, même invention premier
+    jet -- pas de donnée réelle pour arbitrer ce cas). `excluded_name` : le
+    protagoniste du `generated_event` PRÉCÉDENT uniquement (jamais un but
+    réel adjacent, voir PRIORITÉ DES CONTRAINTES -- le lookahead vers un but
+    suivant du brief précédent est retiré, il n'a plus lieu d'être)."""
+    candidates = [p for p in squad if position_group(p.poste) != GOALKEEPER]
+    candidate = rng.choice(candidates)
+    for _ in range(_MAX_DRAW_ATTEMPTS):
+        if candidate.player_name != excluded_name:
+            return candidate
+        candidate = rng.choice(candidates)
+    return candidate  # meilleur essai après _MAX_DRAW_ATTEMPTS tentatives, voir docstring de _pick_minute
+
+
+def _goal_diff_before_minute(goals: list[GoalEvent], minute: int, team: str, home_team: str, away_team: str) -> int:
+    """Différentiel de buts pour `team` à partir des buts réels STRICTEMENT
+    antérieurs à `minute` (utilisé pour `existing_events` ET
+    `generated_events` -- un `generated_event` n'a pas d'ordre d'apparition
+    propre dans les données d'entrée, seulement sa minute)."""
+    home_before = sum(1 for g in goals if g.minute < minute and g.club_name == home_team)
+    away_before = sum(1 for g in goals if g.minute < minute and g.club_name == away_team)
+    return (home_before - away_before) if team == home_team else (away_before - home_before)
+
+
+def _existing_events(match: MatchResult, rng: Random) -> list[NarrativeEvent]:
+    """Un `NarrativeEvent` par but réel (`match.goals`), dans leur ORDRE
+    D'APPARITION d'entrée (Tâche 1.3 : "insérés tels quels, triés par minute
+    puis par ordre d'apparition" -- le tri par minute est fait par
+    `build_timeline` via un tri STABLE, voir sa docstring ; ici on ne fait
+    que préserver l'ordre d'apparition initial en traitant `match.goals`
+    dans son ordre propre, jamais réordonné).
+
+    AUCUN retirage contraint : `pick_template` est appelé UNE SEULE FOIS par
+    but, sans vérifier ni gabarit précédent, ni pattern cyclique, ni joueur
+    précédent -- les buts réels sont HORS PÉRIMÈTRE des règles
+    anti-répétition (PRIORITÉ DES CONTRAINTES, point 4). Un penalty réel
+    retombe naturellement sur le gabarit `"penalty"` (`_score_penalty` dans
+    templates.py le rend seul éligible dès que `context.penalty=True`,
+    aucun code spécial nécessaire ici)."""
+    home_squad_lookup = _squad_lookup(match.home_squad)
+    away_squad_lookup = _squad_lookup(match.away_squad)
+    home_score = away_score = 0
+    events: list[NarrativeEvent] = []
+
+    for goal in match.goals:
+        team = match.home_team if goal.club_name == match.home_team else match.away_team
+        squad_lookup = home_squad_lookup if team == match.home_team else away_squad_lookup
+        scorer_stat = squad_lookup.get(goal.scorer)
+        scorer_poste = scorer_stat.poste if scorer_stat is not None else None
+        assist_stat = squad_lookup.get(goal.assist) if goal.assist else None
+        assist_poste = assist_stat.poste if assist_stat is not None else None
+        own_before, opp_before = (home_score, away_score) if team == match.home_team else (away_score, home_score)
+        context = TemplateContext(
+            minute=goal.minute, goal_diff_before=own_before - opp_before,
+            scorer_poste=scorer_poste, assist_poste=assist_poste,
+            penalty=goal.penalty, competition_type=match.competition_type or "league",
+        )
+        gabarit = pick_template(context, rng=rng)
+        involved = (goal.scorer, goal.assist) if goal.assist else (goal.scorer,)
+        events.append(NarrativeEvent(
+            minute=goal.minute, event_type=BUT, gabarit=gabarit, declinaison="default", team=team,
+            main_player=goal.scorer, involved_players=involved, outcome=_OUTCOME_BUT,
+            start_position=_zone_center(goal.zone), starts_at_restart=TEMPLATES[gabarit].starts_at_restart,
+        ))
+        if team == match.home_team:
+            home_score += 1
+        else:
+            away_score += 1
+
+    return events
+
+
+def _generated_events(match: MatchResult, rng: Random, n_fillers: int) -> list[NarrativeEvent]:
+    """`n_fillers` occasions inventées, triées par minute -- SEULES
+    concernées par les règles anti-répétition/écart minimum (PRIORITÉ DES
+    CONTRAINTES, point 3), vérifiées uniquement entre `generated_events`
+    (jamais contre un `existing_event` adjacent)."""
+    home_squad_lookup = _squad_lookup(match.home_squad)
+    away_squad_lookup = _squad_lookup(match.away_squad)
+    home_occasion_share = _home_occasion_share(match)
+
+    minutes: list[int] = []
+    for _ in range(n_fillers):
+        minutes.append(_pick_minute(rng, minutes))
+    minutes.sort()
+
+    last_pair: tuple[str, str] | None = None
+    last_main_player: str | None = None
+    gabarit_sequence: list[str] = []
+    events: list[NarrativeEvent] = []
+
+    for minute in minutes:
+        team = match.home_team if rng.random() < home_occasion_share else match.away_team
+        squad_lookup = home_squad_lookup if team == match.home_team else away_squad_lookup
+        squad = match.home_squad if team == match.home_team else match.away_squad
+        main_player_stat = _pick_main_player(rng, squad, last_main_player)
+        goal_diff_before = _goal_diff_before_minute(match.goals, minute, team, match.home_team, match.away_team)
+        context = TemplateContext(
+            minute=minute, goal_diff_before=goal_diff_before,
+            scorer_poste=main_player_stat.poste, assist_poste=None,
+            penalty=False, competition_type=match.competition_type or "league",
+        )
+        gabarit = _pick_gabarit(rng, context, last_pair, gabarit_sequence)
+        main_player = main_player_stat.player_name
+        involved = _involved_players(rng, gabarit, main_player, squad_lookup)
+        outcome = rng.choices(_NON_GOAL_OUTCOMES, weights=_NON_GOAL_OUTCOME_WEIGHTS, k=1)[0]
+
+        events.append(NarrativeEvent(
+            minute=minute, event_type=OCCASION, gabarit=gabarit, declinaison="default", team=team,
+            main_player=main_player, involved_players=involved, outcome=outcome,
+            start_position=None,  # pas de zone réelle pour une occasion inventée -- non inventée non plus, voir schema
+            starts_at_restart=TEMPLATES[gabarit].starts_at_restart,
+        ))
+        last_pair = (gabarit, "default")
+        last_main_player = main_player
+        gabarit_sequence.append(gabarit)
+
+    return events
 
 
 def build_timeline(match: MatchResult) -> Timeline:
     """Construit la `Timeline` d'un match déjà décidé (score et buts
     IMMUABLES, voir docs/narrative_timeline_schema.md, section "Invariants
-    structurels"). Déterministe : seed dérivée du match (`_derive_seed`),
-    générateurs locaux (`random.Random`/`np.random.default_rng`) seedés
-    explicitement, jamais l'état aléatoire global Python/numpy."""
+    structurels", et PRIORITÉ DES CONTRAINTES en tête de fichier). AUCUN
+    match n'est rejeté : `existing_events` (buts réels, hors périmètre des
+    règles anti-répétition) et `generated_events` (occasions inventées, SEULES
+    soumises à ces règles) sont construits séparément puis fusionnés par un
+    tri STABLE sur la minute -- à minute égale, l'ordre de la CONCATÉNATION
+    (`existing_events` d'abord, dans leur ordre d'apparition d'entrée, PUIS
+    `generated_events` dans leur ordre de génération) est préservé, exactement
+    la "règle de tri secondaire stable" de la Tâche 1.3.
+
+    Déterministe : seed dérivée du match (`_derive_seed`), générateurs
+    locaux (`random.Random`/`np.random.default_rng`) seedés explicitement,
+    jamais l'état aléatoire global Python/numpy."""
     seed = _derive_seed(match)
     rng = Random(seed)
 
-    home_squad_lookup = _squad_lookup(match.home_squad)
-    away_squad_lookup = _squad_lookup(match.away_squad)
-
-    goal_minutes = [g.minute for g in match.goals]
-    if len(goal_minutes) != len(set(goal_minutes)):
-        raise MinuteCollisionError(
-            f"{match.home_team} vs {match.away_team} : deux buts existants à la même minute "
-            f"({sorted(m for m in goal_minutes if goal_minutes.count(m) > 1)}) -- remontée Tâche 3.3, "
-            "pas de correction silencieuse."
-        )
+    existing_events = _existing_events(match, rng)
 
     total_occasions = max(_truncated_poisson_count(seed), len(match.goals))
     n_fillers = total_occasions - len(match.goals)
+    generated_events = _generated_events(match, rng, n_fillers)
 
-    taken_minutes = list(goal_minutes)
-    filler_minutes: list[int] = []
-    for _ in range(n_fillers):
-        minute = _pick_minute(rng, taken_minutes)
-        taken_minutes.append(minute)
-        filler_minutes.append(minute)
-
-    # (minute, is_goal, GoalEvent|None) -- fusionne buts réels et occasions
-    # inventées en une seule timeline triée AVANT de générer le contenu de
-    # chaque événement (nécessaire pour calculer goal_diff_before dans le
-    # bon ordre chronologique, et pour le lookahead de `_pick_main_player`).
-    slots: list[tuple[int, GoalEvent | None]] = [(g.minute, g) for g in match.goals]
-    slots += [(m, None) for m in filler_minutes]
-    slots.sort(key=lambda s: s[0])
-
-    # Deux buts RÉELS consécutifs (aucune occasion inventée entre les deux)
-    # marqués par le MÊME buteur : la règle 5.2 (pas de répétition immédiate
-    # de joueur principal) est alors structurellement impossible à respecter
-    # -- le buteur réel est immuable (Tâche 3), rien à retirer. Même
-    # traitement que les deux penalties consécutifs (voir
-    # AntiRepetitionUnsatisfiableError) : remontée, pas de violation
-    # silencieuse de la règle.
-    for (_m_a, goal_a), (_m_b, goal_b) in zip(slots, slots[1:]):
-        if goal_a is not None and goal_b is not None and goal_a.scorer == goal_b.scorer:
-            raise AntiRepetitionUnsatisfiableError(
-                f"{match.home_team} vs {match.away_team} : deux buts réels consécutifs "
-                f"({goal_a.minute}min, {goal_b.minute}min) du même buteur ({goal_a.scorer!r}) -- "
-                "règle 5.2 structurellement impossible à respecter, remontée."
-            )
-
-    home_score = away_score = 0
-    last_pair: tuple[str, str] | None = None
-    last_main_player: str | None = None
-    gabarit_sequence: list[str] = []
-    events: list[NarrativeEvent] = []
-    home_occasion_share = _home_occasion_share(match)
-
-    for i, (minute, goal) in enumerate(slots):
-        if goal is not None:
-            team = match.home_team if goal.club_name == match.home_team else match.away_team
-            squad_lookup = home_squad_lookup if team == match.home_team else away_squad_lookup
-            scorer_stat = squad_lookup.get(goal.scorer)
-            scorer_poste = scorer_stat.poste if scorer_stat is not None else None
-            assist_stat = squad_lookup.get(goal.assist) if goal.assist else None
-            assist_poste = assist_stat.poste if assist_stat is not None else None
-            own_score_before, opp_score_before = (home_score, away_score) if team == match.home_team else (away_score, home_score)
-            context = TemplateContext(
-                minute=minute, goal_diff_before=own_score_before - opp_score_before,
-                scorer_poste=scorer_poste, assist_poste=assist_poste,
-                penalty=goal.penalty, competition_type=match.competition_type or "league",
-            )
-            gabarit = _pick_gabarit(rng, context, last_pair, gabarit_sequence)
-            main_player = goal.scorer
-            involved = (goal.scorer, goal.assist) if goal.assist else (goal.scorer,)
-            start_position = _zone_center(goal.zone)
-            outcome = _OUTCOME_BUT
-            if team == match.home_team:
-                home_score += 1
-            else:
-                away_score += 1
-        else:
-            team = match.home_team if rng.random() < home_occasion_share else match.away_team
-            squad_lookup = home_squad_lookup if team == match.home_team else away_squad_lookup
-            squad = match.home_squad if team == match.home_team else match.away_squad
-            excluded_names = {last_main_player} if last_main_player is not None else set()
-            if i + 1 < len(slots) and slots[i + 1][1] is not None:
-                excluded_names.add(slots[i + 1][1].scorer)  # lookahead, voir docstring de _pick_main_player
-            main_player_stat = _pick_main_player(rng, squad, frozenset(excluded_names))
-            own_score_before, opp_score_before = (home_score, away_score) if team == match.home_team else (away_score, home_score)
-            context = TemplateContext(
-                minute=minute, goal_diff_before=own_score_before - opp_score_before,
-                scorer_poste=main_player_stat.poste, assist_poste=None,
-                penalty=False, competition_type=match.competition_type or "league",
-            )
-            gabarit = _pick_gabarit(rng, context, last_pair, gabarit_sequence)
-            main_player = main_player_stat.player_name
-            involved = _involved_players(rng, gabarit, main_player, squad_lookup)
-            start_position = None  # pas de zone réelle pour une occasion inventée -- non inventé non plus, voir schema
-            outcome = rng.choices(_NON_GOAL_OUTCOMES, weights=_NON_GOAL_OUTCOME_WEIGHTS, k=1)[0]
-
-        events.append(NarrativeEvent(
-            minute=minute, event_type=BUT if goal is not None else OCCASION,
-            gabarit=gabarit, declinaison="default", team=team,
-            main_player=main_player, involved_players=involved, outcome=outcome,
-            start_position=start_position, starts_at_restart=TEMPLATES[gabarit].starts_at_restart,
-        ))
-        last_pair = (gabarit, "default")
-        last_main_player = main_player
-        gabarit_sequence.append(gabarit)
+    events = sorted(existing_events + generated_events, key=lambda e: e.minute)  # tri stable, voir docstring
 
     match_id = f"{match.home_team}-{match.away_team}-{match.date}"
     return Timeline(

@@ -35,20 +35,31 @@ référence structurelle, pas un mode d'emploi de l'API Python).
 ## Invariants structurels
 
 1. **Score final inchangé** : `home_goals`/`away_goals` de la `Timeline` sont EXACTEMENT ceux du `MatchResult` d'entrée, jamais recalculés depuis les événements.
-2. **Buts aux minutes existantes** : chaque but réel (`MatchResult.goals`) apparaît dans `events` avec sa `minute` et son `main_player` (buteur) EXACTS -- aucun but ajouté, retiré, ou déplacé.
+2. **Buts aux minutes existantes** : chaque but réel (`MatchResult.goals`) apparaît dans `events` avec sa `minute`, son `main_player` (buteur) et son `gabarit` réel (penalty reste penalty) EXACTS -- aucun but ajouté, retiré, ou déplacé.
 3. **Aucune occasion taguée `but`** qui ne soit pas un but réel préexistant -- `outcome="but"` ssi `event_type="but"`.
-4. **Tri chronologique strict** : `events` est trié par `minute` strictement croissante ; deux événements à la même minute sont un cas REMONTÉ (`MinuteCollisionError`), jamais géré silencieusement (voir "Dette connue" plus bas).
-5. **Aucune répétition immédiate de gabarit ni de joueur principal** : formulée précisément sur le couple `(gabarit, declinaison)` (pas `gabarit` seul, voir section Déclinaisons) pour `main_player` et `(gabarit, declinaison)`, PLUS aucun pattern cyclique de période ≤5 sur la seule séquence des gabarits (voir `engine/narrative._has_cyclic_pattern`). Cas structurellement impossibles (deux buts réels consécutifs du même buteur, deux penalties consécutifs) : REMONTÉS (`AntiRepetitionUnsatisfiableError`), jamais une violation silencieuse de la règle.
-6. **Écart minimum entre occasions PLACÉES** (3 minutes, voir `engine/narrative._MIN_MINUTE_GAP`) : s'applique au placement des occasions inventées par le générateur, PAS à l'écart entre deux buts réels (immuable, hors du contrôle du générateur -- voir le retour de tâche pour le taux mesuré).
+4. **Tri chronologique** : `events` est trié par `minute` croissante, tri STABLE (voir "Priorité des contraintes" ci-dessous) -- deux événements à la même minute (deux buts réels y compris) sont départagés par ordre d'apparition, jamais rejetés (brief "constraint priority", 23/09/2026 -- la distinction visuelle de deux buts à la même minute, ex. temps additionnel affiché, est un problème de rendu canvas, voir "Non inclus").
+5. **Aucune répétition immédiate de gabarit ni de joueur principal SUR LES `generated_events` UNIQUEMENT** : formulée sur le couple `(gabarit, declinaison)` (pas `gabarit` seul, voir section Déclinaisons) et sur `main_player`, PLUS aucun pattern cyclique de période ≤5 sur la séquence des gabarits des `generated_events` (voir `engine/narrative._has_cyclic_pattern`). Les `existing_events` (buts réels) sont HORS PÉRIMÈTRE de cette règle -- voir "Priorité des contraintes".
+6. **Écart minimum entre occasions PLACÉES** (3 minutes, voir `engine/narrative._MIN_MINUTE_GAP`) : s'applique UNIQUEMENT au placement des `generated_events` entre eux, jamais à l'écart entre deux buts réels (immuable, hors du contrôle du générateur).
 
-### Dette connue (moteur de résultats, non corrigée)
+## Priorité des contraintes
 
-Mesuré sur 3000 matchs simulés de contrôle (voir retour de tâche) :
-- **~3.6% des matchs** ont deux buts réels à la même minute (`MinuteCollisionError`).
-- **~3.7% des matchs** ont deux buts réels consécutifs du même buteur sans occasion entre les deux (`AntiRepetitionUnsatisfiableError`).
-- **~0.2% des matchs** ont deux penalties réels consécutifs, rendant le gabarit `"penalty"` seul éligible deux fois de suite (`AntiRepetitionUnsatisfiableError`).
+Brief "constraint priority" (23/09/2026) -- décision structurante validée
+par le propriétaire, formalisée dans `engine/narrative.py` (voir PRIORITÉ
+DES CONTRAINTES en tête de fichier) :
 
-Ces trois cas sont des propriétés du moteur de résultats existant (minutes/penalties non espacés), pas un bug de ce module -- `build_timeline` les détecte et refuse de construire une timeline plutôt que de violer silencieusement un invariant.
+| # | Contrainte | Portée |
+|---|---|---|
+| 1 | Score final inchangé | Absolue |
+| 2 | Buts existants à leur minute/buteur/gabarit exacts | Absolue |
+| 3 | Anti-répétition (gabarit+déclinaison, joueur) + écart minimum | `generated_events` UNIQUEMENT |
+| 4 | Le réel prime -- une répétition/proximité imposée par le réel est acceptée | `existing_events` HORS PÉRIMÈTRE des règles 3 |
+
+Conséquence directe : `build_timeline` ne rejette plus aucun match (les
+exceptions `MinuteCollisionError`/`AntiRepetitionUnsatisfiableError` du
+brief précédent sont retirées -- les cas qu'elles signalaient, mesurés sur
+3000 matchs de contrôle, sont désormais acceptés tels quels : ~3.6% des
+matchs avec deux buts réels à la même minute, ~3.7% avec deux buts
+consécutifs du même buteur, ~0.2% avec deux penalties consécutifs).
 
 ## Non inclus dans ce brief
 
@@ -60,6 +71,7 @@ Ces trois cas sont des propriétés du moteur de résultats existant (minutes/pe
 - **Date de match réelle** -- absente du moteur de résultats (voir `engine/narrative.py`, DETTE en tête de fichier) ; `date`/`competition_type` sont optionnels, fournis par l'appelant ou `None`.
 - **Position de départ des occasions inventées** -- `start_position=None` systématiquement (pas de zone réelle à cette étape, voir tableau ci-dessus).
 - **Résolution complète des rôles d'un gabarit** -- `involved_players` ne résout PAS chaque rôle (`support1`, `support2`...) vers un joueur précis comme le ferait `animation.templates.build_from_template` ; seul un second joueur générique est tiré si le gabarit a plus d'un rôle (voir "Mapping vers canvas").
+- **La distinction visuelle de deux buts à la même minute** (temps additionnel affiché) est un problème de rendu canvas, à traiter dans un brief futur.
 
 ## Mapping vers canvas
 

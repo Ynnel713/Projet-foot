@@ -1,55 +1,52 @@
 # Rapport d'audit du moteur narratif
 
-Brief "narrative engine foundations" (23/09/2026), Tâche 6 -- `scripts/narrative_audit.py`, seed numpy fixe `20260923` (déterministe, voir docstring du script).
+Brief "constraint priority" (23/09/2026), Tâche 3 -- `scripts/narrative_audit.py`, seed fixe `20260923` (déterministe, voir docstring du script).
 
-**1000 timelines construites avec succès sur 1172 matchs simulés tentés.**
+**Priorité des contraintes formalisée** (voir `engine/narrative.py`, PRIORITÉ DES CONTRAINTES) : les règles anti-répétition/écart minimum ne gouvernent QUE les occasions inventées (`generated_events`), jamais les buts réels (`existing_events`, hors périmètre). **Conséquence : aucun match n'est plus rejeté** -- `build_timeline` ne lève plus jamais d'exception. Écart avec l'audit précédent : ce rapport traite exactement `n`=1000 matchs (contre ~92-96% de `n` avant, le reste étant alors exclu par collision de minute ou règle anti-répétition structurellement insatisfiable).
 
-## Matchs exclus (dette du moteur de résultats, voir docs/narrative_timeline_schema.md)
-
-- Collisions de minute entre deux buts réels (`MinuteCollisionError`) : 40 (3.41%)
-- Règles anti-répétition structurellement insatisfiables (`AntiRepetitionUnsatisfiableError`) : 46 (3.92%)
+**1000 timelines construites sur 1000 matchs simulés -- 0 rejeté.**
 
 ## Distribution du nombre d'occasions par match
 
-- Moyenne : 15.28
-- Écart-type : 3.07
+- Moyenne : 15.25
+- Écart-type : 3.05
 - Min : 10
 - Max : 22
 
 ## Distribution des gabarits utilisés
 
-- `contre_attaque` : 2313 (15.14%)
-- `debordement_centre_tete` : 2217 (14.51%)
-- `percee_individuelle` : 1981 (12.96%)
-- `construction_placee` : 1656 (10.84%)
-- `recuperation_haute` : 1617 (10.58%)
-- `decalage_enroulee` : 1615 (10.57%)
-- `profondeur_1v1` : 1123 (7.35%)
-- `une_deux` : 938 (6.14%)
-- `corner` : 860 (5.63%)
-- `coup_franc` : 390 (2.55%)
-- `but_gag` : 326 (2.13%)
-- `penalty` : 244 (1.60%)
+- `contre_attaque` : 2311 (15.15%)
+- `debordement_centre_tete` : 2251 (14.76%)
+- `percee_individuelle` : 1961 (12.86%)
+- `construction_placee` : 1675 (10.98%)
+- `decalage_enroulee` : 1592 (10.44%)
+- `recuperation_haute` : 1577 (10.34%)
+- `profondeur_1v1` : 1136 (7.45%)
+- `une_deux` : 958 (6.28%)
+- `corner` : 846 (5.55%)
+- `coup_franc` : 387 (2.54%)
+- `but_gag` : 301 (1.97%)
+- `penalty` : 255 (1.67%)
 
 ## Distribution des issues
 
-- `arret` : 5041 (32.99%)
-- `hors_cadre` : 3122 (20.43%)
-- `but` : 2687 (17.59%)
-- `tacle` : 1904 (12.46%)
-- `degagement` : 1268 (8.30%)
-- `poteau` : 1258 (8.23%)
+- `arret` : 4959 (32.52%)
+- `hors_cadre` : 3074 (20.16%)
+- `but` : 2837 (18.60%)
+- `tacle` : 1889 (12.39%)
+- `poteau` : 1256 (8.24%)
+- `degagement` : 1235 (8.10%)
 
 ## Distribution temporelle (par tranche de 15 minutes)
 
-- 1-15min : 2607
-- 16-30min : 2489
-- 31-45min : 2530
-- 46-60min : 2571
-- 61-75min : 2495
-- 76-90min : 2588
+- 1-15min : 2562
+- 16-30min : 2501
+- 31-45min : 2519
+- 46-60min : 2557
+- 61-75min : 2420
+- 76-90min : 2691
 
-## Vérification des propriétés anti-répétition (taux de violation, attendu 0)
+## Vérification des propriétés anti-répétition sur `generated_events` uniquement (taux de violation, attendu 0)
 
 - Répétition immédiate (gabarit, déclinaison) : 0/1000 (0.00%)
 - Répétition immédiate du joueur principal : 0/1000 (0.00%)

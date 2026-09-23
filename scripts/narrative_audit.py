@@ -1,18 +1,26 @@
-"""Audit par lot du moteur narratif (brief "narrative engine foundations",
-23/09/2026, Tâche 6) -- simule 1000 matchs via le pipeline existant
-(`ligue1sim.simulation.simulate_match`), construit une `Timeline` pour
-chacun (`engine.narrative.build_timeline`) et rapporte les distributions
-clés + le taux de violation des invariants (attendu : 0 sur les timelines
-effectivement construites).
+"""Audit par lot du moteur narratif (brief "narrative engine foundations"
+puis "constraint priority", 23/09/2026, Tâche 6 puis 3) -- simule des
+matchs via le pipeline existant (`ligue1sim.simulation.simulate_match`),
+construit une `Timeline` pour chacun (`engine.narrative.build_timeline`) et
+rapporte les distributions clés + le taux de violation des invariants
+(attendu : 0).
 
-Déterminisme (Tâche 6.3) : `simulation.py` ET `events.py` tirent depuis
-l'état ALÉATOIRE GLOBAL, `numpy` (`np.random.uniform`/`.poisson`/`.choice`)
-ET stdlib `random` (`random.randint`/`.random`/`.choice`/`.shuffle`/`.gauss`,
-minutes de but comprises -- voir leur code, non modifié ici) -- ce script
-seed donc CES DEUX états globaux une fois au démarrage, uniquement pour que
-la SÉQUENCE de matchs simulés soit reproductible d'un run à l'autre.
-`engine.narrative.build_timeline` reste, lui, seedé localement par match
-(jamais l'état global), inchangé.
+Sémantique brief "constraint priority" -- ÉCART attendu par rapport à
+l'audit précédent : `build_timeline` ne rejette PLUS AUCUN match
+(`MinuteCollisionError`/`AntiRepetitionUnsatisfiableError` retirées, voir
+engine/narrative.py, PRIORITÉ DES CONTRAINTES) -- les règles anti-répétition
+ne sont vérifiées ici QUE sur les `generated_events` (occasions inventées,
+`event_type == "occasion"`), jamais sur les `existing_events` (buts réels,
+hors périmètre de ces règles). Ce rapport traite donc TOUJOURS exactement
+`n` matchs, contre ~92-96% de `n` dans la version précédente (matchs
+exclus par collision de minute ou règle insatisfiable).
+
+Déterminisme (Tâche 6.3 puis 3.1, inchangé) : `simulation.py` ET `events.py`
+tirent depuis l'état ALÉATOIRE GLOBAL, `numpy` (`.uniform`/`.poisson`/
+`.choice`) ET stdlib `random` (`.randint`/`.random`/`.choice`/`.shuffle`/
+`.gauss`, minutes de but comprises -- voir leur code, non modifié ici) --
+ce script seed donc CES DEUX états globaux une fois au démarrage.
+`engine.narrative.build_timeline` reste, lui, seedé localement par match.
 
 Usage :
     uv run python scripts/narrative_audit.py [--n N]
@@ -38,18 +46,10 @@ from ligue1sim.players import Player  # noqa: E402
 from ligue1sim.schedule import Match  # noqa: E402
 from ligue1sim.simulation import LeagueContext, simulate_match  # noqa: E402
 
-from narrative import (  # noqa: E402
-    BUT,
-    _MIN_MINUTE_GAP,
-    AntiRepetitionUnsatisfiableError,
-    MinuteCollisionError,
-    _has_cyclic_pattern,
-    build_timeline,
-    match_result_from,
-)
+from narrative import BUT, OCCASION, _MIN_MINUTE_GAP, _has_cyclic_pattern, build_timeline, match_result_from  # noqa: E402
 
 _AUDIT_SEED = 2026_09_23  # date du brief, arbitraire mais fixe -- voir docstring de module
-_DEFAULT_N = 1000
+_DEFAULT_N = 1000  # aucun rejet desormais (voir docstring) : 1000 matchs simules = 1000 timelines
 _OUTPUT_PATH = Path(__file__).resolve().parent.parent / "docs" / "narrative_audit_report.md"
 
 
@@ -80,7 +80,7 @@ def run(n: int) -> str:
     home_lineup, away_lineup = pick_best_formation(home), pick_best_formation(away)
 
     timelines = []
-    n_collisions = n_unsatisfiable = n_attempted = 0
+    n_attempted = 0
     i = 0
     while len(timelines) < n:
         home_goals, away_goals, events = simulate_match(home, away, context)
@@ -90,14 +90,7 @@ def run(n: int) -> str:
         match = Match(home=home.name, away=away.name, home_goals=home_goals, away_goals=away_goals, events=events)
         result = match_result_from(match, events, home_lineup, away_lineup, date=str(i))
         n_attempted += 1
-        try:
-            timelines.append(build_timeline(result))
-        except MinuteCollisionError:
-            n_collisions += 1
-        except AntiRepetitionUnsatisfiableError:
-            n_unsatisfiable += 1
-
-    total_tried = n_attempted + n_collisions + n_unsatisfiable
+        timelines.append(build_timeline(result))  # aucun rejet possible desormais, voir docstring de module
 
     occasion_counts = [len(t.events) for t in timelines]
     gabarit_hist = Counter(e.gabarit for t in timelines for e in t.events)
@@ -118,37 +111,39 @@ def run(n: int) -> str:
             score_violations += 1
 
         minutes = [e.minute for e in t.events]
-        if minutes != sorted(minutes) or len(minutes) != len(set(minutes)):
+        if minutes != sorted(minutes):
             sort_violations += 1
 
-        couples = [(e.gabarit, e.declinaison) for e in t.events]
+        # Regles anti-repetition VERIFIEES UNIQUEMENT sur generated_events
+        # (brief "constraint priority") -- existing_events (buts) hors perimetre.
+        generated = [e for e in t.events if e.event_type == OCCASION]
+        couples = [(e.gabarit, e.declinaison) for e in generated]
         if any(a == b for a, b in zip(couples, couples[1:])):
             pair_repeat_violations += 1
-        players = [e.main_player for e in t.events]
+        players = [e.main_player for e in generated]
         if any(a == b for a, b in zip(players, players[1:])):
             player_repeat_violations += 1
-        events_sorted = sorted(t.events, key=lambda e: e.minute)
-        if any(
-            (b.minute - a.minute) < _MIN_MINUTE_GAP
-            for a, b in zip(events_sorted, events_sorted[1:])
-            if not (a.event_type == BUT and b.event_type == BUT)
-        ):
+        gen_minutes = sorted(e.minute for e in generated)
+        if any((b - a) < _MIN_MINUTE_GAP for a, b in zip(gen_minutes, gen_minutes[1:])):
             gap_violations += 1
-        if _has_cyclic_pattern([e.gabarit for e in t.events]):
+        if _has_cyclic_pattern([e.gabarit for e in generated]):
             cyclic_violations += 1
 
     lines = [
         "# Rapport d'audit du moteur narratif",
         "",
-        f"Brief \"narrative engine foundations\" (23/09/2026), Tâche 6 -- `scripts/narrative_audit.py`, "
-        f"seed numpy fixe `{_AUDIT_SEED}` (déterministe, voir docstring du script).",
+        "Brief \"constraint priority\" (23/09/2026), Tâche 3 -- `scripts/narrative_audit.py`, "
+        f"seed fixe `{_AUDIT_SEED}` (déterministe, voir docstring du script).",
         "",
-        f"**{len(timelines)} timelines construites avec succès sur {total_tried} matchs simulés tentés.**",
+        "**Priorité des contraintes formalisée** (voir `engine/narrative.py`, PRIORITÉ DES CONTRAINTES) : "
+        "les règles anti-répétition/écart minimum ne gouvernent QUE les occasions inventées "
+        "(`generated_events`), jamais les buts réels (`existing_events`, hors périmètre). "
+        "**Conséquence : aucun match n'est plus rejeté** -- `build_timeline` ne lève plus jamais "
+        "d'exception. Écart avec l'audit précédent : ce rapport traite exactement "
+        f"`n`={n} matchs (contre ~92-96% de `n` avant, le reste étant alors exclu par "
+        "collision de minute ou règle anti-répétition structurellement insatisfiable).",
         "",
-        "## Matchs exclus (dette du moteur de résultats, voir docs/narrative_timeline_schema.md)",
-        "",
-        f"- Collisions de minute entre deux buts réels (`MinuteCollisionError`) : {n_collisions} ({n_collisions / total_tried:.2%})",
-        f"- Règles anti-répétition structurellement insatisfiables (`AntiRepetitionUnsatisfiableError`) : {n_unsatisfiable} ({n_unsatisfiable / total_tried:.2%})",
+        f"**{len(timelines)} timelines construites sur {n_attempted} matchs simulés -- 0 rejeté.**",
         "",
         "## Distribution du nombre d'occasions par match",
         "",
@@ -171,7 +166,7 @@ def run(n: int) -> str:
         lines.append(f"- {start}-{end}min : {bracket_hist[bracket]}")
     lines += [
         "",
-        "## Vérification des propriétés anti-répétition (taux de violation, attendu 0)",
+        "## Vérification des propriétés anti-répétition sur `generated_events` uniquement (taux de violation, attendu 0)",
         "",
         f"- Répétition immédiate (gabarit, déclinaison) : {pair_repeat_violations}/{len(timelines)} ({pair_repeat_violations / len(timelines):.2%})",
         f"- Répétition immédiate du joueur principal : {player_repeat_violations}/{len(timelines)} ({player_repeat_violations / len(timelines):.2%})",
@@ -189,10 +184,9 @@ def run(n: int) -> str:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--n", type=int, default=_DEFAULT_N, help=f"nombre de timelines a construire (defaut {_DEFAULT_N})")
+    parser.add_argument("--n", type=int, default=_DEFAULT_N, help=f"nombre de matchs a traiter (defaut {_DEFAULT_N})")
     args = parser.parse_args()
 
     report = run(args.n)
     _OUTPUT_PATH.write_text(report, encoding="utf-8")
-    print(report)
-    print(f"\nRapport ecrit : {_OUTPUT_PATH}")
+    print(f"Rapport ecrit : {_OUTPUT_PATH}")
