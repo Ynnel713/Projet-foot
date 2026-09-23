@@ -55,3 +55,25 @@ lui-même -- un rendu doit donc recevoir la `Sequence` (au moins son
   scalaire (rad/s), pas un vecteur d'axe -- insuffisant pour animer la
   rotation visuelle du ballon lui-même (seulement sa vitesse de rotation
   autour d'un axe non spécifié).
+
+## Vertical slice implémenté (brief "canvas vertical slice", 23/09/2026)
+
+Voir `docs/canvas_json_schema.md` pour le format JSON exact. Un seul
+gabarit câblé : `decalage_enroulee` (substitution de "frappe_enroulee",
+demandé mais inexistant dans `animation.templates.BUILDERS` -- voir le
+retour de tâche pour le détail).
+
+- **Fichier canvas autonome** : `render/canvas.html` (placeholder
+  `/*__SEQUENCE_JSON__*/null` remplacé par le JSON injecté).
+- **Preview navigateur, sans Streamlit** :
+  ```bash
+  uv run python scripts/render_preview.py
+  ```
+  génère `render/canvas_preview.html`, ouvrable directement dans un
+  navigateur (double-clic ou `file://...`).
+- **Preview Streamlit** (fichier autonome, volontairement absent de
+  `Lancer l'appli.bat` -- le propriétaire le lance manuellement) :
+  ```bash
+  uv run streamlit run apps/streamlit_preview.py --server.port 8600
+  ```
+  puis ouvrir `http://localhost:8600` dans un navigateur.

@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Rendu canvas -- vertical slice</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #0b0b0b; font-family: sans-serif; }
+  #wrap { display: flex; flex-direction: column; align-items: center; padding: 12px; }
+  canvas { background: #1e824c; display: block; max-width: 100%; height: auto; }
+  #controls { padding: 8px 0; }
+  button { font-size: 14px; padding: 6px 16px; margin: 0 4px; cursor: pointer; }
+  #label { color: #eee; font-size: 13px; padding-bottom: 4px; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="label"></div>
+  <canvas id="pitch" width="1200" height="780"></canvas>
+  <div id="controls">
+    <button id="toggle">Pause</button>
+    <button id="replay">Recommencer</button>
+  </div>
+</div>
+<script>
+// Brief "canvas vertical slice" (23/09/2026), Tache 3 -- fichier autonome,
+// pas de dependance (ni React, ni librairie JS externe).
+//
+// PLACEHOLDER D'INJECTION -- l'appelant (scripts/render_preview.py,
+// apps/streamlit_preview.py) remplace le texte EXACT
+// "/*__SEQUENCE_JSON__*/null" ci-dessous par le JSON produit par
+// animation.serialize.frame_sequence_to_json (voir
+// docs/canvas_json_schema.md pour le format). Un simple replace() textuel
+// suffit -- aucun templating.
+const SEQUENCE_DATA = /*__SEQUENCE_JSON__*/null;
+
+(function () {
+  if (!SEQUENCE_DATA) {
+    document.getElementById('label').textContent =
+      'Aucune sequence injectee -- ce fichier est un gabarit, voir scripts/render_preview.py';
+    return;
+  }
+
+  const canvas = document.getElementById('pitch');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const MARGIN = 20;
+
+  const frames = SEQUENCE_DATA.frames;
+  const duration = SEQUENCE_DATA.duration;
+  const teams = SEQUENCE_DATA.metadata.teams;
+
+  document.getElementById('label').textContent =
+    SEQUENCE_DATA.metadata.template + ' -- ' + teams.scorer.name + ' vs ' + teams.opponent.name +
+    ' (' + duration.toFixed(1) + 's, ' + frames.length + ' frames)';
+
+  // Meme convention que ligue1sim.pitch_geometry.to_canvas_px : origine
+  // bas-gauche du terrain normalise [0,1], axe Y ecran vers le BAS -> y
+  // inverse (y=0 terrain -> bas du canvas, y=1 terrain -> haut du canvas).
+  function toPx(x, y) {
+    return [x * W, (1 - y) * H];
+  }
+
+  function lerp(a, b, f) {
+    return a + (b - a) * f;
+  }
+
+  function drawPitch() {
+    ctx.fillStyle = '#1e824c';
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = '#ffffff';
+    ctx.fillStyle = '#ffffff';
+
+    // touches + lignes de but (bordure du terrain)
+    ctx.lineWidth = 2;
+    ctx.strokeRect(MARGIN, MARGIN, W - 2 * MARGIN, H - 2 * MARGIN);
+
+    // ligne mediane
+    ctx.beginPath();
+    ctx.moveTo(W / 2, MARGIN);
+    ctx.lineTo(W / 2, H - MARGIN);
+    ctx.stroke();
+
+    // rond central
+    ctx.beginPath();
+    ctx.arc(W / 2, H / 2, 70, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(W / 2, H / 2, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // surfaces de reparation (les deux cotes)
+    const boxW = W * 0.10, boxH = H * 0.42;
+    ctx.strokeRect(MARGIN, H / 2 - boxH / 2, boxW, boxH);
+    ctx.strokeRect(W - MARGIN - boxW, H / 2 - boxH / 2, boxW, boxH);
+
+    // surfaces de but (six metres)
+    const sixW = W * 0.045, sixH = H * 0.20;
+    ctx.strokeRect(MARGIN, H / 2 - sixH / 2, sixW, sixH);
+    ctx.strokeRect(W - MARGIN - sixW, H / 2 - sixH / 2, sixW, sixH);
+
+    // points de penalty
+    const spotDist = W * 0.085;
+    ctx.beginPath();
+    ctx.arc(MARGIN + spotDist, H / 2, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(W - MARGIN - spotDist, H / 2, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // buts (trait epais au centre de chaque ligne de but)
+    const goalW = H * 0.12;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(MARGIN, H / 2 - goalW / 2);
+    ctx.lineTo(MARGIN, H / 2 + goalW / 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(W - MARGIN, H / 2 - goalW / 2);
+    ctx.lineTo(W - MARGIN, H / 2 + goalW / 2);
+    ctx.stroke();
+  }
+
+  // Segment [frames[i], frames[i+1]] encadrant t, et fraction s dans ce
+  // segment -- meme principe que animation.ball._find_ball_segment, cote JS.
+  function findSegment(t) {
+    const last = frames.length - 1;
+    if (t <= frames[0].t) return [frames[0], frames[Math.min(1, last)], 0];
+    if (t >= frames[last].t) return [frames[Math.max(0, last - 1)], frames[last], 1];
+    for (let i = 0; i < last; i++) {
+      if (frames[i].t <= t && t <= frames[i + 1].t) {
+        const span = frames[i + 1].t - frames[i].t;
+        const frac = span > 0 ? (t - frames[i].t) / span : 0;
+        return [frames[i], frames[i + 1], frac];
+      }
+    }
+    return [frames[last], frames[last], 0];
+  }
+
+  function drawFrame(t) {
+    drawPitch();
+    const [fa, fb, frac] = findSegment(t);
+
+    const byIdB = {};
+    for (const p of fb.players) byIdB[p.id] = p;
+
+    for (const pa of fa.players) {
+      const pb = byIdB[pa.id] || pa;
+      const x = lerp(pa.x, pb.x, frac);
+      const y = lerp(pa.y, pb.y, frac);
+      const [px, py] = toPx(x, y);
+      const team = teams[pa.team];
+      const radius = pa.active ? 13 : 9;
+
+      ctx.beginPath();
+      ctx.arc(px, py, radius, 0, Math.PI * 2);
+      ctx.fillStyle = team.color_fill;
+      ctx.fill();
+      // joueur actif distingue visuellement : contour dore epais (meme
+      // convention que scripts/preview_motion.py) vs contour fin couleur
+      // secondaire d'equipe pour un figurant.
+      ctx.lineWidth = pa.active ? 3 : 1;
+      ctx.strokeStyle = pa.active ? '#ffd700' : team.color_outline;
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(String(pa.numero), px, py + radius + 11);
+    }
+
+    const ballX = lerp(fa.ball.x, fb.ball.x, frac);
+    const ballY = lerp(fa.ball.y, fb.ball.y, frac);
+    const ballZ = lerp(fa.ball.z, fb.ball.z, frac);
+    const [bx, by] = toPx(ballX, ballY);
+    // rayon proportionnel a z (ballon en l'air = plus gros a l'ecran) --
+    // approximation premier jet, pas une vraie perspective/projection 3D.
+    const ballRadius = 5 + Math.min(9, ballZ * 3);
+    ctx.beginPath();
+    ctx.arc(bx, by, ballRadius, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#000000';
+    ctx.stroke();
+  }
+
+  let playing = true;
+  let pausedAtS = 0;
+  let startPerfMs = null;
+
+  function currentT(nowMs) {
+    if (!playing) return pausedAtS;
+    if (startPerfMs === null) startPerfMs = nowMs - pausedAtS * 1000;
+    return ((nowMs - startPerfMs) / 1000) % duration; // boucle automatique a la fin
+  }
+
+  function tick(nowMs) {
+    const t = currentT(nowMs);
+    if (playing) pausedAtS = t;
+    drawFrame(t);
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  document.getElementById('toggle').addEventListener('click', () => {
+    playing = !playing;
+    document.getElementById('toggle').textContent = playing ? 'Pause' : 'Lecture';
+    if (playing) startPerfMs = null; // reprend depuis pausedAtS, pas de saut
+  });
+
+  document.getElementById('replay').addEventListener('click', () => {
+    pausedAtS = 0;
+    startPerfMs = null;
+    playing = true;
+    document.getElementById('toggle').textContent = 'Pause';
+  });
+})();
+</script>
+</body>
+</html>
