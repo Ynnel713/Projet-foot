@@ -25,8 +25,21 @@ Ce module dépend de `ligue1sim.events` (pour `GoalEvent`), `ligue1sim.lineup`
 conformément à l'invariant 1 (le moteur ne dépend jamais de l'habillage).
 """
 
+# DETTE -- 2026-09-23 -- `build_from_template` fige le ballon sur sa dernière
+# position connue quand `ball_owner=None` à un `t_ratio` sans que
+# `Template.ball_position` ne porte d'entrée pour ce même `t_ratio` (voir la
+# résolution de `ball_x`/`ball_y` dans `build_from_template`) -- impact :
+# `corner` (t_ratio=0.6, "ballon disputé" du centre) et `recuperation_haute`
+# (t_ratio=0.3, "ballon disputé" du pressing), les 2 seuls gabarits sur 12 à
+# poser `ball_owner=None` -- corrigés ici via `ball_position` (brief du
+# 23/09/2026, Tâche 2 "ball_owner=None debt"). Piste de correction pérenne :
+# faire porter `ball_position` par TOUT gabarit futur qui pose
+# `ball_owner=None`, sous peine du même repli (désormais visible, voir le
+# `logging.warning` dans `build_from_template`, mais pas éliminé).
+
 from __future__ import annotations
 
+import logging
 import random
 from dataclasses import dataclass
 from typing import Callable
@@ -36,6 +49,8 @@ from ligue1sim.events import GoalEvent
 from ligue1sim.lineup import Lineup
 from ligue1sim.pitch_geometry import PITCH_WIDTH_M, PitchPoint, center_of
 from ligue1sim.players import ATTACKER, DEFENDER, GOALKEEPER, MIDFIELDER, Player
+
+_logger = logging.getLogger(__name__)
 
 # --- Ancrages de fin d'un rôle -------------------------------------------
 # Un rôle progresse (voir RoleFrame.progress) de sa position de départ RÉELLE
@@ -155,6 +170,16 @@ class Template:
     ball_owner: tuple[tuple[float, str | None], ...]  # (t_ratio, nom du rôle porteur, ou None)
     context_score: Callable[[TemplateContext], float]
     ball_height: tuple[tuple[float, float], ...] = ()  # (t_ratio, z) -- 0.0 (au sol) si absent pour ce t_ratio
+    # (t_ratio, position normalisée (x, y)) -- position EXPLICITE du ballon à
+    # ce t_ratio quand `ball_owner` y vaut `None` (voir DETTE en tête de
+    # fichier). Absent de ce tuple pour un `t_ratio` donné où `ball_owner`
+    # vaut `None` -> `build_from_template` retombe sur la dernière position
+    # connue et émet un avertissement (dette non corrigée pour ce gabarit,
+    # jamais une erreur). Position FIXE, pas recalculée depuis
+    # `event.zone`/`assist_zone` : `Template` reste event-agnostic partout
+    # ailleurs (même esprit que `ball_height`), une intervention minimale ne
+    # justifie pas d'en faire la première exception.
+    ball_position: tuple[tuple[float, tuple[float, float]], ...] = ()
     # Coup franc/penalty : la séquence démarre une fois le tireur DÉJÀ en
     # position (près du ballon), pas à sa position de formation -- un rôle
     # peut donc légitimement porter le ballon dès t=0 avec un progress non
@@ -319,6 +344,7 @@ def build_from_template(
     tags_by_ratio = dict(template.tags)
     ball_owner_by_ratio = dict(template.ball_owner)
     ball_height_by_ratio = dict(template.ball_height)
+    ball_position_by_ratio = dict(template.ball_position)
     physics_tags_by_ratio = dict(template.physics_tags)
     timeline = sorted({frame.t_ratio for role in template.roles for frame in role.frames})
 
@@ -342,8 +368,15 @@ def build_from_template(
         if owner_role is not None and owner_role in role_ids:
             owner_id = role_ids[owner_role]
             ball_x, ball_y = players[owner_id]
+        elif t_ratio in ball_position_by_ratio:
+            ball_x, ball_y = ball_position_by_ratio[t_ratio]
         else:
             ball_x, ball_y = last_ball_xy.x, last_ball_xy.y
+            _logger.warning(
+                "%s@t_ratio=%s : ball_owner=None sans ball_position -- ballon figé sur sa dernière "
+                "position connue (dette du 23/09/2026, voir DETTE en tête de templates.py)",
+                template.name, t_ratio,
+            )
         last_ball_xy = PitchPoint(x=ball_x, y=ball_y)
 
         keyframes.append(
@@ -618,14 +651,22 @@ _TEMPLATE_CORNER = Template(
     tags=((0.0, "preparation"), (0.3, "montee"), (0.6, "centre"), (1.0, "tete")),
     ball_owner=((0.0, "assist"), (0.3, "assist"), (0.6, None), (1.0, "scorer")),
     ball_height=((0.0, 0.0), (0.3, 0.0), (0.6, 0.8), (1.0, 0.3)),
+    # Position fixe approximative (voir la docstring du champ sur Template) :
+    # zone de réception typique d'un corner (six mètres, entre le point de
+    # centre et le but) -- sans elle, le segment "cross" 0.3->0.6 partirait
+    # d'un ballon figé sur sa dernière position connue (dette ball_owner=None,
+    # voir DETTE en tête de fichier) : un centre immobile en plein vol.
+    ball_position=((0.6, (0.93, 0.5)),),
     context_score=_score_corner,
-    # dernier segment (0.6 -> 1.0) : shot, même explicitement pour une tête
-    # (voir Modification B du brief "tag-driven trajectory with fallback
-    # inference", 23/09/2026 -- confirmé par l'exemple du brief lui-même).
-    # Le segment 0.3 -> 0.6 (la trajectoire du corner tiré lui-même,
-    # narrative tag "centre" à 0.6, porteur=None à 0.6) N'EST PAS taggé ici
-    # -- ambiguïté cross/deflect non résolue avec Olivier, voir la réponse.
-    physics_tags=((0.6, "shot"),),
+    # Table des tags de corner (brief "corner tags decision", 23/09/2026) --
+    # tranche le conflit cross/deflect signalé sur la keyframe "ballon
+    # disputé" (t=0.6) : ce n'est pas UN segment ambigu, ce sont DEUX
+    # segments distincts de part et d'autre de cette keyframe, chacun avec
+    # son propre tag.
+    # segment [0.0 -> 0.3] : pass_ground -- assist porte le ballon au sol en marchant vers le point de corner
+    # segment [0.3 -> 0.6] : cross -- le centre lui-même, ballon en vol vers la zone disputée (keyframe "centre")
+    # segment [0.6 -> 1.0] : deflect -- ballon disputé au contact (owner=None à 0.6, keyframe "ballon disputé") avant la tête du buteur
+    physics_tags=((0.0, "pass_ground"), (0.3, "cross"), (0.6, "deflect")),
 )
 
 _TEMPLATE_PROFONDEUR_1V1 = Template(
@@ -671,6 +712,13 @@ _TEMPLATE_RECUPERATION_HAUTE = Template(
     ),
     tags=((0.0, "pressing"), (0.3, "pressing"), (0.55, "recuperation"), (1.0, "tir")),
     ball_owner=((0.0, "support1"), (0.3, None), (0.55, "support1"), (1.0, "scorer")),
+    # Position fixe approximative (voir la docstring du champ sur Template,
+    # même dette ball_owner=None que corner ci-dessus) -- zone de pressing/
+    # ballon disputé, dans la moitié offensive. Repérée en écrivant
+    # test_no_immobile_segment_in_flight_actions (Tâche 2) : sans elle, le
+    # segment [0.0 -> 0.3] (inféré pass_ground, porteur=support1 à t=0) part
+    # et arrive au même point figé -- ballon immobile en plein pressing.
+    ball_position=((0.3, (0.6, 0.5)),),
     context_score=_score_recuperation_haute,
     # t=0.3 : porteur=None (ballon disputé pendant le pressing) -> deflect.
     # 0.55 (dernier segment avant 1.0) : shot, le tir de conclusion.

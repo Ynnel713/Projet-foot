@@ -3,6 +3,15 @@ from collections import Counter
 
 import pytest
 
+from ligue1sim.animation.ball import (
+    CROSS,
+    DEFLECT,
+    PASS_GROUND,
+    PASS_LOB,
+    SHOT,
+    _real_distance_m,
+    _resolve_physics_tag,
+)
 from ligue1sim.animation.templates import (
     ANCHOR_STATIC,
     BUILDERS,
@@ -560,20 +569,27 @@ class TestTemplateStructureUnchangedByPhysicsTags:
     fixture standard de ce fichier (`_lineup`/`_goal_event`/
     `_start_positions`). Si ce test échoue, quelque chose d'AUTRE que les
     `physics_tag` a changé dans un gabarit -- à traiter comme une
-    régression, pas comme un test à mettre à jour à la légère."""
+    régression, pas comme un test à mettre à jour à la légère.
+
+    Exception délibérée (brief "ball_owner=None debt", 23/09/2026, Tâche 2) :
+    `corner` et `recuperation_haute` ont une empreinte mise à jour -- leur
+    ballon change RÉELLEMENT de position (x/y) sur la keyframe "disputée"
+    (`Template.ball_position`), ce n'est plus le repli figé sur la dernière
+    position connue. Recalculée et vérifiée manuellement à cette occasion,
+    pas une régression."""
 
     _EXPECTED_STRUCTURE_HASH = {
         "but_gag": "f41d49b564e507476892e0c8dc83e1a4a980e461357b4e9f6d158126c86184d1",
         "construction_placee": "bd570f855aa35b4cf9d2c714e22ffc76a379b8b2a8f0c7e3e713603aee4bff37",
         "contre_attaque": "718658a38fd6623511674dfbe38e588fb184d3d33f59a49ad50c58c60874b50b",
-        "corner": "375f852fcdf4471ad91b495350f7a1b9076c02ab05eea79aa289a4fc2bcde3bb",
+        "corner": "cfc642378285192fb8f4e59ce0a6ec25679b837b273293de8e82e3f1641e7293",
         "coup_franc": "65652dc16b67dc362221250ace6198a26a169ab60203e1fc2b74af280db8d566",
         "debordement_centre_tete": "06543fdddb12bdc4959eb29b0ca83b146bc5f8e312e233f196c9df1225658819",
         "decalage_enroulee": "7baa9bcc8f4e6f703650a8aef2ca0250701b3305f3948481d924b4ce10e8b403",
         "penalty": "7f2c7ebf289a42122153109b2e9d4faff267170513620ea9bf83c940d42b0f91",
         "percee_individuelle": "4fd4c5ef14c5b020821ecf2638a54c0e58c5a8a35e11001e66b458b4cd1633ca",
         "profondeur_1v1": "dd55a79b69a71bf4436c06f08f195a4be89b66ff555ef3117b148b85b88443a7",
-        "recuperation_haute": "af598dd2a84ad31fff862bc5371ce8c2fd96185ec88e93dd10cb7fa5a06ec551",
+        "recuperation_haute": "4232271529fc19842275569741dfd639830cd03682cbe914ef31464edb40e810",
         "une_deux": "1d6d30fc696daa9e9e8324b204231f8612a2b20d575e7bbd8eee148c94cca5d5",
     }
 
@@ -595,3 +611,33 @@ class TestTemplateStructureUnchangedByPhysicsTags:
             f"{name} : structure changée au-delà de physics_tag (positions/tags narratifs/"
             "ball_owner/ball_height/nombre de keyframes) -- vérifier le diff"
         )
+
+
+class TestNoImmobileSegmentInFlightActions:
+    """Brief "ball_owner=None debt" (23/09/2026), Tâche 2.4 : un segment dont
+    le comportement RÉSOLU (`physics_tag` explicite ou inféré, voir
+    `animation.ball._resolve_physics_tag`) est `cross`/`shot`/`pass_ground`/
+    `pass_lob`/`deflect` doit RÉELLEMENT déplacer le ballon de plus d'1cm --
+    sinon c'est le bug "ballon immobile en plein vol" causé par le repli
+    silencieux de `build_from_template` sur la dernière position connue
+    quand `ball_owner=None` (voir DETTE en tête de `templates.py`). Aucune
+    liste d'exclusion : si un gabarit échoue, on le corrige (`ball_position`),
+    on ne l'exclut pas."""
+
+    _IN_FLIGHT_TAGS = {CROSS, SHOT, PASS_GROUND, PASS_LOB, DEFLECT}
+    _MIN_DISPLACEMENT_M = 0.01  # 1 cm
+
+    @pytest.mark.parametrize("name", sorted(BUILDERS))
+    def test_no_immobile_segment_in_flight_actions(self, name):
+        lineup = _lineup()
+        sequence = BUILDERS[name](_goal_event(), lineup, _start_positions(lineup))
+        for kf_a, kf_b in zip(sequence.keyframes, sequence.keyframes[1:]):
+            is_last_segment = kf_b.t == sequence.keyframes[-1].t
+            tag = _resolve_physics_tag(sequence, kf_a, is_last_segment=is_last_segment)
+            if tag not in self._IN_FLIGHT_TAGS:
+                continue
+            distance_m = _real_distance_m((kf_a.ball.x, kf_a.ball.y), (kf_b.ball.x, kf_b.ball.y))
+            assert distance_m > self._MIN_DISPLACEMENT_M, (
+                f"{name} segment [t={kf_a.t}->t={kf_b.t}] tagué {tag} mais le ballon ne bouge que de "
+                f"{distance_m * 100:.3f}cm -- ballon immobile en plein vol (dette ball_owner=None ?)"
+            )

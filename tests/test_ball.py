@@ -245,6 +245,29 @@ class TestDeflectBehavior:
         assert _real_distance_m((a.x, a.y), (b.x, b.y)) < base_step_m * 5  # quelques fois le pas de base, pas un bond
 
 
+class TestDeflectVelocityRatioBounded:
+    """Brief "ball_owner=None debt" (23/09/2026), Tâche 3 : chiffre exact
+    derrière la tolérance élargie de `TestContinuityAndArrivalPerBehavior`
+    (0.25 au lieu de 0.07 pour le SAUT de vitesse entre deux frames
+    consécutives) -- ici le ratio vitesse_instantanée/vitesse_base est borné
+    sur l'ENSEMBLE du segment, pas seulement entre deux frames. Si ce ratio
+    dépasse 5.0, le test doit échouer -- pas de réélargissement silencieux
+    de la tolérance."""
+
+    _MAX_RATIO = 5.0
+
+    def test_deflect_velocity_ratio_bounded(self):
+        sequence = _sequence(physics_tag=DEFLECT, start=(0.1, 0.5), end=(0.9, 0.5), duration=2.0)
+        base_speed_m_s = _real_distance_m((0.1, 0.5), (0.9, 0.5)) / sequence.duration
+        t = 0.0
+        max_ratio = 0.0
+        while t <= sequence.duration:
+            ratio = _speed(ball_state_at(sequence, t)) / base_speed_m_s
+            max_ratio = max(max_ratio, ratio)
+            t += _DT
+        assert max_ratio < self._MAX_RATIO, f"ratio vitesse_instantanée/vitesse_base = {max_ratio:.3f} (max autorisé {self._MAX_RATIO})"
+
+
 class TestEdgeCases:
     def test_stationary_ball_has_frozen_position_and_zero_velocity(self):
         sequence = _sequence(start=(0.5, 0.5), end=(0.5, 0.5), duration=2.0)

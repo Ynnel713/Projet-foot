@@ -18,13 +18,15 @@ s'il est renseigné, sinon INFÉRÉ (voir `_resolve_physics_tag`) :
       conclusion) -> `"shot"`.
     - sinon -> `"pass_ground"`.
 Cinq comportements disponibles : `pass_ground`, `pass_lob`, `shot`, `cross`,
-`deflect` -- voir chaque fonction `_behavior_*` pour le détail. Seuls
-`pass_ground`, `shot` (sur tous les gabarits) et `deflect` (sur
-`recuperation_haute`) sont aujourd'hui déclenchés par les 12 gabarits réels
-(voir leurs `physics_tags` dans `templates.py`) ; `pass_lob` et `cross`
-existent et sont testés unitairement mais ne sont pour l'instant déclenchés
-par aucun gabarit (`cross` sera branché sur `corner` une fois l'ambiguïté
-cross/deflect de son segment 0.3->0.6 tranchée avec Olivier).
+`deflect` -- voir chaque fonction `_behavior_*` pour le détail. `pass_ground`,
+`shot` (sur tous les gabarits), `deflect` (sur `recuperation_haute` et
+`corner`) et `cross` (sur `corner`) sont aujourd'hui déclenchés par les 12
+gabarits réels (voir leurs `physics_tags` dans `templates.py`) -- l'ambiguïté
+cross/deflect du segment 0.3->0.6 de `corner` a été tranchée avec Olivier
+(brief "corner tags decision", 23/09/2026) : `cross` pour le centre en vol
+(0.3->0.6), `deflect` pour le ballon disputé au contact (0.6->1.0). Seul
+`pass_lob` existe et est testé unitairement sans être pour l'instant
+déclenché par aucun gabarit.
 
 **`ball_height`/`Keyframe.ball.z` (l'ancien champ, rempli par
 `templates.py`) est IGNORÉ ici** (arbitrage du 23/09/2026) : ses valeurs
