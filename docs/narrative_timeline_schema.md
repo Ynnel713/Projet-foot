@@ -15,6 +15,7 @@ référence structurelle, pas un mode d'emploi de l'API Python).
 | `home_goals` / `away_goals` | int | `MatchResult.home_goals` / `.away_goals` -- **invariant absolu, jamais recalculé** |
 | `home_rating` / `away_rating` | float | `MatchResult.home_lineup.rating` / `.away_lineup.rating` |
 | `competition_type` | str \| None | `MatchResult.competition_type` (voir "Non inclus" -- jamais calculé par le moteur de résultats, fourni par l'appelant ou `None`) |
+| `home_lineup` / `away_lineup` | `Lineup` | **Ajouté le 23/09/2026 (brief "canvas player", Tâche 3, décision explicite d'Olivier)** -- référence directe (pas une copie) vers `MatchResult.home_lineup`/`.away_lineup`, le **onze de départ uniquement** (pas `home_squad`/`away_squad`, qui portent aussi les entrants) -- voir "Mapping vers canvas" et `engine/narrative_player.py` pour la limite que ça implique sur un `main_player` remplaçant |
 | `events` | list[NarrativeEvent] | voir ci-dessous, triée strictement par `minute` croissante |
 
 ## Par événement (`NarrativeEvent`)
@@ -31,6 +32,7 @@ référence structurelle, pas un mode d'emploi de l'API Python).
 | `outcome` | str | `"but"` si `event_type="but"` ; sinon tiré parmi `arret`/`hors_cadre`/`tacle`/`degagement`/`poteau` (pondéré, voir `engine/narrative.py`) |
 | `start_position` | tuple[float, float] \| None | but : `center_of(GoalEvent.zone)` si zone connue, sinon `None` ; occasion : **toujours `None`** (pas de zone réelle, non inventée -- voir "Non inclus") |
 | `starts_at_restart` | bool | `Template.starts_at_restart` du gabarit tiré (réutilise la convention existante de `animation.templates.Template`) |
+| `zone` | tuple[float, float] | **Ajouté le 23/09/2026 (brief "canvas player", Tâche 3, décision explicite d'Olivier)** -- TOUJOURS peuplée (jamais `None`, contrairement à `start_position` ci-dessus), pour tout événement (but ET occasion, MÊME convention pour les deux, y compris un but réel -- pas forcément identique à `start_position`/`GoalEvent.zone` pour ce but). Dérivée du gabarit (`engine.narrative._GABARIT_BASE_ZONE`) + un léger décalage déterministe seedé par la position finale de l'événement dans `Timeline.events` (`_narrative_event_zone`) -- représente la zone où l'action DÉCISIVE du gabarit converge (`ANCHOR_SCORER` côté `build_from_template`), pas littéralement "où le mouvement démarre" malgré le nom du champ |
 
 ## Invariants structurels
 
@@ -66,44 +68,54 @@ consécutifs du même buteur, ~0.2% avec deux penalties consécutifs).
 - **Commentaire textuel** -- aucune génération de texte, ce module ne produit que la structure.
 - **Vitesse de lecture** -- aucun paramètre de rythme de restitution.
 - **Caméra** -- aucun paramètre de cadrage/caméra.
-- **Branchement canvas** -- `build_timeline` ne construit aucune `Sequence`/`FrameState` (voir "Mapping vers canvas" pour ce qui EST déjà compatible).
+- **Branchement canvas** -- `build_timeline` lui-même ne construit toujours aucune `Sequence`/`FrameState` (ce n'est pas son rôle) ; c'est désormais fait par `engine/narrative_player.build_clips` (brief "canvas player", 23/09/2026, Tâche 3), voir "Mapping vers canvas" mis à jour ci-dessous.
 - **Variation paramétrique des gabarits** -- `declinaison` existe comme champ mais vaut toujours `"default"` (brief séparé, voir section dédiée).
 - **Date de match réelle** -- absente du moteur de résultats (voir `engine/narrative.py`, DETTE en tête de fichier) ; `date`/`competition_type` sont optionnels, fournis par l'appelant ou `None`.
-- **Position de départ des occasions inventées** -- `start_position=None` systématiquement (pas de zone réelle à cette étape, voir tableau ci-dessus).
+- **Position de départ des occasions inventées** -- `start_position=None` systématiquement (pas de zone réelle à cette étape, voir tableau ci-dessus) -- **mais** voir le nouveau champ `zone` (toujours peuplé, Tâche 3) qui comble ce manque pour le rendu canvas spécifiquement.
 - **Résolution complète des rôles d'un gabarit** -- `involved_players` ne résout PAS chaque rôle (`support1`, `support2`...) vers un joueur précis comme le ferait `animation.templates.build_from_template` ; seul un second joueur générique est tiré si le gabarit a plus d'un rôle (voir "Mapping vers canvas").
 - **La distinction visuelle de deux buts à la même minute** (temps additionnel affiché) est un problème de rendu canvas, à traiter dans un brief futur.
 
 ## Mapping vers canvas
 
-Un `NarrativeEvent` porte tout ce dont `animation.templates.build_from_template`
-a besoin pour produire une `Sequence` (voir `docs/canvas_json_schema.md`) --
-**sauf** la résolution complète des rôles secondaires, différée à un brief
-futur ("branchement du narratif au canvas") :
+**Mis à jour le 23/09/2026 (brief "canvas player", Tâche 3)** -- implémenté
+dans `engine/narrative_player.build_clips`, voir ce module pour le détail
+exact. Un `NarrativeEvent` + `Timeline.home_lineup`/`.away_lineup` porte
+désormais tout ce dont `animation.templates.build_from_template` a besoin
+pour produire une `Sequence` :
 
-1. `gabarit` → `animation.templates.BUILDERS[gabarit]`, le constructeur exact.
+1. `gabarit` → `animation.templates.BUILDERS[gabarit]`, le constructeur exact (gabarit déjà décidé, `pick_template` n'est PAS rappelé).
 2. `main_player`/`involved_players` → rôles `"scorer"`/`"assist"` de
-   `build_from_template` (résolus depuis `GoalEvent.scorer`/`.assist` pour un
-   but réel) ; les rôles génériques restants (`support1`, `support2`...) sont
-   aujourd'hui comblés par `_resolve_roles` (déjà le comportement de
-   `build_from_template`, pas de champ manquant côté `NarrativeEvent` -- ce
-   module ne fait que fournir le `GoalEvent`/l'événement équivalent, pas les
-   noms précis des rôles génériques, exactement comme `sequence_generator.generate_sequence`
-   le fait déjà aujourd'hui pour un vrai but).
-3. `team` → détermine quelle `Lineup` (`home_lineup`/`away_lineup` de
-   `MatchResult`) sert de `lineup` à `build_from_template`.
-4. `start_position` (`but` uniquement) → déjà un `event.zone`-compatible
-   (`center_of` appliqué), correspond à `GoalEvent.zone`.
-5. `starts_at_restart` → déjà lu depuis `Template.starts_at_restart`, aucune
-   conversion nécessaire.
+   `build_from_template` (`involved_players[1]` résolu vers `"assist"`
+   UNIQUEMENT si ce gabarit a un rôle "assist", voir `_assist_name`) ; les
+   rôles génériques restants (`support1`, `support2`...) sont comblés par
+   `_resolve_roles` (comportement inchangé de `build_from_template`).
+3. `team` → sélectionne `Timeline.home_lineup` ou `.away_lineup` comme
+   `lineup`, et l'AUTRE comme adversaire pour `enrich_with_background`.
+4. `zone` (nouveau champ, toujours peuplé) → `pitch_geometry.zone_of(*zone)`
+   sert de `GoalEvent.zone` ; `assist_zone` reste `None` (repli déjà géré par
+   `build_from_template`, `ANCHOR_ASSIST` retombe alors sur `event.zone`).
+5. `starts_at_restart` → non consommé directement par `narrative_player`
+   (`Template.starts_at_restart` déjà lu depuis `TEMPLATES[gabarit]`).
 6. `outcome`/`event_type` → n'affectent PAS la construction de la `Sequence`
-   elle-même (`build_from_template` ne distingue pas but/occasion aujourd'hui) ;
-   utiles pour la narration textuelle (hors scope) et pour décider, à terme,
-   si le tir doit "rentrer" ou non dans un gabarit qui le permet.
+   elle-même ; réexposés tels quels sur `Clip.issue`/le score progressif.
 
-**Champ manquant pour un branchement complet** : pour une `occasion` (pas un
-but réel), `build_from_template` a besoin d'un `GoalEvent`-compatible complet
-(avec `zone`/`assist_zone` réels) pour positionner les joueurs -- ce module
-ne les fournit pas (`start_position=None` pour les occasions, voir "Non
+**Limite restante, non corrigée (voir `engine/narrative_player.py`)** : un
+`main_player`/assist qui serait un remplaçant (absent de `home_lineup`/
+`away_lineup`, qui ne portent que le onze de départ) n'est pas résolu --
+`build_clips` OMET alors ce clip plutôt que de planter ou d'inventer sa
+position (mesuré à ~36% des occasions sur un échantillon de matchs simulés,
+la sélection du protagoniste d'une occasion ne tient pas compte de sa
+fenêtre de jeu réelle, limite pré-existante de `_pick_main_player`, hors
+périmètre ici). Un `assist_zone` distinct de `zone` (nécessaire pour qu'un
+tireur de corner, par exemple, reste visuellement près du poteau de corner
+plutôt que de converger avec le buteur) est également hors périmètre de
+cette itération -- ancien texte pour mémoire ci-dessous :
+
+**Champ manquant pour un branchement complet** (texte original, avant la
+Tâche 3) : pour une `occasion` (pas un but réel), `build_from_template` a
+besoin d'un `GoalEvent`-compatible complet (avec `zone`/`assist_zone` réels)
+pour positionner les joueurs -- ce module ne les fournit pas (`start_position=None`
+pour les occasions, voir "Non
 inclus"). Le brief "branchement canvas" devra soit inventer une zone
 plausible selon le `gabarit`, soit étendre `NarrativeEvent`.
 

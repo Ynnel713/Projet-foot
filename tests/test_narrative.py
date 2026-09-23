@@ -10,6 +10,9 @@ plus AUCUN match (`MinuteCollisionError`/`AntiRepetitionUnsatisfiableError`
 retirées) -- les tests "1000 matchs" simulent donc directement 1000 matchs
 réels et appellent `build_timeline` sur chacun sans gestion d'exception."""
 
+import random
+
+import numpy as np
 import pytest
 
 from ligue1sim.clubs import Club
@@ -29,6 +32,16 @@ from narrative import (
 )
 
 _N_MATCHES = 1000
+# Seed globale (random + numpy, voir scripts/narrative_audit.py pour le meme
+# principe) utilisee UNIQUEMENT par TestMissedPenaltyCalibration -- meme
+# seed et memes equipes (note=70.0 vs 70.0, voir _clubs) que la mesure de G
+# documentee dans engine/narrative.py (_MEASURED_PENALTY_GOALS_PER_MATCH) :
+# un ratio calibre sur une constante mesuree une fois doit etre verifie de
+# facon REPRODUCTIBLE (pas re-mesure a chaque run pytest sur un etat aleatoire
+# global non seede, qui ferait varier "made" et donc le ratio d'un run a
+# l'autre) -- les autres classes de tests de ce fichier restent volontairement
+# non seedees (proprietes structurelles, pas une valeur numerique precise).
+_CALIBRATION_SEED = 2026_09_23
 
 
 def _player(poste: str, note: float, name: str) -> Player:
@@ -109,6 +122,17 @@ class TestDeterminism:
 
 @pytest.fixture(scope="module")
 def timelines_1000():
+    results = _simulate_n(_N_MATCHES)
+    return [(m, build_timeline(m)) for m in results]
+
+
+@pytest.fixture(scope="module")
+def timelines_1000_calibration_seeded():
+    """Utilisée UNIQUEMENT par TestMissedPenaltyCalibration -- voir
+    _CALIBRATION_SEED pour pourquoi ce fixture-ci est seedé alors que
+    `timelines_1000` (ci-dessus) ne l'est pas."""
+    random.seed(_CALIBRATION_SEED)
+    np.random.seed(_CALIBRATION_SEED)
     results = _simulate_n(_N_MATCHES)
     return [(m, build_timeline(m)) for m in results]
 
@@ -281,3 +305,46 @@ class TestConstraintPriority:
             build_timeline(match)  # toute exception ici fait echouer le test
             n_built += 1
         assert n_built == _N_MATCHES
+
+
+class TestMissedPenaltyCalibration:
+    """Brief "canvas player" (23/09/2026), Tâche 2 -- calibration du volume
+    de penaltys ratés (`engine.narrative._MISSED_PENALTY_POISSON_MEAN`,
+    dérivé de G mesuré et T=0.76, voir le commentaire en tête de
+    `engine/narrative.py`). Le gabarit "penalty" n'est JAMAIS choisi par un
+    `filler` (`_score_penalty` vaut 0 hors `context.penalty=True`) -- tout
+    événement `gabarit == "penalty"` de la timeline est donc soit un but réel
+    sur penalty, soit un penalty raté généré ici, jamais autre chose."""
+
+    def test_penalty_missed_ratio_calibrated(self, timelines_1000_calibration_seeded):
+        made = missed = 0
+        for _match, timeline in timelines_1000_calibration_seeded:
+            for e in timeline.events:
+                if e.gabarit != "penalty":
+                    continue
+                if e.event_type == BUT:
+                    made += 1
+                else:
+                    missed += 1
+        assert made + missed > 0
+        ratio = made / (made + missed)
+        assert 0.74 <= ratio <= 0.78, f"ratio={ratio:.4f} (marques={made}, rates={missed}) hors de [0.74, 0.78]"
+
+    def test_penalty_missed_does_not_affect_score(self, timelines_1000_calibration_seeded):
+        score_violations = []
+        outcome_violations = []
+        for match, timeline in timelines_1000_calibration_seeded:
+            recomputed_home = sum(1 for e in timeline.events if e.event_type == BUT and e.team == match.home_team)
+            recomputed_away = sum(1 for e in timeline.events if e.event_type == BUT and e.team == match.away_team)
+            if (recomputed_home, recomputed_away) != (match.home_goals, match.away_goals):
+                score_violations.append(timeline.match_id)
+
+            missed_penalties_tagged_but = [
+                e for e in timeline.events
+                if e.gabarit == "penalty" and e.event_type == OCCASION and e.outcome == "but"
+            ]
+            if missed_penalties_tagged_but:
+                outcome_violations.append((timeline.match_id, missed_penalties_tagged_but))
+
+        assert not score_violations, f"{len(score_violations)} matchs avec un score recalcule different -- exemples: {score_violations[:3]}"
+        assert not outcome_violations, f"{len(outcome_violations)} penaltys rates tagues 'but' -- exemples: {outcome_violations[:3]}"

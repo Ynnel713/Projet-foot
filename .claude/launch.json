@@ -6,6 +6,18 @@
       "runtimeExecutable": ".venv/Scripts/streamlit.exe",
       "runtimeArgs": ["run", "app.py", "--server.headless", "true"],
       "port": 8501
+    },
+    {
+      "name": "canvas-static",
+      "runtimeExecutable": ".venv/Scripts/python.exe",
+      "runtimeArgs": ["-m", "http.server", "8610", "--directory", "render"],
+      "port": 8610
+    },
+    {
+      "name": "streamlit-canvas-preview",
+      "runtimeExecutable": ".venv/Scripts/streamlit.exe",
+      "runtimeArgs": ["run", "apps/streamlit_preview.py", "--server.headless", "true", "--server.port", "8600"],
+      "port": 8600
     }
   ]
 }

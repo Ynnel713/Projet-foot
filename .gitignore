@@ -17,6 +17,8 @@ data/*.backup*.xlsx
 # Images générées par scripts/preview_templates.py (audit visuel, pas du code)
 scripts/output/
 
-# HTML généré par scripts/render_preview.py (canvas.html + JSON injecté,
-# artefact de build, pas du code -- render/canvas.html lui-même reste suivi)
+# HTML généré par scripts/render_preview.py / scripts/render_player_preview.py
+# (canvas.html + JSON injecté, artefact de build, pas du code --
+# render/canvas.html lui-même reste suivi)
 render/canvas_preview.html
+render/canvas_player_preview.html

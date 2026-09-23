@@ -38,15 +38,15 @@ une vraie date/un vrai identifiant si la collision devient un problème réel).
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 import numpy as np
 from random import Random
 
 from ligue1sim.animation.templates import TEMPLATES, TemplateContext, pick_template
-from ligue1sim.events import GoalEvent, MatchEvents, PlayerMatchStat
+from ligue1sim.events import PENALTY_SPOT_ZONE, GoalEvent, MatchEvents, PlayerMatchStat
 from ligue1sim.lineup import Lineup
-from ligue1sim.pitch_geometry import PitchPoint, Zone, center_of
+from ligue1sim.pitch_geometry import GRID_COLUMNS, GRID_ROWS, PitchPoint, Zone, center_of
 from ligue1sim.players import GOALKEEPER, position_group
 from ligue1sim.schedule import Match
 
@@ -61,6 +61,38 @@ _OUTCOME_BUT = "but"
 # voir "calibrage sur données réelles" dans les briefs futurs de la série).
 _NON_GOAL_OUTCOMES = ("arret", "hors_cadre", "tacle", "degagement", "poteau")
 _NON_GOAL_OUTCOME_WEIGHTS = (0.40, 0.25, 0.15, 0.10, 0.10)
+
+# Penaltys ratés (brief "canvas player", 23/09/2026, Tâche 2) -- issues
+# propres au tir au but, distinctes de `_NON_GOAL_OUTCOMES` (un "tacle" ou un
+# "degagement" n'a pas de sens sur un penalty, personne d'autre que le
+# tireur et le gardien n'intervient). Ordres de grandeur donnés par le brief
+# (~60% arrêt, ~15% poteau/barre combiné, ~25% hors cadre) -- poteau et barre
+# ne sont pas distingués dans la donnée fournie, répartis à parts égales
+# faute de source plus précise (même esprit que _NON_GOAL_OUTCOME_WEIGHTS :
+# ajustable, documenté, pas une vérité absolue).
+_MISSED_PENALTY_OUTCOMES = ("arret", "poteau", "hors_cadre", "barre")
+_MISSED_PENALTY_OUTCOME_WEIGHTS = (0.60, 0.075, 0.25, 0.075)
+
+# Calibration du volume de penaltys ratés (Tâche 2.1/2.2) -- G mesuré sur
+# 1000 matchs simulés (seed 2026_09_23, pipeline identique à
+# tests/test_narrative.py::_simulate_n, équipes note=70 vs note=70) : 247
+# buts sur gabarit "penalty" (`NarrativeEvent.gabarit == "penalty"` ET
+# `event_type == BUT`) sur 2736 buts totaux -- G = 247/1000 = 0.247 penaltys
+# marqués/match. Mesure ponctuelle (script non conservé, comme les autres
+# constantes calibrées de ce module) figée ici en constante, valeur
+# rapportée telle quelle dans le retour de tâche.
+_MEASURED_PENALTY_GOALS_PER_MATCH = 0.247  # G
+_TARGET_MISSED_PENALTY_RATIO = 0.76  # T -- cible fournie par le brief (moyenne europeenne)
+# Formule (Tâche 2.2) : le ratio global visé est
+#   T = marqués / (marqués + ratés)
+# <=> marqués = T * (marqués + ratés)
+# <=> marqués * (1 - T) = T * ratés
+# <=> ratés = marqués * (1 - T) / T
+# Avec marqués ~ G (moyenne mesurée), R = G * (1 - T) / T est la moyenne de
+# ratés à générer par match pour que le ratio global observé converge vers T.
+_MISSED_PENALTY_POISSON_MEAN = (  # R
+    _MEASURED_PENALTY_GOALS_PER_MATCH * (1 - _TARGET_MISSED_PENALTY_RATIO) / _TARGET_MISSED_PENALTY_RATIO
+)
 
 # Poisson tronquée (Tâche 4.1) -- cible ~15 occasions (buts + intercalées).
 # Bornes [10, 22] : en dessous de 10, un résumé devient trop pauvre pour
@@ -175,6 +207,18 @@ class NarrativeEvent:
     outcome: str
     start_position: tuple[float, float] | None
     starts_at_restart: bool
+    # Extension du 23/09/2026 (brief "canvas player", Tâche 3, décision
+    # explicite d'Olivier -- hors du périmètre initial du brief, autorisée
+    # pour débloquer engine/narrative_player.py) : zone normalisée (x, y),
+    # dérivée du gabarit + d'un léger décalage déterministe seedé par la
+    # position finale de l'événement dans Timeline.events (voir
+    # _narrative_event_zone/build_timeline) -- TOUJOURS peuplée (jamais None,
+    # contrairement à start_position), pour TOUT événement (but ET occasion,
+    # y compris les buts réels : même convention partout, voir
+    # _narrative_event_zone). Placeholder à la construction (0.0, 0.0),
+    # écrasée par build_timeline une fois l'index final connu -- ne jamais
+    # lire cette valeur avant le retour de build_timeline.
+    zone: tuple[float, float] = (0.0, 0.0)
 
 
 @dataclass(frozen=True)
@@ -188,6 +232,16 @@ class Timeline:
     home_rating: float
     away_rating: float
     competition_type: str | None
+    # Extension du 23/09/2026 (brief "canvas player", Tâche 3, décision
+    # explicite d'Olivier) : RÉFÉRENCE directe vers les Lineup du MatchResult
+    # d'entrée (onze de DÉPART uniquement -- pas home_squad/away_squad, voir
+    # engine/narrative_player.py pour la limite que ça implique sur un
+    # remplaçant protagoniste), jamais une copie -- nécessaire pour que
+    # narrative_player.build_clips puisse construire une Sequence réelle
+    # sans revenir au MatchResult d'origine (Timeline doit rester
+    # auto-suffisante pour le rendu, voir docstring de module).
+    home_lineup: Lineup
+    away_lineup: Lineup
     events: list[NarrativeEvent]
 
 
@@ -218,6 +272,83 @@ def _truncated_poisson_count(seed: int) -> int:
         f"Poisson(λ={_POISSON_TARGET}) n'a produit aucune valeur dans [{_POISSON_MIN},{_POISSON_MAX}] "
         f"en {_POISSON_RESAMPLE_ATTEMPTS} tirages -- bornes probablement trop étroites, à revoir."
     )
+
+
+# --- Zone dérivée du gabarit (Tâche 3, décision explicite d'Olivier du
+# 23/09/2026) -----------------------------------------------------------
+#
+# `NarrativeEvent.zone` alimente `GoalEvent.zone`-équivalent côté
+# `narrative_player.build_clips` -> `templates.build_from_template`
+# (ANCHOR_SCORER) : c'est la zone où l'action DÉCISIVE (tir/tête) converge,
+# pas littéralement "où le mouvement démarre" malgré le nom du champ -- même
+# convention que `GoalEvent.zone` déjà existant côté moteur (`events._shot_zone`),
+# et même lecture déjà faite de `NarrativeEvent.start_position` ("but:
+# center_of(GoalEvent.zone)", voir docs/narrative_timeline_schema.md). Une
+# zone de base par gabarit choisie pour rester géométriquement plausible UNE
+# FOIS CONSOMMÉE par ANCHOR_SCORER (toujours dans le tiers offensif, jamais
+# dans son propre camp -- un `contre_attaque` littéralement ancré en zone
+# défensive ferait converger le tir du buteur dans SA PROPRE moitié de
+# terrain, faux) tout en reflétant la nature de l'action via sa position
+# exacte dans ce tiers (une tête de corner/débordement plutôt excentrée près
+# du petit rectangle, un une-deux/un but_gag à bout portant, un penalty
+# exactement au point réglementaire -- déjà la vraie zone d'un penalty côté
+# moteur, `events.PENALTY_SPOT_ZONE`, aucune divergence).
+_GABARIT_BASE_ZONE: dict[str, Zone] = {
+    "contre_attaque": Zone(col=9, row=4),
+    "construction_placee": Zone(col=9, row=4),
+    "debordement_centre_tete": Zone(col=10, row=2),
+    "percee_individuelle": Zone(col=9, row=4),
+    "une_deux": Zone(col=10, row=4),
+    "coup_franc": Zone(col=7, row=4),
+    "corner": Zone(col=10, row=1),
+    "profondeur_1v1": Zone(col=10, row=4),
+    "recuperation_haute": Zone(col=10, row=4),
+    "decalage_enroulee": Zone(col=9, row=2),
+    "penalty": PENALTY_SPOT_ZONE,
+    "but_gag": Zone(col=11, row=4),
+}
+_ZONE_JITTER_COLS = 1  # ecart max en colonnes autour de la zone de base du gabarit
+_ZONE_JITTER_ROWS = 2  # ecart max en lignes -- variation laterale un peu plus large que la variation en profondeur
+
+
+def _narrative_event_zone(gabarit: str, index: int) -> tuple[float, float]:
+    """Zone déterministe d'un `NarrativeEvent`, dérivée de son gabarit
+    (`_GABARIT_BASE_ZONE`) et perturbée par un petit décalage déterministe
+    (hash sha256, même principe que le reste du module) seedé par `index` --
+    la position FINALE de l'événement dans `Timeline.events` (post tri, voir
+    `build_timeline`) : deux occasions du même gabarit dans le même match ne
+    partent jamais du même point, mais un même `(match, index)` retombe
+    toujours sur la même zone (déterminisme)."""
+    base = _GABARIT_BASE_ZONE[gabarit]
+    digest = hashlib.sha256(f"zone|{gabarit}|{index}".encode()).digest()
+    col_fraction = int.from_bytes(digest[:4], "big") / 2**32  # [0, 1)
+    row_fraction = int.from_bytes(digest[4:8], "big") / 2**32
+    col_offset = round((col_fraction * 2 - 1) * _ZONE_JITTER_COLS)
+    row_offset = round((row_fraction * 2 - 1) * _ZONE_JITTER_ROWS)
+    col = min(max(base.col + col_offset, 0), GRID_COLUMNS - 1)
+    row = min(max(base.row + row_offset, 0), GRID_ROWS - 1)
+    point = center_of(Zone(col=col, row=row))
+    return (point.x, point.y)
+
+
+def _missed_penalty_seed(seed: int) -> int:
+    """Seed dérivée (hash sha256 salé, même principe que `_derive_seed`) --
+    délibérément DIFFÉRENTE de `seed` lui-même (utilisé tel quel par
+    `_truncated_poisson_count`) : un générateur numpy local et indépendant
+    évite de corréler artificiellement le nombre de penaltys ratés au nombre
+    total d'occasions du match (deux tirages Poisson avec la MÊME seed
+    produiraient des valeurs corrélées, ce n'est pas le comportement voulu)."""
+    digest = hashlib.sha256(f"missed_penalty|{seed}".encode()).digest()
+    return int.from_bytes(digest[:8], "big")
+
+
+def _missed_penalty_count(seed: int) -> int:
+    """Tirage Poisson(λ=R) NON tronqué (Tâche 2.3 -- contrairement à
+    `_truncated_poisson_count`, aucune borne [min, max] : R est petit
+    (~0.08, voir _MISSED_PENALTY_POISSON_MEAN), la quasi-totalité des matchs
+    tirent 0 ou 1, un tronquage n'a pas de sens ici)."""
+    generator = np.random.default_rng(_missed_penalty_seed(seed))
+    return int(generator.poisson(_MISSED_PENALTY_POISSON_MEAN))
 
 
 def _home_occasion_share(match: MatchResult) -> float:
@@ -357,45 +488,104 @@ def _existing_events(match: MatchResult, rng: Random) -> list[NarrativeEvent]:
     return events
 
 
-def _generated_events(match: MatchResult, rng: Random, n_fillers: int) -> list[NarrativeEvent]:
-    """`n_fillers` occasions inventées, triées par minute -- SEULES
+_MISSED_PENALTY_KIND = "missed_penalty"
+_FILLER_KIND = "filler"
+_MISSED_PENALTY_PAIR = ("penalty", "default")  # gabarit fixe d'un penalty rate, voir _generated_events
+
+
+def _repair_consecutive_missed_penalties(
+    rng: Random, pending: list[tuple[int, str]], taken_minutes: list[int]
+) -> list[tuple[int, str]]:
+    """Deux penaltys ratés consécutifs (aucun `filler` entre les deux, une
+    fois `pending` trié par minute) violeraient la règle anti-répétition
+    immédiate ((gabarit, déclinaison) répété, voir _MISSED_PENALTY_PAIR) --
+    le SEUL cas possible : un `filler` ne tire jamais le gabarit "penalty"
+    (`_score_penalty` vaut 0 tant que `context.penalty=False`, toujours le
+    cas pour un `filler`, voir `_generated_events`). Repli identique à
+    `_pick_minute`/`_pick_gabarit` (retirage contraint, meilleur essai après
+    `_MAX_DRAW_ATTEMPTS`) -- mais ici le gabarit est fixe (un penalty raté
+    EST "penalty"), seul le levier MINUTE peut lever la collision : on
+    redéplace le second penalty raté du couple, jamais son gabarit."""
+    pending = sorted(pending, key=lambda pair: pair[0])
+    for _ in range(_MAX_DRAW_ATTEMPTS):
+        collision_idx = next(
+            (i for i in range(1, len(pending)) if pending[i][1] == pending[i - 1][1] == _MISSED_PENALTY_KIND),
+            None,
+        )
+        if collision_idx is None:
+            return pending
+        old_minute, kind = pending[collision_idx]
+        taken_minutes.remove(old_minute)
+        new_minute = _pick_minute(rng, taken_minutes)
+        taken_minutes.append(new_minute)
+        pending[collision_idx] = (new_minute, kind)
+        pending.sort(key=lambda pair: pair[0])
+    return pending  # meilleur essai apres _MAX_DRAW_ATTEMPTS tentatives, voir docstring de _pick_minute
+
+
+def _generated_events(match: MatchResult, rng: Random, n_fillers: int, n_missed_penalties: int) -> list[NarrativeEvent]:
+    """`n_fillers` occasions inventées + `n_missed_penalties` penaltys ratés
+    (Tâche 2.3/2.4), fusionnés et triés par minute -- SEULES catégories
     concernées par les règles anti-répétition/écart minimum (PRIORITÉ DES
     CONTRAINTES, point 3), vérifiées uniquement entre `generated_events`
-    (jamais contre un `existing_event` adjacent)."""
+    (jamais contre un `existing_event` adjacent). Un penalty raté est un
+    `generated_event` comme un autre pour ces règles : gabarit fixé à
+    "penalty" (jamais tiré via `pick_template`, voir _MISSED_PENALTY_PAIR),
+    déclinaison "default", jamais compté dans le score (`outcome` tiré parmi
+    _MISSED_PENALTY_OUTCOMES, jamais "but")."""
     home_squad_lookup = _squad_lookup(match.home_squad)
     away_squad_lookup = _squad_lookup(match.away_squad)
     home_occasion_share = _home_occasion_share(match)
 
-    minutes: list[int] = []
+    taken_minutes: list[int] = []
+    pending: list[tuple[int, str]] = []
     for _ in range(n_fillers):
-        minutes.append(_pick_minute(rng, minutes))
-    minutes.sort()
+        minute = _pick_minute(rng, taken_minutes)
+        taken_minutes.append(minute)
+        pending.append((minute, _FILLER_KIND))
+    for _ in range(n_missed_penalties):
+        minute = _pick_minute(rng, taken_minutes)
+        taken_minutes.append(minute)
+        pending.append((minute, _MISSED_PENALTY_KIND))
+    pending = _repair_consecutive_missed_penalties(rng, pending, taken_minutes)
 
     last_pair: tuple[str, str] | None = None
     last_main_player: str | None = None
     gabarit_sequence: list[str] = []
     events: list[NarrativeEvent] = []
 
-    for minute in minutes:
+    for minute, kind in pending:
         team = match.home_team if rng.random() < home_occasion_share else match.away_team
         squad_lookup = home_squad_lookup if team == match.home_team else away_squad_lookup
         squad = match.home_squad if team == match.home_team else match.away_squad
         main_player_stat = _pick_main_player(rng, squad, last_main_player)
-        goal_diff_before = _goal_diff_before_minute(match.goals, minute, team, match.home_team, match.away_team)
-        context = TemplateContext(
-            minute=minute, goal_diff_before=goal_diff_before,
-            scorer_poste=main_player_stat.poste, assist_poste=None,
-            penalty=False, competition_type=match.competition_type or "league",
-        )
-        gabarit = _pick_gabarit(rng, context, last_pair, gabarit_sequence)
         main_player = main_player_stat.player_name
-        involved = _involved_players(rng, gabarit, main_player, squad_lookup)
-        outcome = rng.choices(_NON_GOAL_OUTCOMES, weights=_NON_GOAL_OUTCOME_WEIGHTS, k=1)[0]
+
+        if kind == _MISSED_PENALTY_KIND:
+            gabarit = _MISSED_PENALTY_PAIR[0]
+            involved = _involved_players(rng, gabarit, main_player, squad_lookup)
+            outcome = rng.choices(_MISSED_PENALTY_OUTCOMES, weights=_MISSED_PENALTY_OUTCOME_WEIGHTS, k=1)[0]
+            # Zone RÉELLE, pas inventée : un penalty part TOUJOURS du même
+            # point réglementaire (PENALTY_SPOT_ZONE, voir events.py), à la
+            # différence d'une occasion générique dont start_position reste
+            # None (voir plus bas) -- ce n'est pas une zone devinée.
+            start_position = _zone_center(PENALTY_SPOT_ZONE)
+        else:
+            goal_diff_before = _goal_diff_before_minute(match.goals, minute, team, match.home_team, match.away_team)
+            context = TemplateContext(
+                minute=minute, goal_diff_before=goal_diff_before,
+                scorer_poste=main_player_stat.poste, assist_poste=None,
+                penalty=False, competition_type=match.competition_type or "league",
+            )
+            gabarit = _pick_gabarit(rng, context, last_pair, gabarit_sequence)
+            involved = _involved_players(rng, gabarit, main_player, squad_lookup)
+            outcome = rng.choices(_NON_GOAL_OUTCOMES, weights=_NON_GOAL_OUTCOME_WEIGHTS, k=1)[0]
+            start_position = None  # pas de zone réelle pour une occasion inventée -- non inventée non plus, voir schema
 
         events.append(NarrativeEvent(
             minute=minute, event_type=OCCASION, gabarit=gabarit, declinaison="default", team=team,
             main_player=main_player, involved_players=involved, outcome=outcome,
-            start_position=None,  # pas de zone réelle pour une occasion inventée -- non inventée non plus, voir schema
+            start_position=start_position,
             starts_at_restart=TEMPLATES[gabarit].starts_at_restart,
         ))
         last_pair = (gabarit, "default")
@@ -427,9 +617,15 @@ def build_timeline(match: MatchResult) -> Timeline:
 
     total_occasions = max(_truncated_poisson_count(seed), len(match.goals))
     n_fillers = total_occasions - len(match.goals)
-    generated_events = _generated_events(match, rng, n_fillers)
+    n_missed_penalties = _missed_penalty_count(seed)
+    generated_events = _generated_events(match, rng, n_fillers, n_missed_penalties)
 
     events = sorted(existing_events + generated_events, key=lambda e: e.minute)  # tri stable, voir docstring
+    # Zone (Tâche 3, décision du 23/09/2026) : seedée par la position FINALE
+    # (post-tri) -- appliquée ici, pas dans _existing_events/_generated_events,
+    # qui ne connaissent pas encore cet ordre final au moment où ils
+    # construisent chaque NarrativeEvent (voir _narrative_event_zone).
+    events = [replace(e, zone=_narrative_event_zone(e.gabarit, i)) for i, e in enumerate(events)]
 
     match_id = f"{match.home_team}-{match.away_team}-{match.date}"
     return Timeline(
@@ -437,7 +633,9 @@ def build_timeline(match: MatchResult) -> Timeline:
         home_team=match.home_team, away_team=match.away_team,
         home_goals=match.home_goals, away_goals=match.away_goals,
         home_rating=match.home_lineup.rating, away_rating=match.away_lineup.rating,
-        competition_type=match.competition_type, events=events,
+        competition_type=match.competition_type,
+        home_lineup=match.home_lineup, away_lineup=match.away_lineup,
+        events=events,
     )
 
 

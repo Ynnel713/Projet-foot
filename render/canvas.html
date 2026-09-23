@@ -2,34 +2,106 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<title>Rendu canvas -- vertical slice</title>
+<title>Rendu canvas -- vertical slice / lecteur de clips</title>
 <style>
   html, body { margin: 0; padding: 0; background: #0b0b0b; font-family: sans-serif; }
   #wrap { display: flex; flex-direction: column; align-items: center; padding: 12px; }
+  #canvasWrap { position: relative; }
   canvas { background: #1e824c; display: block; max-width: 100%; height: auto; }
   #controls { padding: 8px 0; }
   button { font-size: 14px; padding: 6px 16px; margin: 0 4px; cursor: pointer; }
   #label { color: #eee; font-size: 13px; padding-bottom: 4px; }
+
+  /* --- Mode player (Tache 4, brief "canvas player", 23/09/2026) --------- */
+  /* Score/minute : coin haut du canvas, discret (pas de fond plein, juste
+     un fond semi-transparent pour la lisibilite sur l'herbe). */
+  #scoreboard {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    color: #fff; font-size: 16px; font-weight: 600; letter-spacing: 0.3px;
+    background: rgba(0, 0, 0, 0.45); padding: 4px 14px; border-radius: 4px;
+    pointer-events: none; display: none;
+  }
+
+  /* Navigation : pictogrammes epures, taille modeste, pas d'ombre ni de
+     degrade lourd (brief 4.3). */
+  #playerControls { display: none; align-items: center; gap: 10px; padding: 6px 0 2px; }
+  .player-btn {
+    background: #1c1c1c; color: #eee; border: 1px solid #3a3a3a; border-radius: 4px;
+    font-size: 15px; line-height: 1; padding: 6px 10px; cursor: pointer; margin: 0;
+  }
+  .player-btn:hover { background: #2a2a2a; }
+  .player-btn:active { background: #333; }
+
+  /* Barre de progression : un marqueur cliquable par clip, positionne
+     proportionnellement a la minute (brief 4.4). */
+  #progressBar {
+    display: none; position: relative; width: 100%; max-width: 1200px;
+    height: 22px; margin-top: 2px;
+  }
+  #progressTrack {
+    position: absolute; left: 0; right: 0; top: 50%; height: 2px;
+    background: #3a3a3a; transform: translateY(-50%);
+  }
+  .progress-marker {
+    position: absolute; top: 50%; width: 10px; height: 10px; border-radius: 50%;
+    background: #888; border: 1px solid #1c1c1c; transform: translate(-50%, -50%);
+    cursor: pointer;
+  }
+  .progress-marker:hover { background: #aaa; }
+  .progress-marker.current { background: #ffd700; width: 13px; height: 13px; }
+
+  /* Carton intermediaire (brief 4.5) : overlay semi-transparent, 2s par
+     defaut (voir CARTON_DURATION_S plus bas), pas de degrade/ombre lourd. */
+  #carton {
+    display: none; position: absolute; inset: 0; background: rgba(0, 0, 0, 0.72);
+    color: #fff; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 20px; box-sizing: border-box;
+  }
+  #cartonMinute { font-size: 14px; color: #ccc; margin-bottom: 6px; }
+  #cartonEvent { font-size: 20px; font-weight: 700; margin-bottom: 10px; }
+  #cartonScore { font-size: 28px; font-weight: 800; margin-bottom: 10px; }
+  #cartonIntervalEvents { font-size: 13px; color: #ddd; line-height: 1.6; }
 </style>
 </head>
 <body>
 <div id="wrap">
   <div id="label"></div>
-  <canvas id="pitch" width="1200" height="780"></canvas>
+  <div id="canvasWrap">
+    <canvas id="pitch" width="1200" height="780"></canvas>
+    <div id="scoreboard"></div>
+    <div id="carton">
+      <div id="cartonMinute"></div>
+      <div id="cartonEvent"></div>
+      <div id="cartonScore"></div>
+      <div id="cartonIntervalEvents"></div>
+    </div>
+  </div>
   <div id="controls">
     <button id="toggle">Pause</button>
     <button id="replay">Recommencer</button>
   </div>
+  <div id="playerControls">
+    <button class="player-btn" id="prevClip" title="Precedent">&#9664;</button>
+    <button class="player-btn" id="playPause" title="Play/Pause">&#9208;</button>
+    <button class="player-btn" id="replayClip" title="Rejouer">&#8635;</button>
+    <button class="player-btn" id="nextClip" title="Suivant">&#9654;</button>
+  </div>
+  <div id="progressBar">
+    <div id="progressTrack"></div>
+  </div>
 </div>
 <script>
-// Brief "canvas vertical slice" (23/09/2026), Tache 3 -- fichier autonome,
-// pas de dependance (ni React, ni librairie JS externe).
+// Brief "canvas vertical slice" (23/09/2026) puis "canvas player" (Tache 4,
+// meme date) -- fichier autonome, pas de dependance (ni React, ni
+// librairie JS externe), mode "gabarit isole" et mode "player" cohabitent.
 //
 // PLACEHOLDER D'INJECTION -- l'appelant (scripts/render_preview.py,
 // apps/streamlit_preview.py) remplace le texte EXACT
-// "/*__SEQUENCE_JSON__*/null" ci-dessous par le JSON produit par
-// animation.serialize.frame_sequence_to_json (voir
-// docs/canvas_json_schema.md pour le format). Un simple replace() textuel
+// "/*__SEQUENCE_JSON__*/null" ci-dessous par le JSON produit soit par
+// animation.serialize.frame_sequence_to_json (UN SEUL objet -- mode
+// "gabarit isole"), soit par engine.narrative_player.clips_to_json (un
+// TABLEAU de plusieurs objets de meme forme + metadonnees narratives -- mode
+// "player"), voir docs/canvas_json_schema.md. Un simple replace() textuel
 // suffit -- aucun templating.
 const SEQUENCE_DATA = /*__SEQUENCE_JSON__*/null;
 
@@ -40,31 +112,24 @@ const SEQUENCE_DATA = /*__SEQUENCE_JSON__*/null;
     return;
   }
 
+  // Normalisation : un objet seul OU un tableau d'un seul element -> mode
+  // "gabarit isole" (comportement inchange). Un tableau de 2+ -> mode
+  // "player" (Tache 4.1).
+  const clips = Array.isArray(SEQUENCE_DATA) ? SEQUENCE_DATA : [SEQUENCE_DATA];
+  const isPlayerMode = clips.length > 1;
+
   const canvas = document.getElementById('pitch');
   const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
   const MARGIN = 20;
 
-  const frames = SEQUENCE_DATA.frames;
-  const duration = SEQUENCE_DATA.duration;
-  const teams = SEQUENCE_DATA.metadata.teams;
-
-  // Mode debug (brief "canvas vertical slice", Tache 2, 23/09/2026) --
-  // ?debug=1 dans l'URL : logue chaque frame RENDUE (pas chaque frame du
-  // JSON source) dans la console JS, pour prouver la fluidite de
-  // l'interpolation a l'echelle de la frame (~16ms/60fps), voir
-  // scripts/verify_canvas_smoothness.py. Desactive par defaut (aucun cout
-  // perf hors debug).
   const DEBUG = new URLSearchParams(window.location.search).get('debug') === '1';
   let debugFrameIdx = 0;
 
-  document.getElementById('label').textContent =
-    SEQUENCE_DATA.metadata.template + ' -- ' + teams.scorer.name + ' vs ' + teams.opponent.name +
-    ' (' + duration.toFixed(1) + 's, ' + frames.length + ' frames)';
+  // Duree du carton intermediaire, en secondes -- constante ajustable
+  // (brief 4.5), documentee ici plutot qu'eparpillee dans le code.
+  const CARTON_DURATION_S = 2.0;
 
-  // Meme convention que ligue1sim.pitch_geometry.to_canvas_px : origine
-  // bas-gauche du terrain normalise [0,1], axe Y ecran vers le BAS -> y
-  // inverse (y=0 terrain -> bas du canvas, y=1 terrain -> haut du canvas).
   function toPx(x, y) {
     return [x * W, (1 - y) * H];
   }
@@ -79,17 +144,14 @@ const SEQUENCE_DATA = /*__SEQUENCE_JSON__*/null;
     ctx.strokeStyle = '#ffffff';
     ctx.fillStyle = '#ffffff';
 
-    // touches + lignes de but (bordure du terrain)
     ctx.lineWidth = 2;
     ctx.strokeRect(MARGIN, MARGIN, W - 2 * MARGIN, H - 2 * MARGIN);
 
-    // ligne mediane
     ctx.beginPath();
     ctx.moveTo(W / 2, MARGIN);
     ctx.lineTo(W / 2, H - MARGIN);
     ctx.stroke();
 
-    // rond central
     ctx.beginPath();
     ctx.arc(W / 2, H / 2, 70, 0, Math.PI * 2);
     ctx.stroke();
@@ -97,17 +159,14 @@ const SEQUENCE_DATA = /*__SEQUENCE_JSON__*/null;
     ctx.arc(W / 2, H / 2, 3, 0, Math.PI * 2);
     ctx.fill();
 
-    // surfaces de reparation (les deux cotes)
     const boxW = W * 0.10, boxH = H * 0.42;
     ctx.strokeRect(MARGIN, H / 2 - boxH / 2, boxW, boxH);
     ctx.strokeRect(W - MARGIN - boxW, H / 2 - boxH / 2, boxW, boxH);
 
-    // surfaces de but (six metres)
     const sixW = W * 0.045, sixH = H * 0.20;
     ctx.strokeRect(MARGIN, H / 2 - sixH / 2, sixW, sixH);
     ctx.strokeRect(W - MARGIN - sixW, H / 2 - sixH / 2, sixW, sixH);
 
-    // points de penalty
     const spotDist = W * 0.085;
     ctx.beginPath();
     ctx.arc(MARGIN + spotDist, H / 2, 3, 0, Math.PI * 2);
@@ -116,7 +175,6 @@ const SEQUENCE_DATA = /*__SEQUENCE_JSON__*/null;
     ctx.arc(W - MARGIN - spotDist, H / 2, 3, 0, Math.PI * 2);
     ctx.fill();
 
-    // buts (trait epais au centre de chaque ligne de but)
     const goalW = H * 0.12;
     ctx.lineWidth = 4;
     ctx.beginPath();
@@ -130,8 +188,11 @@ const SEQUENCE_DATA = /*__SEQUENCE_JSON__*/null;
   }
 
   // Segment [frames[i], frames[i+1]] encadrant t, et fraction s dans ce
-  // segment -- meme principe que animation.ball._find_ball_segment, cote JS.
-  function findSegment(t) {
+  // segment, POUR UN CLIP DONNE (parametre, plus une variable globale
+  // implicite -- necessaire pour rejouer plusieurs clips avec la meme
+  // fonction, voir mode player).
+  function findSegment(clipData, t) {
+    const frames = clipData.frames;
     const last = frames.length - 1;
     if (t <= frames[0].t) return [frames[0], frames[Math.min(1, last)], 0];
     if (t >= frames[last].t) return [frames[Math.max(0, last - 1)], frames[last], 1];
@@ -145,9 +206,10 @@ const SEQUENCE_DATA = /*__SEQUENCE_JSON__*/null;
     return [frames[last], frames[last], 0];
   }
 
-  function drawFrame(t) {
+  function drawFrame(clipData, t) {
     drawPitch();
-    const [fa, fb, frac] = findSegment(t);
+    const teams = clipData.metadata.teams;
+    const [fa, fb, frac] = findSegment(clipData, t);
 
     const byIdB = {};
     for (const p of fb.players) byIdB[p.id] = p;
@@ -164,9 +226,6 @@ const SEQUENCE_DATA = /*__SEQUENCE_JSON__*/null;
       ctx.arc(px, py, radius, 0, Math.PI * 2);
       ctx.fillStyle = team.color_fill;
       ctx.fill();
-      // joueur actif distingue visuellement : contour dore epais (meme
-      // convention que scripts/preview_motion.py) vs contour fin couleur
-      // secondaire d'equipe pour un figurant.
       ctx.lineWidth = pa.active ? 3 : 1;
       ctx.strokeStyle = pa.active ? '#ffd700' : team.color_outline;
       ctx.stroke();
@@ -181,8 +240,6 @@ const SEQUENCE_DATA = /*__SEQUENCE_JSON__*/null;
     const ballY = lerp(fa.ball.y, fb.ball.y, frac);
     const ballZ = lerp(fa.ball.z, fb.ball.z, frac);
     const [bx, by] = toPx(ballX, ballY);
-    // rayon proportionnel a z (ballon en l'air = plus gros a l'ecran) --
-    // approximation premier jet, pas une vraie perspective/projection 3D.
     const ballRadius = 5 + Math.min(9, ballZ * 3);
     ctx.beginPath();
     ctx.arc(bx, by, ballRadius, 0, Math.PI * 2);
@@ -200,35 +257,200 @@ const SEQUENCE_DATA = /*__SEQUENCE_JSON__*/null;
     }
   }
 
+  if (!isPlayerMode) {
+    // --- Mode "gabarit isole" -- comportement INCHANGE (brief 4.1) -------
+    const sequence = clips[0];
+    const duration = sequence.duration;
+    const teams = sequence.metadata.teams;
+
+    document.getElementById('label').textContent =
+      sequence.metadata.template + ' -- ' + teams.scorer.name + ' vs ' + teams.opponent.name +
+      ' (' + duration.toFixed(1) + 's, ' + sequence.frames.length + ' frames)';
+
+    let playing = true;
+    let pausedAtS = 0;
+    let startPerfMs = null;
+
+    function currentT(nowMs) {
+      if (!playing) return pausedAtS;
+      if (startPerfMs === null) startPerfMs = nowMs - pausedAtS * 1000;
+      return ((nowMs - startPerfMs) / 1000) % duration; // boucle automatique a la fin
+    }
+
+    function tick(nowMs) {
+      const t = currentT(nowMs);
+      if (playing) pausedAtS = t;
+      drawFrame(sequence, t);
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+
+    document.getElementById('toggle').addEventListener('click', () => {
+      playing = !playing;
+      document.getElementById('toggle').textContent = playing ? 'Pause' : 'Lecture';
+      if (playing) startPerfMs = null;
+    });
+
+    document.getElementById('replay').addEventListener('click', () => {
+      pausedAtS = 0;
+      startPerfMs = null;
+      playing = true;
+      document.getElementById('toggle').textContent = 'Pause';
+    });
+    return;
+  }
+
+  // --- Mode "player" (Tache 4.2-4.6) --------------------------------------
+  document.getElementById('controls').style.display = 'none';
+  document.getElementById('scoreboard').style.display = 'block';
+  document.getElementById('playerControls').style.display = 'flex';
+  document.getElementById('progressBar').style.display = 'block';
+
+  const scoreboardEl = document.getElementById('scoreboard');
+  const cartonEl = document.getElementById('carton');
+  const cartonMinuteEl = document.getElementById('cartonMinute');
+  const cartonEventEl = document.getElementById('cartonEvent');
+  const cartonScoreEl = document.getElementById('cartonScore');
+  const cartonIntervalEl = document.getElementById('cartonIntervalEvents');
+  const playPauseBtn = document.getElementById('playPause');
+  const progressBarEl = document.getElementById('progressBar');
+
+  // Marqueurs de la barre de progression (Tache 4.4) -- un par clip,
+  // position proportionnelle a la minute (echelle fixe 0-90, un match dure
+  // 90 minutes par construction du moteur narratif).
+  const markerEls = clips.map((clip, idx) => {
+    const marker = document.createElement('div');
+    marker.className = 'progress-marker';
+    marker.style.left = (Math.min(90, Math.max(1, clip.metadata.minute)) / 90 * 100) + '%';
+    marker.title = clip.metadata.minute + "' -- " + clip.metadata.template;
+    marker.addEventListener('click', () => jumpToClip(idx));
+    progressBarEl.appendChild(marker);
+    return marker;
+  });
+
+  function updateMarkers(activeIdx) {
+    markerEls.forEach((el, idx) => el.classList.toggle('current', idx === activeIdx));
+  }
+
+  function eventLabel(clip) {
+    const equipe = clip.metadata.equipe;
+    if (clip.metadata.issue === 'but') return 'BUT ' + equipe.toUpperCase();
+    if (clip.metadata.template === 'penalty') return 'Penalty rate';
+    return 'Occasion ' + equipe;
+  }
+
+  function updateScoreboard(clip) {
+    const [dom, ext] = clip.metadata.score_after;
+    scoreboardEl.textContent =
+      clip.metadata.home_team + ' ' + dom + ' – ' + ext + ' ' + clip.metadata.away_team +
+      ' | ' + clip.metadata.minute + "'";
+  }
+
+  let currentIdx = 0;
   let playing = true;
   let pausedAtS = 0;
   let startPerfMs = null;
+  let showingCarton = false;
+  let cartonStartPerfMs = null;
 
-  function currentT(nowMs) {
-    if (!playing) return pausedAtS;
-    if (startPerfMs === null) startPerfMs = nowMs - pausedAtS * 1000;
-    return ((nowMs - startPerfMs) / 1000) % duration; // boucle automatique a la fin
+  function showCarton(clip) {
+    showingCarton = true;
+    cartonStartPerfMs = null;
+    cartonMinuteEl.textContent = clip.metadata.minute + "'";
+    cartonEventEl.textContent = eventLabel(clip);
+    const [dom, ext] = clip.metadata.score_after;
+    cartonScoreEl.textContent = clip.metadata.home_team + ' ' + dom + ' – ' + ext + ' ' + clip.metadata.away_team;
+    const intervalEvents = clip.metadata.interval_events || [];
+    cartonIntervalEl.innerHTML = intervalEvents.length
+      ? intervalEvents.map((line) => '<div>' + line + '</div>').join('')
+      : '';
+    cartonEl.style.display = 'flex';
+  }
+
+  function hideCarton() {
+    showingCarton = false;
+    cartonEl.style.display = 'none';
+  }
+
+  function jumpToClip(idx) {
+    currentIdx = Math.min(Math.max(idx, 0), clips.length - 1);
+    pausedAtS = 0;
+    startPerfMs = null;
+    hideCarton();
+    updateMarkers(currentIdx);
+    updateScoreboard(clips[currentIdx]);
   }
 
   function tick(nowMs) {
-    const t = currentT(nowMs);
-    if (playing) pausedAtS = t;
-    drawFrame(t);
+    const clip = clips[currentIdx];
+    const duration = clip.duration;
+
+    if (showingCarton) {
+      if (playing) {
+        if (cartonStartPerfMs === null) cartonStartPerfMs = nowMs;
+        const elapsed = (nowMs - cartonStartPerfMs) / 1000;
+        if (elapsed >= CARTON_DURATION_S) {
+          hideCarton();
+          if (currentIdx < clips.length - 1) {
+            jumpToClip(currentIdx + 1);
+          }
+          // dernier clip : reste sur le carton final a l'ecran (pas de
+          // rebouclage automatique, comportement deterministe et simple).
+        }
+      }
+      drawFrame(clip, duration); // dernier frame du clip fige derriere le carton
+      requestAnimationFrame(tick);
+      return;
+    }
+
+    let t;
+    if (!playing) {
+      t = pausedAtS;
+    } else {
+      if (startPerfMs === null) startPerfMs = nowMs - pausedAtS * 1000;
+      t = (nowMs - startPerfMs) / 1000;
+      if (t >= duration) {
+        t = duration;
+        pausedAtS = t;
+        showCarton(clip);
+      } else {
+        pausedAtS = t;
+      }
+    }
+
+    drawFrame(clip, t);
+    updateScoreboard(clip);
     requestAnimationFrame(tick);
   }
   requestAnimationFrame(tick);
 
-  document.getElementById('toggle').addEventListener('click', () => {
-    playing = !playing;
-    document.getElementById('toggle').textContent = playing ? 'Pause' : 'Lecture';
-    if (playing) startPerfMs = null; // reprend depuis pausedAtS, pas de saut
-  });
+  updateMarkers(currentIdx);
+  updateScoreboard(clips[currentIdx]);
 
-  document.getElementById('replay').addEventListener('click', () => {
+  document.getElementById('prevClip').addEventListener('click', () => {
+    jumpToClip(currentIdx - 1);
+    playing = true;
+    playPauseBtn.innerHTML = '&#9208;';
+  });
+  document.getElementById('nextClip').addEventListener('click', () => {
+    jumpToClip(currentIdx + 1);
+    playing = true;
+    playPauseBtn.innerHTML = '&#9208;';
+  });
+  document.getElementById('replayClip').addEventListener('click', () => {
     pausedAtS = 0;
     startPerfMs = null;
+    hideCarton();
     playing = true;
-    document.getElementById('toggle').textContent = 'Pause';
+    playPauseBtn.innerHTML = '&#9208;';
+  });
+  playPauseBtn.addEventListener('click', () => {
+    playing = !playing;
+    playPauseBtn.innerHTML = playing ? '&#9208;' : '&#9205;';
+    if (playing) {
+      startPerfMs = null;
+      cartonStartPerfMs = null;
+    }
   });
 })();
 </script>

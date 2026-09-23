@@ -180,3 +180,89 @@ par rapport à la corde du segment COMPLET `t=2.4-6.0s`, à son point milieu
 t=4.2s) -- deux mesures légitimes, deux référentiels différents, aucune
 contradiction : la fenêtre demandée ici ne couvre que la phase montante de
 la courbe, avant son pic.
+
+## Lecteur de clips narratif (brief "canvas player", 23/09/2026, Tâches 3-5)
+
+Branche `engine.narrative.Timeline` (occasions) sur le canvas -- jusqu'ici
+hors de portée, `Timeline` ne portait ni `Lineup`, ni position de départ
+pour une occasion générique (voir "Champ manquant pour un branchement
+complet" dans `docs/narrative_timeline_schema.md`). Débloqué par deux
+extensions **explicitement autorisées par Olivier** (décision du 23/09/2026,
+hors du périmètre initial du brief, documentées dans `engine/narrative.py`) :
+`NarrativeEvent.zone` (dérivée du gabarit) et `Timeline.home_lineup`/
+`.away_lineup` (le onze de départ, référence directe vers le `MatchResult`
+d'entrée).
+
+### Module `engine/narrative_player.py` (Tâche 3)
+
+`build_clips(timeline, max_occasions=None) -> list[Clip]` -- un `Clip` par
+occasion retenue (gabarit, équipe, score progressif, frames construites via
+le pipeline INCHANGÉ `templates.BUILDERS` + `animation.motion.interpolate`,
+voir docstring du module). `clips_to_json(clips, timeline) -> str` sérialise
+en JSON pour `render/canvas.html` (réutilise
+`animation.serialize.frame_sequence_to_json`, pas de duplication).
+
+**Limite connue, non corrigée** : un protagoniste remplaçant (absent du onze
+de départ) fait omettre son clip plutôt que planter -- mesuré à ~36% des
+occasions sur un échantillon de matchs simulés (la sélection du protagoniste
+d'une occasion ne tient pas compte de sa fenêtre de jeu réelle, limite
+pré-existante de `narrative._pick_main_player`, hors périmètre ici).
+`interval_events` reste toujours `()` : `Timeline` ne porte pas les
+cartons/remplacements réels, hors des deux extensions autorisées.
+
+### Mode "player" de `render/canvas.html` (Tâche 4)
+
+Le placeholder `/*__SEQUENCE_JSON__*/null` accepte maintenant soit un objet
+seul (mode "gabarit isolé", inchangé), soit un TABLEAU de 2+ objets de même
+forme + métadonnées narratives (`minute`, `equipe`, `issue`, `score_before`/
+`score_after`, `home_team`/`away_team`...) -- mode "player" : score/minute
+en haut du canvas, navigation (`◀ Précédent`, `⏸/⏵ Play/Pause`, `↻ Rejouer`,
+`▶ Suivant`), barre de progression avec un marqueur cliquable par clip
+(position ∝ minute/90), carton intermédiaire (2s, `CARTON_DURATION_S`) avec
+les `interval_events` de l'intervalle (toujours vide pour l'instant, voir
+limite ci-dessus).
+
+Preview autonome (script dédié, ne touche à aucun fichier de canvas/moteur) :
+
+```bash
+uv run python scripts/render_player_preview.py
+```
+
+génère `render/canvas_player_preview.html`, ouvrable via un serveur statique
+(le fichier référence des données injectées, pas de `file://` direct dans un
+navigateur qui bloquerait -- voir la config `canvas-static` de
+`.claude/launch.json`, `python -m http.server 8610 --directory render`).
+
+Captures (Tâche 4.7, match seed=7 -- voir `scripts/render_player_preview.py`
+pour la recherche déterministe qui a retenu cette seed, un profil "occasion
+puis 2 buts sur les 3 premiers clips" utile pour la démonstration) :
+- Milieu du 1er clip (occasion, score 0-0) : [docs/previews/canvas/player_clip1.png](previews/canvas/player_clip1.png)
+- Carton intermédiaire après le but du 2e clip (score 1-0) : [docs/previews/canvas/player_carton.png](previews/canvas/player_carton.png)
+- Milieu du 3e clip (score 2-0, mis à jour une 2e fois) : [docs/previews/canvas/player_clip3.png](previews/canvas/player_clip3.png)
+
+Note de session (méthode de capture, pas un comportement du produit) : la
+fenêtre réelle du carton (2s) est trop courte pour l'aller-retour outil de
+cette session (chaque appel d'outil consomme plusieurs secondes de temps
+réel, le lecteur continue de tourner en tâche de fond entre deux appels) --
+les captures ont donc été prises en figeant l'état visuel exact que le code
+réel produit à cet instant (mêmes valeurs, jamais inventées), pas en
+"chronométrant" un clic en direct. `canvas.toDataURL()` seul ne capture que
+le `<canvas>`, pas le score/les boutons/la barre -- capture complète obtenue
+via un rendu DOM -> SVG (`<foreignObject>`) -> canvas, technique standard du
+navigateur, sans nouvelle dépendance (script de capture, pas dans
+`canvas.html` lui-même).
+
+### Mode `match` de `apps/streamlit_preview.py` (Tâche 5)
+
+Sélecteur `Mode` (`gabarit` existant / `match` nouveau) : `match` simule un
+match fixe et déterministe (mêmes clubs synthétiques que le mode gabarit,
+seed=7 -- même seed que `scripts/render_player_preview.py`, même profil
+utile), construit sa `Timeline` puis ses 4 premiers clips construisibles, et
+les injecte dans `render/canvas.html` (mode player).
+
+```bash
+uv run streamlit run apps/streamlit_preview.py --server.port 8600
+```
+
+puis choisir "match" dans le sélecteur de mode. Capture :
+[docs/previews/canvas/streamlit_match_mode.png](previews/canvas/streamlit_match_mode.png).
