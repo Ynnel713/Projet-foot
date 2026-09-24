@@ -33,9 +33,10 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from ligue1sim.animation.motion import FrameState, interpolate
+from ligue1sim.animation.physics import apply_acceleration_constraint
 from ligue1sim.animation.sequence_generator import enrich_with_background
 from ligue1sim.animation.serialize import frame_sequence_to_json
 from ligue1sim.animation.spatial import placed_player_to_normalized
@@ -44,7 +45,7 @@ from ligue1sim.animation.types import PlayerId, RosterEntry
 from ligue1sim.events import CardEvent, GoalEvent, PlayerMatchStat, SubstitutionEvent
 from ligue1sim.kits import match_kit_colors
 from ligue1sim.lineup import Lineup
-from ligue1sim.pitch_geometry import PitchPoint, zone_of
+from ligue1sim.pitch_geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, PitchPoint, zone_of
 from ligue1sim.pitch_layout import place_starting_xi
 from ligue1sim.players import Player
 
@@ -213,7 +214,37 @@ def _build_clip_frames(
     while t <= sequence.duration + 1e-9:
         frames.append(interpolate(sequence, t))
         t += step
+    frames = _apply_acceleration_constraint_to_frames(frames, step)
     return frames, sequence.roster
+
+
+def _apply_acceleration_constraint_to_frames(frames: list[FrameState], dt: float) -> list[FrameState]:
+    """Convertit `frames` (positions normalisées) en mètres, applique
+    `physics.apply_acceleration_constraint` (a_max=10 m/s², voir sa
+    docstring -- accélération humaine plausible pour un footballeur en
+    pleine course), reconvertit en normalisé -- brief "acceleration
+    constraint on rendered frames" (24/09/2026), option D : `motion.
+    interpolate` reste pur et INTOUCHÉ, la contrainte séquentielle vit ici,
+    dans la boucle qui construit la séquence ORDONNÉE de frames d'un clip.
+    Seules les positions x/y changent ; `vx`/`vy`/`is_ball_carrier`/`ball`
+    restent tels qu'`interpolate` les a produits (pas de vitesse
+    max/décélération/inertie ici, brief séparé)."""
+    positions_m = [
+        {player_id: (state.x * PITCH_LENGTH_M, state.y * PITCH_WIDTH_M) for player_id, state in frame.players.items()}
+        for frame in frames
+    ]
+    corrected_m = apply_acceleration_constraint(positions_m, dt)
+    return [
+        replace(frame, players={
+            player_id: replace(
+                state,
+                x=corrected_m[i][player_id][0] / PITCH_LENGTH_M,
+                y=corrected_m[i][player_id][1] / PITCH_WIDTH_M,
+            )
+            for player_id, state in frame.players.items()
+        })
+        for i, frame in enumerate(frames)
+    ]
 
 
 def _card_detail(card_type: str) -> str:

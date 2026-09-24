@@ -46,6 +46,7 @@ from __future__ import annotations
 
 import random
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
@@ -55,6 +56,7 @@ import numpy as np  # noqa: E402
 import streamlit as st  # noqa: E402
 
 from ligue1sim.animation.motion import interpolate  # noqa: E402
+from ligue1sim.animation.physics import apply_acceleration_constraint  # noqa: E402
 from ligue1sim.animation.sequence_generator import enrich_with_background  # noqa: E402
 from ligue1sim.animation.serialize import frame_sequence_to_json  # noqa: E402
 from ligue1sim.animation.templates import BUILDERS  # noqa: E402
@@ -62,7 +64,7 @@ from ligue1sim.clubs import Club  # noqa: E402
 from ligue1sim.events import GoalEvent  # noqa: E402
 from ligue1sim.kits import match_kit_colors  # noqa: E402
 from ligue1sim.lineup import Lineup, pick_best_formation  # noqa: E402
-from ligue1sim.pitch_geometry import PitchPoint, Zone  # noqa: E402
+from ligue1sim.pitch_geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, PitchPoint, Zone  # noqa: E402
 from ligue1sim.players import Player  # noqa: E402
 from ligue1sim.schedule import Match  # noqa: E402
 from ligue1sim.simulation import LeagueContext, simulate_match  # noqa: E402
@@ -139,6 +141,7 @@ def build_sequence_json(template_name: str, *, fps: int = _FPS) -> str:
     while t <= sequence.duration + 1e-9:
         frames.append(interpolate(sequence, t))
         t += step
+    frames = _apply_acceleration_constraint_to_frames(frames, step)
 
     (scorer_fill, scorer_outline), (opp_fill, opp_outline) = match_kit_colors(_SCORER_CLUB, _OPPONENT_CLUB)
     roster = {
@@ -156,6 +159,35 @@ def build_sequence_json(template_name: str, *, fps: int = _FPS) -> str:
         "roster": roster,
     }
     return frame_sequence_to_json(frames, metadata)
+
+
+def _apply_acceleration_constraint_to_frames(frames: list, dt: float) -> list:
+    """Convertit `frames` (positions normalisées) en mètres, applique
+    `physics.apply_acceleration_constraint` (a_max=10 m/s², accélération
+    humaine plausible pour un footballeur en pleine course), reconvertit en
+    normalisé -- brief "acceleration constraint on rendered frames"
+    (24/09/2026), option D : `motion.interpolate` reste pur et INTOUCHÉ, la
+    contrainte séquentielle vit ici, dans la boucle qui construit la
+    séquence ORDONNÉE de frames du mode "gabarit". Dupliquée à l'identique
+    dans `engine/narrative_player.py::_apply_acceleration_constraint_to_frames`
+    (dette de duplication documentée en tête de `physics.py`, périmètre de
+    ce brief limité aux 2 boucles réellement utilisées par le propriétaire)."""
+    positions_m = [
+        {player_id: (state.x * PITCH_LENGTH_M, state.y * PITCH_WIDTH_M) for player_id, state in frame.players.items()}
+        for frame in frames
+    ]
+    corrected_m = apply_acceleration_constraint(positions_m, dt)
+    return [
+        replace(frame, players={
+            player_id: replace(
+                state,
+                x=corrected_m[i][player_id][0] / PITCH_LENGTH_M,
+                y=corrected_m[i][player_id][1] / PITCH_WIDTH_M,
+            )
+            for player_id, state in frame.players.items()
+        })
+        for i, frame in enumerate(frames)
+    ]
 
 
 def _match_player(poste: str, note: float, name: str) -> Player:

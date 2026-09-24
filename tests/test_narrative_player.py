@@ -7,14 +7,25 @@ d'`apps/streamlit_preview.py` sur l'indépendance volontaire des fichiers)."""
 import pytest
 
 from ligue1sim.animation import templates as templates_module
+from ligue1sim.animation.motion import interpolate
+from ligue1sim.animation.sequence_generator import enrich_with_background
+from ligue1sim.animation.templates import BUILDERS
 from ligue1sim.clubs import Club
-from ligue1sim.lineup import pick_best_formation, select_best_xi
+from ligue1sim.events import GoalEvent
+from ligue1sim.lineup import Lineup, pick_best_formation, select_best_xi
+from ligue1sim.pitch_geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Zone
 from ligue1sim.players import Player
 from ligue1sim.schedule import Match
 from ligue1sim.simulation import LeagueContext, simulate_match
 
 from narrative import BUT, build_timeline, match_result_from
-from narrative_player import build_clips, _build_clip_frames, _interval_events, _lineup_start_positions
+from narrative_player import (
+    build_clips,
+    _apply_acceleration_constraint_to_frames,
+    _build_clip_frames,
+    _interval_events,
+    _lineup_start_positions,
+)
 
 _N_MATCHES = 30
 
@@ -339,3 +350,111 @@ class TestOutcomeTransmittedToTemplate:
                 checked += 1
 
         assert checked > 0
+
+
+# --- Brief "acceleration constraint on rendered frames" (24/09/2026) -----
+# Option D : `motion.interpolate` reste pur, INTOUCHÉ, `tests/test_motion.py`
+# n'est pas modifié (voir sa suite, notamment `TestImpossibleSegment`/
+# `TestDeterminism`, toujours vrais tels quels). La contrainte vit dans
+# `_apply_acceleration_constraint_to_frames`, appelée par `_build_clip_frames`
+# -- ces tests exercent cette fonction directement sur les 12 gabarits réels
+# (mêmes `BUILDERS`/`enrich_with_background` que `_build_clip_frames`
+# utilise réellement), sans reconstruire tout le pipeline `Timeline`/match
+# simulé -- inutile ici, la contrainte ne dépend que des frames produites.
+
+_ACCEL_SCORER_ZONE = Zone(col=10, row=4)
+_ACCEL_ASSIST_ZONE = Zone(col=7, row=3)
+_ACCEL_STEP_S = 1.0 / 30.0
+_ACCEL_A_MAX = 10.0
+
+
+def _accel_lineup(prefix: str, id_offset: int) -> Lineup:
+    postes_names = [
+        ("GK", "gk"), ("DC", "cb0"), ("DC", "cb1"), ("LB", "lb"), ("RB", "rb"),
+        ("MDC", "mdc"), ("MC", "mc0"), ("MC", "mc1"), ("AG", "ag"), ("AD", "ad"), ("BU", "bu"),
+    ]
+    players = [
+        Player(
+            prenom=f"{prefix}_{name}", nom="", nationalite="France", age=25, poste=poste, note=70.0,
+            club="Test FC", championnat="TEST", id=id_offset + i,
+        )
+        for i, (poste, name) in enumerate(postes_names)
+    ]
+    return Lineup(club_name=f"{prefix} FC", formation="4-3-3", players=players, rating=70.0)
+
+
+def _accel_goal_event() -> GoalEvent:
+    return GoalEvent(
+        club_name="home FC", scorer="home_bu", assist="home_mc0", minute=41, penalty=False,
+        zone=_ACCEL_SCORER_ZONE, assist_zone=_ACCEL_ASSIST_ZONE,
+    )
+
+
+def _accel_start_positions(lineup: Lineup):
+    from ligue1sim.pitch_geometry import PitchPoint
+    return {p.id: PitchPoint(x=0.12 + 0.06 * i, y=0.1 + 0.07 * i) for i, p in enumerate(lineup.players)}
+
+
+def _raw_and_corrected_frames(name: str):
+    """Reproduit exactement ce que fait `_build_clip_frames` pour un
+    gabarit donné (construction du gabarit + `enrich_with_background` +
+    boucle `interpolate`), puis compare AVANT/APRÈS
+    `_apply_acceleration_constraint_to_frames` -- la même fonction que
+    `_build_clip_frames` appelle réellement."""
+    lineup = _accel_lineup("home", 1)
+    opponent = _accel_lineup("away", 101)
+    sequence = BUILDERS[name](_accel_goal_event(), lineup, _accel_start_positions(lineup))
+    sequence = enrich_with_background(sequence, opponent)
+
+    raw_frames = []
+    t = 0.0
+    while t <= sequence.duration + 1e-9:
+        raw_frames.append(interpolate(sequence, t))
+        t += _ACCEL_STEP_S
+
+    corrected_frames = _apply_acceleration_constraint_to_frames(raw_frames, _ACCEL_STEP_S)
+    return raw_frames, corrected_frames
+
+
+def _positions_m(frame) -> dict:
+    return {pid: (s.x * PITCH_LENGTH_M, s.y * PITCH_WIDTH_M) for pid, s in frame.players.items()}
+
+
+class TestAccelerationConstraintOnRealGabarits:
+    @pytest.mark.parametrize("name", sorted(BUILDERS))
+    def test_no_instantaneous_acceleration_exceeds_a_max(self, name):
+        _raw_frames, corrected_frames = _raw_and_corrected_frames(name)
+        positions_m = [_positions_m(f) for f in corrected_frames]
+
+        for player_id in positions_m[0]:
+            velocities = []
+            for i in range(1, len(positions_m)):
+                dx = positions_m[i][player_id][0] - positions_m[i - 1][player_id][0]
+                dy = positions_m[i][player_id][1] - positions_m[i - 1][player_id][1]
+                velocities.append((dx / _ACCEL_STEP_S, dy / _ACCEL_STEP_S))
+            for j in range(1, len(velocities)):
+                ax = (velocities[j][0] - velocities[j - 1][0]) / _ACCEL_STEP_S
+                ay = (velocities[j][1] - velocities[j - 1][1]) / _ACCEL_STEP_S
+                accel = (ax * ax + ay * ay) ** 0.5
+                assert accel <= _ACCEL_A_MAX + 1e-6, f"{name} joueur={player_id} accel={accel:.2f} m/s^2"
+
+    def test_at_least_one_gabarit_gets_its_positions_actually_corrected(self):
+        # Tache 3.3 -- preuve que le fix agit reellement. Verifie sur les 12
+        # gabarits (pas un par un : rien n'exige qu'un segment "impossible"/
+        # une arrivee anticipee se produise sur CHAQUE gabarit avec ce jeu
+        # de positions de depart minimal -- `tests/test_physics.py` prouve
+        # deja, sur un cas synthetique garanti spikey, que la fonction agit;
+        # ici on verifie qu'au moins un vrai gabarit en beneficie reellement).
+        gabarits_with_a_correction = []
+        for name in sorted(BUILDERS):
+            raw_frames, corrected_frames = _raw_and_corrected_frames(name)
+            raw_positions = [_positions_m(f) for f in raw_frames]
+            corrected_positions = [_positions_m(f) for f in corrected_frames]
+            if any(
+                corrected_positions[i][pid] != raw_positions[i][pid]
+                for i in range(len(raw_positions))
+                for pid in raw_positions[i]
+            ):
+                gabarits_with_a_correction.append(name)
+
+        assert gabarits_with_a_correction, "aucun des 12 gabarits n'a ete corrige -- la contrainte n'agit sur rien"
