@@ -8,13 +8,13 @@ import pytest
 
 from ligue1sim.animation import templates as templates_module
 from ligue1sim.clubs import Club
-from ligue1sim.lineup import pick_best_formation
+from ligue1sim.lineup import pick_best_formation, select_best_xi
 from ligue1sim.players import Player
 from ligue1sim.schedule import Match
 from ligue1sim.simulation import LeagueContext, simulate_match
 
 from narrative import BUT, build_timeline, match_result_from
-from narrative_player import build_clips, _build_clip_frames, _interval_events
+from narrative_player import build_clips, _build_clip_frames, _interval_events, _lineup_start_positions
 
 _N_MATCHES = 30
 
@@ -54,6 +54,47 @@ def _simulate_n(n: int) -> list:
         match = Match(home=home.name, away=away.name, home_goals=home_goals, away_goals=away_goals, events=events)
         results.append(match_result_from(match, events, home_lineup, away_lineup, date=str(i)))
     return results
+
+
+class TestLineupStartPositionsRespectDeclaredFormationBands:
+    """Fix "transmit band to lineup reconstruction" (24/09/2026) -- voir
+    docs/render_diagnostic.md, Problème 1. `_lineup_start_positions`
+    reconstruit un `PlayerMatchStat` par joueur pour `place_starting_xi` ;
+    sans `band=lineup.bands.get(p.name)`, ce dernier retombe sur un
+    regroupement générique GK/DEF/MID/ATT par grande famille de poste
+    (`ligue1sim.players.POSITION_GROUP`), qui fusionne tous les DC/LB/RB sur
+    UNE seule ligne -- sur le squad synthétique de ce fichier (4 DC/2 LB/2
+    RB disponibles), la meilleure compo "4-3-3" sélectionne réellement 5
+    joueurs de profil défenseur (mesuré dans le diagnostic), qui se
+    retrouvaient TOUS à la même profondeur sans `band`. Avec `band`
+    correctement transmis, `_formation_bands("4-3-3", 11)` assigne
+    EXACTEMENT 4 slots à la ligne défensive, 3 à la ligne médiane, 3 à la
+    ligne d'attaque, quel que soit le poste brut de chacun -- la répartition
+    par profondeur DOIT donc être [1, 4, 3, 3] (GK/DEF/MID/ATT), jamais
+    [1, 5, 2, 3] (l'ancien regroupement générique observé)."""
+
+    def test_scorer_lineup_start_positions_group_into_4_3_3_not_a_generic_bucket(self):
+        # `select_best_xi(club, "4-3-3")` directement (pas `pick_best_formation`,
+        # qui choisirait adaptativement le dispositif donnant la meilleure note
+        # -- pas forcement "4-3-3" pour ce squad synthetique, voir le rouge
+        # observe en le testant : "4-2-3-1"). Ni l'un ni l'autre n'est modifie
+        # ici, seulement appele avec un dispositif explicite.
+        home, _away = _clubs()
+        lineup = select_best_xi(home, "4-3-3")
+        assert lineup.formation == "4-3-3", f"fixture attendue en 4-3-3, obtenu {lineup.formation!r}"
+
+        positions = _lineup_start_positions(lineup)
+
+        by_depth: dict[float, list[str]] = {}
+        for player in lineup.players:
+            x = round(positions[player.name].x, 6)
+            by_depth.setdefault(x, []).append(player.name)
+
+        line_sizes = [len(names) for _depth, names in sorted(by_depth.items())]
+        assert line_sizes == [1, 4, 3, 3], (
+            "lignes obtenues par profondeur croissante (GK/DEF/MID/ATT), attendu [1, 4, 3, 3] "
+            f"pour un 4-3-3 -- obtenu {line_sizes} (detail : {sorted(by_depth.items())})"
+        )
 
 
 class TestBuildClipsScoreSequence:

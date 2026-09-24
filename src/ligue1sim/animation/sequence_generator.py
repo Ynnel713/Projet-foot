@@ -338,7 +338,10 @@ def _opponent_positions(opponent_lineup: Lineup) -> dict[PlayerId, PitchPoint]:
     reflet en x compte pour les recaler dans le référentiel partagé, la
     latéralité (y) n'est jamais affectée par `attacking_up`."""
     stats = [
-        PlayerMatchStat(player_name=p.name, club_name=opponent_lineup.club_name, poste=p.poste, started=True)
+        PlayerMatchStat(
+            player_name=p.name, club_name=opponent_lineup.club_name, poste=p.poste, started=True,
+            band=opponent_lineup.bands.get(p.name),
+        )
         for p in opponent_lineup.players
     ]
     placed = place_starting_xi(stats, attacking_up=True)

@@ -138,7 +138,9 @@ def _lineup_start_positions(lineup: Lineup) -> dict[PlayerId, PitchPoint]:
     remplaçant peut donc apparaître avec 12-16 points au lieu de 11 sur les
     clips où un remplaçant est impliqué."""
     stats = [
-        PlayerMatchStat(player_name=p.name, club_name=lineup.club_name, poste=p.poste, started=True)
+        PlayerMatchStat(
+            player_name=p.name, club_name=lineup.club_name, poste=p.poste, started=True, band=lineup.bands.get(p.name)
+        )
         for p in lineup.players
     ]
     placed = place_starting_xi(stats, attacking_up=True)
