@@ -1086,6 +1086,9 @@ def build_recuperation_haute(
 # voir `_behavior_ball_flight` : la courbure Magnus doit se conserver sur le
 # vol, section 1.1 du design doc, pas seulement sur l'approche).
 _DECALAGE_ENROULEE_SHOT_SPIN_RAD_S = 50.0
+# DETTE : résidu de vitesse 3D > 35 m/s sur ce gabarit (spin ≠ 0), 2,8 % des
+# vols, ~35,5 m/s max. À corriger dans le chantier des déclinaisons de ce
+# gabarit. Voir `docs/ball_flight_design.md` section "Dette connue".
 _DECALAGE_ENROULEE_CURVED_TAGS = frozenset({"shot", BALL_FLIGHT})
 
 
