@@ -35,3 +35,13 @@ packages = ["src/ligue1sim"]
 # fichier unique (voir engine/narrative.py) -- pythonpath le rend
 # importable depuis tests/ sans sys.path.insert() disséminé.
 pythonpath = ["engine"]
+# Brief "mark narrative_player integration tests" (24/09/2026) : diagnostic
+# préalable -- 7 tests de tests/test_narrative_player.py (simulation de 100
+# matchs + rendu complet des frames d'animation) représentent ~99% du temps
+# de la suite complète (~1838s sur ~1836-1897s selon le run). `not
+# integration` par défaut : run quotidien en quelques secondes, la garantie
+# statistique sur 100 matchs reste disponible à la demande.
+markers = [
+    "integration: tests d'intégration lourds (~30 min, 100 matchs simulés). Lancer via pytest -m integration.",
+]
+addopts = "-m 'not integration'"

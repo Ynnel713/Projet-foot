@@ -2,4 +2,11 @@
 `test_X.py`. Les tests d'une fonction définie dans `A.py` vivent dans
 `test_A.py`, même si la fonction est utilisée ailleurs (brief "Trois manques
 a combler avant cloture", 24/09/2026, Tâche 1 -- convention déjà appliquée
-de fait dans ce dépôt, jamais écrite avant ce fichier)."""
+de fait dans ce dépôt, jamais écrite avant ce fichier).
+
+Run par défaut : `pytest` -- exclut les tests `integration` (~5 s). Run
+complet : `pytest -m integration` (~30 min, 100 matchs simulés), à lancer
+avant tout commit touchant `narrative_player.py`, `sequence_generator.py`,
+`ball.py`, `templates.py`, ou le moteur de résultats (brief "mark
+narrative_player integration tests", 24/09/2026, voir le marqueur
+`integration` déclaré dans pyproject.toml)."""

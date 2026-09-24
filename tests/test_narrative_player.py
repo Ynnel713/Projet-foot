@@ -4,6 +4,8 @@ Tâche 3) -- `build_clips`. Mêmes helpers de simulation que
 de test -- même motif déjà établi dans ce projet, voir la docstring
 d'`apps/streamlit_preview.py` sur l'indépendance volontaire des fichiers)."""
 
+import pytest
+
 from ligue1sim.animation import templates as templates_module
 from ligue1sim.clubs import Club
 from ligue1sim.lineup import pick_best_formation
@@ -55,6 +57,7 @@ def _simulate_n(n: int) -> list:
 
 
 class TestBuildClipsScoreSequence:
+    @pytest.mark.integration
     def test_build_clips_preserves_score_sequence(self):
         # Tache 3.3 -- sur plusieurs matchs (pas un seul, voir la limite
         # documentee dans narrative_timeline_schema.md/narrative_player.py :
@@ -102,6 +105,7 @@ class TestBuildClipsScoreSequence:
 
 
 class TestBuildClipsMaxOccasions:
+    @pytest.mark.integration
     def test_build_clips_max_occasions(self):
         # Tache 3.4 -- sur plusieurs matchs (les timelines comptent >= 10
         # evenements par construction, voir narrative._POISSON_MIN, donc 4
@@ -167,6 +171,7 @@ class TestBuildClipsIntervalEvents:
         ratio = non_empty / total
         assert ratio >= 0.25, f"ratio={ratio:.2%} ({non_empty}/{total}) sous le seuil de 25% -- a remonter"
 
+    @pytest.mark.integration
     def test_interval_events_chronological(self):
         # Tache 1.5 -- sur les Clips REELLEMENT retenus par build_clips
         # cette fois (echantillon plus modeste pour rester rapide, voir
@@ -185,6 +190,7 @@ class TestBuildClipsIntervalEvents:
 class TestNoOmissionAfterSubstitutesFix:
     """Brief "canvas player consolidation" (23/09/2026), Tache 2."""
 
+    @pytest.mark.integration
     def test_all_clips_rendered_no_omission(self):
         # Tache 2.4 -- sur 100 matchs simules, 100% des occasions generees
         # (timeline.events) sont rendues par build_clips (aucune omission).
@@ -202,6 +208,7 @@ class TestNoOmissionAfterSubstitutesFix:
 
         assert not omitted, f"{len(omitted)} occasion(s) omise(s) -- exemples: {omitted[:5]}"
 
+    @pytest.mark.integration
     def test_substitute_placed_correctly(self):
         # Tache 2.5 -- un evenement dont main_player est un remplacant
         # produit des frames valides (positions definies, dans [0, 1]).
@@ -240,6 +247,7 @@ class TestNoOmissionAfterSubstitutesFix:
 
 
 class TestBuildClipsFramesNeverEmpty:
+    @pytest.mark.integration
     def test_no_clip_has_empty_frames(self):
         results = _simulate_n(_N_MATCHES)
         for match in results:
@@ -261,6 +269,7 @@ class TestOutcomeTransmittedToTemplate:
     garder une correspondance 1-appel-pour-1-evenement sans ambiguite
     d'ordre (build_clips peut tenter des evenements ensuite omis)."""
 
+    @pytest.mark.integration
     def test_outcome_transmitted_to_template(self, monkeypatch):
         results = _simulate_n(100)
         original = templates_module.build_from_template
