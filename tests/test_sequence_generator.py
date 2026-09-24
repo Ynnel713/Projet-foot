@@ -1,9 +1,14 @@
 import pytest
 
+from ligue1sim.animation.motion import interpolate
 from ligue1sim.animation.sequence_generator import (
+    _GK_BASE_ADVANCE_M,
+    _GK_BASE_Y,
+    _GK_LATERAL_MAX_M,
     MatchState,
     _cb_line_drift,
     _forward_sign,
+    _gk_base_position,
     _tactical_drift,
     deterministic_rng,
     enrich_with_background,
@@ -13,9 +18,16 @@ from ligue1sim.animation.spatial import PitchLayoutState
 from ligue1sim.animation.templates import player_id_of
 from ligue1sim.events import GoalEvent, PlayerMatchStat
 from ligue1sim.lineup import Lineup
-from ligue1sim.pitch_geometry import Zone, center_of
+from ligue1sim.pitch_geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Zone, center_of
 from ligue1sim.pitch_layout import place_starting_xi
 from ligue1sim.players import Player
+
+# Dimensions réglementaires FIFA (voir docs/visual_backlog.md #4/#5), utilisées
+# ici pour vérifier que le gardien reste "entre les poteaux" et "dans sa
+# surface de but" -- pas dupliquées comme constantes de prod, uniquement des
+# bornes de test.
+_GOAL_HALF_WIDTH_M = 7.32 / 2.0
+_GOAL_AREA_DEPTH_M = 5.5
 
 
 def _player(poste: str, note: float, name: str, player_id: int) -> Player:
@@ -393,6 +405,15 @@ class TestTacticalDrift:
             dx, _dy = _tactical_drift("GK", player_id, "scorer", (0.02, 0.5), self._BALL_ON_THE_RIGHT, self._NO_CB_DRIFT)
             assert dx == 0.0
 
+    def test_goalkeeper_lateral_shift_never_exceeds_its_dedicated_cap(self):
+        # Brief "gardien actif" 1/2 (24/09/2026), Tâche 2 -- amplitude
+        # dédiée (_GK_LATERAL_MAX_M), distincte des fourchettes tactiques
+        # "données par Olivier" testées ci-dessus pour les autres postes.
+        max_shift_normalized = _GK_LATERAL_MAX_M / PITCH_WIDTH_M
+        for player_id in range(50):
+            _dx, dy = _tactical_drift("GK", player_id, "scorer", (0.028, 0.5), self._BALL_ON_THE_RIGHT, self._NO_CB_DRIFT)
+            assert abs(dy) <= max_shift_normalized + 1e-9
+
     def test_center_mid_moves_towards_the_ball_in_both_axes(self):
         dx, dy = _tactical_drift("MC", 1, "scorer", (0.4, 0.4), self._BALL_ON_THE_RIGHT, self._NO_CB_DRIFT)
         assert dx > 0
@@ -414,3 +435,100 @@ class TestTacticalDrift:
                 continue
             dx, _dy = sequence.background[player_id].drift
             assert dx == 0.0
+
+
+# --- Brief "gardien actif" 1/2 (24/09/2026) : position de base + réaction --
+# latérale passive. Le gardien reste un joueur "décor" (voir bloc de
+# constantes _GK_* dans sequence_generator.py) -- ces tests couvrent (1) le
+# calcul de sa position de base (`_gk_base_position`), (2) le fait qu'il ne
+# sort jamais de sa surface ni des poteaux une fois le drift appliqué, (3)
+# que son déplacement reste progressif -- ce dernier point s'appuie sur le
+# mécanisme générique `BackgroundTrack`/`motion._background_position_at`,
+# DÉJÀ testé indépendamment (voir tests/test_motion.py::TestBackgroundInterpolation)
+# : le test ci-dessous vérifie seulement que LE GARDIEN emprunte bien ce
+# mécanisme de bout en bout, pas la formule d'accélération elle-même.
+
+
+class TestGkBasePosition:
+    def test_scorer_side_goalkeeper_sits_in_front_of_its_own_goal_line_at_x_zero(self):
+        x, y = _gk_base_position("scorer")
+        assert x == pytest.approx(_GK_BASE_ADVANCE_M / PITCH_LENGTH_M)
+        assert y == _GK_BASE_Y
+
+    def test_opponent_goalkeeper_sits_in_front_of_its_own_goal_line_at_x_one(self):
+        x, y = _gk_base_position("opponent")
+        assert x == pytest.approx(1.0 - _GK_BASE_ADVANCE_M / PITCH_LENGTH_M)
+        assert y == _GK_BASE_Y
+
+    def test_base_is_centered_between_the_posts(self):
+        assert _GK_BASE_Y == 0.5
+
+    def test_base_advance_stays_within_the_goal_area_depth(self):
+        assert 0.0 < _GK_BASE_ADVANCE_M < _GOAL_AREA_DEPTH_M
+
+    def test_lateral_cap_never_reaches_the_posts(self):
+        assert 0.0 < _GK_LATERAL_MAX_M < _GOAL_HALF_WIDTH_M
+
+
+class TestGoalkeepersStartAtTheirBasePosition:
+    def test_both_goalkeepers_start_a_few_meters_forward_and_centered(self):
+        sequence, lineup, opponent = _enriched_sequence()
+        scorer_gk_id = player_id_of(next(p for p in lineup.players if p.poste == "GK"))
+        opponent_gk_id = player_id_of(next(p for p in opponent.players if p.poste == "GK"))
+
+        assert sequence.background[scorer_gk_id].start == pytest.approx(_gk_base_position("scorer"))
+        assert sequence.background[opponent_gk_id].start == pytest.approx(_gk_base_position("opponent"))
+
+
+class TestGoalkeeperStaysWithinItsGoalAreaAndPosts:
+    def test_never_passes_the_posts_or_leaves_the_goal_area_over_100_goals(self):
+        # Même protocole que test_drift_statistics_over_100_goals_stay_close_to_formation_positions
+        # ci-dessus, ciblé sur l'invariant propre au gardien : sa position
+        # finale (base + drift) ne doit JAMAIS dépasser les poteaux ni
+        # sortir de sa surface de but, quel que soit le tirage.
+        for event_index in range(100):
+            sequence, lineup, opponent = _enriched_sequence(event_index=event_index, minute=1 + event_index % 90)
+            for gk_lineup, own_goal_x in ((lineup, 0.0), (opponent, 1.0)):
+                gk_id = player_id_of(next(p for p in gk_lineup.players if p.poste == "GK"))
+                if gk_id not in sequence.background:
+                    continue
+                track = sequence.background[gk_id]
+                final_x = track.start[0] + track.drift[0]
+                final_y = track.start[1] + track.drift[1]
+
+                depth_from_own_line_m = abs(final_x - own_goal_x) * PITCH_LENGTH_M
+                assert depth_from_own_line_m <= _GOAL_AREA_DEPTH_M + 1e-9
+
+                lateral_shift_m = abs(final_y - 0.5) * PITCH_WIDTH_M
+                assert lateral_shift_m <= _GK_LATERAL_MAX_M + 1e-6
+                assert lateral_shift_m < _GOAL_HALF_WIDTH_M
+
+
+class TestGoalkeeperLateralReactionIsProgressive:
+    def test_the_conceding_goalkeeper_moves_smoothly_not_instantly_towards_its_final_position(self):
+        # Cherche un tirage où le gardien adverse a effectivement un drift
+        # latéral non nul (sinon rien à observer) -- amplitude déterministe
+        # par joueur (voir _deterministic_unit), donc pas garanti dès le
+        # premier event_index.
+        for event_index in range(30):
+            sequence, _lineup_, opponent = _enriched_sequence(event_index=event_index)
+            gk_id = player_id_of(next(p for p in opponent.players if p.poste == "GK"))
+            track = sequence.background.get(gk_id)
+            if track is None or track.drift[1] == 0.0:
+                continue
+
+            y_start = interpolate(sequence, 0.0).players[gk_id].y
+            y_mid = interpolate(sequence, sequence.duration / 2.0).players[gk_id].y
+            y_end = interpolate(sequence, sequence.duration).players[gk_id].y
+
+            assert y_start == pytest.approx(track.start[1])
+            assert y_end == pytest.approx(track.start[1] + track.drift[1])
+            # Progressif : à mi-parcours, ni encore à sa position de base ni
+            # déjà arrivé à sa position finale -- pas de saut instantané.
+            assert min(y_start, y_end) < y_mid < max(y_start, y_end)
+            return
+
+        pytest.fail(
+            "aucun des 30 tirages n'a produit de drift latéral pour le gardien adverse -- "
+            "amplitude ou logique de _tactical_drift à revérifier"
+        )

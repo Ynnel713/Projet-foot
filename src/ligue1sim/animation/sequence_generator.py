@@ -28,8 +28,9 @@ from ligue1sim.animation.templates import BUILDERS, context_from_event, numeros_
 from ligue1sim.animation.types import BackgroundTrack, PlayerId, RosterEntry, Sequence
 from ligue1sim.events import GoalEvent, PlayerMatchStat
 from ligue1sim.lineup import Lineup
-from ligue1sim.pitch_geometry import PitchPoint
+from ligue1sim.pitch_geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, PitchPoint
 from ligue1sim.pitch_layout import place_starting_xi
+from ligue1sim.players import GOALKEEPER
 
 
 @dataclass(frozen=True)
@@ -159,8 +160,36 @@ _WINGER_SUPPORT_Y_MAX = 0.01  # "dans le couloir" -- moins de latéral qu'un MC,
 _WINGER_HOLD_MAGNITUDE = 0.01  # ailier côté opposé qui "tient la largeur" -- quasi immobile
 _FORWARD_RUN_X_RANGE = (0.02, 0.04)  # appel en profondeur (ailier opposé) / appel (BU) -- toujours vers l'avant, jamais vers son propre but
 _STRIKER_HOLD_MAGNITUDE = 0.008  # BU qui "reste haut" -- quasi immobile, jamais vers le ballon
-_GK_Y_MAX = 0.02  # donné par Olivier
 _MAX_DRIFT_MAGNITUDE = 0.05  # ~5% du terrain, borne globale donnée par Olivier -- absorbe l'essentiel du risque d'erreur sur les fourchettes ci-dessus
+
+# --- Gardien actif, brief 1/2 (24/09/2026) : position de base + réaction --
+# latérale passive (suivi du ballon, sans plongeon -- voir brief 2). Un
+# gardien reste un joueur "décor" (`BackgroundTrack`, jamais un rôle de
+# gabarit, voir `_tactical_drift` ci-dessous) : ce chantier ne touche donc
+# QUE (1) le point de départ de son `BackgroundTrack` (`_gk_base_position`,
+# remplace la position issue de la formation générique `pitch_layout`,
+# pensée pour l'écran "stade" et pas pour ce rôle) et (2) l'amplitude de son
+# drift latéral (`_GK_LATERAL_MAX_M`, remplace l'ancien `_GK_Y_MAX`) -- valeurs
+# choisies pour ce brief, documentées ci-dessous, jamais "données par
+# Olivier" comme les fourchettes tactiques au-dessus.
+_GK_BASE_ADVANCE_M = 3.0  # avancée par défaut depuis SA ligne de but -- dans sa surface de but (5,5 m de profondeur, voir docs/visual_backlog.md #4), cohérent avec un gardien qui ne colle pas sa ligne sans sortir en sweeper-keeper
+_GK_BASE_Y = 0.5  # centre de sa cage, latéralement -- le but est centré sur le terrain (référentiel `pitch_geometry`)
+_GK_LATERAL_MAX_M = 2.5  # amplitude latérale max du suivi passif -- nettement en-deçà de la demi-largeur du but (3,66 m : but réglementaire 7,32 m), pour ne JAMAIS dépasser les poteaux même au pic du hash déterministe (voir _tactical_drift)
+
+
+def _gk_base_position(team_side: str) -> tuple[float, float]:
+    """Position de base du gardien (Tâche 1 du brief "gardien actif" 1/2) :
+    sur SA ligne de but, `_GK_BASE_ADVANCE_M` mètres devant, centré entre les
+    poteaux (`_GK_BASE_Y`). Référentiel : celui, PARTAGÉ, de la `Sequence`
+    (voir `pitch_geometry` -- x=progression vers le but adverse, y=latéral,
+    0-1) : le but de l'équipe qui marque ("scorer") est à x=0, celui de
+    l'adversaire ("opponent", celui qui encaisse) est à x=1 -- symétrique de
+    `_forward_sign`. Remplace la position de formation (`pitch_layout`,
+    ~10,5 m avancée pour un gardien) par une position pensée pour CE rôle,
+    indépendante du dispositif tactique choisi."""
+    advance = _GK_BASE_ADVANCE_M / PITCH_LENGTH_M
+    x = advance if team_side == "scorer" else 1.0 - advance
+    return (x, _GK_BASE_Y)
 
 
 def _deterministic_unit(key: object, salt: str) -> float:
@@ -239,9 +268,13 @@ def _tactical_drift(
     x_unit = _deterministic_unit(player_id, "drift_x")
     y_unit = _deterministic_unit(player_id, "drift_y")
 
-    if poste == "GK":
-        # Micro-shift latéral suivant le ballon, reste sur sa ligne (x=0).
-        return (0.0, _toward(ball_y, start_y, _GK_Y_MAX * y_unit))
+    if poste == GOALKEEPER:
+        # Réaction latérale passive (Tâche 2, brief "gardien actif" 1/2) :
+        # suit le ballon en y, ne bouge JAMAIS en x (reste à sa position de
+        # base, voir `_gk_base_position` -- x=0.0 ici est un delta, pas une
+        # position absolue, cohérent avec le reste de `_tactical_drift`).
+        max_shift = _GK_LATERAL_MAX_M / PITCH_WIDTH_M
+        return (0.0, _toward(ball_y, start_y, max_shift * y_unit))
 
     if poste == "DC":
         return cb_line_drift
@@ -337,7 +370,9 @@ def enrich_with_background(sequence: Sequence, opponent_lineup: Lineup) -> Seque
     11 adverses (`_opponent_positions`) ; (4) calcule la ligne de défenseurs
     centraux (`_cb_line_drift`) et un `BackgroundTrack` par joueur décor
     (`_tactical_drift`, réglé par rôle tactique -- voir Point 2 du brief du
-    23/09/2026) POUR CHAQUE ÉQUIPE séparément ; (5) étend `roster` avec les
+    23/09/2026) POUR CHAQUE ÉQUIPE séparément -- pour le gardien de chaque
+    équipe, le `start` de formation est remplacé par `_gk_base_position`
+    (brief "gardien actif" 1/2, 24/09/2026) ; (5) étend `roster` avec les
     11 adverses (numéro dérivé via `templates.numeros_by_player_id`,
     `team_side="opponent"`)."""
     active_ids = {player_id for player_id, entry in sequence.roster.items() if entry.role is not None}
@@ -358,6 +393,8 @@ def enrich_with_background(sequence: Sequence, opponent_lineup: Lineup) -> Seque
     ) if scorer_cb_ys else (0.0, 0.0)
     for player_id, start in scorer_starts.items():
         entry = sequence.roster[player_id]
+        if entry.poste == GOALKEEPER:
+            start = _gk_base_position("scorer")
         drift = _tactical_drift(entry.poste, player_id, "scorer", start, ball_target, scorer_cb_drift)
         background[player_id] = BackgroundTrack(start=start, drift=drift)
 
@@ -372,7 +409,7 @@ def enrich_with_background(sequence: Sequence, opponent_lineup: Lineup) -> Seque
     opponent_roster: dict[PlayerId, RosterEntry] = {}
     for player_id, point in opponent_positions.items():
         player = opponent_by_id[player_id]
-        start = (point.x, point.y)
+        start = _gk_base_position("opponent") if player.poste == GOALKEEPER else (point.x, point.y)
         drift = _tactical_drift(player.poste, player_id, "opponent", start, ball_target, opponent_cb_drift)
         background[player_id] = BackgroundTrack(start=start, drift=drift)
         opponent_roster[player_id] = RosterEntry(
