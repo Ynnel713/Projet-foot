@@ -1,0 +1,5617 @@
+{
+  "clip_index": 0,
+  "minute": 2,
+  "gabarit": "debordement_centre_tete",
+  "equipe": "Paris Saint-Germain",
+  "issue": "hors_cadre",
+  "main_player": "home_cb0",
+  "duration_s": 8.49999999999998,
+  "n_frames_total": 256,
+  "scorer_formation_declaree": "4-3-3",
+  "opponent_formation_declaree": "4-2-3-1",
+  "roster": {
+    "home_gk0": {
+      "numero": 1,
+      "team_side": "scorer",
+      "poste": "GK",
+      "role": null
+    },
+    "home_lb0": {
+      "numero": 5,
+      "team_side": "scorer",
+      "poste": "LB",
+      "role": null
+    },
+    "home_rb0": {
+      "numero": 6,
+      "team_side": "scorer",
+      "poste": "RB",
+      "role": null
+    },
+    "home_cb0": {
+      "numero": 2,
+      "team_side": "scorer",
+      "poste": "DC",
+      "role": "scorer"
+    },
+    "home_cb1": {
+      "numero": 3,
+      "team_side": "scorer",
+      "poste": "DC",
+      "role": null
+    },
+    "home_cb2": {
+      "numero": 4,
+      "team_side": "scorer",
+      "poste": "DC",
+      "role": null
+    },
+    "home_cm0": {
+      "numero": 7,
+      "team_side": "scorer",
+      "poste": "MC",
+      "role": null
+    },
+    "home_cm1": {
+      "numero": 8,
+      "team_side": "scorer",
+      "poste": "MC",
+      "role": null
+    },
+    "home_lw0": {
+      "numero": 10,
+      "team_side": "scorer",
+      "poste": "AG",
+      "role": null
+    },
+    "home_rw0": {
+      "numero": 11,
+      "team_side": "scorer",
+      "poste": "AD",
+      "role": null
+    },
+    "home_cf0": {
+      "numero": 9,
+      "team_side": "scorer",
+      "poste": "BU",
+      "role": null
+    },
+    "home_cb3": {
+      "numero": 12,
+      "team_side": "scorer",
+      "poste": "DC",
+      "role": null
+    },
+    "home_cm2": {
+      "numero": 14,
+      "team_side": "scorer",
+      "poste": "MC",
+      "role": "assist"
+    },
+    "home_lb1": {
+      "numero": 13,
+      "team_side": "scorer",
+      "poste": "LB",
+      "role": null
+    },
+    "away_gk0": {
+      "numero": 1,
+      "team_side": "opponent",
+      "poste": "GK",
+      "role": null
+    },
+    "away_lb0": {
+      "numero": 4,
+      "team_side": "opponent",
+      "poste": "LB",
+      "role": null
+    },
+    "away_rb0": {
+      "numero": 5,
+      "team_side": "opponent",
+      "poste": "RB",
+      "role": null
+    },
+    "away_cb0": {
+      "numero": 2,
+      "team_side": "opponent",
+      "poste": "DC",
+      "role": null
+    },
+    "away_cb1": {
+      "numero": 3,
+      "team_side": "opponent",
+      "poste": "DC",
+      "role": null
+    },
+    "away_am0": {
+      "numero": 6,
+      "team_side": "opponent",
+      "poste": "MOC",
+      "role": null
+    },
+    "away_cm0": {
+      "numero": 7,
+      "team_side": "opponent",
+      "poste": "MC",
+      "role": null
+    },
+    "away_cm1": {
+      "numero": 8,
+      "team_side": "opponent",
+      "poste": "MC",
+      "role": null
+    },
+    "away_lw0": {
+      "numero": 10,
+      "team_side": "opponent",
+      "poste": "AG",
+      "role": null
+    },
+    "away_rw0": {
+      "numero": 11,
+      "team_side": "opponent",
+      "poste": "AD",
+      "role": null
+    },
+    "away_cf0": {
+      "numero": 9,
+      "team_side": "opponent",
+      "poste": "BU",
+      "role": null
+    }
+  },
+  "frames": [
+    {
+      "frame_idx": 0,
+      "t": 0.0,
+      "ball": {
+        "x": 0.45,
+        "y": 0.2573643243781958,
+        "z": 0.0,
+        "owner_id": "home_cm2"
+      },
+      "players": {
+        "away_cm1": {
+          "numero": 8,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.6866666666666668,
+          "y": 0.75,
+          "is_ball_carrier": false
+        },
+        "home_cm0": {
+          "numero": 7,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.31333333333333324,
+          "y": 0.32,
+          "is_ball_carrier": false
+        },
+        "away_gk0": {
+          "numero": 1,
+          "team_side": "opponent",
+          "poste": "GK",
+          "role": null,
+          "x": 0.9714285714285714,
+          "y": 0.5,
+          "is_ball_carrier": false
+        },
+        "away_lb0": {
+          "numero": 4,
+          "team_side": "opponent",
+          "poste": "LB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.12,
+          "is_ball_carrier": false
+        },
+        "home_cm1": {
+          "numero": 8,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.31333333333333324,
+          "y": 0.68,
+          "is_ball_carrier": false
+        },
+        "away_rb0": {
+          "numero": 5,
+          "team_side": "opponent",
+          "poste": "RB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.88,
+          "is_ball_carrier": false
+        },
+        "away_am0": {
+          "numero": 6,
+          "team_side": "opponent",
+          "poste": "MOC",
+          "role": null,
+          "x": 0.6866666666666668,
+          "y": 0.25,
+          "is_ball_carrier": false
+        },
+        "home_lb1": {
+          "numero": 13,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.22,
+          "y": 0.194499694341205,
+          "is_ball_carrier": false
+        },
+        "away_cb0": {
+          "numero": 2,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.32,
+          "is_ball_carrier": false
+        },
+        "home_cm2": {
+          "numero": 14,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": "assist",
+          "x": 0.45,
+          "y": 0.2573643243781958,
+          "is_ball_carrier": true
+        },
+        "home_cb2": {
+          "numero": 4,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.75,
+          "is_ball_carrier": false
+        },
+        "home_cb0": {
+          "numero": 2,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": "scorer",
+          "x": 0.20666666666666667,
+          "y": 0.25,
+          "is_ball_carrier": false
+        },
+        "home_lb0": {
+          "numero": 5,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.12,
+          "is_ball_carrier": false
+        },
+        "home_rw0": {
+          "numero": 11,
+          "team_side": "scorer",
+          "poste": "AD",
+          "role": null,
+          "x": 0.42000000000000004,
+          "y": 0.88,
+          "is_ball_carrier": false
+        },
+        "away_cf0": {
+          "numero": 9,
+          "team_side": "opponent",
+          "poste": "BU",
+          "role": null,
+          "x": 0.58,
+          "y": 0.5,
+          "is_ball_carrier": false
+        },
+        "home_cb3": {
+          "numero": 12,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.18,
+          "y": 0.20480166344215045,
+          "is_ball_carrier": false
+        },
+        "away_cb1": {
+          "numero": 3,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.68,
+          "is_ball_carrier": false
+        },
+        "home_cb1": {
+          "numero": 3,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.5,
+          "is_ball_carrier": false
+        },
+        "away_rw0": {
+          "numero": 11,
+          "team_side": "opponent",
+          "poste": "AD",
+          "role": null,
+          "x": 0.58,
+          "y": 0.88,
+          "is_ball_carrier": false
+        },
+        "home_lw0": {
+          "numero": 10,
+          "team_side": "scorer",
+          "poste": "AG",
+          "role": null,
+          "x": 0.42000000000000004,
+          "y": 0.12,
+          "is_ball_carrier": false
+        },
+        "home_gk0": {
+          "numero": 1,
+          "team_side": "scorer",
+          "poste": "GK",
+          "role": null,
+          "x": 0.02857142857142857,
+          "y": 0.5,
+          "is_ball_carrier": false
+        },
+        "away_lw0": {
+          "numero": 10,
+          "team_side": "opponent",
+          "poste": "AG",
+          "role": null,
+          "x": 0.58,
+          "y": 0.12,
+          "is_ball_carrier": false
+        },
+        "away_cm0": {
+          "numero": 7,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.6866666666666668,
+          "y": 0.5,
+          "is_ball_carrier": false
+        },
+        "home_rb0": {
+          "numero": 6,
+          "team_side": "scorer",
+          "poste": "RB",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.88,
+          "is_ball_carrier": false
+        },
+        "home_cf0": {
+          "numero": 9,
+          "team_side": "scorer",
+          "poste": "BU",
+          "role": null,
+          "x": 0.42000000000000004,
+          "y": 0.5,
+          "is_ball_carrier": false
+        }
+      }
+    },
+    {
+      "frame_idx": 12,
+      "t": 0.39999999999999997,
+      "ball": {
+        "x": 0.4838089585311808,
+        "y": 0.24186277176146878,
+        "z": 0.0,
+        "owner_id": "home_cm2"
+      },
+      "players": {
+        "away_cm1": {
+          "numero": 8,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.6868116895545284,
+          "y": 0.7500264033069757,
+          "is_ball_carrier": false
+        },
+        "home_cm0": {
+          "numero": 7,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.31344182653813757,
+          "y": 0.3200272682350967,
+          "is_ball_carrier": false
+        },
+        "away_gk0": {
+          "numero": 1,
+          "team_side": "opponent",
+          "poste": "GK",
+          "role": null,
+          "x": 0.9714285714285714,
+          "y": 0.500149868732936,
+          "is_ball_carrier": false
+        },
+        "away_lb0": {
+          "numero": 4,
+          "team_side": "opponent",
+          "poste": "LB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.12000045520685072,
+          "is_ball_carrier": false
+        },
+        "home_cm1": {
+          "numero": 8,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.31345615976242974,
+          "y": 0.6800013931644313,
+          "is_ball_carrier": false
+        },
+        "away_rb0": {
+          "numero": 5,
+          "team_side": "opponent",
+          "poste": "RB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.8800021529159238,
+          "is_ball_carrier": false
+        },
+        "away_am0": {
+          "numero": 6,
+          "team_side": "opponent",
+          "poste": "MOC",
+          "role": null,
+          "x": 0.6867668781114397,
+          "y": 0.25001600951497743,
+          "is_ball_carrier": false
+        },
+        "home_lb1": {
+          "numero": 13,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.22,
+          "y": 0.19454459759504883,
+          "is_ball_carrier": false
+        },
+        "away_cb0": {
+          "numero": 2,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.32003927813306904,
+          "is_ball_carrier": false
+        },
+        "home_cm2": {
+          "numero": 14,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": "assist",
+          "x": 0.4792154173265618,
+          "y": 0.24396893012227225,
+          "is_ball_carrier": true
+        },
+        "home_cb2": {
+          "numero": 4,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.7500113658036189,
+          "is_ball_carrier": false
+        },
+        "home_cb0": {
+          "numero": 2,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": "scorer",
+          "x": 0.23328456262552094,
+          "y": 0.24751079526569317,
+          "is_ball_carrier": false
+        },
+        "home_lb0": {
+          "numero": 5,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.12005295092941203,
+          "is_ball_carrier": false
+        },
+        "home_rw0": {
+          "numero": 11,
+          "team_side": "scorer",
+          "poste": "AD",
+          "role": null,
+          "x": 0.42013117623222135,
+          "y": 0.8800234026133276,
+          "is_ball_carrier": false
+        },
+        "away_cf0": {
+          "numero": 9,
+          "team_side": "opponent",
+          "poste": "BU",
+          "role": null,
+          "x": 0.5798423626980863,
+          "y": 0.5,
+          "is_ball_carrier": false
+        },
+        "home_cb3": {
+          "numero": 12,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.18,
+          "y": 0.20481302924576938,
+          "is_ball_carrier": false
+        },
+        "away_cb1": {
+          "numero": 3,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.6800392781330691,
+          "is_ball_carrier": false
+        },
+        "home_cb1": {
+          "numero": 3,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.5000113658036189,
+          "is_ball_carrier": false
+        },
+        "away_rw0": {
+          "numero": 11,
+          "team_side": "opponent",
+          "poste": "AD",
+          "role": null,
+          "x": 0.5801403204951255,
+          "y": 0.8800062326388192,
+          "is_ball_carrier": false
+        },
+        "home_lw0": {
+          "numero": 10,
+          "team_side": "scorer",
+          "poste": "AG",
+          "role": null,
+          "x": 0.42000000000000004,
+          "y": 0.11998062722010457,
+          "is_ball_carrier": false
+        },
+        "home_gk0": {
+          "numero": 1,
+          "team_side": "scorer",
+          "poste": "GK",
+          "role": null,
+          "x": 0.02857142857142857,
+          "y": 0.5000710131378454,
+          "is_ball_carrier": false
+        },
+        "away_lw0": {
+          "numero": 10,
+          "team_side": "opponent",
+          "poste": "AG",
+          "role": null,
+          "x": 0.579847282636533,
+          "y": 0.12,
+          "is_ball_carrier": false
+        },
+        "away_cm0": {
+          "numero": 7,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.6867709113158843,
+          "y": 0.5000019589733937,
+          "is_ball_carrier": false
+        },
+        "home_rb0": {
+          "numero": 6,
+          "team_side": "scorer",
+          "poste": "RB",
+          "role": null,
+          "x": 0.20683079370409765,
+          "y": 0.8800020555527472,
+          "is_ball_carrier": false
+        },
+        "home_cf0": {
+          "numero": 9,
+          "team_side": "scorer",
+          "poste": "BU",
+          "role": null,
+          "x": 0.4200003498452018,
+          "y": 0.5,
+          "is_ball_carrier": false
+        }
+      }
+    },
+    {
+      "frame_idx": 24,
+      "t": 0.7999999999999999,
+      "ball": {
+        "x": 0.5174295663184553,
+        "y": 0.2264475787693475,
+        "z": 0.0,
+        "owner_id": "home_cm2"
+      },
+      "players": {
+        "away_cm1": {
+          "numero": 8,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.6872582118233307,
+          "y": 0.7501076985060195,
+          "is_ball_carrier": false
+        },
+        "home_cm0": {
+          "numero": 7,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.3137758747195879,
+          "y": 0.3201112265287229,
+          "is_ball_carrier": false
+        },
+        "away_gk0": {
+          "numero": 1,
+          "team_side": "opponent",
+          "poste": "GK",
+          "role": null,
+          "x": 0.9714285714285714,
+          "y": 0.5006113112516983,
+          "is_ball_carrier": false
+        },
+        "away_lb0": {
+          "numero": 4,
+          "team_side": "opponent",
+          "poste": "LB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.12000185677869056,
+          "is_ball_carrier": false
+        },
+        "home_cm1": {
+          "numero": 8,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.31383433962491725,
+          "y": 0.6800056826869464,
+          "is_ball_carrier": false
+        },
+        "away_rb0": {
+          "numero": 5,
+          "team_side": "opponent",
+          "poste": "RB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.8800087816965045,
+          "is_ball_carrier": false
+        },
+        "away_am0": {
+          "numero": 6,
+          "team_side": "opponent",
+          "poste": "MOC",
+          "role": null,
+          "x": 0.6870754269366612,
+          "y": 0.2500653024580126,
+          "is_ball_carrier": false
+        },
+        "home_lb1": {
+          "numero": 13,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.22,
+          "y": 0.19468285372191674,
+          "is_ball_carrier": false
+        },
+        "away_cb0": {
+          "numero": 2,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.3201602146373057,
+          "is_ball_carrier": false
+        },
+        "home_cm2": {
+          "numero": 14,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": "assist",
+          "x": 0.5084308346531237,
+          "y": 0.2305735358663487,
+          "is_ball_carrier": true
+        },
+        "home_cb2": {
+          "numero": 4,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.7500463608619405,
+          "is_ball_carrier": false
+        },
+        "home_cb0": {
+          "numero": 2,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": "scorer",
+          "x": 0.2599024585843752,
+          "y": 0.24502159053138636,
+          "is_ball_carrier": false
+        },
+        "home_lb0": {
+          "numero": 5,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.12021598567161636,
+          "is_ball_carrier": false
+        },
+        "home_rw0": {
+          "numero": 11,
+          "team_side": "scorer",
+          "poste": "AD",
+          "role": null,
+          "x": 0.4205350649541193,
+          "y": 0.8800954587429013,
+          "is_ball_carrier": false
+        },
+        "away_cf0": {
+          "numero": 9,
+          "team_side": "opponent",
+          "poste": "BU",
+          "role": null,
+          "x": 0.5793570009270156,
+          "y": 0.5,
+          "is_ball_carrier": false
+        },
+        "home_cb3": {
+          "numero": 12,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.18,
+          "y": 0.20484802430409094,
+          "is_ball_carrier": false
+        },
+        "away_cb1": {
+          "numero": 3,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.6801602146373057,
+          "is_ball_carrier": false
+        },
+        "home_cb1": {
+          "numero": 3,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.5000463608619405,
+          "is_ball_carrier": false
+        },
+        "away_rw0": {
+          "numero": 11,
+          "team_side": "opponent",
+          "poste": "AD",
+          "role": null,
+          "x": 0.5805723642005489,
+          "y": 0.8800254227960916,
+          "is_ball_carrier": false
+        },
+        "home_lw0": {
+          "numero": 10,
+          "team_side": "scorer",
+          "poste": "AG",
+          "role": null,
+          "x": 0.42000000000000004,
+          "y": 0.11992097885866686,
+          "is_ball_carrier": false
+        },
+        "home_gk0": {
+          "numero": 1,
+          "team_side": "scorer",
+          "poste": "GK",
+          "role": null,
+          "x": 0.02857142857142857,
+          "y": 0.5002896610209007,
+          "is_ball_carrier": false
+        },
+        "away_lw0": {
+          "numero": 10,
+          "team_side": "opponent",
+          "poste": "AG",
+          "role": null,
+          "x": 0.5793770692472793,
+          "y": 0.12,
+          "is_ball_carrier": false
+        },
+        "away_cm0": {
+          "numero": 7,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.6870918782885151,
+          "y": 0.5000079906092079,
+          "is_ball_carrier": false
+        },
+        "home_rb0": {
+          "numero": 6,
+          "team_side": "scorer",
+          "poste": "RB",
+          "role": null,
+          "x": 0.2073361372274965,
+          "y": 0.8800083845542578,
+          "is_ball_carrier": false
+        },
+        "home_cf0": {
+          "numero": 9,
+          "team_side": "scorer",
+          "poste": "BU",
+          "role": null,
+          "x": 0.42000142701085147,
+          "y": 0.5,
+          "is_ball_carrier": false
+        }
+      }
+    },
+    {
+      "frame_idx": 36,
+      "t": 1.2000000000000004,
+      "ball": {
+        "x": 0.5508618233618234,
+        "y": 0.21111874540183193,
+        "z": 0.0,
+        "owner_id": "home_cm2"
+      },
+      "players": {
+        "away_cm1": {
+          "numero": 8,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.6880215908483119,
+          "y": 0.7502466816074632,
+          "is_ball_carrier": false
+        },
+        "home_cm0": {
+          "numero": 7,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.3143469668976698,
+          "y": 0.3202547624838264,
+          "is_ball_carrier": false
+        },
+        "away_gk0": {
+          "numero": 1,
+          "team_side": "opponent",
+          "poste": "GK",
+          "role": null,
+          "x": 0.9714285714285714,
+          "y": 0.5014001980881884,
+          "is_ball_carrier": false
+        },
+        "away_lb0": {
+          "numero": 4,
+          "team_side": "opponent",
+          "poste": "LB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.12000425292020307,
+          "is_ball_carrier": false
+        },
+        "home_cm1": {
+          "numero": 8,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.3144808797750147,
+          "y": 0.6800130160983884,
+          "is_ball_carrier": false
+        },
+        "away_rb0": {
+          "numero": 5,
+          "team_side": "opponent",
+          "poste": "RB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.8800201143273947,
+          "is_ball_carrier": false
+        },
+        "away_am0": {
+          "numero": 6,
+          "team_side": "opponent",
+          "poste": "MOC",
+          "role": null,
+          "x": 0.6876029251552574,
+          "y": 0.2501495741761815,
+          "is_ball_carrier": false
+        },
+        "home_lb1": {
+          "numero": 13,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.22,
+          "y": 0.19491921780653274,
+          "is_ball_carrier": false
+        },
+        "away_cb0": {
+          "numero": 2,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.3203669689184225,
+          "is_ball_carrier": false
+        },
+        "home_cm2": {
+          "numero": 14,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": "assist",
+          "x": 0.5376462519796855,
+          "y": 0.21717814161042515,
+          "is_ball_carrier": true
+        },
+        "home_cb2": {
+          "numero": 4,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.7501061887705739,
+          "is_ball_carrier": false
+        },
+        "home_cb0": {
+          "numero": 2,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": "scorer",
+          "x": 0.28652035454322955,
+          "y": 0.24253238579707953,
+          "is_ball_carrier": false
+        },
+        "home_lb0": {
+          "numero": 5,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.12049471152973729,
+          "is_ball_carrier": false
+        },
+        "home_rw0": {
+          "numero": 11,
+          "team_side": "scorer",
+          "poste": "AD",
+          "role": null,
+          "x": 0.42122555723247856,
+          "y": 0.8802186466369464,
+          "is_ball_carrier": false
+        },
+        "away_cf0": {
+          "numero": 9,
+          "team_side": "opponent",
+          "poste": "BU",
+          "role": null,
+          "x": 0.5785272214928182,
+          "y": 0.5,
+          "is_ball_carrier": false
+        },
+        "home_cb3": {
+          "numero": 12,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.18,
+          "y": 0.20490785221272437,
+          "is_ball_carrier": false
+        },
+        "away_cb1": {
+          "numero": 3,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.6803669689184225,
+          "is_ball_carrier": false
+        },
+        "home_cb1": {
+          "numero": 3,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.5001061887705739,
+          "is_ball_carrier": false
+        },
+        "away_rw0": {
+          "numero": 11,
+          "team_side": "opponent",
+          "poste": "AD",
+          "role": null,
+          "x": 0.5813109905259057,
+          "y": 0.8800582304846918,
+          "is_ball_carrier": false
+        },
+        "home_lw0": {
+          "numero": 10,
+          "team_side": "scorer",
+          "poste": "AG",
+          "role": null,
+          "x": 0.42000000000000004,
+          "y": 0.11981900341157842,
+          "is_ball_carrier": false
+        },
+        "home_gk0": {
+          "numero": 1,
+          "team_side": "scorer",
+          "poste": "GK",
+          "role": null,
+          "x": 0.02857142857142857,
+          "y": 0.5006634636718382,
+          "is_ball_carrier": false
+        },
+        "away_lw0": {
+          "numero": 10,
+          "team_side": "opponent",
+          "poste": "AG",
+          "role": null,
+          "x": 0.5785731876411403,
+          "y": 0.12,
+          "is_ball_carrier": false
+        },
+        "away_cm0": {
+          "numero": 7,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.6876406066985792,
+          "y": 0.5000183023553144,
+          "is_ball_carrier": false
+        },
+        "home_rb0": {
+          "numero": 6,
+          "team_side": "scorer",
+          "poste": "RB",
+          "role": null,
+          "x": 0.2082000776692747,
+          "y": 0.8800192046797918,
+          "is_ball_carrier": false
+        },
+        "home_cf0": {
+          "numero": 9,
+          "team_side": "scorer",
+          "poste": "BU",
+          "role": null,
+          "x": 0.4200032685442326,
+          "y": 0.5,
+          "is_ball_carrier": false
+        }
+      }
+    },
+    {
+      "frame_idx": 48,
+      "t": 1.6000000000000016,
+      "ball": {
+        "x": 0.5841057296612854,
+        "y": 0.19587627165892202,
+        "z": 0.0,
+        "owner_id": "home_cm2"
+      },
+      "players": {
+        "away_cm1": {
+          "numero": 8,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.6891131130921823,
+          "y": 0.7504454074589518,
+          "is_ball_carrier": false
+        },
+        "home_cm0": {
+          "numero": 7,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.31516354659828694,
+          "y": 0.32045999826141985,
+          "is_ball_carrier": false
+        },
+        "away_gk0": {
+          "numero": 1,
+          "team_side": "opponent",
+          "poste": "GK",
+          "role": null,
+          "x": 0.9714285714285714,
+          "y": 0.5025281928348954,
+          "is_ball_carrier": false
+        },
+        "away_lb0": {
+          "numero": 4,
+          "team_side": "opponent",
+          "poste": "LB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.12000767905803864,
+          "is_ball_carrier": false
+        },
+        "home_cm1": {
+          "numero": 8,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.31540533922738684,
+          "y": 0.6800235018223216,
+          "is_ball_carrier": false
+        },
+        "away_rb0": {
+          "numero": 5,
+          "team_side": "opponent",
+          "poste": "RB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.8800363183601142,
+          "is_ball_carrier": false
+        },
+        "away_am0": {
+          "numero": 6,
+          "team_side": "opponent",
+          "poste": "MOC",
+          "role": null,
+          "x": 0.6883571717619333,
+          "y": 0.25027007061622025,
+          "is_ball_carrier": false
+        },
+        "home_lb1": {
+          "numero": 13,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.22,
+          "y": 0.19525718446210952,
+          "is_ball_carrier": false
+        },
+        "away_cb0": {
+          "numero": 2,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.3206625978124177,
+          "is_ball_carrier": false
+        },
+        "home_cm2": {
+          "numero": 14,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": "assist",
+          "x": 0.5668616693062474,
+          "y": 0.20378274735450158,
+          "is_ball_carrier": true
+        },
+        "home_cb2": {
+          "numero": 4,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.7501917340776109,
+          "is_ball_carrier": false
+        },
+        "home_cb0": {
+          "numero": 2,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": "scorer",
+          "x": 0.31313825050208394,
+          "y": 0.2400431810627727,
+          "is_ball_carrier": false
+        },
+        "home_lb0": {
+          "numero": 5,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.12089324943047179,
+          "is_ball_carrier": false
+        },
+        "home_rw0": {
+          "numero": 11,
+          "team_side": "scorer",
+          "poste": "AD",
+          "role": null,
+          "x": 0.4222128619086428,
+          "y": 0.8803947876129563,
+          "is_ball_carrier": false
+        },
+        "away_cf0": {
+          "numero": 9,
+          "team_side": "opponent",
+          "poste": "BU",
+          "role": null,
+          "x": 0.5773407562110998,
+          "y": 0.5,
+          "is_ball_carrier": false
+        },
+        "home_cb3": {
+          "numero": 12,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.18,
+          "y": 0.20499339751976134,
+          "is_ball_carrier": false
+        },
+        "away_cb1": {
+          "numero": 3,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.6806625978124177,
+          "is_ball_carrier": false
+        },
+        "home_cb1": {
+          "numero": 3,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.5001917340776109,
+          "is_ball_carrier": false
+        },
+        "away_rw0": {
+          "numero": 11,
+          "team_side": "opponent",
+          "poste": "AD",
+          "role": null,
+          "x": 0.5823671199683604,
+          "y": 0.8801051407621623,
+          "is_ball_carrier": false
+        },
+        "home_lw0": {
+          "numero": 10,
+          "team_side": "scorer",
+          "poste": "AG",
+          "role": null,
+          "x": 0.42000000000000004,
+          "y": 0.11967319318470145,
+          "is_ball_carrier": false
+        },
+        "home_gk0": {
+          "numero": 1,
+          "team_side": "scorer",
+          "poste": "GK",
+          "role": null,
+          "x": 0.02857142857142857,
+          "y": 0.5011979477157585,
+          "is_ball_carrier": false
+        },
+        "away_lw0": {
+          "numero": 10,
+          "team_side": "opponent",
+          "poste": "AG",
+          "role": null,
+          "x": 0.5774237525298463,
+          "y": 0.12,
+          "is_ball_carrier": false
+        },
+        "away_cm0": {
+          "numero": 7,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.6884252094264878,
+          "y": 0.5000330466695805,
+          "is_ball_carrier": false
+        },
+        "home_rb0": {
+          "numero": 6,
+          "team_side": "scorer",
+          "poste": "RB",
+          "role": null,
+          "x": 0.20943538828002017,
+          "y": 0.8800346759035422,
+          "is_ball_carrier": false
+        },
+        "home_cf0": {
+          "numero": 9,
+          "team_side": "scorer",
+          "poste": "BU",
+          "role": null,
+          "x": 0.4200059016721841,
+          "y": 0.5,
+          "is_ball_carrier": false
+        }
+      }
+    },
+    {
+      "frame_idx": 60,
+      "t": 2.0000000000000027,
+      "ball": {
+        "x": 0.6171612852168411,
+        "y": 0.18072015754061788,
+        "z": 0.0,
+        "owner_id": "home_cm2"
+      },
+      "players": {
+        "away_cm1": {
+          "numero": 8,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.6905373667729398,
+          "y": 0.750704711405375,
+          "is_ball_carrier": false
+        },
+        "home_cm0": {
+          "numero": 7,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.31622904631738763,
+          "y": 0.3207277965708929,
+          "is_ball_carrier": false
+        },
+        "away_gk0": {
+          "numero": 1,
+          "team_side": "opponent",
+          "poste": "GK",
+          "role": null,
+          "x": 0.9714285714285714,
+          "y": 0.5040000370221254,
+          "is_ball_carrier": false
+        },
+        "away_lb0": {
+          "numero": 4,
+          "team_side": "opponent",
+          "poste": "LB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.12001214959398099,
+          "is_ball_carrier": false
+        },
+        "home_cm1": {
+          "numero": 8,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.31661160395093807,
+          "y": 0.6800371839355275,
+          "is_ball_carrier": false
+        },
+        "away_rb0": {
+          "numero": 5,
+          "team_side": "opponent",
+          "poste": "RB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.8800574619083775,
+          "is_ball_carrier": false
+        },
+        "away_am0": {
+          "numero": 6,
+          "team_side": "opponent",
+          "poste": "MOC",
+          "role": null,
+          "x": 0.6893413372352343,
+          "y": 0.25042729828538335,
+          "is_ball_carrier": false
+        },
+        "home_lb1": {
+          "numero": 13,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.22,
+          "y": 0.1956981743327986,
+          "is_ball_carrier": false
+        },
+        "away_cb0": {
+          "numero": 2,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.3210483439964973,
+          "is_ball_carrier": false
+        },
+        "home_cm2": {
+          "numero": 14,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": "assist",
+          "x": 0.5960770866328093,
+          "y": 0.19038735309857802,
+          "is_ball_carrier": true
+        },
+        "home_cb2": {
+          "numero": 4,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.7503033563730823,
+          "is_ball_carrier": false
+        },
+        "home_cb0": {
+          "numero": 2,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": "scorer",
+          "x": 0.3397561464609383,
+          "y": 0.23755397632846587,
+          "is_ball_carrier": false
+        },
+        "home_lb0": {
+          "numero": 5,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.12141327462943603,
+          "is_ball_carrier": false
+        },
+        "home_rw0": {
+          "numero": 11,
+          "team_side": "scorer",
+          "poste": "AD",
+          "role": null,
+          "x": 0.4235011291216592,
+          "y": 0.8806246220802089,
+          "is_ball_carrier": false
+        },
+        "away_cf0": {
+          "numero": 9,
+          "team_side": "opponent",
+          "poste": "BU",
+          "role": null,
+          "x": 0.5757926177704329,
+          "y": 0.5,
+          "is_ball_carrier": false
+        },
+        "home_cb3": {
+          "numero": 12,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.18,
+          "y": 0.2051050198152328,
+          "is_ball_carrier": false
+        },
+        "away_cb1": {
+          "numero": 3,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.6810483439964973,
+          "is_ball_carrier": false
+        },
+        "home_cb1": {
+          "numero": 3,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.5003033563730823,
+          "is_ball_carrier": false
+        },
+        "away_rw0": {
+          "numero": 11,
+          "team_side": "opponent",
+          "poste": "AD",
+          "role": null,
+          "x": 0.5837451919721329,
+          "y": 0.880166350816037,
+          "is_ball_carrier": false
+        },
+        "home_lw0": {
+          "numero": 10,
+          "team_side": "scorer",
+          "poste": "AG",
+          "role": null,
+          "x": 0.42000000000000004,
+          "y": 0.11948293526418004,
+          "is_ball_carrier": false
+        },
+        "home_gk0": {
+          "numero": 1,
+          "team_side": "scorer",
+          "poste": "GK",
+          "role": null,
+          "x": 0.02857142857142857,
+          "y": 0.5018953598584196,
+          "is_ball_carrier": false
+        },
+        "away_lw0": {
+          "numero": 10,
+          "team_side": "opponent",
+          "poste": "AG",
+          "role": null,
+          "x": 0.5759239322584354,
+          "y": 0.12,
+          "is_ball_carrier": false
+        },
+        "away_cm0": {
+          "numero": 7,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.6894489845528599,
+          "y": 0.5000522855297884,
+          "is_ball_carrier": false
+        },
+        "home_rb0": {
+          "numero": 6,
+          "team_side": "scorer",
+          "poste": "RB",
+          "role": null,
+          "x": 0.21104726169269095,
+          "y": 0.8800548632588583,
+          "is_ball_carrier": false
+        },
+        "home_cf0": {
+          "numero": 9,
+          "team_side": "scorer",
+          "poste": "BU",
+          "role": null,
+          "x": 0.4200093374630697,
+          "y": 0.5,
+          "is_ball_carrier": false
+        }
+      }
+    },
+    {
+      "frame_idx": 72,
+      "t": 2.4000000000000012,
+      "ball": {
+        "x": 0.6500284900284902,
+        "y": 0.16565040304691953,
+        "z": 0.0,
+        "owner_id": "home_cm2"
+      },
+      "players": {
+        "away_cm1": {
+          "numero": 8,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.6922889720788343,
+          "y": 0.7510236139818827,
+          "is_ball_carrier": false
+        },
+        "home_cm0": {
+          "numero": 7,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.3175394413591004,
+          "y": 0.3210571458617671,
+          "is_ball_carrier": false
+        },
+        "away_gk0": {
+          "numero": 1,
+          "team_side": "opponent",
+          "poste": "GK",
+          "role": null,
+          "x": 0.9714285714285714,
+          "y": 0.5058101710752322,
+          "is_ball_carrier": false
+        },
+        "away_lb0": {
+          "numero": 4,
+          "team_side": "opponent",
+          "poste": "LB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.12001764764154273,
+          "is_ball_carrier": false
+        },
+        "home_cm1": {
+          "numero": 8,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.3180951175402881,
+          "y": 0.680054010756768,
+          "is_ball_carrier": false
+        },
+        "away_rb0": {
+          "numero": 5,
+          "team_side": "opponent",
+          "poste": "RB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.8800834651069819,
+          "is_ball_carrier": false
+        },
+        "away_am0": {
+          "numero": 6,
+          "team_side": "opponent",
+          "poste": "MOC",
+          "role": null,
+          "x": 0.6905517041018975,
+          "y": 0.2506206632899891,
+          "is_ball_carrier": false
+        },
+        "home_lb1": {
+          "numero": 13,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.22,
+          "y": 0.19624052167427347,
+          "is_ball_carrier": false
+        },
+        "away_cb0": {
+          "numero": 2,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.3215227503974714,
+          "is_ball_carrier": false
+        },
+        "home_cm2": {
+          "numero": 14,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": "assist",
+          "x": 0.6252925039593711,
+          "y": 0.1769919588426545,
+          "is_ball_carrier": true
+        },
+        "home_cb2": {
+          "numero": 4,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.7504406340277905,
+          "is_ball_carrier": false
+        },
+        "home_cb0": {
+          "numero": 2,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": "scorer",
+          "x": 0.36637404241979254,
+          "y": 0.23506477159415906,
+          "is_ball_carrier": false
+        },
+        "home_lb0": {
+          "numero": 5,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.12205282284336105,
+          "is_ball_carrier": false
+        },
+        "home_rw0": {
+          "numero": 11,
+          "team_side": "scorer",
+          "poste": "AD",
+          "role": null,
+          "x": 0.42508549271939217,
+          "y": 0.8809072818884693,
+          "is_ball_carrier": false
+        },
+        "away_cf0": {
+          "numero": 9,
+          "team_side": "opponent",
+          "poste": "BU",
+          "role": null,
+          "x": 0.5738886539305857,
+          "y": 0.5,
+          "is_ball_carrier": false
+        },
+        "home_cb3": {
+          "numero": 12,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.18,
+          "y": 0.205242297469941,
+          "is_ball_carrier": false
+        },
+        "away_cb1": {
+          "numero": 3,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.6815227503974715,
+          "is_ball_carrier": false
+        },
+        "home_cb1": {
+          "numero": 3,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.5004406340277905,
+          "is_ball_carrier": false
+        },
+        "away_rw0": {
+          "numero": 11,
+          "team_side": "opponent",
+          "poste": "AD",
+          "role": null,
+          "x": 0.5854400011668184,
+          "y": 0.880241629438511,
+          "is_ball_carrier": false
+        },
+        "home_lw0": {
+          "numero": 10,
+          "team_side": "scorer",
+          "poste": "AG",
+          "role": null,
+          "x": 0.42000000000000004,
+          "y": 0.11924894830836152,
+          "is_ball_carrier": false
+        },
+        "home_gk0": {
+          "numero": 1,
+          "team_side": "scorer",
+          "poste": "GK",
+          "role": null,
+          "x": 0.02857142857142857,
+          "y": 0.5027530657755499,
+          "is_ball_carrier": false
+        },
+        "away_lw0": {
+          "numero": 10,
+          "team_side": "opponent",
+          "poste": "AG",
+          "role": null,
+          "x": 0.5740793920751909,
+          "y": 0.12,
+          "is_ball_carrier": false
+        },
+        "away_cm0": {
+          "numero": 7,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.6907080649874932,
+          "y": 0.5000759462652845,
+          "is_ball_carrier": false
+        },
+        "home_rb0": {
+          "numero": 6,
+          "team_side": "scorer",
+          "poste": "RB",
+          "role": null,
+          "x": 0.21302960940237892,
+          "y": 0.88007969049235,
+          "is_ball_carrier": false
+        },
+        "home_cf0": {
+          "numero": 9,
+          "team_side": "scorer",
+          "poste": "BU",
+          "role": null,
+          "x": 0.4200135629389286,
+          "y": 0.5,
+          "is_ball_carrier": false
+        }
+      }
+    },
+    {
+      "frame_idx": 84,
+      "t": 2.8,
+      "ball": {
+        "x": 0.682707344096233,
+        "y": 0.1506670081778269,
+        "z": 0.0,
+        "owner_id": "home_cm2"
+      },
+      "players": {
+        "away_cm1": {
+          "numero": 8,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.6943489651818002,
+          "y": 0.7513986625763994,
+          "is_ball_carrier": false
+        },
+        "home_cm0": {
+          "numero": 7,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.3190805446767286,
+          "y": 0.3214444804201773,
+          "is_ball_carrier": false
+        },
+        "away_gk0": {
+          "numero": 1,
+          "team_side": "opponent",
+          "poste": "GK",
+          "role": null,
+          "x": 0.9714285714285714,
+          "y": 0.5079389975022222,
+          "is_ball_carrier": false
+        },
+        "away_lb0": {
+          "numero": 4,
+          "team_side": "opponent",
+          "poste": "LB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.12002411367588213,
+          "is_ball_carrier": false
+        },
+        "home_cm1": {
+          "numero": 8,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.3198398186735475,
+          "y": 0.6800738001097595,
+          "is_ball_carrier": false
+        },
+        "away_rb0": {
+          "numero": 5,
+          "team_side": "opponent",
+          "poste": "RB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.8801140464312103,
+          "is_ball_carrier": false
+        },
+        "away_am0": {
+          "numero": 6,
+          "team_side": "opponent",
+          "poste": "MOC",
+          "role": null,
+          "x": 0.6919751682744449,
+          "y": 0.2508480721557321,
+          "is_ball_carrier": false
+        },
+        "home_lb1": {
+          "numero": 13,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.22,
+          "y": 0.1968783547403703,
+          "is_ball_carrier": false
+        },
+        "away_cb0": {
+          "numero": 2,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.32208068083460867,
+          "is_ball_carrier": false
+        },
+        "home_cm2": {
+          "numero": 14,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": "assist",
+          "x": 0.6545079212859328,
+          "y": 0.16359656458673102,
+          "is_ball_carrier": true
+        },
+        "home_cb2": {
+          "numero": 4,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.7506020807994682,
+          "is_ball_carrier": false
+        },
+        "home_cb0": {
+          "numero": 2,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": "scorer",
+          "x": 0.3929919383786467,
+          "y": 0.23257556685985226,
+          "is_ball_carrier": false
+        },
+        "home_lb0": {
+          "numero": 5,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.12280496997677415,
+          "is_ball_carrier": false
+        },
+        "home_rw0": {
+          "numero": 11,
+          "team_side": "scorer",
+          "poste": "AD",
+          "role": null,
+          "x": 0.4269487995231207,
+          "y": 0.8812397068095076,
+          "is_ball_carrier": false
+        },
+        "away_cf0": {
+          "numero": 9,
+          "team_side": "opponent",
+          "poste": "BU",
+          "role": null,
+          "x": 0.5716494780356609,
+          "y": 0.5,
+          "is_ball_carrier": false
+        },
+        "home_cb3": {
+          "numero": 12,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.18,
+          "y": 0.20540374424161872,
+          "is_ball_carrier": false
+        },
+        "away_cb1": {
+          "numero": 3,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.6820806808346087,
+          "is_ball_carrier": false
+        },
+        "home_cb1": {
+          "numero": 3,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.5006020807994682,
+          "is_ball_carrier": false
+        },
+        "away_rw0": {
+          "numero": 11,
+          "team_side": "opponent",
+          "poste": "AD",
+          "role": null,
+          "x": 0.5874331986298236,
+          "y": 0.8803301616224314,
+          "is_ball_carrier": false
+        },
+        "home_lw0": {
+          "numero": 10,
+          "team_side": "scorer",
+          "poste": "AG",
+          "role": null,
+          "x": 0.42000000000000004,
+          "y": 0.1189737655868043,
+          "is_ball_carrier": false
+        },
+        "home_gk0": {
+          "numero": 1,
+          "team_side": "scorer",
+          "poste": "GK",
+          "role": null,
+          "x": 0.02857142857142857,
+          "y": 0.5037617794781836,
+          "is_ball_carrier": false
+        },
+        "away_lw0": {
+          "numero": 10,
+          "team_side": "opponent",
+          "poste": "AG",
+          "role": null,
+          "x": 0.5719101019715124,
+          "y": 0.12,
+          "is_ball_carrier": false
+        },
+        "away_cm0": {
+          "numero": 7,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.6921888192434293,
+          "y": 0.5001037727121266,
+          "is_ball_carrier": false
+        },
+        "home_rb0": {
+          "numero": 6,
+          "team_side": "scorer",
+          "poste": "RB",
+          "role": null,
+          "x": 0.21536096943873834,
+          "y": 0.8801088888109362,
+          "is_ball_carrier": false
+        },
+        "home_cf0": {
+          "numero": 9,
+          "team_side": "scorer",
+          "poste": "BU",
+          "role": null,
+          "x": 0.42001853235247,
+          "y": 0.5,
+          "is_ball_carrier": false
+        }
+      }
+    },
+    {
+      "frame_idx": 96,
+      "t": 3.1999999999999984,
+      "ball": {
+        "x": 0.7151978474200695,
+        "y": 0.13576997293334003,
+        "z": 0.0,
+        "owner_id": "home_cm2"
+      },
+      "players": {
+        "away_cm1": {
+          "numero": 8,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.6966815204905117,
+          "y": 0.7518233346730707,
+          "is_ball_carrier": false
+        },
+        "home_cm0": {
+          "numero": 7,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.32082555475449565,
+          "y": 0.32188306406357214,
+          "is_ball_carrier": false
+        },
+        "away_gk0": {
+          "numero": 1,
+          "team_side": "opponent",
+          "poste": "GK",
+          "role": null,
+          "x": 0.9714285714285714,
+          "y": 0.5103494936230348,
+          "is_ball_carrier": false
+        },
+        "away_lb0": {
+          "numero": 4,
+          "team_side": "opponent",
+          "poste": "LB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.12003143524540727,
+          "is_ball_carrier": false
+        },
+        "home_cm1": {
+          "numero": 8,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.3218153650404939,
+          "y": 0.6800962078354504,
+          "is_ball_carrier": false
+        },
+        "away_rb0": {
+          "numero": 5,
+          "team_side": "opponent",
+          "poste": "RB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.8801486740375231,
+          "is_ball_carrier": false
+        },
+        "away_am0": {
+          "numero": 6,
+          "team_side": "opponent",
+          "poste": "MOC",
+          "role": null,
+          "x": 0.6935869741138214,
+          "y": 0.2511055699872895,
+          "is_ball_carrier": false
+        },
+        "home_lb1": {
+          "numero": 13,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.22,
+          "y": 0.19760058089843546,
+          "is_ball_carrier": false
+        },
+        "away_cb0": {
+          "numero": 2,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.32271243227162194,
+          "is_ball_carrier": false
+        },
+        "home_cm2": {
+          "numero": 14,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": "assist",
+          "x": 0.6837233386124945,
+          "y": 0.15020117033080754,
+          "is_ball_carrier": true
+        },
+        "home_cb2": {
+          "numero": 4,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.7507848889476164,
+          "is_ball_carrier": false
+        },
+        "home_cb0": {
+          "numero": 2,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": "scorer",
+          "x": 0.4196098343375009,
+          "y": 0.23008636212554542,
+          "is_ball_carrier": false
+        },
+        "home_lb0": {
+          "numero": 5,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.12365663534713328,
+          "is_ball_carrier": false
+        },
+        "home_rw0": {
+          "numero": 11,
+          "team_side": "scorer",
+          "poste": "AD",
+          "role": null,
+          "x": 0.42905864453694004,
+          "y": 0.8816161156009735,
+          "is_ball_carrier": false
+        },
+        "away_cf0": {
+          "numero": 9,
+          "team_side": "opponent",
+          "poste": "BU",
+          "role": null,
+          "x": 0.5691140318667753,
+          "y": 0.5,
+          "is_ball_carrier": false
+        },
+        "home_cb3": {
+          "numero": 12,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.18,
+          "y": 0.20558655238976686,
+          "is_ball_carrier": false
+        },
+        "away_cb1": {
+          "numero": 3,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.6827124322716219,
+          "is_ball_carrier": false
+        },
+        "home_cb1": {
+          "numero": 3,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.5007848889476164,
+          "is_ball_carrier": false
+        },
+        "away_rw0": {
+          "numero": 11,
+          "team_side": "opponent",
+          "poste": "AD",
+          "role": null,
+          "x": 0.5896901204209445,
+          "y": 0.8804304076937884,
+          "is_ball_carrier": false
+        },
+        "home_lw0": {
+          "numero": 10,
+          "team_side": "scorer",
+          "poste": "AG",
+          "role": null,
+          "x": 0.42000000000000004,
+          "y": 0.11866217283578501,
+          "is_ball_carrier": false
+        },
+        "home_gk0": {
+          "numero": 1,
+          "team_side": "scorer",
+          "poste": "GK",
+          "role": null,
+          "x": 0.02857142857142857,
+          "y": 0.5049039583032778,
+          "is_ball_carrier": false
+        },
+        "away_lw0": {
+          "numero": 10,
+          "team_side": "opponent",
+          "poste": "AG",
+          "role": null,
+          "x": 0.5694537883361974,
+          "y": 0.12,
+          "is_ball_carrier": false
+        },
+        "away_cm0": {
+          "numero": 7,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.6938654953427853,
+          "y": 0.5001352809371837,
+          "is_ball_carrier": false
+        },
+        "home_rb0": {
+          "numero": 6,
+          "team_side": "scorer",
+          "poste": "RB",
+          "role": null,
+          "x": 0.2180007968350039,
+          "y": 0.8801419504230967,
+          "is_ball_carrier": false
+        },
+        "home_cf0": {
+          "numero": 9,
+          "team_side": "scorer",
+          "poste": "BU",
+          "role": null,
+          "x": 0.4200241592800167,
+          "y": 0.5,
+          "is_ball_carrier": false
+        }
+      }
+    },
+    {
+      "frame_idx": 108,
+      "t": 3.599999999999997,
+      "ball": {
+        "x": 0.7474999999999998,
+        "y": 0.12095929731345886,
+        "z": 0.0,
+        "owner_id": "home_cm2"
+      },
+      "players": {
+        "away_cm1": {
+          "numero": 8,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.6992321063074143,
+          "y": 0.752287702065586,
+          "is_ball_carrier": false
+        },
+        "home_cm0": {
+          "numero": 7,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.32273367583444706,
+          "y": 0.32236264335422843,
+          "is_ball_carrier": false
+        },
+        "away_gk0": {
+          "numero": 1,
+          "team_side": "opponent",
+          "poste": "GK",
+          "role": null,
+          "x": 0.9714285714285714,
+          "y": 0.5129853055990605,
+          "is_ball_carrier": false
+        },
+        "away_lb0": {
+          "numero": 4,
+          "team_side": "opponent",
+          "poste": "LB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.1200394411826378,
+          "is_ball_carrier": false
+        },
+        "home_cm1": {
+          "numero": 8,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.3239755712852712,
+          "y": 0.6801207100743139,
+          "is_ball_carrier": false
+        },
+        "away_rb0": {
+          "numero": 5,
+          "team_side": "opponent",
+          "poste": "RB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.8801865383836351,
+          "is_ball_carrier": false
+        },
+        "away_am0": {
+          "numero": 6,
+          "team_side": "opponent",
+          "poste": "MOC",
+          "role": null,
+          "x": 0.6953494399804018,
+          "y": 0.25138713686572556,
+          "is_ball_carrier": false
+        },
+        "home_lb1": {
+          "numero": 13,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.22,
+          "y": 0.19839031556773884,
+          "is_ball_carrier": false
+        },
+        "away_cb0": {
+          "numero": 2,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.32340323529311343,
+          "is_ball_carrier": false
+        },
+        "home_cm2": {
+          "numero": 14,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": "assist",
+          "x": 0.7129387559390563,
+          "y": 0.13680577607488403,
+          "is_ball_carrier": true
+        },
+        "home_cb2": {
+          "numero": 4,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.7509847846877686,
+          "is_ball_carrier": false
+        },
+        "home_cb0": {
+          "numero": 2,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": "scorer",
+          "x": 0.4462277302963551,
+          "y": 0.22759715739123862,
+          "is_ball_carrier": false
+        },
+        "home_lb0": {
+          "numero": 5,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.12458790827612769,
+          "is_ball_carrier": false
+        },
+        "home_rw0": {
+          "numero": 11,
+          "team_side": "scorer",
+          "poste": "AD",
+          "role": null,
+          "x": 0.43136570270101127,
+          "y": 0.8820277083813398,
+          "is_ball_carrier": false
+        },
+        "away_cf0": {
+          "numero": 9,
+          "team_side": "opponent",
+          "poste": "BU",
+          "role": null,
+          "x": 0.5663415904100915,
+          "y": 0.5,
+          "is_ball_carrier": false
+        },
+        "home_cb3": {
+          "numero": 12,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.18,
+          "y": 0.20578644812991911,
+          "is_ball_carrier": false
+        },
+        "away_cb1": {
+          "numero": 3,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.6834032352931135,
+          "is_ball_carrier": false
+        },
+        "home_cb1": {
+          "numero": 3,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.5009847846877686,
+          "is_ball_carrier": false
+        },
+        "away_rw0": {
+          "numero": 11,
+          "team_side": "opponent",
+          "poste": "AD",
+          "role": null,
+          "x": 0.5921580030425454,
+          "y": 0.8805400240475139,
+          "is_ball_carrier": false
+        },
+        "home_lw0": {
+          "numero": 10,
+          "team_side": "scorer",
+          "poste": "AG",
+          "role": null,
+          "x": 0.42000000000000004,
+          "y": 0.1183214546335493,
+          "is_ball_carrier": false
+        },
+        "home_gk0": {
+          "numero": 1,
+          "team_side": "scorer",
+          "poste": "GK",
+          "role": null,
+          "x": 0.02857142857142857,
+          "y": 0.5061528997970859,
+          "is_ball_carrier": false
+        },
+        "away_lw0": {
+          "numero": 10,
+          "team_side": "opponent",
+          "poste": "AG",
+          "role": null,
+          "x": 0.566767876153665,
+          "y": 0.12,
+          "is_ball_carrier": false
+        },
+        "away_cm0": {
+          "numero": 7,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.6956988950750812,
+          "y": 0.5001697343246966,
+          "is_ball_carrier": false
+        },
+        "home_rb0": {
+          "numero": 6,
+          "team_side": "scorer",
+          "poste": "RB",
+          "role": null,
+          "x": 0.22088737632610528,
+          "y": 0.8801781023971766,
+          "is_ball_carrier": false
+        },
+        "home_cf0": {
+          "numero": 9,
+          "team_side": "scorer",
+          "poste": "BU",
+          "role": null,
+          "x": 0.42003031217231457,
+          "y": 0.5,
+          "is_ball_carrier": false
+        }
+      }
+    },
+    {
+      "frame_idx": 120,
+      "t": 3.9999999999999956,
+      "ball": {
+        "x": 0.7687499999999998,
+        "y": 0.13204941442788218,
+        "z": 0.0,
+        "owner_id": "home_cm2"
+      },
+      "players": {
+        "away_cm1": {
+          "numero": 8,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.701928330324399,
+          "y": 0.7527785847906868,
+          "is_ball_carrier": false
+        },
+        "home_cm0": {
+          "numero": 7,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.32475075044098894,
+          "y": 0.3228696065753626,
+          "is_ball_carrier": false
+        },
+        "away_gk0": {
+          "numero": 1,
+          "team_side": "opponent",
+          "poste": "GK",
+          "role": null,
+          "x": 0.9714285714285714,
+          "y": 0.5157716221804987,
+          "is_ball_carrier": false
+        },
+        "away_lb0": {
+          "numero": 4,
+          "team_side": "opponent",
+          "poste": "LB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.12004790425809928,
+          "is_ball_carrier": false
+        },
+        "home_cm1": {
+          "numero": 8,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.32625912509483584,
+          "y": 0.6801466113886142,
+          "is_ball_carrier": false
+        },
+        "away_rb0": {
+          "numero": 5,
+          "team_side": "opponent",
+          "poste": "RB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.8802265647801979,
+          "is_ball_carrier": false
+        },
+        "away_am0": {
+          "numero": 6,
+          "team_side": "opponent",
+          "poste": "MOC",
+          "role": null,
+          "x": 0.6972125424751693,
+          "y": 0.2516847811853152,
+          "is_ball_carrier": false
+        },
+        "home_lb1": {
+          "numero": 13,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.22,
+          "y": 0.1992251440092328,
+          "is_ball_carrier": false
+        },
+        "away_cb0": {
+          "numero": 2,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.3241334830994049,
+          "is_ball_carrier": false
+        },
+        "home_cm2": {
+          "numero": 14,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": "assist",
+          "x": 0.7767154173265616,
+          "y": 0.10756390305753534,
+          "is_ball_carrier": true
+        },
+        "home_cb2": {
+          "numero": 4,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.7511960944550855,
+          "is_ball_carrier": false
+        },
+        "home_cb0": {
+          "numero": 2,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": "scorer",
+          "x": 0.5006178959588541,
+          "y": 0.2225107952656932,
+          "is_ball_carrier": false
+        },
+        "home_lb0": {
+          "numero": 5,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.12557235679806442,
+          "is_ball_carrier": false
+        },
+        "home_rw0": {
+          "numero": 11,
+          "team_side": "scorer",
+          "poste": "AD",
+          "role": null,
+          "x": 0.43380449366006385,
+          "y": 0.882462803069112,
+          "is_ball_carrier": false
+        },
+        "away_cf0": {
+          "numero": 9,
+          "team_side": "opponent",
+          "poste": "BU",
+          "role": null,
+          "x": 0.5634108428180449,
+          "y": 0.5,
+          "is_ball_carrier": false
+        },
+        "home_cb3": {
+          "numero": 12,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.18,
+          "y": 0.205997757897236,
+          "is_ball_carrier": false
+        },
+        "away_cb1": {
+          "numero": 3,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.6841334830994049,
+          "is_ball_carrier": false
+        },
+        "home_cb1": {
+          "numero": 3,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.5011960944550855,
+          "is_ball_carrier": false
+        },
+        "away_rw0": {
+          "numero": 11,
+          "team_side": "opponent",
+          "poste": "AD",
+          "role": null,
+          "x": 0.594766801519885,
+          "y": 0.88065589948429,
+          "is_ball_carrier": false
+        },
+        "home_lw0": {
+          "numero": 10,
+          "team_side": "scorer",
+          "poste": "AG",
+          "role": null,
+          "x": 0.42000000000000004,
+          "y": 0.11796128145537041,
+          "is_ball_carrier": false
+        },
+        "home_gk0": {
+          "numero": 1,
+          "team_side": "scorer",
+          "poste": "GK",
+          "role": null,
+          "x": 0.02857142857142857,
+          "y": 0.5074731557277424,
+          "is_ball_carrier": false
+        },
+        "away_lw0": {
+          "numero": 10,
+          "team_side": "opponent",
+          "poste": "AG",
+          "role": null,
+          "x": 0.5639285986488403,
+          "y": 0.12,
+          "is_ball_carrier": false
+        },
+        "away_cm0": {
+          "numero": 7,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.6976369817523422,
+          "y": 0.5002061549972586,
+          "is_ball_carrier": false
+        },
+        "home_rb0": {
+          "numero": 6,
+          "team_side": "scorer",
+          "poste": "RB",
+          "role": null,
+          "x": 0.22393877922314437,
+          "y": 0.880216318645432,
+          "is_ball_carrier": false
+        },
+        "home_cf0": {
+          "numero": 9,
+          "team_side": "scorer",
+          "poste": "BU",
+          "role": null,
+          "x": 0.42003681639415935,
+          "y": 0.5,
+          "is_ball_carrier": false
+        }
+      }
+    },
+    {
+      "frame_idx": 132,
+      "t": 4.399999999999994,
+      "ball": {
+        "x": 0.7899999999999997,
+        "y": 0.1431395315423057,
+        "z": 0.0,
+        "owner_id": "home_cm2"
+      },
+      "players": {
+        "away_cm1": {
+          "numero": 8,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.7046843003494305,
+          "y": 0.7532803450552868,
+          "is_ball_carrier": false
+        },
+        "home_cm0": {
+          "numero": 7,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.32681252168805985,
+          "y": 0.3233878036659744,
+          "is_ball_carrier": false
+        },
+        "away_gk0": {
+          "numero": 1,
+          "team_side": "opponent",
+          "poste": "GK",
+          "role": null,
+          "x": 0.9714285714285714,
+          "y": 0.5186196811438183,
+          "is_ball_carrier": false
+        },
+        "away_lb0": {
+          "numero": 4,
+          "team_side": "opponent",
+          "poste": "LB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.12005655486804286,
+          "is_ball_carrier": false
+        },
+        "home_cm1": {
+          "numero": 8,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.3285932804951516,
+          "y": 0.6801730866537892,
+          "is_ball_carrier": false
+        },
+        "away_rb0": {
+          "numero": 5,
+          "team_side": "opponent",
+          "poste": "RB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.8802674781273242,
+          "is_ball_carrier": false
+        },
+        "away_am0": {
+          "numero": 6,
+          "team_side": "opponent",
+          "poste": "MOC",
+          "role": null,
+          "x": 0.6991169297207375,
+          "y": 0.2519890210473379,
+          "is_ball_carrier": false
+        },
+        "home_lb1": {
+          "numero": 13,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.22,
+          "y": 0.20007847153183753,
+          "is_ball_carrier": false
+        },
+        "away_cb0": {
+          "numero": 2,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.3248799125697701,
+          "is_ball_carrier": false
+        },
+        "home_cm2": {
+          "numero": 14,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": "assist",
+          "x": 0.8059308346531233,
+          "y": 0.09416850880161184,
+          "is_ball_carrier": true
+        },
+        "home_cb2": {
+          "numero": 4,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.7514120866653222,
+          "is_ball_carrier": false
+        },
+        "home_cb0": {
+          "numero": 2,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": "scorer",
+          "x": 0.5272357919177082,
+          "y": 0.2200215905313864,
+          "is_ball_carrier": false
+        },
+        "home_lb0": {
+          "numero": 5,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.12657861985356458,
+          "is_ball_carrier": false
+        },
+        "home_rw0": {
+          "numero": 11,
+          "team_side": "scorer",
+          "poste": "AD",
+          "role": null,
+          "x": 0.436297326131745,
+          "y": 0.8829075390814004,
+          "is_ball_carrier": false
+        },
+        "away_cf0": {
+          "numero": 9,
+          "team_side": "opponent",
+          "poste": "BU",
+          "role": null,
+          "x": 0.560415152376994,
+          "y": 0.5,
+          "is_ball_carrier": false
+        },
+        "home_cb3": {
+          "numero": 12,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.18,
+          "y": 0.20621375010747267,
+          "is_ball_carrier": false
+        },
+        "away_cb1": {
+          "numero": 3,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.6848799125697701,
+          "is_ball_carrier": false
+        },
+        "home_cb1": {
+          "numero": 3,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.5014120866653222,
+          "is_ball_carrier": false
+        },
+        "away_rw0": {
+          "numero": 11,
+          "team_side": "opponent",
+          "poste": "AD",
+          "role": null,
+          "x": 0.597433408730415,
+          "y": 0.8807743426212034,
+          "is_ball_carrier": false
+        },
+        "home_lw0": {
+          "numero": 10,
+          "team_side": "scorer",
+          "poste": "AG",
+          "role": null,
+          "x": 0.42000000000000004,
+          "y": 0.117593127148967,
+          "is_ball_carrier": false
+        },
+        "home_gk0": {
+          "numero": 1,
+          "team_side": "scorer",
+          "poste": "GK",
+          "role": null,
+          "x": 0.02857142857142857,
+          "y": 0.508822667395667,
+          "is_ball_carrier": false
+        },
+        "away_lw0": {
+          "numero": 10,
+          "team_side": "opponent",
+          "poste": "AG",
+          "role": null,
+          "x": 0.5610264051935675,
+          "y": 0.12,
+          "is_ball_carrier": false
+        },
+        "away_cm0": {
+          "numero": 7,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.6996180147654734,
+          "y": 0.5002433827206377,
+          "is_ball_carrier": false
+        },
+        "home_rb0": {
+          "numero": 6,
+          "team_side": "scorer",
+          "poste": "RB",
+          "role": null,
+          "x": 0.2270577985870984,
+          "y": 0.8802553817329195,
+          "is_ball_carrier": false
+        },
+        "home_cf0": {
+          "numero": 9,
+          "team_side": "scorer",
+          "poste": "BU",
+          "role": null,
+          "x": 0.4200434647439729,
+          "y": 0.5,
+          "is_ball_carrier": false
+        }
+      }
+    },
+    {
+      "frame_idx": 144,
+      "t": 4.799999999999993,
+      "ball": {
+        "x": 0.8112499999999997,
+        "y": 0.15422964865672917,
+        "z": 0.0,
+        "owner_id": "home_cm2"
+      },
+      "players": {
+        "away_cm1": {
+          "numero": 8,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.7074082010163805,
+          "y": 0.7537762666752535,
+          "is_ball_carrier": false
+        },
+        "home_cm0": {
+          "numero": 7,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.32885030149843025,
+          "y": 0.3238999708477321,
+          "is_ball_carrier": false
+        },
+        "away_gk0": {
+          "numero": 1,
+          "team_side": "opponent",
+          "poste": "GK",
+          "role": null,
+          "x": 0.9714285714285714,
+          "y": 0.5214345991724029,
+          "is_ball_carrier": false
+        },
+        "away_lb0": {
+          "numero": 4,
+          "team_side": "opponent",
+          "poste": "LB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.1200651048166928,
+          "is_ball_carrier": false
+        },
+        "home_cm1": {
+          "numero": 8,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.3309002749087112,
+          "y": 0.6801992538442203,
+          "is_ball_carrier": false
+        },
+        "away_rb0": {
+          "numero": 5,
+          "team_side": "opponent",
+          "poste": "RB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.880307915393518,
+          "is_ball_carrier": false
+        },
+        "away_am0": {
+          "numero": 6,
+          "team_side": "opponent",
+          "poste": "MOC",
+          "role": null,
+          "x": 0.7009991569007211,
+          "y": 0.25228972067598027,
+          "is_ball_carrier": false
+        },
+        "home_lb1": {
+          "numero": 13,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.22,
+          "y": 0.20092186945955023,
+          "is_ball_carrier": false
+        },
+        "away_cb0": {
+          "numero": 2,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.3256176563455341,
+          "is_ball_carrier": false
+        },
+        "home_cm2": {
+          "numero": 14,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": "assist",
+          "x": 0.8351462519796851,
+          "y": 0.08077311454568833,
+          "is_ball_carrier": true
+        },
+        "home_cb2": {
+          "numero": 4,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.7516255655203808,
+          "is_ball_carrier": false
+        },
+        "home_cb0": {
+          "numero": 2,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": "scorer",
+          "x": 0.5538536878765624,
+          "y": 0.2175323857970796,
+          "is_ball_carrier": false
+        },
+        "home_lb0": {
+          "numero": 5,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.12757317370687538,
+          "is_ball_carrier": false
+        },
+        "home_rw0": {
+          "numero": 11,
+          "team_side": "scorer",
+          "poste": "AD",
+          "role": null,
+          "x": 0.4387611511989751,
+          "y": 0.8833471000016885,
+          "is_ball_carrier": false
+        },
+        "away_cf0": {
+          "numero": 9,
+          "team_side": "opponent",
+          "poste": "BU",
+          "role": null,
+          "x": 0.5574543207582752,
+          "y": 0.5,
+          "is_ball_carrier": false
+        },
+        "home_cb3": {
+          "numero": 12,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.18,
+          "y": 0.2064272289625313,
+          "is_ball_carrier": false
+        },
+        "away_cb1": {
+          "numero": 3,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.6856176563455341,
+          "is_ball_carrier": false
+        },
+        "home_cb1": {
+          "numero": 3,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.5016255655203808,
+          "is_ball_carrier": false
+        },
+        "away_rw0": {
+          "numero": 11,
+          "team_side": "opponent",
+          "poste": "AD",
+          "role": null,
+          "x": 0.6000689864374597,
+          "y": 0.8808914075154886,
+          "is_ball_carrier": false
+        },
+        "home_lw0": {
+          "numero": 10,
+          "team_side": "scorer",
+          "poste": "AG",
+          "role": null,
+          "x": 0.42000000000000004,
+          "y": 0.11722925680507913,
+          "is_ball_carrier": false
+        },
+        "home_gk0": {
+          "numero": 1,
+          "team_side": "scorer",
+          "poste": "GK",
+          "role": null,
+          "x": 0.02857142857142857,
+          "y": 0.5101564757095925,
+          "is_ball_carrier": false
+        },
+        "away_lw0": {
+          "numero": 10,
+          "team_side": "opponent",
+          "poste": "AG",
+          "role": null,
+          "x": 0.5581579825994772,
+          "y": 0.12,
+          "is_ball_carrier": false
+        },
+        "away_cm0": {
+          "numero": 7,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.7015759958380927,
+          "y": 0.5002801772501937,
+          "is_ball_carrier": false
+        },
+        "home_rb0": {
+          "numero": 6,
+          "team_side": "scorer",
+          "poste": "RB",
+          "role": null,
+          "x": 0.23014052403350732,
+          "y": 0.8802939902696938,
+          "is_ball_carrier": false
+        },
+        "home_cf0": {
+          "numero": 9,
+          "team_side": "scorer",
+          "poste": "BU",
+          "role": null,
+          "x": 0.4200500357314389,
+          "y": 0.5,
+          "is_ball_carrier": false
+        }
+      }
+    },
+    {
+      "frame_idx": 156,
+      "t": 5.199999999999991,
+      "ball": {
+        "x": 0.8324999999999996,
+        "y": 0.16531976577115268,
+        "z": 0.0,
+        "owner_id": "home_cm2"
+      },
+      "players": {
+        "away_cm1": {
+          "numero": 8,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.710011424784585,
+          "y": 0.7542502174928908,
+          "is_ball_carrier": false
+        },
+        "home_cm0": {
+          "numero": 7,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.3307978016041016,
+          "y": 0.3243894475004688,
+          "is_ball_carrier": false
+        },
+        "away_gk0": {
+          "numero": 1,
+          "team_side": "opponent",
+          "poste": "GK",
+          "role": null,
+          "x": 0.9714285714285714,
+          "y": 0.524124807962492,
+          "is_ball_carrier": false
+        },
+        "away_lb0": {
+          "numero": 4,
+          "team_side": "opponent",
+          "poste": "LB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.12007327597719529,
+          "is_ball_carrier": false
+        },
+        "home_cm1": {
+          "numero": 8,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.33310506261017236,
+          "y": 0.6802242617503104,
+          "is_ball_carrier": false
+        },
+        "away_rb0": {
+          "numero": 5,
+          "team_side": "opponent",
+          "poste": "RB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.880346561168584,
+          "is_ball_carrier": false
+        },
+        "away_am0": {
+          "numero": 6,
+          "team_side": "opponent",
+          "poste": "MOC",
+          "role": null,
+          "x": 0.7027979958200494,
+          "y": 0.2525770984169786,
+          "is_ball_carrier": false
+        },
+        "home_lb1": {
+          "numero": 13,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.22,
+          "y": 0.2017279023513203,
+          "is_ball_carrier": false
+        },
+        "away_cb0": {
+          "numero": 2,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.32632271587843703,
+          "is_ball_carrier": false
+        },
+        "home_cm2": {
+          "numero": 14,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": "assist",
+          "x": 0.8643616693062467,
+          "y": 0.06737772028976483,
+          "is_ball_carrier": true
+        },
+        "home_cb2": {
+          "numero": 4,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.7518295866274061,
+          "is_ball_carrier": false
+        },
+        "home_cb0": {
+          "numero": 2,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": "scorer",
+          "x": 0.5804715838354166,
+          "y": 0.21504318106277276,
+          "is_ball_carrier": false
+        },
+        "home_lb0": {
+          "numero": 5,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.1285236658672951,
+          "is_ball_carrier": false
+        },
+        "home_rw0": {
+          "numero": 11,
+          "team_side": "scorer",
+          "poste": "AD",
+          "role": null,
+          "x": 0.4411158214898316,
+          "y": 0.8837671870662249,
+          "is_ball_carrier": false
+        },
+        "away_cf0": {
+          "numero": 9,
+          "team_side": "opponent",
+          "poste": "BU",
+          "role": null,
+          "x": 0.5546246627839516,
+          "y": 0.5,
+          "is_ball_carrier": false
+        },
+        "home_cb3": {
+          "numero": 12,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.18,
+          "y": 0.2066312500695565,
+          "is_ball_carrier": false
+        },
+        "away_cb1": {
+          "numero": 3,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.6863227158784371,
+          "is_ball_carrier": false
+        },
+        "home_cb1": {
+          "numero": 3,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.5018295866274061,
+          "is_ball_carrier": false
+        },
+        "away_rw0": {
+          "numero": 11,
+          "team_side": "opponent",
+          "poste": "AD",
+          "role": null,
+          "x": 0.6025878002155006,
+          "y": 0.8810032860868783,
+          "is_ball_carrier": false
+        },
+        "home_lw0": {
+          "numero": 10,
+          "team_side": "scorer",
+          "poste": "AG",
+          "role": null,
+          "x": 0.42000000000000004,
+          "y": 0.11688150699935136,
+          "is_ball_carrier": false
+        },
+        "home_gk0": {
+          "numero": 1,
+          "team_side": "scorer",
+          "poste": "GK",
+          "role": null,
+          "x": 0.02857142857142857,
+          "y": 0.5114311923492884,
+          "is_ball_carrier": false
+        },
+        "away_lw0": {
+          "numero": 10,
+          "team_side": "opponent",
+          "poste": "AG",
+          "role": null,
+          "x": 0.5554166396552239,
+          "y": 0.12,
+          "is_ball_carrier": false
+        },
+        "away_cm0": {
+          "numero": 7,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.7034472325273676,
+          "y": 0.5003153416726861,
+          "is_ball_carrier": false
+        },
+        "home_rb0": {
+          "numero": 6,
+          "team_side": "scorer",
+          "poste": "RB",
+          "role": null,
+          "x": 0.23308667557651722,
+          "y": 0.880330888333491,
+          "is_ball_carrier": false
+        },
+        "home_cf0": {
+          "numero": 9,
+          "team_side": "scorer",
+          "poste": "BU",
+          "role": null,
+          "x": 0.4200563156046221,
+          "y": 0.5,
+          "is_ball_carrier": false
+        }
+      }
+    },
+    {
+      "frame_idx": 168,
+      "t": 5.59999999999999,
+      "ball": {
+        "x": 0.8537499999999995,
+        "y": 0.17640988288557619,
+        "z": 0.0,
+        "owner_id": "home_cm2"
+      },
+      "players": {
+        "away_cm1": {
+          "numero": 8,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.7124168505828676,
+          "y": 0.7546881566119886,
+          "is_ball_carrier": false
+        },
+        "home_cm0": {
+          "numero": 7,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.3325973268902321,
+          "y": 0.3248417327717276,
+          "is_ball_carrier": false
+        },
+        "away_gk0": {
+          "numero": 1,
+          "team_side": "opponent",
+          "poste": "GK",
+          "role": null,
+          "x": 0.9714285714285714,
+          "y": 0.5266106094926886,
+          "is_ball_carrier": false
+        },
+        "away_lb0": {
+          "numero": 4,
+          "team_side": "opponent",
+          "poste": "LB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.12008082627714055,
+          "is_ball_carrier": false
+        },
+        "home_cm1": {
+          "numero": 8,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.3351423262836248,
+          "y": 0.680247369507394,
+          "is_ball_carrier": false
+        },
+        "away_rb0": {
+          "numero": 5,
+          "team_side": "opponent",
+          "poste": "RB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.8803822705630178,
+          "is_ball_carrier": false
+        },
+        "away_am0": {
+          "numero": 6,
+          "team_side": "opponent",
+          "poste": "MOC",
+          "role": null,
+          "x": 0.7044601554839077,
+          "y": 0.25284264064215833,
+          "is_ball_carrier": false
+        },
+        "home_lb1": {
+          "numero": 13,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.22,
+          "y": 0.20247269130715612,
+          "is_ball_carrier": false
+        },
+        "away_cb0": {
+          "numero": 2,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.3269742036262381,
+          "is_ball_carrier": false
+        },
+        "home_cm2": {
+          "numero": 14,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": "assist",
+          "x": 0.875,
+          "y": 0.0625,
+          "is_ball_carrier": true
+        },
+        "home_cb2": {
+          "numero": 4,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.7520181058166615,
+          "is_ball_carrier": false
+        },
+        "home_cb0": {
+          "numero": 2,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": "scorer",
+          "x": 0.6070894797942709,
+          "y": 0.21255397632846595,
+          "is_ball_carrier": false
+        },
+        "home_lb0": {
+          "numero": 5,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.12940193779753179,
+          "is_ball_carrier": false
+        },
+        "home_rw0": {
+          "numero": 11,
+          "team_side": "scorer",
+          "poste": "AD",
+          "role": null,
+          "x": 0.44329157938404534,
+          "y": 0.8841553551042179,
+          "is_ball_carrier": false
+        },
+        "away_cf0": {
+          "numero": 9,
+          "team_side": "opponent",
+          "poste": "BU",
+          "role": null,
+          "x": 0.5520100076878788,
+          "y": 0.5,
+          "is_ball_carrier": false
+        },
+        "home_cb3": {
+          "numero": 12,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.18,
+          "y": 0.20681976925881196,
+          "is_ball_carrier": false
+        },
+        "away_cb1": {
+          "numero": 3,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.6869742036262381,
+          "is_ball_carrier": false
+        },
+        "home_cb1": {
+          "numero": 3,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.5020181058166615,
+          "is_ball_carrier": false
+        },
+        "away_rw0": {
+          "numero": 11,
+          "team_side": "opponent",
+          "poste": "AD",
+          "role": null,
+          "x": 0.6049152296577065,
+          "y": 0.8811066639083251,
+          "is_ball_carrier": false
+        },
+        "home_lw0": {
+          "numero": 10,
+          "team_side": "scorer",
+          "poste": "AG",
+          "role": null,
+          "x": 0.42000000000000004,
+          "y": 0.11656017989552644,
+          "is_ball_carrier": false
+        },
+        "home_gk0": {
+          "numero": 1,
+          "team_side": "scorer",
+          "poste": "GK",
+          "role": null,
+          "x": 0.02857142857142857,
+          "y": 0.5126090535566402,
+          "is_ball_carrier": false
+        },
+        "away_lw0": {
+          "numero": 10,
+          "team_side": "opponent",
+          "poste": "AG",
+          "role": null,
+          "x": 0.5528835892426598,
+          "y": 0.12,
+          "is_ball_carrier": false
+        },
+        "away_cm0": {
+          "numero": 7,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.705176289038779,
+          "y": 0.5003478342344391,
+          "is_ball_carrier": false
+        },
+        "home_rb0": {
+          "numero": 6,
+          "team_side": "scorer",
+          "poste": "RB",
+          "role": null,
+          "x": 0.23580897283492538,
+          "y": 0.880364982811134,
+          "is_ball_carrier": false
+        },
+        "home_cf0": {
+          "numero": 9,
+          "team_side": "scorer",
+          "poste": "BU",
+          "role": null,
+          "x": 0.42006211832091156,
+          "y": 0.5,
+          "is_ball_carrier": false
+        }
+      }
+    },
+    {
+      "frame_idx": 180,
+      "t": 5.9999999999999885,
+      "ball": {
+        "x": 0.8749999999999993,
+        "y": 0.18749999999999967,
+        "z": 0.0,
+        "owner_id": "home_cm2"
+      },
+      "players": {
+        "away_cm1": {
+          "numero": 8,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.7145642782665206,
+          "y": 0.7550791238115491,
+          "is_ball_carrier": false
+        },
+        "home_cm0": {
+          "numero": 7,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.33420384097170125,
+          "y": 0.3252455074020252,
+          "is_ball_carrier": false
+        },
+        "away_gk0": {
+          "numero": 1,
+          "team_side": "opponent",
+          "poste": "GK",
+          "role": null,
+          "x": 0.9714285714285714,
+          "y": 0.5288297920697702,
+          "is_ball_carrier": false
+        },
+        "away_lb0": {
+          "numero": 4,
+          "team_side": "opponent",
+          "poste": "LB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.12008756675657413,
+          "is_ball_carrier": false
+        },
+        "home_cm1": {
+          "numero": 8,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.33696107970948225,
+          "y": 0.6802679988019263,
+          "is_ball_carrier": false
+        },
+        "away_rb0": {
+          "numero": 5,
+          "team_side": "opponent",
+          "poste": "RB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.8804141498844371,
+          "is_ball_carrier": false
+        },
+        "away_am0": {
+          "numero": 6,
+          "team_side": "opponent",
+          "poste": "MOC",
+          "role": null,
+          "x": 0.7059440373310923,
+          "y": 0.25307970167556737,
+          "is_ball_carrier": false
+        },
+        "home_lb1": {
+          "numero": 13,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.22,
+          "y": 0.20313759663218536,
+          "is_ball_carrier": false
+        },
+        "away_cb0": {
+          "numero": 2,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.32755581492607017,
+          "is_ball_carrier": false
+        },
+        "home_cm2": {
+          "numero": 14,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": "assist",
+          "x": 0.875,
+          "y": 0.0625,
+          "is_ball_carrier": true
+        },
+        "home_cb2": {
+          "numero": 4,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.7521864050534104,
+          "is_ball_carrier": false
+        },
+        "home_cb0": {
+          "numero": 2,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": "scorer",
+          "x": 0.6337073757531251,
+          "y": 0.21006477159415915,
+          "is_ball_carrier": false
+        },
+        "home_lb0": {
+          "numero": 5,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.1301860091491038,
+          "is_ball_carrier": false
+        },
+        "home_rw0": {
+          "numero": 11,
+          "team_side": "scorer",
+          "poste": "AD",
+          "role": null,
+          "x": 0.4452339725928889,
+          "y": 0.884501889506273,
+          "is_ball_carrier": false
+        },
+        "away_cf0": {
+          "numero": 9,
+          "team_side": "opponent",
+          "poste": "BU",
+          "role": null,
+          "x": 0.5496757919575411,
+          "y": 0.5,
+          "is_ball_carrier": false
+        },
+        "home_cb3": {
+          "numero": 12,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.18,
+          "y": 0.20698806849556084,
+          "is_ball_carrier": false
+        },
+        "away_cb1": {
+          "numero": 3,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.6875558149260702,
+          "is_ball_carrier": false
+        },
+        "home_cb1": {
+          "numero": 3,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.5021864050534104,
+          "is_ball_carrier": false
+        },
+        "away_rw0": {
+          "numero": 11,
+          "team_side": "opponent",
+          "poste": "AD",
+          "role": null,
+          "x": 0.6069930266196875,
+          "y": 0.8811989537622917,
+          "is_ball_carrier": false
+        },
+        "home_lw0": {
+          "numero": 10,
+          "team_side": "scorer",
+          "poste": "AG",
+          "role": null,
+          "x": 0.42000000000000004,
+          "y": 0.11627331728735356,
+          "is_ball_carrier": false
+        },
+        "home_gk0": {
+          "numero": 1,
+          "team_side": "scorer",
+          "poste": "GK",
+          "role": null,
+          "x": 0.02857142857142857,
+          "y": 0.5136605812179692,
+          "is_ball_carrier": false
+        },
+        "away_lw0": {
+          "numero": 10,
+          "team_side": "opponent",
+          "poste": "AG",
+          "role": null,
+          "x": 0.5506222255440113,
+          "y": 0.12,
+          "is_ball_carrier": false
+        },
+        "away_cm0": {
+          "numero": 7,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.7067198925961435,
+          "y": 0.5003768417501441,
+          "is_ball_carrier": false
+        },
+        "home_rb0": {
+          "numero": 6,
+          "team_side": "scorer",
+          "poste": "RB",
+          "role": null,
+          "x": 0.23823928538084227,
+          "y": 0.8803954204264627,
+          "is_ball_carrier": false
+        },
+        "home_cf0": {
+          "numero": 9,
+          "team_side": "scorer",
+          "poste": "BU",
+          "role": null,
+          "x": 0.4200672986568043,
+          "y": 0.5,
+          "is_ball_carrier": false
+        }
+      }
+    },
+    {
+      "frame_idx": 192,
+      "t": 6.399999999999987,
+      "ball": {
+        "x": 0.8917375972623411,
+        "y": 0.3144663601086089,
+        "z": 0.5401651900252497,
+        "owner_id": "home_cb0"
+      },
+      "players": {
+        "away_cm1": {
+          "numero": 8,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.716412294434579,
+          "y": 0.755415579242141,
+          "is_ball_carrier": false
+        },
+        "home_cm0": {
+          "numero": 7,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.3355863620313712,
+          "y": 0.325592984549089,
+          "is_ball_carrier": false
+        },
+        "away_gk0": {
+          "numero": 1,
+          "team_side": "opponent",
+          "poste": "GK",
+          "role": null,
+          "x": 0.9714285714285714,
+          "y": 0.530739558491028,
+          "is_ball_carrier": false
+        },
+        "away_lb0": {
+          "numero": 4,
+          "team_side": "opponent",
+          "poste": "LB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.12009336742454008,
+          "is_ball_carrier": false
+        },
+        "home_cm1": {
+          "numero": 8,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.33852624800934256,
+          "y": 0.680285751795483,
+          "is_ball_carrier": false
+        },
+        "away_rb0": {
+          "numero": 5,
+          "team_side": "opponent",
+          "poste": "RB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.8804415843362969,
+          "is_ball_carrier": false
+        },
+        "away_am0": {
+          "numero": 6,
+          "team_side": "opponent",
+          "poste": "MOC",
+          "role": null,
+          "x": 0.7072210245218417,
+          "y": 0.2532837097666856,
+          "is_ball_carrier": false
+        },
+        "home_lb1": {
+          "numero": 13,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.22,
+          "y": 0.20370979554730412,
+          "is_ball_carrier": false
+        },
+        "away_cb0": {
+          "numero": 2,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.3280563333341158,
+          "is_ball_carrier": false
+        },
+        "home_cm2": {
+          "numero": 14,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": "assist",
+          "x": 0.875,
+          "y": 0.0625,
+          "is_ball_carrier": false
+        },
+        "home_cb2": {
+          "numero": 4,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.7523312386666452,
+          "is_ball_carrier": false
+        },
+        "home_cb0": {
+          "numero": 2,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": "scorer",
+          "x": 0.875,
+          "y": 0.1875,
+          "is_ball_carrier": true
+        },
+        "home_lb0": {
+          "numero": 5,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.13086075901176347,
+          "is_ball_carrier": false
+        },
+        "home_rw0": {
+          "numero": 11,
+          "team_side": "scorer",
+          "poste": "AD",
+          "role": null,
+          "x": 0.4469055418298857,
+          "y": 0.8848001073147985,
+          "is_ball_carrier": false
+        },
+        "away_cf0": {
+          "numero": 9,
+          "team_side": "opponent",
+          "poste": "BU",
+          "role": null,
+          "x": 0.5476670312238329,
+          "y": 0.5,
+          "is_ball_carrier": false
+        },
+        "home_cb3": {
+          "numero": 12,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.18,
+          "y": 0.20713290210879562,
+          "is_ball_carrier": false
+        },
+        "away_cb1": {
+          "numero": 3,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.6880563333341159,
+          "is_ball_carrier": false
+        },
+        "home_cb1": {
+          "numero": 3,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.5023312386666452,
+          "is_ball_carrier": false
+        },
+        "away_rw0": {
+          "numero": 11,
+          "team_side": "opponent",
+          "poste": "AD",
+          "role": null,
+          "x": 0.6087811205373143,
+          "y": 0.8812783758278524,
+          "is_ball_carrier": false
+        },
+        "home_lw0": {
+          "numero": 10,
+          "team_side": "scorer",
+          "poste": "AG",
+          "role": null,
+          "x": 0.42000000000000004,
+          "y": 0.11602645135470754,
+          "is_ball_carrier": false
+        },
+        "home_gk0": {
+          "numero": 1,
+          "team_side": "scorer",
+          "poste": "GK",
+          "role": null,
+          "x": 0.02857142857142857,
+          "y": 0.51456549649595,
+          "is_ball_carrier": false
+        },
+        "away_lw0": {
+          "numero": 10,
+          "team_side": "opponent",
+          "poste": "AG",
+          "role": null,
+          "x": 0.5486761592299859,
+          "y": 0.12,
+          "is_ball_carrier": false
+        },
+        "away_cm0": {
+          "numero": 7,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.7080482746193414,
+          "y": 0.5004018048063746,
+          "is_ball_carrier": false
+        },
+        "home_rb0": {
+          "numero": 6,
+          "team_side": "scorer",
+          "poste": "RB",
+          "role": null,
+          "x": 0.240330744344736,
+          "y": 0.8804216141864076,
+          "is_ball_carrier": false
+        },
+        "home_cf0": {
+          "numero": 9,
+          "team_side": "scorer",
+          "poste": "BU",
+          "role": null,
+          "x": 0.42007175670890023,
+          "y": 0.5,
+          "is_ball_carrier": false
+        }
+      }
+    },
+    {
+      "frame_idx": 204,
+      "t": 6.799999999999986,
+      "ball": {
+        "x": 0.9084751945246827,
+        "y": 0.4414327202172214,
+        "z": 1.0803303800505148,
+        "owner_id": "home_cb0"
+      },
+      "players": {
+        "away_cm1": {
+          "numero": 8,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.7179371179739844,
+          "y": 0.7556931932421669,
+          "is_ball_carrier": false
+        },
+        "home_cm0": {
+          "numero": 7,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.33672709915907895,
+          "y": 0.32587969271885847,
+          "is_ball_carrier": false
+        },
+        "away_gk0": {
+          "numero": 1,
+          "team_side": "opponent",
+          "poste": "GK",
+          "role": null,
+          "x": 0.9714285714285714,
+          "y": 0.5323153330130441,
+          "is_ball_carrier": false
+        },
+        "away_lb0": {
+          "numero": 4,
+          "team_side": "opponent",
+          "poste": "LB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.12009815363540317,
+          "is_ball_carrier": false
+        },
+        "home_cm1": {
+          "numero": 8,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.33981768988523564,
+          "y": 0.6803004000344639,
+          "is_ball_carrier": false
+        },
+        "away_rb0": {
+          "numero": 5,
+          "team_side": "opponent",
+          "poste": "RB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.8804642208795856,
+          "is_ball_carrier": false
+        },
+        "away_am0": {
+          "numero": 6,
+          "team_side": "opponent",
+          "poste": "MOC",
+          "role": null,
+          "x": 0.7082746842038451,
+          "y": 0.2534520396465552,
+          "is_ball_carrier": false
+        },
+        "home_lb1": {
+          "numero": 13,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.22,
+          "y": 0.2041819247364724,
+          "is_ball_carrier": false
+        },
+        "away_cb0": {
+          "numero": 2,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.32846931795172096,
+          "is_ball_carrier": false
+        },
+        "home_cm2": {
+          "numero": 14,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": "assist",
+          "x": 0.875,
+          "y": 0.0625,
+          "is_ball_carrier": false
+        },
+        "home_cb2": {
+          "numero": 4,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.7524507428715188,
+          "is_ball_carrier": false
+        },
+        "home_cb0": {
+          "numero": 2,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": "scorer",
+          "x": 0.875,
+          "y": 0.1875,
+          "is_ball_carrier": true
+        },
+        "home_lb0": {
+          "numero": 5,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.13141750439720837,
+          "is_ball_carrier": false
+        },
+        "home_rw0": {
+          "numero": 11,
+          "team_side": "scorer",
+          "poste": "AD",
+          "role": null,
+          "x": 0.44828477658138494,
+          "y": 0.8850461709273195,
+          "is_ball_carrier": false
+        },
+        "away_cf0": {
+          "numero": 9,
+          "team_side": "opponent",
+          "poste": "BU",
+          "role": null,
+          "x": 0.5460095751340359,
+          "y": 0.5,
+          "is_ball_carrier": false
+        },
+        "home_cb3": {
+          "numero": 12,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.18,
+          "y": 0.20725240631366929,
+          "is_ball_carrier": false
+        },
+        "away_cb1": {
+          "numero": 3,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.688469317951721,
+          "is_ball_carrier": false
+        },
+        "home_cb1": {
+          "numero": 3,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.5024507428715188,
+          "is_ball_carrier": false
+        },
+        "away_rw0": {
+          "numero": 11,
+          "team_side": "opponent",
+          "poste": "AD",
+          "role": null,
+          "x": 0.6102565014043169,
+          "y": 0.8813439080657236,
+          "is_ball_carrier": false
+        },
+        "home_lw0": {
+          "numero": 10,
+          "team_side": "scorer",
+          "poste": "AG",
+          "role": null,
+          "x": 0.42000000000000004,
+          "y": 0.1158227588807551,
+          "is_ball_carrier": false
+        },
+        "home_gk0": {
+          "numero": 1,
+          "team_side": "scorer",
+          "poste": "GK",
+          "role": null,
+          "x": 0.02857142857142857,
+          "y": 0.5153121545289705,
+          "is_ball_carrier": false
+        },
+        "away_lw0": {
+          "numero": 10,
+          "team_side": "opponent",
+          "poste": "AG",
+          "role": null,
+          "x": 0.5470704331675416,
+          "y": 0.12,
+          "is_ball_carrier": false
+        },
+        "away_cm0": {
+          "numero": 7,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.7091443408839688,
+          "y": 0.5004224021671628,
+          "is_ball_carrier": false
+        },
+        "home_rb0": {
+          "numero": 6,
+          "team_side": "scorer",
+          "poste": "RB",
+          "role": null,
+          "x": 0.24205643588086373,
+          "y": 0.8804432270177454,
+          "is_ball_carrier": false
+        },
+        "home_cf0": {
+          "numero": 9,
+          "team_side": "scorer",
+          "poste": "BU",
+          "role": null,
+          "x": 0.420075435108956,
+          "y": 0.5,
+          "is_ball_carrier": false
+        }
+      }
+    },
+    {
+      "frame_idx": 216,
+      "t": 7.199999999999984,
+      "ball": {
+        "x": 0.9252127917870243,
+        "y": 0.568399080325834,
+        "z": 1.62049557007578,
+        "owner_id": "home_cb0"
+      },
+      "players": {
+        "away_cm1": {
+          "numero": 8,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.7191296264806227,
+          "y": 0.7559103049590556,
+          "is_ball_carrier": false
+        },
+        "home_cm0": {
+          "numero": 7,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.33761922778476905,
+          "y": 0.32610391665201344,
+          "is_ball_carrier": false
+        },
+        "away_gk0": {
+          "numero": 1,
+          "team_side": "opponent",
+          "poste": "GK",
+          "role": null,
+          "x": 0.9714285714285714,
+          "y": 0.5335476884125291,
+          "is_ball_carrier": false
+        },
+        "away_lb0": {
+          "numero": 4,
+          "team_side": "opponent",
+          "poste": "LB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.12010189675519461,
+          "is_ball_carrier": false
+        },
+        "home_cm1": {
+          "numero": 8,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.34082767916139284,
+          "y": 0.6803118558843643,
+          "is_ball_carrier": false
+        },
+        "away_rb0": {
+          "numero": 5,
+          "team_side": "opponent",
+          "poste": "RB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.8804819240889964,
+          "is_ball_carrier": false
+        },
+        "away_am0": {
+          "numero": 6,
+          "team_side": "opponent",
+          "poste": "MOC",
+          "role": null,
+          "x": 0.7090987127562774,
+          "y": 0.25358368426541,
+          "is_ball_carrier": false
+        },
+        "home_lb1": {
+          "numero": 13,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.22,
+          "y": 0.20455115964121093,
+          "is_ball_carrier": false
+        },
+        "away_cb0": {
+          "numero": 2,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.32879229805851873,
+          "is_ball_carrier": false
+        },
+        "home_cm2": {
+          "numero": 14,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": "assist",
+          "x": 0.875,
+          "y": 0.0625,
+          "is_ball_carrier": false
+        },
+        "home_cb2": {
+          "numero": 4,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.7525442027225823,
+          "is_ball_carrier": false
+        },
+        "home_cb0": {
+          "numero": 2,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": "scorer",
+          "x": 0.875,
+          "y": 0.1875,
+          "is_ball_carrier": true
+        },
+        "home_lb0": {
+          "numero": 5,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.13185291452239148,
+          "is_ball_carrier": false
+        },
+        "home_rw0": {
+          "numero": 11,
+          "team_side": "scorer",
+          "poste": "AD",
+          "role": null,
+          "x": 0.4493634254422593,
+          "y": 0.8852386082445056,
+          "is_ball_carrier": false
+        },
+        "away_cf0": {
+          "numero": 9,
+          "team_side": "opponent",
+          "poste": "BU",
+          "role": null,
+          "x": 0.5447133395793087,
+          "y": 0.5,
+          "is_ball_carrier": false
+        },
+        "home_cb3": {
+          "numero": 12,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.18,
+          "y": 0.20734586616473277,
+          "is_ball_carrier": false
+        },
+        "away_cb1": {
+          "numero": 3,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.6887922980585187,
+          "is_ball_carrier": false
+        },
+        "home_cb1": {
+          "numero": 3,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.5025442027225823,
+          "is_ball_carrier": false
+        },
+        "away_rw0": {
+          "numero": 11,
+          "team_side": "opponent",
+          "poste": "AD",
+          "role": null,
+          "x": 0.6114103426121449,
+          "y": 0.8813951584229622,
+          "is_ball_carrier": false
+        },
+        "home_lw0": {
+          "numero": 10,
+          "team_side": "scorer",
+          "poste": "AG",
+          "role": null,
+          "x": 0.42000000000000004,
+          "y": 0.11566345847539725,
+          "is_ball_carrier": false
+        },
+        "home_gk0": {
+          "numero": 1,
+          "team_side": "scorer",
+          "poste": "GK",
+          "role": null,
+          "x": 0.02857142857142857,
+          "y": 0.5158960883632252,
+          "is_ball_carrier": false
+        },
+        "away_lw0": {
+          "numero": 10,
+          "team_side": "opponent",
+          "poste": "AG",
+          "role": null,
+          "x": 0.5458146537679514,
+          "y": 0.12,
+          "is_ball_carrier": false
+        },
+        "away_cm0": {
+          "numero": 7,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.7100015340677239,
+          "y": 0.5004385106068081,
+          "is_ball_carrier": false
+        },
+        "home_rb0": {
+          "numero": 6,
+          "team_side": "scorer",
+          "poste": "RB",
+          "role": null,
+          "x": 0.24340603587291823,
+          "y": 0.8804601296196246,
+          "is_ball_carrier": false
+        },
+        "home_cf0": {
+          "numero": 9,
+          "team_side": "scorer",
+          "poste": "BU",
+          "role": null,
+          "x": 0.4200783118505881,
+          "y": 0.5,
+          "is_ball_carrier": false
+        }
+      }
+    },
+    {
+      "frame_idx": 228,
+      "t": 7.599999999999983,
+      "ball": {
+        "x": 0.9419503890493659,
+        "y": 0.6953654404344465,
+        "z": 2.1606607601010452,
+        "owner_id": "home_cb0"
+      },
+      "players": {
+        "away_cm1": {
+          "numero": 8,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.7199917504389235,
+          "y": 0.7560672658626599,
+          "is_ball_carrier": false
+        },
+        "home_cm0": {
+          "numero": 7,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.3382641921249074,
+          "y": 0.32626601933197025,
+          "is_ball_carrier": false
+        },
+        "away_gk0": {
+          "numero": 1,
+          "team_side": "opponent",
+          "poste": "GK",
+          "role": null,
+          "x": 0.9714285714285714,
+          "y": 0.5344386196797889,
+          "is_ball_carrier": false
+        },
+        "away_lb0": {
+          "numero": 4,
+          "team_side": "opponent",
+          "poste": "LB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.12010460284343887,
+          "is_ball_carrier": false
+        },
+        "home_cm1": {
+          "numero": 8,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.34155785085220663,
+          "y": 0.6803201378904101,
+          "is_ball_carrier": false
+        },
+        "away_rb0": {
+          "numero": 5,
+          "team_side": "opponent",
+          "poste": "RB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.8804947226232517,
+          "is_ball_carrier": false
+        },
+        "away_am0": {
+          "numero": 6,
+          "team_side": "opponent",
+          "poste": "MOC",
+          "role": null,
+          "x": 0.7096944441522559,
+          "y": 0.25367885673526186,
+          "is_ball_carrier": false
+        },
+        "home_lb1": {
+          "numero": 13,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.22,
+          "y": 0.2048180979949786,
+          "is_ball_carrier": false
+        },
+        "away_cb0": {
+          "numero": 2,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.32902579650869734,
+          "is_ball_carrier": false
+        },
+        "home_cm2": {
+          "numero": 14,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": "assist",
+          "x": 0.875,
+          "y": 0.0625,
+          "is_ball_carrier": false
+        },
+        "home_cb2": {
+          "numero": 4,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.7526117695166912,
+          "is_ball_carrier": false
+        },
+        "home_cb0": {
+          "numero": 2,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": "scorer",
+          "x": 0.875,
+          "y": 0.1875,
+          "is_ball_carrier": true
+        },
+        "home_lb0": {
+          "numero": 5,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.13216769424808522,
+          "is_ball_carrier": false
+        },
+        "home_rw0": {
+          "numero": 11,
+          "team_side": "scorer",
+          "poste": "AD",
+          "role": null,
+          "x": 0.4501432345760114,
+          "y": 0.8853777307922223,
+          "is_ball_carrier": false
+        },
+        "away_cf0": {
+          "numero": 9,
+          "team_side": "opponent",
+          "poste": "BU",
+          "role": null,
+          "x": 0.5437762261573827,
+          "y": 0.5,
+          "is_ball_carrier": false
+        },
+        "home_cb3": {
+          "numero": 12,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.18,
+          "y": 0.20741343295884157,
+          "is_ball_carrier": false
+        },
+        "away_cb1": {
+          "numero": 3,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.6890257965086974,
+          "is_ball_carrier": false
+        },
+        "home_cb1": {
+          "numero": 3,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.5026117695166912,
+          "is_ball_carrier": false
+        },
+        "away_rw0": {
+          "numero": 11,
+          "team_side": "opponent",
+          "poste": "AD",
+          "role": null,
+          "x": 0.6122445120489294,
+          "y": 0.8814322098658669,
+          "is_ball_carrier": false
+        },
+        "home_lw0": {
+          "numero": 10,
+          "team_side": "scorer",
+          "poste": "AG",
+          "role": null,
+          "x": 0.42000000000000004,
+          "y": 0.11554829225623695,
+          "is_ball_carrier": false
+        },
+        "home_gk0": {
+          "numero": 1,
+          "team_side": "scorer",
+          "poste": "GK",
+          "role": null,
+          "x": 0.02857142857142857,
+          "y": 0.5163182432961008,
+          "is_ball_carrier": false
+        },
+        "away_lw0": {
+          "numero": 10,
+          "team_side": "opponent",
+          "poste": "AG",
+          "role": null,
+          "x": 0.5449067881211231,
+          "y": 0.12,
+          "is_ball_carrier": false
+        },
+        "away_cm0": {
+          "numero": 7,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.7106212418320657,
+          "y": 0.5004501562023503,
+          "is_ball_carrier": false
+        },
+        "home_rb0": {
+          "numero": 6,
+          "team_side": "scorer",
+          "poste": "RB",
+          "role": null,
+          "x": 0.2443817291118308,
+          "y": 0.8804723493547096,
+          "is_ball_carrier": false
+        },
+        "home_cf0": {
+          "numero": 9,
+          "team_side": "scorer",
+          "poste": "BU",
+          "role": null,
+          "x": 0.4200803915907904,
+          "y": 0.5,
+          "is_ball_carrier": false
+        }
+      }
+    },
+    {
+      "frame_idx": 240,
+      "t": 7.999999999999981,
+      "ball": {
+        "x": 0.9586879863117075,
+        "y": 0.8223318005430591,
+        "z": 2.7008259501263105,
+        "owner_id": "home_cb0"
+      },
+      "players": {
+        "away_cm1": {
+          "numero": 8,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.7205330512835167,
+          "y": 0.7561658167367784,
+          "is_ball_carrier": false
+        },
+        "home_cm0": {
+          "numero": 7,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.3386691451930689,
+          "y": 0.3263677985676899,
+          "is_ball_carrier": false
+        },
+        "away_gk0": {
+          "numero": 1,
+          "team_side": "opponent",
+          "poste": "GK",
+          "role": null,
+          "x": 0.9714285714285714,
+          "y": 0.5349980077385464,
+          "is_ball_carrier": false
+        },
+        "away_lb0": {
+          "numero": 4,
+          "team_side": "opponent",
+          "poste": "LB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.12010630191216101,
+          "is_ball_carrier": false
+        },
+        "home_cm1": {
+          "numero": 8,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.3420163029682047,
+          "y": 0.6803253379046592,
+          "is_ball_carrier": false
+        },
+        "away_rb0": {
+          "numero": 5,
+          "team_side": "opponent",
+          "poste": "RB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.8805027584252211,
+          "is_ball_carrier": false
+        },
+        "away_am0": {
+          "numero": 6,
+          "team_side": "opponent",
+          "poste": "MOC",
+          "role": null,
+          "x": 0.7100684853845973,
+          "y": 0.2537386125717826,
+          "is_ball_carrier": false
+        },
+        "home_lb1": {
+          "numero": 13,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.22,
+          "y": 0.20498570029271962,
+          "is_ball_carrier": false
+        },
+        "away_cb0": {
+          "numero": 2,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.32917240293005473,
+          "is_ball_carrier": false
+        },
+        "home_cm2": {
+          "numero": 14,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": "assist",
+          "x": 0.875,
+          "y": 0.0625,
+          "is_ball_carrier": false
+        },
+        "home_cb2": {
+          "numero": 4,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.7526541926072055,
+          "is_ball_carrier": false
+        },
+        "home_cb0": {
+          "numero": 2,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": "scorer",
+          "x": 0.875,
+          "y": 0.1875,
+          "is_ball_carrier": true
+        },
+        "home_lb0": {
+          "numero": 5,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.13236533465668113,
+          "is_ball_carrier": false
+        },
+        "home_rw0": {
+          "numero": 11,
+          "team_side": "scorer",
+          "poste": "AD",
+          "role": null,
+          "x": 0.4506328525000435,
+          "y": 0.8854650815169711,
+          "is_ball_carrier": false
+        },
+        "away_cf0": {
+          "numero": 9,
+          "team_side": "opponent",
+          "poste": "BU",
+          "role": null,
+          "x": 0.5431878417587308,
+          "y": 0.5,
+          "is_ball_carrier": false
+        },
+        "home_cb3": {
+          "numero": 12,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.18,
+          "y": 0.2074558560493559,
+          "is_ball_carrier": false
+        },
+        "away_cb1": {
+          "numero": 3,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.6891724029300548,
+          "is_ball_carrier": false
+        },
+        "home_cb1": {
+          "numero": 3,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.5026541926072055,
+          "is_ball_carrier": false
+        },
+        "away_rw0": {
+          "numero": 11,
+          "team_side": "opponent",
+          "poste": "AD",
+          "role": null,
+          "x": 0.6127682611180949,
+          "y": 0.8814554733155652,
+          "is_ball_carrier": false
+        },
+        "home_lw0": {
+          "numero": 10,
+          "team_side": "scorer",
+          "poste": "AG",
+          "role": null,
+          "x": 0.42000000000000004,
+          "y": 0.11547598296579227,
+          "is_ball_carrier": false
+        },
+        "home_gk0": {
+          "numero": 1,
+          "team_side": "scorer",
+          "poste": "GK",
+          "role": null,
+          "x": 0.02857142857142857,
+          "y": 0.5165833012608105,
+          "is_ball_carrier": false
+        },
+        "away_lw0": {
+          "numero": 10,
+          "team_side": "opponent",
+          "poste": "AG",
+          "role": null,
+          "x": 0.5443367674916374,
+          "y": 0.12,
+          "is_ball_carrier": false
+        },
+        "away_cm0": {
+          "numero": 7,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.7110103370810834,
+          "y": 0.5004574681099271,
+          "is_ball_carrier": false
+        },
+        "home_rb0": {
+          "numero": 6,
+          "team_side": "scorer",
+          "poste": "RB",
+          "role": null,
+          "x": 0.24499433657877584,
+          "y": 0.8804800217466651,
+          "is_ball_carrier": false
+        },
+        "home_cf0": {
+          "numero": 9,
+          "team_side": "scorer",
+          "poste": "BU",
+          "role": null,
+          "x": 0.42008169739503953,
+          "y": 0.5,
+          "is_ball_carrier": false
+        }
+      }
+    },
+    {
+      "frame_idx": 252,
+      "t": 8.39999999999998,
+      "ball": {
+        "x": 0.9754255835740491,
+        "y": 0.9492981606516719,
+        "z": 3.240991140151577,
+        "owner_id": "home_cb0"
+      },
+      "players": {
+        "away_cm1": {
+          "numero": 8,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.7207678857214991,
+          "y": 0.7562085714070648,
+          "is_ball_carrier": false
+        },
+        "home_cm0": {
+          "numero": 7,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.3388448273984835,
+          "y": 0.32641195380937704,
+          "is_ball_carrier": false
+        },
+        "away_gk0": {
+          "numero": 1,
+          "team_side": "opponent",
+          "poste": "GK",
+          "role": null,
+          "x": 0.9714285714285714,
+          "y": 0.5352406890158887,
+          "is_ball_carrier": false
+        },
+        "away_lb0": {
+          "numero": 4,
+          "team_side": "opponent",
+          "poste": "LB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.12010703902508527,
+          "is_ball_carrier": false
+        },
+        "home_cm1": {
+          "numero": 8,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.34221519485259316,
+          "y": 0.6803275938450218,
+          "is_ball_carrier": false
+        },
+        "away_rb0": {
+          "numero": 5,
+          "team_side": "opponent",
+          "poste": "RB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.8805062446252853,
+          "is_ball_carrier": false
+        },
+        "away_am0": {
+          "numero": 6,
+          "team_side": "opponent",
+          "poste": "MOC",
+          "role": null,
+          "x": 0.7102307570001998,
+          "y": 0.2537645366552672,
+          "is_ball_carrier": false
+        },
+        "home_lb1": {
+          "numero": 13,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.22,
+          "y": 0.20505841178354342,
+          "is_ball_carrier": false
+        },
+        "away_cb0": {
+          "numero": 2,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.32923600570641826,
+          "is_ball_carrier": false
+        },
+        "home_cm2": {
+          "numero": 14,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": "assist",
+          "x": 0.875,
+          "y": 0.0625,
+          "is_ball_carrier": false
+        },
+        "home_cb2": {
+          "numero": 4,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.7526725971648889,
+          "is_ball_carrier": false
+        },
+        "home_cb0": {
+          "numero": 2,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": "scorer",
+          "x": 0.875,
+          "y": 0.1875,
+          "is_ball_carrier": true
+        },
+        "home_lb0": {
+          "numero": 5,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.13245107768616057,
+          "is_ball_carrier": false
+        },
+        "home_rw0": {
+          "numero": 11,
+          "team_side": "scorer",
+          "poste": "AD",
+          "role": null,
+          "x": 0.4508452651558977,
+          "y": 0.8855029771872969,
+          "is_ball_carrier": false
+        },
+        "away_cf0": {
+          "numero": 9,
+          "team_side": "opponent",
+          "poste": "BU",
+          "role": null,
+          "x": 0.542932580897871,
+          "y": 0.5,
+          "is_ball_carrier": false
+        },
+        "home_cb3": {
+          "numero": 12,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.18,
+          "y": 0.20747426060703933,
+          "is_ball_carrier": false
+        },
+        "away_cb1": {
+          "numero": 3,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.6892360057064183,
+          "is_ball_carrier": false
+        },
+        "home_cb1": {
+          "numero": 3,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.5026725971648889,
+          "is_ball_carrier": false
+        },
+        "away_rw0": {
+          "numero": 11,
+          "team_side": "opponent",
+          "poste": "AD",
+          "role": null,
+          "x": 0.6129954810079764,
+          "y": 0.8814655657792848,
+          "is_ball_carrier": false
+        },
+        "home_lw0": {
+          "numero": 10,
+          "team_side": "scorer",
+          "poste": "AG",
+          "role": null,
+          "x": 0.42000000000000004,
+          "y": 0.11544461277350071,
+          "is_ball_carrier": false
+        },
+        "home_gk0": {
+          "numero": 1,
+          "team_side": "scorer",
+          "poste": "GK",
+          "role": null,
+          "x": 0.02857142857142857,
+          "y": 0.5166982922843737,
+          "is_ball_carrier": false
+        },
+        "away_lw0": {
+          "numero": 10,
+          "team_side": "opponent",
+          "poste": "AG",
+          "role": null,
+          "x": 0.544089473448961,
+          "y": 0.12,
+          "is_ball_carrier": false
+        },
+        "away_cm0": {
+          "numero": 7,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.7111791396333745,
+          "y": 0.5004606402603561,
+          "is_ball_carrier": false
+        },
+        "home_rb0": {
+          "numero": 6,
+          "team_side": "scorer",
+          "poste": "RB",
+          "role": null,
+          "x": 0.2452601062180454,
+          "y": 0.8804833502872923,
+          "is_ball_carrier": false
+        },
+        "home_cf0": {
+          "numero": 9,
+          "team_side": "scorer",
+          "poste": "BU",
+          "role": null,
+          "x": 0.4200822638966625,
+          "y": 0.5,
+          "is_ball_carrier": false
+        }
+      }
+    },
+    {
+      "frame_idx": 255,
+      "t": 8.49999999999998,
+      "ball": {
+        "x": 0.9796099828896345,
+        "y": 0.981039750678825,
+        "z": 3.376032437657893,
+        "owner_id": "home_cb0"
+      },
+      "players": {
+        "away_cm1": {
+          "numero": 8,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.7207806675593432,
+          "y": 0.7562108985072438,
+          "is_ball_carrier": false
+        },
+        "home_cm0": {
+          "numero": 7,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.33885438963084175,
+          "y": 0.32641435714146094,
+          "is_ball_carrier": false
+        },
+        "away_gk0": {
+          "numero": 1,
+          "team_side": "opponent",
+          "poste": "GK",
+          "role": null,
+          "x": 0.9714285714285714,
+          "y": 0.5352538979504957,
+          "is_ball_carrier": false
+        },
+        "away_lb0": {
+          "numero": 4,
+          "team_side": "opponent",
+          "poste": "LB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.12010707914551202,
+          "is_ball_carrier": false
+        },
+        "home_cm1": {
+          "numero": 8,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": null,
+          "x": 0.34222602036795025,
+          "y": 0.6803277166339285,
+          "is_ball_carrier": false
+        },
+        "away_rb0": {
+          "numero": 5,
+          "team_side": "opponent",
+          "poste": "RB",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.8805064343761766,
+          "is_ball_carrier": false
+        },
+        "away_am0": {
+          "numero": 6,
+          "team_side": "opponent",
+          "poste": "MOC",
+          "role": null,
+          "x": 0.7102395893056109,
+          "y": 0.25376594768098476,
+          "is_ball_carrier": false
+        },
+        "home_lb1": {
+          "numero": 13,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.22,
+          "y": 0.2050623694078727,
+          "is_ball_carrier": false
+        },
+        "away_cb0": {
+          "numero": 2,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.32923946755120087,
+          "is_ball_carrier": false
+        },
+        "home_cm2": {
+          "numero": 14,
+          "team_side": "scorer",
+          "poste": "MC",
+          "role": "assist",
+          "x": 0.875,
+          "y": 0.0625,
+          "is_ball_carrier": false
+        },
+        "home_cb2": {
+          "numero": 4,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.7526735989092409,
+          "is_ball_carrier": false
+        },
+        "home_cb0": {
+          "numero": 2,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": "scorer",
+          "x": 0.875,
+          "y": 0.1875,
+          "is_ball_carrier": true
+        },
+        "home_lb0": {
+          "numero": 5,
+          "team_side": "scorer",
+          "poste": "LB",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.13245574460600626,
+          "is_ball_carrier": false
+        },
+        "home_rw0": {
+          "numero": 11,
+          "team_side": "scorer",
+          "poste": "AD",
+          "role": null,
+          "x": 0.4508568265952951,
+          "y": 0.885505039816259,
+          "is_ball_carrier": false
+        },
+        "away_cf0": {
+          "numero": 9,
+          "team_side": "opponent",
+          "poste": "BU",
+          "role": null,
+          "x": 0.5429186872672797,
+          "y": 0.5,
+          "is_ball_carrier": false
+        },
+        "home_cb3": {
+          "numero": 12,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.18,
+          "y": 0.20747526235139133,
+          "is_ball_carrier": false
+        },
+        "away_cb1": {
+          "numero": 3,
+          "team_side": "opponent",
+          "poste": "DC",
+          "role": null,
+          "x": 0.7933333333333333,
+          "y": 0.6892394675512009,
+          "is_ball_carrier": false
+        },
+        "home_cb1": {
+          "numero": 3,
+          "team_side": "scorer",
+          "poste": "DC",
+          "role": null,
+          "x": 0.20666666666666667,
+          "y": 0.5026735989092409,
+          "is_ball_carrier": false
+        },
+        "away_rw0": {
+          "numero": 11,
+          "team_side": "opponent",
+          "poste": "AD",
+          "role": null,
+          "x": 0.6130078483924724,
+          "y": 0.8814661151034632,
+          "is_ball_carrier": false
+        },
+        "home_lw0": {
+          "numero": 10,
+          "team_side": "scorer",
+          "poste": "AG",
+          "role": null,
+          "x": 0.42000000000000004,
+          "y": 0.11544290532073333,
+          "is_ball_carrier": false
+        },
+        "home_gk0": {
+          "numero": 1,
+          "team_side": "scorer",
+          "poste": "GK",
+          "role": null,
+          "x": 0.02857142857142857,
+          "y": 0.5167045511475513,
+          "is_ball_carrier": false
+        },
+        "away_lw0": {
+          "numero": 10,
+          "team_side": "opponent",
+          "poste": "AG",
+          "role": null,
+          "x": 0.5440760134454774,
+          "y": 0.12,
+          "is_ball_carrier": false
+        },
+        "away_cm0": {
+          "numero": 7,
+          "team_side": "opponent",
+          "poste": "MC",
+          "role": null,
+          "x": 0.7111883274120904,
+          "y": 0.500460812917794,
+          "is_ball_carrier": false
+        },
+        "home_rb0": {
+          "numero": 6,
+          "team_side": "scorer",
+          "poste": "RB",
+          "role": null,
+          "x": 0.2452745718324681,
+          "y": 0.8804835314569152,
+          "is_ball_carrier": false
+        },
+        "home_cf0": {
+          "numero": 9,
+          "team_side": "scorer",
+          "poste": "BU",
+          "role": null,
+          "x": 0.4200822947308619,
+          "y": 0.5,
+          "is_ball_carrier": false
+        }
+      }
+    }
+  ]
+}
