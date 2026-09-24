@@ -228,11 +228,27 @@ const DATA = __DATA_JSON__;
   const W = canvas.width, H = canvas.height;
   const P = DATA.pitch;
   const MARGIN = 20;
-  const scaleX = (W - 2 * MARGIN) / P.length;
-  const scaleY = (H - 2 * MARGIN) / P.width;
+  // Echelle UNIQUE (pas de scaleX/scaleY distincts) : le rond central et les
+  // arcs restent des cercles au lieu d'ellipses. Terrain centre dans le
+  // canvas avec cette echelle commune.
+  const SCALE = Math.min((W - 2 * MARGIN) / P.length, (H - 2 * MARGIN) / P.width);
+  const FIELD_W = P.length * SCALE;
+  const FIELD_H = P.width * SCALE;
+  const OFFSET_X = (W - FIELD_W) / 2;
+  const OFFSET_Y = (H - FIELD_H) / 2;
 
   function toPx(x, y) {
-    return [MARGIN + x * scaleX, H - (MARGIN + y * scaleY)];
+    return [OFFSET_X + x * SCALE, OFFSET_Y + (FIELD_H - y * SCALE)];
+  }
+
+  // Rectangle defini par 2 coins opposes en metres, dans n'importe quel ordre --
+  // corrige le bug precedent ou strokeRect(x, y, w, h) partait toujours du
+  // coin "y le plus petit en metres" (donc le PLUS BAS a l'ecran, l'axe y
+  // canvas etant inverse) et dessinait la moitie de la boite hors canvas.
+  function strokeRectMeters(xa, ya, xb, yb) {
+    const [pxa, pya] = toPx(xa, ya);
+    const [pxb, pyb] = toPx(xb, yb);
+    ctx.strokeRect(Math.min(pxa, pxb), Math.min(pya, pyb), Math.abs(pxb - pxa), Math.abs(pyb - pya));
   }
 
   function drawPitch() {
@@ -240,40 +256,41 @@ const DATA = __DATA_JSON__;
     ctx.fillRect(0, 0, W, H);
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 2;
-    ctx.strokeRect(MARGIN, MARGIN, W - 2 * MARGIN, H - 2 * MARGIN);
+    strokeRectMeters(0, 0, P.length, P.width);
 
     const [midTopX, midTopY] = toPx(P.length / 2, P.width);
     const [midBotX, midBotY] = toPx(P.length / 2, 0);
     ctx.beginPath(); ctx.moveTo(midTopX, midTopY); ctx.lineTo(midBotX, midBotY); ctx.stroke();
 
     const [cx, cy] = toPx(P.length / 2, P.width / 2);
-    ctx.beginPath(); ctx.arc(cx, cy, P.center_circle * scaleX, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, P.center_circle * SCALE, 0, Math.PI * 2); ctx.stroke();
     ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill();
 
-    // Surfaces + arcs + points de penalty, cote gauche (x=0) et droit (x=length)
+    // Demi-angle exact de l'arc hors surface : au point ou l'arc (rayon
+    // center_circle depuis le point de penalty) croise la ligne de surface
+    // (a penalty_area[0] - penalty_spot metres du point), cos(theta) = cette
+    // distance / rayon -- remplace l'ancienne valeur fixe approximative (0.9).
+    const arcHalfAngle = Math.acos((P.penalty_area[0] - P.penalty_spot) / P.center_circle);
+
+    // Surfaces + arcs + points de penalty + buts, cote gauche (x=0) et droit (x=length)
     for (const side of [0, 1]) {
-      const sign = side === 0 ? 1 : -1;
       const baseX = side === 0 ? 0 : P.length;
-      const [paX, paY] = toPx(side === 0 ? P.penalty_area[0] : P.length - P.penalty_area[0], P.width / 2 - P.penalty_area[1] / 2);
-      const paW = P.penalty_area[0] * scaleX;
-      const paH = P.penalty_area[1] * scaleY;
-      ctx.strokeRect(side === 0 ? MARGIN : paX, paY, paW, paH);
+      const paNearX = side === 0 ? P.penalty_area[0] : P.length - P.penalty_area[0];
+      const gaNearX = side === 0 ? P.goal_area[0] : P.length - P.goal_area[0];
 
-      const [gaX, gaY] = toPx(side === 0 ? P.goal_area[0] : P.length - P.goal_area[0], P.width / 2 - P.goal_area[1] / 2);
-      const gaW = P.goal_area[0] * scaleX;
-      const gaH = P.goal_area[1] * scaleY;
-      ctx.strokeRect(side === 0 ? MARGIN : gaX, gaY, gaW, gaH);
+      strokeRectMeters(baseX, P.width / 2 - P.penalty_area[1] / 2, paNearX, P.width / 2 + P.penalty_area[1] / 2);
+      strokeRectMeters(baseX, P.width / 2 - P.goal_area[1] / 2, gaNearX, P.width / 2 + P.goal_area[1] / 2);
 
-      const [spotX, spotY] = toPx(side === 0 ? P.penalty_spot : P.length - P.penalty_spot, P.width / 2);
-      ctx.beginPath(); ctx.arc(spotX, spotY, 3, 0, Math.PI * 2); ctx.fill();
+      const spotXMeters = side === 0 ? P.penalty_spot : P.length - P.penalty_spot;
+      const [spotX, spotY] = toPx(spotXMeters, P.width / 2);
+      ctx.beginPath(); ctx.arc(spotX, spotY, 3, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill();
 
       ctx.beginPath();
-      const startAngle = side === 0 ? -0.9 : Math.PI - 0.9;
-      const endAngle = side === 0 ? 0.9 : Math.PI + 0.9;
-      ctx.arc(spotX, spotY, P.center_circle * scaleX, startAngle, endAngle);
+      const startAngle = side === 0 ? -arcHalfAngle : Math.PI - arcHalfAngle;
+      const endAngle = side === 0 ? arcHalfAngle : Math.PI + arcHalfAngle;
+      ctx.arc(spotX, spotY, P.center_circle * SCALE, startAngle, endAngle);
       ctx.stroke();
 
-      const goalHalf = (P.goal_width / 2) * scaleY;
       const [gx, gyTop] = toPx(baseX, P.width / 2 + P.goal_width / 2);
       const [, gyBot] = toPx(baseX, P.width / 2 - P.goal_width / 2);
       ctx.lineWidth = 4;
