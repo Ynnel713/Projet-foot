@@ -1,3 +1,4 @@
+import math
 import random
 from collections import Counter
 
@@ -17,6 +18,7 @@ from ligue1sim.animation.templates import (
     BUILDERS,
     TEMPLATES,
     TemplateContext,
+    _flight_distance_m,
     _urgency_factor,
     build_from_template,
     pick_template,
@@ -647,3 +649,48 @@ class TestNoImmobileSegmentInFlightActions:
                 f"{name} segment [t={kf_a.t}->t={kf_b.t}] tagué {tag} mais le ballon ne bouge que de "
                 f"{distance_m * 100:.3f}cm -- ballon immobile en plein vol (dette ball_owner=None ?)"
             )
+
+
+class TestBallFlightDurationUses3DDistance:
+    """Brief "structural test for 2D->3D flight duration" (24/09/2026) --
+    test STRUCTUREL, indépendant du résidu Magnus (qui affecte seulement
+    `decalage_enroulee`, voir DETTE en tête de `ball.py`) : vérifie
+    directement que `_flight_distance_m` (LA fonction dont dépend le calcul
+    de la durée du vol dans `build_from_template`, voir `templates.py`)
+    calcule une distance 3D (`sqrt(dx²+dy²+dz²)`), pas 2D
+    (`sqrt(dx²+dy²)`). `build_from_template` ne définit pas de fonction
+    "durée" séparée -- la durée est `distance_m / vitesse_cible`, un
+    calcul direct à partir de cette seule fonction -- donc la tester ICI
+    couvre exactement le mécanisme, sans qu'une extraction de fonction
+    supplémentaire soit nécessaire (aucun refacto).
+
+    Conçu pour échouer si `_flight_distance_m` repassait à une distance 2D :
+    vérifié localement (voir le retour de tâche) en remettant temporairement
+    `return math.hypot(dx_m, dy_m)` (sans `dz_m`) -- le test devient rouge,
+    remis en place ensuite."""
+
+    def test_ball_flight_duration_uses_3d_distance(self):
+        # Cas du brief : dx=10m, dy=0, dz=15m, vitesse_cible=20 m/s ->
+        # distance_3D = sqrt(10² + 0² + 15²) = sqrt(325) ≈ 18.0278m,
+        # durée ≈ 0.90139s. `a`/`b` sont des points (x normalisé, y
+        # normalisé, z en mètres) -- x construit pour que
+        # (b.x - a.x) * PITCH_LENGTH_M == 10 exactement.
+        dx_m, dy_m, dz_m = 10.0, 0.0, 15.0
+        vitesse_cible = 20.0
+        a = (0.0, 0.0, 0.0)
+        b = (dx_m / PITCH_LENGTH_M, dy_m, dz_m)
+
+        distance_m = _flight_distance_m(a, b)
+        expected_distance_3d = math.sqrt(dx_m**2 + dy_m**2 + dz_m**2)
+        assert distance_m == pytest.approx(expected_distance_3d, abs=1e-9)
+        assert distance_m == pytest.approx(18.0278, abs=1e-3)
+
+        duration = distance_m / vitesse_cible
+        expected_duration = expected_distance_3d / vitesse_cible
+        assert duration == pytest.approx(expected_duration, abs=1e-9)
+        assert duration == pytest.approx(0.90139, abs=1e-4)
+
+        # Distance 2D (sans dz) donnerait une valeur STRICTEMENT différente
+        # -- la formule 3D n'est donc pas accidentellement équivalente ici.
+        distance_2d_only = math.hypot(dx_m, dy_m)
+        assert distance_m != pytest.approx(distance_2d_only, abs=1e-6)

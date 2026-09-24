@@ -91,6 +91,16 @@ brief -- documenté ici plutôt que silencieusement supposé résolu.
 # rien d'autre") -- à traiter dans le chantier des déclinaisons multiples de
 # `decalage_enroulee` prévu séparément (voir aussi
 # docs/ball_flight_design.md, section "Dette connue").
+#
+# Précision (brief "structural test for 2D->3D flight duration", 24/09/2026) :
+# la formule 2D->3D elle-même (`_flight_distance_m`, templates.py) est
+# couverte par un test structurel dédié
+# (tests/test_templates.py::TestBallFlightDurationUses3DDistance) --
+# vérifiée rouge si la distance repasse en 2D, vérifiée verte avec la
+# distance 3D en place. Ce test NE COUVRE PAS le résidu Magnus décrit
+# ci-dessus (les deux causes sont distinctes : formule de durée vs
+# contribution de vitesse de la courbure) -- le résidu Magnus reste sans
+# test de non-régression, à traiter avec le chantier séparé.
 
 from __future__ import annotations
 
