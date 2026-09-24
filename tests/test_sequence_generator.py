@@ -5,17 +5,19 @@ from ligue1sim.animation.sequence_generator import (
     _GK_BASE_ADVANCE_M,
     _GK_BASE_Y,
     _GK_LATERAL_MAX_M,
+    _MIN_DRIFT_MAGNITUDE_M,
     MatchState,
     _cb_line_drift,
     _forward_sign,
     _gk_base_position,
+    _start_positions,
     _tactical_drift,
     deterministic_rng,
     enrich_with_background,
     generate_sequence,
 )
 from ligue1sim.animation.spatial import PitchLayoutState
-from ligue1sim.animation.templates import player_id_of
+from ligue1sim.animation.templates import BUILDERS, player_id_of
 from ligue1sim.events import GoalEvent, PlayerMatchStat
 from ligue1sim.lineup import Lineup
 from ligue1sim.pitch_geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Zone, center_of
@@ -532,3 +534,31 @@ class TestGoalkeeperLateralReactionIsProgressive:
             "aucun des 30 tirages n'a produit de drift latéral pour le gardien adverse -- "
             "amplitude ou logique de _tactical_drift à revérifier"
         )
+
+
+class TestDriftFloor:
+    """Fix "enforce 0.5m minimum for all figurants" (24/09/2026), voir
+    docs/render_diagnostic.md, Problème 2 réévalué en majeur -- sur les 12
+    gabarits réels, aucun figurant (`sequence.background`) ne doit avoir un
+    drift de magnitude < `_MIN_DRIFT_MAGNITUDE_M`, quel que soit le tirage
+    déterministe par joueur."""
+
+    @pytest.mark.parametrize("name", sorted(BUILDERS))
+    def test_every_figurant_drift_meets_the_minimum(self, name):
+        lineup = _lineup()
+        opponent = _opponent_lineup()
+        event = _goal_event()
+        state = _pitch_layout_state(lineup)
+        positions = _start_positions(lineup, state)
+        sequence = BUILDERS[name](event, lineup, positions)
+        sequence = enrich_with_background(sequence, opponent)
+
+        for player_id, track in sequence.background.items():
+            dx, dy = track.drift
+            magnitude_m = (dx * PITCH_LENGTH_M) ** 2 + (dy * PITCH_WIDTH_M) ** 2
+            magnitude_m **= 0.5
+            entry = sequence.roster[player_id]
+            assert magnitude_m >= _MIN_DRIFT_MAGNITUDE_M - 1e-9, (
+                f"{name} : figurant {player_id} ({entry.team_side}, {entry.poste}, #{entry.numero}) "
+                f"drift={magnitude_m:.4f} m, sous le plancher {_MIN_DRIFT_MAGNITUDE_M} m"
+            )

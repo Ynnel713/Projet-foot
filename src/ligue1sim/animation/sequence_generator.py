@@ -245,7 +245,56 @@ def _cb_line_drift(team_key: str, avg_cb_y: float, ball_y: float) -> tuple[float
     return (0.0, _toward(ball_y, avg_cb_y, _DEFENDER_Y_MAX * unit))
 
 
+# Plancher 0,5 m (fix "enforce minimum drift", 24/09/2026, voir
+# docs/render_diagnostic.md, Problème 2) : un figurant doit toujours être
+# perceptible à l'écran, même dans un rôle à faible amplitude (couverture,
+# reste haut). La formule ci-dessous (plafond par rôle × fraction
+# déterministe) ne garantissait aucun minimum -- un tirage proche de 0
+# produisait un joueur visuellement figé (mesuré jusqu'à 7 mm sur 8,5 s,
+# voir le diagnostic), alors que la RÉDUCTION d'amplitude pour ces rôles est
+# volontaire, pas leur immobilité totale.
+_MIN_DRIFT_MAGNITUDE_M = 0.5
+
+
+def _floor_drift_magnitude(dx: float, dy: float, player_id: PlayerId) -> tuple[float, float]:
+    """Applique le plancher `_MIN_DRIFT_MAGNITUDE_M` à un drift déjà calculé
+    -- mise à l'échelle UNIFORME (préserve le signe/la direction de chaque
+    composante, donc toute contrainte tactique déjà encodée dans `dx`/`dy`
+    par l'appelant reste respectée), jamais un plafond touché (`_clamped`,
+    `_MAX_DRIFT_MAGNITUDE=0.05` normalisé, très au-dessus de 0,5 m dans tous
+    les cas, voir plus haut) : ce plancher ne peut donc jamais entrer en
+    conflit avec un plafond existant. Cas dégénéré (`dx == dy == 0.0`, ex.
+    `_toward` quand la cible == le départ) : aucune direction à l'échelle,
+    le plancher s'applique alors UNIQUEMENT en latéral (jamais en
+    profondeur, pour ne jamais introduire une avancée non voulue), signe
+    déterministe par joueur."""
+    magnitude_m = math.hypot(dx * PITCH_LENGTH_M, dy * PITCH_WIDTH_M)
+    if magnitude_m >= _MIN_DRIFT_MAGNITUDE_M:
+        return dx, dy
+    if magnitude_m < 1e-12:
+        sign = 1.0 if _deterministic_unit(player_id, "drift_floor_side") < 0.5 else -1.0
+        return 0.0, sign * _MIN_DRIFT_MAGNITUDE_M / PITCH_WIDTH_M
+    scale = _MIN_DRIFT_MAGNITUDE_M / magnitude_m
+    return dx * scale, dy * scale
+
+
 def _tactical_drift(
+    poste: str,
+    player_id: PlayerId,
+    team_side: str,
+    start: tuple[float, float],
+    ball_target: tuple[float, float],
+    cb_line_drift: tuple[float, float],
+) -> tuple[float, float]:
+    """`_tactical_drift_unfloored` (règles tactiques par rôle) + plancher
+    `_MIN_DRIFT_MAGNITUDE_M` (voir sa docstring) -- point d'entrée public
+    inchangé, tous les appelants existants (`enrich_with_background`, tests)
+    passent par ici."""
+    dx, dy = _tactical_drift_unfloored(poste, player_id, team_side, start, ball_target, cb_line_drift)
+    return _floor_drift_magnitude(dx, dy, player_id)
+
+
+def _tactical_drift_unfloored(
     poste: str,
     player_id: PlayerId,
     team_side: str,
@@ -260,7 +309,9 @@ def _tactical_drift(
     suit le ballon en continu (un seul drift calculé une fois, voir
     `BackgroundTrack`). `cb_line_drift` : le drift partagé de toute la ligne
     de défenseurs centraux (voir `_cb_line_drift`), utilisé tel quel pour un
-    `DC` -- ignoré pour tout autre poste."""
+    `DC` -- ignoré pour tout autre poste. Plancher de visibilité appliqué
+    par l'appelant public `_tactical_drift`, pas ici (cette fonction ne
+    calcule QUE la direction/l'amplitude tactique brute)."""
     start_x, start_y = start
     ball_x, ball_y = ball_target
     same_side = _side_of(start_y) == _side_of(ball_y)
