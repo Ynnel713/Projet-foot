@@ -9,8 +9,17 @@ Le brief demande "decalege_enroulee" -- "decalage_enroulee" (voir
 templates.py) est le nom réel, même substitution documentée que dans les
 briefs précédents.
 
+Brief "ball flight after shot" (24/09/2026), Tâche 5.1 -- `--outcome` (ex.
+"but") fait passer l'issue à `BUILDERS[template]` : la trajectoire
+échantillonnée devient alors le segment `ball_flight` qui suit le tir (tagué
+`BALL_FLIGHT`, voir `animation.ball`), PAS l'ancien segment `"shot"`
+(approche vers la position de frappe, inchangé) -- c'est ce nouveau segment
+qui prouve visuellement que le ballon atteint la cage. Sans `--outcome`
+(défaut `None`), comportement IDENTIQUE à avant ce brief (segment `"shot"`),
+pour ne pas casser les captures existantes qui n'en ont pas besoin.
+
 Usage :
-    uv run python scripts/render_trajectory.py [--template NOM] [--spin VALEUR] [--output CHEMIN]
+    uv run python scripts/render_trajectory.py [--template NOM] [--spin VALEUR] [--outcome ISSUE] [--output CHEMIN]
 """
 
 from __future__ import annotations
@@ -25,7 +34,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from PIL import Image, ImageDraw  # noqa: E402
 
-from ligue1sim.animation.ball import ball_state_at  # noqa: E402
+from ligue1sim.animation.ball import BALL_FLIGHT, ball_state_at  # noqa: E402
 from ligue1sim.animation.templates import BUILDERS  # noqa: E402
 from ligue1sim.events import GoalEvent  # noqa: E402
 from ligue1sim.lineup import Lineup  # noqa: E402
@@ -49,22 +58,31 @@ def _event() -> GoalEvent:
 
 
 def _force_spin(sequence, spin: float):
-    keyframes = [replace(kf, ball=replace(kf.ball, spin=spin)) if kf.physics_tag == "shot" else kf for kf in sequence.keyframes]
+    curved_tags = ("shot", BALL_FLIGHT)
+    keyframes = [replace(kf, ball=replace(kf.ball, spin=spin)) if kf.physics_tag in curved_tags else kf for kf in sequence.keyframes]
     return replace(sequence, keyframes=keyframes)
 
 
-def sample_positions(template_name: str, spin_override: float | None):
+def sample_positions(template_name: str, spin_override: float | None, outcome: str | None):
     lineup = _lineup()
     event = _event()
     start_positions = {p.id: PitchPoint(x=0.15 + 0.06 * i, y=0.1 + 0.07 * i) for i, p in enumerate(lineup.players)}
-    sequence = BUILDERS[template_name](event, lineup, start_positions)
-    shot_kf = next(kf for kf in sequence.keyframes if kf.physics_tag == "shot")
+    sequence = BUILDERS[template_name](event, lineup, start_positions, outcome)
+
+    # Tache 5.1 (brief "ball flight after shot") : avec --outcome, la
+    # trajectoire a echantillonner est le segment BALL_FLIGHT (le vol vers
+    # la cage), pas l'ancien segment "shot" (approche, inchange).
+    target_tag = BALL_FLIGHT if outcome is not None else "shot"
+    shot_kf = next(kf for kf in sequence.keyframes if kf.physics_tag == target_tag)
     shot_spin = shot_kf.ball.spin if spin_override is None else spin_override
     if spin_override is not None:
         sequence = _force_spin(sequence, spin_override)
 
     t_start = shot_kf.t
-    t_end = t_start + (sequence.keyframes[-1].t - t_start) / 2  # brief : "t=2.4 a 4.2s", moitie du segment shot
+    if outcome is not None:
+        t_end = sequence.keyframes[-1].t  # vol entier, jusqu'a la cible
+    else:
+        t_end = t_start + (sequence.keyframes[-1].t - t_start) / 2  # brief : "t=2.4 a 4.2s", moitie du segment shot
     times = [t_start + i * (t_end - t_start) / (_N_SAMPLES - 1) for i in range(_N_SAMPLES)]
     states = [ball_state_at(sequence, t) for t in times]
     return states, shot_spin, t_start, t_end
@@ -119,16 +137,18 @@ def draw_trajectory(states, label: str, output_path: Path) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--template", default=_TEMPLATE_NAME, help=f"nom du gabarit (defaut {_TEMPLATE_NAME!r})")
-    parser.add_argument("--spin", type=float, default=None, help="force le spin du segment shot (ex. 0 pour la comparaison droite) -- defaut : spin reel du gabarit")
+    parser.add_argument("--spin", type=float, default=None, help="force le spin du segment shot/vol (ex. 0 pour la comparaison droite) -- defaut : spin reel du gabarit")
+    parser.add_argument("--outcome", default=None, help="issue transmise a build_from_template (ex. 'but') -- active le segment ball_flight (Tache 5.1, brief 'ball flight after shot')")
     parser.add_argument("--output", default=None, help="chemin de sortie (defaut docs/previews/canvas/trajectory_<template>.png, ou trajectory_straight_comparison.png si --spin 0)")
     args = parser.parse_args()
 
     if args.template not in BUILDERS:
         raise SystemExit(f"Gabarit inconnu : {args.template!r} -- choisir parmi {sorted(BUILDERS)}")
 
-    states, shot_spin, t_start, t_end = sample_positions(args.template, args.spin)
+    states, shot_spin, t_start, t_end = sample_positions(args.template, args.spin, args.outcome)
     deviation_m = max_deviation_m(states)
-    label = f"{args.template} -- spin={shot_spin:.1f} rad/s -- segment shot t={t_start:.1f}-{t_end:.1f}s -- deviation max={deviation_m:.2f}m"
+    segment_label = "ball_flight (vol vers la cage)" if args.outcome is not None else "shot"
+    label = f"{args.template} -- spin={shot_spin:.1f} rad/s -- segment {segment_label} t={t_start:.2f}-{t_end:.2f}s -- deviation max={deviation_m:.2f}m"
 
     default_name = "trajectory_straight_comparison.png" if args.spin == 0.0 else f"trajectory_{args.template}.png"
     output_path = Path(args.output) if args.output else _OUTPUT_DIR / default_name

@@ -194,7 +194,15 @@ def _build_clip_frames(
         assist_zone=zone_of(*event.assist_zone),
     )
     start_positions = _lineup_start_positions(scorer_lineup)
-    sequence = BUILDERS[event.gabarit](goal_event, scorer_lineup, start_positions)
+    # Transit de l'outcome (brief "ball flight after shot", 24/09/2026,
+    # Tache 2) -- parametre positionnel explicite (pas d'objet d'encapsulation :
+    # une seule valeur `str`, deja portee telle quelle par `NarrativeEvent.
+    # outcome`, rien a regrouper). `build_from_template` (voir templates.py)
+    # traite `outcome=None` comme avant ce brief ; ici il est TOUJOURS fourni
+    # (`event.outcome` n'est jamais None sur un `NarrativeEvent`, voir
+    # narrative.py) -- seul changement dans ce fichier, aucune autre
+    # modification.
+    sequence = BUILDERS[event.gabarit](goal_event, scorer_lineup, start_positions, event.outcome)
     sequence = enrich_with_background(sequence, opponent_lineup)
 
     step = 1.0 / _FPS
@@ -282,7 +290,15 @@ def build_clips(timeline: Timeline, max_occasions: int | None = None) -> list[Cl
             interval_events=_interval_events(timeline, prev_minute, event.minute),
             frames=frames,
             roster=roster,
-            duration_s=TEMPLATES[event.gabarit].duration,
+            # Bug corrige (brief "ball flight after shot", 24/09/2026, Tache 2 --
+            # escalade tranchee avec le proprietaire) : avant ce brief,
+            # TEMPLATES[gabarit].duration valait TOUJOURS sequence.duration
+            # (aucune extension de duree n'existait), donc equivalent a
+            # frames[-1].t -- plus vrai depuis que le vol allonge la Sequence.
+            # canvas.html (tick()) affiche le carton des que t >= clip.duration :
+            # avec l'ancienne constante figee, la lecture s'arretait AVANT les
+            # frames du vol, jamais jouees malgre leur presence dans `frames`.
+            duration_s=frames[-1].t,
         ))
         prev_minute = event.minute
         if max_occasions is not None and len(clips) >= max_occasions:

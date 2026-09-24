@@ -4,6 +4,7 @@ Tâche 3) -- `build_clips`. Mêmes helpers de simulation que
 de test -- même motif déjà établi dans ce projet, voir la docstring
 d'`apps/streamlit_preview.py` sur l'indépendance volontaire des fichiers)."""
 
+from ligue1sim.animation import templates as templates_module
 from ligue1sim.clubs import Club
 from ligue1sim.lineup import pick_best_formation
 from ligue1sim.players import Player
@@ -11,7 +12,7 @@ from ligue1sim.schedule import Match
 from ligue1sim.simulation import LeagueContext, simulate_match
 
 from narrative import BUT, build_timeline, match_result_from
-from narrative_player import build_clips, _interval_events
+from narrative_player import build_clips, _build_clip_frames, _interval_events
 
 _N_MATCHES = 30
 
@@ -247,3 +248,44 @@ class TestBuildClipsFramesNeverEmpty:
             for clip in clips:
                 assert clip.frames, f"{timeline.match_id} : clip {clip.minute}/{clip.gabarit} sans frames"
                 assert clip.duration_s > 0
+
+
+class TestOutcomeTransmittedToTemplate:
+    """Brief "ball flight after shot" (24/09/2026), Tache 2.4 -- sur 100
+    matchs, tous les appels a `templates.build_from_template` depuis
+    `_build_clip_frames` recoivent bien l'`outcome` de l'evenement
+    correspondant. Espionne `build_from_template` lui-meme (pas
+    `BUILDERS[gabarit]`) pour verifier que le transit traverse TOUTE la
+    chaine (wrapper build_xxx inclus), pas seulement l'appel de surface.
+    Appelle `_build_clip_frames` directement (pas `build_clips`) pour
+    garder une correspondance 1-appel-pour-1-evenement sans ambiguite
+    d'ordre (build_clips peut tenter des evenements ensuite omis)."""
+
+    def test_outcome_transmitted_to_template(self, monkeypatch):
+        results = _simulate_n(100)
+        original = templates_module.build_from_template
+        captured: list = []
+
+        def spy(template, event, lineup, start_positions, outcome=None):
+            captured.append(outcome)
+            return original(template, event, lineup, start_positions, outcome)
+
+        monkeypatch.setattr(templates_module, "build_from_template", spy)
+
+        checked = 0
+        for match in results:
+            timeline = build_timeline(match)
+            for event in timeline.events:
+                captured.clear()
+                _build_clip_frames(timeline, event)
+                assert len(captured) == 1, (
+                    f"{timeline.match_id} minute={event.minute} : {len(captured)} appels a "
+                    "build_from_template (attendu exactement 1 par evenement)"
+                )
+                assert captured[0] == event.outcome, (
+                    f"{timeline.match_id} minute={event.minute} : outcome transmis {captured[0]!r} "
+                    f"!= event.outcome {event.outcome!r}"
+                )
+                checked += 1
+
+        assert checked > 0

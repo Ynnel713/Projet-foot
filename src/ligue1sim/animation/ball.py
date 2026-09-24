@@ -87,7 +87,20 @@ PASS_LOB = "pass_lob"
 SHOT = "shot"
 CROSS = "cross"
 DEFLECT = "deflect"
-_KNOWN_TAGS = frozenset({PASS_GROUND, PASS_LOB, SHOT, CROSS, DEFLECT})
+# Brief "ball flight after shot" (24/09/2026), voir docs/ball_flight_design.md
+# -- segment qui suit un `shot`/`deflect` de gabarit (templates.py) et
+# atteint une cible (x, y, z) explicite dérivée de l'issue réelle de
+# l'action, jamais dérivée d'un `Template.ball_position` statique. Distinct
+# de `SHOT` (pas juste réutilisé avec le même tag) car son modèle de hauteur
+# DIFFÈRE : `_behavior_shot` retombe toujours à z=0 en fin de segment
+# (`_hat(1)=0`, voir plus bas) -- correct pour un tir qui arrive au pied du
+# tireur (comportement historique, inchangé), mais faux pour un vol qui doit
+# atteindre une hauteur cible arbitraire (ex. la barre, ~2,44m). Un tag
+# dédié évite tout changement de comportement des segments `shot` EXISTANTS
+# des 12 gabarits (voir `_behavior_ball_flight`, qui réutilise la
+# composante x/y/Magnus de `_behavior_shot` SANS toucher à cette fonction).
+BALL_FLIGHT = "ball_flight"
+_KNOWN_TAGS = frozenset({PASS_GROUND, PASS_LOB, SHOT, CROSS, DEFLECT, BALL_FLIGHT})
 
 _VELOCITY_EPSILON_S = 1e-4  # même principe que motion._VELOCITY_EPSILON_S -- différence finie pour (vx, vy, vz)
 _STATIONARY_EPSILON_M = 0.01  # ballon "immobile" (cas limite) : moins d'1 cm entre kf_a et kf_b
@@ -259,6 +272,25 @@ def _behavior_shot(
     vy = (end[1] - start[1]) / duration + (curve_peak_m / PITCH_WIDTH_M) * py * _hat_derivative(s) / duration
     vz = height_max * _hat_derivative(s) / duration
     return BallState(x=x, y=y, z=z, spin=spin, owner_id=None, vx=vx, vy=vy, vz=vz)
+
+
+# --- ball_flight -------------------------------------------------------------
+# Brief "ball flight after shot" (24/09/2026) -- réutilise EXACTEMENT la
+# composante x/y (ligne droite + courbure de Magnus si spin != 0) de
+# `_behavior_shot` (appel direct, aucune duplication de cette partie), et
+# remplace SEULEMENT sa composante z : `_behavior_shot` ramène toujours z à 0
+# en fin de segment (`_hat(1)=0`), correct pour un tir qui s'arrête au pied
+# du tireur, mais un `ball_flight` doit atteindre une hauteur cible
+# arbitraire (ex. ~2,44m pour "barre") -- rampe linéaire simple de 0 (début
+# du vol, ballon au sol au pied du tireur) vers `end_z` (hauteur de la cible,
+# voir templates._flight_target), pas de nouveau modèle physique de hauteur.
+def _behavior_ball_flight(
+    start: tuple[float, float], end: tuple[float, float], s: float, duration: float, spin: float, end_z: float
+) -> BallState:
+    base = _behavior_shot(start, end, s, duration, spin)
+    z = end_z * s
+    vz = end_z / duration if duration > 0 else 0.0
+    return replace(base, z=z, vz=vz)
 
 
 # --- cross -------------------------------------------------------------------
@@ -445,6 +477,8 @@ def ball_state_at(sequence: Sequence, t: float) -> BallState:
         state = _behavior_pass_lob(start, end, s, duration)
     elif tag == SHOT:
         state = _behavior_shot(start, end, s, duration, kf_a.ball.spin)
+    elif tag == BALL_FLIGHT:
+        state = _behavior_ball_flight(start, end, s, duration, kf_a.ball.spin, kf_b.ball.z)
     elif tag == CROSS:
         state = _behavior_cross(start, end, s, duration, seed_key)
     else:

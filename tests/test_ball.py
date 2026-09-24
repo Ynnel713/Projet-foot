@@ -3,6 +3,7 @@ import math
 import pytest
 
 from ligue1sim.animation.ball import (
+    BALL_FLIGHT,
     CROSS,
     DEFLECT,
     PASS_GROUND,
@@ -13,7 +14,7 @@ from ligue1sim.animation.ball import (
     _resolve_physics_tag,
     ball_state_at,
 )
-from ligue1sim.animation.templates import BUILDERS
+from ligue1sim.animation.templates import BUILDERS, TEMPLATES
 from ligue1sim.animation.types import BallState, Keyframe, RosterEntry, Sequence
 from ligue1sim.events import GoalEvent
 from ligue1sim.lineup import Lineup
@@ -472,6 +473,236 @@ class TestBallPositionContinuousAcrossShotBoundary:
                 f"(plafond {limit_m * 100:.3f}cm pour v_max={self._V_MAX_M_S}m/s) -- discontinuité de POSITION"
             )
             previous = current
+
+
+_FLIGHT_ZONES = {
+    "contre_attaque": Zone(col=9, row=4), "construction_placee": Zone(col=9, row=4),
+    "debordement_centre_tete": Zone(col=10, row=2), "percee_individuelle": Zone(col=9, row=4),
+    "une_deux": Zone(col=10, row=4), "coup_franc": Zone(col=7, row=4), "corner": Zone(col=10, row=1),
+    "profondeur_1v1": Zone(col=10, row=4), "recuperation_haute": Zone(col=10, row=4),
+    "decalage_enroulee": Zone(col=9, row=2), "penalty": Zone(col=11, row=4), "but_gag": Zone(col=11, row=4),
+}
+_GOAL_Y_MIN = 0.5 - 3.66 / PITCH_WIDTH_M
+_GOAL_Y_MAX = 0.5 + 3.66 / PITCH_WIDTH_M
+
+# Intervalles cibles par issue -- recopiés du design (docs/ball_flight_design.md,
+# section 1.2), PAS dérivés de `templates._flight_target` : un test qui
+# réutiliserait l'implémentation pour se vérifier lui-même serait tautologique.
+_TARGET_INTERVALS = {
+    "but": {"x": (1.00, 1.02), "y": (_GOAL_Y_MIN, _GOAL_Y_MAX), "z": (0.0, 2.40)},
+    "arret": {"x": (0.98, 1.00), "y": (0.47, 0.53), "z": (0.0, 2.0)},
+    "barre": {"x": (0.995, 1.005), "y": (_GOAL_Y_MIN, _GOAL_Y_MAX), "z": (2.35, 2.44)},
+}
+
+
+def _flight_event(gabarit: str) -> GoalEvent:
+    template = TEMPLATES[gabarit]
+    role_names = {r.name for r in template.roles}
+    assist = "mc0" if "assist" in role_names else None
+    return GoalEvent(
+        club_name="Test FC", scorer="bu", assist=assist, minute=34,
+        penalty=(gabarit == "penalty"),
+        zone=_FLIGHT_ZONES[gabarit], assist_zone=Zone(col=7, row=3) if assist else None,
+    )
+
+
+def _flight_start_positions() -> dict:
+    lineup = _deflect_audit_lineup()
+    return {p.id: PitchPoint(x=0.12 + 0.06 * i, y=0.1 + 0.07 * i) for i, p in enumerate(lineup.players)}
+
+
+class TestBallReachesTargetOnShot:
+    """Brief "ball flight after shot, outcome-driven target" (24/09/2026),
+    Tâche 4.1 : sur les 12 gabarits x 3 issues avec intervalle numérique
+    exact dans le design (but/arret/barre -- poteau/hors_cadre dépendent
+    d'un côté gauche/droite tiré déterministe, non fixé à l'avance, testés
+    séparément par `TestBallFlightPoteauOnPost`/`TestBallFlightHorsCadreWide`
+    ci-dessous), la position finale du ballon tombe dans l'intervalle cible.
+    Aucune liste d'exclusion : les 12 gabarits sont parcourus via `TEMPLATES`."""
+
+    @pytest.mark.parametrize("gabarit", sorted(TEMPLATES))
+    @pytest.mark.parametrize("outcome", ["but", "arret", "barre"])
+    def test_ball_reaches_target_on_shot(self, gabarit, outcome):
+        lineup = _deflect_audit_lineup()
+        event = _flight_event(gabarit)
+        start_positions = _flight_start_positions()
+        sequence = BUILDERS[gabarit](event, lineup, start_positions, outcome)
+        final = ball_state_at(sequence, sequence.duration)
+        interval = _TARGET_INTERVALS[outcome]
+        for axis, value in (("x", final.x), ("y", final.y), ("z", final.z)):
+            lo, hi = interval[axis]
+            assert lo <= value <= hi, (
+                f"{gabarit}/{outcome} : {axis}={value:.4f} hors intervalle cible [{lo}, {hi}]"
+            )
+
+
+class TestBallFlightPoteauAndHorsCadre:
+    """Issues avec un côté gauche/droite tiré déterministe (poteau/
+    hors_cadre) -- vérifie l'appartenance au bon POTEAU (y proche de
+    `_GOAL_Y_MIN` ou `_GOAL_Y_MAX`, jamais entre les deux) ou au bon côté
+    "nettement large" (y hors de [_GOAL_Y_MIN, _GOAL_Y_MAX] avec une marge),
+    plutôt qu'une valeur y fixe (le côté est déterministe PAR ÉVÉNEMENT, pas
+    fixe pour un gabarit donné)."""
+
+    @pytest.mark.parametrize("gabarit", sorted(TEMPLATES))
+    def test_poteau_on_post_not_between(self, gabarit):
+        lineup = _deflect_audit_lineup()
+        event = _flight_event(gabarit)
+        start_positions = _flight_start_positions()
+        sequence = BUILDERS[gabarit](event, lineup, start_positions, "poteau")
+        final = ball_state_at(sequence, sequence.duration)
+        assert 0.995 <= final.x <= 1.005
+        near_left = abs(final.y - _GOAL_Y_MIN) <= 0.01
+        near_right = abs(final.y - _GOAL_Y_MAX) <= 0.01
+        assert near_left or near_right, f"{gabarit} : y={final.y:.4f} n'est sur aucun des deux poteaux"
+        assert 0.0 <= final.z <= 2.2
+
+    @pytest.mark.parametrize("gabarit", sorted(TEMPLATES))
+    def test_hors_cadre_clearly_wide(self, gabarit):
+        lineup = _deflect_audit_lineup()
+        event = _flight_event(gabarit)
+        start_positions = _flight_start_positions()
+        sequence = BUILDERS[gabarit](event, lineup, start_positions, "hors_cadre")
+        final = ball_state_at(sequence, sequence.duration)
+        assert 0.97 <= final.x <= 1.03
+        assert final.y < 0.40 or final.y > 0.60, f"{gabarit} : y={final.y:.4f} pas nettement large"
+        assert 0.0 <= final.z <= 3.5
+
+
+class TestBallFlightNoTargetOnInterruptedOutcome:
+    """Tâche 3.4 : `tacle`/`degagement` interrompent l'action avant le tir --
+    aucun `ball_flight`, la durée de la Sequence reste identique à
+    `outcome=None` (comportement d'avant ce brief, préservé)."""
+
+    @pytest.mark.parametrize("gabarit", sorted(TEMPLATES))
+    @pytest.mark.parametrize("outcome", ["tacle", "degagement"])
+    def test_no_flight_on_interrupted_outcome(self, gabarit, outcome):
+        lineup = _deflect_audit_lineup()
+        event = _flight_event(gabarit)
+        start_positions = _flight_start_positions()
+        sequence_none = BUILDERS[gabarit](event, lineup, start_positions, None)
+        sequence_interrupted = BUILDERS[gabarit](event, lineup, start_positions, outcome)
+        assert sequence_interrupted.duration == pytest.approx(sequence_none.duration)
+        assert len(sequence_interrupted.keyframes) == len(sequence_none.keyframes)
+
+
+class TestBallPositionContinuousDuringFlight:
+    """Tâche 4.2 : continuité de position à 1000Hz sur le segment
+    `ball_flight` (méthode identique à
+    `TestBallPositionContinuousAcrossShotBoundary`/`...Deflect...` ci-dessus,
+    même plafond v_max=40 m/s)."""
+
+    _HZ = 1000
+    _DT_S = 1.0 / _HZ
+    _V_MAX_M_S = 40.0
+
+    @pytest.mark.parametrize("gabarit", sorted(TEMPLATES))
+    def test_ball_position_continuous_during_flight(self, gabarit):
+        lineup = _deflect_audit_lineup()
+        event = _flight_event(gabarit)
+        start_positions = _flight_start_positions()
+        sequence = BUILDERS[gabarit](event, lineup, start_positions, "but")
+        limit_m = self._V_MAX_M_S * self._DT_S
+
+        flight_start_t = sequence.keyframes[-2].t
+        flight_end_t = sequence.keyframes[-1].t
+        t = flight_start_t
+        previous = ball_state_at(sequence, t)
+        while t < flight_end_t - self._DT_S:
+            t += self._DT_S
+            current = ball_state_at(sequence, t)
+            jump_m = _xyz_distance_m(previous, current)
+            assert jump_m <= limit_m, (
+                f"{gabarit} t={t:.5f} : saut de position de {jump_m * 100:.3f}cm en {self._DT_S * 1000:.2f}ms "
+                f"(plafond {limit_m * 100:.3f}cm pour v_max={self._V_MAX_M_S}m/s) -- discontinuité de POSITION"
+            )
+            previous = current
+
+
+class TestBallFlightDeterministic:
+    """Tâche 4.3 : deux appels avec le même `event`/`outcome` produisent le
+    même vol, bit à bit (aucun tirage `random`, uniquement du hash seedé par
+    `event_ref`, voir `templates._flight_unit`)."""
+
+    @pytest.mark.parametrize("gabarit", sorted(TEMPLATES))
+    def test_ball_flight_deterministic(self, gabarit):
+        lineup = _deflect_audit_lineup()
+        event = _flight_event(gabarit)
+        start_positions = _flight_start_positions()
+        seq_a = BUILDERS[gabarit](event, lineup, start_positions, "but")
+        seq_b = BUILDERS[gabarit](event, lineup, start_positions, "but")
+        assert seq_a.duration == seq_b.duration
+        assert len(seq_a.keyframes) == len(seq_b.keyframes)
+        for kf_a, kf_b in zip(seq_a.keyframes, seq_b.keyframes):
+            assert kf_a.ball == kf_b.ball
+            assert kf_a.t == kf_b.t
+            assert kf_a.physics_tag == kf_b.physics_tag
+
+
+class TestBallSpeedRealisticOnFlight:
+    """Tâche 4.4 : vitesse moyenne du ballon sur le segment `ball_flight`
+    dans [15, 35] m/s (référence : tir réel de Ligue 1 = 25-30 m/s). Mesuré
+    sur plusieurs `event_ref` distincts par gabarit (minute/buteur variés)
+    pour ne pas ne tirer qu'UN seul échantillon du hash déterministe -- si
+    une mesure sort de l'intervalle, le test échoue avec le chiffre exact
+    (pas d'ajustement silencieux du code de production pour la faire passer)."""
+
+    _HZ = 1000
+    _MINUTES = (5, 23, 41, 67, 88)
+
+    @pytest.mark.parametrize("gabarit", sorted(TEMPLATES))
+    def test_ball_speed_realistic_on_flight(self, gabarit):
+        lineup = _deflect_audit_lineup()
+        start_positions = _flight_start_positions()
+        template = TEMPLATES[gabarit]
+        role_names = {r.name for r in template.roles}
+        assist = "mc0" if "assist" in role_names else None
+
+        for minute in self._MINUTES:
+            event = GoalEvent(
+                club_name="Test FC", scorer="bu", assist=assist, minute=minute,
+                penalty=(gabarit == "penalty"),
+                zone=_FLIGHT_ZONES[gabarit], assist_zone=Zone(col=7, row=3) if assist else None,
+            )
+            sequence = BUILDERS[gabarit](event, lineup, start_positions, "but")
+            flight_start_t = sequence.keyframes[-2].t
+            flight_end_t = sequence.keyframes[-1].t
+            dt = 1.0 / self._HZ
+            n = max(2, int((flight_end_t - flight_start_t) / dt))
+            ts = [flight_start_t + i * (flight_end_t - flight_start_t) / n for i in range(n + 1)]
+            states = [ball_state_at(sequence, t) for t in ts]
+            total_m = sum(_xyz_distance_m(a, b) for a, b in zip(states, states[1:]))
+            avg_speed = total_m / (flight_end_t - flight_start_t)
+            assert 15.0 <= avg_speed <= 35.0, (
+                f"{gabarit} minute={minute} : vitesse moyenne mesuree {avg_speed:.3f} m/s "
+                "hors de [15, 35] m/s -- chiffre exact remonte, pas d'ajustement silencieux"
+            )
+
+
+class TestBallFlightOnlyAfterShot:
+    """Tâche 4.5 : le segment qui PRÉCÈDE immédiatement le `ball_flight`
+    (avant son ajout, donc le dernier segment "historique" du gabarit) doit
+    toujours être `shot`/`cross`/`deflect` -- jamais `pass_ground`/`pass_lob`.
+    Vérifié sur les 12 gabarits réels, sans exception codée en dur."""
+
+    @pytest.mark.parametrize("gabarit", sorted(TEMPLATES))
+    def test_ball_flight_only_after_shot(self, gabarit):
+        assert TEMPLATES[gabarit].has_ball_flight
+        lineup = _deflect_audit_lineup()
+        event = _flight_event(gabarit)
+        start_positions = _flight_start_positions()
+        sequence_no_flight = BUILDERS[gabarit](event, lineup, start_positions, None)
+        kf_a = sequence_no_flight.keyframes[-2]
+        kf_b = sequence_no_flight.keyframes[-1]
+        tag = _resolve_physics_tag(sequence_no_flight, kf_a, is_last_segment=True)
+        assert tag in (SHOT, CROSS, DEFLECT), (
+            f"{gabarit} : segment precedant le ball_flight tague {tag!r}, attendu shot/cross/deflect"
+        )
+        # Une fois le vol ajoute, la keyframe qui le demarre est explicitement
+        # taguee BALL_FLIGHT (pas SHOT ni le tag herite) -- verifie que le
+        # dispatch de ball_state_at ne retombe jamais sur l'inference.
+        sequence_with_flight = BUILDERS[gabarit](event, lineup, start_positions, "but")
+        assert sequence_with_flight.keyframes[-2].physics_tag == BALL_FLIGHT
 
 
 class TestEdgeCases:

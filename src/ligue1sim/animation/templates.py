@@ -39,15 +39,18 @@ conformément à l'invariant 1 (le moteur ne dépend jamais de l'habillage).
 
 from __future__ import annotations
 
+import hashlib
 import logging
+import math
 import random
 from dataclasses import dataclass, replace
 from typing import Callable
 
+from ligue1sim.animation.ball import BALL_FLIGHT
 from ligue1sim.animation.types import BallState, Keyframe, PlayerId, RosterEntry, Sequence
 from ligue1sim.events import GoalEvent
 from ligue1sim.lineup import Lineup
-from ligue1sim.pitch_geometry import PITCH_WIDTH_M, PitchPoint, center_of
+from ligue1sim.pitch_geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, PitchPoint, center_of
 from ligue1sim.players import ATTACKER, DEFENDER, GOALKEEPER, MIDFIELDER, Player
 
 _logger = logging.getLogger(__name__)
@@ -195,6 +198,15 @@ class Template:
     # animation.ball.ball_state_at infère un comportement par défaut. Ne
     # PAS chercher à tagger exhaustivement chaque segment de chaque gabarit.
     physics_tags: tuple[tuple[float, str], ...] = ()
+    # Ce gabarit se termine par un tir/tête/déviation vers le but -- brief
+    # "ball flight after shot" (24/09/2026), voir docs/ball_flight_design.md
+    # section 1.3/1.4 : True sur les 12 gabarits actuels (chacun se termine
+    # par un rôle qui frappe/dévie vers le but, vérifié gabarit par gabarit
+    # dans le design, pas supposé). Seul déclencheur STRUCTUREL -- la
+    # décision d'ajouter réellement un segment `ball_flight` à l'exécution
+    # dépend aussi de l'`outcome` transmis à `build_from_template` (absent
+    # -> comportement actuel inchangé, voir sa docstring).
+    has_ball_flight: bool = False
 
 
 def _validate_template(template: Template) -> None:
@@ -323,16 +335,127 @@ def _anchor_point(anchor: str, start: PitchPoint, event: GoalEvent) -> PitchPoin
     raise ValueError(f"Ancrage de rôle inconnu : {anchor!r}")
 
 
+# --- Vol du ballon après la frappe (`ball_flight`) --------------------------
+# Brief "ball flight after shot" (24/09/2026), voir docs/ball_flight_design.md
+# -- segment ajouté APRÈS le dernier segment porté (approche/centre/corner
+# actuel, inchangé) : le ballon quitte enfin le pied du tireur pour une
+# trajectoire explicite vers une cible dérivée de l'ISSUE réelle de l'action
+# (`NarrativeEvent.outcome`, transmis par `narrative_player.py`, voir Tâche 2
+# du brief -- absent ici : `outcome` reste un paramètre OPTIONNEL de
+# `build_from_template`, `None` préserve exactement le comportement actuel).
+#
+# Géométrie de la cage (référentiel normalisé, voir pitch_geometry.py) : but
+# adverse sur la ligne x=1.0, centré y=0.5, largeur réglementaire 7,32m
+# (+/-3,66m), hauteur réglementaire 2,44m -- PAS de `Zone` (grille
+# GRID_COLUMNS x GRID_ROWS) : une case de la grille existante (~8,75m de
+# large) est plus large que le but lui-même, trop grossière (voir design
+# doc, section 1.2).
+_GOAL_Y_CENTER = 0.5
+_GOAL_HALF_WIDTH_Y = 3.66 / PITCH_WIDTH_M
+_GOAL_Y_MIN = _GOAL_Y_CENTER - _GOAL_HALF_WIDTH_Y  # ~0.4462
+_GOAL_Y_MAX = _GOAL_Y_CENTER + _GOAL_HALF_WIDTH_Y  # ~0.5538
+
+# Vitesse cible du vol (Tâche 2.7/4.4 du brief) -- référence donnée par le
+# propriétaire : un tir réel de Ligue 1 part à 25-30 m/s, intervalle accepté
+# [15, 35] m/s. Tirage déterministe (voir `_flight_unit`), jamais `random`
+# global.
+_FLIGHT_MIN_SPEED_MPS = 15.0
+_FLIGHT_MAX_SPEED_MPS = 35.0
+
+# Issues qui interrompent l'action AVANT le tir (défenseur intervient) --
+# aucun `ball_flight` pour celles-ci (design doc, section 1.4). Toute AUTRE
+# valeur d'`outcome` non listée ci-dessous ET absente de `_flight_target`
+# lève une erreur explicite plutôt que de retomber silencieusement sur
+# "pas de vol" -- une issue inconnue est une dérive du modèle de données à
+# signaler, pas un cas à absorber sans bruit.
+_NO_FLIGHT_OUTCOMES = frozenset({"tacle", "degagement"})
+
+
+def _flight_unit(event_ref: str, salt: str) -> float:
+    """Fraction déterministe dans [0, 1) -- même principe que
+    `ball._deterministic_unit`/`motion._start_offset` (hash sha256, jamais
+    `hash()` ni `random`). Copie locale plutôt qu'import de `animation.ball`
+    -- même convention que `motion.py`/`ball.py` eux-mêmes, qui se
+    réimplémentent chacun leur propre `_real_distance_m` pour ne pas se
+    coupler entre modules."""
+    digest = hashlib.sha256(f"ball_flight|{salt}|{event_ref}".encode()).digest()
+    return int.from_bytes(digest[:8], "big") / 2**64
+
+
+def _flight_target(outcome: str, event_ref: str) -> tuple[float, float, float] | None:
+    """Point cible `(x, y, z)` du vol dérivé de `outcome` (design doc,
+    section 1.2) -- `None` pour une issue qui n'a pas de vol
+    (`_NO_FLIGHT_OUTCOMES`). `z` en MÈTRES (convention `BallState.z`), `x`/`y`
+    normalisés -- `x` peut légitimement dépasser 1.0 pour l'issue "but" (le
+    filet est physiquement derrière la ligne, hors terrain)."""
+    if outcome in _NO_FLIGHT_OUTCOMES:
+        return None
+    if outcome == "but":
+        x = 1.00 + _flight_unit(event_ref, "x") * 0.02
+        y = _GOAL_Y_MIN + _flight_unit(event_ref, "y") * (_GOAL_Y_MAX - _GOAL_Y_MIN)
+        z = _flight_unit(event_ref, "z") * 2.40
+        return (x, y, z)
+    if outcome == "arret":
+        x = 0.98 + _flight_unit(event_ref, "x") * 0.02
+        y = 0.47 + _flight_unit(event_ref, "y") * 0.06
+        z = _flight_unit(event_ref, "z") * 2.0
+        return (x, y, z)
+    if outcome == "poteau":
+        x = 1.00 + (_flight_unit(event_ref, "x") - 0.5) * 0.01
+        left_post = _flight_unit(event_ref, "side") < 0.5
+        base_y = _GOAL_Y_MIN if left_post else _GOAL_Y_MAX
+        y = base_y + (_flight_unit(event_ref, "y") - 0.5) * 0.01
+        z = _flight_unit(event_ref, "z") * 2.2
+        return (x, y, z)
+    if outcome == "barre":
+        x = 1.00 + (_flight_unit(event_ref, "x") - 0.5) * 0.01
+        y = _GOAL_Y_MIN + _flight_unit(event_ref, "y") * (_GOAL_Y_MAX - _GOAL_Y_MIN)
+        z = 2.35 + _flight_unit(event_ref, "z") * (2.44 - 2.35)
+        return (x, y, z)
+    if outcome == "hors_cadre":
+        x = 0.97 + _flight_unit(event_ref, "x") * 0.06
+        wide_right = _flight_unit(event_ref, "side") >= 0.5
+        y = (
+            _GOAL_Y_MAX + _flight_unit(event_ref, "y") * (1.0 - _GOAL_Y_MAX)
+            if wide_right
+            else _flight_unit(event_ref, "y") * _GOAL_Y_MIN
+        )
+        z = _flight_unit(event_ref, "z") * 3.5
+        return (x, y, z)
+    raise ValueError(
+        f"outcome {outcome!r} inconnu de _flight_target -- ni dans _NO_FLIGHT_OUTCOMES "
+        "ni dans les issues avec cible (but/arret/poteau/barre/hors_cadre), voir "
+        "docs/ball_flight_design.md section 1.2"
+    )
+
+
+def _flight_distance_m(a: tuple[float, float], b: tuple[float, float]) -> float:
+    dx_m = (b[0] - a[0]) * PITCH_LENGTH_M
+    dy_m = (b[1] - a[1]) * PITCH_WIDTH_M
+    return math.hypot(dx_m, dy_m)
+
+
 def build_from_template(
     template: Template,
     event: GoalEvent,
     lineup: Lineup,
     start_positions: dict[PlayerId, PitchPoint],
+    outcome: str | None = None,
 ) -> Sequence:
     """Moteur générique partagé par les 12 gabarits (voir en bas de fichier
     pour leurs wrappers `build_xxx`). Fonction PURE : mêmes entrées, même
     `Sequence`, aucun tirage aléatoire -- la part de hasard de ce module se
-    limite au CHOIX du gabarit (`pick_template`), jamais à son exécution."""
+    limite au CHOIX du gabarit (`pick_template`), jamais à son exécution.
+
+    `outcome` (brief "ball flight after shot", 24/09/2026, voir
+    docs/ball_flight_design.md) : paramètre OPTIONNEL, `None` par défaut --
+    préserve EXACTEMENT le comportement d'avant ce brief (aucun segment
+    `ball_flight` ajouté). Transmis par `narrative_player.py` depuis
+    `NarrativeEvent.outcome` (Tâche 2 du brief) ; si fourni ET
+    `template.has_ball_flight`, un segment de vol est ajouté après le
+    dernier segment porté -- voir `_flight_target`. `outcome in
+    ("tacle", "degagement")` : aucun vol (action interrompue avant le tir),
+    voir `_NO_FLIGHT_OUTCOMES`."""
     _validate_template(template)
 
     role_names = tuple(role.name for role in template.roles)
@@ -409,10 +532,35 @@ def build_from_template(
             )
         )
 
+    event_ref = f"goal:{event.club_name}:{event.scorer}:{event.minute}"
+    duration = template.duration
+
+    if outcome is not None and template.has_ball_flight:
+        target = _flight_target(outcome, event_ref)
+        if target is not None:
+            target_x, target_y, target_z = target
+            distance_m = _flight_distance_m((last_ball_xy.x, last_ball_xy.y), (target_x, target_y))
+            speed_mps = _FLIGHT_MIN_SPEED_MPS + _flight_unit(event_ref, "speed") * (
+                _FLIGHT_MAX_SPEED_MPS - _FLIGHT_MIN_SPEED_MPS
+            )
+            flight_duration = distance_m / speed_mps if speed_mps > 0 else 0.0
+            flight_start_players = keyframes[-1].players
+            keyframes[-1] = replace(keyframes[-1], physics_tag=BALL_FLIGHT)
+            keyframes.append(
+                Keyframe(
+                    t=duration + flight_duration,
+                    ball=BallState(x=target_x, y=target_y, z=target_z, spin=0.0, owner_id=None),
+                    players=flight_start_players,
+                    tag="vol",
+                    physics_tag=None,
+                )
+            )
+            duration += flight_duration
+
     return Sequence(
-        event_ref=f"goal:{event.club_name}:{event.scorer}:{event.minute}",
+        event_ref=event_ref,
         keyframes=keyframes,
-        duration=template.duration,
+        duration=duration,
         meta={"template": template.name, "roles": {name: player.name for name, player in resolved.items()}},
         roster=roster,
     )
@@ -575,6 +723,7 @@ _TEMPLATE_CONTRE_ATTAQUE = Template(
     ball_owner=((0.0, "support1"), (0.4, "assist"), (1.0, "scorer")),
     context_score=_score_contre_attaque,
     physics_tags=((0.4, "shot"),),  # dernier segment (0.4 -> 1.0) : le tir au but
+    has_ball_flight=True,
 )
 
 _TEMPLATE_CONSTRUCTION_PLACEE = Template(
@@ -596,6 +745,7 @@ _TEMPLATE_CONSTRUCTION_PLACEE = Template(
     ball_owner=((0.0, "support1"), (0.3, "support1"), (0.6, "assist"), (1.0, "scorer")),
     context_score=_score_construction_placee,
     physics_tags=((0.6, "shot"),),  # dernier segment (0.6 -> 1.0) : le tir au but
+    has_ball_flight=True,
 )
 
 _TEMPLATE_DEBORDEMENT = Template(
@@ -611,6 +761,7 @@ _TEMPLATE_DEBORDEMENT = Template(
     ball_height=((0.6, 0.6), (1.0, 0.3)),
     context_score=_score_debordement_centre_tete,
     physics_tags=((0.6, "shot"),),  # dernier segment (0.6 -> 1.0) : la tête au but
+    has_ball_flight=True,
 )
 
 _TEMPLATE_PERCEE_INDIVIDUELLE = Template(
@@ -622,6 +773,7 @@ _TEMPLATE_PERCEE_INDIVIDUELLE = Template(
     ball_owner=((0.0, "scorer"), (0.4, "scorer"), (0.75, "scorer"), (1.0, "scorer")),
     context_score=_score_percee_individuelle,
     physics_tags=((0.75, "shot"),),  # dernier segment (0.75 -> 1.0) : le tir au but
+    has_ball_flight=True,
 )
 
 _TEMPLATE_UNE_DEUX = Template(
@@ -636,6 +788,7 @@ _TEMPLATE_UNE_DEUX = Template(
     ball_owner=((0.0, "scorer"), (0.5, "assist"), (1.0, "scorer")),
     context_score=_score_une_deux,
     physics_tags=((0.5, "shot"),),  # dernier segment (0.5 -> 1.0) : le tir au but
+    has_ball_flight=True,
 )
 
 _TEMPLATE_COUP_FRANC = Template(
@@ -651,6 +804,7 @@ _TEMPLATE_COUP_FRANC = Template(
     context_score=_score_coup_franc,
     starts_at_restart=True,
     physics_tags=((0.7, "shot"),),  # dernier segment (0.7 -> 1.0) : la frappe
+    has_ball_flight=True,
 )
 
 _TEMPLATE_CORNER = Template(
@@ -687,6 +841,7 @@ _TEMPLATE_CORNER = Template(
     # segment [0.3 -> 0.6] : cross -- le centre lui-même, ballon en vol vers la zone disputée (keyframe "centre")
     # segment [0.6 -> 1.0] : deflect -- ballon disputé au contact (owner=None à 0.6, keyframe "ballon disputé") avant la tête du buteur
     physics_tags=((0.0, "pass_ground"), (0.3, "cross"), (0.6, "deflect")),
+    has_ball_flight=True,
 )
 
 _TEMPLATE_PROFONDEUR_1V1 = Template(
@@ -706,6 +861,7 @@ _TEMPLATE_PROFONDEUR_1V1 = Template(
     ball_owner=((0.0, "assist"), (0.3, "scorer"), (1.0, "scorer")),
     context_score=_score_profondeur_1v1,
     physics_tags=((0.3, "shot"),),  # dernier segment (0.3 -> 1.0) : le 1v1 conclu au tir
+    has_ball_flight=True,
 )
 
 _TEMPLATE_RECUPERATION_HAUTE = Template(
@@ -743,6 +899,7 @@ _TEMPLATE_RECUPERATION_HAUTE = Template(
     # t=0.3 : porteur=None (ballon disputé pendant le pressing) -> deflect.
     # 0.55 (dernier segment avant 1.0) : shot, le tir de conclusion.
     physics_tags=((0.3, "deflect"), (0.55, "shot")),
+    has_ball_flight=True,
 )
 
 _TEMPLATE_DECALAGE_ENROULEE = Template(
@@ -757,6 +914,7 @@ _TEMPLATE_DECALAGE_ENROULEE = Template(
     ball_owner=((0.0, "assist"), (0.4, "scorer"), (1.0, "scorer")),
     context_score=_score_decalage_enroulee,
     physics_tags=((0.4, "shot"),),  # dernier segment (0.4 -> 1.0) : l'enroulée
+    has_ball_flight=True,
 )
 
 _TEMPLATE_PENALTY = Template(
@@ -792,6 +950,7 @@ _TEMPLATE_PENALTY = Template(
     context_score=_score_penalty,
     starts_at_restart=True,
     physics_tags=((0.85, "shot"),),  # dernier segment (0.85 -> 1.0) : le tir
+    has_ball_flight=True,
 )
 
 _TEMPLATE_BUT_GAG = Template(
@@ -821,6 +980,7 @@ _TEMPLATE_BUT_GAG = Template(
     ball_owner=((0.0, "scorer"), (0.35, "support1"), (0.65, "support2"), (1.0, "scorer")),
     context_score=_score_but_gag,
     physics_tags=((0.65, "shot"),),  # dernier segment (0.65 -> 1.0) : la déviation finale au but
+    has_ball_flight=True,
 )
 
 TEMPLATES: dict[str, Template] = {
@@ -842,40 +1002,58 @@ TEMPLATES: dict[str, Template] = {
 }
 
 
-def build_contre_attaque(event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint]) -> Sequence:
-    return build_from_template(TEMPLATES["contre_attaque"], event, lineup, start_positions)
+def build_contre_attaque(
+    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None
+) -> Sequence:
+    return build_from_template(TEMPLATES["contre_attaque"], event, lineup, start_positions, outcome)
 
 
-def build_construction_placee(event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint]) -> Sequence:
-    return build_from_template(TEMPLATES["construction_placee"], event, lineup, start_positions)
+def build_construction_placee(
+    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None
+) -> Sequence:
+    return build_from_template(TEMPLATES["construction_placee"], event, lineup, start_positions, outcome)
 
 
-def build_debordement_centre_tete(event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint]) -> Sequence:
-    return build_from_template(TEMPLATES["debordement_centre_tete"], event, lineup, start_positions)
+def build_debordement_centre_tete(
+    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None
+) -> Sequence:
+    return build_from_template(TEMPLATES["debordement_centre_tete"], event, lineup, start_positions, outcome)
 
 
-def build_percee_individuelle(event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint]) -> Sequence:
-    return build_from_template(TEMPLATES["percee_individuelle"], event, lineup, start_positions)
+def build_percee_individuelle(
+    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None
+) -> Sequence:
+    return build_from_template(TEMPLATES["percee_individuelle"], event, lineup, start_positions, outcome)
 
 
-def build_une_deux(event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint]) -> Sequence:
-    return build_from_template(TEMPLATES["une_deux"], event, lineup, start_positions)
+def build_une_deux(
+    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None
+) -> Sequence:
+    return build_from_template(TEMPLATES["une_deux"], event, lineup, start_positions, outcome)
 
 
-def build_coup_franc(event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint]) -> Sequence:
-    return build_from_template(TEMPLATES["coup_franc"], event, lineup, start_positions)
+def build_coup_franc(
+    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None
+) -> Sequence:
+    return build_from_template(TEMPLATES["coup_franc"], event, lineup, start_positions, outcome)
 
 
-def build_corner(event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint]) -> Sequence:
-    return build_from_template(TEMPLATES["corner"], event, lineup, start_positions)
+def build_corner(
+    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None
+) -> Sequence:
+    return build_from_template(TEMPLATES["corner"], event, lineup, start_positions, outcome)
 
 
-def build_profondeur_1v1(event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint]) -> Sequence:
-    return build_from_template(TEMPLATES["profondeur_1v1"], event, lineup, start_positions)
+def build_profondeur_1v1(
+    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None
+) -> Sequence:
+    return build_from_template(TEMPLATES["profondeur_1v1"], event, lineup, start_positions, outcome)
 
 
-def build_recuperation_haute(event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint]) -> Sequence:
-    return build_from_template(TEMPLATES["recuperation_haute"], event, lineup, start_positions)
+def build_recuperation_haute(
+    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None
+) -> Sequence:
+    return build_from_template(TEMPLATES["recuperation_haute"], event, lineup, start_positions, outcome)
 
 
 # Brief "real Magnus effect" (23/09/2026), Tâche 3 -- SEUL point de vérité
@@ -891,29 +1069,42 @@ def build_recuperation_haute(event: GoalEvent, lineup: Lineup, start_positions: 
 # une "frappe enroulée" (le nom même du gabarit), visible à l'œil sans être
 # une parabole exagérée. `build_from_template` reste générique et continue
 # de poser `spin=0.0` par défaut (aucun changement au moteur) : ce wrapper
-# poste-traite la Sequence pour renseigner le spin SEULEMENT sur la keyframe
-# où le segment `shot` démarre (celle dont `physics_tag == "shot"`).
+# poste-traite la Sequence pour renseigner le spin SEULEMENT sur la/les
+# keyframe(s) où un segment courbé démarre -- `physics_tag == "shot"`
+# (segment d'approche existant, inchangé) ET, depuis le brief "ball flight
+# after shot" (24/09/2026), `physics_tag == BALL_FLIGHT` (le vol lui-même,
+# voir `_behavior_ball_flight` : la courbure Magnus doit se conserver sur le
+# vol, section 1.1 du design doc, pas seulement sur l'approche).
 _DECALAGE_ENROULEE_SHOT_SPIN_RAD_S = 50.0
+_DECALAGE_ENROULEE_CURVED_TAGS = frozenset({"shot", BALL_FLIGHT})
 
 
-def build_decalage_enroulee(event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint]) -> Sequence:
-    sequence = build_from_template(TEMPLATES["decalage_enroulee"], event, lineup, start_positions)
+def build_decalage_enroulee(
+    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None
+) -> Sequence:
+    sequence = build_from_template(TEMPLATES["decalage_enroulee"], event, lineup, start_positions, outcome)
     keyframes = [
-        replace(kf, ball=replace(kf.ball, spin=_DECALAGE_ENROULEE_SHOT_SPIN_RAD_S)) if kf.physics_tag == "shot" else kf
+        replace(kf, ball=replace(kf.ball, spin=_DECALAGE_ENROULEE_SHOT_SPIN_RAD_S))
+        if kf.physics_tag in _DECALAGE_ENROULEE_CURVED_TAGS
+        else kf
         for kf in sequence.keyframes
     ]
     return replace(sequence, keyframes=keyframes)
 
 
-def build_penalty(event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint]) -> Sequence:
-    return build_from_template(TEMPLATES["penalty"], event, lineup, start_positions)
+def build_penalty(
+    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None
+) -> Sequence:
+    return build_from_template(TEMPLATES["penalty"], event, lineup, start_positions, outcome)
 
 
-def build_but_gag(event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint]) -> Sequence:
-    return build_from_template(TEMPLATES["but_gag"], event, lineup, start_positions)
+def build_but_gag(
+    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None
+) -> Sequence:
+    return build_from_template(TEMPLATES["but_gag"], event, lineup, start_positions, outcome)
 
 
-BUILDERS: dict[str, Callable[[GoalEvent, Lineup, dict[PlayerId, PitchPoint]], Sequence]] = {
+BUILDERS: dict[str, Callable[..., Sequence]] = {
     "contre_attaque": build_contre_attaque,
     "construction_placee": build_construction_placee,
     "debordement_centre_tete": build_debordement_centre_tete,
