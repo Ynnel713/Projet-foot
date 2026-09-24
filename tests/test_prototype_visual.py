@@ -155,6 +155,57 @@ class TestInvariant4BallInertWhenUntouched:
             assert positions == {pos}, "devrait echouer"
 
 
+class TestGoalkeeperCenteredActiveBounded:
+    """Gardien (brief "gardien centre, actif, borne", 24/09/2026). `blue_1`/
+    `red_1` ne sont plus dans PLAYER_SEGMENTS -- voir goalkeeper_position()
+    dans apps/prototype_visual.py -- donc ces tests passent par
+    player_position() (qui delegue) pour rester couplees au vrai chemin
+    d'appel utilise par le rendu."""
+
+    @pytest.mark.parametrize("player_id", pv.GOALKEEPER_IDS)
+    def test_stays_within_goal_area_depth_and_between_posts_at_every_frame(self, player_id):
+        # "Sa surface" = la surface de but (5.5 m de profondeur), pas la
+        # surface de reparation -- coherent avec GK_DEPTH_M=2.5 (a mi-profondeur).
+        y_low = pv.PITCH_WIDTH_M / 2 - pv.GOAL_WIDTH_M / 2
+        y_high = pv.PITCH_WIDTH_M / 2 + pv.GOAL_WIDTH_M / 2
+        for t in _sample_times():
+            x, y = pv.player_position(player_id, t)
+            depth = x if player_id == "blue_1" else pv.PITCH_LENGTH_M - x
+            assert 0.0 <= depth <= pv.GOAL_AREA_LENGTH_M, f"t={t:.3f} {player_id} hors surface : x={x}"
+            assert y_low <= y <= y_high, f"t={t:.3f} {player_id} hors des poteaux : y={y}"
+
+    def test_red_the_pre_brief_off_centre_goalkeeper_is_detected(self, monkeypatch):
+        # Preuve rouge : la position de base d'avant ce brief (blue_1 a
+        # x=8-9, loin devant sa surface de 5.5 m) doit faire echouer la meme
+        # verification.
+        broken_segments = dict(pv.PLAYER_SEGMENTS)
+        broken_segments["blue_1"] = [(0.0, pv.TOTAL_DURATION_S, (8.0, 34.0), (9.0, 32.0))]
+        monkeypatch.setattr(pv, "PLAYER_SEGMENTS", broken_segments)
+
+        x, _y = pv.player_position("blue_1", 0.0)
+        assert x > pv.GOAL_AREA_LENGTH_M  # confirme que le cas casse bien l'invariant (8 m > 5.5 m)
+        with pytest.raises(AssertionError):
+            assert 0.0 <= x <= pv.GOAL_AREA_LENGTH_M, "devrait echouer"
+
+    @pytest.mark.parametrize("player_id", pv.GOALKEEPER_IDS)
+    def test_covers_at_least_one_metre_over_the_clip(self, player_id):
+        positions = [pv.player_position(player_id, t) for t in _sample_times()]
+        total = sum(math.hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(positions, positions[1:]))
+        assert total >= 1.0, f"{player_id} : {total:.3f} m parcourus"
+
+    @pytest.mark.parametrize("player_id", pv.GOALKEEPER_IDS)
+    def test_no_jump_more_than_half_a_metre_between_frames(self, player_id):
+        worst = _max_frame_step(player_id)
+        assert worst <= 0.5, f"{player_id} : saut max {worst:.3f} m entre deux frames"
+
+    @pytest.mark.parametrize("player_id", pv.GOALKEEPER_IDS)
+    def test_average_y_position_stays_close_to_goal_centre(self, player_id):
+        ys = [pv.player_position(player_id, t)[1] for t in _sample_times()]
+        mean_y = sum(ys) / len(ys)
+        deviation = abs(mean_y - pv.PITCH_WIDTH_M / 2)
+        assert deviation < 3.0, f"{player_id} : y moyen={mean_y:.3f} centre={pv.PITCH_WIDTH_M / 2} ecart={deviation:.3f}"
+
+
 class TestNoEngineImports:
     """Tâche 1.3 -- aucune dépendance au moteur existant (ni `ligue1sim.*`,
     ni `narrative`/`narrative_player`). Analyse via `ast` (les instructions

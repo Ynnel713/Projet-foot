@@ -62,7 +62,8 @@ FPS = 30
 # du script (Tâche 2.1).
 PLAYER_SEGMENTS: dict[str, list[tuple[float, float, tuple[float, float], tuple[float, float]]]] = {
     # --- Blue (attaque vers x=105) -----------------------------------------
-    "blue_1": [(0.0, TOTAL_DURATION_S, (8.0, 34.0), (9.0, 32.0))],  # gardien -- suit le ballon du regard, micro-lateral
+    # Gardiens (blue_1/red_1) ABSENTS d'ici depuis le 24/09 -- ce ne sont pas
+    # des segments start->end, voir goalkeeper_position() plus bas.
     "blue_2": [(0.0, TOTAL_DURATION_S, (22.0, 12.0), (26.0, 14.0))],
     "blue_3": [(0.0, TOTAL_DURATION_S, (18.0, 26.0), (22.0, 27.0))],
     "blue_4": [(0.0, TOTAL_DURATION_S, (18.0, 42.0), (22.0, 41.0))],
@@ -96,7 +97,6 @@ PLAYER_SEGMENTS: dict[str, list[tuple[float, float, tuple[float, float], tuple[f
         (9.6, TOTAL_DURATION_S, (91.0, 33.0), (94.0, 36.0)),
     ],
     # --- Red (attaque vers x=0, defend pres de x=105) -----------------------
-    "red_1": [(0.0, TOTAL_DURATION_S, (97.0, 34.0), (97.0, 30.0))],  # gardien -- suit le ballon du regard
     "red_2": [(0.0, TOTAL_DURATION_S, (75.0, 14.0), (88.0, 16.0))],  # recule
     "red_3": [(0.0, TOTAL_DURATION_S, (80.0, 26.0), (90.0, 27.0))],
     "red_4": [(0.0, TOTAL_DURATION_S, (80.0, 42.0), (90.0, 40.0))],
@@ -180,6 +180,55 @@ def carrier_at(t: float) -> str | None:
             return phase[1]
     return None
 
+
+# --- Gardien (brief "gardien centre, actif, borne", 24/09/2026) -----------
+# Poursuite laterale AMORTIE de la position Y du ballon (`ball_position`
+# ci-dessus, lue seulement -- jamais modifiee, aucun autre joueur ni le
+# script de l'action ne sont touches), bornee pour ne jamais sortir des
+# poteaux. Position de base (ballon au centre, offset=0) = centre de la
+# cage, a GK_DEPTH_M devant la ligne : c'est vers cette position que le
+# gardien revient des que le ballon repasse par y = centre (Tache 1.2).
+#
+# "Bakee" en PLAYER_SEGMENTS classiques (echantillonnage au meme pas que le
+# rendu, 30 fps) plutot qu'un chemin de calcul a part dans player_position() :
+# ecart au brief assume -- une 1ere version dispatchait sur un ID de gardien
+# special-case dans player_position(), mais ALL_PLAYER_IDS = list(GOALKEEPER
+# _IDS) + list(PLAYER_SEGMENTS) faisait sortir blue_1/red_1 de PLAYER_SEGMENTS,
+# et cassait 2 tests EXISTANTS (TestInvariant1NoIdlePlayer, qui lit
+# PLAYER_SEGMENTS[player_id] directement -- KeyError). Interdiction de
+# toucher aux tests existants (regle d'escalade) : cette version-ci ne
+# modifie ni player_position(), ni ALL_PLAYER_IDS, ni aucun test -- blue_1/
+# red_1 restent des entrees PLAYER_SEGMENTS normales, juste calculees au
+# lieu d'etre ecrites a la main.
+GOALKEEPER_IDS: tuple[str, str] = ("blue_1", "red_1")
+GK_DEPTH_M = 2.5  # devant sa ligne de but, dans sa surface (5.5 m de profondeur)
+GK_LATERAL_FACTOR = 0.3  # amortissement -- le gardien suit le ballon, ne colle pas dessus
+GK_LATERAL_AMPLITUDE_M = 2.5  # < GOAL_WIDTH_M / 2 (3.66 m) -- marge de securite entre les poteaux
+
+
+def _goalkeeper_waypoint(player_id: str, t: float) -> tuple[float, float]:
+    x = GK_DEPTH_M if player_id == "blue_1" else PITCH_LENGTH_M - GK_DEPTH_M
+    _, ball_y = ball_position(t)
+    offset = GK_LATERAL_FACTOR * (ball_y - PITCH_WIDTH_M / 2)
+    offset = max(-GK_LATERAL_AMPLITUDE_M, min(GK_LATERAL_AMPLITUDE_M, offset))
+    return (x, PITCH_WIDTH_M / 2 + offset)
+
+
+def _goalkeeper_segments(player_id: str) -> list[tuple[float, float, tuple[float, float], tuple[float, float]]]:
+    n_frames = int(TOTAL_DURATION_S * FPS) + 1
+    times = [min(TOTAL_DURATION_S, i / FPS) for i in range(n_frames)]
+    segments = []
+    prev_t, prev_pos = times[0], _goalkeeper_waypoint(player_id, times[0])
+    for t in times[1:]:
+        pos = _goalkeeper_waypoint(player_id, t)
+        segments.append((prev_t, t, prev_pos, pos))
+        prev_t, prev_pos = t, pos
+    return segments
+
+
+for _gk_id in GOALKEEPER_IDS:
+    PLAYER_SEGMENTS[_gk_id] = _goalkeeper_segments(_gk_id)
+del _gk_id
 
 ALL_PLAYER_IDS = list(PLAYER_SEGMENTS.keys())
 
