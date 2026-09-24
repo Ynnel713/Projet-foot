@@ -214,7 +214,7 @@ def _build_frames_json() -> str:
 
 _HTML_TEMPLATE = """
 <div id="wrap" style="background:#0b0b0b; font-family:sans-serif; display:flex; flex-direction:column; align-items:center; padding:8px;">
-  <canvas id="pitch" width="1050" height="680" style="background:#1e824c; max-width:100%; height:auto;"></canvas>
+  <canvas id="pitch" width="1050" height="680" style="background:#4a8f34; max-width:100%; height:auto;"></canvas>
   <div id="controls" style="padding:8px 0;">
     <button id="play" style="font-size:14px; padding:6px 16px; margin:0 4px;">Pause</button>
     <button id="replay" style="font-size:14px; padding:6px 16px; margin:0 4px;">Recommencer</button>
@@ -251,9 +251,20 @@ const DATA = __DATA_JSON__;
     ctx.strokeRect(Math.min(pxa, pxb), Math.min(pya, pyb), Math.abs(pxb - pxa), Math.abs(pyb - pya));
   }
 
+  // Rayures de tonte (demande 24/09 : 2 verts alternes, approche du visuel
+  // Football Manager fourni comme reference) -- purement decoratif, ne
+  // change aucune metrique du terrain (memes lignes, memes proportions FIFA
+  // que le fix precedent).
+  const GRASS_LIGHT = '#57a13d';
+  const GRASS_DARK = '#4a8f34';
+  const STRIPE_COUNT = 10;
+
   function drawPitch() {
-    ctx.fillStyle = '#1e824c';
-    ctx.fillRect(0, 0, W, H);
+    const stripeW = W / STRIPE_COUNT;
+    for (let i = 0; i < STRIPE_COUNT; i++) {
+      ctx.fillStyle = i % 2 === 0 ? GRASS_LIGHT : GRASS_DARK;
+      ctx.fillRect(Math.floor(i * stripeW), 0, Math.ceil(stripeW) + 1, H);
+    }
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 2;
     strokeRectMeters(0, 0, P.length, P.width);
@@ -299,6 +310,67 @@ const DATA = __DATA_JSON__;
     }
   }
 
+  // Filets qui bougent aux buts (demande 24/09). Detection GENERIQUE a partir
+  // des positions du ballon deja calculees cote Python (DATA.frames) : on
+  // repere juste la premiere frame ou le ballon entre dans le cadre (x pres
+  // d'une ligne de but, y dans la largeur des buts), par cote. Ne touche pas
+  // a PLAYER_SEGMENTS/BALL_PHASES -- le ballon n'est pas redessine autrement,
+  // seul le filet reagit.
+  const GOAL_EPS_M = 1.0;
+  const NET_DEPTH_M = 2.0;
+  const NET_RIPPLE_DURATION_S = 0.6;
+  const NET_RIPPLE_AMPLITUDE_M = 0.6;
+
+  function detectGoalEvents() {
+    const events = [];
+    const found = new Set();
+    for (const frame of DATA.frames) {
+      const [bx, by] = frame.ball;
+      if (Math.abs(by - P.width / 2) > P.goal_width / 2) continue;
+      if (!found.has(0) && bx <= GOAL_EPS_M) { events.push({ side: 0, t: frame.t }); found.add(0); }
+      if (!found.has(1) && bx >= P.length - GOAL_EPS_M) { events.push({ side: 1, t: frame.t }); found.add(1); }
+    }
+    return events;
+  }
+  const GOAL_EVENTS = detectGoalEvents();
+
+  function netBulge(t, side) {
+    let bulge = 0;
+    for (const ev of GOAL_EVENTS) {
+      if (ev.side !== side) continue;
+      const elapsed = t - ev.t;
+      if (elapsed < 0 || elapsed > NET_RIPPLE_DURATION_S) continue;
+      const decay = 1 - elapsed / NET_RIPPLE_DURATION_S;
+      const wave = Math.sin(Math.PI * elapsed / (NET_RIPPLE_DURATION_S / 2));
+      bulge = Math.max(bulge, NET_RIPPLE_AMPLITUDE_M * decay * wave);
+    }
+    return bulge;
+  }
+
+  function drawNet(side, t) {
+    const depth = NET_DEPTH_M + Math.max(0, netBulge(t, side));
+    const yTop = P.width / 2 + P.goal_width / 2;
+    const yBot = P.width / 2 - P.goal_width / 2;
+    const xNear = side === 0 ? 0 : P.length;
+    const xFar = side === 0 ? -depth : P.length + depth;
+    const cols = 6, rows = 4;
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = 1;
+    for (let c = 0; c <= cols; c++) {
+      const xm = xNear + (xFar - xNear) * (c / cols);
+      const [x1, y1] = toPx(xm, yTop);
+      const [x2, y2] = toPx(xm, yBot);
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    }
+    for (let r = 0; r <= rows; r++) {
+      const ym = yBot + (yTop - yBot) * (r / rows);
+      const [x1, y1] = toPx(xNear, ym);
+      const [x2, y2] = toPx(xFar, ym);
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    }
+  }
+
   function findFrame(t) {
     const frames = DATA.frames;
     const idx = Math.min(frames.length - 1, Math.max(0, Math.round(t / (DATA.duration / (frames.length - 1)))));
@@ -307,6 +379,8 @@ const DATA = __DATA_JSON__;
 
   function drawFrame(t) {
     drawPitch();
+    drawNet(0, t);
+    drawNet(1, t);
     const frame = findFrame(t);
     for (const [pid, pos] of Object.entries(frame.players)) {
       const [px, py] = toPx(pos[0], pos[1]);
