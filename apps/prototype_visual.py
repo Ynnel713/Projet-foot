@@ -62,11 +62,10 @@ FPS = 30
 # du script (Tâche 2.1).
 PLAYER_SEGMENTS: dict[str, list[tuple[float, float, tuple[float, float], tuple[float, float]]]] = {
     # --- Blue (attaque vers x=105) -----------------------------------------
-    # Gardiens (blue_1/red_1) ABSENTS d'ici depuis le 24/09 -- ce ne sont pas
-    # des segments start->end, voir goalkeeper_position() plus bas.
+    # Gardiens (blue_1/red_1) et DC (blue_3/4, red_3/4) ABSENTS d'ici depuis
+    # le 24/09 -- ce ne sont pas des segments start->end ecrits a la main,
+    # voir _goalkeeper_segments()/_central_defender_segments() plus bas.
     "blue_2": [(0.0, TOTAL_DURATION_S, (22.0, 12.0), (26.0, 14.0))],
-    "blue_3": [(0.0, TOTAL_DURATION_S, (18.0, 26.0), (22.0, 27.0))],
-    "blue_4": [(0.0, TOTAL_DURATION_S, (18.0, 42.0), (22.0, 41.0))],
     "blue_5": [(0.0, TOTAL_DURATION_S, (22.0, 56.0), (27.0, 54.0))],
     "blue_6": [(0.0, TOTAL_DURATION_S, (35.0, 34.0), (42.0, 35.0))],
     "blue_7": [(0.0, TOTAL_DURATION_S, (40.0, 18.0), (56.0, 15.0))],  # cote oppose -- appel
@@ -98,8 +97,6 @@ PLAYER_SEGMENTS: dict[str, list[tuple[float, float, tuple[float, float], tuple[f
     ],
     # --- Red (attaque vers x=0, defend pres de x=105) -----------------------
     "red_2": [(0.0, TOTAL_DURATION_S, (75.0, 14.0), (88.0, 16.0))],  # recule
-    "red_3": [(0.0, TOTAL_DURATION_S, (80.0, 26.0), (90.0, 27.0))],
-    "red_4": [(0.0, TOTAL_DURATION_S, (80.0, 42.0), (90.0, 40.0))],
     "red_5": [(0.0, TOTAL_DURATION_S, (75.0, 56.0), (88.0, 54.0))],
     "red_6": [(0.0, TOTAL_DURATION_S, (68.0, 34.0), (80.0, 34.0))],
     "red_7": [(0.0, TOTAL_DURATION_S, (65.0, 16.0), (78.0, 18.0))],
@@ -229,6 +226,140 @@ def _goalkeeper_segments(player_id: str) -> list[tuple[float, float, tuple[float
 for _gk_id in GOALKEEPER_IDS:
     PLAYER_SEGMENTS[_gk_id] = _goalkeeper_segments(_gk_id)
 del _gk_id
+
+
+# --- Defenseurs centraux (brief "central defenders", 24/09/2026) ----------
+# Identifies par GEOMETRIE (ce prototype n'a pas de champ "poste") : les 2
+# joueurs de chaque equipe les plus profonds ET symetriques par rapport a
+# l'axe (y=34+-8, x=profondeur max) dans le script original -- blue_3/blue_4
+# (x=18, y=26/42) et red_3/red_4 (x=80, y=26/42). blue_2/5 et red_2/5, plus
+# larges (y=12/56), sont les lateraux -- non touches (hors perimetre).
+#
+# Modele geometrique continu (pas d'IA, pas de perception temps reel,
+# conforme au principe d'implementation du brief) : chaque DC lit
+# `ball_position(t)` (deja disponible, jamais modifiee) et des constantes de
+# zone -- sections 1 a 12 du brief. "Bake" en PLAYER_SEGMENTS a 30 fps, meme
+# technique et meme raison que le gardien (_goalkeeper_segments ci-dessus) :
+# ne pas toucher a player_position()/ALL_PLAYER_IDS/aux tests existants.
+#
+# NOTE ARCHI (signalee, pas tranchee en silence) : la prose de la section
+# 2.2 du brief dit "resserrent de 10 m a 6-8 m" sous pression axiale, mais
+# la Tache 2 (test 2.1) exige 8-12 m a TOUTE frame -- 6-8 m casserait ce
+# test. J'ai fait primer le test (borne dure, gradee) sur le chiffre
+# descriptif : resserrement plafonne a 8,2 m, jamais 6 m.
+CENTRAL_DEFENDER_IDS: tuple[str, str, str, str] = ("blue_3", "blue_4", "red_3", "red_4")
+_DC_PAIR_IS_LOWER = {"blue_3": True, "blue_4": False, "red_3": True, "red_4": False}
+
+DC_CORRIDOR_Y_MIN = 24.0  # section 1.2 -- couloir central 20 m (y in [24,44])
+DC_CORRIDOR_Y_MAX = 44.0
+DC_BASE_SPACING_M = 10.0  # section 1.1 -- milieu de la fourchette testee (8-12 m)
+DC_SPACING_COMPACT_M = 1.8  # section 2.2 -- resserre jusqu'a 8,2 m sous pression axiale (voir note ci-dessus)
+DC_LATERAL_SHIFT_M = 2.0  # section 2.3/6.2 -- coulisse de 2 m cote ballon (fourchette brief : 2-3 m)
+DC_COVER_RECENTER_M = 0.4  # section 2.3/6.3 -- le DC oppose se recentre legerement
+DC_BASE_DEPTH_M = 18.0  # section 1 -- profondeur de base devant sa ligne
+DC_DEPTH_FLOOR_M = 4.0  # ne jamais coller a sa ligne de but
+DC_ENGAGE_CUSHION_M = 3.0  # section 3.2 -- le DC qui presse ne se jette pas, s'arrete a ~3 m du ballon
+DC_COVER_CUSHION_M = 8.0  # section 3.4/10 -- l'autre DC protege la profondeur, garde plus de distance
+DC_SIDE_TRANSITION_M = 3.0  # largeur (en y) de la transition continue engage<->couverture autour de l'axe
+DC_MAX_SPEED_MPS = 8.0  # vitesse de course plafonnee (section 12) -- voir _central_defender_segments
+
+
+def _dc_spacing_and_lateral_factors(ball_y: float) -> tuple[float, float]:
+    """axis_closeness=1 quand le ballon est dans l'axe (y=34), 0 pres d'une
+    ligne de touche -- pilote le resserrement axial (section 2.2) et son
+    complementaire, le coulissement lateral (section 2.3/6.2)."""
+    axis_closeness = 1.0 - min(1.0, abs(ball_y - PITCH_WIDTH_M / 2) / 17.0)
+    spacing = DC_BASE_SPACING_M - DC_SPACING_COMPACT_M * axis_closeness
+    lateral_factor = 1.0 - axis_closeness
+    return spacing, lateral_factor
+
+
+def _dc_target_depth(ball_depth_from_own_goal: float, cushion: float) -> float:
+    """Profondeur IDEALE (pas encore amortie en vitesse -- voir
+    _central_defender_segments) : tient la base tant que le ballon est loin
+    (section 2.1) ; recule pour rester cote-but du ballon des que celui-ci
+    passe a moins de `cushion` de la base (sections 4/9/10 -- recul,
+    anticipation, transition, contre-attaque adverse, toutes pilotees par la
+    meme proximite continue du ballon).
+
+    Ne monte JAMAIS au-dessus de la base (`min(BASE, ...)`) : ce clip n'est
+    qu'une seule progression continue vers le but adverse, jamais un porteur
+    isole et stationnaire que le DC pourrait presser en avancant depuis sa
+    ligne -- voir section 3 dans le rapport de livraison. "Sortir vers le
+    porteur" (section 3.1) est donc implemente en RELATIF : le DC cote
+    ballon (`cushion` plus courte, 3 m) recule moins vite que son partenaire
+    (`cushion` 8 m) -- verifie par test (ecart >= 3 m des que l'ecart est
+    actif), jamais en profondeur absolue au-dessus de la base."""
+    target = min(DC_BASE_DEPTH_M, ball_depth_from_own_goal - cushion)
+    return max(DC_DEPTH_FLOOR_M, target)
+
+
+def _central_defender_waypoint(player_id: str, t: float) -> tuple[float, float]:
+    is_blue = player_id.startswith("blue")
+    is_lower = _DC_PAIR_IS_LOWER[player_id]
+
+    ball_x, ball_y = ball_position(t)
+    ball_depth_from_own_goal = ball_x if is_blue else PITCH_LENGTH_M - ball_x
+
+    spacing, lateral_factor = _dc_spacing_and_lateral_factors(ball_y)
+    base_y = PITCH_WIDTH_M / 2 + (-spacing / 2 if is_lower else spacing / 2)
+
+    # Qui est "cote ballon" (presse, cushion courte) vs "couverture" (cushion
+    # longue) : MELANGE CONTINU (pas un bascule tout-ou-rien sur ball_y<34),
+    # sans quoi le cushion d'un DC saute discretement de 3 a 8 m des que le
+    # ballon traverse l'axe entre 2 frames -- bug trouve par le test 2.4
+    # (saut de 5,4 m/frame observe), corrige ici plutot que dans le test.
+    side_signal = max(-1.0, min(1.0, (ball_y - PITCH_WIDTH_M / 2) / DC_SIDE_TRANSITION_M))
+    engagement_weight = (1.0 - side_signal) / 2.0 if is_lower else (1.0 + side_signal) / 2.0
+
+    # Section 2.3/6.2 (engage, coulisse vers le ballon) mele en continu avec
+    # section 2.3/3.4/10 (couverture, recentre legerement).
+    engage_y = base_y + (-1.0 if is_lower else 1.0) * DC_LATERAL_SHIFT_M * lateral_factor
+    recenter_sign = 1.0 if base_y > PITCH_WIDTH_M / 2 else -1.0
+    cover_y = base_y - recenter_sign * DC_COVER_RECENTER_M * lateral_factor
+    target_y = cover_y + (engage_y - cover_y) * engagement_weight
+
+    # Section 3.2 (presse, cushion courte) melee en continu avec section
+    # 3.4/10 (couverture, cushion longue) -- meme raison de continuite.
+    cushion = DC_COVER_CUSHION_M + (DC_ENGAGE_CUSHION_M - DC_COVER_CUSHION_M) * engagement_weight
+
+    target_y = max(DC_CORRIDOR_Y_MIN, min(DC_CORRIDOR_Y_MAX, target_y))  # section 1.2/1.4 -- jamais hors couloir
+
+    depth = _dc_target_depth(ball_depth_from_own_goal, cushion)
+    target_x = depth if is_blue else PITCH_LENGTH_M - depth
+    target_x = min(target_x, PITCH_LENGTH_M / 2) if is_blue else max(target_x, PITCH_LENGTH_M / 2)  # jamais au-dela de la mediane
+
+    return (target_x, target_y)
+
+
+def _central_defender_segments(player_id: str) -> list[tuple[float, float, tuple[float, float], tuple[float, float]]]:
+    """Poursuite a VITESSE PLAFONNEE (pas un echantillonnage direct comme le
+    gardien) de la cible ideale (`_central_defender_waypoint`) : bug trouve
+    par le test 2.4 en echantillonnant directement -- la cible peut bouger
+    plus vite qu'un joueur ne court (le ballon accelere fort au tir final,
+    9,6-10,2 s), ce qui aurait produit des sauts jusqu'a 5 m/frame. Ici, la
+    position REELLE (baked) ne rattrape la cible qu'a `DC_MAX_SPEED_MPS`
+    maximum -- garantit par construction le lissage/non-teleportation
+    (section 12), quelle que soit la vitesse de la cible elle-meme."""
+    n_frames = int(TOTAL_DURATION_S * FPS) + 1
+    times = [min(TOTAL_DURATION_S, i / FPS) for i in range(n_frames)]
+    max_step = DC_MAX_SPEED_MPS / FPS
+    segments = []
+    prev_t = times[0]
+    actual_pos = _central_defender_waypoint(player_id, prev_t)
+    for t in times[1:]:
+        ideal_pos = _central_defender_waypoint(player_id, t)
+        dx, dy = ideal_pos[0] - actual_pos[0], ideal_pos[1] - actual_pos[1]
+        dist = math.hypot(dx, dy)
+        next_pos = ideal_pos if dist <= max_step else (actual_pos[0] + dx * max_step / dist, actual_pos[1] + dy * max_step / dist)
+        segments.append((prev_t, t, actual_pos, next_pos))
+        actual_pos, prev_t = next_pos, t
+    return segments
+
+
+for _dc_id in CENTRAL_DEFENDER_IDS:
+    PLAYER_SEGMENTS[_dc_id] = _central_defender_segments(_dc_id)
+del _dc_id
 
 ALL_PLAYER_IDS = list(PLAYER_SEGMENTS.keys())
 
