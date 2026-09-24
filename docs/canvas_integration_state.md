@@ -58,3 +58,50 @@ avec un commentaire `# TODO(animation): ...` juste au-dessus (ligne 21). **Jamai
 ## Point d'escalade
 
 Aucun — tous les éléments demandés (lecteur, point de branchement, fonction de génération du résumé) ont été localisés avec un chemin exact. La structure Streamlit actuelle (`st.columns` + `st.session_state` + `st.rerun()`) permet d'ajouter un bouton par ligne **sans refonte**. Les inconnues listées ci-dessus (surtout l'Inconnue 1, lineups non conservées) sont des décisions de conception pour le prochain brief, pas des blocages de reconnaissance.
+
+## PWA React — cible réelle du branchement
+
+**Correction importante** : la section "Point de branchement Streamlit" ci-dessus documente `app.py`, mais ce n'est **plus** l'app que le propriétaire utilise au quotidien. `Lancer l'appli.bat` lance en réalité l'API FastAPI (port 8000) + la PWA React de `ui/` (port 5173) — commentaire du `.bat` : "L'appli est passée de Streamlit à une PWA React + API FastAPI". La reconnaissance ci-dessous porte sur cette PWA, la vraie cible d'un bouton "Voir temps forts" en usage réel.
+
+### 2.1 — Racine, framework, gestionnaire de paquets
+
+- **Racine** : [ui/](../ui) (à la racine du dépôt, à côté de `src/`, `api/`, `engine/`).
+- **Framework** : React 19 + **Vite** (`ui/vite.config.js` : `@vitejs/plugin-react`, `@tailwindcss/vite`, `vite-plugin-pwa`) — ni Next.js ni Create React App.
+- **Gestionnaire de paquets** : **npm** (`ui/package-lock.json` présent, aucun `yarn.lock`/`pnpm-lock.yaml`). Scripts (`ui/package.json`) : `npm run dev` (Vite dev server), `npm run build`, `npm run lint` (oxlint), `npm run preview`.
+- Autres dépendances notables déjà en place : `react-router-dom` (routage), `zustand` (état global), `framer-motion` (animations de transition), `lucide-react` (icônes) — **aucune** dépendance canvas/animation existante côté JS.
+
+### 2.2 — Composant liste des matchs d'une journée
+
+- **Écran** : [ui/src/routes/Simulation.jsx](../ui/src/routes/Simulation.jsx) — composant fonctionnel (`export default function Simulation()`), état local via `useState`/`useCallback`/`useEffect` (pas de Context ni de Redux pour cet écran).
+- **Ligne de match** : [ui/src/components/simulation/MatchRow.jsx](../ui/src/components/simulation/MatchRow.jsx) — composant fonctionnel dédié, `export default function MatchRow({ match, onClick })`.
+
+### 2.3 — Génération des lignes et point d'ajout du bouton
+
+- `Simulation.jsx:124-126` : boucle `matches.map((m) => <MatchRow key={...} match={m} onClick={() => openPitch(m)} />)` — un `.map()` React classique sur le tableau `matches` (état local, chargé depuis l'API), pas de `<table>`.
+- Dans `MatchRow.jsx:25-31`, la ligne est un `<div className="flex items-center justify-between">` avec 3 enfants : nom domicile (`flex-1`), score (`shrink-0`), nom extérieur (`flex-1`). **Le bouton "Voir temps forts" s'ajouterait comme un 4e enfant de ce même `flex`**, après le `<span>` du nom extérieur (ligne 30), ou sous la ligne actuelle (à côté de `<ScorersLine>`, ligne 32).
+- **Point d'attention concret** : toute la ligne `MatchRow` est déjà cliquable dans son ensemble (`onClick={clickable ? onClick : undefined}` sur le `motion.div` racine, ligne 20, qui ouvre `PitchView` via `openPitch`). Un nouveau bouton "Voir temps forts" à l'intérieur devra appeler `event.stopPropagation()` dans son propre `onClick`, sinon le clic déclenchera aussi la navigation vers `PitchView` portée par le conteneur parent.
+
+### 2.4 — Récupération des données et état du match sélectionné
+
+- **Mécanisme HTTP** : [ui/src/api/client.js](../ui/src/api/client.js) — un seul point d'entrée `request(path, options)` (lignes 8-18) qui fait un `fetch` JSON simple (`BASE_URL` vide en usage normal : même origine que l'API FastAPI qui sert aussi `ui/dist`, voir `api/main.py`). Chaque endpoint est une fonction exportée d'une ligne (ex. `export const getMatches = (id, journee) => request(...)`, ligne 36-37).
+- **Endpoint de la liste des matchs** : `GET /api/competitions/{id}/matches?journee=N` (`getMatches`, `client.js:36-37`).
+- **Endpoint le plus proche d'un "détail de match"** : `GET /api/competitions/{id}/pitch?home=&away=&journee=` (`getPitchView`, `client.js:42-45`), backend `api/routers/competitions.py:250-251` (`get_pitch_view`) — retourne aujourd'hui une **formation statique** (positions des 22 joueurs, sans animation), consommé par [ui/src/routes/PitchView.jsx](../ui/src/routes/PitchView.jsx). Aucun endpoint n'expose aujourd'hui une timeline/des clips animés.
+- **État du "match sélectionné"** : ni Context, ni `useState` partagé, ni Zustand ([ui/src/store/useGameStore.js](../ui/src/store/useGameStore.js) ne contient que `activeCompetitionId/Label/Format` et `followedClub` — rien sur un match précis). Le match sélectionné transite **par l'URL** : `Simulation.jsx:155-159` (`openPitch`) construit des `URLSearchParams` (`home`, `away`, `journee`) et navigue vers `/competition/:id/pitch?...` ; `PitchView.jsx:16,21-27` les relit via `useSearchParams`. Un écran "temps forts" suivrait le même patron (nouvelle route + mêmes query params).
+
+### 2.5 — Évaluation des 3 options d'intégration (pas de décision)
+
+| Option | Faisabilité | Effort | Avantages | Inconvénients |
+|---|---|---|---|---|
+| **A. Iframe** (`<iframe srcDoc={html} />`) | Haute — `canvas.html` est déjà 100% autonome (aucune dépendance externe, confirmé section "État du lecteur"), exactement le même document HTML que celui déjà injecté et embarqué avec succès via `st.components.v1.html` côté Streamlit. | Faible — même recette qu'`apps/streamlit_preview.py:220-225` (lire `canvas.html`, remplacer le placeholder par le JSON), juste servi en `srcDoc` d'un `<iframe>` React au lieu d'un composant Streamlit. | Isolation totale du DOM/CSS (aucun risque d'interférence avec Tailwind/React), **zéro réécriture** du JS existant donc risque de régression minimal sur l'animation (score/minute/buteur exacts, invariant "intouchable"). | Communication avec le reste de l'app (fermer l'écran, ajuster la hauteur à l'écran mobile) demande `postMessage`/redimensionnement manuel ; se sent moins "natif" que le reste de la PWA. |
+| **B. Composant React natif** (réécrire en `<canvas>` + hooks) | Moyenne — techniquement faisable, mais `canvas.html` embarque ~370 lignes de logique (détection de mode, interpolation `findSegment`/`lerp`, dessin `drawFrame`, scoreboard, carton intermédiaire avec timer, barre de progression cliquable, machine à états play/pause/next/prev) à porter fidèlement. | Élevé — réécriture complète de cette logique en JS/React (`useRef` + `useEffect` + `requestAnimationFrame`), sans test navigateur existant pour détecter une régression de comportement (voir Inconnue 3 ci-dessus). | Intégration native totale (thème Tailwind, transitions `framer-motion`, partage d'état avec le reste de l'app) ; pas d'iframe à dimensionner. | Effort et risque les plus élevés ; double maintenance de la même logique d'animation en deux endroits (Python ne génère plus de HTML, mais l'invariant visuel doit rester identique) ; aucun filet de test pour garantir la fidélité du portage. |
+| **C. Web Component** (wrapper `customElements.define`) | Moyenne-haute — envelopper le JS existant du `<script>` de `canvas.html` dans une classe `HTMLElement` (essentiellement la même logique, pas réécrite, juste déplacée dans `connectedCallback`), utilisable comme `<canvas-player clips={...} />` (React 19 gère bien les custom elements). | Moyen — pas de réécriture de la logique d'animation (même risque de régression que l'option A), mais **nouvelle plomberie de build** : `render/canvas.html` ne fait aujourd'hui partie d'aucun pipeline Vite (`ui/`) — il faudrait le faire empaqueter par Vite ou le charger comme script séparé. | Réutilise la logique JS quasi telle quelle (bas risque de régression) tout en devenant un vrai nœud de l'arbre React (pas de `postMessage`). | Pattern inconnu du code actuel (aucun Web Component existant dans `ui/src`, aucune dépendance de ce type dans `package.json`) ; passage de props complexes (le tableau de clips) à un custom element demande une assignation impérative de propriété (via `ref`), pas un simple attribut HTML. |
+
+### 2.6 — Fichiers à modifier pour brancher le lecteur (identifiés, non modifiés)
+
+- [ui/src/components/simulation/MatchRow.jsx](../ui/src/components/simulation/MatchRow.jsx) — ajouter le bouton "Voir temps forts" (voir 2.3).
+- [ui/src/routes/Simulation.jsx](../ui/src/routes/Simulation.jsx) — passer un nouveau callback à `MatchRow` (même patron que `onClick={() => openPitch(m)}`, ligne 125).
+- Un **nouveau fichier route** (n'existe pas encore), ex. `ui/src/routes/Highlights.jsx`, sur le modèle de [ui/src/routes/PitchView.jsx](../ui/src/routes/PitchView.jsx) (lecture des query params, fetch, affichage).
+- [ui/src/App.jsx](../ui/src/App.jsx) — enregistrer la nouvelle route dans `<Routes>` (à côté de la route `pitch`, ligne 25).
+- [ui/src/api/client.js](../ui/src/api/client.js) — nouvelle fonction d'appel (ex. `getHighlights`), même patron que `getPitchView` (lignes 42-45).
+- Côté backend (hors PWA à proprement parler, mais nécessaire) : [api/routers/competitions.py](../api/routers/competitions.py) — un nouvel endpoint (voisin de `get_pitch_view`, ligne 250-251) qui produirait le JSON des clips pour un match réel — **butte directement sur l'Inconnue 1 ci-dessus** (lineups des matchs déjà joués non conservées).
+- `render/canvas.html` : selon l'option choisie (2.5), soit **non modifié** (A, C réutilisent son JS tel quel), soit remplacé par une réécriture React (B).
