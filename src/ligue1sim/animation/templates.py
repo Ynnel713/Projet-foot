@@ -429,10 +429,19 @@ def _flight_target(outcome: str, event_ref: str) -> tuple[float, float, float] |
     )
 
 
-def _flight_distance_m(a: tuple[float, float], b: tuple[float, float]) -> float:
+def _flight_distance_m(a: tuple[float, float, float], b: tuple[float, float, float]) -> float:
+    """Distance 3D (m) entre deux points `(x, y, z)` -- `x`/`y` normalisés
+    (voir `PITCH_LENGTH_M`/`PITCH_WIDTH_M`), `z` deja en metres. Corrige le
+    24/09/2026 (2D -> 3D) : la duree du vol calculee sur la seule distance
+    x/y sous-estimait le trajet reel quand la cible est haute par rapport a
+    une distance horizontale courte (ex. tete proche du but envoyee
+    "hors_cadre", z jusqu'a 3,5m) -- vitesse 3D realisee alors superieure au
+    tirage voulu. Signature volontairement large (3-uplet, pas 2) pour que
+    l'oubli de z ne puisse plus se reproduire au meme endroit."""
     dx_m = (b[0] - a[0]) * PITCH_LENGTH_M
     dy_m = (b[1] - a[1]) * PITCH_WIDTH_M
-    return math.hypot(dx_m, dy_m)
+    dz_m = b[2] - a[2]
+    return math.hypot(math.hypot(dx_m, dy_m), dz_m)
 
 
 def build_from_template(
@@ -539,7 +548,8 @@ def build_from_template(
         target = _flight_target(outcome, event_ref)
         if target is not None:
             target_x, target_y, target_z = target
-            distance_m = _flight_distance_m((last_ball_xy.x, last_ball_xy.y), (target_x, target_y))
+            start_z = keyframes[-1].ball.z
+            distance_m = _flight_distance_m((last_ball_xy.x, last_ball_xy.y, start_z), (target_x, target_y, target_z))
             speed_mps = _FLIGHT_MIN_SPEED_MPS + _flight_unit(event_ref, "speed") * (
                 _FLIGHT_MAX_SPEED_MPS - _FLIGHT_MIN_SPEED_MPS
             )

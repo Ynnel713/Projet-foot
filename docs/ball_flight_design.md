@@ -219,3 +219,21 @@ Aucune tentative de contournement silencieux n'a été faite (ex. encoder
 l'issue dans `event.zone` par convention, ou deviner l'issue depuis
 `event.involved_players`) — cela aurait été une correction masquée, pas une
 solution.
+
+## Dette connue
+
+**Résidu Magnus sur les bords du segment `ball_flight`** (découvert le
+24/09/2026, brief "ball_flight duration uses 3D distance") : la Tâche 1 de
+ce brief a corrigé la durée du vol (distance 2D → 3D), mais un test plus
+fin (échantillonnage 30fps sur 100 matchs simulés, 1251 vols) a révélé un
+second problème distinct, non corrigé (hors périmètre de cette Tâche,
+"rien d'autre") : `decalage_enroulee` (seul gabarit avec `spin != 0`) peut
+dépasser 35 m/s en vitesse 3D **instantanée** près des bords du segment
+(`_hat_derivative(s)`, la contribution de vitesse de la courbure Magnus
+dans `_behavior_shot`, culmine à `s→0`/`s→1` et s'additionne à la vitesse
+de base) — 35/1251 vols (2,8%), max observé 35,51 m/s (35,0 visé, écart
+1,5%, invisible à l'œil). La vitesse **moyenne** du vol reste correcte
+(`tests/test_ball.py::TestBallSpeedRealisticOnFlight`, vert). Documenté
+aussi en tête de `ball.py`. Piste : amortir la composante Magnus en
+entrée/sortie du segment `ball_flight`. À traiter dans le chantier des
+déclinaisons multiples de `decalage_enroulee` prévu séparément.

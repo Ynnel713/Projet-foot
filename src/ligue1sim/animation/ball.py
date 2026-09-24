@@ -72,6 +72,25 @@ brief -- documenté ici plutôt que silencieusement supposé résolu.
 # amplitude/côté latéral, sans lien avec une donnée physique du gabarit
 # (contrairement à `shot` désormais) -- même incohérence structurelle que
 # celle trouvée pour `shot`, potentiellement à auditer plus tard.
+#
+# DETTE -- 2026-09-24 -- résidu Magnus sur les bords du segment `ball_flight`
+# (brief "ball_flight duration uses 3D distance") : `decalage_enroulee` (seul
+# gabarit avec `spin != 0`) peut dépasser 35 m/s en vitesse 3D INSTANTANÉE
+# près des bords du segment (`s` proche de 0 ou 1), même quand la vitesse
+# MOYENNE du vol est correcte (couverte par
+# tests/test_ball.py::TestBallSpeedRealisticOnFlight, qui reste vert) --
+# `_hat_derivative(s)` (courbure Magnus, voir `_behavior_shot`) culmine aux
+# bords du segment (`_hat_derivative(0)=4`, `_hat_derivative(1)=-4`, nul au
+# milieu), sa contribution de vitesse s'ADDITIONNE à la vitesse de base
+# `_behavior_ball_flight` (jamais à `_behavior_shot` lui-même, non modifié).
+# Mesuré sur 100 matchs simulés (1251 vols) : 35/1251 (2,8%), tous
+# `decalage_enroulee`, max observé 35,51 m/s (35,0 visé) -- écart 1,5%,
+# invisible à l'œil. Piste : amortir l'ajout de la composante Magnus en
+# entrée/sortie du segment `ball_flight` plutôt qu'un `_hat_derivative` brut.
+# Non corrigé ici (hors périmètre de la Tâche 1 du brief, "formule 2D->3D,
+# rien d'autre") -- à traiter dans le chantier des déclinaisons multiples de
+# `decalage_enroulee` prévu séparément (voir aussi
+# docs/ball_flight_design.md, section "Dette connue").
 
 from __future__ import annotations
 
