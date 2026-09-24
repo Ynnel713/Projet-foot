@@ -6,9 +6,7 @@ import pytest
 from ligue1sim.animation.motion import (
     MAX_SPEED_MPS,
     _apply_avoidance,
-    _CARRIER_LEASH_MAX_M,
     _ease_progress,
-    _possession_carrier_at,
     _reacts_immediately,
     _real_distance_m,
     _start_offset,
@@ -180,42 +178,6 @@ class TestNonCollision:
                 for j in range(i + 1, len(positions)):
                     dist_m = _real_distance_m(positions[i], positions[j])
                     assert dist_m >= self.MIN_DISTANCE_M, f"{name} à t={t:.2f} : {dist_m:.3f} m"
-
-
-class TestBallCarrierLeash:
-    """Fix "constrain ball-carrier within 1.5m of ball during possession"
-    (24/09/2026, voir docs/render_diagnostic.md, Problème 3) -- vérifie
-    l'invariant sur les 12 gabarits réels (`_all_sequences`, mêmes fonctions
-    de construction que `TestVelocityContinuity`/`TestNonCollision`
-    ci-dessus) : c'est exactement la même structure de `Sequence` qu'un vrai
-    clip du lecteur (`engine.narrative_player.build_clips` appelle les mêmes
-    `BUILDERS[gabarit]`), donc "parcourir les 12 gabarits densément dans le
-    temps" couvre le même terrain qu'un balayage de plusieurs clips réels,
-    sans reconstruire ici tout le pipeline de simulation de match."""
-
-    DT = 0.05
-
-    @pytest.mark.parametrize("name", sorted(BUILDERS))
-    def test_carrier_never_exceeds_the_leash_during_a_real_possession(self, name):
-        lineup = _lineup()
-        sequence = _sequence(name, lineup)
-
-        t = sequence.keyframes[0].t
-        end = sequence.keyframes[-1].t
-        checked_a_possession = False
-        while t <= end + 1e-9:
-            possession_id = _possession_carrier_at(sequence, t)
-            if possession_id is not None:
-                frame = interpolate(sequence, t)
-                carrier = frame.players[possession_id]
-                dist_m = _real_distance_m((carrier.x, carrier.y), (frame.ball.x, frame.ball.y))
-                assert dist_m <= _CARRIER_LEASH_MAX_M + 1e-6, (
-                    f"{name} à t={t:.2f} : porteur {possession_id} à {dist_m:.3f} m du ballon "
-                    f"(max {_CARRIER_LEASH_MAX_M} m pendant une possession)"
-                )
-                checked_a_possession = True
-            t += self.DT
-        assert checked_a_possession, f"{name} : aucun segment de possession détecté -- invariant non exercé"
 
 
 class TestAvoidance:

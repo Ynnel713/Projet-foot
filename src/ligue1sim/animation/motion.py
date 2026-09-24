@@ -284,65 +284,6 @@ def _ball_carrier_at(sequence: Sequence, t: float) -> PlayerId | None:
     return sequence.keyframes[idx_a].ball.owner_id
 
 
-# --- Contrainte porteur/ballon pendant une possession (fix "constrain -----
-# ball-carrier", 24/09/2026, voir docs/render_diagnostic.md, Problème 3) --
-#
-# AUCUNE notion de "phase de possession" n'existe dans `Sequence`/`Keyframe`
-# (voir diagnostic) : `Keyframe.ball.owner_id` n'est qu'un nom porté par
-# CHAQUE keyframe, reconduit tel quel par `animation.ball.ball_state_at`
-# pendant TOUT segment suivant (passe, tir, tête...) même quand le ballon
-# s'éloigne physiquement de ce joueur -- ni `ball_state_at` ni ce module
-# n'imposaient jusqu'ici de contrainte de proximité entre la position
-# CONTINUE du porteur et celle du ballon.
-#
-# Règle de possession RETENUE ici (déduite de la timeline, aucune source
-# plus explicite disponible) : un segment [Keyframe[i], Keyframe[i+1]] est
-# une phase de possession du joueur X si et seulement si
-# `Keyframe[i].ball.owner_id == Keyframe[i+1].ball.owner_id == X` (X garde le
-# ballon aux DEUX bouts du segment -- une conduite/course balle au pied).
-# Si le porteur CHANGE d'un keyframe à l'autre (une passe/un centre/une tête
-# qui atteint un nouveau porteur) ou redevient `None` (tir non repris, perte
-# de balle), le segment n'est PAS une possession : le ballon est en vol,
-# aucune contrainte ne s'applique (Tâche 3.2 du brief). Correspond exactement
-# à la définition de secours du brief : une possession commence quand un
-# joueur devient `owner_id` (réception d'une passe réussie ou récupération)
-# et se termine quand le ballon change de porteur ou est perdu.
-_CARRIER_LEASH_MAX_M = 1.5  # distance max porteur<->ballon pendant sa possession -- valeur donnée par le brief
-
-
-def _possession_carrier_at(sequence: Sequence, t: float) -> PlayerId | None:
-    """Joueur en possession du ballon à `t`, selon la règle ci-dessus --
-    `None` si le segment courant n'est pas une possession (ballon en vol ou
-    disputé). Distinct de `_ball_carrier_at` (jamais modifié, reste le nom du
-    dernier porteur connu, utilisé pour `PlayerMotionState.is_ball_carrier`,
-    une information d'affichage) : celui-ci ne sert QU'à décider où
-    appliquer la contrainte de distance."""
-    idx_a, idx_b, _elapsed = _find_segment(sequence, t)
-    owner_a = sequence.keyframes[idx_a].ball.owner_id
-    owner_b = sequence.keyframes[idx_b].ball.owner_id
-    if owner_a is not None and owner_a == owner_b:
-        return owner_a
-    return None
-
-
-def _leashed_to_ball(position: tuple[float, float], ball_xy: tuple[float, float]) -> tuple[float, float]:
-    """Ramène `position` à au plus `_CARRIER_LEASH_MAX_M` mètres de
-    `ball_xy`, en la déplaçant le long du segment qui les relie -- inchangée
-    si déjà à distance ≤ au seuil. Méthode retenue : correction DIRECTE
-    (clamp), pas un lissage progressif sur plusieurs frames -- c'est la seule
-    façon de GARANTIR l'invariant "≤ 1,5 m" à CHAQUE frame indépendamment
-    (un lissage temporel ne ferait que s'en rapprocher progressivement, sans
-    jamais le garantir à un instant donné), et `interpolate` reste une
-    fonction pure de `(sequence, t)` sans état ni historique à maintenir."""
-    dist_m = _real_distance_m(position, ball_xy)
-    if dist_m <= _CARRIER_LEASH_MAX_M:
-        return position
-    scale = _CARRIER_LEASH_MAX_M / dist_m
-    dx_m = (position[0] - ball_xy[0]) * PITCH_LENGTH_M * scale
-    dy_m = (position[1] - ball_xy[1]) * PITCH_WIDTH_M * scale
-    return (ball_xy[0] + dx_m / PITCH_LENGTH_M, ball_xy[1] + dy_m / PITCH_WIDTH_M)
-
-
 # --- Résultat --------------------------------------------------------------
 
 
@@ -414,17 +355,6 @@ def interpolate(sequence: Sequence, t: float) -> FrameState:
 
     adjusted_positions = _apply_avoidance(raw_positions)
     carrier_id = _ball_carrier_at(sequence, clamped_t)
-    ball = ball_state_at(sequence, clamped_t)
-
-    # Contrainte de possession (fix "constrain ball-carrier", 24/09/2026) :
-    # UNIQUEMENT le joueur en possession réelle à cet instant (voir
-    # `_possession_carrier_at`), jamais les autres -- `adjusted_positions`
-    # n'est modifié que pour cette seule clé, le reste (dont la vitesse,
-    # calculée plus haut sur la position NON contrainte) est inchangé.
-    possession_id = _possession_carrier_at(sequence, clamped_t)
-    if possession_id is not None and possession_id in adjusted_positions:
-        adjusted_positions = dict(adjusted_positions)
-        adjusted_positions[possession_id] = _leashed_to_ball(adjusted_positions[possession_id], (ball.x, ball.y))
 
     players = {
         player_id: PlayerMotionState(
@@ -433,4 +363,4 @@ def interpolate(sequence: Sequence, t: float) -> FrameState:
         )
         for player_id, xy in adjusted_positions.items()
     }
-    return FrameState(t=clamped_t, players=players, ball=ball)
+    return FrameState(t=clamped_t, players=players, ball=ball_state_at(sequence, clamped_t))
