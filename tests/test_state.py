@@ -1,9 +1,13 @@
+import math
+
 import pytest
 
-from ligue1sim.animation.motion import interpolate
+from ligue1sim.animation.motion import MAX_SPEED_MPS, interpolate
 from ligue1sim.animation.sequence_generator import enrich_with_background
-from ligue1sim.animation.state import BallState, PlayerState, player_states_and_ball_at
+from ligue1sim.animation.state import DynamicBallState, PlayerState, player_states_and_ball_at
 from ligue1sim.animation.templates import BUILDERS
+from ligue1sim.animation.types import BallState as EngineBallState
+from ligue1sim.animation.types import Keyframe, RosterEntry, Sequence
 from ligue1sim.events import GoalEvent
 from ligue1sim.lineup import Lineup
 from ligue1sim.pitch_geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Zone
@@ -136,20 +140,79 @@ class TestPlayerStatesShape:
             assert isinstance(p.direction_body, float)
             assert p.current_action in ("idle", "sprint")
             assert p.target is None or (isinstance(p.target, tuple) and len(p.target) == 2)
+            assert isinstance(p.velocity, tuple) and len(p.velocity) == 2
+            assert all(isinstance(v, float) for v in p.velocity)
+            assert isinstance(p.acceleration, tuple) and len(p.acceleration) == 2
+            assert all(isinstance(v, float) for v in p.acceleration)
         assert len(seen_ids) == 22  # jamais deux joueurs avec le meme player_id
 
 
 class TestBallStateShape:
-    """Tâche 3.3 -- `BallState` par frame."""
+    """Tâche 3.3 -- `DynamicBallState` par frame (distinct de
+    `ligue1sim.animation.types.BallState`, voir docstring de `state.py`)."""
 
     @pytest.mark.parametrize("name", sorted(BUILDERS))
     def test_ball_state_has_valid_fields(self, name):
         sequence = _enriched_sequence(name)
         _players, ball = player_states_and_ball_at(sequence, sequence.duration * 0.4)
 
-        assert isinstance(ball, BallState)
+        assert isinstance(ball, DynamicBallState)
+        assert not isinstance(ball, EngineBallState)  # jamais confondus, voir docstring de state.py
         assert isinstance(ball.position, tuple) and len(ball.position) == 3
         assert all(isinstance(v, float) for v in ball.position)
         assert isinstance(ball.velocity, tuple) and len(ball.velocity) == 3
         assert all(isinstance(v, float) for v in ball.velocity)
         assert ball.possession is None or isinstance(ball.possession, str)
+
+
+def _uniform_motion_sequence(*, v_max_m_s: float, duration_s: float) -> Sequence:
+    """Séquence synthétique à 1 joueur actif, construite pour forcer le
+    repli linéaire à vitesse constante d'`animation.motion._interpolate_segment`
+    (comportement 2, voir sa docstring) : distance très supérieure à ce que
+    `v_max` permet de couvrir dans `duration_s`, donc vitesse CONSTAMENT
+    égale à `v_max` (pas d'accélération/décélération ease-in-out) sur tout
+    le segment -- une vérité de référence connue pour la Tâche 4.2."""
+    start = (0.05, 0.5)
+    end = (0.95, 0.5)  # ~94.5 m en x, très au-dela de v_max*duration_s
+    ball = EngineBallState(x=start[0], y=start[1], z=0.0, spin=0.0, owner_id="runner")
+    keyframes = [
+        Keyframe(t=0.0, ball=ball, players={"runner": start}, tag="test", physics_tag=None),
+        Keyframe(t=duration_s, ball=ball, players={"runner": end}, tag="test", physics_tag=None),
+    ]
+    roster = {"runner": RosterEntry(nom="runner", poste="BU", role="scorer", numero=9, team_side="scorer")}
+    return Sequence(event_ref="test:uniform", keyframes=keyframes, duration=duration_s, meta={}, roster=roster)
+
+
+class TestVelocityAndAccelerationAreConsistent:
+    """Tâche 4.2 -- sur un déplacement à vitesse constante connue (`v_max`
+    du poste "BU", voir `MAX_SPEED_MPS`), `velocity` doit être proche de
+    cette vitesse théorique et `acceleration` proche de 0."""
+
+    def test_uniform_motion_matches_the_known_speed(self):
+        v_max = MAX_SPEED_MPS["BU"]
+        sequence = _uniform_motion_sequence(v_max_m_s=v_max, duration_s=2.0)
+        t = sequence.duration / 2.0  # loin des deux bords (>> _DERIVATIVE_DT_S)
+
+        players, _ball = player_states_and_ball_at(sequence, t)
+        runner = next(p for p in players if p.player_id == "runner")
+
+        speed = math.hypot(*runner.velocity)
+        assert speed == pytest.approx(v_max, rel=0.01), f"vitesse mesuree {speed:.4f} m/s, attendue ~{v_max} m/s"
+        assert runner.velocity[1] == pytest.approx(0.0, abs=1e-6)  # deplacement purement horizontal
+        assert math.hypot(*runner.acceleration) == pytest.approx(0.0, abs=1e-3)
+
+
+class TestVelocityAndAccelerationAreFiniteAtBoundaries:
+    """Tâche 4.3 -- à `t=0` et `t=durée` (différences avant/arrière, voir
+    `_velocities_m_s_at`), aucune valeur `NaN`/infinie."""
+
+    @pytest.mark.parametrize("name", sorted(BUILDERS))
+    @pytest.mark.parametrize("frac", (0.0, 1.0))
+    def test_boundary_values_are_finite(self, name, frac):
+        sequence = _enriched_sequence(name)
+        players, ball = player_states_and_ball_at(sequence, sequence.duration * frac)
+
+        for p in players:
+            assert all(math.isfinite(v) for v in p.velocity), f"{name}@{frac} : velocity non finie pour {p.player_id}"
+            assert all(math.isfinite(v) for v in p.acceleration), f"{name}@{frac} : acceleration non finie pour {p.player_id}"
+        assert all(math.isfinite(v) for v in ball.velocity)
