@@ -7,6 +7,7 @@ from ligue1sim.clubs import (
     load_all_clubs,
     load_clubs,
 )
+from ligue1sim.players import FM_ATTRIBUTE_COLUMNS
 
 DATA_PATH = "data/joueurs.xlsx"
 
@@ -288,3 +289,79 @@ def test_load_clubs_allows_missing_nom_for_mononym_players(tmp_path):
     vitinha = next(p for c in clubs for p in c.players if p.prenom == "Vitinha")
     assert vitinha.nom == ""
     assert vitinha.name == "Vitinha"
+
+
+# --- Enrichissement FM26 (attributs/Ability/Note FM, 26/09/2026) -----------
+# Colonnes optionnelles (pas dans REQUIRED_COLUMNS) : absentes pour la
+# majorité des joueurs tant que scripts/scrape_fminside_attributes.py n'a
+# pas fini de traiter les 7564 lignes.
+
+def test_load_clubs_without_fm26_columns_leaves_attributes_ability_note_fm_none(tmp_path):
+    """Compatibilité arrière : un classeur sans les colonnes FM26 (comme tous
+    les autres df synthétiques de ce fichier, ou le classeur historique
+    avant le 25/09/2026) ne doit ni planter ni inventer des valeurs."""
+    df = pd.DataFrame(
+        {
+            "Championnat": ["TEST"] * 22,
+            "Club": ["A"] * 11 + ["B"] * 11,
+            "Prénom": [f"P{i}" for i in range(22)],
+            "Nom": [f"N{i}" for i in range(22)],
+            "Nationalité": ["France"] * 22,
+            "Âge": [25] * 22,
+            "Poste": ["MC"] * 22,
+            "Moyenne joueur": [70] * 22,
+        }
+    )
+    path = tmp_path / "joueurs.xlsx"
+    df.to_excel(path, index=False)
+
+    clubs = load_clubs(path, "TEST")
+
+    assert all(p.attributes is None and p.ability is None and p.note_fm is None for c in clubs for p in c.players)
+
+
+def test_load_clubs_reads_fm26_columns_when_present(tmp_path):
+    df = pd.DataFrame(
+        {
+            "Championnat": ["TEST"] * 22,
+            "Club": ["A"] * 11 + ["B"] * 11,
+            "Prénom": ["Enrichi"] + [f"P{i}" for i in range(21)],
+            "Nom": [f"N{i}" for i in range(22)],
+            "Nationalité": ["France"] * 22,
+            "Âge": [25] * 22,
+            "Poste": ["MC"] * 22,
+            "Moyenne joueur": [70] * 22,
+            "Crossing": [65] + [None] * 21,
+            "Pace": [95] + [None] * 21,
+            "Ability (0-99)": [84] + [None] * 21,
+            "Note FM": [83.8] + [None] * 21,
+        }
+    )
+    path = tmp_path / "joueurs.xlsx"
+    df.to_excel(path, index=False)
+
+    clubs = load_clubs(path, "TEST")
+    enrichi = next(p for c in clubs for p in c.players if p.prenom == "Enrichi")
+    autre = next(p for c in clubs for p in c.players if p.prenom == "P0")
+
+    assert enrichi.attributes == {"Crossing": 65, "Pace": 95}
+    assert enrichi.ability == 84.0
+    assert enrichi.note_fm == 83.8
+    assert autre.attributes is None and autre.ability is None and autre.note_fm is None
+
+
+def test_load_clubs_real_data_fm26_attributes_stay_within_known_bounds():
+    """Sur le vrai classeur (pas un df synthétique) : chaque joueur déjà
+    enrichi a des attributs dans les bornes attendues -- si ce test échoue,
+    c'est que le scraping a écrit une valeur aberrante (mauvaise colonne,
+    parsing cassé...), pas que ce test est mal conçu."""
+    clubs = load_clubs(DATA_PATH, "Premier League")
+    enriched = [p for c in clubs for p in c.players if p.attributes]
+    assert enriched, "aucun joueur enrichi FM26 en Premier League -- invariant non exercé"
+    for p in enriched:
+        assert set(p.attributes) <= set(FM_ATTRIBUTE_COLUMNS)
+        assert all(0 <= v <= 99 for v in p.attributes.values())
+        if p.ability is not None:
+            assert 0 <= p.ability <= 99
+        if p.note_fm is not None:
+            assert 0 <= p.note_fm <= 100

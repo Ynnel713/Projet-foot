@@ -135,6 +135,30 @@ def best_distance_to_group(postes: tuple[str, ...], group: str) -> int | None:
     return min(distances) if distances else None
 
 
+# Attributs FM26 (26/09/2026, voir scripts/scrape_fminside_attributes.py) --
+# mêmes 47 noms/catégories que le script de scraping (source de vérité
+# partagée : ne pas faire diverger cette liste de celle du script). Absents
+# pour la grande majorité des joueurs tant que l'enrichissement n'est pas
+# terminé (497/7564 au 26/09/2026) -- toujours vérifier `player.attributes`
+# avant de l'utiliser.
+FM_ATTRIBUTE_CATEGORIES: dict[str, tuple[str, ...]] = {
+    "Technique": ("Crossing", "Dribbling", "Finishing", "First Touch", "Heading", "Long Shots",
+                  "Marking", "Passing", "Tackling", "Technique"),
+    "Gardien": ("Aerial Reach", "Command of Area", "Communication", "Eccentricity", "Handling",
+                "Kicking", "One on Ones", "Punching (Tendency)", "Reflexes",
+                "Rushing Out (Tendency)", "Throwing"),
+    "Mental": ("Aggression", "Anticipation", "Bravery", "Composure", "Concentration", "Decisions",
+               "Determination", "Flair", "Leadership", "Off the Ball", "Positioning", "Teamwork",
+               "Vision", "Work Rate"),
+    "Physique": ("Acceleration", "Agility", "Balance", "Jumping Reach", "Natural Fitness", "Pace",
+                 "Stamina", "Strength"),
+    "Coups de pied arrêtés": ("Corners", "Free Kick Taking", "Long Throws", "Penalty Taking"),
+}
+FM_ATTRIBUTE_COLUMNS: tuple[str, ...] = tuple(
+    name for names in FM_ATTRIBUTE_CATEGORIES.values() for name in names
+)
+
+
 @dataclass(frozen=True)
 class Player:
     prenom: str
@@ -148,6 +172,9 @@ class Player:
     poste_secondaire: tuple[str, ...] = ()
     categorie: str | None = None  # colonne "Catégorie" (rôle/style, ex. "buteur_axial") ; absente pour la plupart
     id: int | None = None  # colonne "ID" ; sert à recroiser avec d'autres onglets (voir nations.py)
+    attributes: dict[str, int] | None = None  # 47 attributs FM26 (voir FM_ATTRIBUTE_CATEGORIES) ; None si non enrichi
+    ability: float | None = None  # note générale fminside (0-99), indépendante de tout rôle
+    note_fm: float | None = None  # 0,85*ability + 0,15*note -- pas encore branchée au moteur (voir clubs.NOTE_COLUMN)
 
     @property
     def name(self) -> str:

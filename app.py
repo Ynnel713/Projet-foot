@@ -31,11 +31,12 @@ from ligue1sim.nations import confederation as national_team_confederation
 from ligue1sim.nations import load_national_teams
 from ligue1sim.nations import clear_cache as clear_nations_cache
 from ligue1sim.events import AvailabilityTracker, MatchEvents, PlayerMatchStat, compute_leaderboards
+from ligue1sim.faces import face_path
 from ligue1sim.groups import QUALIFIERS_PER_GROUP
 from ligue1sim.kits import match_kit_colors, primary_color
 from ligue1sim.knockout import Round
 from ligue1sim.pitch_layout import PlacedPlayer, actual_formation_label, place_starting_xi
-from ligue1sim.players import Player
+from ligue1sim.players import FM_ATTRIBUTE_CATEGORIES, Player
 from ligue1sim.schedule import Match
 from ligue1sim.season import (
     CLUBS_PATH,
@@ -2161,19 +2162,50 @@ def _render_roster_table(players: list[Player], *, key: str) -> None:
 
 
 def _render_player_profile_card(player: Player) -> None:
-    st.markdown(f"**{player.name}** — {player.club}")
-    cols = st.columns(3)
-    cols[0].metric("Poste", player.poste)
-    cols[1].metric("Âge", player.age)
-    cols[2].metric("Moyenne joueur", f"{player.note:.1f}")
+    """Fiche joueur (26/09/2026) : photo (pack Sortitoutsi, voir
+    ligue1sim.faces) + attributs FM26 quand le joueur est déjà enrichi
+    (scripts/scrape_fminside_attributes.py) -- l'un comme l'autre absents
+    pour la plupart des joueurs tant que l'enrichissement (3381/7564 au
+    26/09) n'est pas terminé : toute cette fiche doit rester utilisable sans."""
+    photo = face_path(player.id)
+    photo_col, info_col = st.columns([1, 3])
+    if photo is not None:
+        photo_col.image(str(photo), width=120)
 
-    details = [player.nationalite, player.championnat]
-    if player.poste_secondaire:
-        details.append("Dépanne aussi : " + " / ".join(player.poste_secondaire))
-    st.caption(" · ".join(d for d in details if d))
+    with info_col:
+        st.markdown(f"**{player.name}** — {player.club}")
+        cols = st.columns(3)
+        cols[0].metric("Poste", player.poste)
+        cols[1].metric("Âge", player.age)
+        cols[2].metric("Moyenne joueur", f"{player.note:.1f}")
 
-    if player.categorie:
-        st.write(f"**Style de jeu :** {player.categorie.replace('_', ' ')}")
+        details = [player.nationalite, player.championnat]
+        if player.poste_secondaire:
+            details.append("Dépanne aussi : " + " / ".join(player.poste_secondaire))
+        st.caption(" · ".join(d for d in details if d))
+
+        if player.categorie:
+            st.write(f"**Style de jeu :** {player.categorie.replace('_', ' ')}")
+
+        if player.ability is not None or player.note_fm is not None:
+            fm_cols = st.columns(2)
+            if player.ability is not None:
+                fm_cols[0].metric("Ability FM", f"{player.ability:.0f}/99")
+            if player.note_fm is not None:
+                fm_cols[1].metric("Note FM", f"{player.note_fm:.1f}")
+
+    if player.attributes:
+        with st.expander("Attributs FM26 (détail)"):
+            for category, names in FM_ATTRIBUTE_CATEGORIES.items():
+                values = [(name, player.attributes[name]) for name in names if name in player.attributes]
+                if not values:
+                    continue
+                st.markdown(f"**{category}**")
+                attr_cols = st.columns(4)
+                for i, (name, value) in enumerate(values):
+                    attr_cols[i % 4].metric(name, value)
+    else:
+        st.caption("Attributs FM26 pas encore récupérés pour ce joueur.")
 
 
 _STANDINGS_HEADER = ["Rang", "Club", "J", "G", "N", "P", "BP", "BC", "Diff", "Pts"]

@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from ligue1sim.players import Player
+from ligue1sim.players import FM_ATTRIBUTE_COLUMNS, Player
 
 ID_COLUMN = "ID"
 CHAMPIONNAT_COLUMN = "Championnat"
@@ -37,6 +37,13 @@ POSTE_SECONDAIRE_COLUMN = "Poste secondaire"
 # spécifique attribué. Purement informatif côté UI (fiche joueur) : n'entre
 # dans aucun calcul du moteur de jeu.
 CATEGORIE_COLUMN = "Catégorie"
+
+# Enrichissement FM26 (26/09/2026, voir scripts/scrape_fminside_attributes.py) :
+# absent pour la plupart des joueurs tant que le scraping n'est pas terminé,
+# donc volontairement pas dans REQUIRED_COLUMNS -- même traitement que
+# CATEGORIE_COLUMN/POSTE_SECONDAIRE_COLUMN ci-dessus.
+ABILITY_COLUMN = "Ability (0-99)"
+NOTE_FM_COLUMN = "Note FM"
 
 REQUIRED_COLUMNS = [
     CHAMPIONNAT_COLUMN,
@@ -160,6 +167,9 @@ def _build_players(group: pd.DataFrame) -> list[Player]:
         player_id = row.get(ID_COLUMN)
         poste, extra_postes = _split_poste(row[POSTE_COLUMN])
         declared_secondaires = _parse_postes_secondaires(row.get(POSTE_SECONDAIRE_COLUMN))
+        attributes = {name: int(row[name]) for name in FM_ATTRIBUTE_COLUMNS if pd.notna(row.get(name))}
+        ability = row.get(ABILITY_COLUMN)
+        note_fm = row.get(NOTE_FM_COLUMN)
         players.append(
             Player(
                 prenom=row[PRENOM_COLUMN],
@@ -173,6 +183,9 @@ def _build_players(group: pd.DataFrame) -> list[Player]:
                 poste_secondaire=extra_postes + declared_secondaires,
                 categorie=str(categorie) if pd.notna(categorie) else None,
                 id=int(player_id) if pd.notna(player_id) else None,
+                attributes=attributes or None,
+                ability=float(ability) if pd.notna(ability) else None,
+                note_fm=float(note_fm) if pd.notna(note_fm) else None,
             )
         )
     return players
