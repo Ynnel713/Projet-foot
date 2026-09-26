@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import math
 import textwrap
 from pathlib import Path
 from typing import Callable
@@ -2161,66 +2162,238 @@ def _render_roster_table(players: list[Player], *, key: str) -> None:
         _render_player_profile_card(players[selected_rows[0]])
 
 
+def _fm_tier(value: float) -> str:
+    """Vert/orange/rouge (mêmes couleurs que les notes de match, voir
+    _rating_tier) -- seuils différents : ici sur l'échelle 0-99 des
+    attributs/notes FM26, pas les notes de match sur 10."""
+    if value >= 75:
+        return "good"
+    if value >= 55:
+        return "avg"
+    return "poor"
+
+
+_PLAYER_PROFILE_STYLE = """
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=Manrope:wght@400;500;600;700&display=swap');
+
+.pp-card {
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px; padding: 1.1rem 1.3rem; margin: 0.4rem 0 0.9rem;
+    font-family: "Manrope", sans-serif;
+}
+.pp-header { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.pp-photo, .pp-photo-placeholder {
+    width: 84px; height: 84px; border-radius: 12px; flex-shrink: 0;
+    border: 1px solid rgba(255,255,255,0.12); object-fit: cover;
+}
+.pp-photo-placeholder {
+    background: rgba(255,255,255,0.06); display: flex; align-items: center;
+    justify-content: center; font-size: 28px; color: rgba(230,230,235,0.35);
+}
+.pp-identity { flex: 1; min-width: 180px; }
+.pp-name { font-weight: 800; font-size: 20px; color: #fff; line-height: 1.2; }
+.pp-club { font-size: 13px; color: rgba(230,230,235,0.65); margin-top: 2px; }
+.pp-tags { margin-top: 0.5rem; display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.pp-tag {
+    font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px;
+    background: rgba(255,255,255,0.07); color: rgba(230,230,235,0.85);
+    border: 1px solid rgba(255,255,255,0.1); white-space: nowrap;
+}
+.pp-note-badge {
+    width: 74px; height: 74px; border-radius: 14px; flex-shrink: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.pp-note-value { font-family: "Big Shoulders Display", sans-serif; font-size: 30px; font-weight: 800; color: #fff; line-height: 1; }
+.pp-note-label {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    color: rgba(255,255,255,0.85); margin-top: 2px;
+}
+.pp-good { background: #1e8e3e; } .pp-avg { background: #c99a12; } .pp-poor { background: #c0392b; }
+
+.pp-note-fg { color: #1e8e3e; } .pp-avg-fg { color: #c99a12; } .pp-poor-fg { color: #c0392b; }
+
+.pp-body { display: grid; grid-template-columns: 1.3fr 1fr; gap: 1.1rem; margin-top: 1rem; }
+.pp-category { margin-bottom: 0.7rem; }
+.pp-category-title {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    color: rgba(230,230,235,0.5); margin-bottom: 0.35rem;
+}
+.pp-attr-row { padding: 3px 0; }
+.pp-attr-head { display: flex; justify-content: space-between; font-size: 12px; color: rgba(230,230,235,0.9); }
+.pp-attr-track { height: 5px; border-radius: 3px; background: rgba(255,255,255,0.08); margin-top: 2px; overflow: hidden; }
+.pp-attr-fill { height: 100%; border-radius: 3px; }
+.pp-radar-wrap { display: flex; flex-direction: column; align-items: center; }
+.pp-radar-title {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    color: rgba(230,230,235,0.5); margin-bottom: 0.4rem; align-self: flex-start;
+}
+.pp-highlights { margin-top: 0.6rem; font-size: 12px; color: rgba(230,230,235,0.8); text-align: left; width: 100%; }
+.pp-highlights b { color: #fff; }
+.pp-footnote { margin-top: 0.8rem; font-size: 12.5px; color: rgba(230,230,235,0.75); }
+.pp-footnote i { color: rgba(230,230,235,0.55); }
+.pp-no-data { color: rgba(230,230,235,0.45); font-size: 12.5px; font-style: italic; margin-top: 0.8rem; }
+
+@media (max-width: 640px) {
+    .pp-body { grid-template-columns: 1fr; }
+}
+</style>
+"""
+
+
+def _radar_svg(categories: list[tuple[str, float]], *, size: int = 230) -> str:
+    """Radar/araignée des moyennes par catégorie d'attributs FM26 -- "graphique
+    pour compartimenter les notes" (retour du 27/09/2026), inspiré d'une
+    maquette fournie par l'utilisateur : la structure (araignée + libellé +
+    valeur par axe), pas son contenu (ses catégories à elle -- Défense/
+    Attaque/Vitesse... -- ne correspondent à aucune donnée réelle qu'on a ;
+    les nôtres viennent de FM_ATTRIBUTE_CATEGORIES)."""
+    n = len(categories)
+    if n < 3:
+        return ""
+    width = size + 110  # marge horizontale pour les libelles (trouve en le voyant rendu : "Coups de
+    # pied arretes"/"Mental" se faisaient couper par les bords d'un viewBox carre)
+    cx, cy = width / 2, size / 2
+    max_r = size / 2 - 40
+    step = 2 * math.pi / n
+    points = []
+    for i, (_name, value) in enumerate(categories):
+        angle = -math.pi / 2 + i * step
+        r = max_r * max(0.0, min(1.0, value / 99))
+        points.append((cx + r * math.cos(angle), cy + r * math.sin(angle)))
+    polygon = " ".join(f"{x:.1f},{y:.1f}" for x, y in points)
+
+    grid = "".join(
+        '<polygon points="'
+        + " ".join(
+            f"{cx + max_r * frac * math.cos(-math.pi / 2 + i * step):.1f},"
+            f"{cy + max_r * frac * math.sin(-math.pi / 2 + i * step):.1f}"
+            for i in range(n)
+        )
+        + '" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1" />'
+        for frac in (0.25, 0.5, 0.75, 1.0)
+    )
+    axes, labels = "", ""
+    for i, (name, value) in enumerate(categories):
+        angle = -math.pi / 2 + i * step
+        ex, ey = cx + max_r * math.cos(angle), cy + max_r * math.sin(angle)
+        axes += f'<line x1="{cx}" y1="{cy}" x2="{ex:.1f}" y2="{ey:.1f}" stroke="rgba(255,255,255,0.08)" />'
+        lx, ly = cx + (max_r + 26) * math.cos(angle), cy + (max_r + 26) * math.sin(angle)
+        anchor = "middle" if abs(lx - cx) < 5 else ("end" if lx < cx else "start")
+        color = {"good": "#3ddc70", "avg": "#e0b13a", "poor": "#e0645a"}[_fm_tier(value)]
+        labels += (
+            f'<text x="{lx:.1f}" y="{ly - 6:.1f}" text-anchor="{anchor}" '
+            f'font-family="Manrope, sans-serif" font-size="10.5" font-weight="700" '
+            f'fill="rgba(230,230,235,0.8)">{name}</text>'
+            f'<text x="{lx:.1f}" y="{ly + 9:.1f}" text-anchor="{anchor}" '
+            f'font-family="Manrope, sans-serif" font-size="13" font-weight="800" fill="{color}">{value:.0f}</text>'
+        )
+    dots = "".join(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="3" fill="#3ddc70" />' for x, y in points)
+    return (
+        f'<svg viewBox="0 0 {width} {size}" width="100%" height="{size}" style="max-width:320px;">'
+        f"{grid}{axes}"
+        f'<polygon points="{polygon}" fill="#1e8e3e55" stroke="#3ddc70" stroke-width="2" />'
+        f"{dots}{labels}</svg>"
+    )
+
+
 def _render_player_profile_card(player: Player) -> None:
-    """Fiche joueur (26/09/2026) : photo (pack Sortitoutsi, voir
-    ligue1sim.faces) + attributs FM26 quand le joueur est déjà enrichi
-    (scripts/scrape_fminside_attributes.py) -- l'un comme l'autre absents
-    pour la plupart des joueurs tant que l'enrichissement (3381/7564 au
-    26/09) n'est pas terminé : toute cette fiche doit rester utilisable sans."""
+    """Fiche joueur (26/09/2026, redessinée le 27/09/2026 en un seul visuel
+    HTML -- retour terrain : "un beau visuel", "compartimenter les notes"
+    avec un graphique, une seule note mise en valeur, code couleur partout,
+    plus de mentions "FM" inutiles, plus de doublon de poste). Photo (pack
+    Sortitoutsi) + attributs FM26 absents pour la plupart des joueurs tant
+    que l'enrichissement (3381/7564 au 26/09) n'est pas terminé : toute la
+    carte doit rester correcte sans -- pas de section inventée (pas
+    d'historique de carrière, de heatmap ni de stats de saison : absents de
+    la base, contrairement à la maquette dont ce visuel s'inspire)."""
+    st.markdown(_PLAYER_PROFILE_STYLE, unsafe_allow_html=True)
+
     photo = face_path(player.id)
-    photo_col, info_col = st.columns([1, 3])
     if photo is not None:
-        photo_col.image(str(photo), width=120)
+        photo_html = f'<img class="pp-photo" src="data:image/png;base64,{base64.b64encode(photo.read_bytes()).decode()}" />'
+    else:
+        photo_html = '<div class="pp-photo-placeholder">?</div>'
 
-    with info_col:
-        st.markdown(f"**{player.name}** — {player.club}")
-        cols = st.columns(3)
-        cols[0].metric("Poste", player.poste)
-        cols[1].metric("Âge", player.age)
-        # Une seule note globale affichée (retour du 26/09/2026 : "4 notes, ça
-        # n'a pas de sens, garde celle qui sera utilisée") -- Note FM si le
-        # joueur est enrichi (destinée à remplacer Moyenne joueur, voir
-        # clubs.NOTE_COLUMN), sinon Moyenne joueur. Ability (composante brute
-        # de Note FM) n'est plus affichée séparément, volontairement.
-        if player.note_fm is not None:
-            note_label, note_value = "Note FM", player.note_fm
-        else:
-            note_label, note_value = "Moyenne joueur", player.note
-        cols[2].metric(note_label, f"{note_value:.1f}")
+    # "Poste" affiche = poste FM (plus precis, ex. "DR, WBR") s'il est connu,
+    # sinon le poste Transfermarkt -- jamais les deux (doublon signale le
+    # 26/09/2026).
+    poste_affiche = player.postes_fm or player.poste
+    tags = [player.nationalite, player.championnat, f"{player.age} ans", poste_affiche]
+    if player.poste_secondaire:
+        tags.append("Dépanne : " + " / ".join(player.poste_secondaire))
+    if player.taille_fm is not None:
+        tags.append(f"{player.taille_fm} cm")
+    if player.weak_foot is not None:
+        tags.append(f"Pied faible {player.weak_foot:.0f}/5")
+    tags_html = "".join(f'<span class="pp-tag">{t}</span>' for t in tags if t)
 
-        details = [player.nationalite, player.championnat]
-        if player.poste_secondaire:
-            details.append("Dépanne aussi : " + " / ".join(player.poste_secondaire))
-        if player.postes_fm:
-            details.append(f"Postes FM : {player.postes_fm}")
-        st.caption(" · ".join(d for d in details if d))
+    # Une seule note globale (retour du 26/09/2026) -- Note FM si le joueur
+    # est enrichi (destinee a remplacer Moyenne joueur, voir clubs.NOTE_COLUMN),
+    # sinon Moyenne joueur. Ability (composante brute de Note FM) n'est jamais
+    # affichee seule.
+    note_value = player.note_fm if player.note_fm is not None else player.note
+    note_tier = _fm_tier(note_value)
 
-        if player.categorie:
-            st.write(f"**Style de jeu :** {player.categorie.replace('_', ' ')}")
-
-        physique = []
-        if player.taille_fm is not None:
-            physique.append(f"Taille : {player.taille_fm} cm")
-        if player.weak_foot is not None:
-            physique.append(f"Pied faible : {player.weak_foot:.0f}/5")
-        if physique:
-            st.caption(" · ".join(physique))
-
-        if player.preferred_moves:
-            st.write(f"**Preferred moves :** {player.preferred_moves}")
+    footnotes = []
+    if player.categorie:
+        footnotes.append(f"<b>Style de jeu :</b> {player.categorie.replace('_', ' ')}")
+    if player.preferred_moves:
+        footnotes.append(f"<b>Preferred moves :</b> {player.preferred_moves}")
+    footnote_html = "".join(f'<div class="pp-footnote">{f}</div>' for f in footnotes)
 
     if player.attributes:
-        with st.expander("Attributs FM26 (détail)"):
-            for category, names in FM_ATTRIBUTE_CATEGORIES.items():
-                values = [(name, player.attributes[name]) for name in names if name in player.attributes]
-                if not values:
-                    continue
-                st.markdown(f"**{category}**")
-                attr_cols = st.columns(4)
-                for i, (name, value) in enumerate(values):
-                    attr_cols[i % 4].metric(name, value)
+        category_html = ""
+        for category, names in FM_ATTRIBUTE_CATEGORIES.items():
+            values = [(name, player.attributes[name]) for name in names if name in player.attributes]
+            if not values:
+                continue
+            rows = "".join(
+                f'<div class="pp-attr-row"><div class="pp-attr-head"><span>{name}</span>'
+                f'<span class="pp-{_fm_tier(value)}-fg"><b>{value}</b></span></div>'
+                f'<div class="pp-attr-track"><div class="pp-attr-fill pp-{_fm_tier(value)}" '
+                f'style="width:{min(100, value)}%;"></div></div></div>'
+                for name, value in values
+            )
+            category_html += f'<div class="pp-category"><div class="pp-category-title">{category}</div>{rows}</div>'
+
+        # Libelles courts pour le radar seulement (place limitee sur l'axe) --
+        # les categories completes restent affichees telles quelles a gauche.
+        radar_short_names = {"Coups de pied arrêtés": "Coups de pied"}
+        radar_categories = [
+            (radar_short_names.get(category, category),
+             sum(v for _n, v in [(n, player.attributes[n]) for n in names if n in player.attributes])
+             / len([n for n in names if n in player.attributes]))
+            for category, names in FM_ATTRIBUTE_CATEGORIES.items()
+            if any(n in player.attributes for n in names)
+        ]
+        radar_html = (
+            f'<div class="pp-radar-wrap"><div class="pp-radar-title">Aperçu par catégorie</div>'
+            f"{_radar_svg(radar_categories)}"
+        )
+        ranked = sorted(player.attributes.items(), key=lambda kv: -kv[1])
+        best = ", ".join(name for name, _ in ranked[:3])
+        worst = ", ".join(name for name, _ in ranked[-3:])
+        radar_html += (
+            f'<div class="pp-highlights"><b>Points forts :</b> {best}<br>'
+            f'<b>Points faibles :</b> {worst}</div></div>'
+        )
+        body_html = f'<div class="pp-body"><div>{category_html}</div>{radar_html}</div>'
     else:
-        st.caption("Attributs FM26 pas encore récupérés pour ce joueur.")
+        body_html = '<div class="pp-no-data">Caractéristiques FM26 pas encore récupérées pour ce joueur.</div>'
+
+    st.markdown(
+        f'<div class="pp-card">'
+        f'<div class="pp-header">{photo_html}'
+        f'<div class="pp-identity"><div class="pp-name">{player.name}</div>'
+        f'<div class="pp-club">{player.club}</div>'
+        f'<div class="pp-tags">{tags_html}</div></div>'
+        f'<div class="pp-note-badge pp-{note_tier}"><div class="pp-note-value">{note_value:.0f}</div>'
+        f'<div class="pp-note-label">Note</div></div>'
+        f"</div>{footnote_html}{body_html}"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
 
 
 _STANDINGS_HEADER = ["Rang", "Club", "J", "G", "N", "P", "BP", "BC", "Diff", "Pts"]
