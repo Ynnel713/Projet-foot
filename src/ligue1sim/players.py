@@ -174,7 +174,7 @@ class Player:
     id: int | None = None  # colonne "ID" ; sert à recroiser avec d'autres onglets (voir nations.py)
     attributes: dict[str, int] | None = None  # 47 attributs FM26 (voir FM_ATTRIBUTE_CATEGORIES) ; None si non enrichi
     ability: float | None = None  # note générale fminside (0-99), indépendante de tout rôle -- composante de note_fm, pas affichée seule (voir app._render_player_profile_card)
-    note_fm: float | None = None  # 0,85*ability + 0,15*note -- pas encore branchée au moteur (voir clubs.NOTE_COLUMN)
+    note_fm: float | None = None  # mélange ability/note pondéré par âge (voir scrape_fminside_attributes.note_fm_weight_moyenne) -- pas encore branchée au moteur (voir clubs.NOTE_COLUMN)
     postes_fm: str | None = None  # colonne "Postes FM naturels" (ex. "DR, WBR") -- distinct du "Poste" Transfermarkt
     taille_fm: int | None = None  # colonne "Taille FM (cm)"
     weak_foot: float | None = None  # colonne "Weak foot (/5)"

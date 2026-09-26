@@ -15,7 +15,8 @@ Principe
    + infos complémentaires de la fiche : postes naturels, taille, weak foot (/5) et preferred
    moves (ces derniers seulement avec un compte fminside connecté, voir --cookie). Écrit aussi
    "Ability (0-99)" (note générale fminside, indépendante de tout rôle) et "Note FM"
-   (0,85 × Ability + 0,15 × Moyenne joueur). Pas de notes de rôle (retirées le 25/09/2026 :
+   (pondération Ability/Moyenne joueur variable selon l'âge, voir note_fm_weight_moyenne).
+   Pas de notes de rôle (retirées le 25/09/2026 :
    aucun code du moteur ne les lit, corrélation 0,90 avec Ability -- voir data/joueurs.xlsx).
 5. Produit un rapport CSV de matching (à relire pour les AMBIGU / INTROUVABLE / CONFLIT) et
    accepte un fichier de corrections manuelles.
@@ -110,9 +111,30 @@ EXTRA_COLUMNS = [POS_COL, HEIGHT_COL, WF_COL, MOVES_COL]
 # joueur, memes poids que la passe manuelle faite sur le lot n1 (497 joueurs).
 ABILITY_COL = "Ability (0-99)"
 NOTE_FM_COL = "Note FM"
-NOTE_FM_WEIGHT_ABILITY = 0.85
-NOTE_FM_WEIGHT_MOYENNE = 0.15
+# Poids de Moyenne joueur dans Note FM, PONDERE PAR AGE (27/09/2026 --
+# initialement un poids fixe 0,85/0,15, corrige suite a un retour terrain :
+# "Lamine Camara a 70, très loin de la réalité"). Vérifié sur les 3381 joueurs
+# déjà enrichis : Ability sous-note structurellement les jeunes par rapport à
+# Moyenne joueur (écart moyen +8,4 pour les 15-19 ans, +8,0 pour les 20-21,
+# ..., +1,7 pour les 30-40 -- quasi linéaire). Moyenne joueur pèse donc plus
+# pour un jeune joueur (jusqu'à 0,50 à 18 ans et moins), retombe au poids de
+# base (0,15) à partir de 30 ans.
+NOTE_FM_WEIGHT_BASE = 0.15  # >= NOTE_FM_ADULT_AGE
+NOTE_FM_WEIGHT_YOUTH_MAX = 0.50  # <= NOTE_FM_YOUTH_AGE
+NOTE_FM_YOUTH_AGE = 18
+NOTE_FM_ADULT_AGE = 30
 NEW_COLUMNS = ATTRIBUTES + [URL_COL] + EXTRA_COLUMNS + [ABILITY_COL, NOTE_FM_COL]
+
+
+def note_fm_weight_moyenne(age: int) -> float:
+    """Poids de Moyenne joueur dans Note FM pour un joueur de cet âge --
+    voir la note ci-dessus sur NOTE_FM_WEIGHT_BASE."""
+    if age <= NOTE_FM_YOUTH_AGE:
+        return NOTE_FM_WEIGHT_YOUTH_MAX
+    if age >= NOTE_FM_ADULT_AGE:
+        return NOTE_FM_WEIGHT_BASE
+    t = (age - NOTE_FM_YOUTH_AGE) / (NOTE_FM_ADULT_AGE - NOTE_FM_YOUTH_AGE)
+    return NOTE_FM_WEIGHT_YOUTH_MAX + (NOTE_FM_WEIGHT_BASE - NOTE_FM_WEIGHT_YOUTH_MAX) * t
 
 # --- Réglages du matching -----------------------------------------------------------------
 MIN_SCORE = 16.0      # score mini pour accepter un candidat
@@ -860,8 +882,9 @@ def main():
         ws.cell(p.row, url_col).value = b.url
         write_extras(ws, p.row, headers, api.cache["extra"].get(b.url))
         ws.cell(p.row, headers[ABILITY_COL]).value = b.ability
-        if p.rating is not None and b.ability is not None:
-            note_fm = NOTE_FM_WEIGHT_ABILITY * b.ability + NOTE_FM_WEIGHT_MOYENNE * p.rating
+        if p.rating is not None and b.ability is not None and p.age is not None:
+            w = note_fm_weight_moyenne(p.age)
+            note_fm = (1 - w) * b.ability + w * p.rating
             ws.cell(p.row, headers[NOTE_FM_COL]).value = round(note_fm, 1)
         written += 1
     api.save_cache()

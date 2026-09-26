@@ -15,6 +15,11 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",
+    # scripts/scrape_fminside_attributes.py (importé par
+    # tests/test_scrape_fminside_attributes.py) -- pas des dépendances du
+    # package lui-même, juste de ce script utilitaire hors src/ligue1sim.
+    "beautifulsoup4>=4.12",
+    "curl_cffi>=0.6",
 ]
 
 [tool.uv]
