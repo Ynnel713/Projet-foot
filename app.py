@@ -2286,7 +2286,14 @@ def render_club_detail_screen(club_name: str) -> None:
     ordered_postes = [p for p in _POSTE_DISPLAY_ORDER if p in by_poste]
     ordered_postes += sorted(p for p in by_poste if p not in _POSTE_DISPLAY_ORDER)
 
+    # Lu une seule fois avant la boucle : la fiche s'affiche juste apres le
+    # groupe DU JOUEUR SELECTIONNE (pas tout en bas de la page apres tous les
+    # groupes, comme une 1ere version le faisait -- retour terrain du
+    # 27/09/2026, "je ne peux plus cliquer sur les joueurs" : le clic
+    # fonctionnait, mais son resultat n'etait visible qu'apres avoir scrolle
+    # tout en bas d'un effectif de 20+ joueurs, donc invisible en pratique).
     selected_key = f"team_selected_player_{club.name}"
+    selected_id = st.session_state.get(selected_key)
     for poste in ordered_postes:
         players = sorted(by_poste[poste], key=lambda p: -_team_headline_note(p))
         st.markdown(
@@ -2295,11 +2302,10 @@ def render_club_detail_screen(club_name: str) -> None:
         )
         _render_player_card_grid_team(players, key_prefix=f"{club.name}_{poste}", selected_key=selected_key)
 
-    selected_id = st.session_state.get(selected_key)
-    if selected_id is not None:
-        selected_player = next((p for p in club.players if p.id == selected_id), None)
-        if selected_player is not None:
-            _render_player_profile_card(selected_player)
+        if selected_id is not None:
+            selected_player = next((p for p in players if p.id == selected_id), None)
+            if selected_player is not None:
+                _render_player_profile_card(selected_player)
 
 
 def _fm_tier(value: float) -> str:
