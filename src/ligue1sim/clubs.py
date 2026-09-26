@@ -44,6 +44,10 @@ CATEGORIE_COLUMN = "Catégorie"
 # CATEGORIE_COLUMN/POSTE_SECONDAIRE_COLUMN ci-dessus.
 ABILITY_COLUMN = "Ability (0-99)"
 NOTE_FM_COLUMN = "Note FM"
+POSTES_FM_COLUMN = "Postes FM naturels"
+TAILLE_FM_COLUMN = "Taille FM (cm)"
+WEAK_FOOT_COLUMN = "Weak foot (/5)"
+PREFERRED_MOVES_COLUMN = "Preferred moves"
 
 REQUIRED_COLUMNS = [
     CHAMPIONNAT_COLUMN,
@@ -170,6 +174,10 @@ def _build_players(group: pd.DataFrame) -> list[Player]:
         attributes = {name: int(row[name]) for name in FM_ATTRIBUTE_COLUMNS if pd.notna(row.get(name))}
         ability = row.get(ABILITY_COLUMN)
         note_fm = row.get(NOTE_FM_COLUMN)
+        postes_fm = row.get(POSTES_FM_COLUMN)
+        taille_fm = row.get(TAILLE_FM_COLUMN)
+        weak_foot = row.get(WEAK_FOOT_COLUMN)
+        preferred_moves = row.get(PREFERRED_MOVES_COLUMN)
         players.append(
             Player(
                 prenom=row[PRENOM_COLUMN],
@@ -183,6 +191,10 @@ def _build_players(group: pd.DataFrame) -> list[Player]:
                 poste_secondaire=extra_postes + declared_secondaires,
                 categorie=str(categorie) if pd.notna(categorie) else None,
                 id=int(player_id) if pd.notna(player_id) else None,
+                postes_fm=str(postes_fm) if pd.notna(postes_fm) else None,
+                taille_fm=int(taille_fm) if pd.notna(taille_fm) else None,
+                weak_foot=float(weak_foot) if pd.notna(weak_foot) else None,
+                preferred_moves=str(preferred_moves) if pd.notna(preferred_moves) else None,
                 attributes=attributes or None,
                 ability=float(ability) if pd.notna(ability) else None,
                 note_fm=float(note_fm) if pd.notna(note_fm) else None,

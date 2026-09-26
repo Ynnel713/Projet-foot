@@ -173,8 +173,12 @@ class Player:
     categorie: str | None = None  # colonne "Catégorie" (rôle/style, ex. "buteur_axial") ; absente pour la plupart
     id: int | None = None  # colonne "ID" ; sert à recroiser avec d'autres onglets (voir nations.py)
     attributes: dict[str, int] | None = None  # 47 attributs FM26 (voir FM_ATTRIBUTE_CATEGORIES) ; None si non enrichi
-    ability: float | None = None  # note générale fminside (0-99), indépendante de tout rôle
+    ability: float | None = None  # note générale fminside (0-99), indépendante de tout rôle -- composante de note_fm, pas affichée seule (voir app._render_player_profile_card)
     note_fm: float | None = None  # 0,85*ability + 0,15*note -- pas encore branchée au moteur (voir clubs.NOTE_COLUMN)
+    postes_fm: str | None = None  # colonne "Postes FM naturels" (ex. "DR, WBR") -- distinct du "Poste" Transfermarkt
+    taille_fm: int | None = None  # colonne "Taille FM (cm)"
+    weak_foot: float | None = None  # colonne "Weak foot (/5)"
+    preferred_moves: str | None = None  # colonne "Preferred moves" -- vide pour la plupart : nécessite un scraping connecté (--cookie)
 
     @property
     def name(self) -> str:

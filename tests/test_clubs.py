@@ -317,7 +317,17 @@ def test_load_clubs_without_fm26_columns_leaves_attributes_ability_note_fm_none(
 
     clubs = load_clubs(path, "TEST")
 
-    assert all(p.attributes is None and p.ability is None and p.note_fm is None for c in clubs for p in c.players)
+    assert all(
+        p.attributes is None
+        and p.ability is None
+        and p.note_fm is None
+        and p.postes_fm is None
+        and p.taille_fm is None
+        and p.weak_foot is None
+        and p.preferred_moves is None
+        for c in clubs
+        for p in c.players
+    )
 
 
 def test_load_clubs_reads_fm26_columns_when_present(tmp_path):
@@ -335,6 +345,10 @@ def test_load_clubs_reads_fm26_columns_when_present(tmp_path):
             "Pace": [95] + [None] * 21,
             "Ability (0-99)": [84] + [None] * 21,
             "Note FM": [83.8] + [None] * 21,
+            "Postes FM naturels": ["DR, WBR"] + [None] * 21,
+            "Taille FM (cm)": [181] + [None] * 21,
+            "Weak foot (/5)": [3] + [None] * 21,
+            "Preferred moves": ["Cuts Inside"] + [None] * 21,
         }
     )
     path = tmp_path / "joueurs.xlsx"
@@ -347,7 +361,12 @@ def test_load_clubs_reads_fm26_columns_when_present(tmp_path):
     assert enrichi.attributes == {"Crossing": 65, "Pace": 95}
     assert enrichi.ability == 84.0
     assert enrichi.note_fm == 83.8
+    assert enrichi.postes_fm == "DR, WBR"
+    assert enrichi.taille_fm == 181
+    assert enrichi.weak_foot == 3.0
+    assert enrichi.preferred_moves == "Cuts Inside"
     assert autre.attributes is None and autre.ability is None and autre.note_fm is None
+    assert autre.postes_fm is None and autre.taille_fm is None and autre.weak_foot is None and autre.preferred_moves is None
 
 
 def test_load_clubs_real_data_fm26_attributes_stay_within_known_bounds():

@@ -2177,22 +2177,37 @@ def _render_player_profile_card(player: Player) -> None:
         cols = st.columns(3)
         cols[0].metric("Poste", player.poste)
         cols[1].metric("Âge", player.age)
-        cols[2].metric("Moyenne joueur", f"{player.note:.1f}")
+        # Une seule note globale affichée (retour du 26/09/2026 : "4 notes, ça
+        # n'a pas de sens, garde celle qui sera utilisée") -- Note FM si le
+        # joueur est enrichi (destinée à remplacer Moyenne joueur, voir
+        # clubs.NOTE_COLUMN), sinon Moyenne joueur. Ability (composante brute
+        # de Note FM) n'est plus affichée séparément, volontairement.
+        if player.note_fm is not None:
+            note_label, note_value = "Note FM", player.note_fm
+        else:
+            note_label, note_value = "Moyenne joueur", player.note
+        cols[2].metric(note_label, f"{note_value:.1f}")
 
         details = [player.nationalite, player.championnat]
         if player.poste_secondaire:
             details.append("Dépanne aussi : " + " / ".join(player.poste_secondaire))
+        if player.postes_fm:
+            details.append(f"Postes FM : {player.postes_fm}")
         st.caption(" · ".join(d for d in details if d))
 
         if player.categorie:
             st.write(f"**Style de jeu :** {player.categorie.replace('_', ' ')}")
 
-        if player.ability is not None or player.note_fm is not None:
-            fm_cols = st.columns(2)
-            if player.ability is not None:
-                fm_cols[0].metric("Ability FM", f"{player.ability:.0f}/99")
-            if player.note_fm is not None:
-                fm_cols[1].metric("Note FM", f"{player.note_fm:.1f}")
+        physique = []
+        if player.taille_fm is not None:
+            physique.append(f"Taille : {player.taille_fm} cm")
+        if player.weak_foot is not None:
+            physique.append(f"Pied faible : {player.weak_foot:.0f}/5")
+        if physique:
+            st.caption(" · ".join(physique))
+
+        if player.preferred_moves:
+            st.write(f"**Preferred moves :** {player.preferred_moves}")
 
     if player.attributes:
         with st.expander("Attributs FM26 (détail)"):
