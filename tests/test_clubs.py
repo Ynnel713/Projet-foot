@@ -3,6 +3,7 @@ import pytest
 
 from ligue1sim.clubs import (
     ClubDataError,
+    _parse_valeur_marchande,
     list_championnats,
     load_all_clubs,
     load_clubs,
@@ -384,3 +385,34 @@ def test_load_clubs_real_data_fm26_attributes_stay_within_known_bounds():
             assert 0 <= p.ability <= 99
         if p.note_fm is not None:
             assert 0 <= p.note_fm <= 100
+
+
+# --- Valeur marchande / pied (27/09/2026, colonnes originales jamais lues jusqu'ici) --
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ("€30.00m", 30.0),
+        ("€300k", 0.3),
+        ("€0.5m", 0.5),
+        ("-", None),
+        (None, None),
+        ("", None),
+        ("pas un nombre", None),
+    ],
+)
+def test_parse_valeur_marchande(raw, expected):
+    assert _parse_valeur_marchande(raw) == expected
+
+
+def test_load_clubs_real_data_valeur_marchande_and_pied_are_populated():
+    """Colonnes originales (toutes les lignes, pas seulement les enrichis
+    FM26) : quasi aucun joueur ne devrait en être dépourvu."""
+    clubs = load_clubs(DATA_PATH, "Premier League")
+    players = [p for c in clubs for p in c.players]
+    with_value = [p for p in players if p.valeur_marchande is not None]
+    with_pied = [p for p in players if p.pied is not None]
+    assert len(with_value) / len(players) > 0.9
+    assert len(with_pied) / len(players) > 0.9
+    assert all(v.valeur_marchande >= 0 for v in with_value)
+    assert all(p.pied in ("D", "G") for p in with_pied)

@@ -179,6 +179,8 @@ class Player:
     taille_fm: int | None = None  # colonne "Taille FM (cm)"
     weak_foot: float | None = None  # colonne "Weak foot (/5)"
     preferred_moves: str | None = None  # colonne "Preferred moves" -- vide pour la plupart : nécessite un scraping connecté (--cookie)
+    valeur_marchande: float | None = None  # colonne "Valeur marchande" (originale, tous les joueurs), en millions d'euros
+    pied: str | None = None  # colonne "Pieds" (originale, tous les joueurs) : "D" ou "G"
 
     @property
     def name(self) -> str:

@@ -2115,6 +2115,156 @@ def _find_club(club_name: str) -> Club | None:
     return option.as_club() if option is not None else None
 
 
+_TEAM_STYLE = """
+<style>
+.team-header {
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px; padding: 1rem 1.3rem; margin: 0.3rem 0 1.2rem;
+    font-family: "Manrope", sans-serif;
+}
+.team-header-top { display: flex; align-items: center; gap: 1.1rem; flex-wrap: wrap; }
+.team-badge {
+    width: 56px; height: 56px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 17px; color: #fff;
+}
+.team-identity { min-width: 160px; }
+.team-name { font-weight: 800; font-size: 20px; color: #fff; line-height: 1.15; }
+.team-sub { font-size: 12.5px; color: rgba(230,230,235,0.6); margin-top: 2px; }
+/* Rangee separee (pas un seul flex avec margin-left:auto) : trouve en la
+   voyant deborder du cadre -- margin-left:auto et flex-wrap se bloquent
+   mutuellement, la 3e tuile sortait du conteneur au lieu de passer a la
+   ligne. */
+.team-stats { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.8rem; }
+.team-stat-tile {
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 10px; padding: 0.45rem 0.9rem; text-align: center; min-width: 84px;
+}
+.team-stat-label {
+    font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    color: rgba(230,230,235,0.55);
+}
+.team-stat-value {
+    font-family: "Big Shoulders Display", sans-serif; font-size: 21px; font-weight: 800;
+    color: #fff; margin-top: 1px; line-height: 1;
+}
+.team-stat-tile.pp-good .team-stat-label, .team-stat-tile.pp-avg .team-stat-label, .team-stat-tile.pp-poor .team-stat-label {
+    color: rgba(255,255,255,0.85);
+}
+
+.team-group-title {
+    font-weight: 700; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: rgba(230,230,235,0.6); margin: 1.1rem 0 0.6rem; font-family: "Manrope", sans-serif;
+}
+div[class*="st-key-team_grid_"] {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 0.6rem;
+}
+div[class*="st-key-team_card_"] { position: relative; }
+div[class*="st-key-team_cardbtn_"] { position: static !important; width: 100% !important; }
+div[class*="st-key-team_cardbtn_"] button {
+    position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important;
+    opacity: 0 !important; z-index: 3; cursor: pointer; border-radius: 12px;
+}
+.team-player-card {
+    position: relative; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px; padding: 0.6rem 0.5rem; text-align: center;
+    font-family: "Manrope", sans-serif; transition: background 0.15s ease, border-color 0.15s ease;
+}
+div[class*="st-key-team_card_"]:hover .team-player-card {
+    background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2);
+}
+.team-player-photo, .team-player-photo-placeholder {
+    width: 60px; height: 60px; border-radius: 10px; margin: 0 auto 0.4rem; display: block;
+    border: 1px solid rgba(255,255,255,0.1); object-fit: cover;
+}
+.team-player-photo-placeholder {
+    background: rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: center;
+    color: rgba(230,230,235,0.3); font-size: 18px;
+}
+.team-player-rating {
+    position: absolute; top: 6px; left: 6px; min-width: 22px; height: 22px; padding: 0 4px;
+    border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 11px; color: #fff;
+}
+.team-player-name {
+    font-weight: 700; font-size: 12px; color: #fff; line-height: 1.2; margin-top: 0.1rem;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.team-player-meta { font-size: 10.5px; color: rgba(230,230,235,0.6); margin-top: 2px; }
+
+@media (max-width: 640px) {
+    .team-stats { margin-left: 0; width: 100%; }
+}
+</style>
+"""
+
+_PIED_LABELS = {"D": "Droit", "G": "Gauche"}
+
+
+def _team_headline_note(player: Player) -> float:
+    return player.note_fm if player.note_fm is not None else player.note
+
+
+def _render_team_header(club: Club) -> None:
+    players = club.players
+    note = sum(_team_headline_note(p) for p in players) / len(players) if players else 0.0
+    age_moyen = sum(p.age for p in players) / len(players) if players else 0.0
+    valeurs = [p.valeur_marchande for p in players if p.valeur_marchande is not None]
+    championnat = players[0].championnat if players else ""
+
+    valeur_html = (
+        f'<div class="team-stat-tile"><div class="team-stat-label">Valeur estimée</div>'
+        f'<div class="team-stat-value">€{sum(valeurs):.0f}M</div></div>'
+        if valeurs else ""
+    )
+    st.markdown(
+        f'<div class="team-header"><div class="team-header-top">'
+        f'<div class="team-badge" style="background:{primary_color(club.name)};">{_club_initials(club.name)}</div>'
+        f'<div class="team-identity"><div class="team-name">{club.name}</div>'
+        f'<div class="team-sub">{championnat} · {len(players)} joueurs</div></div>'
+        f"</div>"
+        f'<div class="team-stats">'
+        f'<div class="team-stat-tile pp-{_fm_tier(note)}"><div class="team-stat-label">Note globale</div>'
+        f'<div class="team-stat-value">{note:.0f}</div></div>'
+        f'<div class="team-stat-tile"><div class="team-stat-label">Âge moyen</div>'
+        f'<div class="team-stat-value">{age_moyen:.1f}</div></div>'
+        f"{valeur_html}"
+        f"</div></div>",
+        unsafe_allow_html=True,
+    )
+
+
+def _team_player_card_html(player: Player) -> str:
+    photo = face_path(player.id)
+    if photo is not None:
+        photo_html = f'<img class="team-player-photo" src="data:image/png;base64,{base64.b64encode(photo.read_bytes()).decode()}" />'
+    else:
+        photo_html = '<div class="team-player-photo-placeholder">?</div>'
+    note = _team_headline_note(player)
+    pied = _PIED_LABELS.get(player.pied or "", "")
+    meta = f"{player.poste} · {player.age} ans" + (f" · {pied}" if pied else "")
+    return (
+        f'<div class="team-player-card">'
+        f'<div class="team-player-rating pp-{_fm_tier(note)}">{note:.0f}</div>'
+        f"{photo_html}"
+        f'<div class="team-player-name">{player.name}</div>'
+        f'<div class="team-player-meta">{meta}</div>'
+        f"</div>"
+    )
+
+
+def _render_player_card_grid_team(players: list[Player], *, key_prefix: str, selected_key: str) -> None:
+    if not players:
+        return
+    with st.container(key=f"team_grid_{key_prefix}"):
+        for i, player in enumerate(players):
+            with st.container(key=f"team_card_{key_prefix}_{i}"):
+                st.markdown(_team_player_card_html(player), unsafe_allow_html=True)
+                if st.button("", key=f"team_cardbtn_{key_prefix}_{i}"):
+                    st.session_state[selected_key] = player.id
+                    st.rerun()
+
+
 def render_club_detail_screen(club_name: str) -> None:
     if st.button("← Retour"):
         st.session_state.pop(_OPEN_CLUB_KEY, None)
@@ -2125,8 +2275,9 @@ def render_club_detail_screen(club_name: str) -> None:
         st.error(f"Club introuvable : {club_name}")
         return
 
-    st.title(f"⚽ {club.name}")
-    st.caption(f"{len(club.players)} joueurs")
+    st.markdown(_PLAYER_PROFILE_STYLE, unsafe_allow_html=True)
+    st.markdown(_TEAM_STYLE, unsafe_allow_html=True)
+    _render_team_header(club)
 
     by_poste: dict[str, list[Player]] = {}
     for player in club.players:
@@ -2135,40 +2286,30 @@ def render_club_detail_screen(club_name: str) -> None:
     ordered_postes = [p for p in _POSTE_DISPLAY_ORDER if p in by_poste]
     ordered_postes += sorted(p for p in by_poste if p not in _POSTE_DISPLAY_ORDER)
 
+    selected_key = f"team_selected_player_{club.name}"
     for poste in ordered_postes:
-        players = sorted(by_poste[poste], key=lambda p: -p.note)
-        st.markdown(f"**{poste}** &nbsp;·&nbsp; {len(players)} joueur{'s' if len(players) > 1 else ''}", unsafe_allow_html=True)
-        _render_roster_table(players, key=f"roster_{club.name}_{poste}")
+        players = sorted(by_poste[poste], key=lambda p: -_team_headline_note(p))
+        st.markdown(
+            f'<div class="team-group-title">{poste} · {len(players)} joueur{"s" if len(players) > 1 else ""}</div>',
+            unsafe_allow_html=True,
+        )
+        _render_player_card_grid_team(players, key_prefix=f"{club.name}_{poste}", selected_key=selected_key)
 
-
-def _render_roster_table(players: list[Player], *, key: str) -> None:
-    rows = [
-        {"Joueur": p.name, "Âge": p.age, "Nationalité": p.nationalite, "Moyenne joueur": p.note}
-        for p in players
-    ]
-    event = st.dataframe(
-        rows,
-        hide_index=True,
-        width="stretch",
-        on_select="rerun",
-        selection_mode="single-row",
-        column_config={
-            "Moyenne joueur": st.column_config.ProgressColumn("Moyenne joueur", min_value=0, max_value=100, format="%.0f")
-        },
-        key=key,
-    )
-    selected_rows = event.selection.rows if event is not None else []
-    if selected_rows:
-        _render_player_profile_card(players[selected_rows[0]])
+    selected_id = st.session_state.get(selected_key)
+    if selected_id is not None:
+        selected_player = next((p for p in club.players if p.id == selected_id), None)
+        if selected_player is not None:
+            _render_player_profile_card(selected_player)
 
 
 def _fm_tier(value: float) -> str:
     """Vert/orange/rouge (mêmes couleurs que les notes de match, voir
     _rating_tier) -- seuils différents : ici sur l'échelle 0-99 des
-    attributs/notes FM26, pas les notes de match sur 10."""
-    if value >= 75:
+    attributs/notes FM26, pas les notes de match sur 10. Retour terrain
+    (27/09/2026) : vert strictement au-dessus de 70."""
+    if value > 70:
         return "good"
-    if value >= 55:
+    if value >= 50:
         return "avg"
     return "poor"
 
@@ -2343,8 +2484,14 @@ def _render_player_profile_card(player: Player) -> None:
     footnote_html = "".join(f'<div class="pp-footnote">{f}</div>' for f in footnotes)
 
     if player.attributes:
+        # Gardien en premier pour un gardien -- ce sont les stats pertinentes
+        # pour son poste (retour terrain du 27/09/2026), les autres gardent
+        # leur ordre habituel (tri stable).
+        category_order = sorted(FM_ATTRIBUTE_CATEGORIES.items(), key=lambda item: item[0] != "Gardien") \
+            if player.poste == "GK" else list(FM_ATTRIBUTE_CATEGORIES.items())
+
         category_html = ""
-        for category, names in FM_ATTRIBUTE_CATEGORIES.items():
+        for category, names in category_order:
             values = [(name, player.attributes[name]) for name in names if name in player.attributes]
             if not values:
                 continue
@@ -2364,7 +2511,7 @@ def _render_player_profile_card(player: Player) -> None:
             (radar_short_names.get(category, category),
              sum(v for _n, v in [(n, player.attributes[n]) for n in names if n in player.attributes])
              / len([n for n in names if n in player.attributes]))
-            for category, names in FM_ATTRIBUTE_CATEGORIES.items()
+            for category, names in category_order
             if any(n in player.attributes for n in names)
         ]
         radar_html = (

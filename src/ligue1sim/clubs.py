@@ -38,6 +38,12 @@ POSTE_SECONDAIRE_COLUMN = "Poste secondaire"
 # dans aucun calcul du moteur de jeu.
 CATEGORIE_COLUMN = "Catégorie"
 
+# Originales (tous les joueurs, pas seulement les enrichis FM26) mais jamais
+# lues jusqu'ici -- ajoutées le 27/09/2026 pour l'en-tête de l'écran équipe
+# (valeur d'effectif) et les cartes joueur (pied).
+VALEUR_MARCHANDE_COLUMN = "Valeur marchande"
+PIED_COLUMN = "Pieds"
+
 # Enrichissement FM26 (26/09/2026, voir scripts/scrape_fminside_attributes.py) :
 # absent pour la plupart des joueurs tant que le scraping n'est pas terminé,
 # donc volontairement pas dans REQUIRED_COLUMNS -- même traitement que
@@ -178,6 +184,7 @@ def _build_players(group: pd.DataFrame) -> list[Player]:
         taille_fm = row.get(TAILLE_FM_COLUMN)
         weak_foot = row.get(WEAK_FOOT_COLUMN)
         preferred_moves = row.get(PREFERRED_MOVES_COLUMN)
+        pied = row.get(PIED_COLUMN)
         players.append(
             Player(
                 prenom=row[PRENOM_COLUMN],
@@ -198,9 +205,28 @@ def _build_players(group: pd.DataFrame) -> list[Player]:
                 attributes=attributes or None,
                 ability=float(ability) if pd.notna(ability) else None,
                 note_fm=float(note_fm) if pd.notna(note_fm) else None,
+                valeur_marchande=_parse_valeur_marchande(row.get(VALEUR_MARCHANDE_COLUMN)),
+                pied=str(pied) if pd.notna(pied) else None,
             )
         )
     return players
+
+
+def _parse_valeur_marchande(raw: object) -> float | None:
+    """"€30.00m" -> 30.0 (millions d'euros) ; "€300k" -> 0.3 ; "-"/vide -> None."""
+    if not pd.notna(raw):
+        return None
+    text = str(raw).strip().lstrip("€").strip()
+    if not text or text == "-":
+        return None
+    try:
+        if text.endswith("m"):
+            return float(text[:-1])
+        if text.endswith("k"):
+            return float(text[:-1]) / 1000.0
+        return float(text)
+    except ValueError:
+        return None
 
 
 def _split_poste(raw: object) -> tuple[str, tuple[str, ...]]:
