@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Bases runtime -- regenerees par `python cli.py init-db` / `import-players` /
+# `import-seed` (voir README.md), jamais versionnees : simulafoot.db duplique
+# integralement data/joueurs.xlsx (deja versionne ailleurs dans le depot) et
+# grossit a chaque usage (phrase_history).
+data/simulafoot.db
+data/simulafoot.db-*
+data/analytics.duckdb

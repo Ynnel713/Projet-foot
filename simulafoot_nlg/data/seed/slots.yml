@@ -1,0 +1,21 @@
+# slots.yml -- dictionnaires de valeurs pour les PhraseSlot qui piochent
+# aleatoirement une valeur (dictionary_key) plutot que d'en calculer une
+# dynamiquement (expression) -- voir README.md, section "Format YAML".
+#
+# Format (mapping au niveau racine, une cle = un dictionnaire) :
+#
+# exclamations_but:
+#   - value: "quelle frappe !"
+#     weight: 1.0            # optionnel, defaut 1.0 -- poids de tirage relatif
+#   - value: "magnifique !"
+#     weight: 0.5
+#   - value: "personne ne s'y attendait !"
+#
+# adjectifs_intensite:
+#   - value: "exceptionnel"
+#   - value: "rare"
+#
+# Ce fichier est VIDE au depart (mapping vide ci-dessous) -- squelette
+# technique uniquement, aucun dictionnaire en dur dans cette session. La
+# banque de phrases sera ajoutee ici plus tard.
+{}
