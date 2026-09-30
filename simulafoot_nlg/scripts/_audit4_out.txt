@@ -1,0 +1,55 @@
+=== AUDIT 4 -- substitution isolee, 20 cas limites (joueur) ===
+ATTENTION : ne teste PAS l'integration template_filler reelle (NotImplementedError, squelette) -- seulement la mecanique de substitution + elision isolee ecrite dans ce script.
+
+[nom 3 lettres                                ] 'Ola'                               -> "Sur une remise d'Ola, l'Inter craque completement."  [OK]
+[nom 3 lettres, voyelle                       ] 'Ebe'                               -> "Sur une remise d'Ebe, l'Inter craque completement."  [OK]
+[nom 20 lettres                               ] 'Konstantinopoulosovic'             -> "Sur une remise de Konstantinopoulosovic, l'Inter craque completement."  [OK]
+[nom compose (3 mots)                         ] 'Jean-Pierre de la Fontaine'        -> "Sur une remise de Jean-Pierre de la Fontaine, l'Inter craque completement."  [OK]
+[nom compose court                            ] 'Van Dijk'                          -> "Sur une remise de Van Dijk, l'Inter craque completement."  [OK]
+[apostrophe                                   ] "N'Golo Kante"                      -> "Sur une remise de N'Golo Kante, l'Inter craque completement."  [OK]
+[apostrophe + voyelle initiale                ] "O'Brien"                           -> "Sur une remise d'O'Brien, l'Inter craque completement."  [OK]
+[particule 'de'                               ] 'Kevin De Bruyne'                   -> "Sur une remise de Kevin De Bruyne, l'Inter craque completement."  [OK]
+[particule 'van der'                          ] 'Virgil van der Berg'               -> "Sur une remise de Virgil van der Berg, l'Inter craque completement."  [OK]
+[particule 'del'                              ] 'Angel Di Maria'                    -> "Sur une remise d'Angel Di Maria, l'Inter craque completement."  [OK]
+[commence par voyelle a                       ] 'Ansu Fati'                         -> "Sur une remise d'Ansu Fati, l'Inter craque completement."  [OK]
+[commence par voyelle e                       ] 'Erling Haaland'                    -> "Sur une remise d'Erling Haaland, l'Inter craque completement."  [OK]
+[commence par h muet                          ] 'Harry Kane'                        -> "Sur une remise d'Harry Kane, l'Inter craque completement."  [OK]
+[commence par h aspire (exception FR)         ] 'Hugo Lloris'                       -> "Sur une remise d'Hugo Lloris, l'Inter craque completement."  [OK]
+[commence par consonne                        ] 'Kylian Mbappe'                     -> "Sur une remise de Kylian Mbappe, l'Inter craque completement."  [OK]
+[accent initial                               ] 'Ederson Santana'                   -> "Sur une remise d'Ederson Santana, l'Inter craque completement."  [OK]
+[nom avec tiret                               ] 'Pierre-Emerick Aubameyang'         -> "Sur une remise de Pierre-Emerick Aubameyang, l'Inter craque completement."  [OK]
+[nom tres court (2 lettres, prenom usuel)     ] 'Bo Setterlund'                     -> "Sur une remise de Bo Setterlund, l'Inter craque completement."  [OK]
+[majuscules accentuees                        ] 'Ǝlan Test'                         -> "Sur une remise de Ǝlan Test, l'Inter craque completement."  [OK]
+[chiffre dans surnom (cas limite absurde mais present en donnees FM)] 'Neymar Jr'                         -> "Sur une remise de Neymar Jr, l'Inter craque completement."  [OK]
+
+--- Cas 'de {X}' reels de la banque, testes avec ces 20 noms ---
+
+Gabarit: Le pressing de {club} force {adversaire} à dégager en catastrophe.
+    [nom 3 lettres                      ] -> Le pressing d'Ola force Ola à dégager en catastrophe.
+    [nom 3 lettres, voyelle             ] -> Le pressing d'Ebe force Ebe à dégager en catastrophe.
+    [nom 20 lettres                     ] -> Le pressing de Konstantinopoulosovic force Konstantinopoulosovic à dégager en catastrophe.
+    [nom compose (3 mots)               ] -> Le pressing de Jean-Pierre de la Fontaine force Jean-Pierre de la Fontaine à dégager en catastrophe.
+    [nom compose court                  ] -> Le pressing de Van Dijk force Van Dijk à dégager en catastrophe.
+    [apostrophe                         ] -> Le pressing de N'Golo Kante force N'Golo Kante à dégager en catastrophe.
+    [apostrophe + voyelle initiale      ] -> Le pressing d'O'Brien force O'Brien à dégager en catastrophe.
+    [particule 'de'                     ] -> Le pressing de Kevin De Bruyne force Kevin De Bruyne à dégager en catastrophe.
+
+Gabarit: Contrôle orienté sublime de {joueur}, qui élimine son marqueur.
+    [nom 3 lettres                      ] -> Contrôle orienté sublime d'Ola, qui élimine son marqueur.
+    [nom 3 lettres, voyelle             ] -> Contrôle orienté sublime d'Ebe, qui élimine son marqueur.
+    [nom 20 lettres                     ] -> Contrôle orienté sublime de Konstantinopoulosovic, qui élimine son marqueur.
+    [nom compose (3 mots)               ] -> Contrôle orienté sublime de Jean-Pierre de la Fontaine, qui élimine son marqueur.
+    [nom compose court                  ] -> Contrôle orienté sublime de Van Dijk, qui élimine son marqueur.
+    [apostrophe                         ] -> Contrôle orienté sublime de N'Golo Kante, qui élimine son marqueur.
+    [apostrophe + voyelle initiale      ] -> Contrôle orienté sublime d'O'Brien, qui élimine son marqueur.
+    [particule 'de'                     ] -> Contrôle orienté sublime de Kevin De Bruyne, qui élimine son marqueur.
+
+Gabarit: Sur ce coup franc, la défense de {adversaire} monte trop tard.
+    [nom 3 lettres                      ] -> Sur ce coup franc, la défense d'Ola monte trop tard.
+    [nom 3 lettres, voyelle             ] -> Sur ce coup franc, la défense d'Ebe monte trop tard.
+    [nom 20 lettres                     ] -> Sur ce coup franc, la défense de Konstantinopoulosovic monte trop tard.
+    [nom compose (3 mots)               ] -> Sur ce coup franc, la défense de Jean-Pierre de la Fontaine monte trop tard.
+    [nom compose court                  ] -> Sur ce coup franc, la défense de Van Dijk monte trop tard.
+    [apostrophe                         ] -> Sur ce coup franc, la défense de N'Golo Kante monte trop tard.
+    [apostrophe + voyelle initiale      ] -> Sur ce coup franc, la défense d'O'Brien monte trop tard.
+    [particule 'de'                     ] -> Sur ce coup franc, la défense de Kevin De Bruyne monte trop tard.

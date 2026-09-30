@@ -1,0 +1,92 @@
+
+Total echantillon: 90
+[01] CARTON_ROUGE/DEFAUT :: {joueur} craque après avoir été chambré toute la rencontre par les joueurs de {adversaire}, il répond violemment et voit rouge !
+[02] CARTON_ROUGE/DEFAUT :: {joueur} perd totalement son sang-froid et repousse violemment un adversaire, l'arbitre n'hésite pas une seconde : carton rouge !
+[03] CARTON_ROUGE/DEFAUT :: {joueur} voit rouge à la {minute}e minute, {club} devra finir à dix.
+[04] CARTON_ROUGE/DEFAUT :: L'échauffourée dégénère complètement, {joueur} pousse violemment un adversaire au sol, direction les vestiaires !
+[05] CARTON_ROUGE/DEFAUT :: Le ton monte soudainement entre les deux équipes, une échauffourée générale éclate au milieu du terrain, {joueur} en ressort exclu !
+[06] CARTON_ROUGE/DEFAUT :: Après avoir contesté chaque décision depuis le coup d'envoi, {joueur} finit par craquer nerveusement face à l'arbitre et voit rouge !
+[07] CARTON_ROUGE/DEFAUT :: {joueur} allume la mèche d'une bagarre générale en provoquant ouvertement ses adversaires, l'arbitre l'exclut sans détour !
+[08] CARTON_ROUGE/DEFAUT :: Sur une intervention à retardement complètement inutile, {joueur} écope d'un second avertissement logique et voit rouge !
+[09] CARTON_ROUGE/DEFAUT :: {joueur} répond du tac au tac à une provocation et se fait justice, c'est un rouge sévère mais logique au regard du règlement !
+[10] CARTON_ROUGE/DEFAUT :: Après un but litigieux, plusieurs joueurs des deux équipes se retrouvent au corps à corps, {joueur} en fait les frais et est exclu !
+[11] BUT/SURNOM :: Le bulldozer repousse deux défenseurs d'un bras et catapulte le ballon au fond des filets malgré le contact !
+[12] BUT/SURNOM :: La tour domine tous les débats aériens et place une tête surpuissante que personne n'a pu contester !
+[13] BUT/PENALTY :: {joueur} frappe une fusée dans l'angle, le gardien part du bon côté mais ne peut rien faire face à tant de puissance !
+[14] BUT/DEFAUT :: {joueur} envoie un missile du pied droit : la barre transversale tremble encore avant que le ballon ne finisse au fond des filets !
+[15] BUT/PENALTY :: Le stade retient son souffle, {joueur} prend son élan et catapulte le ballon au ras du poteau, personne n'y peut rien !
+[16] BUT/DEFAUT :: Dans les arrêts de jeu, {joueur} surgit au second poteau et offre un but improbable à {club}, le stade explose !
+[17] BUT/DEFAUT :: {joueur} ajuste sa course, enroule sa frappe et vient loger le ballon dans la lucarne opposée, hors de portée du gardien !
+[18] BUT/DEFAUT :: Le ballon traîne à l'entrée de la surface, {joueur} ne réfléchit pas une seconde et catapulte une reprise de volée en pleine lucarne !
+[19] BUT/SURNOM :: Le chef d'orchestre profite d'un relâchement adverse pour surgir lui-même et conclure d'une frappe limpide !
+[20] BUT/DEFAUT :: D'un piqué de l'extérieur du pied, {joueur} surprend tout le monde et trouve la lucarne dans un silence de cathédrale !
+[21] PENALTY_RATE/DEFAUT :: Le gardien de {adversaire} devine parfaitement le côté choisi par {joueur} et bloque le tir sans trembler !
+[22] PENALTY_RATE/DEFAUT :: Le tir de {joueur} claque contre la barre dans un fracas terrible, le ballon repart aussitôt en jeu !
+[23] PENALTY_RATE/DEFAUT :: {joueur} frappe fort et haut, un peu trop haut : le ballon percute la barre et s'envole au-dessus des cages !
+[24] PENALTY_RATE/DEFAUT :: {joueur} frappe fort au centre, mais le gardien de {adversaire} reste debout et capte le ballon sans bouger d'un pouce !
+[25] PENALTY_RATE/DEFAUT :: {joueur} tire trop mollement et à côté, le gardien de {adversaire} n'a même pas eu besoin de plonger !
+[26] PENALTY_RATE/DEFAUT :: {joueur} rate complètement son penalty, la frappe s'envole très loin au-dessus de la transversale !
+[27] PENALTY_RATE/DEFAUT :: {joueur} précipite sa frappe, le ballon file largement au-dessus de la barre sous les sifflets du public !
+[28] PENALTY_RATE/DEFAUT :: {joueur} ajuste trop son tir, le ballon touche le poteau et file hors du cadre, la frustration est immense !
+[29] PENALTY_RATE/DEFAUT :: Le gardien plonge du bon côté et repousse d'une claquette autoritaire la tentative de {joueur} !
+[30] PENALTY_RATE/DEFAUT :: La frappe de {joueur} part hors cadre, le ballon termine sa course dans les tribunes !
+[31] COUP_FRANC/DEFAUT :: {passeur} glisse son coup franc en profondeur, {receveur} s'échappe seul face au gardien de {adversaire} !
+[32] COUP_FRANC/DEFAUT :: Coup franc rapidement négocié : {passeur} sert {receveur} en retrait, à quelques mètres seulement des buts de {adversaire} !
+[33] COUP_FRANC/DEFAUT :: Coup franc excentré côté droit : {passeur} enroule un centre parfait vers le second poteau, en plein sur la tête de {receveur} !
+[34] COUP_FRANC/DEFAUT :: Sur ce coup franc, la défense de {adversaire} monte trop tard : {receveur} se retrouve totalement libre pour reprendre le centre de {passeur} !
+[35] COUP_FRANC/DEFAUT :: {passeur} surprend tout le monde en jouant vite son coup franc vers {receveur}, démarqué dans un couloir de passe parfait !
+[36] COUP_FRANC/DEFAUT :: {passeur} frappe son coup franc en cloche vers l'opposé, {receveur} contrôle avec du champ devant lui, loin de la défense adverse !
+[37] COUP_FRANC/DEFAUT :: {passeur} envoie son coup franc en cloche jusqu'au premier poteau, où {receveur} peut dévier du crâne vers le but adverse !
+[38] COUP_FRANC/DEFAUT :: {passeur} centre le coup franc au point de penalty, {receveur} s'impose dans les airs face à sa marque !
+[39] COUP_FRANC/DEFAUT :: D'un coup franc excentré, {passeur} trouve le second poteau où {receveur} attend, seul, prêt à reprendre de la tête !
+[40] COUP_FRANC/DEFAUT :: Sur ce coup franc à deux, {passeur} décale {receveur} d'une touche subtile avant que la défense n'ait pu se replacer !
+[41] CONSTRUCTION/DEFAUT :: D'un extérieur du pied génial, {passeur} envoie {receveur} dans le dos de la défense de {adversaire} !
+[42] CONSTRUCTION/DEFAUT :: {passeur} casse les lignes d'une passe millimétrée, {receveur} se retrouve en tête-à-tête avec le gardien !
+[43] CONSTRUCTION/DEFAUT :: {passeur} déborde sur le côté et centre en retrait pour {receveur}, totalement démarqué à l'entrée de la surface !
+[44] CONSTRUCTION/DEFAUT :: {joueur} enchaîne les contrôles et repique dans l'axe après un long rush balle au pied, ouvrant un boulevard devant lui !
+[45] CONSTRUCTION/DEFAUT :: Sur un mouvement collectif léché, {passeur} sert {receveur} en une touche de balle au cœur de la défense !
+[46] CONSTRUCTION/DEFAUT :: {passeur} récupère le ballon après un pressing haut et le repique instantanément vers {receveur}, à quelques mètres du but !
+[47] CONSTRUCTION/DEFAUT :: Après un débordement côté gauche, {passeur} centre au cordeau, {receveur} arrive lancé au second poteau !
+[48] CONSTRUCTION/DEFAUT :: Belle série de passes courtes entre {passeur} et {receveur}, qui se retrouve idéalement placé aux abords de la surface !
+[49] CONSTRUCTION/DEFAUT :: {passeur} centre depuis l'aile droite, {receveur} s'élève au premier poteau dans la surface adverse !
+[50] CONSTRUCTION/DEFAUT :: {passeur} glisse un ballon filtrant entre deux défenseurs, {receveur} s'échappe seul face au gardien de {adversaire} !
+[51] ARRET_GARDIEN/DEFAUT :: {joueur} conclut une prestation XXL en repoussant la dernière tentative de {adversaire} dans les arrêts de jeu !
+[52] ARRET_GARDIEN/SURNOM :: Le colosse des cages repousse des poings avec une puissance impressionnante, dégageant le danger très loin !
+[53] ARRET_GARDIEN/DEFAUT :: Sur cette frappe enroulée qui semblait imparable, {joueur} s'envole et détourne le ballon en corner !
+[54] ARRET_GARDIEN/DEFAUT :: Sorti à la limite du hors-jeu, {joueur} devance l'attaquant de {adversaire} et capte le ballon avant qu'il ne puisse frapper !
+[55] ARRET_GARDIEN/DEFAUT :: Face à un attaquant lancé seul, {joueur} sort à la limite de sa surface et repousse le tir du pied !
+[56] ARRET_GARDIEN/DEFAUT :: Complètement à contre-pied, {joueur} se détend malgré tout et repousse le ballon du bout des gants !
+[57] ARRET_GARDIEN/DEFAUT :: {joueur} repousse des poings un centre-tir dangereux qui filait directement au fond des filets !
+[58] ARRET_GARDIEN/SURNOM :: Le sage sort un réflexe digne de ses plus belles années et repousse le danger avec une lecture parfaite !
+[59] ARRET_GARDIEN/DEFAUT :: {joueur} boxe le centre dangereux avec autorité, dégageant le danger loin de sa surface !
+[60] ARRET_GARDIEN/DEFAUT :: {joueur} garde son sang-froid face à la Panenka tentée par l'attaquant et capte le ballon sans bouger !
+[61] SITUATION_MATCH/DEFAUT :: Match très fermé pour l'instant, les deux équipes se neutralisent et peinent à se procurer la moindre occasion franche.
+[62] SITUATION_MATCH/DEFAUT :: {club} asphyxie complètement {adversaire} par son pressing haut, impossible de sortir proprement le ballon pour les visiteurs.
+[63] SITUATION_MATCH/DEFAUT :: {adversaire} semble avoir totalement abdiqué tactiquement, {club} se promène tranquillement sur la pelouse.
+[64] SITUATION_MATCH/DEFAUT :: On sent {adversaire} totalement décontenancé par l'intensité imposée par {club} depuis le début du match.
+[65] SITUATION_MATCH/DEFAUT :: On sent une réelle envie de bien faire chez {adversaire}, qui répond crânement à la domination de {club} depuis le début du match.
+[66] SITUATION_MATCH/DEFAUT :: {club} met une pression constante sur les relances de {adversaire}, qui se transforment en pertes de balle immédiates.
+[67] SITUATION_MATCH/DEFAUT :: Le money time approche et la tension est à son comble, chaque ballon perdu par {club} pourrait désormais coûter cher.
+[68] SITUATION_MATCH/DEFAUT :: {club} a totalement pris possession du milieu de terrain, {adversaire} ne parvient plus à construire la moindre offensive.
+[69] SITUATION_MATCH/DEFAUT :: {club} multiplie les occasions sans parvenir à trouver la faille, {adversaire} résiste tant bien que mal devant son but.
+[70] SITUATION_MATCH/DEFAUT :: L'engagement physique est total sur ce terrain, les duels se multiplient sans que l'arbitre n'ait besoin d'intervenir excessivement.
+[71] DEBUT_MATCH/DEFAUT :: {club} aborde cette rencontre sur une série de cinq victoires consécutives, la confiance est à son comble.
+[72] DEBUT_MATCH/DEFAUT :: {adversaire} cherche à stopper l'hémorragie après trois matchs sans la moindre victoire.
+[73] DEBUT_MATCH/DEFAUT :: Avec seulement trois points d'avance sur la zone rouge, {club} ne peut se permettre le moindre faux pas face à {adversaire}.
+[74] DEBUT_MATCH/DEFAUT :: {adversaire} devra se passer de son capitaine {joueur}, out sur blessure depuis plusieurs semaines.
+[75] DEBUT_MATCH/DEFAUT :: {adversaire} n'a plus perdu depuis huit rencontres, une dynamique impressionnante à l'approche de ce choc.
+[76] DEBUT_MATCH/DEFAUT :: Revanche attendue pour {club}, battu à l'aller par {adversaire}, l'occasion est belle de renverser la tendance.
+[77] DEBUT_MATCH/DEFAUT :: {joueur}, meilleur buteur de {club} cette saison, manque à l'appel ce soir sur blessure, un coup dur pour l'attaque.
+[78] DEBUT_MATCH/DEFAUT :: {club} devra composer sans {joueur}, suspendu pour ce rendez-vous capital, une absence qui pèse lourd dans l'effectif.
+[79] DEBUT_MATCH/DEFAUT :: Ce choc au sommet entre {club} et {adversaire} pourrait dessiner les contours de la fin de saison.
+[80] DEBUT_MATCH/DEFAUT :: L'absence de {joueur}, élément clé du milieu de terrain de {club}, pourrait peser lourd dans l'équilibre de cette rencontre.
+[81] GESTE_SIGNATURE/DEFAUT :: {joueur} multiplie les appuis et les contrôles supplémentaires pour ramener systématiquement le ballon sur son pied fort, quitte à perdre un temps précieux face à la pression de {adversaire}. Une habitude qui le rend parfois prévisible, mais rarement prise en défaut sur la qualité d'exécution.
+[82] GESTE_SIGNATURE/DEFAUT :: {joueur} refuse obstinément de se jeter dans le tacle, préférant temporiser et attendre le bon moment pour intervenir proprement sur le porteur du ballon de {adversaire}. Une discipline défensive qui limite drastiquement le risque de se faire éliminer d'un crochet.
+[83] GESTE_SIGNATURE/SURNOM :: Le chef d'orchestre voit l'ouverture avant tout le monde et distille une passe que seul lui avait anticipée !
+[84] GESTE_SIGNATURE/DEFAUT :: {joueur} reste scotché à la ligne de touche pour étirer au maximum le bloc défensif de {adversaire}, créant des couloirs de passe intérieurs pour ses partenaires. Cette occupation constante de l'espace large est précieuse pour ouvrir le jeu de {club}.
+[85] GESTE_SIGNATURE/SURNOM :: Le feu follet slalome dans des espaces minuscules où personne d'autre ne pourrait se faufiler !
+[86] GESTE_SIGNATURE/DEFAUT :: {joueur} se retrouve encerclé par deux joueurs de {adversaire} dans son propre camp, mais garde son calme et trouve la faille technique pour ressortir proprement le ballon plutôt que de le dégager n'importe comment. Ce sang-froid sous pression rassure tout le bloc défensif de {club} derrière lui.
+[87] GESTE_SIGNATURE/DEFAUT :: {joueur} lève les bras vers les tribunes après une simple récupération de balle, invitant le public de {club} à hausser le volume, et l'ambiance du stade grimpe instantanément d'un cran. Une alchimie particulière semble s'installer entre lui et les supporters à chacune de ses interventions.
+[88] GESTE_SIGNATURE/DEFAUT :: {joueur} rentre indifféremment vers l'intérieur depuis la droite comme depuis la gauche, rendant sa lecture totalement imprévisible pour les défenseurs de {adversaire}. Cette double capacité à casser l'axe en fait un cauchemar à marquer pour n'importe quel arrière latéral.
+[89] GESTE_SIGNATURE/DEFAUT :: {joueur} déserte régulièrement l'axe pour se glisser dans les couloirs entre le latéral et le défenseur central de {adversaire}, zone toujours délicate à couvrir collectivement. Cette mobilité horizontale constante complique sérieusement les repères défensifs adverses.
+[90] GESTE_SIGNATURE/DEFAUT :: {joueur} enchaîne les une-deux avec ses partenaires les plus proches, remisant instantanément avant de relancer sa course pour recevoir le ballon en profondeur. Cette combinaison répétée prend systématiquement de vitesse le marquage individuel de {adversaire}.

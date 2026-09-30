@@ -38,7 +38,7 @@ from engine.models import MatchContext, PhraseCondition, Player
 # qui apparaitrait aussi (par accident futur) dans FM26_ATTRIBUTES serait lu
 # ici en premier -- voir tests/commentary/test_namespaces_attributs.py qui
 # verifie qu'aucune collision de ce genre n'existe aujourd'hui.
-PLAYER_FIELDS = frozenset({"age", "height_cm", "weak_foot"})
+PLAYER_FIELDS = frozenset({"age", "height_cm", "weak_foot", "foot"})
 
 # Champs lus directement sur MatchContext (dataclass).
 MATCH_CONTEXT_FIELDS = frozenset({"minute", "score_context"})

@@ -1,7 +1,13 @@
+from pathlib import Path
+from typing import Any
+
 import pytest
+import yaml
 
 from engine.conditions import ConditionAtom, evaluate_condition, parse_condition_atoms
 from engine.models import MatchContext, PhraseCondition, Player
+
+SCENARIOS_PATH = Path(__file__).resolve().parent.parent / "data" / "seed" / "scenarios.yml"
 
 
 def _player(**overrides) -> Player:
@@ -98,10 +104,94 @@ class TestEvaluateCondition:
         assert evaluate_condition(cond, _player(weak_foot=4), _context()) is True
         assert evaluate_condition(cond, _player(weak_foot=2), _context()) is False
 
+    def test_foot_field_distinguishes_natural_foot(self):
+        # Ajoute le 30/09/2026 (audit éditorial) : BUT/DEFAUT
+        # "{joueur} envoie un missile du pied droit..." n'était conditionnée
+        # que sur preferred_moves="Shoots With Power", sans rien sur le pied
+        # naturel -- un gaucher pur pouvait déclencher une phrase qui
+        # affirme un tir du pied droit (non-sens football). `foot` existe
+        # bien comme champ Player (engine/models.py) mais manquait de
+        # PLAYER_FIELDS : ce test verrouille sa résolution correcte,
+        # au-delà du seul cas de cette phrase.
+        cond = PhraseCondition(id=1, phrase_id=1, attribute="foot", operator="==", value='"Right"')
+        assert evaluate_condition(cond, _player(foot="Right"), _context()) is True
+        assert evaluate_condition(cond, _player(foot="Left"), _context()) is False
+
     def test_unknown_attribute_raises_instead_of_silently_never_matching(self):
         cond = PhraseCondition(id=1, phrase_id=1, attribute="nom_inconnu", operator=">=", value="1")
         with pytest.raises(ValueError, match="nom_inconnu"):
             evaluate_condition(cond, _player(), _context())
+
+
+class TestMissilePiedDroitNonSensFootballRegression:
+    """Non-regression sur la banque REELLE (data/seed/scenarios.yml), pas un
+    cas synthetique : verrouille le fix de l'audit editorial du 30/09/2026
+    (BUT/DEFAUT "...un missile du pied droit...") directement contre le YAML
+    livre, pas contre une copie recopiee a la main qui pourrait diverger."""
+
+    def _phrase_missile(self) -> dict[str, Any]:
+        with SCENARIOS_PATH.open(encoding="utf-8") as f:
+            scenarios = yaml.safe_load(f)
+        but = next(s for s in scenarios if s["code"] == "BUT")
+        for variant in but["variants"]:
+            for phrase in variant["phrases"]:
+                if "missile du pied droit" in phrase["text"]:
+                    return phrase
+        raise AssertionError("Phrase 'missile du pied droit' introuvable dans scenarios.yml")
+
+    def test_phrase_now_has_a_foot_condition(self):
+        phrase = self._phrase_missile()
+        attributs = {c["attribute"] for c in phrase["conditions"]}
+        assert "foot" in attributs, (
+            "La phrase 'missile du pied droit' doit conditionner sur `foot` -- "
+            "voir AUDIT_EDITORIAL_2026-09-30.md, Audit 5."
+        )
+
+    def test_pure_lefty_fails_at_least_one_mandatory_condition(self):
+        # C'est cette assertion qui, une fois phrase_selector implémenté,
+        # garantit que la phrase est ÉCARTÉE (pas seulement dépriorisée) pour
+        # un gaucher pur -- voir engine/phrase_selector.py, étape 4 de son
+        # algorithme prévu ("filtrer les phrases dont une condition
+        # mandatory=True échoue").
+        phrase = self._phrase_missile()
+        lefty = _player(foot="Left", preferred_moves=("Shoots With Power",))
+        ctx = _context()
+
+        conditions = [
+            PhraseCondition(
+                id=i,
+                phrase_id=1,
+                attribute=c["attribute"],
+                operator=c["operator"],
+                value=str(c["value"]),
+                mandatory=c.get("mandatory", True),
+            )
+            for i, c in enumerate(phrase["conditions"])
+        ]
+        resultats = {c.attribute: evaluate_condition(c, lefty, ctx) for c in conditions}
+        assert resultats["foot"] is False
+        assert not all(resultats.values())
+
+    def test_pure_righty_satisfies_all_conditions(self):
+        # Non-regression symetrique : le fix ne doit pas, par erreur, exclure
+        # aussi les droitiers pour lesquels la phrase reste parfaitement
+        # valide.
+        phrase = self._phrase_missile()
+        righty = _player(foot="Right", preferred_moves=("Shoots With Power",))
+        ctx = _context()
+
+        conditions = [
+            PhraseCondition(
+                id=i,
+                phrase_id=1,
+                attribute=c["attribute"],
+                operator=c["operator"],
+                value=str(c["value"]),
+                mandatory=c.get("mandatory", True),
+            )
+            for i, c in enumerate(phrase["conditions"])
+        ]
+        assert all(evaluate_condition(c, righty, ctx) for c in conditions)
 
 
 class TestNamespaceCollision:

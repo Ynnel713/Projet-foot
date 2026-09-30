@@ -7,6 +7,7 @@
     phrases:
     - text: '{joueur} voit rouge à la {minute}e minute, {club} devra finir à dix.'
       weight: 1.0
+      cooldown_matches: 10
       conditions: []
       slots:
       - slot_name: joueur
@@ -18,6 +19,7 @@
     - text: '{joueur} arrive tacle tendu, les crampons en avant, sur son adversaire
         : l''arbitre ne peut que sortir le carton rouge !'
       weight: 1.0
+      cooldown_matches: 10
       conditions:
       - attribute: Aggression
         operator: '>='
@@ -33,6 +35,7 @@
     - text: Complètement à côté de la plaque, {joueur} fauche son adversaire par derrière
         en pleine course, c'est le rouge direct !
       weight: 1.0
+      cooldown_matches: 10
       conditions:
       - attribute: Aggression
         operator: '>='
@@ -44,6 +47,7 @@
     - text: '{joueur} perd totalement son sang-froid et repousse violemment un adversaire,
         l''arbitre n''hésite pas une seconde : carton rouge !'
       weight: 1.0
+      cooldown_matches: 10
       conditions:
       - attribute: Aggression
         operator: '>='
@@ -55,6 +59,7 @@
     - text: Sur une intervention à retardement complètement inutile, {joueur} écope
         d'un second avertissement logique et voit rouge !
       weight: 1.0
+      cooldown_matches: 10
       conditions:
       - attribute: Aggression
         operator: '>='
@@ -66,6 +71,7 @@
     - text: '{joueur} envoie un coup de coude discret mais bien vu par l''arbitre,
         c''est exclusion immédiate !'
       weight: 1.0
+      cooldown_matches: 10
       conditions:
       - attribute: Aggression
         operator: '>='
@@ -77,6 +83,7 @@
     - text: '{joueur} n''a jamais su se contrôler et provoque un peu trop son adversaire,
         la sanction tombe : carton rouge !'
       weight: 1.0
+      cooldown_matches: 10
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -92,6 +99,7 @@
     - text: Après avoir contesté chaque décision depuis le coup d'envoi, {joueur}
         finit par craquer nerveusement face à l'arbitre et voit rouge !
       weight: 1.0
+      cooldown_matches: 10
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -107,6 +115,7 @@
     - text: Le ton monte soudainement entre les deux équipes, une échauffourée générale
         éclate au milieu du terrain, {joueur} en ressort exclu !
       weight: 1.0
+      cooldown_matches: 10
       conditions:
       - attribute: Aggression
         operator: '>='
@@ -118,6 +127,7 @@
     - text: Après un tacle litigieux, plusieurs joueurs se bousculent violemment,
         {joueur} se retrouve au cœur de la bagarre et prend un rouge direct !
       weight: 1.0
+      cooldown_matches: 10
       conditions:
       - attribute: Aggression
         operator: '>='
@@ -129,6 +139,7 @@
     - text: 'Le contact était anodin, mais tout dégénère : une mêlée générale se forme,
         {joueur} y perd son sang-froid et voit rouge !'
       weight: 1.0
+      cooldown_matches: 10
       conditions:
       - attribute: Aggression
         operator: '>='
@@ -140,6 +151,7 @@
     - text: '{joueur} se rue vers le lieu de l''incident et se jette dans la bagarre
         générale, l''arbitre l''exclut sans hésiter !'
       weight: 1.0
+      cooldown_matches: 10
       conditions:
       - attribute: Aggression
         operator: '>='
@@ -151,6 +163,7 @@
     - text: 'Tensions à leur comble : {joueur} en vient aux mains avec un adversaire
         au milieu d''une échauffourée monumentale, c''est rouge !'
       weight: 1.0
+      cooldown_matches: 10
       conditions:
       - attribute: Aggression
         operator: '>='
@@ -162,6 +175,7 @@
     - text: Frustré par le scénario du match, {joueur} craque nerveusement dans le
         money time et voit rouge après une faute grossière !
       weight: 1.0
+      cooldown_matches: 10
       conditions:
       - attribute: minute
         operator: '>='
@@ -177,6 +191,7 @@
     - text: Dans les dernières minutes, {joueur} perd patience et se venge d'un tacle
         dangereux, l'arbitre siffle immédiatement l'exclusion !
       weight: 1.0
+      cooldown_matches: 10
       conditions:
       - attribute: minute
         operator: '>='
@@ -188,6 +203,7 @@
     - text: '{joueur} agrippe son adversaire lancé seul au but et l''empêche irrégulièrement
         de filer, c''est un rouge indiscutable pour faute sur occasion nette !'
       weight: 1.0
+      cooldown_matches: 10
       conditions: []
       slots:
       - slot_name: joueur
@@ -195,6 +211,7 @@
     - text: '{joueur} arrive lancé et percute son adversaire à pleine vitesse sans
         jouer le ballon, l''arbitre sort logiquement le rouge !'
       weight: 1.0
+      cooldown_matches: 10
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -210,6 +227,7 @@
     - text: Complètement excédé par la physicalité du match, {joueur} répond à une
         provocation par un geste incontrôlé et voit rouge !
       weight: 1.0
+      cooldown_matches: 10
       conditions:
       - attribute: Aggression
         operator: '>='
@@ -221,6 +239,7 @@
     - text: '{joueur} tente un tacle désespéré et touche l''adversaire bien avant
         le ballon, l''arbitre n''a pas d''autre choix que l''exclusion !'
       weight: 1.0
+      cooldown_matches: 10
       conditions:
       - attribute: Aggression
         operator: '>='
@@ -232,6 +251,7 @@
     - text: Sous le coup de la frustration, {joueur} donne un coup de tête à son vis-à-vis
         en pleine échauffourée, exclusion immédiate !
       weight: 1.0
+      cooldown_matches: 10
       conditions:
       - attribute: Aggression
         operator: '>='
@@ -243,6 +263,7 @@
     - text: '{joueur} craque après avoir été chambré toute la rencontre par les joueurs
         de {adversaire}, il répond violemment et voit rouge !'
       weight: 1.0
+      cooldown_matches: 10
       conditions:
       - attribute: Aggression
         operator: '>='
@@ -256,6 +277,7 @@
     - text: Après un but litigieux, plusieurs joueurs des deux équipes se retrouvent
         au corps à corps, {joueur} en fait les frais et est exclu !
       weight: 1.0
+      cooldown_matches: 10
       conditions:
       - attribute: Aggression
         operator: '>='
@@ -267,6 +289,7 @@
     - text: Ça chauffe méchamment devant les bancs de touche, {joueur} se précipite
         dans la mêlée et se fait exclure pour son geste déplacé !
       weight: 1.0
+      cooldown_matches: 10
       conditions:
       - attribute: Aggression
         operator: '>='
@@ -278,6 +301,7 @@
     - text: L'échauffourée dégénère complètement, {joueur} pousse violemment un adversaire
         au sol, direction les vestiaires !
       weight: 1.0
+      cooldown_matches: 10
       conditions:
       - attribute: Aggression
         operator: '>='
@@ -289,6 +313,7 @@
     - text: Après une faute grossière non sifflée, {joueur} décide de se faire justice
         lui-même et se fait exclure pour son geste de trop !
       weight: 1.0
+      cooldown_matches: 10
       conditions:
       - attribute: Aggression
         operator: '>='
@@ -300,6 +325,7 @@
     - text: '{joueur} allume la mèche d''une bagarre générale en provoquant ouvertement
         ses adversaires, l''arbitre l''exclut sans détour !'
       weight: 1.0
+      cooldown_matches: 10
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -315,6 +341,7 @@
     - text: '{joueur} arrive fort sur le porteur du ballon, sans intention de le jouer,
         et écope logiquement d''un carton rouge direct !'
       weight: 1.0
+      cooldown_matches: 10
       conditions:
       - attribute: Tackling
         operator: '>='
@@ -331,6 +358,7 @@
         contre-attaque et voit rouge pour avoir privé l''adversaire d''une occasion
         manifeste de but !'
       weight: 1.0
+      cooldown_matches: 10
       conditions: []
       slots:
       - slot_name: joueur
@@ -339,6 +367,7 @@
         contact litigieux, l''arbitre exclut {joueur} après consultation de son assistant
         !'
       weight: 1.0
+      cooldown_matches: 10
       conditions:
       - attribute: Aggression
         operator: '>='
@@ -354,6 +383,7 @@
     - text: '{joueur} répond du tac au tac à une provocation et se fait justice, c''est
         un rouge sévère mais logique au regard du règlement !'
       weight: 1.0
+      cooldown_matches: 10
       conditions:
       - attribute: Aggression
         operator: '>='
@@ -365,6 +395,7 @@
     - text: L'ambiance est électrique depuis le coup d'envoi, {joueur} finit par exploser
         nerveusement et voit rouge après une altercation généralisée !
       weight: 1.0
+      cooldown_matches: 10
       conditions:
       - attribute: Aggression
         operator: '>='
@@ -387,6 +418,7 @@
     - text: Depuis l'extérieur de la surface, {joueur} arme une frappe surpuissante
         qui ne laisse aucune chance au gardien de {adversaire} !
       weight: 1.0
+      cooldown_matches: 3
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -400,6 +432,7 @@
     - text: Le ballon traîne à l'entrée de la surface, {joueur} ne réfléchit pas une
         seconde et catapulte une reprise de volée en pleine lucarne !
       weight: 1.0
+      cooldown_matches: 3
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -411,6 +444,7 @@
     - text: '{joueur} ajuste sa course, enroule sa frappe et vient loger le ballon
         dans la lucarne opposée, hors de portée du gardien !'
       weight: 1.0
+      cooldown_matches: 3
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -422,6 +456,7 @@
     - text: Le gardien de {adversaire} s'avance un peu trop, {joueur} ne tremble pas
         et le lobe avec un sang-froid déconcertant !
       weight: 1.0
+      cooldown_matches: 3
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -435,6 +470,7 @@
     - text: Plutôt que de frapper de toutes ses forces, {joueur} garde la tête froide
         et place sa frappe le long du poteau, imparable !
       weight: 1.0
+      cooldown_matches: 3
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -446,10 +482,15 @@
     - text: '{joueur} envoie un missile du pied droit : la barre transversale tremble
         encore avant que le ballon ne finisse au fond des filets !'
       weight: 1.0
+      cooldown_matches: 3
       conditions:
       - attribute: preferred_moves
         operator: contient
         value: Shoots With Power
+        mandatory: true
+      - attribute: foot
+        operator: ==
+        value: '"Right"'
         mandatory: true
       slots:
       - slot_name: joueur
@@ -457,6 +498,7 @@
     - text: Centre repoussé par la défense, mais {joueur} s'envole et conclut d'une
         retournée acrobatique du plus bel effet !
       weight: 1.0
+      cooldown_matches: 3
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -468,6 +510,7 @@
     - text: '{joueur} efface le gardien de {adversaire} d''un crochet et pousse tranquillement
         le ballon au fond des filets vides !'
       weight: 1.0
+      cooldown_matches: 3
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -481,6 +524,7 @@
     - text: '{joueur} part de son propre camp, élimine deux adversaires balle au pied
         et conclut sa chevauchée solitaire en beauté !'
       weight: 1.0
+      cooldown_matches: 3
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -492,6 +536,7 @@
     - text: '{joueur} élimine son vis-à-vis d''un contrôle orienté et frappe sans
         laisser au gardien le temps de réagir !'
       weight: 1.0
+      cooldown_matches: 3
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -503,6 +548,7 @@
     - text: '{joueur} rentre sur son pied fort depuis la gauche et enroule une frappe
         qui finit sa course dans la lucarne !'
       weight: 1.0
+      cooldown_matches: 3
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -514,6 +560,7 @@
     - text: '{joueur} coupe vers l''intérieur depuis la droite et décoche une frappe
         croisée qui trompe totalement le gardien !'
       weight: 1.0
+      cooldown_matches: 3
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -525,6 +572,7 @@
     - text: Après un festival de gestes techniques, {joueur} sème son défenseur et
         ajuste le gardien avec un calme royal !
       weight: 1.0
+      cooldown_matches: 3
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -536,6 +584,7 @@
     - text: D'un piqué de l'extérieur du pied, {joueur} surprend tout le monde et
         trouve la lucarne dans un silence de cathédrale !
       weight: 1.0
+      cooldown_matches: 3
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -547,6 +596,7 @@
     - text: '{joueur} prend le piège du hors-jeu à revers, s''échappe seul face au
         gardien de {adversaire} et ne tremble pas devant le but vide !'
       weight: 1.0
+      cooldown_matches: 3
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -560,6 +610,7 @@
     - text: 'Coup franc à vingt mètres : {joueur} frappe une bombe qui explose sous
         la barre transversale, le mur n''a rien pu faire !'
       weight: 1.0
+      cooldown_matches: 3
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -571,6 +622,7 @@
     - text: '{joueur} s''élance sur ce coup franc lointain et trouve l''angle parfait,
         un missile totalement imparable !'
       weight: 1.0
+      cooldown_matches: 3
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -582,6 +634,7 @@
     - text: 'Un pur instinct de renard des surfaces : {joueur} devance tout le monde
         sur le ballon repoussé et pousse au fond des filets !'
       weight: 1.0
+      cooldown_matches: 3
       conditions:
       - attribute: Finishing
         operator: '>='
@@ -593,6 +646,7 @@
     - text: '{joueur} slalome entre trois défenseurs de {adversaire} comme s''ils
         n''existaient pas et conclut d''un geste chirurgical !'
       weight: 1.0
+      cooldown_matches: 3
       conditions:
       - attribute: Dribbling
         operator: '>='
@@ -606,6 +660,7 @@
     - text: Lancé dans le dos de la défense, {joueur} grille tout le monde à la course
         et ajuste un gardien à bout de souffle !
       weight: 1.0
+      cooldown_matches: 3
       conditions:
       - attribute: Pace
         operator: '>='
@@ -621,6 +676,7 @@
     - text: '{joueur} tient son défenseur à distance d''un bras de fer, protège le
         ballon puis le catapulte au fond des filets !'
       weight: 1.0
+      cooldown_matches: 3
       conditions:
       - attribute: Strength
         operator: '>='
@@ -632,6 +688,7 @@
     - text: Contrôle orienté sublime de {joueur}, qui élimine son marqueur d'un seul
         geste et ajuste le gardien sans trembler !
       weight: 1.0
+      cooldown_matches: 3
       conditions:
       - attribute: Technique
         operator: '>='
@@ -643,6 +700,7 @@
     - text: Dans le money time, {joueur} s'élève au-dessus de tout le monde et place
         une tête rageuse au fond des filets !
       weight: 1.0
+      cooldown_matches: 3
       conditions:
       - attribute: Heading
         operator: '>='
@@ -658,6 +716,7 @@
     - text: '{joueur} ouvre le score et libère tout le stade, {club} prend un avantage
         psychologique précieux !'
       weight: 1.0
+      cooldown_matches: 3
       conditions:
       - attribute: score_context
         operator: ==
@@ -671,6 +730,7 @@
     - text: '{joueur} redonne l''avantage à {club} d''une réalisation qui fait basculer
         le match !'
       weight: 1.0
+      cooldown_matches: 3
       conditions:
       - attribute: score_context
         operator: ==
@@ -684,6 +744,7 @@
     - text: '{joueur} relance les siens en réduisant l''écart, {club} y croit de nouveau
         après ce but plein de caractère !'
       weight: 1.0
+      cooldown_matches: 3
       conditions:
       - attribute: score_context
         operator: ==
@@ -697,6 +758,7 @@
     - text: '{joueur} enfonce le clou et creuse un peu plus l''écart pour {club},
         {adversaire} semble abattu !'
       weight: 1.0
+      cooldown_matches: 3
       conditions:
       - attribute: score_context
         operator: ==
@@ -712,6 +774,7 @@
     - text: Dans les arrêts de jeu, {joueur} surgit au second poteau et offre un but
         improbable à {club}, le stade explose !
       weight: 1.0
+      cooldown_matches: 3
       conditions:
       - attribute: minute
         operator: '>='
@@ -725,6 +788,7 @@
     - text: Sur une action collective léchée, {joueur} conclut avec sang-froid un
         mouvement initié depuis le milieu de terrain !
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: joueur
@@ -732,6 +796,7 @@
     - text: '{joueur} exploite la moindre faille dans la défense de {adversaire} et
         ne laisse aucune chance au gardien !'
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: joueur
@@ -745,6 +810,7 @@
     - text: '{joueur} s''avance sereinement, prend une profonde inspiration et envoie
         le penalty en pleine lucarne, imparable !'
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: joueur
@@ -752,6 +818,7 @@
     - text: '{joueur} ne change pas sa course, frappe fort et au centre : le gardien
         s''est jeté, mais le ballon rentre en plein milieu !'
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: joueur
@@ -759,6 +826,7 @@
     - text: 'Sang-froid total : {joueur} attend que le gardien de {adversaire} se
         couche et pousse tranquillement le ballon de l''autre côté !'
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: joueur
@@ -768,6 +836,7 @@
     - text: '{joueur} tente une Panenka totalement décomplexée, le ballon finit tout
         doucement au fond sous les huées du public adverse !'
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: joueur
@@ -775,6 +844,7 @@
     - text: '{joueur} frappe une fusée dans l''angle, le gardien part du bon côté
         mais ne peut rien faire face à tant de puissance !'
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: joueur
@@ -782,6 +852,7 @@
     - text: Après un temps d'arrêt interminable, {joueur} déroute le gardien d'un
         enchaînement de petits pas et loge le ballon à l'opposé !
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: joueur
@@ -789,6 +860,7 @@
     - text: '{joueur} ne laisse paraître aucune émotion, frappe sèchement et bas dans
         le coin, le gardien est resté cloué sur place !'
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: joueur
@@ -796,6 +868,7 @@
     - text: Le stade retient son souffle, {joueur} prend son élan et catapulte le
         ballon au ras du poteau, personne n'y peut rien !
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: joueur
@@ -803,6 +876,7 @@
     - text: '{joueur} place son penalty avec une précision chirurgicale dans la lucarne
         opposée, le gardien de {adversaire} n''a même pas bougé !'
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: joueur
@@ -812,6 +886,7 @@
     - text: D'un tir croisé et puissant, {joueur} transforme sans trembler ce penalty
         décisif !
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: joueur
@@ -819,6 +894,7 @@
     - text: '{joueur} feinte sa course d''un temps suspendu et surprend totalement
         le gardien, qui s''écroule du mauvais côté !'
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: joueur
@@ -826,6 +902,7 @@
     - text: '{joueur} frappe fort et haut, le ballon claque sous la barre avant de
         finir au fond des filets !'
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: joueur
@@ -833,6 +910,7 @@
     - text: Malgré la pression, {joueur} garde son sang-froid et ajuste parfaitement
         sa frappe dans la lucarne !
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: joueur
@@ -840,6 +918,7 @@
     - text: '{joueur} ne tremble pas d''un poil et transforme ce penalty capital comme
         si de rien n''était !'
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: joueur
@@ -847,6 +926,7 @@
     - text: '{joueur} choisit son côté avec assurance, frappe puissamment et voit
         le ballon se loger au fond, sans appel !'
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: joueur
@@ -859,6 +939,7 @@
         tête dans les filets, laissant le gardien de {adversaire} totalement immobile
         !
       weight: 0.4
+      cooldown_matches: 3
       conditions:
       - attribute: height_cm
         operator: '>='
@@ -874,6 +955,7 @@
     - text: L'éclair prend de vitesse toute la défense de {adversaire} et vient conclure
         d'un sang-froid déconcertant !
       weight: 0.4
+      cooldown_matches: 3
       conditions:
       - attribute: Pace
         operator: '>='
@@ -885,6 +967,7 @@
     - text: Le bulldozer repousse deux défenseurs d'un bras et catapulte le ballon
         au fond des filets malgré le contact !
       weight: 0.4
+      cooldown_matches: 3
       conditions:
       - attribute: Strength
         operator: '>='
@@ -894,6 +977,7 @@
     - text: Le renard des surfaces sent le bon coup avant tout le monde et pousse
         le ballon au fond sans même y penser !
       weight: 0.4
+      cooldown_matches: 3
       conditions:
       - attribute: Finishing
         operator: '>='
@@ -903,6 +987,7 @@
     - text: Le magicien efface deux adversaires de {adversaire} d'un enchaînement
         de crochets et ajuste le gardien avec une facilité déconcertante !
       weight: 0.4
+      cooldown_matches: 3
       conditions:
       - attribute: Technique
         operator: '>='
@@ -918,6 +1003,7 @@
     - text: Le prodige, à peine sorti de l'adolescence, inscrit déjà un but d'une
         maturité folle pour {club} !
       weight: 0.4
+      cooldown_matches: 3
       conditions:
       - attribute: age
         operator: <=
@@ -929,6 +1015,7 @@
     - text: Le vétéran prouve que l'expérience n'a pas d'âge et conclut avec la même
         sérénité qu'à ses débuts !
       weight: 0.4
+      cooldown_matches: 3
       conditions:
       - attribute: age
         operator: '>='
@@ -938,6 +1025,7 @@
     - text: L'artificier arme son pied et envoie un missile qui explose au fond des
         filets sur ce coup franc !
       weight: 0.4
+      cooldown_matches: 3
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -951,6 +1039,7 @@
     - text: Le canonnier décoche une frappe surpuissante qui ne laisse absolument
         aucune chance au gardien de {adversaire} !
       weight: 0.4
+      cooldown_matches: 3
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -966,6 +1055,7 @@
     - text: Le feu follet se faufile entre les jambes de deux défenseurs bien plus
         costauds que lui et ajuste le gardien avec malice !
       weight: 0.4
+      cooldown_matches: 3
       conditions:
       - attribute: height_cm
         operator: <=
@@ -979,6 +1069,7 @@
     - text: Ambidextre redoutable, le métronome place sa frappe du pied qu'on n'attendait
         pas, complètement imprenable !
       weight: 0.4
+      cooldown_matches: 3
       conditions:
       - attribute: weak_foot
         operator: '>='
@@ -988,6 +1079,7 @@
     - text: Le chef d'orchestre profite d'un relâchement adverse pour surgir lui-même
         et conclure d'une frappe limpide !
       weight: 0.4
+      cooldown_matches: 3
       conditions:
       - attribute: Vision
         operator: '>='
@@ -997,6 +1089,7 @@
     - text: La tour domine tous les débats aériens et place une tête surpuissante
         que personne n'a pu contester !
       weight: 0.4
+      cooldown_matches: 3
       conditions:
       - attribute: Heading
         operator: '>='
@@ -1010,6 +1103,7 @@
     - text: La fusée grille tout le monde dans le money time et vient crucifier {adversaire}
         en contre !
       weight: 0.4
+      cooldown_matches: 3
       conditions:
       - attribute: Pace
         operator: '>='
@@ -1025,6 +1119,7 @@
     - text: Le spécialiste s'élance sur ce coup franc lointain et trouve l'angle parfait,
         un vrai geste d'orfèvre !
       weight: 0.4
+      cooldown_matches: 3
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -1045,6 +1140,7 @@
     - text: '{joueur} frappe fort au centre, mais le gardien de {adversaire} reste
         debout et capte le ballon sans bouger d''un pouce !'
       weight: 1.0
+      cooldown_matches: 6
       conditions: []
       slots:
       - slot_name: joueur
@@ -1054,6 +1150,7 @@
     - text: Le gardien plonge du bon côté et repousse d'une claquette autoritaire
         la tentative de {joueur} !
       weight: 1.0
+      cooldown_matches: 6
       conditions: []
       slots:
       - slot_name: joueur
@@ -1061,6 +1158,7 @@
     - text: '{joueur} tente de placer sa frappe, mais le gardien s''étire et détourne
         le ballon du bout des doigts !'
       weight: 1.0
+      cooldown_matches: 6
       conditions: []
       slots:
       - slot_name: joueur
@@ -1068,6 +1166,7 @@
     - text: Le gardien de {adversaire} devine parfaitement le côté choisi par {joueur}
         et bloque le tir sans trembler !
       weight: 1.0
+      cooldown_matches: 6
       conditions: []
       slots:
       - slot_name: adversaire
@@ -1077,6 +1176,7 @@
     - text: '{joueur} frappe puissamment mais le ballon s''écrase sur le poteau et
         revient en jeu, quelle occasion manquée !'
       weight: 1.0
+      cooldown_matches: 6
       conditions: []
       slots:
       - slot_name: joueur
@@ -1084,6 +1184,7 @@
     - text: La frappe de {joueur} heurte le montant dans un bruit sourd, le penalty
         ne rentrera pas cette fois !
       weight: 1.0
+      cooldown_matches: 6
       conditions: []
       slots:
       - slot_name: joueur
@@ -1091,6 +1192,7 @@
     - text: '{joueur} ajuste trop son tir, le ballon touche le poteau et file hors
         du cadre, la frustration est immense !'
       weight: 1.0
+      cooldown_matches: 6
       conditions: []
       slots:
       - slot_name: joueur
@@ -1098,6 +1200,7 @@
     - text: '{joueur} envoie une frappe surpuissante qui s''écrase sur la barre transversale
         avant de rebondir loin du but !'
       weight: 1.0
+      cooldown_matches: 6
       conditions: []
       slots:
       - slot_name: joueur
@@ -1105,6 +1208,7 @@
     - text: Le tir de {joueur} claque contre la barre dans un fracas terrible, le
         ballon repart aussitôt en jeu !
       weight: 1.0
+      cooldown_matches: 6
       conditions: []
       slots:
       - slot_name: joueur
@@ -1112,6 +1216,7 @@
     - text: '{joueur} frappe fort et haut, un peu trop haut : le ballon percute la
         barre et s''envole au-dessus des cages !'
       weight: 1.0
+      cooldown_matches: 6
       conditions: []
       slots:
       - slot_name: joueur
@@ -1119,6 +1224,7 @@
     - text: '{joueur} précipite sa frappe, le ballon file largement au-dessus de la
         barre sous les sifflets du public !'
       weight: 1.0
+      cooldown_matches: 6
       conditions: []
       slots:
       - slot_name: joueur
@@ -1126,6 +1232,7 @@
     - text: '{joueur} manque totalement son ajustement et envoie le ballon loin à
         côté du poteau, une occasion complètement gâchée !'
       weight: 1.0
+      cooldown_matches: 6
       conditions: []
       slots:
       - slot_name: joueur
@@ -1133,6 +1240,7 @@
     - text: La frappe de {joueur} part hors cadre, le ballon termine sa course dans
         les tribunes !
       weight: 1.0
+      cooldown_matches: 6
       conditions: []
       slots:
       - slot_name: joueur
@@ -1140,6 +1248,7 @@
     - text: '{joueur} tire trop mollement et à côté, le gardien de {adversaire} n''a
         même pas eu besoin de plonger !'
       weight: 1.0
+      cooldown_matches: 6
       conditions: []
       slots:
       - slot_name: joueur
@@ -1149,6 +1258,7 @@
     - text: '{joueur} rate complètement son penalty, la frappe s''envole très loin
         au-dessus de la transversale !'
       weight: 1.0
+      cooldown_matches: 6
       conditions: []
       slots:
       - slot_name: joueur
@@ -1163,6 +1273,7 @@
     - text: 'Coup franc excentré côté droit : {passeur} enroule un centre parfait
         vers le second poteau, en plein sur la tête de {receveur} !'
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: passeur
@@ -1172,6 +1283,7 @@
     - text: Sur ce coup franc lointain, {passeur} choisit de centrer en cloche par-dessus
         le mur, {receveur} s'élève totalement libre dans la surface !
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: passeur
@@ -1181,6 +1293,7 @@
     - text: '{passeur} centre le coup franc au point de penalty, {receveur} s''impose
         dans les airs face à sa marque !'
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: passeur
@@ -1190,6 +1303,7 @@
     - text: D'un coup franc excentré, {passeur} trouve le second poteau où {receveur}
         attend, seul, prêt à reprendre de la tête !
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: passeur
@@ -1199,6 +1313,7 @@
     - text: '{passeur} envoie son coup franc en cloche jusqu''au premier poteau, où
         {receveur} peut dévier du crâne vers le but adverse !'
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: passeur
@@ -1208,6 +1323,7 @@
     - text: 'Sur ce coup franc, la défense de {adversaire} monte trop tard : {receveur}
         se retrouve totalement libre pour reprendre le centre de {passeur} !'
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: adversaire
@@ -1219,6 +1335,7 @@
     - text: Sur ce coup franc proche de la surface, le mur repousse le premier ballon,
         {receveur} récupère le cuir à l'entrée de la surface, totalement libre !
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: receveur
@@ -1226,6 +1343,7 @@
     - text: '{passeur} joue son coup franc en retrait pour {receveur}, qui se présente
         idéalement aux abords de la surface !'
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: passeur
@@ -1235,6 +1353,7 @@
     - text: 'Coup franc rapidement négocié : {passeur} sert {receveur} en retrait,
         à quelques mètres seulement des buts de {adversaire} !'
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: passeur
@@ -1246,6 +1365,7 @@
     - text: Sur ce coup franc, {passeur} trouve un ballon dévié qui retombe idéalement
         dans les pieds de {receveur}, aux abords de la surface !
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: passeur
@@ -1255,6 +1375,7 @@
     - text: '{passeur} centre le coup franc à ras de terre, {receveur} n''a plus qu''à
         ajuster sa position à bout portant !'
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: passeur
@@ -1264,6 +1385,7 @@
     - text: '{passeur} joue le coup franc à ras de terre en une-deux avec {receveur},
         prenant toute la défense à contre-pied !'
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: passeur
@@ -1273,6 +1395,7 @@
     - text: 'Coup franc joué rapidement : {passeur} et {receveur} combinent en une
         touche de balle sous les yeux surpris de {adversaire} !'
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: passeur
@@ -1284,6 +1407,7 @@
     - text: '{passeur} surprend tout le monde en jouant vite son coup franc vers {receveur},
         démarqué dans un couloir de passe parfait !'
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: passeur
@@ -1293,6 +1417,7 @@
     - text: Sur ce coup franc à deux, {passeur} décale {receveur} d'une touche subtile
         avant que la défense n'ait pu se replacer !
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: passeur
@@ -1302,6 +1427,7 @@
     - text: Le mur dévie le coup franc de {passeur}, mais le ballon retombe idéalement
         dans les pieds de {receveur}, à bonne distance des buts !
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: passeur
@@ -1311,6 +1437,7 @@
     - text: '{passeur} frappe son coup franc en cloche vers l''opposé, {receveur}
         contrôle avec du champ devant lui, loin de la défense adverse !'
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: passeur
@@ -1320,6 +1447,7 @@
     - text: La défense de {adversaire} repousse mal ce coup franc, le ballon revient
         tout droit dans les pieds de {receveur}, qui a le temps de s'installer !
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: adversaire
@@ -1329,6 +1457,7 @@
     - text: '{passeur} glisse son coup franc en profondeur, {receveur} s''échappe
         seul face au gardien de {adversaire} !'
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: passeur
@@ -1340,6 +1469,7 @@
     - text: 'Coup franc joué à la perfection : {passeur} trouve {receveur} dans le
         dos de la défense, hors de portée de {adversaire} !'
       weight: 1.0
+      cooldown_matches: 3
       conditions: []
       slots:
       - slot_name: passeur
@@ -1358,6 +1488,7 @@
     - text: '{passeur} glisse un ballon filtrant entre deux défenseurs, {receveur}
         s''échappe seul face au gardien de {adversaire} !'
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: passeur
@@ -1369,6 +1500,7 @@
     - text: Sur un décalage parfait, {passeur} trouve {receveur} dans la profondeur,
         hors de portée de la défense de {adversaire} !
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: passeur
@@ -1380,6 +1512,7 @@
     - text: '{passeur} casse les lignes d''une passe millimétrée, {receveur} se retrouve
         en tête-à-tête avec le gardien !'
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: passeur
@@ -1389,6 +1522,7 @@
     - text: D'un extérieur du pied génial, {passeur} envoie {receveur} dans le dos
         de la défense de {adversaire} !
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: passeur
@@ -1400,6 +1534,7 @@
     - text: '{passeur} centre depuis l''aile droite, {receveur} s''élève au premier
         poteau dans la surface adverse !'
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: passeur
@@ -1409,6 +1544,7 @@
     - text: Après un débordement côté gauche, {passeur} centre au cordeau, {receveur}
         arrive lancé au second poteau !
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: passeur
@@ -1418,6 +1554,7 @@
     - text: '{passeur} trouve l''espace sur le côté et envoie un centre piqué exactement
         sur la tête de {receveur} !'
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: passeur
@@ -1427,6 +1564,7 @@
     - text: Sur un corner, {passeur} envoie le ballon au point de penalty, {receveur}
         s'impose dans les airs face à sa marque !
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: passeur
@@ -1436,6 +1574,7 @@
     - text: '{passeur} joue un une-deux rapide avec {receveur} à l''entrée de la surface,
         la défense de {adversaire} est prise de vitesse !'
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: passeur
@@ -1447,6 +1586,7 @@
     - text: Belle série de passes courtes entre {passeur} et {receveur}, qui se retrouve
         idéalement placé aux abords de la surface !
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: passeur
@@ -1456,6 +1596,7 @@
     - text: '{passeur} remise instinctivement pour {receveur}, surgi dans son dos
         à l''entrée de la surface !'
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: passeur
@@ -1465,6 +1606,7 @@
     - text: Sur un mouvement collectif léché, {passeur} sert {receveur} en une touche
         de balle au cœur de la défense !
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: passeur
@@ -1474,6 +1616,7 @@
     - text: '{passeur} déborde sur le côté et centre en retrait pour {receveur}, totalement
         démarqué à l''entrée de la surface !'
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: passeur
@@ -1483,6 +1626,7 @@
     - text: '{passeur} récupère le ballon après un pressing haut et le repique instantanément
         vers {receveur}, à quelques mètres du but !'
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: passeur
@@ -1492,6 +1636,7 @@
     - text: '{passeur} élimine son vis-à-vis puis décale {receveur}, seul face aux
         buts adverses !'
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: passeur
@@ -1501,6 +1646,7 @@
     - text: '{passeur} change le jeu d''un long ballon vers l''aile opposée, {receveur}
         contrôle et se retrouve avec du champ devant lui !'
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: passeur
@@ -1511,6 +1657,7 @@
         ballon retombe idéalement dans les pieds de {receveur}, loin de la surface
         !
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: club
@@ -1522,6 +1669,7 @@
     - text: '{passeur} récupère un ballon aérien et le remet en retrait, {receveur}
         se retrouve seul à distance des buts, avec le temps de s''installer !'
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: passeur
@@ -1531,6 +1679,7 @@
     - text: '{joueur} récupère le ballon dans son camp et s''élance en solitaire,
         éliminant un premier adversaire d''un crochet sec !'
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: joueur
@@ -1538,6 +1687,7 @@
     - text: '{joueur} enchaîne les contrôles et repique dans l''axe après un long
         rush balle au pied, ouvrant un boulevard devant lui !'
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: joueur
@@ -1552,6 +1702,7 @@
     - text: '{joueur} sort une claquette monumentale pour repousser la frappe surpuissante
         d''un attaquant de {adversaire} !'
       weight: 1.0
+      cooldown_matches: 2
       conditions:
       - attribute: score_context
         operator: ==
@@ -1565,6 +1716,7 @@
     - text: D'un réflexe stupéfiant, {joueur} détourne le ballon du bout des doigts
         et l'envoie en corner !
       weight: 1.0
+      cooldown_matches: 2
       conditions:
       - attribute: score_context
         operator: ==
@@ -1576,6 +1728,7 @@
     - text: '{joueur} s''étire de tout son long et repousse le tir croisé, sauvant
         {club} d''un but presque certain !'
       weight: 1.0
+      cooldown_matches: 2
       conditions:
       - attribute: score_context
         operator: ==
@@ -1589,6 +1742,7 @@
     - text: Sur cette tête plongeante d'un joueur de {adversaire}, {joueur} sort un
         arrêt réflexe des grands soirs !
       weight: 1.0
+      cooldown_matches: 2
       conditions:
       - attribute: score_context
         operator: ==
@@ -1602,6 +1756,7 @@
     - text: '{joueur} devine la trajectoire et capte le ballon en pleine lucarne sans
         bouger d''un pouce !'
       weight: 1.0
+      cooldown_matches: 2
       conditions:
       - attribute: score_context
         operator: ==
@@ -1613,6 +1768,7 @@
     - text: Face à un attaquant lancé seul, {joueur} sort à la limite de sa surface
         et repousse le tir du pied !
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: joueur
@@ -1620,6 +1776,7 @@
     - text: '{joueur} boxe le centre dangereux avec autorité, dégageant le danger
         loin de sa surface !'
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: joueur
@@ -1627,6 +1784,7 @@
     - text: Sur cette frappe enroulée qui semblait imparable, {joueur} s'envole et
         détourne le ballon en corner !
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: joueur
@@ -1634,6 +1792,7 @@
     - text: '{joueur} réalise un double arrêt phénoménal, repoussant d''abord puis
         captant le ballon sur le rebond !'
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: joueur
@@ -1641,6 +1800,7 @@
     - text: Malgré une frappe surpuissante à bout portant, {joueur} garde les mains
         fermes et capte le ballon !
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: joueur
@@ -1648,6 +1808,7 @@
     - text: '{joueur} sort une main ferme pour dévier la frappe lointaine juste à
         côté du poteau !'
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: joueur
@@ -1655,6 +1816,7 @@
     - text: '{joueur} suit parfaitement la trajectoire du coup franc et capte le ballon
         avec autorité malgré le monde autour de lui !'
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: joueur
@@ -1662,6 +1824,7 @@
     - text: Dans un money time à couper le souffle, {joueur} repousse la tentative
         désespérée d'un joueur de {adversaire} !
       weight: 1.0
+      cooldown_matches: 2
       conditions:
       - attribute: minute
         operator: '>='
@@ -1679,6 +1842,7 @@
     - text: '{joueur} n''est pas pris à défaut par la déviation surprise et sort un
         réflexe exceptionnel pour sauver son but !'
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: joueur
@@ -1686,6 +1850,7 @@
     - text: Dès les premières minutes, {joueur} doit déjà s'employer et repousse un
         tir croisé du bout du pied !
       weight: 1.0
+      cooldown_matches: 2
       conditions:
       - attribute: minute
         operator: <=
@@ -1697,6 +1862,7 @@
     - text: '{joueur} plonge à ras de terre et détourne in extremis une frappe qui
         filait au ras du poteau !'
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: joueur
@@ -1704,6 +1870,7 @@
     - text: Sur une reprise de volée surprise, {joueur} réagit au quart de tour et
         capte le ballon en pleine course !
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: joueur
@@ -1711,6 +1878,7 @@
     - text: '{joueur} s''impose dans les airs et capte le corner dangereux devant
         une nuée d''attaquants de {adversaire} !'
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: joueur
@@ -1720,6 +1888,7 @@
     - text: Complètement à contre-pied, {joueur} se détend malgré tout et repousse
         le ballon du bout des gants !
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: joueur
@@ -1727,6 +1896,7 @@
     - text: '{joueur} sort victorieux de ce face-à-face, refermant l''angle au bon
         moment pour bloquer la frappe !'
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: joueur
@@ -1734,6 +1904,7 @@
     - text: '{joueur} détourne en catastrophe une déviation contre son camp, sauvant
         {club} d''un but gag !'
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: joueur
@@ -1743,6 +1914,7 @@
     - text: Sur cette frappe surpuissante des vingt mètres, {joueur} s'envole et repousse
         le ballon par-dessus la barre !
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: joueur
@@ -1750,6 +1922,7 @@
     - text: '{joueur} garde son sang-froid face à la Panenka tentée par l''attaquant
         et capte le ballon sans bouger !'
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: joueur
@@ -1757,6 +1930,7 @@
     - text: '{joueur} repousse des poings un centre-tir dangereux qui filait directement
         au fond des filets !'
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: joueur
@@ -1764,6 +1938,7 @@
     - text: Sorti à la limite du hors-jeu, {joueur} devance l'attaquant de {adversaire}
         et capte le ballon avant qu'il ne puisse frapper !
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: joueur
@@ -1773,6 +1948,7 @@
     - text: '{joueur} s''interpose héroïquement et bloque la frappe à bout portant
         avec le visage !'
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: joueur
@@ -1780,6 +1956,7 @@
     - text: Sur un une-deux rapide de {adversaire}, {joueur} lit parfaitement le jeu
         et intercepte la remise décisive !
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: adversaire
@@ -1789,6 +1966,7 @@
     - text: '{joueur} multiplie les arrêts dans cette fin de match complètement folle
         et maintient {club} dans le match !'
       weight: 1.0
+      cooldown_matches: 2
       conditions:
       - attribute: minute
         operator: '>='
@@ -1802,6 +1980,7 @@
     - text: '{joueur} sort un arrêt du pied salvateur sur cette frappe déviée qui
         trompait toute sa trajectoire !'
       weight: 1.0
+      cooldown_matches: 2
       conditions: []
       slots:
       - slot_name: joueur
@@ -1809,6 +1988,7 @@
     - text: '{joueur} conclut une prestation XXL en repoussant la dernière tentative
         de {adversaire} dans les arrêts de jeu !'
       weight: 1.0
+      cooldown_matches: 2
       conditions:
       - attribute: minute
         operator: '>='
@@ -1826,6 +2006,7 @@
     - text: La muraille s'étire de tout son long et repousse une frappe qui semblait
         déjà au fond des filets !
       weight: 0.4
+      cooldown_matches: 2
       conditions:
       - attribute: height_cm
         operator: '>='
@@ -1835,6 +2016,7 @@
     - text: Le mur ferme tout l'angle de son imposante carrure et bloque la tentative
         sans même sembler forcer !
       weight: 0.4
+      cooldown_matches: 2
       conditions:
       - attribute: height_cm
         operator: '>='
@@ -1848,6 +2030,7 @@
     - text: Le sage sort un réflexe digne de ses plus belles années et repousse le
         danger avec une lecture parfaite !
       weight: 0.4
+      cooldown_matches: 2
       conditions:
       - attribute: age
         operator: '>='
@@ -1857,6 +2040,7 @@
     - text: Le jeune prodige des cages sort un arrêt réflexe stupéfiant pour un gardien
         aussi peu expérimenté !
       weight: 0.4
+      cooldown_matches: 2
       conditions:
       - attribute: age
         operator: <=
@@ -1866,6 +2050,7 @@
     - text: Le colosse des cages repousse des poings avec une puissance impressionnante,
         dégageant le danger très loin !
       weight: 0.4
+      cooldown_matches: 2
       conditions:
       - attribute: Strength
         operator: '>='
@@ -1875,6 +2060,7 @@
     - text: Le dernier rempart multiplie les prouesses dans le money time et maintient
         son équipe en vie !
       weight: 0.4
+      cooldown_matches: 2
       conditions:
       - attribute: minute
         operator: '>='
@@ -1884,6 +2070,7 @@
     - text: Le félin détend son corps à une vitesse folle et détourne un ballon qui
         semblait pourtant imparable !
       weight: 0.4
+      cooldown_matches: 2
       conditions:
       - attribute: Pace
         operator: '>='
@@ -1893,6 +2080,7 @@
     - text: Le géant des cages n'a même pas besoin de sauter pour cueillir ce centre
         au-dessus de la mêlée !
       weight: 0.4
+      cooldown_matches: 2
       conditions:
       - attribute: height_cm
         operator: '>='
@@ -1909,6 +2097,7 @@
     - text: Pour le moment, {club} fait respecter la hiérarchie et {adversaire} ne
         voit pas beaucoup le ballon, souffrant terriblement dans ce début de rencontre.
       weight: 1.0
+      cooldown_matches: 1
       conditions:
       - attribute: minute
         operator: <=
@@ -1922,6 +2111,7 @@
     - text: '{club} asphyxie complètement {adversaire} par son pressing haut, impossible
         de sortir proprement le ballon pour les visiteurs.'
       weight: 1.0
+      cooldown_matches: 1
       conditions: []
       slots:
       - slot_name: club
@@ -1931,11 +2121,13 @@
     - text: Match très fermé pour l'instant, les deux équipes se neutralisent et peinent
         à se procurer la moindre occasion franche.
       weight: 1.0
+      cooldown_matches: 1
       conditions: []
       slots: []
     - text: '{club} multiplie les occasions sans parvenir à trouver la faille, {adversaire}
         résiste tant bien que mal devant son but.'
       weight: 1.0
+      cooldown_matches: 1
       conditions: []
       slots:
       - slot_name: club
@@ -1945,6 +2137,7 @@
     - text: '{adversaire} s''est totalement replié en bloc bas, laissant {club} pousser
         sans grand danger pour l''instant.'
       weight: 1.0
+      cooldown_matches: 1
       conditions: []
       slots:
       - slot_name: adversaire
@@ -1954,11 +2147,13 @@
     - text: Le rythme est étouffant depuis le coup d'envoi, les deux équipes se rendent
         coup pour coup dans un engagement total.
       weight: 1.0
+      cooldown_matches: 1
       conditions: []
       slots: []
     - text: '{club} maîtrise parfaitement le tempo de la rencontre, {adversaire} court
         après le ballon sans jamais vraiment le récupérer.'
       weight: 1.0
+      cooldown_matches: 1
       conditions: []
       slots:
       - slot_name: club
@@ -1968,6 +2163,7 @@
     - text: On sent {adversaire} totalement décontenancé par l'intensité imposée par
         {club} depuis le début du match.
       weight: 1.0
+      cooldown_matches: 1
       conditions: []
       slots:
       - slot_name: adversaire
@@ -1977,6 +2173,7 @@
     - text: Les organismes commencent à fatiguer sérieusement, le rythme du match
         ralentit nettement en cette fin de rencontre.
       weight: 1.0
+      cooldown_matches: 1
       conditions:
       - attribute: minute
         operator: '>='
@@ -1986,6 +2183,7 @@
     - text: '{club} met une pression constante sur les relances de {adversaire}, qui
         se transforment en pertes de balle immédiates.'
       weight: 1.0
+      cooldown_matches: 1
       conditions: []
       slots:
       - slot_name: club
@@ -1995,6 +2193,7 @@
     - text: Depuis la reprise, {club} est sorti des vestiaires avec de bien meilleures
         intentions, {adversaire} recule inexorablement.
       weight: 1.0
+      cooldown_matches: 1
       conditions:
       - attribute: minute
         operator: '>='
@@ -2008,6 +2207,7 @@
     - text: '{adversaire} n''arrive décidément plus à sortir de sa moitié de terrain,
         {club} verrouille totalement le milieu de terrain.'
       weight: 1.0
+      cooldown_matches: 1
       conditions: []
       slots:
       - slot_name: adversaire
@@ -2017,11 +2217,13 @@
     - text: L'engagement physique est total sur ce terrain, les duels se multiplient
         sans que l'arbitre n'ait besoin d'intervenir excessivement.
       weight: 1.0
+      cooldown_matches: 1
       conditions: []
       slots: []
     - text: '{club} semble jouer avec une confiance débordante, chaque relance de
         {adversaire} est immédiatement pressée et récupérée haut.'
       weight: 1.0
+      cooldown_matches: 1
       conditions: []
       slots:
       - slot_name: club
@@ -2031,6 +2233,7 @@
     - text: Le pressing de {club} commence sérieusement à payer, {adversaire} multiplie
         les pertes de balle dangereuses dans sa propre moitié.
       weight: 1.0
+      cooldown_matches: 1
       conditions: []
       slots:
       - slot_name: club
@@ -2040,6 +2243,7 @@
     - text: '{adversaire} semble totalement débordé tactiquement, incapable de trouver
         des solutions face au pressing de {club}.'
       weight: 1.0
+      cooldown_matches: 1
       conditions: []
       slots:
       - slot_name: adversaire
@@ -2049,11 +2253,13 @@
     - text: Match totalement équilibré pour l'instant, aucune des deux équipes ne
         parvient à prendre l'ascendant sur l'autre.
       weight: 1.0
+      cooldown_matches: 1
       conditions: []
       slots: []
     - text: '{club} contrôle le ballon sans forcer, laissant {adversaire} courir dans
         le vide sans jamais vraiment le mettre en danger.'
       weight: 1.0
+      cooldown_matches: 1
       conditions: []
       slots:
       - slot_name: club
@@ -2063,6 +2269,7 @@
     - text: On sent une réelle nervosité dans le jeu de {adversaire}, chaque contrôle
         est raté et chaque passe est imprécise.
       weight: 1.0
+      cooldown_matches: 1
       conditions: []
       slots:
       - slot_name: adversaire
@@ -2070,6 +2277,7 @@
     - text: '{club} joue collectif et fait circuler le ballon avec beaucoup de justesse,
         {adversaire} est totalement à la poursuite du cuir.'
       weight: 1.0
+      cooldown_matches: 1
       conditions: []
       slots:
       - slot_name: club
@@ -2079,6 +2287,7 @@
     - text: Le stade est en ébullition, l'ambiance électrique semble clairement porter
         {club} vers l'avant depuis le début de la rencontre.
       weight: 1.0
+      cooldown_matches: 1
       conditions: []
       slots:
       - slot_name: club
@@ -2086,6 +2295,7 @@
     - text: '{adversaire} semble avoir totalement abdiqué tactiquement, {club} se
         promène tranquillement sur la pelouse.'
       weight: 1.0
+      cooldown_matches: 1
       conditions: []
       slots:
       - slot_name: adversaire
@@ -2095,11 +2305,13 @@
     - text: Match très haché, l'arbitre multiplie les coups de sifflet et empêche
         les deux équipes de développer leur jeu.
       weight: 1.0
+      cooldown_matches: 1
       conditions: []
       slots: []
     - text: '{club} pousse mais se heurte à un bloc {adversaire} extrêmement discipliné
         et compact autour de sa surface.'
       weight: 1.0
+      cooldown_matches: 1
       conditions: []
       slots:
       - slot_name: club
@@ -2109,6 +2321,7 @@
     - text: On sent une réelle envie de bien faire chez {adversaire}, qui répond crânement
         à la domination de {club} depuis le début du match.
       weight: 1.0
+      cooldown_matches: 1
       conditions: []
       slots:
       - slot_name: adversaire
@@ -2118,11 +2331,13 @@
     - text: Les organismes sont à rude épreuve, le rythme du match a nettement chuté
         depuis une vingtaine de minutes.
       weight: 1.0
+      cooldown_matches: 1
       conditions: []
       slots: []
     - text: '{club} a totalement pris possession du milieu de terrain, {adversaire}
         ne parvient plus à construire la moindre offensive.'
       weight: 1.0
+      cooldown_matches: 1
       conditions: []
       slots:
       - slot_name: club
@@ -2132,6 +2347,7 @@
     - text: L'intensité redescend nettement après ce début de match tonitruant, les
         deux équipes cherchent à reprendre leur souffle.
       weight: 1.0
+      cooldown_matches: 1
       conditions:
       - attribute: minute
         operator: <=
@@ -2141,6 +2357,7 @@
     - text: '{adversaire} semble enfin relever la tête après une entame catastrophique,
         {club} doit désormais se méfier de ce sursaut d''orgueil.'
       weight: 1.0
+      cooldown_matches: 1
       conditions: []
       slots:
       - slot_name: adversaire
@@ -2150,6 +2367,7 @@
     - text: Le money time approche et la tension est à son comble, chaque ballon perdu
         par {club} pourrait désormais coûter cher.
       weight: 1.0
+      cooldown_matches: 1
       conditions:
       - attribute: minute
         operator: '>='
@@ -2168,6 +2386,7 @@
     - text: Match à haute intensité programmé entre {club} et {adversaire}, la lutte
         pour le titre entre dans une phase décisive !
       weight: 1.0
+      cooldown_matches: 4
       conditions: []
       slots:
       - slot_name: club
@@ -2177,6 +2396,7 @@
     - text: '{club} et {adversaire} s''affrontent dans un choc capital pour le maintien,
         aucune des deux équipes n''a le droit à l''erreur ce soir.'
       weight: 1.0
+      cooldown_matches: 4
       conditions: []
       slots:
       - slot_name: club
@@ -2186,6 +2406,7 @@
     - text: Ce derby oppose {club} à {adversaire} devant un public en ébullition,
         la rivalité historique entre les deux clubs promet une ambiance électrique.
       weight: 1.0
+      cooldown_matches: 4
       conditions: []
       slots:
       - slot_name: club
@@ -2195,6 +2416,7 @@
     - text: Une victoire ce soir propulserait {club} sur le podium continental, l'enjeu
         est immense face à {adversaire}.
       weight: 1.0
+      cooldown_matches: 4
       conditions: []
       slots:
       - slot_name: club
@@ -2204,6 +2426,7 @@
     - text: '{club} joue gros ce soir : une défaite face à {adversaire} l''enverrait
         directement dans la zone rouge.'
       weight: 1.0
+      cooldown_matches: 4
       conditions: []
       slots:
       - slot_name: club
@@ -2213,6 +2436,7 @@
     - text: Revanche attendue pour {club}, battu à l'aller par {adversaire}, l'occasion
         est belle de renverser la tendance.
       weight: 1.0
+      cooldown_matches: 4
       conditions: []
       slots:
       - slot_name: club
@@ -2222,6 +2446,7 @@
     - text: Ce choc au sommet entre {club} et {adversaire} pourrait dessiner les contours
         de la fin de saison.
       weight: 1.0
+      cooldown_matches: 4
       conditions: []
       slots:
       - slot_name: club
@@ -2231,6 +2456,7 @@
     - text: '{club} n''a plus le droit à l''erreur dans cette course à l''Europe,
         {adversaire} se dresse sur sa route ce soir.'
       weight: 1.0
+      cooldown_matches: 4
       conditions: []
       slots:
       - slot_name: club
@@ -2240,6 +2466,7 @@
     - text: '{club} aborde cette rencontre sur une série de cinq victoires consécutives,
         la confiance est à son comble.'
       weight: 1.0
+      cooldown_matches: 4
       conditions: []
       slots:
       - slot_name: club
@@ -2247,6 +2474,7 @@
     - text: '{adversaire} traverse une véritable crise sportive avec seulement une
         victoire lors des dix derniers matchs.'
       weight: 1.0
+      cooldown_matches: 4
       conditions: []
       slots:
       - slot_name: adversaire
@@ -2254,6 +2482,7 @@
     - text: Série noire pour {club}, qui reste sur quatre défaites d'affilée avant
         ce déplacement périlleux chez {adversaire}.
       weight: 1.0
+      cooldown_matches: 4
       conditions: []
       slots:
       - slot_name: club
@@ -2263,6 +2492,7 @@
     - text: '{adversaire} n''a plus perdu depuis huit rencontres, une dynamique impressionnante
         à l''approche de ce choc.'
       weight: 1.0
+      cooldown_matches: 4
       conditions: []
       slots:
       - slot_name: adversaire
@@ -2270,6 +2500,7 @@
     - text: '{club} retrouve des couleurs après un début de saison compliqué, porté
         par trois victoires lors des quatre derniers matchs.'
       weight: 1.0
+      cooldown_matches: 4
       conditions: []
       slots:
       - slot_name: club
@@ -2277,6 +2508,7 @@
     - text: L'euphorie règne du côté de {club}, injouable depuis la reprise et sur
         une dynamique exceptionnelle.
       weight: 1.0
+      cooldown_matches: 4
       conditions: []
       slots:
       - slot_name: club
@@ -2284,6 +2516,7 @@
     - text: '{adversaire} cherche à stopper l''hémorragie après trois matchs sans
         la moindre victoire.'
       weight: 1.0
+      cooldown_matches: 4
       conditions: []
       slots:
       - slot_name: adversaire
@@ -2291,6 +2524,7 @@
     - text: '{club} occupe la tête du classement avec quatre points d''avance, une
         victoire ce soir creuserait encore l''écart.'
       weight: 1.0
+      cooldown_matches: 4
       conditions: []
       slots:
       - slot_name: club
@@ -2298,6 +2532,7 @@
     - text: '{adversaire} pointe à la dernière place du classement, une position critique
         qui inquiète sérieusement son vestiaire.'
       weight: 1.0
+      cooldown_matches: 4
       conditions: []
       slots:
       - slot_name: adversaire
@@ -2305,6 +2540,7 @@
     - text: Seuls deux points séparent {club} et {adversaire} au classement, ce choc
         direct pourrait faire basculer la hiérarchie.
       weight: 1.0
+      cooldown_matches: 4
       conditions: []
       slots:
       - slot_name: club
@@ -2314,6 +2550,7 @@
     - text: '{club} stagne dans le ventre mou du classement et espère profiter de
         ce match pour se relancer vers le haut de tableau.'
       weight: 1.0
+      cooldown_matches: 4
       conditions: []
       slots:
       - slot_name: club
@@ -2321,6 +2558,7 @@
     - text: '{adversaire} occupe la place de barragiste, un contexte comptable qui
         met une pression immense sur ses épaules ce soir.'
       weight: 1.0
+      cooldown_matches: 4
       conditions: []
       slots:
       - slot_name: adversaire
@@ -2328,6 +2566,7 @@
     - text: Avec seulement trois points d'avance sur la zone rouge, {club} ne peut
         se permettre le moindre faux pas face à {adversaire}.
       weight: 1.0
+      cooldown_matches: 4
       conditions: []
       slots:
       - slot_name: club
@@ -2337,6 +2576,7 @@
     - text: '{adversaire} reste sur ses distances avec le podium et vise une performance
         solide pour continuer à y croire.'
       weight: 1.0
+      cooldown_matches: 4
       conditions: []
       slots:
       - slot_name: adversaire
@@ -2344,6 +2584,7 @@
     - text: '{club} et {adversaire} sont au coude à coude pour la dernière place qualificative,
         chaque point comptera double ce soir.'
       weight: 1.0
+      cooldown_matches: 4
       conditions: []
       slots:
       - slot_name: club
@@ -2353,6 +2594,7 @@
     - text: '{club} devra composer sans {joueur}, suspendu pour ce rendez-vous capital,
         une absence qui pèse lourd dans l''effectif.'
       weight: 1.0
+      cooldown_matches: 4
       conditions: []
       slots:
       - slot_name: club
@@ -2362,6 +2604,7 @@
     - text: Grosse infirmerie du côté de {adversaire}, privé de pas moins de cinq
         titulaires pour cette rencontre.
       weight: 1.0
+      cooldown_matches: 4
       conditions: []
       slots:
       - slot_name: adversaire
@@ -2369,6 +2612,7 @@
     - text: '{joueur}, meilleur buteur de {club} cette saison, manque à l''appel ce
         soir sur blessure, un coup dur pour l''attaque.'
       weight: 1.0
+      cooldown_matches: 4
       conditions: []
       slots:
       - slot_name: joueur
@@ -2378,6 +2622,7 @@
     - text: '{adversaire} devra se passer de son capitaine {joueur}, out sur blessure
         depuis plusieurs semaines.'
       weight: 1.0
+      cooldown_matches: 4
       conditions: []
       slots:
       - slot_name: adversaire
@@ -2387,6 +2632,7 @@
     - text: 'Bonne nouvelle du côté de {club} : {joueur} fait son retour de blessure
         et retrouve le groupe pour cette affiche.'
       weight: 1.0
+      cooldown_matches: 4
       conditions: []
       slots:
       - slot_name: club
@@ -2396,6 +2642,7 @@
     - text: '{adversaire} aligne une défense largement remaniée, plusieurs cadres
         étant forfaits pour ce déplacement.'
       weight: 1.0
+      cooldown_matches: 4
       conditions: []
       slots:
       - slot_name: adversaire
@@ -2403,6 +2650,7 @@
     - text: L'absence de {joueur}, élément clé du milieu de terrain de {club}, pourrait
         peser lourd dans l'équilibre de cette rencontre.
       weight: 1.0
+      cooldown_matches: 4
       conditions: []
       slots:
       - slot_name: joueur
@@ -2422,6 +2670,7 @@
         {club}. L''arrière de {adversaire} ne sait plus où donner de la tête face
         à ce festival répété sur son côté.'
       weight: 1.0
+      cooldown_matches: 5
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -2439,6 +2688,7 @@
         technique. La défense de {adversaire} est menée en bateau, incapable de suivre
         le rythme de ses appuis.'
       weight: 1.0
+      cooldown_matches: 5
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -2454,6 +2704,7 @@
         sifflet contraire. L''homme en noir commence sérieusement à perdre patience
         face à ce chapelet de contestations incessantes.'
       weight: 1.0
+      cooldown_matches: 5
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -2467,6 +2718,7 @@
         Ce genre de course invisible, répétée match après match, fait toute la différence
         dans les couloirs de la surface adverse.'
       weight: 1.0
+      cooldown_matches: 5
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -2482,6 +2734,7 @@
         face à la pression de {adversaire}. Une habitude qui le rend parfois prévisible,
         mais rarement prise en défaut sur la qualité d''exécution.'
       weight: 1.0
+      cooldown_matches: 5
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -2497,6 +2750,7 @@
         tranquille avant de trouver un partenaire démarqué. Une sérénité rare pour
         un défenseur, qui transforme chaque relance en début d''action posée.'
       weight: 1.0
+      cooldown_matches: 5
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -2512,6 +2766,7 @@
         Ce mouvement récurrent désorganise complètement le pressing adverse et libère
         de l''espace dans son dos pour ses coéquipiers.'
       weight: 1.0
+      cooldown_matches: 5
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -2527,6 +2782,7 @@
         de se replacer. Une prise de décision rapide qui surprend régulièrement les
         latéraux adverses, pris de vitesse.'
       weight: 1.0
+      cooldown_matches: 5
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -2542,6 +2798,7 @@
         de {adversaire}. Cette double capacité à casser l''axe en fait un cauchemar
         à marquer pour n''importe quel arrière latéral.'
       weight: 1.0
+      cooldown_matches: 5
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -2557,6 +2814,7 @@
         quand l''espace s''ouvre. Le milieu de {adversaire} peine à retrouver le contrôle
         du tempo face à ce métronome insaisissable.'
       weight: 1.0
+      cooldown_matches: 5
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -2572,6 +2830,7 @@
         de {adversaire}. Une discipline défensive qui limite drastiquement le risque
         de se faire éliminer d''un crochet.'
       weight: 1.0
+      cooldown_matches: 5
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -2587,6 +2846,7 @@
         {adversaire} venus refermer l''espace. Cette hésitation récurrente coûte parfois
         cher à {club} sur les transitions.'
       weight: 1.0
+      cooldown_matches: 5
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -2604,6 +2864,7 @@
         du stade grimpe instantanément d''un cran. Une alchimie particulière semble
         s''installer entre lui et les supporters à chacune de ses interventions.'
       weight: 1.0
+      cooldown_matches: 5
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -2619,6 +2880,7 @@
         vitesse le repli de {adversaire}. Cette générosité offensive constante fait
         de lui un atout supplémentaire dans le dispositif de {club}.'
       weight: 1.0
+      cooldown_matches: 5
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -2636,6 +2898,7 @@
         de force. Sa présence permanente dans cette zone dangereuse oblige les défenseurs
         à ne jamais relâcher leur vigilance.'
       weight: 1.0
+      cooldown_matches: 5
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -2651,6 +2914,7 @@
         ses partenaires. Cette occupation constante de l''espace large est précieuse
         pour ouvrir le jeu de {club}.'
       weight: 1.0
+      cooldown_matches: 5
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -2668,6 +2932,7 @@
         vers l''avant. Cette exigence technique permanente impose à ses coéquipiers
         de {club} une précision de passe de tous les instants.'
       weight: 1.0
+      cooldown_matches: 5
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -2683,6 +2948,7 @@
         tout le repli défensif de {adversaire}. Ce changement de rythme et de côté
         déstabilise à chaque fois l''organisation adverse.'
       weight: 1.0
+      cooldown_matches: 5
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -2698,6 +2964,7 @@
         de frapper lui-même. Un altruisme collectif qui ravit ses coéquipiers de {club},
         parfois au détriment de ses propres statistiques.'
       weight: 1.0
+      cooldown_matches: 5
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -2713,6 +2980,7 @@
         terriblement efficace face à {adversaire}. Cette habitude, répétée inlassablement,
         finit par payer sur ce genre d''action décisive.'
       weight: 1.0
+      cooldown_matches: 5
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -2728,6 +2996,7 @@
         à couvrir collectivement. Cette mobilité horizontale constante complique sérieusement
         les repères défensifs adverses.'
       weight: 1.0
+      cooldown_matches: 5
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -2743,6 +3012,7 @@
         du reste du jeu. Ce sens du placement pur en fait un renard des surfaces toujours
         prêt à surgir au bon moment.'
       weight: 1.0
+      cooldown_matches: 5
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -2756,6 +3026,7 @@
         en profondeur. Cette combinaison répétée prend systématiquement de vitesse
         le marquage individuel de {adversaire}.'
       weight: 1.0
+      cooldown_matches: 5
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -2771,6 +3042,7 @@
         se précipiter. Une sobriété technique qui rassure tout un système de jeu autour
         de lui.'
       weight: 1.0
+      cooldown_matches: 5
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -2786,6 +3058,7 @@
         lancé dans son dos. Cette capacité à faire l''écran physique libère un espace
         précieux juste derrière lui.'
       weight: 1.0
+      cooldown_matches: 5
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -2801,6 +3074,7 @@
         corner pour la défense adverse. Cette arme méconnue devient une vraie source
         d''inquiétude sur chaque remise en jeu excentrée.'
       weight: 1.0
+      cooldown_matches: 5
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -2816,6 +3090,7 @@
         plus favorable plutôt que de frapper d''emblée. Une prudence qui frustre parfois
         les tribunes de {club}, avides d''un geste plus spontané.'
       weight: 1.0
+      cooldown_matches: 5
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -2831,6 +3106,7 @@
         sans dévier de sa trajectoire. Cette audace centrale, rarement tentée par
         les autres joueurs, ouvre des angles de jeu inédits pour {club}.'
       weight: 1.0
+      cooldown_matches: 5
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -2848,6 +3124,7 @@
         dans leur pressing. Cette rupture de tempo, presque provocatrice, permet à
         {club} de reprendre son souffle collectif.'
       weight: 1.0
+      cooldown_matches: 5
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -2865,6 +3142,7 @@
         proprement le ballon plutôt que de le dégager n''importe comment. Ce sang-froid
         sous pression rassure tout le bloc défensif de {club} derrière lui.'
       weight: 1.0
+      cooldown_matches: 5
       conditions:
       - attribute: preferred_moves
         operator: contient
@@ -2884,6 +3162,7 @@
     - text: L'éclair part balle au pied et grille tout le monde à la course, personne
         de {adversaire} ne peut suivre son rythme !
       weight: 0.4
+      cooldown_matches: 5
       conditions:
       - attribute: Pace
         operator: '>='
@@ -2899,6 +3178,7 @@
     - text: L'artiste jongle littéralement avec la pression adverse, chaque contrôle
         ressemble à un geste de haute voltige !
       weight: 0.4
+      cooldown_matches: 5
       conditions:
       - attribute: Technique
         operator: '>='
@@ -2908,6 +3188,7 @@
     - text: Le bulldozer écarte les bras et repousse son vis-à-vis comme s'il n'existait
         pas, imperturbable physiquement !
       weight: 0.4
+      cooldown_matches: 5
       conditions:
       - attribute: Strength
         operator: '>='
@@ -2917,6 +3198,7 @@
     - text: Le crack, encore adolescent, montre déjà une lucidité folle balle au pied
         face à des adversaires bien plus expérimentés !
       weight: 0.4
+      cooldown_matches: 5
       conditions:
       - attribute: age
         operator: <=
@@ -2926,6 +3208,7 @@
     - text: Le chef d'orchestre voit l'ouverture avant tout le monde et distille une
         passe que seul lui avait anticipée !
       weight: 0.4
+      cooldown_matches: 5
       conditions:
       - attribute: Vision
         operator: '>='
@@ -2935,6 +3218,7 @@
     - text: Le feu follet slalome dans des espaces minuscules où personne d'autre
         ne pourrait se faufiler !
       weight: 0.4
+      cooldown_matches: 5
       conditions:
       - attribute: height_cm
         operator: <=
@@ -2948,6 +3232,7 @@
     - text: Le sage gère le tempo avec une lucidité rare, comme si les années n'avaient
         aucune emprise sur sa lecture du jeu !
       weight: 0.4
+      cooldown_matches: 5
       conditions:
       - attribute: age
         operator: '>='

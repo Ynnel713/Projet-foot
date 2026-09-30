@@ -3,12 +3,13 @@ import pytest
 import yaml
 
 from scripts.convert_commentary_xlsx_to_yaml import (
+    DEFAULT_COOLDOWN_MATCHES_BY_SCENARIO,
     SLOTS_AUTORISES,
     CommentaryConversionError,
     convertir,
     valider_slots,
 )
-from scripts.import_seed import _validate_scenarios
+from scripts.import_seed import SeedValidationError, _validate_scenarios
 
 
 def _write_xlsx(tmp_path, rows):
@@ -183,3 +184,87 @@ class TestConvertir:
         data = yaml.safe_load(out.read_text(encoding="utf-8"))
         slots = {s["slot_name"]: s["expression"] for s in data[0]["variants"][0]["phrases"][0]["slots"]}
         assert slots == {"joueur": "player.full_name", "adversaire": "context.opponent_team"}
+
+    def test_every_phrase_gets_its_scenario_default_cooldown(self, tmp_path):
+        # Aucune colonne "Cooldown" dans l'onglet "Phrases" du classeur reel
+        # (voir DEFAULT_COOLDOWN_MATCHES_BY_SCENARIO) -- verrou de
+        # non-regression : ce champ ne doit JAMAIS rester absent/None en
+        # sortie, sous peine de faire echouer import_seed (regle "cooldown
+        # obligatoire"). Un chiffre unique pour tous les scenarios a ete jugé
+        # sous-pensé (2e tour d'audit, 30/09/2026) -- verrouille ici que
+        # BUT et CARTON_ROUGE reçoivent des valeurs DIFFERENTES.
+        xlsx = _write_xlsx(
+            tmp_path,
+            [
+                _row(scenario="BUT", phrase="{joueur} marque !"),
+                _row(
+                    scenario="CARTON_ROUGE",
+                    label="Carton rouge",
+                    phrase="{joueur} voit rouge !",
+                ),
+            ],
+        )
+        out = tmp_path / "out.yml"
+
+        convertir(xlsx, out)
+
+        data = yaml.safe_load(out.read_text(encoding="utf-8"))
+        cooldowns_par_scenario = {
+            s["code"]: p["cooldown_matches"] for s in data for v in s["variants"] for p in v["phrases"]
+        }
+        assert cooldowns_par_scenario == {
+            "BUT": DEFAULT_COOLDOWN_MATCHES_BY_SCENARIO["BUT"],
+            "CARTON_ROUGE": DEFAULT_COOLDOWN_MATCHES_BY_SCENARIO["CARTON_ROUGE"],
+        }
+        assert cooldowns_par_scenario["BUT"] != cooldowns_par_scenario["CARTON_ROUGE"]
+
+    def test_all_allowed_scenarios_have_an_arbitrated_cooldown(self):
+        # Garde-fou statique : SLOTS_AUTORISES et
+        # DEFAULT_COOLDOWN_MATCHES_BY_SCENARIO doivent lister exactement les
+        # memes scenarios -- si l'un des deux grandit sans l'autre,
+        # convertir() plante sur le premier scenario concerne (voir son
+        # garde-fou), mais ce test le detecte statiquement avant meme une
+        # conversion, pour tous les scenarios d'un coup.
+        assert set(SLOTS_AUTORISES) == set(DEFAULT_COOLDOWN_MATCHES_BY_SCENARIO)
+
+
+class TestCooldownObligatoire:
+    """La regle "cooldown obligatoire" du README doit etre appliquee des la
+    validation (avant toute ecriture SQLite) -- voir import_seed._validate_scenarios."""
+
+    def test_missing_cooldown_matches_fails_validation(self):
+        scenarios = [
+            {
+                "code": "BUT",
+                "label": "But",
+                "variants": [
+                    {
+                        "code": "DEFAUT",
+                        "label": "Défaut",
+                        "is_default": True,
+                        "phrases": [{"text": "{joueur} marque !", "weight": 1.0}],
+                    }
+                ],
+            }
+        ]
+        with pytest.raises(SeedValidationError, match="cooldown_matches"):
+            _validate_scenarios(scenarios, known_slot_keys=set())
+
+    def test_explicit_cooldown_matches_passes_validation(self):
+        scenarios = [
+            {
+                "code": "BUT",
+                "label": "But",
+                "variants": [
+                    {
+                        "code": "DEFAUT",
+                        "label": "Défaut",
+                        "is_default": True,
+                        "phrases": [
+                            {"text": "{joueur} marque !", "weight": 1.0, "cooldown_matches": 3}
+                        ],
+                    }
+                ],
+            }
+        ]
+        _validate_scenarios(scenarios, known_slot_keys=set())  # ne doit pas lever

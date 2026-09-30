@@ -1,0 +1,42 @@
+Phrases a conditions multiples ('et' >= 2 atomes): 22
+Verification mecanique (evaluate_condition reel) : chaque phrase est testee
+contre un contexte qui satisfait TOUT et un contexte qui echoue -- objectif
+unique : verifier qu'aucune condition ne plante ou ne se contredit elle-meme,
+pas juger le sens football (voir plus bas pour l'inspection manuelle).
+
+[CARTON_ROUGE/DEFAUT] satisfait->True  echec->False  OK
+[CARTON_ROUGE/DEFAUT] satisfait->True  echec->False  OK
+[CARTON_ROUGE/DEFAUT] satisfait->True  echec->False  OK
+[CARTON_ROUGE/DEFAUT] satisfait->True  echec->False  OK
+[CARTON_ROUGE/DEFAUT] satisfait->True  echec->False  OK
+[CARTON_ROUGE/DEFAUT] satisfait->True  echec->False  OK
+[CARTON_ROUGE/DEFAUT] satisfait->True  echec->False  OK
+[CARTON_ROUGE/DEFAUT] satisfait->True  echec->False  OK
+[BUT/DEFAUT] satisfait->True  echec->False  OK
+[BUT/DEFAUT] satisfait->True  echec->False  OK
+[BUT/SURNOM] satisfait->True  echec->False  OK
+[BUT/SURNOM] satisfait->True  echec->False  OK
+[BUT/SURNOM] satisfait->True  echec->False  OK
+[BUT/SURNOM] satisfait->True  echec->False  OK
+[BUT/SURNOM] satisfait->True  echec->False  OK
+[BUT/SURNOM] satisfait->True  echec->False  OK
+[BUT/SURNOM] satisfait->True  echec->False  OK
+[BUT/SURNOM] satisfait->True  echec->False  OK
+[ARRET_GARDIEN/DEFAUT] satisfait->True  echec->False  OK
+[ARRET_GARDIEN/SURNOM] satisfait->True  echec->False  OK
+[GESTE_SIGNATURE/SURNOM] satisfait->True  echec->False  OK
+[GESTE_SIGNATURE/SURNOM] satisfait->True  echec->False  OK
+
+Anomalies mecaniques (condition qui plante ou logique inversee): 0
+
+=== Inspection manuelle des 22 phrases (sens football) ===
+Voir AUDIT_EDITORIAL_2026-09-30.md, section Audit 5 -- inspection ligne a
+ligne condition/texte pour chacune des 22 ; verdict : aucune incoherence
+trouvee parmi les phrases a 2+ conditions (hauteur/tete, vitesse/sprint,
+technique/dribble, force/coup-franc s'accordent avec le texte).
+
+=== Risque trouve HORS de ce filtre (1 seule condition, pas 2+) ===
+BUT/DEFAUT : "{joueur} envoie un missile du pied droit : la barre transversale tremble encore avant que le ballon ne finisse au fond des filets !"
+  condition unique : preferred_moves contient 'Shoots With Power'
+  Aucune condition sur `foot` ou `weak_foot` : un joueur gaucher pur (foot='Left', weak_foot bas) peut declencher cette phrase qui affirme un tir du pied droit -- non-sens football, meme categorie que l'exemple du brief (weak_foot=5 sans pied gauche).
+  Comparer avec BUT/SURNOM "Ambidextre redoutable..." qui, lui, conditionne correctement sur weak_foot >= 4 avant de parler du pied 'qu'on n'attendait pas'.

@@ -69,6 +69,25 @@ def _validate_scenarios(scenarios: list[dict[str, Any]], known_slot_keys: set[st
             )
         for variant in variants:
             for phrase in variant.get("phrases", []):
+                # Cooldown obligatoire (règle du README, confirmée par
+                # l'audit éditorial du 30/09/2026, section cooldown) : une
+                # phrase sans cooldown_matches explicite laisserait
+                # phrase_cooldowns.cooldown_matches à NULL, et
+                # phrase_selector (une fois implémenté) doit alors REFUSER la
+                # phrase -- autant échouer l'import maintenant, tant qu'on
+                # peut encore corriger la source (le classeur/le YAML),
+                # plutôt que découvrir en production qu'une phrase ne sort
+                # jamais faute de cooldown défini. Pas de valeur par défaut
+                # silencieuse ici : le défaut (3 matchs) est appliqué en
+                # AMONT, à la conversion (voir
+                # scripts/convert_commentary_xlsx_to_yaml.DEFAULT_COOLDOWN_MATCHES),
+                # jamais côté import.
+                if phrase.get("cooldown_matches") is None:
+                    raise SeedValidationError(
+                        f'Scénario "{code}" : la phrase {phrase.get("text", "<sans texte>")!r} '
+                        "n'a pas de cooldown_matches -- import refusé (règle \"cooldown "
+                        "obligatoire\" du README, voir AUDIT_EDITORIAL_2026-09-30.md)."
+                    )
                 for slot in phrase.get("slots", []):
                     key = slot.get("dictionary_key")
                     if key is not None and key not in known_slot_keys:
@@ -120,6 +139,16 @@ def _insert_scenarios(conn: Connection, scenarios: list[dict[str, Any]]) -> tupl
                 )
                 phrase_id = cur.lastrowid
                 n_phrases += 1
+
+                # cooldown_matches deja valide non-NULL par _validate_scenarios
+                # (regle "cooldown obligatoire") -- une ligne par phrase, PK
+                # phrase_id (voir data/schema.sql : le cooldown est une
+                # propriete de la PHRASE, pas du couple phrase x joueur, qui
+                # lui vit dans phrase_history).
+                conn.execute(
+                    "INSERT INTO phrase_cooldowns (phrase_id, cooldown_matches) VALUES (?, ?)",
+                    (phrase_id, int(phrase["cooldown_matches"])),
+                )
 
                 for condition in phrase.get("conditions", []):
                     conn.execute(

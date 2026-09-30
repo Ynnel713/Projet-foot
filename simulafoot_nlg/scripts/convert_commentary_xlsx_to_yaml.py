@@ -17,6 +17,12 @@ Ce que ce script fait :
        a variante vide se voit attribuer sa variante existante comme
        defaut (voir _group_variants) plutot que d'echouer l'import pour
        une contrainte que le classeur ne peut pas exprimer nativement.
+    4bis. Attribue DEFAULT_COOLDOWN_MATCHES a chaque phrase (aucune colonne
+       "Cooldown" dans le classeur du 29/09/2026 -- voir la constante pour
+       l'arbitrage complet). Jamais NULL en sortie : import_seed.py refuse
+       tout scenario portant une phrase sans cooldown_matches (regle
+       "cooldown obligatoire" du README), donc ce script ne doit jamais en
+       produire une.
     5. Ecrit le YAML dans scenarios_path (defaut data/seed/scenarios.yml).
 
 Ce que ce script ne fait PAS : il n'ecrit rien en SQLite -- c'est le role
@@ -96,6 +102,67 @@ SLOT_EXPRESSIONS: dict[str, str] = {
 }
 
 _JUNK_MARKERS = ("exemple", "ex_")
+
+# Cooldown par defaut applique a TOUTE phrase issue de ce classeur (aucune
+# colonne "Cooldown" dans l'onglet "Phrases" du 29/09/2026 -- voir
+# AUDIT_EDITORIAL_2026-09-30.md, section cooldown, pour l'arbitrage complet).
+#
+# Decision (30/09/2026, audit editorial) sur l'unite et la portee -- non
+# revisees ici, deja tranchees et confirmees par le 2e tour d'audit :
+#   - unite = MATCHS (nom deja porte par phrase_cooldowns.cooldown_matches ;
+#     un spectateur juge la repetition d'un match sur l'autre, pas a la
+#     minute pres).
+#   - portee = PAR PHRASE (phrase_cooldowns.phrase_id est la PRIMARY KEY).
+#   - JAMAIS laisse a NULL (regle "cooldown obligatoire" du README) : c'est
+#     ce qui rendrait toute la banque injouable une fois phrase_selector
+#     implemente. import_seed.py refuse tout import si une phrase en manque.
+#
+# Revision (2e tour d'audit, 30/09/2026) : un chiffre unique (3) pour 281
+# phrases de densites emotionnelles tres differentes etait sous-pense --
+# corrige en configurable PAR SCENARIO. Chaque valeur est un arbitrage
+# frequence x memorabilite (plus l'evenement est rare et marquant, plus le
+# cooldown est long) ; PAS une mesure d'usage reel (aucune donnee de match
+# jouee n'existe encore, voir SPEC_ANTI_REPEAT.md) -- place-holder assume, a
+# affiner une fois l'anti-repetition mesurable en production.
+DEFAULT_COOLDOWN_MATCHES_BY_SCENARIO: dict[str, int] = {
+    # Evenement rarissime (quelques cartons rouges par saison et par joueur)
+    # et choquant a chaque fois -- doit rester un non-evenement en temps
+    # normal, la memoire du spectateur y est la plus longue de tout le lot.
+    "CARTON_ROUGE": 10,
+    # Rare dans un match donne (0-3 penalties en moyenne, souvent 0), mais un
+    # penalty rate (surtout manque) est un moment fort dont on se souvient
+    # -- juste en dessous de CARTON_ROUGE, pas au meme niveau (moins choquant,
+    # plus frequent sur une saison complete).
+    "PENALTY_RATE": 6,
+    # Trait de caractere d'UN joueur (pas un evenement de match) : le revoir
+    # trop vite pour le MEME joueur casserait l'illusion de personnalite
+    # ("il fait encore son numero"), mais le pool est deliberement large
+    # (30-37 phrases/scenario) donc pas besoin d'un cooldown aussi long que
+    # les evenements rares ci-dessus.
+    "GESTE_SIGNATURE": 5,
+    # Ne sort qu'UNE fois par match par construction (contexte d'avant-match),
+    # mais les faits qu'il relaie (forme du moment, absences) restent vrais
+    # sur plusieurs semaines pour la MEME equipe -- cooldown moyen pour eviter
+    # de resservir la meme accroche a la rencontre suivante de ce club.
+    "DEBUT_MATCH": 4,
+    # Moment fort classique (~2-3 buts/match en moyenne) : memorable mais pas
+    # rarissime, le pool (60 phrases, 3 variantes) est deja le plus large du
+    # lot -- valeur de reference du 1er tour d'audit, conservee.
+    "BUT": 3,
+    "COUP_FRANC": 3,
+    # Frequent (plusieurs arrets/relances par match) et individuellement peu
+    # marquant hors gros arret -- valeur de reference du 1er tour d'audit,
+    # conservee.
+    "ARRET_GARDIEN": 2,
+    # Phase de jeu la plus frequente d'un match (de tres nombreuses
+    # constructions par mi-temps), jamais un "moment" en soi -- cooldown
+    # court pour ne pas assecher le pool sur une seule rencontre.
+    "CONSTRUCTION": 2,
+    # Commentaire d'ambiance/tactique quasi continu, appele bien plus souvent
+    # que tout autre scenario au fil d'un match -- le plus court du lot :
+    # un cooldown plus long asseche le pool (30 phrases) avant la mi-temps.
+    "SITUATION_MATCH": 1,
+}
 
 
 def _sha256(path: Path) -> str:
@@ -260,6 +327,7 @@ def _group_variants(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     {
                         "text": r["phrase"],
                         "weight": r["weight"],
+                        "cooldown_matches": r["cooldown_matches"],
                         "conditions": r["conditions"],
                         "slots": r["slots"],
                     }
@@ -303,11 +371,20 @@ def convertir(xlsx_path: Path, yml_path: Path, checksum_path: Path | None = None
         variant = str(ligne["variant"]).strip() if pd.notna(ligne["variant"]) else None
 
         labels.setdefault(scenario, str(ligne["scenario_label"]).strip())
+        if scenario not in DEFAULT_COOLDOWN_MATCHES_BY_SCENARIO:
+            # Echec explicite plutot qu'un defaut silencieux -- un nouveau
+            # scenario sans cooldown arbitre serait sinon importe avec une
+            # valeur au hasard (voir la discussion "cooldown obligatoire").
+            raise CommentaryConversionError(
+                f"Ligne {ligne_excel} : scénario {scenario!r} sans cooldown_matches arbitré dans "
+                "DEFAULT_COOLDOWN_MATCHES_BY_SCENARIO -- ajoute une valeur justifiée avant de convertir."
+            )
         rows_by_scenario[scenario].append(
             {
                 "phrase": phrase,
                 "variant": variant,
                 "weight": weight,
+                "cooldown_matches": DEFAULT_COOLDOWN_MATCHES_BY_SCENARIO[scenario],
                 "conditions": _conditions_for_phrase(condition_brute, ligne_excel),
                 "slots": _slots_for_phrase(phrase),
             }

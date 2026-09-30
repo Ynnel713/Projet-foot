@@ -100,7 +100,14 @@ CREATE TABLE IF NOT EXISTS phrase_conditions (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     phrase_id  INTEGER NOT NULL REFERENCES phrases(id) ON DELETE CASCADE,
     attribute  TEXT NOT NULL,              -- champ Player ou MatchContext (ex. "Determination", "minute")
-    operator   TEXT NOT NULL CHECK (operator IN ('==', '!=', '>', '>=', '<', '<=', 'in')),
+    -- Doit lister EXACTEMENT les operateurs reconnus par
+    -- engine/conditions.evaluate_condition/parse_condition_atoms (voir
+    -- _ATOME_RE et les branches "in"/"contient" de ce module) -- 'contient'
+    -- et '=' manquaient ici (bug trouve le 30/09/2026 au premier import
+    -- reel des 281 phrases : 56 conditions "contient" de la banque
+    -- rejetees par ce CHECK, jamais detecte avant faute d'avoir teste
+    -- l'import complet contre le vrai schema).
+    operator   TEXT NOT NULL CHECK (operator IN ('==', '=', '!=', '>', '>=', '<', '<=', 'in', 'contient')),
     value      TEXT NOT NULL,
     mandatory  INTEGER NOT NULL DEFAULT 1 CHECK (mandatory IN (0, 1))
 );

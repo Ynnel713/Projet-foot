@@ -1,0 +1,36 @@
+CARTON_ROUGE         n= 31  1ermot_partage= 74.2%  signature4_partagee=  0.0%
+    top 1ers mots : [('SLOT', 15), ('APRÈS', 4), ('COMPLÈTEMENT', 2), ('LE', 2), ('SUR', 1)]
+    top signatures (>=2 occurrences) : []
+
+BUT                  n= 60  1ermot_partage= 78.3%  signature4_partagee=  0.0%
+    top 1ers mots : [('SLOT', 26), ('LE', 13), ('APRÈS', 2), ("D'UN", 2), ('DANS', 2)]
+    top signatures (>=2 occurrences) : []
+
+PENALTY_RATE         n= 15  1ermot_partage=100.0%  signature4_partagee= 13.3%
+    top 1ers mots : [('SLOT', 10), ('LE', 3), ('LA', 2)]
+    top signatures (>=2 occurrences) : [('la frappe de slot', 2)]
+
+COUP_FRANC           n= 20  1ermot_partage= 85.0%  signature4_partagee= 35.0% <-- >30% signatures jumelles
+    top 1ers mots : [('SLOT', 8), ('SUR', 5), ('COUP', 4), ("D'UN", 1), ('LE', 1)]
+    top signatures (>=2 occurrences) : [('sur ce coup franc', 5), ('slot centre le coup', 2)]
+
+CONSTRUCTION         n= 20  1ermot_partage= 80.0%  signature4_partagee= 10.0%
+    top 1ers mots : [('SLOT', 13), ('SUR', 3), ("D'UN", 1), ('APRÈS', 1), ('BELLE', 1)]
+    top signatures (>=2 occurrences) : [('slot récupère le ballon', 2)]
+
+ARRET_GARDIEN        n= 38  1ermot_partage= 78.9%  signature4_partagee=  0.0%
+    top 1ers mots : [('SLOT', 18), ('LE', 7), ('SUR', 5), ("D'UN", 1), ('FACE', 1)]
+    top signatures (>=2 occurrences) : []
+
+SITUATION_MATCH      n= 30  1ermot_partage= 86.7%  signature4_partagee=  6.7%
+    top 1ers mots : [('SLOT', 14), ('LE', 4), ('MATCH', 3), ('ON', 3), ('LES', 2)]
+    top signatures (>=2 occurrences) : [('on sent une réelle', 2)]
+
+DEBUT_MATCH          n= 30  1ermot_partage= 63.3%  signature4_partagee=  0.0%
+    top 1ers mots : [('SLOT', 17), ('CE', 2), ('MATCH', 1), ('UNE', 1), ('REVANCHE', 1)]
+    top signatures (>=2 occurrences) : []
+
+GESTE_SIGNATURE      n= 37  1ermot_partage= 94.6%  signature4_partagee=  0.0%
+    top 1ers mots : [('SLOT', 30), ('LE', 5), ("L'ÉCLAIR", 1), ("L'ARTISTE", 1)]
+    top signatures (>=2 occurrences) : []
+

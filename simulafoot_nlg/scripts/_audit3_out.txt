@@ -1,0 +1,67 @@
+Total BUT: 60
+=== Variante DEFAUT (Variante par défaut) ===
+[01] Depuis l'extérieur de la surface, {joueur} arme une frappe surpuissante qui ne laisse aucune chance au gardien de {adversaire} !
+[02] Le ballon traîne à l'entrée de la surface, {joueur} ne réfléchit pas une seconde et catapulte une reprise de volée en pleine lucarne !
+[03] {joueur} ajuste sa course, enroule sa frappe et vient loger le ballon dans la lucarne opposée, hors de portée du gardien !
+[04] Le gardien de {adversaire} s'avance un peu trop, {joueur} ne tremble pas et le lobe avec un sang-froid déconcertant !
+[05] Plutôt que de frapper de toutes ses forces, {joueur} garde la tête froide et place sa frappe le long du poteau, imparable !
+[06] {joueur} envoie un missile du pied droit : la barre transversale tremble encore avant que le ballon ne finisse au fond des filets !
+[07] Centre repoussé par la défense, mais {joueur} s'envole et conclut d'une retournée acrobatique du plus bel effet !
+[08] {joueur} efface le gardien de {adversaire} d'un crochet et pousse tranquillement le ballon au fond des filets vides !
+[09] {joueur} part de son propre camp, élimine deux adversaires balle au pied et conclut sa chevauchée solitaire en beauté !
+[10] {joueur} élimine son vis-à-vis d'un contrôle orienté et frappe sans laisser au gardien le temps de réagir !
+[11] {joueur} rentre sur son pied fort depuis la gauche et enroule une frappe qui finit sa course dans la lucarne !
+[12] {joueur} coupe vers l'intérieur depuis la droite et décoche une frappe croisée qui trompe totalement le gardien !
+[13] Après un festival de gestes techniques, {joueur} sème son défenseur et ajuste le gardien avec un calme royal !
+[14] D'un piqué de l'extérieur du pied, {joueur} surprend tout le monde et trouve la lucarne dans un silence de cathédrale !
+[15] {joueur} prend le piège du hors-jeu à revers, s'échappe seul face au gardien de {adversaire} et ne tremble pas devant le but vide !
+[16] Coup franc à vingt mètres : {joueur} frappe une bombe qui explose sous la barre transversale, le mur n'a rien pu faire !
+[17] {joueur} s'élance sur ce coup franc lointain et trouve l'angle parfait, un missile totalement imparable !
+[18] Un pur instinct de renard des surfaces : {joueur} devance tout le monde sur le ballon repoussé et pousse au fond des filets !
+[19] {joueur} slalome entre trois défenseurs de {adversaire} comme s'ils n'existaient pas et conclut d'un geste chirurgical !
+[20] Lancé dans le dos de la défense, {joueur} grille tout le monde à la course et ajuste un gardien à bout de souffle !
+[21] {joueur} tient son défenseur à distance d'un bras de fer, protège le ballon puis le catapulte au fond des filets !
+[22] Contrôle orienté sublime de {joueur}, qui élimine son marqueur d'un seul geste et ajuste le gardien sans trembler !
+[23] Dans le money time, {joueur} s'élève au-dessus de tout le monde et place une tête rageuse au fond des filets !
+[24] {joueur} ouvre le score et libère tout le stade, {club} prend un avantage psychologique précieux !
+[25] {joueur} redonne l'avantage à {club} d'une réalisation qui fait basculer le match !
+[26] {joueur} relance les siens en réduisant l'écart, {club} y croit de nouveau après ce but plein de caractère !
+[27] {joueur} enfonce le clou et creuse un peu plus l'écart pour {club}, {adversaire} semble abattu !
+[28] Dans les arrêts de jeu, {joueur} surgit au second poteau et offre un but improbable à {club}, le stade explose !
+[29] Sur une action collective léchée, {joueur} conclut avec sang-froid un mouvement initié depuis le milieu de terrain !
+[30] {joueur} exploite la moindre faille dans la défense de {adversaire} et ne laisse aucune chance au gardien !
+
+=== Variante PENALTY (Penalty) ===
+[31] {joueur} s'avance sereinement, prend une profonde inspiration et envoie le penalty en pleine lucarne, imparable !
+[32] {joueur} ne change pas sa course, frappe fort et au centre : le gardien s'est jeté, mais le ballon rentre en plein milieu !
+[33] Sang-froid total : {joueur} attend que le gardien de {adversaire} se couche et pousse tranquillement le ballon de l'autre côté !
+[34] {joueur} tente une Panenka totalement décomplexée, le ballon finit tout doucement au fond sous les huées du public adverse !
+[35] {joueur} frappe une fusée dans l'angle, le gardien part du bon côté mais ne peut rien faire face à tant de puissance !
+[36] Après un temps d'arrêt interminable, {joueur} déroute le gardien d'un enchaînement de petits pas et loge le ballon à l'opposé !
+[37] {joueur} ne laisse paraître aucune émotion, frappe sèchement et bas dans le coin, le gardien est resté cloué sur place !
+[38] Le stade retient son souffle, {joueur} prend son élan et catapulte le ballon au ras du poteau, personne n'y peut rien !
+[39] {joueur} place son penalty avec une précision chirurgicale dans la lucarne opposée, le gardien de {adversaire} n'a même pas bougé !
+[40] D'un tir croisé et puissant, {joueur} transforme sans trembler ce penalty décisif !
+[41] {joueur} feinte sa course d'un temps suspendu et surprend totalement le gardien, qui s'écroule du mauvais côté !
+[42] {joueur} frappe fort et haut, le ballon claque sous la barre avant de finir au fond des filets !
+[43] Malgré la pression, {joueur} garde son sang-froid et ajuste parfaitement sa frappe dans la lucarne !
+[44] {joueur} ne tremble pas d'un poil et transforme ce penalty capital comme si de rien n'était !
+[45] {joueur} choisit son côté avec assurance, frappe puissamment et voit le ballon se loger au fond, sans appel !
+
+=== Variante SURNOM (Surnom) ===
+[46] Le colosse s'impose devant son vis-à-vis et catapulte le ballon de la tête dans les filets, laissant le gardien de {adversaire} totalement immobile !
+[47] L'éclair prend de vitesse toute la défense de {adversaire} et vient conclure d'un sang-froid déconcertant !
+[48] Le bulldozer repousse deux défenseurs d'un bras et catapulte le ballon au fond des filets malgré le contact !
+[49] Le renard des surfaces sent le bon coup avant tout le monde et pousse le ballon au fond sans même y penser !
+[50] Le magicien efface deux adversaires de {adversaire} d'un enchaînement de crochets et ajuste le gardien avec une facilité déconcertante !
+[51] Le prodige, à peine sorti de l'adolescence, inscrit déjà un but d'une maturité folle pour {club} !
+[52] Le vétéran prouve que l'expérience n'a pas d'âge et conclut avec la même sérénité qu'à ses débuts !
+[53] L'artificier arme son pied et envoie un missile qui explose au fond des filets sur ce coup franc !
+[54] Le canonnier décoche une frappe surpuissante qui ne laisse absolument aucune chance au gardien de {adversaire} !
+[55] Le feu follet se faufile entre les jambes de deux défenseurs bien plus costauds que lui et ajuste le gardien avec malice !
+[56] Ambidextre redoutable, le métronome place sa frappe du pied qu'on n'attendait pas, complètement imprenable !
+[57] Le chef d'orchestre profite d'un relâchement adverse pour surgir lui-même et conclure d'une frappe limpide !
+[58] La tour domine tous les débats aériens et place une tête surpuissante que personne n'a pu contester !
+[59] La fusée grille tout le monde dans le money time et vient crucifier {adversaire} en contre !
+[60] Le spécialiste s'élance sur ce coup franc lointain et trouve l'angle parfait, un vrai geste d'orfèvre !
+
