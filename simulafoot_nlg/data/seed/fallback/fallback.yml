@@ -21,13 +21,13 @@
 - scenario: CARTON_ROUGE
   text: L'arbitre sort le carton rouge.
 - scenario: CONSTRUCTION
-  text: Le jeu se construit proprement dans le camp adverse.
+  text: Le jeu se construit proprement.
 - scenario: COUP_FRANC
   text: Le coup franc est joué dans la zone dangereuse.
 - scenario: DEBUT_MATCH
   text: Le match est lancé.
 - scenario: GESTE_SIGNATURE
-  text: Un geste technique bien dans sa manière.
+  text: Un geste technique est tenté.
 - scenario: PENALTY_RATE
   text: Le penalty n'est pas transformé.
 - scenario: SITUATION_MATCH
