@@ -51,9 +51,9 @@ Dans l'ordre chronologique, un commit = un sujet :
 
 | Fichier | Scénario | Phrases | Audits passés |
 |---|---|---|---|
-| `defense.py` | DÉFENSE | 28 (22 DEFAUT + 6 SURNOM) | n-grammes, structurel, séquence (4 seeds) |
+| `defense.py` | DÉFENSE | 32 (26 DEFAUT + 6 SURNOM ; +4 neutres repli α le 01/10/2026) | n-grammes, structurel, séquence (4 seeds) |
 | `faute_simple.py` | FAUTE_SIMPLE | 26 (20 DEFAUT + 6 SURNOM) | n-grammes, structurel (1 faux positif vérifié), séquence |
-| `corner.py` | CORNER | 26 (20 DEFAUT + 6 SURNOM) | n-grammes (2 résidus acceptés comme vocabulaire naturel), structurel, séquence |
+| `corner.py` | CORNER | 30 (24 DEFAUT + 6 SURNOM ; +4 neutres repli α le 01/10/2026) | n-grammes (2 résidus acceptés comme vocabulaire naturel), structurel, séquence |
 
 Chaque fichier porte son propre détail d'audit en docstring de module.
 L'outil réutilisable qui a servi aux trois : `scripts/audit_structure_phrases.py`
@@ -63,14 +63,25 @@ réelle** (`data/seed/scenarios.yml`, le classeur xlsx) — ce sont des
 brouillons validés en attente d'intégration formelle, à faire quand
 l'ensemble du Tier 1 (6 scénarios) sera couvert.
 
+## TIER 1 CLOS (01/10/2026) — 6 pilotes, 165 phrases V2
+
+(157 à la clôture ; +8 le 01/10/2026 : repli α, 4 phrases neutres ajoutées à DÉFENSE et à
+CORNER, voir SPEC_ANTI_REPEAT.md section 6.) DÉFENSE 32, FAUTE_SIMPLE 26, CORNER 30, TIR_NON_CADRÉ 28, REMPLACEMENT 21,
+CARTON_JAUNE 28 (REMPLACEMENT et CARTON_JAUNE validés par l'architecte sous
+réserves traitées : calcul d'intersection de l'outil vérifié, « jaune/avertissement »
+68 % → 43 %). Constat de jouabilité sur DÉFENSE/FAUTE_SIMPLE/CORNER : voir plus bas.
+
+**Tier 2 en cours : AMBIANCE validé** (`ambiance.py`, 24 phrases DEFAUT, 4 types, pas
+de SURNOM). **HORS-JEU** (`hors_jeu.py`, 24 phrases : 19 DEFAUT + 5 SURNOM) écrit — en
+attente de validation. BLESSURE (dette données `status`) et MI_TEMPS_FIN_MATCH (dette
+`score_display`) attendent. Un seul scénario en vol.
+
 ## Ce qui reste à faire (Tier 1, dans l'ordre déjà arbitré)
 
 1. ~~DÉFENSE~~ ✅ ~~FAUTE_SIMPLE~~ ✅ ~~CORNER~~ ✅
-2. **TIR_NON_CADRÉ** (prochain, fréquence ~10/match) — pas commencé.
-3. **REMPLACEMENT** — pas commencé. Slots : `sortant`/`entrant` (nouveau
-   patron à deux joueurs, voir `data/seed/PLAN_V2_EDITORIAL.md`).
-4. **CARTON_JAUNE** (dernier du Tier 1, le plus exigeant éditorialement)
-   — pas commencé.
+2. **TIR_NON_CADRÉ** (~10/match) — pilote écrit (`tir_non_cadre.py`, 28 phrases : 22 DEFAUT + 6 SURNOM), audits n-grammes/structurel/séquence passés, `tests/test_pilote_tir_non_cadre.py` (9 tests). **En attente de validation architecte.** Jouabilité mesurée contre la base (`scripts/audit_conditions_pilote.py`) : conditions ajustées le 01/10/2026, 0 condition dominante, 0 SURNOM fantôme.
+3. **REMPLACEMENT** — pilote écrit (`remplacement.py`, 21 phrases : 16 DEFAUT + 5 SURNOM), audits n-grammes/structurel/chutes/jouabilité passés, `tests/test_pilote_remplacement.py`. **En attente de validation architecte** (conventions à trancher listées en tête du fichier : conditions sur l'entrant, `score_context` non utilisé, pas de « retour de blessure »).
+4. **CARTON_JAUNE** (~3-4/match) — pilote écrit (`carton_jaune.py`, 28 phrases : 22 DEFAUT + 6 SURNOM), audits n-grammes/structurel/chutes/jouabilité passés, `tests/test_pilote_carton_jaune.py`. Seuils d'`Aggression` gradués (le plan proposait ≥ 60 = 57 % des joueurs de champ) ; « Argues With Officials » écarté (18 joueurs = fantôme). **En attente de validation architecte** — dernier du Tier 1.
 
 Puis Tier 2 (HORS-JEU, MI_TEMPS_FIN_MATCH, BLESSURE, AMBIANCE) et Tier 3
 (STATISTIQUES_PÉRIODIQUES, VAR) — voir `data/seed/PLAN_V2_EDITORIAL.md`
@@ -95,6 +106,16 @@ pour les fiches complètes des 12 scénarios.
 6. Vérifier les recouvrements de conditions avec les scénarios déjà
    validés (même sens = cohérent, sens opposé sur le même attribut =
    à examiner).
+
+## Constat de jouabilité sur les pilotes validés (01/10/2026)
+
+Voir `pilotes_v2/ATTRIBUTS_PILOTES.md` : FAUTE_SIMPLE a 12 phrases sur 26 à
+sélectivité > 50 %, DÉFENSE 3 SURNOM fantômes, CORNER 2 SURNOM fantômes
+(« lutin » : 3 joueurs). Non modifiés (consigne) ; arbitrage à rendre.
+
+## Garde-fous permanents
+
+`tests/test_pilotes_v2_garde_fous.py` découvre automatiquement chaque `pilotes_v2/*.py` et plafonne ses collisions de 4 mots à 2 (CORNER en porte 2 réelles, tous les autres 0). Un nouveau pilote est couvert sans modifier ce fichier.
 
 ## Ce qu'on ne fait pas
 

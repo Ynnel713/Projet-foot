@@ -272,6 +272,53 @@ quasiment pas).
 **Cible finale : ~708 phrases** — dans la fourchette 700-800 demandée,
 sans forcer artificiellement un chiffre rond.
 
+## Réalité vs plan — clôture de l'écriture V2 (01/10/2026)
+
+**Le plan annonçait 427 phrases nouvelles (340 pour les 12 scénarios + 87 de renforcements, soit
+708 au total avec les 281 v1). L'écriture est close à 213 phrases rédigées** (pilotes dans
+`pilotes_v2/`, jamais importés : `scenarios.yml` et la base ne contiennent toujours que les 281
+phrases v1). Delta : **−214**. Cette section explique pourquoi, et ce qu'il faudrait débloquer.
+
+| Bloc | Plan | Rédigé | Delta | Cause |
+|---|---|---|---|---|
+| Tier 1 (6 scénarios) | 210 | 165 | −45 | volumes de pilote sous la cible : DÉFENSE 32/50, CORNER 30/40, FAUTE_SIMPLE 26/35, TIR_NON_CADRÉ 28/30, CARTON_JAUNE 28/30, REMPLACEMENT 21/25 ; méthode « pilote 25-30 » validée avant montée en volume |
+| Tier 2 (4 scénarios) | 90 | 48 | −42 | AMBIANCE 24/25, HORS-JEU 24/20 (+4) ; **BLESSURE 0/20 et MI_TEMPS_FIN_MATCH 0/25 bloqués** |
+| Tier 3 (2 scénarios) | 40 | 0 | −40 | **STATISTIQUES_PÉRIODIQUES 0/20 et VAR 0/20 bloqués** |
+| Renforcements (4 scénarios) | 87 | 0 | −87 | non démarrés (hors Tiers) : CONSTRUCTION +40, ARRET_GARDIEN +17, SITUATION_MATCH +15, COUP_FRANC +15 |
+| **Total** | **427** | **213** | **−214** | |
+
+Lecture du delta : **85** phrases sont bloquées par une dépendance (BLESSURE 20, MI_TEMPS 25,
+STATS 20, VAR 20 — elles sont DÉJÀ comptées dans les lignes Tier 2 et Tier 3 ci-dessus, pas en
+plus) ; **87** ne sont pas bloquées mais jamais ouvertes (renforcements) ; **42** viennent des
+volumes de pilote sous la cible (−45 sur Tier 1, +3 net sur Tier 2). 85 + 87 + 42 = 214.
+
+### Ce qu'il faudrait débloquer pour aller au-delà
+
+| Phrases | Scénario | Déblocage nécessaire | Nature |
+|---|---|---|---|
+| 20 | BLESSURE | `players.status` ne porte pas blessé/revenant/apte (ou un événement de blessure côté moteur) | donnée |
+| 25 | MI_TEMPS_FIN_MATCH | `MatchContext.score_display` + choix de variante (mi-temps / fin, valence du résultat) par le sélecteur (option C) | spec / sélecteur V2.1 |
+| 20 | STATISTIQUES_PÉRIODIQUES | champs de statistiques sur `MatchContext` (possession, tirs cumulés) : décision sur ce que le moteur expose | moteur |
+| 20 | VAR | le moteur n'émet pas d'événement VAR ; écrire sur un événement inexistant serait spéculatif | moteur |
+| 87 | Renforcements | décision d'ouvrir le chantier (CONSTRUCTION : 15-20 occurrences/match pour un pool de 20) | priorisation |
+| ~45 | Volumes Tier 1 sous la cible | montée en volume après intégration, à mesurer avec les taux de répétition du sélecteur (`SPEC_ANTI_REPEAT.md` §8) | mesure |
+
+### Trajectoire
+
+281 (v1) + 213 (V2 rédigé) = **494 phrases** hors banque importée ; +45 (Tier 2/3 débloqués par
+la donnée ou le moteur) +87 (renforcements) +45 (volumes) représentent le chemin vers les ~708
+théoriques du plan initial. Le 708 était un objectif de volume ; la réalité resserre sur ce qui
+est écrivable avec les données et événements existants.
+
+### État d'intégration
+
+Tout l'écrit est en attente d'intégration : le sélecteur, `template_filler` et `anti_repeat`
+n'existent pas (squelettes `NotImplementedError`), la cascade DEFAUT → SURNOM est spécifiée
+(`engine/phrase_selector.py`, étape 7) mais non codée. Les décisions d'architecture accumulées
+pour V2.1 sont dans `SPEC_ANTI_REPEAT.md` (§1-8).
+
+---
+
 ## Ce que ce plan ne tranche pas (hors périmètre "plan éditorial")
 
 - Le fallback `phrase_selector` étape 7 (0 candidat) — décision
