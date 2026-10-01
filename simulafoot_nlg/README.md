@@ -17,7 +17,7 @@
 | `engine/phrase_selector.py` | **Squelette.** Sélectionnera une `Phrase` pour un (scénario, joueur, contexte) donnés. |
 | `engine/anti_repeat.py` | **Squelette.** Pénalités de récence/similarité, mise à jour du cooldown. |
 | `engine/template_filler.py` | **Squelette.** Résout les `{slot_name}` d'une `Phrase`. |
-| `engine/post_process.py` | **Squelette.** Élision, majuscule, ponctuation, espaces. |
+| `engine/post_process.py` | Post-traitement du texte rendu : espaces, majuscule, ponctuation finale, élision -- quatre fonctions pures enchaînées par `apply`. |
 | `engine/logger.py` | **Squelette.** Journalise un usage de phrase (`phrase_history`). |
 | `data/import/import_players.py` | ETL `joueurs.xlsx` -> DuckDB -> SQLite (`players` + `player_attributes`). |
 | `scripts/init_db.py` | Crée/met à jour `data/simulafoot.db` depuis `data/schema.sql` (idempotent). |
@@ -34,8 +34,8 @@
 Ce qui **fonctionne réellement** aujourd'hui : le schéma, l'import des
 joueurs, le chargement des scénarios/phrases depuis la base. Ce qui **n'est
 pas encore implémenté** (lève `NotImplementedError`) : la sélection d'une
-phrase, l'anti-répétition, le remplissage des slots, le post-traitement
-linguistique, la journalisation d'usage. Chaque module concerné documente en
+phrase, l'anti-répétition, le remplissage des slots, la journalisation
+d'usage. Chaque module concerné documente en
 tête l'algorithme prévu -- c'est le point de départ de la prochaine session,
 une fois la banque de phrases livrée.
 
