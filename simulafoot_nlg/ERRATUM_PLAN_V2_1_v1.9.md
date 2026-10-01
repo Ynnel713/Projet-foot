@@ -149,6 +149,9 @@ l'export DuckDB (D8rév).
 
 ## D. État des décisions (§7 révisé)
 
+*Les 9 décisions « à trancher » ci-dessous ont été tranchées le 01/10/2026 : voir SPEC_ANTI_REPEAT.md §10,*
+*« Décisions de l'architecte sur les 9 points ouverts du plan V2.1 ».*
+
 **À acter (8)** : norm-mc ; bool-int ; match-seq-None ; match-seq-neg ; alpha (seuil 70 % déjà
 tranché, E9) ; alpha-D1 (ordre C3) ; rng-par-phrase (clé `sha256(seed|code scénario|code variante|texte)`) ;
 poteau-hors-V2.1 (E8).

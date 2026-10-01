@@ -635,6 +635,36 @@ sur `preferred_moves`, jamais `None`) ; même traitement, retourner `False`.
   HORS-JEU), 213 phrases, 494 rédigées avec la v1 ; les 4 renforcements (87 phrases) ne sont pas
   démarrés (aucun fichier dans `pilotes_v2/`).
 
+**Décisions de l'architecte sur les 9 points ouverts du plan V2.1 (01/10/2026) :**
+1. **penalty-variant — la variante PENALTY de BUT est non prioritaire.** Les 15 phrases de BUT/PENALTY
+   n'ont aucune condition, `is_default = 0` et le même poids que SURNOM : l'ordre de l'étape 2 de
+   `select` (poids décroissant, puis `id` croissant) les essaierait avant SURNOM et DEFAUT, et tout BUT
+   serait commenté comme un penalty. Elle ne sort que si le contexte est réellement un penalty.
+   *Mécanisme retenu (à ma main) :* condition `mandatory` `gabarit == "penalty"` sur ces 15 phrases
+   (données, pas de cas particulier dans le sélecteur). Prérequis : `gabarit` dans
+   `MATCH_CONTEXT_FIELDS` (code) et les 15 conditions dans la source éditoriale (classeur, puis
+   reconversion) ; commits séparés, plus tard. Critère de réussite : un BUT ordinaire n'est jamais servi
+   par PENALTY (test), un penalty l'est.
+2. **adversaire = club — statu quo.** Les 8 phrases de DEFENSE qui traitent `{adversaire}` comme une
+   personne sont à RÉÉCRIRE (chantier éditorial, hors Bloc 1). FAUTE_SIMPLE est inatteignable en V2.1 :
+   ses 8 phrases suivent la même réécriture au déblocage.
+3. **D10 — fallback retenu.** Lignes de `phrases` à `is_fallback = 1`, source `data/seed/fallback/`
+   (dossier dédié, comme `v2/`). Jamais soumis au cooldown (aucune ligne `phrase_cooldowns`), jamais
+   inscrit dans `phrase_history`. Conséquences : `Phrase.is_fallback` ; `update_cooldown` lève
+   `ValueError` sur un fallback ; test SQL « un seul fallback par scénario » (jointure `variants`).
+4. **D9 — cache mémoire au démarrage de l'app** (sélectivité calculée une fois ; une modification des
+   joueurs ou de la banque prend effet au redémarrage).
+5. **D9-pop — population de référence : joueurs de champ (`position != "GK"`)**, la même que celle du
+   seuil de 70 % (§6) et de `audit_conditions_pilote.py`.
+6. **D12 — mapping, premières lignes actées :** (occasion, gabarit `penalty`, `arret`) →
+   ARRET_GARDIEN ; (but, `construction_placee`) → CONSTRUCTION. La table complète, par
+   (event_type, gabarit, outcome), est à figer après cette décision (reste notamment à arbitrer les
+   autres issues d'un penalty raté).
+7. **sim-window — en matchs** (`match_sequence`), jamais en heures.
+8. **D10-warn — un seul WARNING enrichi** (pas deux niveaux).
+9. **proprio-conversion — module racine, hors V2.1.** V2.1 livre le contrat des dicts
+   (`SPEC_NLG_INGESTION.md`, à créer au Bloc 5) ; les tests NLG utilisent des dicts écrits à la main.
+
 ## Ce qui N'est PAS bloquant (déjà en place)
 - Le schéma SQL (`phrase_history`, `phrase_cooldowns`,
   `similarity_signatures`) est cohérent avec l'algorithme documenté dans le
