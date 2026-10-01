@@ -605,6 +605,36 @@ sur `preferred_moves`, jamais `None`) ; même traitement, retourner `False`.
 - **`parse_condition_atoms` ne supporte pas « ou »** (conjonction seule) : l'option B (assouplir les
   conditions) doit REMPLACER une condition `preferred_moves`, jamais s'y ajouter.
 
+**Précisions de cartographie (01/10/2026, architecte, complétant la note d'audit ci-dessus) :**
+- **Pas de renversement de diagnostic.** GESTE_SIGNATURE reste concerné (31/37 phrases limitées par
+  `preferred_moves` / `foot`), BUT aussi (20/60), CARTON_ROUGE (5/31), ARRET_GARDIEN non (0/38) : 56
+  phrases v1 limitées par la donnée après la correction de `height_cm`.
+- **Deux populations de référence, non comparables :** l'audit de couverture mesure sur les 7563
+  joueurs ; le SPEC §6 (seuil de 70 %) et `audit_conditions_pilote.py` sur les joueurs de champ (6675,
+  `position != "GK"`). La population de D9 à l'EXÉCUTION reste à définir.
+- **D14 par ID** : voir la note ci-dessus (clé `players.id` = colonne `ID` = `Player.id` ; les
+  événements du moteur ne portent que des noms, résolution par effectif du club, homonyme
+  intra-club possible).
+- **Limite de l'outil d'audit :** `scripts/audit_conditions_pilote.py` ne gère pas `==` / `!=` sur du
+  TEXTE (ex. `foot == "Right"` lève une erreur : conversion numérique du seuil). N'affecte pas les
+  pilotes V2 (leurs `==` portent sur `is_home`, contexte ignoré par l'outil).
+- **Comptes de `preferred_moves` — historique à réconcilier avec `COUVERTURE.md` :** 362 joueurs
+  (4,8 %) à l'import du 30/09 (chiffre encore dans `COUVERTURE.md`) → 644 au moment de la rédaction
+  d'`ENRICHISSEMENT_PREFERRED_MOVES.md` (classeur) → **703 aujourd'hui** (classeur ET base, 9,3 %).
+  Ce n'est pas une divergence entre deux sources mais une progression de la saisie manuelle dans la
+  journée du 01/10 ; `COUVERTURE.md` et l'ENRICHISSEMENT portent des comptes périmés.
+- **3 phrases V2 conditionnées par un move** (1 TIR_NON_CADRÉ : « canonnier » ; 2 CARTON_JAUNE :
+  « Dives Into Tackles », « Winds Up Opponents »). Avec 9,3 % de couverture, elles s'adressent à 24,
+  105 et 29 joueurs sur 7563 (0,3 à 1,4 %) : très rares, pas impossibles ; elles grandiront avec
+  l'enrichissement. Les trois moves figurent dans les 55 canoniques (`PREFERRED_MOVE_TRANSLATIONS`).
+- **Garde-fou d'import des moves :** le contrôle « move hors des 55 connus » vit dans
+  `_conditions_for_phrase` (`scripts/convert_commentary_xlsx_to_yaml.py:284-300`), donc dans le
+  pipeline classeur → YAML (v1) seulement ; le chemin pilotes → YAML (A2) n'existe pas encore et
+  devra le réutiliser.
+- **Périmètre confirmé par `PLAN_V2_EDITORIAL.md` :** 6 pilotes Tier 1 + 2 Tier 2 réalisés (AMBIANCE,
+  HORS-JEU), 213 phrases, 494 rédigées avec la v1 ; les 4 renforcements (87 phrases) ne sont pas
+  démarrés (aucun fichier dans `pilotes_v2/`).
+
 ## Ce qui N'est PAS bloquant (déjà en place)
 - Le schéma SQL (`phrase_history`, `phrase_cooldowns`,
   `similarity_signatures`) est cohérent avec l'algorithme documenté dans le
