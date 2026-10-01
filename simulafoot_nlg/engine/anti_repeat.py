@@ -22,6 +22,11 @@ from engine.models import Phrase, Player
 from engine.profile_engine import validate_match_sequence
 
 
+class CooldownManquantError(ValueError):
+    """Une phrase normale n'a aucune ligne `phrase_cooldowns` (regle "cooldown obligatoire") :
+    phrase_selector la refuse au lieu de planter."""
+
+
 def recency_penalty(conn: Connection, phrase: Phrase, player: Player, *, match_sequence: int) -> float:
     """Penalite de recence : 1.0 si `phrase` a ete utilisee pour `player` il y a MOINS de
     `cooldown_matches` matchs, 0.0 sinon (jamais utilisee, ou cooldown ecoule).
@@ -44,7 +49,9 @@ def recency_penalty(conn: Connection, phrase: Phrase, player: Player, *, match_s
         "SELECT cooldown_matches FROM phrase_cooldowns WHERE phrase_id = ?", (phrase.id,)
     ).fetchone()
     if cooldown is None:
-        raise ValueError(f"recency_penalty : phrase {phrase.id} sans cooldown (phrase_cooldowns) -- refusee.")
+        raise CooldownManquantError(
+            f"recency_penalty : phrase {phrase.id} sans cooldown (phrase_cooldowns) -- refusee."
+        )
     dernier = conn.execute(
         """SELECT MAX(match_sequence) FROM phrase_history
            WHERE phrase_id = ? AND player_id = ? AND match_sequence IS NOT NULL""",

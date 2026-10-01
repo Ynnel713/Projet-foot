@@ -1,6 +1,5 @@
-"""phrase_selector : filtre mandatory et paliers (Bloc 2, commit 1), cascade de variantes
-(commit 2). La classe TestCascadeDeVariantesSpec verrouille encore le DOCSTRING du module ; elle
-sera remplacee par des tests de comportement au commit 3."""
+"""phrase_selector : filtre mandatory, paliers alpha, cascade de variantes, cooldown, similarite,
+rendu, phrase de secours, WARNING unique (decisions D1, alpha, D9, D10, D10-warn)."""
 
 from __future__ import annotations
 
@@ -8,78 +7,37 @@ import logging
 
 import pytest
 
+import engine.phrase_selector as module
+from engine import minhash
+from engine.logger import log_usage
 from engine.models import MatchContext, Phrase, PhraseCondition, Player, Variant
 from engine.phrase_selector import (
     AucunCandidatError,
     candidats,
     ordonner_variantes,
-    palier_retenu,
     paliers,
     select,
 )
 from engine.selectivity import Selectivite
 
-
-def _player() -> Player:
-    return Player(id=1, first_name="A", last_name="B")
+RAPIDE = [("Pace", ">=", "8")]  # 30 % de la population : specifique
 
 
 def _context() -> MatchContext:
     return MatchContext(match_id="m1")
 
 
-class TestCascadeDeVariantesSpec:
-    """select() n'est pas implemente -- il n'y a donc pas de COMPORTEMENT a
-    tester pour la cascade de variantes (decision du 01/10/2026, etape 7 de
-    l'algorithme). Mais la DECISION elle-meme (pas juste une intention) doit
-    survivre a une reecriture distraite du docstring -- sans ca, la
-    formalisation n'est qu'un vœu pieux. Ces tests verrouillent chacune des
-    garanties promises (ordre, garde-fou, logging) independamment, pour
-    qu'un echec pointe precisement CE qui a disparu plutot qu'un diff vague
-    sur tout le docstring."""
-
-    @staticmethod
-    def _doc() -> str:
-        import engine.phrase_selector as module
-
-        assert module.__doc__ is not None
-        return module.__doc__
-
-    def test_cascade_falls_back_to_other_active_variants_on_zero_candidates(self):
-        doc = self._doc()
-        assert "0 candidat" in doc
-        assert "is_active=1" in doc or "variantes actives" in doc
-
-    def test_cascade_order_is_deterministic_non_default_first_then_default_last(self):
-        doc = self._doc()
-        assert "weight" in doc and "decroissant" in doc
-        assert "is_default" in doc and "dernier recours" in doc
-
-    def test_cascade_reapplies_mandatory_conditions_and_cooldown_unchanged(self):
-        doc = self._doc()
-        assert "cooldown obligatoire" in doc
-        assert "jamais contournes" in doc
-
-    def test_cascade_has_an_anti_loop_guard(self):
-        doc = self._doc()
-        assert "anti-boucle" in doc
-        assert "au plus une fois" in doc
-
-    def test_cascade_activation_is_logged_as_warning(self):
-        doc = self._doc()
-        assert "LOGGING obligatoire" in doc
-        assert "WARNING" in doc
-
-    def test_cascade_exhaustion_falls_through_to_the_final_fallback(self):
-        # L'etape 7 ne remplace pas le fallback final (toujours a definir) --
-        # elle le retarde jusqu'a ce que TOUTES les variantes actives aient
-        # ete tentees, pas une seule.
-        doc = self._doc()
-        assert "fallback final explicite" in doc
-        assert "toujours a definir" in doc
+def _joueur_rapide() -> Player:
+    return Player(id=1, first_name="A", last_name="B", attributes={"Pace": 90, "Finishing": 40})
 
 
-# --- Bloc 2 (1/4) : filtre mandatory, partition specifiques / generiques --------
+def _joueur_lent() -> Player:
+    return Player(id=3, first_name="L", last_name="ent", attributes={"Pace": 2})
+
+
+def _population_pace() -> Selectivite:
+    """10 joueurs de champ, Pace 1..10."""
+    return Selectivite([Player(id=i, first_name="J", last_name=str(i), attributes={"Pace": i}) for i in range(1, 11)])
 
 
 def _cond(attribute: str, operator: str, value: str, mandatory: bool = True) -> PhraseCondition:
@@ -90,13 +48,11 @@ def _p(identifiant: int, *conditions: PhraseCondition, **champs) -> Phrase:
     return Phrase(id=identifiant, variant_id=1, text=f"p{identifiant}", conditions=conditions, **champs)
 
 
-def _joueur_rapide() -> Player:
-    return Player(id=1, first_name="A", last_name="B", attributes={"Pace": 90, "Finishing": 40})
+def _v(identifiant: int, code: str, *, defaut: bool = False, poids: float = 1.0, active: bool = True) -> Variant:
+    return Variant(id=identifiant, scenario_id=1, code=code, label=code, is_default=defaut, weight=poids, is_active=active)
 
 
-def _population_pace() -> Selectivite:
-    """10 joueurs de champ, Pace 1..10."""
-    return Selectivite([Player(id=i, first_name="J", last_name=str(i), attributes={"Pace": i}) for i in range(1, 11)])
+# --- Filtre mandatory -----------------------------------------------------------
 
 
 class TestFiltreMandatory:
@@ -139,7 +95,7 @@ class TestFiltreMandatory:
         assert [p.id for p in candidats(pool, _joueur_rapide(), _context())] == [3, 1, 2]
 
 
-class TestPartitionEtPaliers:
+class TestPartition:
     def test_partition_a_70_pour_cent(self):
         specifique = _p(1, _cond("Pace", ">=", "4"))  # 7/10 = 70 % : specifique
         large = _p(2, _cond("Pace", ">=", "3"))  # 8/10 : generique
@@ -148,33 +104,11 @@ class TestPartitionEtPaliers:
         assert [p.id for p in specifiques] == [1]
         assert [p.id for p in generiques] == [2, 3]
 
-    def test_un_specifique_eligible_l_emporte_et_les_generiques_sont_ecartes(self):
-        pool = [_p(1, _cond("Pace", ">=", "8")), _p(2), _p(3, _cond("Pace", ">=", "1"))]
-        assert [p.id for p in palier_retenu(pool, _population_pace())] == [1]
-
-    def test_zero_specifique_repli_sur_les_generiques(self):
-        pool = [_p(2), _p(3, _cond("Pace", ">=", "1"))]  # sans condition, et trop large (100 %)
-        assert [p.id for p in palier_retenu(pool, _population_pace())] == [2, 3]
-
-    def test_zero_generique_les_specifiques_servent(self):
-        assert [p.id for p in palier_retenu([_p(1, _cond("Pace", ">=", "8"))], _population_pace())] == [1]
-
-    def test_pool_vide_donne_une_liste_vide(self):
-        assert palier_retenu([], _population_pace()) == []
-
-    def test_repli_apres_filtre_conditions_et_cooldown(self):
-        """Le pool arrive deja filtre (conditions, puis cooldown au commit 3) : si le seul specifique
-        est ecarte (condition non satisfaite), les generiques prennent le relais."""
-        joueur_lent = Player(id=3, first_name="L", last_name="ent", attributes={"Pace": 2})
-        pool = candidats([_p(1, _cond("Pace", ">=", "8")), _p(2)], joueur_lent, _context())
-        assert [p.id for p in palier_retenu(pool, _population_pace())] == [2]
+    def test_pool_vide_donne_deux_paliers_vides(self):
+        assert paliers([], _population_pace()) == ([], [])
 
 
-# --- Bloc 2 (2/4) : cascade de variantes ----------------------------------------
-
-
-def _v(identifiant: int, code: str, *, defaut: bool = False, poids: float = 1.0, active: bool = True) -> Variant:
-    return Variant(id=identifiant, scenario_id=1, code=code, label=code, is_default=defaut, weight=poids, is_active=active)
+# --- Ordre de la cascade --------------------------------------------------------
 
 
 class TestOrdreDeLaCascade:
@@ -196,8 +130,14 @@ class TestOrdreDeLaCascade:
         assert ordonner_variantes(variantes) == ordonner_variantes(list(reversed(variantes)))
 
 
-def _banque(conn, variantes: dict[str, dict]) -> None:
-    """Scenario BUT_TEST ; `variantes` : code -> {defaut, poids, active, phrases: [(texte, [(attr, op, val)], poids)]}."""
+# --- Banque en base pour select -------------------------------------------------
+
+
+def _banque(conn, variantes: dict[str, dict], *, cooldown: int | None = 2) -> None:
+    """Scenario BUT_TEST ; `variantes` : code -> {defaut, poids, active, phrases: [(texte, [(attr, op, val)], poids?)]}.
+    Les joueurs 1 et 3 existent (historique) ; chaque phrase recoit un cooldown (sauf cooldown=None)."""
+    for identifiant in (1, 3):
+        conn.execute("INSERT INTO players (id, first_name, last_name) VALUES (?, 'J', 'x')", (identifiant,))
     conn.execute("INSERT INTO scenarios (code, label) VALUES ('BUT_TEST', 'But')")
     for code, definition in variantes.items():
         variante_id = conn.execute(
@@ -208,6 +148,8 @@ def _banque(conn, variantes: dict[str, dict]) -> None:
             phrase_id = conn.execute(
                 "INSERT INTO phrases (variant_id, text, weight) VALUES (?, ?, ?)", (variante_id, texte, poids[0] if poids else 1.0)
             ).lastrowid
+            if cooldown is not None:
+                conn.execute("INSERT INTO phrase_cooldowns (phrase_id, cooldown_matches) VALUES (?, ?)", (phrase_id, cooldown))
             for attribut, operateur, valeur in conditions:
                 conn.execute(
                     "INSERT INTO phrase_conditions (phrase_id, attribute, operator, value) VALUES (?, ?, ?, ?)",
@@ -216,7 +158,51 @@ def _banque(conn, variantes: dict[str, dict]) -> None:
     conn.commit()
 
 
-RAPIDE = [("Pace", ">=", "8")]  # specifique pour _population_pace (30 %)
+def _ajouter_slot(conn, texte: str, slot_name: str, expression: str) -> None:
+    phrase_id = conn.execute("SELECT id FROM phrases WHERE text = ?", (texte,)).fetchone()[0]
+    conn.execute(
+        "INSERT INTO phrase_slots (phrase_id, slot_name, expression) VALUES (?, ?, ?)", (phrase_id, slot_name, expression)
+    )
+    conn.commit()
+
+
+def _ajouter_secours(conn, texte: str = "Le match suit son cours.") -> int:
+    variante_id = conn.execute("SELECT id FROM variants WHERE is_default = 1").fetchone()[0]
+    phrase_id = conn.execute(
+        "INSERT INTO phrases (variant_id, text, is_fallback) VALUES (?, ?, 1)", (variante_id, texte)
+    ).lastrowid
+    conn.commit()
+    return phrase_id
+
+
+def _usage(conn, texte: str, joueur: int, rang: int, texte_rendu: str | None = None) -> None:
+    """Un usage enregistre comme update_cooldown le fait : ligne d'historique + signature MinHash."""
+    phrase_id = conn.execute("SELECT id FROM phrases WHERE text = ?", (texte,)).fetchone()[0]
+    # Par defaut le texte HISTORISE differe de la phrase (aucun lien de similarite avec elle) ; les
+    # tests de similarite passent explicitement le texte identique.
+    rendu = texte_rendu or f"historique du match {rang} sans rapport"
+    history_id = log_usage(conn, phrase_id, joueur, f"m{rang}", rendu, match_sequence=rang)
+    conn.execute(
+        "INSERT INTO similarity_signatures (history_id, signature) VALUES (?, ?)",
+        (history_id, minhash.serialiser(minhash.signature(rendu))),
+    )
+    conn.commit()
+
+
+def _select(conn, joueur: Player | None = None, *, seed=1, match_sequence=10, **kwargs) -> Phrase:
+    return select(
+        conn,
+        "BUT_TEST",
+        joueur or _joueur_rapide(),
+        kwargs.pop("contexte", _context()),
+        seed=seed,
+        match_sequence=match_sequence,
+        selectivite=kwargs.pop("selectivite", _population_pace()),
+        **kwargs,
+    )
+
+
+# --- Cascade de variantes ----------------------------------------------------------
 
 
 class TestSelectCascade:
@@ -226,22 +212,16 @@ class TestSelectCascade:
             "SURNOM": {"phrases": [("Le sprinter file", RAPIDE)]},
         })
         for graine in range(20):
-            phrase = select(sqlite_conn, "BUT_TEST", _joueur_rapide(), _context(), seed=graine, selectivite=_population_pace())
-            assert phrase.text == "Le sprinter file"
+            assert _select(sqlite_conn, seed=graine).text == "Le sprinter file"
 
     def test_surnom_vide_defaut_sert(self, sqlite_conn):
-        joueur_lent = Player(id=3, first_name="L", last_name="ent", attributes={"Pace": 2})
         _banque(sqlite_conn, {
             "DEFAUT": {"defaut": True, "phrases": [("generique", [])]},
             "SURNOM": {"phrases": [("Le sprinter file", RAPIDE)]},
         })
-        phrase = select(sqlite_conn, "BUT_TEST", joueur_lent, _context(), seed=1, selectivite=_population_pace())
-        assert phrase.text == "generique"
+        assert _select(sqlite_conn, _joueur_lent()).text == "generique"
 
     def test_une_variante_a_zero_candidat_laisse_la_place_a_la_suivante_une_seule_fois(self, sqlite_conn, monkeypatch):
-        import engine.phrase_selector as module
-
-        joueur_lent = Player(id=3, first_name="L", last_name="ent", attributes={"Pace": 2})
         _banque(sqlite_conn, {
             "DEFAUT": {"defaut": True, "phrases": [("generique", [])]},
             "SURNOM": {"phrases": [("A", RAPIDE)]},
@@ -251,14 +231,10 @@ class TestSelectCascade:
         original = module.load_phrases
         monkeypatch.setattr(module, "load_phrases", lambda conn, variante_id: charges.append(variante_id) or original(conn, variante_id))
 
-        phrase = select(sqlite_conn, "BUT_TEST", joueur_lent, _context(), seed=1, selectivite=_population_pace())
-
-        assert phrase.text == "generique"
+        assert _select(sqlite_conn, _joueur_lent()).text == "generique"
         assert len(charges) == 3 and len(set(charges)) == 3  # PENALTY, SURNOM, DEFAUT : une fois chacune
 
     def test_on_s_arrete_a_la_premiere_variante_qui_produit_un_candidat(self, sqlite_conn, monkeypatch):
-        import engine.phrase_selector as module
-
         _banque(sqlite_conn, {
             "DEFAUT": {"defaut": True, "phrases": [("generique", [])]},
             "SURNOM": {"phrases": [("Le sprinter file", RAPIDE)]},
@@ -266,76 +242,205 @@ class TestSelectCascade:
         charges: list[int] = []
         original = module.load_phrases
         monkeypatch.setattr(module, "load_phrases", lambda conn, variante_id: charges.append(variante_id) or original(conn, variante_id))
-        select(sqlite_conn, "BUT_TEST", _joueur_rapide(), _context(), seed=1, selectivite=_population_pace())
+        _select(sqlite_conn)
         assert len(charges) == 1  # DEFAUT n'a meme pas ete charge
 
-    def test_la_variante_par_poids_decroissant_passe_la_premiere(self, sqlite_conn):
+    def test_la_variante_au_plus_grand_poids_passe_la_premiere(self, sqlite_conn):
         _banque(sqlite_conn, {
             "DEFAUT": {"defaut": True, "phrases": [("generique", [])]},
             "SURNOM": {"poids": 1.0, "phrases": [("surnom", RAPIDE)]},
             "PENALTY": {"poids": 3.0, "phrases": [("penalty", RAPIDE)]},
         })
-        assert select(sqlite_conn, "BUT_TEST", _joueur_rapide(), _context(), seed=1, selectivite=_population_pace()).text == "penalty"
+        assert _select(sqlite_conn).text == "penalty"
 
     def test_une_variante_inactive_n_est_jamais_essayee(self, sqlite_conn):
         _banque(sqlite_conn, {
             "DEFAUT": {"defaut": True, "phrases": [("generique", [])]},
             "SURNOM": {"active": False, "phrases": [("surnom", RAPIDE)]},
         })
-        assert select(sqlite_conn, "BUT_TEST", _joueur_rapide(), _context(), seed=1, selectivite=_population_pace()).text == "generique"
-
-    def test_les_generiques_servent_quand_aucun_specifique_n_est_eligible_dans_la_variante(self, sqlite_conn):
-        joueur_lent = Player(id=3, first_name="L", last_name="ent", attributes={"Pace": 2})
-        _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("spec", RAPIDE), ("gen", [])]}})
-        assert select(sqlite_conn, "BUT_TEST", joueur_lent, _context(), seed=1, selectivite=_population_pace()).text == "gen"
-
-    def test_un_fallback_n_est_jamais_tire_dans_le_pool_normal(self, sqlite_conn):
-        _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("normale", [])]}})
-        sqlite_conn.execute("INSERT INTO phrases (variant_id, text, is_fallback) VALUES (1, 'secours', 1)")
-        sqlite_conn.commit()
-        textes = {select(sqlite_conn, "BUT_TEST", _joueur_rapide(), _context(), seed=g, selectivite=_population_pace()).text for g in range(30)}
-        assert textes == {"normale"}
+        assert _select(sqlite_conn).text == "generique"
 
     def test_scenario_inconnu_leve_key_error(self, sqlite_conn):
         with pytest.raises(KeyError, match="INCONNU"):
-            select(sqlite_conn, "INCONNU", _joueur_rapide(), _context(), seed=1, selectivite=_population_pace())
+            select(sqlite_conn, "INCONNU", _joueur_rapide(), _context(), seed=1, match_sequence=1, selectivite=_population_pace())
+
+
+class TestPaliersDansSelect:
+    def test_un_specifique_eligible_l_emporte_et_les_generiques_sont_ecartes(self, sqlite_conn):
+        _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("spec", RAPIDE), ("gen A", []), ("gen B", [])]}})
+        assert {_select(sqlite_conn, seed=g).text for g in range(30)} == {"spec"}
+
+    def test_zero_specifique_eligible_repli_sur_les_generiques(self, sqlite_conn):
+        _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("spec", RAPIDE), ("gen", [])]}})
+        assert _select(sqlite_conn, _joueur_lent()).text == "gen"
+
+    def test_zero_generique_les_specifiques_servent(self, sqlite_conn):
+        _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("spec", RAPIDE)]}})
+        assert _select(sqlite_conn).text == "spec"
+
+    def test_une_condition_trop_large_est_generique_donc_au_meme_rang_qu_une_phrase_sans_condition(self, sqlite_conn):
+        large = [("Pace", ">=", "1")]  # 100 % de la population
+        _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("large", large), ("sans condition", [])]}})
+        assert {_select(sqlite_conn, seed=g).text for g in range(40)} == {"large", "sans condition"}
+
+    def test_un_fallback_n_est_jamais_tire_dans_le_pool_normal(self, sqlite_conn):
+        _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("normale", [])]}})
+        _ajouter_secours(sqlite_conn)
+        assert {_select(sqlite_conn, seed=g).text for g in range(30)} == {"normale"}
 
 
 class TestTirage:
     def test_meme_graine_meme_phrase_et_la_graine_fait_varier_le_tirage(self, sqlite_conn):
         _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [(f"g{i}", []) for i in range(10)]}})
-        def tirer(graine):
-            return select(sqlite_conn, "BUT_TEST", _joueur_rapide(), _context(), seed=graine, selectivite=_population_pace()).text
-        assert tirer(7) == tirer(7)
-        assert len({tirer(g) for g in range(40)}) > 4
+        assert _select(sqlite_conn, seed=7).text == _select(sqlite_conn, seed=7).text
+        assert len({_select(sqlite_conn, seed=g).text for g in range(40)}) > 4
 
     def test_une_phrase_de_poids_nul_n_est_jamais_tiree(self, sqlite_conn):
         _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("poids nul", [], 0.0), ("poids un", [], 1.0)]}})
-        textes = {select(sqlite_conn, "BUT_TEST", _joueur_rapide(), _context(), seed=g, selectivite=_population_pace()).text for g in range(40)}
-        assert textes == {"poids un"}
+        assert {_select(sqlite_conn, seed=g).text for g in range(40)} == {"poids un"}
 
 
-class TestWarningUnique:
-    def test_defaut_a_zero_candidat_un_seul_warning_enrichi_puis_erreur(self, sqlite_conn, caplog):
-        joueur_lent = Player(id=3, first_name="L", last_name="ent", attributes={"Pace": 2})
+# --- Cooldown (en matchs) ---------------------------------------------------------
+
+
+class TestCooldown:
+    def test_une_phrase_en_cooldown_est_ecartee_puis_redevient_disponible(self, sqlite_conn):
+        _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("A", []), ("B", [])]}})  # cooldown 2
+        _usage(sqlite_conn, "A", 1, 10)
+        assert {_select(sqlite_conn, seed=g, match_sequence=11).text for g in range(30)} == {"B"}
+        assert {_select(sqlite_conn, seed=g, match_sequence=12).text for g in range(40)} == {"A", "B"}
+
+    def test_repli_cooldown_specifiques_epuises_les_generiques_servent(self, sqlite_conn):
+        _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("spec", RAPIDE), ("gen", [])]}})
+        assert _select(sqlite_conn, match_sequence=10).text == "spec"
+        _usage(sqlite_conn, "spec", 1, 10)
+        assert _select(sqlite_conn, match_sequence=11).text == "gen"  # au lieu de bloquer
+        assert _select(sqlite_conn, match_sequence=12).text == "spec"  # cooldown ecoule : le specifique revient
+
+    def test_la_cascade_ne_contourne_jamais_le_cooldown(self, sqlite_conn):
+        _banque(sqlite_conn, {
+            "DEFAUT": {"defaut": True, "phrases": [("generique", [])]},
+            "SURNOM": {"phrases": [("surnom", RAPIDE)]},
+        })
+        _usage(sqlite_conn, "surnom", 1, 10)
+        assert _select(sqlite_conn, match_sequence=11).text == "generique"  # SURNOM en cooldown : DEFAUT sert
+        assert _select(sqlite_conn, match_sequence=12).text == "surnom"
+
+    def test_le_cooldown_est_par_joueur(self, sqlite_conn):
+        _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("A", [])]}})
+        _usage(sqlite_conn, "A", 3, 10)  # un AUTRE joueur l'a eue
+        assert _select(sqlite_conn, _joueur_rapide(), match_sequence=10).text == "A"
+
+    def test_une_phrase_sans_cooldown_est_refusee_avec_un_warning(self, sqlite_conn, caplog):
+        _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("avec", [])]}})
+        sqlite_conn.execute("INSERT INTO phrases (variant_id, text) VALUES (1, 'sans cooldown')")
+        sqlite_conn.commit()
+        with caplog.at_level(logging.WARNING, logger="engine.phrase_selector"):
+            assert {_select(sqlite_conn, seed=g).text for g in range(30)} == {"avec"}
+        assert any("cooldown" in r.getMessage() for r in caplog.records)
+
+
+# --- Similarite et rendu ------------------------------------------------------------
+
+
+class TestSimilariteEtRendu:
+    def test_un_texte_identique_a_un_usage_recent_est_ecarte_quand_une_alternative_existe(self, sqlite_conn):
+        _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("Il marque un but superbe ce soir", []), ("Une toute autre phrase sans rapport", [])]}}, cooldown=0)
+        _usage(sqlite_conn, "Il marque un but superbe ce soir", 1, 10, "Il marque un but superbe ce soir")
+        assert {_select(sqlite_conn, seed=g, match_sequence=10).text for g in range(40)} == {"Une toute autre phrase sans rapport"}
+
+    def test_si_tous_les_candidats_sont_identiques_a_l_historique_le_palier_n_est_pas_vide(self, sqlite_conn):
+        _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("Il marque un but superbe ce soir", [])]}}, cooldown=0)
+        _usage(sqlite_conn, "Il marque un but superbe ce soir", 1, 10, "Il marque un but superbe ce soir")
+        assert _select(sqlite_conn, match_sequence=10).text == "Il marque un but superbe ce soir"
+
+    def test_un_slot_irresolvable_ecarte_la_phrase_et_une_autre_sert(self, sqlite_conn):
+        _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("{passeur} centre", []), ("Il frappe", [])]}})
+        _ajouter_slot(sqlite_conn, "{passeur} centre", "passeur", "context.passeur.full_name")
+        # le contexte n'a pas de passeur : la premiere phrase ne se rend pas (SlotResolutionError)
+        assert {_select(sqlite_conn, seed=g).text for g in range(30)} == {"Il frappe"}
+
+    def test_si_le_palier_specifique_ne_se_rend_pas_les_generiques_servent(self, sqlite_conn):
+        _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("{passeur} lance", RAPIDE), ("gen", [])]}})
+        _ajouter_slot(sqlite_conn, "{passeur} lance", "passeur", "context.passeur.full_name")
+        assert _select(sqlite_conn).text == "gen"
+
+    def test_render_recoit_la_graine_et_les_codes_de_scenario_et_de_variante(self, sqlite_conn, monkeypatch):
+        _banque(sqlite_conn, {
+            "DEFAUT": {"defaut": True, "phrases": [("generique", [])]},
+            "SURNOM": {"phrases": [("surnom", RAPIDE)]},
+        })
+        appels = []
+        original = module.render
+        monkeypatch.setattr(module, "render", lambda *a, **kw: appels.append(kw) or original(*a, **kw))
+        _select(sqlite_conn, seed=42)
+        assert [(a["seed"], a["scenario_code"], a["variant_code"]) for a in appels] == [(42, "BUT_TEST", "SURNOM")]
+
+
+# --- Phrase de secours et WARNING unique ----------------------------------------------
+
+
+class TestFallbackEtWarning:
+    def test_cascade_epuisee_la_phrase_de_secours_sert(self, sqlite_conn):
+        _banque(sqlite_conn, {
+            "DEFAUT": {"defaut": True, "phrases": [("spec", RAPIDE)]},
+            "SURNOM": {"phrases": [("surnom", RAPIDE)]},
+        })
+        secours_id = _ajouter_secours(sqlite_conn)
+        phrase = _select(sqlite_conn, _joueur_lent())
+        assert (phrase.id, phrase.text, phrase.is_fallback) == (secours_id, "Le match suit son cours.", True)
+
+    def test_le_fallback_n_est_pas_soumis_au_cooldown(self, sqlite_conn):
+        _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("spec", RAPIDE)]}})
+        secours_id = _ajouter_secours(sqlite_conn)
+        for rang in (10, 11, 12):  # il peut se repeter : aucune ligne d'historique n'est jamais ecrite pour lui
+            assert _select(sqlite_conn, _joueur_lent(), match_sequence=rang).id == secours_id
+
+    def test_cascade_warning_only_when_default_empty(self, sqlite_conn, caplog):
+        """D5/D10-warn : AUCUN log pour le passage normal SURNOM -> DEFAUT ; UN seul WARNING enrichi
+        quand la variante par defaut est elle aussi a sec."""
+        _banque(sqlite_conn, {
+            "DEFAUT": {"defaut": True, "phrases": [("spec", RAPIDE), ("gen", [])]},
+            "SURNOM": {"phrases": [("surnom", RAPIDE)]},
+        })
+        with caplog.at_level(logging.DEBUG, logger="engine.phrase_selector"):
+            assert _select(sqlite_conn, _joueur_lent()).text == "gen"  # SURNOM vide, DEFAUT sert
+        assert [r for r in caplog.records if r.levelno >= logging.WARNING] == []
+
+        _usage(sqlite_conn, "gen", 3, 10)  # le seul candidat de DEFAUT passe en cooldown
+        secours_id = _ajouter_secours(sqlite_conn)
+        caplog.clear()
+        with caplog.at_level(logging.DEBUG, logger="engine.phrase_selector"):
+            assert _select(sqlite_conn, _joueur_lent(), match_sequence=11).id == secours_id
+        avertissements = [r for r in caplog.records if r.levelno >= logging.WARNING]
+        assert len(avertissements) == 1
+        message = avertissements[0].getMessage()
+        assert "BUT_TEST" in message and "SURNOM#2" in message and "DEFAUT#1" in message
+        assert f"phrase de secours #{secours_id}" in message
+
+    def test_sans_phrase_de_secours_un_seul_warning_puis_erreur(self, sqlite_conn, caplog):
         _banque(sqlite_conn, {
             "DEFAUT": {"defaut": True, "phrases": [("spec", RAPIDE)]},
             "SURNOM": {"phrases": [("surnom", RAPIDE)]},
         })
         with caplog.at_level(logging.WARNING, logger="engine.phrase_selector"):
             with pytest.raises(AucunCandidatError, match="BUT_TEST"):
-                select(sqlite_conn, "BUT_TEST", joueur_lent, _context(), seed=1, selectivite=_population_pace())
+                _select(sqlite_conn, _joueur_lent())
         avertissements = [r for r in caplog.records if r.levelno == logging.WARNING]
-        assert len(avertissements) == 1
-        message = avertissements[0].getMessage()
-        assert "BUT_TEST" in message and "SURNOM#2" in message and "DEFAUT#1" in message
+        assert len(avertissements) == 1 and "repli = aucun" in avertissements[0].getMessage()
 
-    def test_le_passage_normal_surnom_vers_defaut_ne_logue_rien(self, sqlite_conn, caplog):
-        joueur_lent = Player(id=3, first_name="L", last_name="ent", attributes={"Pace": 2})
-        _banque(sqlite_conn, {
-            "DEFAUT": {"defaut": True, "phrases": [("generique", [])]},
-            "SURNOM": {"phrases": [("surnom", RAPIDE)]},
-        })
-        with caplog.at_level(logging.DEBUG, logger="engine.phrase_selector"):
-            select(sqlite_conn, "BUT_TEST", joueur_lent, _context(), seed=1, selectivite=_population_pace())
-        assert [r for r in caplog.records if r.levelno >= logging.WARNING] == []
+
+# --- match_sequence obligatoire --------------------------------------------------------
+
+
+class TestMatchSequence:
+    @pytest.mark.parametrize(("rang", "erreur"), [(None, ValueError), (-1, ValueError), (True, TypeError), ("3", TypeError)])
+    def test_invalide_est_refuse_sans_repli_meme_si_le_scenario_est_inconnu(self, sqlite_conn, rang, erreur):
+        with pytest.raises(erreur, match="match_sequence"):
+            select(sqlite_conn, "INCONNU", _joueur_rapide(), _context(), seed=1, match_sequence=rang, selectivite=_population_pace())
+
+    def test_obligatoire_et_par_mot_cle(self, sqlite_conn):
+        with pytest.raises(TypeError):
+            select(sqlite_conn, "X", _joueur_rapide(), _context(), seed=1, selectivite=_population_pace())  # type: ignore[call-arg]
+        with pytest.raises(TypeError):
+            select(sqlite_conn, "X", _joueur_rapide(), _context(), 1, 10, _population_pace())  # type: ignore[misc]

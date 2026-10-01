@@ -158,6 +158,7 @@ def _cmd_select(args: argparse.Namespace) -> None:
                 player,
                 MatchContext(match_id="cli"),
                 seed=args.seed,
+                match_sequence=args.match_sequence,
                 selectivite=Selectivite.depuis_base(conn),
             )
         except AucunCandidatError as exc:
@@ -205,6 +206,9 @@ def main(argv: list[str] | None = None) -> None:
     p_select.add_argument("--scenario", required=True)
     p_select.add_argument("--player-id", required=True, type=int)
     p_select.add_argument("--seed", default="0", help="Graine explicite du tirage (défaut : 0)")
+    p_select.add_argument(
+        "--match-sequence", required=True, type=int, help="Rang du match (unité du cooldown), obligatoire"
+    )
 
     args = parser.parse_args(argv)
     handlers: dict[str, Callable[[argparse.Namespace], None]] = {
