@@ -52,7 +52,7 @@ DEFAUT = [
     ("Pour gérer les derniers instants, l'entraîneur fait confiance à l'expérience de {entrant}, qui relève {sortant}.",
      [("age", ">=", "33"), ("minute", ">=", "70")]),
     ("Changement précoce : {sortant} s'en va après {minute} minutes de jeu, remplacé par {entrant} !",
-     [("minute", "<=", "50")]),
+     [("minute", "<=", "55")]),
     ("Dans le money time, {club} lance {entrant} dans la bataille pendant que {sortant} file s'asseoir.",
      [("minute", ">=", "85")]),
     ("Coup de sifflet de l'arbitre : {sortant} sort, {entrant} entre, et {club} repart avec un autre visage.",

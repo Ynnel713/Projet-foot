@@ -139,7 +139,7 @@
       conditions:
       - attribute: minute
         operator: <=
-        value: '50'
+        value: '55'
         mandatory: true
       slots:
       - slot_name: sortant
