@@ -46,6 +46,7 @@ import logging
 import re
 import sys
 from collections import defaultdict
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -171,6 +172,35 @@ DEFAULT_COOLDOWN_MATCHES_BY_SCENARIO: dict[str, int] = {
     # que tout autre scenario au fil d'un match -- le plus court du lot :
     # un cooldown plus long asseche le pool (30 phrases) avant la mi-temps.
     "SITUATION_MATCH": 1,
+}
+
+
+@dataclass(frozen=True)
+class PiloteMetadata:
+    """Ce que le module pilotes_v2/<code en minuscules>.py ne dit pas lui-meme :
+    libelle du scenario, cooldown (en matchs) et slots que ses phrases peuvent
+    utiliser. Les listes DEFAUT/SURNOM du module portent les textes et leurs
+    conditions ; ceci est la source UNIQUE du reste (decision du plan V2.1) --
+    SLOTS_AUTORISES et DEFAULT_COOLDOWN_MATCHES_BY_SCENARIO en sont derives."""
+
+    label: str
+    cooldown_matches: int
+    slots: frozenset[str]
+
+
+# Cooldowns : valeurs proposees par fiche dans data/seed/PLAN_V2_EDITORIAL.md
+# (meme logique frequence x memorabilite que les 9 scenarios v1 ci-dessus).
+# Slots : mesures sur les modules (tests/test_pilotes_metadata.py exige l'egalite
+# stricte -- un slot en trop ou en moins echoue).
+PILOTES_METADATA: dict[str, PiloteMetadata] = {
+    "DEFENSE": PiloteMetadata("Défense", 2, frozenset({"joueur", "adversaire"})),
+    "CORNER": PiloteMetadata("Corner", 3, frozenset({"passeur", "receveur", "adversaire"})),
+    "FAUTE_SIMPLE": PiloteMetadata("Faute simple", 2, frozenset({"joueur", "adversaire"})),
+    "TIR_NON_CADRE": PiloteMetadata("Tir non cadré", 3, frozenset({"joueur", "adversaire"})),
+    "REMPLACEMENT": PiloteMetadata("Remplacement", 2, frozenset({"club", "entrant", "minute", "sortant"})),
+    "CARTON_JAUNE": PiloteMetadata("Carton jaune", 3, frozenset({"joueur", "adversaire", "club", "minute"})),
+    "AMBIANCE": PiloteMetadata("Ambiance", 2, frozenset({"club", "adversaire"})),
+    "HORS_JEU": PiloteMetadata("Hors-jeu", 3, frozenset({"joueur", "adversaire", "minute"})),
 }
 
 
