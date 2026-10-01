@@ -1,10 +1,9 @@
-# Simulafoot NLG -- squelette technique
+# Simulafoot NLG -- commentaire de match
 
-> Ce module ne génère **aucune phrase**. Il prépare le terrain (base de
-> données, modèles, ETL, points d'extension) pour la banque de phrases à
-> venir. Tout module qui devra un jour "écrire du texte" lève actuellement
-> `NotImplementedError` avec un message explicite -- voir la section
-> [État des lieux](#état-des-lieux).
+> Génère le commentaire d'un match à partir d'une banque de phrases (SQLite),
+> d'un flux d'événements (dicts, contrat dans [SPEC_NLG_INGESTION.md](SPEC_NLG_INGESTION.md))
+> et des joueurs. **Jamais de texte inventé** : une phrase vient de la banque, ou
+> d'une phrase de secours -- voir [État des lieux](#état-des-lieux).
 
 ## Vue d'ensemble
 
@@ -29,16 +28,21 @@
 | `scripts/convert_commentary_xlsx_to_yaml.py` | Classeur Excel de commentaire -> `data/seed/scenarios.yml` (banque v1). Porte aussi `PILOTES_METADATA`. |
 | `scripts/convert_pilotes_to_yaml.py` | Modules `pilotes_v2/*.py` -> `data/seed/v2/*.yml` (un YAML par pilote). |
 | `scripts/export_analytics.py` | Recopie les tables d'usage (scénarios, phrases, historique) vers `analytics.duckdb` pour analyse SQL libre. |
+| `engine/event_contract.py` | Contrat des dicts d'événements (TypedDicts par famille) et leur validation (`validate_event`, `validate_event_stream`). |
+| `engine/narrative_adapter.py` | `event_to_scenario` : (event_type, gabarit, outcome) → code de scénario ; scénarios non atteints déclarés avec raison. |
+| `engine/event_adapters.py` | Cartons et remplacements du moteur → dicts du contrat (aucune décision de scénario). |
+| `engine/player_resolver.py` | `resolve(player_id, conn)` → `Player` avec ses attributs FM26. |
+| `engine/context_builder.py` | `dict_to_context` : dict d'événement → `MatchContext` (protagonistes résolus en base). |
 | `cli.py` | Point d'entrée en ligne de commande (voir ci-dessous). |
 
 ## État des lieux
 
-Ce qui **fonctionne réellement** aujourd'hui : le schéma, l'import des
-joueurs, le chargement des scénarios/phrases depuis la base. Ce qui **n'est
-pas encore implémenté** (lève `NotImplementedError`) : la sélection d'une
-phrase. La sélection (`select`), le rendu des slots, le post-traitement, le
-journal d'usage et l'anti-répétition sont implémentés et testés ; reste
-l'intégration (contrat de dicts d'événements, branchement de la CLI).
+V2.1 est **livrée** : import de la banque (v1 + 8 pilotes + phrases de secours), sélection (`select`),
+rendu des slots, post-traitement, journal d'usage, anti-répétition et intégration d'un flux d'événements
+(`cli.py narrate`). Seule la **conversion racine → dicts** (le moteur de simulation nomme ses joueurs ; le NLG
+attend des identifiants) reste à faire côté racine : voir [SPEC_NLG_INGESTION.md](SPEC_NLG_INGESTION.md), qui
+documente aussi les limites connues (poteau / barre non commentés, `(but, corner) → CORNER`, 3 pilotes sans
+source d'événement).
 
 ## Initialisation (< 10 min)
 
@@ -190,6 +194,7 @@ python cli.py import-players --xlsx data/joueurs.xlsx
 python cli.py import-seed
 python cli.py reset-seed --yes                                  # vide banque + historique, garde les joueurs
 python cli.py select --scenario BUT --player-id 1 --match-sequence 1 [--seed 0]   # affiche la phrase rendue
+python cli.py narrate --events evenements.jsonl [--dry-run]     # raconte un flux d'événements (JSON Lines ou -)
 python cli.py export-analytics
 ```
 
