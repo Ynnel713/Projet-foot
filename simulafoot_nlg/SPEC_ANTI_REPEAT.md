@@ -61,10 +61,11 @@ question (a) champ par phrase / (b) valeur par défaut.* Elle est tranchée en p
 valeur est définie PAR SCÉNARIO (dictionnaire), stockée PAR PHRASE (table), évaluée par
 (phrase, joueur) (`phrase_history`).
 
-**Reste à faire pour V2 (décision A2 du 01/10/2026, exécutée dans le bloc import) :** ajouter
-les 8 nouveaux scénarios au dictionnaire — 2 : DÉFENSE, REMPLACEMENT, FAUTE_SIMPLE, AMBIANCE ;
-3 : CORNER, TIR_NON_CADRÉ, CARTON_JAUNE, HORS-JEU. Les pilotes sont des modules Python
-(`pilotes_v2/*.py`), non des lignes du classeur : le chemin pilote → YAML n'existe pas encore.
+**Reste à faire pour V2 (décision A2 RÉVISÉE du 01/10/2026, sous-tâche du bloc 1) :** construire
+le chemin `pilotes_v2/` → YAML → `import_seed.py` (voir la note A2 révisée, §6). Y entrent les
+8 nouveaux scénarios au dictionnaire des cooldowns — 2 : DEFENSE, REMPLACEMENT, FAUTE_SIMPLE,
+AMBIANCE ; 3 : CORNER, TIR_NON_CADRE, CARTON_JAUNE, HORS_JEU. Les pilotes sont des modules Python
+(`pilotes_v2/*.py`), non des lignes du classeur : ce chemin n'existe pas encore.
 
 ### 3. `similarity_penalty` a besoin d'un texte qui n'existe pas encore
 Le schéma est clair : `similarity_signatures.signature` correspond au texte
@@ -81,7 +82,8 @@ pouvoir tester quoi que ce soit ici.
 
 ### 4. `similarity_penalty` doit couvrir la répétition THÉMATIQUE, pas seulement lexicale (ajouté le 01/10/2026)
 
-Trouvé en auditant la séquence du pilote DÉFENSE (28 phrases, voir
+Trouvé en auditant la séquence du pilote DÉFENSE (32 phrases aujourd'hui ; 28 à l'époque de
+l'audit, avant l'ajout des 4 phrases de repli α, voir
 `data/seed/PLAN_V2_EDITORIAL.md`) : sur un tirage aléatoire donné, 3
 phrases à thème "duel aérien"/tête se sont retrouvées consécutives alors
 qu'aucune ne partageait le moindre n-gramme de texte avec une autre (zéro
@@ -186,6 +188,12 @@ l'essentiel en docstring) :
   ni homogène ni polarisé, **sous le seuil d'alerte, ne rouvre pas** le pilote.
   Les phrases SANS condition (colonne de droite) sont toujours éligibles : à
   suivre au moment du sélecteur (CARTON_JAUNE 10/28, REMPLACEMENT 9/21).
+- **Chevauchement de surnoms, deux cas distincts, tous deux AUTORISÉS (décision B3 précisée,
+  01/10/2026) :** (1) *un même joueur déclenche le même surnom dans deux scénarios* (ex.
+  « renard », `Finishing >= 85`, sur TIR_NON_CADRÉ et sur HORS-JEU dans le même match) — voulu :
+  même archétype d'un scénario à l'autre ; (2) *deux joueurs d'un même match partagent un même
+  surnom* — cas rare, non mesuré, dette documentée ; à rouvrir si un match réel produit une
+  confusion.
 - **« Retour de blessure »** : aucune donnée (`players.status` n'a pas de
   valeur blessé/retour) — aucune phrase possible. À rouvrir avec BLESSURE
   (Tier 2) si la donnée arrive.
@@ -243,15 +251,29 @@ pool minimal de 5. À confirmer sur des matchs simulés avant d'ajouter 3-4 neut
 **Points à trancher en V2.1 (non décidés ici) :**
 - la docstring de `phrase_selector.select` (étape 6) décrit un tirage pondéré parmi
   TOUTES les candidates d'une variante, soit β ; α exige un palier de priorité ;
-- le SURNOM est une variante séparée que la cascade (étape 7) n'essaie qu'APRÈS un
-  DEFAUT à 0 candidat ; s'il doit PRIMER sur un DEFAUT, c'est une règle de plus ;
-- granularité de « spécifique » : une phrase à condition large (ex. `Aggression >= 45`,
-  80 %) compte-t-elle ? (seuil de sélectivité à fixer, 50 % ou 70 %).
-- **Les SURNOM peuvent se chevaucher entre scénarios, c'est voulu** (décision du
-  01/10/2026) : un même joueur peut déclencher « renard » (Finishing >= 85) sur
-  TIR_NON_CADRÉ et sur HORS-JEU dans le même match ; même vocabulaire partagé, même
-  archétype d'un scénario à l'autre.
+- ~~le SURNOM est une variante séparée que la cascade (étape 7) n'essaie qu'APRÈS un
+  DEFAUT à 0 candidat~~ **tranché par D1 (note ci-dessous).**
+- granularité de « spécifique » : **tranché à 70 %** (décision B2 du 01/10/2026) — une
+  phrase à condition large (ex. `Aggression >= 45`, 80 %) n'est PAS spécifique.
 
+**Note D1 — ordre réel de la cascade : SURNOM → DEFAUT (décision du 01/10/2026).** Les phrases
+SURNOM (surnom vétéran, joker, etc., conditionnées) sont essayées EN PREMIER : si l'une matche
+(et que son cooldown est écoulé), elle prime ; sinon on retombe sur DEFAUT, avec le repli
+cooldown entre les deux (prérequis 2). C'est α appliqué aux surnoms. Raison : un ordre
+« DEFAUT d'abord, SURNOM si DEFAUT n'a aucun candidat » rendrait les 48 phrases SURNOM
+mortes, car avec 5-10 phrases sans condition en repli, DEFAUT n'a jamais 0 candidat. Les
+SURNOM ne sont donc jamais « cascade de repli » : c'est le palier prioritaire. La docstring
+de `phrase_selector.select` (étapes 2, 6 et 7) devra suivre ; elle décrit aujourd'hui, à
+l'étape 7.a, un essai des variantes non par défaut puis de la variante par défaut en dernier
+recours après 0 survivant.
+
+**Note A2 révisée — chemin pilotes → YAML (01/10/2026).** Le dictionnaire des cooldowns n'est
+lu que par la conversion classeur → YAML ; les pilotes sont des modules Python. Décision :
+construire le chemin `pilotes_v2/` → YAML → `import_seed.py`, même forme que le pipeline v1
+(classeur → YAML → base) ; pas d'import direct de modules Python en base (une seconde source
+de vérité). Codes de scénario sans accent ni tiret, en MAJUSCULES avec `_` (DEFENSE,
+TIR_NON_CADRE, HORS_JEU, CARTON_JAUNE…), cohérents avec CARTON_ROUGE, ARRET_GARDIEN. Sous-tâche
+du bloc 1 (import), non une action isolée.
 ### 7. Bilan V2 et décision Tier 3 (01/10/2026)
 
 Phrases RÉDIGÉES en pilotes (hors banque : `scenarios.yml` et la base ne contiennent
@@ -269,8 +291,8 @@ cumulés) — aucune phrase chiffrée ne peut s'écrire sans la donnée. VAR est
 deux issues (validé / annulé) gérées par le sélecteur (option C), phrases autonomes ;
 dépendance résiduelle = le moteur doit émettre un événement VAR. **Ouvrir VAR seul
 (20 phrases : 10 validé + 10 annulé, cooldown 6), laisser STATISTIQUES_PÉRIODIQUES en
-dette données.** Total visé : 213 + 20 = **~233** phrases rédigées (cohérent avec le ~235
-de l'architecte ; avec 15-20 pour VAR : 228-233).
+dette données.** VAR, finalement DIFFÉRÉ (le moteur n'émet pas d'événement VAR, décision du 01/10/2026),
+n'est pas écrit : **total rédigé = 213** phrases.
 
 Ce que ce total ne contient PAS (à acter explicitement) :
 - **3 scénarios bloqués** : BLESSURE (20), MI_TEMPS_FIN_MATCH (25), STATISTIQUES_PÉRIODIQUES (20)
@@ -282,8 +304,8 @@ Ce que ce total ne contient PAS (à acter explicitement) :
   20 → 60 (+40, fréquence 15-20/match pour le plus petit pool : « déséquilibre le plus
   sévère » selon le plan), ARRET_GARDIEN +17, SITUATION_MATCH +15, COUP_FRANC +15. Ce
   chantier n'est ni ouvert ni refermé : à décider.
-Le 708 du plan v2 (281 + 427) était théorique ; la trajectoire réelle est ≈ 281 + 233 =
-~514 phrases (+ 87 si les renforcements sont ouverts), soit ~73 % des 340 phrases
+Le 708 du plan v2 (281 + 427) était théorique ; la trajectoire réelle est 281 + 213 =
+**494 phrases** (+ 87 si les renforcements sont ouverts), soit ~73 % des 340 phrases
 visées pour les 12 scénarios.
 
 ### 8. Mesures à faire lors de l'implémentation du sélecteur (V2.1)
@@ -314,16 +336,21 @@ visées pour les 12 scénarios.
 
 ### 9. Décisions de cartographie V2.1 (01/10/2026, architecte)
 
-- **A2 — cooldowns V2 :** dictionnaire par scénario (voir §2), exécuté dans le bloc import.
-- **B1 — α et cascade DEFAUT → SURNOM actées :** la docstring de `phrase_selector.select`
-  est alignée sur α (commit séparé) ; aucun code.
+- **A2 (révisée) — chemin pilotes → YAML → `import_seed.py` à construire**, codes sans accent ni
+  tiret ; cooldowns V2 par dictionnaire (voir §2 et la note A2 révisée, §6) ; sous-tâche du bloc 1.
+- **B1 — α actée ; cascade : voir D1 (SURNOM → DEFAUT).** La docstring de `phrase_selector.select`
+  est alignée sur α pour l'étape 6 (commit `48e6bea`) ; son étape 7 reste à réviser selon D1 ;
+  aucun code.
 - **B2 — « spécifique » = sélectivité ≤ 70 %** (même critère que la domination, §6) : en
   dessous de ce seuil seulement, α apporte quelque chose.
-- **B3 — chevauchement de surnoms entre joueurs d'un même match : autorisé**, dette
-  documentée (cas rare, non mesuré ; à rouvrir si un match réel produit une confusion).
-- **C1 — ordre des matchs : compteur explicite fourni par l'appelant.** Ajout d'un champ
-  `match_sequence: int` à `phrase_history` (migration de colonne, pas de table `matches`) ;
+- **B3 (précisée) — deux cas de chevauchement de surnoms, tous deux autorisés** (même joueur
+  dans deux scénarios ; deux joueurs d'un même match) : notes distinctes au §5.
+- **C1 — ordre des matchs : compteur explicite fourni par l'appelant (précisé).** Champ
+  `match_sequence: int` ajouté à `phrase_history` (`ALTER TABLE … ADD COLUMN` avec valeur par
+  défaut, même sur table vide, pas de table `matches`) ; paramètre `match_sequence` fourni par
+  l'appelant (`recency_penalty` / `update_cooldown`) ; écriture dans `logger.log_usage` ;
   `match_id` reste la clé de jointure. À intégrer au bloc 4 (`anti_repeat`) ; pas ce tour.
+- **D1 — cascade SURNOM → DEFAUT** (SURNOM prime quand sa condition matche) : note D1, §6.
 - **C2 — répétition thématique (§4) : hors périmètre V2.1.** Dette de conception ; aucun
   chantier de tagging (`tags` / `phrase_tags` restent vides et inutilisées).
 
