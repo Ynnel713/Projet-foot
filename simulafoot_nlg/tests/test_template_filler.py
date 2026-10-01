@@ -3,6 +3,7 @@ MatchContext), y compris sur la banque reelle (v1 + 8 pilotes)."""
 
 from __future__ import annotations
 
+import random
 import re
 from pathlib import Path
 
@@ -123,3 +124,90 @@ def test_les_494_phrases_reelles_se_rendent_sans_slot_ni_accolade_residuelle():
 def test_une_phrase_reelle_donne_le_texte_attendu():
     phrase = next(p for p in _phrases_reelles() if p.text.startswith("{joueur} voit rouge"))
     assert render(phrase, JOUEUR, CONTEXTE) == "Kylian Mbappé voit rouge à la 67e minute, Lyon devra finir à dix."
+
+
+# --- Branche dictionary_key (slots.yml SYNTHETIQUE : aucune donnee reelle) -----
+
+SLOTS_SYNTHETIQUES = yaml.safe_load(
+    """
+exclamations_but:
+  - value: "quelle frappe !"
+    weight: 1.0
+  - value: "magnifique !"
+    weight: 0.5
+  - value: "personne ne s'y attendait !"
+adjectifs:
+  - value: "exceptionnel"
+  - value: "rare"
+"""
+)
+
+
+def _phrase_a_dictionnaires() -> Phrase:
+    return Phrase(
+        id=1,
+        variant_id=1,
+        text="{joueur} frappe, {exclamation} Un geste {adjectif}.",
+        slots=(
+            PhraseSlot(id=1, phrase_id=1, slot_name="joueur", expression="player.full_name"),
+            PhraseSlot(id=2, phrase_id=1, slot_name="exclamation", dictionary_key="exclamations_but"),
+            PhraseSlot(id=3, phrase_id=1, slot_name="adjectif", dictionary_key="adjectifs"),
+        ),
+    )
+
+
+def test_un_slot_a_dictionnaire_tire_une_valeur_du_dictionnaire():
+    rendu = render(_phrase_a_dictionnaires(), JOUEUR, CONTEXTE, rng=random.Random(1), dictionaries=SLOTS_SYNTHETIQUES)
+    exclamations = [e["value"] for e in SLOTS_SYNTHETIQUES["exclamations_but"]]
+    adjectifs = [e["value"] for e in SLOTS_SYNTHETIQUES["adjectifs"]]
+    assert any(f"Kylian Mbappé frappe, {x} Un geste {a}." == rendu for x in exclamations for a in adjectifs)
+
+
+def test_meme_graine_meme_rendu_et_les_tirages_suivent_l_ordre_des_slots():
+    def rendre(graine: int) -> str:
+        return render(
+            _phrase_a_dictionnaires(), JOUEUR, CONTEXTE, rng=random.Random(graine), dictionaries=SLOTS_SYNTHETIQUES
+        )
+
+    assert rendre(7) == rendre(7)
+    # Consommation previsible : un tirage pondere par slot a dictionnaire, dans l'ordre de phrase.slots.
+    rng = random.Random(7)
+    exclamation = rng.choices(["quelle frappe !", "magnifique !", "personne ne s'y attendait !"], weights=[1.0, 0.5, 1.0])[0]
+    adjectif = rng.choices(["exceptionnel", "rare"], weights=[1.0, 1.0])[0]
+    assert rendre(7) == f"Kylian Mbappé frappe, {exclamation} Un geste {adjectif}."
+
+
+def test_les_poids_sont_respectes():
+    dictionnaire = {"k": [{"value": "A", "weight": 1.0}, {"value": "B", "weight": 0.0}]}
+    phrase = Phrase(
+        id=1, variant_id=1, text="{x}", slots=(PhraseSlot(id=1, phrase_id=1, slot_name="x", dictionary_key="k"),)
+    )
+    rng = random.Random(0)
+    assert {render(phrase, JOUEUR, CONTEXTE, rng=rng, dictionaries=dictionnaire) for _ in range(50)} == {"A"}
+
+
+def test_un_slot_a_dictionnaire_tire_une_seule_fois_meme_repete():
+    phrase = Phrase(
+        id=1,
+        variant_id=1,
+        text="{x} puis {x}",
+        slots=(PhraseSlot(id=1, phrase_id=1, slot_name="x", dictionary_key="adjectifs"),),
+    )
+    for graine in range(20):
+        gauche, droite = render(phrase, JOUEUR, CONTEXTE, rng=random.Random(graine), dictionaries=SLOTS_SYNTHETIQUES).split(" puis ")
+        assert gauche == droite
+
+
+def test_dictionnaire_absent_ou_vide_leve_slot_resolution_error():
+    phrase = _phrase_a_dictionnaires()
+    with pytest.raises(SlotResolutionError, match="exclamations_but"):
+        render(phrase, JOUEUR, CONTEXTE, rng=random.Random(1), dictionaries={"adjectifs": [{"value": "x"}]})
+    with pytest.raises(SlotResolutionError, match="exclamations_but"):
+        render(phrase, JOUEUR, CONTEXTE, rng=random.Random(1), dictionaries={"exclamations_but": [], "adjectifs": []})
+    with pytest.raises(SlotResolutionError, match="exclamations_but"):
+        render(phrase, JOUEUR, CONTEXTE, rng=random.Random(1))
+
+
+def test_un_slot_a_dictionnaire_sans_rng_est_refuse():
+    with pytest.raises(ValueError, match="rng obligatoire"):
+        render(_phrase_a_dictionnaires(), JOUEUR, CONTEXTE, dictionaries=SLOTS_SYNTHETIQUES)

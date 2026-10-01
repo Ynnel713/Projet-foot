@@ -4,6 +4,9 @@ Pour chaque PhraseSlot de `phrase.slots` :
     - `expression` (ex. "player.full_name") -> evaluee contre `player`/`context` par un
       mini-interpreteur d'attributs a points (resolve_expression) -- PAS `eval()` : le
       YAML est edite a la main ;
+    - `dictionary_key` -> tirage pondere dans `dictionaries[cle]` (meme forme que
+      data/seed/slots.yml : liste de {value, weight?}) avec `rng` ; un slot tire UNE fois
+      par rendu, dans l'ordre de `phrase.slots` (consommation du rng previsible) ;
     - un slot du texte sans valeur resolue -> SlotResolutionError (jamais un "{slot}"
       affiche tel quel a l'ecran) ; l'appelant (phrase_selector) la traite comme "phrase
       invalide, en choisir une autre".
@@ -17,9 +20,10 @@ from __future__ import annotations
 
 import random
 import re
+from collections.abc import Mapping, Sequence
 from typing import Any
 
-from engine.models import MatchContext, Phrase, Player
+from engine.models import MatchContext, Phrase, PhraseSlot, Player
 
 
 class SlotResolutionError(ValueError):
@@ -67,19 +71,35 @@ def resolve_expression(expression: str, player: Player, context: MatchContext) -
 _SLOT_RE = re.compile(r"\{(\w+)\}")
 
 
+def _tirer(
+    slot: PhraseSlot, dictionaries: Mapping[str, Sequence[Mapping[str, Any]]] | None, rng: random.Random | None
+) -> str:
+    entrees = (dictionaries or {}).get(slot.dictionary_key or "")
+    if not entrees:
+        raise SlotResolutionError(f"Slot {{{slot.slot_name}}} : dictionnaire {slot.dictionary_key!r} absent ou vide.")
+    if rng is None:
+        raise ValueError(f"Slot {{{slot.slot_name}}} (dictionnaire {slot.dictionary_key!r}) : rng obligatoire.")
+    poids = [float(entree.get("weight", 1.0)) for entree in entrees]
+    return str(rng.choices([entree["value"] for entree in entrees], weights=poids, k=1)[0])
+
+
 def render(
     phrase: Phrase,
     player: Player,
     context: MatchContext,
     *,
     rng: random.Random | None = None,
+    dictionaries: Mapping[str, Sequence[Mapping[str, Any]]] | None = None,
 ) -> str:
     """Rend `phrase.text` avec tous ses slots resolus pour (`player`, `context`) -- voir
-    docstring du module. Leve SlotResolutionError si un slot du texte n'a pas de valeur."""
+    docstring du module. Leve SlotResolutionError si un slot du texte n'a pas de valeur ;
+    ValueError si un slot a dictionnaire est rendu sans `rng`."""
     valeurs: dict[str, str] = {}
     for slot in phrase.slots:
         if slot.expression is not None:
             valeurs[slot.slot_name] = resolve_expression(slot.expression, player, context)
+        elif slot.dictionary_key is not None:
+            valeurs[slot.slot_name] = _tirer(slot, dictionaries, rng)
 
     def remplacer(correspondance: re.Match[str]) -> str:
         nom = correspondance.group(1)
