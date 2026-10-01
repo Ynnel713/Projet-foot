@@ -1,0 +1,213 @@
+=== SECTION 1 -- couverture par attribut (sur 7563 joueurs) ===
+
+foot                2957/7563 =  39.1%     1 phrase(s)   [QUASI-VIDE]
+    valeurs : [('D', 2245), ('G', 712)]
+weak_foot           7037/7563 =  93.0%     1 phrase(s)   [VIABLE]
+    min=1.0 med=3.0 max=4.0
+height_cm            887/7563 =  11.7%     7 phrase(s)   [QUASI-VIDE]
+    min=152 med=182 max=203
+age                 7563/7563 = 100.0%     6 phrase(s)   [VIABLE]
+    min=15 med=25 max=43
+preferred_moves      362/7563 =   4.8%    56 phrase(s)   [QUASI-VIDE]
+    top 5 preferred_moves (parmi les 362 joueurs renseignes) : [('Runs With Ball Often', 77), ('Tries Killer Balls Often', 42), ('Tries To Play Way Out Of Trouble', 41), ('Plays One-Twos', 40), ('Tries Long Range Passes', 39)]
+
+Aggression          7037/7563 =  93.0%    27 phrase(s)   min=10 med=60 max=99   [VIABLE]
+Strength            7037/7563 =  93.0%     6 phrase(s)   min=5 med=60 max=99   [VIABLE]
+Pace                7037/7563 =  93.0%     5 phrase(s)   min=10 med=65 max=99   [VIABLE]
+Dribbling           6193/7563 =  81.9%     4 phrase(s)   min=5 med=60 max=95   [VIABLE]
+Technique           7037/7563 =  93.0%     4 phrase(s)   min=5 med=60 max=99   [VIABLE]
+Finishing           6193/7563 =  81.9%     3 phrase(s)   min=5 med=45 max=95   [VIABLE]
+Heading             6193/7563 =  81.9%     3 phrase(s)   min=5 med=50 max=95   [VIABLE]
+Vision              7037/7563 =  93.0%     2 phrase(s)   min=5 med=55 max=99   [VIABLE]
+Tackling            6193/7563 =  81.9%     1 phrase(s)   min=5 med=55 max=95   [VIABLE]
+
+minute             -- attribut de CONTEXTE DE MATCH (toujours disponible au runtime, hors perimetre donnees-joueur)   17 phrase(s)
+score_context      -- attribut de CONTEXTE DE MATCH (toujours disponible au runtime, hors perimetre donnees-joueur)   10 phrase(s)
+
+=== SECTION 2 -- taux de declenchement theorique par phrase (conditions JOUEUR uniquement) ===
+
+Phrases a conditions JOUEUR evaluees : 109
+Phrases sous 10% de taux de declenchement theorique : 102
+  dont LIMITEES PAR LA DONNEE (preferred_moves/height_cm/foot) : 63
+  dont SELECTIVITE NARRATIVE SAINE (attribut bien renseigne, seuil elitiste voulu) : 39
+
+--- Limitees par la donnee (le vrai probleme) ---
+   0.00%  BUT/DEFAUT  [preferred_moves contient Shoots With Power, foot == "Right"]
+          {joueur} envoie un missile du pied droit : la barre transversale tremble encore avant que le ballon ne finisse
+   0.00%  BUT/SURNOM  [preferred_moves contient Hits Free Kicks With Power, Strength >= 80]
+          L'artificier arme son pied et envoie un missile qui explose au fond des filets sur ce coup franc !
+   0.01%  BUT/DEFAUT  [preferred_moves contient Hits Free Kicks With Power]
+          Coup franc à vingt mètres : {joueur} frappe une bombe qui explose sous la barre transversale, le mur n'a rien 
+   0.01%  BUT/SURNOM  [preferred_moves contient Tries Long Range Free Kicks, Technique >= 85]
+          Le spécialiste s'élance sur ce coup franc lointain et trouve l'angle parfait, un vrai geste d'orfèvre !
+   0.01%  GESTE_SIGNATURE/DEFAUT  [preferred_moves contient Refrains From Taking Long Shots]
+          {joueur} dispose pourtant d'un espace évident pour tenter sa chance de loin, mais préfère instinctivement temp
+   0.03%  BUT/DEFAUT  [preferred_moves contient Attempts Overhead Kicks]
+          Centre repoussé par la défense, mais {joueur} s'envole et conclut d'une retournée acrobatique du plus bel effe
+   0.03%  BUT/DEFAUT  [preferred_moves contient Likes To Round Keeper]
+          {joueur} efface le gardien de {adversaire} d'un crochet et pousse tranquillement le ballon au fond des filets 
+   0.03%  BUT/SURNOM  [preferred_moves contient Shoots With Power, Finishing >= 80]
+          Le canonnier décoche une frappe surpuissante qui ne laisse absolument aucune chance au gardien de {adversaire}
+   0.03%  GESTE_SIGNATURE/DEFAUT  [preferred_moves contient Crosses Early]
+          {joueur} ne temporise jamais sur son côté : dès qu'il touche le ballon, il centre instantanément sans laisser 
+   0.03%  GESTE_SIGNATURE/DEFAUT  [preferred_moves contient Penalty Box Player]
+          {joueur} rôde inlassablement aux abords de la surface adverse, guettant la moindre faute de main ou le moindre
+   0.03%  GESTE_SIGNATURE/DEFAUT  [preferred_moves contient Possesses Long Flat Throw]
+          {joueur} s'avance sur la ligne de touche et envoie une longue touche tendue directement dans la surface de {ad
+   0.03%  GESTE_SIGNATURE/DEFAUT  [preferred_moves contient Stops Play]
+          {joueur} pose soudainement le pied sur le ballon et casse complètement le rythme de la rencontre, au grand dam
+   0.05%  BUT/DEFAUT  [preferred_moves contient Likes To Lob Keeper]
+          Le gardien de {adversaire} s'avance un peu trop, {joueur} ne tremble pas et le lobe avec un sang-froid déconce
+   0.05%  GESTE_SIGNATURE/DEFAUT  [preferred_moves contient Dwells On Ball]
+          {joueur} garde le ballon un instant de trop, cherchant la solution parfaite plutôt que la plus rapide, et se f
+   0.05%  GESTE_SIGNATURE/DEFAUT  [preferred_moves contient Looks For Pass Rather Than Attempting To Score]
+          {joueur} se retrouve pourtant en position idéale pour tenter sa chance, mais préfère instinctivement chercher 
+   0.05%  GESTE_SIGNATURE/DEFAUT  [preferred_moves contient Plays With Back To Goal]
+          {joueur} reçoit le ballon dos au but, encaissant le contact du défenseur de {adversaire} avec son corps, avant
+   0.07%  BUT/DEFAUT  [preferred_moves contient Tries Long Range Free Kicks]
+          {joueur} s'élance sur ce coup franc lointain et trouve l'angle parfait, un missile totalement imparable !
+   0.07%  GESTE_SIGNATURE/DEFAUT  [preferred_moves contient Moves Ball To Left Foot Before Dribble Attempt]
+          {joueur} bascule systématiquement le ballon sur son pied gauche avant de tenter son crochet, un mouvement prép
+   0.07%  GESTE_SIGNATURE/SURNOM  [Pace >= 90, preferred_moves contient Runs With Ball Often]
+          L'éclair part balle au pied et grille tout le monde à la course, personne de {adversaire} ne peut suivre son r
+   0.08%  BUT/SURNOM  [height_cm <= 170, Dribbling >= 85]
+          Le feu follet se faufile entre les jambes de deux défenseurs bien plus costauds que lui et ajuste le gardien a
+   0.08%  GESTE_SIGNATURE/DEFAUT  [preferred_moves contient Hugs Line]
+          {joueur} reste scotché à la ligne de touche pour étirer au maximum le bloc défensif de {adversaire}, créant de
+   0.08%  GESTE_SIGNATURE/SURNOM  [height_cm <= 168, Dribbling >= 85]
+          Le feu follet slalome dans des espaces minuscules où personne d'autre ne pourrait se faufiler !
+   0.11%  CARTON_ROUGE/DEFAUT  [Aggression >= 85, preferred_moves contient Dives Into Tackles]
+          {joueur} arrive tacle tendu, les crampons en avant, sur son adversaire : l'arbitre ne peut que sortir le carto
+   0.11%  CARTON_ROUGE/DEFAUT  [preferred_moves contient Argues With Officials, Aggression >= 75]
+          Après avoir contesté chaque décision depuis le coup d'envoi, {joueur} finit par craquer nerveusement face à l'
+   0.12%  BUT/DEFAUT  [preferred_moves contient Tries First Time Shots]
+          Le ballon traîne à l'entrée de la surface, {joueur} ne réfléchit pas une seconde et catapulte une reprise de v
+   0.12%  BUT/DEFAUT  [preferred_moves contient Uses Outside Of Foot]
+          D'un piqué de l'extérieur du pied, {joueur} surprend tout le monde et trouve la lucarne dans un silence de cat
+   0.15%  GESTE_SIGNATURE/DEFAUT  [preferred_moves contient Argues With Officials]
+          {joueur} n'est jamais d'accord avec la moindre décision de l'arbitre et le lui fait savoir bruyamment, les bra
+   0.16%  CARTON_ROUGE/DEFAUT  [preferred_moves contient Winds Up Opponents, Aggression >= 80]
+          {joueur} allume la mèche d'une bagarre générale en provoquant ouvertement ses adversaires, l'arbitre l'exclut 
+   0.16%  BUT/DEFAUT  [preferred_moves contient Likes To Try To Break Offside Trap]
+          {joueur} prend le piège du hors-jeu à revers, s'échappe seul face au gardien de {adversaire} et ne tremble pas
+   0.16%  GESTE_SIGNATURE/DEFAUT  [preferred_moves contient Plays Short Simple Passes]
+          {joueur} refuse la prise de risque inutile et privilégie systématiquement la passe courte et sûre, conservant 
+   0.17%  BUT/DEFAUT  [preferred_moves contient Curls Ball]
+          {joueur} ajuste sa course, enroule sa frappe et vient loger le ballon dans la lucarne opposée, hors de portée 
+   0.17%  BUT/DEFAUT  [preferred_moves contient Places Shots]
+          Plutôt que de frapper de toutes ses forces, {joueur} garde la tête froide et place sa frappe le long du poteau
+   0.19%  CARTON_ROUGE/DEFAUT  [preferred_moves contient Dives Into Tackles, Aggression >= 80]
+          {joueur} arrive lancé et percute son adversaire à pleine vitesse sans jouer le ballon, l'arbitre sort logiquem
+   0.19%  ARRET_GARDIEN/SURNOM  [height_cm >= 198]
+          Le géant des cages n'a même pas besoin de sauter pour cueillir ce centre au-dessus de la mêlée !
+   0.19%  GESTE_SIGNATURE/DEFAUT  [preferred_moves contient Avoids Using Weaker Foot]
+          {joueur} multiplie les appuis et les contrôles supplémentaires pour ramener systématiquement le ballon sur son
+   0.20%  CARTON_ROUGE/DEFAUT  [preferred_moves contient Winds Up Opponents, Aggression >= 75]
+          {joueur} n'a jamais su se contrôler et provoque un peu trop son adversaire, la sanction tombe : carton rouge !
+   0.20%  GESTE_SIGNATURE/DEFAUT  [preferred_moves contient Arrives Late In Opposition Area]
+          {joueur} surgit de nulle part au second poteau, arrivé lancé depuis le milieu de terrain sans que personne de 
+   0.20%  GESTE_SIGNATURE/DEFAUT  [preferred_moves contient Does Not Dive Into Tackles]
+          {joueur} refuse obstinément de se jeter dans le tacle, préférant temporiser et attendre le bon moment pour int
+   0.21%  GESTE_SIGNATURE/DEFAUT  [preferred_moves contient Gets Into Opposition Area]
+          {joueur} multiplie les appels dans la surface adverse, toujours prêt à exploiter le moindre relâchement de {ad
+   0.22%  BUT/DEFAUT  [preferred_moves contient Cuts Inside From Left Wing]
+          {joueur} rentre sur son pied fort depuis la gauche et enroule une frappe qui finit sa course dans la lucarne !
+   0.22%  BUT/DEFAUT  [preferred_moves contient Cuts Inside From Right Wing]
+          {joueur} coupe vers l'intérieur depuis la droite et décoche une frappe croisée qui trompe totalement le gardie
+   0.25%  GESTE_SIGNATURE/DEFAUT  [preferred_moves contient Gets Crowd Going]
+          {joueur} lève les bras vers les tribunes après une simple récupération de balle, invitant le public de {club} 
+   0.28%  GESTE_SIGNATURE/DEFAUT  [preferred_moves contient Moves Into Channels]
+          {joueur} déserte régulièrement l'axe pour se glisser dans les couloirs entre le latéral et le défenseur centra
+   0.29%  GESTE_SIGNATURE/DEFAUT  [preferred_moves contient Cuts Inside From Both Wings]
+          {joueur} rentre indifféremment vers l'intérieur depuis la droite comme depuis la gauche, rendant sa lecture to
+   0.29%  GESTE_SIGNATURE/DEFAUT  [preferred_moves contient Likes To Switch Ball To Wide Areas]
+          {joueur} repère d'un coup d'œil le surnombre créé sur le côté opposé et bascule instantanément le jeu d'une lo
+   0.30%  GESTE_SIGNATURE/DEFAUT  [preferred_moves contient Likes Ball Played Into Feet]
+          {joueur} réclame sans cesse le ballon dans les pieds plutôt que dans la course, s'orientant instantanément dos
+   0.32%  GESTE_SIGNATURE/DEFAUT  [preferred_moves contient Likes To Beat Opponent Repeatedly]
+          {joueur} prend un malin plaisir à recommencer : après avoir déjà éliminé son vis-à-vis une première fois, il r
+   0.34%  BUT/SURNOM  [Heading >= 85, height_cm >= 185]
+          La tour domine tous les débats aériens et place une tête surpuissante que personne n'a pu contester !
+   0.36%  GESTE_SIGNATURE/DEFAUT  [preferred_moves contient Dictates Tempo]
+          {joueur} impose son propre rythme à la rencontre, ralentissant le jeu d'une touche courte quand il faut respir
+   0.36%  GESTE_SIGNATURE/DEFAUT  [preferred_moves contient Runs With Ball Through The Centre]
+          {joueur} choisit délibérément l'axe plutôt que les côtés pour porter le ballon, traversant tout le milieu de t
+   0.38%  GESTE_SIGNATURE/DEFAUT  [preferred_moves contient Comes Deep To Get Ball]
+          {joueur} décroche loin de sa position habituelle pour venir chercher le ballon dans les pieds, échappant ainsi
+   0.41%  BUT/DEFAUT  [preferred_moves contient Tries Tricks]
+          Après un festival de gestes techniques, {joueur} sème son défenseur et ajuste le gardien avec un calme royal !
+   0.41%  GESTE_SIGNATURE/DEFAUT  [preferred_moves contient Tries Tricks]
+          {joueur} enchaîne les petits ponts et les crochets déroutants sans jamais se départir de son sang-froid, trans
+   0.42%  BUT/DEFAUT  [preferred_moves contient Shoots From Distance]
+          Depuis l'extérieur de la surface, {joueur} arme une frappe surpuissante qui ne laisse aucune chance au gardien
+   0.42%  ARRET_GARDIEN/SURNOM  [height_cm >= 195]
+          La muraille s'étire de tout son long et repousse une frappe qui semblait déjà au fond des filets !
+   0.49%  GESTE_SIGNATURE/DEFAUT  [preferred_moves contient Bring Ball Out of Defence]
+          {joueur} relance proprement depuis sa propre surface, ballon collé au pied, et élimine la première ligne de pr
+   0.50%  BUT/DEFAUT  [preferred_moves contient Knocks Ball Past Opponent]
+          {joueur} élimine son vis-à-vis d'un contrôle orienté et frappe sans laisser au gardien le temps de réagir !
+   0.52%  GESTE_SIGNATURE/DEFAUT  [preferred_moves contient Gets Forward Whenever Possible]
+          {joueur} ne se contente jamais de son couloir défensif et se projette systématiquement vers l'avant dès que l'
+   0.53%  GESTE_SIGNATURE/DEFAUT  [preferred_moves contient Plays One-Twos]
+          {joueur} enchaîne les une-deux avec ses partenaires les plus proches, remisant instantanément avant de relance
+   0.54%  GESTE_SIGNATURE/DEFAUT  [preferred_moves contient Tries To Play Way Out Of Trouble]
+          {joueur} se retrouve encerclé par deux joueurs de {adversaire} dans son propre camp, mais garde son calme et t
+   0.73%  BUT/SURNOM  [height_cm >= 190, Heading >= 75]
+          Le colosse s'impose devant son vis-à-vis et catapulte le ballon de la tête dans les filets, laissant le gardie
+   0.73%  ARRET_GARDIEN/SURNOM  [height_cm >= 190, Strength >= 80]
+          Le mur ferme tout l'angle de son imposante carrure et bloque la tentative sans même sembler forcer !
+   1.02%  BUT/DEFAUT  [preferred_moves contient Runs With Ball Often]
+          {joueur} part de son propre camp, élimine deux adversaires balle au pied et conclut sa chevauchée solitaire en
+
+--- Selectivite narrative saine (PAS un probleme, liste pour memoire) ---
+   0.09%  BUT/SURNOM  [Technique >= 88, Dribbling >= 88]
+   0.11%  BUT/SURNOM  [Finishing >= 90]
+   0.22%  BUT/SURNOM  [Vision >= 88]
+   0.22%  GESTE_SIGNATURE/SURNOM  [Vision >= 90]
+   0.29%  BUT/DEFAUT  [Finishing >= 85]
+   0.32%  BUT/SURNOM  [Pace >= 90]
+   0.34%  GESTE_SIGNATURE/SURNOM  [Technique >= 90]
+   0.52%  GESTE_SIGNATURE/SURNOM  [Strength >= 88]
+   1.03%  CARTON_ROUGE/DEFAUT  [Aggression >= 90]
+   1.03%  CARTON_ROUGE/DEFAUT  [Aggression >= 90]
+   1.08%  CARTON_ROUGE/DEFAUT  [Tackling >= 80, Aggression >= 80]
+   1.20%  BUT/DEFAUT  [Dribbling >= 85]
+   1.41%  BUT/DEFAUT  [Technique >= 85]
+   1.44%  BUT/DEFAUT  [Pace >= 85]
+   1.44%  BUT/SURNOM  [Pace >= 85]
+   1.47%  BUT/SURNOM  [Strength >= 85]
+   1.47%  ARRET_GARDIEN/SURNOM  [Strength >= 85]
+   2.01%  GESTE_SIGNATURE/SURNOM  [age >= 36]
+   2.63%  BUT/DEFAUT  [Heading >= 80]
+   3.00%  CARTON_ROUGE/DEFAUT  [Aggression >= 85]
+   3.00%  CARTON_ROUGE/DEFAUT  [Aggression >= 85]
+   3.00%  CARTON_ROUGE/DEFAUT  [Aggression >= 85]
+   3.00%  CARTON_ROUGE/DEFAUT  [Aggression >= 85]
+   3.00%  CARTON_ROUGE/DEFAUT  [Aggression >= 85]
+   3.31%  GESTE_SIGNATURE/SURNOM  [age <= 18]
+   3.53%  BUT/SURNOM  [age >= 35]
+   4.44%  ARRET_GARDIEN/SURNOM  [Pace >= 80]
+   4.83%  BUT/DEFAUT  [Strength >= 80]
+   5.22%  ARRET_GARDIEN/SURNOM  [age >= 34]
+   7.39%  BUT/SURNOM  [weak_foot >= 4]
+   8.09%  CARTON_ROUGE/DEFAUT  [Aggression >= 80]
+   8.09%  CARTON_ROUGE/DEFAUT  [Aggression >= 80]
+   8.09%  CARTON_ROUGE/DEFAUT  [Aggression >= 80]
+   8.09%  CARTON_ROUGE/DEFAUT  [Aggression >= 80]
+   8.09%  CARTON_ROUGE/DEFAUT  [Aggression >= 80]
+   8.09%  CARTON_ROUGE/DEFAUT  [Aggression >= 80]
+   8.09%  CARTON_ROUGE/DEFAUT  [Aggression >= 80]
+   8.09%  CARTON_ROUGE/DEFAUT  [Aggression >= 80]
+   8.13%  BUT/SURNOM  [age <= 19]
+
+--- Pour reference, les 10 phrases les MIEUX couvertes (conditions non triviales) ---
+   8.09%  CARTON_ROUGE/DEFAUT  [Aggression >= 80]
+   8.09%  CARTON_ROUGE/DEFAUT  [Aggression >= 80]
+   8.13%  BUT/SURNOM  [age <= 19]
+  15.99%  CARTON_ROUGE/DEFAUT  [Aggression >= 75]
+  15.99%  CARTON_ROUGE/DEFAUT  [Aggression >= 75]
+  15.99%  CARTON_ROUGE/DEFAUT  [Aggression >= 75]
+  15.99%  CARTON_ROUGE/DEFAUT  [Aggression >= 75]
+  21.41%  ARRET_GARDIEN/SURNOM  [age <= 21]
+  25.86%  CARTON_ROUGE/DEFAUT  [Aggression >= 70]
+  25.86%  CARTON_ROUGE/DEFAUT  [Aggression >= 70]

@@ -5,7 +5,60 @@ dans ce document**. Fait suite à l'import du 30/09/2026 (voir
 [COUVERTURE.md](COUVERTURE.md)) et au smoke test du même jour (voir
 `scripts/smoke_test_pipeline.py` et son rapport).
 
-## Constat transversal trouvé par le smoke test — à traiter AVANT d'ouvrir des scénarios
+## PRÉREQUIS DONNÉES — à trancher avant d'écrire la moindre phrase v2
+
+Section ajoutée le 30/09/2026, suite à l'[AUDIT_COUVERTURE_DONNEES_JOUEUR.md](AUDIT_COUVERTURE_DONNEES_JOUEUR.md).
+Le constat transversal ci-dessous (issu du smoke test) est confirmé et
+précisé par cet audit : ce n'est pas 1 phrase sur 5, c'est **63 des 109
+phrases à conditions joueur (57,8 %)** qui sont limitées par la donnée,
+pas par un seuil narratif voulu. Détail complet dans le fichier dédié.
+
+**Pause décidée sur l'écriture v2** : aucune nouvelle phrase tant que la
+stratégie donnée (voir le même fichier, section "Stratégie") n'est pas
+tranchée. Raison : la formule de calibrage de ce plan
+(`fréquence × 8`) calibre sur la fréquence de l'événement, pas sur la
+disponibilité de la donnée qui conditionne la phrase — un scénario
+conditionné sur `minute` (100 % de couverture) et un scénario conditionné
+sur `preferred_moves` (4,8 %) n'ont pas la même viabilité, et le volume
+cible actuel des 12 fiches ne fait pas cette distinction.
+
+### Attributs nécessaires par nouveau scénario (Tier 1) et leur couverture réelle
+
+| Scénario | Attributs cités dans les conditions types de la fiche | Couverture réelle (7563 joueurs) | Fiche impactée ? |
+|---|---|---|---|
+| DÉFENSE | `Tackling` (82 %), `Pace` (93 %), `height_cm` (**11,7 %**) | Mixte | **Oui** — l'exemple "dégagement aérien, height_cm >= 190" hérite du même risque que BUT/SURNOM "Le colosse" (0,73 % réel) |
+| CORNER | `Heading` (82 %) + `height_cm` (**11,7 %**), `Strength` (93 %), `Technique` (93 %) | Mixte | **Oui** — même combo Heading+height_cm que ci-dessus |
+| FAUTE_SIMPLE | `Aggression` (93 %), `Tackling` (82 %), `minute` (100 %, contexte) | Viable | Non |
+| TIR_NON_CADRÉ | `Finishing` (82 %), `preferred_moves` (**4,8 %**) | Mixte | **Oui** — ne pas répéter l'erreur de BUT/GESTE_SIGNATURE : ne pas conditionner la majorité du pool sur `preferred_moves` |
+| CARTON_JAUNE | `Aggression` (93 %), `preferred_moves` (**4,8 %**), `minute` | Mixte | **Oui** — même remarque |
+| REMPLACEMENT | `age` (100 %), `minute`, `fm_rating` (**100 %**, vérifié) | Viable | Non — `fm_rating` est un bon candidat, quasi jamais vide (contrairement à `preferred_moves`), à privilégier pour ce scénario |
+
+**Tier 2/3** (HORS-JEU, MI_TEMPS_FIN_MATCH, BLESSURE, AMBIANCE,
+STATISTIQUES_PÉRIODIQUES, VAR) : aucun n'utilise `preferred_moves` ni
+`height_cm` dans les conditions types proposées — pas de risque donnée
+identifié pour ces 6 fiches. AMBIANCE et VAR n'ont même quasiment aucune
+condition Player (contexte de match uniquement), donc aucun risque par
+construction.
+
+### Action préalable par attribut
+
+| Attribut | Couverture | Action préalable | Impact volume |
+|---|---|---|---|
+| `preferred_moves` | 4,8 % (et souvent <1 % par move précis, voir audit) | **À trancher (options A/B/C, voir fichier dédié)** avant TIR_NON_CADRÉ/CARTON_JAUNE | Dépend de l'option retenue — voir chiffrage par option |
+| `height_cm` | 11,7 % | Idem `preferred_moves` — même mécanisme technique (voir "Investigation" dans le fichier dédié) | DÉFENSE et CORNER perdent leurs exemples "dégagement/tête" tels quels si non enrichi |
+| `foot` | 39,1 % | Partiel, viable pour un usage ponctuel (1 phrase existante) mais pas pour un scénario qui en ferait un pilier | Aucune fiche v2 n'en dépend actuellement |
+| `Aggression`, `Pace`, `Strength`, `Technique`, `Vision` | 93 % | Aucune action — viable tel quel | — |
+| `Dribbling`, `Heading`, `Finishing`, `Tackling` | 82 % | Aucune action — viable tel quel | — |
+| `age`, `fm_rating` | 100 % | Aucune action — viable tel quel | — |
+| `weak_foot` | 93 % | Aucune action — viable tel quel | — |
+
+**Pas de changement de volume ni de cooldown dans ce document** — les
+chiffres des 12 fiches plus bas restent ceux du tour précédent, en
+attente de ta décision sur la stratégie donnée.
+
+---
+
+## Constat transversal trouvé par le smoke test (précédent tour — voir la section PRÉREQUIS DONNÉES ci-dessus pour la version chiffrée)
 
 Le smoke test a fait échouer GESTE_SIGNATURE sur 2 de ses 4 occurrences
 (0 phrase sélectionnable). Cause creusée : **seulement 4,8 % des 7563
