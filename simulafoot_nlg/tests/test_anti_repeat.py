@@ -7,7 +7,13 @@ import pytest
 
 import sqlite3
 
-from engine.anti_repeat import recency_penalty, similarity_penalty, update_cooldown
+from engine.anti_repeat import (
+    recency_penalty,
+    recency_penalty_global,
+    sans_protagoniste,
+    similarity_penalty,
+    update_cooldown,
+)
 from engine.models import Phrase, Player
 from engine import minhash
 from engine.logger import log_usage
@@ -95,6 +101,103 @@ class TestRecencyPenalty:
             recency_penalty(sqlite_conn, phrase_en_base, self._joueur())  # type: ignore[call-arg]
         with pytest.raises(TypeError):
             recency_penalty(sqlite_conn, phrase_en_base, self._joueur(), 10)  # type: ignore[misc]
+
+
+# --- recency_penalty_global : memoire INTER-JOUEURS --------------------------------
+
+
+class TestRecencyPenaltyGlobal:
+    @pytest.fixture
+    def en_base(self, sqlite_conn, seeded_scenario):
+        for identifiant in (7, 8):
+            sqlite_conn.execute("INSERT INTO players (id, first_name, last_name) VALUES (?, 'J', 'x')", (identifiant,))
+        sqlite_conn.commit()
+        return seeded_scenario
+
+    @staticmethod
+    def _phrase(en_base, texte: str) -> Phrase:
+        return Phrase(id=en_base["phrase_id"], variant_id=en_base["variant_id"], text=texte)
+
+    @staticmethod
+    def _usage(conn, phrase: Phrase, joueur: int, rang: int | None) -> None:
+        if rang is None:
+            conn.execute("INSERT INTO phrase_history (phrase_id, player_id, match_id, rendered_text) VALUES (?, ?, 'm', 'x')", (phrase.id, joueur))
+        else:
+            log_usage(conn, phrase.id, joueur, f"m{rang}", "x", match_sequence=rang)
+
+    def test_jamais_utilisee_pas_de_penalite(self, sqlite_conn, en_base):
+        assert recency_penalty_global(sqlite_conn, self._phrase(en_base, "{joueur} marque"), match_sequence=10) == 0.0
+
+    def test_le_match_courant_est_bloque_pour_tous_les_joueurs(self, sqlite_conn, en_base):
+        phrase = self._phrase(en_base, "{joueur} marque")
+        self._usage(sqlite_conn, phrase, 7, 10)  # le joueur 7 l'a eue : le joueur 8 aussi est bloque
+        assert recency_penalty_global(sqlite_conn, phrase, match_sequence=10) == 1.0
+
+    @pytest.mark.parametrize(
+        ("rang", "attendu"),
+        [(10, 1.0), (11, 0.7), (12, 0.7 * 2 / 3), (13, 0.7 / 3), (14, 0.0), (40, 0.0)],
+    )
+    def test_modele_nommant_un_joueur_penalite_decroissante_sur_3_matchs(self, sqlite_conn, en_base, rang, attendu):
+        phrase = self._phrase(en_base, "{joueur} marque")
+        self._usage(sqlite_conn, phrase, 7, 10)
+        assert recency_penalty_global(sqlite_conn, phrase, match_sequence=rang) == pytest.approx(attendu)
+
+    @pytest.mark.parametrize(
+        ("rang", "attendu"),
+        [(10, 1.0), (11, 0.9), (12, 0.6), (13, 0.3), (14, 0.0)],
+    )
+    def test_modele_sans_protagoniste_est_penalise_plus_fort(self, sqlite_conn, en_base, rang, attendu):
+        phrase = self._phrase(en_base, "Le mitrailleur tire de partout !")
+        self._usage(sqlite_conn, phrase, 7, 10)
+        assert recency_penalty_global(sqlite_conn, phrase, match_sequence=rang) == pytest.approx(attendu)
+
+    def test_seul_le_dernier_usage_de_n_importe_quel_joueur_compte(self, sqlite_conn, en_base):
+        phrase = self._phrase(en_base, "{joueur} marque")
+        self._usage(sqlite_conn, phrase, 7, 2)
+        self._usage(sqlite_conn, phrase, 8, 10)
+        assert recency_penalty_global(sqlite_conn, phrase, match_sequence=11) == pytest.approx(0.7)
+
+    def test_un_usage_futur_est_ignore(self, sqlite_conn, en_base):
+        phrase = self._phrase(en_base, "{joueur} marque")
+        self._usage(sqlite_conn, phrase, 7, 20)
+        assert recency_penalty_global(sqlite_conn, phrase, match_sequence=5) == 0.0
+
+    def test_les_lignes_sans_match_sequence_sont_ignorees(self, sqlite_conn, en_base):
+        phrase = self._phrase(en_base, "{joueur} marque")
+        self._usage(sqlite_conn, phrase, 7, None)
+        assert recency_penalty_global(sqlite_conn, phrase, match_sequence=10) == 0.0
+
+    def test_une_phrase_de_secours_n_est_jamais_penalisee(self, sqlite_conn, en_base):
+        secours = Phrase(id=en_base["phrase_id"], variant_id=en_base["variant_id"], text="x", is_fallback=True)
+        self._usage(sqlite_conn, secours, 7, 10)
+        assert recency_penalty_global(sqlite_conn, secours, match_sequence=10) == 0.0
+
+    @pytest.mark.parametrize(("rang", "erreur"), [(None, ValueError), (-1, ValueError), (True, TypeError), ("3", TypeError)])
+    def test_match_sequence_invalide_est_refuse_sans_repli(self, sqlite_conn, en_base, rang, erreur):
+        with pytest.raises(erreur, match="match_sequence"):
+            recency_penalty_global(sqlite_conn, self._phrase(en_base, "x"), match_sequence=rang)
+
+    def test_match_sequence_est_obligatoire_et_par_mot_cle(self, sqlite_conn, en_base):
+        with pytest.raises(TypeError):
+            recency_penalty_global(sqlite_conn, self._phrase(en_base, "x"))  # type: ignore[call-arg]
+        with pytest.raises(TypeError):
+            recency_penalty_global(sqlite_conn, self._phrase(en_base, "x"), 10)  # type: ignore[misc]
+
+
+class TestSansProtagoniste:
+    @pytest.mark.parametrize(
+        ("texte", "attendu"),
+        [
+            ("Le mitrailleur tire de partout !", True),
+            ("Le dernier rempart multiplie les prouesses face à {adversaire} dans le money time à la {minute}e !", True),
+            ("{joueur} tire de partout", False),
+            ("Le joker sort du banc à la place de {sortant}", False),  # l'entrant n'est pas nomme mais le sortant l'est
+            ("Sur le banc, {entrant} est une carte de poids", False),
+            ("{passeur} sert {receveur}", False),
+        ],
+    )
+    def test_detection_par_les_slots_de_protagoniste(self, texte, attendu):
+        assert sans_protagoniste(Phrase(id=1, variant_id=1, text=texte)) is attendu
 
 
 # --- similarity_penalty : MinHash, fenetre en matchs ----------------------------

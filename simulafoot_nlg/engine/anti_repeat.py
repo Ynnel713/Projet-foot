@@ -5,6 +5,8 @@ heures (decision sim-window) ; `match_sequence` est obligatoire et par mot-cle p
 refuse sans repli (voir profile_engine.validate_match_sequence).
 
     recency_penalty    : 1.0 tant que le cooldown de la phrase n'est pas ecoule pour ce joueur, 0.0 apres.
+    recency_penalty_global : meme phrase, TOUS joueurs confondus : 1.0 dans le match courant, puis une
+        penalite decroissante sur les 3 matchs suivants (plus forte pour un modele sans protagoniste).
     similarity_penalty : similarite (MinHash, engine/minhash.py) avec les textes recents du joueur.
     update_cooldown    : APRES le choix et le rendu (template_filler.render + post_process.apply),
         enregistre l'usage : phrase_history (via logger.log_usage, ecrivain unique, D17) puis
@@ -13,6 +15,7 @@ refuse sans repli (voir profile_engine.validate_match_sequence).
 
 from __future__ import annotations
 
+import re
 from sqlite3 import Connection
 
 from engine import minhash
@@ -60,6 +63,53 @@ def recency_penalty(conn: Connection, phrase: Phrase, player: Player, *, match_s
     if dernier is None:
         return 0.0
     return 0.0 if rang - dernier >= cooldown[0] else 1.0
+
+
+#: Slots qui nomment un protagoniste dans le texte rendu. Un modele qui n'en contient aucun (« Le
+#: mitrailleur tire de partout… ») rend le MEME texte quel que soit le joueur : seul un cooldown inter-joueurs le voit.
+SLOTS_PROTAGONISTE = frozenset({"joueur", "entrant", "sortant", "passeur", "receveur"})
+_SLOT = re.compile(r"\{(\w+)\}")
+
+#: Fenetre de la memoire inter-joueurs, en matchs apres celui de l'usage, et penalite au match suivant
+#: (decroissante lineairement jusqu'a 0 au-dela de la fenetre). Le match de l'usage lui-meme est BLOQUE (1.0).
+FENETRE_GLOBALE_MATCHS = 3
+PENALITE_GLOBALE = 0.7
+PENALITE_GLOBALE_SANS_PROTAGONISTE = 0.9
+
+
+def sans_protagoniste(phrase: Phrase) -> bool:
+    """Vrai si le modele ne nomme aucun joueur (aucun slot de `SLOTS_PROTAGONISTE`)."""
+    return not SLOTS_PROTAGONISTE & set(_SLOT.findall(phrase.text))
+
+
+def recency_penalty_global(conn: Connection, phrase: Phrase, *, match_sequence: int) -> float:
+    """Penalite [0, 1] de recence INTER-JOUEURS : `phrase` a-t-elle deja servi recemment, pour N'IMPORTE
+    quel joueur ? (`recency_penalty` ne voit que le meme joueur : deux joueurs differents recevaient le meme
+    modele, et un modele sans protagoniste le meme texte.)
+
+    `ecoules = match_sequence - dernier usage` (tous joueurs, usages futurs ignores) : 1.0 si `ecoules == 0`
+    (le match courant : blocage) ; sinon `pic * (FENETRE + 1 - ecoules) / FENETRE` tant que `ecoules <=
+    FENETRE_GLOBALE_MATCHS`, soit pic, 2/3 pic, 1/3 pic, puis 0.0 ; pic = `PENALITE_GLOBALE` (0.7), ou
+    `PENALITE_GLOBALE_SANS_PROTAGONISTE` (0.9) pour un modele sans protagoniste. Une phrase de secours n'est
+    jamais penalisee. Deterministe : lecture de `phrase_history`, aucune horloge ni aleatoire.
+
+    `match_sequence` est obligatoire, par mot-cle (None -> ValueError, aucun repli)."""
+    rang = validate_match_sequence(match_sequence)
+    if phrase.is_fallback:
+        return 0.0
+    dernier = conn.execute(
+        "SELECT MAX(match_sequence) FROM phrase_history WHERE phrase_id = ? AND match_sequence IS NOT NULL AND match_sequence <= ?",
+        (phrase.id, rang),
+    ).fetchone()[0]
+    if dernier is None:
+        return 0.0
+    ecoules = rang - dernier
+    if ecoules == 0:
+        return 1.0
+    if ecoules > FENETRE_GLOBALE_MATCHS:
+        return 0.0
+    pic = PENALITE_GLOBALE_SANS_PROTAGONISTE if sans_protagoniste(phrase) else PENALITE_GLOBALE
+    return pic * (FENETRE_GLOBALE_MATCHS + 1 - ecoules) / FENETRE_GLOBALE_MATCHS
 
 
 # Fenetre de comparaison, en MATCHS (decision sim-window : jamais en heures) : le match
