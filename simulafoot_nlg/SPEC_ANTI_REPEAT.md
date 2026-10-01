@@ -536,6 +536,39 @@ sur `preferred_moves`, jamais `None`) ; même traitement, retourner `False`.
   CINQ — `>=`, `<=`, `contient` (`preferred_moves`), `==` (`is_home`), `in` (`position`). Jamais
   `<`, `>`, `!=`, `=`.
 
+**D16 — solution précisée, D17, précision D3 et inventaire de `conditions.py` (01/10/2026, architecte) :**
+- **D16, solution.** Le problème est dans `_resolve` : un nom ni dans `PLAYER_FIELDS`, ni dans
+  `player.attributes`, ni dans `MATCH_CONTEXT_FIELDS`, ni `preferred_moves` lève `ValueError` — y
+  compris un attribut FM connu mais absent chez ce joueur. Ajouter `FM26_ATTRIBUTES_KNOWN`
+  (copie ou import propre de `FM26_ATTRIBUTES`) dans `conditions.py` et, dans `_resolve`, AVANT le
+  `ValueError` : `if name in FM26_ATTRIBUTES_KNOWN: return None` (connu du système, absent chez ce
+  joueur). `_comparer` renvoie déjà `False` sur `None` : phrase écartée, pas de crash. Un nom mal
+  orthographié (« Aggresion ») lève toujours `ValueError` : signal fort préservé. **Limite :** la
+  distinction ne joue qu'à l'EXÉCUTION ; `parse_condition_atoms` ne connaît pas les attributs, donc
+  un signal à l'IMPORT demanderait un contrôle supplémentaire dans le convertisseur ou `import_seed`.
+  *Précision de lecture :* `return None` couvre les comparaisons et `in` ; la branche `contient`
+  (`condition.value in gauche`) est évaluée avant `_comparer` et lève `TypeError` sur `None` : elle
+  demande sa propre garde (corollaire de D16 ci-dessus).
+- **D17 — écrivain de `phrase_history` : `logger.log_usage`, écrivain UNIQUE.** `anti_repeat.
+  update_cooldown` l'appelle (logger = journalisation, anti_repeat = décision de pénalité) ; pas de
+  duplication. `update_cooldown` calcule la signature de similarité et l'insère dans
+  `similarity_signatures`. *(À vérifier à l'implémentation : `similarity_signatures.history_id`
+  référence `phrase_history.id` et `log_usage` ne renvoie rien aujourd'hui ; l'ordre « signature puis
+  `log_usage` » suppose que la ligne d'historique existe déjà — signalé à l'architecte.)*
+- **D3, précision.** `sortant` et `entrant` ne seront PAS conditionnables tant qu'ils ne sont pas
+  ajoutés à `MATCH_CONTEXT_FIELDS` (`engine/conditions.py`) : à faire dans le même commit que D3 ou
+  juste après.
+- **Champs non conditionnables aujourd'hui :** `gabarit`, `passeur`, `receveur`, `sortant`, `entrant`
+  sont absents de `MATCH_CONTEXT_FIELDS` (qui ne contient que `minute`, `score_context`,
+  `is_home`) : aucune phrase ne peut conditionner sur eux (ValueError à l'exécution).
+- **`PLAYER_FIELDS` est limité à 6 champs** (`age`, `height_cm`, `weak_foot`, `foot`, `fm_rating`,
+  `position`) : ni `club`, ni `league`, ni `nationality`, ni `role_category`, ni
+  `secondary_positions` (ni `status`, `market_value`, `average_rating`, bien présents sur `Player`).
+- **Piège YAML latent de `in` :** il compare en TEXTE des deux côtés (`str(gauche) in membres`) :
+  « 04 » ne matche pas `4`, ni `4.0` le texte « 4 ».
+- **Rappel `contient` / `None` :** `TypeError` latent (voir D16). Vérifié : les 20 attributs FM
+  conditionnés par les 8 pilotes figurent tous dans `FM26_ATTRIBUTES` (aucun inconnu).
+
 ## Ce qui N'est PAS bloquant (déjà en place)
 - Le schéma SQL (`phrase_history`, `phrase_cooldowns`,
   `similarity_signatures`) est cohérent avec l'algorithme documenté dans le
