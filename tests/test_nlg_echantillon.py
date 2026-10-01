@@ -22,6 +22,7 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.skipif(not sample.NLG_PYTHON.exists(), reason="venv du NLG absent (simulafoot_nlg/.venv)"),
     pytest.mark.skipif(not sample.export.DEFAULT_XLSX.exists(), reason="data/joueurs.xlsx absent"),
+    pytest.mark.skipif(not (sample.NLG / "data" / "simulafoot.db").exists(), reason="base du NLG absente (cli.py init-db, import-players, import-seed)"),
 ]
 
 # Execute dans le venv du NLG : rejoue les 14 fichiers sur une copie VIERGE de la base du NLG, avec les memes graines
@@ -52,6 +53,22 @@ print(json.dumps(compte))
 """
 
 
+# Execute dans le venv du NLG : phrases conditionnees eligibles pour plus de 30 % des evenements de leur scenario.
+_CONDITIONS_LARGES = """
+import json, sys
+from pathlib import Path
+from engine.db import get_sqlite
+from scripts.audit_conditions_larges import _lire, conditions_larges
+conn = get_sqlite(sys.argv[1])
+print(json.dumps([[g["scenario"], g["phrase_id"], g["conditions"], round(g["part"], 3)] for g in conditions_larges(conn, _lire(Path(sys.argv[2])))]))
+"""
+
+# Conditions larges tolerees : celles de contexte (`score_context == "ouverture_score"` : le premier but arrive a 0-0, donc
+# pour beaucoup d'evenements) et « Changement precoce » (minute <= 55), dont le resserrement reporte ses tirages sur les
+# modeles sans condition et fait depasser le plafond de 12 usages.
+SEUIL_CONDITIONS_LARGES = 3
+
+
 @pytest.fixture(scope="module")
 def echantillon(tmp_path_factory):
     sortie = tmp_path_factory.mktemp("nlg_samples")
@@ -74,15 +91,23 @@ def echantillon(tmp_path_factory):
         cwd=sample.NLG, capture_output=True, timeout=900,
     )
     assert mesure.returncode == 0, mesure.stderr.decode("utf-8", "replace")
-    return {"rapport": rapport, "historique": historique, "joker": conditions_joker, "surnom": json.loads(mesure.stdout)}
+    larges = subprocess.run(
+        [str(sample.NLG_PYTHON), "-c", _CONDITIONS_LARGES, str(sample.NLG / "data" / "simulafoot.db"), str(sortie / "inbox")],
+        cwd=sample.NLG, capture_output=True, timeout=900,
+    )
+    assert larges.returncode == 0, larges.stderr.decode("utf-8", "replace")
+    return {"rapport": rapport, "historique": historique, "joker": conditions_joker, "surnom": json.loads(mesure.stdout),
+            "larges": json.loads(larges.stdout)}
 
 
 def test_taux_surnom(echantillon):
-    """Quand une phrase SURNOM est eligible face a DEFAUT, elle sort dans 15 a 30 % des tirages (poids 0.65 -> 39 % a
-    disponibilite egale, moins une fois la memoire inter-joueurs appliquee)."""
+    """SURNOM (poids 0.35) : 20 a 30 % des tirages ou il est eligible face a DEFAUT, et 5 a 10 % de toutes les lignes
+    (plafond ~13 % : eligible dans ~26 % des tirages, 5 a 8 modeles par scenario, memoire inter-joueurs)."""
     compte = echantillon["surnom"]
     assert compte["eligibles"] >= 50  # l'echantillon est assez grand pour mesurer
-    assert 0.15 <= compte["surnom"] / compte["eligibles"] <= 0.30
+    assert 0.20 <= compte["surnom"] / compte["eligibles"] <= 0.30
+    lignes = echantillon["historique"]
+    assert 0.05 <= sum(ligne[4] == "SURNOM" for ligne in lignes) / len(lignes) <= 0.10
 
 
 def test_joker_seuil(echantillon):
@@ -108,3 +133,10 @@ def test_invariants_de_repetition(echantillon):
     # REMPLACEMENT : un meme modele ne sort jamais deux fois dans un meme match
     par_match = Counter((ligne[0], ligne[1]) for ligne in historique if ligne[5] == "REMPLACEMENT")
     assert max(par_match.values()) == 1
+
+
+def test_conditions_larges_non_dominantes(echantillon):
+    """Au plus 3 phrases conditionnees eligibles pour plus de 30 % des evenements de leur scenario (16 avant le ticket
+    banque du 02/10/2026) ; la liste est dans le message d'echec."""
+    larges = echantillon["larges"]
+    assert len(larges) <= SEUIL_CONDITIONS_LARGES, larges

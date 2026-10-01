@@ -35,9 +35,12 @@ Les valeurs FM sont quantifiées par pas de 5 : `>= 78` et `>= 80` sont
 | Aggression | `>= 75` | carton_jaune | 93.0% | 17.4% | 1208 |
 | Aggression | `>= 80` | carton_jaune | 93.0% | 9.0% | 611 |
 | Aggression | `>= 85` | carton_jaune | 93.0% | 3.4% | 226 |
-| Anticipation | `<= 50` | carton_jaune | 93.0% | 16.9% | 1375 |
+| Anticipation | `<= 50` | carton_jaune, hors_jeu | 93.0% | 16.9% | 1375 |
+| Anticipation | `>= 70` | carton_jaune | 93.0% | 19.4% | 1396 |
 | Composure | `<= 45` | carton_jaune | 93.0% | 13.1% | 1124 |
 | Composure | `<= 55` | tir_non_cadre | 93.0% | 39.5% | 3123 |
+| Composure | `<= 65` | carton_jaune | 93.0% | 78.5% | 5994 |
+| Concentration | `<= 45` | hors_jeu | 93.0% | 18.3% | 1385 |
 | Decisions | `<= 45` | carton_jaune | 93.0% | 12.7% | 941 |
 | Determination | `>= 80` | carton_jaune | 93.0% | 13.5% | 1001 |
 | Finishing | `<= 40` | tir_non_cadre | 81.9% | 39.2% | 2619 |
@@ -46,7 +49,7 @@ Les valeurs FM sont quantifiées par pas de 5 : `>= 78` et `>= 80` sont
 | Finishing | `<= 70` | tir_non_cadre | 81.9% | 89.4% | 5965 |
 | Finishing | `>= 78` | tir_non_cadre | 81.9% | 1.1% | 76 |
 | Finishing | `>= 80` | tir_non_cadre | 81.9% | 1.1% | 76 |
-| Finishing | `>= 85` | tir_non_cadre | 81.9% | 0.3% | 22 |
+| Finishing | `>= 85` | hors_jeu, tir_non_cadre | 81.9% | 0.3% | 22 |
 | First Touch | `<= 55` | tir_non_cadre | 93.0% | 31.0% | 2831 |
 | Flair | `>= 75` | carton_jaune | 93.0% | 12.0% | 805 |
 | Heading | `>= 75` | corner | 81.9% | 7.4% | 496 |
@@ -57,16 +60,20 @@ Les valeurs FM sont quantifiées par pas de 5 : `>= 78` et `>= 80` sont
 | Heading | `>= 88` | corner, defense | 81.9% | 0.2% | 15 |
 | Leadership | `>= 80` | carton_jaune | 93.0% | 2.5% | 195 |
 | Long Shots | `>= 60` | tir_non_cadre | 81.9% | 25.9% | 1730 |
+| Long Shots | `>= 70` | tir_non_cadre | 81.9% | 6.5% | 433 |
+| Off the Ball | `>= 75` | hors_jeu | 93.0% | 7.3% | 484 |
+| Off the Ball | `>= 80` | hors_jeu | 93.0% | 2.7% | 179 |
 | Pace | `<= 55` | faute_simple | 93.0% | 16.8% | 1758 |
 | Pace | `<= 60` | faute_simple | 93.0% | 37.6% | 3281 |
 | Pace | `<= 65` | faute_simple | 93.0% | 60.8% | 4882 |
 | Pace | `>= 75` | defense | 93.0% | 13.9% | 932 |
 | Pace | `>= 78` | remplacement | 93.0% | 5.0% | 337 |
+| Pace | `>= 80` | hors_jeu | 93.0% | 5.0% | 337 |
 | Pace | `>= 82` | defense, tir_non_cadre | 93.0% | 1.6% | 110 |
 | Pace | `>= 85` | defense, tir_non_cadre | 93.0% | 1.6% | 109 |
 | Pace | `>= 86` | defense | 93.0% | 0.4% | 24 |
 | Pace | `>= 88` | defense | 93.0% | 0.4% | 24 |
-| Pace | `>= 90` | defense, remplacement, tir_non_cadre | 93.0% | 0.4% | 24 |
+| Pace | `>= 90` | defense, hors_jeu, remplacement, tir_non_cadre | 93.0% | 0.4% | 24 |
 | Stamina | `>= 75` | remplacement | 93.0% | 14.7% | 1005 |
 | Stamina | `>= 85` | remplacement | 93.0% | 1.7% | 112 |
 | Strength | `>= 70` | faute_simple | 93.0% | 21.2% | 1575 |
@@ -77,7 +84,7 @@ Les valeurs FM sont quantifiées par pas de 5 : `>= 78` et `>= 80` sont
 | Tackling | `<= 50` | faute_simple | 81.9% | 42.3% | 2826 |
 | Tackling | `<= 55` | faute_simple | 81.9% | 50.2% | 3350 |
 | Tackling | `<= 58` | faute_simple | 81.9% | 50.2% | 3350 |
-| Tackling | `<= 60` | faute_simple | 81.9% | 62.4% | 4167 |
+| Tackling | `<= 60` | carton_jaune, faute_simple | 81.9% | 62.4% | 4167 |
 | Tackling | `<= 62` | faute_simple | 81.9% | 62.4% | 4167 |
 | Tackling | `<= 65` | faute_simple | 81.9% | 75.6% | 5046 |
 | Tackling | `>= 70` | carton_jaune | 81.9% | 17.2% | 1147 |
@@ -92,10 +99,11 @@ Les valeurs FM sont quantifiées par pas de 5 : `>= 78` et `>= 80` sont
 | Technique | `<= 60` | faute_simple | 93.0% | 47.7% | 3989 |
 | Technique | `>= 70` | corner, defense, faute_simple | 93.0% | 25.7% | 1732 |
 | Technique | `>= 72` | corner, defense, tir_non_cadre | 93.0% | 11.8% | 793 |
-| Technique | `>= 75` | corner, tir_non_cadre | 93.0% | 11.8% | 793 |
+| Technique | `>= 75` | corner | 93.0% | 11.8% | 793 |
 | Technique | `>= 76` | corner | 93.0% | 4.9% | 328 |
 | Technique | `>= 78` | corner, remplacement, tir_non_cadre | 93.0% | 4.9% | 328 |
 | Technique | `>= 80` | corner | 93.0% | 4.9% | 327 |
+| Technique | `>= 82` | tir_non_cadre | 93.0% | 1.6% | 107 |
 | Technique | `>= 85` | corner, defense | 93.0% | 1.6% | 107 |
 | Technique | `>= 88` | corner | 93.0% | 0.4% | 26 |
 | Technique | `>= 90` | tir_non_cadre | 93.0% | 0.4% | 26 |
@@ -108,17 +116,24 @@ Les valeurs FM sont quantifiées par pas de 5 : `>= 78` et `>= 80` sont
 | Vision | `>= 82` | corner, defense, faute_simple | 93.0% | 0.7% | 46 |
 | Vision | `>= 85` | defense, tir_non_cadre | 93.0% | 0.7% | 46 |
 | Work Rate | `>= 80` | remplacement | 93.0% | 11.0% | 749 |
-| age | `<= 18` | carton_jaune, remplacement | 100.0% | 3.4% | 250 |
+| age | `<= 18` | carton_jaune, hors_jeu, remplacement | 100.0% | 3.4% | 250 |
 | age | `<= 21` | remplacement | 100.0% | 22.3% | 1619 |
+| age | `>= 30` | carton_jaune | 100.0% | 16.9% | 1425 |
 | age | `>= 32` | faute_simple | 100.0% | 9.3% | 834 |
 | age | `>= 33` | defense, remplacement | 100.0% | 6.4% | 596 |
-| age | `>= 34` | carton_jaune, remplacement | 100.0% | 4.0% | 395 |
-| fm_rating | `>= 75` | remplacement | 100.0% | 22.1% | 1609 |
+| age | `>= 34` | carton_jaune, hors_jeu, remplacement | 100.0% | 4.0% | 395 |
+| fm_rating | `>= 75` | hors_jeu | 100.0% | 22.1% | 1609 |
+| fm_rating | `>= 81` | remplacement | 100.0% | 3.6% | 275 |
 | fm_rating | `>= 82` | remplacement | 100.0% | 2.4% | 183 |
 | height_cm | `<= 172` | corner | 93.4% | 7.6% | 510 |
 | height_cm | `>= 185` | corner | 93.4% | 34.7% | 3089 |
 | height_cm | `>= 188` | corner | 93.4% | 19.7% | 1935 |
 | height_cm | `>= 190` | corner | 93.4% | 12.3% | 1288 |
+| position | `in AG, AD` | hors_jeu | 100.0% | 18.3% | 1224 |
+| position | `in BU, SA` | hors_jeu | 100.0% | 14.5% | 968 |
+| position | `in BU, SA, AG, AD, MOC, MC` | hors_jeu | 100.0% | 53.9% | 3596 |
+| position | `in BU, SA, AG, AD, MOC, MC, RB, LB` | hors_jeu | 100.0% | 70.5% | 4705 |
+| position | `in MC, MDC, MOC` | hors_jeu | 100.0% | 30.0% | 2003 |
 | preferred_moves | `contient Dives Into Tackles` | carton_jaune | 9.3% | 1.6% | 105 |
 | preferred_moves | `contient Shoots With Power` | tir_non_cadre | 9.3% | 0.5% | 35 |
 | preferred_moves | `contient Winds Up Opponents` | carton_jaune | 9.3% | 0.4% | 29 |
