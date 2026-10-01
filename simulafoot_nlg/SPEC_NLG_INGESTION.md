@@ -68,19 +68,22 @@ Seul décideur du `scenario_code` ; les adaptateurs ne le choisissent jamais. R�
 2. occasion `arret` → ARRET_GARDIEN (penalty compris).
 3. occasion de gabarit `penalty` → PENALTY_RATE.
 4. occasion `hors_cadre` → TIR_NON_CADRE ; `tacle` / `degagement` → DEFENSE.
-5. but de gabarit `coup_franc` / `construction_placee` / `corner` → COUP_FRANC / CONSTRUCTION / CORNER ;
-   tout autre but → BUT (le gabarit `penalty` active la variante PENALTY de BUT).
+5. **but, quel que soit le gabarit → BUT** (le gabarit `penalty` active la variante PENALTY de BUT). Un but est un but
+   (01/10/2026, révise D12) : COUP_FRANC / CONSTRUCTION / CORNER ne contiennent pas de phrase « but » ; ils n'ont plus
+   d'événement source (dette V2.2, voir ci-dessous) ;
 6. carton `yellow` → CARTON_JAUNE ; `direct` / `second_yellow` → CARTON_ROUGE ; remplacement → REMPLACEMENT.
 
 **Non atteints** (déclarés avec raison, test d'exhaustivité contre les 17 scénarios importés) :
 *structurels* — DEBUT_MATCH, SITUATION_MATCH, GESTE_SIGNATURE (contexte ou trait, pas un événement) ;
-*différés* (inatteignables en V2.1, pas de source d'événement — D13) — FAUTE_SIMPLE, HORS_JEU, AMBIANCE.
+*différés* (inatteignables en V2.1, pas de source d'événement — D13) — FAUTE_SIMPLE, HORS_JEU, AMBIANCE ;
+*dette V2.2* — COUP_FRANC, CONSTRUCTION, CORNER : ajouter des phrases « but » dans ces pools, puis rebasculer (but, gabarit) → scénario du gabarit.
 
 ## 5. Limites connues (à arbitrer, pas des bugs cachés)
 
-- **(but, corner) → CORNER** : le pool CORNER (30 phrases) mélange corners réussis et ratés (≈ 12 phrases
-  décrivent un corner sans but) et aucune condition d'outcome n'existe : un but sur corner peut recevoir un texte
-  de corner raté. Ligne de D12 à valider.
+- **(but, corner / coup_franc / construction_placee) → BUT** : décision du 01/10/2026. Les phrases de ces pools
+  décrivent une passe (`{passeur}` → `{receveur}`), pas un but. Dette V2.2 : y ajouter des phrases « but ». Côté racine,
+  `receveur_id` reste envoyé (= buteur) pour ces gabarits, et un but sans passeur y est émis en `percee_individuelle` :
+  sans effet sur le scénario depuis cette décision.
 - **PENALTY_RATE** : son pool mélange arrêts du gardien et poteau, sans condition d'outcome ; seul `hors_cadre`
   lui est envoyé (l'`arret` va à ARRET_GARDIEN).
 - **`{adversaire}` = le club adverse.** FAUTE_SIMPLE (inatteignable) et ~8 phrases de DEFENSE le traitent comme

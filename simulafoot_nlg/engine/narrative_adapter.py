@@ -18,13 +18,15 @@ REGLES, par ordre de priorite :
      le gardien est l'acteur, voir event_contract).
   3. occasion de gabarit `penalty`          -> PENALTY_RATE (outcome hors_cadre).
   4. occasion, `hors_cadre`                 -> TIR_NON_CADRE ; `tacle` / `degagement` -> DEFENSE.
-  5. but de gabarit coup_franc / construction_placee / corner -> COUP_FRANC / CONSTRUCTION / CORNER ;
-     tout autre but (dont `penalty`, qui active la variante PENALTY de BUT par condition de gabarit) -> BUT.
+  5. but, QUEL QUE SOIT LE GABARIT -> BUT (dont `penalty`, qui active la variante PENALTY de BUT par condition
+     de gabarit). Un but est un but (decision du 01/10/2026, revise D12) : les pools COUP_FRANC, CONSTRUCTION et
+     CORNER decrivent une passe, pas un but (il n'y a pas de phrase "but" dedans), et un but de corner/coup franc
+     etait raconte par un corner rate ou une phrase de secours.
   6. carton `yellow` -> CARTON_JAUNE ; `direct` / `second_yellow` -> CARTON_ROUGE ; remplacement -> REMPLACEMENT.
 
-LIMITE CONNUE (a valider au titre de D12) : (but, corner) -> CORNER : le pool CORNER (30 phrases)
-melange des corners reussis et des corners rates (une douzaine de phrases decrivent un corner sans
-but), et aucune condition d'outcome n'existe : un but sur corner peut recevoir un texte de corner rate.
+DETTE V2.2 : COUP_FRANC, CONSTRUCTION et CORNER n'ont plus d'evenement source (voir SCENARIOS_DIFFERES).
+Pour les rebrancher : ajouter des phrases "but" dans ces trois pools (le pool CORNER melange en outre des
+corners reussis et rates, sans condition d'outcome), puis rebasculer (but, gabarit) -> scenario du gabarit.
 
 Un scenario IMPORTE qui n'est atteint par aucune regle est declare, avec sa raison, dans
 SCENARIOS_STRUCTURELS ou SCENARIOS_DIFFERES (un test verrouille l'union avec la banque importee).
@@ -38,11 +40,6 @@ from typing import Any
 #: Outcomes sans commentaire en V2.1 (voir regle 1).
 OUTCOMES_NON_COMMENTES = frozenset({"poteau", "barre"})
 
-_BUT_PAR_GABARIT = {
-    "coup_franc": "COUP_FRANC",
-    "construction_placee": "CONSTRUCTION",
-    "corner": "CORNER",
-}
 _OCCASION_PAR_OUTCOME = {
     "hors_cadre": "TIR_NON_CADRE",
     "tacle": "DEFENSE",
@@ -57,7 +54,7 @@ _CARTON_PAR_OUTCOME = {
 #: Scenarios que `event_to_scenario` peut renvoyer (verrouille par un test qui enumere tout le domaine).
 SCENARIOS_ATTEIGNABLES = frozenset(
     {
-        "BUT", "COUP_FRANC", "CONSTRUCTION", "CORNER",
+        "BUT",
         "ARRET_GARDIEN", "PENALTY_RATE", "TIR_NON_CADRE", "DEFENSE",
         "CARTON_JAUNE", "CARTON_ROUGE", "REMPLACEMENT",
     }
@@ -79,6 +76,11 @@ SCENARIOS_DIFFERES: dict[str, str] = {
     "FAUTE_SIMPLE": "inatteignable en V2.1 (pas de source d'evenement)",
     "HORS_JEU": "inatteignable en V2.1 (pas de source d'evenement)",
     "AMBIANCE": "inatteignable en V2.1 (pas de source d'evenement)",
+    # Dette V2.2 (01/10/2026) : un but sur ces gabarits est raconte par BUT ; les pools ne contiennent pas de
+    # phrase "but". Ajouter des phrases "but" dans chacun, puis rebasculer le mapping.
+    "COUP_FRANC": "dette V2.2 : pas de phrase 'but' dans le pool ; un but de coup franc est raconte par BUT",
+    "CONSTRUCTION": "dette V2.2 : pas de phrase 'but' dans le pool ; un but de construction est raconte par BUT",
+    "CORNER": "dette V2.2 : pas de phrase 'but' dans le pool ; un but de corner est raconte par BUT",
 }
 
 
@@ -94,7 +96,7 @@ def event_to_scenario(event: Mapping[str, Any]) -> str | None:
     if type_evenement == "remplacement":
         return "REMPLACEMENT"
     if type_evenement == "but":
-        return _BUT_PAR_GABARIT.get(event["gabarit"], "BUT")
+        return "BUT"
     if type_evenement == "occasion":
         outcome, gabarit = event["outcome"], event["gabarit"]
         if outcome in OUTCOMES_NON_COMMENTES:

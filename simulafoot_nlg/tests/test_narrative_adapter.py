@@ -35,10 +35,10 @@ def _occasion(gabarit: str, outcome: str) -> dict:
 @pytest.mark.parametrize(
     ("evenement", "attendu"),
     [
-        # buts : gabarits a scenario propre, tout le reste -> BUT (penalty compris : variante PENALTY)
-        (_but("coup_franc"), "COUP_FRANC"),
-        (_but("construction_placee"), "CONSTRUCTION"),
-        (_but("corner"), "CORNER"),
+        # buts : TOUT but -> BUT, quel que soit le gabarit (penalty compris : variante PENALTY)
+        (_but("coup_franc"), "BUT"),
+        (_but("construction_placee"), "BUT"),
+        (_but("corner"), "BUT"),
         (_but("penalty"), "BUT"),
         (_but("contre_attaque"), "BUT"),
         (_but("but_gag"), "BUT"),
@@ -130,6 +130,24 @@ def test_chaque_scenario_inatteignable_a_une_raison():
         assert all(raison.strip() for raison in raisons.values())
 
 
+@pytest.mark.parametrize("gabarit", GABARITS)
+def test_un_but_est_un_but_quel_que_soit_le_gabarit(gabarit):
+    assert event_to_scenario(_but(gabarit)) == "BUT"
+
+
+@pytest.mark.parametrize("outcome", ["arret", "hors_cadre", "tacle", "degagement"])
+def test_une_occasion_de_gabarit_corner_reste_decidee_par_son_outcome(outcome):
+    # inchange : le gabarit corner ne mene a CORNER ni pour un but ni pour une occasion
+    attendu = {"arret": "ARRET_GARDIEN", "hors_cadre": "TIR_NON_CADRE", "tacle": "DEFENSE", "degagement": "DEFENSE"}[outcome]
+    assert event_to_scenario(_occasion("corner", outcome)) == attendu
+
+
+def test_corner_coup_franc_construction_sont_une_dette_v2_2():
+    dette = {"COUP_FRANC", "CONSTRUCTION", "CORNER"}
+    assert dette <= set(SCENARIOS_DIFFERES) and not dette & SCENARIOS_ATTEIGNABLES
+    assert all("V2.2" in SCENARIOS_DIFFERES[code] for code in dette)
+
+
 def test_les_trois_pilotes_sans_source_sont_differes_a_v2_2_et_les_traits_et_contextes_sont_structurels():
-    assert set(SCENARIOS_DIFFERES) == {"FAUTE_SIMPLE", "HORS_JEU", "AMBIANCE"}  # D13
+    assert {"FAUTE_SIMPLE", "HORS_JEU", "AMBIANCE"} <= set(SCENARIOS_DIFFERES)  # D13 (+ la dette V2.2 ci-dessus)
     assert set(SCENARIOS_STRUCTURELS) == {"DEBUT_MATCH", "SITUATION_MATCH", "GESTE_SIGNATURE"}
