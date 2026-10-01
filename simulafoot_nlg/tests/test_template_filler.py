@@ -211,3 +211,86 @@ def test_dictionnaire_absent_ou_vide_leve_slot_resolution_error():
 def test_un_slot_a_dictionnaire_sans_rng_est_refuse():
     with pytest.raises(ValueError, match="rng obligatoire"):
         render(_phrase_a_dictionnaires(), JOUEUR, CONTEXTE, dictionaries=SLOTS_SYNTHETIQUES)
+
+
+# --- SlotResolutionError : slot inconnu, definition invalide ------------------
+
+
+def _avec_slots(texte: str, *slots: PhraseSlot) -> Phrase:
+    return Phrase(id=1, variant_id=1, text=texte, slots=slots)
+
+
+def test_un_slot_du_texte_non_declare_est_nomme_dans_l_erreur():
+    with pytest.raises(SlotResolutionError, match=r"\{adversaire\}"):
+        render(_avec_slots("{joueur} contre {adversaire}"), JOUEUR, CONTEXTE)
+
+
+@pytest.mark.parametrize(
+    "expression",
+    ["player.full_name()", "joueur.full_name", "player.__class__", "player.nope", "context.receveur.nope"],
+)
+def test_une_expression_invalide_ou_inconnue_leve_slot_resolution_error_en_nommant_le_slot(expression):
+    phrase = _avec_slots("{x} marque", PhraseSlot(id=1, phrase_id=1, slot_name="x", expression=expression))
+    with pytest.raises(SlotResolutionError, match=r"Slot \{x\}"):
+        render(phrase, JOUEUR, CONTEXTE)
+
+
+def test_un_slot_sans_expression_ni_dictionnaire_est_refuse():
+    phrase = _avec_slots("{x}", PhraseSlot(id=1, phrase_id=1, slot_name="x"))
+    with pytest.raises(SlotResolutionError, match="exactement un"):
+        render(phrase, JOUEUR, CONTEXTE)
+
+
+def test_un_slot_avec_expression_ET_dictionnaire_est_refuse():
+    phrase = _avec_slots(
+        "{x}",
+        PhraseSlot(id=1, phrase_id=1, slot_name="x", expression="player.full_name", dictionary_key="k"),
+    )
+    with pytest.raises(SlotResolutionError, match="exactement un"):
+        render(phrase, JOUEUR, CONTEXTE, rng=random.Random(0), dictionaries={"k": [{"value": "v"}]})
+
+
+def test_un_slot_declare_deux_fois_avec_des_definitions_differentes_est_refuse():
+    phrase = _avec_slots(
+        "{x}",
+        PhraseSlot(id=1, phrase_id=1, slot_name="x", expression="player.full_name"),
+        PhraseSlot(id=2, phrase_id=1, slot_name="x", expression="player.last_name"),
+    )
+    with pytest.raises(SlotResolutionError, match="deux fois"):
+        render(phrase, JOUEUR, CONTEXTE)
+
+
+def test_un_slot_declare_deux_fois_a_l_identique_est_normal():
+    # Le convertisseur declare un slot AUTANT de fois qu'il apparait dans le texte.
+    phrase = _avec_slots(
+        "{x} et {x}",
+        PhraseSlot(id=1, phrase_id=1, slot_name="x", expression="player.last_name"),
+        PhraseSlot(id=2, phrase_id=1, slot_name="x", expression="player.last_name"),
+    )
+    assert render(phrase, JOUEUR, CONTEXTE) == "Mbappé et Mbappé"
+
+
+def test_un_slot_declare_mais_absent_du_texte_ne_consomme_ni_rng_ni_erreur():
+    phrase = _avec_slots(
+        "{joueur} marque",
+        PhraseSlot(id=1, phrase_id=1, slot_name="joueur", expression="player.full_name"),
+        PhraseSlot(id=2, phrase_id=1, slot_name="inutile", dictionary_key="absent"),
+        PhraseSlot(id=3, phrase_id=1, slot_name="receveur", expression="context.receveur.full_name"),
+    )
+    assert render(phrase, JOUEUR, MatchContext(match_id="m1")) == "Kylian Mbappé marque"
+
+
+@pytest.mark.parametrize(
+    "dictionnaire",
+    [
+        [{"valeur": "x"}],  # cle "value" absente
+        ["x"],  # entree non-mapping
+        [{"value": "x", "weight": "lourd"}],  # poids non numerique
+        [{"value": "x", "weight": -1}],  # poids negatif
+        [{"value": "x", "weight": 0}],  # poids tous nuls
+    ],
+)
+def test_un_dictionnaire_mal_forme_leve_slot_resolution_error(dictionnaire):
+    phrase = _avec_slots("{x}", PhraseSlot(id=1, phrase_id=1, slot_name="x", dictionary_key="k"))
+    with pytest.raises(SlotResolutionError, match=r"Slot \{x\}"):
+        render(phrase, JOUEUR, CONTEXTE, rng=random.Random(0), dictionaries={"k": dictionnaire})

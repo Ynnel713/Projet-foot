@@ -77,10 +77,45 @@ def _tirer(
     entrees = (dictionaries or {}).get(slot.dictionary_key or "")
     if not entrees:
         raise SlotResolutionError(f"Slot {{{slot.slot_name}}} : dictionnaire {slot.dictionary_key!r} absent ou vide.")
+    valeurs: list[str] = []
+    poids: list[float] = []
+    for entree in entrees:
+        try:
+            valeur, poids_entree = entree["value"], float(entree.get("weight", 1.0))
+        except (KeyError, TypeError, ValueError, AttributeError) as exc:
+            raise SlotResolutionError(
+                f"Slot {{{slot.slot_name}}} : entree invalide {entree!r} dans {slot.dictionary_key!r} "
+                "(attendu : {value, weight?} avec un poids numerique)."
+            ) from exc
+        if poids_entree < 0:
+            raise SlotResolutionError(f"Slot {{{slot.slot_name}}} : poids negatif dans {slot.dictionary_key!r}.")
+        valeurs.append(str(valeur))
+        poids.append(poids_entree)
+    if not any(poids):
+        raise SlotResolutionError(f"Slot {{{slot.slot_name}}} : poids tous nuls dans {slot.dictionary_key!r}.")
     if rng is None:
         raise ValueError(f"Slot {{{slot.slot_name}}} (dictionnaire {slot.dictionary_key!r}) : rng obligatoire.")
-    poids = [float(entree.get("weight", 1.0)) for entree in entrees]
-    return str(rng.choices([entree["value"] for entree in entrees], weights=poids, k=1)[0])
+    return rng.choices(valeurs, weights=poids, k=1)[0]
+
+
+def _resoudre(
+    slot: PhraseSlot,
+    player: Player,
+    context: MatchContext,
+    rng: random.Random | None,
+    dictionaries: Mapping[str, Sequence[Mapping[str, Any]]] | None,
+) -> str:
+    if (slot.expression is None) == (slot.dictionary_key is None):
+        raise SlotResolutionError(
+            f"Slot {{{slot.slot_name}}} : exactement un de `expression` et `dictionary_key` est attendu "
+            f"(recu expression={slot.expression!r}, dictionary_key={slot.dictionary_key!r})."
+        )
+    if slot.expression is not None:
+        try:
+            return resolve_expression(slot.expression, player, context)
+        except SlotResolutionError as exc:
+            raise SlotResolutionError(f"Slot {{{slot.slot_name}}} : {exc}") from exc
+    return _tirer(slot, dictionaries, rng)
 
 
 def render(
@@ -92,19 +127,34 @@ def render(
     dictionaries: Mapping[str, Sequence[Mapping[str, Any]]] | None = None,
 ) -> str:
     """Rend `phrase.text` avec tous ses slots resolus pour (`player`, `context`) -- voir
-    docstring du module. Leve SlotResolutionError si un slot du texte n'a pas de valeur ;
-    ValueError si un slot a dictionnaire est rendu sans `rng`."""
+    docstring du module. Leve SlotResolutionError dans tous ces cas : slot du texte non declare ;
+    slot declare sans (ou avec les deux de) expression/dictionary_key ; deux declarations
+    differentes du meme slot ; expression invalide ou a valeur absente ; dictionnaire absent,
+    vide ou mal forme. Seuls les slots PRESENTS dans le texte sont resolus (un slot declare
+    mais inutilise ne consomme ni rng ni erreur). ValueError si un slot a dictionnaire est
+    rendu sans `rng`."""
+    utilises = set(_SLOT_RE.findall(phrase.text))
+    declarations: dict[str, PhraseSlot] = {}
     valeurs: dict[str, str] = {}
     for slot in phrase.slots:
-        if slot.expression is not None:
-            valeurs[slot.slot_name] = resolve_expression(slot.expression, player, context)
-        elif slot.dictionary_key is not None:
-            valeurs[slot.slot_name] = _tirer(slot, dictionaries, rng)
+        if slot.slot_name not in utilises:
+            continue
+        precedente = declarations.get(slot.slot_name)
+        if precedente is not None:
+            # Un slot repete dans le texte est declare plusieurs fois par le convertisseur :
+            # normal si c'est la meme definition, ambigu sinon.
+            if (precedente.expression, precedente.dictionary_key) != (slot.expression, slot.dictionary_key):
+                raise SlotResolutionError(
+                    f"Slot {{{slot.slot_name}}} : declare deux fois avec des definitions differentes."
+                )
+            continue
+        declarations[slot.slot_name] = slot
+        valeurs[slot.slot_name] = _resoudre(slot, player, context, rng, dictionaries)
 
     def remplacer(correspondance: re.Match[str]) -> str:
         nom = correspondance.group(1)
         if nom not in valeurs:
-            raise SlotResolutionError(f"Slot {{{nom}}} sans valeur resolue dans {phrase.text!r}.")
+            raise SlotResolutionError(f"Slot {{{nom}}} non declare dans {phrase.text!r}.")
         return valeurs[nom]
 
     return _SLOT_RE.sub(remplacer, phrase.text)
