@@ -101,3 +101,59 @@ def test_un_match_simule_est_raconte_par_le_nlg(match_simule, tmp_path):
     noms = {p.id: p.name for p in home.players + away.players}
     for ligne, d in zip(lignes, commentes):
         assert noms[d["player_id"]] in ligne
+
+
+# --- receveur_id : un but de corner / coup franc / construction est raconte comme une passe decisive suivie d'un but ---
+
+# Base NLG minimale : pour chacun des 3 scenarios, UNE phrase de but (slots passeur ET receveur, comme 20/20 COUP_FRANC,
+# 18/20 CONSTRUCTION, 18/30 CORNER de la vraie banque) + une phrase de secours. Sans receveur_id, la phrase est
+# inrendable et le NLG retombe sur le secours (les 2 buts de coup franc du match 7 de l'echantillon).
+_SETUP_NLG_RECEVEUR = r"""
+import json, sqlite3, sys
+from pathlib import Path
+from scripts.init_db import init_db
+db, joueurs = Path(sys.argv[1]), json.loads(sys.argv[2])
+init_db(db_path=db)
+conn = sqlite3.connect(db)
+conn.executemany("INSERT INTO players (id, first_name, last_name, position) VALUES (?, ?, '', ?)", joueurs)
+for code in ("CORNER", "COUP_FRANC", "CONSTRUCTION"):
+    sid = conn.execute("INSERT INTO scenarios (code, label) VALUES (?, ?)", (code, code)).lastrowid
+    vid = conn.execute("INSERT INTO variants (scenario_id, code, label, is_default) VALUES (?, 'D', 'd', 1)", (sid,)).lastrowid
+    pid = conn.execute("INSERT INTO phrases (variant_id, text) VALUES (?, ?)", (vid, "BUT " + code + " : {passeur} sert {receveur}")).lastrowid
+    conn.execute("INSERT INTO phrase_cooldowns (phrase_id, cooldown_matches) VALUES (?, 0)", (pid,))
+    for nom, expr in (("passeur", "context.passeur.full_name"), ("receveur", "context.receveur.full_name")):
+        conn.execute("INSERT INTO phrase_slots (phrase_id, slot_name, expression) VALUES (?, ?, ?)", (pid, nom, expr))
+    conn.execute("INSERT INTO phrases (variant_id, text, is_fallback) VALUES (?, ?, 1)", (vid, code + " secours"))
+conn.commit()
+"""
+
+
+@pytest.mark.skipif(not NLG_PYTHON.exists(), reason="venv du NLG absent (simulafoot_nlg/.venv)")
+@pytest.mark.parametrize("gabarit,scenario", [("corner", "CORNER"), ("coup_franc", "COUP_FRANC"),
+                                              ("construction_placee", "CONSTRUCTION")])
+def test_un_but_sur_gabarit_a_passeur_est_raconte_avec_passeur_et_receveur(gabarit, scenario, tmp_path):
+    from test_nlg_ingestion import _match
+    from ligue1sim.events import GoalEvent
+
+    goals = [GoalEvent(club_name="Home FC", scorer="h_17", assist="h_14", minute=12)]
+    match_result, home, away = _match(goals)
+    timeline = build_timeline(match_result)
+    but = next(e for e in timeline.events if e.event_type == "but")
+    timeline = replace(timeline, events=[replace(e, gabarit=gabarit) if e is but else e for e in timeline.events])
+    dicts = [d for d in timeline_to_events(timeline, match_sequence=1, home_squad=home.players, away_squad=away.players)
+             if d["event_type"] == "but"]
+    assert len(dicts) == 1 and dicts[0]["receveur_id"] == 1017
+
+    fichier = write_jsonl(dicts, tmp_path / "but.jsonl")
+    db = tmp_path / "nlg.db"
+    joueurs = [[p.id, p.name, p.poste] for p in home.players + away.players]
+    assert _nlg("-c", _SETUP_NLG_RECEVEUR, str(db), json.dumps(joueurs)).returncode == 0
+    resultat = _nlg("cli.py", "--db", str(db), "narrate", "--events", str(fichier))
+    assert resultat.returncode == 0, resultat.stderr
+    assert resultat.stdout.strip() == f"12' BUT {scenario} : h_14 sert h_17"  # pas "secours" : receveur = buteur
+
+    # et SANS receveur_id (comportement d'avant la correction) : phrase inrendable -> secours
+    sans = [{k: v for k, v in d.items() if k != "receveur_id"} for d in dicts]
+    fichier2 = write_jsonl(sans, tmp_path / "sans.jsonl")
+    avant = _nlg("cli.py", "--db", str(db), "narrate", "--events", str(fichier2), "--dry-run")
+    assert avant.stdout.strip() == f"12' {scenario} secours"

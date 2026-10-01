@@ -157,6 +157,11 @@ def _narratif_to_dict(event: NarrativeEvent, commun: dict[str, Any], squad: Effe
         dico = {**commun, "event_type": "but", "gabarit": event.gabarit, "player_id": squad.player_id(event.main_player)}
         if len(event.involved_players) > 1:
             dico["passeur_id"] = squad.player_id(event.involved_players[1])
+            if event.gabarit in _GABARITS_A_PASSEUR:
+                # Les phrases de ces gabarits exigent {receveur} (COUP_FRANC 20/20, CONSTRUCTION 18/20, CORNER 18/30) ;
+                # sans lui le NLG ecarte la phrase (secours, ou corner rate). Le moteur ne connait que le passeur :
+                # le receveur de la passe decisive EST le buteur.
+                dico["receveur_id"] = dico["player_id"]
         elif event.gabarit in _GABARITS_A_PASSEUR:
             dico["gabarit"] = GABARIT_BUT_SANS_PASSEUR  # -> scenario BUT, voir plus haut
         return dico

@@ -324,3 +324,22 @@ class TestJsonLines:
         assert b"\r" not in brut and brut.endswith(b"\n")
         assert [json.loads(l) for l in brut.decode("utf-8").splitlines()] == events
         assert jsonl_path(tmp_path, "a", 5) != jsonl_path(tmp_path, "a", 6)
+
+
+class TestReceveurId:
+    """Les phrases COUP_FRANC / CONSTRUCTION / CORNER exigent {receveur} : le receveur de la passe decisive est le buteur."""
+
+    @pytest.mark.parametrize("gabarit", ["corner", "coup_franc", "construction_placee"])
+    def test_but_avec_passeur_receveur_est_le_buteur(self, gabarit):
+        d = TestButSansPasseur._but_dict(gabarit, "h_14")
+        assert d["receveur_id"] == d["player_id"] == 1017
+        assert d["passeur_id"] == 1014 and d["passeur_id"] != d["receveur_id"]
+
+    @pytest.mark.parametrize("gabarit", ["corner", "coup_franc", "construction_placee"])
+    def test_but_sans_passeur_pas_de_receveur(self, gabarit):
+        d = TestButSansPasseur._but_dict(gabarit, None)  # devient percee_individuelle -> scenario BUT
+        assert "receveur_id" not in d and "passeur_id" not in d
+
+    @pytest.mark.parametrize("gabarit", ["penalty", "contre_attaque", "but_gag", "une_deux"])
+    def test_autres_gabarits_pas_de_receveur(self, gabarit):
+        assert "receveur_id" not in TestButSansPasseur._but_dict(gabarit, "h_14")
