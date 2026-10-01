@@ -39,3 +39,6 @@ scripts/output/
 # render/canvas.html lui-même reste suivi)
 render/canvas_preview.html
 render/canvas_player_preview.html
+
+# Matchs exportes pour le NLG (scripts/export_match_to_nlg.py) : regenerables, jamais versionnes.
+data/nlg_inbox/
