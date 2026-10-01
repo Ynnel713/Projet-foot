@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from engine.post_process import apply, ecraser_espaces, majuscule_initiale
+from engine.post_process import apply, ecraser_espaces, majuscule_initiale, ponctuation_finale
 
 
 def test_apply_raises_not_implemented_error_on_plain_text():
@@ -91,3 +91,34 @@ def test_majuscule_initiale(brut, attendu):
 
 def test_majuscule_initiale_ne_touche_que_la_premiere_lettre():
     assert majuscule_initiale("mbappé et LUCAS ont marqué") == "Mbappé et LUCAS ont marqué"
+
+
+# --- Regle 3 : une seule marque finale ---------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("brut", "attendu"),
+    [
+        ("Quel but !.", "Quel but !"),  # slot "!" + gabarit "."
+        ("Quel but ?.", "Quel but ?"),
+        ("Quel but..", "Quel but."),
+        ("Quel but !!", "Quel but !"),
+        ("Quel but .!", "Quel but !"),
+        ("Quoi !?!", "Quoi ?!"),  # les deux marques expressives restent
+        ("Quel but.", "Quel but."),  # deja correct : inchange
+        ("Quel but !", "Quel but !"),  # espace avant la marque : inchange
+        ("Quel but...", "Quel but..."),  # points de suspension voulus
+        ("Quel but…", "Quel but…"),
+        ("Quoi ?!", "Quoi ?!"),
+        ("Quoi !?", "Quoi !?"),
+        ("Pas de ponctuation", "Pas de ponctuation"),  # rien n'est ajoute
+        ("", ""),
+    ],
+)
+def test_ponctuation_finale(brut, attendu):
+    assert ponctuation_finale(brut) == attendu
+
+
+def test_ponctuation_finale_ne_touche_que_la_fin_et_garde_les_espaces_apres():
+    assert ponctuation_finale("Quel but ! Quel but !.  ") == "Quel but ! Quel but !  "
+    assert ponctuation_finale("Oh... quel but !.") == "Oh... quel but !"

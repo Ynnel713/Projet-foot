@@ -24,6 +24,10 @@ from __future__ import annotations
 import re
 
 _ESPACES_MULTIPLES_RE = re.compile(r"[ 	]{2,}")
+_PONCTUATION_FINALE_RE = re.compile(r"([.!?…]+)(\s*)$")
+# Series de marques finales a CONSERVER telles quelles : points de suspension et
+# combinaisons expressives ("?!" / "!?" sont voulues, pas des collisions).
+_SERIES_VOULUES = frozenset({"...", "…", "?!", "!?"})
 
 
 def ecraser_espaces(text: str) -> str:
@@ -32,6 +36,32 @@ def ecraser_espaces(text: str) -> str:
     ou un espace en tete). L'espace insecable (U+00A0, typographie francaise) et
     les retours a la ligne ne sont jamais touches."""
     return _ESPACES_MULTIPLES_RE.sub(" ", text).strip(" 	")
+
+
+def ponctuation_finale(text: str) -> str:
+    """Une seule marque finale. Un slot qui se termine deja par une ponctuation, suivi
+    d'un gabarit qui en ajoute une autre, laisse "!." ou ".." : la serie finale est
+    ramenee a UNE marque (le plus expressif l'emporte : "?!" > "!" > "?" > "..." > ".").
+    Conserves tels quels : "...", "…", "?!" et "!?". Un texte sans ponctuation finale
+    n'en recoit pas (ce n'est pas le role de cette regle). Les espaces apres la
+    marque, et l'espace avant elle ("Quel but !"), ne sont pas touches."""
+    correspondance = _PONCTUATION_FINALE_RE.search(text)
+    if correspondance is None:
+        return text
+    serie, espaces = correspondance.group(1), correspondance.group(2)
+    if serie in _SERIES_VOULUES:
+        return text
+    if "?" in serie and "!" in serie:
+        marque = "?!"
+    elif "!" in serie:
+        marque = "!"
+    elif "?" in serie:
+        marque = "?"
+    elif "…" in serie:
+        marque = "…"
+    else:
+        marque = "."
+    return text[: correspondance.start()] + marque + espaces
 
 
 def majuscule_initiale(text: str) -> str:
