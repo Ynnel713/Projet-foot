@@ -32,9 +32,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from engine.db import get_sqlite  # noqa: E402
 from engine.models import MatchContext  # noqa: E402
+from engine.phrase_selector import AucunCandidatError  # noqa: E402
 from engine.phrase_selector import select as select_phrase  # noqa: E402
 from engine.profile_engine import normalize_player  # noqa: E402
 from engine.scenario_engine import load_scenario  # noqa: E402
+from engine.selectivity import Selectivite  # noqa: E402
 from scripts.convert_commentary_xlsx_to_yaml import DEFAULT_YAML_PATH, convertir  # noqa: E402
 from scripts.export_analytics import export_analytics  # noqa: E402
 from scripts.import_seed import import_seed  # noqa: E402
@@ -129,10 +131,9 @@ def _cmd_export_analytics(args: argparse.Namespace) -> None:
 
 
 def _cmd_select(args: argparse.Namespace) -> None:
-    """Tant que la banque de phrases n'est pas livrée, cette commande ne
-    génère jamais de texte inventé -- elle renvoie une erreur explicite,
-    soit parce que le scénario est introuvable, soit parce que
-    phrase_selector.select lève NotImplementedError (squelette non branché)."""
+    """Commande de développement : sélectionne une phrase pour un (scénario, joueur) avec un
+    contexte minimal (match_id="cli", pas un vrai événement) et l'affiche. Jamais de texte inventé :
+    scénario introuvable ou à sec -> erreur explicite. La graine est explicite (--seed)."""
     if not Path(args.db).exists():
         print(f"Base introuvable : {args.db} -- lancez `python cli.py init-db` d'abord.", file=sys.stderr)
         raise SystemExit(1)
@@ -150,13 +151,19 @@ def _cmd_select(args: argparse.Namespace) -> None:
             raise SystemExit(1)
         player = normalize_player(dict(row))
 
-        # match_id="cli" : ce contexte n'est qu'un prétexte pour exercer le
-        # squelette depuis la ligne de commande, pas un vrai événement de match.
         try:
-            select_phrase(conn, args.scenario, player, MatchContext(match_id="cli"))
-        except NotImplementedError as exc:
+            phrase = select_phrase(
+                conn,
+                args.scenario,
+                player,
+                MatchContext(match_id="cli"),
+                seed=args.seed,
+                selectivite=Selectivite.depuis_base(conn),
+            )
+        except AucunCandidatError as exc:
             print(f"select : {exc}", file=sys.stderr)
             raise SystemExit(2) from exc
+        print(phrase.text)
     finally:
         conn.close()
 
@@ -197,6 +204,7 @@ def main(argv: list[str] | None = None) -> None:
     )
     p_select.add_argument("--scenario", required=True)
     p_select.add_argument("--player-id", required=True, type=int)
+    p_select.add_argument("--seed", default="0", help="Graine explicite du tirage (défaut : 0)")
 
     args = parser.parse_args(argv)
     handlers: dict[str, Callable[[argparse.Namespace], None]] = {

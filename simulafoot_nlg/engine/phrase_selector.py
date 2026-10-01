@@ -90,13 +90,21 @@ Algorithme prevu (une fois la banque livree) :
 
 from __future__ import annotations
 
-import random
+import logging
 from collections.abc import Sequence
 from sqlite3 import Connection
 
 from engine.conditions import evaluate_condition
-from engine.models import MatchContext, Phrase, Player
+from engine.models import MatchContext, Phrase, Player, Variant
+from engine.scenario_engine import load_phrases, load_scenario, load_variants
 from engine.selectivity import Selectivite
+from engine.template_filler import derive_rng
+
+logger = logging.getLogger(__name__)
+
+
+class AucunCandidatError(LookupError):
+    """Aucune phrase disponible pour ce scenario : toutes les variantes actives sont a sec."""
 
 
 def candidats(phrases: Sequence[Phrase], player: Player, context: MatchContext) -> list[Phrase]:
@@ -133,22 +141,62 @@ def palier_retenu(pool: Sequence[Phrase], selectivite: Selectivite) -> list[Phra
     return specifiques or generiques
 
 
+def ordonner_variantes(variantes: Sequence[Variant]) -> list[Variant]:
+    """Ordre d'essai de la cascade (decision D1) : variantes ACTIVES seulement, les non-defaut
+    d'abord (SURNOM, PENALTY...) par poids decroissant puis `id` croissant (deterministe), puis la
+    variante `is_default` en dernier recours. C'est l'ordre NORMAL, pas un repli exceptionnel : un
+    DEFAUT essaye d'abord n'aurait presque jamais 0 candidat (les phrases sans condition lui servent
+    de repli) et les SURNOM ne sortiraient jamais."""
+    actives = [v for v in variantes if v.is_active]
+    return sorted(actives, key=lambda v: (v.is_default, -v.weight, v.id))
+
+
 def select(
     conn: Connection,
     scenario_code: str,
     player: Player,
     context: MatchContext,
     *,
-    rng: random.Random | None = None,
+    seed: int | str,
+    selectivite: Selectivite,
 ) -> Phrase:
-    """Selectionne UNE Phrase pour `player` dans le contexte `context`, pour
-    le scenario `scenario_code`. `rng` : generateur injectable (defaut :
-    `random.Random()` global) pour des tirages reproductibles en test.
+    """Selectionne UNE Phrase pour `player` dans `context`, pour le scenario `scenario_code`.
 
-    Leve NotImplementedError tant que la banque de phrases n'est pas livree
-    -- voir l'algorithme prevu ci-dessus en tete de module."""
-    raise NotImplementedError(
-        "phrase_selector.select : squelette non implémenté -- en attente de la "
-        "banque de phrases (voir data/seed/scenarios.yml). Algorithme prévu : "
-        "docstring de engine/phrase_selector.py."
+    Cascade de variantes (voir ordonner_variantes), UNE fois chacune (garde-fou anti-boucle) : dans
+    chaque variante, candidats (conditions mandatory) puis palier alpha (specifiques d'abord, repli sur
+    les generiques) ; la premiere variante qui produit au moins un candidat sert, sans fusion avec les
+    suivantes. Tirage pondere (poids de la variante x poids de la phrase) avec un rng derive de
+    `seed` (explicite, jamais d'horloge).
+
+    Leve KeyError si le scenario est inconnu, AucunCandidatError si toutes les variantes actives sont
+    a sec -- apres UN seul WARNING enrichi (D10-warn). Aucun WARNING pour le passage normal
+    SURNOM -> DEFAUT."""
+    scenario = load_scenario(conn, scenario_code)
+    if scenario is None:
+        raise KeyError(f"Scenario inconnu : {scenario_code!r}")
+
+    ecartees: list[Variant] = []
+    for variante in ordonner_variantes(load_variants(conn, scenario.id)):
+        pool = candidats(load_phrases(conn, variante.id), player, context)
+        retenu = palier_retenu(pool, selectivite)
+        if not retenu:
+            ecartees.append(variante)
+            continue
+        rng = derive_rng(seed, scenario_code, variante.code, "select")
+        return rng.choices(retenu, weights=[variante.weight * p.weight for p in retenu], k=1)[0]
+
+    _signaler_scenario_a_sec(scenario_code, ecartees, repli="aucun")
+    raise AucunCandidatError(f"Scenario {scenario_code!r} : aucune phrase disponible dans aucune variante active.")
+
+
+def _signaler_scenario_a_sec(scenario_code: str, ecartees: Sequence[Variant], *, repli: str) -> None:
+    """WARNING UNIQUE et enrichi (D10-warn), emis quand la cascade entiere -- jusqu'a la variante par
+    defaut -- n'a produit aucun candidat : le scenario est sous-alimente (c'est le signal qui dira si
+    l'enrichissement des donnees joueur a fait son effet). Contient le code du scenario, les variantes
+    ecartees (code et id) et le repli retenu."""
+    logger.warning(
+        "Scenario %s a sec : variantes ecartees = [%s] ; repli = %s",
+        scenario_code,
+        ", ".join(f"{v.code}#{v.id}" for v in ecartees) or "aucune",
+        repli,
     )
