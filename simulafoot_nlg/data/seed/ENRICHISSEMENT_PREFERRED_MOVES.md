@@ -1,0 +1,163 @@
+# Scoping de l'enrichissement `preferred_moves` — 01/10/2026
+
+Document de cadrage, pas de code. Fait suite à la décision du
+01/10/2026 : un enrichissement de `preferred_moves` sur quasi toute la
+base est désormais prévu, ce qui change le statut de GESTE_SIGNATURE de
+"scénario mort hors Premier League" à "scénario en attente d'une
+dépendance externe". Voir [AUDIT_COUVERTURE_DONNEES_JOUEUR.md](AUDIT_COUVERTURE_DONNEES_JOUEUR.md)
+pour le diagnostic complet qui a mené ici.
+
+## 1. Source
+
+**fminside reste la seule source identifiée dans le code existant**
+(`scripts/scrape_fminside_attributes.py`, racine du projet). Le verrou
+n'est pas sur l'accès au site en général (les attributs numériques FM26
+sont déjà scrapés à 93 % sans connexion) — il est spécifique à la section
+`section.player-hidden-attributes` qui porte les preferred moves,
+inaccessible sans cookie de session fminside valide (`--cookie` /
+`FMINSIDE_COOKIE`, voir docstring du script).
+
+Alternatives envisageables, non investiguées en détail (hors périmètre
+"document, pas code" de ce tour) :
+- **Cookie de compte fminside + relance du scraper existant** — le
+  mécanisme est déjà écrit, c'est la voie la moins chère si un compte
+  est disponible.
+- **Base FM locale (fichier d'édition du jeu Football Manager)** — plus
+  fiable et exhaustive si quelqu'un a accès au jeu et à un éditeur de
+  base, mais aucun outil d'extraction de ce type n'existe dans ce
+  dépôt aujourd'hui ; à construire de zéro.
+- **Autre site/API de scouting FM** — non recherché, à évaluer si
+  l'option cookie fminside s'avère bloquée en pratique (compte
+  limité, rate-limiting agressif sur ~7000 requêtes).
+
+Tu indiques avoir déjà commencé à ajouter des preferred moves à la main
+dans le classeur — vérifié : la colonne "Preferred moves" (feuille
+"Infos principales") est passée de 362 à **644 joueurs renseignés**
+depuis le dernier import en base (+282). C'est une 4ᵉ voie de fait, déjà
+en cours : saisie manuelle, en parallèle ou à la place du scraping.
+
+## 2. Vocabulaire — écart trouvé, à clarifier avec toi
+
+Le classeur contient une feuille de référence dédiée, **"Preferred
+moves"**, qui documente **55 moves distincts réellement présents dans la
+base actuelle** (pas 48) — avec traduction française et nombre de
+joueurs par move. Exemple : "Runs With Ball Often" / "Porte souvent le
+ballon" / 77 joueurs.
+
+Écart trouvé en croisant cette liste avec les conditions réellement
+utilisées dans les 281 phrases : **`"Moves Ball To Left Foot Before
+Dribble Attempt"`** (utilisé par une phrase GESTE_SIGNATURE existante)
+**n'apparaît pas dans les 55** — seule la variante `"...To Right Foot..."`
+y figure. Vérifié séparément que ce move a bien au moins un joueur
+correspondant en base (0 move de GESTE_SIGNATURE n'a 0 joueur, voir
+audit précédent) — donc la feuille de référence elle-même n'est pas
+totalement à jour/exhaustive, probablement un instantané pris à un
+moment donné plutôt qu'une liste générée dynamiquement à chaque import.
+
+**Je ne confirme donc pas "48 canoniques"** — le chiffre réel observable
+dans le fichier est 55, avec au moins un écart résiduel. Dis-moi si "48"
+vient d'une autre source (une liste FM26 officielle que je n'ai pas
+trouvée) : si oui, il faudrait comparer les 55 réels à cette liste
+officielle, pas seulement se fier à la feuille du classeur.
+
+## 3. Granularité
+
+Confirmé par la base : **plusieurs moves par joueur**, pas un seul.
+Somme des compteurs de la feuille de référence = 971 occurrences pour
+644-ish joueurs renseignés (avant tes derniers ajouts) → en moyenne
+~1,5-2,7 moves par joueur renseigné (l'écart vient de ce que la feuille
+de référence est un instantané antérieur, voir point 2). Impact sur la
+sélectivité : une condition `preferred_moves contient "X"` reste une
+condition sur UN move précis parmi ceux du joueur, pas sur l'ensemble de
+son profil — la sélectivité des phrases GESTE_SIGNATURE ne change pas de
+nature avec l'enrichissement, seulement la PROPORTION de joueurs qui ont
+une chance d'avoir au moins un move qui matche une des 31 conditions.
+
+## 4. Cible de couverture : 90 %
+
+Proposition, alignée sur le reste des attributs FM26 déjà en place
+(`Aggression`, `Strength`, `Pace`, `Technique`, `Vision` à 93 % ;
+`Dribbling`, `Heading`, `Finishing`, `Tackling` à 82 %) — `weak_foot` et
+`preferred_moves` sont censés sortir du MÊME passage d'enrichissement
+(voir audit précédent : `weak_foot` est déjà à 93 % alors qu'il vient du
+même bloc `parse_extras` que `moves`), donc viser le même ordre de
+grandeur est cohérent plutôt qu'arbitraire. 95 % me semble optimiste
+(les attributs FM26 eux-mêmes plafonnent à 93 %, jamais 100 % sauf
+`age`/`fm_rating`) ; 85 % est trop proche du plancher déjà observé pour
+les attributs "moyens" (82 %) et laisserait une marge d'échec trop
+large. **90 % est le choix qui ne sur-promet ni ne sous-vise.**
+
+## 5. Timeline
+
+Je ne peux pas donner un chiffre engageant sans avoir fait tourner le
+scraper — estimation, pas un engagement :
+- **Volume restant** : ~6900 joueurs sans `preferred_moves` (7563 - 644
+  à ce jour).
+- **Débit du scraper** : `--delay` par défaut = 1 s/requête → ~1h55 de
+  temps de requête pur pour une passe complète. **Irréaliste comme
+  délai réel** : le script documente lui-même un processus de
+  correspondance nom/club avec cas AMBIGU/INTROUVABLE/CONFLIT nécessitant
+  une relecture manuelle du rapport CSV produit, plus la contrainte
+  cookie (expiration de session, relance nécessaire).
+- **Estimation réaliste : quelques jours à ~2 semaines**, selon le taux
+  d'échec de correspondance réel (inconnu tant que le scraper n'a pas
+  tourné à cette échelle) et la disponibilité d'un compte fminside
+  stable. Je ne peux pas resserrer cette fourchette sans une première
+  passe test à petite échelle (`--limit`).
+
+## 6. Critère de vérification
+
+Proposition (à spécifier, pas à coder ce tour) : un contrôle de
+couverture **avant** tout `import-seed`, pas une simple observation
+après coup — cohérent avec le principe déjà en place pour le cooldown
+("cooldown obligatoire", refus d'import si absent). Deux endroits
+possibles, à trancher :
+- **Dans `data/import/import_players.py`** : logguer un WARNING (pas un
+  refus bloquant — contrairement au cooldown, l'import des joueurs ne
+  doit pas échouer juste parce qu'un attribut optionnel est sous la
+  cible) si la couverture `preferred_moves` post-import est < 90 %.
+- **Dans un script de contrôle séparé** (type `scripts/audit_couverture_donnees.py`,
+  déjà existant) : rejouer l'audit après chaque import et comparer à la
+  cible — plus simple à faire évoluer sans toucher à l'ETL, recommandé.
+
+## Comportement intermédiaire — jusqu'à ce que la cible de 90 % soit atteinte
+
+32 phrases GESTE_SIGNATURE sont mortes aujourd'hui sur tout match
+hors Premier League (0 des 35 clubs couverts n'étant dans les autres
+championnats). Trois options, je ne tranche pas :
+
+**Option A — Garder en base, documenter "PL-only jusqu'à enrichissement"**
+- *Pour* : rien à retoucher dans `scenarios.yml`/la base, l'info vit
+  dans `COUVERTURE.md` (déjà le cas). Le jour où `preferred_moves`
+  atteint 90 %, ces phrases redeviennent utilisables sans aucune action.
+- *Contre* : `import-seed` reste conforme (pas de "code mort" au sens de
+  la règle du projet puisque ces phrases restent potentiellement
+  déclenchables, juste rarement) mais un futur import complet du moteur
+  simulerait des matchs hors-PL où GESTE_SIGNATURE serait silencieusement
+  absent sans que rien ne le signale À L'EXÉCUTION (seule la documentation
+  le dit, pas le comportement observé).
+
+**Option B — Retirer temporairement de la banque active (249 phrases), réintégrer après**
+- *Pour* : la banque "active" reflète honnêtement ce qui peut
+  réellement se déclencher aujourd'hui, pas ce qui existe en texte.
+  Repartir de `scenarios.yml` + reconvertir est mécanique (déjà
+  comment ce fichier est régénéré, voir `convert_commentary_xlsx_to_yaml.py`).
+- *Contre* : retirer puis réintégrer 32 phrases est un aller-retour
+  d'édition du classeur/YAML (variante is_active=0 plutôt qu'une
+  suppression physique serait plus sûr qu'une suppression-réinsertion),
+  et ça complique le diff/l'historique pour un état qui n'est que
+  temporaire par construction. Risque d'oubli de réintégration si le
+  workstream donnée traîne.
+
+**Option C — Garder sans documenter : exclue**, contraire à la règle
+"pas de code mort silencieux" du projet, comme tu l'as toi-même posé.
+
+**Mon inclination (je n'arbitre pas)** : Option A, parce que
+`COUVERTURE.md` existe déjà précisément pour porter ce genre d'information
+et que la section "VIABILITÉ DES CONDITIONS" ajoutée au tour précédent
+couvre déjà ce cas noir sur blanc — B ajoute un cycle d'édition pour un
+état transitoire dont la durée réelle (quelques jours à deux semaines,
+section 5) ne le justifie pas forcément. Mais si le workstream données
+s'annonce plus long que prévu, B devient plus défendable pour éviter
+qu'un tableau de bord ou un export analytics compte ces 32 phrases
+comme "actives" pendant des mois.

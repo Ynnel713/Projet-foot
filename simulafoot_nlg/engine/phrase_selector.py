@@ -20,9 +20,46 @@ Algorithme prevu (une fois la banque livree) :
        candidats restants, avec `rng` injectable pour la reproductibilite
        des tests (voir tests/test_phrase_selector.py : "tirage reproductible
        avec seed").
-    7. 0 candidat apres filtrage -> fallback explicite (a definir : phrase
-       generique de secours, ou exception dediee -- pas un texte invente a
-       la volee).
+    7. CASCADE DE VARIANTES SI 0 CANDIDAT (decision du 01/10/2026, voir
+       AUDIT_COUVERTURE_DONNEES_JOUEUR.md -- garde-fou sain pour les
+       scenarios a faible densite de donnees joueur, ex. GESTE_SIGNATURE
+       conditionne a 86% de ses phrases sur preferred_moves, renseigne a
+       ~5-90% des joueurs selon l'etat de l'enrichissement en cours) :
+         a. Si l'etape 4 ecarte TOUTES les phrases de la variante choisie
+            a l'etape 2 (0 survivante), NE PAS s'arreter la : reessayer
+            avec les AUTRES variantes actives (is_active=1) du MEME
+            scenario, une seule fois chacune, dans cet ordre de priorite :
+              i.  les variantes non-is_default, triees par weight
+                  decroissant (ties -> variant.id croissant, deterministe) ;
+              ii. la variante is_default en dernier recours (si elle
+                  n'etait pas deja celle tentee a l'etape 2).
+         b. Chaque variante de la cascade repasse par les etapes 4 et 5
+            A L'IDENTIQUE (conditions mandatory + cooldown obligatoire ne
+            sont jamais contournes par le fallback -- la cascade change de
+            POOL de phrases, jamais les regles qui les filtrent).
+         c. Des qu'une variante de la cascade produit >= 1 candidat, on
+            s'arrete la (etape 6 sur ce pool) -- pas de fusion de plusieurs
+            variantes en un seul tirage.
+         d. GARDE-FOU anti-boucle : chaque variante active du scenario est
+            tentee au plus une fois par appel a `select` -- la cascade est
+            bornee par le nombre de variantes, jamais un retry illimite.
+         e. LOGGING obligatoire des que la cascade est activee (la variante
+            choisie a l'etape 2 a rendu 0 candidat) : niveau WARNING,
+            avec au minimum scenario_code, variant_id ecarte, variant_id
+            de repli retenu (ou absence totale si meme la cascade echoue).
+            Objectif explicite : rendre OBSERVABLE en production qu'un
+            scenario est en train de "mourir" sur sa variante principale
+            faute de donnee joueur -- c'est ce signal qui dira si
+            l'enrichissement preferred_moves (cible 90%, voir
+            ENRICHISSEMENT_PREFERRED_MOVES.md) a fait son effet, sans
+            attendre un nouvel audit manuel.
+       Seulement si la cascade entiere (etape 7.a-d) n'a produit 0
+       candidat sur AUCUNE variante active -> fallback final explicite
+       (toujours a definir : phrase generique de secours au niveau du
+       SCENARIO, ou exception dediee -- pas un texte invente a la volee).
+       Ce dernier cas doit rester rarissime une fois la cascade en place ;
+       s'il se repete, c'est le signal que le scenario entier (toutes
+       variantes confondues) est sous-alimente, pas juste une variante.
 """
 
 from __future__ import annotations

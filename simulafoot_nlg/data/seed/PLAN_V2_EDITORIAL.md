@@ -5,22 +5,16 @@ dans ce document**. Fait suite à l'import du 30/09/2026 (voir
 [COUVERTURE.md](COUVERTURE.md)) et au smoke test du même jour (voir
 `scripts/smoke_test_pipeline.py` et son rapport).
 
-## PRÉREQUIS DONNÉES — à trancher avant d'écrire la moindre phrase v2
+## PRÉREQUIS DONNÉES — mis à jour le 01/10/2026
 
-Section ajoutée le 30/09/2026, suite à l'[AUDIT_COUVERTURE_DONNEES_JOUEUR.md](AUDIT_COUVERTURE_DONNEES_JOUEUR.md).
-Le constat transversal ci-dessous (issu du smoke test) est confirmé et
-précisé par cet audit : ce n'est pas 1 phrase sur 5, c'est **63 des 109
-phrases à conditions joueur (57,8 %)** qui sont limitées par la donnée,
-pas par un seuil narratif voulu. Détail complet dans le fichier dédié.
-
-**Pause décidée sur l'écriture v2** : aucune nouvelle phrase tant que la
-stratégie donnée (voir le même fichier, section "Stratégie") n'est pas
-tranchée. Raison : la formule de calibrage de ce plan
-(`fréquence × 8`) calibre sur la fréquence de l'événement, pas sur la
-disponibilité de la donnée qui conditionne la phrase — un scénario
-conditionné sur `minute` (100 % de couverture) et un scénario conditionné
-sur `preferred_moves` (4,8 %) n'ont pas la même viabilité, et le volume
-cible actuel des 12 fiches ne fait pas cette distinction.
+Section créée le 30/09/2026, révisée le 01/10/2026 suite à la décision
+d'enrichir `preferred_moves` sur quasi toute la base (cible 90 %, voir
+[ENRICHISSEMENT_PREFERRED_MOVES.md](ENRICHISSEMENT_PREFERRED_MOVES.md)).
+**`preferred_moves` n'est plus listé comme attribut "à risque" ci-dessous**
+— il est traité comme un attribut pleinement viable à terme, sous réserve
+que la cible de couverture soit atteinte (voir "Dépendances externes").
+`height_cm` et `foot` restent à risque, sans dépendance d'enrichissement
+planifiée à ce jour.
 
 ### Attributs nécessaires par nouveau scénario (Tier 1) et leur couverture réelle
 
@@ -29,36 +23,70 @@ cible actuel des 12 fiches ne fait pas cette distinction.
 | DÉFENSE | `Tackling` (82 %), `Pace` (93 %), `height_cm` (**11,7 %**) | Mixte | **Oui** — l'exemple "dégagement aérien, height_cm >= 190" hérite du même risque que BUT/SURNOM "Le colosse" (0,73 % réel) |
 | CORNER | `Heading` (82 %) + `height_cm` (**11,7 %**), `Strength` (93 %), `Technique` (93 %) | Mixte | **Oui** — même combo Heading+height_cm que ci-dessus |
 | FAUTE_SIMPLE | `Aggression` (93 %), `Tackling` (82 %), `minute` (100 %, contexte) | Viable | Non |
-| TIR_NON_CADRÉ | `Finishing` (82 %), `preferred_moves` (**4,8 %**) | Mixte | **Oui** — ne pas répéter l'erreur de BUT/GESTE_SIGNATURE : ne pas conditionner la majorité du pool sur `preferred_moves` |
-| CARTON_JAUNE | `Aggression` (93 %), `preferred_moves` (**4,8 %**), `minute` | Mixte | **Oui** — même remarque |
-| REMPLACEMENT | `age` (100 %), `minute`, `fm_rating` (**100 %**, vérifié) | Viable | Non — `fm_rating` est un bon candidat, quasi jamais vide (contrairement à `preferred_moves`), à privilégier pour ce scénario |
+| TIR_NON_CADRÉ | `Finishing` (82 %), `preferred_moves` (en cours d'enrichissement, cible 90 %) | Viable sous réserve de la cible | Non — plus de restriction particulière sur `preferred_moves` une fois la cible atteinte |
+| CARTON_JAUNE | `Aggression` (93 %), `preferred_moves` (en cours d'enrichissement, cible 90 %), `minute` | Viable sous réserve de la cible | Non — idem |
+| REMPLACEMENT | `age` (100 %), `minute`, `fm_rating` (**100 %**, vérifié) | Viable | Non |
 
 **Tier 2/3** (HORS-JEU, MI_TEMPS_FIN_MATCH, BLESSURE, AMBIANCE,
-STATISTIQUES_PÉRIODIQUES, VAR) : aucun n'utilise `preferred_moves` ni
-`height_cm` dans les conditions types proposées — pas de risque donnée
-identifié pour ces 6 fiches. AMBIANCE et VAR n'ont même quasiment aucune
-condition Player (contexte de match uniquement), donc aucun risque par
-construction.
+STATISTIQUES_PÉRIODIQUES, VAR) : aucun n'utilise `height_cm` dans les
+conditions types proposées — pas de risque donnée identifié pour ces 6
+fiches. AMBIANCE et VAR n'ont même quasiment aucune condition Player
+(contexte de match uniquement), donc aucun risque par construction.
 
 ### Action préalable par attribut
 
 | Attribut | Couverture | Action préalable | Impact volume |
 |---|---|---|---|
-| `preferred_moves` | 4,8 % (et souvent <1 % par move précis, voir audit) | **À trancher (options A/B/C, voir fichier dédié)** avant TIR_NON_CADRÉ/CARTON_JAUNE | Dépend de l'option retenue — voir chiffrage par option |
-| `height_cm` | 11,7 % | Idem `preferred_moves` — même mécanisme technique (voir "Investigation" dans le fichier dédié) | DÉFENSE et CORNER perdent leurs exemples "dégagement/tête" tels quels si non enrichi |
+| `preferred_moves` | 4,8 % → **cible 90 %** (enrichissement planifié, voir Dépendances externes) | Suivre l'avancement de l'enrichissement — pas de restriction d'écriture une fois la cible atteinte | Aucun — TIR_NON_CADRÉ/CARTON_JAUNE peuvent utiliser `preferred_moves` sans précaution particulière dès que la cible est confirmée |
+| `height_cm` | 11,7 % | Cause identifiée (nom de colonne Excel divergent entre le scraper et l'import, voir AUDIT_COUVERTURE_DONNEES_JOUEUR.md) — correctif possible mais non appliqué (661 conflits de valeur à arbitrer d'abord). **Pas d'enrichissement planifié à ce jour.** | DÉFENSE et CORNER perdent leurs exemples "dégagement/tête" tels quels tant que non résolu |
 | `foot` | 39,1 % | Partiel, viable pour un usage ponctuel (1 phrase existante) mais pas pour un scénario qui en ferait un pilier | Aucune fiche v2 n'en dépend actuellement |
 | `Aggression`, `Pace`, `Strength`, `Technique`, `Vision` | 93 % | Aucune action — viable tel quel | — |
 | `Dribbling`, `Heading`, `Finishing`, `Tackling` | 82 % | Aucune action — viable tel quel | — |
 | `age`, `fm_rating` | 100 % | Aucune action — viable tel quel | — |
 | `weak_foot` | 93 % | Aucune action — viable tel quel | — |
 
+### Dépendances externes
+
+**L'enrichissement `preferred_moves` est un prérequis de livraison V2,
+pas un détail technique** — sa timeline conditionne la livraison des
+phrases GESTE_SIGNATURE (existantes, 32/37 aujourd'hui PL-only) et de
+toute nouvelle phrase V2 qui s'appuierait sur cet attribut sans
+restriction.
+
+- **Cible de couverture** : 90 % des 7563 joueurs (voir justification
+  dans ENRICHISSEMENT_PREFERRED_MOVES.md, section 4).
+- **Source** : scraping fminside (cookie de session requis) et/ou saisie
+  manuelle déjà en cours côté utilisateur (644/7563 à ce jour, +282
+  depuis le dernier import).
+- **Timeline estimée** : quelques jours à ~2 semaines (non engageante,
+  dépend du taux d'échec de correspondance du scraper, voir section 5
+  du même fichier).
+- **Critère de vérification** : contrôle de couverture à spécifier
+  (proposition : audit automatisé rejoué après chaque import, pas un
+  refus bloquant d'import contrairement au cooldown — voir section 6).
+- **Comportement intermédiaire** (avant que la cible soit atteinte) :
+  trois options présentées et non tranchées dans
+  ENRICHISSEMENT_PREFERRED_MOVES.md — garder en base documenté PL-only
+  (A), retirer temporairement de la banque active (B), ou garder sans
+  documenter (C, exclu).
+- **Garde-fou complémentaire** : cascade de variantes au niveau du
+  sélecteur (DEFAUT → SURNOM si 0 candidat), formalisée dans le
+  docstring de `engine/phrase_selector.py` (étape 7) — absorbe une
+  partie du risque si l'enrichissement prend du retard, sans attendre
+  la cible de 90 % pour limiter la casse.
+
 **Pas de changement de volume ni de cooldown dans ce document** — les
-chiffres des 12 fiches plus bas restent ceux du tour précédent, en
-attente de ta décision sur la stratégie donnée.
+chiffres des 12 fiches plus bas restent ceux du tour précédent.
 
 ---
 
-## Constat transversal trouvé par le smoke test (précédent tour — voir la section PRÉREQUIS DONNÉES ci-dessus pour la version chiffrée)
+## Constat transversal trouvé par le smoke test (historique — statut dépassé par la décision d'enrichissement du 01/10/2026, voir "Dépendances externes" ci-dessus)
+
+Conservé tel quel pour la traçabilité de la décision, mais **ne plus lire
+"preferred_moves à 4,8 %" comme un verdict définitif** : un enrichissement
+est désormais planifié (cible 90 %), ce qui change GESTE_SIGNATURE de
+"scénario mort hors Premier League" à "scénario en attente d'une
+dépendance externe".
 
 Le smoke test a fait échouer GESTE_SIGNATURE sur 2 de ses 4 occurrences
 (0 phrase sélectionnable). Cause creusée : **seulement 4,8 % des 7563
