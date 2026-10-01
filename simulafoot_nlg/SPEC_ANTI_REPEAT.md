@@ -766,5 +766,7 @@ pool de P modèles, le minimum est N - P (114 - 21 = 93). Le bon invariant est �
 les modèles SURNOM sont peu nombreux (5 à 8 par scénario) et que la mémoire inter-joueurs les protège de la répétition. Les 95
 lignes SURNOM d'avant (25 %) venaient de la répétition des mêmes 11 modèles sans nom.
 
-- **Hors ticket** : la banque n'est pas modifiée ici ; `scripts/audit_conditions_larges.py` liste les conditions éligibles pour plus
+- **Banque** : une seule condition resserrée, `fm_rating >= 80` -> `>= 82` pour « Le joker… » (REMPLACEMENT, 28 % -> 17 % des
+  entrants de l'échantillon ; `pilotes_v2/remplacement.py`, YAML régénéré, base réimportée) ; les autres conditions larges
+  restent au ticket banque. `scripts/audit_conditions_larges.py` liste les conditions éligibles pour plus
   de 30 % des événements de leur scénario (resserrement : ticket banque).

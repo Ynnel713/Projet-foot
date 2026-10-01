@@ -288,7 +288,7 @@
       conditions:
       - attribute: fm_rating
         operator: '>='
-        value: '80'
+        value: '82'
         mandatory: true
       slots:
       - slot_name: sortant

@@ -77,5 +77,5 @@ SURNOM = [
     ("Le poumon vient relever {sortant} et promet de courir jusqu'au coup de sifflet final !",
      [("Stamina", ">=", "85"), ("minute", ">=", "70")]),
     ("Le joker sort du banc à la place de {sortant}, un luxe que peu d'équipes peuvent s'offrir !",
-     [("fm_rating", ">=", "80")]),
+     [("fm_rating", ">=", "82")]),
 ]

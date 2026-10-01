@@ -114,7 +114,7 @@ Les valeurs FM sont quantifiées par pas de 5 : `>= 78` et `>= 80` sont
 | age | `>= 33` | defense, remplacement | 100.0% | 6.4% | 596 |
 | age | `>= 34` | carton_jaune, remplacement | 100.0% | 4.0% | 395 |
 | fm_rating | `>= 75` | remplacement | 100.0% | 22.1% | 1609 |
-| fm_rating | `>= 80` | remplacement | 100.0% | 5.1% | 384 |
+| fm_rating | `>= 82` | remplacement | 100.0% | 2.4% | 183 |
 | height_cm | `<= 172` | corner | 93.4% | 7.6% | 510 |
 | height_cm | `>= 185` | corner | 93.4% | 34.7% | 3089 |
 | height_cm | `>= 188` | corner | 93.4% | 19.7% | 1935 |
