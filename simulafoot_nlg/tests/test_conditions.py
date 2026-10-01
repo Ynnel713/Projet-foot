@@ -281,6 +281,25 @@ class TestAttributFmConnuMaisAbsent:
         assert evaluate_condition(condition, _player(attributes={"Aggression": 50}), _context()) is False
 
 
+class TestGabaritConditionnable:
+    """penalty-variant : `gabarit == "penalty"` est une condition valide. Sans
+    gabarit dans MATCH_CONTEXT_FIELDS, `_resolve` levait ValueError."""
+
+    @staticmethod
+    def _atome() -> PhraseCondition:
+        (atome,) = parse_condition_atoms('gabarit == "penalty"')
+        return PhraseCondition(
+            id=1, phrase_id=1, attribute=atome.attribute, operator=atome.operator, value=atome.value
+        )
+
+    def test_matche_un_penalty(self):
+        assert evaluate_condition(self._atome(), _player(), _context(gabarit="penalty")) is True
+
+    @pytest.mark.parametrize("gabarit", ["corner", "coup_franc", None])
+    def test_ne_matche_ni_un_autre_gabarit_ni_un_gabarit_absent(self, gabarit):
+        assert evaluate_condition(self._atome(), _player(), _context(gabarit=gabarit)) is False
+
+
 class TestChampsJoueursDuContexte:
     """sortant/entrant (D3) : conditionnables au sens ou `_resolve` les
     reconnait. Sans leur ajout a MATCH_CONTEXT_FIELDS, `_resolve` leve

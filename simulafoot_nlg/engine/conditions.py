@@ -52,7 +52,10 @@ PLAYER_FIELDS = frozenset({"age", "height_cm", "weak_foot", "foot", "fm_rating",
 # seuls ==/!= ont un sens dessus (un operateur d'ordre leverait TypeError) ; le
 # choix de variante selon le profil du remplacement releve du selecteur (option
 # C, SPEC_ANTI_REPEAT.md section 5), pas de cette grammaire.
-MATCH_CONTEXT_FIELDS = frozenset({"minute", "score_context", "is_home", "sortant", "entrant"})
+# gabarit ajoute (decision penalty-variant, SPEC_ANTI_REPEAT.md section 10) :
+# permet `gabarit == "penalty"` pour reserver la variante BUT/PENALTY aux vrais
+# penaltys ; chaine ou None (None -> la condition ne matche jamais).
+MATCH_CONTEXT_FIELDS = frozenset({"minute", "score_context", "is_home", "sortant", "entrant", "gabarit"})
 
 # Tous les noms qu'une condition de phrase peut viser (champ Player, champ de
 # MatchContext, attribut FM26, preferred_moves) : ce que `_resolve` reconnait
