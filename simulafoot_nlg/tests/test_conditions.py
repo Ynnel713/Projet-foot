@@ -81,6 +81,29 @@ class TestEvaluateCondition:
         assert evaluate_condition(cond, _player(), _context(minute=85)) is True
         assert evaluate_condition(cond, _player(), _context(minute=10)) is False
 
+    @pytest.mark.parametrize("litteral", ["true", "vrai", "True"])
+    def test_is_home_reads_boolean_literals_from_match_context(self, litteral):
+        # D1 (01/10/2026) : sans le cast booleen, True == "true" est False et
+        # la condition ne matcherait JAMAIS (echec silencieux).
+        domicile = PhraseCondition(id=1, phrase_id=1, attribute="is_home", operator="==", value=litteral)
+        assert evaluate_condition(domicile, _player(), _context(is_home=True)) is True
+        assert evaluate_condition(domicile, _player(), _context(is_home=False)) is False
+
+    def test_is_home_false_literal_and_not_equal_operator(self):
+        exterieur = PhraseCondition(id=1, phrase_id=1, attribute="is_home", operator="==", value="false")
+        assert evaluate_condition(exterieur, _player(), _context(is_home=False)) is True
+        assert evaluate_condition(exterieur, _player(), _context(is_home=True)) is False
+        pas_domicile = PhraseCondition(id=1, phrase_id=1, attribute="is_home", operator="!=", value="true")
+        assert evaluate_condition(pas_domicile, _player(), _context(is_home=False)) is True
+
+    def test_unknown_is_home_never_matches_even_with_not_equal(self):
+        for operateur in ("==", "!="):
+            cond = PhraseCondition(id=1, phrase_id=1, attribute="is_home", operator=operateur, value="true")
+            assert evaluate_condition(cond, _player(), _context(is_home=None)) is False
+
+    def test_is_home_parses_as_condition_atom(self):
+        assert parse_condition_atoms("is_home == true") == [ConditionAtom("is_home", "==", "true")]
+
     def test_preferred_moves_contient(self):
         cond = PhraseCondition(
             id=1, phrase_id=1, attribute="preferred_moves", operator="contient", value="Shoots From Distance"
@@ -103,6 +126,26 @@ class TestEvaluateCondition:
         cond = PhraseCondition(id=1, phrase_id=1, attribute="weak_foot", operator="in", value="4, 5")
         assert evaluate_condition(cond, _player(weak_foot=4), _context()) is True
         assert evaluate_condition(cond, _player(weak_foot=2), _context()) is False
+
+    def test_fm_rating_is_readable_as_a_player_field(self):
+        # Les pilotes V2 (REMPLACEMENT : "fm_rating >= 75", surnom joker
+        # ">= 80") conditionnent sur fm_rating : sans PLAYER_FIELDS, _resolve
+        # levait ValueError a l'execution.
+        cond = PhraseCondition(id=1, phrase_id=1, attribute="fm_rating", operator=">=", value="75")
+        assert evaluate_condition(cond, _player(fm_rating=80.0), _context()) is True
+        assert evaluate_condition(cond, _player(fm_rating=60.0), _context()) is False
+
+    def test_position_is_readable_with_equality_and_in_operator(self):
+        # Decision A du 01/10/2026 (HORS-JEU : conditionner sur le poste).
+        egal = PhraseCondition(id=1, phrase_id=1, attribute="position", operator="==", value='"BU"')
+        assert evaluate_condition(egal, _player(position="BU"), _context()) is True
+        assert evaluate_condition(egal, _player(position="DC"), _context()) is False
+        dans = PhraseCondition(id=2, phrase_id=1, attribute="position", operator="in", value="BU, AG, AD")
+        assert evaluate_condition(dans, _player(position="AG"), _context()) is True
+        assert evaluate_condition(dans, _player(position="MC"), _context()) is False
+        assert parse_condition_atoms("position in [BU, AG, AD]") == [
+            ConditionAtom("position", "in", "BU, AG, AD")
+        ]
 
     def test_foot_field_distinguishes_natural_foot(self):
         # Ajoute le 30/09/2026 (audit éditorial) : BUT/DEFAUT

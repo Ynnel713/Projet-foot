@@ -38,10 +38,16 @@ from engine.models import MatchContext, PhraseCondition, Player
 # qui apparaitrait aussi (par accident futur) dans FM26_ATTRIBUTES serait lu
 # ici en premier -- voir tests/commentary/test_namespaces_attributs.py qui
 # verifie qu'aucune collision de ce genre n'existe aujourd'hui.
-PLAYER_FIELDS = frozenset({"age", "height_cm", "weak_foot", "foot"})
+# fm_rating ajoute le 01/10/2026 : champ Player lu par les pilotes REMPLACEMENT
+# (phrase 6, surnom joker) -- sans cela _resolve levait ValueError.
+# position ajoute le 01/10/2026 (decision A, HORS-JEU) : poste principal
+# (BU, AG, AD, SA, MOC, MC, MDC, DC, LB, RB, GK), renseigne a 100 % (7563/7563).
+PLAYER_FIELDS = frozenset({"age", "height_cm", "weak_foot", "foot", "fm_rating", "position"})
 
 # Champs lus directement sur MatchContext (dataclass).
-MATCH_CONTEXT_FIELDS = frozenset({"minute", "score_context"})
+# is_home ajoute le 01/10/2026 (decision D1 du plan Tier 2, AMBIANCE) : une
+# phrase peut conditionner sur domicile/exterieur ("is_home == true").
+MATCH_CONTEXT_FIELDS = frozenset({"minute", "score_context", "is_home"})
 
 _ATOME_RE = re.compile(
     r'^\s*(\w+)\s*(<=|>=|!=|==|=|<|>)\s*(.+?)\s*$'
@@ -116,6 +122,11 @@ def _comparer(gauche: Any, operateur: str, droite_brute: str) -> bool:
     # avant comparaison -- ne matchait alors JAMAIS la valeur sans
     # guillemets du contexte (echec silencieux). Retirer les guillemets
     # AVANT la tentative de cast numerique, pas apres.
+    # Valeur inconnue (ex. is_home=None, minute=None) : une condition ne
+    # matche jamais sur une information absente (sinon "is_home != true"
+    # matcherait un contexte sans domicile/exterieur connu).
+    if gauche is None:
+        return False
     droite_brute = droite_brute.strip()
     if len(droite_brute) >= 2 and droite_brute[0] == droite_brute[-1] == '"':
         droite_brute = droite_brute[1:-1]
@@ -127,6 +138,14 @@ def _comparer(gauche: Any, operateur: str, droite_brute: str) -> bool:
             break
         except ValueError:
             continue
+
+    if isinstance(gauche, bool):
+        # is_home est un bool : "true"/"vrai" doivent matcher True, pas rester
+        # du texte (True == "true" est False en Python -- meme famille d'echec
+        # silencieux que les guillemets ci-dessus).
+        droite = {"true": True, "vrai": True, "false": False, "faux": False}.get(
+            droite_brute.lower(), droite
+        )
 
     ops: dict[str, Any] = {
         "<": lambda a, b: a < b,
