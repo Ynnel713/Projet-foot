@@ -398,17 +398,17 @@ visées pour les 12 scénarios.
   `player_attributes`, `scenarios`, `variants`, `phrases`, `phrase_conditions`, `phrase_slots`,
   `slot_dictionaries`, `phrase_history`, `similarity_signatures`, `tags` — `player_attributes` n'est
   PAS du seed et ne doit jamais figurer dans la liste du `DELETE FROM sqlite_sequence`.
-- **D8 — export DuckDB : exclure `phrase_history` et `similarity_signatures` (01/10/2026).**
-  Motif : D7 acte la perte de `phrase_history` à chaque réimport ; l'exporter produirait des ids
-  morts côté DuckDB. L'analytique de match se produit AVANT le réimport, pas depuis un DuckDB
-  cumulatif. État vérifié : `EXPORTED_TABLES` (`scripts/export_analytics.py:16-22`) =
-  `scenarios`, `variants`, `phrases`, `phrase_history`, `phrase_cooldowns` ; `similarity_signatures`
-  n'est déjà pas exportée et `players` n'est pas exporté par cette commande (déjà dans DuckDB via
-  `import-players`). Effet net de D8 : retirer `phrase_history` de ce tuple.
-- **Note C1 (bloc 4) :** `match_sequence` sera ajouté au `CREATE` de `schema.sql` ; l'`ALTER` ne
-  servirait qu'aux bases non réimportées. *(À réconcilier avec D7bis : `DELETE FROM` ne recrée
-  pas les tables, donc un `CREATE` modifié n'atteint pas une base existante — signalé à
-  l'architecte.)*
+- **D8 révisée — `phrase_history` conservée dans l'export, note README sur les IDs morts après
+  réimport (01/10/2026).** La décision initiale (exclure `phrase_history`) est RETIRÉE : la
+  docstring de `export_analytics` vise « quelles phrases sont le plus utilisées par scénario »,
+  ce qui exige `phrase_history`. `EXPORTED_TABLES` (`scripts/export_analytics.py:16-22`) reste :
+  `scenarios`, `variants`, `phrases`, `phrase_history`, `phrase_cooldowns`. **À faire (README) :**
+  les `phrase_id` exportés ne désignent plus rien après un réimport de seed (D7/D7bis) ;
+  exporter AVANT un réimport, pas après.
+- **Note C1 (bloc 4), corrigée :** `match_sequence` suit DEUX voies qui coexistent :
+  `schema.sql` (`CREATE`) pour les bases créées APRÈS le changement, et `ALTER TABLE … ADD COLUMN`
+  (avec valeur par défaut) pour TOUTE base existante. `DELETE FROM` (D7bis) ne recrée pas les
+  tables : un `CREATE` modifié n'atteint jamais une base déjà créée.
 - **Note C2 (bloc 1) :** ajouter un test de non-régression « pas de doublon de code de scénario
   entre v1 et V2 » avec une erreur EXPLICITE (aujourd'hui : `IntegrityError` muette sur la
   contrainte `UNIQUE` de `scenarios.code`).
@@ -416,6 +416,29 @@ visées pour les 12 scénarios.
   « `data/seed/` + `data/seed/v2/` » (D4).
 - **C2 — répétition thématique (§4) : hors périmètre V2.1.** Dette de conception ; aucun
   chantier de tagging (`tags` / `phrase_tags` restent vides et inutilisées).
+
+### 10. Décisions OUVERTES remontées à l'architecte (non actées, 01/10/2026)
+
+**D9 — sélectivité à l'exécution (étape 6.a de `phrase_selector.select`).** Quatre options :
+(a) colonne matérialisée à l'import — fausse dès que la population de joueurs change ;
+(b) calcul à la volée à chaque `select` — correct mais coûteux ; (c) cache mémoire au démarrage —
+correct et rapide ; (d) approximation « au moins une condition joueur = spécifique » — dévie du
+critère B2 (sélectivité ≤ 70 %). Recommandation : **(c)**. *Décision de l'architecte en attente.*
+Faits : aucun cache n'existe dans `simulafoot_nlg/` (des `lru_cache` et `st.cache_data` existent
+côté simulation et application, `src/ligue1sim/*.py`, `app.py`, `apps/streamlit_preview.py`, sur les
+classeurs `joueurs.xlsx` / `entraineurs.xlsx`, pas sur la base NLG) : à créer. Population de
+référence actuelle de la mesure : les joueurs de CHAMP (hors GK, `position != "GK"`), tous postes de
+champ confondus — ni toute la base, ni une sous-population par scénario ; la définir pour
+l'exécution reste ouvert (ex. `Off the Ball >= 75` : 7,3 % des joueurs de champ, 13,2 % des
+attaquants).
+
+**D10 — fallback final (étape 7, dernier paragraphe).** Trois options : (a) phrase générique de
+secours par scénario, en base ; (b) exception dédiée ; (c) phrase neutre en dur. Recommandation :
+**(a) + WARNING obligatoire** (même niveau que l'étape 7.e). *Décision de l'architecte en
+attente.* Faits : aucune table ni colonne de phrase de secours n'existe dans `schema.sql` (à créer) ;
+le test `test_cascade_exhaustion_falls_through_to_the_final_fallback` fige les expressions
+« fallback final explicite » et « toujours a definir » de la docstring : à mettre à jour avec la
+décision.
 
 ## Ce qui N'est PAS bloquant (déjà en place)
 - Le schéma SQL (`phrase_history`, `phrase_cooldowns`,
