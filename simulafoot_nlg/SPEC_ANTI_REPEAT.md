@@ -377,6 +377,20 @@ visées pour les 12 scénarios.
   `test_cascade_warning_only_when_default_empty`, dans le même commit que le prochain changement
   touchant `phrase_selector`, jamais en commit isolé.
 - **D6 — vétérans :** voir la mesure ajoutée au §8.
+- **D7 — import de seed : rebuild des tables de SEED uniquement, joueurs préservés (01/10/2026).**
+  Pipeline V2.1 : (1) supprimer les tables de seed — `scenarios`, `variants`, `phrases`,
+  `phrase_conditions`, `phrase_slots`, `slot_dictionaries`, `phrase_cooldowns`, `tags`,
+  `phrase_tags` ; (2) supprimer le runtime associé — `phrase_history`, `similarity_signatures`
+  (cascade depuis `scenarios`, ou suppression explicite, au choix de l'implémentation) ;
+  (3) réimporter v1 + V2 en un seul appel avec la liste de chemins (D4). **Ne pas toucher à
+  `players` ni `player_attributes`** (refaire `import-players` à chaque import de seed est un
+  coût inutile). Pas de changement du `ON DELETE CASCADE` de `phrase_history.phrase_id` : un
+  `phrase_id` orphelin est pire qu'une suppression nette.
+  **Dette documentée :** perte de `phrase_history` à chaque réimport de seed ; acceptable
+  aujourd'hui (zéro match réel en base), à reconsidérer quand le runtime portera des données de
+  match réelles.
+- **README, ligne 24, à actualiser** : « Charge `data/seed/*.yml` dans SQLite… » →
+  « `data/seed/` + `data/seed/v2/` » (D4).
 - **C2 — répétition thématique (§4) : hors périmètre V2.1.** Dette de conception ; aucun
   chantier de tagging (`tags` / `phrase_tags` restent vides et inutilisées).
 
