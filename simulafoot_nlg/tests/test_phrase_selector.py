@@ -11,8 +11,9 @@ from __future__ import annotations
 
 import pytest
 
-from engine.models import MatchContext, Player
-from engine.phrase_selector import select
+from engine.models import MatchContext, Phrase, PhraseCondition, Player
+from engine.phrase_selector import candidats, palier_retenu, paliers, select
+from engine.selectivity import Selectivite
 
 
 def _player() -> Player:
@@ -89,3 +90,94 @@ class TestCascadeDeVariantesSpec:
         doc = self._doc()
         assert "fallback final explicite" in doc
         assert "toujours a definir" in doc
+
+
+# --- Bloc 2 (1/4) : filtre mandatory, partition specifiques / generiques --------
+
+
+def _cond(attribute: str, operator: str, value: str, mandatory: bool = True) -> PhraseCondition:
+    return PhraseCondition(id=1, phrase_id=1, attribute=attribute, operator=operator, value=value, mandatory=mandatory)
+
+
+def _p(identifiant: int, *conditions: PhraseCondition, **champs) -> Phrase:
+    return Phrase(id=identifiant, variant_id=1, text=f"p{identifiant}", conditions=conditions, **champs)
+
+
+def _joueur_rapide() -> Player:
+    return Player(id=1, first_name="A", last_name="B", attributes={"Pace": 90, "Finishing": 40})
+
+
+def _population_pace() -> Selectivite:
+    """10 joueurs de champ, Pace 1..10."""
+    return Selectivite([Player(id=i, first_name="J", last_name=str(i), attributes={"Pace": i}) for i in range(1, 11)])
+
+
+class TestFiltreMandatory:
+    def test_une_phrase_sans_condition_passe(self):
+        assert candidats([_p(1)], _joueur_rapide(), _context()) == [_p(1)]
+
+    def test_une_condition_mandatory_qui_echoue_ecarte_la_phrase(self):
+        pool = [_p(1, _cond("Pace", ">=", "80")), _p(2, _cond("Finishing", ">=", "80"))]
+        assert [p.id for p in candidats(pool, _joueur_rapide(), _context())] == [1]
+
+    def test_toutes_les_conditions_mandatory_doivent_etre_satisfaites(self):
+        pool = [_p(1, _cond("Pace", ">=", "80"), _cond("Finishing", ">=", "80"))]
+        assert candidats(pool, _joueur_rapide(), _context()) == []
+
+    def test_une_condition_non_mandatory_ne_filtre_pas(self):
+        pool = [_p(1, _cond("Finishing", ">=", "80", mandatory=False))]
+        assert len(candidats(pool, _joueur_rapide(), _context())) == 1
+
+    def test_les_conditions_de_contexte_filtrent_aussi(self):
+        pool = [_p(1, _cond("minute", ">=", "85"))]
+        assert candidats(pool, _joueur_rapide(), MatchContext(match_id="m", minute=90)) == pool
+        assert candidats(pool, _joueur_rapide(), MatchContext(match_id="m", minute=10)) == []
+        assert candidats(pool, _joueur_rapide(), MatchContext(match_id="m")) == []  # minute inconnue : ne matche jamais
+
+    def test_attribut_fm_connu_mais_absent_ecarte_la_phrase_sans_lever(self):
+        # D16 : un joueur sans attributs ecarte les phrases a condition FM, il ne fait pas planter select.
+        sans_attributs = Player(id=2, first_name="C", last_name="D")
+        assert candidats([_p(1, _cond("Pace", ">=", "10"))], sans_attributs, _context()) == []
+
+    def test_une_faute_de_frappe_en_base_leve_toujours_value_error(self):
+        with pytest.raises(ValueError, match="Aggresion"):
+            candidats([_p(1, _cond("Aggresion", ">=", "10"))], _joueur_rapide(), _context())
+
+    def test_fallback_et_phrases_inactives_ne_sont_jamais_dans_le_pool_normal(self):
+        pool = [_p(1), _p(2, is_fallback=True), _p(3, is_active=False)]
+        assert [p.id for p in candidats(pool, _joueur_rapide(), _context())] == [1]
+
+    def test_l_ordre_du_pool_est_conserve(self):
+        pool = [_p(3), _p(1), _p(2)]
+        assert [p.id for p in candidats(pool, _joueur_rapide(), _context())] == [3, 1, 2]
+
+
+class TestPartitionEtPaliers:
+    def test_partition_a_70_pour_cent(self):
+        specifique = _p(1, _cond("Pace", ">=", "4"))  # 7/10 = 70 % : specifique
+        large = _p(2, _cond("Pace", ">=", "3"))  # 8/10 : generique
+        sans_condition = _p(3)
+        specifiques, generiques = paliers([specifique, large, sans_condition], _population_pace())
+        assert [p.id for p in specifiques] == [1]
+        assert [p.id for p in generiques] == [2, 3]
+
+    def test_un_specifique_eligible_l_emporte_et_les_generiques_sont_ecartes(self):
+        pool = [_p(1, _cond("Pace", ">=", "8")), _p(2), _p(3, _cond("Pace", ">=", "1"))]
+        assert [p.id for p in palier_retenu(pool, _population_pace())] == [1]
+
+    def test_zero_specifique_repli_sur_les_generiques(self):
+        pool = [_p(2), _p(3, _cond("Pace", ">=", "1"))]  # sans condition, et trop large (100 %)
+        assert [p.id for p in palier_retenu(pool, _population_pace())] == [2, 3]
+
+    def test_zero_generique_les_specifiques_servent(self):
+        assert [p.id for p in palier_retenu([_p(1, _cond("Pace", ">=", "8"))], _population_pace())] == [1]
+
+    def test_pool_vide_donne_une_liste_vide(self):
+        assert palier_retenu([], _population_pace()) == []
+
+    def test_repli_apres_filtre_conditions_et_cooldown(self):
+        """Le pool arrive deja filtre (conditions, puis cooldown au commit 3) : si le seul specifique
+        est ecarte (condition non satisfaite), les generiques prennent le relais."""
+        joueur_lent = Player(id=3, first_name="L", last_name="ent", attributes={"Pace": 2})
+        pool = candidats([_p(1, _cond("Pace", ">=", "8")), _p(2)], joueur_lent, _context())
+        assert [p.id for p in palier_retenu(pool, _population_pace())] == [2]

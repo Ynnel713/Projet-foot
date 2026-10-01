@@ -91,9 +91,46 @@ Algorithme prevu (une fois la banque livree) :
 from __future__ import annotations
 
 import random
+from collections.abc import Sequence
 from sqlite3 import Connection
 
+from engine.conditions import evaluate_condition
 from engine.models import MatchContext, Phrase, Player
+from engine.selectivity import Selectivite
+
+
+def candidats(phrases: Sequence[Phrase], player: Player, context: MatchContext) -> list[Phrase]:
+    """Phrases d'un pool qui PEUVENT sortir pour (`player`, `context`) : actives, hors phrases de
+    secours (`is_fallback` : jamais dans le pool normal, decision D10 -- elles ne sortent que par le
+    repli final) et dont TOUTES les conditions `mandatory` sont satisfaites (une condition qui
+    echoue ECARTE la phrase, elle ne la deprioritise pas). Les conditions non `mandatory` ne filtrent
+    pas. Une condition invalide (nom inconnu) leve ValueError : jamais ecartee en silence.
+    L'ordre du pool est conserve."""
+    return [
+        phrase
+        for phrase in phrases
+        if phrase.is_active
+        and not phrase.is_fallback
+        and all(evaluate_condition(c, player, context) for c in phrase.conditions if c.mandatory)
+    ]
+
+
+def paliers(pool: Sequence[Phrase], selectivite: Selectivite) -> tuple[list[Phrase], list[Phrase]]:
+    """(specifiques, generiques) : partition du pool selon la selectivite (<= 70 % des joueurs de
+    champ et au moins une condition joueur : specifique, voir engine/selectivity.py)."""
+    specifiques = [p for p in pool if selectivite.est_specifique(p)]
+    generiques = [p for p in pool if not selectivite.est_specifique(p)]
+    return specifiques, generiques
+
+
+def palier_retenu(pool: Sequence[Phrase], selectivite: Selectivite) -> list[Phrase]:
+    """Politique alpha (decision du 01/10/2026) : s'il y a au moins un candidat SPECIFIQUE, le tirage
+    se fait UNIQUEMENT parmi les specifiques ; les generiques sont un REPLI, retenus seulement quand
+    aucun specifique n'est eligible (aucun ne satisfait ses conditions, ou -- le pool etant deja
+    filtre par le cooldown -- tous sont en cooldown : le repli sur cooldown epuise remplace un
+    blocage). Pool vide -> liste vide."""
+    specifiques, generiques = paliers(pool, selectivite)
+    return specifiques or generiques
 
 
 def select(
