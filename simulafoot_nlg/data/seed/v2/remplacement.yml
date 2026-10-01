@@ -75,7 +75,7 @@
       conditions:
       - attribute: fm_rating
         operator: '>='
-        value: '75'
+        value: '81'
         mandatory: true
       slots:
       - slot_name: entrant
@@ -139,7 +139,7 @@
       conditions:
       - attribute: minute
         operator: <=
-        value: '55'
+        value: '50'
         mandatory: true
       slots:
       - slot_name: sortant
