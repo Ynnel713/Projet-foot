@@ -13,15 +13,16 @@ d'enrichir `preferred_moves` sur quasi toute la base (cible 90 %, voir
 **`preferred_moves` n'est plus listé comme attribut "à risque" ci-dessous**
 — il est traité comme un attribut pleinement viable à terme, sous réserve
 que la cible de couverture soit atteinte (voir "Dépendances externes").
-`height_cm` et `foot` restent à risque, sans dépendance d'enrichissement
-planifiée à ce jour.
+`height_cm` est **résolu le 01/10/2026** (correctif de colonne Excel
+appliqué, voir plus bas) — plus un attribut à risque. `foot` reste
+partiel, sans dépendance d'enrichissement planifiée.
 
 ### Attributs nécessaires par nouveau scénario (Tier 1) et leur couverture réelle
 
 | Scénario | Attributs cités dans les conditions types de la fiche | Couverture réelle (7563 joueurs) | Fiche impactée ? |
 |---|---|---|---|
-| DÉFENSE | `Tackling` (82 %), `Pace` (93 %), `height_cm` (**11,7 %**) | Mixte | **Oui** — l'exemple "dégagement aérien, height_cm >= 190" hérite du même risque que BUT/SURNOM "Le colosse" (0,73 % réel) |
-| CORNER | `Heading` (82 %) + `height_cm` (**11,7 %**), `Strength` (93 %), `Technique` (93 %) | Mixte | **Oui** — même combo Heading+height_cm que ci-dessus |
+| DÉFENSE | `Tackling` (82 %), `Pace` (93 %), `height_cm` (**93,4 %, résolu**) | Viable | Non — le pilote livré (28 phrases) a volontairement évité `height_cm` par précaution avant correctif, les phrases restantes (jusqu'à 50) peuvent l'utiliser librement |
+| CORNER | `Heading` (82 %) + `height_cm` (**93,4 %, résolu**), `Strength` (93 %), `Technique` (93 %) | Viable | Non |
 | FAUTE_SIMPLE | `Aggression` (93 %), `Tackling` (82 %), `minute` (100 %, contexte) | Viable | Non |
 | TIR_NON_CADRÉ | `Finishing` (82 %), `preferred_moves` (en cours d'enrichissement, cible 90 %) | Viable sous réserve de la cible | Non — plus de restriction particulière sur `preferred_moves` une fois la cible atteinte |
 | CARTON_JAUNE | `Aggression` (93 %), `preferred_moves` (en cours d'enrichissement, cible 90 %), `minute` | Viable sous réserve de la cible | Non — idem |
@@ -38,7 +39,7 @@ fiches. AMBIANCE et VAR n'ont même quasiment aucune condition Player
 | Attribut | Couverture | Action préalable | Impact volume |
 |---|---|---|---|
 | `preferred_moves` | 4,8 % → **cible 90 %** (enrichissement planifié, voir Dépendances externes) | Suivre l'avancement de l'enrichissement — pas de restriction d'écriture une fois la cible atteinte | Aucun — TIR_NON_CADRÉ/CARTON_JAUNE peuvent utiliser `preferred_moves` sans précaution particulière dès que la cible est confirmée |
-| `height_cm` | 11,7 % | Cause identifiée (nom de colonne Excel divergent entre le scraper et l'import, voir AUDIT_COUVERTURE_DONNEES_JOUEUR.md) — correctif possible mais non appliqué (661 conflits de valeur à arbitrer d'abord). **Pas d'enrichissement planifié à ce jour.** | DÉFENSE et CORNER perdent leurs exemples "dégagement/tête" tels quels tant que non résolu |
+| `height_cm` | ~~11,7 %~~ **93,4 %, résolu le 01/10/2026** | Aucune — `data/import/import_players.py` corrigé (priorité "Taille FM (cm)", repli sur "Taille (cm)"), vérifié sans casse sur les 177 valeurs sentinelles, `import-players` relancé. | Aucun — DÉFENSE/CORNER peuvent utiliser `height_cm` sans précaution dès maintenant |
 | `foot` | 39,1 % | Partiel, viable pour un usage ponctuel (1 phrase existante) mais pas pour un scénario qui en ferait un pilier | Aucune fiche v2 n'en dépend actuellement |
 | `Aggression`, `Pace`, `Strength`, `Technique`, `Vision` | 93 % | Aucune action — viable tel quel | — |
 | `Dribbling`, `Heading`, `Finishing`, `Tackling` | 82 % | Aucune action — viable tel quel | — |

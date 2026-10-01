@@ -94,6 +94,36 @@ accepté + cas rejeté), non-régression confirmée : reconvertir les 281
 phrases réelles avec ce garde-fou produit un YAML strictement identique
 (diff vide).
 
+### Source des 55 — classeur/scraping, PAS un export FM26 vérifié (signalé le 01/10/2026)
+
+Vérifié par lecture directe du commentaire de code au-dessus de
+`PREFERRED_MOVE_TRANSLATIONS` (`scripts/make_phrase_template.py`, commit
+`8f0142a`, 29/09/2026) : *"Clé = orthographe EXACTE telle que scrapée
+(voir scripts/scrape_fminside_attributes.py) — une valeur absente de ce
+dictionnaire (base qui évolue) affiche un repli explicite plutôt que de
+planter."*
+
+**La source est le scraping fminside sur l'échantillon de joueurs
+effectivement récupéré, pas un export ou une documentation officielle
+FM26.** Les 55 sont l'ensemble empirique des noms de moves distincts
+rencontrés chez les joueurs scrapés avec succès — pas une liste validée
+contre le jeu lui-même. Le commentaire du code le reconnaît déjà ("base
+qui évolue") et prévoit un repli explicite pour une valeur absente
+plutôt qu'un plantage, signe que l'auteur savait ce réservoir incomplet
+par construction.
+
+**Risque identifié, non corrigé (je signale, je ne tranche pas)** : le
+garde-fou ajouté ce tour protège la cohérence INTERNE (pas de faute de
+frappe par rapport à l'existant) mais pas la validité EXTERNE. Si
+l'enrichissement en cours fait apparaître un move réellement présent
+dans FM26 mais absent des 55 (parce qu'aucun joueur de l'échantillon
+initial ne l'avait), le garde-fou le rejettera à tort comme "inconnu" —
+un faux positif qui bloquerait une future phrase légitime, pas une vraie
+faute de frappe. **Pas d'action proposée ici** : la décision (élargir le
+réservoir au fil de l'enrichissement vs. chercher une liste FM26
+officielle externe) appartient à l'arbitrage du prochain tour qui
+touchera réellement au workstream donnée.
+
 ## 3. Granularité
 
 Confirmé par la base : **plusieurs moves par joueur**, pas un seul.

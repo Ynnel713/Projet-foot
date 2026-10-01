@@ -9,6 +9,19 @@ Pause décidée sur l'écriture V2 tant que ce document n'est pas tranché
 7563 joueurs, pas d'échantillonnage — une poignée d'agrégations SQL sur
 une table de cette taille, de l'ordre de la milliseconde chacune.
 
+> **Mise à jour du 01/10/2026 — `height_cm` RÉSOLU, chiffres de ce
+> document devenus historiques pour cet attribut.** Les 11,7 % relevés
+> ci-dessous venaient d'un bug de nom de colonne (`import_players.py`
+> lisait `"Taille (cm)"` au lieu de `"Taille FM (cm)"`). Vérifié avant
+> bascule : sur 93+84 joueurs portant une valeur sentinelle connue sur
+> `"Taille (cm)"` (152,4 cm/154,9 cm, conversion pieds/pouces ratée),
+> 91 et 82 respectivement récupérables via la colonne FM26, sans
+> collision. Correctif appliqué, `import-players` relancé — couverture
+> réelle désormais **93,4 %**. Les tableaux ci-dessous ne sont PAS
+> corrigés rétroactivement (valeur historique du diagnostic initial) —
+> voir [COUVERTURE.md](COUVERTURE.md) et
+> [PLAN_V2_EDITORIAL.md](PLAN_V2_EDITORIAL.md) pour l'état courant.
+
 ---
 
 ## 1. Couverture par attribut

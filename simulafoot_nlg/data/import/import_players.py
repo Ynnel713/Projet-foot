@@ -218,7 +218,19 @@ def _row_to_player(row: pd.Series) -> dict[str, Any] | None:
         "league": _clean_str(row.get("Championnat")),
         "market_value": _parse_market_value(row.get("Valeur marchande")),
         "average_rating": _parse_float(row.get("Note transfermrkt")),
-        "height_cm": _parse_int(row.get("Taille (cm)")),
+        # "Taille FM (cm)" (scrapee FM26) prioritaire sur "Taille (cm)"
+        # (Transfermarkt, pre-existante) -- decision du 01/10/2026 : coherence
+        # avec le reste du modele joueur, deja issu de FM26 (preferred_moves,
+        # Aggression, Technique, Vision...). Verifie avant bascule : parmi les
+        # 93+84 joueurs a une valeur sentinelle connue sur "Taille (cm)"
+        # (152.4cm/154.9cm, conversion pieds/pouces ratee -- pas une vraie
+        # taille), 91 et 82 respectivement ont une valeur FM coherente
+        # (150-210cm, jamais la meme sentinelle) -- la bascule les corrige,
+        # elle ne les casse pas. Bug d'origine : le scraper
+        # (scripts/scrape_fminside_attributes.py) ecrit dans "Taille FM (cm)",
+        # cette ligne lisait "Taille (cm)" -- deux colonnes differentes,
+        # jamais remarque faute d'avoir mesure l'ecart avant ce jour.
+        "height_cm": _parse_int(row.get("Taille FM (cm)")) or _parse_int(row.get("Taille (cm)")),
         "status": _clean_str(row.get("Statut")),
         "role_category": _clean_str(row.get("Catégorie")),
         "foot": _clean_str(row.get("Pieds")),

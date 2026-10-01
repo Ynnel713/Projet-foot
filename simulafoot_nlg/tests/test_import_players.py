@@ -22,12 +22,13 @@ import_players = _import_players_module.import_players
 _parse_market_value = _import_players_module._parse_market_value
 _split_positions = _import_players_module._split_positions
 _split_preferred_moves = _import_players_module._split_preferred_moves
+_row_to_player = _import_players_module._row_to_player
 
 COLUMNS = [
     "ID", "Colonne1", "Prénom", "Nom", "Nationalité", "Âge", "Poste", "Club", "Championnat",
-    "Valeur marchande", "Note transfermrkt", "Taille (cm)", "Statut", "Catégorie", "Pieds",
-    "Moyenne joueur", "Pace", "Finishing", "Marking", "Postes FM naturels", "Weak foot (/5)",
-    "Preferred moves",
+    "Valeur marchande", "Note transfermrkt", "Taille (cm)", "Taille FM (cm)", "Statut", "Catégorie",
+    "Pieds", "Moyenne joueur", "Pace", "Finishing", "Marking", "Postes FM naturels",
+    "Weak foot (/5)", "Preferred moves",
 ]
 
 
@@ -171,4 +172,33 @@ def test_split_preferred_moves_splits_on_semicolon_and_trims():
 
 def test_split_preferred_moves_none_marker_gives_empty_tuple():
     assert _split_preferred_moves("(aucun)") == ()
+
+
+# --- height_cm : priorite FM26 sur Transfermarkt, decision du 01/10/2026 ---
+# Bug trouve le 30/09/2026 : cette ligne lisait "Taille (cm)" (Transfermarkt,
+# 11.7% de couverture) au lieu de "Taille FM (cm)" (scrapee, 93%) -- deux
+# colonnes differentes dans le classeur. Verifie avant bascule (01/10/2026) :
+# sur les 93+84 joueurs portant une valeur sentinelle connue sur "Taille (cm)"
+# (152.4cm/154.9cm, conversion pieds/pouces ratee), 91 et 82 respectivement
+# ont une valeur FM coherente -- la bascule les corrige, elle ne les casse pas.
+
+def test_height_cm_prefers_fm26_column_when_both_present():
+    row = pd.Series(_row(ID=99, **{"Taille (cm)": 152.4, "Taille FM (cm)": 178}))
+    player = _row_to_player(row)
+    assert player is not None
+    assert player["height_cm"] == 178  # pas la sentinelle Transfermarkt (152.4)
+
+
+def test_height_cm_falls_back_to_transfermarkt_column_when_fm26_missing():
+    row = pd.Series(_row(ID=99, **{"Taille (cm)": 184, "Taille FM (cm)": None}))
+    player = _row_to_player(row)
+    assert player is not None
+    assert player["height_cm"] == 184
+
+
+def test_height_cm_is_none_when_both_columns_missing():
+    row = pd.Series(_row(ID=99))
+    player = _row_to_player(row)
+    assert player is not None
+    assert player["height_cm"] is None
     assert _split_preferred_moves(None) == ()

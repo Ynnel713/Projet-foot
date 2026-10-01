@@ -81,6 +81,27 @@ diversité perçue par un spectateur. À l'inverse, ignorer ce proxy revient à
 attendre l'implémentation de `template_filler`/`post_process` avant de
 pouvoir tester quoi que ce soit ici.
 
+### 4. `similarity_penalty` doit couvrir la répétition THÉMATIQUE, pas seulement lexicale (ajouté le 01/10/2026)
+
+Trouvé en auditant la séquence du pilote DÉFENSE (28 phrases, voir
+`data/seed/PLAN_V2_EDITORIAL.md`) : sur un tirage aléatoire donné, 3
+phrases à thème "duel aérien"/tête se sont retrouvées consécutives alors
+qu'aucune ne partageait le moindre n-gramme de texte avec une autre (zéro
+collision lexicale, vérifié mécaniquement). Un `similarity_penalty` basé
+sur une signature MinHash/k-shingles du texte rendu (voir point 3
+ci-dessus) ne détecterait PAS ce cas : les textes sont lexicalement
+distincts, seul le THÈME narratif (ici : "contact aérien") se répète.
+
+Implication pour l'implémentation future : `similarity_penalty` (ou un
+mécanisme complémentaire à spécifier) devra pouvoir comparer les
+candidats sur un axe thématique/tag (ex. un tag "aérien" porté par la
+Phrase ou dérivé de ses conditions `Heading`/`height_cm`), pas uniquement
+sur la similarité textuelle du rendu. Piste à creuser à l'implémentation
+réelle, pas tranchée ici : soit un tag explicite par phrase (colonne
+`tags`/`phrase_tags`, déjà présente dans le schéma mais actuellement
+libre et non structurée), soit une heuristique dérivée des attributs
+conditionnants communs entre phrases d'un même scénario.
+
 ## Ce qui N'est PAS bloquant (déjà en place)
 - Le schéma SQL (`phrase_history`, `phrase_cooldowns`,
   `similarity_signatures`) est cohérent avec l'algorithme documenté dans le
