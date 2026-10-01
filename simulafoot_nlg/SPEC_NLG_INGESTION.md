@@ -69,7 +69,7 @@ Seul décideur du `scenario_code` ; les adaptateurs ne le choisissent jamais. R�
 
 **Non atteints** (déclarés avec raison, test d'exhaustivité contre les 17 scénarios importés) :
 *structurels* — DEBUT_MATCH, SITUATION_MATCH, GESTE_SIGNATURE (contexte ou trait, pas un événement) ;
-*différés V2.2* — FAUTE_SIMPLE, HORS_JEU, AMBIANCE (D13 : aucune source d'événement).
+*différés* (inatteignables en V2.1, pas de source d'événement — D13) — FAUTE_SIMPLE, HORS_JEU, AMBIANCE.
 
 ## 5. Limites connues (à arbitrer, pas des bugs cachés)
 

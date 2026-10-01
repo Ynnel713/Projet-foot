@@ -72,11 +72,13 @@ SCENARIOS_STRUCTURELS: dict[str, str] = {
 }
 
 #: DIFFERE : evenements de match reels mais SANS source dans narrative.py ni MatchEvents (D13) ; pilotes
-#: importes mais non branches. Revue en V2.2 (une source cote racine suffirait a les debloquer).
+#: importes mais inatteignables en V2.1 (pas un report planifie : une source d'evenement cote racine
+#: suffirait a les debloquer). FAUTE_SIMPLE : 8 phrases traitent {adversaire} comme une personne (a
+#: reecrire au deblocage).
 SCENARIOS_DIFFERES: dict[str, str] = {
-    "FAUTE_SIMPLE": "D13 : aucune source d'evenement (V2.2) ; 8 phrases a reecrire ({adversaire} = personne)",
-    "HORS_JEU": "D13 : aucune source d'evenement (V2.2)",
-    "AMBIANCE": "D13 : aucune source d'evenement (V2.2)",
+    "FAUTE_SIMPLE": "inatteignable en V2.1 (pas de source d'evenement)",
+    "HORS_JEU": "inatteignable en V2.1 (pas de source d'evenement)",
+    "AMBIANCE": "inatteignable en V2.1 (pas de source d'evenement)",
 }
 
 
