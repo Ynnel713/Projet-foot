@@ -43,7 +43,7 @@ DEFAUT = [
     ("{joueur} aperçoit le gardien avancé et tente le lob, mais ajuste mal et dépasse largement la barre !",
      [("Vision", ">=", "80")]),
     ("Après avoir éliminé un défenseur de {adversaire}, {joueur} enclenche trop vite sa frappe et la décale loin de la lucarne !",
-     [("Technique", ">=", "75")]),
+     [("Technique", ">=", "82")]),
     ("Idéalement placé aux abords des seize mètres, {joueur} cadre mal sa frappe, qui rase le poteau de très peu !",
      [("Finishing", ">=", "80")]),
     ("{joueur} déborde sur l'aile, ferme l'angle et tire, mais le ballon traverse la surface sans trouver preneur !",
@@ -65,7 +65,7 @@ DEFAUT = [
     ("Après un contrôle raté, {joueur} s'empresse de frapper et ne cadre pas, pour le plus grand soulagement de {adversaire} !",
      [("Finishing", "<=", "60"), ("First Touch", "<=", "55")]),
     ("{joueur} s'offre une opportunité à vingt mètres, ajuste son tir avec soin, mais ne trouve que le filet extérieur !",
-     [("Technique", ">=", "72")]),
+     [("Technique", ">=", "72"), ("Long Shots", ">=", "70")]),
     ("Décalé sur sa gauche, {joueur} claque une frappe puissante, mais le ballon passe au-dessus, dans un silence soudain !",
      []),
 ]

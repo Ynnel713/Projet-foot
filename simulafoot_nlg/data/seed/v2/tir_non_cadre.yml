@@ -116,7 +116,7 @@
       conditions:
       - attribute: Technique
         operator: '>='
-        value: '75'
+        value: '82'
         mandatory: true
       slots:
       - slot_name: adversaire
@@ -245,6 +245,10 @@
       - attribute: Technique
         operator: '>='
         value: '72'
+        mandatory: true
+      - attribute: Long Shots
+        operator: '>='
+        value: '70'
         mandatory: true
       slots:
       - slot_name: joueur
