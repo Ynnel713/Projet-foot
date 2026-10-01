@@ -569,6 +569,42 @@ sur `preferred_moves`, jamais `None`) ; même traitement, retourner `False`.
 - **Rappel `contient` / `None` :** `TypeError` latent (voir D16). Vérifié : les 20 attributs FM
   conditionnés par les 8 pilotes figurent tous dans `FM26_ATTRIBUTES` (aucun inconnu).
 
+**D17 révisée, D16 et D14 précisées, notes d'audit (01/10/2026, architecte) :**
+- **D17 révisée — `log_usage` renvoie `int` (l'`id` inséré).** `anti_repeat.update_cooldown` appelle
+  `log_usage`, récupère l'`id`, puis calcule et insère la signature dans `similarity_signatures` avec
+  `history_id` renseigné. Impact : la signature de `log_usage` passe de `-> None` à `-> int`,
+  `tests/test_logger.py` à adapter. Option (b) (`anti_repeat` fait l'`INSERT` lui-même) REJETÉE :
+  elle contredit « logger = écrivain unique ».
+- **D16 précisée — `contient` / `None`.** Dans `evaluate_condition`, la branche `contient` est
+  évaluée avant `_comparer` et lève `TypeError` sur `None` : ajouter `if gauche is None: return False`
+  avant `condition.value in gauche`. **D3 et D16 touchent le même fichier (`conditions.py`) : chacune
+  son test, chacune son commit, sans les mélanger.**
+- **D14 précisée — résolution par ID.** `players.id` en base = colonne `ID` du classeur
+  (`ID_COLUMN`, `data/import/import_players.py:65`) = `Player.id` de la simulation : la clé de
+  correspondance existe (résolution par ID, non par nom : homonymes entre clubs). *Réserve :* les
+  événements du moteur (`CardEvent.player`, `SubstitutionEvent.player_on/off`) ne portent que des
+  noms ; l'`id` se retrouve par l'effectif du club (nom au sein du club), unique sauf homonymes dans
+  un même club.
+- **`interval_events` n'est PAS un contrat NLG** (détail d'implémentation du canevas, clés
+  françaises, information perdue sur les remplacements) : lire `Timeline.cards` / `Timeline.substitutions`
+  directement (typés).
+- **Audit de couverture (`AUDIT_COUVERTURE_DONNEES_JOUEUR.md`, 30/09/2026) — diagnostic mis à jour
+  après la correction de `height_cm` (93,4 %, 01/10/2026).** L'audit comptait 63 phrases v1 limitées
+  par la DONNÉE (`preferred_moves`, `height_cm`, `foot`) et 39 sélectives par conception. Recompté :
+  **56** phrases v1 restent limitées par `preferred_moves` / `foot` (GESTE_SIGNATURE 31/37, BUT 20/60,
+  CARTON_ROUGE 5/31, ARRET_GARDIEN 0/38) ; les 7 qui dépendaient de `height_cm` (BUT 3, ARRET_GARDIEN
+  3, GESTE_SIGNATURE 1) sont passées à « sélectives par conception ». GESTE_SIGNATURE reste de loin le
+  plus exposé ; BUT l'est encore (20 phrases). Ces chiffres sont la banque v1, antérieurs aux pilotes
+  V2 (qui n'ont que 3 phrases sur `preferred_moves`). Le garde-fou de pool (§6) ne s'applique qu'aux
+  pilotes V2 ; mesuré à titre indicatif, GESTE_SIGNATURE/DEFAUT a un pool moyen de 0,16 phrase par
+  joueur de champ et 91,7 % de joueurs à pool nul.
+- **`scripts/scrape_fminside_attributes.py` :** versionné (commits `2501b64`, `a6f1ef5`) mais
+  MODIFIÉ non commité dans l'arbre de travail (9 ajouts, 40 suppressions) — travail en cours hors
+  NLG ; les preferred moves exigent un cookie de compte fminside ; `--extras-only` ne couvre que les
+  joueurs déjà reliés. À clarifier avant de compter sur l'option A (enrichir).
+- **`parse_condition_atoms` ne supporte pas « ou »** (conjonction seule) : l'option B (assouplir les
+  conditions) doit REMPLACER une condition `preferred_moves`, jamais s'y ajouter.
+
 ## Ce qui N'est PAS bloquant (déjà en place)
 - Le schéma SQL (`phrase_history`, `phrase_cooldowns`,
   `similarity_signatures`) est cohérent avec l'algorithme documenté dans le
