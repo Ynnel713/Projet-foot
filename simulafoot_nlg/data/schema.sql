@@ -207,6 +207,11 @@ CREATE INDEX IF NOT EXISTS idx_player_attributes_attribute   ON player_attribute
 
 CREATE INDEX IF NOT EXISTS idx_variants_scenario_id          ON variants(scenario_id);
 CREATE INDEX IF NOT EXISTS idx_phrases_variant_id             ON phrases(variant_id);
+-- Une variante ne contient jamais deux fois le meme gabarit (cle naturelle de
+-- rng-par-phrase, voir SPEC_ANTI_REPEAT.md section 10) ; import_seed le refuse
+-- avant insertion, cet index est la ceinture. IF NOT EXISTS : init_db l'applique
+-- aussi a une base existante (echoue si elle contient deja un doublon).
+CREATE UNIQUE INDEX IF NOT EXISTS idx_phrases_variant_text_unique ON phrases(variant_id, text);
 CREATE INDEX IF NOT EXISTS idx_phrase_conditions_phrase_id    ON phrase_conditions(phrase_id);
 CREATE INDEX IF NOT EXISTS idx_phrase_slots_phrase_id         ON phrase_slots(phrase_id);
 CREATE INDEX IF NOT EXISTS idx_phrase_slots_slot_name         ON phrase_slots(slot_name);

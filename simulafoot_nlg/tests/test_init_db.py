@@ -84,3 +84,22 @@ def test_la_contrainte_refuse_un_rang_negatif_dans_les_deux_chemins(tmp_path, or
             )
     finally:
         conn.close()
+
+
+def test_l_index_d_unicite_est_ajoute_a_une_base_existante_qui_ne_l_avait_pas(tmp_path):
+    db_path = tmp_path / "sans_index.db"
+    init_db(db_path=db_path)
+    conn = sqlite3.connect(db_path)
+    conn.execute("DROP INDEX idx_phrases_variant_text_unique")
+    conn.commit()
+    conn.close()
+
+    init_db(db_path=db_path)
+    init_db(db_path=db_path)  # idempotent
+
+    conn = sqlite3.connect(db_path)
+    try:
+        noms = {row[1] for row in conn.execute("PRAGMA index_list(phrases)")}
+    finally:
+        conn.close()
+    assert "idx_phrases_variant_text_unique" in noms

@@ -70,7 +70,18 @@ def _validate_scenarios(scenarios: list[dict[str, Any]], known_slot_keys: set[st
                 "(règle du brief : toujours une variante par défaut)."
             )
         for variant in variants:
+            textes_vus: set[str] = set()
             for phrase in variant.get("phrases", []):
+                # Unicite (variante, texte) : cle naturelle de la graine de rendu
+                # par phrase (SPEC_ANTI_REPEAT.md section 10) -- deux phrases
+                # identiques dans une variante seraient indiscernables.
+                texte = phrase.get("text")
+                if texte in textes_vus:
+                    raise SeedValidationError(
+                        f'Scénario "{code}", variante "{variant.get("code", "<sans code>")}" : '
+                        f"texte en double {texte!r} -- import refusé."
+                    )
+                textes_vus.add(texte)
                 # Cooldown obligatoire (règle du README, confirmée par
                 # l'audit éditorial du 30/09/2026, section cooldown) : une
                 # phrase sans cooldown_matches explicite laisserait

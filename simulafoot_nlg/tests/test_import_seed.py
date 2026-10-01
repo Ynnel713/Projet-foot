@@ -164,3 +164,55 @@ class TestImportSeedNomsDAttributs:
             (SCHEMA_PATH.parent / "seed" / "scenarios.yml").read_text(encoding="utf-8")
         )
         _validate_scenarios(banque, known_slot_keys=set())
+
+
+class TestImportSeedUniciteDesTextes:
+    """Un meme texte deux fois dans une variante : refuse a l'import (avant toute
+    ecriture) ET par l'index UNIQUE (ceinture). Le meme texte dans deux variantes
+    ou deux scenarios reste autorise."""
+
+    @staticmethod
+    def _ecrire(tmp_path: Path, textes_par_variante: dict[str, list[str]]) -> Path:
+        variantes = [
+            {
+                "code": code,
+                "label": code,
+                "is_default": code == "DEFAUT",
+                "phrases": [{"text": t, "weight": 1.0, "cooldown_matches": 3} for t in textes],
+            }
+            for code, textes in textes_par_variante.items()
+        ]
+        path = tmp_path / "scenarios.yml"
+        path.write_text(
+            yaml.safe_dump([{"code": "BUT", "label": "But", "variants": variantes}], allow_unicode=True),
+            encoding="utf-8",
+        )
+        return path
+
+    def test_deux_textes_identiques_dans_une_variante_font_echouer_l_import(self, tmp_path):
+        db_path = _init_db(tmp_path)
+        scenarios_path = self._ecrire(tmp_path, {"DEFAUT": ["{joueur} marque !", "{joueur} marque !"]})
+        with pytest.raises(SeedValidationError, match=r"BUT.*DEFAUT.*en double"):
+            import_seed(db_path, scenarios_path, _write_empty_slots_yaml(tmp_path))
+
+        conn = sqlite3.connect(db_path)
+        assert conn.execute("SELECT COUNT(*) FROM scenarios").fetchone()[0] == 0
+        conn.close()
+
+    def test_le_meme_texte_dans_deux_variantes_est_autorise(self, tmp_path):
+        db_path = _init_db(tmp_path)
+        scenarios_path = self._ecrire(
+            tmp_path, {"DEFAUT": ["{joueur} marque !"], "SURNOM": ["{joueur} marque !"]}
+        )
+        stats = import_seed(db_path, scenarios_path, _write_empty_slots_yaml(tmp_path))
+        assert stats.phrases == 2
+
+    def test_l_index_unique_refuse_le_doublon_meme_sans_passer_par_import_seed(self, tmp_path):
+        db_path = _init_db(tmp_path)
+        conn = sqlite3.connect(db_path)
+        conn.execute("INSERT INTO scenarios (code, label) VALUES ('BUT', 'But')")
+        conn.execute("INSERT INTO variants (scenario_id, code, label, is_default) VALUES (1, 'DEFAUT', 'd', 1)")
+        conn.execute("INSERT INTO phrases (variant_id, text) VALUES (1, 'x')")
+        with pytest.raises(sqlite3.IntegrityError):
+            conn.execute("INSERT INTO phrases (variant_id, text) VALUES (1, 'x')")
+        conn.close()
