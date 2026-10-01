@@ -18,11 +18,13 @@ ECARTE, jamais devine : il est signale dans `skipped` si l'appelant le demande.
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Sequence
+from random import Random
 from typing import Any
 
 from ligue1sim.events import CardEvent, SubstitutionEvent
-from ligue1sim.players import Player
+from ligue1sim.players import DEFENDER, GOALKEEPER, Player, position_group
 
 from narrative import BUT, NarrativeEvent, Timeline
 
@@ -65,6 +67,44 @@ class EffectifClub:
         return player.id
 
 
+def en_jeu_a(timeline: Timeline, club: str, minute: int) -> list[str]:
+    """Noms des joueurs de `club` sur le terrain a `minute` : titulaires du `Lineup`, moins les sortants
+    et les expulses (`direct`, `second_yellow`), plus les entrants, pour les evenements STRICTEMENT
+    anterieurs a `minute` (a minute egale, l'occasion se joue avant le changement). Ordre :
+    titulaires d'abord, puis entrants dans l'ordre des changements."""
+    lineup = timeline.home_lineup if club == timeline.home_team else timeline.away_lineup
+    sur_le_terrain = [p.name for p in lineup.players]
+    changements = [(e.minute, 0, e) for e in timeline.substitutions if e.club_name == club and e.minute < minute]
+    expulsions = [(e.minute, 1, e) for e in timeline.cards
+                  if e.club_name == club and e.minute < minute and e.card_type in {"direct", "second_yellow"}]
+    for _minute, _rang, e in sorted(changements + expulsions, key=lambda t: t[:2]):
+        if isinstance(e, SubstitutionEvent):
+            if e.player_off in sur_le_terrain:
+                sur_le_terrain.remove(e.player_off)
+            sur_le_terrain.append(e.player_on)
+        elif e.player in sur_le_terrain:
+            sur_le_terrain.remove(e.player)
+    return sur_le_terrain
+
+
+def _graine(match_id: str, minute: int, role: str) -> int:
+    digest = hashlib.sha256(f"nlg_ingestion|{match_id}|{minute}|{role}".encode()).digest()
+    return int.from_bytes(digest[:8], "big")
+
+
+def choisir_acteur_defensif(timeline: Timeline, match_id: str, club: str, minute: int, groupe: str, squad: "EffectifClub") -> int:
+    """`player_id` du gardien (`GOALKEEPER`) ou d'un defenseur (`DEFENDER`) de `club` a `minute`.
+
+    Deterministe : candidats tries par nom, tirage par un `Random` seede par (match_id, minute, role) --
+    jamais l'etat global, jamais l'horloge. Un seul gardien est normalement en jeu (titulaire, ou son
+    remplacant apres un changement) ; aucun candidat -> evenement ecarte."""
+    candidats = sorted(n for n in en_jeu_a(timeline, club, minute) if position_group(squad.joueur(n).poste) == groupe)
+    if not candidats:
+        raise EvenementEcarte(f"aucun {groupe} en jeu pour {club} a la minute {minute}")
+    nom = Random(_graine(match_id, minute, groupe)).choice(candidats)
+    return squad.player_id(nom)
+
+
 def _commun(timeline: Timeline, match_id: str, match_sequence: int, event_id: int, minute: int, club: str,
             competition: str | None, journee: int | None) -> dict[str, Any]:
     return {
@@ -82,7 +122,8 @@ def _commun(timeline: Timeline, match_id: str, match_sequence: int, event_id: in
     }
 
 
-def _narratif_to_dict(event: NarrativeEvent, commun: dict[str, Any], squad: EffectifClub) -> dict[str, Any]:
+def _narratif_to_dict(event: NarrativeEvent, commun: dict[str, Any], squad: EffectifClub,
+                      timeline: Timeline, adverse: EffectifClub) -> dict[str, Any]:
     if event.event_type == BUT:
         dico = {**commun, "event_type": "but", "gabarit": event.gabarit, "player_id": squad.player_id(event.main_player)}
         if len(event.involved_players) > 1:
@@ -91,16 +132,20 @@ def _narratif_to_dict(event: NarrativeEvent, commun: dict[str, Any], squad: Effe
     if event.outcome in {"hors_cadre", "poteau", "barre"}:  # le tireur est l'acteur
         return {**commun, "event_type": "occasion", "gabarit": event.gabarit, "outcome": event.outcome,
                 "player_id": squad.player_id(event.main_player)}
-    raise EvenementEcarte(f"occasion {event.outcome!r} : acteur defensif non resolu")
+    # arret -> gardien adverse ; tacle / degagement -> defenseur adverse (le NarrativeEvent ne nomme que le tireur).
+    groupe = GOALKEEPER if event.outcome == "arret" else DEFENDER
+    acteur = choisir_acteur_defensif(timeline, commun["match_id"], adverse.club, event.minute, groupe, adverse)
+    return {**{**commun, "player_team": adverse.club, "is_home": adverse.club == commun["home_team"]},
+            "event_type": "occasion", "gabarit": event.gabarit, "outcome": event.outcome, "player_id": acteur}
 
 
-def _carton_to_dict(event: CardEvent, commun: dict[str, Any], squad: EffectifClub) -> dict[str, Any]:
+def _carton_to_dict(event: CardEvent, commun: dict[str, Any], squad: EffectifClub, timeline: Timeline, adverse: EffectifClub) -> dict[str, Any]:
     if event.card_type not in _CARTON_OUTCOMES:
         raise EvenementEcarte(f"type de carton inconnu : {event.card_type!r}")
     return {**commun, "event_type": "carton", "outcome": event.card_type, "player_id": squad.player_id(event.player)}
 
 
-def _remplacement_to_dict(event: SubstitutionEvent, commun: dict[str, Any], squad: EffectifClub) -> dict[str, Any]:
+def _remplacement_to_dict(event: SubstitutionEvent, commun: dict[str, Any], squad: EffectifClub, timeline: Timeline, adverse: EffectifClub) -> dict[str, Any]:
     entrant = squad.player_id(event.player_on)
     return {**commun, "event_type": "remplacement", "player_id": entrant, "entrant_id": entrant,
             "sortant_id": squad.player_id(event.player_off)}
@@ -139,7 +184,8 @@ def timeline_to_events(
     for event_id, (minute, _rang, _ordre, club, event, convertir) in enumerate(candidats):
         commun = _commun(timeline, match_id, match_sequence, event_id, minute, club, competition, journee)
         try:
-            dicts.append(convertir(event, commun, squads[club]))
+            adverse = squads[timeline.away_team if club == timeline.home_team else timeline.home_team]
+            dicts.append(convertir(event, commun, squads[club], timeline, adverse))
         except EvenementEcarte as exc:
             if skipped is not None:
                 skipped.append((event_id, str(exc)))

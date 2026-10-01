@@ -13,7 +13,9 @@ from ligue1sim.players import Player
 from ligue1sim.schedule import Match
 
 from narrative import build_timeline, match_result_from
-from nlg_ingestion import EffectifClub, timeline_to_events
+from dataclasses import replace
+
+from nlg_ingestion import EffectifClub, choisir_acteur_defensif, en_jeu_a, timeline_to_events
 
 CLES_COMMUNES = {
     "match_id", "match_sequence", "event_id", "minute", "player_id", "player_team", "home_team", "away_team",
@@ -162,3 +164,73 @@ class TestResolutionPlayerId:
     def test_joueur_inconnu_refuse(self):
         with pytest.raises(ValueError, match="introuvable"):
             EffectifClub("Home FC", []).player_id("fantome")
+
+
+class TestActeurDefensifSeede:
+    """Gardien (arret) / defenseur (tacle, degagement) : le NarrativeEvent ne nomme que le tireur."""
+
+    @staticmethod
+    def _timeline(substitutions=(), cards=()):
+        match_result, home, away = _match([GoalEvent(club_name="Home FC", scorer="h_17", assist=None, minute=12)],
+                                          cards, substitutions)
+        return build_timeline(match_result), EffectifClub("Away FC", away.players)
+
+    @staticmethod
+    def _gardien_titulaire(timeline):
+        [gk] = [p for p in timeline.away_lineup.players if p.poste == "GK"]
+        return gk
+
+    def test_gardien_titulaire(self):
+        timeline, away = self._timeline()
+        gk = self._gardien_titulaire(timeline)
+        assert choisir_acteur_defensif(timeline, "M", "Away FC", 40, "GK", away) == gk.id
+        assert choisir_acteur_defensif(timeline, "M", "Away FC", 89, "GK", away) == gk.id
+
+    def test_gardien_remplace(self):
+        timeline0, _ = self._timeline()
+        titulaire = self._gardien_titulaire(timeline0)
+        remplacant = next(p for p in _effectif("a", 2000) if p.poste == "GK" and p.name != titulaire.name)
+        sub = SubstitutionEvent(club_name="Away FC", player_off=titulaire.name, player_on=remplacant.name, minute=60)
+        timeline, away = self._timeline([sub])
+        assert choisir_acteur_defensif(timeline, "M", "Away FC", 59, "GK", away) == titulaire.id
+        assert choisir_acteur_defensif(timeline, "M", "Away FC", 60, "GK", away) == titulaire.id  # le changement suit l'occasion
+        assert choisir_acteur_defensif(timeline, "M", "Away FC", 61, "GK", away) == remplacant.id
+        assert remplacant.name in en_jeu_a(timeline, "Away FC", 90)
+
+    def test_gardien_expulse_sans_remplacant_aucun_gardien(self):
+        timeline0, _ = self._timeline()
+        titulaire = self._gardien_titulaire(timeline0)
+        carton = CardEvent(club_name="Away FC", player=titulaire.name, minute=50, card_type="direct")
+        timeline, away = self._timeline(cards=[carton])
+        with pytest.raises(ValueError, match="aucun GK"):
+            choisir_acteur_defensif(timeline, "M", "Away FC", 70, "GK", away)
+
+    def test_aucun_gardien(self):
+        timeline, away = self._timeline()
+        sans_gk = replace(timeline.away_lineup, players=[p for p in timeline.away_lineup.players if p.poste != "GK"])
+        timeline = replace(timeline, away_lineup=sans_gk)
+        with pytest.raises(ValueError, match="aucun GK"):
+            choisir_acteur_defensif(timeline, "M", "Away FC", 40, "GK", away)
+
+    def test_defenseur_deterministe_et_en_jeu(self):
+        timeline, away = self._timeline()
+        defenseurs = {p.id for p in timeline.away_lineup.players if p.poste in ("DC", "LB", "RB")}
+        choix = {choisir_acteur_defensif(timeline, "M", "Away FC", m, "DEF", away) for m in range(1, 90)}
+        assert choix <= defenseurs and len(choix) > 1  # varie selon la minute
+        assert choisir_acteur_defensif(timeline, "M", "Away FC", 33, "DEF", away) == choisir_acteur_defensif(timeline, "M", "Away FC", 33, "DEF", away)
+        # la graine depend du match
+        assert any(choisir_acteur_defensif(timeline, "M1", "Away FC", m, "DEF", away) != choisir_acteur_defensif(timeline, "M2", "Away FC", m, "DEF", away) for m in range(1, 90))
+
+    def test_occasions_defensives_converties_cote_adverse(self):
+        match_result, home, away = _match([GoalEvent(club_name="Home FC", scorer="h_17", assist=None, minute=12)])
+        for seed_date in range(40):  # des fillers avec arret/tacle/degagement apparaissent vite
+            match_result = replace(match_result, date=str(seed_date))
+            timeline = build_timeline(match_result)
+            dicts = timeline_to_events(timeline, match_sequence=1, home_squad=home.players, away_squad=away.players)
+            for d in dicts:
+                if d["event_type"] == "occasion" and d["outcome"] in ("arret", "tacle", "degagement"):
+                    tireur_home = next(e.team == "Home FC" for e in timeline.events if e.minute == d["minute"] and e.event_type == "occasion")
+                    assert d["is_home"] != tireur_home  # l'acteur est dans le camp oppose au tireur
+                    assert d["player_team"] == ("Away FC" if tireur_home else "Home FC")
+                    return
+        pytest.fail("aucune occasion defensive generee")
