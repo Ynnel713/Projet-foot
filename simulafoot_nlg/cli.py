@@ -39,6 +39,7 @@ from scripts.convert_commentary_xlsx_to_yaml import DEFAULT_YAML_PATH, convertir
 from scripts.export_analytics import export_analytics  # noqa: E402
 from scripts.import_seed import import_seed  # noqa: E402
 from scripts.init_db import DEFAULT_SCHEMA_PATH, init_db  # noqa: E402
+from scripts.reset_seed import reset_seed  # noqa: E402
 
 
 class _ImportStatsLike(Protocol):
@@ -98,6 +99,15 @@ def _cmd_import_seed(args: argparse.Namespace) -> None:
         f"{stats.scenarios} scénarios, {stats.variants} variantes, "
         f"{stats.phrases} phrases, {stats.dictionaries} entrées de dictionnaire importés"
     )
+
+
+def _cmd_reset_seed(args: argparse.Namespace) -> None:
+    try:
+        deleted = reset_seed(args.db, yes=args.yes)
+    except ValueError as exc:
+        print(f"Reset refusé : {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    print(f"Banque et historique vidés ({sum(deleted.values())} lignes) ; joueurs conservés.")
 
 
 def _cmd_convert_commentary(args: argparse.Namespace) -> None:
@@ -164,6 +174,12 @@ def main(argv: list[str] | None = None) -> None:
 
     sub.add_parser("import-seed", help="Importe data/seed/*.yml dans SQLite")
 
+    p_reset = sub.add_parser(
+        "reset-seed",
+        help="Vide la banque de phrases et l'historique (joueurs conservés) -- exporter l'historique avant",
+    )
+    p_reset.add_argument("--yes", action="store_true", help="Confirme la suppression (obligatoire)")
+
     p_convert = sub.add_parser(
         "convert-commentary", help="Convertit le classeur Excel de commentaire en data/seed/scenarios.yml"
     )
@@ -187,6 +203,7 @@ def main(argv: list[str] | None = None) -> None:
         "init-db": _cmd_init_db,
         "import-players": _cmd_import_players,
         "import-seed": _cmd_import_seed,
+        "reset-seed": _cmd_reset_seed,
         "convert-commentary": _cmd_convert_commentary,
         "export-analytics": _cmd_export_analytics,
         "select": _cmd_select,
