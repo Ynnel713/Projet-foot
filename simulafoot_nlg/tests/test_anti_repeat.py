@@ -1,10 +1,11 @@
 """anti_repeat : recency_penalty est implemente (voir TestRecencyPenalty) ;
-similarity_penalty l'est aussi (TestSimilarityPenalty) ; update_cooldown reste un SQUELETTE
-(contrat "echoue explicitement") jusqu'a son commit."""
+similarity_penalty (TestSimilarityPenalty) et update_cooldown (TestUpdateCooldown) aussi."""
 
 from __future__ import annotations
 
 import pytest
+
+import sqlite3
 
 from engine.anti_repeat import recency_penalty, similarity_penalty, update_cooldown
 from engine.models import Phrase, Player
@@ -18,11 +19,6 @@ def _phrase() -> Phrase:
 
 def _player() -> Player:
     return Player(id=1, first_name="A", last_name="B")
-
-
-def test_update_cooldown_raises_not_implemented_error(sqlite_conn):
-    with pytest.raises(NotImplementedError):
-        update_cooldown(sqlite_conn, _phrase(), _player(), "m1", "Quel but !")
 
 
 # --- recency_penalty : en matchs, binaire, match_sequence obligatoire -----------
@@ -215,3 +211,109 @@ class TestSimilarityPenalty:
         )
         with pytest.raises(ValueError, match="incomparables"):
             similarity_penalty(conn, TEXTE, self._joueur(), match_sequence=10)
+
+
+# --- update_cooldown : une transaction, historique PUIS signature ----------------
+
+
+class TestUpdateCooldown:
+    @pytest.fixture
+    def base(self, sqlite_conn, seeded_scenario):
+        sqlite_conn.execute("INSERT INTO players (id, first_name, last_name) VALUES (7, 'Kylian', 'Mbappé')")
+        sqlite_conn.execute(
+            "INSERT INTO phrase_cooldowns (phrase_id, cooldown_matches) VALUES (?, 3)", (seeded_scenario["phrase_id"],)
+        )
+        sqlite_conn.commit()
+        phrase = Phrase(id=seeded_scenario["phrase_id"], variant_id=seeded_scenario["variant_id"], text="x")
+        return sqlite_conn, phrase, Player(id=7, first_name="Kylian", last_name="Mbappé")
+
+    @staticmethod
+    def _compte(conn, table: str) -> int:
+        return int(conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0])
+
+    def test_ecrit_l_historique_puis_la_signature_avec_le_bon_history_id(self, base):
+        conn, phrase, joueur = base
+        history_id = update_cooldown(conn, phrase, joueur, "m10", TEXTE, match_sequence=10)
+
+        ligne = conn.execute("SELECT * FROM phrase_history WHERE id = ?", (history_id,)).fetchone()
+        assert (ligne["phrase_id"], ligne["player_id"], ligne["match_id"]) == (phrase.id, 7, "m10")
+        assert (ligne["match_sequence"], ligne["rendered_text"]) == (10, TEXTE)
+        signature = conn.execute(
+            "SELECT history_id, signature FROM similarity_signatures"
+        ).fetchall()
+        assert [s["history_id"] for s in signature] == [history_id]
+        assert minhash.deserialiser(signature[0]["signature"]) == minhash.signature(TEXTE)
+
+    def test_l_ecriture_est_commitee(self, base):
+        conn, phrase, joueur = base
+        update_cooldown(conn, phrase, joueur, "m10", TEXTE, match_sequence=10)
+        conn.rollback()  # sans effet : deja commite
+        assert (self._compte(conn, "phrase_history"), self._compte(conn, "similarity_signatures")) == (1, 1)
+        assert not conn.in_transaction
+
+    def test_les_penalites_voient_l_usage_enregistre(self, base):
+        conn, phrase, joueur = base
+        assert recency_penalty(conn, phrase, joueur, match_sequence=10) == 0.0
+        update_cooldown(conn, phrase, joueur, "m10", TEXTE, match_sequence=10)
+        assert recency_penalty(conn, phrase, joueur, match_sequence=11) == 1.0
+        assert recency_penalty(conn, phrase, joueur, match_sequence=13) == 0.0
+        assert similarity_penalty(conn, TEXTE, joueur, match_sequence=11) == 1.0
+
+    def test_si_la_signature_echoue_la_ligne_d_historique_est_annulee(self, base):
+        conn, phrase, joueur = base
+        conn.executescript(
+            """CREATE TRIGGER echec_signature BEFORE INSERT ON similarity_signatures
+               BEGIN SELECT RAISE(ABORT, 'signature refusee'); END;"""
+        )
+        with pytest.raises(sqlite3.IntegrityError, match="signature refusee"):
+            update_cooldown(conn, phrase, joueur, "m10", TEXTE, match_sequence=10)
+
+        assert self._compte(conn, "phrase_history") == 0  # la ligne inseree par log_usage est annulee
+        assert self._compte(conn, "similarity_signatures") == 0
+        assert not conn.in_transaction
+
+    def test_si_le_calcul_de_signature_echoue_l_historique_est_annule(self, base, monkeypatch):
+        conn, phrase, joueur = base
+
+        def casse(_texte: str):
+            raise RuntimeError("calcul impossible")
+
+        monkeypatch.setattr(minhash, "signature", casse)
+        with pytest.raises(RuntimeError, match="calcul impossible"):
+            update_cooldown(conn, phrase, joueur, "m10", TEXTE, match_sequence=10)
+        assert self._compte(conn, "phrase_history") == 0
+
+    def test_une_phrase_de_secours_est_refusee_sans_rien_ecrire(self, base):
+        conn, phrase, joueur = base
+        secours_id = conn.execute(
+            "INSERT INTO phrases (variant_id, text, is_fallback) VALUES (?, 'Le match suit son cours.', 1)",
+            (phrase.variant_id,),
+        ).lastrowid
+        conn.commit()
+        secours = Phrase(id=secours_id, variant_id=phrase.variant_id, text="x", is_fallback=True)
+        with pytest.raises(ValueError, match="phrase de secours"):
+            update_cooldown(conn, secours, joueur, "m10", TEXTE, match_sequence=10)
+        assert (self._compte(conn, "phrase_history"), self._compte(conn, "similarity_signatures")) == (0, 0)
+
+    @pytest.mark.parametrize(("rang", "erreur"), [(None, ValueError), (-1, ValueError), (True, TypeError)])
+    def test_match_sequence_invalide_est_refuse_sans_ecriture(self, base, rang, erreur):
+        conn, phrase, joueur = base
+        with pytest.raises(erreur, match="match_sequence"):
+            update_cooldown(conn, phrase, joueur, "m10", TEXTE, match_sequence=rang)
+        assert self._compte(conn, "phrase_history") == 0
+
+    def test_match_sequence_est_obligatoire_et_par_mot_cle(self, base):
+        conn, phrase, joueur = base
+        with pytest.raises(TypeError):
+            update_cooldown(conn, phrase, joueur, "m10", TEXTE)  # type: ignore[call-arg]
+        with pytest.raises(TypeError):
+            update_cooldown(conn, phrase, joueur, "m10", TEXTE, 10)  # type: ignore[misc]
+
+    def test_une_transaction_deja_ouverte_est_refusee_et_n_est_pas_touchee(self, base):
+        conn, phrase, joueur = base
+        conn.execute("INSERT INTO tags (name) VALUES ('en attente')")  # ecriture de l'appelant, non commitee
+        with pytest.raises(RuntimeError, match="transaction"):
+            update_cooldown(conn, phrase, joueur, "m10", TEXTE, match_sequence=10)
+        assert conn.in_transaction
+        assert self._compte(conn, "tags") == 1
+        assert self._compte(conn, "phrase_history") == 0

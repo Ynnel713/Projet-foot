@@ -1,26 +1,14 @@
-"""SQUELETTE -- anti-repetition : penalites de recence/similarite, mise a
-jour du cooldown. Aucune implementation dans cette session.
+"""Anti-repetition : penalites de recence et de similarite, enregistrement d'un usage.
 
-Algorithme prevu :
-    recency_penalty : lit phrase_history pour (phrase_id, player_id),
-        cherche le dernier usage (`used_at` le plus recent) puis le nombre de
-        matchs ecoules depuis (a definir : soit un compteur de matchs
-        explicite fourni par l'appelant, soit derive de match_id via une
-        table de matchs a venir). Retourne une penalite dans [0, 1] : 0 = pas
-        de penalite (cooldown largement ecoule), 1 = phrase totalement
-        interdite (cooldown pas ecoule). Distinct du refus pur "cooldown non
-        defini" gere par phrase_selector -- ici c'est une PENALITE continue,
-        pas un refus binaire.
-    similarity_penalty : calcule une signature MinHash (ou equivalent, k-shingles
-        sur le texte rendu) du candidat, la compare aux `similarity_signatures`
-        recentes du meme joueur (similarite de Jaccard approx). Retourne une
-        penalite [0, 1] croissante avec la similarite au texte le plus proche
-        deja vu.
-    update_cooldown : APRES qu'une phrase a ete choisie et rendue (voir
-        template_filler.render + post_process.apply), enregistre l'usage :
-        insere dans phrase_history (ou delegue a logger.log_usage -- a
-        trancher a l'implementation pour eviter la double ecriture), calcule
-        et insere la signature de similarite dans similarity_signatures.
+Tout se mesure en MATCHS (`match_sequence`, rang du match fourni par l'appelant), jamais en
+heures (decision sim-window) ; `match_sequence` est obligatoire et par mot-cle partout, None est
+refuse sans repli (voir profile_engine.validate_match_sequence).
+
+    recency_penalty    : 1.0 tant que le cooldown de la phrase n'est pas ecoule pour ce joueur, 0.0 apres.
+    similarity_penalty : similarite (MinHash, engine/minhash.py) avec les textes recents du joueur.
+    update_cooldown    : APRES le choix et le rendu (template_filler.render + post_process.apply),
+        enregistre l'usage : phrase_history (via logger.log_usage, ecrivain unique, D17) puis
+        similarity_signatures, dans UNE transaction.
 """
 
 from __future__ import annotations
@@ -28,6 +16,8 @@ from __future__ import annotations
 from sqlite3 import Connection
 
 from engine import minhash
+from engine.db import sqlite_transaction
+from engine.logger import log_usage
 from engine.models import Phrase, Player
 from engine.profile_engine import validate_match_sequence
 
@@ -104,12 +94,33 @@ def similarity_penalty(
 
 
 def update_cooldown(
-    conn: Connection, phrase: Phrase, player: Player, match_id: str, rendered_text: str
-) -> None:
-    """Enregistre l'usage de `phrase` (texte final `rendered_text`) pour
-    `player` sur `match_id` -- voir algorithme prevu en tete de module. Leve
-    NotImplementedError tant que la banque de phrases n'est pas livree."""
-    raise NotImplementedError(
-        "anti_repeat.update_cooldown : squelette non implémenté -- voir la docstring "
-        "de engine/anti_repeat.py pour l'algorithme prévu."
-    )
+    conn: Connection,
+    phrase: Phrase,
+    player: Player,
+    match_id: str,
+    rendered_text: str,
+    *,
+    match_sequence: int,
+) -> int:
+    """Enregistre l'usage de `phrase` (texte final `rendered_text`) pour `player` sur `match_id`
+    (rang `match_sequence`) et retourne l'id de la ligne `phrase_history`.
+
+    UNE transaction couvre l'historique puis la signature de similarite : `logger.log_usage` insere
+    la ligne, son id (`history_id`) sert a inserer la signature ; si n'importe quelle etape echoue,
+    TOUT est annule (jamais un historique sans signature, qui fausserait similarity_penalty). Les
+    validations (match_sequence, phrase de secours : ValueError) precedent toute ecriture.
+
+    La transaction est commitee ici : si la connexion en a deja une d'ouverte (ecritures de
+    l'appelant non commitees), RuntimeError -- on ne commite ni n'annule les ecritures d'autrui."""
+    if conn.in_transaction:
+        raise RuntimeError(
+            "update_cooldown : une transaction est deja ouverte sur la connexion -- commitez ou "
+            "annulez-la d'abord (cette fonction commite sa propre transaction)."
+        )
+    with sqlite_transaction(conn):
+        history_id = log_usage(conn, phrase.id, player.id, match_id, rendered_text, match_sequence=match_sequence)
+        conn.execute(
+            "INSERT INTO similarity_signatures (history_id, signature) VALUES (?, ?)",
+            (history_id, minhash.serialiser(minhash.signature(rendered_text))),
+        )
+    return history_id

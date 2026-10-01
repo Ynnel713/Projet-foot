@@ -15,10 +15,11 @@
 | `engine/profile_engine.py` | Normalise un dict brut (ligne SQL) en `Player`/`MatchContext` typés -- postes secondaires et preferred moves redécoupés, aucune valeur inventée. |
 | `engine/scenario_engine.py` | Charge scénario -> variantes -> phrases (+ conditions/slots) depuis SQLite, en lecture seule. |
 | `engine/phrase_selector.py` | **Squelette.** Sélectionnera une `Phrase` pour un (scénario, joueur, contexte) donnés. |
-| `engine/anti_repeat.py` | **Squelette.** Pénalités de récence/similarité, mise à jour du cooldown. |
-| `engine/template_filler.py` | **Squelette.** Résout les `{slot_name}` d'une `Phrase`. |
+| `engine/anti_repeat.py` | Pénalités de récence (en matchs, binaire) et de similarité (MinHash), `update_cooldown` (une transaction : historique puis signature). `match_sequence` obligatoire. |
+| `engine/minhash.py` | Signature MinHash d'un texte via `hashlib` (indépendante de `PYTHONHASHSEED`). |
+| `engine/template_filler.py` | Résout les `{slot}` d'une `Phrase` (expressions à points sans `eval`, dictionnaires, `SlotResolutionError`) ; rng dérivé par phrase. |
 | `engine/post_process.py` | Post-traitement du texte rendu : espaces, majuscule, ponctuation finale, élision -- quatre fonctions pures enchaînées par `apply`. |
-| `engine/logger.py` | **Squelette.** Journalise un usage de phrase (`phrase_history`). |
+| `engine/logger.py` | `log_usage` : écrivain unique de `phrase_history`, retourne l'id inséré ; refuse les phrases de secours. |
 | `data/import/import_players.py` | ETL `joueurs.xlsx` -> DuckDB -> SQLite (`players` + `player_attributes`). |
 | `scripts/init_db.py` | Crée/met à jour `data/simulafoot.db` depuis `data/schema.sql` (idempotent). |
 | `engine/fm26.py` | Source unique des 47 attributs FM26 (`FM26_ATTRIBUTES`, `FM26_ATTRIBUTES_KNOWN`) : lue par l'import des joueurs et par l'évaluateur de conditions. |
@@ -34,10 +35,9 @@
 Ce qui **fonctionne réellement** aujourd'hui : le schéma, l'import des
 joueurs, le chargement des scénarios/phrases depuis la base. Ce qui **n'est
 pas encore implémenté** (lève `NotImplementedError`) : la sélection d'une
-phrase, l'anti-répétition, le remplissage des slots, la journalisation
-d'usage. Chaque module concerné documente en
-tête l'algorithme prévu -- c'est le point de départ de la prochaine session,
-une fois la banque de phrases livrée.
+phrase (`phrase_selector.select`). Le rendu des slots, le post-traitement, le
+journal d'usage et l'anti-répétition sont implémentés et testés ; `select`
+documente en tête l'algorithme prévu.
 
 ## Initialisation (< 10 min)
 
