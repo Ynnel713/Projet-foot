@@ -5,7 +5,12 @@ from __future__ import annotations
 
 import pytest
 
+from engine.models import Player
 from engine.profile_engine import compute_score_context, normalize_match_context, normalize_player
+
+# Champs de MatchContext qui portent un Player deja resolu par l'appelant
+# (pass-through, voir profile_engine._player_or_none).
+PLAYER_VALUED_CONTEXT_FIELDS = ("sortant", "entrant")
 
 
 def test_normalizes_a_complete_player_row():
@@ -105,6 +110,25 @@ def test_normalize_match_context_passes_through_score_context():
 def test_normalize_match_context_score_context_defaults_to_none():
     context = normalize_match_context({"match_id": "m1"})
     assert context.score_context is None
+
+
+@pytest.mark.parametrize("field", PLAYER_VALUED_CONTEXT_FIELDS)
+class TestPlayerValuedContextFields:
+    def test_absent_key_gives_none(self, field):
+        assert getattr(normalize_match_context({"match_id": "m1"}), field) is None
+
+    def test_explicit_none_gives_none(self, field):
+        assert getattr(normalize_match_context({"match_id": "m1", field: None}), field) is None
+
+    def test_player_is_passed_through_as_the_same_object(self, field):
+        joueur = Player(id=7, first_name="Ousmane", last_name="Dembélé")
+        context = normalize_match_context({"match_id": "m1", field: joueur})
+        assert getattr(context, field) is joueur
+
+    @pytest.mark.parametrize("not_a_player", [{"id": 7}, "Ousmane Dembélé", 7])
+    def test_anything_else_raises_type_error_naming_the_field(self, field, not_a_player):
+        with pytest.raises(TypeError, match=field):
+            normalize_match_context({"match_id": "m1", field: not_a_player})
 
 
 # --- compute_score_context : un cas par valeur de SCORE_CONTEXT_VALUES -----

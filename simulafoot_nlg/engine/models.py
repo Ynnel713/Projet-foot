@@ -136,6 +136,12 @@ class MatchContext:
     # meme principe que score_context ci-dessus. None si l'appelant ne l'a pas
     # fourni (ex. contexte construit hors du pipeline narrative.py).
     gabarit: str | None = None
+    # Protagonistes d'un REMPLACEMENT (decision D3 du plan V2.1) : le joueur qui
+    # sort et celui qui entre, meme principe que passeur/receveur ci-dessus
+    # (None pour tout evenement qui n'est pas un remplacement, jamais rempli
+    # "au cas ou"). Resolus par l'appelant (par ID, decision D14), jamais ici.
+    sortant: Player | None = None
+    entrant: Player | None = None
 
     @property
     def opponent_team(self) -> str | None:

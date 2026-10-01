@@ -58,10 +58,24 @@ def normalize_player(row: dict[str, Any]) -> Player:
     )
 
 
+def _player_or_none(row: dict[str, Any], key: str) -> Player | None:
+    """Pass-through d'un `Player` deja resolu par l'appelant (decision D14 :
+    resolution par ID hors de ce module, aucun acces base ici). Cle absente
+    ou None -> None ; tout autre type (dict brut, nom, ID...) -> TypeError :
+    convertir silencieusement un dict en Player inventerait des champs."""
+    value = row.get(key)
+    if value is None or isinstance(value, Player):
+        return value
+    raise TypeError(
+        f"normalize_match_context: {key!r} doit etre un Player ou None, recu {type(value).__name__}"
+    )
+
+
 def normalize_match_context(row: dict[str, Any]) -> MatchContext:
     """Construit un MatchContext depuis un dict brut (ex. un evenement issu
     du moteur de simulation ligue1sim, pas d'une table dediee -- voir
-    engine.models.MatchContext). `match_id` est la seule cle obligatoire."""
+    engine.models.MatchContext). `match_id` est la seule cle obligatoire.
+    `sortant`/`entrant` sont des `Player` deja resolus (voir _player_or_none)."""
     if "match_id" not in row:
         raise KeyError('normalize_match_context: la ligne ne contient pas de clé "match_id"')
 
@@ -79,6 +93,8 @@ def normalize_match_context(row: dict[str, Any]) -> MatchContext:
         scenario_code=row.get("scenario_code"),
         score_context=row.get("score_context"),
         gabarit=row.get("gabarit"),
+        sortant=_player_or_none(row, "sortant"),
+        entrant=_player_or_none(row, "entrant"),
     )
 
 

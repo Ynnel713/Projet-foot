@@ -237,6 +237,27 @@ class TestMissilePiedDroitNonSensFootballRegression:
         assert all(evaluate_condition(c, righty, ctx) for c in conditions)
 
 
+class TestChampsJoueursDuContexte:
+    """sortant/entrant (D3) : conditionnables au sens ou `_resolve` les
+    reconnait. Sans leur ajout a MATCH_CONTEXT_FIELDS, `_resolve` leve
+    ValueError ("inconnu")."""
+
+    @staticmethod
+    def _condition(attribute: str, operator: str, value: str) -> PhraseCondition:
+        return PhraseCondition(id=1, phrase_id=1, attribute=attribute, operator=operator, value=value)
+
+    @pytest.mark.parametrize("champ", ["sortant", "entrant"])
+    def test_champ_absent_du_contexte_ne_matche_jamais_et_ne_leve_pas(self, champ):
+        condition = self._condition(champ, "==", "x")
+        assert evaluate_condition(condition, _player(), _context()) is False
+
+    @pytest.mark.parametrize("champ", ["sortant", "entrant"])
+    def test_champ_renseigne_est_resolu_sans_valueerror(self, champ):
+        joueur = _player(id=9, first_name="Ousmane", last_name="Dembélé")
+        condition = self._condition(champ, "!=", "x")
+        assert evaluate_condition(condition, _player(), _context(**{champ: joueur})) is True
+
+
 class TestNamespaceCollision:
     def test_no_collision_between_player_fields_and_fm26_attributes(self):
         # "data.import.import_players" n'est pas importable statiquement

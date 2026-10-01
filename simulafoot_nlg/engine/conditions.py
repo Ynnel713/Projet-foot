@@ -47,7 +47,11 @@ PLAYER_FIELDS = frozenset({"age", "height_cm", "weak_foot", "foot", "fm_rating",
 # Champs lus directement sur MatchContext (dataclass).
 # is_home ajoute le 01/10/2026 (decision D1 du plan Tier 2, AMBIANCE) : une
 # phrase peut conditionner sur domicile/exterieur ("is_home == true").
-MATCH_CONTEXT_FIELDS = frozenset({"minute", "score_context", "is_home"})
+# sortant/entrant ajoutes (decision D3, plan V2.1) : champs de type Player, donc
+# seuls ==/!= ont un sens dessus (un operateur d'ordre leverait TypeError) ; le
+# choix de variante selon le profil du remplacement releve du selecteur (option
+# C, SPEC_ANTI_REPEAT.md section 5), pas de cette grammaire.
+MATCH_CONTEXT_FIELDS = frozenset({"minute", "score_context", "is_home", "sortant", "entrant"})
 
 _ATOME_RE = re.compile(
     r'^\s*(\w+)\s*(<=|>=|!=|==|=|<|>)\s*(.+?)\s*$'
