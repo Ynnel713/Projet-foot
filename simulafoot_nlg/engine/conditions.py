@@ -185,5 +185,10 @@ def evaluate_condition(condition: PhraseCondition, player: Player, context: Matc
         membres = [v.strip().strip('"') for v in condition.value.split(",")]
         return str(gauche) in membres
     if condition.operator == "contient":
+        # Meme regle que _comparer : une information absente ne matche jamais
+        # (D16) -- sans cette garde, `x in None` levait TypeError avant meme
+        # d'atteindre _comparer.
+        if gauche is None:
+            return False
         return condition.value in gauche
     return _comparer(gauche, condition.operator, condition.value)

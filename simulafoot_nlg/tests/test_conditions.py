@@ -257,6 +257,24 @@ class TestAttributFmConnuMaisAbsent:
         with pytest.raises(ValueError, match="Aggresion"):
             evaluate_condition(condition, sans_attributs, _context())
 
+    @pytest.mark.parametrize(
+        ("attribut", "joueur", "contexte"),
+        [
+            ("Aggression", _player(attributes={}), _context()),  # attribut FM connu, absent
+            ("score_context", _player(), _context(score_context=None)),  # champ de contexte inconnu
+        ],
+    )
+    def test_contient_sur_une_valeur_absente_est_faux_et_ne_leve_pas(self, attribut, joueur, contexte):
+        condition = PhraseCondition(id=1, phrase_id=1, attribute=attribut, operator="contient", value="x")
+        assert evaluate_condition(condition, joueur, contexte) is False
+
+    def test_contient_sur_preferred_moves_matche_toujours(self):
+        condition = PhraseCondition(
+            id=1, phrase_id=1, attribute="preferred_moves", operator="contient", value="Shoots From Distance"
+        )
+        assert evaluate_condition(condition, _player(), _context()) is True
+        assert evaluate_condition(condition, _player(preferred_moves=()), _context()) is False
+
     def test_attribut_present_est_toujours_compare(self):
         condition = PhraseCondition(id=1, phrase_id=1, attribute="Aggression", operator=">=", value="55")
         assert evaluate_condition(condition, _player(attributes={"Aggression": 60}), _context()) is True
