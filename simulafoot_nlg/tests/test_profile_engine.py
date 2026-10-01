@@ -6,7 +6,12 @@ from __future__ import annotations
 import pytest
 
 from engine.models import Player
-from engine.profile_engine import compute_score_context, normalize_match_context, normalize_player
+from engine.profile_engine import (
+    compute_score_context,
+    normalize_match_context,
+    normalize_player,
+    validate_match_sequence,
+)
 
 # Champs de MatchContext qui portent un Player deja resolu par l'appelant
 # (pass-through, voir profile_engine._player_or_none).
@@ -187,3 +192,22 @@ def test_compute_score_context_extends_an_existing_lead():
 def test_compute_score_context_still_behind_after_scoring():
     assert compute_score_context(0, 3, scorer_is_home=True) == "reduit_ecart"
     assert compute_score_context(3, 0, scorer_is_home=False) == "reduit_ecart"
+
+
+class TestValidateMatchSequence:
+    @pytest.mark.parametrize("rang", [0, 1, 38])
+    def test_un_entier_positif_ou_nul_est_renvoye_tel_quel(self, rang):
+        assert validate_match_sequence(rang) == rang
+
+    def test_none_leve_value_error_sans_repli(self):
+        with pytest.raises(ValueError, match="obligatoire"):
+            validate_match_sequence(None)
+
+    @pytest.mark.parametrize("pas_un_entier", [True, False, "3", 2.0])
+    def test_bool_et_non_entier_levent_type_error(self, pas_un_entier):
+        with pytest.raises(TypeError, match="match_sequence"):
+            validate_match_sequence(pas_un_entier)
+
+    def test_un_rang_negatif_leve_value_error(self):
+        with pytest.raises(ValueError, match=">= 0"):
+            validate_match_sequence(-1)

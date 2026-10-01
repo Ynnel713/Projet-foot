@@ -71,19 +71,27 @@ def _player_or_none(row: dict[str, Any], key: str) -> Player | None:
     )
 
 
-def _match_sequence_or_none(row: dict[str, Any]) -> int | None:
-    """`match_sequence` : None/absent -> None ; un entier >= 0 sinon. Un bool
-    est refuse explicitement (isinstance(True, int) est vrai en Python :
-    `match_sequence=True` passerait pour 1 et fausserait les cooldowns sans
-    bruit) ; tout autre type -> TypeError ; un rang negatif -> ValueError."""
-    value = row.get("match_sequence")
+def validate_match_sequence(value: object) -> int:
+    """Rang de match valide, ou une exception : l'unique regle de `match_sequence`
+    (unite du cooldown, en MATCHS), partagee par la normalisation du contexte, le
+    journal d'usage et l'anti-repetition. None -> ValueError (pas de repli : un rang
+    deduit ou devine fausserait les cooldowns) ; un bool est refuse explicitement
+    (isinstance(True, int) est vrai en Python : `True` passerait pour 1) ; tout autre
+    non-entier -> TypeError ; un rang negatif -> ValueError."""
     if value is None:
-        return None
+        raise ValueError("match_sequence est obligatoire : None refuse (aucun repli).")
     if isinstance(value, bool) or not isinstance(value, int):
-        raise TypeError(f"normalize_match_context: 'match_sequence' doit etre un int, recu {type(value).__name__}")
+        raise TypeError(f"match_sequence doit etre un int, recu {type(value).__name__}")
     if value < 0:
-        raise ValueError(f"normalize_match_context: 'match_sequence' doit etre >= 0, recu {value}")
+        raise ValueError(f"match_sequence doit etre >= 0, recu {value}")
     return value
+
+
+def _match_sequence_or_none(row: dict[str, Any]) -> int | None:
+    """`match_sequence` d'une ligne brute : None/absent -> None, sinon voir
+    validate_match_sequence."""
+    value = row.get("match_sequence")
+    return None if value is None else validate_match_sequence(value)
 
 
 def normalize_match_context(row: dict[str, Any]) -> MatchContext:
