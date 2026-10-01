@@ -440,6 +440,18 @@ le test `test_cascade_exhaustion_falls_through_to_the_final_fallback` fige les e
 « fallback final explicite » et « toujours a definir » de la docstring : à mettre à jour avec la
 décision.
 
+**Compléments à D9 et D10 (01/10/2026, notes de l'architecte) :**
+- **D9 (c) — invalidation à définir.** Un cache mémoire chargé au démarrage devient périmé si
+  `import-players` tourne pendant la vie du processus ; si l'import peut se faire à chaud, un
+  mécanisme d'invalidation reste à définir.
+- **D9 — deux sources de joueurs.** Les caches existants lisent les classeurs (`lru_cache`,
+  `st.cache_data` sur `joueurs.xlsx` / `entraineurs.xlsx`) ; le moteur NLG lit `simulafoot.db`. Un
+  cache côté NLG ne partage pas l'invalidation de l'application.
+- **D10 (a) × D7bis.** Une phrase de secours en base est du SEED : supprimée puis recréée à chaque
+  réimport. Elle doit figurer dans les YAML, ou être créée par le script de reset.
+- **D10 — WARNING.** Deux WARNING pour un seul incident (étape 7.e puis fallback final) est un
+  anti-pattern à éviter ; à décider avec D10 : un seul WARNING enrichi, ou deux niveaux distincts.
+
 ## Ce qui N'est PAS bloquant (déjà en place)
 - Le schéma SQL (`phrase_history`, `phrase_cooldowns`,
   `similarity_signatures`) est cohérent avec l'algorithme documenté dans le
