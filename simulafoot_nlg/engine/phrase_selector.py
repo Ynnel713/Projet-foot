@@ -4,10 +4,15 @@ donnes. Aucune implementation dans cette session (voir contrainte du brief :
 
 Algorithme prevu (une fois la banque livree) :
     1. scenario_engine.load_scenario(code) -- 404 explicite si absent.
-    2. scenario_engine.load_variants(scenario.id), ne garder que is_active=1 ;
-       si aucune variante specifique ne "matche" mieux le contexte (logique
-       de matching a definir avec la banque), retomber sur celle(s)
-       is_default=1.
+    2. scenario_engine.load_variants(scenario.id), ne garder que is_active=1,
+       puis ORDONNER les variantes (decision D1 du 01/10/2026, SPEC_ANTI_REPEAT.md
+       section 6) : les variantes NON par defaut (SURNOM, etc.) d'abord, triees
+       par weight decroissant (ties -> variant.id croissant, deterministe), puis
+       la variante is_default en dernier. Une phrase SURNOM dont la condition
+       matche PRIME sur toute phrase DEFAUT ; sinon on retombe sur DEFAUT.
+       (Ordre inverse -- DEFAUT d'abord, SURNOM si DEFAUT n'a aucun candidat --
+       rejete : avec des phrases sans condition en repli, DEFAUT n'a jamais 0
+       candidat et les SURNOM ne sortiraient jamais.)
     3. Pour chaque variante candidate, scenario_engine.load_phrases(variant.id).
     4. Filtrer les phrases dont une condition `mandatory=True` echoue (voir
        PhraseCondition) -- ECARTEES, pas depriorisees.
@@ -37,19 +42,21 @@ Algorithme prevu (une fois la banque livree) :
             reproductible avec seed").
        (Ce palier remplace le tirage uniforme parmi TOUTES les candidates, qui
        etait l'option beta, ecartee.)
-    7. CASCADE DE VARIANTES SI 0 CANDIDAT (decision du 01/10/2026, voir
+    7. CASCADE DE VARIANTES SI 0 CANDIDAT -- c'est l'ordre NORMAL d'essai de
+       l'etape 2 (SURNOM -> DEFAUT), pas un repli exceptionnel : la plupart des
+       evenements n'ont aucun SURNOM eligible et sont servis par DEFAUT
+       (decision du 01/10/2026, voir
        AUDIT_COUVERTURE_DONNEES_JOUEUR.md -- garde-fou sain pour les
        scenarios a faible densite de donnees joueur, ex. GESTE_SIGNATURE
        conditionne a 86% de ses phrases sur preferred_moves, renseigne a
        ~5-90% des joueurs selon l'etat de l'enrichissement en cours) :
-         a. Si l'etape 4 ecarte TOUTES les phrases de la variante choisie
-            a l'etape 2 (0 survivante), NE PAS s'arreter la : reessayer
-            avec les AUTRES variantes actives (is_active=1) du MEME
-            scenario, une seule fois chacune, dans cet ordre de priorite :
+         a. Si l'etape 4 (ou le cooldown de l'etape 5) ecarte TOUTES les
+            phrases de la variante courante (0 survivante), NE PAS s'arreter
+            la : essayer la variante SUIVANTE de l'ordre de l'etape 2, une
+            seule fois chacune :
               i.  les variantes non-is_default, triees par weight
                   decroissant (ties -> variant.id croissant, deterministe) ;
-              ii. la variante is_default en dernier recours (si elle
-                  n'etait pas deja celle tentee a l'etape 2).
+              ii. la variante is_default en dernier recours.
          b. Chaque variante de la cascade repasse par les etapes 4 et 5
             A L'IDENTIQUE (conditions mandatory + cooldown obligatoire ne
             sont jamais contournes par le fallback -- la cascade change de
@@ -60,10 +67,12 @@ Algorithme prevu (une fois la banque livree) :
          d. GARDE-FOU anti-boucle : chaque variante active du scenario est
             tentee au plus une fois par appel a `select` -- la cascade est
             bornee par le nombre de variantes, jamais un retry illimite.
-         e. LOGGING obligatoire des que la cascade est activee (la variante
-            choisie a l'etape 2 a rendu 0 candidat) : niveau WARNING,
-            avec au minimum scenario_code, variant_id ecarte, variant_id
-            de repli retenu (ou absence totale si meme la cascade echoue).
+         e. LOGGING obligatoire, mais PAS pour le passage normal SURNOM ->
+            DEFAUT (il inonderait les logs) : niveau WARNING uniquement quand
+            la variante is_default elle-meme rend 0 candidat (le scenario est
+            sous-alimente), avec au minimum scenario_code, variant_id
+            ecarte(s), variant_id de repli retenu (ou absence totale si meme
+            la cascade echoue).
             Objectif explicite : rendre OBSERVABLE en production qu'un
             scenario est en train de "mourir" sur sa variante principale
             faute de donnee joueur -- c'est ce signal qui dira si
