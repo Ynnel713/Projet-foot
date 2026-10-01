@@ -513,6 +513,29 @@ décision.
 - **Reclassement STATISTIQUES_PÉRIODIQUES :** `src/ligue1sim/match_stats.py` existe (non commité,
   valeurs finales de match : possession, tirs, tirs cadrés, xG) ; le cumul périodique manque.
 
+**D16 — évaluateur de conditions : attribut absent (01/10/2026, architecte).** Deux cas à
+distinguer dans `conditions.evaluate_condition` : (1) attribut TOTALEMENT inconnu du système (typo
+dans un YAML) → `ValueError` (signal fort, à PRÉSERVER) ; (2) attribut CONNU mais absent chez ce
+joueur → `False`, comme `age = None` aujourd'hui : la phrase est écartée silencieusement, sans
+exception. Impact : une branche dans `evaluate_condition`, qui s'appuie sur `PLAYER_FIELDS`
+(`engine/conditions.py:45`, colonnes de `Player`) et sur la liste des attributs FM connus
+(`FM26_ATTRIBUTES`, `data/import/import_players.py:71`, hors du paquet `engine` : à rendre
+disponible côté moteur). **Test obligatoire** : une condition FM sur un `attributes` vide renvoie
+`False` sans lever ; il doit échouer si on retire le correctif. **Corollaire :** `contient` sur un
+attribut `None` lève aujourd'hui `TypeError` (latent : aucun pilote ne l'exerce, ils l'emploient
+sur `preferred_moves`, jamais `None`) ; même traitement, retourner `False`.
+- **Bug connu jusqu'au correctif :** les 526 joueurs sans attributs FM (6,9 % de la base ; tous les
+  postes, 44 gardiens inclus ; `fm_rating` renseigné pour les 526) font lever `ValueError` à toute
+  condition FM, c'est-à-dire dès le premier événement d'un scénario conditionné par un attribut FM.
+  Latent tant que `select` n'est pas implémenté (`NotImplementedError`). Incohérent avec
+  `normalize_player`, dont la docstring dit qu'un joueur sans attributs est « un état normal ».
+- **Divergence audit / exécution :** `scripts/audit_conditions_pilote.py` compte « valeur absente =
+  condition fausse » (documenté), alors que l'exécution levait une exception ; D16 aligne
+  l'exécution sur l'audit.
+- **Opérateurs réellement utilisés par les 8 pilotes (périmètre des tests de `conditions.py`) :**
+  CINQ — `>=`, `<=`, `contient` (`preferred_moves`), `==` (`is_home`), `in` (`position`). Jamais
+  `<`, `>`, `!=`, `=`.
+
 ## Ce qui N'est PAS bloquant (déjà en place)
 - Le schéma SQL (`phrase_history`, `phrase_cooldowns`,
   `similarity_signatures`) est cohérent avec l'algorithme documenté dans le
