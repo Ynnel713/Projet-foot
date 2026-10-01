@@ -1,0 +1,28 @@
+=== SMOKE TEST -- 20 premiers evenements d'un match simule (Lyon-Marseille) ===
+AVERTISSEMENT : simulation scripts/, pas le moteur reel -- voir docstring du module.
+
+[ 1'] DEBUT_MATCH      -> Seuls deux points séparent Lyon et Marseille au classement, ce choc direct pourrait faire basculer la hiérarchie.
+[ 4'] SITUATION_MATCH  -> On sent une réelle envie de bien faire chez Marseille, qui répond crânement à la domination de Lyon depuis le début du match.
+[ 7'] CONSTRUCTION     -> Le pressing de Lyon force Marseille à dégager en catastrophe, le ballon retombe idéalement dans les pieds de Konstantinos Koulierakis, loin de la surface !
+[11'] COUP_FRANC       -> Le mur dévie le coup franc de Konstantinos Koulierakis, mais le ballon retombe idéalement dans les pieds de Santiago Castro, à bonne distance des buts !
+[14'] CONSTRUCTION     -> Santiago Castro joue un une-deux rapide avec Marvin Schwäbe à l'entrée de la surface, la défense de Marseille est prise de vitesse !
+[18'] ARRET_GARDIEN    -> Santiago Castro plonge à ras de terre et détourne in extremis une frappe qui filait au ras du poteau !
+[23'] GESTE_SIGNATURE  -> AUCUNE PHRASE SELECTIONNABLE
+[27'] SITUATION_MATCH  -> Le stade est en ébullition, l'ambiance électrique semble clairement porter Lyon vers l'avant depuis le début de la rencontre.
+[31'] BUT              -> Fabian Kvam exploite la moindre faille dans la défense de Marseille et ne laisse aucune chance au gardien !
+[34'] CONSTRUCTION     -> D'un extérieur du pied génial, Thierno Barry envoie Georgi Rusev dans le dos de la défense de Marseille !
+[38'] PENALTY_RATE     -> Le tir de Thierno Barry claque contre la barre dans un fracas terrible, le ballon repart aussitôt en jeu !
+[45'] SITUATION_MATCH  -> On sent une réelle envie de bien faire chez Marseille, qui répond crânement à la domination de Lyon depuis le début du match. [DEJA VU dans cette sequence]
+[52'] CARTON_ROUGE     -> James Ward-Prowse voit rouge à la 52e minute, Lyon devra finir à dix.
+[58'] ARRET_GARDIEN    -> Connor Metcalfe sort une main ferme pour dévier la frappe lointaine juste à côté du poteau !
+[63'] COUP_FRANC       -> İsmail Yüksek frappe son coup franc en cloche vers l'opposé, Zsombor Gruber contrôle avec du champ devant lui, loin de la défense adverse !
+[67'] GESTE_SIGNATURE  -> AUCUNE PHRASE SELECTIONNABLE
+[74'] CONSTRUCTION     -> Sur un décalage parfait, Nolan Galves trouve Callum Hudson-Odoi dans la profondeur, hors de portée de la défense de Marseille !
+[79'] BUT              -> Sur une action collective léchée, Nolan Galves conclut avec sang-froid un mouvement initié depuis le milieu de terrain !
+[85'] ARRET_GARDIEN    -> Callum Hudson-Odoi s'impose dans les airs et capte le corner dangereux devant une nuée d'attaquants de Marseille !
+[90'] SITUATION_MATCH  -> Le pressing de Lyon commence sérieusement à payer, Marseille multiplie les pertes de balle dangereuses dans sa propre moitié.
+
+Echecs de selection (0 candidat) : 2/20
+  23' GESTE_SIGNATURE
+  67' GESTE_SIGNATURE
+Phrases reutilisees dans les 20 evenements (normal, anti_repeat non implemente) : 1

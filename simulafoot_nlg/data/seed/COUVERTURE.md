@@ -43,6 +43,36 @@ priorisation de ces 12 scénarios.
 | SITUATION_MATCH | 30 | 1 match | Cooldown le plus court du lot (par design, voir justification dans `convert_commentary_xlsx_to_yaml.py`) — un pool de 30 phrases avec un cooldown de 1 match s'épuise vite sur un match à commentaire dense. |
 | COUP_FRANC | 20 | 3 matchs | Pool le plus petit des scénarios "action" restants ; 35 % de redondance structurelle corrigée à 10 % lors de l'audit du 30/09/2026, mais la taille du pool reste limitante. |
 
+## VIABILITÉ DES CONDITIONS — ajouté le 01/10/2026
+
+> **Ces phrases peuvent ne jamais se déclencher sur la majorité des
+> matchs.** 281 phrases importées ne veut pas dire 281 phrases également
+> jouables — voir [AUDIT_COUVERTURE_DONNEES_JOUEUR.md](AUDIT_COUVERTURE_DONNEES_JOUEUR.md)
+> pour le détail complet, la méthode et les trois options de remédiation.
+
+**63 des 109 phrases à conditions joueur (57,8 %) sont limitées par la
+donnée**, pas par un seuil narratif voulu — un joueur qui aurait le trait
+qualifiant ne peut même pas être testé, faute de valeur renseignée pour
+lui. Groupées par attribut responsable :
+
+| Attribut en cause | Couverture réelle (7563 joueurs) | Phrases limitées par la donnée | Particularité |
+|---|---|---|---|
+| `preferred_moves` | 4,8 % (362 joueurs) | ~56 phrases concernées, dont la quasi-totalité des phrases GESTE_SIGNATURE/DEFAUT | **Concentré sur 35 clubs seulement (sur 836)** — les 20 clubs Premier League sont couverts à 100 %, presque tout le reste à 0 %. Pour un match hors Premier League, le taux réel de déclenchement de ces phrases tend vers 0 %, pas vers 4,8 %. |
+| `height_cm` | 11,7 % (887 joueurs) | 7 phrases (BUT/SURNOM "Le colosse"/"Le feu follet", ARRET_GARDIEN/SURNOM "Le mur"/"La muraille"/"Le géant", etc.) | Cause identifiée avec certitude (lecture de code) : `scripts/scrape_fminside_attributes.py` écrit la taille scrapée dans la colonne Excel **"Taille FM (cm)"**, mais `data/import/import_players.py` lit la colonne **"Taille (cm)"** (sans "FM") — deux colonnes différentes. Les 11,7 % viennent d'une source antérieure au scraping FM, pas d'un échec du scraper. |
+| `foot` | 39,1 % (2957 joueurs, valeurs D/G) | 1 phrase (BUT/DEFAUT "...pied droit...", corrigée le 30/09/2026) | Partiel mais pas critique — aucun scénario n'en dépend massivement. |
+
+Répartition des 63 phrases data-limitées par scénario : **GESTE_SIGNATURE
+32/37 (86 %)**, **BUT 23/60 (38 %)**, **CARTON_ROUGE 5/31 (16 %)**,
+**ARRET_GARDIEN 3/38 (8 %)**.
+
+**Nuance obligatoire** : 39 autres phrases tombent aussi sous 10 % de
+taux de déclenchement théorique mais ne sont PAS un problème de donnée —
+elles conditionnent sur un attribut bien peuplé (`Aggression`, `Strength`,
+93 % de couverture) avec un seuil élitiste voulu (peu de joueurs ont
+vraiment 85+ d'agressivité, et c'est le but : un carton rouge doit rester
+rare). Ne pas confondre les deux catégories lors d'une future lecture de
+ce fichier.
+
 ## Pourquoi importer quand même
 
 Décision assumée (30/09/2026) : importer une banque partielle permet de

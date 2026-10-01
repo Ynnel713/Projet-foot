@@ -86,14 +86,13 @@ ADVERSAIRE = "Marseille"
 
 
 def _random_players(conn: sqlite3.Connection, n: int, rng: random.Random) -> list[Player]:
-    rows = conn.execute(
-        "SELECT id, first_name, last_name, position, foot, weak_foot, height_cm, age "
-        "FROM players ORDER BY RANDOM() LIMIT ?",
-        (n * 3,),
-    ).fetchall()
-    ids = [r["id"] for r in rows]
-    rng.shuffle(ids)
-    picked = ids[:n]
+    # Bug trouve en re-smoke-testant (01/10/2026) : "ORDER BY RANDOM()" est le
+    # generateur SQLite, PAS `rng` -- deux executions avec le meme seed Python
+    # tiraient des joueurs differents, rendant le smoke test non reproductible.
+    # Corrige : la selection complete se fait cote Python avec `rng`.
+    all_ids = [r[0] for r in conn.execute("SELECT id FROM players").fetchall()]
+    rng.shuffle(all_ids)
+    picked = all_ids[:n]
     players = []
     for pid in picked:
         row = conn.execute(
