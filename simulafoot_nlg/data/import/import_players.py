@@ -33,6 +33,7 @@ import duckdb
 import pandas as pd
 
 from engine.db import get_duckdb, get_sqlite
+from engine.fm26 import ATTRIBUTE_TO_CATEGORY, FM26_ATTRIBUTES
 
 logger = logging.getLogger(__name__)
 
@@ -64,36 +65,8 @@ IDENTITY_COLUMNS: dict[str, str] = {
 POSITION_COLUMNS = ("Poste", "Postes FM naturels")
 ID_COLUMN = "ID"
 
-# Les 47 attributs FM26, groupes par categorie -- noms de colonnes exacts
-# (voir scripts/scrape_fminside_attributes.py, meme liste, source de verite
-# partagee : ne pas laisser diverger). Confirme colonne par colonne dans
-# data/joueurs.xlsx le 28/09/2026 (colonnes 17 a 63).
-FM26_ATTRIBUTES: dict[str, tuple[str, ...]] = {
-    "technique": (
-        "Crossing", "Dribbling", "Finishing", "First Touch", "Heading",
-        "Long Shots", "Marking", "Passing", "Tackling", "Technique",
-    ),
-    "gardien": (
-        "Aerial Reach", "Command of Area", "Communication", "Eccentricity",
-        "Handling", "Kicking", "One on Ones", "Punching (Tendency)",
-        "Reflexes", "Rushing Out (Tendency)", "Throwing",
-    ),
-    "mental": (
-        "Aggression", "Anticipation", "Bravery", "Composure", "Concentration",
-        "Decisions", "Determination", "Flair", "Leadership", "Off the Ball",
-        "Positioning", "Teamwork", "Vision", "Work Rate",
-    ),
-    "physique": (
-        "Acceleration", "Agility", "Balance", "Jumping Reach",
-        "Natural Fitness", "Pace", "Stamina", "Strength",
-    ),
-    "coups_de_pied_arretes": (
-        "Corners", "Free Kick Taking", "Long Throws", "Penalty Taking",
-    ),
-}
-ATTRIBUTE_TO_CATEGORY: dict[str, str] = {
-    name: category for category, names in FM26_ATTRIBUTES.items() for name in names
-}
+# Les 47 attributs FM26 vivent dans engine/fm26.py (source unique, D16/R11) ;
+# importes ici pour que `import_players.FM26_ATTRIBUTES` reste valide.
 
 # Marqueurs de valeur absente rencontres dans le classeur (cellule vide,
 # tiret simple, tiret cadratin) -- distincts d'un NaN pandas, traites de la

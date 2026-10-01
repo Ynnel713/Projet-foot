@@ -260,13 +260,7 @@ class TestChampsJoueursDuContexte:
 
 class TestNamespaceCollision:
     def test_no_collision_between_player_fields_and_fm26_attributes(self):
-        # "data.import.import_players" n'est pas importable statiquement
-        # ("import" est un mot-clé Python) -- même contournement que cli.py
-        # (importlib.import_module, voir sa docstring).
-        import importlib
-
         from engine.conditions import PLAYER_FIELDS
+        from engine.fm26 import FM26_ATTRIBUTES_KNOWN
 
-        import_players_module = importlib.import_module("data.import.import_players")
-        flat_fm26 = {name for names in import_players_module.FM26_ATTRIBUTES.values() for name in names}
-        assert PLAYER_FIELDS & flat_fm26 == set()
+        assert PLAYER_FIELDS & FM26_ATTRIBUTES_KNOWN == set()
