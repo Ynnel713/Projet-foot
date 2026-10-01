@@ -389,6 +389,29 @@ visées pour les 12 scénarios.
   **Dette documentée :** perte de `phrase_history` à chaque réimport de seed ; acceptable
   aujourd'hui (zéro match réel en base), à reconsidérer quand le runtime portera des données de
   match réelles.
+- **D7bis — `DELETE FROM`, pas `DROP TABLE` (01/10/2026).** Le reset du seed supprime les LIGNES
+  dans l'ordre inverse des dépendances, puis `DELETE FROM sqlite_sequence WHERE name IN (…)` pour
+  remettre à zéro les compteurs `AUTOINCREMENT` (déterminisme des `phrase_id` à ordre d'insertion
+  constant). Compatible clés étrangères ; `schema.sql` reste la seule source du schéma et n'est pas
+  ré-exécuté. **Le script de reset seed-scoped est à CRÉER, dans le bloc 1** (aucun script
+  d'administration n'existe : `init_db` ne supprime rien). Tables `AUTOINCREMENT` du schéma :
+  `player_attributes`, `scenarios`, `variants`, `phrases`, `phrase_conditions`, `phrase_slots`,
+  `slot_dictionaries`, `phrase_history`, `similarity_signatures`, `tags` — `player_attributes` n'est
+  PAS du seed et ne doit jamais figurer dans la liste du `DELETE FROM sqlite_sequence`.
+- **D8 — export DuckDB : exclure `phrase_history` et `similarity_signatures` (01/10/2026).**
+  Motif : D7 acte la perte de `phrase_history` à chaque réimport ; l'exporter produirait des ids
+  morts côté DuckDB. L'analytique de match se produit AVANT le réimport, pas depuis un DuckDB
+  cumulatif. État vérifié : `EXPORTED_TABLES` (`scripts/export_analytics.py:16-22`) =
+  `scenarios`, `variants`, `phrases`, `phrase_history`, `phrase_cooldowns` ; `similarity_signatures`
+  n'est déjà pas exportée et `players` n'est pas exporté par cette commande (déjà dans DuckDB via
+  `import-players`). Effet net de D8 : retirer `phrase_history` de ce tuple.
+- **Note C1 (bloc 4) :** `match_sequence` sera ajouté au `CREATE` de `schema.sql` ; l'`ALTER` ne
+  servirait qu'aux bases non réimportées. *(À réconcilier avec D7bis : `DELETE FROM` ne recrée
+  pas les tables, donc un `CREATE` modifié n'atteint pas une base existante — signalé à
+  l'architecte.)*
+- **Note C2 (bloc 1) :** ajouter un test de non-régression « pas de doublon de code de scénario
+  entre v1 et V2 » avec une erreur EXPLICITE (aujourd'hui : `IntegrityError` muette sur la
+  contrainte `UNIQUE` de `scenarios.code`).
 - **README, ligne 24, à actualiser** : « Charge `data/seed/*.yml` dans SQLite… » →
   « `data/seed/` + `data/seed/v2/` » (D4).
 - **C2 — répétition thématique (§4) : hors périmètre V2.1.** Dette de conception ; aucun
