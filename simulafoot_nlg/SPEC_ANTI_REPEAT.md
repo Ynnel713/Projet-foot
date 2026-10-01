@@ -676,6 +676,21 @@ sur `preferred_moves`, jamais `None`) ; même traitement, retourner `False`.
 - **Dette mineure — `in` sans garde `None`** (`engine/conditions.py`) : `in` compare `str(None)` ; correct
   en pratique, pas de garde explicite.
 
+**Contrat de `select` envers `template_filler.render` et `post_process` (01/10/2026, livré au Bloc 3) :**
+- `render(phrase, player, context, *, seed, scenario_code, variant_code, dictionaries=None) -> str` : le rng
+  de la phrase est DÉRIVÉ dans `render` (`derive_rng` : 8 octets de `sha256(f"{seed}|{scenario_code}|
+  {variant_code}|{texte}")`, jamais `phrase.id` ni `variant_id`, instables après un reset + réimport).
+  Une `Phrase` n'a que `variant_id` : **`select` doit fournir `scenario_code` et `variant_code`** (il
+  connaît le `Scenario` et la `Variant` qu'il parcourt) **et `seed`** (dérivé par `cli.py` de
+  `match_id|match_sequence|event_id`, jamais d'une horloge). Rendre le pool entier avec cette dérivation
+  garantit qu'ajouter ou retirer une phrase ne change le rendu d'aucune autre.
+- `render` lève `SlotResolutionError` (`ValueError`) pour tout slot non résolu : `select` la traite comme
+  « phrase invalide, en choisir une autre » (jamais un `{slot}` à l'écran).
+- `render` renvoie un texte BRUT ; `select` applique ensuite `post_process.apply` (espaces, majuscule,
+  ponctuation finale, élision, contraction) et renvoie `SelectionResult(phrase, rendered_text)` (D11).
+- `dictionaries` : mapping `dictionary_key -> [{value, weight?}]` (forme de `slots.yml`), à charger une
+  fois par l'appelant ; aucune phrase actuelle n'utilise de `dictionary_key` (`slots.yml` vide).
+
 ## Ce qui N'est PAS bloquant (déjà en place)
 - Le schéma SQL (`phrase_history`, `phrase_cooldowns`,
   `similarity_signatures`) est cohérent avec l'algorithme documenté dans le
