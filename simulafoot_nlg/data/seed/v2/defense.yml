@@ -1,0 +1,449 @@
+- code: DEFENSE
+  label: Défense
+  variants:
+  - code: DEFAUT
+    label: Variante par défaut
+    is_default: true
+    phrases:
+    - text: '{joueur} place un tacle parfaitement chronométré et récupère le ballon
+        sans donner le moindre coup franc à {adversaire} !'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Tackling
+        operator: '>='
+        value: '85'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: D'une interception limpide, {joueur} coupe la trajectoire de la passe
+        et repart aussitôt vers l'avant !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Vision
+        operator: '>='
+        value: '78'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} sort un tacle glissé désespéré à l''entrée de la surface et
+        repousse le danger in extremis !'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Tackling
+        operator: '>='
+        value: '80'
+        mandatory: true
+      - attribute: minute
+        operator: '>='
+        value: '75'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: Revenu à pleine vitesse dans son propre camp, {joueur} efface l'attaquant
+        de {adversaire} d'une course de récupération exemplaire !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Pace
+        operator: '>='
+        value: '88'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: '{joueur} s''impose dans le duel aérien et dégage le ballon loin de sa
+        surface sans aucune difficulté !'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Heading
+        operator: '>='
+        value: '80'
+        mandatory: true
+      - attribute: Strength
+        operator: '>='
+        value: '75'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: D'une charge réglementaire impeccable, {joueur} déséquilibre son adversaire
+        et récupère proprement le ballon !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Strength
+        operator: '>='
+        value: '80'
+        mandatory: true
+      - attribute: Aggression
+        operator: <=
+        value: '50'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} lit parfaitement la trajectoire du centre et coupe le ballon
+        avant qu''il n''atteigne {adversaire} !'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Vision
+        operator: '>='
+        value: '80'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: Pris à contre-pied, {joueur} rattrape pourtant son retard par un repli
+        défensif monumental et sauve la situation !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Pace
+        operator: '>='
+        value: '85'
+        mandatory: true
+      - attribute: minute
+        operator: '>='
+        value: '70'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} referme l''espace dans son dos en un éclair et coupe toute passe
+        en profondeur vers {adversaire} !'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Pace
+        operator: '>='
+        value: '82'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: D'un tacle à retardement savamment dosé, {joueur} cueille le ballon sans
+        jamais toucher l'adversaire !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Tackling
+        operator: '>='
+        value: '82'
+        mandatory: true
+      - attribute: Technique
+        operator: '>='
+        value: '70'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} s''interpose courageusement devant la frappe et dévie le ballon
+        en corner au prix d''un contact rude !'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Strength
+        operator: '>='
+        value: '75'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: Dans un mouchoir de poche, {joueur} grappille le ballon des pieds de {adversaire}
+        sans commettre la moindre faute !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Tackling
+        operator: '>='
+        value: '88'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: '{joueur} anticipe la remise et subtilise le ballon avant même que {adversaire}
+        n''ait pu le contrôler !'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Vision
+        operator: '>='
+        value: '78'
+        mandatory: true
+      - attribute: Pace
+        operator: '>='
+        value: '75'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: Dos au but et sous pression, {joueur} dégage en catastrophe, propre malgré
+        l'urgence !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions: []
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} s''arrache au sol pour contrer la frappe à bout portant et sauve
+        son équipe d''un but certain !'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Strength
+        operator: '>='
+        value: '80'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} garde son sang-froid et temporise jusqu''à ce que ses partenaires
+        reviennent couvrir l''espace libre !'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Technique
+        operator: '>='
+        value: '72'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: D'un retour athlétique phénoménal, {joueur} rejoint l'ailier de {adversaire}
+        et glisse un tacle salvateur par l'arrière !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Pace
+        operator: '>='
+        value: '86'
+        mandatory: true
+      - attribute: Tackling
+        operator: '>='
+        value: '75'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: '{joueur} boxe littéralement le ballon d''une tête rageuse, sans se soucier
+        du style !'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Heading
+        operator: '>='
+        value: '82'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: Esseulé face à deux attaquants de {adversaire}, {joueur} temporise intelligemment
+        avant d'intervenir au bon moment !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Vision
+        operator: '>='
+        value: '75'
+        mandatory: true
+      - attribute: Aggression
+        operator: <=
+        value: '55'
+        mandatory: true
+      slots:
+      - slot_name: adversaire
+        expression: context.opponent_team
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} hausse le ton physiquement et prend le dessus dans chaque duel
+        face aux assauts de {adversaire} !'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Strength
+        operator: '>='
+        value: '85'
+        mandatory: true
+      - attribute: Aggression
+        operator: '>='
+        value: '60'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: D'une lecture précoce du jeu, {joueur} coupe la ligne de passe avant que
+        l'idée n'ait germé dans la tête de {adversaire} !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Vision
+        operator: '>='
+        value: '85'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: '{joueur} se jette corps et âme devant la tentative et stoppe le cuir
+        sur la ligne, au prix d''une égratignure !'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Tackling
+        operator: '>='
+        value: '78'
+        mandatory: true
+      - attribute: Aggression
+        operator: '>='
+        value: '60'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} met un tacle propre, bien dosé, et le jeu repart de l''autre
+        côté.'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions: []
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} se place juste, intercepte la passe destinée à {adversaire}
+        et relance simplement.'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions: []
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: '{joueur} dégage prudemment en touche face à {adversaire}, sans prendre
+        le moindre risque.'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions: []
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: '{joueur} suit son vis-à-vis de près, l''accompagne vers la ligne de touche
+        et récupère la balle.'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions: []
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+  - code: SURNOM
+    label: Surnom
+    is_default: false
+    phrases:
+    - text: Le roc ne cède pas un centimètre et repousse l'assaut de {adversaire}
+        comme si de rien n'était !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Strength
+        operator: '>='
+        value: '88'
+        mandatory: true
+      slots:
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: Le verrou interdit tout passage à {adversaire}, aucune échappée ne lui
+        résiste !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Tackling
+        operator: '>='
+        value: '90'
+        mandatory: true
+      slots:
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: Le chasseur fond sur le porteur du ballon et lui vole la possession avant
+        qu'il n'ait pu réagir !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Pace
+        operator: '>='
+        value: '90'
+        mandatory: true
+      - attribute: Tackling
+        operator: '>='
+        value: '75'
+        mandatory: true
+      slots: []
+    - text: L'ancien couvre l'espace avec une anticipation que l'âge n'a en rien émoussée
+        !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: age
+        operator: '>='
+        value: '33'
+        mandatory: true
+      - attribute: Vision
+        operator: '>='
+        value: '80'
+        mandatory: true
+      slots: []
+    - text: Le pilier domine chaque duel aérien et repousse {adversaire} d'un simple
+        regard !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Heading
+        operator: '>='
+        value: '88'
+        mandatory: true
+      - attribute: Strength
+        operator: '>='
+        value: '85'
+        mandatory: true
+      slots:
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: Le métronome défensif dicte le repli de son équipe avec un calme qui force
+        le respect !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Technique
+        operator: '>='
+        value: '85'
+        mandatory: true
+      - attribute: Vision
+        operator: '>='
+        value: '82'
+        mandatory: true
+      slots: []

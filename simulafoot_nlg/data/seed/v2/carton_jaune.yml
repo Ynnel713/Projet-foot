@@ -1,0 +1,332 @@
+- code: CARTON_JAUNE
+  label: Carton jaune
+  variants:
+  - code: DEFAUT
+    label: Variante par défaut
+    is_default: true
+    phrases:
+    - text: Un pied en retard, {joueur} fauche son adversaire et récolte un carton.
+      weight: 1.0
+      cooldown_matches: 3
+      conditions: []
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: 'Tacle par derrière : {joueur} frappe la jambe avant le ballon, la sanction
+        tombe sans hésiter !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Aggression
+        operator: '>='
+        value: '70'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: Les protestations de {joueur} deviennent trop vives, l'arbitre y met fin
+        d'un avertissement.
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Aggression
+        operator: '>='
+        value: '75'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: 'Pour couper une contre-attaque, {joueur} retient son vis-à-vis par la
+        manche : un jaune tactique, sans discussion.'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: minute
+        operator: '>='
+        value: '60'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: À peine {minute} minutes écoulées et {joueur} est déjà averti, un début
+        de partie bien chargé pour {club} !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: minute
+        operator: <=
+        value: '30'
+        mandatory: true
+      slots:
+      - slot_name: minute
+        expression: context.minute
+      - slot_name: joueur
+        expression: player.full_name
+      - slot_name: club
+        expression: context.player_team
+    - text: '{joueur} gagne du temps en traînant les pieds, mais la manœuvre est vue
+        et l''antijeu sanctionné !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: minute
+        operator: '>='
+        value: '80'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: 'Main volontaire de {joueur} pour stopper la trajectoire : c''est flagrant,
+        rien à discuter.'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions: []
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} balance son bras dans un duel aérien : le geste est jugé dangereux,
+        la sanction tombe.'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions: []
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: Agacé par une décision, {joueur} envoie le ballon au loin, ce qui lui
+        vaut une sanction immédiate !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Composure
+        operator: <=
+        value: '45'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: Emporté par l'intensité du duel, {joueur} repousse un adversaire des deux
+        mains et le carton sort aussitôt.
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Aggression
+        operator: '>='
+        value: '75'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} met un tacle appuyé à un joueur de {adversaire}, difficile de
+        plaider l''innocence.'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Tackling
+        operator: '>='
+        value: '70'
+        mandatory: true
+      - attribute: Aggression
+        operator: '>='
+        value: '70'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: Mal inspiré, {joueur} se jette dans les pieds de son vis-à-vis et se fait
+        sanctionner, un carton qui pourrait coûter cher !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Decisions
+        operator: <=
+        value: '45'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} accroche un adversaire au milieu du terrain, une faute banale
+        que l''arbitre sanctionne sans se faire prier.'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions: []
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: Sur un tacle bien trop tardif, {joueur} s'en veut aussitôt et ne protestera
+        pas.
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Anticipation
+        operator: <=
+        value: '50'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: Le ton monte autour de l'arbitre, {joueur} s'approche trop près et reçoit
+        un carton jaune en plein visage !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Aggression
+        operator: '>='
+        value: '70'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} stoppe du pied une relance rapide et se voit sanctionner pour
+        avoir retardé la reprise du jeu.'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: minute
+        operator: '>='
+        value: '70'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: 'Un geste de trop : {joueur} frappe le ballon une fois le jeu arrêté,
+        carton immédiat !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions: []
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} se jette en tacle glissé, touche l''adversaire et écope d''un
+        avertissement : {club} devra se méfier jusqu''à la fin !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: preferred_moves
+        operator: contient
+        value: Dives Into Tackles
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+      - slot_name: club
+        expression: context.player_team
+    - text: '{joueur} réclame un penalty avec trop d''insistance, l''arbitre lui montre
+        le carton jaune pour le calmer !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Determination
+        operator: '>='
+        value: '80'
+        mandatory: true
+      - attribute: Aggression
+        operator: '>='
+        value: '65'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} s''écroule dans la surface, mais la comédie ne prend pas : carton
+        pour simulation !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Flair
+        operator: '>='
+        value: '75'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: 'Tacle à retardement de {joueur} : jaune bien mérité, personne ne dira
+        le contraire.'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions: []
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} enchaîne les fautes sur le porteur de {adversaire}, ça ne pouvait
+        pas durer !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Aggression
+        operator: '>='
+        value: '80'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+  - code: SURNOM
+    label: Surnom
+    is_default: false
+    phrases:
+    - text: Le boucher arrive en retard sur son vis-à-vis et reçoit un avertissement
+        que personne ne contestera !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Aggression
+        operator: '>='
+        value: '85'
+        mandatory: true
+      slots: []
+    - text: 'Le pitbull s''accroche à son adversaire sans jamais le lâcher : le sifflet
+        retentit, le jaune suit.'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Tackling
+        operator: '>='
+        value: '75'
+        mandatory: true
+      - attribute: Aggression
+        operator: '>='
+        value: '75'
+        mandatory: true
+      slots: []
+    - text: Le provocateur cherche encore son vis-à-vis du regard, l'arbitre sort
+        le jaune pour le rappeler à l'ordre !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: preferred_moves
+        operator: contient
+        value: Winds Up Opponents
+        mandatory: true
+      slots: []
+    - text: Le sage laisse traîner sa jambe une fois de trop et se retrouve avec un
+        jaune sur les bras, presque surpris.
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: age
+        operator: '>='
+        value: '34'
+        mandatory: true
+      slots: []
+    - text: Le tribun va réclamer auprès de l'arbitre, qui lui répond d'un carton
+        pour contestation.
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Leadership
+        operator: '>='
+        value: '80'
+        mandatory: true
+      slots: []
+    - text: La pépite découvre le haut rythme de la compétition et doit se contenter
+        d'un jaune pour la leçon !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: age
+        operator: <=
+        value: '18'
+        mandatory: true
+      slots: []

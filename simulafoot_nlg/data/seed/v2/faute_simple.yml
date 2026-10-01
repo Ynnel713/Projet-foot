@@ -1,0 +1,375 @@
+- code: FAUTE_SIMPLE
+  label: Faute simple
+  variants:
+  - code: DEFAUT
+    label: Variante par défaut
+    is_default: true
+    phrases:
+    - text: '{joueur} accroche le maillot de son adversaire et concède une faute évidente
+        sans la moindre contestation !'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Tackling
+        operator: <=
+        value: '55'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: D'un geste réflexe, {joueur} retient son adversaire par le bras et l'arbitre
+        siffle sans hésiter !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Aggression
+        operator: '>='
+        value: '55'
+        mandatory: true
+      - attribute: Aggression
+        operator: <=
+        value: '75'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} arrive une fraction de seconde trop tard sur l''intervention
+        et fauche involontairement son vis-à-vis !'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Tackling
+        operator: <=
+        value: '60'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: Pris de vitesse, {joueur} n'a d'autre choix que de stopper {adversaire}
+        par une faute tactique assumée !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Pace
+        operator: <=
+        value: '65'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: '{joueur} pousse légèrement son adversaire dans le dos pour gagner sa
+        position, l''arbitre ne laisse rien passer !'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Aggression
+        operator: '>='
+        value: '50'
+        mandatory: true
+      - attribute: Aggression
+        operator: <=
+        value: '70'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: Sur un ballon aérien disputé, {joueur} déborde largement du jeu et écope
+        d'un coup franc sans discussion possible !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Strength
+        operator: '>='
+        value: '70'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} se jette un peu tôt dans l''intervention et cède une faute évitable
+        à l''entrée du milieu de terrain !'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Vision
+        operator: <=
+        value: '60'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} repousse instinctivement le ballon de la main, l''arbitre n''hésite
+        pas à sanctionner !'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions: []
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} coupe la course de {adversaire} d''une légère retenue, suffisante
+        pour faire tomber le coup de sifflet !'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Aggression
+        operator: '>='
+        value: '55'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: Fatigué par l'effort, {joueur} n'arrive plus à suivre le rythme et craque
+        sur une dernière course perdue d'avance !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Pace
+        operator: <=
+        value: '60'
+        mandatory: true
+      - attribute: minute
+        operator: '>='
+        value: '75'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} intervient un peu fort sur le pied d''appui de {adversaire},
+        sans intention de nuire !'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Tackling
+        operator: <=
+        value: '58'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: Dépassé par le dribble, {joueur} bouscule {adversaire} dans sa course,
+        l'arbitre ne voit que l'infraction !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Tackling
+        operator: <=
+        value: '62'
+        mandatory: true
+      - attribute: Vision
+        operator: <=
+        value: '65'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: '{joueur} se place devant {adversaire} et le déséquilibre d''une épaule,
+        sans vraiment chercher le contact !'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Aggression
+        operator: '>='
+        value: '45'
+        mandatory: true
+      - attribute: Aggression
+        operator: <=
+        value: '65'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: D'une charge un peu appuyée, {joueur} déséquilibre son adversaire et l'arbitre
+        ne tergiverse pas !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Strength
+        operator: '>='
+        value: '75'
+        mandatory: true
+      - attribute: Aggression
+        operator: <=
+        value: '60'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} tente sa chance sur l''interception mais touche l''homme avant
+        le ballon !'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Tackling
+        operator: <=
+        value: '65'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: Pressé par le temps, {joueur} commet une faute frustrée après avoir perdu
+        son duel !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: minute
+        operator: '>='
+        value: '80'
+        mandatory: true
+      - attribute: Aggression
+        operator: '>='
+        value: '50'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} se fait surprendre par un une-deux et ne peut qu''accrocher
+        {adversaire} pour l''arrêter !'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Vision
+        operator: <=
+        value: '58'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: D'une main agacée, {joueur} repousse {adversaire} après une perte de balle
+        frustrante !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Aggression
+        operator: '>='
+        value: '60'
+        mandatory: true
+      - attribute: Aggression
+        operator: <=
+        value: '78'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: '{joueur} ralentit délibérément le jeu par une faute calculée, loin de
+        sa propre surface !'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Vision
+        operator: '>='
+        value: '75'
+        mandatory: true
+      - attribute: Aggression
+        operator: <=
+        value: '55'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: Sur une remise manquée, {joueur} retient {adversaire} par maladresse plus
+        que par intention !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Technique
+        operator: <=
+        value: '60'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+  - code: SURNOM
+    label: Surnom
+    is_default: false
+    phrases:
+    - text: Le malin sacrifie une faute tactique au bon moment, sans jamais se faire
+        prendre en défaut par l'arbitre !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Vision
+        operator: '>='
+        value: '82'
+        mandatory: true
+      - attribute: Aggression
+        operator: <=
+        value: '55'
+        mandatory: true
+      slots: []
+    - text: L'agacé n'accepte pas de se faire déborder et répond par une faute franche
+        sur {adversaire} !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Aggression
+        operator: '>='
+        value: '70'
+        mandatory: true
+      slots:
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: Le maladroit intervient avec dix bonnes intentions et une seule mauvaise
+        jambe, faute inévitable !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Tackling
+        operator: <=
+        value: '50'
+        mandatory: true
+      slots: []
+    - text: Le vétéran dégaine la faute tactique avec un sens du timing qui n'appartient
+        qu'à lui !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: age
+        operator: '>='
+        value: '32'
+        mandatory: true
+      - attribute: Vision
+        operator: '>='
+        value: '80'
+        mandatory: true
+      slots: []
+    - text: Le discret tire doucement le maillot de {adversaire}, suffisamment pour
+        casser l'élan sans se faire remarquer !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Technique
+        operator: '>='
+        value: '70'
+        mandatory: true
+      - attribute: Aggression
+        operator: <=
+        value: '50'
+        mandatory: true
+      slots:
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: Le pressé se précipite dans un duel qu'il n'avait pas à jouer et récolte
+        une faute qu'il aurait pu éviter !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Pace
+        operator: <=
+        value: '55'
+        mandatory: true
+      slots: []

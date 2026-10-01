@@ -1,0 +1,285 @@
+- code: HORS_JEU
+  label: Hors-jeu
+  variants:
+  - code: DEFAUT
+    label: Variante par défaut
+    is_default: true
+    phrases:
+    - text: '{joueur} s''élance un instant trop tôt, le drapeau de l''assistant se
+        lève aussitôt !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions: []
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: 'Ligne défensive parfaitement alignée : {joueur} tombe dans le piège !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions: []
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{minute}e minute : {joueur} croit filer au but, mais sa course n''était
+        pas valable.'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions: []
+      slots:
+      - slot_name: minute
+        expression: context.minute
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{adversaire} remonte d''un bloc et laisse {joueur} seul, bien trop seul
+        pour que ce soit régulier !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions: []
+      slots:
+      - slot_name: adversaire
+        expression: context.opponent_team
+      - slot_name: joueur
+        expression: player.full_name
+    - text: 'Le sifflet retentit : {joueur} était devant le dernier défenseur au départ
+        de la passe.'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions: []
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} contrôle parfaitement et s''en va seul, mais l''arbitre stoppe
+        l''action net !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions: []
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: Trop impatient, {joueur} s'est placé d'une pointe de pied au-delà de la
+        limite.
+      weight: 1.0
+      cooldown_matches: 3
+      conditions: []
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: 'Petite erreur de timing : {joueur} arrive au mauvais moment, un souffle
+        devant les défenseurs, et le hors-jeu est sifflé.'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions: []
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} réclame le ballon dans le dos de la défense, mais son appel
+        était parti une seconde trop tôt !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Off the Ball
+        operator: '>='
+        value: '75'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: Lancé à pleine vitesse, {joueur} dépasse les défenseurs d'un cheveu et
+        se fait rattraper par le drapeau !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Pace
+        operator: '>='
+        value: '80'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: Distrait un instant, {joueur} ne voit pas la défense remonter et ne comprend
+        son erreur qu'au coup de sifflet.
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Concentration
+        operator: <=
+        value: '45'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: Mal calé sur la dernière passe, {joueur} est de nouveau pris en position
+        irrégulière.
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Anticipation
+        operator: <=
+        value: '50'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{adversaire} avait bien surveillé {joueur} : toute la défense monte d''un
+        cran pour le piéger !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: fm_rating
+        operator: '>='
+        value: '75'
+        mandatory: true
+      slots:
+      - slot_name: adversaire
+        expression: context.opponent_team
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} joue sur la limite en pointe et finit par la dépasser, le hors-jeu
+        est signalé.'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: position
+        operator: in
+        value: BU, SA
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: Sur son couloir, {joueur} part en éclair mais l'assistant lève son drapeau
+        avant le centre !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: position
+        operator: in
+        value: AG, AD
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: Venu de la deuxième ligne, {joueur} perce dans l'axe mais arrive un cheveu
+        trop tôt dans la zone !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: position
+        operator: in
+        value: MC, MDC, MOC
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: Dans la dernière ligne droite, {joueur} prend tous les risques et se fait
+        piéger par le bloc de {adversaire} !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: minute
+        operator: '>='
+        value: '80'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: Dès l'entame, {joueur} teste la ligne de {adversaire}, et se fait déjà
+        reprendre par l'assistant.
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: minute
+        operator: <=
+        value: '20'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: Fatigué, {joueur} manque de lucidité et retombe une nouvelle fois dans
+        le piège du hors-jeu.
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Concentration
+        operator: <=
+        value: '45'
+        mandatory: true
+      - attribute: minute
+        operator: '>='
+        value: '70'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+  - code: SURNOM
+    label: Surnom
+    is_default: false
+    phrases:
+    - text: Le renard flaire l'ouverture avant la passe, et le drapeau se lève !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Finishing
+        operator: '>='
+        value: '85'
+        mandatory: true
+      slots: []
+    - text: L'éclair prend de vitesse un défenseur médusé, mais le drapeau de l'assistant
+        est déjà levé !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Pace
+        operator: '>='
+        value: '90'
+        mandatory: true
+      - attribute: position
+        operator: in
+        value: BU, SA, AG, AD, MOC, MC, RB, LB
+        mandatory: true
+      slots: []
+    - text: Le fantôme surgit dans le dos des défenseurs, mais l'assistant l'avait
+        bien repéré !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Off the Ball
+        operator: '>='
+        value: '80'
+        mandatory: true
+      - attribute: position
+        operator: in
+        value: BU, SA, AG, AD, MOC, MC
+        mandatory: true
+      slots: []
+    - text: Le vétéran connaît pourtant tous les pièges, mais il s'est laissé surprendre
+        cette fois !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: age
+        operator: '>='
+        value: '34'
+        mandatory: true
+      - attribute: position
+        operator: in
+        value: BU, SA, AG, AD, MOC, MC
+        mandatory: true
+      slots: []
+    - text: La pépite s'emballe, part trop vite et se fait siffler pour avoir trop
+        anticipé !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: age
+        operator: <=
+        value: '18'
+        mandatory: true
+      - attribute: position
+        operator: in
+        value: BU, SA, AG, AD, MOC, MC
+        mandatory: true
+      slots: []

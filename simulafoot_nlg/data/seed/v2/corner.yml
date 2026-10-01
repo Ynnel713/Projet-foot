@@ -1,0 +1,403 @@
+- code: CORNER
+  label: Corner
+  variants:
+  - code: DEFAUT
+    label: Variante par défaut
+    is_default: true
+    phrases:
+    - text: '{passeur} enroule son corner directement vers le premier poteau, {receveur}
+        dévie imperceptiblement le cuir, imparable pour {adversaire} !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Technique
+        operator: '>='
+        value: '75'
+        mandatory: true
+      slots:
+      - slot_name: passeur
+        expression: context.passeur.full_name
+      - slot_name: receveur
+        expression: context.receveur.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: D'un corner tendu au second poteau, {passeur} trouve {receveur} totalement
+        esseulé face au but vide !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Technique
+        operator: '>='
+        value: '72'
+        mandatory: true
+      slots:
+      - slot_name: passeur
+        expression: context.passeur.full_name
+      - slot_name: receveur
+        expression: context.receveur.full_name
+    - text: '{passeur} joue son corner à ras de terre vers l''avant du but, {receveur}
+        n''a qu''à pousser le ballon au fond !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Technique
+        operator: '>='
+        value: '70'
+        mandatory: true
+      slots:
+      - slot_name: passeur
+        expression: context.passeur.full_name
+      - slot_name: receveur
+        expression: context.receveur.full_name
+    - text: '{passeur} glisse son corner en retrait pour {receveur}, démarqué à l''entrée
+        de la surface avant que la défense ne réagisse !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Vision
+        operator: '>='
+        value: '78'
+        mandatory: true
+      slots:
+      - slot_name: passeur
+        expression: context.passeur.full_name
+      - slot_name: receveur
+        expression: context.receveur.full_name
+    - text: '{receveur} domine le combat aérien et catapulte une tête rageuse que
+        le gardien de {adversaire} ne peut qu''accompagner le ballon du regard !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Heading
+        operator: '>='
+        value: '82'
+        mandatory: true
+      slots:
+      - slot_name: receveur
+        expression: context.receveur.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: D'un corner excentré, {passeur} trouve la tête de {receveur}, totalement
+        imprenable dans les airs !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Heading
+        operator: '>='
+        value: '80'
+        mandatory: true
+      - attribute: height_cm
+        operator: '>='
+        value: '185'
+        mandatory: true
+      slots:
+      - slot_name: passeur
+        expression: context.passeur.full_name
+      - slot_name: receveur
+        expression: context.receveur.full_name
+    - text: '{passeur} centre trop fort, le ballon traverse toute la surface sans
+        que personne ne puisse l''intercepter !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions: []
+      slots:
+      - slot_name: passeur
+        expression: context.passeur.full_name
+    - text: La défense de {adversaire} repousse le premier corner, mais {receveur}
+        récupère le ballon et reprend aussitôt !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Technique
+        operator: '>='
+        value: '72'
+        mandatory: true
+      slots:
+      - slot_name: adversaire
+        expression: context.opponent_team
+      - slot_name: receveur
+        expression: context.receveur.full_name
+    - text: '{passeur} brosse son corner en cloche, {receveur} glisse sa tête entre
+        deux défenseurs de {adversaire} !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Heading
+        operator: '>='
+        value: '78'
+        mandatory: true
+      slots:
+      - slot_name: passeur
+        expression: context.passeur.full_name
+      - slot_name: receveur
+        expression: context.receveur.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: Sur un corner joué court, {passeur} et {receveur} combinent pour prendre
+        de vitesse le repli de {adversaire} !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Vision
+        operator: '>='
+        value: '80'
+        mandatory: true
+      slots:
+      - slot_name: passeur
+        expression: context.passeur.full_name
+      - slot_name: receveur
+        expression: context.receveur.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: '{passeur} envoie un corner trop long, le ballon file directement en touche
+        sous les sifflets !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions: []
+      slots:
+      - slot_name: passeur
+        expression: context.passeur.full_name
+    - text: '{receveur} anticipe le mouvement de {passeur} et s''infiltre entre les
+        lignes pour couper la trajectoire de la tête !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Vision
+        operator: '>='
+        value: '80'
+        mandatory: true
+      slots:
+      - slot_name: receveur
+        expression: context.receveur.full_name
+      - slot_name: passeur
+        expression: context.passeur.full_name
+    - text: D'un corner parfaitement dosé, {passeur} offre un caviar à {receveur},
+        seul au point de penalty !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Technique
+        operator: '>='
+        value: '78'
+        mandatory: true
+      slots:
+      - slot_name: passeur
+        expression: context.passeur.full_name
+      - slot_name: receveur
+        expression: context.receveur.full_name
+    - text: '{passeur} sert {receveur} au premier poteau d''un ballon piqué, imparable
+        pour le gardien de {adversaire} !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Technique
+        operator: '>='
+        value: '75'
+        mandatory: true
+      slots:
+      - slot_name: passeur
+        expression: context.passeur.full_name
+      - slot_name: receveur
+        expression: context.receveur.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: '{adversaire} repousse le ballon de la tête en catastrophe, mais le cuir
+        retombe idéalement dans la surface pour une seconde tentative !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions: []
+      slots:
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: '{receveur} devance tout le monde et loge une tête surpuissante dans la
+        lucarne, totalement imparable !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Heading
+        operator: '>='
+        value: '85'
+        mandatory: true
+      - attribute: height_cm
+        operator: '>='
+        value: '188'
+        mandatory: true
+      slots:
+      - slot_name: receveur
+        expression: context.receveur.full_name
+    - text: '{passeur} varie son corner vers le second poteau, {receveur} surgit et
+        reprend acrobatiquement !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Technique
+        operator: '>='
+        value: '80'
+        mandatory: true
+      slots:
+      - slot_name: passeur
+        expression: context.passeur.full_name
+      - slot_name: receveur
+        expression: context.receveur.full_name
+    - text: Sur un corner mal négocié, {passeur} envoie le ballon directement dans
+        les gants du gardien de {adversaire} !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions: []
+      slots:
+      - slot_name: passeur
+        expression: context.passeur.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: '{receveur} gagne son duel aérien face à {adversaire} sur le corner tiré
+        par {passeur} et cadre sa tête sans trembler !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Heading
+        operator: '>='
+        value: '80'
+        mandatory: true
+      - attribute: Strength
+        operator: '>='
+        value: '75'
+        mandatory: true
+      slots:
+      - slot_name: receveur
+        expression: context.receveur.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+      - slot_name: passeur
+        expression: context.passeur.full_name
+    - text: '{passeur} trouve une ouverture inattendue sur son corner, {receveur}
+        reprend du plat du pied à bout portant !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Technique
+        operator: '>='
+        value: '76'
+        mandatory: true
+      slots:
+      - slot_name: passeur
+        expression: context.passeur.full_name
+      - slot_name: receveur
+        expression: context.receveur.full_name
+    - text: '{passeur} envoie son corner au second poteau, mais personne ne parvient
+        à le reprendre et la balle sort.'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions: []
+      slots:
+      - slot_name: passeur
+        expression: context.passeur.full_name
+    - text: '{passeur} cherche {receveur} d''un corner court, mais l''espace manque
+        et le ballon est repris par l''adversaire.'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions: []
+      slots:
+      - slot_name: passeur
+        expression: context.passeur.full_name
+      - slot_name: receveur
+        expression: context.receveur.full_name
+    - text: Le corner de {passeur} flotte dans la surface, un défenseur de {adversaire}
+        dégage sans difficulté.
+      weight: 1.0
+      cooldown_matches: 3
+      conditions: []
+      slots:
+      - slot_name: passeur
+        expression: context.passeur.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: '{passeur} et {receveur} se coordonnent sur le corner, mais la combinaison
+        est interceptée aux abords de la surface.'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions: []
+      slots:
+      - slot_name: passeur
+        expression: context.passeur.full_name
+      - slot_name: receveur
+        expression: context.receveur.full_name
+  - code: SURNOM
+    label: Surnom
+    is_default: false
+    phrases:
+    - text: Le cadreur brosse une parabole parfaite sur chaque corner, aucun gardien
+        ne peut rien y faire !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Technique
+        operator: '>='
+        value: '88'
+        mandatory: true
+      slots: []
+    - text: Le dominateur s'élève au-dessus de la mêlée sur le corner et impose sa
+        tête sans aucune contestation !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Heading
+        operator: '>='
+        value: '88'
+        mandatory: true
+      - attribute: height_cm
+        operator: '>='
+        value: '190'
+        mandatory: true
+      slots: []
+    - text: Le lutin se glisse entre deux montagnes dans la surface et place une tête
+        que personne n'a vue venir !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: height_cm
+        operator: <=
+        value: '172'
+        mandatory: true
+      - attribute: Heading
+        operator: '>='
+        value: '75'
+        mandatory: true
+      slots: []
+    - text: L'horloger ajuste son corner au centimètre près, directement sur le crâne
+        de son partenaire !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Technique
+        operator: '>='
+        value: '85'
+        mandatory: true
+      - attribute: Vision
+        operator: '>='
+        value: '80'
+        mandatory: true
+      slots: []
+    - text: L'opportuniste sent le ballon repoussé avant tout le monde et reprend
+        instantanément au fond des filets !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Vision
+        operator: '>='
+        value: '82'
+        mandatory: true
+      slots: []
+    - text: Le rempart impose sa carrure sur chaque corner et dégage inlassablement
+        le danger de la tête !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Strength
+        operator: '>='
+        value: '85'
+        mandatory: true
+      - attribute: Heading
+        operator: '>='
+        value: '78'
+        mandatory: true
+      slots: []

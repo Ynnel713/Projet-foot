@@ -1,0 +1,295 @@
+- code: REMPLACEMENT
+  label: Remplacement
+  variants:
+  - code: DEFAUT
+    label: Variante par défaut
+    is_default: true
+    phrases:
+    - text: 'Changement chez {club} : {entrant} remplace {sortant} à la {minute}e
+        minute.'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions: []
+      slots:
+      - slot_name: club
+        expression: context.player_team
+      - slot_name: entrant
+        expression: context.entrant.full_name
+      - slot_name: sortant
+        expression: context.sortant.full_name
+      - slot_name: minute
+        expression: context.minute
+    - text: '{sortant} cède sa place à {entrant}, qui entre en jeu sous les applaudissements.'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions: []
+      slots:
+      - slot_name: sortant
+        expression: context.sortant.full_name
+      - slot_name: entrant
+        expression: context.entrant.full_name
+    - text: 'Dernier ajustement tactique : {entrant} succède à {sortant} pour boucler
+        la partie.'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: minute
+        operator: '>='
+        value: '75'
+        mandatory: true
+      slots:
+      - slot_name: entrant
+        expression: context.entrant.full_name
+      - slot_name: sortant
+        expression: context.sortant.full_name
+    - text: '{sortant} rejoint le banc et {entrant} s''installe sur la pelouse, prêt
+        à peser sur le jeu.'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions: []
+      slots:
+      - slot_name: sortant
+        expression: context.sortant.full_name
+      - slot_name: entrant
+        expression: context.entrant.full_name
+    - text: 'Du sang neuf : {entrant} apporte sa vitesse à {club}, tandis que {sortant}
+        s''efface !'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Pace
+        operator: '>='
+        value: '78'
+        mandatory: true
+      slots:
+      - slot_name: entrant
+        expression: context.entrant.full_name
+      - slot_name: club
+        expression: context.player_team
+      - slot_name: sortant
+        expression: context.sortant.full_name
+    - text: 'Sur le banc, {entrant} est une carte de poids : il relève {sortant} et
+        change l''allure de la rencontre !'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: fm_rating
+        operator: '>='
+        value: '75'
+        mandatory: true
+      slots:
+      - slot_name: entrant
+        expression: context.entrant.full_name
+      - slot_name: sortant
+        expression: context.sortant.full_name
+    - text: 'Des jambes fraîches : {entrant} entre pour {sortant}, avec un réservoir
+        encore plein.'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Stamina
+        operator: '>='
+        value: '75'
+        mandatory: true
+      - attribute: minute
+        operator: '>='
+        value: '60'
+        mandatory: true
+      slots:
+      - slot_name: entrant
+        expression: context.entrant.full_name
+      - slot_name: sortant
+        expression: context.sortant.full_name
+    - text: 'Le banc lance un jeune : {entrant} hérite du poste de {sortant} et tente
+        sa chance.'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: age
+        operator: <=
+        value: '21'
+        mandatory: true
+      slots:
+      - slot_name: entrant
+        expression: context.entrant.full_name
+      - slot_name: sortant
+        expression: context.sortant.full_name
+    - text: Pour gérer les derniers instants, l'entraîneur fait confiance à l'expérience
+        de {entrant}, qui relève {sortant}.
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: age
+        operator: '>='
+        value: '33'
+        mandatory: true
+      - attribute: minute
+        operator: '>='
+        value: '70'
+        mandatory: true
+      slots:
+      - slot_name: entrant
+        expression: context.entrant.full_name
+      - slot_name: sortant
+        expression: context.sortant.full_name
+    - text: 'Changement précoce : {sortant} s''en va après {minute} minutes de jeu,
+        remplacé par {entrant} !'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: minute
+        operator: <=
+        value: '55'
+        mandatory: true
+      slots:
+      - slot_name: sortant
+        expression: context.sortant.full_name
+      - slot_name: minute
+        expression: context.minute
+      - slot_name: entrant
+        expression: context.entrant.full_name
+    - text: Dans le money time, {club} lance {entrant} dans la bataille pendant que
+        {sortant} file s'asseoir.
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: minute
+        operator: '>='
+        value: '85'
+        mandatory: true
+      slots:
+      - slot_name: club
+        expression: context.player_team
+      - slot_name: entrant
+        expression: context.entrant.full_name
+      - slot_name: sortant
+        expression: context.sortant.full_name
+    - text: 'Coup de sifflet de l''arbitre : {sortant} sort, {entrant} entre, et {club}
+        repart avec un autre visage.'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions: []
+      slots:
+      - slot_name: sortant
+        expression: context.sortant.full_name
+      - slot_name: entrant
+        expression: context.entrant.full_name
+      - slot_name: club
+        expression: context.player_team
+    - text: 'Changement de rotation : {entrant} prend le relais de {sortant}, avec
+        pour consigne de maintenir l''équilibre.'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions: []
+      slots:
+      - slot_name: entrant
+        expression: context.entrant.full_name
+      - slot_name: sortant
+        expression: context.sortant.full_name
+    - text: Dès son entrée, {entrant} presse comme un forcené, {sortant} ayant déjà
+        rejoint le banc !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Work Rate
+        operator: '>='
+        value: '80'
+        mandatory: true
+      slots:
+      - slot_name: entrant
+        expression: context.entrant.full_name
+      - slot_name: sortant
+        expression: context.sortant.full_name
+    - text: '{entrant} débarque pour {sortant}, avec l''idée d''apporter de la fluidité
+        dans le jeu de {club} !'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Technique
+        operator: '>='
+        value: '78'
+        mandatory: true
+      slots:
+      - slot_name: entrant
+        expression: context.entrant.full_name
+      - slot_name: sortant
+        expression: context.sortant.full_name
+      - slot_name: club
+        expression: context.player_team
+    - text: 'Un remaniement à bas bruit : une tape sur l''épaule, et {entrant} relève
+        {sortant} sur le terrain.'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions: []
+      slots:
+      - slot_name: entrant
+        expression: context.entrant.full_name
+      - slot_name: sortant
+        expression: context.sortant.full_name
+  - code: SURNOM
+    label: Surnom
+    is_default: false
+    phrases:
+    - text: Le vétéran remplace {sortant}, et sa seule présence rassure tous ses coéquipiers
+        !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: age
+        operator: '>='
+        value: '34'
+        mandatory: true
+      slots:
+      - slot_name: sortant
+        expression: context.sortant.full_name
+    - text: La pépite fait son entrée pour {sortant} sous les regards impatients du
+        public !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: age
+        operator: <=
+        value: '18'
+        mandatory: true
+      slots:
+      - slot_name: sortant
+        expression: context.sortant.full_name
+    - text: L'éclair déboule pour {sortant} et met aussitôt le feu au match !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Pace
+        operator: '>='
+        value: '90'
+        mandatory: true
+      slots:
+      - slot_name: sortant
+        expression: context.sortant.full_name
+    - text: Le poumon vient relever {sortant} et promet de courir jusqu'au coup de
+        sifflet final !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: Stamina
+        operator: '>='
+        value: '85'
+        mandatory: true
+      - attribute: minute
+        operator: '>='
+        value: '70'
+        mandatory: true
+      slots:
+      - slot_name: sortant
+        expression: context.sortant.full_name
+    - text: Le joker sort du banc à la place de {sortant}, un luxe que peu d'équipes
+        peuvent s'offrir !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: fm_rating
+        operator: '>='
+        value: '80'
+        mandatory: true
+      slots:
+      - slot_name: sortant
+        expression: context.sortant.full_name

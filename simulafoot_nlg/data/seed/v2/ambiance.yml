@@ -1,0 +1,214 @@
+- code: AMBIANCE
+  label: Ambiance
+  variants:
+  - code: DEFAUT
+    label: Variante par défaut
+    is_default: true
+    phrases:
+    - text: Les chants descendent des tribunes sans interruption, les travées vibrent
+        d'une seule voix !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions: []
+      slots: []
+    - text: Un tifo immense se déploie sur toute la largeur du virage, les couleurs
+        recouvrent tout !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions: []
+      slots: []
+    - text: Les drapeaux s'agitent, les écharpes tournent, ça chante fort dans cette
+        enceinte !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions: []
+      slots: []
+    - text: À domicile, le public de {club} chante à pleins poumons et porte son équipe
+        en avant !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: is_home
+        operator: ==
+        value: 'true'
+        mandatory: true
+      slots:
+      - slot_name: club
+        expression: context.player_team
+    - text: Même en déplacement, les supporters de {club} se font entendre et couvrent
+        presque les locaux !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: is_home
+        operator: ==
+        value: 'false'
+        mandatory: true
+      slots:
+      - slot_name: club
+        expression: context.player_team
+    - text: 'Dès les premières minutes, les travées sont en fusion : chants, drapeaux
+        et tambours, rien ne manque !'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: minute
+        operator: <=
+        value: '10'
+        mandatory: true
+      slots: []
+    - text: Le ton monte dans les gradins, chaque décision arbitrale réveille la colère
+        de la foule !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions: []
+      slots: []
+    - text: Les nerfs sont à vif des deux côtés, le moindre contact peut tout faire
+        basculer.
+      weight: 1.0
+      cooldown_matches: 2
+      conditions: []
+      slots: []
+    - text: Les sifflets pleuvent sur la pelouse, l'atmosphère devient électrique
+        !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions: []
+      slots: []
+    - text: Dans cette enceinte hostile, chaque ballon touché par {club} est accueilli
+        par un concert de sifflets !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: is_home
+        operator: ==
+        value: 'false'
+        mandatory: true
+      slots:
+      - slot_name: club
+        expression: context.player_team
+    - text: Les travées de {club} retiennent leur souffle à chaque duel, la crispation
+        se lit sur tous les visages.
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: is_home
+        operator: ==
+        value: 'true'
+        mandatory: true
+      slots:
+      - slot_name: club
+        expression: context.player_team
+    - text: 'Dernier quart d''heure : les supporters se lèvent, la tension est à son
+        comble !'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: minute
+        operator: '>='
+        value: '75'
+        mandatory: true
+      slots: []
+    - text: Un silence étrange s'installe, on entendrait presque les crampons gratter
+        la pelouse.
+      weight: 1.0
+      cooldown_matches: 2
+      conditions: []
+      slots: []
+    - text: Les tribunes se taisent d'un coup, tous les regards suivent le ballon
+        avec une attention fiévreuse.
+      weight: 1.0
+      cooldown_matches: 2
+      conditions: []
+      slots: []
+    - text: Le bruit retombe un instant, comme si tout le stade retenait son souffle.
+      weight: 1.0
+      cooldown_matches: 2
+      conditions: []
+      slots: []
+    - text: Dans ce temple devenu muet, on distingue clairement les consignes de {club}
+        depuis les bancs.
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: is_home
+        operator: ==
+        value: 'false'
+        mandatory: true
+      slots:
+      - slot_name: club
+        expression: context.player_team
+    - text: Dans un recueillement inhabituel, les tribunes de {club} observent le
+        jeu sans un mot.
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: is_home
+        operator: ==
+        value: 'true'
+        mandatory: true
+      slots:
+      - slot_name: club
+        expression: context.player_team
+    - text: À ce stade de la partie, un silence respectueux règne autour du terrain.
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: minute
+        operator: '>='
+        value: '60'
+        mandatory: true
+      slots: []
+    - text: Porté par des tribunes acquises à sa cause, {club} étouffe {adversaire}
+        sous le bruit !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: is_home
+        operator: ==
+        value: 'true'
+        mandatory: true
+      slots:
+      - slot_name: club
+        expression: context.player_team
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: Dans ce chaudron, {club} doit encaisser une pression de chaque instant
+        venue des gradins !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: is_home
+        operator: ==
+        value: 'false'
+        mandatory: true
+      slots:
+      - slot_name: club
+        expression: context.player_team
+    - text: La pression monte d'un cran, l'enceinte entière semble vouloir faire avancer
+        le ballon !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions: []
+      slots: []
+    - text: Les murs tremblent, la clameur pèse sur chaque passe et chaque contrôle.
+      weight: 1.0
+      cooldown_matches: 2
+      conditions: []
+      slots: []
+    - text: 'Rarement une atmosphère aura autant pesé sur une rencontre : la foule
+        commente chaque touche de balle !'
+      weight: 1.0
+      cooldown_matches: 2
+      conditions: []
+      slots: []
+    - text: Dans les ultimes minutes, la clameur enfle jusqu'à ne plus former qu'un
+        seul cri !
+      weight: 1.0
+      cooldown_matches: 2
+      conditions:
+      - attribute: minute
+        operator: '>='
+        value: '85'
+        mandatory: true
+      slots: []

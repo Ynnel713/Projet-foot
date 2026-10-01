@@ -1,0 +1,331 @@
+- code: TIR_NON_CADRE
+  label: Tir non cadré
+  variants:
+  - code: DEFAUT
+    label: Variante par défaut
+    is_default: true
+    phrases:
+    - text: '{joueur} s''essaie de loin, sa frappe instantanée des vingt-cinq mètres
+        s''envole largement au-dessus de la transversale !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions: []
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: À l'entrée de la surface, {joueur} contrôle puis arme trop vite, le ballon
+        part dans les tribunes !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Finishing
+        operator: <=
+        value: '60'
+        mandatory: true
+      - attribute: Composure
+        operator: <=
+        value: '55'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} se présente dans un angle fermé, force sa frappe et ne récolte
+        qu''un concert de sifflets !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions: []
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: Servi dans l'axe, {joueur} frappe du premier ballon mais croise trop son
+        tir, qui file à côté du second poteau !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Finishing
+        operator: <=
+        value: '65'
+        mandatory: true
+      - attribute: Technique
+        operator: <=
+        value: '55'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} enroule sa frappe après un contrôle orienté, le ballon frôle
+        le montant et sort de quelques centimètres !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Technique
+        operator: '>='
+        value: '78'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: Lancé plein axe, {joueur} déclenche à pleine vitesse et voit son tir s'écraser
+        loin du cadre !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Pace
+        operator: '>='
+        value: '85'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} reprend de volée une balle mal dégagée, mais le tir s''envole
+        bien trop haut !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions: []
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: Dans l'axe et sans opposition, {joueur} manque complètement sa frappe,
+        qui prend la direction du virage !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Finishing
+        operator: <=
+        value: '40'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} aperçoit le gardien avancé et tente le lob, mais ajuste mal
+        et dépasse largement la barre !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Vision
+        operator: '>='
+        value: '80'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: Après avoir éliminé un défenseur de {adversaire}, {joueur} enclenche trop
+        vite sa frappe et la décale loin de la lucarne !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Technique
+        operator: '>='
+        value: '75'
+        mandatory: true
+      slots:
+      - slot_name: adversaire
+        expression: context.opponent_team
+      - slot_name: joueur
+        expression: player.full_name
+    - text: Idéalement placé aux abords des seize mètres, {joueur} cadre mal sa frappe,
+        qui rase le poteau de très peu !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Finishing
+        operator: '>='
+        value: '80'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} déborde sur l''aile, ferme l''angle et tire, mais le ballon
+        traverse la surface sans trouver preneur !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Pace
+        operator: '>='
+        value: '82'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: Sur une frappe instantanée aux seize mètres, {joueur} voit le cuir lui
+        échapper et mourir très loin de sa cible !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Technique
+        operator: <=
+        value: '55'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} se laisse surprendre par le rebond et expédie le ballon dans
+        les gradins sans même cadrer !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions: []
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: Pourtant bien placé, {joueur} précipite sa conclusion face au but et passe
+        nettement à côté !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: minute
+        operator: '>='
+        value: '75'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: La frappe de {joueur}, déclenchée de loin, flotte longtemps avant de se
+        perdre dans un ciel dégagé !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions: []
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: Dos au but, {joueur} pivote d'un coup et décoche une frappe qui ne cadre
+        pas !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Technique
+        operator: '>='
+        value: '78'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} s''y reprend d''un angle impossible, le ballon longe le poteau
+        et sort pour un six mètres !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Finishing
+        operator: '>='
+        value: '78'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} déclenche une frappe lourde dans l''axe, mais le cuir s''écrase
+        derrière le but !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions: []
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: Après un contrôle raté, {joueur} s'empresse de frapper et ne cadre pas,
+        pour le plus grand soulagement de {adversaire} !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Finishing
+        operator: <=
+        value: '60'
+        mandatory: true
+      - attribute: First Touch
+        operator: <=
+        value: '55'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: '{joueur} s''offre une opportunité à vingt mètres, ajuste son tir avec
+        soin, mais ne trouve que le filet extérieur !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Technique
+        operator: '>='
+        value: '72'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: Décalé sur sa gauche, {joueur} claque une frappe puissante, mais le ballon
+        passe au-dessus, dans un silence soudain !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions: []
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+  - code: SURNOM
+    label: Surnom
+    is_default: false
+    phrases:
+    - text: Le mitrailleur tire de partout et envoie encore celle-là dans les nuages
+        !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Long Shots
+        operator: '>='
+        value: '60'
+        mandatory: true
+      - attribute: Finishing
+        operator: <=
+        value: '60'
+        mandatory: true
+      slots: []
+    - text: L'éclair arrive lancé dans la surface, tire trop vite et envoie le ballon
+        bien au-dessus de la cage !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Pace
+        operator: '>='
+        value: '90'
+        mandatory: true
+      slots: []
+    - text: Le canonnier arme une frappe de mule, mais le ballon finit sa course bien
+        loin des buts !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: preferred_moves
+        operator: contient
+        value: Shoots With Power
+        mandatory: true
+      - attribute: Finishing
+        operator: <=
+        value: '70'
+        mandatory: true
+      slots: []
+    - text: L'artiste tente un geste de haute voltige dans l'axe, mais la frappe frôle
+        le montant !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Technique
+        operator: '>='
+        value: '90'
+        mandatory: true
+      slots: []
+    - text: Le stratège repère la sortie du gardien et tente un lob inspiré, qui passe
+        juste au-dessus !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Vision
+        operator: '>='
+        value: '85'
+        mandatory: true
+      slots: []
+    - text: Le renard des surfaces se retrouve seul et rate son rendez-vous, le ballon
+        file dans le décor !
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: Finishing
+        operator: '>='
+        value: '85'
+        mandatory: true
+      slots: []
