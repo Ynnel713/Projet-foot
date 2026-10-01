@@ -356,10 +356,13 @@ visées pour les 12 scénarios.
 - **D1 — cascade SURNOM → DEFAUT** (SURNOM prime quand sa condition matche) : note D1, §6.
 - **D3 — `{sortant}` / `{entrant}` : étendre `MatchContext`** avec `sortant: Player | None = None`
   et `entrant: Player | None = None` (deux champs typés, comme `passeur` / `receveur`, pas de
-  dict générique). Impact : `engine/models.py` (2 champs + la note « Autre protagoniste d'un
-  événement à deux joueurs » à étendre à REMPLACEMENT) ; `convert_commentary_xlsx_to_yaml.py`
-  (`SLOT_EXPRESSIONS` : `context.sortant.full_name`, `context.entrant.full_name` ;
-  `SLOTS_AUTORISES["REMPLACEMENT"]`) ; `template_filler.render` (gérer les deux slots). Couples à
+  dict générique). **Impact, 4 endroits (liste corrigée le 01/10/2026 : `profile_engine` manquait) :**
+  (1) `engine/models.py` : 2 champs + la note « Autre protagoniste d'un événement à deux
+  joueurs » à étendre à REMPLACEMENT ; (2) `engine/profile_engine.normalize_match_context` :
+  lecture des 2 clés (il construit `MatchContext` depuis un dict et ne connaît ni `sortant` ni
+  `entrant`) ; (3) `convert_commentary_xlsx_to_yaml.py` : `SLOT_EXPRESSIONS`
+  (`context.sortant.full_name`, `context.entrant.full_name`) et `SLOTS_AUTORISES["REMPLACEMENT"]` ;
+  (4) `template_filler.render` : gérer les deux slots. Couples à
   deux joueurs existants ou prévus : seulement `passeur`/`receveur` (COUP_FRANC, CONSTRUCTION,
   CORNER) et `sortant`/`entrant` (REMPLACEMENT) — aucune structure générique justifiée.
   **Prérequis du bloc 1 (import), à faire AVANT lui : changement de modèle, pas d'intégration
