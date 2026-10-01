@@ -144,9 +144,9 @@ class TestRecencyPenaltyGlobal:
 
     @pytest.mark.parametrize(
         ("rang", "attendu"),
-        [(10, 1.0), (11, 0.9), (12, 0.6), (13, 0.3), (14, 0.0)],
+        [(10, 1.0), (11, 1.0), (15, 1.0), (22, 1.0), (23, 0.0), (40, 0.0)],
     )
-    def test_modele_sans_protagoniste_est_penalise_plus_fort(self, sqlite_conn, en_base, rang, attendu):
+    def test_modele_sans_protagoniste_est_bloque_12_matchs(self, sqlite_conn, en_base, rang, attendu):
         phrase = self._phrase(en_base, "Le mitrailleur tire de partout !")
         self._usage(sqlite_conn, phrase, 7, 10)
         assert recency_penalty_global(sqlite_conn, phrase, match_sequence=rang) == pytest.approx(attendu)

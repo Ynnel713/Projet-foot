@@ -207,13 +207,17 @@ class TestSelectVariantes:
         for graine in range(20):
             assert _select(sqlite_conn, seed=graine).text == "sur penalty"
 
-    def test_surnom_et_defaut_partagent_un_tirage_pondere_defaut_en_tete(self, sqlite_conn):
+    @pytest.mark.parametrize("phrases_surnom", [1, 5])
+    def test_taux_surnom_deux_etapes_independant_de_la_taille_du_pool(self, sqlite_conn, phrases_surnom):
+        """Etape 1 : SURNOM 0.65 contre DEFAUT 1.0 = 39 % des tirages quand les deux sont eligibles, que DEFAUT ait 2 ou
+        20 phrases (avec un tirage a plat sur toutes les phrases, SURNOM tombait a 2 % face a un pool 4-5x plus grand)."""
         _banque(sqlite_conn, {
-            "DEFAUT": {"defaut": True, "phrases": [("generique A", []), ("generique B", [])]},
-            "SURNOM": {"phrases": [("Le sprinter file", RAPIDE)]},
+            "DEFAUT": {"defaut": True, "phrases": [(f"generique {i}", []) for i in range(20)]},
+            "SURNOM": {"phrases": [(f"surnom {i}", RAPIDE) for i in range(phrases_surnom)]},
         })
-        tires = [_select(sqlite_conn, seed=graine).text for graine in range(300)]
-        assert 0 < tires.count("Le sprinter file") < 300 / 6  # SURNOM (0.35) x ciblage large (0.4) face a deux generiques (1.0)
+        tires = [_select(sqlite_conn, seed=graine).text for graine in range(1000)]
+        part = sum(t.startswith("surnom") for t in tires) / 1000
+        assert 0.33 < part < 0.45
 
     def test_surnom_vide_defaut_sert(self, sqlite_conn):
         _banque(sqlite_conn, {
@@ -274,11 +278,11 @@ class TestPonderationDesCandidats:
         assert set(tires) == {"large", "sans condition"}
         assert tires.count("large") < tires.count("sans condition")  # 0.4 contre 1.0
 
-    def test_une_condition_discriminante_ne_desavantage_pas_la_phrase(self, sqlite_conn):
-        rare = [("Pace", ">=", "10")]  # 10 % de la population : ciblage 1.0
+    def test_une_condition_discriminante_est_favorisee(self, sqlite_conn):
+        rare = [("Pace", ">=", "10")]  # 10 % de la population : ciblage 1.2
         _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("rare", rare), ("sans condition", [])]}})
-        tires = [_select(sqlite_conn, seed=g).text for g in range(400)]
-        assert abs(tires.count("rare") - tires.count("sans condition")) < 80  # ~ moitie-moitie
+        tires = [_select(sqlite_conn, seed=g).text for g in range(800)]
+        assert tires.count("rare") > tires.count("sans condition")  # 1.2 contre 1.0
 
     def test_zero_specifique_eligible_repli_sur_les_generiques(self, sqlite_conn):
         _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("spec", RAPIDE), ("gen", [])]}})
@@ -309,13 +313,14 @@ class TestCooldown:
         _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("A", []), ("B", [])]}})  # cooldown 2
         _usage(sqlite_conn, "A", 1, 10)
         assert {_select(sqlite_conn, seed=g, match_sequence=11).text for g in range(30)} == {"B"}
-        assert {_select(sqlite_conn, seed=g, match_sequence=12).text for g in range(40)} == {"A", "B"}
+        # "A" n'a pas de slot de protagoniste : la memoire globale la garde 12 matchs (anti_repeat), libre au 23e
+        assert {_select(sqlite_conn, seed=g, match_sequence=23).text for g in range(40)} == {"A", "B"}
 
     def test_une_phrase_en_cooldown_laisse_les_autres_servir_puis_revient(self, sqlite_conn):
         _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("spec", RAPIDE), ("gen", [])]}})
         _usage(sqlite_conn, "spec", 1, 10)
         assert {_select(sqlite_conn, match_sequence=11, seed=g).text for g in range(30)} == {"gen"}  # au lieu de bloquer
-        assert "spec" in {_select(sqlite_conn, match_sequence=12, seed=g).text for g in range(60)}  # cooldown ecoule
+        assert "spec" in {_select(sqlite_conn, match_sequence=23, seed=g).text for g in range(60)}  # cooldown et blocage ecoules
 
     def test_le_tirage_ne_contourne_jamais_le_cooldown(self, sqlite_conn):
         _banque(sqlite_conn, {
@@ -324,7 +329,7 @@ class TestCooldown:
         })
         _usage(sqlite_conn, "surnom", 1, 10)
         assert {_select(sqlite_conn, match_sequence=11, seed=g).text for g in range(60)} == {"generique"}  # SURNOM en cooldown
-        assert "surnom" in {_select(sqlite_conn, match_sequence=13, seed=g).text for g in range(200)}  # cooldown (2) et memoire globale ecoules
+        assert "surnom" in {_select(sqlite_conn, match_sequence=23, seed=g).text for g in range(200)}  # cooldown (2) et memoire globale ecoules
 
     def test_le_cooldown_joueur_ne_bloque_que_ce_joueur(self, sqlite_conn):
         _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("A", []), ("B", [])]}})
@@ -520,10 +525,10 @@ class TestCooldownGlobal:
         _usage(sqlite_conn, MITRAILLEUR, tolisso.id, 1)
         # meme match : bloque pour un AUTRE joueur, quelle que soit la graine
         assert MITRAILLEUR not in {_select(sqlite_conn, zaire_emery, match_sequence=1, seed=g).text for g in range(200)}
-        # match suivant : penalise (0.9 de penalite -> poids x 0.1), puis libre une fois la fenetre ecoulee
-        suivant = [_select(sqlite_conn, zaire_emery, match_sequence=2, seed=g).text for g in range(800)].count(MITRAILLEUR)
-        libre = [_select(sqlite_conn, zaire_emery, match_sequence=6, seed=g).text for g in range(800)].count(MITRAILLEUR)
-        assert 0 < suivant < libre / 2
+        # modele sans protagoniste : bloque 12 matchs (M2 et M9 de l'echantillon), libre ensuite
+        for rang in (2, 9, 13):
+            assert MITRAILLEUR not in {_select(sqlite_conn, zaire_emery, match_sequence=rang, seed=g).text for g in range(200)}
+        assert MITRAILLEUR in {_select(sqlite_conn, zaire_emery, match_sequence=14, seed=g).text for g in range(200)}
 
     def test_surnom_seul_global(self, sqlite_conn):
         """Un modele sans slot de joueur ne peut pas sortir deux fois dans le meme match, tant que le pool a une alternative :

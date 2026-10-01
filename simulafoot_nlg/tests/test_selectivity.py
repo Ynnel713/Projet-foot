@@ -26,8 +26,8 @@ class TestFacteurCiblage:
     @pytest.mark.parametrize(
         ("seuil_pace", "couverture", "facteur"),
         [
-            (11, 0.0, 1.0),  # ne matche personne : discriminante
-            (9, 0.2, 1.0),  # 20 % : borne incluse, discriminante
+            (11, 0.0, 1.2),  # ne matche personne : discriminante
+            (9, 0.2, 1.2),  # 20 % : borne incluse, discriminante
             (8, 0.3, 0.4),  # 30 % : borne incluse, large
             (1, 1.0, 0.4),
         ],
@@ -39,9 +39,9 @@ class TestFacteurCiblage:
         assert selectivite.facteur_ciblage(phrase) == pytest.approx(facteur)
 
     def test_entre_20_et_30_pour_cent_le_facteur_est_lineaire(self):
-        # 25 joueurs sur 100 : mi-chemin entre 1.0 (20 %) et 0.4 (30 %)
+        # 25 joueurs sur 100 : mi-chemin entre 1.2 (20 %) et 0.4 (30 %)
         phrase = _phrase(_cond("Pace", ">=", "76"))
-        assert Selectivite(_population(100)).facteur_ciblage(phrase) == pytest.approx(0.7)
+        assert Selectivite(_population(100)).facteur_ciblage(phrase) == pytest.approx(0.8)
 
     def test_le_facteur_decroit_avec_la_couverture(self):
         selectivite = Selectivite(_population(100))

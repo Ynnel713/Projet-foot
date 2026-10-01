@@ -7,9 +7,9 @@ Algorithme de `select` (decisions D1, D9, D10, revisees le 02/10/2026 ; SPEC_ANT
        et variantes d'ATTRIBUT (DEFAUT et SURNOM).
     2. Les variantes de contexte gardent leur priorite : la premiere qui produit un candidat sert (un but sur
        penalty se raconte avec une phrase de penalty, pas avec un generique tire au sort).
-    3. Sinon, UN tirage pondere sur l'ensemble des candidats de DEFAUT et de SURNOM (plus de priorite dure
-       SURNOM > DEFAUT, ni specifique > generique : elles servaient le meme modele a tout joueur remplissant
-       une condition large). Pour chaque variante :
+    3. Sinon, tirage en DEUX ETAPES sur les variantes d'attribut (DEFAUT, SURNOM) -- plus de priorite dure
+       SURNOM > DEFAUT, ni specifique > generique (elles servaient le meme modele a tout joueur remplissant une
+       condition large). Pour chaque variante :
          a. conditions : les phrases dont une condition `mandatory` echoue sont ECARTEES (jamais
             deprioritisees) ; les phrases de secours (`is_fallback`) et inactives ne sont jamais dans
             le pool normal ;
@@ -17,13 +17,15 @@ Algorithme de `select` (decisions D1, D9, D10, revisees le 02/10/2026 ; SPEC_ANT
             EN MATCHS) est ecartee ; une phrase sans cooldown est refusee. Jamais relache ;
          c. rendu : chaque candidat est rendu (template_filler.render puis post_process.apply) ; un candidat
             dont un slot ne se resout pas (SlotResolutionError) est ecarte ;
-         d. poids = poids de la variante x poids de la phrase x `POIDS_SURNOM` (0.35 pour la variante SURNOM)
-            x `Selectivite.facteur_ciblage` (1.0 discriminante <= 20 %, 0.4 large >= 30 %) x (1 - similarite
-            du texte rendu, meme joueur) x (1 - recency_penalty_global) : une phrase deja servie dans le match
-            pour N'IMPORTE quel joueur a un poids nul, puis penalise 3 matchs (anti_repeat).
-       Le rng est derive de `seed` (explicite, jamais d'horloge). Si tous les poids sont nuls, le cooldown
-       global est relache (le pool epuise par la seule memoire inter-joueurs retombe sur les poids de base,
-       DEFAUT en tete) ; si ce n'est pas encore assez, tirage uniforme : une penalite ne vide jamais le pool.
+         d. poids de la phrase = poids x `Selectivite.facteur_ciblage` (1.2 discriminante <= 20 %, 0.4 large
+            >= 30 %, 1.0 sans condition joueur) x (1 - similarite du texte rendu, meme joueur).
+       ETAPE 1 : une variante est tiree parmi celles qui ont un candidat, au poids `poids variante` (DEFAUT 1.0,
+       SURNOM `POIDS_SURNOM` 0.65) x DISPONIBILITE, part du poids de ses phrases qui survit a la memoire
+       inter-joueurs (1 - recency_penalty_global) : une variante dont les phrases viennent de servir pour un
+       autre joueur pese peu, une variante entierement bloquee (1.0) n'est pas eligible. ETAPE 2 : la phrase est
+       tiree dans la variante choisie, au poids de la phrase x (1 - penalite globale). Si aucune variante n'est
+       eligible, le cooldown global est relache (poids de base) ; si ce n'est pas encore assez, tirage uniforme :
+       une penalite ne vide jamais le pool. Le rng est derive de `seed` (explicite, jamais d'horloge).
     4. Cascade epuisee (aucun candidat dans aucune variante) : repli final sur la phrase de secours du
        scenario (D10), rendue comme les autres ; UN seul WARNING enrichi (scenario, variantes ecartees,
        repli) signale que le scenario est sous-alimente. Pas de phrase de secours en base : le meme WARNING,
@@ -56,12 +58,16 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class _Rendu:
-    """Un candidat rendu : sa phrase, son texte final, son poids de base et sa penalite inter-joueurs."""
+    """Un candidat rendu : sa phrase, son texte final, son poids (ciblage, similarite) et sa penalite inter-joueurs."""
 
     phrase: Phrase
     texte: str
     poids: float
     penalite_globale: float
+
+    def disponible(self, relacher: bool) -> float:
+        """Poids apres la memoire inter-joueurs (`relacher` : sans elle)."""
+        return self.poids if relacher else self.poids * (1.0 - self.penalite_globale)
 
 
 class AucunCandidatError(LookupError):
@@ -85,8 +91,9 @@ def candidats(phrases: Sequence[Phrase], player: Player, context: MatchContext) 
     ]
 
 
-#: Poids de la variante SURNOM face a DEFAUT (1.0) : un modele a surnom reste possible sans dominer.
-POIDS_SURNOM = 0.35
+#: Poids de la variante SURNOM face a DEFAUT (1.0) a l'etape 1 du tirage : ~39 % des tirages quand les deux sont
+#: eligibles, quel que soit le nombre de phrases de chaque variante (le pool DEFAUT est 4 a 5 fois plus grand).
+POIDS_SURNOM = 0.65
 CODE_SURNOM = "SURNOM"
 
 
@@ -144,20 +151,34 @@ def _rendre(
             continue
         texte = apply(brut)
         penalite = similarity_penalty(conn, texte, player, match_sequence=match_sequence)
-        poids = variante.weight * phrase.weight * selectivite.facteur_ciblage(phrase) * (1.0 - penalite)
-        if variante.code == CODE_SURNOM:
-            poids *= POIDS_SURNOM
+        poids = phrase.weight * selectivite.facteur_ciblage(phrase) * (1.0 - penalite)
         rendus.append(_Rendu(phrase, texte, poids, recency_penalty_global(conn, phrase, match_sequence=match_sequence)))
     return rendus
 
 
-def _tirer(rendus: Sequence[_Rendu], rng: random.Random) -> SelectionResult:
-    """Tirage pondere. Poids = poids de base x (1 - penalite globale) ; tous nuls : la memoire inter-joueurs est
-    relachee (poids de base) ; encore tous nuls : tirage uniforme."""
-    poids = [r.poids * (1.0 - r.penalite_globale) for r in rendus]
-    if not any(poids):
-        poids = [r.poids for r in rendus]
-    choix = rng.choices(rendus, weights=poids if any(poids) else None, k=1)[0]
+def _poids_variante(variante: Variant) -> float:
+    return variante.weight * (POIDS_SURNOM if variante.code == CODE_SURNOM else 1.0)
+
+
+def _tirer(groupes: Sequence[tuple[Variant, Sequence[_Rendu]]], rng: random.Random) -> SelectionResult:
+    """Tirage en deux etapes (variante, puis phrase), voir le module. Si aucune variante n'est eligible, la memoire
+    inter-joueurs est relachee ; si tous les poids sont encore nuls, tirage uniforme sur tous les candidats."""
+    for relacher in (False, True):
+        eligibles = [(v, rs) for v, rs in groupes if any(r.disponible(relacher) for r in rs)]
+        if eligibles:
+            break
+    else:
+        return _uniforme([r for _, rs in groupes for r in rs], rng)
+    poids = [
+        _poids_variante(v) * sum(r.disponible(relacher) for r in rs) / sum(r.poids for r in rs) for v, rs in eligibles
+    ]
+    _, rendus = rng.choices(eligibles, weights=poids if any(poids) else None, k=1)[0]
+    choix = rng.choices(rendus, weights=[r.disponible(relacher) for r in rendus], k=1)[0]
+    return SelectionResult(choix.phrase, choix.texte)
+
+
+def _uniforme(rendus: Sequence[_Rendu], rng: random.Random) -> SelectionResult:
+    choix = rng.choice(rendus)
     return SelectionResult(choix.phrase, choix.texte)
 
 
@@ -211,10 +232,10 @@ def select(
     for variante in variantes_de_contexte(variantes):
         rendus = rendre(variante)
         if rendus:
-            return _tirer(rendus, derive_rng(seed, scenario_code, variante.code, "select"))
-    rendus = [r for v in actives if not _est_de_contexte(v) for r in rendre(v)]
-    if rendus:
-        return _tirer(rendus, derive_rng(seed, scenario_code, "POOL", "select"))
+            return _tirer([(variante, rendus)], derive_rng(seed, scenario_code, variante.code, "select"))
+    groupes = [(v, rendus) for v in actives if not _est_de_contexte(v) if (rendus := rendre(v))]
+    if groupes:
+        return _tirer(groupes, derive_rng(seed, scenario_code, "POOL", "select"))
     ecartees = actives
 
     secours = _phrase_de_secours(conn, variantes)

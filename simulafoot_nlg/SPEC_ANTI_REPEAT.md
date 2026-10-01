@@ -727,23 +727,42 @@ sur `preferred_moves`, jamais `None`) ; même traitement, retourner `False`.
 
 ---
 
-## Révision du 02/10/2026 -- mémoire inter-joueurs et tirage pondéré (échantillon 14 matchs)
+## Révision du 02/10/2026 -- mémoire inter-joueurs et tirage en deux étapes (échantillon 14 matchs)
 
 Constat (`data/nlg_samples/repetitions.md`) : cooldown et similarité sont **par joueur** ; rien ne voyait qu'un modèle venait de
 servir pour un autre joueur, et la sélection (SURNOM avant DEFAUT, spécifique avant générique) servait le même modèle à
 tout joueur remplissant une condition large (`fm_rating >= 80` : « Le joker… » pour 31 des 32 entrants).
 
 - **Cooldown global** (`anti_repeat.recency_penalty_global`) : une phrase déjà servie dans le match courant, pour N'IMPORTE
-  quel joueur, est bloquée (1.0) ; puis pénalité décroissante sur 3 matchs (pic 0.7 au match suivant, 2/3 puis 1/3 du pic).
-  Un modèle **sans protagoniste** (aucun slot `joueur`/`entrant`/`sortant`/`passeur`/`receveur` : « Le mitrailleur… »,
-  rendu identique pour tous) : pic 0.9. Unité : `match_sequence`, déterministe. Il **subsume** la pénalité « même phrase_id
-  déjà sorti dans le match / les 2 derniers matchs » : un seul mécanisme, pas deux.
-- **Pool épuisé** : le blocage global est un poids (1 - pénalité) ; si tous les poids sont nuls il est relâché (poids de
-  base) -- jamais de phrase de secours à cause de la seule mémoire inter-joueurs. Le cooldown joueur, lui, n'est jamais relâché.
-- **Tirage pondéré** (`phrase_selector.select`) : plus de priorité dure SURNOM > DEFAUT ni spécifique > générique (`paliers`,
-  `ordonner_variantes`, `Selectivite.est_specifique` et le seuil de 70 % sont supprimés). Poids = poids variante x poids phrase
-  x `POIDS_SURNOM` (0.35, variante SURNOM) x `Selectivite.facteur_ciblage` (1.0 si couverture <= 20 %, 0.4 si >= 30 %, linéaire
-  entre) x (1 - similarité du texte rendu) x (1 - pénalité globale). Les variantes de **contexte** (PENALTY : ni DEFAUT ni
-  SURNOM) gardent leur priorité : un but sur penalty se raconte avec une phrase de penalty.
-- **Hors ticket** : la banque n'est pas modifiée ; `scripts/audit_conditions_larges.py` liste les conditions éligibles pour plus
+  quel joueur, est bloquée (1.0) ; puis pénalité décroissante sur 3 matchs (0.7, 0.47, 0.23). Un modèle **sans protagoniste**
+  (aucun slot `joueur`/`entrant`/`sortant`/`passeur`/`receveur` : « Le mitrailleur… », rendu identique pour tous) est **bloqué
+  12 matchs** : une pénalité graduée (0.9 sur 3 matchs) laissait 6 textes identiques répétés sur 14 matchs, le blocage de 12
+  matchs 0. Unité : `match_sequence`, déterministe. Ce mécanisme **subsume** la pénalité « même phrase_id déjà sorti dans le
+  match / les 2 derniers matchs » : un seul invariant, pas deux.
+- **Tirage en deux étapes** (`phrase_selector.select`), plus de priorité dure SURNOM > DEFAUT ni spécifique > générique
+  (`paliers`, `ordonner_variantes`, `Selectivite.est_specifique`, seuil de 70 % supprimés) :
+  1. variante tirée parmi celles qui ont un candidat, au poids **DEFAUT 1.0, SURNOM 0.65** (`POIDS_SURNOM`) x **disponibilité**
+     (part du poids de ses phrases qui survit à la mémoire inter-joueurs : une variante dont l'unique phrase vient de servir
+     pèse peu, une variante entièrement bloquée n'est pas éligible). À disponibilité égale, SURNOM prend 0.65/1.65 = **39 %**
+     des tirages éligibles, que DEFAUT ait 2 ou 20 phrases (un tirage à plat sur toutes les phrases le ramenait à 2 %) ;
+  2. phrase tirée dans la variante, au poids phrase x `Selectivite.facteur_ciblage` (**1.2** si la couverture des
+     conditions joueur est <= 20 %, **0.4** si >= 30 %, linéaire entre les deux, 1.0 sans condition joueur) x (1 - similarité
+     du texte rendu, même joueur) x (1 - pénalité globale).
+  Les variantes de **contexte** (PENALTY : ni DEFAUT ni SURNOM) gardent leur priorité et ne sont jamais mêlées au tirage : un but
+  sur penalty se raconte avec une phrase de penalty.
+- **Pool épuisé** : si aucune variante n'est éligible, la mémoire inter-joueurs est relâchée (poids de base) -- jamais de phrase
+  de secours à cause d'elle ; si tous les poids sont encore nuls, tirage uniforme. Le cooldown joueur n'est jamais relâché.
+
+**Invariants mesurés (14 matchs, 376 phrases, graine fixe)** : (a) même phrase pour le même joueur : 0 ; (b) textes identiques pour
+des joueurs différents : 0 ; REMPLACEMENT, même modèle deux fois dans un même match : 0 ; phrases de secours : 0 ; deux exécutions
+même graine : sortie identique.
+
+**Ce qui est impossible, et pourquoi.** « REMPLACEMENT : réutilisations en trop < 20 » ne peut pas être tenu : avec N lignes et un
+pool de P modèles, le minimum est N - P (114 - 21 = 93). Le bon invariant est « même modèle deux fois dans un même match = 0 »
+(tenu : 0) et « total en trop <= (lignes - modèles éligibles) + 5 ». De même la part de SURNOM est bornée par l'éligibilité
+(~26 % des tirages) : en pourcentage de **toutes** les lignes elle plafonne vers 13 % même avec un poids SURNOM de 2.5, parce que
+les modèles SURNOM sont peu nombreux (5 à 8 par scénario) et que la mémoire inter-joueurs les protège de la répétition. Les 95
+lignes SURNOM d'avant (25 %) venaient de la répétition des mêmes 11 modèles sans nom.
+
+- **Hors ticket** : la banque n'est pas modifiée ici ; `scripts/audit_conditions_larges.py` liste les conditions éligibles pour plus
   de 30 % des événements de leur scénario (resserrement : ticket banque).

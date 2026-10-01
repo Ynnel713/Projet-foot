@@ -6,7 +6,7 @@ refuse sans repli (voir profile_engine.validate_match_sequence).
 
     recency_penalty    : 1.0 tant que le cooldown de la phrase n'est pas ecoule pour ce joueur, 0.0 apres.
     recency_penalty_global : meme phrase, TOUS joueurs confondus : 1.0 dans le match courant, puis une
-        penalite decroissante sur les 3 matchs suivants (plus forte pour un modele sans protagoniste).
+        penalite decroissante sur les 3 matchs suivants ; un modele sans protagoniste reste bloque 12 matchs.
     similarity_penalty : similarite (MinHash, engine/minhash.py) avec les textes recents du joueur.
     update_cooldown    : APRES le choix et le rendu (template_filler.render + post_process.apply),
         enregistre l'usage : phrase_history (via logger.log_usage, ecrivain unique, D17) puis
@@ -74,7 +74,10 @@ _SLOT = re.compile(r"\{(\w+)\}")
 #: (decroissante lineairement jusqu'a 0 au-dela de la fenetre). Le match de l'usage lui-meme est BLOQUE (1.0).
 FENETRE_GLOBALE_MATCHS = 3
 PENALITE_GLOBALE = 0.7
-PENALITE_GLOBALE_SANS_PROTAGONISTE = 0.9
+#: Un modele sans protagoniste rend le MEME texte pour tout joueur : bloque (1.0) pendant 12 matchs apres son usage.
+#: Mesure sur 14 matchs avec un tirage SURNOM a 0.65 : une penalite graduee (0.9 sur 3 matchs) laissait 6 textes
+#: identiques repetes (+8), un blocage de 12 matchs 0 -- sans changer la part de SURNOM parmi les tirages eligibles.
+BLOCAGE_SANS_PROTAGONISTE_MATCHS = 12
 
 
 def sans_protagoniste(phrase: Phrase) -> bool:
@@ -88,10 +91,10 @@ def recency_penalty_global(conn: Connection, phrase: Phrase, *, match_sequence: 
     modele, et un modele sans protagoniste le meme texte.)
 
     `ecoules = match_sequence - dernier usage` (tous joueurs, usages futurs ignores) : 1.0 si `ecoules == 0`
-    (le match courant : blocage) ; sinon `pic * (FENETRE + 1 - ecoules) / FENETRE` tant que `ecoules <=
-    FENETRE_GLOBALE_MATCHS`, soit pic, 2/3 pic, 1/3 pic, puis 0.0 ; pic = `PENALITE_GLOBALE` (0.7), ou
-    `PENALITE_GLOBALE_SANS_PROTAGONISTE` (0.9) pour un modele sans protagoniste. Une phrase de secours n'est
-    jamais penalisee. Deterministe : lecture de `phrase_history`, aucune horloge ni aleatoire.
+    (le match courant : blocage). Modele sans protagoniste : 1.0 tant que `ecoules <=
+    BLOCAGE_SANS_PROTAGONISTE_MATCHS`, puis 0.0. Autre modele : `PENALITE_GLOBALE * (FENETRE + 1 - ecoules) /
+    FENETRE` tant que `ecoules <= FENETRE_GLOBALE_MATCHS`, soit 0.7, 0.47, 0.23 (decroissance lineaire), puis 0.0.
+    Une phrase de secours n'est jamais penalisee. Deterministe : lecture de `phrase_history`, aucune horloge ni aleatoire.
 
     `match_sequence` est obligatoire, par mot-cle (None -> ValueError, aucun repli)."""
     rang = validate_match_sequence(match_sequence)
@@ -106,10 +109,11 @@ def recency_penalty_global(conn: Connection, phrase: Phrase, *, match_sequence: 
     ecoules = rang - dernier
     if ecoules == 0:
         return 1.0
+    if sans_protagoniste(phrase):
+        return 1.0 if ecoules <= BLOCAGE_SANS_PROTAGONISTE_MATCHS else 0.0
     if ecoules > FENETRE_GLOBALE_MATCHS:
         return 0.0
-    pic = PENALITE_GLOBALE_SANS_PROTAGONISTE if sans_protagoniste(phrase) else PENALITE_GLOBALE
-    return pic * (FENETRE_GLOBALE_MATCHS + 1 - ecoules) / FENETRE_GLOBALE_MATCHS
+    return PENALITE_GLOBALE * (FENETRE_GLOBALE_MATCHS + 1 - ecoules) / FENETRE_GLOBALE_MATCHS
 
 
 # Fenetre de comparaison, en MATCHS (decision sim-window : jamais en heures) : le match

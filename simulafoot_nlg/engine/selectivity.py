@@ -23,10 +23,11 @@ from engine.conditions import MATCH_CONTEXT_FIELDS, evaluate_condition
 from engine.models import MatchContext, Phrase, Player
 from engine.profile_engine import normalize_player
 
-#: Ciblage : une phrase dont les conditions joueur couvrent <= 20 % de la population est DISCRIMINANTE (poids 1.0) ;
+#: Ciblage : une phrase dont les conditions joueur couvrent <= 20 % de la population est DISCRIMINANTE (poids 1.2) ;
 #: au-dela de 30 % elle est LARGE (poids 0.4) ; entre les deux, interpolation lineaire. Sans condition joueur : 1.0.
 COUVERTURE_DISCRIMINANTE = 0.20
 COUVERTURE_LARGE = 0.30
+POIDS_CIBLAGE_DISCRIMINANT = 1.2
 POIDS_CIBLAGE_LARGE = 0.4
 
 
@@ -85,13 +86,15 @@ class Selectivite:
         return None if comptes is None else comptes[0] / comptes[1]
 
     def facteur_ciblage(self, phrase: Phrase) -> float:
-        """Facteur de poids [`POIDS_CIBLAGE_LARGE`, 1.0] selon la couverture : 1.0 sans condition joueur ou a
-        couverture <= `COUVERTURE_DISCRIMINANTE` ; `POIDS_CIBLAGE_LARGE` a couverture >= `COUVERTURE_LARGE` ;
-        lineaire entre les deux."""
+        """Facteur de poids [`POIDS_CIBLAGE_LARGE`, `POIDS_CIBLAGE_DISCRIMINANT`] selon la couverture : 1.0 sans condition
+        joueur ; `POIDS_CIBLAGE_DISCRIMINANT` (1.2) a couverture <= `COUVERTURE_DISCRIMINANTE` ; `POIDS_CIBLAGE_LARGE`
+        (0.4) a couverture >= `COUVERTURE_LARGE` ; lineaire entre les deux."""
         couverture = self.couverture(phrase)
-        if couverture is None or couverture <= COUVERTURE_DISCRIMINANTE:
+        if couverture is None:
             return 1.0
+        if couverture <= COUVERTURE_DISCRIMINANTE:
+            return POIDS_CIBLAGE_DISCRIMINANT
         if couverture >= COUVERTURE_LARGE:
             return POIDS_CIBLAGE_LARGE
         part = (couverture - COUVERTURE_DISCRIMINANTE) / (COUVERTURE_LARGE - COUVERTURE_DISCRIMINANTE)
-        return 1.0 - part * (1.0 - POIDS_CIBLAGE_LARGE)
+        return POIDS_CIBLAGE_DISCRIMINANT - part * (POIDS_CIBLAGE_DISCRIMINANT - POIDS_CIBLAGE_LARGE)
