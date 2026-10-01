@@ -494,6 +494,25 @@ décision.
 - **`engine/logger.py` : sa docstring est à compléter avec `match_sequence`** à l'implémentation
   du bloc 4 (elle ne le mentionne pas aujourd'hui).
 
+**Décisions D13-D15 et reclassements de blocages (01/10/2026, architecte) :**
+- **D13 — FAUTE_SIMPLE, HORS-JEU, AMBIANCE reportés à V2.2.** Aucun n'a de source d'événement dans
+  `narrative.py` ni dans `MatchEvents`. V2.1 est un chantier moteur (import + sélecteur +
+  `template_filler` + `anti_repeat` + branchement), pas d'extension de `narrative.py`. Les 3 pilotes
+  restent dans `pilotes_v2/`, importables via YAML, mais non branchés à un flux d'événement.
+- **D14 — identité des joueurs : l'appelant résout via la base.** Le bloc 5 (intégration) inclut une
+  passe de résolution : noms / `Player` de la simulation → `Player` NLG par lookup dans la table
+  `players`. D3 (`sortant` / `entrant` typés `Player`) n'est pas touché.
+- **D15 — collision du paquet `engine` : dette V2.2, hors périmètre V2.1.** `engine/` à la racine (sans
+  `__init__.py`, ajouté au `pythonpath`) et `simulafoot_nlg/engine/` tournent séparément ; à
+  documenter, ne pas toucher ; à rouvrir au premier cas réel d'import croisé.
+- **Reclassement BLESSURE :** de « donnée absente » à « câblage absent » — `MatchEvents.injuries`
+  existe (`InjuryEvent`), `narrative.py` ne le propage pas dans `Timeline`. Potentiellement
+  in-scope V2.1.
+- **Reclassement double jaune :** `second_yellow` existe déjà dans `CardEvent.card_type`
+  (`src/ligue1sim/events.py`) ; la dette V3 est devenue faisable en V2.1 si on le souhaite.
+- **Reclassement STATISTIQUES_PÉRIODIQUES :** `src/ligue1sim/match_stats.py` existe (non commité,
+  valeurs finales de match : possession, tirs, tirs cadrés, xG) ; le cumul périodique manque.
+
 ## Ce qui N'est PAS bloquant (déjà en place)
 - Le schéma SQL (`phrase_history`, `phrase_cooldowns`,
   `similarity_signatures`) est cohérent avec l'algorithme documenté dans le
