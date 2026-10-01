@@ -475,6 +475,25 @@ décision.
 - **Qui écrit `phrase_history` (`logger.log_usage` ou `anti_repeat.update_cooldown`) reste à trancher
   dans le bloc 4** ; les deux sont des squelettes, leurs docstrings posent la question.
 
+**Décisions et notes complémentaires (01/10/2026, architecte) :**
+- **C3 — similarité par joueur uniquement pour V2.1.** L'élargissement au match courant est une
+  DETTE, à rouvrir si un cas réel montre la faille.
+- **C4 — ordre d'implémentation corrigé :** (1) `template_filler` + `post_process` ;
+  (2) `anti_repeat` (récence + `log_usage`, avec `match_sequence`) ; (3) `phrase_selector` ;
+  (4) intégration. L'ordre « `template_filler` → `phrase_selector` → `anti_repeat` » était faux :
+  `select` appelle les pénalités à l'étape 5. (Section « Séquencement » mise à jour.)
+- **D11 — `rng` et ordre de rendu.** Le rendu de tous les candidats consomme du `rng` (slots à
+  dictionnaire) : l'ordre de rendu doit être STABLE, par `phrase.id` croissant, pour la
+  reproductibilité.
+- **`rendered_text` = texte APRÈS `render` ET `post_process`** (pas seulement `render`) : `select`
+  consomme donc les deux modules.
+- **`match_sequence` obligatoire et `MatchContext.match_sequence` à `None` : décision OUVERTE,
+  remontée à l'architecte.** Deux options : exception explicite (`ValueError`) ou valeur de repli.
+  Recommandation : exception explicite (un match sans rang n'est pas un match, l'appelant doit le
+  fournir).
+- **`engine/logger.py` : sa docstring est à compléter avec `match_sequence`** à l'implémentation
+  du bloc 4 (elle ne le mentionne pas aujourd'hui).
+
 ## Ce qui N'est PAS bloquant (déjà en place)
 - Le schéma SQL (`phrase_history`, `phrase_cooldowns`,
   `similarity_signatures`) est cohérent avec l'algorithme documenté dans le
@@ -494,12 +513,14 @@ décision.
 2. Implémenter `template_filler.render` + `post_process.apply` (prérequis
    factuel : sans texte rendu réel, `similarity_penalty` n'a rien à
    comparer).
-3. Implémenter `phrase_selector.select` (consommateur direct
-   d'`anti_repeat`).
-4. Implémenter `anti_repeat.*` pour de vrai, avec les tests que
-   `tests/test_anti_repeat.py` ne fait aujourd'hui que documenter en creux
-   (contrat `NotImplementedError`).
-5. Alors seulement : rejouer un match simulé (90 minutes, ~25 tirs, ~12
+3. Implémenter `anti_repeat.*` pour de vrai (récence + `log_usage`, avec `match_sequence`),
+   avec les tests que `tests/test_anti_repeat.py` ne fait aujourd'hui que documenter en creux
+   (contrat `NotImplementedError`). *(Ordre corrigé le 01/10/2026 : `select` appelle les
+   pénalités à l'étape 5, `anti_repeat` doit donc le précéder ; l'ordre précédent, sélecteur
+   avant `anti_repeat`, est retiré.)*
+4. Implémenter `phrase_selector.select` (consommateur direct d'`anti_repeat`, de
+   `template_filler.render` et de `post_process.apply`).
+5. Alors seulement : intégration puis rejouer un match simulé (90 minutes, ~25 tirs, ~12
    corners, ~3 buts) pour mesurer répétitions exactes et structurelles sous
    5 minutes d'écart, comme demandé par l'audit initial — impossible avant
    les étapes 1 à 4.
