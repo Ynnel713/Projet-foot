@@ -16,10 +16,27 @@ Algorithme prevu (une fois la banque livree) :
        brief : "cooldown obligatoire"). Puis anti_repeat.recency_penalty +
        anti_repeat.similarity_penalty pondèrent le candidat (poids reduit,
        pas forcement exclu, sauf cooldown strictement non ecoule).
-    6. Tirage pondere (poids variante x poids phrase x penalites) parmi les
-       candidats restants, avec `rng` injectable pour la reproductibilite
-       des tests (voir tests/test_phrase_selector.py : "tirage reproductible
-       avec seed").
+    6. POLITIQUE ALPHA (decision du 01/10/2026, SPEC_ANTI_REPEAT.md sections
+       6 et 9) puis tirage pondere :
+         a. Partitionner les candidats restants (etapes 4 et 5) en
+            SPECIFIQUES -- au moins une condition joueur, de selectivite
+            <= 70 % des joueurs de champ (meme critere que la regle de
+            domination) -- et GENERIQUES (sans condition joueur, ou condition
+            plus large que 70 %). La selectivite est mesuree hors ligne
+            (scripts/audit_conditions_pilote.py) ; comment la rendre
+            disponible a l'execution (colonne, calcul a l'import) reste a
+            trancher a l'implementation.
+         b. Au moins un candidat specifique : le tirage se fait UNIQUEMENT
+            parmi les specifiques. Les generiques sont un REPLI : retenus
+            seulement quand aucun specifique n'est eligible (conditions non
+            satisfaites, ou cooldown non ecoule -- le repli sur cooldown
+            epuise remplace un blocage).
+         c. Tirage pondere (poids variante x poids phrase x penalites) dans
+            le palier retenu, avec `rng` injectable pour la reproductibilite
+            des tests (voir tests/test_phrase_selector.py : "tirage
+            reproductible avec seed").
+       (Ce palier remplace le tirage uniforme parmi TOUTES les candidates, qui
+       etait l'option beta, ecartee.)
     7. CASCADE DE VARIANTES SI 0 CANDIDAT (decision du 01/10/2026, voir
        AUDIT_COUVERTURE_DONNEES_JOUEUR.md -- garde-fou sain pour les
        scenarios a faible densite de donnees joueur, ex. GESTE_SIGNATURE
