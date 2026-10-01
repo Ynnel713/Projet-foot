@@ -317,6 +317,23 @@ n'existent pas (squelettes `NotImplementedError`), la cascade DEFAUT → SURNOM 
 (`engine/phrase_selector.py`, étape 7) mais non codée. Les décisions d'architecture accumulées
 pour V2.1 sont dans `SPEC_ANTI_REPEAT.md` (§1-8).
 
+### Suite : V2.1 (01/10/2026)
+
+**V2.1 = sélecteur + `template_filler` + `anti_repeat` + intégration `engine/`.** Chantier
+MOTEUR, pas éditorial : tests unitaires et architecture, plus de relecture à voix haute. **Brief
+à produire en session dédiée ; non démarré.**
+
+Dépendances et état au moment de la clôture de l'écriture :
+- 8 pilotes validés (DÉFENSE, FAUTE_SIMPLE, CORNER, TIR_NON_CADRÉ, REMPLACEMENT, CARTON_JAUNE,
+  AMBIANCE, HORS-JEU), 213 phrases rédigées ; avec les 281 v1, 494 phrases — dont seules les
+  281 v1 sont dans la banque importée ;
+- schéma des cooldowns : **aucune migration requise** (`phrase_history` par joueur +
+  `phrase_cooldowns` durée par phrase, déjà en place) ; restent à décider les deux manques de
+  `SPEC_ANTI_REPEAT.md` §1-2 (séquence de matchs ; valeurs de cooldown à injecter à l'import) ;
+- décisions d'architecture accumulées : `SPEC_ANTI_REPEAT.md` §1-8 (option α et prérequis,
+  option C, `score_display`, double jaune V3, mesures à faire à l'implémentation) ;
+- 208 tests verts au 01/10/2026.
+
 ---
 
 ## Ce que ce plan ne tranche pas (hors périmètre "plan éditorial")
