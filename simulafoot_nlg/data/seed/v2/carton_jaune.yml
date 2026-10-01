@@ -21,6 +21,10 @@
         operator: '>='
         value: '70'
         mandatory: true
+      - attribute: Tackling
+        operator: <=
+        value: '60'
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -44,6 +48,10 @@
       - attribute: minute
         operator: '>='
         value: '60'
+        mandatory: true
+      - attribute: Anticipation
+        operator: '>='
+        value: '70'
         mandatory: true
       slots:
       - slot_name: joueur
@@ -175,6 +183,10 @@
         operator: '>='
         value: '70'
         mandatory: true
+      - attribute: Composure
+        operator: <=
+        value: '65'
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -186,6 +198,10 @@
       - attribute: minute
         operator: '>='
         value: '70'
+        mandatory: true
+      - attribute: age
+        operator: '>='
+        value: '30'
         mandatory: true
       slots:
       - slot_name: joueur
