@@ -321,7 +321,9 @@ def import_seed(
     scenarios = _load_scenarios(chemins)
     dictionaries = _load_yaml(Path(slots_path), dict)
     if fallback_path is None:
-        chemins_fallback = sorted(DEFAULT_FALLBACK_DIR.glob("*.yml"))
+        # Les defauts vont ensemble : des fichiers de scenarios EXPLICITES n'heritent
+        # pas des fallbacks du depot (ils ne couvriraient pas leurs scenarios).
+        chemins_fallback = sorted(DEFAULT_FALLBACK_DIR.glob("*.yml")) if scenarios_path is None else []
     elif isinstance(fallback_path, list):
         chemins_fallback = [Path(p) for p in fallback_path]
     else:

@@ -449,7 +449,21 @@ class TestImportSeedFallbacks:
             encoding="utf-8",
         )
         monkeypatch.setattr(module, "DEFAULT_FALLBACK_DIR", dossier)
+        monkeypatch.setattr(module, "DEFAULT_SCENARIOS_PATH", self._banque(tmp_path))
+        monkeypatch.setattr(module, "DEFAULT_V2_DIR", tmp_path / "absent")
+
+        db_path = _init_db(tmp_path)
+        stats = import_seed(db_path, slots_path=_write_empty_slots_yaml(tmp_path))
+        assert stats.fallbacks == 2
+
+    def test_des_scenarios_explicites_n_heritent_pas_des_fallbacks_du_depot(self, tmp_path, monkeypatch):
+        import scripts.import_seed as module
+
+        dossier = tmp_path / "fallback"
+        dossier.mkdir()
+        (dossier / "v1.yml").write_text(yaml.safe_dump([{"scenario": "BUT", "text": "x"}]), encoding="utf-8")
+        monkeypatch.setattr(module, "DEFAULT_FALLBACK_DIR", dossier)
 
         db_path = _init_db(tmp_path)
         stats = import_seed(db_path, self._banque(tmp_path), _write_empty_slots_yaml(tmp_path))
-        assert stats.fallbacks == 2
+        assert stats.fallbacks == 0

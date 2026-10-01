@@ -1,0 +1,52 @@
+# Phrases de secours (decision D10) -- PREMIER JET, a valider avant merge.
+#
+# Une par scenario (17 : 9 de la banque v1, 8 pilotes V2), ecrites a la main (ce
+# fichier n'est genere par aucun script). Elles sortent quand un scenario est a
+# sec : aucune phrase normale eligible dans aucune variante. Contraintes :
+#   - AUCUN slot ({joueur}, {club}...) et aucune condition : elles doivent etre
+#     vraies pour n'importe quel contexte du scenario, y compris un joueur sans
+#     donnee ;
+#   - sobres et non marquantes : pas de point d'exclamation, pas de superlatif,
+#     une seule courte phrase -- un fallback ne doit jamais voler la vedette ;
+#   - jamais soumises au cooldown ni inscrites dans phrase_history : elles
+#     peuvent donc se repeter, d'ou ce ton neutre ;
+#   - differentes de toute phrase normale de la variante par defaut.
+# Format : liste de {scenario, text} (scripts/import_seed.py, _validate_fallbacks).
+
+# --- Banque v1 -------------------------------------------------------------
+- scenario: ARRET_GARDIEN
+  text: Le gardien écarte le danger.
+- scenario: BUT
+  text: Le ballon termine au fond des filets.
+- scenario: CARTON_ROUGE
+  text: L'arbitre sort le carton rouge.
+- scenario: CONSTRUCTION
+  text: Le jeu se construit proprement.
+- scenario: COUP_FRANC
+  text: Le coup franc est joué dans la zone dangereuse.
+- scenario: DEBUT_MATCH
+  text: Le match est lancé.
+- scenario: GESTE_SIGNATURE
+  text: Un geste technique est tenté.
+- scenario: PENALTY_RATE
+  text: Le penalty n'est pas transformé.
+- scenario: SITUATION_MATCH
+  text: Le match suit son cours.
+
+# --- Pilotes V2 ------------------------------------------------------------
+- scenario: AMBIANCE
+  text: L'ambiance est bien présente dans les tribunes.
+- scenario: CARTON_JAUNE
+  text: L'arbitre sort le carton jaune.
+- scenario: CORNER
+  text: Le corner est joué.
+- scenario: DEFENSE
+  text: La défense écarte le danger.
+- scenario: FAUTE_SIMPLE
+  text: L'arbitre siffle une faute.
+- scenario: HORS_JEU
+  text: Le drapeau se lève, hors-jeu signalé.
+- scenario: REMPLACEMENT
+  text: Un changement a lieu.
+- scenario: TIR_NON_CADRE
+  text: La frappe ne cadre pas.
