@@ -10,7 +10,7 @@ from engine.profile_engine import compute_score_context, normalize_match_context
 
 # Champs de MatchContext qui portent un Player deja resolu par l'appelant
 # (pass-through, voir profile_engine._player_or_none).
-PLAYER_VALUED_CONTEXT_FIELDS = ("sortant", "entrant")
+PLAYER_VALUED_CONTEXT_FIELDS = ("passeur", "receveur", "sortant", "entrant")
 
 
 def test_normalizes_a_complete_player_row():

@@ -90,7 +90,7 @@ def normalize_match_context(row: dict[str, Any]) -> MatchContext:
     """Construit un MatchContext depuis un dict brut (ex. un evenement issu
     du moteur de simulation ligue1sim, pas d'une table dediee -- voir
     engine.models.MatchContext). `match_id` est la seule cle obligatoire.
-    `sortant`/`entrant` sont des `Player` deja resolus (voir _player_or_none)."""
+    `passeur`/`receveur`/`sortant`/`entrant` sont des `Player` deja resolus (voir _player_or_none)."""
     if "match_id" not in row:
         raise KeyError('normalize_match_context: la ligne ne contient pas de clé "match_id"')
 
@@ -108,6 +108,8 @@ def normalize_match_context(row: dict[str, Any]) -> MatchContext:
         scenario_code=row.get("scenario_code"),
         score_context=row.get("score_context"),
         gabarit=row.get("gabarit"),
+        passeur=_player_or_none(row, "passeur"),
+        receveur=_player_or_none(row, "receveur"),
         sortant=_player_or_none(row, "sortant"),
         entrant=_player_or_none(row, "entrant"),
         match_sequence=_match_sequence_or_none(row),
