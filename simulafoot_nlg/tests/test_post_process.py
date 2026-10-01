@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from engine.post_process import apply
+from engine.post_process import apply, ecraser_espaces, majuscule_initiale
 
 
 def test_apply_raises_not_implemented_error_on_plain_text():
@@ -43,9 +43,6 @@ def test_apply_raises_not_implemented_error_on_double_space_case():
 
 # --- Regle 1 : espaces multiples (fonctions pures, apply les enchainera) -----
 
-from engine.post_process import ecraser_espaces  # noqa: E402
-
-
 @pytest.mark.parametrize(
     ("brut", "attendu"),
     [
@@ -69,3 +66,28 @@ def test_ecraser_espaces_respecte_l_espace_insecable_et_les_retours_a_la_ligne()
 
 def test_ecraser_espaces_est_idempotente():
     assert ecraser_espaces(ecraser_espaces("a   b  ")) == "a b"
+
+
+# --- Regle 2 : majuscule initiale --------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("brut", "attendu"),
+    [
+        ("mbappé marque", "Mbappé marque"),  # slot en minuscule en tete de gabarit
+        ("Mbappé marque", "Mbappé marque"),  # deja en majuscule : inchange
+        ("élan parfait", "Élan parfait"),  # lettre accentuee
+        ("l'ailier file", "L'ailier file"),
+        ("« quel but », dit-il", "« Quel but », dit-il"),  # signes d'ouverture sautes
+        ("— quel but", "— Quel but"),
+        ("3 joueurs, et mbappé", "3 joueurs, et mbappé"),  # chiffre en tete : rien
+        ("!!!", "!!!"),
+        ("", ""),
+    ],
+)
+def test_majuscule_initiale(brut, attendu):
+    assert majuscule_initiale(brut) == attendu
+
+
+def test_majuscule_initiale_ne_touche_que_la_premiere_lettre():
+    assert majuscule_initiale("mbappé et LUCAS ont marqué") == "Mbappé et LUCAS ont marqué"

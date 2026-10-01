@@ -34,6 +34,20 @@ def ecraser_espaces(text: str) -> str:
     return _ESPACES_MULTIPLES_RE.sub(" ", text).strip(" 	")
 
 
+def majuscule_initiale(text: str) -> str:
+    """Met en majuscule la premiere LETTRE du texte (un gabarit peut commencer par
+    un slot en minuscule : "mbappe marque" -> "Mbappe marque"). Les signes d'ouverture
+    (guillemets, tirets, espaces) sont sautes ; le reste du texte n'est pas touche.
+    Si le premier caractere alphanumerique est un chiffre ("3 joueurs..."), rien ne
+    change : on ne cherche pas une lettre plus loin dans la phrase."""
+    for position, caractere in enumerate(text):
+        if caractere.isalpha():
+            return text[:position] + caractere.upper() + text[position + 1 :]
+        if caractere.isalnum():
+            return text
+    return text
+
+
 def apply(text: str) -> str:
     """Applique le post-traitement linguistique complet a `text` (deja
     entierement rendu par template_filler.render, tous les slots resolus).
