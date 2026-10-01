@@ -41,6 +41,12 @@ ignore = ["B008"]
 [tool.ruff.lint.isort]
 known-first-party = ["engine"]
 
+[tool.ruff.lint.per-file-ignores]
+# pilotes_v2/ : contenu editorial brut en cours de validation (phrases de la
+# banque V2, pas encore integrees au pipeline reel) -- les lignes de texte
+# depassent la limite de code standard, ce n'est pas du code a corriger.
+"pilotes_v2/*.py" = ["E501"]
+
 # --- mypy --------------------------------------------------------------
 # python_version=3.12 (pas 3.11 malgre requires-python initialement envisage
 # a 3.11) : numpy (dependance transitive de pandas) publie des stubs qui
