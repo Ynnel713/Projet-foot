@@ -29,7 +29,7 @@ DEFAUT = [
     ("D'un tacle à retardement savamment dosé, {joueur} cueille le ballon sans jamais toucher l'adversaire !",
      [("Tackling", ">=", "82"), ("Technique", ">=", "70")]),
     ("{joueur} s'interpose courageusement devant la frappe et dévie le ballon en corner au prix d'un contact rude !",
-     [("Strength", ">=", "75")]),
+     [("Strength", ">=", "80")]),
     ("Dans un mouchoir de poche, {joueur} grappille le ballon des pieds de {adversaire} sans commettre la moindre faute !",
      [("Tackling", ">=", "88")]),
     ("{joueur} anticipe la remise et subtilise le ballon avant même que {adversaire} n'ait pu le contrôler !",

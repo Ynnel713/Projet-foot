@@ -160,7 +160,7 @@
       conditions:
       - attribute: Strength
         operator: '>='
-        value: '75'
+        value: '80'
         mandatory: true
       slots:
       - slot_name: joueur
