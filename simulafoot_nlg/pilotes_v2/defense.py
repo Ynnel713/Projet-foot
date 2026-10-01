@@ -1,5 +1,6 @@
 """Pilote DEFENSE -- VALIDE (voir pilotes_v2/STATUT.md). 28 phrases
-(22 DEFAUT + 6 SURNOM). Audits passes : n-grammes (0 collision apres
+(26 DEFAUT + 6 SURNOM depuis le 01/10/2026 : les 4 dernieres DEFAUT sont des phrases
+neutres de repli alpha, SPEC_ANTI_REPEAT.md section 6). Audits passes : n-grammes (0 collision apres
 corrections), sequence (4 seeds testees : 42/43/44/45 -- H1 "seed
 malheureux" confirmee pour la concentration aerienne observee sur seed=42
 uniquement, pas un defaut du pool), structurel (0 doublon). Non importe
@@ -51,6 +52,16 @@ DEFAUT = [
      [("Vision", ">=", "85")]),
     ("{joueur} se jette corps et âme devant la tentative et stoppe le cuir sur la ligne, au prix d'une égratignure !",
      [("Tackling", ">=", "78"), ("Aggression", ">=", "60")]),
+    # --- repli alpha (01/10/2026) : 4 phrases NEUTRES ajoutees pour que 3 joueurs sur 4
+    # (74 % sans phrase specifique) disposent d'un pool de 5, pas d'une seule phrase ---
+    ("{joueur} met un tacle propre, bien dosé, et le jeu repart de l'autre côté.",
+     []),
+    ("{joueur} se place juste, intercepte la passe destinée à {adversaire} et relance simplement.",
+     []),
+    ("{joueur} dégage prudemment en touche face à {adversaire}, sans prendre le moindre risque.",
+     []),
+    ("{joueur} suit son vis-à-vis de près, l'accompagne vers la ligne de touche et récupère la balle.",
+     []),
 ]
 
 SURNOM = [

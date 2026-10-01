@@ -1,5 +1,6 @@
-"""Pilote CORNER -- VALIDE (voir pilotes_v2/STATUT.md). 26 phrases
-(20 DEFAUT + 6 SURNOM). Audits passes : n-grammes (2 residus acceptes comme
+"""Pilote CORNER -- VALIDE (voir pilotes_v2/STATUT.md). 30 phrases
+(24 DEFAUT + 6 SURNOM ; les 4 dernieres DEFAUT sont des phrases neutres de repli alpha
+ajoutees le 01/10/2026, SPEC_ANTI_REPEAT.md section 6). Audits passes : n-grammes (2 residus acceptes comme
 vocabulaire football naturel -- "tout le monde et", "le gardien de
 {adversaire}" --, memes criteres que "dans les pieds de" sur COUP_FRANC),
 structurel (1 signal #2/#20 "PASSEUR trouve...corner", verifie : deux
@@ -25,7 +26,7 @@ DEFAUT = [
      [("Technique", ">=", "70")]),
     ("{passeur} glisse son corner en retrait pour {receveur}, démarqué à l'entrée de la surface avant que la défense ne réagisse !",
      [("Vision", ">=", "78")]),
-    ("{receveur} domine le combat aérien et catapulte une tête rageuse que le gardien de {adversaire} ne peut qu'accompagner au fond !",
+    ("{receveur} domine le combat aérien et catapulte une tête rageuse que le gardien de {adversaire} ne peut qu'accompagner le ballon du regard !",
      [("Heading", ">=", "82")]),
     ("D'un corner excentré, {passeur} trouve la tête de {receveur}, totalement imprenable dans les airs !",
      [("Heading", ">=", "80"), ("height_cm", ">=", "185")]),
@@ -57,6 +58,15 @@ DEFAUT = [
      [("Heading", ">=", "80"), ("Strength", ">=", "75")]),
     ("{passeur} trouve une ouverture inattendue sur son corner, {receveur} reprend du plat du pied à bout portant !",
      [("Technique", ">=", "76")]),
+    # --- repli alpha (01/10/2026) : 4 phrases NEUTRES ajoutees (4 -> 8 sans condition) ---
+    ("{passeur} envoie son corner au second poteau, mais personne ne parvient à le reprendre et la balle sort.",
+     []),
+    ("{passeur} cherche {receveur} d'un corner court, mais l'espace manque et le ballon est repris par l'adversaire.",
+     []),
+    ("Le corner de {passeur} flotte dans la surface, un défenseur de {adversaire} dégage sans difficulté.",
+     []),
+    ("{passeur} et {receveur} se coordonnent sur le corner, mais la combinaison est interceptée aux abords de la surface.",
+     []),
 ]
 
 SURNOM = [
