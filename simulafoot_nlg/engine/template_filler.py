@@ -1,27 +1,16 @@
-"""SQUELETTE -- remplacement des emplacements `{slot_name}` d'une Phrase par
-leur valeur resolue. Aucune implementation dans cette session.
+"""Remplacement des emplacements `{slot_name}` d'une Phrase par leur valeur resolue.
 
-Algorithme prevu :
-    Pour chaque PhraseSlot de `phrase.slots` :
-        - `expression` renseignee (ex. "player.full_name") -> evaluee contre
-          `player`/`context` via un mini-interpreteur d'attributs a points
-          restreint (PAS `eval()` -- surface d'attaque inacceptable pour du
-          texte potentiellement issu d'un YAML edite a la main), produisant
-          un SlotExpression avec resolved_value rempli.
-        - `dictionary_key` renseignee -> tirage pondere dans
-          slot_dictionaries (voir data/seed/slots.yml) parmi les entrees de
-          cette cle ; `rng` injectable comme pour phrase_selector.select.
-        - ni l'un ni l'autre, ou slot reference absent des deux -- cas
-          limite explicite du brief ("Phrase referencant un slot
-          inexistant") : NE DOIT PAS lever d'exception qui casse tout le
-          match ; a la place, laisser une trace explicite (ex. lever une
-          exception DEDIEE `SlotResolutionError`, que l'appelant (phrase_selector)
-          pourra choisir de traiter comme "phrase invalide, en choisir une
-          autre" plutot que de laisser planter la generation).
-    Une fois tous les slots resolus, remplacer chaque "{slot_name}" du texte
-    par sa valeur (`str.format_map` ou equivalent controle -- pas
-    `str.format(**kwargs)` direct, pour eviter qu'un nom de slot avec un
-    format-spec accidentel (ex. "{score:d}") ne casse le rendu).
+Pour chaque PhraseSlot de `phrase.slots` :
+    - `expression` (ex. "player.full_name") -> evaluee contre `player`/`context` par un
+      mini-interpreteur d'attributs a points (resolve_expression) -- PAS `eval()` : le
+      YAML est edite a la main ;
+    - un slot du texte sans valeur resolue -> SlotResolutionError (jamais un "{slot}"
+      affiche tel quel a l'ecran) ; l'appelant (phrase_selector) la traite comme "phrase
+      invalide, en choisir une autre".
+Le texte est rempli en UNE passe (regex), pas par `str.format` : un nom de slot a
+format-spec accidentel ("{score:d}") ne casse pas le rendu, et une valeur qui contient
+des accolades n'est jamais re-developpee. Le texte rendu est BRUT : le post-traitement
+linguistique (post_process.apply) est une etape distincte, appliquee apres.
 """
 
 from __future__ import annotations
@@ -75,6 +64,9 @@ def resolve_expression(expression: str, player: Player, context: MatchContext) -
     return str(valeur)
 
 
+_SLOT_RE = re.compile(r"\{(\w+)\}")
+
+
 def render(
     phrase: Phrase,
     player: Player,
@@ -82,10 +74,17 @@ def render(
     *,
     rng: random.Random | None = None,
 ) -> str:
-    """Rend `phrase.text` avec tous ses slots resolus pour (`player`,
-    `context`) -- voir algorithme prevu en tete de module. Leve
-    NotImplementedError tant que la banque de phrases n'est pas livree."""
-    raise NotImplementedError(
-        "template_filler.render : squelette non implémenté -- voir la docstring "
-        "de engine/template_filler.py pour l'algorithme prévu."
-    )
+    """Rend `phrase.text` avec tous ses slots resolus pour (`player`, `context`) -- voir
+    docstring du module. Leve SlotResolutionError si un slot du texte n'a pas de valeur."""
+    valeurs: dict[str, str] = {}
+    for slot in phrase.slots:
+        if slot.expression is not None:
+            valeurs[slot.slot_name] = resolve_expression(slot.expression, player, context)
+
+    def remplacer(correspondance: re.Match[str]) -> str:
+        nom = correspondance.group(1)
+        if nom not in valeurs:
+            raise SlotResolutionError(f"Slot {{{nom}}} sans valeur resolue dans {phrase.text!r}.")
+        return valeurs[nom]
+
+    return _SLOT_RE.sub(remplacer, phrase.text)
