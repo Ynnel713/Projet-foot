@@ -15,7 +15,7 @@ from ligue1sim.schedule import Match
 from narrative import build_timeline, match_result_from
 from dataclasses import replace
 
-from nlg_ingestion import EffectifClub, choisir_acteur_defensif, en_jeu_a, timeline_to_events
+from nlg_ingestion import EffectifClub, choisir_acteur_defensif, compute_score_context, en_jeu_a, timeline_to_events
 
 CLES_COMMUNES = {
     "match_id", "match_sequence", "event_id", "minute", "player_id", "player_team", "home_team", "away_team",
@@ -234,3 +234,51 @@ class TestActeurDefensifSeede:
                     assert d["player_team"] == ("Away FC" if tireur_home else "Home FC")
                     return
         pytest.fail("aucune occasion defensive generee")
+
+
+class TestScoreContext:
+    @pytest.mark.parametrize("home,away,scorer_home,attendu", [
+        (0, 0, True, "ouverture_score"),
+        (0, 0, False, "ouverture_score"),
+        (0, 1, True, "egalisation"),
+        (1, 1, True, "prise_avantage"),
+        (2, 0, True, "creuse_ecart"),
+        (0, 2, True, "reduit_ecart"),
+        (3, 1, False, "reduit_ecart"),
+    ])
+    def test_compute_score_context(self, home, away, scorer_home, attendu):
+        assert compute_score_context(home, away, scorer_home) == attendu
+
+    def test_valeurs_du_contrat(self):
+        valeurs = {compute_score_context(h, a, sh) for h in range(4) for a in range(4) for sh in (True, False)}
+        assert valeurs == {"ouverture_score", "egalisation", "prise_avantage", "reduit_ecart", "creuse_ecart"}
+
+    def test_buts_dans_le_match(self):
+        goals = [
+            GoalEvent(club_name="Home FC", scorer="h_17", assist=None, minute=12),  # 0-0 -> 1-0
+            GoalEvent(club_name="Away FC", scorer="a_18", assist=None, minute=30),  # 1-0 -> 1-1
+            GoalEvent(club_name="Home FC", scorer="h_17", assist=None, minute=50),  # 1-1 -> 2-1
+            GoalEvent(club_name="Home FC", scorer="h_16", assist=None, minute=60),  # 2-1 -> 3-1
+            GoalEvent(club_name="Away FC", scorer="a_18", assist=None, minute=80),  # 3-1 -> 3-2
+        ]
+        match_result, home, away = _match(goals)
+        _, dicts, _ = _convertir(match_result, home, away)
+        contextes = [d["score_context"] for d in dicts if d["event_type"] == "but"]
+        assert contextes == ["ouverture_score", "egalisation", "prise_avantage", "creuse_ecart", "reduit_ecart"]
+
+    def test_arret_score_hypothetique_du_tireur_autres_none(self):
+        goals = [GoalEvent(club_name="Home FC", scorer="h_17", assist=None, minute=1)]
+        cards = [CardEvent(club_name="Home FC", player="h_3", minute=2, card_type="yellow")]
+        match_result, home, away = _match(goals, cards)
+        for date in range(40):
+            match_result = replace(match_result, date=str(date))
+            timeline, dicts, _ = _convertir(match_result, home, away)
+            arrets = [d for d in dicts if d["event_type"] == "occasion" and d["outcome"] == "arret"]
+            if arrets:
+                break
+        assert arrets
+        for d in arrets:
+            tireur_home = not d["is_home"]  # l'acteur (gardien) est du camp oppose
+            # le but (minute 1) precede toute occasion : a minute egale, buts avant occasions generees
+            assert d["score_context"] == compute_score_context(1, 0, tireur_home)
+        assert all(d["score_context"] is None for d in dicts if d["event_type"] in ("carton", "remplacement"))

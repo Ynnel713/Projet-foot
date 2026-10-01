@@ -105,6 +105,23 @@ def choisir_acteur_defensif(timeline: Timeline, match_id: str, club: str, minute
     return squad.player_id(nom)
 
 
+def compute_score_context(home_score_before: int, away_score_before: int, scorer_is_home: bool) -> str:
+    """Effet d'un but sur le score, d'apres le score juste AVANT lui. REPLIQUE de
+    `simulafoot_nlg/engine/profile_engine.compute_score_context` (deux projets, pas d'import croise) ;
+    un test verrouille les 5 valeurs de `SCORE_CONTEXT_VALUES` du contrat."""
+    scorer_before = home_score_before if scorer_is_home else away_score_before
+    opponent_before = away_score_before if scorer_is_home else home_score_before
+    if home_score_before == 0 and away_score_before == 0:
+        return "ouverture_score"
+    if scorer_before + 1 == opponent_before:
+        return "egalisation"
+    if scorer_before > opponent_before:
+        return "creuse_ecart"
+    if scorer_before == opponent_before:
+        return "prise_avantage"
+    return "reduit_ecart"
+
+
 def _commun(timeline: Timeline, match_id: str, match_sequence: int, event_id: int, minute: int, club: str,
             competition: str | None, journee: int | None) -> dict[str, Any]:
     return {
@@ -181,8 +198,16 @@ def timeline_to_events(
     candidats.sort(key=lambda c: c[:3])
 
     dicts: list[dict[str, Any]] = []
+    score = {timeline.home_team: 0, timeline.away_team: 0}  # score avant l'evenement courant, dans l'ordre du tri
     for event_id, (minute, _rang, _ordre, club, event, convertir) in enumerate(candidats):
         commun = _commun(timeline, match_id, match_sequence, event_id, minute, club, competition, journee)
+        if isinstance(event, NarrativeEvent) and (event.event_type == BUT or event.outcome == "arret"):
+            # but : effet du but ; occasion `arret` : score HYPOTHETIQUE du point de vue du tireur (contrat).
+            commun["score_context"] = compute_score_context(
+                score[timeline.home_team], score[timeline.away_team], event.team == timeline.home_team
+            )
+        if isinstance(event, NarrativeEvent) and event.event_type == BUT:
+            score[event.team] += 1  # apres le calcul : le contexte d'un but voit le score AVANT lui
         try:
             adverse = squads[timeline.away_team if club == timeline.home_team else timeline.home_team]
             dicts.append(convertir(event, commun, squads[club], timeline, adverse))
