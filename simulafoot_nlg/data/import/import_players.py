@@ -139,6 +139,26 @@ def _parse_int(value: Any) -> int | None:
         return None
 
 
+# Valeurs sentinelles de "Taille (cm)" (Transfermarkt) : 152.4 et 154.9 cm
+# sont des conversions pieds/pouces ratees, pas des tailles reelles (apres
+# int(), 152 et 154). Si la source FM26 est absente pour ces joueurs, la
+# verite est "taille inconnue" (None), pas la sentinelle -- sinon une
+# condition `height_cm <= 172` (SURNOM "lutin") les fait matcher a tort.
+# Decision du 01/10/2026.
+_HEIGHT_CM_SENTINELLES = frozenset({152, 154})
+
+
+def _height_cm(row: pd.Series) -> int | None:
+    """Taille FM26 en priorite, repli sur Transfermarkt sauf sentinelle."""
+    taille_fm = _parse_int(row.get("Taille FM (cm)"))
+    if taille_fm:
+        return taille_fm
+    taille_transfermarkt = _parse_int(row.get("Taille (cm)"))
+    if taille_transfermarkt in _HEIGHT_CM_SENTINELLES:
+        return None
+    return taille_transfermarkt
+
+
 def _parse_float(value: Any) -> float | None:
     if _is_missing(value):
         return None
@@ -230,7 +250,7 @@ def _row_to_player(row: pd.Series) -> dict[str, Any] | None:
         # (scripts/scrape_fminside_attributes.py) ecrit dans "Taille FM (cm)",
         # cette ligne lisait "Taille (cm)" -- deux colonnes differentes,
         # jamais remarque faute d'avoir mesure l'ecart avant ce jour.
-        "height_cm": _parse_int(row.get("Taille FM (cm)")) or _parse_int(row.get("Taille (cm)")),
+        "height_cm": _height_cm(row),
         "status": _clean_str(row.get("Statut")),
         "role_category": _clean_str(row.get("Catégorie")),
         "foot": _clean_str(row.get("Pieds")),

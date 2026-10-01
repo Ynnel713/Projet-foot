@@ -202,3 +202,38 @@ def test_height_cm_is_none_when_both_columns_missing():
     assert player is not None
     assert player["height_cm"] is None
     assert _split_preferred_moves(None) == ()
+
+
+# --- height_cm : sentinelles Transfermarkt sans source FM26 -> None ---
+# Non-regression : sans _height_cm, ces joueurs gardaient 152/154 cm et
+# matchaient `height_cm <= 172` (SURNOM "lutin") a tort.
+
+@pytest.mark.parametrize("sentinelle", [152.4, 154.9])
+def test_height_cm_sentinelle_transfermarkt_sans_source_fm_devient_none(sentinelle):
+    row = pd.Series(_row(ID=99, **{"Taille (cm)": sentinelle, "Taille FM (cm)": None}))
+    player = _row_to_player(row)
+    assert player is not None
+    assert player["height_cm"] is None
+
+
+def test_height_cm_valeur_fm_est_conservee_meme_si_egale_a_une_sentinelle():
+    row = pd.Series(_row(ID=99, **{"Taille (cm)": None, "Taille FM (cm)": 152}))
+    player = _row_to_player(row)
+    assert player is not None
+    assert player["height_cm"] == 152
+
+
+def test_base_reelle_ne_contient_aucune_sentinelle_height_cm():
+    """Garde-fou sur la base locale (non versionnee) : un import qui
+    laisserait 152/154 cm declencherait "lutin" a tort. Ignore si la base
+    n'existe pas (CI, poste vierge)."""
+    from pathlib import Path
+
+    chemin = Path(__file__).resolve().parent.parent / "data" / "simulafoot.db"
+    if not chemin.exists():
+        pytest.skip("base locale absente")
+    with sqlite3.connect(chemin) as conn:
+        sentinelles = conn.execute(
+            "SELECT id FROM players WHERE height_cm IN (152, 154)"
+        ).fetchall()
+    assert sentinelles == []
