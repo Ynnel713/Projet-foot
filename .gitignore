@@ -42,3 +42,5 @@ render/canvas_player_preview.html
 
 # Matchs exportes pour le NLG (scripts/export_match_to_nlg.py) : regenerables, jamais versionnes.
 data/nlg_inbox/
+data/nlg_samples/work*.db
+data/nlg_samples/inbox/
