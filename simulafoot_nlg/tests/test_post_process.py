@@ -9,7 +9,14 @@ from __future__ import annotations
 
 import pytest
 
-from engine.post_process import apply, ecraser_espaces, majuscule_initiale, ponctuation_finale
+from engine.post_process import (
+    INITIALE_ASPIREE,
+    apply,
+    ecraser_espaces,
+    elision,
+    majuscule_initiale,
+    ponctuation_finale,
+)
 
 
 def test_apply_raises_not_implemented_error_on_plain_text():
@@ -122,3 +129,98 @@ def test_ponctuation_finale(brut, attendu):
 def test_ponctuation_finale_ne_touche_que_la_fin_et_garde_les_espaces_apres():
     assert ponctuation_finale("Quel but ! Quel but !.  ") == "Quel but ! Quel but !  "
     assert ponctuation_finale("Oh... quel but !.") == "Oh... quel but !"
+
+
+# --- Regle 4 : elision --------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("brut", "attendu"),
+    [
+        ("le Ailier a marqué", "l'Ailier a marqué"),
+        ("la équipe", "l'équipe"),
+        ("de Arsenal", "d'Arsenal"),
+        ("que il marque", "qu'il marque"),
+        ("ne a pas", "n'a pas"),
+        ("se être", "s'être"),
+        ("ce est", "c'est"),
+        ("me envoie", "m'envoie"),
+        ("te avoir", "t'avoir"),
+        ("de Écosse", "d'Écosse"),  # voyelle accentuee
+        ("de homme", "d'homme"),  # h muet
+        ("de Henry", "d'Henry"),  # h muet : absent de la table
+        ("Le Ailier", "L'Ailier"),  # casse de l'article conservee
+        ("DE Arsenal", "D'Arsenal"),
+    ],
+)
+def test_elision_devant_voyelle_ou_h_muet(brut, attendu):
+    assert elision(brut) == attendu
+
+
+@pytest.mark.parametrize(
+    "texte",
+    [
+        "le Havre",
+        "de Havre",
+        "à la fois contre Le Havre",
+        "de Hull City",
+        "le Hamburger SV",
+        "de Hannover 96",
+        "de Hajduk Split",
+        "le hors-jeu",
+        "de hors-jeu",
+        "le onze de départ",
+        "la hargne",
+        "le héros du match",
+        "le huitième de finale",
+        "de Haaland",
+    ],
+)
+def test_pas_d_elision_devant_une_initiale_aspiree(texte):
+    assert elision(texte) == texte
+
+
+@pytest.mark.parametrize(
+    "texte",
+    [
+        "le ballon",  # consonne
+        "de Lyon",
+        "l'ailier",  # deja elide
+        "de l'équipe",
+        "tele a",  # le n'est pas un mot seul
+        "cela a marché",
+    ],
+)
+def test_pas_d_elision_hors_des_articles_devant_voyelle(texte):
+    assert elision(texte) == texte
+
+
+def test_elision_n_agit_que_sur_les_mots_entiers_et_pas_devant_y():
+    assert elision("de Yann") == "de Yann"
+    assert elision("rôle a") == "rôle a"
+    assert elision("pile à l'heure") == "pile à l'heure"
+
+
+def test_elision_traite_plusieurs_occurrences_et_est_idempotente():
+    brut = "le Ailier de Arsenal que il connaît"
+    assert elision(brut) == "l'Ailier d'Arsenal qu'il connaît"
+    assert elision(elision(brut)) == elision(brut)
+
+
+def test_la_table_couvre_le_havre_et_les_clubs_en_h_de_la_base():
+    # Clubs en "H" de players.club (01/10/2026), tous a h aspire en francais.
+    for club in (
+        "Le Havre AC", "Hull City", "Hamburger SV", "HNK Hajduk Split", "Hellas Verona", "Hapoel Tel Aviv",
+        "Hannover 96", "Holstein Kiel", "Hertha BSC", "Hardrock Football Club", "Hammarby IF", "HNK Rijeka",
+        "Huddersfield Town", "Hibernian FC", "Heracles Almelo", "Henan FC", "Heidenheim", "Hearts of Oak",
+        "Heart of Midlothian FC", "Hafia FC", "HJK Helsinki",
+    ):
+        phrase = f"face à {club}" if club.startswith("Le ") else f"de {club}"
+        assert elision(phrase) == phrase, club  # "Le Havre AC" : c'est le "Le" du club qui est juge
+
+
+def test_la_table_est_en_forme_normalisee():
+    # Comparaison faite en minuscules, sans accent, premier segment : une entree
+    # en majuscule ou accentuee ne matcherait jamais.
+    for mot in INITIALE_ASPIREE:
+        assert mot == mot.lower() and "-" not in mot and mot.isascii(), mot

@@ -22,6 +22,7 @@ Algorithme prevu :
 from __future__ import annotations
 
 import re
+import unicodedata
 
 _ESPACES_MULTIPLES_RE = re.compile(r"[ 	]{2,}")
 _PONCTUATION_FINALE_RE = re.compile(r"([.!?…]+)(\s*)$")
@@ -76,6 +77,63 @@ def majuscule_initiale(text: str) -> str:
         if caractere.isalnum():
             return text
     return text
+
+
+_ELISIONS = {"le": "l'", "la": "l'", "de": "d'", "que": "qu'", "ne": "n'", "se": "s'", "ce": "c'", "me": "m'", "te": "t'"}
+_VOYELLES = frozenset("aeiouàâäéèêëîïôöùûüœæ")
+# Article seul (jamais le "le" de "tele", ni apres une apostrophe ou un tiret), puis le
+# mot suivant. Un seul espace : ecraser_espaces s'execute avant.
+_ELISION_RE = re.compile(r"(?<![\w'’-])(le|la|de|que|ne|se|ce|me|te) (\w+)", re.IGNORECASE)
+
+# Mots a initiale ASPIREE : pas d'elision devant eux ("le Havre", "de Hull", "le onze").
+# Formes normalisees (minuscules, sans accent, premier segment avant un tiret :
+# "hors-jeu" -> "hors"). Table fermee : un mot en "h" ABSENT d'ici est traite comme un
+# h muet ("d'Henry"), un mot a voyelle initiale absent d'ici est elide. Les prenoms et
+# noms de joueurs en "h" ne sont pas listes (267 noms et 154 prenoms en base) : seuls
+# quelques noms connus a h aspire le sont ; les autres seront elides.
+INITIALE_ASPIREE = frozenset(
+    {
+        # clubs (lus dans players.club : tous les clubs en "H" etrangers + Le Havre)
+        "havre", "hull", "hamburger", "hamburg", "hambourg", "hajduk", "hellas", "hapoel",
+        "hannover", "hanovre", "holstein", "hertha", "hardrock", "hammarby", "huddersfield",
+        "hibernian", "heracles", "henan", "heidenheim", "hearts", "heart", "hafia", "hnk", "hjk",
+        # joueurs au h aspire courant
+        "haaland", "hakimi", "hazard", "havertz", "hummels", "haller",
+        # pays
+        "hongrie", "hollande", "haiti", "honduras",
+        # vocabulaire (football et courant)
+        "hors", "haut", "haute", "hauteur", "hasard", "hargne", "honte", "hate", "heros",
+        "huit", "huitieme", "hall", "handball", "hockey", "hooligan", "huee", "hurler", "hurlement",
+        # initiale vocalique aspiree
+        "onze", "onzieme", "oui",
+    }
+)
+
+
+def _normaliser(mot: str) -> str:
+    sans_accent = "".join(c for c in unicodedata.normalize("NFD", mot.lower()) if not unicodedata.combining(c))
+    return sans_accent.split("-")[0]
+
+
+def elision(text: str) -> str:
+    """"le Ailier" -> "l'Ailier", "de Arsenal" -> "d'Arsenal", "que il" -> "qu'il" : les
+    mots le/la, de, que, ne, se, ce, me, te sont elides devant une voyelle ou un h muet. Pas
+    d'elision devant un mot de INITIALE_ASPIREE (h aspire, "onze", "oui"). La casse de
+    l'article est conservee ("Le Ailier" -> "L'Ailier"). "y" n'est pas traite comme une
+    voyelle (hesitation d'usage : "de Yann"). Le mot suivant s'arrete a la fin de son
+    premier segment : "de hors-jeu" est juge sur "hors"."""
+
+    def remplacer(correspondance: re.Match[str]) -> str:
+        article, suivant = correspondance.group(1), correspondance.group(2)
+        initiale = suivant[0].lower()
+        if initiale != "h" and initiale not in _VOYELLES:
+            return correspondance.group(0)
+        if _normaliser(suivant) in INITIALE_ASPIREE:
+            return correspondance.group(0)
+        elide = _ELISIONS[article.lower()]
+        return (elide[0].upper() if article[0].isupper() else elide[0]) + elide[1:] + suivant
+
+    return _ELISION_RE.sub(remplacer, text)
 
 
 def apply(text: str) -> str:
