@@ -56,6 +56,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from engine.conditions import parse_condition_atoms  # noqa: E402
 
+# make_phrase_template.py se documente comme "PAS relie au pipeline d'import"
+# (generateur de template ponctuel) -- cet import ne l'y relie pas non plus,
+# il ne lit QUE sa constante PREFERRED_MOVE_TRANSLATIONS (55 moves reels,
+# voir investigation du 01/10/2026 : AUDIT_COUVERTURE_DONNEES_JOUEUR.md)
+# comme reservoir canonique, pour eviter qu'une 2e liste divergente n'existe
+# en parallele de celle qui genere deja la feuille "Preferred moves" du
+# classeur source.
+from scripts.make_phrase_template import PREFERRED_MOVE_TRANSLATIONS  # noqa: E402
+
 logger = logging.getLogger(__name__)
 
 _NLG_ROOT = Path(__file__).resolve().parent.parent
@@ -277,6 +286,20 @@ def _conditions_for_phrase(condition_brute: str, ligne_excel: int) -> list[dict[
         atomes = parse_condition_atoms(condition_brute)
     except ValueError as exc:
         raise CommentaryConversionError(f"Ligne {ligne_excel} : condition invalide — {exc}") from exc
+    for a in atomes:
+        if a.attribute == "preferred_moves" and a.value not in PREFERRED_MOVE_TRANSLATIONS:
+            # Trouve par l'investigation du 01/10/2026 (voir
+            # AUDIT_COUVERTURE_DONNEES_JOUEUR.md) : aucun des 56 usages
+            # existants n'est hors reservoir, mais rien ne l'empechait
+            # avant ce garde-fou -- une faute de frappe future passerait
+            # silencieusement (la phrase ne se declencherait simplement
+            # jamais, bug invisible, meme raisonnement que valider_slots).
+            raise CommentaryConversionError(
+                f"Ligne {ligne_excel} : preferred_moves {a.value!r} absent du reservoir "
+                f"canonique ({len(PREFERRED_MOVE_TRANSLATIONS)} moves connus, voir "
+                "scripts/make_phrase_template.PREFERRED_MOVE_TRANSLATIONS) -- faute de "
+                "frappe, ou move reellement nouveau a ajouter au reservoir d'abord."
+            )
     return [
         {"attribute": a.attribute, "operator": a.operator, "value": a.value, "mandatory": True}
         for a in atomes

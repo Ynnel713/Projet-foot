@@ -1,0 +1,71 @@
+Canon (PREFERRED_MOVE_TRANSLATIONS) : 55 moves
+Feuille generee (joueurs.xlsx)      : 55 moves
+Canon == Feuille                    : True
+Moves utilises dans les 281 phrases  : 48
+Utilises MAIS hors canon (invente/mal orthographie) : AUCUN
+
+Moves canoniques jamais utilises dans la banque actuelle (7) :
+  - Moves Ball To Right Foot Before Dribble Attempt (Bascule sur le pied droit avant de dribbler)
+  - Runs With Ball Down Left (Porte le ballon côté gauche)
+  - Runs With Ball Down Right (Porte le ballon côté droit)
+  - Runs With Ball Rarely (Porte rarement le ballon)
+  - Tries Killer Balls Often (Tente souvent des passes décisives tranchantes)
+  - Tries Long Range Passes (Tente des passes longues)
+  - Uses Long Throw To Start Counter Attacks (Utilise sa longue touche pour lancer les contre-attaques)
+
+--- Liste complete des 55, usage dans les 281 phrases ---
+ 2x [UTILISE  ] Argues With Officials -- Conteste les décisions de l'arbitre
+ 1x [UTILISE  ] Arrives Late In Opposition Area -- Arrive tardivement dans la surface adverse
+ 1x [UTILISE  ] Attempts Overhead Kicks -- Tente des retournées acrobatiques
+ 1x [UTILISE  ] Avoids Using Weaker Foot -- Évite d'utiliser son pied faible
+ 1x [UTILISE  ] Bring Ball Out of Defence -- Relance proprement depuis la défense
+ 1x [UTILISE  ] Comes Deep To Get Ball -- Décroche pour venir chercher le ballon
+ 1x [UTILISE  ] Crosses Early -- Centre tôt, sans attendre
+ 1x [UTILISE  ] Curls Ball -- Enroule ses frappes et centres
+ 1x [UTILISE  ] Cuts Inside From Both Wings -- Rentre à l'intérieur des deux côtés
+ 1x [UTILISE  ] Cuts Inside From Left Wing -- Rentre à l'intérieur depuis la gauche
+ 1x [UTILISE  ] Cuts Inside From Right Wing -- Rentre à l'intérieur depuis la droite
+ 1x [UTILISE  ] Dictates Tempo -- Dicte le tempo du jeu
+ 2x [UTILISE  ] Dives Into Tackles -- Se jette dans les tacles
+ 1x [UTILISE  ] Does Not Dive Into Tackles -- Évite de se jeter dans les tacles
+ 1x [UTILISE  ] Dwells On Ball -- Garde le ballon trop longtemps
+ 1x [UTILISE  ] Gets Crowd Going -- Enflamme le public
+ 1x [UTILISE  ] Gets Forward Whenever Possible -- Monte offensivement dès que possible
+ 1x [UTILISE  ] Gets Into Opposition Area -- Fait des appels dans la surface adverse
+ 2x [UTILISE  ] Hits Free Kicks With Power -- Frappe puissamment les coups francs
+ 1x [UTILISE  ] Hugs Line -- Colle à la ligne de touche
+ 1x [UTILISE  ] Knocks Ball Past Opponent -- Élimine l'adversaire en poussant le ballon devant lui
+ 1x [UTILISE  ] Likes Ball Played Into Feet -- Aime recevoir le ballon dans les pieds
+ 1x [UTILISE  ] Likes To Beat Opponent Repeatedly -- Aime éliminer le même adversaire plusieurs fois
+ 1x [UTILISE  ] Likes To Lob Keeper -- Aime lober le gardien
+ 1x [UTILISE  ] Likes To Round Keeper -- Aime dribbler le gardien
+ 1x [UTILISE  ] Likes To Switch Ball To Wide Areas -- Aime changer le jeu vers les ailes
+ 1x [UTILISE  ] Likes To Try To Break Offside Trap -- Cherche à casser le piège du hors-jeu
+ 1x [UTILISE  ] Looks For Pass Rather Than Attempting To Score -- Privilégie la passe à la finition
+ 1x [UTILISE  ] Moves Ball To Left Foot Before Dribble Attempt -- Bascule sur le pied gauche avant de dribbler
+ 0x [inutilise] Moves Ball To Right Foot Before Dribble Attempt -- Bascule sur le pied droit avant de dribbler
+ 1x [UTILISE  ] Moves Into Channels -- Se déplace entre les lignes adverses
+ 1x [UTILISE  ] Penalty Box Player -- Joueur de surface
+ 1x [UTILISE  ] Places Shots -- Place ses frappes plutôt que de frapper fort
+ 1x [UTILISE  ] Plays One-Twos -- Joue en une-deux
+ 1x [UTILISE  ] Plays Short Simple Passes -- Joue des passes courtes et simples
+ 1x [UTILISE  ] Plays With Back To Goal -- Joue dos au but
+ 1x [UTILISE  ] Possesses Long Flat Throw -- Possède une longue touche tendue
+ 1x [UTILISE  ] Refrains From Taking Long Shots -- Évite les frappes lointaines
+ 0x [inutilise] Runs With Ball Down Left -- Porte le ballon côté gauche
+ 0x [inutilise] Runs With Ball Down Right -- Porte le ballon côté droit
+ 2x [UTILISE  ] Runs With Ball Often -- Porte souvent le ballon
+ 0x [inutilise] Runs With Ball Rarely -- Porte rarement le ballon
+ 1x [UTILISE  ] Runs With Ball Through The Centre -- Porte le ballon dans l'axe
+ 1x [UTILISE  ] Shoots From Distance -- Tire de loin
+ 2x [UTILISE  ] Shoots With Power -- Frappe puissamment
+ 1x [UTILISE  ] Stops Play -- Casse le rythme du jeu
+ 1x [UTILISE  ] Tries First Time Shots -- Tente des frappes en une touche
+ 0x [inutilise] Tries Killer Balls Often -- Tente souvent des passes décisives tranchantes
+ 2x [UTILISE  ] Tries Long Range Free Kicks -- Tente des coups francs lointains
+ 0x [inutilise] Tries Long Range Passes -- Tente des passes longues
+ 1x [UTILISE  ] Tries To Play Way Out Of Trouble -- Cherche à sortir du pressing par le jeu
+ 2x [UTILISE  ] Tries Tricks -- Tente des gestes techniques et dribbles
+ 0x [inutilise] Uses Long Throw To Start Counter Attacks -- Utilise sa longue touche pour lancer les contre-attaques
+ 1x [UTILISE  ] Uses Outside Of Foot -- Utilise l'extérieur du pied
+ 2x [UTILISE  ] Winds Up Opponents -- Provoque les adversaires

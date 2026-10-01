@@ -36,42 +36,75 @@ dans le classeur — vérifié : la colonne "Preferred moves" (feuille
 depuis le dernier import en base (+282). C'est une 4ᵉ voie de fait, déjà
 en cours : saisie manuelle, en parallèle ou à la place du scraping.
 
-## 2. Vocabulaire — écart trouvé, à clarifier avec toi
+## 2. Vocabulaire — investigation 55 vs 48 close le 01/10/2026
 
-Le classeur contient une feuille de référence dédiée, **"Preferred
-moves"**, qui documente **55 moves distincts réellement présents dans la
-base actuelle** (pas 48) — avec traduction française et nombre de
-joueurs par move. Exemple : "Runs With Ball Often" / "Porte souvent le
-ballon" / 77 joueurs.
+**Correction d'une erreur de ma part** : au tour précédent, j'ai annoncé
+un "écart" (`"Moves Ball To Left Foot Before Dribble Attempt"` prétendument
+absent de la feuille de référence) en me basant sur une lecture visuelle
+tronquée du fichier — erreur de ma part, pas un vrai écart. Vérifié
+programmatiquement (`scripts/audit_moves_canoniques.py`, sortie complète
+dans `scripts/_audit_moves_out.txt`) : ce move EST bien présent dans la
+feuille, à la ligne que j'avais sautée en scannant à l'œil. Je le signale
+explicitement plutôt que de laisser la correction se fondre dans le reste.
 
-Écart trouvé en croisant cette liste avec les conditions réellement
-utilisées dans les 281 phrases : **`"Moves Ball To Left Foot Before
-Dribble Attempt"`** (utilisé par une phrase GESTE_SIGNATURE existante)
-**n'apparaît pas dans les 55** — seule la variante `"...To Right Foot..."`
-y figure. Vérifié séparément que ce move a bien au moins un joueur
-correspondant en base (0 move de GESTE_SIGNATURE n'a 0 joueur, voir
-audit précédent) — donc la feuille de référence elle-même n'est pas
-totalement à jour/exhaustive, probablement un instantané pris à un
-moment donné plutôt qu'une liste générée dynamiquement à chaque import.
+**Investigation complète, les 3 hypothèses tranchées par lecture de
+code, pas par supposition :**
 
-**Je ne confirme donc pas "48 canoniques"** — le chiffre réel observable
-dans le fichier est 55, avec au moins un écart résiduel. Dis-moi si "48"
-vient d'une autre source (une liste FM26 officielle que je n'ai pas
-trouvée) : si oui, il faudrait comparer les 55 réels à cette liste
-officielle, pas seulement se fier à la feuille du classeur.
+- Le réservoir canonique réel est **`PREFERRED_MOVE_TRANSLATIONS`**
+  (`scripts/make_phrase_template.py`) — un dictionnaire de traduction
+  anglais→français **maintenu à la main**, 55 entrées. C'est lui qui
+  génère la feuille "Preferred moves" du classeur (`_build_preferred_moves_sheet`
+  dans le même fichier) — **vérifié que les deux ensembles sont
+  identiques, caractère pour caractère** (55 = 55, aucune différence).
+- Croisé avec les 56 conditions `preferred_moves` réellement utilisées
+  dans les 281 phrases (48 valeurs DISTINCTES, certaines réutilisées
+  sur 2 phrases — ex. "Shoots With Power" x2) : **les 48 sont un
+  sous-ensemble strict des 55, zéro valeur hors réservoir.** Aucune
+  faute de frappe, aucun move inventé.
+- **Le "48" n'est donc pas un chiffre erroné ni une référence séparée à
+  retrouver** — c'est très probablement le nombre de moves DISTINCTS
+  UTILISÉS dans la banque actuelle (48), que tu as gardé en mémoire
+  comme "la liste validée", alors que le réservoir DISPONIBLE (55)
+  contient 7 moves de plus, simplement non encore exploités par une
+  phrase : `Moves Ball To Right Foot Before Dribble Attempt`, `Runs
+  With Ball Down Left`, `Runs With Ball Down Right`, `Runs With Ball
+  Rarely`, `Tries Killer Balls Often`, `Tries Long Range Passes`, `Uses
+  Long Throw To Start Counter Attacks`.
+
+**Conclusion des 3 hypothèses** :
+1. *La référence (48) est incomplète, la vraie liste a 55* — reformulée :
+   il n'y a jamais eu deux listes concurrentes, juste un réservoir
+   disponible (55) et un sous-ensemble utilisé (48). **Pas une
+   incomplétude à corriger.**
+2. *Le 55ᵉ move est inventé/mal orthographié* — **réfutée**, aucune
+   valeur utilisée n'est hors réservoir.
+3. *Deux versions FM se télescopent* — **réfutée**, pas de preuve, et
+   l'explication plus simple (réservoir vs sous-ensemble utilisé)
+   suffit.
+
+**Aucune mise à jour de référence nécessaire** — rien n'était cassé.
+Ce qui MANQUAIT réellement, et qui est maintenant en place : un
+garde-fou d'import qui aurait détecté le jour où une vraie faute de
+frappe serait passée. **Ajouté** dans
+`scripts/convert_commentary_xlsx_to_yaml.py::_conditions_for_phrase` —
+toute condition `preferred_moves` dont la valeur n'est pas dans
+`PREFERRED_MOVE_TRANSLATIONS` fait échouer la conversion (même
+mécanisme que `valider_slots` pour les noms de slot). Testé (cas
+accepté + cas rejeté), non-régression confirmée : reconvertir les 281
+phrases réelles avec ce garde-fou produit un YAML strictement identique
+(diff vide).
 
 ## 3. Granularité
 
 Confirmé par la base : **plusieurs moves par joueur**, pas un seul.
 Somme des compteurs de la feuille de référence = 971 occurrences pour
-644-ish joueurs renseignés (avant tes derniers ajouts) → en moyenne
-~1,5-2,7 moves par joueur renseigné (l'écart vient de ce que la feuille
-de référence est un instantané antérieur, voir point 2). Impact sur la
-sélectivité : une condition `preferred_moves contient "X"` reste une
-condition sur UN move précis parmi ceux du joueur, pas sur l'ensemble de
-son profil — la sélectivité des phrases GESTE_SIGNATURE ne change pas de
-nature avec l'enrichissement, seulement la PROPORTION de joueurs qui ont
-une chance d'avoir au moins un move qui matche une des 31 conditions.
+644 joueurs renseignés à ce jour → en moyenne ~1,5 move par joueur
+renseigné. Impact sur la sélectivité : une condition `preferred_moves
+contient "X"` reste une condition sur UN move précis parmi ceux du
+joueur, pas sur l'ensemble de son profil — la sélectivité des phrases
+GESTE_SIGNATURE ne change pas de nature avec l'enrichissement, seulement
+la PROPORTION de joueurs qui ont une chance d'avoir au moins un move qui
+matche une des 31 conditions.
 
 ## 4. Cible de couverture : 90 %
 
@@ -105,28 +138,46 @@ scraper — estimation, pas un engagement :
   stable. Je ne peux pas resserrer cette fourchette sans une première
   passe test à petite échelle (`--limit`).
 
-## 6. Critère de vérification
+## 6. Critère de vérification — PRÉALABLE AU DÉMARRAGE (décision du 01/10/2026)
 
-Proposition (à spécifier, pas à coder ce tour) : un contrôle de
-couverture **avant** tout `import-seed`, pas une simple observation
-après coup — cohérent avec le principe déjà en place pour le cooldown
-("cooldown obligatoire", refus d'import si absent). Deux endroits
-possibles, à trancher :
-- **Dans `data/import/import_players.py`** : logguer un WARNING (pas un
-  refus bloquant — contrairement au cooldown, l'import des joueurs ne
-  doit pas échouer juste parce qu'un attribut optionnel est sous la
-  cible) si la couverture `preferred_moves` post-import est < 90 %.
-- **Dans un script de contrôle séparé** (type `scripts/audit_couverture_donnees.py`,
-  déjà existant) : rejouer l'audit après chaque import et comparer à la
-  cible — plus simple à faire évoluer sans toucher à l'ETL, recommandé.
+Directive explicite : ce critère doit exister **avant** le lancement du
+workstream d'enrichissement, pas après coup — même logique que le
+cooldown ("cooldown obligatoire", refus d'import si absent), mais ici en
+garde-fou de PROCESSUS plutôt que d'import (voir pourquoi ci-dessous).
 
-## Comportement intermédiaire — jusqu'à ce que la cible de 90 % soit atteinte
+**Conception retenue** (à écrire au prochain tour qui touche du code,
+pas ce tour-ci) : script de contrôle séparé, sur le modèle de
+`scripts/audit_couverture_donnees.py` déjà existant — pas une
+modification de `data/import/import_players.py`. Raison du choix :
+- L'import des joueurs est une opération d'INFRASTRUCTURE (faire
+  rentrer les données en base) ; la cible de 90 % est un objectif
+  ÉDITORIAL/PROJET (le workstream est-il fini ou non). Mélanger les deux
+  rendrait `import_players.py` responsable d'une décision qui ne lui
+  appartient pas — chaque import intermédiaire (ex. après 2000 joueurs
+  enrichis sur 6900) ne doit PAS échouer ou alarmer à tort.
+- Un script séparé peut tourner à la demande (fin de journée de
+  scraping, avant de décider si GESTE_SIGNATURE peut sortir du statut
+  PL-only) sans coupler le cycle d'import au cycle de décision projet.
+
+**Forme concrète** : étendre `scripts/audit_couverture_donnees.py`
+(déjà capable de calculer `preferred_moves` : X/7563 = Y %) d'un mode
+`--seuil 90 --attribut preferred_moves` qui retourne un code de sortie
+non-zéro si Y < 90 — utilisable en commande manuelle aujourd'hui, et
+automatisable (CI, tâche planifiée) sans changement si le besoin se
+confirme. Ce n'est PAS un refus d'import comme le cooldown — c'est un
+GO/NO-GO pour décider si la section "PL-only" de `COUVERTURE.md` et la
+restriction correspondante du plan V2 peuvent être levées.
+
+## Comportement intermédiaire — TRANCHÉ le 01/10/2026 : Option A
 
 32 phrases GESTE_SIGNATURE sont mortes aujourd'hui sur tout match
 hors Premier League (0 des 35 clubs couverts n'étant dans les autres
-championnats). Trois options, je ne tranche pas :
+championnats). **Décision : Option A** (garder en base, documenter
+PL-only) — voir [COUVERTURE.md](COUVERTURE.md), section dédiée. Les
+trois options sont conservées ci-dessous pour la traçabilité de la
+décision, pas comme un choix encore ouvert.
 
-**Option A — Garder en base, documenter "PL-only jusqu'à enrichissement"**
+**Option A — Garder en base, documenter "PL-only jusqu'à enrichissement" (RETENUE)**
 - *Pour* : rien à retoucher dans `scenarios.yml`/la base, l'info vit
   dans `COUVERTURE.md` (déjà le cas). Le jour où `preferred_moves`
   atteint 90 %, ces phrases redeviennent utilisables sans aucune action.

@@ -4,6 +4,7 @@ import yaml
 
 from scripts.convert_commentary_xlsx_to_yaml import (
     DEFAULT_COOLDOWN_MATCHES_BY_SCENARIO,
+    PREFERRED_MOVE_TRANSLATIONS,
     SLOTS_AUTORISES,
     CommentaryConversionError,
     convertir,
@@ -184,6 +185,32 @@ class TestConvertir:
         data = yaml.safe_load(out.read_text(encoding="utf-8"))
         slots = {s["slot_name"]: s["expression"] for s in data[0]["variants"][0]["phrases"][0]["slots"]}
         assert slots == {"joueur": "player.full_name", "adversaire": "context.opponent_team"}
+
+    def test_known_preferred_move_is_accepted(self, tmp_path):
+        # Non-regression de l'investigation du 01/10/2026 : le reservoir
+        # canonique a 55 moves, pas 48 (voir AUDIT_COUVERTURE_DONNEES_JOUEUR.md)
+        # -- un move reellement connu, meme rarement utilise dans la banque
+        # actuelle, ne doit pas etre rejete.
+        move = next(iter(PREFERRED_MOVE_TRANSLATIONS))
+        xlsx = _write_xlsx(
+            tmp_path,
+            [_row(condition=f'preferred_moves contient "{move}"')],
+        )
+        out = tmp_path / "out.yml"
+        convertir(xlsx, out)  # ne doit pas lever
+
+    def test_unknown_preferred_move_fails_the_whole_conversion(self, tmp_path):
+        # Garde-fou ajoute le 01/10/2026 : avant, une faute de frappe sur un
+        # nom de move passait silencieusement (la phrase ne se declenchait
+        # simplement jamais) -- meme raisonnement que valider_slots pour les
+        # noms de slot inconnus.
+        xlsx = _write_xlsx(
+            tmp_path,
+            [_row(condition='preferred_moves contient "Ce Move N\'Existe Pas"')],
+        )
+        out = tmp_path / "out.yml"
+        with pytest.raises(CommentaryConversionError, match="Ce Move N'Existe Pas"):
+            convertir(xlsx, out)
 
     def test_every_phrase_gets_its_scenario_default_cooldown(self, tmp_path):
         # Aucune colonne "Cooldown" dans l'onglet "Phrases" du classeur reel

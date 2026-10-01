@@ -73,6 +73,30 @@ vraiment 85+ d'agressivité, et c'est le but : un carton rouge doit rester
 rare). Ne pas confondre les deux catégories lors d'une future lecture de
 ce fichier.
 
+### 32 phrases GESTE_SIGNATURE — PL-only jusqu'à enrichissement (décision du 01/10/2026)
+
+**Statut assumé, pas un oubli.** 32 des 37 phrases GESTE_SIGNATURE
+(variante DEFAUT quasi entière) ne se déclenchent aujourd'hui que pour un
+match impliquant un des 20 clubs de Premier League (seule compétition
+simulée où `preferred_moves` est couvert à 100 % des effectifs) — 0 % de
+probabilité de déclenchement pour tout autre championnat simulé (Ligue 1,
+Serie A, Bundesliga, Liga Portugal, Jupiler Pro League, Eredivisie...).
+
+Décision : **garder ces 32 phrases en base, documentées PL-only, plutôt
+que les retirer temporairement.** Les retirer puis les réintégrer après
+l'enrichissement coûte deux cycles d'import/test/commit pour un état
+transitoire — coût jugé supérieur au bénéfice (voir
+[ENRICHISSEMENT_PREFERRED_MOVES.md](ENRICHISSEMENT_PREFERRED_MOVES.md)
+pour les 3 options considérées).
+
+**Ce statut est temporaire par construction** : un enrichissement de
+`preferred_moves` est planifié, cible 90 % de couverture joueur (contre
+4,8 % aujourd'hui) — voir le fichier dédié pour le scoping complet. Le
+critère de vérification de cet enrichissement (avant tout démarrage du
+travail) doit être en place avant que le workstream ne commence, pas
+après. Une fois la cible atteinte, cette section n'aura plus lieu d'être
+et devra être retirée.
+
 ## Pourquoi importer quand même
 
 Décision assumée (30/09/2026) : importer une banque partielle permet de
