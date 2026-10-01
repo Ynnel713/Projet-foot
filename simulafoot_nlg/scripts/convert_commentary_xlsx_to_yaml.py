@@ -323,25 +323,32 @@ def _slots_for_phrase(phrase: str) -> list[dict[str, Any]]:
     return slots
 
 
+def verifier_move_canonique(attribut: str, valeur: str, origine: str) -> None:
+    """Garde-fou des preferred_moves : une condition `preferred_moves contient X`
+    dont X n'est pas dans le reservoir canonique ne se declencherait jamais (bug
+    invisible, meme raisonnement que valider_slots). Partage par le chemin
+    classeur -> YAML et le chemin pilotes -> YAML ; `origine` situe l'erreur."""
+    if attribut == "preferred_moves" and valeur not in PREFERRED_MOVE_TRANSLATIONS:
+        # Trouve par l'investigation du 01/10/2026 (voir
+        # AUDIT_COUVERTURE_DONNEES_JOUEUR.md) : aucun des 56 usages
+        # existants n'est hors reservoir, mais rien ne l'empechait
+        # avant ce garde-fou -- une faute de frappe future passerait
+        # silencieusement.
+        raise CommentaryConversionError(
+            f"{origine} : preferred_moves {valeur!r} absent du reservoir "
+            f"canonique ({len(PREFERRED_MOVE_TRANSLATIONS)} moves connus, voir "
+            "scripts/make_phrase_template.PREFERRED_MOVE_TRANSLATIONS) -- faute de "
+            "frappe, ou move reellement nouveau a ajouter au reservoir d'abord."
+        )
+
+
 def _conditions_for_phrase(condition_brute: str, ligne_excel: int) -> list[dict[str, Any]]:
     try:
         atomes = parse_condition_atoms(condition_brute)
     except ValueError as exc:
         raise CommentaryConversionError(f"Ligne {ligne_excel} : condition invalide — {exc}") from exc
     for a in atomes:
-        if a.attribute == "preferred_moves" and a.value not in PREFERRED_MOVE_TRANSLATIONS:
-            # Trouve par l'investigation du 01/10/2026 (voir
-            # AUDIT_COUVERTURE_DONNEES_JOUEUR.md) : aucun des 56 usages
-            # existants n'est hors reservoir, mais rien ne l'empechait
-            # avant ce garde-fou -- une faute de frappe future passerait
-            # silencieusement (la phrase ne se declencherait simplement
-            # jamais, bug invisible, meme raisonnement que valider_slots).
-            raise CommentaryConversionError(
-                f"Ligne {ligne_excel} : preferred_moves {a.value!r} absent du reservoir "
-                f"canonique ({len(PREFERRED_MOVE_TRANSLATIONS)} moves connus, voir "
-                "scripts/make_phrase_template.PREFERRED_MOVE_TRANSLATIONS) -- faute de "
-                "frappe, ou move reellement nouveau a ajouter au reservoir d'abord."
-            )
+        verifier_move_canonique(a.attribute, a.value, f"Ligne {ligne_excel}")
     return [
         {"attribute": a.attribute, "operator": a.operator, "value": a.value, "mandatory": True}
         for a in atomes
