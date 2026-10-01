@@ -15,6 +15,7 @@ Algorithme :
 
 from __future__ import annotations
 
+import difflib
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -23,6 +24,7 @@ from typing import Any
 
 import yaml
 
+from engine.conditions import NOMS_CONDITIONNABLES
 from engine.db import get_sqlite, sqlite_transaction
 
 logger = logging.getLogger(__name__)
@@ -88,6 +90,21 @@ def _validate_scenarios(scenarios: list[dict[str, Any]], known_slot_keys: set[st
                         "n'a pas de cooldown_matches -- import refusé (règle \"cooldown "
                         "obligatoire\" du README, voir AUDIT_EDITORIAL_2026-09-30.md)."
                     )
+                for condition in phrase.get("conditions", []):
+                    # D16-fine : un nom d'attribut inconnu est une faute de frappe,
+                    # a refuser ICI (la phrase serait sinon importee, puis ferait
+                    # lever ValueError a la premiere selection). Un attribut FM26
+                    # connu mais absent chez certains joueurs reste valide : il
+                    # est ecarte a l'execution (D16), pas a l'import.
+                    attribute = condition.get("attribute")
+                    if attribute not in NOMS_CONDITIONNABLES:
+                        proches = difflib.get_close_matches(str(attribute), sorted(NOMS_CONDITIONNABLES), n=1)
+                        suggestion = f" Vouliez-vous dire {proches[0]!r} ?" if proches else ""
+                        raise SeedValidationError(
+                            f'Scénario "{code}" : la phrase {phrase.get("text", "<sans texte>")!r} '
+                            f"conditionne sur {attribute!r}, inconnu (ni champ Player, ni "
+                            f"MatchContext, ni attribut FM26, ni preferred_moves).{suggestion}"
+                        )
                 for slot in phrase.get("slots", []):
                     key = slot.get("dictionary_key")
                     if key is not None and key not in known_slot_keys:

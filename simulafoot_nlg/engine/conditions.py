@@ -54,6 +54,12 @@ PLAYER_FIELDS = frozenset({"age", "height_cm", "weak_foot", "foot", "fm_rating",
 # C, SPEC_ANTI_REPEAT.md section 5), pas de cette grammaire.
 MATCH_CONTEXT_FIELDS = frozenset({"minute", "score_context", "is_home", "sortant", "entrant"})
 
+# Tous les noms qu'une condition de phrase peut viser (champ Player, champ de
+# MatchContext, attribut FM26, preferred_moves) : ce que `_resolve` reconnait
+# sans lever ValueError. Un autre nom est une faute de frappe -- a l'import
+# (scripts/import_seed.py, D16-fine) comme a l'execution.
+NOMS_CONDITIONNABLES = PLAYER_FIELDS | MATCH_CONTEXT_FIELDS | FM26_ATTRIBUTES_KNOWN | {"preferred_moves"}
+
 _ATOME_RE = re.compile(
     r'^\s*(\w+)\s*(<=|>=|!=|==|=|<|>)\s*(.+?)\s*$'
     r'|^\s*(\w+)\s+in\s*\[(.+?)\]\s*$'

@@ -9,9 +9,10 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
+import pytest
 import yaml
 
-from scripts.import_seed import import_seed
+from scripts.import_seed import SeedValidationError, _validate_scenarios, import_seed
 
 SCHEMA_PATH = Path(__file__).resolve().parent.parent / "data" / "schema.sql"
 
@@ -119,3 +120,47 @@ class TestImportSeedConditionOperators:
         row = conn.execute("SELECT operator FROM phrase_conditions").fetchone()
         conn.close()
         assert row[0] == "contient"
+
+
+class TestImportSeedNomsDAttributs:
+    """D16-fine : un nom d'attribut inconnu fait echouer l'import (tout ou rien) ;
+    les noms valides (FM26, champ Player, champ de contexte, preferred_moves) passent,
+    y compris ceux que certains joueurs n'ont pas (ecartes a l'execution, pas ici)."""
+
+    @staticmethod
+    def _importer(tmp_path: Path, attribute: str) -> Path:
+        db_path = _init_db(tmp_path)
+        scenarios_path = _write_scenarios_yaml(
+            tmp_path,
+            cooldown_matches=3,
+            conditions=[{"attribute": attribute, "operator": ">=", "value": "70"}],
+        )
+        import_seed(db_path, scenarios_path, _write_empty_slots_yaml(tmp_path))
+        return db_path
+
+    def test_une_faute_de_frappe_fait_echouer_l_import_et_suggere_le_bon_nom(self, tmp_path):
+        db_path = _init_db(tmp_path)
+        scenarios_path = _write_scenarios_yaml(
+            tmp_path,
+            cooldown_matches=3,
+            conditions=[{"attribute": "Aggresion", "operator": ">=", "value": "70"}],
+        )
+        with pytest.raises(SeedValidationError, match="Aggresion.*Aggression"):
+            import_seed(db_path, scenarios_path, _write_empty_slots_yaml(tmp_path))
+
+        conn = sqlite3.connect(db_path)
+        assert conn.execute("SELECT COUNT(*) FROM scenarios").fetchone()[0] == 0
+        conn.close()
+
+    @pytest.mark.parametrize("attribute", ["Aggression", "age", "minute", "is_home", "fm_rating"])
+    def test_un_nom_valide_est_accepte(self, tmp_path, attribute):
+        db_path = self._importer(tmp_path, attribute)
+        conn = sqlite3.connect(db_path)
+        assert conn.execute("SELECT attribute FROM phrase_conditions").fetchone()[0] == attribute
+        conn.close()
+
+    def test_toutes_les_conditions_de_la_banque_v1_sont_reconnues(self):
+        banque = yaml.safe_load(
+            (SCHEMA_PATH.parent / "seed" / "scenarios.yml").read_text(encoding="utf-8")
+        )
+        _validate_scenarios(banque, known_slot_keys=set())

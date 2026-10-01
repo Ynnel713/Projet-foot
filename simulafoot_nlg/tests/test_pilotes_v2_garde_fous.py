@@ -64,10 +64,9 @@ def test_chaque_attribut_conditionne_est_resolvable_par_l_evaluateur(pilote):
     """Un attribut hors PLAYER_FIELDS / MATCH_CONTEXT_FIELDS / FM26 / preferred_moves
     leve ValueError dans engine.conditions._resolve a l'execution (cas reel :
     fm_rating avant le 01/10/2026). Ce test l'attrape a l'ecriture du pilote."""
-    from engine.conditions import MATCH_CONTEXT_FIELDS, PLAYER_FIELDS
-    from engine.fm26 import FM26_ATTRIBUTES_KNOWN
+    from engine.conditions import NOMS_CONDITIONNABLES
 
-    resolvables = PLAYER_FIELDS | MATCH_CONTEXT_FIELDS | FM26_ATTRIBUTES_KNOWN | {"preferred_moves"}
+    resolvables = NOMS_CONDITIONNABLES
     for texte, conditions in pilote.DEFAUT + pilote.SURNOM:
         for attribut, _, _ in conditions:
             assert attribut in resolvables, (attribut, texte)
