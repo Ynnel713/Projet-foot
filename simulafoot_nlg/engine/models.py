@@ -215,6 +215,16 @@ class Phrase:
 
 
 @dataclass(frozen=True)
+class SelectionResult:
+    """Resultat de phrase_selector.select (decision D11) : la `Phrase` choisie ET son texte rendu
+    pour ce (joueur, contexte) -- slots resolus puis post-traitement linguistique. C'est ce texte
+    que l'appelant affiche et passe a anti_repeat.update_cooldown (jamais le gabarit)."""
+
+    phrase: Phrase
+    rendered_text: str
+
+
+@dataclass(frozen=True)
 class PhraseCondition:
     """Condition de selection d'une Phrase (ex. attribut "Determination" >=
     70). `mandatory=True` : la Phrase est ECARTEE si la condition echoue (pas

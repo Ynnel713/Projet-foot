@@ -10,7 +10,7 @@ import pytest
 import engine.phrase_selector as module
 from engine import minhash
 from engine.logger import log_usage
-from engine.models import MatchContext, Phrase, PhraseCondition, Player, Variant
+from engine.models import MatchContext, Phrase, PhraseCondition, Player, SelectionResult, Variant
 from engine.phrase_selector import (
     AucunCandidatError,
     candidats,
@@ -189,7 +189,7 @@ def _usage(conn, texte: str, joueur: int, rang: int, texte_rendu: str | None = N
     conn.commit()
 
 
-def _select(conn, joueur: Player | None = None, *, seed=1, match_sequence=10, **kwargs) -> Phrase:
+def _resultat(conn, joueur: Player | None = None, *, seed=1, match_sequence=10, **kwargs) -> SelectionResult:
     return select(
         conn,
         "BUT_TEST",
@@ -200,6 +200,11 @@ def _select(conn, joueur: Player | None = None, *, seed=1, match_sequence=10, **
         selectivite=kwargs.pop("selectivite", _population_pace()),
         **kwargs,
     )
+
+
+def _select(conn, joueur: Player | None = None, **kwargs) -> Phrase:
+    """La phrase choisie (la plupart des tests ne regardent que elle)."""
+    return _resultat(conn, joueur, **kwargs).phrase
 
 
 # --- Cascade de variantes ----------------------------------------------------------
@@ -444,3 +449,50 @@ class TestMatchSequence:
             select(sqlite_conn, "X", _joueur_rapide(), _context(), seed=1, selectivite=_population_pace())  # type: ignore[call-arg]
         with pytest.raises(TypeError):
             select(sqlite_conn, "X", _joueur_rapide(), _context(), 1, 10, _population_pace())  # type: ignore[misc]
+
+
+# --- SelectionResult (D11) : la phrase ET son texte rendu --------------------------------
+
+
+class TestSelectionResult:
+    def test_le_resultat_porte_la_phrase_et_le_texte_rendu_post_traite(self, sqlite_conn):
+        _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("{joueur} frappe  fort face à {adversaire}", [])]}})
+        _ajouter_slot(sqlite_conn, "{joueur} frappe  fort face à {adversaire}", "joueur", "player.full_name")
+        _ajouter_slot(sqlite_conn, "{joueur} frappe  fort face à {adversaire}", "adversaire", "context.opponent_team")
+        joueur = Player(id=1, first_name="kylian", last_name="Mbappé")
+        contexte = MatchContext(match_id="m1", home_team="Lyon", away_team="Le Havre AC", is_home=True, player_team="Lyon")
+
+        resultat = _resultat(sqlite_conn, joueur, contexte=contexte)
+
+        assert isinstance(resultat, SelectionResult)
+        assert resultat.phrase.text == "{joueur} frappe  fort face à {adversaire}"  # le gabarit est intact
+        # slots resolus, espaces ecrases, majuscule initiale, contraction "à Le" -> "au"
+        assert resultat.rendered_text == "Kylian Mbappé frappe fort face au Havre AC"
+
+    def test_le_texte_rendu_est_celui_que_update_cooldown_doit_enregistrer(self, sqlite_conn):
+        from engine.anti_repeat import similarity_penalty, update_cooldown
+
+        _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("un but superbe de {joueur} ce soir", [])]}})
+        _ajouter_slot(sqlite_conn, "un but superbe de {joueur} ce soir", "joueur", "player.full_name")
+        joueur = Player(id=1, first_name="Ousmane", last_name="Dembélé")
+        resultat = _resultat(sqlite_conn, joueur, match_sequence=10)
+        update_cooldown(sqlite_conn, resultat.phrase, joueur, "m10", resultat.rendered_text, match_sequence=10)
+        assert similarity_penalty(sqlite_conn, resultat.rendered_text, joueur, match_sequence=10) == 1.0
+        assert sqlite_conn.execute("SELECT rendered_text FROM phrase_history").fetchone()[0] == "Un but superbe d'Ousmane Dembélé ce soir"
+
+    def test_une_phrase_de_secours_est_aussi_rendue(self, sqlite_conn):
+        _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("spec", RAPIDE)]}})
+        secours_id = _ajouter_secours(sqlite_conn, "le match suit son cours.")
+        resultat = _resultat(sqlite_conn, _joueur_lent())
+        assert (resultat.phrase.id, resultat.phrase.is_fallback) == (secours_id, True)
+        assert resultat.rendered_text == "Le match suit son cours."  # post_process applique
+
+    def test_le_resultat_est_immuable(self, sqlite_conn):
+        _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("x", [])]}})
+        resultat = _resultat(sqlite_conn)
+        with pytest.raises(AttributeError):
+            resultat.rendered_text = "autre"  # type: ignore[misc]
+
+    def test_le_rendu_est_reproductible_avec_la_meme_graine(self, sqlite_conn):
+        _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [(f"phrase numero {i}", []) for i in range(10)]}})
+        assert _resultat(sqlite_conn, seed=9) == _resultat(sqlite_conn, seed=9)

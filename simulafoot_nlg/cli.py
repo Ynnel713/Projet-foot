@@ -152,7 +152,7 @@ def _cmd_select(args: argparse.Namespace) -> None:
         player = normalize_player(dict(row))
 
         try:
-            phrase = select_phrase(
+            resultat = select_phrase(
                 conn,
                 args.scenario,
                 player,
@@ -164,7 +164,7 @@ def _cmd_select(args: argparse.Namespace) -> None:
         except AucunCandidatError as exc:
             print(f"select : {exc}", file=sys.stderr)
             raise SystemExit(2) from exc
-        print(phrase.text)
+        print(resultat.rendered_text)
     finally:
         conn.close()
 

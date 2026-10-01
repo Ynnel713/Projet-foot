@@ -29,7 +29,7 @@ Algorithme de `select` (decisions D1, alpha, D9, D10 ; SPEC_ANTI_REPEAT.md secti
        phrase de secours en base : le meme WARNING, puis AucunCandidatError. Aucun log pour le passage
        normal SURNOM -> DEFAUT.
 
-`select` ne fait AUCUNE ecriture : l'enregistrement de l'usage est anti_repeat.update_cooldown, appele
+`select` retourne SelectionResult(phrase, rendered_text) (D11) et ne fait AUCUNE ecriture : l'enregistrement de l'usage est anti_repeat.update_cooldown, appele
 par l'appelant (jamais pour une phrase de secours, que log_usage refuse).
 """
 
@@ -42,7 +42,7 @@ from typing import Any
 
 from engine.anti_repeat import CooldownManquantError, recency_penalty, similarity_penalty
 from engine.conditions import evaluate_condition
-from engine.models import MatchContext, Phrase, Player, Variant
+from engine.models import MatchContext, Phrase, Player, SelectionResult, Variant
 from engine.post_process import apply
 from engine.profile_engine import validate_match_sequence
 from engine.scenario_engine import load_phrases, load_scenario, load_variants
@@ -159,8 +159,11 @@ def select(
     match_sequence: int,
     selectivite: Selectivite,
     dictionaries: Mapping[str, Sequence[Mapping[str, Any]]] | None = None,
-) -> Phrase:
-    """Selectionne UNE Phrase (voir l'algorithme en tete de module).
+) -> SelectionResult:
+    """Selectionne UNE phrase et la rend : `SelectionResult(phrase, rendered_text)` (D11 ; voir
+    l'algorithme en tete de module). `rendered_text` est le texte final (slots resolus, puis
+    post_process.apply), celui a afficher et a enregistrer par update_cooldown -- sauf pour une phrase
+    de secours (`phrase.is_fallback`), que log_usage refuse.
 
     `seed` et `match_sequence` sont OBLIGATOIRES et par mot-cle : la graine rend tout le tirage et
     tout le rendu reproductibles ; `match_sequence` (rang du match, None refuse sans repli) est
@@ -185,7 +188,7 @@ def select(
             poids = [p for _, _, p in rendus]
             rng = derive_rng(seed, scenario_code, variante.code, "select")
             choix = rng.choices(rendus, weights=poids if any(poids) else None, k=1)[0]
-            return choix[0]
+            return SelectionResult(choix[0], choix[1])
         ecartees.append(variante)
 
     secours = _phrase_de_secours(conn, variantes)
@@ -194,7 +197,10 @@ def select(
         raise AucunCandidatError(f"Scenario {scenario_code!r} : aucune phrase disponible, ni phrase de secours.")
     phrase, variante = secours
     _signaler_scenario_a_sec(scenario_code, ecartees, repli=f"phrase de secours #{phrase.id} ({variante.code})")
-    return phrase
+    brut = render(
+        phrase, player, context, seed=seed, scenario_code=scenario_code, variant_code=variante.code, dictionaries=dictionaries
+    )
+    return SelectionResult(phrase, apply(brut))
 
 
 def _signaler_scenario_a_sec(scenario_code: str, ecartees: Sequence[Variant], *, repli: str) -> None:

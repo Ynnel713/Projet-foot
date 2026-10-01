@@ -14,7 +14,8 @@
 | `engine/db.py` | Connexions SQLite (WAL, FK) et DuckDB + context managers de transaction. Point d'entrée unique vers les deux bases. |
 | `engine/profile_engine.py` | Normalise un dict brut (ligne SQL) en `Player`/`MatchContext` typés -- postes secondaires et preferred moves redécoupés, aucune valeur inventée. |
 | `engine/scenario_engine.py` | Charge scénario -> variantes -> phrases (+ conditions/slots) depuis SQLite, en lecture seule. |
-| `engine/phrase_selector.py` | **Squelette.** Sélectionnera une `Phrase` pour un (scénario, joueur, contexte) donnés. |
+| `engine/phrase_selector.py` | `select` : cascade de variantes (SURNOM avant DEFAUT), conditions, cooldown en matchs, paliers spécifiques/génériques, rendu, phrase de secours ; retourne `SelectionResult(phrase, rendered_text)`. |
+| `engine/selectivity.py` | Sélectivité des phrases (seuil 70 % des joueurs de champ), cache mémoire. |
 | `engine/anti_repeat.py` | Pénalités de récence (en matchs, binaire) et de similarité (MinHash), `update_cooldown` (une transaction : historique puis signature). `match_sequence` obligatoire. |
 | `engine/minhash.py` | Signature MinHash d'un texte via `hashlib` (indépendante de `PYTHONHASHSEED`). |
 | `engine/template_filler.py` | Résout les `{slot}` d'une `Phrase` (expressions à points sans `eval`, dictionnaires, `SlotResolutionError`) ; rng dérivé par phrase. |
@@ -35,9 +36,9 @@
 Ce qui **fonctionne réellement** aujourd'hui : le schéma, l'import des
 joueurs, le chargement des scénarios/phrases depuis la base. Ce qui **n'est
 pas encore implémenté** (lève `NotImplementedError`) : la sélection d'une
-phrase (`phrase_selector.select`). Le rendu des slots, le post-traitement, le
-journal d'usage et l'anti-répétition sont implémentés et testés ; `select`
-documente en tête l'algorithme prévu.
+phrase. La sélection (`select`), le rendu des slots, le post-traitement, le
+journal d'usage et l'anti-répétition sont implémentés et testés ; reste
+l'intégration (contrat de dicts d'événements, branchement de la CLI).
 
 ## Initialisation (< 10 min)
 
@@ -174,10 +175,9 @@ python cli.py import-seed
 - **Ne jamais inventer de donnée.** Aucune valeur de joueur, aucune phrase,
   aucun scénario en dur dans le code -- tout vient de la base ou des YAML.
 - **Toujours une variante par défaut** par scénario (voir ci-dessus).
-- **Cooldown obligatoire** : `phrase_selector.select` (une fois implémenté)
-  devra refuser toute phrase sans ligne dans `phrase_cooldowns`, ou dont
-  `cooldown_matches` est `NULL` -- à l'exception des phrases de secours
-  (`is_fallback`), qui n'en ont jamais.
+- **Cooldown obligatoire** : `phrase_selector.select` refuse toute phrase sans
+  ligne dans `phrase_cooldowns` (avec un WARNING) -- à l'exception des phrases
+  de secours (`is_fallback`), qui n'en ont jamais.
 - **Pas de code mort** : toute fonction publique a un test, y compris les
   squelettes (le test y vérifie le contrat `NotImplementedError`, en
   attendant l'implémentation réelle).
@@ -189,7 +189,7 @@ python cli.py init-db
 python cli.py import-players --xlsx data/joueurs.xlsx
 python cli.py import-seed
 python cli.py reset-seed --yes                                  # vide banque + historique, garde les joueurs
-python cli.py select --scenario BUT_PIED_DROIT --player-id 1   # échoue explicitement (squelette)
+python cli.py select --scenario BUT --player-id 1 --match-sequence 1 [--seed 0]   # affiche la phrase rendue
 python cli.py export-analytics
 ```
 
@@ -212,6 +212,6 @@ Attendu :
 - `pytest` : 100 % des tests passent, couverture `engine/` > 85 % (99 % au
   28/09/2026).
 - `mypy --strict` et `ruff check .` : aucune erreur.
-- `python cli.py select --scenario X --player-id 1` échoue explicitement
-  (scénario introuvable, ou `NotImplementedError` si le scénario existe) --
-  jamais de texte généré.
+- `python cli.py select --scenario X --player-id 1 --match-sequence 1` affiche
+  une phrase rendue, ou échoue explicitement (scénario introuvable, ou à sec
+  sans phrase de secours) -- jamais de texte inventé.

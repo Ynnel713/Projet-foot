@@ -1,4 +1,8 @@
-from engine.models import MatchContext, Player
+import dataclasses
+
+import pytest
+
+from engine.models import MatchContext, Phrase, Player, SelectionResult
 
 
 def _player(name: str) -> Player:
@@ -30,3 +34,12 @@ class TestMatchContextTwoPlayerEvent:
         ctx = MatchContext(match_id="m1", passeur=passeur, receveur=receveur)
         assert ctx.passeur is passeur
         assert ctx.receveur is receveur
+
+
+def test_selection_result_porte_la_phrase_et_le_texte_rendu_et_est_immuable():
+    phrase = Phrase(id=1, variant_id=1, text="{joueur} marque !")
+    resultat = SelectionResult(phrase, "Kylian Mbappé marque !")
+    assert (resultat.phrase, resultat.rendered_text) == (phrase, "Kylian Mbappé marque !")
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        resultat.rendered_text = "autre"  # type: ignore[misc]
+    assert resultat == SelectionResult(phrase, "Kylian Mbappé marque !")
