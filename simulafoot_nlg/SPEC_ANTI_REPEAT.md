@@ -665,6 +665,17 @@ sur `preferred_moves`, jamais `None`) ; même traitement, retourner `False`.
 9. **proprio-conversion — module racine, hors V2.1.** V2.1 livre le contrat des dicts
    (`SPEC_NLG_INGESTION.md`, à créer au Bloc 5) ; les tests NLG utilisent des dicts écrits à la main.
 
+**Dettes de `post_process` (01/10/2026, architecte) :**
+- **Prénoms à h aspiré — hors V2.1.** `elision` traite tout « h » absent de `INITIALE_ASPIREE` comme
+  muet : « de Harry Kane » devient « d'Harry Kane ». La table ne liste que des clubs, quelques noms et
+  du vocabulaire ; or `{joueur}` rend « Prénom Nom », donc le mot jugé est le prénom. 90 prénoms
+  distincts en « H » en base (154 joueurs sur 7563, 2 %), dont Harry (12), Harvey, Harrison, Hayden,
+  Hassan, Hamza, Hans, Hannes (h probablement aspiré) ; Hugo (21), Henry, Héctor, Henrik sont muets
+  (élision correcte). Motif : jugement de prononciation, pas une règle mécanique ; erreurs rares et
+  peu visibles. Une liste éditoriale viendra en V2.2 si un retour d'usage le justifie.
+- **Dette mineure — `in` sans garde `None`** (`engine/conditions.py`) : `in` compare `str(None)` ; correct
+  en pratique, pas de garde explicite.
+
 ## Ce qui N'est PAS bloquant (déjà en place)
 - Le schéma SQL (`phrase_history`, `phrase_cooldowns`,
   `similarity_signatures`) est cohérent avec l'algorithme documenté dans le
