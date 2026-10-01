@@ -65,6 +65,10 @@
         operator: '>='
         value: '70'
         mandatory: true
+      - attribute: Tackling
+        operator: <=
+        value: '55'
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -144,6 +148,10 @@
       - attribute: Aggression
         operator: '>='
         value: '75'
+        mandatory: true
+      - attribute: Determination
+        operator: '>='
+        value: '80'
         mandatory: true
       slots:
       - slot_name: joueur
@@ -245,6 +253,10 @@
         operator: '>='
         value: '70'
         mandatory: true
+      - attribute: minute
+        operator: '>='
+        value: '60'
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -282,6 +294,10 @@
       - attribute: Aggression
         operator: '>='
         value: '75'
+        mandatory: true
+      - attribute: Teamwork
+        operator: '>='
+        value: '80'
         mandatory: true
       slots:
       - slot_name: joueur
@@ -388,6 +404,10 @@
       - attribute: Aggression
         operator: '>='
         value: '75'
+        mandatory: true
+      - attribute: Decisions
+        operator: <=
+        value: '60'
         mandatory: true
       slots:
       - slot_name: joueur
