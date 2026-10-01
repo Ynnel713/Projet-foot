@@ -1,7 +1,9 @@
-"""YAML (data/seed/scenarios.yml, data/seed/slots.yml) -> SQLite.
+"""YAML (data/seed/scenarios.yml + data/seed/v2/*.yml, data/seed/slots.yml) -> SQLite.
 
 Algorithme :
-    1. Charger les deux YAML (erreur explicite si fichier absent/invalide).
+    1. Charger les YAML de scenarios (un chemin, ou une liste : decision D4 --
+       un YAML par pilote) et slots.yml (erreur explicite si fichier
+       absent/invalide ; un meme code de scenario dans deux fichiers est refuse).
     2. VALIDER integralement avant la moindre ecriture : chaque scenario a
        au moins une variante is_default=1 (contrainte du brief -- import
        refuse tout le fichier si un seul scenario y deroge, pas d'import
@@ -31,6 +33,10 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_SCENARIOS_PATH = Path(__file__).resolve().parent.parent / "data" / "seed" / "scenarios.yml"
 DEFAULT_SLOTS_PATH = Path(__file__).resolve().parent.parent / "data" / "seed" / "slots.yml"
+# Defaut EXPLICITE de la liste de scenarios : la banque v1 (fichier obligatoire) puis
+# les YAML des pilotes V2 (glob, peut etre vide). Jamais un glob sur data/seed/ :
+# slots.yml y cohabite avec un autre schema (dict, pas liste).
+DEFAULT_V2_DIR = Path(__file__).resolve().parent.parent / "data" / "seed" / "v2"
 
 
 class SeedValidationError(ValueError):
@@ -58,6 +64,28 @@ def _load_yaml(path: Path, expected_type: type) -> Any:
             f"{path} : attendu un {expected_type.__name__} au niveau racine, trouvé {type(data).__name__}"
         )
     return data
+
+
+def _default_scenario_paths() -> list[Path]:
+    return [DEFAULT_SCENARIOS_PATH, *sorted(DEFAULT_V2_DIR.glob("*.yml"))]
+
+
+def _load_scenarios(paths: list[Path]) -> list[dict[str, Any]]:
+    """Fusionne les scenarios de plusieurs fichiers. Un code present dans deux
+    fichiers est une erreur (scenarios.code est UNIQUE : l'echec arriverait sinon
+    a l'insertion, apres des ecritures partielles)."""
+    scenarios: list[dict[str, Any]] = []
+    origine: dict[str, Path] = {}
+    for path in paths:
+        for scenario in _load_yaml(path, list):
+            code = scenario.get("code", "<sans code>")
+            if code in origine:
+                raise SeedValidationError(
+                    f'Scénario "{code}" défini dans deux fichiers : {origine[code]} et {path} -- import refusé.'
+                )
+            origine[code] = path
+            scenarios.append(scenario)
+    return scenarios
 
 
 def _validate_scenarios(scenarios: list[dict[str, Any]], known_slot_keys: set[str]) -> None:
@@ -213,10 +241,16 @@ def _insert_slot_dictionaries(conn: Connection, dictionaries: dict[str, list[dic
 
 def import_seed(
     sqlite_path: str | Path,
-    scenarios_path: str | Path = DEFAULT_SCENARIOS_PATH,
+    scenarios_path: str | Path | list[str | Path] | None = None,
     slots_path: str | Path = DEFAULT_SLOTS_PATH,
 ) -> SeedStats:
-    scenarios = _load_yaml(Path(scenarios_path), list)
+    if scenarios_path is None:
+        chemins = _default_scenario_paths()
+    elif isinstance(scenarios_path, list):
+        chemins = [Path(p) for p in scenarios_path]
+    else:
+        chemins = [Path(scenarios_path)]
+    scenarios = _load_scenarios(chemins)
     dictionaries = _load_yaml(Path(slots_path), dict)
 
     _validate_scenarios(scenarios, known_slot_keys=set(dictionaries))

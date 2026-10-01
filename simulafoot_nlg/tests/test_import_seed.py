@@ -216,3 +216,72 @@ class TestImportSeedUniciteDesTextes:
         with pytest.raises(sqlite3.IntegrityError):
             conn.execute("INSERT INTO phrases (variant_id, text) VALUES (1, 'x')")
         conn.close()
+
+
+class TestImportSeedListeDeFichiers:
+    """D4 : import_seed accepte une liste de YAML de scenarios (un par pilote)."""
+
+    @staticmethod
+    def _yaml_pour(tmp_path: Path, nom: str, code_scenario: str) -> Path:
+        scenarios = [
+            {
+                "code": code_scenario,
+                "label": code_scenario,
+                "variants": [
+                    {
+                        "code": "DEFAUT",
+                        "label": "d",
+                        "is_default": True,
+                        "phrases": [{"text": f"texte {code_scenario}", "cooldown_matches": 2}],
+                    }
+                ],
+            }
+        ]
+        path = tmp_path / nom
+        path.write_text(yaml.safe_dump(scenarios, allow_unicode=True), encoding="utf-8")
+        return path
+
+    def test_une_liste_de_fichiers_est_importee_en_un_seul_import(self, tmp_path):
+        db_path = _init_db(tmp_path)
+        fichiers = [self._yaml_pour(tmp_path, "a.yml", "BUT"), self._yaml_pour(tmp_path, "b.yml", "CORNER")]
+        stats = import_seed(db_path, fichiers, _write_empty_slots_yaml(tmp_path))
+        assert (stats.scenarios, stats.phrases) == (2, 2)
+
+    def test_str_et_path_seuls_restent_acceptes(self, tmp_path):
+        for i, conversion in enumerate((str, Path)):
+            sous_dossier = tmp_path / str(i)
+            sous_dossier.mkdir()
+            db_path = _init_db(sous_dossier)
+            fichier = self._yaml_pour(sous_dossier, "a.yml", "BUT")
+            stats = import_seed(db_path, conversion(fichier), _write_empty_slots_yaml(sous_dossier))
+            assert stats.scenarios == 1
+
+    def test_un_code_present_dans_deux_fichiers_est_refuse_avant_toute_ecriture(self, tmp_path):
+        db_path = _init_db(tmp_path)
+        fichiers = [self._yaml_pour(tmp_path, "a.yml", "BUT"), self._yaml_pour(tmp_path, "b.yml", "BUT")]
+        with pytest.raises(SeedValidationError, match=r'"BUT".*a\.yml.*b\.yml'):
+            import_seed(db_path, fichiers, _write_empty_slots_yaml(tmp_path))
+
+        conn = sqlite3.connect(db_path)
+        assert conn.execute("SELECT COUNT(*) FROM scenarios").fetchone()[0] == 0
+        conn.close()
+
+    def test_le_defaut_est_la_banque_v1_puis_les_yaml_du_dossier_v2(self, tmp_path, monkeypatch):
+        import scripts.import_seed as module
+
+        (tmp_path / "defense.yml").write_text("[]", encoding="utf-8")
+        (tmp_path / "corner.yml").write_text("[]", encoding="utf-8")
+        (tmp_path / "notes.md").write_text("pas un yaml", encoding="utf-8")
+        monkeypatch.setattr(module, "DEFAULT_V2_DIR", tmp_path)
+
+        assert module._default_scenario_paths() == [
+            module.DEFAULT_SCENARIOS_PATH,
+            tmp_path / "corner.yml",
+            tmp_path / "defense.yml",
+        ]
+
+    def test_le_defaut_sans_dossier_v2_est_la_banque_v1_seule(self, tmp_path, monkeypatch):
+        import scripts.import_seed as module
+
+        monkeypatch.setattr(module, "DEFAULT_V2_DIR", tmp_path / "absent")
+        assert module._default_scenario_paths() == [module.DEFAULT_SCENARIOS_PATH]
