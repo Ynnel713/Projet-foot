@@ -1,10 +1,13 @@
 # SPEC — contrat d'ingestion d'événements du NLG (V2.1)
 
 Ce que la **racine** (le moteur de simulation) doit fournir au NLG pour qu'un match soit raconté, et ce
-que le NLG en fait. La conversion racine → dicts est faite côté racine par `engine/nlg_ingestion.py` (B2, 01/10/2026 : `timeline_to_events`,
+que le NLG en fait. La conversion racine → dicts est faite côté racine par `engine/nlg_ingestion.py` (B2 : `timeline_to_events`,
 `write_jsonl`, un fichier JSON Lines par match ; test bout-en-bout `tests/test_nlg_end_to_end.py`, deux processus). Le NLG reste
 testé avec des dicts écrits à la main (`tests/test_cli_narrate.py`). Règle côté racine : un but sans passeur sur un gabarit
-corner / coup_franc / construction_placee est émis avec le gabarit `percee_individuelle` (→ scénario BUT). Le code fait foi :
+corner / coup_franc / construction_placee est émis avec le gabarit `percee_individuelle` (→ scénario BUT).
+Garde-fou côté NLG : `tests/test_but_gabarit_neutre.py` (aucune phrase de BUT ne conditionne ce gabarit).
+Export d'un match : `scripts/export_match_to_nlg.py` (racine) → `data/nlg_inbox/NNNNNN_<match_id>.jsonl`, puis
+`cli.py narrate --events` (§6). **B2 clos (01/10/2026).** Le code fait foi :
 [`engine/event_contract.py`](engine/event_contract.py) (formes et validation),
 [`engine/narrative_adapter.py`](engine/narrative_adapter.py) (scénario),
 [`engine/event_adapters.py`](engine/event_adapters.py) (cartons, remplacements),
