@@ -50,7 +50,7 @@ fiches. AMBIANCE et VAR n'ont même quasiment aucune condition Player
 
 **L'enrichissement `preferred_moves` est un prérequis de livraison V2,
 pas un détail technique** — sa timeline conditionne la livraison des
-phrases GESTE_SIGNATURE (existantes, 32/37 aujourd'hui PL-only) et de
+phrases GESTE_SIGNATURE (existantes ; 31/37 limitées par cet attribut au 01/10/2026) et de
 toute nouvelle phrase V2 qui s'appuierait sur cet attribut sans
 restriction.
 
@@ -67,8 +67,8 @@ restriction.
   refus bloquant d'import contrairement au cooldown — voir section 6).
 - **Comportement intermédiaire** (avant que la cible soit atteinte) :
   trois options présentées et non tranchées dans
-  ENRICHISSEMENT_PREFERRED_MOVES.md — garder en base documenté PL-only
-  (A), retirer temporairement de la banque active (B), ou garder sans
+  ENRICHISSEMENT_PREFERRED_MOVES.md — garder en base documenté comme limité
+  aux joueurs renseignés (A), retirer temporairement de la banque active (B), ou garder sans
   documenter (C, exclu).
 - **Garde-fou complémentaire** : cascade de variantes au niveau du
   sélecteur (DEFAUT → SURNOM si 0 candidat), formalisée dans le
@@ -276,8 +276,8 @@ sans forcer artificiellement un chiffre rond.
 
 **Le plan annonçait 427 phrases nouvelles (340 pour les 12 scénarios + 87 de renforcements, soit
 708 au total avec les 281 v1). L'écriture est close à 213 phrases rédigées** (pilotes dans
-`pilotes_v2/`, jamais importés : `scenarios.yml` et la base ne contiennent toujours que les 281
-phrases v1). Delta : **−214**. Cette section explique pourquoi, et ce qu'il faudrait débloquer.
+`pilotes_v2/`). *Correction du 01/10/2026 : au moment de la clôture de l'écriture ils n'étaient pas
+importés ; ils le sont depuis V2.1 (voir « Suite : V2.1 »).* Delta : **−214**. Cette section explique pourquoi, et ce qu'il faudrait débloquer.
 
 | Bloc | Plan | Rédigé | Delta | Cause |
 |---|---|---|---|---|
@@ -292,14 +292,19 @@ STATS 20, VAR 20 — elles sont DÉJÀ comptées dans les lignes Tier 2 et Tier 
 plus) ; **87** ne sont pas bloquées mais jamais ouvertes (renforcements) ; **42** viennent des
 volumes de pilote sous la cible (−45 sur Tier 1, +3 net sur Tier 2). 85 + 87 + 42 = 214.
 
+**Les trois Tiers manquent donc de 127 phrases (−45 −42 −40) — mais 127 n'est PAS le nombre de
+phrases bloquées :** 85 seulement le sont (BLESSURE, MI_TEMPS, STATS, VAR) ; les 42 autres sont un choix
+de volume de pilote (méthode « pilote 25-30 »), sans blocage. 85 + 42 = 127.
+
 ### Ce qu'il faudrait débloquer pour aller au-delà
 
 | Phrases | Scénario | Déblocage nécessaire | Nature |
 |---|---|---|---|
-| 20 | BLESSURE | `players.status` ne porte pas blessé/revenant/apte (ou un événement de blessure côté moteur) | donnée |
+| 20 | BLESSURE | **reclassé (01/10/2026)** : `MatchEvents.injuries` (`InjuryEvent`) existe côté moteur, `narrative.py` ne le propage pas dans `Timeline` ; la donnée `players.status` (pas de blessé/revenant/apte) n'est plus le blocage | câblage |
 | 25 | MI_TEMPS_FIN_MATCH | `MatchContext.score_display` + choix de variante (mi-temps / fin, valence du résultat) par le sélecteur (option C) | spec / sélecteur V2.1 |
-| 20 | STATISTIQUES_PÉRIODIQUES | champs de statistiques sur `MatchContext` (possession, tirs cumulés) : décision sur ce que le moteur expose | moteur |
+| 20 | STATISTIQUES_PÉRIODIQUES | **reclassé (01/10/2026)** : `src/ligue1sim/match_stats.py` expose les valeurs FINALES du match (possession, tirs, tirs cadrés, xG), pas le cumul périodique ; il faut en outre des champs sur `MatchContext` | moteur |
 | 20 | VAR | le moteur n'émet pas d'événement VAR ; écrire sur un événement inexistant serait spéculatif | moteur |
+| — | Double jaune | **reclassé (01/10/2026)** : n'est plus bloqué — `second_yellow` existe dans `CardEvent.card_type` et est servi par CARTON_ROUGE depuis V2.1 ; un scénario dédié (texte « deuxième jaune ») reste un choix éditorial | aucun blocage |
 | 87 | Renforcements | décision d'ouvrir le chantier (CONSTRUCTION : 15-20 occurrences/match pour un pool de 20) | priorisation |
 | ~45 | Volumes Tier 1 sous la cible | montée en volume après intégration, à mesurer avec les taux de répétition du sélecteur (`SPEC_ANTI_REPEAT.md` §8) | mesure |
 
@@ -310,37 +315,46 @@ la donnée ou le moteur) +87 (renforcements) +45 (volumes) représentent le chem
 théoriques du plan initial. Le 708 était un objectif de volume ; la réalité resserre sur ce qui
 est écrivable avec les données et événements existants.
 
-### État d'intégration
+### État d'intégration (mis à jour le 01/10/2026 — V2.1 close)
 
-Tout l'écrit est en attente d'intégration : le sélecteur, `template_filler` et `anti_repeat`
-n'existent pas (squelettes `NotImplementedError`), la cascade DEFAUT → SURNOM est spécifiée
-(`engine/phrase_selector.py`, étape 7) mais non codée. Les décisions d'architecture accumulées
-pour V2.1 sont dans `SPEC_ANTI_REPEAT.md` (§1-8).
+V2.1 est livrée : sélecteur (`phrase_selector.select` : cascade SURNOM → DEFAUT, option α, cooldown en
+matchs, repli sur une phrase de secours), `template_filler`, `post_process`, `anti_repeat`, import des 8
+pilotes (un YAML par pilote dans `data/seed/v2/`) et intégration d'un flux d'événements (`cli.py narrate`,
+contrat dans `SPEC_NLG_INGESTION.md`). Les décisions d'architecture sont dans `SPEC_ANTI_REPEAT.md` (§1-10).
+Base locale : 17 scénarios, 494 phrases, 17 phrases de secours (une par scénario, `data/seed/fallback/`) ;
+839 tests verts.
 
-### Suite : V2.1 (01/10/2026)
+### Suite : V2.1 (livrée le 01/10/2026)
 
-**V2.1 = sélecteur + `template_filler` + `anti_repeat` + intégration `engine/`.** Chantier
-MOTEUR, pas éditorial : tests unitaires et architecture, plus de relecture à voix haute. **Brief
-à produire en session dédiée ; non démarré.**
-
-Dépendances et état au moment de la clôture de l'écriture :
-- 8 pilotes validés (DÉFENSE, FAUTE_SIMPLE, CORNER, TIR_NON_CADRÉ, REMPLACEMENT, CARTON_JAUNE,
-  AMBIANCE, HORS-JEU), 213 phrases rédigées ; avec les 281 v1, 494 phrases — dont seules les
-  281 v1 sont dans la banque importée ;
-- schéma des cooldowns : **aucune migration requise** (`phrase_history` par joueur +
-  `phrase_cooldowns` durée par phrase, déjà en place ; peuplée à 281/281 pour la v1) ; restent
-  la séquence de matchs (`match_sequence`, décision C1) et les cooldowns des 8 scénarios V2
-  (dictionnaire par scénario, décision A2) — voir `SPEC_ANTI_REPEAT.md` §2 et §9 ;
-- décisions d'architecture accumulées : `SPEC_ANTI_REPEAT.md` §1-8 (option α et prérequis,
-  option C, `score_display`, double jaune V3, mesures à faire à l'implémentation) ;
-- 208 tests verts au 01/10/2026.
+**V2.1 était un chantier MOTEUR** (sélecteur + `template_filler` + `anti_repeat` + intégration), pas
+éditorial. État à la clôture :
+- 8 pilotes validés (DÉFENSE, FAUTE_SIMPLE, CORNER, TIR_NON_CADRÉ, REMPLACEMENT, CARTON_JAUNE, AMBIANCE,
+  HORS-JEU), 213 phrases, **importés** avec les 281 v1 : **494 phrases en base**, hors les 17 phrases de
+  secours ;
+- **D13 (précisé).** FAUTE_SIMPLE, HORS-JEU et AMBIANCE sont **importés**, mais **inatteignables en V2.1** :
+  ni `narrative.py` ni `MatchEvents` n'émettent d'événement correspondant, et V2.1 n'étend pas `narrative.py`.
+  Ce n'est pas un report planifié : une source d'événement côté racine suffirait à les débloquer ;
+- DEBUT_MATCH, SITUATION_MATCH et GESTE_SIGNATURE sont aussi importés et inatteignables, par nature
+  (contexte ou trait de joueur, pas un événement discret). GESTE_SIGNATURE reste en plus limité par
+  `preferred_moves` (31/37 phrases ; 703 joueurs renseignés, 9,3 %, au 01/10/2026) : ce n'est plus un
+  scénario « PL-only » mais un scénario sans source d'événement ;
+- schéma : `phrase_history.match_sequence` (rang du match, décision C1), `phrases.is_fallback`, cooldowns
+  des 8 scénarios V2 dérivés de `PILOTES_METADATA` (décision A2) ;
+- limites connues, documentées dans `SPEC_NLG_INGESTION.md` : poteau et barre non commentés ;
+  `(but, corner) → CORNER` à valider (le pool CORNER mélange corners réussis et ratés) ; 8 phrases de
+  FAUTE_SIMPLE et ≈ 8 de DEFENSE traitent `{adversaire}` comme une personne alors qu'il vaut le club adverse
+  (réécriture éditoriale) ;
+- reste à faire côté racine : la conversion moteur → dicts d'événements (identifiants de joueurs, gardien
+  et défenseur des occasions) ;
+- reclassements des blocages (tableau ci-dessus) : BLESSURE = câblage, STATS = moteur, double jaune = plus
+  bloqué.
 
 ---
 
 ## Ce que ce plan ne tranche pas (hors périmètre "plan éditorial")
 
-- Le fallback `phrase_selector` étape 7 (0 candidat) — décision
-  d'architecture, voir constat transversal.
+- Le fallback `phrase_selector` (0 candidat) — **tranché depuis (D10)** : une phrase de secours par
+  scénario (`is_fallback`, `data/seed/fallback/`), voir `SPEC_ANTI_REPEAT.md` §10.
 - L'extension de `MatchContext` pour STATISTIQUES_PÉRIODIQUES — décision
   technique liée à ce que le moteur de simulation expose réellement.
 - `score_display` pour MI_TEMPS_FIN_MATCH — décision technique mineure
