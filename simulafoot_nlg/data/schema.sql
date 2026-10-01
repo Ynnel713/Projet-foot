@@ -150,6 +150,11 @@ CREATE TABLE IF NOT EXISTS phrase_history (
     phrase_id   INTEGER NOT NULL REFERENCES phrases(id) ON DELETE CASCADE,
     player_id   INTEGER REFERENCES players(id) ON DELETE SET NULL,
     match_id    TEXT NOT NULL,
+    -- Rang du match dans la sequence jouee (decision B du plan V2.1) : unite du
+    -- cooldown (en MATCHS, voir phrase_cooldowns). Nullable pour les lignes
+    -- anterieures a la colonne ; scripts/init_db.py l'ajoute par ALTER TABLE
+    -- sur une base existante (definition a garder identique a celle-ci).
+    match_sequence INTEGER CHECK (match_sequence >= 0),
     rendered_text TEXT NOT NULL,           -- texte final (post template_filler + post_process), pas le gabarit
     used_at     TEXT NOT NULL DEFAULT (datetime('now'))
 );

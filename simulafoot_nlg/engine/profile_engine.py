@@ -71,6 +71,21 @@ def _player_or_none(row: dict[str, Any], key: str) -> Player | None:
     )
 
 
+def _match_sequence_or_none(row: dict[str, Any]) -> int | None:
+    """`match_sequence` : None/absent -> None ; un entier >= 0 sinon. Un bool
+    est refuse explicitement (isinstance(True, int) est vrai en Python :
+    `match_sequence=True` passerait pour 1 et fausserait les cooldowns sans
+    bruit) ; tout autre type -> TypeError ; un rang negatif -> ValueError."""
+    value = row.get("match_sequence")
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise TypeError(f"normalize_match_context: 'match_sequence' doit etre un int, recu {type(value).__name__}")
+    if value < 0:
+        raise ValueError(f"normalize_match_context: 'match_sequence' doit etre >= 0, recu {value}")
+    return value
+
+
 def normalize_match_context(row: dict[str, Any]) -> MatchContext:
     """Construit un MatchContext depuis un dict brut (ex. un evenement issu
     du moteur de simulation ligue1sim, pas d'une table dediee -- voir
@@ -95,6 +110,7 @@ def normalize_match_context(row: dict[str, Any]) -> MatchContext:
         gabarit=row.get("gabarit"),
         sortant=_player_or_none(row, "sortant"),
         entrant=_player_or_none(row, "entrant"),
+        match_sequence=_match_sequence_or_none(row),
     )
 
 

@@ -142,6 +142,12 @@ class MatchContext:
     # "au cas ou"). Resolus par l'appelant (par ID, decision D14), jamais ici.
     sortant: Player | None = None
     entrant: Player | None = None
+    # Rang du match dans la sequence jouee (decision B du plan V2.1) : unite du
+    # cooldown, qui se compte en MATCHS (phrase_cooldowns.cooldown_matches), pas
+    # en minutes ni en dates. Fourni par l'appelant (le seul a connaitre
+    # l'ordre des matchs), jamais deduit ici. None si non fourni : c'est
+    # anti_repeat qui decide quoi en faire.
+    match_sequence: int | None = None
 
     @property
     def opponent_team(self) -> str | None:

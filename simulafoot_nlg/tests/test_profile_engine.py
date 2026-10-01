@@ -112,6 +112,32 @@ def test_normalize_match_context_score_context_defaults_to_none():
     assert context.score_context is None
 
 
+class TestMatchSequence:
+    def test_absent_key_gives_none(self):
+        assert normalize_match_context({"match_id": "m1"}).match_sequence is None
+
+    def test_explicit_none_gives_none(self):
+        assert normalize_match_context({"match_id": "m1", "match_sequence": None}).match_sequence is None
+
+    @pytest.mark.parametrize("rank", [0, 1, 38])
+    def test_non_negative_int_is_read(self, rank):
+        assert normalize_match_context({"match_id": "m1", "match_sequence": rank}).match_sequence == rank
+
+    @pytest.mark.parametrize("flag", [True, False])
+    def test_bool_is_refused_even_though_it_is_an_int(self, flag):
+        with pytest.raises(TypeError, match="match_sequence"):
+            normalize_match_context({"match_id": "m1", "match_sequence": flag})
+
+    @pytest.mark.parametrize("not_an_int", ["3", 2.0])
+    def test_non_int_is_refused(self, not_an_int):
+        with pytest.raises(TypeError, match="match_sequence"):
+            normalize_match_context({"match_id": "m1", "match_sequence": not_an_int})
+
+    def test_negative_rank_raises_value_error(self):
+        with pytest.raises(ValueError, match="match_sequence"):
+            normalize_match_context({"match_id": "m1", "match_sequence": -1})
+
+
 @pytest.mark.parametrize("field", PLAYER_VALUED_CONTEXT_FIELDS)
 class TestPlayerValuedContextFields:
     def test_absent_key_gives_none(self, field):
