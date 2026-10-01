@@ -46,27 +46,25 @@ soit un compteur de matchs explicite... soit derive de match_id via une
 table de matchs a venir") — cet audit confirme qu'aucune des deux n'a
 depuis été tranchée, ni dans le schéma ni dans le code.
 
-### 2. `phrase_cooldowns` est vide pour les 281 phrases — le cooldown obligatoire n'a pas de source
-Le format YAML (`scenarios.yml`) n'a **aucun champ cooldown** par phrase, et
-`scripts/import_seed.py` ne peuple `phrase_cooldowns` nulle part (recherche
-confirmée : zéro occurrence de "cooldown" dans ce script). Or le README est
-explicite : *"phrase_selector.select devra refuser toute phrase sans ligne
-dans phrase_cooldowns, ou dont cooldown_matches est NULL"*.
+### 2. Source du cooldown — RÉSOLU pour les 281 phrases v1 (corrigé le 01/10/2026)
+**État actuel (vérifié dans le code et la base) :** chaque phrase de `scenarios.yml` porte un
+`cooldown_matches`, attribué à la conversion depuis `DEFAULT_COOLDOWN_MATCHES_BY_SCENARIO`
+(`scripts/convert_commentary_xlsx_to_yaml.py:136` ; la conversion échoue si le scénario n'y
+figure pas). `scripts/import_seed.py` refuse toute phrase sans `cooldown_matches` (l. 85-90) et
+insère dans `phrase_cooldowns` (l. 149). En base : **281/281** lignes peuplées (valeurs 1 à 10 :
+SITUATION_MATCH 1 ; ARRET_GARDIEN, CONSTRUCTION 2 ; BUT, COUP_FRANC 3 ; DEBUT_MATCH 4 ;
+GESTE_SIGNATURE 5 ; PENALTY_RATE 6 ; CARTON_ROUGE 10).
 
-Conséquence concrète : si `phrase_selector`/`anti_repeat` étaient branchés
-aujourd'hui sur la banque telle qu'importée, **les 281 phrases seraient
-refusées**, sans exception — le refus binaire (cooldown non défini)
-intervient AVANT toute pénalité continue de `recency_penalty`. Il faut
-décider :
-- **(a)** ajouter un champ `cooldown_matches` par phrase dans le format
-  YAML/xlsx (donc modifier `scripts/convert_commentary_xlsx_to_yaml.py` et
-  le classeur source), ou
-- **(b)** une valeur par défaut globale documentée (ex. "3 matchs pour
-  toute phrase sans valeur explicite") appliquée au moment de l'import.
+*Historique (audit du 30/09/2026, antérieur à l'import `ac3bd30`, devenu inexact) : le YAML
+n'avait alors aucun champ cooldown et l'import ne peuplait pas `phrase_cooldowns`, d'où la
+question (a) champ par phrase / (b) valeur par défaut.* Elle est tranchée en pratique : la
+valeur est définie PAR SCÉNARIO (dictionnaire), stockée PAR PHRASE (table), évaluée par
+(phrase, joueur) (`phrase_history`).
 
-Sans cette décision, tester `anti_repeat` sur la banque réelle est
-impossible : il n'y a rien à pénaliser progressivement, tout est refusé en
-amont.
+**Reste à faire pour V2 (décision A2 du 01/10/2026, exécutée dans le bloc import) :** ajouter
+les 8 nouveaux scénarios au dictionnaire — 2 : DÉFENSE, REMPLACEMENT, FAUTE_SIMPLE, AMBIANCE ;
+3 : CORNER, TIR_NON_CADRÉ, CARTON_JAUNE, HORS-JEU. Les pilotes sont des modules Python
+(`pilotes_v2/*.py`), non des lignes du classeur : le chemin pilote → YAML n'existe pas encore.
 
 ### 3. `similarity_penalty` a besoin d'un texte qui n'existe pas encore
 Le schéma est clair : `similarity_signatures.signature` correspond au texte
@@ -296,10 +294,9 @@ visées pour les 12 scénarios.
   joueur : `phrase_history(phrase_id, player_id, match_id, …)` donne le dernier usage
   d'une phrase PAR JOUEUR, `phrase_cooldowns(phrase_id → cooldown_matches)` porte la
   DURÉE (propriété de la phrase). La « correction » du 01/10/2026 concernait la formule de
-  DIMENSIONNEMENT des pools, pas le stockage. Restent ouverts, indépendamment, les deux
-  manques déjà notés (décisions 1 et 2) : pas de séquence de matchs (« matchs écoulés ») et
-  `phrase_cooldowns` jamais peuplée à l'import (les pilotes ne portent aucun cooldown ; les
-  valeurs du plan, 2 à 6 selon le scénario, sont à injecter).
+  DIMENSIONNEMENT des pools, pas le stockage. `phrase_cooldowns` est peuplée à 281/281 pour la
+  v1 (voir §2) ; restent ouverts : la séquence de matchs (« matchs écoulés », décision 1 →
+  décision C1 ci-dessous) et les cooldowns des 8 scénarios V2 (décision A2, §2).
 - **DÉFENSE — risque résiduel accepté, à mesurer.** Estimation (non mesurée) : ~4 événements
   par joueur et par match pour les plus sollicités, cooldown 2, pool minimal 5 phrases
   (5 sans-condition). Pool suffisant pour un match, tendu sur un cycle de cooldown complet.
@@ -314,6 +311,21 @@ visées pour les 12 scénarios.
   rester rarissime.
 - **FAUTE_SIMPLE et CORNER** (20-25 et 10-12 événements par match) : même taux de
   répétition exacte par joueur que DÉFENSE.
+
+### 9. Décisions de cartographie V2.1 (01/10/2026, architecte)
+
+- **A2 — cooldowns V2 :** dictionnaire par scénario (voir §2), exécuté dans le bloc import.
+- **B1 — α et cascade DEFAUT → SURNOM actées :** la docstring de `phrase_selector.select`
+  est alignée sur α (commit séparé) ; aucun code.
+- **B2 — « spécifique » = sélectivité ≤ 70 %** (même critère que la domination, §6) : en
+  dessous de ce seuil seulement, α apporte quelque chose.
+- **B3 — chevauchement de surnoms entre joueurs d'un même match : autorisé**, dette
+  documentée (cas rare, non mesuré ; à rouvrir si un match réel produit une confusion).
+- **C1 — ordre des matchs : compteur explicite fourni par l'appelant.** Ajout d'un champ
+  `match_sequence: int` à `phrase_history` (migration de colonne, pas de table `matches`) ;
+  `match_id` reste la clé de jointure. À intégrer au bloc 4 (`anti_repeat`) ; pas ce tour.
+- **C2 — répétition thématique (§4) : hors périmètre V2.1.** Dette de conception ; aucun
+  chantier de tagging (`tags` / `phrase_tags` restent vides et inutilisées).
 
 ## Ce qui N'est PAS bloquant (déjà en place)
 - Le schéma SQL (`phrase_history`, `phrase_cooldowns`,

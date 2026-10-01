@@ -328,8 +328,9 @@ Dépendances et état au moment de la clôture de l'écriture :
   AMBIANCE, HORS-JEU), 213 phrases rédigées ; avec les 281 v1, 494 phrases — dont seules les
   281 v1 sont dans la banque importée ;
 - schéma des cooldowns : **aucune migration requise** (`phrase_history` par joueur +
-  `phrase_cooldowns` durée par phrase, déjà en place) ; restent à décider les deux manques de
-  `SPEC_ANTI_REPEAT.md` §1-2 (séquence de matchs ; valeurs de cooldown à injecter à l'import) ;
+  `phrase_cooldowns` durée par phrase, déjà en place ; peuplée à 281/281 pour la v1) ; restent
+  la séquence de matchs (`match_sequence`, décision C1) et les cooldowns des 8 scénarios V2
+  (dictionnaire par scénario, décision A2) — voir `SPEC_ANTI_REPEAT.md` §2 et §9 ;
 - décisions d'architecture accumulées : `SPEC_ANTI_REPEAT.md` §1-8 (option α et prérequis,
   option C, `score_display`, double jaune V3, mesures à faire à l'implémentation) ;
 - 208 tests verts au 01/10/2026.
