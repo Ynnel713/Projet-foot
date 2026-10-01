@@ -8,6 +8,7 @@ import pytest
 from engine.post_process import (
     INITIALE_ASPIREE,
     apply,
+    contraction,
     ecraser_espaces,
     elision,
     majuscule_initiale,
@@ -193,7 +194,97 @@ def test_la_table_est_en_forme_normalisee():
         assert mot == mot.lower() and "-" not in mot and mot.isascii(), mot
 
 
-# --- apply : les quatre regles dans l'ordre -----------------------------------
+# --- Regle 5 : contractions de/a + Le/Les devant un nom propre -----------------
+
+
+@pytest.mark.parametrize(
+    ("brut", "attendu"),
+    [
+        ("le gardien de Le Havre AC", "le gardien du Havre AC"),
+        ("face à Le Havre AC", "face au Havre AC"),
+        ("les joueurs de Le Mans FC", "les joueurs du Mans FC"),
+        ("de Les Herbiers", "des Herbiers"),
+        ("à Les Herbiers", "aux Herbiers"),
+        ("De Le Mans", "Du Mans"),  # casse de la preposition conservee
+        ("À Le Mans", "Au Mans"),
+    ],
+)
+def test_contraction_devant_un_nom_propre_a_article(brut, attendu):
+    assert contraction(brut) == attendu
+
+
+@pytest.mark.parametrize(
+    "texte",
+    [
+        "décidé de le faire",  # pronom + infinitif : "de le" est correct
+        "personne ne parvient à le reprendre",
+        "sans que personne ne pense à le suivre",
+        "de Lyon",
+        "à Lens",
+        "de Le ballon",  # le mot suivant n'est pas un nom propre
+        "il a Le Havre dans son groupe",  # "a" sans accent : verbe, jamais contracte
+        "Le Havre AC domine",  # pas de preposition devant
+    ],
+)
+def test_pas_de_contraction_hors_nom_propre_a_article(texte):
+    assert contraction(texte) == texte
+
+
+def test_contraction_est_idempotente():
+    assert contraction(contraction("de Le Havre et à Les Herbiers")) == "du Havre et aux Herbiers"
+
+
+def test_aucun_gabarit_reel_ne_contient_de_pronom_modifie_par_la_contraction():
+    """Les 4 gabarits reels ("de le jouer", "à le suivre", "à le reprendre"...) ne
+    doivent pas bouger : c'est ce qui interdit de contracter un "le" en minuscule."""
+    import glob
+
+    import yaml
+    from pathlib import Path
+
+    racine = Path(__file__).resolve().parent.parent / "data" / "seed"
+    for fichier in [racine / "scenarios.yml", *sorted((racine / "v2").glob("*.yml"))]:
+        for scenario in yaml.safe_load(fichier.read_text(encoding="utf-8")):
+            for variante in scenario["variants"]:
+                for phrase in variante["phrases"]:
+                    assert contraction(phrase["text"]) == phrase["text"], phrase["text"]
+
+
+def test_apply_les_trois_exemples_du_havre_et_du_mans():
+    assert apply("le gardien de Le Havre AC s'avance") == "Le gardien du Havre AC s'avance"
+    assert apply("face à Le Havre AC") == "Face au Havre AC"
+    assert apply("les joueurs de Le Mans FC") == "Les joueurs du Mans FC"
+
+
+def test_la_banque_complete_rendue_avec_un_club_a_article_n_a_plus_de_de_le():
+    """Les 494 gabarits rendus avec Le Havre AC / Le Mans FC : plus aucun "de Le", "à Le",
+    "de Les" ni "à Les" apres apply (avant la regle : 94 phrases en "de/à {adversaire}")."""
+    import re
+    from pathlib import Path
+
+    import yaml
+
+    racine = Path(__file__).resolve().parent.parent / "data" / "seed"
+    valeurs = {
+        "joueur": "Kylian Mbappé", "club": "Le Mans FC", "adversaire": "Le Havre AC", "minute": "67",
+        "passeur": "Alexandre Lacazette", "receveur": "Moussa Dembélé", "sortant": "Ousmane Dembélé",
+        "entrant": "Rayan Cherki",
+    }
+    restants = []
+    rendus = 0
+    for fichier in [racine / "scenarios.yml", *sorted((racine / "v2").glob("*.yml"))]:
+        for scenario in yaml.safe_load(fichier.read_text(encoding="utf-8")):
+            for variante in scenario["variants"]:
+                for phrase in variante["phrases"]:
+                    rendu = apply(re.sub(r"\{(\w+)\}", lambda m: valeurs[m.group(1)], phrase["text"]))
+                    rendus += 1
+                    if re.search(r"(de|à|De|À) Les? [A-Z]", rendu):
+                        restants.append(rendu)
+    assert rendus == 494
+    assert restants == []
+
+
+# --- apply : les cinq regles dans l'ordre -----------------------------------
 
 
 @pytest.mark.parametrize(
@@ -231,11 +322,11 @@ def test_apply_enchaine_les_regles_dans_l_ordre_valide(monkeypatch):
 
         return enveloppe
 
-    for nom in ("ecraser_espaces", "majuscule_initiale", "ponctuation_finale", "elision"):
+    for nom in ("ecraser_espaces", "majuscule_initiale", "ponctuation_finale", "elision", "contraction"):
         monkeypatch.setattr(module, nom, espion(nom))
 
     module.apply("texte")
-    assert appels == ["ecraser_espaces", "majuscule_initiale", "ponctuation_finale", "elision"]
+    assert appels == ["ecraser_espaces", "majuscule_initiale", "ponctuation_finale", "elision", "contraction"]
 
 
 @pytest.mark.parametrize("brut", ["  de arsenal  gagne !!  ", "le  Ailier a marqué !.", "mbappé..", "Quoi ?!", ""])

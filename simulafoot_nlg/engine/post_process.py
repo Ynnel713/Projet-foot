@@ -1,11 +1,12 @@
-"""Post-traitement linguistique du texte rendu par template_filler.render : quatre
+"""Post-traitement linguistique du texte rendu par template_filler.render : cinq
 regles, chacune une fonction PURE testee isolement, enchainees par `apply` dans cet
 ordre :
 
     1. ecraser_espaces     -- espaces multiples (un slot vide laisse un double espace) ;
     2. majuscule_initiale  -- un gabarit peut commencer par un slot en minuscule ;
     3. ponctuation_finale  -- une seule marque finale ("!." issu d'un slot + gabarit) ;
-    4. elision             -- "le Ailier" -> "l'Ailier", "de Arsenal" -> "d'Arsenal".
+    4. elision             -- "le Ailier" -> "l'Ailier", "de Arsenal" -> "d'Arsenal" ;
+    5. contraction         -- "de Le Havre AC" -> "du Havre AC", "a Le Mans" -> "au Mans".
 
 L'ordre compte : l'elision attend un seul espace entre l'article et le mot (donc apres
 les espaces) et conserve la casse de l'article (donc apres la majuscule). Pas
@@ -130,8 +131,35 @@ def elision(text: str) -> str:
     return _ELISION_RE.sub(remplacer, text)
 
 
+_CONTRACTIONS = {"le": "u", "les": "es"}  # de + le -> du, de + les -> des
+_CONTRACTIONS_A = {"le": "au", "les": "aux"}
+# "de"/"a" suivi d'un article en MAJUSCULE lui-meme suivi d'un mot en majuscule : un nom
+# propre a article ("Le Havre AC", "Les Herbiers"). L'article en minuscule n'est jamais
+# contracte : "de le jouer", "a le suivre" (pronom + infinitif) sont corrects tels quels
+# et s'ecrivent identiquement a un article.
+_CONTRACTION_RE = re.compile(r"(?<![\w'’-])(?i:(de|à)) (Le|Les) (?=[A-ZÀ-ÖØ-Þ])")
+
+
+def contraction(text: str) -> str:
+    """"de Le Havre AC" -> "du Havre AC", "de Les Herbiers" -> "des Herbiers", "à Le Mans" ->
+    "au Mans", "à Les Herbiers" -> "aux Herbiers" : de/à suivi d'un nom propre qui commence par
+    l'article Le/Les (regle generale, aucun club nomme). Seul "à" avec accent est traite (le
+    verbe "a" ne se contracte jamais). Casse de de/à conservee ("De Le" -> "Du")."""
+
+    def remplacer(correspondance: re.Match[str]) -> str:
+        preposition, article = correspondance.group(1), correspondance.group(2).lower()
+        majuscule = preposition[0].isupper()
+        if preposition.lower() == "de":
+            contracte = "d" + _CONTRACTIONS[article]
+        else:
+            contracte = _CONTRACTIONS_A[article]
+        return (contracte[0].upper() if majuscule else contracte[0]) + contracte[1:] + " "
+
+    return _CONTRACTION_RE.sub(remplacer, text)
+
+
 def apply(text: str) -> str:
     """Applique le post-traitement linguistique complet a `text` (deja entierement
     rendu par template_filler.render, tous les slots resolus) : espaces, majuscule,
-    ponctuation, elision, dans cet ordre (voir docstring du module). Idempotente."""
-    return elision(ponctuation_finale(majuscule_initiale(ecraser_espaces(text))))
+    ponctuation, elision, contraction, dans cet ordre (voir docstring du module). Idempotente."""
+    return contraction(elision(ponctuation_finale(majuscule_initiale(ecraser_espaces(text)))))
