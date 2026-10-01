@@ -21,6 +21,18 @@ Algorithme prevu :
 
 from __future__ import annotations
 
+import re
+
+_ESPACES_MULTIPLES_RE = re.compile(r"[ 	]{2,}")
+
+
+def ecraser_espaces(text: str) -> str:
+    """Espaces et tabulations consecutifs -> un seul espace, et aucun en debut ni
+    en fin de texte (un slot vide laisse un double espace au milieu d'un gabarit,
+    ou un espace en tete). L'espace insecable (U+00A0, typographie francaise) et
+    les retours a la ligne ne sont jamais touches."""
+    return _ESPACES_MULTIPLES_RE.sub(" ", text).strip(" 	")
+
 
 def apply(text: str) -> str:
     """Applique le post-traitement linguistique complet a `text` (deja

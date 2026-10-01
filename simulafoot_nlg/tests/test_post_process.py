@@ -39,3 +39,33 @@ def test_apply_raises_not_implemented_error_on_double_space_case():
     # Futur : "Quel  but" -> "Quel but"
     with pytest.raises(NotImplementedError):
         apply("Quel  but")
+
+
+# --- Regle 1 : espaces multiples (fonctions pures, apply les enchainera) -----
+
+from engine.post_process import ecraser_espaces  # noqa: E402
+
+
+@pytest.mark.parametrize(
+    ("brut", "attendu"),
+    [
+        ("Quel  but", "Quel but"),  # slot vide au milieu du gabarit
+        ("a   b    c", "a b c"),
+        ("  Quel but", "Quel but"),  # slot vide en tete
+        ("Quel but  ", "Quel but"),
+        ("Quel\t\tbut", "Quel but"),
+        ("Quel but", "Quel but"),  # deja propre : inchange
+        ("", ""),
+    ],
+)
+def test_ecraser_espaces(brut, attendu):
+    assert ecraser_espaces(brut) == attendu
+
+
+def test_ecraser_espaces_respecte_l_espace_insecable_et_les_retours_a_la_ligne():
+    assert ecraser_espaces("Quel but !") == "Quel but !"
+    assert ecraser_espaces("une\n\nligne") == "une\n\nligne"
+
+
+def test_ecraser_espaces_est_idempotente():
+    assert ecraser_espaces(ecraser_espaces("a   b  ")) == "a b"
