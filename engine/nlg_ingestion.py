@@ -36,11 +36,33 @@ class EvenementEcarte(ValueError):
     """Un evenement du moteur ne peut pas devenir un dict du contrat ; le message dit pourquoi."""
 
 
-def _resolve_id(name: str, squad: Sequence[Player]) -> int:
-    for player in squad:
-        if player.name == name and player.id is not None:
-            return player.id
-    raise EvenementEcarte(f"joueur {name!r} introuvable dans l'effectif")
+class EffectifClub:
+    """Index d'un effectif (`Club.players`) par nom, pour resoudre un nom du moteur en `Player.id`.
+
+    Pas de lookup en base (decision B2) : l'id est lu directement sur `Player.id`. Les titulaires du
+    `Lineup` et les remplacants (reconstruits sans id par `narrative._player_from_stat`) se resolvent
+    pareil, par (nom, club) dans l'effectif du club -- le club est donne par le cote (domicile ou
+    exterieur) de l'evenement. Deux joueurs de meme nom dans un club : ambigu, ValueError."""
+
+    def __init__(self, club: str, players: Sequence[Player]) -> None:
+        self.club = club
+        self._par_nom: dict[str, list[Player]] = {}
+        for player in players:
+            self._par_nom.setdefault(player.name, []).append(player)
+
+    def joueur(self, name: str) -> Player:
+        candidats = self._par_nom.get(name, [])
+        if not candidats:
+            raise EvenementEcarte(f"joueur {name!r} introuvable dans l'effectif de {self.club}")
+        if len(candidats) > 1:
+            raise EvenementEcarte(f"homonymes dans l'effectif de {self.club} : {name!r} ({len(candidats)} joueurs)")
+        return candidats[0]
+
+    def player_id(self, name: str) -> int:
+        player = self.joueur(name)
+        if player.id is None:
+            raise EvenementEcarte(f"joueur {name!r} ({self.club}) sans Player.id : refuse")
+        return player.id
 
 
 def _commun(timeline: Timeline, match_id: str, match_sequence: int, event_id: int, minute: int, club: str,
@@ -60,28 +82,28 @@ def _commun(timeline: Timeline, match_id: str, match_sequence: int, event_id: in
     }
 
 
-def _narratif_to_dict(event: NarrativeEvent, commun: dict[str, Any], squad: Sequence[Player]) -> dict[str, Any]:
+def _narratif_to_dict(event: NarrativeEvent, commun: dict[str, Any], squad: EffectifClub) -> dict[str, Any]:
     if event.event_type == BUT:
-        dico = {**commun, "event_type": "but", "gabarit": event.gabarit, "player_id": _resolve_id(event.main_player, squad)}
+        dico = {**commun, "event_type": "but", "gabarit": event.gabarit, "player_id": squad.player_id(event.main_player)}
         if len(event.involved_players) > 1:
-            dico["passeur_id"] = _resolve_id(event.involved_players[1], squad)
+            dico["passeur_id"] = squad.player_id(event.involved_players[1])
         return dico
     if event.outcome in {"hors_cadre", "poteau", "barre"}:  # le tireur est l'acteur
         return {**commun, "event_type": "occasion", "gabarit": event.gabarit, "outcome": event.outcome,
-                "player_id": _resolve_id(event.main_player, squad)}
+                "player_id": squad.player_id(event.main_player)}
     raise EvenementEcarte(f"occasion {event.outcome!r} : acteur defensif non resolu")
 
 
-def _carton_to_dict(event: CardEvent, commun: dict[str, Any], squad: Sequence[Player]) -> dict[str, Any]:
+def _carton_to_dict(event: CardEvent, commun: dict[str, Any], squad: EffectifClub) -> dict[str, Any]:
     if event.card_type not in _CARTON_OUTCOMES:
         raise EvenementEcarte(f"type de carton inconnu : {event.card_type!r}")
-    return {**commun, "event_type": "carton", "outcome": event.card_type, "player_id": _resolve_id(event.player, squad)}
+    return {**commun, "event_type": "carton", "outcome": event.card_type, "player_id": squad.player_id(event.player)}
 
 
-def _remplacement_to_dict(event: SubstitutionEvent, commun: dict[str, Any], squad: Sequence[Player]) -> dict[str, Any]:
-    entrant = _resolve_id(event.player_on, squad)
+def _remplacement_to_dict(event: SubstitutionEvent, commun: dict[str, Any], squad: EffectifClub) -> dict[str, Any]:
+    entrant = squad.player_id(event.player_on)
     return {**commun, "event_type": "remplacement", "player_id": entrant, "entrant_id": entrant,
-            "sortant_id": _resolve_id(event.player_off, squad)}
+            "sortant_id": squad.player_id(event.player_off)}
 
 
 def timeline_to_events(
@@ -100,7 +122,8 @@ def timeline_to_events(
     `home_squad`/`away_squad` : effectifs complets (`Club.players`) -- les ids viennent de `Player.id`.
     `skipped` (optionnel) recoit `(event_id, raison)` pour chaque evenement ecarte."""
     match_id = match_id or timeline.match_id
-    squads = {timeline.home_team: home_squad, timeline.away_team: away_squad}
+    squads = {timeline.home_team: EffectifClub(timeline.home_team, home_squad),
+              timeline.away_team: EffectifClub(timeline.away_team, away_squad)}
 
     # (minute, rang, ordre d'origine, club, evenement du moteur, convertisseur)
     candidats: list[tuple[int, int, int, str, Any, Any]] = []

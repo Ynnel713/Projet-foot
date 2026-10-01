@@ -13,7 +13,7 @@ from ligue1sim.players import Player
 from ligue1sim.schedule import Match
 
 from narrative import build_timeline, match_result_from
-from nlg_ingestion import timeline_to_events
+from nlg_ingestion import EffectifClub, timeline_to_events
 
 CLES_COMMUNES = {
     "match_id", "match_sequence", "event_id", "minute", "player_id", "player_team", "home_team", "away_team",
@@ -121,3 +121,44 @@ class TestTimelineToEvents:
     def test_deterministe(self, match_synthetique):
         match_result, home, away = match_synthetique
         assert _convertir(match_result, home, away)[1] == _convertir(match_result, home, away)[1]
+
+
+class TestResolutionPlayerId:
+    """Pas de lookup en base : `Player.id` lu dans l'effectif, remplacants par (nom, club)."""
+
+    def test_titulaire_par_id_direct(self):
+        effectif = EffectifClub("Home FC", _effectif("h", 1000))
+        assert effectif.player_id("h_17") == 1017
+
+    def test_remplacant_par_nom_et_club(self, match_synthetique):
+        # a_19 entre : le Lineup le reconstruit SANS id (narrative._player_from_stat), l'effectif le porte.
+        match_result, home, away = match_synthetique
+        entrant = [p for p in match_result.away_lineup.substitutes if p.name == "a_19"]
+        assert not entrant or entrant[0].id is None
+        _, dicts, _ = _convertir(match_result, home, away)
+        [remp] = [d for d in dicts if d["event_type"] == "remplacement"]
+        assert remp["entrant_id"] == 2019
+
+    def test_homonymes_intra_club_valueerror(self):
+        joueurs = _effectif("h", 1000) + [_joueur("DC", "h_3", 9999)]  # second h_3
+        effectif = EffectifClub("Home FC", joueurs)
+        with pytest.raises(ValueError, match="homonymes"):
+            effectif.player_id("h_3")
+
+    def test_homonyme_evenement_ecarte_pas_les_autres(self):
+        goals = [GoalEvent(club_name="Home FC", scorer="h_17", assist=None, minute=12)]
+        cards = [CardEvent(club_name="Home FC", player="h_3", minute=30, card_type="yellow")]
+        match_result, home, away = _match(goals, cards)
+        home.players.append(_joueur("DC", "h_3", 9999))
+        _, dicts, skipped = _convertir(match_result, home, away)
+        assert [d["event_type"] for d in dicts if d["event_type"] in ("but", "carton")] == ["but"]
+        assert any("homonymes" in raison for _, raison in skipped)
+
+    def test_player_id_none_refuse(self):
+        effectif = EffectifClub("Home FC", [_joueur("BU", "h_sans_id", None)])
+        with pytest.raises(ValueError, match="sans Player.id"):
+            effectif.player_id("h_sans_id")
+
+    def test_joueur_inconnu_refuse(self):
+        with pytest.raises(ValueError, match="introuvable"):
+            EffectifClub("Home FC", []).player_id("fantome")
