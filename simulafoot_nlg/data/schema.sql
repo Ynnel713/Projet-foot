@@ -91,6 +91,12 @@ CREATE TABLE IF NOT EXISTS phrases (
     variant_id  INTEGER NOT NULL REFERENCES variants(id) ON DELETE CASCADE,
     text        TEXT NOT NULL,             -- gabarit avec emplacements "{slot_name}"
     weight      REAL NOT NULL DEFAULT 1.0,
+    -- Phrase de secours (decision D10) : une par scenario, rattachee a sa variante
+    -- par defaut, sans slot ni condition, jamais soumise au cooldown ni inscrite
+    -- dans phrase_history. EXCLUE du tirage normal (le selecteur filtre dessus).
+    -- scripts/init_db.py l'ajoute par ALTER TABLE sur une base existante
+    -- (definition a garder identique a celle-ci).
+    is_fallback INTEGER NOT NULL DEFAULT 0 CHECK (is_fallback IN (0, 1)),
     is_active   INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1))
 );
 
@@ -212,6 +218,10 @@ CREATE INDEX IF NOT EXISTS idx_phrases_variant_id             ON phrases(variant
 -- avant insertion, cet index est la ceinture. IF NOT EXISTS : init_db l'applique
 -- aussi a une base existante (echoue si elle contient deja un doublon).
 CREATE UNIQUE INDEX IF NOT EXISTS idx_phrases_variant_text_unique ON phrases(variant_id, text);
+-- Ceinture de D10 : au plus un fallback par variante (le fallback vit sur la
+-- variante par defaut, donc au plus un par scenario). La regle "exactement un
+-- par scenario" est verifiee par import_seed, pas ici (ce serait un "au moins").
+CREATE UNIQUE INDEX IF NOT EXISTS idx_phrases_one_fallback_per_variant ON phrases(variant_id) WHERE is_fallback = 1;
 CREATE INDEX IF NOT EXISTS idx_phrase_conditions_phrase_id    ON phrase_conditions(phrase_id);
 CREATE INDEX IF NOT EXISTS idx_phrase_slots_phrase_id         ON phrase_slots(phrase_id);
 CREATE INDEX IF NOT EXISTS idx_phrase_slots_slot_name         ON phrase_slots(slot_name);

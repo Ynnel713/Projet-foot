@@ -22,11 +22,11 @@ def _colonnes(db_path: Path, table: str) -> dict[str, str]:
 
 
 def _base_anterieure_a_la_colonne(db_path: Path) -> None:
-    """Schema actuel prive de toute ligne mentionnant match_sequence (colonne +
-    commentaire) : etat d'une base creee avant la decision B."""
+    """Schema actuel prive de toute ligne mentionnant match_sequence ou is_fallback
+    (colonnes, index, commentaires) : etat d'une base creee avant les decisions B et D10."""
     sql = Path(DEFAULT_SCHEMA_PATH).read_text(encoding="utf-8")
-    ancien = re.sub(r"^.*match_sequence.*\n", "", sql, flags=re.MULTILINE)
-    assert ancien != sql, "schema.sql ne mentionne plus match_sequence : le test ne prouve plus rien"
+    ancien = re.sub(r"^.*(match_sequence|is_fallback).*\n", "", sql, flags=re.MULTILINE)
+    assert ancien != sql, "schema.sql ne mentionne plus ces colonnes : le test ne prouve plus rien"
     conn = sqlite3.connect(db_path)
     try:
         conn.executescript(ancien)
@@ -38,6 +38,7 @@ def _base_anterieure_a_la_colonne(db_path: Path) -> None:
     finally:
         conn.close()
     assert "match_sequence" not in _colonnes(db_path, "phrase_history")
+    assert "is_fallback" not in _colonnes(db_path, "phrases")
 
 
 def test_match_sequence_existe_a_la_creation(tmp_path):
@@ -103,3 +104,26 @@ def test_l_index_d_unicite_est_ajoute_a_une_base_existante_qui_ne_l_avait_pas(tm
     finally:
         conn.close()
     assert "idx_phrases_variant_text_unique" in noms
+
+
+def test_is_fallback_existe_a_la_creation_avec_zero_par_defaut(tmp_path):
+    db_path = tmp_path / "neuve.db"
+    init_db(db_path=db_path)
+    assert _colonnes(db_path, "phrases")["is_fallback"] == "INTEGER"
+
+
+def test_is_fallback_ajoutee_a_une_base_existante_les_phrases_restent_des_phrases_normales(tmp_path):
+    db_path = tmp_path / "ancienne.db"
+    _base_anterieure_a_la_colonne(db_path)
+
+    init_db(db_path=db_path)
+    init_db(db_path=db_path)  # idempotent, index partiel compris
+
+    assert _colonnes(db_path, "phrases")["is_fallback"] == "INTEGER"
+    conn = sqlite3.connect(db_path)
+    try:
+        assert conn.execute("SELECT text, is_fallback FROM phrases").fetchall() == [("x", 0)]
+        noms = {row[1] for row in conn.execute("PRAGMA index_list(phrases)")}
+    finally:
+        conn.close()
+    assert "idx_phrases_one_fallback_per_variant" in noms

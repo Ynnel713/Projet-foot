@@ -285,3 +285,171 @@ class TestImportSeedListeDeFichiers:
 
         monkeypatch.setattr(module, "DEFAULT_V2_DIR", tmp_path / "absent")
         assert module._default_scenario_paths() == [module.DEFAULT_SCENARIOS_PATH]
+
+
+class TestImportSeedFallbacks:
+    """D10 : un fallback par scenario, ligne de `phrases` a is_fallback=1 sur la variante
+    par defaut, ni slot ni condition, ni cooldown ; couverture totale des qu'un fichier existe."""
+
+    @staticmethod
+    def _banque(tmp_path: Path, codes: tuple[str, ...] = ("BUT", "CORNER")) -> Path:
+        scenarios = [
+            {
+                "code": code,
+                "label": code,
+                "variants": [
+                    {
+                        "code": "DEFAUT",
+                        "label": "d",
+                        "is_default": True,
+                        "phrases": [{"text": f"texte {code}", "cooldown_matches": 2}],
+                    },
+                    {
+                        "code": "SURNOM",
+                        "label": "s",
+                        "is_default": False,
+                        "phrases": [{"text": f"surnom {code}", "cooldown_matches": 2}],
+                    },
+                ],
+            }
+            for code in codes
+        ]
+        path = tmp_path / "scenarios.yml"
+        path.write_text(yaml.safe_dump(scenarios, allow_unicode=True), encoding="utf-8")
+        return path
+
+    @staticmethod
+    def _fallbacks(tmp_path: Path, entrees: list[dict[str, Any]]) -> Path:
+        path = tmp_path / "fallback.yml"
+        path.write_text(yaml.safe_dump(entrees, allow_unicode=True), encoding="utf-8")
+        return path
+
+    def _importer(self, tmp_path: Path, entrees: list[dict[str, Any]]):
+        db_path = _init_db(tmp_path)
+        stats = import_seed(
+            db_path,
+            self._banque(tmp_path),
+            _write_empty_slots_yaml(tmp_path),
+            fallback_path=self._fallbacks(tmp_path, entrees),
+        )
+        return db_path, stats
+
+    def test_un_fallback_par_scenario_sur_la_variante_par_defaut_et_hors_du_compte_des_phrases(self, tmp_path):
+        db_path, stats = self._importer(
+            tmp_path,
+            [{"scenario": "BUT", "text": "Que de l'action !"}, {"scenario": "CORNER", "text": "Coup de pied de coin."}],
+        )
+        assert (stats.phrases, stats.fallbacks) == (4, 2)
+
+        conn = sqlite3.connect(db_path)
+        try:
+            # Test SQL D10 : EXACTEMENT un fallback par scenario (jointure variants), 0 compris.
+            par_scenario = conn.execute(
+                """SELECT s.code, COUNT(p.id) FROM scenarios s
+                   LEFT JOIN variants v ON v.scenario_id = s.id
+                   LEFT JOIN phrases p ON p.variant_id = v.id AND p.is_fallback = 1
+                   GROUP BY s.code ORDER BY s.code"""
+            ).fetchall()
+            assert par_scenario == [("BUT", 1), ("CORNER", 1)]
+
+            sur_defaut = conn.execute(
+                "SELECT COUNT(*) FROM phrases p JOIN variants v ON v.id = p.variant_id "
+                "WHERE p.is_fallback = 1 AND v.is_default = 1"
+            ).fetchone()[0]
+            assert sur_defaut == 2
+            # Jamais soumis au cooldown : les 4 phrases normales en ont un, pas les fallbacks.
+            sans_cooldown = conn.execute(
+                "SELECT COUNT(*) FROM phrases p LEFT JOIN phrase_cooldowns c ON c.phrase_id = p.id "
+                "WHERE c.phrase_id IS NULL"
+            ).fetchone()[0]
+            assert sans_cooldown == 2
+            assert conn.execute("SELECT COUNT(*) FROM phrases WHERE is_fallback = 0").fetchone()[0] == 4
+        finally:
+            conn.close()
+
+    def test_phrase_is_fallback_est_charge_par_load_phrases(self, tmp_path):
+        from engine.scenario_engine import load_phrases
+
+        db_path, _ = self._importer(
+            tmp_path, [{"scenario": "BUT", "text": "x"}, {"scenario": "CORNER", "text": "y"}]
+        )
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        try:
+            variante_id = conn.execute(
+                "SELECT v.id FROM variants v JOIN scenarios s ON s.id = v.scenario_id "
+                "WHERE s.code = 'BUT' AND v.is_default = 1"
+            ).fetchone()[0]
+            phrases = load_phrases(conn, variante_id)
+        finally:
+            conn.close()
+        assert sorted((p.text, p.is_fallback) for p in phrases) == [("texte BUT", False), ("x", True)]
+
+    @pytest.mark.parametrize(
+        ("entrees", "message"),
+        [
+            ([{"scenario": "BUT", "text": "a"}], r'"CORNER".*0 fallback'),
+            (
+                [{"scenario": "BUT", "text": "a"}, {"scenario": "BUT", "text": "b"}, {"scenario": "CORNER", "text": "c"}],
+                r'"BUT".*2 fallback',
+            ),
+            ([{"scenario": "BUT", "text": "a"}, {"scenario": "CORNER", "text": "c"}, {"scenario": "VAR", "text": "d"}], r'inconnu "VAR"'),
+            ([{"scenario": "BUT", "text": "{joueur} marque"}, {"scenario": "CORNER", "text": "c"}], "slot"),
+            ([{"scenario": "BUT", "text": "texte BUT"}, {"scenario": "CORNER", "text": "c"}], "reprend"),
+            ([{"scenario": "BUT", "text": "a", "conditions": []}, {"scenario": "CORNER", "text": "c"}], "scenario.*text"),
+        ],
+        ids=["scenario-sans-fallback", "deux-fallbacks", "scenario-inconnu", "slot", "texte-existant", "cle-inattendue"],
+    )
+    def test_un_fallback_invalide_refuse_tout_l_import(self, tmp_path, entrees, message):
+        db_path = _init_db(tmp_path)
+        with pytest.raises(SeedValidationError, match=message):
+            import_seed(
+                db_path,
+                self._banque(tmp_path),
+                _write_empty_slots_yaml(tmp_path),
+                fallback_path=self._fallbacks(tmp_path, entrees),
+            )
+        conn = sqlite3.connect(db_path)
+        assert conn.execute("SELECT COUNT(*) FROM scenarios").fetchone()[0] == 0
+        conn.close()
+
+    def test_sans_fichier_de_fallback_l_import_reste_possible_avec_un_avertissement(self, tmp_path, caplog):
+        db_path = _init_db(tmp_path)
+        with caplog.at_level("WARNING"):
+            stats = import_seed(
+                db_path,
+                self._banque(tmp_path),
+                _write_empty_slots_yaml(tmp_path),
+                fallback_path=[],
+            )
+        assert (stats.phrases, stats.fallbacks) == (4, 0)
+        assert "Aucun fallback" in caplog.text
+
+    def test_l_index_partiel_refuse_deux_fallbacks_sur_la_meme_variante(self, tmp_path):
+        db_path, _ = self._importer(
+            tmp_path, [{"scenario": "BUT", "text": "x"}, {"scenario": "CORNER", "text": "y"}]
+        )
+        conn = sqlite3.connect(db_path)
+        try:
+            with pytest.raises(sqlite3.IntegrityError):
+                conn.execute(
+                    "INSERT INTO phrases (variant_id, text, is_fallback) "
+                    "SELECT variant_id, 'autre', 1 FROM phrases WHERE text = 'x'"
+                )
+        finally:
+            conn.close()
+
+    def test_le_defaut_lit_le_dossier_fallback(self, tmp_path, monkeypatch):
+        import scripts.import_seed as module
+
+        dossier = tmp_path / "fallback"
+        dossier.mkdir()
+        (dossier / "v1.yml").write_text(
+            yaml.safe_dump([{"scenario": "BUT", "text": "x"}, {"scenario": "CORNER", "text": "y"}]),
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(module, "DEFAULT_FALLBACK_DIR", dossier)
+
+        db_path = _init_db(tmp_path)
+        stats = import_seed(db_path, self._banque(tmp_path), _write_empty_slots_yaml(tmp_path))
+        assert stats.fallbacks == 2

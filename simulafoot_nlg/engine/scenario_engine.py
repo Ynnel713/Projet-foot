@@ -92,9 +92,11 @@ def load_phrase_slots(conn: Connection, phrase_id: int) -> list[PhraseSlot]:
 def load_phrases(conn: Connection, variant_id: int) -> list[Phrase]:
     """Toutes les phrases d'une variante, conditions et slots deja attaches
     (voir load_phrase_conditions/load_phrase_slots) -- un Phrase retourne
-    ici est complet, l'appelant n'a pas besoin de requeter davantage."""
+    ici est complet, l'appelant n'a pas besoin de requeter davantage. Les
+    fallbacks (`is_fallback`) sont INCLUS et marques : les exclure du tirage
+    normal est la responsabilite du selecteur, comme `is_active`."""
     rows = conn.execute(
-        "SELECT id, variant_id, text, weight, is_active FROM phrases WHERE variant_id = ?",
+        "SELECT id, variant_id, text, weight, is_active, is_fallback FROM phrases WHERE variant_id = ?",
         (variant_id,),
     ).fetchall()
     return [
@@ -106,6 +108,7 @@ def load_phrases(conn: Connection, variant_id: int) -> list[Phrase]:
             is_active=bool(row["is_active"]),
             conditions=tuple(load_phrase_conditions(conn, row["id"])),
             slots=tuple(load_phrase_slots(conn, row["id"])),
+            is_fallback=bool(row["is_fallback"]),
         )
         for row in rows
     ]

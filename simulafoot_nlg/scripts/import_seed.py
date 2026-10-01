@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import difflib
 import logging
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from sqlite3 import Connection
@@ -37,6 +38,10 @@ DEFAULT_SLOTS_PATH = Path(__file__).resolve().parent.parent / "data" / "seed" / 
 # les YAML des pilotes V2 (glob, peut etre vide). Jamais un glob sur data/seed/ :
 # slots.yml y cohabite avec un autre schema (dict, pas liste).
 DEFAULT_V2_DIR = Path(__file__).resolve().parent.parent / "data" / "seed" / "v2"
+# Phrases de secours (D10), ecrites a la main (pas generees : le dossier v2/ l'est) :
+# data/seed/fallback/*.yml, liste de {scenario: CODE, text: "..."}.
+DEFAULT_FALLBACK_DIR = Path(__file__).resolve().parent.parent / "data" / "seed" / "fallback"
+_SLOT_RE = re.compile(r"\{\w+\}")
 
 
 class SeedValidationError(ValueError):
@@ -48,8 +53,9 @@ class SeedValidationError(ValueError):
 class SeedStats:
     scenarios: int
     variants: int
-    phrases: int
+    phrases: int  # hors fallbacks
     dictionaries: int
+    fallbacks: int = 0
 
 
 def _load_yaml(path: Path, expected_type: type) -> Any:
@@ -86,6 +92,67 @@ def _load_scenarios(paths: list[Path]) -> list[dict[str, Any]]:
             origine[code] = path
             scenarios.append(scenario)
     return scenarios
+
+
+def _load_fallbacks(paths: list[Path]) -> list[dict[str, Any]]:
+    fallbacks: list[dict[str, Any]] = []
+    for path in paths:
+        fallbacks.extend(_load_yaml(path, list))
+    return fallbacks
+
+
+def _validate_fallbacks(scenarios: list[dict[str, Any]], fallbacks: list[dict[str, Any]]) -> None:
+    """D10 : des qu'un fichier de fallback existe, CHAQUE scenario importe en a
+    exactement un (couverture totale -- un scenario sans secours serait le cas
+    non couvert que D10 est cense fermer). Un fallback n'a ni slot ni condition
+    (il doit pouvoir sortir pour n'importe quel contexte) et ne reprend le
+    texte d'aucune phrase de la variante par defaut (unicite variante x texte)."""
+    textes_par_scenario: dict[str, set[str]] = {}
+    for scenario in scenarios:
+        variante_par_defaut = next(v for v in scenario.get("variants", []) if v.get("is_default"))
+        textes_par_scenario[scenario["code"]] = {p.get("text", "") for p in variante_par_defaut.get("phrases", [])}
+
+    par_scenario: dict[str, int] = {}
+    for entree in fallbacks:
+        if set(entree) != {"scenario", "text"}:
+            raise SeedValidationError(
+                f"Fallback invalide {entree!r} : clés attendues exactement 'scenario' et 'text' "
+                "(un fallback n'a ni slot ni condition)."
+            )
+        code, texte = entree["scenario"], entree["text"]
+        if code not in textes_par_scenario:
+            raise SeedValidationError(f'Fallback pour le scénario inconnu "{code}" -- import refusé.')
+        if _SLOT_RE.search(texte):
+            raise SeedValidationError(
+                f'Fallback "{code}" : {texte!r} contient un slot -- un fallback n\'en a aucun.'
+            )
+        if texte in textes_par_scenario[code]:
+            raise SeedValidationError(f'Fallback "{code}" : {texte!r} reprend une phrase de la variante par défaut.')
+        par_scenario[code] = par_scenario.get(code, 0) + 1
+
+    for code in textes_par_scenario:
+        nombre = par_scenario.get(code, 0)
+        if nombre != 1:
+            raise SeedValidationError(
+                f'Scénario "{code}" : {nombre} fallback(s), exactement 1 attendu -- import refusé.'
+            )
+
+
+def _insert_fallbacks(conn: Connection, fallbacks: list[dict[str, Any]]) -> int:
+    """Une ligne de `phrases` is_fallback=1 par fallback, sur la variante par
+    defaut de son scenario. Volontairement AUCUNE ligne phrase_cooldowns (jamais
+    soumis au cooldown)."""
+    for entree in fallbacks:
+        row = conn.execute(
+            """SELECT v.id FROM variants v JOIN scenarios s ON s.id = v.scenario_id
+               WHERE s.code = ? AND v.is_default = 1 ORDER BY v.id LIMIT 1""",
+            (entree["scenario"],),
+        ).fetchone()
+        conn.execute(
+            "INSERT INTO phrases (variant_id, text, weight, is_active, is_fallback) VALUES (?, ?, 1.0, 1, 1)",
+            (row[0], entree["text"]),
+        )
+    return len(fallbacks)
 
 
 def _validate_scenarios(scenarios: list[dict[str, Any]], known_slot_keys: set[str]) -> None:
@@ -243,6 +310,7 @@ def import_seed(
     sqlite_path: str | Path,
     scenarios_path: str | Path | list[str | Path] | None = None,
     slots_path: str | Path = DEFAULT_SLOTS_PATH,
+    fallback_path: str | Path | list[str | Path] | None = None,
 ) -> SeedStats:
     if scenarios_path is None:
         chemins = _default_scenario_paths()
@@ -252,25 +320,42 @@ def import_seed(
         chemins = [Path(scenarios_path)]
     scenarios = _load_scenarios(chemins)
     dictionaries = _load_yaml(Path(slots_path), dict)
+    if fallback_path is None:
+        chemins_fallback = sorted(DEFAULT_FALLBACK_DIR.glob("*.yml"))
+    elif isinstance(fallback_path, list):
+        chemins_fallback = [Path(p) for p in fallback_path]
+    else:
+        chemins_fallback = [Path(fallback_path)]
+    fallbacks = _load_fallbacks(chemins_fallback)
 
     _validate_scenarios(scenarios, known_slot_keys=set(dictionaries))
+    if fallbacks:
+        _validate_fallbacks(scenarios, fallbacks)
+    else:
+        logger.warning("Aucun fallback (D10) : les scénarios sont importés sans phrase de secours.")
 
     conn = get_sqlite(sqlite_path)
     try:
         with sqlite_transaction(conn):
             n_scenarios, n_variants, n_phrases = _insert_scenarios(conn, scenarios)
             n_dictionaries = _insert_slot_dictionaries(conn, dictionaries)
+            n_fallbacks = _insert_fallbacks(conn, fallbacks)
     finally:
         conn.close()
 
     stats = SeedStats(
-        scenarios=n_scenarios, variants=n_variants, phrases=n_phrases, dictionaries=n_dictionaries
+        scenarios=n_scenarios,
+        variants=n_variants,
+        phrases=n_phrases,
+        dictionaries=n_dictionaries,
+        fallbacks=n_fallbacks,
     )
     logger.info(
-        "%d scénarios, %d variantes, %d phrases, %d entrées de dictionnaire importés",
+        "%d scénarios, %d variantes, %d phrases, %d fallbacks, %d entrées de dictionnaire importés",
         stats.scenarios,
         stats.variants,
         stats.phrases,
+        stats.fallbacks,
         stats.dictionaries,
     )
     return stats

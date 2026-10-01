@@ -209,6 +209,9 @@ class Phrase:
     is_active: bool = True
     conditions: tuple[PhraseCondition, ...] = ()
     slots: tuple[PhraseSlot, ...] = ()
+    # Phrase de secours de son scenario (decision D10) : jamais tiree dans le
+    # pool normal, jamais soumise au cooldown ni inscrite dans phrase_history.
+    is_fallback: bool = False
 
 
 @dataclass(frozen=True)
