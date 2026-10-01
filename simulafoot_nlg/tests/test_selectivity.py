@@ -1,4 +1,4 @@
-"""engine/selectivity.py : couverture des phrases sur les joueurs de champ, seuil de 70 % (B2)."""
+"""engine/selectivity.py : couverture des phrases sur les joueurs de champ et facteur de ciblage (poids du tirage)."""
 
 from __future__ import annotations
 
@@ -22,38 +22,42 @@ def _phrase(*conditions: PhraseCondition, identifiant: int = 1) -> Phrase:
     return Phrase(id=identifiant, variant_id=1, text="x", conditions=conditions)
 
 
-class TestSeuilDe70Pourcent:
+class TestFacteurCiblage:
     @pytest.mark.parametrize(
-        ("seuil_pace", "couverture", "specifique"),
+        ("seuil_pace", "couverture", "facteur"),
         [
-            (4, 0.7, True),  # 7 joueurs sur 10 : exactement 70 % -> specifique (borne incluse)
-            (3, 0.8, False),  # 8 sur 10 : 80 % -> trop large
-            (8, 0.3, True),
-            (11, 0.0, True),  # ne matche personne : "specifique" (la rarete est l'affaire de l'audit)
+            (11, 0.0, 1.0),  # ne matche personne : discriminante
+            (9, 0.2, 1.0),  # 20 % : borne incluse, discriminante
+            (8, 0.3, 0.4),  # 30 % : borne incluse, large
+            (1, 1.0, 0.4),
         ],
     )
-    def test_frontiere_a_70_pour_cent(self, seuil_pace, couverture, specifique):
+    def test_bornes_de_la_couverture(self, seuil_pace, couverture, facteur):
         phrase = _phrase(_cond("Pace", ">=", str(seuil_pace)))
         selectivite = Selectivite(_population(10))
         assert selectivite.couverture(phrase) == pytest.approx(couverture)
-        assert selectivite.est_specifique(phrase) is specifique
+        assert selectivite.facteur_ciblage(phrase) == pytest.approx(facteur)
 
-    def test_la_frontiere_se_juge_en_entiers_sans_arrondi_flottant(self):
-        # 21 joueurs sur 30 = 70 % exactement (21/30 pourrait s'ecrire 0.7000000000000001 selon le calcul).
-        phrase = _phrase(_cond("Pace", ">=", "10"))
-        selectivite = Selectivite(_population(30))  # Pace >= 10 : 21 joueurs
-        assert selectivite.est_specifique(phrase) is True
+    def test_entre_20_et_30_pour_cent_le_facteur_est_lineaire(self):
+        # 25 joueurs sur 100 : mi-chemin entre 1.0 (20 %) et 0.4 (30 %)
+        phrase = _phrase(_cond("Pace", ">=", "76"))
+        assert Selectivite(_population(100)).facteur_ciblage(phrase) == pytest.approx(0.7)
 
-    def test_phrase_sans_condition_est_generique(self):
+    def test_le_facteur_decroit_avec_la_couverture(self):
+        selectivite = Selectivite(_population(100))
+        facteurs = [selectivite.facteur_ciblage(_phrase(_cond("Pace", ">=", str(seuil)))) for seuil in (90, 80, 77, 76, 75, 50)]
+        assert facteurs == sorted(facteurs, reverse=True)
+
+    def test_phrase_sans_condition_joueur_n_est_pas_ponderee(self):
         selectivite = Selectivite(_population())
         assert selectivite.couverture(_phrase()) is None
-        assert selectivite.est_specifique(_phrase()) is False
+        assert selectivite.facteur_ciblage(_phrase()) == 1.0
 
     def test_les_conditions_de_contexte_ne_comptent_pas(self):
         phrase = _phrase(_cond("minute", ">=", "85"), _cond("score_context", "==", '"egalisation"'), _cond("gabarit", "==", '"penalty"'))
         selectivite = Selectivite(_population())
         assert selectivite.couverture(phrase) is None
-        assert selectivite.est_specifique(phrase) is False
+        assert selectivite.facteur_ciblage(phrase) == 1.0
 
     def test_condition_de_contexte_et_condition_joueur_seule_la_derniere_compte(self):
         phrase = _phrase(_cond("minute", ">=", "85"), _cond("Pace", ">=", "8"))
@@ -66,8 +70,8 @@ class TestSeuilDe70Pourcent:
         assert Selectivite(_population()).couverture(phrase) == pytest.approx(0.4)
 
     def test_une_condition_non_mandatory_n_est_pas_un_ciblage(self):
-        phrase = _phrase(_cond("Pace", ">=", "8", mandatory=False))
-        assert Selectivite(_population()).est_specifique(phrase) is False
+        phrase = _phrase(_cond("Pace", ">=", "1", mandatory=False))
+        assert Selectivite(_population()).facteur_ciblage(phrase) == 1.0
 
     def test_un_attribut_absent_chez_certains_joueurs_ne_les_compte_pas(self):
         population = _population(10) + [Player(id=99, first_name="X", last_name="Sans attributs")]
@@ -87,9 +91,9 @@ class TestCacheEnMemoire:
         monkeypatch.setattr(module, "evaluate_condition", espion)
         selectivite = Selectivite(_population(10))
         phrase = _phrase(_cond("Pace", ">=", "4"))
-        selectivite.est_specifique(phrase)
+        selectivite.facteur_ciblage(phrase)
         selectivite.couverture(phrase)
-        selectivite.est_specifique(phrase)
+        selectivite.facteur_ciblage(phrase)
         assert len(appels) == 10  # une evaluation par joueur, une seule fois
 
     def test_une_population_vide_est_refusee(self):
@@ -119,7 +123,7 @@ class TestPopulationDeReference:
         assert population[2].attributes == {}
         selectivite = Selectivite.depuis_base(sqlite_conn)
         assert selectivite.taille_population == 3
-        # Pace >= 50 : joueurs 2 et 3 sur 3 -> 66,7 % : specifique.
+        # Pace >= 50 : joueurs 2 et 3 sur 3 -> 66,7 % : condition large.
         phrase = _phrase(_cond("Pace", ">=", "50"))
         assert selectivite.couverture(phrase) == pytest.approx(2 / 3)
-        assert selectivite.est_specifique(phrase) is True
+        assert selectivite.facteur_ciblage(phrase) == pytest.approx(0.4)

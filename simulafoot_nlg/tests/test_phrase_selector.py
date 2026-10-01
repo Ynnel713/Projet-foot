@@ -1,5 +1,5 @@
-"""phrase_selector : filtre mandatory, paliers alpha, cascade de variantes, cooldown, similarite,
-rendu, phrase de secours, WARNING unique (decisions D1, alpha, D9, D10, D10-warn)."""
+"""phrase_selector : filtre mandatory, variantes de contexte prioritaires, tirage pondere DEFAUT/SURNOM, cooldown
+joueur et global, similarite, rendu, phrase de secours, WARNING unique (decisions D1, D9, D10, D10-warn, revisees 02/10/2026)."""
 
 from __future__ import annotations
 
@@ -9,14 +9,14 @@ import pytest
 
 import engine.phrase_selector as module
 from engine import minhash
+from engine.anti_repeat import update_cooldown
 from engine.logger import log_usage
 from engine.models import MatchContext, Phrase, PhraseCondition, Player, SelectionResult, Variant
 from engine.phrase_selector import (
     AucunCandidatError,
     candidats,
-    ordonner_variantes,
-    paliers,
     select,
+    variantes_de_contexte,
 )
 from engine.selectivity import Selectivite
 
@@ -95,39 +95,27 @@ class TestFiltreMandatory:
         assert [p.id for p in candidats(pool, _joueur_rapide(), _context())] == [3, 1, 2]
 
 
-class TestPartition:
-    def test_partition_a_70_pour_cent(self):
-        specifique = _p(1, _cond("Pace", ">=", "4"))  # 7/10 = 70 % : specifique
-        large = _p(2, _cond("Pace", ">=", "3"))  # 8/10 : generique
-        sans_condition = _p(3)
-        specifiques, generiques = paliers([specifique, large, sans_condition], _population_pace())
-        assert [p.id for p in specifiques] == [1]
-        assert [p.id for p in generiques] == [2, 3]
-
-    def test_pool_vide_donne_deux_paliers_vides(self):
-        assert paliers([], _population_pace()) == ([], [])
+# --- Variantes de contexte ------------------------------------------------------
 
 
-# --- Ordre de la cascade --------------------------------------------------------
-
-
-class TestOrdreDeLaCascade:
-    def test_non_defaut_par_poids_decroissant_puis_id_croissant_puis_defaut_en_dernier(self):
+class TestVariantesDeContexte:
+    def test_ni_defaut_ni_surnom_par_poids_decroissant_puis_id_croissant(self):
         variantes = [
             _v(1, "DEFAUT", defaut=True),
             _v(2, "SURNOM", poids=1.0),
             _v(3, "PENALTY", poids=2.0),
             _v(4, "AUTRE", poids=1.0),
+            _v(5, "ENCORE", poids=1.0),
         ]
-        assert [v.code for v in ordonner_variantes(variantes)] == ["PENALTY", "SURNOM", "AUTRE", "DEFAUT"]
+        assert [v.code for v in variantes_de_contexte(variantes)] == ["PENALTY", "AUTRE", "ENCORE"]
 
     def test_les_variantes_inactives_sont_ignorees(self):
-        variantes = [_v(1, "DEFAUT", defaut=True), _v(2, "SURNOM", active=False)]
-        assert [v.code for v in ordonner_variantes(variantes)] == ["DEFAUT"]
+        variantes = [_v(1, "DEFAUT", defaut=True), _v(2, "PENALTY", active=False)]
+        assert variantes_de_contexte(variantes) == []
 
     def test_l_ordre_ne_depend_pas_de_l_ordre_d_entree(self):
-        variantes = [_v(1, "DEFAUT", defaut=True), _v(2, "SURNOM"), _v(3, "PENALTY")]
-        assert ordonner_variantes(variantes) == ordonner_variantes(list(reversed(variantes)))
+        variantes = [_v(1, "DEFAUT", defaut=True), _v(2, "PENALTY"), _v(3, "AUTRE")]
+        assert variantes_de_contexte(variantes) == variantes_de_contexte(list(reversed(variantes)))
 
 
 # --- Banque en base pour select -------------------------------------------------
@@ -210,14 +198,22 @@ def _select(conn, joueur: Player | None = None, **kwargs) -> Phrase:
 # --- Cascade de variantes ----------------------------------------------------------
 
 
-class TestSelectCascade:
-    def test_surnom_dont_la_condition_est_satisfaite_bat_defaut_generique(self, sqlite_conn):
+class TestSelectVariantes:
+    def test_une_variante_de_contexte_garde_sa_priorite_sur_defaut(self, sqlite_conn):
+        _banque(sqlite_conn, {
+            "DEFAUT": {"defaut": True, "phrases": [("generique A", []), ("generique B", [])]},
+            "PENALTY": {"phrases": [("sur penalty", [])]},
+        })
+        for graine in range(20):
+            assert _select(sqlite_conn, seed=graine).text == "sur penalty"
+
+    def test_surnom_et_defaut_partagent_un_tirage_pondere_defaut_en_tete(self, sqlite_conn):
         _banque(sqlite_conn, {
             "DEFAUT": {"defaut": True, "phrases": [("generique A", []), ("generique B", [])]},
             "SURNOM": {"phrases": [("Le sprinter file", RAPIDE)]},
         })
-        for graine in range(20):
-            assert _select(sqlite_conn, seed=graine).text == "Le sprinter file"
+        tires = [_select(sqlite_conn, seed=graine).text for graine in range(300)]
+        assert 0 < tires.count("Le sprinter file") < 300 / 6  # SURNOM (0.35) x ciblage large (0.4) face a deux generiques (1.0)
 
     def test_surnom_vide_defaut_sert(self, sqlite_conn):
         _banque(sqlite_conn, {
@@ -237,12 +233,12 @@ class TestSelectCascade:
         monkeypatch.setattr(module, "load_phrases", lambda conn, variante_id: charges.append(variante_id) or original(conn, variante_id))
 
         assert _select(sqlite_conn, _joueur_lent()).text == "generique"
-        assert len(charges) == 3 and len(set(charges)) == 3  # PENALTY, SURNOM, DEFAUT : une fois chacune
+        assert len(charges) == 3 and len(set(charges)) == 3  # PENALTY, puis SURNOM et DEFAUT : une fois chacune
 
-    def test_on_s_arrete_a_la_premiere_variante_qui_produit_un_candidat(self, sqlite_conn, monkeypatch):
+    def test_on_s_arrete_a_la_premiere_variante_de_contexte_qui_produit_un_candidat(self, sqlite_conn, monkeypatch):
         _banque(sqlite_conn, {
             "DEFAUT": {"defaut": True, "phrases": [("generique", [])]},
-            "SURNOM": {"phrases": [("Le sprinter file", RAPIDE)]},
+            "PENALTY": {"phrases": [("sur penalty", RAPIDE)]},
         })
         charges: list[int] = []
         original = module.load_phrases
@@ -250,10 +246,10 @@ class TestSelectCascade:
         _select(sqlite_conn)
         assert len(charges) == 1  # DEFAUT n'a meme pas ete charge
 
-    def test_la_variante_au_plus_grand_poids_passe_la_premiere(self, sqlite_conn):
+    def test_la_variante_de_contexte_au_plus_grand_poids_passe_la_premiere(self, sqlite_conn):
         _banque(sqlite_conn, {
             "DEFAUT": {"defaut": True, "phrases": [("generique", [])]},
-            "SURNOM": {"poids": 1.0, "phrases": [("surnom", RAPIDE)]},
+            "AUTRE": {"poids": 1.0, "phrases": [("autre", RAPIDE)]},
             "PENALTY": {"poids": 3.0, "phrases": [("penalty", RAPIDE)]},
         })
         assert _select(sqlite_conn).text == "penalty"
@@ -263,30 +259,30 @@ class TestSelectCascade:
             "DEFAUT": {"defaut": True, "phrases": [("generique", [])]},
             "SURNOM": {"active": False, "phrases": [("surnom", RAPIDE)]},
         })
-        assert _select(sqlite_conn).text == "generique"
+        assert {_select(sqlite_conn, seed=g).text for g in range(30)} == {"generique"}
 
     def test_scenario_inconnu_leve_key_error(self, sqlite_conn):
         with pytest.raises(KeyError, match="INCONNU"):
             select(sqlite_conn, "INCONNU", _joueur_rapide(), _context(), seed=1, match_sequence=1, selectivite=_population_pace())
 
 
-class TestPaliersDansSelect:
-    def test_un_specifique_eligible_l_emporte_et_les_generiques_sont_ecartes(self, sqlite_conn):
-        _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("spec", RAPIDE), ("gen A", []), ("gen B", [])]}})
-        assert {_select(sqlite_conn, seed=g).text for g in range(30)} == {"spec"}
+class TestPonderationDesCandidats:
+    def test_une_phrase_a_condition_large_ne_ecrase_plus_les_generiques(self, sqlite_conn):
+        large = [("Pace", ">=", "1")]  # 100 % de la population : ciblage 0.4
+        _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("large", large), ("sans condition", [])]}})
+        tires = [_select(sqlite_conn, seed=g).text for g in range(400)]
+        assert set(tires) == {"large", "sans condition"}
+        assert tires.count("large") < tires.count("sans condition")  # 0.4 contre 1.0
+
+    def test_une_condition_discriminante_ne_desavantage_pas_la_phrase(self, sqlite_conn):
+        rare = [("Pace", ">=", "10")]  # 10 % de la population : ciblage 1.0
+        _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("rare", rare), ("sans condition", [])]}})
+        tires = [_select(sqlite_conn, seed=g).text for g in range(400)]
+        assert abs(tires.count("rare") - tires.count("sans condition")) < 80  # ~ moitie-moitie
 
     def test_zero_specifique_eligible_repli_sur_les_generiques(self, sqlite_conn):
         _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("spec", RAPIDE), ("gen", [])]}})
         assert _select(sqlite_conn, _joueur_lent()).text == "gen"
-
-    def test_zero_generique_les_specifiques_servent(self, sqlite_conn):
-        _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("spec", RAPIDE)]}})
-        assert _select(sqlite_conn).text == "spec"
-
-    def test_une_condition_trop_large_est_generique_donc_au_meme_rang_qu_une_phrase_sans_condition(self, sqlite_conn):
-        large = [("Pace", ">=", "1")]  # 100 % de la population
-        _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("large", large), ("sans condition", [])]}})
-        assert {_select(sqlite_conn, seed=g).text for g in range(40)} == {"large", "sans condition"}
 
     def test_un_fallback_n_est_jamais_tire_dans_le_pool_normal(self, sqlite_conn):
         _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("normale", [])]}})
@@ -315,26 +311,26 @@ class TestCooldown:
         assert {_select(sqlite_conn, seed=g, match_sequence=11).text for g in range(30)} == {"B"}
         assert {_select(sqlite_conn, seed=g, match_sequence=12).text for g in range(40)} == {"A", "B"}
 
-    def test_repli_cooldown_specifiques_epuises_les_generiques_servent(self, sqlite_conn):
+    def test_une_phrase_en_cooldown_laisse_les_autres_servir_puis_revient(self, sqlite_conn):
         _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("spec", RAPIDE), ("gen", [])]}})
-        assert _select(sqlite_conn, match_sequence=10).text == "spec"
         _usage(sqlite_conn, "spec", 1, 10)
-        assert _select(sqlite_conn, match_sequence=11).text == "gen"  # au lieu de bloquer
-        assert _select(sqlite_conn, match_sequence=12).text == "spec"  # cooldown ecoule : le specifique revient
+        assert {_select(sqlite_conn, match_sequence=11, seed=g).text for g in range(30)} == {"gen"}  # au lieu de bloquer
+        assert "spec" in {_select(sqlite_conn, match_sequence=12, seed=g).text for g in range(60)}  # cooldown ecoule
 
-    def test_la_cascade_ne_contourne_jamais_le_cooldown(self, sqlite_conn):
+    def test_le_tirage_ne_contourne_jamais_le_cooldown(self, sqlite_conn):
         _banque(sqlite_conn, {
             "DEFAUT": {"defaut": True, "phrases": [("generique", [])]},
             "SURNOM": {"phrases": [("surnom", RAPIDE)]},
         })
         _usage(sqlite_conn, "surnom", 1, 10)
-        assert _select(sqlite_conn, match_sequence=11).text == "generique"  # SURNOM en cooldown : DEFAUT sert
-        assert _select(sqlite_conn, match_sequence=12).text == "surnom"
+        assert {_select(sqlite_conn, match_sequence=11, seed=g).text for g in range(60)} == {"generique"}  # SURNOM en cooldown
+        assert "surnom" in {_select(sqlite_conn, match_sequence=13, seed=g).text for g in range(200)}  # cooldown (2) et memoire globale ecoules
 
-    def test_le_cooldown_est_par_joueur(self, sqlite_conn):
-        _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("A", [])]}})
-        _usage(sqlite_conn, "A", 3, 10)  # un AUTRE joueur l'a eue
-        assert _select(sqlite_conn, _joueur_rapide(), match_sequence=10).text == "A"
+    def test_le_cooldown_joueur_ne_bloque_que_ce_joueur(self, sqlite_conn):
+        _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("A", []), ("B", [])]}})
+        _usage(sqlite_conn, "A", 3, 10)  # un AUTRE joueur l'a eue : pas de blocage joueur, mais la memoire globale la bloque
+        assert {_select(sqlite_conn, _joueur_rapide(), match_sequence=10, seed=g).text for g in range(40)} == {"B"}
+        assert {_select(sqlite_conn, _joueur_rapide(), match_sequence=10, seed=g).text for g in range(40)} == {"B"}
 
     def test_une_phrase_sans_cooldown_est_refusee_avec_un_warning(self, sqlite_conn, caplog):
         _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("avec", [])]}})
@@ -354,7 +350,7 @@ class TestSimilariteEtRendu:
         _usage(sqlite_conn, "Il marque un but superbe ce soir", 1, 10, "Il marque un but superbe ce soir")
         assert {_select(sqlite_conn, seed=g, match_sequence=10).text for g in range(40)} == {"Une toute autre phrase sans rapport"}
 
-    def test_si_tous_les_candidats_sont_identiques_a_l_historique_le_palier_n_est_pas_vide(self, sqlite_conn):
+    def test_si_tous_les_candidats_sont_identiques_a_l_historique_le_pool_n_est_pas_vide(self, sqlite_conn):
         _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("Il marque un but superbe ce soir", [])]}}, cooldown=0)
         _usage(sqlite_conn, "Il marque un but superbe ce soir", 1, 10, "Il marque un but superbe ce soir")
         assert _select(sqlite_conn, match_sequence=10).text == "Il marque un but superbe ce soir"
@@ -365,7 +361,7 @@ class TestSimilariteEtRendu:
         # le contexte n'a pas de passeur : la premiere phrase ne se rend pas (SlotResolutionError)
         assert {_select(sqlite_conn, seed=g).text for g in range(30)} == {"Il frappe"}
 
-    def test_si_le_palier_specifique_ne_se_rend_pas_les_generiques_servent(self, sqlite_conn):
+    def test_si_la_phrase_a_condition_ne_se_rend_pas_les_generiques_servent(self, sqlite_conn):
         _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("{passeur} lance", RAPIDE), ("gen", [])]}})
         _ajouter_slot(sqlite_conn, "{passeur} lance", "passeur", "context.passeur.full_name")
         assert _select(sqlite_conn).text == "gen"
@@ -379,7 +375,10 @@ class TestSimilariteEtRendu:
         original = module.render
         monkeypatch.setattr(module, "render", lambda *a, **kw: appels.append(kw) or original(*a, **kw))
         _select(sqlite_conn, seed=42)
-        assert [(a["seed"], a["scenario_code"], a["variant_code"]) for a in appels] == [(42, "BUT_TEST", "SURNOM")]
+        assert sorted((a["seed"], a["scenario_code"], a["variant_code"]) for a in appels) == [
+            (42, "BUT_TEST", "DEFAUT"),
+            (42, "BUT_TEST", "SURNOM"),
+        ]
 
 
 # --- Phrase de secours et WARNING unique ----------------------------------------------
@@ -496,3 +495,60 @@ class TestSelectionResult:
     def test_le_rendu_est_reproductible_avec_la_meme_graine(self, sqlite_conn):
         _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [(f"phrase numero {i}", []) for i in range(10)]}})
         assert _resultat(sqlite_conn, seed=9) == _resultat(sqlite_conn, seed=9)
+
+
+# --- Memoire INTER-JOUEURS (cooldown global) -----------------------------------------
+
+MITRAILLEUR = "Le mitrailleur tire de partout et envoie encore celle-là dans les nuages !"
+TIREUR = [("Pace", ">=", "9")]  # 20 % de la population de test : discriminante (ciblage 1.0)
+
+
+def _banque_mitrailleur(conn, generiques: int = 2) -> None:
+    """Un modele SANS slot de protagoniste (surnom seul, comme la phrase 489 de la vraie banque) et des generiques."""
+    _banque(conn, {
+        "DEFAUT": {"defaut": True, "phrases": [(f"Generique numero {i} sans rapport", []) for i in range(generiques)]},
+        "SURNOM": {"phrases": [(MITRAILLEUR, TIREUR)]},
+    })
+
+
+class TestCooldownGlobal:
+    def test_non_regression_global_cooldown(self, sqlite_conn):
+        """Echantillon du 01/10/2026 : « Le mitrailleur… » (phrase 489) servi a Tolisso (M1 52') puis a Zaire-Emery
+        (M2 20') -- puis a 5 autres joueurs. Le cooldown par joueur ne le voyait pas ; la memoire globale, si."""
+        _banque_mitrailleur(sqlite_conn)
+        tolisso, zaire_emery = _joueur_rapide(), Player(id=3, first_name="Warren", last_name="Zaire-Emery", attributes={"Pace": 80})
+        _usage(sqlite_conn, MITRAILLEUR, tolisso.id, 1)
+        # meme match : bloque pour un AUTRE joueur, quelle que soit la graine
+        assert MITRAILLEUR not in {_select(sqlite_conn, zaire_emery, match_sequence=1, seed=g).text for g in range(200)}
+        # match suivant : penalise (0.9 de penalite -> poids x 0.1), puis libre une fois la fenetre ecoulee
+        suivant = [_select(sqlite_conn, zaire_emery, match_sequence=2, seed=g).text for g in range(800)].count(MITRAILLEUR)
+        libre = [_select(sqlite_conn, zaire_emery, match_sequence=6, seed=g).text for g in range(800)].count(MITRAILLEUR)
+        assert 0 < suivant < libre / 2
+
+    def test_surnom_seul_global(self, sqlite_conn):
+        """Un modele sans slot de joueur ne peut pas sortir deux fois dans le meme match, tant que le pool a une alternative :
+        4 evenements de 4 joueurs differents -> les 4 modeles du pool (1 surnom seul + 3 generiques) sortent chacun une fois."""
+        _banque_mitrailleur(sqlite_conn, generiques=3)
+        tires = []
+        for rang_evenement in range(4):
+            joueur = Player(id=10 + rang_evenement, first_name="J", last_name=str(rang_evenement), attributes={"Pace": 90})
+            sqlite_conn.execute("INSERT INTO players (id, first_name, last_name) VALUES (?, 'J', 'x')", (joueur.id,))
+            sqlite_conn.commit()
+            resultat = _resultat(sqlite_conn, joueur, match_sequence=5, seed=rang_evenement)
+            update_cooldown(sqlite_conn, resultat.phrase, joueur, "m5", resultat.rendered_text, match_sequence=5)
+            tires.append(resultat.phrase.text)
+        assert len(set(tires)) == 4
+        assert tires.count(MITRAILLEUR) <= 1
+
+    def test_pool_epuise_la_memoire_globale_est_relachee_sans_secours(self, sqlite_conn):
+        _banque(sqlite_conn, {"DEFAUT": {"defaut": True, "phrases": [("seule phrase", [])]}})
+        _ajouter_secours(sqlite_conn)
+        _usage(sqlite_conn, "seule phrase", 3, 10)  # un autre joueur, meme match : bloquee globalement
+        assert _resultat(sqlite_conn, match_sequence=10).phrase.text == "seule phrase"  # et non le secours
+
+    def test_le_cooldown_global_est_deterministe(self, sqlite_conn):
+        _banque_mitrailleur(sqlite_conn)
+        _usage(sqlite_conn, MITRAILLEUR, 3, 5)
+        assert [_select(sqlite_conn, match_sequence=6, seed=g).text for g in range(30)] == [
+            _select(sqlite_conn, match_sequence=6, seed=g).text for g in range(30)
+        ]

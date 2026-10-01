@@ -1,33 +1,33 @@
 """Selection d'une Phrase pour un (scenario, joueur, contexte) donnes.
 
-Algorithme de `select` (decisions D1, alpha, D9, D10 ; SPEC_ANTI_REPEAT.md sections 6 et 10) :
+Algorithme de `select` (decisions D1, D9, D10, revisees le 02/10/2026 ; SPEC_ANTI_REPEAT.md sections 6 et 10) :
 
-    1. Le scenario est charge (KeyError s'il est inconnu) ; ses variantes ACTIVES sont ordonnees :
-       les non-defaut (SURNOM, PENALTY...) par poids decroissant puis `id` croissant, puis la variante
-       `is_default` en dernier. C'est l'ordre NORMAL (un DEFAUT essaye d'abord n'aurait presque jamais
-       0 candidat et les SURNOM ne sortiraient jamais).
-    2. Pour CHAQUE variante, UNE fois (garde-fou anti-boucle), dans cet ordre :
+    1. Le scenario est charge (KeyError s'il est inconnu) ; ses variantes ACTIVES sont reparties en
+       variantes de CONTEXTE (ni DEFAUT ni SURNOM : PENALTY...), ordonnees par poids decroissant puis `id`,
+       et variantes d'ATTRIBUT (DEFAUT et SURNOM).
+    2. Les variantes de contexte gardent leur priorite : la premiere qui produit un candidat sert (un but sur
+       penalty se raconte avec une phrase de penalty, pas avec un generique tire au sort).
+    3. Sinon, UN tirage pondere sur l'ensemble des candidats de DEFAUT et de SURNOM (plus de priorite dure
+       SURNOM > DEFAUT, ni specifique > generique : elles servaient le meme modele a tout joueur remplissant
+       une condition large). Pour chaque variante :
          a. conditions : les phrases dont une condition `mandatory` echoue sont ECARTEES (jamais
             deprioritisees) ; les phrases de secours (`is_fallback`) et inactives ne sont jamais dans
             le pool normal ;
-         b. cooldown : une phrase dont le cooldown n'est pas ecoule pour ce joueur (recency_penalty,
-            EN MATCHS) est ecartee ; une phrase sans cooldown est refusee. Le cooldown n'est JAMAIS
-            relache ni contourne par la cascade ;
-         c. alpha : palier SPECIFIQUE d'abord (au moins une condition joueur, <= 70 % des joueurs de
-            champ), sinon palier GENERIQUE -- c'est aussi le "repli cooldown" : si tous les specifiques
-            sont en cooldown, les generiques servent au lieu de bloquer ;
-         d. rendu : chaque candidat du palier est rendu (template_filler.render puis
-            post_process.apply) ; un candidat dont un slot ne se resout pas (SlotResolutionError) est
-            ecarte ("phrase invalide, en choisir une autre") ;
-         e. tirage pondere : poids de la variante x poids de la phrase x (1 - similarity_penalty du
-            texte rendu) ; si tous les poids sont nuls, tirage uniforme (une penalite ne vide jamais le
-            palier) ; rng derive de `seed` (explicite, jamais d'horloge).
-       La premiere variante qui produit un candidat sert ; aucune fusion de variantes.
-    3. Cascade epuisee (toutes les variantes actives a sec, jusqu'a la variante par defaut) : repli
-       final sur la phrase de secours du scenario (D10), rendue comme les autres ; UN seul WARNING
-       enrichi (scenario, variantes ecartees, repli) signale que le scenario est sous-alimente. Pas de
-       phrase de secours en base : le meme WARNING, puis AucunCandidatError. Aucun log pour le passage
-       normal SURNOM -> DEFAUT.
+         b. cooldown JOUEUR : une phrase dont le cooldown n'est pas ecoule pour ce joueur (recency_penalty,
+            EN MATCHS) est ecartee ; une phrase sans cooldown est refusee. Jamais relache ;
+         c. rendu : chaque candidat est rendu (template_filler.render puis post_process.apply) ; un candidat
+            dont un slot ne se resout pas (SlotResolutionError) est ecarte ;
+         d. poids = poids de la variante x poids de la phrase x `POIDS_SURNOM` (0.35 pour la variante SURNOM)
+            x `Selectivite.facteur_ciblage` (1.0 discriminante <= 20 %, 0.4 large >= 30 %) x (1 - similarite
+            du texte rendu, meme joueur) x (1 - recency_penalty_global) : une phrase deja servie dans le match
+            pour N'IMPORTE quel joueur a un poids nul, puis penalise 3 matchs (anti_repeat).
+       Le rng est derive de `seed` (explicite, jamais d'horloge). Si tous les poids sont nuls, le cooldown
+       global est relache (le pool epuise par la seule memoire inter-joueurs retombe sur les poids de base,
+       DEFAUT en tete) ; si ce n'est pas encore assez, tirage uniforme : une penalite ne vide jamais le pool.
+    4. Cascade epuisee (aucun candidat dans aucune variante) : repli final sur la phrase de secours du
+       scenario (D10), rendue comme les autres ; UN seul WARNING enrichi (scenario, variantes ecartees,
+       repli) signale que le scenario est sous-alimente. Pas de phrase de secours en base : le meme WARNING,
+       puis AucunCandidatError.
 
 `select` retourne SelectionResult(phrase, rendered_text) (D11) et ne fait AUCUNE ecriture : l'enregistrement de l'usage est anti_repeat.update_cooldown, appele
 par l'appelant (jamais pour une phrase de secours, que log_usage refuse).
@@ -36,11 +36,13 @@ par l'appelant (jamais pour une phrase de secours, que log_usage refuse).
 from __future__ import annotations
 
 import logging
+import random
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from sqlite3 import Connection
 from typing import Any
 
-from engine.anti_repeat import CooldownManquantError, recency_penalty, similarity_penalty
+from engine.anti_repeat import CooldownManquantError, recency_penalty, recency_penalty_global, similarity_penalty
 from engine.conditions import evaluate_condition
 from engine.models import MatchContext, Phrase, Player, SelectionResult, Variant
 from engine.post_process import apply
@@ -50,6 +52,16 @@ from engine.selectivity import Selectivite
 from engine.template_filler import SlotResolutionError, derive_rng, render
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class _Rendu:
+    """Un candidat rendu : sa phrase, son texte final, son poids de base et sa penalite inter-joueurs."""
+
+    phrase: Phrase
+    texte: str
+    poids: float
+    penalite_globale: float
 
 
 class AucunCandidatError(LookupError):
@@ -73,20 +85,19 @@ def candidats(phrases: Sequence[Phrase], player: Player, context: MatchContext) 
     ]
 
 
-def paliers(pool: Sequence[Phrase], selectivite: Selectivite) -> tuple[list[Phrase], list[Phrase]]:
-    """(specifiques, generiques) : partition du pool selon la selectivite (<= 70 % des joueurs de
-    champ et au moins une condition joueur : specifique, voir engine/selectivity.py). Politique alpha :
-    `select` tente les specifiques, puis les generiques seulement si aucun specifique ne sort."""
-    specifiques = [p for p in pool if selectivite.est_specifique(p)]
-    generiques = [p for p in pool if not selectivite.est_specifique(p)]
-    return specifiques, generiques
+#: Poids de la variante SURNOM face a DEFAUT (1.0) : un modele a surnom reste possible sans dominer.
+POIDS_SURNOM = 0.35
+CODE_SURNOM = "SURNOM"
 
 
-def ordonner_variantes(variantes: Sequence[Variant]) -> list[Variant]:
-    """Ordre d'essai de la cascade (decision D1) : variantes ACTIVES seulement, les non-defaut
-    d'abord par poids decroissant puis `id` croissant (deterministe), puis la variante `is_default`."""
-    actives = [v for v in variantes if v.is_active]
-    return sorted(actives, key=lambda v: (v.is_default, -v.weight, v.id))
+def _est_de_contexte(variante: Variant) -> bool:
+    """Variante ni DEFAUT ni SURNOM (PENALTY...) : elle se declenche sur le contexte, elle garde sa priorite."""
+    return not variante.is_default and variante.code != CODE_SURNOM
+
+
+def variantes_de_contexte(variantes: Sequence[Variant]) -> list[Variant]:
+    """Variantes de contexte ACTIVES, par poids decroissant puis `id` croissant (deterministe)."""
+    return sorted((v for v in variantes if v.is_active and _est_de_contexte(v)), key=lambda v: (-v.weight, v.id))
 
 
 def _hors_cooldown(conn: Connection, pool: Sequence[Phrase], player: Player, match_sequence: int) -> list[Phrase]:
@@ -102,22 +113,22 @@ def _hors_cooldown(conn: Connection, pool: Sequence[Phrase], player: Player, mat
     return retenues
 
 
-def _rendre_palier(
+def _rendre(
     conn: Connection,
-    palier: Sequence[Phrase],
+    pool: Sequence[Phrase],
     variante: Variant,
     scenario_code: str,
     player: Player,
     context: MatchContext,
+    selectivite: Selectivite,
     *,
     seed: int | str,
     match_sequence: int,
     dictionaries: Mapping[str, Sequence[Mapping[str, Any]]] | None,
-) -> list[tuple[Phrase, str, float]]:
-    """(phrase, texte rendu, poids) pour chaque candidat du palier, par `id` croissant ; un candidat
-    dont un slot ne se resout pas est ecarte. poids = poids variante x phrase x (1 - similarite)."""
+) -> list[_Rendu]:
+    """Un `_Rendu` par candidat de `pool` (par `id` croissant) ; un candidat dont un slot ne se resout pas est ecarte."""
     rendus = []
-    for phrase in sorted(palier, key=lambda p: p.id):
+    for phrase in sorted(pool, key=lambda p: p.id):
         try:
             brut = render(
                 phrase,
@@ -133,8 +144,21 @@ def _rendre_palier(
             continue
         texte = apply(brut)
         penalite = similarity_penalty(conn, texte, player, match_sequence=match_sequence)
-        rendus.append((phrase, texte, variante.weight * phrase.weight * (1.0 - penalite)))
+        poids = variante.weight * phrase.weight * selectivite.facteur_ciblage(phrase) * (1.0 - penalite)
+        if variante.code == CODE_SURNOM:
+            poids *= POIDS_SURNOM
+        rendus.append(_Rendu(phrase, texte, poids, recency_penalty_global(conn, phrase, match_sequence=match_sequence)))
     return rendus
+
+
+def _tirer(rendus: Sequence[_Rendu], rng: random.Random) -> SelectionResult:
+    """Tirage pondere. Poids = poids de base x (1 - penalite globale) ; tous nuls : la memoire inter-joueurs est
+    relachee (poids de base) ; encore tous nuls : tirage uniforme."""
+    poids = [r.poids * (1.0 - r.penalite_globale) for r in rendus]
+    if not any(poids):
+        poids = [r.poids for r in rendus]
+    choix = rng.choices(rendus, weights=poids if any(poids) else None, k=1)[0]
+    return SelectionResult(choix.phrase, choix.texte)
 
 
 def _phrase_de_secours(
@@ -175,21 +199,23 @@ def select(
         raise KeyError(f"Scenario inconnu : {scenario_code!r}")
 
     variantes = load_variants(conn, scenario.id)
-    ecartees: list[Variant] = []
-    for variante in ordonner_variantes(variantes):
+    actives = sorted((v for v in variantes if v.is_active), key=lambda v: v.id)
+
+    def rendre(variante: Variant) -> list[_Rendu]:
         pool = _hors_cooldown(conn, candidats(load_phrases(conn, variante.id), player, context), player, match_sequence)
-        for palier in paliers(pool, selectivite):
-            rendus = _rendre_palier(
-                conn, palier, variante, scenario_code, player, context,
-                seed=seed, match_sequence=match_sequence, dictionaries=dictionaries,
-            )
-            if not rendus:
-                continue
-            poids = [p for _, _, p in rendus]
-            rng = derive_rng(seed, scenario_code, variante.code, "select")
-            choix = rng.choices(rendus, weights=poids if any(poids) else None, k=1)[0]
-            return SelectionResult(choix[0], choix[1])
-        ecartees.append(variante)
+        return _rendre(
+            conn, pool, variante, scenario_code, player, context, selectivite,
+            seed=seed, match_sequence=match_sequence, dictionaries=dictionaries,
+        )
+
+    for variante in variantes_de_contexte(variantes):
+        rendus = rendre(variante)
+        if rendus:
+            return _tirer(rendus, derive_rng(seed, scenario_code, variante.code, "select"))
+    rendus = [r for v in actives if not _est_de_contexte(v) for r in rendre(v)]
+    if rendus:
+        return _tirer(rendus, derive_rng(seed, scenario_code, "POOL", "select"))
+    ecartees = actives
 
     secours = _phrase_de_secours(conn, variantes)
     if secours is None:

@@ -723,3 +723,27 @@ sur `preferred_moves`, jamais `None`) ; même traitement, retourner `False`.
    les étapes 1 à 4.
 
 **Verdict : dette bloquante, spec livrée, aucune implémentation ce tour.**
+
+
+---
+
+## Révision du 02/10/2026 -- mémoire inter-joueurs et tirage pondéré (échantillon 14 matchs)
+
+Constat (`data/nlg_samples/repetitions.md`) : cooldown et similarité sont **par joueur** ; rien ne voyait qu'un modèle venait de
+servir pour un autre joueur, et la sélection (SURNOM avant DEFAUT, spécifique avant générique) servait le même modèle à
+tout joueur remplissant une condition large (`fm_rating >= 80` : « Le joker… » pour 31 des 32 entrants).
+
+- **Cooldown global** (`anti_repeat.recency_penalty_global`) : une phrase déjà servie dans le match courant, pour N'IMPORTE
+  quel joueur, est bloquée (1.0) ; puis pénalité décroissante sur 3 matchs (pic 0.7 au match suivant, 2/3 puis 1/3 du pic).
+  Un modèle **sans protagoniste** (aucun slot `joueur`/`entrant`/`sortant`/`passeur`/`receveur` : « Le mitrailleur… »,
+  rendu identique pour tous) : pic 0.9. Unité : `match_sequence`, déterministe. Il **subsume** la pénalité « même phrase_id
+  déjà sorti dans le match / les 2 derniers matchs » : un seul mécanisme, pas deux.
+- **Pool épuisé** : le blocage global est un poids (1 - pénalité) ; si tous les poids sont nuls il est relâché (poids de
+  base) -- jamais de phrase de secours à cause de la seule mémoire inter-joueurs. Le cooldown joueur, lui, n'est jamais relâché.
+- **Tirage pondéré** (`phrase_selector.select`) : plus de priorité dure SURNOM > DEFAUT ni spécifique > générique (`paliers`,
+  `ordonner_variantes`, `Selectivite.est_specifique` et le seuil de 70 % sont supprimés). Poids = poids variante x poids phrase
+  x `POIDS_SURNOM` (0.35, variante SURNOM) x `Selectivite.facteur_ciblage` (1.0 si couverture <= 20 %, 0.4 si >= 30 %, linéaire
+  entre) x (1 - similarité du texte rendu) x (1 - pénalité globale). Les variantes de **contexte** (PENALTY : ni DEFAUT ni
+  SURNOM) gardent leur priorité : un but sur penalty se raconte avec une phrase de penalty.
+- **Hors ticket** : la banque n'est pas modifiée ; `scripts/audit_conditions_larges.py` liste les conditions éligibles pour plus
+  de 30 % des événements de leur scénario (resserrement : ticket banque).
