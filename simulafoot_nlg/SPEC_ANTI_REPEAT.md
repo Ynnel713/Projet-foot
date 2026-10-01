@@ -756,15 +756,23 @@ tout joueur remplissant une condition large (`fm_rating >= 80` : « Le joker… 
   de secours à cause d'elle ; si tous les poids sont encore nuls, tirage uniforme. Le cooldown joueur n'est jamais relâché.
 
 **Invariants mesurés (14 matchs, 376 phrases, graine fixe)** : (a) même phrase pour le même joueur : 0 ; (b) textes identiques pour
-des joueurs différents : 0 ; REMPLACEMENT, même modèle deux fois dans un même match : 0 ; phrases de secours : 0 ; deux exécutions
-même graine : sortie identique.
+des joueurs différents : 0 ; REMPLACEMENT, même modèle deux fois dans un même match : 0 ; phrases de secours : 0 ; modèle le plus
+servi : 12 (31 avant) ; deux exécutions même graine : sortie identique. SURNOM : **26 %** des tirages éligibles (24/91, bande 20-30 %),
+**6,4 %** de toutes les lignes (24/376, bande 5-10 %).
 
-**Ce qui est impossible, et pourquoi.** « REMPLACEMENT : réutilisations en trop < 20 » ne peut pas être tenu : avec N lignes et un
-pool de P modèles, le minimum est N - P (114 - 21 = 93). Le bon invariant est « même modèle deux fois dans un même match = 0 »
-(tenu : 0) et « total en trop <= (lignes - modèles éligibles) + 5 ». De même la part de SURNOM est bornée par l'éligibilité
-(~26 % des tirages) : en pourcentage de **toutes** les lignes elle plafonne vers 13 % même avec un poids SURNOM de 2.5, parce que
-les modèles SURNOM sont peu nombreux (5 à 8 par scénario) et que la mémoire inter-joueurs les protège de la répétition. Les 95
-lignes SURNOM d'avant (25 %) venaient de la répétition des mêmes 11 modèles sans nom.
+**Paramètres retenus.** `POIDS_SURNOM = 0.35` (26 % des tirages éligibles ; mesuré : 0.35 -> 26 %, 0.5 -> 30 %, 0.65 -> 33 %, donc 0.65
+sort de la bande) ; cooldown global : match courant bloqué, puis **0.7 / 0.47 / 0.23** sur les 3 matchs suivants (décroissance
+linéaire, plus douce que 0.7 / 0.33 / 0.16) ; modèle sans protagoniste : **bloqué 12 matchs** (`BLOCAGE_SANS_PROTAGONISTE_MATCHS`).
+
+**Ce qui est impossible, et pourquoi.**
+- « REMPLACEMENT : réutilisations en trop < 20 » : avec N lignes et un pool de P modèles, le minimum est N - P (114 - 21 = **93**).
+  Le vrai invariant est « même modèle deux fois dans un même match = 0 » (tenu : 0) et « total en trop <= (lignes - modèles
+  éligibles) + 5 ».
+- « SURNOM = 15-30 % de TOUTES les lignes » : SURNOM n'est éligible que dans ~26 % des tirages (91/376), il y a 5 à 8 modèles SURNOM
+  par scénario, et la mémoire inter-joueurs les protège de la répétition. Le plafond est ~13 % de toutes les lignes, même avec un poids
+  de 2.5 (mesuré). Les 95 lignes SURNOM d'avant (25 %) venaient de la répétition des mêmes 11 modèles sans nom. L'invariant réel est
+  donc : **SURNOM sur éligibles = 20-30 %, SURNOM sur le total = 5-10 %**. Pour plus de SURNOM, il faut plus de modèles SURNOM
+  éligibles (ticket banque), pas un poids plus fort.
 
 - **Banque** : une seule condition resserrée, `fm_rating >= 80` -> `>= 82` pour « Le joker… » (REMPLACEMENT, 28 % -> 17 % des
   entrants de l'échantillon ; `pilotes_v2/remplacement.py`, YAML régénéré, base réimportée) ; les autres conditions larges
