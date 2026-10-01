@@ -3,18 +3,29 @@ MatchContext), y compris sur la banque reelle (v1 + 8 pilotes)."""
 
 from __future__ import annotations
 
+import hashlib
 import random
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 import yaml
 
 from engine.models import MatchContext, Phrase, PhraseSlot, Player
-from engine.template_filler import SlotResolutionError, render
+from engine.template_filler import SlotResolutionError, derive_rng
+from engine.template_filler import render as render_phrase
 from scripts.convert_commentary_xlsx_to_yaml import SLOT_EXPRESSIONS
 
 SEED = Path(__file__).resolve().parent.parent / "data" / "seed"
+
+
+def render(phrase, player, context, *, seed=1, scenario_code="BUT", variant_code="DEFAUT", **kwargs):
+    """render avec une graine et des codes par defaut (les tests de rendu n'en dependent pas)."""
+    return render_phrase(
+        phrase, player, context, seed=seed, scenario_code=scenario_code, variant_code=variant_code, **kwargs
+    )
 
 
 def _joueur(prenom: str, nom: str) -> Player:
@@ -157,7 +168,7 @@ def _phrase_a_dictionnaires() -> Phrase:
 
 
 def test_un_slot_a_dictionnaire_tire_une_valeur_du_dictionnaire():
-    rendu = render(_phrase_a_dictionnaires(), JOUEUR, CONTEXTE, rng=random.Random(1), dictionaries=SLOTS_SYNTHETIQUES)
+    rendu = render(_phrase_a_dictionnaires(), JOUEUR, CONTEXTE, seed=1, dictionaries=SLOTS_SYNTHETIQUES)
     exclamations = [e["value"] for e in SLOTS_SYNTHETIQUES["exclamations_but"]]
     adjectifs = [e["value"] for e in SLOTS_SYNTHETIQUES["adjectifs"]]
     assert any(f"Kylian Mbappé frappe, {x} Un geste {a}." == rendu for x in exclamations for a in adjectifs)
@@ -166,12 +177,13 @@ def test_un_slot_a_dictionnaire_tire_une_valeur_du_dictionnaire():
 def test_meme_graine_meme_rendu_et_les_tirages_suivent_l_ordre_des_slots():
     def rendre(graine: int) -> str:
         return render(
-            _phrase_a_dictionnaires(), JOUEUR, CONTEXTE, rng=random.Random(graine), dictionaries=SLOTS_SYNTHETIQUES
+            _phrase_a_dictionnaires(), JOUEUR, CONTEXTE, seed=graine, dictionaries=SLOTS_SYNTHETIQUES
         )
 
     assert rendre(7) == rendre(7)
-    # Consommation previsible : un tirage pondere par slot a dictionnaire, dans l'ordre de phrase.slots.
-    rng = random.Random(7)
+    # Consommation previsible : un tirage pondere par slot a dictionnaire, dans l'ordre de
+    # phrase.slots, avec le rng derive de la phrase.
+    rng = derive_rng(7, "BUT", "DEFAUT", _phrase_a_dictionnaires().text)
     exclamation = rng.choices(["quelle frappe !", "magnifique !", "personne ne s'y attendait !"], weights=[1.0, 0.5, 1.0])[0]
     adjectif = rng.choices(["exceptionnel", "rare"], weights=[1.0, 1.0])[0]
     assert rendre(7) == f"Kylian Mbappé frappe, {exclamation} Un geste {adjectif}."
@@ -182,8 +194,7 @@ def test_les_poids_sont_respectes():
     phrase = Phrase(
         id=1, variant_id=1, text="{x}", slots=(PhraseSlot(id=1, phrase_id=1, slot_name="x", dictionary_key="k"),)
     )
-    rng = random.Random(0)
-    assert {render(phrase, JOUEUR, CONTEXTE, rng=rng, dictionaries=dictionnaire) for _ in range(50)} == {"A"}
+    assert {render(phrase, JOUEUR, CONTEXTE, seed=graine, dictionaries=dictionnaire) for graine in range(50)} == {"A"}
 
 
 def test_un_slot_a_dictionnaire_tire_une_seule_fois_meme_repete():
@@ -194,23 +205,18 @@ def test_un_slot_a_dictionnaire_tire_une_seule_fois_meme_repete():
         slots=(PhraseSlot(id=1, phrase_id=1, slot_name="x", dictionary_key="adjectifs"),),
     )
     for graine in range(20):
-        gauche, droite = render(phrase, JOUEUR, CONTEXTE, rng=random.Random(graine), dictionaries=SLOTS_SYNTHETIQUES).split(" puis ")
+        gauche, droite = render(phrase, JOUEUR, CONTEXTE, seed=graine, dictionaries=SLOTS_SYNTHETIQUES).split(" puis ")
         assert gauche == droite
 
 
 def test_dictionnaire_absent_ou_vide_leve_slot_resolution_error():
     phrase = _phrase_a_dictionnaires()
     with pytest.raises(SlotResolutionError, match="exclamations_but"):
-        render(phrase, JOUEUR, CONTEXTE, rng=random.Random(1), dictionaries={"adjectifs": [{"value": "x"}]})
+        render(phrase, JOUEUR, CONTEXTE, dictionaries={"adjectifs": [{"value": "x"}]})
     with pytest.raises(SlotResolutionError, match="exclamations_but"):
-        render(phrase, JOUEUR, CONTEXTE, rng=random.Random(1), dictionaries={"exclamations_but": [], "adjectifs": []})
+        render(phrase, JOUEUR, CONTEXTE, dictionaries={"exclamations_but": [], "adjectifs": []})
     with pytest.raises(SlotResolutionError, match="exclamations_but"):
-        render(phrase, JOUEUR, CONTEXTE, rng=random.Random(1))
-
-
-def test_un_slot_a_dictionnaire_sans_rng_est_refuse():
-    with pytest.raises(ValueError, match="rng obligatoire"):
-        render(_phrase_a_dictionnaires(), JOUEUR, CONTEXTE, dictionaries=SLOTS_SYNTHETIQUES)
+        render(phrase, JOUEUR, CONTEXTE)
 
 
 # --- SlotResolutionError : slot inconnu, definition invalide ------------------
@@ -247,7 +253,7 @@ def test_un_slot_avec_expression_ET_dictionnaire_est_refuse():
         PhraseSlot(id=1, phrase_id=1, slot_name="x", expression="player.full_name", dictionary_key="k"),
     )
     with pytest.raises(SlotResolutionError, match="exactement un"):
-        render(phrase, JOUEUR, CONTEXTE, rng=random.Random(0), dictionaries={"k": [{"value": "v"}]})
+        render(phrase, JOUEUR, CONTEXTE, dictionaries={"k": [{"value": "v"}]})
 
 
 def test_un_slot_declare_deux_fois_avec_des_definitions_differentes_est_refuse():
@@ -293,4 +299,79 @@ def test_un_slot_declare_mais_absent_du_texte_ne_consomme_ni_rng_ni_erreur():
 def test_un_dictionnaire_mal_forme_leve_slot_resolution_error(dictionnaire):
     phrase = _avec_slots("{x}", PhraseSlot(id=1, phrase_id=1, slot_name="x", dictionary_key="k"))
     with pytest.raises(SlotResolutionError, match=r"Slot \{x\}"):
-        render(phrase, JOUEUR, CONTEXTE, rng=random.Random(0), dictionaries={"k": dictionnaire})
+        render(phrase, JOUEUR, CONTEXTE, dictionaries={"k": dictionnaire})
+
+
+# --- rng derive par phrase : sha256(seed|code scenario|code variante|texte) -----
+
+
+def test_derive_rng_suit_exactement_la_formule_sha256():
+    cle = "42|BUT|SURNOM|{joueur} marque !"
+    attendu = random.Random(int.from_bytes(hashlib.sha256(cle.encode("utf-8")).digest()[:8], "big"))
+    obtenu = derive_rng(42, "BUT", "SURNOM", "{joueur} marque !")
+    assert [obtenu.random() for _ in range(3)] == [attendu.random() for _ in range(3)]
+
+
+@pytest.mark.parametrize(
+    "autre",
+    [
+        (43, "BUT", "SURNOM", "t"),  # graine
+        (42, "CORNER", "SURNOM", "t"),  # code scenario
+        (42, "BUT", "DEFAUT", "t"),  # code variante
+        (42, "BUT", "SURNOM", "autre texte"),  # texte
+    ],
+)
+def test_chaque_composante_de_la_cle_change_le_rng(autre):
+    reference = derive_rng(42, "BUT", "SURNOM", "t").random()
+    assert derive_rng(*autre).random() != reference
+
+
+@pytest.mark.parametrize(("scenario", "variante"), [("", "DEFAUT"), ("BUT", "")])
+def test_un_code_vide_est_refuse(scenario, variante):
+    with pytest.raises(ValueError, match="obligatoires"):
+        derive_rng(1, scenario, variante, "t")
+    with pytest.raises(ValueError, match="obligatoires"):
+        render_phrase(
+            Phrase(id=1, variant_id=1, text="t"), JOUEUR, CONTEXTE, seed=1, scenario_code=scenario, variant_code=variante
+        )
+
+
+def test_le_rendu_d_une_phrase_ne_depend_pas_des_autres_phrases_du_pool():
+    """Ajouter ou retirer une phrase du pool ne change le rendu d'aucune autre (cle naturelle,
+    pas d'etat partage) -- avec un rng global, retirer B decalerait les tirages de C."""
+    adjectifs = {"adjectifs": [{"value": v} for v in ("a", "b", "c", "d", "e", "f", "g", "h")]}
+
+    def phrase(texte: str) -> Phrase:
+        return _avec_slots(texte, PhraseSlot(id=1, phrase_id=1, slot_name="x", dictionary_key="adjectifs"))
+
+    pool = [phrase("A {x}"), phrase("B {x}"), phrase("C {x}")]
+    complet = [render(p, JOUEUR, CONTEXTE, seed=5, dictionaries=adjectifs) for p in pool]
+    sans_b = [render(p, JOUEUR, CONTEXTE, seed=5, dictionaries=adjectifs) for p in (pool[0], pool[2])]
+    assert sans_b == [complet[0], complet[2]]
+
+
+def test_la_graine_fait_varier_le_rendu():
+    phrase = _avec_slots("{x}", PhraseSlot(id=1, phrase_id=1, slot_name="x", dictionary_key="k"))
+    dictionnaire = {"k": [{"value": str(i)} for i in range(10)]}
+    rendus = {render(phrase, JOUEUR, CONTEXTE, seed=graine, dictionaries=dictionnaire) for graine in range(30)}
+    assert len(rendus) > 3
+
+
+def test_meme_entree_meme_rendu_quelle_que_soit_la_graine_de_hachage_de_python():
+    """sha256, pas hash() : le rendu ne depend pas de PYTHONHASHSEED."""
+    code = (
+        "from engine.template_filler import derive_rng;"
+        "print(derive_rng(7, 'BUT', 'DEFAUT', 'texte').random())"
+    )
+    resultats = set()
+    for graine_de_hachage in ("1", "2", "random"):
+        sortie = subprocess.run(
+            [sys.executable, "-c", code],
+            capture_output=True,
+            text=True,
+            check=True,
+            env={**__import__("os").environ, "PYTHONHASHSEED": graine_de_hachage},
+            cwd=str(Path(__file__).resolve().parent.parent),
+        )
+        resultats.add(sortie.stdout.strip())
+    assert len(resultats) == 1

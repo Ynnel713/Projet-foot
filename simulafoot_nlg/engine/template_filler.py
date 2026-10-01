@@ -5,8 +5,9 @@ Pour chaque PhraseSlot de `phrase.slots` :
       mini-interpreteur d'attributs a points (resolve_expression) -- PAS `eval()` : le
       YAML est edite a la main ;
     - `dictionary_key` -> tirage pondere dans `dictionaries[cle]` (meme forme que
-      data/seed/slots.yml : liste de {value, weight?}) avec `rng` ; un slot tire UNE fois
-      par rendu, dans l'ordre de `phrase.slots` (consommation du rng previsible) ;
+      data/seed/slots.yml : liste de {value, weight?}) avec un rng DERIVE PAR PHRASE (voir
+      derive_rng) ; un slot tire UNE fois par rendu, dans l'ordre de `phrase.slots`
+      (consommation du rng previsible) ;
     - un slot du texte sans valeur resolue -> SlotResolutionError (jamais un "{slot}"
       affiche tel quel a l'ecran) ; l'appelant (phrase_selector) la traite comme "phrase
       invalide, en choisir une autre".
@@ -18,6 +19,7 @@ linguistique (post_process.apply) est une etape distincte, appliquee apres.
 
 from __future__ import annotations
 
+import hashlib
 import random
 import re
 from collections.abc import Mapping, Sequence
@@ -71,8 +73,21 @@ def resolve_expression(expression: str, player: Player, context: MatchContext) -
 _SLOT_RE = re.compile(r"\{(\w+)\}")
 
 
+def derive_rng(seed: int | str, scenario_code: str, variant_code: str, text: str) -> random.Random:
+    """RNG propre a UNE phrase : graine = 8 premiers octets de
+    sha256(f"{seed}|{scenario_code}|{variant_code}|{text}"). Cle NATURELLE (codes et texte,
+    jamais les id autoincrement, instables apres un reset + reimport) : retirer ou ajouter une
+    phrase du pool ne change le rendu d'aucune autre, et deux executions donnent le meme rendu
+    (sha256, pas hash() : independant de PYTHONHASHSEED). `seed` est fourni par l'appelant
+    (cli.py : derive de match_id, match_sequence et event_id)."""
+    if not scenario_code or not variant_code:
+        raise ValueError("derive_rng : scenario_code et variant_code sont obligatoires (cle de la graine).")
+    cle = f"{seed}|{scenario_code}|{variant_code}|{text}"
+    return random.Random(int.from_bytes(hashlib.sha256(cle.encode("utf-8")).digest()[:8], "big"))
+
+
 def _tirer(
-    slot: PhraseSlot, dictionaries: Mapping[str, Sequence[Mapping[str, Any]]] | None, rng: random.Random | None
+    slot: PhraseSlot, dictionaries: Mapping[str, Sequence[Mapping[str, Any]]] | None, rng: random.Random
 ) -> str:
     entrees = (dictionaries or {}).get(slot.dictionary_key or "")
     if not entrees:
@@ -93,8 +108,6 @@ def _tirer(
         poids.append(poids_entree)
     if not any(poids):
         raise SlotResolutionError(f"Slot {{{slot.slot_name}}} : poids tous nuls dans {slot.dictionary_key!r}.")
-    if rng is None:
-        raise ValueError(f"Slot {{{slot.slot_name}}} (dictionnaire {slot.dictionary_key!r}) : rng obligatoire.")
     return rng.choices(valeurs, weights=poids, k=1)[0]
 
 
@@ -102,7 +115,7 @@ def _resoudre(
     slot: PhraseSlot,
     player: Player,
     context: MatchContext,
-    rng: random.Random | None,
+    rng: random.Random,
     dictionaries: Mapping[str, Sequence[Mapping[str, Any]]] | None,
 ) -> str:
     if (slot.expression is None) == (slot.dictionary_key is None):
@@ -123,7 +136,9 @@ def render(
     player: Player,
     context: MatchContext,
     *,
-    rng: random.Random | None = None,
+    seed: int | str,
+    scenario_code: str,
+    variant_code: str,
     dictionaries: Mapping[str, Sequence[Mapping[str, Any]]] | None = None,
 ) -> str:
     """Rend `phrase.text` avec tous ses slots resolus pour (`player`, `context`) -- voir
@@ -131,8 +146,12 @@ def render(
     slot declare sans (ou avec les deux de) expression/dictionary_key ; deux declarations
     differentes du meme slot ; expression invalide ou a valeur absente ; dictionnaire absent,
     vide ou mal forme. Seuls les slots PRESENTS dans le texte sont resolus (un slot declare
-    mais inutilise ne consomme ni rng ni erreur). ValueError si un slot a dictionnaire est
-    rendu sans `rng`."""
+    mais inutilise ne consomme ni rng ni erreur).
+
+    `seed`, `scenario_code` et `variant_code` sont OBLIGATOIRES : ils forment, avec le texte, la
+    graine du rng de cette phrase (derive_rng) -- une `Phrase` n'a que `variant_id`, c'est donc au
+    selecteur de fournir les deux codes. ValueError si un code est vide."""
+    rng = derive_rng(seed, scenario_code, variant_code, phrase.text)
     utilises = set(_SLOT_RE.findall(phrase.text))
     declarations: dict[str, PhraseSlot] = {}
     valeurs: dict[str, str] = {}
