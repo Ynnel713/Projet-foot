@@ -19,7 +19,10 @@ ECARTE, jamais devine : il est signale dans `skipped` si l'appelant le demande.
 from __future__ import annotations
 
 import hashlib
+import json
+import re
 from collections.abc import Sequence
+from pathlib import Path
 from random import Random
 from typing import Any
 
@@ -226,3 +229,22 @@ def timeline_to_events(
             if skipped is not None:
                 skipped.append((event_id, str(exc)))
     return dicts
+
+
+def jsonl_path(directory: str | Path, match_id: str, match_sequence: int) -> Path:
+    """Chemin du fichier JSON Lines d'un match : un fichier par match (decision B2). Le rang du match
+    prefixe le nom (tri naturel = ordre de jeu) ; le `match_id` est assaini pour le systeme de fichiers."""
+    sur = re.sub(r"[^A-Za-z0-9._-]+", "_", match_id).strip("_") or "match"
+    return Path(directory) / f"{match_sequence:06d}_{sur}.jsonl"
+
+
+def write_jsonl(events: Sequence[dict[str, Any]], path: str | Path) -> Path:
+    """Ecrit `events` en JSON Lines UTF-8 (un dict par ligne, fin de ligne LF) -- le format lu par
+    `simulafoot_nlg/cli.py narrate --events`. Cree le dossier parent. Ne valide pas : la validation est
+    celle du NLG, a la lecture (`validate_event_stream`)."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="\n") as flux:
+        for event in events:
+            flux.write(json.dumps(event, ensure_ascii=False) + "\n")
+    return path

@@ -311,3 +311,16 @@ class TestButSansPasseur:
     @pytest.mark.parametrize("gabarit", ["penalty", "contre_attaque", "but_gag"])
     def test_autres_gabarits_inchanges_sans_passeur(self, gabarit):
         assert self._but_dict(gabarit, None)["gabarit"] == gabarit
+
+
+class TestJsonLines:
+    def test_roundtrip_utf8_un_fichier_par_match(self, tmp_path):
+        from nlg_ingestion import jsonl_path, write_jsonl
+        import json
+        events = [{"event_id": 0, "texte": "é"}, {"event_id": 1, "texte": "ô"}]
+        chemin = write_jsonl(events, jsonl_path(tmp_path / "sortie", "Home FC-Away FC/2026 10:01", 5))
+        assert chemin.name == "000005_Home_FC-Away_FC_2026_10_01.jsonl"
+        brut = chemin.read_bytes()
+        assert b"\r" not in brut and brut.endswith(b"\n")
+        assert [json.loads(l) for l in brut.decode("utf-8").splitlines()] == events
+        assert jsonl_path(tmp_path, "a", 5) != jsonl_path(tmp_path, "a", 6)
