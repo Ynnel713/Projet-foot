@@ -28,6 +28,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+from engine.fm26 import FM26_ATTRIBUTES_KNOWN
 from engine.models import MatchContext, PhraseCondition, Player
 
 # Champs lus directement sur Player (dataclass), PAS dans son dict
@@ -106,9 +107,12 @@ def parse_condition_atoms(condition: str) -> list[ConditionAtom]:
 def _resolve(name: str, player: Player, context: MatchContext) -> Any:
     """Valeur de `name` pour ce (player, context) -- precedence Player >
     FM26 > MatchContext (voir PLAYER_FIELDS/MATCH_CONTEXT_FIELDS ci-dessus).
-    Leve ValueError si `name` n'est reconnu nulle part : un attribut absent
-    du contexte ne doit jamais faire matcher silencieusement une condition
-    (meme raisonnement que parse_condition_atoms)."""
+    Decision D16 : un attribut FM26 CONNU (FM26_ATTRIBUTES_KNOWN) mais absent
+    chez ce joueur vaut None -- etat normal (526 joueurs sans attributs), la
+    condition ne matche pas (voir _comparer). Leve ValueError si `name` n'est
+    reconnu nulle part, y compris comme attribut FM26 : une faute de frappe
+    ("Aggresion") ne doit jamais faire matcher ni ecarter silencieusement une
+    condition (meme raisonnement que parse_condition_atoms)."""
     if name in PLAYER_FIELDS:
         return getattr(player, name)
     if name in player.attributes:
@@ -117,6 +121,8 @@ def _resolve(name: str, player: Player, context: MatchContext) -> Any:
         return getattr(context, name)
     if name == "preferred_moves":
         return player.preferred_moves
+    if name in FM26_ATTRIBUTES_KNOWN:
+        return None
     raise ValueError(f"Attribut {name!r} inconnu (ni champ Player, ni attribut FM26, ni champ MatchContext)")
 
 

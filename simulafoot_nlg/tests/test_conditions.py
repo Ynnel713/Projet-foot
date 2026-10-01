@@ -237,6 +237,32 @@ class TestMissilePiedDroitNonSensFootballRegression:
         assert all(evaluate_condition(c, righty, ctx) for c in conditions)
 
 
+class TestAttributFmConnuMaisAbsent:
+    """D16 : un attribut FM26 connu mais absent chez ce joueur ecarte la phrase
+    (False) au lieu de lever ; un nom inconnu (faute de frappe) leve toujours.
+    Les deux cas sur un joueur a attributes={} : c'est lui que le bug frappait
+    (526 joueurs sans attributs FM)."""
+
+    @pytest.mark.parametrize(
+        ("operateur", "valeur"), [(">=", "70"), ("<=", "70"), ("==", "70"), ("!=", "70"), ("in", "70,80")]
+    )
+    def test_attribut_connu_absent_ne_matche_jamais_et_ne_leve_pas(self, operateur, valeur):
+        sans_attributs = _player(attributes={})
+        condition = PhraseCondition(id=1, phrase_id=1, attribute="Aggression", operator=operateur, value=valeur)
+        assert evaluate_condition(condition, sans_attributs, _context()) is False
+
+    def test_faute_de_frappe_leve_toujours_value_error_meme_sans_attributs(self):
+        sans_attributs = _player(attributes={})
+        condition = PhraseCondition(id=1, phrase_id=1, attribute="Aggresion", operator=">=", value="70")
+        with pytest.raises(ValueError, match="Aggresion"):
+            evaluate_condition(condition, sans_attributs, _context())
+
+    def test_attribut_present_est_toujours_compare(self):
+        condition = PhraseCondition(id=1, phrase_id=1, attribute="Aggression", operator=">=", value="55")
+        assert evaluate_condition(condition, _player(attributes={"Aggression": 60}), _context()) is True
+        assert evaluate_condition(condition, _player(attributes={"Aggression": 50}), _context()) is False
+
+
 class TestChampsJoueursDuContexte:
     """sortant/entrant (D3) : conditionnables au sens ou `_resolve` les
     reconnait. Sans leur ajout a MATCH_CONTEXT_FIELDS, `_resolve` leve
