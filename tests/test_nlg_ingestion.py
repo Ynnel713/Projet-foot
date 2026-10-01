@@ -282,3 +282,32 @@ class TestScoreContext:
             # le but (minute 1) precede toute occasion : a minute egale, buts avant occasions generees
             assert d["score_context"] == compute_score_context(1, 0, tireur_home)
         assert all(d["score_context"] is None for d in dicts if d["event_type"] in ("carton", "remplacement"))
+
+
+class TestButSansPasseur:
+    """Decision B2 n°6 : but sans passeur sur corner / coup_franc / construction_placee -> scenario BUT."""
+
+    @staticmethod
+    def _but_dict(gabarit_force, passeur):
+        goals = [GoalEvent(club_name="Home FC", scorer="h_17", assist=passeur, minute=12)]
+        match_result, home, away = _match(goals)
+        timeline = build_timeline(match_result)
+        [but] = [e for e in timeline.events if e.event_type == "but"]
+        timeline = replace(timeline, events=[replace(e, gabarit=gabarit_force) if e is but else e for e in timeline.events])
+        dicts = timeline_to_events(timeline, match_sequence=1, home_squad=home.players, away_squad=away.players)
+        return next(d for d in dicts if d["event_type"] == "but")
+
+    @pytest.mark.parametrize("gabarit", ["corner", "coup_franc", "construction_placee"])
+    def test_sans_passeur_gabarit_neutre(self, gabarit):
+        d = self._but_dict(gabarit, None)
+        assert "passeur_id" not in d
+        assert d["gabarit"] == "percee_individuelle"  # le NLG deduit alors BUT (event_to_scenario)
+
+    @pytest.mark.parametrize("gabarit", ["corner", "coup_franc", "construction_placee"])
+    def test_avec_passeur_gabarit_conserve(self, gabarit):
+        d = self._but_dict(gabarit, "h_14")
+        assert d["gabarit"] == gabarit and d["passeur_id"] == 1014
+
+    @pytest.mark.parametrize("gabarit", ["penalty", "contre_attaque", "but_gag"])
+    def test_autres_gabarits_inchanges_sans_passeur(self, gabarit):
+        assert self._but_dict(gabarit, None)["gabarit"] == gabarit

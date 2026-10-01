@@ -31,6 +31,15 @@ from narrative import BUT, NarrativeEvent, Timeline
 # Rang de tri a minute egale : ce qui se joue (but, occasion) avant la sanction, avant le changement.
 _RANG_NARRATIF, _RANG_CARTON, _RANG_REMPLACEMENT = 0, 1, 2
 
+# Decision B2 n°6 : un but SANS passeur sur ces gabarits n'a pas de scenario propre (les pools COUP_FRANC,
+# CONSTRUCTION, CORNER decrivent une passe ou un centre) -> scenario BUT. Le dict ne porte pas de
+# scenario_code (le NLG le deduit du gabarit, narrative_adapter.event_to_scenario) : la regle vit ICI, en
+# remplacant le gabarit par un gabarit neutre qui mene a BUT. `percee_individuelle` (action seule) : aucune
+# phrase de BUT ne conditionne ce gabarit (seul `penalty` active une variante). Le gabarit d'origine reste
+# dans `Timeline` ; seul le dict est modifie.
+_GABARITS_A_PASSEUR = frozenset({"corner", "coup_franc", "construction_placee"})
+GABARIT_BUT_SANS_PASSEUR = "percee_individuelle"
+
 _CARTON_OUTCOMES = {"yellow", "second_yellow", "direct"}
 
 
@@ -145,6 +154,8 @@ def _narratif_to_dict(event: NarrativeEvent, commun: dict[str, Any], squad: Effe
         dico = {**commun, "event_type": "but", "gabarit": event.gabarit, "player_id": squad.player_id(event.main_player)}
         if len(event.involved_players) > 1:
             dico["passeur_id"] = squad.player_id(event.involved_players[1])
+        elif event.gabarit in _GABARITS_A_PASSEUR:
+            dico["gabarit"] = GABARIT_BUT_SANS_PASSEUR  # -> scenario BUT, voir plus haut
         return dico
     if event.outcome in {"hors_cadre", "poteau", "barre"}:  # le tireur est l'acteur
         return {**commun, "event_type": "occasion", "gabarit": event.gabarit, "outcome": event.outcome,
