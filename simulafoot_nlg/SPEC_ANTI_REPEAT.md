@@ -741,10 +741,12 @@ tout joueur remplissant une condition large (`fm_rating >= 80` : « Le joker… 
   match / les 2 derniers matchs » : un seul invariant, pas deux.
 - **Tirage en deux étapes** (`phrase_selector.select`), plus de priorité dure SURNOM > DEFAUT ni spécifique > générique
   (`paliers`, `ordonner_variantes`, `Selectivite.est_specifique`, seuil de 70 % supprimés) :
-  1. variante tirée parmi celles qui ont un candidat, au poids **DEFAUT 1.0, SURNOM 0.65** (`POIDS_SURNOM`) x **disponibilité**
+  1. variante tirée parmi celles qui ont un candidat, au poids **DEFAUT 1.0, SURNOM 0.35** (`POIDS_SURNOM`) x **disponibilité**
      (part du poids de ses phrases qui survit à la mémoire inter-joueurs : une variante dont l'unique phrase vient de servir
-     pèse peu, une variante entièrement bloquée n'est pas éligible). À disponibilité égale, SURNOM prend 0.65/1.65 = **39 %**
-     des tirages éligibles, que DEFAUT ait 2 ou 20 phrases (un tirage à plat sur toutes les phrases le ramenait à 2 %) ;
+     pèse peu, une variante entièrement bloquée n'est pas éligible). À disponibilité égale, SURNOM prend 0.35/1.35 = **26 %**
+     des tirages éligibles, que DEFAUT ait 2 ou 20 phrases (un tirage à plat sur toutes les phrases le ramenait à 2 %).
+     Mesuré sur 14 matchs, sur les tirages où SURNOM est éligible face à DEFAUT : 0.35 -> 26 %, 0.5 -> 30 %, 0.65 -> 33 %
+     (bande visée : 15-30 %) ;
   2. phrase tirée dans la variante, au poids phrase x `Selectivite.facteur_ciblage` (**1.2** si la couverture des
      conditions joueur est <= 20 %, **0.4** si >= 30 %, linéaire entre les deux, 1.0 sans condition joueur) x (1 - similarité
      du texte rendu, même joueur) x (1 - pénalité globale).

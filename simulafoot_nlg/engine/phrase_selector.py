@@ -20,7 +20,7 @@ Algorithme de `select` (decisions D1, D9, D10, revisees le 02/10/2026 ; SPEC_ANT
          d. poids de la phrase = poids x `Selectivite.facteur_ciblage` (1.2 discriminante <= 20 %, 0.4 large
             >= 30 %, 1.0 sans condition joueur) x (1 - similarite du texte rendu, meme joueur).
        ETAPE 1 : une variante est tiree parmi celles qui ont un candidat, au poids `poids variante` (DEFAUT 1.0,
-       SURNOM `POIDS_SURNOM` 0.65) x DISPONIBILITE, part du poids de ses phrases qui survit a la memoire
+       SURNOM `POIDS_SURNOM` 0.35) x DISPONIBILITE, part du poids de ses phrases qui survit a la memoire
        inter-joueurs (1 - recency_penalty_global) : une variante dont les phrases viennent de servir pour un
        autre joueur pese peu, une variante entierement bloquee (1.0) n'est pas eligible. ETAPE 2 : la phrase est
        tiree dans la variante choisie, au poids de la phrase x (1 - penalite globale). Si aucune variante n'est
@@ -91,9 +91,10 @@ def candidats(phrases: Sequence[Phrase], player: Player, context: MatchContext) 
     ]
 
 
-#: Poids de la variante SURNOM face a DEFAUT (1.0) a l'etape 1 du tirage : ~39 % des tirages quand les deux sont
-#: eligibles, quel que soit le nombre de phrases de chaque variante (le pool DEFAUT est 4 a 5 fois plus grand).
-POIDS_SURNOM = 0.65
+#: Poids de la variante SURNOM face a DEFAUT (1.0) a l'etape 1 du tirage : 0.35 / 1.35 = 26 % des tirages quand les deux
+#: sont eligibles, quel que soit le nombre de phrases de chaque variante (le pool DEFAUT est 4 a 5 fois plus grand).
+#: Mesure sur 14 matchs (tirages eligibles) : 0.35 -> 26 %, 0.5 -> 30 %, 0.65 -> 33 %.
+POIDS_SURNOM = 0.35
 CODE_SURNOM = "SURNOM"
 
 

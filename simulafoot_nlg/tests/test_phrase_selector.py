@@ -209,7 +209,7 @@ class TestSelectVariantes:
 
     @pytest.mark.parametrize("phrases_surnom", [1, 5])
     def test_taux_surnom_deux_etapes_independant_de_la_taille_du_pool(self, sqlite_conn, phrases_surnom):
-        """Etape 1 : SURNOM 0.65 contre DEFAUT 1.0 = 39 % des tirages quand les deux sont eligibles, que DEFAUT ait 2 ou
+        """Etape 1 : SURNOM 0.35 contre DEFAUT 1.0 = 26 % des tirages quand les deux sont eligibles, que DEFAUT ait 2 ou
         20 phrases (avec un tirage a plat sur toutes les phrases, SURNOM tombait a 2 % face a un pool 4-5x plus grand)."""
         _banque(sqlite_conn, {
             "DEFAUT": {"defaut": True, "phrases": [(f"generique {i}", []) for i in range(20)]},
@@ -217,7 +217,7 @@ class TestSelectVariantes:
         })
         tires = [_select(sqlite_conn, seed=graine).text for graine in range(1000)]
         part = sum(t.startswith("surnom") for t in tires) / 1000
-        assert 0.33 < part < 0.45
+        assert 0.22 < part < 0.30
 
     def test_surnom_vide_defaut_sert(self, sqlite_conn):
         _banque(sqlite_conn, {
