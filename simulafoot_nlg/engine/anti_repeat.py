@@ -27,6 +27,7 @@ from __future__ import annotations
 
 from sqlite3 import Connection
 
+from engine import minhash
 from engine.models import Phrase, Player
 from engine.profile_engine import validate_match_sequence
 
@@ -64,15 +65,42 @@ def recency_penalty(conn: Connection, phrase: Phrase, player: Player, *, match_s
     return 0.0 if rang - dernier >= cooldown[0] else 1.0
 
 
-def similarity_penalty(conn: Connection, candidate_text: str, player: Player) -> float:
-    """Penalite [0, 1] liee a la similarite de `candidate_text` avec les
-    phrases recemment generees pour `player` (voir algorithme prevu en tete
-    de module). Leve NotImplementedError tant que la banque de phrases n'est
-    pas livree."""
-    raise NotImplementedError(
-        "anti_repeat.similarity_penalty : squelette non implémenté -- voir la docstring "
-        "de engine/anti_repeat.py pour l'algorithme prévu."
-    )
+# Fenetre de comparaison, en MATCHS (decision sim-window : jamais en heures) : le match
+# courant et les FENETRE_SIMILARITE_MATCHS precedents. PLACE-HOLDER assume, comme les cooldowns
+# (aucune donnee d'usage reel pour le calibrer) : a affiner une fois l'anti-repetition mesurable.
+FENETRE_SIMILARITE_MATCHS = 3
+
+
+def similarity_penalty(
+    conn: Connection,
+    candidate_text: str,
+    player: Player,
+    *,
+    match_sequence: int,
+    fenetre_matchs: int = FENETRE_SIMILARITE_MATCHS,
+) -> float:
+    """Penalite [0, 1] : similarite (MinHash, estimation de Jaccard) de `candidate_text` avec le
+    texte le plus proche parmi ceux deja rendus pour `player` dans la fenetre -- 0.0 si aucun,
+    1.0 pour un texte identique (a la casse, la ponctuation et l'accentuation composee pres).
+
+    Fenetre EN MATCHS : usages dont `match_sequence` est dans [match_sequence - fenetre_matchs,
+    match_sequence] (match courant inclus : deux phrases voisines du meme match comptent ; un
+    usage futur ou sans rang est ignore). Par joueur, comme le cooldown.
+
+    `match_sequence` est obligatoire, par mot-cle (None -> ValueError, aucun repli) ;
+    `fenetre_matchs` doit etre un entier >= 0."""
+    rang = validate_match_sequence(match_sequence)
+    if isinstance(fenetre_matchs, bool) or not isinstance(fenetre_matchs, int) or fenetre_matchs < 0:
+        raise ValueError(f"fenetre_matchs doit etre un entier >= 0, recu {fenetre_matchs!r}")
+    lignes = conn.execute(
+        """SELECT s.signature FROM similarity_signatures s
+           JOIN phrase_history h ON h.id = s.history_id
+           WHERE h.player_id = ? AND h.match_sequence IS NOT NULL
+             AND h.match_sequence BETWEEN ? AND ?""",
+        (player.id, rang - fenetre_matchs, rang),
+    ).fetchall()
+    candidate = minhash.signature(candidate_text)
+    return max((minhash.similarite(candidate, minhash.deserialiser(ligne[0])) for ligne in lignes), default=0.0)
 
 
 def update_cooldown(
