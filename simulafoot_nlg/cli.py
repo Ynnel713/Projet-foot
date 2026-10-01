@@ -5,7 +5,8 @@ Commandes :
     python cli.py import-players --xlsx data/joueurs.xlsx
     python cli.py import-seed
     python cli.py convert-commentary --xlsx data/seed_source/banque_de_phrases_simulafoot.xlsx
-    python cli.py select --scenario BUT_PIED_DROIT --player-id 1
+    python cli.py select --scenario BUT --player-id 1 --match-sequence 1
+    python cli.py narrate --events evenements.jsonl [--dry-run]
 
 Note sur l'import de data/import/import_players.py : `import` est un mot-cle
 Python, donc `from data.import.import_players import ...` est une ERREUR DE
@@ -22,19 +23,26 @@ from __future__ import annotations
 
 import argparse
 import importlib
+import json
 import logging
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from sqlite3 import Connection  # noqa: E402
+
+from engine.anti_repeat import update_cooldown  # noqa: E402
+from engine.context_builder import dict_to_context  # noqa: E402
 from engine.db import get_sqlite  # noqa: E402
+from engine.event_contract import validate_event_stream  # noqa: E402
 from engine.models import MatchContext  # noqa: E402
+from engine.narrative_adapter import event_to_scenario  # noqa: E402
 from engine.phrase_selector import AucunCandidatError  # noqa: E402
 from engine.phrase_selector import select as select_phrase  # noqa: E402
-from engine.profile_engine import normalize_player  # noqa: E402
+from engine.player_resolver import resolve  # noqa: E402
 from engine.scenario_engine import load_scenario  # noqa: E402
 from engine.selectivity import Selectivite  # noqa: E402
 from scripts.convert_commentary_xlsx_to_yaml import DEFAULT_YAML_PATH, convertir  # noqa: E402
@@ -145,11 +153,11 @@ def _cmd_select(args: argparse.Namespace) -> None:
             print(f'Scénario "{args.scenario}" introuvable (banque pas encore importée ?).', file=sys.stderr)
             raise SystemExit(1)
 
-        row = conn.execute("SELECT * FROM players WHERE id = ?", (args.player_id,)).fetchone()
-        if row is None:
+        try:
+            player = resolve(args.player_id, conn)
+        except KeyError as exc:
             print(f"Joueur {args.player_id} introuvable.", file=sys.stderr)
-            raise SystemExit(1)
-        player = normalize_player(dict(row))
+            raise SystemExit(1) from exc
 
         try:
             resultat = select_phrase(
@@ -167,6 +175,93 @@ def _cmd_select(args: argparse.Namespace) -> None:
         print(resultat.rendered_text)
     finally:
         conn.close()
+
+
+def narrer_flux(
+    conn: Connection, evenements: Iterable[Mapping[str, Any]], selectivite: Selectivite, *, enregistrer: bool = True
+) -> Iterator[dict[str, Any]]:
+    """Pipeline d'integration : pour chaque evenement du flux -- validation (event_contract), scenario
+    (narrative_adapter), joueur et contexte (player_resolver / context_builder), phrase rendue (select),
+    puis enregistrement de l'usage (update_cooldown) pour que le cooldown et la similarite voient les
+    evenements deja racontes du flux. Une phrase de secours n'est jamais enregistree. Un evenement sans
+    scenario en V2.1 (poteau / barre) est signale `scenario: None`, sans texte. La graine de chaque
+    evenement est `match_id|match_sequence|event_id` (explicite, jamais une horloge)."""
+    for evenement in validate_event_stream(evenements):
+        scenario = event_to_scenario(evenement)
+        if scenario is None:
+            yield {"event_id": evenement["event_id"], "minute": evenement["minute"], "scenario": None, "texte": None}
+            continue
+        joueur = resolve(evenement["player_id"], conn)
+        contexte = dict_to_context(evenement, conn)
+        resultat = select_phrase(
+            conn,
+            scenario,
+            joueur,
+            contexte,
+            seed=f"{evenement['match_id']}|{evenement['match_sequence']}|{evenement['event_id']}",
+            match_sequence=evenement["match_sequence"],
+            selectivite=selectivite,
+        )
+        if enregistrer and not resultat.phrase.is_fallback:
+            update_cooldown(
+                conn, resultat.phrase, joueur, evenement["match_id"], resultat.rendered_text,
+                match_sequence=evenement["match_sequence"],
+            )
+        yield {
+            "event_id": evenement["event_id"],
+            "minute": evenement["minute"],
+            "scenario": scenario,
+            "texte": resultat.rendered_text,
+            "secours": resultat.phrase.is_fallback,
+        }
+
+
+def _lire_evenements(source: str) -> Iterator[dict[str, Any]]:
+    """Flux JSON Lines (un dict par ligne, lignes vides ignorees) depuis un fichier ou `-` (stdin)."""
+    flux = sys.stdin if source == "-" else Path(source).open(encoding="utf-8")
+    try:
+        for numero, ligne in enumerate(flux, 1):
+            if ligne.strip():
+                try:
+                    yield json.loads(ligne)
+                except json.JSONDecodeError as exc:
+                    raise ValueError(f"Ligne {numero} : JSON invalide ({exc.msg}).") from exc
+    finally:
+        if flux is not sys.stdin:
+            flux.close()
+
+
+def _cmd_narrate(args: argparse.Namespace) -> None:
+    """Raconte un flux d'evenements (JSON Lines, contrat de engine/event_contract.py) : une ligne
+    "minute' texte" par evenement commente. Enregistre l'usage de chaque phrase (cooldown, similarite)
+    sauf avec --dry-run."""
+    if not Path(args.db).exists():
+        print(f"Base introuvable : {args.db} -- lancez `python cli.py init-db` d'abord.", file=sys.stderr)
+        raise SystemExit(1)
+    if args.events != "-" and not Path(args.events).exists():
+        print(f"Fichier d'evenements introuvable : {args.events}", file=sys.stderr)
+        raise SystemExit(1)
+
+    conn = get_sqlite(args.db)
+    non_commentes = 0
+    try:
+        selectivite = Selectivite.depuis_base(conn)
+        try:
+            for resultat in narrer_flux(conn, _lire_evenements(args.events), selectivite, enregistrer=not args.dry_run):
+                if resultat["texte"] is None:
+                    non_commentes += 1
+                else:
+                    print(f"{resultat['minute']}' {resultat['texte']}")
+        except AucunCandidatError as exc:
+            print(f"narrate : {exc}", file=sys.stderr)
+            raise SystemExit(2) from exc
+        except (ValueError, KeyError) as exc:
+            print(f"narrate : evenement refuse, {exc}", file=sys.stderr)
+            raise SystemExit(1) from exc
+    finally:
+        conn.close()
+    if non_commentes:
+        print(f"{non_commentes} evenement(s) non commente(s) en V2.1 (poteau / barre).", file=sys.stderr)
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -210,6 +305,12 @@ def main(argv: list[str] | None = None) -> None:
         "--match-sequence", required=True, type=int, help="Rang du match (unité du cooldown), obligatoire"
     )
 
+    p_narrate = sub.add_parser(
+        "narrate", help="Raconte un flux d'événements JSON Lines (contrat engine/event_contract.py)"
+    )
+    p_narrate.add_argument("--events", required=True, help="Fichier JSON Lines des événements, ou - pour stdin")
+    p_narrate.add_argument("--dry-run", action="store_true", help="N'enregistre pas l'usage (phrase_history)")
+
     args = parser.parse_args(argv)
     handlers: dict[str, Callable[[argparse.Namespace], None]] = {
         "init-db": _cmd_init_db,
@@ -219,6 +320,7 @@ def main(argv: list[str] | None = None) -> None:
         "convert-commentary": _cmd_convert_commentary,
         "export-analytics": _cmd_export_analytics,
         "select": _cmd_select,
+        "narrate": _cmd_narrate,
     }
     handlers[args.command](args)
 
