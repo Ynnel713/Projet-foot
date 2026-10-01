@@ -329,6 +329,9 @@ visées pour les 12 scénarios.
   une phrase sans condition et la comparer au tableau de la section 6 (ex. DÉFENSE ~74 %
   des joueurs sans phrase spécifique, CORNER ~72 %) ; un écart fort signale des conditions
   trop larges ou une donnée joueur manquante.
+- **Part des événements où un SURNOM sort chez un joueur de 35 ans et plus** (conséquence de D1,
+  SURNOM prime) : borne haute à vérifier après implémentation (D6, 01/10/2026). Mesure seule :
+  ni test ni code.
 - **Cooldown épuisé.** Taux d'événements à 0 candidat (cascade, étape 7) par scénario ; doit
   rester rarissime.
 - **FAUTE_SIMPLE et CORNER** (20-25 et 10-12 événements par match) : même taux de
@@ -351,6 +354,26 @@ visées pour les 12 scénarios.
   l'appelant (`recency_penalty` / `update_cooldown`) ; écriture dans `logger.log_usage` ;
   `match_id` reste la clé de jointure. À intégrer au bloc 4 (`anti_repeat`) ; pas ce tour.
 - **D1 — cascade SURNOM → DEFAUT** (SURNOM prime quand sa condition matche) : note D1, §6.
+- **D3 — `{sortant}` / `{entrant}` : étendre `MatchContext`** avec `sortant: Player | None = None`
+  et `entrant: Player | None = None` (deux champs typés, comme `passeur` / `receveur`, pas de
+  dict générique). Impact : `engine/models.py` (2 champs + la note « Autre protagoniste d'un
+  événement à deux joueurs » à étendre à REMPLACEMENT) ; `convert_commentary_xlsx_to_yaml.py`
+  (`SLOT_EXPRESSIONS` : `context.sortant.full_name`, `context.entrant.full_name` ;
+  `SLOTS_AUTORISES["REMPLACEMENT"]`) ; `template_filler.render` (gérer les deux slots). Couples à
+  deux joueurs existants ou prévus : seulement `passeur`/`receveur` (COUP_FRANC, CONSTRUCTION,
+  CORNER) et `sortant`/`entrant` (REMPLACEMENT) — aucune structure générique justifiée.
+  **Prérequis du bloc 1 (import), à faire AVANT lui : changement de modèle, pas d'intégration
+  runtime ni du bloc 5.**
+- **D4 — YAML des pilotes : second fichier, pas de fusion avec v1.** `import_seed.py` accepte une
+  LISTE de chemins YAML au lieu d'un seul (`scenarios_path`, `scripts/import_seed.py:186-192`,
+  constante `DEFAULT_SCENARIOS_PATH` l. 30). Les 281 phrases v1 ne sont jamais réécrites ; chaque
+  pilote peut être un commit séparé ; convention « YAML = source d'import » préservée.
+- **D5 — test à renommer :** `test_cascade_activation_is_logged_as_warning`
+  (`tests/test_phrase_selector.py`, `TestCascadeDeVariantesSpec`) ne décrit plus la règle (WARNING
+  seulement si la variante par défaut rend 0 candidat). Renommage proposé :
+  `test_cascade_warning_only_when_default_empty`, dans le même commit que le prochain changement
+  touchant `phrase_selector`, jamais en commit isolé.
+- **D6 — vétérans :** voir la mesure ajoutée au §8.
 - **C2 — répétition thématique (§4) : hors périmètre V2.1.** Dette de conception ; aucun
   chantier de tagging (`tags` / `phrase_tags` restent vides et inutilisées).
 
