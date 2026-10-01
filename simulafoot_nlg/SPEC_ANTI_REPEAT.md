@@ -452,6 +452,29 @@ décision.
 - **D10 — WARNING.** Deux WARNING pour un seul incident (étape 7.e puis fallback final) est un
   anti-pattern à éviter ; à décider avec D10 : un seul WARNING enrichi, ou deux niveaux distincts.
 
+**Décisions actées en complément (01/10/2026, architecte) :**
+- **B — `match_sequence` : option (iii).** `match_sequence: int`, paramètre keyword-only OBLIGATOIRE
+  sur `recency_penalty` et `update_cooldown`. Il doit AUSSI vivre sur `MatchContext` (sinon `select`,
+  qui ne reçoit que `context`, ne peut pas le passer) : portage dans `engine/models.py` et
+  `profile_engine.normalize_match_context`, **dans le même commit que D3** (pas de commit séparé).
+  `similarity_penalty` n'a pas de rang ; si sa fenêtre de « signatures récentes » se compte en
+  matchs et non en heures, il lui en faudra un aussi (fenêtre non définie, à trancher avec D9).
+- **D11 — flux de rendu : `SelectionResult`.** Problème : `select` renvoie une `Phrase`, mais
+  `similarity_penalty` exige le texte rendu de chaque candidat AVANT le tirage ; si l'appelant
+  re-rend, le `rng` peut diverger. Solution : nouveau dataclass dans `models.py`,
+  `@dataclass(frozen=True) class SelectionResult: phrase: Phrase; rendered_text: str`, et `select`
+  renvoie `SelectionResult`. Impact : `models.py`, `phrase_selector.select` (type de retour),
+  `tests/test_phrase_selector.py`, `engine/narrative.py` (consommateur futur). **Conséquence :
+  `template_filler` doit précéder `phrase_selector`** (`select` devient consommateur de
+  `template_filler.render`) ; plan V2.1 réordonné en conséquence.
+- **Similarité par joueur uniquement.** `similarity_penalty` compare aux signatures récentes du MÊME
+  joueur ; la répétition d'une phrase entre joueurs d'un même match n'est pas couverte (lacune
+  consignée).
+- **`slots.yml` est vide aujourd'hui** (`{}`) : aucun dictionnaire, toutes les phrases v1 utilisent
+  une `expression` ; aucun cas d'usage réel pour le chemin `dictionary_key`.
+- **Qui écrit `phrase_history` (`logger.log_usage` ou `anti_repeat.update_cooldown`) reste à trancher
+  dans le bloc 4** ; les deux sont des squelettes, leurs docstrings posent la question.
+
 ## Ce qui N'est PAS bloquant (déjà en place)
 - Le schéma SQL (`phrase_history`, `phrase_cooldowns`,
   `similarity_signatures`) est cohérent avec l'algorithme documenté dans le
