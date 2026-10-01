@@ -109,6 +109,9 @@ SLOT_EXPRESSIONS: dict[str, str] = {
     "minute": "context.minute",
     "passeur": "context.passeur.full_name",
     "receveur": "context.receveur.full_name",
+    # REMPLACEMENT (decision D3) : joueur sortant / entrant, resolus par l'appelant.
+    "sortant": "context.sortant.full_name",
+    "entrant": "context.entrant.full_name",
 }
 
 _JUNK_MARKERS = ("exemple", "ex_")
@@ -202,6 +205,15 @@ PILOTES_METADATA: dict[str, PiloteMetadata] = {
     "AMBIANCE": PiloteMetadata("Ambiance", 2, frozenset({"club", "adversaire"})),
     "HORS_JEU": PiloteMetadata("Hors-jeu", 3, frozenset({"joueur", "adversaire", "minute"})),
 }
+
+# Derivation (decision du plan V2.1, source unique = PILOTES_METADATA). Effet a
+# connaitre : le convertisseur du classeur v1 accepte desormais aussi les codes
+# V2 ; un tel code present dans scenarios.yml ET dans data/seed/v2/ est refuse a
+# l'import (code de scenario en double, scripts/import_seed.py).
+SLOTS_AUTORISES.update({code: meta.slots for code, meta in PILOTES_METADATA.items()})
+DEFAULT_COOLDOWN_MATCHES_BY_SCENARIO.update(
+    {code: meta.cooldown_matches for code, meta in PILOTES_METADATA.items()}
+)
 
 
 def _sha256(path: Path) -> str:
