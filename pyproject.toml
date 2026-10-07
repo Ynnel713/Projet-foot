@@ -39,7 +39,10 @@ packages = ["src/ligue1sim"]
 # hors de src/ligue1sim -- pas encore un package installable, juste un
 # fichier unique (voir engine/narrative.py) -- pythonpath le rend
 # importable depuis tests/ sans sys.path.insert() disséminé.
-pythonpath = ["engine"]
+# "." (26/09/2026) : même besoin pour api/ (package à la racine, pas dans
+# src/ligue1sim/packages ci-dessus) -- tests/test_serializers.py et
+# tests/test_competitions.py importent `api.serializers`/`api.routers...`.
+pythonpath = ["engine", "."]
 # Brief "mark narrative_player integration tests" (24/09/2026) : diagnostic
 # préalable -- 7 tests de tests/test_narrative_player.py (simulation de 100
 # matchs + rendu complet des frames d'animation) représentent ~99% du temps
