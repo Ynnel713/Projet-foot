@@ -150,7 +150,12 @@ def confederation(path: str, team_name: str) -> str:
 def _as_national_player(base: Player, country: str) -> Player:
     """Le joueur `base` (tel que chargé pour son club réel), transposé dans
     le contexte de la sélection `country` -- poste, notes, style de jeu
-    inchangés, seuls club/championnat changent."""
+    inchangés, seuls club/championnat changent. Reprend aussi les champs
+    d'enrichissement FM26 (attributs déjà recalés par weighted_attributes,
+    postes FM, taille, pied fort, preferred moves, valeur marchande, pied)
+    -- oubliés jusqu'au 28/09/2026, ce qui faisait perdre le profil complet
+    de tout joueur vu via sa sélection nationale (Coupe du Monde) malgré un
+    profil correctement enrichi côté club."""
     return Player(
         prenom=base.prenom,
         nom=base.nom,
@@ -163,6 +168,13 @@ def _as_national_player(base: Player, country: str) -> Player:
         poste_secondaire=base.poste_secondaire,
         categorie=base.categorie,
         id=base.id,
+        attributes=base.attributes,
+        postes_fm=base.postes_fm,
+        taille_fm=base.taille_fm,
+        weak_foot=base.weak_foot,
+        preferred_moves=base.preferred_moves,
+        valeur_marchande=base.valeur_marchande,
+        pied=base.pied,
     )
 
 

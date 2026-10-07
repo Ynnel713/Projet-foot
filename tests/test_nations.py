@@ -1,5 +1,6 @@
 from ligue1sim.lineup import pick_best_formation
-from ligue1sim.nations import load_national_teams
+from ligue1sim.nations import _as_national_player, load_national_teams
+from ligue1sim.players import Player
 
 DATA_PATH = "data/joueurs.xlsx"
 
@@ -43,3 +44,32 @@ def test_national_team_squad_can_field_a_full_lineup():
     lineup = pick_best_formation(team)
 
     assert len(lineup.players) == 11
+
+
+def test_as_national_player_keeps_the_enriched_fm26_fields():
+    # Régression du 28/09/2026 : ces champs (attributs recalés côté club par
+    # players.weighted_attributes, postes FM, taille, pied fort, preferred
+    # moves, valeur marchande, pied) disparaissaient entièrement à la
+    # transposition en sélection nationale -- tout joueur vu via sa
+    # sélection (Coupe du Monde) retombait sur "Caractéristiques FM26 pas
+    # encore récupérées", même déjà pleinement enrichi côté club.
+    base = Player(
+        prenom="Test", nom="Player", nationalite="France", age=25, poste="AG",
+        note=80.0, club="Real Club", championnat="Ligue 1", id=1,
+        attributes={"Pace": 88}, postes_fm="AMR", taille_fm=180,
+        weak_foot=3.0, preferred_moves="Cuts Inside",
+        valeur_marchande=20.0, pied="D",
+    )
+
+    national = _as_national_player(base, "France")
+
+    assert national.attributes == {"Pace": 88}
+    assert national.postes_fm == "AMR"
+    assert national.taille_fm == 180
+    assert national.weak_foot == 3.0
+    assert national.preferred_moves == "Cuts Inside"
+    assert national.valeur_marchande == 20.0
+    assert national.pied == "D"
+    # Le reste continue à changer comme avant (club/championnat).
+    assert national.club == "France"
+    assert national.championnat != base.championnat

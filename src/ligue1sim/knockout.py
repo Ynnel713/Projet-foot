@@ -5,6 +5,7 @@ manches.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -29,6 +30,12 @@ class Tie:
     # que le vainqueur a dû être départagé (voir `_resolve_tiebreak`) --
     # sans ça, l'écran ne montre qu'un score nul sans expliquer qui a gagné.
     decided_by_penalties: bool = False
+    # Scoreline de tirs au but (vainqueur, perdant dans l'ordre home/away,
+    # voir `_penalty_shootout_score`) -- purement cosmétique : le vainqueur
+    # est déjà décidé par `_resolve_tiebreak`, ceci habille juste l'écran
+    # ("TAB : 4-5" plutôt qu'un simple "X qualifié", retour terrain du
+    # 29/09/2026). None sauf si `decided_by_penalties`.
+    penalty_score: tuple[int, int] | None = None
 
     def __post_init__(self) -> None:
         if self.away is None:
@@ -53,6 +60,9 @@ class Tie:
 class Round:
     number: int
     ties: list[Tie]
+    # Libellé d'affichage imposé (ex. « Barrages » de la Ligue des Champions, dont les 8 confrontations ne sont pas des « 8es de
+    # finale ») ; None : l'UI le déduit du nombre de confrontations (finale, 1/2, 1/4, 1/8e...).
+    label: str | None = None
 
     @property
     def played(self) -> bool:
@@ -62,6 +72,10 @@ class Round:
 @dataclass
 class Bracket:
     rounds: list[Round]
+    # Passage au tour suivant PERSONNALISÉ : {numéro du tour qui vient de se jouer : fonction construisant le tour suivant}. Sert aux
+    # formats où les vainqueurs ne s'apparient pas « deux par deux » (Ligue des Champions : les vainqueurs des barrages rencontrent les
+    # 8 premiers de la phase de ligue). Vide par défaut : comportement inchangé.
+    advance_hooks: dict[int, Callable[[Round], Round]] = field(default_factory=dict)
 
     @property
     def current_round(self) -> Round:
@@ -120,10 +134,23 @@ def simulate_tie(
     home_club, away_club = clubs_by_name[tie.home], clubs_by_name[tie.away]
     for leg_index in range(legs):
         host, guest = (home_club, away_club) if leg_index % 2 == 0 else (away_club, home_club)
-        unavailable_host = suspensions.unavailable_players(host.name) | injuries.unavailable_players(host.name)
-        unavailable_guest = suspensions.unavailable_players(guest.name) | injuries.unavailable_players(guest.name)
+        suspended_host, injured_host = suspensions.unavailable_players(host.name), injuries.unavailable_players(host.name)
+        suspended_guest, injured_guest = suspensions.unavailable_players(guest.name), injuries.unavailable_players(guest.name)
+        unavailable_host = suspended_host | injured_host
+        unavailable_guest = suspended_guest | injured_guest
 
-        host_goals, guest_goals, events = simulate_match(host, guest, context, unavailable_host, unavailable_guest, form)
+        host_goals, guest_goals, events = simulate_match(
+            host,
+            guest,
+            context,
+            unavailable_host,
+            unavailable_guest,
+            form,
+            suspended_home=suspended_host,
+            injured_home=injured_host,
+            suspended_away=suspended_guest,
+            injured_away=injured_guest,
+        )
         tie.legs.append(Match(host.name, guest.name, host_goals, guest_goals, events))
 
         new_suspensions, new_injuries = ([], []) if events is None else collect_new_bans(events)
@@ -137,6 +164,8 @@ def simulate_tie(
     else:
         tie.winner = _resolve_tiebreak(home_club, away_club)
         tie.decided_by_penalties = True
+        winner_score, loser_score = _penalty_shootout_score()
+        tie.penalty_score = (winner_score, loser_score) if tie.winner == tie.home else (loser_score, winner_score)
 
 
 def simulate_round(
@@ -162,6 +191,11 @@ def advance_round(bracket: Bracket) -> None:
     if len(current.ties) == 1:
         return
 
+    hook = bracket.advance_hooks.get(current.number)
+    if hook is not None:
+        bracket.rounds.append(hook(current))
+        return
+
     winners = [t.winner for t in current.ties]
     next_ties = [Tie(home=winners[i], away=winners[i + 1]) for i in range(0, len(winners), 2)]
     bracket.rounds.append(Round(number=current.number + 1, ties=next_ties))
@@ -174,6 +208,23 @@ def _resolve_tiebreak(home_club: Club, away_club: Club) -> str:
     diff = (club_strength(home_club) - club_strength(away_club)) / 10
     p_home = 1 / (1 + 10 ** (-diff))
     return home_club.name if np.random.random() < p_home else away_club.name
+
+
+# Scorelines de tirs au but réalistes (vainqueur, perdant), pondérées vers
+# les issues les plus courantes (5-4, 5-3, 4-3...) avec une petite part de
+# séances longues (6-5, 7-6) -- voir _penalty_shootout_score.
+_COMMON_SHOOTOUT_SCORES = [(5, 4), (5, 3), (4, 3), (5, 2), (4, 2), (3, 2), (3, 1)]
+_RARE_SHOOTOUT_SCORES = [(6, 5), (7, 6), (4, 1), (5, 1)]
+_SHOOTOUT_POOL = _COMMON_SHOOTOUT_SCORES * 4 + _RARE_SHOOTOUT_SCORES
+
+
+def _penalty_shootout_score() -> tuple[int, int]:
+    """Scoreline plausible (vainqueur, perdant) pour l'affichage -- pas une
+    vraie séance tirée tir par tir : le vainqueur est déjà décidé par
+    `_resolve_tiebreak`, cette fonction habille juste le résultat (voir
+    Tie.penalty_score)."""
+    index = int(np.random.randint(len(_SHOOTOUT_POOL)))
+    return _SHOOTOUT_POOL[index]
 
 
 def _next_power_of_two(n: int) -> int:

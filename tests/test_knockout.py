@@ -69,3 +69,41 @@ def test_full_tournament_reaches_a_champion_with_byes():
 
     assert bracket.champion in by_name
     assert len(bracket.rounds) == 3  # 6 clubs -> tableau de 8 -> 3 tours
+
+
+class TestPenaltyShootoutScore:
+    """Scoreline de tirs au but affichée quand une confrontation est
+    départagée (voir Tie.penalty_score/_penalty_shootout_score, retour
+    terrain du 29/09/2026 : 'TAB : 4-5' plutôt qu'un simple 'X qualifié')."""
+
+    def test_decided_by_penalties_always_has_a_winner_ahead_penalty_score(self, monkeypatch):
+        import ligue1sim.knockout as knockout_module
+
+        # Force un match nul à chaque manche pour garantir le passage par
+        # les tirs au but, quel que soit le tirage réel du moteur.
+        monkeypatch.setattr(knockout_module, "simulate_match", lambda *a, **k: (0, 0, None))
+
+        clubs = _make_clubs(2)
+        by_name = {c.name: c for c in clubs}
+        context = LeagueContext.from_clubs(clubs)
+        tie = generate_bracket(clubs).rounds[0].ties[0]
+
+        simulate_tie(tie, 1, by_name, context)
+
+        assert tie.decided_by_penalties
+        assert tie.penalty_score is not None
+        home_pens, away_pens = tie.penalty_score
+        winner_pens = home_pens if tie.winner == tie.home else away_pens
+        loser_pens = away_pens if tie.winner == tie.home else home_pens
+        assert winner_pens > loser_pens
+
+    def test_no_penalty_score_when_not_decided_by_penalties(self):
+        clubs = _make_clubs(2)
+        by_name = {c.name: c for c in clubs}
+        context = LeagueContext.from_clubs(clubs)
+        tie = generate_bracket(clubs).rounds[0].ties[0]
+
+        simulate_tie(tie, 1, by_name, context)
+
+        if not tie.decided_by_penalties:
+            assert tie.penalty_score is None

@@ -5,6 +5,7 @@ st.session_state.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 import streamlit as st
@@ -45,6 +46,22 @@ class CustomCompetition:
     # place de "Compétition Perso" dans les titres d'écran -- None (par
     # défaut) : comportement inchangé.
     label: str | None = None
+    # Nombre de manches par confrontation à élimination directe (hors
+    # finale), et pour la finale seule -- distincts de `legs` (qui reste la
+    # phase de championnat/poules) depuis l'assistant Compétition Perso du
+    # 28/09/2026 ("championnat + élimination" / "élimination directe" avec un
+    # réglage séparé par phase). `None` (par défaut) : reprend `legs`, donc
+    # AUCUN changement de comportement pour tout appelant existant
+    # (Ligue des Champions, Coupe du Monde, anciens appels) qui ne les passe
+    # pas -- voir `_knockout_legs`/`_final_legs`.
+    knockout_legs: int | None = None
+    final_legs: int | None = None
+    # Construit le tableau à partir des poules terminées, à la place de `generate_bracket(qualifiés)` (têtes de série par force) :
+    # Ligue des Champions (barrages puis 8es avec les 8 premiers de la phase de ligue). None : comportement inchangé.
+    knockout_builder: Callable[[list[Group]], Bracket] | None = None
+    # True : la « phase de poules » est la PHASE DE LIGUE de la Ligue des Champions (un seul classement de 36 clubs, 8 journées) ;
+    # l'UI affiche alors les zones de qualification (8 directs, 16 barragistes) au lieu de « 2 premiers de chaque poule ».
+    league_phase: bool = False
 
     context: LeagueContext = field(init=False)
     season: Season | None = field(default=None, init=False)
@@ -98,15 +115,29 @@ class CustomCompetition:
         self.groups_matchday += 1
 
     def start_knockout_from_groups(self) -> None:
+        if self.knockout_builder is not None:
+            self.bracket = self.knockout_builder(self.groups)
+            return
         qualifiers = qualified_from_groups(self.groups)
         self.bracket = generate_bracket(qualifiers)
 
     # --- phase à élimination directe (KNOCKOUT, et HYBRID après les groupes) ---
 
+    @property
+    def _round_legs(self) -> int:
+        """Nombre de manches à appliquer au tour COURANT du tableau : celui
+        de la finale si un seul tie reste à jouer (voir `Bracket.is_complete`,
+        même détection), celui des autres tours sinon."""
+        is_final_round = len(self.bracket.current_round.ties) == 1
+        knockout_legs = self.knockout_legs if self.knockout_legs is not None else self.legs
+        if is_final_round:
+            return self.final_legs if self.final_legs is not None else knockout_legs
+        return knockout_legs
+
     def simulate_bracket_round(self) -> None:
         clubs_by_name = {c.name: c for c in self.clubs}
         simulate_round(
-            self.bracket.current_round, self.legs, clubs_by_name, self.context, self.suspensions, self.injuries, self.form
+            self.bracket.current_round, self._round_legs, clubs_by_name, self.context, self.suspensions, self.injuries, self.form
         )
 
     def advance_bracket_round(self) -> None:
