@@ -14,6 +14,7 @@ const COUNTRY_NAMES = { "gb-eng": "Angleterre" };
 export default function Leagues() {
   const [leagues, setLeagues] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [launching, setLaunching] = useState(null);
   const [drilldown, setDrilldown] = useState(null); // country_code en cours de détail, ou null
   const navigate = useNavigate();
@@ -22,6 +23,12 @@ export default function Leagues() {
   useEffect(() => {
     getLeagues()
       .then(setLeagues)
+      // Sans ce catch, un échec réseau/API (ex. data/joueurs.xlsx verrouillé
+      // côté serveur) laissait `leagues` vide et l'écran se retrouvait
+      // silencieusement blanc -- aucun message, juste le fond d'écran (retour
+      // terrain du 28/09/2026, "écran noir"). Toujours montrer QUELQUE CHOSE
+      // à l'utilisateur plutôt qu'un échec muet.
+      .catch(() => setError("Impossible de charger les championnats. Réessaie dans un instant."))
       .finally(() => setLoading(false));
   }, []);
 
@@ -41,7 +48,7 @@ export default function Leagues() {
     setLaunching(championnat);
     try {
       const status = await createCompetition({ format: "LEAGUE", legs: 2, source: "league", championnat });
-      setActiveCompetition(status.id, status.championnat, status.format);
+      setActiveCompetition(status.id, status.championnat);
       navigate(`/competition/${status.id}/simulate`);
     } finally {
       setLaunching(null);
@@ -60,8 +67,9 @@ export default function Leagues() {
       </button>
 
       {loading && <p className="text-sm text-gray-400">Chargement des championnats…</p>}
+      {!loading && error && <p className="text-sm text-red-400">{error}</p>}
 
-      {!loading && !drilldownLeagues && (
+      {!loading && !error && !drilldownLeagues && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {groups.map(([code, group]) =>
             group.length === 1 ? (

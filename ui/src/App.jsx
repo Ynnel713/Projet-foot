@@ -6,6 +6,8 @@ import Nations from "./routes/Nations";
 import CustomCompetition from "./routes/CustomCompetition";
 import Simulation from "./routes/Simulation";
 import Standings from "./routes/Standings";
+import TeamRoster from "./routes/TeamRoster";
+import PlayerPage from "./routes/PlayerPage";
 import PitchView from "./routes/PitchView";
 import Groups from "./routes/Groups";
 import Bracket from "./routes/Bracket";
@@ -22,6 +24,8 @@ export default function App() {
           <Route path="/custom" element={<CustomCompetition />} />
           <Route path="/competition/:id/simulate" element={<Simulation />} />
           <Route path="/competition/:id/standings" element={<Standings />} />
+          <Route path="/competition/:id/clubs/:clubName" element={<TeamRoster />} />
+          <Route path="/competition/:id/clubs/:clubName/players/:playerName" element={<PlayerPage />} />
           <Route path="/competition/:id/pitch" element={<PitchView />} />
           <Route path="/competition/:id/groups" element={<Groups />} />
           <Route path="/competition/:id/bracket" element={<Bracket />} />

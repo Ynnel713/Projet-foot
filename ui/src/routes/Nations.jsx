@@ -38,7 +38,7 @@ export default function Nations() {
     setCreating(true);
     try {
       const status = await createCompetition({ format: "LEAGUE", legs, source: "custom", club_names: selected });
-      setActiveCompetition(status.id, status.championnat, status.format);
+      setActiveCompetition(status.id, status.championnat);
       navigate(`/competition/${status.id}/simulate`);
     } finally {
       setCreating(false);

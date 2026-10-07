@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ListOrdered } from "lucide-react";
+import { ListOrdered, LoaderCircle } from "lucide-react";
 import {
   getCompetition,
   getStandings,
+  getLeaderboards,
   getMatches,
   simulateCurrent,
   advanceJournee,
@@ -19,22 +20,32 @@ export default function Simulation() {
   const [status, setStatus] = useState(null);
   const [matches, setMatches] = useState([]);
   const [standings, setStandings] = useState([]);
+  const [leaderboards, setLeaderboards] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [launching, setLaunching] = useState(false); // « Lancement du live… » (simulation de la journée avant le premier live)
   const [error, setError] = useState(null);
 
   // Charge le calendrier de la journée courante -- joué ou pas encore : les
   // matchs à venir doivent être visibles AVANT simulation (MatchRow affiche
   // "– –" pour un match non joué), pas seulement une fois le résultat connu.
+  // Buteurs/passeurs (`leaderboards`) rechargés à CHAQUE action de simulation
+  // (voir handleToggle/handleSimulateAll ci-dessous), pas seulement ici --
+  // sans ça, le mini classement affiché à côté restait figé sur les buts de
+  // la toute première journée jusqu'à la fin de la saison (anomalie
+  // remontée le 28/09/2026 : meilleur buteur à 2 buts après une saison
+  // complète).
   const load = useCallback(async () => {
     try {
       const s = await getCompetition(id);
-      const [journeeMatches, standingsRows] = await Promise.all([
+      const [journeeMatches, standingsRows, boards] = await Promise.all([
         getMatches(id, s.current_journee),
         getStandings(id),
+        getLeaderboards(id),
       ]);
       setStatus(s);
       setMatches(journeeMatches);
       setStandings(standingsRows);
+      setLeaderboards(boards);
     } catch {
       setError("Compétition introuvable.");
     }
@@ -62,6 +73,7 @@ export default function Simulation() {
         setStatus(res.status);
         setMatches(res.matches_played); // désormais joués, avec les scores -- tous affichés d'un coup
         setStandings(res.standings);
+        setLeaderboards(await getLeaderboards(id)); // buts/passes de cette journée viennent de s'ajouter
       }
     } catch {
       setError("Échec de l'opération.");
@@ -75,10 +87,14 @@ export default function Simulation() {
     setError(null);
     try {
       const res = await simulateAll(id);
-      const lastJournee = await getMatches(id, res.status.current_journee);
+      const [lastJournee, boards] = await Promise.all([
+        getMatches(id, res.status.current_journee),
+        getLeaderboards(id),
+      ]);
       setStatus(res.status);
       setMatches(lastJournee);
       setStandings(res.standings);
+      setLeaderboards(boards);
     } catch {
       setError("Échec de la simulation.");
     } finally {
@@ -120,41 +136,80 @@ export default function Simulation() {
           </div>
         )}
 
-        <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-1.5 pb-16">
+        <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-1.5">
           {matches.map((m) => (
-            <MatchRow key={`${m.home}-${m.away}`} match={m} onClick={() => openPitch(m)} />
+            <MatchRow key={`${m.home}-${m.away}`} match={m} onClick={() => openPitch(m)} onLive={() => openLive(m)} />
           ))}
         </div>
+
+        {/* Boutons d'action sous la liste des matchs plutôt qu'en survol
+            flottant -- retour terrain du 28/09/2026, pour que le geste
+            "simuler" reste ancré au flux de la journée au lieu de flotter
+            par-dessus le classement condensé à droite. Centrés, agrandis. */}
+        {!status?.is_over && (
+          <div className="shrink-0 pt-2 flex items-center justify-center gap-3">
+            <button
+              onClick={handleSimulateAll}
+              disabled={loading}
+              className="h-11 px-5 rounded-full bg-surface border border-white/10 text-sm font-medium text-gray-300
+                         hover:bg-white/5 active:scale-95 transition-transform disabled:opacity-40"
+            >
+              Simuler tout
+            </button>
+            <button
+              onClick={handleToggle}
+              disabled={loading}
+              className="h-14 px-8 rounded-full bg-accent text-white font-semibold text-base shadow-lg shadow-accent/30
+                         hover:brightness-110 active:scale-95 transition-transform disabled:opacity-40"
+            >
+              {loading ? "…" : buttonLabel}
+            </button>
+          </div>
+        )}
       </div>
 
-      <MiniStandings standings={standings} className="hidden md:flex w-56 shrink-0" />
+      <MiniStandings standings={standings} leaderboards={leaderboards} className="hidden md:flex w-[39rem] shrink-0" />
 
-      {!status?.is_over && (
-        <div className="fixed bottom-20 right-3 flex flex-col items-end gap-2">
-          <button
-            onClick={handleSimulateAll}
-            disabled={loading}
-            className="h-9 px-4 rounded-full bg-surface border border-white/10 text-xs font-medium text-gray-300
-                       active:scale-95 transition-transform disabled:opacity-40"
-          >
-            Simuler tout
-          </button>
-          <button
-            onClick={handleToggle}
-            disabled={loading}
-            className="h-12 px-5 rounded-full bg-accent text-white font-medium shadow-lg shadow-accent/30
-                       active:scale-95 transition-transform disabled:opacity-40"
-          >
-            {loading ? "…" : buttonLabel}
-          </button>
+      {launching && (
+        <div role="status" className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-black/70 backdrop-blur-sm">
+          <LoaderCircle size={36} className="animate-spin text-live" />
+          <span className="text-sm font-semibold text-slate-100">Lancement du live...</span>
         </div>
       )}
     </div>
   );
 
-  function openPitch(match) {
+  // Bouton LIVE d'une ligne, toujours actif. Match déjà joué : on ouvre directement son live (rejoué à l'horloge accélérée).
+  // Match pas encore joué : le moteur simule la journée d'un bloc (les résultats des autres matchs alimentent les alertes buts du live),
+  // puis on ouvre le live du match. `replay=1` : le live part de la minute 0.
+  async function openLive(match) {
+    if (match.played) {
+      openPitch(match, "live");
+      return;
+    }
+    setLaunching(true);
+    setError(null);
+    try {
+      const res = await simulateCurrent(id);
+      setStatus(res.status);
+      setMatches(res.matches_played);
+      setStandings(res.standings);
+      setLeaderboards(await getLeaderboards(id));
+      const played = res.matches_played.find((m) => m.home === match.home && m.away === match.away);
+      openPitch(played ?? match, "live", res.status.current_journee);
+    } catch {
+      setError("Échec du lancement du live.");
+    } finally {
+      setLaunching(false);
+    }
+  }
+
+  // `tab` : "live" ouvre l'écran match sur l'onglet commentaire en direct ; sinon onglet terrain (par défaut).
+  function openPitch(match, tab, journee = status.current_journee) {
     if (!match.played) return;
-    const qs = new URLSearchParams({ journee: status.current_journee, home: match.home, away: match.away });
+    const qs = new URLSearchParams({ journee, home: match.home, away: match.away });
+    if (tab) qs.set("tab", tab);
+    if (tab === "live") qs.set("replay", "1");
     navigate(`/competition/${id}/pitch?${qs}`);
   }
 }

@@ -8,9 +8,7 @@ import { create } from "zustand";
 export const useGameStore = create((set) => ({
   activeCompetitionId: null,
   activeCompetitionLabel: null,
-  activeCompetitionFormat: null, // "LEAGUE" | "HYBRID" -- adapte la barre du bas (voir BottomNav)
   followedClub: null, // mis en évidence dans classement/résultats
-  setActiveCompetition: (id, label, format) =>
-    set({ activeCompetitionId: id, activeCompetitionLabel: label, activeCompetitionFormat: format }),
+  setActiveCompetition: (id, label) => set({ activeCompetitionId: id, activeCompetitionLabel: label }),
   setFollowedClub: (name) => set({ followedClub: name }),
 }));

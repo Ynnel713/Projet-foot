@@ -1,9 +1,12 @@
-import { ChevronUp, ChevronDown, Minus } from "lucide-react";
+import { ChevronUp, ChevronDown, Minus, Star } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useGameStore } from "../../store/useGameStore";
+import ClubLogo from "../common/ClubLogo";
 
-export default function StandingsTable({ rows }) {
+export default function StandingsTable({ rows, competitionId }) {
   const followedClub = useGameStore((s) => s.followedClub);
   const setFollowedClub = useGameStore((s) => s.setFollowedClub);
+  const navigate = useNavigate();
 
   return (
     <div className="overflow-x-auto">
@@ -29,7 +32,7 @@ export default function StandingsTable({ rows }) {
             return (
               <tr
                 key={row.club}
-                onClick={() => setFollowedClub(isFollowed ? null : row.club)}
+                onClick={() => navigate(`/competition/${competitionId}/clubs/${encodeURIComponent(row.club)}`)}
                 className={`cursor-pointer ${
                   isFollowed ? "bg-gold/15 text-gold" : i % 2 === 0 ? "bg-white/[0.02]" : "bg-transparent"
                 }`}
@@ -38,7 +41,22 @@ export default function StandingsTable({ rows }) {
                   <RankChange value={row.rank_change} />
                 </td>
                 <td className="px-2 py-1.5 tabular-nums text-gray-400">{row.rank}</td>
-                <td className="px-2 py-1.5 font-medium truncate max-w-[9rem] sm:max-w-none">{row.club}</td>
+                <td className="px-2 py-1.5 font-medium truncate max-w-[9rem] sm:max-w-none">
+                  <span className="inline-flex items-center gap-1.5">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFollowedClub(isFollowed ? null : row.club);
+                      }}
+                      className={`shrink-0 ${isFollowed ? "text-gold" : "text-gray-600 hover:text-gray-400"}`}
+                      aria-label={isFollowed ? `Ne plus suivre ${row.club}` : `Suivre ${row.club}`}
+                    >
+                      <Star size={13} fill={isFollowed ? "currentColor" : "none"} />
+                    </button>
+                    <ClubLogo clubName={row.club} size={18} />
+                    {row.club}
+                  </span>
+                </td>
                 <td className="px-2 py-1.5 text-center tabular-nums">{row.played}</td>
                 <td className="px-2 py-1.5 text-center tabular-nums">{row.won}</td>
                 <td className="px-2 py-1.5 text-center tabular-nums">{row.drawn}</td>

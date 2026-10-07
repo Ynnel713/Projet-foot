@@ -1,6 +1,5 @@
 import { useLocation } from "react-router-dom";
 import Header from "./Header";
-import BottomNav from "./BottomNav";
 
 export default function AppShell({ children }) {
   // La vue terrain a besoin de toute la hauteur possible (terrain horizontal
@@ -16,14 +15,13 @@ export default function AppShell({ children }) {
     // Le padding en env(safe-area-inset-*) protège des zones d'encoche/
     // indicateur home, qui passent sur les CÔTÉS en paysage sur iPhone.
     <div
-      className="h-dvh w-dvw flex flex-col bg-bg text-gray-100 overflow-hidden"
+      className="app-bg h-dvh w-dvw flex flex-col text-gray-100 overflow-hidden"
       style={{ paddingLeft: "env(safe-area-inset-left)", paddingRight: "env(safe-area-inset-right)" }}
     >
       {!hideHeader && <Header />}
       {/* min-h-0 est indispensable : sans lui, un enfant flex-column ne se
           contracte jamais sous son contenu et overflow-y-auto ne fait rien. */}
       <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative">{children}</main>
-      <BottomNav />
     </div>
   );
 }
