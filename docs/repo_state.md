@@ -222,7 +222,7 @@ Les trois parties se trouvent dans les mêmes fichiers (`events.py`, `simulation
   - **Tests** : intervalle de confiance bootstrap à 95 % de la différence de moyennes ; Kolmogorov-Smirnov bi-échantillon sur le total de buts ; χ² sur l'histogramme ; proportions pour les queues.
   - **Seuil proposé** (à confirmer par le propriétaire) : écart **significatif** si l'IC 95 % de Δ(moyenne du total) exclut 0 **et** |Δ| ≥ 0,03 but/match (≈ 1 %), ou si ΔP(queue) ≥ 0,5 point, ou si Δ(victoires à domicile) ≥ 1 point. **Si significatif : décision explicite** (accepter, recalibrer `COACH_INFLUENCE`/`STYLE_*`, ou abandonner) **avant** tout commit.
 - **Critère de vérification (chaque partie)** : §8.1.
-- **Statut** : 3a **fait** (`f5e37de`) et 3b **fait** (`3070543`, scission validée par le propriétaire) ; **3c BLOQUÉ** jusqu'à la mesure et à la décision D2.
+- **Statut** : 3a **fait** (`f5e37de`) et 3b **fait** (`3070543`, scission validée par le propriétaire) ; **3c BLOQUÉ** : mesure D2 faite (§8.11), décision du propriétaire en attente.
 
 #### Lot 4 — API
 - **Périmètre exact** : `api/schemas.py`, `api/serializers.py`, `api/live_commentary.py` (nouveau), `api/nlg_live.py` (nouveau), `api/routers/competitions.py` (hunks restants : `get_roster`, routes `/bracket/*` pour le format KNOCKOUT, `knockout_legs`/`final_legs`, libellé du match), `api/main.py` (hunk `/media/faces` restant) ; tests `tests/test_competitions.py`, `test_serializers.py`, `test_live_commentary.py`, `test_nlg_live.py` (nouveaux).
@@ -240,7 +240,7 @@ Les trois parties se trouvent dans les mêmes fichiers (`events.py`, `simulation
 
 ### 8.5 Ordre d'exécution recommandé
 
-**3a (fait, `f5e37de`)** → **Lot 1 (fait, `7fa9f68`)** → **Lot 2 (fait, `ddfad09`)** → **3b (fait, `3070543`)** → `D2` (mesure + décision) → **3c** → **Lot 4** → **Lot 5**. *(Révisé le 07/10/2026 ; voir §8.7, §8.8 et §8.10.)*
+**3a (fait, `f5e37de`)** → **Lot 1 (fait, `7fa9f68`)** → **Lot 2 (fait, `ddfad09`)** → **3b (fait, `3070543`)** → **mesure D2 (faite, §8.11)** → **décision du propriétaire sur 3c (en attente)** → **3c** → **Lot 4** → **Lot 5**. *(Révisé le 07/10/2026 ; voir §8.7, §8.8, §8.10 et §8.11.)*
 Les éléments qui ne dépendent d'aucune décision (3a, le Lot 1 scindé, éventuellement 3b après validation de la scission) peuvent passer avant `D1`. 3c reste **bloqué** par D2.
 
 ### 8.6 Hors séquence — `PROJET_SIMULAFOOT.md` (non commité, bloqué)
@@ -345,3 +345,102 @@ Le document (881 lignes, mis à jour le 28/09/2026) **n'est pas cohérent avec l
 **5. Superposition 3a + Lot 1 + Lot 2 + 3b** (`git archive HEAD` propre, `pytest` nu) : **1010 passés, 5 ignorés, 12 désélectionnés**. Avec le venv NLG local rendu accessible à l'archive (jonction retirée ensuite) : **1015 passés, 0 ignoré, 12 désélectionnés**.
 
 **6. D2 reste en attente du propriétaire — mesure comparative obligatoire avant tout commit de 3c.** Précision de méthode pour cette mesure : le **bras A (sans modulateurs) est le `HEAD` actuel, qui inclut 3b et donc les dispositifs du nouveau classeur de coachs** ; il ne faut pas comparer à l'ancien `HEAD` d'avant 3b, sous peine de mêler l'effet des modulateurs à celui des données de coachs mesuré ci-dessus. Le protocole du §8.4 (partie 3c) est inchangé par ailleurs. Aucun commit de 3c, du Lot 4 ni du Lot 5.
+
+### 8.11 Avancement du 07/10/2026 (suite) — décision D3 et mesure D2 (3c non commité)
+
+**Séquence mise à jour : 3a (fait) → Lot 1 (fait) → Lot 2 (fait) → 3b (fait) → mesure D2 (faite) → décision du propriétaire sur 3c (en attente) → 3c → Lot 4 → Lot 5.** Ce paragraphe présente des chiffres ; **il ne conclut pas sur l'opportunité de commiter 3c**, décision qui revient au propriétaire.
+
+**1. Décision D3 — dispositifs clubs conservés.** Le propriétaire a tranché : les dispositifs préférentiels du nouveau classeur de coachs (6 clubs de Ligue 1, §8.10) sont **conservés tels quels**, sans neutralisation ; l'effet est une caractéristique produit assumée. Entrée documentaire : `docs/known_issues.md`, « Décision propriétaire — dispositifs clubs conservés (D3) » (statut : résolu). **Écart consigné** : la consigne citait « +0,062 but par match (+2,3 %) » et « 7 % des matchs des clubs concernés » ; mes mesures donnent **+0,062 = bruit** (écart entre deux graines du `HEAD` seul) et **4,25 %** des matchs des 6 clubs (le hash de 3b est `3070543`, non `38705437`). Les chiffres mesurés sont ceux de l'entrée D3.
+
+**2. Protocole de la mesure D2** (exécutée sur **archives jetables** `git archive`, jamais sur l'arbre de travail) :
+- **Bras A** = `HEAD` actuel (`be168d3`) : 3a, Lots 1 et 2 et 3b inclus (dispositifs du nouveau classeur de coachs appliqués), **aucun modulateur**.
+- **Bras B** = A + le `simulation.py` de l'arbre de travail, soit **3c seul** : 4 hunks (import `coaches`, constantes `COACH_INFLUENCE` = 0,3 avec bornes 0,99–1,01 et `STYLE_*` avec bornes cumulées 0,95–1,05, application des modulateurs aux lambdas dans `_draw_score`, fonctions `_coach_modifier` / `_style_attack_modifier` / `_style_defense_modifier`). Le bras B ne diffère de A que par ce fichier (vérifié par `diff -rq`). 3c n'est **pas** commité.
+- **Simulation** : Ligue 1 réelle (18 clubs, 306 affiches ordonnées jouées en boucle, `simulate_match` complet), **mêmes graines et même ordre dans A et B**. Deux modes : **apparié** (graines `random` et `numpy` refixées avant chaque match ; 1 000 matchs, puis 30 612 en supplément) et **flux continu** (une graine, matchs à la suite ; 1 000 matchs graine 1, puis 30 612 matchs graine 7 en supplément).
+- **Mesures** : moyenne, écart-type et effectifs de matchs à 0, 1, 2, 3, 4, 5+ buts, pour le domicile, l'extérieur et le total.
+- **Tests** : **Welch** sur la moyenne (p-valeur par approximation normale, IC 95 % de la différence) ; **Kolmogorov-Smirnov** bi-échantillon sur la distribution (p-valeur asymptotique, conservatrice sur données discrètes) ; **écart apparié** match à match (test t apparié, IC 95 %), seulement pertinent en mode apparié. Seuil : p < 0,05.
+- **Hasard** : le code de 3c n'appelle aucune fonction aléatoire (0 occurrence de `random` dans les lignes ajoutées), mais il modifie les lambdas, donc le **nombre de tirages consommés** par `poisson` et par la génération des événements ; en flux continu, les deux bras **ne partagent donc pas** la même séquence aléatoire au-delà du premier match différent (voir le pourcentage de scores identiques ci-dessous). C'est pourquoi le mode apparié est le plus informatif pour l'effet de 3c.
+- **Limites** : seule la Ligue 1 est mesurée (pas les autres championnats ni les sélections) ; un seul jeu d'affiches (306, jouées en boucle).
+
+**3. Résultats bruts** (sortie du script, inchangée).
+
+```
+======================================================================================================================
+MODE APPARIÉ — graine (random + numpy) refixée avant CHAQUE match (mêmes graines, même ordre) — 1000 matchs par bras
+======================================================================================================================
+          bras   moyenne       σ        0       1       2       3       4      5+   (effectifs de matchs avec k buts)
+Domicile  A       1.5780  1.2937      205     341     253     115      54      32
+Domicile  B       1.6080  1.3115      196     348     248     114      58      36
+Extérieur A       1.1670  1.1271      324     358     194      90      23      11
+Extérieur B       1.1850  1.1428      325     346     198      98      20      13
+Total     A       2.7450  1.6908       65     187     239     211     146     152
+Total     B       2.7930  1.7038       61     187     231     207     153     161
+
+            Δ moyenne (B−A)         IC 95 % Welch   p Welch    KS D     p KS   Δ apparié       IC 95 % apparié  p apparié
+Domicile            +0.0300  [ -0.0842 ;  +0.1442]     0.607   0.009    1.000     +0.0300  [ +0.0160 ;  +0.0440]     0.0000
+Extérieur           +0.0180  [ -0.0815 ;  +0.1175]     0.723   0.011    1.000     +0.0180  [ -0.0014 ;  +0.0374]     0.0687
+Total               +0.0480  [ -0.1008 ;  +0.1968]     0.527   0.016    0.999     +0.0480  [ +0.0243 ;  +0.0717]     0.0001
+
+scores identiques match à match : 919/1000 = 91.90 %  (différents : 81 = 8.10 %) ; buteurs/minutes identiques : 919/1000
+répartition des écarts de buts totaux B−A par match : -4: 1, -2: 1, -1: 10, +0: 943, +1: 32, +2: 9, +3: 2, +4: 2
+
+======================================================================================================================
+MODE FLUX CONTINU — une graine (1), 1 000 matchs à la suite (séquence aléatoire partagée : elle diverge dès qu'un match consomme un nombre différent de tirages) — 1000 matchs par bras
+======================================================================================================================
+          bras   moyenne       σ        0       1       2       3       4      5+   (effectifs de matchs avec k buts)
+Domicile  A       1.5540  1.2980      236     308     232     144      58      22
+Domicile  B       1.5820  1.3301      234     304     238     129      69      26
+Extérieur A       1.2270  1.1683      325     327     199     103      38       8
+Extérieur B       1.2570  1.1594      291     367     194     108      25      15
+Total     A       2.7810  1.6649       73     170     220     213     175     149
+Total     B       2.8390  1.7269       67     178     212     210     169     164
+
+            Δ moyenne (B−A)         IC 95 % Welch   p Welch    KS D     p KS   Δ apparié       IC 95 % apparié  p apparié
+Domicile            +0.0280  [ -0.0872 ;  +0.1432]     0.634   0.015    1.000     +0.0280  [ -0.0810 ;  +0.1370]     0.6147
+Extérieur           +0.0300  [ -0.0720 ;  +0.1320]     0.564   0.034    0.603     +0.0300  [ -0.0639 ;  +0.1239]     0.5314
+Total               +0.0580  [ -0.0907 ;  +0.2067]     0.444   0.015    1.000     +0.0580  [ -0.0840 ;  +0.2000]     0.4233
+
+scores identiques match à match : 98/1000 = 9.80 %  (différents : 902 = 90.20 %) ; buteurs/minutes identiques : 28/1000
+répartition des écarts de buts totaux B−A par match : -6: 7, -5: 20, -4: 33, -3: 63, -2: 108, -1: 172, +0: 180, +1: 177, +2: 110, +3: 59, +4: 38, +5: 20, +6: 10, +7: 1, +8: 2
+
+======================================================================================================================
+SUPPLÉMENT (puissance) — MODE APPARIÉ — 30612 matchs par bras
+======================================================================================================================
+          bras   moyenne       σ        0       1       2       3       4      5+   (effectifs de matchs avec k buts)
+Domicile  A       1.5902  1.2969     6615    9676    7680    4021    1768     852
+Domicile  B       1.6125  1.3100     6517    9582    7682    4077    1852     902
+Extérieur A       1.1812  1.1130     9663   10917    6293    2647     811     281
+Extérieur B       1.1986  1.1273     9549   10871    6322    2688     870     312
+Total     A       2.7713  1.6692     1956    5380    7244    6758    4610    4664
+Total     B       2.8112  1.6873     1886    5291    7143    6742    4683    4867
+
+            Δ moyenne (B−A)         IC 95 % Welch   p Welch    KS D     p KS   Δ apparié       IC 95 % apparié  p apparié
+Domicile            +0.0224  [ +0.0017 ;  +0.0430]     0.034   0.006    0.582     +0.0224  [ +0.0201 ;  +0.0246]     0.0000
+Extérieur           +0.0175  [ -0.0003 ;  +0.0352]     0.054   0.005    0.796     +0.0175  [ +0.0142 ;  +0.0207]     0.0000
+Total               +0.0399  [ +0.0133 ;  +0.0664]     0.003   0.009    0.165     +0.0399  [ +0.0359 ;  +0.0438]     0.0000
+
+scores identiques match à match : 28550/30612 = 93.26 %  (différents : 2062 = 6.74 %) ; buteurs/minutes identiques : 28543/30612
+répartition des écarts de buts totaux B−A par match : -5: 2, -4: 5, -3: 18, -2: 40, -1: 291, +0: 29030, +1: 950, +2: 167, +3: 62, +4: 33, +5: 11, +6: 3
+
+======================================================================================================================
+SUPPLÉMENT (puissance) — MODE FLUX CONTINU, graine 7 — 30612 matchs par bras
+======================================================================================================================
+          bras   moyenne       σ        0       1       2       3       4      5+   (effectifs de matchs avec k buts)
+Domicile  A       1.5957  1.3015     6564    9778    7511    4110    1779     870
+Domicile  B       1.6055  1.3155     6587    9682    7498    4151    1741     953
+Extérieur A       1.1771  1.1205     9798   10800    6331    2543     836     304
+Extérieur B       1.1977  1.1233     9596   10717    6464    2684     846     305
+Total     A       2.7728  1.6777     1972    5338    7384    6628    4593    4697
+Total     B       2.8032  1.6852     1881    5321    7211    6732    4663    4804
+
+            Δ moyenne (B−A)         IC 95 % Welch   p Welch    KS D     p KS   Δ apparié       IC 95 % apparié  p apparié
+Domicile            +0.0098  [ -0.0109 ;  +0.0305]     0.354   0.003    1.000     +0.0098  [ -0.0100 ;  +0.0296]     0.3331
+Extérieur           +0.0206  [ +0.0029 ;  +0.0384]     0.023   0.009    0.140     +0.0206  [ +0.0035 ;  +0.0378]     0.0185
+Total               +0.0304  [ +0.0038 ;  +0.0571]     0.025   0.009    0.151     +0.0304  [ +0.0043 ;  +0.0566]     0.0227
+
+scores identiques match à match : 2102/30612 = 6.87 %  (différents : 28510 = 93.13 %) ; buteurs/minutes identiques : 204/30612
+répartition des écarts de buts totaux B−A par match : -9: 5, -8: 14, -7: 70, -6: 224, -5: 535, -4: 1153, -3: 2117, -2: 3564, -1: 4705, +0: 5376, +1: 4887, +2: 3635, +3: 2296, +4: 1199, +5: 539, +6: 214, +7: 61, +8: 16, +9: 1, +10: 1
+```
+
+**4. Arbre de travail** : restauré à l'identique après la mesure (la mesure n'a rien modifié) : `git status` (55 entrées), hash du diff `HEAD` hors docs (`a22f5cb5b83b51ff`) et hash de `simulation.py` (`4b44301c…`, avec 3c) identiques avant et après ; `PROJET_SIMULAFOOT.md` inchangé et non commité.
+
+**5. Statut** : mesure D2 **faite**. **Décision du propriétaire sur 3c : en attente.** Aucun commit de 3c, du Lot 4 ni du Lot 5 ; aucun modulateur dans `HEAD`.

@@ -160,3 +160,27 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun n'est corrig
 **Priorité.** Immédiate : avant tout push ou partage du dépôt.
 
 **Statut.** Ouvert.
+
+
+---
+
+# Décisions du propriétaire (entrées documentaires — ce ne sont pas des tickets)
+
+## Décision propriétaire — dispositifs clubs conservés (D3)
+
+**Description factuelle.** Le commit 3b (`3070543`) remplace `data/entraineurs.xlsx` par `data/Coachs-Simulafoot.xlsx`. En Ligue 1, ce nouveau classeur change le **dispositif préférentiel de 6 clubs sur 18** par rapport à `HEAD` d'avant 3b : Le Havre (4-2-3-1 → 4-3-3 Attacking), Paris FC (3-4-2-1 → 4-2-3-1), Lens (4-2-3-1 → 3-4-2-1), Angers (4-3-1-2 → 4-2-3-1), Troyes et Paris Saint-Germain (4-3-3 → 4-3-3 Attacking). Les notes de secteur de composition (utilisées par le modèle de Poisson) changent pour 4 d'entre eux ; elles sont inchangées pour Troyes et le PSG. Effet **sur le résultat sportif** : les lambdas de ces clubs, et marginalement ceux des autres (via les moyennes de la ligue qui les normalisent). Aucun modulateur coach/styles n'est en jeu (lot 3c non commité).
+
+**Mesure** (simulations sur archives jetables, Ligue 1 réelle, `HEAD` avant 3b contre `HEAD` + 3b ; détail au §8.10 de `docs/repo_state.md`) :
+- **1 000 matchs, flux continu** : écart de moyenne de buts totale **+0,017** (graine 1) et **−0,017** (graine 2), du même ordre que le bruit de référence ; aucun test significatif.
+- **30 612 matchs, flux continu** : Δ buts/match total **−0,0131 ± 0,0267** (IC 95 %), non significatif.
+- **30 612 matchs, mode apparié** (même graine à chaque match) : Δ buts/match total **−0,0042** (IC 95 % apparié [−0,0067 ; −0,0018]).
+- **Part des matchs dont le score diffère, en apparié** : **2,73 %** des matchs de la Ligue 1 (837 / 30 612) ; **4,25 %** des matchs impliquant au moins l'un des 6 clubs (739 / 17 404) ; **0,74 %** des matchs n'en impliquant aucun (98 / 13 208).
+- **Effet par club** (points par match, 30 612 matchs, flux continu) : de l'ordre du bruit (Le Havre +0,025, Lens +0,028, Paris FC −0,003 ; bruit des 12 clubs non modifiés : de −0,029 à +0,035).
+
+**Précision sur les chiffres de la consigne du propriétaire (écart consigné, non recopié).** La consigne du 07/10/2026 citait « +0,062 but par match (+2,3 %) » et « 7 % des matchs des clubs concernés ». Les mesures ci-dessus donnent autre chose : **+0,062 est l'écart de moyenne entre deux graines différentes du `HEAD` seul** (A graine 1 2,764 − A graine 2 2,702), c'est-à-dire du **bruit**, pas l'effet des données de coachs ; la part de scores différents pour les matchs des 6 clubs est de **4,25 %** (5,67 % pour les 4 clubs à notes de secteur modifiées), et **0,74 %** concerne les matchs **sans** aucun de ces clubs, non la Ligue 1 entière (2,73 %).
+
+**Décision.** Le propriétaire a tranché : **les dispositifs issus de `data/Coachs-Simulafoot.xlsx` sont conservés tels quels, aucune neutralisation** ; l'effet est une **caractéristique produit assumée**. La décision est enregistrée telle qu'elle a été communiquée ; les chiffres mesurés ci-dessus sont fournis pour information.
+
+**Référence.** `docs/repo_state.md` §8.10 (vérification `np.random` et effet « données ») et §8.11 (baseline de la mesure D2).
+
+**Statut.** **Résolu — décision propriétaire, 07/10/2026.** Ne crée aucun ticket ouvert ; les tickets 1 à 8 ne sont pas modifiés.
