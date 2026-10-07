@@ -222,7 +222,7 @@ Les trois parties se trouvent dans les mêmes fichiers (`events.py`, `simulation
   - **Tests** : intervalle de confiance bootstrap à 95 % de la différence de moyennes ; Kolmogorov-Smirnov bi-échantillon sur le total de buts ; χ² sur l'histogramme ; proportions pour les queues.
   - **Seuil proposé** (à confirmer par le propriétaire) : écart **significatif** si l'IC 95 % de Δ(moyenne du total) exclut 0 **et** |Δ| ≥ 0,03 but/match (≈ 1 %), ou si ΔP(queue) ≥ 0,5 point, ou si Δ(victoires à domicile) ≥ 1 point. **Si significatif : décision explicite** (accepter, recalibrer `COACH_INFLUENCE`/`STYLE_*`, ou abandonner) **avant** tout commit.
 - **Critère de vérification (chaque partie)** : §8.1.
-- **Statut** : 3a **fait** (`f5e37de`) et 3b **fait** (`3070543`, scission validée par le propriétaire) ; **3c BLOQUÉ** : mesure D2 faite (§8.11), décision du propriétaire en attente.
+- **Statut** : 3a **fait** (`f5e37de`) et 3b **fait** (`3070543`, scission validée par le propriétaire) ; **3c BLOQUÉ** : mesure D2 (§8.11) et balayage d'amplitudes (§8.12) faits, décision du propriétaire sur l'amplitude (ou l'abandon) en attente.
 
 #### Lot 4 — API
 - **Périmètre exact** : `api/schemas.py`, `api/serializers.py`, `api/live_commentary.py` (nouveau), `api/nlg_live.py` (nouveau), `api/routers/competitions.py` (hunks restants : `get_roster`, routes `/bracket/*` pour le format KNOCKOUT, `knockout_legs`/`final_legs`, libellé du match), `api/main.py` (hunk `/media/faces` restant) ; tests `tests/test_competitions.py`, `test_serializers.py`, `test_live_commentary.py`, `test_nlg_live.py` (nouveaux).
@@ -240,7 +240,7 @@ Les trois parties se trouvent dans les mêmes fichiers (`events.py`, `simulation
 
 ### 8.5 Ordre d'exécution recommandé
 
-**3a (fait, `f5e37de`)** → **Lot 1 (fait, `7fa9f68`)** → **Lot 2 (fait, `ddfad09`)** → **3b (fait, `3070543`)** → **mesure D2 (faite, §8.11)** → **décision du propriétaire sur 3c (en attente)** → **3c** → **Lot 4** → **Lot 5**. *(Révisé le 07/10/2026 ; voir §8.7, §8.8, §8.10 et §8.11.)*
+**3a (fait, `f5e37de`)** → **Lot 1 (fait, `7fa9f68`)** → **Lot 2 (fait, `ddfad09`)** → **3b (fait, `3070543`)** → **mesure D2 (faite, §8.11)** → **décision D4 (option C : balayage d'amplitudes)** → **balayage d'amplitudes (fait, §8.12)** → **décision du propriétaire sur l'amplitude de 3c (en attente)** → **3c (commit à l'amplitude retenue, ou abandon)** → **Lot 4** → **Lot 5**. *(Révisé le 07/10/2026 ; voir §8.7, §8.8, §8.10, §8.11 et §8.12.)*
 Les éléments qui ne dépendent d'aucune décision (3a, le Lot 1 scindé, éventuellement 3b après validation de la scission) peuvent passer avant `D1`. 3c reste **bloqué** par D2.
 
 ### 8.6 Hors séquence — `PROJET_SIMULAFOOT.md` (non commité, bloqué)
@@ -444,3 +444,174 @@ répartition des écarts de buts totaux B−A par match : -9: 5, -8: 14, -7: 70,
 **4. Arbre de travail** : restauré à l'identique après la mesure (la mesure n'a rien modifié) : `git status` (55 entrées), hash du diff `HEAD` hors docs (`a22f5cb5b83b51ff`) et hash de `simulation.py` (`4b44301c…`, avec 3c) identiques avant et après ; `PROJET_SIMULAFOOT.md` inchangé et non commité.
 
 **5. Statut** : mesure D2 **faite**. **Décision du propriétaire sur 3c : en attente.** Aucun commit de 3c, du Lot 4 ni du Lot 5 ; aucun modulateur dans `HEAD`.
+
+### 8.12 Avancement du 07/10/2026 (suite) — décision D4 (option C) et balayage d'amplitudes de 3c
+
+**Séquence mise à jour : 3a (fait) → Lot 1 (fait) → Lot 2 (fait) → 3b (fait) → mesure D2 (faite) → décision D4 (option C) → balayage d'amplitudes (fait) → décision du propriétaire sur l'amplitude de 3c (en attente) → 3c (commit à l'amplitude retenue, ou abandon) → Lot 4 → Lot 5.** Ce paragraphe présente des chiffres ; **il ne conclut pas sur l'amplitude à adopter**, décision qui revient au propriétaire. 3c n'est **pas** commité.
+
+**1. Décision D4 — option C retenue.** Le propriétaire a décidé de **conserver les modulateurs de 3c** et de **tester des amplitudes renforcées** pour obtenir un effet statistiquement mesurable sur la distribution des scores ; si aucune amplitude testée ne produit d'effet significatif, retour au propriétaire avec une recommandation d'abandon. Fait de contexte : les commentaires de `simulation.py` (section « Coach », 29/09/2026) consignent une demande explicite de garder cette influence « très légère » ; D4 lui est postérieure.
+
+**2. Correction de hash demandée — non appliquée, vérifiée.** La demande citait le hash de 3b comme `30785437` et celui de la mesure D2 comme `acb1f71a` (après un `38705437` du rapport précédent). **Aucun de ces trois hash n'existe** (`git rev-parse --verify` : aucun commit). Les hash réels sont : **3b = `3070543`** (`307054370d97abe9c2b1d7fb3b425262cbcbfb35`) et **commit documentaire de la mesure D2 = `ac4b1f7`**. Le §8.11 et `docs/known_issues.md` contiennent **déjà** `3070543` ; les « corriger » vers un hash inexistant aurait introduit une erreur. **Aucune modification de contenu n'a été faite au §8.11 ni dans `known_issues.md`.**
+
+**3. Protocole.** Archives jetables `git archive` du `HEAD` actuel (`ac4b1f7`, 3b inclus, dispositifs clubs conservés — D3), **jamais l'arbre de travail**.
+- **Bras A** : `HEAD`, **aucun modulateur** (baseline).
+- **Bras B0** (ajouté comme référence, non demandé) : A + `simulation.py` de l'arbre de travail, soit 3c à l'amplitude actuelle (**×1** : coach ±1 %, styles ±5 %).
+- **Bras B1 (×3)** : coach ±3 %, styles ±15 %. **Bras B2 (×6)** : coach ±6 %, styles ±30 %.
+- **Amplification** : le facteur multiplie uniformément `COACH_INFLUENCE` **et** les `STYLE_*`, **ainsi que l'écart des deux bornes à 1** (`_COACH_MODIFIER_BOUNDS`, `_STYLE_MODIFIER_BOUNDS`) : sans cela, la borne de ±1 % annulerait l'effet de `COACH_INFLUENCE` ×3. Les formules d'application aux lambdas sont **inchangées**. Valeurs vérifiées par import dans chaque archive :
+
+| Bras | `COACH_INFLUENCE` | bornes coach | `STYLE_*` (attaque+ / défense− / défense+ / attaque− / pressing / contre-attaque) | bornes styles |
+|---|---|---|---|---|
+| A | (absent) | — | — | — |
+| B0 ×1 | 0,3 | 0,99–1,01 | 0,02 / 0,015 / 0,02 / 0,015 / 0,01 / 0,03 | 0,95–1,05 |
+| B1 ×3 | 0,9 | 0,97–1,03 | 0,06 / 0,045 / 0,06 / 0,045 / 0,03 / 0,09 | 0,85–1,15 |
+| B2 ×6 | 1,8 | 0,94–1,06 | 0,12 / 0,09 / 0,12 / 0,09 / 0,06 / 0,18 | 0,70–1,30 |
+
+- **Simulation** : Ligue 1 réelle (18 clubs, 306 affiches ordonnées jouées en boucle), `simulate_match` complet, **mêmes graines et même ordre dans tous les bras**. **Mode apparié privilégié** : graines `random` et `numpy` refixées avant chaque match (1 000 matchs) ; **mode flux continu** donné pour information (graine 1, 1 000 matchs) ; **supplément de puissance** à 30 612 matchs par bras (apparié, graine 3 ; flux continu, graine 7).
+- **Mesures** : moyenne, écart-type, effectifs de matchs à 0, 1, 2, 3, 4, 5+ buts (domicile, extérieur, total). **Tests** : Welch sur la moyenne (p-valeur par approximation normale, IC 95 %) ; Kolmogorov-Smirnov sur la distribution (p-valeur asymptotique, conservatrice sur données discrètes) ; en plus, test t **apparié** match à match (IC 95 %) ; seuil p < 0,05 ; pourcentage de scores identiques.
+- **Limites** : Ligue 1 seulement ; un seul jeu de 306 affiches.
+
+**4. Résultats bruts** (sortie du script, inchangée).
+
+```
+============================================================================================================================
+MODE APPARIÉ (graine random+numpy refixée avant chaque match ; mêmes graines, même ordre) — 1000 matchs par bras
+============================================================================================================================
+          bras   moyenne       σ        0       1       2       3       4      5+   (effectifs de matchs avec k buts)
+Domicile  A       1.5780  1.2937      205     341     253     115      54      32
+Domicile  B0      1.6080  1.3115      196     348     248     114      58      36
+Domicile  B1      1.6600  1.3668      196     335     247     115      64      43
+Domicile  B2      1.7410  1.4401      191     323     243     117      72      54
+Extérieur A       1.1670  1.1271      324     358     194      90      23      11
+Extérieur B0      1.1850  1.1428      325     346     198      98      20      13
+Extérieur B1      1.2250  1.1789      320     338     198     105      24      15
+Extérieur B2      1.2800  1.2301      314     329     194     113      32      18
+Total     A       2.7450  1.6908       65     187     239     211     146     152
+Total     B0      2.7930  1.7038       61     187     231     207     153     161
+Total     B1      2.8850  1.7734       61     181     219     203     157     179
+Total     B2      3.0210  1.8607       60     171     204     209     137     219
+
+          A vs    Δ moyenne         IC 95 % Welch   p Welch    KS D     p KS   Δ apparié       IC 95 % apparié  p apparié
+Domicile  B0        +0.0300  [ -0.0842 ;  +0.1442]     0.607   0.009    1.000     +0.0300  [ +0.0160 ;  +0.0440]     0.0000
+Domicile  B1        +0.0820  [ -0.0346 ;  +0.1986]     0.168   0.021    0.979     +0.0820  [ +0.0574 ;  +0.1066]     0.0000
+Domicile  B2        +0.1630  [ +0.0430 ;  +0.2830]     0.008   0.042    0.334     +0.1630  [ +0.1279 ;  +0.1981]     0.0000
+Extérieur B0        +0.0180  [ -0.0815 ;  +0.1175]     0.723   0.011    1.000     +0.0180  [ -0.0014 ;  +0.0374]     0.0687
+Extérieur B1        +0.0580  [ -0.0431 ;  +0.1591]     0.261   0.024    0.933     +0.0580  [ +0.0240 ;  +0.0920]     0.0008
+Extérieur B2        +0.1130  [ +0.0096 ;  +0.2164]     0.032   0.039    0.425     +0.1130  [ +0.0651 ;  +0.1609]     0.0000
+Total     B0        +0.0480  [ -0.1008 ;  +0.1968]     0.527   0.016    0.999     +0.0480  [ +0.0243 ;  +0.0717]     0.0001
+Total     B1        +0.1400  [ -0.0119 ;  +0.2919]     0.071   0.038    0.459     +0.1400  [ +0.0987 ;  +0.1813]     0.0000
+Total     B2        +0.2760  [ +0.1202 ;  +0.4318]     0.001   0.067    0.021     +0.2760  [ +0.2169 ;  +0.3351]     0.0000
+
+scores identiques A vs B0 : 919/1000 =  91.90 %  (différents   8.10 %) | écart de buts totaux : médiane +0, |écart| ≥ 2 : 15 matchs
+scores identiques A vs B1 : 801/1000 =  80.10 %  (différents  19.90 %) | écart de buts totaux : médiane +0, |écart| ≥ 2 : 51 matchs
+scores identiques A vs B2 : 661/1000 =  66.10 %  (différents  33.90 %) | écart de buts totaux : médiane +0, |écart| ≥ 2 : 113 matchs
+
+============================================================================================================================
+MODE FLUX CONTINU (graine 1, matchs à la suite ; INFORMATIF) — 1000 matchs par bras
+============================================================================================================================
+          bras   moyenne       σ        0       1       2       3       4      5+   (effectifs de matchs avec k buts)
+Domicile  A       1.5540  1.2980      236     308     232     144      58      22
+Domicile  B0      1.5820  1.3301      234     304     238     129      69      26
+Domicile  B1      1.6100  1.3385      223     305     251     123      66      32
+Domicile  B2      1.6870  1.4419      234     279     233     141      62      51
+Extérieur A       1.2270  1.1683      325     327     199     103      38       8
+Extérieur B0      1.2570  1.1594      291     367     194     108      25      15
+Extérieur B1      1.1970  1.1556      321     355     188      92      31      13
+Extérieur B2      1.2870  1.2050      306     323     219     103      32      17
+Total     A       2.7810  1.6649       73     170     220     213     175     149
+Total     B0      2.8390  1.7269       67     178     212     210     169     164
+Total     B1      2.8070  1.7392       69     177     230     208     149     167
+Total     B2      2.9740  1.8212       69     161     196     225     151     198
+
+          A vs    Δ moyenne         IC 95 % Welch   p Welch    KS D     p KS   Δ apparié       IC 95 % apparié  p apparié
+Domicile  B0        +0.0280  [ -0.0872 ;  +0.1432]     0.634   0.015    1.000     +0.0280  [ -0.0810 ;  +0.1370]     0.6147
+Domicile  B1        +0.0560  [ -0.0596 ;  +0.1716]     0.342   0.018    0.997     +0.0560  [ -0.0505 ;  +0.1625]     0.3025
+Domicile  B2        +0.1330  [ +0.0128 ;  +0.2532]     0.030   0.033    0.641     +0.1330  [ +0.0198 ;  +0.2462]     0.0213
+Extérieur B0        +0.0300  [ -0.0720 ;  +0.1320]     0.564   0.034    0.603     +0.0300  [ -0.0639 ;  +0.1239]     0.5314
+Extérieur B1        -0.0300  [ -0.1319 ;  +0.0719]     0.564   0.024    0.933     -0.0300  [ -0.1241 ;  +0.0641]     0.5319
+Extérieur B2        +0.0600  [ -0.0440 ;  +0.1640]     0.258   0.023    0.952     +0.0600  [ -0.0395 ;  +0.1595]     0.2370
+Total     B0        +0.0580  [ -0.0907 ;  +0.2067]     0.444   0.015    1.000     +0.0580  [ -0.0840 ;  +0.2000]     0.4233
+Total     B1        +0.0260  [ -0.1232 ;  +0.1752]     0.733   0.018    0.997     +0.0260  [ -0.1136 ;  +0.1656]     0.7151
+Total     B2        +0.1930  [ +0.0401 ;  +0.3459]     0.013   0.049    0.176     +0.1930  [ +0.0417 ;  +0.3443]     0.0124
+
+scores identiques A vs B0 : 98/1000 =   9.80 %  (différents  90.20 %) | écart de buts totaux : médiane +0, |écart| ≥ 2 : 471 matchs
+scores identiques A vs B1 : 95/1000 =   9.50 %  (différents  90.50 %) | écart de buts totaux : médiane +0, |écart| ≥ 2 : 508 matchs
+scores identiques A vs B2 : 51/1000 =   5.10 %  (différents  94.90 %) | écart de buts totaux : médiane +0, |écart| ≥ 2 : 530 matchs
+
+============================================================================================================================
+SUPPLÉMENT (puissance) — MODE APPARIÉ — 30612 matchs par bras
+============================================================================================================================
+          bras   moyenne       σ        0       1       2       3       4      5+   (effectifs de matchs avec k buts)
+Domicile  A       1.5902  1.2969     6615    9676    7680    4021    1768     852
+Domicile  B0      1.6125  1.3100     6517    9582    7682    4077    1852     902
+Domicile  B1      1.6574  1.3397     6339    9418    7644    4175    1997    1039
+Domicile  B2      1.7209  1.3902     6185    9142    7508    4311    2178    1288
+Extérieur A       1.1812  1.1130     9663   10917    6293    2647     811     281
+Extérieur B0      1.1986  1.1273     9549   10871    6322    2688     870     312
+Extérieur B1      1.2358  1.1553     9310   10749    6392    2821     965     375
+Extérieur B2      1.2895  1.2085     9106   10502    6376    2951    1159     518
+Total     A       2.7713  1.6692     1956    5380    7244    6758    4610    4664
+Total     B0      2.8112  1.6873     1886    5291    7143    6742    4683    4867
+Total     B1      2.8931  1.7256     1780    5062    6950    6729    4773    5318
+Total     B2      3.0104  1.7900     1706    4761    6654    6530    4959    6002
+
+          A vs    Δ moyenne         IC 95 % Welch   p Welch    KS D     p KS   Δ apparié       IC 95 % apparié  p apparié
+Domicile  B0        +0.0224  [ +0.0017 ;  +0.0430]     0.034   0.006    0.582     +0.0224  [ +0.0201 ;  +0.0246]     0.0000
+Domicile  B1        +0.0672  [ +0.0463 ;  +0.0881]     0.000   0.019    0.000     +0.0672  [ +0.0630 ;  +0.0714]     0.0000
+Domicile  B2        +0.1307  [ +0.1094 ;  +0.1520]     0.000   0.037    0.000     +0.1307  [ +0.1246 ;  +0.1368]     0.0000
+Extérieur B0        +0.0175  [ -0.0003 ;  +0.0352]     0.054   0.005    0.796     +0.0175  [ +0.0142 ;  +0.0207]     0.0000
+Extérieur B1        +0.0546  [ +0.0366 ;  +0.0726]     0.000   0.017    0.000     +0.0546  [ +0.0488 ;  +0.0604]     0.0000
+Extérieur B2        +0.1083  [ +0.0899 ;  +0.1267]     0.000   0.032    0.000     +0.1083  [ +0.1002 ;  +0.1165]     0.0000
+Total     B0        +0.0399  [ +0.0133 ;  +0.0664]     0.003   0.009    0.165     +0.0399  [ +0.0359 ;  +0.0438]     0.0000
+Total     B1        +0.1218  [ +0.0949 ;  +0.1487]     0.000   0.027    0.000     +0.1218  [ +0.1147 ;  +0.1289]     0.0000
+Total     B2        +0.2390  [ +0.2116 ;  +0.2664]     0.000   0.055    0.000     +0.2390  [ +0.2291 ;  +0.2489]     0.0000
+
+scores identiques A vs B0 : 28550/30612 =  93.26 %  (différents   6.74 %) | écart de buts totaux : médiane +0, |écart| ≥ 2 : 341 matchs
+scores identiques A vs B1 : 24900/30612 =  81.34 %  (différents  18.66 %) | écart de buts totaux : médiane +0, |écart| ≥ 2 : 1307 matchs
+scores identiques A vs B2 : 20602/30612 =  67.30 %  (différents  32.70 %) | écart de buts totaux : médiane +0, |écart| ≥ 2 : 2847 matchs
+
+============================================================================================================================
+SUPPLÉMENT (puissance) — MODE FLUX CONTINU, graine 7 (INFORMATIF) — 30612 matchs par bras
+============================================================================================================================
+          bras   moyenne       σ        0       1       2       3       4      5+   (effectifs de matchs avec k buts)
+Domicile  A       1.5957  1.3015     6564    9778    7511    4110    1779     870
+Domicile  B0      1.6055  1.3155     6587    9682    7498    4151    1741     953
+Domicile  B1      1.6632  1.3510     6403    9367    7461    4326    1972    1083
+Domicile  B2      1.7151  1.3967     6241    9242    7327    4415    2051    1336
+Extérieur A       1.1771  1.1205     9798   10800    6331    2543     836     304
+Extérieur B0      1.1977  1.1233     9596   10717    6464    2684     846     305
+Extérieur B1      1.2336  1.1545     9303   10778    6471    2675     995     390
+Extérieur B2      1.2868  1.2120     9208   10362    6447    2938    1124     533
+Total     A       2.7728  1.6777     1972    5338    7384    6628    4593    4697
+Total     B0      2.8032  1.6852     1881    5321    7211    6732    4663    4804
+Total     B1      2.8968  1.7316     1812    5008    6982    6658    4808    5344
+Total     B2      3.0019  1.8028     1754    4784    6701    6536    4845    5992
+
+          A vs    Δ moyenne         IC 95 % Welch   p Welch    KS D     p KS   Δ apparié       IC 95 % apparié  p apparié
+Domicile  B0        +0.0098  [ -0.0109 ;  +0.0305]     0.354   0.003    1.000     +0.0098  [ -0.0100 ;  +0.0296]     0.3331
+Domicile  B1        +0.0675  [ +0.0464 ;  +0.0885]     0.000   0.020    0.000     +0.0675  [ +0.0474 ;  +0.0875]     0.0000
+Domicile  B2        +0.1194  [ +0.0980 ;  +0.1408]     0.000   0.034    0.000     +0.1194  [ +0.0992 ;  +0.1397]     0.0000
+Extérieur B0        +0.0206  [ +0.0029 ;  +0.0384]     0.023   0.009    0.140     +0.0206  [ +0.0035 ;  +0.0378]     0.0185
+Extérieur B1        +0.0565  [ +0.0385 ;  +0.0746]     0.000   0.017    0.000     +0.0565  [ +0.0392 ;  +0.0738]     0.0000
+Extérieur B2        +0.1097  [ +0.0912 ;  +0.1282]     0.000   0.034    0.000     +0.1097  [ +0.0919 ;  +0.1275]     0.0000
+Total     B0        +0.0304  [ +0.0038 ;  +0.0571]     0.025   0.009    0.151     +0.0304  [ +0.0043 ;  +0.0566]     0.0227
+Total     B1        +0.1240  [ +0.0970 ;  +0.1510]     0.000   0.029    0.000     +0.1240  [ +0.0976 ;  +0.1504]     0.0000
+Total     B2        +0.2291  [ +0.2015 ;  +0.2567]     0.000   0.051    0.000     +0.2291  [ +0.2022 ;  +0.2560]     0.0000
+
+scores identiques A vs B0 : 2102/30612 =   6.87 %  (différents  93.13 %) | écart de buts totaux : médiane +0, |écart| ≥ 2 : 15644 matchs
+scores identiques A vs B1 : 2099/30612 =   6.86 %  (différents  93.14 %) | écart de buts totaux : médiane +0, |écart| ≥ 2 : 15721 matchs
+scores identiques A vs B2 : 2012/30612 =   6.57 %  (différents  93.43 %) | écart de buts totaux : médiane +0, |écart| ≥ 2 : 15864 matchs
+```
+
+**5. Synthèse factuelle des p-valeurs** (tirée des tableaux ci-dessus ; « oui » = p < 0,05), pour le **total de buts** :
+
+| Amplitude | 1 000 matchs apparié : Welch / KS | 1 000 matchs apparié : t apparié | 30 612 matchs apparié : Welch / KS | Δ moyenne totale (1 000 / 30 612) | Scores identiques à A (1 000 / 30 612) |
+|---|---|---|---|---|---|
+| ×1 | non (0,527) / non (0,999) | oui (0,0001) | oui (0,003) / non (0,165) | +0,048 / +0,040 | 91,90 % / 93,26 % |
+| ×3 | non (0,071) / non (0,459) | oui (< 0,0001) | oui (< 0,001) / oui (< 0,001) | +0,140 / +0,122 | 80,10 % / 81,34 % |
+| ×6 | oui (0,001) / oui (0,021) | oui (< 0,0001) | oui (< 0,001) / oui (< 0,001) | +0,276 / +0,239 | 66,10 % / 67,30 % |
+
+Faits constatés (sans recommandation) : au critère demandé (Welch et KS sur 1 000 matchs), seule l'amplitude ×6 est significative sur le total ; à 30 612 matchs, ×3 et ×6 le sont aux deux tests, ×1 seulement au test de Welch. La **moyenne de buts augmente avec l'amplitude** (+1,7 %, +5,1 %, +10,1 % de la moyenne du bras A à 1 000 matchs ; +1,4 %, +4,4 %, +8,6 % à 30 612) : les modulateurs ne sont pas neutres sur la moyenne de buts de la ligue. En flux continu (informatif), seul ×6 est significatif sur le total à 1 000 matchs (Welch p = 0,013).
+
+**6. Arbre de travail** : restauré à l'identique (rien n'a été modifié) : `git status` (55 entrées), hash du diff `HEAD` hors docs (`a22f5cb5b83b51ff`) et hash de `simulation.py` (`4b44301c…`) identiques avant et après ; les constantes de 3c y restent à **±1 % / ±5 %** (`COACH_INFLUENCE = 0.3`, bornes 0,99–1,01 et 0,95–1,05). `PROJET_SIMULAFOOT.md` inchangé et non commité.
+
+**7. Statut** : balayage **fait**. **Décision du propriétaire sur l'amplitude de 3c (ou abandon) : en attente.** Aucun commit de 3c, du Lot 4 ni du Lot 5 ; aucun modulateur dans `HEAD`.
