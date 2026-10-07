@@ -105,3 +105,59 @@ Aucun — tous les éléments demandés (lecteur, point de branchement, fonction
 - [ui/src/api/client.js](../ui/src/api/client.js) — nouvelle fonction d'appel (ex. `getHighlights`), même patron que `getPitchView` (lignes 42-45).
 - Côté backend (hors PWA à proprement parler, mais nécessaire) : [api/routers/competitions.py](../api/routers/competitions.py) — un nouvel endpoint (voisin de `get_pitch_view`, ligne 250-251) qui produirait le JSON des clips pour un match réel — **butte directement sur l'Inconnue 1 ci-dessus** (lineups des matchs déjà joués non conservées).
 - `render/canvas.html` : selon l'option choisie (2.5), soit **non modifié** (A, C réutilisent son JS tel quel), soit remplacé par une réécriture React (B).
+
+### 2.7 — Compo persistée dans le Match (Étape B, 07/10/2026) — Inconnue 1 levée côté moteur
+
+`MatchEvents` porte désormais `home_lineup_snapshot` / `away_lineup_snapshot` (`LineupSnapshot | None`, défaut `None`), pris dans `events.generate_match_events` au moment où la compo est consommée. **Source de vérité unique** : le moteur graphique lit ces compos via `lineup_snapshot.persisted_lineups` / `require_persisted_lineups` et n'appelle jamais `pick_best_formation`. Purement additif : aucun tirage, score ni événement modifié.
+
+**Schéma JSON** (`match_persistence.match_to_json`, `format_version` 1) :
+
+```
+{"format_version": 1, "home", "away", "home_goals", "away_goals",
+ "events": {…MatchEvents existant…,
+   "home_lineup_snapshot": <LineupSnapshot>, "away_lineup_snapshot": <LineupSnapshot>} | null}
+
+LineupSnapshot = {
+  "schema_version": 1,
+  "lineup": {club_name, formation, rating, gk_rating, def_rating, mid_rating, att_rating,
+             bands: {nom: ligne}, substitutes: [],            # le Lineup EXACT de la simulation
+             players: [Player complet ×11]},                 # id, prenom, nom, poste, poste_secondaire, categorie,
+                                                             # note, age, nationalite, attributes (47), preferred_moves, pied…
+  "starters": [{player_id, name, poste, band, x, y} ×11],     # onze de départ ; x/y 0-100 = place_starting_xi(attacking_up=True) à la simulation (trace d'audit)
+  "entered_substitutes": [Player complet, …]                  # remplaçants ayant réellement joué (statut "remplaçant")
+}
+```
+
+Limites assumées (rien d'inventé) : le moteur n'a ni « rôle tactique » ni « consigne individuelle » distincts ; leurs équivalents portés tels quels sont `Player.categorie` (rôle/style) et `Player.preferred_moves`, plus `Lineup.bands` (ligne du dispositif). `enrich_with_background` recalcule ses positions depuis `lineup` (poste + bande) ; `starters[].x/y` ne sont pas lus par lui. Le banc non utilisé n'est pas persisté.
+
+**Règle de fallback (matchs sans snapshot)** : la lecture est tolérante (clé absente → défaut du champ, clé inconnue ignorée, `dataclass_codec`). Un match ancien se recharge sans erreur avec snapshots à `None` ; `persisted_lineups` renvoie alors `None` et `require_persisted_lineups` lève `LineupNotPersistedError`. **Aucun recalcul via `pick_best_formation`** : le moteur graphique doit dégrader (pas d'animation de compo pour ce match). Rappel : aucune persistance disque de Match n'existe encore (`api/store.py` est en mémoire) ; `match_persistence` fournit le format, il n'est pas branché au store.
+
+Fichiers : `src/ligue1sim/{lineup_snapshot,match_persistence,dataclass_codec}.py` (nouveaux), `src/ligue1sim/events.py` (2 champs + 2 lignes) ; tests `tests/test_{lineup_snapshot,dataclass_codec}.py`.
+
+### 2.8 — Chaîne de remplacement, qui est sur le terrain à la minute m (Étape B bis, 07/10/2026)
+
+**Réponse : oui, les remplacements sont déjà dans le Match et persistés — rien n'a été ajouté au `LineupSnapshot` pour eux** (les dupliquer créerait une 2ᵉ source de vérité). `Match.events.substitutions` est une `list[SubstitutionEvent]`, écrite par `events._play_match_squad`, sérialisée avec tout `MatchEvents` par `match_persistence` (test `test_substitution_events_are_persisted_with_the_match`) :
+
+```
+SubstitutionEvent = {club_name: str, player_off: str, player_on: str, minute: int, zone: Zone | None}
+```
+
+Les joueurs y sont identifiés par **nom** (clé d'effectif de tout le moteur, comme `PlayerMatchStat.player_name`), pas par `player_id`. Le nom se résout en `Player` complet via `snapshot.lineup.players` (titulaires) et `snapshot.entered_substitutes` (entrants). Cartons : `Match.events.cards` (`CardEvent{club_name, player, minute, card_type: "yellow"|"second_yellow"|"direct", zone}`), aussi persistés.
+
+**API** : `lineup_snapshot.players_on_pitch(match, club_name, minute) -> list[Player]`, depuis le seul Match rechargé (jamais `pick_best_formation`). Convention : un joueur est présent de `minute_on` à `minute_off` (un remplacement à la minute m fait sortir le sortant et entrer l'entrant dès m, comme `_SquadEntry.minute_range`) ; un rouge (`direct`/`second_yellow`) retire le joueur à sa minute sans remplaçant ; un titulaire blessé sans remplaçant disponible reste sur le terrain (comportement du moteur).
+
+**Incohérence du moteur, à arbitrer (non corrigée, résultat sportif intact)** : remplacements et cartons sont tirés indépendamment, donc un joueur déjà expulsé peut être « remplacé » plus tard (ex. seed 11 : second jaune à la 17ᵉ, remplacé à la 64ᵉ). `players_on_pitch` suit l'événement persisté à la lettre (l'entrant joue à partir de la 64ᵉ, l'équipe reste à 10 jusque-là) ; le cas est figé par `test_engine_substitutes_an_already_sent_off_player_and_the_helper_does_not_hide_it`.
+
+### 2.9 — Déterminisme de `enrich_with_background` (audit + preuve)
+
+Audit du chemin `enrich_with_background` → `_opponent_positions` → `pitch_layout.place_starting_xi` / `_tactical_drift` : pas d'horloge (`time`/`datetime`), pas d'`uuid`, pas de `hash()` builtin, pas de `np.random` ; `random` n'est importé que pour `deterministic_rng` (graine sha256, hors de ce chemin) ; aléas de drift = `_deterministic_unit` (sha256, `PYTHONHASHSEED`-indépendant) ; regroupement par bande via `dict`/`sorted(band)` (ordre d'insertion garanti) ; aucun état global mutable.
+Seul point théorique : `inactive_scorer_ids = set(...)` est itéré, et `sum(scorer_cb_ys)` additionne des flottants dans l'ordre de ce `set` (qui varie avec `PYTHONHASHSEED` pour des ids `str`) — une addition flottante n'étant pas associative, un écart au dernier bit est concevable avec ≥ 3 défenseurs centraux. **Mesuré : aucun écart** (toutes les permutations donnent la même somme sur 6 dispositifs, et séquence identique sous 4 `PYTHONHASHSEED`). Latent, non masqué ; un `sorted(...)` lèverait le doute si on veut le fermer (code d'animation, hors périmètre de cette étape).
+Preuves : `test_enrich_with_background_is_deterministic_on_a_reloaded_lineup` (deux appels, séquences égales) et `test_enrich_with_background_is_stable_across_processes[0|1|42|2026]` (même hash de séquence dans des processus à `PYTHONHASHSEED` différents).
+
+### 2.10 — Match sans `LineupSnapshot` : comportement attendu côté UI
+
+Quand `persisted_lineups(match)` renvoie `None` (match antérieur au snapshot, ou sans `MatchEvents`) :
+- **Pas de crash** : l'API attrape `LineupNotPersistedError` (levée par `require_persisted_lineups` / `players_on_pitch`) ; l'endpoint de clips répond un état explicite, jamais une 500.
+- **Pas de recalcul** (`pick_best_formation` interdit) et **pas de reconstruction approximative** depuis `PlayerMatchStat` (même pas « les titulaires seulement »).
+- **Indisponibilité signalée** : l'animation de composition n'est pas proposée ; le bouton « Voir temps forts » est désactivé (ou remplacé) avec le message **« Animation indisponible : la composition de ce match n'a pas été enregistrée. »** Réponse API suggérée : `{"available": false, "reason": "lineup_not_persisted"}`.
+- Le reste de la fiche match (score, buteurs, cartons, remplacements, notes) reste affiché normalement : seuls les composants qui exigent la compo exacte sont désactivés.

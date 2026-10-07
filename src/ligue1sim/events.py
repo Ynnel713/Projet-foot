@@ -27,6 +27,7 @@ import pandas as pd
 
 from ligue1sim.clubs import Club
 from ligue1sim.lineup import Lineup, bench
+from ligue1sim.lineup_snapshot import LineupSnapshot, snapshot_lineup
 from ligue1sim.pitch_geometry import GRID_COLUMNS, GRID_ROWS, Zone
 from ligue1sim.players import ASSIST_WEIGHT, GOALKEEPER, SCORER_WEIGHT, Player
 
@@ -277,6 +278,14 @@ class MatchEvents:
     cards: list[CardEvent] = field(default_factory=list)
     injuries: list[InjuryEvent] = field(default_factory=list)
     penalties_missed: list[PenaltyMissedEvent] = field(default_factory=list)
+    # Compo réellement alignée par chaque équipe à la simulation (voir
+    # lineup_snapshot.py) -- source de vérité unique pour reconstruire une
+    # animation sans rappeler `pick_best_formation`. Purement additif :
+    # aucun tirage ni résultat sportif n'en dépend. None pour un MatchEvents
+    # construit hors `generate_match_events` (tests) ou relu d'un document
+    # antérieur à ces champs.
+    home_lineup_snapshot: LineupSnapshot | None = None
+    away_lineup_snapshot: LineupSnapshot | None = None
 
 
 def generate_match_events(
@@ -336,6 +345,8 @@ def generate_match_events(
         cards=home_cards + away_cards,
         injuries=home_injuries + away_injuries,
         penalties_missed=penalties_missed,
+        home_lineup_snapshot=snapshot_lineup(home_lineup, [e.player for e in home_squad if not e.started]),
+        away_lineup_snapshot=snapshot_lineup(away_lineup, [e.player for e in away_squad if not e.started]),
     )
 
 
