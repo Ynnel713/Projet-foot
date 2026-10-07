@@ -670,3 +670,32 @@ Résultat de l'essai : `pytest tests --ignore=simulafoot_nlg` → **1044 passed,
 **Séquence mise à jour** : 3a (fait, `f5e37de`) → Lot 1 (fait, `7fa9f68`) → Lot 2 (fait, `ddfad09`) → 3b (fait, `3070543`) → 3c (fait, `8ee3e7d`) → docstrings `coaches.py` (fait, `14070bc`) → Lot 4 (prêt à commiter) → Lot 5 (à faire) → mise à jour de `PROJET_SIMULAFOOT.md` (à faire) → entrée Phase 5 (à faire).
 
 **Statut** : aucun commit du Lot 4, du Lot 5 ni de `PROJET_SIMULAFOOT.md`. Moteur de rendu, mode standalone de `canvas.html`, `PitchView.jsx` et tickets 1, 2, 3, 4, 6, 7 inchangés.
+
+### 8.15 Avancement du 07/10/2026 (suite) — Lot 4 commité, Lot 5 préparé, en-tête de `known_issues.md`
+
+**Commit du Lot 4 : `b0cad857ec1e3e27dcc8780156e53d2951443b35`** (`feat(api): lot 4 -- raisons d'absence, stats de match, fil live et commentaire NLG`). Périmètre : **exactement 10 fichiers** (+1 005 / −14 lignes).
+- Modifiés (4) : `api/main.py`, `api/routers/competitions.py`, `api/schemas.py`, `api/serializers.py`.
+- Nouveaux (2) : `api/live_commentary.py`, `api/nlg_live.py`.
+- Nouveaux tests (4) : `tests/test_competitions.py`, `tests/test_serializers.py`, `tests/test_live_commentary.py`, `tests/test_nlg_live.py`.
+
+Vérification sur `git archive` de l'index puis de `HEAD` : `pytest tests --ignore=simulafoot_nlg` → **1044 passed, 5 skipped, 12 deselected**.
+
+**Superposition complète après le Lot 4** (pile 3a + Lot 1 + Lot 2 + 3b + 3c + docstrings + Lot 4, archive propre de `HEAD`) :
+- sans NLG (venv principal) : **1044 passed, 5 skipped** (12 désélectionnés : tests d'intégration exclus par défaut) ;
+- NLG (`simulafoot_nlg/.venv`, lancé depuis `simulafoot_nlg/`) : **874 passed, 23 skipped**, couverture 99,77 % (seuil de 85 % tenu, voir ticket 10) ;
+- **total : 1 918 passed, 28 skipped. La pile est verte.**
+
+**Lot 5 (refonte UI) : périmètre exact, essai sur archive jetable de `HEAD` (non commité).** 206 entrées sous `ui/` :
+- **22 fichiers suivis modifiés** : `ui/vite.config.js` ; `ui/src/` : `App.jsx`, `index.css`, `api/client.js`, `store/useGameStore.js` ; composants `layout/` (`AppShell`, `Header`), `simulation/` (`MatchRow`, `MiniStandings`, `ScorersLine`), `standings/` (`LeaderboardTable`, `StandingsTable`) ; routes (`Bracket`, `CustomCompetition`, `Groups`, `Home`, `Leaderboards`, `Leagues`, `Nations`, `PitchView`, `Simulation`, `Standings`).
+- **1 fichier supprimé** : `ui/src/components/layout/BottomNav.jsx`.
+- **183 entrées non suivies** : `ui/public/logos/clubs/` (157 fichiers, 9,5 Mo), `ui/public/branding/` (1 fichier, 0,5 Mo), `ui/src/components/common/` (4), `ui/src/components/pitch/` (`GoalAlerts`, `LivePanel`, `PitchField`), `ui/src/components/team/` (7), `ui/src/routes/PlayerPage.jsx`, `ui/src/routes/TeamRoster.jsx`, `ui/src/utils/` (9 : `clubInitials`, `clubSlug`, `fmAttributes`, `fmTier`, `liveReplay`, `nationalityFlags`, `playerName`, `posteCoordinates`, `posteLabels`).
+
+`PitchView.jsx` : la version de l'arbre de travail contient bien les 4 hunks d'animation (import de `MatchAnimation`, état `showAnimation`, bouton « Voir l'animation », `AnimationDialog`) ; la version de `HEAD` les contient **déjà** (7 occurrences), car ils datent de `f70b37d`. Le ticket 7 ne porte donc pas sur ces 4 hunks mais sur le reste de la divergence ; le commit du Lot 5 remplacerait la version de `HEAD` par celle de l'arbre de travail.
+
+Résultat de l'essai (`HEAD` + ces 206 entrées) : `pytest tests --ignore=simulafoot_nlg` → **1044 passed, 5 skipped, 12 deselected** ; `npm run build` (Vite 8.2.2, `node_modules` de l'arbre de travail lié par jonction dans l'archive) → **OK, 2279 modules transformés**, PWA générée ; `npm run lint` → **0 erreur, 5 avertissements** `set-state-in-effect` (`TeamRoster.jsx:35`, `Simulation.jsx:55`, `PlayerPage.jsx:21`, `CustomCompetition.jsx:348`, `PitchView.jsx:93`). **Lot 5 est commitable tel quel : oui**, aucune dépendance manquante identifiée (tout import UI non suivi figure dans le périmètre). Il s'appuie sur les endpoints du Lot 4, désormais commités. Il reste **non commité**. Lecture : le test en dev (§8.4 : lancement sans `.env.local`, modale d'animation sur match animable et sans snapshot) n'a pas été rejoué dans cette étape.
+
+**En-tête de `docs/known_issues.md` corrigé** (paragraphe d'introduction uniquement, aucun ticket modifié) : il liste désormais les tickets ouverts 1, 2, 3, 4, 6, 7, 9, 10 et le ticket 5 fermé. **Le ticket 8 porte encore le statut « Ouvert »** alors que son correctif (`pythonpath = ["engine", "."]`) est commité depuis `2d71e55` : signalé dans l'en-tête, statut à confirmer par le propriétaire.
+
+**Séquence mise à jour** : 3a (fait, `f5e37de`) → Lot 1 (fait, `7fa9f68`) → Lot 2 (fait, `ddfad09`) → 3b (fait, `3070543`) → 3c (fait, `8ee3e7d`) → docstrings `coaches.py` (fait, `14070bc`) → Lot 4 (fait, `b0cad85`) → Lot 5 (prêt à commiter) → mise à jour de `PROJET_SIMULAFOOT.md` (à faire) → entrée Phase 5 (à faire).
+
+**Statut** : aucun commit du Lot 5 ni de `PROJET_SIMULAFOOT.md`. Moteur de rendu, mode standalone de `canvas.html` et tickets 1, 2, 3, 4, 6, 7, 9, 10 inchangés ; 3c intact.

@@ -1,6 +1,6 @@
 # Dette connue — Simulafoot
 
-Tickets ouverts, documentés pour être traités plus tard. **Aucun n'est corrigé à ce jour.** Créé le 07/10/2026 (clôture de l'Étape B, `LineupSnapshot`) ; tickets 4 et 5 ajoutés le même jour (intégration PWA par iframe) ; ticket 5 fermé et tickets 6 à 8 ouverts le même jour (gouvernance, avant Phase 5).
+Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 1, 2, 3, 4, 6, 7, 9 et 10 n'est corrigé à ce jour.** Créé le 07/10/2026 (clôture de l'Étape B, `LineupSnapshot`) ; tickets 4 et 5 ajoutés le même jour (intégration PWA par iframe) ; ticket 5 fermé et tickets 6 à 8 ouverts le même jour (gouvernance, avant Phase 5) ; tickets 9 (`duckdb`) et 10 (couverture NLG) ajoutés le même jour (environnement de test). **État : ouverts 1, 2, 3, 4, 6, 7, 9, 10 ; fermé 5. Ticket 8 :** son tableau et son corps portent encore le statut « Ouvert », mais le correctif qu'il propose (`pythonpath = ["engine", "."]`) est commité depuis `2d71e55` ; son statut est à confirmer et à mettre à jour par le propriétaire (non modifié ici).
 
 | # | Titre | Priorité (avant…) | Statut |
 |---|---|---|---|
