@@ -720,3 +720,32 @@ Résultat de l'essai (`HEAD` + ces 206 entrées) : `pytest tests --ignore=simula
 **Séquence mise à jour** : 3a (fait, `f5e37de`) → Lot 1 (fait, `7fa9f68`) → Lot 2 (fait, `ddfad09`) → 3b (fait, `3070543`) → 3c (fait, `8ee3e7d`) → docstrings `coaches.py` (fait, `14070bc`) → Lot 4 (fait, `b0cad85`) → Lot 5 (fait, `7309172` code, `6377443` assets). **Reste** : mise à jour de `PROJET_SIMULAFOOT.md`, entrée en Phase 5.
 
 **Statut** : `PROJET_SIMULAFOOT.md` non commité. Moteur de rendu, mode standalone de `canvas.html` et 3c inchangés ; tickets 1, 2, 3, 4, 6, 7, 9, 10 non corrigés.
+
+### 8.17 Fin de la phase de résorption du dépôt — 07/10/2026
+
+**Récapitulatif des commits de la phase** (ordre d'exécution ; un document ne peut pas contenir le hash du commit qui l'ajoute : le commit final est celui qui porte ce §8.17, voir `git log`) :
+
+| Étape | Commit | Contenu |
+|---|---|---|
+| 3a | `f5e37de` | raisons d'absence (suspension / blessure) transmises aux événements de match |
+| Lot 1 | `7fa9f68` | compétitions (phase de ligue, tirage par confédération, tirs au but, formats perso) |
+| Lot 2 | `ddfad09` | « Moyenne joueur » fait foi, attributs recalés, `joueurs.xlsx` (décision D1) |
+| 3b | `3070543` | couche coachs et statistiques de match |
+| 3c | `8ee3e7d` | modulateurs coach et styles, amplitudes ×3 (décision D5) |
+| docstrings | `14070bc` | `coaches.py` : la note et les styles sont utilisés depuis 3c |
+| Lot 4 | `b0cad85` | API : fil live, commentaire NLG, statistiques de match (10 fichiers) |
+| Lot 5 code | `7309172` | refonte PWA (48 fichiers) |
+| Lot 5 assets | `6377443` | logos de clubs et branding (158 fichiers) |
+| documentation | `58ca56a`, `2117da0`, … | §8.13 à §8.17, tickets 7 à 11, `PROJET_SIMULAFOOT.md` |
+
+**`PROJET_SIMULAFOOT.md` commité (version 1.1).** Le document décrit désormais ce qui est dans `HEAD`. Corrections vérifiées dans le code, le classeur et les tests : 7 563 joueurs (et non 7 564) ; « Moyenne joueur » en **colonne Q** (colonne P avant l'insertion de « Preferred moves » en O) et colonnes d'attributs R à BL ; 796 `preferred_moves` renseignés ; onglets du classeur (« Statuts » absent, « Preferred moves » et « Caractéristiques » présents) ; `data/Coachs-Simulafoot.xlsx` à la place de `data/entraineurs.xlsx` ; `weighted_attributes(attributes, note, poste)` pondérée par l'importance de l'attribut pour le poste ; formule de résultat relue dans `simulation.py` (exposant 2,6 et bonus domicile 1,35, et non 1,8 et 1,20 ; forme bornée à ±3 %, et non ±15 %) ; nouvelle §14.2 bis (coach et styles, 3c) ; format réel de la Ligue des Champions ; routes de l'API (`/animation`, groupes, tableau) et modules `api/` ; 12 écrans React et composants du Lot 5 ; rendu animé intégré à la PWA par iframe (ADR-005 marqué « contredit dans les faits ») ; compo persistée (`LineupSnapshot`) ; état des tests au 07/10/2026 ; renvoi des tickets à `docs/known_issues.md` (non dupliqués). **Non revérifié et signalé comme tel dans le document** : la mise en forme de la colonne « Moyenne joueur » (§11.3), l'inventaire des scripts (§12), les statistiques de calibrage citées du README, la cohérence chronologique des événements. **Marqué « prévu, non implémenté »** : Phase 5 (habillage visuel), Phases 6 et 7, ADR formel de l'intégration par iframe.
+
+**Tickets** (`docs/known_issues.md`) : **ouverts 1, 2, 3, 4, 6, 9, 10, 11 ; fermés 5 (non reproduit), 7 (résolu, `7309172`) et 8 (résolu, `2d71e55`)**. Le ticket 11 (`ConnectionResetError` Windows 10054, priorité basse) est ouvert dans cette étape, sans correction. Aucun des tickets ouverts n'a été corrigé.
+
+**Vérification de la pile** (archive propre de `HEAD` = `2117da0`, avant les commits de documentation de cette étape) : `pytest tests --ignore=simulafoot_nlg` → 1044 passed, 5 skipped, 12 deselected ; suite NLG (depuis `simulafoot_nlg/`) → 874 passed, 23 skipped ; total 1 918 passés, 28 ignorés ; `npm run build` OK (2279 modules) ; `npm run lint` 0 erreur, 5 avertissements. Les commits de documentation ultérieurs n'ont modifié aucun code (chacun vérifié par `pytest` sur l'index exporté).
+
+**État de l'arbre de travail.** Aucune modification préexistante ne reste non commitée : tout a été commité (lots ci-dessus) ou archivé hors suivi (`scripts/archive/`, ignoré). `git status` ne montre plus que des chemins ignorés par `.gitignore` : `.venv/`, `.pytest_cache/`, les `__pycache__/`, `graphify-out/`, `assets/faces/`, `render/canvas_preview.html` et `render/canvas_player_preview.html` (artefacts générés), `data/nlg_samples/` et `data/nlg_inbox/`, les caches et sauvegardes de `data/`, `scripts/archive/` ; côté UI `ui/node_modules/` et `ui/dist/`.
+
+**Séquence mise à jour** : 3a, Lot 1, Lot 2, 3b, 3c, docstrings, Lot 4, Lot 5 et mise à jour de `PROJET_SIMULAFOOT.md` : **faits**. **Reste : entrée en Phase 5 (habillage visuel)**.
+
+**Statut** : moteur de rendu (`sequence_generator`, `ball`, `motion`, `templates`, `engine/`), mode standalone de `canvas.html` et 3c inchangés pendant toute la phase de résorption ; rien n'a été poussé.

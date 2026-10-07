@@ -1,6 +1,6 @@
 # Dette connue — Simulafoot
 
-Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 1, 2, 3, 4, 6, 7, 9 et 10 n'est corrigé à ce jour.** Créé le 07/10/2026 (clôture de l'Étape B, `LineupSnapshot`) ; tickets 4 et 5 ajoutés le même jour (intégration PWA par iframe) ; ticket 5 fermé et tickets 6 à 8 ouverts le même jour (gouvernance, avant Phase 5) ; tickets 9 (`duckdb`) et 10 (couverture NLG) ajoutés le même jour (environnement de test). **État : ouverts 1, 2, 3, 4, 6, 7, 9, 10 ; fermés 5 (non reproduit) et 8 (résolu en `2d71e55`, vérifié sur archive propre).**
+Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets ouverts (1, 2, 3, 4, 6, 9, 10 et 11) n'est corrigé à ce jour.** Créé le 07/10/2026 (clôture de l'Étape B, `LineupSnapshot`) ; tickets 4 et 5 ajoutés le même jour (intégration PWA par iframe) ; ticket 5 fermé et tickets 6 à 8 ouverts le même jour (gouvernance, avant Phase 5) ; tickets 9 (`duckdb`) et 10 (couverture NLG) ajoutés le même jour (environnement de test). tickets 7 (résolu en `7309172`) et 11 (`ConnectionResetError`) traités le même jour. **État : ouverts 1, 2, 3, 4, 6, 9, 10, 11 ; fermés 5 (non reproduit), 7 (résolu en `7309172`) et 8 (résolu en `2d71e55`, vérifié sur archive propre).**
 
 | # | Titre | Priorité (avant…) | Statut |
 |---|---|---|---|
@@ -10,10 +10,11 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 | 4 | Latence et poids du payload d'animation | Phase 6 (produit / carrière) | Ouvert |
 | 5 | `build_clips` écarte les événements dont le protagoniste n'est pas dans le onze de départ | — | **Fermé** (non reproduit) |
 | 6 | `build_clips` : `continue` silencieux quand `frames` est vide (et docstring obsolète) | Phase 7 (qualité) | Ouvert (priorité basse) |
-| 7 | `PitchView.jsx` : la version commitée diverge de celle de l'arbre de travail | Phase 5 (habillage visuel) | Ouvert |
+| 7 | `PitchView.jsx` : la version commitée diverge de celle de l'arbre de travail | Phase 5 (habillage visuel) | **Fermé — Résolu** (`7309172`) |
 | 8 | `pytest` seul échoue sur un checkout propre de `HEAD` (`ModuleNotFoundError: api`) | Immédiate (avant tout partage / push) | **Fermé — Résolu** (`2d71e55`) |
 | 9 | `pytest` nu échoue à la collecte à cause de `duckdb` absent du venv principal | Phase 7 (qualité / packaging) | Ouvert |
 | 10 | Le seuil de couverture à 85 % sur `engine/` échoue depuis le venv NLG | Phase 7 (qualité / packaging) | Ouvert |
+| 11 | `ConnectionResetError` Windows 10054 dans le journal de l'API | Phase 7 (qualité / packaging) — priorité basse | Ouvert |
 
 ---
 
@@ -143,7 +144,7 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 
 **Priorité.** Avant la Phase 5 (habillage visuel).
 
-**Statut.** Ouvert (gouvernance). Rien n'est corrigé.
+**Statut.** **Fermé — Résolu (07/10/2026).** Commit `7309172` a aligné la version commitée de `PitchView.jsx` sur l'arbre de travail. Les 4 hunks d'animation étaient déjà dans HEAD depuis `f70b37d`. Plus de divergence.
 
 ---
 
@@ -195,6 +196,20 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 **Pistes (non appliquées).** Lancer les tests NLG depuis `simulafoot_nlg/` ; ou redéfinir le périmètre (`--cov=simulafoot_nlg/engine`) ; ou ajuster le seuil. Décision de packaging à prendre.
 
 **Priorité.** Avant la Phase 7 (qualité / packaging).
+
+**Statut.** Ouvert.
+
+---
+
+## 11. `ConnectionResetError` Windows 10054 dans le journal de l'API
+
+**Description.** Pendant le test §8.4 (07/10/2026), le journal d'`uvicorn` (`api.main:app`, port 8000) a affiché un `ConnectionResetError: [WinError 10054]` (« Une connexion existante a dû être fermée par l'hôte distant »), sans effet visible côté client : les pages se sont chargées, la simulation et l'animation ont fonctionné.
+
+**Reproduction.** Non systématique. Apparue une fois au chargement de la liste de matchs depuis la PWA ; le mécanisme exact n'a pas été tracé. Une cause plausible, **non confirmée**, est une connexion fermée par le navigateur en cours de requête (rechargement, annulation, double appel de `StrictMode`) ; l'arrêt d'un serveur en cours de requête produit le même type d'erreur.
+
+**Impact.** Bruit dans le journal ; aucune conséquence fonctionnelle connue.
+
+**Priorité.** Basse, avant la Phase 7 (qualité / packaging).
 
 **Statut.** Ouvert.
 
