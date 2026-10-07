@@ -192,7 +192,7 @@ Superposition **cumulative** des fichiers de l'arbre de travail sur un `git arch
 
 ### 8.3 Décisions préalables (hors périmètre de l'exécutant)
 
-- **D1 — `data/joueurs.xlsx`** (Lot 2). Faits mesurés (lecture seule, comparaison `HEAD` / arbre de travail) : **82 « Moyenne joueur » modifiées** (60 hausses, 22 baisses ; médiane des écarts absolus 1,0 ; 17 écarts ≥ 5 ; maximum +50,5, ex. 19,5 → 70,0 pour « Flores », CA Boca Juniors) ; **1 ligne retirée, qui est un doublon** (7 564 → 7 563 : « Lucas Paquetá », CR Flamengo, note 81, présent deux fois dans `HEAD` ; voir §8.7) ; colonnes `Ability (0-99)` et `Note FM` supprimées ; onglet `Statuts` remplacé par `Preferred moves` ; onglet `Amérique` modifié. À décider : valider tel quel, corriger (ex. le joueur retiré, les notes aberrantes), ou écarter. **Tant que D1 n'est pas prise, le Lot 2 reste bloqué.**
+- **D1 — `data/joueurs.xlsx`** (Lot 2). Faits mesurés (lecture seule, comparaison `HEAD` / arbre de travail) : **82 « Moyenne joueur » modifiées** (60 hausses, 22 baisses ; médiane des écarts absolus 1,0 ; 17 écarts ≥ 5 ; maximum +50,5, ex. 19,5 → 70,0 pour « Flores », CA Boca Juniors) ; **1 ligne retirée, qui est un doublon** (7 564 → 7 563 : « Lucas Paquetá », CR Flamengo, note 81, présent deux fois dans `HEAD` ; voir §8.7) ; colonnes `Ability (0-99)` et `Note FM` supprimées ; onglet `Statuts` remplacé par `Preferred moves` ; onglet `Amérique` modifié. À décider : valider tel quel, corriger (ex. le joueur retiré, les notes aberrantes), ou écarter. **D1 tranchée par le propriétaire le 07/10/2026 (voir §8.8) : les changements sont volontaires et le Lot 2 est commité.**
 - **D2 — calibration** (Lot 3, partie 3c). Voir le protocole de mesure ci-dessous ; **aucun commit du modulateur sans mesure**.
 
 ### 8.4 Lots
@@ -202,14 +202,14 @@ Superposition **cumulative** des fichiers de l'arbre de travail sur un `git arch
 - **Dépendances non suivies à inclure** : aucun fichier non suivi (aucun import vers `match_stats`, `live_commentary`, `nlg_live`). **Dépendances sur d'autres lots (mises en évidence par l'essai)** : (a) **3a** pour `simulate_match(..., suspended_*/injured_*)` ; (b) **Lot 2** pour le test `test_load_national_teams_returns_only_complete_squads_of_18` (données). Options : exécuter le Lot 1 **après** 3a et le Lot 2, ou **scinder** `nations.py`/`test_nations.py` pour laisser dans le Lot 2 ce qui dépend des données (à valider à l'exécution).
 - **Prérequis** : 3a commité ; relecture des règles (phase de ligue, tirage, tirs au but).
 - **Critère de vérification** : §8.1 ; les 9 tests de simulation de tournoi (`test_knockout`, `test_custom_competition`, `test_world_cup`, `test_champions_league`) et `test_nations` verts sur `git archive HEAD`.
-- **Statut** : **prêt à commiter** depuis le commit de 3a, **à condition de scinder `tests/test_nations.py`** (essai à blanc vert, 996 verts avec 3a ; voir §8.7). *(Statut initial « bloqué » : levé par l'essai du 07/10/2026.)*
+- **Statut** : **FAIT** — commit `7fa9f68` (996 verts sur archive propre), avec `tests/test_nations.py` scindé ; voir §8.8. *(Statuts antérieurs : « bloqué », puis « prêt à commiter ».)*
 
 #### Lot 2 — Notes et attributs FM
 - **Périmètre exact** : `src/ligue1sim/players.py`, `clubs.py` ; `scripts/scrape_fminside_attributes.py` ; `app.py` (Streamlit : `player.note` au lieu de `note_fm`) ; tests `tests/test_players.py`, `tests/test_clubs.py` ; **suppression** de `tests/test_scrape_fminside_attributes.py` (teste une fonction retirée) ; **`data/joueurs.xlsx`**, commité **avec** le code, jamais séparément.
 - **Dépendances non suivies à inclure** : aucune.
 - **Prérequis** : **D1** (décision explicite du propriétaire sur `data/joueurs.xlsx`). Produire d'abord un rapport lisible des 82 écarts et du joueur retiré (la liste complète, pas seulement la synthèse de §8.3).
 - **Critère de vérification** : §8.1 ; contrôle que la suite lit bien le classeur commité (pas une copie locale).
-- **Statut** : **BLOQUÉ** tant que D1 n'est pas prise.
+- **Statut** : **FAIT** — D1 tranchée par le propriétaire ; commit `ddfad09` (999 verts sur archive propre) ; voir §8.8. *(Statut antérieur : « bloqué » par D1.)*
 
 #### Lot 3 — Coachs, `match_stats`, moteur *(proposé : scindé en 3a / 3b / 3c)*
 Les trois parties se trouvent dans les mêmes fichiers (`events.py`, `simulation.py`) : elles se séparent **par hunks**. Cette scission **n'a pas été validée par un essai à blanc** (seul l'ensemble 1+2+3 l'a été) ; elle commite des parties du Lot 3 **avant** la mesure D2, sans y inclure les modulateurs : elle exige donc une **validation explicite** du propriétaire.
@@ -240,8 +240,8 @@ Les trois parties se trouvent dans les mêmes fichiers (`events.py`, `simulation
 
 ### 8.5 Ordre d'exécution recommandé
 
-**3a (fait, `f5e37de`)** → **Lot 1** → `D1` → **Lot 2** → **3b** → `D2` (mesure + décision) → **3c** → **Lot 4** → **Lot 5**. *(Révisé le 07/10/2026 : le Lot 1 ne dépend plus du Lot 2 une fois `test_nations.py` scindé ; voir §8.7.)*
-Les éléments qui ne dépendent d'aucune décision (3a, le Lot 1 scindé, éventuellement 3b après validation de la scission) peuvent passer avant `D1`. Le Lot 2 reste **bloqué** par D1 et 3c par D2.
+**3a (fait, `f5e37de`)** → **Lot 1 (fait, `7fa9f68`)** → **Lot 2 (fait, `ddfad09`)** → **3b** → `D2` (mesure + décision) → **3c** → **Lot 4** → **Lot 5**. *(Révisé le 07/10/2026 ; voir §8.7 et §8.8.)*
+Les éléments qui ne dépendent d'aucune décision (3a, le Lot 1 scindé, éventuellement 3b après validation de la scission) peuvent passer avant `D1`. 3c reste **bloqué** par D2.
 
 ### 8.6 Hors séquence — `PROJET_SIMULAFOOT.md` (non commité, bloqué)
 
@@ -271,3 +271,39 @@ Le document (881 lignes, mis à jour le 28/09/2026) **n'est pas cohérent avec l
 **6. Conséquences sur la séquence.** L'ordre recommandé du §8.5 est **modifié pour une raison factuelle** (le Lot 1 n'a plus besoin du Lot 2 une fois `test_nations.py` scindé) : **3a (fait) → Lot 1 → `D1` → Lot 2 → 3b → `D2` → 3c → Lot 4 → Lot 5.** Les autres lots, leurs périmètres et leurs prérequis sont inchangés.
 
 **7. Précision sur D1 (fait nouveau, vérifié en lecture seule).** Le « joueur retiré » n'est **pas** un joueur perdu : `HEAD` contient **deux lignes identiques « Lucas Paquetá », CR Flamengo, note 81** (IDs 2358 et 6252) ; l'arbre de travail supprime la ligne d'ID 6252 (doublon de saisie, documenté par un commentaire de `tests/test_nations.py` du 28/09/2026) et conserve la ligne d'ID 2358 avec une note de **79,0** (modifiée parmi les 82 écarts). Cela réduit la portée de « −1 joueur » à « −1 ligne en double », mais ne règle pas la décision D1 sur les 82 notes modifiées.
+
+### 8.8 Avancement du 07/10/2026 (suite) — Lot 1 et Lot 2 commités, D1 résolue
+
+**Séquence mise à jour : 3a (fait) → Lot 1 (fait) → Lot 2 (fait) → 3b → D2 (mesure + décision) → 3c → Lot 4 → Lot 5.** `PROJET_SIMULAFOOT.md` reste non commité (voir la fin de ce paragraphe).
+
+**Commit Lot 1 — `7fa9f68`** (`feat(competitions): phase de ligue, tirage par confédération, tirs au but, formats perso — lot 1`).
+- **Périmètre exact (9 fichiers)** : `src/ligue1sim/champions_league.py`, `world_cup.py`, `knockout.py`, `custom_competition.py`, `nations.py` ; `tests/test_champions_league.py`, `test_world_cup.py`, `test_knockout.py`, `test_nations.py` (**scindé** : version de `HEAD` + imports + le nouveau test `test_as_national_player_keeps_the_enriched_fm26_fields` ; l'assertion « Brésil 17 » et son commentaire en sont exclus).
+- **Écart avec la consigne initiale (consigné pour mémoire)** : la liste « `nations.py` + `test_nations.py`, aucun autre fichier » ne pouvait pas couvrir le Lot 1 prouvé à 996 verts (les 9 tests qui échouaient dépendent de `knockout.py`, `world_cup.py`, `champions_league.py`, `custom_competition.py`). Le commit contient donc le **périmètre complet du Lot 1 défini au §8.4**, avec la scission annoncée.
+- **Vérification** : `git archive HEAD` propre, `pytest tests` nu → **996 passés, 5 ignorés** (tests NLG, venv absent de l'archive). Les 9 tests qui échouaient avec `simulate_match() got an unexpected keyword argument 'suspended_home'` passent tous.
+
+**Commit Lot 2 — `ddfad09`** (`feat(data): Moyenne joueur fait foi — retrait d'Ability/Note FM, attributs recalés, joueurs.xlsx — lot 2`).
+- **Périmètre exact (9 fichiers)** : `data/joueurs.xlsx` ; code strictement lié : `src/ligue1sim/players.py` (`weighted_attributes`, retrait des champs `ability`/`note_fm`), `src/ligue1sim/clubs.py`, `scripts/scrape_fminside_attributes.py`, `app.py` ; tests `tests/test_players.py`, `tests/test_clubs.py` ; **suppression** de `tests/test_scrape_fminside_attributes.py` ; `tests/test_nations.py` (l'assertion « Brésil 17 » + son commentaire).
+- **Périmètre vérifié avant commit** : toutes les références à `note_fm` / `ability` / `NOTE_FM_*` / `Ability (0-99)` / `Note FM` du code suivi se trouvent dans ces seuls fichiers ; aucun autre lot n'en dépend. Aucun code ne lit les onglets `Statuts` ni `Preferred moves` ; le chargement de la **colonne** « Preferred moves » (`PREFERRED_MOVES_COLUMN`, `Player.preferred_moves`) existe déjà dans `HEAD` : aucun code « attributs préférés » n'était à ajouter.
+- **Vérification** : essai à blanc sur copie de `HEAD` (999 passés), puis après commit, `git archive HEAD` propre, `pytest` nu → **999 passés, 5 ignorés**, dont `test_load_national_teams_returns_only_complete_squads_of_18`.
+
+**Superposition 3a + Lot 1 + Lot 2** (`git archive HEAD` propre, `pytest` nu) : **999 passés, 5 ignorés**. Avec le venv NLG local rendu accessible à l'archive (jonction vers `simulafoot_nlg/.venv`, retirée ensuite), les 5 tests NLG s'exécutent : **1004 passés, 0 ignoré, 12 désélectionnés** (tests d'intégration). Les tests NLG ne sont donc pas ignorés par défaut seulement parce que ce venv, ignoré par git, n'existe pas dans une archive propre.
+
+**Décision D1 — tranchée par le propriétaire.** Les modifications de `data/joueurs.xlsx` sont **volontaires et conservées** : **82 « Moyenne joueur » modifiées** ; **doublon « Lucas Paquetá » (CR Flamengo, ID 6252) supprimé** (l'ID 2358 est conservé, note 79,0 au lieu de 81) ; **colonnes `Ability (0-99)` et `Note FM` supprimées** ; **onglet `Statuts` remplacé par l'onglet `Preferred moves`** (et onglet `Amérique` modifié). Ces changements sont commités avec leur code (`ddfad09`).
+
+**Décision D2 — reste en attente du propriétaire.** Les modulateurs coach (±1 %) et styles (jusqu'à ±5 %) du modèle de Poisson ne sont **pas** commités. **Mesure comparative obligatoire (≥ 1 000 matchs par bras, protocole du §8.4, partie 3c) avant tout commit de 3c.** Aucun commit de 3b, 3c, Lot 4, Lot 5.
+
+**`PROJET_SIMULAFOOT.md`** : toujours non commité. Le Lot 2 étant commité, sa mise à jour est possible, mais il décrit encore des écrans et des modules non commités (`TeamRoster`, `PlayerPage`, etc.) ; il restera bloqué tant que ces lots ne sont pas commités, ou jusqu'à sa réécriture sur l'état réel.
+
+### 8.9 Étape suivante (préparée, NON exécutée) — commit de 3b : couche coachs et `match_stats`
+
+- **Périmètre attendu** (relevé le 07/10/2026 sur l'arbre de travail) :
+  - `src/ligue1sim/coaches.py` (lecture de `data/Coachs-Simulafoot.xlsx` : note /100, styles, formation ; sélectionneurs) ;
+  - `data/Coachs-Simulafoot.xlsx` (nouveau) et **suppression** de `data/entraineurs.xlsx` (le `coaches.py` de `HEAD` le lit encore : à commiter ensemble) ;
+  - `src/ligue1sim/match_stats.py` (nouveau : possession, tirs, tirs cadrés, xG) ;
+  - `src/ligue1sim/events.py` : les **7 hunks restants** (imports `coaches` et `match_stats`, champ `stats`, paramètres `home_lambda` / `away_lambda` et leur docstring, appel `compute_match_stats`, argument `stats=`) — depuis 3a, tout ce qui reste de `events.py` relève de 3b ;
+  - `src/ligue1sim/simulation.py` : **un seul hunk** (2 lignes : `home_lambda=lambda_home`, `away_lambda=lambda_away` dans l'appel à `generate_match_events`) ; les autres hunks restants (import `coaches`, constantes `COACH_INFLUENCE` / `STYLE_*`, application aux lambdas dans `_draw_score`, fonctions `_coach_modifier` / `_style_*_modifier`) sont du **3c** et **ne doivent pas** être inclus ;
+  - tests `tests/test_coaches.py` (modifié) et `tests/test_match_stats.py` (nouveau) ;
+  - décision à prendre sur `scripts/scrape_transfermarkt_coaches.py` et `scripts/scrape_transfermarkt_national_coaches.py` (le second importe le premier ; tous deux écrivent encore `data/entraineurs.xlsx`, supprimé) : les mettre à jour vers `Coachs-Simulafoot.xlsx` ou les archiver ensemble.
+- **Prérequis** : 3a, Lot 1 et Lot 2 commités (fait) ; validation explicite de la scission 3b / 3c par le propriétaire (la séquence « 3b puis D2 puis 3c » la présuppose) ; vérification que 3b **n'embarque aucun modulateur** (`grep` de `COACH_INFLUENCE`, `STYLE_`, `_coach_modifier` dans les fichiers stagés : 0 occurrence).
+- **Critère de vérification** : (1) méthode « `HEAD` + hunks », essai à blanc sur copie de `HEAD` puis `git archive HEAD` propre et `pytest` nu (collecte OK, suite verte) ; (2) **point de vigilance `np.random`** : `match_stats` consomme le flux aléatoire global après chaque match, ce qui décale la séquence des matchs suivants sans changer la distribution d'un match — vérifier sur ≥ 1 000 matchs, 3b seul (modulateurs absents), que moyenne et écart-type des buts ne varient pas de façon significative par rapport à `HEAD` ; (3) `coaches.py` et le nouveau classeur chargent sans erreur sur une archive propre.
+- **Statut** : **non exécuté** dans cette étape.
