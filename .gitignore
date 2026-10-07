@@ -44,3 +44,12 @@ render/canvas_player_preview.html
 data/nlg_inbox/
 data/nlg_samples/work*.db
 data/nlg_samples/inbox/
+
+# Sorties generees, non versionnees (inventaire du 07/10/2026, docs/repo_state.md) :
+# rapports/echantillons NLG (~50 Mo) et graphe de connaissances de l'outil graphify (~10 Mo).
+# NB : data/nlg_samples/conditions_larges.md est DEJA suivi par git -- cette regle ne le retire pas du suivi.
+graphify-out/
+data/nlg_samples/
+
+# Scripts jetables archives localement (chemin personnel code en dur) : voir docs/repo_state.md.
+scripts/archive/

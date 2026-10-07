@@ -143,12 +143,24 @@ Principe : des commits **par lot cohérent**, dans l'ordre des dépendances, cha
 8. **Lot « UI refonte »** : composants et écrans listés en §3.6, **y compris la réconciliation de `PitchView.jsx`** (ticket 7 : repartir de la refonte et réintégrer les 4 hunks d'animation à côté de « Retour »). Dépend du lot 7. Vérifier : `vite build`, `oxlint`, lancement en dev, modale d'animation sur un match animable et sur un match sans snapshot. Décider du sort des 10 Mo d'images (`ui/public/logos`, `branding`) : les commiter, les ignorer, ou les sortir du dépôt (droits à confirmer).
 
 ### Catégorie C — À abandonner, archiver ou ignorer (ne pas commiter)
-9. **Supprimer** (après confirmation du propriétaire) : `_coloring.txt`, `_comp_id.txt`.
-10. **Archiver hors dépôt ou supprimer** : `add_*.py`, `update_penalties.py`, `update_saves_and_reds.py` (chemin personnel codé en dur, outils jetables). Si utiles, les déplacer dans `scripts/archive/` en retirant le chemin personnel.
-11. **Ajouter à `.gitignore`** : `graphify-out/`, `data/nlg_samples/` (50 Mo générés). Ne jamais les commiter.
+9. ~~**Supprimer** `_coloring.txt`, `_comp_id.txt`.~~ **Fait le 07/10/2026** (voir §7).
+10. ~~**Archiver** `add_*.py`, `update_penalties.py`, `update_saves_and_reds.py`.~~ **Fait le 07/10/2026** : déplacés dans `scripts/archive/` (dossier ignoré par git, non supprimés ; voir §7).
+11. ~~**Ajouter à `.gitignore`** `graphify-out/`, `data/nlg_samples/`.~~ **Fait le 07/10/2026** (voir §7, avec une réserve : un fichier de `data/nlg_samples/` est déjà suivi).
 12. **Stasher ou conserver localement** tout lot dont la décision est en attente (surtout lot 6), plutôt que de le commiter à moitié.
 
 ### Garde-fous pour chaque étape
 - Un seul lot par commit ; message qui cite le ticket ou le document concerné.
 - Après chaque commit : `git archive HEAD` dans un dossier vierge, `pytest tests` (commande nue), build/lint UI.
 - Aucune opération destructive (`checkout --`, `reset --hard`, `clean`) sans sauvegarde et validation explicite : l'arbre de travail est aujourd'hui la **seule copie** de ces modifications.
+
+## 7. Nettoyage de la Catégorie C — exécuté le 07/10/2026
+
+Aucun fichier de code suivi n'a été modifié. Le commit de nettoyage ne contient que `.gitignore` et ce document.
+
+| Élément | Action | Résultat / justification |
+|---|---|---|
+| `graphify-out/` | Ajouté à `.gitignore` | Aucun fichier suivi par git (0) ; sortie générée de l'outil graphify (~9,8 Mo) |
+| `data/nlg_samples/` | Ajouté à `.gitignore` | Les 10 fichiers non suivis (~50 Mo) ne figurent plus dans `git status`. **Réserve : `data/nlg_samples/conditions_larges.md` (4 384 octets) est déjà suivi par git** ; la règle d'ignorance ne le retire pas du suivi et il n'a pas été retiré (validation explicite requise pour le sortir de l'index) |
+| `_coloring.txt` (287 o : suite d'entiers), `_comp_id.txt` (37 o : un identifiant de compétition) | **Supprimés** | Fichiers d'outillage sans usage produit ; aucune référence trouvée dans les fichiers suivis ni dans les notes ; jamais suivis par git (donc pas de trace dans un commit) |
+| `add_buildup.py`, `add_goals.py`, `add_nicknames.py`, `add_preferred_moves.py`, `add_prematch.py`, `add_saves.py`, `add_situational.py`, `update_penalties.py`, `update_saves_and_reds.py` | **Déplacés, non supprimés**, de la racine vers **`scripts/archive/`** | Chacun contient le chemin codé en dur `C:\Users\omariani\Downloads\banque_de_phrases_simulafoot.xlsx` ; aucun n'est importé. `scripts/archive/` est **ignoré par git** (`.gitignore`) : ces 9 fichiers n'existent donc plus **que sur ce poste** (copie locale unique, non versionnée) — à sauvegarder si leur historique compte. Une note tracée, `simulafoot_nlg/data/seed/AUDIT_COUVERTURE_DONNEES_JOUEUR.md` (§2), analyse `add_preferred_moves.py` à son ancien emplacement racine : le chemin cité n'existe plus |
+| `scripts/scrape_transfermarkt_coaches.py` | **Laissé en place** | **Non prouvé orphelin** : `scripts/scrape_transfermarkt_national_coaches.py` l'importe (`from scrape_transfermarkt_coaches import …`, ligne 44). Les deux écrivent `data/entraineurs.xlsx`, supprimé dans l'arbre de travail (suppression non commitée) mais encore lu par le `coaches.py` de `HEAD`. Décision reportée au Lot 3 de la séquence de résorption Catégorie B |
