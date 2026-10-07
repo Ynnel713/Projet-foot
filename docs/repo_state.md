@@ -615,3 +615,39 @@ Faits constatés (sans recommandation) : au critère demandé (Welch et KS sur 1
 **6. Arbre de travail** : restauré à l'identique (rien n'a été modifié) : `git status` (55 entrées), hash du diff `HEAD` hors docs (`a22f5cb5b83b51ff`) et hash de `simulation.py` (`4b44301c…`) identiques avant et après ; les constantes de 3c y restent à **±1 % / ±5 %** (`COACH_INFLUENCE = 0.3`, bornes 0,99–1,01 et 0,95–1,05). `PROJET_SIMULAFOOT.md` inchangé et non commité.
 
 **7. Statut** : balayage **fait**. **Décision du propriétaire sur l'amplitude de 3c (ou abandon) : en attente.** Aucun commit de 3c, du Lot 4 ni du Lot 5 ; aucun modulateur dans `HEAD`.
+
+### 8.13 Avancement du 07/10/2026 (suite) — décision D5 (option B), 3c commité à ×3
+
+**Décision D5 (propriétaire) : option B retenue, les modulateurs de 3c sont commités à l'amplitude ×3** (coach ±3 %, styles ±15 %), en connaissance du balayage d'amplitudes du §8.12.
+
+**Valeurs finales des constantes** (`src/ligue1sim/simulation.py`) :
+
+| Constante | Valeur finale | Valeur ×1 (§8.12) |
+|---|---|---|
+| `COACH_INFLUENCE` | 0,9 | 0,3 |
+| `_COACH_MODIFIER_BOUNDS` | (0,97 ; 1,03) | (0,99 ; 1,01) |
+| `STYLE_ATTACK_BONUS` (Offensif) | 0,06 | 0,02 |
+| `STYLE_DEFENSE_MALUS` (contrepartie d'Offensif) | 0,045 | 0,015 |
+| `STYLE_DEFENSE_BONUS` (Défensif) | 0,06 | 0,02 |
+| `STYLE_ATTACK_MALUS` (contrepartie de Défensif) | 0,045 | 0,015 |
+| `STYLE_PRESSING_BONUS` | 0,03 | 0,01 |
+| `STYLE_COUNTER_ATTACK_BONUS` | 0,09 | 0,03 |
+| `_STYLE_MODIFIER_BOUNDS` | (0,85 ; 1,15) | (0,95 ; 1,05) |
+
+Les formules d'application aux lambdas de Poisson sont inchangées ; seules les constantes diffèrent de ×1.
+
+**Commit 3c : `8ee3e7d`** (`feat(simulation): 3c -- modulateurs coach et styles de jeu (amplitudes x3, D5)`). Périmètre : `src/ligue1sim/simulation.py` (+112 lignes : constantes, `_coach_modifier`, `_style_attack_modifier`, `_style_defense_modifier`, application dans `_draw_score`) et `tests/test_simulation.py` (+80 lignes : `TestCoachModifier`, `TestStyleModifiers`, test de bornes adapté à 0,97–1,03). Aucun autre fichier. Les modifications de docstrings de `src/ligue1sim/coaches.py` (qui décrivent encore la note comme « pas encore utilisée par le moteur ») **ne sont pas** dans ce commit : elles restent dans l'arbre de travail, à traiter avec la suite.
+
+**Précision sur la note du 29/09/2026** : le commentaire de `simulation.py` demandait de garder l'influence **coach** sous 3 %. ×3 place l'influence coach **à la borne** (±3 %) ; décision assumée. Les **styles** passent à ±15 % cumulés, ce qui sort du périmètre de la note initiale (qui ne portait que sur le coach). Un commentaire de 3 lignes dans `simulation.py` documente D5.
+
+**Vérifications sur `git archive HEAD` propre (`8ee3e7d`)** :
+- `pytest` nu avec le venv principal : s'interrompt à la collecte (`simulafoot_nlg/tests/conftest.py` importe `duckdb`, absent de ce venv). Sans rapport avec le code de 3c (dépendance du conftest NLG ; non testé sans 3c).
+- `pytest --ignore=simulafoot_nlg` (venv principal) : **1018 passed, 5 skipped, 12 deselected** (tests d'intégration exclus par défaut).
+- `simulafoot_nlg/tests` dans le venv NLG (`simulafoot_nlg/.venv`) : **874 passed, 23 skipped** (le seuil de couverture 85 % sur `engine/` échoue depuis ce venv, sans lien avec les tests).
+- **Superposition complète : 1 892 passed, 28 skipped.**
+
+**Faisabilité du Lot 4 seul (essai à blanc, non commité)** : HEAD + les 4 fichiers `api/` suivis modifiés (`main.py`, `routers/competitions.py`, `schemas.py`, `serializers.py`) : **non commitable seul**. La collecte échoue (`ModuleNotFoundError: No module named 'api.live_commentary'`, importé par `api/serializers.py`). Dépendances non suivies manquantes : `api/live_commentary.py`, `api/nlg_live.py`. Avec ces deux fichiers ajoutés, la suite passe (1018 passed, 5 skipped). Les tests `tests/test_competitions.py`, `test_serializers.py`, `test_live_commentary.py`, `test_nlg_live.py` sont également non suivis. `engine.db` et `engine.selectivity`, importés dans un script exécuté dans le venv NLG (`api/nlg_live.py`), ne sont pas des dépendances de la suite racine.
+
+**Séquence mise à jour** : 3a (fait, `f5e37de`) → Lot 1 (fait, `7fa9f68`) → Lot 2 (fait, `ddfad09`) → 3b (fait, `3070543`) → 3c (fait, `8ee3e7d`) → Lot 4 (à faire) → Lot 5 (à faire) → mise à jour de `PROJET_SIMULAFOOT.md` (à faire) → entrée Phase 5 (à faire).
+
+**Statut** : aucun commit du Lot 4, du Lot 5 ni de `PROJET_SIMULAFOOT.md`. Moteur de rendu, mode standalone de `canvas.html` et tickets 1, 2, 3, 4, 6, 7 de `known_issues.md` inchangés.
