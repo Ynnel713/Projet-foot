@@ -436,6 +436,8 @@ def simulate_match(
             injured_home=injured_home,
             suspended_away=suspended_away,
             injured_away=injured_away,
+            home_lambda=lambda_home,
+            away_lambda=lambda_away,
         )
 
     return home_goals, away_goals, events

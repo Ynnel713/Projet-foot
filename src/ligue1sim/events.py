@@ -25,9 +25,11 @@ from dataclasses import dataclass, field
 import numpy as np
 import pandas as pd
 
+from ligue1sim import coaches
 from ligue1sim.clubs import Club
 from ligue1sim.lineup import Lineup, bench
 from ligue1sim.lineup_snapshot import LineupSnapshot, snapshot_lineup
+from ligue1sim.match_stats import MatchStats, compute_match_stats
 from ligue1sim.pitch_geometry import GRID_COLUMNS, GRID_ROWS, Zone
 from ligue1sim.players import ASSIST_WEIGHT, GOALKEEPER, SCORER_WEIGHT, Player
 
@@ -288,6 +290,12 @@ class MatchEvents:
     home_injured: frozenset[str] = field(default_factory=frozenset)
     away_suspended: frozenset[str] = field(default_factory=frozenset)
     away_injured: frozenset[str] = field(default_factory=frozenset)
+    # Possession/tirs/tirs cadrés/xG (29/09/2026) -- voir match_stats.py.
+    # Toujours renseigné par `generate_match_events` (repli sur un lambda
+    # dérivé du score si l'appelant n'en fournit pas) ; None seulement pour
+    # une construction directe de MatchEvents en dehors de cette fonction
+    # (tests notamment).
+    stats: MatchStats | None = None
     # Compo réellement alignée par chaque équipe à la simulation (voir
     # lineup_snapshot.py) -- source de vérité unique pour reconstruire une
     # animation sans rappeler `pick_best_formation`. Purement additif :
@@ -312,9 +320,18 @@ def generate_match_events(
     injured_home: frozenset[str] = frozenset(),
     suspended_away: frozenset[str] = frozenset(),
     injured_away: frozenset[str] = frozenset(),
+    home_lambda: float | None = None,
+    away_lambda: float | None = None,
 ) -> MatchEvents:
     """Construit tout ce qui s'est passé pendant le match à partir du score
-    déjà tiré : remplacements, buteurs/passeurs, cartons, blessures, notes.
+    déjà tiré : remplacements, buteurs/passeurs, cartons, blessures, notes,
+    stats d'équipe (possession/tirs/tirs cadrés/xG, voir match_stats.py).
+
+    `home_lambda`/`away_lambda` : buts attendus déjà calculés par
+    `simulation._draw_score`, réutilisés tels quels pour que le xG affiché
+    reste cohérent avec le score réel plutôt que recalculé indépendamment.
+    Omis par défaut (repli sur `max(buts réels, 0.3)`) -- pour les appelants
+    qui ne simulent pas via `simulation.simulate_match` (tests, scripts).
 
     `match_id` : identifiant utilisé pour dériver la zone (voir
     `_deterministic_rng`) de chaque événement -- une valeur stable permet de
@@ -349,6 +366,17 @@ def generate_match_events(
         [(home_club.name, home_squad), (away_club.name, away_squad)]
     )
 
+    match_stats = compute_match_stats(
+        home_lambda=home_lambda if home_lambda is not None else max(home_goals, 0.3),
+        away_lambda=away_lambda if away_lambda is not None else max(away_goals, 0.3),
+        home_rating=home_lineup.rating,
+        away_rating=away_lineup.rating,
+        home_goals=home_goals,
+        away_goals=away_goals,
+        home_styles=coaches.coach_styles(home_club.name),
+        away_styles=coaches.coach_styles(away_club.name),
+    )
+
     return MatchEvents(
         home_formation=home_lineup.formation,
         away_formation=away_lineup.formation,
@@ -363,6 +391,7 @@ def generate_match_events(
         home_injured=injured_home,
         away_suspended=suspended_away,
         away_injured=injured_away,
+        stats=match_stats,
         home_lineup_snapshot=snapshot_lineup(home_lineup, [e.player for e in home_squad if not e.started]),
         away_lineup_snapshot=snapshot_lineup(away_lineup, [e.player for e in away_squad if not e.started]),
     )

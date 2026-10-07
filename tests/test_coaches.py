@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 
 from ligue1sim.clubs import Club
-from ligue1sim.coaches import clear_cache, coach_name, coaches, preferred_formations
+from ligue1sim.coaches import average_note, clear_cache, coach_name, coach_note, coach_styles, coaches, preferred_formations
 from ligue1sim.lineup import pick_best_formation, select_best_xi
 from ligue1sim.players import Player
 
@@ -18,11 +18,15 @@ def _clear_cache():
 
 
 def _write_coaches_file(tmp_path, rows):
-    path = tmp_path / "entraineurs.xlsx"
-    pd.DataFrame(rows, columns=["Championnat", "Club", "Entraîneur", "Formation préférentielle", "Remarques"]).to_excel(
-        path, index=False
-    )
+    path = tmp_path / "Coachs-Simulafoot.xlsx"
+    pd.DataFrame(
+        rows, columns=["Club", "Entraineur", "Formation", "Note /100", "Contre attaque", "Pressing", "Défensif", "Offensif", "Possession"]
+    ).to_excel(path, index=False)
     return str(path)
+
+
+def _row(club, coach, formation=None, note=None, styles=()):
+    return [club, coach, formation, note] + [("X" if s in styles else None) for s in ("Contre attaque", "Pressing", "Défensif", "Offensif", "Possession")]
 
 
 def _player(poste: str, note: float, name: str) -> Player:
@@ -48,8 +52,8 @@ def test_preferred_formations_reads_club_to_formation_mapping(tmp_path):
     path = _write_coaches_file(
         tmp_path,
         [
-            ["Ligue 1", "LOSC Lille", "Bruno Genesio", "4-2-3-1", None],
-            ["Ligue 1", "RC Lens", "Pierre Sage", "3-4-3", None],
+            _row("LOSC Lille", "Bruno Genesio", "4-2-3-1"),
+            _row("RC Lens", "Pierre Sage", "3-4-3"),
         ],
     )
 
@@ -59,12 +63,7 @@ def test_preferred_formations_reads_club_to_formation_mapping(tmp_path):
 
 
 def test_preferred_formations_skips_rows_with_no_formation(tmp_path):
-    path = _write_coaches_file(
-        tmp_path,
-        [
-            ["Ligue 1", "AJ Auxerre", "Christophe Pélissier", None, "formation non renseignée"],
-        ],
-    )
+    path = _write_coaches_file(tmp_path, [_row("AJ Auxerre", "Christophe Pélissier")])
 
     assert preferred_formations((path,)) == {}
 
@@ -76,32 +75,81 @@ def test_preferred_formations_ignores_missing_files(tmp_path):
 
 
 def test_coach_name_is_available_even_without_a_preferred_formation(tmp_path):
-    path = _write_coaches_file(
-        tmp_path,
-        [["Ligue 1", "AJ Auxerre", "Christophe Pélissier", None, "formation non renseignée"]],
-    )
+    path = _write_coaches_file(tmp_path, [_row("AJ Auxerre", "Christophe Pélissier")])
 
     assert coach_name("AJ Auxerre", (path,)) == "Christophe Pélissier"
     assert preferred_formations((path,)) == {}
 
 
 def test_coach_name_is_none_for_an_unknown_club(tmp_path):
-    path = _write_coaches_file(tmp_path, [["Ligue 1", "AJ Auxerre", "Christophe Pélissier", "4-4-2", None]])
+    path = _write_coaches_file(tmp_path, [_row("AJ Auxerre", "Christophe Pélissier", "4-4-2")])
 
     assert coach_name("Unknown FC", (path,)) is None
 
 
-def test_coaches_exposes_both_name_and_formation(tmp_path):
-    path = _write_coaches_file(tmp_path, [["Ligue 1", "LOSC Lille", "Bruno Genesio", "4-2-3-1", None]])
+def test_coaches_exposes_name_formation_note_and_styles(tmp_path):
+    path = _write_coaches_file(
+        tmp_path, [_row("LOSC Lille", "Bruno Genesio", "4-2-3-1", 82, styles=("Offensif", "Pressing"))]
+    )
 
     result = coaches((path,))
 
     assert result["LOSC Lille"].name == "Bruno Genesio"
     assert result["LOSC Lille"].preferred_formation == "4-2-3-1"
+    assert result["LOSC Lille"].note == 82.0
+    assert result["LOSC Lille"].styles == frozenset({"Offensif", "Pressing"})
+
+
+def test_coach_note_and_styles_helpers(tmp_path):
+    path = _write_coaches_file(tmp_path, [_row("LOSC Lille", "Bruno Genesio", "4-2-3-1", 82, styles=("Défensif",))])
+
+    assert coach_note("LOSC Lille", (path,)) == 82.0
+    assert coach_styles("LOSC Lille", (path,)) == frozenset({"Défensif"})
+
+
+def test_average_note_ignores_clubs_without_a_note(tmp_path):
+    path = _write_coaches_file(
+        tmp_path,
+        [
+            _row("LOSC Lille", "Coach A", note=80),
+            _row("RC Lens", "Coach B", note=90),
+            _row("AJ Auxerre", "Coach C"),
+        ],
+    )
+
+    assert average_note((path,)) == 85.0
+
+
+def test_abbreviated_club_names_resolve_to_the_canonical_app_name(tmp_path):
+    # "Paris SG" (alias manuel) et "Tottenham" (correspondance normalisée
+    # non ambiguë dans le vivier complet) doivent tous deux se résoudre au
+    # nom canonique utilisé par Club.name ailleurs dans le moteur.
+    path = _write_coaches_file(
+        tmp_path,
+        [
+            _row("Paris SG", "Luis Enrique", "4-3-3"),
+            _row("Tottenham", "Coach Spurs", "4-2-3-1"),
+        ],
+    )
+
+    result = coaches((path,))
+
+    assert "Paris Saint-Germain" in result
+    assert "Tottenham Hotspur" in result
+
+
+def test_country_code_prefixed_nation_rows_resolve_to_the_flagged_name(tmp_path):
+    path = _write_coaches_file(tmp_path, [_row("FR France", "Zinédine Zidane", "4-3-3")])
+
+    result = coaches((path,))
+
+    flagged = [name for name in result if name.endswith("France")]
+    assert len(flagged) == 1
+    assert result[flagged[0]].name == "Zinédine Zidane"
 
 
 def test_pick_best_formation_uses_the_forced_formation_when_known(tmp_path, monkeypatch):
-    path = _write_coaches_file(tmp_path, [["Ligue 1", "Test FC", "Coach Test", "3-4-3", None]])
+    path = _write_coaches_file(tmp_path, [_row("Test FC", "Coach Test", "3-4-3")])
     import ligue1sim.lineup as lineup_module
 
     monkeypatch.setattr(lineup_module, "preferred_formations", lambda: preferred_formations((path,)))
@@ -113,7 +161,7 @@ def test_pick_best_formation_uses_the_forced_formation_when_known(tmp_path, monk
 
 
 def test_pick_best_formation_falls_back_to_adaptive_choice_when_club_unknown(tmp_path, monkeypatch):
-    path = _write_coaches_file(tmp_path, [["Ligue 1", "Some Other Club", "Coach Test", "3-4-3", None]])
+    path = _write_coaches_file(tmp_path, [_row("Some Other Club", "Coach Test", "3-4-3")])
     import ligue1sim.lineup as lineup_module
 
     monkeypatch.setattr(lineup_module, "preferred_formations", lambda: preferred_formations((path,)))
@@ -134,7 +182,7 @@ def test_pick_best_formation_switches_away_from_a_badly_hurt_forced_formation(tm
     # offensif "moc0") n'a besoin de piocher qu'UN seul des deux ailiers de
     # réserve et laisse l'autre sur le banc -- nettement mieux noté au global.
     # Doit basculer plutôt que de s'entêter sur "4-4-2".
-    path = _write_coaches_file(tmp_path, [["Ligue 1", "Test FC", "Coach Test", "4-4-2", None]])
+    path = _write_coaches_file(tmp_path, [_row("Test FC", "Coach Test", "4-4-2")])
     import ligue1sim.lineup as lineup_module
 
     monkeypatch.setattr(lineup_module, "preferred_formations", lambda: preferred_formations((path,)))
@@ -165,7 +213,7 @@ def test_pick_best_formation_keeps_the_forced_formation_when_the_gap_is_small(tm
     # Une indisponibilité qui ne touche qu'un joueur de banc jamais titularisé
     # ne doit rien changer : le dispositif du coach reste appliqué (pas de
     # bascule pour un écart nul/négligeable, voir _FORMATION_LOYALTY_FACTOR).
-    path = _write_coaches_file(tmp_path, [["Ligue 1", "Test FC", "Coach Test", "3-4-3", None]])
+    path = _write_coaches_file(tmp_path, [_row("Test FC", "Coach Test", "3-4-3")])
     import ligue1sim.lineup as lineup_module
 
     monkeypatch.setattr(lineup_module, "preferred_formations", lambda: preferred_formations((path,)))
