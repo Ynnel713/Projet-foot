@@ -18,6 +18,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from ligue1sim.faces import FACES_DIR
+
 from api.routers import competitions, leagues
 
 app = FastAPI(title="Simulafoot API")
@@ -34,6 +36,12 @@ app.add_middleware(
 
 app.include_router(leagues.router, prefix="/api")
 app.include_router(competitions.router, prefix="/api")
+
+# Photos de joueurs (voir ligue1sim.faces) -- non versionnées, absentes tant
+# que scripts/extract_faces.py n'a pas tourné localement. Chemin distinct de
+# /assets (déjà pris par le build du frontend, voir plus bas).
+if FACES_DIR.is_dir():
+    app.mount("/media/faces", StaticFiles(directory=FACES_DIR), name="faces")
 
 
 @app.get("/api/health")

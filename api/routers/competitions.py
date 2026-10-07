@@ -2,11 +2,15 @@
 ou d'un coup, classement, matchs.
 
 Format LEAGUE (championnats officiels et Compétition Perso en championnat
-pur) et HYBRID (Ligue des Champions -- poules puis élimination directe).
-KNOCKOUT seul (Compétition Perso en élimination directe pure) pas encore
-branché ici -- le moteur le gère déjà (`CustomCompetition`), il reste à
-écrire l'équivalent HTTP de `simulate_bracket_round`/`advance_bracket_round`
-hors contexte HYBRID.
+pur), HYBRID (poules puis élimination directe -- Ligue des Champions/Coupe du
+Monde via leurs routes dédiées avec tirage par chapeau, ou Compétition Perso
+"championnat + élimination" via `create_competition` avec poules tirées par
+force, voir `groups.make_groups`) et KNOCKOUT (élimination directe pure,
+tableau déjà généré dès la création -- voir `CustomCompetition.__post_init__`)
+partagent les routes `/bracket/*` ci-dessous (voir `_require_bracket_format`).
+Seules `/groups`, `/groups/simulate-matchday` et `/knockout/start` restent
+HYBRID uniquement (`_require_hybrid`) : KNOCKOUT n'a pas de phase de poules,
+son tableau existe déjà, pas besoin de "start".
 """
 
 from __future__ import annotations
@@ -31,6 +35,7 @@ from api.schemas import (
     LeaderboardsOut,
     MatchOut,
     PitchViewOut,
+    RosterOut,
     SimulateResponse,
 )
 from api.serializers import (
@@ -39,6 +44,7 @@ from api.serializers import (
     leaderboards_out,
     match_out,
     pitch_view,
+    roster_out,
     standings as serialize_standings,
     status as serialize_status,
 )
@@ -73,7 +79,14 @@ def create_competition(req: CreateCompetitionRequest) -> CompetitionStatus:
     # sans lui, `competition.season.championnat` vaut toujours "Compétition
     # Perso" en interne, même pour un championnat officiel.
     label = req.championnat if req.source == "league" else None
-    competition = CustomCompetition(format=req.format, legs=req.legs, clubs=clubs, label=label)
+    competition = CustomCompetition(
+        format=req.format,
+        legs=req.legs,
+        clubs=clubs,
+        label=label,
+        knockout_legs=req.knockout_legs,
+        final_legs=req.final_legs,
+    )
     comp_id = store.create(competition)
     return serialize_status(comp_id, competition)
 
@@ -195,6 +208,17 @@ def get_standings(comp_id: str):
     return serialize_standings(competition, store.previous_ranks(comp_id))
 
 
+@router.get("/{comp_id}/clubs/{club_name}/roster", response_model=RosterOut)
+def get_roster(comp_id: str, club_name: str) -> RosterOut:
+    """Effectif complet d'un club de cette compétition (écran équipe PWA,
+    voir app.render_club_detail_screen pour l'équivalent Streamlit)."""
+    competition = _get_or_404(comp_id)
+    club = next((c for c in competition.clubs if c.name == club_name), None)
+    if club is None:
+        raise HTTPException(404, f"Club introuvable dans cette compétition : {club_name}")
+    return roster_out(club)
+
+
 @router.get("/{comp_id}/leaderboards", response_model=LeaderboardsOut)
 def get_leaderboards(comp_id: str) -> LeaderboardsOut:
     """Classements buteurs/passeurs sur tous les matchs déjà joués, quel que
@@ -282,7 +306,10 @@ def get_pitch_view(
     if not match.played or match.events is None:
         raise HTTPException(409, "Ce match n'a pas encore été joué (ou n'a pas d'effectif réel).")
 
-    return pitch_view(match)
+    clubs_by_name = {c.name: c for c in competition.clubs}
+    # Suffixe du match_id du fil NLG (varie la graine du tirage des occasions d'un match à l'autre).
+    label = f"j{journee}" if journee is not None else f"{group}-{matchday}" if group is not None else f"t{round_number}-{leg}"
+    return pitch_view(match, clubs_by_name, label)
 
 
 def _locate_match(
@@ -339,6 +366,11 @@ def _require_hybrid(competition: CustomCompetition) -> None:
         raise HTTPException(501, "Ce format n'a pas de phase de poules.")
 
 
+def _require_bracket_format(competition: CustomCompetition) -> None:
+    if competition.format not in (CompetitionFormat.HYBRID, CompetitionFormat.KNOCKOUT):
+        raise HTTPException(501, "Ce format n'a pas de tableau à élimination directe.")
+
+
 @router.get("/{comp_id}/groups", response_model=GroupsStatusOut)
 def get_groups(comp_id: str) -> GroupsStatusOut:
     competition = _get_or_404(comp_id)
@@ -374,7 +406,7 @@ def start_knockout(comp_id: str) -> BracketOut:
 @router.get("/{comp_id}/bracket", response_model=BracketOut)
 def get_bracket(comp_id: str) -> BracketOut:
     competition = _get_or_404(comp_id)
-    _require_hybrid(competition)
+    _require_bracket_format(competition)
     if competition.bracket is None:
         raise HTTPException(409, "Phase à élimination pas encore commencée -- utilise /knockout/start.")
     return bracket_out(competition.bracket)
@@ -383,7 +415,7 @@ def get_bracket(comp_id: str) -> BracketOut:
 @router.post("/{comp_id}/bracket/simulate-round", response_model=BracketOut)
 def simulate_bracket_round(comp_id: str) -> BracketOut:
     competition = _get_or_404(comp_id)
-    _require_hybrid(competition)
+    _require_bracket_format(competition)
     if competition.bracket is None:
         raise HTTPException(409, "Phase à élimination pas encore commencée -- utilise /knockout/start.")
     if competition.bracket.current_round.played:
@@ -395,7 +427,7 @@ def simulate_bracket_round(comp_id: str) -> BracketOut:
 @router.post("/{comp_id}/bracket/advance", response_model=BracketOut)
 def advance_bracket(comp_id: str) -> BracketOut:
     competition = _get_or_404(comp_id)
-    _require_hybrid(competition)
+    _require_bracket_format(competition)
     if competition.bracket is None:
         raise HTTPException(409, "Phase à élimination pas encore commencée -- utilise /knockout/start.")
     if not competition.bracket.current_round.played:
