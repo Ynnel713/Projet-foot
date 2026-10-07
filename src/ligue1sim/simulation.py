@@ -133,6 +133,7 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from ligue1sim.clubs import Club
+from ligue1sim import coaches
 from ligue1sim.events import (
     AvailabilityTracker,
     MatchEvents,
@@ -295,6 +296,46 @@ _BENCH_MODIFIER_BOUNDS = (0.985, 1.015)
 # ATTACK_DEFENSE_POWER.
 _BIG_MATCH_FRACTION = 1 / 3  # ex. 6-7 clubs sur 18-20 : approxime le "top 6" habituel
 BIG_MATCH_BONUS = 0.05
+
+# --- Coach (data/Coachs-Simulafoot.xlsx, note /100 + styles) -------------
+#
+# Influence VOLONTAIREMENT très légère (demande explicite du 29/09/2026,
+# "ça doit rester léger j'insiste") : un bon coach doit à peine faire
+# pencher la balance, jamais rivaliser avec la qualité de l'effectif
+# (_attack_strength/_defense_strength) ou même avec les modulateurs
+# secondaires ci-dessus. Borne la plus étroite de toute cette section (±1%,
+# contre ±1.5% pour le banc et ±3% pour le milieu/la forme) -- comparée à la
+# MOYENNE des notes de coachs connues (coaches.average_note), pas à un seuil
+# arbitraire fixe, pour rester auto-calibrée si le fichier de coachs évolue.
+# Appliqué symétriquement à l'attaque ET à la défense du club, comme
+# MID_INFLUENCE/BENCH_INFLUENCE : un bon coach n'est pas supposé être
+# seulement offensif (voir STYLE_* plus bas pour cette nuance-là).
+#
+# Décision D5 (07/10/2026) : amplitudes ×3 (coach ±3 %, styles ±15 %). Le
+# commentaire du 29/09/2026 ci-dessus visait l'influence coach sous 3 % : ×3
+# est à la borne, assumé ; les styles (±15 %) sortent de ce périmètre.
+COACH_INFLUENCE = 0.9
+_COACH_MODIFIER_BOUNDS = (0.97, 1.03)
+
+# Styles de jeu (cases à cocher indépendantes de data/Coachs-Simulafoot.xlsx,
+# voir coaches.STYLE_COLUMNS) -- modulateurs cumulables mais chacun modeste,
+# à l'échelle de BENCH_INFLUENCE plutôt que de MID_INFLUENCE : la note et
+# l'effectif restent les seuls vrais déterminants du résultat, les styles
+# n'apportent qu'une nuance tactique. "Offensif"/"Défensif" jouent sur
+# l'attaque ET la défense en sens opposés (un système plus audacieux prend
+# aussi plus de risques) ; "Pressing" relève très légèrement les deux à la
+# fois (récupère haut, mais s'expose aussi) ; "Contre-attaque" ne joue QUE
+# sur l'attaque, et seulement quand l'équipe n'a pas l'ascendant en
+# possession (voir _style_modifier) -- capture l'idée du style sans
+# modéliser des possessions réelles. "Possession" n'affecte aucun but
+# attendu ici, seulement la possession affichée -- voir match_stats.py.
+STYLE_ATTACK_BONUS = 0.06  # "Offensif" (×3, 07/10/2026 ; 0,02 à l'origine)
+STYLE_DEFENSE_MALUS = 0.045  # contrepartie défensive de "Offensif" (0,015 à l'origine)
+STYLE_DEFENSE_BONUS = 0.06  # "Défensif" (0,02 à l'origine)
+STYLE_ATTACK_MALUS = 0.045  # contrepartie offensive de "Défensif" (0,015 à l'origine)
+STYLE_PRESSING_BONUS = 0.03  # "Pressing", attaque ET défense (0,01 à l'origine)
+STYLE_COUNTER_ATTACK_BONUS = 0.09  # "Contre-attaque", attaque seule, si en dessous de la possession attendue (0,03 à l'origine)
+_STYLE_MODIFIER_BOUNDS = (0.85, 1.15)  # (0,95-1,05 à l'origine) plafond cumulé (tous styles confondus), jamais un second ATTACK_DEFENSE_POWER
 
 # --- Forme (inertie sportive persistante, EMA de performance réelle) -----
 #
@@ -550,6 +591,27 @@ def _draw_score(
     lambda_home *= home_bench_mod / away_bench_mod
     lambda_away *= away_bench_mod / home_bench_mod
 
+    # Coach (note /100, voir COACH_INFLUENCE) : même couplage propre/adverse
+    # que milieu/banc ci-dessus -- influence volontairement minime.
+    home_coach_mod, away_coach_mod = _coach_modifier(home_name), _coach_modifier(away_name)
+    lambda_home *= home_coach_mod / away_coach_mod
+    lambda_away *= away_coach_mod / home_coach_mod
+
+    # Styles de jeu du coach (voir STYLE_*) : contrairement à mid/banc/coach
+    # ci-dessus, attaque et défense sont modulées INDÉPENDAMMENT (un style
+    # offensif relève l'attaque ET abaisse la défense de SA PROPRE équipe --
+    # voir _style_attack_modifier/_style_defense_modifier). "Contre-attaque"
+    # a besoin de savoir qui domine le ballon : proxy simple, l'équipe avec
+    # la meilleure compo du jour (même signal que la possession affichée,
+    # voir match_stats.py).
+    home_possession_edge = home_lineup.rating >= away_lineup.rating
+    home_style_attack = _style_attack_modifier(home_name, home_possession_edge)
+    away_style_attack = _style_attack_modifier(away_name, not home_possession_edge)
+    home_style_defense = _style_defense_modifier(home_name)
+    away_style_defense = _style_defense_modifier(away_name)
+    lambda_home *= home_style_attack / away_style_defense
+    lambda_away *= away_style_attack / home_style_defense
+
     if form is not None:
         # Une équipe en forme offensive marque plus ; une équipe adverse en
         # mauvaise forme défensive encaisse plus -- même couplage attaque
@@ -594,6 +656,56 @@ def _bench_modifier(reserves: list[Player], context: LeagueContext) -> float:
     relative_gap = (bench_rating - context.avg_rating) / context.avg_rating
     modifier = 1.0 + BENCH_INFLUENCE * relative_gap
     return min(_BENCH_MODIFIER_BOUNDS[1], max(_BENCH_MODIFIER_BOUNDS[0], modifier))
+
+
+def _coach_modifier(club_name: str) -> float:
+    """Modulateur (autour de 1.0) appliqué à l'attaque ET à la défense d'un
+    club selon que la note de son coach (data/Coachs-Simulafoot.xlsx) est
+    au-dessus ou en-dessous de la moyenne des coachs connus (voir
+    COACH_INFLUENCE/_COACH_MODIFIER_BOUNDS ci-dessus). 1.0 (neutre) si le
+    coach ou sa note sont inconnus."""
+    note = coaches.coach_note(club_name)
+    baseline = coaches.average_note()
+    if note is None or not baseline:
+        return 1.0
+    relative_gap = (note - baseline) / baseline
+    modifier = 1.0 + COACH_INFLUENCE * relative_gap
+    return min(_COACH_MODIFIER_BOUNDS[1], max(_COACH_MODIFIER_BOUNDS[0], modifier))
+
+
+def _style_attack_modifier(club_name: str, has_possession_edge: bool) -> float:
+    """Modulateur (autour de 1.0) appliqué à L'ATTAQUE SEULE d'un club selon
+    ses styles de jeu déclarés (voir STYLE_*/_STYLE_MODIFIER_BOUNDS
+    ci-dessus). `has_possession_edge` : True si CE club a la note de compo
+    la plus haute des deux pour ce match (proxy de qui domine le ballon,
+    voir _draw_score) -- "Contre-attaque" ne bonifie l'attaque QUE quand ce
+    n'est PAS le cas (contre-attaquer suppose ne pas avoir le ballon)."""
+    styles = coaches.coach_styles(club_name)
+    modifier = 1.0
+    if "Offensif" in styles:
+        modifier += STYLE_ATTACK_BONUS
+    if "Défensif" in styles:
+        modifier -= STYLE_ATTACK_MALUS
+    if "Pressing" in styles:
+        modifier += STYLE_PRESSING_BONUS
+    if "Contre attaque" in styles and not has_possession_edge:
+        modifier += STYLE_COUNTER_ATTACK_BONUS
+    return min(_STYLE_MODIFIER_BOUNDS[1], max(_STYLE_MODIFIER_BOUNDS[0], modifier))
+
+
+def _style_defense_modifier(club_name: str) -> float:
+    """Modulateur (autour de 1.0) appliqué à LA DÉFENSE SEULE d'un club selon
+    ses styles de jeu déclarés (voir STYLE_*/_STYLE_MODIFIER_BOUNDS
+    ci-dessus)."""
+    styles = coaches.coach_styles(club_name)
+    modifier = 1.0
+    if "Offensif" in styles:
+        modifier -= STYLE_DEFENSE_MALUS
+    if "Défensif" in styles:
+        modifier += STYLE_DEFENSE_BONUS
+    if "Pressing" in styles:
+        modifier += STYLE_PRESSING_BONUS
+    return min(_STYLE_MODIFIER_BOUNDS[1], max(_STYLE_MODIFIER_BOUNDS[0], modifier))
 
 
 def _mid_modifier(lineup: Lineup) -> float:

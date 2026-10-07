@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+from ligue1sim import coaches
 from ligue1sim.clubs import Club
 from ligue1sim.events import AvailabilityTracker
 from ligue1sim.lineup import bench, select_best_xi
@@ -11,14 +12,18 @@ from ligue1sim.simulation import (
     LEAGUE_AVG_GOALS,
     FormTracker,
     LeagueContext,
+    _COACH_MODIFIER_BOUNDS,
     _attack_strength,
     _bench_modifier,
+    _coach_modifier,
     _defense_strength,
     _draw_score,
     _expected_goals,
     _form_modifier,
     _mid_modifier,
     _process_form_signal,
+    _style_attack_modifier,
+    _style_defense_modifier,
     simulate_journee,
     simulate_match,
 )
@@ -369,6 +374,81 @@ class TestBigMatchBonus:
 
         assert lam_home_one_sided == pytest.approx(lam_home_neutral)
         assert lam_away_one_sided == pytest.approx(lam_away_neutral)
+
+
+def _stub_coaches(monkeypatch, notes: dict[str, float] | None = None, styles: dict[str, frozenset[str]] | None = None):
+    """Monkeypatche les accesseurs publics de `coaches` (regardés en global
+    par simulation._coach_modifier/_style_*_modifier, voir `from ligue1sim
+    import coaches` en tête de simulation.py) sans passer par un vrai
+    fichier Excel."""
+    notes = notes or {}
+    styles = styles or {}
+    monkeypatch.setattr(coaches, "coach_note", lambda club, paths=None: notes.get(club))
+    monkeypatch.setattr(coaches, "coach_styles", lambda club, paths=None: styles.get(club, frozenset()))
+    known_notes = [n for n in notes.values() if n is not None]
+    baseline = sum(known_notes) / len(known_notes) if known_notes else None
+    monkeypatch.setattr(coaches, "average_note", lambda paths=None: baseline)
+
+
+class TestCoachModifier:
+    """Modulateur de note de coach (voir COACH_INFLUENCE/
+    _COACH_MODIFIER_BOUNDS en tête de simulation.py) -- influence
+    volontairement légère (±3 % depuis l'amplitude ×3 du 07/10/2026,
+    ±1 % à l'origine)."""
+
+    def test_above_average_note_gives_a_small_bonus(self, monkeypatch):
+        _stub_coaches(monkeypatch, notes={"Test FC": 90.0, "Other FC": 70.0})
+
+        assert _coach_modifier("Test FC") > 1.0
+
+    def test_below_average_note_gives_a_small_penalty(self, monkeypatch):
+        _stub_coaches(monkeypatch, notes={"Test FC": 50.0, "Other FC": 70.0})
+
+        assert _coach_modifier("Test FC") < 1.0
+
+    def test_unknown_club_is_neutral(self, monkeypatch):
+        _stub_coaches(monkeypatch, notes={"Other FC": 70.0})
+
+        assert _coach_modifier("Test FC") == 1.0
+
+    def test_modifier_never_exceeds_its_bounds(self, monkeypatch):
+        # Test de BORNE (adapté à l'amplitude ×3 du 07/10/2026 : 0,97-1,03 au lieu de 0,99-1,01) : on lit les bornes
+        # dans simulation.py plutôt que de les recoder en dur, et on vérifie qu'elles sont bien atteintes aux extrêmes.
+        low, high = _COACH_MODIFIER_BOUNDS
+        _stub_coaches(monkeypatch, notes={"Best FC": 100.0, "Worst FC": 1.0})
+
+        assert _coach_modifier("Best FC") == pytest.approx(high)
+        assert _coach_modifier("Worst FC") == pytest.approx(low)
+        assert (low, high) == pytest.approx((0.97, 1.03))
+
+
+class TestStyleModifiers:
+    """Modulateurs de style de jeu du coach (voir STYLE_*/
+    _STYLE_MODIFIER_BOUNDS en tête de simulation.py)."""
+
+    def test_offensive_style_boosts_attack_and_weakens_defense(self, monkeypatch):
+        _stub_coaches(monkeypatch, styles={"Test FC": frozenset({"Offensif"})})
+
+        assert _style_attack_modifier("Test FC", has_possession_edge=True) > 1.0
+        assert _style_defense_modifier("Test FC") < 1.0
+
+    def test_defensive_style_weakens_attack_and_boosts_defense(self, monkeypatch):
+        _stub_coaches(monkeypatch, styles={"Test FC": frozenset({"Défensif"})})
+
+        assert _style_attack_modifier("Test FC", has_possession_edge=True) < 1.0
+        assert _style_defense_modifier("Test FC") > 1.0
+
+    def test_counter_attack_only_boosts_without_the_possession_edge(self, monkeypatch):
+        _stub_coaches(monkeypatch, styles={"Test FC": frozenset({"Contre attaque"})})
+
+        assert _style_attack_modifier("Test FC", has_possession_edge=False) > 1.0
+        assert _style_attack_modifier("Test FC", has_possession_edge=True) == pytest.approx(1.0)
+
+    def test_unknown_club_is_neutral(self, monkeypatch):
+        _stub_coaches(monkeypatch, styles={"Other FC": frozenset({"Offensif"})})
+
+        assert _style_attack_modifier("Test FC", has_possession_edge=True) == 1.0
+        assert _style_defense_modifier("Test FC") == 1.0
 
 
 def test_ephemeral_tracker_is_used_when_none_is_passed():
