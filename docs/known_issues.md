@@ -1,6 +1,6 @@
 # Dette connue — Simulafoot
 
-Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 1, 2, 3, 4, 6, 7, 9 et 10 n'est corrigé à ce jour.** Créé le 07/10/2026 (clôture de l'Étape B, `LineupSnapshot`) ; tickets 4 et 5 ajoutés le même jour (intégration PWA par iframe) ; ticket 5 fermé et tickets 6 à 8 ouverts le même jour (gouvernance, avant Phase 5) ; tickets 9 (`duckdb`) et 10 (couverture NLG) ajoutés le même jour (environnement de test). **État : ouverts 1, 2, 3, 4, 6, 7, 9, 10 ; fermé 5. Ticket 8 :** son tableau et son corps portent encore le statut « Ouvert », mais le correctif qu'il propose (`pythonpath = ["engine", "."]`) est commité depuis `2d71e55` ; son statut est à confirmer et à mettre à jour par le propriétaire (non modifié ici).
+Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 1, 2, 3, 4, 6, 7, 9 et 10 n'est corrigé à ce jour.** Créé le 07/10/2026 (clôture de l'Étape B, `LineupSnapshot`) ; tickets 4 et 5 ajoutés le même jour (intégration PWA par iframe) ; ticket 5 fermé et tickets 6 à 8 ouverts le même jour (gouvernance, avant Phase 5) ; tickets 9 (`duckdb`) et 10 (couverture NLG) ajoutés le même jour (environnement de test). **État : ouverts 1, 2, 3, 4, 6, 7, 9, 10 ; fermés 5 (non reproduit) et 8 (résolu en `2d71e55`, vérifié sur archive propre).**
 
 | # | Titre | Priorité (avant…) | Statut |
 |---|---|---|---|
@@ -11,7 +11,7 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 | 5 | `build_clips` écarte les événements dont le protagoniste n'est pas dans le onze de départ | — | **Fermé** (non reproduit) |
 | 6 | `build_clips` : `continue` silencieux quand `frames` est vide (et docstring obsolète) | Phase 7 (qualité) | Ouvert (priorité basse) |
 | 7 | `PitchView.jsx` : la version commitée diverge de celle de l'arbre de travail | Phase 5 (habillage visuel) | Ouvert |
-| 8 | `pytest` seul échoue sur un checkout propre de `HEAD` (`ModuleNotFoundError: api`) | Immédiate (avant tout partage / push) | Ouvert |
+| 8 | `pytest` seul échoue sur un checkout propre de `HEAD` (`ModuleNotFoundError: api`) | Immédiate (avant tout partage / push) | **Fermé — Résolu** (`2d71e55`) |
 | 9 | `pytest` nu échoue à la collecte à cause de `duckdb` absent du venv principal | Phase 7 (qualité / packaging) | Ouvert |
 | 10 | Le seuil de couverture à 85 % sur `engine/` échoue depuis le venv NLG | Phase 7 (qualité / packaging) | Ouvert |
 
@@ -161,7 +161,7 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 
 **Priorité.** Immédiate : avant tout push ou partage du dépôt.
 
-**Statut.** Ouvert.
+**Statut.** **Fermé — Résolu (07/10/2026).** Correction commitée en `2d71e55` (`pythonpath = ["engine", "."]` dans `pyproject.toml`), vérifiée sur archive propre. Plus reproductible.
 
 
 ---
