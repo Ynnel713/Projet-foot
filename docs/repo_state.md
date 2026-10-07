@@ -651,3 +651,22 @@ Les formules d'application aux lambdas de Poisson sont inchangées ; seules les 
 **Séquence mise à jour** : 3a (fait, `f5e37de`) → Lot 1 (fait, `7fa9f68`) → Lot 2 (fait, `ddfad09`) → 3b (fait, `3070543`) → 3c (fait, `8ee3e7d`) → Lot 4 (à faire) → Lot 5 (à faire) → mise à jour de `PROJET_SIMULAFOOT.md` (à faire) → entrée Phase 5 (à faire).
 
 **Statut** : aucun commit du Lot 4, du Lot 5 ni de `PROJET_SIMULAFOOT.md`. Moteur de rendu, mode standalone de `canvas.html` et tickets 1, 2, 3, 4, 6, 7 de `known_issues.md` inchangés.
+
+### 8.14 Avancement du 07/10/2026 (suite) — docstrings de `coaches.py`, Lot 4 préparé, tickets 9 et 10
+
+**Commit des docstrings de `coaches.py` : `14070bc`** (`docs(coaches): docstrings mises a jour -- la note et les styles sont utilises depuis 3c`). Périmètre : `src/ligue1sim/coaches.py` seul (+7 / −5 lignes), **docstrings uniquement, aucune ligne de code**. La docstring du module, celle de `coach_note` et celle de `average_note` ne disent plus que la note « n'est pas encore utilisée par le moteur » : elles renvoient à `simulation.COACH_INFLUENCE` (±3 %, décision D5, 07/10/2026) et aux styles (±15 % cumulés). Vérification sur `git archive` de l'index : `pytest tests --ignore=simulafoot_nlg` → 1018 passed, 5 skipped, 12 deselected. 3c n'est pas touché (`COACH_INFLUENCE = 0.9` et bornes inchangés).
+
+**Lot 4 : périmètre exact (10 fichiers, essai sur archive jetable de `HEAD`, non commité).**
+- 4 fichiers `api/` suivis modifiés : `api/main.py`, `api/routers/competitions.py`, `api/schemas.py`, `api/serializers.py`.
+- 2 fichiers `api/` non suivis : `api/live_commentary.py`, `api/nlg_live.py`.
+- 4 fichiers de tests non suivis : `tests/test_competitions.py`, `tests/test_serializers.py`, `tests/test_live_commentary.py`, `tests/test_nlg_live.py`.
+
+Résultat de l'essai : `pytest tests --ignore=simulafoot_nlg` → **1044 passed, 5 skipped, 12 deselected** (soit +26 tests par rapport à HEAD seul). Collecte propre. **Lot 4 est commitable tel quel : oui**, sans autre dépendance manquante. Il reste **non commité**. Le `ui/` (dont `PitchView.jsx`) ne fait pas partie du Lot 4 ; il dépend du Lot 4 (§8.4).
+
+**Tickets ajoutés à `docs/known_issues.md`.**
+- **Ticket 9** : `pytest` nu échoue à la collecte (`duckdb` absent du venv principal, importé par `simulafoot_nlg/tests/conftest.py`). Contournement : `pytest tests --ignore=simulafoot_nlg`. Avant la Phase 7. Ouvert.
+- **Ticket 10** : seuil de couverture 85 % en échec depuis la racine. **Précision issue de la mesure du 07/10/2026** : la cause est le répertoire de lancement (`--cov=engine` vise le `engine/` de la racine, couverture 0 %), pas le venv NLG ; lancée depuis `simulafoot_nlg/`, la suite NLG atteint 99,77 % et le seuil est tenu. Avant la Phase 7. Ouvert.
+
+**Séquence mise à jour** : 3a (fait, `f5e37de`) → Lot 1 (fait, `7fa9f68`) → Lot 2 (fait, `ddfad09`) → 3b (fait, `3070543`) → 3c (fait, `8ee3e7d`) → docstrings `coaches.py` (fait, `14070bc`) → Lot 4 (prêt à commiter) → Lot 5 (à faire) → mise à jour de `PROJET_SIMULAFOOT.md` (à faire) → entrée Phase 5 (à faire).
+
+**Statut** : aucun commit du Lot 4, du Lot 5 ni de `PROJET_SIMULAFOOT.md`. Moteur de rendu, mode standalone de `canvas.html`, `PitchView.jsx` et tickets 1, 2, 3, 4, 6, 7 inchangés.

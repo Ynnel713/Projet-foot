@@ -12,6 +12,8 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun n'est corrig
 | 6 | `build_clips` : `continue` silencieux quand `frames` est vide (et docstring obsolète) | Phase 7 (qualité) | Ouvert (priorité basse) |
 | 7 | `PitchView.jsx` : la version commitée diverge de celle de l'arbre de travail | Phase 5 (habillage visuel) | Ouvert |
 | 8 | `pytest` seul échoue sur un checkout propre de `HEAD` (`ModuleNotFoundError: api`) | Immédiate (avant tout partage / push) | Ouvert |
+| 9 | `pytest` nu échoue à la collecte à cause de `duckdb` absent du venv principal | Phase 7 (qualité / packaging) | Ouvert |
+| 10 | Le seuil de couverture à 85 % sur `engine/` échoue depuis le venv NLG | Phase 7 (qualité / packaging) | Ouvert |
 
 ---
 
@@ -161,6 +163,40 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun n'est corrig
 
 **Statut.** Ouvert.
 
+
+---
+
+## 9. `pytest` nu échoue à la collecte à cause de `duckdb` absent du venv principal
+
+**Description.** `simulafoot_nlg/tests/conftest.py` importe `duckdb` (ligne 11), qui n'est pas installé dans le venv principal (`.venv`). La collecte de `pytest` lancé sans précaution s'interrompt donc sur ce dossier avant d'exécuter le moindre test.
+
+**Reproduction.** Depuis la racine du dépôt, `pytest tests` (ou `pytest` nu) avec le venv principal, sans ignorer NLG → `ModuleNotFoundError: No module named 'duckdb'`, **1 erreur de collecte**, 0 test exécuté. Constaté le 07/10/2026 (identique sur `git archive HEAD`).
+
+**Contournement actuel.** `pytest tests --ignore=simulafoot_nlg` : 1018 passés, 5 ignorés, 12 désélectionnés sur HEAD `8ee3e7d`. La suite NLG se lance à part, depuis `simulafoot_nlg/` avec `simulafoot_nlg/.venv` (874 passés, 23 ignorés).
+
+**Impact produit.** Impossible de lancer la suite complète en une seule commande ; la suite doit être scindée en deux exécutions avec deux environnements.
+
+**Priorité.** Avant la Phase 7 (qualité / packaging).
+
+**Statut.** Ouvert.
+
+---
+
+## 10. Le seuil de couverture à 85 % sur `engine/` échoue depuis le venv NLG
+
+**Description.** `simulafoot_nlg/pyproject.toml:71` impose `addopts = "--cov=engine --cov-report=term-missing --cov-fail-under=85"`. Lancée depuis la racine du dépôt avec `simulafoot_nlg/.venv` (`python -m pytest simulafoot_nlg/tests`), la mesure échoue : **« FAIL Required test coverage of 85% not reached. Total coverage: 0.00% »**, alors que les tests passent (874 passés, 23 ignorés).
+
+**Reproduction.** Depuis la racine du dépôt (ou d'une archive de `HEAD`) : `simulafoot_nlg/.venv/Scripts/python.exe -m pytest simulafoot_nlg/tests`. Le rapport liste `engine\narrative.py`, `engine\narrative_player.py`, `engine\nlg_ingestion.py` (le `engine/` **de la racine**) à 0 %. À l'inverse, lancée **depuis `simulafoot_nlg/`** (`cd simulafoot_nlg && .venv/Scripts/python.exe -m pytest tests`), la même suite atteint **99,77 %** (881 instructions, 2 non couvertes) et le seuil est tenu (constaté le 07/10/2026).
+
+**Cause probable (précision).** Le défaut vient du **répertoire de lancement** et non du venv : `--cov=engine` désigne le paquet `engine` résolu depuis le répertoire courant, c'est-à-dire le `engine/` de la racine (moteur graphique, non couvert par ces tests) et non `simulafoot_nlg/engine/`. Non confirmée au-delà de ces deux lancements.
+
+**Impact produit.** Faux échec (code de sortie non nul) d'une CI qui lancerait les tests NLG depuis la racine, malgré une suite verte.
+
+**Pistes (non appliquées).** Lancer les tests NLG depuis `simulafoot_nlg/` ; ou redéfinir le périmètre (`--cov=simulafoot_nlg/engine`) ; ou ajuster le seuil. Décision de packaging à prendre.
+
+**Priorité.** Avant la Phase 7 (qualité / packaging).
+
+**Statut.** Ouvert.
 
 ---
 
