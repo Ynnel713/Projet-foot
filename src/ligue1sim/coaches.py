@@ -7,9 +7,11 @@ jouer dans ce dispositif (voir `lineup.pick_best_formation`) -- quitte à
 devoir dépanner certains postes (voir `lineup.select_best_xi`). Un club
 absent retombe sur le choix adaptatif habituel (meilleur des dispositifs
 standards, voir `lineup.FORMATIONS`). Le nom de l'entraîneur est purement
-informatif (affiché sur la feuille de match). Les styles alimentent les
-statistiques de match (voir `match_stats`) ; la note n'est pas encore utilisée
-par le moteur de simulation.
+informatif (affiché sur la feuille de match). Depuis 3c (décision D5,
+07/10/2026), la note applique un modulateur d'influence coach (±3 %) sur les
+lambdas de Poisson, et les styles un modulateur de ±15 % cumulés -- voir
+COACH_INFLUENCE/STYLE_* dans simulation.py. Les styles alimentent aussi les
+statistiques de match (voir `match_stats`).
 
 Résolution des noms
 --------------------
@@ -179,8 +181,8 @@ def coach_name(club_name: str, paths: tuple[str, ...] = COACHES_PATHS) -> str | 
 
 
 def coach_note(club_name: str, paths: tuple[str, ...] = COACHES_PATHS) -> float | None:
-    """Note /100 de l'entraîneur du club/sélection, si connue (donnée
-    disponible pour le moteur de simulation, qui ne l'utilise pas encore)."""
+    """Note /100 de l'entraîneur du club/sélection, si connue (voir
+    `simulation.COACH_INFLUENCE` pour son usage dans le moteur)."""
     coach = _load(paths).get(club_name)
     return coach.note if coach else None
 
@@ -195,7 +197,7 @@ def coach_styles(club_name: str, paths: tuple[str, ...] = COACHES_PATHS) -> froz
 @lru_cache(maxsize=None)
 def average_note(paths: tuple[str, ...] = COACHES_PATHS) -> float | None:
     """Moyenne des notes /100 connues, tous clubs/sélections confondus --
-    référence permettant de juger un coach
+    référence utilisée par `simulation.COACH_INFLUENCE` pour juger un coach
     au-dessus ou en-dessous du lot plutôt que contre un seuil arbitraire
     fixe. None si aucune note n'est renseignée."""
     notes = [c.note for c in _load(paths).values() if c.note is not None]
