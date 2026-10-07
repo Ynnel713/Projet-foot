@@ -272,47 +272,167 @@ function startPlayer(SEQUENCE_DATA, bridge) {
     return [frames[last], frames[last], 0];
   }
 
+  // --- Tailles en PIXELS ECRAN (Phase 5, sous-etape 2) ---------------------
+  // Le canvas fait 1200 x 780 px mais est reduit par CSS : ses dimensions
+  // internes ne disent rien de ce que l'utilisateur voit. Les tailles
+  // ci-dessous sont donc exprimees en pixels ECRAN (px CSS) puis converties en
+  // pixels canvas par le rapport canvas.width / largeur affichee. Ce rapport
+  // est calcule au chargement et a chaque redimensionnement (ResizeObserver),
+  // jamais a chaque image. Le device pixel ratio n'intervient pas : un px CSS
+  // occupe dpr x dpr pixels physiques, la taille PERCUE reste la meme sur tout
+  // ecran (seule la nettete change).
+  const PLAYER_DIAMETER_SCREEN_PX = 14;
+  const ACTIVE_DIAMETER_RATIO = 13 / 9;  // le joueur "actif" (role mis en scene) garde son surcroit d'emphase d'origine
+  const NUMBER_FONT_RATIO = 0.58;        // taille du numero / diametre du rond
+  const NAME_FONT_SCREEN_PX = 10;
+  const BALL_DIAMETER_SCREEN_PX = 6;
+  const HEADING_TIP_SCREEN_PX = 3.5;     // depassement de la pointe d'orientation au-dela du rond
+  const BALL_CARRIED_MAX_M = 3;          // distance max ballon-porteur pour afficher le nom du porteur
+  const HEADING_MIN_SPEED_MS = 0.3;      // en dessous, le joueur est a l'arret : on garde son dernier cap
+
+  let pxPerScreenPx = 1;
+  let sizes = null;
+
+  function updateSizes() {
+    const rect = canvas.getBoundingClientRect();
+    pxPerScreenPx = rect.width > 0 ? canvas.width / rect.width : 1;
+    sizes = {
+      playerRadius: PLAYER_DIAMETER_SCREEN_PX / 2 * pxPerScreenPx,
+      activeRadius: PLAYER_DIAMETER_SCREEN_PX * ACTIVE_DIAMETER_RATIO / 2 * pxPerScreenPx,
+      ballRadius: BALL_DIAMETER_SCREEN_PX / 2 * pxPerScreenPx,
+      nameFont: NAME_FONT_SCREEN_PX * pxPerScreenPx,
+      headingTip: HEADING_TIP_SCREEN_PX * pxPerScreenPx,
+    };
+  }
+  updateSizes();
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(updateSizes).observe(canvas);
+  window.addEventListener('resize', updateSizes);
+
+  // Couleur du numero contrastee sur le remplissage du rond (blanc ou quasi noir).
+  const numberColorCache = {};
+  function numberColor(hex) {
+    if (!(hex in numberColorCache)) {
+      const n = parseInt(hex.slice(1), 16);
+      const lin = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+      const lum = 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+      numberColorCache[hex] = lum > 0.4 ? '#111111' : '#ffffff';
+    }
+    return numberColorCache[hex];
+  }
+
+  // Dernier cap connu de chaque joueur, par clip (orientation deduite du deplacement
+  // entre deux images consecutives ; un joueur a l'arret conserve son dernier cap).
+  const headingsByClip = new WeakMap();
+
+  function drawHeading(px, py, radius, angle) {
+    const tip = radius + sizes.headingTip;
+    const baseR = radius * 0.92;
+    const half = 0.55;  // demi-ouverture angulaire de la base (radians)
+    ctx.beginPath();
+    ctx.moveTo(px + Math.cos(angle) * tip, py + Math.sin(angle) * tip);
+    ctx.lineTo(px + Math.cos(angle + half) * baseR, py + Math.sin(angle + half) * baseR);
+    ctx.lineTo(px + Math.cos(angle - half) * baseR, py + Math.sin(angle - half) * baseR);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+    ctx.fill();
+    ctx.lineWidth = 0.6 * pxPerScreenPx;
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.55)';
+    ctx.stroke();
+  }
+
+  // Nom du porteur sous son rond, sur fond semi-transparent. Affiche uniquement si le
+  // clip porte `metadata.main_player` ; le nom vient de `metadata.player_names[id]`
+  // (id du porteur = `frame.ball.owner`), repli sur `main_player` pour un joueur actif.
+  function drawCarrierName(clipData, pa, px, py, radius) {
+    const meta = clipData.metadata;
+    if (!meta.main_player) return;
+    let name = meta.player_names ? meta.player_names[pa.id] : null;
+    if (!name && pa.active) name = meta.main_player;
+    if (!name) return;
+    if (name.length > 18) name = name.slice(0, 17) + '\u2026';
+    ctx.font = sizes.nameFont + 'px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    const padding = 2 * pxPerScreenPx;
+    const width = ctx.measureText(name).width + 2 * padding;
+    const top = py + radius + 2 * pxPerScreenPx;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+    ctx.fillRect(px - width / 2, top, width, sizes.nameFont + 2 * padding);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(name, px, top + padding);
+  }
+
   function drawFrame(clipData, t) {
     drawPitch();
     const teams = clipData.metadata.teams;
     const [fa, fb, frac] = findSegment(clipData, t);
+    const carrierId = fa.ball.owner || null;
+    let headings = headingsByClip.get(clipData);
+    if (!headings) { headings = {}; headingsByClip.set(clipData, headings); }
+    const segmentDt = fb.t - fa.t;
 
     const byIdB = {};
     for (const p of fb.players) byIdB[p.id] = p;
 
+    let carrierDraw = null;
     for (const pa of fa.players) {
       const pb = byIdB[pa.id] || pa;
       const x = lerp(pa.x, pb.x, frac);
       const y = lerp(pa.y, pb.y, frac);
       const [px, py] = toPx(x, y);
       const team = teams[pa.team];
-      const radius = pa.active ? 13 : 9;
+      const radius = pa.active ? sizes.activeRadius : sizes.playerRadius;
+
+      // Cap : deplacement (en metres) entre les deux images qui encadrent t.
+      if (segmentDt > 0) {
+        const dx = (pb.x - pa.x) * PITCH_L, dy = (pb.y - pa.y) * PITCH_W;
+        if (Math.hypot(dx, dy) / segmentDt >= HEADING_MIN_SPEED_MS) headings[pa.id] = Math.atan2(-dy, dx);  // y canvas vers le bas
+      }
+      if (pa.id in headings) drawHeading(px, py, radius, headings[pa.id]);
 
       ctx.beginPath();
       ctx.arc(px, py, radius, 0, Math.PI * 2);
       ctx.fillStyle = team.color_fill;
       ctx.fill();
-      ctx.lineWidth = pa.active ? 3 : 1;
+      ctx.lineWidth = (pa.active ? 2 : 1) * pxPerScreenPx;
       ctx.strokeStyle = pa.active ? '#ffd700' : team.color_outline;
       ctx.stroke();
 
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '10px sans-serif';
+      // Numero centre dans le rond, taille proportionnelle au diametre.
+      ctx.fillStyle = numberColor(team.color_fill);
+      ctx.font = 'bold ' + (2 * radius * NUMBER_FONT_RATIO) + 'px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(String(pa.numero), px, py + radius + 11);
-    }
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(pa.numero), px, py + 0.5 * pxPerScreenPx);
 
+      if (carrierId !== null && pa.id === carrierId) carrierDraw = [pa, px, py, radius];
+    }
     const ballX = lerp(fa.ball.x, fb.ball.x, frac);
     const ballY = lerp(fa.ball.y, fb.ball.y, frac);
     const ballZ = lerp(fa.ball.z, fb.ball.z, frac);
     const [bx, by] = toPx(ballX, ballY);
-    const ballRadius = 5 + Math.min(9, ballZ * 3);
+
+    // Le nom n'est affiche que tant que le ballon est reellement porte : a terre et a moins de
+    // BALL_CARRIED_MAX_M du porteur (le porteur du moteur change a la transition de segment, la
+    // passe est deja partie un instant avant).
+    if (carrierDraw && ballZ < 0.5 && Math.hypot(bx - carrierDraw[1], by - carrierDraw[2]) <= BALL_CARRIED_MAX_M * SCALE) {
+      drawCarrierName(clipData, ...carrierDraw);
+    }
+
+    // Ballon : dessine APRES les ronds (visible meme porte), 6 px ecran de diametre,
+    // ombre au sol, souleve a l'ecran quand il est en l'air.
+    const lift = Math.min(ballZ, 4) * SCALE * 0.5;
+    const r = sizes.ballRadius * (1 + Math.min(0.5, ballZ * 0.15));
     ctx.beginPath();
-    ctx.arc(bx, by, ballRadius, 0, Math.PI * 2);
+    ctx.ellipse(bx + 0.6 * r, by + 0.6 * r, r, r * 0.8, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(bx, by - lift, r, 0, Math.PI * 2);
     ctx.fillStyle = '#ffffff';
     ctx.fill();
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 0.8 * pxPerScreenPx;
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)';
     ctx.stroke();
 
     if (DEBUG) {

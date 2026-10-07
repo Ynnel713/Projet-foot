@@ -1,6 +1,6 @@
 # Dette connue — Simulafoot
 
-Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets ouverts (2, 3, 4, 6, 9, 10 et 11) n'est corrigé à ce jour.** Créé le 07/10/2026 (clôture de l'Étape B, `LineupSnapshot`) ; tickets 4 et 5 ajoutés le même jour (intégration PWA par iframe) ; ticket 5 fermé et tickets 6 à 8 ouverts le même jour (gouvernance, avant Phase 5) ; tickets 9 (`duckdb`) et 10 (couverture NLG) ajoutés le même jour (environnement de test). tickets 7 (résolu en `7309172`) et 11 (`ConnectionResetError`) traités le même jour. **État : ouverts 2, 3, 4, 6, 9, 10, 11 ; fermés 1 (résolu en `61773ab`, Phase 5 sous-étape 1), 5 (non reproduit), 7 (résolu en `7309172`) et 8 (résolu en `2d71e55`, vérifié sur archive propre).**
+Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets ouverts (2, 3, 4, 6, 9, 10, 11 et 12) n'est corrigé à ce jour.** Créé le 07/10/2026 (clôture de l'Étape B, `LineupSnapshot`) ; tickets 4 et 5 ajoutés le même jour (intégration PWA par iframe) ; ticket 5 fermé et tickets 6 à 8 ouverts le même jour (gouvernance, avant Phase 5) ; tickets 9 (`duckdb`) et 10 (couverture NLG) ajoutés le même jour (environnement de test). tickets 7 (résolu en `7309172`) et 11 (`ConnectionResetError`) traités le même jour. **État : ouverts 2, 3, 4, 6, 9, 10, 11, 12 ; fermés 1 (résolu en `61773ab`, Phase 5 sous-étape 1), 5 (non reproduit), 7 (résolu en `7309172`) et 8 (résolu en `2d71e55`, vérifié sur archive propre).**
 
 | # | Titre | Priorité (avant…) | Statut |
 |---|---|---|---|
@@ -15,6 +15,7 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 | 9 | `pytest` nu échoue à la collecte à cause de `duckdb` absent du venv principal | Phase 7 (qualité / packaging) | Ouvert |
 | 10 | Le seuil de couverture à 85 % sur `engine/` échoue depuis le venv NLG | Phase 7 (qualité / packaging) | Ouvert |
 | 11 | `ConnectionResetError` Windows 10054 dans le journal de l'API | Phase 7 (qualité / packaging) — priorité basse | Ouvert |
+| 12 | Sauts de trajectoire en amont liés aux changements de segment de gabarit | Phase 7 (qualité / packaging) — priorité basse | Ouvert |
 
 ---
 
@@ -208,6 +209,20 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 **Reproduction.** Non systématique. Apparue une fois au chargement de la liste de matchs depuis la PWA ; le mécanisme exact n'a pas été tracé. Une cause plausible, **non confirmée**, est une connexion fermée par le navigateur en cours de requête (rechargement, annulation, double appel de `StrictMode`) ; l'arrêt d'un serveur en cours de requête produit le même type d'erreur.
 
 **Impact.** Bruit dans le journal ; aucune conséquence fonctionnelle connue.
+
+**Priorité.** Basse, avant la Phase 7 (qualité / packaging).
+
+**Statut.** Ouvert.
+
+---
+
+## 12. Sauts de trajectoire en amont liés aux changements de segment de gabarit
+
+**Description.** Les joueurs effectuent des sauts brusques de position au changement de segment d'un gabarit : la trajectoire brute produite par `animation.motion.interpolate` présente des discontinuités (3 à 8 m en une image, soit 100 à 250 m/s). Distinct du ticket 1 (position hors du terrain, résolu en `61773ab` : la contrainte d'accélération est désormais bornée au terrain) ; la contrainte lisse ces sauts sans les supprimer.
+
+**Reproduction.** Observer les clips de contre-attaque où le porteur change. Mesure du 07/10/2026 sur 40 matchs : 682 joueurs × clips sur ~16 300 (≈ 4 %) ont au moins un saut brut de plus de 40 m/s entre deux images, principalement entre 20 % et 60 % de la durée du clip (équipes `scorer` et `opponent`, tous postes). Cause non tracée plus finement (changement de segment, délai de réaction, évitement).
+
+**Impact.** Rendu visuellement moins fluide (glissement ou téléportation d'un joueur sur quelques images) ; aucune position impossible depuis la correction du ticket 1.
 
 **Priorité.** Basse, avant la Phase 7 (qualité / packaging).
 

@@ -375,6 +375,15 @@ def clips_to_json(clips: list[Clip], timeline: Timeline) -> str:
             },
         )
         clip_payload = json.loads(sequence_json)
+        # Phase 5 sous-etape 2 (07/10/2026) : porteur du ballon a chaque image
+        # (`ball.owner` = id du joueur dont `is_ball_carrier` est vrai, None si le
+        # ballon est libre/en l'air) et noms par id (`metadata.player_names`) --
+        # pour afficher le nom du porteur dans canvas.html. Champs additifs :
+        # ni les positions, ni la physique, ni le protocole ne changent.
+        for frame_payload, frame in zip(clip_payload["frames"], clip.frames):
+            carrier = next((str(pid) for pid, state in frame.players.items() if state.is_ball_carrier), None)
+            frame_payload["ball"]["owner"] = carrier
+        clip_payload["metadata"]["player_names"] = {str(pid): entry.nom for pid, entry in clip.roster.items()}
         clip_payload["metadata"].update({
             "minute": clip.minute,
             "declinaison": clip.declinaison,

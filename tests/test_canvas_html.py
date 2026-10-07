@@ -62,3 +62,77 @@ def test_pitch_is_drawn_in_meters_with_one_scale_and_no_hardcoded_fractions():
         assert old_fraction not in CANVAS
     assert "Math.acos(" in CANVAS  # arc de la surface de réparation
     assert "corner_arc_radius_m" in CANVAS  # arcs de coin
+
+
+# --- Rendu des joueurs et du ballon (Phase 5, sous-étape 2) -------------------------------------------------------
+# Tests STATIQUES (lecture du code de canvas.html, aucun navigateur) + un test du payload émis par narrative_player.
+
+
+def test_player_diameter_is_14_screen_pixels_whatever_the_device_pixel_ratio():
+    assert "const PLAYER_DIAMETER_SCREEN_PX = 14;" in CANVAS
+    # Pixels ECRAN (CSS) -> pixels canvas par le rapport canvas.width / largeur affichee, recalcule au chargement et au
+    # redimensionnement (ResizeObserver), jamais à chaque image ; le device pixel ratio n'intervient pas.
+    assert "canvas.getBoundingClientRect()" in CANVAS
+    assert "pxPerScreenPx = rect.width > 0 ? canvas.width / rect.width : 1;" in CANVAS
+    assert "new ResizeObserver(updateSizes)" in CANVAS
+    assert "devicePixelRatio" not in CANVAS
+    assert "PLAYER_DIAMETER_SCREEN_PX / 2 * pxPerScreenPx" in CANVAS
+    draw_frame = CANVAS[CANVAS.index("function drawFrame("):]
+    assert "updateSizes()" not in draw_frame  # la taille n'est pas recalculée à chaque image
+    assert "pa.active ? 13 : 9" not in CANVAS  # anciens rayons en pixels canvas supprimés
+
+
+def test_player_number_is_centered_and_proportional_to_the_diameter():
+    assert "const NUMBER_FONT_RATIO = 0.58;" in CANVAS
+    assert "'bold ' + (2 * radius * NUMBER_FONT_RATIO) + 'px sans-serif'" in CANVAS
+    assert "ctx.textBaseline = 'middle';" in CANVAS
+    assert "ctx.fillText(String(pa.numero), px, py + 0.5 * pxPerScreenPx);" in CANVAS  # dans le rond, plus sous le rond
+    assert "py + radius + 11" not in CANVAS
+
+
+def test_carrier_name_is_drawn_only_when_main_player_is_present():
+    body = CANVAS[CANVAS.index("function drawCarrierName("):CANVAS.index("function drawFrame(")]
+    assert "if (!meta.main_player) return;" in body  # sans metadata.main_player : aucun nom
+    assert "meta.player_names" in body and "meta.main_player" in body  # seules sources du nom
+    assert "const NAME_FONT_SCREEN_PX = 10;" in CANVAS
+    assert "rgba(0, 0, 0, 0.55)" in body  # fond semi-transparent
+    assert CANVAS.count("drawCarrierName(") == 2  # définition + un seul appel, réservé au porteur
+    assert "ballZ < 0.5" in CANVAS and "BALL_CARRIED_MAX_M" in CANVAS  # seulement tant que le ballon est porté
+
+
+def test_heading_is_derived_from_two_consecutive_frames():
+    assert "(pb.x - pa.x) * PITCH_L" in CANVAS and "(pb.y - pa.y) * PITCH_W" in CANVAS
+    assert "Math.atan2(-dy, dx)" in CANVAS
+    assert "const HEADING_MIN_SPEED_MS = 0.3;" in CANVAS  # à l'arrêt : dernier cap conservé
+
+
+def test_ball_is_6_screen_pixels_drawn_after_the_players_with_a_ground_shadow():
+    assert "const BALL_DIAMETER_SCREEN_PX = 6;" in CANVAS
+    assert "BALL_DIAMETER_SCREEN_PX / 2 * pxPerScreenPx" in CANVAS
+    assert "5 + Math.min(9, ballZ * 3)" not in CANVAS  # ancien rayon en pixels canvas supprimé
+    ball = CANVAS.index("// Ballon : dessine APRES les ronds")
+    assert ball > CANVAS.index("ctx.fillText(String(pa.numero)")  # le ballon est peint par-dessus les ronds
+    assert "ctx.ellipse(" in CANVAS[ball:]  # ombre au sol
+    assert "by - lift" in CANVAS[ball:]  # souleve quand il est en l'air
+
+
+def test_payload_carries_the_ball_owner_per_frame_and_the_player_names():
+    import json
+
+    from narrative_player import build_clips, clips_to_json
+    from test_canvas_e2e import _MAX_OCCASIONS, _find_usable_match
+
+    timeline = _find_usable_match()
+    data = json.loads(clips_to_json(build_clips(timeline, max_occasions=_MAX_OCCASIONS), timeline))
+    assert data
+    for clip in data:
+        names = clip["metadata"]["player_names"]
+        assert clip["metadata"]["main_player"]
+        ids = {p["id"] for p in clip["frames"][0]["players"]}
+        assert set(names) >= ids and all(isinstance(n, str) and n for n in names.values())
+        for frame in clip["frames"]:
+            assert "owner" in frame["ball"]  # clé présente à chaque image
+            owner = frame["ball"]["owner"]
+            assert owner is None or owner in {p["id"] for p in frame["players"]}
+        # un porteur est identifié sur au moins une image de chaque clip
+        assert any(f["ball"]["owner"] is not None for f in clip["frames"])
