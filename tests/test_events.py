@@ -1,5 +1,7 @@
 import random
 
+import numpy as np
+
 from ligue1sim.clubs import Club
 from ligue1sim.events import (
     AvailabilityTracker,
@@ -10,7 +12,8 @@ from ligue1sim.events import (
 )
 from ligue1sim.lineup import pick_best_formation
 from ligue1sim.players import Player
-from ligue1sim.schedule import Match
+from ligue1sim.schedule import Journee, Match
+from ligue1sim.simulation import LeagueContext, simulate_journee, simulate_match
 
 
 def _player(poste: str, note: float, name: str) -> Player:
@@ -198,3 +201,65 @@ class TestAvailabilityTracker:
         tracker.apply_new_ban("Club B", "Joueur Y", 1)
 
         assert tracker.active_bans() == [("Club A", "Joueur X", 2), ("Club B", "Joueur Y", 1)]
+
+
+# --- Raison des absences (suspension / blessure) : affichage seulement ---------
+# `suspended_*`/`injured_*` ne servent qu'a AFFICHER pourquoi un joueur est absent ; la compo reste
+# decidee par `unavailable_*` (ensemble fusionne) et le resultat sportif n'en depend pas.
+
+
+def test_absence_reasons_default_to_empty_and_are_recorded_when_given():
+    random.seed(5)
+    home, away = _clubs()
+    home_lineup, away_lineup = pick_best_formation(home), pick_best_formation(away)
+
+    default = generate_match_events(home, away, home_lineup, away_lineup, home_goals=1, away_goals=0)
+    assert default.home_suspended == default.home_injured == frozenset()
+    assert default.away_suspended == default.away_injured == frozenset()
+
+    shown = generate_match_events(
+        home, away, home_lineup, away_lineup, home_goals=1, away_goals=0,
+        suspended_home=frozenset({"home_cb0"}), injured_home=frozenset({"home_cm1"}),
+        suspended_away=frozenset({"away_lb0"}), injured_away=frozenset({"away_cf2"}),
+    )
+    assert shown.home_suspended == frozenset({"home_cb0"})
+    assert shown.home_injured == frozenset({"home_cm1"})
+    assert shown.away_suspended == frozenset({"away_lb0"})
+    assert shown.away_injured == frozenset({"away_cf2"})
+
+
+def test_absence_reasons_do_not_change_the_match():
+    """Meme graine, meme absent : avec ou sans raison (suspension ou blessure), meme score et memes buts."""
+    home, away = _clubs()
+    context = LeagueContext.from_clubs([home, away])
+    absent = frozenset({"home_cb0"})
+
+    def play(**reasons):
+        random.seed(21)
+        np.random.seed(21)
+        return simulate_match(home, away, context, unavailable_home=absent, **reasons)
+
+    home_goals, away_goals, plain = play()
+    for reasons in ({"suspended_home": absent}, {"injured_home": absent}):
+        hg, ag, events = play(**reasons)
+        assert (hg, ag) == (home_goals, away_goals)
+        assert events.goals == plain.goals
+        assert [s.player_name for s in events.home_lineup] == [s.player_name for s in plain.home_lineup]
+    assert plain.home_suspended == plain.home_injured == frozenset()
+
+
+def test_simulate_journee_records_why_each_player_was_absent():
+    home, away = _clubs()
+    context = LeagueContext.from_clubs([home, away])
+    suspensions, injuries = AvailabilityTracker(), AvailabilityTracker()
+    suspensions.apply_new_ban("Home FC", "home_cb0", 2)
+    injuries.apply_new_ban("Away FC", "away_lb0", 2)
+    journee = Journee(1, [Match("Home FC", "Away FC")])
+
+    random.seed(8)
+    simulate_journee(journee, {"Home FC": home, "Away FC": away}, context, suspensions=suspensions, injuries=injuries)
+
+    events = journee.matches[0].events
+    assert events.home_suspended == frozenset({"home_cb0"}) and events.home_injured == frozenset()
+    assert events.away_injured == frozenset({"away_lb0"}) and events.away_suspended == frozenset()
+    assert "home_cb0" not in {s.player_name for s in events.home_lineup}  # absent de la compo, quelle que soit la raison

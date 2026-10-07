@@ -278,6 +278,16 @@ class MatchEvents:
     cards: list[CardEvent] = field(default_factory=list)
     injuries: list[InjuryEvent] = field(default_factory=list)
     penalties_missed: list[PenaltyMissedEvent] = field(default_factory=list)
+    # Joueurs absents de l'effectif du jour, et pourquoi (28/09/2026, pour
+    # l'écran terrain "reste de l'effectif" côté UI) -- `unavailable_home`/
+    # `unavailable_away` ci-dessous restent le seul ensemble FUSIONNÉ utilisé
+    # pour exclure ces joueurs de la compo (`_play_match_squad`) ; ces 4
+    # champs ne servent qu'à l'affichage de la RAISON, jamais à la logique de
+    # sélection.
+    home_suspended: frozenset[str] = field(default_factory=frozenset)
+    home_injured: frozenset[str] = field(default_factory=frozenset)
+    away_suspended: frozenset[str] = field(default_factory=frozenset)
+    away_injured: frozenset[str] = field(default_factory=frozenset)
     # Compo réellement alignée par chaque équipe à la simulation (voir
     # lineup_snapshot.py) -- source de vérité unique pour reconstruire une
     # animation sans rappeler `pick_best_formation`. Purement additif :
@@ -298,6 +308,10 @@ def generate_match_events(
     unavailable_home: frozenset[str] = frozenset(),
     unavailable_away: frozenset[str] = frozenset(),
     match_id: str | None = None,
+    suspended_home: frozenset[str] = frozenset(),
+    injured_home: frozenset[str] = frozenset(),
+    suspended_away: frozenset[str] = frozenset(),
+    injured_away: frozenset[str] = frozenset(),
 ) -> MatchEvents:
     """Construit tout ce qui s'est passé pendant le match à partir du score
     déjà tiré : remplacements, buteurs/passeurs, cartons, blessures, notes.
@@ -345,6 +359,10 @@ def generate_match_events(
         cards=home_cards + away_cards,
         injuries=home_injuries + away_injuries,
         penalties_missed=penalties_missed,
+        home_suspended=suspended_home,
+        home_injured=injured_home,
+        away_suspended=suspended_away,
+        away_injured=injured_away,
         home_lineup_snapshot=snapshot_lineup(home_lineup, [e.player for e in home_squad if not e.started]),
         away_lineup_snapshot=snapshot_lineup(away_lineup, [e.player for e in away_squad if not e.started]),
     )

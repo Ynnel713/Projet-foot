@@ -386,6 +386,10 @@ def simulate_match(
     unavailable_home: frozenset[str] = frozenset(),
     unavailable_away: frozenset[str] = frozenset(),
     form: FormTracker | None = None,
+    suspended_home: frozenset[str] = frozenset(),
+    injured_home: frozenset[str] = frozenset(),
+    suspended_away: frozenset[str] = frozenset(),
+    injured_away: frozenset[str] = frozenset(),
 ) -> tuple[int, int, MatchEvents | None]:
     """Simule un match : compos du jour (dispositif + indisponibilités),
     score, puis événements si les deux clubs ont un effectif réel (les clubs
@@ -397,7 +401,15 @@ def simulate_match(
     forme actuelle avant le tirage, puis est mis à jour avec la performance
     réelle de ce match (voir FormTracker). Si omis, aucune forme n'est
     appliquée -- comportement inchangé pour les appelants qui ne s'en
-    soucient pas, y compris tous les tests existants."""
+    soucient pas, y compris tous les tests existants.
+
+    `suspended_home`/`injured_home`/`suspended_away`/`injured_away` : sous-
+    ensembles de `unavailable_home`/`unavailable_away` (union des deux, voir
+    l'appelant), uniquement pour AFFICHER la raison d'une absence côté UI
+    (écran terrain, "reste de l'effectif") -- n'influencent PAS la sélection
+    de compo, déjà décidée par `unavailable_home`/`unavailable_away`. Omis
+    par défaut (ensembles vides) : comportement inchangé pour les appelants
+    qui ne s'en soucient pas, y compris tous les tests existants."""
     home_lineup = pick_best_formation(home, unavailable_home)
     away_lineup = pick_best_formation(away, unavailable_away)
     home_bench_mod = _bench_modifier(bench(home, home_lineup, unavailable_home), context)
@@ -412,7 +424,18 @@ def simulate_match(
     events = None
     if home.players and away.players:
         events = generate_match_events(
-            home, away, home_lineup, away_lineup, home_goals, away_goals, unavailable_home, unavailable_away
+            home,
+            away,
+            home_lineup,
+            away_lineup,
+            home_goals,
+            away_goals,
+            unavailable_home,
+            unavailable_away,
+            suspended_home=suspended_home,
+            injured_home=injured_home,
+            suspended_away=suspended_away,
+            injured_away=injured_away,
         )
 
     return home_goals, away_goals, events
@@ -449,10 +472,23 @@ def simulate_journee(
             continue
 
         home, away = clubs_by_name[match.home], clubs_by_name[match.away]
-        unavailable_home = suspensions.unavailable_players(home.name) | injuries.unavailable_players(home.name)
-        unavailable_away = suspensions.unavailable_players(away.name) | injuries.unavailable_players(away.name)
+        suspended_home, injured_home = suspensions.unavailable_players(home.name), injuries.unavailable_players(home.name)
+        suspended_away, injured_away = suspensions.unavailable_players(away.name), injuries.unavailable_players(away.name)
+        unavailable_home = suspended_home | injured_home
+        unavailable_away = suspended_away | injured_away
 
-        home_goals, away_goals, events = simulate_match(home, away, context, unavailable_home, unavailable_away, form)
+        home_goals, away_goals, events = simulate_match(
+            home,
+            away,
+            context,
+            unavailable_home,
+            unavailable_away,
+            form,
+            suspended_home=suspended_home,
+            injured_home=injured_home,
+            suspended_away=suspended_away,
+            injured_away=injured_away,
+        )
         match.home_goals, match.away_goals, match.events = home_goals, away_goals, events
         clubs_played.update({home.name, away.name})
 
