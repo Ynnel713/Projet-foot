@@ -4,7 +4,7 @@ et sert le frontend buildé (ui/dist) sur le même port/origine.
 Lancement (dev, avec rechargement à chaud du frontend séparé) :
   uv run uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
   cd ui && npm run dev
-Lancement (accès stable partagé, un seul port -- voir "Lancer l'appli.bat") :
+Lancement (accès stable partagé, un seul port -- voir "simulafoot.bat") :
   cd ui && npm run build
   uv run uvicorn api.main:app --host 0.0.0.0 --port 8000
 """

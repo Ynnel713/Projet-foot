@@ -11,7 +11,7 @@ Le projet a deux frontends distincts, à des stades très différents :
 | | Streamlit (`app.py`) | React/FastAPI (`ui/` + `api/`) |
 |---|---|---|
 | Statut | **Interface réellement utilisée** (confirmé le 22/09 par Olivier) | Existe, buildée, mais pas l'interface utilisée au quotidien |
-| Lancé par | `uv run streamlit run app.py` (manuel) | `Lancer l'appli.bat` : uvicorn (port 8000) + Vite (port 5173) |
+| Lancé par | `uv run streamlit run app.py` (manuel) | `simulafoot.bat` : uvicorn (port 8000) + Vite (port 5173) |
 | Ajouté | Dès le début du projet | Commit `9d43df1`, début septembre 2026 |
 | Forme | App web classique, pensée desktop | PWA mobile-first, format paysage |
 

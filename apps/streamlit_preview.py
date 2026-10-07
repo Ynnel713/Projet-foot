@@ -15,7 +15,7 @@ Les deux modes injectent `render/canvas.html` (qui detecte lui-meme le mode
 gabarit-isole vs player selon la forme du JSON, voir Tache 4.1) et l'affichent
 via `st.components.v1.html`.
 
-Fichier AUTONOME, volontairement NON ajoute a `Lancer l'appli.bat` (brief,
+Fichier AUTONOME, volontairement NON ajoute a `simulafoot.bat` (brief,
 4.2) -- le proprietaire le lance manuellement :
 
     uv run streamlit run apps/streamlit_preview.py --server.port 8600

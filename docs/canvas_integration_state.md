@@ -61,7 +61,7 @@ Aucun — tous les éléments demandés (lecteur, point de branchement, fonction
 
 ## PWA React — cible réelle du branchement
 
-**Correction importante** : la section "Point de branchement Streamlit" ci-dessus documente `app.py`, mais ce n'est **plus** l'app que le propriétaire utilise au quotidien. `Lancer l'appli.bat` lance en réalité l'API FastAPI (port 8000) + la PWA React de `ui/` (port 5173) — commentaire du `.bat` : "L'appli est passée de Streamlit à une PWA React + API FastAPI". La reconnaissance ci-dessous porte sur cette PWA, la vraie cible d'un bouton "Voir temps forts" en usage réel.
+**Correction importante** : la section "Point de branchement Streamlit" ci-dessus documente `app.py`, mais ce n'est **plus** l'app que le propriétaire utilise au quotidien. `simulafoot.bat` lance en réalité l'API FastAPI (port 8000) + la PWA React de `ui/` (port 5173) — commentaire du `.bat` : "L'appli est passée de Streamlit à une PWA React + API FastAPI". La reconnaissance ci-dessous porte sur cette PWA, la vraie cible d'un bouton "Voir temps forts" en usage réel.
 
 ### 2.1 — Racine, framework, gestionnaire de paquets
 

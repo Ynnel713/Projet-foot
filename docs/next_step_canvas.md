@@ -72,7 +72,7 @@ retour de tâche pour le détail).
   génère `render/canvas_preview.html`, ouvrable directement dans un
   navigateur (double-clic ou `file://...`).
 - **Preview Streamlit** (fichier autonome, volontairement absent de
-  `Lancer l'appli.bat` -- le propriétaire le lance manuellement) :
+  `simulafoot.bat` -- le propriétaire le lance manuellement) :
   ```bash
   uv run streamlit run apps/streamlit_preview.py --server.port 8600
   ```
