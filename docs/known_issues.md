@@ -1,6 +1,6 @@
 # Dette connue — Simulafoot
 
-Tickets ouverts, documentés pour être traités plus tard. **Aucun n'est corrigé à ce jour.** Créé le 07/10/2026 (clôture de l'Étape B, `LineupSnapshot`) ; tickets 4 et 5 ajoutés le même jour (intégration PWA par iframe).
+Tickets ouverts, documentés pour être traités plus tard. **Aucun n'est corrigé à ce jour.** Créé le 07/10/2026 (clôture de l'Étape B, `LineupSnapshot`) ; tickets 4 et 5 ajoutés le même jour (intégration PWA par iframe) ; ticket 5 fermé et tickets 6 à 8 ouverts le même jour (gouvernance, avant Phase 5).
 
 | # | Titre | Priorité (avant…) | Statut |
 |---|---|---|---|
@@ -8,7 +8,10 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun n'est corrig
 | 2 | Un joueur expulsé peut être remplacé plus tard dans le même match | Phase 4 (branchement PWA effectif) | Ouvert |
 | 3 | `SubstitutionEvent` identifie les joueurs par nom, pas par `player_id` | Phase 6 (produit / carrière) | Ouvert |
 | 4 | Latence et poids du payload d'animation | Phase 6 (produit / carrière) | Ouvert |
-| 5 | `build_clips` écarte silencieusement un événement dont le protagoniste n'est pas résolu (protagoniste hors onze de départ) | Phase 6 (produit / carrière) | Ouvert (non reproduit) |
+| 5 | `build_clips` écarte les événements dont le protagoniste n'est pas dans le onze de départ | — | **Fermé** (non reproduit) |
+| 6 | `build_clips` : `continue` silencieux quand `frames` est vide (et docstring obsolète) | Phase 7 (qualité) | Ouvert (priorité basse) |
+| 7 | `PitchView.jsx` : la version commitée diverge de celle de l'arbre de travail | Phase 5 (habillage visuel) | Ouvert |
+| 8 | `pytest` seul échoue sur un checkout propre de `HEAD` (`ModuleNotFoundError: api`) | Immédiate (avant tout partage / push) | Ouvert |
 
 ---
 
@@ -90,7 +93,7 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun n'est corrig
 
 ---
 
-## 5. `build_clips` écarte silencieusement un événement dont le protagoniste n'est pas résolu (protagoniste hors onze de départ)
+## 5. `build_clips` écarte les événements dont le protagoniste n'est pas dans le onze de départ (fermé)
 
 **Description.** `engine/narrative_player.build_clips` ignore (`if not frames: continue`) tout événement pour lequel `_build_clip_frames` ne produit aucune frame, sans trace ni compteur ; l'événement disparaît des clips alors qu'il reste dans `Timeline.events` (et le score progressif est calculé sur tous les événements). La docstring de `build_clips` (datée du 23/09/2026) attribue ce cas aux protagonistes absents du onze de départ (« ~36 % des occasions » mesurées à l'époque), typiquement un buteur entré en cours de jeu.
 
@@ -102,7 +105,58 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun n'est corrig
 
 **Impact produit.** Si le cas se produit : moins de temps forts que d'occasions, et un score affiché qui avance sans clip correspondant (un but manquant dans la timeline du lecteur). Aucun impact observé à ce jour.
 
-**Priorité.** Avant la Phase 6 (produit / carrière). À réévaluer : mettre à jour la docstring, ou transformer le `continue` silencieux en avertissement.
+**Priorité.** Sans objet (fermé). Le `continue` silencieux et la docstring obsolète sont suivis dans le ticket 6.
 
-**Statut.** Ouvert (non reproduit au 07/10/2026) ; rien n'est corrigé.
+**Statut.** **Fermé — non reproduit le 07/10/2026 : plus aucune omission mesurée sur 18 matchs / 299 événements** (299 clips, dont 46 buts ; 27 événements à protagoniste remplaçant, tous rendus). *Note de précision :* la docstring de `build_clips`, obsolète, n'est **pas** corrigée à ce jour — `engine/` n'a pas été modifié, par contrainte de cette étape — ; ce point est repris dans le ticket 6.
 
+---
+
+## 6. `build_clips` : `continue` silencieux quand `frames` est vide, et docstring obsolète
+
+**Description.** Dans `engine/narrative_player.build_clips`, la boucle fait `frames, roster = _build_clip_frames(timeline, event)` puis `if not frames: continue` : un événement dont les frames sont vides est écarté **sans trace** (ni log, ni compteur, ni avertissement) ; il reste dans `Timeline.events` et son effet sur le score progressif est conservé, mais aucun clip ne lui correspond. La docstring de la fonction (datée du 23/09/2026) décrit encore l'ancienne cause, « protagoniste hors onze de départ (~36 % des occasions) », qui n'est plus reproduite (ticket 5, fermé) : elle est **obsolète et non corrigée**.
+
+**Constat.** Au 07/10/2026 le `continue` n'est jamais atteint sur 18 matchs / 299 événements (0 omission). Aucun défaut visible aujourd'hui.
+
+**Impact potentiel.** Si un futur gabarit (ou une évolution de `_build_clip_frames`) produit des frames vides, un clip disparaît silencieusement : moins de temps forts que d'occasions, un score qui avance sans clip correspondant, sans aucun signal pour le diagnostiquer. La docstring obsolète peut en outre induire en erreur (elle a servi de source à une affirmation inexacte dans un rapport du 07/10/2026).
+
+**Reproduction.** Aucune à ce jour. Pour détecter le cas : comparer `len(timeline.events)` à `len(build_clips(timeline, None))`, ou ajouter un test d'invariant « un événement de la timeline = un clip » sur un lot de matchs simulés.
+
+**Pistes (non implémentées).** Journaliser un avertissement (ou lever en mode test) quand `frames` est vide ; corriger la docstring ; test d'invariant sur 100 matchs.
+
+**Priorité.** Basse — avant la Phase 7 (qualité).
+
+**Statut.** Ouvert. Rien n'est corrigé (`engine/` non modifié).
+
+---
+
+## 7. `PitchView.jsx` : la version commitée diverge de celle de l'arbre de travail
+
+**Description.** Le commit `f70b37d` contient `ui/src/routes/PitchView.jsx` dans sa version **adaptée au contexte de `HEAD`** (ancienne vue de 116 lignes) : bouton « Voir l'animation » placé **à côté du libellé de contexte**, état `showAnimation`, import de `MatchAnimation`, composant `AnimationDialog` en fin de fichier. L'arbre de travail contient une **refonte préexistante non commitée** de ce fichier (~400 lignes modifiées : `LivePanel`, `MatchHeader`, `MatchStatsPanel`, `PitchField`, replay en direct, alertes de buts) où le même bouton est placé **à côté de « Retour »**. Les deux versions ne partagent pas le même contexte textuel : le dépôt a, pour ce fichier, une version que personne n'utilise en pratique (celle du poste de travail est la refonte).
+
+**Reproduction.** `git diff HEAD -- ui/src/routes/PitchView.jsx` : la refonte apparaît comme un grand diff qui **inclut** (ré-écrit dans son propre contexte) les 4 ajouts de l'animation ; un commit tel quel de la refonte remplacerait la version commitée sans conflit mais sans relecture des hunks d'animation.
+
+**Impact.** Réconciliation obligatoire au prochain commit de la refonte préexistante ; risque de perdre ou de dupliquer un hunk d'animation (import, état, bouton, `AnimationDialog`) si le fichier est commité en bloc ou écrasé par un `git checkout`.
+
+**Action attendue.** Lorsque le travail préexistant sera commité : partir de la **refonte**, y réintégrer explicitement les 4 hunks (import `MatchAnimation`, état `showAnimation`, bouton « Voir l'animation » à côté de « Retour », composant `AnimationDialog`), puis re-tester le build (`vite build`), le lint (`oxlint`) et le lancement en dev (modale d'animation fonctionnelle sur un match animable et sur un match sans snapshot). **Ne pas modifier la version commitée d'ici là.**
+
+**Priorité.** Avant la Phase 5 (habillage visuel).
+
+**Statut.** Ouvert (gouvernance). Rien n'est corrigé.
+
+---
+
+## 8. `pytest` seul échoue sur un checkout propre de `HEAD` (`ModuleNotFoundError: api`)
+
+**Description.** `tests/test_api_animation.py` (commit `f70b37d`) importe `api.*`. Le `pyproject.toml` de `HEAD` fixe `pythonpath = ["engine"]` ; l'ajout de `"."` (nécessaire pour importer le paquet `api` à la racine) n'existe que dans une **modification préexistante non commitée** de `pyproject.toml`. Résultat : sur un checkout propre de `HEAD`, la commande `pytest tests` s'arrête à la collecte (`1 error during collection`) ; seule `python -m pytest` passe (elle ajoute le dossier courant au chemin).
+
+**Reproduction (constatée le 07/10/2026).** `git archive HEAD` dans un dossier vierge, puis `pytest tests/test_api_animation.py` → `ModuleNotFoundError: No module named 'api'`. Avec `python -m pytest tests/test_canvas_html.py` : 5 passed.
+
+**Cause.** Dépendance non commitée : le test commité (`f70b37d`) suppose le `pythonpath = ["engine", "."]` que le travail préexistant ajoute à `pyproject.toml` (3 lignes, commentaire compris).
+
+**Impact.** Sur un clone propre, la suite de tests ne se lance pas avec la commande standard ; masqué sur le poste de travail où `pyproject.toml` est modifié.
+
+**Correction proposée (non appliquée ici, hors périmètre de ce commit).** Commiter le hunk `pythonpath = ["engine", "."]` de `pyproject.toml` (voir `docs/repo_state.md`, plan, étape 0).
+
+**Priorité.** Immédiate : avant tout push ou partage du dépôt.
+
+**Statut.** Ouvert.
