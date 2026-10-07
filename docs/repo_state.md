@@ -163,7 +163,7 @@ Aucun fichier de code suivi n'a été modifié. Le commit de nettoyage ne contie
 | `data/nlg_samples/` | Ajouté à `.gitignore` | Les 10 fichiers non suivis (~50 Mo) ne figurent plus dans `git status`. **Réserve : `data/nlg_samples/conditions_larges.md` (4 384 octets) est déjà suivi par git** ; la règle d'ignorance ne le retire pas du suivi et il n'a pas été retiré (validation explicite requise pour le sortir de l'index) |
 | `_coloring.txt` (287 o : suite d'entiers), `_comp_id.txt` (37 o : un identifiant de compétition) | **Supprimés** | Fichiers d'outillage sans usage produit ; aucune référence trouvée dans les fichiers suivis ni dans les notes ; jamais suivis par git (donc pas de trace dans un commit) |
 | `add_buildup.py`, `add_goals.py`, `add_nicknames.py`, `add_preferred_moves.py`, `add_prematch.py`, `add_saves.py`, `add_situational.py`, `update_penalties.py`, `update_saves_and_reds.py` | **Déplacés, non supprimés**, de la racine vers **`scripts/archive/`** | Chacun contient le chemin codé en dur `C:\Users\omariani\Downloads\banque_de_phrases_simulafoot.xlsx` ; aucun n'est importé. `scripts/archive/` est **ignoré par git** (`.gitignore`) : ces 9 fichiers n'existent donc plus **que sur ce poste** (copie locale unique, non versionnée) — à sauvegarder si leur historique compte. Une note tracée, `simulafoot_nlg/data/seed/AUDIT_COUVERTURE_DONNEES_JOUEUR.md` (§2), analyse `add_preferred_moves.py` à son ancien emplacement racine : le chemin cité n'existe plus |
-| `scripts/scrape_transfermarkt_coaches.py` | **Laissé en place** | **Non prouvé orphelin** : `scripts/scrape_transfermarkt_national_coaches.py` l'importe (`from scrape_transfermarkt_coaches import …`, ligne 44). Les deux écrivent `data/entraineurs.xlsx`, supprimé dans l'arbre de travail (suppression non commitée) mais encore lu par le `coaches.py` de `HEAD`. Décision reportée au Lot 3 de la séquence de résorption Catégorie B |
+| `scripts/scrape_transfermarkt_coaches.py` (puis `…_national_coaches.py`) | ~~Laissé en place~~ → **archivés ensemble dans `scripts/archive/` le 07/10/2026 (§8.10)** | **Non prouvé orphelin** : `scripts/scrape_transfermarkt_national_coaches.py` l'importe (`from scrape_transfermarkt_coaches import …`, ligne 44). Les deux écrivent `data/entraineurs.xlsx`, supprimé dans l'arbre de travail (suppression non commitée) mais encore lu par le `coaches.py` de `HEAD`. Décision reportée au Lot 3 de la séquence de résorption Catégorie B |
 
 ## 8. Séquence de résorption Catégorie B (proposée, NON exécutée)
 
@@ -222,7 +222,7 @@ Les trois parties se trouvent dans les mêmes fichiers (`events.py`, `simulation
   - **Tests** : intervalle de confiance bootstrap à 95 % de la différence de moyennes ; Kolmogorov-Smirnov bi-échantillon sur le total de buts ; χ² sur l'histogramme ; proportions pour les queues.
   - **Seuil proposé** (à confirmer par le propriétaire) : écart **significatif** si l'IC 95 % de Δ(moyenne du total) exclut 0 **et** |Δ| ≥ 0,03 but/match (≈ 1 %), ou si ΔP(queue) ≥ 0,5 point, ou si Δ(victoires à domicile) ≥ 1 point. **Si significatif : décision explicite** (accepter, recalibrer `COACH_INFLUENCE`/`STYLE_*`, ou abandonner) **avant** tout commit.
 - **Critère de vérification (chaque partie)** : §8.1.
-- **Statut** : 3a et 3b **non bloqués par D1/D2 mais soumis à validation de la scission** ; **3c BLOQUÉ** jusqu'à la mesure et à la décision D2. Aucun commit du Lot 3 sans cette validation.
+- **Statut** : 3a **fait** (`f5e37de`) et 3b **fait** (`3070543`, scission validée par le propriétaire) ; **3c BLOQUÉ** jusqu'à la mesure et à la décision D2.
 
 #### Lot 4 — API
 - **Périmètre exact** : `api/schemas.py`, `api/serializers.py`, `api/live_commentary.py` (nouveau), `api/nlg_live.py` (nouveau), `api/routers/competitions.py` (hunks restants : `get_roster`, routes `/bracket/*` pour le format KNOCKOUT, `knockout_legs`/`final_legs`, libellé du match), `api/main.py` (hunk `/media/faces` restant) ; tests `tests/test_competitions.py`, `test_serializers.py`, `test_live_commentary.py`, `test_nlg_live.py` (nouveaux).
@@ -240,7 +240,7 @@ Les trois parties se trouvent dans les mêmes fichiers (`events.py`, `simulation
 
 ### 8.5 Ordre d'exécution recommandé
 
-**3a (fait, `f5e37de`)** → **Lot 1 (fait, `7fa9f68`)** → **Lot 2 (fait, `ddfad09`)** → **3b** → `D2` (mesure + décision) → **3c** → **Lot 4** → **Lot 5**. *(Révisé le 07/10/2026 ; voir §8.7 et §8.8.)*
+**3a (fait, `f5e37de`)** → **Lot 1 (fait, `7fa9f68`)** → **Lot 2 (fait, `ddfad09`)** → **3b (fait, `3070543`)** → `D2` (mesure + décision) → **3c** → **Lot 4** → **Lot 5**. *(Révisé le 07/10/2026 ; voir §8.7, §8.8 et §8.10.)*
 Les éléments qui ne dépendent d'aucune décision (3a, le Lot 1 scindé, éventuellement 3b après validation de la scission) peuvent passer avant `D1`. 3c reste **bloqué** par D2.
 
 ### 8.6 Hors séquence — `PROJET_SIMULAFOOT.md` (non commité, bloqué)
@@ -306,4 +306,42 @@ Le document (881 lignes, mis à jour le 28/09/2026) **n'est pas cohérent avec l
   - décision à prendre sur `scripts/scrape_transfermarkt_coaches.py` et `scripts/scrape_transfermarkt_national_coaches.py` (le second importe le premier ; tous deux écrivent encore `data/entraineurs.xlsx`, supprimé) : les mettre à jour vers `Coachs-Simulafoot.xlsx` ou les archiver ensemble.
 - **Prérequis** : 3a, Lot 1 et Lot 2 commités (fait) ; validation explicite de la scission 3b / 3c par le propriétaire (la séquence « 3b puis D2 puis 3c » la présuppose) ; vérification que 3b **n'embarque aucun modulateur** (`grep` de `COACH_INFLUENCE`, `STYLE_`, `_coach_modifier` dans les fichiers stagés : 0 occurrence).
 - **Critère de vérification** : (1) méthode « `HEAD` + hunks », essai à blanc sur copie de `HEAD` puis `git archive HEAD` propre et `pytest` nu (collecte OK, suite verte) ; (2) **point de vigilance `np.random`** : `match_stats` consomme le flux aléatoire global après chaque match, ce qui décale la séquence des matchs suivants sans changer la distribution d'un match — vérifier sur ≥ 1 000 matchs, 3b seul (modulateurs absents), que moyenne et écart-type des buts ne varient pas de façon significative par rapport à `HEAD` ; (3) `coaches.py` et le nouveau classeur chargent sans erreur sur une archive propre.
-- **Statut** : **non exécuté** dans cette étape.
+- **Statut** : **FAIT** — commit `3070543` (voir §8.10). *(Statut antérieur : « non exécuté ».)*
+
+### 8.10 Avancement du 07/10/2026 (suite) — 3b commité
+
+**Séquence mise à jour : 3a (fait) → Lot 1 (fait) → Lot 2 (fait) → 3b (fait) → D2 (mesure + décision) → 3c → Lot 4 → Lot 5.** `PROJET_SIMULAFOOT.md` reste non commité.
+
+**1. Vérification du flux `np.random` (avant commit, archives jetables, jamais sur l'arbre de travail).**
+- **Dispositif** : A = `HEAD` avant 3b (`7003bf0`) ; B = A + 3b ; **B′ = B avec les dispositifs préférentiels de A imposés** (isole le code de 3b : `match_stats` et `coaches`). Ligue 1 réelle (18 clubs, 306 affiches ordonnées jouées en boucle), `simulate_match` complet (événements et statistiques inclus). Deux modes : **apparié** (graines `random` et `numpy` refixées avant chaque match : le score d'un match ne dépend que de son numéro) et **flux continu** (une graine, matchs à la suite : la séquence aléatoire est partagée, donc décalée si 3b consomme `np.random`).
+- **Résultats bruts, 1 000 matchs, flux continu** (effectifs de buts 0 / 1 / 2 / 3 / 4+ par équipe) :
+
+| Version | Graine | Domicile : moy σ — effectifs | Extérieur : moy σ — effectifs | Total : moy σ |
+|---|---|---|---|---|
+| A `HEAD` | 1 | 1,583 1,274 — 210 316 265 137 72 | 1,181 1,110 — 314 357 209 86 34 | 2,764 1,697 |
+| B `HEAD`+3b complet | 1 | 1,554 1,298 — 236 308 232 144 80 | 1,227 1,168 — 325 327 199 103 46 | 2,781 1,665 |
+| B′ 3b, dispositifs de `HEAD` | 1 | 1,606 1,304 — 222 290 267 140 81 | 1,172 1,105 — 310 376 197 75 42 | 2,778 1,658 |
+| A `HEAD` | 2 | 1,552 1,291 — 226 321 242 132 79 | 1,150 1,096 — 327 348 217 74 34 | 2,702 1,646 |
+| B `HEAD`+3b complet | 2 | 1,539 1,286 — 231 320 238 134 77 | 1,146 1,098 — 322 363 208 76 31 | 2,685 1,653 |
+| B′ 3b, dispositifs de `HEAD` | 2 | 1,509 1,238 — 220 345 237 127 71 | 1,121 1,096 — 350 322 226 72 30 | 2,630 1,634 |
+
+  Bruit de référence à 1 000 matchs (A graine 1 contre A graine 2, `HEAD` contre lui-même) : écart de moyenne totale **+0,062** ; les écarts A↔B et A↔B′ sont du même ordre. Aucun test significatif (Welch, KS, χ² : tous les p ≥ 0,28 pour A↔B).
+- **Mode apparié, 1 000 matchs, scores différents par rapport à A** : **B : 37 / 1 000** ; **B′ : 0 / 1 000**.
+- **Confirmation à grande échelle (30 612 matchs par bras, 100 fois chaque affiche)** :
+  - **B′ en apparié** : **0 / 30 612** scores différents, **0 / 30 612** buteurs ou minutes différents ; les statistiques de match sont présentes dans 30 612 / 30 612 matchs.
+  - **B′ en flux continu** : seuls 2 087 / 30 612 scores sont identiques match à match (**`match_stats` consomme bien `np.random` : la séquence est décalée**, comme prévu), mais la distribution est indiscernable : buts/match total A 2,7859 → B′ 2,7758, **Δ −0,0100 ± 0,0267** (IC 95 %) ; χ² sur les effectifs 0 / 1 / 2 / 3 / 4+ : **6,20 (domicile) et 4,25 (extérieur)** pour un seuil de 5 % à 4 ddl de 9,49 ; Δ des points par match par club (18 clubs) : σ 0,029, de −0,058 à +0,036.
+  - **B (3b complet) en flux continu** : Δ buts/match total **−0,0131 ± 0,0267** ; P(total ≥ 5) 0,1553 → 0,1534 ; aucun écart significatif.
+- **Conclusion.** À dispositifs identiques, **3b ne change aucun match** (0 écart sur 30 612) : la consommation de `np.random` décale seulement la séquence, sans effet sur la distribution. **Le seul effet sur le résultat sportif vient des données du nouveau classeur de coachs : le dispositif préférentiel change pour 6 clubs sur 18 en Ligue 1** — Le Havre (4-2-3-1 → 4-3-3 Attacking), Paris FC (3-4-2-1 → 4-2-3-1), Lens (4-2-3-1 → 3-4-2-1), Angers (4-3-1-2 → 4-2-3-1), Troyes et PSG (4-3-3 → 4-3-3 Attacking). Les notes de secteur utilisées par le Poisson changent pour 4 d'entre eux (ex. Le Havre, milieu 67,17 → 74,00 ; la note globale de composition passe de 69,09 à 70,95). En apparié, **5,67 %** des matchs impliquant l'un de ces 4 clubs ont un score différent, et **0,74 %** (134 / 18 209) des autres matchs (les moyennes de la ligue servant à normaliser les lambdas bougent légèrement) ; l'effet sur les points par match de ces clubs reste de l'ordre du bruit (Le Havre +0,025, Lens +0,028, Paris FC −0,003). **Limite** : seule la Ligue 1 a été mesurée ; les autres championnats et les sélections ne l'ont pas été.
+- **Décision au regard du critère fixé** (écart significatif de distribution à 1 000 matchs) : **aucun écart significatif** ; le passage au commit a été autorisé. L'effet « données » est consigné ici pour le propriétaire.
+
+**2. Grep des modulateurs (diff indexé de 3b, lignes ajoutées et retirées)** : motif `COACH_INFLUENCE | STYLE_ATTACK_BONUS | STYLE_DEFENSE_* | STYLE_ATTACK_MALUS | STYLE_PRESSING | STYLE_COUNTER_ATTACK | _coach_modifier | _style_attack_modifier | _style_defense_modifier | _COACH_MODIFIER_BOUNDS | _STYLE_MODIFIER_BOUNDS` → **0 occurrence**. Trois mentions textuelles de `COACH_INFLUENCE` / `STYLE_*` existaient dans des commentaires de `coaches.py` (renvois vers du code du lot 3c) ; elles ont été **reformulées dans la version commitée uniquement** (le fichier de travail garde les commentaires d'origine, qui réapparaîtront dans le diff du lot 3c). Faux positifs du motif large `STYLE_` : `STYLE_COLUMNS` (noms de colonnes du classeur, ×4), `_POSSESSION_STYLE_BONUS` (possession affichée, ×3). Le diff de `simulation.py` ne contient que **2 lignes ajoutées** (`home_lambda=lambda_home,` et `away_lambda=lambda_away,`) et **aucune ligne retirée** ; les `lambda_home *=` du fichier sont ceux, préexistants, du milieu, du banc et de la forme.
+
+**3. Commit 3b — `3070543`** (`feat(coachs): couche de données entraîneurs et statistiques de match — lot 3b`).
+- **Périmètre exact (8 fichiers)** : `src/ligue1sim/coaches.py` ; `data/Coachs-Simulafoot.xlsx` (nouveau) ; **suppression** de `data/entraineurs.xlsx` ; `src/ligue1sim/match_stats.py` (nouveau) ; `src/ligue1sim/events.py` (les 7 hunks restants) ; `src/ligue1sim/simulation.py` (le hunk de 2 lignes) ; `tests/test_coaches.py` ; `tests/test_match_stats.py` (nouveau).
+- **Vérification** : essai à blanc sur archive jetable `HEAD` + 3b : **1010 passés** ; après commit, `git archive HEAD` propre, `pytest` nu : **1010 passés, 5 ignorés** (tests NLG, venv absent de l'archive).
+
+**4. Archivage des scripts Transfermarkt.** `scripts/scrape_transfermarkt_coaches.py` et `scripts/scrape_transfermarkt_national_coaches.py` sont déplacés dans **`scripts/archive/`** (dossier ignoré par git ; copie locale unique, non versionnée — à sauvegarder si leur historique compte). **Raison** : ils écrivent (et lisent) `data/entraineurs.xlsx`, supprimé par 3b et désormais remplacé par `data/Coachs-Simulafoot.xlsx` ; plus aucune référence dans les fichiers suivis de `HEAD` (`git grep` : 0 résultat hors ce document). Le second importe le premier : les deux ont été archivés **ensemble**, donc l'import reste valide dans le dossier d'archive. Ce déplacement concerne des fichiers jamais suivis : il ne figure dans aucun commit hors cette documentation. Il remplace la ligne « laissé en place » du §7.
+
+**5. Superposition 3a + Lot 1 + Lot 2 + 3b** (`git archive HEAD` propre, `pytest` nu) : **1010 passés, 5 ignorés, 12 désélectionnés**. Avec le venv NLG local rendu accessible à l'archive (jonction retirée ensuite) : **1015 passés, 0 ignoré, 12 désélectionnés**.
+
+**6. D2 reste en attente du propriétaire — mesure comparative obligatoire avant tout commit de 3c.** Précision de méthode pour cette mesure : le **bras A (sans modulateurs) est le `HEAD` actuel, qui inclut 3b et donc les dispositifs du nouveau classeur de coachs** ; il ne faut pas comparer à l'ancien `HEAD` d'avant 3b, sous peine de mêler l'effet des modulateurs à celui des données de coachs mesuré ci-dessus. Le protocole du §8.4 (partie 3c) est inchangé par ailleurs. Aucun commit de 3c, du Lot 4 ni du Lot 5.
