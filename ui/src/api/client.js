@@ -3,7 +3,7 @@
 // ui/dist) -- un seul port/domaine à exposer, y compris via le tunnel ngrok.
 // VITE_API_URL sert uniquement au dev séparé (`npm run dev` sur le port 5173
 // distinct du backend sur 8000) -- voir ui/.env.local.
-const BASE_URL = import.meta.env.VITE_API_URL ?? "";
+export const BASE_URL = import.meta.env.VITE_API_URL ?? "";
 
 async function request(path, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -42,6 +42,13 @@ export const getMatches = (id, journee) =>
 export const getPitchView = (id, params) => {
   const clean = Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== null));
   return request(`/api/competitions/${id}/pitch?${new URLSearchParams(clean)}`);
+};
+
+// Payload d'animation d'un match (iframe canvas, protocole version 1 -- docs/canvas_integration_state.md §2.11).
+// Mêmes `params` que getPitchView. Toujours 200 pour un match existant : { available: false, reason } si non animable.
+export const getMatchAnimation = (id, params) => {
+  const clean = Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== null));
+  return request(`/api/competitions/${id}/animation?${new URLSearchParams(clean)}`);
 };
 
 // Ligue des Champions / Coupe du Monde (format HYBRID : poules puis

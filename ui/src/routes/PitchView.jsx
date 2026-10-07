@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { getPitchView } from "../api/client";
+import MatchAnimation from "../components/pitch/MatchAnimation";
 
 // Terrain HORIZONTAL (adapté au format paysage) : le placement calculé côté
 // moteur (pitch_layout.place_starting_xi) est vertical -- domicile en haut
@@ -17,6 +18,7 @@ export default function PitchView() {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const [showAnimation, setShowAnimation] = useState(false); // fenêtre « Voir l'animation » (iframe canvas, voir MatchAnimation)
 
   const home = params.get("home");
   const away = params.get("away");
@@ -58,8 +60,21 @@ export default function PitchView() {
         <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-xs text-gray-400">
           <ArrowLeft size={14} /> Retour
         </button>
-        <span className="text-xs text-gray-500">{contextLabel}</span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-gray-500">{contextLabel}</span>
+          <button onClick={() => setShowAnimation(true)} className="text-xs font-semibold text-accent">
+            Voir l'animation
+          </button>
+        </div>
       </div>
+
+      {showAnimation && (
+        <AnimationDialog
+          competitionId={id}
+          matchParams={{ home, away, journee, group, matchday, round_number: roundNumber, leg }}
+          onClose={() => setShowAnimation(false)}
+        />
+      )}
 
       <div className="flex items-center justify-center gap-3 shrink-0 text-sm">
         <span className="font-semibold truncate max-w-[35%]">{data.home}</span>
@@ -111,6 +126,29 @@ function PlayerDot({ player, color }) {
           {player.red_card && "🟥"}
         </span>
       )}
+    </div>
+  );
+}
+
+// Fenêtre modale de l'animation : un calque plein écran (le layout de la fiche, calé sur la hauteur de la fenêtre, n'est PAS modifié).
+// L'iframe n'est montée que si MatchAnimation obtient un payload ; fermer la fenêtre démonte tout.
+function AnimationDialog({ competitionId, matchParams, onClose }) {
+  useEffect(() => {
+    const onKey = (e) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Animation du match" className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-3">
+      <div className="w-full max-w-5xl max-h-full overflow-y-auto rounded-xl bg-surface border border-white/10 p-3 flex flex-col gap-2">
+        <div className="flex justify-end">
+          <button onClick={onClose} className="text-xs text-gray-400">
+            Fermer ✕
+          </button>
+        </div>
+        <MatchAnimation key={JSON.stringify(matchParams)} competitionId={competitionId} matchParams={matchParams} />
+      </div>
     </div>
   );
 }

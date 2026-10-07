@@ -50,6 +50,11 @@
   .progress-marker:hover { background: #aaa; }
   .progress-marker.current { background: #ffd700; width: 13px; height: 13px; }
 
+  /* Mode embarque uniquement (classe `embed` posee par le JS, jamais en
+     standalone) : le canevas se reduit pour que scoreboard + controles +
+     barre de progression restent visibles dans la hauteur de l'iframe. */
+  body.embed canvas { max-height: calc(100vh - 150px); }
+
   /* Carton intermediaire (brief 4.5) : overlay semi-transparent, 2s par
      defaut (voir CARTON_DURATION_S plus bas), pas de degrade/ombre lourd. */
   #carton {
@@ -105,7 +110,18 @@
 // suffit -- aucun templating.
 const SEQUENCE_DATA = /*__SEQUENCE_JSON__*/null;
 
-(function () {
+// MODE EMBARQUE (iframe de la PWA, docs/canvas_integration_state.md §2.11,
+// protocole version 1) -- active UNIQUEMENT par `?embed=1`. Sans ce
+// parametre, le fichier se comporte exactement comme avant (mode standalone :
+// donnees injectees par remplacement du placeholder ci-dessus) -- le corps du
+// lecteur, `startPlayer`, est l'ancienne IIFE a l'identique, seuls trois
+// points d'accroche `if (bridge)` (inertes en standalone, `bridge === null`)
+// y ont ete ajoutes.
+const EMBED_PARAMS = new URLSearchParams(window.location.search);
+const EMBED = EMBED_PARAMS.get('embed') === '1';
+if (EMBED) document.body.classList.add('embed');
+
+function startPlayer(SEQUENCE_DATA, bridge) {
   if (!SEQUENCE_DATA) {
     document.getElementById('label').textContent =
       'Aucune sequence injectee -- ce fichier est un gabarit, voir scripts/render_preview.py';
@@ -116,7 +132,9 @@ const SEQUENCE_DATA = /*__SEQUENCE_JSON__*/null;
   // "gabarit isole" (comportement inchange). Un tableau de 2+ -> mode
   // "player" (Tache 4.1).
   const clips = Array.isArray(SEQUENCE_DATA) ? SEQUENCE_DATA : [SEQUENCE_DATA];
-  const isPlayerMode = clips.length > 1;
+  // En mode embarque (bridge != null) le mode "player" est force meme pour un
+  // seul clip : un match n'a pas forcement 2+ temps forts.
+  const isPlayerMode = clips.length > 1 || bridge !== null;
 
   const canvas = document.getElementById('pitch');
   const ctx = canvas.getContext('2d');
@@ -366,6 +384,11 @@ const SEQUENCE_DATA = /*__SEQUENCE_JSON__*/null;
   let startPerfMs = null;
   let showingCarton = false;
   let cartonStartPerfMs = null;
+  let endedSent = false; // mode embarque : "fin de lecture" signalee une seule fois par passage
+
+  function notifyClipChange() {
+    if (bridge) bridge.clipChange(currentIdx, clips.length, clips[currentIdx].metadata.minute);
+  }
 
   function showCarton(clip) {
     showingCarton = true;
@@ -393,6 +416,8 @@ const SEQUENCE_DATA = /*__SEQUENCE_JSON__*/null;
     hideCarton();
     updateMarkers(currentIdx);
     updateScoreboard(clips[currentIdx]);
+    endedSent = false;
+    notifyClipChange();
   }
 
   function tick(nowMs) {
@@ -410,6 +435,10 @@ const SEQUENCE_DATA = /*__SEQUENCE_JSON__*/null;
           }
           // dernier clip : reste sur le carton final a l'ecran (pas de
           // rebouclage automatique, comportement deterministe et simple).
+          else if (bridge && !endedSent) {
+            endedSent = true;
+            bridge.ended();
+          }
         }
       }
       drawFrame(clip, duration); // dernier frame du clip fige derriere le carton
@@ -440,6 +469,7 @@ const SEQUENCE_DATA = /*__SEQUENCE_JSON__*/null;
 
   updateMarkers(currentIdx);
   updateScoreboard(clips[currentIdx]);
+  notifyClipChange();
 
   document.getElementById('prevClip').addEventListener('click', () => {
     jumpToClip(currentIdx - 1);
@@ -455,6 +485,7 @@ const SEQUENCE_DATA = /*__SEQUENCE_JSON__*/null;
     pausedAtS = 0;
     startPerfMs = null;
     hideCarton();
+    endedSent = false;
     playing = true;
     playPauseBtn.innerHTML = '&#9208;';
   });
@@ -466,7 +497,79 @@ const SEQUENCE_DATA = /*__SEQUENCE_JSON__*/null;
       cartonStartPerfMs = null;
     }
   });
-})();
+}
+
+if (!EMBED) {
+  // --- Mode standalone : strictement l'ancien comportement ----------------
+  startPlayer(SEQUENCE_DATA, null);
+} else {
+  // --- Mode embarque : protocole version 1 (docs/canvas_integration_state.md
+  // §2.11). Seuls messages permis. Iframe -> parent : ready, clipchange,
+  // ended, error. Parent -> iframe : init (un seul, apres `ready`). Aucun
+  // acces reseau/API/fichier, aucune navigation de la page hote.
+  (function () {
+    const PROTOCOL_VERSION = 1;
+    const OUT_SOURCE = 'simulafoot-canvas';
+    const IN_SOURCE = 'simulafoot-host';
+    const parentOrigin = EMBED_PARAMS.get('parent_origin');
+    const labelEl = document.getElementById('label');
+    let started = false;
+
+    // Jamais de '*' : sans parent_origin valide, rien n'est emis.
+    function emit(type, extra) {
+      if (!parentOrigin || window.parent === window) return;
+      window.parent.postMessage(
+        Object.assign({ source: OUT_SOURCE, version: PROTOCOL_VERSION, type: type }, extra || {}),
+        parentOrigin
+      );
+    }
+
+    const bridge = {
+      clipChange: (index, total, minute) => emit('clipchange', { index: index, total: total, minute: minute }),
+      ended: () => emit('ended'),
+    };
+
+    function fail(code, message, extra) {
+      labelEl.textContent = message;
+      emit('error', Object.assign({ code: code, message: message }, extra || {}));
+    }
+
+    if (!parentOrigin || window.parent === window) {
+      labelEl.textContent = 'Mode embarque : ouvrir dans une iframe avec ?embed=1&parent_origin=<origine>.';
+      return;
+    }
+    labelEl.textContent = 'Chargement de l\'animation...';
+
+    window.addEventListener('error', (e) => fail('render_error', String(e.message || 'erreur de rendu')));
+
+    window.addEventListener('message', (event) => {
+      if (event.source !== window.parent || event.origin !== parentOrigin) return;
+      const msg = event.data;
+      if (!msg || msg.source !== IN_SOURCE || msg.type !== 'init') return;
+      if (msg.version !== PROTOCOL_VERSION) {
+        fail('version_mismatch', 'Version de protocole incompatible.', {
+          supported: [PROTOCOL_VERSION], received: msg.version === undefined ? null : msg.version,
+        });
+        return;
+      }
+      if (started) return; // un seul init pris en compte
+      const clips = msg.payload && msg.payload.clips;
+      if (!Array.isArray(clips) || clips.length === 0) {
+        fail('invalid_payload', 'Payload d\'animation invalide ou vide.');
+        return;
+      }
+      started = true;
+      labelEl.textContent = '';
+      try {
+        startPlayer(clips, bridge);
+      } catch (err) {
+        fail('render_error', String(err && err.message ? err.message : err));
+      }
+    });
+
+    emit('ready');
+  })();
+}
 </script>
 </body>
 </html>

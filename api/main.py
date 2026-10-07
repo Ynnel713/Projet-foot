@@ -41,6 +41,18 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+# Lecteur d'animation embarqué dans la PWA via <iframe> (docs/
+# canvas_integration_state.md §2.11) : on sert l'unique fichier
+# render/canvas.html tel quel (source unique, aucune copie dans ui/), jamais
+# le dossier render/ en entier (les previews générées n'ont rien à faire là).
+_CANVAS_HTML = Path(__file__).resolve().parent.parent / "render" / "canvas.html"
+
+
+@app.get("/render/canvas.html", include_in_schema=False)
+def canvas_player() -> FileResponse:
+    return FileResponse(_CANVAS_HTML, media_type="text/html; charset=utf-8", headers={"Cache-Control": "no-cache"})
+
+
 # --- Frontend buildé (ui/dist) -- absent en dev pur (npm run dev séparé sur
 # le port 5173), présent après `npm run build` pour l'accès partagé stable.
 _DIST_DIR = Path(__file__).resolve().parent.parent / "ui" / "dist"

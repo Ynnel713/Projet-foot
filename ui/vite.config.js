@@ -28,6 +28,10 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // La navigation de l'iframe d'animation vers /render/canvas.html (docs/canvas_integration_state.md §2.11) est
+        // une requête de navigation : sans cette exclusion, le service worker lui répondrait par index.html (la PWA
+        // elle-même, dans l'iframe). Même exclusion pour l'API.
+        navigateFallbackDenylist: [/^\/render\//, /^\/api\//],
         // Référence peu changeante (championnats, vivier de clubs) : mise en
         // cache réseau-d'abord. Les POST de simulation ne sont jamais mis en
         // cache par Workbox par défaut (seules les requêtes GET le sont).

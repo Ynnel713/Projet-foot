@@ -22,6 +22,7 @@ from ligue1sim.season import CLUBS_PATH
 from ligue1sim.world_cup import start_world_cup
 
 from api import store
+from api.animation import build_match_animation
 from api.schemas import (
     BracketOut,
     CompetitionStatus,
@@ -282,6 +283,52 @@ def get_pitch_view(
         raise HTTPException(409, "Ce match n'a pas encore été joué (ou n'a pas d'effectif réel).")
 
     return pitch_view(match)
+
+
+def _locate_match(
+    competition: CustomCompetition,
+    home: str,
+    away: str,
+    journee: int | None,
+    group: str | None,
+    matchday: int | None,
+    round_number: int | None,
+    leg: int | None,
+) -> tuple[Match, str]:
+    """(match, libellé stable) selon le groupe de paramètres fourni -- même
+    dispatch que `get_pitch_view` (championnat / poule / tableau)."""
+    if journee is not None:
+        match, label = _find_match_in_season(competition, home, away, journee), f"j{journee}"
+    elif group is not None and matchday is not None:
+        match, label = _find_match_in_group(competition, home, away, group, matchday), f"{group}-{matchday}"
+    elif round_number is not None and leg is not None:
+        match, label = _find_match_in_bracket(competition, home, away, round_number, leg), f"t{round_number}-{leg}"
+    else:
+        raise HTTPException(422, "Fournis journee, group+matchday, ou round_number+leg.")
+    if match is None:
+        raise HTTPException(404, "Match introuvable.")
+    return match, label
+
+
+@router.get("/{comp_id}/animation")
+def get_match_animation(
+    comp_id: str,
+    home: str,
+    away: str,
+    journee: int | None = None,
+    group: str | None = None,
+    matchday: int | None = None,
+    round_number: int | None = None,
+    leg: int | None = None,
+) -> dict:
+    """Payload d'animation (iframe `render/canvas.html`, protocole version 1 --
+    docs/canvas_integration_state.md §2.11) d'un match déjà joué. Toujours un
+    200 pour un match existant : `available=false` + `reason` quand le match
+    n'est pas animable (compo non persistée, pas de temps fort, pas joué),
+    jamais un payload partiel ni un recalcul de composition."""
+    competition = _get_or_404(comp_id)
+    match, label = _locate_match(competition, home, away, journee, group, matchday, round_number, leg)
+    return build_match_animation(match, label)
 
 
 # --- Phase de poules + élimination directe (HYBRID -- Ligue des Champions) ---
