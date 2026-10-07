@@ -1,10 +1,10 @@
 # Dette connue — Simulafoot
 
-Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets ouverts (1, 2, 3, 4, 6, 9, 10 et 11) n'est corrigé à ce jour.** Créé le 07/10/2026 (clôture de l'Étape B, `LineupSnapshot`) ; tickets 4 et 5 ajoutés le même jour (intégration PWA par iframe) ; ticket 5 fermé et tickets 6 à 8 ouverts le même jour (gouvernance, avant Phase 5) ; tickets 9 (`duckdb`) et 10 (couverture NLG) ajoutés le même jour (environnement de test). tickets 7 (résolu en `7309172`) et 11 (`ConnectionResetError`) traités le même jour. **État : ouverts 1, 2, 3, 4, 6, 9, 10, 11 ; fermés 5 (non reproduit), 7 (résolu en `7309172`) et 8 (résolu en `2d71e55`, vérifié sur archive propre).**
+Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets ouverts (2, 3, 4, 6, 9, 10 et 11) n'est corrigé à ce jour.** Créé le 07/10/2026 (clôture de l'Étape B, `LineupSnapshot`) ; tickets 4 et 5 ajoutés le même jour (intégration PWA par iframe) ; ticket 5 fermé et tickets 6 à 8 ouverts le même jour (gouvernance, avant Phase 5) ; tickets 9 (`duckdb`) et 10 (couverture NLG) ajoutés le même jour (environnement de test). tickets 7 (résolu en `7309172`) et 11 (`ConnectionResetError`) traités le même jour. **État : ouverts 2, 3, 4, 6, 9, 10, 11 ; fermés 1 (résolu, Phase 5 sous-étape 1), 5 (non reproduit), 7 (résolu en `7309172`) et 8 (résolu en `2d71e55`, vérifié sur archive propre).**
 
 | # | Titre | Priorité (avant…) | Statut |
 |---|---|---|---|
-| 1 | Joueur statique poussé hors de la marge près d'un bord du terrain | Phase 5 (habillage visuel) | Ouvert |
+| 1 | Joueur statique poussé hors de la marge près d'un bord du terrain | Phase 5 (habillage visuel) | **Résolu** (Phase 5, sous-étape 1) — tolérance recalibrée à 0,5 % |
 | 2 | Un joueur expulsé peut être remplacé plus tard dans le même match | Phase 4 (branchement PWA effectif) | Ouvert |
 | 3 | `SubstitutionEvent` identifie les joueurs par nom, pas par `player_id` | Phase 6 (produit / carrière) | Ouvert |
 | 4 | Latence et poids du payload d'animation | Phase 6 (produit / carrière) | Ouvert |
@@ -29,13 +29,13 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 
 `_simulate_n(100)` n'a pas de graine aléatoire : les valeurs changent à chaque exécution, l'échec lui est systématique.
 
-**Cause probable.** `animation.motion._apply_avoidance` (évitement de collisions entre joueurs), que le commentaire du test désigne lui-même comme pouvant pousser une position au-delà de 0/1 près du bord. **Non confirmée** : le mécanisme exact n'a pas été tracé.
+**Cause (corrigée le 07/10/2026).** L'hypothèse initiale (`animation.motion._apply_avoidance`) était **inexacte** : mesure sur 60 matchs (5,67 M de positions), aucune position brute ni sortie de `_apply_avoidance` n'est hors de [0, 1]. Les dépassements (jusqu'à ~0,58 normalisé, ~60 m ; 115 cas sur 16 349 joueurs × clips) venaient de `animation.physics.apply_acceleration_constraint`, qui suit la position brute sans rappel ni freinage anticipé : à un saut de la trajectoire brute (3 à 8 m en une image), la vitesse monte, dépasse la cible et le joueur dérive hors du terrain.
 
 **Impact produit.** Un joueur est légèrement hors du terrain près d'un bord, perceptible visuellement dans l'animation.
 
 **Priorité.** Avant la Phase 5 (habillage visuel).
 
-**Statut.** Ouvert.
+**Statut.** **Résolu — commit de la sous-étape 1 de la Phase 5 (hash ci-dessous), tolérance recalibrée à 0,5 % de la longueur du terrain (0,525 m, contre 0,1 soit ~10 m).** Correctif à la source dans `physics.apply_acceleration_constraint` : paramètre `bounds` (bornes du terrain, passées par `narrative_player`) et freinage anticipé par axe près des bords, plafond d'accélération conservé. Les sauts de trajectoire brute en amont (changements de segment des gabarits) ne sont pas traités.
 
 ---
 

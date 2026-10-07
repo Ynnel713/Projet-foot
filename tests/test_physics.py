@@ -1,3 +1,4 @@
+import pytest
 from ligue1sim.animation.physics import apply_acceleration_constraint
 
 _DT = 1.0 / 30.0
@@ -86,3 +87,49 @@ class TestEdgeCases:
         snapshot = [dict(f) for f in frames]
         apply_acceleration_constraint(frames, _DT, a_max=10.0)
         assert frames == snapshot
+
+
+class TestBoundsKeepThePlayerOnThePitch:
+    """Ticket 1 (Phase 5, sous-etape 1) : face a un SAUT de la trajectoire brute, la contrainte
+    d'acceleration poursuivait la cible sans freiner et pouvait deriver a des dizaines de metres
+    (hors du terrain). Avec `bounds`, la vitesse visee est plafonnee pour qu'un arret a a_max reste
+    possible avant le bord : le joueur reste dans les bornes SANS depasser a_max."""
+
+    _BOUNDS = ((0.0, 105.0), (0.0, 68.0))
+
+    @staticmethod
+    def _max_acceleration(frames, pid="p"):
+        velocities = [
+            ((frames[i][pid][0] - frames[i - 1][pid][0]) / _DT, (frames[i][pid][1] - frames[i - 1][pid][1]) / _DT)
+            for i in range(1, len(frames))
+        ]
+        return max(
+            (((velocities[j][0] - velocities[j - 1][0]) ** 2 + (velocities[j][1] - velocities[j - 1][1]) ** 2) ** 0.5) / _DT
+            for j in range(2, len(velocities))
+        )
+
+    def test_teleport_toward_the_touchline_does_not_leave_the_pitch(self):
+        # Immobile en x=10, saut brut a x=100 (un segment impossible), immobile ensuite : sans bornes, le joueur
+        # accelere vers 100, la depasse largement (> 105) et finit hors du terrain.
+        frames = [{"p": (10.0, 20.0)}] * 3 + [{"p": (100.0, 20.0)}] * 400
+        unbounded = apply_acceleration_constraint(frames, _DT, a_max=10.0)
+        assert max(f["p"][0] for f in unbounded) > 105.0  # le defaut qui est corrige
+        bounded = apply_acceleration_constraint(frames, _DT, a_max=10.0, bounds=self._BOUNDS)
+        xs = [f["p"][0] for f in bounded]
+        assert 0.0 <= min(xs) and max(xs) <= 105.0
+
+    def test_bounds_never_break_the_acceleration_limit(self):
+        frames = [{"p": (10.0, 20.0)}] * 3 + [{"p": (100.0, 20.0)}] * 400
+        bounded = apply_acceleration_constraint(frames, _DT, a_max=10.0, bounds=self._BOUNDS)
+        assert self._max_acceleration(bounded) <= 10.0 + 1e-6
+
+    def test_player_running_along_the_touchline_is_not_slowed(self):
+        # y = 0 (sur la touche) : seule la composante x est libre, aucun freinage parasite.
+        frames = [{"p": (1.0 + 0.2 * i, 0.0)} for i in range(100)]
+        assert apply_acceleration_constraint(frames, _DT, a_max=10.0, bounds=self._BOUNDS) == frames
+
+    def test_without_bounds_behaviour_is_unchanged(self):
+        frames = [{"p": (0.0, 0.0)}, {"p": (0.1, 0.0)}, {"p": (30.0, 0.0)}] + [{"p": (30.0, 0.0)}] * 50
+        assert apply_acceleration_constraint(frames, _DT, a_max=10.0) == apply_acceleration_constraint(
+            frames, _DT, a_max=10.0, bounds=None
+        )

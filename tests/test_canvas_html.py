@@ -39,3 +39,26 @@ def test_messages_are_origin_scoped_never_wildcard():
 def test_embedded_page_never_navigates_the_host():
     for forbidden in ("window.top", "top.location", "parent.location", "window.open", "location.href =", "location.assign"):
         assert forbidden not in CANVAS
+
+
+# --- Cotes du terrain en mètres (Phase 5, sous-étape 1) -------------------------------------------------------------
+
+import json  # noqa: E402
+
+from ligue1sim.pitch_geometry import pitch_dimensions  # noqa: E402
+
+
+def test_pitch_block_is_derived_from_pitch_geometry():
+    block = re.search(r"/\*PITCH_GEOMETRY_BEGIN\*/(.*?)/\*PITCH_GEOMETRY_END\*/", CANVAS, re.S)
+    assert block, "bloc PITCH_GEOMETRY introuvable dans canvas.html"
+    # Source unique : src/ligue1sim/pitch_geometry.py. Régénérer : python -m ligue1sim.pitch_geometry
+    assert json.loads(block.group(1)) == pitch_dimensions()
+
+
+def test_pitch_is_drawn_in_meters_with_one_scale_and_no_hardcoded_fractions():
+    assert "const SCALE = Math.min((W - 2 * MARGIN) / PITCH_L, (H - 2 * MARGIN) / PITCH_W);" in CANVAS
+    assert "return mToPx(x * PITCH_L, y * PITCH_W);" in CANVAS  # repère normalisé du moteur -> rectangle 105 x 68 m
+    for old_fraction in ("W * 0.10", "H * 0.42", "W * 0.045", "H * 0.20", "W * 0.085", "H * 0.12"):
+        assert old_fraction not in CANVAS
+    assert "Math.acos(" in CANVAS  # arc de la surface de réparation
+    assert "corner_arc_radius_m" in CANVAS  # arcs de coin

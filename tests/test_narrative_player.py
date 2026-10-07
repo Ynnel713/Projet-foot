@@ -282,18 +282,20 @@ class TestNoOmissionAfterSubstitutesFix:
                 assert matching, f"{timeline.match_id} : remplacant {event.main_player!r} (minute {event.minute}) omis"
                 clip = matching[0]
                 assert clip.frames
-                # Tolerance faible (evitement des collisions entre joueurs,
-                # animation.motion._apply_avoidance, peut legerement pousser
-                # une position au-dela de 0/1 pres du bord du terrain) --
-                # pas un test "exactement dans [0,1]", juste "pas de valeur
-                # aberrante/hors carte" (None, NaN, tres hors limites).
-                margin = 0.1
+                # Tolerance recalibree (Phase 5 sous-etape 1, ticket 1) : 0,5 % de la
+                # longueur du terrain (0,525 m), au lieu de 0,1 (~10 m). Les positions
+                # brutes et la sortie de motion._apply_avoidance sont dans [0, 1] ; le
+                # depassement (jusqu'a ~60 m) venait de physics.apply_acceleration_
+                # constraint, desormais bornee au terrain (freinage anticipe, param. bounds).
+                # La marge ne sert plus que de garde-fou d'arrondi : en pratique 0.
+                margin_m = 0.005 * PITCH_LENGTH_M
+                margin_x, margin_y = margin_m / PITCH_LENGTH_M, margin_m / PITCH_WIDTH_M
                 for frame in clip.frames:
                     assert frame.ball is not None
                     for state in frame.players.values():
                         assert state is not None
-                        assert -margin <= state.x <= 1.0 + margin, f"x={state.x} hors terrain"
-                        assert -margin <= state.y <= 1.0 + margin, f"y={state.y} hors terrain"
+                        assert -margin_x <= state.x <= 1.0 + margin_x, f"x={state.x} hors terrain"
+                        assert -margin_y <= state.y <= 1.0 + margin_y, f"y={state.y} hors terrain"
                 checked += 1
         assert checked > 0, "aucun evenement avec un remplacant comme protagoniste trouve sur 100 matchs -- echantillon insuffisant"
 

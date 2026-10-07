@@ -159,3 +159,59 @@ class TestToCanvasPx:
     def test_respects_a_custom_canvas_size(self):
         px_x, px_y = to_canvas_px(PitchPoint(x=0.5, y=0.0), canvas_width=600, canvas_height=400)
         assert (px_x, px_y) == (300.0, 400.0)
+
+
+# --- Cotes du terrain (Phase 5, sous-étape 1) : source unique -----------------------------------------------------
+
+import json
+import math
+from pathlib import Path
+
+from ligue1sim import pitch_geometry as pg
+
+_UI_JSON = Path(__file__).resolve().parent.parent / "ui" / "src" / "utils" / "pitchGeometry.json"
+
+
+class TestFifaDimensions:
+    def test_official_values_in_meters(self):
+        assert (pg.PITCH_LENGTH_M, pg.PITCH_WIDTH_M) == (105.0, 68.0)
+        assert (pg.PENALTY_AREA_DEPTH_M, pg.PENALTY_AREA_WIDTH_M) == (16.5, 40.32)
+        assert (pg.GOAL_AREA_DEPTH_M, pg.GOAL_AREA_WIDTH_M) == (5.5, 18.32)
+        assert pg.PENALTY_SPOT_DISTANCE_M == 11.0
+        assert (pg.CENTER_CIRCLE_RADIUS_M, pg.PENALTY_ARC_RADIUS_M, pg.CORNER_ARC_RADIUS_M) == (9.15, 9.15, 1.0)
+        assert (pg.GOAL_WIDTH_M, pg.GOAL_HEIGHT_M) == (7.32, 2.44)
+
+    def test_exported_keys_match_declared_list(self):
+        assert tuple(sorted(pg.pitch_dimensions())) == tuple(sorted(pg._EXPORTED_DIMENSIONS))
+
+    def test_ui_json_is_derived_from_this_module(self):
+        # Garde-fou de dérive : PitchField.jsx lit ce fichier. Régénérer :
+        # python -m ligue1sim.pitch_geometry > ui/src/utils/pitchGeometry.json
+        assert json.loads(_UI_JSON.read_text(encoding="utf-8")) == pg.pitch_dimensions()
+
+    def test_corner_posts_are_the_four_pitch_corners(self):
+        assert set(pg.corner_posts_m()) == {(0.0, 0.0), (0.0, 68.0), (105.0, 68.0), (105.0, 0.0)}
+
+    def test_penalty_arc_half_angle(self):
+        # Le cercle de 9,15 m centré à 11 m de la ligne coupe la ligne de surface (16,5 m) à 5,5 m du point.
+        assert math.degrees(pg.penalty_arc_half_angle_rad()) == pytest.approx(53.05, abs=0.01)
+
+
+class TestPitchProjection:
+    def test_default_scale_is_isotropic_and_centered(self):
+        scale, ox, oy = pg.pitch_rect_px()
+        assert scale == pytest.approx(10.882, abs=1e-3)  # min(1160/105, 740/68), limité par la hauteur
+        assert oy == 20.0 and ox == pytest.approx((1200 - 105 * scale) / 2)
+        assert ox >= 20.0  # marge minimale respectée
+
+    def test_normalized_corners_land_on_the_drawn_pitch_rectangle(self):
+        scale, ox, oy = pg.pitch_rect_px()
+        assert pg.to_pitch_px(pg.PitchPoint(0.0, 1.0)) == pytest.approx((ox, oy))
+        assert pg.to_pitch_px(pg.PitchPoint(1.0, 0.0)) == pytest.approx((ox + 105 * scale, oy + 68 * scale))
+
+    def test_goal_center_is_on_the_goal_line_mid_height(self):
+        px, py = pg.to_pitch_px(pg.PitchPoint(0.0, 0.5))
+        assert px == pytest.approx(pg.pitch_rect_px()[1]) and py == pytest.approx(390.0)
+
+    def test_to_canvas_px_is_unchanged(self):
+        assert to_canvas_px(PitchPoint(x=0.0, y=0.0)) == (0.0, CANVAS_HEIGHT_PX)

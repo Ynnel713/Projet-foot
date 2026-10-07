@@ -1,36 +1,42 @@
+import dims from "../../utils/pitchGeometry.json";
+
 // Pelouse réaliste (tondue en bandes, lignes officielles à l'échelle) pour
 // l'écran match (PitchView) -- remplace le rectangle vert plat d'origine
-// (retour terrain du 28/09/2026 : "le terrain n'est pas beau"). Dimensions
-// FIFA standard en mètres (105 x 68), terrain HORIZONTAL comme le reste de
-// PitchView -- but domicile à gauche (x=0), but extérieur à droite (x=L).
-const L = 105;
-const W = 68;
+// (retour terrain du 28/09/2026 : "le terrain n'est pas beau"). Cotes FIFA en
+// mètres lues dans ui/src/utils/pitchGeometry.json, DÉRIVÉ de
+// src/ligue1sim/pitch_geometry.py (source unique, Phase 5 sous-étape 1 ; ne
+// pas les redéfinir ici -- tests/test_pitch_geometry.py vérifie l'égalité).
+// Terrain HORIZONTAL comme le reste de PitchView -- but domicile à gauche
+// (x=0), but extérieur à droite (x=L).
+const L = dims.pitch_length_m;
+const W = dims.pitch_width_m;
 const PAD = 3; // marge autour du terrain (pour dessiner les cages qui dépassent)
 const STRIPES = 18;
 const GRASS_A = "#2d8a4e";
 const GRASS_B = "#26793f";
 const OUT_OF_BOUNDS = "#1c5a30";
 const LINE = "rgba(255,255,255,0.92)";
-const LINE_W = 0.35;
+const LINE_W = 0.35; // épaisseur de TRACÉ (visibilité), pas une cote réglementaire
 
-const PEN_DEPTH = 16.5;
-const PEN_WIDTH = 40.32;
-const SIX_DEPTH = 5.5;
-const SIX_WIDTH = 18.32;
-const SPOT_DIST = 11;
-const CIRCLE_R = 9.15;
-const GOAL_WIDTH = 7.32;
-const GOAL_DEPTH = 2;
-const CORNER_R = 1;
+const PEN_DEPTH = dims.penalty_area_depth_m;
+const PEN_WIDTH = dims.penalty_area_width_m;
+const SIX_DEPTH = dims.goal_area_depth_m;
+const SIX_WIDTH = dims.goal_area_width_m;
+const SPOT_DIST = dims.penalty_spot_distance_m;
+const CIRCLE_R = dims.center_circle_radius_m;
+const ARC_R = dims.penalty_arc_radius_m;
+const GOAL_WIDTH = dims.goal_width_m;
+const GOAL_DEPTH = dims.goal_net_depth_m;
+const CORNER_R = dims.corner_arc_radius_m;
 
-// Arc de surface de réparation -- portion du rond central (rayon CIRCLE_R,
-// centré sur le point de penalty) visible hors de la surface : les deux
+// Arc de surface de réparation -- portion du cercle de rayon ARC_R,
+// centré sur le point de penalty, visible hors de la surface : les deux
 // points où ce cercle croise la ligne de surface, à `depth` du point de
 // penalty (16.5 - 11 = 5.5 m).
 function penaltyArc(spotX, boxEdgeX, midY, sweepFlag) {
   const depth = Math.abs(boxEdgeX - spotX);
-  const half = Math.sqrt(CIRCLE_R * CIRCLE_R - depth * depth);
-  return `M ${boxEdgeX} ${midY - half} A ${CIRCLE_R} ${CIRCLE_R} 0 0 ${sweepFlag} ${boxEdgeX} ${midY + half}`;
+  const half = Math.sqrt(ARC_R * ARC_R - depth * depth);
+  return `M ${boxEdgeX} ${midY - half} A ${ARC_R} ${ARC_R} 0 0 ${sweepFlag} ${boxEdgeX} ${midY + half}`;
 }
 
 function GoalEnd({ side }) {

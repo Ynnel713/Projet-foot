@@ -86,7 +86,7 @@ Mode « player » (PWA) : quatre boutons sous le canvas, `◀ ⏸/⏵ ↻ ▶` (
 ### 2.10 Écarts observés hors du retour du 24/09
 
 1. **Repère décalé de la marge** (§2.1) : bloque la fiabilité de toute mesure de géométrie et explique en partie le ticket 1.
-2. **Pas de borne des positions** : aucun écrêtage à [0, 1] dans `motion.py`, ni dans `narrative_player._apply_acceleration_constraint_to_frames`, ni dans `canvas.html` ; `motion._apply_avoidance` déplace les positions sans borne, puis la contrainte d'accélération (`physics`, 10 m/s²) les reconvertit. Le test du ticket 1 (`test_substitute_placed_correctly`, marqueur `integration`) tolère **0,1** en normalisé, soit ~10,5 m en x et ~6,8 m en y. Le mécanisme exact n'a pas été tracé expérimentalement (cohérent avec le ticket 1).
+2. **Pas de borne des positions — diagnostic corrigé le 07/10/2026 (sous-étape 1).** La reconnaissance désignait `motion._apply_avoidance` ; la mesure (60 matchs, 5,67 M de positions) montre que **ni les positions brutes ni la sortie de `_apply_avoidance` ne sortent de [0, 1]** (0 cas). Les dépassements (jusqu'à ~60 m, 115 cas sur 16 349 joueurs × clips) naissaient dans `physics.apply_acceleration_constraint` : face à un saut de la trajectoire brute (3 à 8 m en une image, ~4 % des joueurs d'un clip), la contrainte poursuivait la cible sans freiner et la dépassait. Corrigé à la source : `physics.apply_acceleration_constraint` reçoit les bornes du terrain (`bounds`, passées par `narrative_player`) et plafonne la vitesse visée par axe pour qu'un arrêt à `a_max` reste possible avant le bord (freinage anticipé) ; le plafond d'accélération est conservé et le comportement loin des bords est inchangé. Les sauts de trajectoire brute eux-mêmes (changements de segment des gabarits) restent une dette amont, non traitée.
 3. **Sens d'attaque** : chaque clip est exprimé dans le repère de l'équipe qui attaque (x vers le but adverse) : l'équipe à la manœuvre attaque **toujours vers la droite**, donc les deux équipes changent de côté d'un clip à l'autre. Le score, lui, est toujours affiché domicile–extérieur. Choix de lecture à arbitrer (§5), non couvert par le backlog.
 4. **Lisibilité à l'échelle réduite** : lignes (2 px), numéros (10 px), ballon (5 px) sont dimensionnés pour l'échelle 1 ; en dessous de ~0,5 ils deviennent peu lisibles (§2.1, §2.2).
 5. **Terrain dupliqué** : le canvas, `PitchField.jsx` (PWA), plusieurs scripts de prévisualisation Python (`scripts/preview_*.py`, tracé PIL) et `pitch_layout.py` (terrain vertical) définissent chacun leur propre terrain.
@@ -201,3 +201,23 @@ Cinq sous-étapes, chacune commitable et testable seule, dans l'ordre des dépen
 ## 6. État des tickets liés
 
 Ticket 1 (joueur hors de la marge) : traité par la sous-étape 5.1, **non corrigé** à ce jour. Tickets 2, 3, 4, 6, 9, 10 et 11 : sans lien direct avec le rendu ; le ticket 4 (latence et poids du payload) est à surveiller pour toute sous-étape qui enrichit le payload (5.2).
+
+## 7. Écart entre `narrative_player` et `sequence_generator` (documenté le 07/10/2026, **non corrigé**)
+
+**Constat.** Deux orchestrations coexistent pour passer d'un événement à une `Sequence` :
+
+| | `engine/narrative_player._build_clip_frames` (chemin de la PWA) | `animation/sequence_generator.generate_sequence` |
+|---|---|---|
+| Entrée | `NarrativeEvent` (gabarit **déjà choisi** par `engine/narrative.py`) converti en `GoalEvent` | `GoalEvent` + `PitchLayoutState` + `MatchState` + `rng` |
+| Positions de départ | `_lineup_start_positions` (+ `_substitute_start_position`) | `_start_positions` (via `pitch_layout`) |
+| Choix du gabarit | aucun (hérité de la timeline) | `templates.pick_template(context, rng)` |
+| Exécution | `BUILDERS[gabarit](...)` puis `enrich_with_background` (adversaire et dérives) | `BUILDERS[nom](...)` ; ajoute `match_id`/`event_index` à `meta` |
+| Appelé par | `build_clips` → `api/animation` (**production**) | **uniquement des tests** (`tests/test_sequence_generator.py`, `tests/test_lineup_snapshot.py`) ; aucune référence hors docstrings dans `src/`, `engine/`, `api/`, `apps/`, `scripts/` |
+
+**Impact.** *Maintenance* : la logique de départ des joueurs et d'exécution des gabarits existe deux fois ; un correctif sur l'une n'atteint pas l'autre (le diagnostic du 24/09, `docs/render_diagnostic.md`, a déjà dû corriger le même oubli de `band` à deux endroits). *Cohérence* : la suite de tests de `generate_sequence` (11 appels) ne couvre pas le chemin réellement utilisé par la PWA ; une régression de production peut passer au vert. *Lisibilité* : la docstring de `animation/__init__.py` présente `generate_sequence` comme point d'entrée, ce qui est faux pour le produit.
+
+**Pistes (non appliquées, à arbitrer).** (1) Déclarer officiellement `narrative_player._build_clip_frames` comme chemin de production, marquer `generate_sequence` obsolète (docstring) puis le retirer avec ses tests si aucun usage n'est confirmé. (2) Ou extraire l'orchestration commune (positions de départ, exécution du gabarit, `enrich_with_background`) dans une fonction unique appelée par les deux. (3) Dans les deux cas, ajouter un test de non-divergence sur un événement donné. Aucun code modifié par cette note.
+
+## 8. Avancement
+
+- **Sous-étape 1 (géométrie FIFA, repère, ticket 1)** : réalisée le 07/10/2026 ; baseline avant/après dans `docs/previews/phase5/sous_etape_1/`. Décisions d'architecte appliquées : correctifs communs aux deux modes de `canvas.html`, cotes dans `pitch_geometry.py` (source unique), ticket 1 corrigé à la source (cause réelle : `physics.py`, voir §2.10). Mesures : 0 position hors [0, 1] sur 100 matchs après correctif (contre jusqu'à ~60 m de dépassement avant) ; clip de preview (seed 26) : 112 positions hors terrain avant, 0 après, 5 joueurs × clips modifiés. Fichiers hors liste initiale, nécessaires : `engine/narrative_player.py` (1 appel : passage de `bounds`), `ui/src/utils/pitchGeometry.json` (JSON dérivé de `pitch_geometry.py`), `tests/test_physics.py`.

@@ -233,7 +233,9 @@ def _apply_acceleration_constraint_to_frames(frames: list[FrameState], dt: float
         {player_id: (state.x * PITCH_LENGTH_M, state.y * PITCH_WIDTH_M) for player_id, state in frame.players.items()}
         for frame in frames
     ]
-    corrected_m = apply_acceleration_constraint(positions_m, dt)
+    corrected_m = apply_acceleration_constraint(
+        positions_m, dt, bounds=((0.0, PITCH_LENGTH_M), (0.0, PITCH_WIDTH_M))  # ticket 1 : voir physics (BORNES DU TERRAIN)
+    )
     return [
         replace(frame, players={
             player_id: replace(

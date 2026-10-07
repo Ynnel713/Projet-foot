@@ -110,6 +110,12 @@
 // suffit -- aucun templating.
 const SEQUENCE_DATA = /*__SEQUENCE_JSON__*/null;
 
+// Cotes du terrain en METRES -- Phase 5, sous-etape 1. Bloc DERIVE de
+// src/ligue1sim/pitch_geometry.py (source unique, fonction pitch_dimensions_json) :
+// ne jamais le modifier a la main, tests/test_canvas_html.py verifie l'egalite.
+// Regenerer : python -m ligue1sim.pitch_geometry
+const PITCH = /*PITCH_GEOMETRY_BEGIN*/{"center_circle_radius_m":9.15,"corner_arc_radius_m":1.0,"goal_area_depth_m":5.5,"goal_area_width_m":18.32,"goal_net_depth_m":2.0,"goal_width_m":7.32,"penalty_arc_radius_m":9.15,"penalty_area_depth_m":16.5,"penalty_area_width_m":40.32,"penalty_spot_distance_m":11.0,"pitch_length_m":105.0,"pitch_width_m":68.0}/*PITCH_GEOMETRY_END*/;
+
 // MODE EMBARQUE (iframe de la PWA, docs/canvas_integration_state.md §2.11,
 // protocole version 1) -- active UNIQUEMENT par `?embed=1`. Sans ce
 // parametre, le fichier se comporte exactement comme avant (mode standalone :
@@ -148,12 +154,34 @@ function startPlayer(SEQUENCE_DATA, bridge) {
   // (brief 4.5), documentee ici plutot qu'eparpillee dans le code.
   const CARTON_DURATION_S = 2.0;
 
+  // Projection en metres (Phase 5, sous-etape 1) : le terrain 105 x 68 m est
+  // inscrit dans le canvas avec au moins MARGIN px de chaque cote, a UNE SEULE
+  // echelle (px par metre, meme valeur sur x et y : les cercles restent
+  // ronds), et centre. Le referentiel normalise du moteur ([0, 1], x=0/x=1 =
+  // lignes de but, y=0/y=1 = touches) correspond EXACTEMENT a ce rectangle.
+  // Meme formule que pitch_geometry.pitch_rect_px (Python).
+  const PITCH_L = PITCH.pitch_length_m, PITCH_W = PITCH.pitch_width_m;
+  const SCALE = Math.min((W - 2 * MARGIN) / PITCH_L, (H - 2 * MARGIN) / PITCH_W);
+  const OX = (W - PITCH_L * SCALE) / 2, OY = (H - PITCH_W * SCALE) / 2;
+
+  // Metres (origine coin bas-gauche du terrain, y vers le haut) -> pixels canvas.
+  function mToPx(mx, my) {
+    return [OX + mx * SCALE, OY + (PITCH_W - my) * SCALE];
+  }
+
+  // Referentiel normalise du moteur -> pixels canvas.
   function toPx(x, y) {
-    return [x * W, (1 - y) * H];
+    return mToPx(x * PITCH_L, y * PITCH_W);
   }
 
   function lerp(a, b, f) {
     return a + (b - a) * f;
+  }
+
+  function dot(px, py) {
+    ctx.beginPath();
+    ctx.arc(px, py, 3, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   function drawPitch() {
@@ -161,48 +189,68 @@ function startPlayer(SEQUENCE_DATA, bridge) {
     ctx.fillRect(0, 0, W, H);
     ctx.strokeStyle = '#ffffff';
     ctx.fillStyle = '#ffffff';
-
     ctx.lineWidth = 2;
-    ctx.strokeRect(MARGIN, MARGIN, W - 2 * MARGIN, H - 2 * MARGIN);
 
+    // Touches et lignes de but, ligne mediane, rond central.
+    const [x0, y0] = mToPx(0, PITCH_W);
+    ctx.strokeRect(x0, y0, PITCH_L * SCALE, PITCH_W * SCALE);
     ctx.beginPath();
-    ctx.moveTo(W / 2, MARGIN);
-    ctx.lineTo(W / 2, H - MARGIN);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.arc(W / 2, H / 2, 70, 0, Math.PI * 2);
+    ctx.moveTo(...mToPx(PITCH_L / 2, 0));
+    ctx.lineTo(...mToPx(PITCH_L / 2, PITCH_W));
     ctx.stroke();
     ctx.beginPath();
-    ctx.arc(W / 2, H / 2, 3, 0, Math.PI * 2);
-    ctx.fill();
-
-    const boxW = W * 0.10, boxH = H * 0.42;
-    ctx.strokeRect(MARGIN, H / 2 - boxH / 2, boxW, boxH);
-    ctx.strokeRect(W - MARGIN - boxW, H / 2 - boxH / 2, boxW, boxH);
-
-    const sixW = W * 0.045, sixH = H * 0.20;
-    ctx.strokeRect(MARGIN, H / 2 - sixH / 2, sixW, sixH);
-    ctx.strokeRect(W - MARGIN - sixW, H / 2 - sixH / 2, sixW, sixH);
-
-    const spotDist = W * 0.085;
-    ctx.beginPath();
-    ctx.arc(MARGIN + spotDist, H / 2, 3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(W - MARGIN - spotDist, H / 2, 3, 0, Math.PI * 2);
-    ctx.fill();
-
-    const goalW = H * 0.12;
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(MARGIN, H / 2 - goalW / 2);
-    ctx.lineTo(MARGIN, H / 2 + goalW / 2);
+    ctx.arc(...mToPx(PITCH_L / 2, PITCH_W / 2), PITCH.center_circle_radius_m * SCALE, 0, Math.PI * 2);
     ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(W - MARGIN, H / 2 - goalW / 2);
-    ctx.lineTo(W - MARGIN, H / 2 + goalW / 2);
-    ctx.stroke();
+    dot(...mToPx(PITCH_L / 2, PITCH_W / 2));
+
+    // Chaque extremite : dir = +1 a gauche (ligne de but en x = 0), -1 a droite.
+    // Angle d'ouverture de l'arc de surface : acos((profondeur surface - distance du point de penalty) / rayon de l'arc).
+    const arcHalfAngle = Math.acos(
+      (PITCH.penalty_area_depth_m - PITCH.penalty_spot_distance_m) / PITCH.penalty_arc_radius_m
+    );
+    for (const dir of [1, -1]) {
+      const goalLineX = dir === 1 ? 0 : PITCH_L;
+      const midY = PITCH_W / 2;
+
+      // Surface de reparation et surface de but (rectangles colles a la ligne de but).
+      for (const [depth, width] of [
+        [PITCH.penalty_area_depth_m, PITCH.penalty_area_width_m],
+        [PITCH.goal_area_depth_m, PITCH.goal_area_width_m],
+      ]) {
+        const [rx, ry] = mToPx(dir === 1 ? goalLineX : goalLineX - depth, midY + width / 2);
+        ctx.strokeRect(rx, ry, depth * SCALE, width * SCALE);
+      }
+
+      // Point de penalty et arc de cercle (portion hors de la surface seulement).
+      const [spotPx, spotPy] = mToPx(goalLineX + dir * PITCH.penalty_spot_distance_m, midY);
+      dot(spotPx, spotPy);
+      ctx.beginPath();
+      if (dir === 1) ctx.arc(spotPx, spotPy, PITCH.penalty_arc_radius_m * SCALE, -arcHalfAngle, arcHalfAngle);
+      else ctx.arc(spotPx, spotPy, PITCH.penalty_arc_radius_m * SCALE, Math.PI - arcHalfAngle, Math.PI + arcHalfAngle);
+      ctx.stroke();
+
+      // But : trait de 4 px entre les poteaux, sur la ligne de but (filets : sous-etape ulterieure).
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(...mToPx(goalLineX, midY - PITCH.goal_width_m / 2));
+      ctx.lineTo(...mToPx(goalLineX, midY + PITCH.goal_width_m / 2));
+      ctx.stroke();
+      ctx.lineWidth = 2;
+    }
+
+    // Arcs de coin : quart de cercle de rayon corner_arc_radius_m centre sur chaque poteau de corner.
+    const cornerR = PITCH.corner_arc_radius_m * SCALE;
+    const corners = [
+      [mToPx(0, 0), -Math.PI / 2, 0],
+      [mToPx(0, PITCH_W), 0, Math.PI / 2],
+      [mToPx(PITCH_L, PITCH_W), Math.PI / 2, Math.PI],
+      [mToPx(PITCH_L, 0), Math.PI, Math.PI * 1.5],
+    ];
+    for (const [[cx, cy], from, to] of corners) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, cornerR, from, to);
+      ctx.stroke();
+    }
   }
 
   // Segment [frames[i], frames[i+1]] encadrant t, et fraction s dans ce
