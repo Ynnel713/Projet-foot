@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from ligue1sim.players import FM_ATTRIBUTE_COLUMNS, Player
+from ligue1sim.players import FM_ATTRIBUTE_COLUMNS, Player, weighted_attributes
 
 ID_COLUMN = "ID"
 CHAMPIONNAT_COLUMN = "Championnat"
@@ -47,9 +47,9 @@ PIED_COLUMN = "Pieds"
 # Enrichissement FM26 (26/09/2026, voir scripts/scrape_fminside_attributes.py) :
 # absent pour la plupart des joueurs tant que le scraping n'est pas terminé,
 # donc volontairement pas dans REQUIRED_COLUMNS -- même traitement que
-# CATEGORIE_COLUMN/POSTE_SECONDAIRE_COLUMN ci-dessus.
-ABILITY_COLUMN = "Ability (0-99)"
-NOTE_FM_COLUMN = "Note FM"
+# CATEGORIE_COLUMN/POSTE_SECONDAIRE_COLUMN ci-dessus. Pas de note globale FM
+# (Ability/Note FM, retirées le 26/09/2026) : Moyenne joueur (NOTE_COLUMN)
+# fait foi, les attributs FM ne servent qu'à décrire le profil du joueur.
 POSTES_FM_COLUMN = "Postes FM naturels"
 TAILLE_FM_COLUMN = "Taille FM (cm)"
 WEAK_FOOT_COLUMN = "Weak foot (/5)"
@@ -178,8 +178,7 @@ def _build_players(group: pd.DataFrame) -> list[Player]:
         poste, extra_postes = _split_poste(row[POSTE_COLUMN])
         declared_secondaires = _parse_postes_secondaires(row.get(POSTE_SECONDAIRE_COLUMN))
         attributes = {name: int(row[name]) for name in FM_ATTRIBUTE_COLUMNS if pd.notna(row.get(name))}
-        ability = row.get(ABILITY_COLUMN)
-        note_fm = row.get(NOTE_FM_COLUMN)
+        note = float(row[NOTE_COLUMN])
         postes_fm = row.get(POSTES_FM_COLUMN)
         taille_fm = row.get(TAILLE_FM_COLUMN)
         weak_foot = row.get(WEAK_FOOT_COLUMN)
@@ -192,7 +191,7 @@ def _build_players(group: pd.DataFrame) -> list[Player]:
                 nationalite=row[NATIONALITE_COLUMN],
                 age=int(row[AGE_COLUMN]),
                 poste=poste,
-                note=float(row[NOTE_COLUMN]),
+                note=note,
                 club=row[CLUB_COLUMN],
                 championnat=row[CHAMPIONNAT_COLUMN],
                 poste_secondaire=extra_postes + declared_secondaires,
@@ -202,9 +201,7 @@ def _build_players(group: pd.DataFrame) -> list[Player]:
                 taille_fm=int(taille_fm) if pd.notna(taille_fm) else None,
                 weak_foot=float(weak_foot) if pd.notna(weak_foot) else None,
                 preferred_moves=str(preferred_moves) if pd.notna(preferred_moves) else None,
-                attributes=attributes or None,
-                ability=float(ability) if pd.notna(ability) else None,
-                note_fm=float(note_fm) if pd.notna(note_fm) else None,
+                attributes=weighted_attributes(attributes, note, poste) if attributes else None,
                 valeur_marchande=_parse_valeur_marchande(row.get(VALEUR_MARCHANDE_COLUMN)),
                 pied=str(pied) if pd.notna(pied) else None,
             )

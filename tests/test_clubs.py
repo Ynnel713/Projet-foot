@@ -292,12 +292,12 @@ def test_load_clubs_allows_missing_nom_for_mononym_players(tmp_path):
     assert vitinha.name == "Vitinha"
 
 
-# --- Enrichissement FM26 (attributs/Ability/Note FM, 26/09/2026) -----------
+# --- Enrichissement FM26 (attributs, 26/09/2026) ---------------------------
 # Colonnes optionnelles (pas dans REQUIRED_COLUMNS) : absentes pour la
 # majorité des joueurs tant que scripts/scrape_fminside_attributes.py n'a
 # pas fini de traiter les 7564 lignes.
 
-def test_load_clubs_without_fm26_columns_leaves_attributes_ability_note_fm_none(tmp_path):
+def test_load_clubs_without_fm26_columns_leaves_attributes_none(tmp_path):
     """Compatibilité arrière : un classeur sans les colonnes FM26 (comme tous
     les autres df synthétiques de ce fichier, ou le classeur historique
     avant le 25/09/2026) ne doit ni planter ni inventer des valeurs."""
@@ -320,8 +320,6 @@ def test_load_clubs_without_fm26_columns_leaves_attributes_ability_note_fm_none(
 
     assert all(
         p.attributes is None
-        and p.ability is None
-        and p.note_fm is None
         and p.postes_fm is None
         and p.taille_fm is None
         and p.weak_foot is None
@@ -344,8 +342,6 @@ def test_load_clubs_reads_fm26_columns_when_present(tmp_path):
             "Moyenne joueur": [70] * 22,
             "Crossing": [65] + [None] * 21,
             "Pace": [95] + [None] * 21,
-            "Ability (0-99)": [84] + [None] * 21,
-            "Note FM": [83.8] + [None] * 21,
             "Postes FM naturels": ["DR, WBR"] + [None] * 21,
             "Taille FM (cm)": [181] + [None] * 21,
             "Weak foot (/5)": [3] + [None] * 21,
@@ -359,14 +355,16 @@ def test_load_clubs_reads_fm26_columns_when_present(tmp_path):
     enrichi = next(p for c in clubs for p in c.players if p.prenom == "Enrichi")
     autre = next(p for c in clubs for p in c.players if p.prenom == "P0")
 
+    # players.weighted_attributes (28/09/2026, voir test_players.py pour le
+    # détail) : Crossing et Pace ne sont pas dans les attributs jugés
+    # pertinents pour "MC" (voir _RAW_IMPORTANCE) -- "notes annexes",
+    # rendues telles quelles, pas recalées vers Moyenne joueur (70).
     assert enrichi.attributes == {"Crossing": 65, "Pace": 95}
-    assert enrichi.ability == 84.0
-    assert enrichi.note_fm == 83.8
     assert enrichi.postes_fm == "DR, WBR"
     assert enrichi.taille_fm == 181
     assert enrichi.weak_foot == 3.0
     assert enrichi.preferred_moves == "Cuts Inside"
-    assert autre.attributes is None and autre.ability is None and autre.note_fm is None
+    assert autre.attributes is None
     assert autre.postes_fm is None and autre.taille_fm is None and autre.weak_foot is None and autre.preferred_moves is None
 
 
@@ -381,10 +379,6 @@ def test_load_clubs_real_data_fm26_attributes_stay_within_known_bounds():
     for p in enriched:
         assert set(p.attributes) <= set(FM_ATTRIBUTE_COLUMNS)
         assert all(0 <= v <= 99 for v in p.attributes.values())
-        if p.ability is not None:
-            assert 0 <= p.ability <= 99
-        if p.note_fm is not None:
-            assert 0 <= p.note_fm <= 100
 
 
 # --- Valeur marchande / pied (27/09/2026, colonnes originales jamais lues jusqu'ici) --

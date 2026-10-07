@@ -2201,13 +2201,9 @@ div[class*="st-key-team_card_"]:hover .team-player-card {
 _PIED_LABELS = {"D": "Droit", "G": "Gauche"}
 
 
-def _team_headline_note(player: Player) -> float:
-    return player.note_fm if player.note_fm is not None else player.note
-
-
 def _render_team_header(club: Club) -> None:
     players = club.players
-    note = sum(_team_headline_note(p) for p in players) / len(players) if players else 0.0
+    note = sum(p.note for p in players) / len(players) if players else 0.0
     age_moyen = sum(p.age for p in players) / len(players) if players else 0.0
     valeurs = [p.valeur_marchande for p in players if p.valeur_marchande is not None]
     championnat = players[0].championnat if players else ""
@@ -2240,7 +2236,7 @@ def _team_player_card_html(player: Player) -> str:
         photo_html = f'<img class="team-player-photo" src="data:image/png;base64,{base64.b64encode(photo.read_bytes()).decode()}" />'
     else:
         photo_html = '<div class="team-player-photo-placeholder">?</div>'
-    note = _team_headline_note(player)
+    note = player.note
     pied = _PIED_LABELS.get(player.pied or "", "")
     meta = f"{player.poste} · {player.age} ans" + (f" · {pied}" if pied else "")
     return (
@@ -2295,7 +2291,7 @@ def render_club_detail_screen(club_name: str) -> None:
     selected_key = f"team_selected_player_{club.name}"
     selected_id = st.session_state.get(selected_key)
     for poste in ordered_postes:
-        players = sorted(by_poste[poste], key=lambda p: -_team_headline_note(p))
+        players = sorted(by_poste[poste], key=lambda p: -p.note)
         st.markdown(
             f'<div class="team-group-title">{poste} · {len(players)} joueur{"s" if len(players) > 1 else ""}</div>',
             unsafe_allow_html=True,
@@ -2475,11 +2471,10 @@ def _render_player_profile_card(player: Player) -> None:
         tags.append(f"Pied faible {player.weak_foot:.0f}/5")
     tags_html = "".join(f'<span class="pp-tag">{t}</span>' for t in tags if t)
 
-    # Une seule note globale (retour du 26/09/2026) -- Note FM si le joueur
-    # est enrichi (destinee a remplacer Moyenne joueur, voir clubs.NOTE_COLUMN),
-    # sinon Moyenne joueur. Ability (composante brute de Note FM) n'est jamais
-    # affichee seule.
-    note_value = player.note_fm if player.note_fm is not None else player.note
+    # Moyenne joueur fait foi (26/09/2026) -- les attributs FM26 servent à
+    # décrire le profil du joueur (technique/physique/mental), jamais à
+    # calculer une note globale concurrente.
+    note_value = player.note
     note_tier = _fm_tier(note_value)
 
     footnotes = []

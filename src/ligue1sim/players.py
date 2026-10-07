@@ -159,6 +159,145 @@ FM_ATTRIBUTE_COLUMNS: tuple[str, ...] = tuple(
 )
 
 
+# Importance par attribut x poste (28/09/2026, fournie par l'utilisateur --
+# fm-importance-des-attributs-par-poste-2-=-fondamental-1-=-utile.xlsx).
+# Remplace la table de coefficients 0-5 (version précédente) : celle-ci
+# moyennait TOUS les attributs (même ceux jugés "hors sujet" à coeff 1),
+# ce qui tirait encore trop la moyenne brute vers le bas et forçait des
+# recalages excessifs (retour utilisateur : même en poussant les
+# coefficients à l'extrême sur les points forts, la moyenne ne dépassait
+# pas ~73 pour un ailier comme Gordon, loin de sa Moyenne joueur). Ici,
+# seuls les attributs marqués comptent dans la moyenne -- 2 = compétence
+# fondamentale, 1 = compétence utile, absent = "note annexe" (case vide
+# dans le fichier source) : EXCLUE de la moyenne ET jamais recalée, rendue
+# telle quelle. Colonnes du fichier source, dans l'ordre : DC, Latéral,
+# Piston, MDC, MC, MOC, Ailier, BU. "Piston" n'a pas d'équivalent dans
+# POSITION_GROUP/postes -- conservé pour référence mais non utilisé.
+# "Bravery" absent de la feuille source (colonne manquante, comme dans la
+# table de coefficients précédente) -- note annexe partout par défaut.
+_IMPORTANCE_COLUMNS = ("DC", "Latéral", "Piston", "MDC", "MC", "MOC", "Ailier", "BU")
+_RAW_IMPORTANCE: dict[str, tuple[int, ...]] = {
+    "Crossing": (0, 1, 2, 0, 0, 0, 0, 0),
+    "Dribbling": (0, 0, 1, 0, 0, 1, 2, 0),
+    "Finishing": (0, 0, 0, 0, 0, 0, 0, 2),
+    "First Touch": (0, 0, 0, 0, 1, 2, 1, 1),
+    "Heading": (2, 0, 0, 0, 0, 0, 0, 0),
+    "Long Shots": (0, 0, 0, 0, 0, 1, 0, 0),
+    "Marking": (2, 1, 1, 1, 0, 0, 0, 0),
+    "Passing": (0, 0, 0, 1, 2, 2, 0, 0),
+    "Tackling": (2, 1, 1, 2, 0, 0, 0, 0),
+    "Technique": (0, 0, 0, 0, 1, 2, 2, 0),
+    "Aggression": (1, 0, 0, 1, 0, 0, 0, 0),
+    "Anticipation": (1, 1, 0, 1, 1, 1, 1, 2),
+    "Composure": (0, 0, 0, 0, 1, 2, 0, 2),
+    "Concentration": (2, 1, 1, 2, 1, 0, 0, 1),
+    "Decisions": (1, 1, 1, 2, 2, 2, 1, 1),
+    "Determination": (1, 1, 1, 1, 1, 1, 1, 1),
+    "Flair": (0, 0, 0, 0, 0, 2, 2, 0),
+    "Leadership": (1, 0, 0, 1, 1, 0, 0, 0),
+    "Off the Ball": (0, 0, 0, 0, 0, 1, 2, 2),
+    "Positioning": (2, 1, 1, 2, 0, 0, 0, 0),
+    "Teamwork": (1, 1, 1, 1, 2, 1, 0, 0),
+    "Vision": (0, 0, 0, 1, 2, 2, 1, 0),
+    "Work Rate": (0, 2, 2, 1, 1, 0, 1, 0),
+    "Acceleration": (0, 1, 1, 0, 0, 0, 2, 1),
+    "Agility": (0, 0, 0, 0, 0, 0, 1, 0),
+    "Balance": (0, 0, 0, 0, 0, 0, 1, 1),
+    "Jumping Reach": (2, 0, 0, 0, 0, 0, 0, 0),
+    "Natural Fitness": (0, 0, 0, 0, 0, 0, 0, 0),
+    "Pace": (0, 2, 2, 0, 0, 0, 2, 1),
+    "Stamina": (0, 2, 2, 1, 2, 1, 1, 0),
+    "Strength": (2, 0, 0, 1, 0, 0, 0, 1),
+    "Corners": (0, 0, 0, 0, 0, 0, 0, 0),
+    "Free Kick Taking": (0, 0, 0, 0, 0, 0, 0, 0),
+    "Long Throws": (0, 0, 0, 0, 0, 0, 0, 0),
+    "Penalty Taking": (0, 0, 0, 0, 0, 0, 0, 0),
+}
+_RAW_IMPORTANCE["Bravery"] = (0, 0, 0, 0, 0, 0, 0, 0)
+
+# Poste exact -> libellé de colonne ci-dessus. SA/ATT n'ont pas de colonne
+# dédiée -- moyenne (arrondie) de colonnes voisines (SA : profil à
+# mi-chemin MOC/BU ; ATT, "attaquant polyvalent" sans équivalent
+# Transfermarkt, voir le docstring du module : moyenne des 3 profils
+# offensifs). "GK" absent volontairement : un gardien n'a que des attributs
+# "Gardien", hors de cette table -- tous en "note annexe" (voir _importance).
+_POSTE_COLUMN: dict[str, str] = {
+    "DC": "DC", "LB": "Latéral", "RB": "Latéral", "MDC": "MDC", "MC": "MC",
+    "MOC": "MOC", "AG": "Ailier", "AD": "Ailier", "BU": "BU",
+}
+_POSTE_BLEND: dict[str, tuple[str, ...]] = {
+    "SA": ("MOC", "BU"),
+    "ATT": ("Ailier", "MOC", "BU"),
+}
+
+
+def _importance(name: str, poste: str | None) -> float:
+    """Niveau d'importance (0 = note annexe, 1 = utile, 2 = fondamentale) de
+    l'attribut `name` pour `poste` (voir _RAW_IMPORTANCE) -- 0 si `poste` est
+    absent/inconnu, ou si `name` n'est dans la table pour aucun poste (ex.
+    attributs "Gardien")."""
+    column = _POSTE_COLUMN.get(poste)
+    if column:
+        row = _RAW_IMPORTANCE.get(name)
+        return float(row[_IMPORTANCE_COLUMNS.index(column)]) if row else 0.0
+    blend = _POSTE_BLEND.get(poste)
+    if blend:
+        row = _RAW_IMPORTANCE.get(name)
+        if not row:
+            return 0.0
+        indices = [_IMPORTANCE_COLUMNS.index(c) for c in blend]
+        return sum(row[i] for i in indices) / len(indices)
+    return 0.0
+
+
+def weighted_attributes(attributes: dict[str, int], note: float, poste: str | None = None) -> dict[str, int]:
+    """Recale les attributs FM26 bruts (scrapés sur fminside) sur la seule
+    note qui fait foi dans le moteur, Moyenne joueur (décision du
+    26/09/2026 : on abandonne toute note globale FM concurrente comme
+    "Ability" -- voir l'historique de scripts/scrape_fminside_attributes.py).
+    Moyenne joueur ne devient pas une note globale concurrente (elle reste la
+    seule utilisée par le moteur, voir clubs.NOTE_COLUMN) -- elle sert
+    seulement à recentrer le PROFIL (attributs affichés, radar/barres) sur le
+    niveau réel du joueur plutôt que sur celui, potentiellement biaisé, que
+    fminside lui attribue seul.
+
+    Seuls les attributs jugés pertinents pour `poste` (importance 1 ou 2,
+    voir _RAW_IMPORTANCE -- décision utilisateur du 28/09/2026) entrent dans
+    la moyenne brute de référence ET sont recalés ; les autres ("notes
+    annexes", importance 0 ou absente de la table) sont retournés TELS
+    QUELS, jamais modifiés. `poste` omis/inconnu/sans aucun attribut marqué
+    -> rien à recaler, tout est retourné inchangé.
+
+    Le décalage nécessaire (note - moyenne pondérée des attributs
+    pertinents) est réparti entre eux INVERSEMENT à leur importance
+    (fondamental = 2x moins de correction qu'utile = 1x) plutôt
+    qu'uniformément : un point ajouté à un attribut fondamental pèse déjà
+    beaucoup plus dans la moyenne qu'un point ajouté à un attribut
+    seulement utile, donc le corriger autant que les autres le pousserait
+    hors de toute proportion (retour utilisateur du 28/09/2026). Chaque
+    attribut recalé reste borné à [0, 99]."""
+    if not attributes:
+        return attributes
+
+    weights = {name: _importance(name, poste) for name in attributes}
+    relevant = {name: w for name, w in weights.items() if w > 0}
+    if not relevant:
+        return dict(attributes)
+
+    total_weight = sum(relevant.values())
+    weighted_mean = sum(weights[name] * value for name, value in attributes.items() if name in relevant) / total_weight
+    total_gap = (note - weighted_mean) * total_weight
+    correction_unit = total_gap / len(relevant)  # à répartir en /importance ci-dessous
+
+    def rescale(name: str, value: int) -> int:
+        weight = weights[name]
+        if weight <= 0:
+            return value  # note annexe -- jamais touchée
+        return round(min(99, max(0, value + correction_unit / weight)))
+
+    return {name: rescale(name, value) for name, value in attributes.items()}
+
+
 @dataclass(frozen=True)
 class Player:
     prenom: str
@@ -172,9 +311,7 @@ class Player:
     poste_secondaire: tuple[str, ...] = ()
     categorie: str | None = None  # colonne "Catégorie" (rôle/style, ex. "buteur_axial") ; absente pour la plupart
     id: int | None = None  # colonne "ID" ; sert à recroiser avec d'autres onglets (voir nations.py)
-    attributes: dict[str, int] | None = None  # 47 attributs FM26 (voir FM_ATTRIBUTE_CATEGORIES) ; None si non enrichi
-    ability: float | None = None  # note générale fminside (0-99), indépendante de tout rôle -- composante de note_fm, pas affichée seule (voir app._render_player_profile_card)
-    note_fm: float | None = None  # mélange ability/note pondéré par âge (voir scrape_fminside_attributes.note_fm_weight_moyenne) -- pas encore branchée au moteur (voir clubs.NOTE_COLUMN)
+    attributes: dict[str, int] | None = None  # 47 attributs FM26 (voir FM_ATTRIBUTE_CATEGORIES) ; None si non enrichi -- décrivent le profil du joueur (rapide, bon finisseur...), n'entrent dans aucune note
     postes_fm: str | None = None  # colonne "Postes FM naturels" (ex. "DR, WBR") -- distinct du "Poste" Transfermarkt
     taille_fm: int | None = None  # colonne "Taille FM (cm)"
     weak_foot: float | None = None  # colonne "Weak foot (/5)"

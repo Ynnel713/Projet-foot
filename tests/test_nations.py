@@ -11,10 +11,16 @@ def test_load_national_teams_returns_only_complete_squads_of_18():
     # attaquants) : les données scrapées pour 20 sélections manquantes ne
     # fournissaient pas toujours assez de joueurs bien notés par groupe de
     # poste pour boucler un 23/23 -- voir la docstring du script.
+    #
+    # Le Brésil fait exception à 17 (retour utilisateur du 28/09/2026) :
+    # "Lucas Paquetá" y était listé deux fois (deux lignes distinctes de
+    # "Infos principales", même nom/club/note -- doublon de saisie), corrigé
+    # en supprimant la ligne en trop plutôt qu'en réduisant le quota général.
     teams = load_national_teams(DATA_PATH)
 
     assert len(teams) > 0
-    assert all(len(t.players) == 18 for t in teams)
+    counts = {t.name: len(t.players) for t in teams}
+    assert all(count == 17 if "Brésil" in name else count == 18 for name, count in counts.items())
     assert len({t.name for t in teams}) == len(teams)  # pas de doublon de pays
 
 

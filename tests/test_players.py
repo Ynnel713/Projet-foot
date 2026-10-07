@@ -11,6 +11,7 @@ from ligue1sim.players import (
     nearest_distance_to_group,
     position_group,
     poste_distance,
+    weighted_attributes,
 )
 
 ALL_POSTE_TAGS = [
@@ -164,3 +165,74 @@ class TestPosteAdjacency:
     def test_goalkeeper_has_no_distance_to_any_outfield_group(self):
         for group in (DEFENDER, MIDFIELDER, ATTACKER):
             assert nearest_distance_to_group("GK", group) is None
+
+
+class TestWeightedAttributes:
+    """weighted_attributes (28/09/2026, décision utilisateur -- voir
+    _RAW_IMPORTANCE) : seuls les attributs jugés pertinents pour `poste`
+    (importance 1=utile ou 2=fondamentale) entrent dans la moyenne de
+    référence ET sont recalés vers `note` -- répartis INVERSEMENT à leur
+    importance (fondamental corrigé 2x moins qu'utile). Les autres ("notes
+    annexes") sont rendus tels quels, jamais modifiés. Sans `poste` connu,
+    ou si aucun attribut n'est marqué, rien n'est recalé."""
+
+    def test_returns_falsy_attributes_unchanged(self):
+        assert weighted_attributes({}, note=80.0) == {}
+        assert weighted_attributes(None, note=80.0) is None
+
+    def test_without_poste_nothing_is_marked_so_nothing_is_rescaled(self):
+        # Aucune table de pertinence sans `poste` -- rien de "pertinent",
+        # donc rien à recaler : les attributs bruts ressortent inchangés.
+        result = weighted_attributes({"Pace": 60, "Passing": 80}, note=90.0)
+        assert result == {"Pace": 60, "Passing": 80}
+
+    def test_unknown_poste_also_leaves_everything_unchanged(self):
+        result = weighted_attributes({"Pace": 60, "Passing": 80}, note=90.0, poste="???")
+        assert result == {"Pace": 60, "Passing": 80}
+
+    def test_attributes_absent_from_the_table_for_this_poste_are_never_touched(self):
+        # "AG" (ailier) : Marking n'est marqué pour aucun poste offensif --
+        # note annexe, jamais recalée, même quand d'autres attributs du même
+        # joueur le sont largement (Pace, marqué "fondamental" pour AG).
+        result = weighted_attributes({"Pace": 60, "Marking": 40}, note=90.0, poste="AG")
+        assert result["Marking"] == 40
+
+    def test_correction_is_shared_inversely_to_importance(self):
+        # "AG" : Pace = fondamental (2), Determination = utile (1), Marking
+        # = note annexe (0, exclue). Moyenne pondérée des deux marqués =
+        # (60*2+60*1)/3 = 60, écart à note=80 -> 20 à répartir. La correction
+        # par point d'importance est 60/2=30 (voir _RAW_IMPORTANCE : 2
+        # attributs marqués, gap total = 20*3 = 60) : Determination (poids 1)
+        # absorbe toute cette unité (+30), Pace (poids 2) seulement la
+        # moitié (+15) -- deux fois moins de correction pour l'attribut
+        # fondamental, comme demandé.
+        result = weighted_attributes({"Pace": 60, "Determination": 60, "Marking": 60}, note=80.0, poste="AG")
+        assert result == {"Pace": 75, "Determination": 90, "Marking": 60}
+        # La moyenne pondérée des deux attributs recalés retombe exactement sur `note`.
+        assert (result["Pace"] * 2 + result["Determination"] * 1) / 3 == 80.0
+
+    def test_clips_rescaled_values_to_the_0_99_range(self):
+        # "BU" (buteur) : Finishing = fondamental (2). Moyenne (95) déjà
+        # proche de note=99 mais la correction pousserait au-delà de 99 sans
+        # bornage.
+        result = weighted_attributes({"Finishing": 95}, note=99.0, poste="BU")
+        assert result["Finishing"] == 99
+
+    def test_gordon_like_profile_stays_close_to_its_true_ceiling(self):
+        # Cas réel (retour utilisateur du 28/09/2026) : un ailier avec
+        # Moyenne joueur (82) nettement au-dessus de sa moyenne brute
+        # pondérée -- même situation qu'Anthony Gordon. Dribbling/Pace
+        # (fondamentaux, 85 bruts, déjà son plafond réel) ne doivent
+        # PAS finir à 99 : la correction, répartie inversement à
+        # l'importance, doit les laisser nettement sous le plafond.
+        attrs = {
+            "Dribbling": 85, "Pace": 85, "Determination": 45,  # fondamental/fondamental/utile
+            "Marking": 40, "Tackling": 55, "Heading": 35,  # notes annexes pour un ailier
+        }
+        result = weighted_attributes(attrs, note=82.0, poste="AG")
+        assert result["Dribbling"] < 90
+        assert result["Pace"] < 90
+        # Notes annexes : rigoureusement inchangées.
+        assert result["Marking"] == 40
+        assert result["Tackling"] == 55
+        assert result["Heading"] == 35
