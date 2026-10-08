@@ -384,7 +384,7 @@ Fichiers : `engine/narrative.py` (biais gardien), `render/canvas.html` (consomma
 ### 8.1 Biais gardien
 
 - **Où.** La consigne demandait `narrative_player.py`. L'issue d'un non-but est tirée dans `engine/narrative.py` et le commentaire texte (`nlg_ingestion`, `nlg_live`) lit la même issue : appliquer le biais ailleurs ferait afficher une parade pendant que le texte dit « poteau ». Le biais est donc dans `narrative.py` (hunk limité : deux fonctions et deux appels), ce qui garde l'animation et le texte cohérents sans toucher au NLG. **Écart de périmètre à valider.**
-- **Facteur** (celui de la consigne) : `0,5 + note/100` appliqué au poids de l'issue `arret` ; `rng.choices` normalise, les autres issues se répartissent proportionnellement. Note 50 → 1,0 ; 90 → 1,4 ; 20 → 0,7 ; gardien introuvable ou note inconnue (0,0) → 1,0. Le nombre de tirages du générateur ne change pas : minutes, gabarits, équipes et tireurs sont identiques, seule l'issue peut changer. Appliqué aussi au menu des penaltys manqués.
+- **Facteur** (formule d'origine, remplacée par la formule recentrée du §8.7) : `0,5 + note/100` appliqué au poids de l'issue `arret` ; `rng.choices` normalise, les autres issues se répartissent proportionnellement. Note 50 → 1,0 ; 90 → 1,4 ; 20 → 0,7 ; gardien introuvable ou note inconnue (0,0) → 1,0. Le nombre de tirages du générateur ne change pas : minutes, gabarits, équipes et tireurs sont identiques, seule l'issue peut changer. Appliqué aussi au menu des penaltys manqués.
 - **Mesure sur 1 000 non-buts** (gardien 90 contre gardien 20) : 49,0 % de parades (252 / 514) contre 29,2 % (142 / 486), soit **+68 %** en relatif (théorie : 48,3 % et 31,8 %). Deux gardiens à 50 : 41,6 % et 38,7 % (théorie : 40 %).
 - **Effet réel sur les données** : les gardiens titulaires de Ligue 1 ont une note de 68 à 81 (moyenne 74,7), donc un facteur de 1,18 à 1,31 : **tous sont au-dessus du « rating 50 » neutre**. Conséquence mesurée sur 100 matchs : la part des arrêts passe de **39,9 % à 45,4 %** (+5,5 points), `hors_cadre` 24,6 → 22,3 %, `tacle` 14,6 → 13,1 %, `degagement` 10,8 → 9,9 %, `poteau` 10,1 → 9,3 % ; 147 clips sur 1 586 (9,3 %) changent d'issue visuelle. Entre le meilleur et le moins bon gardien réels (81 contre 68), l'écart de facteur n'est que de 11 %. **Si la distribution globale doit rester inchangée, il faut recentrer le facteur sur la moyenne de la ligue** (par exemple `1 + (note − 74,7) / 100`) ; non fait, car c'est une constante produit.
 - **Score** : **100 matchs sur 100** identiques (scores, buts, cartons, remplacements, blessures, notes) entre HEAD et l'arbre modifié ; 295 buts avant et après ; test sur 60 matchs avec trois couples de notes de gardiens (90 / 20, 20 / 90, 50 / 50) : mêmes buts, mêmes minutes, mêmes tireurs.
@@ -430,3 +430,37 @@ Scores, buts, cartons, remplacements : **100 / 100** identiques (§8.1). Issues 
 ### 8.6 Statut
 
 **B4-bis terminé.** Tickets ouverts à cette occasion : 18, 19 et 20 (`docs/known_issues.md`).
+
+### 8.7 B4-bis — Formule de biais gardien (recentrée) (08/10/2026)
+
+Fichiers : `engine/narrative.py` (formule), `tests/test_ball_events.py` (tests). `render/canvas.html`, `ball.py`, `templates.py`, `narrative_player.py`, le moteur sportif, Poisson et 3c sont **intacts**.
+
+- **Ancienne formule** (§8.1) : `0,5 + note/100`. Les gardiens titulaires réels (notes 68 à 81, moyenne 74,7) étaient tous au-dessus du neutre 50 : la part des arrêts passait de **39,9 % à 45,4 %** (+5,5 points) et 147 clips sur 1 586 changeaient d'issue visuelle.
+- **Nouvelle formule** : `1 + (note − 74,7)/100`, appliquée au poids de l'issue `arret` (les autres issues se renormalisent). Justification : recentrée sur la moyenne des gardiens titulaires (74,7), elle préserve la distribution globale tout en différenciant les gardiens extrêmes. **Décision propriétaire B4-bis.** Constante : `_KEEPER_RATING_MEAN = 74.7`. Gardien introuvable ou note inconnue : 1,0.
+- **Facteurs** : note 74,7 → 1,000 ; 90 → 1,153 ; 20 → 0,453 ; titulaires réels (68 à 81) → 0,933 à 1,063.
+
+**Part de parades sur des non-buts** (valeur attendue : `0,40·f / (0,40·f + 0,60)`) :
+
+| Gardien | Facteur | 1 000 non-buts | 8 000 non-buts | Théorie |
+|---|---|---|---|---|
+| 74,7 | 1,000 | 387 (38,7 %) | 3 181 (39,8 %) | 40,0 % |
+| 90 | 1,153 | 419 (41,9 %) | 3 447 (43,1 %) | 43,5 % |
+| 20 | 0,453 | 205 (20,5 %) | 1 873 (23,4 %) | 23,2 % |
+
+**Écart avec les ordres de grandeur annoncés** : la consigne attendait « environ 45-46 % » (note 90) et « environ 18-20 % » (note 20). La formule validée donne mathématiquement 43,5 % et 23,2 % : seul le poids de l'arrêt (0,40) est multiplié, puis renormalisé, ce qui amortit l'effet. La formule a été appliquée telle quelle ; atteindre 45-46 % et 18-20 % demanderait un facteur plus ample (environ 1,25 et 0,35), à décider par l'architecte.
+
+**Distribution globale (100 matchs, graines 1 à 100, 1 291 non-buts)** :
+
+| Issue | Avant B4-bis | B4-bis (0,5 + note/100) | Recentrée |
+|---|---|---|---|
+| arrêt | 515 (39,9 %) | 586 (45,4 %) | **512 (39,7 %)** |
+| hors cadre | 317 (24,6 %) | 288 (22,3 %) | 321 (24,9 %) |
+| tacle | 188 (14,6 %) | 169 (13,1 %) | 187 (14,5 %) |
+| dégagement | 140 (10,8 %) | 128 (9,9 %) | 140 (10,8 %) |
+| poteau | 131 (10,1 %) | 120 (9,3 %) | 131 (10,1 %) |
+
+La distribution globale est préservée (39,7 % contre 39,9 % : −3 arrêts sur 1 291). **Clips dont l'issue change par rapport à avant B4-bis : 14 sur 1 586** (147 avec l'ancienne formule). Aucun n'est dû à un gardien exceptionnel (note < 60 ou > 85) : il n'y en a pas dans les données (68 à 81). Les 14 changements viennent de l'écart résiduel de la note à 74,7 (facteur 0,93 à 1,06, notes 69 à 77 pour ces clips) ; un facteur continu ne peut pas laisser **tous** les clips inchangés tant que la note diffère de 74,7. Sens : 5 arrêts devenus autre chose, 2 l'inverse, 7 autre issue vers autre issue.
+
+- **Score** : 100 matchs sur 100 identiques (scores, buts, cartons, remplacements, blessures, notes) entre avant B4-bis, B4-bis et l'arbre recentré ; 295 buts dans les trois cas ; mêmes minutes, équipes, gabarits et types d'événement.
+- **Cohérence texte / animation** (100 matchs) : 1 586 clips vérifiés, 0 incohérence — arrêt ⇒ premier événement `parade` ; poteau ⇒ `poteau` sans parade ni barre ; barre ⇒ `barre` ; but ⇒ `but` ; toute autre issue ⇒ aucun événement parade / poteau / barre. L'ingestion NLG (`timeline_to_events`) restitue la même issue que le `NarrativeEvent` pour 1 287 occasions, 0 écart.
+- **Statut** : formule validée par décision propriétaire.

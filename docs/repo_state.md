@@ -801,3 +801,23 @@ Quatre tests ajoutés dans `tests/test_events.py` (détecteur d'incohérences, g
 **Séquence mise à jour** : ticket 2 **fermé**. Prochain : entrée en **Phase 6** (Bloc B physique de balle, puis Bloc A mouvement des joueurs, puis Bloc C cohérence du rendu).
 
 **Statut** : moteur de rendu (`canvas.html`, `PitchField.jsx`), 3c, moteur graphique et moteur de séquence inchangés ; seul le générateur d'événements (`events.py`) est modifié ; rien n'a été poussé.
+
+### 8.20 Phase 6 Bloc B — Avancement — 08/10/2026
+
+**Sous-étapes terminées** :
+
+| Sous-étape | Contenu | Commit |
+|---|---|---|
+| Audit | physique du ballon, ticket 17 | `4154584` |
+| B2 | rebonds (sol, poteau, barre) | `d09d9cf` |
+| B1 | friction de l'air (`dv/dt = −c·v²`) et arrêt des rebonds | `af6f493` |
+| B4 | événements du ballon (but, parade, poteau, corner, sortie de but, touche, dégagement) | `c149422` |
+| B4-bis | consommation dans `canvas.html` et biais gardien, formule recentrée `1 + (note − 74,7)/100` (décision propriétaire) | `8febf44`, puis recentrage (commit suivant) |
+
+**Biais gardien recentré (décision propriétaire).** La formule initiale `0,5 + note/100` décalait la part des arrêts de 39,9 % à 45,4 % ; la formule recentrée la ramène à 39,7 % (100 matchs), score identique graine par graine, 14 clips sur 1 586 changent d'issue (contre 147). Détail et mesures : `docs/phase6_block_b_audit.md` §8.7.
+
+**Tickets** : 18 (poteau / barre toujours attribués à l'attaquant), 19 (imports privés de `ball.py` dans `ball_events.py`) et 20 (clips poteau prolongés jusqu'à la touche, coupés à 1,0 s) : **ouverts, non corrigés**. Ticket 4 : *partiellement résolu* ; le poids du payload augmente légèrement avec les clips prolongés par B4 (trajectoire prolongée après le tir), à remesurer.
+
+**Prochaine sous-étape** : B3 (rotation visible du ballon).
+
+**Statut** : `canvas.html` (hors B4-bis), 3c, moteur sportif, Poisson, `templates.py` et `ball.py` inchangés dans cette étape ; rien n'a été poussé.

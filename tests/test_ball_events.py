@@ -243,18 +243,19 @@ def _with_keeper_notes(match, home_note: float, away_note: float):
 
 
 class TestKeeperBias:
-    def test_the_factor_is_neutral_at_rating_50_and_follows_the_validated_formula(self):
+    def test_the_factor_is_neutral_at_the_league_mean_and_follows_the_recentred_formula(self):
         import narrative
         from test_narrative_player import _simulate_n
 
         match = _simulate_n(1)[0]
-        for note, expected in ((50.0, 1.0), (90.0, 1.4), (20.0, 0.7), (75.0, 1.25)):
+        # Formule recentrée (décision propriétaire B4-bis) : 1 + (note − 74,7)/100.
+        for note, expected in ((74.7, 1.0), (90.0, 1.153), (20.0, 0.453), (50.0, 0.753), (81.0, 1.063), (68.0, 0.933)):
             squad = _with_keeper_notes(match, note, note).home_squad
             assert narrative._keeper_parade_factor(squad) == pytest.approx(expected)
         assert narrative._keeper_parade_factor([]) == 1.0  # pas de gardien : neutre
         assert narrative._keeper_parade_factor(_with_keeper_notes(match, 0.0, 0.0).home_squad) == 1.0  # note inconnue
-        weights = narrative._biased_outcome_weights(narrative._NON_GOAL_OUTCOMES, narrative._NON_GOAL_OUTCOME_WEIGHTS, 1.4)
-        assert weights[0] == pytest.approx(0.40 * 1.4) and weights[1:] == narrative._NON_GOAL_OUTCOME_WEIGHTS[1:]
+        weights = narrative._biased_outcome_weights(narrative._NON_GOAL_OUTCOMES, narrative._NON_GOAL_OUTCOME_WEIGHTS, 1.153)
+        assert weights[0] == pytest.approx(0.40 * 1.153) and weights[1:] == narrative._NON_GOAL_OUTCOME_WEIGHTS[1:]
 
     def test_a_top_keeper_produces_significantly_more_parades_than_a_weak_one(self):
         import random
@@ -273,22 +274,40 @@ class TestKeeperBias:
         assert total >= 900, total
         top, weak = (faced[k][0] / faced[k][1] for k in ("top", "weak"))
         assert top / weak > 1.2, f"gardien 90 : {top:.3f}, gardien 20 : {weak:.3f}"
-        # Conforme à la formule : P = 0,40·f / (0,40·f + 0,60)  ->  0,483 (f = 1,4) et 0,318 (f = 0,7)
-        assert top == pytest.approx(0.483, abs=0.05) and weak == pytest.approx(0.318, abs=0.05)
+        # Conforme à la formule : P = 0,40·f / (0,40·f + 0,60)  ->  0,435 (f = 1,153) et 0,232 (f = 0,453)
+        assert top == pytest.approx(0.435, abs=0.05) and weak == pytest.approx(0.232, abs=0.05)
 
-    def test_a_neutral_keeper_leaves_the_distribution_unchanged(self):
+    def test_a_league_average_keeper_reproduces_the_pre_bias_distribution(self):
+        """Gardien à 74,7 (moyenne des titulaires) : facteur exactement 1,0, donc MÊMES issues, événement par événement,
+        que sans biais (note inconnue : comportement d'avant B4-bis) ; part de parades d'environ 40 % (39,9 % mesuré
+        avant B4-bis sur 100 matchs)."""
         import random
 
         import narrative
         from test_narrative_player import _simulate_n
 
-        match = _with_keeper_notes(_simulate_n(1)[0], home_note=50.0, away_note=50.0)
+        base = _simulate_n(1)[0]
+        average = _with_keeper_notes(base, home_note=74.7, away_note=74.7)
+        unbiased = _with_keeper_notes(base, home_note=0.0, away_note=0.0)  # note inconnue -> facteur 1,0 : tirage d'avant B4-bis
         parades = total = 0
         for seed in range(25):
-            for event in narrative._generated_events(match, random.Random(seed), 40, 0):
-                parades += event.outcome == "arret"
-                total += 1
+            ours = narrative._generated_events(average, random.Random(seed), 40, 0)
+            reference = narrative._generated_events(unbiased, random.Random(seed), 40, 0)
+            assert [e.outcome for e in ours] == [e.outcome for e in reference]
+            parades += sum(e.outcome == "arret" for e in ours)
+            total += len(ours)
+        assert total >= 900, total
         assert parades / total == pytest.approx(0.40, abs=0.05)
+
+    def test_the_real_keeper_range_stays_close_to_neutral(self):
+        """Notes réelles des titulaires (68 à 81) : facteur de 0,93 à 1,06, loin des 1,18 à 1,31 de l'ancienne formule."""
+        import narrative
+        from test_narrative_player import _simulate_n
+
+        match = _simulate_n(1)[0]
+        for note in (68.0, 81.0):
+            factor = narrative._keeper_parade_factor(_with_keeper_notes(match, note, note).home_squad)
+            assert 0.93 <= factor <= 1.07
 
     def test_the_score_never_depends_on_the_keeper(self):
         """Sur 60 matchs : buts, minutes, tireurs identiques quel que soit le gardien ; seul le MENU des non-buts

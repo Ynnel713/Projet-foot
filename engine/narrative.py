@@ -79,6 +79,7 @@ _NON_GOAL_OUTCOME_WEIGHTS = (0.40, 0.25, 0.15, 0.10, 0.10)
 # ajustable, documenté, pas une vérité absolue).
 _MISSED_PENALTY_OUTCOMES = ("arret", "poteau", "hors_cadre", "barre")
 _ARRET = "arret"
+_KEEPER_RATING_MEAN = 74.7  # moyenne des notes des gardiens titulaires (Ligue 1, mesurée le 08/10/2026)
 _MISSED_PENALTY_OUTCOME_WEIGHTS = (0.60, 0.075, 0.25, 0.075)
 
 # Calibration du volume de penaltys ratés (Tâche 2.1/2.2) -- G mesuré sur
@@ -671,14 +672,16 @@ def _repair_consecutive_missed_penalties(
 
 
 def _keeper_parade_factor(defending_squad: list[PlayerMatchStat]) -> float:
-    """Facteur de parade du gardien qui défend (Phase 6, B4-bis, 08/10/2026) : `0,5 + note/100` (note 50 : 1,0 ;
-    note 90 : 1,4 ; note 20 : 0,7). Gardien titulaire introuvable ou note inconnue (`0,0`, compo synthétique) :
-    1,0 (neutre). Les notes réelles des gardiens titulaires de Ligue 1 vont de 68 à 81 (moyenne 74,7), donc un
-    facteur de 1,18 à 1,31."""
+    """Facteur de parade du gardien qui défend : `1 + (note − 74,7)/100` (note 74,7 : 1,0 ; note 90 : 1,153 ;
+    note 20 : 0,453). Formule recentrée sur la moyenne des gardiens titulaires (74,7). Préserve la distribution
+    globale tout en différenciant les gardiens extrêmes. Décision propriétaire B4-bis (08/10/2026) ; remplace
+    `0,5 + note/100`, qui décalait la part des arrêts de 39,9 % à 45,4 %. Gardien titulaire introuvable ou note
+    inconnue (`0,0`, compo synthétique) : 1,0 (neutre). Les notes réelles des titulaires de Ligue 1 vont de 68 à 81,
+    donc un facteur de 0,93 à 1,06."""
     keeper = next((p for p in defending_squad if p.started and p.poste == "GK"), None)
     if keeper is None or keeper.note <= 0:
         return 1.0
-    return 0.5 + keeper.note / 100.0
+    return 1.0 + (keeper.note - _KEEPER_RATING_MEAN) / 100.0
 
 
 def _biased_outcome_weights(outcomes: tuple[str, ...], weights: tuple[float, ...], parade_factor: float) -> tuple[float, ...]:
