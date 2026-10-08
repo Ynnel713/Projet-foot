@@ -36,7 +36,7 @@ app.add_middleware(
 )
 
 # Ticket 4 (optimisation 1) : gzip des réponses de plus de 1 000 octets (payload
-# d'animation : ~14 Mo -> ~2 Mo). Les navigateurs décompressent nativement.
+# d'animation : 13,3 Mo -> 0,42 Mo après gzip). Les navigateurs décompressent nativement.
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 app.include_router(leagues.router, prefix="/api")

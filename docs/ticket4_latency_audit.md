@@ -179,6 +179,10 @@ Le 1er appel à froid n'est **pas** amélioré (10 à 14 s, même ordre de grand
 
 Moins de 0,13 px d'écart même sur un terrain de 2 560 px de large : invisible. Identité, équipe, numéro, `active`, `t`, `duration` et `ball.owner` identiques ; la première image où le ballon franchit une ligne de but (`x >= 1` ou `x <= 0`) est la même dans les 19 clips. Les `id` accentués sont désormais émis en `\uXXXX` (JSON équivalent) au lieu d'UTF-8 brut.
 
+### Alerte graine (diagnostic du 08/10/2026, voir ticket 16 de `docs/known_issues.md`)
+
+Le constat ci-dessus (« une même graine ne redonne pas la même simulation ») est exact mais il s'explique : `random.seed(11)` ne fixe que le module Python `random` (`events.py`), alors que le nombre de buts vient de `np.random` global (`simulation.py:643` et `:753`, aussi `events.py:614`), jamais seedé. Vérifié sur archive jetable de `HEAD` : avec `random.seed` **et** `np.random.seed`, deux processus donnent des saisons identiques (scores et `MatchEvents`), quel que soit `PYTHONHASHSEED`. Nature : graine manquante, pas une source d'aléa cachée. Les mesures « avant / après » ci-dessus (pickle d'une saison figée) ne sont pas concernées. Non corrigé.
+
 ### Statut du ticket 4
 
 **Partiellement résolu.** Optimisations 1-3 appliquées. Reste à évaluer : plafond `max_occasions` (piste 6, décision produit) et optimisation d'`interpolate` (piste 7, seul levier sur la latence à froid, touche le moteur de rendu, reportée). Les pistes **15 images/s** (piste 3) et **remplaçants non animés** (piste 8) sont en attente de décision propriétaire ; recommandation de l'architecte : **non** pour les deux.

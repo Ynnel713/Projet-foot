@@ -19,6 +19,7 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 | 13 | Axe de la barre de progression fixe à 0–90 min, marqueurs qui se chevauchent pour les clips rapprochés | Phase 7 (qualité / packaging) — priorité basse | Ouvert |
 | 14 | Orientation des bandes de tonte : horizontal (implémenté) vs perpendiculaire (backlog 24/09) | — (priorité basse) | **Résolu — décision produit**, horizontal conservé |
 | 15 | `PitchField.jsx` : bandes de tonte perpendiculaires à la longueur, incohérentes avec `canvas.html` | Phase 6 (produit / carrière) — priorité basse | Ouvert |
+| 16 | `random.seed(11)` ne redonne pas la même simulation : moteur non reproductible | Avant la Phase 6 (priorité haute) | Ouvert — cause diagnostiquée, non corrigée |
 
 ---
 
@@ -274,6 +275,30 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 **Priorité.** Basse, avant la Phase 6 (produit / carrière).
 
 **Statut.** Ouvert.
+
+---
+
+## 16. `random.seed(11)` ne redonne pas la même simulation : moteur non reproductible
+
+**Description.** Observation faite pendant le diagnostic du ticket 4 (08/10/2026) : deux processus lancés avec `random.seed(11)` et `PYTHONHASHSEED=0` simulent des saisons différentes (le même match « FC Toulouse – Paris FC » a donné 12, 16 puis 22 clips selon le processus). Cela contredit la propriété supposée « même graine = même match ».
+
+**Reproduction.** Lancer deux fois, dans deux processus distincts, `random.seed(11)` puis `simulate_current` sur une Ligue 1 (`CustomCompetition(format="LEAGUE", legs=2, ...)`), et comparer les scores de la journée 1, les buteurs et les compositions. Les scores diffèrent (mesure du 08/10/2026 : `5-0,1-0,2-1,…` contre `1-2,1-0,5-0,…`).
+
+**Diagnostic (08/10/2026, aucun code modifié).** Le moteur n'est pas intrinsèquement non reproductible : **la graine ne fixait qu'un des deux générateurs globaux qu'il utilise.**
+- `random.seed(…)` fixe le module Python `random`, utilisé par `src/ligue1sim/events.py` (`randint`, `choice`, `shuffle`, `random`, `gauss` : lignes 401, 413, 466, 502, 559, 563, 701, 714-715, 722-724, 757).
+- Le **résultat sportif** (nombre de buts) vient de **`np.random`** (état global NumPy), jamais seedé par `random.seed` : `src/ligue1sim/simulation.py:643` (bruit sur lambda, `np.random.uniform`) et `:753` (tirage `np.random.poisson`) ; aussi `events.py:614` (choix pondéré du buteur), `match_stats.py:69-84`, `knockout.py:210` et `:226`, `champions_league.py:149-201`, `world_cup.py:68-181`.
+- Nature : **(a) une graine manquante** (un seul des deux générateurs est seedé). Ni (b) un seed écrasé, ni (c) un ordre de `set` ou de dictionnaire, ni (d) l'horloge ou un identifiant système : `api/store.py:20` utilise `uuid.uuid4()` pour l'identifiant de compétition, mais il n'entre pas dans les tirages.
+- Les générateurs locaux (`events._deterministic_rng`, `narrative.py`, `nlg_ingestion.py`) sont seedés par SHA-256, donc stables d'un processus à l'autre.
+- **Vérification sur archive jetable de `HEAD`** (une saison de Ligue 1, empreinte SHA-256 des scores de toute la saison et des `MatchEvents` des journées 1 à 3, 2 processus par cas) : `random.seed` seul → empreintes **différentes** ; `random.seed` **et** `np.random.seed` → empreintes **identiques**, avec `PYTHONHASHSEED` libre comme avec `PYTHONHASHSEED=0`. Aucune autre source d'aléa n'a été mise en évidence sur ce chemin.
+- Les tests qui veulent de la reproductibilité seedent déjà les deux (`tests/test_canvas_e2e.py:64-65`, `tests/test_canvas_html.py:270-271`). Rien dans l'application ne seede quoi que ce soit : le comportement normal est aléatoire, ce qui est voulu.
+
+**Impact.** Impossible de reproduire un bug à partir d'une graine unique (il faut connaître et fixer les deux générateurs), impossible de comparer deux versions du moteur sur le même match sans cette précaution, impossible de valider une modification du moteur par comparaison. Les deux générateurs étant **globaux**, deux requêtes API concurrentes (ou toute autre consommation de tirages) décalent le flux : même avec les deux graines, la reproductibilité n'est garantie qu'en exécution mono-fil et sans autre appel intercalé. Dette de fond.
+
+**Piste (non implémentée, décision d'architecte).** Un point d'entrée unique de seed qui fixe `random` et `np.random` (ou, mieux, des générateurs locaux passés explicitement), et une règle de test « toute comparaison de moteur seede les deux ». Modifier le moteur change le flux de tirages donc le résultat sportif : à arbitrer.
+
+**Priorité.** Haute, avant la Phase 6 (qui modifiera le moteur et aura besoin de comparaisons reproductibles).
+
+**Statut.** Ouvert. Cause diagnostiquée, **non corrigée**.
 
 ---
 
