@@ -614,3 +614,122 @@ Cinq tests : seuil strict (|spin| > 5, sens indifférent), longueur 10 à 15 pos
 ### 10.8 Statut
 
 **B3 terminé** (traînée de rotation, ballon à 6 px, payload inchangé).
+
+## 11. B5 — Variétés de frappe : diagnostic (08/10/2026)
+
+**Diagnostic seul : aucune ligne de code modifiée** (`canvas.html`, `templates.py`, `ball.py`, `narrative.py`, `narrative_player.py`, moteur sportif, Poisson et 3c intacts). Mesures par scripts jetables hors dépôt (`PYTHONHASHSEED=0`, graines 1 à 100, 1 586 clips, séquences construites par `templates.BUILDERS`). Les nombres de la typologie (§11.3 à §11.5) sont des **estimations** à partir de ces mesures, pas des constantes validées.
+
+### 11.0 Corrections factuelles aux hypothèses de la consigne
+
+| Hypothèse | Mesure |
+|---|---|
+| spin 50 pour `decalage_enroulee` **et** `debordement_centre_tete` | **Faux** : `debordement_centre_tete` a un spin de 0 sur ses 248 clips. Seul `decalage_enroulee` (163 clips) porte 50 rad/s |
+| 163 clips à spin 50 et 657 à spin 0 | 163 à spin 50 et **1 423** à spin 0 (1 586 clips) |
+| `shot` = frappe | `shot` est la **conduite** finale du ballon (2,4 à 5,6 s, 2,7 à 22 m/s en moyenne) ; la frappe réelle est le segment `ball_flight` (§11.1) |
+| tendue = spin 5 à 10 | Incompatible avec le seuil de la traînée B3 (valeur absolue du spin > 5) : une frappe tendue à 6-10 rad/s afficherait la traînée (§11.6) |
+| HEAD `b71592` | HEAD de départ : `f0f6383` (B3), précédé de `b715092` (diagnostic B3) |
+
+### 11.1 Audit des types de frappe actuels (Tâche 1)
+
+Chaque gabarit a un segment `shot` (conduite) suivi, pour 1 259 clips sur 1 586 (79,4 %), d'un segment `ball_flight` (la frappe) ; les issues `tacle` et `degagement` (327 clips) n'ont pas de vol. Fréquences sur 100 matchs ; distances, durées et vitesses : moyenne [minimum ; maximum].
+
+| Gabarit | Frappe implicite (étiquette narrative finale) | Spin | Clips (par match) | Segment `shot` : distance, durée, vitesse | Vol `ball_flight` : nombre, distance, vitesse |
+|---|---|---|---|---|---|
+| `contre_attaque` | tir du pied (`tir`) après récupération et passe | 0 | 223 (2,23) | 53,1 m [13,7 ; 77,9], 4,8 s, 11,1 m/s | 166, 27,8 m, 24,7 m/s |
+| `construction_placee` | tir du pied (`tir`) après circulation | 0 | 176 (1,76) | 53,0 m [20,4 ; 75,0], 5,6 s, 9,5 m/s | 142, 26,7 m, 25,7 m/s |
+| `debordement_centre_tete` | **tête** (`tete`) après centre | 0 | 248 (2,48) | 27,1 m [0,3 ; 41,6], 2,4 s, 11,3 m/s | 205, 23,7 m, 24,8 m/s |
+| `percee_individuelle` | tir après dribbles (`tir`) | 0 | 182 (1,82) | 15,2 m [1,4 ; 23,9], 1,8 s, 8,7 m/s | 137, 27,9 m, 24,9 m/s |
+| `une_deux` | tir après remise (`tir`) | 0 | 107 (1,07) | 44,7 m [13,9 ; 82,7], 2,0 s, 22,3 m/s | 92, 17,1 m, 24,1 m/s |
+| `coup_franc` | frappe de coup franc (`frappe`) | 0 | 46 (0,46) | 4,0 m [1,1 ; 6,1], 1,5 s, 2,7 m/s | 35, 44,3 m [30,1 ; 62,2], 23,8 m/s |
+| `corner` | centre (`cross`) puis tête déviée (`deflect`, `tete`) ; pas de segment `shot` | 0 | 89 (0,89) | — | 70, 26,4 m, 24,2 m/s |
+| `profondeur_1v1` | 1 contre 1 conclu au tir (`1v1`) | 0 | 118 (1,18) | 43,7 m [10,5 ; 59,8], 4,2 s, 10,4 m/s | 95, 18,3 m, 25,6 m/s |
+| `recuperation_haute` | récupération haute, déviation (`deflect`) puis tir | 0 | 166 (1,66) | 40,2 m [8,9 ; 54,2], 2,2 s, 17,9 m/s | 134, 19,3 m, 24,6 m/s |
+| `decalage_enroulee` | **frappe enroulée** (`enroulee`) après contrôle | **50** (conduite et vol) | 163 (1,63) | 37,7 m [9,3 ; 59,5], 3,6 s, 10,5 m/s | 122, 25,4 m, 25,5 m/s |
+| `penalty` | tir de penalty (`tir`) | 0 | 34 (0,34) | 2,6 m [0,3 ; 3,8], 0,6 s, 4,4 m/s | 34, 21,8 m, 25,0 m/s |
+| `but_gag` | déviation finale (`but`) | 0 | 34 (0,34) | 52,1 m [21,5 ; 67,8], 1,8 s, 29,8 m/s | 27, 16,3 m, 24,0 m/s |
+
+Constats :
+1. **Un seul type de frappe a un spin** (`decalage_enroulee`), et ce spin est posé sur la **conduite** (82,5 % des images à spin non nul) autant que sur le vol : la courbure de Magnus déplace donc le ballon hors des pieds de son porteur pendant la conduite (jusqu'à 3,46 m), défaut qui ne devrait pas être étendu à d'autres gabarits.
+2. **La vitesse de la frappe ne dépend pas de son type** : elle est tirée par hachage de l'événement dans [15 ; 35] m/s pour tous les gabarits (moyennes de 23,8 à 25,7 m/s, y compris pour les têtes et les penaltys). Une tête vole aussi vite qu'un tir.
+3. **La distance du vol dépend de l'issue**, pas du type : 4 à 63 m ; la courbure de Magnus n'agit qu'au-delà de 11 m.
+4. Pas de frappe de volée, ni du pied extérieur, ni de tir enroulé léger dans le catalogue actuel.
+
+### 11.2 Audit des tags (Tâche 2)
+
+| Tag | Sens | Produit par | Consommé |
+|---|---|---|---|
+| `pass_ground` | passe au sol (cinématique) | `templates.py` (corner, t = 0,0) | `ball.py` (trajectoire) ; **ni payload ni canvas** |
+| `pass_lob` | passe lobée | défini dans `ball.py`, **posé par aucun gabarit** | `ball.py` (utilisé pour le rebond après un centre) |
+| `shot` | conduite finale (courbée par Magnus si spin ≠ 0, hauteur jusqu'à 0,8 m) | `templates.py` (11 gabarits) | `ball.py` ; ni payload ni canvas |
+| `cross` | centre en cloche | `templates.py` (corner, t = 0,3) | `ball.py` ; ni payload ni canvas |
+| `deflect` | déviation / perturbation latérale (hachage) | `templates.py` (corner t = 0,6 ; `recuperation_haute` t = 0,3) | `ball.py` ; ni payload ni canvas |
+| `ball_flight` | vol de la frappe vers la cible de l'issue (ajouté en fin de séquence si l'issue a un vol, 79,4 % des clips) | `templates.py` (`build_from_template`) | `ball.py`, `engine/ball_events.py` (`keyframes[-2]`) ; ni payload ni canvas |
+| `bounce` | rebond sur le sol, le poteau, la barre (B2) | défini dans `ball.py`, **posé par aucun gabarit** | `ball.py` (`ball_state_at`) ; ni payload ni canvas |
+| `lob` | **n'existe pas** (le tag est `pass_lob`) | — | — |
+
+- **Étiquettes narratives** (`Keyframe.tag` : `recuperation`, `progression`, `tir`, `tete`, `frappe`, `enroulee`, `1v1`, …) : produites par `templates.py`, jamais interprétées par le rendu, **absentes du payload**. Le payload d'un clip ne contient que, par image, la position du ballon (x, y, z), `spin`, `owner` et les joueurs.
+- Ce que `canvas.html` consomme : `metadata.template` (titre, marqueur, libellé « Penalty raté »), `ball.spin` (traînée B3), `metadata.events_ball` (B4-bis), `ball.x`, `ball.y`, `ball.z`, `ball.owner`.
+- `metadata.declinaison` vaut `"default"` pour les 1 586 clips (`narrative.py`) : champ prévu pour des variantes, non consommé par le canvas ; aucun lien avec les types de frappe aujourd'hui. Le NLG (`simulafoot_nlg`) lit le **gabarit** ; seuls les gabarits `decalage_enroulee` et quelques scénarios de coup franc emploient le mot « enroule ».
+
+### 11.3 Typologie enrichie proposée (Tâche 3)
+
+Six types, **tous réalisables en ne posant que spin et vitesse du vol dans `templates.py`** (post-traitement comme `build_decalage_enroulee`, déterministe par hachage de la référence de l'événement), sans toucher à `ball.py`. Courbure : `pic ≈ 0,5 · 0,003 · spin · v · (T/2)²` ; pour un vol typique (v = 25 m/s, T = 1,1 s) soit **≈ 0,0113 m par rad/s** (spin 25 : 0,28 m ≈ 3 px ; spin 80 : 0,90 m ≈ 10 px).
+
+| Type | Spin (rad/s) | Vitesse du vol | Trajectoire | Contexte typique (gabarits) | Vols / 100 matchs (estim.) | Impact visuel | Complexité |
+|---|---|---|---|---|---|---|---|
+| `shot_tendu` | 0 (≤ 4 : sous le seuil de traînée) | 25 à 35 | droite | `percee_individuelle`, `profondeur_1v1`, `une_deux`, `penalty`, 40 % de `contre_attaque` et de `construction_placee` | ≈ 443 (35 %) | faible : référence sans traînée | très faible |
+| `shot_enroule_leger` | 20 à 30 | 22 à 30 | courbe légère (0,2 à 0,35 m) | 50 % de `contre_attaque` et de `construction_placee` | ≈ 154 (12 %) | moyen sur la traînée (présente, discrète), faible sur la courbure | faible |
+| `shot_enroule_fort` | 50 à 80 | 20 à 30 | courbe forte (0,6 à 0,9 m) | `decalage_enroulee`, `coup_franc` | ≈ 157 (12,5 %) | fort sur la traînée, moyen sur la courbure | faible |
+| `shot_exterieur_pied` | −30 à −20 (sens inverse) | 22 à 30 | courbe légère inverse | 30 % de `percee_individuelle` et de `profondeur_1v1` | ≈ 69 (5,5 %) | faible (traînée identique, courbure opposée) | moyenne (le signe du spin dépend du côté, voir §11.6) |
+| `reprise_volee` | 10 à 15 | 28 à 35 | quasi droite | `recuperation_haute`, `but_gag` (déviation puis tir) | ≈ 161 (12,8 %) | faible à moyen (traînée discrète) | faible |
+| `tete` | 0 | 15 à 25 (plus lente) | droite, hauteur du vol | `debordement_centre_tete`, `corner` | ≈ 275 (21,8 %) | moyen sur la variété (vitesse), nul sur la traînée | faible (vitesse seule) |
+
+Estimations par gabarit à partir des vols mesurés (§11.1) : somme 443 + 154 + 157 + 69 + 161 + 275 = **1 259 vols / 100 matchs**, soit 12,6 par match. Les parts 40 / 50 / 60 % sont des partages hachés par événement (déterministes) proposés, non validés.
+
+**Contraintes de cohérence** : un clip `decalage_enroulee` doit toujours rester `shot_enroule_fort` (le NLG dit « enroule sa frappe ») ; le spin posé sur le **vol** seulement (pas sur la conduite) évite que le ballon quitte son porteur ; la hauteur et la cible de l'issue (B4, parades, poteaux) ne changent pas, car l'écart de Magnus est nul aux extrémités du segment.
+
+### 11.4 Impact sur la distribution du spin (Tâche 4)
+
+Aujourd'hui, sur 1 586 clips : **163 clips (10,3 %) à spin 50**, 1 423 à spin 0 ; 21 546 images sur 373 456 (5,8 %) ont un spin non nul, dont 82,5 % en conduite.
+
+Avec la typologie (spin sur le vol seulement), par 100 matchs :
+
+| Classe de spin (valeur absolue) | Types | Vols | Part des 1 259 vols |
+|---|---|---|---|
+| nul (0) | `shot_tendu`, `tete` | ≈ 718 | 57 % |
+| faible (5 à 15) | `reprise_volee` | ≈ 161 | 12,8 % |
+| moyen (20 à 30) | `shot_enroule_leger`, `shot_exterieur_pied` | ≈ 223 | 17,7 % |
+| élevé (50 à 80) | `shot_enroule_fort` | ≈ 157 | 12,5 % |
+
+- **Traînée visible (|spin| > 5)** : ≈ 541 vols sur 1 259 (43 %), soit ≈ 34 % des 1 586 clips (contre 10,3 % aujourd'hui), à raison d'une traînée d'environ 1 s seulement (le vol), contre 3,6 s aujourd'hui (la conduite). Images concernées : ≈ 16 000 à 18 000 (≈ 4,3 à 4,8 %), du même ordre qu'aujourd'hui (5,8 %).
+- **Variété à l'écran** : avec la traînée actuelle (apparence identique dès que |spin| > 5), les classes faible, moyenne et élevée **ne se distinguent pas** : la variété ne ferait que passer de « 1 gabarit » à « 4 gabarits » présents. Pour qu'elle soit lisible il faut **moduler la traînée par |spin|** (opacité, épaisseur ou longueur), ce qui est un changement de `canvas.html` (décision D3 ci-dessous).
+- **Courbure** : sur le vol, elle reste ≤ 10 px même à spin 80 (§11.3) : la limite d'échelle du ticket 22 demeure.
+
+### 11.5 Ordre d'implémentation proposé (Tâche 5)
+
+1. **`shot_tendu` contre `shot_enroule_fort`, spin déplacé de la conduite au vol** : gain visuel maximal (la traînée n'apparaît plus qu'à la frappe, 82,5 % des images à spin non nul disparaissent de la conduite), complexité très faible (un post-traitement, la constante existe déjà), et corrige le défaut de la conduite. Un seul gabarit change de comportement ; `coup_franc` peut être ajouté ici.
+2. **`tete`** (vitesse seule) : indépendante, complexité faible (`_FLIGHT_MIN/MAX_SPEED_MPS` par type) ; aucune interaction avec le spin ; gain de variété sur 22 % des vols.
+3. **`shot_enroule_leger`** : demande la modulation de la traînée par |spin| (D3) pour être visible ; dépend de l'étape 1.
+4. **`reprise_volee`** : spin faible, dépend de la modulation de la traînée ; gabarits `recuperation_haute` et `but_gag`.
+5. **`shot_exterieur_pied`** : en dernier, car il exige un spin **négatif** et donc la règle du côté (D4) ; gain visuel le plus faible.
+
+À chaque étape : 100 matchs identiques pour le score, issues et événements du ballon (B4) inchangés, tests de signature par type, captures avant / après, NLG inchangé.
+
+### 11.6 Points d'attention
+
+- **Seuil de la traînée.** Un spin « tendu » de 5 à 10 rad/s dépasserait le seuil de 5 : soit la frappe tendue reste à 0 à 4, soit le seuil monte (par exemple à 15) ; décision D2.
+- **Signe du spin.** Aujourd'hui toujours positif ; un signe négatif courbe de l'autre côté **par rapport au sens de la frappe**, sans notion de pied fort ou de côté d'attaque.
+- **Spin sur la conduite.** Le déplacer vers le vol supprime la courbure de 0 à 3,46 m de la conduite (aujourd'hui peut-être perçue comme du dribble) ; c'est le choix de D1.
+
+### 11.7 Décisions attendues de l'architecte
+
+1. **D1 : spin sur le vol seulement** (recommandé) ou aussi sur la conduite (déconseillé, §11.1 constat 1).
+2. **D2 : seuil de la traînée** : maintenir 5 rad/s (frappe tendue ≤ 4) ou relever le seuil (le tendu à 5 à 10).
+3. **D3 : modulation de la traînée par |spin|** (opacité / épaisseur / longueur) : nécessaire pour que la variété de spin se voie ; modifie `canvas.html` (gel à lever).
+4. **D4 : signe du spin** : règle du côté (pied fort, côté de l'attaque) ou sens fixe.
+5. **D5 : vitesse par type de frappe** (tête plus lente) : autorisée à modifier `templates.py` (`_FLIGHT_*_SPEED_MPS`) ?
+6. **D6 : périmètre** : types et pourcentages de la §11.3 à valider avant toute implémentation (constantes produit).
+
+### 11.8 Statut
+
+**B5 : diagnostic terminé, implémentation en attente des décisions du §11.7.** Rien n'a été modifié dans le code. Ticket 22 ouvert (`docs/known_issues.md`).

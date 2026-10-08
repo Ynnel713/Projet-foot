@@ -1,6 +1,6 @@
 # Dette connue — Simulafoot
 
-Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets ouverts (3, 4, 6, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20 et 21) n'est corrigé à ce jour** (le ticket 2 est fermé le 08/10/2026). Créé le 07/10/2026 (clôture de l'Étape B, `LineupSnapshot`) ; tickets 4 et 5 ajoutés le même jour (intégration PWA par iframe) ; ticket 5 fermé et tickets 6 à 8 ouverts le même jour (gouvernance, avant Phase 5) ; tickets 9 (`duckdb`) et 10 (couverture NLG) ajoutés le même jour (environnement de test). tickets 7 (résolu en `7309172`) et 11 (`ConnectionResetError`) traités le même jour. **État : ouverts 2, 3, 4, 6, 9, 10, 11, 12, 13, 15 ; fermés 1 (résolu en `61773ab`, Phase 5 sous-étape 1), 14 (décision produit, bandes de tonte horizontales conservées), 5 (non reproduit), 7 (résolu en `7309172`) et 8 (résolu en `2d71e55`, vérifié sur archive propre).**
+Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets ouverts (3, 4, 6, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21 et 22) n'est corrigé à ce jour** (le ticket 2 est fermé le 08/10/2026). Créé le 07/10/2026 (clôture de l'Étape B, `LineupSnapshot`) ; tickets 4 et 5 ajoutés le même jour (intégration PWA par iframe) ; ticket 5 fermé et tickets 6 à 8 ouverts le même jour (gouvernance, avant Phase 5) ; tickets 9 (`duckdb`) et 10 (couverture NLG) ajoutés le même jour (environnement de test). tickets 7 (résolu en `7309172`) et 11 (`ConnectionResetError`) traités le même jour. **État : ouverts 2, 3, 4, 6, 9, 10, 11, 12, 13, 15 ; fermés 1 (résolu en `61773ab`, Phase 5 sous-étape 1), 14 (décision produit, bandes de tonte horizontales conservées), 5 (non reproduit), 7 (résolu en `7309172`) et 8 (résolu en `2d71e55`, vérifié sur archive propre).**
 
 | # | Titre | Priorité (avant…) | Statut |
 |---|---|---|---|
@@ -25,6 +25,7 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 | 19 | Imports privés entre modules : `ball_events.py` importe `_simulate_rebound` et `_deterministic_unit` depuis `ball.py` | Avant la Phase 7 (priorité basse) | Ouvert |
 | 20 | Clips poteau prolongés jusqu'à la touche, coupés à 1,0 s | Avant la Phase 7 (priorité basse) | Ouvert |
 | 21 | Spin binaire (0 ou 50 rad/s) dans `templates.py`, pas de valeurs intermédiaires | B5 (priorité moyenne) | Ouvert |
+| 22 | Courbure non perceptible à l'échelle 6 px | Avant la Phase 7 (priorité basse) | Ouvert |
 
 ---
 
@@ -394,6 +395,24 @@ appelé par les scripts, les tests et un éventuel paramètre de graine de l'API
 **Piste (non implémentée).** Pour varier les frappes (B5), introduire une distribution continue de spin selon le type de frappe, et le poser sur le vol (`ball_flight`) plutôt que sur la conduite.
 
 **Priorité.** Moyenne, à traiter en B5.
+
+**Statut.** Ouvert. Non corrigé.
+
+---
+
+## 22. Courbure non perceptible à l'échelle 6 px
+
+**Description.** Avec un ballon de 6 px (décision Phase 5) et la traînée de B3 (0,37 s), la courbure d'un tir enroulé n'est pas perceptible à l'œil nu. Mesures du 08/10/2026 (graines 1 à 5, canvas 1 200 × 780, 10,88 px par mètre) :
+- **courbure réelle** (écart maximal à la corde, séquences `decalage_enroulee`, spin 50 rad/s) : 0,36 à 1,32 m sur le vol `ball_flight` (4 à 14 px) ; 0 à 3,46 m sur la conduite `shot` (jusqu'à 38 px) ;
+- **courbure visible dans la traînée** (flèche de la traînée de 0,37 s, 4 à 12 m de long) : **0,06 à 0,82 px** en vol, 2,47 px au plus en conduite. Ces chiffres sont ceux de la traînée, pas de la trajectoire entière : la traînée suit les positions réelles du ballon mais, sur une durée aussi courte, elle se lit comme une ligne droite.
+
+**Reproduction.** Rejouer un clip `decalage_enroulee` (graine 2, clip 0, t = 6,4 s) : le sillage est droit à l'œil ; l'écart à la corde de la trajectoire complète n'apparaît qu'en regardant l'ensemble du tracé après coup.
+
+**Impact.** Impossible de distinguer visuellement une frappe courbée d'une frappe droite à l'échelle actuelle ; la traînée ne signale que la présence d'un spin (B3, ticket 21).
+
+**Pistes.** (a) agrandir le ballon à 8 px (modifie la décision Phase 5, refusée) ; (b) exagérer l'effet Magnus (`_MAGNUS_K`, `ball.py`, refusé) ; (c) un tracé long (2 à 3 s) de la trajectoire, à évaluer ; (d) accepter la limitation.
+
+**Priorité.** Basse, avant la Phase 7.
 
 **Statut.** Ouvert. Non corrigé.
 
