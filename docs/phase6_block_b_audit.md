@@ -552,3 +552,65 @@ Planche d'essai jetable (hors dépôt) : le ballon de 6 px est rendu avec chaque
 ### 9.7 Statut
 
 **B3 : diagnostic terminé, implémentation en attente des décisions du §9.6.** Rien n'a été modifié dans le code.
+
+## 10. B3 — Rotation visible : implémentation (08/10/2026)
+
+Fichiers : `render/canvas.html` (traînée), `tests/test_canvas_html.py` (5 tests), `docs/previews/phase6/b3/` (24 captures avant / après et une comparaison de longueurs), `docs/known_issues.md` (ticket 21). **Intacts** : `templates.py`, `ball.py`, `narrative.py`, `narrative_player.py`, le payload, le moteur sportif, Poisson et 3c.
+
+### 10.1 Décisions de l'architecte appliquées
+
+- **Option C** : traînée suivant les positions réelles du ballon, sans les modifier.
+- **Activation** : `|spin| > 5 rad/s` (`BALL_TRAIL_MIN_SPIN_RAD_S`). Mesure : le spin ne prend que les valeurs 0 et 50 (373 456 images, 0 image entre 0 et 5 rad/s) ; le seuil de 5 ne coupe donc aucun cas réel.
+- **Longueur** : `BALL_TRAIL_POINTS = 12` positions, une par image du payload (`fps_target`, 30), soit (12 − 1) / 30 = **0,37 s**.
+- **Style** : blanc cassé `rgba(245, 241, 230)`, opacité 0,6 à la tête et 0 à la queue, épaisseur 2 px à la tête et 0,4 px à la queue (px écran), extrémités arrondies.
+- **Ballon** : maintenu à **6 px** (`BALL_DIAMETER_SCREEN_PX = 6`, décision Phase 5 inchangée).
+
+### 10.2 Implémentation
+
+- `drawBallTrail(clipData, t)`, appelée dans `drawFrame` après les joueurs et **avant** le ballon et ses effets (B4-bis).
+- **Calcul sans état** à partir de l'instant `t` : les 12 positions sont lues dans le payload à `t − k/30` (`findSegment`, interpolation linéaire comme le ballon), avec le même relevage que le ballon en hauteur. Pas de tampon circulaire : un tampon survivrait mal à une pause, un saut ou un rejeu, et le rendu ne serait plus une fonction de l'instant. L'effet est celui d'un tampon de 12 positions, sans état à invalider.
+- La traînée s'arrête à la première position **sans spin** (le début d'un spin n'est pas prolongé en arrière) ; aucune traînée si moins de 2 positions ou si la longueur totale est inférieure à 2 px écran (ballon immobile).
+- Aucune lecture hors du payload, aucun hasard, aucune horloge ; le contrat standalone (`/*__SEQUENCE_JSON__*/null`), le protocole embarqué et l'interdiction d'accès réseau sont inchangés.
+
+### 10.3 Longueur retenue (12) : justification visuelle
+
+`docs/previews/phase6/b3/comparaison_longueurs_N10_N12_N15.png` : même instant, 10 / 12 / 15 positions, agrandi ×3. À 10 positions le tracé est net mais court ; à 15 positions il remonte jusqu'à la conduite avant le tir et fait apparaître un **coude** (changement de direction, pas de la courbure) sur le clip 3 ; 12 positions donne un tracé net, sans coude, de 4 à 12 m selon la vitesse. La queue est très fine dans les trois cas (0,4 px).
+
+### 10.4 Résultats
+
+- **Clips avec traînée** : **163 sur 1 586 (10,3 %)**, tous `decalage_enroulee` (la consigne annonçait ~9,7 %). Images à spin non nul : 21 546 sur 373 456 (5,8 %).
+- **Captures** (`docs/previews/phase6/b3/`, canvas 1 200 × 780, graines 1 à 5, instants figés, avant = HEAD, après = arbre modifié) :
+
+| Clip | Gabarit | Instant | Phase | Pixels modifiés | Longueur de la traînée |
+|---|---|---|---|---|---|
+| 0 | `decalage_enroulee` (poteau) | 6,40 s | vol | 172 | 7,2 m (79 px) |
+| 1 | `decalage_enroulee` (poteau) | 6,37 s | vol | 260 | 10,0 m (109 px) |
+| 2 | `decalage_enroulee` (dégagement) | 2,83 s | conduite | 120 | 4,9 m (54 px) |
+| 3 | `decalage_enroulee` (hors cadre) | 6,37 s | vol | 315 | 11,8 m (128 px) |
+| 4 | `decalage_enroulee` (dégagement) | 2,73 s | conduite | 67 | 4,0 m (43 px) |
+| 0 | `decalage_enroulee` | 3,90 s | conduite lente (3 m/s) | 18 | 1,1 m (12 px) |
+| 3 | `decalage_enroulee` | 3,90 s | conduite | 137 | 5,6 m (61 px) |
+| 5 à 9 | `une_deux` (5 clips) | vitesse maximale | vol | **0** (images identiques octet pour octet) | aucune |
+
+  Noms : `avant_clip<i>_<gabarit>_<phase>_<instant>.png` / `apres_...`.
+- **Suit la courbure réelle ?** Les points de la traînée sont les positions du payload (vérifié par test). Mais la traînée de 0,37 s est **presque rectiligne** : flèche de courbure de 0,06 à 0,82 px sur les clips de vol, 2,47 px au plus (clip 4, conduite). Elle signale qu'**une frappe est enroulée** (présence), elle ne rend **pas la courbure lisible** (cf. §9.3 : il faudrait un tracé de 2 à 3 s).
+- **Phase d'affichage.** La règle est `|spin| > seuil` : la traînée apparaît donc aussi pendant la **conduite** du gabarit (82,5 % des images à spin non nul, 17,5 % en vol), avant la frappe. Le point 2 du §9.6 (afficher en vol seulement, ou corriger `templates.py`) n'est pas tranché par la consigne ; il est reporté au ticket 21 / B5.
+
+### 10.5 Déterminisme
+
+- **Moteur** : 100 matchs sur 100 (graines 1 à 100) identiques entre HEAD et l'arbre modifié (scores, buts, cartons, remplacements, blessures, notes : 295 buts ; événements narratifs identiques), puisqu'aucun fichier Python n'est modifié.
+- **Pixels** : trois rendus indépendants du même instant (clip 3, 6,367 s ; deux rechargements de page) donnent la **même empreinte SHA-256** ; test comportemental : deux appels de `drawBallTrail` produisent exactement les mêmes tracés.
+
+### 10.6 Tests (`tests/test_canvas_html.py`)
+
+Cinq tests : seuil strict (|spin| > 5, sens indifférent), longueur 10 à 15 positions avec épaisseur et opacité décroissantes, positions identiques à celles du payload sur une trajectoire non rectiligne et déterminisme, aucune traînée pour un ballon qui roule sans spin, au repos ou lent, et ordre de dessin / ballon à 6 px / contrat standalone. Les tests comportementaux exécutent les fonctions extraites de `canvas.html` sous Node avec un contexte 2D factice (ignorés si Node est absent).
+
+### 10.7 Limites et suites
+
+- Seuls **10,3 % des clips** montrent une traînée (spin binaire, ticket 21) : B5 élargira.
+- Perception en mouvement non testée (captures figées) ; la lecture du sens de rotation n'est pas visée par cette option.
+- Ticket 21 ouvert (`docs/known_issues.md`).
+
+### 10.8 Statut
+
+**B3 terminé** (traînée de rotation, ballon à 6 px, payload inchangé).

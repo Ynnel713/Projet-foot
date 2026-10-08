@@ -1,6 +1,6 @@
 # Dette connue — Simulafoot
 
-Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets ouverts (3, 4, 6, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19 et 20) n'est corrigé à ce jour** (le ticket 2 est fermé le 08/10/2026). Créé le 07/10/2026 (clôture de l'Étape B, `LineupSnapshot`) ; tickets 4 et 5 ajoutés le même jour (intégration PWA par iframe) ; ticket 5 fermé et tickets 6 à 8 ouverts le même jour (gouvernance, avant Phase 5) ; tickets 9 (`duckdb`) et 10 (couverture NLG) ajoutés le même jour (environnement de test). tickets 7 (résolu en `7309172`) et 11 (`ConnectionResetError`) traités le même jour. **État : ouverts 2, 3, 4, 6, 9, 10, 11, 12, 13, 15 ; fermés 1 (résolu en `61773ab`, Phase 5 sous-étape 1), 14 (décision produit, bandes de tonte horizontales conservées), 5 (non reproduit), 7 (résolu en `7309172`) et 8 (résolu en `2d71e55`, vérifié sur archive propre).**
+Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets ouverts (3, 4, 6, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20 et 21) n'est corrigé à ce jour** (le ticket 2 est fermé le 08/10/2026). Créé le 07/10/2026 (clôture de l'Étape B, `LineupSnapshot`) ; tickets 4 et 5 ajoutés le même jour (intégration PWA par iframe) ; ticket 5 fermé et tickets 6 à 8 ouverts le même jour (gouvernance, avant Phase 5) ; tickets 9 (`duckdb`) et 10 (couverture NLG) ajoutés le même jour (environnement de test). tickets 7 (résolu en `7309172`) et 11 (`ConnectionResetError`) traités le même jour. **État : ouverts 2, 3, 4, 6, 9, 10, 11, 12, 13, 15 ; fermés 1 (résolu en `61773ab`, Phase 5 sous-étape 1), 14 (décision produit, bandes de tonte horizontales conservées), 5 (non reproduit), 7 (résolu en `7309172`) et 8 (résolu en `2d71e55`, vérifié sur archive propre).**
 
 | # | Titre | Priorité (avant…) | Statut |
 |---|---|---|---|
@@ -24,6 +24,7 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 | 18 | Poteau / barre toujours attribués à l'attaquant | Avant la Phase 7 (priorité basse) | Ouvert |
 | 19 | Imports privés entre modules : `ball_events.py` importe `_simulate_rebound` et `_deterministic_unit` depuis `ball.py` | Avant la Phase 7 (priorité basse) | Ouvert |
 | 20 | Clips poteau prolongés jusqu'à la touche, coupés à 1,0 s | Avant la Phase 7 (priorité basse) | Ouvert |
+| 21 | Spin binaire (0 ou 50 rad/s) dans `templates.py`, pas de valeurs intermédiaires | B5 (priorité moyenne) | Ouvert |
 
 ---
 
@@ -377,6 +378,22 @@ appelé par les scripts, les tests et un éventuel paramètre de graine de l'API
 **Impact.** Cas fréquent parmi les poteaux (41 %) mais sans conséquence sur le score ; la sortie n'est pas soulignée à l'écran.
 
 **Priorité.** Basse, avant la Phase 7.
+
+**Statut.** Ouvert. Non corrigé.
+
+---
+
+## 21. Spin binaire (0 ou 50 rad/s) dans `templates.py`, pas de valeurs intermédiaires
+
+**Description.** Le spin est posé par `templates.py` (`build_decalage_enroulee`, constante `_DECALAGE_ENROULEE_SHOT_SPIN_RAD_S = 50.0`) et prend **deux valeurs seulement** : 0 ou 50 rad/s. Mesure du 08/10/2026 (graines 1 à 100, 1 586 clips, 373 456 images échantillonnées à 30 Hz) : aucune image avec un spin strictement compris entre 0 et 5 rad/s ; seul `decalage_enroulee` (163 clips, 10,3 %) porte un spin non nul. La traînée de rotation de `canvas.html` (B3) ne peut donc distinguer que deux cas : enroulé ou pas. Le spin est en outre posé sur la **conduite** de ce gabarit (82,5 % des images à spin non nul, 17 767 sur 21 546) et pas seulement sur la frappe.
+
+**Reproduction.** Construire les séquences des 12 gabarits de `templates.py` et échantillonner `ball_state_at(...).spin` : valeurs 0,0 et 50,0 uniquement.
+
+**Impact.** Aucune variété de frappes : un tir enroulé est toujours le même, un tir tendu n'a jamais d'effet. La traînée de B3 apparaît sur 10,3 % des clips, toujours sur le même gabarit.
+
+**Piste (non implémentée).** Pour varier les frappes (B5), introduire une distribution continue de spin selon le type de frappe, et le poser sur le vol (`ball_flight`) plutôt que sur la conduite.
+
+**Priorité.** Moyenne, à traiter en B5.
 
 **Statut.** Ouvert. Non corrigé.
 

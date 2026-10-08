@@ -554,6 +554,52 @@ function startPlayer(SEQUENCE_DATA, bridge) {
     }
   }
 
+  // --- Trainee de rotation du ballon (Phase 6, B3) ---------------------------------------------------------
+  // Une frappe enroulee (`ball.spin` != 0 dans le payload, aujourd'hui 0 ou 50 rad/s, pose par templates.py) est
+  // soulignee par une trainee : les BALL_TRAIL_POINTS dernieres positions REELLES du ballon (celles du payload, rien
+  // n'est recalcule ni inflechi), a raison d'une par image du payload (fps_target, 30), du blanc casse semi-transparent
+  // qui s'efface et s'affine vers la queue. Calcul SANS ETAT a partir de la tete de lecture (pas de tampon qui
+  // survivrait a une pause, un saut ou un rejeu) : meme payload + meme instant = memes pixels. Sous le seuil de spin
+  // (ballon qui roule, passe, centre...) : aucune trainee. La trainee s'arrete a la premiere position sans spin.
+  const BALL_TRAIL_POINTS = 12;           // 10 a 15 positions : (12 - 1) / 30 = 0,37 s
+  const BALL_TRAIL_MIN_SPIN_RAD_S = 5;    // |spin| au-dessus duquel la trainee est dessinee
+  const BALL_TRAIL_HEAD_SCREEN_PX = 2;    // epaisseur a la tete, s'affine jusqu'a la queue
+  const BALL_TRAIL_TAIL_SCREEN_PX = 0.4;
+  const BALL_TRAIL_ALPHA = 0.6;           // opacite a la tete, 0 a la queue
+  const BALL_TRAIL_COLOR = '245, 241, 230';  // blanc casse
+  const BALL_TRAIL_MIN_LENGTH_SCREEN_PX = 2; // en dessous (ballon quasi immobile), rien n'est dessine
+  function ballTrailPoint(clipData, t) {
+    const [fa, fb, frac] = findSegment(clipData, t);
+    const z = lerp(fa.ball.z, fb.ball.z, frac);
+    const [px, py] = toPx(lerp(fa.ball.x, fb.ball.x, frac), lerp(fa.ball.y, fb.ball.y, frac));
+    // Meme relevage a l'ecran que le ballon (voir drawFrame), pour que la queue le rejoigne.
+    return { x: px, y: py - Math.min(z, 4) * SCALE * 0.5, spin: Math.abs(fa.ball.spin) };
+  }
+  function drawBallTrail(clipData, t) {
+    const dt = 1 / (clipData.fps_target || 30);
+    const points = [];
+    for (let k = 0; k < BALL_TRAIL_POINTS; k++) {
+      const pt = ballTrailPoint(clipData, Math.max(0, t - k * dt));
+      if (!(pt.spin > BALL_TRAIL_MIN_SPIN_RAD_S)) break;
+      points.push(pt);
+    }
+    if (points.length < 2) return;
+    const unit = pxPerScreenPx;
+    if (Math.hypot(points[0].x - points[points.length - 1].x, points[0].y - points[points.length - 1].y) < BALL_TRAIL_MIN_LENGTH_SCREEN_PX * unit) return;
+    ctx.save();
+    ctx.lineCap = 'round';
+    for (let k = 0; k < points.length - 1; k++) {
+      const f = k / (BALL_TRAIL_POINTS - 1);  // 0 a la tete, 1 a la queue
+      ctx.beginPath();
+      ctx.moveTo(points[k].x, points[k].y);
+      ctx.lineTo(points[k + 1].x, points[k + 1].y);
+      ctx.lineWidth = (BALL_TRAIL_HEAD_SCREEN_PX + (BALL_TRAIL_TAIL_SCREEN_PX - BALL_TRAIL_HEAD_SCREEN_PX) * f) * unit;
+      ctx.strokeStyle = 'rgba(' + BALL_TRAIL_COLOR + ', ' + (BALL_TRAIL_ALPHA * (1 - f)).toFixed(3) + ')';
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   // --- Filets ------------------------------------------------------------------
   // Un filet derriere chaque ligne de but, entre les poteaux, sur NET.goal_net_depth_m : quadrillage fin
   // blanc casse semi-transparent (ne masque ni joueur ni ballon, peints apres). `deform` : null au repos ;
@@ -664,6 +710,8 @@ function startPlayer(SEQUENCE_DATA, bridge) {
     if (carrierDraw && ballZ < 0.5 && Math.hypot(bx - carrierDraw[1], by - carrierDraw[2]) <= BALL_CARRIED_MAX_M * SCALE) {
       drawCarrierName(clipData, ...carrierDraw);
     }
+
+    drawBallTrail(clipData, t);  // Phase 6, B3 : trainee de rotation (frappes enroulees), sous le ballon
 
     // Ballon : dessine APRES les ronds (visible meme porte), 6 px ecran de diametre,
     // ombre au sol, souleve a l'ecran quand il est en l'air.

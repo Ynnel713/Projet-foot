@@ -6,6 +6,8 @@ peut l'être sans navigateur : mode standalone intact, protocole fermé, jamais 
 import re
 from pathlib import Path
 
+import pytest
+
 CANVAS = (Path(__file__).resolve().parent.parent / "render" / "canvas.html").read_text(encoding="utf-8")
 
 
@@ -406,3 +408,117 @@ def test_real_payload_ball_events_match_what_the_player_consumes():
         if clip["metadata"]["issue"] == "arret":
             assert events and events[0]["type"] == "parade"
     assert "but" in seen  # le but reste détecté par le navigateur ; le moteur le signale aussi
+
+
+# --- Phase 6, B3 : traînée de rotation du ballon (frappes enroulées, `ball.spin`) -----------------------------
+# Tests STATIQUES (lecture du code) + comportementaux : les fonctions de traînée sont extraites de canvas.html et
+# exécutées sous Node avec un contexte 2D factice (ignorés si Node est absent). Rendu vérifié dans le navigateur
+# intégré (captures avant / après dans docs/previews/phase6/b3/).
+
+def _trail_block():
+    return CANVAS[CANVAS.index("  const BALL_TRAIL_POINTS"):CANVAS.index("  // --- Filets ---")]
+
+
+def _trail_constant(name):
+    return float(re.search(r"const " + name + r" = ([0-9.]+);", CANVAS).group(1))
+
+
+def _run_trail(clip_cases):
+    """Exécute `drawBallTrail` sur chaque (clip, t) ; renvoie, par cas, la liste des tracés (points, épaisseur, style)."""
+    import json
+    import shutil
+    import subprocess
+
+    import pytest
+
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node absent : test comportemental de la traînée ignoré")
+    find_segment = CANVAS[CANVAS.index("  function findSegment(clipData, t)"):CANVAS.index("  // --- Tailles en PIXELS ECRAN")]
+    lerp = CANVAS[CANVAS.index("  function lerp(a, b, f)"):CANVAS.index("  function dot(px, py)")]
+    harness = (
+        "const SCALE = 10, pxPerScreenPx = 1;\n"
+        "function toPx(x, y) { return [x * 1000, y * 600]; }\n"
+        "let cur = []; const calls = [];\n"
+        "const ctx = { lineCap: '', lineWidth: 0, strokeStyle: '', save() {}, restore() {}, beginPath() { cur = []; },\n"
+        "  moveTo(x, y) { cur = [[x, y]]; }, lineTo(x, y) { cur.push([x, y]); },\n"
+        "  stroke() { calls.push({ pts: cur.slice(), w: this.lineWidth, style: this.strokeStyle }); } };\n"
+        + find_segment + lerp + _trail_block()
+        + "const cases = JSON.parse(require('fs').readFileSync(0, 'utf8')); const out = [];\n"
+        "for (const [clip, t] of cases) { calls.length = 0; drawBallTrail(clip, t); out.push(calls.slice()); }\n"
+        "process.stdout.write(JSON.stringify(out));\n"
+    )
+    result = subprocess.run([node, "-e", harness], input=json.dumps(clip_cases), capture_output=True, text=True, timeout=60)
+    assert result.returncode == 0, result.stderr
+    return json.loads(result.stdout)
+
+
+def _fake_clip(spin, x_step=0.01, n=60):
+    """Clip de n images à 30 images/s ; le ballon avance de `x_step` (normalisé) par image, avec ce `spin`."""
+    frames = [{"t": round(k / 30, 6), "ball": {"x": 0.1 + k * x_step, "y": 0.5, "z": 0.0, "spin": spin, "owner": None}, "players": []} for k in range(n)]
+    return {"fps_target": 30, "frames": frames}
+
+
+def test_ball_trail_is_drawn_above_the_spin_threshold_and_not_below():
+    threshold = _trail_constant("BALL_TRAIL_MIN_SPIN_RAD_S")
+    assert threshold == 5
+    t = 1.5
+    drawn, at_threshold, below, none, negative = _run_trail([
+        (_fake_clip(50.0), t), (_fake_clip(threshold), t), (_fake_clip(threshold - 0.1), t), (_fake_clip(0.0), t), (_fake_clip(-50.0), t),
+    ])
+    assert len(drawn) > 0  # spin = 50 rad/s (frappe enroulée) : traînée
+    assert at_threshold == [] and below == [] and none == []  # |spin| <= seuil : rien (le seuil est strict)
+    assert len(negative) > 0  # le sens de rotation importe peu : c'est |spin| qui compte
+
+
+def test_ball_trail_length_is_between_10_and_15_positions():
+    points = int(_trail_constant("BALL_TRAIL_POINTS"))
+    assert 10 <= points <= 15
+    (strokes,) = _run_trail([(_fake_clip(50.0), 1.5)])
+    assert len(strokes) == points - 1  # N positions -> N - 1 segments, tous dessinés quand le ballon est lancé
+    # Début de clip : moins de positions disponibles ne fausse pas le tracé (positions confondues -> rien d'aberrant).
+    (early,) = _run_trail([(_fake_clip(50.0), 0.1)])
+    assert len(early) <= points - 1
+    # Chaque tracé est un segment entre deux positions consécutives, de l'épaisseur et de l'opacité décroissantes.
+    widths = [s["w"] for s in strokes]
+    assert widths == sorted(widths, reverse=True) and widths[0] <= 2.0 + 1e-9 and widths[-1] >= 0.4 - 1e-9
+    alphas = [float(re.search(r", ([0-9.]+)\)$", s["style"]).group(1)) for s in strokes]
+    assert alphas == sorted(alphas, reverse=True) and alphas[0] <= 0.6 + 1e-9 and alphas[-1] > 0.0
+
+
+def test_ball_trail_follows_the_real_ball_positions_and_is_deterministic():
+    clip = _fake_clip(50.0)
+    # Trajectoire non rectiligne : le ballon dévie latéralement (parabole), la traînée doit épouser ces positions.
+    for k, frame in enumerate(clip["frames"]):
+        frame["ball"]["y"] = 0.5 + 0.0004 * k * k
+    t = 1.5
+    first, second = _run_trail([(clip, t), (clip, t)])
+    assert first == second  # même payload, même instant : mêmes tracés
+    for k, stroke in enumerate(first):
+        for j, (px, py) in enumerate(stroke["pts"]):
+            frame = clip["frames"][round((t - (k + j) / 30) * 30)]
+            assert px == pytest.approx(frame["ball"]["x"] * 1000, abs=1e-2) and py == pytest.approx(frame["ball"]["y"] * 600, abs=1e-2)
+
+
+def test_ball_trail_is_not_drawn_while_the_ball_is_rolling_without_spin_or_at_rest():
+    moving_without_spin = _fake_clip(0.0, x_step=0.01)  # passe / ballon qui roule : spin = 0
+    resting_with_spin = _fake_clip(50.0, x_step=0.0)  # spin posé mais ballon immobile : pas de traînée
+    slow_roll = _fake_clip(0.0, x_step=0.0004)
+    a, b, c = _run_trail([(moving_without_spin, 1.5), (resting_with_spin, 1.5), (slow_roll, 1.5)])
+    assert a == [] and b == [] and c == []
+
+
+def test_ball_trail_is_drawn_under_the_ball_after_the_players_and_leaves_the_payload_alone():
+    frame = CANVAS[CANVAS.index("function drawFrame("):]
+    assert frame.index("drawBallTrail(clipData, t);") < frame.index("// Ballon : dessine APRES les ronds") < frame.index("drawBallEvents(clipData, playhead);")
+    assert "BALL_DIAMETER_SCREEN_PX = 6;" in CANVAS  # le ballon reste à 6 px (décision Phase 5)
+    block = _trail_block()
+    assert ".spin =" not in block and "frames.push" not in block  # le payload n'est que lu
+    for forbidden in ("Math.random", "Date.now", "performance.now"):
+        assert forbidden not in block  # traînée déterministe : fonction pure de l'instant
+    # Contrat standalone et protocole intacts.
+    assert CANVAS.count("const SEQUENCE_DATA = /*__SEQUENCE_JSON__*/null;") == 1
+    assert CANVAS.count("startPlayer(SEQUENCE_DATA, null);") == 1
+    assert set(re.findall(r"emit\('([a-z]+)'", CANVAS)) == {"ready", "clipchange", "ended", "error"}
+    for forbidden in ("fetch(", "XMLHttpRequest", "localStorage", "sessionStorage", "WebSocket"):
+        assert forbidden not in CANVAS
