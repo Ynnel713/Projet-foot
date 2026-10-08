@@ -1,6 +1,6 @@
 # Dette connue — Simulafoot
 
-Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets ouverts (3, 4, 6, 9, 10, 11, 12, 13, 15, 16 et 17) n'est corrigé à ce jour** (le ticket 2 est fermé le 08/10/2026). Créé le 07/10/2026 (clôture de l'Étape B, `LineupSnapshot`) ; tickets 4 et 5 ajoutés le même jour (intégration PWA par iframe) ; ticket 5 fermé et tickets 6 à 8 ouverts le même jour (gouvernance, avant Phase 5) ; tickets 9 (`duckdb`) et 10 (couverture NLG) ajoutés le même jour (environnement de test). tickets 7 (résolu en `7309172`) et 11 (`ConnectionResetError`) traités le même jour. **État : ouverts 2, 3, 4, 6, 9, 10, 11, 12, 13, 15 ; fermés 1 (résolu en `61773ab`, Phase 5 sous-étape 1), 14 (décision produit, bandes de tonte horizontales conservées), 5 (non reproduit), 7 (résolu en `7309172`) et 8 (résolu en `2d71e55`, vérifié sur archive propre).**
+Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets ouverts (3, 4, 6, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19 et 20) n'est corrigé à ce jour** (le ticket 2 est fermé le 08/10/2026). Créé le 07/10/2026 (clôture de l'Étape B, `LineupSnapshot`) ; tickets 4 et 5 ajoutés le même jour (intégration PWA par iframe) ; ticket 5 fermé et tickets 6 à 8 ouverts le même jour (gouvernance, avant Phase 5) ; tickets 9 (`duckdb`) et 10 (couverture NLG) ajoutés le même jour (environnement de test). tickets 7 (résolu en `7309172`) et 11 (`ConnectionResetError`) traités le même jour. **État : ouverts 2, 3, 4, 6, 9, 10, 11, 12, 13, 15 ; fermés 1 (résolu en `61773ab`, Phase 5 sous-étape 1), 14 (décision produit, bandes de tonte horizontales conservées), 5 (non reproduit), 7 (résolu en `7309172`) et 8 (résolu en `2d71e55`, vérifié sur archive propre).**
 
 | # | Titre | Priorité (avant…) | Statut |
 |---|---|---|---|
@@ -21,6 +21,9 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 | 15 | `PitchField.jsx` : bandes de tonte perpendiculaires à la longueur, incohérentes avec `canvas.html` | Phase 6 (produit / carrière) — priorité basse | Ouvert |
 | 16 | Point d'entrée seed manquant : `random.seed` ne suffit pas, il faut aussi `np.random.seed` | Avant la Phase 7 (priorité basse) | Ouvert — cause diagnostiquée, non corrigée |
 | 17 | Pas de remplacement d'urgence modélisé (gardien expulsé sans remplaçant) | Avant la Phase 7 (priorité basse) | Ouvert |
+| 18 | Poteau / barre toujours attribués à l'attaquant | Avant la Phase 7 (priorité basse) | Ouvert |
+| 19 | Imports privés entre modules : `ball_events.py` importe `_simulate_rebound` et `_deterministic_unit` depuis `ball.py` | Avant la Phase 7 (priorité basse) | Ouvert |
+| 20 | Clips poteau prolongés jusqu'à la touche, coupés à 1,0 s | Avant la Phase 7 (priorité basse) | Ouvert |
 
 ---
 
@@ -328,6 +331,50 @@ appelé par les scripts, les tests et un éventuel paramètre de graine de l'API
 **Impact.** Un match peut se terminer sans gardien actif : `lineup_snapshot.players_on_pitch` retire l'expulsé à sa minute et personne ne le remplace ; l'animation compose chaque clip depuis la composition de départ, sans tenir compte des minutes de présence (limite préexistante de `engine/narrative.py`), et montre donc encore le gardien expulsé dans ses buts ; les buts encaissés continuent d'être comptés normalement (le résultat sportif n'est pas modifié). Impact visuel et de réalisme ; aucun effet sur les scores.
 
 **Piste (non implémentée).** Lors d'une expulsion de gardien : soit faire entrer le gardien remplaçant s'il y en a un (en sacrifiant un joueur de champ non expulsé, selon la règle usuelle), soit désigner un joueur de champ comme gardien de fortune. À arbitrer car cela fait consommer des tirages et modifie la distribution des remplacements.
+
+**Priorité.** Basse, avant la Phase 7.
+
+**Statut.** Ouvert. Non corrigé.
+
+---
+
+## 18. Poteau / barre toujours attribués à l'attaquant
+
+**Description.** `engine/ball_events.py` attribue le dernier toucher d'un poteau ou d'une barre à l'**attaquant**, quel que soit le cas. Un défenseur qui dégage le ballon sur son propre poteau devrait lui aussi pouvoir produire un corner ; aujourd'hui, un ballon qui ressort par la ligne de but après un poteau ne peut donner qu'une `sortie_but`.
+
+**Reproduction.** Rare : seul un rebond de montant qui franchirait la ligne de but hors des poteaux est concerné. Avec les règles actuelles (le ballon repart toujours vers le terrain après un poteau ou une barre, jamais derrière la ligne), le cas ne se produit pratiquement pas dans les clips actuels ; il apparaîtra si une issue « dégagement sur le poteau » est ajoutée à la narration.
+
+**Impact.** Incohérence logique avec la règle du corner (dernier toucheur défenseur), sans effet visible aujourd'hui ni sur le score.
+
+**Priorité.** Basse, avant la Phase 7.
+
+**Statut.** Ouvert. Non corrigé.
+
+---
+
+## 19. Imports privés entre modules : `ball_events.py` importe `_simulate_rebound` et `_deterministic_unit` depuis `ball.py`
+
+**Description.** `engine/ball_events.py` importe deux fonctions préfixées par `_` de `src/ligue1sim/animation/ball.py` : `_simulate_rebound` (simulation des rebonds au sol) et `_deterministic_unit` (fraction déterministe par hachage). Le code est fonctionnel, mais ces noms sont privés et peuvent changer sans prévenir.
+
+**Reproduction.** Renommer ou changer la signature de l'une de ces deux fonctions dans `ball.py` : `engine/ball_events.py` ne s'importe plus (échec immédiat des tests de `tests/test_ball_events.py`).
+
+**Impact.** Fragilité : une refactorisation de `ball.py` casse `ball_events.py`. Aucun effet fonctionnel aujourd'hui.
+
+**Piste (non implémentée).** Exposer ces deux fonctions dans l'interface publique de `ball.py` (sans préfixe), ou déplacer la simulation de trajectoire dans un module partagé.
+
+**Priorité.** Basse, avant la Phase 7.
+
+**Statut.** Ouvert. Non corrigé.
+
+---
+
+## 20. Clips poteau prolongés jusqu'à la touche, coupés à 1,0 s
+
+**Description.** Un tir sur le poteau dont le ballon ressort par la ligne de touche produit un événement `touche`, et le clip est coupé 1,0 s après. Mesure du 08/10/2026 (avant le biais gardien) : 54 poteaux sur 131 sont concernés. `canvas.html` ignore l'événement `touche` : le ballon quitte le terrain sans aucune animation, puis le clip s'arrête.
+
+**Reproduction.** Simuler 100 matchs (graines 1 à 100) et lire les événements `touche` qui suivent un événement `poteau` dans `metadata.events_ball`.
+
+**Impact.** Cas fréquent parmi les poteaux (41 %) mais sans conséquence sur le score ; la sortie n'est pas soulignée à l'écran.
 
 **Priorité.** Basse, avant la Phase 7.
 

@@ -224,3 +224,98 @@ class TestDeterminism:
     def test_different_events_do_not_all_give_the_same_parry(self):
         directions = {_plan("une_deux", "arret", m).events[0].direction_deg for m in range(1, 21)}
         assert len(directions) > 10
+
+
+# --- Phase 6, B4-bis (08/10/2026) : biais selon la qualité du gardien ------------------------------------
+# L'issue visuelle d'un non-but est tirée dans `narrative.py` (et lue par le commentaire texte) : la parade y est
+# modulée par `0,5 + note/100`. Le score (but / non-but) est décidé en amont et ne dépend pas du gardien.
+
+
+def _with_keeper_notes(match, home_note: float, away_note: float):
+    from ligue1sim.events import PlayerMatchStat  # noqa: F401  (type des effectifs)
+
+    def retouch(squad, note):
+        return [dataclasses.replace(p, note=note) if p.started and p.poste == "GK" else p for p in squad]
+
+    return dataclasses.replace(
+        match, home_squad=retouch(match.home_squad, home_note), away_squad=retouch(match.away_squad, away_note)
+    )
+
+
+class TestKeeperBias:
+    def test_the_factor_is_neutral_at_rating_50_and_follows_the_validated_formula(self):
+        import narrative
+        from test_narrative_player import _simulate_n
+
+        match = _simulate_n(1)[0]
+        for note, expected in ((50.0, 1.0), (90.0, 1.4), (20.0, 0.7), (75.0, 1.25)):
+            squad = _with_keeper_notes(match, note, note).home_squad
+            assert narrative._keeper_parade_factor(squad) == pytest.approx(expected)
+        assert narrative._keeper_parade_factor([]) == 1.0  # pas de gardien : neutre
+        assert narrative._keeper_parade_factor(_with_keeper_notes(match, 0.0, 0.0).home_squad) == 1.0  # note inconnue
+        weights = narrative._biased_outcome_weights(narrative._NON_GOAL_OUTCOMES, narrative._NON_GOAL_OUTCOME_WEIGHTS, 1.4)
+        assert weights[0] == pytest.approx(0.40 * 1.4) and weights[1:] == narrative._NON_GOAL_OUTCOME_WEIGHTS[1:]
+
+    def test_a_top_keeper_produces_significantly_more_parades_than_a_weak_one(self):
+        import random
+
+        import narrative
+        from test_narrative_player import _simulate_n
+
+        match = _with_keeper_notes(_simulate_n(1)[0], home_note=90.0, away_note=20.0)
+        faced = {"top": [0, 0], "weak": [0, 0]}  # [parades, non-buts]
+        for seed in range(25):
+            for event in narrative._generated_events(match, random.Random(seed), 40, 0):
+                keeper = "top" if event.team == match.away_team else "weak"  # l'attaque de l'extérieur affronte le gardien 90
+                faced[keeper][0] += event.outcome == "arret"
+                faced[keeper][1] += 1
+        total = faced["top"][1] + faced["weak"][1]
+        assert total >= 900, total
+        top, weak = (faced[k][0] / faced[k][1] for k in ("top", "weak"))
+        assert top / weak > 1.2, f"gardien 90 : {top:.3f}, gardien 20 : {weak:.3f}"
+        # Conforme à la formule : P = 0,40·f / (0,40·f + 0,60)  ->  0,483 (f = 1,4) et 0,318 (f = 0,7)
+        assert top == pytest.approx(0.483, abs=0.05) and weak == pytest.approx(0.318, abs=0.05)
+
+    def test_a_neutral_keeper_leaves_the_distribution_unchanged(self):
+        import random
+
+        import narrative
+        from test_narrative_player import _simulate_n
+
+        match = _with_keeper_notes(_simulate_n(1)[0], home_note=50.0, away_note=50.0)
+        parades = total = 0
+        for seed in range(25):
+            for event in narrative._generated_events(match, random.Random(seed), 40, 0):
+                parades += event.outcome == "arret"
+                total += 1
+        assert parades / total == pytest.approx(0.40, abs=0.05)
+
+    def test_the_score_never_depends_on_the_keeper(self):
+        """Sur 60 matchs : buts, minutes, tireurs identiques quel que soit le gardien ; seul le MENU des non-buts
+        (et seulement l'issue, pas leur nombre, leur minute ou leur tireur) peut changer."""
+        import narrative
+        from test_narrative_player import _simulate_n
+
+        changed_outcomes = 0
+        for match in _simulate_n(60):
+            timelines = [
+                narrative.build_timeline(_with_keeper_notes(match, home, away)) for home, away in ((90.0, 20.0), (20.0, 90.0), (50.0, 50.0))
+            ]
+            goals = [
+                [(e.minute, e.main_player, e.team) for e in tl.events if e.event_type == narrative.BUT] for tl in timelines
+            ]
+            assert goals[0] == goals[1] == goals[2]
+            assert len(goals[0]) == match.home_goals + match.away_goals
+            frames = [[(e.minute, e.gabarit, e.team, e.main_player) for e in tl.events] for tl in timelines]
+            assert frames[0] == frames[1] == frames[2]  # même nombre d'occasions, mêmes minutes, mêmes tireurs
+            changed_outcomes += sum(a.outcome != b.outcome for a, b in zip(timelines[0].events, timelines[1].events))
+        assert changed_outcomes > 0  # le biais agit bel et bien
+
+    def test_the_visual_outcome_stays_consistent_with_the_commentary_source(self):
+        """Le commentaire texte et l'animation lisent la MÊME issue (`NarrativeEvent.outcome`) : aucune issue
+        n'est re-tirée côté animation."""
+        import narrative
+        from test_narrative_player import _simulate_n
+
+        timeline = narrative.build_timeline(_with_keeper_notes(_simulate_n(1)[0], 90.0, 20.0))
+        assert {e.outcome for e in timeline.events} <= {"but", "arret", "hors_cadre", "tacle", "degagement", "poteau", "barre"}

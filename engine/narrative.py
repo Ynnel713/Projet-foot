@@ -78,6 +78,7 @@ _NON_GOAL_OUTCOME_WEIGHTS = (0.40, 0.25, 0.15, 0.10, 0.10)
 # faute de source plus précise (même esprit que _NON_GOAL_OUTCOME_WEIGHTS :
 # ajustable, documenté, pas une vérité absolue).
 _MISSED_PENALTY_OUTCOMES = ("arret", "poteau", "hors_cadre", "barre")
+_ARRET = "arret"
 _MISSED_PENALTY_OUTCOME_WEIGHTS = (0.60, 0.075, 0.25, 0.075)
 
 # Calibration du volume de penaltys ratés (Tâche 2.1/2.2) -- G mesuré sur
@@ -669,6 +670,24 @@ def _repair_consecutive_missed_penalties(
     return pending  # meilleur essai apres _MAX_DRAW_ATTEMPTS tentatives, voir docstring de _pick_minute
 
 
+def _keeper_parade_factor(defending_squad: list[PlayerMatchStat]) -> float:
+    """Facteur de parade du gardien qui défend (Phase 6, B4-bis, 08/10/2026) : `0,5 + note/100` (note 50 : 1,0 ;
+    note 90 : 1,4 ; note 20 : 0,7). Gardien titulaire introuvable ou note inconnue (`0,0`, compo synthétique) :
+    1,0 (neutre). Les notes réelles des gardiens titulaires de Ligue 1 vont de 68 à 81 (moyenne 74,7), donc un
+    facteur de 1,18 à 1,31."""
+    keeper = next((p for p in defending_squad if p.started and p.poste == "GK"), None)
+    if keeper is None or keeper.note <= 0:
+        return 1.0
+    return 0.5 + keeper.note / 100.0
+
+
+def _biased_outcome_weights(outcomes: tuple[str, ...], weights: tuple[float, ...], parade_factor: float) -> tuple[float, ...]:
+    """Poids des issues d'un non-but : seul le poids de l'arrêt est multiplié par `parade_factor` ; `rng.choices` normalise
+    ensuite, donc les autres issues se répartissent proportionnellement pour que la somme reste 1. Le NOMBRE de tirages
+    du générateur n'est pas modifié (un `choices(k=1)` consomme un tirage quels que soient les poids)."""
+    return tuple(w * parade_factor if outcome == _ARRET else w for outcome, w in zip(outcomes, weights))
+
+
 def _generated_events(match: MatchResult, rng: Random, n_fillers: int, n_missed_penalties: int) -> list[NarrativeEvent]:
     """`n_fillers` occasions inventées + `n_missed_penalties` penaltys ratés
     (Tâche 2.3/2.4), fusionnés et triés par minute -- SEULES catégories
@@ -704,13 +723,19 @@ def _generated_events(match: MatchResult, rng: Random, n_fillers: int, n_missed_
         team = match.home_team if rng.random() < home_occasion_share else match.away_team
         squad_lookup = home_squad_lookup if team == match.home_team else away_squad_lookup
         squad = match.home_squad if team == match.home_team else match.away_squad
+        defending_squad = match.away_squad if team == match.home_team else match.home_squad
+        parade_factor = _keeper_parade_factor(defending_squad)
         main_player_stat = _pick_main_player(rng, squad, last_main_player)
         main_player = main_player_stat.player_name
 
         if kind == _MISSED_PENALTY_KIND:
             gabarit = _MISSED_PENALTY_PAIR[0]
             involved = _involved_players(rng, gabarit, main_player, squad_lookup)
-            outcome = rng.choices(_MISSED_PENALTY_OUTCOMES, weights=_MISSED_PENALTY_OUTCOME_WEIGHTS, k=1)[0]
+            outcome = rng.choices(
+                _MISSED_PENALTY_OUTCOMES,
+                weights=_biased_outcome_weights(_MISSED_PENALTY_OUTCOMES, _MISSED_PENALTY_OUTCOME_WEIGHTS, parade_factor),
+                k=1,
+            )[0]
             # Zone RÉELLE, pas inventée : un penalty part TOUJOURS du même
             # point réglementaire (PENALTY_SPOT_ZONE, voir events.py), à la
             # différence d'une occasion générique dont start_position reste
@@ -725,7 +750,11 @@ def _generated_events(match: MatchResult, rng: Random, n_fillers: int, n_missed_
             )
             gabarit = _pick_gabarit(rng, context, last_pair, gabarit_sequence)
             involved = _involved_players(rng, gabarit, main_player, squad_lookup)
-            outcome = rng.choices(_NON_GOAL_OUTCOMES, weights=_NON_GOAL_OUTCOME_WEIGHTS, k=1)[0]
+            outcome = rng.choices(
+                _NON_GOAL_OUTCOMES,
+                weights=_biased_outcome_weights(_NON_GOAL_OUTCOMES, _NON_GOAL_OUTCOME_WEIGHTS, parade_factor),
+                k=1,
+            )[0]
             start_position = None  # pas de zone réelle pour une occasion inventée -- non inventée non plus, voir schema
 
         events.append(NarrativeEvent(

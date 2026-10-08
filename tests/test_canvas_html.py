@@ -335,3 +335,74 @@ def test_goal_clips_carry_a_score_that_changes_by_exactly_one_goal():
         before, after = clip["metadata"]["score_before"], clip["metadata"]["score_after"]
         delta = (after[0] - before[0]) + (after[1] - before[1])
         assert delta == (1 if clip["metadata"]["issue"] == "but" else 0), f"clip {clip['metadata']['minute']}' : {before} -> {after}"
+
+
+# --- Phase 6, B4-bis : consommation de `metadata.events_ball` (parade, poteau, barre, corner, sortie de but) ------
+# Tests STATIQUES (lecture du code, aucun navigateur) + cohérence avec le payload réel. Le rendu a été vérifié dans
+# le navigateur intégré (captures avant / après dans docs/previews/phase6/b4_bis/).
+
+
+def test_canvas_reads_the_optional_ball_events_field_of_the_payload():
+    assert "clipData.metadata.events_ball" in CANVAS
+    assert "Array.isArray(clipData.metadata.events_ball)" in CANVAS  # champ OPTIONNEL : absent -> liste vide, rien n'est dessiné
+    assert (
+        "const BALL_FX_LABELS = { parade: 'Parade', poteau: 'Poteau', barre: 'Barre', corner: 'Corner', sortie_but: 'Sortie de but' };"
+        in CANVAS
+    )
+    # Seuls les types connus sont retenus (un type inconnu ou `but` / `touche` / `degagement` est ignoré).
+    assert "Object.prototype.hasOwnProperty.call(BALL_FX_LABELS, ev.type)" in CANVAS
+    assert "'but'" not in CANVAS[CANVAS.index("const BALL_FX_LABELS"):CANVAS.index("const BALL_FX_LABELLED")]
+
+
+def test_each_visible_ball_event_has_its_own_animation_drawn_after_the_ball():
+    body = CANVAS[CANVAS.index("function drawBallEvents("):CANVAS.index("function drawNet(dir, deform)")]
+    assert "ev.type === 'parade'" in body and "ev.direction_deg" in body  # anneau + flèche dans le cap de sortie
+    assert "ev.type === 'poteau'" in body  # flash discret sur le poteau
+    assert "ev.type === 'barre'" in body  # flash sur la barre (largeur du but)
+    assert "ev.type === 'corner'" in body  # éclair sur la ligne + anneau au poteau de corner ; sortie de but : éclair seul
+    assert "BALL_FX_LABELLED.has(ev.type)" in body  # étiquette : parade, corner, sortie de but (poteau / barre : discrets)
+    frame = CANVAS[CANVAS.index("function drawFrame("):]
+    assert frame.index("// Ballon : dessine APRES les ronds") < frame.index("drawBallEvents(clipData, playhead);") < frame.index("if (DEBUG) {")
+    assert "if (age < 0 || age >= BALL_FX_LABEL_S) continue;" in body  # chaque effet s'éteint de lui-même
+
+
+def test_ball_events_reuse_the_existing_durations_and_leave_goal_detection_untouched():
+    assert "const BALL_FX_S = NET_ANIM_S;" in CANVAS and "const BALL_FX_LABEL_S = GOAL_FLASH_S;" in CANVAS
+    detection = CANVAS[CANVAS.index("function goalEvents("):CANVAS.index("function playEnd(")]
+    assert "events_ball" not in detection and "ballEvents" not in detection  # `goalEvents` n'a pas bougé
+    # Un évènement de fin de clip (sortie de but) reste visible avant la carte de titre ; le maintien du but est inchangé.
+    assert "return Math.max(base, ballEventsEnd(clipData));" in CANVAS
+    assert "const base = events.length ? Math.max(clipData.duration, events[events.length - 1].t) + GOAL_HOLD_S : clipData.duration;" in CANVAS
+    assert "function ballEventsEnd(clipData)" in CANVAS and "end = Math.max(end, ev.t + BALL_FX_S)" in CANVAS
+
+
+def test_standalone_contract_and_protocol_are_untouched_by_ball_events():
+    assert CANVAS.count("const SEQUENCE_DATA = /*__SEQUENCE_JSON__*/null;") == 1
+    assert CANVAS.count("startPlayer(SEQUENCE_DATA, null);") == 1
+    assert set(re.findall(r"emit\('([a-z]+)'", CANVAS)) == {"ready", "clipchange", "ended", "error"}
+    # Aucun accès réseau ni stockage ajouté par la consommation des évènements.
+    for forbidden in ("fetch(", "XMLHttpRequest", "localStorage", "sessionStorage", "WebSocket"):
+        assert forbidden not in CANVAS
+
+
+def test_real_payload_ball_events_match_what_the_player_consumes():
+    import json
+
+    from narrative_player import build_clips, clips_to_json
+    from test_canvas_e2e import _MAX_OCCASIONS
+
+    known = {"but", "parade", "poteau", "barre", "corner", "sortie_but", "touche", "degagement"}
+    timeline = _find_match_with_a_goal()
+    data = json.loads(clips_to_json(build_clips(timeline, max_occasions=_MAX_OCCASIONS), timeline))
+    seen = set()
+    for clip in data:
+        events = clip["metadata"].get("events_ball", [])
+        for event in events:
+            assert event["type"] in known
+            assert isinstance(event["t"], (int, float)) and 0.0 <= event["t"] <= clip["duration"] + 1e-6
+            assert 0.0 <= event["x"] <= 1.02 and 0.0 <= event["y"] <= 1.0
+            assert event["direction_deg"] is None or isinstance(event["direction_deg"], (int, float))
+            seen.add(event["type"])
+        if clip["metadata"]["issue"] == "arret":
+            assert events and events[0]["type"] == "parade"
+    assert "but" in seen  # le but reste détecté par le navigateur ; le moteur le signale aussi

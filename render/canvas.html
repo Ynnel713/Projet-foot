@@ -440,7 +440,118 @@ function startPlayer(SEQUENCE_DATA, bridge) {
   // l'eclaircissement du score avant la carte de titre.
   function playEnd(clipData) {
     const events = goalEvents(clipData);
-    return events.length ? Math.max(clipData.duration, events[events.length - 1].t) + GOAL_HOLD_S : clipData.duration;
+    const base = events.length ? Math.max(clipData.duration, events[events.length - 1].t) + GOAL_HOLD_S : clipData.duration;
+    return Math.max(base, ballEventsEnd(clipData)); // Phase 6, B4-bis : un evenement de fin de clip reste visible
+  }
+
+  // --- Evenements du ballon (Phase 6, B4-bis) ---------------------------------------------------------------
+  // Lecture de `metadata.events_ball` : champ OPTIONNEL du clip, produit par le moteur (engine/ball_events.py) --
+  // parade, poteau, barre, corner, sortie de but. Le BUT reste detecte par goalEvents() ci-dessus, inchange. Sans le
+  // champ (ancien payload, JSON injecte sans evenements) : rien n'est dessine. Le ballon lui-meme suit deja sa
+  // trajectoire de rebond dans les images ; ces effets ne font que la souligner (anneau, fleche, flash, etiquette).
+  const BALL_FX_LABELS = { parade: 'Parade', poteau: 'Poteau', barre: 'Barre', corner: 'Corner', sortie_but: 'Sortie de but' };
+  const BALL_FX_LABELLED = new Set(['parade', 'corner', 'sortie_but']);  // poteau et barre : flash discret, sans texte
+  const BALL_FX_S = NET_ANIM_S;          // duree de l'effet (0,5 s, comme l'oscillation du filet)
+  const BALL_FX_LABEL_S = GOAL_FLASH_S;  // duree de l'etiquette (1,0 s)
+  const BALL_FX_COLOR = '#ffd700';       // meme or que le contour du joueur actif
+  const BALL_FX_LABEL_FONT_SCREEN_PX = 11;
+  const ballEventsCache = new WeakMap();
+  function ballEvents(clipData) {
+    let events = ballEventsCache.get(clipData);
+    if (!events) {
+      const raw = clipData.metadata && Array.isArray(clipData.metadata.events_ball) ? clipData.metadata.events_ball : [];
+      events = raw.filter((ev) => ev && Object.prototype.hasOwnProperty.call(BALL_FX_LABELS, ev.type) && typeof ev.t === 'number');
+      ballEventsCache.set(clipData, events);
+    }
+    return events;
+  }
+  function ballEventsEnd(clipData) {
+    let end = 0;
+    for (const ev of ballEvents(clipData)) end = Math.max(end, ev.t + BALL_FX_S);
+    return end;
+  }
+
+  function drawBallEvents(clipData, playhead) {
+    const halfGoal = PITCH.goal_width_m / 2 / PITCH_W;
+    for (const ev of ballEvents(clipData)) {
+      const age = playhead - ev.t;
+      if (age < 0 || age >= BALL_FX_LABEL_S) continue;
+      const p = Math.min(1, age / BALL_FX_S);
+      const [px, py] = toPx(ev.x, ev.y);
+      const unit = pxPerScreenPx;
+      if (age < BALL_FX_S) {
+        ctx.save();
+        ctx.globalAlpha = 1 - p;
+        ctx.strokeStyle = BALL_FX_COLOR;
+        ctx.fillStyle = '#ffffff';
+        ctx.lineWidth = 2 * unit;
+        if (ev.type === 'parade') {
+          ctx.beginPath();
+          ctx.arc(px, py, (7 + 16 * p) * unit, 0, Math.PI * 2);
+          ctx.stroke();
+          if (typeof ev.direction_deg === 'number') {
+            // Cap de sortie du ballon : 0 deg = vers le but attaque (+x), 90 deg = vers +y (le haut de l'ecran).
+            const a = -ev.direction_deg * Math.PI / 180;
+            const len = (14 + 22 * p) * unit;
+            const ex = px + len * Math.cos(a), ey = py + len * Math.sin(a);
+            ctx.beginPath();
+            ctx.moveTo(px, py);
+            ctx.lineTo(ex, ey);
+            for (const side of [-1, 1]) {
+              ctx.moveTo(ex, ey);
+              ctx.lineTo(ex + 6 * unit * Math.cos(a + Math.PI + side * 0.5), ey + 6 * unit * Math.sin(a + Math.PI + side * 0.5));
+            }
+            ctx.stroke();
+          }
+        } else if (ev.type === 'poteau') {
+          ctx.beginPath();
+          ctx.arc(px, py, (4 + 8 * p) * unit, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(px, py, (8 + 12 * p) * unit, 0, Math.PI * 2);
+          ctx.stroke();
+        } else if (ev.type === 'barre') {
+          // Vue de dessus, la barre se confond avec la ligne de but entre les poteaux : on l'eclaire sur toute sa largeur.
+          const goalX = ev.x >= 0.5 ? 1 : 0;
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 5 * unit;
+          ctx.beginPath();
+          ctx.moveTo(...toPx(goalX, 0.5 - halfGoal));
+          ctx.lineTo(...toPx(goalX, 0.5 + halfGoal));
+          ctx.stroke();
+        } else {
+          // Corner / sortie de but : eclair sur la ligne de but, au point de sortie (+-NET_SPREAD_M de part et d'autre).
+          const spread = NET_SPREAD_M / PITCH_W;
+          ctx.lineWidth = 4 * unit;
+          ctx.beginPath();
+          ctx.moveTo(...toPx(ev.x, ev.y - spread));
+          ctx.lineTo(...toPx(ev.x, ev.y + spread));
+          ctx.stroke();
+          if (ev.type === 'corner') {
+            ctx.strokeStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(...toPx(ev.x >= 0.5 ? 1 : 0, ev.y >= 0.5 ? 1 : 0), (6 + 14 * p) * unit, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+        }
+        ctx.restore();
+      }
+      if (BALL_FX_LABELLED.has(ev.type)) {
+        ctx.save();
+        ctx.globalAlpha = 1 - 0.6 * (age / BALL_FX_LABEL_S);
+        ctx.font = 'bold ' + BALL_FX_LABEL_FONT_SCREEN_PX * unit + 'px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const lx = Math.min(Math.max(px, 60 * unit), W - 60 * unit);
+        const ly = Math.max(py - 22 * unit, 14 * unit);
+        ctx.lineWidth = 3 * unit;
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)';
+        ctx.strokeText(BALL_FX_LABELS[ev.type], lx, ly);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(BALL_FX_LABELS[ev.type], lx, ly);
+        ctx.restore();
+      }
+    }
   }
 
   // --- Filets ------------------------------------------------------------------
@@ -569,6 +680,8 @@ function startPlayer(SEQUENCE_DATA, bridge) {
     ctx.lineWidth = 0.8 * pxPerScreenPx;
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)';
     ctx.stroke();
+
+    drawBallEvents(clipData, playhead);  // Phase 6, B4-bis : parade, poteau, barre, corner, sortie de but
 
     if (DEBUG) {
       console.log('[canvas-debug] ' + JSON.stringify({

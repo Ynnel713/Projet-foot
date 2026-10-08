@@ -1,6 +1,6 @@
 # Phase 6, Bloc B — Audit de la physique du ballon
 
-Document de référence du **08/10/2026**, sur `HEAD` = `e63d6f0`. **Audit seulement : aucune ligne de code n'a été modifiée.** *Mise à jour du 08/10/2026 : **B2 (rebonds) est terminé**, voir le §5, puis **B1 (décélération)**, voir le §6, puis **B4 (événements du ballon et parades)**, voir le §7 ; les §0 à §4 décrivent l'état avant B2.* Les mesures viennent de scripts jetables, hors dépôt, qui appellent `ball_state_at` sur les 12 gabarits réels (helpers déterministes de `tests/test_narrative_player.py`, compo fixe) pour les issues `but`, `arret`, `poteau`, `barre`, `hors_cadre`, `tacle` et `degagement`.
+Document de référence du **08/10/2026**, sur `HEAD` = `e63d6f0`. **Audit seulement : aucune ligne de code n'a été modifiée.** *Mise à jour du 08/10/2026 : **B2 (rebonds) est terminé**, voir le §5, puis **B1 (décélération)**, voir le §6, puis **B4 (événements du ballon et parades)**, voir le §7, puis **B4-bis (consommation des événements)**, voir le §8 ; les §0 à §4 décrivent l'état avant B2.* Les mesures viennent de scripts jetables, hors dépôt, qui appellent `ball_state_at` sur les 12 gabarits réels (helpers déterministes de `tests/test_narrative_player.py`, compo fixe) pour les issues `but`, `arret`, `poteau`, `barre`, `hors_cadre`, `tacle` et `degagement`.
 
 ## 0. Méthode et limites
 
@@ -375,3 +375,58 @@ Les clips 1, 5, 7 de ce match sont des tacles : un `degagement` chacun, sans tra
 ### 7.8 Statut
 
 **B4 terminé.** `canvas.html` n'est pas modifié : une sous-étape ultérieure consommera `metadata.events_ball`. Rappel de B1 : l'objectif « arrêt en 3-4 s après le premier rebond » a été accepté à 3,76-4,96 s (4-5 s est crédible pour Football Manager ; descendre plus bas demanderait de revoir la restitution de B2, refusé).
+
+
+## 8. B4-bis — Consommation des événements visuels (terminé le 08/10/2026)
+
+Fichiers : `engine/narrative.py` (biais gardien), `render/canvas.html` (consommation de `events_ball`), `tests/test_ball_events.py`, `tests/test_canvas_html.py`, `docs/previews/phase6/b4_bis/` (12 captures). `engine/narrative_player.py` n'est **pas** modifié dans cette étape. **Intacts** : `ball.py`, `templates.py`, le moteur sportif, 3c, le contrat d'injection standalone et le protocole embarqué.
+
+### 8.1 Biais gardien
+
+- **Où.** La consigne demandait `narrative_player.py`. L'issue d'un non-but est tirée dans `engine/narrative.py` et le commentaire texte (`nlg_ingestion`, `nlg_live`) lit la même issue : appliquer le biais ailleurs ferait afficher une parade pendant que le texte dit « poteau ». Le biais est donc dans `narrative.py` (hunk limité : deux fonctions et deux appels), ce qui garde l'animation et le texte cohérents sans toucher au NLG. **Écart de périmètre à valider.**
+- **Facteur** (celui de la consigne) : `0,5 + note/100` appliqué au poids de l'issue `arret` ; `rng.choices` normalise, les autres issues se répartissent proportionnellement. Note 50 → 1,0 ; 90 → 1,4 ; 20 → 0,7 ; gardien introuvable ou note inconnue (0,0) → 1,0. Le nombre de tirages du générateur ne change pas : minutes, gabarits, équipes et tireurs sont identiques, seule l'issue peut changer. Appliqué aussi au menu des penaltys manqués.
+- **Mesure sur 1 000 non-buts** (gardien 90 contre gardien 20) : 49,0 % de parades (252 / 514) contre 29,2 % (142 / 486), soit **+68 %** en relatif (théorie : 48,3 % et 31,8 %). Deux gardiens à 50 : 41,6 % et 38,7 % (théorie : 40 %).
+- **Effet réel sur les données** : les gardiens titulaires de Ligue 1 ont une note de 68 à 81 (moyenne 74,7), donc un facteur de 1,18 à 1,31 : **tous sont au-dessus du « rating 50 » neutre**. Conséquence mesurée sur 100 matchs : la part des arrêts passe de **39,9 % à 45,4 %** (+5,5 points), `hors_cadre` 24,6 → 22,3 %, `tacle` 14,6 → 13,1 %, `degagement` 10,8 → 9,9 %, `poteau` 10,1 → 9,3 % ; 147 clips sur 1 586 (9,3 %) changent d'issue visuelle. Entre le meilleur et le moins bon gardien réels (81 contre 68), l'écart de facteur n'est que de 11 %. **Si la distribution globale doit rester inchangée, il faut recentrer le facteur sur la moyenne de la ligue** (par exemple `1 + (note − 74,7) / 100`) ; non fait, car c'est une constante produit.
+- **Score** : **100 matchs sur 100** identiques (scores, buts, cartons, remplacements, blessures, notes) entre HEAD et l'arbre modifié ; 295 buts avant et après ; test sur 60 matchs avec trois couples de notes de gardiens (90 / 20, 20 / 90, 50 / 50) : mêmes buts, mêmes minutes, mêmes tireurs.
+- **NLG** : les tests du sous-projet (`simulafoot_nlg`, environnement propre) passent (environ 897 tests, couverture 99,77 %) ; aucun test n'a eu besoin d'être adapté. Les 203 tests du projet principal qui lisent la narration et l'ingestion NLG passent aussi.
+
+### 8.2 Consommation des événements dans `canvas.html`
+
+`metadata.events_ball` est lu comme **champ optionnel** (absent : rien n'est dessiné). Les types retenus sont `parade`, `poteau`, `barre`, `corner`, `sortie_but` ; `but`, `touche` et `degagement` sont ignorés (le but reste détecté par `goalEvents`, **inchangé**). Chaque effet dure 0,5 s (`NET_ANIM_S`) et l'étiquette 1,0 s (`GOAL_FLASH_S`), couleur or du joueur actif ; aucune autre constante produit n'a été ajoutée :
+
+| Événement | Rendu |
+|---|---|
+| `parade` | anneau or autour du ballon qui s'élargit, flèche dans le cap de sortie (`direction_deg`), étiquette « Parade » |
+| `poteau` | disque blanc et anneau or sur le point de contact (discret, sans texte) |
+| `barre` | éclair blanc sur la ligne de but, sur la largeur du but (discret, sans texte) |
+| `corner` | éclair or sur la ligne de but au point de sortie, anneau blanc sur le poteau de corner, étiquette « Corner » |
+| `sortie_but` | éclair or sur la ligne de but au point de sortie, étiquette « Sortie de but » |
+
+`playEnd` garde le maintien du but (`GOAL_HOLD_S`) et ajoute, en `max`, la fin de l'effet d'un événement de fin de clip : les clips `hors_cadre` (l'événement est daté à la toute fin) durent 0,5 s de plus pour que « Sortie de but » soit visible avant la carte de titre.
+
+### 8.3 Captures (`docs/previews/phase6/b4_bis/`, canvas 1200 × 780, match de la graine 3, même instant avant / après)
+
+| Cas | Avant | Après | Description factuelle de l'écart |
+|---|---|---|---|
+| Parade, clip 0 (t = 6,98 s) | `avant_clip0_parade_6s98.png` | `apres_clip0_parade_6s98.png` | anneau or autour du ballon au but de droite, flèche vers le bas (cap −99°), étiquette « Parade » |
+| Parade, clip 1 (t = 6,71 s) | `avant_clip1_parade_6s71.png` | `apres_clip1_parade_6s71.png` | idem, cap +87° (vers le haut) |
+| Corner, clip 1 (t = 7,73 s) | `avant_clip1_corner_7s73.png` | `apres_clip1_corner_7s73.png` | éclair or sur la ligne de but (y = 0,71), anneau blanc sur le poteau de corner supérieur droit, étiquette « Corner » ; le ballon est déjà hors du terrain dans les deux images |
+| Poteau, clip 2 (t = 7,00 s) | `avant_clip2_poteau_7s00.png` | `apres_clip2_poteau_7s00.png` | disque blanc et anneau or sur le poteau inférieur du but de droite |
+| Sortie de but, clip 3 (t = 8,09 s) | `avant_clip3_sortie_but_8s09.png` | `apres_clip3_sortie_but_8s09.png` | éclair or sur la ligne de but, étiquette « Sortie de but » |
+| But, clip 4 (t = 15,55 s) (contrôle) | `avant_clip4_but_15s55.png` | `apres_clip4_but_15s55.png` | **images identiques octet pour octet** : le but n'est pas touché |
+
+Méthode : un serveur local jetable (hors dépôt) sert l'ancien et le nouveau `canvas.html` avec le même payload, lecture figée à l'instant voulu ; le canvas est enregistré depuis le navigateur intégré. Un premier lot a produit cinq images identiques de 21 374 octets (onglet en arrière-plan, canevas non redessiné) : ces fichiers ont été refaits après avoir forcé le rendu, et les tailles ont été contrôlées.
+
+### 8.4 Déterminisme
+
+Scores, buts, cartons, remplacements : **100 / 100** identiques (§8.1). Issues visuelles et événements du ballon : **identiques sur deux exécutions** (mêmes graines, `PYTHONHASHSEED=0`).
+
+### 8.5 Limites
+
+- Le biais décale la distribution globale (§8.1) ; recentrage à décider.
+- Les 12 captures sont celles d'un seul match ; l'animation en mouvement (effet qui s'éteint en 0,5 s) n'est vérifiée que par ses instants figés et par les tests statiques.
+- `touche` et `degagement` ne sont pas dessinés (voir ticket 20).
+
+### 8.6 Statut
+
+**B4-bis terminé.** Tickets ouverts à cette occasion : 18, 19 et 20 (`docs/known_issues.md`).
