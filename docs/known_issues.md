@@ -1,6 +1,6 @@
 # Dette connue — Simulafoot
 
-Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets ouverts (3, 4, 6, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24 et 25) n'est corrigé à ce jour** (le ticket 2 est fermé le 08/10/2026). Créé le 07/10/2026 (clôture de l'Étape B, `LineupSnapshot`) ; tickets 4 et 5 ajoutés le même jour (intégration PWA par iframe) ; ticket 5 fermé et tickets 6 à 8 ouverts le même jour (gouvernance, avant Phase 5) ; tickets 9 (`duckdb`) et 10 (couverture NLG) ajoutés le même jour (environnement de test). tickets 7 (résolu en `7309172`) et 11 (`ConnectionResetError`) traités le même jour. **État : ouverts 2, 3, 4, 6, 9, 10, 11, 12, 13, 15 ; fermés 1 (résolu en `61773ab`, Phase 5 sous-étape 1), 14 (décision produit, bandes de tonte horizontales conservées), 5 (non reproduit), 7 (résolu en `7309172`) et 8 (résolu en `2d71e55`, vérifié sur archive propre).**
+Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets ouverts (3, 4, 6, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25 et 26) n'est corrigé à ce jour** (le ticket 2 est fermé le 08/10/2026). Créé le 07/10/2026 (clôture de l'Étape B, `LineupSnapshot`) ; tickets 4 et 5 ajoutés le même jour (intégration PWA par iframe) ; ticket 5 fermé et tickets 6 à 8 ouverts le même jour (gouvernance, avant Phase 5) ; tickets 9 (`duckdb`) et 10 (couverture NLG) ajoutés le même jour (environnement de test). tickets 7 (résolu en `7309172`) et 11 (`ConnectionResetError`) traités le même jour. **État : ouverts 2, 3, 4, 6, 9, 10, 11, 12, 13, 15 ; fermés 1 (résolu en `61773ab`, Phase 5 sous-étape 1), 14 (décision produit, bandes de tonte horizontales conservées), 5 (non reproduit), 7 (résolu en `7309172`) et 8 (résolu en `2d71e55`, vérifié sur archive propre).**
 
 | # | Titre | Priorité (avant…) | Statut |
 |---|---|---|---|
@@ -29,6 +29,7 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 | 23 | NLG ne reçoit pas le type de frappe, texte générique incohérent avec le rendu | Après B5 (priorité moyenne) | Ouvert |
 | 24 | Commentaire faux sur la zone d'un penalty dans `engine/narrative.py` | Priorité basse | Ouvert |
 | 25 | Clips de but dont la dernière image est avant la ligne | Avant la Phase 7 (priorité basse) | Ouvert |
+| 26 | Penaltys ratés du moteur sans clip, et penaltys ratés animés distincts de ceux du moteur | Priorité basse | Ouvert |
 
 ---
 
@@ -456,6 +457,20 @@ appelé par les scripts, les tests et un éventuel paramètre de graine de l'API
 **Résolution.** À décider par le propriétaire (par exemple une image finale ajoutée à l'instant exact de la fin du vol, ou une durée de séquence alignée sur le pas d'image).
 
 **Priorité.** Basse, avant la Phase 7.
+
+**Statut.** Ouvert. Non corrigé.
+
+---
+
+## 26. Penaltys ratés du moteur sans clip, et penaltys ratés animés distincts de ceux du moteur
+
+**Description.** Il existe deux générateurs indépendants de penaltys ratés. Le moteur (`src/ligue1sim/events.py`, `_generate_missed_penalties`, champ `penalties_missed`) en produit environ 9 par 100 matchs ; ils apparaissent dans le fil de commentaire live (`api/live_commentary.py`, « PENALTY MANQUÉ ») et dans la liste des événements du match (`app.py`), mais **ne produisent aucun clip**. La narration (`engine/narrative.py`, `_missed_penalty_count`, moyenne de Poisson `_MISSED_PENALTY_POISSON_MEAN` ≈ 0,078 par match) en invente de son côté environ 8 par 100 matchs, qui sont animés (gabarit `penalty`) mais **absents** du moteur. Mesure du 08/10/2026 (graines 1 à 100) : 9 ratés côté moteur, 8 côté narration, **0 en commun** (même minute, joueur et club). Les buts de penalty, eux, sont les mêmes des deux côtés (26 sur 26, identiques dans les 100 matchs).
+
+**Impact.** Incohérence potentielle entre le rendu animé, le fil live du moteur et la liste des événements : un penalty raté peut être listé sans être animé, et un penalty raté animé peut ne figurer dans aucun événement du moteur (le fil du NLG, qui lit la narration, et le fil du moteur ne racontent donc pas les mêmes penaltys ratés).
+
+**Résolution.** À décider par le propriétaire (par exemple animer les ratés du moteur et supprimer ceux de la narration). Hors périmètre de B6.
+
+**Priorité.** Basse.
 
 **Statut.** Ouvert. Non corrigé.
 
