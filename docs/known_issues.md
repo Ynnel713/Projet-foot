@@ -1,11 +1,11 @@
 # Dette connue — Simulafoot
 
-Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets ouverts (2, 3, 4, 6, 9, 10, 11, 12, 13 et 15) n'est corrigé à ce jour.** Créé le 07/10/2026 (clôture de l'Étape B, `LineupSnapshot`) ; tickets 4 et 5 ajoutés le même jour (intégration PWA par iframe) ; ticket 5 fermé et tickets 6 à 8 ouverts le même jour (gouvernance, avant Phase 5) ; tickets 9 (`duckdb`) et 10 (couverture NLG) ajoutés le même jour (environnement de test). tickets 7 (résolu en `7309172`) et 11 (`ConnectionResetError`) traités le même jour. **État : ouverts 2, 3, 4, 6, 9, 10, 11, 12, 13, 15 ; fermés 1 (résolu en `61773ab`, Phase 5 sous-étape 1), 14 (décision produit, bandes de tonte horizontales conservées), 5 (non reproduit), 7 (résolu en `7309172`) et 8 (résolu en `2d71e55`, vérifié sur archive propre).**
+Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets ouverts (3, 4, 6, 9, 10, 11, 12, 13, 15 et 16) n'est corrigé à ce jour** (le ticket 2 est fermé le 08/10/2026). Créé le 07/10/2026 (clôture de l'Étape B, `LineupSnapshot`) ; tickets 4 et 5 ajoutés le même jour (intégration PWA par iframe) ; ticket 5 fermé et tickets 6 à 8 ouverts le même jour (gouvernance, avant Phase 5) ; tickets 9 (`duckdb`) et 10 (couverture NLG) ajoutés le même jour (environnement de test). tickets 7 (résolu en `7309172`) et 11 (`ConnectionResetError`) traités le même jour. **État : ouverts 2, 3, 4, 6, 9, 10, 11, 12, 13, 15 ; fermés 1 (résolu en `61773ab`, Phase 5 sous-étape 1), 14 (décision produit, bandes de tonte horizontales conservées), 5 (non reproduit), 7 (résolu en `7309172`) et 8 (résolu en `2d71e55`, vérifié sur archive propre).**
 
 | # | Titre | Priorité (avant…) | Statut |
 |---|---|---|---|
 | 1 | Joueur statique poussé hors de la marge près d'un bord du terrain | Phase 5 (habillage visuel) | **Résolu** — commit `61773ab`, tolérance recalibrée à 0,5 % |
-| 2 | Un joueur expulsé peut être remplacé plus tard dans le même match | Phase 4 (branchement PWA effectif) | Ouvert |
+| 2 | Un joueur expulsé peut être remplacé plus tard dans le même match | Phase 4 (branchement PWA effectif) | **Fermé — Résolu** (commit « fix(events): cohérence entre cartons et remplacements (ticket 2) ») |
 | 3 | `SubstitutionEvent` identifie les joueurs par nom, pas par `player_id` | Phase 6 (produit / carrière) | Ouvert |
 | 4 | Latence et poids du payload d'animation | Phase 6 (produit / carrière) | Partiellement résolu (transfert, poids, cache HTTP et `interpolate` optimisés), voir `docs/ticket4_latency_audit.md` §8 et §9 |
 | 5 | `build_clips` écarte les événements dont le protagoniste n'est pas dans le onze de départ | — | **Fermé** (non reproduit) |
@@ -56,7 +56,13 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 
 **Priorité.** Avant le branchement PWA effectif (Phase 4).
 
-**Statut.** Ouvert. Toute correction touche le moteur d'événements, donc le comportement sportif : à arbitrer avant.
+**Statut.** **Fermé — Résolu** (commit « fix(events): cohérence entre cartons et remplacements (ticket 2) », 08/10/2026). Correction de la cohérence entre cartons et remplacements dans `events._play_match_squad` : tous les cartons sont désormais tirés **avant** les remplacements et les buts ; la minute d'expulsion borne la fenêtre de présence du joueur (`_SquadEntry.minute_expelled`), un expulsé est exclu des sortants (blessure forcée et tactique), et aucun but, passe, blessure ou penalty manqué ne peut suivre son expulsion. Un titulaire blessé puis expulsé voit sa minute de blessure ramenée à son expulsion.
+
+**Mesure** (graines 1 à N, `random.seed` et `np.random.seed`, Ligue 1 réelle) : sur 100 matchs, **0 incohérence** contre 12 expulsés remplacés et 2 événements postérieurs à une expulsion ; sur 3 000 matchs, **0 contre 375** expulsés remplacés (360 matchs, 12 %) et **0 contre 141** événements postérieurs à une expulsion (121 matchs). Distribution sportive préservée : **buts identiques graine par graine** (le score est tiré avant les événements), jaunes 4,740 → 4,818 (z = +1,52), rouges 0,485 → 0,472 (z = −0,74), remplacements 7,986 → 8,032 (z = +1,55), tous dans le bruit (|z| < 2). Le flux de `random` est décalé (les tirages sont réordonnés, pas modifiés en nombre) : tous les résultats seedés du moteur changent, à loi identique.
+
+**Trois tests existants adaptés** (décision d'architecte, option A) : `tests/test_lineup_snapshot.py` (l'ancien test figeait le défaut, réécrit en `test_engine_never_substitutes_a_sent_off_player`), `tests/test_events_zone.py` (snapshot `tests/fixtures/event_regression_snapshot.json` régénéré, format vérifié octet pour octet avec l'ancien code), `tests/test_narrative.py` (borne de `test_penalty_missed_ratio_calibrated` élargie de [0,74 ; 0,78] à [0,70 ; 0,85]). Détail au §8.19 de `docs/repo_state.md`.
+
+**Limites connues.** Un gardien expulsé n'est pas remplacé (le moteur ne modélise pas de remplaçant d'urgence) ; `engine/narrative.py` tire encore ses occasions parmi tout l'effectif ayant joué, sans tenir compte des minutes de présence, donc une occasion non marquée peut encore être attribuée à un joueur après son expulsion (limite pré-existante, hors périmètre) ; la branche « sortant déjà absent » de `lineup_snapshot.players_on_pitch` ne sert plus que pour des documents antérieurs à cette correction.
 
 ---
 
@@ -303,6 +309,8 @@ def seed_all(seed: int) -> None:
     np.random.seed(seed)
 ```
 appelé par les scripts, les tests et un éventuel paramètre de graine de l'API, avec une règle « toute comparaison de moteur passe par `seed_all` ». À plus long terme, des générateurs locaux passés explicitement. Ne change pas le résultat sportif tant qu'il n'est pas appelé.
+
+**Règle de test (précisée le 08/10/2026).** Toute comparaison de moteur ou de payload doit fixer `random.seed`, `np.random.seed` **et** `PYTHONHASHSEED=0` (sans `python -I`, qui ignore cette variable) : sans le troisième, l'ordre des joueurs dans une image du payload varie d'un processus à l'autre.
 
 **Priorité.** Basse, avant la Phase 7.
 

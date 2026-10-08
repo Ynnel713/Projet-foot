@@ -285,18 +285,43 @@ def test_enrich_with_background_is_stable_across_processes(played, tmp_path, has
     assert _run_enrich(path, hashseed) == reference
 
 
-def test_engine_substitutes_an_already_sent_off_player_and_the_helper_does_not_hide_it(played):
-    """Incohérence du moteur (seed 11) : un joueur expulsé puis « remplacé »
-    plus tard. Documenté, pas masqué : l'helper suit les événements persistés,
-    l'entrant joue à partir de la minute du remplacement."""
+def test_engine_never_substitutes_a_sent_off_player(monkeypatch):
+    """Remplace `test_engine_substitutes_an_already_sent_off_player_and_the_helper_does_not_hide_it`,
+    qui validait l'INVERSE : il exigeait que la graine 11 produise un expulsé « remplacé » plus tard
+    (comportement incorrect, documenté comme bug au ticket 2 de `docs/known_issues.md`). Corrigé le
+    08/10/2026 : les cartons sont tirés avant les remplacements (`events._play_match_squad`), un expulsé
+    n'est jamais sortant d'un remplacement et n'a plus aucun événement après son expulsion.
+
+    Expulsions FORCÉES (le 2e, 4e, 6e et 13e appel de `_draw_card` donnent un rouge direct) pour que le
+    cas se présente à coup sûr, sur 40 graines : aucun remplacement ne concerne l'expulsé, aucun but, passe,
+    blessure, penalty manqué ni carton ne le concerne après sa minute, et `players_on_pitch` l'écarte."""
+    from ligue1sim import events as events_module
     from ligue1sim.lineup_snapshot import players_on_pitch
 
-    _, _, match, *_ = played
-    red = {(c.club_name, c.player): c.minute for c in match.events.cards if c.card_type != "yellow"}
-    anomalies = [
-        s for s in match.events.substitutions if (s.club_name, s.player_off) in red and red[(s.club_name, s.player_off)] < s.minute
-    ]
-    assert anomalies, "ce seed doit produire le cas (sinon le test ne prouve plus rien)"
-    for s in anomalies:
-        names = {p.name for p in players_on_pitch(match, s.club_name, s.minute)}
-        assert s.player_off not in names and s.player_on in names
+    for seed in range(1, 41):
+        calls = {"n": 0}
+
+        def forced_card():
+            n = calls["n"]
+            calls["n"] += 1
+            return (0, "direct") if n in (1, 3, 5, 12) else (0, None)
+
+        monkeypatch.setattr(events_module, "_draw_card", forced_card)
+        random.seed(seed)
+        np.random.seed(seed)
+        home, away = _club("Home FC"), _club("Away FC")
+        home_goals, away_goals, events = simulate_match(home, away, LeagueContext.from_clubs([home, away]))
+        match = Match("Home FC", "Away FC", home_goals, away_goals, events)
+
+        red = {(c.club_name, c.player): c.minute for c in events.cards if c.card_type != "yellow"}
+        assert red, f"graine {seed} : aucune expulsion forcée"
+        assert not {(s.club_name, s.player_off) for s in events.substitutions} & set(red), f"graine {seed}"
+        later = [
+            (e.club_name, e.player, e.minute) for e in [*events.injuries, *events.penalties_missed, *events.cards]
+        ] + [(g.club_name, g.scorer, g.minute) for g in events.goals]
+        later += [(g.club_name, g.assist, g.minute) for g in events.goals if g.assist]
+        for club, player, minute in later:
+            if (club, player) in red:
+                assert minute <= red[(club, player)], f"graine {seed} : {player} après son expulsion"
+        for (club, player), minute in red.items():
+            assert player not in {p.name for p in players_on_pitch(match, club, minute)}, f"graine {seed}"

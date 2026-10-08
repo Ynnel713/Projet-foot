@@ -771,3 +771,33 @@ Résultat de l'essai (`HEAD` + ces 206 entrées) : `pytest tests --ignore=simula
 **Séquence mise à jour** : Phase 5 **close**. Reste, dans cet ordre : **ticket 4** (latence et poids du payload d'animation), **ticket 2** (un expulsé peut être remplacé), puis **Phase 6** (Bloc B → A → C). *Décision produit sur l'ordre : ticket 4 avant ticket 2, car la latence affecte chaque interaction alors que le ticket 2 est un cas de bord.*
 
 **Statut** : moteur de simulation (`physics` hors correctif du ticket 1, `ball`, `motion`, `templates`, `sequence_generator`), moteur de Poisson et 3c inchangés pendant la Phase 5 ; rien n'a été poussé.
+
+### 8.19 Fin du ticket 4 (étape courante) et fermeture du ticket 2 — 08/10/2026
+
+**Ticket 4 — statut.** *Partiellement résolu.* Transfert (gzip, −96,8 %), poids (arrondi à 4 décimales, −21,2 %), cache HTTP (LRU de 5 entrées, 2e appel 0,06 à 0,7 s) et `interpolate` (mémoïsation de `_ease_progress` et sortie anticipée d'`_apply_avoidance`, `build_clips` −54 %, premier appel à froid 16-18 s → 9-11 s) sont optimisés, résultat bit-à-bit identique. **En réserve** : levier 3 (vectorisation d'`_apply_avoidance`), plafond `max_occasions`, vitesse analytique (levier 4, Phase 6). 15 images/s et remplaçants non animés refusés par le propriétaire. Détail : `docs/ticket4_latency_audit.md` §8 et §9.
+
+**Ticket 16 — reformulé.** « Point d'entrée seed manquant : `random.seed` ne suffit pas, il faut aussi `np.random.seed` » (priorité basse, avant la Phase 7, ouvert, non corrigé). Précision `PYTHONHASHSEED` : toute comparaison de payload fixe aussi `PYTHONHASHSEED=0` (et n'utilise pas `python -I`, qui l'ignore).
+
+**Ticket 2 — fermé.** Les cartons sont tirés avant les remplacements et les buts (`events._play_match_squad`) ; la minute d'expulsion borne la présence du joueur. Mesures avant / après, graines 1 à 3 000, Ligue 1 réelle :
+
+| Mesure | Avant | Après |
+|---|---|---|
+| Expulsé remplacé (matchs concernés) | 375 (360, soit 12 %) | **0** |
+| Événement après expulsion (matchs concernés) | 141 (121) | **0** |
+| Sur 100 matchs | 12 + 2 | **0** |
+| Buts par match | 2,9267 | 2,9267 (identiques graine par graine) |
+| Jaunes / rouges / remplacements par match | 4,740 / 0,485 / 7,986 | 4,818 / 0,472 / 8,032 (z = +1,52 / −0,74 / +1,55) |
+
+**Trois tests adaptés (décision d'architecte, option A) :**
+
+| Test | Raison | Changement |
+|---|---|---|
+| `tests/test_lineup_snapshot.py` : `test_engine_substitutes_an_already_sent_off_player_and_the_helper_does_not_hide_it` | validait le défaut comme comportement attendu (graine 11) | réécrit en `test_engine_never_substitutes_a_sent_off_player` : expulsions forcées sur 40 graines, aucun remplacement ni événement postérieur, `players_on_pitch` écarte l'expulsé |
+| `tests/test_events_zone.py` : `TestNoRegression::test_1000_matches_produce_identical_non_zone_events_before_and_after` | le réordonnancement des tirages décale le flux `random` (1 000 matchs sur 1 000 différaient) | snapshot `tests/fixtures/event_regression_snapshot.json` régénéré (format reproduit octet pour octet avec l'ancien code) ; les 1 000 scores et nombres de buts sont identiques ; mention dans la docstring |
+| `tests/test_narrative.py` : `TestMissedPenaltyCalibration::test_penalty_missed_ratio_calibrated` | ratio 0,739 (252 / 341) pour une borne basse de 0,74, plus serrée que le bruit d'échantillonnage (≈ 0,023) | fourchette [0,74 ; 0,78] → [0,70 ; 0,85], commentaire explicatif |
+
+Quatre tests ajoutés dans `tests/test_events.py` (détecteur d'incohérences, graine 11, 100 matchs seedés, 60 graines avec expulsions forcées) ; les deux derniers échouent sur l'ancien code.
+
+**Séquence mise à jour** : ticket 2 **fermé**. Prochain : entrée en **Phase 6** (Bloc B physique de balle, puis Bloc A mouvement des joueurs, puis Bloc C cohérence du rendu).
+
+**Statut** : moteur de rendu (`canvas.html`, `PitchField.jsx`), 3c, moteur graphique et moteur de séquence inchangés ; seul le générateur d'événements (`events.py`) est modifié ; rien n'a été poussé.

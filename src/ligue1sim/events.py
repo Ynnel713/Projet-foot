@@ -433,12 +433,22 @@ class _SquadEntry:
     minute_on: int | None = None  # None pour un titulaire (sur le terrain depuis la 1re minute)
     minute_off: int | None = None  # None si le joueur termine le match (jamais remplacé)
     band: int | None = None  # voir lineup.Lineup.bands ; un entrant hérite de la ligne du sortant qu'il remplace
+    # Cartons du joueur, tirés AVANT les remplacements et les buts (ticket 2) : un joueur expulsé
+    # quitte le terrain à `minute_expelled`, ce qui borne sa fenêtre de présence.
+    yellow_cards: int = 0
+    red_card_type: str | None = None  # "direct" | "second_yellow" | None
+    minute_expelled: int | None = None  # None sans expulsion
 
     def minute_range(self) -> tuple[int, int]:
         """Fenêtre [min, max] pendant laquelle ce joueur est effectivement sur
         le terrain, pour tirer un but/carton/blessure à une minute cohérente
-        avec son temps de jeu réel."""
-        return self.minute_on or 1, self.minute_off or 90
+        avec son temps de jeu réel : de son entrée (ou de la 1re minute) à sa
+        sortie -- remplacement ou expulsion, le premier des deux (un expulsé
+        n'est jamais remplacé, voir `_play_match_squad`)."""
+        end = self.minute_off or 90
+        if self.minute_expelled is not None:
+            end = min(end, self.minute_expelled)
+        return self.minute_on or 1, end
 
 
 def _play_match_squad(
@@ -457,6 +467,15 @@ def _play_match_squad(
         injured, duration = _draw_injury()
         starter_injuries[p.name] = (injured, duration, _random_minute(1, 90) if injured else 0)
 
+    # Cartons des titulaires, tirés AVANT les remplacements (ticket 2) : un joueur expulsé ne peut
+    # ni être remplacé ni être le sortant d'un remplacement ; sa minute d'expulsion borne sa
+    # fenêtre de présence (buts, passes, blessure, penalty manqué ne peuvent plus la dépasser).
+    starter_cards: dict[str, tuple[int, str | None, int | None]] = {}
+    for p in starters:
+        yellow_cards, red_card_type = _draw_card()
+        starter_cards[p.name] = (yellow_cards, red_card_type, _random_minute(1, 90) if red_card_type else None)
+    expelled_starters = {name for name, (_y, red, _m) in starter_cards.items() if red is not None}
+
     substitutions: list[SubstitutionEvent] = []
     subs_on: list[tuple[Player, int, int | None]] = []
     used_reserve_names: set[str] = set()
@@ -468,7 +487,8 @@ def _play_match_squad(
         # 1. Remplacements forcés par blessure (gardien compris) : priorité
         #    absolue, dans l'ordre chronologique des blessures.
         injured_starters = sorted(
-            (p for p in starters if starter_injuries[p.name][0]), key=lambda p: starter_injuries[p.name][2]
+            (p for p in starters if starter_injuries[p.name][0] and p.name not in expelled_starters),
+            key=lambda p: starter_injuries[p.name][2],
         )
         for player_off in injured_starters:
             if len(subs_on) >= nb_subs_total:
@@ -497,7 +517,9 @@ def _play_match_squad(
         remaining_slots = nb_subs_total - len(subs_on)
         if remaining_slots > 0:
             candidates_off = [
-                p for p in starters if p.group != GOALKEEPER and p.name not in subbed_off_names
+                p
+                for p in starters
+                if p.group != GOALKEEPER and p.name not in subbed_off_names and p.name not in expelled_starters
             ]
             random.shuffle(candidates_off)
             nb_subs = min(remaining_slots, len(candidates_off), len(reserves) - len(used_reserve_names))
@@ -527,14 +549,33 @@ def _play_match_squad(
     minute_off_by_name = {sub.player_off: sub.minute for sub in substitutions}
     entries = [
         _SquadEntry(
-            p, started=True, weight_multiplier=1.0, minute_off=minute_off_by_name.get(p.name), band=lineup.bands.get(p.name)
+            p,
+            started=True,
+            weight_multiplier=1.0,
+            minute_off=minute_off_by_name.get(p.name),
+            band=lineup.bands.get(p.name),
+            yellow_cards=starter_cards[p.name][0],
+            red_card_type=starter_cards[p.name][1],
+            minute_expelled=starter_cards[p.name][2],
         )
         for p in starters
     ]
-    entries += [
-        _SquadEntry(p, started=False, weight_multiplier=SUB_EVENT_WEIGHT, minute_on=minute_on, band=band)
-        for p, minute_on, band in subs_on
-    ]
+    for p, minute_on, band in subs_on:
+        # Cartons des entrants : tirés ici (et non plus dans `_build_stats`) pour que leur éventuelle
+        # expulsion, comprise entre leur entrée et la 90e minute, borne aussi leurs buts.
+        yellow_cards, red_card_type = _draw_card()
+        entries.append(
+            _SquadEntry(
+                p,
+                started=False,
+                weight_multiplier=SUB_EVENT_WEIGHT,
+                minute_on=minute_on,
+                band=band,
+                yellow_cards=yellow_cards,
+                red_card_type=red_card_type,
+                minute_expelled=_random_minute(minute_on, 90) if red_card_type else None,
+            )
+        )
     return entries, substitutions, starter_injuries
 
 
@@ -638,10 +679,12 @@ def _build_stats(
         player = entry.player
         goals = goals_by_scorer.get(player.name, 0)
         assists = assists_by_player.get(player.name, 0)
-        yellow_cards, red_card_type = _draw_card()
+        yellow_cards, red_card_type = entry.yellow_cards, entry.red_card_type  # tirés dans _play_match_squad
         if entry.started:
             # déjà tirée dans _play_match_squad, avant les remplacements.
             injured, injury_duration, injury_minute = starter_injuries[player.name]
+            # Un titulaire blessé ET expulsé (non remplacé) ne peut pas se blesser après son expulsion.
+            injury_minute = min(injury_minute, entry.minute_range()[1]) if injured else injury_minute
         else:
             injured, injury_duration = _draw_injury()
             injury_minute = _random_minute(*entry.minute_range()) if injured else 0
@@ -673,7 +716,11 @@ def _build_stats(
             # décalerait tous les tirages suivants -- exactement ce que
             # _deterministic_rng est censé éviter (voir tests de
             # non-régression, tests/test_events_zone.py).
-            card_minute = _random_minute(*entry.minute_range())
+            # Une expulsion a déjà sa minute (tirée avant les remplacements, voir `_play_match_squad`) ;
+            # un simple jaune est tiré dans la fenêtre de présence du joueur.
+            card_minute = (
+                entry.minute_expelled if entry.minute_expelled is not None else _random_minute(*entry.minute_range())
+            )
             card_rng = _deterministic_rng(match_id, card_minute, _player_seed_id(player))
             cards.append(
                 CardEvent(

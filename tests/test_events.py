@@ -263,3 +263,107 @@ def test_simulate_journee_records_why_each_player_was_absent():
     assert events.home_suspended == frozenset({"home_cb0"}) and events.home_injured == frozenset()
     assert events.away_injured == frozenset({"away_lb0"}) and events.away_suspended == frozenset()
     assert "home_cb0" not in {s.player_name for s in events.home_lineup}  # absent de la compo, quelle que soit la raison
+
+
+# --- Ticket 2 (08/10/2026) : cohérence cartons / remplacements --------------------------------
+# Règle : un expulsé (rouge direct ou second jaune) quitte le terrain définitivement -- jamais
+# remplacé, aucun but / passe / blessure / penalty manqué après sa minute d'expulsion ; un
+# remplacé ne reçoit pas de carton après sa sortie ; un entrant n'a rien avant son entrée.
+
+_RED_TYPES = ("direct", "second_yellow")
+
+
+def _incoherences(events) -> list[str]:
+    """Liste des violations de la règle ci-dessus dans `events` (vide = cohérent)."""
+    problems = []
+    expelled = {(c.club_name, c.player): c.minute for c in events.cards if c.card_type in _RED_TYPES}
+    left = {(s.club_name, s.player_off): s.minute for s in events.substitutions}
+    entered = {(s.club_name, s.player_on): s.minute for s in events.substitutions}
+    for key in expelled:
+        if key in left:
+            problems.append(f"expulsé remplacé : {key}")
+    for card in events.cards:
+        key = (card.club_name, card.player)
+        if key in left and card.minute > left[key]:
+            problems.append(f"carton après sortie : {key}")
+
+    def check(club: str, player: str, minute: int, what: str) -> None:
+        key = (club, player)
+        if key in expelled and minute > expelled[key]:
+            problems.append(f"{what} après expulsion : {key}")
+        if key in left and minute > left[key]:
+            problems.append(f"{what} après remplacement : {key}")
+        if key in entered and minute < entered[key]:
+            problems.append(f"{what} avant entrée : {key}")
+
+    for goal in events.goals:
+        check(goal.club_name, goal.scorer, goal.minute, "but")
+        if goal.assist:
+            check(goal.club_name, goal.assist, goal.minute, "passe")
+    for injury in events.injuries:
+        check(injury.club_name, injury.player, injury.minute, "blessure")
+    for missed in events.penalties_missed:
+        check(missed.club_name, missed.player, missed.minute, "penalty manqué")
+    return problems
+
+
+def _seeded_match(seed: int):
+    random.seed(seed)
+    np.random.seed(seed)
+    home, away = _clubs()
+    context = LeagueContext.from_clubs([home, away])
+    home_goals, away_goals, events = simulate_match(home, away, context)
+    return events
+
+
+def test_incoherence_detector_flags_an_expelled_player_who_is_substituted():
+    # Garde-fou : le détecteur doit voir le défaut du ticket 2 (sinon les tests ci-dessous seraient vides).
+    from ligue1sim.events import CardEvent, MatchEvents, SubstitutionEvent
+
+    bad = MatchEvents(
+        home_formation="4-3-3", away_formation="4-3-3", home_lineup=[], away_lineup=[],
+        substitutions=[SubstitutionEvent("Home FC", player_off="a", player_on="b", minute=64)],
+        cards=[CardEvent("Home FC", "a", minute=17, card_type="second_yellow")],
+    )
+    assert _incoherences(bad) == ["expulsé remplacé : ('Home FC', 'a')"]
+
+
+def test_seed_11_match_never_substitutes_an_expelled_player():
+    events = _seeded_match(11)
+    assert _incoherences(events) == []
+
+
+def test_hundred_seeded_matches_have_no_card_substitution_incoherence():
+    total_reds = total_starters_replaced = 0
+    for seed in range(1, 101):
+        events = _seeded_match(seed)
+        assert _incoherences(events) == [], f"graine {seed}"
+        total_reds += sum(1 for c in events.cards if c.card_type in _RED_TYPES)
+        total_starters_replaced += len(events.substitutions)
+    assert total_reds > 0 and total_starters_replaced > 0  # le scénario à risque est bien exercé
+
+
+def test_expelled_players_appear_in_no_later_event_even_when_forced(monkeypatch):
+    # Expulsions FORCÉES (titulaires 1, 3, 5, entrant n° 12 de l'appel) : le cas du ticket 2 se produit
+    # à coup sûr, pour 60 graines, quel que soit le tirage de remplacements.
+    from ligue1sim import events as events_module
+
+    for seed in range(1, 61):
+        calls = {"n": 0}
+
+        def forced_card():
+            n = calls["n"]
+            calls["n"] += 1
+            return (0, "direct") if n in (1, 3, 5, 12) else (0, None)
+
+        monkeypatch.setattr(events_module, "_draw_card", forced_card)
+        random.seed(seed)
+        np.random.seed(seed)
+        home, away = _clubs()
+        home_lineup, away_lineup = pick_best_formation(home), pick_best_formation(away)
+        events = generate_match_events(home, away, home_lineup, away_lineup, home_goals=3, away_goals=2)
+
+        expelled = {c.player: c.minute for c in events.cards if c.club_name == "Home FC" and c.card_type == "direct"}
+        assert len(expelled) >= 3, f"graine {seed}"
+        assert not {s.player_off for s in events.substitutions} & set(expelled), f"graine {seed}"
+        assert _incoherences(events) == [], f"graine {seed}"

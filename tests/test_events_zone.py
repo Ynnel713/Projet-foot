@@ -82,7 +82,13 @@ class TestNoRegression:
         """Rejoue les 1000 matchs de la fixture (générée par le code AVANT
         l'ajout du champ zone, avec le même double seed) et compare tout
         sauf zone/assist_zone -- la moindre différence prouverait que
-        l'ajout des zones a perturbé un tirage existant."""
+        l'ajout des zones a perturbé un tirage existant.
+
+        Régénéré le 08/10/2026 suite à la correction du ticket 2 (cohérence cartons / remplacements) :
+        les cartons sont désormais tirés avant les remplacements, ce qui décale le flux `random` (les
+        scores, donnés en entrée, et le nombre de buts restent identiques sur les 1000 matchs). Distribution
+        préservée : buts identiques, cartons et remplacements dans le bruit (|z| < 2 sur 3000 matchs ;
+        jaunes 4819 -> 4787, rouges 461 -> 475, remplacements 7964 -> 7989 sur ce snapshot)."""
         with FIXTURE_PATH.open(encoding="utf-8") as f:
             snapshot = json.load(f)
         assert len(snapshot) == 1000
