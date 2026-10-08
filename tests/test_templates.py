@@ -680,27 +680,60 @@ class TestNoImmobileSegmentInFlightActions:
     silencieux de `build_from_template` sur la dernière position connue
     quand `ball_owner=None` (voir DETTE en tête de `templates.py`). Aucune
     liste d'exclusion : si un gabarit échoue, on le corrige (`ball_position`),
-    on ne l'exclut pas."""
+    on ne l'exclut pas.
+
+    SEULE exception, Phase 6 B6-a (08/10/2026) : le gabarit `penalty`. Un penalty a, par le règlement, un ballon POSÉ immobile
+    au point de penalty tant que le tireur n'a pas frappé ; ses segments d'attente et d'élan sont donc immobiles par
+    construction (réalisme, pas la dette ball_owner=None). L'exception est limitée au NOM `penalty` (`_EXEMPT_GABARIT`) et
+    prouvée par `test_the_exemption_is_limited_to_the_penalty_template` : tout autre gabarit avec un segment immobile échoue."""
 
     _IN_FLIGHT_TAGS = {CROSS, SHOT, PASS_GROUND, PASS_LOB, DEFLECT}
     _MIN_DISPLACEMENT_M = 0.01  # 1 cm
+    _EXEMPT_GABARIT = "penalty"  # ballon posé immobile avant la frappe (règlement), voir la docstring
 
-    @pytest.mark.parametrize("name", sorted(BUILDERS))
-    def test_no_immobile_segment_in_flight_actions(self, name):
-        lineup = _lineup()
-        sequence = BUILDERS[name](_goal_event(), lineup, _start_positions(lineup))
+    def _immobile_segments(self, name, sequence):
+        """Segments « en vol » dont le ballon bouge de moins d'1 cm (liste de (t_a, t_b, tag, distance en m)) ; vide pour
+        le gabarit exempté (ballon posé)."""
+        found = []
         for kf_a, kf_b in zip(sequence.keyframes, sequence.keyframes[1:]):
             is_last_segment = kf_b.t == sequence.keyframes[-1].t
             tag = _resolve_physics_tag(sequence, kf_a, is_last_segment=is_last_segment)
             if tag not in self._IN_FLIGHT_TAGS:
                 continue
             distance_m = _real_distance_m((kf_a.ball.x, kf_a.ball.y), (kf_b.ball.x, kf_b.ball.y))
-            if name == "penalty" and distance_m <= self._MIN_DISPLACEMENT_M:
-                continue  # B6-a : le ballon est POSÉ au point de penalty tant que le tireur n'a pas frappé (voir TestPenaltyIsSpecialCased)
-            assert distance_m > self._MIN_DISPLACEMENT_M, (
-                f"{name} segment [t={kf_a.t}->t={kf_b.t}] tagué {tag} mais le ballon ne bouge que de "
-                f"{distance_m * 100:.3f}cm -- ballon immobile en plein vol (dette ball_owner=None ?)"
-            )
+            if distance_m > self._MIN_DISPLACEMENT_M:
+                continue
+            if name == self._EXEMPT_GABARIT:
+                continue  # B6-a : ballon POSÉ au point de penalty tant que le tireur n'a pas frappé (voir TestPenaltyIsSpecialCased)
+            found.append((kf_a.t, kf_b.t, tag, distance_m))
+        return found
+
+    @pytest.mark.parametrize("name", sorted(BUILDERS))
+    def test_no_immobile_segment_in_flight_actions(self, name):
+        lineup = _lineup()
+        sequence = BUILDERS[name](_goal_event(), lineup, _start_positions(lineup))
+        assert self._immobile_segments(name, sequence) == [], (
+            f"{name} : segment tagué en vol mais ballon immobile (< 1 cm) -- dette ball_owner=None ?"
+        )
+
+    @pytest.mark.parametrize("name", sorted(BUILDERS))
+    def test_the_exemption_is_limited_to_the_penalty_template(self, name):
+        """On FIGE le ballon sur le premier segment en vol du gabarit : tout gabarit autre que `penalty` doit alors être
+        signalé ; seul `penalty` ne l'est pas (ballon posé)."""
+        from dataclasses import replace
+
+        lineup = _lineup()
+        sequence = BUILDERS[name](_goal_event(), lineup, _start_positions(lineup))
+        keyframes = list(sequence.keyframes)
+        for i, (kf_a, kf_b) in enumerate(zip(keyframes, keyframes[1:])):
+            tag = _resolve_physics_tag(sequence, kf_a, is_last_segment=(kf_b.t == keyframes[-1].t))
+            if tag in self._IN_FLIGHT_TAGS:
+                keyframes[i + 1] = replace(kf_b, ball=replace(kf_b.ball, x=kf_a.ball.x, y=kf_a.ball.y))
+                frozen = replace(sequence, keyframes=keyframes)
+                flagged = self._immobile_segments(name, frozen)
+                assert (flagged == []) == (name == "penalty"), (name, flagged)
+                return
+        raise AssertionError(f"{name} : aucun segment en vol trouvé")
 
 
 class TestBallFlightDurationUses3DDistance:
