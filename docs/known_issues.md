@@ -29,7 +29,7 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 | 23 | NLG ne reçoit pas le type de frappe, texte générique incohérent avec le rendu | Après B5 (priorité moyenne) | Ouvert |
 | 24 | Commentaire faux sur la zone d'un penalty dans `engine/narrative.py` | Priorité basse | Ouvert |
 | 25 | Clips de but dont la dernière image est avant la ligne | Avant la Phase 7 (priorité basse) | Ouvert |
-| 26 | Penaltys ratés du moteur sans clip, et penaltys ratés animés distincts de ceux du moteur | Priorité basse | Ouvert |
+| 26 | Divergence moteur / narration sur les penaltys ratés : l'animation montre des ratés qui n'ont pas eu lieu et omet ceux du moteur | Basse à moyenne (à trancher), à coupler au Bloc C | Ouvert |
 
 ---
 
@@ -462,15 +462,17 @@ appelé par les scripts, les tests et un éventuel paramètre de graine de l'API
 
 ---
 
-## 26. Penaltys ratés du moteur sans clip, et penaltys ratés animés distincts de ceux du moteur
+## 26. Divergence moteur / narration sur les penaltys ratés : l'animation montre des ratés qui n'ont pas eu lieu et omet ceux du moteur
 
 **Description.** Il existe deux générateurs indépendants de penaltys ratés. Le moteur (`src/ligue1sim/events.py`, `_generate_missed_penalties`, champ `penalties_missed`) en produit environ 9 par 100 matchs ; ils apparaissent dans le fil de commentaire live (`api/live_commentary.py`, « PENALTY MANQUÉ ») et dans la liste des événements du match (`app.py`), mais **ne produisent aucun clip**. La narration (`engine/narrative.py`, `_missed_penalty_count`, moyenne de Poisson `_MISSED_PENALTY_POISSON_MEAN` ≈ 0,078 par match) en invente de son côté environ 8 par 100 matchs, qui sont animés (gabarit `penalty`) mais **absents** du moteur. Mesure du 08/10/2026 (graines 1 à 100) : 9 ratés côté moteur, 8 côté narration, **0 en commun** (même minute, joueur et club). Les buts de penalty, eux, sont les mêmes des deux côtés (26 sur 26, identiques dans les 100 matchs).
 
-**Impact.** Incohérence potentielle entre le rendu animé, le fil live du moteur et la liste des événements : un penalty raté peut être listé sans être animé, et un penalty raté animé peut ne figurer dans aucun événement du moteur (le fil du NLG, qui lit la narration, et le fil du moteur ne racontent donc pas les mêmes penaltys ratés).
+**Impact.** Divergence entre le moteur et la narration, pas seulement un trou d'affichage : l'animation montre des penaltys ratés **qui n'ont jamais eu lieu** (ceux de la narration, absents des événements du moteur) et **ne montre pas** ceux qui ont eu lieu (ceux du moteur, listés dans le fil live et la liste des événements). Le fil du NLG (`api/nlg_live.py`, qui lit la narration) et le fil du moteur (`api/live_commentary.py`) ne racontent donc pas les mêmes penaltys ratés. Le résultat sportif n'est pas touché (un penalty raté ne change pas le score) ; la cohérence du produit l'est.
 
-**Résolution.** À décider par le propriétaire (par exemple animer les ratés du moteur et supprimer ceux de la narration). Hors périmètre de B6.
+**Fichiers concernés.** `src/ligue1sim/events.py` (`_generate_missed_penalties`, `penalties_missed`), `engine/narrative.py` (`_missed_penalty_count`, `_MISSED_PENALTY_POISSON_MEAN`, `_generated_events`), `api/live_commentary.py`, `api/nlg_live.py`, `app.py` (liste des événements du match).
 
-**Priorité.** Basse.
+**Résolution.** À décider par le propriétaire (par exemple animer les ratés du moteur et supprimer ceux de la narration). Hors périmètre de B6 ; elle pourrait être couplée au **Bloc C (cohérence du rendu)** plutôt qu'à B6.
+
+**Priorité.** Basse à moyenne, à trancher par le propriétaire.
 
 **Statut.** Ouvert. Non corrigé.
 
