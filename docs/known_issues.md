@@ -1,6 +1,6 @@
 # Dette connue — Simulafoot
 
-Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets ouverts (3, 4, 6, 9, 10, 11, 12, 13, 15 et 16) n'est corrigé à ce jour** (le ticket 2 est fermé le 08/10/2026). Créé le 07/10/2026 (clôture de l'Étape B, `LineupSnapshot`) ; tickets 4 et 5 ajoutés le même jour (intégration PWA par iframe) ; ticket 5 fermé et tickets 6 à 8 ouverts le même jour (gouvernance, avant Phase 5) ; tickets 9 (`duckdb`) et 10 (couverture NLG) ajoutés le même jour (environnement de test). tickets 7 (résolu en `7309172`) et 11 (`ConnectionResetError`) traités le même jour. **État : ouverts 2, 3, 4, 6, 9, 10, 11, 12, 13, 15 ; fermés 1 (résolu en `61773ab`, Phase 5 sous-étape 1), 14 (décision produit, bandes de tonte horizontales conservées), 5 (non reproduit), 7 (résolu en `7309172`) et 8 (résolu en `2d71e55`, vérifié sur archive propre).**
+Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets ouverts (3, 4, 6, 9, 10, 11, 12, 13, 15, 16 et 17) n'est corrigé à ce jour** (le ticket 2 est fermé le 08/10/2026). Créé le 07/10/2026 (clôture de l'Étape B, `LineupSnapshot`) ; tickets 4 et 5 ajoutés le même jour (intégration PWA par iframe) ; ticket 5 fermé et tickets 6 à 8 ouverts le même jour (gouvernance, avant Phase 5) ; tickets 9 (`duckdb`) et 10 (couverture NLG) ajoutés le même jour (environnement de test). tickets 7 (résolu en `7309172`) et 11 (`ConnectionResetError`) traités le même jour. **État : ouverts 2, 3, 4, 6, 9, 10, 11, 12, 13, 15 ; fermés 1 (résolu en `61773ab`, Phase 5 sous-étape 1), 14 (décision produit, bandes de tonte horizontales conservées), 5 (non reproduit), 7 (résolu en `7309172`) et 8 (résolu en `2d71e55`, vérifié sur archive propre).**
 
 | # | Titre | Priorité (avant…) | Statut |
 |---|---|---|---|
@@ -20,6 +20,7 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 | 14 | Orientation des bandes de tonte : horizontal (implémenté) vs perpendiculaire (backlog 24/09) | — (priorité basse) | **Résolu — décision produit**, horizontal conservé |
 | 15 | `PitchField.jsx` : bandes de tonte perpendiculaires à la longueur, incohérentes avec `canvas.html` | Phase 6 (produit / carrière) — priorité basse | Ouvert |
 | 16 | Point d'entrée seed manquant : `random.seed` ne suffit pas, il faut aussi `np.random.seed` | Avant la Phase 7 (priorité basse) | Ouvert — cause diagnostiquée, non corrigée |
+| 17 | Pas de remplacement d'urgence modélisé (gardien expulsé sans remplaçant) | Avant la Phase 7 (priorité basse) | Ouvert |
 
 ---
 
@@ -315,6 +316,22 @@ appelé par les scripts, les tests et un éventuel paramètre de graine de l'API
 **Priorité.** Basse, avant la Phase 7.
 
 **Statut.** Ouvert. Cause diagnostiquée, **non corrigée**.
+
+---
+
+## 17. Pas de remplacement d'urgence modélisé (gardien expulsé sans remplaçant)
+
+**Description.** Le moteur ne modélise aucun mécanisme d'urgence pour un gardien expulsé. Depuis la correction du ticket 2 (08/10/2026), un expulsé n'est jamais remplacé (règle volontaire), et le générateur n'a rien prévu pour le gardien : ni entrée du gardien remplaçant, ni passage d'un joueur de champ dans les buts. Le gardien expulsé reste sur la feuille de match, sans gardien actif pour la suite du match, **même quand un gardien remplaçant est sur le banc** (les remplacements tactiques excluent le poste de gardien, `events._play_match_squad`, et un expulsé est exclu des sortants).
+
+**Reproduction.** Déterministe dès qu'un gardien titulaire reçoit un rouge direct ou un second jaune. Fréquence mesurée sur 3 000 matchs (graines 1 à 3 000, `random.seed` et `np.random.seed`, Ligue 1 réelle) : **93 gardiens titulaires expulsés sur 6 000 équipes-matchs, soit 1,55 % des équipes-matchs et 3,10 % des matchs**. Pour le voir : forcer le rouge du gardien (monkeypatch de `events._draw_card`, comme dans `tests/test_events.py::test_expelled_players_appear_in_no_later_event_even_when_forced`) et lire `events.substitutions`, qui ne contient aucune entrée du gardien remplaçant.
+
+**Impact.** Un match peut se terminer sans gardien actif : `lineup_snapshot.players_on_pitch` retire l'expulsé à sa minute et personne ne le remplace ; l'animation compose chaque clip depuis la composition de départ, sans tenir compte des minutes de présence (limite préexistante de `engine/narrative.py`), et montre donc encore le gardien expulsé dans ses buts ; les buts encaissés continuent d'être comptés normalement (le résultat sportif n'est pas modifié). Impact visuel et de réalisme ; aucun effet sur les scores.
+
+**Piste (non implémentée).** Lors d'une expulsion de gardien : soit faire entrer le gardien remplaçant s'il y en a un (en sacrifiant un joueur de champ non expulsé, selon la règle usuelle), soit désigner un joueur de champ comme gardien de fortune. À arbitrer car cela fait consommer des tirages et modifie la distribution des remplacements.
+
+**Priorité.** Basse, avant la Phase 7.
+
+**Statut.** Ouvert. Non corrigé.
 
 ---
 
