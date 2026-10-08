@@ -404,6 +404,12 @@ class StrikeType:
     spin_max: float
     speed_min: float  # m/s
     speed_max: float
+    # Placement de la cible (penaltys seulement, B6-b) : |y| en mètres depuis l'axe du but, et hauteur z en mètres. `None` :
+    # la cible reste celle de `_flight_target` (issue seule).
+    y_abs_min_m: float | None = None
+    y_abs_max_m: float | None = None
+    z_min_m: float | None = None
+    z_max_m: float | None = None
 
 
 STRIKE_TYPES: dict[str, StrikeType] = {
@@ -415,6 +421,11 @@ STRIKE_TYPES: dict[str, StrikeType] = {
         StrikeType("shot_exterieur_pied", -30.0, -20.0, 22.0, 30.0),
         StrikeType("reprise_vollee", 10.0, 15.0, 25.0, 32.0),
         StrikeType("tete", 0.0, 0.0, 12.0, 18.0),
+        # Phase 6, B6-b (08/10/2026) -- types de penalty, constantes validées par le propriétaire. Le type ne choisit JAMAIS l'issue :
+        # il donne la vitesse, le spin et, pour un BUT seulement, le placement ; le gardien (B6-d) en dépend.
+        StrikeType("penalty_fort", 0.0, 0.0, 29.0, 33.0, 2.4, 3.4, 1.0, 2.0),  # frappe puissante, mi-hauteur à haut, près d'un poteau
+        StrikeType("penalty_place", 20.0, 30.0, 21.0, 25.0, 2.8, 3.5, 0.1, 0.8),  # placée, ras de terre à mi-hauteur basse (spin : traînée seule)
+        StrikeType("penalty_contre_pied", 0.0, 0.0, 24.0, 28.0, 1.0, 2.8, 0.3, 1.2),  # côté opposé au plongeon du gardien (B6-d)
     )
 }
 
@@ -432,7 +443,7 @@ _STRIKE_TYPE_WEIGHTS: dict[str, tuple[tuple[str, float], ...]] = {
     "corner": _HEAD_POOL,
     "recuperation_haute": (("reprise_vollee", 1.0),),
     "but_gag": (("reprise_vollee", 1.0),),
-    "penalty": (("shot_tendu", 1.0),),
+    "penalty": (("penalty_fort", 0.30), ("penalty_place", 0.50), ("penalty_contre_pied", 0.20)),
     "coup_franc": (("shot_enroule_leger", 1.0),),
     "contre_attaque": _FOOT_POOL,
     "construction_placee": _FOOT_POOL,
@@ -460,6 +471,25 @@ def strike_spin_for(strike: StrikeType, event_ref: str) -> float:
 
 def strike_speed_for(strike: StrikeType, event_ref: str) -> float:
     return strike.speed_min + _flight_unit(event_ref, "speed") * (strike.speed_max - strike.speed_min)
+
+
+def penalty_ball_side(event_ref: str) -> int:
+    """Côté du ballon d'un penalty, +1 ou -1 (signe de l'écart latéral à l'axe du but), déterministe (sha256 de `event_ref`).
+    Convention PARTAGÉE avec le gardien (B6-d) : pour un type `penalty_contre_pied`, le gardien plonge du côté OPPOSÉ."""
+    return 1 if _flight_unit(event_ref, "penalty_side") >= 0.5 else -1
+
+
+def _penalty_target(outcome: str, event_ref: str, strike: StrikeType) -> tuple[float, float, float] | None:
+    """Cible d'un penalty selon son TYPE (B6-b) pour l'issue `but` SEULEMENT ; toutes les autres issues (arrêt, hors cadre,
+    poteau, barre, ou sans vol) gardent la cible de `_flight_target` : l'issue décide, le type ne fait que la forme du vol.
+    L'arrêt garde sa cible centrale (y dans +-2,2 m, voir `_flight_target` et `engine/ball_events.py`, parade B4) : un placement
+    de type jusqu'à 3,5 m de l'axe sortirait de la portée du gardien (glissement de 2,5 m) -- à traiter avec B6-d."""
+    if outcome != "but" or strike.y_abs_min_m is None:
+        return _flight_target(outcome, event_ref)
+    y_m = penalty_ball_side(event_ref) * (strike.y_abs_min_m + _flight_unit(event_ref, "y") * (strike.y_abs_max_m - strike.y_abs_min_m))
+    z = strike.z_min_m + _flight_unit(event_ref, "z") * (strike.z_max_m - strike.z_min_m)
+    x = 1.00 + _flight_unit(event_ref, "x") * 0.02
+    return (x, _GOAL_Y_CENTER + y_m / PITCH_WIDTH_M, z)
 
 
 def _flight_target(outcome: str, event_ref: str) -> tuple[float, float, float] | None:
@@ -629,12 +659,12 @@ def build_from_template(
     duration = template.duration
 
     if outcome is not None and template.has_ball_flight:
-        target = _flight_target(outcome, event_ref)
+        strike = strike_type_for(template.name, event_ref)
+        target = _penalty_target(outcome, event_ref, strike) if template.name == "penalty" else _flight_target(outcome, event_ref)
         if target is not None:
             target_x, target_y, target_z = target
             start_z = keyframes[-1].ball.z
             distance_m = _flight_distance_m((last_ball_xy.x, last_ball_xy.y, start_z), (target_x, target_y, target_z))
-            strike = strike_type_for(template.name, event_ref)
             speed_mps = strike_speed_for(strike, event_ref)
             flight_duration = distance_m / speed_mps if speed_mps > 0 else 0.0
             flight_start_players = keyframes[-1].players

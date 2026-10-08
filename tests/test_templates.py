@@ -791,7 +791,18 @@ _STRIKE_SPEC = {
     "shot_exterieur_pied": (-30.0, -20.0, 22.0, 30.0),
     "reprise_vollee": (10.0, 15.0, 25.0, 32.0),
     "tete": (0.0, 0.0, 12.0, 18.0),
+    # Phase 6, B6-b : types de penalty (constantes validées par le propriétaire)
+    "penalty_fort": (0.0, 0.0, 29.0, 33.0),
+    "penalty_place": (20.0, 30.0, 21.0, 25.0),
+    "penalty_contre_pied": (0.0, 0.0, 24.0, 28.0),
 }
+# Placement des penaltys convertis : (|y| min, |y| max, z min, z max) en mètres.
+_PENALTY_PLACEMENT = {
+    "penalty_fort": (2.4, 3.4, 1.0, 2.0),
+    "penalty_place": (2.8, 3.5, 0.1, 0.8),
+    "penalty_contre_pied": (1.0, 2.8, 0.3, 1.2),
+}
+_PENALTY_TYPES = tuple(_PENALTY_PLACEMENT)
 # Vols par gabarit sur 100 matchs (graines 1 à 100, B5) : sert de mélange réaliste pour les tests de répartition.
 _FLIGHTS_PER_100_MATCHES = {
     "contre_attaque": 166, "construction_placee": 142, "debordement_centre_tete": 205, "percee_individuelle": 137,
@@ -877,7 +888,7 @@ def test_type_is_coherent_with_the_gabarit():
         "corner": {"tete", "reprise_vollee"},
         "recuperation_haute": {"reprise_vollee"},
         "but_gag": {"reprise_vollee"},
-        "penalty": {"shot_tendu"},
+        "penalty": set(_PENALTY_TYPES),
         "coup_franc": {"shot_enroule_leger"},
     }
     foot = {"shot_tendu", "shot_enroule_leger", "shot_exterieur_pied"}
@@ -887,6 +898,8 @@ def test_type_is_coherent_with_the_gabarit():
         # Une tête n'est produite que par les gabarits de tête ; le fort que par decalage_enroulee.
         assert ("tete" in seen) == (gabarit in {"debordement_centre_tete", "corner"})
         assert ("shot_enroule_fort" in seen) == (gabarit == "decalage_enroulee")
+        # Les types de penalty ne sortent que du gabarit penalty, et lui ne produit rien d'autre.
+        assert (seen & set(_PENALTY_TYPES) != set()) == (gabarit == "penalty")
 
 
 def test_strike_type_distribution_over_1000_strikes():
@@ -894,10 +907,12 @@ def test_strike_type_distribution_over_1000_strikes():
 
     from ligue1sim.animation.templates import strike_type_for
 
-    total = sum(_FLIGHTS_PER_100_MATCHES.values())
+    # Le gabarit penalty a ses propres types depuis B6-b : il sort de ce mélange (voir test_penalty_type_distribution...).
+    mix = {g: n for g, n in _FLIGHTS_PER_100_MATCHES.items() if g != "penalty"}
+    total = sum(mix.values())
     counts: Counter = Counter()
     strikes = 0
-    for gabarit, flights in _FLIGHTS_PER_100_MATCHES.items():
+    for gabarit, flights in mix.items():
         n = round(1000 * flights / total)
         for i in range(n):
             counts[strike_type_for(gabarit, f"goal:Test FC:{gabarit}{i}:{(i * 7) % 90 + 1}").name] += 1
@@ -910,7 +925,8 @@ def test_strike_type_distribution_over_1000_strikes():
         share = 100.0 * counts[name] / strikes
         assert abs(share - target) <= 4.0, f"{name} : {share:.1f} % pour une cible de {target} %"
     assert abs(100.0 * counts["shot_enroule_fort"] / strikes - 9.7) <= 0.6  # decalage_enroulee seul : 122 vols sur 1 259
-    assert abs(100.0 * counts["shot_tendu"] / strikes - 35.0) <= 2.5, counts
+    # B6-b : les penaltys (jadis `shot_tendu`, 2,7 points) ont leurs propres types ; `shot_tendu` ne garde donc que la marge de 4 points
+    # ci-dessus (réel, 100 matchs : 33 % de l'ensemble des vols, voir docs/phase6_block_b_audit.md).
 
 
 def test_strike_type_is_deterministic_and_independent_of_the_global_random_state():
@@ -930,3 +946,76 @@ def test_no_spin_without_flight_and_the_carry_is_straight():
         for outcome in (None, "tacle", "degagement"):
             sequence, _ = _build_with_flight(gabarit, 34, outcome=outcome)
             assert all(kf.ball.spin == 0.0 for kf in sequence.keyframes), (gabarit, outcome)
+
+
+# --- Phase 6, B6-b : types de penalty (fort 30 %, placé 50 %, contre-pied 20 %) ------------------------------------------
+
+
+def _penalty_sequence(minute, scorer="bu", outcome="but"):
+    sequence, event_ref = _build_with_flight("penalty", minute, scorer=scorer, outcome=outcome)
+    return sequence, event_ref
+
+
+def test_penalty_type_distribution_over_1000_penalties():
+    from collections import Counter
+
+    from ligue1sim.animation.templates import strike_type_for
+
+    counts = Counter(strike_type_for("penalty", f"goal:Test FC:taker{i}:{i % 90 + 1}").name for i in range(1000))
+    assert set(counts) == set(_PENALTY_TYPES)
+    for name, target in (("penalty_fort", 30.0), ("penalty_place", 50.0), ("penalty_contre_pied", 20.0)):
+        assert abs(counts[name] / 10.0 - target) <= 4.0, (name, counts)
+
+
+def test_each_penalty_type_respects_its_speed_spin_and_placement():
+    from ligue1sim.animation.templates import strike_type_for
+
+    seen = set()
+    sides = set()
+    for minute in range(1, 91):
+        for scorer in ("bu", "ag", "ad"):
+            sequence, event_ref = _penalty_sequence(minute, scorer)
+            strike = strike_type_for("penalty", event_ref)
+            seen.add(strike.name)
+            spin_min, spin_max, speed_min, speed_max = _STRIKE_SPEC[strike.name]
+            flight_start, target = sequence.keyframes[-2], sequence.keyframes[-1]
+            assert spin_min <= flight_start.ball.spin <= spin_max
+            assert speed_min - 1e-6 <= _flight_speed_mps(sequence) <= speed_max + 1e-6
+            y_min, y_max, z_min, z_max = _PENALTY_PLACEMENT[strike.name]
+            y_m = (target.ball.y - 0.5) * 68.0
+            assert y_min - 1e-6 <= abs(y_m) <= y_max + 1e-6, (strike.name, y_m)
+            assert z_min - 1e-6 <= target.ball.z <= z_max + 1e-6, (strike.name, target.ball.z)
+            assert 1.0 <= target.ball.x <= 1.02  # le ballon franchit la ligne : c'est bien un but
+            sides.add(y_m > 0)
+    assert seen == set(_PENALTY_TYPES)
+    assert sides == {True, False}  # les deux côtés du but sont utilisés
+    # Le placé a un spin (traînée) ; le fort et le contre-pied n'en ont pas.
+    assert _STRIKE_SPEC["penalty_place"][0] > 5 and _STRIKE_SPEC["penalty_fort"][1] == _STRIKE_SPEC["penalty_contre_pied"][1] == 0.0
+
+
+def test_the_penalty_type_never_chooses_the_outcome():
+    """Le type ne dépend que de `event_ref` ; l'issue, elle, décide de la cible : arrêt, hors cadre, poteau et barre gardent
+    la cible d'avant B6-b (`_flight_target`), seul le BUT reçoit le placement du type."""
+    from ligue1sim.animation.templates import _flight_target, strike_type_for
+
+    for minute in (5, 23, 41, 67, 88):
+        for outcome in ("but", "arret", "hors_cadre", "poteau", "barre"):
+            sequence, event_ref = _penalty_sequence(minute, outcome=outcome)
+            assert strike_type_for("penalty", event_ref).name == strike_type_for("penalty", event_ref).name
+            target = sequence.keyframes[-1].ball
+            if outcome != "but":
+                expected = _flight_target(outcome, event_ref)
+                assert (target.x, target.y, target.z) == pytest.approx(expected)
+    # Même événement, quelle que soit l'issue : même type.
+    for minute in range(1, 40):
+        types = {strike_type_for("penalty", f"goal:Test FC:bu:{minute}").name for _ in ("but", "arret", "hors_cadre")}
+        assert len(types) == 1
+
+
+def test_penalty_ball_side_is_deterministic_and_balanced():
+    from ligue1sim.animation.templates import penalty_ball_side
+
+    refs = [f"goal:Test FC:p{i}:{i % 90 + 1}" for i in range(400)]
+    sides = [penalty_ball_side(r) for r in refs]
+    assert sides == [penalty_ball_side(r) for r in refs] and set(sides) == {1, -1}
+    assert abs(sum(1 for v in sides if v > 0) - 200) <= 40
