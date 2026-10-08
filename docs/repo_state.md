@@ -749,3 +749,25 @@ Résultat de l'essai (`HEAD` + ces 206 entrées) : `pytest tests --ignore=simula
 **Séquence mise à jour** : 3a, Lot 1, Lot 2, 3b, 3c, docstrings, Lot 4, Lot 5 et mise à jour de `PROJET_SIMULAFOOT.md` : **faits**. **Reste : entrée en Phase 5 (habillage visuel)**.
 
 **Statut** : moteur de rendu (`sequence_generator`, `ball`, `motion`, `templates`, `engine/`), mode standalone de `canvas.html` et 3c inchangés pendant toute la phase de résorption ; rien n'a été poussé.
+
+### 8.18 Fermeture de la Phase 5 (habillage visuel) — 08/10/2026
+
+**Sous-étapes de la Phase 5** (rendu `render/canvas.html`, un commit par sous-étape, baseline avant/après dans `docs/previews/phase5/`) :
+
+| Sous-étape | Commit | Contenu |
+|---|---|---|
+| 1 | `61773ab` | géométrie FIFA en mètres (`pitch_geometry.py` source unique), repère = terrain, arc de surface et arcs de coin, ticket 1 résolu dans `physics.py` |
+| 2 | `63dc7c0` | ronds à 14 px écran, numéro centré, nom du porteur, cap, ballon 6 px avec ombre ; payload enrichi (`ball.owner`, `metadata.player_names`) |
+| 3 | `9fb14ac` | pelouse à 9 bandes horizontales, bloc score compact, bandeau de lecture (buts / occasions) |
+| 4 | `392809f` | filets de but, animation au but, éclaircissement du score |
+| 4 bis | ce commit | score synchronisé avec le franchissement de la ligne |
+
+**Sous-étape 4 — filets, animation, effet score.** Un filet de 12 × 4 mailles (7,32 × 2 m, cotes de `pitch_geometry.py`) derrière chaque but, tracé avant les joueurs et le ballon ; tracé au repos mis en cache (`Path2D`). Au franchissement de la ligne : oscillation sinusoïdale amortie de 0,5 s (6 Hz, enveloppe exp(−6 t), 0,55 m). Éclaircissement du bloc score pendant 1 s (fondu 0,3 s), une fois par but. **Coût de rendu mesuré : +2,3 %** du temps de dessin par image (0,5155 → 0,5276 ms, soit ~0,07 % du budget de 16,7 ms ; une première version non mise en cache coûtait +15 %). **Détection sans enrichissement du moteur** : le franchissement se lit dans les positions existantes du ballon (clip `issue === 'but'`, x hors de [0, 1] entre les poteaux) ; il a lieu à la toute dernière image du clip, qui est donc prolongée de 1,4 s après un but avant la carte de titre.
+
+**Mini-étape bis — timing du score.** Dans un clip de but, le bloc score affiche l'ancien score (`score_before`) jusqu'à la frame de franchissement, puis le nouveau (`score_after`) à cette frame, avec la même condition (`playhead >= ev.t`) que le flash : score et éclaircissement basculent ensemble (vérifié dans le navigateur : « 1 – 0 » sans flash juste avant, « 2 – 0 » avec flash au pas suivant). Hors clip de but, comportement inchangé. Format, position, style du bloc, détection du but et durées du flash inchangés. Test de non-régression statique + cohérence du payload (un clip de but change le score d'exactement un but). Baseline : `docs/previews/phase5/sous_etape_4_bis/`.
+
+**Statut de la Phase 5.** Les 11 points du backlog du 24/09/2026 (`docs/visual_backlog.md`) sont couverts sur le canvas. Tickets : **13 ouvert** (axe de la barre de progression fixe à 0–90 min, marqueurs qui se chevauchent), **14 résolu** (orientation des bandes de tonte : horizontal conservé, décision produit), **15 ouvert** (`PitchField.jsx` : bandes perpendiculaires à la longueur, incohérentes avec `canvas.html`). Ticket 12 (sauts de trajectoire amont) toujours ouvert.
+
+**Séquence mise à jour** : Phase 5 **close**. Reste, dans cet ordre : **ticket 4** (latence et poids du payload d'animation), **ticket 2** (un expulsé peut être remplacé), puis **Phase 6** (Bloc B → A → C). *Décision produit sur l'ordre : ticket 4 avant ticket 2, car la latence affecte chaque interaction alors que le ticket 2 est un cas de bord.*
+
+**Statut** : moteur de simulation (`physics` hors correctif du ticket 1, `ball`, `motion`, `templates`, `sequence_generator`), moteur de Poisson et 3c inchangés pendant la Phase 5 ; rien n'a été poussé.

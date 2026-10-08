@@ -1,6 +1,6 @@
 # Dette connue — Simulafoot
 
-Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets ouverts (2, 3, 4, 6, 9, 10, 11, 12 et 13) n'est corrigé à ce jour.** Créé le 07/10/2026 (clôture de l'Étape B, `LineupSnapshot`) ; tickets 4 et 5 ajoutés le même jour (intégration PWA par iframe) ; ticket 5 fermé et tickets 6 à 8 ouverts le même jour (gouvernance, avant Phase 5) ; tickets 9 (`duckdb`) et 10 (couverture NLG) ajoutés le même jour (environnement de test). tickets 7 (résolu en `7309172`) et 11 (`ConnectionResetError`) traités le même jour. **État : ouverts 2, 3, 4, 6, 9, 10, 11, 12, 13 ; fermés 1 (résolu en `61773ab`, Phase 5 sous-étape 1), 14 (décision produit, bandes de tonte horizontales conservées), 5 (non reproduit), 7 (résolu en `7309172`) et 8 (résolu en `2d71e55`, vérifié sur archive propre).**
+Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets ouverts (2, 3, 4, 6, 9, 10, 11, 12, 13 et 15) n'est corrigé à ce jour.** Créé le 07/10/2026 (clôture de l'Étape B, `LineupSnapshot`) ; tickets 4 et 5 ajoutés le même jour (intégration PWA par iframe) ; ticket 5 fermé et tickets 6 à 8 ouverts le même jour (gouvernance, avant Phase 5) ; tickets 9 (`duckdb`) et 10 (couverture NLG) ajoutés le même jour (environnement de test). tickets 7 (résolu en `7309172`) et 11 (`ConnectionResetError`) traités le même jour. **État : ouverts 2, 3, 4, 6, 9, 10, 11, 12, 13, 15 ; fermés 1 (résolu en `61773ab`, Phase 5 sous-étape 1), 14 (décision produit, bandes de tonte horizontales conservées), 5 (non reproduit), 7 (résolu en `7309172`) et 8 (résolu en `2d71e55`, vérifié sur archive propre).**
 
 | # | Titre | Priorité (avant…) | Statut |
 |---|---|---|---|
@@ -18,6 +18,7 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 | 12 | Sauts de trajectoire en amont liés aux changements de segment de gabarit | Phase 7 (qualité / packaging) — priorité basse | Ouvert |
 | 13 | Axe de la barre de progression fixe à 0–90 min, marqueurs qui se chevauchent pour les clips rapprochés | Phase 7 (qualité / packaging) — priorité basse | Ouvert |
 | 14 | Orientation des bandes de tonte : horizontal (implémenté) vs perpendiculaire (backlog 24/09) | — (priorité basse) | **Résolu — décision produit**, horizontal conservé |
+| 15 | `PitchField.jsx` : bandes de tonte perpendiculaires à la longueur, incohérentes avec `canvas.html` | Phase 6 (produit / carrière) — priorité basse | Ouvert |
 
 ---
 
@@ -257,6 +258,22 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 **Priorité.** Basse.
 
 **Statut.** **Résolu — décision produit, horizontal conservé.**
+
+---
+
+## 15. `PitchField.jsx` : bandes de tonte perpendiculaires à la longueur, incohérentes avec `canvas.html`
+
+**Description.** `render/canvas.html` (animation des temps forts) dessine des bandes de tonte **parallèles aux lignes de touche** (9 bandes horizontales de 7,6 m, Phase 5 sous-étape 3, voir ticket 14). `ui/src/components/pitch/PitchField.jsx` (terrain SVG de la fiche de match) dessine 18 bandes **perpendiculaires à la longueur** du terrain, avec d'autres verts (`#2d8a4e` / `#26793f`, fond `#1c5a30`). Les deux vues d'un même match n'ont donc ni la même orientation de bandes ni la même teinte.
+
+**Reproduction.** Ouvrir la fiche d'un match joué (`PitchField.jsx`), puis cliquer sur « Voir l'animation » (`canvas.html`) et comparer les deux pelouses.
+
+**Impact.** Incohérence visuelle entre les deux vues d'un même match ; aucune conséquence fonctionnelle.
+
+**Piste.** Aligner `PitchField.jsx` sur `canvas.html` (bandes parallèles aux touches, mêmes verts), sauf décision produit contraire. Les cotes du terrain sont déjà partagées (`pitch_geometry.py` → `pitchGeometry.json`) ; les couleurs et le nombre de bandes ne le sont pas.
+
+**Priorité.** Basse, avant la Phase 6 (produit / carrière).
+
+**Statut.** Ouvert.
 
 ---
 

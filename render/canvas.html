@@ -697,10 +697,19 @@ function startPlayer(SEQUENCE_DATA, bridge) {
   const sbMinuteEl = document.getElementById('sbMinute');
   let sbKey = null;
 
-  // Bloc score : abreviations des deux clubs, score apres le clip, minute du clip. N'ecrit dans
-  // le DOM que lorsque le contenu change (pas a chaque image).
-  function updateScoreboard(clip) {
-    const [dom, ext] = clip.metadata.score_after;
+  // Score affiche : dans un clip de but, l'ANCIEN score (score_before) jusqu'a la frame de franchissement de
+  // la ligne, le NOUVEAU (score_after) a partir de cette frame -- la meme condition (playhead >= ev.t) que
+  // l'eclaircissement du bloc (updateGoalFlash), donc score et flash basculent ensemble. Hors clip de but :
+  // score_after des le debut du clip, comme avant.
+  function shownScore(clip, playhead) {
+    const events = goalEvents(clip);
+    return events.length && playhead < events[0].t ? clip.metadata.score_before : clip.metadata.score_after;
+  }
+
+  // Bloc score : abreviations des deux clubs, score synchronise avec le but (voir shownScore), minute du clip.
+  // N'ecrit dans le DOM que lorsque le contenu change (pas a chaque image).
+  function updateScoreboard(clip, playhead = 0) {
+    const [dom, ext] = shownScore(clip, playhead);
     const key = clip.metadata.home_team + '|' + clip.metadata.away_team + '|' + dom + '|' + ext + '|' + clip.metadata.minute;
     if (key === sbKey) return;
     sbKey = key;
@@ -811,7 +820,7 @@ function startPlayer(SEQUENCE_DATA, bridge) {
     }
 
     drawFrame(clip, Math.min(playhead, duration), playhead);
-    updateScoreboard(clip);
+    updateScoreboard(clip, playhead);
     updateGoalFlash(clip, playhead);
     requestAnimationFrame(tick);
   }

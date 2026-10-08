@@ -168,8 +168,8 @@ def test_pitch_has_at_least_7_mowing_stripes_in_two_close_greens():
 def test_scoreboard_shows_both_clubs_the_score_and_the_minute_in_a_fixed_compact_box():
     for element in ('id="sbHome"', 'id="sbScore"', 'id="sbAway"', 'id="sbMinute"'):
         assert element in CANVAS
-    body = CANVAS[CANVAS.index("function updateScoreboard("):]
-    body = body[: body.index("\n  }\n")]
+    # shownScore fournit le score, updateScoreboard l'écrit : on lit les deux fonctions.
+    body = CANVAS[CANVAS.index("function shownScore("):CANVAS.index("let currentIdx = 0;")]
     for source in ("clip.metadata.home_team", "clip.metadata.away_team", "clip.metadata.score_after", "clip.metadata.minute"):
         assert source in body
     for target in ("sbHomeEl.textContent", "sbScoreEl.textContent", "sbAwayEl.textContent", "sbMinuteEl.textContent"):
@@ -302,3 +302,36 @@ def test_goal_clips_of_a_real_payload_cross_the_line_between_the_posts():
     for clip in data:
         if clip["metadata"]["issue"] != "but":
             assert not crosses(clip), "un clip sans but ne doit pas franchir la ligne entre les poteaux"
+
+
+# --- Score synchronisé avec le but (Phase 5, sous-étape 4 bis) -----------------------------------------------------
+
+
+def test_scoreboard_keeps_the_old_score_until_the_crossing_frame_then_switches_with_the_flash():
+    shown = CANVAS[CANVAS.index("function shownScore("):CANVAS.index("// Bloc score : abreviations")]
+    # Avant la frame de franchissement : ancien score ; à partir de cette frame : nouveau score.
+    assert "events.length && playhead < events[0].t ? clip.metadata.score_before : clip.metadata.score_after" in shown
+    # Hors clip de but (aucun évènement) : score_after dès le début, comme avant.
+    assert "const events = goalEvents(clip);" in shown
+    assert "function updateScoreboard(clip, playhead = 0) {" in CANVAS  # sans position de lecture : début du clip
+    assert "const [dom, ext] = shownScore(clip, playhead);" in CANVAS
+    # Même frame que le flash : même position de lecture, même instant de franchissement (conditions complémentaires).
+    flash = CANVAS[CANVAS.index("function updateGoalFlash("):CANVAS.rindex("function tick(")]
+    assert "playhead >= ev.t && playhead - ev.t < GOAL_FLASH_S" in flash  # flash actif dès playhead >= ev.t
+    assert "updateScoreboard(clip, playhead);\n    updateGoalFlash(clip, playhead);" in CANVAS.replace("\r\n", "\n")  # même appel, même playhead
+    # Le temps de franchissement est celui de la détection (sous-étape 4), inchangé.
+    assert "events.push({ t: f.t, dir: side, yM: b.y * PITCH_W });" in CANVAS
+
+
+def test_goal_clips_carry_a_score_that_changes_by_exactly_one_goal():
+    import json
+
+    from narrative_player import build_clips, clips_to_json
+    from test_canvas_e2e import _MAX_OCCASIONS
+
+    timeline = _find_match_with_a_goal()
+    data = json.loads(clips_to_json(build_clips(timeline, max_occasions=_MAX_OCCASIONS), timeline))
+    for clip in data:
+        before, after = clip["metadata"]["score_before"], clip["metadata"]["score_after"]
+        delta = (after[0] - before[0]) + (after[1] - before[1])
+        assert delta == (1 if clip["metadata"]["issue"] == "but" else 0), f"clip {clip['metadata']['minute']}' : {before} -> {after}"
