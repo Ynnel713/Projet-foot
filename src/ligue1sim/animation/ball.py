@@ -179,29 +179,52 @@ def _hat_derivative(s: float) -> float:
     return 4.0 - 8.0 * s
 
 
+# --- Friction de l'air (Phase 6, Bloc B1, 08/10/2026) ------------------------------------------------
+# Un ballon libre ralentit : `dv/dt = -c·v²` (friction proportionnelle au carré de la vitesse), donc `v(d) = v0·exp(-c·d)`
+# à la distance `d` parcourue. Les trajectoires de ce module sont CINÉMATIQUES (position imposée aux keyframes, durée
+# fixée par le gabarit) : la friction est donc un reparamétrage du temps le long de la trajectoire,
+#     p(s) = ln(1 + (e^{cD} - 1)·s) / (cD),    p(0) = 0, p(1) = 1 (arrivée exacte), p'(s) = ((e^{cD}-1)/(cD)) / (1 + (e^{cD}-1)·s)
+# qui donne un ballon plus rapide au départ qu'à l'arrivée (rapport v_fin / v_début = e^{-cD}) sans changer les positions
+# imposées. La vitesse INITIALE d'un segment est celle de la frappe (v0 = v_moyenne · cD / (1 - e^{-cD})) : elle n'est pas
+# réduite, seule la suite du vol ralentit.
+# Coefficient : 5 % de perte de vitesse par seconde à 15 m/s (c·v = 0,05 -> c = 0,05 / 15 = 0,0033 /m, valeur de
+# l'architecte) ; la perte relative est proportionnelle à la vitesse (~1 %/s à 3 m/s, ~11 %/s à 34 m/s), jamais nulle.
+# Bornes : la décélération relative initiale ne dépasse pas `AIR_DRAG_MAX_RATE_PER_S`, et un segment cinématique ne
+# perd jamais plus de la moitié de sa vitesse (`AIR_DRAG_MIN_SPEED_RATIO`).
+# Les déplacements MESURÉS dans ce module (conduite `shot`, `pass_ground`, `cross`, `deflect`, `pass_lob`,
+# `ball_flight`, rebonds) utilisent tous cette loi ; la hauteur `z` reste fonction du temps (la gravité n'est pas freinée).
+AIR_DRAG_PER_M = 0.05 / 15.0
+AIR_DRAG_MAX_RATE_PER_S = 0.30
+AIR_DRAG_MIN_SPEED_RATIO = 0.50
+
+
+def _segment_drag(distance_m: float) -> float:
+    """Coefficient effectif (1/m) d'un segment cinématique de `distance_m` mètres : `AIR_DRAG_PER_M`, borné pour que
+    v_fin / v_début >= `AIR_DRAG_MIN_SPEED_RATIO`."""
+    if distance_m <= 1e-9:
+        return 0.0
+    return min(AIR_DRAG_PER_M, math.log(1.0 / AIR_DRAG_MIN_SPEED_RATIO) / distance_m)
+
+
+def _drag_progress(s: float, distance_m: float) -> tuple[float, float]:
+    """(p(s), p'(s)) : progression le long du segment avec friction de l'air (voir ci-dessus). `p'(s)` multiplie la
+    vitesse moyenne `distance / durée` pour obtenir la vitesse instantanée."""
+    cd = _segment_drag(distance_m) * distance_m
+    if cd < 1e-12:
+        return s, 1.0
+    a = math.expm1(cd)
+    return math.log1p(a * s) / cd, (a / cd) / (1.0 + a * s)
+
+
 # --- pass_ground -----------------------------------------------------------
-# Quasi linéaire, freinage léger : la vitesse finale est `_BRAKE_RATIO` fois
-# la vitesse initiale (5% de moins, valeur donnée par Olivier). Modèle
-# fermé : progress(s) = (1+k)s - k*s^2 avec k choisi pour que
-# progress'(1)/progress'(0) = _BRAKE_RATIO -- garantit progress(0)=0,
-# progress(1)=1 (arrivée exacte) quel que soit k.
-_BRAKE_RATIO = 0.95  # vitesse finale / vitesse initiale (freinage de 5%)
-_BRAKE_K = (1.0 - _BRAKE_RATIO) / (1.0 + _BRAKE_RATIO)
-
-
-def _pass_ground_progress(s: float) -> float:
-    return (1.0 + _BRAKE_K) * s - _BRAKE_K * s * s
-
-
-def _pass_ground_progress_derivative(s: float) -> float:
-    return (1.0 + _BRAKE_K) - 2.0 * _BRAKE_K * s
+# Trajectoire droite au sol qui ralentit avec la friction de l'air (`_drag_progress`) : ancien freinage fixe de 5 %
+# (valeur donnée par Olivier) remplacé le 08/10/2026 par une perte qui dépend de la distance parcourue.
 
 
 def _behavior_pass_ground(start: tuple[float, float], end: tuple[float, float], s: float, duration: float) -> BallState:
-    progress = _pass_ground_progress(s)
+    progress, dprogress_ds = _drag_progress(s, _real_distance_m(start, end))
     x = start[0] + (end[0] - start[0]) * progress
     y = start[1] + (end[1] - start[1]) * progress
-    dprogress_ds = _pass_ground_progress_derivative(s)
     vx = (end[0] - start[0]) * dprogress_ds / duration
     vy = (end[1] - start[1]) * dprogress_ds / duration
     return BallState(x=x, y=y, z=0.0, spin=0.0, owner_id=None, vx=vx, vy=vy, vz=0.0)
@@ -230,11 +253,12 @@ def _lob_height_max_m(distance_m: float) -> float:
 def _behavior_pass_lob(start: tuple[float, float], end: tuple[float, float], s: float, duration: float) -> BallState:
     distance_m = _real_distance_m(start, end)
     height_max = _lob_height_max_m(distance_m)
-    x = start[0] + (end[0] - start[0]) * s
-    y = start[1] + (end[1] - start[1]) * s
+    progress, dprogress_ds = _drag_progress(s, distance_m)
+    x = start[0] + (end[0] - start[0]) * progress
+    y = start[1] + (end[1] - start[1]) * progress
     z = height_max * _hat(s)
-    vx = (end[0] - start[0]) / duration
-    vy = (end[1] - start[1]) / duration
+    vx = (end[0] - start[0]) * dprogress_ds / duration
+    vy = (end[1] - start[1]) * dprogress_ds / duration
     vz = height_max * _hat_derivative(s) / duration
     return BallState(x=x, y=y, z=z, spin=0.0, owner_id=None, vx=vx, vy=vy, vz=vz)
 
@@ -292,16 +316,17 @@ def _behavior_shot(
     offset_x = (offset_m / PITCH_LENGTH_M) * px
     offset_y = (offset_m / PITCH_WIDTH_M) * py
 
-    base_x = start[0] + (end[0] - start[0]) * s
-    base_y = start[1] + (end[1] - start[1]) * s
+    progress, dprogress_ds = _drag_progress(s, distance_m)
+    base_x = start[0] + (end[0] - start[0]) * progress
+    base_y = start[1] + (end[1] - start[1]) * progress
     x = base_x + offset_x
     y = base_y + offset_y
 
     height_max = _shot_height_max_m(distance_m)
     z = height_max * _hat(s)
 
-    vx = (end[0] - start[0]) / duration + (curve_peak_m / PITCH_LENGTH_M) * px * _hat_derivative(s) / duration
-    vy = (end[1] - start[1]) / duration + (curve_peak_m / PITCH_WIDTH_M) * py * _hat_derivative(s) / duration
+    vx = (end[0] - start[0]) * dprogress_ds / duration + (curve_peak_m / PITCH_LENGTH_M) * px * _hat_derivative(s) / duration
+    vy = (end[1] - start[1]) * dprogress_ds / duration + (curve_peak_m / PITCH_WIDTH_M) * py * _hat_derivative(s) / duration
     vz = height_max * _hat_derivative(s) / duration
     return BallState(x=x, y=y, z=z, spin=spin, owner_id=None, vx=vx, vy=vy, vz=vz)
 
@@ -348,13 +373,14 @@ def _behavior_cross(
     control_x = (start[0] + end[0]) / 2.0 + (lateral_m / PITCH_LENGTH_M) * px
     control_y = (start[1] + end[1]) / 2.0 + (lateral_m / PITCH_WIDTH_M) * py
 
-    one_minus_s = 1.0 - s
-    x = one_minus_s * one_minus_s * start[0] + 2 * one_minus_s * s * control_x + s * s * end[0]
-    y = one_minus_s * one_minus_s * start[1] + 2 * one_minus_s * s * control_y + s * s * end[1]
-    dx_ds = 2 * one_minus_s * (control_x - start[0]) + 2 * s * (end[0] - control_x)
-    dy_ds = 2 * one_minus_s * (control_y - start[1]) + 2 * s * (end[1] - control_y)
-    vx = dx_ds / duration
-    vy = dy_ds / duration
+    progress, dprogress_ds = _drag_progress(s, distance_m)  # le paramètre de la courbe suit la friction de l'air
+    one_minus_s = 1.0 - progress
+    x = one_minus_s * one_minus_s * start[0] + 2 * one_minus_s * progress * control_x + progress * progress * end[0]
+    y = one_minus_s * one_minus_s * start[1] + 2 * one_minus_s * progress * control_y + progress * progress * end[1]
+    dx_du = 2 * one_minus_s * (control_x - start[0]) + 2 * progress * (end[0] - control_x)
+    dy_du = 2 * one_minus_s * (control_y - start[1]) + 2 * progress * (end[1] - control_y)
+    vx = dx_du * dprogress_ds / duration
+    vy = dy_du * dprogress_ds / duration
 
     height_max = _CROSS_HEIGHT_MIN_M + (_CROSS_HEIGHT_MAX_M - _CROSS_HEIGHT_MIN_M) * _deterministic_unit(seed_key, "cross_height")
     z = height_max * _hat(s)
@@ -424,13 +450,14 @@ def _behavior_deflect(
     bump = _deflect_bump(s)
     bump_d = _deflect_bump_derivative(s)
 
-    base_x = start[0] + (end[0] - start[0]) * s
-    base_y = start[1] + (end[1] - start[1]) * s
+    progress, dprogress_ds = _drag_progress(s, distance_m)
+    base_x = start[0] + (end[0] - start[0]) * progress
+    base_y = start[1] + (end[1] - start[1]) * progress
     x = base_x + (amplitude_m / PITCH_LENGTH_M) * px * bump
     y = base_y + (amplitude_m / PITCH_WIDTH_M) * py * bump
 
-    vx = (end[0] - start[0]) / duration + (amplitude_m / PITCH_LENGTH_M) * px * bump_d / duration
-    vy = (end[1] - start[1]) / duration + (amplitude_m / PITCH_WIDTH_M) * py * bump_d / duration
+    vx = (end[0] - start[0]) * dprogress_ds / duration + (amplitude_m / PITCH_LENGTH_M) * px * bump_d / duration
+    vy = (end[1] - start[1]) * dprogress_ds / duration + (amplitude_m / PITCH_WIDTH_M) * py * bump_d / duration
     return BallState(x=x, y=y, z=0.0, spin=0.0, owner_id=None, vx=vx, vy=vy, vz=0.0)
 
 
@@ -445,24 +472,27 @@ def _behavior_deflect(
 #   plus haut (0,8 -> 36 % de perte), le ballon « rebondit comme une balle de tennis ».
 # - Friction horizontale 15 % par rebond : le contact avec l'herbe freine la composante horizontale (frottement
 #   tangentiel) ; 10 à 20 % est la fourchette donnée, 15 % en est le milieu.
-# - Arrêt : un rebond dont le sommet est sous 5 cm est supprimé, le ballon roule ensuite avec une décélération
-#   constante de 2,5 m/s² (herbe sèche, 1,5 à 3). Durée totale bornée à 3 s (le clip est un temps fort, pas un match).
-#   LIMITE MESURÉE : sans frottement de l'air (levier B1, étape suivante), le ballon n'est pas encore à l'arrêt à 3 s
-#   (il lui faut 6 à 7 s et 45 à 57 m) : le clip est coupé à 3 s, ballon encore en mouvement.
+# - Arrêt (réglé en B1, 08/10/2026) : un rebond dont le sommet est sous 15 cm est supprimé (5 cm en B2) ; le ballon roule
+#   ensuite avec une décélération constante de 4 m/s² (2,5 en B2). Durée totale bornée à 5 s (3 s en B2).
+#   Mesuré (12 gabarits x 40 événements, friction de l'air de B1 comprise) : l'arrêt vient APRÈS LE PREMIER REBOND en
+#   3,6 s (poteau) et 4,3 s (barre) en moyenne, contre 5,4 et 5,6 s sans friction. La friction de l'air seule ne suffit
+#   pas (-8 %) : la durée est portée par la série de rebonds verticaux (restitution 0,70), qu'elle ne freine pas.
+#   Le seuil de 15 cm ramène la barre de 6 à 4-5 rebonds ; un rebond de moins de 15 cm lève le ballon de moins d'1 px.
 # - Poteau : réflexion horizontale (cylindre vertical, `vz` conservé) ; barre : normale inclinée de 5 à 15° sous
 #   l'horizontale côté terrain, donc le ballon repart vers le bas ET vers le terrain, jamais derrière la ligne
 #   (une réflexion purement verticale lui laisserait sa vitesse vers l'avant).
 # - Aléa D8 : l'angle de sortie vient de la géométrie (écart du point d'impact au centre du montant, angle
 #   d'incidence) ; un aléa borné de +-10° sur l'azimut de sortie, déterministe par `event_ref`, s'y ajoute.
 # - Planches de publicité : le ballon est arrêté à 3 m des lignes (coordonnées bornées, vitesse annulée).
+# - Friction de l'air (B1) : vols balistiques freinés horizontalement par `dv/dt = -c·v²` (voir `AIR_DRAG_PER_M`).
 GRAVITY_M_S2 = 9.81
 GROUND_RESTITUTION = 0.70
 GROUND_HORIZONTAL_KEEP = 0.85  # -15 % de vitesse horizontale par rebond au sol
 POST_RESTITUTION = 0.70
 BAR_RESTITUTION = 0.70
-REBOUND_MIN_APEX_M = 0.05
-ROLL_DECEL_M_S2 = 2.5
-REBOUND_MAX_DURATION_S = 3.0
+REBOUND_MIN_APEX_M = 0.15
+ROLL_DECEL_M_S2 = 4.0
+REBOUND_MAX_DURATION_S = 5.0
 REBOUND_AZIMUTH_JITTER_DEG = 10.0
 SURFACE_POST = "post"
 SURFACE_BAR = "bar"
@@ -493,12 +523,24 @@ class _Arc:
     p0: tuple[float, float, float]
     v0: tuple[float, float, float]
     kind: str  # "flight" | "roll"
+    drag: float = 0.0  # coefficient de friction de l'air (1/m) de ce vol, voir `_arc_drag`
 
     def at(self, tau: float) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
         tau = min(max(tau, 0.0), self.duration)
         x0, y0, z0 = self.p0
         vx, vy, vz = self.v0
         if self.kind == "flight":
+            # Vitesse horizontale freinée par l'air (dv/dt = -c·v²) : h(τ) = h0 / (1 + c·h0·τ), distance
+            # ln(1 + c·h0·τ) / c ; la composante verticale ne subit que la gravité.
+            h0 = math.hypot(vx, vy)
+            if self.drag > 0.0 and h0 > 1e-12:
+                distance = math.log1p(self.drag * h0 * tau) / self.drag
+                speed = h0 / (1.0 + self.drag * h0 * tau)
+                ux, uy = vx / h0, vy / h0
+                return (
+                    (x0 + ux * distance, y0 + uy * distance, z0 + vz * tau - 0.5 * GRAVITY_M_S2 * tau * tau),
+                    (ux * speed, uy * speed, vz - GRAVITY_M_S2 * tau),
+                )
             return (
                 (x0 + vx * tau, y0 + vy * tau, z0 + vz * tau - 0.5 * GRAVITY_M_S2 * tau * tau),
                 (vx, vy, vz - GRAVITY_M_S2 * tau),
@@ -609,6 +651,14 @@ def rebound_exit_velocity(
     return out_x, out_y, out_z
 
 
+def _arc_drag(horizontal_speed: float) -> float:
+    """Coefficient de friction d'un vol : `AIR_DRAG_PER_M`, borné pour que la perte relative de vitesse initiale ne
+    dépasse pas `AIR_DRAG_MAX_RATE_PER_S`."""
+    if horizontal_speed <= 1e-9:
+        return 0.0
+    return min(AIR_DRAG_PER_M, AIR_DRAG_MAX_RATE_PER_S / horizontal_speed)
+
+
 def _simulate_rebound(
     p0: tuple[float, float, float], v0: tuple[float, float, float]
 ) -> tuple[tuple[_Arc, ...], int, tuple[float, ...]]:
@@ -623,14 +673,17 @@ def _simulate_rebound(
     while True:
         remaining = REBOUND_MAX_DURATION_S - t
         fall_time = (vz + math.sqrt(vz * vz + 2.0 * GRAVITY_M_S2 * z)) / GRAVITY_M_S2
+        drag = _arc_drag(math.hypot(vx, vy))
         if fall_time >= remaining:
             # Le prochain arc ne tient pas dans la durée maximale : le rebond s'arrête au dernier contact avec le
-            # sol (ballon au sol, encore en mouvement -- voir LIMITE MESURÉE plus haut), jamais coupé en plein vol.
+            # sol (ballon au sol, encore en mouvement), jamais coupé en plein vol.
             if not arcs:
-                arcs.append(_Arc(t, remaining, (x, y, z), (vx, vy, vz), "flight"))
+                arcs.append(_Arc(t, remaining, (x, y, z), (vx, vy, vz), "flight", drag))
             return tuple(arcs), ground_contacts, tuple(apexes)
-        arcs.append(_Arc(t, fall_time, (x, y, z), (vx, vy, vz), "flight"))
-        x, y, t = x + vx * fall_time, y + vy * fall_time, t + fall_time
+        arc = _Arc(t, fall_time, (x, y, z), (vx, vy, vz), "flight", drag)
+        arcs.append(arc)
+        (x, y, _), (vx, vy, _) = arc.at(fall_time)
+        t += fall_time
         impact_vz = vz - GRAVITY_M_S2 * fall_time
         ground_contacts += 1
         z, vz = 0.0, -GROUND_RESTITUTION * impact_vz
@@ -689,7 +742,7 @@ def _surface_from_contact(contact_state: BallState) -> str:
 
 
 # Rebond d'un ballon qui retombe sur le sol (centre de corner : `cross` puis `deflect`) : seule la HAUTEUR rebondit
-# (restitution 0,70, arrêt sous 5 cm de sommet), la trajectoire x/y du `deflect` est inchangée.
+# (restitution 0,70, arrêt sous `REBOUND_MIN_APEX_M` de sommet), la trajectoire x/y du `deflect` est inchangée.
 def _landing_speed_m_s(sequence: Sequence, kf_a: Keyframe) -> float | None:
     idx = next((i for i, kf in enumerate(sequence.keyframes) if kf is kf_a), 0)
     if idx == 0:
@@ -702,7 +755,7 @@ def _landing_speed_m_s(sequence: Sequence, kf_a: Keyframe) -> float | None:
 
 
 def _vertical_bounce(landing_speed_m_s: float, tau: float, horizon: float) -> tuple[float, float]:
-    """(z, vz) `tau` s après l'atterrissage à `landing_speed_m_s` : rebonds successifs jusqu'à un sommet < 5 cm, ou
+    """(z, vz) `tau` s après l'atterrissage à `landing_speed_m_s` : rebonds successifs jusqu'à un sommet < `REBOUND_MIN_APEX_M`, ou
     jusqu'à ce que le dernier arc ne tienne plus dans `horizon` (le ballon est alors au sol à la fin du segment)."""
     t0 = 0.0
     vz_up = GROUND_RESTITUTION * landing_speed_m_s

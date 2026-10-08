@@ -11,6 +11,8 @@ from ligue1sim.animation.ball import (
     GRAVITY_M_S2,
     GROUND_HORIZONTAL_KEEP,
     GROUND_RESTITUTION,
+    AIR_DRAG_MIN_SPEED_RATIO,
+    AIR_DRAG_PER_M,
     PASS_GROUND,
     PASS_LOB,
     REBOUND_AZIMUTH_JITTER_DEG,
@@ -19,6 +21,7 @@ from ligue1sim.animation.ball import (
     SHOT,
     SURFACE_BAR,
     SURFACE_POST,
+    _drag_progress,
     _find_ball_segment,
     _real_distance_m,
     _resolve_physics_tag,
@@ -152,7 +155,11 @@ class TestPassGroundBehavior:
         speed_start = _speed(ball_state_at(sequence, 0.0))
         speed_end = _speed(ball_state_at(sequence, sequence.duration - 1e-6))
         assert speed_end < speed_start
-        assert speed_end / speed_start == pytest.approx(0.95, abs=0.01)
+        # B1 (08/10/2026) : le freinage fixe de 5 % est remplacé par la friction de l'air, v_fin / v_début = exp(-c·D)
+        # (84 m sur cette fixture : la borne de 50 % s'applique).
+        distance_m = 0.8 * PITCH_LENGTH_M
+        expected = max(math.exp(-AIR_DRAG_PER_M * distance_m), AIR_DRAG_MIN_SPEED_RATIO)
+        assert speed_end / speed_start == pytest.approx(expected, abs=0.01)
 
 
 class TestPassLobBehavior:
@@ -889,7 +896,9 @@ class TestReboundsAfterFlight:
                 trajectory = _rebound(gabarit, outcome)
                 flights = [arc for arc in trajectory.arcs if arc.kind == "flight"]
                 for before, after in zip(flights, flights[1:]):
-                    speed_before = math.hypot(before.v0[0], before.v0[1])
+                    # vitesse horizontale à l'ATTERRISSAGE (après la friction de l'air du vol), avant le contact
+                    landing = before.at(before.duration)[1]
+                    speed_before = math.hypot(landing[0], landing[1])
                     speed_after = math.hypot(after.v0[0], after.v0[1])
                     assert speed_after == pytest.approx(speed_before * GROUND_HORIZONTAL_KEEP, rel=1e-9)
                     checked += 1
@@ -1002,3 +1011,95 @@ class TestBounceTagAndLandingBounce:
     def test_a_deflect_that_does_not_follow_an_airborne_segment_stays_on_the_ground(self):
         sequence = _sequence(physics_tag=DEFLECT, start=(0.3, 0.5), end=(0.5, 0.5), duration=3.0)
         assert all(ball_state_at(sequence, 3.0 * k / 60).z == 0.0 for k in range(61))
+
+
+# --- Phase 6, Bloc B1 (08/10/2026) : friction de l'air ----------------------------------------------
+# dv/dt = -c·v² (5 % de perte par seconde à 15 m/s) : v(d) = v0·exp(-c·d). Les segments cinématiques gardent leurs
+# positions imposées (arrivée exacte) : la friction reparamètre le temps le long de la trajectoire.
+
+
+class TestAirDrag:
+    def test_progress_starts_at_zero_ends_at_one_and_is_monotonic(self):
+        for distance_m in (0.5, 5.0, 20.0, 60.0, 300.0):
+            values = [_drag_progress(k / 100, distance_m)[0] for k in range(101)]
+            assert values[0] == 0.0 and values[-1] == pytest.approx(1.0, abs=1e-12)
+            assert all(b > a for a, b in zip(values, values[1:]))
+
+    def test_progress_derivative_matches_a_finite_difference(self):
+        for distance_m in (3.0, 25.0, 80.0):
+            for s in (0.05, 0.4, 0.9):
+                h = 1e-6
+                numeric = (_drag_progress(s + h, distance_m)[0] - _drag_progress(s - h, distance_m)[0]) / (2 * h)
+                assert _drag_progress(s, distance_m)[1] == pytest.approx(numeric, rel=1e-5)
+
+    def test_speed_ratio_is_exp_minus_c_times_distance_and_never_below_the_bound(self):
+        for distance_m in (2.0, 10.0, 30.0, 60.0, 200.0):
+            ratio = _drag_progress(1.0, distance_m)[1] / _drag_progress(0.0, distance_m)[1]
+            expected = max(math.exp(-AIR_DRAG_PER_M * distance_m), AIR_DRAG_MIN_SPEED_RATIO)
+            assert ratio == pytest.approx(expected, rel=1e-9)
+            assert ratio >= AIR_DRAG_MIN_SPEED_RATIO - 1e-12
+
+    def test_ground_pass_slows_down_progressively_without_a_jolt(self):
+        # Passe de 33 m en 2,4 s (le gabarit `profondeur_1v1` en a une de cet ordre).
+        sequence = _sequence(physics_tag=PASS_GROUND, start=(0.2, 0.5), end=(0.2 + 33.0 / PITCH_LENGTH_M, 0.5), duration=2.4)
+        speeds = [_speed(ball_state_at(sequence, 2.4 * k / 60)) for k in range(61)]
+        assert all(b < a for a, b in zip(speeds, speeds[1:])), "la vitesse doit décroître à chaque pas"
+        assert max(a - b for a, b in zip(speeds, speeds[1:])) < 0.02 * speeds[0]  # aucun à-coup
+        assert 0.5 * speeds[0] <= speeds[-1] < speeds[0]  # arrive vivant, pas mort
+
+    def test_air_friction_also_acts_at_low_speed(self):
+        # Passe lente : 6 m en 3 s (2 m/s de moyenne) -- nettement sous les 15 m/s de référence.
+        sequence = _sequence(physics_tag=PASS_GROUND, start=(0.3, 0.5), end=(0.3 + 6.0 / PITCH_LENGTH_M, 0.5), duration=3.0)
+        start, end = _speed(ball_state_at(sequence, 0.0)), _speed(ball_state_at(sequence, 3.0))
+        assert end < start
+        assert end / start == pytest.approx(math.exp(-AIR_DRAG_PER_M * 6.0), rel=1e-3)
+        # ... et un vol de rebond à 3 m/s ralentit aussi.
+        arc = _rebound("construction_placee", "poteau").arcs[0]
+        slow = dataclasses.replace(arc, v0=(3.0, 0.0, 5.0), drag=AIR_DRAG_PER_M)
+        assert math.hypot(*slow.at(1.0)[1][:2]) < 3.0
+
+    def test_initial_phase_of_a_shot_keeps_its_energy_and_barely_moves(self):
+        """Phase de vol avant le premier contact : la vitesse initiale (frappe) n'est pas réduite et la position à 10 %
+        du vol reste à moins de 1 % de la distance de ce qu'elle serait sans friction."""
+        distance_m = 14.5
+        start = (0.85, 0.5)
+        end = (0.85 + distance_m / PITCH_LENGTH_M, 0.5)
+        sequence = _sequence(physics_tag=BALL_FLIGHT, start=start, end=end, duration=0.43)
+        average_speed = distance_m / 0.43
+        initial = ball_state_at(sequence, 0.0)
+        assert average_speed <= _speed(initial) <= average_speed * 1.05  # énergie initiale conservée (et un peu plus)
+        t = 0.043  # 10 % du vol
+        with_drag = ball_state_at(sequence, t)
+        straight = start[0] + (end[0] - start[0]) * (t / 0.43)
+        assert abs(with_drag.x - straight) * PITCH_LENGTH_M < 0.01 * distance_m
+
+    def test_ball_stops_in_about_four_seconds_after_the_first_bounce(self):
+        """Après un impact sur le poteau ou la barre, le ballon s'arrête en moyenne en moins de 4,5 s après son premier
+        contact avec le sol (objectif 3 à 4 s ; sans friction : 5,4 à 5,6 s), et finit immobile au sol."""
+        for outcome in ("poteau", "barre"):
+            after_first_bounce = []
+            for gabarit in _REBOUND_GABARITS:
+                for minute in (3, 11, 19, 27, 35, 43, 51, 59):
+                    trajectory = _rebound(gabarit, outcome, minute)
+                    after_first_bounce.append(trajectory.duration - trajectory.arcs[0].duration)
+                    end = trajectory.state_at(trajectory.duration)
+                    assert end.z == 0.0
+                    last = trajectory.arcs[-1]
+                    if last.kind == "roll" and last.t0 + last.duration < REBOUND_MAX_DURATION_S - 1e-9:
+                        # le roulement est allé jusqu'au bout (pas coupé par le plafond) : le ballon est immobile
+                        assert math.hypot(end.vx * PITCH_LENGTH_M, end.vy * PITCH_WIDTH_M) < 1e-6
+            assert sum(after_first_bounce) / len(after_first_bounce) < 4.5, outcome
+            assert max(after_first_bounce) < REBOUND_MAX_DURATION_S
+
+    def test_drag_shortens_the_rebound_compared_to_no_drag(self, monkeypatch):
+        import ligue1sim.animation.ball as ball_module
+
+        monkeypatch.setattr(ball_module, "REBOUND_MAX_DURATION_S", 60.0)  # sans plafond : durée naturelle
+
+        def total(outcome):
+            return sum(_rebound(g, outcome, 20).duration for g in _REBOUND_GABARITS)
+
+        with_drag = {outcome: total(outcome) for outcome in ("poteau", "barre")}
+        monkeypatch.setattr(ball_module, "AIR_DRAG_PER_M", 0.0)
+        without_drag = {outcome: total(outcome) for outcome in ("poteau", "barre")}
+        assert all(with_drag[outcome] < without_drag[outcome] for outcome in with_drag)

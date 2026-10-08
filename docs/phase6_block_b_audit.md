@@ -1,6 +1,6 @@
 # Phase 6, Bloc B — Audit de la physique du ballon
 
-Document de référence du **08/10/2026**, sur `HEAD` = `e63d6f0`. **Audit seulement : aucune ligne de code n'a été modifiée.** *Mise à jour du 08/10/2026 : **B2 (rebonds) est terminé**, voir le §5 ; les §0 à §4 décrivent l'état avant B2.* Les mesures viennent de scripts jetables, hors dépôt, qui appellent `ball_state_at` sur les 12 gabarits réels (helpers déterministes de `tests/test_narrative_player.py`, compo fixe) pour les issues `but`, `arret`, `poteau`, `barre`, `hors_cadre`, `tacle` et `degagement`.
+Document de référence du **08/10/2026**, sur `HEAD` = `e63d6f0`. **Audit seulement : aucune ligne de code n'a été modifiée.** *Mise à jour du 08/10/2026 : **B2 (rebonds) est terminé**, voir le §5, puis **B1 (décélération)**, voir le §6 ; les §0 à §4 décrivent l'état avant B2.* Les mesures viennent de scripts jetables, hors dépôt, qui appellent `ball_state_at` sur les 12 gabarits réels (helpers déterministes de `tests/test_narrative_player.py`, compo fixe) pour les issues `but`, `arret`, `poteau`, `barre`, `hors_cadre`, `tacle` et `degagement`.
 
 ## 0. Méthode et limites
 
@@ -199,3 +199,99 @@ Cela contredit « la trajectoire existante ne change pas » et « seul l'ajout d
 ### 5.7 Statut
 
 **B2 terminé.** Prochaine étape de la séquence : B1 (décélération, friction de l'air).
+
+
+## 6. B1 — Décélération (friction de l'air), terminé le 08/10/2026
+
+**Pourquoi B1.** B2 a mesuré que, sans friction de l'air, le ballon n'était pas à l'arrêt à 3 s après un impact (il lui fallait 6 à 7 s et 45 à 57 m). B1 ajoute la friction de l'air à toute la physique du ballon. Fichiers modifiés : `ball.py` et `tests/test_ball.py` ; `templates.py`, `canvas.html`, le moteur sportif et 3c sont intacts.
+
+### 6.1 Formule retenue
+
+Friction proportionnelle au carré de la vitesse : `dv/dt = −c·v²`, soit `v(d) = v0·exp(−c·d)` à la distance `d` parcourue.
+
+| Paramètre | Valeur | Justification |
+|---|---|---|
+| `AIR_DRAG_PER_M` (c) | **0,05 / 15 = 0,0033 /m** | 5 % de perte de vitesse par seconde à 15 m/s (valeur de l'architecte) ; la perte relative `c·v` vaut ~1 %/s à 3 m/s et ~11 %/s à 34 m/s : jamais nulle, plus forte quand le ballon va vite |
+| `AIR_DRAG_MAX_RATE_PER_S` | 0,30 | borne : la perte relative initiale d'un vol ne dépasse jamais 30 %/s |
+| `AIR_DRAG_MIN_SPEED_RATIO` | 0,50 | borne : un segment ne perd jamais plus de la moitié de sa vitesse |
+
+**Application.** Les trajectoires de `ball.py` sont cinématiques (positions imposées aux keyframes, durée fixée par le gabarit). La friction y est un **reparamétrage du temps** le long de la trajectoire, `p(s) = ln(1 + (e^{cD} − 1)·s) / (cD)`, qui garde `p(0) = 0` et `p(1) = 1` (arrivée exacte) : le ballon part plus vite qu'il n'arrive (rapport `e^{−cD}`). La vitesse initiale n'est pas réduite : `v0 = v_moyenne · cD / (1 − e^{−cD})`, un peu au-dessus de la moyenne. Elle s'applique à `pass_ground` (qui remplace l'ancien freinage fixe de 5 %), `pass_lob`, `shot` (la conduite), `cross`, `deflect` et `ball_flight`. Dans les rebonds, les vols balistiques sont freinés horizontalement (`h(τ) = h0 / (1 + c·h0·τ)`) ; la composante verticale ne subit que la gravité.
+
+### 6.2 Ce que la friction de l'air seule ne règle pas (écarts à la consigne)
+
+L'objectif « arrêt en 3 à 4 s après le premier rebond » **n'est pas atteignable par la friction seule** : la durée est portée par la série de rebonds **verticaux** (restitution 0,70), que la friction horizontale ne freine pas. Mesure (12 gabarits × 40 événements, poteau et barre, sans plafond de durée) :
+
+| Réglage | Arrêt après le 1er rebond (poteau / barre, moyenne) |
+|---|---|
+| B2, sans friction de l'air | 5,42 / 5,60 s |
+| friction de l'architecte (c = 0,0033) | 4,97 / 5,18 s (−8 %) |
+| friction physique réelle (c = 0,0133, ~27 %/s à 20 m/s) | 4,19 / 4,44 s |
+| friction de l'architecte + roulement 4 m/s² | 3,80 / 4,35 s |
+| + seuil de rebond 15 cm | 3,91 / 4,34 s, rebonds 3,4 / 4,5 en moyenne |
+
+Trois réglages **non validés par l'architecte** ont donc été changés dans `ball.py`, pour approcher l'objectif ; chacun se revient d'une constante :
+
+| Constante | B2 | B1 | Raison |
+|---|---|---|---|
+| `ROLL_DECEL_M_S2` | 2,5 | **4,0** | seul levier restant sur la phase de roulement (valeur de jeu, plus forte que le roulement réel de l'herbe) |
+| `REBOUND_MIN_APEX_M` | 0,05 | **0,15** | sans cela la barre fait 6 à 7 rebonds (objectif 2 à 5) ; un rebond de moins de 15 cm lève le ballon de moins d'1 px à l'écran. La durée n'en dépend presque pas (mesuré : 4,35 → 4,34 s) |
+| `REBOUND_MAX_DURATION_S` | 3,0 | **5,0** | à 3 s, le ballon était encore en mouvement dans 131 clips sur 131 ; à 5 s, 88 sur 131 sont à l'arrêt |
+
+Le seuil de 5 cm de l'architecte (B2) et l'objectif « 2 à 5 rebonds » se contredisent dès que le ballon va loin ; B1 retient l'objectif mesurable.
+
+### 6.3 Mesures avant / après (graines 1 à 100, 131 clips d'issue `poteau`)
+
+| Mesure | Avant (état B2) | Après (B1) |
+|---|---|---|
+| Arrêt après le 1er rebond (moyenne / médiane / p90 / max) | 2,26 / 2,36 / 2,74 / 2,96 s (**clip coupé à 3 s**, ballon en mouvement dans 131 clips sur 131) | **3,76 / 3,88 / 4,38 / 4,96 s** (clip coupé à 5 s, ballon en mouvement dans 43 clips sur 131) |
+| Rebonds au sol (min / moy / max) | 1 / 3,8 / 5 | 1 / 3,1 / 5 |
+| Durée totale du rebond | 2,91 s | 4,41 s |
+| Sommet moyen du 1er rebond | 0,68 m | 0,67 m |
+| Arrêt à (depuis le contact) | 38,4 m | 39,5 m |
+
+**Les chiffres « avant » ne sont pas comparables tels quels** : le plafond de 3 s de B2 coupait le rebond avant son arrêt naturel (mesuré sans plafond : 5,4 à 5,6 s). La comparaison à plafond égal est celle du tableau du §6.2.
+
+**5 clips témoins** (avant → après) :
+
+| Clip | Gabarit | Arrêt après le 1er rebond | Rebonds | Durée totale | Vitesse à la fin |
+|---|---|---|---|---|---|
+| 1:8 | `une_deux` | 2,58 → 2,61 s | 4 → 3 | 3,00 → 3,04 s | 2,8 → 0,0 m/s |
+| 1:11 | `recuperation_haute` | 1,66 → 4,08 s | 3 → 4 | 2,58 → 5,00 s | 18,1 → 2,6 m/s |
+| 2:0 | `decalage_enroulee` | 2,85 → 2,79 s | 1 → 1 | 3,00 → 2,94 s | 4,5 → 0,0 m/s |
+| 2:1 | `debordement_centre_tete` | 2,22 → 4,22 s | 5 → 4 | 3,00 → 5,00 s | 8,0 → 1,4 m/s |
+| 3:1 | `decalage_enroulee` | 2,82 → 4,82 s | 2 → 1 | 3,00 → 5,00 s | 0,5 → 0,0 m/s |
+
+**Passe au sol** (vitesse départ / mi-course / arrivée, m/s ; avant → après) :
+
+| Clip | Passe | Avant | Après | Arrivée / départ |
+|---|---|---|---|---|
+| 1:0 | 33,6 m en 3,60 s | 9,56 / 9,32 / 9,08 | 9,86 / 9,31 / 8,82 | 0,89 |
+| 1:1 | 28,1 m en 3,20 s | 9,02 / 8,79 / 8,57 | 9,22 / 8,79 / 8,39 | 0,91 |
+| 1:3 | 34,6 m en 1,50 s | 23,64 / 23,05 / 22,46 | 24,42 / 23,02 / 21,77 | 0,89 |
+
+La décélération est continue (vérifiée à 1/60 s par test : aucun pas ne perd plus de 2 % de la vitesse initiale) ; le ballon arrive à 89-94 % de sa vitesse de départ, ni mort ni trop vif. La vitesse moyenne n'a pas changé (la mi-course reste la même) : la durée et les positions imposées sont conservées.
+
+**Tir** (`ball_flight`, vitesse départ / mi-course / arrivée au but, m/s) :
+
+| Clip | Vol | Avant | Après |
+|---|---|---|---|
+| 1:3 | 15,0 m en 0,44 s | 34,60 / 34,60 / 34,60 | 35,47 / 34,60 / 33,77 |
+| 1:4 | 13,7 m en 0,63 s | 21,64 / 21,64 / 21,64 | 22,14 / 21,63 / 21,15 |
+| 1:9 | 31,8 m en 1,52 s | 20,99 / 20,99 / 20,99 | 22,14 / 20,97 / 19,92 |
+
+Le tir arrive à 94-96 % de sa vitesse de départ. La trajectoire reste lisible : la position à 10 % du vol diffère de moins de 1 % de la distance de celle sans friction (testé). **Point d'attention** : la vitesse de départ est environ 2,5 % au-dessus de la vitesse moyenne tirée (35,47 m/s pour 34,6 m/s), donc un tir tiré près de 35 m/s dépasse légèrement cette borne au départ (résidu de la même nature que la dette Magnus du §1.2).
+
+### 6.4 Déterminisme
+
+**100 matchs sur 100** avec scores, buts, cartons, remplacements, blessures et notes identiques entre l'état B2 (HEAD) et B1 (graines 1 à 100, `random.seed`, `np.random.seed`, `PYTHONHASHSEED=0`). La friction n'agit que sur l'animation, en aval du moteur sportif.
+
+### 6.5 Limites connues
+
+- L'effet de la loi en `v²` est **faible aux basses vitesses** (une passe de 1,2 m/s perd moins de 2 % sur son segment), conformément à la loi ; un frottement de roulement sur les passes lentes serait un autre réglage.
+- La friction physique réelle (c ≈ 0,013, quatre fois la valeur retenue) rapprocherait l'arrêt de l'objectif ; elle changerait aussi la vitesse d'arrivée des tirs (94-96 % → environ 82 %).
+- La barre n'apparaît pas dans l'échantillon de 100 matchs (rare) : couverte par les tests et les balayages de 720 rebonds.
+- Le clip de rebond dure jusqu'à 5 s (contre 3 s en B2) : environ +1,5 s en moyenne (une quarantaine d'images de plus) pour les clips `poteau` et `barre` seulement.
+
+### 6.6 Statut
+
+**B1 terminé** ; objectif « arrêt en 3 à 4 s après le premier rebond » atteint en moyenne (3,76 s), pas pour tous les clips (p90 4,38 s, max 4,96 s). Prochaine étape de la séquence : B4 (événements du ballon).
