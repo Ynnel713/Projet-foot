@@ -1,3 +1,4 @@
+import math
 import pytest
 
 from ligue1sim.animation.motion import interpolate
@@ -449,6 +450,39 @@ class TestTacticalDrift:
 # DÉJÀ testé indépendamment (voir tests/test_motion.py::TestBackgroundInterpolation)
 # : le test ci-dessous vérifie seulement que LE GARDIEN emprunte bien ce
 # mécanisme de bout en bout, pas la formule d'accélération elle-même.
+
+
+class TestTacticalDriftVariesByEvent:
+    """Phase 6, B6-c : le tirage de drift est clé `player_id|event_ref|sel` -- un même joueur dérive différemment d'un
+    événement à l'autre, dans les mêmes fourchettes qu'avant."""
+
+    _BALL = (0.9, 0.8)
+    _NO_CB_DRIFT = (0.0, 0.0)
+
+    def test_same_player_drifts_differently_on_different_events(self):
+        for poste, start in (("MC", (0.4, 0.4)), ("AD", (0.6, 0.75)), ("BU", (0.7, 0.25)), ("RB", (0.5, 0.75))):
+            drifts = {
+                _tactical_drift(poste, 7, "scorer", start, self._BALL, self._NO_CB_DRIFT, f"goal:Test FC:p{i}:{i + 1}")
+                for i in range(30)
+            }
+            assert len(drifts) >= 25, (poste, len(drifts))
+
+    def test_is_deterministic_for_a_player_and_an_event(self):
+        args = ("MC", 7, "scorer", (0.4, 0.4), self._BALL, self._NO_CB_DRIFT, "goal:Test FC:p1:12")
+        assert _tactical_drift(*args) == _tactical_drift(*args)
+
+    def test_amplitudes_are_unchanged(self):
+        # Mêmes bornes qu'avant B6-c (voir TestTacticalDrift) : milieu -> vers le ballon, jamais au-delà du plafond de drift.
+        for i in range(200):
+            dx, dy = _tactical_drift("MC", i, "scorer", (0.4, 0.4), self._BALL, self._NO_CB_DRIFT, f"goal:Test FC:p{i}:{i % 90 + 1}")
+            assert dx > 0 and dy >= 0
+            assert math.hypot(dx, dy) <= 0.05 + 1e-9
+
+    def test_enrich_with_background_uses_the_sequence_event_ref(self):
+        from ligue1sim.animation.sequence_generator import _event_unit
+
+        assert _event_unit(7, "goal:A:x:1", "drift_x") != _event_unit(7, "goal:B:y:2", "drift_x")
+        assert _event_unit(7, "goal:A:x:1", "drift_x") != _event_unit(7, "goal:A:x:1", "drift_y")
 
 
 class TestGkBasePosition:

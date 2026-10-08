@@ -107,6 +107,21 @@ class TestStartOffset:
         offsets = {_start_offset(pid, 8.0) for pid in range(20)}
         assert len(offsets) > 1
 
+    # Phase 6, B6-c : la clé est `player_id|event_ref|sel`, plus `player_id` seul.
+    def test_the_same_player_gets_different_offsets_on_different_events(self):
+        refs = [f"goal:Test FC:p{i}:{i + 1}" for i in range(40)]
+        offsets = [_start_offset(7, 8.0, event_ref=ref) for ref in refs]
+        assert len(set(offsets)) >= 38  # un hachage 64 bits : quasi aucune collision sur 40 événements
+
+    def test_is_deterministic_for_a_player_and_an_event(self):
+        assert _start_offset(7, 8.0, event_ref="goal:Test FC:p1:12") == _start_offset(7, 8.0, event_ref="goal:Test FC:p1:12")
+
+    def test_amplitude_is_unchanged_with_an_event_ref(self):
+        duration = 10.0
+        offsets = [_start_offset(pid, duration, event_ref=f"goal:Test FC:p{pid}:{pid + 1}") for pid in range(400)]
+        assert all(0.0 <= o <= 0.3 * duration for o in offsets)
+        assert max(offsets) > 0.25 * duration and min(offsets) < 0.05 * duration  # la plage [0, 0,3 x durée] est bien parcourue
+
 
 class TestVelocityContinuity:
     """"|position(t+dt) - position(t)| <= v_max * dt * 1.1" pour tout t et

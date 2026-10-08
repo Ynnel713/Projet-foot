@@ -475,13 +475,19 @@ class TestAccelerationConstraintOnRealGabarits:
 # (gabarits réels + `enrich_with_background` + `interpolate`, sans simulation donc sans
 # aléa) ; `_reference_avoidance` est une copie de l'ancienne `_apply_avoidance`.
 
+# Phase 6, B6-c : les décalages de départ et les dérives des joueurs sont désormais clés sur `player_id|event_ref|sel` (et non plus
+# `player_id` seul) ; les positions des joueurs changent donc, et ces 5 empreintes ont été recalculées. Preuve que B6-c est la SEULE cause :
+# en remettant temporairement l'ancienne clé (`player_id` seul), le code actuel redonne exactement les empreintes d'avant (HEAD 7eb8fe8) :
+# but_gag ("6b3877c7e00cfc9e", "30bef88bb8d089cd"), construction_placee ("2dbe69316b810342", ...), contre_attaque ("269d6156d88bef7b", ...),
+# corner ("0b781d5c5bc9f220", "f5705f4abb4a75e8"), percee_individuelle ("d61261efa5c6fb1c", ...). L'équivalence d'`interpolate` avec le code
+# d'origine reste vérifiée par `_reference_avoidance` et les tests ci-dessous.
 _WITNESS_DIGESTS = {
     # gabarit: (empreinte des images brutes `interpolate`, empreinte après contrainte d'accélération)
-    "but_gag": ("6b3877c7e00cfc9e", "30bef88bb8d089cd"),
-    "construction_placee": ("2dbe69316b810342", "2dbe69316b810342"),
-    "contre_attaque": ("269d6156d88bef7b", "269d6156d88bef7b"),
-    "corner": ("0b781d5c5bc9f220", "f5705f4abb4a75e8"),
-    "percee_individuelle": ("d61261efa5c6fb1c", "d61261efa5c6fb1c"),
+    "but_gag": ("72e992e33871f1a1", "986c877d0f40e3cc"),
+    "construction_placee": ("2fdf4a837c8f86ae", "2fdf4a837c8f86ae"),
+    "contre_attaque": ("eba806b8f8345992", "eba806b8f8345992"),
+    "corner": ("8667086b93f53cda", "c2a0a0579fb60eae"),
+    "percee_individuelle": ("6d8d8580707ed082", "6d8d8580707ed082"),
 }
 
 

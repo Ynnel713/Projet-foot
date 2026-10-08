@@ -100,14 +100,21 @@ def max_speed_normalized(poste: str | None) -> float:
 _MAX_START_OFFSET_RATIO = 0.3  # fraction de la durée totale
 
 
-def _start_offset(player_id: PlayerId, duration: float) -> float:
+_START_OFFSET_SALT = "start_offset_b6c"  # sel fixe (Phase 6, B6-c) : sépare ce tirage de tout autre hachage de `player_id|event_ref`
+
+
+def _start_offset(player_id: PlayerId, duration: float, *, event_ref: str = "") -> float:
     """Décalage temporel déterministe (secondes) avant qu'un joueur "non
     impliqué" (`Sequence.roster[id].role is None`, voir `_reacts_immediately`)
     commence à réagir -- même principe que `events._deterministic_rng` (hash
     sha256, pas `hash()` qui varie d'un process Python à l'autre) : la même
-    combinaison retombe toujours sur le même décalage, dans [0, 0.3 *
-    duration]."""
-    digest = hashlib.sha256(f"start_offset|{player_id}".encode()).digest()
+    combinaison `(joueur, événement)` retombe toujours sur le même décalage,
+    dans [0, 0.3 * duration]. Phase 6, B6-c : la clé est `player_id|event_ref|sel`
+    (et non plus `player_id` seul) -- un même joueur n'a plus le même décalage
+    dans tous ses clips. L'amplitude (`_MAX_START_OFFSET_RATIO`) ne change pas.
+    `event_ref` vide (appel direct sans événement, tests) : la clé reste
+    déterministe mais ne varie plus par événement."""
+    digest = hashlib.sha256(f"{player_id}|{event_ref}|{_START_OFFSET_SALT}".encode()).digest()
     fraction = int.from_bytes(digest[:8], "big") / 2**64  # ∈ [0, 1)
     return fraction * _MAX_START_OFFSET_RATIO * duration
 
@@ -345,7 +352,7 @@ def _raw_position_at(sequence: Sequence, player_id: PlayerId, t: float) -> tuple
 
     entry = sequence.roster[player_id]
     v_max = max_speed_normalized(entry.poste)
-    offset = 0.0 if _reacts_immediately(entry.role) else _start_offset(player_id, sequence.duration)
+    offset = 0.0 if _reacts_immediately(entry.role) else _start_offset(player_id, sequence.duration, event_ref=sequence.event_ref)
     return _player_position_at(sequence, player_id, t - offset, v_max)
 
 

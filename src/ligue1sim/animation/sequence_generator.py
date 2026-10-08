@@ -203,6 +203,17 @@ def _deterministic_unit(key: object, salt: str) -> float:
     return int.from_bytes(digest[:8], "big") / 2**64
 
 
+def _event_unit(player_id: PlayerId, event_ref: str, salt: str) -> float:
+    """Fraction déterministe dans [0, 1) propre à un COUPLE (joueur, événement) -- Phase 6, B6-c. Hachage sha256 de
+    `player_id|event_ref|salt` (jamais `hash()` ni `random`) : le sel est fixe, un par usage ("drift_x", "drift_y",
+    "winger_choice", "hold_width", "striker_choice", "hold_high", "drift_floor_side"). Avant B6-c la clé était
+    `player_id` seul, donc un même joueur "décor" dérivait de la même façon dans tous ses clips ; les amplitudes
+    (fourchettes par rôle) ne changent pas, seule la fraction tirée dans la fourchette varie avec l'événement.
+    `event_ref` vide (appel direct sans événement, tests) : tirage stable mais sans variété par événement."""
+    digest = hashlib.sha256(f"{player_id}|{event_ref}|{salt}".encode()).digest()
+    return int.from_bytes(digest[:8], "big") / 2**64
+
+
 def _toward(target: float, start: float, magnitude: float) -> float:
     """Déplacement signé de `start` vers `target`, amplitude `magnitude` --
     0.0 si `start == target` (pas de direction arbitraire par division par
@@ -256,7 +267,7 @@ def _cb_line_drift(team_key: str, avg_cb_y: float, ball_y: float) -> tuple[float
 _MIN_DRIFT_MAGNITUDE_M = 0.5
 
 
-def _floor_drift_magnitude(dx: float, dy: float, player_id: PlayerId) -> tuple[float, float]:
+def _floor_drift_magnitude(dx: float, dy: float, player_id: PlayerId, event_ref: str = "") -> tuple[float, float]:
     """Applique le plancher `_MIN_DRIFT_MAGNITUDE_M` à un drift déjà calculé
     -- mise à l'échelle UNIFORME (préserve le signe/la direction de chaque
     composante, donc toute contrainte tactique déjà encodée dans `dx`/`dy`
@@ -272,7 +283,7 @@ def _floor_drift_magnitude(dx: float, dy: float, player_id: PlayerId) -> tuple[f
     if magnitude_m >= _MIN_DRIFT_MAGNITUDE_M:
         return dx, dy
     if magnitude_m < 1e-12:
-        sign = 1.0 if _deterministic_unit(player_id, "drift_floor_side") < 0.5 else -1.0
+        sign = 1.0 if _event_unit(player_id, event_ref, "drift_floor_side") < 0.5 else -1.0
         return 0.0, sign * _MIN_DRIFT_MAGNITUDE_M / PITCH_WIDTH_M
     scale = _MIN_DRIFT_MAGNITUDE_M / magnitude_m
     return dx * scale, dy * scale
@@ -285,13 +296,14 @@ def _tactical_drift(
     start: tuple[float, float],
     ball_target: tuple[float, float],
     cb_line_drift: tuple[float, float],
+    event_ref: str = "",
 ) -> tuple[float, float]:
     """`_tactical_drift_unfloored` (règles tactiques par rôle) + plancher
     `_MIN_DRIFT_MAGNITUDE_M` (voir sa docstring) -- point d'entrée public
     inchangé, tous les appelants existants (`enrich_with_background`, tests)
     passent par ici."""
-    dx, dy = _tactical_drift_unfloored(poste, player_id, team_side, start, ball_target, cb_line_drift)
-    return _floor_drift_magnitude(dx, dy, player_id)
+    dx, dy = _tactical_drift_unfloored(poste, player_id, team_side, start, ball_target, cb_line_drift, event_ref)
+    return _floor_drift_magnitude(dx, dy, player_id, event_ref)
 
 
 def _tactical_drift_unfloored(
@@ -301,6 +313,7 @@ def _tactical_drift_unfloored(
     start: tuple[float, float],
     ball_target: tuple[float, float],
     cb_line_drift: tuple[float, float],
+    event_ref: str = "",
 ) -> tuple[float, float]:
     """Micro-mouvement déterministe d'un joueur "décor", réglé par RÔLE
     TACTIQUE plutôt qu'uniformément "vers le ballon" (voir le bloc de
@@ -316,8 +329,8 @@ def _tactical_drift_unfloored(
     ball_x, ball_y = ball_target
     same_side = _side_of(start_y) == _side_of(ball_y)
     forward = _forward_sign(team_side)
-    x_unit = _deterministic_unit(player_id, "drift_x")
-    y_unit = _deterministic_unit(player_id, "drift_y")
+    x_unit = _event_unit(player_id, event_ref, "drift_x")
+    y_unit = _event_unit(player_id, event_ref, "drift_y")
 
     if poste == GOALKEEPER:
         # Réaction latérale passive (Tâche 2, brief "gardien actif" 1/2) :
@@ -361,8 +374,8 @@ def _tactical_drift_unfloored(
             return _clamped(dx, dy)
         # Ailier côté opposé : tient la largeur OU appel en profondeur --
         # choix déterministe seedé par joueur, jamais un mélange des deux.
-        if _deterministic_unit(player_id, "winger_choice") < 0.5:
-            hold_unit = _deterministic_unit(player_id, "hold_width")
+        if _event_unit(player_id, event_ref, "winger_choice") < 0.5:
+            hold_unit = _event_unit(player_id, event_ref, "hold_width")
             dy = math.copysign(_WINGER_HOLD_MAGNITUDE * hold_unit, start_y - 0.5) if start_y != 0.5 else 0.0
             return (0.0, dy)
         x_lo, x_hi = _FORWARD_RUN_X_RANGE
@@ -371,8 +384,8 @@ def _tactical_drift_unfloored(
     # BU / SA / ATT : reste haut OU fait un appel -- jamais ne redescend
     # vers le ballon (même choix seedé que l'ailier côté opposé, cible
     # différente).
-    if _deterministic_unit(player_id, "striker_choice") < 0.5:
-        hold_unit = _deterministic_unit(player_id, "hold_high")
+    if _event_unit(player_id, event_ref, "striker_choice") < 0.5:
+        hold_unit = _event_unit(player_id, event_ref, "hold_high")
         return (forward * _STRIKER_HOLD_MAGNITUDE * hold_unit, 0.0)
     x_lo, x_hi = _FORWARD_RUN_X_RANGE
     return (forward * (x_lo + (x_hi - x_lo) * x_unit), 0.0)
@@ -449,7 +462,7 @@ def enrich_with_background(sequence: Sequence, opponent_lineup: Lineup) -> Seque
         entry = sequence.roster[player_id]
         if entry.poste == GOALKEEPER:
             start = _gk_base_position("scorer")
-        drift = _tactical_drift(entry.poste, player_id, "scorer", start, ball_target, scorer_cb_drift)
+        drift = _tactical_drift(entry.poste, player_id, "scorer", start, ball_target, scorer_cb_drift, sequence.event_ref)
         background[player_id] = BackgroundTrack(start=start, drift=drift)
 
     opponent_positions = _opponent_positions(opponent_lineup)
@@ -464,7 +477,7 @@ def enrich_with_background(sequence: Sequence, opponent_lineup: Lineup) -> Seque
     for player_id, point in opponent_positions.items():
         player = opponent_by_id[player_id]
         start = _gk_base_position("opponent") if player.poste == GOALKEEPER else (point.x, point.y)
-        drift = _tactical_drift(player.poste, player_id, "opponent", start, ball_target, opponent_cb_drift)
+        drift = _tactical_drift(player.poste, player_id, "opponent", start, ball_target, opponent_cb_drift, sequence.event_ref)
         background[player_id] = BackgroundTrack(start=start, drift=drift)
         opponent_roster[player_id] = RosterEntry(
             nom=player.name,
