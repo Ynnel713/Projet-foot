@@ -30,6 +30,8 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 | 24 | Commentaire faux sur la zone d'un penalty dans `engine/narrative.py` | Priorité basse | Ouvert |
 | 25 | Clips de but dont la dernière image est avant la ligne | Avant la Phase 7 (priorité basse) | Ouvert |
 | 26 | Divergence moteur / narration sur les penaltys ratés : l'animation montre des ratés qui n'ont pas eu lieu et omet ceux du moteur | Basse à moyenne (à trancher), à coupler au Bloc C | Ouvert |
+| 27 | Tireur de penalty dépasse le ballon après la frappe | Moyenne, B6-d ou B6-c selon la cause | Ouvert |
+| 28 | Adversaire (joueur décor) à 1,5 m du départ du tireur de penalty | Basse, résolution possible en Bloc A | Ouvert |
 
 ---
 
@@ -473,6 +475,40 @@ appelé par les scripts, les tests et un éventuel paramètre de graine de l'API
 **Résolution.** À décider par le propriétaire (par exemple animer les ratés du moteur et supprimer ceux de la narration). Hors périmètre de B6 ; elle pourrait être couplée au **Bloc C (cohérence du rendu)** plutôt qu'à B6.
 
 **Priorité.** Basse à moyenne, à trancher par le propriétaire.
+
+**Statut.** Ouvert. Non corrigé.
+
+---
+
+## 27. Tireur de penalty dépasse le ballon après la frappe
+
+**Description.** Sur la capture de la graine 5 (B6-b), le tireur arrive à 11,57 m de la ligne de but à 4,0 s (0,57 m derrière le ballon), puis se retrouve à 10,44 m après la frappe : il dépasse le ballon de 0,56 m. Sur la graine 3, il arrive pile à 11,00 m et ne dépasse pas (0 m). Le défaut n'est donc pas systématique et dépend de la graine.
+
+**Impact.** Un tireur de penalty ne traverse pas le ballon : défaut visuel, sans effet sur le résultat sportif.
+
+**Fichiers concernés.** `src/ligue1sim/animation/templates.py`, `src/ligue1sim/animation/motion.py`.
+
+**Résolution.** Prévue en B6-d ou B6-c selon la cause identifiée. Non corrigé.
+
+**Priorité.** Moyenne.
+
+**Statut.** Ouvert. Non corrigé.
+
+---
+
+## 28. Adversaire (joueur décor) à 1,5 m du départ du tireur de penalty
+
+**Description.** Sur la capture de la graine 5 (B6-b), un adversaire se tient à 1,5 m du point de départ du tireur, ce qui est visuellement étrange. Cause supposée : les joueurs « décor » ne sont pas placés en formation autour du penalty (`src/ligue1sim/animation/motion.py`).
+
+**Mesure de rattrapage (08/10/2026).** Effectifs synthétiques de `scripts/narrative_audit.py`, graines 1 à 100, 30 clips de penalty, distance entre le tireur et l'adversaire le plus proche à la première image. Sur `6f4f5bb` (avant B6-a) : minimum 1,54 m, médiane 7,52 m, 6 clips sur 30 sous 3 m. Sur `815e7f7` (HEAD, après B6-a et B6-b) : minimum 11,01 m, médiane 11,74 m, aucun clip sous 3 m. La graine 5 elle-même n'a produit aucun penalty dans cette série (l'outil de capture du propriétaire n'utilise pas les mêmes matchs) ; le cas de la capture n'est donc pas reproduit exactement.
+
+**Conclusion.** Le phénomène existait avant B6-a (1,54 m sur `6f4f5bb`) : ce n'est pas une régression de B6-a. Il n'est pas reproduit à la première image sur HEAD ; la distance observée sur la capture peut venir d'un instant ultérieur du clip ou de la composition réelle. À remesurer sur la graine 5 avec l'outil de capture avant toute correction.
+
+**Impact.** Défaut visuel mineur, sans effet sur le résultat sportif.
+
+**Résolution.** Possible en Bloc A (mouvement des joueurs). Non corrigé.
+
+**Priorité.** Basse.
 
 **Statut.** Ouvert. Non corrigé.
 
