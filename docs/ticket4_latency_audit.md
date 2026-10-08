@@ -181,12 +181,55 @@ Moins de 0,13 px d'écart même sur un terrain de 2 560 px de large : invisible.
 
 ### Alerte graine (diagnostic du 08/10/2026, voir ticket 16 de `docs/known_issues.md`)
 
-Le constat ci-dessus (« une même graine ne redonne pas la même simulation ») est exact mais il s'explique : `random.seed(11)` ne fixe que le module Python `random` (`events.py`), alors que le nombre de buts vient de `np.random` global (`simulation.py:643` et `:753`, aussi `events.py:614`), jamais seedé. Vérifié sur archive jetable de `HEAD` : avec `random.seed` **et** `np.random.seed`, deux processus donnent des saisons identiques (scores et `MatchEvents`), quel que soit `PYTHONHASHSEED`. Nature : graine manquante, pas une source d'aléa cachée. Les mesures « avant / après » ci-dessus (pickle d'une saison figée) ne sont pas concernées. Non corrigé.
+Le constat ci-dessus (« une même graine ne redonne pas la même simulation ») est exact mais il s'explique : `random.seed(11)` ne fixe que le module Python `random` (`events.py`), alors que le nombre de buts vient de `np.random` global (`simulation.py:643` et `:753`, aussi `events.py:614`), jamais seedé. Vérifié sur archive jetable de `HEAD` : avec `random.seed` **et** `np.random.seed`, deux processus donnent des saisons identiques (scores et `MatchEvents`), avec un hachage de chaînes libre (les sondes tournaient en `python -I`, qui ignore `PYTHONHASHSEED`). Nature : graine manquante, pas une source d'aléa cachée. Les mesures « avant / après » ci-dessus (pickle d'une saison figée) ne sont pas concernées. Non corrigé.
 
 ### Statut du ticket 4
 
 **Partiellement résolu.** Optimisations 1-3 appliquées. Reste à évaluer : plafond `max_occasions` (piste 6, décision produit) et optimisation d'`interpolate` (piste 7, seul levier sur la latence à froid, touche le moteur de rendu, reportée). Les pistes **15 images/s** (piste 3) et **remplaçants non animés** (piste 8) sont en attente de décision propriétaire ; recommandation de l'architecte : **non** pour les deux.
 
-## 9. Reproductibilité
+## 9. Optimisation d'interpolate (08/10/2026)
+
+Périmètre élargi par l'architecte à `src/ligue1sim/animation/motion.py`, strictement pour deux leviers ; contrat de `interpolate` préservé (fonction pure, signature inchangée, résultat **bit-à-bit identique**). `engine/narrative_player.py`, le moteur Poisson, 3c et le rendu ne sont pas touchés.
+
+### Audit (match FC Toulouse – Paris FC, 19 clips, 4 915 images, minuteurs autour des fonctions, avant optimisation)
+
+`interpolate` (9,5 à 11 s selon la passe) = 87-88 % de `build_clips` ; boucle Python pure joueurs × images, aucun numpy. 25 ou 26 joueurs par image ; 166 à 459 images par clip (moyenne 258,7). Chaque joueur est évalué 3 fois par image (position, puis ±1e-4 s pour la vitesse par différence finie) : 77 évaluations par image, 377 370 appels à `_raw_position_at`. `_ease_progress` (Newton à 8 itérations) : 363 438 appels, environ 39 % de `build_clips`. `_apply_avoidance` : O(N²), 4 passes de 325 paires = 1 300 tests de distance par image, 32 % de `build_clips`. Les vitesses des joueurs (`vx`, `vy`) ne sortent pas du pipeline clips → JSON.
+
+### Leviers retenus
+
+1. **Mémoïsation de `_ease_progress`** : `functools.lru_cache(maxsize=4096)`. Fonction pure de `s`, donc résultat identique à un calcul frais. Taux de succès mesuré ≈ 95 % : les hits viennent de l'intérieur d'une même image (joueurs « décor » et rôles sans décalage partagent le même `s`). **Écart à la consigne** : la consigne demandait un cache dict réinitialisé à chaque clip. Une réinitialisation par clip exigerait un état global et un appel de remise à zéro depuis `narrative_player.py` (interdit) ; elle est inutile ici, car le cache est **borné** (4096 entrées, LRU) : aucune croissance illimitée, rien à réinitialiser, `interpolate` reste sans état partagé observable. Le test vérifie la borne et l'absence d'effet d'un cache chaud sur les clips suivants.
+2. **Sortie anticipée d'`_apply_avoidance`** : on arrête dès qu'une passe complète ne déplace personne (les passes suivantes, mêmes entrées, ne déplaceraient personne non plus : sortie exacte). 60 % des images (2 952 sur 4 915) n'ont aucun déplacement dès la passe 1.
+
+### Leviers écartés
+
+- **Vectorisation numpy d'`_apply_avoidance` / de l'interpolation** (levier 3) : gain supplémentaire plus faible une fois 1 et 2 appliqués, complexité moyenne, risque d'écart numérique à contrôler ; à réévaluer si la latence à froid reste gênante.
+- **Vitesse analytique ou à la demande** (levier 4) : retirerait environ 2/3 des évaluations de `_raw_position_at`, mais modifie le contrat d'`interpolate` (`vx`, `vy` sont testés) ; à traiter en Phase 6.
+- **Précalcul de coefficients de Bézier** : sans objet, ils sont constants ; ce qui coûte est la résolution de Newton de `_ease_progress`, traitée par la mémoïsation.
+
+### Mesures avant / après (même état de compétition figé, même match, machine chargée : bruit de ±1 s)
+
+| Mesure | Avant | Après | Écart |
+|---|---|---|---|
+| `build_clips`, sans minuteurs (3 passes alternées) | 10,88 / 10,38 / 10,39 s | 4,80 / 4,78 / 5,13 s | **−54 %** (moyenne 10,55 → 4,90 s) |
+| `interpolate` (minuteurs) | 9,51 s | 4,27 s | −55 % |
+| dont `_ease_progress` | 4,15 s | 0,53 s | −87 % |
+| dont `_raw_position_at` | 4,89 s | 1,21 s | −75 % |
+| `_apply_avoidance` | 3,48 s | 1,96 s | −44 % |
+| Requête HTTP complète, 1er appel à froid (gzip) | 16,2 s et 17,7 s | **8,7 s et 10,6 s** | −46 % et −40 % |
+| 2e appel (cache) | 0,62 s et 1,00 s | 0,72 s et 0,59 s | inchangé |
+
+Les chiffres de l'audit initial (12,66 s, 11,04 s, 4,10 s) viennent d'une passe plus chargée ; les « avant » ci-dessus ont été remesurés dans la même session que les « après ». Les minuteurs ajoutent environ 0,4 s par fonction très appelée. Variabilité à froid : une passe intermédiaire (4 requêtes, `-I`) a donné 18,4 / 17,9 s (« avant » / « après ») puis 18,0 / 8,7 s ; la requête complète à froid inclut aussi la sérialisation (~2 s) et subit la charge de la machine, les mesures de `build_clips` seul (3 passes alternées, −54 %) sont plus stables.
+
+### Non-régression
+
+Le payload complet du match (19 clips, 10 472 166 octets décodés) est **identique octet pour octet** avant et après (même SHA-256, `PYTHONHASHSEED=0`) : écart maximal **0 px** sur les 19 clips, dont les 5 témoins (1, 3, 5, 7, 12). Tests ajoutés dans `tests/test_narrative_player.py` : empreintes figées de 5 gabarits témoins calculées avec le code d'origine, `_ease_progress` mémoïsé comparé à un calcul frais, cache borné sans effet sur les clips suivants, `_apply_avoidance` comparé à une copie de l'ancienne version sur 300 cas aléatoires seedés (dont paquets denses et joueurs superposés).
+
+**Observation annexe** : l'ordre des joueurs à l'intérieur d'une image dépend de `PYTHONHASHSEED` (`interpolate` itère sur un `set`) ; sans graine de hachage fixée, deux processus donnent des payloads de mêmes valeurs mais d'ordre différent. Sans effet pour le client (qui indexe par identifiant) ; noté au ticket 16, non corrigé.
+
+### Statut du ticket 4
+
+**Partiellement résolu — transfert, poids et cache HTTP optimisés ; `interpolate` optimisé via mémoïsation et sortie anticipée ; reste à évaluer : plafond `max_occasions`, optimisation d'`_apply_avoidance` (levier 3), vitesse analytique (levier 4, Phase 6).** Les pistes 15 images/s et remplaçants non animés ont été **refusées par le propriétaire**.
+
+## 10. Reproductibilité
 
 Scripts de mesure jetables (instrumentation par enveloppes de fonctions, serveur `uvicorn` en thread, `cProfile`, analyse du payload réel, essai de cache), écrits dans un dossier temporaire **hors dépôt** et appliqués à une archive jetable de `HEAD` ; non commités. Graine 11, Ligue 1, journée 1.

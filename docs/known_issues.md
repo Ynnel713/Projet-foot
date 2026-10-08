@@ -7,7 +7,7 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 | 1 | Joueur statique poussé hors de la marge près d'un bord du terrain | Phase 5 (habillage visuel) | **Résolu** — commit `61773ab`, tolérance recalibrée à 0,5 % |
 | 2 | Un joueur expulsé peut être remplacé plus tard dans le même match | Phase 4 (branchement PWA effectif) | Ouvert |
 | 3 | `SubstitutionEvent` identifie les joueurs par nom, pas par `player_id` | Phase 6 (produit / carrière) | Ouvert |
-| 4 | Latence et poids du payload d'animation | Phase 6 (produit / carrière) | Partiellement résolu (optimisations 1-3 appliquées), voir `docs/ticket4_latency_audit.md` §8 |
+| 4 | Latence et poids du payload d'animation | Phase 6 (produit / carrière) | Partiellement résolu (transfert, poids, cache HTTP et `interpolate` optimisés), voir `docs/ticket4_latency_audit.md` §8 et §9 |
 | 5 | `build_clips` écarte les événements dont le protagoniste n'est pas dans le onze de départ | — | **Fermé** (non reproduit) |
 | 6 | `build_clips` : `continue` silencieux quand `frames` est vide (et docstring obsolète) | Phase 7 (qualité) | Ouvert (priorité basse) |
 | 7 | `PitchView.jsx` : la version commitée diverge de celle de l'arbre de travail | Phase 5 (habillage visuel) | **Fermé — Résolu** (`7309172`) |
@@ -19,7 +19,7 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 | 13 | Axe de la barre de progression fixe à 0–90 min, marqueurs qui se chevauchent pour les clips rapprochés | Phase 7 (qualité / packaging) — priorité basse | Ouvert |
 | 14 | Orientation des bandes de tonte : horizontal (implémenté) vs perpendiculaire (backlog 24/09) | — (priorité basse) | **Résolu — décision produit**, horizontal conservé |
 | 15 | `PitchField.jsx` : bandes de tonte perpendiculaires à la longueur, incohérentes avec `canvas.html` | Phase 6 (produit / carrière) — priorité basse | Ouvert |
-| 16 | `random.seed(11)` ne redonne pas la même simulation : moteur non reproductible | Avant la Phase 6 (priorité haute) | Ouvert — cause diagnostiquée, non corrigée |
+| 16 | Point d'entrée seed manquant : `random.seed` ne suffit pas, il faut aussi `np.random.seed` | Avant la Phase 7 (priorité basse) | Ouvert — cause diagnostiquée, non corrigée |
 
 ---
 
@@ -97,7 +97,7 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 
 **Priorité.** Avant la Phase 6 (produit / carrière).
 
-**Statut.** Partiellement résolu, optimisations 1-3 appliquées (gzip, arrondi à 4 décimales, cache LRU), pistes 4-5 en attente de décision propriétaire (15 images/s, remplaçants non animés ; recommandation architecte : non pour les deux). Reste à évaluer : plafond `max_occasions`, optimisation d'`interpolate`. Le premier appel à froid reste de 10 à 14 s. Détail et mesures : `docs/ticket4_latency_audit.md` §8.
+**Statut.** **Partiellement résolu** — transfert, poids et cache HTTP optimisés (gzip, arrondi à 4 décimales, cache LRU) ; `interpolate` optimisé via mémoïsation et sortie anticipée (premier appel à froid divisé par environ 2 : 16-18 s → 9-11 s sur la machine de mesure, résultat bit-à-bit identique). Reste à évaluer : plafond `max_occasions`, optimisation d'`_apply_avoidance` (levier 3 : vectorisation), vitesse analytique (levier 4, Phase 6). **15 images/s et remplaçants non animés ont été refusés par le propriétaire.** Détail et mesures : `docs/ticket4_latency_audit.md` §8 et §9.
 
 ---
 
@@ -278,9 +278,9 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 
 ---
 
-## 16. `random.seed(11)` ne redonne pas la même simulation : moteur non reproductible
+## 16. Point d'entrée seed manquant : `random.seed` ne suffit pas, il faut aussi `np.random.seed`
 
-**Description.** Observation faite pendant le diagnostic du ticket 4 (08/10/2026) : deux processus lancés avec `random.seed(11)` et `PYTHONHASHSEED=0` simulent des saisons différentes (le même match « FC Toulouse – Paris FC » a donné 12, 16 puis 22 clips selon le processus). Cela contredit la propriété supposée « même graine = même match ».
+**Description.** Observation faite pendant le diagnostic du ticket 4 (08/10/2026) : deux processus lancés avec `random.seed(11)` (le `PYTHONHASHSEED=0` posé dans l'environnement n'était en fait pas appliqué : les scripts de mesure utilisaient `python -I`, qui l'ignore) simulent des saisons différentes (le même match « FC Toulouse – Paris FC » a donné 12, 16 puis 22 clips selon le processus). Cela contredit la propriété supposée « même graine = même match ». **Reformulation (08/10/2026) : le moteur est reproductible, c'est le point d'entrée de graine qui manque** (voir ci-dessous).
 
 **Reproduction.** Lancer deux fois, dans deux processus distincts, `random.seed(11)` puis `simulate_current` sur une Ligue 1 (`CustomCompetition(format="LEAGUE", legs=2, ...)`), et comparer les scores de la journée 1, les buteurs et les compositions. Les scores diffèrent (mesure du 08/10/2026 : `5-0,1-0,2-1,…` contre `1-2,1-0,5-0,…`).
 
@@ -289,14 +289,22 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 - Le **résultat sportif** (nombre de buts) vient de **`np.random`** (état global NumPy), jamais seedé par `random.seed` : `src/ligue1sim/simulation.py:643` (bruit sur lambda, `np.random.uniform`) et `:753` (tirage `np.random.poisson`) ; aussi `events.py:614` (choix pondéré du buteur), `match_stats.py:69-84`, `knockout.py:210` et `:226`, `champions_league.py:149-201`, `world_cup.py:68-181`.
 - Nature : **(a) une graine manquante** (un seul des deux générateurs est seedé). Ni (b) un seed écrasé, ni (c) un ordre de `set` ou de dictionnaire, ni (d) l'horloge ou un identifiant système : `api/store.py:20` utilise `uuid.uuid4()` pour l'identifiant de compétition, mais il n'entre pas dans les tirages.
 - Les générateurs locaux (`events._deterministic_rng`, `narrative.py`, `nlg_ingestion.py`) sont seedés par SHA-256, donc stables d'un processus à l'autre.
-- **Vérification sur archive jetable de `HEAD`** (une saison de Ligue 1, empreinte SHA-256 des scores de toute la saison et des `MatchEvents` des journées 1 à 3, 2 processus par cas) : `random.seed` seul → empreintes **différentes** ; `random.seed` **et** `np.random.seed` → empreintes **identiques**, avec `PYTHONHASHSEED` libre comme avec `PYTHONHASHSEED=0`. Aucune autre source d'aléa n'a été mise en évidence sur ce chemin.
+- **Vérification sur archive jetable de `HEAD`** (une saison de Ligue 1, empreinte SHA-256 des scores de toute la saison et des `MatchEvents` des journées 1 à 3, 2 processus par cas) : `random.seed` seul → empreintes **différentes** ; `random.seed` **et** `np.random.seed` → empreintes **identiques**, avec `PYTHONHASHSEED` libre (les scores et les événements ne dépendent donc pas du hachage ; seul l'ordre des joueurs dans une image du payload en dépend, voir ci-dessous). Aucune autre source d'aléa n'a été mise en évidence sur ce chemin.
 - Les tests qui veulent de la reproductibilité seedent déjà les deux (`tests/test_canvas_e2e.py:64-65`, `tests/test_canvas_html.py:270-271`). Rien dans l'application ne seede quoi que ce soit : le comportement normal est aléatoire, ce qui est voulu.
 
-**Impact.** Impossible de reproduire un bug à partir d'une graine unique (il faut connaître et fixer les deux générateurs), impossible de comparer deux versions du moteur sur le même match sans cette précaution, impossible de valider une modification du moteur par comparaison. Les deux générateurs étant **globaux**, deux requêtes API concurrentes (ou toute autre consommation de tirages) décalent le flux : même avec les deux graines, la reproductibilité n'est garantie qu'en exécution mono-fil et sans autre appel intercalé. Dette de fond.
+**Impact.** Impossible de reproduire un bug à partir d'une graine unique (il faut connaître et fixer les deux générateurs) ; la comparaison de deux versions du moteur sur le même match demande cette précaution. Les deux générateurs étant **globaux**, deux requêtes API concurrentes (ou toute autre consommation de tirages) décalent le flux : même avec les deux graines, la reproductibilité n'est garantie qu'en exécution mono-fil et sans autre appel intercalé. Dette de fond.
 
-**Piste (non implémentée, décision d'architecte).** Un point d'entrée unique de seed qui fixe `random` et `np.random` (ou, mieux, des générateurs locaux passés explicitement), et une règle de test « toute comparaison de moteur seede les deux ». Modifier le moteur change le flux de tirages donc le résultat sportif : à arbitrer.
+**Précisions de mesure.** Dans `np.random` : lambdas et buts de Poisson (`simulation.py:643`, `:753`), choix du buteur (`events.py:614`), statistiques de match, tirs au but, tirages de Ligue des Champions et de Coupe du Monde. Dans `random` (module Python) : cartons, blessures, remplacements, notes (`events.py:701-757`). Autre constat (08/10/2026) : l'ordre des joueurs à l'intérieur d'une image du payload d'animation dépend de `PYTHONHASHSEED` (`interpolate` itère sur un `set`, `motion.py`) ; seul l'ordre change, pas les valeurs, et le client indexe par identifiant. Avec `PYTHONHASHSEED=0` deux processus donnent un payload identique octet pour octet.
 
-**Priorité.** Haute, avant la Phase 6 (qui modifiera le moteur et aura besoin de comparaisons reproductibles).
+**Proposition (non implémentée).** Un helper `seed_all(seed)`, par exemple dans `src/ligue1sim/seeding.py` :
+```python
+def seed_all(seed: int) -> None:
+    random.seed(seed)
+    np.random.seed(seed)
+```
+appelé par les scripts, les tests et un éventuel paramètre de graine de l'API, avec une règle « toute comparaison de moteur passe par `seed_all` ». À plus long terme, des générateurs locaux passés explicitement. Ne change pas le résultat sportif tant qu'il n'est pas appelé.
+
+**Priorité.** Basse, avant la Phase 7.
 
 **Statut.** Ouvert. Cause diagnostiquée, **non corrigée**.
 

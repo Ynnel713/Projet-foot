@@ -460,3 +460,116 @@ class TestAccelerationConstraintOnRealGabarits:
                 gabarits_with_a_correction.append(name)
 
         assert gabarits_with_a_correction, "aucun des 12 gabarits n'a ete corrige -- la contrainte n'agit sur rien"
+
+
+# --- Ticket 4 (08/10/2026) : optimisation d'`interpolate` (mémoïsation de
+# `_ease_progress`, sortie anticipée d'`_apply_avoidance`) ---------------------
+# Contrat : résultat BIT-À-BIT identique au code d'origine. Les empreintes ci-dessous
+# ont été calculées avec le code AVANT optimisation (HEAD 7eb8fe8) sur 5 clips témoins
+# (gabarits réels + `enrich_with_background` + `interpolate`, sans simulation donc sans
+# aléa) ; `_reference_avoidance` est une copie de l'ancienne `_apply_avoidance`.
+
+_WITNESS_DIGESTS = {
+    # gabarit: (empreinte des images brutes `interpolate`, empreinte après contrainte d'accélération)
+    "but_gag": ("6b3877c7e00cfc9e", "30bef88bb8d089cd"),
+    "construction_placee": ("2dbe69316b810342", "2dbe69316b810342"),
+    "contre_attaque": ("269d6156d88bef7b", "269d6156d88bef7b"),
+    "corner": ("0b781d5c5bc9f220", "f5705f4abb4a75e8"),
+    "percee_individuelle": ("d61261efa5c6fb1c", "d61261efa5c6fb1c"),
+}
+
+
+def _trajectory_digest(frames) -> str:
+    import hashlib
+
+    digest = hashlib.sha256()
+    for frame in frames:
+        for player_id in sorted(frame.players, key=str):
+            s = frame.players[player_id]
+            digest.update(
+                f"{player_id}|{s.x:.9f}|{s.y:.9f}|{s.vx:.6f}|{s.vy:.6f}|{int(s.is_ball_carrier)};".encode()
+            )
+    return digest.hexdigest()[:16]
+
+
+def _reference_avoidance(positions):
+    """Copie de `motion._apply_avoidance` AVANT le ticket 4 : 4 passes complètes, sans sortie anticipée."""
+    import math
+
+    from ligue1sim.animation import motion
+
+    ids = sorted(positions, key=str)
+    adjusted = dict(positions)
+    for _pass in range(motion._AVOIDANCE_PASSES):
+        for i in range(len(ids)):
+            for j in range(i + 1, len(ids)):
+                a, b = ids[i], ids[j]
+                ax, ay = adjusted[a]
+                bx, by = adjusted[b]
+                dist_m = motion._real_distance_m((ax, ay), (bx, by))
+                if dist_m >= motion._AVOIDANCE_TRIGGER_M:
+                    continue
+                if dist_m < 1e-9:
+                    angle = motion._stable_repulsion_angle(a, b)
+                    dir_x, dir_y = math.cos(angle), math.sin(angle)
+                else:
+                    dx_m = (bx - ax) * motion.PITCH_LENGTH_M
+                    dy_m = (by - ay) * motion.PITCH_WIDTH_M
+                    dir_x, dir_y = dx_m / dist_m, dy_m / dist_m
+                missing_m = motion._AVOIDANCE_TRIGGER_M - dist_m
+                push_x = (dir_x * missing_m / 2) / motion.PITCH_LENGTH_M
+                push_y = (dir_y * missing_m / 2) / motion.PITCH_WIDTH_M
+                adjusted[a] = (ax - push_x, ay - push_y)
+                adjusted[b] = (bx + push_x, by + push_y)
+    return adjusted
+
+
+class TestInterpolateOptimisation:
+    @pytest.mark.parametrize("name", sorted(_WITNESS_DIGESTS))
+    def test_witness_clips_match_the_frozen_pre_optimisation_reference(self, name):
+        raw_frames, corrected_frames = _raw_and_corrected_frames(name)
+        assert (_trajectory_digest(raw_frames), _trajectory_digest(corrected_frames)) == _WITNESS_DIGESTS[name]
+
+    def test_cached_ease_progress_is_bit_identical_to_a_fresh_computation(self):
+        from ligue1sim.animation.motion import _ease_progress
+
+        fresh = _ease_progress.__wrapped__  # fonction non mémoïsée
+        samples = [-1.0, 0.0, 1e-9, 0.25, 0.5, 0.999999, 1.0, 2.0] + [k / 997 for k in range(998)]
+        _ease_progress.cache_clear()
+        for _ in range(2):  # 1re passe : calculs frais ; 2e passe : tout vient du cache
+            for s in samples:
+                assert _ease_progress(s) == fresh(s)
+
+    def test_ease_cache_is_bounded_and_does_not_change_results_between_clips(self):
+        from ligue1sim.animation.motion import _ease_progress
+
+        _ease_progress.cache_clear()
+        cold = [_trajectory_digest(_raw_and_corrected_frames(n)[0]) for n in sorted(_WITNESS_DIGESTS)]
+        info = _ease_progress.cache_info()
+        assert info.currsize <= info.maxsize  # borné : pas de fuite entre clips
+        warm = [_trajectory_digest(_raw_and_corrected_frames(n)[0]) for n in sorted(_WITNESS_DIGESTS)]
+        assert warm == cold  # un cache chaud (clips précédents) ne change aucun résultat
+        for _ in range(info.maxsize + 50):  # même saturé, la taille reste bornée
+            _ease_progress(__import__("random").random())
+        assert _ease_progress.cache_info().currsize <= info.maxsize
+
+    def test_avoidance_early_exit_is_bit_identical_to_the_four_full_passes(self):
+        import random
+
+        from ligue1sim.animation.motion import _apply_avoidance
+
+        rng = random.Random(20261008)
+        for case in range(300):
+            spread = rng.choice([0.002, 0.01, 0.05, 0.4])  # du paquet dense à l'écart total
+            positions = {
+                f"p{k}": (0.5 + rng.uniform(-spread, spread), 0.5 + rng.uniform(-spread, spread)) for k in range(26)
+            }
+            if case % 7 == 0:  # deux joueurs exactement superposés (branche `_stable_repulsion_angle`)
+                positions["p1"] = positions["p0"]
+            assert _apply_avoidance(positions) == _reference_avoidance(positions)
+
+    def test_avoidance_leaves_well_separated_players_untouched(self):
+        from ligue1sim.animation.motion import _apply_avoidance
+
+        positions = {f"p{k}": (0.04 * k, 0.04 * k) for k in range(20)}
+        assert _apply_avoidance(positions) == positions
