@@ -918,15 +918,15 @@ def test_strike_type_distribution_over_1000_strikes():
             counts[strike_type_for(gabarit, f"goal:Test FC:{gabarit}{i}:{(i * 7) % 90 + 1}").name] += 1
             strikes += 1
     assert 990 <= strikes <= 1010
-    # Cibles de l'architecte (parts de l'ensemble des frappes), marge de 4 points ; `shot_tendu` resserré à ±2,5 points (bruit d'échantillonnage de 1 000 frappes : environ ±1,5 point)
-    # (revue du 08/10/2026 : fourchette 34-36 % sur 100 matchs, voir docs/phase6_block_b_audit.md, section B5).
-    targets = {"shot_tendu": 35.0, "shot_enroule_leger": 12.0, "shot_enroule_fort": 9.7, "shot_exterieur_pied": 5.5, "reprise_vollee": 16.0, "tete": 21.8}
+    # Cibles de l'architecte (parts de l'ensemble des frappes hors penaltys), marge de 4 points ; `shot_tendu` resserré à ±2,5 points
+    # (bruit d'échantillonnage de 1 000 frappes : environ ±1,5 point). Sa cible est rebasée à 32,3 % depuis B6-b : les penaltys,
+    # qui pesaient 2,7 points de `shot_tendu` dans la cible historique de 35 %, ont leurs propres types et sortent du mélange.
+    targets = {"shot_tendu": 32.3, "shot_enroule_leger": 12.0, "shot_enroule_fort": 9.7, "shot_exterieur_pied": 5.5, "reprise_vollee": 16.0, "tete": 21.8}
     for name, target in targets.items():
         share = 100.0 * counts[name] / strikes
         assert abs(share - target) <= 4.0, f"{name} : {share:.1f} % pour une cible de {target} %"
     assert abs(100.0 * counts["shot_enroule_fort"] / strikes - 9.7) <= 0.6  # decalage_enroulee seul : 122 vols sur 1 259
-    # B6-b : les penaltys (jadis `shot_tendu`, 2,7 points) ont leurs propres types ; `shot_tendu` ne garde donc que la marge de 4 points
-    # ci-dessus (réel, 100 matchs : 33 % de l'ensemble des vols, voir docs/phase6_block_b_audit.md).
+    assert abs(100.0 * counts["shot_tendu"] / strikes - 32.3) <= 2.5, counts
 
 
 def test_strike_type_is_deterministic_and_independent_of_the_global_random_state():
