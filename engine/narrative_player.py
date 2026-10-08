@@ -35,6 +35,7 @@ import hashlib
 import json
 from dataclasses import dataclass, replace
 
+from ligue1sim.animation.ball import rebound_after_flight
 from ligue1sim.animation.motion import FrameState, interpolate
 from ligue1sim.animation.physics import apply_acceleration_constraint
 from ligue1sim.animation.sequence_generator import enrich_with_background
@@ -215,7 +216,35 @@ def _build_clip_frames(
         frames.append(interpolate(sequence, t))
         t += step
     frames = _apply_acceleration_constraint_to_frames(frames, step)
+    frames = _extend_with_rebound(frames, sequence, event.outcome, step)
     return frames, sequence.roster
+
+
+def _extend_with_rebound(frames: list[FrameState], sequence, outcome: str | None, dt: float) -> list[FrameState]:
+    """Phase 6, Bloc B2 (08/10/2026) : prolonge un clip dont le tir finit sur un poteau ou la barre (`outcome`
+    `poteau` / `barre`) par les images du REBOND (voir `animation.ball.rebound_after_flight`) -- le ballon repart
+    du point de contact, rebondit sur le sol et s'arrête, au lieu de s'arrêter net.
+
+    Les images existantes ne sont JAMAIS modifiées : le rebond s'ajoute APRÈS `sequence.duration`, avec les joueurs
+    figés sur leurs dernières positions (comme pendant le vol). Allonger `Sequence.duration` à la place décalerait
+    presque toutes les images précédentes, car `motion` s'en sert pour la dérive des joueurs de fond et le décalage
+    de réaction (mesuré : 221 images sur 222 modifiées, jusqu'à 1,3 m d'écart sur un joueur). Sans effet pour les
+    autres issues (but, arrêt, hors cadre, tacle, dégagement)."""
+    trajectory = rebound_after_flight(sequence, outcome)
+    if trajectory is None or not frames:
+        return frames
+    last = frames[-1]
+    extension: list[FrameState] = []
+    t = last.t + dt
+    # `last.t` est la dernière image AVANT le contact (au plus un pas avant `sequence.duration`) : la première image
+    # ajoutée est donc déjà après l'impact.
+    while t - sequence.duration <= trajectory.duration + 1e-9:
+        extension.append(replace(last, t=t, ball=trajectory.state_at(t - sequence.duration)))
+        t += dt
+    end_t = sequence.duration + trajectory.duration
+    if not extension or extension[-1].t < end_t - 1e-9:
+        extension.append(replace(last, t=end_t, ball=trajectory.state_at(trajectory.duration)))
+    return frames + extension
 
 
 def _apply_acceleration_constraint_to_frames(frames: list[FrameState], dt: float) -> list[FrameState]:

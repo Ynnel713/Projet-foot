@@ -106,10 +106,10 @@ from __future__ import annotations
 
 import hashlib
 import math
-from dataclasses import replace
+from dataclasses import dataclass, replace
 
 from ligue1sim.animation.types import BallState, Keyframe, Sequence
-from ligue1sim.pitch_geometry import PITCH_LENGTH_M, PITCH_WIDTH_M
+from ligue1sim.pitch_geometry import GOAL_WIDTH_M, PITCH_LENGTH_M, PITCH_WIDTH_M
 
 PASS_GROUND = "pass_ground"
 PASS_LOB = "pass_lob"
@@ -129,7 +129,10 @@ DEFLECT = "deflect"
 # des 12 gabarits (voir `_behavior_ball_flight`, qui réutilise la
 # composante x/y/Magnus de `_behavior_shot` SANS toucher à cette fonction).
 BALL_FLIGHT = "ball_flight"
-_KNOWN_TAGS = frozenset({PASS_GROUND, PASS_LOB, SHOT, CROSS, DEFLECT, BALL_FLIGHT})
+# Phase 6, Bloc B2 (08/10/2026) -- rebond après impact sur un montant (voir plus bas, "Rebonds") : segment qui
+# démarre au point de contact (fin d'un `ball_flight`) et suit `ReboundTrajectory`.
+BOUNCE = "bounce"
+_KNOWN_TAGS = frozenset({PASS_GROUND, PASS_LOB, SHOT, CROSS, DEFLECT, BALL_FLIGHT, BOUNCE})
 
 _VELOCITY_EPSILON_S = 1e-4  # même principe que motion._VELOCITY_EPSILON_S -- différence finie pour (vx, vy, vz)
 _STATIONARY_EPSILON_M = 0.01  # ballon "immobile" (cas limite) : moins d'1 cm entre kf_a et kf_b
@@ -431,6 +434,290 @@ def _behavior_deflect(
     return BallState(x=x, y=y, z=0.0, spin=0.0, owner_id=None, vx=vx, vy=vy, vz=0.0)
 
 
+# --- Rebonds (Phase 6, Bloc B2, 08/10/2026) --------------------------------------
+# Le ballon rebondit au lieu de s'arrêter net : sur le sol (restitution 0,70, -15 % de vitesse horizontale par
+# rebond), sur un poteau et sur la barre (restitution 0,70). Fonctions PURES : aucune lecture de l'état global,
+# aucun `random` ; l'aléa de direction est un hachage déterministe (même principe que `_deterministic_unit`).
+#
+# Choix des paramètres (valeurs validées par l'architecte) :
+# - Restitution 0,70 : la hauteur d'un rebond vaut e² de la précédente (0,49), soit une perte de 51 %, dans la
+#   cible « rebond mou » de Football Manager (40 à 50 % de hauteur perdue). Plus bas, le rebond meurt trop vite ;
+#   plus haut (0,8 -> 36 % de perte), le ballon « rebondit comme une balle de tennis ».
+# - Friction horizontale 15 % par rebond : le contact avec l'herbe freine la composante horizontale (frottement
+#   tangentiel) ; 10 à 20 % est la fourchette donnée, 15 % en est le milieu.
+# - Arrêt : un rebond dont le sommet est sous 5 cm est supprimé, le ballon roule ensuite avec une décélération
+#   constante de 2,5 m/s² (herbe sèche, 1,5 à 3). Durée totale bornée à 3 s (le clip est un temps fort, pas un match).
+#   LIMITE MESURÉE : sans frottement de l'air (levier B1, étape suivante), le ballon n'est pas encore à l'arrêt à 3 s
+#   (il lui faut 6 à 7 s et 45 à 57 m) : le clip est coupé à 3 s, ballon encore en mouvement.
+# - Poteau : réflexion horizontale (cylindre vertical, `vz` conservé) ; barre : normale inclinée de 5 à 15° sous
+#   l'horizontale côté terrain, donc le ballon repart vers le bas ET vers le terrain, jamais derrière la ligne
+#   (une réflexion purement verticale lui laisserait sa vitesse vers l'avant).
+# - Aléa D8 : l'angle de sortie vient de la géométrie (écart du point d'impact au centre du montant, angle
+#   d'incidence) ; un aléa borné de +-10° sur l'azimut de sortie, déterministe par `event_ref`, s'y ajoute.
+# - Planches de publicité : le ballon est arrêté à 3 m des lignes (coordonnées bornées, vitesse annulée).
+GRAVITY_M_S2 = 9.81
+GROUND_RESTITUTION = 0.70
+GROUND_HORIZONTAL_KEEP = 0.85  # -15 % de vitesse horizontale par rebond au sol
+POST_RESTITUTION = 0.70
+BAR_RESTITUTION = 0.70
+REBOUND_MIN_APEX_M = 0.05
+ROLL_DECEL_M_S2 = 2.5
+REBOUND_MAX_DURATION_S = 3.0
+REBOUND_AZIMUTH_JITTER_DEG = 10.0
+SURFACE_POST = "post"
+SURFACE_BAR = "bar"
+_POST_MAX_CONTACT_ANGLE_DEG = 35.0  # au-delà, le ballon ne repartirait plus dans le demi-plan opposé
+_POST_OFFSET_REF_M = 0.005 * PITCH_WIDTH_M  # résolution de la cible `poteau` (templates : +-0,005 normalisé)
+# Inclinaison de la normale de la barre sous l'horizontale (consigne : < 30°). 5 à 15° : le ballon repart vers le
+# terrain et vers le bas ; mesuré avec 10 à 30°, le premier rebond au sol montait à 3,2 m en moyenne (10,5 m au
+# maximum), trop haut pour un rebond de barre.
+_BAR_TILT_MIN_DEG = 5.0
+_BAR_TILT_MAX_DEG = 15.0
+_BAR_Z_MIN_M = 2.35  # intervalle de la cible `barre` (templates)
+_BAR_Z_MAX_M = 2.44
+_MIN_BACKWARD_SPEED_M_S = 1.0  # le ballon repart toujours vers le terrain d'au moins 1 m/s
+_MIN_DOWNWARD_SPEED_M_S = 1.0  # et vers le bas (barre)
+_BOARDS_MARGIN_M = 3.0
+_ROLL_STOP_SPEED_M_S = 0.05
+_GOAL_Y_MIN_NORM = 0.5 - (GOAL_WIDTH_M / 2.0) / PITCH_WIDTH_M
+_GOAL_Y_MAX_NORM = 0.5 + (GOAL_WIDTH_M / 2.0) / PITCH_WIDTH_M
+
+
+@dataclass(frozen=True)
+class _Arc:
+    """Un morceau de trajectoire (mètres, temps local `t0`) : vol balistique (gravité) ou roulement (décélération
+    constante, `z = 0`)."""
+
+    t0: float
+    duration: float
+    p0: tuple[float, float, float]
+    v0: tuple[float, float, float]
+    kind: str  # "flight" | "roll"
+
+    def at(self, tau: float) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
+        tau = min(max(tau, 0.0), self.duration)
+        x0, y0, z0 = self.p0
+        vx, vy, vz = self.v0
+        if self.kind == "flight":
+            return (
+                (x0 + vx * tau, y0 + vy * tau, z0 + vz * tau - 0.5 * GRAVITY_M_S2 * tau * tau),
+                (vx, vy, vz - GRAVITY_M_S2 * tau),
+            )
+        speed = math.hypot(vx, vy)
+        if speed < 1e-12:
+            return (x0, y0, 0.0), (0.0, 0.0, 0.0)
+        tau = min(tau, speed / ROLL_DECEL_M_S2)
+        distance = speed * tau - 0.5 * ROLL_DECEL_M_S2 * tau * tau
+        now = max(0.0, speed - ROLL_DECEL_M_S2 * tau)
+        ux, uy = vx / speed, vy / speed
+        return (x0 + ux * distance, y0 + uy * distance, 0.0), (ux * now, uy * now, 0.0)
+
+
+@dataclass(frozen=True)
+class ReboundTrajectory:
+    """Trajectoire du ballon après un impact (poteau, barre) : rebonds successifs puis arrêt. `state_at(tau)`
+    donne l'état `tau` secondes après le contact (borné à `[0, duration]`, jamais d'extrapolation)."""
+
+    surface: str
+    contact: tuple[float, float, float]  # x, y normalisés, z en mètres
+    exit_velocity: tuple[float, float, float]  # m/s juste après le contact
+    arcs: tuple[_Arc, ...]
+    duration: float
+    ground_bounces: int
+    apexes_m: tuple[float, ...]  # sommet de chaque arc qui suit un contact avec le sol
+    first_bounce_apex_m: float
+    rest: tuple[float, float, float]  # position finale (x, y normalisés, z m)
+
+    def state_at(self, tau: float) -> BallState:
+        tau = min(max(tau, 0.0), self.duration)
+        arc = self.arcs[-1]
+        for candidate in self.arcs:
+            if tau <= candidate.t0 + candidate.duration + 1e-12:
+                arc = candidate
+                break
+        (px, py, pz), (vx, vy, vz) = arc.at(tau - arc.t0)
+        lo_x, hi_x = -_BOARDS_MARGIN_M, PITCH_LENGTH_M + _BOARDS_MARGIN_M
+        lo_y, hi_y = -_BOARDS_MARGIN_M, PITCH_WIDTH_M + _BOARDS_MARGIN_M
+        if px < lo_x or px > hi_x:
+            px, vx = min(max(px, lo_x), hi_x), 0.0
+        if py < lo_y or py > hi_y:
+            py, vy = min(max(py, lo_y), hi_y), 0.0
+        return BallState(
+            x=px / PITCH_LENGTH_M, y=py / PITCH_WIDTH_M, z=0.0 if pz < 1e-9 else pz, spin=0.0, owner_id=None,
+            vx=vx / PITCH_LENGTH_M, vy=vy / PITCH_WIDTH_M, vz=vz,
+        )
+
+
+def _rotate(vx: float, vy: float, angle_rad: float) -> tuple[float, float]:
+    c, s = math.cos(angle_rad), math.sin(angle_rad)
+    return vx * c - vy * s, vx * s + vy * c
+
+
+def _enforce_backward(vx: float, vy: float) -> tuple[float, float]:
+    """Le ballon repart toujours vers le terrain (vx <= -1 m/s), à vitesse horizontale conservée."""
+    if vx <= -_MIN_BACKWARD_SPEED_M_S:
+        return vx, vy
+    horizontal = math.hypot(vx, vy)
+    lateral = math.sqrt(max(horizontal * horizontal - _MIN_BACKWARD_SPEED_M_S ** 2, 0.0))
+    return -_MIN_BACKWARD_SPEED_M_S, math.copysign(lateral, vy if vy != 0.0 else 1.0)
+
+
+def rebound_exit_velocity(
+    surface: str,
+    contact: tuple[float, float, float],
+    velocity_m_s: tuple[float, float, float],
+    seed_key: str,
+    *,
+    jitter: bool = True,
+) -> tuple[float, float, float]:
+    """Vitesse (m/s) juste après l'impact sur un montant. `contact` = (x, y normalisés, z m), `velocity_m_s` =
+    vitesse d'arrivée. L'angle de sortie est calculé GÉOMÉTRIQUEMENT (point d'impact, angle d'incidence) puis
+    perturbé d'un aléa borné de +-`REBOUND_AZIMUTH_JITTER_DEG` degrés, déterministe pour un `seed_key` donné
+    (`jitter=False` pour obtenir la valeur sans aléa)."""
+    vx, vy, vz = velocity_m_s
+    _, cy, cz = contact
+    if surface == SURFACE_POST:
+        # Écart latéral du contact au centre du poteau, ramené à un angle de contact de 0 (plein centre : le ballon
+        # revient sur lui-même) à 35° (bord : il part de côté). Le poteau est un cylindre vertical : `vz` est conservé.
+        post_y = min((_GOAL_Y_MIN_NORM, _GOAL_Y_MAX_NORM), key=lambda y: abs(y - cy))
+        offset = max(-1.0, min(1.0, (cy - post_y) * PITCH_WIDTH_M / _POST_OFFSET_REF_M))
+        phi = math.radians(_POST_MAX_CONTACT_ANGLE_DEG) * offset
+        nx, ny = -math.cos(phi), math.sin(phi)  # normale horizontale : vers le terrain et vers le côté du contact
+        vn = vx * nx + vy * ny
+        out_x = vx - (1.0 + POST_RESTITUTION) * vn * nx
+        out_y = vy - (1.0 + POST_RESTITUTION) * vn * ny
+        out_z = vz
+    elif surface == SURFACE_BAR:
+        # Contact sous la face avant de la barre : normale inclinée de 5 à 15° sous l'horizontale, côté terrain
+        # (plus le contact est bas, plus elle est inclinée) -> le ballon repart vers le bas et vers le terrain.
+        depth = max(0.0, min(1.0, (_BAR_Z_MAX_M - cz) / (_BAR_Z_MAX_M - _BAR_Z_MIN_M)))
+        theta = math.radians(_BAR_TILT_MIN_DEG + (_BAR_TILT_MAX_DEG - _BAR_TILT_MIN_DEG) * depth)
+        nx, nz = -math.cos(theta), -math.sin(theta)
+        vn = vx * nx + vz * nz
+        out_x = vx - (1.0 + BAR_RESTITUTION) * vn * nx
+        out_y = vy
+        out_z = vz - (1.0 + BAR_RESTITUTION) * vn * nz
+    else:
+        raise ValueError(f"surface de rebond inconnue : {surface!r}")
+
+    if jitter:
+        unit = _deterministic_unit(seed_key, "rebound_azimuth")
+        out_x, out_y = _rotate(out_x, out_y, math.radians(REBOUND_AZIMUTH_JITTER_DEG) * (2.0 * unit - 1.0))
+    out_x, out_y = _enforce_backward(out_x, out_y)
+    if surface == SURFACE_BAR:
+        out_z = min(out_z, -_MIN_DOWNWARD_SPEED_M_S)
+    return out_x, out_y, out_z
+
+
+def _simulate_rebound(
+    p0: tuple[float, float, float], v0: tuple[float, float, float]
+) -> tuple[tuple[_Arc, ...], int, tuple[float, ...]]:
+    """Vols balistiques successifs avec rebonds au sol, puis roulement jusqu'à l'arrêt (ou jusqu'à
+    `REBOUND_MAX_DURATION_S`). Retourne (arcs, nombre de contacts avec le sol, sommets des arcs de rebond)."""
+    arcs: list[_Arc] = []
+    apexes: list[float] = []
+    ground_contacts = 0
+    t = 0.0
+    x, y, z = p0
+    vx, vy, vz = v0
+    while True:
+        remaining = REBOUND_MAX_DURATION_S - t
+        fall_time = (vz + math.sqrt(vz * vz + 2.0 * GRAVITY_M_S2 * z)) / GRAVITY_M_S2
+        if fall_time >= remaining:
+            # Le prochain arc ne tient pas dans la durée maximale : le rebond s'arrête au dernier contact avec le
+            # sol (ballon au sol, encore en mouvement -- voir LIMITE MESURÉE plus haut), jamais coupé en plein vol.
+            if not arcs:
+                arcs.append(_Arc(t, remaining, (x, y, z), (vx, vy, vz), "flight"))
+            return tuple(arcs), ground_contacts, tuple(apexes)
+        arcs.append(_Arc(t, fall_time, (x, y, z), (vx, vy, vz), "flight"))
+        x, y, t = x + vx * fall_time, y + vy * fall_time, t + fall_time
+        impact_vz = vz - GRAVITY_M_S2 * fall_time
+        ground_contacts += 1
+        z, vz = 0.0, -GROUND_RESTITUTION * impact_vz
+        vx, vy = vx * GROUND_HORIZONTAL_KEEP, vy * GROUND_HORIZONTAL_KEEP
+        apex = vz * vz / (2.0 * GRAVITY_M_S2)
+        if apex < REBOUND_MIN_APEX_M:
+            break
+        apexes.append(apex)
+    speed = math.hypot(vx, vy)
+    remaining = REBOUND_MAX_DURATION_S - t
+    if speed > _ROLL_STOP_SPEED_M_S and remaining > 0.0:
+        arcs.append(_Arc(t, min(speed / ROLL_DECEL_M_S2, remaining), (x, y, 0.0), (vx, vy, 0.0), "roll"))
+    else:
+        arcs.append(_Arc(t, 0.0, (x, y, 0.0), (0.0, 0.0, 0.0), "roll"))
+    return tuple(arcs), ground_contacts, tuple(apexes)
+
+
+def rebound_trajectory(
+    surface: str, contact_state: BallState, seed_key: str, *, jitter: bool = True
+) -> ReboundTrajectory:
+    """Rebond après l'impact de `contact_state` (état d'arrivée du ballon : position normalisée, `z` en mètres,
+    vitesse) sur un montant (`SURFACE_POST` ou `SURFACE_BAR`) : le ballon repart du point de contact, rebondit sur le
+    sol (restitution 0,70, -15 % de vitesse horizontale par rebond) et s'arrête."""
+    contact = (contact_state.x, contact_state.y, contact_state.z)
+    velocity = (contact_state.vx * PITCH_LENGTH_M, contact_state.vy * PITCH_WIDTH_M, contact_state.vz)
+    exit_velocity = rebound_exit_velocity(surface, contact, velocity, seed_key, jitter=jitter)
+    p0 = (contact_state.x * PITCH_LENGTH_M, contact_state.y * PITCH_WIDTH_M, contact_state.z)
+    arcs, ground_contacts, apexes = _simulate_rebound(p0, exit_velocity)
+    duration = arcs[-1].t0 + arcs[-1].duration
+    trajectory = ReboundTrajectory(
+        surface=surface, contact=contact, exit_velocity=exit_velocity, arcs=arcs, duration=duration,
+        ground_bounces=ground_contacts, apexes_m=apexes, first_bounce_apex_m=apexes[0] if apexes else 0.0,
+        rest=(0.0, 0.0, 0.0),
+    )
+    end = trajectory.state_at(duration)
+    return replace(trajectory, rest=(end.x, end.y, end.z))
+
+
+_REBOUND_SURFACE_BY_OUTCOME = {"poteau": SURFACE_POST, "barre": SURFACE_BAR}
+
+
+def rebound_after_flight(sequence: Sequence, outcome: str | None) -> ReboundTrajectory | None:
+    """Rebond qui prolonge un clip dont le vol (`ball_flight`) s'arrête sur un montant (`outcome` `poteau` ou
+    `barre`). `None` pour toute autre issue (but, arrêt, hors cadre, tacle, dégagement : inchangées) ou pour une
+    séquence sans vol. L'état de contact est l'état d'arrivée du vol, donc la trajectoire existante ne change pas :
+    le rebond commence là où elle s'arrête (à `sequence.duration`)."""
+    surface = _REBOUND_SURFACE_BY_OUTCOME.get(outcome or "")
+    if surface is None or len(sequence.keyframes) < 2 or sequence.keyframes[-2].physics_tag != BALL_FLIGHT:
+        return None
+    contact_state = ball_state_at(sequence, sequence.duration)
+    return rebound_trajectory(surface, contact_state, f"{sequence.event_ref}|rebound")
+
+
+def _surface_from_contact(contact_state: BallState) -> str:
+    return SURFACE_BAR if contact_state.z >= _BAR_Z_MIN_M - 0.05 else SURFACE_POST
+
+
+# Rebond d'un ballon qui retombe sur le sol (centre de corner : `cross` puis `deflect`) : seule la HAUTEUR rebondit
+# (restitution 0,70, arrêt sous 5 cm de sommet), la trajectoire x/y du `deflect` est inchangée.
+def _landing_speed_m_s(sequence: Sequence, kf_a: Keyframe) -> float | None:
+    idx = next((i for i, kf in enumerate(sequence.keyframes) if kf is kf_a), 0)
+    if idx == 0:
+        return None
+    previous = sequence.keyframes[idx - 1]
+    if previous.physics_tag not in (CROSS, PASS_LOB):
+        return None
+    arrival = ball_state_at(sequence, kf_a.t)  # `_find_ball_segment` résout t = kf_a.t vers le segment PRÉCÉDENT
+    return -arrival.vz if arrival.vz < 0.0 else None
+
+
+def _vertical_bounce(landing_speed_m_s: float, tau: float, horizon: float) -> tuple[float, float]:
+    """(z, vz) `tau` s après l'atterrissage à `landing_speed_m_s` : rebonds successifs jusqu'à un sommet < 5 cm, ou
+    jusqu'à ce que le dernier arc ne tienne plus dans `horizon` (le ballon est alors au sol à la fin du segment)."""
+    t0 = 0.0
+    vz_up = GROUND_RESTITUTION * landing_speed_m_s
+    while vz_up * vz_up / (2.0 * GRAVITY_M_S2) >= REBOUND_MIN_APEX_M:
+        arc = 2.0 * vz_up / GRAVITY_M_S2
+        if t0 + arc > horizon:
+            break
+        if tau <= t0 + arc:
+            local = tau - t0
+            return vz_up * local - 0.5 * GRAVITY_M_S2 * local * local, vz_up - GRAVITY_M_S2 * local
+        t0 += arc
+        vz_up *= GROUND_RESTITUTION
+    return 0.0, 0.0
+
+
 # --- résolution du tag / dispatch -------------------------------------------
 
 
@@ -510,8 +797,18 @@ def ball_state_at(sequence: Sequence, t: float) -> BallState:
         state = _behavior_ball_flight(start, end, s, duration, kf_a.ball.spin, kf_b.ball.z)
     elif tag == CROSS:
         state = _behavior_cross(start, end, s, duration, seed_key)
+    elif tag == BOUNCE:
+        contact_state = ball_state_at(sequence, kf_a.t)  # fin du segment précédent (le vol)
+        trajectory = rebound_trajectory(
+            _surface_from_contact(contact_state), contact_state, f"{sequence.event_ref}|rebound"
+        )
+        state = trajectory.state_at(s * duration)
     else:
         state = _behavior_deflect(start, end, s, duration, seed_key)
+        landing = _landing_speed_m_s(sequence, kf_a)
+        if landing is not None:
+            z, vz = _vertical_bounce(landing, s * duration, duration)
+            state = replace(state, z=z, vz=vz)
 
     owner_id = kf_a.ball.owner_id if s < 1.0 else kf_b.ball.owner_id
     return replace(state, owner_id=owner_id)

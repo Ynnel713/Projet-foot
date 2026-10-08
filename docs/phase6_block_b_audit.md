@@ -1,6 +1,6 @@
 # Phase 6, Bloc B — Audit de la physique du ballon
 
-Document de référence du **08/10/2026**, sur `HEAD` = `e63d6f0`. **Audit seulement : aucune ligne de code n'a été modifiée.** Les mesures viennent de scripts jetables, hors dépôt, qui appellent `ball_state_at` sur les 12 gabarits réels (helpers déterministes de `tests/test_narrative_player.py`, compo fixe) pour les issues `but`, `arret`, `poteau`, `barre`, `hors_cadre`, `tacle` et `degagement`.
+Document de référence du **08/10/2026**, sur `HEAD` = `e63d6f0`. **Audit seulement : aucune ligne de code n'a été modifiée.** *Mise à jour du 08/10/2026 : **B2 (rebonds) est terminé**, voir le §5 ; les §0 à §4 décrivent l'état avant B2.* Les mesures viennent de scripts jetables, hors dépôt, qui appellent `ball_state_at` sur les 12 gabarits réels (helpers déterministes de `tests/test_narrative_player.py`, compo fixe) pour les issues `but`, `arret`, `poteau`, `barre`, `hors_cadre`, `tacle` et `degagement`.
 
 ## 0. Méthode et limites
 
@@ -118,3 +118,84 @@ La consigne suggérait B2 (rebonds), B3 (rotation), B4 (sorties), B5 (tag). L'au
 6. **B6 — micro-variations.** En dernier : il faut des grandeurs stables à faire varier, et il touche le cache et la reproductibilité.
 
 **Décisions attendues de l'architecte** : (1) autorisation de modifier `templates.py` pour B2, B4, B5 ; (2) levée du gel de `canvas.html` pour B3 et pour consommer B4 ; (3) choix du mécanisme de variantes pour B6 (graine de rendu dans la clé de cache, ou nombre fixe de variantes).
+
+
+## 5. B2 — Rebonds (terminé le 08/10/2026)
+
+### 5.1 Périmètre, et écart à la consigne
+
+Périmètre autorisé par l'architecte (option A) : `src/ligue1sim/animation/ball.py`, `src/ligue1sim/animation/templates.py` et `engine/narrative_player.py`. **Fichiers réellement modifiés : `ball.py` et `narrative_player.py`. `templates.py` n'est pas modifié.**
+
+La consigne demandait de prolonger la **durée de la `Sequence`** dans `templates.py`. Mesure faite avant d'écrire du code : allonger `Sequence.duration` décale presque toutes les images **avant** le contact, parce que `motion` s'en sert pour la dérive des joueurs de fond (`_background_position_at`) et pour le décalage de réaction des joueurs sans rôle (`_start_offset`).
+
+| Gabarit (issue `barre`, +2 s) | Images avant contact | Images modifiées | Écart maximal d'un joueur |
+|---|---|---|---|
+| `corner` | 222 | 221 | 0,85 m |
+| `decalage_enroulee` | 192 | 191 | 0,96 m |
+| `une_deux` | 132 | 131 | 1,30 m |
+
+Cela contredit « la trajectoire existante ne change pas » et « seul l'ajout du segment final ». Les images du rebond sont donc ajoutées **après** la séquence, dans `narrative_player._extend_with_rebound`, avec la physique de `ball.py` (`rebound_after_flight`) ; les joueurs restent figés sur leurs dernières positions, comme pendant le vol. Les images existantes sont strictement identiques (vérifié, §5.4). Conséquence : les tests `test_ball_reaches_target_on_shot` et `test_poteau_on_post_not_between` ne sont **pas** cassés (la séquence s'arrête toujours à la cible du vol) et restent en place ; `tests/test_templates.py` n'a pas besoin d'être adapté.
+
+**Durée du rebond.** La consigne parlait d'une prolongation de 0,3 s. Elle ne suffit pas : un ballon qui quitte la barre à 2,4 m met 0,2 s à retomber, et trois à cinq rebonds en demandent 2 à 3. La durée est donc **physique, plafonnée à 3 s** (`REBOUND_MAX_DURATION_S`), le clip s'arrête au dernier contact avec le sol qui tient dans ce plafond.
+
+### 5.2 Ce qui est livré
+
+- **`ball.py`** : tag `bounce` ; `rebound_trajectory`, `rebound_exit_velocity`, `rebound_after_flight` (poteau, barre) ; `ReboundTrajectory.state_at(tau)` ; rebond de la hauteur d'un ballon qui retombe d'un centre (`cross` puis `deflect`, donc le corner), la trajectoire x/y du `deflect` étant inchangée.
+- **`narrative_player.py`** : `_extend_with_rebound`, appelé après la contrainte d'accélération, uniquement pour les issues `poteau` et `barre`.
+- **Issues inchangées** : `but`, `arret`, `hors_cadre`, `tacle`, `degagement` n'ont aucun rebond. Un ballon qui franchit la ligne n'est donc jamais dévié ; la détection du but (`canvas.html`) n'est pas touchée.
+
+### 5.3 Paramètres retenus
+
+| Paramètre | Valeur | Justification |
+|---|---|---|
+| Restitution au sol | **0,70** | la hauteur d'un rebond vaut e² de la précédente, soit 0,49 : perte de 51 %, dans la cible « rebond mou » de FM (40 à 50 %). À 0,8, la perte tombe à 36 % (balle de tennis) |
+| Friction horizontale au sol | **−15 % par rebond** | milieu de la fourchette 10-20 % |
+| Arrêt des rebonds | sommet < 5 cm, puis roulement à 2,5 m/s² | herbe sèche (1,5 à 3 m/s²) |
+| Poteau | restitution **0,70** | réflexion horizontale, `vz` conservé ; angle de contact de 0 (plein centre) à 35° selon l'écart du point d'impact au centre du montant |
+| Barre | restitution **0,70**, normale inclinée de **5 à 15°** sous l'horizontale côté terrain | le ballon repart vers le bas et vers le terrain, jamais derrière la ligne. Avec 10 à 30°, le premier rebond au sol montait à 3,19 m en moyenne (10,5 m au maximum) ; avec 5 à 15° : 1,46 m (2,71 m au maximum) |
+| Aléa de direction (D8) | **±10°** sur l'azimut de sortie | calculé à partir de la géométrie, puis perturbé par un hachage déterministe de `event_ref` (borné, vérifié par test) |
+| Garde-fous | vitesse de sortie vers le terrain ≥ 1 m/s ; vers le bas ≥ 1 m/s (barre) ; ballon arrêté à 3 m des lignes (planches) | jamais derrière la ligne : 0 cas sur 1 440 rebonds simulés |
+
+### 5.4 Mesures avant / après
+
+**Déterminisme** (graines 1 à 100, `random.seed` et `np.random.seed`, `PYTHONHASHSEED=0`, Ligue 1 réelle, HEAD contre arbre modifié) : **100 matchs sur 100** avec scores, buts, cartons, remplacements, blessures et notes identiques ; scores identiques 100/100. L'animation est en aval du moteur sportif.
+
+**Clips** (les mêmes 100 matchs, tous les clips d'issue `poteau` ou `barre` : 40 clips, tous des poteaux ; aucune barre n'apparaît dans cet échantillon) :
+- images existantes strictement identiques : **39 clips sur 40**. Le 40e est un `corner` : joueurs, x, y et t identiques sur les 271 images ; seule la hauteur du ballon change (47 images, jusqu'à 0,48 m, au lieu de 0), ce qui est le rebond du centre qui retombe (voulu) ;
+- rebonds au sol (min / moy / max) : **1 / 3,58 / 5** ; sommet du 1er rebond : 0,0 / 0,72 / 4,78 m ;
+- prolongation du clip : 2,09 / 2,92 / 3,03 s, soit 63 à 91 images ajoutées (+19 à +60 % d'images, 40 % en moyenne, pour ces clips seulement : `poteau` et `barre`) ;
+- arrêt à 19,6 / 36,9 / 58,0 m du point de contact, et à 7,9 / 40,4 / 62,4 m du point de tir.
+
+**5 clips témoins** (avant : le clip s'arrête au contact, ballon à ~34 m/s, `z` = hauteur du contact ; après : rebond jusqu'à un contact au sol) :
+
+| Clip | Gabarit | Rebonds | Sommet du 1er rebond | Prolongation | Arrêt / contact | Arrêt / point de tir | Avant : durée du clip |
+|---|---|---|---|---|---|---|---|
+| 1:8 | `une_deux` | 4 | 0,34 m | 3,03 s | 22,2 m | 19,7 m | 5,37 s |
+| 1:11 | `recuperation_haute` | 3 | 1,17 m | 2,59 s | 56,3 m | 45,2 m | 6,00 s |
+| 2:0 | `decalage_enroulee` | 1 | 0,0 m | 3,03 s | 25,1 m | 15,8 m | 7,10 s |
+| 2:1 | `debordement_centre_tete` | 5 | 0,76 m | 3,03 s | 55,0 m | 58,4 m | 6,60 s |
+| 3:1 | `decalage_enroulee` | 2 | 0,06 m | 3,01 s | 40,4 m | 53,5 m | 6,87 s |
+
+**Écart perceptible** : avant, le ballon s'arrêtait net sur le poteau ; après, il repart vers le terrain, rebondit 1 à 5 fois et finit au sol, en 2 à 3 s de plus. En revanche, il va **loin** (36,9 m en moyenne depuis le contact, jusqu'à 58 m) parce que le moteur n'a pas encore de frottement de l'air.
+
+**Sur 720 rebonds de barre simulés** (12 gabarits × 60 événements) : 3 à 4 rebonds, sommet du 1er rebond 1,21 à 2,71 m (moyenne 1,46 m), arrêt à 22,8 à 59,0 m du contact, durée 2,41 à 3,0 s.
+
+### 5.5 Corrections factuelles (vérifiées contre les mesures de l'audit, §1)
+
+| Point | État vérifié |
+|---|---|
+| Effet Magnus | La conduite `shot` dévie de **1,08 m** (spin 50 rad/s, 16,05 m, 3,6 s, mesuré) ; le vol rapide `ball_flight` de **0,09 à 0,49 m** (0,49 m pour un `hors_cadre` de **0,88 s**). Le « 0,75 m » est la hauteur `z` maximale d'une conduite, pas la déviation ; le « 0,15 s » et le « 0,49 s » ne correspondent à aucune durée de segment mesurée |
+| Friction de l'air | **Elle n'existe pas** dans `ball.py` : seul `pass_ground` perd 5 % de vitesse, sur la **totalité du segment**. Le « 5 % par seconde partout » n'est donc pas l'état du code ; c'est une valeur à implémenter, au levier B1 |
+| Tag cross / deflect | Résolu depuis le 23/09/2026 (`templates.py` : `cross` puis `deflect` pour le corner). La mention « non résolu » de `docs/simulation_physique_archi.md` (ligne 12) est périmée. Le périmètre de B5 se réduit à la variété des types de frappe et au vocabulaire |
+
+### 5.6 Limites connues
+
+- **Le ballon n'est pas à l'arrêt à 3 s** : sans frottement de l'air, l'arrêt complet demande 6 à 7 s et 45 à 57 m (mesuré avec un plafond de 60 s). Le clip est coupé au dernier contact avec le sol avant 3 s. Le levier B1 doit résoudre cela.
+- **Planches** : environ 16 % des rebonds (229 sur 1 440) finissent contre la limite de 3 m derrière les lignes ; le ballon y est arrêté.
+- **Barre** : aucune issue `barre` dans l'échantillon de 100 matchs (rare dans la narration) ; couverte par les tests unitaires et les 720 rebonds simulés.
+- **Joueurs figés** pendant le rebond (2 à 3 s) ; aucun joueur ne réagit au ballon. À revoir avec le Bloc A.
+- `arret`, `hors_cadre` et `but` sont inchangés : un tir qui finit dans le filet ou dans le gardien s'arrête toujours net.
+
+### 5.7 Statut
+
+**B2 terminé.** Prochaine étape de la séquence : B1 (décélération, friction de l'air).

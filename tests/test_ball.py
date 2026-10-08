@@ -1,18 +1,30 @@
+import dataclasses
 import math
 
 import pytest
 
 from ligue1sim.animation.ball import (
     BALL_FLIGHT,
+    BOUNCE,
     CROSS,
     DEFLECT,
+    GRAVITY_M_S2,
+    GROUND_HORIZONTAL_KEEP,
+    GROUND_RESTITUTION,
     PASS_GROUND,
     PASS_LOB,
+    REBOUND_AZIMUTH_JITTER_DEG,
+    REBOUND_MAX_DURATION_S,
+    REBOUND_MIN_APEX_M,
     SHOT,
+    SURFACE_BAR,
+    SURFACE_POST,
     _find_ball_segment,
     _real_distance_m,
     _resolve_physics_tag,
     ball_state_at,
+    rebound_after_flight,
+    rebound_exit_velocity,
 )
 from ligue1sim.animation.templates import BUILDERS, TEMPLATES
 from ligue1sim.animation.types import BallState, Keyframe, RosterEntry, Sequence
@@ -801,3 +813,192 @@ class TestFindBallSegment:
         kf_a, kf_b, s, is_last = _find_ball_segment(sequence, 999.0)
         assert s == 1.0
         assert is_last is True
+
+
+# --- Phase 6, Bloc B2 (08/10/2026) : rebonds ---------------------------------------------------------
+# Le rebond s'ajoute APRÈS le contact (poteau, barre) : il ne modifie ni la trajectoire existante ni les issues
+# `but` / `arret` / `hors_cadre` / `tacle` / `degagement`. Les tests `TestBallReachesTargetOnShot` et
+# `TestBallFlightPoteauAndHorsCadre` ci-dessus restent valides : la séquence s'arrête toujours à la cible du vol,
+# le rebond vit dans `rebound_after_flight` (et dans `narrative_player._extend_with_rebound` pour les clips).
+
+
+def _rebound_sequence(gabarit: str, outcome: str, minute: int = 34):
+    event = dataclasses.replace(_flight_event(gabarit), minute=minute)
+    return BUILDERS[gabarit](event, _deflect_audit_lineup(), _flight_start_positions(), outcome)
+
+
+def _rebound(gabarit: str, outcome: str, minute: int = 34):
+    return rebound_after_flight(_rebound_sequence(gabarit, outcome, minute), outcome)
+
+
+_REBOUND_GABARITS = sorted(TEMPLATES)
+
+
+class TestReboundsAfterFlight:
+    @pytest.mark.parametrize("gabarit", _REBOUND_GABARITS)
+    def test_ball_rebounds_on_shot_and_comes_to_rest(self, gabarit):
+        """Un tir sur la barre rebondit au moins 2 fois sur le sol avant la fin du rebond, et le ballon finit AU
+        SOL (z = 0), pas à la cible. (La séquence, elle, s'arrête toujours à la cible : le rebond est ajouté après.)"""
+        for outcome in ("barre", "poteau"):
+            trajectory = _rebound(gabarit, outcome)
+            assert trajectory is not None
+            minimum = 2 if outcome == "barre" else 1
+            assert trajectory.ground_bounces >= minimum, f"{gabarit}/{outcome}"
+            assert trajectory.state_at(trajectory.duration).z == 0.0, f"{gabarit}/{outcome} : fin en l'air"
+            assert trajectory.duration <= REBOUND_MAX_DURATION_S + 1e-9
+
+    @pytest.mark.parametrize("gabarit", _REBOUND_GABARITS)
+    def test_poteau_rebounds_instead_of_stopping_on_the_post(self, gabarit):
+        for minute in range(1, 16):
+            trajectory = _rebound(gabarit, "poteau", minute)
+            contact_x, contact_y, _ = trajectory.contact
+            end = trajectory.state_at(trajectory.duration)
+            assert trajectory.exit_velocity[0] <= -1.0, "le ballon doit repartir vers le terrain (demi-plan opposé)"
+            moved_m = math.hypot((end.x - contact_x) * PITCH_LENGTH_M, (end.y - contact_y) * PITCH_WIDTH_M)
+            assert moved_m > 3.0, f"{gabarit}/{minute} : le ballon est resté sur le poteau ({moved_m:.2f} m)"
+            for k in range(1, 61):  # jamais derrière la ligne de but
+                assert trajectory.state_at(trajectory.duration * k / 60).x <= contact_x + 1e-9
+
+    @pytest.mark.parametrize("gabarit", _REBOUND_GABARITS)
+    def test_barre_sends_the_ball_down_and_back_into_the_field_never_behind_the_line(self, gabarit):
+        for minute in range(1, 16):
+            trajectory = _rebound(gabarit, "barre", minute)
+            vx, _, vz = trajectory.exit_velocity
+            assert vx <= -1.0 and vz <= -1.0
+            for k in range(1, 61):
+                state = trajectory.state_at(trajectory.duration * k / 60)
+                assert state.x <= trajectory.contact[0] + 1e-9, f"{gabarit}/{minute} : derrière la ligne"
+                assert state.z >= 0.0
+
+    def test_bounce_height_decreases_at_every_bounce(self):
+        for gabarit in _REBOUND_GABARITS:
+            for outcome in ("barre", "poteau"):
+                for minute in (5, 17, 34, 52):
+                    apexes = _rebound(gabarit, outcome, minute).apexes_m
+                    assert all(later < earlier for earlier, later in zip(apexes, apexes[1:])), (gabarit, outcome)
+                    assert all(
+                        later == pytest.approx(earlier * GROUND_RESTITUTION**2, rel=1e-9)
+                        for earlier, later in zip(apexes, apexes[1:])
+                    )
+                    assert all(apex >= REBOUND_MIN_APEX_M for apex in apexes)  # sous 5 cm : le rebond est supprimé
+
+    def test_horizontal_friction_reduces_the_speed_at_every_ground_bounce(self):
+        checked = 0
+        for gabarit in _REBOUND_GABARITS:
+            for outcome in ("barre", "poteau"):
+                trajectory = _rebound(gabarit, outcome)
+                flights = [arc for arc in trajectory.arcs if arc.kind == "flight"]
+                for before, after in zip(flights, flights[1:]):
+                    speed_before = math.hypot(before.v0[0], before.v0[1])
+                    speed_after = math.hypot(after.v0[0], after.v0[1])
+                    assert speed_after == pytest.approx(speed_before * GROUND_HORIZONTAL_KEEP, rel=1e-9)
+                    checked += 1
+        assert checked > 20
+
+    @pytest.mark.parametrize("gabarit", _REBOUND_GABARITS)
+    @pytest.mark.parametrize("outcome", ["but", "arret", "hors_cadre", "tacle", "degagement"])
+    def test_other_outcomes_get_no_rebound(self, gabarit, outcome):
+        assert _rebound(gabarit, outcome) is None
+
+    @pytest.mark.parametrize("gabarit", _REBOUND_GABARITS)
+    def test_ball_crossing_the_goal_line_is_not_deflected_by_a_spurious_rebound(self, gabarit):
+        """Issue `but` : aucun rebond n'est ajouté et le vol continue jusqu'au filet, derrière la ligne, entre les
+        poteaux (x croissant jusqu'à la fin, toujours >= 1,0 à l'arrivée)."""
+        sequence = _rebound_sequence(gabarit, "but")
+        assert rebound_after_flight(sequence, "but") is None
+        flight_start = sequence.keyframes[-2].t
+        xs = [ball_state_at(sequence, flight_start + (sequence.duration - flight_start) * k / 40).x for k in range(41)]
+        assert all(later >= earlier - 1e-12 for earlier, later in zip(xs, xs[1:]))
+        final = ball_state_at(sequence, sequence.duration)
+        assert final.x >= 1.0 and _GOAL_Y_MIN <= final.y <= _GOAL_Y_MAX
+
+    def test_existing_flight_is_unchanged_by_the_rebound_machinery(self):
+        for gabarit in _REBOUND_GABARITS:
+            for outcome in ("barre", "poteau"):
+                sequence = _rebound_sequence(gabarit, outcome)
+                before = [ball_state_at(sequence, sequence.duration * k / 50) for k in range(51)]
+                rebound_after_flight(sequence, outcome)
+                assert before == [ball_state_at(sequence, sequence.duration * k / 50) for k in range(51)]
+
+
+class TestReboundDirectionIsBoundedAndDeterministic:
+    _CONTACT = (1.0, _GOAL_Y_MIN, 1.0)
+    _VELOCITY = (33.0, 0.5, 0.3)
+
+    def _azimuth_deg(self, velocity):
+        return math.degrees(math.atan2(velocity[1], velocity[0]))
+
+    def test_azimuth_jitter_is_bounded_to_ten_degrees(self):
+        base = rebound_exit_velocity(SURFACE_POST, self._CONTACT, self._VELOCITY, "x", jitter=False)
+        deviations = []
+        for index in range(400):
+            jittered = rebound_exit_velocity(SURFACE_POST, self._CONTACT, self._VELOCITY, f"event-{index}")
+            delta = (self._azimuth_deg(jittered) - self._azimuth_deg(base) + 180.0) % 360.0 - 180.0
+            deviations.append(delta)
+            assert jittered[2] == base[2]  # l'aléa ne touche que l'azimut
+            assert math.hypot(jittered[0], jittered[1]) == pytest.approx(math.hypot(base[0], base[1]), rel=1e-9)
+        assert max(abs(delta) for delta in deviations) <= REBOUND_AZIMUTH_JITTER_DEG + 1e-9
+        assert min(deviations) < -5.0 and max(deviations) > 5.0  # l'aléa existe bel et bien (pas une constante)
+
+    def test_same_seed_gives_the_same_direction_and_the_whole_trajectory(self):
+        a = rebound_exit_velocity(SURFACE_BAR, self._CONTACT, self._VELOCITY, "event-7")
+        b = rebound_exit_velocity(SURFACE_BAR, self._CONTACT, self._VELOCITY, "event-7")
+        assert a == b
+        assert _rebound("corner", "barre", 12) == _rebound("corner", "barre", 12)
+
+    def test_exit_angle_follows_the_geometry_of_the_impact(self):
+        # Plein centre du poteau : le ballon revient sur lui-même ; sur le bord, il part nettement de côté.
+        centred = rebound_exit_velocity(SURFACE_POST, (1.0, _GOAL_Y_MIN, 1.0), (30.0, 0.0, 0.0), "x", jitter=False)
+        edge = rebound_exit_velocity(
+            SURFACE_POST, (1.0, _GOAL_Y_MIN + 0.005, 1.0), (30.0, 0.0, 0.0), "x", jitter=False
+        )
+        assert centred[1] == pytest.approx(0.0, abs=1e-9) and centred[0] == pytest.approx(-0.7 * 30.0)
+        assert abs(edge[1]) > 10.0
+        # Barre : plus le contact est bas, plus la normale est inclinée -> plus le ballon part vers le bas.
+        high = rebound_exit_velocity(SURFACE_BAR, (1.0, 0.5, 2.44), (30.0, 0.0, 0.0), "x", jitter=False)
+        low = rebound_exit_velocity(SURFACE_BAR, (1.0, 0.5, 2.35), (30.0, 0.0, 0.0), "x", jitter=False)
+        assert low[2] < high[2] < 0.0
+
+
+class TestBounceTagAndLandingBounce:
+    def test_bounce_tag_follows_the_rebound_trajectory(self):
+        sequence = _rebound_sequence("construction_placee", "barre")
+        trajectory = rebound_after_flight(sequence, "barre")
+        last = sequence.keyframes[-1]
+        rest = BallState(x=trajectory.rest[0], y=trajectory.rest[1], z=trajectory.rest[2], spin=0.0, owner_id=None)
+        extended = dataclasses.replace(
+            sequence,
+            duration=sequence.duration + trajectory.duration,
+            keyframes=[
+                *sequence.keyframes[:-1],
+                dataclasses.replace(last, physics_tag=BOUNCE),
+                dataclasses.replace(last, t=last.t + trajectory.duration, ball=rest, physics_tag=None),
+            ],
+        )
+        for tau in (0.0, 0.2, 0.9, 1.7, trajectory.duration):
+            via_tag = ball_state_at(extended, sequence.duration + tau)
+            direct = trajectory.state_at(tau)
+            assert (via_tag.x, via_tag.y, via_tag.z) == pytest.approx((direct.x, direct.y, direct.z), abs=1e-9)
+
+    def test_corner_cross_lands_and_bounces_without_changing_the_ground_path(self):
+        sequence = _rebound_sequence("corner", "but")
+        frames = sequence.keyframes
+        index = next(i for i, kf in enumerate(frames) if kf.physics_tag == DEFLECT and frames[i - 1].physics_tag == CROSS)
+        kf_a, kf_b = frames[index], frames[index + 1]
+        duration = kf_b.t - kf_a.t
+        zs = [ball_state_at(sequence, kf_a.t + duration * k / 200).z for k in range(1, 201)]
+        landing_speed = -ball_state_at(sequence, kf_a.t).vz
+        assert landing_speed > 1.0
+        assert max(zs) == pytest.approx((GROUND_RESTITUTION * landing_speed) ** 2 / (2 * GRAVITY_M_S2), rel=0.02)
+        assert zs[-1] == 0.0  # au sol à la fin du segment (le vol suivant part du sol)
+        from ligue1sim.animation.ball import _behavior_deflect
+
+        seed_key = f"{sequence.event_ref}|{kf_a.t}"
+        for s in (0.1, 0.5, 0.9):
+            plain = _behavior_deflect((kf_a.ball.x, kf_a.ball.y), (kf_b.ball.x, kf_b.ball.y), s, duration, seed_key)
+            state = ball_state_at(sequence, kf_a.t + s * duration)
+            assert (state.x, state.y) == pytest.approx((plain.x, plain.y), abs=1e-12)  # seule la hauteur rebondit
+
+    def test_a_deflect_that_does_not_follow_an_airborne_segment_stays_on_the_ground(self):
+        sequence = _sequence(physics_tag=DEFLECT, start=(0.3, 0.5), end=(0.5, 0.5), duration=3.0)
+        assert all(ball_state_at(sequence, 3.0 * k / 60).z == 0.0 for k in range(61))

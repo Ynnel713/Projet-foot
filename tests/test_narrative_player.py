@@ -7,6 +7,7 @@ d'`apps/streamlit_preview.py` sur l'indépendance volontaire des fichiers)."""
 import pytest
 
 from ligue1sim.animation import templates as templates_module
+from ligue1sim.animation.ball import REBOUND_MAX_DURATION_S
 from ligue1sim.animation.motion import interpolate
 from ligue1sim.animation.sequence_generator import enrich_with_background
 from ligue1sim.animation.templates import BUILDERS
@@ -23,6 +24,7 @@ from narrative_player import (
     build_clips,
     _apply_acceleration_constraint_to_frames,
     _build_clip_frames,
+    _extend_with_rebound,
     _interval_events,
     _lineup_start_positions,
 )
@@ -573,3 +575,50 @@ class TestInterpolateOptimisation:
 
         positions = {f"p{k}": (0.04 * k, 0.04 * k) for k in range(20)}
         assert _apply_avoidance(positions) == positions
+
+
+# --- Phase 6, Bloc B2 (08/10/2026) : prolongation des clips par le rebond ----------------------
+# `_extend_with_rebound` ajoute les images du rebond APRÈS la séquence (poteau, barre) sans toucher aux images
+# existantes : allonger `Sequence.duration` décalerait presque toutes les images précédentes (voir sa docstring).
+
+
+def _frames_with_outcome(name: str, outcome: str | None):
+    lineup, opponent = _accel_lineup("home", 1), _accel_lineup("away", 101)
+    sequence = BUILDERS[name](_accel_goal_event(), lineup, _accel_start_positions(lineup), outcome)
+    sequence = enrich_with_background(sequence, opponent)
+    frames, t = [], 0.0
+    while t <= sequence.duration + 1e-9:
+        frames.append(interpolate(sequence, t))
+        t += _ACCEL_STEP_S
+    return sequence, frames
+
+
+class TestExtendWithRebound:
+    @pytest.mark.parametrize("name", sorted(BUILDERS))
+    @pytest.mark.parametrize("outcome", ["poteau", "barre"])
+    def test_existing_frames_are_untouched_and_the_rebound_is_appended_after_the_impact(self, name, outcome):
+        sequence, frames = _frames_with_outcome(name, outcome)
+        extended = _extend_with_rebound(frames, sequence, outcome, _ACCEL_STEP_S)
+
+        assert extended[: len(frames)] == frames  # images existantes strictement identiques
+        extension = extended[len(frames):]
+        assert extension, "le clip doit être prolongé"
+        assert extension[0].t > sequence.duration  # la première image ajoutée est déjà après l'impact
+        times = [f.t for f in extension]
+        assert times == sorted(times) and len(set(times)) == len(times)
+        assert all(0.0 < b - a <= _ACCEL_STEP_S + 1e-9 for a, b in zip(times, times[1:]))
+        assert extension[-1].t - sequence.duration <= REBOUND_MAX_DURATION_S + 1e-9
+        assert all(f.players == frames[-1].players for f in extension)  # joueurs figés, comme pendant le vol
+        assert all(f.ball.z >= 0.0 and f.ball.owner_id is None for f in extension)
+        assert extension[-1].ball.z == 0.0  # le ballon finit au sol
+
+    @pytest.mark.parametrize("name", sorted(BUILDERS))
+    @pytest.mark.parametrize("outcome", ["but", "arret", "hors_cadre", "tacle", "degagement", None])
+    def test_other_outcomes_are_not_extended(self, name, outcome):
+        sequence, frames = _frames_with_outcome(name, outcome)
+        assert _extend_with_rebound(frames, sequence, outcome, _ACCEL_STEP_S) is frames
+
+    def test_the_clip_with_a_rebound_is_longer_than_the_clip_without_it(self):
+        sequence, frames = _frames_with_outcome("une_deux", "barre")
+        extended = _extend_with_rebound(frames, sequence, "barre", _ACCEL_STEP_S)
+        assert extended[-1].t > frames[-1].t + 1.0  # le rebond est visible (plus d'une seconde)
