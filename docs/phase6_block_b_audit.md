@@ -464,3 +464,91 @@ La distribution globale est préservée (39,7 % contre 39,9 % : −3 arrêts sur
 - **Score** : 100 matchs sur 100 identiques (scores, buts, cartons, remplacements, blessures, notes) entre avant B4-bis, B4-bis et l'arbre recentré ; 295 buts dans les trois cas ; mêmes minutes, équipes, gabarits et types d'événement.
 - **Cohérence texte / animation** (100 matchs) : 1 586 clips vérifiés, 0 incohérence — arrêt ⇒ premier événement `parade` ; poteau ⇒ `poteau` sans parade ni barre ; barre ⇒ `barre` ; but ⇒ `but` ; toute autre issue ⇒ aucun événement parade / poteau / barre. L'ingestion NLG (`timeline_to_events`) restitue la même issue que le `NarrativeEvent` pour 1 287 occasions, 0 écart.
 - **Statut** : formule validée par décision propriétaire.
+
+## 9. B3 — Rotation visible : diagnostic (08/10/2026)
+
+**Diagnostic seul : aucune ligne de code modifiée** (`canvas.html`, `ball.py`, `templates.py`, `narrative.py`, `narrative_player.py`, moteur sportif, Poisson et 3c intacts). Les mesures viennent de scripts jetables hors dépôt (`PYTHONHASHSEED=0`, graines 1 à 100) et d'une planche d'essai de rendu hors dépôt (mêmes constantes de ballon que `canvas.html`).
+
+### 9.1 Rotation actuelle : un champ `spin` posé par les gabarits, lu uniquement pour la courbure
+
+- **Précision sur le périmètre de `ball.py`.** `ball.py` **ne calcule pas** `spin` : il le **consomme**. La valeur est posée par `templates.py` (`build_decalage_enroulee`, constante `_DECALAGE_ENROULEE_SHOT_SPIN_RAD_S = 50.0`) sur les keyframes dont le tag est `shot` ou `ball_flight`. `ball.py` ne l'utilise que dans `_behavior_shot` (et `_behavior_ball_flight`, qui appelle `_behavior_shot`) pour la courbure de Magnus.
+- **Formule.** `a_lat = _MAGNUS_K · spin · v_base` (`_MAGNUS_K = 0,003`, sans unité, `v_base = distance / durée`), `crête = ½ · a_lat · (durée/2)²`, décalage perpendiculaire en `crête · 4s(1−s)`, nul aux extrémités. **Dépendance** : linéaire en `spin` et en `v_base` (quadratique en durée) ; **aucune courbure sous 11 m** (`_SHOT_STRAIGHT_MAX_DIST_M`) ; pas de dépendance à l'angle de frappe. Le signe de la courbure suit le signe de `spin`.
+- **Type de frappe.** Un seul gabarit a un spin non nul : `decalage_enroulee`. Tous les autres (passes au sol, centres, déviations, penalty, coup franc…) ont `spin = 0,0` : les segments `pass_ground`, `cross`, `deflect`, `bounce` et les segments sans tag renvoient toujours `spin = 0,0` (`ball.py`).
+- **Mesure sur les séquences moteur** (6 séquences par gabarit, échantillonnage à 0,05 s) :
+
+| Gabarit | Échantillons | `spin` ≠ 0 | Valeurs |
+|---|---|---|---|
+| `decalage_enroulee` | 835 | 541 (64,8 %) | 0 ou **+50 rad/s** (jamais négatif) |
+| 11 autres gabarits (but_gag, construction_placee, contre_attaque, corner, coup_franc, debordement_centre_tete, penalty, percee_individuelle, profondeur_1v1, recuperation_haute, une_deux) | 0 non nul sur 9 657 | 0 % | 0,0 |
+
+`decalage_enroulee` représente **163 événements sur 1 586** (10,3 %) sur les 100 matchs de référence.
+- **Plage.** 50 rad/s ≈ **8 tours/s**, constante, posée en marche d'escalier (0 → 50 → 0, sans montée ni descente) ; jamais lente, jamais variable. À 30 images/s (`_FPS = 30`), cela fait **95,5° par image du payload** ; à 60 Hz d'affichage, 47,7°.
+- **Courbure effective** (écart maximal à la corde, par segment, 6 séquences `decalage_enroulee` contre 6 séquences de gabarits sans spin) :
+
+| Segment | `decalage_enroulee` (spin 50) | Gabarits sans spin |
+|---|---|---|
+| `shot` (conduite, 3,6 s, 10 à 52 m, 3 à 15 m/s) | 0,00 à **3,46 m** (0 m à 10,6 m ; 0,89 m à 13,5 m ; 2,3 à 3,5 m de 34 à 52 m) | **0,00 m** (profondeur_1v1, penalty, coup_franc) |
+| `ball_flight` (0,9 à 2,1 s, 16 à 31 m/s) | **0,36 à 1,32 m** (4 à 14 px) | **0,00 m** |
+
+Sur ces séquences, la courbure sépare donc **sans ambiguïté** une frappe enroulée (> 0) d'une frappe tendue (= 0) ; l'écart vient pour l'essentiel de la **conduite** (`shot`, lente), pas du vol rapide (déjà signalé §1.2 et la note « Hors liste » de la synthèse).
+- **Clip témoin** (graine 2, `decalage_enroulee`, issue `poteau`) : 304 images, `spin` ≠ 0 sur **142 images** (t = 2,40 à 7,10 s), écart à la corde 1,08 m (11,8 px) sur 31,7 m. Pour comparaison, les clips sans spin ont des écarts de 1,6 à 6,8 m **à la corde sur une fenêtre de 3 s** (conduite, passes) : la courbure du ballon seule n'est donc pas lisible dans le flux de jeu, ce que l'architecte a constaté.
+
+| Clip témoin (graine 2) | Issue | `spin` ≠ 0 | Écart à la corde (fenêtre) | Vitesse moyenne |
+|---|---|---|---|---|
+| frappe enroulée (`decalage_enroulee`) | poteau | 142 / 304 | 1,08 m (2,40–7,10 s) | 6,8 m/s |
+| frappe tendue (`profondeur_1v1`) | but | 0 / 196 | 4,80 m (3,0 s) : conduite, pas frappe | 11,4 m/s |
+| passe au sol (`construction_placee`) | but | 0 / 448 | 4,91 m (3,0 s) | 14,1 m/s |
+| centre (`debordement_centre_tete`) | poteau | 0 / 281 | 1,62 m (3,0 s) | 12,6 m/s |
+| déviation (`percee_individuelle` ; segments `deflect` dans `corner` et `recuperation_haute`) | tacle | 0 / 211 | 0,00 m | 6,2 m/s |
+
+- **Transmission dans le payload.** Oui : `frames[i].ball.spin`, un **flottant scalaire** (rad/s, signé), arrondi à 4 décimales (`_round_frame_payload`), valeurs observées 0,0 et 50,0. Image de balle complète : `{"owner": "1523", "spin": 0.0, "x": 0.18, "y": 0.32, "z": 0.0}` (62 octets). **Ni axe, ni angle intégré, ni vitesse angulaire vectorielle.** Pas de rampe : la valeur change d'un coup à la frontière des segments.
+- **Conséquence sur le rendu.** L'angle de rotation n'existe nulle part ; il faudrait l'intégrer côté lecteur (`angle(t) = ∫ spin dt`), sans changer le payload. Une rotation du ballon vue de dessus autour de l'axe vertical correspond bien à l'effet latéral (Magnus) : un motif dessiné sur le disque tourne dans le plan de l'écran, ce qui est physiquement cohérent ; un roulement (axe horizontal) n'est pas modélisé.
+
+### 9.2 Rendu actuel du ballon dans `canvas.html`
+
+- **Dessin** (`drawFrame`) : disque blanc `#ffffff` de **6 px écran** de diamètre (`BALL_DIAMETER_SCREEN_PX = 6`, rayon 3 px × `pxPerScreenPx`), contour noir `rgba(0, 0, 0, 0.85)` de 0,8 px, surface intérieure ≈ 21 px² ; **ombre** ellipse `rgba(0, 0, 0, 0.28)` décalée de 0,6 r, de rayons r × 0,8 r ; **hauteur** : le disque est relevé de `min(z, 4)·SCALE·0,5` px et son rayon grossit de `min(0,5, z·0,15)` (jusqu'à +50 %) ; position interpolée linéairement entre deux images (`lerp`). Échelle du terrain : 10,88 px par mètre (canvas 1200 × 780).
+- **Marqueur sur le ballon** : aucun (pas de point, de ligne, de motif). **Traînée** : aucune. **Rotation visible** : non ; `canvas.html` contient **0 occurrence** de `spin`.
+- **Contraintes qui pèsent sur toute option** : l'or `#ffd700` est déjà utilisé par le contour du joueur actif et par les effets B4-bis (parade, corner, sortie de but) ; le ballon est dessiné après les joueurs et avant `drawBallEvents` ; ordre de dessin et constantes sont protégés par des tests statiques (`tests/test_canvas_html.py`).
+- **Captures existantes** (`docs/previews/phase5/sous_etape_2/zoom_ballon_en_vol_avant_apres.png`) : le ballon de 6 px est un disque blanc net avec son ombre ; à cette taille, un motif interne de plus de 1 à 2 px prend une part sensible de la surface (21 px²).
+
+### 9.3 Options évaluées à 6 px
+
+Planche d'essai jetable (hors dépôt) : le ballon de 6 px est rendu avec chaque option, 6 images successives à 60 Hz (47,7° par image) sur la pelouse, à taille réelle et agrandi (pixels nets). **Limite** : seules des images fixes ont été examinées ; la perception en mouvement n'a pas été testée.
+
+| Option | Faisabilité | Perceptibilité | Risque | Complexité | `canvas.html` | Observation sur la planche |
+|---|---|---|---|---|---|---|
+| **A.** 1 point noir (Ø 1,2 px) | Oui | **Faible à moyenne** | Le ballon paraît « sale » ; à 8 tours/s le point saute de 48° par image : lu comme un scintillement, **le sens de rotation n'est pas lisible**. Distingue « tourne / ne tourne pas » seulement par la présence d'une marque qui bouge | Faible | Oui | Une tache sombre de 1 à 2 px changeant de place ; sans sens |
+| **B.** 3 points noirs à 120° | Oui | **Faible** | Les trois points forment un damier de 6 px qui **se lit comme une texture**. À 30 images/s (95,5° par image) la période de 120° provoque un repliement (la rotation semble **reculer** de 24,5° par image) ; à 60 Hz (47,7°) il reste lisible mais sans direction | Faible à moyenne | Oui | Texture grise, plus lourde qu'en A |
+| **C.** Arc de rotation (queue de 70° au bord, 1,2 px) | Oui | **Moyenne à forte** (présence nette ; sens porté par la queue de l'arc, à confirmer en mouvement) | Collision de couleur si l'arc est or (déjà utilisé) ; nuit à la lisibilité des étiquettes B4-bis si trop long | Moyenne | Oui | Arc jaune bien visible autour du disque ; il se déplace de 48° par image ; le ballon blanc reste intact |
+| **D.** Ballon à 8 px + point | Oui | **Moyenne** | **Lève une décision Phase 5** (6 px) ; le disque passe de 28 à 50 px² (+ 78 %) ; ne règle pas la lecture du sens ; modifie les captures de référence de la Phase 5 | Faible | Oui | Le point est un peu plus net, le ballon paraît plus massif |
+| **E.** Flèche courbe externe fixe | Oui | **Forte** pour le sens, **sans rotation réelle** | Indicateur d'interface plus que rotation ; ≈ 15 px de large autour d'un ballon de 6 px, surcharge si les deux équipes enchaînent des frappes enroulées ; ne se distingue pas des flèches de B4-bis (parade) | Moyenne | Oui | Très lisible, mais statique et plus grosse que le ballon |
+| **F.** A + C | Oui | **Moyenne à forte** | Cumule les risques de A (tache) et de C ; deux éléments pour une information | Moyenne à forte | Oui | Plus chargé que C seul, sans gain de sens |
+
+- **Coût en pixels** (aire de la marque, ballon de 6 px) : A ≈ 1,1 px² (5 % de la surface) ; B ≈ 3 px² ; C ≈ 1,2 px de large sur un arc d'environ 5,5 px de long, **hors du disque** (surface blanche intacte) ; D +22 px² sur le ballon ; E ≈ 20 px² ; F ≈ A + C.
+- **Impact sur les captures de référence.** Toute option modifie le rendu du ballon uniquement **pendant les clips `decalage_enroulee` avec `spin ≠ 0`** (10,3 % des clips) ; les captures de B4-bis dont le gabarit n'a pas de spin (parade `profondeur_1v1`, corner `debordement_centre_tete`, sortie de but `coup_franc`, but `construction_placee`) resteraient identiques avec C ou E ; **la capture « poteau » de B4-bis est un `decalage_enroulee` en plein spin (t = 7,00 s, spin ≠ 0 de 2,40 à 7,10 s) : elle changerait**, comme tout clip `decalage_enroulee` des captures de la Phase 5 (gabarits non relus dans cette étape : à vérifier) ; A, B, D et F changeraient aussi le ballon des captures sans spin si le marqueur est dessiné en permanence (A, B, D) : à éviter, un marqueur ne devrait apparaître que pour `spin ≠ 0`.
+- **Traînée de trajectoire** (variante de C, hors liste) : testée à 8 points (≈ 27 px, 0,12 s à 20 m/s). **Inefficace** : la flèche de courbure d'une parabole de 1 m sur 560 px n'est que de **0,03 px** sur 27 px et de **0,4 px** sur 110 px (0,5 s). Seul un **tracé long** (≥ 2 à 3 s, la conduite entière) rendrait la courbure visible, au prix d'un trait persistant sur le terrain ; non recommandé en première intention.
+
+### 9.4 Points durs révélés par le diagnostic
+
+1. **Le spin s'applique aussi à la conduite.** `decalage_enroulee` porte `spin = 50` sur son segment `shot` (conduite lente de 3,6 s, 3 à 15 m/s) **avant** la frappe. Un rendu fondé sur `spin ≠ 0` ferait **tourner le ballon pendant la conduite**, et donc avant le tir. C'est le défaut déjà noté §1.2 et la note « Hors liste » de la synthèse : la courbure est portée par la conduite plutôt que par la frappe. Deux manières de le traiter (à décider) : (a) côté rendu, n'afficher la rotation que lorsque le ballon est en vol (par exemple `z > 0` ou vitesse supérieure à un seuil), **avec une constante produit à fixer**, car les vitesses de conduite (jusqu'à 14,6 m/s) et de vol (16 à 31 m/s) se chevauchent peu mais se touchent ; (b) côté moteur, ne poser `spin` que sur `ball_flight` (modification de `templates.py`), ce qui **supprimerait aussi la courbure de la conduite** (jusqu'à 3,5 m, soit 38 px) et ramènerait la courbure visible à 0,4 à 1,3 m (4 à 14 px).
+2. **Crénelage temporel.** À 50 rad/s et 30 images/s, un motif à symétrie multiple (B) apparaît tournant à l'envers. Tout motif doit être orienté par `angle = spin · (t − t0)` calculé **à partir de la tête de lecture** (60 Hz), jamais par image du payload, et se limiter à une marque unique (A ou C).
+3. **Sens de rotation.** Le signe de `spin` est constant (+) dans les données actuelles : un sens « gauche / droite » n'est pas distingué selon le côté de l'attaque. Le sens affiché sera donc toujours le même ; le lien avec le côté de la courbure est à vérifier avant d'afficher un sens.
+4. **Déterminisme.** Tout angle calculé à partir de `spin` et de la tête de lecture est une fonction pure du payload : même graine, même payload, même rendu. Aucun aléa à ajouter, aucune modification du payload nécessaire (le champ `ball.spin` existe déjà).
+
+### 9.5 Recommandation
+
+- **Option recommandée : C (arc de rotation), sans agrandir le ballon, avec rotation limitée aux phases de vol.** Elle est la seule à (1) rendre visible la différence entre une frappe enroulée (arc présent) et une frappe tendue (rien), (2) laisser le disque blanc de 6 px intact (l'arc est à l'extérieur), (3) ne rien changer au payload, (4) rester déterministe, (5) ne rien dessiner pour les 89,7 % de clips sans spin.
+- **Ce qu'elle ne garantit pas** : la lecture du **sens** de rotation (non vérifiée en mouvement) ; l'arc peut être pris pour un effet de B4-bis s'il reste or. Il faut un choix de couleur distinct.
+- **Pourquoi pas les autres.** A et B : à 6 px, une marque noire se lit comme une tache ou une texture, avec un risque de repliement temporel pour B ; D : lève la décision Phase 5 sans résoudre la lecture du sens ; E : lisible mais ne montre pas une rotation et ajoute un pictogramme volumineux ; F : charge sans gain.
+- **Aucune option ne rend la rotation « réelle » lisible à 6 px.** La rotation d'un disque blanc de 6 px à 8 tours/s est, en pratique, **invisible** sans marque ; ce que l'on peut obtenir est un **indicateur de rotation** (arc), pas la rotation du ballon. Si l'architecte exige la rotation d'un motif sur le ballon lui-même, **l'agrandissement (D) est le seul moyen d'y parvenir, et il lève la décision Phase 5** (décision à lui).
+
+### 9.6 Décisions attendues de l'architecte
+
+1. **Cible** : accepter un **indicateur de rotation** (option C) à la place de la rotation d'un motif sur le ballon, ou lever la décision Phase 5 (ballon de 8 px, option D).
+2. **Phase d'affichage** : afficher l'arc seulement en vol (règle de rendu à seuil, constante à fixer) ou corriger le moteur pour que `spin` ne soit posé que sur `ball_flight` (`templates.py`, courbure de la conduite supprimée) — voir §9.4 point 1.
+3. **Couleur de l'arc** (différente de l'or `#ffd700` du joueur actif et de B4-bis) et **longueur / épaisseur** (propositions : 70°, 1,2 px, rayon + 1,6 px ; à valider avant toute modification).
+4. **Périmètre** : levée du gel de `canvas.html` pour B3 (une fonction de dessin après `drawBallEvents`, tests statiques, captures avant / après), sans toucher au payload.
+
+### 9.7 Statut
+
+**B3 : diagnostic terminé, implémentation en attente des décisions du §9.6.** Rien n'a été modifié dans le code.
