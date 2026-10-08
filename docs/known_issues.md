@@ -1,6 +1,6 @@
 # Dette connue — Simulafoot
 
-Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets ouverts (3, 4, 6, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22 et 23) n'est corrigé à ce jour** (le ticket 2 est fermé le 08/10/2026). Créé le 07/10/2026 (clôture de l'Étape B, `LineupSnapshot`) ; tickets 4 et 5 ajoutés le même jour (intégration PWA par iframe) ; ticket 5 fermé et tickets 6 à 8 ouverts le même jour (gouvernance, avant Phase 5) ; tickets 9 (`duckdb`) et 10 (couverture NLG) ajoutés le même jour (environnement de test). tickets 7 (résolu en `7309172`) et 11 (`ConnectionResetError`) traités le même jour. **État : ouverts 2, 3, 4, 6, 9, 10, 11, 12, 13, 15 ; fermés 1 (résolu en `61773ab`, Phase 5 sous-étape 1), 14 (décision produit, bandes de tonte horizontales conservées), 5 (non reproduit), 7 (résolu en `7309172`) et 8 (résolu en `2d71e55`, vérifié sur archive propre).**
+Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets ouverts (3, 4, 6, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24 et 25) n'est corrigé à ce jour** (le ticket 2 est fermé le 08/10/2026). Créé le 07/10/2026 (clôture de l'Étape B, `LineupSnapshot`) ; tickets 4 et 5 ajoutés le même jour (intégration PWA par iframe) ; ticket 5 fermé et tickets 6 à 8 ouverts le même jour (gouvernance, avant Phase 5) ; tickets 9 (`duckdb`) et 10 (couverture NLG) ajoutés le même jour (environnement de test). tickets 7 (résolu en `7309172`) et 11 (`ConnectionResetError`) traités le même jour. **État : ouverts 2, 3, 4, 6, 9, 10, 11, 12, 13, 15 ; fermés 1 (résolu en `61773ab`, Phase 5 sous-étape 1), 14 (décision produit, bandes de tonte horizontales conservées), 5 (non reproduit), 7 (résolu en `7309172`) et 8 (résolu en `2d71e55`, vérifié sur archive propre).**
 
 | # | Titre | Priorité (avant…) | Statut |
 |---|---|---|---|
@@ -27,6 +27,8 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 | 21 | Spin binaire (0 ou 50 rad/s) dans `templates.py`, pas de valeurs intermédiaires | B5 (priorité moyenne) | Ouvert |
 | 22 | Courbure non perceptible à l'échelle 6 px | Avant la Phase 7 (priorité basse) | Ouvert |
 | 23 | NLG ne reçoit pas le type de frappe, texte générique incohérent avec le rendu | Après B5 (priorité moyenne) | Ouvert |
+| 24 | Commentaire faux sur la zone d'un penalty dans `engine/narrative.py` | Priorité basse | Ouvert |
+| 25 | Clips de but dont la dernière image est avant la ligne | Avant la Phase 7 (priorité basse) | Ouvert |
 
 ---
 
@@ -428,6 +430,32 @@ appelé par les scripts, les tests et un éventuel paramètre de graine de l'API
 **Piste (non implémentée).** Calculer le type de frappe en amont de l'animation (même hachage de `event_ref`) et le transmettre au NLG (champ du contrat), ou conditionner les phrases « volée », « enroulée », « tête » sur ce champ.
 
 **Priorité.** Moyenne ; résolution prévue après B5.
+
+**Statut.** Ouvert. Non corrigé.
+
+---
+
+## 24. Commentaire faux sur la zone d'un penalty dans `engine/narrative.py`
+
+**Description.** Le commentaire qui précède `_GABARIT_BASE_ZONE` (`engine/narrative.py`, lignes 380 à 387 environ) affirme qu'un penalty part « exactement au point réglementaire, aucune divergence » avec `events.PENALTY_SPOT_ZONE`. C'est inexact : `_narrative_event_zone` applique à **tous** les gabarits, penalty compris, un décalage déterministe (`_ZONE_JITTER_COLS = 1`, `_ZONE_JITTER_ROWS = 2`), et `PENALTY_SPOT_ZONE` (`src/ligue1sim/events.py`) est le centre d'une case de la grille (13,12 m de la ligne de but, 4,25 m de l'axe), pas le point de penalty réel (11 m, axe). Mesure du 08/10/2026 (graines 1 à 100, 34 clips de penalty) : le ballon part de 4,4 à 21,9 m de la ligne de but.
+
+**Correction attendue.** Corriger le texte du commentaire seulement, **sans modifier le comportement** ; le point de départ des penaltys sera traité dans `src/ligue1sim/animation/templates.py` (B6) et non dans ce fichier.
+
+**Priorité.** Basse.
+
+**Statut.** Ouvert. Non corrigé.
+
+---
+
+## 25. Clips de but dont la dernière image est avant la ligne
+
+**Description.** Certains clips de but n'ont aucune image où le ballon dépasse la ligne entre les poteaux : l'image la plus tardive (échantillonnage à 30 images/s, `_FPS` dans `engine/narrative_player.py`) tombe quelques centimètres avant la ligne (écart maximal mesuré 1,5 m). Le canvas gère le cas par un repli (`goalEvents` dans `render/canvas.html` : l'événement but part à la dernière image), donc rien ne casse à l'écran. Mesure sur 295 clips de but (graines 1 à 100) : **45 (15,3 %) avant B5**, 54 (18,3 %) juste après B5, **50 (16,9 %) après le recalibrage du pool pied** (`6bb8e5e` puis `dbe65a9`), les vols étant plus rapides (`src/ligue1sim/animation/templates.py`).
+
+**Impact et trace.** Le test `test_goal_clips_of_a_real_payload_cross_the_line_between_the_posts` (`tests/test_canvas_html.py`) tolère maintenant une dernière image à moins de 1,5 m de la ligne. Défaut préexistant, légèrement aggravé par B5 (+5 clips sur 295 par rapport à avant B5).
+
+**Résolution.** À décider par le propriétaire (par exemple une image finale ajoutée à l'instant exact de la fin du vol, ou une durée de séquence alignée sur le pas d'image).
+
+**Priorité.** Basse, avant la Phase 7.
 
 **Statut.** Ouvert. Non corrigé.
 
