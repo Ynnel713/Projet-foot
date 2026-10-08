@@ -50,7 +50,7 @@ from ligue1sim.animation.ball import BALL_FLIGHT
 from ligue1sim.animation.types import BallState, Keyframe, PlayerId, RosterEntry, Sequence
 from ligue1sim.events import GoalEvent
 from ligue1sim.lineup import Lineup
-from ligue1sim.pitch_geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, PitchPoint, center_of
+from ligue1sim.pitch_geometry import PENALTY_SPOT_DISTANCE_M, PITCH_LENGTH_M, PITCH_WIDTH_M, PitchPoint, center_of
 from ligue1sim.players import ATTACKER, DEFENDER, GOALKEEPER, MIDFIELDER, Player
 
 _logger = logging.getLogger(__name__)
@@ -61,6 +61,7 @@ _logger = logging.getLogger(__name__)
 ANCHOR_SCORER = "scorer_zone"  # event.zone (centre de la zone de tir/but)
 ANCHOR_ASSIST = "assist_zone"  # event.assist_zone si présent, sinon repli sur ANCHOR_SCORER
 ANCHOR_STATIC = "static"  # reste à sa position de départ (progress ignoré)
+ANCHOR_PENALTY_SPOT = "penalty_spot"  # point de penalty réglementaire (PENALTY_SPOT_DISTANCE_M de la ligne de but, y = 0,5), indépendant de event.zone -- Phase 6 B6-a
 ANCHOR_LATERAL_SHIFT = "lateral_shift"  # décalage latéral FIXE (voir _LATERAL_SHIFT_M) depuis le départ -- un pas de côté, jamais une vraie course (brief du 23/09/2026, penalty.support1/support2)
 
 # Amplitude du décalage pour ANCHOR_LATERAL_SHIFT -- 1,5 m (une enjambée
@@ -72,6 +73,14 @@ ANCHOR_LATERAL_SHIFT = "lateral_shift"  # décalage latéral FIXE (voir _LATERAL
 # penalty.support1/support2), donne 60 cm réels de déplacement final --
 # visible, subtil, crédible pour un joueur qui piétine avant un penalty.
 _LATERAL_SHIFT_M = 1.5
+
+# Phase 6, B6-a (08/10/2026) -- point de penalty réglementaire : 11 m de la ligne de but adverse (x = 1), sur l'axe (y = 0,5).
+# Remplace la zone de l'événement (case de la grille : centre à 13,12 m de la ligne et 4,25 m de l'axe, perturbée de plus par
+# `engine/narrative.py`, ticket 24), qui n'est plus lue pour un penalty. Constantes produit validées par le propriétaire.
+_PENALTY_SPOT = PitchPoint(x=1.0 - PENALTY_SPOT_DISTANCE_M / PITCH_LENGTH_M, y=0.5)
+_PENALTY_RUNUP_MIN_M = 6.0  # longueur de l'élan du tireur : 6 à 9 m
+_PENALTY_RUNUP_MAX_M = 9.0
+_PENALTY_RUNUP_ANGLE_MAX_DEG = 10.0  # angle d'approche : +-10 degres autour de l'axe tireur -> but (aléa D8)
 
 
 @dataclass(frozen=True)
@@ -332,6 +341,8 @@ def _anchor_point(anchor: str, start: PitchPoint, event: GoalEvent) -> PitchPoin
         return center_of(zone)
     if anchor == ANCHOR_LATERAL_SHIFT:
         return PitchPoint(x=start.x, y=start.y + _LATERAL_SHIFT_M / PITCH_WIDTH_M)
+    if anchor == ANCHOR_PENALTY_SPOT:
+        return _PENALTY_SPOT
     raise ValueError(f"Ancrage de rôle inconnu : {anchor!r}")
 
 
@@ -588,7 +599,11 @@ def build_from_template(
         owner_id: PlayerId | None = None
         if owner_role is not None and owner_role in role_ids:
             owner_id = role_ids[owner_role]
-            ball_x, ball_y = players[owner_id]
+            if t_ratio in ball_position_by_ratio:
+                # Ballon POSE (penalty, B6-a) : position explicite, le tireur reste le « porteur » (nom affiché à l'arrivée).
+                ball_x, ball_y = ball_position_by_ratio[t_ratio]
+            else:
+                ball_x, ball_y = players[owner_id]
         elif t_ratio in ball_position_by_ratio:
             ball_x, ball_y = ball_position_by_ratio[t_ratio]
         else:
@@ -1000,38 +1015,27 @@ _TEMPLATE_DECALAGE_ENROULEE = Template(
 )
 
 _TEMPLATE_PENALTY = Template(
-    # Enrichi le 23/09/2026 (audit visuel) : 1 rôle -> 3 (deux coéquipiers
-    # à l'entrée de la surface, à l'affût d'un rebond -- une scène de
-    # penalty réaliste n'est jamais un tireur totalement seul sur le
-    # terrain). Phase de préparation/attente désormais explicite avant
-    # l'élan (0.0 -> 0.5), pas juste un élan puis un tir.
+    # Enrichi le 23/09/2026 (audit visuel) : 1 rôle -> 3 (deux coéquipiers à l'entrée de la surface, à l'affût d'un rebond).
+    # Phase 6, B6-a (08/10/2026) : le ballon est POSÉ au point de penalty (`ball_position`, ne bouge plus avec le tireur) ;
+    # le tireur part d'un point d'élan situé à 6-9 m du ballon (voir `build_penalty`), attend (0 -> 0.25, 1 s), s'élance
+    # (0.25 -> 0.8 : 85 % de la course) puis arrive sur le ballon (0.8 -> 1.0) et frappe à t_ratio = 1.0 (vitesse de course
+    # de 3 m/s en moyenne, environ 6 m/s au plus pour un élan de 9 m).
     name="penalty",
     weight=0.6,
     duration=4.0,
     roles=(
-        # ANCHOR_LATERAL_SHIFT, pas ANCHOR_STATIC (fix du 23/09/2026) : le
-        # commentaire promettait un "léger frémissement d'anticipation", mais
-        # ANCHOR_STATIC fige la cible = le départ -- AUCUNE valeur de
-        # progress, même petite, ne peut y produire le moindre mouvement
-        # (`_lerp(x,x,p)=x`). Restent à l'entrée de la surface : pas
-        # ANCHOR_SCORER, ils n'ont aucune raison de converger vers le point
-        # de penalty -- juste un pas de côté fixe (_LATERAL_SHIFT_M, 1,5 m).
-        # Progress relevé 0.05 -> 0.4 (fix "suite 2" du 23/09/2026) : la
-        # première version (25 cm x 0.05 = 1,25 cm réels, 0,14 px) était
-        # mathématiquement non nulle mais visuellement invisible -- 1,5 m x
-        # 0.4 = 60 cm réels, un pas de côté visible et crédible.
-        Role("support1", ANCHOR_LATERAL_SHIFT, (RoleFrame(0.0, 0.0), RoleFrame(0.5, 0.4), RoleFrame(0.85, 0.4), RoleFrame(1.0, 0.4))),
-        Role("support2", ANCHOR_LATERAL_SHIFT, (RoleFrame(0.0, 0.0), RoleFrame(0.5, 0.4), RoleFrame(0.85, 0.4), RoleFrame(1.0, 0.4))),
-        # ANCHOR_SCORER, pas ANCHOR_STATIC : le tireur est déjà debout devant
-        # le ballon au point de penalty (frame 0 très proche de la zone),
-        # pas à sa position de formation d'origine.
-        Role("scorer", ANCHOR_SCORER, (RoleFrame(0.0, 0.85), RoleFrame(0.5, 0.9), RoleFrame(0.85, 0.95), RoleFrame(1.0, 1.0))),
+        # ANCHOR_LATERAL_SHIFT : pas de côté fixe de 1,5 m, progress 0.4 -> 60 cm réels (fix du 23/09/2026, voir _LATERAL_SHIFT_M).
+        Role("support1", ANCHOR_LATERAL_SHIFT, (RoleFrame(0.0, 0.0), RoleFrame(0.25, 0.4), RoleFrame(0.8, 0.4), RoleFrame(1.0, 0.4))),
+        Role("support2", ANCHOR_LATERAL_SHIFT, (RoleFrame(0.0, 0.0), RoleFrame(0.25, 0.4), RoleFrame(0.8, 0.4), RoleFrame(1.0, 0.4))),
+        # Du point d'élan (start_positions, surchargé par build_penalty) au point de penalty.
+        Role("scorer", ANCHOR_PENALTY_SPOT, (RoleFrame(0.0, 0.0), RoleFrame(0.25, 0.0), RoleFrame(0.8, 0.85), RoleFrame(1.0, 1.0))),
     ),
-    tags=((0.0, "placement"), (0.5, "attente"), (0.85, "elan"), (1.0, "tir")),
-    ball_owner=((0.0, "scorer"), (0.5, "scorer"), (0.85, "scorer"), (1.0, "scorer")),
+    tags=((0.0, "placement"), (0.25, "attente"), (0.8, "elan"), (1.0, "tir")),
+    ball_owner=((0.0, "scorer"), (0.25, "scorer"), (0.8, "scorer"), (1.0, "scorer")),
+    ball_position=tuple((t, (_PENALTY_SPOT.x, _PENALTY_SPOT.y)) for t in (0.0, 0.25, 0.8, 1.0)),
     context_score=_score_penalty,
     starts_at_restart=True,
-    physics_tags=((0.85, "shot"),),  # dernier segment (0.85 -> 1.0) : le tir
+    physics_tags=((0.8, "shot"),),  # dernier segment (0.8 -> 1.0) : ballon immobile (posé), puis ball_flight
     has_ball_flight=True,
 )
 
@@ -1149,10 +1153,26 @@ def build_decalage_enroulee(
     return build_from_template(TEMPLATES["decalage_enroulee"], event, lineup, start_positions, outcome)
 
 
+def penalty_runup_start(event_ref: str) -> PitchPoint:
+    """Point d'élan du tireur (B6-a) : à `_PENALTY_RUNUP_MIN_M` - `_PENALTY_RUNUP_MAX_M` du point de penalty, sous un angle de
+    +-`_PENALTY_RUNUP_ANGLE_MAX_DEG` degrés par rapport à l'axe tireur -> but. Déterministe (sha256 de `event_ref`)."""
+    length_m = _PENALTY_RUNUP_MIN_M + _flight_unit(event_ref, "penalty_runup_length") * (_PENALTY_RUNUP_MAX_M - _PENALTY_RUNUP_MIN_M)
+    angle = math.radians((2.0 * _flight_unit(event_ref, "penalty_runup_angle") - 1.0) * _PENALTY_RUNUP_ANGLE_MAX_DEG)
+    return PitchPoint(
+        x=_PENALTY_SPOT.x - length_m * math.cos(angle) / PITCH_LENGTH_M,
+        y=_PENALTY_SPOT.y - length_m * math.sin(angle) / PITCH_WIDTH_M,
+    )
+
+
 def build_penalty(
     event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None
 ) -> Sequence:
-    return build_from_template(TEMPLATES["penalty"], event, lineup, start_positions, outcome)
+    """Phase 6, B6-a : le ballon est posé au point de penalty réglementaire (la zone de l'événement n'est plus lue) et le
+    tireur s'élance depuis un point d'élan (`penalty_runup_start`) : seule la position de départ du tireur est remplacée."""
+    scorer = _resolve_roles(event, lineup, ("scorer",))["scorer"]
+    event_ref = f"goal:{event.club_name}:{event.scorer}:{event.minute}"
+    starts = {**start_positions, player_id_of(scorer): penalty_runup_start(event_ref)}
+    return build_from_template(TEMPLATES["penalty"], event, lineup, starts, outcome)
 
 
 def build_but_gag(

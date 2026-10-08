@@ -178,15 +178,57 @@ class TestEveryTemplateProducesAValidSequence:
 
 
 class TestPenaltyIsSpecialCased:
-    def test_penalty_template_places_the_scorer_at_the_penalty_spot_zone(self):
-        lineup = _lineup()
-        event = _goal_event(assist=None, penalty=True, minute=70)
-        sequence = BUILDERS["penalty"](event, lineup, _start_positions(lineup))
+    """Phase 6, B6-a : le ballon est posé au point de penalty réglementaire (11 m de la ligne de but, y = 0), la zone de
+    l'événement n'est plus lue, et le tireur s'élance depuis un point situé à 6-9 m, sous +-10 degrés."""
 
-        expected = center_of(event.zone)
-        scorer_final_x, scorer_final_y = sequence.keyframes[-1].players[11]  # id du "bu"
-        assert scorer_final_x == pytest.approx(expected.x)
-        assert scorer_final_y == pytest.approx(expected.y)
+    _SPOT_X = 1.0 - 11.0 / PITCH_LENGTH_M
+
+    def _build(self, **event_kwargs):
+        lineup = _lineup()
+        event = _goal_event(assist=None, penalty=True, minute=event_kwargs.pop("minute", 70), **event_kwargs)
+        return BUILDERS["penalty"](event, lineup, _start_positions(lineup), "but"), lineup
+
+    def test_penalty_template_places_the_scorer_at_the_penalty_spot(self):
+        sequence, _ = self._build()
+        scorer_x, scorer_y = sequence.keyframes[-2].players[11]  # id du "bu", au moment de la frappe
+        assert scorer_x == pytest.approx(self._SPOT_X)
+        assert scorer_y == pytest.approx(0.5)
+
+    def test_ball_is_at_rest_on_the_spot_until_the_strike(self):
+        for minute in (5, 23, 41, 67, 88):
+            sequence, _ = self._build(minute=minute)
+            before_flight = sequence.keyframes[:-1]  # la dernière keyframe est la cible du vol
+            for kf in before_flight:
+                assert kf.ball.x == pytest.approx(self._SPOT_X) and kf.ball.y == pytest.approx(0.5) and kf.ball.z == 0.0
+            # 11 m de la ligne de but, a 0,1 m pres, y = 0 a 0,1 m pres.
+            assert abs((1.0 - before_flight[-1].ball.x) * PITCH_LENGTH_M - 11.0) <= 0.1
+            assert abs((before_flight[-1].ball.y - 0.5) * 68.0) <= 0.1
+
+    def test_zone_of_the_event_is_ignored(self):
+        lineup = _lineup()
+        base = _goal_event(assist=None, penalty=True, minute=70)
+        other = GoalEvent(**{**base.__dict__, "zone": Zone(col=3, row=1)})
+        a = BUILDERS["penalty"](base, lineup, _start_positions(lineup), "but")
+        b = BUILDERS["penalty"](other, lineup, _start_positions(lineup), "but")
+        assert [kf.ball for kf in a.keyframes] == [kf.ball for kf in b.keyframes]
+        assert [kf.players for kf in a.keyframes] == [kf.players for kf in b.keyframes]
+
+    def test_runup_is_6_to_9_m_long_within_10_degrees_and_deterministic(self):
+        lengths, angles = [], []
+        for minute in range(1, 91):
+            for scorer in ("bu", "ag", "ad"):
+                sequence, _ = self._build(minute=minute, scorer=scorer)
+                lineup = _lineup()
+                scorer_id = next(p.id for p in lineup.players if p.name == scorer)
+                start_x, start_y = sequence.keyframes[0].players[scorer_id]
+                dx_m, dy_m = (self._SPOT_X - start_x) * PITCH_LENGTH_M, (0.5 - start_y) * 68.0
+                lengths.append(math.hypot(dx_m, dy_m))
+                angles.append(math.degrees(math.atan2(dy_m, dx_m)))
+        assert all(6.0 - 1e-6 <= v <= 9.0 + 1e-6 for v in lengths) and max(lengths) - min(lengths) > 2.0
+        assert all(-10.0 - 1e-6 <= a <= 10.0 + 1e-6 for a in angles) and max(angles) - min(angles) > 10.0
+        again, _ = self._build(minute=23, scorer="ag")
+        first, _ = self._build(minute=23, scorer="ag")
+        assert [kf.players for kf in again.keyframes] == [kf.players for kf in first.keyframes]
 
 
 class TestBuildFromTemplateIsPure:
@@ -588,7 +630,11 @@ class TestTemplateStructureUnchangedByPhysicsTags:
 
     Troisième exception délibérée (Phase 6, B5, 08/10/2026) : `decalage_enroulee` a de nouveau une empreinte mise à jour --
     le spin n'est plus posé sur la conduite `shot` (fixture sans issue, donc sans vol : `spin = 0.0` partout) mais sur le seul
-    vol, selon le type de frappe (`STRIKE_TYPES`). Recalculée et vérifiée : seul le spin de la keyframe de tir a changé."""
+    vol, selon le type de frappe (`STRIKE_TYPES`). Recalculée et vérifiée : seul le spin de la keyframe de tir a changé.
+
+    Quatrième exception délibérée (Phase 6, B6-a, 08/10/2026) : `penalty` a une empreinte mise à jour -- le ballon est posé au
+    point de penalty réglementaire (`ball_position`) au lieu de suivre le tireur, et le tireur part d'un point d'élan (6 à 9 m)
+    au lieu de sa position de formation avancée de 85 %. Recalculée et vérifiée manuellement, pas une régression."""
 
     _EXPECTED_STRUCTURE_HASH = {
         "but_gag": "f41d49b564e507476892e0c8dc83e1a4a980e461357b4e9f6d158126c86184d1",
@@ -598,7 +644,7 @@ class TestTemplateStructureUnchangedByPhysicsTags:
         "coup_franc": "65652dc16b67dc362221250ace6198a26a169ab60203e1fc2b74af280db8d566",
         "debordement_centre_tete": "06543fdddb12bdc4959eb29b0ca83b146bc5f8e312e233f196c9df1225658819",
         "decalage_enroulee": "7baa9bcc8f4e6f703650a8aef2ca0250701b3305f3948481d924b4ce10e8b403",
-        "penalty": "7f2c7ebf289a42122153109b2e9d4faff267170513620ea9bf83c940d42b0f91",
+        "penalty": "7972e9a2d7afe7e1caa593950d3b7fa5e7cde43195b04a14bcc0c77a0b38a888",
         "percee_individuelle": "4fd4c5ef14c5b020821ecf2638a54c0e58c5a8a35e11001e66b458b4cd1633ca",
         "profondeur_1v1": "dd55a79b69a71bf4436c06f08f195a4be89b66ff555ef3117b148b85b88443a7",
         "recuperation_haute": "4232271529fc19842275569741dfd639830cd03682cbe914ef31464edb40e810",
@@ -649,6 +695,8 @@ class TestNoImmobileSegmentInFlightActions:
             if tag not in self._IN_FLIGHT_TAGS:
                 continue
             distance_m = _real_distance_m((kf_a.ball.x, kf_a.ball.y), (kf_b.ball.x, kf_b.ball.y))
+            if name == "penalty" and distance_m <= self._MIN_DISPLACEMENT_M:
+                continue  # B6-a : le ballon est POSÉ au point de penalty tant que le tireur n'a pas frappé (voir TestPenaltyIsSpecialCased)
             assert distance_m > self._MIN_DISPLACEMENT_M, (
                 f"{name} segment [t={kf_a.t}->t={kf_b.t}] tagué {tag} mais le ballon ne bouge que de "
                 f"{distance_m * 100:.3f}cm -- ballon immobile en plein vol (dette ball_owner=None ?)"
