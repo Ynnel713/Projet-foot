@@ -411,7 +411,9 @@ STRIKE_TYPES: dict[str, StrikeType] = {
 # `shot_enroule_fort` ; les gabarits de tête produisent `tete` (majoritaire) ou `reprise_vollee` ; les gabarits de
 # récupération / déviation produisent `reprise_vollee` ; un penalty est toujours tendu, un coup franc toujours enroulé léger ;
 # les autres frappes au pied se répartissent entre tendu, enroulé léger et extérieur du pied.
-_FOOT_POOL = (("shot_tendu", 0.70), ("shot_enroule_leger", 0.19), ("shot_exterieur_pied", 0.11))
+# Poids du « pool pied » recalibrés le 08/10/2026 (revue de l'architecte : `shot_tendu` à 39,4 % pour une cible de 35 %) :
+# 0,70 / 0,19 / 0,11 -> 0,64 / 0,22 / 0,14.
+_FOOT_POOL = (("shot_tendu", 0.64), ("shot_enroule_leger", 0.22), ("shot_exterieur_pied", 0.14))
 _HEAD_POOL = (("tete", 0.90), ("reprise_vollee", 0.10))
 _STRIKE_TYPE_WEIGHTS: dict[str, tuple[tuple[str, float], ...]] = {
     "decalage_enroulee": (("shot_enroule_fort", 1.0),),

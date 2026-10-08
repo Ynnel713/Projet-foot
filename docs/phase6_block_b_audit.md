@@ -749,10 +749,10 @@ Fichiers : `src/ligue1sim/animation/templates.py` (types, spin, vitesse), `tests
 
 | Type | Spin (rad/s) | Vitesse du vol (m/s) | Cible de l'architecte | Observé (1 259 vols, 100 matchs) |
 |---|---|---|---|---|
-| `shot_tendu` | 0 | 30 à 35 | 35 % | 496 (39,4 %) |
-| `shot_enroule_leger` | 20 à 30 | 20 à 28 | 12 % | 135 (10,7 %) |
+| `shot_tendu` | 0 | 30 à 35 | 35 % | 448 (35,6 %) |
+| `shot_enroule_leger` | 20 à 30 | 20 à 28 | 12 % | 165 (13,1 %) |
 | `shot_enroule_fort` | 50 à 80 | 20 à 28 | 9,7 % | 122 (9,7 %) |
-| `shot_exterieur_pied` | −30 à −20 | 22 à 30 | 5,5 % | 70 (5,6 %) |
+| `shot_exterieur_pied` | −30 à −20 | 22 à 30 | 5,5 % | 88 (7,0 %) |
 | `reprise_vollee` | 10 à 15 | 25 à 32 | 16 % | 193 (15,3 %) |
 | `tete` | 0 | 12 à 18 | 21,8 % | 243 (19,3 %) |
 
@@ -761,15 +761,15 @@ Observé : spin minimum / moyen / maximum et vitesse minimum / moyenne / maximum
 | Type | Spin | Vitesse | Durée moyenne du vol | Clips avec traînée |
 |---|---|---|---|---|
 | `shot_tendu` | 0 / 0 / 0 | 30,0 / 32,4 / 35,0 | 0,76 s | 0 |
-| `shot_enroule_leger` | 20,1 / 25,2 / 29,8 | 20,0 / 24,1 / 28,0 | 1,24 s | 135 |
+| `shot_enroule_leger` | 20,1 / 25,2 / 29,8 | 20,0 / 24,2 / 28,0 | 1,19 s | 165 |
 | `shot_enroule_fort` | 50,1 / 65,4 / 80,0 | 20,0 / 24,2 / 28,0 | 1,06 s | 122 |
-| `shot_exterieur_pied` | −30,0 / −25,3 / −20,0 | 22,1 / 26,2 / 29,9 | 0,94 s | 70 |
+| `shot_exterieur_pied` | −30,0 / −25,2 / −20,0 | 22,1 / 26,3 / 30,0 | 0,94 s | 88 |
 | `reprise_vollee` | 10,0 / 12,3 / 15,0 | 25,0 / 28,4 / 31,9 | 0,70 s | 193 |
 | `tete` | 0 / 0 / 0 | 12,0 / 14,9 / 18,0 | 1,66 s | 0 |
 
 ### 12.3 Correspondance gabarit → type
 
-Les six cibles ne peuvent pas être tenues à la fois avec les règles de cohérence de la consigne (voir 12.7) ; le mapping retenu s'appuie sur le diagnostic §11.3 et donne les écarts ci-dessus (au plus 4,4 points).
+Les six cibles ne peuvent pas être tenues à la fois avec les règles de cohérence de la consigne (voir 12.7) ; le mapping retenu s'appuie sur le diagnostic §11.3 et donne les écarts ci-dessus (au plus 2,5 points, après le recalibrage du pool pied du §12.11).
 
 | Gabarit | Types (poids) | Observé (vols) |
 |---|---|---|
@@ -779,17 +779,17 @@ Les six cibles ne peuvent pas être tenues à la fois avec les règles de cohér
 | `recuperation_haute`, `but_gag` | `reprise_vollee` (100 %) | volée 134 et 27 |
 | `penalty` | `shot_tendu` (100 %) | tendu 34 |
 | `coup_franc` | `shot_enroule_leger` (100 %) | léger 35 |
-| `contre_attaque`, `construction_placee`, `percee_individuelle`, `profondeur_1v1`, `une_deux` | `shot_tendu` 70 %, `shot_enroule_leger` 19 %, `shot_exterieur_pied` 11 % | tendu 462, léger 100, extérieur 70 |
+| `contre_attaque`, `construction_placee`, `percee_individuelle`, `profondeur_1v1`, `une_deux` | `shot_tendu` 64 %, `shot_enroule_leger` 22 %, `shot_exterieur_pied` 14 % | tendu 414, léger 130, extérieur 88 |
 
 ### 12.4 Distribution du spin (100 matchs, graines 1 à 100, 1 586 clips)
 
 | Mesure | Avant B5 | Après B5 |
 |---|---|---|
-| Clips avec un spin en valeur absolue > 5 (traînée visible) | 163 (10,3 %) | **520 (32,8 %)**, soit 41,3 % des 1 259 vols |
-| Images avec traînée | 21 546 / 373 456 (5,8 %), 82,5 % en conduite | 14 647 / 372 594 (3,9 %), toutes en vol |
-| Spin nul | 1 423 clips | 1 066 clips (dont 327 sans vol) |
+| Clips avec un spin en valeur absolue > 5 (traînée visible) | 163 (10,3 %) | **568 (35,8 %)**, soit 45,1 % des 1 259 vols |
+| Images avec traînée | 21 546 / 373 456 (5,8 %), 82,5 % en conduite | 16 007 / 372 918 (4,3 %), toutes en vol |
+| Spin nul | 1 423 clips | 1 018 clips (dont 327 sans vol) |
 | Spin faible (5 à 15) | 0 | 193 |
-| Spin moyen (20 à 30, valeur absolue) | 0 | 205 |
+| Spin moyen (20 à 30, valeur absolue) | 0 | 253 |
 | Spin élevé (50 à 80) | 163 (spin 50) | 122 |
 
 La traînée apparaît sur trois fois plus de clips, plus brièvement (une seconde de vol au lieu de 3,6 s de conduite). Elle est identique dès que le spin dépasse 5 en valeur absolue : la différence entre faible, moyen et élevé n'est pas visible tant que `canvas.html` ne module pas la traînée par le spin (décision D3 du diagnostic, non traitée ici).
@@ -797,7 +797,7 @@ La traînée apparaît sur trois fois plus de clips, plus brièvement (une secon
 ### 12.5 Déterminisme
 
 - **Moteur sportif** : 100 matchs sur 100 identiques entre HEAD et l'arbre modifié (scores, buts, cartons, remplacements, blessures, notes ; 295 buts ; événements narratifs identiques : minute, équipe, gabarit, issue).
-- **Types** : deux exécutions indépendantes (graines 1 à 100, `PYTHONHASHSEED=0`) donnent les **mêmes** 1 586 lignes (type, spin, vitesse, distance, durée). Test : le tirage ne dépend pas de l'état du générateur global.
+- **Types** : deux exécutions indépendantes (graines 1 à 100, `PYTHONHASHSEED=0`) donnent les **mêmes** 1 586 lignes (type, spin, vitesse, distance, durée). Test : le tirage ne dépend pas de l'état du générateur global. Contrôle complémentaire après recalibrage (§12.11) : la trajectoire du ballon est identique à celle d'avant B5 sur les 286 clips sans vol hors `decalage_enroulee` et, pour les clips avec vol, **avant le début du vol** (1 137 clips sur 1 259) ; elle diffère pour les 122 `decalage_enroulee` (conduite redressée) et, par construction, après le début du vol (durée de chaque vol modifiée : 1 259 clips sur 1 259, 372 918 images contre 373 456).
 - **Cohérence avec B4** : issues et événements du ballon inchangés ; durées de clip modifiées (la vitesse du vol dépend du type : durée moyenne d'un vol 1,01 s, tête 1,66 s, volée 0,70 s) ; durée moyenne d'un clip 7,81 s.
 
 ### 12.6 Cohérence NLG (100 matchs, textes réellement produits par le NLG)
@@ -809,18 +809,18 @@ Le NLG ne reçoit **ni le type de frappe ni le spin** : il choisit son scénario
 | `decalage_enroulee` avec texte | 149 événements : **1 seul** texte contient « enroul » (148 sans) |
 | Phrases qui nomment un type de frappe | « volée / reprise » 55, « enroulée » 20, « tête » (hors « tête froide ») 9, « frappe tendue / sèche » 3 |
 | Contradictions texte / animation **avant B5** | 83 (volée 55, enroulée 19, tête 9) |
-| Contradictions texte / animation **après B5** | **62** (volée 41, enroulée 14, tête 7) |
+| Contradictions texte / animation **après B5** | **61** (volée 41, enroulée 13, tête 7) |
 
-- La consigne attendait **0 incohérence** et que `decalage_enroulee` produise toujours un texte « enroulé » : **ce n'est pas le cas** et ce n'est pas atteignable sans modifier le NLG (la prémisse « le texte dit enroule sa frappe » n'existe pas dans les banques : seules quelques phrases génériques, conditionnées par les attributs du joueur, contiennent « enroule »). B5 **réduit** les contradictions de 25 % (83 → 62) sans les supprimer ; le texte n'est jamais ajusté par B5.
+- La consigne attendait **0 incohérence** et que `decalage_enroulee` produise toujours un texte « enroulé » : **ce n'est pas le cas** et ce n'est pas atteignable sans modifier le NLG (la prémisse « le texte dit enroule sa frappe » n'existe pas dans les banques : seules quelques phrases génériques, conditionnées par les attributs du joueur, contiennent « enroule »). B5 **réduit** les contradictions de 27 % (83 → 61) sans les supprimer ; le texte n'est jamais ajusté par B5.
 - Les 3 phrases « frappe tendue / sèche » tombent sur des clips sans traînée (penalty, `shot_tendu`) ; `shot_enroule_fort` n'est produit que par `decalage_enroulee`.
 - Suite possible (hors périmètre, à décider) : transmettre le type de frappe au NLG, ou conditionner les phrases « volée », « enroulée », « tête » sur le type.
 
 ### 12.7 Écarts entre la consigne et les données
 
-1. **Les six pourcentages ne se tiennent pas ensemble.** Avec « tête / volée pour les gabarits de tête » et « tendu / léger / extérieur pour les autres gabarits », la volée (16 %) ne peut venir que des gabarits de tête (275 vols, 21,8 %) : impossible de viser aussi la tête à 21,8 %. J'ai appliqué le mapping validé au diagnostic (`reprise_vollee` aussi pour `recuperation_haute` et `but_gag`, gabarits de déviation) ; écarts : tendu +4,4 points, tête −2,5, volée −0,7, léger −1,3.
+1. **Les six pourcentages ne se tiennent pas ensemble.** Avec « tête / volée pour les gabarits de tête » et « tendu / léger / extérieur pour les autres gabarits », la volée (16 %) ne peut venir que des gabarits de tête (275 vols, 21,8 %) : impossible de viser aussi la tête à 21,8 %. J'ai appliqué le mapping validé au diagnostic (`reprise_vollee` aussi pour `recuperation_haute` et `but_gag`, gabarits de déviation) ; écarts initiaux : tendu +4,4 points, tête −2,5, volée −0,7, léger −1,3 ; après recalibrage (§12.11) : tendu +0,6, léger +1,1, extérieur +1,5, tête −2,5, volée −0,7.
 2. **`debordement_centre_tete` n'avait pas de spin** avant B5 (la consigne le disait à 50 rad/s) : seul `decalage_enroulee` en avait.
 3. **Spin déplacé de la conduite au vol** : la conduite de `decalage_enroulee` est désormais droite (elle déviait jusqu'à 3,46 m du porteur) ; la courbure de Magnus ne s'applique plus qu'au vol (jusqu'à 2,9 m d'écart à la corde pour `shot_enroule_fort`).
-4. **Vitesse instantanée > 35 m/s** : 140 vols sur 1 259 (11 %), tous `shot_tendu` (30 à 35 m/s de vitesse moyenne ; pic jusqu'à 38,1 m/s dû à la décélération de B1 : la vitesse initiale dépasse la moyenne). Même convention qu'avant B5 (vitesse moyenne dans la fourchette), mais plus fréquente puisque les tendus partent plus vite ; la dette notée au design doc (« résidu > 35 m/s ») s'étend donc aux frappes tendues.
+4. **Vitesse instantanée > 35 m/s** : 125 vols sur 1 259 (9,9 %) après recalibrage (140 avant), tous `shot_tendu` (30 à 35 m/s de vitesse moyenne ; pic jusqu'à 38,1 m/s dû à la décélération de B1 : la vitesse initiale dépasse la moyenne). Même convention qu'avant B5 (vitesse moyenne dans la fourchette), mais plus fréquente puisque les tendus partent plus vite ; la dette notée au design doc (« résidu > 35 m/s ») s'étend donc aux frappes tendues.
 5. **Tests existants adaptés** (conséquences directes des décisions) : l'empreinte de structure de `decalage_enroulee` (`tests/test_templates.py`, fixture sans issue, donc sans vol, donc plus de spin) ; la borne basse de vitesse moyenne du vol de `tests/test_ball.py` (15 → 12 m/s, la tête vole à 12-18 m/s). `tests/test_ball.py` n'était pas dans la liste du commit demandée : ajouté.
 6. **Franchissement de la ligne par les clips de but.** `test_goal_clips_of_a_real_payload_cross_the_line_between_the_posts` (`tests/test_canvas_html.py`) a échoué sur l'export : un clip de but (volée de `debordement_centre_tete`, 23e minute) finit à 0,17 m de la ligne à la dernière image (échantillonnage à 30 images/s, vol plus rapide). Ce n'est pas un défaut nouveau : sans B5, **45 clips de but sur 295 (15,3 %)** n'ont déjà aucune image au-delà de la ligne (écart maximal 1,48 m) ; avec B5, **54 sur 295 (18,3 %)**, écart maximal 1,19 m. Le canvas prévoit ce cas (repli de `goalEvents` : l'événement but part à la dernière image), donc rien ne casse à l'écran ; le test d'origine réussissait par hasard sur son match d'essai. Il exige maintenant le franchissement **ou** une dernière image à moins de 1,5 m de la ligne, entre les poteaux. `tests/test_canvas_html.py` n'était pas dans la liste du commit : ajouté. Pas de ticket ouvert pour ce défaut d'échantillonnage (à décider).
 
@@ -843,6 +843,29 @@ Noms : `avant_clip<i>_<type>_<instant>.png` / `apres_...` ; `zoom_types_1_a_3.pn
 
 `tests/test_templates.py` : table des types conforme aux décisions, spin et vitesse attendus pour chacun des six types (300 tirages), spin posé sur le seul vol des 12 gabarits (60 séquences), `decalage_enroulee` toujours `shot_enroule_fort` (270 séquences, vitesse 20-28), cohérence gabarit → type, répartition sur 1 000 frappes (mélange réel de gabarits, tolérance 4,5 points, `shot_enroule_fort` à 9,7 % ± 0,6), déterminisme indépendant de l'état aléatoire global, absence de spin sans vol.
 
+### 12.11 Revue de l'architecte du 08/10/2026 : recalibrage et alignements
+
+**Point 1 : `shot_tendu` hors fourchette.** Constante produit modifiée, citée : poids du pool pied `_FOOT_POOL` (`contre_attaque`, `construction_placee`, `percee_individuelle`, `profondeur_1v1`, `une_deux`) **0,70 / 0,19 / 0,11 → 0,64 / 0,22 / 0,14** (tendu / enroulé léger / extérieur du pied). Les poids des gabarits spéciaux (`decalage_enroulee`, têtes, volées, penalty, coup franc) ne changent pas. Les poids ont été calés sur l'échantillon de 100 matchs (un seul réglage) ; 66 vols changent de type (48 tendu → léger, 18 léger → extérieur), le score et les issues ne changent pas.
+
+| Type | Avant recalibrage | **Après** | Cible | Fourchette de l'architecte (cible ± 4) | Dans la fourchette |
+|---|---|---|---|---|---|
+| `shot_tendu` | 496 (39,4 %) | **448 (35,6 %)** | 35 % | 34-36 % demandé | oui |
+| `shot_enroule_leger` | 135 (10,7 %) | 165 (13,1 %) | 12 % | 8 à 16 % | oui |
+| `shot_enroule_fort` | 122 (9,7 %) | 122 (9,7 %) | 9,7 % | 5,7 à 13,7 % | oui |
+| `shot_exterieur_pied` | 70 (5,6 %) | 88 (7,0 %) | 5,5 % | 1,5 à 9,5 % | oui |
+| `reprise_vollee` | 193 (15,3 %) | 193 (15,3 %) | 16 % | 12 à 20 % | oui |
+| `tete` | 243 (19,3 %) | 243 (19,3 %) | 21,8 % | 17,8 à 25,8 % | oui |
+
+Échantillon identique : 1 259 vols, 100 matchs (graines 1 à 100). Le test de répartition (`tests/test_templates.py`) exige maintenant ± 4 points pour chaque type (au lieu de 4,5) et ± 2,5 points pour `shot_tendu` sur son échantillon synthétique de 1 000 frappes (bruit d'échantillonnage d'environ ± 1,5 point). Les captures de §12.8 restent valides : les six événements témoins gardent le même type.
+
+**Point 2 : spin de `reprise_vollee`.** La cible produit reste **10 à 15 rad/s** et le code l'applique (`StrikeType("reprise_vollee", 10.0, 15.0, 25.0, 32.0)`, spin posé sur le vol) : spin mesuré 10,0 / 12,3 / 15,0 sur 193 vols, traînée sur les 193 (courte : durée moyenne du vol 0,70 s). La formule « spin fixé à 0 sur le vol » n'apparaît ni dans le code ni dans ce document (la table du §12.2 donnait déjà 10 à 15) ; seule la **conduite** est à spin 0 pour tous les types, et les types `shot_tendu` et `tete` sont à spin 0 sur le vol. Aucune constante modifiée sur ce point.
+
+**Point 3 : NLG et type de frappe.** Ticket 23 ouvert dans `docs/known_issues.md` (priorité moyenne, résolution prévue après B5). Aucune correction dans B5.
+
+**Points acceptés.** Pic de vitesse de `shot_tendu` (38,1 m/s) : accepté en l'état, à surveiller en B6. Le test adapté `tests/test_canvas_html.py` (franchissement de la ligne, §12.7 point 6) est présent dans l'export et passe.
+
+**Déterminisme relancé** (graines 1 à 100, état avant B5 contre arbre recalibré) : scores, buts (295), cartons, remplacements, blessures, notes : 100 / 100 identiques ; 1 586 événements narratifs et 1 586 clips identiques (graine, rang, gabarit, issue) ; deux exécutions de l'arbre : types, spin, vitesses, durées et empreintes de la trajectoire du ballon identiques ; 372 918 images (373 456 avant B5, la durée des vols ayant changé). Les chiffres « 246 événements, 60 clips, 5 864 images » du message de revue ne correspondent à aucune mesure de cette série ; les valeurs ci-dessus sont celles mesurées.
+
 ### 12.10 Statut
 
-**B5 terminé** : six types de frappe, spin et vitesse par type, score identique 100/100, traînée sur 32,8 % des clips. À décider : modulation de la traînée par spin (D3), mise en cohérence du NLG avec le type de frappe (§12.6), écarts de répartition (§12.7).
+**B5 terminé** : six types de frappe, spin et vitesse par type, score identique 100/100, traînée sur 35,8 % des clips. À décider : modulation de la traînée par spin (D3), mise en cohérence du NLG avec le type de frappe (§12.6), écarts de répartition (§12.7).

@@ -1,6 +1,6 @@
 # Dette connue — Simulafoot
 
-Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets ouverts (3, 4, 6, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21 et 22) n'est corrigé à ce jour** (le ticket 2 est fermé le 08/10/2026). Créé le 07/10/2026 (clôture de l'Étape B, `LineupSnapshot`) ; tickets 4 et 5 ajoutés le même jour (intégration PWA par iframe) ; ticket 5 fermé et tickets 6 à 8 ouverts le même jour (gouvernance, avant Phase 5) ; tickets 9 (`duckdb`) et 10 (couverture NLG) ajoutés le même jour (environnement de test). tickets 7 (résolu en `7309172`) et 11 (`ConnectionResetError`) traités le même jour. **État : ouverts 2, 3, 4, 6, 9, 10, 11, 12, 13, 15 ; fermés 1 (résolu en `61773ab`, Phase 5 sous-étape 1), 14 (décision produit, bandes de tonte horizontales conservées), 5 (non reproduit), 7 (résolu en `7309172`) et 8 (résolu en `2d71e55`, vérifié sur archive propre).**
+Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets ouverts (3, 4, 6, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22 et 23) n'est corrigé à ce jour** (le ticket 2 est fermé le 08/10/2026). Créé le 07/10/2026 (clôture de l'Étape B, `LineupSnapshot`) ; tickets 4 et 5 ajoutés le même jour (intégration PWA par iframe) ; ticket 5 fermé et tickets 6 à 8 ouverts le même jour (gouvernance, avant Phase 5) ; tickets 9 (`duckdb`) et 10 (couverture NLG) ajoutés le même jour (environnement de test). tickets 7 (résolu en `7309172`) et 11 (`ConnectionResetError`) traités le même jour. **État : ouverts 2, 3, 4, 6, 9, 10, 11, 12, 13, 15 ; fermés 1 (résolu en `61773ab`, Phase 5 sous-étape 1), 14 (décision produit, bandes de tonte horizontales conservées), 5 (non reproduit), 7 (résolu en `7309172`) et 8 (résolu en `2d71e55`, vérifié sur archive propre).**
 
 | # | Titre | Priorité (avant…) | Statut |
 |---|---|---|---|
@@ -26,6 +26,7 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 | 20 | Clips poteau prolongés jusqu'à la touche, coupés à 1,0 s | Avant la Phase 7 (priorité basse) | Ouvert |
 | 21 | Spin binaire (0 ou 50 rad/s) dans `templates.py`, pas de valeurs intermédiaires | B5 (priorité moyenne) | Ouvert |
 | 22 | Courbure non perceptible à l'échelle 6 px | Avant la Phase 7 (priorité basse) | Ouvert |
+| 23 | NLG ne reçoit pas le type de frappe, texte générique incohérent avec le rendu | Après B5 (priorité moyenne) | Ouvert |
 
 ---
 
@@ -413,6 +414,20 @@ appelé par les scripts, les tests et un éventuel paramètre de graine de l'API
 **Pistes.** (a) agrandir le ballon à 8 px (modifie la décision Phase 5, refusée) ; (b) exagérer l'effet Magnus (`_MAGNUS_K`, `ball.py`, refusé) ; (c) un tracé long (2 à 3 s) de la trajectoire, à évaluer ; (d) accepter la limitation.
 
 **Priorité.** Basse, avant la Phase 7.
+
+**Statut.** Ouvert. Non corrigé.
+
+---
+
+## 23. NLG ne reçoit pas le type de frappe, texte générique incohérent avec le rendu
+
+**Description.** Le NLG choisit son commentaire sur (type d'événement, gabarit, issue) et pioche dans des banques génériques ; il ne reçoit ni le type de frappe de B5 (`shot_tendu`, `shot_enroule_*`, `reprise_vollee`, `tete`…) ni le spin. Une phrase du type « enroule sa frappe » peut donc accompagner un `shot_tendu` sans traînée, et un `decalage_enroulee` (toujours `shot_enroule_fort`) être commenté sans le mot « enroule » (1 texte sur 149, mesure du 08/10/2026, 100 matchs). Contradictions texte / animation mesurées : 83 avant B5, 61 après (volée 41, enroulée 13, tête 7).
+
+**Fichiers concernés.** `engine/narrative.py` (le `NarrativeEvent` ne porte pas le type), `engine/narrative_player.py` (le type n'existe que dans `templates.py`, au moment de construire l'animation), `engine/nlg_ingestion.py` (dictionnaire transmis au NLG : gabarit et issue seulement).
+
+**Piste (non implémentée).** Calculer le type de frappe en amont de l'animation (même hachage de `event_ref`) et le transmettre au NLG (champ du contrat), ou conditionner les phrases « volée », « enroulée », « tête » sur ce champ.
+
+**Priorité.** Moyenne ; résolution prévue après B5.
 
 **Statut.** Ouvert. Non corrigé.
 
