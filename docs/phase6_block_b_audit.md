@@ -1,6 +1,6 @@
 # Phase 6, Bloc B — Audit de la physique du ballon
 
-Document de référence du **08/10/2026**, sur `HEAD` = `e63d6f0`. **Audit seulement : aucune ligne de code n'a été modifiée.** *Mise à jour du 08/10/2026 : **B2 (rebonds) est terminé**, voir le §5, puis **B1 (décélération)**, voir le §6 ; les §0 à §4 décrivent l'état avant B2.* Les mesures viennent de scripts jetables, hors dépôt, qui appellent `ball_state_at` sur les 12 gabarits réels (helpers déterministes de `tests/test_narrative_player.py`, compo fixe) pour les issues `but`, `arret`, `poteau`, `barre`, `hors_cadre`, `tacle` et `degagement`.
+Document de référence du **08/10/2026**, sur `HEAD` = `e63d6f0`. **Audit seulement : aucune ligne de code n'a été modifiée.** *Mise à jour du 08/10/2026 : **B2 (rebonds) est terminé**, voir le §5, puis **B1 (décélération)**, voir le §6, puis **B4 (événements du ballon et parades)**, voir le §7 ; les §0 à §4 décrivent l'état avant B2.* Les mesures viennent de scripts jetables, hors dépôt, qui appellent `ball_state_at` sur les 12 gabarits réels (helpers déterministes de `tests/test_narrative_player.py`, compo fixe) pour les issues `but`, `arret`, `poteau`, `barre`, `hors_cadre`, `tacle` et `degagement`.
 
 ## 0. Méthode et limites
 
@@ -295,3 +295,83 @@ Le tir arrive à 94-96 % de sa vitesse de départ. La trajectoire reste lisible 
 ### 6.6 Statut
 
 **B1 terminé** ; objectif « arrêt en 3 à 4 s après le premier rebond » atteint en moyenne (3,76 s), pas pour tous les clips (p90 4,38 s, max 4,96 s). Prochaine étape de la séquence : B4 (événements du ballon).
+
+
+## 7. B4 — Événements du ballon et parades (terminé le 08/10/2026)
+
+Fichiers : `engine/ball_events.py` (nouveau), `engine/narrative_player.py`, `tests/test_ball_events.py` (nouveau), `tests/test_narrative_player.py`. **Intacts** : `ball.py`, `templates.py`, `render/canvas.html`, `tests/test_canvas_html.py`, le moteur sportif, 3c.
+
+### 7.1 Principe
+
+**Une parade est l'issue visuelle d'un non-but ; le score est décidé en amont par le moteur de Poisson et rien dans B4 ne le modifie.** Aucune portée de gardien n'est calculée : un `arret` (issue déjà tirée par la narration) est mis en images comme une parade, un `but` ne produit jamais de parade. Le moteur produit désormais explicitement les événements du ballon ; `canvas.html` garde sa propre détection du but (`goalEvents`) et ignore le nouveau champ, qui est **optionnel** (`metadata.events_ball`, absent quand un clip n'a pas d'événement).
+
+### 7.2 Écarts à la consigne (à connaître)
+
+- **Le choix de l'issue avec biais selon le gardien n'est pas implémenté.** L'issue d'un non-but est tirée dans `engine/narrative.py` (poids 0,40 / 0,25 / 0,15 / 0,10 / 0,10 pour `arret`, `hors_cadre`, `tacle`, `degagement`, `poteau` ; menu des penaltys manqués avec `barre`), et le commentaire texte (`nlg_ingestion`, `nlg_live`) s'appuie sur cette même issue. La retirer dans `narrative_player` ferait afficher une parade pendant que le texte dit « poteau ». Un biais selon le gardien demande de toucher `narrative.py` (et sa distribution testée, côté NLG aussi) : hors périmètre ; le test « deux gardiens de qualité différente » n'est donc pas fait.
+- **Menu réellement disponible** : parade (`arret`), à côté (`hors_cadre`), poteau, bloc / dégagement (`tacle`, `degagement`). **« Au-dessus » est absent** (les cibles `hors_cadre` de `templates.py` sont toujours à côté des poteaux) et **`barre` n'est jamais produite par la narration** (0 sur 100 matchs ; seulement 7,5 % des penaltys manqués) : elle n'est couverte que par les tests.
+- **Champs** : la consigne donnait `t_minute` ; il vaut la minute du match. J'ai ajouté `t`, l'instant dans le clip (s), indispensable pour dater l'événement ; il est borné à la durée du clip.
+- **Référence de la parade** : l'angle `a = 60° · u` utilise `u` = décalage latéral du tir ramené à **0,03** (demi-largeur de la cible `arret` de `templates.py`, y ∈ [0,47 ; 0,53]). Cette référence n'était pas dans les constantes validées ; sans elle l'angle ne dépasserait jamais 34°.
+- **`_build_clip_frames`** garde sa signature `(frames, roster)` ; `_build_clip` renvoie en plus les événements.
+
+### 7.3 Événements produits
+
+| Issue visuelle | Événements | Dernier toucheur |
+|---|---|---|
+| `but` | `but` (franchissement de la ligne entre les poteaux) | attaquant |
+| `arret` | `parade`, puis `corner` ou `touche` si le ballon sort | défenseur (gardien) |
+| `poteau` / `barre` | `poteau` / `barre`, puis `touche` ou `sortie_but` si le ballon sort (rebond de B2) | attaquant |
+| `hors_cadre` | `sortie_but` | attaquant |
+| `tacle`, `degagement` | `degagement` (position du ballon en fin de clip, joueur inconnu) | défenseur |
+
+Structure : `{type, t_minute, t, x, y, joueur, direction_deg, last_toucher, event_ref}` (`direction_deg` : cap de sortie, 0° = vers le but attaqué, 90° = vers +y).
+
+**Règles de sortie** (`classify_line_exit`) : entre les poteaux et sous la barre → `but` ; hors des poteaux ou au-dessus de la barre, dernier toucheur défenseur → `corner`, attaquant → `sortie_but` ; ligne de touche → `touche`.
+
+### 7.4 Constantes appliquées (validées par l'architecte)
+
+| Constante | Valeur |
+|---|---|
+| Angle maximal de la parade (`a_max`) | 60° |
+| Garde-fou « jamais un but sur une parade » | 40° (puis, en dernier recours, retour vers le terrain) |
+| Restitution de la parade | tirée par hachage de `event_ref` dans [0,5 ; 0,7] (un tir à 30 m/s repart à 15-21 m/s) |
+| Aléa de direction (D8) | ±10° sur l'azimut, déterministe |
+| Coupe du clip | 1,0 s après le franchissement d'une ligne (plafond de sécurité conservé : 5 s) |
+
+### 7.5 Mesures (graines 1 à 100, 1 586 clips)
+
+| Événement | Total | Par match (moy / min / max) |
+|---|---|---|
+| `parade` | 515 | 5,15 / 0 / 13 |
+| `poteau` | 131 | 1,31 / 0 / 5 |
+| `barre` | 0 | — |
+| `corner` | 119 | 1,19 / 0 / 4 |
+| `sortie_but` | 317 | 3,17 / 0 / 8 |
+| `touche` | 104 (50 après une parade, 54 après un poteau) | 1,04 / 0 / 3 |
+| `degagement` | 328 (188 tacles + 140 dégagements) | 3,28 / 0 / 11 |
+| `but` | 295 | 2,95 / 0 / 11 |
+
+**Issues de non-but** (1 291 clips) : parade 39,9 %, à côté 24,6 %, bloc (tacle) 14,6 %, dégagement 10,8 %, poteau 10,1 %, barre 0 % ; au-dessus : sans objet (voir §7.2). **Après une parade** : le ballon reste en jeu dans 346 cas sur 515 (67 %), sort en corner dans 119 (23 %), par la touche dans 50 (10 %) ; aucune parade ne produit de but (garde-fou vérifié sur 780 tirs de test, dont 300 tirs extrêmes). **Directions de sortie des parades** : les tranches de 30° de −180° à −90° et de 60° à 150° sont toutes bien représentées (52 à 75 parades chacune) ; les caps proches de 0° (ballon renvoyé vers le but) sont rares ou absents (5 et 12 parades dans les deux tranches voisines, 0 dans les deux tranches centrales) ; cap moyen 3°, écart-type 126°.
+
+**Cinq clips avec tir au but** (match 1, sauf mention) :
+
+| Clip | Gabarit | Issue | Événements | Prolongation |
+|---|---|---|---|---|
+| 2 | `percee_individuelle` | but | `but` (t = 8,80 s, 0°) | — |
+| 3 | `recuperation_haute` | arrêt | `parade` (t = 5,44 s, −154°) | 5,0 s |
+| 4 | `debordement_centre_tete` | arrêt | `parade` (t = 6,63 s, −128°) | 2,89 s |
+| 8 | `une_deux` | poteau | `poteau` (t = 5,39 s, 129°) | 3,04 s |
+| 10 | `profondeur_1v1` | hors cadre | `sortie_but` (t = 6,83 s, 0°) | — |
+
+Les clips 1, 5, 7 de ce match sont des tacles : un `degagement` chacun, sans trajectoire.
+
+### 7.6 Déterminisme
+
+**100 matchs sur 100** avec scores, buts, cartons, remplacements, blessures et notes identiques entre HEAD et l'arbre modifié ; les événements du ballon sont **identiques sur deux exécutions** (mêmes graines, `PYTHONHASHSEED=0`). Tout vient d'un hachage sha256 de `event_ref`.
+
+### 7.7 Impact sur le poids et la latence
+
+646 clips sur 1 586 (41 %) sont maintenant prolongés (parades : 515, poteaux : 131), de 3,26 s en moyenne (5,0 s au maximum), soit environ 100 images de plus chacun. C'est un coût de poids et de sérialisation (ticket 4, non corrigé), très inférieur à celui du calcul des clips (les images ajoutées sont des copies de la dernière image avec un ballon différent, sans `interpolate`).
+
+### 7.8 Statut
+
+**B4 terminé.** `canvas.html` n'est pas modifié : une sous-étape ultérieure consommera `metadata.events_ball`. Rappel de B1 : l'objectif « arrêt en 3-4 s après le premier rebond » a été accepté à 3,76-4,96 s (4-5 s est crédible pour Football Manager ; descendre plus bas demanderait de revoir la restitution de B2, refusé).

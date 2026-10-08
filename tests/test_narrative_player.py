@@ -4,6 +4,8 @@ Tâche 3) -- `build_clips`. Mêmes helpers de simulation que
 de test -- même motif déjà établi dans ce projet, voir la docstring
 d'`apps/streamlit_preview.py` sur l'indépendance volontaire des fichiers)."""
 
+import dataclasses
+
 import pytest
 
 from ligue1sim.animation import templates as templates_module
@@ -19,9 +21,11 @@ from ligue1sim.players import Player
 from ligue1sim.schedule import Match
 from ligue1sim.simulation import LeagueContext, simulate_match
 
+from ball_events import BALL_EVENT_TYPES, plan_ball_events
 from narrative import BUT, build_timeline, match_result_from
 from narrative_player import (
     build_clips,
+    clips_to_json,
     _apply_acceleration_constraint_to_frames,
     _build_clip_frames,
     _extend_with_rebound,
@@ -595,7 +599,7 @@ def _frames_with_outcome(name: str, outcome: str | None):
 
 class TestExtendWithRebound:
     @pytest.mark.parametrize("name", sorted(BUILDERS))
-    @pytest.mark.parametrize("outcome", ["poteau", "barre"])
+    @pytest.mark.parametrize("outcome", ["poteau", "barre", "arret"])
     def test_existing_frames_are_untouched_and_the_rebound_is_appended_after_the_impact(self, name, outcome):
         sequence, frames = _frames_with_outcome(name, outcome)
         extended = _extend_with_rebound(frames, sequence, outcome, _ACCEL_STEP_S)
@@ -610,10 +614,12 @@ class TestExtendWithRebound:
         assert extension[-1].t - sequence.duration <= REBOUND_MAX_DURATION_S + 1e-9
         assert all(f.players == frames[-1].players for f in extension)  # joueurs figés, comme pendant le vol
         assert all(f.ball.z >= 0.0 and f.ball.owner_id is None for f in extension)
-        assert extension[-1].ball.z == 0.0  # le ballon finit au sol
+        plan = plan_ball_events(sequence, outcome, 0, None, None)
+        if plan.end_tau >= plan.trajectory.duration - 1e-9:
+            assert extension[-1].ball.z == 0.0  # le ballon finit au sol (sauf clip coupé 1,0 s après une ligne)
 
     @pytest.mark.parametrize("name", sorted(BUILDERS))
-    @pytest.mark.parametrize("outcome", ["but", "arret", "hors_cadre", "tacle", "degagement", None])
+    @pytest.mark.parametrize("outcome", ["but", "hors_cadre", "tacle", "degagement", None])
     def test_other_outcomes_are_not_extended(self, name, outcome):
         sequence, frames = _frames_with_outcome(name, outcome)
         assert _extend_with_rebound(frames, sequence, outcome, _ACCEL_STEP_S) is frames
@@ -622,3 +628,45 @@ class TestExtendWithRebound:
         sequence, frames = _frames_with_outcome("une_deux", "barre")
         extended = _extend_with_rebound(frames, sequence, "barre", _ACCEL_STEP_S)
         assert extended[-1].t > frames[-1].t + 1.0  # le rebond est visible (plus d'une seconde)
+
+
+# --- Phase 6, Bloc B4 (08/10/2026) : événements du ballon dans le payload --------------------------------
+
+
+class TestBallEventsInThePayload:
+    """`metadata.events_ball` : champ OPTIONNEL du clip (`render/canvas.html` l'ignore), produit par le moteur."""
+
+    def test_clips_carry_valid_json_ball_events_consistent_with_their_outcome(self):
+        import json
+
+        found = 0
+        outcomes_seen = set()
+        for match in _simulate_n(8):
+            timeline = build_timeline(match)
+            clips = build_clips(timeline, max_occasions=5)
+            payloads = json.loads(clips_to_json(clips, timeline))
+            for clip, payload in zip(clips, payloads):
+                events = payload["metadata"].get("events_ball", [])
+                assert events == list(clip.events_ball)
+                if clip.issue in ("arret", "but", "hors_cadre", "poteau", "barre", "tacle", "degagement"):
+                    assert events, f"{clip.issue} : aucun événement du ballon"
+                outcomes_seen.add(clip.issue)
+                for event in events:
+                    assert event["type"] in BALL_EVENT_TYPES
+                    assert 0.0 <= event["t"] <= payload["duration"] + 1e-6
+                    assert event["t_minute"] == clip.minute and event["event_ref"]
+                    assert 0.0 <= event["x"] <= 1.02 and 0.0 <= event["y"] <= 1.0
+                if clip.issue == "but":
+                    assert [e["type"] for e in events] == ["but"]
+                if clip.issue == "arret":
+                    assert events[0]["type"] == "parade"
+                found += len(events)
+        assert found > 0 and {"but", "arret"} <= outcomes_seen
+
+    def test_the_payload_stays_backward_compatible_without_ball_events(self):
+        import json
+
+        timeline = build_timeline(_simulate_n(1)[0])
+        clips = [dataclasses.replace(c, events_ball=()) for c in build_clips(timeline, max_occasions=2)]
+        for payload in json.loads(clips_to_json(clips, timeline)):
+            assert "events_ball" not in payload["metadata"]

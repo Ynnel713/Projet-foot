@@ -35,7 +35,6 @@ import hashlib
 import json
 from dataclasses import dataclass, replace
 
-from ligue1sim.animation.ball import rebound_after_flight
 from ligue1sim.animation.motion import FrameState, interpolate
 from ligue1sim.animation.physics import apply_acceleration_constraint
 from ligue1sim.animation.sequence_generator import enrich_with_background
@@ -48,8 +47,9 @@ from ligue1sim.kits import match_kit_colors
 from ligue1sim.lineup import Lineup
 from ligue1sim.pitch_geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, PitchPoint, zone_of
 from ligue1sim.pitch_layout import place_starting_xi
-from ligue1sim.players import Player
+from ligue1sim.players import GOALKEEPER, Player
 
+from ball_events import BallPlan, plan_ball_events
 from narrative import BUT, NarrativeEvent, Timeline
 
 _FPS = 30
@@ -117,6 +117,9 @@ class Clip:
     frames: list[FrameState]
     roster: dict[PlayerId, RosterEntry]
     duration_s: float
+    # Phase 6, B4 : événements visuels du ballon (but, parade, poteau, corner...), voir `ball_events`. Optionnel :
+    # `render/canvas.html` ne le lit pas.
+    events_ball: tuple[dict, ...] = ()
 
 
 def _lineup_start_positions(lineup: Lineup) -> dict[PlayerId, PitchPoint]:
@@ -174,6 +177,14 @@ def _assist_name(event: NarrativeEvent) -> str | None:
 def _build_clip_frames(
     timeline: Timeline, event: NarrativeEvent
 ) -> tuple[list[FrameState], dict[PlayerId, RosterEntry]]:
+    """Images et distribution d'un clip (voir `_build_clip`, qui renvoie en plus les événements du ballon)."""
+    frames, roster, _events = _build_clip(timeline, event)
+    return frames, roster
+
+
+def _build_clip(
+    timeline: Timeline, event: NarrativeEvent
+) -> tuple[list[FrameState], dict[PlayerId, RosterEntry], tuple[dict, ...]]:
     scorer_lineup = timeline.home_lineup if event.team == timeline.home_team else timeline.away_lineup
     opponent_lineup = timeline.away_lineup if event.team == timeline.home_team else timeline.home_lineup
 
@@ -183,7 +194,7 @@ def _build_clip_frames(
         # Filet de securite (voir docstring de module) -- ne devrait plus se
         # declencher depuis la Tache 2 (substitutes couvre tout l'effectif
         # ayant reellement joue), garde par defense plutot que supprime.
-        return [], {}
+        return [], {}, ()
 
     goal_event = GoalEvent(
         club_name=event.team,
@@ -216,21 +227,28 @@ def _build_clip_frames(
         frames.append(interpolate(sequence, t))
         t += step
     frames = _apply_acceleration_constraint_to_frames(frames, step)
-    frames = _extend_with_rebound(frames, sequence, event.outcome, step)
-    return frames, sequence.roster
+    keeper = next((p.name for p in opponent_lineup.players if p.group == GOALKEEPER), None)
+    plan = plan_ball_events(sequence, event.outcome, event.minute, event.main_player, keeper)
+    frames = _extend_with_ball_path(frames, sequence, plan, step)
+    # Un événement daté à l'instant exact du contact peut tomber jusqu'à une image après la dernière image d'un clip
+    # non prolongé : sa date est bornée à la durée du clip.
+    clip_end = frames[-1].t
+    events_ball = tuple({**d, "t": min(d["t"], clip_end)} for d in (e.to_dict() for e in plan.events))
+    return frames, sequence.roster, events_ball
 
 
-def _extend_with_rebound(frames: list[FrameState], sequence, outcome: str | None, dt: float) -> list[FrameState]:
-    """Phase 6, Bloc B2 (08/10/2026) : prolonge un clip dont le tir finit sur un poteau ou la barre (`outcome`
-    `poteau` / `barre`) par les images du REBOND (voir `animation.ball.rebound_after_flight`) -- le ballon repart
-    du point de contact, rebondit sur le sol et s'arrête, au lieu de s'arrêter net.
+def _extend_with_ball_path(frames: list[FrameState], sequence, plan: BallPlan, dt: float) -> list[FrameState]:
+    """Phase 6, Bloc B2 (rebonds) puis B4 (parades) : prolonge un clip dont le ballon repart après le contact (tir sur
+    un poteau ou la barre, parade du gardien) par les images de sa trajectoire (`plan.trajectory`, voir
+    `ball_events.plan_ball_events`) -- au lieu de s'arrêter net. Le clip s'arrête à `plan.end_tau` s après le contact :
+    à l'arrêt du ballon, ou 1,0 s après le franchissement d'une ligne.
 
     Les images existantes ne sont JAMAIS modifiées : le rebond s'ajoute APRÈS `sequence.duration`, avec les joueurs
     figés sur leurs dernières positions (comme pendant le vol). Allonger `Sequence.duration` à la place décalerait
     presque toutes les images précédentes, car `motion` s'en sert pour la dérive des joueurs de fond et le décalage
-    de réaction (mesuré : 221 images sur 222 modifiées, jusqu'à 1,3 m d'écart sur un joueur). Sans effet pour les
-    autres issues (but, arrêt, hors cadre, tacle, dégagement)."""
-    trajectory = rebound_after_flight(sequence, outcome)
+    de réaction (mesuré : 221 images sur 222 modifiées, jusqu'à 1,3 m d'écart sur un joueur). Sans trajectoire
+    (but, hors cadre, tacle, dégagement), les `frames` sont rendues telles quelles."""
+    trajectory = plan.trajectory
     if trajectory is None or not frames:
         return frames
     last = frames[-1]
@@ -238,13 +256,18 @@ def _extend_with_rebound(frames: list[FrameState], sequence, outcome: str | None
     t = last.t + dt
     # `last.t` est la dernière image AVANT le contact (au plus un pas avant `sequence.duration`) : la première image
     # ajoutée est donc déjà après l'impact.
-    while t - sequence.duration <= trajectory.duration + 1e-9:
+    while t - sequence.duration <= plan.end_tau + 1e-9:
         extension.append(replace(last, t=t, ball=trajectory.state_at(t - sequence.duration)))
         t += dt
-    end_t = sequence.duration + trajectory.duration
+    end_t = sequence.duration + plan.end_tau
     if not extension or extension[-1].t < end_t - 1e-9:
-        extension.append(replace(last, t=end_t, ball=trajectory.state_at(trajectory.duration)))
+        extension.append(replace(last, t=end_t, ball=trajectory.state_at(plan.end_tau)))
     return frames + extension
+
+
+def _extend_with_rebound(frames: list[FrameState], sequence, outcome: str | None, dt: float) -> list[FrameState]:
+    """Prolonge `frames` du rebond / de la parade de l'issue `outcome` (voir `_extend_with_ball_path`)."""
+    return _extend_with_ball_path(frames, sequence, plan_ball_events(sequence, outcome, 0, None, None), dt)
 
 
 def _apply_acceleration_constraint_to_frames(frames: list[FrameState], dt: float) -> list[FrameState]:
@@ -338,7 +361,7 @@ def build_clips(timeline: Timeline, max_occasions: int | None = None) -> list[Cl
                 away_score += 1
         score_after = (home_score, away_score)
 
-        frames, roster = _build_clip_frames(timeline, event)
+        frames, roster, events_ball = _build_clip(timeline, event)
         if not frames:
             continue
 
@@ -363,6 +386,7 @@ def build_clips(timeline: Timeline, max_occasions: int | None = None) -> list[Cl
             # avec l'ancienne constante figee, la lecture s'arretait AVANT les
             # frames du vol, jamais jouees malgre leur presence dans `frames`.
             duration_s=frames[-1].t,
+            events_ball=events_ball,
         ))
         prev_minute = event.minute
         if max_occasions is not None and len(clips) >= max_occasions:
@@ -417,6 +441,8 @@ def clips_to_json(clips: list[Clip], timeline: Timeline) -> str:
         # (les FrameState du moteur restent en pleine precision).
         for frame_payload in clip_payload["frames"]:
             _round_frame_payload(frame_payload)
+        if clip.events_ball:
+            clip_payload["metadata"]["events_ball"] = list(clip.events_ball)  # Phase 6, B4 : optionnel
         clip_payload["metadata"].update({
             "minute": clip.minute,
             "declinaison": clip.declinaison,
