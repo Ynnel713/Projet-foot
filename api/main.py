@@ -15,6 +15,7 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -33,6 +34,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Ticket 4 (optimisation 1) : gzip des réponses de plus de 1 000 octets (payload
+# d'animation : ~14 Mo -> ~2 Mo). Les navigateurs décompressent nativement.
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 app.include_router(leagues.router, prefix="/api")
 app.include_router(competitions.router, prefix="/api")

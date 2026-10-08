@@ -144,6 +144,45 @@ Une variante « cache des octets sérialisés » n'a pas pu être exercée (mon 
 
 *À remplir dans une deuxième passe, après lecture du diagnostic. Ce document est un document de travail, pas une décision.*
 
-## 8. Reproductibilité
+## 8. Implémentation (08/10/2026)
+
+Trois optimisations appliquées, sans autre changement : le calcul des clips, le moteur Poisson, 3c et `canvas.html` / `PitchField.jsx` sont intacts.
+
+1. **gzip** : `GZipMiddleware(minimum_size=1000)` dans `api/main.py`. Le client (`fetch`) décompresse nativement, aucun changement côté React.
+2. **Arrondi à 4 décimales** de `x`, `y` (joueurs et ballon) et `z`, `spin` (ballon), dans `clips_to_json` (`engine/narrative_player.py`), donc à la sérialisation seulement : les `FrameState` restent en pleine précision et `frame_sequence_to_json` (donc le mode standalone) n'est pas touché. `t` et `duration` ne sont **pas** arrondis (`canvas.html` affiche le carton de fin quand `t >= duration`, et `duration` vaut `frames[-1].t`). Au passage, séparateurs JSON compacts dans `clips_to_json` et suppression du `json.loads` puis ré-`dumps` de la réponse : le JSON des clips est inséré tel quel dans l'enveloppe.
+3. **Cache LRU** (`api/animation.py`, `build_match_animation_json`) : 5 entrées, sans expiration, en mémoire (perdu au redémarrage). Clé = équipes, libellé, score et SHA-256 de `repr(match.events)`, qui contient les deux `LineupSnapshot` : une compo ou un événement différent donne une autre clé. **Ce qui est gardé : le JSON décompressé** (octets), ~10,5 Mo par match, ~52 Mo pour 5 entrées. Choix assumé plutôt que le gzip (~0,4 Mo par entrée) : un seul objet sert tous les clients, avec ou sans `Accept-Encoding: gzip`, et le cache ne dépend pas du middleware. Contrepartie : la compression est refaite à chaque réponse (~0,5 s). Seuls les payloads `available=true` sont mis en cache. `build_match_animation` (dict) reste un calcul complet, sans cache : c'est la référence des tests. La route renvoie désormais un `Response` JSON déjà sérialisé (au lieu d'un `dict` ré-encodé par FastAPI).
+
+### Mesures avant / après
+
+Banc : serveur `uvicorn` en thread, requêtes HTTP localhost, match **FC Toulouse – Paris FC, 19 clips, 4 915 images**, même état de compétition rechargé (pickle) dans les deux mesures. Constat : une même graine (`random.seed(11)`) ne redonne **pas** la même simulation d'un processus à l'autre ; sans état figé, « avant » et « après » ne portaient pas sur le même match.
+
+| Mesure | Avant (HEAD) | Après | Écart |
+|---|---|---|---|
+| Poids du JSON décodé | 13 287 596 o | 10 472 166 o | −21,2 % |
+| Poids transféré, client gzip | 13 287 596 o (pas de gzip) | **422 743 o** | **−96,8 %** |
+| 1er appel (à froid), sans gzip | 12,3 s | 10,6 s | bruit de mesure |
+| 1er appel (à froid), gzip | — | 14,1 s | bruit de mesure |
+| 2e appel, avec cache, gzip | 14,9 s (recalcul) | **0,61 s** | −96 % |
+| 3e appel, avec cache, gzip | — | 0,69 s | — |
+| 2e appel, avec cache, sans gzip | — | **0,055 s** | — |
+
+Le 1er appel à froid n'est **pas** amélioré (10 à 14 s, même ordre de grandeur que l'avant : le bruit entre passes est de ±3 s) ; seul le calcul d'`interpolate` agit dessus (piste 7). Le gain du cache est sur les appels suivants (dont le double appel de `StrictMode` en développement). Le transfert en localhost est déjà négligeable ; le gain de poids joue surtout hors réseau local.
+
+### Écart de l'arrondi (comparaison des 19 clips, 125 790 états de joueur, avant / après)
+
+| | Écart maximal |
+|---|---|
+| x (joueurs et ballon) | 5,0e−5 normalisé = **0,005 m** (terrain de 105 m) |
+| y | 5,0e−5 normalisé = 0,003 m (terrain de 68 m) |
+| z du ballon | 5,0e−5 |
+| Écran, terrain de 1 000 px / 1 920 px / 2 560 px de large | x : 0,05 / 0,10 / 0,13 px ; y : 0,03 / 0,06 / 0,08 px |
+
+Moins de 0,13 px d'écart même sur un terrain de 2 560 px de large : invisible. Identité, équipe, numéro, `active`, `t`, `duration` et `ball.owner` identiques ; la première image où le ballon franchit une ligne de but (`x >= 1` ou `x <= 0`) est la même dans les 19 clips. Les `id` accentués sont désormais émis en `\uXXXX` (JSON équivalent) au lieu d'UTF-8 brut.
+
+### Statut du ticket 4
+
+**Partiellement résolu.** Optimisations 1-3 appliquées. Reste à évaluer : plafond `max_occasions` (piste 6, décision produit) et optimisation d'`interpolate` (piste 7, seul levier sur la latence à froid, touche le moteur de rendu, reportée). Les pistes **15 images/s** (piste 3) et **remplaçants non animés** (piste 8) sont en attente de décision propriétaire ; recommandation de l'architecte : **non** pour les deux.
+
+## 9. Reproductibilité
 
 Scripts de mesure jetables (instrumentation par enveloppes de fonctions, serveur `uvicorn` en thread, `cProfile`, analyse du payload réel, essai de cache), écrits dans un dossier temporaire **hors dépôt** et appliqués à une archive jetable de `HEAD` ; non commités. Graine 11, Ligue 1, journée 1.

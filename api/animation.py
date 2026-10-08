@@ -14,9 +14,12 @@ transporter le résultat jusqu'à l'iframe.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
+from collections import OrderedDict
 from pathlib import Path
+from threading import Lock
 from typing import Any
 
 # Convention du dépôt (apps/streamlit_preview.py, scripts/render_*.py, pytest
@@ -45,27 +48,29 @@ def unavailable(reason: str) -> dict[str, Any]:
     return {"version": PROTOCOL_VERSION, "available": False, "reason": reason}
 
 
-def build_match_animation(match: Match, label: str = "") -> dict[str, Any]:
-    """`{"version", "available": True, "match": {...}, "clips": [...]}` ou
-    `{"version", "available": False, "reason": ...}`.
+def _compact(obj: Any) -> str:
+    return json.dumps(obj, separators=(",", ":"))
 
-    `label` : suffixe stable du match (journée, poule, tour) -- passé comme
-    `date` à `match_result_from`, qui s'en sert pour varier la graine des
-    occasions d'un match à l'autre (même convention que le fil NLG)."""
+
+def _animation_json(match: Match, label: str) -> tuple[bytes, bool]:
+    """(JSON UTF-8 du payload, `available`). Calcul complet, sans cache.
+
+    Le JSON des clips est inséré tel quel dans l'enveloppe (aucun
+    `json.loads` puis ré-`dumps` de ~14 Mo, voir docs/ticket4_latency_audit.md)."""
     if not match.played or match.events is None:
-        return unavailable(REASON_NOT_PLAYED)
+        return _compact(unavailable(REASON_NOT_PLAYED)).encode(), False
     lineups = persisted_lineups(match)
     if lineups is None:
-        return unavailable(REASON_LINEUP_NOT_PERSISTED)
+        return _compact(unavailable(REASON_LINEUP_NOT_PERSISTED)).encode(), False
     home_lineup, away_lineup = lineups
 
     result = match_result_from(match, match.events, home_lineup, away_lineup, date=label)
     timeline = build_timeline(result)
     clips = build_clips(timeline, max_occasions=None)
     if not clips:
-        return unavailable(REASON_NO_HIGHLIGHTS)
+        return _compact(unavailable(REASON_NO_HIGHLIGHTS)).encode(), False
 
-    return {
+    head = {
         "version": PROTOCOL_VERSION,
         "available": True,
         "match": {
@@ -74,5 +79,64 @@ def build_match_animation(match: Match, label: str = "") -> dict[str, Any]:
             "home_goals": match.home_goals,
             "away_goals": match.away_goals,
         },
-        "clips": json.loads(clips_to_json(clips, timeline)),
     }
+    text = f'{_compact(head)[:-1]},"clips":{clips_to_json(clips, timeline)}}}'
+    return text.encode(), True
+
+
+def build_match_animation(match: Match, label: str = "") -> dict[str, Any]:
+    """`{"version", "available": True, "match": {...}, "clips": [...]}` ou
+    `{"version", "available": False, "reason": ...}`. Toujours recalculé
+    (jamais le cache) : c'est la référence que les tests comparent.
+
+    `label` : suffixe stable du match (journée, poule, tour) -- passé comme
+    `date` à `match_result_from`, qui s'en sert pour varier la graine des
+    occasions d'un match à l'autre (même convention que le fil NLG)."""
+    return json.loads(_animation_json(match, label)[0])
+
+
+# --- Cache mémoire (ticket 4, optimisation 3) ---------------------------------
+# LRU simple, sans expiration, perdu au redémarrage du serveur. On garde le JSON
+# DÉCOMPRESSÉ (octets) : ~11 Mo par match après arrondi, soit ~55 Mo pour 5
+# entrées. Choix assumé plutôt que de garder le gzip (~0,5 Mo par entrée) : le
+# même octet-string sert tous les clients (avec ou sans `Accept-Encoding: gzip`)
+# et le cache ne dépend pas du middleware ; la compression (une passe sur 11 Mo)
+# est refaite par `GZipMiddleware` à chaque réponse.
+CACHE_MAX_ENTRIES = 5
+_cache: OrderedDict[tuple, bytes] = OrderedDict()
+_cache_lock = Lock()
+
+
+def _cache_key(match: Match, label: str) -> tuple:
+    """Identifiant du match (équipes, libellé) + empreinte de ses `MatchEvents`,
+    qui contiennent les `LineupSnapshot` persistés (les deux compos) : une compo
+    ou un événement différent donne une autre clé, donc un recalcul."""
+    digest = hashlib.sha256(repr(match.events).encode()).hexdigest()
+    return (match.home, match.away, label, match.home_goals, match.away_goals, digest)
+
+
+def build_match_animation_json(match: Match, label: str = "") -> bytes:
+    """Comme `build_match_animation`, mais en JSON (octets) et avec cache LRU.
+    Seuls les payloads `available=True` sont mis en cache (les autres sont
+    instantanés)."""
+    if not match.played or match.events is None:
+        return _animation_json(match, label)[0]
+    key = _cache_key(match, label)
+    with _cache_lock:
+        cached = _cache.get(key)
+        if cached is not None:
+            _cache.move_to_end(key)
+            return cached
+    payload, available = _animation_json(match, label)
+    if available:
+        with _cache_lock:
+            _cache[key] = payload
+            _cache.move_to_end(key)
+            while len(_cache) > CACHE_MAX_ENTRIES:
+                _cache.popitem(last=False)
+    return payload
+
+
+def clear_cache() -> None:
+    with _cache_lock:
+        _cache.clear()

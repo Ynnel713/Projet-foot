@@ -384,6 +384,10 @@ def clips_to_json(clips: list[Clip], timeline: Timeline) -> str:
             carrier = next((str(pid) for pid, state in frame.players.items() if state.is_ball_carrier), None)
             frame_payload["ball"]["owner"] = carrier
         clip_payload["metadata"]["player_names"] = {str(pid): entry.nom for pid, entry in clip.roster.items()}
+        # Ticket 4 (optimisation 2) : arrondi des coordonnees a la serialisation SEULEMENT
+        # (les FrameState du moteur restent en pleine precision).
+        for frame_payload in clip_payload["frames"]:
+            _round_frame_payload(frame_payload)
         clip_payload["metadata"].update({
             "minute": clip.minute,
             "declinaison": clip.declinaison,
@@ -403,4 +407,25 @@ def clips_to_json(clips: list[Clip], timeline: Timeline) -> str:
             "away_team": timeline.away_team,
         })
         payload.append(clip_payload)
-    return json.dumps(payload, sort_keys=True)
+    # Separateurs compacts : meme contenu, ~10 % d'octets en moins qu'avec les
+    # separateurs par defaut (", " / ": "), sans effet sur le parsing.
+    return json.dumps(payload, sort_keys=True, separators=(",", ":"))
+
+
+# Ticket 4 (optimisation 2, 08/10/2026) : 4 decimales sur un terrain normalise 0-1
+# de 105 x 68 m = 0,0105 m (~1 cm) en longueur. `t` et `duration` ne sont PAS
+# arrondis : canvas.html affiche le carton de fin quand t >= clip.duration, et
+# `duration_s` vaut frames[-1].t -- arrondir l'un sans l'autre pourrait empecher
+# le declenchement.
+COORD_DECIMALS = 4
+
+
+def _round_frame_payload(frame_payload: dict) -> None:
+    """Arrondit en place x, y des joueurs et x, y, z, spin du ballon."""
+    for player in frame_payload["players"]:
+        player["x"] = round(player["x"], COORD_DECIMALS)
+        player["y"] = round(player["y"], COORD_DECIMALS)
+    ball = frame_payload["ball"]
+    for key in ("x", "y", "z", "spin"):
+        if isinstance(ball.get(key), float):
+            ball[key] = round(ball[key], COORD_DECIMALS)

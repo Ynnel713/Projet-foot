@@ -7,7 +7,7 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 | 1 | Joueur statique poussé hors de la marge près d'un bord du terrain | Phase 5 (habillage visuel) | **Résolu** — commit `61773ab`, tolérance recalibrée à 0,5 % |
 | 2 | Un joueur expulsé peut être remplacé plus tard dans le même match | Phase 4 (branchement PWA effectif) | Ouvert |
 | 3 | `SubstitutionEvent` identifie les joueurs par nom, pas par `player_id` | Phase 6 (produit / carrière) | Ouvert |
-| 4 | Latence et poids du payload d'animation | Phase 6 (produit / carrière) | Ouvert — diagnostic en cours, voir `docs/ticket4_latency_audit.md` |
+| 4 | Latence et poids du payload d'animation | Phase 6 (produit / carrière) | Partiellement résolu (optimisations 1-3 appliquées), voir `docs/ticket4_latency_audit.md` §8 |
 | 5 | `build_clips` écarte les événements dont le protagoniste n'est pas dans le onze de départ | — | **Fermé** (non reproduit) |
 | 6 | `build_clips` : `continue` silencieux quand `frames` est vide (et docstring obsolète) | Phase 7 (qualité) | Ouvert (priorité basse) |
 | 7 | `PitchView.jsx` : la version commitée diverge de celle de l'arbre de travail | Phase 5 (habillage visuel) | **Fermé — Résolu** (`7309172`) |
@@ -96,7 +96,7 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 
 **Priorité.** Avant la Phase 6 (produit / carrière).
 
-**Statut.** Ouvert. **Diagnostic en cours, voir `docs/ticket4_latency_audit.md`** (mesures du 08/10/2026 : coût dominé par la construction des clips, `interpolate` = 74 % du temps ; poids dominé par l'identité des joueurs répétée à chaque image, 54 % ; non corrigé).
+**Statut.** Partiellement résolu, optimisations 1-3 appliquées (gzip, arrondi à 4 décimales, cache LRU), pistes 4-5 en attente de décision propriétaire (15 images/s, remplaçants non animés ; recommandation architecte : non pour les deux). Reste à évaluer : plafond `max_occasions`, optimisation d'`interpolate`. Le premier appel à froid reste de 10 à 14 s. Détail et mesures : `docs/ticket4_latency_audit.md` §8.
 
 ---
 

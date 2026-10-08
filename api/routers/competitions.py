@@ -15,7 +15,7 @@ son tableau existe déjà, pas besoin de "start".
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
 
 from ligue1sim.champions_league import start_champions_league
 from ligue1sim.clubs import load_clubs, list_perso_clubs
@@ -26,7 +26,7 @@ from ligue1sim.season import CLUBS_PATH
 from ligue1sim.world_cup import start_world_cup
 
 from api import store
-from api.animation import build_match_animation
+from api.animation import build_match_animation_json
 from api.schemas import (
     BracketOut,
     CompetitionStatus,
@@ -347,15 +347,18 @@ def get_match_animation(
     matchday: int | None = None,
     round_number: int | None = None,
     leg: int | None = None,
-) -> dict:
+) -> Response:
     """Payload d'animation (iframe `render/canvas.html`, protocole version 1 --
     docs/canvas_integration_state.md §2.11) d'un match déjà joué. Toujours un
     200 pour un match existant : `available=false` + `reason` quand le match
     n'est pas animable (compo non persistée, pas de temps fort, pas joué),
-    jamais un payload partiel ni un recalcul de composition."""
+    jamais un payload partiel ni un recalcul de composition.
+
+    Réponse = JSON déjà sérialisé (cache LRU de `api.animation`), compressé en
+    gzip par `GZipMiddleware` (`api.main`)."""
     competition = _get_or_404(comp_id)
     match, label = _locate_match(competition, home, away, journee, group, matchday, round_number, leg)
-    return build_match_animation(match, label)
+    return Response(content=build_match_animation_json(match, label), media_type="application/json")
 
 
 # --- Phase de poules + élimination directe (HYBRID -- Ligue des Champions) ---
