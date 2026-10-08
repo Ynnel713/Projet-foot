@@ -1,6 +1,6 @@
 # Dette connue — Simulafoot
 
-Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets ouverts (2, 3, 4, 6, 9, 10, 11 et 12) n'est corrigé à ce jour.** Créé le 07/10/2026 (clôture de l'Étape B, `LineupSnapshot`) ; tickets 4 et 5 ajoutés le même jour (intégration PWA par iframe) ; ticket 5 fermé et tickets 6 à 8 ouverts le même jour (gouvernance, avant Phase 5) ; tickets 9 (`duckdb`) et 10 (couverture NLG) ajoutés le même jour (environnement de test). tickets 7 (résolu en `7309172`) et 11 (`ConnectionResetError`) traités le même jour. **État : ouverts 2, 3, 4, 6, 9, 10, 11, 12 ; fermés 1 (résolu en `61773ab`, Phase 5 sous-étape 1), 5 (non reproduit), 7 (résolu en `7309172`) et 8 (résolu en `2d71e55`, vérifié sur archive propre).**
+Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets ouverts (2, 3, 4, 6, 9, 10, 11, 12 et 13) n'est corrigé à ce jour.** Créé le 07/10/2026 (clôture de l'Étape B, `LineupSnapshot`) ; tickets 4 et 5 ajoutés le même jour (intégration PWA par iframe) ; ticket 5 fermé et tickets 6 à 8 ouverts le même jour (gouvernance, avant Phase 5) ; tickets 9 (`duckdb`) et 10 (couverture NLG) ajoutés le même jour (environnement de test). tickets 7 (résolu en `7309172`) et 11 (`ConnectionResetError`) traités le même jour. **État : ouverts 2, 3, 4, 6, 9, 10, 11, 12, 13 ; fermés 1 (résolu en `61773ab`, Phase 5 sous-étape 1), 14 (décision produit, bandes de tonte horizontales conservées), 5 (non reproduit), 7 (résolu en `7309172`) et 8 (résolu en `2d71e55`, vérifié sur archive propre).**
 
 | # | Titre | Priorité (avant…) | Statut |
 |---|---|---|---|
@@ -16,6 +16,8 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 | 10 | Le seuil de couverture à 85 % sur `engine/` échoue depuis le venv NLG | Phase 7 (qualité / packaging) | Ouvert |
 | 11 | `ConnectionResetError` Windows 10054 dans le journal de l'API | Phase 7 (qualité / packaging) — priorité basse | Ouvert |
 | 12 | Sauts de trajectoire en amont liés aux changements de segment de gabarit | Phase 7 (qualité / packaging) — priorité basse | Ouvert |
+| 13 | Axe de la barre de progression fixe à 0–90 min, marqueurs qui se chevauchent pour les clips rapprochés | Phase 7 (qualité / packaging) — priorité basse | Ouvert |
+| 14 | Orientation des bandes de tonte : horizontal (implémenté) vs perpendiculaire (backlog 24/09) | — (priorité basse) | **Résolu — décision produit**, horizontal conservé |
 
 ---
 
@@ -227,6 +229,34 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 **Priorité.** Basse, avant la Phase 7 (qualité / packaging).
 
 **Statut.** Ouvert.
+
+---
+
+## 13. Axe de la barre de progression fixe à 0–90 min, marqueurs qui se chevauchent pour les clips rapprochés
+
+**Description.** `render/canvas.html` positionne chaque marqueur de la barre de progression à `minute / 90` de sa largeur (échelle fixe 0–90, `Math.min(90, Math.max(1, minute))`). Quand plusieurs clips tombent à quelques minutes d'écart (cas fréquent : les temps forts sont concentrés), les marqueurs (9 à 12 px) se touchent ou se superposent. Depuis la sous-étape 3 de la Phase 5, un but est dessiné au-dessus d'une occasion voisine (`z-index`), ce qui évite qu'il soit masqué mais ne règle pas la superposition.
+
+**Reproduction.** Match de référence de la Phase 5 (seed 26) : clips à 5', 7', 12' et 13' sur une barre d'environ 380 px (~4 px par minute) : les marqueurs de 5' et 7' sont à 8 px l'un de l'autre, ceux de 12' et 13' se recouvrent presque (4 px). Ouvrir l'animation d'un match avec plusieurs occasions dans le même quart d'heure.
+
+**Impact.** Lisibilité : on distingue mal les marqueurs voisins et leur type (but / occasion) ; le clic peut tomber sur le mauvais marqueur. Aucune conséquence fonctionnelle sur la lecture.
+
+**Pistes (non appliquées).** Axe ajusté à l'étendue réelle des minutes des clips (premier et dernier, avec marge) ; axe non linéaire (logarithmique ou compressé) ; zoom intelligent (écarter localement les marqueurs trop proches, infobulle de regroupement) ; ou marqueurs régulièrement espacés avec la minute en étiquette.
+
+**Priorité.** Basse, avant la Phase 7 (qualité / packaging).
+
+**Statut.** Ouvert.
+
+---
+
+## 14. Orientation des bandes de tonte : horizontal (implémenté) vs perpendiculaire (backlog 24/09)
+
+**Description.** Le point 8 de `docs/visual_backlog.md` (retour du 24/09/2026) demandait des bandes de tonte « perpendiculaires à la longueur » du terrain (découpage de la longueur de 105 m). La sous-étape 3 de la Phase 5 a implémenté, sur instruction de l'architecte, des bandes **horizontales, parallèles aux lignes de touche** (9 bandes de 7,6 m sur la largeur de 68 m). Le terrain SVG de l'écran match de la PWA (`PitchField.jsx`) garde 18 bandes perpendiculaires à la longueur : les deux surfaces n'ont donc pas la même orientation de bandes.
+
+**Décision actuelle.** Horizontal conservé (décision produit). Entrée créée pour la traçabilité de l'écart avec le backlog ; aucune correction prévue.
+
+**Priorité.** Basse.
+
+**Statut.** **Résolu — décision produit, horizontal conservé.**
 
 ---
 

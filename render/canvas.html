@@ -27,6 +27,9 @@
     pointer-events: none;
   }
   #scoreboard .sb-score { font-variant-numeric: tabular-nums; }
+  /* Effet au but (Phase 5, sous-etape 4) : eclaircissement doux du bloc pendant 1 s, une fois par but. */
+  #scoreboard { transition: background-color 0.3s ease, border-color 0.3s ease; }
+  #scoreboard.goal-flash { background: rgba(120, 120, 120, 0.85); border-color: #ffffff; }
   #scoreboard .sb-minute { opacity: 0.75; font-weight: 400; }
 
   /* Bandeau de lecture, sous le terrain, meme largeur que lui : hauteur fixe 52 px,
@@ -184,6 +187,17 @@ function startPlayer(SEQUENCE_DATA, bridge) {
   const STRIPE_COUNT = 9;
   const GRASS_DARK = '#1e824c';
   const GRASS_LIGHT = '#1e8650';
+
+  // Filets de but (Phase 5, sous-etape 4). Profondeur et largeur : cotes de PITCH (pitch_geometry.py).
+  const NET_COLS = 12;                   // mailles dans la largeur du but (7,32 m / 12 = 0,61 m)
+  const NET_ROWS = 4;                    // mailles dans la profondeur (2 m / 4 = 0,5 m)
+  const NET_ANIM_S = 0.5;                // duree de l'oscillation du filet au but (0,4 a 0,6 s)
+  const NET_AMPLITUDE_M = 0.55;          // deplacement maximal du fond du filet
+  const NET_FREQ_HZ = 6;                 // 3 oscillations en 0,5 s
+  const NET_DECAY_PER_S = 6;             // enveloppe exp(-6 t) : ~5 % de l'amplitude a 0,5 s
+  const NET_SPREAD_M = 1.8;              // etalement lateral de la deformation autour de l'impact
+  const GOAL_FLASH_S = 1.0;              // duree de l'eclaircissement du bloc score
+  const GOAL_HOLD_S = 1.4;               // maintien de la derniere image apres un but, avant la carte de titre
 
   // Metres (origine coin bas-gauche du terrain, y vers le haut) -> pixels canvas.
   function mToPx(mx, my) {
@@ -388,8 +402,103 @@ function startPlayer(SEQUENCE_DATA, bridge) {
     ctx.fillText(name, px, top + padding);
   }
 
-  function drawFrame(clipData, t) {
+  // --- Detection du but (donnees existantes, aucune simulation) --------------
+  // Un clip de but (`metadata.issue === 'but'`) se termine quand le ballon franchit la ligne :
+  // on cherche, dans les positions du ballon de la sequence, la premiere image ou il est
+  // au-dela d'une ligne de but (x <= 0 ou x >= 1) ENTRE LES POTEAUX (|y - 0,5| <= demi-largeur
+  // du but). Plusieurs entrees sont possibles ; deux evenements sont toujours espaces d'au moins
+  // NET_ANIM_S, donc les animations ne se chevauchent jamais. Sans but : aucun evenement.
+  // Repli : un clip de but sans franchissement mesurable declenche a sa derniere image.
+  // Resultat memorise par clip.
+  const goalEventsCache = new WeakMap();
+  function goalEvents(clipData) {
+    let events = goalEventsCache.get(clipData);
+    if (events) return events;
+    events = [];
+    if (clipData.metadata && clipData.metadata.issue === 'but') {
+      const halfGoal = PITCH.goal_width_m / 2 / PITCH_W;
+      let inGoal = false;
+      for (const f of clipData.frames) {
+        const b = f.ball;
+        const side = b.x >= 1 ? -1 : (b.x <= 0 ? 1 : 0);  // -1 : but de droite, +1 : but de gauche
+        const inside = side !== 0 && Math.abs(b.y - 0.5) <= halfGoal;
+        if (inside && !inGoal && (!events.length || f.t - events[events.length - 1].t >= NET_ANIM_S)) {
+          events.push({ t: f.t, dir: side, yM: b.y * PITCH_W });
+        }
+        inGoal = inside;
+      }
+      if (!events.length) {
+        const last = clipData.frames[clipData.frames.length - 1];
+        events.push({ t: last.t, dir: last.ball.x >= 0.5 ? -1 : 1, yM: last.ball.y * PITCH_W });
+      }
+    }
+    goalEventsCache.set(clipData, events);
+    return events;
+  }
+
+  // Fin de lecture d'un clip : sa duree, prolongee de GOAL_HOLD_S apres un but pour laisser jouer le filet et
+  // l'eclaircissement du score avant la carte de titre.
+  function playEnd(clipData) {
+    const events = goalEvents(clipData);
+    return events.length ? Math.max(clipData.duration, events[events.length - 1].t) + GOAL_HOLD_S : clipData.duration;
+  }
+
+  // --- Filets ------------------------------------------------------------------
+  // Un filet derriere chaque ligne de but, entre les poteaux, sur NET.goal_net_depth_m : quadrillage fin
+  // blanc casse semi-transparent (ne masque ni joueur ni ballon, peints apres). `deform` : null au repos ;
+  // sinon { t, yM } -> oscillation sinusoidale amortie du fond du filet autour du point d'entree.
+  const staticNetPaths = {};
+  function drawNet(dir, deform) {
+    const goalLineX = dir === 1 ? 0 : PITCH_L;
+    const midY = PITCH_W / 2;
+    const depth = PITCH.goal_net_depth_m;
+    const width = PITCH.goal_width_m;
+    const envelope = deform
+      ? Math.exp(-NET_DECAY_PER_S * deform.t) * Math.sin(2 * Math.PI * NET_FREQ_HZ * deform.t)
+      : 0;
+    const vertex = (i, j) => {
+      const y = midY - width / 2 + width * i / NET_COLS;
+      let extra = 0;
+      if (deform) {
+        const lateral = Math.exp(-Math.pow((y - deform.yM) / NET_SPREAD_M, 2));
+        extra = NET_AMPLITUDE_M * envelope * lateral * (j / NET_ROWS);  // la ligne de but (j = 0) ne bouge pas
+      }
+      return mToPx(goalLineX - dir * (depth * j / NET_ROWS + extra), y);
+    };
+    // Filet au repos : trace construit une seule fois (Path2D) puis simplement retrace a chaque image.
+    let path = deform ? null : staticNetPaths[dir];
+    if (!path) {
+      path = new Path2D();
+      for (let j = 1; j <= NET_ROWS; j++) {            // lignes paralleles a la ligne de but
+        path.moveTo(...vertex(0, j));
+        for (let i = 1; i <= NET_COLS; i++) path.lineTo(...vertex(i, j));
+      }
+      for (let i = 0; i <= NET_COLS; i++) {            // lignes perpendiculaires
+        path.moveTo(...vertex(i, 0));
+        for (let j = 1; j <= NET_ROWS; j++) path.lineTo(...vertex(i, j));
+      }
+      if (!deform) staticNetPaths[dir] = path;
+    }
+    ctx.lineWidth = 0.9 * pxPerScreenPx;
+    ctx.strokeStyle = 'rgba(235, 235, 235, 0.55)';
+    ctx.stroke(path);
+  }
+
+  function drawNets(clipData, playhead) {
+    let active = null;
+    for (const ev of goalEvents(clipData)) {
+      if (playhead >= ev.t && playhead - ev.t < NET_ANIM_S) active = ev;
+    }
+    for (const dir of [1, -1]) {
+      drawNet(dir, active && active.dir === dir ? { t: playhead - active.t, yM: active.yM } : null);
+    }
+  }
+
+  // `playhead` : position de lecture (secondes), egale a `t` sauf pendant le maintien apres un but,
+  // ou la derniere image reste affichee (t = duree) alors que le filet continue d'osciller.
+  function drawFrame(clipData, t, playhead = t) {
     drawPitch();
+    drawNets(clipData, playhead);
     const teams = clipData.metadata.teams;
     const [fa, fb, frac] = findSegment(clipData, t);
     const carrierId = fa.ball.owner || null;
@@ -646,6 +755,18 @@ function startPlayer(SEQUENCE_DATA, bridge) {
     notifyClipChange();
   }
 
+  // Eclaircissement du bloc score au but : la classe n'est basculee que lorsque l'etat change (une fois par but),
+  // jamais a chaque image ; sans but (aucun evenement) elle n'est jamais posee.
+  let goalFlashOn = false;
+  function updateGoalFlash(clip, playhead) {
+    let on = false;
+    for (const ev of goalEvents(clip)) if (playhead >= ev.t && playhead - ev.t < GOAL_FLASH_S) on = true;
+    if (on !== goalFlashOn) {
+      goalFlashOn = on;
+      scoreboardEl.classList.toggle('goal-flash', on);
+    }
+  }
+
   function tick(nowMs) {
     const clip = clips[currentIdx];
     const duration = clip.duration;
@@ -667,28 +788,31 @@ function startPlayer(SEQUENCE_DATA, bridge) {
           }
         }
       }
-      drawFrame(clip, duration); // dernier frame du clip fige derriere le carton
+      drawFrame(clip, duration, playEnd(clip)); // dernier frame du clip fige derriere le carton
       requestAnimationFrame(tick);
       return;
     }
 
-    let t;
+    // `playhead` : 0 -> duration (+ GOAL_HOLD_S apres un but, derniere image maintenue).
+    const endAt = playEnd(clip);
+    let playhead;
     if (!playing) {
-      t = pausedAtS;
+      playhead = pausedAtS;
     } else {
       if (startPerfMs === null) startPerfMs = nowMs - pausedAtS * 1000;
-      t = (nowMs - startPerfMs) / 1000;
-      if (t >= duration) {
-        t = duration;
-        pausedAtS = t;
+      playhead = (nowMs - startPerfMs) / 1000;
+      if (playhead >= endAt) {
+        playhead = endAt;
+        pausedAtS = playhead;
         showCarton(clip);
       } else {
-        pausedAtS = t;
+        pausedAtS = playhead;
       }
     }
 
-    drawFrame(clip, t);
+    drawFrame(clip, Math.min(playhead, duration), playhead);
     updateScoreboard(clip);
+    updateGoalFlash(clip, playhead);
     requestAnimationFrame(tick);
   }
   requestAnimationFrame(tick);

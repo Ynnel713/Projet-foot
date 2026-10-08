@@ -205,3 +205,100 @@ def test_progress_bar_distinguishes_goal_markers_from_chance_markers():
     assert "border-radius: 50%" in goal and "#ffffff" in goal  # but : cercle blanc plein
     assert "rotate(45deg)" in chance and "#9aa0a6" in chance  # occasion : losange gris
     assert "z-index: 2" in goal and "z-index: 1" in chance  # un but n'est jamais masqué par une occasion voisine
+
+
+# --- Filets de but, animation au but, éclaircissement du score (Phase 5, sous-étape 4) ---------------------------
+# Tests STATIQUES (lecture du code de canvas.html, aucun navigateur) + cohérence avec le payload réel.
+
+
+def test_two_nets_one_per_goal_drawn_behind_players_and_ball():
+    assert "function drawNet(dir, deform)" in CANVAS
+    body = CANVAS[CANVAS.index("function drawNets("):CANVAS.index("function drawFrame(")]
+    assert "for (const dir of [1, -1])" in body and "drawNet(dir," in body  # un filet par but (gauche et droite)
+    # Dimensions : cotes de PITCH (pitch_geometry.py), maillage fin, tracé au repos mis en cache (Path2D).
+    net = CANVAS[CANVAS.index("function drawNet(dir, deform)"):CANVAS.index("function drawNets(")]
+    assert "PITCH.goal_net_depth_m" in net and "PITCH.goal_width_m" in net
+    assert "new Path2D()" in net and "staticNetPaths" in CANVAS
+    assert "rgba(235, 235, 235, 0.55)" in net  # blanc cassé semi-transparent
+    # z-order : après la pelouse et les lignes, AVANT les joueurs et le ballon.
+    frame = CANVAS[CANVAS.index("function drawFrame("):]
+    assert frame.index("drawPitch();") < frame.index("drawNets(clipData, playhead);") < frame.index("for (const pa of fa.players)")
+    assert frame.index("for (const pa of fa.players)") < frame.index("// Ballon : dessine APRES les ronds")
+
+
+def test_net_animation_is_triggered_only_when_a_goal_is_detected():
+    assert 0.4 <= float(re.search(r"const NET_ANIM_S = ([\d.]+);", CANVAS).group(1)) <= 0.6
+    detection = CANVAS[CANVAS.index("function goalEvents("):CANVAS.index("function playEnd(")]
+    assert "clipData.metadata.issue === 'but'" in detection  # sans but : aucun évènement, donc aucune animation
+    assert "Math.abs(b.y - 0.5) <= halfGoal" in detection  # le ballon franchit la ligne ENTRE LES POTEAUX
+    assert "f.t - events[events.length - 1].t >= NET_ANIM_S" in detection  # deux animations ne se chevauchent jamais
+    net = CANVAS[CANVAS.index("function drawNet(dir, deform)"):CANVAS.index("function drawNets(")]
+    assert "Math.exp(-NET_DECAY_PER_S * deform.t) * Math.sin(2 * Math.PI * NET_FREQ_HZ * deform.t)" in net  # sinusoïde amortie
+    nets = CANVAS[CANVAS.index("function drawNets("):CANVAS.index("function drawFrame(")]
+    assert "goalEvents(clipData)" in nets and "playhead - ev.t < NET_ANIM_S" in nets  # s'arrête d'elle-même
+    assert "function drawFrame(clipData, t, playhead = t)" in CANVAS  # mode isolé : aucun évènement, filets au repos
+    # Fin de clip prolongée après un but pour que l'animation soit visible avant la carte de titre.
+    assert float(re.search(r"const GOAL_HOLD_S = ([\d.]+);", CANVAS).group(1)) >= float(re.search(r"const GOAL_FLASH_S = ([\d.]+);", CANVAS).group(1))
+    assert "if (playhead >= endAt) {" in CANVAS and "const endAt = playEnd(clip);" in CANVAS
+
+
+def test_scoreboard_lightens_once_per_goal_with_a_soft_fade():
+    css = CANVAS[CANVAS.index("#scoreboard { transition:"):CANVAS.index("/* Bandeau de lecture")]
+    assert "transition: background-color 0.3s ease" in css  # fondu doux
+    flash = re.search(r"#scoreboard\.goal-flash \{ background: rgba\((\d+), (\d+), (\d+), ([\d.]+)\);", css)
+    assert flash and int(flash.group(1)) > 60  # fond plus clair que rgba(0, 0, 0, 0.6)
+    assert float(re.search(r"const GOAL_FLASH_S = ([\d.]+);", CANVAS).group(1)) == 1.0
+    body = CANVAS[CANVAS.index("function updateGoalFlash("):CANVAS.rindex("function tick(")]
+    assert "if (on !== goalFlashOn) {" in body and "scoreboardEl.classList.toggle('goal-flash', on);" in body  # une fois par but
+    assert "updateGoalFlash(" not in CANVAS[CANVAS.index("function drawFrame("):CANVAS.index("// --- Mode \"player\"")]  # jamais dans le rendu de l'image
+
+
+def _find_match_with_a_goal():
+    """Premier match simulé (seed fixe, tentatives bornées) dont les buts sont dans les occasions retenues."""
+    import random
+
+    import numpy as np
+    from test_canvas_e2e import _MAX_OCCASIONS, _squad
+
+    from ligue1sim.clubs import Club
+    from ligue1sim.lineup import pick_best_formation
+    from ligue1sim.schedule import Match
+    from ligue1sim.simulation import LeagueContext, simulate_match
+    from narrative import build_timeline, match_result_from
+
+    for seed in range(100, 400):
+        random.seed(seed)
+        np.random.seed(seed)
+        home, away = Club(name="Home FC", players=_squad("home", 72.0)), Club(name="Away FC", players=_squad("away", 68.0))
+        context = LeagueContext.from_clubs([home, away])
+        home_lineup, away_lineup = pick_best_formation(home), pick_best_formation(away)
+        home_goals, away_goals, events = simulate_match(home, away, context)
+        if events is None or home_goals + away_goals == 0:
+            continue
+        match = Match(home=home.name, away=away.name, home_goals=home_goals, away_goals=away_goals, events=events)
+        timeline = build_timeline(match_result_from(match, events, home_lineup, away_lineup, date=str(seed)))
+        if any(e.outcome == "but" for e in timeline.events[:_MAX_OCCASIONS]):
+            return timeline
+    raise AssertionError("aucun match avec un but trouvé")
+
+
+def test_goal_clips_of_a_real_payload_cross_the_line_between_the_posts():
+    import json
+
+    from narrative_player import build_clips, clips_to_json
+    from test_canvas_e2e import _MAX_OCCASIONS
+
+    timeline = _find_match_with_a_goal()
+    data = json.loads(clips_to_json(build_clips(timeline, max_occasions=_MAX_OCCASIONS), timeline))
+    half_goal = 3.66 / 68
+
+    def crosses(clip):
+        return any((f["ball"]["x"] >= 1 or f["ball"]["x"] <= 0) and abs(f["ball"]["y"] - 0.5) <= half_goal for f in clip["frames"])
+
+    goals = [c for c in data if c["metadata"]["issue"] == "but"]
+    assert goals, "le match choisi doit contenir au moins un clip de but"
+    for clip in goals:
+        assert crosses(clip), f"clip de but {clip['metadata']['minute']}' sans franchissement de la ligne entre les poteaux"
+    for clip in data:
+        if clip["metadata"]["issue"] != "but":
+            assert not crosses(clip), "un clip sans but ne doit pas franchir la ligne entre les poteaux"
