@@ -136,3 +136,72 @@ def test_payload_carries_the_ball_owner_per_frame_and_the_player_names():
             assert owner is None or owner in {p["id"] for p in frame["players"]}
         # un porteur est identifié sur au moins une image de chaque clip
         assert any(f["ball"]["owner"] is not None for f in clip["frames"])
+
+
+# --- Pelouse à bandes, bloc score, bandeau de lecture (Phase 5, sous-étape 3) ------------------------------------
+# Tests STATIQUES (lecture du code de canvas.html, aucun navigateur).
+
+
+def _relative_luminance(hex_color: str) -> float:
+    n = int(hex_color.lstrip("#"), 16)
+
+    def lin(c: int) -> float:
+        c /= 255
+        return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+
+    return 0.2126 * lin(n >> 16 & 255) + 0.7152 * lin(n >> 8 & 255) + 0.0722 * lin(n & 255)
+
+
+def test_pitch_has_at_least_7_mowing_stripes_in_two_close_greens():
+    count = int(re.search(r"const STRIPE_COUNT = (\d+);", CANVAS).group(1))
+    assert count >= 7 and count % 2 == 1  # nombre impair : les deux bords ont le même ton
+    dark = re.search(r"const GRASS_DARK = '(#[0-9a-fA-F]{6})';", CANVAS).group(1)
+    light = re.search(r"const GRASS_LIGHT = '(#[0-9a-fA-F]{6})';", CANVAS).group(1)
+    gap = _relative_luminance(light) / _relative_luminance(dark) - 1
+    assert 0.05 <= gap <= 0.08, f"écart de luminance {gap:.1%} hors de 5-8 %"
+    # Bandes horizontales (parallèles aux touches) sur le terrain seulement, peintes AVANT les lignes.
+    stripes = CANVAS.index("for (let i = 1; i < STRIPE_COUNT; i += 2) ctx.fillRect(OX, OY + i * bandH, PITCH_L * SCALE, bandH);")
+    assert "const bandH = PITCH_W * SCALE / STRIPE_COUNT;" in CANVAS
+    assert stripes < CANVAS.index("ctx.strokeRect(x0, y0, PITCH_L * SCALE, PITCH_W * SCALE);")
+
+
+def test_scoreboard_shows_both_clubs_the_score_and_the_minute_in_a_fixed_compact_box():
+    for element in ('id="sbHome"', 'id="sbScore"', 'id="sbAway"', 'id="sbMinute"'):
+        assert element in CANVAS
+    body = CANVAS[CANVAS.index("function updateScoreboard("):]
+    body = body[: body.index("\n  }\n")]
+    for source in ("clip.metadata.home_team", "clip.metadata.away_team", "clip.metadata.score_after", "clip.metadata.minute"):
+        assert source in body
+    for target in ("sbHomeEl.textContent", "sbScoreEl.textContent", "sbAwayEl.textContent", "sbMinuteEl.textContent"):
+        assert target in body
+    css = CANVAS[CANVAS.index("#scoreboard {"):CANVAS.index("#scoreboard .sb-score")]
+    assert "background: rgba(0, 0, 0, 0.6)" in css and "border: 1px solid" in css
+    assert "height: 26px" in css and "max-width: 200px" in css  # dimensions maximales fixées
+    assert "left: 50%" in css and "top: 6px" in css  # haut-centre, loin des surfaces de réparation
+    assert "const NAME_NOISE" in CANVAS and "slice(0, 3).toUpperCase()" in CANVAS  # abréviation à 3 lettres
+
+
+def test_playbar_has_the_four_controls_in_order_and_a_clip_counter():
+    bar = CANVAS[CANVAS.index('<div id="playbar">'):CANVAS.index('<div id="controls">')]
+    order = [bar.index(f'id="{i}"') for i in ("playPause", "prevClip", "nextClip", "progressBar", "clipCounter")]
+    assert order == sorted(order)  # lecture/pause, précédent, suivant, progression, compteur (de gauche à droite)
+    assert "<svg" in bar and "&#9208;" not in CANVAS  # icônes SVG monochromes (currentColor), plus d'emoji
+    css = CANVAS[CANVAS.index("#playbar {"):CANVAS.index("#playerControls {")]
+    height = int(re.search(r"height: (\d+)px", css).group(1))
+    assert 48 <= height <= 56 and "background: rgba(0, 0, 0, 0.7)" in css
+    assert "width: 32px; height: 32px" in CANVAS  # boutons de 32 x 32 px
+    assert "'Clip ' + (activeIdx + 1) + ' / ' + clips.length" in CANVAS
+    # Comportement : lecture/pause bascule l'icône, précédent/suivant naviguent, un marqueur saute au clip.
+    assert "playPauseBtn.innerHTML = playing ? ICON_PAUSE : ICON_PLAY;" in CANVAS
+    assert "jumpToClip(currentIdx - 1)" in CANVAS and "jumpToClip(currentIdx + 1)" in CANVAS
+    assert "marker.addEventListener('click', () => jumpToClip(idx));" in CANVAS
+
+
+def test_progress_bar_distinguishes_goal_markers_from_chance_markers():
+    assert "const isGoal = clip.metadata.issue === 'but';" in CANVAS
+    assert "'progress-marker ' + (isGoal ? 'goal' : 'chance')" in CANVAS
+    goal = re.search(r"\.progress-marker\.goal \{([^}]*)\}", CANVAS).group(1)
+    chance = re.search(r"\.progress-marker\.chance \{([^}]*)\}", CANVAS).group(1)
+    assert "border-radius: 50%" in goal and "#ffffff" in goal  # but : cercle blanc plein
+    assert "rotate(45deg)" in chance and "#9aa0a6" in chance  # occasion : losange gris
+    assert "z-index: 2" in goal and "z-index: 1" in chance  # un but n'est jamais masqué par une occasion voisine

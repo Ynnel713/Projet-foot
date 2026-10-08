@@ -12,48 +12,58 @@
   button { font-size: 14px; padding: 6px 16px; margin: 0 4px; cursor: pointer; }
   #label { color: #eee; font-size: 13px; padding-bottom: 4px; }
 
-  /* --- Mode player (Tache 4, brief "canvas player", 23/09/2026) --------- */
-  /* Score/minute : coin haut du canvas, discret (pas de fond plein, juste
-     un fond semi-transparent pour la lisibilite sur l'herbe). */
+  /* --- Mode player : bloc score et bandeau de lecture (Phase 5, sous-etape 3) ---- */
+  #stage { position: relative; }
+
+  /* Bloc score compact, haut-centre : abreviations des clubs, score, minute. Taille
+     fixe (hauteur 26 px, largeur max 200 px), jamais sur les surfaces de reparation
+    (centre du terrain). */
   #scoreboard {
-    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-    color: #fff; font-size: 16px; font-weight: 600; letter-spacing: 0.3px;
-    background: rgba(0, 0, 0, 0.45); padding: 4px 14px; border-radius: 4px;
-    pointer-events: none; display: none;
+    position: absolute; top: 6px; left: 50%; transform: translateX(-50%);
+    display: none; align-items: center; justify-content: center; gap: 8px;
+    height: 26px; max-width: 200px; padding: 0 10px; box-sizing: border-box;
+    background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(255, 255, 255, 0.85); border-radius: 3px;
+    color: #fff; font: 600 13px/1 sans-serif; white-space: nowrap; overflow: hidden;
+    pointer-events: none;
   }
+  #scoreboard .sb-score { font-variant-numeric: tabular-nums; }
+  #scoreboard .sb-minute { opacity: 0.75; font-weight: 400; }
 
-  /* Navigation : pictogrammes epures, taille modeste, pas d'ombre ni de
-     degrade lourd (brief 4.3). */
-  #playerControls { display: none; align-items: center; gap: 10px; padding: 6px 0 2px; }
+  /* Bandeau de lecture, sous le terrain, meme largeur que lui : hauteur fixe 52 px,
+     fond sombre semi-transparent. De gauche a droite : lecture/pause, precedent,
+     suivant (et rejouer), barre de progression, compteur de clips. */
+  #playbar {
+    display: none; align-items: center; gap: 12px; height: 52px; padding: 0 12px; box-sizing: border-box;
+    background: rgba(0, 0, 0, 0.7); color: #fff;
+  }
+  #playerControls { display: none; align-items: center; gap: 8px; }
   .player-btn {
-    background: #1c1c1c; color: #eee; border: 1px solid #3a3a3a; border-radius: 4px;
-    font-size: 15px; line-height: 1; padding: 6px 10px; cursor: pointer; margin: 0;
+    width: 32px; height: 32px; padding: 0; margin: 0; display: flex; align-items: center; justify-content: center;
+    background: transparent; color: #fff; border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 4px; cursor: pointer;
   }
-  .player-btn:hover { background: #2a2a2a; }
-  .player-btn:active { background: #333; }
+  .player-btn svg { width: 18px; height: 18px; fill: currentColor; display: block; }
+  .player-btn:hover { background: rgba(255, 255, 255, 0.14); }
+  .player-btn:active { background: rgba(255, 255, 255, 0.24); }
+  .player-btn:focus-visible { outline: 2px solid #ffd700; outline-offset: 1px; }
 
-  /* Barre de progression : un marqueur cliquable par clip, positionne
-     proportionnellement a la minute (brief 4.4). */
-  #progressBar {
-    display: none; position: relative; width: 100%; max-width: 1200px;
-    height: 22px; margin-top: 2px;
-  }
+  /* Barre de progression : un marqueur cliquable par clip, positionne proportionnellement
+     a la minute. But = cercle blanc plein ; occasion = losange gris. Clip courant = anneau dore. */
+  #progressBar { display: none; position: relative; flex: 1; height: 100%; min-width: 0; margin: 0 8px; }
   #progressTrack {
     position: absolute; left: 0; right: 0; top: 50%; height: 2px;
-    background: #3a3a3a; transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.28); transform: translateY(-50%);
   }
-  .progress-marker {
-    position: absolute; top: 50%; width: 10px; height: 10px; border-radius: 50%;
-    background: #888; border: 1px solid #1c1c1c; transform: translate(-50%, -50%);
-    cursor: pointer;
-  }
-  .progress-marker:hover { background: #aaa; }
-  .progress-marker.current { background: #ffd700; width: 13px; height: 13px; }
+  .progress-marker { position: absolute; top: 50%; cursor: pointer; box-sizing: border-box; }
+  .progress-marker.goal { width: 12px; height: 12px; border-radius: 50%; background: #ffffff; transform: translate(-50%, -50%); z-index: 2; }  /* un but n'est jamais masque par une occasion voisine */
+  .progress-marker.chance { width: 9px; height: 9px; background: #9aa0a6; transform: translate(-50%, -50%) rotate(45deg); z-index: 1; }
+  .progress-marker:hover { filter: brightness(1.25); }
+  .progress-marker.current { box-shadow: 0 0 0 2px #ffd700; z-index: 3; }
+  #clipCounter { min-width: 72px; text-align: right; font: 12px/1 sans-serif; color: #fff; white-space: nowrap; }
 
   /* Mode embarque uniquement (classe `embed` posee par le JS, jamais en
-     standalone) : le canevas se reduit pour que scoreboard + controles +
-     barre de progression restent visibles dans la hauteur de l'iframe. */
-  body.embed canvas { max-height: calc(100vh - 150px); }
+     standalone) : le canevas se reduit pour que le bandeau de lecture reste
+     visible dans la hauteur de l'iframe. */
+  body.embed canvas { max-height: calc(100vh - 110px); }
 
   /* Carton intermediaire (brief 4.5) : overlay semi-transparent, 2s par
      defaut (voir CARTON_DURATION_S plus bas), pas de degrade/ombre lourd. */
@@ -72,27 +82,32 @@
 <div id="wrap">
   <div id="label"></div>
   <div id="canvasWrap">
-    <canvas id="pitch" width="1200" height="780"></canvas>
-    <div id="scoreboard"></div>
-    <div id="carton">
-      <div id="cartonMinute"></div>
-      <div id="cartonEvent"></div>
-      <div id="cartonScore"></div>
-      <div id="cartonIntervalEvents"></div>
+    <div id="stage">
+      <canvas id="pitch" width="1200" height="780"></canvas>
+      <div id="scoreboard"><span id="sbHome"></span><span id="sbScore" class="sb-score"></span><span id="sbAway"></span><span id="sbMinute" class="sb-minute"></span></div>
+      <div id="carton">
+        <div id="cartonMinute"></div>
+        <div id="cartonEvent"></div>
+        <div id="cartonScore"></div>
+        <div id="cartonIntervalEvents"></div>
+      </div>
+    </div>
+    <div id="playbar">
+      <div id="playerControls">
+        <button class="player-btn" id="playPause" title="Lecture / pause" aria-label="Lecture / pause"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg></button>
+        <button class="player-btn" id="prevClip" title="Clip precedent" aria-label="Clip precedent"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="2.5" height="14"/><path d="M19 5v14L9 12z"/></svg></button>
+        <button class="player-btn" id="nextClip" title="Clip suivant" aria-label="Clip suivant"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5v14l10-7z"/><rect x="16.5" y="5" width="2.5" height="14"/></svg></button>
+        <button class="player-btn" id="replayClip" title="Rejouer le clip" aria-label="Rejouer le clip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg></button>
+      </div>
+      <div id="progressBar">
+        <div id="progressTrack"></div>
+      </div>
+      <div id="clipCounter"></div>
     </div>
   </div>
   <div id="controls">
     <button id="toggle">Pause</button>
     <button id="replay">Recommencer</button>
-  </div>
-  <div id="playerControls">
-    <button class="player-btn" id="prevClip" title="Precedent">&#9664;</button>
-    <button class="player-btn" id="playPause" title="Play/Pause">&#9208;</button>
-    <button class="player-btn" id="replayClip" title="Rejouer">&#8635;</button>
-    <button class="player-btn" id="nextClip" title="Suivant">&#9654;</button>
-  </div>
-  <div id="progressBar">
-    <div id="progressTrack"></div>
   </div>
 </div>
 <script>
@@ -164,6 +179,12 @@ function startPlayer(SEQUENCE_DATA, bridge) {
   const SCALE = Math.min((W - 2 * MARGIN) / PITCH_L, (H - 2 * MARGIN) / PITCH_W);
   const OX = (W - PITCH_L * SCALE) / 2, OY = (H - PITCH_W * SCALE) / 2;
 
+  // Pelouse a bandes (Phase 5, sous-etape 3) : 9 bandes de 68 / 9 = 7,6 m (7 bandes feraient 9,7 m).
+  // Deux tons proches : #1e824c (luminance relative 0.168) et #1e8650 (0.179), ecart 6.8 %.
+  const STRIPE_COUNT = 9;
+  const GRASS_DARK = '#1e824c';
+  const GRASS_LIGHT = '#1e8650';
+
   // Metres (origine coin bas-gauche du terrain, y vers le haut) -> pixels canvas.
   function mToPx(mx, my) {
     return [OX + mx * SCALE, OY + (PITCH_W - my) * SCALE];
@@ -185,8 +206,13 @@ function startPlayer(SEQUENCE_DATA, bridge) {
   }
 
   function drawPitch() {
-    ctx.fillStyle = '#1e824c';
+    ctx.fillStyle = GRASS_DARK;
     ctx.fillRect(0, 0, W, H);
+    // Bandes de tonte : STRIPE_COUNT bandes horizontales (paralleles aux touches) sur le terrain
+    // seulement ; les bandes impaires sont plus claires, les lignes sont tracees par-dessus.
+    const bandH = PITCH_W * SCALE / STRIPE_COUNT;
+    ctx.fillStyle = GRASS_LIGHT;
+    for (let i = 1; i < STRIPE_COUNT; i += 2) ctx.fillRect(OX, OY + i * bandH, PITCH_L * SCALE, bandH);
     ctx.strokeStyle = '#ffffff';
     ctx.fillStyle = '#ffffff';
     ctx.lineWidth = 2;
@@ -488,7 +514,8 @@ function startPlayer(SEQUENCE_DATA, bridge) {
 
   // --- Mode "player" (Tache 4.2-4.6) --------------------------------------
   document.getElementById('controls').style.display = 'none';
-  document.getElementById('scoreboard').style.display = 'block';
+  document.getElementById('scoreboard').style.display = 'flex';
+  document.getElementById('playbar').style.display = 'flex';
   document.getElementById('playerControls').style.display = 'flex';
   document.getElementById('progressBar').style.display = 'block';
 
@@ -500,15 +527,21 @@ function startPlayer(SEQUENCE_DATA, bridge) {
   const cartonIntervalEl = document.getElementById('cartonIntervalEvents');
   const playPauseBtn = document.getElementById('playPause');
   const progressBarEl = document.getElementById('progressBar');
+  const clipCounterEl = document.getElementById('clipCounter');
+  // Icones monochromes (SVG, currentColor) : pause quand ca joue, lecture quand c'est en pause.
+  const ICON_PAUSE = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg>';
+  const ICON_PLAY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
 
   // Marqueurs de la barre de progression (Tache 4.4) -- un par clip,
   // position proportionnelle a la minute (echelle fixe 0-90, un match dure
   // 90 minutes par construction du moteur narratif).
   const markerEls = clips.map((clip, idx) => {
     const marker = document.createElement('div');
-    marker.className = 'progress-marker';
+    // But = cercle blanc plein, occasion = losange gris (voir CSS .goal / .chance).
+    const isGoal = clip.metadata.issue === 'but';
+    marker.className = 'progress-marker ' + (isGoal ? 'goal' : 'chance');
     marker.style.left = (Math.min(90, Math.max(1, clip.metadata.minute)) / 90 * 100) + '%';
-    marker.title = clip.metadata.minute + "' -- " + clip.metadata.template;
+    marker.title = (isGoal ? 'But ' : 'Occasion ') + clip.metadata.minute + "' -- " + clip.metadata.template;
     marker.addEventListener('click', () => jumpToClip(idx));
     progressBarEl.appendChild(marker);
     return marker;
@@ -516,6 +549,7 @@ function startPlayer(SEQUENCE_DATA, bridge) {
 
   function updateMarkers(activeIdx) {
     markerEls.forEach((el, idx) => el.classList.toggle('current', idx === activeIdx));
+    clipCounterEl.textContent = 'Clip ' + (activeIdx + 1) + ' / ' + clips.length;
   }
 
   function eventLabel(clip) {
@@ -539,11 +573,35 @@ function startPlayer(SEQUENCE_DATA, bridge) {
     return item.minute + "' " + item.type + ', ' + item.equipe + ' — ' + item.joueur;
   }
 
+  // Abreviation de 3 lettres d'un club : on retire les mots d'usage (FC, AS, Stade, Olympique...)
+  // puis on prend les 3 premieres lettres du premier mot restant, sans accents, en majuscules.
+  const NAME_NOISE = new Set(['fc', 'as', 'sc', 'aj', 'rc', 'ogc', 'stade', 'olympique', 'le', 'la', 'les', 'de', 'real', 'club', 'cf', 'ac', 'afc', 'sv', 'fk', 'ca', 'us', 'ss', 'sk']);
+  function abbreviate(name, fromEnd) {
+    const words = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/[^A-Za-z0-9]+/).filter(Boolean);
+    const kept = words.filter((w) => !NAME_NOISE.has(w.toLowerCase()));
+    const pool = kept.length ? kept : words;
+    return (fromEnd ? pool[pool.length - 1] : pool[0]).slice(0, 3).toUpperCase();
+  }
+  const sbHomeEl = document.getElementById('sbHome');
+  const sbScoreEl = document.getElementById('sbScore');
+  const sbAwayEl = document.getElementById('sbAway');
+  const sbMinuteEl = document.getElementById('sbMinute');
+  let sbKey = null;
+
+  // Bloc score : abreviations des deux clubs, score apres le clip, minute du clip. N'ecrit dans
+  // le DOM que lorsque le contenu change (pas a chaque image).
   function updateScoreboard(clip) {
     const [dom, ext] = clip.metadata.score_after;
-    scoreboardEl.textContent =
-      clip.metadata.home_team + ' ' + dom + ' – ' + ext + ' ' + clip.metadata.away_team +
-      ' | ' + clip.metadata.minute + "'";
+    const key = clip.metadata.home_team + '|' + clip.metadata.away_team + '|' + dom + '|' + ext + '|' + clip.metadata.minute;
+    if (key === sbKey) return;
+    sbKey = key;
+    let home = abbreviate(clip.metadata.home_team, false);
+    let away = abbreviate(clip.metadata.away_team, false);
+    if (home === away) { home = abbreviate(clip.metadata.home_team, true); away = abbreviate(clip.metadata.away_team, true); }
+    sbHomeEl.textContent = home;
+    sbScoreEl.textContent = dom + ' \u2013 ' + ext;
+    sbAwayEl.textContent = away;
+    sbMinuteEl.textContent = clip.metadata.minute + "'";
   }
 
   let currentIdx = 0;
@@ -642,12 +700,12 @@ function startPlayer(SEQUENCE_DATA, bridge) {
   document.getElementById('prevClip').addEventListener('click', () => {
     jumpToClip(currentIdx - 1);
     playing = true;
-    playPauseBtn.innerHTML = '&#9208;';
+    playPauseBtn.innerHTML = ICON_PAUSE;
   });
   document.getElementById('nextClip').addEventListener('click', () => {
     jumpToClip(currentIdx + 1);
     playing = true;
-    playPauseBtn.innerHTML = '&#9208;';
+    playPauseBtn.innerHTML = ICON_PAUSE;
   });
   document.getElementById('replayClip').addEventListener('click', () => {
     pausedAtS = 0;
@@ -655,11 +713,11 @@ function startPlayer(SEQUENCE_DATA, bridge) {
     hideCarton();
     endedSent = false;
     playing = true;
-    playPauseBtn.innerHTML = '&#9208;';
+    playPauseBtn.innerHTML = ICON_PAUSE;
   });
   playPauseBtn.addEventListener('click', () => {
     playing = !playing;
-    playPauseBtn.innerHTML = playing ? '&#9208;' : '&#9205;';
+    playPauseBtn.innerHTML = playing ? ICON_PAUSE : ICON_PLAY;
     if (playing) {
       startPerfMs = null;
       cartonStartPerfMs = null;
