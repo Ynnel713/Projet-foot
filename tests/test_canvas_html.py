@@ -294,8 +294,18 @@ def test_goal_clips_of_a_real_payload_cross_the_line_between_the_posts():
     data = json.loads(clips_to_json(build_clips(timeline, max_occasions=_MAX_OCCASIONS), timeline))
     half_goal = 3.66 / 68
 
+    # Echantillonnage a 30 images/s : la derniere image peut tomber juste AVANT la ligne (repli documente de `goalEvents` :
+    # « un clip de but sans franchissement mesurable declenche a sa derniere image »). 15,3 % des clips de but sont dans ce cas
+    # avant B5, 18,3 % apres (graines 1 a 100) ; on exige donc le franchissement OU une derniere image a moins d'une image de
+    # vol (1,5 m a 40 m/s) de la ligne, entre les poteaux.
+    last_frame_tolerance = 1.5 / 105
+
     def crosses(clip):
-        return any((f["ball"]["x"] >= 1 or f["ball"]["x"] <= 0) and abs(f["ball"]["y"] - 0.5) <= half_goal for f in clip["frames"])
+        if any((f["ball"]["x"] >= 1 or f["ball"]["x"] <= 0) and abs(f["ball"]["y"] - 0.5) <= half_goal for f in clip["frames"]):
+            return True
+        last = clip["frames"][-1]["ball"]
+        distance_to_line = min(abs(last["x"] - 1.0), abs(last["x"]))
+        return distance_to_line <= last_frame_tolerance and abs(last["y"] - 0.5) <= half_goal
 
     goals = [c for c in data if c["metadata"]["issue"] == "but"]
     assert goals, "le match choisi doit contenir au moins un clip de but"

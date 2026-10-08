@@ -356,11 +356,9 @@ _GOAL_Y_MIN = _GOAL_Y_CENTER - _GOAL_HALF_WIDTH_Y  # ~0.4462
 _GOAL_Y_MAX = _GOAL_Y_CENTER + _GOAL_HALF_WIDTH_Y  # ~0.5538
 
 # Vitesse cible du vol (Tâche 2.7/4.4 du brief) -- référence donnée par le
-# propriétaire : un tir réel de Ligue 1 part à 25-30 m/s, intervalle accepté
-# [15, 35] m/s. Tirage déterministe (voir `_flight_unit`), jamais `random`
-# global.
-_FLIGHT_MIN_SPEED_MPS = 15.0
-_FLIGHT_MAX_SPEED_MPS = 35.0
+# propriétaire : un tir réel de Ligue 1 part à 25-30 m/s. Depuis la Phase 6 B5 (08/10/2026), la vitesse dépend du TYPE de
+# frappe (`STRIKE_TYPES` plus bas : de 12 m/s pour une tête à 35 m/s pour une frappe tendue), au lieu de l'ancien
+# intervalle unique [15, 35] m/s. Tirage déterministe (voir `_flight_unit`), jamais `random` global.
 
 # Issues qui interrompent l'action AVANT le tir (défenseur intervient) --
 # aucun `ball_flight` pour celles-ci (design doc, section 1.4). Toute AUTRE
@@ -380,6 +378,75 @@ def _flight_unit(event_ref: str, salt: str) -> float:
     coupler entre modules."""
     digest = hashlib.sha256(f"ball_flight|{salt}|{event_ref}".encode()).digest()
     return int.from_bytes(digest[:8], "big") / 2**64
+
+
+# Phase 6, Bloc B5 (08/10/2026) -- types de frappe. Le type, donc le SPIN et la VITESSE du vol (`ball_flight`), se tire
+# par hachage déterministe de `event_ref` (`_flight_unit`, jamais `random`), parmi les types COHERENTS avec le gabarit
+# (`_STRIKE_TYPE_WEIGHTS`). Seul le rendu du vol change : la cible, l'issue, le score et la minute ne dépendent pas du
+# type. Le spin est posé sur la keyframe qui DEMARRE le vol (pas sur la conduite `shot`, qui reste droite : le ballon
+# ne quitte plus son porteur). Fourchettes et fréquences cibles : décisions de l'architecte du 08/10/2026
+# (docs/phase6_block_b_audit.md, section B5).
+@dataclass(frozen=True)
+class StrikeType:
+    name: str
+    spin_min: float  # rad/s (signe : sens de la courbure par rapport au sens de la frappe)
+    spin_max: float
+    speed_min: float  # m/s
+    speed_max: float
+
+
+STRIKE_TYPES: dict[str, StrikeType] = {
+    t.name: t
+    for t in (
+        StrikeType("shot_tendu", 0.0, 0.0, 30.0, 35.0),
+        StrikeType("shot_enroule_leger", 20.0, 30.0, 20.0, 28.0),
+        StrikeType("shot_enroule_fort", 50.0, 80.0, 20.0, 28.0),
+        StrikeType("shot_exterieur_pied", -30.0, -20.0, 22.0, 30.0),
+        StrikeType("reprise_vollee", 10.0, 15.0, 25.0, 32.0),
+        StrikeType("tete", 0.0, 0.0, 12.0, 18.0),
+    )
+}
+
+# Gabarit -> poids des types possibles (somme 1). Cohérence type / gabarit : `decalage_enroulee` ne produit QUE
+# `shot_enroule_fort` ; les gabarits de tête produisent `tete` (majoritaire) ou `reprise_vollee` ; les gabarits de
+# récupération / déviation produisent `reprise_vollee` ; un penalty est toujours tendu, un coup franc toujours enroulé léger ;
+# les autres frappes au pied se répartissent entre tendu, enroulé léger et extérieur du pied.
+_FOOT_POOL = (("shot_tendu", 0.70), ("shot_enroule_leger", 0.19), ("shot_exterieur_pied", 0.11))
+_HEAD_POOL = (("tete", 0.90), ("reprise_vollee", 0.10))
+_STRIKE_TYPE_WEIGHTS: dict[str, tuple[tuple[str, float], ...]] = {
+    "decalage_enroulee": (("shot_enroule_fort", 1.0),),
+    "debordement_centre_tete": _HEAD_POOL,
+    "corner": _HEAD_POOL,
+    "recuperation_haute": (("reprise_vollee", 1.0),),
+    "but_gag": (("reprise_vollee", 1.0),),
+    "penalty": (("shot_tendu", 1.0),),
+    "coup_franc": (("shot_enroule_leger", 1.0),),
+    "contre_attaque": _FOOT_POOL,
+    "construction_placee": _FOOT_POOL,
+    "percee_individuelle": _FOOT_POOL,
+    "profondeur_1v1": _FOOT_POOL,
+    "une_deux": _FOOT_POOL,
+}
+
+
+def strike_type_for(gabarit: str, event_ref: str) -> StrikeType:
+    """Type de frappe déterministe de `event_ref` pour ce gabarit (tirage cumulatif sur `_STRIKE_TYPE_WEIGHTS`)."""
+    unit = _flight_unit(event_ref, "strike_type")
+    cumulative = 0.0
+    pool = _STRIKE_TYPE_WEIGHTS[gabarit]
+    for name, weight in pool:
+        cumulative += weight
+        if unit < cumulative:
+            return STRIKE_TYPES[name]
+    return STRIKE_TYPES[pool[-1][0]]
+
+
+def strike_spin_for(strike: StrikeType, event_ref: str) -> float:
+    return strike.spin_min + _flight_unit(event_ref, "spin") * (strike.spin_max - strike.spin_min)
+
+
+def strike_speed_for(strike: StrikeType, event_ref: str) -> float:
+    return strike.speed_min + _flight_unit(event_ref, "speed") * (strike.speed_max - strike.speed_min)
 
 
 def _flight_target(outcome: str, event_ref: str) -> tuple[float, float, float] | None:
@@ -550,12 +617,15 @@ def build_from_template(
             target_x, target_y, target_z = target
             start_z = keyframes[-1].ball.z
             distance_m = _flight_distance_m((last_ball_xy.x, last_ball_xy.y, start_z), (target_x, target_y, target_z))
-            speed_mps = _FLIGHT_MIN_SPEED_MPS + _flight_unit(event_ref, "speed") * (
-                _FLIGHT_MAX_SPEED_MPS - _FLIGHT_MIN_SPEED_MPS
-            )
+            strike = strike_type_for(template.name, event_ref)
+            speed_mps = strike_speed_for(strike, event_ref)
             flight_duration = distance_m / speed_mps if speed_mps > 0 else 0.0
             flight_start_players = keyframes[-1].players
-            keyframes[-1] = replace(keyframes[-1], physics_tag=BALL_FLIGHT)
+            keyframes[-1] = replace(
+                keyframes[-1],
+                physics_tag=BALL_FLIGHT,
+                ball=replace(keyframes[-1].ball, spin=strike_spin_for(strike, event_ref)),
+            )
             keyframes.append(
                 Keyframe(
                     t=duration + flight_duration,
@@ -1066,43 +1136,15 @@ def build_recuperation_haute(
     return build_from_template(TEMPLATES["recuperation_haute"], event, lineup, start_positions, outcome)
 
 
-# Brief "real Magnus effect" (23/09/2026), Tâche 3 -- SEUL point de vérité
-# pour le spin du tir enroulé de decalage_enroulee (rad/s, voir
-# `BallState.spin` / `animation.ball._MAGNUS_K`) : un futur ajustement de
-# calibration se fait ICI, nulle part ailleurs. Valeur choisie par calcul
-# inverse (pas au jugé) sur la géométrie réelle du gabarit (fixture standard
-# de tests/test_templates.py : distance ≈ 14.6 m, durée du segment shot
-# (0.4->1.0) = 3.6 s) pour une courbure cible d'environ 1 m au pic (~s=0.5,
-# milieu du segment shot) -- voir `_behavior_shot`/`_MAGNUS_K` pour la
-# formule exacte (a = _MAGNUS_K·spin·v, offset_pic = 0.5·a·(durée/2)²).
-# 50.0 rad/s (~8 tours/s) donne 0.98 m sur cette géométrie -- crédible pour
-# une "frappe enroulée" (le nom même du gabarit), visible à l'œil sans être
-# une parabole exagérée. `build_from_template` reste générique et continue
-# de poser `spin=0.0` par défaut (aucun changement au moteur) : ce wrapper
-# poste-traite la Sequence pour renseigner le spin SEULEMENT sur la/les
-# keyframe(s) où un segment courbé démarre -- `physics_tag == "shot"`
-# (segment d'approche existant, inchangé) ET, depuis le brief "ball flight
-# after shot" (24/09/2026), `physics_tag == BALL_FLIGHT` (le vol lui-même,
-# voir `_behavior_ball_flight` : la courbure Magnus doit se conserver sur le
-# vol, section 1.1 du design doc, pas seulement sur l'approche).
-_DECALAGE_ENROULEE_SHOT_SPIN_RAD_S = 50.0
-# DETTE : résidu de vitesse 3D > 35 m/s sur ce gabarit (spin ≠ 0), 2,8 % des
-# vols, ~35,5 m/s max. À corriger dans le chantier des déclinaisons de ce
-# gabarit. Voir `docs/ball_flight_design.md` section "Dette connue".
-_DECALAGE_ENROULEE_CURVED_TAGS = frozenset({"shot", BALL_FLIGHT})
-
-
+# Brief "real Magnus effect" (23/09/2026), Tâche 3, puis Phase 6 B5 (08/10/2026) : le spin de la frappe enroulée n'est plus
+# une constante posée ici sur la conduite (`shot`) ET sur le vol, mais le spin du type `shot_enroule_fort` (50 à 80 rad/s),
+# posé sur le SEUL vol par `build_from_template` (voir `STRIKE_TYPES`). Ce gabarit garde son constructeur dédié pour que
+# `BUILDERS` reste inchangé. DETTE (voir `docs/ball_flight_design.md`, "Dette connue") : résidu de vitesse 3D instantanée
+# > 35 m/s possible (pic dû à la décélération de B1 ; 140 vols sur 1 259 en B5, tous `shot_tendu`), voir docs/phase6_block_b_audit.md.
 def build_decalage_enroulee(
     event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None
 ) -> Sequence:
-    sequence = build_from_template(TEMPLATES["decalage_enroulee"], event, lineup, start_positions, outcome)
-    keyframes = [
-        replace(kf, ball=replace(kf.ball, spin=_DECALAGE_ENROULEE_SHOT_SPIN_RAD_S))
-        if kf.physics_tag in _DECALAGE_ENROULEE_CURVED_TAGS
-        else kf
-        for kf in sequence.keyframes
-    ]
-    return replace(sequence, keyframes=keyframes)
+    return build_from_template(TEMPLATES["decalage_enroulee"], event, lineup, start_positions, outcome)
 
 
 def build_penalty(

@@ -584,7 +584,11 @@ class TestTemplateStructureUnchangedByPhysicsTags:
     Tâche 3) : `decalage_enroulee` a une empreinte mise à jour -- sa keyframe
     de tir porte désormais un `spin` non nul (`build_decalage_enroulee`,
     `templates.py`), remplaçant le `spin=0.0` par défaut. Recalculée et
-    vérifiée manuellement, pas une régression."""
+    vérifiée manuellement, pas une régression.
+
+    Troisième exception délibérée (Phase 6, B5, 08/10/2026) : `decalage_enroulee` a de nouveau une empreinte mise à jour --
+    le spin n'est plus posé sur la conduite `shot` (fixture sans issue, donc sans vol : `spin = 0.0` partout) mais sur le seul
+    vol, selon le type de frappe (`STRIKE_TYPES`). Recalculée et vérifiée : seul le spin de la keyframe de tir a changé."""
 
     _EXPECTED_STRUCTURE_HASH = {
         "but_gag": "f41d49b564e507476892e0c8dc83e1a4a980e461357b4e9f6d158126c86184d1",
@@ -593,7 +597,7 @@ class TestTemplateStructureUnchangedByPhysicsTags:
         "corner": "cfc642378285192fb8f4e59ce0a6ec25679b837b273293de8e82e3f1641e7293",
         "coup_franc": "65652dc16b67dc362221250ace6198a26a169ab60203e1fc2b74af280db8d566",
         "debordement_centre_tete": "06543fdddb12bdc4959eb29b0ca83b146bc5f8e312e233f196c9df1225658819",
-        "decalage_enroulee": "3f373d34b2a6870c46188d262e45dc0852bc1f51f6adc6d19914dc455e05232d",
+        "decalage_enroulee": "7baa9bcc8f4e6f703650a8aef2ca0250701b3305f3948481d924b4ce10e8b403",
         "penalty": "7f2c7ebf289a42122153109b2e9d4faff267170513620ea9bf83c940d42b0f91",
         "percee_individuelle": "4fd4c5ef14c5b020821ecf2638a54c0e58c5a8a35e11001e66b458b4cd1633ca",
         "profondeur_1v1": "dd55a79b69a71bf4436c06f08f195a4be89b66ff555ef3117b148b85b88443a7",
@@ -694,3 +698,153 @@ class TestBallFlightDurationUses3DDistance:
         # -- la formule 3D n'est donc pas accidentellement équivalente ici.
         distance_2d_only = math.hypot(dx_m, dy_m)
         assert distance_m != pytest.approx(distance_2d_only, abs=1e-6)
+
+
+# --- Phase 6, B5 : types de frappe (spin et vitesse du vol par type, tirage déterministe par `event_ref`) -------------
+
+_STRIKE_SPEC = {
+    # type : (spin min, spin max, vitesse min, vitesse max) -- décisions de l'architecte du 08/10/2026
+    "shot_tendu": (0.0, 0.0, 30.0, 35.0),
+    "shot_enroule_leger": (20.0, 30.0, 20.0, 28.0),
+    "shot_enroule_fort": (50.0, 80.0, 20.0, 28.0),
+    "shot_exterieur_pied": (-30.0, -20.0, 22.0, 30.0),
+    "reprise_vollee": (10.0, 15.0, 25.0, 32.0),
+    "tete": (0.0, 0.0, 12.0, 18.0),
+}
+# Vols par gabarit sur 100 matchs (graines 1 à 100, B5) : sert de mélange réaliste pour les tests de répartition.
+_FLIGHTS_PER_100_MATCHES = {
+    "contre_attaque": 166, "construction_placee": 142, "debordement_centre_tete": 205, "percee_individuelle": 137,
+    "une_deux": 92, "coup_franc": 35, "corner": 70, "profondeur_1v1": 95, "recuperation_haute": 134,
+    "decalage_enroulee": 122, "penalty": 34, "but_gag": 27,
+}
+
+
+def _build_with_flight(gabarit: str, minute: int, scorer: str = "bu", outcome: str | None = "but"):
+    lineup = _lineup()
+    event = _goal_event(scorer=scorer, minute=minute, penalty=(gabarit == "penalty"))
+    sequence = BUILDERS[gabarit](event, lineup, _start_positions(lineup), outcome)
+    event_ref = f"goal:{event.club_name}:{event.scorer}:{event.minute}"
+    return sequence, event_ref
+
+
+def _flight_speed_mps(sequence) -> float:
+    start, end = sequence.keyframes[-2], sequence.keyframes[-1]
+    distance_m = _flight_distance_m((start.ball.x, start.ball.y, start.ball.z), (end.ball.x, end.ball.y, end.ball.z))
+    return distance_m / (end.t - start.t)
+
+
+def test_strike_type_table_matches_the_architect_decisions():
+    from ligue1sim.animation.templates import STRIKE_TYPES
+
+    assert set(STRIKE_TYPES) == set(_STRIKE_SPEC)
+    for name, (spin_min, spin_max, speed_min, speed_max) in _STRIKE_SPEC.items():
+        strike = STRIKE_TYPES[name]
+        assert (strike.spin_min, strike.spin_max, strike.speed_min, strike.speed_max) == (spin_min, spin_max, speed_min, speed_max)
+
+
+@pytest.mark.parametrize("name", sorted(_STRIKE_SPEC))
+def test_each_strike_type_produces_the_expected_spin_and_speed(name):
+    from ligue1sim.animation.templates import STRIKE_TYPES, strike_speed_for, strike_spin_for
+
+    spin_min, spin_max, speed_min, speed_max = _STRIKE_SPEC[name]
+    strike = STRIKE_TYPES[name]
+    spins = [strike_spin_for(strike, f"goal:Test FC:p{i}:{i % 90}") for i in range(300)]
+    speeds = [strike_speed_for(strike, f"goal:Test FC:p{i}:{i % 90}") for i in range(300)]
+    assert all(spin_min <= s <= spin_max for s in spins)
+    assert all(speed_min <= v <= speed_max for v in speeds)
+    if spin_min == spin_max == 0.0:
+        assert set(spins) == {0.0}  # tendu et tête : aucun spin, donc aucune traînée
+    else:
+        assert max(spins) - min(spins) > 0.5 * (spin_max - spin_min)  # le spin varie réellement dans la fourchette
+    assert max(speeds) - min(speeds) > 0.5 * (speed_max - speed_min)
+
+
+def test_built_sequences_apply_the_drawn_type_spin_on_the_flight_only():
+    from ligue1sim.animation.ball import BALL_FLIGHT
+    from ligue1sim.animation.templates import strike_spin_for, strike_type_for
+
+    for gabarit in sorted(BUILDERS):
+        for minute in (5, 23, 41, 67, 88):
+            sequence, event_ref = _build_with_flight(gabarit, minute)
+            strike = strike_type_for(gabarit, event_ref)
+            flight_start = sequence.keyframes[-2]
+            assert flight_start.physics_tag == BALL_FLIGHT
+            assert flight_start.ball.spin == strike_spin_for(strike, event_ref)
+            speed_min, speed_max = _STRIKE_SPEC[strike.name][2:]
+            assert speed_min - 1e-6 <= _flight_speed_mps(sequence) <= speed_max + 1e-6
+            # Le spin n'est posé que sur le vol : la conduite et les autres keyframes gardent 0.
+            assert all(kf.ball.spin == 0.0 for kf in sequence.keyframes if kf is not flight_start)
+
+
+def test_decalage_enroulee_always_produces_shot_enroule_fort():
+    from ligue1sim.animation.templates import strike_type_for
+
+    for minute in range(1, 91):
+        for scorer in ("bu", "ag", "ad"):
+            sequence, event_ref = _build_with_flight("decalage_enroulee", minute, scorer=scorer)
+            assert strike_type_for("decalage_enroulee", event_ref).name == "shot_enroule_fort"
+            assert 50.0 <= sequence.keyframes[-2].ball.spin <= 80.0  # toujours |spin| > 5 : traînée visible
+            assert 20.0 - 1e-6 <= _flight_speed_mps(sequence) <= 28.0 + 1e-6
+
+
+def test_type_is_coherent_with_the_gabarit():
+    from ligue1sim.animation.templates import strike_type_for
+
+    allowed = {
+        "decalage_enroulee": {"shot_enroule_fort"},
+        "debordement_centre_tete": {"tete", "reprise_vollee"},
+        "corner": {"tete", "reprise_vollee"},
+        "recuperation_haute": {"reprise_vollee"},
+        "but_gag": {"reprise_vollee"},
+        "penalty": {"shot_tendu"},
+        "coup_franc": {"shot_enroule_leger"},
+    }
+    foot = {"shot_tendu", "shot_enroule_leger", "shot_exterieur_pied"}
+    for gabarit in BUILDERS:
+        seen = {strike_type_for(gabarit, f"goal:Test FC:p{i}:{i % 90}").name for i in range(400)}
+        assert seen <= allowed.get(gabarit, foot), (gabarit, seen)
+        # Une tête n'est produite que par les gabarits de tête ; le fort que par decalage_enroulee.
+        assert ("tete" in seen) == (gabarit in {"debordement_centre_tete", "corner"})
+        assert ("shot_enroule_fort" in seen) == (gabarit == "decalage_enroulee")
+
+
+def test_strike_type_distribution_over_1000_strikes():
+    from collections import Counter
+
+    from ligue1sim.animation.templates import strike_type_for
+
+    total = sum(_FLIGHTS_PER_100_MATCHES.values())
+    counts: Counter = Counter()
+    strikes = 0
+    for gabarit, flights in _FLIGHTS_PER_100_MATCHES.items():
+        n = round(1000 * flights / total)
+        for i in range(n):
+            counts[strike_type_for(gabarit, f"goal:Test FC:{gabarit}{i}:{(i * 7) % 90 + 1}").name] += 1
+            strikes += 1
+    assert 990 <= strikes <= 1010
+    # Cibles de l'architecte (parts de l'ensemble des frappes) ; tolérance de 4,5 points : le mélange réel de gabarits ne
+    # permet pas de tenir les six cibles à la fois (voir docs/phase6_block_b_audit.md, section B5).
+    targets = {"shot_tendu": 35.0, "shot_enroule_leger": 12.0, "shot_enroule_fort": 9.7, "shot_exterieur_pied": 5.5, "reprise_vollee": 16.0, "tete": 21.8}
+    for name, target in targets.items():
+        share = 100.0 * counts[name] / strikes
+        assert abs(share - target) <= 4.5, f"{name} : {share:.1f} % pour une cible de {target} %"
+    assert abs(100.0 * counts["shot_enroule_fort"] / strikes - 9.7) <= 0.6  # decalage_enroulee seul : 122 vols sur 1 259
+
+
+def test_strike_type_is_deterministic_and_independent_of_the_global_random_state():
+    from ligue1sim.animation.templates import strike_type_for
+
+    refs = [f"goal:Test FC:p{i}:{i % 90}" for i in range(200)]
+    random.seed(1)
+    first = [strike_type_for("contre_attaque", r).name for r in refs]
+    random.seed(999)
+    random.random()
+    second = [strike_type_for("contre_attaque", r).name for r in refs]
+    assert first == second
+
+
+def test_no_spin_without_flight_and_the_carry_is_straight():
+    for gabarit in sorted(BUILDERS):
+        for outcome in (None, "tacle", "degagement"):
+            sequence, _ = _build_with_flight(gabarit, 34, outcome=outcome)
+            assert all(kf.ball.spin == 0.0 for kf in sequence.keyframes), (gabarit, outcome)

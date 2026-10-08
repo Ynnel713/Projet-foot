@@ -660,7 +660,8 @@ class TestBallFlightDeterministic:
 
 class TestBallSpeedRealisticOnFlight:
     """Tâche 4.4 : vitesse moyenne du ballon sur le segment `ball_flight`
-    dans [15, 35] m/s (référence : tir réel de Ligue 1 = 25-30 m/s). Mesuré
+    dans [12, 35] m/s (référence : tir réel de Ligue 1 = 25-30 m/s ; borne basse passée de 15 à 12 m/s par la Phase 6 B5,
+    08/10/2026 : la tête vole à 12-18 m/s, voir `templates.STRIKE_TYPES`). Mesuré
     sur plusieurs `event_ref` distincts par gabarit (minute/buteur variés)
     pour ne pas ne tirer qu'UN seul échantillon du hash déterministe -- si
     une mesure sort de l'intervalle, le test échoue avec le chiffre exact
@@ -692,9 +693,9 @@ class TestBallSpeedRealisticOnFlight:
             states = [ball_state_at(sequence, t) for t in ts]
             total_m = sum(_xyz_distance_m(a, b) for a, b in zip(states, states[1:]))
             avg_speed = total_m / (flight_end_t - flight_start_t)
-            assert 15.0 <= avg_speed <= 35.0, (
+            assert 12.0 <= avg_speed <= 35.0, (
                 f"{gabarit} minute={minute} : vitesse moyenne mesuree {avg_speed:.3f} m/s "
-                "hors de [15, 35] m/s -- chiffre exact remonte, pas d'ajustement silencieux"
+                "hors de [12, 35] m/s -- chiffre exact remonte, pas d'ajustement silencieux"
             )
 
 
