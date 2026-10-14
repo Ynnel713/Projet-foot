@@ -35,6 +35,7 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 | 29 | Tests d'intégration exclus de la suite standard : réintégration à décider | Basse | Ouvert (décision propriétaire reportée) |
 | 30 | Cohérence joueur-ballon : contact, distance, accélération sans contact interdite | **Haute**, Bloc A, A1.6 | Ouvert |
 | 31 | Tests integration test_nlg_echantillon.py non relancés après B6-c | Basse | Ouvert (résolution à planifier) |
+| 32 | 5 tests ignorés dans l'environnement principal, qui passent en uv : cause à identifier | Basse | Ouvert (cause à identifier) |
 
 ---
 
@@ -558,6 +559,22 @@ appelé par les scripts, les tests et un éventuel paramètre de graine de l'API
 **Priorité.** Basse.
 
 **Statut.** Ouvert. Non corrigé.
+
+---
+
+## 32. 5 tests ignorés dans l'environnement principal, qui passent en uv
+
+**Description.** La suite `pytest tests --ignore=simulafoot_nlg` donne **1 493 passés, 5 ignorés, 12 désélectionnés** dans l'environnement principal (mesure de la clôture de B6-c sur archive propre de `1f562e9`), et **1 498 passés, 0 ignoré, 12 désélectionnés** lorsqu'elle est lancée avec `uv run pytest` dans le dépôt de travail (mesure de B6-d, 14/10/2026, `-rs` ne signale aucun test ignoré). Les 5 tests ignorés dans le premier cas passent donc dans le second.
+
+**Piste, non vérifiée.** Plusieurs tests sont protégés par des `skipif` sur des fichiers non versionnés : `simulafoot_nlg/.venv` (`tests/test_export_match_to_nlg.py`, `tests/test_nlg_end_to_end.py`, `tests/test_nlg_echantillon.py`), `data/joueurs.xlsx` et `simulafoot_nlg/data/simulafoot.db`. Une archive propre (export de l'index) n'a pas ces fichiers, le dépôt de travail les a. Rien ne prouve encore que ce soit la cause ni que ce soient ces 5 tests-là.
+
+**Risque.** Faible : l'écart de comptage rend deux mesures de la suite non comparables sans le préciser. Il ne signale pas un échec.
+
+**Résolution.** À planifier : lancer `pytest -rs` sur l'archive propre, relever les 5 tests ignorés et leur motif, puis décider s'il faut les garder ignorés dans l'archive. Non corrigé : ticket de traçabilité.
+
+**Priorité.** Basse.
+
+**Statut.** Ouvert. Cause à identifier. Non corrigé.
 
 ---
 
