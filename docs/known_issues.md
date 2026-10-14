@@ -32,6 +32,7 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 | 26 | Divergence moteur / narration sur les penaltys ratés : l'animation montre des ratés qui n'ont pas eu lieu et omet ceux du moteur | Basse à moyenne (à trancher), à coupler au Bloc C | Ouvert |
 | 27 | Tireur de penalty dépasse le ballon après la frappe | Moyenne, B6-d ou B6-c selon la cause | Ouvert |
 | 28 | Adversaire (joueur décor) à 1,5 m du départ du tireur de penalty | Basse, résolution possible en Bloc A | Ouvert |
+| 29 | Tests d'intégration exclus de la suite standard : réintégration à décider | Basse | Ouvert (décision propriétaire reportée) |
 
 ---
 
@@ -507,6 +508,18 @@ appelé par les scripts, les tests et un éventuel paramètre de graine de l'API
 **Impact.** Défaut visuel mineur, sans effet sur le résultat sportif.
 
 **Résolution.** Possible en Bloc A (mouvement des joueurs). Non corrigé.
+
+**Priorité.** Basse.
+
+**Statut.** Ouvert. Non corrigé.
+
+---
+
+## 29. Tests d'intégration exclus de la suite standard : réintégration à décider
+
+**Description.** Les tests marqués `integration` (12 : 7 dans `tests/test_narrative_player.py`, 5 dans `tests/test_nlg_echantillon.py`) sont exclus par défaut (`addopts = "-m 'not integration'"`, `pyproject.toml`). Les 7 de `test_narrative_player.py` passent sur `80f2bd0` (relancés avec `-m integration`, `PYTHONHASHSEED=0`, archive propre de HEAD). Les réintégrer dans la suite standard allongerait sa durée (marqueur « ~30 min, 100 matchs simulés ») ; décision du propriétaire (option C2) : les garder séparés, sans modifier `pyproject.toml`.
+
+**Résolution.** À décider plus tard par le propriétaire. En attendant, relancer ces tests avant la clôture d'une phase : `pytest tests/test_narrative_player.py -m integration`.
 
 **Priorité.** Basse.
 
