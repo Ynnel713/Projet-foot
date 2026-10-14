@@ -600,11 +600,11 @@ class TestDriftFloor:
 
 
 class TestDriftFloorVariesByEvent:
-    """Phase 6, B6-c, décision A3 : le plancher est tiré dans [0,1 ; 0,5] m par couple (joueur, événement) -- plus de valeur fixe à
+    """Phase 6, B6-c, décision A3 : le plancher est tiré dans [0,2 ; 0,5] m par couple (joueur, événement) -- plus de valeur fixe à
     0,5 m qui rendait identiques 20 % des dérives d'un événement à l'autre."""
 
-    def test_the_floor_range_is_0_1_to_0_5_m(self):
-        assert (_MIN_DRIFT_MAGNITUDE_M, _MAX_DRIFT_FLOOR_M) == (0.1, 0.5)
+    def test_the_floor_range_is_0_2_to_0_5_m(self):
+        assert (_MIN_DRIFT_MAGNITUDE_M, _MAX_DRIFT_FLOOR_M) == (0.2, 0.5)
 
     def test_a_tiny_drift_is_raised_to_a_floor_inside_the_range_and_varies_by_event(self):
         from ligue1sim.animation.sequence_generator import _floor_drift_magnitude

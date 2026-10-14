@@ -264,10 +264,10 @@ def _cb_line_drift(team_key: str, avg_cb_y: float, ball_y: float) -> tuple[float
 # produisait un joueur visuellement figé (mesuré jusqu'à 7 mm sur 8,5 s,
 # voir le diagnostic), alors que la RÉDUCTION d'amplitude pour ces rôles est
 # volontaire, pas leur immobilité totale.
-# Phase 6, B6-c, décision A3 du propriétaire (10/2026) : le plancher n'est plus fixe à 0,5 m (22,1 % des dérives valaient alors exactement
+# Phase 6, B6-c, décision A3 du propriétaire (10/2026), borne basse relevée à 0,2 m (option 1B, 14/10/2026) : le plancher n'est plus fixe à 0,5 m (22,1 % des dérives valaient alors exactement
 # 0,5 m, d'où 20,1 % de paires (joueur, événement) identiques d'un événement à l'autre) ; il est tiré par couple (joueur, événement) dans
-# [`_MIN_DRIFT_MAGNITUDE_M`, `_MAX_DRIFT_FLOOR_M`] = [0,1 ; 0,5] m. L'amplitude maximale d'un plancher ne dépasse jamais 0,5 m.
-_MIN_DRIFT_MAGNITUDE_M = 0.1  # plus petit plancher possible
+# [`_MIN_DRIFT_MAGNITUDE_M`, `_MAX_DRIFT_FLOOR_M`] = [0,2 ; 0,5] m. L'amplitude maximale d'un plancher ne dépasse jamais 0,5 m.
+_MIN_DRIFT_MAGNITUDE_M = 0.2  # plus petit plancher possible (0,1 m en A3, remonté à 0,2 m : 22 % de décors presque figés sinon)
 _MAX_DRIFT_FLOOR_M = 0.5  # plus grand plancher possible (ancien plancher fixe)
 
 

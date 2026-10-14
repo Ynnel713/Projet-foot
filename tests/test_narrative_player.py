@@ -486,13 +486,17 @@ class TestAccelerationConstraintOnRealGabarits:
 # plancher remis à 0,5 m fixe (`_MIN_DRIFT_MAGNITUDE_M = 0.5`), le code actuel redonne exactement les empreintes de B6-c :
 # but_gag ("72e992e33871f1a1", "986c877d0f40e3cc"), construction_placee ("2fdf4a837c8f86ae", ...), contre_attaque ("eba806b8f8345992", ...),
 # corner ("8667086b93f53cda", "c2a0a0579fb60eae"), percee_individuelle ("6d8d8580707ed082", ...).
+# Phase 6, B6-c, décision 1B (14/10/2026) : borne basse du plancher des dérives relevée de 0,1 à 0,2 m ; 5 empreintes recalculées une troisième fois.
+# Preuve que ce relèvement est la SEULE cause : avec `_MIN_DRIFT_MAGNITUDE_M = 0.1`, le code actuel redonne exactement les empreintes d'A3 :
+# but_gag ("178cb5423d50d5e5", "625839a8feaefc0b"), construction_placee ("154a539bf8f77445", ...), contre_attaque ("fb2cd12d94c9a31c", ...),
+# corner ("8b9f3e342c4d0d34", "b9a32dd3ebd7562e"), percee_individuelle ("72fa884e6d046ec8", ...).
 _WITNESS_DIGESTS = {
     # gabarit: (empreinte des images brutes `interpolate`, empreinte après contrainte d'accélération)
-    "but_gag": ("178cb5423d50d5e5", "625839a8feaefc0b"),
-    "construction_placee": ("154a539bf8f77445", "154a539bf8f77445"),
-    "contre_attaque": ("fb2cd12d94c9a31c", "fb2cd12d94c9a31c"),
-    "corner": ("8b9f3e342c4d0d34", "b9a32dd3ebd7562e"),
-    "percee_individuelle": ("72fa884e6d046ec8", "72fa884e6d046ec8"),
+    "but_gag": ("d08dadff3471f811", "c7acfb230b442645"),
+    "construction_placee": ("9e0fcb91c8afb6f8", "9e0fcb91c8afb6f8"),
+    "contre_attaque": ("06d519a0433e127a", "06d519a0433e127a"),
+    "corner": ("f05064d66238d5db", "39a32789ddad7788"),
+    "percee_individuelle": ("e81f855c96b7ccfe", "e81f855c96b7ccfe"),
 }
 
 
