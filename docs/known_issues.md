@@ -36,7 +36,7 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 | 30 | Cohérence joueur-ballon : contact, distance, accélération sans contact interdite | **Haute**, Bloc A, A1.6 | Ouvert |
 | 31 | Tests integration test_nlg_echantillon.py non relancés après B6-c | Basse | Ouvert (résolution à planifier) |
 | 32 | 5 tests ignorés dans l'environnement principal, qui passent en uv : cause à identifier | Basse | Ouvert (cause à identifier) |
-| 33 | Rond du gardien perçu trop gros par rapport à la cage — à investiguer | Basse | Ouvert (décision du propriétaire attendue) |
+| 33 | Rond du gardien perçu trop gros par rapport à la cage — à investiguer | Basse | Fermé sur décision propriétaire — remarque retirée |
 
 ---
 
@@ -613,9 +613,9 @@ Le centre du gardien est donc à 1,5 fois la profondeur du filet devant la ligne
 
 **Priorité.** Basse.
 
-**Résolution.** Au choix du propriétaire : Bloc C (options A ou B, `canvas.html`) ou B6-d bis (option C, `sequence_generator.py`).
+**Résolution.** Aucune : le propriétaire a retiré sa remarque, les options A, B et C ne sont pas retenues.
 
-**Statut.** Ouvert. Non corrigé.
+**Statut.** Fermé sur décision propriétaire — remarque retirée. Aucune correction.
 
 ---
 
