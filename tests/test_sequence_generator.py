@@ -735,3 +735,81 @@ class TestFreeKickWall:
             sequence = BUILDERS[name](_goal_event(), lineup, _start_positions(lineup, _pitch_layout_state(lineup)))
             tracks = enrich_with_background(sequence, opponent).background
             assert all(math.hypot(t.drift[0] * PITCH_LENGTH_M, t.drift[1] * PITCH_WIDTH_M) >= _MIN_DRIFT_MAGNITUDE_M - 1e-9 for t in tracks.values())
+
+
+class TestFreeKickWallBlocksTackleAndClearance:
+    """Phase 6, B7-c : un coup franc d'issue `tacle` / `degagement` est BLOQUÉ par le mur -- le ballon part vers le mur, le heurte à moins
+    de 2,0 m de haut et dans l'emprise du mur, puis repart vers le terrain (restitution 0,30 à 0,50, d'au moins 1 m/s). Les autres issues
+    (décidées en amont) et les autres gabarits ne changent pas. Trace : l'événement `degagement` existant, placé au point d'impact."""
+
+    _MINUTES = range(1, 91)
+
+    @staticmethod
+    def _plan(minute, outcome, gabarit="coup_franc"):
+        from ball_events import plan_ball_events
+
+        lineup = _lineup()
+        sequence = BUILDERS[gabarit](_goal_event(assist=None, minute=minute), lineup, _start_positions(lineup, _pitch_layout_state(lineup)), outcome)
+        return sequence, plan_ball_events(sequence, outcome, minute, "bu", None)
+
+    def test_every_tackle_and_clearance_is_blocked_by_the_wall(self):
+        for minute in self._MINUTES:
+            for outcome in ("tacle", "degagement"):
+                sequence, plan = self._plan(minute, outcome)
+                assert plan.trajectory is not None and plan.trajectory.surface == "wall", (minute, outcome)
+                assert plan.events[0].type == "degagement" and plan.events[0].last_toucher == "defenseur"
+
+    def test_the_impact_is_on_the_wall_face_inside_its_footprint_and_below_the_top(self):
+        for minute in self._MINUTES:
+            for outcome in ("tacle", "degagement"):
+                sequence, plan = self._plan(minute, outcome)
+                spot = sequence.keyframes[-1].ball
+                hit_x, hit_y, hit_z = plan.trajectory.contact
+                goal = (PITCH_LENGTH_M - spot.x * PITCH_LENGTH_M, PITCH_WIDTH_M / 2.0 - spot.y * PITCH_WIDTH_M)
+                norm = math.hypot(*goal)
+                along = ((hit_x - spot.x) * PITCH_LENGTH_M * goal[0] + (hit_y - spot.y) * PITCH_WIDTH_M * goal[1]) / norm
+                lateral = (-(hit_x - spot.x) * PITCH_LENGTH_M * goal[1] + (hit_y - spot.y) * PITCH_WIDTH_M * goal[0]) / norm
+                size = 5 if norm <= 20.0 else 4 if norm <= 26.0 else 3
+                assert along == pytest.approx(9.15 - 0.25, abs=1e-6)  # face du mur côté tireur (épaisseur 0,5 m)
+                assert abs(lateral) <= size * 0.75 - 0.5 + 1e-9
+                assert 0.3 - 1e-9 <= hit_z <= 1.7 + 1e-9  # sous le haut du mur (1,80 m + marge 0,20 m)
+                assert plan.events[0].t == pytest.approx(sequence.duration + plan.trajectory.arcs[0].duration)
+                assert (plan.events[0].x, plan.events[0].y) == pytest.approx((hit_x, hit_y))
+
+    def test_the_ball_leaves_toward_the_pitch_with_the_validated_restitution(self):
+        for minute in self._MINUTES:
+            for outcome in ("tacle", "degagement"):
+                sequence, plan = self._plan(minute, outcome)
+                arrival = plan.trajectory.arcs[0].at(plan.trajectory.arcs[0].duration)[1]
+                exit_x, exit_y, _ = plan.trajectory.exit_velocity
+                assert exit_x <= -1.0 + 1e-9, (minute, outcome, exit_x)  # vers le terrain, au moins 1 m/s
+                assert 0.30 - 1e-9 <= math.hypot(exit_x, exit_y) / math.hypot(arrival[0], arrival[1]) <= 0.50 + 1e-9
+                assert plan.end_tau > 0.0
+
+    def test_the_trajectory_is_continuous_and_deterministic(self):
+        sequence, plan = self._plan(41, "tacle")
+        _, again = self._plan(41, "tacle")
+        assert plan.trajectory == again.trajectory
+        previous = plan.trajectory.state_at(0.0)
+        assert (previous.x, previous.y, previous.z) == pytest.approx(
+            (sequence.keyframes[-1].ball.x, sequence.keyframes[-1].ball.y, 0.0))  # le ballon part du point posé
+        tau = 0.0
+        while tau < plan.end_tau:
+            tau += 1.0 / 120.0
+            current = plan.trajectory.state_at(tau)
+            assert math.hypot((current.x - previous.x) * PITCH_LENGTH_M, (current.y - previous.y) * PITCH_WIDTH_M) < 0.5
+            previous = current
+
+    def test_other_issues_and_other_templates_are_unchanged(self):
+        from ligue1sim.animation.ball import SURFACE_BAR, SURFACE_POST
+
+        for minute in (5, 41, 88):
+            for outcome in ("but", "hors_cadre"):
+                assert self._plan(minute, outcome)[1].trajectory is None  # inchangé : pas de rebond après un but ou un hors cadre
+            assert self._plan(minute, "poteau")[1].trajectory.surface == SURFACE_POST
+            assert self._plan(minute, "barre")[1].trajectory.surface == SURFACE_BAR
+            assert self._plan(minute, "arret")[1].trajectory.surface == "keeper"
+            for gabarit in ("construction_placee", "contre_attaque"):
+                sequence, plan = self._plan(minute, "tacle", gabarit)
+                assert plan.trajectory is None and [e.type for e in plan.events] == ["degagement"]
+                assert plan.events[0].t == pytest.approx(sequence.duration)  # au point de contact, comme avant B7-c

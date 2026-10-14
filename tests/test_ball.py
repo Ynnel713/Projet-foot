@@ -693,9 +693,13 @@ class TestBallSpeedRealisticOnFlight:
             states = [ball_state_at(sequence, t) for t in ts]
             total_m = sum(_xyz_distance_m(a, b) for a, b in zip(states, states[1:]))
             avg_speed = total_m / (flight_end_t - flight_start_t)
-            assert 12.0 <= avg_speed <= 35.0, (
+            # B7-c (14/10/2026) : plafond de 40 m/s pour le coup franc (35 m/s pour tous les autres gabarits). Le plafond de 35 m/s était
+            # un choix de test, pas une limite physique ; la bosse au-dessus du mur allonge le trajet 3D du coup franc de quelques
+            # pour cent (vitesse moyenne maximale mesurée toutes issues confondues : 35,3 m/s, 34,9 m/s sans bosse).
+            ceiling = 40.0 if gabarit == "coup_franc" else 35.0
+            assert 12.0 <= avg_speed <= ceiling, (
                 f"{gabarit} minute={minute} : vitesse moyenne mesuree {avg_speed:.3f} m/s "
-                "hors de [12, 35] m/s -- chiffre exact remonte, pas d'ajustement silencieux"
+                f"hors de [12, {ceiling:g}] m/s -- chiffre exact remonte, pas d'ajustement silencieux"
             )
 
 
@@ -1104,3 +1108,102 @@ class TestAirDrag:
         monkeypatch.setattr(ball_module, "AIR_DRAG_PER_M", 0.0)
         without_drag = {outcome: total(outcome) for outcome in ("poteau", "barre")}
         assert all(with_drag[outcome] < without_drag[outcome] for outcome in with_drag)
+
+
+class TestFreeKickFlightClearsTheWall:
+    """Phase 6, B7-c : le vol d'un coup franc (`ball_flight`) passe AU-DESSUS du mur (>= 2,1 m à 9,15 m du ballon, sur la ligne
+    ballon -> but), par une bosse ajoutée à la rampe linéaire de hauteur ; x / y, la durée, la hauteur d'arrivée et le franchissement
+    de la ligne de but ne changent pas ; les autres gabarits ne sont pas touchés."""
+
+    _MINUTES = range(1, 91)
+    _OUTCOMES = ("but", "arret", "poteau", "barre", "hors_cadre")
+
+    @staticmethod
+    def _sequence(minute, outcome, gabarit="coup_franc"):
+        event = GoalEvent(
+            club_name="Test FC", scorer="bu", assist=None, minute=minute, penalty=(gabarit == "penalty"),
+            zone=_FLIGHT_ZONES[gabarit], assist_zone=None,
+        )
+        return BUILDERS[gabarit](event, _deflect_audit_lineup(), _flight_start_positions(), outcome)
+
+    @staticmethod
+    def _without_bump(sequence):
+        return dataclasses.replace(sequence, meta={**sequence.meta, "template": "autre"})
+
+    @staticmethod
+    def _along_goal_line_m(state, spot):
+        goal = (PITCH_LENGTH_M - spot.x * PITCH_LENGTH_M, PITCH_WIDTH_M / 2.0 - spot.y * PITCH_WIDTH_M)
+        norm = math.hypot(*goal)
+        return ((state.x - spot.x) * PITCH_LENGTH_M * goal[0] + (state.y - spot.y) * PITCH_WIDTH_M * goal[1]) / norm
+
+    @staticmethod
+    def _lateral_m(state, spot):
+        goal = (PITCH_LENGTH_M - spot.x * PITCH_LENGTH_M, PITCH_WIDTH_M / 2.0 - spot.y * PITCH_WIDTH_M)
+        norm = math.hypot(*goal)
+        return (-(state.x - spot.x) * PITCH_LENGTH_M * goal[1] + (state.y - spot.y) * PITCH_WIDTH_M * goal[0]) / norm
+
+    def _flight_states(self, sequence, steps=1500):
+        t0, t1 = sequence.keyframes[-2].t, sequence.keyframes[-1].t
+        return [ball_state_at(sequence, t0 + (t1 - t0) * i / steps) for i in range(steps + 1)]
+
+    def test_wall_distance_is_the_same_as_the_one_used_to_build_the_wall(self):
+        from ligue1sim.animation import ball, sequence_generator
+
+        assert ball._WALL_DISTANCE_M == sequence_generator._WALL_DISTANCE_M
+
+    def test_the_ball_clears_the_wall_by_at_least_2_1_m_whenever_it_crosses_the_wall(self):
+        crossed = 0
+        for minute in self._MINUTES:
+            for outcome in self._OUTCOMES:
+                sequence = self._sequence(minute, outcome)
+                spot = sequence.keyframes[0].ball
+                states = self._flight_states(sequence)
+                at_wall = next((st for st in states if self._along_goal_line_m(st, spot) >= 9.15), None)
+                if at_wall is None or abs(self._lateral_m(at_wall, spot)) > 4.5:
+                    continue  # le tir passe à côté du mur
+                crossed += 1
+                assert at_wall.z >= 2.1 - 1e-9, (minute, outcome, at_wall.z)
+        assert crossed >= 360  # tous les tirs cadrés / sur un montant (360) franchissent le mur, plus une part des hors cadre : pas de passage à vide
+
+    def test_the_bump_apex_is_in_the_validated_range_for_shots_on_target(self):
+        for minute in self._MINUTES:
+            for outcome in ("but", "arret"):
+                apex = max(st.z for st in self._flight_states(self._sequence(minute, outcome), steps=400))
+                assert 2.2 <= apex <= 3.0 + 1e-6, (minute, outcome, apex)
+
+    def test_only_the_height_changes_xy_arrival_height_and_line_crossing_are_kept(self):
+        for minute in (5, 23, 41, 67, 88):
+            for outcome in self._OUTCOMES:
+                sequence = self._sequence(minute, outcome)
+                plain = self._without_bump(sequence)
+                t0, t1 = sequence.keyframes[-2].t, sequence.keyframes[-1].t
+                assert ball_state_at(sequence, t0).z == 0.0
+                assert ball_state_at(sequence, t1).z == pytest.approx(ball_state_at(plain, t1).z)  # hauteur d'arrivée inchangée
+                for i in range(0, 101):
+                    t = t0 + (t1 - t0) * i / 100
+                    a, b = ball_state_at(sequence, t), ball_state_at(plain, t)
+                    assert (a.x, a.y) == (b.x, b.y)
+                    if a.x >= 1.0:  # au-delà de la ligne de but (filet) : même hauteur qu'avant, l'issue ne change pas
+                        assert a.z == pytest.approx(b.z, abs=1e-9)
+
+    def test_the_bump_is_deterministic(self):
+        a = [st.z for st in self._flight_states(self._sequence(41, "but"), steps=50)]
+        b = [st.z for st in self._flight_states(self._sequence(41, "but"), steps=50)]
+        assert a == b
+
+    @pytest.mark.parametrize("gabarit", ["penalty", "contre_attaque", "construction_placee"])
+    def test_other_templates_keep_the_linear_height_ramp(self, gabarit):
+        sequence = self._sequence(41, "but", gabarit)
+        kf_a, kf_b = sequence.keyframes[-2], sequence.keyframes[-1]
+        for i in range(0, 101):
+            t = kf_a.t + (kf_b.t - kf_a.t) * i / 100
+            assert ball_state_at(sequence, t).z == pytest.approx(kf_b.ball.z * i / 100, abs=1e-9)
+
+    def test_mean_speed_of_the_free_kick_flight_stays_under_40_m_s_for_every_outcome(self):
+        for minute in (5, 23, 41, 67, 88):
+            for outcome in self._OUTCOMES:
+                sequence = self._sequence(minute, outcome)
+                states = self._flight_states(sequence, steps=1000)
+                total_m = sum(_xyz_distance_m(a, b) for a, b in zip(states, states[1:]))
+                avg = total_m / (sequence.keyframes[-1].t - sequence.keyframes[-2].t)
+                assert 12.0 <= avg <= 40.0, (minute, outcome, avg)

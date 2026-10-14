@@ -15,6 +15,8 @@ Issue -> événements :
     barre       -> `barre`, idem
     hors_cadre  -> `sortie_but` (le tireur est le dernier à avoir touché le ballon)
     tacle / degagement -> `degagement` (ballon renvoyé par un défenseur)
+                        (coup franc direct, B7-c : le ballon part vers le mur, le heurte et repart vers le terrain ; l'événement
+                        `degagement` est alors placé au point d'impact sur le mur, voir `_wall_block_trajectory`)
 
 Règle corner / sortie de but (ligne de but franchie HORS des poteaux ou au-dessus de la barre) :
     dernier toucheur = défenseur (ou gardien) -> `corner` ; dernier toucheur = attaquant -> `sortie_but`.
@@ -37,13 +39,19 @@ from dataclasses import dataclass, replace
 
 from ligue1sim.animation.ball import (
     BALL_FLIGHT,
+    GRAVITY_M_S2,
     REBOUND_AZIMUTH_JITTER_DEG,
     ReboundTrajectory,
+    _Arc,
+    _arc_drag,
     _deterministic_unit,
+    _enforce_backward,
     _simulate_rebound,
     ball_state_at,
     rebound_after_flight,
 )
+from ligue1sim.animation.sequence_generator import _WALL_DISTANCE_M, _WALL_SIZE_BY_MAX_DISTANCE_M, _WALL_SIZE_DEFAULT
+from ligue1sim.animation.templates import strike_speed_for, strike_type_for
 from ligue1sim.animation.types import BallState, Sequence
 from ligue1sim.pitch_geometry import GOAL_HEIGHT_M, GOAL_WIDTH_M, PITCH_LENGTH_M, PITCH_WIDTH_M
 
@@ -67,6 +75,17 @@ PARRY_SAFE_ANGLE_DEG = 40.0  # garde-fou : jamais un but sur une parade
 PARRY_RESTITUTION_RANGE = (0.5, 0.7)
 PARRY_AZIMUTH_JITTER_DEG = REBOUND_AZIMUTH_JITTER_DEG  # +-10° (D8)
 LINE_CUT_S = 1.0  # le clip s'arrête 1,0 s après le franchissement d'une ligne
+
+# Mur d'un coup franc direct (Phase 6, B7-c, 14/10/2026) -- constantes validées par le propriétaire. Un coup franc d'issue `tacle` /
+# `degagement` (seules issues que le mur peut contrarier : toutes les autres sont décidées en amont et franchissent le mur, voir
+# `ball._free_kick_hump_m`) : le ballon part vers le mur, le heurte et repart vers le terrain.
+_WALL_THICKNESS_M = 0.5  # épaisseur de détection : la face côté tireur est à `_WALL_DISTANCE_M` - 0,25 m
+_WALL_HALF_WIDTH_PER_PLAYER_M = 0.75  # largeur de collision par joueur (1,5 m, l'écartement du mur) : le mur est fermé
+_WALL_BLOCK_Z_MAX_M = 1.8 + 0.2  # mur 1,80 m + marge : un ballon plus bas est bloqué
+_WALL_AIM_Z_MARGIN_M = 0.3  # le point d'impact est tiré dans [0,3 ; `_WALL_BLOCK_Z_MAX_M` - 0,3] m
+_WALL_DRIFT_MARGIN_M = 0.5  # dérive latérale partagée du mur (<= 0,5 m, B7-b) : le point visé reste dans l'emprise réelle
+_WALL_RESTITUTION_RANGE = (0.30, 0.50)
+_WALL_MAX_DEFLECTION_DEG = 45.0
 
 # Décalage latéral de référence de la parade : demi-largeur de la cible `arret` (`templates._flight_target` : y dans
 # [0,47 ; 0,53]) ; un tir au bord de cette zone donne l'angle maximal.
@@ -238,6 +257,61 @@ def _goal_crossing_time(sequence: Sequence) -> tuple[float, float, float]:
     return end, final.y, final.z
 
 
+def _wall_block_trajectory(sequence: Sequence) -> ReboundTrajectory:
+    """Trajectoire d'un coup franc bloqué par le mur (B7-c) : vol balistique (gravité, friction de l'air) du ballon posé jusqu'à
+    la face du mur, à un point tiré dans l'emprise du mur (n x 1,5 m, moins la dérive) et à moins de `_WALL_BLOCK_Z_MAX_M`, puis
+    réflexion sur le plan vertical du mur (normale tournée de +-45 degrés au plus, restitution 0,30 à 0,50, tirés par hachage de
+    `event_ref`), puis rebonds au sol. Le ballon repart toujours vers le terrain (`_enforce_backward`, 1 m/s au moins). Le temps
+    `tau` de la trajectoire part de la frappe (fin de `sequence`) : `contact` est le point d'impact sur le mur."""
+    seed_key = sequence.event_ref
+    spot = ball_state_at(sequence, sequence.duration)
+    ball_x, ball_y = spot.x * PITCH_LENGTH_M, spot.y * PITCH_WIDTH_M
+    goal_x, goal_y = PITCH_LENGTH_M - ball_x, PITCH_WIDTH_M / 2.0 - ball_y
+    goal_m = math.hypot(goal_x, goal_y)
+    ux, uy = goal_x / goal_m, goal_y / goal_m
+    size = next((n for limit_m, n in _WALL_SIZE_BY_MAX_DISTANCE_M if goal_m <= limit_m), _WALL_SIZE_DEFAULT)
+
+    # Point d'impact : sur la face du mur, décalé latéralement dans l'emprise, à une hauteur sous le haut du mur.
+    face_m = _WALL_DISTANCE_M - _WALL_THICKNESS_M / 2.0
+    reach_m = size * _WALL_HALF_WIDTH_PER_PLAYER_M - _WALL_DRIFT_MARGIN_M
+    lateral_m = (2.0 * _deterministic_unit(seed_key, "wall_aim_y") - 1.0) * reach_m
+    z_low, z_high = _WALL_AIM_Z_MARGIN_M, _WALL_BLOCK_Z_MAX_M - _WALL_AIM_Z_MARGIN_M
+    aim_z = z_low + (z_high - z_low) * _deterministic_unit(seed_key, "wall_aim_z")
+    aim_x = ball_x + face_m * ux - lateral_m * uy
+    aim_y = ball_y + face_m * uy + lateral_m * ux
+    reach_distance_m = math.hypot(aim_x - ball_x, aim_y - ball_y)
+
+    # Vol jusqu'au mur : vitesse de la frappe de ce coup franc, composante verticale résolue pour arriver à `aim_z`.
+    speed = strike_speed_for(strike_type_for("coup_franc", seed_key), seed_key)
+    drag = _arc_drag(speed)
+    reach_t = math.expm1(drag * reach_distance_m) / (drag * speed) if drag > 0.0 else reach_distance_m / speed
+    launch_vz = (aim_z + 0.5 * GRAVITY_M_S2 * reach_t * reach_t) / reach_t
+    leg_to_wall = _Arc(
+        0.0, reach_t, (ball_x, ball_y, 0.0),
+        (speed * (aim_x - ball_x) / reach_distance_m, speed * (aim_y - ball_y) / reach_distance_m, launch_vz), "flight", drag,
+    )
+    (hit_x, hit_y, hit_z), (vx, vy, vz) = leg_to_wall.at(reach_t)
+
+    # Réflexion sur le plan vertical du mur.
+    phi = math.radians(_WALL_MAX_DEFLECTION_DEG) * (2.0 * _deterministic_unit(seed_key, "wall_angle") - 1.0)
+    nx, ny = _rotate(-ux, -uy, phi)  # normale horizontale : vers le terrain, tournée de phi
+    vn = vx * nx + vy * ny
+    low, high = _WALL_RESTITUTION_RANGE
+    restitution = low + (high - low) * _deterministic_unit(seed_key, "wall_restitution")
+    out_x, out_y = _enforce_backward(*((vx - 2.0 * vn * nx) * restitution, (vy - 2.0 * vn * ny) * restitution))
+    exit_velocity = (out_x, out_y, vz * restitution)
+
+    rebound_arcs, ground_contacts, apexes = _simulate_rebound((hit_x, hit_y, hit_z), exit_velocity)
+    arcs = (leg_to_wall,) + tuple(replace(arc, t0=arc.t0 + reach_t) for arc in rebound_arcs)
+    trajectory = ReboundTrajectory(
+        surface="wall", contact=(hit_x / PITCH_LENGTH_M, hit_y / PITCH_WIDTH_M, hit_z), exit_velocity=exit_velocity, arcs=arcs,
+        duration=arcs[-1].t0 + arcs[-1].duration, ground_bounces=ground_contacts, apexes_m=apexes,
+        first_bounce_apex_m=apexes[0] if apexes else 0.0, rest=(0.0, 0.0, 0.0),
+    )
+    end = trajectory.state_at(trajectory.duration)
+    return replace(trajectory, rest=(end.x, end.y, end.z))
+
+
 def plan_ball_events(
     sequence: Sequence,
     outcome: str | None,
@@ -262,11 +336,18 @@ def plan_ball_events(
         contact = ball_state_at(sequence, end_t)
         return BallPlan((event(SORTIE_BUT, end_t, min(contact.x, 1.0), contact.y, shooter, 0.0, ATTAQUANT),))
 
-    if outcome in ("tacle", "degagement"):
+    wall_block = outcome in ("tacle", "degagement") and sequence.meta.get("template") == "coup_franc"  # B7-c : le mur bloque
+    if outcome in ("tacle", "degagement") and not wall_block:
         contact = ball_state_at(sequence, end_t)
         return BallPlan((event(DEGAGEMENT, end_t, contact.x, contact.y, None, None, DEFENSEUR),))
 
-    if outcome == "arret" and has_flight:
+    if wall_block:
+        trajectory = _wall_block_trajectory(sequence)
+        vx, vy, _ = trajectory.exit_velocity
+        hit_x, hit_y, _ = trajectory.contact
+        first = event(DEGAGEMENT, end_t + trajectory.arcs[0].duration, hit_x, hit_y, None, _azimuth_deg(vx, vy), DEFENSEUR)
+        toucher = DEFENSEUR
+    elif outcome == "arret" and has_flight:
         contact = ball_state_at(sequence, end_t)
         trajectory = parry_trajectory(contact, f"{event_ref}|parade")
         vx, vy, _ = trajectory.exit_velocity

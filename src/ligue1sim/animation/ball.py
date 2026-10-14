@@ -107,6 +107,7 @@ from __future__ import annotations
 import hashlib
 import math
 from dataclasses import dataclass, replace
+from functools import lru_cache
 
 from ligue1sim.animation.types import BallState, Keyframe, Sequence
 from ligue1sim.pitch_geometry import GOAL_WIDTH_M, PITCH_LENGTH_M, PITCH_WIDTH_M
@@ -342,12 +343,74 @@ def _behavior_shot(
 # du vol, ballon au sol au pied du tireur) vers `end_z` (hauteur de la cible,
 # voir templates._flight_target), pas de nouveau modèle physique de hauteur.
 def _behavior_ball_flight(
-    start: tuple[float, float], end: tuple[float, float], s: float, duration: float, spin: float, end_z: float
+    start: tuple[float, float], end: tuple[float, float], s: float, duration: float, spin: float, end_z: float,
+    hump_m: float = 0.0, hump_end_s: float = 1.0,
 ) -> BallState:
     base = _behavior_shot(start, end, s, duration, spin)
-    z = end_z * s
-    vz = end_z / duration if duration > 0 else 0.0
+    hump_on = hump_m != 0.0 and s < hump_end_s
+    z = end_z * s + (hump_m * _hat(s / hump_end_s) if hump_on else 0.0)
+    dz_ds = end_z + (hump_m * _hat_derivative(s / hump_end_s) / hump_end_s if hump_on else 0.0)
+    vz = dz_ds / duration if duration > 0 else 0.0
     return replace(base, z=z, vz=vz)
+
+
+# --- bosse d'un coup franc au-dessus du mur (Phase 6, B7-c, 14/10/2026) ---------------------------------------------
+# La rampe linéaire `z = end_z * s` met le ballon à 0,3-1,0 m au niveau du mur (mesuré : 99 % des tirs cadrés passent sous
+# 1,80 m dans l'emprise du mur) : il le traverserait. Pour un coup franc (`sequence.meta["template"] == "coup_franc"`), on
+# ajoute à la rampe une bosse `A * _hat(s / s_ligne)`, nulle au départ ET à la ligne de but : à la ligne, le ballon garde la
+# hauteur qu'il avait (la décision but / hors cadre ne change pas), et `end_z` reste la hauteur d'arrivée. `A` est le plus grand
+# de deux besoins : franchir `_WALL_CLEARANCE_M` au passage du mur, et atteindre un sommet tiré dans [`_FK_APEX_MIN_M`,
+# `_FK_APEX_MAX_M`] (sha256 de `seed_key`). La durée du vol et x / y ne changent pas.
+_WALL_DISTANCE_M = 9.15  # = sequence_generator._WALL_DISTANCE_M (import circulaire : templates importe ball), égalité testée
+_WALL_CLEARANCE_M = 2.1  # hauteur du ballon au passage du mur : mur de 1,80 m + marge (valeur validée par le propriétaire)
+_HUMP_DESIGN_MARGIN_M = 0.02  # marge de calcul sur la hauteur de franchissement
+_WALL_LATERAL_REACH_M = 4.5  # 5 joueurs x 0,75 m + dérive de 0,5 m, arrondi : au-delà, le tir passe à côté du mur (pas de bosse)
+_FK_APEX_MIN_M = 2.2
+_FK_APEX_MAX_M = 3.0
+
+
+def _inverse_drag_progress(p: float, distance_m: float) -> float:
+    """`s` tel que `_drag_progress(s, distance_m)[0] == p` (progression le long de la trajectoire -> fraction du temps)."""
+    cd = _segment_drag(distance_m) * distance_m
+    return p if cd < 1e-12 else math.expm1(cd * p) / math.expm1(cd)
+
+
+@lru_cache(maxsize=4096)
+def _free_kick_hump_m(
+    start: tuple[float, float], end: tuple[float, float], end_z: float, spin: float, duration: float, seed_key: str
+) -> tuple[float, float]:
+    """`(A, s_ligne)` : amplitude (m) de la bosse et fraction du temps à laquelle le ballon atteint la ligne de but
+    (`1.0` si la cible est en deçà). `(0.0, 1.0)` si le mur n'est pas sur la trajectoire (le tir passe à côté). Le passage du mur (point où le ballon
+    est à `_WALL_DISTANCE_M` du coup franc, mesuré sur la ligne ballon -> centre du but) est cherché par dichotomie sur la
+    trajectoire x / y RÉELLE (courbure de Magnus comprise), donc exact ; mis en cache : un vol = un calcul."""
+    goal_x, goal_y = (1.0 - start[0]) * PITCH_LENGTH_M, (0.5 - start[1]) * PITCH_WIDTH_M
+    goal_m = math.hypot(goal_x, goal_y)
+    if goal_m < 1e-9:
+        return 0.0, 1.0
+    p_line = 1.0 if end[0] <= 1.0 else (1.0 - start[0]) / (end[0] - start[0])
+    s_line = _inverse_drag_progress(p_line, _real_distance_m(start, end))
+
+    def along_goal_line_m(s: float) -> float:
+        state = _behavior_shot(start, end, s, duration, spin)
+        return ((state.x - start[0]) * PITCH_LENGTH_M * goal_x + (state.y - start[1]) * PITCH_WIDTH_M * goal_y) / goal_m
+
+    if along_goal_line_m(s_line) < _WALL_DISTANCE_M:
+        return 0.0, 1.0
+    low, high = 0.0, s_line
+    for _ in range(50):
+        mid = 0.5 * (low + high)
+        low, high = (mid, high) if along_goal_line_m(mid) < _WALL_DISTANCE_M else (low, mid)
+    s_wall = 0.5 * (low + high)
+    wall_state = _behavior_shot(start, end, s_wall, duration, spin)
+    lateral_m = (-(wall_state.x - start[0]) * PITCH_LENGTH_M * goal_y + (wall_state.y - start[1]) * PITCH_WIDTH_M * goal_x) / goal_m
+    if abs(lateral_m) > _WALL_LATERAL_REACH_M:
+        return 0.0, 1.0
+    clearance_amp = max(0.0, (_WALL_CLEARANCE_M + _HUMP_DESIGN_MARGIN_M - end_z * s_wall) / _hat(s_wall / s_line))
+    apex_m = _FK_APEX_MIN_M + (_FK_APEX_MAX_M - _FK_APEX_MIN_M) * _deterministic_unit(seed_key, "fk_apex")
+    line_z = end_z * s_line  # hauteur de la rampe à la ligne de but
+    # Sommet de `end_z * s + A * _hat(s / s_ligne)` = A + line_z / 2 + line_z² / (16 A) (A >= line_z / 4) : on résout pour `apex_m`.
+    apex_amp = 0.0 if apex_m <= end_z else ((apex_m - line_z / 2.0) + math.sqrt(apex_m * (apex_m - line_z))) / 2.0
+    return max(clearance_amp, apex_amp), s_line
 
 
 # --- cross -------------------------------------------------------------------
@@ -847,7 +910,10 @@ def ball_state_at(sequence: Sequence, t: float) -> BallState:
     elif tag == SHOT:
         state = _behavior_shot(start, end, s, duration, kf_a.ball.spin)
     elif tag == BALL_FLIGHT:
-        state = _behavior_ball_flight(start, end, s, duration, kf_a.ball.spin, kf_b.ball.z)
+        hump_m, hump_end_s = (
+            _free_kick_hump_m(start, end, kf_b.ball.z, kf_a.ball.spin, duration, seed_key) if sequence.meta.get("template") == "coup_franc" else (0.0, 1.0)
+        )
+        state = _behavior_ball_flight(start, end, s, duration, kf_a.ball.spin, kf_b.ball.z, hump_m, hump_end_s)
     elif tag == CROSS:
         state = _behavior_cross(start, end, s, duration, seed_key)
     elif tag == BOUNCE:
