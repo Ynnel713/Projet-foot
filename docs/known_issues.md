@@ -40,6 +40,7 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 | 34 | Phrases NLG mentionnent la lucarne sur des penaltys tirés bas ou à mi-hauteur | Basse | Ouvert (résolution à planifier) |
 | 35 | BUT/PENALTY #1 dit « au centre » alors que la cible est près d'un poteau | Basse | Ouvert |
 | 36 | Phrases de coup franc sortent sur des buts qui n'en sont pas | Basse | Ouvert |
+| 37 | Phrases NLG de penalty contredisent B6-d : gardien immobile vs glissement | Basse à moyenne | Ouvert (résolution à planifier) |
 
 ---
 
@@ -649,6 +650,22 @@ Le centre du gardien est donc à 1,5 fois la profondeur du filet devant la ligne
 **Piste (non implémentée).** Ajouter la condition `gabarit == "coup_franc"` à ces quatre phrases (le champ `gabarit` existe déjà dans le contexte des conditions).
 
 **Priorité.** Basse. **Résolution.** À planifier. **Statut.** Ouvert. Non corrigé.
+
+---
+
+## 37. Phrases NLG de penalty contredisent B6-d : gardien immobile vs glissement
+
+**Description.** Depuis B6-d (`docs/phase6_block_b_audit.md`, section 14), le gardien adverse d'un penalty glisse sur toute la durée du clip (amplitude de 0,18 à 2,54 m mesurée sur 34 penaltys, aucun n'est immobile). Plusieurs phrases du NLG décrivent pourtant un gardien qui ne bouge pas, ce que l'animation contredit.
+
+**Phrases concernées** (`simulafoot_nlg/data/seed/`) :
+- `BUT/PENALTY` #6 (« le gardien est resté cloué sur place ») et #8 (« le gardien de {adversaire} n'a même pas bougé ») ;
+- `ARRET_GARDIEN/DEFAUT` #4 (« capte le ballon en pleine lucarne sans bouger d'un pouce ») et #22 (Panenka : « capte le ballon sans bouger ») ;
+- `PENALTY_RATE/DEFAUT` #0 (« reste debout et capte le ballon sans bouger d'un pouce ») et #13 (« n'a même pas eu besoin de plonger ») ;
+- hors penalty mais de même nature : `BUT/SURNOM` #0 (« laissant le gardien … totalement immobile »), le gardien des autres gabarits suivant lui aussi un glissement passif.
+
+**Piste (non implémentée).** Réécrire ou retirer ces phrases (le gardien ne peut pas être « immobile » à l'écran), ou attendre le vrai plongeon du Bloc A (A1.2) qui pourrait redonner du sens à « n'a pas plongé » ; à traiter avec les tickets 34 et 35 (autres incohérences de `BUT/PENALTY`).
+
+**Priorité.** Basse à moyenne. **Résolution.** À planifier. **Statut.** Ouvert. Non corrigé.
 
 ---
 
