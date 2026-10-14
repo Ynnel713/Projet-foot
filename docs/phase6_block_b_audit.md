@@ -933,32 +933,52 @@ Les 5 empreintes figées de `tests/test_narrative_player.py` (`_WITNESS_DIGESTS`
 
 **Constantes (validées par le propriétaire).** Maximum 2,2 à 2,8 m par événement (borne dure 2,8 m, poteaux à 3,66 m). Arrêt : bon côté à 100 %, atteint le y du ballon. But : mauvais côté avec P = 0,5 (fort) / 0,4 (placé) / 1,0 (contre-pied), soit 55 % au global ; mauvais côté à 40-90 % du maximum ; bon côté mais court à 40-75 % de la distance requise. Hors cadre / poteau / barre : côté 50/50 (`gk_side_miss`), toujours opposé pour un contre-pied, amplitude 40-100 % du maximum.
 
-### 14.1 Mesures (100 matchs de Ligue 1 réelle, graines 1 à 100, `PYTHONHASHSEED=0`)
+### 14.1 Échantillon de mesure : méthode d'appariement
 
-**Écart d'échantillon.** Mon harnais tire les deux clubs de chaque graine avec `random.Random(graine).sample` : 1 531 événements narratifs et 31 penaltys, et non les 1 586 événements / 34 penaltys des mesures précédentes (appariement d'origine non retrouvé, 5 variantes essayées). Les comparaisons avant / après portent sur cet échantillon.
+Les mesures de B6-d reprennent **exactement** l'échantillon de B6-a, B6-b et B6-c : **100 matchs de Ligue 1 réelle, 1 586 événements narratifs, 34 penaltys**, donc comparables aux sous-étapes précédentes. Pour la graine `s` de 1 à 100 : `random.seed(s)` et `np.random.seed(s)` ; clubs triés par nom (`load_clubs(CLUBS_PATH, "Ligue 1")`, 18 clubs) ; domicile = `clubs[(s * 3) % n]`, extérieur = `clubs[(s * 7 + 1) % n]` (si c'est le même club, `clubs[(s * 7 + 2) % n]`) ; `simulate_match`, puis `match_result_from(..., date=f"j{s}")`, `build_timeline`, `build_clips(max_occasions=None)`. Les scripts d'origine sont hors dépôt (`detfp.py` et `b6a_real.py`, voir `relais.md`).
 
-- Penaltys : 31 (24 buts, 5 arrêts, 1 hors cadre, 1 barre ; 15 placés, 9 forts, 7 contre-pieds).
+**Erreur corrigée.** La première mesure de B6-d (commit `626dbce`, tableau d'origine de cette section) utilisait un appariement que j'avais écrit moi-même (tirage de deux clubs par `random.Random(graine).sample`, date `str(graine)`) au lieu de rechercher les scripts documentés : 1 531 événements et 31 penaltys, donc non comparable. Ces chiffres sont remplacés ci-dessous. Cinq autres variantes essayées à l'aveugle n'avaient pas retrouvé 1 586 ; seule la lecture de `detfp.py` l'a fait.
+
+### 14.2 Mesures (graines 1 à 100, `PYTHONHASHSEED=0`, HEAD parent `9357786` contre `e8bb99e`)
+
+- Penaltys : **34** (26 buts, 5 arrêts, 3 hors cadre ; aucun poteau ni barre dans cet échantillon ; 16 placés, 12 forts, 6 contre-pieds).
 - Arrêts avec le gardien du bon côté : **5 / 5**.
-- Buts avec le gardien du mauvais côté : **13 / 24 (54 %)** pour 55 % attendus (fort 2 / 6, placé 6 / 13, contre-pied 5 / 5).
-- Déplacement effectif : 0,47 à 2,35 m (avant : jusqu'à 2,46 m) ; le maximum tiré par événement est dans [2,2 ; 2,8] par construction, le déplacement effectif en est une fraction.
-- 25 graines ont un clip modifié, toutes celles qui contiennent un penalty ; les 75 autres sont identiques au HEAD.
+- Buts avec le gardien du mauvais côté : **15 / 26 (57,7 %)** pour 55 % attendus (fort 4 / 10, placé 6 / 11, contre-pied 5 / 5). L'écart à 55 % est dans le bruit d'un échantillon de 26 buts.
+- **Amplitude : le maximum tiré par événement est dans [2,2 ; 2,8] m ; le déplacement effectif en est une fraction, mesurée entre 0,18 et 2,54 m sur les 34 penaltys (avant B6-d : jusqu'à 2,47 m).** Le minimum de 0,18 m est un arrêt où le ballon arrive à 0,18 m de l'axe : le gardien atteint le y du ballon.
+- 27 graines ont un clip modifié, exactement celles qui contiennent un penalty ; les 73 autres sont identiques au HEAD parent.
 
-### 14.2 Vérifications
+### 14.3 Vérifications
 
 | Vérification | Résultat |
 |---|---|
-| Scores, événements du moteur, 1 531 événements narratifs (HEAD contre arbre modifié) | **100 / 100** identiques |
-| Deux exécutions de l'arbre modifié (empreintes de tous les clips, positions des penaltys) | **identiques** |
+| Scores, événements du moteur (buts, cartons, remplacements, blessures, notes), événements narratifs (1 586) : HEAD parent contre `e8bb99e` | **100 / 100** identiques |
+| Deux exécutions de `e8bb99e` (empreintes de tous les clips et positions des gardiens) | **identiques** |
 | Sérialisation JSON (graine 3, 18 clips, ancien comportement contre nouveau) | structure identique ; un seul clip diffère, uniquement par ses images |
-| `pytest tests --ignore=simulafoot_nlg` | **1 498 passés, 12 désélectionnés** (compte différent des 1 493 / 5 ignorés de B6-c : les 5 ignorés passent dans cet environnement) |
+| `pytest tests --ignore=simulafoot_nlg` | **1 498 passés, 12 désélectionnés** ; compte différent des 1 493 / 5 ignorés de B6-c : voir le ticket 32 |
 | `npm run build` / `npm run lint` | OK ; 0 erreur, 5 avertissements |
 
-### 14.3 Limites
+### 14.4 Captures (graine, clip, minute, type, issue, côté du gardien)
+
+Hors dépôt (scratchpad), `canvas.html` inchangé, canvas 1 200 × 780 recadré sur le but et agrandi 4 fois, image figée à t = 4,45 s (4,31 s ou 4,38 s pour deux clips de but plus courts), avant = HEAD parent `9357786`, après = `e8bb99e`. Le côté du gardien est comparé au point d'arrivée du ballon.
+
+| Cas | Graine / clip / minute | Gardien avant | Gardien après |
+|---|---|---|---|
+| Fort, arrêt | 14 / 15 / 79e | −2,28 m, côté du ballon | −1,39 m, côté du ballon |
+| Fort, but | 7 / 2 / 9e | +1,62 m, côté du ballon | −1,73 m, **côté opposé** |
+| Placé, arrêt | 7 / 13 / 83e | +2,44 m, côté du ballon | +1,57 m, côté du ballon |
+| Placé, but | 3 / 7 / 40e | +2,31 m, côté du ballon | −1,07 m, **côté opposé** |
+| Contre-pied, arrêt (décision 3) | 5 / 10 / 57e | −2,48 m, côté du ballon | −0,62 m, côté du ballon |
+| Contre-pied, but | 14 / 11 / 63e | −0,49 m, côté du ballon | +1,90 m, **côté opposé** |
+
+La graine 5 ne contient qu'un penalty (contre-pied, arrêt) : les autres cas viennent des graines 3, 7 et 14. Pour les arrêts, l'amplitude change peu (le gardien était déjà du côté du ballon avant, avec une fraction aléatoire), le gain est qu'il atteint maintenant le y du ballon.
+
+### 14.5 Limites
 
 - Pas de test ajouté (le périmètre autorisé ne contenait pas les fichiers de tests).
-- Captures avant / après non produites dans cette étape.
+- Pas de capture pour un poteau ou une barre (aucun dans l'échantillon) ; seule l'issue hors cadre est mesurée (3 cas), sans capture.
+- Le gardien reste à 3 m devant sa ligne et glisse pendant tout le clip (pas de délai ni de plongeon : Bloc A, A1.2).
 - Ticket 27 (dépassement du tireur) : pas de lien trouvé avec le gardien, reste ouvert pour le Bloc A.
 
-### 14.4 Statut
+### 14.6 Statut
 
-**B6-d implémenté.** En attente de validation du propriétaire avant B6-e.
+**B6-d implémenté, mesures alignées sur l'échantillon de B6-a à B6-c.** En attente de validation du propriétaire avant B6-e.
