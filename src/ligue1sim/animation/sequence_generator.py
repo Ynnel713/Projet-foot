@@ -23,6 +23,7 @@ import math
 import random
 from dataclasses import dataclass, replace
 
+from ligue1sim.animation.motion import _background_position_at
 from ligue1sim.animation.spatial import PitchLayoutState, placed_player_to_normalized
 from ligue1sim.animation.templates import (
     BUILDERS,
@@ -673,3 +674,43 @@ def enrich_with_background(sequence: Sequence, opponent_lineup: Lineup, outcome:
         roster={**sequence.roster, **opponent_roster},
         background=background,
     )
+
+
+# --- Phase 6, B8-b (14/10/2026) : adversaires de champ à un instant donné, pour la pression sur un contrôle ---------------------
+# Les gabarits (`templates.py`) ne connaissent que l'équipe qui marque ; la pression d'un adversaire sur une réception demande ses positions
+# AVANT que `enrich_with_background` ne les place. Ces deux fonctions recalculent, avec le même code (`_opponent_positions`, `_cb_line_drift`,
+# `_tactical_drift`), les pistes des adversaires de champ ; `tests/test_sequence_generator.py` vérifie qu'elles égalent `Sequence.background`.
+# Le gardien est exclu (il ne presse pas), ainsi que les cas particuliers du coup franc (mur) et du penalty, sans réception au sol.
+
+
+def opponent_field_tracks(
+    opponent_lineup: Lineup, event_ref: str, ball_target: tuple[float, float]
+) -> dict[PlayerId, BackgroundTrack]:
+    """Pistes (`BackgroundTrack`) des adversaires de champ, identiques à celles que `enrich_with_background` leur donne pour la même
+    `event_ref` et la même cible du ballon (`ball_target` : position du dernier keyframe de la `Sequence`)."""
+    positions = _opponent_positions(opponent_lineup)
+    by_id = {player_id_of(p): p for p in opponent_lineup.players}
+    cb_ys = [point.y for pid, point in positions.items() if by_id[pid].poste == "DC"]
+    cb_drift = _cb_line_drift(f"{event_ref}|opponent", sum(cb_ys) / len(cb_ys), ball_target[1]) if cb_ys else (0.0, 0.0)
+    return {
+        pid: BackgroundTrack(
+            start=(point.x, point.y),
+            drift=_tactical_drift(by_id[pid].poste, pid, "opponent", (point.x, point.y), ball_target, cb_drift, event_ref),
+        )
+        for pid, point in positions.items()
+        if by_id[pid].poste != GOALKEEPER
+    }
+
+
+def nearest_opponent_distance_m(
+    tracks: dict[PlayerId, BackgroundTrack], point: tuple[float, float], t: float, duration: float
+) -> float | None:
+    """Distance (m) de `point` (position normalisée) à l'adversaire de champ le plus proche à l'instant `t` d'une `Sequence` de durée
+    `duration` ; `None` sans adversaire."""
+    best: float | None = None
+    for track in tracks.values():
+        ox, oy = _background_position_at(track, t, duration)
+        d = math.hypot((ox - point[0]) * PITCH_LENGTH_M, (oy - point[1]) * PITCH_WIDTH_M)
+        if best is None or d < best:
+            best = d
+    return best

@@ -217,7 +217,7 @@ def _build_clip(
     # (`event.outcome` n'est jamais None sur un `NarrativeEvent`, voir
     # narrative.py) -- seul changement dans ce fichier, aucune autre
     # modification.
-    sequence = BUILDERS[event.gabarit](goal_event, scorer_lineup, start_positions, event.outcome)
+    sequence = BUILDERS[event.gabarit](goal_event, scorer_lineup, start_positions, event.outcome, opponent_lineup)  # B8-b : pression adverse sur les contrôles
     sequence = enrich_with_background(sequence, opponent_lineup, event.outcome)
 
     step = 1.0 / _FPS

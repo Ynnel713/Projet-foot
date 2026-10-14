@@ -624,6 +624,74 @@ _CONTROL_ROOM_RATIO = 0.8  # un contrôle (et sa reprise) occupe au plus 80 % de
 _RIGHT_FOOTED_P = 0.78  # pied inconnu : droitier avec cette probabilité (292 D pour 81 G dans les données connues de la Ligue 1)
 
 
+# --- Phase 6, B8-b (14/10/2026) : modulation du contrôle par la pression et la qualité technique ---------------------------------
+# Constantes validées par le propriétaire. La pression `p` ∈ [0 ; 1] combine trois signaux (proximité de l'adversaire de champ le plus proche à
+# la réception, vitesse d'arrivée du ballon, contexte) ; la qualité `q` (échelle des attributs FM) combine First Touch, Technique et, sous
+# pression seulement, Composure. Les probabilités de base (`_CONTROL_LOOSE_HEAVY_P`) sont REDISTRIBUÉES, pas augmentées : `_PRESSURE_MEAN` recentre.
+# Sans `opponent_lineup` (tous les appelants hors `narrative_player`), aucune modulation : comportement de B8-a.
+_PRESSURE_WEIGHTS = (0.5, 0.3, 0.2)  # proximité / vitesse / contexte
+_PRESSURE_DISTANCE_M = (1.5, 8.0)  # adversaire à 1,5 m ou moins : 1 ; à 8 m ou plus : 0 (le seuil bas est celui de l'évitement de motion.py)
+_PRESSURE_ARRIVAL_M_S = (12.0, 24.0)  # ballon à 12 m/s ou moins : 0 ; à 24 m/s ou plus : 1
+_PRESSURE_CONTEXT_P = 0.5  # style Pressing de l'adversaire : 0,5 ; gabarit `recuperation_haute` : 0,5 ; cumulables (max 1)
+_PRESSURE_MEAN = 0.15  # pression moyenne : la modulation ne s'applique qu'à l'écart à cette valeur
+_PRESSURE_EFFECT = 0.25  # +25 points de contrôle approximatif à pression pleine (par rapport à la pression moyenne)
+_QUALITY_NEUTRAL = 59.0  # sans attributs : aucun effet de la qualité
+_QUALITY_EFFECT = 0.12  # -12 points de contrôle approximatif pour +20 de qualité
+_QUALITY_SCALE = 20.0
+_QUALITY_COMPOSURE_SHARE = 0.5  # sous pression pleine, Composure pèse pour moitié dans la qualité
+_QUALITY_FIRST_TOUCH_SHARE = 0.6  # q_base = 0,6 × First Touch + 0,4 × Technique
+_WEAK_FOOT_EFFECT = 0.06  # -6 points de contrôle approximatif par cran de `weak_foot` au-dessus de 3 (pied faible uniquement)
+_LOOSE_RANGE = (0.01, 0.60)  # bornes de la probabilité de contrôle approximatif
+_HEAVY_MAX = 0.25  # plafond du contrôle lourd, proportionnel à l'approximatif
+
+
+@dataclass(frozen=True)
+class _PressureContext:
+    """Ce dont `_insert_ground_controls` a besoin pour mesurer la pression : `distance_at(point, t)` (m, adversaire de champ le plus proche,
+    `None` sans adversaire) et les deux signaux de contexte."""
+
+    distance_at: Callable[[tuple[float, float], float], float | None]
+    pressing_style: bool
+    recuperation_haute: bool
+
+
+def _linear_unit(value: float, zero_at: float, one_at: float) -> float:
+    """0 en `zero_at`, 1 en `one_at`, linéaire entre les deux (`zero_at` > `one_at` accepté), borné à [0 ; 1]."""
+    return min(1.0, max(0.0, (value - zero_at) / (one_at - zero_at)))
+
+
+def _pressure_index(distance_m: float | None, arrival_m_s: float, context: _PressureContext) -> float:
+    """Pression p ∈ [0 ; 1] = 0,5 × proximité + 0,3 × vitesse d'arrivée + 0,2 × contexte."""
+    w_d, w_v, w_c = _PRESSURE_WEIGHTS
+    p_d = 0.0 if distance_m is None else _linear_unit(distance_m, _PRESSURE_DISTANCE_M[1], _PRESSURE_DISTANCE_M[0])
+    p_v = _linear_unit(arrival_m_s, *_PRESSURE_ARRIVAL_M_S)
+    p_c = min(1.0, _PRESSURE_CONTEXT_P * context.pressing_style + _PRESSURE_CONTEXT_P * context.recuperation_haute)
+    return min(1.0, max(0.0, w_d * p_d + w_v * p_v + w_c * p_c))
+
+
+def _technical_quality(player: Player, pressure: float) -> float:
+    """Qualité technique q : (1 - 0,5 p) × (0,6 First Touch + 0,4 Technique) + 0,5 p × Composure ; 59 (neutre) si un des trois attributs manque."""
+    attributes = player.attributes
+    if not attributes or any(name not in attributes for name in ("First Touch", "Technique", "Composure")):
+        return _QUALITY_NEUTRAL
+    base = _QUALITY_FIRST_TOUCH_SHARE * attributes["First Touch"] + (1.0 - _QUALITY_FIRST_TOUCH_SHARE) * attributes["Technique"]
+    share = _QUALITY_COMPOSURE_SHARE * pressure
+    return (1.0 - share) * base + share * attributes["Composure"]
+
+
+def _modulated_loose_heavy(gesture: str, pressure: float, quality: float, weak_foot: float | None) -> tuple[float, float]:
+    """(P approximatif, P lourd) modulés : base + 0,25 (p - 0,15) - 0,12 (q - 59) / 20 [- 0,06 (weak_foot - 3) au pied faible], bornés à
+    [1 % ; 60 %] ; le lourd reste proportionnel (base_lourd × P / base), plafonné à 25 %. La semelle (base 0 %) n'est jamais modulée."""
+    base_loose, base_heavy = _CONTROL_LOOSE_HEAVY_P[gesture]
+    if base_loose <= 0.0:
+        return base_loose, base_heavy
+    loose = base_loose + _PRESSURE_EFFECT * (pressure - _PRESSURE_MEAN) - _QUALITY_EFFECT * (quality - _QUALITY_NEUTRAL) / _QUALITY_SCALE
+    if gesture == "pied_faible" and weak_foot is not None:
+        loose -= _WEAK_FOOT_EFFECT * (weak_foot - 3.0)
+    loose = min(_LOOSE_RANGE[1], max(_LOOSE_RANGE[0], loose))
+    return loose, min(_HEAVY_MAX, base_heavy * loose / base_loose)
+
+
 def _control_span(unit: float, lo_hi: tuple[float, float]) -> float:
     return lo_hi[0] + unit * (lo_hi[1] - lo_hi[0])
 
@@ -645,14 +713,21 @@ def _control_gesture(arrival_m_s: float, unit: float) -> str:
 
 
 def _insert_ground_controls(
-    template: Template, keyframes: list[Keyframe], players_by_id: dict[PlayerId, Player], event_ref: str
+    template: Template,
+    keyframes: list[Keyframe],
+    players_by_id: dict[PlayerId, Player],
+    event_ref: str,
+    pressure_context: _PressureContext | None = None,
 ) -> list[Keyframe]:
     """Insère un segment de contrôle à chaque réception au sol (voir le bloc de commentaires ci-dessus). Une réception est un keyframe
     dont le porteur change pour un joueur (pas `None`) ; une réception à position de ballon explicite (`Template.ball_position`) n'est pas
     touchée. Réception NON finale : le keyframe garde son instant, le ballon y est au pied (`C0`), puis un keyframe de fin de geste
     (et, si le ballon s'est échappé, un keyframe de reprise). Réception FINALE (le joueur frappe aussitôt) : la fenêtre PRÉCÈDE le keyframe
     de frappe, qui reste inchangé, pour ne pas allonger le gabarit. Les joueurs des keyframes insérés sont sur la droite entre les keyframes
-    voisins ; le tag du premier keyframe inséré porte le geste (`controle_<geste>`), `Keyframe.tag` n'étant jamais lu par le rendu."""
+    voisins ; le tag du premier keyframe inséré porte le geste (`controle_<geste>`), `Keyframe.tag` n'étant jamais lu par le rendu.
+
+    B8-b : avec `pressure_context`, les probabilités d'un contrôle approximatif / lourd sont modulées par la pression à la réception et la
+    qualité technique du récepteur (`_modulated_loose_heavy`) ; sans, ce sont les probabilités de base de B8-a."""
     n = len(keyframes)
     if not template.ground_control or n < 2:
         return keyframes
@@ -706,6 +781,14 @@ def _insert_ground_controls(
         side = 1.0 if foot == "D" else -1.0
         d = _control_span(_flight_unit(ref, "duration"), _CONTROL_SOLE_DURATION_S if gesture == "semelle" else _CONTROL_FOOT_DURATION_S)
         loose_p, heavy_p = _CONTROL_LOOSE_HEAVY_P[gesture]
+        if pressure_context is not None and gesture != "semelle":
+            # Réception FINALE : le ballon arrive une durée de geste avant le keyframe de frappe ; sinon, au keyframe de réception.
+            at_t = max(previous.t, kf.t - d) if i == n - 1 else kf.t
+            receiver = blend(previous, kf, at_t)[owner] if i == n - 1 else kf.players[owner]
+            pressure = _pressure_index(pressure_context.distance_at(receiver, at_t), arrival, pressure_context)
+            loose_p, heavy_p = _modulated_loose_heavy(
+                gesture, pressure, _technical_quality(players_by_id[owner], pressure), players_by_id[owner].weak_foot
+            )
         quality = _flight_unit(ref, "quality")
         kind = "lourd" if quality < heavy_p else "approximatif" if quality < heavy_p + loose_p else "propre"
         recovery = _control_span(_flight_unit(ref, "recovery"), _CONTROL_RECOVERY_S) if kind != "propre" else 0.0
@@ -782,6 +865,7 @@ def build_from_template(
     lineup: Lineup,
     start_positions: dict[PlayerId, PitchPoint],
     outcome: str | None = None,
+    opponent_lineup: Lineup | None = None,
 ) -> Sequence:
     """Moteur générique partagé par les 12 gabarits (voir en bas de fichier
     pour leurs wrappers `build_xxx`). Fonction PURE : mêmes entrées, même
@@ -796,7 +880,11 @@ def build_from_template(
     `template.has_ball_flight`, un segment de vol est ajouté après le
     dernier segment porté -- voir `_flight_target`. `outcome in
     ("tacle", "degagement")` : aucun vol (action interrompue avant le tir),
-    voir `_NO_FLIGHT_OUTCOMES`."""
+    voir `_NO_FLIGHT_OUTCOMES`.
+
+    `opponent_lineup` (Phase 6, B8-b) : compo de l'équipe qui encaisse, OPTIONNELLE. Fournie (par `narrative_player`), elle permet de moduler
+    les contrôles au sol par la pression adverse et la qualité technique du récepteur (voir `_insert_ground_controls`) ; `None` (défaut,
+    tous les autres appelants) : comportement de B8-a, bit à bit."""
     _validate_template(template)
 
     role_names = tuple(role.name for role in template.roles)
@@ -878,34 +966,52 @@ def build_from_template(
         )
 
     event_ref = f"goal:{event.club_name}:{event.scorer}:{event.minute}"
-    keyframes = _insert_ground_controls(template, keyframes, players_by_id, event_ref)  # B8-a : segment de contrôle à chaque réception au sol
     duration = template.duration
 
+    # Plan du vol, calculé AVANT l'insertion des contrôles (qui ne touche ni le dernier keyframe ni son ballon) : la cible du ballon et la
+    # durée totale servent à situer les adversaires (B8-b), exactement comme le fera `enrich_with_background`.
+    flight: tuple[tuple[float, float, float], float] | None = None
     if outcome is not None and template.has_ball_flight:
         strike = strike_type_for(template.name, event_ref)
         target = _penalty_target(outcome, event_ref, strike) if template.name == "penalty" else _flight_target(outcome, event_ref)
         if target is not None:
-            target_x, target_y, target_z = target
-            start_z = keyframes[-1].ball.z
-            distance_m = _flight_distance_m((last_ball_xy.x, last_ball_xy.y, start_z), (target_x, target_y, target_z))
+            distance_m = _flight_distance_m((last_ball_xy.x, last_ball_xy.y, keyframes[-1].ball.z), target)
             speed_mps = strike_speed_for(strike, event_ref)
-            flight_duration = distance_m / speed_mps if speed_mps > 0 else 0.0
-            flight_start_players = keyframes[-1].players
-            keyframes[-1] = replace(
-                keyframes[-1],
-                physics_tag=BALL_FLIGHT,
-                ball=replace(keyframes[-1].ball, spin=strike_spin_for(strike, event_ref)),
+            flight = (target, distance_m / speed_mps if speed_mps > 0 else 0.0)
+
+    pressure_context = None
+    if opponent_lineup is not None and template.ground_control:
+        from ligue1sim.animation.sequence_generator import nearest_opponent_distance_m, opponent_field_tracks  # import tardif : sequence_generator importe ce module
+        from ligue1sim.coaches import coach_styles
+
+        ball_target = (flight[0][0], flight[0][1]) if flight else (keyframes[-1].ball.x, keyframes[-1].ball.y)
+        total_duration = duration + (flight[1] if flight else 0.0)
+        tracks = opponent_field_tracks(opponent_lineup, event_ref, ball_target)
+        pressure_context = _PressureContext(
+            distance_at=lambda point, t: nearest_opponent_distance_m(tracks, point, t, total_duration),
+            pressing_style="Pressing" in coach_styles(opponent_lineup.club_name),
+            recuperation_haute=(template.name == "recuperation_haute"),
+        )
+    keyframes = _insert_ground_controls(template, keyframes, players_by_id, event_ref, pressure_context)  # B8-a : segment de contrôle à chaque réception au sol
+
+    if flight is not None:
+        (target_x, target_y, target_z), flight_duration = flight
+        flight_start_players = keyframes[-1].players
+        keyframes[-1] = replace(
+            keyframes[-1],
+            physics_tag=BALL_FLIGHT,
+            ball=replace(keyframes[-1].ball, spin=strike_spin_for(strike, event_ref)),
+        )
+        keyframes.append(
+            Keyframe(
+                t=duration + flight_duration,
+                ball=BallState(x=target_x, y=target_y, z=target_z, spin=0.0, owner_id=None),
+                players=flight_start_players,
+                tag="vol",
+                physics_tag=None,
             )
-            keyframes.append(
-                Keyframe(
-                    t=duration + flight_duration,
-                    ball=BallState(x=target_x, y=target_y, z=target_z, spin=0.0, owner_id=None),
-                    players=flight_start_players,
-                    tag="vol",
-                    physics_tag=None,
-                )
-            )
-            duration += flight_duration
+        )
+        duration += flight_duration
 
     return Sequence(
         event_ref=event_ref,
@@ -1346,33 +1452,38 @@ TEMPLATES: dict[str, Template] = {
 
 
 def build_contre_attaque(
-    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None
+    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None,
+    opponent_lineup: Lineup | None = None,
 ) -> Sequence:
-    return build_from_template(TEMPLATES["contre_attaque"], event, lineup, start_positions, outcome)
+    return build_from_template(TEMPLATES["contre_attaque"], event, lineup, start_positions, outcome, opponent_lineup)
 
 
 def build_construction_placee(
-    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None
+    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None,
+    opponent_lineup: Lineup | None = None,
 ) -> Sequence:
-    return build_from_template(TEMPLATES["construction_placee"], event, lineup, start_positions, outcome)
+    return build_from_template(TEMPLATES["construction_placee"], event, lineup, start_positions, outcome, opponent_lineup)
 
 
 def build_debordement_centre_tete(
-    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None
+    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None,
+    opponent_lineup: Lineup | None = None,
 ) -> Sequence:
-    return build_from_template(TEMPLATES["debordement_centre_tete"], event, lineup, start_positions, outcome)
+    return build_from_template(TEMPLATES["debordement_centre_tete"], event, lineup, start_positions, outcome, opponent_lineup)
 
 
 def build_percee_individuelle(
-    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None
+    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None,
+    opponent_lineup: Lineup | None = None,
 ) -> Sequence:
-    return build_from_template(TEMPLATES["percee_individuelle"], event, lineup, start_positions, outcome)
+    return build_from_template(TEMPLATES["percee_individuelle"], event, lineup, start_positions, outcome, opponent_lineup)
 
 
 def build_une_deux(
-    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None
+    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None,
+    opponent_lineup: Lineup | None = None,
 ) -> Sequence:
-    return build_from_template(TEMPLATES["une_deux"], event, lineup, start_positions, outcome)
+    return build_from_template(TEMPLATES["une_deux"], event, lineup, start_positions, outcome, opponent_lineup)
 
 
 def free_kick_spot(event_ref: str) -> PitchPoint:
@@ -1420,7 +1531,8 @@ def free_kick_runup_start(event_ref: str) -> PitchPoint:
 
 
 def build_coup_franc(
-    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None
+    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None,
+    opponent_lineup: Lineup | None = None,
 ) -> Sequence:
     """Phase 6, B7-a : le ballon est posé au point du coup franc (`free_kick_spot`, la zone de l'événement n'est plus lue) et le
     tireur s'élance depuis un point d'élan (`free_kick_runup_start`). Le gabarit est reconstruit PAR ÉVÉNEMENT (le point varie)."""
@@ -1430,25 +1542,28 @@ def build_coup_franc(
     base = TEMPLATES["coup_franc"]
     template = replace(base, ball_position=tuple((t, (spot.x, spot.y)) for t, _ in base.ball_position))
     starts = {**start_positions, player_id_of(scorer): free_kick_runup_start(event_ref)}
-    return build_from_template(template, event, lineup, starts, outcome)
+    return build_from_template(template, event, lineup, starts, outcome, opponent_lineup)
 
 
 def build_corner(
-    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None
+    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None,
+    opponent_lineup: Lineup | None = None,
 ) -> Sequence:
-    return build_from_template(TEMPLATES["corner"], event, lineup, start_positions, outcome)
+    return build_from_template(TEMPLATES["corner"], event, lineup, start_positions, outcome, opponent_lineup)
 
 
 def build_profondeur_1v1(
-    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None
+    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None,
+    opponent_lineup: Lineup | None = None,
 ) -> Sequence:
-    return build_from_template(TEMPLATES["profondeur_1v1"], event, lineup, start_positions, outcome)
+    return build_from_template(TEMPLATES["profondeur_1v1"], event, lineup, start_positions, outcome, opponent_lineup)
 
 
 def build_recuperation_haute(
-    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None
+    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None,
+    opponent_lineup: Lineup | None = None,
 ) -> Sequence:
-    return build_from_template(TEMPLATES["recuperation_haute"], event, lineup, start_positions, outcome)
+    return build_from_template(TEMPLATES["recuperation_haute"], event, lineup, start_positions, outcome, opponent_lineup)
 
 
 # Brief "real Magnus effect" (23/09/2026), Tâche 3, puis Phase 6 B5 (08/10/2026) : le spin de la frappe enroulée n'est plus
@@ -1457,9 +1572,10 @@ def build_recuperation_haute(
 # `BUILDERS` reste inchangé. DETTE (voir `docs/ball_flight_design.md`, "Dette connue") : résidu de vitesse 3D instantanée
 # > 35 m/s possible (pic dû à la décélération de B1 ; 140 vols sur 1 259 en B5, tous `shot_tendu`), voir docs/phase6_block_b_audit.md.
 def build_decalage_enroulee(
-    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None
+    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None,
+    opponent_lineup: Lineup | None = None,
 ) -> Sequence:
-    return build_from_template(TEMPLATES["decalage_enroulee"], event, lineup, start_positions, outcome)
+    return build_from_template(TEMPLATES["decalage_enroulee"], event, lineup, start_positions, outcome, opponent_lineup)
 
 
 def penalty_runup_start(event_ref: str) -> PitchPoint:
@@ -1474,20 +1590,22 @@ def penalty_runup_start(event_ref: str) -> PitchPoint:
 
 
 def build_penalty(
-    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None
+    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None,
+    opponent_lineup: Lineup | None = None,
 ) -> Sequence:
     """Phase 6, B6-a : le ballon est posé au point de penalty réglementaire (la zone de l'événement n'est plus lue) et le
     tireur s'élance depuis un point d'élan (`penalty_runup_start`) : seule la position de départ du tireur est remplacée."""
     scorer = _resolve_roles(event, lineup, ("scorer",))["scorer"]
     event_ref = f"goal:{event.club_name}:{event.scorer}:{event.minute}"
     starts = {**start_positions, player_id_of(scorer): penalty_runup_start(event_ref)}
-    return build_from_template(TEMPLATES["penalty"], event, lineup, starts, outcome)
+    return build_from_template(TEMPLATES["penalty"], event, lineup, starts, outcome, opponent_lineup)
 
 
 def build_but_gag(
-    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None
+    event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None,
+    opponent_lineup: Lineup | None = None,
 ) -> Sequence:
-    return build_from_template(TEMPLATES["but_gag"], event, lineup, start_positions, outcome)
+    return build_from_template(TEMPLATES["but_gag"], event, lineup, start_positions, outcome, opponent_lineup)
 
 
 BUILDERS: dict[str, Callable[..., Sequence]] = {
