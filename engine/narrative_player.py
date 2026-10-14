@@ -218,7 +218,7 @@ def _build_clip(
     # narrative.py) -- seul changement dans ce fichier, aucune autre
     # modification.
     sequence = BUILDERS[event.gabarit](goal_event, scorer_lineup, start_positions, event.outcome)
-    sequence = enrich_with_background(sequence, opponent_lineup)
+    sequence = enrich_with_background(sequence, opponent_lineup, event.outcome)
 
     step = 1.0 / _FPS
     frames: list[FrameState] = []

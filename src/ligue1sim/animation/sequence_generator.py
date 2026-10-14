@@ -24,7 +24,15 @@ import random
 from dataclasses import dataclass, replace
 
 from ligue1sim.animation.spatial import PitchLayoutState, placed_player_to_normalized
-from ligue1sim.animation.templates import BUILDERS, context_from_event, numeros_by_player_id, pick_template, player_id_of
+from ligue1sim.animation.templates import (
+    BUILDERS,
+    context_from_event,
+    numeros_by_player_id,
+    penalty_ball_side,
+    pick_template,
+    player_id_of,
+    strike_type_for,
+)
 from ligue1sim.animation.types import BackgroundTrack, PlayerId, RosterEntry, Sequence
 from ligue1sim.events import GoalEvent, PlayerMatchStat
 from ligue1sim.lineup import Lineup
@@ -190,6 +198,57 @@ def _gk_base_position(team_side: str) -> tuple[float, float]:
     advance = _GK_BASE_ADVANCE_M / PITCH_LENGTH_M
     x = advance if team_side == "scorer" else 1.0 - advance
     return (x, _GK_BASE_Y)
+
+
+# --- Phase 6, B6-d (14/10/2026) : réaction du gardien sur penalty, Option 2 stricte -------------------------------------
+# Seul le DRIFT du gardien adverse change (amplitude et côté), uniquement pour le gabarit `penalty` : le contrat `Sequence`
+# (types.py, serialize.py, motion.py) est intact, donc AUCUN délai de réaction ni durée de plongeon (Bloc A, A1.2). Constantes
+# validées par le propriétaire. Tout est tiré par sha256 de `player_id|event_ref|sel` (`_event_unit`).
+_GK_PENALTY_MAX_M = (2.2, 2.8)  # maximum d'amplitude tiré par événement (sel `gk_amp`) ; 2,8 m = borne dure, sous les poteaux (3,66 m)
+_GK_PENALTY_WRONG_P = {"penalty_fort": 0.5, "penalty_place": 0.4, "penalty_contre_pied": 1.0}  # but : part du mauvais côté, par type (2d) -- donne 0,3*0,5 + 0,5*0,4 + 0,2*1 = 55 % au global (2c)
+_GK_PENALTY_WRONG_AMP = (0.40, 0.90)  # but, mauvais côté : fraction du maximum (sel `gk_amp_wrong`)
+_GK_PENALTY_SHORT_REACH = (0.40, 0.75)  # but, bon côté : fraction de la distance requise (sel `gk_short`), jamais le ballon
+_GK_PENALTY_MISS_AMP = (0.40, 1.00)  # hors cadre / poteau / barre : fraction du maximum (sel `gk_amp_miss`)
+_GK_PENALTY_MISS_OUTCOMES = ("hors_cadre", "poteau", "barre")
+
+
+def _span(unit: float, lo_hi: tuple[float, float]) -> float:
+    return lo_hi[0] + unit * (lo_hi[1] - lo_hi[0])
+
+
+def _penalty_gk_drift(player_id: PlayerId, event_ref: str, ball_y: float, outcome: str | None) -> tuple[float, float]:
+    """Drift latéral `(0.0, dy)` du gardien adverse sur un penalty (B6-d). `ball_y` : y final du ballon (normalisé).
+
+    CONVENTION B6-b AJUSTÉE (côté du gardien vs côté du ballon, `templates.penalty_ball_side`) : sur `penalty_contre_pied`, le
+    gardien s'engage du côté OPPOSÉ au ballon, sauf si l'issue est un arrêt, auquel cas il finit du côté du ballon. Le
+    « contre-pied » décrit la trajectoire de la frappe, pas le plongeon d'un arrêt.
+
+    `outcome=None` (appel sans issue : scripts, tests) : amplitude seule, vers le ballon, fraction `drift_y` du maximum.
+    Arrêt : bon côté, atteint le y du ballon (plafonné à `_GK_PENALTY_MAX_M[1]`). But : mauvais côté avec la probabilité du type
+    (`_GK_PENALTY_WRONG_P`), sinon bon côté mais court. Hors cadre / poteau / barre : côté 50/50 (sel `gk_side_miss`), toujours
+    opposé pour un contre-pied. Toute autre issue : comme sans issue."""
+    cap_m = _GK_PENALTY_MAX_M[1]
+    max_m = _span(_event_unit(player_id, event_ref, "gk_amp"), _GK_PENALTY_MAX_M)
+    ball_dy_m = (ball_y - _GK_BASE_Y) * PITCH_WIDTH_M
+    ball_side = math.copysign(1.0, ball_dy_m) if ball_dy_m else float(penalty_ball_side(event_ref))
+    required_m = min(abs(ball_dy_m), cap_m)
+    contre_pied = strike_type_for("penalty", event_ref).name == "penalty_contre_pied"
+
+    if outcome == "arret":
+        dy_m = ball_side * required_m if ball_dy_m else 0.0
+    elif outcome == "but":
+        wrong_p = _GK_PENALTY_WRONG_P[strike_type_for("penalty", event_ref).name]
+        if _event_unit(player_id, event_ref, "gk_side") < wrong_p:
+            dy_m = -ball_side * _span(_event_unit(player_id, event_ref, "gk_amp_wrong"), _GK_PENALTY_WRONG_AMP) * max_m
+        else:
+            dy_m = ball_side * _span(_event_unit(player_id, event_ref, "gk_short"), _GK_PENALTY_SHORT_REACH) * required_m
+    elif outcome in _GK_PENALTY_MISS_OUTCOMES:
+        toward_ball = not contre_pied and _event_unit(player_id, event_ref, "gk_side_miss") < 0.5
+        dy_m = (ball_side if toward_ball else -ball_side) * _span(_event_unit(player_id, event_ref, "gk_amp_miss"), _GK_PENALTY_MISS_AMP) * max_m
+    else:  # sans issue : amplitude seule, plancher de dérive conservé (ballon à l'axe -> `_tactical_drift` donnait déjà 0 avant le plancher)
+        dy_m = ball_side * _event_unit(player_id, event_ref, "drift_y") * max_m if ball_dy_m else 0.0
+        return _floor_drift_magnitude(0.0, dy_m / PITCH_WIDTH_M, player_id, event_ref)
+    return (0.0, dy_m / PITCH_WIDTH_M)
 
 
 def _deterministic_unit(key: object, salt: str) -> float:
@@ -426,7 +485,7 @@ def _opponent_positions(opponent_lineup: Lineup) -> dict[PlayerId, PitchPoint]:
     return positions
 
 
-def enrich_with_background(sequence: Sequence, opponent_lineup: Lineup) -> Sequence:
+def enrich_with_background(sequence: Sequence, opponent_lineup: Lineup, outcome: str | None = None) -> Sequence:
     """Complète une `Sequence` déjà produite (par `generate_sequence`, ou
     directement un gabarit) avec les joueurs "décor" : le reste de l'équipe
     qui marque (`sequence.roster` sans rôle de gabarit) et les 11 adverses
@@ -447,7 +506,10 @@ def enrich_with_background(sequence: Sequence, opponent_lineup: Lineup) -> Seque
     équipe, le `start` de formation est remplacé par `_gk_base_position`
     (brief "gardien actif" 1/2, 24/09/2026) ; (5) étend `roster` avec les
     11 adverses (numéro dérivé via `templates.numeros_by_player_id`,
-    `team_side="opponent"`)."""
+    `team_side="opponent"`).
+
+    `outcome` (B6-d) : issue de l'occasion (`NarrativeEvent.outcome`), lue SEULEMENT pour le gardien adverse d'un penalty
+    (`_penalty_gk_drift`). `None` (défaut, tous les appelants hors `narrative_player`) : amplitude seule. Aucun effet hors penalty."""
     active_ids = {player_id for player_id, entry in sequence.roster.items() if entry.role is not None}
     inactive_scorer_ids = set(sequence.roster) - active_ids
     ball_target = (sequence.keyframes[-1].ball.x, sequence.keyframes[-1].ball.y)
@@ -483,7 +545,10 @@ def enrich_with_background(sequence: Sequence, opponent_lineup: Lineup) -> Seque
     for player_id, point in opponent_positions.items():
         player = opponent_by_id[player_id]
         start = _gk_base_position("opponent") if player.poste == GOALKEEPER else (point.x, point.y)
-        drift = _tactical_drift(player.poste, player_id, "opponent", start, ball_target, opponent_cb_drift, sequence.event_ref)
+        if player.poste == GOALKEEPER and sequence.meta.get("template") == "penalty":
+            drift = _penalty_gk_drift(player_id, sequence.event_ref, ball_target[1], outcome)
+        else:
+            drift = _tactical_drift(player.poste, player_id, "opponent", start, ball_target, opponent_cb_drift, sequence.event_ref)
         background[player_id] = BackgroundTrack(start=start, drift=drift)
         opponent_roster[player_id] = RosterEntry(
             nom=player.name,
