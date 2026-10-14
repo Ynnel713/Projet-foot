@@ -1087,3 +1087,56 @@ La graine 5 ne contient qu'un penalty (contre-pied, arrêt) : les autres cas vie
 ### 16.6 Statut
 
 **B7 clos.** Prochain bloc : B8 (contrôles variés), diagnostic d'abord.
+
+
+---
+
+## 17. B8-a — Contrôles au sol : récapitulatif de clôture (14/10/2026)
+
+**Principe.** Une réception au sol était un keyframe où le ballon se collait au centre du joueur : un contrôle de durée zéro, à distance zéro. B8-a insère, à chaque réception au sol des gabarits concernés, un segment de contrôle (pied naturel, pied faible ou semelle) : le ballon arrive au pied du joueur, le geste dure quelques dixièmes de seconde, puis la conduite reprend. Le contrôle approximatif ou lourd est un **effet visuel seul** : le ballon s'échappe puis est repris, le porteur reste le même et l'issue sportive n'est jamais modifiée. Le moteur de Poisson n'est pas touché ; le NLG n'est pas exposé au type de contrôle (ticket 40).
+
+### 17.1 Périmètre et constantes
+
+- **Périmètre.** 7 gabarits actifs : `but_gag`, `construction_placee`, `contre_attaque`, `decalage_enroulee`, `profondeur_1v1`, `recuperation_haute`, `une_deux`. `corner` et `debordement_centre_tete` (`Template.ground_control = False`) sont renvoyés à B8-c : leur réception est aérienne (poitrine, tête). `coup_franc`, `penalty` et `percee_individuelle` n'ont aucune réception.
+- **Geste (passe au sol).** Pied naturel 85 %, pied faible 10 %, semelle 5 %. La semelle n'existe que si le ballon arrive à 8 m/s au plus ; au-delà, pied naturel et pied faible gardent leurs poids relatifs. Pied fort : `Player.pied` s'il est connu, sinon tiré par sha256 de `player_id` (droitier à 78 %) ; le pied faible est le pied opposé.
+- **Contrôle approximatif.** 10 % au pied naturel, 35 % au pied faible, 0 % à la semelle.
+- **Contrôle lourd.** 2 % au pied naturel, 10 % au pied faible (rare sur le pied naturel, plus fréquent sur le pied faible). Constantes validées par le propriétaire ; `_CONTROL_LOOSE_HEAVY_P` dans `src/ligue1sim/animation/templates.py`.
+- **Distance ballon-joueur.** Propre 0,30 à 0,60 m ; approximatif 1 à 2 m ; lourd 2 à 3 m. Reprise du ballon échappé en 0,4 à 0,8 s ; sous 0,2 s disponibles, le contrôle redevient propre.
+- **Durée du geste.** Pied 0,15 à 0,25 s ; semelle 0,20 à 0,30 s. Angle de départ du ballon : pied 30 à 60° de l'axe de course (vers le pied qui contrôle), semelle 10 à 25°.
+- **Tirages.** Tout est tiré par sha256 de `event_ref` (`_flight_unit`), jamais par `random`.
+
+### 17.2 Mesures (100 matchs, graines 1 à 100)
+
+- **Couverture.** 987 clips avec contrôle explicite sur 1 586 (62,2 %), tous dans les 7 gabarits actifs. 1 708 réceptions : 88,7 % pied naturel, 10,2 % pied faible, 1,1 % semelle. Parmi elles, 1 544 propres, 138 approximatives, 26 lourdes.
+- **Distance.** 0,30 à 0,60 m (propre), 1,00 à 2,00 m (approximatif), 2,00 à 2,98 m (lourd). Vitesse d'arrivée du ballon : médiane 10,8 m/s, p90 20,8 m/s.
+- **Déplacement du porteur pendant le contrôle** (1 681 fenêtres ; différence, fenêtre par fenêtre, entre le clip avec contrôle et le même clip sans) : médiane 0,005 m, 90e centile 0,43 m, 99e centile 1,14 m, maximum 1,94 m ; 138 fenêtres (8,2 %) au-dessus de 0,5 m. Le déplacement lui-même (jusqu'à 6,30 m avec contrôle, 5,85 m sans) vient des gabarits, où un porteur en course parcourt plusieurs mètres dans ces fenêtres, pas du contrôle. Aucune exception `motion.py`. Vigilance : si le rendu paraît bizarre sur `une_deux` (course rapide), un ticket sera ouvert.
+
+### 17.3 Vérifications
+
+| Vérification | Résultat |
+|---|---|
+| Déterminisme (scores, événements du moteur, événements narratifs, nombre de clips) | **100 / 100** identiques à HEAD ; deux exécutions du code actuel identiques entre elles |
+| Sérialisation JSON (clés et types, 71 variantes de structure) | empreinte identique à HEAD |
+| Empreintes de gabarits (`test_templates.py`) | 7 recalculées ; cause unique : avec `ground_control` désactivé, les 12 gabarits redonnent exactement les empreintes de HEAD |
+| Tests témoins (`test_narrative_player.py`) | `but_gag`, `construction_placee`, `contre_attaque` recalculés ; cause unique : avec l'insertion neutralisée, retour exact aux empreintes précédentes |
+| `pytest tests` sur l'export de l'index | **1 543 passés, 5 ignorés**, 0 échec |
+| `npm run build` / `npm run lint` | OK ; code de sortie 0, 5 avertissements |
+
+### 17.4 Commits
+
+| Commit | Contenu |
+|---|---|
+| `250b71e` | Code : segment de contrôle au sol sur les 7 gabarits avec réception (`templates.py`) |
+| `927f470` | Tests : adaptation de `test_ball.py` (résolution des tags avec keyframes insérés), `test_narrative_player.py` (3 témoins), `test_templates.py` (7 empreintes) |
+| `174dc71` | Ticket 40 : exposer le type de contrôle au NLG (chantier de type B6-e), ouvert |
+
+### 17.5 Notes
+
+- **Écarts acceptés.** 1 552 événements narratifs mesurés par le script de déterminisme au lieu des 1 586 de la référence (écart d'appariement connu depuis B6-d, cohérent entre les trois exécutions) ; durées et nombre de frames non comparés sur les 100 matchs (la structure, identique sur 71 variantes, est une preuve plus forte).
+- **Tests hors périmètre initial, validés par le propriétaire.** `tests/test_ball.py` (le test de résolution des tags suppose un keyframe par `t_ratio` du gabarit) et `tests/test_narrative_player.py` (empreintes des trois clips témoins).
+- **Renvoyé à B8-b.** Modulation du tirage du contrôle par la pression et la qualité technique (First Touch, Technique, Composure). **Renvoyé à B8-c.** Poitrine, tête, exception `ball.py`, `corner` et `debordement_centre_tete`.
+- **Tickets.** 40 ouvert (type de contrôle exposé au NLG). 30 (cohérence joueur-ballon) reste pour le Bloc A, A1.6.
+
+### 17.6 Statut
+
+**B8-a clos.** Prochaine étape : B8-b (pression et qualité technique), diagnostic d'abord.
