@@ -1027,3 +1027,63 @@ La graine 5 ne contient qu'un penalty (contre-pied, arrêt) : les autres cas vie
 ### 15.5 Statut
 
 **B6-e clos.** Ticket 23 fermé.
+
+
+---
+
+## 16. B7 — Coups francs directs : point exact, mur, gardien : récapitulatif de clôture (14/10/2026)
+
+**Principe.** Un coup franc direct partait d'une case de la grille perturbée (31 à 53 m du but, médiane 45 m), le ballon était conduit par le tireur, aucun mur n'existait, le vol traversait tout ce qui se trouvait sur sa route et le gardien suivait un glissement générique. B7 donne au coup franc sa géométrie, un mur, un profil de hauteur, un blocage et un gardien cohérent avec l'issue, **sans toucher au moteur de Poisson ni au contrat du NLG** : l'issue (but, arrêt, hors cadre, poteau, barre, tacle, dégagement) est décidée en amont et n'est jamais modifiée.
+
+### 16.1 Les quatre sous-blocs
+
+- **B7-a, point et types de frappe.** Point du coup franc tiré par sha256 de `event_ref` : distance au but de max(18 ; √(16,5² + y²)) à 30 m (le ballon reste hors de la surface), décalage latéral de 0 à 12 m, côté tiré par hachage. Ballon posé (z = 0, immobile) jusqu'à la frappe ; élan du tireur de 4 à 7 m (frappé ±10°, enroulé 20 à 40°), chronologie de B6-a. Deux types internes : `coup_franc_enroule` (64,7 %, 24 à 30 m/s, spin 45 à 70 rad/s, 75 % rentrant, nom NLG `shot_enroule_leger`) et `coup_franc_frappe` (35,3 %, 28 à 35 m/s, spin ±5 rad/s, nom NLG `shot_tendu`). Le 15 % de coups francs indirects n'existe pas encore : sa part est renormalisée.
+- **B7-b, mur statique.** 5 joueurs si le ballon est à 20 m du but ou moins, 4 jusqu'à 26 m, 3 au-delà ; à 9,15 m du ballon sur la ligne ballon → centre du but ; écartement de 1,5 m + 1 µm (un micromètre au-dessus du seuil d'évitement de `motion.py`, qui n'est donc jamais modifié) ; les n adversaires de champ les plus proches, jamais le gardien ; une dérive latérale unique partagée par tout le mur (0,2 à 0,5 m).
+- **B7-c, mur actif.** Les tirs franchissent le mur par une bosse de hauteur (≥ 2,1 m au passage, sommet tiré dans 2,2 à 3,0 m, nulle à la ligne de but pour ne pas changer l'issue) ; les coups francs d'issue `tacle` ou `dégagement` (seules issues que le mur peut contrarier) sont bloqués : le ballon part vers le mur, le heurte (face à 8,9 m, sous 2,0 m de haut, dans l'emprise n × 1,5 m) et repart vers le terrain (restitution 0,30 à 0,50, au moins 1 m/s). La trace est l'événement `degagement` existant, placé au point d'impact. Angle de déviation de ±45° sur la normale à l'origine.
+- **B7-d, gardien et angle.** Départ à 1,0 à 2,0 m de la ligne (3,0 m ailleurs), décalé de 1,0 à 2,0 m du côté du ballon ; dérive cohérente avec l'issue (logique de B6-d) ; position finale bornée à 2,5 m du centre ; angle de déviation du mur ramené à ±22,5°.
+
+### 16.2 Mesures (100 matchs réels de Ligue 1, graines 1 à 100, appariement de B6-a : 46 coups francs, dont 35 avec frappe et 11 `tacle` / `dégagement`)
+
+- **Point et élan (B7-a)** : distance au but de 18,4 à 29,9 m (médiane 22,9 m), décalage latéral au plus 11,9 m, profondeur au moins 16,9 m (0 dans la surface), ballon posé 46 sur 46, élan de 4,1 à 6,8 m (médiane 5,7 m), vitesse de course au plus 2,1 m/s. Répartition des types sur 1 000 matchs (384 coups francs) : 62,0 % d'enroulés, IC à 95 % [57,0 ; 66,7] : la cible de 64,7 % est dans l'intervalle (le 58,7 % des 100 premiers matchs était du bruit d'échantillonnage).
+- **Mur (B7-b)** : 8 murs de 5 joueurs, 25 de 4, 13 de 3 (0 écart avec la règle) ; écartement 1,5 m + 1 µm sur toute la durée (écart au plus 2e-14 m) ; distance minimale mur-autres joueurs 1,500001 m (positions brutes, 101 instants par clip) ; dérive de 0,21 à 0,49 m, partagée dans 46 cas sur 46.
+- **Tirs (B7-c)** : sur 35 tirs avec vol, 31 coupent le mur, tous à 2,12 m ou plus (2,12 à 2,80 m) ; les 4 autres sont des hors cadre qui passent à 4,7 m ou plus de l'axe. 11 coups francs `tacle` / `dégagement` sur 11 bloqués, impact entre 8,89 et 8,91 m, retour vers le terrain 11 sur 11. Les clips bloqués durent de 7,6 à 9,6 s (5,0 s avant).
+- **Gardien (B7-d)** : départ de 1,02 à 1,99 m de la ligne (médiane 1,35 m sur 46 cas ; le test sur 4 000 tirages donne 1,5 ± 0,05 m), décalage de 1,01 à 1,96 m, du côté du ballon dans 46 cas sur 46 ; dérive au plus 2,80 m, position finale au plus 2,50 m du centre, aucune dérive en profondeur. Arrêt : bon côté 14 sur 14, y du ballon atteint 12 sur 14 (les 2 autres plafonnés, écart au plus 0,52 m). But : mauvais côté 5 sur 9. Hors cadre, poteau, barre : vers le ballon 7 sur 12 (règle codée 50/50, test à ±3 points sur 4 000 tirages). Angle de sortie après le mur : médiane 13° et maximum 45° d'écart à l'axe de retour sur les 11 cas réels ; sur 900 coups francs simulés, médiane 22°, maximum 61°, 8 % au-delà de 45°, 0 % au-delà de 60° (avec ±45° : médiane 44°, 48 % au-delà de 45°, 30 % au-delà de 60°).
+
+### 16.3 Vérifications
+
+| Vérification | Résultat |
+|---|---|
+| Déterminisme (scores, événements du moteur, chronologie, nombre d'événements narratifs : 1 586) | **100 / 100** identiques à B6-e et au commit précédent de chaque sous-bloc |
+| Deux exécutions de l'arbre | identiques |
+| Clips modifiés | B7-b : les 38 graines qui contiennent un coup franc (62 graines sur 100 inchangées) ; B7-c : 42 clips sur 1 586 ; B7-d : 46 clips sur 1 586 ; **tous des coups francs**, aucun autre gabarit |
+| Sérialisation JSON (clés, types, durées de vol) | inchangée (contrôle sur les graines des captures) |
+| `pytest tests --ignore=simulafoot_nlg` sur l'export de l'index (état final) | **1 532 passés, 5 ignorés (venv du NLG absent de l'export, ticket 32), 12 désélectionnés** |
+| `npm run build` / `npm run lint` | OK ; 0 erreur, 5 avertissements |
+
+### 16.4 Commits
+
+| Commit | Contenu |
+|---|---|
+| `b0bb60c` | B7-a : point de coup franc exact, ballon posé, types de frappe directs |
+| `d1614fa` | Ticket 30 : note B7-a (ballon posé et immobile jusqu'à la frappe) |
+| `ab826b6` | B7-b : construction du mur statique sur coup franc |
+| `396411b` | Tests B7-b : taille, alignement, dérive partagée, autres gabarits |
+| `5582b96` | B7-c : mur actif, profil de hauteur, blocage tacle / dégagement (exception `ball.py` et `ball_events.py`) |
+| `71ac316` | B7-c : correction de `tests/test_narrative_player.py` (tacle / dégagement de coup franc prolongés) |
+| `b2c6037` | Ticket 38 : type dédié « mur » à envisager |
+| `eaac0df` | B7-d : gardien de coup franc, angle de déviation réduit (exception `ball_events.py`) |
+
+### 16.5 Notes
+
+- **Mauvais côté sur un but : 31 % pour un coup franc, 55 % pour un penalty.** Constantes de B6-d reprises (0,35 pour l'enroulé, 0,25 pour le frappé), pondérées par la répartition 64,7 / 35,3 : environ 31 %. Le penalty est à 55 % parce que le gardien doit deviner la direction sans lecture préalable ; sur un coup franc direct, il a plus de temps pour lire la trajectoire. Écart cohérent avec le football réel, noté ici sans ticket. Dans les 69 % restants, le gardien part du bon côté mais arrive trop court.
+- **Règle des ratés (hors cadre, poteau, barre).** Côté tiré à 50/50 (`toward_ball = unité < 0,5`), sans condition de type de frappe ; au penalty, un contre-pied part toujours du côté opposé.
+- **Exceptions de périmètre, toutes validées avant commit** : `ball.py` et `ball_events.py` (B7-c), `ball_events.py` (B7-d, une constante), `tests/test_nlg_ingestion.py` (B7-a, validé a posteriori), `tests/test_narrative_player.py` (B7-c).
+- **Représentation.** Le mur est écarté de 1,5 m, le diamètre d'un rond à l'écran est d'environ 3,3 m : les ronds se chevauchent, c'est la représentation d'un mur serré vu de dessus. La hauteur n'est visible que par la taille du ballon (vue de dessus).
+- **Limites, renvoyées au Bloc A.** Pas de plongeon ni de délai de réaction du gardien (A1.2) : la dérive suit toute la durée du clip, et à la frappe le gardien a déjà parcouru 88 à 97 % de son mouvement. Pas de replacement ni de relance après blocage (les joueurs sont figés après la fin de la séquence). Sortie du gardien en profondeur non retenue. Coup franc indirect absent (second rôle nécessaire).
+- **Tickets.** 30 : note B7-a (la définition d'un contact réel reste pour A1.6). 27 (tireur de penalty qui dépasse le ballon) reste ouvert : l'élan de coup franc ne reproduit pas le dépassement (écart nul sur 46 cas). 38 (ouvert) : type dédié « mur » à envisager pour les coups francs bloqués, qui émettent aujourd'hui l'événement `degagement`.
+- **Angle de sortie du mur.** ±45° donnait des sorties presque latérales (30 % au-delà de 60° d'écart à l'axe de retour sur 900 cas, par exemple −94° en graine 5) ; ramené à ±22,5° par le propriétaire.
+- **Événement `touche`.** Avec ±45°, 4 coups francs bloqués sur 180 simulés sortaient en touche après le mur (clip prolongé d'une seconde) ; non remesuré avec ±22,5°.
+
+### 16.6 Statut
+
+**B7 clos.** Prochain bloc : B8 (contrôles variés), diagnostic d'abord.
