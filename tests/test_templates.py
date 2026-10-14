@@ -749,21 +749,27 @@ class TestTemplateStructureUnchangedByPhysicsTags:
     penalty : le ballon est posé au point du coup franc (`ball_position`, tiré de `event_ref`) au lieu de suivre le tireur, et le
     tireur part d'un point d'élan (4 à 7 m) au lieu de sa position de formation avancée de 80 %, avec les keyframes 0.25 (attente)
     et 0.8 (élan). Preuve de cause unique : avec l'ancien gabarit remis, le code redonne exactement l'ancienne empreinte
-    (65652dc1...)."""
+    (65652dc1...).
+
+    Sixième exception délibérée (Phase 6, B8-a, 14/10/2026) : sept gabarits ont une empreinte mise à jour (`but_gag`, `construction_placee`,
+    `contre_attaque`, `decalage_enroulee`, `profondeur_1v1`, `recuperation_haute`, `une_deux`) -- chaque réception au sol reçoit un segment de
+    contrôle (keyframes insérés, ballon décalé du joueur, tags `controle_<geste>`). Preuve de cause unique : avec `Template.ground_control`
+    à `False` sur les 12 gabarits, le code redonne exactement les 12 anciennes empreintes. `corner` et `debordement_centre_tete` (réception aérienne,
+    B8-c), `coup_franc`, `penalty` et `percee_individuelle` (aucune réception) gardent la leur."""
 
     _EXPECTED_STRUCTURE_HASH = {
-        "but_gag": "f41d49b564e507476892e0c8dc83e1a4a980e461357b4e9f6d158126c86184d1",
-        "construction_placee": "bd570f855aa35b4cf9d2c714e22ffc76a379b8b2a8f0c7e3e713603aee4bff37",
-        "contre_attaque": "718658a38fd6623511674dfbe38e588fb184d3d33f59a49ad50c58c60874b50b",
+        "but_gag": "82585674d2a0633eced9f75a39ee5e914643a8c1b25a47d545fc70c8965e29db",
+        "construction_placee": "65b5ad5b7323521829e6c056ae2d3f43df29bfb79f46336be1fe4437565bf0ae",
+        "contre_attaque": "4273ab175e79155b86d96e879cc9ecb93fa85d675f48e93151212d8050c34b1f",
         "corner": "cfc642378285192fb8f4e59ce0a6ec25679b837b273293de8e82e3f1641e7293",
         "coup_franc": "ff70b15275eb85d5baefeb5acea5f4a81e25319618a6e25cc978600aca72f959",
         "debordement_centre_tete": "06543fdddb12bdc4959eb29b0ca83b146bc5f8e312e233f196c9df1225658819",
-        "decalage_enroulee": "7baa9bcc8f4e6f703650a8aef2ca0250701b3305f3948481d924b4ce10e8b403",
+        "decalage_enroulee": "bc960f8f29e583ad06e16a3c1749222f74900c73f25888f401ebe15695dfa46d",
         "penalty": "7972e9a2d7afe7e1caa593950d3b7fa5e7cde43195b04a14bcc0c77a0b38a888",
         "percee_individuelle": "4fd4c5ef14c5b020821ecf2638a54c0e58c5a8a35e11001e66b458b4cd1633ca",
-        "profondeur_1v1": "dd55a79b69a71bf4436c06f08f195a4be89b66ff555ef3117b148b85b88443a7",
-        "recuperation_haute": "4232271529fc19842275569741dfd639830cd03682cbe914ef31464edb40e810",
-        "une_deux": "1d6d30fc696daa9e9e8324b204231f8612a2b20d575e7bbd8eee148c94cca5d5",
+        "profondeur_1v1": "f8678e12337a02d11163ac0e8830b303682ccccb8bcf00f5ae2634268e65b469",
+        "recuperation_haute": "a63fbaec00fc77ef1aaf1a99c743dd9bffdb5a4c47fd2bf65dad09f06751cd8b",
+        "une_deux": "202c14b7feab0b93b529151d0cd1b505cccb57bb4c479e51f98266a08fc9a22b",
     }
 
     def _structure_hash(self, name: str) -> str:
@@ -1143,3 +1149,218 @@ def test_penalty_ball_side_is_deterministic_and_balanced():
     sides = [penalty_ball_side(r) for r in refs]
     assert sides == [penalty_ball_side(r) for r in refs] and set(sides) == {1, -1}
     assert abs(sum(1 for v in sides if v > 0) - 200) <= 40
+
+
+class TestGroundControls:
+    """Phase 6, B8-a : chaque réception AU SOL reçoit un segment de contrôle explicite (geste tiré par sha256 : pied naturel, pied faible,
+    semelle) -- ballon à 0,3-0,6 m du joueur du côté du pied, geste de 0,15 à 0,30 s, ballon échappé de 1 à 3 m puis repris (0,4 à 0,8 s) pour un
+    contrôle approximatif ou lourd, EFFET VISUEL SEUL (le porteur ne change pas). `corner` et `debordement_centre_tete` (réception aérienne :
+    B8-c), `coup_franc`, `penalty` et `percee_individuelle` (aucune réception) ne changent pas."""
+
+    _CONTROLLED = ("but_gag", "construction_placee", "contre_attaque", "decalage_enroulee", "profondeur_1v1", "recuperation_haute", "une_deux")
+    _UNTOUCHED = ("corner", "debordement_centre_tete", "coup_franc", "penalty", "percee_individuelle")
+    _GESTURES = ("pied_naturel", "pied_faible", "semelle")
+
+    @staticmethod
+    def _lineup_with_foot(foot):
+        import dataclasses
+
+        lineup = _lineup()
+        if foot is None:
+            return lineup
+        return dataclasses.replace(lineup, players=[dataclasses.replace(p, pied=foot) for p in lineup.players])
+
+    def _build(self, name, minute=34, club="Test FC", foot=None, controls=True, outcome="but"):
+        import dataclasses
+
+        lineup = self._lineup_with_foot(foot)
+        event = dataclasses.replace(_goal_event(penalty=(name == "penalty"), minute=minute), club_name=club)
+        starts = _start_positions(lineup)
+        if controls:
+            return BUILDERS[name](event, lineup, starts, outcome)
+        return build_from_template(dataclasses.replace(TEMPLATES[name], ground_control=False), event, lineup, starts, outcome)
+
+    @staticmethod
+    def _is_control_tag(tag):
+        return tag.startswith("controle_pied") or tag.startswith("controle_semelle")
+
+    @staticmethod
+    def _metres(kf, player_id):
+        x, y = kf.players[player_id]
+        return x * PITCH_LENGTH_M, y * 68.0
+
+    @staticmethod
+    def _ball_player_distance_m(kf):
+        px, py = kf.players[kf.ball.owner_id]
+        return math.hypot((kf.ball.x - px) * PITCH_LENGTH_M, (kf.ball.y - py) * 68.0)
+
+    def _windows(self, sequence):
+        """(indice, geste, qualité, final) de chaque contrôle, lu sur les tags des keyframes."""
+        windows = []
+        for j, kf in enumerate(sequence.keyframes):
+            if not self._is_control_tag(kf.tag):
+                continue
+            body = kf.tag[len("controle_"):]
+            quality = "propre"
+            for suffix, label in (("_approximatif", "approximatif"), ("_lourd", "lourd")):
+                if body.endswith(suffix):
+                    body, quality = body[: -len(suffix)], label
+            owner_changed = j >= 1 and sequence.keyframes[j - 1].ball.owner_id != kf.ball.owner_id
+            windows.append((j, body, quality, owner_changed))
+        return windows
+
+    def test_every_ground_reception_has_an_explicit_control_of_positive_duration(self):
+        for name in self._CONTROLLED:
+            for minute in range(1, 41):
+                sequence = self._build(name, minute)
+                frames = sequence.keyframes
+                receptions = [j for j in range(1, len(frames)) if frames[j].ball.owner_id is not None and frames[j].ball.owner_id != frames[j - 1].ball.owner_id]
+                assert receptions, (name, minute)
+                for j in receptions:
+                    at_reception = self._is_control_tag(frames[j].tag)  # réception finale : la fenêtre précède le keyframe de frappe
+                    following = j + 1 < len(frames) and self._is_control_tag(frames[j + 1].tag)
+                    assert at_reception or following, (name, minute, j, frames[j].tag)
+                    nxt = frames[j + 1] if j + 1 < len(frames) else None
+                    assert nxt is not None and nxt.t - frames[j].t > 0.0
+
+    def test_templates_without_ground_reception_have_no_control(self):
+        for name in self._UNTOUCHED:
+            for minute in range(1, 21):
+                assert not any(self._is_control_tag(kf.tag) for kf in self._build(name, minute).keyframes), name
+
+    def test_other_keyframes_players_and_owners_are_unchanged(self):
+        for name in self._CONTROLLED:
+            for minute in (5, 41, 77):
+                with_controls, without = self._build(name, minute), self._build(name, minute, controls=False)
+                original = {kf.t: kf for kf in without.keyframes}
+                kept = [kf for kf in with_controls.keyframes if kf.t in original]
+                assert len(kept) == len(without.keyframes), (name, minute)  # aucun keyframe d'origine n'a bougé dans le temps
+                for kf in kept:
+                    assert kf.players == original[kf.t].players
+                    assert kf.ball.owner_id == original[kf.t].ball.owner_id
+
+    def test_times_strictly_increase_and_inserted_players_lie_between_their_neighbours(self):
+        for name in self._CONTROLLED:
+            for minute in range(1, 31):
+                sequence = self._build(name, minute)
+                times = [kf.t for kf in sequence.keyframes]
+                assert all(b > a for a, b in zip(times, times[1:])), (name, minute)
+                original = {kf.t for kf in self._build(name, minute, controls=False).keyframes}
+                for j, kf in enumerate(sequence.keyframes):
+                    if kf.t in original:
+                        continue
+                    a, b = sequence.keyframes[j - 1], sequence.keyframes[j + 1]
+                    f = (kf.t - a.t) / (b.t - a.t)
+                    for pid, (x, y) in kf.players.items():
+                        assert x == pytest.approx(a.players[pid][0] + (b.players[pid][0] - a.players[pid][0]) * f)
+                        assert y == pytest.approx(a.players[pid][1] + (b.players[pid][1] - a.players[pid][1]) * f)
+
+    def test_control_keyframes_keep_the_receiver_as_carrier_on_the_ground(self):
+        for name in self._CONTROLLED:
+            for minute in range(1, 31):
+                sequence = self._build(name, minute)
+                for j, *_ in self._windows(sequence):
+                    kf = sequence.keyframes[j]
+                    assert kf.ball.owner_id is not None and kf.ball.z == 0.0 and kf.ball.spin == 0.0
+
+    def test_distances_and_durations_follow_the_validated_constants(self):
+        seen = Counter()
+        for name in self._CONTROLLED:
+            for minute in range(1, 91):
+                for club in ("Test FC", "Club B", "Club C"):
+                    sequence = self._build(name, minute, club)
+                    frames = sequence.keyframes
+                    for j, gesture, quality, final in self._windows(sequence):
+                        if quality != "propre" and self._is_control_tag(frames[j - 1].tag):
+                            # ballon échappé d'une réception FINALE : le keyframe de frappe sert de reprise (le ballon revient au joueur)
+                            low, high = (1.0, 2.0) if quality == "approximatif" else (2.0, 3.0)
+                            assert low - 1e-6 <= self._ball_player_distance_m(frames[j]) <= high + 1e-6
+                            assert 0.2 - 1e-6 <= frames[j + 1].t - frames[j].t <= 0.8 + 1e-6
+                            continue
+                        seen[(gesture, quality)] += 1
+                        duration_range = (0.20, 0.30) if gesture == "semelle" else (0.15, 0.25)
+                        if final:
+                            if quality == "propre":
+                                assert 0.55 - 1e-6 <= self._ball_player_distance_m(frames[j]) <= 0.85 + 1e-6  # arrivée : 0,25 m de plus que l'amorti
+                                assert duration_range[0] - 1e-6 <= frames[j + 1].t - frames[j].t <= duration_range[1] + 1e-6
+                            continue
+                        arrival = self._ball_player_distance_m(frames[j - 1])  # keyframe de réception (juste avant le premier inséré)
+                        assert 0.55 - 1e-6 <= arrival <= 0.85 + 1e-6
+                        gesture_duration = frames[j].t - frames[j - 1].t
+                        assert duration_range[0] - 1e-6 <= gesture_duration <= duration_range[1] + 1e-6
+                        distance = self._ball_player_distance_m(frames[j])
+                        if quality == "propre":
+                            assert 0.30 - 1e-6 <= distance <= 0.60 + 1e-6
+                        else:
+                            low, high = (1.0, 2.0) if quality == "approximatif" else (2.0, 3.0)
+                            assert low - 1e-6 <= distance <= high + 1e-6
+                            assert frames[j + 1].tag == "reprise_conduite"
+                            assert 0.2 - 1e-6 <= frames[j + 1].t - frames[j].t <= 0.8 + 1e-6  # reprise de 0,4 à 0,8 s (réduite si l'intervalle manque de place)
+                            assert 0.30 - 1e-6 <= self._ball_player_distance_m(frames[j + 1]) <= 0.60 + 1e-6
+        assert {g for g, _ in seen} == set(self._GESTURES)
+        assert {q for _, q in seen} == {"propre", "approximatif", "lourd"}
+
+    def test_gesture_distribution_and_the_sole_speed_limit(self):
+        from ligue1sim.animation.templates import _control_gesture, _flight_unit
+
+        n = 20000
+        slow = Counter(_control_gesture(5.0, _flight_unit(f"ref{i}", "gesture")) for i in range(n))
+        assert abs(slow["pied_naturel"] / n - 0.85) <= 0.01 and abs(slow["pied_faible"] / n - 0.10) <= 0.01 and abs(slow["semelle"] / n - 0.05) <= 0.01
+        fast = Counter(_control_gesture(8.01, _flight_unit(f"ref{i}", "gesture")) for i in range(n))
+        assert fast["semelle"] == 0  # jamais de semelle au-delà de 8 m/s
+        assert abs(fast["pied_naturel"] / n - 0.85 / 0.95) <= 0.01
+        assert _control_gesture(8.0, 0.99) == "semelle"  # 8 m/s exactement : permis
+
+    def test_side_follows_the_strong_foot_and_flips_for_the_weak_foot(self):
+        checked = Counter()
+        for foot in ("D", "G"):
+            for name in self._CONTROLLED:
+                for minute in range(1, 61):
+                    sequence = self._build(name, minute, foot=foot)
+                    frames = sequence.keyframes
+                    for j, gesture, quality, final in self._windows(sequence):
+                        owner = frames[j].ball.owner_id
+                        if final:
+                            if quality != "propre":
+                                continue
+                            before, after = frames[j], frames[j + 1]
+                        else:
+                            if quality != "propre":
+                                continue
+                            before, after = frames[j - 1], frames[j]
+                        (ax, ay), (bx, by) = self._metres(before, owner), self._metres(after, owner)
+                        move = math.hypot(bx - ax, by - ay)
+                        if move < 0.05:
+                            continue  # joueur immobile : cap par défaut, côté non mesurable ici
+                        hx, hy = (bx - ax) / move, (by - ay) / move
+                        probe = frames[j] if final else frames[j]
+                        px, py = self._metres(probe, owner)
+                        off_x, off_y = probe.ball.x * PITCH_LENGTH_M - px, probe.ball.y * 68.0 - py
+                        right = off_x * (-hy) + off_y * hx  # > 0 : à droite du joueur (axe y vers le bas à l'écran)
+                        strong_right = foot == "D"
+                        expected_right = strong_right if gesture != "pied_faible" else not strong_right
+                        assert (right > -1e-9) if expected_right else (right < 1e-9), (foot, name, minute, gesture, right)
+                        checked[(foot, gesture)] += 1
+        assert checked[("D", "pied_naturel")] > 20 and checked[("G", "pied_naturel")] > 20
+        assert checked[("D", "pied_faible")] > 0 and checked[("G", "pied_faible")] > 0
+
+    def test_unknown_foot_is_drawn_by_hash_about_78_percent_right_footed(self):
+        from ligue1sim.animation.templates import _strong_foot
+
+        players = [_player("MC", 70.0, f"p{i}", 1000 + i) for i in range(4000)]
+        right = sum(_strong_foot(p, p.id) == "D" for p in players)
+        assert abs(right / len(players) - 0.78) <= 0.03
+        assert all(_strong_foot(p, p.id) == _strong_foot(p, p.id) for p in players[:50])  # déterministe
+
+    def test_known_foot_is_used_as_is(self):
+        import dataclasses
+
+        from ligue1sim.animation.templates import _strong_foot
+
+        base = _player("MC", 70.0, "x", 1)
+        assert _strong_foot(dataclasses.replace(base, pied="G"), 1) == "G"
+        assert _strong_foot(dataclasses.replace(base, pied="D"), 1) == "D"
+
+    def test_controls_are_deterministic(self):
+        for name in self._CONTROLLED:
+            assert self._build(name, 41).to_json() == self._build(name, 41).to_json()

@@ -490,11 +490,17 @@ class TestAccelerationConstraintOnRealGabarits:
 # Preuve que ce relèvement est la SEULE cause : avec `_MIN_DRIFT_MAGNITUDE_M = 0.1`, le code actuel redonne exactement les empreintes d'A3 :
 # but_gag ("178cb5423d50d5e5", "625839a8feaefc0b"), construction_placee ("154a539bf8f77445", ...), contre_attaque ("fb2cd12d94c9a31c", ...),
 # corner ("8b9f3e342c4d0d34", "b9a32dd3ebd7562e"), percee_individuelle ("72fa884e6d046ec8", ...).
+# Phase 6, B8-a (14/10/2026) : chaque réception au sol reçoit un segment de contrôle (`templates._insert_ground_controls`), ce qui ajoute des
+# keyframes et déplace les joueurs actifs pendant le geste ; les empreintes de but_gag, construction_placee et contre_attaque sont recalculées
+# (corner et percee_individuelle inchangés : réception aérienne / aucune réception). Preuve que B8-a est la SEULE cause : avec
+# `_insert_ground_controls` neutralisé (identité), le code actuel redonne exactement les empreintes d'avant :
+# but_gag ("d08dadff3471f811", "c7acfb230b442645"), construction_placee ("9e0fcb91c8afb6f8", ...), contre_attaque ("06d519a0433e127a", ...).
+# Mesure sur 100 matchs : le déplacement du porteur pendant la fenêtre vient des gabarits (max 5,85 m sans contrôle, 6,30 m avec) ; aucune exception motion.py.
 _WITNESS_DIGESTS = {
     # gabarit: (empreinte des images brutes `interpolate`, empreinte après contrainte d'accélération)
-    "but_gag": ("d08dadff3471f811", "c7acfb230b442645"),
-    "construction_placee": ("9e0fcb91c8afb6f8", "9e0fcb91c8afb6f8"),
-    "contre_attaque": ("06d519a0433e127a", "06d519a0433e127a"),
+    "but_gag": ("2adb64758544b738", "5413574bb0047c48"),
+    "construction_placee": ("ff696c5902800e79", "b89f6245b693bd81"),
+    "contre_attaque": ("b08cb2b75e7031cd", "a23371edfce032df"),
     "corner": ("f05064d66238d5db", "39a32789ddad7788"),
     "percee_individuelle": ("e81f855c96b7ccfe", "e81f855c96b7ccfe"),
 }

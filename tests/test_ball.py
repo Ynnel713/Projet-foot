@@ -802,7 +802,19 @@ class TestFallbackInferenceOnRealTemplates:
         t_ratios = sorted({frame.t_ratio for role in template.roles for frame in role.frames})
         last_t_ratio = t_ratios[-1]
 
-        for i, kf in enumerate(sequence.keyframes[:-1]):
+        # B8-a : `_insert_ground_controls` intercale des keyframes de contrôle (tags `controle_*` / `reprise_conduite`) après chaque
+        # réception au sol. On ne compare que les keyframes D'ORIGINE (un par t_ratio) ; le tag qui pilote le segment jusqu'au keyframe
+        # d'origine suivant est celui du DERNIER keyframe du groupe (original + contrôles insérés), le premier segment étant un amorti.
+        groups: list[Keyframe] = []
+        for kf_ in sequence.keyframes:
+            if kf_.tag.startswith("controle_") or kf_.tag == "reprise_conduite":
+                groups[-1] = kf_
+            else:
+                groups.append(kf_)
+        # Une fenêtre de réception FINALE précède le keyframe de frappe : elle est insérée AVANT lui, donc rattachée au groupe précédent
+        # par la boucle ci-dessus, ce qui est bien le comportement voulu (le tag du dernier contrôle = tag du segment d'origine).
+        assert len(groups) == len(t_ratios)
+        for i, kf in enumerate(groups[:-1]):
             ratio = t_ratios[i]
             is_last_segment = t_ratios[i + 1] == last_t_ratio
             if ratio in explicit_by_ratio:
