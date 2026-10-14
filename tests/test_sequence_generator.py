@@ -661,3 +661,77 @@ class TestFreeKickWallGuard:
                         if other != wall_pid:
                             d = math.hypot((wx - ox) * PITCH_LENGTH_M, (wy - oy) * PITCH_WIDTH_M)
                             assert d >= 1.5, (minute, round(t, 2), wall_pid, other, d)
+
+
+class TestFreeKickWall:
+    """Phase 6, B7-b : mur d'un coup franc direct -- 3 / 4 / 5 adversaires de champ à 9,15 m du ballon sur la ligne ballon -> but, espacés de
+    1,5 m + 1 µm, dérive latérale PARTAGÉE de 0,2 à 0,5 m ; les autres gabarits ne sont pas touchés. Le garde-fou de non-collision est dans
+    `TestFreeKickWallGuard`."""
+
+    _MINUTES = range(1, 91)
+
+    def _enriched(self, minute):
+        from ligue1sim.animation.motion import _raw_position_at  # positions BRUTES : `interpolate` applique l'évitement, qui masquerait une collision
+        from ligue1sim.animation.sequence_generator import _free_kick_wall, _opponent_positions
+
+        lineup, opponent = _lineup(), _opponent_lineup()
+        sequence = BUILDERS["coup_franc"](_goal_event(assist=None, minute=minute), lineup, _start_positions(lineup, _pitch_layout_state(lineup)))
+        opp_positions = _opponent_positions(opponent)
+        by_id = {player_id_of(p): p for p in opponent.players}
+        members, drift = _free_kick_wall(sequence, opp_positions, by_id)
+        enriched = enrich_with_background(sequence, opponent)
+        return sequence, enriched, members, drift, _raw_position_at
+
+    @staticmethod
+    def _metres(point):
+        return point[0] * PITCH_LENGTH_M, point[1] * PITCH_WIDTH_M
+
+    def test_size_follows_the_distance_rule_and_the_goalkeeper_is_excluded(self):
+        sizes = set()
+        for minute in self._MINUTES:
+            sequence, enriched, members, _drift, _raw = self._enriched(minute)
+            ball = sequence.keyframes[0].ball
+            distance_m = math.hypot((1.0 - ball.x) * PITCH_LENGTH_M, (0.5 - ball.y) * PITCH_WIDTH_M)
+            expected = 5 if distance_m <= 20.0 else 4 if distance_m <= 26.0 else 3
+            assert len(members) == expected, (minute, distance_m, len(members))
+            assert all(enriched.roster[pid].poste != "GK" for pid in members)
+            sizes.add(expected)
+        assert sizes == {3, 4, 5}
+
+    def test_the_wall_is_aligned_at_9_15_m_on_the_ball_goal_line_with_1_5_m_spacing_for_the_whole_clip(self):
+        for minute in self._MINUTES:
+            sequence, enriched, members, _drift, raw = self._enriched(minute)
+            ball = self._metres((sequence.keyframes[0].ball.x, sequence.keyframes[0].ball.y))
+            goal = (PITCH_LENGTH_M, PITCH_WIDTH_M / 2.0)
+            line = math.hypot(goal[0] - ball[0], goal[1] - ball[1])
+            ux, uy = (goal[0] - ball[0]) / line, (goal[1] - ball[1]) / line
+            for t in (0.0, sequence.duration / 2.0, sequence.duration):
+                points = sorted((self._metres(raw(enriched, pid, t)) for pid in members), key=lambda p: -uy * p[0] + ux * p[1])
+                centre = (sum(p[0] for p in points) / len(points), sum(p[1] for p in points) / len(points))
+                for p in points:  # perpendiculaire à la ligne du tir : projection sur l'axe du tir identique pour tous
+                    assert (p[0] - ball[0]) * ux + (p[1] - ball[1]) * uy == pytest.approx(9.15, abs=0.6)  # la dérive (<= 0,5 m) est latérale
+                for a, b in zip(points, points[1:]):
+                    assert math.hypot(b[0] - a[0], b[1] - a[1]) == pytest.approx(1.5 + 1e-6, abs=1e-9), (minute, t)
+                assert abs((centre[0] - ball[0]) * -uy + (centre[1] - ball[1]) * ux) <= 0.5 + 1e-6  # centré sur la ligne, au décalage de dérive près
+
+    def test_the_drift_is_shared_lateral_and_respects_the_floor(self):
+        for minute in self._MINUTES:
+            sequence, enriched, members, drift, _raw = self._enriched(minute)
+            assert members
+            for pid in members:
+                assert enriched.background[pid].drift == drift
+            magnitude_m = math.hypot(drift[0] * PITCH_LENGTH_M, drift[1] * PITCH_WIDTH_M)
+            assert _MIN_DRIFT_MAGNITUDE_M - 1e-9 <= magnitude_m <= _MAX_DRIFT_FLOOR_M + 1e-9
+            ball = sequence.keyframes[0].ball
+            to_goal = ((1.0 - ball.x) * PITCH_LENGTH_M, (0.5 - ball.y) * PITCH_WIDTH_M)
+            along_m = (drift[0] * PITCH_LENGTH_M * to_goal[0] + drift[1] * PITCH_WIDTH_M * to_goal[1]) / math.hypot(*to_goal)
+            assert abs(along_m) < 1e-9  # latérale : aucune composante le long du tir
+
+    def test_other_templates_are_untouched(self):
+        lineup, opponent = _lineup(), _opponent_lineup()
+        for name in sorted(BUILDERS):
+            if name == "coup_franc":
+                continue
+            sequence = BUILDERS[name](_goal_event(), lineup, _start_positions(lineup, _pitch_layout_state(lineup)))
+            tracks = enrich_with_background(sequence, opponent).background
+            assert all(math.hypot(t.drift[0] * PITCH_LENGTH_M, t.drift[1] * PITCH_WIDTH_M) >= _MIN_DRIFT_MAGNITUDE_M - 1e-9 for t in tracks.values())
