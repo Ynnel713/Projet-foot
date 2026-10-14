@@ -922,3 +922,43 @@ Les 5 empreintes figées de `tests/test_narrative_player.py` (`_WITNESS_DIGESTS`
 ### 13.6 Statut
 
 **B6-c clos.** Prochaine étape : B6-d (réaction du gardien).
+
+## 14. B6-d — Réaction du gardien sur penalty : amplitude et côté (14/10/2026)
+
+**Principe (Option 2 stricte).** Seul le drift du gardien adverse change, et seulement pour le gabarit `penalty` (`sequence_generator._penalty_gk_drift`). Le contrat `Sequence` est intact (`types.py`, `serialize.py`, `motion.py`, `templates.py` non modifiés) : **pas de délai de réaction ni de durée de plongeon** (le clip de 4 s s'arrête sur la frappe, le vol est calculé après ; le vrai plongeon relève du Bloc A, A1.2). Tout est tiré par sha256 de `player_id|event_ref|sel` (`gk_amp`, `gk_side`, `gk_amp_wrong`, `gk_short`, `gk_side_miss`, `gk_amp_miss`).
+
+**Convention B6-b ajustée.** Sur `penalty_contre_pied`, le gardien s'engage du côté opposé au ballon, sauf si l'issue est un arrêt, auquel cas il finit du côté du ballon. Le « contre-pied » décrit la trajectoire de la frappe, pas le plongeon d'un arrêt. Documentée dans la docstring de `_penalty_gk_drift` ; la docstring de `templates.penalty_ball_side` (hors périmètre) n'est pas modifiée.
+
+**Exception ponctuelle (propriétaire, Cas C, option C1).** L'issue n'était accessible ni par `enrich_with_background` ni par `Sequence` (`meta` ne la porte pas, `event_ref` non plus). Une ligne de `engine/narrative_player.py` (`_build_clip`) passe désormais `event.outcome` à `enrich_with_background(sequence, opponent_lineup, outcome=None)`. Gardes-fous : aucune autre modification de `narrative_player.py` ; le défaut `outcome=None` est conservé (scripts, `apps/streamlit_preview.py` et tests inchangés) ; la sérialisation ne change pas (`meta` intact). Sans issue : amplitude seule, plancher de dérive conservé.
+
+**Constantes (validées par le propriétaire).** Maximum 2,2 à 2,8 m par événement (borne dure 2,8 m, poteaux à 3,66 m). Arrêt : bon côté à 100 %, atteint le y du ballon. But : mauvais côté avec P = 0,5 (fort) / 0,4 (placé) / 1,0 (contre-pied), soit 55 % au global ; mauvais côté à 40-90 % du maximum ; bon côté mais court à 40-75 % de la distance requise. Hors cadre / poteau / barre : côté 50/50 (`gk_side_miss`), toujours opposé pour un contre-pied, amplitude 40-100 % du maximum.
+
+### 14.1 Mesures (100 matchs de Ligue 1 réelle, graines 1 à 100, `PYTHONHASHSEED=0`)
+
+**Écart d'échantillon.** Mon harnais tire les deux clubs de chaque graine avec `random.Random(graine).sample` : 1 531 événements narratifs et 31 penaltys, et non les 1 586 événements / 34 penaltys des mesures précédentes (appariement d'origine non retrouvé, 5 variantes essayées). Les comparaisons avant / après portent sur cet échantillon.
+
+- Penaltys : 31 (24 buts, 5 arrêts, 1 hors cadre, 1 barre ; 15 placés, 9 forts, 7 contre-pieds).
+- Arrêts avec le gardien du bon côté : **5 / 5**.
+- Buts avec le gardien du mauvais côté : **13 / 24 (54 %)** pour 55 % attendus (fort 2 / 6, placé 6 / 13, contre-pied 5 / 5).
+- Déplacement effectif : 0,47 à 2,35 m (avant : jusqu'à 2,46 m) ; le maximum tiré par événement est dans [2,2 ; 2,8] par construction, le déplacement effectif en est une fraction.
+- 25 graines ont un clip modifié, toutes celles qui contiennent un penalty ; les 75 autres sont identiques au HEAD.
+
+### 14.2 Vérifications
+
+| Vérification | Résultat |
+|---|---|
+| Scores, événements du moteur, 1 531 événements narratifs (HEAD contre arbre modifié) | **100 / 100** identiques |
+| Deux exécutions de l'arbre modifié (empreintes de tous les clips, positions des penaltys) | **identiques** |
+| Sérialisation JSON (graine 3, 18 clips, ancien comportement contre nouveau) | structure identique ; un seul clip diffère, uniquement par ses images |
+| `pytest tests --ignore=simulafoot_nlg` | **1 498 passés, 12 désélectionnés** (compte différent des 1 493 / 5 ignorés de B6-c : les 5 ignorés passent dans cet environnement) |
+| `npm run build` / `npm run lint` | OK ; 0 erreur, 5 avertissements |
+
+### 14.3 Limites
+
+- Pas de test ajouté (le périmètre autorisé ne contenait pas les fichiers de tests).
+- Captures avant / après non produites dans cette étape.
+- Ticket 27 (dépassement du tireur) : pas de lien trouvé avec le gardien, reste ouvert pour le Bloc A.
+
+### 14.4 Statut
+
+**B6-d implémenté.** En attente de validation du propriétaire avant B6-e.
