@@ -1140,3 +1140,72 @@ La graine 5 ne contient qu'un penalty (contre-pied, arrêt) : les autres cas vie
 ### 17.6 Statut
 
 **B8-a clos.** Prochaine étape : B8-b (pression et qualité technique), diagnostic d'abord.
+
+
+---
+
+## 18. B8-b — Contrôles au sol : modulation par la pression et la qualité technique, récapitulatif de clôture (14/10/2026)
+
+**Principe.** Dans B8-a, le contrôle approximatif ou lourd était tiré à probabilités fixes. B8-b les module par la **pression** adverse à la réception et la **qualité technique** du récepteur : un joueur sous pression avec un pied faible rate plus souvent, un joueur technique sans pression réussit presque toujours. La modulation **redistribue** les taux autour de ceux de B8-a (pied naturel 10 %, pied faible 35 %), elle ne les augmente pas. L'issue sportive n'est jamais modifiée, le moteur de Poisson n'est pas touché, le NLG n'est pas exposé (ticket 40).
+
+### 18.1 Formules et constantes (validées par le propriétaire)
+
+- **Pression** `p` ∈ [0 ; 1] = 0,5 × `p_d` + 0,3 × `p_v` + 0,2 × `p_c`.
+  - `p_d` (proximité de l'adversaire de champ le plus proche à la réception) : 1 à 1,5 m ou moins, 0 à 8 m ou plus, linéaire entre les deux.
+  - `p_v` (vitesse d'arrivée du ballon) : 0 à 12 m/s ou moins, 1 à 24 m/s ou plus, linéaire entre les deux.
+  - `p_c` (contexte) : 0,5 si l'adversaire a le style Pressing (`coaches.coach_styles`), plus 0,5 pour le gabarit `recuperation_haute` ; cumulables, plafonnés à 1.
+- **Qualité** `q` = (1 − 0,5 `p`) × `q_base` + 0,5 `p` × Composure, avec `q_base` = 0,6 × First Touch + 0,4 × Technique. Valeur neutre 59 si un des trois attributs manque.
+- **Contrôle approximatif** : `P_approx` = base + 0,25 × (`p` − 0,15) − 0,12 × (`q` − 59) / 20 [− 0,06 × (`weak_foot` − 3) au pied faible], bornée à [1 % ; 60 %]. Bases : pied naturel 10 %, pied faible 35 %, semelle 0 % (la semelle n'est jamais modulée). `p̄` = 0,15.
+- **Contrôle lourd** proportionnel : `P_lourd` = base_lourd × `P_approx` / base_approx, plafonné à 25 % (bases 2 % pied naturel, 10 % pied faible).
+- **Sans `opponent_lineup`** (tous les appelants hors `narrative_player`) : aucune modulation, comportement de B8-a bit à bit.
+
+### 18.2 Mise en œuvre
+
+- **`src/ligue1sim/animation/templates.py`** : constantes, indice de pression, qualité, modulation ; paramètre `opponent_lineup=None` dans `build_from_template` et dans les 12 wrappers. Le plan du vol (cible du ballon, durée totale) est calculé avant l'insertion des contrôles, pour situer les adversaires comme le fera `enrich_with_background`.
+- **`src/ligue1sim/animation/sequence_generator.py`** (exception validée) : deux fonctions ajoutées, `opponent_field_tracks` et `nearest_opponent_distance_m`, qui recalculent les pistes des adversaires de champ avec le même code que `enrich_with_background` (non modifiée) ; un test vérifie qu'elles égalent `Sequence.background`.
+- **`engine/narrative_player.py`** (exception validée, une seule ligne) : `BUILDERS[event.gabarit](goal_event, scorer_lineup, start_positions, event.outcome)` devient `BUILDERS[event.gabarit](goal_event, scorer_lineup, start_positions, event.outcome, opponent_lineup)`.
+
+### 18.3 Mesures (100 matchs, audit `narrative_audit.py`, graine 20260923)
+
+Conditions : compos de l'audit avec des **attributs synthétiques** (First Touch N(58 ; 15), Technique corrélée à 0,83, Composure N(58 ; 12), `weak_foot` de 1 à 5) ; les clubs n'étant pas dans le fichier des entraîneurs, le style Pressing n'intervient pas (le contexte vient de `recuperation_haute`).
+
+- **Indice `p`** : calculé pour les 1 655 fenêtres au pied (1 469 pied naturel, 186 pied faible), toujours dans [0 ; 1] ; moyenne 0,167, médiane 0,10, 90e centile 0,49.
+- **Taux observés (approximatif / lourd)** : pied naturel 10,3 % / 2,0 % ; pied faible 35,5 % / 7,0 %. Taux attendus par la formule : 11,3 % / 2,3 % et 37,7 % / 10,8 %.
+- **Selon la pression** (pied naturel, approximatif attendu) : 8,0 % à `p` = 0 ; 9,8 % jusqu'à 0,15 ; 12,2 % jusqu'à 0,30 ; 15,3 % jusqu'à 0,50 ; 19,2 % au-delà.
+- **Selon la qualité** (pied naturel, approximatif attendu) : 22,1 % sous 45 ; 13,8 % de 45 à 59 ; 9,3 % de 59 à 70 ; 4,0 % de 70 à 80.
+- **Cas cibles.** Pied faible sous forte pression (`p` ≥ 0,5, 19 cas) : 47,4 %, au-dessus de 35 %. Pied naturel à `p` = 0,25 : 13,2 % attendu. `p` = 0 avec `q` ≥ 80 : **1 % attendu** par la formule et le test unitaire, **0 cas observé** sur l'échantillon (les attributs synthétiques n'atteignent pas 80 sans pression).
+- **Contrôle lourd** : proportionnel à l'approximatif, maximum observé 17,1 % (plafond 25 %).
+- **Clips modifiés** : 72 sur 1 552 (4,6 %), compos de l'audit sans attributs (qualité neutre : seule la pression agit) ; nombre de frames et durée identiques sur les 1 552 clips.
+- **Captures** (graine d'audit 20260923) : propre sous pression modérée (match 1, événement 6), propre sans pression avec un joueur technique (match 1, événement 8), approximatif sous pression modérée (match 3, événement 13), approximatif sous forte pression avec pied faible (match 4, événement 1 : ballon à 1,48 m au maximum, repris à 0,36 m). Aucun contrôle lourd n'est capturé.
+
+### 18.4 Vérifications
+
+| Vérification | Résultat |
+|---|---|
+| Déterminisme (scores, événements du moteur, événements narratifs : 1 552, nombre de clips) | **100 / 100** identiques à HEAD (B8-a) ; deux exécutions du code B8-b identiques entre elles |
+| Sérialisation JSON (clés et types, 71 variantes de structure) | empreinte identique à HEAD |
+| Frames et durée des clips | identiques sur les 1 552 clips |
+| `pytest tests` sur l'export de l'index | **1 561 passés, 5 ignorés**, 0 échec (1 543 de B8-a + 18 tests de B8-b) |
+| Test d'intégration de la transmission de l'issue et de la compo adverse (désélectionné par défaut) | passé (100 matchs) |
+| `npm run build` / `npm run lint` | OK ; code de sortie 0, 5 avertissements |
+
+### 18.5 Commits
+
+| Commit | Contenu |
+|---|---|
+| `55bc0f1` | Code : modulation par la pression et la qualité (`templates.py`, `sequence_generator.py`, `narrative_player.py`) |
+| `c43b8b6` | Tests : modulation (14), helper adverse (4), adaptation du test de transmission de l'issue |
+
+Le commit de cette section suit `c43b8b6`.
+
+### 18.6 Notes
+
+- **Écart accepté.** Pied faible à **35,5 % observé** contre **37,7 % attendu** par la formule. Cause : `weak_foot` est centré sur 3 alors que la moyenne de la population est 2,68 (soit environ +1,9 point sur les données réelles), et la pression moyenne observée (0,167) dépasse `p̄` (0,15). Aucune constante n'est ajustée.
+- **Test existant adapté.** `TestOutcomeTransmittedToTemplate` (`tests/test_narrative_player.py`, marqué `integration`) espionnait `build_from_template` avec cinq arguments ; il en accepte six et vérifie la transmission de la compo adverse.
+- **Limite.** La pression est mesurée sur la position du keyframe de réception, pas sur la position rendue (décalage de réaction et lissage de `motion.py`) ; l'écart entre ballon et joueur rendu relève du ticket 30 (A1.6).
+- **Joueurs sans `weak_foot`.** Ils reçoivent la qualité neutre et aucun ajustement du pied faible.
+- **Renvoyé à B8-c.** Poitrine, tête, exception `ball.py`, `corner` et `debordement_centre_tete`.
+
+### 18.7 Statut
+
+**B8-b clos.** Prochaine étape : B8-c (contrôles aériens), diagnostic d'abord.
