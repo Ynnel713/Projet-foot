@@ -538,6 +538,8 @@ appelé par les scripts, les tests et un éventuel paramètre de graine de l'API
 
 **Résolution prévue.** Bloc A, sous-section dédiée **A1.6 — Couplage joueur-ballon**, traitée après B6 avec le mouvement individuel des joueurs. À définir à ce moment : la notion de contact (distance maximale), la distance pendant un contrôle ou une conduite, et un test qui échoue dès qu'une accélération du ballon survient sans contact. Non corrigé : ticket de traçabilité.
 
+**Note pour A1.6 (décision du propriétaire, 14/10/2026).** La mesure ci-dessus montre que `ball.owner` ne peut pas servir de définition du contact : il est renseigné sur toutes les images, mais le ballon est à une distance médiane de 10,4 m (maximum 70 m) du joueur désigné. L'exigence « pas d'accélération sans contact » n'est donc ni vérifiée ni garantie. En A1.6, définir une **notion de contact réel** (distance ballon-joueur inférieure à un seuil, orientation, possession) et ne pas se fier à `ball.owner`.
+
 **Priorité.** Haute.
 
 **Statut.** Ouvert. Non corrigé.
