@@ -85,7 +85,7 @@ _WALL_BLOCK_Z_MAX_M = 1.8 + 0.2  # mur 1,80 m + marge : un ballon plus bas est b
 _WALL_AIM_Z_MARGIN_M = 0.3  # le point d'impact est tiré dans [0,3 ; `_WALL_BLOCK_Z_MAX_M` - 0,3] m
 _WALL_DRIFT_MARGIN_M = 0.5  # dérive latérale partagée du mur (<= 0,5 m, B7-b) : le point visé reste dans l'emprise réelle
 _WALL_RESTITUTION_RANGE = (0.30, 0.50)
-_WALL_MAX_DEFLECTION_DEG = 45.0
+_WALL_MAX_DEFLECTION_DEG = 22.5  # B7-d (14/10/2026) : 45 -> 22,5 (sur 900 coups francs bloqués, 30 % repartaient à plus de 60 degrés de l axe de retour)
 
 # Décalage latéral de référence de la parade : demi-largeur de la cible `arret` (`templates._flight_target` : y dans
 # [0,47 ; 0,53]) ; un tir au bord de cette zone donne l'angle maximal.
@@ -260,7 +260,7 @@ def _goal_crossing_time(sequence: Sequence) -> tuple[float, float, float]:
 def _wall_block_trajectory(sequence: Sequence) -> ReboundTrajectory:
     """Trajectoire d'un coup franc bloqué par le mur (B7-c) : vol balistique (gravité, friction de l'air) du ballon posé jusqu'à
     la face du mur, à un point tiré dans l'emprise du mur (n x 1,5 m, moins la dérive) et à moins de `_WALL_BLOCK_Z_MAX_M`, puis
-    réflexion sur le plan vertical du mur (normale tournée de +-45 degrés au plus, restitution 0,30 à 0,50, tirés par hachage de
+    réflexion sur le plan vertical du mur (normale tournée de +-22,5 degrés au plus, restitution 0,30 à 0,50, tirés par hachage de
     `event_ref`), puis rebonds au sol. Le ballon repart toujours vers le terrain (`_enforce_backward`, 1 m/s au moins). Le temps
     `tau` de la trajectoire part de la frappe (fin de `sequence`) : `contact` est le point d'impact sur le mur."""
     seed_key = sequence.event_ref

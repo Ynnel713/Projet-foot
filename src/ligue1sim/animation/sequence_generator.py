@@ -251,6 +251,64 @@ def _penalty_gk_drift(player_id: PlayerId, event_ref: str, ball_y: float, outcom
     return (0.0, dy_m / PITCH_WIDTH_M)
 
 
+# --- Phase 6, B7-d (14/10/2026) : gardien adverse d'un coup franc direct, même option « stricte » que B6-d ----------------------
+# Seuls changent le point de départ et le DRIFT du gardien, pour le seul gabarit `coup_franc` (aucun délai ni plongeon : Bloc A, A1.2).
+# Constantes validées par le propriétaire ; l'amplitude, le « mauvais côté » de repli, la portée courte et les ratés reprennent celles de
+# B6-d (`_GK_PENALTY_*`). Tout est tiré par sha256 de `player_id|event_ref|sel` (`_event_unit`).
+_GK_FREE_KICK_ADVANCE_M = (1.0, 2.0)  # avancée de départ depuis sa ligne, tirée par événement (sel `gk_fk_adv`) ; remplace `_GK_BASE_ADVANCE_M` (3,0 m) pour ce seul gabarit
+_GK_FREE_KICK_OFFSET_M = (1.0, 2.0)  # décalage latéral de départ, du côté du ballon (sel `gk_fk_offset`)
+_GK_FREE_KICK_WRONG_P = {"coup_franc_enroule": 0.35, "coup_franc_frappe": 0.25}  # but : part du mauvais côté, par type de frappe
+_GK_FREE_KICK_MAX_Y_M = _GK_LATERAL_MAX_M  # |y| final borné (2,5 m du centre, poteaux à 3,66 m) : le départ décalé ne doit pas pousser le gardien contre un poteau
+
+
+def _free_kick_gk_start(player_id: PlayerId, event_ref: str, ball_y: float) -> tuple[float, float]:
+    """Point de départ du gardien adverse sur coup franc (B7-d) : `_GK_FREE_KICK_ADVANCE_M` devant sa ligne, décalé de
+    `_GK_FREE_KICK_OFFSET_M` du côté du ballon (`ball_y` : y du ballon posé ; au centre exact, côté tiré par hachage)."""
+    advance_m = _span(_event_unit(player_id, event_ref, "gk_fk_adv"), _GK_FREE_KICK_ADVANCE_M)
+    offset_m = _span(_event_unit(player_id, event_ref, "gk_fk_offset"), _GK_FREE_KICK_OFFSET_M)
+    if ball_y != _GK_BASE_Y:
+        side = math.copysign(1.0, ball_y - _GK_BASE_Y)
+    else:
+        side = 1.0 if _event_unit(player_id, event_ref, "gk_fk_side") < 0.5 else -1.0
+    return (1.0 - advance_m / PITCH_LENGTH_M, _GK_BASE_Y + side * offset_m / PITCH_WIDTH_M)
+
+
+def _free_kick_gk_drift(
+    player_id: PlayerId, event_ref: str, start_y: float, target_y: float, outcome: str | None
+) -> tuple[float, float]:
+    """Drift latéral `(0.0, dy)` du gardien adverse sur un coup franc (B7-d), même logique que `_penalty_gk_drift`. `start_y` : y de
+    départ du gardien ; `target_y` : y final du ballon (la cible du tir, ou le point posé pour `tacle` / `degagement`).
+
+    Arrêt : bon côté, atteint le y du ballon (déplacement plafonné à `_GK_PENALTY_MAX_M[1]`). But : mauvais côté avec la probabilité du
+    type de frappe (`_GK_FREE_KICK_WRONG_P`), sinon bon côté mais court. Hors cadre / poteau / barre : côté 50/50. Toute autre issue
+    (`tacle`, `degagement`) ou sans issue : vers le ballon, fraction `drift_y` du maximum, plancher de dérive conservé. Dans tous les cas
+    la position finale reste à moins de `_GK_FREE_KICK_MAX_Y_M` du centre."""
+    cap_m = _GK_PENALTY_MAX_M[1]
+    max_m = _span(_event_unit(player_id, event_ref, "gk_amp"), _GK_PENALTY_MAX_M)
+    start_m = (start_y - _GK_BASE_Y) * PITCH_WIDTH_M
+    need_m = (target_y - _GK_BASE_Y) * PITCH_WIDTH_M - start_m  # déplacement signé qui amènerait le gardien au y du ballon
+    side = math.copysign(1.0, need_m) if need_m else (1.0 if _event_unit(player_id, event_ref, "gk_fk_side") < 0.5 else -1.0)
+    required_m = min(abs(need_m), cap_m)
+
+    if outcome == "arret":
+        dy_m = side * required_m
+    elif outcome == "but":
+        wrong_p = _GK_FREE_KICK_WRONG_P[strike_type_for("coup_franc", event_ref).name]
+        if _event_unit(player_id, event_ref, "gk_side") < wrong_p:
+            dy_m = -side * _span(_event_unit(player_id, event_ref, "gk_amp_wrong"), _GK_PENALTY_WRONG_AMP) * max_m
+        else:
+            dy_m = side * _span(_event_unit(player_id, event_ref, "gk_short"), _GK_PENALTY_SHORT_REACH) * required_m
+    elif outcome in _GK_PENALTY_MISS_OUTCOMES:
+        toward_ball = _event_unit(player_id, event_ref, "gk_side_miss") < 0.5
+        dy_m = (side if toward_ball else -side) * _span(_event_unit(player_id, event_ref, "gk_amp_miss"), _GK_PENALTY_MISS_AMP) * max_m
+    else:
+        dy_m = side * _event_unit(player_id, event_ref, "drift_y") * max_m
+        dy_m = max(-_GK_FREE_KICK_MAX_Y_M - start_m, min(_GK_FREE_KICK_MAX_Y_M - start_m, dy_m))
+        return _floor_drift_magnitude(0.0, dy_m / PITCH_WIDTH_M, player_id, event_ref)
+    dy_m = max(-_GK_FREE_KICK_MAX_Y_M - start_m, min(_GK_FREE_KICK_MAX_Y_M - start_m, dy_m))
+    return (0.0, dy_m / PITCH_WIDTH_M)
+
+
 def _deterministic_unit(key: object, salt: str) -> float:
     """Fraction déterministe dans [0, 1) -- même principe que
     `motion._start_offset` (hash sha256, jamais `hash()` ni `random`) :
@@ -590,10 +648,14 @@ def enrich_with_background(sequence: Sequence, opponent_lineup: Lineup, outcome:
     for player_id, point in opponent_positions.items():
         player = opponent_by_id[player_id]
         start = _gk_base_position("opponent") if player.poste == GOALKEEPER else (point.x, point.y)
+        if player.poste == GOALKEEPER and sequence.meta.get("template") == "coup_franc":
+            start = _free_kick_gk_start(player_id, sequence.event_ref, sequence.keyframes[0].ball.y)  # B7-d : départ moins avancé, côté ballon
         if player_id in wall_starts:
             start, drift = wall_starts[player_id], wall_drift  # B7-b : mur d'un coup franc, dérive partagée
         elif player.poste == GOALKEEPER and sequence.meta.get("template") == "penalty":
             drift = _penalty_gk_drift(player_id, sequence.event_ref, ball_target[1], outcome)
+        elif player.poste == GOALKEEPER and sequence.meta.get("template") == "coup_franc":
+            drift = _free_kick_gk_drift(player_id, sequence.event_ref, start[1], ball_target[1], outcome)  # B7-d
         else:
             drift = _tactical_drift(player.poste, player_id, "opponent", start, ball_target, opponent_cb_drift, sequence.event_ref)
         background[player_id] = BackgroundTrack(start=start, drift=drift)

@@ -786,6 +786,28 @@ class TestFreeKickWallBlocksTackleAndClearance:
                 assert 0.30 - 1e-9 <= math.hypot(exit_x, exit_y) / math.hypot(arrival[0], arrival[1]) <= 0.50 + 1e-9
                 assert plan.end_tau > 0.0
 
+    def test_the_wall_deflects_within_22_5_degrees_of_the_normal(self):
+        """B7-d : normale tournée de 22,5 degrés au plus -> le ballon repart près de l'axe de retour (médiane ~22 degrés, jamais au-delà de ~61)."""
+        import dataclasses
+
+        from ball_events import plan_ball_events
+
+        lineup = _lineup()
+        starts = _start_positions(lineup, _pitch_layout_state(lineup))
+        angles = []
+        for club in ("A", "B", "C", "D"):
+            for minute in self._MINUTES:
+                event = dataclasses.replace(_goal_event(assist=None, minute=minute), club_name=f"Club{club}")
+                sequence = BUILDERS["coup_franc"](event, lineup, starts, "tacle")
+                exit_x, exit_y, _ = plan_ball_events(sequence, "tacle", minute, "bu", None).trajectory.exit_velocity
+                spot = sequence.keyframes[-1].ball
+                back = math.degrees(math.atan2(PITCH_WIDTH_M / 2.0 - spot.y * PITCH_WIDTH_M, PITCH_LENGTH_M - spot.x * PITCH_LENGTH_M)) + 180.0
+                angles.append(abs((math.degrees(math.atan2(exit_y, exit_x)) - back + 180.0) % 360.0 - 180.0))
+        angles.sort()
+        assert 15.0 <= angles[len(angles) // 2] <= 30.0
+        assert angles[-1] <= 62.0  # 2 x 22,5 degrés + angle d'arrivée (au plus ~16 degrés)
+        assert sum(a > 60.0 for a in angles) / len(angles) < 0.10
+
     def test_the_trajectory_is_continuous_and_deterministic(self):
         sequence, plan = self._plan(41, "tacle")
         _, again = self._plan(41, "tacle")
@@ -813,3 +835,130 @@ class TestFreeKickWallBlocksTackleAndClearance:
                 sequence, plan = self._plan(minute, "tacle", gabarit)
                 assert plan.trajectory is None and [e.type for e in plan.events] == ["degagement"]
                 assert plan.events[0].t == pytest.approx(sequence.duration)  # au point de contact, comme avant B7-c
+
+
+class TestFreeKickGoalkeeper:
+    """Phase 6, B7-d : gardien adverse d'un coup franc direct -- départ à 1,0-2,0 m de sa ligne (au lieu de 3,0 m), décalé de 1,0-2,0 m du
+    côté du ballon, et dérive latérale cohérente avec l'issue (même logique que B6-d, `_free_kick_gk_drift`). Les autres gabarits ne changent pas."""
+
+    _N = 4000
+
+    @staticmethod
+    def _unit(i, k):
+        return (i * 0.6180339887498949 * (k + 1)) % 1.0
+
+    def _case(self, i):
+        from ligue1sim.animation.sequence_generator import _free_kick_gk_start
+
+        ref = f"goal:Club{i % 18}:p{i}:{i % 90 + 1}"
+        ball_y = 0.5 + (self._unit(i, 1) - 0.5) * 0.7  # y du ballon posé : jusqu'à 12 m de l'axe
+        start = _free_kick_gk_start(7, ref, ball_y)
+        return ref, ball_y, start
+
+    def test_start_is_1_to_2_m_from_the_line_and_1_to_2_m_off_centre_on_the_ball_side(self):
+        advances = []
+        for i in range(self._N):
+            ref, ball_y, (x, y) = self._case(i)
+            advance_m = (1.0 - x) * PITCH_LENGTH_M
+            offset_m = (y - 0.5) * PITCH_WIDTH_M
+            assert 1.0 - 1e-9 <= advance_m <= 2.0 + 1e-9
+            assert 1.0 - 1e-9 <= abs(offset_m) <= 2.0 + 1e-9
+            assert (offset_m > 0) == (ball_y > 0.5), ref
+            advances.append(advance_m)
+        assert abs(sorted(advances)[len(advances) // 2] - 1.5) <= 0.05  # médiane ~ 1,5 m
+
+    def test_the_goalkeeper_of_a_free_kick_starts_there_and_other_templates_keep_the_standard_position(self):
+        from ligue1sim.animation.sequence_generator import _free_kick_gk_start
+
+        lineup, opponent = _lineup(), _opponent_lineup()
+        gk_id = player_id_of(next(p for p in opponent.players if p.poste == "GK"))
+        for name in sorted(BUILDERS):
+            sequence = BUILDERS[name](_goal_event(), lineup, _start_positions(lineup, _pitch_layout_state(lineup)))
+            start = enrich_with_background(sequence, opponent).background[gk_id].start
+            if name == "coup_franc":
+                assert start == pytest.approx(_free_kick_gk_start(gk_id, sequence.event_ref, sequence.keyframes[0].ball.y))
+            else:
+                assert start == pytest.approx(_gk_base_position("opponent")), name
+
+    def test_save_goes_the_right_way_and_reaches_the_ball_height(self):
+        from ligue1sim.animation.sequence_generator import _free_kick_gk_drift
+
+        reached = 0
+        for i in range(self._N):
+            ref, _ball_y, (_x, start_y) = self._case(i)
+            target_y = 0.5 + (self._unit(i, 2) - 0.5) * (4.0 / PITCH_WIDTH_M)  # cible d'un arrêt : +-2 m
+            _, dy = _free_kick_gk_drift(7, ref, start_y, target_y, "arret")
+            need = target_y - start_y
+            assert dy * need >= 0.0, ref  # bon côté, toujours
+            if abs(need) * PITCH_WIDTH_M <= 2.8:  # à portée (déplacement plafonné à 2,8 m) : il atteint exactement le y du ballon
+                assert dy == pytest.approx(need), ref
+                reached += 1
+            else:
+                assert abs(dy) * PITCH_WIDTH_M == pytest.approx(2.8)  # hors de portée : il va au bout de son plafond
+        assert reached / self._N > 0.8
+
+    def test_goal_beats_the_wrong_side_with_the_probability_of_the_strike_type(self):
+        from ligue1sim.animation.sequence_generator import _free_kick_gk_drift
+        from ligue1sim.animation.templates import strike_type_for
+
+        wrong = {"coup_franc_enroule": [0, 0], "coup_franc_frappe": [0, 0]}
+        for i in range(self._N * 2):
+            ref, _ball_y, (_x, start_y) = self._case(i)
+            target_y = 0.5 + (self._unit(i, 3) - 0.5) * (7.32 / PITCH_WIDTH_M) * 0.9
+            need = target_y - start_y
+            if abs(need * PITCH_WIDTH_M) < 0.3:
+                continue  # trop près : « côté » sans objet
+            _, dy = _free_kick_gk_drift(7, ref, start_y, target_y, "but")
+            counter = wrong[strike_type_for("coup_franc", ref).name]
+            counter[0] += 1
+            counter[1] += (dy * need < 0.0)
+        for name, p in (("coup_franc_enroule", 0.35), ("coup_franc_frappe", 0.25)):
+            n, k = wrong[name]
+            assert abs(k / n - p) <= 0.03, (name, k / n)
+
+    def test_miss_goes_either_side_half_of_the_time(self):
+        from ligue1sim.animation.sequence_generator import _free_kick_gk_drift
+
+        for outcome in ("hors_cadre", "poteau", "barre"):
+            toward = n = 0
+            for i in range(self._N):
+                ref, _ball_y, (_x, start_y) = self._case(i)
+                target_y = 0.5 + (self._unit(i, 4) - 0.5) * (7.32 / PITCH_WIDTH_M)
+                need = target_y - start_y
+                if abs(need * PITCH_WIDTH_M) < 0.3:
+                    continue
+                n += 1
+                toward += (_free_kick_gk_drift(7, ref, start_y, target_y, outcome)[1] * need > 0.0)
+            assert abs(toward / n - 0.5) <= 0.03, (outcome, toward / n)
+
+    def test_amplitude_never_exceeds_2_8_m_and_the_final_position_stays_within_2_5_m_of_the_centre(self):
+        from ligue1sim.animation.sequence_generator import _free_kick_gk_drift
+
+        for outcome in ("arret", "but", "poteau", "hors_cadre", "barre", "tacle", "degagement", None):
+            for i in range(self._N // 4):
+                ref, _ball_y, (_x, start_y) = self._case(i)
+                target_y = 0.5 + (self._unit(i, 5) - 0.5) * (14.0 / PITCH_WIDTH_M)
+                _, dy = _free_kick_gk_drift(7, ref, start_y, target_y, outcome)
+                assert abs(dy) * PITCH_WIDTH_M <= 2.8 + 1e-9, (outcome, ref)
+                assert abs(start_y + dy - 0.5) * PITCH_WIDTH_M <= 2.5 + 1e-9, (outcome, ref)
+
+    def test_without_outcome_the_drift_floor_is_kept(self):
+        from ligue1sim.animation.sequence_generator import _free_kick_gk_drift
+
+        for i in range(500):
+            ref, _ball_y, (_x, start_y) = self._case(i)
+            _, dy = _free_kick_gk_drift(7, ref, start_y, 0.5, None)
+            assert abs(dy) * PITCH_WIDTH_M >= _MIN_DRIFT_MAGNITUDE_M - 1e-9
+
+    def test_the_enriched_goalkeeper_follows_the_function_and_has_no_depth_drift(self):
+        from ligue1sim.animation.sequence_generator import _free_kick_gk_drift
+
+        lineup, opponent = _lineup(), _opponent_lineup()
+        gk_id = player_id_of(next(p for p in opponent.players if p.poste == "GK"))
+        for minute in range(1, 91):
+            for outcome in ("arret", "but", "hors_cadre", "tacle"):
+                sequence = BUILDERS["coup_franc"](_goal_event(assist=None, minute=minute), lineup, _start_positions(lineup, _pitch_layout_state(lineup)), outcome)
+                track = enrich_with_background(sequence, opponent, outcome).background[gk_id]
+                expected = _free_kick_gk_drift(gk_id, sequence.event_ref, track.start[1], sequence.keyframes[-1].ball.y, outcome)
+                assert track.drift == pytest.approx(expected)
+                assert track.drift[0] == 0.0  # aucune sortie en profondeur (renvoyée au Bloc A)
