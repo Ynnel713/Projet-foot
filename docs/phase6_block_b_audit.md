@@ -982,3 +982,48 @@ La graine 5 ne contient qu'un penalty (contre-pied, arrêt) : les autres cas vie
 ### 14.6 Statut
 
 **B6-d implémenté, mesures alignées sur l'échantillon de B6-a à B6-c.** En attente de validation du propriétaire avant B6-e.
+
+## 15. B6-e — Le NLG reçoit le type de frappe (ticket 23) : récapitulatif de clôture (14/10/2026)
+
+**Principe.** Le NLG choisissait son texte sur (type d'événement, gabarit, issue) et ignorait le type de frappe de B5 : « enroule sa frappe » pouvait accompagner un `shot_tendu`, une tête était commentée comme une frappe. `NarrativeEvent.strike_type` (lu par `templates.strike_type_for(gabarit, event_ref)`, le même hachage que l'animation) est transmis au NLG, qui le conditionne sur 70 phrases de `BUT`, `ARRET_GARDIEN`, `PENALTY_RATE` et `TIR_NON_CADRE` (condition `strike_type in [A, B]`, mandatory) et reçoit 10 phrases nouvelles validées par le propriétaire. Le sélecteur est inchangé : il filtre sans forcer.
+
+### 15.1 Résultats (100 matchs réels de Ligue 1, graines 1 à 100, appariement de B6-a à B6-d : 1 586 événements, 1 124 frappes commentées)
+
+- **Contradictions texte / type : 157 avant, 0 après.** Avant : 95 « frappe » sur une tête, 40 volées hors `reprise_vollee`, 15 « enroule » hors type enroulé (dont 4 sur un `shot_tendu`), 7 « tête » hors type `tete`.
+- **Couverture de nommage du style** (part des clips dont le texte nomme le style ; mesure informative, sans cible) : tendu 9,5 → 26,6 %, enroulé léger 2,7 → 10,7 %, enroulé fort 0,9 → 6,5 %, extérieur du pied 0 → 11,5 %, volée 8,3 → 17,2 %, tête 0,9 → 29,5 %.
+- **Penaltys** : échantillon trop petit pour conclure (12 forts, 16 placés, 6 contre-pieds). Couverture mesurée : fort 33,3 → 50,0 %, contre-pied 33,3 → 50,0 %, placé 31,2 → 25,0 % (à surveiller).
+- **Base** : 504 phrases (494 + 10), 80 conditions `strike_type` (70 phrases existantes conditionnées + 10 phrases nouvelles).
+- **Contrat NLG** : `strike_type` optionnel, 9 valeurs (les 6 types de B5 et `penalty_fort`, `penalty_place`, `penalty_contre_pied`) ; `None` pour `tacle` et `degagement` (pas de frappe à l'écran). Clé absente : acceptée, et aucune phrase conditionnée sur le type ne sort.
+
+### 15.2 Vérifications
+
+| Vérification | Résultat |
+|---|---|
+| Déterminisme (scores, événements du moteur, 1 586 événements narratifs, sérialisation des clips ; arbre final contre B6-d `e8bb99e` et contre le commit 1) | **100 / 100** identiques |
+| Textes du NLG, deux exécutions de l'arbre final | identiques |
+| `strike_type` de la chronologie contre le type tiré par l'animation (1 259 frappes comparées ; 327 événements sans frappe) | 0 écart |
+| `pytest tests --ignore=simulafoot_nlg` (racine) | **1 499 passés, 12 désélectionnés** |
+| Suite du NLG (`simulafoot_nlg`, son venv) | **943 passés** |
+| `npm run build` / `npm run lint` | OK ; 0 erreur, 5 avertissements |
+
+### 15.3 Commits
+
+| Commit | Contenu |
+|---|---|
+| `b37289a` | Tickets 34, 35, 36 (incohérences texte / trajectoire des penaltys, phrases de coup franc hors contexte) |
+| `88497f1` | Commit 1 : `engine/narrative.py`, champ `strike_type` |
+| `f5ba202` | Commit 3 : `simulafoot_nlg`, contrat, conditions des phrases, 10 phrases |
+| `2674de0` | Commit 2 : `engine/nlg_ingestion.py`, transmission du champ |
+| `2bc31e7` | Ticket 23 fermé |
+| `8f876ed` | Ticket 37 (phrases de penalty qui contredisent B6-d) |
+
+### 15.4 Notes
+
+- **Ordre des commits.** Le commit 3 (contrat du NLG) précède le commit 2 (émission de la clé) pour que chaque commit reste vert : le NLG rejette les clés inconnues, et émise avant le contrat, la clé fait échouer 5 tests de bout en bout.
+- **Fichiers hors de l'énoncé, validés par le propriétaire.** `tests/test_nlg_ingestion.py` (jeux de clés attendues) ; `simulafoot_nlg/pilotes_v2/tir_non_cadre.py` (source du YAML de TIR_NON_CADRE, régénéré par `scripts/convert_pilotes_to_yaml.py`) ; `simulafoot_nlg/scripts/audit_conditions_pilote.py` (`strike_type` est un champ de contexte).
+- **`scenarios.yml`** est édité à la main, comme les commits précédents ; une reconversion depuis le classeur Excel effacerait ces conditions.
+- **Hors périmètre, tickets ouverts** : 34 (« lucarne » sur des penaltys bas), 35 (« au centre » près d'un poteau), 36 (phrases de coup franc sur des buts qui n'en sont pas), 37 (gardien « immobile » contre le glissement de B6-d).
+
+### 15.5 Statut
+
+**B6-e clos.** Ticket 23 fermé.
