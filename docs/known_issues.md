@@ -33,6 +33,7 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 | 27 | Tireur de penalty dépasse le ballon après la frappe | Moyenne, B6-d ou B6-c selon la cause | Ouvert |
 | 28 | Adversaire (joueur décor) à 1,5 m du départ du tireur de penalty | Basse, résolution possible en Bloc A | Ouvert |
 | 29 | Tests d'intégration exclus de la suite standard : réintégration à décider | Basse | Ouvert (décision propriétaire reportée) |
+| 30 | Cohérence joueur-ballon : contact, distance, accélération sans contact interdite | **Haute**, Bloc A, A1.6 | Ouvert |
 
 ---
 
@@ -522,6 +523,22 @@ appelé par les scripts, les tests et un éventuel paramètre de graine de l'API
 **Résolution.** À décider plus tard par le propriétaire. En attendant, relancer ces tests avant la clôture d'une phase : `pytest tests/test_narrative_player.py -m integration`.
 
 **Priorité.** Basse.
+
+**Statut.** Ouvert. Non corrigé.
+
+---
+
+## 30. Cohérence joueur-ballon : contact, distance, accélération sans contact interdite
+
+**Exigence du propriétaire.** Cohérence parfaite du rapport joueur-ballon : contact, distance pendant les contrôles, conduite de balle, frappes. **Règle absolue : le ballon ne doit jamais accélérer sans contact avec un joueur.**
+
+**Constat.** Aujourd'hui, rien ne garantit que le ballon reste à portée du joueur pendant un contrôle ou une conduite, et rien n'empêche une accélération du ballon sans contact : la trajectoire du ballon (`src/ligue1sim/animation/ball.py`) est pilotée par les keyframes et les balises de physique du gabarit (`templates.py`), indépendamment des positions des joueurs (`motion.py`). Mesure indicative du 14/10/2026, graine 5 (18 clips, 5 257 images, payload avec le code de `9965d63`) : le champ `ball.owner` du payload est renseigné sur 100 % des images mais le ballon est à une distance médiane de 10,4 m (percentile 90 : 31,5 m, maximum 70,0 m) du joueur désigné, donc il n'exprime pas un contact ; en revanche, aucune image de cette graine n'a une accélération supérieure à 30 m/s² sans joueur à moins de 1,5 m (seuils choisis pour cette mesure, non issus d'une spécification). L'exigence n'est donc ni vérifiée ni garantie, et aucun test ne la protège.
+
+**Fichiers concernés.** `src/ligue1sim/animation/ball.py`, `src/ligue1sim/animation/templates.py`, `src/ligue1sim/animation/motion.py`, `engine/narrative_player.py`.
+
+**Résolution prévue.** Bloc A, sous-section dédiée **A1.6 — Couplage joueur-ballon**, traitée après B6 avec le mouvement individuel des joueurs. À définir à ce moment : la notion de contact (distance maximale), la distance pendant un contrôle ou une conduite, et un test qui échoue dès qu'une accélération du ballon survient sans contact. Non corrigé : ticket de traçabilité.
+
+**Priorité.** Haute.
 
 **Statut.** Ouvert. Non corrigé.
 
