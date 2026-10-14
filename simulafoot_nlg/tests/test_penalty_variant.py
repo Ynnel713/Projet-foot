@@ -36,10 +36,10 @@ def _conditions(phrase: dict) -> list[PhraseCondition]:
     ]
 
 
-def _candidates(phrases: list[dict], gabarit: str | None) -> int:
+def _candidates(phrases: list[dict], gabarit: str | None, strike_type: str | None = None) -> int:
     """Phrases dont TOUTES les conditions mandatory matchent (joueur sans attribut)."""
     joueur = Player(id=1, first_name="Kylian", last_name="Mbappé")
-    contexte = MatchContext(match_id="m1", gabarit=gabarit)
+    contexte = MatchContext(match_id="m1", gabarit=gabarit, strike_type=strike_type)
     return sum(
         all(evaluate_condition(c, joueur, contexte) for c in _conditions(p) if c.mandatory) for p in phrases
     )
@@ -76,8 +76,25 @@ def test_un_but_ordinaire_n_a_aucune_phrase_penalty_candidate(gabarit):
     assert _candidates(_variantes_de_but()["PENALTY"], gabarit) == 0
 
 
-def test_un_vrai_penalty_a_ses_15_phrases_candidates():
-    assert _candidates(_variantes_de_but()["PENALTY"], "penalty") == 15
+def test_un_vrai_penalty_a_ses_15_phrases_candidates_sur_l_ensemble_des_types():
+    """B6-e : dix phrases sont reservees a un ou deux types de penalty (`strike_type`) ; chaque tir en voit un sous-ensemble,
+    et l'union des trois types redonne les 15 phrases (aucune n'est devenue inatteignable)."""
+    penalty = _variantes_de_but()["PENALTY"]
+    types = ("penalty_fort", "penalty_place", "penalty_contre_pied")
+    par_type = {t: sum(all(evaluate_condition(c, Player(id=1, first_name="K", last_name="M"), MatchContext(match_id="m1", gabarit="penalty", strike_type=t))
+                           for c in _conditions(p) if c.mandatory) for p in penalty) for t in types}
+    assert all(n >= 7 for n in par_type.values()), par_type
+    joueur = Player(id=1, first_name="K", last_name="M")
+    atteignables = [
+        p for p in penalty
+        if any(all(evaluate_condition(c, joueur, MatchContext(match_id="m1", gabarit="penalty", strike_type=t))
+                   for c in _conditions(p) if c.mandatory) for t in types)
+    ]
+    assert len(atteignables) == 15
+
+
+def test_un_penalty_sans_type_ne_voit_que_les_phrases_non_conditionnees_par_le_type():
+    assert _candidates(_variantes_de_but()["PENALTY"], "penalty") == 5
 
 
 @pytest.mark.parametrize("gabarit", ["contre_attaque", "penalty"])

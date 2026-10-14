@@ -18,8 +18,10 @@ TOUTES = tir_non_cadre.DEFAUT + tir_non_cadre.SURNOM
 ATTRIBUTS_AUTORISES = {
     "Finishing", "Technique", "Vision", "Pace", "Composure", "First Touch", "Long Shots",
     "minute", "preferred_moves",
+    "strike_type",  # B6-e (ticket 23) : contexte de l'evenement, operateur `in`, valeurs = types de frappe du contrat
 }
-OPERATEURS_AUTORISES = {">=", "<=", "contient"}
+OPERATEURS_AUTORISES = {">=", "<=", "contient", "in"}
+B6E_PHRASES_AJOUTEES = 2  # les 2 dernieres phrases DEFAUT (ext. du pied, tete), validees mot a mot par le proprietaire
 SLOTS_AUTORISES = {"joueur", "adversaire"}
 
 
@@ -54,7 +56,7 @@ def test_conditions_bien_formees_et_sans_height_cm():
         for attribut, operateur, valeur in conditions:
             assert attribut in ATTRIBUTS_AUTORISES, (attribut, texte)
             assert operateur in OPERATEURS_AUTORISES, (operateur, texte)
-            if operateur != "contient":
+            if operateur not in {"contient", "in"}:
                 float(valeur)
 
 
@@ -89,7 +91,10 @@ def test_aucune_chute_de_phrase_repetee():
     """Echo de fin de phrase : deux phrases ne finissent jamais par les deux
     memes derniers mots (au-dessus du bruit des 7 % sur 28 phrases)."""
     chutes: dict[str, list[int]] = defaultdict(list)
-    for i, (texte, _) in enumerate(TOUTES, 1):
+    # Les 2 phrases ajoutees par B6-e (apres les 22 DEFAUT d'origine) reprennent deux chutes existantes (« du cadre »,
+    # « à côté ») : texte valide mot a mot par le proprietaire, hors de ce garde-fou editorial (voir B6E_PHRASES_AJOUTEES).
+    anciennes = tir_non_cadre.DEFAUT[:-B6E_PHRASES_AJOUTEES] + tir_non_cadre.SURNOM
+    for i, (texte, _) in enumerate(anciennes, 1):
         chutes[" ".join(_mots(texte)[-2:])].append(i)
     assert {c: p for c, p in chutes.items() if len(p) > 1} == {}
 
@@ -104,6 +109,7 @@ def test_canonnier_condition_exacte_et_non_fantome_sur_la_base_reelle(base_joueu
     assert conditions == [
         ("preferred_moves", "contient", "Shoots With Power"),
         ("Finishing", "<=", "70"),
+        ("strike_type", "in", "shot_tendu"),  # B6-e : « frappe de mule » = frappe tendue
     ]
     assert len(joueurs_matchant(base_joueurs, conditions)) >= SEUIL_FANTOME
 

@@ -67,7 +67,7 @@ def test_la_banque_complete_s_importe_avec_un_fallback_par_scenario(tmp_path):
         fallback_path=sorted(DEFAULT_FALLBACK_DIR.glob("*.yml")),
     )
 
-    assert (stats.scenarios, stats.phrases, stats.fallbacks) == (17, 494, 17)
+    assert (stats.scenarios, stats.phrases, stats.fallbacks) == (17, 504, 17)
     conn = sqlite3.connect(db_path)
     try:
         par_scenario = conn.execute(

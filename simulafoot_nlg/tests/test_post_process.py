@@ -257,7 +257,7 @@ def test_apply_les_trois_exemples_du_havre_et_du_mans():
 
 
 def test_la_banque_complete_rendue_avec_un_club_a_article_n_a_plus_de_de_le():
-    """Les 494 gabarits rendus avec Le Havre AC / Le Mans FC : plus aucun "de Le", "à Le",
+    """Les 504 gabarits rendus avec Le Havre AC / Le Mans FC : plus aucun "de Le", "à Le",
     "de Les" ni "à Les" apres apply (avant la regle : 94 phrases en "de/à {adversaire}")."""
     import re
     from pathlib import Path
@@ -280,7 +280,7 @@ def test_la_banque_complete_rendue_avec_un_club_a_article_n_a_plus_de_de_le():
                     rendus += 1
                     if re.search(r"(de|à|De|À) Les? [A-Z]", rendu):
                         restants.append(rendu)
-    assert rendus == 494
+    assert rendus == 504
     assert restants == []
 
 

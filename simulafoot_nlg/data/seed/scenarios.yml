@@ -444,6 +444,10 @@
         operator: contient
         value: Shoots From Distance
         mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: shot_tendu
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -458,6 +462,10 @@
         operator: contient
         value: Tries First Time Shots
         mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: reprise_vollee
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -469,6 +477,10 @@
       - attribute: preferred_moves
         operator: contient
         value: Curls Ball
+        mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: shot_enroule_leger, shot_enroule_fort
         mandatory: true
       slots:
       - slot_name: joueur
@@ -496,6 +508,10 @@
         operator: contient
         value: Places Shots
         mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: shot_tendu, shot_enroule_leger, shot_enroule_fort, shot_exterieur_pied, reprise_vollee, penalty_fort, penalty_place, penalty_contre_pied
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -512,6 +528,10 @@
         operator: ==
         value: '"Right"'
         mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: shot_tendu
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -523,6 +543,10 @@
       - attribute: preferred_moves
         operator: contient
         value: Attempts Overhead Kicks
+        mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: reprise_vollee
         mandatory: true
       slots:
       - slot_name: joueur
@@ -562,6 +586,10 @@
         operator: contient
         value: Knocks Ball Past Opponent
         mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: shot_tendu, shot_enroule_leger, shot_enroule_fort, shot_exterieur_pied, reprise_vollee, penalty_fort, penalty_place, penalty_contre_pied
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -574,6 +602,10 @@
         operator: contient
         value: Cuts Inside From Left Wing
         mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: shot_enroule_leger, shot_enroule_fort
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -585,6 +617,10 @@
       - attribute: preferred_moves
         operator: contient
         value: Cuts Inside From Right Wing
+        mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: shot_tendu, shot_enroule_leger, shot_enroule_fort, shot_exterieur_pied, reprise_vollee, penalty_fort, penalty_place, penalty_contre_pied
         mandatory: true
       slots:
       - slot_name: joueur
@@ -609,6 +645,10 @@
       - attribute: preferred_moves
         operator: contient
         value: Uses Outside Of Foot
+        mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: shot_exterieur_pied
         mandatory: true
       slots:
       - slot_name: joueur
@@ -636,6 +676,10 @@
         operator: contient
         value: Hits Free Kicks With Power
         mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: shot_tendu, shot_enroule_leger, shot_enroule_fort, shot_exterieur_pied, reprise_vollee, penalty_fort, penalty_place, penalty_contre_pied
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -647,6 +691,10 @@
       - attribute: preferred_moves
         operator: contient
         value: Tries Long Range Free Kicks
+        mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: shot_tendu, shot_enroule_leger, shot_enroule_fort, shot_exterieur_pied, reprise_vollee, penalty_fort, penalty_place, penalty_contre_pied
         mandatory: true
       slots:
       - slot_name: joueur
@@ -729,6 +777,10 @@
       - attribute: minute
         operator: '>='
         value: '80'
+        mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: tete
         mandatory: true
       slots:
       - slot_name: joueur
@@ -823,6 +875,67 @@
         expression: player.full_name
       - slot_name: adversaire
         expression: context.opponent_team
+    - text: '{joueur} arme une frappe sèche et tendue, le gardien de {adversaire} n''a pas le temps de réagir !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: strike_type
+        operator: in
+        value: shot_tendu
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: '{joueur} enroule sa frappe, le ballon dessine sa courbe et finit au fond, le gardien de {adversaire} ne peut que le regarder !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: strike_type
+        operator: in
+        value: shot_enroule_leger, shot_enroule_fort
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: '{joueur} tente l''extérieur du pied et son ballon, joliment brossé, trompe le gardien de {adversaire} !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: strike_type
+        operator: in
+        value: shot_exterieur_pied
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: '{joueur} reprend de volée, sans contrôle, et le ballon file au fond des filets !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: strike_type
+        operator: in
+        value: reprise_vollee
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} s''élève plus haut que tout le monde et propulse le ballon de la tête au fond des filets !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: strike_type
+        operator: in
+        value: tete
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
   - code: PENALTY
     label: Penalty
     is_default: false
@@ -848,6 +961,10 @@
         operator: ==
         value: '"penalty"'
         mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: penalty_fort
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -859,6 +976,10 @@
       - attribute: gabarit
         operator: ==
         value: '"penalty"'
+        mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: penalty_contre_pied
         mandatory: true
       slots:
       - slot_name: joueur
@@ -886,6 +1007,10 @@
         operator: ==
         value: '"penalty"'
         mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: penalty_fort, penalty_place
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -897,6 +1022,10 @@
       - attribute: gabarit
         operator: ==
         value: '"penalty"'
+        mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: penalty_contre_pied
         mandatory: true
       slots:
       - slot_name: joueur
@@ -910,6 +1039,10 @@
         operator: ==
         value: '"penalty"'
         mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: penalty_place
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -921,6 +1054,10 @@
       - attribute: gabarit
         operator: ==
         value: '"penalty"'
+        mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: penalty_fort
         mandatory: true
       slots:
       - slot_name: joueur
@@ -948,6 +1085,10 @@
         operator: ==
         value: '"penalty"'
         mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: penalty_fort
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -960,6 +1101,10 @@
         operator: ==
         value: '"penalty"'
         mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: penalty_contre_pied
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -971,6 +1116,10 @@
       - attribute: gabarit
         operator: ==
         value: '"penalty"'
+        mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: penalty_fort
         mandatory: true
       slots:
       - slot_name: joueur
@@ -1008,6 +1157,10 @@
         operator: ==
         value: '"penalty"'
         mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: penalty_fort
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -1028,6 +1181,10 @@
       - attribute: Heading
         operator: '>='
         value: '75'
+        mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: tete
         mandatory: true
       slots:
       - slot_name: adversaire
@@ -1115,6 +1272,10 @@
         operator: '>='
         value: '80'
         mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: shot_tendu, shot_enroule_leger, shot_enroule_fort, shot_exterieur_pied, reprise_vollee, penalty_fort, penalty_place, penalty_contre_pied
+        mandatory: true
       slots: []
     - text: Le canonnier décoche une frappe surpuissante qui ne laisse absolument
         aucune chance au gardien de {adversaire} !
@@ -1128,6 +1289,10 @@
       - attribute: Finishing
         operator: '>='
         value: '80'
+        mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: shot_tendu
         mandatory: true
       slots:
       - slot_name: adversaire
@@ -1155,6 +1320,10 @@
         operator: '>='
         value: '4'
         mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: shot_tendu, shot_enroule_leger, shot_enroule_fort, shot_exterieur_pied, reprise_vollee, penalty_fort, penalty_place, penalty_contre_pied
+        mandatory: true
       slots: []
     - text: Le chef d'orchestre profite d'un relâchement adverse pour surgir lui-même
         et conclure d'une frappe limpide !
@@ -1164,6 +1333,10 @@
       - attribute: Vision
         operator: '>='
         value: '88'
+        mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: shot_tendu, shot_enroule_leger, shot_enroule_fort, shot_exterieur_pied, reprise_vollee, penalty_fort, penalty_place, penalty_contre_pied
         mandatory: true
       slots: []
     - text: La tour domine tous les débats aériens et place une tête surpuissante
@@ -1178,6 +1351,10 @@
       - attribute: height_cm
         operator: '>='
         value: '185'
+        mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: tete
         mandatory: true
       slots: []
     - text: La fusée grille tout le monde dans le money time et vient crucifier {adversaire}
@@ -1209,6 +1386,10 @@
         operator: '>='
         value: '85'
         mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: shot_tendu, shot_enroule_leger, shot_enroule_fort, shot_exterieur_pied, reprise_vollee, penalty_fort, penalty_place, penalty_contre_pied
+        mandatory: true
       slots: []
 - code: PENALTY_RATE
   label: Penalty manqué
@@ -1221,7 +1402,11 @@
         debout et capte le ballon sans bouger d''un pouce !'
       weight: 1.0
       cooldown_matches: 6
-      conditions: []
+      conditions:
+      - attribute: strike_type
+        operator: in
+        value: penalty_fort
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -1257,7 +1442,11 @@
         revient en jeu, quelle occasion manquée !'
       weight: 1.0
       cooldown_matches: 6
-      conditions: []
+      conditions:
+      - attribute: strike_type
+        operator: in
+        value: penalty_fort
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -1281,7 +1470,11 @@
         avant de rebondir loin du but !'
       weight: 1.0
       cooldown_matches: 6
-      conditions: []
+      conditions:
+      - attribute: strike_type
+        operator: in
+        value: penalty_fort
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -1297,7 +1490,11 @@
         barre et s''envole au-dessus des cages !'
       weight: 1.0
       cooldown_matches: 6
-      conditions: []
+      conditions:
+      - attribute: strike_type
+        operator: in
+        value: penalty_fort
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -1788,6 +1985,10 @@
         operator: ==
         value: '"egalisation"'
         mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: shot_tendu
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -1814,6 +2015,10 @@
         operator: ==
         value: '"prise_avantage"'
         mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: shot_tendu, shot_enroule_leger, shot_enroule_fort, shot_exterieur_pied, reprise_vollee, penalty_fort, penalty_place, penalty_contre_pied
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -1827,6 +2032,10 @@
       - attribute: score_context
         operator: ==
         value: '"reduit_ecart"'
+        mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: tete
         mandatory: true
       slots:
       - slot_name: adversaire
@@ -1849,7 +2058,11 @@
         et repousse le tir du pied !
       weight: 1.0
       cooldown_matches: 2
-      conditions: []
+      conditions:
+      - attribute: strike_type
+        operator: in
+        value: shot_tendu, shot_enroule_leger, shot_enroule_fort, shot_exterieur_pied, reprise_vollee, penalty_fort, penalty_place, penalty_contre_pied
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -1865,7 +2078,11 @@
         détourne le ballon en corner !
       weight: 1.0
       cooldown_matches: 2
-      conditions: []
+      conditions:
+      - attribute: strike_type
+        operator: in
+        value: shot_enroule_leger, shot_enroule_fort
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -1881,7 +2098,11 @@
         fermes et capte le ballon !
       weight: 1.0
       cooldown_matches: 2
-      conditions: []
+      conditions:
+      - attribute: strike_type
+        operator: in
+        value: shot_tendu
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -1889,7 +2110,11 @@
         côté du poteau !'
       weight: 1.0
       cooldown_matches: 2
-      conditions: []
+      conditions:
+      - attribute: strike_type
+        operator: in
+        value: shot_tendu, shot_enroule_leger, shot_enroule_fort, shot_exterieur_pied, reprise_vollee, penalty_fort, penalty_place, penalty_contre_pied
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -1936,6 +2161,10 @@
         operator: <=
         value: '5'
         mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: shot_tendu, shot_enroule_leger, shot_enroule_fort, shot_exterieur_pied, reprise_vollee, penalty_fort, penalty_place, penalty_contre_pied
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -1943,7 +2172,11 @@
         filait au ras du poteau !'
       weight: 1.0
       cooldown_matches: 2
-      conditions: []
+      conditions:
+      - attribute: strike_type
+        operator: in
+        value: shot_tendu, shot_enroule_leger, shot_enroule_fort, shot_exterieur_pied, reprise_vollee, penalty_fort, penalty_place, penalty_contre_pied
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -1951,7 +2184,11 @@
         capte le ballon en pleine course !
       weight: 1.0
       cooldown_matches: 2
-      conditions: []
+      conditions:
+      - attribute: strike_type
+        operator: in
+        value: reprise_vollee
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -1977,7 +2214,11 @@
         moment pour bloquer la frappe !'
       weight: 1.0
       cooldown_matches: 2
-      conditions: []
+      conditions:
+      - attribute: strike_type
+        operator: in
+        value: shot_tendu, shot_enroule_leger, shot_enroule_fort, shot_exterieur_pied, reprise_vollee, penalty_fort, penalty_place, penalty_contre_pied
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -1995,7 +2236,11 @@
         le ballon par-dessus la barre !
       weight: 1.0
       cooldown_matches: 2
-      conditions: []
+      conditions:
+      - attribute: strike_type
+        operator: in
+        value: shot_tendu
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -2029,7 +2274,11 @@
         avec le visage !'
       weight: 1.0
       cooldown_matches: 2
-      conditions: []
+      conditions:
+      - attribute: strike_type
+        operator: in
+        value: shot_tendu, shot_enroule_leger, shot_enroule_fort, shot_exterieur_pied, reprise_vollee, penalty_fort, penalty_place, penalty_contre_pied
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -2061,7 +2310,11 @@
         trompait toute sa trajectoire !'
       weight: 1.0
       cooldown_matches: 2
-      conditions: []
+      conditions:
+      - attribute: strike_type
+        operator: in
+        value: shot_tendu, shot_enroule_leger, shot_enroule_fort, shot_exterieur_pied, reprise_vollee, penalty_fort, penalty_place, penalty_contre_pied
+        mandatory: true
       slots:
       - slot_name: joueur
         expression: player.full_name
@@ -2073,6 +2326,41 @@
       - attribute: minute
         operator: '>='
         value: '90'
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+      - slot_name: adversaire
+        expression: context.opponent_team
+    - text: '{joueur} se détend sur une frappe tendue et repousse le ballon du bout des gants !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: strike_type
+        operator: in
+        value: shot_tendu
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: '{joueur} ne se laisse pas surprendre par cette frappe de l''extérieur du pied et détourne le ballon !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: strike_type
+        operator: in
+        value: shot_exterieur_pied
+        mandatory: true
+      slots:
+      - slot_name: joueur
+        expression: player.full_name
+    - text: 'Sur cette tête dangereuse d''un joueur de {adversaire}, {joueur} réagit sur sa ligne et repousse le ballon !'
+      weight: 1.0
+      cooldown_matches: 3
+      conditions:
+      - attribute: strike_type
+        operator: in
+        value: tete
         mandatory: true
       slots:
       - slot_name: joueur
@@ -2091,6 +2379,10 @@
       - attribute: height_cm
         operator: '>='
         value: '195'
+        mandatory: true
+      - attribute: strike_type
+        operator: in
+        value: shot_tendu, shot_enroule_leger, shot_enroule_fort, shot_exterieur_pied, reprise_vollee, penalty_fort, penalty_place, penalty_contre_pied
         mandatory: true
       slots: []
     - text: Le mur ferme tout l'angle de son imposante carrure et bloque la tentative

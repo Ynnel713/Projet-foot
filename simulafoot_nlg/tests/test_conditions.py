@@ -221,7 +221,7 @@ class TestMissilePiedDroitNonSensFootballRegression:
         # valide.
         phrase = self._phrase_missile()
         righty = _player(foot="Right", preferred_moves=("Shoots With Power",))
-        ctx = _context()
+        ctx = _context(strike_type="shot_tendu")  # B6-e : « missile » est reservee a la frappe tendue
 
         conditions = [
             PhraseCondition(

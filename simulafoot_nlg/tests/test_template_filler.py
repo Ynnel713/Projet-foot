@@ -123,9 +123,9 @@ def _phrases_reelles() -> list[Phrase]:
     return phrases
 
 
-def test_les_494_phrases_reelles_se_rendent_sans_slot_ni_accolade_residuelle():
+def test_les_504_phrases_reelles_se_rendent_sans_slot_ni_accolade_residuelle():
     phrases = _phrases_reelles()
-    assert len(phrases) == 494
+    assert len(phrases) == 504
     for phrase in phrases:
         rendu = render(phrase, JOUEUR, CONTEXTE)
         assert not re.search(r"[{}]", rendu), (phrase.text, rendu)

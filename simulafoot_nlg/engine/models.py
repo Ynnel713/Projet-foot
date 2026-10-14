@@ -136,6 +136,11 @@ class MatchContext:
     # meme principe que score_context ci-dessus. None si l'appelant ne l'a pas
     # fourni (ex. contexte construit hors du pipeline narrative.py).
     gabarit: str | None = None
+    # Type de frappe de l'evenement (B6-e, ticket 23) : un des 9 `event_contract.StrikeType` (`shot_tendu`, `tete`,
+    # `penalty_fort`...), copie telle quelle du dict, meme principe que `gabarit`. Permet `strike_type in [A, B]` pour qu'une
+    # phrase ne decrive que la frappe vue a l'ecran. None : evenement sans frappe (tacle, degagement) ou flux sans le champ
+    # -- une condition ne matche jamais sur une information absente.
+    strike_type: str | None = None
     # Protagonistes d'un REMPLACEMENT (decision D3 du plan V2.1) : le joueur qui
     # sort et celui qui entre, meme principe que passeur/receveur ci-dessus
     # (None pour tout evenement qui n'est pas un remplacement, jamais rempli

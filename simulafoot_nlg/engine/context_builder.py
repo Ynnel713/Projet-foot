@@ -37,6 +37,7 @@ _CHAMPS_RECOPIES = (
     "journee",
     "score_context",
     "gabarit",
+    "strike_type",
 )
 
 

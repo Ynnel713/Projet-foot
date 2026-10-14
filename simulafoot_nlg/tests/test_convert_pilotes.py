@@ -36,7 +36,7 @@ def test_un_yaml_par_pilote_nomme_comme_son_module_avec_le_bon_nombre_de_phrases
     for module in _pilotes():
         attendu = len(module.DEFAUT) + len(getattr(module, "SURNOM", []))
         assert nombres[_nom(module).upper()] == attendu
-    assert sum(nombres.values()) == 213
+    assert sum(nombres.values()) == 215  # 213 + 2 phrases de B6-e (ticket 23)
 
 
 def test_reconversion_diff_vide(tmp_path):
@@ -93,10 +93,10 @@ def test_la_banque_v1_et_les_8_pilotes_s_importent_ensemble(tmp_path):
     fichiers = [DEFAULT_SCENARIOS_PATH, *sorted((tmp_path / "v2").glob("*.yml"))]
     stats = import_seed(db_path, fichiers, DEFAULT_SLOTS_PATH, fallback_path=[])
 
-    assert (stats.scenarios, stats.phrases) == (9 + 8, 281 + 213)
+    assert (stats.scenarios, stats.phrases) == (9 + 8, 289 + 215)
     conn = sqlite3.connect(db_path)
     try:
-        assert conn.execute("SELECT COUNT(*) FROM phrase_cooldowns").fetchone()[0] == 494
+        assert conn.execute("SELECT COUNT(*) FROM phrase_cooldowns").fetchone()[0] == 504
     finally:
         conn.close()
 

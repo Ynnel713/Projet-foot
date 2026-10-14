@@ -47,7 +47,7 @@ SEUIL_DOMINANCE = 0.50  # a signaler (information)
 SEUIL_TRES_DOMINANTE = 0.70
 MAX_TRES_DOMINANTES = 2
 SEUIL_FANTOME = 20
-CHAMPS_CONTEXTE = {"minute", "score_context", "score_diff", "is_home"}
+CHAMPS_CONTEXTE = {"minute", "score_context", "score_diff", "is_home", "strike_type"}  # strike_type : B6-e, contexte de l'evenement, pas une propriete du joueur
 COLONNES_JOUEUR = {"age", "fm_rating", "height_cm", "weak_foot", "average_rating", "preferred_moves", "foot", "position"}
 
 Condition = tuple[str, str, str]

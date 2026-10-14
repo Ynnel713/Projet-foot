@@ -116,6 +116,7 @@ def normalize_match_context(row: dict[str, Any]) -> MatchContext:
         scenario_code=row.get("scenario_code"),
         score_context=row.get("score_context"),
         gabarit=row.get("gabarit"),
+        strike_type=row.get("strike_type"),
         passeur=_player_or_none(row, "passeur"),
         receveur=_player_or_none(row, "receveur"),
         sortant=_player_or_none(row, "sortant"),

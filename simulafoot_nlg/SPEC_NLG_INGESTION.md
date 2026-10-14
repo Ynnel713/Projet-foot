@@ -47,6 +47,13 @@ Champs communs (tous requis ; `competition`, `journee`, `score_context` peuvent 
 `match_id`, `match_sequence`, `event_id`, `minute`, `player_id`, `player_team`, `home_team`, `away_team`,
 `is_home`, `competition`, `journee`, `score_context` (∈ `SCORE_CONTEXT_VALUES` ou `None`).
 
+**`strike_type` (optionnel, B6-e / ticket 23).** Les `but` et `occasion` peuvent porter le type de frappe vu à l'écran :
+`shot_tendu`, `shot_enroule_leger`, `shot_enroule_fort`, `shot_exterieur_pied`, `reprise_vollee`, `tete`, `penalty_fort`,
+`penalty_place`, `penalty_contre_pied` (9 valeurs, `STRIKE_TYPES` du contrat), ou `None` quand il n'y a pas de frappe
+(`tacle`, `degagement`). Clé absente : acceptée. Il alimente `MatchContext.strike_type` ; une phrase le conditionne avec
+`strike_type in [A, B]` (mandatory) pour ne décrire que le style de la frappe jouée (« enroule » seulement pour un type
+enroulé, « tête » seulement pour `tete`...). Sans type connu, aucune phrase conditionnée sur lui ne sort.
+
 **À la charge de la racine :** choisir le gardien (occasion `arret`) et le défenseur (`tacle`, `degagement`)
 dans les compositions : le `NarrativeEvent` ne nomme que le tireur. Pour une occasion `arret`,
 `score_context` est le score **hypothétique du point de vue du tireur** (`MatchContext`).

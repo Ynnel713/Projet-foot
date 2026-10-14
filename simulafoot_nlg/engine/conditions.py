@@ -55,7 +55,9 @@ PLAYER_FIELDS = frozenset({"age", "height_cm", "weak_foot", "foot", "fm_rating",
 # gabarit ajoute (decision penalty-variant, SPEC_ANTI_REPEAT.md section 10) :
 # permet `gabarit == "penalty"` pour reserver la variante BUT/PENALTY aux vrais
 # penaltys ; chaine ou None (None -> la condition ne matche jamais).
-MATCH_CONTEXT_FIELDS = frozenset({"minute", "score_context", "is_home", "sortant", "entrant", "gabarit"})
+# strike_type ajoute (B6-e, ticket 23) : `strike_type in [shot_enroule_leger, shot_enroule_fort]` reserve une phrase aux frappes
+# enroulees ; None (tacle, degagement, flux sans le champ) -> la condition ne matche jamais.
+MATCH_CONTEXT_FIELDS = frozenset({"minute", "score_context", "is_home", "sortant", "entrant", "gabarit", "strike_type"})
 
 # Tous les noms qu'une condition de phrase peut viser (champ Player, champ de
 # MatchContext, attribut FM26, preferred_moves) : ce que `_resolve` reconnait

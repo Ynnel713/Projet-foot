@@ -52,6 +52,22 @@ Gabarit = Literal[
 ]
 GABARITS: tuple[str, ...] = get_args(Gabarit)
 
+# Les 9 types de frappe de la racine (templates.py : 6 de B5 + 3 de penalty de B6-b), B6-e / ticket 23. Copie volontaire :
+# le NLG n'importe pas la racine. Cle OPTIONNELLE des buts et occasions ; `None` quand il n'y a pas de frappe a l'ecran
+# (`tacle`, `degagement`). Absente (anciens flux, tests) : acceptee, et aucune phrase conditionnee sur le type ne sort.
+StrikeType = Literal[
+    "shot_tendu",
+    "shot_enroule_leger",
+    "shot_enroule_fort",
+    "shot_exterieur_pied",
+    "reprise_vollee",
+    "tete",
+    "penalty_fort",
+    "penalty_place",
+    "penalty_contre_pied",
+]
+STRIKE_TYPES: tuple[str, ...] = get_args(StrikeType)
+
 OutcomeOccasion = Literal["arret", "hors_cadre", "tacle", "degagement", "poteau", "barre"]
 OutcomeCarton = Literal["yellow", "direct", "second_yellow"]
 
@@ -79,12 +95,14 @@ class ButDict(EventBaseDict):
     gabarit: Gabarit
     passeur_id: NotRequired[int]
     receveur_id: NotRequired[int]
+    strike_type: NotRequired[StrikeType | None]
 
 
 class OccasionDict(EventBaseDict):
     event_type: Literal["occasion"]
     outcome: OutcomeOccasion
     gabarit: Gabarit
+    strike_type: NotRequired[StrikeType | None]
 
 
 class CartonDict(EventBaseDict):
