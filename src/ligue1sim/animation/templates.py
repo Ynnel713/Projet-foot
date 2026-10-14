@@ -46,7 +46,7 @@ import random
 from dataclasses import dataclass, replace
 from typing import Callable
 
-from ligue1sim.animation.ball import BALL_FLIGHT
+from ligue1sim.animation.ball import BALL_FLIGHT, PASS_GROUND, _drag_progress
 from ligue1sim.animation.types import BallState, Keyframe, PlayerId, RosterEntry, Sequence
 from ligue1sim.events import GoalEvent
 from ligue1sim.lineup import Lineup
@@ -237,6 +237,9 @@ class Template:
     # dépend aussi de l'`outcome` transmis à `build_from_template` (absent
     # -> comportement actuel inchangé, voir sa docstring).
     has_ball_flight: bool = False
+    # Phase 6, B8-a (14/10/2026) : `False` = ce gabarit ne reçoit PAS de contrôle au sol (voir `_insert_ground_controls`). Les deux gabarits
+    # qui finissent de la tête (`corner`, `debordement_centre_tete`) reçoivent un ballon aérien : leur contrôle relève de B8-c.
+    ground_control: bool = True
 
 
 def _validate_template(template: Template) -> None:
@@ -593,6 +596,186 @@ def _flight_distance_m(a: tuple[float, float, float], b: tuple[float, float, flo
     return math.hypot(math.hypot(dx_m, dy_m), dz_m)
 
 
+# --- Phase 6, B8-a (14/10/2026) : contrôles au sol ----------------------------------------------------------------------------
+# Avant B8-a, une réception (changement de porteur) était un keyframe où le ballon se collait au centre du joueur : un contrôle de durée
+# zéro, à distance zéro. Pour chaque réception AU SOL d'un gabarit (`Template.ground_control`), on insère maintenant un segment de contrôle :
+# le ballon arrive au pied du joueur (0,3 à 0,6 m de son centre, du côté du pied qui contrôle), le geste dure 0,15 à 0,30 s, puis la conduite
+# reprend (le ballon rejoint le centre du joueur au keyframe suivant, comme avant). Un contrôle approximatif ou lourd éloigne le ballon de 1 à 3 m
+# puis le joueur le reprend (0,4 à 0,8 s) : EFFET VISUEL SEUL, le porteur reste le même et l'issue de l'action n'est jamais modifiée.
+# Tout est tiré par sha256 de `event_ref` (`_flight_unit`, jamais `random`). Constantes validées par le propriétaire (voir `_CONTROL_LOOSE_HEAVY_P` pour les probabilités approximatif / lourd).
+_CONTROL_GESTURE_P = (0.85, 0.10, 0.05)  # pied naturel / pied faible / semelle, sur une passe au sol
+_CONTROL_SOLE_MAX_ARRIVAL_M_S = 8.0  # la semelle n'existe que si le ballon arrive à 8 m/s au plus
+_CONTROL_FOOT_DURATION_S = (0.15, 0.25)
+_CONTROL_SOLE_DURATION_S = (0.20, 0.30)
+_CONTROL_CLEAN_DISTANCE_M = (0.30, 0.60)  # ballon - centre du joueur après un contrôle propre
+_CONTROL_LOOSE_DISTANCE_M = (1.0, 2.0)  # contrôle approximatif : jusqu'à 2 m
+_CONTROL_HEAVY_DISTANCE_M = (2.0, 3.0)  # contrôle lourd : jusqu'à 3 m
+_CONTROL_ARRIVAL_EXTRA_M = 0.25  # le ballon arrive 25 cm plus loin que sa position après amorti : il s'amortit pendant le geste (choix d'implémentation)
+_CONTROL_RECOVERY_S = (0.4, 0.8)  # reprise du ballon échappé
+_CONTROL_MIN_RECOVERY_S = 0.2  # sous cette durée disponible, le contrôle redevient propre
+_CONTROL_ANGLE_JITTER_DEG = 10.0  # aléa de direction borné, déterministe
+_CONTROL_FOOT_ANGLE_DEG = (30.0, 60.0)  # écart à l'axe de course, vers le pied qui contrôle (choix d'implémentation)
+_CONTROL_SOLE_ANGLE_DEG = (10.0, 25.0)  # la semelle garde le ballon plus dans l'axe (choix d'implémentation)
+_CONTROL_ESCAPE_ANGLE_DEG = 15.0  # le ballon échappé part devant, légèrement vers le côté du pied (choix d'implémentation)
+# (approximatif, lourd). VALIDÉ par le propriétaire (14/10/2026) : approximatif pied naturel 10 %, pied faible 35 %, semelle 0 % ; lourd
+# 2 % pied naturel (rare) et 10 % pied faible (plus fréquent). B8-b les fera dépendre de la qualité technique et de la pression.
+_CONTROL_LOOSE_HEAVY_P = {"pied_naturel": (0.10, 0.02), "pied_faible": (0.35, 0.10), "semelle": (0.0, 0.0)}
+_CONTROL_ROOM_RATIO = 0.8  # un contrôle (et sa reprise) occupe au plus 80 % de l'intervalle entre deux keyframes d'origine
+_RIGHT_FOOTED_P = 0.78  # pied inconnu : droitier avec cette probabilité (292 D pour 81 G dans les données connues de la Ligue 1)
+
+
+def _control_span(unit: float, lo_hi: tuple[float, float]) -> float:
+    return lo_hi[0] + unit * (lo_hi[1] - lo_hi[0])
+
+
+def _strong_foot(player: Player, player_id: PlayerId) -> str:
+    """Pied fort du joueur : `Player.pied` ("D" / "G") s'il est connu, sinon tiré par sha256 de `player_id`."""
+    if player.pied in ("D", "G"):
+        return player.pied
+    return "D" if _flight_unit(str(player_id), "strong_foot") < _RIGHT_FOOTED_P else "G"
+
+
+def _control_gesture(arrival_m_s: float, unit: float) -> str:
+    """Geste du contrôle : pied naturel 85 %, pied faible 10 %, semelle 5 % (seulement si le ballon arrive à 8 m/s au plus ; sinon
+    pied naturel et pied faible gardent leurs poids relatifs)."""
+    natural, weak, _sole = _CONTROL_GESTURE_P
+    if arrival_m_s <= _CONTROL_SOLE_MAX_ARRIVAL_M_S:
+        return "pied_naturel" if unit < natural else "pied_faible" if unit < natural + weak else "semelle"
+    return "pied_naturel" if unit * (natural + weak) < natural else "pied_faible"
+
+
+def _insert_ground_controls(
+    template: Template, keyframes: list[Keyframe], players_by_id: dict[PlayerId, Player], event_ref: str
+) -> list[Keyframe]:
+    """Insère un segment de contrôle à chaque réception au sol (voir le bloc de commentaires ci-dessus). Une réception est un keyframe
+    dont le porteur change pour un joueur (pas `None`) ; une réception à position de ballon explicite (`Template.ball_position`) n'est pas
+    touchée. Réception NON finale : le keyframe garde son instant, le ballon y est au pied (`C0`), puis un keyframe de fin de geste
+    (et, si le ballon s'est échappé, un keyframe de reprise). Réception FINALE (le joueur frappe aussitôt) : la fenêtre PRÉCÈDE le keyframe
+    de frappe, qui reste inchangé, pour ne pas allonger le gabarit. Les joueurs des keyframes insérés sont sur la droite entre les keyframes
+    voisins ; le tag du premier keyframe inséré porte le geste (`controle_<geste>`), `Keyframe.tag` n'étant jamais lu par le rendu."""
+    n = len(keyframes)
+    if not template.ground_control or n < 2:
+        return keyframes
+    explicit_times = {ratio * template.duration for ratio, _ in template.ball_position}
+    receptions = [
+        i for i in range(1, n)
+        if keyframes[i].ball.owner_id is not None
+        and keyframes[i].ball.owner_id != keyframes[i - 1].ball.owner_id
+        and keyframes[i].ball.owner_id in players_by_id
+        and keyframes[i].t not in explicit_times
+    ]
+    if not receptions:
+        return keyframes
+    length_m, width_m = PITCH_LENGTH_M, PITCH_WIDTH_M
+
+    def position_m(kf: Keyframe, player_id: PlayerId) -> tuple[float, float]:
+        x, y = kf.players[player_id]
+        return x * length_m, y * width_m
+
+    def heading(i: int, owner: PlayerId) -> tuple[float, float]:
+        a, b = (i, i + 1) if i < n - 1 else (i - 1, i)
+        (ax, ay), (bx, by) = position_m(keyframes[a], owner), position_m(keyframes[b], owner)
+        norm = math.hypot(bx - ax, by - ay)
+        return ((bx - ax) / norm, (by - ay) / norm) if norm > 1e-9 else (1.0, 0.0)
+
+    def offset(head: tuple[float, float], angle_deg: float, distance_m: float) -> tuple[float, float]:
+        """Décalage normalisé : `distance_m` dans la direction `head` tournée de `angle_deg` (positif = vers la droite du joueur)."""
+        a = math.radians(angle_deg)
+        right = (-head[1], head[0])
+        return (
+            distance_m * (math.cos(a) * head[0] + math.sin(a) * right[0]) / length_m,
+            distance_m * (math.cos(a) * head[1] + math.sin(a) * right[1]) / width_m,
+        )
+
+    def blend(a: Keyframe, b: Keyframe, t: float) -> dict[PlayerId, tuple[float, float]]:
+        f = (t - a.t) / (b.t - a.t)
+        return {pid: (ax + (b.players[pid][0] - ax) * f, ay + (b.players[pid][1] - ay) * f) for pid, (ax, ay) in a.players.items()}
+
+    inserted: dict[int, list[Keyframe]] = {}
+    modified: dict[int, Keyframe] = {}
+    for i in receptions:
+        kf, previous = keyframes[i], keyframes[i - 1]
+        owner = kf.ball.owner_id
+        ref = f"{event_ref}|control{i}"
+        dist_m = math.hypot((kf.ball.x - previous.ball.x) * length_m, (kf.ball.y - previous.ball.y) * width_m)
+        dt = kf.t - previous.t
+        arrival = (dist_m / dt) * _drag_progress(1.0, dist_m)[1] if dist_m > 1e-9 and dt > 0 else 0.0  # vitesse d'arrivée du ballon
+        gesture = _control_gesture(arrival, _flight_unit(ref, "gesture"))
+        strong = _strong_foot(players_by_id[owner], owner)
+        foot = strong if gesture != "pied_faible" else ("G" if strong == "D" else "D")
+        side = 1.0 if foot == "D" else -1.0
+        d = _control_span(_flight_unit(ref, "duration"), _CONTROL_SOLE_DURATION_S if gesture == "semelle" else _CONTROL_FOOT_DURATION_S)
+        loose_p, heavy_p = _CONTROL_LOOSE_HEAVY_P[gesture]
+        quality = _flight_unit(ref, "quality")
+        kind = "lourd" if quality < heavy_p else "approximatif" if quality < heavy_p + loose_p else "propre"
+        recovery = _control_span(_flight_unit(ref, "recovery"), _CONTROL_RECOVERY_S) if kind != "propre" else 0.0
+
+        # Place disponible dans l'intervalle voisin ; partagée avec la réception finale quand les deux fenêtres se touchent.
+        last = i == n - 1
+        t_a, t_b = (keyframes[i - 1].t, kf.t) if last else (kf.t, keyframes[i + 1].t)
+        shared = (last and (n - 2) in receptions) or (i == n - 2 and (n - 1) in receptions)
+        room = _CONTROL_ROOM_RATIO * (t_b - t_a) * (0.5 if shared else 1.0)
+        d = min(d, room)
+        if d + recovery > room:
+            recovery = max(0.0, room - d)
+        if recovery < _CONTROL_MIN_RECOVERY_S:
+            recovery, kind = 0.0, "propre"
+
+        head = heading(i, owner)
+        jitter = _CONTROL_ANGLE_JITTER_DEG * (2.0 * _flight_unit(ref, "jitter") - 1.0)
+        foot_angle = _control_span(_flight_unit(ref, "angle"), _CONTROL_SOLE_ANGLE_DEG if gesture == "semelle" else _CONTROL_FOOT_ANGLE_DEG)
+        settled_m = _control_span(_flight_unit(ref, "distance"), _CONTROL_CLEAN_DISTANCE_M)
+        clean = offset(head, side * foot_angle + jitter, settled_m)
+        arrival_shift = offset(head, side * foot_angle + jitter, settled_m + _CONTROL_ARRIVAL_EXTRA_M)  # où le ballon arrive, avant l'amorti
+        escape_range = _CONTROL_HEAVY_DISTANCE_M if kind == "lourd" else _CONTROL_LOOSE_DISTANCE_M
+        escape = offset(
+            head, side * _CONTROL_ESCAPE_ANGLE_DEG + _CONTROL_ANGLE_JITTER_DEG * (2.0 * _flight_unit(ref, "escape_jitter") - 1.0),
+            _control_span(_flight_unit(ref, "escape"), escape_range),
+        )
+
+        def ball_at(players: dict[PlayerId, tuple[float, float]], shift: tuple[float, float]) -> BallState:
+            px, py = players[owner]
+            return BallState(x=px + shift[0], y=py + shift[1], z=0.0, spin=0.0, owner_id=owner)
+
+        tag = f"controle_{gesture}"
+        if last:
+            t0 = kf.t - (d + recovery)
+            first_players = blend(previous, kf, t0)
+            # Le segment qui précède le keyframe de frappe garde le tag du segment d'origine (`previous.physics_tag`, par exemple `shot`).
+            controls = [Keyframe(t=t0, ball=ball_at(first_players, arrival_shift), players=first_players, tag=tag, physics_tag=previous.physics_tag)]
+            if recovery > 0.0:
+                t1 = t0 + d
+                players_1 = blend(previous, kf, t1)
+                controls[0] = replace(controls[0], physics_tag=PASS_GROUND)
+                controls.append(Keyframe(t=t1, ball=ball_at(players_1, escape), players=players_1, tag=f"{tag}_{kind}", physics_tag=previous.physics_tag))
+            inserted[i] = controls
+        else:
+            following = keyframes[i + 1]
+            t1 = kf.t + d
+            players_1 = blend(kf, following, t1)
+            reception_players = kf.players
+            modified[i] = replace(kf, ball=ball_at(reception_players, arrival_shift), physics_tag=PASS_GROUND)
+            if recovery > 0.0:
+                t2 = t1 + recovery
+                players_2 = blend(kf, following, t2)
+                inserted[i] = [
+                    Keyframe(t=t1, ball=ball_at(players_1, escape), players=players_1, tag=f"{tag}_{kind}", physics_tag=PASS_GROUND),
+                    Keyframe(t=t2, ball=ball_at(players_2, clean), players=players_2, tag="reprise_conduite", physics_tag=kf.physics_tag),
+                ]
+            else:
+                inserted[i] = [Keyframe(t=t1, ball=ball_at(players_1, clean), players=players_1, tag=tag, physics_tag=kf.physics_tag)]
+
+    result: list[Keyframe] = []
+    for i, kf in enumerate(keyframes):
+        if i == n - 1 and i in inserted:
+            result.extend(inserted[i])  # réception finale : la fenêtre précède le keyframe de frappe
+            result.append(kf)
+        else:
+            result.append(modified.get(i, kf))
+            result.extend(inserted.get(i, []))
+    return result
+
+
 def build_from_template(
     template: Template,
     event: GoalEvent,
@@ -695,6 +878,7 @@ def build_from_template(
         )
 
     event_ref = f"goal:{event.club_name}:{event.scorer}:{event.minute}"
+    keyframes = _insert_ground_controls(template, keyframes, players_by_id, event_ref)  # B8-a : segment de contrôle à chaque réception au sol
     duration = template.duration
 
     if outcome is not None and template.has_ball_flight:
@@ -928,6 +1112,7 @@ _TEMPLATE_DEBORDEMENT = Template(
     context_score=_score_debordement_centre_tete,
     physics_tags=((0.6, "shot"),),  # dernier segment (0.6 -> 1.0) : la tête au but
     has_ball_flight=True,
+    ground_control=False,  # B8-a : finition de la tête, réception AÉRIENNE (B8-c)
 )
 
 _TEMPLATE_PERCEE_INDIVIDUELLE = Template(
@@ -1010,6 +1195,7 @@ _TEMPLATE_CORNER = Template(
     # segment [0.6 -> 1.0] : deflect -- ballon disputé au contact (owner=None à 0.6, keyframe "ballon disputé") avant la tête du buteur
     physics_tags=((0.0, "pass_ground"), (0.3, "cross"), (0.6, "deflect")),
     has_ball_flight=True,
+    ground_control=False,  # B8-a : finition de la tête, réception AÉRIENNE (B8-c)
 )
 
 _TEMPLATE_PROFONDEUR_1V1 = Template(
