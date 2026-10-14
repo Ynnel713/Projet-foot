@@ -154,7 +154,8 @@ def _commun(timeline: Timeline, match_id: str, match_sequence: int, event_id: in
 def _narratif_to_dict(event: NarrativeEvent, commun: dict[str, Any], squad: EffectifClub,
                       timeline: Timeline, adverse: EffectifClub) -> dict[str, Any]:
     if event.event_type == BUT:
-        dico = {**commun, "event_type": "but", "gabarit": event.gabarit, "player_id": squad.player_id(event.main_player)}
+        dico = {**commun, "event_type": "but", "gabarit": event.gabarit, "player_id": squad.player_id(event.main_player),
+                "strike_type": event.strike_type}
         if len(event.involved_players) > 1:
             dico["passeur_id"] = squad.player_id(event.involved_players[1])
             if event.gabarit in _GABARITS_A_PASSEUR:
@@ -167,12 +168,13 @@ def _narratif_to_dict(event: NarrativeEvent, commun: dict[str, Any], squad: Effe
         return dico
     if event.outcome in {"hors_cadre", "poteau", "barre"}:  # le tireur est l'acteur
         return {**commun, "event_type": "occasion", "gabarit": event.gabarit, "outcome": event.outcome,
-                "player_id": squad.player_id(event.main_player)}
+                "player_id": squad.player_id(event.main_player), "strike_type": event.strike_type}
     # arret -> gardien adverse ; tacle / degagement -> defenseur adverse (le NarrativeEvent ne nomme que le tireur).
     groupe = GOALKEEPER if event.outcome == "arret" else DEFENDER
     acteur = choisir_acteur_defensif(timeline, commun["match_id"], adverse.club, event.minute, groupe, adverse)
     return {**{**commun, "player_team": adverse.club, "is_home": adverse.club == commun["home_team"]},
-            "event_type": "occasion", "gabarit": event.gabarit, "outcome": event.outcome, "player_id": acteur}
+            "event_type": "occasion", "gabarit": event.gabarit, "outcome": event.outcome, "player_id": acteur,
+            "strike_type": event.strike_type}
 
 
 def _carton_to_dict(event: CardEvent, commun: dict[str, Any], squad: EffectifClub, timeline: Timeline, adverse: EffectifClub) -> dict[str, Any]:

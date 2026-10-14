@@ -22,8 +22,8 @@ CLES_COMMUNES = {
     "is_home", "competition", "journee", "score_context", "event_type",
 }
 CLES_PAR_TYPE = {
-    "but": CLES_COMMUNES | {"gabarit", "passeur_id"},
-    "occasion": CLES_COMMUNES | {"gabarit", "outcome"},
+    "but": CLES_COMMUNES | {"gabarit", "passeur_id", "strike_type"},  # strike_type : B6-e (ticket 23), toujours emis, None sans frappe
+    "occasion": CLES_COMMUNES | {"gabarit", "outcome", "strike_type"},
     "carton": CLES_COMMUNES | {"outcome"},
     "remplacement": CLES_COMMUNES | {"entrant_id", "sortant_id"},
 }
@@ -88,6 +88,22 @@ class TestTimelineToEvents:
             assert d["is_home"] == (d["player_team"] == d["home_team"])
             assert d["match_sequence"] == 3
             assert all(isinstance(d[k], int) and not isinstance(d[k], bool) for k in d if k.endswith("_id") and k != "match_id")
+
+    def test_strike_type_est_transmis_tel_que_la_chronologie_le_porte(self, match_synthetique):
+        """B6-e (ticket 23) : le dict du NLG porte le `strike_type` du `NarrativeEvent` (le type tire pour l'animation) ;
+        `None` pour une issue sans frappe (tacle, degagement)."""
+        from ligue1sim.animation.templates import strike_type_for
+
+        match_result, home, away = match_synthetique
+        timeline, dicts, _ = _convertir(match_result, home, away)
+        narratifs = [d for d in dicts if d["event_type"] in {"but", "occasion"}]
+        assert narratifs
+        for e in timeline.events:
+            attendu = None if e.outcome in {"tacle", "degagement"} else strike_type_for(e.gabarit, f"goal:{e.team}:{e.main_player}:{e.minute}").name
+            assert e.strike_type == attendu
+        assert {d["strike_type"] for d in narratifs} <= {None, "shot_tendu", "shot_enroule_leger", "shot_enroule_fort",
+            "shot_exterieur_pied", "reprise_vollee", "tete", "penalty_fort", "penalty_place", "penalty_contre_pied"}
+        assert all(d["strike_type"] is None for d in narratifs if d.get("outcome") in {"tacle", "degagement"})
 
     def test_but_carton_remplacement_convertis(self, match_synthetique):
         match_result, home, away = match_synthetique
