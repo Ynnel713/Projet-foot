@@ -37,6 +37,9 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 | 31 | Tests integration test_nlg_echantillon.py non relancés après B6-c | Basse | Ouvert (résolution à planifier) |
 | 32 | 5 tests ignorés dans l'environnement principal, qui passent en uv : cause à identifier | Basse | Ouvert (cause à identifier) |
 | 33 | Rond du gardien perçu trop gros par rapport à la cage — à investiguer | Basse | Fermé sur décision propriétaire — remarque retirée |
+| 34 | Phrases NLG mentionnent la lucarne sur des penaltys tirés bas ou à mi-hauteur | Basse | Ouvert (résolution à planifier) |
+| 35 | BUT/PENALTY #1 dit « au centre » alors que la cible est près d'un poteau | Basse | Ouvert |
+| 36 | Phrases de coup franc sortent sur des buts qui n'en sont pas | Basse | Ouvert |
 
 ---
 
@@ -616,6 +619,36 @@ Le centre du gardien est donc à 1,5 fois la profondeur du filet devant la ligne
 **Résolution.** Aucune : le propriétaire a retiré sa remarque, les options A, B et C ne sont pas retenues.
 
 **Statut.** Fermé sur décision propriétaire — remarque retirée. Aucune correction.
+
+---
+
+## 34. Phrases NLG mentionnent la lucarne sur des penaltys tirés bas ou à mi-hauteur
+
+**Description.** Trois phrases de `BUT/PENALTY` (`simulafoot_nlg/data/seed/scenarios.yml`) évoquent la lucarne : #0 (« en pleine lucarne »), #8 (« dans la lucarne opposée ») et #12 (« dans la lucarne »). Or les hauteurs de cible des trois types de penalty (B6-b, `templates.py`, `STRIKE_TYPES`) sont de 1,0 à 2,0 m pour `penalty_fort`, de 0,1 à 0,8 m pour `penalty_place` et de 0,3 à 1,2 m pour `penalty_contre_pied`, alors que la lucarne est à environ 2,44 m (la barre). Aucun type ne vise la lucarne : le texte contredit la trajectoire visible.
+
+**Piste (non implémentée).** Conditionner ces phrases sur un type de penalty compatible (impossible aujourd'hui : aucun ne l'est), ou les réécrire sans « lucarne ». À traiter avec les autres corrections éditoriales de `BUT/PENALTY`.
+
+**Priorité.** Basse. **Résolution.** À planifier. **Statut.** Ouvert. Non corrigé.
+
+---
+
+## 35. BUT/PENALTY #1 dit « au centre » alors que la cible est près d'un poteau
+
+**Description.** La phrase #1 de `BUT/PENALTY` (« frappe fort et au centre : le gardien s'est jeté, mais le ballon rentre en plein milieu ») décrit un tir au centre. Les cibles de but des penaltys (B6-b) sont à 1,0 à 3,5 m de l'axe selon le type (`penalty_fort` : 2,4 à 3,4 m), sur un but de 3,66 m de demi-largeur : le ballon rentre près d'un poteau, jamais « en plein milieu ». Incohérence entre le texte et la trajectoire.
+
+**Piste (non implémentée).** Réécrire la phrase ou la réserver à un type dont la cible est proche de l'axe (aucun aujourd'hui).
+
+**Priorité.** Basse. **Résolution.** À planifier. **Statut.** Ouvert. Non corrigé.
+
+---
+
+## 36. Phrases de coup franc sortent sur des buts qui n'en sont pas
+
+**Description.** Quatre phrases du NLG parlent d'un coup franc : `BUT/DEFAUT` #15 (« Coup franc à vingt mètres : … ») et #16 (« s'élance sur ce coup franc lointain »), `BUT/SURNOM` #7 (« … sur ce coup franc ») et #14 (« … sur ce coup franc lointain »). Elles ne sont conditionnées que par `preferred_moves` (le joueur sait tirer les coups francs), pas par le gabarit : un but de contre-attaque ou de corner marqué par un spécialiste peut donc être raconté comme un coup franc.
+
+**Piste (non implémentée).** Ajouter la condition `gabarit == "coup_franc"` à ces quatre phrases (le champ `gabarit` existe déjà dans le contexte des conditions).
+
+**Priorité.** Basse. **Résolution.** À planifier. **Statut.** Ouvert. Non corrigé.
 
 ---
 
