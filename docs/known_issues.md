@@ -685,6 +685,20 @@ Le centre du gardien est donc à 1,5 fois la profondeur du filet devant la ligne
 
 ---
 
+## 40. Exposer le type de contrôle au NLG (chantier de type B6-e)
+
+**Description.** B8-a crée le type de contrôle d'une réception au sol (`pied_naturel`, `pied_faible`, `semelle`) sous forme d'un marquage interne à `src/ligue1sim/animation/templates.py` (étiquette des keyframes de contrôle). Ce type n'est **pas exposé au NLG** : `NarrativeEvent` ne le porte pas et les phrases ne peuvent pas le nommer (« contrôle de la semelle », « contrôle du pied faible »).
+
+**Piste (non implémentée).** Chantier de même nature que B6-e (ticket 23) : champ optionnel dans `engine/narrative.py`, transmission par `engine/nlg_ingestion.py`, contrat et conditions du NLG, nouvelles phrases, réforme de la base. Toute modification du contrat NLG est soumise à validation préalable du propriétaire.
+
+**Fichiers concernés.** `engine/narrative.py`, `engine/nlg_ingestion.py`, `simulafoot_nlg/` (contrat, conditions, phrases).
+
+**Numérotation.** Le numéro 39, proposé en option par le propriétaire, n'a pas été ouvert : l'écart de taux de mauvais côté entre coup franc et penalty est noté dans la section 16.5 de `docs/phase6_block_b_audit.md`.
+
+**Priorité.** Basse. **Résolution.** À planifier après B8. **Statut.** Ouvert. Non corrigé.
+
+---
+
 # Décisions du propriétaire (entrées documentaires — ce ne sont pas des tickets)
 
 ## Décision propriétaire — dispositifs clubs conservés (D3)
