@@ -34,6 +34,7 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 | 28 | Adversaire (joueur décor) à 1,5 m du départ du tireur de penalty | Basse, résolution possible en Bloc A | Ouvert |
 | 29 | Tests d'intégration exclus de la suite standard : réintégration à décider | Basse | Ouvert (décision propriétaire reportée) |
 | 30 | Cohérence joueur-ballon : contact, distance, accélération sans contact interdite | **Haute**, Bloc A, A1.6 | Ouvert |
+| 31 | Tests integration test_nlg_echantillon.py non relancés après B6-c | Basse | Ouvert (résolution à planifier) |
 
 ---
 
@@ -541,6 +542,20 @@ appelé par les scripts, les tests et un éventuel paramètre de graine de l'API
 **Note pour A1.6 (décision du propriétaire, 14/10/2026).** La mesure ci-dessus montre que `ball.owner` ne peut pas servir de définition du contact : il est renseigné sur toutes les images, mais le ballon est à une distance médiane de 10,4 m (maximum 70 m) du joueur désigné. L'exigence « pas d'accélération sans contact » n'est donc ni vérifiée ni garantie. En A1.6, définir une **notion de contact réel** (distance ballon-joueur inférieure à un seuil, orientation, possession) et ne pas se fier à `ball.owner`.
 
 **Priorité.** Haute.
+
+**Statut.** Ouvert. Non corrigé.
+
+---
+
+## 31. Tests integration test_nlg_echantillon.py non relancés après B6-c
+
+**Description.** Les 5 tests marqués `integration` de `tests/test_nlg_echantillon.py` (`test_taux_surnom`, `test_joker_seuil`, `test_aucune_domination_d_un_modele`, `test_invariants_de_repetition`, `test_conditions_larges_non_dominantes`) n'ont pas été relancés après B6-c (`80f2bd0`, `9965d63`, `1f562e9`). Seuls les 7 tests d'intégration de `tests/test_narrative_player.py` l'ont été (tous passés sur `80f2bd0`). Ils sont exclus de la suite standard (`addopts = "-m 'not integration'"`, ticket 29).
+
+**Risque.** Faible : B6-c ne modifie que les décalages et les dérives des joueurs (`motion.py`, `sequence_generator.py`), pas le NLG ; mais l'absence de relance est un trou de couverture, pas une preuve.
+
+**Résolution.** À planifier : `pytest tests/test_nlg_echantillon.py -m integration` (`PYTHONHASHSEED=0`). Non corrigé : ticket de traçabilité.
+
+**Priorité.** Basse.
 
 **Statut.** Ouvert. Non corrigé.
 
