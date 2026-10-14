@@ -43,7 +43,7 @@ from dataclasses import dataclass, field, replace
 import numpy as np
 from random import Random
 
-from ligue1sim.animation.templates import TEMPLATES, TemplateContext, pick_template
+from ligue1sim.animation.templates import _NO_FLIGHT_OUTCOMES, TEMPLATES, TemplateContext, pick_template, strike_type_for
 from ligue1sim.events import (
     PENALTY_SPOT_ZONE,
     CardEvent,
@@ -304,6 +304,11 @@ class NarrativeEvent:
     # (0.0, 0.0) a la construction, meme avertissement : ne jamais lire
     # avant le retour de build_timeline.
     assist_zone: tuple[float, float] = (0.0, 0.0)
+    # B6-e (14/10/2026, ticket 23 ; exception ponctuelle pour ce seul champ) : type de frappe de B5 (`shot_tendu`, `tete`,
+    # `penalty_fort`...), le MEME que celui que `templates.build_from_template` tire pour l'animation (même hachage de
+    # `event_ref`). `None` pour une issue sans frappe visible (`tacle`, `degagement`). Posé par `build_timeline` (comme `zone`) ;
+    # lu seulement par `nlg_ingestion` -- `narrative_player` et la sérialisation des clips l'ignorent.
+    strike_type: str | None = None
 
 
 @dataclass(frozen=True)
@@ -826,7 +831,13 @@ def build_timeline(match: MatchResult) -> Timeline:
     # qui ne connaissent pas encore cet ordre final au moment où ils
     # construisent chaque NarrativeEvent (voir _narrative_event_zone).
     events = [
-        replace(e, zone=_narrative_event_zone(e.gabarit, i), assist_zone=_narrative_event_assist_zone(e.gabarit, i))
+        replace(
+            e,
+            zone=_narrative_event_zone(e.gabarit, i),
+            assist_zone=_narrative_event_assist_zone(e.gabarit, i),
+            strike_type=None if e.outcome in _NO_FLIGHT_OUTCOMES
+            else strike_type_for(e.gabarit, f"goal:{e.team}:{e.main_player}:{e.minute}").name,
+        )
         for i, e in enumerate(events)
     ]
 
