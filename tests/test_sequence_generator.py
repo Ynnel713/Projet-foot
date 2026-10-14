@@ -6,6 +6,7 @@ from ligue1sim.animation.sequence_generator import (
     _GK_BASE_ADVANCE_M,
     _GK_BASE_Y,
     _GK_LATERAL_MAX_M,
+    _MAX_DRIFT_FLOOR_M,
     _MIN_DRIFT_MAGNITUDE_M,
     MatchState,
     _cb_line_drift,
@@ -596,3 +597,39 @@ class TestDriftFloor:
                 f"{name} : figurant {player_id} ({entry.team_side}, {entry.poste}, #{entry.numero}) "
                 f"drift={magnitude_m:.4f} m, sous le plancher {_MIN_DRIFT_MAGNITUDE_M} m"
             )
+
+
+class TestDriftFloorVariesByEvent:
+    """Phase 6, B6-c, décision A3 : le plancher est tiré dans [0,1 ; 0,5] m par couple (joueur, événement) -- plus de valeur fixe à
+    0,5 m qui rendait identiques 20 % des dérives d'un événement à l'autre."""
+
+    def test_the_floor_range_is_0_1_to_0_5_m(self):
+        assert (_MIN_DRIFT_MAGNITUDE_M, _MAX_DRIFT_FLOOR_M) == (0.1, 0.5)
+
+    def test_a_tiny_drift_is_raised_to_a_floor_inside_the_range_and_varies_by_event(self):
+        from ligue1sim.animation.sequence_generator import _floor_drift_magnitude
+
+        floors = set()
+        for i in range(200):
+            dx, dy = _floor_drift_magnitude(0.0, 0.0, 7, f"goal:Test FC:p{i}:{i % 90 + 1}")
+            floors.add(round(abs(dy) * PITCH_WIDTH_M, 9))
+            assert _MIN_DRIFT_MAGNITUDE_M - 1e-9 <= abs(dy) * PITCH_WIDTH_M <= _MAX_DRIFT_FLOOR_M + 1e-9
+            assert dx == 0.0  # cas dégénéré : latéral seulement
+        assert len(floors) >= 190  # plancher continu, quasi aucune collision
+
+    def test_a_drift_above_the_largest_floor_is_never_modified(self):
+        from ligue1sim.animation.sequence_generator import _floor_drift_magnitude
+
+        dx, dy = 0.02, 0.01  # ~2,1 m en x : au-dessus de 0,5 m
+        for i in range(50):
+            assert _floor_drift_magnitude(dx, dy, 7, f"goal:Test FC:p{i}:{i + 1}") == (dx, dy)
+
+    def test_a_non_degenerate_drift_keeps_its_direction_when_floored(self):
+        from ligue1sim.animation.sequence_generator import _floor_drift_magnitude
+
+        dx, dy = 0.0001, 0.0002  # direction (1, 2), ~0,03 m : sous tous les planchers
+        for i in range(50):
+            fx, fy = _floor_drift_magnitude(dx, dy, 3, f"goal:Test FC:p{i}:{i + 1}")
+            assert fx > 0 and fy / fx == pytest.approx(dy / dx)  # mise à l'échelle uniforme : même direction
+            magnitude_m = math.hypot(fx * PITCH_LENGTH_M, fy * PITCH_WIDTH_M)
+            assert _MIN_DRIFT_MAGNITUDE_M - 1e-9 <= magnitude_m <= _MAX_DRIFT_FLOOR_M + 1e-9

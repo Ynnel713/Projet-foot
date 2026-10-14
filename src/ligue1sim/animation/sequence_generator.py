@@ -264,12 +264,17 @@ def _cb_line_drift(team_key: str, avg_cb_y: float, ball_y: float) -> tuple[float
 # produisait un joueur visuellement figé (mesuré jusqu'à 7 mm sur 8,5 s,
 # voir le diagnostic), alors que la RÉDUCTION d'amplitude pour ces rôles est
 # volontaire, pas leur immobilité totale.
-_MIN_DRIFT_MAGNITUDE_M = 0.5
+# Phase 6, B6-c, décision A3 du propriétaire (10/2026) : le plancher n'est plus fixe à 0,5 m (22,1 % des dérives valaient alors exactement
+# 0,5 m, d'où 20,1 % de paires (joueur, événement) identiques d'un événement à l'autre) ; il est tiré par couple (joueur, événement) dans
+# [`_MIN_DRIFT_MAGNITUDE_M`, `_MAX_DRIFT_FLOOR_M`] = [0,1 ; 0,5] m. L'amplitude maximale d'un plancher ne dépasse jamais 0,5 m.
+_MIN_DRIFT_MAGNITUDE_M = 0.1  # plus petit plancher possible
+_MAX_DRIFT_FLOOR_M = 0.5  # plus grand plancher possible (ancien plancher fixe)
 
 
 def _floor_drift_magnitude(dx: float, dy: float, player_id: PlayerId, event_ref: str = "") -> tuple[float, float]:
-    """Applique le plancher `_MIN_DRIFT_MAGNITUDE_M` à un drift déjà calculé
-    -- mise à l'échelle UNIFORME (préserve le signe/la direction de chaque
+    """Applique le plancher (tiré dans [`_MIN_DRIFT_MAGNITUDE_M`,
+    `_MAX_DRIFT_FLOOR_M`] par `player_id|event_ref|drift_floor_mag`) à un
+    drift déjà calculé -- mise à l'échelle UNIFORME (préserve le signe/la direction de chaque
     composante, donc toute contrainte tactique déjà encodée dans `dx`/`dy`
     par l'appelant reste respectée), jamais un plafond touché (`_clamped`,
     `_MAX_DRIFT_MAGNITUDE=0.05` normalisé, très au-dessus de 0,5 m dans tous
@@ -279,13 +284,14 @@ def _floor_drift_magnitude(dx: float, dy: float, player_id: PlayerId, event_ref:
     le plancher s'applique alors UNIQUEMENT en latéral (jamais en
     profondeur, pour ne jamais introduire une avancée non voulue), signe
     déterministe par joueur."""
+    floor_m = _MIN_DRIFT_MAGNITUDE_M + (_MAX_DRIFT_FLOOR_M - _MIN_DRIFT_MAGNITUDE_M) * _event_unit(player_id, event_ref, "drift_floor_mag")
     magnitude_m = math.hypot(dx * PITCH_LENGTH_M, dy * PITCH_WIDTH_M)
-    if magnitude_m >= _MIN_DRIFT_MAGNITUDE_M:
+    if magnitude_m >= floor_m:
         return dx, dy
     if magnitude_m < 1e-12:
         sign = 1.0 if _event_unit(player_id, event_ref, "drift_floor_side") < 0.5 else -1.0
-        return 0.0, sign * _MIN_DRIFT_MAGNITUDE_M / PITCH_WIDTH_M
-    scale = _MIN_DRIFT_MAGNITUDE_M / magnitude_m
+        return 0.0, sign * floor_m / PITCH_WIDTH_M
+    scale = floor_m / magnitude_m
     return dx * scale, dy * scale
 
 

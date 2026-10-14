@@ -481,13 +481,18 @@ class TestAccelerationConstraintOnRealGabarits:
 # but_gag ("6b3877c7e00cfc9e", "30bef88bb8d089cd"), construction_placee ("2dbe69316b810342", ...), contre_attaque ("269d6156d88bef7b", ...),
 # corner ("0b781d5c5bc9f220", "f5705f4abb4a75e8"), percee_individuelle ("d61261efa5c6fb1c", ...). L'équivalence d'`interpolate` avec le code
 # d'origine reste vérifiée par `_reference_avoidance` et les tests ci-dessous.
+# Phase 6, B6-c, décision A3 (plancher des dérives tiré dans [0,1 ; 0,5] m par couple (joueur, événement), au lieu de 0,5 m fixe) : les
+# dérives des joueurs décor changent, les 5 empreintes ont été recalculées une seconde fois. Preuve que A3 est la SEULE cause : avec le
+# plancher remis à 0,5 m fixe (`_MIN_DRIFT_MAGNITUDE_M = 0.5`), le code actuel redonne exactement les empreintes de B6-c :
+# but_gag ("72e992e33871f1a1", "986c877d0f40e3cc"), construction_placee ("2fdf4a837c8f86ae", ...), contre_attaque ("eba806b8f8345992", ...),
+# corner ("8667086b93f53cda", "c2a0a0579fb60eae"), percee_individuelle ("6d8d8580707ed082", ...).
 _WITNESS_DIGESTS = {
     # gabarit: (empreinte des images brutes `interpolate`, empreinte après contrainte d'accélération)
-    "but_gag": ("72e992e33871f1a1", "986c877d0f40e3cc"),
-    "construction_placee": ("2fdf4a837c8f86ae", "2fdf4a837c8f86ae"),
-    "contre_attaque": ("eba806b8f8345992", "eba806b8f8345992"),
-    "corner": ("8667086b93f53cda", "c2a0a0579fb60eae"),
-    "percee_individuelle": ("6d8d8580707ed082", "6d8d8580707ed082"),
+    "but_gag": ("178cb5423d50d5e5", "625839a8feaefc0b"),
+    "construction_placee": ("154a539bf8f77445", "154a539bf8f77445"),
+    "contre_attaque": ("fb2cd12d94c9a31c", "fb2cd12d94c9a31c"),
+    "corner": ("8b9f3e342c4d0d34", "b9a32dd3ebd7562e"),
+    "percee_individuelle": ("72fa884e6d046ec8", "72fa884e6d046ec8"),
 }
 
 
