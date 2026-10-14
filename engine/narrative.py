@@ -836,7 +836,7 @@ def build_timeline(match: MatchResult) -> Timeline:
             zone=_narrative_event_zone(e.gabarit, i),
             assist_zone=_narrative_event_assist_zone(e.gabarit, i),
             strike_type=None if e.outcome in _NO_FLIGHT_OUTCOMES
-            else strike_type_for(e.gabarit, f"goal:{e.team}:{e.main_player}:{e.minute}").name,
+            else strike_type_for(e.gabarit, f"goal:{e.team}:{e.main_player}:{e.minute}").nlg_name,  # B7-a : nom exposé au NLG
         )
         for i, e in enumerate(events)
     ]

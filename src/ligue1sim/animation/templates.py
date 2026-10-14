@@ -50,7 +50,14 @@ from ligue1sim.animation.ball import BALL_FLIGHT
 from ligue1sim.animation.types import BallState, Keyframe, PlayerId, RosterEntry, Sequence
 from ligue1sim.events import GoalEvent
 from ligue1sim.lineup import Lineup
-from ligue1sim.pitch_geometry import PENALTY_SPOT_DISTANCE_M, PITCH_LENGTH_M, PITCH_WIDTH_M, PitchPoint, center_of
+from ligue1sim.pitch_geometry import (
+    PENALTY_AREA_DEPTH_M,
+    PENALTY_SPOT_DISTANCE_M,
+    PITCH_LENGTH_M,
+    PITCH_WIDTH_M,
+    PitchPoint,
+    center_of,
+)
 from ligue1sim.players import ATTACKER, DEFENDER, GOALKEEPER, MIDFIELDER, Player
 
 _logger = logging.getLogger(__name__)
@@ -62,6 +69,7 @@ ANCHOR_SCORER = "scorer_zone"  # event.zone (centre de la zone de tir/but)
 ANCHOR_ASSIST = "assist_zone"  # event.assist_zone si présent, sinon repli sur ANCHOR_SCORER
 ANCHOR_STATIC = "static"  # reste à sa position de départ (progress ignoré)
 ANCHOR_PENALTY_SPOT = "penalty_spot"  # point de penalty réglementaire (PENALTY_SPOT_DISTANCE_M de la ligne de but, y = 0,5), indépendant de event.zone -- Phase 6 B6-a
+ANCHOR_FREE_KICK_SPOT = "free_kick_spot"  # point du coup franc direct, tiré de event_ref (voir free_kick_spot), indépendant de event.zone -- Phase 6 B7-a
 ANCHOR_LATERAL_SHIFT = "lateral_shift"  # décalage latéral FIXE (voir _LATERAL_SHIFT_M) depuis le départ -- un pas de côté, jamais une vraie course (brief du 23/09/2026, penalty.support1/support2)
 
 # Amplitude du décalage pour ANCHOR_LATERAL_SHIFT -- 1,5 m (une enjambée
@@ -81,6 +89,19 @@ _PENALTY_SPOT = PitchPoint(x=1.0 - PENALTY_SPOT_DISTANCE_M / PITCH_LENGTH_M, y=0
 _PENALTY_RUNUP_MIN_M = 6.0  # longueur de l'élan du tireur : 6 à 9 m
 _PENALTY_RUNUP_MAX_M = 9.0
 _PENALTY_RUNUP_ANGLE_MAX_DEG = 10.0  # angle d'approche : +-10 degres autour de l'axe tireur -> but (aléa D8)
+
+# Phase 6, B7-a (14/10/2026) -- point du coup franc direct : constantes produit validées par le propriétaire. Remplace la zone de
+# l'événement (case de la grille perturbée par `engine/narrative.py` : 31 à 53 m du but, médiane 45 m, jamais sous 25 m), qui n'est
+# plus lue pour un coup franc. Le ballon est posé hors de la surface de réparation (sinon ce serait un penalty).
+_FREE_KICK_DISTANCE_MIN_M = 18.0  # distance au centre du but : de 18 à 30 m (zone d'un coup franc direct)
+_FREE_KICK_DISTANCE_MAX_M = 30.0
+_FREE_KICK_LATERAL_MAX_M = 12.0  # décalage latéral |y| de 0 à 12 m, côté tiré par hachage (au-delà : situation de centre)
+_FREE_KICK_RUNUP_MIN_M = 4.0  # élan : 4 à 7 m (3 à 5 pas ; le penalty est à 6 à 9 m)
+_FREE_KICK_RUNUP_MAX_M = 7.0
+_FREE_KICK_RUNUP_ANGLE_STRAIGHT_DEG = 10.0  # frappé : +-10 degrés de l'axe ballon -> but
+_FREE_KICK_RUNUP_ANGLE_CURL_MIN_DEG = 20.0  # enroulé : 20 à 40 degrés de l'axe, côté tiré par hachage (on prend un enroulé de biais)
+_FREE_KICK_RUNUP_ANGLE_CURL_MAX_DEG = 40.0
+_FREE_KICK_INWARD_CURVE_P = 0.75  # courbure rentrante (vers l'axe du but) pour 75 % des enroulés, sortante pour 25 %
 
 
 @dataclass(frozen=True)
@@ -343,6 +364,8 @@ def _anchor_point(anchor: str, start: PitchPoint, event: GoalEvent) -> PitchPoin
         return PitchPoint(x=start.x, y=start.y + _LATERAL_SHIFT_M / PITCH_WIDTH_M)
     if anchor == ANCHOR_PENALTY_SPOT:
         return _PENALTY_SPOT
+    if anchor == ANCHOR_FREE_KICK_SPOT:
+        return free_kick_spot(f"goal:{event.club_name}:{event.scorer}:{event.minute}")
     raise ValueError(f"Ancrage de rôle inconnu : {anchor!r}")
 
 
@@ -410,6 +433,15 @@ class StrikeType:
     y_abs_max_m: float | None = None
     z_min_m: float | None = None
     z_max_m: float | None = None
+    # B7-a : nom exposé au NLG quand il diffère du nom interne (`coup_franc_enroule` -> `shot_enroule_leger`) : le contrat du NLG
+    # ne connaît que les 9 types de B5 / B6-b, voir `nlg_name` et `engine/narrative.py`.
+    nlg_alias: str | None = None
+    # B7-a : `spin_min`/`spin_max` sont des MODULES, le signe est tiré par `strike_spin_for` (rentrant / sortant).
+    curve_side_drawn: bool = False
+
+    @property
+    def nlg_name(self) -> str:
+        return self.nlg_alias or self.name
 
 
 STRIKE_TYPES: dict[str, StrikeType] = {
@@ -426,12 +458,16 @@ STRIKE_TYPES: dict[str, StrikeType] = {
         StrikeType("penalty_fort", 0.0, 0.0, 29.0, 33.0, 2.4, 3.4, 1.0, 2.0),  # frappe puissante, mi-hauteur à haut, près d'un poteau
         StrikeType("penalty_place", 20.0, 30.0, 21.0, 25.0, 2.8, 3.5, 0.1, 0.8),  # placée, ras de terre à mi-hauteur basse (spin : traînée seule)
         StrikeType("penalty_contre_pied", 0.0, 0.0, 24.0, 28.0, 1.0, 2.8, 0.3, 1.2),  # côté opposé au plongeon du gardien (B6-d)
+        # Phase 6, B7-a (14/10/2026) -- types de coup franc direct, constantes validées par le propriétaire. Noms internes : le NLG
+        # reçoit `shot_enroule_leger` / `shot_tendu` (`nlg_name`), son contrat n'est pas modifié.
+        StrikeType("coup_franc_enroule", 45.0, 70.0, 24.0, 30.0, nlg_alias="shot_enroule_leger", curve_side_drawn=True),  # 86 à 108 km/h, 7 à 11 tours/s
+        StrikeType("coup_franc_frappe", -5.0, 5.0, 28.0, 35.0, nlg_alias="shot_tendu"),  # 100 à 126 km/h, quasi sans rotation
     )
 }
 
 # Gabarit -> poids des types possibles (somme 1). Cohérence type / gabarit : `decalage_enroulee` ne produit QUE
 # `shot_enroule_fort` ; les gabarits de tête produisent `tete` (majoritaire) ou `reprise_vollee` ; les gabarits de
-# récupération / déviation produisent `reprise_vollee` ; un penalty est toujours tendu, un coup franc toujours enroulé léger ;
+# récupération / déviation produisent `reprise_vollee` ; un penalty a ses 3 types (B6-b), un coup franc direct ses 2 types (B7-a) ;
 # les autres frappes au pied se répartissent entre tendu, enroulé léger et extérieur du pied.
 # Poids du « pool pied » recalibrés le 08/10/2026 (revue de l'architecte : `shot_tendu` à 39,4 % pour une cible de 35 %) :
 # 0,70 / 0,19 / 0,11 -> 0,64 / 0,22 / 0,14.
@@ -444,7 +480,9 @@ _STRIKE_TYPE_WEIGHTS: dict[str, tuple[tuple[str, float], ...]] = {
     "recuperation_haute": (("reprise_vollee", 1.0),),
     "but_gag": (("reprise_vollee", 1.0),),
     "penalty": (("penalty_fort", 0.30), ("penalty_place", 0.50), ("penalty_contre_pied", 0.20)),
-    "coup_franc": (("shot_enroule_leger", 1.0),),
+    # B7-a : 55 % enroulé / 30 % frappé / 15 % indirect, l'indirect n'existant pas encore : renormalisé en 55/85 et 30/85
+    # (64,7 % / 35,3 %). Quand l'indirect viendra : 0,55 / 0,30 / 0,15 et un passeur force l'indirect.
+    "coup_franc": (("coup_franc_enroule", 55 / 85), ("coup_franc_frappe", 30 / 85)),
     "contre_attaque": _FOOT_POOL,
     "construction_placee": _FOOT_POOL,
     "percee_individuelle": _FOOT_POOL,
@@ -466,7 +504,8 @@ def strike_type_for(gabarit: str, event_ref: str) -> StrikeType:
 
 
 def strike_spin_for(strike: StrikeType, event_ref: str) -> float:
-    return strike.spin_min + _flight_unit(event_ref, "spin") * (strike.spin_max - strike.spin_min)
+    spin = strike.spin_min + _flight_unit(event_ref, "spin") * (strike.spin_max - strike.spin_min)
+    return spin * _free_kick_curve_sign(event_ref) if strike.curve_side_drawn else spin
 
 
 def strike_speed_for(strike: StrikeType, event_ref: str) -> float:
@@ -922,15 +961,17 @@ _TEMPLATE_COUP_FRANC = Template(
     name="coup_franc",
     weight=0.4,
     duration=5.0,
-    # ANCHOR_SCORER, pas ANCHOR_STATIC : le tireur est déjà positionné près du
-    # ballon au coup franc (frame 0 proche de la zone), pas à sa position de
-    # formation d'origine -- peu de déplacement, mais vers le bon point.
-    roles=(Role("scorer", ANCHOR_SCORER, (RoleFrame(0.0, 0.8), RoleFrame(0.7, 0.9), RoleFrame(1.0, 1.0))),),
-    tags=((0.0, "placement"), (0.7, "elan"), (1.0, "frappe")),
-    ball_owner=((0.0, "scorer"), (0.7, "scorer"), (1.0, "scorer")),
+    # Phase 6, B7-a (14/10/2026) : même chronologie que le penalty (B6-a). Le ballon est POSÉ au point du coup franc (z = 0,
+    # immobile, `ball_position`) et le tireur part d'un point d'élan (4 à 7 m, `free_kick_runup_start`), attend (0 -> 0.25, 1,25 s),
+    # s'élance (0.25 -> 0.8 : 85 % de la course) puis arrive sur le ballon (0.8 -> 1.0) et frappe à t_ratio = 1.0. Le point change
+    # à chaque coup franc : `build_coup_franc` remplace `ball_position` par événement (valeur par défaut ci-dessous : 24 m, axe).
+    roles=(Role("scorer", ANCHOR_FREE_KICK_SPOT, (RoleFrame(0.0, 0.0), RoleFrame(0.25, 0.0), RoleFrame(0.8, 0.85), RoleFrame(1.0, 1.0))),),
+    tags=((0.0, "placement"), (0.25, "attente"), (0.8, "elan"), (1.0, "frappe")),
+    ball_owner=((0.0, "scorer"), (0.25, "scorer"), (0.8, "scorer"), (1.0, "scorer")),
+    ball_position=tuple((t, (1.0 - 24.0 / PITCH_LENGTH_M, 0.5)) for t in (0.0, 0.25, 0.8, 1.0)),
     context_score=_score_coup_franc,
     starts_at_restart=True,
-    physics_tags=((0.7, "shot"),),  # dernier segment (0.7 -> 1.0) : la frappe
+    physics_tags=((0.8, "shot"),),  # dernier segment (0.8 -> 1.0) : ballon immobile (posé), puis ball_flight
     has_ball_flight=True,
 )
 
@@ -1148,10 +1189,62 @@ def build_une_deux(
     return build_from_template(TEMPLATES["une_deux"], event, lineup, start_positions, outcome)
 
 
+def free_kick_spot(event_ref: str) -> PitchPoint:
+    """Point du coup franc direct (B7-a) : distance au centre du but dans [max(18 ; racine(16,5² + y²)) ; 30] m et décalage latéral
+    |y| de 0 à 12 m, côté gauche ou droit tiré par hachage. Le plancher racine(16,5² + y²) garde le ballon HORS de la surface de
+    réparation (16,5 m de la ligne de but), sinon la faute serait un penalty. Déterministe (sha256 de `event_ref`)."""
+    lateral_m = _flight_unit(event_ref, "fk_lateral") * _FREE_KICK_LATERAL_MAX_M
+    side = 1.0 if _flight_unit(event_ref, "fk_side") >= 0.5 else -1.0
+    distance_min_m = max(_FREE_KICK_DISTANCE_MIN_M, math.hypot(PENALTY_AREA_DEPTH_M, lateral_m))
+    distance_m = distance_min_m + _flight_unit(event_ref, "fk_distance") * (_FREE_KICK_DISTANCE_MAX_M - distance_min_m)
+    depth_m = math.sqrt(distance_m**2 - lateral_m**2)  # profondeur depuis la ligne de but : >= 16,5 m par construction
+    return PitchPoint(x=1.0 - depth_m / PITCH_LENGTH_M, y=0.5 + side * lateral_m / PITCH_WIDTH_M)
+
+
+def _free_kick_curve_sign(event_ref: str) -> float:
+    """Signe du spin d'un coup franc enroulé (B7-a). Un spin > 0 gonfle la trajectoire vers les y croissants (`ball._perp_unit`) : la
+    courbure est RENTRANTE (le ballon vise à l'extérieur puis revient vers l'axe du but) quand le gonflement est du côté du ballon,
+    soit le signe de `y - 0,5` ; SORTANTE sinon. Rentrante pour 75 % des coups francs (`_FREE_KICK_INWARD_CURVE_P`)."""
+    ball_side = 1.0 if free_kick_spot(event_ref).y >= 0.5 else -1.0
+    inward = _flight_unit(event_ref, "fk_curve_inward") < _FREE_KICK_INWARD_CURVE_P
+    return ball_side if inward else -ball_side
+
+
+def free_kick_runup_start(event_ref: str) -> PitchPoint:
+    """Point d'élan du tireur (B7-a) : 4 à 7 m du ballon, sous un angle par rapport à l'axe ballon -> centre du but de +-10 degrés
+    pour un frappé, de 20 à 40 degrés (côté tiré par hachage) pour un enroulé. Déterministe (sha256 de `event_ref`)."""
+    spot = free_kick_spot(event_ref)
+    length_m = _FREE_KICK_RUNUP_MIN_M + _flight_unit(event_ref, "fk_runup_length") * (_FREE_KICK_RUNUP_MAX_M - _FREE_KICK_RUNUP_MIN_M)
+    if strike_type_for("coup_franc", event_ref).name == "coup_franc_frappe":
+        angle = math.radians((2.0 * _flight_unit(event_ref, "fk_runup_angle") - 1.0) * _FREE_KICK_RUNUP_ANGLE_STRAIGHT_DEG)
+    else:
+        magnitude = _FREE_KICK_RUNUP_ANGLE_CURL_MIN_DEG + _flight_unit(event_ref, "fk_runup_angle") * (
+            _FREE_KICK_RUNUP_ANGLE_CURL_MAX_DEG - _FREE_KICK_RUNUP_ANGLE_CURL_MIN_DEG
+        )
+        angle = math.radians(magnitude if _flight_unit(event_ref, "fk_runup_side") >= 0.5 else -magnitude)
+    ball_x_m, ball_y_m = spot.x * PITCH_LENGTH_M, spot.y * PITCH_WIDTH_M
+    to_goal_x, to_goal_y = PITCH_LENGTH_M - ball_x_m, PITCH_WIDTH_M / 2.0 - ball_y_m
+    norm = math.hypot(to_goal_x, to_goal_y)
+    ux, uy = to_goal_x / norm, to_goal_y / norm  # axe ballon -> centre du but
+    nx, ny = -uy, ux
+    return PitchPoint(
+        x=(ball_x_m - length_m * (math.cos(angle) * ux + math.sin(angle) * nx)) / PITCH_LENGTH_M,
+        y=(ball_y_m - length_m * (math.cos(angle) * uy + math.sin(angle) * ny)) / PITCH_WIDTH_M,
+    )
+
+
 def build_coup_franc(
     event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None
 ) -> Sequence:
-    return build_from_template(TEMPLATES["coup_franc"], event, lineup, start_positions, outcome)
+    """Phase 6, B7-a : le ballon est posé au point du coup franc (`free_kick_spot`, la zone de l'événement n'est plus lue) et le
+    tireur s'élance depuis un point d'élan (`free_kick_runup_start`). Le gabarit est reconstruit PAR ÉVÉNEMENT (le point varie)."""
+    scorer = _resolve_roles(event, lineup, ("scorer",))["scorer"]
+    event_ref = f"goal:{event.club_name}:{event.scorer}:{event.minute}"
+    spot = free_kick_spot(event_ref)
+    base = TEMPLATES["coup_franc"]
+    template = replace(base, ball_position=tuple((t, (spot.x, spot.y)) for t, _ in base.ball_position))
+    starts = {**start_positions, player_id_of(scorer): free_kick_runup_start(event_ref)}
+    return build_from_template(template, event, lineup, starts, outcome)
 
 
 def build_corner(

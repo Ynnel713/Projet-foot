@@ -99,7 +99,7 @@ class TestTimelineToEvents:
         narratifs = [d for d in dicts if d["event_type"] in {"but", "occasion"}]
         assert narratifs
         for e in timeline.events:
-            attendu = None if e.outcome in {"tacle", "degagement"} else strike_type_for(e.gabarit, f"goal:{e.team}:{e.main_player}:{e.minute}").name
+            attendu = None if e.outcome in {"tacle", "degagement"} else strike_type_for(e.gabarit, f"goal:{e.team}:{e.main_player}:{e.minute}").nlg_name
             assert e.strike_type == attendu
         assert {d["strike_type"] for d in narratifs} <= {None, "shot_tendu", "shot_enroule_leger", "shot_enroule_fort",
             "shot_exterieur_pied", "reprise_vollee", "tete", "penalty_fort", "penalty_place", "penalty_contre_pied"}

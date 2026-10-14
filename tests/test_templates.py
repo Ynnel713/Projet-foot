@@ -177,6 +177,115 @@ class TestEveryTemplateProducesAValidSequence:
         assert payload["keyframes"]
 
 
+class TestFreeKickIsSpecialCased:
+    """Phase 6, B7-a : le ballon d'un coup franc direct est posé (z = 0, immobile) à un point tiré de `event_ref` (18 à 30 m du but,
+    0 à 12 m de l'axe, hors de la surface), la zone de l'événement n'est plus lue, et le tireur s'élance de 4 à 7 m."""
+
+    _REFS = [f"goal:Club{i % 18}:p{i}:{i % 90 + 1}" for i in range(3000)]
+
+    def _build(self, **event_kwargs):
+        lineup = _lineup()
+        event = _goal_event(assist=None, minute=event_kwargs.pop("minute", 70), **event_kwargs)
+        return BUILDERS["coup_franc"](event, lineup, _start_positions(lineup), "but"), lineup
+
+    @staticmethod
+    def _spot_metres(ref):
+        from ligue1sim.animation.templates import free_kick_spot
+
+        spot = free_kick_spot(ref)
+        return (1.0 - spot.x) * PITCH_LENGTH_M, (spot.y - 0.5) * 68.0  # profondeur depuis la ligne de but, décalage latéral signé
+
+    def test_the_spot_is_in_the_direct_free_kick_zone_and_outside_the_penalty_area(self):
+        for ref in self._REFS:
+            depth_m, lateral_m = self._spot_metres(ref)
+            distance_m = (depth_m**2 + lateral_m**2) ** 0.5
+            assert 18.0 - 1e-9 <= distance_m <= 30.0 + 1e-9, (ref, distance_m)
+            assert abs(lateral_m) <= 12.0 + 1e-9, (ref, lateral_m)
+            assert depth_m >= 16.5 - 1e-9, (ref, depth_m)  # sinon ce serait un penalty
+
+    def test_the_spot_covers_both_sides_and_the_whole_range(self):
+        spots = [self._spot_metres(ref) for ref in self._REFS]
+        left = sum(1 for _, lateral in spots if lateral < 0)
+        assert 0.45 <= left / len(spots) <= 0.55
+        distances = [(d**2 + lat**2) ** 0.5 for d, lat in spots]
+        assert min(distances) < 18.5 and max(distances) > 29.5
+        assert max(abs(lat) for _, lat in spots) > 11.5
+
+    def test_ball_is_at_rest_on_the_ground_at_the_spot_until_the_strike(self):
+        from ligue1sim.animation.templates import free_kick_spot
+
+        for minute in (5, 23, 41, 67, 88):
+            sequence, _ = self._build(minute=minute)
+            ref = f"goal:Test FC:bu:{minute}"
+            spot = free_kick_spot(ref)
+            before_flight = sequence.keyframes[:-1]  # la dernière keyframe est la cible du vol
+            for kf in before_flight:
+                assert kf.ball.x == pytest.approx(spot.x) and kf.ball.y == pytest.approx(spot.y) and kf.ball.z == 0.0
+            scorer_x, scorer_y = sequence.keyframes[-2].players[11]  # id du "bu", au moment de la frappe
+            assert scorer_x == pytest.approx(spot.x) and scorer_y == pytest.approx(spot.y)
+
+    def test_zone_of_the_event_is_ignored(self):
+        lineup = _lineup()
+        base = _goal_event(assist=None, minute=70)
+        other = GoalEvent(**{**base.__dict__, "zone": Zone(col=3, row=1)})
+        a = BUILDERS["coup_franc"](base, lineup, _start_positions(lineup), "but")
+        b = BUILDERS["coup_franc"](other, lineup, _start_positions(lineup), "but")
+        assert [kf.ball for kf in a.keyframes] == [kf.ball for kf in b.keyframes]
+        assert [kf.players for kf in a.keyframes] == [kf.players for kf in b.keyframes]
+
+    def test_the_run_up_is_4_to_7_m_with_the_validated_angles(self):
+        import math
+
+        from ligue1sim.animation.templates import free_kick_runup_start, free_kick_spot, strike_type_for
+
+        angles = {"coup_franc_frappe": [], "coup_franc_enroule": []}
+        for ref in self._REFS:
+            spot, start = free_kick_spot(ref), free_kick_runup_start(ref)
+            dx, dy = (spot.x - start.x) * PITCH_LENGTH_M, (spot.y - start.y) * 68.0  # de l'élan vers le ballon
+            assert 4.0 - 1e-6 <= math.hypot(dx, dy) <= 7.0 + 1e-6, ref
+            depth_m, lateral_m = self._spot_metres(ref)
+            to_goal = (depth_m, -lateral_m)  # ballon -> centre du but, dans le repère (x vers le but, y)
+            cos_angle = (dx * to_goal[0] + dy * to_goal[1]) / (math.hypot(dx, dy) * math.hypot(*to_goal))
+            angles[strike_type_for("coup_franc", ref).name].append(math.degrees(math.acos(min(1.0, cos_angle))))
+        assert max(angles["coup_franc_frappe"]) <= 10.0 + 1e-6
+        assert 20.0 - 1e-6 <= min(angles["coup_franc_enroule"]) and max(angles["coup_franc_enroule"]) <= 40.0 + 1e-6
+
+    def test_the_scorer_starts_at_the_run_up_point_and_runs_85_percent_by_80_percent_of_the_clip(self):
+        from ligue1sim.animation.templates import free_kick_runup_start, free_kick_spot
+
+        sequence, _ = self._build(minute=41)
+        ref = "goal:Test FC:bu:41"
+        start, spot = free_kick_runup_start(ref), free_kick_spot(ref)
+        assert [round(kf.t, 6) for kf in sequence.keyframes[:4]] == [0.0, 1.25, 4.0, 5.0]
+        assert sequence.keyframes[0].players[11] == pytest.approx((start.x, start.y))
+        assert sequence.keyframes[1].players[11] == pytest.approx((start.x, start.y))  # attente
+        run_x = sequence.keyframes[2].players[11][0]
+        assert run_x == pytest.approx(start.x + 0.85 * (spot.x - start.x))
+
+    def test_type_distribution_and_the_nlg_names(self):
+        from collections import Counter
+
+        from ligue1sim.animation.templates import STRIKE_TYPES, strike_type_for
+
+        counts = Counter(strike_type_for("coup_franc", ref).name for ref in self._REFS)
+        assert set(counts) == {"coup_franc_enroule", "coup_franc_frappe"}
+        assert abs(100.0 * counts["coup_franc_enroule"] / len(self._REFS) - 100 * 55 / 85) <= 3.0, counts  # 64,7 % (indirect renormalisé)
+        assert STRIKE_TYPES["coup_franc_enroule"].nlg_name == "shot_enroule_leger"
+        assert STRIKE_TYPES["coup_franc_frappe"].nlg_name == "shot_tendu"
+        assert all(t.nlg_name == t.name for n, t in STRIKE_TYPES.items() if not n.startswith("coup_franc"))  # le contrat du NLG est inchangé
+
+    def test_curve_is_inward_for_75_percent_of_the_curled_free_kicks(self):
+        from ligue1sim.animation.templates import STRIKE_TYPES, free_kick_spot, strike_spin_for
+
+        curled = [r for r in self._REFS if strike_spin_for(STRIKE_TYPES["coup_franc_enroule"], r) != 0.0]
+        inward = 0
+        for ref in curled:
+            spin = strike_spin_for(STRIKE_TYPES["coup_franc_enroule"], ref)
+            ball_side = 1.0 if free_kick_spot(ref).y >= 0.5 else -1.0
+            inward += (spin > 0) == (ball_side > 0)  # spin > 0 gonfle vers y croissant (ball._perp_unit) : rentrant = du côté du ballon
+        assert abs(inward / len(curled) - 0.75) <= 0.03
+
+
 class TestPenaltyIsSpecialCased:
     """Phase 6, B6-a : le ballon est posé au point de penalty réglementaire (11 m de la ligne de but, y = 0), la zone de
     l'événement n'est plus lue, et le tireur s'élance depuis un point situé à 6-9 m, sous +-10 degrés."""
@@ -634,14 +743,20 @@ class TestTemplateStructureUnchangedByPhysicsTags:
 
     Quatrième exception délibérée (Phase 6, B6-a, 08/10/2026) : `penalty` a une empreinte mise à jour -- le ballon est posé au
     point de penalty réglementaire (`ball_position`) au lieu de suivre le tireur, et le tireur part d'un point d'élan (6 à 9 m)
-    au lieu de sa position de formation avancée de 85 %. Recalculée et vérifiée manuellement, pas une régression."""
+    au lieu de sa position de formation avancée de 85 %. Recalculée et vérifiée manuellement, pas une régression.
+
+    Cinquième exception délibérée (Phase 6, B7-a, 14/10/2026) : `coup_franc` a une empreinte mise à jour -- même mécanisme que le
+    penalty : le ballon est posé au point du coup franc (`ball_position`, tiré de `event_ref`) au lieu de suivre le tireur, et le
+    tireur part d'un point d'élan (4 à 7 m) au lieu de sa position de formation avancée de 80 %, avec les keyframes 0.25 (attente)
+    et 0.8 (élan). Preuve de cause unique : avec l'ancien gabarit remis, le code redonne exactement l'ancienne empreinte
+    (65652dc1...)."""
 
     _EXPECTED_STRUCTURE_HASH = {
         "but_gag": "f41d49b564e507476892e0c8dc83e1a4a980e461357b4e9f6d158126c86184d1",
         "construction_placee": "bd570f855aa35b4cf9d2c714e22ffc76a379b8b2a8f0c7e3e713603aee4bff37",
         "contre_attaque": "718658a38fd6623511674dfbe38e588fb184d3d33f59a49ad50c58c60874b50b",
         "corner": "cfc642378285192fb8f4e59ce0a6ec25679b837b273293de8e82e3f1641e7293",
-        "coup_franc": "65652dc16b67dc362221250ace6198a26a169ab60203e1fc2b74af280db8d566",
+        "coup_franc": "ff70b15275eb85d5baefeb5acea5f4a81e25319618a6e25cc978600aca72f959",
         "debordement_centre_tete": "06543fdddb12bdc4959eb29b0ca83b146bc5f8e312e233f196c9df1225658819",
         "decalage_enroulee": "7baa9bcc8f4e6f703650a8aef2ca0250701b3305f3948481d924b4ce10e8b403",
         "penalty": "7972e9a2d7afe7e1caa593950d3b7fa5e7cde43195b04a14bcc0c77a0b38a888",
@@ -682,14 +797,15 @@ class TestNoImmobileSegmentInFlightActions:
     liste d'exclusion : si un gabarit échoue, on le corrige (`ball_position`),
     on ne l'exclut pas.
 
-    SEULE exception, Phase 6 B6-a (08/10/2026) : le gabarit `penalty`. Un penalty a, par le règlement, un ballon POSÉ immobile
-    au point de penalty tant que le tireur n'a pas frappé ; ses segments d'attente et d'élan sont donc immobiles par
-    construction (réalisme, pas la dette ball_owner=None). L'exception est limitée au NOM `penalty` (`_EXEMPT_GABARIT`) et
-    prouvée par `test_the_exemption_is_limited_to_the_penalty_template` : tout autre gabarit avec un segment immobile échoue."""
+    SEULE exception, Phase 6 B6-a (08/10/2026) puis B7-a (14/10/2026) : les gabarits `penalty` et `coup_franc`. Un penalty et un coup
+    franc ont, par le règlement, un ballon POSÉ immobile tant que le tireur n'a pas frappé ; leurs segments d'attente et d'élan sont
+    donc immobiles par construction (réalisme, pas la dette ball_owner=None). L'exception est limitée à ces deux NOMS
+    (`_EXEMPT_GABARITS`) et prouvée par `test_the_exemption_is_limited_to_the_posed_ball_templates` : tout autre gabarit avec un
+    segment immobile échoue."""
 
     _IN_FLIGHT_TAGS = {CROSS, SHOT, PASS_GROUND, PASS_LOB, DEFLECT}
     _MIN_DISPLACEMENT_M = 0.01  # 1 cm
-    _EXEMPT_GABARIT = "penalty"  # ballon posé immobile avant la frappe (règlement), voir la docstring
+    _EXEMPT_GABARITS = {"penalty", "coup_franc"}  # ballon posé immobile avant la frappe (règlement), voir la docstring
 
     def _immobile_segments(self, name, sequence):
         """Segments « en vol » dont le ballon bouge de moins d'1 cm (liste de (t_a, t_b, tag, distance en m)) ; vide pour
@@ -703,8 +819,8 @@ class TestNoImmobileSegmentInFlightActions:
             distance_m = _real_distance_m((kf_a.ball.x, kf_a.ball.y), (kf_b.ball.x, kf_b.ball.y))
             if distance_m > self._MIN_DISPLACEMENT_M:
                 continue
-            if name == self._EXEMPT_GABARIT:
-                continue  # B6-a : ballon POSÉ au point de penalty tant que le tireur n'a pas frappé (voir TestPenaltyIsSpecialCased)
+            if name in self._EXEMPT_GABARITS:
+                continue  # B6-a / B7-a : ballon POSÉ tant que le tireur n'a pas frappé (voir TestPenaltyIsSpecialCased, TestFreeKickIsSpecialCased)
             found.append((kf_a.t, kf_b.t, tag, distance_m))
         return found
 
@@ -717,9 +833,9 @@ class TestNoImmobileSegmentInFlightActions:
         )
 
     @pytest.mark.parametrize("name", sorted(BUILDERS))
-    def test_the_exemption_is_limited_to_the_penalty_template(self, name):
-        """On FIGE le ballon sur le premier segment en vol du gabarit : tout gabarit autre que `penalty` doit alors être
-        signalé ; seul `penalty` ne l'est pas (ballon posé)."""
+    def test_the_exemption_is_limited_to_the_posed_ball_templates(self, name):
+        """On FIGE le ballon sur le premier segment en vol du gabarit : tout gabarit autre que `penalty` et `coup_franc` doit
+        alors être signalé ; seuls ces deux-là ne le sont pas (ballon posé)."""
         from dataclasses import replace
 
         lineup = _lineup()
@@ -731,7 +847,7 @@ class TestNoImmobileSegmentInFlightActions:
                 keyframes[i + 1] = replace(kf_b, ball=replace(kf_b.ball, x=kf_a.ball.x, y=kf_a.ball.y))
                 frozen = replace(sequence, keyframes=keyframes)
                 flagged = self._immobile_segments(name, frozen)
-                assert (flagged == []) == (name == "penalty"), (name, flagged)
+                assert (flagged == []) == (name in self._EXEMPT_GABARITS), (name, flagged)
                 return
         raise AssertionError(f"{name} : aucun segment en vol trouvé")
 
@@ -795,6 +911,9 @@ _STRIKE_SPEC = {
     "penalty_fort": (0.0, 0.0, 29.0, 33.0),
     "penalty_place": (20.0, 30.0, 21.0, 25.0),
     "penalty_contre_pied": (0.0, 0.0, 24.0, 28.0),
+    # Phase 6, B7-a : types de coup franc direct (constantes validées par le propriétaire) ; spin de l'enroulé en MODULE, signe tiré.
+    "coup_franc_enroule": (45.0, 70.0, 24.0, 30.0),
+    "coup_franc_frappe": (-5.0, 5.0, 28.0, 35.0),
 }
 # Placement des penaltys convertis : (|y| min, |y| max, z min, z max) en mètres.
 _PENALTY_PLACEMENT = {
@@ -841,6 +960,9 @@ def test_each_strike_type_produces_the_expected_spin_and_speed(name):
     spin_min, spin_max, speed_min, speed_max = _STRIKE_SPEC[name]
     strike = STRIKE_TYPES[name]
     spins = [strike_spin_for(strike, f"goal:Test FC:p{i}:{i % 90}") for i in range(300)]
+    if strike.curve_side_drawn:  # B7-a : coup franc enroulé, fourchette en module, signe rentrant / sortant
+        assert {s > 0 for s in spins} == {True, False}
+        spins = [abs(s) for s in spins]
     speeds = [strike_speed_for(strike, f"goal:Test FC:p{i}:{i % 90}") for i in range(300)]
     assert all(spin_min <= s <= spin_max for s in spins)
     assert all(speed_min <= v <= speed_max for v in speeds)
@@ -889,7 +1011,7 @@ def test_type_is_coherent_with_the_gabarit():
         "recuperation_haute": {"reprise_vollee"},
         "but_gag": {"reprise_vollee"},
         "penalty": set(_PENALTY_TYPES),
-        "coup_franc": {"shot_enroule_leger"},
+        "coup_franc": {"coup_franc_enroule", "coup_franc_frappe"},
     }
     foot = {"shot_tendu", "shot_enroule_leger", "shot_exterieur_pied"}
     for gabarit in BUILDERS:
@@ -921,7 +1043,9 @@ def test_strike_type_distribution_over_1000_strikes():
     # Cibles de l'architecte (parts de l'ensemble des frappes hors penaltys), marge de 4 points ; `shot_tendu` resserré à ±2,5 points
     # (bruit d'échantillonnage de 1 000 frappes : environ ±1,5 point). Sa cible est rebasée à 32,3 % depuis B6-b : les penaltys,
     # qui pesaient 2,7 points de `shot_tendu` dans la cible historique de 35 %, ont leurs propres types et sortent du mélange.
-    targets = {"shot_tendu": 32.3, "shot_enroule_leger": 12.0, "shot_enroule_fort": 9.7, "shot_exterieur_pied": 5.5, "reprise_vollee": 16.0, "tete": 21.8}
+    # B7-a : les coups francs (2,8 points des frappes) ont leurs 2 types internes (1,8 + 1,0 point) et sortent de `shot_enroule_leger` (12,0 -> 9,2).
+    targets = {"shot_tendu": 32.3, "shot_enroule_leger": 9.2, "shot_enroule_fort": 9.7, "shot_exterieur_pied": 5.5, "reprise_vollee": 16.0, "tete": 21.8,
+               "coup_franc_enroule": 1.8, "coup_franc_frappe": 1.0}
     for name, target in targets.items():
         share = 100.0 * counts[name] / strikes
         assert abs(share - target) <= 4.0, f"{name} : {share:.1f} % pour une cible de {target} %"
