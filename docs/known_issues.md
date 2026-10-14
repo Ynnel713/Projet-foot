@@ -36,6 +36,7 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 | 30 | Cohérence joueur-ballon : contact, distance, accélération sans contact interdite | **Haute**, Bloc A, A1.6 | Ouvert |
 | 31 | Tests integration test_nlg_echantillon.py non relancés après B6-c | Basse | Ouvert (résolution à planifier) |
 | 32 | 5 tests ignorés dans l'environnement principal, qui passent en uv : cause à identifier | Basse | Ouvert (cause à identifier) |
+| 33 | Rond du gardien perçu trop gros par rapport à la cage — à investiguer | Basse | Ouvert (décision du propriétaire attendue) |
 
 ---
 
@@ -575,6 +576,46 @@ appelé par les scripts, les tests et un éventuel paramètre de graine de l'API
 **Priorité.** Basse.
 
 **Statut.** Ouvert. Cause à identifier. Non corrigé.
+
+---
+
+## 33. Rond du gardien perçu trop gros par rapport à la cage — à investiguer
+
+**Description.** Le propriétaire trouve que le rond du gardien paraît trop gros par rapport à la cage. En théorie, il ne l'est pas : le rond fait 14 px d'écran comme tous les joueurs (`PLAYER_DIAMETER_SCREEN_PX`, `render/canvas.html`), soit 17,6 % de la largeur du but ; un gardien réel, bras écartés, occupe environ 26 % de la cage.
+
+**Mesure (graine 5, clip 10 : penalty, 57e minute, arrêt ; image à t = 4,47 s ; canvas 1 200 × 780 affiché à 1:1).** Échelle `SCALE` = min((1 200 − 40) / 105, (780 − 40) / 68) = 10,88 px/m.
+
+| Grandeur | px | m |
+|---|---|---|
+| Rond du gardien (diamètre) | 14 | 1,29 |
+| Largeur du but (7,32 m) | 79,7 | 7,32 |
+| Profondeur du filet (2 m) | 21,8 | 2,00 |
+| Gardien, centre du rond → ligne de but | 32,7 | 3,00 (`_GK_BASE_ADVANCE_M`) |
+| Rond / largeur du but | 17,6 % | — |
+
+Le centre du gardien est donc à 1,5 fois la profondeur du filet devant la ligne, dans la surface de but (5,5 m). Capture annotée hors dépôt : `annot_ticket33.png` (scratchpad de la session de B6-d).
+
+**Observation supplémentaire.** Les tailles du rond (14 px) sont en **pixels d'écran**, pas en mètres du terrain : `updateSizes` les multiplie par `canvas.width / largeur affichée`. Le rapport rond / but de 17,6 % n'est vrai que si le canvas est affiché à 1 200 px de large. Dans le panneau de test (canvas affiché à 493 px de large), le rond mesure 34 px de canvas pour un but de 79,7 px, soit **43 %** de la largeur du but. Plus l'écran est petit, plus le rond paraît gros par rapport à la cage. Cela n'avait pas été listé parmi les causes possibles.
+
+**Causes possibles (non départagées).**
+1. Position : 3 m devant la ligne, donc très avancé pour une cage de 21,8 px de profondeur.
+2. Pas de plongeon (le gardien glisse, sans délai, voir B6-d et Bloc A, A1.2) : un rond statique au centre paraît plus massif.
+3. Isolement visuel : le gardien est le seul rond dans un espace vide, sans ligne de défense à comparer.
+4. Taille d'écran (observation ci-dessus).
+5. Halo et libellé « Parade » (anneau doré, nom) qui s'ajoutent au rond sur les arrêts.
+
+**Options proposées (aucune appliquée).**
+- **A. Réduire le rond du gardien seul.** Pour : ciblé, ne change aucun autre joueur ; rapide. Contre : casse la cohérence visuelle (tous les joueurs ont le même rond) ; un gardien plus petit que ses défenseurs surprend ; touche `canvas.html` (gel actuel, Bloc C).
+- **B. Réduire tous les ronds** (par exemple 14 → 11 ou 12 px). Pour : cohérent, et corrige aussi les ronds qui se chevauchent dans les surfaces (22 joueurs sur un petit terrain). Contre : impact global sur tout le rendu (captures de référence de la Phase 5 et de toutes les sous-étapes, lisibilité des numéros à 0,58 × le diamètre, ballon de 6 px) ; touche `canvas.html`.
+- **C. Reculer le gardien vers la ligne** (par exemple `_GK_BASE_ADVANCE_M` de 3,0 à 1,0 ou 1,5 m), sans toucher au rond. Pour : ne touche que `sequence_generator.py` (pas de `canvas.html`) ; le gardien se rapproche de la cage, le rapport visuel rond / cage s'améliore sans réduire le rond ; plus réaliste sur un penalty (gardien sur sa ligne). Contre : change la position de base de **tous** les gardiens, pas seulement sur penalty (à moins de limiter au gabarit `penalty`, comme B6-d) ; ne règle pas la cause 4 ; modifie les empreintes de position des gardiens.
+
+**Recommandation (non tranchée).** C limitée au gabarit `penalty` (le seul cas où le gardien est vu seul, dans la cage), puis revoir la taille globale (B) en Bloc C si le problème persiste.
+
+**Priorité.** Basse.
+
+**Résolution.** Au choix du propriétaire : Bloc C (options A ou B, `canvas.html`) ou B6-d bis (option C, `sequence_generator.py`).
+
+**Statut.** Ouvert. Non corrigé.
 
 ---
 
