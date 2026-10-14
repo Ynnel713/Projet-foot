@@ -1364,3 +1364,174 @@ class TestGroundControls:
     def test_controls_are_deterministic(self):
         for name in self._CONTROLLED:
             assert self._build(name, 41).to_json() == self._build(name, 41).to_json()
+
+
+class TestControlPressureModulation:
+    """Phase 6, B8-b : la probabilité d'un contrôle approximatif / lourd dépend de la pression adverse (proximité, vitesse d'arrivée, contexte)
+    et de la qualité technique du récepteur (First Touch, Technique, Composure, weak_foot). Sans `opponent_lineup`, comportement de B8-a."""
+
+    _CONTROLLED = TestGroundControls._CONTROLLED
+
+    @staticmethod
+    def _context(distance_m=None, pressing=False, recuperation_haute=False):
+        from ligue1sim.animation.templates import _PressureContext
+
+        return _PressureContext(distance_at=lambda _point, _t: distance_m, pressing_style=pressing, recuperation_haute=recuperation_haute)
+
+    @staticmethod
+    def _opponents():
+        postes = ["DC", "DC", "LB", "RB", "MDC", "MC", "MC", "AG", "AD", "BU"]
+        players = [_player("GK", 65.0, "opp-gk", 101)] + [_player(poste, 65.0, f"opp-{i}", 102 + i) for i, poste in enumerate(postes)]
+        return Lineup(club_name="Opponent FC", formation="4-3-3", players=players, rating=65.0)
+
+    # --- indice de pression p ---------------------------------------------------------------------------------------------------------
+    def test_pressure_index_follows_the_validated_weights_and_thresholds(self):
+        from ligue1sim.animation.templates import _pressure_index
+
+        none = self._context(distance_m=20.0)
+        assert _pressure_index(20.0, 5.0, none) == 0.0
+        assert _pressure_index(8.0, 12.0, none) == 0.0  # seuils : 8 m -> 0 ; 12 m/s -> 0
+        assert _pressure_index(1.5, 5.0, none) == pytest.approx(0.5)  # proximité seule
+        assert _pressure_index(20.0, 24.0, none) == pytest.approx(0.3)  # vitesse seule
+        assert _pressure_index(20.0, 5.0, self._context(pressing=True)) == pytest.approx(0.1)  # contexte : 0,2 x 0,5
+        assert _pressure_index(20.0, 5.0, self._context(pressing=True, recuperation_haute=True)) == pytest.approx(0.2)  # cumulables
+        assert _pressure_index(1.0, 40.0, self._context(pressing=True, recuperation_haute=True)) == pytest.approx(1.0)
+        assert _pressure_index(4.75, 18.0, none) == pytest.approx(0.5 * 0.5 + 0.3 * 0.5)  # interpolation linéaire
+        assert _pressure_index(None, 5.0, none) == 0.0  # aucun adversaire de champ
+
+    def test_pressure_index_stays_within_zero_and_one(self):
+        from ligue1sim.animation.templates import _pressure_index
+
+        context = self._context(pressing=True, recuperation_haute=True)
+        for distance in (None, 0.0, 1.5, 3.0, 8.0, 50.0):
+            for arrival in (0.0, 12.0, 18.0, 24.0, 60.0):
+                assert 0.0 <= _pressure_index(distance, arrival, context) <= 1.0
+
+    # --- qualité technique q ----------------------------------------------------------------------------------------------------------
+    def test_technical_quality_is_neutral_without_attributes(self):
+        import dataclasses
+
+        from ligue1sim.animation.templates import _technical_quality
+
+        bare = _player("MC", 70.0, "x", 1)
+        assert _technical_quality(bare, 0.0) == 59.0 and _technical_quality(bare, 1.0) == 59.0
+        partial = dataclasses.replace(bare, attributes={"First Touch": 90, "Technique": 90})  # Composure manquante
+        assert _technical_quality(partial, 0.5) == 59.0
+
+    def test_technical_quality_mixes_composure_only_under_pressure(self):
+        import dataclasses
+
+        from ligue1sim.animation.templates import _technical_quality
+
+        player = dataclasses.replace(_player("MC", 70.0, "x", 1), attributes={"First Touch": 80, "Technique": 60, "Composure": 40})
+        assert _technical_quality(player, 0.0) == pytest.approx(0.6 * 80 + 0.4 * 60)  # 72 : Composure n'entre pas
+        assert _technical_quality(player, 1.0) == pytest.approx(0.5 * 72 + 0.5 * 40)  # 56 : pour moitié sous pression pleine
+        assert _technical_quality(player, 0.5) == pytest.approx(0.75 * 72 + 0.25 * 40)
+
+    # --- modulation du tirage ---------------------------------------------------------------------------------------------------------
+    def test_neutral_pressure_and_quality_keep_the_base_rates(self):
+        from ligue1sim.animation.templates import _modulated_loose_heavy
+
+        assert _modulated_loose_heavy("pied_naturel", 0.15, 59.0, None) == pytest.approx((0.10, 0.02))
+        assert _modulated_loose_heavy("pied_faible", 0.15, 59.0, 3.0) == pytest.approx((0.35, 0.10))
+
+    def test_modulation_formula_uses_the_validated_effects(self):
+        from ligue1sim.animation.templates import _modulated_loose_heavy
+
+        loose, heavy = _modulated_loose_heavy("pied_naturel", 0.75, 59.0, None)  # +0,25 x 0,60
+        assert loose == pytest.approx(0.25) and heavy == pytest.approx(0.02 * 0.25 / 0.10)  # lourd proportionnel : 5 %
+        assert _modulated_loose_heavy("pied_naturel", 0.15, 79.0, None)[0] == 0.01  # -0,12 pour +20 de qualité : 10 % -> plancher de 1 %
+        assert _modulated_loose_heavy("pied_naturel", 0.15, 49.0, None)[0] == pytest.approx(0.10 + 0.06)  # -10 de qualité : +6 points
+        assert _modulated_loose_heavy("pied_faible", 0.15, 59.0, 1.0)[0] == pytest.approx(0.35 + 0.12)
+        assert _modulated_loose_heavy("pied_faible", 0.15, 59.0, 5.0)[0] == pytest.approx(0.35 - 0.12)
+        assert _modulated_loose_heavy("pied_naturel", 0.15, 59.0, 1.0)[0] == pytest.approx(0.10)  # weak_foot : pied faible seulement
+
+    def test_modulation_is_bounded_and_heavy_is_capped(self):
+        from ligue1sim.animation.templates import _modulated_loose_heavy
+
+        assert _modulated_loose_heavy("pied_faible", 1.0, 0.0, 1.0)[0] == 0.60  # plafond de l'approximatif
+        assert _modulated_loose_heavy("pied_naturel", 0.0, 99.0, None)[0] == 0.01  # plancher
+        for gesture in ("pied_naturel", "pied_faible"):
+            for pressure in (0.0, 0.5, 1.0):
+                for quality in (0.0, 59.0, 99.0):
+                    for weak_foot in (None, 1.0, 3.0, 5.0):
+                        loose, heavy = _modulated_loose_heavy(gesture, pressure, quality, weak_foot)
+                        assert 0.01 <= loose <= 0.60 and 0.0 <= heavy <= 0.25
+
+    def test_sole_is_never_modulated(self):
+        from ligue1sim.animation.templates import _modulated_loose_heavy
+
+        assert _modulated_loose_heavy("semelle", 1.0, 0.0, 1.0) == (0.0, 0.0)
+
+    # --- effet sur les gabarits -------------------------------------------------------------------------------------------------------
+    def _loose_rate(self, context, attributes=None, count=240):
+        """Part des contrôles au pied naturel qui ne sont pas propres, sur `count` événements, avec un contexte de pression imposé."""
+        import dataclasses
+
+        from ligue1sim.animation.templates import TEMPLATES, _insert_ground_controls
+
+        lineup = _lineup()
+        if attributes is not None:
+            lineup = dataclasses.replace(lineup, players=[dataclasses.replace(p, attributes=attributes) for p in lineup.players])
+        players_by_id = {p.id: p for p in lineup.players}
+        loose = total = 0
+        for minute in range(1, count + 1):
+            club = f"club{minute}"
+            bare = TestGroundControls()._build("contre_attaque", minute, club=club, controls=False)
+            for kf in _insert_ground_controls(TEMPLATES["contre_attaque"], list(bare.keyframes), players_by_id, bare.event_ref, context):
+                if kf.tag.startswith("controle_pied_naturel"):
+                    total += 1
+                    loose += kf.tag.endswith(("_approximatif", "_lourd"))
+        assert total > 100
+        return loose / total
+
+    def test_strong_pressure_raises_and_calm_lowers_the_loose_control_rate(self):
+        calm = self._loose_rate(self._context(distance_m=30.0))
+        pressed = self._loose_rate(self._context(distance_m=1.5, pressing=True, recuperation_haute=True))
+        assert pressed > calm + 0.10
+
+    def test_a_technical_player_without_pressure_rarely_loses_the_ball(self):
+        technical = {"First Touch": 90, "Technique": 90, "Composure": 90}
+        clumsy = {"First Touch": 25, "Technique": 25, "Composure": 25}
+        calm = self._context(distance_m=30.0)
+        assert self._loose_rate(calm, technical) < 0.05
+        assert self._loose_rate(calm, clumsy) > self._loose_rate(calm, technical) + 0.05
+
+    # --- branchement dans les gabarits ------------------------------------------------------------------------------------------------
+    def test_every_builder_accepts_the_opponent_lineup_and_none_keeps_b8a(self):
+        lineup, opponents = _lineup(), self._opponents()
+        for name in BUILDERS:
+            event = _goal_event(penalty=(name == "penalty"))
+            starts = _start_positions(lineup)
+            default = BUILDERS[name](event, lineup, starts, "but")
+            explicit_none = BUILDERS[name](event, lineup, starts, "but", None)
+            with_opponents = BUILDERS[name](event, lineup, starts, "but", opponents)
+            assert default.to_json() == explicit_none.to_json(), name
+            assert with_opponents.duration == default.duration, name  # la pression ne change jamais la durée
+            assert with_opponents.event_ref == default.event_ref, name
+
+    def test_templates_without_ground_control_ignore_the_opponent_lineup(self):
+        lineup, opponents = _lineup(), self._opponents()
+        for name in TestGroundControls._UNTOUCHED:
+            event = _goal_event(penalty=(name == "penalty"))
+            starts = _start_positions(lineup)
+            assert BUILDERS[name](event, lineup, starts, "but", opponents).to_json() == BUILDERS[name](event, lineup, starts, "but").to_json(), name
+
+    def test_modulation_with_opponents_is_deterministic(self):
+        lineup, opponents = _lineup(), self._opponents()
+        for name in self._CONTROLLED:
+            for minute in range(1, 21):
+                event = _goal_event(minute=minute)
+                starts = _start_positions(lineup)
+                assert BUILDERS[name](event, lineup, starts, "but", opponents).to_json() == BUILDERS[name](event, lineup, starts, "but", opponents).to_json()
+
+    def test_the_sporting_outcome_and_the_receivers_are_never_modified_by_the_pressure(self):
+        lineup, opponents = _lineup(), self._opponents()
+        for name in self._CONTROLLED:
+            for minute in range(1, 11):
+                event = _goal_event(minute=minute)
+                starts = _start_positions(lineup)
+                plain, pressed = BUILDERS[name](event, lineup, starts, "but"), BUILDERS[name](event, lineup, starts, "but", opponents)
+                assert plain.keyframes[0].ball == pressed.keyframes[0].ball and plain.keyframes[-1].ball == pressed.keyframes[-1].ball
+                original = lambda sequence: [(kf.t, kf.ball.owner_id) for kf in sequence.keyframes if not kf.tag.startswith(("controle_", "reprise_"))]
+                assert original(plain) == original(pressed), (name, minute)

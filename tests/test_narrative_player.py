@@ -335,9 +335,12 @@ class TestOutcomeTransmittedToTemplate:
         original = templates_module.build_from_template
         captured: list = []
 
-        def spy(template, event, lineup, start_positions, outcome=None):
+        opponents: list = []
+
+        def spy(template, event, lineup, start_positions, outcome=None, opponent_lineup=None):
             captured.append(outcome)
-            return original(template, event, lineup, start_positions, outcome)
+            opponents.append(opponent_lineup)
+            return original(template, event, lineup, start_positions, outcome, opponent_lineup)
 
         monkeypatch.setattr(templates_module, "build_from_template", spy)
 
@@ -346,6 +349,7 @@ class TestOutcomeTransmittedToTemplate:
             timeline = build_timeline(match)
             for event in timeline.events:
                 captured.clear()
+                opponents.clear()
                 _build_clip_frames(timeline, event)
                 assert len(captured) == 1, (
                     f"{timeline.match_id} minute={event.minute} : {len(captured)} appels a "
@@ -355,6 +359,9 @@ class TestOutcomeTransmittedToTemplate:
                     f"{timeline.match_id} minute={event.minute} : outcome transmis {captured[0]!r} "
                     f"!= event.outcome {event.outcome!r}"
                 )
+                # B8-b : la compo de l'équipe qui encaisse est transmise au gabarit (pression adverse sur les contrôles).
+                opponent_club = timeline.away_lineup if event.team == timeline.home_team else timeline.home_lineup
+                assert opponents[0] is opponent_club, f"{timeline.match_id} minute={event.minute} : compo adverse non transmise"
                 checked += 1
 
         assert checked > 0

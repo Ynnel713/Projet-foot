@@ -22,7 +22,7 @@ from ligue1sim.animation.spatial import PitchLayoutState
 from ligue1sim.animation.templates import BUILDERS, player_id_of
 from ligue1sim.events import GoalEvent, PlayerMatchStat
 from ligue1sim.lineup import Lineup
-from ligue1sim.pitch_geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Zone, center_of
+from ligue1sim.pitch_geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, PitchPoint, Zone, center_of
 from ligue1sim.pitch_layout import place_starting_xi
 from ligue1sim.players import Player
 
@@ -962,3 +962,56 @@ class TestFreeKickGoalkeeper:
                 expected = _free_kick_gk_drift(gk_id, sequence.event_ref, track.start[1], sequence.keyframes[-1].ball.y, outcome)
                 assert track.drift == pytest.approx(expected)
                 assert track.drift[0] == 0.0  # aucune sortie en profondeur (renvoyée au Bloc A)
+
+
+class TestOpponentFieldTracks:
+    """Phase 6, B8-b : `opponent_field_tracks` / `nearest_opponent_distance_m` recalculent, avant l'enrichissement, les pistes des adversaires de
+    champ -- elles DOIVENT égaler celles que `enrich_with_background` pose dans `Sequence.background`."""
+
+    _NAMES = ("contre_attaque", "construction_placee", "decalage_enroulee", "profondeur_1v1", "recuperation_haute", "une_deux", "corner")
+
+    @staticmethod
+    def _built(name, minute, outcome):
+        lineup = _lineup()
+        starts = {p.id: PitchPoint(x=0.15 + 0.06 * i, y=0.1 + 0.07 * i) for i, p in enumerate(lineup.players)}
+        return BUILDERS[name](_goal_event(minute=minute), lineup, starts, outcome)
+
+    def test_tracks_equal_the_background_of_the_enriched_sequence(self):
+        from ligue1sim.animation.sequence_generator import opponent_field_tracks
+
+        opponent = _opponent_lineup()
+        for name in self._NAMES:
+            for minute, outcome in ((12, "but"), (34, "arret"), (77, "poteau"), (88, None)):
+                sequence = self._built(name, minute, outcome)
+                enriched = enrich_with_background(sequence, opponent, outcome)
+                tracks = opponent_field_tracks(opponent, sequence.event_ref, (sequence.keyframes[-1].ball.x, sequence.keyframes[-1].ball.y))
+                assert tracks, name
+                for player_id, track in tracks.items():
+                    assert enriched.background[player_id] == track, (name, minute, outcome, player_id)
+
+    def test_the_goalkeeper_is_not_a_field_opponent(self):
+        from ligue1sim.animation.sequence_generator import opponent_field_tracks
+
+        tracks = opponent_field_tracks(_opponent_lineup(), "goal:Test FC:bu:41", (1.0, 0.5))
+        assert 101 not in tracks and len(tracks) == 10
+
+    def test_distance_matches_the_rendered_background_position(self):
+        from ligue1sim.animation.motion import _raw_position_at
+        from ligue1sim.animation.sequence_generator import nearest_opponent_distance_m, opponent_field_tracks
+
+        opponent = _opponent_lineup()
+        sequence = self._built("contre_attaque", 41, "but")
+        enriched = enrich_with_background(sequence, opponent, "but")
+        tracks = opponent_field_tracks(opponent, sequence.event_ref, (sequence.keyframes[-1].ball.x, sequence.keyframes[-1].ball.y))
+        point = (0.55, 0.45)
+        for t in (0.0, 0.7 * sequence.duration, sequence.duration):
+            expected = min(
+                math.hypot((x - point[0]) * PITCH_LENGTH_M, (y - point[1]) * PITCH_WIDTH_M)
+                for x, y in (_raw_position_at(enriched, player_id, t) for player_id in tracks)
+            )
+            assert nearest_opponent_distance_m(tracks, point, t, sequence.duration) == pytest.approx(expected, abs=1e-9)
+
+    def test_no_track_gives_no_distance(self):
+        from ligue1sim.animation.sequence_generator import nearest_opponent_distance_m
+
+        assert nearest_opponent_distance_m({}, (0.5, 0.5), 1.0, 5.0) is None
