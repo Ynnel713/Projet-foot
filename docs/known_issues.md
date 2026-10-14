@@ -671,6 +671,20 @@ Le centre du gardien est donc à 1,5 fois la profondeur du filet devant la ligne
 
 ---
 
+## 38. Type dédié « mur » à envisager pour les coups francs bloqués
+
+**Description.** Depuis B7-c (`5582b96`), un coup franc direct d'issue `tacle` ou `degagement` est bloqué par le mur : le ballon part vers le mur, le heurte et repart vers le terrain (`engine/ball_events.py`, `_wall_block_trajectory`). Sur les 100 matchs de référence, 11 coups francs sur 46 sont dans ce cas (11 sur 11 bloqués). L'événement produit dans `metadata.events_ball` est le type **`degagement`** déjà existant (`last_toucher = "defenseur"`), placé au point d'impact sur le mur : le contrat du NLG n'est pas modifié. Le texte du NLG décrit donc un ballon bloqué par le mur comme un « dégagement ».
+
+**Décision du propriétaire (14/10/2026).** Garder le type `degagement` pour ces coups francs ; ouvrir ce ticket de traçabilité.
+
+**Piste (non implémentée).** Ajouter un type d'événement dédié (nom à choisir, par exemple `mur`) à `BALL_EVENT_TYPES`, le transmettre au NLG avec ses phrases et ses conditions. Toute modification du contrat NLG est soumise à validation préalable du propriétaire.
+
+**Fichiers concernés.** `engine/ball_events.py`, `engine/narrative_player.py`, contrat et phrases du NLG (`simulafoot_nlg/`).
+
+**Priorité.** Basse. **Résolution.** À planifier en B7-d ou plus tard. **Statut.** Ouvert. Non corrigé.
+
+---
+
 # Décisions du propriétaire (entrées documentaires — ce ne sont pas des tickets)
 
 ## Décision propriétaire — dispositifs clubs conservés (D3)
