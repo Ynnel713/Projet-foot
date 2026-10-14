@@ -485,6 +485,49 @@ def _opponent_positions(opponent_lineup: Lineup) -> dict[PlayerId, PitchPoint]:
     return positions
 
 
+# Phase 6, B7-b (14/10/2026) -- mur d'un coup franc direct : constantes produit validées par le propriétaire. L'écartement dépasse de
+# 1 µm le seuil de `motion._AVOIDANCE_TRIGGER_M` (1,5 m) : `_apply_avoidance` ne pousse que sous ce seuil (`dist < 1,5`), donc le mur reste
+# aligné sans toucher `motion.py` (à 1,5 m pile, une erreur d'arrondi pourrait déclencher une poussée de l'ordre de 1e-10 m).
+_WALL_DISTANCE_M = 9.15  # du ballon, sur la ligne ballon -> centre du but
+_WALL_SPACING_M = 1.5 + 1e-6
+_WALL_SIZE_BY_MAX_DISTANCE_M = ((20.0, 5), (26.0, 4))  # distance ballon-but <= 20 m : 5 joueurs ; <= 26 m : 4 ; au-delà : 3
+_WALL_SIZE_DEFAULT = 3
+
+
+def _free_kick_wall(sequence: Sequence, opponent_positions: dict[PlayerId, PitchPoint], opponent_by_id: dict) -> tuple[dict[PlayerId, tuple[float, float]], tuple[float, float]]:
+    """Mur d'un coup franc (B7-b) : `({joueur: emplacement}, dérive partagée)`, en coordonnées normalisées. n adversaires de champ (jamais
+    le gardien) -- les n plus proches du milieu du mur, `_WALL_SIZE_BY_MAX_DISTANCE_M` -- sont alignés perpendiculairement à la ligne
+    ballon -> centre du but, centrés sur elle, à `_WALL_DISTANCE_M` du ballon. L'ordre le long du mur suit leur position actuelle
+    (aucun croisement). Dérive PARTAGÉE (même principe que `_cb_line_drift` : un bloc glisse d'un seul tenant, l'écartement ne bouge
+    pas) : latérale, d'amplitude tirée dans [`_MIN_DRIFT_MAGNITUDE_M`, `_MAX_DRIFT_FLOOR_M`], donc le plancher de chaque joueur est respecté."""
+    ball = sequence.keyframes[0].ball  # ballon posé (B7-a) : même point sur tous les keyframes avant la frappe
+    ball_x_m, ball_y_m = ball.x * PITCH_LENGTH_M, ball.y * PITCH_WIDTH_M
+    to_goal_x, to_goal_y = PITCH_LENGTH_M - ball_x_m, PITCH_WIDTH_M / 2.0 - ball_y_m
+    distance_m = math.hypot(to_goal_x, to_goal_y)
+    ux, uy = to_goal_x / distance_m, to_goal_y / distance_m
+    px, py = -uy, ux  # perpendiculaire au tir
+    size = next((n for limit_m, n in _WALL_SIZE_BY_MAX_DISTANCE_M if distance_m <= limit_m), _WALL_SIZE_DEFAULT)
+    center_x_m, center_y_m = ball_x_m + _WALL_DISTANCE_M * ux, ball_y_m + _WALL_DISTANCE_M * uy
+
+    def _metres(point: PitchPoint) -> tuple[float, float]:
+        return point.x * PITCH_LENGTH_M, point.y * PITCH_WIDTH_M
+
+    field = sorted((pid for pid in opponent_positions if opponent_by_id[pid].poste != GOALKEEPER), key=str)  # ordre stable (déterminisme)
+    members = sorted(field, key=lambda pid: math.hypot(_metres(opponent_positions[pid])[0] - center_x_m, _metres(opponent_positions[pid])[1] - center_y_m))[:size]
+    members.sort(key=lambda pid: (_metres(opponent_positions[pid])[0] - center_x_m) * px + (_metres(opponent_positions[pid])[1] - center_y_m) * py)
+    starts = {
+        pid: (
+            (center_x_m + (k - (size - 1) / 2.0) * _WALL_SPACING_M * px) / PITCH_LENGTH_M,
+            (center_y_m + (k - (size - 1) / 2.0) * _WALL_SPACING_M * py) / PITCH_WIDTH_M,
+        )
+        for k, pid in enumerate(members)
+    }
+    event_ref = sequence.event_ref
+    magnitude_m = _MIN_DRIFT_MAGNITUDE_M + (_MAX_DRIFT_FLOOR_M - _MIN_DRIFT_MAGNITUDE_M) * _event_unit("wall", event_ref, "wall_drift_mag")
+    sign = 1.0 if _event_unit("wall", event_ref, "wall_drift_side") < 0.5 else -1.0
+    return starts, (sign * magnitude_m * px / PITCH_LENGTH_M, sign * magnitude_m * py / PITCH_WIDTH_M)
+
+
 def enrich_with_background(sequence: Sequence, opponent_lineup: Lineup, outcome: str | None = None) -> Sequence:
     """Complète une `Sequence` déjà produite (par `generate_sequence`, ou
     directement un gabarit) avec les joueurs "décor" : le reste de l'équipe
@@ -541,11 +584,15 @@ def enrich_with_background(sequence: Sequence, opponent_lineup: Lineup, outcome:
         f"{sequence.event_ref}|opponent", sum(opponent_cb_ys) / len(opponent_cb_ys), ball_target[1]
     ) if opponent_cb_ys else (0.0, 0.0)
 
+    wall_starts, wall_drift = _free_kick_wall(sequence, opponent_positions, opponent_by_id) if sequence.meta.get("template") == "coup_franc" else ({}, (0.0, 0.0))
+
     opponent_roster: dict[PlayerId, RosterEntry] = {}
     for player_id, point in opponent_positions.items():
         player = opponent_by_id[player_id]
         start = _gk_base_position("opponent") if player.poste == GOALKEEPER else (point.x, point.y)
-        if player.poste == GOALKEEPER and sequence.meta.get("template") == "penalty":
+        if player_id in wall_starts:
+            start, drift = wall_starts[player_id], wall_drift  # B7-b : mur d'un coup franc, dérive partagée
+        elif player.poste == GOALKEEPER and sequence.meta.get("template") == "penalty":
             drift = _penalty_gk_drift(player_id, sequence.event_ref, ball_target[1], outcome)
         else:
             drift = _tactical_drift(player.poste, player_id, "opponent", start, ball_target, opponent_cb_drift, sequence.event_ref)

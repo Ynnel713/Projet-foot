@@ -633,3 +633,31 @@ class TestDriftFloorVariesByEvent:
             assert fx > 0 and fy / fx == pytest.approx(dy / dx)  # mise à l'échelle uniforme : même direction
             magnitude_m = math.hypot(fx * PITCH_LENGTH_M, fy * PITCH_WIDTH_M)
             assert _MIN_DRIFT_MAGNITUDE_M - 1e-9 <= magnitude_m <= _MAX_DRIFT_FLOOR_M + 1e-9
+
+
+class TestFreeKickWallGuard:
+    """Phase 6, B7-b, garde-fou A3 : sur toute la durée d'un coup franc, aucun joueur du mur (`_free_kick_wall`) n'est à moins de 1,5 m d'un
+    autre joueur -- `motion._apply_avoidance` n'a donc jamais à le pousser. Positions BRUTES (`_raw_position_at`) : `interpolate` applique
+    l'évitement, qui masquerait une collision."""
+
+    def test_the_wall_stays_at_least_1_5_m_from_every_other_player_for_the_whole_clip(self):
+        from ligue1sim.animation.motion import _raw_position_at
+        from ligue1sim.animation.sequence_generator import _free_kick_wall, _opponent_positions
+
+        lineup, opponent = _lineup(), _opponent_lineup()
+        by_id = {player_id_of(p): p for p in opponent.players}
+        for minute in range(1, 91):
+            sequence = BUILDERS["coup_franc"](_goal_event(assist=None, minute=minute), lineup, _start_positions(lineup, _pitch_layout_state(lineup)))
+            members, _drift = _free_kick_wall(sequence, _opponent_positions(opponent), by_id)
+            assert 3 <= len(members) <= 5
+            enriched = enrich_with_background(sequence, opponent)
+            everyone = set(enriched.keyframes[0].players) | set(enriched.background)
+            for step in range(101):
+                t = sequence.duration * step / 100
+                positions = {pid: _raw_position_at(enriched, pid, t) for pid in everyone}
+                for wall_pid in members:
+                    wx, wy = positions[wall_pid]
+                    for other, (ox, oy) in positions.items():
+                        if other != wall_pid:
+                            d = math.hypot((wx - ox) * PITCH_LENGTH_M, (wy - oy) * PITCH_WIDTH_M)
+                            assert d >= 1.5, (minute, round(t, 2), wall_pid, other, d)
