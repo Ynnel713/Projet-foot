@@ -869,3 +869,56 @@ Noms : `avant_clip<i>_<type>_<instant>.png` / `apres_...` ; `zoom_types_1_a_3.pn
 ### 12.10 Statut
 
 **B5 terminé** : six types de frappe, spin et vitesse par type, score identique 100/100, traînée sur 35,8 % des clips. À décider : modulation de la traînée par spin (D3), mise en cohérence du NLG avec le type de frappe (§12.6), écarts de répartition (§12.7).
+
+---
+
+## 13. B6-c — Micro-variations clé par événement : récapitulatif de clôture (14/10/2026)
+
+**Principe.** Les décalages de départ et les dérives des joueurs étaient clés sur `player_id` seul : un même joueur avait les mêmes décalages dans tous ses clips. Ils sont désormais clés sur `player_id|event_ref|sel` (sha256, jamais `hash()` ni `random`), avec les mêmes amplitudes pour le décalage de départ (0 à 0,3 × durée du clip). Le plancher des dérives, jusque-là fixe à 0,5 m, est tiré par couple (joueur, événement) dans **[0,2 ; 0,5] m** (sel `drift_floor_mag`). Fichier modifié : `src/ligue1sim/animation/sequence_generator.py` (la clé du décalage de départ est dans `motion.py`).
+
+### 13.1 Résultats (100 matchs réels de Ligue 1, graines 1 à 100, 1 586 événements)
+
+| Mesure | Avant B6-c | B6-c (`80f2bd0`) | A3 (`9965d63`, plancher 0,1 m) | Clôture (`1f562e9`, plancher 0,2 m) |
+|---|---|---|---|---|
+| Variété des dérives (paires joueur / événement différentes, 37 619 paires) | 16,5 % | 79,9 % | 99,9 % | **99,9 %** |
+| Amplitude moyenne des dérives | — | 2,00 m | 1,97 m | **1,97 m** |
+| Plancher des dérives | 0,5 m fixe | 0,5 m fixe | [0,1 ; 0,5] m continu | **[0,2 ; 0,5] m continu** |
+| Variété des décalages de départ (41 247 paires) | 0 % | 99,8 % | 99,8 % | **99,8 %** (inchangée) |
+| Décors dont la dérive est sous 0,36 m | 0 % | 0 % | 10,2 % | 8,4 % |
+
+**Distribution des dérives à la clôture (m).** Minimum 0,20 ; percentiles 1 / 5 / 10 / 25 / 50 / 75 / 90 / 95 / 99 : 0,23 / 0,31 / 0,38 / 0,57 / 1,79 / 3,23 / 3,91 / 4,14 / 5,23 ; maximum 5,25. Seul le bas de la plage change entre B6-c et la clôture ; à partir du percentile 25, rien ne change.
+
+**Pourquoi un plancher variable.** Avec le plancher fixe de 0,5 m, 22,1 % des dérives valaient exactement 0,5 m, d'où 20,1 % de paires identiques d'un événement à l'autre ; le seuil de 90 % de variété n'était pas atteignable sans modifier cette amplitude produit (décision du propriétaire : A3, puis relèvement de la borne basse de 0,1 à 0,2 m pour garder du mouvement aux décors les plus lents, option 1B).
+
+### 13.2 Vérifications
+
+| Vérification | Résultat |
+|---|---|
+| Déterminisme (7 empreintes sur 100 matchs : résultat moteur, 1 586 événements narratifs, durées, métadonnées, trajectoires du ballon, nombre d'images, positions des joueurs) | **100 / 100** entre l'état précédent et l'état modifié pour les six premières (seules les positions des joueurs changent, par construction) ; **100 / 100** entre deux exécutions de l'arbre pour les sept |
+| `pytest tests --ignore=simulafoot_nlg` (archive propre de `1f562e9`, `PYTHONHASHSEED=0`) | **1 493 passés, 5 ignorés, 12 désélectionnés** |
+| `npm run build` / `npm run lint` (même archive) | **OK** ; 0 erreur, 5 avertissements |
+| Tests d'intégration (7 de `tests/test_narrative_player.py`, `-m integration`, archive propre de `80f2bd0`) | 7 passés ; restent exclus de la suite standard (décision du propriétaire, ticket 29) |
+| Captures avant / après (graine 5, mêmes clips : offensif, défensif, transition) | Aucune différence visible entre plancher 0,1 m et 0,2 m ; décor le plus lent des clips : 0,22 → 0,23 m, 0,37 → 0,37 m, 0,27 → 0,34 m |
+
+### 13.3 Tests et empreintes
+
+Les 5 empreintes figées de `tests/test_narrative_player.py` (`_WITNESS_DIGESTS`) ont été recalculées **trois fois** : après B6-c, après A3, puis après le plancher à 0,2 m. À chaque fois, la cause unique est prouvée par aller-retour de la constante : avec l'ancienne valeur remise, le code redonne exactement les empreintes précédentes. Modification de ce fichier, hors du périmètre initial de B6-c, entérinée par le propriétaire (décision B1). Tests ajoutés : 7 à B6-c (3 dans `tests/test_motion.py`, variété du décalage de départ ; 4 dans `tests/test_sequence_generator.py`, variété des dérives) et 4 à A3 (`tests/test_sequence_generator.py`, variété et bornes du plancher), soit 1 482 → 1 489 → 1 493 tests passés.
+
+### 13.4 Commits
+
+| Commit | Contenu |
+|---|---|
+| `80f2bd0` | B6-c : décalages de départ et dérives clés par événement |
+| `9965d63` | A3 : plancher des dérives tiré dans [0,1 ; 0,5] m |
+| `1f562e9` | Plancher relevé : [0,2 ; 0,5] m (option 1B) |
+| `6d50b07` | Ticket 29 : tests d'intégration exclus de la suite standard |
+| `a9c6897` | Ticket 30 : cohérence joueur-ballon (exigence du propriétaire, Bloc A, A1.6) |
+
+### 13.5 Limites connues
+
+- 8,4 % des dérives restent sous 0,36 m (22,1 % sous 0,5 m) : décors proches du minimum, jugés conformes sur les captures de la graine 5 (images fixes, début et fin de clip, pas une lecture animée).
+- Ticket 28 (adversaire décor à 1,5 m du départ du tireur de penalty) et ticket 27 (tireur qui dépasse le ballon) restent ouverts.
+
+### 13.6 Statut
+
+**B6-c clos.** Prochaine étape : B6-d (réaction du gardien).
