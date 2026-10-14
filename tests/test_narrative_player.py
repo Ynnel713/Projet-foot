@@ -633,11 +633,31 @@ class TestExtendWithRebound:
         if plan.end_tau >= plan.trajectory.duration - 1e-9:
             assert extension[-1].ball.z == 0.0  # le ballon finit au sol (sauf clip coupé 1,0 s après une ligne)
 
-    @pytest.mark.parametrize("name", sorted(BUILDERS))
-    @pytest.mark.parametrize("outcome", ["but", "hors_cadre", "tacle", "degagement", None])
+    # B7-c (14/10/2026) : un coup franc d'issue `tacle` / `degagement` est BLOQUE par le mur et donc prolongé (voir
+    # `test_extension_free_kick_tackle_and_clearance_are_extended`) ; ces deux cas sortent de la liste « non prolongé ».
+    @pytest.mark.parametrize(
+        "name,outcome",
+        [
+            (name, outcome)
+            for name in sorted(BUILDERS)
+            for outcome in ["but", "hors_cadre", "tacle", "degagement", None]
+            if not (name == "coup_franc" and outcome in ("tacle", "degagement"))
+        ],
+    )
     def test_other_outcomes_are_not_extended(self, name, outcome):
         sequence, frames = _frames_with_outcome(name, outcome)
         assert _extend_with_rebound(frames, sequence, outcome, _ACCEL_STEP_S) is frames
+
+    @pytest.mark.parametrize("outcome", ["tacle", "degagement"])
+    def test_extension_free_kick_tackle_and_clearance_are_extended(self, outcome):
+        sequence, frames = _frames_with_outcome("coup_franc", outcome)
+        extended = _extend_with_rebound(frames, sequence, outcome, _ACCEL_STEP_S)
+        assert extended[: len(frames)] == frames  # images existantes strictement identiques
+        extension = extended[len(frames):]
+        assert extension, "le ballon bloqué par le mur doit être prolongé"
+        assert extension[0].t > sequence.duration
+        assert all(f.players == frames[-1].players for f in extension)  # joueurs figés, comme pendant un vol
+        assert all(f.ball.z >= 0.0 and f.ball.owner_id is None for f in extension)
 
     def test_the_clip_with_a_rebound_is_longer_than_the_clip_without_it(self):
         sequence, frames = _frames_with_outcome("une_deux", "barre")
