@@ -26,7 +26,7 @@ Tickets ouverts, documentés pour être traités plus tard. **Aucun des tickets 
 | 20 | Clips poteau prolongés jusqu'à la touche, coupés à 1,0 s | Avant la Phase 7 (priorité basse) | Ouvert |
 | 21 | Spin binaire (0 ou 50 rad/s) dans `templates.py`, pas de valeurs intermédiaires | B5 (priorité moyenne) | Ouvert |
 | 22 | Courbure non perceptible à l'échelle 6 px | Avant la Phase 7 (priorité basse) | Ouvert |
-| 23 | NLG ne reçoit pas le type de frappe, texte générique incohérent avec le rendu | Après B5 (priorité moyenne) | Ouvert |
+| 23 | NLG ne reçoit pas le type de frappe, texte générique incohérent avec le rendu | Après B5 (priorité moyenne) | Fermé (B6-e, 14/10/2026) |
 | 24 | Commentaire faux sur la zone d'un penalty dans `engine/narrative.py` | Priorité basse | Ouvert |
 | 25 | Clips de but dont la dernière image est avant la ligne | Avant la Phase 7 (priorité basse) | Ouvert |
 | 26 | Divergence moteur / narration sur les penaltys ratés : l'animation montre des ratés qui n'ont pas eu lieu et omet ceux du moteur | Basse à moyenne (à trancher), à coupler au Bloc C | Ouvert |
@@ -442,7 +442,7 @@ appelé par les scripts, les tests et un éventuel paramètre de graine de l'API
 
 **Priorité.** Moyenne ; résolution prévue après B5.
 
-**Statut.** Ouvert. Non corrigé.
+**Statut.** Fermé (B6-e, 14/10/2026). Le NLG reçoit le type de frappe et ne décrit plus que le style de la frappe jouée : `NarrativeEvent.strike_type` (`88497f1`, `engine/narrative.py`), transmis par `engine/nlg_ingestion.py` (`2674de0`), accepté par le contrat du NLG, conditionnant 70 phrases de la banque et 10 phrases ajoutées, 494 -> 504 (`f5ba202`). Mesure sur 100 matchs (1 586 événements, 1 124 frappes commentées) : contradictions texte / type **157 -> 0** (dont 4 « enroule » sur un `shot_tendu`, avant). La couverture de nommage du style reste partielle (de 6,5 % à 29,5 % selon le type pour les six types B5) : le sélecteur filtre sans forcer, décision du propriétaire.
 
 ---
 
