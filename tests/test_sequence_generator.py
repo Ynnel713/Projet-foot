@@ -1015,3 +1015,74 @@ class TestOpponentFieldTracks:
         from ligue1sim.animation.sequence_generator import nearest_opponent_distance_m
 
         assert nearest_opponent_distance_m({}, (0.5, 0.5), 1.0, 5.0) is None
+
+
+class TestOpponentEnJeu:
+    """Étape 0b-2 du Bloc A : `en_jeu` sépare « effectif complet pour la formation » et « joueurs présents pour le rendu ». Sans lui, comportement
+    historique ; avec lui, aucune ligne n'est recalée quand un titulaire sort, et un remplaçant est placé à sa propre position (reflétée)."""
+
+    @staticmethod
+    def _with_substitute():
+        import dataclasses
+
+        return dataclasses.replace(_opponent_lineup(), substitutes=[_player("BU", 65.0, "opp-sub", 112)])
+
+    def test_without_en_jeu_nothing_changes(self):
+        from ligue1sim.animation.sequence_generator import _opponent_positions
+
+        opponent = self._with_substitute()
+        default = _opponent_positions(opponent)
+        assert len(default) == 11 and 112 not in default  # les remplaçants ne sont pas placés
+        assert _opponent_positions(opponent, None) == default
+        starters_only = {p.name: None for p in opponent.players}
+        assert _opponent_positions(opponent, starters_only) == default
+        sequence = TestOpponentFieldTracks._built("contre_attaque", 41, "but")
+        assert enrich_with_background(sequence, opponent, "but") == enrich_with_background(sequence, opponent, "but", None)
+
+    def test_a_missing_starter_does_not_move_the_others_and_the_entrant_gets_its_own_mirrored_position(self):
+        from ligue1sim.animation.sequence_generator import _opponent_positions
+
+        opponent = self._with_substitute()
+        default = _opponent_positions(opponent)
+        present = {p.name: None for p in opponent.players if p.name != "opp-mc0"}
+        present["opp-sub"] = PitchPoint(x=0.75, y=0.31)
+        positions = _opponent_positions(opponent, present)
+        assert 107 not in positions  # opp-mc0 absent
+        assert all(positions[player_id] == default[player_id] for player_id in default if player_id != 107)  # aucune ligne recalée
+        assert positions[112] == PitchPoint(x=0.25, y=0.31)
+
+    def test_enrich_places_the_entrant_and_drops_the_absent_with_stable_numbers(self):
+        opponent = self._with_substitute()
+        en_jeu = {p.name: None for p in opponent.players if p.name != "opp-mc0"}
+        en_jeu["opp-sub"] = PitchPoint(x=0.75, y=0.31)
+        sequence = TestOpponentFieldTracks._built("contre_attaque", 41, "but")
+        full = enrich_with_background(sequence, opponent, "but")
+        enriched = enrich_with_background(sequence, opponent, "but", en_jeu)
+        assert 107 not in enriched.background and 112 in enriched.background and len(enriched.background) == len(full.background)
+        assert enriched.background[112].start == (0.25, 0.31)
+        assert enriched.roster[112].team_side == "opponent" and enriched.roster[112].poste == "BU"
+        assert enriched.roster[102].numero == full.roster[102].numero  # numéros dérivés de l'effectif complet
+        assert enriched.background[102] == full.background[102]
+
+    def test_field_tracks_read_en_jeu_from_the_argument_or_from_the_lineup(self):
+        import dataclasses
+
+        from ligue1sim.animation.sequence_generator import opponent_field_tracks
+
+        opponent = self._with_substitute()
+        en_jeu = {p.name: None for p in opponent.players if p.name != "opp-mc0"}
+        en_jeu["opp-sub"] = PitchPoint(x=0.75, y=0.31)
+        sequence = TestOpponentFieldTracks._built("contre_attaque", 41, "but")
+        target = (sequence.keyframes[-1].ball.x, sequence.keyframes[-1].ball.y)
+        enriched = enrich_with_background(sequence, opponent, "but", en_jeu)
+        tracks = opponent_field_tracks(opponent, sequence.event_ref, target, en_jeu)
+        assert 107 not in tracks and 112 in tracks
+        for player_id, track in tracks.items():
+            assert enriched.background[player_id] == track
+
+        class _Carrier(Lineup):
+            pass
+
+        carrier = _Carrier(**{f.name: getattr(opponent, f.name) for f in dataclasses.fields(Lineup)})
+        object.__setattr__(carrier, "en_jeu", en_jeu)
+        assert opponent_field_tracks(carrier, sequence.event_ref, target) == tracks

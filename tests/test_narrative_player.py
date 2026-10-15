@@ -13,7 +13,7 @@ from ligue1sim.animation import templates as templates_module
 from ligue1sim.animation.ball import REBOUND_MAX_DURATION_S
 from ligue1sim.animation.motion import interpolate
 from ligue1sim.animation.sequence_generator import enrich_with_background
-from ligue1sim.animation.templates import BUILDERS
+from ligue1sim.animation.templates import BUILDERS, numeros_by_player_id
 from ligue1sim.clubs import Club
 from ligue1sim.events import GoalEvent
 from ligue1sim.lineup import Lineup, pick_best_formation, select_best_xi
@@ -30,9 +30,12 @@ from narrative_player import (
     _apply_acceleration_constraint_to_frames,
     _build_clip_frames,
     _extend_with_rebound,
-    _goalkeeper_lineup_at,
     _interval_events,
     _lineup_start_positions,
+    _names_on_pitch,
+    _opponent_view,
+    _scorer_view,
+    _substitute_start_position,
 )
 
 _N_MATCHES = 30
@@ -116,47 +119,131 @@ class TestLineupStartPositionsRespectDeclaredFormationBands:
         )
 
 
-class TestGoalkeeperLineupAt:
-    """Étape 0a du Bloc A : un seul gardien par équipe à la minute de l'événement (`Timeline.substitutions` fait foi), remplaçants de champ intacts."""
+class TestNamesOnPitch:
+    """Étapes 0a et 0b-2 du Bloc A : effectif affiché = joueurs sur le terrain à la minute de l'événement (`Timeline.substitutions` et
+    `Timeline.cards` font foi). Remplacements de même minute en bloc, blessures sans effet, `keep` pour les buts réels de frontière (ticket 44)."""
 
     @staticmethod
     def _setup():
         home, _away = _clubs()
         lineup = select_best_xi(home, "4-2-3-1")
-        starter = next(p for p in lineup.players if p.poste == "GK")
-        entrant = next(p for p in home.players if p.poste == "GK" and p.name != starter.name)
-        outfield = next(p for p in home.players if p.poste == "MC" and p.name not in {q.name for q in lineup.players})
-        lineup = dataclasses.replace(lineup, substitutes=[entrant, outfield])
-        sub = SimpleNamespace(club_name="Home FC", player_off=starter.name, player_on=entrant.name, minute=43)
-        return lineup, starter, entrant, outfield, SimpleNamespace(substitutions=[sub])
+        gk = next(p for p in lineup.players if p.poste == "GK")
+        outfield = [p for p in lineup.players if p.poste != "GK"]
+        mc, bu = next(p for p in outfield if p.poste == "MC"), next(p for p in outfield if p.poste == "BU")
+        others = [p for p in outfield if p not in (mc, bu)]
+        reserve_gk = next(p for p in home.players if p.poste == "GK" and p.name != gk.name)
+        reserve_cb, reserve_cm = (next(p for p in home.players if p.poste == poste and p.name not in {q.name for q in lineup.players}) for poste in ("DC", "MC"))
+        lineup = dataclasses.replace(lineup, substitutes=[reserve_gk, reserve_cb, reserve_cm])
+        timeline = SimpleNamespace(
+            substitutions=[
+                SimpleNamespace(club_name="Home FC", player_off=gk.name, player_on=reserve_gk.name, minute=43),
+                SimpleNamespace(club_name="Home FC", player_off=mc.name, player_on=reserve_cb.name, minute=60),
+                SimpleNamespace(club_name="Home FC", player_off=bu.name, player_on=reserve_cm.name, minute=60),
+            ],
+            cards=[
+                SimpleNamespace(club_name="Home FC", player=others[0].name, minute=75, card_type="direct"),
+                SimpleNamespace(club_name="Home FC", player=others[1].name, minute=20, card_type="yellow"),
+            ],
+        )
+        return lineup, timeline, dict(gk=gk, reserve_gk=reserve_gk, mc=mc, bu=bu, reserve_cb=reserve_cb, reserve_cm=reserve_cm, red=others[0], yellow=others[1])
 
-    def test_before_the_substitution_the_starter_stays_and_the_entrant_is_hidden(self):
-        lineup, starter, entrant, outfield, timeline = self._setup()
-        result = _goalkeeper_lineup_at(timeline, lineup, "Home FC", 42)
-        assert [p.name for p in result.players if p.poste == "GK"] == [starter.name]
-        assert [p.name for p in result.substitutes] == [outfield.name]  # remplaçant de champ conservé
+    def test_before_any_substitution_the_eleven_starters_stay_and_no_reserve_is_present(self):
+        lineup, timeline, who = self._setup()
+        assert _names_on_pitch(timeline, lineup, "Home FC", 42) == {p.name for p in lineup.players}
 
-    def test_from_the_substitution_minute_the_entrant_replaces_the_starter(self):
-        lineup, starter, entrant, outfield, timeline = self._setup()
-        for minute in (43, 90):
-            result = _goalkeeper_lineup_at(timeline, lineup, "Home FC", minute)
-            assert [p.name for p in result.players if p.poste == "GK"] == [entrant.name]
-            assert starter.name not in {p.name for p in result.players + result.substitutes}
-            assert result.bands[entrant.name] == lineup.bands[starter.name]
-            assert starter.name not in result.bands
-            assert len(result.players) == 11
+    def test_substitutions_of_the_same_minute_apply_together_from_that_minute(self):
+        lineup, timeline, who = self._setup()
+        assert who["reserve_gk"].name in _names_on_pitch(timeline, lineup, "Home FC", 43) and who["gk"].name not in _names_on_pitch(timeline, lineup, "Home FC", 43)
+        at_60 = _names_on_pitch(timeline, lineup, "Home FC", 60)
+        assert {who["reserve_cb"].name, who["reserve_cm"].name} <= at_60 and not ({who["mc"].name, who["bu"].name} & at_60)
+        assert len(at_60) == 11
 
-    def test_start_positions_hold_exactly_one_goalkeeper_per_minute(self):
-        lineup, starter, entrant, _outfield, timeline = self._setup()
-        for minute, expected in ((10, starter.name), (43, entrant.name)):
-            positions = _lineup_start_positions(_goalkeeper_lineup_at(timeline, lineup, "Home FC", minute))
-            goalkeepers = {p.name for p in lineup.players + lineup.substitutes if p.poste == "GK"}
-            assert goalkeepers & set(positions) == {expected}
+    def test_red_card_removes_the_player_from_its_minute_and_a_yellow_does_not(self):
+        lineup, timeline, who = self._setup()
+        assert who["red"].name in _names_on_pitch(timeline, lineup, "Home FC", 74)
+        assert who["red"].name not in _names_on_pitch(timeline, lineup, "Home FC", 75)
+        assert len(_names_on_pitch(timeline, lineup, "Home FC", 90)) == 10
+        assert who["yellow"].name in _names_on_pitch(timeline, lineup, "Home FC", 90)
 
-    def test_other_team_and_no_substitution_are_left_untouched(self):
-        lineup, _starter, _entrant, _outfield, timeline = self._setup()
-        assert _goalkeeper_lineup_at(timeline, lineup, "Away FC", 90) is lineup
-        assert _goalkeeper_lineup_at(SimpleNamespace(substitutions=[]), lineup, "Home FC", 90) is lineup
+    def test_kept_names_stay_even_when_absent(self):
+        lineup, timeline, who = self._setup()
+        names = _names_on_pitch(timeline, lineup, "Home FC", 80, frozenset({who["mc"].name, who["red"].name}))
+        assert {who["mc"].name, who["red"].name, who["reserve_cb"].name} <= names and len(names) == 12
+
+    def test_other_team_keeps_its_starters(self):
+        lineup, timeline, _who = self._setup()
+        assert _names_on_pitch(timeline, lineup, "Away FC", 90) == {p.name for p in lineup.players}
+
+    def test_scorer_view_restricts_positions_without_recomputing_the_formation(self):
+        lineup, timeline, who = self._setup()
+        full = _lineup_start_positions(lineup)
+        shown, positions = _scorer_view(timeline, lineup, "Home FC", 90, frozenset())
+        assert shown.substitutes == [] and set(positions) == {p.name for p in shown.players} and len(positions) == 10  # 11 joueurs après les remplacements, moins l'expulsé
+        for name, point in positions.items():
+            assert point == full[name]  # aucun recalage : même point qu'avec l'effectif complet
+        assert positions[who["reserve_cb"].name] == full[who["reserve_cb"].name]  # le remplaçant garde sa position propre
+
+    def test_a_substitute_enters_on_the_formation_line_of_its_poste_and_in_its_natural_lane(self):
+        lineup, _timeline, who = self._setup()
+        positions = _lineup_start_positions(lineup)
+        starter_xs = {}
+        for player in lineup.players:
+            starter_xs.setdefault(player.poste, []).append(positions[player.name].x)
+        for key, poste in (("reserve_cb", "DC"), ("reserve_cm", "MC")):
+            point = positions[who[key].name]
+            assert point.x == pytest.approx(sum(starter_xs[poste]) / len(starter_xs[poste]))  # même profondeur que la ligne de son poste
+            assert 0.15 + 0.70 / 3 <= point.y <= 0.15 + 0.70 * 2 / 3  # couloir axial : tiers central
+        starters_alone = _lineup_start_positions(dataclasses.replace(lineup, substitutes=[]))
+        assert all(positions[p.name] == starters_alone[p.name] for p in lineup.players)  # les titulaires ne bougent pas
+        wide = _substitute_start_position(dataclasses.replace(who["reserve_cb"], poste="LB"), 0.2)
+        assert 0.15 <= wide.y <= 0.15 + 0.70 / 3 and wide.x == 0.2
+        right = _substitute_start_position(dataclasses.replace(who["reserve_cb"], poste="AD"), 0.2)
+        assert 0.15 + 0.70 * 2 / 3 <= right.y <= 0.85
+
+    def test_opponent_view_keeps_the_complete_lineup_and_carries_en_jeu(self):
+        lineup, timeline, who = self._setup()
+        view, present = _opponent_view(timeline, lineup, "Home FC", 60)
+        assert [p.name for p in view.players] == [p.name for p in lineup.players] and [p.name for p in view.substitutes] == [p.name for p in lineup.substitutes]
+        assert set(view.en_jeu) == present and who["mc"].name not in view.en_jeu
+        assert view.en_jeu[who["reserve_cb"].name] == _lineup_start_positions(lineup)[who["reserve_cb"].name]
+
+
+class TestClipsShowExactlyThePlayersOnThePitch:
+    @staticmethod
+    def _expected(timeline, lineup, team, minute):
+        on = {p.name for p in lineup.players}
+        for sub in sorted((x for x in timeline.substitutions if x.club_name == team), key=lambda x: x.minute):
+            if minute >= sub.minute:
+                on.discard(sub.player_off)
+                on.add(sub.player_on)
+        for card in timeline.cards:
+            if card.club_name == team and card.card_type in ("direct", "second_yellow") and minute >= card.minute:
+                on.discard(card.player)
+        return on
+
+    def test_composition_positions_and_shirt_numbers(self):
+        checked = 0
+        for match in _simulate_n(3):
+            timeline = build_timeline(match)
+            clips = build_clips(timeline)
+            assert len(clips) == len(timeline.events)
+            numbers_by_player: dict = {}
+            for event, clip in zip(timeline.events, clips):
+                scorer_is_home = event.team == timeline.home_team
+                lineups = {"scorer": timeline.home_lineup if scorer_is_home else timeline.away_lineup, "opponent": timeline.away_lineup if scorer_is_home else timeline.home_lineup}
+                teams = {"scorer": event.team, "opponent": timeline.away_team if scorer_is_home else timeline.home_team}
+                for side in ("scorer", "opponent"):
+                    shown = [entry.nom for entry in clip.roster.values() if entry.team_side == side]
+                    assert len(shown) == len(set(shown))
+                    expected = self._expected(timeline, lineups[side], teams[side], event.minute)
+                    named = {event.main_player, *event.involved_players} if side == "scorer" else set()
+                    assert expected <= set(shown) and set(shown) - expected <= named, (timeline.match_id, event.minute, side)
+                numbers = {side: numeros_by_player_id(lineups[side]) for side in lineups}
+                for pid, entry in clip.roster.items():
+                    assert entry.numero == numbers[entry.team_side][pid]  # numéro dérivé de l'effectif complet
+                    assert numbers_by_player.setdefault(entry.nom, entry.numero) == entry.numero  # stable d'un clip à l'autre
+                checked += 1
+        assert checked > 0
 
 
 class TestBuildClipsScoreSequence:
