@@ -753,6 +753,22 @@ Dans les 14 cas, le segment est une passe au sol (`pass_ground`) et aucune réce
 
 ---
 
+## 43. `apply_acceleration_constraint` ne corrige jamais les images 0 et 1
+
+**Description.** `src/ligue1sim/animation/physics.py` (`apply_acceleration_constraint`) recopie telles quelles les deux premières images d'un clip et prend la vitesse entre elles comme vitesse de départ du suivi limité à 10 m/s². Si la position brute saute entre l'image 0 et l'image 1, cette vitesse initiale n'est jamais plafonnée et ne décroît ensuite qu'à 10 m/s².
+
+**Cas déclencheur (identifié en 0a, diagnostic du 15/10/2026).** Deux gardiens superposés au même point (équipe qui attaque avec un gardien remplaçant, matchs 27, 92 et 99 de la graine d'audit 20260923) : `motion._apply_avoidance` les écarte de 0,73 m entre l'image 0 et l'image 1 (22 m/s), `interpolate` ne parcourt ensuite que 2,4 m, mais le rendu parcourt 56,5 m et 81,6 m (match 27, événement 0). La superposition a été supprimée en 0a ; le défaut de la contrainte reste.
+
+**Cas génériques possibles.** Toute poussée d'évitement ou tout saut à l'image 0 ou 1 produit le même effet. Le diagnostic Bloc A a relevé 13 décors de champ avec un chemin supérieur à 10 m (maximum 15,2 m) sur 1 552 clips, dont la cause n'a pas été isolée ; ce mécanisme est une piste.
+
+**Correctif pressenti.** Forcer la vitesse des images 0 et 1 à zéro, ou à la vitesse cible, avant d'appliquer la contrainte. À mesurer avant décision : l'effet sur les acteurs (vitesses de départ des gabarits à `starts_at_restart`) et sur les empreintes de `tests/test_narrative_player.py`.
+
+**Fichiers concernés.** `src/ligue1sim/animation/physics.py`.
+
+**Priorité.** Basse à moyenne. **Résolution.** Hors périmètre de l'étape 0a ; à rattacher à l'étape 2 (A1.1, inertie) du Bloc A. **Statut.** Ouvert. Non corrigé.
+
+---
+
 # Décisions du propriétaire (entrées documentaires — ce ne sont pas des tickets)
 
 ## Décision propriétaire — dispositifs clubs conservés (D3)
