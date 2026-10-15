@@ -1457,11 +1457,28 @@ _TEMPLATE_CORNER = Template(
     # (t = 4,9 s, t_ratio 0,7) et dure 2,1 s comme avant : il arrive à t = 7,0 s, à la hauteur du contact (`aerial_contact`), où le buteur le reprend. Le
     # segment « ballon disputé » qui rebondissait 2,8 s au sol (t = 4,2 à 7,0 s) n'existe plus ; l'assist termine sa marche au poteau de corner (t_ratio 0,6 -> 0,7,
     # progress 0,95 -> 1,0 : il bouge, le ballon aussi) avant de centrer. Les rôles gardent leurs positions d'avant à 0,0 / 0,3 / 0,6 / 1,0 ; la position à 0,7 est celle de la courbe d'avant à t = 4,9 s.
+    #
+    # Chantier 1, 1f (15/10/2026) : géométrie de rôle sur les trois rôles, cibles inchangées (assist -> zone d'assist = poteau de
+    # corner, scorer -> zone de tir) ; seul le départ devient réaliste. assist (le tireur du corner) a sa course de départ plafonnée
+    # à 8 m du poteau de corner (`run_cap_m=8.0`, même mécanisme que l'élan du penalty/coup franc, mais sans variation d'un corner à
+    # l'autre -- le plan ne demande qu'un plafond, pas une plage). scorer plafonné à 15 m (`run_cap_m=15.0`). support1 (l'appel au
+    # premier poteau, type aérien) devient TACTIQUE (postes attendus DC, BU, SA, ATT -- proposés en conception, à confirmer par la
+    # mesure réelle) avec `GEOM_BEHIND_ZONE` : sa cible se recale à `cap_m=6.0` de la zone de tir vers le poteau de corner, exactement
+    # au plancher déjà existant (`_BEHIND_MIN_M`) -- valeur proposée, soumise à validation du propriétaire. Ballon non touché.
     duration=7.0,
     roles=(
-        Role("assist", ANCHOR_ASSIST, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.4), RoleFrame(0.6, 0.95), RoleFrame(0.7, 1.0), RoleFrame(1.0, 1.0))),
-        Role("support1", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.2), RoleFrame(0.6, 0.5), RoleFrame(0.7, 0.51), RoleFrame(1.0, 0.55))),
-        Role("scorer", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.15), RoleFrame(0.6, 0.6), RoleFrame(0.7, 0.65), RoleFrame(1.0, 1.0))),
+        Role(
+            "assist", ANCHOR_ASSIST, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.4), RoleFrame(0.6, 0.95), RoleFrame(0.7, 1.0), RoleFrame(1.0, 1.0)),
+            geometry=RoleGeometry(GEOM_ASSIST_ZONE, run_cap_m=8.0),
+        ),
+        Role(
+            "support1", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.2), RoleFrame(0.6, 0.5), RoleFrame(0.7, 0.51), RoleFrame(1.0, 0.55)),
+            geometry=RoleGeometry(GEOM_BEHIND_ZONE, cap_m=6.0, preferred_postes=frozenset({"DC", "BU", "SA", "ATT"})),
+        ),
+        Role(
+            "scorer", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.15), RoleFrame(0.6, 0.6), RoleFrame(0.7, 0.65), RoleFrame(1.0, 1.0)),
+            geometry=RoleGeometry(GEOM_ZONE, run_cap_m=15.0),
+        ),
     ),
     tags=((0.0, "preparation"), (0.3, "montee"), (0.6, "attente"), (0.7, "centre"), (1.0, "tete")),
     ball_owner=((0.0, "assist"), (0.3, "assist"), (0.6, "assist"), (0.7, "assist"), (1.0, "scorer")),

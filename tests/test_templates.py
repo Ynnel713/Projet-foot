@@ -799,13 +799,21 @@ class TestTemplateStructureUnchangedByPhysicsTags:
     DEUX rôles génériques (`support1` ET `support2`) deviennent tactiques dans le même gabarit, PREMIER cas du chantier à puiser
     deux rôles dans le même pool de postes (voir `TestTacticalSupports`). `recuperation_haute` porte en plus une durée allongée
     (5,0 -> 6,0 s) ; `but_gag` est inchangée (5,0 s). Preuve de cause unique : avec l'ancienne durée et `geometry=None` sur tous les
-    rôles de ces 2 gabarits, le code redonne exactement les 2 anciennes empreintes ci-dessus."""
+    rôles de ces 2 gabarits, le code redonne exactement les 2 anciennes empreintes ci-dessus.
+
+    Onzième exception délibérée (Chantier 1, 1f, 15/10/2026) : `corner` a une empreinte mise à jour -- cibles inchangées (assist ->
+    zone d'assist = poteau de corner, scorer -> zone de tir), seul le départ devient réaliste, avec deux nouveautés par rapport aux
+    gabarits précédents : `assist` et `scorer` portent chacun un `run_cap_m` explicite (8 et 15 m, plafonds proposés en conception)
+    en plus de leur cible habituelle ; `support1` (l'appel au premier poteau) devient tactique via `GEOM_BEHIND_ZONE` (cible recalée
+    à 6 m de la zone de tir vers le poteau de corner, pas `GEOM_ZONE`/`GEOM_ASSIST_ZONE` -- première utilisation réelle de cette
+    cible dans un gabarit du chantier). Preuve de cause unique : avec `geometry=None` sur les trois rôles, le code redonne
+    exactement l'ancienne empreinte ci-dessus."""
 
     _EXPECTED_STRUCTURE_HASH = {
         "but_gag": "c982c7c9f8905b2d948ecbc21c2009643fb30661471acfd64352f604a8801ecf",
         "construction_placee": "4e9db51913eab6c3181ad30a473c9d583c634bc410db8807eed2fcb9ebc7f452",
         "contre_attaque": "76bacb1b0545a25c661dc61635984d2cb042ed0ee29cc928881da8eb7b810a39",
-        "corner": "5086502e6020d2ff4c293776dee443643211b703cc4cb3eb37474f585e6eefbf",
+        "corner": "81b011f67a82794ee034a3ec5cecd123bba67d90957bc0aa0bb69d67cb963917",
         "coup_franc": "ff70b15275eb85d5baefeb5acea5f4a81e25319618a6e25cc978600aca72f959",
         "debordement_centre_tete": "9a5039d4b4d9112586b7676f475bc7e7cec54ce265278006814c3dae681a95f8",
         "decalage_enroulee": "f2f8eae8553986557f62b7e938429e5ac182fef09c21f4d87fb2c0f158ff1090",
@@ -1739,10 +1747,11 @@ class TestRoleGeometry:
         second, _ = self._build(8.0, "cb0", PitchPoint(0.1, 0.4))
         assert first.to_json() == second.to_json()
 
-    # Chantier 1, 1c (15/10/2026) : liste DÉCROISSANTE au fil des sous-étapes (1e-1 a retiré les siens, 1f retirera les derniers) --
-    # garde-fou qu'un gabarit pas encore migré ne reçoive pas de géométrie par erreur. Ne jamais revenir à "aucun gabarit" : un gabarit
-    # migré doit sortir de cette liste, pas la faire disparaître.
-    _NOT_YET_MIGRATED = ("coup_franc", "corner", "penalty")
+    # Chantier 1, 1c (15/10/2026) : liste DÉCROISSANTE au fil des sous-étapes (1e-1 a retiré les siens, 1f retire "corner" --
+    # "penalty" restera dans cette liste même après 1f, voir le commit suivant) -- garde-fou qu'un gabarit pas encore migré ne
+    # reçoive pas de géométrie par erreur. Ne jamais revenir à "aucun gabarit" : un gabarit migré doit sortir de cette liste, pas
+    # la faire disparaître.
+    _NOT_YET_MIGRATED = ("coup_franc", "penalty")
 
     def test_templates_not_yet_migrated_carry_no_geometry(self):
         assert set(self._NOT_YET_MIGRATED) <= set(TEMPLATES)
@@ -1850,9 +1859,12 @@ class TestTacticalSupports:
         starts = self._starts(lineup, cb0=self._at(-20.0), cb1=self._at(-12.0))
         assert tpl.build_from_template(template, _goal_event(), lineup, starts).meta["roles"]["support1"] == "cb1"
 
-    @pytest.mark.parametrize("name", ["contre_attaque", "construction_placee"])
+    @pytest.mark.parametrize("name", ["contre_attaque", "construction_placee", "corner"])
     def test_support1_is_drawn_tactically_on_the_real_migrated_templates(self, name):
-        # Chantier 1, 1d (15/10/2026) : support1 de ces deux gabarits est désormais tactique (postes attendus DC/LB/RB/MDC/MC).
+        # Chantier 1, 1d (15/10/2026) : support1 de contre_attaque/construction_placee est tactique (postes attendus DC/LB/RB/MDC/MC).
+        # Chantier 1, 1f (15/10/2026) : support1 de corner aussi (postes attendus DC/BU/SA/ATT, cible GEOM_BEHIND_ZONE plutôt que
+        # GEOM_ZONE -- le DC le plus proche de la zone de tir reste le DC le plus proche de la cible recalée à 6 m de cette zone,
+        # l'écart entre les deux DC de la fixture (8 m) est assez grand pour ne pas être affecté par ce recalage).
         lineup = _lineup()
         starts = self._starts(lineup, cb0=self._at(-20.0), cb1=self._at(-12.0))
         assert tpl.build_from_template(TEMPLATES[name], _goal_event(), lineup, starts).meta["roles"]["support1"] == "cb1"
@@ -1894,9 +1906,10 @@ class TestTacticalSupports:
         plain = tpl.Role("support1", ANCHOR_STATIC, (tpl.RoleFrame(0.0, 0.0), tpl.RoleFrame(1.0, 1.0)))
         assert self._resolve([plain], starts)["support1"] == "ad"  # premier nom par ordre alphabétique hors buteur, passeur et gardien
         assert tpl._resolve_roles(_goal_event(), lineup, ("scorer", "assist", "support1"))["support1"].name == "ad"  # appel d'avant 1b
-        # Précondition de CE test : "corner" n'est pas encore migré (son support1 n'a pas de géométrie) -- voir
-        # test_templates_not_yet_migrated_carry_no_geometry pour la liste à jour par gabarit (1e-1 a migré les deux supports tactiques
-        # de recuperation_haute/but_gag, qui ne peuvent donc plus servir d'exemple ici).
-        assert all(role.geometry is None for role in TEMPLATES["corner"].roles if role.name not in ("scorer", "assist"))
-        sequence = BUILDERS["corner"](_goal_event(), lineup, _start_positions(lineup))
+        # Précondition de CE test : "penalty" n'est pas migré au sens de `Role.geometry` (son support1 n'en a pas -- voir
+        # test_templates_not_yet_migrated_carry_no_geometry pour la liste à jour) ; ses supports ont bien une position de départ
+        # remplacée par 1f (`build_penalty`/`penalty_support_position`), mais QUI tient le rôle reste alphabétique, inchangé.
+        # "corner" a migré son support1 en 1f, qui ne peut donc plus servir d'exemple ici.
+        assert all(role.geometry is None for role in TEMPLATES["penalty"].roles if role.name not in ("scorer", "assist"))
+        sequence = BUILDERS["penalty"](_goal_event(), lineup, _start_positions(lineup))
         assert sequence.meta["roles"]["support1"] == "ad"
