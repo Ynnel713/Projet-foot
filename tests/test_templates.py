@@ -516,56 +516,154 @@ class TestPickTemplateReactsToScore:
         assert counts_blowout["construction_placee"] / 500 > counts_level["construction_placee"] / 500
 
 
-class TestSegmentSpeedHeadroom:
-    """"Point B" du brief du 23/09/2026 : un segment de gabarit qui exige
-    RÉELLEMENT plus que v_max en moyenne ne peut pas être rattrapé par le
-    repli linéaire de motion.py (voir sa docstring de module, "Limite connue
-    et non corrigée" -- saut de position/vitesse à la transition). Aucun des
-    12 gabarits actuels n'atteint ce seuil (`une_deux` est le plus proche,
-    ~76% de v_max) -- ce test fige cette marge pour qu'une future édition
-    d'un gabarit (nouveaux RoleFrame plus exigeants) ne la fasse pas
-    silencieusement basculer en territoire "impossible"."""
+class TestRoleRunLimitRespectsVMaxAndAccel:
+    """Chantier 1, 1g (15/10/2026, ticket 46) : remplace `TestSegmentSpeedHeadroom`. Celui-ci testait une seule compo/zone
+    synthétique (`_lineup()`/`_goal_event()`) sur les keyframes déjà SCRIPTÉS -- aveugle de deux façons : (1) pour un rôle
+    géométrisé (9 gabarits sur 12 depuis 1a-1f), le départ est déjà plafonné par `role_run_limit_m`/`geometry_start` AVANT
+    construction des keyframes, donc le ratio scripté respecte `_RUN_RATIO_MAX`/`_RUN_ACCEL_COEFF` PAR CONSTRUCTION, quelle
+    que soit la zone -- le test ne vérifiait en fait qu'une seule compo, jamais les postes DC/MC/BU proposés par le plan ;
+    (2) il ne couvrait pas les rôles SANS géométrie (penalty, coup_franc), seuls à ne pas bénéficier de ce plafond automatique.
 
-    def _worst_ratio(self, name: str, lineup: Lineup) -> float:
-        from ligue1sim.animation.motion import _real_distance_m, max_speed_normalized
+    Ce test vérifie directement la garantie de `role_run_limit_m` sur les 12 gabarits réels, avec les 3 postes de référence du
+    plan (DC 7 m/s, MC 8 m/s, BU 9 m/s) -- remplace la matrice "zones" (sans effet sur cette fonction, qui ne dépend que des
+    progressions/durées du gabarit, pas d'une zone) par une couverture postes × gabarits réels, plus honnête que la compo
+    unique d'avant. Garantie mathématique, donc un échec signale une régression de la FORMULE elle-même (min() manquant,
+    mauvaise unité...), pas un gabarit "trop exigeant" -- ce risque-là est couvert par `TestFixedAnchorRoleSpeedAcrossPostes`
+    (rôles sans géométrie) et par `TestPipelineSpeedHeadroom` (effets de bord du rendu réel, hors formule)."""
 
-        sequence = BUILDERS[name](_goal_event(), lineup, _start_positions(lineup))
+    _POSTES_MPS = {"DC": 7.0, "MC": 8.0, "BU": 9.0}
+    _EPSILON = 1e-9
+
+    @pytest.mark.parametrize("poste,v_max_mps", sorted(_POSTES_MPS.items()))
+    @pytest.mark.parametrize("name", sorted(TEMPLATES))
+    def test_every_geometrized_role_respects_the_caps_for_every_reference_poste(self, name, poste, v_max_mps):
+        template = TEMPLATES[name]
+        for role in template.roles:
+            if role.geometry is None:
+                continue
+            limit_m = tpl.role_run_limit_m(role.frames, template.duration, v_max_mps, role.geometry.run_cap_m)
+            for a, b in zip(role.frames, role.frames[1:]):
+                dp = abs(b.progress - a.progress)
+                if dp <= 1e-9:
+                    continue
+                segment_s = (b.t_ratio - a.t_ratio) * template.duration
+                dist_m = limit_m * dp
+                ratio = dist_m / (v_max_mps * segment_s)
+                assert ratio <= tpl._RUN_RATIO_MAX + self._EPSILON, (name, role.name, poste, ratio)
+                assert dist_m <= tpl._RUN_ACCEL_COEFF * segment_s**2 + self._EPSILON, (name, role.name, poste, dist_m)
+
+
+class TestFixedAnchorRoleSpeedAcrossPostes:
+    """Chantier 1, 1g : les rôles SANS géométrie (penalty, coup_franc -- voir `TestRoleGeometry._NOT_YET_MIGRATED`) ne
+    bénéficient pas du plafond automatique de `role_run_limit_m` : le scorer (élan vers le ballon posé) a un déplacement
+    réel significatif ; les supports du penalty (`ANCHOR_LATERAL_SHIFT`) bougent aussi, mais de quelques dizaines de cm --
+    tous deux vérifiés ici, sur CHAQUE rôle actif (comme l'ancien test), sur les 3 postes de référence (une seule compo
+    synthétique ne les exerçait pas tous avant ce commit)."""
+
+    _POSTES_MPS = {"DC": 7.0, "MC": 8.0, "BU": 9.0}
+
+    @pytest.mark.parametrize("poste,v_max_mps", sorted(_POSTES_MPS.items()))
+    @pytest.mark.parametrize("name", ["penalty", "coup_franc"])
+    def test_every_active_role_stays_under_v_max(self, name, poste, v_max_mps):
+        import dataclasses
+
+        from ligue1sim.animation.motion import _real_distance_m
+
+        lineup = _lineup()
+        players = [dataclasses.replace(p, poste=poste) if p.name == "bu" else p for p in lineup.players]
+        lineup = dataclasses.replace(lineup, players=players)
+        event = _goal_event(assist=None, penalty=(name == "penalty"))
+        sequence = BUILDERS[name](event, lineup, _start_positions(lineup), "but")
         worst = 0.0
         for player_id, entry in sequence.roster.items():
             if entry.role is None:
                 continue
-            v_max = max_speed_normalized(entry.poste)
             for kf_a, kf_b in zip(sequence.keyframes, sequence.keyframes[1:]):
                 duration = kf_b.t - kf_a.t
                 if duration <= 0:
                     continue
                 dist_m = _real_distance_m(kf_a.players[player_id], kf_b.players[player_id])
-                required_avg_speed = (dist_m / 105.0) / duration
-                worst = max(worst, required_avg_speed / v_max)
-        return worst
+                worst = max(worst, (dist_m / duration) / v_max_mps)
+        assert worst < 1.0, f"{name}/{poste} : le tireur exige {worst:.2f}x v_max sur son segment le plus dur"
 
-    @pytest.mark.parametrize("name", sorted(BUILDERS))
-    def test_no_template_ever_demands_more_than_v_max(self, name):
-        ratio = self._worst_ratio(name, _lineup())
-        assert ratio < 1.0, f"{name} exige {ratio:.2f}x v_max sur son segment le plus dur -- devient \"impossible\""
 
-    def test_debordement_centre_tete_is_the_closest_to_the_critical_threshold(self):
-        # Constat du 23/09/2026 (voir docs/simulation_physique_archi.md,
-        # "Point B") -- "une_deux" était le pire jusqu'à sa migration en
-        # Chantier 1, 1d (15/10/2026, géométrie de rôle sur scorer/assist) :
-        # son pire ratio a baissé sous celui de "recuperation_haute", qui
-        # n'était pas encore migré (famille C, sous-étape 1e-1) et prenait
-        # donc sa place. Chantier 1, 1e-1 (15/10/2026) : "recuperation_haute"
-        # puis "but_gag" migrés, leur pire ratio baisse (0,45 et 0,53 ->
-        # inférieur) -- "debordement_centre_tete" (migré en 1c) prend leur
-        # place, exactement au plafond de conception (`_RUN_RATIO_MAX` = 0,5,
-        # quasi à égalité avec "une_deux" lui-même au plafond ; départagé par
-        # l'ordre d'itération de `BUILDERS`, pas par un écart réel).
-        # Re-vérifié, pas corrigé en silence -- si ce n'est plus vrai après
-        # 1f, la table a de nouveau changé et mérite d'être revérifiée.
-        lineup = _lineup()
-        ratios = {name: self._worst_ratio(name, lineup) for name in BUILDERS}
-        assert max(ratios, key=ratios.get) == "debordement_centre_tete"
+class TestPipelineSpeedHeadroom:
+    """Chantier 1, 1g (ticket 46) : niveau PIPELINE, complémentaire des deux classes ci-dessus -- construit ~10 matchs réels
+    de la graine d'audit (`scripts/narrative_audit.py::_AUDIT_SEED`, même mécanisme que `scripts/measure_geometry.py`, pas
+    réinventé) et mesure la vitesse RENDUE (après interpolation et contrainte d'accélération de `motion.py`, pas seulement
+    scriptée) des rôles actifs. Capture les effets de bord du rendu réel (évitement, contrainte d'accélération par keyframe)
+    qu'aucun des deux tests ci-dessus ne peut voir -- renvoyés à A1.1/A1.5, hors chantier 1.
+
+    Seuil calibré le 15/10/2026 sur l'état du dépôt à ce commit (chantier 1 complet, 1a à 1e-2) : mesuré réellement à
+    36/155 clips (23,2 %) sur 10 matchs de la graine d'audit -- PAS une extrapolation des 351/1 552 (22,6 %) mesurés sur
+    100 matchs, cohérent avec eux mais recalculé indépendamment comme demandé par le cadrage. Plafond fixé à 30 % (marge
+    au-dessus des 23,2 % mesurés, pour absorber la variance d'un sous-échantillon de 10 matchs plutôt que 100) -- à
+    RE-mesurer et documenter si une sous-étape ultérieure (A1.1, A1.5...) change légitimement cette distribution ; ne
+    jamais resserrer ce seuil sans remesurer."""
+
+    _MAX_OVER_VMAX_SHARE = 0.30  # marge de sécurité au-dessus des 23,2 % mesurés le 15/10/2026 (voir docstring)
+
+    @pytest.mark.integration
+    def test_rendered_speed_stays_mostly_under_1_05x_vmax_on_real_matches(self):
+        import random
+        import sys
+        from pathlib import Path
+
+        root = Path(__file__).resolve().parent.parent
+        for sub in ("scripts", "engine", "src"):
+            path = str(root / sub)
+            if path not in sys.path:
+                sys.path.insert(0, path)
+        import numpy as np
+
+        import narrative_audit as audit
+        import narrative_player as np_
+        from ligue1sim.animation.motion import _real_distance_m, max_speed_normalized
+        from ligue1sim.clubs import Club
+        from ligue1sim.lineup import pick_best_formation
+        from ligue1sim.schedule import Match
+        from ligue1sim.simulation import LeagueContext, simulate_match
+        from narrative import build_timeline, match_result_from
+
+        random.seed(audit._AUDIT_SEED)
+        np.random.seed(audit._AUDIT_SEED)
+        home = Club(name="Home FC", players=audit._squad("home", 72.0))
+        away = Club(name="Away FC", players=audit._squad("away", 68.0))
+        context = LeagueContext.from_clubs([home, away])
+        home_lineup, away_lineup = pick_best_formation(home), pick_best_formation(away)
+
+        over, total, done, i = 0, 0, 0, 0
+        while done < 10:
+            home_goals, away_goals, events = simulate_match(home, away, context)
+            i += 1
+            if events is None:
+                continue
+            done += 1
+            match = Match(home=home.name, away=away.name, home_goals=home_goals, away_goals=away_goals, events=events)
+            for clip in np_.build_clips(build_timeline(match_result_from(match, events, home_lineup, away_lineup, date=str(i)))):
+                total += 1
+                exceeded = False
+                for player_id, entry in clip.roster.items():
+                    if entry.role is None:
+                        continue
+                    v_max = max_speed_normalized(entry.poste) * 105.0
+                    for kf_a, kf_b in zip(clip.frames, clip.frames[1:]):
+                        duration = kf_b.t - kf_a.t
+                        if duration <= 0:
+                            continue
+                        state_a, state_b = kf_a.players[player_id], kf_b.players[player_id]
+                        dist_m = _real_distance_m((state_a.x, state_a.y), (state_b.x, state_b.y))
+                        if (dist_m / duration) / v_max > 1.05:
+                            exceeded = True
+                            break
+                    if exceeded:
+                        break
+                over += exceeded
+        assert total > 0, "aucun clip construit sur l'échantillon -- vérifier la graine/le pipeline"
+        share = over / total
+        assert share <= self._MAX_OVER_VMAX_SHARE, (
+            f"{over}/{total} clips ({share:.0%}) dépassent 1,05x vmax au rendu -- au-delà de la marge mesurée (voir docstring)"
+        )
 
 
 class TestContreAttaqueSupport1Carries:
