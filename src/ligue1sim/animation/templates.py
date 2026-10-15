@@ -252,6 +252,11 @@ class Template:
     # ailleurs (même esprit que `ball_height`), une intervention minimale ne
     # justifie pas d'en faire la première exception.
     ball_position: tuple[tuple[float, tuple[float, float]], ...] = ()
+    # Chantier 1, 1e-2 (15/10/2026) : (t_ratio, rôle A, rôle B) -- position du ballon à ce `t_ratio` recalculée comme le MILIEU des
+    # positions résolues des deux rôles nommés, plutôt qu'une position fixe. Même usage que `ball_position` (seulement quand
+    # `ball_owner` y vaut `None`), mais calculée à l'exécution -- corrige la dette dont `recuperation_haute` est le premier cas
+    # traité (ballon disputé pendant le pressing, entre les deux presseurs). Vide par défaut : aucun effet sur les autres gabarits.
+    dynamic_ball_position: tuple[tuple[float, str, str], ...] = ()
     # Coup franc/penalty : la séquence démarre une fois le tireur DÉJÀ en
     # position (près du ballon), pas à sa position de formation -- un rôle
     # peut donc légitimement porter le ballon dès t=0 avec un progress non
@@ -299,6 +304,13 @@ def _validate_template(template: Template) -> None:
             raise ValueError(
                 f"Gabarit {template.name!r} : le rôle {role.name!r} a des t_ratio {sorted(ratios)} "
                 f"différents du rôle {template.roles[0].name!r} {sorted(reference)}"
+            )
+    role_names = {role.name for role in template.roles}
+    for t_ratio, role_a, role_b in template.dynamic_ball_position:
+        if role_a not in role_names or role_b not in role_names:
+            raise ValueError(
+                f"Gabarit {template.name!r} : dynamic_ball_position à t_ratio={t_ratio} référence un rôle inconnu "
+                f"({role_a!r}/{role_b!r} vs {sorted(role_names)})"
             )
 
 
@@ -1069,6 +1081,7 @@ def build_from_template(
     ball_owner_by_ratio = dict(template.ball_owner)
     ball_height_by_ratio = dict(template.ball_height)
     ball_position_by_ratio = dict(template.ball_position)
+    dynamic_ball_by_ratio = {t_ratio: (role_a, role_b) for t_ratio, role_a, role_b in template.dynamic_ball_position}
     physics_tags_by_ratio = dict(template.physics_tags)
     timeline = sorted({frame.t_ratio for role in template.roles for frame in role.frames})
 
@@ -1096,6 +1109,12 @@ def build_from_template(
                 ball_x, ball_y = ball_position_by_ratio[t_ratio]
             else:
                 ball_x, ball_y = players[owner_id]
+        elif t_ratio in dynamic_ball_by_ratio and all(r in role_ids for r in dynamic_ball_by_ratio[t_ratio]):
+            # Chantier 1, 1e-2 : ballon disputé (pas de porteur) -> milieu des deux rôles nommés, déjà résolus ci-dessus pour ce t_ratio.
+            # Repli (rôle non résolu, compo trop réduite) : branche suivante (position fixe) ou dernière position connue.
+            role_a, role_b = dynamic_ball_by_ratio[t_ratio]
+            (ax, ay), (bx, by) = players[role_ids[role_a]], players[role_ids[role_b]]
+            ball_x, ball_y = (ax + bx) / 2.0, (ay + by) / 2.0
         elif t_ratio in ball_position_by_ratio:
             ball_x, ball_y = ball_position_by_ratio[t_ratio]
         else:
@@ -1567,13 +1586,11 @@ _TEMPLATE_RECUPERATION_HAUTE = Template(
     ),
     tags=((0.0, "pressing"), (0.3, "pressing"), (0.55, "recuperation"), (1.0, "tir")),
     ball_owner=((0.0, "support1"), (0.3, None), (0.55, "support1"), (1.0, "scorer")),
-    # Position fixe approximative (voir la docstring du champ sur Template,
-    # même dette ball_owner=None que corner ci-dessus) -- zone de pressing/
-    # ballon disputé, dans la moitié offensive. Repérée en écrivant
-    # test_no_immobile_segment_in_flight_actions (Tâche 2) : sans elle, le
-    # segment [0.0 -> 0.3] (inféré pass_ground, porteur=support1 à t=0) part
-    # et arrive au même point figé -- ballon immobile en plein pressing.
-    ball_position=((0.3, (0.6, 0.5)),),
+    # Chantier 1, 1e-2 (15/10/2026) : la position fixe (0,6 ; 0,5), posée le 23/09/2026 juste pour éviter un ballon immobile en
+    # plein pressing (voir test_no_immobile_segment_in_flight_actions, Tâche 2) sans jamais représenter une vraie position
+    # disputée, devient le MILIEU des deux presseurs (support1, support2) à ce même t_ratio -- première dette `ball_position`
+    # fixe corrigée du chantier (voir `dynamic_ball_position` sur `Template`). Sans effet sur les autres gabarits (champ vide).
+    dynamic_ball_position=((0.3, "support1", "support2"),),
     context_score=_score_recuperation_haute,
     # t=0.3 : porteur=None (ballon disputé pendant le pressing) -> deflect.
     # 0.55 (dernier segment avant 1.0) : shot, le tir de conclusion.

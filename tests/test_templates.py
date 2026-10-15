@@ -839,7 +839,13 @@ class TestTemplateStructureUnchangedByPhysicsTags:
     position de départ est remplacée dans `build_penalty`, comme celle du tireur (`penalty_runup_start`) l'est déjà, par un point
     au bord de la surface (`penalty_support_position`), mesuré à 70 m en médiane de la surface avant cette migration -- sans lien
     avec l'événement. Preuve de cause unique : avec l'ancien `build_penalty` (positions de départ non remplacées pour support1/
-    support2), le code redonne exactement l'ancienne empreinte ci-dessus."""
+    support2), le code redonne exactement l'ancienne empreinte ci-dessus.
+
+    Treizième exception délibérée (Chantier 1, 1e-2, 15/10/2026) : `recuperation_haute` a une empreinte mise à jour -- la position
+    fixe du ballon disputé à t_ratio=0,3 (posée le 23/09/2026 juste pour éviter un ballon immobile, jamais une vraie position)
+    devient le MILIEU des deux presseurs (`support1`/`support2`) à ce même t_ratio (`Template.dynamic_ball_position`, nouveau
+    champ, vide par défaut sur les 11 autres gabarits). Preuve de cause unique : avec `dynamic_ball_position=()` et l'ancien
+    `ball_position=((0.3, (0.6, 0.5)),)` remis, le code redonne exactement l'ancienne empreinte ci-dessus."""
 
     _EXPECTED_STRUCTURE_HASH = {
         "but_gag": "c982c7c9f8905b2d948ecbc21c2009643fb30661471acfd64352f604a8801ecf",
@@ -852,7 +858,7 @@ class TestTemplateStructureUnchangedByPhysicsTags:
         "penalty": "f2e5e8f763161da656bf4080c7991701714085723a65e69fe23af4ba4e883f28",
         "percee_individuelle": "7dda924ea183a11583d3539da5cadd0b95d46733059d7d6901729da617f28021",
         "profondeur_1v1": "72001bb8a4e7e0a03cbc38616bc13fa468f342f5adce9e38c2327126666ad988",
-        "recuperation_haute": "85d5747c251c864ab0ec20bd5ff5a8cc078a9fd63d034ab7b26c2102005fc931",
+        "recuperation_haute": "bd403efaca280ffc63eab15b92c795468fc094a17e303c75e67d69639ebb4d62",
         "une_deux": "670afd1bace6fc57f1e267ece1b16cf73a94954c2bc5de3272646f382071adbc",
     }
 
@@ -940,6 +946,54 @@ class TestNoImmobileSegmentInFlightActions:
                 assert (flagged == []) == (name in self._EXEMPT_GABARITS), (name, flagged)
                 return
         raise AssertionError(f"{name} : aucun segment en vol trouvé")
+
+
+class TestDynamicBallPosition:
+    """Chantier 1, 1e-2 (15/10/2026) : `Template.dynamic_ball_position` recalcule la position du ballon à un `t_ratio` donné
+    comme le MILIEU de deux rôles nommés, au lieu d'une position fixe posée -- seulement quand `ball_owner` y vaut `None`
+    (même usage que `ball_position`, voir sa docstring sur `Template`). Vide par défaut : aucun effet sur les gabarits qui ne
+    l'utilisent pas (vérifié par l'empreinte de structure des 11 autres, `TestTemplateStructureUnchangedByPhysicsTags`)."""
+
+    def test_the_ball_sits_at_the_exact_midpoint_on_the_real_gabarit(self):
+        lineup = _lineup()
+        sequence = BUILDERS["recuperation_haute"](_goal_event(), lineup, _start_positions(lineup))
+        kf = next(k for k in sequence.keyframes if k.t == pytest.approx(0.3 * 6.0))
+        support1_id = next(pid for pid, entry in sequence.roster.items() if entry.role == "support1")
+        support2_id = next(pid for pid, entry in sequence.roster.items() if entry.role == "support2")
+        (x1, y1), (x2, y2) = kf.players[support1_id], kf.players[support2_id]
+        assert kf.ball.x == pytest.approx((x1 + x2) / 2.0)
+        assert kf.ball.y == pytest.approx((y1 + y2) / 2.0)
+        assert kf.ball.owner_id is None  # ballon disputé, toujours sans porteur à ce t_ratio
+
+    def test_build_from_template_uses_the_dynamic_midpoint(self):
+        times = (0.0, 1.0)
+        template = tpl.Template(
+            name="dynamic_ball_test", weight=1.0, duration=10.0, tags=tuple((t, "x") for t in times),
+            ball_owner=((0.0, "scorer"), (1.0, None)),
+            roles=(
+                tpl.Role("scorer", ANCHOR_STATIC, (tpl.RoleFrame(0.0, 0.0), tpl.RoleFrame(1.0, 0.0))),
+                tpl.Role("support1", ANCHOR_STATIC, (tpl.RoleFrame(0.0, 0.0), tpl.RoleFrame(1.0, 0.0))),
+                tpl.Role("support2", ANCHOR_STATIC, (tpl.RoleFrame(0.0, 0.0), tpl.RoleFrame(1.0, 0.0))),
+            ),
+            dynamic_ball_position=((1.0, "support1", "support2"),),
+            context_score=lambda _: 1.0, ground_control=False,
+        )
+        lineup = _lineup()
+        sequence = tpl.build_from_template(template, _goal_event(), lineup, _start_positions(lineup))
+        last = sequence.keyframes[-1]
+        support1_id = next(p.id for p in lineup.players if p.name == "ad")  # 1er nom alphabétique hors bu/mc0/gardien
+        support2_id = next(p.id for p in lineup.players if p.name == "ag")  # 2e
+        (x1, y1), (x2, y2) = last.players[support1_id], last.players[support2_id]
+        assert last.ball.x == pytest.approx((x1 + x2) / 2.0)
+        assert last.ball.y == pytest.approx((y1 + y2) / 2.0)
+
+    def test_an_unknown_role_is_rejected_at_build_time(self):
+        import dataclasses
+
+        orig = TEMPLATES["recuperation_haute"]
+        broken = dataclasses.replace(orig, dynamic_ball_position=((0.3, "support1", "introuvable"),))
+        with pytest.raises(ValueError):
+            tpl.build_from_template(broken, _goal_event(), _lineup(), _start_positions(_lineup()))
 
 
 class TestBallFlightDurationUses3DDistance:
