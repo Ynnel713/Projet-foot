@@ -11,6 +11,7 @@ retirées) -- les tests "1000 matchs" simulent donc directement 1000 matchs
 réels et appellent `build_timeline` sur chacun sans gestion d'exception."""
 
 import random
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -27,6 +28,8 @@ from narrative import (
     OCCASION,
     _MIN_MINUTE_GAP,
     _has_cyclic_pattern,
+    _present_names,
+    _replacement_player,
     build_timeline,
     match_result_from,
 )
@@ -385,3 +388,104 @@ class TestAssistZoneDerived:
 
         assert checked >= 1000
         assert not violations, f"{len(violations)} assist_zone non derivee -- exemples: {violations[:3]}"
+
+
+def _stat(name: str, poste: str, *, started: bool = True) -> PlayerMatchStat:
+    return PlayerMatchStat(player_name=name, club_name="Home FC", poste=poste, started=started)
+
+
+class TestPresentNames:
+    """Étape 0b-1 du Bloc A : présence à la minute m, convention stricte (sortant absent dès la minute du remplacement, entrant présent dès cette
+    minute, expulsé absent dès la minute de l'expulsion)."""
+
+    @staticmethod
+    def _match():
+        squad = [_stat("a", "DC"), _stat("b", "MC"), _stat("c", "BU"), _stat("n", "MC", started=False), _stat("m", "BU", started=False)]
+        subs = (SimpleNamespace(club_name="Home FC", player_off="b", player_on="n", minute=60),
+                SimpleNamespace(club_name="Away FC", player_off="x", player_on="y", minute=10))
+        cards = (SimpleNamespace(club_name="Home FC", player="c", minute=75, card_type="direct"),
+                 SimpleNamespace(club_name="Home FC", player="a", minute=20, card_type="yellow"),
+                 SimpleNamespace(club_name="Home FC", player="n", minute=80, card_type="second_yellow"))
+        return SimpleNamespace(home_team="Home FC", away_team="Away FC", home_squad=squad, away_squad=[], substitutions=subs, cards=cards)
+
+    def test_before_the_substitution(self):
+        assert _present_names(self._match(), "Home FC", 59) == {"a", "b", "c"}
+
+    def test_at_the_substitution_minute_the_entrant_replaces_the_starter(self):
+        assert _present_names(self._match(), "Home FC", 60) == {"a", "n", "c"}
+
+    def test_red_card_removes_the_player_from_its_minute_and_a_yellow_does_not(self):
+        match = self._match()
+        assert _present_names(match, "Home FC", 74) == {"a", "n", "c"}
+        assert _present_names(match, "Home FC", 75) == {"a", "n"}
+        assert _present_names(match, "Home FC", 80) == {"a"}
+
+
+class TestReplacementPlayer:
+    _SQUAD = [_stat("a", "DC"), _stat("b", "DC"), _stat("c", "MC"), _stat("d", "MC"), _stat("e", "BU"), _stat("gk", "GK")]
+
+    def test_same_poste_first_then_lexicographic_successor_with_wrap(self):
+        present = {"a", "b", "c", "d", "e", "gk"}
+        assert _replacement_player(self._SQUAD, present, "x", set()) == "a"  # poste inconnu : tout poste de champ, successeur de "x" en tournant
+        assert _replacement_player(self._SQUAD, {"b", "c", "d", "e", "gk"}, "a", set()) == "b"  # même poste (DC)
+        assert _replacement_player(self._SQUAD, {"a", "c", "d", "e", "gk"}, "b", set()) == "a"  # seul DC présent : tour complet (a < b)
+        assert _replacement_player(self._SQUAD, {"c", "d", "e", "gk"}, "a", set()) == "c"  # ni même poste ni même groupe : tout poste de champ, successeur lexicographique
+
+    def test_excluded_and_goalkeeper_are_never_chosen(self):
+        assert _replacement_player(self._SQUAD, {"c", "d", "gk"}, "a", {"c"}) == "d"
+        assert _replacement_player(self._SQUAD, {"gk"}, "a", set()) == "a"  # aucun candidat : le joueur tiré est conservé
+
+    def test_strike_type_preference_comes_first(self):
+        squad = [_stat("a", "DC"), _stat("b", "DC"), _stat("c", "BU")]
+        assert _replacement_player(squad, {"b", "c"}, "a", set(), same_strike=lambda name: name == "c") == "c"
+        assert _replacement_player(squad, {"b", "c"}, "a", set(), same_strike=lambda name: False) == "b"
+
+    def test_deterministic(self):
+        present = {"b", "c", "d", "e", "gk"}
+        assert {_replacement_player(self._SQUAD, present, "a", set()) for _ in range(5)} == {"b"}
+
+
+class TestNarrativeRolesAreOnThePitch:
+    """Étape 0b-1 : tireur et assist des occasions générées sont sur le terrain à la minute de l'événement ; la séquence RNG est préservée
+    (équipe, gabarit, issue, minute identiques à un tirage sans remplacement) ; les buts réels ne sont pas touchés."""
+
+    @staticmethod
+    def _present(match, team, minute):
+        squad = match.home_squad if team == match.home_team else match.away_squad
+        on = {p.player_name for p in squad if p.started}
+        for sub in sorted((x for x in match.substitutions if x.club_name == team), key=lambda x: x.minute):
+            if minute >= sub.minute:
+                on.discard(sub.player_off)
+                on.add(sub.player_on)
+        for card in match.cards:
+            if card.club_name == team and card.card_type in ("direct", "second_yellow") and minute >= card.minute:
+                on.discard(card.player)
+        return on
+
+    def test_generated_roles_are_present_and_names_never_repeat_consecutively(self):
+        for match in _simulate_n(30):
+            timeline = build_timeline(match)
+            previous = None
+            for event in timeline.events:
+                if event.event_type != OCCASION:
+                    continue
+                present = self._present(match, event.team, event.minute)
+                assert event.main_player in present, (timeline.match_id, event.minute, event.main_player)
+                if len(event.involved_players) > 1:
+                    assert event.involved_players[1] in present
+                    assert event.involved_players[1] != event.main_player
+                assert event.main_player != previous
+                previous = event.main_player
+
+    def test_rng_sequence_is_preserved_and_goals_untouched(self, monkeypatch):
+        import narrative
+
+        matches = _simulate_n(15)
+        real = [build_timeline(match) for match in matches]
+        monkeypatch.setattr(narrative, "_present_names", lambda match, team, minute: {p.player_name for p in (match.home_squad + match.away_squad)})
+        raw = [build_timeline(match) for match in matches]  # aucun remplacement : tirage brut
+        keys = lambda timeline: [(e.event_type, e.team, e.gabarit, e.outcome, e.minute) for e in timeline.events]
+        assert [keys(t) for t in real] == [keys(t) for t in raw]
+        for match, timeline in zip(matches, real):
+            goals = sorted((e.main_player, e.involved_players) for e in timeline.events if e.event_type == BUT)
+            assert goals == sorted((g.scorer, (g.scorer, g.assist) if g.assist else (g.scorer,)) for g in match.goals)
