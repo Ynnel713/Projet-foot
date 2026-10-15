@@ -696,6 +696,47 @@ def _biased_outcome_weights(outcomes: tuple[str, ...], weights: tuple[float, ...
     return tuple(w * parade_factor if outcome == _ARRET else w for outcome, w in zip(outcomes, weights))
 
 
+_RED_CARD_TYPES = ("direct", "second_yellow")
+
+
+def _present_names(match: MatchResult, team: str, minute: int) -> set[str]:
+    """Étape 0b-1 du Bloc A : noms des joueurs de `team` sur le terrain à `minute` (convention stricte). Un titulaire est présent tant que
+    `minute` est avant sa sortie ou son expulsion ; un entrant l'est à partir de la minute de son entrée (incluse) jusqu'à son expulsion. Source :
+    `MatchResult.substitutions` et `.cards` (rouge direct ou second jaune), jamais un tirage."""
+    squad = match.home_squad if team == match.home_team else match.away_squad
+    present = {p.player_name for p in squad if p.started}
+    for sub in sorted((s for s in match.substitutions if s.club_name == team), key=lambda s: s.minute):
+        if minute >= sub.minute:
+            present.discard(sub.player_off)
+            present.add(sub.player_on)
+    for card in match.cards:
+        if card.club_name == team and card.card_type in _RED_CARD_TYPES and minute >= card.minute:
+            present.discard(card.player)
+    return present
+
+
+def _replacement_player(squad: list[PlayerMatchStat], present: set[str], absent: str, excluded: set[str], same_strike=None) -> str:
+    """Remplaçant déterministe de `absent` (aucun tirage). Candidats : joueurs de champ présents, hors `excluded`. Préférence, dans l'ordre :
+    même type de frappe que le joueur tiré (`same_strike(nom)`, tireur seulement), puis même poste, même groupe de poste, tout poste de champ.
+    Dans le meilleur niveau : premier nom strictement après `absent` par ordre lexicographique, en tournant. Sans candidat : `absent`."""
+    absent_stat = next((p for p in squad if p.player_name == absent), None)
+    candidates = [p for p in squad if p.player_name in present and p.player_name not in excluded and position_group(p.poste) != GOALKEEPER]
+    if not candidates:
+        return absent
+
+    def level(p: PlayerMatchStat) -> tuple[int, int]:
+        other_type = 0 if same_strike is None or same_strike(p.player_name) else 1
+        if absent_stat is None:
+            return other_type, 2
+        if p.poste == absent_stat.poste:
+            return other_type, 0
+        return other_type, 1 if position_group(p.poste) == position_group(absent_stat.poste) else 2
+
+    best = min(level(p) for p in candidates)
+    names = sorted(p.player_name for p in candidates if level(p) == best)
+    return next((name for name in names if name > absent), names[0])
+
+
 def _generated_events(match: MatchResult, rng: Random, n_fillers: int, n_missed_penalties: int) -> list[NarrativeEvent]:
     """`n_fillers` occasions inventées + `n_missed_penalties` penaltys ratés
     (Tâche 2.3/2.4), fusionnés et triés par minute -- SEULES catégories
@@ -724,6 +765,7 @@ def _generated_events(match: MatchResult, rng: Random, n_fillers: int, n_missed_
 
     last_pair: tuple[str, str] | None = None
     last_main_player: str | None = None
+    last_final_main: str | None = None  # tireur FINAL de l'événement précédent (anti-répétition des noms affichés), distinct de `last_main_player` (nom tiré)
     gabarit_sequence: list[str] = []
     events: list[NarrativeEvent] = []
 
@@ -765,14 +807,32 @@ def _generated_events(match: MatchResult, rng: Random, n_fillers: int, n_missed_
             )[0]
             start_position = None  # pas de zone réelle pour une occasion inventée -- non inventée non plus, voir schema
 
+        # Étape 0b-1 : le tirage ci-dessus (RNG, contexte du gabarit, `last_main_player`) reste celui du pool complet ; un tireur ou un assist absent du
+        # terrain à cette minute (ou un tireur identique au tireur final précédent) est remplacé APRÈS COUP par `_replacement_player`, sans tirage.
+        present = _present_names(match, team, minute)
+        final_main = main_player
+        if main_player not in present or main_player == last_final_main:
+            drawn_strike = strike_type_for(gabarit, f"goal:{team}:{main_player}:{minute}").name
+            final_main = _replacement_player(
+                squad, present, main_player, {name for name in (last_final_main, involved[1] if len(involved) > 1 else None) if name},
+                lambda name: strike_type_for(gabarit, f"goal:{team}:{name}:{minute}").name == drawn_strike,
+            )
+        final_involved = (final_main,)
+        if len(involved) > 1:
+            assist = involved[1]
+            if assist not in present or assist == final_main:
+                assist = _replacement_player(squad, present, assist, {final_main}, None)
+            final_involved = (final_main, assist)
+
         events.append(NarrativeEvent(
             minute=minute, event_type=OCCASION, gabarit=gabarit, declinaison="default", team=team,
-            main_player=main_player, involved_players=involved, outcome=outcome,
+            main_player=final_main, involved_players=final_involved, outcome=outcome,
             start_position=start_position,
             starts_at_restart=TEMPLATES[gabarit].starts_at_restart,
         ))
         last_pair = (gabarit, "default")
         last_main_player = main_player
+        last_final_main = final_main
         gabarit_sequence.append(gabarit)
 
     return events
