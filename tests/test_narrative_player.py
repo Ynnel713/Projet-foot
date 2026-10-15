@@ -651,7 +651,7 @@ class TestAccelerationConstraintOnRealGabarits:
 _WITNESS_DIGESTS = {
     # gabarit: (empreinte des images brutes `interpolate`, empreinte après contrainte d'accélération)
     "but_gag": ("2adb64758544b738", "5413574bb0047c48"),
-    "construction_placee": ("ff696c5902800e79", "b89f6245b693bd81"),
+    "construction_placee": ("0858943d9f3a7e55", "7ace6109febe5566"),
     "contre_attaque": ("1b546dda1ca4f3d8", "867086d4e95127b3"),
     "corner": ("2e573082648af3d4", "46b52565c7ea2d7b"),
     "percee_individuelle": ("4a00cea671b14edd", "4a00cea671b14edd"),

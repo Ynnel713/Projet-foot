@@ -1339,6 +1339,9 @@ _TEMPLATE_CONTRE_ATTAQUE = Template(
 _TEMPLATE_CONSTRUCTION_PLACEE = Template(
     name="construction_placee",
     weight=1.0,
+    # Chantier 1, 1d (15/10/2026) : géométrie de rôle sur les trois rôles (cibles inchangées), durée inchangée (14,0 s). support1
+    # devient tactique, même mécanisme et mêmes postes attendus que contre_attaque (DC, LB, RB, MDC, MC) : rôle structurellement
+    # identique (récupère puis porte le ballon avant de le céder à l'assist).
     duration=14.0,
     roles=(
         # ANCHOR_SCORER, pas ANCHOR_STATIC (fix du 23/09/2026, même bug que
@@ -1347,9 +1350,15 @@ _TEMPLATE_CONSTRUCTION_PLACEE = Template(
         # circule sans bouger contredit son propre tag. Progress final relevé
         # 0.25 -> 0.35 pour éviter le même arrêt net qu'à la Tâche 1 après
         # la passe. Couplage à event.zone assumé, voir contre_attaque.
-        Role("support1", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.2), RoleFrame(0.6, 0.25), RoleFrame(1.0, 0.35))),
-        Role("assist", ANCHOR_ASSIST, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.15), RoleFrame(0.6, 0.5), RoleFrame(1.0, 1.0))),
-        Role("scorer", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.1), RoleFrame(0.6, 0.4), RoleFrame(1.0, 1.0))),
+        Role(
+            "support1", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.2), RoleFrame(0.6, 0.25), RoleFrame(1.0, 0.35)),
+            geometry=RoleGeometry(GEOM_ZONE, preferred_postes=frozenset({"DC", "LB", "RB", "MDC", "MC"})),
+        ),
+        Role(
+            "assist", ANCHOR_ASSIST, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.15), RoleFrame(0.6, 0.5), RoleFrame(1.0, 1.0)),
+            geometry=RoleGeometry(GEOM_ASSIST_ZONE),
+        ),
+        Role("scorer", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.1), RoleFrame(0.6, 0.4), RoleFrame(1.0, 1.0)), geometry=RoleGeometry(GEOM_ZONE)),
     ),
     tags=((0.0, "recuperation"), (0.3, "circulation"), (0.6, "progression"), (1.0, "tir")),
     ball_owner=((0.0, "support1"), (0.3, "support1"), (0.6, "assist"), (1.0, "scorer")),
