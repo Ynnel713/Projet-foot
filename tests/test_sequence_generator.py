@@ -115,12 +115,11 @@ class TestGenerateSequenceHonoursTheKnownResult:
         assert final_y == pytest.approx(expected.y)
 
     def test_the_assist_provider_ends_up_at_the_real_assist_zone_when_a_role_uses_it(self):
-        # "debordement_centre_tete" utilise le rôle "assist" avec
-        # ANCHOR_ASSIST jusqu'à progress=1.0 -- gabarit fixe plutôt que
-        # pick_template pour un test déterministe et ciblé sur le calage
-        # assist_zone (tous les gabarits n'amènent pas le passeur à 100% de
-        # l'ancrage -- "une_deux" par ex. le laisse à mi-chemin, réaliste
-        # pour une remise -- celui-ci si).
+        # "debordement_centre_tete" amène le rôle "assist" jusqu'à progress=1.0 sur sa zone d'assist -- gabarit fixe plutôt que
+        # pick_template pour un test déterministe et ciblé sur le calage assist_zone (tous les gabarits n'amènent pas le passeur à 100% de
+        # l'ancrage -- "une_deux" par ex. le laisse à mi-chemin, réaliste pour une remise -- celui-ci si). Chantier 1, 1c (15/10/2026) :
+        # la cible d'arrivée est désormais portée par `Role.geometry` (GEOM_ASSIST_ZONE, qui remplace l'ancien end_anchor ANCHOR_ASSIST,
+        # ignoré une fois geometry renseignée) -- même valeur finale qu'avant 1c, seul le départ du rôle a changé.
         from ligue1sim.animation.sequence_generator import _start_positions
         from ligue1sim.animation.templates import BUILDERS
 

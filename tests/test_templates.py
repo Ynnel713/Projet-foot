@@ -782,7 +782,7 @@ class TestTemplateStructureUnchangedByPhysicsTags:
         "contre_attaque": "4273ab175e79155b86d96e879cc9ecb93fa85d675f48e93151212d8050c34b1f",
         "corner": "5086502e6020d2ff4c293776dee443643211b703cc4cb3eb37474f585e6eefbf",
         "coup_franc": "ff70b15275eb85d5baefeb5acea5f4a81e25319618a6e25cc978600aca72f959",
-        "debordement_centre_tete": "233d958978da2a443675c2345ca56c15ad14ed4c5e9852143bbd339556173aa9",
+        "debordement_centre_tete": "9a5039d4b4d9112586b7676f475bc7e7cec54ce265278006814c3dae681a95f8",
         "decalage_enroulee": "bc960f8f29e583ad06e16a3c1749222f74900c73f25888f401ebe15695dfa46d",
         "penalty": "7972e9a2d7afe7e1caa593950d3b7fa5e7cde43195b04a14bcc0c77a0b38a888",
         "percee_individuelle": "7dda924ea183a11583d3539da5cadd0b95d46733059d7d6901729da617f28021",

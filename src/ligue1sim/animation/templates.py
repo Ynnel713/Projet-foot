@@ -1355,9 +1355,11 @@ _TEMPLATE_DEBORDEMENT = Template(
     name="debordement_centre_tete",
     weight=1.0,
     duration=6.0,
+    # Chantier 1, 1c (15/10/2026) : géométrie de rôle sur les deux rôles, cible inchangée (assist -> zone d'assist, scorer -> zone de
+    # tir, comme avant) -- seul le DÉPART devient réaliste (dérivé de la formation, course plafonnée), l'arrivée ne bouge pas.
     roles=(
-        Role("assist", ANCHOR_ASSIST, (RoleFrame(0.0, 0.0), RoleFrame(0.6, 0.7), RoleFrame(1.0, 1.0))),
-        Role("scorer", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.6, 0.4), RoleFrame(1.0, 1.0))),
+        Role("assist", ANCHOR_ASSIST, (RoleFrame(0.0, 0.0), RoleFrame(0.6, 0.7), RoleFrame(1.0, 1.0)), geometry=RoleGeometry(GEOM_ASSIST_ZONE)),
+        Role("scorer", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.6, 0.4), RoleFrame(1.0, 1.0)), geometry=RoleGeometry(GEOM_ZONE)),
     ),
     tags=((0.0, "debordement"), (0.6, "centre"), (1.0, "tete")),
     ball_owner=((0.0, "assist"), (0.6, "assist"), (1.0, "scorer")),
