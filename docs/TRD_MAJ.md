@@ -85,6 +85,21 @@ La sous-étape 1e-2 du chantier 1 a été validée et commitée (ticket 41 non f
 |---|---|---|
 | pytest (suite principale) | 1 659 passés, 12 désélectionnés | 1 662 passés, 12 désélectionnés |
 
+## v1.6 — 15/10/2026 (état du dépôt : c5cefb0)
+
+La sous-étape 1g du chantier 1 a été validée et commitée (ticket 46 refondu, pas encore écrit dans `known_issues.md` --
+prévu en 1h).
+
+| ID | Statut v1.5 | Statut v1.6 | Preuve |
+|---|---|---|---|
+| EG-JOU-05 (Bloc A) | Partiel : 1a à 1f et 1e-2 validées ; 1g, 1h restantes | Partiel : 1a à 1g validées (chantier 1 entièrement migré) ; seule 1h (documentation de clôture) restante | voir ci-dessous |
+| Ticket 46 (test aveugle `TestSegmentSpeedHeadroom`) | Annoncé, non écrit | Refondu en trois classes de test (analytique sur `role_run_limit_m`, rôles sans géométrie, pipeline réel ~10 matchs) ; fermeture formelle du ticket (texte dans `known_issues.md`) reportée à 1h | c5cefb0 |
+
+### Suite de tests (indicateurs)
+| Indicateur | v1.5 | v1.6 |
+|---|---|---|
+| pytest (suite principale) | 1 662 passés, 12 désélectionnés | 1 691 passés, 13 désélectionnés (nouveau test marqué `integration`, hors suite par défaut) |
+
 ### Écarts à corriger au prochain remaniement du PDF
 - Section 9 : B6-d, B6-e, B7, B8 passent à « Implémenté » ; le Bloc A passe à « En cours ».
 - Section 5.2 : B7 et B8 passent à « Implémenté ».

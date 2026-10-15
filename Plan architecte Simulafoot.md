@@ -6,7 +6,7 @@ Document de planification architecte. Établi le 15/10/2026 à partir de l'état
 
 ## 1. PRÉAMBULE — ÉTAT ACTUEL
 
-Depuis B6-c, le Bloc B (physique de balle) est clos (15 sous-étapes, B1 à B8-c1). Le Bloc A (mouvement des joueurs) est ouvert : l'étape 0 (assainissement de l'effectif affiché) est close, le chantier 1 (géométrie macro des gabarits) est en cours, avec 1a, 1b, 1c (famille A), 1d (famille B), 1e-1 (famille C), 1f (famille D) et 1e-2 (ballon dynamique) validées. Prochaine sous-étape : 1g (test pipeline réel).
+Depuis B6-c, le Bloc B (physique de balle) est clos (15 sous-étapes, B1 à B8-c1). Le Bloc A (mouvement des joueurs) est ouvert : l'étape 0 (assainissement de l'effectif affiché) est close, le chantier 1 (géométrie macro des gabarits) est en cours, avec 1a à 1e-2, 1f et 1g validées. Prochaine et dernière sous-étape : 1h (documentation de clôture).
 
 Faits mesurables à ce jour :
 
@@ -127,10 +127,14 @@ Sous-étapes :
 - Commit (1, gabarit unique) : 939e2c1.
 - Dépendances : 1e-1. Risque : élevé (le ballon est touché) -- confirmé maîtrisé : `ball.py` non modifié. Statut : validée.
 
-**1g — test pipeline réel (ticket 46 refondu). À FAIRE.**
+**1g — test pipeline réel (ticket 46 refondu). VALIDÉE (15/10/2026).**
 - Objectif : remplacer `TestSegmentSpeedHeadroom` (aveugle : géométrie synthétique) par un test à deux niveaux : analytique (matrice zones de base × postes DC, MC, BU) et pipeline (`build_clips` sur environ 10 matchs de la graine d'audit, vitesse image par image des rôles scriptés).
-- Périmètre : `tests/test_templates.py`.
-- Dépendances : 1c à 1f (seuils calibrés sur le résultat). Statut : à faire.
+- Réalisé en trois classes (la « matrice zones » n'a pas d'effet sur `role_run_limit_m`, qui ne dépend que des progressions/durées du gabarit -- remplacée par une couverture postes × gabarits réels, plus honnête que la compo unique d'avant) : `TestRoleRunLimitRespectsVMaxAndAccel` (12 gabarits × 3 postes de référence, garantie mathématique de la formule, garde-fou anti-régression) ; `TestFixedAnchorRoleSpeedAcrossPostes` (penalty/coup_franc, seuls gabarits sans géométrie, tous rôles actifs × 3 postes) ; `TestPipelineSpeedHeadroom` (marquée `integration`, ~10 matchs réels de la graine d'audit, vitesse RENDUE après interpolation/contrainte d'accélération).
+- Seuil pipeline mesuré réellement à 36/155 clips (23,2 %) sur 10 matchs -- pas une extrapolation des 351/1552 (100 matchs) -- plafond fixé à 30 % avec marge documentée, à remesurer si A1.1/A1.5 change la distribution.
+- Périmètre : `tests/test_templates.py` uniquement.
+- Revue `simulafoot-reviewer` : un écart de couverture mineur signalé et corrigé (supports du penalty non couverts initialement) avant commit.
+- Commit (1) : c5cefb0.
+- Dépendances : 1c à 1f (seuils calibrés sur le résultat). Statut : validée.
 
 **1h — documentation. À FAIRE.**
 - Objectif : fermer le ticket 47, refondre le ticket 46, ouvrir le ticket 48 (adversaires et nouveaux départs, A1.5), ajouter le récapitulatif de clôture du chantier 1.
@@ -252,7 +256,7 @@ Chantier 1 (1g et 1h) :
 4. ~~1e-1 (famille C, géométrie).~~ Faite (15/10/2026).
 5. ~~1f (famille D).~~ Faite (15/10/2026).
 6. ~~1e-2 (ballon dynamique de recuperation_haute).~~ Faite (15/10/2026).
-7. 1g (test pipeline réel, ticket 46).
+7. ~~1g (test pipeline réel, ticket 46).~~ Faite (15/10/2026).
 8. 1h (documentation, tickets 46 à 48).
 9. A1.1 (inertie, accélération), puis retiming des t_ratio de passe.
 10. A1.5 (évitement et placement adverse), A1.2 (gardiens), A1.3 (joueurs hors action).
