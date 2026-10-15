@@ -5,6 +5,7 @@ de test -- même motif déjà établi dans ce projet, voir la docstring
 d'`apps/streamlit_preview.py` sur l'indépendance volontaire des fichiers)."""
 
 import dataclasses
+from types import SimpleNamespace
 
 import pytest
 
@@ -29,6 +30,7 @@ from narrative_player import (
     _apply_acceleration_constraint_to_frames,
     _build_clip_frames,
     _extend_with_rebound,
+    _goalkeeper_lineup_at,
     _interval_events,
     _lineup_start_positions,
 )
@@ -112,6 +114,49 @@ class TestLineupStartPositionsRespectDeclaredFormationBands:
             "lignes obtenues par profondeur croissante (GK/DEF/MID/ATT), attendu [1, 4, 3, 3] "
             f"pour un 4-3-3 -- obtenu {line_sizes} (detail : {sorted(by_depth.items())})"
         )
+
+
+class TestGoalkeeperLineupAt:
+    """Étape 0a du Bloc A : un seul gardien par équipe à la minute de l'événement (`Timeline.substitutions` fait foi), remplaçants de champ intacts."""
+
+    @staticmethod
+    def _setup():
+        home, _away = _clubs()
+        lineup = select_best_xi(home, "4-2-3-1")
+        starter = next(p for p in lineup.players if p.poste == "GK")
+        entrant = next(p for p in home.players if p.poste == "GK" and p.name != starter.name)
+        outfield = next(p for p in home.players if p.poste == "MC" and p.name not in {q.name for q in lineup.players})
+        lineup = dataclasses.replace(lineup, substitutes=[entrant, outfield])
+        sub = SimpleNamespace(club_name="Home FC", player_off=starter.name, player_on=entrant.name, minute=43)
+        return lineup, starter, entrant, outfield, SimpleNamespace(substitutions=[sub])
+
+    def test_before_the_substitution_the_starter_stays_and_the_entrant_is_hidden(self):
+        lineup, starter, entrant, outfield, timeline = self._setup()
+        result = _goalkeeper_lineup_at(timeline, lineup, "Home FC", 42)
+        assert [p.name for p in result.players if p.poste == "GK"] == [starter.name]
+        assert [p.name for p in result.substitutes] == [outfield.name]  # remplaçant de champ conservé
+
+    def test_from_the_substitution_minute_the_entrant_replaces_the_starter(self):
+        lineup, starter, entrant, outfield, timeline = self._setup()
+        for minute in (43, 90):
+            result = _goalkeeper_lineup_at(timeline, lineup, "Home FC", minute)
+            assert [p.name for p in result.players if p.poste == "GK"] == [entrant.name]
+            assert starter.name not in {p.name for p in result.players + result.substitutes}
+            assert result.bands[entrant.name] == lineup.bands[starter.name]
+            assert starter.name not in result.bands
+            assert len(result.players) == 11
+
+    def test_start_positions_hold_exactly_one_goalkeeper_per_minute(self):
+        lineup, starter, entrant, _outfield, timeline = self._setup()
+        for minute, expected in ((10, starter.name), (43, entrant.name)):
+            positions = _lineup_start_positions(_goalkeeper_lineup_at(timeline, lineup, "Home FC", minute))
+            goalkeepers = {p.name for p in lineup.players + lineup.substitutes if p.poste == "GK"}
+            assert goalkeepers & set(positions) == {expected}
+
+    def test_other_team_and_no_substitution_are_left_untouched(self):
+        lineup, _starter, _entrant, _outfield, timeline = self._setup()
+        assert _goalkeeper_lineup_at(timeline, lineup, "Away FC", 90) is lineup
+        assert _goalkeeper_lineup_at(SimpleNamespace(substitutions=[]), lineup, "Home FC", 90) is lineup
 
 
 class TestBuildClipsScoreSequence:
