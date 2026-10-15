@@ -161,6 +161,27 @@ def _lineup_start_positions(lineup: Lineup) -> dict[PlayerId, PitchPoint]:
     return positions
 
 
+def _goalkeeper_lineup_at(timeline: Timeline, lineup: Lineup, team: str, minute: int) -> Lineup:
+    """Étape 0a du Bloc A : `lineup` avec UN SEUL gardien à la minute `minute`. Un gardien remplaçant n'est jamais affiché avant la minute de son
+    entrée ; à partir de cette minute (incluse), il prend la place du gardien sortant, qui n'est plus affiché (position de formation et bande
+    reprises). Source : `Timeline.substitutions` (club, sortant, entrant). Les remplaçants de champ ne sont pas touchés (étape 0b)."""
+    players, substitutes, bands = list(lineup.players), list(lineup.substitutes), dict(lineup.bands)
+    changed = False
+    for sub in sorted((s for s in timeline.substitutions if s.club_name == team), key=lambda s: s.minute):
+        entrant = next((p for p in substitutes if p.name == sub.player_on and p.group == GOALKEEPER), None)
+        if entrant is None:
+            continue
+        substitutes.remove(entrant)
+        changed = True
+        index = next((i for i, p in enumerate(players) if p.name == sub.player_off), None)
+        if minute >= sub.minute and index is not None:
+            band = bands.pop(players[index].name, None)
+            if band is not None:
+                bands[entrant.name] = band
+            players[index] = entrant
+    return replace(lineup, players=players, substitutes=substitutes, bands=bands) if changed else lineup
+
+
 def _assist_name(event: NarrativeEvent) -> str | None:
     """Second nom réel de `involved_players`, résolu vers le rôle "assist"
     UNIQUEMENT si ce gabarit en a un (voir `_resolve_roles` dans
@@ -187,6 +208,9 @@ def _build_clip(
 ) -> tuple[list[FrameState], dict[PlayerId, RosterEntry], tuple[dict, ...]]:
     scorer_lineup = timeline.home_lineup if event.team == timeline.home_team else timeline.away_lineup
     opponent_lineup = timeline.away_lineup if event.team == timeline.home_team else timeline.home_lineup
+    opponent_team = timeline.away_team if event.team == timeline.home_team else timeline.home_team
+    scorer_lineup = _goalkeeper_lineup_at(timeline, scorer_lineup, event.team, event.minute)  # étape 0a : un seul gardien par équipe
+    opponent_lineup = _goalkeeper_lineup_at(timeline, opponent_lineup, opponent_team, event.minute)
 
     scorer_names = {p.name for p in scorer_lineup.players} | {p.name for p in scorer_lineup.substitutes}
     assist = _assist_name(event)
