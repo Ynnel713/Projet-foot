@@ -766,7 +766,15 @@ class TestTemplateStructureUnchangedByPhysicsTags:
     `debordement_centre_tete` 06543fdd...) ; avec le nouveau gabarit mais `aerial_contact=False`, `corner` donne une troisième empreinte (3bce8e74...),
     et l'ancien gabarit avec `aerial_contact=True` une quatrième (d9d7cffc...) : la durée et la hauteur du contact y contribuent chacune. Pour
     `debordement_centre_tete`, le seul changement de `physics_tags` (`shot` -> `cross`) ne change pas l'empreinte (le champ est neutralisé) : seule la
-    hauteur du contact la modifie."""
+    hauteur du contact la modifie.
+
+    Huitième exception délibérée (Chantier 1, 1c, 15/10/2026) : `percee_individuelle`, `debordement_centre_tete`, `profondeur_1v1` et
+    `decalage_enroulee` ont une empreinte mise à jour -- chacun reçoit une géométrie de rôle (`Role.geometry`) sur son (ou ses) rôle(s)
+    scorer/assist : la CIBLE d'arrivée ne change pas (toujours `event.zone`/`event.assist_zone`, comme avant), seul le DÉPART devient
+    réaliste (dérivé de la position de formation, plafonné par la course réalisable sur la durée du gabarit -- voir `geometry_start`).
+    `percee_individuelle` et `profondeur_1v1` portent en plus une durée allongée (7,0 -> 8,0 s et 6,0 -> 7,0 s). Preuve de cause unique :
+    avec les anciennes durées et `geometry=None` sur tous les rôles de ces 4 gabarits, le code redonne exactement les 4 anciennes
+    empreintes ci-dessus."""
 
     _EXPECTED_STRUCTURE_HASH = {
         "but_gag": "82585674d2a0633eced9f75a39ee5e914643a8c1b25a47d545fc70c8965e29db",
@@ -777,7 +785,7 @@ class TestTemplateStructureUnchangedByPhysicsTags:
         "debordement_centre_tete": "233d958978da2a443675c2345ca56c15ad14ed4c5e9852143bbd339556173aa9",
         "decalage_enroulee": "bc960f8f29e583ad06e16a3c1749222f74900c73f25888f401ebe15695dfa46d",
         "penalty": "7972e9a2d7afe7e1caa593950d3b7fa5e7cde43195b04a14bcc0c77a0b38a888",
-        "percee_individuelle": "4fd4c5ef14c5b020821ecf2638a54c0e58c5a8a35e11001e66b458b4cd1633ca",
+        "percee_individuelle": "7dda924ea183a11583d3539da5cadd0b95d46733059d7d6901729da617f28021",
         "profondeur_1v1": "f8678e12337a02d11163ac0e8830b303682ccccb8bcf00f5ae2634268e65b469",
         "recuperation_haute": "a63fbaec00fc77ef1aaf1a99c743dd9bffdb5a4c47fd2bf65dad09f06751cd8b",
         "une_deux": "202c14b7feab0b93b529151d0cd1b505cccb57bb4c479e51f98266a08fc9a22b",
@@ -1599,7 +1607,8 @@ class TestAerialContactHeight:
 class TestRoleGeometry:
     """Chantier 1, sous-étape 1a : géométrie de rôle (`Role.geometry`). Le départ d'un rôle avec géométrie est dérivé de sa cible et de sa
     position de formation ; sa course respecte, sur CHAQUE segment, le ratio (<= 0,55 de la vitesse max du poste) et l'accélération
-    (D <= 2,25 x T²). Aucun gabarit n'en porte encore : un rôle sans géométrie est inchangé (voir aussi les empreintes de structure)."""
+    (D <= 2,25 x T²). Un rôle sans géométrie reste inchangé (voir aussi les empreintes de structure). Depuis 1c, quatre gabarits en
+    portent déjà une (voir `test_templates_not_yet_migrated_carry_no_geometry`, qui vérifie les autres)."""
 
     _PROFILE = ((0.0, 0.0), (0.4, 0.4), (1.0, 1.0))
     _ASSIST_PROFILE = ((0.0, 0.0), (0.4, 0.85), (1.0, 1.0))
@@ -1705,8 +1714,17 @@ class TestRoleGeometry:
         second, _ = self._build(8.0, "cb0", PitchPoint(0.1, 0.4))
         assert first.to_json() == second.to_json()
 
-    def test_no_template_carries_a_geometry_yet(self):
-        assert all(role.geometry is None for template in TEMPLATES.values() for role in template.roles)
+    # Chantier 1, 1c (15/10/2026) : liste DÉCROISSANTE au fil des sous-étapes (1d, 1e-1, 1f retireront les leurs à leur tour) -- garde-fou
+    # qu'un gabarit pas encore migré ne reçoive pas de géométrie par erreur. Ne jamais revenir à "aucun gabarit" : un gabarit migré doit
+    # sortir de cette liste, pas la faire disparaître.
+    _NOT_YET_MIGRATED = (
+        "contre_attaque", "construction_placee", "une_deux", "coup_franc", "corner", "recuperation_haute", "penalty", "but_gag",
+    )
+
+    def test_templates_not_yet_migrated_carry_no_geometry(self):
+        assert set(self._NOT_YET_MIGRATED) <= set(TEMPLATES)
+        for name in self._NOT_YET_MIGRATED:
+            assert all(role.geometry is None for role in TEMPLATES[name].roles), name
 
 
 class TestTacticalSupports:
@@ -1815,7 +1833,9 @@ class TestTacticalSupports:
         plain = tpl.Role("support1", ANCHOR_STATIC, (tpl.RoleFrame(0.0, 0.0), tpl.RoleFrame(1.0, 1.0)))
         assert self._resolve([plain], starts)["support1"] == "ad"  # premier nom par ordre alphabétique hors buteur, passeur et gardien
         assert tpl._resolve_roles(_goal_event(), lineup, ("scorer", "assist", "support1"))["support1"].name == "ad"  # appel d'avant 1b
-        for name in BUILDERS:  # aucun gabarit migré
-            assert all(role.geometry is None for role in TEMPLATES[name].roles)
+        # Précondition de CE test : aucun rôle générique (support) n'a encore de géométrie (1c n'a migré que scorer/assist de la
+        # famille A, jamais un support -- voir test_templates_not_yet_migrated_carry_no_geometry pour la liste à jour par gabarit).
+        for template in TEMPLATES.values():
+            assert all(role.geometry is None for role in template.roles if role.name not in ("scorer", "assist"))
         sequence = BUILDERS["contre_attaque"](_goal_event(), lineup, _start_positions(lineup))
         assert sequence.meta["roles"]["support1"] == "ad"

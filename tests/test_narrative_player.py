@@ -639,13 +639,17 @@ class TestAccelerationConstraintOnRealGabarits:
 # disputé » ; un keyframe de plus à t_ratio 0,7), ce qui change les trajectoires des joueurs : l'empreinte de `corner` est recalculée. Preuve que B8-c1 est la SEULE cause : avec l'ancienne définition du gabarit
 # (durée, rôles, tags, `ball_owner`, `ball_height`, `ball_position`, `physics_tags` d'avant), le code actuel redonne exactement l'empreinte précédente
 # ("f05064d66238d5db", "39a32789ddad7788"). L'empreinte ne contient que les joueurs : `ball.py` n'y intervient pas.
+# Chantier 1, 1c (15/10/2026) : `percee_individuelle` reçoit une géométrie de rôle sur son scorer (durée 7,0 -> 8,0 s, départ dérivé de
+# la formation au lieu de la position brute) -- l'empreinte est recalculée, et redevient identique avant/après contrainte d'accélération
+# (comme avant la migration) : la course du scorer est désormais réalisable sans correction. Preuve que 1c est la SEULE cause : avec
+# l'ancienne durée et `geometry=None` sur son rôle, le code actuel redonne exactement l'empreinte précédente ("e81f855c96b7ccfe", idem).
 _WITNESS_DIGESTS = {
     # gabarit: (empreinte des images brutes `interpolate`, empreinte après contrainte d'accélération)
     "but_gag": ("2adb64758544b738", "5413574bb0047c48"),
     "construction_placee": ("ff696c5902800e79", "b89f6245b693bd81"),
     "contre_attaque": ("b08cb2b75e7031cd", "a23371edfce032df"),
     "corner": ("2e573082648af3d4", "46b52565c7ea2d7b"),
-    "percee_individuelle": ("e81f855c96b7ccfe", "e81f855c96b7ccfe"),
+    "percee_individuelle": ("4a00cea671b14edd", "4a00cea671b14edd"),
 }
 
 

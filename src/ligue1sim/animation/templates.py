@@ -1371,8 +1371,15 @@ _TEMPLATE_DEBORDEMENT = Template(
 _TEMPLATE_PERCEE_INDIVIDUELLE = Template(
     name="percee_individuelle",
     weight=0.9,
-    duration=7.0,
-    roles=(Role("scorer", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.4, 0.35), RoleFrame(0.75, 0.7), RoleFrame(1.0, 1.0))),),
+    # Chantier 1, 1c (15/10/2026) : durée 7,0 -> 8,0 s et géométrie de rôle sur le scorer (cible event.zone, inchangée -- seul le
+    # départ devient réaliste, dérivé de la formation et plafonné par la course réalisable sur la durée du gabarit).
+    duration=8.0,
+    roles=(
+        Role(
+            "scorer", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.4, 0.35), RoleFrame(0.75, 0.7), RoleFrame(1.0, 1.0)),
+            geometry=RoleGeometry(GEOM_ZONE),
+        ),
+    ),
     tags=((0.0, "controle"), (0.4, "dribble"), (0.75, "dribble"), (1.0, "tir")),
     ball_owner=((0.0, "scorer"), (0.4, "scorer"), (0.75, "scorer"), (1.0, "scorer")),
     context_score=_score_percee_individuelle,
