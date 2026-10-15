@@ -6,11 +6,12 @@ Document de planification architecte. Établi le 15/10/2026 à partir de l'état
 
 ## 1. PRÉAMBULE — ÉTAT ACTUEL
 
-Depuis B6-c, le Bloc B (physique de balle) est clos (15 sous-étapes, B1 à B8-c1). Le Bloc A (mouvement des joueurs) est ouvert : l'étape 0 (assainissement de l'effectif affiché) est close, le chantier 1 (géométrie macro des gabarits) est en cours, avec 1a, 1b, 1c (famille A) et 1d (famille B) validées. Prochaine sous-étape : 1e-1.
+Depuis B6-c, le Bloc B (physique de balle) est clos (15 sous-étapes, B1 à B8-c1). Le Bloc A (mouvement des joueurs) est ouvert : l'étape 0 (assainissement de l'effectif affiché) est close, le chantier 1 (géométrie macro des gabarits) est en cours, avec 1a, 1b, 1c (famille A), 1d (famille B) et 1e-1 (famille C) validées. Prochaine sous-étape : 1f.
 
 Faits mesurables à ce jour :
 
-- Suite de tests : 1 648 passés à 44497d1 (les 5 "ignorés" de l'époque sont redevenus actifs depuis, dépendance NLG désormais installée, sans lien avec le chantier 1), 12 désélectionnés. 1 623 à ab92559, 1 637 après 1a.
+- Suite de tests : 1 657 passés (12 désélectionnés) après 1e-1. 1 648 passés à 44497d1 (les 5 "ignorés" de l'époque sont redevenus actifs depuis, dépendance NLG désormais installée, sans lien avec le chantier 1), 12 désélectionnés. 1 623 à ab92559, 1 637 après 1a.
+- 1e-1 migre les 2 derniers gabarits à rôles multiples non géométrisés (recuperation_haute, but_gag) vers `Role.geometry`, avec un premier cas de deux rôles tactiques dans le même pool de postes. Mesure pipeline réel (100 matchs, graine 20260923) : clips au-dessus de 1,05x vmax recuperation_haute 189 → 46, but_gag 27 → 9 ; combiné tous gabarits 582 → 421. Passes > 30 m/s (chemin) 6 → 0 et 27 → 0 sur les deux, conforme à la prédiction. Résiduel sur l'écart d'arrivée du scorer de but_gag (1,94 m, documenté dans le code, renvoyé à A1.1/A1.5).
 - Chantier 1 : 1a et 1b sont neutres (aucun gabarit migré). 1c migre les 4 gabarits de la famille A (percee_individuelle, debordement_centre_tete, profondeur_1v1, decalage_enroulee) vers `Role.geometry` -- cible d'arrivée inchangée, seul le départ devient réaliste. Mesure pipeline réel (100 matchs, graine 20260923, 1 552 clips, moteur identique avant/après) : clips au-dessus de 1,05x vmax percee 192 -> 14, profondeur_1v1 108 -> 37, decalage_enroulee 180 -> 87, debordement 218 -> 23 (les 8 autres gabarits sont 100 % identiques clip à clip, aucun effet de bord hors périmètre). Écart du scorer à sa zone de tir ramené à 0,00 m médian sur les 4. Effet de bord identifié et documenté dans le code (commentaire du gabarit `profondeur_1v1`) : 14 clips sur 1552 où une passe dépasse 30 m/s (0 avant), à reprendre en 1g/1h (ticket 47), ne bloque pas la clôture de 1c (aucune exigence testée violée).
 - Diagnostic du Bloc A avant 1c (100 matchs, 1 552 clips) : 67 % des clips contiennent un segment impossible (vitesse moyenne exigée supérieure à la vitesse max du poste), 70,7 % des acteurs rendus dépassent leur vmax, 49 % ont un saut brut de plus d'1 m en une image, le buteur fait 56,7 m de déplacement net en médiane, l'écart médian entre le buteur rendu et sa zone de tir est de 4,88 m.
 
@@ -96,11 +97,14 @@ Sous-étapes :
 - Commits (3, un par gabarit) : une_deux cb436f4, contre_attaque 3c05319, construction_placee d44547b.
 - Dépendances : 1a, 1b. Statut : validée.
 
-**1e-1 — famille C, géométrie des joueurs : recuperation_haute, but_gag. À FAIRE.**
-- Objectif : course réduite pour respecter D inférieur ou égal à 2,25 fois T au carré (le critère ne mord que dans ces deux gabarits et le corner). Durée de recuperation 5 → 6. Postes attendus : MOC, MC, AG, AD, SA, ATT, BU pour recuperation ; BU, SA, ATT, MOC pour but_gag. Sans toucher au ballon.
-- Périmètre : `templates.py` ; empreintes des 2 gabarits ; témoin but_gag.
-- Gain attendu : passes supérieures à 30 m/s but_gag 27 → 0, recuperation 6 → 0 (chemin). Les clips au-dessus de 1,05 fois vmax (189 → 188 et 27 → 22 sans le critère) sont à mesurer avec le critère.
-- Dépendances : 1a, 1b. Statut : à faire.
+**1e-1 — famille C, géométrie des joueurs : recuperation_haute, but_gag. VALIDÉE (15/10/2026).**
+- Objectif : course réduite pour respecter D inférieur ou égal à 2,25 fois T au carré (le critère ne mord que dans ces deux gabarits et le corner). Durée de recuperation 5 → 6 (but_gag inchangée, pas demandée par le cadrage). Postes attendus : MOC, MC, AG, AD, SA, ATT, BU pour recuperation ; BU, SA, ATT, MOC pour but_gag, tous deux tactiques sur support1 ET support2 (premier cas du chantier à deux rôles tactiques dans le même pool). Ballon non touché.
+- Périmètre : `templates.py` ; empreintes des 2 gabarits ; témoin but_gag ; deux nouveaux tests `TestTacticalSupports` pour le cas à deux rôles tactiques.
+- Gain mesuré (pipeline réel, 100 matchs, graine 20260923, moteur identique) : clips au-dessus de 1,05 fois vmax recuperation_haute 189 → 46 (sur 189 clips), but_gag 27 → 9 (sur 27 clips) ; combiné, tous gabarits confondus, 582 → 421 (-27,7 %). Passes > 30 m/s (chemin) recuperation_haute 6 → 0, but_gag 27 → 0 — conforme à la prédiction du plan sur les deux. Écart d'arrivée du scorer médian : recuperation_haute 5,58 → 0,38 m, but_gag 3,71 → 1,94 m.
+- Effet de bord mesuré et documenté dans le code (`but_gag`) : l'écart d'arrivée du scorer reste à 1,94 m (pas ramené à 0 comme recuperation_haute) — le ratio de vitesse scripté respecte le plafond de conception, mais le ratio rendu dépasse 1,0x vmax sur une bonne moitié des clips : les trois rôles convergent vers la même zone en 5 s à peine (plus serré que recuperation_haute, 6 s), ce qui expose l'évitement entre acteurs (A1.5) et la contrainte d'accélération par keyframe (A1.1), deux mécanismes hors chantier 1. Aucune exigence testée violée ; à reprendre en A1.1/A1.5, pas un blocage de 1e-1.
+- Revue `simulafoot-reviewer` : aucun défaut bloquant ; portée, déterminisme et décisions produit conformes au cadrage.
+- Commits (2, un par gabarit) : recuperation_haute 078b457, but_gag d0a3411.
+- Dépendances : 1a, 1b. Statut : validée.
 
 **1f — famille D : corner, penalty (supports). À FAIRE.**
 - Objectif : corner avec durée 7,0 s et centre à 4,9 s conservés (contrainte B8-c1), course plafonnée à 15 m, tireur à 8 m du poteau de corner, plancher de 6 m entre la zone et le tireur, support1 de type aérien (DC, BU, SA, ATT). Penalty : supports au bord de la surface, tireur et durée inchangés. Coup franc inchangé.
@@ -235,7 +239,7 @@ Chantier 1 (1g et 1h) :
 1. ~~Validation de 1b.~~ Faite (15/10/2026).
 2. ~~1c (famille A).~~ Faite (15/10/2026).
 3. ~~1d (famille B).~~ Faite (15/10/2026).
-4. 1e-1 (famille C, géométrie).
+4. ~~1e-1 (famille C, géométrie).~~ Faite (15/10/2026).
 5. 1f (famille D).
 6. 1e-2 (ballon dynamique de recuperation_haute).
 7. 1g (test pipeline réel, ticket 46).
