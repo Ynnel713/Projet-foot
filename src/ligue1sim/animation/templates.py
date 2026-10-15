@@ -47,6 +47,7 @@ from dataclasses import dataclass, replace
 from typing import Callable
 
 from ligue1sim.animation.ball import BALL_FLIGHT, PASS_GROUND, _drag_progress
+from ligue1sim.animation.motion import max_speed_normalized
 from ligue1sim.animation.types import BallState, Keyframe, PlayerId, RosterEntry, Sequence
 from ligue1sim.events import GoalEvent
 from ligue1sim.lineup import Lineup
@@ -173,17 +174,46 @@ class RoleFrame:
     progress: float
 
 
+# --- Géométrie de rôle (chantier 1, sous-étape 1a) -------------------------
+# Un rôle AVEC géométrie ne part plus de sa position de formation : son ancrage de fin W est un point cible dérivé de l'événement, et son
+# départ est dérivé de W et de sa position de formation P0 (voir `geometry_start`), de façon que la course reste réalisable :
+#   - ratio : distance / (durée du segment x vmax du poste) <= `_RUN_RATIO_MAX` sur chaque segment ;
+#   - accélération : distance <= `_RUN_ACCEL_COEFF` x durée² sur chaque segment (le pic d'accélération de la courbe de motion.py vaut
+#     4,44 x distance / durée², soit moins de 10 m/s²).
+GEOM_ZONE = "zone"  # W = centre de event.zone
+GEOM_ASSIST_ZONE = "assist_zone"  # W = centre de event.assist_zone (repli : event.zone)
+GEOM_BEHIND_ZONE = "behind_zone"  # W = à `cap_m` de event.zone, dans la direction de event.assist_zone tournée de `angle_deg` (au moins `_BEHIND_MIN_M`)
+GEOM_TOWARD_GOAL = "toward_goal"  # W = à `cap_m` de event.zone, vers le centre du but adverse
+
+_RUN_RATIO_MAX = 0.5  # marge de conception sous la limite de 0,55 de motion.py (soumise à validation du propriétaire)
+_RUN_ACCEL_COEFF = 2.25  # m/s² : 10 m/s² / 4,44, pic d'accélération de la courbe d'ease (soumise à validation du propriétaire)
+_BEHIND_MIN_M = 6.0  # distance minimale de W à event.zone pour GEOM_BEHIND_ZONE
+
+
+@dataclass(frozen=True)
+class RoleGeometry:
+    """Cible et plafond de course d'un rôle. `cap_m` / `angle_deg` : voir GEOM_BEHIND_ZONE et GEOM_TOWARD_GOAL. `run_cap_m` : plafond de
+    course supplémentaire (m), `None` = seulement celui de la vitesse et de l'accélération."""
+
+    target: str
+    cap_m: float = 0.0
+    angle_deg: float = 0.0
+    run_cap_m: float | None = None
+
+
 @dataclass(frozen=True)
 class Role:
     """Un acteur du gabarit. `name` est résolu vers un vrai joueur par
     `_resolve_roles` ("scorer"/"assist" depuis l'événement lui-même, tout
     autre nom depuis les coéquipiers restants, voir cette fonction).
     `frames` doit couvrir EXACTEMENT les mêmes `t_ratio` que les autres
-    rôles actifs du même gabarit (vérifié par `_validate_template`)."""
+    rôles actifs du même gabarit (vérifié par `_validate_template`).
+    `geometry` : voir `RoleGeometry` ; renseignée, elle remplace `end_anchor` (ignoré) et la position de départ du rôle."""
 
     name: str
     end_anchor: str
     frames: tuple[RoleFrame, ...]
+    geometry: RoleGeometry | None = None
 
 
 @dataclass(frozen=True)
@@ -351,6 +381,62 @@ def _resolve_roles(event: GoalEvent, lineup: Lineup, role_names: tuple[str, ...]
 
 
 # --- Moteur générique ------------------------------------------------------
+
+
+def _unit_m(ax: float, ay: float, bx: float, by: float) -> tuple[float, float]:
+    """Vecteur unitaire a -> b (m) ; (-1, 0), vers son propre but, si a et b coïncident."""
+    d = math.hypot(bx - ax, by - ay)
+    return ((bx - ax) / d, (by - ay) / d) if d > 1e-9 else (-1.0, 0.0)
+
+
+def geometry_target(geometry: RoleGeometry, event: GoalEvent) -> PitchPoint:
+    """Ancrage de fin W d'un rôle avec géométrie (voir GEOM_*). Fonction pure."""
+    zone = center_of(event.zone)
+    assist = center_of(event.assist_zone if event.assist_zone is not None else event.zone)
+    if geometry.target == GEOM_ZONE:
+        return zone
+    if geometry.target == GEOM_ASSIST_ZONE:
+        return assist
+    zx, zy = zone.x * PITCH_LENGTH_M, zone.y * PITCH_WIDTH_M
+    if geometry.target == GEOM_TOWARD_GOAL:
+        ux, uy = _unit_m(zx, zy, PITCH_LENGTH_M, PITCH_WIDTH_M / 2.0)
+        distance_m = geometry.cap_m
+    elif geometry.target == GEOM_BEHIND_ZONE:
+        ax, ay = assist.x * PITCH_LENGTH_M, assist.y * PITCH_WIDTH_M
+        ux, uy = _unit_m(zx, zy, ax, ay)
+        angle = math.radians(geometry.angle_deg)
+        ux, uy = ux * math.cos(angle) - uy * math.sin(angle), ux * math.sin(angle) + uy * math.cos(angle)
+        distance_m = min(geometry.cap_m, max(math.hypot(ax - zx, ay - zy), _BEHIND_MIN_M))
+    else:
+        raise ValueError(f"Cible de géométrie inconnue : {geometry.target!r}")
+    x, y = zx + distance_m * ux, zy + distance_m * uy
+    return PitchPoint(x=min(PITCH_LENGTH_M, max(0.0, x)) / PITCH_LENGTH_M, y=min(PITCH_WIDTH_M, max(0.0, y)) / PITCH_WIDTH_M)
+
+
+def role_run_limit_m(frames: tuple[RoleFrame, ...], duration_s: float, v_max_mps: float, run_cap_m: float | None = None) -> float:
+    """Longueur de course maximale (m) de départ -> ancrage : sur CHAQUE segment où la progression varie de `dp`, la distance `L x dp` doit
+    respecter le ratio (`_RUN_RATIO_MAX` x vmax x durée) ET l'accélération (`_RUN_ACCEL_COEFF` x durée²). 0 si le rôle ne bouge jamais."""
+    limit = math.inf
+    for a, b in zip(frames, frames[1:]):
+        dp = abs(b.progress - a.progress)
+        if dp <= 1e-9:
+            continue
+        segment_s = (b.t_ratio - a.t_ratio) * duration_s
+        limit = min(limit, _RUN_RATIO_MAX * v_max_mps * segment_s / dp, _RUN_ACCEL_COEFF * segment_s**2 / dp)
+    if limit == math.inf:
+        return 0.0
+    return limit if run_cap_m is None else min(limit, run_cap_m)
+
+
+def geometry_start(target: PitchPoint, home: PitchPoint, limit_m: float) -> PitchPoint:
+    """Départ d'un rôle avec géométrie : sur la droite `target` -> `home` (sa position de formation), à min(|home - target|, `limit_m`) de
+    `target`. Un joueur déjà à portée garde sa position de formation."""
+    dx, dy = (home.x - target.x) * PITCH_LENGTH_M, (home.y - target.y) * PITCH_WIDTH_M
+    distance_m = math.hypot(dx, dy)
+    if distance_m <= limit_m:
+        return home
+    k = limit_m / distance_m
+    return PitchPoint(x=target.x + dx * k / PITCH_LENGTH_M, y=target.y + dy * k / PITCH_WIDTH_M)
 
 
 def _lerp(a: PitchPoint, b: PitchPoint, progress: float) -> PitchPoint:
@@ -922,11 +1008,18 @@ def build_from_template(
         )
         for player_id in start_positions
     }
-    role_ends = {
-        role.name: _anchor_point(role.end_anchor, role_starts[role.name], event)
-        for role in template.roles
-        if role.name in resolved
-    }
+    role_ends: dict[str, PitchPoint] = {}
+    for role in template.roles:
+        if role.name not in resolved:
+            continue
+        if role.geometry is None:
+            role_ends[role.name] = _anchor_point(role.end_anchor, role_starts[role.name], event)
+            continue
+        target = geometry_target(role.geometry, event)  # chantier 1 : départ dérivé de la cible, course réalisable
+        v_max_mps = max_speed_normalized(resolved[role.name].poste) * PITCH_LENGTH_M
+        limit_m = role_run_limit_m(role.frames, template.duration, v_max_mps, role.geometry.run_cap_m)
+        role_starts[role.name] = geometry_start(target, role_starts[role.name], limit_m)
+        role_ends[role.name] = target
 
     tags_by_ratio = dict(template.tags)
     ball_owner_by_ratio = dict(template.ball_owner)
