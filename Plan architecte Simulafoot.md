@@ -6,12 +6,13 @@ Document de planification architecte. Établi le 15/10/2026 à partir de l'état
 
 ## 1. PRÉAMBULE — ÉTAT ACTUEL
 
-Depuis B6-c, le Bloc B (physique de balle) est clos (15 sous-étapes, B1 à B8-c1). Le Bloc A (mouvement des joueurs) est ouvert : l'étape 0 (assainissement de l'effectif affiché) est close, le chantier 1 (géométrie macro des gabarits) est en cours, avec 1a, 1b, 1c (famille A), 1d (famille B) et 1e-1 (famille C) validées. Prochaine sous-étape : 1f.
+Depuis B6-c, le Bloc B (physique de balle) est clos (15 sous-étapes, B1 à B8-c1). Le Bloc A (mouvement des joueurs) est ouvert : l'étape 0 (assainissement de l'effectif affiché) est close, le chantier 1 (géométrie macro des gabarits) est en cours, avec 1a, 1b, 1c (famille A), 1d (famille B), 1e-1 (famille C) et 1f (famille D) validées. Prochaine sous-étape : 1e-2 (ballon dynamique de recuperation_haute).
 
 Faits mesurables à ce jour :
 
-- Suite de tests : 1 657 passés (12 désélectionnés) après 1e-1. 1 648 passés à 44497d1 (les 5 "ignorés" de l'époque sont redevenus actifs depuis, dépendance NLG désormais installée, sans lien avec le chantier 1), 12 désélectionnés. 1 623 à ab92559, 1 637 après 1a.
+- Suite de tests : 1 659 passés (12 désélectionnés) après 1f. 1 657 après 1e-1. 1 648 passés à 44497d1 (les 5 "ignorés" de l'époque sont redevenus actifs depuis, dépendance NLG désormais installée, sans lien avec le chantier 1), 12 désélectionnés. 1 623 à ab92559, 1 637 après 1a.
 - 1e-1 migre les 2 derniers gabarits à rôles multiples non géométrisés (recuperation_haute, but_gag) vers `Role.geometry`, avec un premier cas de deux rôles tactiques dans le même pool de postes. Mesure pipeline réel (100 matchs, graine 20260923) : clips au-dessus de 1,05x vmax recuperation_haute 189 → 46, but_gag 27 → 9 ; combiné tous gabarits 582 → 421. Passes > 30 m/s (chemin) 6 → 0 et 27 → 0 sur les deux, conforme à la prédiction. Résiduel sur l'écart d'arrivée du scorer de but_gag (1,94 m, documenté dans le code, renvoyé à A1.1/A1.5).
+- 1f migre `corner` (géométrie de rôle, premier usage réel de `GEOM_BEHIND_ZONE`) et corrige `penalty` (supports repositionnés au bord de la surface, découverte en mesurant avant de coder : ils étaient à 70 m en médiane, pas juste imprécis). Mesure pipeline réel : clips au-dessus de 1,05x vmax combiné 421 → 348 ; sauts bruts > 1 m 4 → 0 (plus aucun sur l'échantillon) ; corner seul 85 → 12 clips au-dessus de 1,05x vmax, écart d'arrivée du scorer 4,06 → 0,00 m.
 - Chantier 1 : 1a et 1b sont neutres (aucun gabarit migré). 1c migre les 4 gabarits de la famille A (percee_individuelle, debordement_centre_tete, profondeur_1v1, decalage_enroulee) vers `Role.geometry` -- cible d'arrivée inchangée, seul le départ devient réaliste. Mesure pipeline réel (100 matchs, graine 20260923, 1 552 clips, moteur identique avant/après) : clips au-dessus de 1,05x vmax percee 192 -> 14, profondeur_1v1 108 -> 37, decalage_enroulee 180 -> 87, debordement 218 -> 23 (les 8 autres gabarits sont 100 % identiques clip à clip, aucun effet de bord hors périmètre). Écart du scorer à sa zone de tir ramené à 0,00 m médian sur les 4. Effet de bord identifié et documenté dans le code (commentaire du gabarit `profondeur_1v1`) : 14 clips sur 1552 où une passe dépasse 30 m/s (0 avant), à reprendre en 1g/1h (ticket 47), ne bloque pas la clôture de 1c (aucune exigence testée violée).
 - Diagnostic du Bloc A avant 1c (100 matchs, 1 552 clips) : 67 % des clips contiennent un segment impossible (vitesse moyenne exigée supérieure à la vitesse max du poste), 70,7 % des acteurs rendus dépassent leur vmax, 49 % ont un saut brut de plus d'1 m en une image, le buteur fait 56,7 m de déplacement net en médiane, l'écart médian entre le buteur rendu et sa zone de tir est de 4,88 m.
 
@@ -106,11 +107,16 @@ Sous-étapes :
 - Commits (2, un par gabarit) : recuperation_haute 078b457, but_gag d0a3411.
 - Dépendances : 1a, 1b. Statut : validée.
 
-**1f — famille D : corner, penalty (supports). À FAIRE.**
+**1f — famille D : corner, penalty (supports). VALIDÉE (15/10/2026).**
 - Objectif : corner avec durée 7,0 s et centre à 4,9 s conservés (contrainte B8-c1), course plafonnée à 15 m, tireur à 8 m du poteau de corner, plancher de 6 m entre la zone et le tireur, support1 de type aérien (DC, BU, SA, ATT). Penalty : supports au bord de la surface, tireur et durée inchangés. Coup franc inchangé.
-- Périmètre : `templates.py` ; empreintes corner et penalty ; témoin corner ; tests de B6-a sur les supports du penalty.
-- Gain attendu : clips au-dessus de 1,05 fois vmax du corner 85 → 4, écart d'arrivée 4,06 → 0,47 m.
-- Dépendances : 1a, 1b, 1e-1 (critère d'accélération). Statut : à faire.
+- Décision produit (ambiguïté du texte du plan, tranchée avec le propriétaire) : "tireur à 8 m du poteau de corner" désigne `assist` (le centreur, comme au penalty/coup franc) ; "plancher de 6 m entre la zone et le tireur" désigne en fait `support1` (l'appel aérien), cohérent avec `_BEHIND_MIN_M` déjà existant pour ce rôle.
+- Périmètre : `templates.py` ; empreintes corner et penalty ; témoin corner ; nouveau test dédié aux supports du penalty (aucun test antérieur ne les couvrait).
+- Corner : `assist` et `scorer` géométrisés avec `run_cap_m` (8 et 15 m) sur leur cible habituelle (inchangée) ; `support1` devient tactique via `GEOM_BEHIND_ZONE` (cible recalée à 6 m de la zone de tir, premier usage réel de cette cible dans le chantier).
+- Penalty : mesure préalable au codage (ponytail du cadrage) qui a révélé que les supports étaient à 70 m en MÉDIANE du bord de la surface (position de formation brute) -- bien plus grave que prévu. `RoleGeometry`/`ANCHOR_LATERAL_SHIFT` non cumulables sur un même rôle : fix via position de départ remplacée dans `build_penalty` (même mécanisme que l'élan du tireur), nouvelle fonction `penalty_support_position` (bord de la surface, 6 à 15 m de l'axe, côtés opposés, déterministe).
+- Gain mesuré (pipeline réel, 100 matchs, graine 20260923, moteur identique) : corner (85 clips) clips au-dessus de 1,05 fois vmax 85 → 12 (prédit 4, écart expliqué par le résiduel connu évitement/accélération, hors chantier 1), sauts bruts > 1 m 4 → 0, écart d'arrivée du scorer médian 4,06 → 0,00 m (meilleur que prédit 0,47 m). Penalty (24 clips) : écart des supports au bord de la surface 70 m médian → 0 (mesure ad hoc, hors `measure_geometry.py` qui ne couvre pas cette dimension).
+- Revue `simulafoot-reviewer` : aucun défaut bloquant.
+- Commits (2, un par gabarit) : corner 9a19a19, penalty 624606a.
+- Dépendances : 1a, 1b, 1e-1 (critère d'accélération). Statut : validée.
 
 **1e-2 — ballon dynamique de recuperation_haute. À FAIRE.**
 - Objectif : le `ball_position` figé (0,6 ; 0,5) à t_ratio 0,3 devient dynamique (milieu des deux presseurs). Diagnostic préalable contre `ball.py` (branche « ballon immobile ») et ticket 41.
@@ -240,7 +246,7 @@ Chantier 1 (1g et 1h) :
 2. ~~1c (famille A).~~ Faite (15/10/2026).
 3. ~~1d (famille B).~~ Faite (15/10/2026).
 4. ~~1e-1 (famille C, géométrie).~~ Faite (15/10/2026).
-5. 1f (famille D).
+5. ~~1f (famille D).~~ Faite (15/10/2026).
 6. 1e-2 (ballon dynamique de recuperation_haute).
 7. 1g (test pipeline réel, ticket 46).
 8. 1h (documentation, tickets 46 à 48).

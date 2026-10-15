@@ -55,6 +55,21 @@ Les sous-étapes 1c, 1d et 1e-1 du chantier 1 (`Plan architecte Simulafoot.md` �
 |---|---|---|
 | pytest (suite principale) | 1 648 passés, 5 ignorés, 12 désélectionnés | 1 657 passés, 12 désélectionnés (les 5 anciens « ignorés » sont redevenus actifs, dépendance NLG installée, sans lien avec le chantier 1) |
 
+## v1.4 — 15/10/2026 (état du dépôt : 624606a)
+
+La sous-étape 1f du chantier 1 a été validée et commitée.
+
+| ID | Statut v1.3 | Statut v1.4 | Preuve |
+|---|---|---|---|
+| EG-JOU-05 (Bloc A) | Partiel : 1a à 1e-1 validées (familles A, B, C migrées) ; 1f, 1e-2, 1g, 1h restantes | Partiel : 1a à 1f validées (familles A à D migrées) ; 1e-2, 1g, 1h restantes | voir ci-dessous |
+| EG-JOU-10 (géométrie de rôle) | Partiel : 8 gabarits sur 12 migrés ; corner, coup_franc, penalty restants (1f) | Partiel : 9 gabarits sur 12 migrés via `Role.geometry` (+ corner) ; `penalty` corrigé par un mécanisme différent (position de départ remplacée dans `build_penalty`, pas `Role.geometry`, incompatible avec son ancrage `ANCHOR_LATERAL_SHIFT`) ; seuls coup_franc et penalty (au sens strict de `Role.geometry`) restent hors géométrie, aucun autre gabarit prévu en 1g/1h | 9a19a19, 624606a (1f) |
+| EG-JOU-11 (buteur à sa zone, 0 passe > 30 m/s, baisse des dépassements 1,05× vmax) | Planifié, mesure réelle cumulée 421 clips > 1,05× vmax après 1e-1 | Planifié, mesure réelle cumulée 348 clips > 1,05× vmax après 1f (-17,3 % vs 1e-1, -76 % vs avant chantier 1) ; sauts bruts > 1 m ramenés à 0 sur l'échantillon (100 matchs) | `Plan architecte Simulafoot.md` §3.2 ; mesure pipeline réel 100 matchs, graine 20260923 |
+
+### Suite de tests (indicateurs)
+| Indicateur | v1.3 | v1.4 |
+|---|---|---|
+| pytest (suite principale) | 1 657 passés, 12 désélectionnés | 1 659 passés, 12 désélectionnés |
+
 ### Écarts à corriger au prochain remaniement du PDF
 - Section 9 : B6-d, B6-e, B7, B8 passent à « Implémenté » ; le Bloc A passe à « En cours ».
 - Section 5.2 : B7 et B8 passent à « Implémenté ».
