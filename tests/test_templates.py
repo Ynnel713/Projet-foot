@@ -26,7 +26,7 @@ from ligue1sim.animation.templates import (
 from ligue1sim.animation import templates as tpl
 from ligue1sim.events import GoalEvent
 from ligue1sim.lineup import Lineup
-from ligue1sim.pitch_geometry import GRID_COLUMNS, GRID_ROWS, PITCH_LENGTH_M, PitchPoint, Zone, center_of
+from ligue1sim.pitch_geometry import GRID_COLUMNS, GRID_ROWS, PENALTY_AREA_DEPTH_M, PITCH_LENGTH_M, PitchPoint, Zone, center_of
 from ligue1sim.players import Player
 
 _SCORER_ZONE = Zone(col=10, row=4)
@@ -338,6 +338,31 @@ class TestPenaltyIsSpecialCased:
         assert all(-10.0 - 1e-6 <= a <= 10.0 + 1e-6 for a in angles) and max(angles) - min(angles) > 10.0
         again, _ = self._build(minute=23, scorer="ag")
         first, _ = self._build(minute=23, scorer="ag")
+        assert [kf.players for kf in again.keyframes] == [kf.players for kf in first.keyframes]
+
+    def test_supports_start_at_the_penalty_area_edge_on_opposite_sides_and_deterministic(self):
+        # Chantier 1, 1f (15/10/2026) : avant cette migration, support1/support2 partaient de leur position de formation brute,
+        # mesurée à 70 m en médiane de la surface sur le pipeline réel -- sans lien avec l'événement. Désormais au bord de la
+        # surface (ligne des 16,5 m), décalés de 6 à 15 m de l'axe, toujours de part et d'autre (jamais le même côté).
+        edge_x = 1.0 - PENALTY_AREA_DEPTH_M / PITCH_LENGTH_M
+        sides, laterals_m = [], []
+        for minute in range(1, 91):
+            sequence, lineup = self._build(minute=minute)
+            support1_id = next(p.id for p in lineup.players if p.name == "ad")  # premier nom alphabétique hors bu/gardien
+            support2_id = next(p.id for p in lineup.players if p.name == "ag")  # second
+            x1, y1 = sequence.keyframes[0].players[support1_id]
+            x2, y2 = sequence.keyframes[0].players[support2_id]
+            assert x1 == pytest.approx(edge_x) and x2 == pytest.approx(edge_x)
+            lateral1_m, lateral2_m = (y1 - 0.5) * 68.0, (y2 - 0.5) * 68.0
+            assert 6.0 - 1e-6 <= abs(lateral1_m) <= 15.0 + 1e-6
+            assert 6.0 - 1e-6 <= abs(lateral2_m) <= 15.0 + 1e-6
+            assert (lateral1_m > 0) != (lateral2_m > 0)  # jamais le même côté
+            sides.append(lateral1_m > 0)
+            laterals_m.append(abs(lateral1_m))
+        assert any(sides) and not all(sides)  # le côté varie d'un événement à l'autre
+        assert max(laterals_m) - min(laterals_m) > 2.0  # l'écart latéral varie aussi
+        again, _ = self._build(minute=23)
+        first, _ = self._build(minute=23)
         assert [kf.players for kf in again.keyframes] == [kf.players for kf in first.keyframes]
 
 
@@ -807,7 +832,14 @@ class TestTemplateStructureUnchangedByPhysicsTags:
     en plus de leur cible habituelle ; `support1` (l'appel au premier poteau) devient tactique via `GEOM_BEHIND_ZONE` (cible recalée
     à 6 m de la zone de tir vers le poteau de corner, pas `GEOM_ZONE`/`GEOM_ASSIST_ZONE` -- première utilisation réelle de cette
     cible dans un gabarit du chantier). Preuve de cause unique : avec `geometry=None` sur les trois rôles, le code redonne
-    exactement l'ancienne empreinte ci-dessus."""
+    exactement l'ancienne empreinte ci-dessus.
+
+    Douzième exception délibérée (Chantier 1, 1f, 15/10/2026) : `penalty` a une empreinte mise à jour -- mécanisme différent des
+    autres exceptions (pas de `Role.geometry`, incompatible avec `ANCHOR_LATERAL_SHIFT` déjà porté par support1/support2) : leur
+    position de départ est remplacée dans `build_penalty`, comme celle du tireur (`penalty_runup_start`) l'est déjà, par un point
+    au bord de la surface (`penalty_support_position`), mesuré à 70 m en médiane de la surface avant cette migration -- sans lien
+    avec l'événement. Preuve de cause unique : avec l'ancien `build_penalty` (positions de départ non remplacées pour support1/
+    support2), le code redonne exactement l'ancienne empreinte ci-dessus."""
 
     _EXPECTED_STRUCTURE_HASH = {
         "but_gag": "c982c7c9f8905b2d948ecbc21c2009643fb30661471acfd64352f604a8801ecf",
@@ -817,7 +849,7 @@ class TestTemplateStructureUnchangedByPhysicsTags:
         "coup_franc": "ff70b15275eb85d5baefeb5acea5f4a81e25319618a6e25cc978600aca72f959",
         "debordement_centre_tete": "9a5039d4b4d9112586b7676f475bc7e7cec54ce265278006814c3dae681a95f8",
         "decalage_enroulee": "f2f8eae8553986557f62b7e938429e5ac182fef09c21f4d87fb2c0f158ff1090",
-        "penalty": "7972e9a2d7afe7e1caa593950d3b7fa5e7cde43195b04a14bcc0c77a0b38a888",
+        "penalty": "f2e5e8f763161da656bf4080c7991701714085723a65e69fe23af4ba4e883f28",
         "percee_individuelle": "7dda924ea183a11583d3539da5cadd0b95d46733059d7d6901729da617f28021",
         "profondeur_1v1": "72001bb8a4e7e0a03cbc38616bc13fa468f342f5adce9e38c2327126666ad988",
         "recuperation_haute": "85d5747c251c864ab0ec20bd5ff5a8cc078a9fd63d034ab7b26c2102005fc931",
@@ -1747,10 +1779,10 @@ class TestRoleGeometry:
         second, _ = self._build(8.0, "cb0", PitchPoint(0.1, 0.4))
         assert first.to_json() == second.to_json()
 
-    # Chantier 1, 1c (15/10/2026) : liste DÉCROISSANTE au fil des sous-étapes (1e-1 a retiré les siens, 1f retire "corner" --
-    # "penalty" restera dans cette liste même après 1f, voir le commit suivant) -- garde-fou qu'un gabarit pas encore migré ne
-    # reçoive pas de géométrie par erreur. Ne jamais revenir à "aucun gabarit" : un gabarit migré doit sortir de cette liste, pas
-    # la faire disparaître.
+    # Chantier 1, 1c (15/10/2026) : liste DÉCROISSANTE au fil des sous-étapes (1e-1 et 1f ont retiré les leurs) -- garde-fou qu'un
+    # gabarit pas encore migré ne reçoive pas de géométrie par erreur. Ne jamais revenir à "aucun gabarit" : un gabarit migré doit
+    # sortir de cette liste, pas la faire disparaître. "penalty" y reste : ses supports sont désormais repositionnés (1f), mais via
+    # une position de départ remplacée dans `build_penalty`, jamais via `Role.geometry` (incompatible avec `ANCHOR_LATERAL_SHIFT`).
     _NOT_YET_MIGRATED = ("coup_franc", "penalty")
 
     def test_templates_not_yet_migrated_carry_no_geometry(self):

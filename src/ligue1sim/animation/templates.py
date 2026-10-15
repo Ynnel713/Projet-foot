@@ -91,6 +91,13 @@ _PENALTY_RUNUP_MIN_M = 6.0  # longueur de l'élan du tireur : 6 à 9 m
 _PENALTY_RUNUP_MAX_M = 9.0
 _PENALTY_RUNUP_ANGLE_MAX_DEG = 10.0  # angle d'approche : +-10 degres autour de l'axe tireur -> but (aléa D8)
 
+# Chantier 1, 1f (15/10/2026) -- coéquipiers du tireur, au bord de la surface de réparation (ligne des 16,5 m), de part et d'autre
+# de l'axe tireur -> but (jamais le même côté pour les deux). Constantes proposées en conception, soumises à validation du
+# propriétaire : écart latéral de 6 à 15 m de l'axe (reste dans la largeur de la surface, environ 20,16 m de chaque côté).
+_PENALTY_SUPPORT_EDGE_X = 1.0 - PENALTY_AREA_DEPTH_M / PITCH_LENGTH_M
+_PENALTY_SUPPORT_LATERAL_MIN_M = 6.0
+_PENALTY_SUPPORT_LATERAL_MAX_M = 15.0
+
 # Phase 6, B7-a (14/10/2026) -- point du coup franc direct : constantes produit validées par le propriétaire. Remplace la zone de
 # l'événement (case de la grille perturbée par `engine/narrative.py` : 31 à 53 m du but, médiane 45 m, jamais sous 25 m), qui n'est
 # plus lue pour un coup franc. Le ballon est posé hors de la surface de réparation (sinon ce serait un penalty).
@@ -1823,15 +1830,38 @@ def penalty_runup_start(event_ref: str) -> PitchPoint:
     )
 
 
+def penalty_support_position(event_ref: str, role_name: str) -> PitchPoint:
+    """Position de départ d'un coéquipier du tireur (chantier 1, 1f) : au bord de la surface de réparation (ligne des 16,5 m),
+    décalé latéralement de `_PENALTY_SUPPORT_LATERAL_MIN_M` à `_MAX_M` de l'axe tireur -> but. Le côté (tiré une fois par
+    événement) est le même pour les deux rôles, "support2" prenant systématiquement le côté opposé à "support1" -- jamais les
+    deux coéquipiers du même côté. Déterministe (sha256 de `event_ref`)."""
+    side = 1.0 if _flight_unit(event_ref, "penalty_support_side") >= 0.5 else -1.0
+    if role_name == "support2":
+        side = -side
+    lateral_m = _PENALTY_SUPPORT_LATERAL_MIN_M + _flight_unit(event_ref, f"penalty_support_lateral_{role_name}") * (
+        _PENALTY_SUPPORT_LATERAL_MAX_M - _PENALTY_SUPPORT_LATERAL_MIN_M
+    )
+    return PitchPoint(x=_PENALTY_SUPPORT_EDGE_X, y=0.5 + side * lateral_m / PITCH_WIDTH_M)
+
+
 def build_penalty(
     event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None,
     opponent_lineup: Lineup | None = None,
 ) -> Sequence:
     """Phase 6, B6-a : le ballon est posé au point de penalty réglementaire (la zone de l'événement n'est plus lue) et le
-    tireur s'élance depuis un point d'élan (`penalty_runup_start`) : seule la position de départ du tireur est remplacée."""
-    scorer = _resolve_roles(event, lineup, ("scorer",))["scorer"]
+    tireur s'élance depuis un point d'élan (`penalty_runup_start`) : seule la position de départ du tireur est remplacée.
+
+    Chantier 1, 1f (15/10/2026) : les deux coéquipiers (`support1`/`support2`) partent désormais du bord de la surface
+    (`penalty_support_position`) plutôt que de leur position de formation brute (mesurée à 70 m en médiane de la surface avant
+    cette migration -- sans lien avec l'événement). Pas de `RoleGeometry` ici (ANCHOR_LATERAL_SHIFT et géométrie ne sont pas
+    cumulables sur un même rôle) : même mécanisme que l'élan du tireur, position de départ remplacée avant l'appel générique."""
+    resolved = _resolve_roles(event, lineup, ("support1", "support2", "scorer"))
     event_ref = f"goal:{event.club_name}:{event.scorer}:{event.minute}"
-    starts = {**start_positions, player_id_of(scorer): penalty_runup_start(event_ref)}
+    starts = dict(start_positions)
+    starts[player_id_of(resolved["scorer"])] = penalty_runup_start(event_ref)
+    for role_name in ("support1", "support2"):
+        if role_name in resolved:
+            starts[player_id_of(resolved[role_name])] = penalty_support_position(event_ref, role_name)
     return build_from_template(TEMPLATES["penalty"], event, lineup, starts, outcome, opponent_lineup)
 
 
