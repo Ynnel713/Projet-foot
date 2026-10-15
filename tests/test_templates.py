@@ -524,18 +524,21 @@ class TestSegmentSpeedHeadroom:
         ratio = self._worst_ratio(name, _lineup())
         assert ratio < 1.0, f"{name} exige {ratio:.2f}x v_max sur son segment le plus dur -- devient \"impossible\""
 
-    def test_recuperation_haute_is_the_closest_to_the_critical_threshold(self):
+    def test_but_gag_is_the_closest_to_the_critical_threshold(self):
         # Constat du 23/09/2026 (voir docs/simulation_physique_archi.md,
         # "Point B") -- "une_deux" était le pire jusqu'à sa migration en
         # Chantier 1, 1d (15/10/2026, géométrie de rôle sur scorer/assist) :
         # son pire ratio a baissé sous celui de "recuperation_haute", qui
-        # n'est pas encore migré (famille C, sous-étape 1e-1) et prend donc
-        # sa place. Re-vérifié, pas corrigé en silence -- si ce n'est plus
-        # vrai après 1e-1, la table a de nouveau changé et mérite d'être
-        # revérifiée.
+        # n'était pas encore migré (famille C, sous-étape 1e-1) et prenait
+        # donc sa place. Chantier 1, 1e-1, 1/2 (15/10/2026) : "recuperation_haute"
+        # migré (durée 5,0 -> 6,0 s, géométrie de rôle), son pire ratio baisse
+        # à 0,45 -- "but_gag", pas encore migré à ce commit, prend sa place.
+        # Re-vérifié, pas corrigé en silence -- si ce n'est plus vrai après la
+        # migration de "but_gag" (1e-1, 2/2), la table a de nouveau changé et
+        # mérite d'être revérifiée.
         lineup = _lineup()
         ratios = {name: self._worst_ratio(name, lineup) for name in BUILDERS}
-        assert max(ratios, key=ratios.get) == "recuperation_haute"
+        assert max(ratios, key=ratios.get) == "but_gag"
 
 
 class TestContreAttaqueSupport1Carries:
@@ -787,7 +790,14 @@ class TestTemplateStructureUnchangedByPhysicsTags:
     tire désormais par poste attendu et proximité, au lieu de l'ordre alphabétique -- voir `TestTacticalSupports`), ce qui peut changer
     QUEL joueur tient ce rôle, pas seulement sa position. `une_deux` porte en plus une durée allongée (4,0 -> 5,0 s) ; `contre_attaque`
     aussi (8,0 -> 9,0 s) ; `construction_placee` est inchangée (14,0 s). Preuve de cause unique : avec les anciennes durées et
-    `geometry=None` sur tous les rôles de ces 3 gabarits, le code redonne exactement les 3 anciennes empreintes ci-dessus."""
+    `geometry=None` sur tous les rôles de ces 3 gabarits, le code redonne exactement les 3 anciennes empreintes ci-dessus.
+
+    Dixième exception délibérée (Chantier 1, 1e-1, 15/10/2026) : `but_gag` et `recuperation_haute` ont une empreinte mise à jour --
+    même mécanisme que la huitième/neuvième exception (cible inchangée, seul le départ devient réaliste), avec une nouveauté : les
+    DEUX rôles génériques (`support1` ET `support2`) deviennent tactiques dans le même gabarit, PREMIER cas du chantier à puiser
+    deux rôles dans le même pool de postes (voir `TestTacticalSupports`). `recuperation_haute` porte en plus une durée allongée
+    (5,0 -> 6,0 s) ; `but_gag` est inchangée (5,0 s). Preuve de cause unique : avec l'ancienne durée et `geometry=None` sur tous les
+    rôles de ces 2 gabarits, le code redonne exactement les 2 anciennes empreintes ci-dessus."""
 
     _EXPECTED_STRUCTURE_HASH = {
         "but_gag": "82585674d2a0633eced9f75a39ee5e914643a8c1b25a47d545fc70c8965e29db",
@@ -800,7 +810,7 @@ class TestTemplateStructureUnchangedByPhysicsTags:
         "penalty": "7972e9a2d7afe7e1caa593950d3b7fa5e7cde43195b04a14bcc0c77a0b38a888",
         "percee_individuelle": "7dda924ea183a11583d3539da5cadd0b95d46733059d7d6901729da617f28021",
         "profondeur_1v1": "72001bb8a4e7e0a03cbc38616bc13fa468f342f5adce9e38c2327126666ad988",
-        "recuperation_haute": "a63fbaec00fc77ef1aaf1a99c743dd9bffdb5a4c47fd2bf65dad09f06751cd8b",
+        "recuperation_haute": "85d5747c251c864ab0ec20bd5ff5a8cc078a9fd63d034ab7b26c2102005fc931",
         "une_deux": "670afd1bace6fc57f1e267ece1b16cf73a94954c2bc5de3272646f382071adbc",
     }
 
@@ -1727,10 +1737,10 @@ class TestRoleGeometry:
         second, _ = self._build(8.0, "cb0", PitchPoint(0.1, 0.4))
         assert first.to_json() == second.to_json()
 
-    # Chantier 1, 1c (15/10/2026) : liste DÉCROISSANTE au fil des sous-étapes (1d, 1e-1, 1f retireront les leurs à leur tour) -- garde-fou
-    # qu'un gabarit pas encore migré ne reçoive pas de géométrie par erreur. Ne jamais revenir à "aucun gabarit" : un gabarit migré doit
-    # sortir de cette liste, pas la faire disparaître.
-    _NOT_YET_MIGRATED = ("coup_franc", "corner", "recuperation_haute", "penalty", "but_gag")
+    # Chantier 1, 1c (15/10/2026) : liste DÉCROISSANTE au fil des sous-étapes (1e-1 retire les siens un par un, 1f retirera les
+    # derniers) -- garde-fou qu'un gabarit pas encore migré ne reçoive pas de géométrie par erreur. Ne jamais revenir à "aucun
+    # gabarit" : un gabarit migré doit sortir de cette liste, pas la faire disparaître.
+    _NOT_YET_MIGRATED = ("coup_franc", "corner", "but_gag", "penalty")
 
     def test_templates_not_yet_migrated_carry_no_geometry(self):
         assert set(self._NOT_YET_MIGRATED) <= set(TEMPLATES)
@@ -1845,15 +1855,28 @@ class TestTacticalSupports:
         starts = self._starts(lineup, cb0=self._at(-20.0), cb1=self._at(-12.0))
         assert tpl.build_from_template(TEMPLATES[name], _goal_event(), lineup, starts).meta["roles"]["support1"] == "cb1"
 
+    def test_two_tactical_roles_in_the_same_template_never_draw_the_same_player(self):
+        # Chantier 1, 1e-1 (15/10/2026) : support1 ET support2 de recuperation_haute/but_gag sont désormais tactiques, PREMIER cas du
+        # chantier à puiser deux rôles génériques dans le même pool de postes (tirés dans l'ordre alphabétique des noms de rôle --
+        # support1 avant support2 -- chacun exclu du pool restant pour l'autre, mécanisme 1b inchangé, jamais encore exercé avec deux
+        # rôles tactiques simultanés). Ce test l'exerce sur les deux gabarits réels.
+        lineup = _lineup()
+        starts = self._starts(lineup)
+        roles = tpl.build_from_template(TEMPLATES["recuperation_haute"], _goal_event(), lineup, starts).meta["roles"]
+        assert roles["support1"] != roles["support2"]
+        by_name = {p.name: p for p in lineup.players}
+        assert by_name[roles["support1"]].poste in {"MOC", "MC", "AG", "AD", "SA", "ATT", "BU"}
+        assert by_name[roles["support2"]].poste in {"MOC", "MC", "AG", "AD", "SA", "ATT", "BU"}
+
     def test_roles_without_geometry_stay_alphabetical(self):
         lineup = _lineup()
         starts = self._starts(lineup, lb=self._at(-1.0))  # sans géométrie, la proximité n'intervient pas
         plain = tpl.Role("support1", ANCHOR_STATIC, (tpl.RoleFrame(0.0, 0.0), tpl.RoleFrame(1.0, 1.0)))
         assert self._resolve([plain], starts)["support1"] == "ad"  # premier nom par ordre alphabétique hors buteur, passeur et gardien
         assert tpl._resolve_roles(_goal_event(), lineup, ("scorer", "assist", "support1"))["support1"].name == "ad"  # appel d'avant 1b
-        # Précondition de CE test : "recuperation_haute" n'est pas encore migré (ses supports n'ont pas de géométrie) -- voir
-        # test_templates_not_yet_migrated_carry_no_geometry pour la liste à jour par gabarit (1d a migré le support1 tactique de
-        # contre_attaque, qui ne peut donc plus servir d'exemple ici).
-        assert all(role.geometry is None for role in TEMPLATES["recuperation_haute"].roles if role.name not in ("scorer", "assist"))
-        sequence = BUILDERS["recuperation_haute"](_goal_event(), lineup, _start_positions(lineup))
+        # Précondition de CE test : "corner" n'est pas encore migré (son support1 n'a pas de géométrie) -- voir
+        # test_templates_not_yet_migrated_carry_no_geometry pour la liste à jour par gabarit (1e-1 a migré les deux supports tactiques
+        # de recuperation_haute/but_gag, qui ne peuvent donc plus servir d'exemple ici).
+        assert all(role.geometry is None for role in TEMPLATES["corner"].roles if role.name not in ("scorer", "assist"))
+        sequence = BUILDERS["corner"](_goal_event(), lineup, _start_positions(lineup))
         assert sequence.meta["roles"]["support1"] == "ad"

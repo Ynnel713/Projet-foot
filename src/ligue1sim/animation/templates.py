@@ -1513,9 +1513,17 @@ _TEMPLATE_RECUPERATION_HAUTE = Template(
     # marque seul -- "support1"/"support2" pressent, "support1" récupère,
     # relais rapide vers "scorer" qui conclut ("immédiate" reste vrai : le
     # temps entre récupération et tir est court, voir la durée).
+    #
+    # Chantier 1, 1e-1 (15/10/2026) : durée 5,0 -> 6,0 s (seul gabarit, avec but_gag et corner, où le critère D <= 2,25 x T² mordait
+    # avant migration -- le gain réaliste vient ici autant de la durée allongée que de la géométrie) et géométrie de rôle sur les
+    # trois rôles (cibles inchangées -- support1/support2/scorer -> zone de tir, les deux presseurs convergent avec le buteur).
+    # support1 ET support2 deviennent tactiques, PREMIER gabarit du chantier avec deux rôles génériques tactiques dans le même pool
+    # de postes (MOC, MC, AG, AD, SA, ATT, BU -- proposés en conception, à confirmer par la mesure réelle) : `_resolve_roles` les
+    # résout dans l'ordre alphabétique (support1 avant support2), chacun exclu du pool restant pour l'autre (mécanisme 1b inchangé,
+    # jamais encore exercé avec deux rôles tactiques simultanés). Ballon non touché (`ball_owner`/`ball_position` inchangés).
     name="recuperation_haute",
     weight=0.8,
-    duration=5.0,
+    duration=6.0,
     roles=(
         # ANCHOR_SCORER, pas ANCHOR_STATIC (fix du 23/09/2026) : le
         # commentaire ci-dessus décrit un pressing ACTIF ("support1/support2
@@ -1523,9 +1531,15 @@ _TEMPLATE_RECUPERATION_HAUTE = Template(
         # son propre texte. Progress final relevé (0.4->0.5, 0.45->0.55) :
         # les deux avancent ensemble en pressant vers l'avant, couplage à
         # event.zone assumé (voir contre_attaque).
-        Role("support1", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.3), RoleFrame(0.55, 0.4), RoleFrame(1.0, 0.5))),
-        Role("support2", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.35), RoleFrame(0.55, 0.45), RoleFrame(1.0, 0.55))),
-        Role("scorer", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.2), RoleFrame(0.55, 0.5), RoleFrame(1.0, 1.0))),
+        Role(
+            "support1", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.3), RoleFrame(0.55, 0.4), RoleFrame(1.0, 0.5)),
+            geometry=RoleGeometry(GEOM_ZONE, preferred_postes=frozenset({"MOC", "MC", "AG", "AD", "SA", "ATT", "BU"})),
+        ),
+        Role(
+            "support2", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.35), RoleFrame(0.55, 0.45), RoleFrame(1.0, 0.55)),
+            geometry=RoleGeometry(GEOM_ZONE, preferred_postes=frozenset({"MOC", "MC", "AG", "AD", "SA", "ATT", "BU"})),
+        ),
+        Role("scorer", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.2), RoleFrame(0.55, 0.5), RoleFrame(1.0, 1.0)), geometry=RoleGeometry(GEOM_ZONE)),
     ),
     tags=((0.0, "pressing"), (0.3, "pressing"), (0.55, "recuperation"), (1.0, "tir")),
     ball_owner=((0.0, "support1"), (0.3, None), (0.55, "support1"), (1.0, "scorer")),
