@@ -6,7 +6,7 @@ Document de planification architecte. Établi le 15/10/2026 à partir de l'état
 
 ## 1. PRÉAMBULE — ÉTAT ACTUEL
 
-Depuis B6-c, le Bloc B (physique de balle) est clos (15 sous-étapes, B1 à B8-c1). Le Bloc A (mouvement des joueurs) est ouvert : l'étape 0 (assainissement de l'effectif affiché) est close, le chantier 1 (géométrie macro des gabarits) est en cours, avec 1a, 1b et 1c (famille A) validées. Prochaine sous-étape : 1d.
+Depuis B6-c, le Bloc B (physique de balle) est clos (15 sous-étapes, B1 à B8-c1). Le Bloc A (mouvement des joueurs) est ouvert : l'étape 0 (assainissement de l'effectif affiché) est close, le chantier 1 (géométrie macro des gabarits) est en cours, avec 1a, 1b, 1c (famille A) et 1d (famille B) validées. Prochaine sous-étape : 1e-1.
 
 Faits mesurables à ce jour :
 
@@ -85,11 +85,16 @@ Sous-étapes :
 - Commits (4, un par gabarit) : percee_individuelle f67fae5, debordement_centre_tete c35b9a4, profondeur_1v1 00f6c94, decalage_enroulee 4059400.
 - Dépendances : 1a. Statut : validée.
 
-**1d — famille B : une_deux, contre_attaque, construction_placee. À FAIRE.**
-- Objectif : migrer la géométrie, durées 4 → 5 et 8 → 9 (construction reste à 14), support1 tactique (poste attendu : DC, LB, RB, MDC, MC).
+**1d — famille B : une_deux, contre_attaque, construction_placee. VALIDÉE (15/10/2026).**
+- Objectif : migrer la géométrie, durées 4 → 5 et 8 → 9 (construction reste à 14), support1 tactique (poste attendu : DC, LB, RB, MDC, MC) sur contre_attaque ET construction_placee (décision du propriétaire : même traitement, rôle structurellement identique). L'assist, qui bouge beaucoup dans ces 3 gabarits (contrairement à celui de profondeur_1v1 en 1c), est migré aussi.
 - Périmètre : `templates.py` ; empreintes des 3 gabarits ; témoins contre_attaque et construction_placee.
-- Gain attendu : clips au-dessus de 1,05 fois vmax une_deux 94 → 75, contre_attaque 213 → 61, construction_placee 144 → 34. Passes supérieures à 30 m/s sur une_deux 50 → 0. Support1 de contre_attaque : MC dans 175 clips sur 213 mesurés.
-- Dépendances : 1a, 1b. Statut : à faire.
+- Gain mesuré (pipeline réel, 100 matchs, graine 20260923, moteur identique) : clips au-dessus de 1,05 fois vmax une_deux 94 → 15 (prédit 75), contre_attaque 213 → 46 (prédit 61), construction_placee 167 → 25 (prédit 34) — meilleur que prédit sur les 3. Écart d'arrivée du scorer médian ramené à 0,31 / 0,47 / 0,46 m. Les 9 autres gabarits sont 100 % identiques clip à clip.
+- Passes > 30 m/s : une_deux 52 → 6 (prédit 0 ; nette amélioration, résiduel documenté dans le code aux côtés de celui de profondeur_1v1, à reprendre en 1g/1h) ; contre_attaque et construction_placee 0 → 0 (le risque de régression identifié en cadrage — un rôle géométrisé qui reçoit à un t_ratio non terminal — ne s'est pas matérialisé : les deux bouts du segment support1→assist sont géométrisés simultanément dans ces deux gabarits, contrairement à profondeur_1v1 où seul le receveur l'était ; confirmé par simulafoot-reviewer).
+- Tirage tactique mesuré : MC choisi dans 95 % des clips (203/213 contre_attaque, 159/167 construction_placee), LB et MDC jamais tirés — structurel (géométrie de formation : LB en largeur, MDC sur une ligne plus basse que MC). À confirmer par le propriétaire comme résultat voulu plutôt qu'un jeu de postes mal calibré.
+- "une_deux" était le gabarit le plus tendu en vitesse exigée depuis le 23/09/2026 ; ce n'est plus le cas après sa migration (recuperation_haute, pas encore migré, prend sa place — signal qui pointe vers 1e-1).
+- Revue `simulafoot-reviewer` : aucun défaut bloquant ; un commentaire de dette ajouté sur `une_deux` (résiduel de passes > 30 m/s) suite à sa recommandation.
+- Commits (3, un par gabarit) : une_deux cb436f4, contre_attaque 3c05319, construction_placee d44547b.
+- Dépendances : 1a, 1b. Statut : validée.
 
 **1e-1 — famille C, géométrie des joueurs : recuperation_haute, but_gag. À FAIRE.**
 - Objectif : course réduite pour respecter D inférieur ou égal à 2,25 fois T au carré (le critère ne mord que dans ces deux gabarits et le corner). Durée de recuperation 5 → 6. Postes attendus : MOC, MC, AG, AD, SA, ATT, BU pour recuperation ; BU, SA, ATT, MOC pour but_gag. Sans toucher au ballon.
@@ -229,7 +234,7 @@ Chantier 1 (1g et 1h) :
 
 1. ~~Validation de 1b.~~ Faite (15/10/2026).
 2. ~~1c (famille A).~~ Faite (15/10/2026).
-3. 1d (famille B).
+3. ~~1d (famille B).~~ Faite (15/10/2026).
 4. 1e-1 (famille C, géométrie).
 5. 1f (famille D).
 6. 1e-2 (ballon dynamique de recuperation_haute).
