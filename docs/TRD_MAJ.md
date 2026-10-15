@@ -70,6 +70,21 @@ La sous-étape 1f du chantier 1 a été validée et commitée.
 |---|---|---|
 | pytest (suite principale) | 1 657 passés, 12 désélectionnés | 1 659 passés, 12 désélectionnés |
 
+## v1.5 — 15/10/2026 (état du dépôt : 939e2c1)
+
+La sous-étape 1e-2 du chantier 1 a été validée et commitée (ticket 41 non fermé : famille apparentée, pas le même cas exact).
+
+| ID | Statut v1.4 | Statut v1.5 | Preuve |
+|---|---|---|---|
+| EG-JOU-05 (Bloc A) | Partiel : 1a à 1f validées (familles A à D migrées) ; 1e-2, 1g, 1h restantes | Partiel : 1a à 1f et 1e-2 validées ; 1g, 1h restantes | voir ci-dessous |
+| EG-JOU-10 (géométrie de rôle) | Partiel : 9 gabarits sur 12 migrés via `Role.geometry` ; penalty corrigé par un mécanisme différent | Inchangé (1e-2 ne migre pas de rôle, corrige une position de ballon fixe via le nouveau champ `Template.dynamic_ball_position`) | 939e2c1 |
+| Dette « ball_position fixe » (voir DETTE en tête de `templates.py`) | 2 gabarits concernés (corner, recuperation_haute), tous deux avec une position fixe approximative posée le 23/09/2026 | 1 gabarit restant (`corner`, hors périmètre de 1e-2) ; `recuperation_haute` corrigé : ballon au milieu réel de support1/support2 | 939e2c1 |
+
+### Suite de tests (indicateurs)
+| Indicateur | v1.4 | v1.5 |
+|---|---|---|
+| pytest (suite principale) | 1 659 passés, 12 désélectionnés | 1 662 passés, 12 désélectionnés |
+
 ### Écarts à corriger au prochain remaniement du PDF
 - Section 9 : B6-d, B6-e, B7, B8 passent à « Implémenté » ; le Bloc A passe à « En cours ».
 - Section 5.2 : B7 et B8 passent à « Implémenté ».

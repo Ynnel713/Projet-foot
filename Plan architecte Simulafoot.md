@@ -6,7 +6,7 @@ Document de planification architecte. Établi le 15/10/2026 à partir de l'état
 
 ## 1. PRÉAMBULE — ÉTAT ACTUEL
 
-Depuis B6-c, le Bloc B (physique de balle) est clos (15 sous-étapes, B1 à B8-c1). Le Bloc A (mouvement des joueurs) est ouvert : l'étape 0 (assainissement de l'effectif affiché) est close, le chantier 1 (géométrie macro des gabarits) est en cours, avec 1a, 1b, 1c (famille A), 1d (famille B), 1e-1 (famille C) et 1f (famille D) validées. Prochaine sous-étape : 1e-2 (ballon dynamique de recuperation_haute).
+Depuis B6-c, le Bloc B (physique de balle) est clos (15 sous-étapes, B1 à B8-c1). Le Bloc A (mouvement des joueurs) est ouvert : l'étape 0 (assainissement de l'effectif affiché) est close, le chantier 1 (géométrie macro des gabarits) est en cours, avec 1a, 1b, 1c (famille A), 1d (famille B), 1e-1 (famille C), 1f (famille D) et 1e-2 (ballon dynamique) validées. Prochaine sous-étape : 1g (test pipeline réel).
 
 Faits mesurables à ce jour :
 
@@ -118,10 +118,14 @@ Sous-étapes :
 - Commits (2, un par gabarit) : corner 9a19a19, penalty 624606a.
 - Dépendances : 1a, 1b, 1e-1 (critère d'accélération). Statut : validée.
 
-**1e-2 — ballon dynamique de recuperation_haute. À FAIRE.**
+**1e-2 — ballon dynamique de recuperation_haute. VALIDÉE (15/10/2026).**
 - Objectif : le `ball_position` figé (0,6 ; 0,5) à t_ratio 0,3 devient dynamique (milieu des deux presseurs). Diagnostic préalable contre `ball.py` (branche « ballon immobile ») et ticket 41.
-- Périmètre : `templates.py` (builder par événement) ; test de ce gabarit. Exception sur `ball.py` à demander si le diagnostic l'exige.
-- Dépendances : 1e-1. Risque : élevé (le ballon est touché). Statut : à faire.
+- Diagnostic (`simulafoot-architect`, lecture seule) : `ball.py` n'a pas besoin d'être touché, aucune exception demandée. `ball_state_at` ne lit jamais `Template.ball_position` -- il consomme les coordonnées déjà résolues par `build_from_template`, qui calcule les positions de tous les rôles pour un `t_ratio` AVANT de résoudre le ballon pour ce même `t_ratio` : le milieu de deux rôles est calculable intégralement dans `templates.py`.
+- Périmètre réel : nouveau champ optionnel `Template.dynamic_ball_position` (vide par défaut, aucun effet sur les 11 autres gabarits), vérifié par `_validate_template` ; `recuperation_haute` seul l'utilise (`(0.3, "support1", "support2")`, milieu strict, lecture littérale du mot « milieu » du plan, aucune pondération). `ball.py` non touché, conforme au diagnostic.
+- Mesure pipeline réel (100 matchs, graine 20260923, moteur identique) : 176/189 images de clips `recuperation_haute` changées (le milieu diffère du point fixe sur la plupart des clips) ; aucun effet sur les 11 autres gabarits (100 % identiques) ; indicateurs globaux (dépassements 1,05× vmax, sauts, arrivée du scorer) stables à la marge (348 → 351, bruit de mesure, pas une régression).
+- Revue `simulafoot-reviewer` : aucun défaut bloquant. Deux remarques mineures notées (repli non testé si un presseur n'est pas résolu ; chevauchement théorique owner/dynamique non testé) -- ni l'un ni l'autre ne se produit sur ce gabarit aujourd'hui.
+- Commit (1, gabarit unique) : 939e2c1.
+- Dépendances : 1e-1. Risque : élevé (le ballon est touché) -- confirmé maîtrisé : `ball.py` non modifié. Statut : validée.
 
 **1g — test pipeline réel (ticket 46 refondu). À FAIRE.**
 - Objectif : remplacer `TestSegmentSpeedHeadroom` (aveugle : géométrie synthétique) par un test à deux niveaux : analytique (matrice zones de base × postes DC, MC, BU) et pipeline (`build_clips` sur environ 10 matchs de la graine d'audit, vitesse image par image des rôles scriptés).
@@ -226,7 +230,7 @@ Chantier 1 (1g et 1h) :
 |---|---|---|---|
 | 1b | Validation de la livraison des supports tactiques | Architecte | Validée (15/10/2026) |
 | Postes attendus | Ensembles de postes par gabarit (renseignés à 1d, 1e-1, 1f) | Architecte | Proposés, validés en conception |
-| 1e-2 | Exception sur `ball.py` si le ballon dynamique l'exige | Architecte | À venir |
+| 1e-2 | Exception sur `ball.py` si le ballon dynamique l'exige | Architecte | Résolue (15/10/2026) : pas nécessaire, `ball.py` non touché |
 | A1.4 | Rattachement du pressing et du marquage à A2.1 ou A2.3 | Architecte | À trancher |
 | Ticket 42 | Lieu de traitement des vrais lobs : A1.6 ou B9 dédié | Architecte | À trancher |
 | Tickets 17 et 45 | Rattachement : A1.6 ou A2.4 | Architecte | À trancher |
@@ -247,7 +251,7 @@ Chantier 1 (1g et 1h) :
 3. ~~1d (famille B).~~ Faite (15/10/2026).
 4. ~~1e-1 (famille C, géométrie).~~ Faite (15/10/2026).
 5. ~~1f (famille D).~~ Faite (15/10/2026).
-6. 1e-2 (ballon dynamique de recuperation_haute).
+6. ~~1e-2 (ballon dynamique de recuperation_haute).~~ Faite (15/10/2026).
 7. 1g (test pipeline réel, ticket 46).
 8. 1h (documentation, tickets 46 à 48).
 9. A1.1 (inertie, accélération), puis retiming des t_ratio de passe.
