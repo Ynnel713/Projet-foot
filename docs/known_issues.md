@@ -769,6 +769,22 @@ Dans les 14 cas, le segment est une passe au sol (`pass_ground`) et aucune réce
 
 ---
 
+## 44. Attribution moteur vs rendu sur les buts réels : rôles absents à la minute
+
+**Description.** Sur 100 matchs (graine d'audit 20260923, HEAD ead10dd), 3 buts réels sur 288 ont un tireur ou un assist attribué par le moteur qui est absent du terrain à la minute de l'événement selon la convention stricte du rendu (sortant et expulsé absents dès la minute du remplacement ou de l'expulsion, entrant présent dès cette minute). Les trois sont des minutes de frontière : match 2 événement 6 (tireur `home_cm0`, minute 71, sortant), match 5 événement 14 (assist `home_rw0`, minute 64, sortant), match 96 événement 11 (tireur `home_am0`, minute 70, sortant). Il n'y a aucune absence franche (entrant futur ou sortant antérieur) d'un rôle attribué par le moteur.
+
+**Cause.** Le moteur utilise une fenêtre de présence inclusive `[minute_on, min(minute_off, minute_expelled)]` (`events.py`, `_SquadEntry.minute_range`) : à la minute d'un remplacement, le sortant et l'entrant sont tous deux présents pour lui. Le rendu (0a, 0b) applique une convention stricte, où le sortant est absent dès cette minute.
+
+**Correctif pressenti.** Aligner les deux conventions : soit exposer la fenêtre inclusive du moteur et afficher les deux joueurs à la minute de frontière, soit imposer au moteur de ne pas attribuer un but au sortant à sa minute de sortie. Hors périmètre de 0b-1 (interdit sur le moteur). Les buts réels ne passent pas par le remplacement du tirage narratif de 0b-1.
+
+**Hors ticket.** Les 21 autres buts réels dont un rôle est absent concernent `support1` ou `support2`, choisis par `_resolve_roles` dans l'effectif affiché : ils relèvent de l'étape 0b-2, pas de ce ticket.
+
+**Fichiers concernés.** `src/ligue1sim/events.py` (fenêtre de présence), `engine/narrative_player.py` (effectif affiché).
+
+**Priorité.** Basse. **Résolution.** À rattacher au Bloc A (A1.6 ou A2.4, à trancher). **Statut.** Ouvert. Non corrigé.
+
+---
+
 # Décisions du propriétaire (entrées documentaires — ce ne sont pas des tickets)
 
 ## Décision propriétaire — dispositifs clubs conservés (D3)
