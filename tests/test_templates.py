@@ -792,7 +792,7 @@ class TestTemplateStructureUnchangedByPhysicsTags:
     _EXPECTED_STRUCTURE_HASH = {
         "but_gag": "82585674d2a0633eced9f75a39ee5e914643a8c1b25a47d545fc70c8965e29db",
         "construction_placee": "65b5ad5b7323521829e6c056ae2d3f43df29bfb79f46336be1fe4437565bf0ae",
-        "contre_attaque": "4273ab175e79155b86d96e879cc9ecb93fa85d675f48e93151212d8050c34b1f",
+        "contre_attaque": "76bacb1b0545a25c661dc61635984d2cb042ed0ee29cc928881da8eb7b810a39",
         "corner": "5086502e6020d2ff4c293776dee443643211b703cc4cb3eb37474f585e6eefbf",
         "coup_franc": "ff70b15275eb85d5baefeb5acea5f4a81e25319618a6e25cc978600aca72f959",
         "debordement_centre_tete": "9a5039d4b4d9112586b7676f475bc7e7cec54ce265278006814c3dae681a95f8",
@@ -1730,7 +1730,7 @@ class TestRoleGeometry:
     # Chantier 1, 1c (15/10/2026) : liste DÉCROISSANTE au fil des sous-étapes (1d, 1e-1, 1f retireront les leurs à leur tour) -- garde-fou
     # qu'un gabarit pas encore migré ne reçoive pas de géométrie par erreur. Ne jamais revenir à "aucun gabarit" : un gabarit migré doit
     # sortir de cette liste, pas la faire disparaître.
-    _NOT_YET_MIGRATED = ("contre_attaque", "construction_placee", "coup_franc", "corner", "recuperation_haute", "penalty", "but_gag")
+    _NOT_YET_MIGRATED = ("construction_placee", "coup_franc", "corner", "recuperation_haute", "penalty", "but_gag")
 
     def test_templates_not_yet_migrated_carry_no_geometry(self):
         assert set(self._NOT_YET_MIGRATED) <= set(TEMPLATES)
@@ -1838,15 +1838,21 @@ class TestTacticalSupports:
         starts = self._starts(lineup, cb0=self._at(-20.0), cb1=self._at(-12.0))
         assert tpl.build_from_template(template, _goal_event(), lineup, starts).meta["roles"]["support1"] == "cb1"
 
+    def test_contre_attaque_support1_is_drawn_tactically_on_the_real_template(self):
+        # Chantier 1, 1d (15/10/2026) : support1 de contre_attaque est désormais tactique (postes attendus DC/LB/RB/MDC/MC).
+        lineup = _lineup()
+        starts = self._starts(lineup, cb0=self._at(-20.0), cb1=self._at(-12.0))
+        assert tpl.build_from_template(TEMPLATES["contre_attaque"], _goal_event(), lineup, starts).meta["roles"]["support1"] == "cb1"
+
     def test_roles_without_geometry_stay_alphabetical(self):
         lineup = _lineup()
         starts = self._starts(lineup, lb=self._at(-1.0))  # sans géométrie, la proximité n'intervient pas
         plain = tpl.Role("support1", ANCHOR_STATIC, (tpl.RoleFrame(0.0, 0.0), tpl.RoleFrame(1.0, 1.0)))
         assert self._resolve([plain], starts)["support1"] == "ad"  # premier nom par ordre alphabétique hors buteur, passeur et gardien
         assert tpl._resolve_roles(_goal_event(), lineup, ("scorer", "assist", "support1"))["support1"].name == "ad"  # appel d'avant 1b
-        # Précondition de CE test : aucun rôle générique (support) n'a encore de géométrie (1c n'a migré que scorer/assist de la
-        # famille A, jamais un support -- voir test_templates_not_yet_migrated_carry_no_geometry pour la liste à jour par gabarit).
-        for template in TEMPLATES.values():
-            assert all(role.geometry is None for role in template.roles if role.name not in ("scorer", "assist"))
-        sequence = BUILDERS["contre_attaque"](_goal_event(), lineup, _start_positions(lineup))
+        # Précondition de CE test : "recuperation_haute" n'est pas encore migré (ses supports n'ont pas de géométrie) -- voir
+        # test_templates_not_yet_migrated_carry_no_geometry pour la liste à jour par gabarit (1d a migré le support1 tactique de
+        # contre_attaque, qui ne peut donc plus servir d'exemple ici).
+        assert all(role.geometry is None for role in TEMPLATES["recuperation_haute"].roles if role.name not in ("scorer", "assist"))
+        sequence = BUILDERS["recuperation_haute"](_goal_event(), lineup, _start_positions(lineup))
         assert sequence.meta["roles"]["support1"] == "ad"

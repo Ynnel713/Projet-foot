@@ -1298,7 +1298,11 @@ def _score_but_gag(context: TemplateContext) -> float:
 _TEMPLATE_CONTRE_ATTAQUE = Template(
     name="contre_attaque",
     weight=1.2,
-    duration=8.0,
+    # Chantier 1, 1d (15/10/2026) : durée 8,0 -> 9,0 s et géométrie de rôle sur les trois rôles (cibles inchangées -- support1/scorer
+    # -> zone de tir, assist -> zone d'assist). support1 devient en plus un rôle TACTIQUE (`_resolve_roles`/`_pick_support`, 1b) : le
+    # joueur récupérateur profond est désormais le joueur de champ dont la position de formation est la plus proche de la zone de tir,
+    # parmi les postes attendus pour ce rôle (DC, LB, RB, MDC, MC -- proposés en conception, à confirmer par la mesure réelle).
+    duration=9.0,
     roles=(
         # ANCHOR_SCORER, pas ANCHOR_STATIC (bug corrigé le 23/09/2026 : un
         # ANCHOR_STATIC fige la cible = le départ, donc TOUT progress non nul
@@ -1318,9 +1322,12 @@ _TEMPLATE_CONTRE_ATTAQUE = Template(
         # gabarit, avec le buteur qui fait son appel globalement dans l'axe,
         # l'effet reste plausible ; pas généralisé à un anchor dédié
         # (ANCHOR_CARRIER_FORWARD) tant qu'un seul gabarit en a besoin.
-        Role("support1", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.4, 0.3), RoleFrame(1.0, 0.4))),
-        Role("assist", ANCHOR_ASSIST, (RoleFrame(0.0, 0.0), RoleFrame(0.4, 0.2), RoleFrame(1.0, 1.0))),
-        Role("scorer", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.4, 0.35), RoleFrame(1.0, 1.0))),
+        Role(
+            "support1", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.4, 0.3), RoleFrame(1.0, 0.4)),
+            geometry=RoleGeometry(GEOM_ZONE, preferred_postes=frozenset({"DC", "LB", "RB", "MDC", "MC"})),
+        ),
+        Role("assist", ANCHOR_ASSIST, (RoleFrame(0.0, 0.0), RoleFrame(0.4, 0.2), RoleFrame(1.0, 1.0)), geometry=RoleGeometry(GEOM_ASSIST_ZONE)),
+        Role("scorer", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.4, 0.35), RoleFrame(1.0, 1.0)), geometry=RoleGeometry(GEOM_ZONE)),
     ),
     tags=((0.0, "recuperation"), (0.4, "progression"), (1.0, "tir")),
     ball_owner=((0.0, "support1"), (0.4, "assist"), (1.0, "scorer")),
