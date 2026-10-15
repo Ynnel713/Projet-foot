@@ -785,6 +785,20 @@ Dans les 14 cas, le segment est une passe au sol (`pass_ground`) et aucune réce
 
 ---
 
+## 45. Gardien expulsé sans remplaçant : aucune règle moteur, rendu sans gardien
+
+**Description.** Sur 100 matchs (graine d'audit 20260923, HEAD 10ce4a5), 3 gardiens titulaires sont expulsés et jamais remplacés : match 22 (`home_gk0`, minute 81), match 45 (`away_gk0`, minute 70), match 70 (`home_gk0`, minute 66). Le moteur (`events.py`) ne remplace pas un expulsé, gardien compris, et aucun joueur de champ ne prend les gants ; il continue d'utiliser la note du gardien pour la force de l'équipe. Avec l'effectif affiché filtré à la minute (étape 0b-2), l'équipe n'a plus de gardien dans 10 clips : (45, 8), (45, 9), (45, 10), (70, 15), (70, 16), (70, 17), (70, 18), (70, 19), (70, 20), (70, 21). Six de ces clips sont des tirs contre l'équipe sans gardien (dont un arrêt, (70, 18) `profondeur_1v1`, et un but, (70, 19) `contre_attaque`) ; les événements du ballon n'y nomment aucun gardien. Aucune exception n'est levée.
+
+**Correctif pressenti.** Modéliser au moteur la prise de gants par un joueur de champ désigné (effet sur les statistiques et la force de l'équipe), ou fixer une règle produit de rendu (gardien de remplacement, but vide). Hors périmètre de 0b-2 (interdit sur le moteur).
+
+**Note sur la variante D (0b-2).** Le rendu applique la règle générale : un expulsé est retiré dès la minute du carton, sans règle spéciale pour le gardien, et un remplaçant entre à la profondeur de la ligne de son poste, dans son couloir naturel, sans rattachement au sortant. Les 10 clips sans gardien restent donc ouverts. Le glissement tactique collectif après un remplacement ou une expulsion (les autres joueurs qui comblent le trou) n'est pas modélisé : il est renvoyé à l'étape A2 du Bloc A, avec les caractéristiques de coach (D7).
+
+**Fichiers concernés.** `src/ligue1sim/events.py` (expulsions), `src/ligue1sim/simulation.py` (force de l'équipe), `engine/narrative_player.py` (effectif affiché).
+
+**Priorité.** Basse. **Résolution.** Rattachement à trancher : Bloc A (A2) ou Bloc moteur. **Statut.** Ouvert. Non corrigé.
+
+---
+
 # Décisions du propriétaire (entrées documentaires — ce ne sont pas des tickets)
 
 ## Décision propriétaire — dispositifs clubs conservés (D3)
