@@ -1524,10 +1524,12 @@ _TEMPLATE_RECUPERATION_HAUTE = Template(
 _TEMPLATE_DECALAGE_ENROULEE = Template(
     name="decalage_enroulee",
     weight=0.9,
-    duration=6.0,
+    # Chantier 1, 1c (15/10/2026) : durée 6,0 -> 7,0 s et géométrie de rôle sur le scorer SEUL (cible event.zone, inchangée). L'assist
+    # reste ANCHOR_STATIC sans géométrie : il ne bouge jamais (progress toujours 0), rien à réaliser.
+    duration=7.0,
     roles=(
         Role("assist", ANCHOR_STATIC, (RoleFrame(0.0, 0.0), RoleFrame(0.4, 0.0), RoleFrame(1.0, 0.0))),
-        Role("scorer", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.4, 0.3), RoleFrame(1.0, 1.0))),
+        Role("scorer", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.4, 0.3), RoleFrame(1.0, 1.0)), geometry=RoleGeometry(GEOM_ZONE)),
     ),
     tags=((0.0, "decalage"), (0.4, "controle"), (1.0, "enroulee")),
     ball_owner=((0.0, "assist"), (0.4, "scorer"), (1.0, "scorer")),
