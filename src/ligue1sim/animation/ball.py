@@ -28,11 +28,13 @@ cross/deflect du segment 0.3->0.6 de `corner` a été tranchée avec Olivier
 `pass_lob` existe et est testé unitairement sans être pour l'instant
 déclenché par aucun gabarit.
 
-**`ball_height`/`Keyframe.ball.z` (l'ancien champ, rempli par
-`templates.py`) est IGNORÉ ici** (arbitrage du 23/09/2026) : ses valeurs
-(0.3, 0.6, 0.8...) n'ont jamais été calibrées en mètres nulle part dans le
-code. `ball_state_at` calcule sa propre hauteur, en mètres, directement
-depuis les formules ci-dessous -- jamais depuis `ball_height`.
+**`ball_height`/`Keyframe.ball.z` (rempli par `templates.py`) ne pilote PAS la
+hauteur en cours de segment** (arbitrage du 23/09/2026) : `ball_state_at` calcule
+sa propre hauteur, en mètres, depuis les formules ci-dessous. **Exception depuis
+B8-c1 (14/10/2026)** : `kf_b.ball.z` est la hauteur D'ARRIVÉE d'un `cross` ou d'un
+`pass_lob` (tête ou volée au contact), et `kf_a.ball.z` la hauteur de DÉPART d'un
+`ball_flight` ; à 0 (défaut des gabarits), le comportement d'avant est inchangé bit
+à bit.
 
 Toute amplitude "aléatoire" encore basée sur un hash (contrôle latéral d'un
 centre, perturbation d'une déviation) est déterministe -- hash sha256 du
@@ -251,16 +253,27 @@ def _lob_height_max_m(distance_m: float) -> float:
     return _LOB_HEIGHT_NEAR_M + (_LOB_HEIGHT_FAR_M - _LOB_HEIGHT_NEAR_M) * frac
 
 
-def _behavior_pass_lob(start: tuple[float, float], end: tuple[float, float], s: float, duration: float) -> BallState:
+def _arch_amplitude_m(apex_m: float, end_z: float) -> float:
+    """Amplitude A de `z = end_z * s + A * _hat(s)` (B8-c1) : arche qui arrive à `end_z` en gardant un sommet de `max(apex_m, end_z)`.
+    `end_z <= 0` : `apex_m` tel quel (arche au sol d'avant B8-c1). Sommet de la forme : A + end_z / 2 + end_z² / (16 A), résolu pour A."""
+    if end_z <= 0.0:
+        return apex_m
+    apex = max(apex_m, end_z)
+    return ((apex - end_z / 2.0) + math.sqrt(apex * (apex - end_z))) / 2.0
+
+
+def _behavior_pass_lob(
+    start: tuple[float, float], end: tuple[float, float], s: float, duration: float, end_z: float = 0.0
+) -> BallState:
     distance_m = _real_distance_m(start, end)
-    height_max = _lob_height_max_m(distance_m)
+    amplitude = _arch_amplitude_m(_lob_height_max_m(distance_m), end_z)
     progress, dprogress_ds = _drag_progress(s, distance_m)
     x = start[0] + (end[0] - start[0]) * progress
     y = start[1] + (end[1] - start[1]) * progress
-    z = height_max * _hat(s)
+    z = end_z * s + amplitude * _hat(s)
     vx = (end[0] - start[0]) * dprogress_ds / duration
     vy = (end[1] - start[1]) * dprogress_ds / duration
-    vz = height_max * _hat_derivative(s) / duration
+    vz = (end_z + amplitude * _hat_derivative(s)) / duration
     return BallState(x=x, y=y, z=z, spin=0.0, owner_id=None, vx=vx, vy=vy, vz=vz)
 
 
@@ -344,12 +357,12 @@ def _behavior_shot(
 # voir templates._flight_target), pas de nouveau modèle physique de hauteur.
 def _behavior_ball_flight(
     start: tuple[float, float], end: tuple[float, float], s: float, duration: float, spin: float, end_z: float,
-    hump_m: float = 0.0, hump_end_s: float = 1.0,
+    hump_m: float = 0.0, hump_end_s: float = 1.0, start_z: float = 0.0,
 ) -> BallState:
     base = _behavior_shot(start, end, s, duration, spin)
     hump_on = hump_m != 0.0 and s < hump_end_s
-    z = end_z * s + (hump_m * _hat(s / hump_end_s) if hump_on else 0.0)
-    dz_ds = end_z + (hump_m * _hat_derivative(s / hump_end_s) / hump_end_s if hump_on else 0.0)
+    z = start_z + (end_z - start_z) * s + (hump_m * _hat(s / hump_end_s) if hump_on else 0.0)  # B8-c1 : `start_z` = hauteur du contact (tête, volée)
+    dz_ds = (end_z - start_z) + (hump_m * _hat_derivative(s / hump_end_s) / hump_end_s if hump_on else 0.0)
     vz = dz_ds / duration if duration > 0 else 0.0
     return replace(base, z=z, vz=vz)
 
@@ -427,7 +440,7 @@ _CROSS_LATERAL_RATIO = 0.12  # décalage du point de contrôle, fraction de la d
 
 
 def _behavior_cross(
-    start: tuple[float, float], end: tuple[float, float], s: float, duration: float, seed_key: str
+    start: tuple[float, float], end: tuple[float, float], s: float, duration: float, seed_key: str, end_z: float = 0.0
 ) -> BallState:
     distance_m = _real_distance_m(start, end)
     px, py = _perp_unit(start, end)
@@ -446,8 +459,9 @@ def _behavior_cross(
     vy = dy_du * dprogress_ds / duration
 
     height_max = _CROSS_HEIGHT_MIN_M + (_CROSS_HEIGHT_MAX_M - _CROSS_HEIGHT_MIN_M) * _deterministic_unit(seed_key, "cross_height")
-    z = height_max * _hat(s)
-    vz = height_max * _hat_derivative(s) / duration
+    amplitude = _arch_amplitude_m(height_max, end_z)  # B8-c1 : le centre arrive à `end_z` (tête, volée), plus forcément au sol
+    z = end_z * s + amplitude * _hat(s)
+    vz = (end_z + amplitude * _hat_derivative(s)) / duration
     return BallState(x=x, y=y, z=z, spin=0.0, owner_id=None, vx=vx, vy=vy, vz=vz)
 
 
@@ -834,6 +848,18 @@ def _vertical_bounce(landing_speed_m_s: float, tau: float, horizon: float) -> tu
     return 0.0, 0.0
 
 
+def _fall_then_bounce(arrival_z: float, landing_speed_m_s: float, tau: float, horizon: float) -> tuple[float, float]:
+    """(z, vz) `tau` s après une arrivée EN HAUTEUR (B8-c1) à `arrival_z` m, descendant à `landing_speed_m_s` : chute libre jusqu'au sol, puis les
+    rebonds de `_vertical_bounce` (restitution `GROUND_RESTITUTION`). `arrival_z <= 0` : `_vertical_bounce` seul (cas d'avant B8-c1)."""
+    if arrival_z <= 0.0:
+        return _vertical_bounce(landing_speed_m_s, tau, horizon)
+    impact_speed = math.sqrt(landing_speed_m_s * landing_speed_m_s + 2.0 * GRAVITY_M_S2 * arrival_z)
+    fall_s = (impact_speed - landing_speed_m_s) / GRAVITY_M_S2
+    if tau < fall_s:
+        return arrival_z - landing_speed_m_s * tau - 0.5 * GRAVITY_M_S2 * tau * tau, -(landing_speed_m_s + GRAVITY_M_S2 * tau)
+    return _vertical_bounce(impact_speed, tau - fall_s, horizon - fall_s)
+
+
 # --- résolution du tag / dispatch -------------------------------------------
 
 
@@ -906,16 +932,16 @@ def ball_state_at(sequence: Sequence, t: float) -> BallState:
     if tag == PASS_GROUND:
         state = _behavior_pass_ground(start, end, s, duration)
     elif tag == PASS_LOB:
-        state = _behavior_pass_lob(start, end, s, duration)
+        state = _behavior_pass_lob(start, end, s, duration, kf_b.ball.z)
     elif tag == SHOT:
         state = _behavior_shot(start, end, s, duration, kf_a.ball.spin)
     elif tag == BALL_FLIGHT:
         hump_m, hump_end_s = (
             _free_kick_hump_m(start, end, kf_b.ball.z, kf_a.ball.spin, duration, seed_key) if sequence.meta.get("template") == "coup_franc" else (0.0, 1.0)
         )
-        state = _behavior_ball_flight(start, end, s, duration, kf_a.ball.spin, kf_b.ball.z, hump_m, hump_end_s)
+        state = _behavior_ball_flight(start, end, s, duration, kf_a.ball.spin, kf_b.ball.z, hump_m, hump_end_s, kf_a.ball.z)
     elif tag == CROSS:
-        state = _behavior_cross(start, end, s, duration, seed_key)
+        state = _behavior_cross(start, end, s, duration, seed_key, kf_b.ball.z)
     elif tag == BOUNCE:
         contact_state = ball_state_at(sequence, kf_a.t)  # fin du segment précédent (le vol)
         trajectory = rebound_trajectory(
@@ -926,7 +952,8 @@ def ball_state_at(sequence: Sequence, t: float) -> BallState:
         state = _behavior_deflect(start, end, s, duration, seed_key)
         landing = _landing_speed_m_s(sequence, kf_a)
         if landing is not None:
-            z, vz = _vertical_bounce(landing, s * duration, duration)
+            arrival_z = ball_state_at(sequence, kf_a.t).z  # B8-c1 : hauteur d'arrivée du `cross` / `pass_lob` précédent
+            z, vz = _fall_then_bounce(arrival_z, landing, s * duration, duration)
             state = replace(state, z=z, vz=vz)
 
     owner_id = kf_a.ball.owner_id if s < 1.0 else kf_b.ball.owner_id

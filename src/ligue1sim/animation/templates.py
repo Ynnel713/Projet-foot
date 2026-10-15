@@ -240,6 +240,9 @@ class Template:
     # Phase 6, B8-a (14/10/2026) : `False` = ce gabarit ne reçoit PAS de contrôle au sol (voir `_insert_ground_controls`). Les deux gabarits
     # qui finissent de la tête (`corner`, `debordement_centre_tete`) reçoivent un ballon aérien : leur contrôle relève de B8-c.
     ground_control: bool = True
+    # Phase 6, B8-c1 (14/10/2026) : `True` = le dernier keyframe est un contact AÉRIEN (tête ou volée sur un centre) : le ballon y arrive, et en repart,
+    # à la hauteur du contact tirée par `_contact_height_m` (`ball.py` lit `Keyframe.ball.z`, voir sa docstring de module).
+    aerial_contact: bool = False
 
 
 def _validate_template(template: Template) -> None:
@@ -624,6 +627,18 @@ _CONTROL_ROOM_RATIO = 0.8  # un contrôle (et sa reprise) occupe au plus 80 % de
 _RIGHT_FOOTED_P = 0.78  # pied inconnu : droitier avec cette probabilité (292 D pour 81 G dans les données connues de la Ligue 1)
 
 
+# --- Phase 6, B8-c1 (14/10/2026) : hauteur du contact aérien (tête, volée) ---------------------------------------------------------
+# Constantes validées par le propriétaire. Le type de frappe (`strike_type_for`) décide : `tete` = 1,6 à 2,2 m (arrivée du centre ET départ du vol),
+# `reprise_vollee` = 0,4 à 1,0 m. Hauteur tirée par sha256 de `event_ref` (`_flight_unit`, jamais `random`).
+_HEAD_CONTACT_Z_M = (1.6, 2.2)
+_VOLLEY_CONTACT_Z_M = (0.4, 1.0)
+
+
+def _contact_height_m(gabarit: str, event_ref: str) -> float:
+    lo, hi = _VOLLEY_CONTACT_Z_M if strike_type_for(gabarit, event_ref).name == "reprise_vollee" else _HEAD_CONTACT_Z_M
+    return lo + _flight_unit(event_ref, "contact_height") * (hi - lo)
+
+
 # --- Phase 6, B8-b (14/10/2026) : modulation du contrôle par la pression et la qualité technique ---------------------------------
 # Constantes validées par le propriétaire. La pression `p` ∈ [0 ; 1] combine trois signaux (proximité de l'adversaire de champ le plus proche à
 # la réception, vitesse d'arrivée du ballon, contexte) ; la qualité `q` (échelle des attributs FM) combine First Touch, Technique et, sous
@@ -966,6 +981,8 @@ def build_from_template(
         )
 
     event_ref = f"goal:{event.club_name}:{event.scorer}:{event.minute}"
+    if template.aerial_contact:  # B8-c1 : contact de la tête / volée en hauteur ; le centre y arrive, le vol en part
+        keyframes[-1] = replace(keyframes[-1], ball=replace(keyframes[-1].ball, z=_contact_height_m(template.name, event_ref)))
     duration = template.duration
 
     # Plan du vol, calculé AVANT l'insertion des contrôles (qui ne touche ni le dernier keyframe ni son ballon) : la cible du ballon et la
@@ -1214,11 +1231,11 @@ _TEMPLATE_DEBORDEMENT = Template(
     ),
     tags=((0.0, "debordement"), (0.6, "centre"), (1.0, "tete")),
     ball_owner=((0.0, "assist"), (0.6, "assist"), (1.0, "scorer")),
-    ball_height=((0.6, 0.6), (1.0, 0.3)),
     context_score=_score_debordement_centre_tete,
-    physics_tags=((0.6, "shot"),),  # dernier segment (0.6 -> 1.0) : la tête au but
+    physics_tags=((0.6, "cross"),),  # dernier segment (0.6 -> 1.0) : le centre en cloche jusqu'à la tête (B8-c1 : était `shot`, un ballon au sol)
     has_ball_flight=True,
     ground_control=False,  # B8-a : finition de la tête, réception AÉRIENNE (B8-c)
+    aerial_contact=True,  # B8-c1 : le centre arrive à la hauteur de la tête (ou de la volée), le vol en part
 )
 
 _TEMPLATE_PERCEE_INDIVIDUELLE = Template(
@@ -1275,33 +1292,26 @@ _TEMPLATE_CORNER = Template(
     # montée en zone).
     name="corner",
     weight=0.5,
+    # B8-c1 (14/10/2026), option B du propriétaire : la durée reste 7,0 s (celle d'avant), le buteur garde donc son budget-temps. Le centre part PLUS TARD
+    # (t = 4,9 s, t_ratio 0,7) et dure 2,1 s comme avant : il arrive à t = 7,0 s, à la hauteur du contact (`aerial_contact`), où le buteur le reprend. Le
+    # segment « ballon disputé » qui rebondissait 2,8 s au sol (t = 4,2 à 7,0 s) n'existe plus ; l'assist termine sa marche au poteau de corner (t_ratio 0,6 -> 0,7,
+    # progress 0,95 -> 1,0 : il bouge, le ballon aussi) avant de centrer. Les rôles gardent leurs positions d'avant à 0,0 / 0,3 / 0,6 / 1,0 ; la position à 0,7 est celle de la courbe d'avant à t = 4,9 s.
     duration=7.0,
     roles=(
-        Role("assist", ANCHOR_ASSIST, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.4), RoleFrame(0.6, 1.0), RoleFrame(1.0, 1.0))),
-        Role("support1", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.2), RoleFrame(0.6, 0.5), RoleFrame(1.0, 0.55))),
-        Role("scorer", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.15), RoleFrame(0.6, 0.6), RoleFrame(1.0, 1.0))),
+        Role("assist", ANCHOR_ASSIST, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.4), RoleFrame(0.6, 0.95), RoleFrame(0.7, 1.0), RoleFrame(1.0, 1.0))),
+        Role("support1", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.2), RoleFrame(0.6, 0.5), RoleFrame(0.7, 0.51), RoleFrame(1.0, 0.55))),
+        Role("scorer", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.15), RoleFrame(0.6, 0.6), RoleFrame(0.7, 0.65), RoleFrame(1.0, 1.0))),
     ),
-    tags=((0.0, "preparation"), (0.3, "montee"), (0.6, "centre"), (1.0, "tete")),
-    ball_owner=((0.0, "assist"), (0.3, "assist"), (0.6, None), (1.0, "scorer")),
-    ball_height=((0.0, 0.0), (0.3, 0.0), (0.6, 0.8), (1.0, 0.3)),
-    # Position fixe approximative (voir la docstring du champ sur Template) :
-    # zone de réception typique d'un corner (six mètres, entre le point de
-    # centre et le but) -- sans elle, le segment "cross" 0.3->0.6 partirait
-    # d'un ballon figé sur sa dernière position connue (dette ball_owner=None,
-    # voir DETTE en tête de fichier) : un centre immobile en plein vol.
-    ball_position=((0.6, (0.93, 0.5)),),
+    tags=((0.0, "preparation"), (0.3, "montee"), (0.6, "attente"), (0.7, "centre"), (1.0, "tete")),
+    ball_owner=((0.0, "assist"), (0.3, "assist"), (0.6, "assist"), (0.7, "assist"), (1.0, "scorer")),
     context_score=_score_corner,
-    # Table des tags de corner (brief "corner tags decision", 23/09/2026) --
-    # tranche le conflit cross/deflect signalé sur la keyframe "ballon
-    # disputé" (t=0.6) : ce n'est pas UN segment ambigu, ce sont DEUX
-    # segments distincts de part et d'autre de cette keyframe, chacun avec
-    # son propre tag.
-    # segment [0.0 -> 0.3] : pass_ground -- assist porte le ballon au sol en marchant vers le point de corner
-    # segment [0.3 -> 0.6] : cross -- le centre lui-même, ballon en vol vers la zone disputée (keyframe "centre")
-    # segment [0.6 -> 1.0] : deflect -- ballon disputé au contact (owner=None à 0.6, keyframe "ballon disputé") avant la tête du buteur
-    physics_tags=((0.0, "pass_ground"), (0.3, "cross"), (0.6, "deflect")),
+    # Table des tags de corner : segments [0.0 -> 0.7] pass_ground inféré (l'assist porte le ballon au sol vers le point de corner, puis attend) ; segment
+    # [0.7 -> 1.0] cross (le centre en vol : il arrive à la hauteur du contact, `aerial_contact`) ; le vol de la tête (`ball_flight`) part de cette hauteur.
+    # Le segment `deflect` « ballon disputé » d'avant B8-c1 n'existe plus pour ce gabarit.
+    physics_tags=((0.0, "pass_ground"), (0.7, "cross")),
     has_ball_flight=True,
     ground_control=False,  # B8-a : finition de la tête, réception AÉRIENNE (B8-c)
+    aerial_contact=True,  # B8-c1 : le centre arrive à la hauteur de la tête (ou de la volée), le vol en part
 )
 
 _TEMPLATE_PROFONDEUR_1V1 = Template(
