@@ -699,6 +699,26 @@ Le centre du gardien est donc à 1,5 fois la profondeur du filet devant la ligne
 
 ---
 
+## 41. Ballon figé quand le passeur est inconnu (propriétaire `None` sans position)
+
+**Symptôme.** Dans un clip dont l'événement ne porte qu'un seul joueur (`NarrativeEvent.involved_players` de longueur 1 : pas de passeur), le rôle `assist` du gabarit n'est pas résolu : le ballon n'a aucun propriétaire aux premiers keyframes (`ball.owner_id = None`) et, faute de `Template.ball_position`, `build_from_template` le laisse sur la dernière position connue (dette du 23/09/2026, avertissement « ballon figé sur sa dernière position connue »). Le ballon est alors à la position finale du buteur dès t = 0 et y reste jusqu'au contact : le « centre » n'existe pas, le ballon est immobile.
+
+**Cause de la hauteur à 0 m.** Quand les deux keyframes d'un segment sont à moins d'1 cm l'un de l'autre, `ball_state_at` (`src/ligue1sim/animation/ball.py`, branche « ballon immobile » : `_real_distance_m(start, end) < _STATIONARY_EPSILON_M`, environ ligne 922) renvoie une position figée, `z = 0` et une vitesse nulle, **sans consulter le `physics_tag`**. Depuis B8-c1 (hauteur de contact aérien de `corner` et `debordement_centre_tete`), le ballon reste donc au sol pendant tout le segment `cross`, puis **saute** à la hauteur du contact (1,6 à 2,2 m pour une tête, 0,4 à 1,0 m pour une volée) à l'image du contact. Avant B8-c1, le défaut existait déjà (ballon figé), mais sans saut vertical visible.
+
+**Mesure (15/10/2026, après l'option B du corner, 100 matchs, graine d'audit 20260923, compos de l'audit).** Sur les clips à vol (corner : 62, débordement : 172), 12 ont une hauteur du ballon inférieure à 0,3 m à l'image du contact : 9 débordements (5,2 % des débordements à vol) et 3 corners (4,8 % des corners à vol).
+- **11 sur 12 : passeur inconnu** (un seul joueur dans `involved_players`, propriétaire `None` au premier keyframe, ballon à la position du buteur dès t = 0) : 9 débordements et 2 corners. Vérifié clip par clip (matchs 1, 48, 48, 53, 57, 58, 62, 90, 96 pour les débordements, 72 et 83 pour les corners).
+- **1 sur 12 : même effet, autre cause** (match 97, événement 17, corner, 2 joueurs impliqués) : la position finale du buteur est identique à celle de l'assist (zone du but égale à la zone de la passe) ; le segment `cross` part et arrive au même point, donc il est immobile.
+
+**Régression pour les corners.** À HEAD (avant B8-c1), le centre d'un corner visait une position fixe (`ball_position` de 0,93 ; 0,5) : même sans passeur, il montait à 2,3 m (mesuré sur le match 72, événement 7). Depuis B8-c1, il vise la position du buteur (le contact aérien) : sans passeur, ou si le buteur est au point de l'assist, il est immobile. Pour les débordements, le défaut est ancien (le centre `shot` visait déjà la position du buteur) ; B8-c1 le rend visible par le saut vertical.
+
+**Piste (non implémentée).** (1) Dans `ball_state_at`, ne pas court-circuiter un segment immobile dont le `physics_tag` est `cross` ou `pass_lob` à hauteur d'arrivée non nulle, ou faire monter la hauteur de `0` vers `kf_b.ball.z`. (2) Ou, à la source, donner un passeur de repli ou une `Template.ball_position` aux gabarits dont le rôle `assist` peut rester non résolu, et, pour le corner, une cible de repli quand la position du buteur coïncide avec celle de l'assist. La branche « ballon immobile » de `ball_state_at` est **hors du périmètre autorisé de B8-c1**.
+
+**Fichiers concernés.** `src/ligue1sim/animation/ball.py` (`ball_state_at`, branche immobile), `src/ligue1sim/animation/templates.py` (`corner`, `debordement_centre_tete`, résolution du rôle `assist`), `engine/narrative_player.py` (`_assist_name`).
+
+**Priorité.** À fixer par le propriétaire (proposition : moyenne, le saut vertical est visible à l'écran sur environ 5 % des débordements et 5 % des corners). **Résolution.** À planifier avec ou après B8-c1. **Statut.** Ouvert. Non corrigé.
+
+---
+
 # Décisions du propriétaire (entrées documentaires — ce ne sont pas des tickets)
 
 ## Décision propriétaire — dispositifs clubs conservés (D3)
