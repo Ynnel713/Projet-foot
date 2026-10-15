@@ -799,6 +799,46 @@ Dans les 14 cas, le segment est une passe au sol (`pass_ground`) et aucune réce
 
 ---
 
+## 46. Test aveugle `TestSegmentSpeedHeadroom` (chantier 1, sous-étape 1g)
+
+**Description.** `tests/test_templates.py::TestSegmentSpeedHeadroom` (introduite le 23/09/2026, "Point B" du brief du même jour) ne testait qu'une seule compo et un seul événement synthétiques (`_lineup()`/`_goal_event()`), sur les keyframes déjà scriptés. Aveugle de deux façons : (1) pour un rôle avec `Role.geometry` (9 gabarits sur 12 après 1a-1f), le départ est déjà plafonné par `role_run_limit_m`/`geometry_start` AVANT construction des keyframes -- le ratio scripté respecte `_RUN_RATIO_MAX`/`_RUN_ACCEL_COEFF` par construction, quelle que soit la zone, donc le test ne vérifiait en fait que cette garantie déjà acquise, jamais les 3 postes de référence du plan (DC, MC, BU) puisque le poste exercé dépendait du hasard du tirage alphabétique de la compo ; (2) aucune couverture des rôles sans géométrie (`penalty`, `coup_franc`).
+
+**Correctif (chantier 1, 1g, 15/10/2026, commit `c5cefb0`).** Remplacée par trois classes : `TestRoleRunLimitRespectsVMaxAndAccel` (12 gabarits réels × 3 postes de référence, vérifie directement la garantie de `role_run_limit_m` -- garde-fou anti-régression de la formule, pas un test de gabarit "trop exigeant") ; `TestFixedAnchorRoleSpeedAcrossPostes` (`penalty`/`coup_franc`, tous rôles actifs × 3 postes) ; `TestPipelineSpeedHeadroom` (marquée `integration`, ~10 matchs réels de la graine d'audit, vitesse RENDUE après interpolation et contrainte d'accélération -- pas seulement scriptée). Seuil pipeline mesuré réellement à 36/155 clips (23,2 %), plafond fixé à 30 % avec marge documentée.
+
+**Fichiers concernés.** `tests/test_templates.py`.
+
+**Priorité.** Moyenne (test de non-régression du chantier 1). **Résolution.** Chantier 1, sous-étape 1g. **Statut.** **Fermé — Résolu** (`c5cefb0`).
+
+---
+
+## 47. Passes supérieures à 30 m/s résiduelles (modèle A, chantier 1)
+
+**Description.** Le modèle A du chantier 1 (géométrie de rôle, sans retiming des `t_ratio` de passe) rapproche le départ d'un rôle scorer/support de sa cible, ce qui peut allonger artificiellement la vitesse exigée sur le segment de passe qui le précède (le temps imparti au segment ne croît pas aussi vite que la distance round-trip qu'il doit désormais couvrir). Effet de bord mesuré et documenté dans le code au fil du chantier, jamais un échec de test (aucune exigence testée violée, EG-JOU-11 reste "Planifié").
+
+**Mesure de clôture (100 matchs, graine d'audit 20260923, état du dépôt après 1g, commit `c5cefb0`).** Résidu stable à **20 passes sur 1 757** (chemin et corde) depuis 1d : `profondeur_1v1` (1c) 14 clips sur 1 552, `une_deux` (1d) 6 clips sur 94 -- les deux seuls gabarits concernés, inchangés par 1e-1/1f/1e-2/1g (`but_gag` et `recuperation_haute` ramenés à 0 en 1e-1 ; `corner`/`penalty` n'ajoutent aucun résidu).
+
+**Correctif pressenti.** Retiming des `t_ratio` de passe (proposition P-A, voir A1.1 du plan d'architecture) -- écarté du chantier 1 car il fait passer les clips en dépassement de 591 à 933 (modèle B), reporté après A1.1 (inertie/accélération continue).
+
+**Fichiers concernés.** `src/ligue1sim/animation/templates.py` (`profondeur_1v1`, `une_deux`, commentaires de dette déjà en place).
+
+**Priorité.** Basse (résidu de 1,1 %, aucune exigence testée violée). **Résolution.** Reporté à A1.1 (retiming des `t_ratio` de passe). **Statut.** **Fermé pour le modèle A** -- résidu accepté et documenté, pas un blocage de clôture du chantier 1.
+
+---
+
+## 48. Adversaires non repositionnés face aux nouveaux départs scriptés (A1.5)
+
+**Description.** Le chantier 1 rend le DÉPART des rôles scriptés réaliste (dérivé de la position de formation, plafonné par la course réalisable) pour 9 gabarits sur 12 -- mais `enrich_with_background`, qui place les joueurs de décor de l'équipe adverse, ne tient pas compte de ces nouveaux départs : il continue de positionner les adversaires comme avant le chantier 1. Un rôle scripté qui part maintenant d'un point plus proche de sa formation peut donc se retrouver plus près d'un adversaire de décor qu'auparavant, déclenchant `motion._apply_avoidance` (évitement à 1,5 m) plus souvent ou plus fort qu'avant le chantier.
+
+**Mesure (diagnostic Bloc A, préambule de `Plan architecte Simulafoot.md` §1).** L'évitement à 1,5 m provoque à lui seul 137 clips au-dessus de 1,05 fois vmax avant la contrainte d'accélération, sur l'échantillon de 100 matchs de la graine d'audit -- mécanisme déjà identifié comme l'un des trois contributeurs du résiduel restant après le chantier 1 (avec les sous-keyframes des contrôles au sol B8-a et la contrainte d'accélération par keyframe, A1.1), mais jamais mesuré isolément pour la part spécifiquement due aux NOUVEAUX départs du chantier 1 (par opposition à l'évitement déjà présent avant le chantier).
+
+**Correctif pressenti.** Faire dépendre le placement des adversaires de décor (`enrich_with_background`) des départs réels des rôles scriptés après géométrisation, plutôt que de la géométrie pré-chantier 1 ; ou revoir le rayon/la force de `motion._apply_avoidance`. Lié au ticket 28 (adversaire à 1,5 m du départ du tireur de penalty, même mécanisme).
+
+**Fichiers concernés.** `src/ligue1sim/animation/sequence_generator.py` (`enrich_with_background`), `src/ligue1sim/animation/motion.py` (`_apply_avoidance`).
+
+**Priorité.** À fixer par le propriétaire (proposition : moyenne, contributeur mesuré du résiduel de vitesse restant après le chantier 1). **Résolution.** Bloc A, A1.5 (évitement et placement adverse). **Statut.** Ouvert. Non corrigé.
+
+---
+
 # Décisions du propriétaire (entrées documentaires — ce ne sont pas des tickets)
 
 ## Décision propriétaire — dispositifs clubs conservés (D3)

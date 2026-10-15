@@ -6,17 +6,11 @@ Document de planification architecte. Établi le 15/10/2026 à partir de l'état
 
 ## 1. PRÉAMBULE — ÉTAT ACTUEL
 
-Depuis B6-c, le Bloc B (physique de balle) est clos (15 sous-étapes, B1 à B8-c1). Le Bloc A (mouvement des joueurs) est ouvert : l'étape 0 (assainissement de l'effectif affiché) est close, le chantier 1 (géométrie macro des gabarits) est en cours, avec 1a à 1e-2, 1f et 1g validées. Prochaine et dernière sous-étape : 1h (documentation de clôture).
+Depuis B6-c, le Bloc B (physique de balle) est clos (15 sous-étapes, B1 à B8-c1). Le Bloc A (mouvement des joueurs) est ouvert : l'étape 0 (assainissement de l'effectif affiché) est close, et le chantier 1 (géométrie macro des gabarits) est **entièrement clos** (1a à 1h, détail et mesures cumulées dans le récapitulatif de clôture, §3.2). Prochaine sous-étape du Bloc A : A1.1 (inertie, accélération, décélération continue).
 
-Faits mesurables à ce jour :
+Suite de tests à la clôture du chantier 1 : 1 691 passés, 13 désélectionnés (le test `integration` de 1g, hors suite par défaut). Détail sous-étape par sous-étape et mesures avant/après : voir chaque entrée de §3.2 et le récapitulatif de clôture en fin de section.
 
-- Suite de tests : 1 659 passés (12 désélectionnés) après 1f. 1 657 après 1e-1. 1 648 passés à 44497d1 (les 5 "ignorés" de l'époque sont redevenus actifs depuis, dépendance NLG désormais installée, sans lien avec le chantier 1), 12 désélectionnés. 1 623 à ab92559, 1 637 après 1a.
-- 1e-1 migre les 2 derniers gabarits à rôles multiples non géométrisés (recuperation_haute, but_gag) vers `Role.geometry`, avec un premier cas de deux rôles tactiques dans le même pool de postes. Mesure pipeline réel (100 matchs, graine 20260923) : clips au-dessus de 1,05x vmax recuperation_haute 189 → 46, but_gag 27 → 9 ; combiné tous gabarits 582 → 421. Passes > 30 m/s (chemin) 6 → 0 et 27 → 0 sur les deux, conforme à la prédiction. Résiduel sur l'écart d'arrivée du scorer de but_gag (1,94 m, documenté dans le code, renvoyé à A1.1/A1.5).
-- 1f migre `corner` (géométrie de rôle, premier usage réel de `GEOM_BEHIND_ZONE`) et corrige `penalty` (supports repositionnés au bord de la surface, découverte en mesurant avant de coder : ils étaient à 70 m en médiane, pas juste imprécis). Mesure pipeline réel : clips au-dessus de 1,05x vmax combiné 421 → 348 ; sauts bruts > 1 m 4 → 0 (plus aucun sur l'échantillon) ; corner seul 85 → 12 clips au-dessus de 1,05x vmax, écart d'arrivée du scorer 4,06 → 0,00 m.
-- Chantier 1 : 1a et 1b sont neutres (aucun gabarit migré). 1c migre les 4 gabarits de la famille A (percee_individuelle, debordement_centre_tete, profondeur_1v1, decalage_enroulee) vers `Role.geometry` -- cible d'arrivée inchangée, seul le départ devient réaliste. Mesure pipeline réel (100 matchs, graine 20260923, 1 552 clips, moteur identique avant/après) : clips au-dessus de 1,05x vmax percee 192 -> 14, profondeur_1v1 108 -> 37, decalage_enroulee 180 -> 87, debordement 218 -> 23 (les 8 autres gabarits sont 100 % identiques clip à clip, aucun effet de bord hors périmètre). Écart du scorer à sa zone de tir ramené à 0,00 m médian sur les 4. Effet de bord identifié et documenté dans le code (commentaire du gabarit `profondeur_1v1`) : 14 clips sur 1552 où une passe dépasse 30 m/s (0 avant), à reprendre en 1g/1h (ticket 47), ne bloque pas la clôture de 1c (aucune exigence testée violée).
-- Diagnostic du Bloc A avant 1c (100 matchs, 1 552 clips) : 67 % des clips contiennent un segment impossible (vitesse moyenne exigée supérieure à la vitesse max du poste), 70,7 % des acteurs rendus dépassent leur vmax, 49 % ont un saut brut de plus d'1 m en une image, le buteur fait 56,7 m de déplacement net en médiane, l'écart médian entre le buteur rendu et sa zone de tir est de 4,88 m.
-
-Limite de méthode : l'audit utilise des compos synthétiques (4-2-3-1 des deux côtés, notes égales, sans entraîneur). Toutes les mesures du Bloc A sont à re-mesurer sur des compos réelles avant validation définitive.
+Limite de méthode, non levée par le chantier 1 : l'audit utilise des compos synthétiques (4-2-3-1 des deux côtés, notes égales, sans entraîneur). Toutes les mesures du Bloc A sont à re-mesurer sur des compos réelles avant validation définitive.
 
 ---
 
@@ -136,12 +130,32 @@ Sous-étapes :
 - Commit (1) : c5cefb0.
 - Dépendances : 1c à 1f (seuils calibrés sur le résultat). Statut : validée.
 
-**1h — documentation. À FAIRE.**
+**1h — documentation. VALIDÉE (15/10/2026).**
 - Objectif : fermer le ticket 47, refondre le ticket 46, ouvrir le ticket 48 (adversaires et nouveaux départs, A1.5), ajouter le récapitulatif de clôture du chantier 1.
-- Périmètre : `docs/known_issues.md`, `docs/`. Les tickets 46 à 48 ne sont pas encore écrits dans `known_issues.md` (dernier ticket : 45).
-- Dépendances : 1g. Statut : à faire.
+- Réalisé : ticket 46 fermé (résolu en 1g, test refondu) ; ticket 47 fermé pour le modèle A (résidu de 20 passes/1 757, accepté et documenté, reporté à A1.1) ; ticket 48 ouvert (adversaires non repositionnés face aux nouveaux départs scriptés, A1.5) ; récapitulatif de clôture ci-dessous.
+- Périmètre : `docs/known_issues.md`, `Plan architecte Simulafoot.md`, `docs/TRD_MAJ.md`.
+- Dépendances : 1g. Statut : validée.
 
-Ordre du chantier : 1a → 1b → 1c → 1d → 1e-1 → 1f → 1e-2 → 1g → 1h. Chaque sous-étape est mesurée puis commitée séparément (code, tests, docs), isolation des hunks, vérification sur export de l'index, pas de push.
+Ordre du chantier : 1a → 1b → 1c → 1d → 1e-1 → 1f → 1e-2 → 1g → 1h. Chaque sous-étape mesurée puis commitée séparément (code, tests, docs), isolation des hunks, vérification sur export de l'index, pas de push.
+
+#### Récapitulatif de clôture du chantier 1 (15/10/2026)
+
+**Ce qui a changé.** 9 gabarits sur 12 migrés vers `Role.geometry` (départ dérivé de la position de formation, plafonné par la course réalisable sur la durée du gabarit — la cible d'arrivée de chaque rôle n'a JAMAIS changé). `corner` et `recuperation_haute` corrigés par des mécanismes dédiés (`run_cap_m`/`GEOM_BEHIND_ZONE` pour l'un, nouveau champ `Template.dynamic_ball_position` pour l'autre) ; `penalty` corrigé hors `Role.geometry` (position de départ des supports remplacée dans `build_penalty`, même mécanisme que l'élan du tireur) après la découverte, en mesurant avant de coder, que ses coéquipiers étaient à 70 m en médiane du bord de la surface. `coup_franc` seul reste inchangé (aucun rôle générique, aucune cible de zone concernée). Le test de vitesse par segment (`TestSegmentSpeedHeadroom`, aveugle) est refondu en trois classes couvrant les 3 postes de référence et le rendu réel sur 10 matchs (1g).
+
+**Gain mesuré, cumulé (100 matchs, graine d'audit 20260923, moteur identique à chaque étape — aucune modification du résultat sportif sur tout le chantier).**
+| Indicateur | Avant chantier 1 | Après chantier 1 (1a-1g) |
+|---|---|---|
+| Clips avec un acteur > 1,05× vmax au rendu | 1 449 / 1 552 (93,3 %) | 351 / 1 552 (22,6 %) |
+| Sauts bruts de position > 1 m en une image | 1 076 | 0 |
+| Écart du scorer à sa zone de tir (médiane) | 4,88 m | 0,00 à 1,94 m selon le gabarit (`but_gag` seul résiduel documenté) |
+| Passes > 30 m/s | 83 | 20 / 1 757 (ticket 47, fermé pour le modèle A) |
+| Suite de tests | 1 493 passés (v1.1) | 1 691 passés, 13 désélectionnés |
+
+**Résiduel accepté, renvoyé après le chantier 1.** Trois mécanismes, aucun dans le périmètre du chantier 1 : l'évitement adverse à 1,5 m (A1.5, ticket 48 nouvellement ouvert, 137 clips) ; les sous-keyframes des contrôles au sol (B8-a) ; la contrainte d'accélération qui s'arrête à chaque keyframe (A1.1). Le résidu de passes rapides (ticket 47) et l'écart d'arrivée de `but_gag` (1,94 m, documenté dans le code) relèvent des deux derniers.
+
+**Limite de méthode, non levée.** Toutes les mesures du chantier 1 utilisent des compos synthétiques de l'audit (4-2-3-1 des deux côtés, notes égales, sans entraîneur) — à re-mesurer sur des compos réelles avant validation définitive du Bloc A (ligne « Compos réelles » de la synthèse des décisions, §7, désormais actionnable).
+
+**Prochaine étape.** A1.1 (inertie, accélération, décélération continue) — ouvre le reste du Bloc A.
 
 ### 3.3 A1 — mouvement individuel et équipe : À FAIRE (après le chantier 1)
 
@@ -223,8 +237,8 @@ Payload, données et infrastructure :
 Tests et environnement :
 - 9 `pytest` nu échoue (duckdb absent) ; 11 `ConnectionResetError` Windows ; 29 tests d'intégration exclus de la suite standard (réintégration à décider) ; 32 cinq tests ignorés qui passent sous uv.
 
-Chantier 1 (1g et 1h) :
-- 46 test aveugle (`TestSegmentSpeedHeadroom`), refondu en test pipeline réel ; 47 passes supérieures à 30 m/s, fermé pour le modèle A (chemin 0, corde 2) ; 48 voir ci-dessus.
+Chantier 1 (clos) :
+- 46 test aveugle (`TestSegmentSpeedHeadroom`), **fermé** -- refondu en trois classes de test (1g, commit `c5cefb0`) ; 47 passes supérieures à 30 m/s, **fermé pour le modèle A** (résidu 20/1 757, documenté dans le code, reporté à A1.1) ; 48 adversaires non repositionnés face aux nouveaux départs scriptés (A1.5), **ouvert** -- rattaché à A1.5, voir ci-dessus.
 
 ---
 
@@ -243,7 +257,8 @@ Chantier 1 (1g et 1h) :
 | Ticket 26 | Couplage au Bloc C ou traitement séparé | Propriétaire | À venir |
 | Ticket 29 | Réintégration des tests d'intégration | Propriétaire | Reportée |
 | Priorité 41 et 42 | Priorité à fixer pour les tickets 41 et 42 | Propriétaire | À venir |
-| Compos réelles | Re-mesure du chantier 1 sur compos réelles | Architecte | Après le chantier 1 |
+| Compos réelles | Re-mesure du chantier 1 sur compos réelles | Architecte | À faire (chantier 1 clos depuis le 15/10/2026) |
+| Ticket 48 | Priorité du rattachement à A1.5 (évitement et placement adverse) | Propriétaire | À venir |
 | D9.4.1 à D9.4.4 | Décisions citées par l'Architecte, introuvables dans les documents du dépôt | Architecte | À retrouver ou à écarter |
 
 ---
@@ -257,7 +272,7 @@ Chantier 1 (1g et 1h) :
 5. ~~1f (famille D).~~ Faite (15/10/2026).
 6. ~~1e-2 (ballon dynamique de recuperation_haute).~~ Faite (15/10/2026).
 7. ~~1g (test pipeline réel, ticket 46).~~ Faite (15/10/2026).
-8. 1h (documentation, tickets 46 à 48).
+8. ~~1h (documentation, tickets 46 à 48).~~ Faite (15/10/2026). **Chantier 1 clos.**
 9. A1.1 (inertie, accélération), puis retiming des t_ratio de passe.
 10. A1.5 (évitement et placement adverse), A1.2 (gardiens), A1.3 (joueurs hors action).
 11. A1.6 (cohérence joueur-ballon, tickets 30 et 41 ; décision sur le ticket 42).

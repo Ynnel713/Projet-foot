@@ -100,8 +100,25 @@ prévu en 1h).
 |---|---|---|
 | pytest (suite principale) | 1 662 passés, 12 désélectionnés | 1 691 passés, 13 désélectionnés (nouveau test marqué `integration`, hors suite par défaut) |
 
+## v1.7 — 15/10/2026 (état du dépôt : documentation uniquement, pas de nouveau commit de code)
+
+**Chantier 1 (géométrie macro des gabarits) entièrement clos** (1a à 1h). EG-JOU-10 (géométrie de rôle) et EG-JOU-05 (Bloc A, volet chantier 1) passent de « Partiel » à leur état final pour ce chantier :
+
+| ID | Statut v1.6 | Statut v1.7 | Preuve |
+|---|---|---|---|
+| EG-JOU-05 (Bloc A) | Partiel : 1a à 1g validées ; 1h restante | Partiel : chantier 1 entièrement clos (1a-1h) ; A1, A2 et Bloc C restent à faire avant que le Bloc A soit complet | `Plan architecte Simulafoot.md` §3.2, récapitulatif de clôture |
+| EG-JOU-10 (géométrie de rôle) | 9 gabarits sur 12 migrés via `Role.geometry` (+ corner) ; penalty et coup_franc hors `Role.geometry` | Inchangé -- état final du chantier 1 : coup_franc seul gabarit totalement hors géométrie/mécanisme dédié (aucun rôle générique) | voir récapitulatif de clôture |
+| EG-JOU-11 (buteur à sa zone, 0 passe > 30 m/s, baisse des dépassements 1,05× vmax) | Mesure cumulée 351/1552 clips > 1,05× vmax après 1e-2 | État final chantier 1 : 351/1552 (22,6 %), contre 1449/1552 (93,3 %) avant le chantier -- baisse de 76 points. Passes > 30 m/s : 20/1757, ticket 47 fermé pour le modèle A (résidu accepté, reporté à A1.1). Sauts bruts > 1 m : 0 (contre 1076 avant le chantier) | `Plan architecte Simulafoot.md`, récapitulatif de clôture du chantier 1 |
+
+### Tickets (section 11)
+Fermés en 1h : 46 (test aveugle, refondu en 1g), 47 (passes > 30 m/s, fermé pour le modèle A). Ouvert en 1h : 48 (adversaires non repositionnés face aux nouveaux départs scriptés, rattaché à A1.5).
+
+### Points ouverts
+- Limite de méthode non levée : compos synthétiques de l'audit (4-2-3-1, notes égales, sans entraîneur) -- re-mesure sur compos réelles désormais actionnable (chantier 1 clos), voir §7 du Plan.
+- Prochaine étape du Bloc A : A1.1 (inertie, accélération, décélération continue).
+
 ### Écarts à corriger au prochain remaniement du PDF
-- Section 9 : B6-d, B6-e, B7, B8 passent à « Implémenté » ; le Bloc A passe à « En cours ».
+- Section 9 : B6-d, B6-e, B7, B8 passent à « Implémenté » ; le Bloc A passe à « En cours » (chantier 1 clos, A1/A2/Bloc C restants).
 - Section 5.2 : B7 et B8 passent à « Implémenté ».
 - Glossaire : ajouter « géométrie de rôle », « support tactique », « modèle A ».
 - Ce fichier est mis à jour à chaque sous-étape terminée (règle de `CLAUDE.md`).
