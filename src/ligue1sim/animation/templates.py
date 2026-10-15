@@ -193,12 +193,14 @@ _BEHIND_MIN_M = 6.0  # distance minimale de W à event.zone pour GEOM_BEHIND_ZON
 @dataclass(frozen=True)
 class RoleGeometry:
     """Cible et plafond de course d'un rôle. `cap_m` / `angle_deg` : voir GEOM_BEHIND_ZONE et GEOM_TOWARD_GOAL. `run_cap_m` : plafond de
-    course supplémentaire (m), `None` = seulement celui de la vitesse et de l'accélération."""
+    course supplémentaire (m), `None` = seulement celui de la vitesse et de l'accélération. `preferred_postes` : pour un rôle générique
+    (support), postes attendus du joueur tiré par `_resolve_roles` ; vide = tous les postes de champ."""
 
     target: str
     cap_m: float = 0.0
     angle_deg: float = 0.0
     run_cap_m: float | None = None
+    preferred_postes: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True)
@@ -334,7 +336,28 @@ def numeros_by_player_id(lineup: Lineup) -> dict[PlayerId, int]:
     return numeros
 
 
-def _resolve_roles(event: GoalEvent, lineup: Lineup, role_names: tuple[str, ...]) -> dict[str, Player]:
+def _pick_support(
+    candidates: list[Player], start_positions: dict[PlayerId, PitchPoint], target: PitchPoint, preferred_postes: frozenset[str]
+) -> Player | None:
+    """Support tactique (chantier 1, 1b) : parmi les candidats dont le poste est attendu (tous si aucun ne l'est, ou si `preferred_postes`
+    est vide), celui dont la position de formation est la plus proche de `target`. Égalité (arrondie à 1e-6 m) : ordre alphabétique du
+    nom. Déterministe, sans hachage. `None` sans candidat."""
+    pool = [p for p in candidates if p.poste in preferred_postes] or candidates
+
+    def key(player: Player) -> tuple[float, str]:
+        start = start_positions[player_id_of(player)]
+        return (round(math.hypot((start.x - target.x) * PITCH_LENGTH_M, (start.y - target.y) * PITCH_WIDTH_M), 6), player.name)
+
+    return min(pool, key=key, default=None)
+
+
+def _resolve_roles(
+    event: GoalEvent,
+    lineup: Lineup,
+    role_names: tuple[str, ...],
+    roles: tuple[Role, ...] = (),
+    start_positions: dict[PlayerId, PitchPoint] | None = None,
+) -> dict[str, Player]:
     """Associe chaque rôle nommé d'un gabarit à un vrai joueur de `lineup`.
     "scorer"/"assist" sont résolus depuis l'événement lui-même, jamais
     inventés -- un rôle "assist" sans passeur réel (`event.assist is None`)
@@ -349,7 +372,11 @@ def _resolve_roles(event: GoalEvent, lineup: Lineup, role_names: tuple[str, ...]
     n'importe quel rôle -- un buteur/passeur/coéquipier générique peut être
     un remplaçant entré en jeu, pas seulement un titulaire. `substitutes`
     vide par défaut : comportement inchangé pour tout appelant antérieur à
-    cette Tâche 2."""
+    cette Tâche 2.
+
+    Chantier 1, 1b : un rôle générique dont `roles` porte une géométrie est tiré TACTIQUEMENT (`_pick_support` : poste attendu, le plus
+    proche de sa cible, d'après `start_positions`), dans l'ordre alphabétique des noms de rôle (support1 avant support2), avant les
+    rôles génériques sans géométrie, qui restent tirés par ordre alphabétique des noms de joueur parmi les joueurs restants."""
     roster = list(lineup.players) + list(lineup.substitutes)
     by_name = {p.name: p for p in roster}
     resolved: dict[str, Player] = {}
@@ -369,7 +396,17 @@ def _resolve_roles(event: GoalEvent, lineup: Lineup, role_names: tuple[str, ...]
         resolved["assist"] = assist
         used_names.add(assist.name)
 
-    remaining_generic = [name for name in role_names if name not in resolved and name != "assist"]
+    tactical = sorted(
+        (r for r in roles if r.geometry is not None and r.name in role_names and r.name not in ("scorer", "assist")), key=lambda r: r.name
+    ) if start_positions is not None else []
+    for role in tactical:
+        field = [p for p in roster if p.group != GOALKEEPER and p.name not in used_names and player_id_of(p) in start_positions]
+        chosen = _pick_support(field, start_positions, geometry_target(role.geometry, event), role.geometry.preferred_postes)
+        if chosen is not None:
+            resolved[role.name] = chosen
+            used_names.add(chosen.name)
+    tactical_names = {r.name for r in tactical}
+    remaining_generic = [name for name in role_names if name not in resolved and name != "assist" and name not in tactical_names]
     candidates = sorted(
         (p for p in roster if p.group != GOALKEEPER and p.name not in used_names), key=lambda p: p.name
     )
@@ -989,7 +1026,7 @@ def build_from_template(
     _validate_template(template)
 
     role_names = tuple(role.name for role in template.roles)
-    resolved = _resolve_roles(event, lineup, role_names)
+    resolved = _resolve_roles(event, lineup, role_names, template.roles, start_positions)
     role_ids = {name: player_id_of(player) for name, player in resolved.items()}
     role_starts = {name: start_positions[role_ids[name]] for name in resolved}
     role_by_player_id = {player_id: role_name for role_name, player_id in role_ids.items()}
