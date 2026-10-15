@@ -524,13 +524,18 @@ class TestSegmentSpeedHeadroom:
         ratio = self._worst_ratio(name, _lineup())
         assert ratio < 1.0, f"{name} exige {ratio:.2f}x v_max sur son segment le plus dur -- devient \"impossible\""
 
-    def test_une_deux_is_the_closest_to_the_critical_threshold(self):
+    def test_recuperation_haute_is_the_closest_to_the_critical_threshold(self):
         # Constat du 23/09/2026 (voir docs/simulation_physique_archi.md,
-        # "Point B") -- si ce n'est plus vrai, la table a changé et mérite
-        # d'être revérifiée, pas seulement ce test corrigé en silence.
+        # "Point B") -- "une_deux" était le pire jusqu'à sa migration en
+        # Chantier 1, 1d (15/10/2026, géométrie de rôle sur scorer/assist) :
+        # son pire ratio a baissé sous celui de "recuperation_haute", qui
+        # n'est pas encore migré (famille C, sous-étape 1e-1) et prend donc
+        # sa place. Re-vérifié, pas corrigé en silence -- si ce n'est plus
+        # vrai après 1e-1, la table a de nouveau changé et mérite d'être
+        # revérifiée.
         lineup = _lineup()
         ratios = {name: self._worst_ratio(name, lineup) for name in BUILDERS}
-        assert max(ratios, key=ratios.get) == "une_deux"
+        assert max(ratios, key=ratios.get) == "recuperation_haute"
 
 
 class TestContreAttaqueSupport1Carries:
@@ -774,7 +779,15 @@ class TestTemplateStructureUnchangedByPhysicsTags:
     réaliste (dérivé de la position de formation, plafonné par la course réalisable sur la durée du gabarit -- voir `geometry_start`).
     `percee_individuelle` et `profondeur_1v1` portent en plus une durée allongée (7,0 -> 8,0 s et 6,0 -> 7,0 s). Preuve de cause unique :
     avec les anciennes durées et `geometry=None` sur tous les rôles de ces 4 gabarits, le code redonne exactement les 4 anciennes
-    empreintes ci-dessus."""
+    empreintes ci-dessus.
+
+    Neuvième exception délibérée (Chantier 1, 1d, 15/10/2026) : `une_deux`, `contre_attaque` et `construction_placee` ont une empreinte
+    mise à jour -- même mécanisme que la huitième exception (cible inchangée, seul le départ devient réaliste), avec deux nouveautés :
+    `support1` de `contre_attaque`/`construction_placee` reçoit en plus une géométrie et devient un rôle TACTIQUE (`_resolve_roles` le
+    tire désormais par poste attendu et proximité, au lieu de l'ordre alphabétique -- voir `TestTacticalSupports`), ce qui peut changer
+    QUEL joueur tient ce rôle, pas seulement sa position. `une_deux` porte en plus une durée allongée (4,0 -> 5,0 s) ; `contre_attaque`
+    aussi (8,0 -> 9,0 s) ; `construction_placee` est inchangée (14,0 s). Preuve de cause unique : avec les anciennes durées et
+    `geometry=None` sur tous les rôles de ces 3 gabarits, le code redonne exactement les 3 anciennes empreintes ci-dessus."""
 
     _EXPECTED_STRUCTURE_HASH = {
         "but_gag": "82585674d2a0633eced9f75a39ee5e914643a8c1b25a47d545fc70c8965e29db",
@@ -788,7 +801,7 @@ class TestTemplateStructureUnchangedByPhysicsTags:
         "percee_individuelle": "7dda924ea183a11583d3539da5cadd0b95d46733059d7d6901729da617f28021",
         "profondeur_1v1": "72001bb8a4e7e0a03cbc38616bc13fa468f342f5adce9e38c2327126666ad988",
         "recuperation_haute": "a63fbaec00fc77ef1aaf1a99c743dd9bffdb5a4c47fd2bf65dad09f06751cd8b",
-        "une_deux": "202c14b7feab0b93b529151d0cd1b505cccb57bb4c479e51f98266a08fc9a22b",
+        "une_deux": "670afd1bace6fc57f1e267ece1b16cf73a94954c2bc5de3272646f382071adbc",
     }
 
     def _structure_hash(self, name: str) -> str:
@@ -1717,9 +1730,7 @@ class TestRoleGeometry:
     # Chantier 1, 1c (15/10/2026) : liste DÉCROISSANTE au fil des sous-étapes (1d, 1e-1, 1f retireront les leurs à leur tour) -- garde-fou
     # qu'un gabarit pas encore migré ne reçoive pas de géométrie par erreur. Ne jamais revenir à "aucun gabarit" : un gabarit migré doit
     # sortir de cette liste, pas la faire disparaître.
-    _NOT_YET_MIGRATED = (
-        "contre_attaque", "construction_placee", "une_deux", "coup_franc", "corner", "recuperation_haute", "penalty", "but_gag",
-    )
+    _NOT_YET_MIGRATED = ("contre_attaque", "construction_placee", "coup_franc", "corner", "recuperation_haute", "penalty", "but_gag")
 
     def test_templates_not_yet_migrated_carry_no_geometry(self):
         assert set(self._NOT_YET_MIGRATED) <= set(TEMPLATES)

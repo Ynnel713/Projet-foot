@@ -1392,10 +1392,16 @@ _TEMPLATE_PERCEE_INDIVIDUELLE = Template(
 _TEMPLATE_UNE_DEUX = Template(
     name="une_deux",
     weight=0.8,
-    duration=4.0,
+    # Chantier 1, 1d (15/10/2026) : durée 4,0 -> 5,0 s et géométrie de rôle sur les deux rôles (cibles inchangées -- assist -> zone
+    # d'assist, scorer -> zone de tir). Pas de rôle générique ici (pas de "support1") : aucun volet tactique pour ce gabarit.
+    #
+    # Résiduel mesuré (100 matchs, graine d'audit 20260923, scripts/measure_geometry.py) : la passe scorer -> assist à t_ratio=0,5 passe
+    # de 52 à 6 clips sur 94 au-dessus de 30 m/s (amélioration nette, mais pas nulle). Aucune exigence actuellement testée n'est violée
+    # (EG-JOU-11 / ticket 47 restent "Planifié") -- à reprendre en 1g/1h avec le résiduel de `profondeur_1v1` (1c), pas dans ce commit.
+    duration=5.0,
     roles=(
-        Role("assist", ANCHOR_ASSIST, (RoleFrame(0.0, 0.0), RoleFrame(0.5, 0.5), RoleFrame(1.0, 0.5))),
-        Role("scorer", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.5, 0.6), RoleFrame(1.0, 1.0))),
+        Role("assist", ANCHOR_ASSIST, (RoleFrame(0.0, 0.0), RoleFrame(0.5, 0.5), RoleFrame(1.0, 0.5)), geometry=RoleGeometry(GEOM_ASSIST_ZONE)),
+        Role("scorer", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.5, 0.6), RoleFrame(1.0, 1.0)), geometry=RoleGeometry(GEOM_ZONE)),
     ),
     tags=((0.0, "passe"), (0.5, "remise"), (1.0, "tir")),
     ball_owner=((0.0, "scorer"), (0.5, "assist"), (1.0, "scorer")),

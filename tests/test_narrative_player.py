@@ -643,6 +643,11 @@ class TestAccelerationConstraintOnRealGabarits:
 # la formation au lieu de la position brute) -- l'empreinte est recalculée, et redevient identique avant/après contrainte d'accélération
 # (comme avant la migration) : la course du scorer est désormais réalisable sans correction. Preuve que 1c est la SEULE cause : avec
 # l'ancienne durée et `geometry=None` sur son rôle, le code actuel redonne exactement l'empreinte précédente ("e81f855c96b7ccfe", idem).
+# Chantier 1, 1d (15/10/2026) : `contre_attaque` (durée 8,0 -> 9,0 s) et `construction_placee` (durée inchangée) reçoivent une géométrie
+# de rôle sur leurs trois rôles ; `support1` devient en plus tactique (poste attendu, voir `TestTacticalSupports`). Empreintes
+# recalculées. Preuve que 1d est la SEULE cause : avec les anciennes durées, `geometry=None` sur tous les rôles et le tirage
+# alphabétique d'origine pour support1, le code actuel redonne exactement les empreintes précédentes ("b08cb2b75e7031cd"/
+# "a23371edfce032df" pour contre_attaque, "ff696c5902800e79"/"b89f6245b693bd81" pour construction_placee).
 _WITNESS_DIGESTS = {
     # gabarit: (empreinte des images brutes `interpolate`, empreinte après contrainte d'accélération)
     "but_gag": ("2adb64758544b738", "5413574bb0047c48"),
