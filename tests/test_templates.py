@@ -524,21 +524,23 @@ class TestSegmentSpeedHeadroom:
         ratio = self._worst_ratio(name, _lineup())
         assert ratio < 1.0, f"{name} exige {ratio:.2f}x v_max sur son segment le plus dur -- devient \"impossible\""
 
-    def test_but_gag_is_the_closest_to_the_critical_threshold(self):
+    def test_debordement_centre_tete_is_the_closest_to_the_critical_threshold(self):
         # Constat du 23/09/2026 (voir docs/simulation_physique_archi.md,
         # "Point B") -- "une_deux" était le pire jusqu'à sa migration en
         # Chantier 1, 1d (15/10/2026, géométrie de rôle sur scorer/assist) :
         # son pire ratio a baissé sous celui de "recuperation_haute", qui
         # n'était pas encore migré (famille C, sous-étape 1e-1) et prenait
-        # donc sa place. Chantier 1, 1e-1, 1/2 (15/10/2026) : "recuperation_haute"
-        # migré (durée 5,0 -> 6,0 s, géométrie de rôle), son pire ratio baisse
-        # à 0,45 -- "but_gag", pas encore migré à ce commit, prend sa place.
-        # Re-vérifié, pas corrigé en silence -- si ce n'est plus vrai après la
-        # migration de "but_gag" (1e-1, 2/2), la table a de nouveau changé et
-        # mérite d'être revérifiée.
+        # donc sa place. Chantier 1, 1e-1 (15/10/2026) : "recuperation_haute"
+        # puis "but_gag" migrés, leur pire ratio baisse (0,45 et 0,53 ->
+        # inférieur) -- "debordement_centre_tete" (migré en 1c) prend leur
+        # place, exactement au plafond de conception (`_RUN_RATIO_MAX` = 0,5,
+        # quasi à égalité avec "une_deux" lui-même au plafond ; départagé par
+        # l'ordre d'itération de `BUILDERS`, pas par un écart réel).
+        # Re-vérifié, pas corrigé en silence -- si ce n'est plus vrai après
+        # 1f, la table a de nouveau changé et mérite d'être revérifiée.
         lineup = _lineup()
         ratios = {name: self._worst_ratio(name, lineup) for name in BUILDERS}
-        assert max(ratios, key=ratios.get) == "but_gag"
+        assert max(ratios, key=ratios.get) == "debordement_centre_tete"
 
 
 class TestContreAttaqueSupport1Carries:
@@ -800,7 +802,7 @@ class TestTemplateStructureUnchangedByPhysicsTags:
     rôles de ces 2 gabarits, le code redonne exactement les 2 anciennes empreintes ci-dessus."""
 
     _EXPECTED_STRUCTURE_HASH = {
-        "but_gag": "82585674d2a0633eced9f75a39ee5e914643a8c1b25a47d545fc70c8965e29db",
+        "but_gag": "c982c7c9f8905b2d948ecbc21c2009643fb30661471acfd64352f604a8801ecf",
         "construction_placee": "4e9db51913eab6c3181ad30a473c9d583c634bc410db8807eed2fcb9ebc7f452",
         "contre_attaque": "76bacb1b0545a25c661dc61635984d2cb042ed0ee29cc928881da8eb7b810a39",
         "corner": "5086502e6020d2ff4c293776dee443643211b703cc4cb3eb37474f585e6eefbf",
@@ -1737,10 +1739,10 @@ class TestRoleGeometry:
         second, _ = self._build(8.0, "cb0", PitchPoint(0.1, 0.4))
         assert first.to_json() == second.to_json()
 
-    # Chantier 1, 1c (15/10/2026) : liste DÉCROISSANTE au fil des sous-étapes (1e-1 retire les siens un par un, 1f retirera les
-    # derniers) -- garde-fou qu'un gabarit pas encore migré ne reçoive pas de géométrie par erreur. Ne jamais revenir à "aucun
-    # gabarit" : un gabarit migré doit sortir de cette liste, pas la faire disparaître.
-    _NOT_YET_MIGRATED = ("coup_franc", "corner", "but_gag", "penalty")
+    # Chantier 1, 1c (15/10/2026) : liste DÉCROISSANTE au fil des sous-étapes (1e-1 a retiré les siens, 1f retirera les derniers) --
+    # garde-fou qu'un gabarit pas encore migré ne reçoive pas de géométrie par erreur. Ne jamais revenir à "aucun gabarit" : un gabarit
+    # migré doit sortir de cette liste, pas la faire disparaître.
+    _NOT_YET_MIGRATED = ("coup_franc", "corner", "penalty")
 
     def test_templates_not_yet_migrated_carry_no_geometry(self):
         assert set(self._NOT_YET_MIGRATED) <= set(TEMPLATES)
@@ -1867,6 +1869,24 @@ class TestTacticalSupports:
         by_name = {p.name: p for p in lineup.players}
         assert by_name[roles["support1"]].poste in {"MOC", "MC", "AG", "AD", "SA", "ATT", "BU"}
         assert by_name[roles["support2"]].poste in {"MOC", "MC", "AG", "AD", "SA", "ATT", "BU"}
+
+    def test_two_tactical_roles_restricted_to_a_thin_pool_still_never_collide(self):
+        # but_gag (postes attendus BU, SA, ATT, MOC) : la compo standard de ce fichier n'a qu'un seul de ces postes hors buteur (aucun
+        # SA/ATT/MOC) -- le pool tomberait sur le repli "tous les joueurs de champ" (`_pick_support`) et ne testerait pas vraiment le
+        # filtre par poste. Compo dédiée avec deux joueurs attendus (SA, ATT) en plus du buteur (BU, déjà exclu comme scorer).
+        from dataclasses import replace
+
+        base = _lineup()
+        players = [
+            replace(p, poste="SA") if p.name == "ag" else replace(p, poste="ATT") if p.name == "ad" else p for p in base.players
+        ]
+        lineup = replace(base, players=players)
+        starts = self._starts(lineup)
+        roles = tpl.build_from_template(TEMPLATES["but_gag"], _goal_event(), lineup, starts).meta["roles"]
+        assert roles["support1"] != roles["support2"]
+        by_name = {p.name: p for p in lineup.players}
+        assert by_name[roles["support1"]].poste in {"BU", "SA", "ATT", "MOC"}
+        assert by_name[roles["support2"]].poste in {"BU", "SA", "ATT", "MOC"}
 
     def test_roles_without_geometry_stay_alphabetical(self):
         lineup = _lineup()

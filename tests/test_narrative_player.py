@@ -648,9 +648,13 @@ class TestAccelerationConstraintOnRealGabarits:
 # recalculées. Preuve que 1d est la SEULE cause : avec les anciennes durées, `geometry=None` sur tous les rôles et le tirage
 # alphabétique d'origine pour support1, le code actuel redonne exactement les empreintes précédentes ("b08cb2b75e7031cd"/
 # "a23371edfce032df" pour contre_attaque, "ff696c5902800e79"/"b89f6245b693bd81" pour construction_placee).
+# Chantier 1, 1e-1 (15/10/2026) : `but_gag` reçoit une géométrie de rôle sur ses trois rôles (durée inchangée, 5,0 s) ; `support1` et
+# `support2` deviennent en plus tactiques (poste attendu, voir `TestTacticalSupports`). Empreinte recalculée. Preuve que 1e-1 est la
+# SEULE cause : avec `geometry=None` sur tous les rôles et le tirage alphabétique d'origine pour support1/support2, le code actuel
+# redonne exactement l'empreinte précédente ("2adb64758544b738"/"5413574bb0047c48").
 _WITNESS_DIGESTS = {
     # gabarit: (empreinte des images brutes `interpolate`, empreinte après contrainte d'accélération)
-    "but_gag": ("2adb64758544b738", "5413574bb0047c48"),
+    "but_gag": ("0ff6fe3304d23938", "7671f77e105c6115"),
     "construction_placee": ("0858943d9f3a7e55", "7ace6109febe5566"),
     "contre_attaque": ("1b546dda1ca4f3d8", "867086d4e95127b3"),
     "corner": ("2e573082648af3d4", "46b52565c7ea2d7b"),

@@ -1604,6 +1604,20 @@ _TEMPLATE_BUT_GAG = Template(
     # rôles/4 keyframes -- une vraie scène de but chaotique implique
     # généralement plusieurs contacts successifs (double rebond), pas une
     # seule déviation nette.
+    #
+    # Chantier 1, 1e-1 (15/10/2026) : géométrie de rôle sur les trois rôles (cibles inchangées -- support1/support2/scorer -> zone de
+    # tir), durée inchangée (5,0 s, pas demandée par le plan pour ce gabarit). support1 ET support2 deviennent tactiques (postes
+    # attendus BU, SA, ATT, MOC -- proposés en conception, à confirmer par la mesure réelle), même mécanisme à deux rôles tactiques
+    # dans le même pool que recuperation_haute ci-dessus. Ballon non touché (`ball_owner` inchangé).
+    #
+    # Effet de bord mesuré (100 matchs, graine d'audit 20260923, scripts/measure_geometry.py) : l'écart d'arrivée du scorer à sa zone
+    # de tir baisse (médiane 3,71 -> 1,94 m) mais reste loin de 0, contrairement à recuperation_haute (5,58 -> 0,38 m). Diagnostic :
+    # le ratio de vitesse SCRIPTÉ du dernier segment (0,65 -> 1,0) respecte bien le plafond de conception (0,43 à 0,50, jamais au-delà
+    # de `_RUN_RATIO_MAX`), mais le ratio RENDU dépasse 1,0x vmax sur une bonne moitié des clips (jusqu'à 1,3x) -- les trois rôles
+    # (support1, support2, scorer) convergent tous vers la même zone de but en 5 s à peine, plus serré que recuperation_haute (6 s) ;
+    # l'évitement entre acteurs proches (`motion._apply_avoidance`, hors chantier 1, voir A1.5) et la contrainte d'accélération qui
+    # s'arrête à chaque keyframe (hors chantier 1, voir A1.1) dégradent la trajectoire APRÈS que la géométrie l'a placée correctement
+    # au départ. Aucune exigence actuellement testée n'est violée -- à reprendre en A1.1/A1.5, pas dans ce commit.
     name="but_gag",
     weight=0.15,
     duration=5.0,
@@ -1614,9 +1628,15 @@ _TEMPLATE_BUT_GAG = Template(
         # qui dévie, pas une immobilité totale. Progress final relevé
         # (0.15->0.3, 0.2->0.35) pour rendre le déplacement effectif après
         # le contact, couplage à event.zone assumé (voir contre_attaque).
-        Role("support1", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.35, 0.15), RoleFrame(0.65, 0.15), RoleFrame(1.0, 0.3))),
-        Role("support2", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.35, 0.1), RoleFrame(0.65, 0.25), RoleFrame(1.0, 0.35))),
-        Role("scorer", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.35, 0.3), RoleFrame(0.65, 0.6), RoleFrame(1.0, 1.0))),
+        Role(
+            "support1", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.35, 0.15), RoleFrame(0.65, 0.15), RoleFrame(1.0, 0.3)),
+            geometry=RoleGeometry(GEOM_ZONE, preferred_postes=frozenset({"BU", "SA", "ATT", "MOC"})),
+        ),
+        Role(
+            "support2", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.35, 0.1), RoleFrame(0.65, 0.25), RoleFrame(1.0, 0.35)),
+            geometry=RoleGeometry(GEOM_ZONE, preferred_postes=frozenset({"BU", "SA", "ATT", "MOC"})),
+        ),
+        Role("scorer", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.35, 0.3), RoleFrame(0.65, 0.6), RoleFrame(1.0, 1.0)), geometry=RoleGeometry(GEOM_ZONE)),
     ),
     tags=((0.0, "centre"), (0.35, "premier_contact"), (0.65, "rebond"), (1.0, "but")),
     # (1.0, "scorer") et pas None : un ball_owner absent retombe sur la
