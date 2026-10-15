@@ -33,14 +33,14 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, fields, replace
 
 from ligue1sim.animation.motion import FrameState, interpolate
 from ligue1sim.animation.physics import apply_acceleration_constraint
 from ligue1sim.animation.sequence_generator import enrich_with_background
 from ligue1sim.animation.serialize import frame_sequence_to_json
 from ligue1sim.animation.spatial import placed_player_to_normalized
-from ligue1sim.animation.templates import BUILDERS, TEMPLATES, player_id_of
+from ligue1sim.animation.templates import BUILDERS, TEMPLATES, numeros_by_player_id, player_id_of
 from ligue1sim.animation.types import PlayerId, RosterEntry
 from ligue1sim.events import CardEvent, GoalEvent, PlayerMatchStat, SubstitutionEvent
 from ligue1sim.kits import match_kit_colors
@@ -70,13 +70,18 @@ _SUBSTITUTE_DEPTH_BY_POSTE: dict[str, float] = {
     "AG": 0.65, "AD": 0.65, "SA": 0.70, "BU": 0.75, "ATT": 0.75,
 }
 _SUBSTITUTE_DEFAULT_DEPTH = 0.5
+# Étape 0b-2 du Bloc A : couloir naturel du poste (0 = gauche, 2 = droite, 1 = axe), mêmes postes latéraux que `pitch_layout._LANE`. Le latéral d'un
+# remplaçant reste dans le tiers de la plage 0,15-0,85 qui correspond à son couloir ; le décalage dans ce tiers est le hachage du nom.
+_SUBSTITUTE_LANE = {"LB": 0, "AG": 0, "RB": 2, "AD": 2}
 
 
-def _substitute_start_position(player: Player) -> PitchPoint:
-    depth = _SUBSTITUTE_DEPTH_BY_POSTE.get(player.poste, _SUBSTITUTE_DEFAULT_DEPTH)
+def _substitute_start_position(player: Player, line_depth: float | None = None) -> PitchPoint:
+    """Position de départ d'un remplaçant. `line_depth` (étape 0b-2) : profondeur de la ligne de la formation qui porte son poste (voir
+    `_lineup_start_positions`) ; absente, profondeur par défaut du poste. Latéral : dans le tiers de son couloir naturel, décalage par hachage."""
+    depth = line_depth if line_depth is not None else _SUBSTITUTE_DEPTH_BY_POSTE.get(player.poste, _SUBSTITUTE_DEFAULT_DEPTH)
     digest = hashlib.sha256(f"substitute_start|{player.name}".encode()).digest()
     fraction = int.from_bytes(digest[:8], "big") / 2**64  # [0, 1)
-    lateral = 0.15 + fraction * 0.70  # reste a l'interieur du terrain, jamais sur la touche exacte
+    lateral = 0.15 + 0.70 * (_SUBSTITUTE_LANE.get(player.poste, 1) + fraction) / 3.0  # reste a l'interieur du terrain, jamais sur la touche exacte
     return PitchPoint(x=depth, y=lateral)
 
 
@@ -151,35 +156,73 @@ def _lineup_start_positions(lineup: Lineup) -> dict[PlayerId, PitchPoint]:
     placed = place_starting_xi(stats, attacking_up=True)
     players_by_name = {p.name: p for p in lineup.players}
     positions: dict[PlayerId, PitchPoint] = {}
+    depths_by_poste: dict[str, list[float]] = {}
+    depths_by_group: dict[str, list[float]] = {}
     for placed_player in placed:
         player = players_by_name.get(placed_player.stat.player_name)
         if player is None:
             continue  # meme repli que sequence_generator : compo desynchronisee, ignore
-        positions[player_id_of(player)] = placed_player_to_normalized(placed_player, attacking_up=True)
+        point = placed_player_to_normalized(placed_player, attacking_up=True)
+        positions[player_id_of(player)] = point
+        depths_by_poste.setdefault(player.poste, []).append(point.x)
+        depths_by_group.setdefault(player.group, []).append(point.x)
     for substitute in lineup.substitutes:
-        positions[player_id_of(substitute)] = _substitute_start_position(substitute)
+        # Étape 0b-2 : un remplaçant entre à la profondeur de la ligne de la formation qui porte son poste (sinon son groupe de poste), jamais à
+        # une profondeur par défaut sans rapport avec la formation en cours ; les titulaires ne bougent pas.
+        depths = depths_by_poste.get(substitute.poste) or depths_by_group.get(substitute.group)
+        positions[player_id_of(substitute)] = _substitute_start_position(substitute, sum(depths) / len(depths) if depths else None)
     return positions
 
 
-def _goalkeeper_lineup_at(timeline: Timeline, lineup: Lineup, team: str, minute: int) -> Lineup:
-    """Étape 0a du Bloc A : `lineup` avec UN SEUL gardien à la minute `minute`. Un gardien remplaçant n'est jamais affiché avant la minute de son
-    entrée ; à partir de cette minute (incluse), il prend la place du gardien sortant, qui n'est plus affiché (position de formation et bande
-    reprises). Source : `Timeline.substitutions` (club, sortant, entrant). Les remplaçants de champ ne sont pas touchés (étape 0b)."""
-    players, substitutes, bands = list(lineup.players), list(lineup.substitutes), dict(lineup.bands)
-    changed = False
-    for sub in sorted((s for s in timeline.substitutions if s.club_name == team), key=lambda s: s.minute):
-        entrant = next((p for p in substitutes if p.name == sub.player_on and p.group == GOALKEEPER), None)
-        if entrant is None:
-            continue
-        substitutes.remove(entrant)
-        changed = True
-        index = next((i for i, p in enumerate(players) if p.name == sub.player_off), None)
-        if minute >= sub.minute and index is not None:
-            band = bands.pop(players[index].name, None)
-            if band is not None:
-                bands[entrant.name] = band
-            players[index] = entrant
-    return replace(lineup, players=players, substitutes=substitutes, bands=bands) if changed else lineup
+_RED_CARD_TYPES = ("direct", "second_yellow")
+
+
+@dataclass(frozen=True)
+class _LineupEnJeu(Lineup):
+    """`Lineup` COMPLET (11 titulaires + tous les remplaçants, donc formation et numéros inchangés) accompagné de `en_jeu` : `{nom: point}` des joueurs
+    sur le terrain à la minute de l'événement. `point` est `None` pour un titulaire (position de formation) et la position propre du remplaçant
+    (`_lineup_start_positions` : ligne de la formation de son poste) pour un entrant. Lu par `sequence_generator` (`_opponent_positions`, `enrich_with_background`,
+    `opponent_field_tracks`) : passer cet objet à `BUILDERS` fait compter la pression B8-b sur les seuls adversaires présents, sans modifier `templates.py`."""
+
+    en_jeu: dict = field(default_factory=dict)
+
+
+def _names_on_pitch(timeline: Timeline, lineup: Lineup, team: str, minute: int, keep: frozenset[str] = frozenset()) -> set[str]:
+    """Étapes 0a puis 0b-2 du Bloc A : noms des joueurs de `team` sur le terrain à `minute` (convention stricte). Source : `Timeline.substitutions` et
+    `Timeline.cards` (rouge direct ou second jaune), jamais un tirage. Un titulaire est présent tant que `minute` est avant sa sortie ou son expulsion ;
+    un remplaçant l'est à partir de la minute de son entrée (incluse) jusqu'à son expulsion. Les remplacements de même minute s'appliquent ensemble ; les
+    blessures ne comptent pas. `keep` : noms gardés affichés même absents (tireur et assist de l'événement : buts réels de frontière, ticket 44)."""
+    starters = {p.name for p in lineup.players}
+    reserves = {p.name for p in lineup.substitutes}
+    present = set(starters)
+    for sub in timeline.substitutions:
+        if sub.club_name == team and minute >= sub.minute and sub.player_on in reserves:
+            present.discard(sub.player_off)
+            present.add(sub.player_on)
+    for card in timeline.cards:
+        if card.club_name == team and card.card_type in _RED_CARD_TYPES and minute >= card.minute:
+            present.discard(card.player)
+    return present | (keep & (starters | reserves))
+
+
+def _scorer_view(timeline: Timeline, lineup: Lineup, team: str, minute: int, keep: frozenset[str]) -> tuple[Lineup, dict[PlayerId, PitchPoint]]:
+    """Équipe qui attaque, étape 0b-2 : (effectif des joueurs présents, positions de départ). Les positions sont calculées sur l'effectif COMPLET
+    (titulaires en formation, remplaçants sur la ligne de leur poste) puis restreintes aux présents : retirer un joueur ne recale aucune ligne,
+    un remplaçant entre à sa propre place. L'effectif filtré (sans `substitutes`) fait tirer `support1` et `support2` parmi les présents."""
+    present = _names_on_pitch(timeline, lineup, team, minute, keep)
+    positions = _lineup_start_positions(lineup)
+    shown = [p for p in list(lineup.players) + list(lineup.substitutes) if p.name in present]
+    start_positions = {player_id_of(p): positions[player_id_of(p)] for p in shown if player_id_of(p) in positions}
+    return replace(lineup, players=shown, substitutes=[]), start_positions
+
+
+def _opponent_view(timeline: Timeline, lineup: Lineup, team: str, minute: int) -> tuple[_LineupEnJeu, set[str]]:
+    """Équipe adverse, étape 0b-2 : (`Lineup` complet + `en_jeu`, noms présents). Voir `_LineupEnJeu`."""
+    present = _names_on_pitch(timeline, lineup, team, minute)
+    positions = _lineup_start_positions(lineup)
+    en_jeu: dict = {p.name: None for p in lineup.players if p.name in present}
+    en_jeu.update({p.name: positions[player_id_of(p)] for p in lineup.substitutes if p.name in present and player_id_of(p) in positions})
+    return _LineupEnJeu(**{f.name: getattr(lineup, f.name) for f in fields(Lineup)}, en_jeu=en_jeu), present
 
 
 def _assist_name(event: NarrativeEvent) -> str | None:
@@ -209,11 +252,15 @@ def _build_clip(
     scorer_lineup = timeline.home_lineup if event.team == timeline.home_team else timeline.away_lineup
     opponent_lineup = timeline.away_lineup if event.team == timeline.home_team else timeline.home_lineup
     opponent_team = timeline.away_team if event.team == timeline.home_team else timeline.home_team
-    scorer_lineup = _goalkeeper_lineup_at(timeline, scorer_lineup, event.team, event.minute)  # étape 0a : un seul gardien par équipe
-    opponent_lineup = _goalkeeper_lineup_at(timeline, opponent_lineup, opponent_team, event.minute)
+    assist = _assist_name(event)
+    # Numéros de maillot : dérivés des effectifs COMPLETS (stables d'un clip à l'autre), réécrits plus bas dans le roster de la séquence.
+    scorer_numeros, opponent_numeros = numeros_by_player_id(scorer_lineup), numeros_by_player_id(opponent_lineup)
+    # Étapes 0a / 0b-2 : effectif affiché = joueurs sur le terrain à la minute de l'événement ; tireur et assist nommés par l'événement restent affichés.
+    scorer_full, opponent_full = scorer_lineup, opponent_lineup
+    scorer_lineup, start_positions = _scorer_view(timeline, scorer_full, event.team, event.minute, frozenset(n for n in (event.main_player, assist) if n))
+    opponent_lineup, opponent_present = _opponent_view(timeline, opponent_full, opponent_team, event.minute)
 
     scorer_names = {p.name for p in scorer_lineup.players} | {p.name for p in scorer_lineup.substitutes}
-    assist = _assist_name(event)
     if event.main_player not in scorer_names or (assist is not None and assist not in scorer_names):
         # Filet de securite (voir docstring de module) -- ne devrait plus se
         # declencher depuis la Tache 2 (substitutes couvre tout l'effectif
@@ -232,7 +279,6 @@ def _build_clip(
         # narrative._narrative_event_assist_zone) -- plus de None ici.
         assist_zone=zone_of(*event.assist_zone),
     )
-    start_positions = _lineup_start_positions(scorer_lineup)
     # Transit de l'outcome (brief "ball flight after shot", 24/09/2026,
     # Tache 2) -- parametre positionnel explicite (pas d'objet d'encapsulation :
     # une seule valeur `str`, deja portee telle quelle par `NarrativeEvent.
@@ -242,7 +288,11 @@ def _build_clip(
     # narrative.py) -- seul changement dans ce fichier, aucune autre
     # modification.
     sequence = BUILDERS[event.gabarit](goal_event, scorer_lineup, start_positions, event.outcome, opponent_lineup)  # B8-b : pression adverse sur les contrôles
-    sequence = enrich_with_background(sequence, opponent_lineup, event.outcome)
+    sequence = enrich_with_background(sequence, opponent_lineup, event.outcome, opponent_lineup.en_jeu)
+    sequence = replace(sequence, roster={
+        pid: replace(entry, numero=(scorer_numeros if entry.team_side == "scorer" else opponent_numeros).get(pid, entry.numero))
+        for pid, entry in sequence.roster.items()
+    })
 
     step = 1.0 / _FPS
     frames: list[FrameState] = []
@@ -251,7 +301,7 @@ def _build_clip(
         frames.append(interpolate(sequence, t))
         t += step
     frames = _apply_acceleration_constraint_to_frames(frames, step)
-    keeper = next((p.name for p in opponent_lineup.players if p.group == GOALKEEPER), None)
+    keeper = next((p.name for p in list(opponent_full.players) + list(opponent_full.substitutes) if p.group == GOALKEEPER and p.name in opponent_present), None)
     plan = plan_ball_events(sequence, event.outcome, event.minute, event.main_player, keeper)
     frames = _extend_with_ball_path(frames, sequence, plan, step)
     # Un événement daté à l'instant exact du contact peut tomber jusqu'à une image après la dernière image d'un clip

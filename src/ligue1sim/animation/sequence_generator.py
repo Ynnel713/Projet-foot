@@ -515,7 +515,7 @@ def _tactical_drift_unfloored(
     return (forward * (x_lo + (x_hi - x_lo) * x_unit), 0.0)
 
 
-def _opponent_positions(opponent_lineup: Lineup) -> dict[PlayerId, PitchPoint]:
+def _opponent_positions(opponent_lineup: Lineup, en_jeu: dict[str, PitchPoint | None] | None = None) -> dict[PlayerId, PitchPoint]:
     """Place les 11 adverses sur LEUR PROPRE référentiel (`pitch_layout`,
     peu importe le `attacking_up` choisi ici -- voir plus bas) puis les
     reflète dans le référentiel PARTAGÉ de la Sequence, où x=1 est déjà le
@@ -524,7 +524,15 @@ def _opponent_positions(opponent_lineup: Lineup) -> dict[PlayerId, PitchPoint]:
     `scripts/preview_motion.py._away_static_points`. Le choix de
     `attacking_up=True` pour LEUR PROPRE placement est arbitraire : seul le
     reflet en x compte pour les recaler dans le référentiel partagé, la
-    latéralité (y) n'est jamais affectée par `attacking_up`."""
+    latéralité (y) n'est jamais affectée par `attacking_up`.
+
+    `en_jeu` (étape 0b-2 du Bloc A) : `{nom: point}` des joueurs SUR LE TERRAIN à la minute de l'événement ; `None` (défaut) : comportement historique, les
+    11 titulaires. Le point est `None` pour un titulaire (il garde sa position de formation, calculée sur les 11 titulaires COMPLETS : aucune ligne n'est
+    recalée quand un joueur sort) et la position propre d'un remplaçant dans le repère de son équipe (comme `_substitute_start_position`, dont le point est
+    reflété ici comme celui d'un titulaire). Un titulaire absent de `en_jeu` n'est pas placé ; un remplaçant absent de `en_jeu` ou à point `None` non plus.
+    Par défaut l'attribut `en_jeu` d'un `Lineup` enrichi (voir `engine/narrative_player.py`) est lu ; un paramètre explicite le remplace."""
+    if en_jeu is None:
+        en_jeu = getattr(opponent_lineup, "en_jeu", None)
     stats = [
         PlayerMatchStat(
             player_name=p.name, club_name=opponent_lineup.club_name, poste=p.poste, started=True,
@@ -539,8 +547,15 @@ def _opponent_positions(opponent_lineup: Lineup) -> dict[PlayerId, PitchPoint]:
         player = players_by_name.get(pl.stat.player_name)
         if player is None:
             continue  # même repli que _start_positions : compo désynchronisée, ignoré
+        if en_jeu is not None and player.name not in en_jeu:
+            continue  # titulaire absent du terrain (remplacé ou expulsé) : sa place n'est PAS recalée pour les autres
         own_frame = placed_player_to_normalized(pl, attacking_up=True)
         positions[player_id_of(player)] = PitchPoint(x=1.0 - own_frame.x, y=own_frame.y)
+    if en_jeu is not None:
+        for substitute in opponent_lineup.substitutes:
+            point = en_jeu.get(substitute.name)
+            if point is not None:
+                positions[player_id_of(substitute)] = PitchPoint(x=1.0 - point.x, y=point.y)
     return positions
 
 
@@ -587,7 +602,9 @@ def _free_kick_wall(sequence: Sequence, opponent_positions: dict[PlayerId, Pitch
     return starts, (sign * magnitude_m * px / PITCH_LENGTH_M, sign * magnitude_m * py / PITCH_WIDTH_M)
 
 
-def enrich_with_background(sequence: Sequence, opponent_lineup: Lineup, outcome: str | None = None) -> Sequence:
+def enrich_with_background(
+    sequence: Sequence, opponent_lineup: Lineup, outcome: str | None = None, en_jeu: dict[str, PitchPoint | None] | None = None
+) -> Sequence:
     """Complète une `Sequence` déjà produite (par `generate_sequence`, ou
     directement un gabarit) avec les joueurs "décor" : le reste de l'équipe
     qui marque (`sequence.roster` sans rôle de gabarit) et les 11 adverses
@@ -611,7 +628,12 @@ def enrich_with_background(sequence: Sequence, opponent_lineup: Lineup, outcome:
     `team_side="opponent"`).
 
     `outcome` (B6-d) : issue de l'occasion (`NarrativeEvent.outcome`), lue SEULEMENT pour le gardien adverse d'un penalty
-    (`_penalty_gk_drift`). `None` (défaut, tous les appelants hors `narrative_player`) : amplitude seule. Aucun effet hors penalty."""
+    (`_penalty_gk_drift`). `None` (défaut, tous les appelants hors `narrative_player`) : amplitude seule. Aucun effet hors penalty.
+
+    `en_jeu` (étape 0b-2) : joueurs adverses sur le terrain, voir `_opponent_positions`. `None` et sans attribut `en_jeu` sur `opponent_lineup` : comportement
+    historique, bit à bit."""
+    if en_jeu is None:
+        en_jeu = getattr(opponent_lineup, "en_jeu", None)
     active_ids = {player_id for player_id, entry in sequence.roster.items() if entry.role is not None}
     inactive_scorer_ids = set(sequence.roster) - active_ids
     ball_target = (sequence.keyframes[-1].ball.x, sequence.keyframes[-1].ball.y)
@@ -635,8 +657,8 @@ def enrich_with_background(sequence: Sequence, opponent_lineup: Lineup, outcome:
         drift = _tactical_drift(entry.poste, player_id, "scorer", start, ball_target, scorer_cb_drift, sequence.event_ref)
         background[player_id] = BackgroundTrack(start=start, drift=drift)
 
-    opponent_positions = _opponent_positions(opponent_lineup)
-    opponent_by_id = {player_id_of(p): p for p in opponent_lineup.players}
+    opponent_positions = _opponent_positions(opponent_lineup, en_jeu)
+    opponent_by_id = {player_id_of(p): p for p in (list(opponent_lineup.players) + (list(opponent_lineup.substitutes) if en_jeu is not None else []))}
     opponent_numeros = numeros_by_player_id(opponent_lineup)
     opponent_cb_ys = [point.y for pid, point in opponent_positions.items() if opponent_by_id[pid].poste == "DC"]
     opponent_cb_drift = _cb_line_drift(
@@ -684,12 +706,15 @@ def enrich_with_background(sequence: Sequence, opponent_lineup: Lineup, outcome:
 
 
 def opponent_field_tracks(
-    opponent_lineup: Lineup, event_ref: str, ball_target: tuple[float, float]
+    opponent_lineup: Lineup, event_ref: str, ball_target: tuple[float, float], en_jeu: dict[str, PitchPoint | None] | None = None
 ) -> dict[PlayerId, BackgroundTrack]:
     """Pistes (`BackgroundTrack`) des adversaires de champ, identiques à celles que `enrich_with_background` leur donne pour la même
-    `event_ref` et la même cible du ballon (`ball_target` : position du dernier keyframe de la `Sequence`)."""
-    positions = _opponent_positions(opponent_lineup)
-    by_id = {player_id_of(p): p for p in opponent_lineup.players}
+    `event_ref` et la même cible du ballon (`ball_target` : position du dernier keyframe de la `Sequence`). `en_jeu` (étape 0b-2) : comme pour
+    `enrich_with_background`, seuls les adversaires sur le terrain comptent (pression B8-b)."""
+    if en_jeu is None:
+        en_jeu = getattr(opponent_lineup, "en_jeu", None)
+    positions = _opponent_positions(opponent_lineup, en_jeu)
+    by_id = {player_id_of(p): p for p in (list(opponent_lineup.players) + (list(opponent_lineup.substitutes) if en_jeu is not None else []))}
     cb_ys = [point.y for pid, point in positions.items() if by_id[pid].poste == "DC"]
     cb_drift = _cb_line_drift(f"{event_ref}|opponent", sum(cb_ys) / len(cb_ys), ball_target[1]) if cb_ys else (0.0, 0.0)
     return {
