@@ -713,11 +713,43 @@ Le centre du gardien est donc à 1,5 fois la profondeur du filet devant la ligne
 
 **Régression pour les corners.** À HEAD (avant B8-c1), le centre d'un corner visait une position fixe (`ball_position` de 0,93 ; 0,5) : même sans passeur, il montait à 2,3 m (mesuré sur le match 72, événement 7). Depuis B8-c1, il vise la position du buteur (le contact aérien) : sans passeur, ou si le buteur est au point de l'assist, il est immobile. Pour les débordements, le défaut est ancien (le centre `shot` visait déjà la position du buteur) ; B8-c1 le rend visible par le saut vertical.
 
+**Extension du périmètre (15/10/2026) : trois gabarits au sol.** Le diagnostic B8-c2 (100 matchs, graine d'audit 20260923, HEAD `5f137a7`) a trouvé **14 clips sur 1 552 (0,9 %)**, hors `corner` et `debordement_centre_tete`, dont un **segment de passe est immobile** (moins d'1 cm entre ses deux keyframes) avec un **receveur non identifié** (propriétaire `None` au keyframe d'arrivée, ballon figé), sur des gabarits au sol :
+- `contre_attaque` : 6 clips (match 3, événement 4 ; match 4, événement 12 ; match 29, événement 12 ; match 38, événement 1 ; match 39, événement 7 ; match 85, événement 5), segment 1, keyframe d'arrivée étiqueté `progression`.
+- `construction_placee` : 5 clips (match 14, événement 18 ; match 61, événement 9 ; match 63, événement 8 ; match 89, événement 9 ; match 92, événement 10), segment 2, keyframe d'arrivée étiqueté `progression`.
+- `une_deux` : 3 clips (match 27, événement 5 ; match 28, événement 0 ; match 31, événement 0), segment 1, keyframe d'arrivée étiqueté `remise`.
+Dans les 14 cas, le segment est une passe au sol (`pass_ground`) et aucune réception n'est détectée (aucun changement de porteur vers un joueur). C'est la même famille que ci-dessus (ballon sans propriétaire ni position, donc figé sur sa dernière position connue, dette `ball_owner=None` de `templates.py`). Nuance : pour ces trois gabarits, la branche « ballon immobile » de `ball_state_at` renvoie `z = 0`, ce qui est déjà la hauteur du ballon sur un segment au sol ; le défaut visible n'est donc **pas** un saut de hauteur mais l'**immobilité du ballon** pendant la passe. Le rôle non résolu (passeur inconnu) est présumé être la cause comme pour le débordement ; cela n'a pas été vérifié clip par clip pour ces 14 cas.
+
 **Piste (non implémentée).** (1) Dans `ball_state_at`, ne pas court-circuiter un segment immobile dont le `physics_tag` est `cross` ou `pass_lob` à hauteur d'arrivée non nulle, ou faire monter la hauteur de `0` vers `kf_b.ball.z`. (2) Ou, à la source, donner un passeur de repli ou une `Template.ball_position` aux gabarits dont le rôle `assist` peut rester non résolu, et, pour le corner, une cible de repli quand la position du buteur coïncide avec celle de l'assist. La branche « ballon immobile » de `ball_state_at` est **hors du périmètre autorisé de B8-c1**.
 
-**Fichiers concernés.** `src/ligue1sim/animation/ball.py` (`ball_state_at`, branche immobile), `src/ligue1sim/animation/templates.py` (`corner`, `debordement_centre_tete`, résolution du rôle `assist`), `engine/narrative_player.py` (`_assist_name`).
+**Fichiers concernés.** `src/ligue1sim/animation/ball.py` (`ball_state_at`, branche immobile), `src/ligue1sim/animation/templates.py` (`corner`, `debordement_centre_tete`, et, depuis l'extension, `contre_attaque`, `construction_placee`, `une_deux` ; résolution du rôle `assist`), `engine/narrative_player.py` (`_assist_name`).
 
 **Priorité.** À fixer par le propriétaire (proposition : moyenne, le saut vertical est visible à l'écran sur environ 5 % des débordements et 5 % des corners). **Résolution.** À planifier avec ou après B8-c1. **Statut.** Ouvert. Non corrigé.
+
+---
+
+## 42. Vrais lobs dans les gabarits (ballon arrivant en hauteur sur un receveur)
+
+**Description.** `pass_lob` existe dans `src/ligue1sim/animation/ball.py` (`_behavior_pass_lob`, hauteur max de 0,25 m à 10 m jusqu'à 1,2 m à 30 m) et est testé (`tests/test_ball.py`), mais **aucun gabarit ne le déclenche** : 0 segment sur 5 858 mesurés (100 matchs, graine d'audit 20260923, compos de l'audit, HEAD `5f137a7`). Les seules arches des gabarits de passe viennent du comportement `shot` inféré ou explicite sur le dernier segment, plafonné à 0,8 m (0 m jusqu'à 16 m, 0,8 m à partir de 40 m), avec une **arrivée à z = 0,000 m** et un **angle d'arrivée médian de 3,9° sous l'horizontale** (maximum 4,9°).
+
+**Conséquence.** Aucun contrôle aérien crédible (poitrine, tête de contrôle) n'est possible en l'état : B8-c2 est **sans objet** tant que des gabarits ne produisent pas un ballon qui arrive en hauteur (au moins 1,0 m au point de chute). Le Bloc B est clos sans B8-c2 ; B8-c1 (tête et volée de corner et de débordement) n'est pas concerné, il traite des frappes, pas des contrôles.
+
+**Diagnostic B8-c2 (15/10/2026), résumé.** Définition d'une cloche utilisée faute de lob dans les données : pic de la trajectoire du segment d'arrivée d'au moins 0,25 m (valeur `_LOB_HEIGHT_NEAR_M`), hors centres de corner et de débordement (`cross`, traités en B8-c1).
+- **Réceptions** : 1 984 sur 100 matchs. Cloches : 670 réceptions (670 clips sur 1 552, 43 %) à pic ≥ 0,25 m, 589 à ≥ 0,5 m, 464 à ≥ 0,7 m.
+- **Gabarits producteurs** (pic ≥ 0,25 m) : `contre_attaque` 209 sur 420 réceptions (31 % des cloches), `recuperation_haute` 176 sur 378 (26 %), `construction_placee` 167 sur 329 (25 %), `une_deux` 91 sur 185 (14 %), `but_gag` 27 sur 81 (4 %), `profondeur_1v1` **0 sur 108**. Le découpage de B8-c2 (15 % `contre_attaque`, 25 % `profondeur_1v1`, 10 % `construction_placee`) est contredit par les données.
+- **Caractéristiques** (médiane ; 90e centile) : hauteur d'arrivée 0,00 m partout ; vitesse d'arrivée 13,6 m/s ; 29,9 m/s ; angle d'arrivée 3,9° ; 4,6° ; distance de passe 46 m ; 64 m (minimum 23,6 m : ce sont de très longues passes dues à la géométrie des gabarits, passeur placé loin du receveur) ; écart entre le ballon et le receveur rendu au contact 5,6 m ; 16,0 m.
+- **Receveur** : toujours le rôle `scorer` (670 sur 670), postes MC 160, DC 146, AG 98, LB 57, AD 56, MOC 55, BU 55, RB 43.
+- **Pression** : distance de l'adversaire de champ le plus proche au contact, médiane 6,4 m, p90 11,6 m ; 104 cas sous 3 m (15,5 %), 222 sous 5 m (33 %). Zone occupée : 26 réceptions avec un adversaire à moins de 1,5 m (par exemple match 25, événement 6, `contre_attaque`, 0,15 m ; match 21, événement 4, `une_deux`, 0,75 m).
+- **Sans receveur** : 0 parmi les cloches. Des clips sans receveur existent en revanche sur d'autres segments (14 clips à passe immobile, voir ticket 41).
+- **Existant dans le code** : `templates.py`, `_insert_ground_controls` traite toute réception comme une réception au sol (ballon à z = 0, vitesse d'arrivée horizontale) ; aucun repli aérien ; B8-c1 a ajouté l'arrivée en hauteur seulement pour le `cross` du corner et du débordement (`Template.aerial_contact`).
+- **Répartition poitrine / tête / autre** : non lisible dans les données (aucune arrivée n'a de hauteur) ; toute répartition serait une hypothèse produit.
+
+**Correctif pressenti.** Introduire de vrais lobs dans certains gabarits (`contre_attaque`, `construction_placee`, `recuperation_haute`, `une_deux` pressentis d'après la mesure ; `profondeur_1v1` non, 0 cloche), avec **hauteur d'arrivée non nulle** et **receveur au point de chute**. Le second point dépend du ticket 30 : à B8-c1, le receveur rendu est à 5,6 m du ballon au contact (médiane) sur ces cloches, jusqu'à 21 m sur `une_deux`. Pistes techniques : tag `pass_lob` (ou nouveau tag) posé sur une part des passes, `end_z` lu sur `kf_b.ball.z` (mécanisme de B8-c1, déjà en place dans `_behavior_pass_lob`), geste aérien (poitrine, tête de contrôle) puis modulation par la pression et la qualité technique comme en B8-b. Aucune constante n'est proposée ici : les proportions du découpage de B8-c2 sont à reprendre sur les cas réels.
+
+**Fichiers concernés.** `src/ligue1sim/animation/templates.py`, `src/ligue1sim/animation/sequence_generator.py`, `src/ligue1sim/animation/ball.py`. Hors Bloc B.
+
+**Lieu de traitement.** À l'ouverture du Bloc A, ou dans un B9 dédié : à trancher ultérieurement.
+
+**Priorité.** À fixer par le propriétaire. **Résolution.** À planifier avec le ticket 30 (cohérence joueur-ballon, A1.6). **Statut.** Ouvert. Non corrigé.
 
 ---
 

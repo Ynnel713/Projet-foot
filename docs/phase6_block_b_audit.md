@@ -1209,3 +1209,73 @@ Le commit de cette section suit `c43b8b6`.
 ### 18.7 Statut
 
 **B8-b clos.** Prochaine étape : B8-c (contrôles aériens), diagnostic d'abord.
+
+
+---
+
+## 19. Bloc B : récapitulatif de clôture (15/10/2026)
+
+**Principe.** Le Bloc B a donné au ballon une physique et des gestes crédibles à l'écran, **sans jamais modifier le résultat sportif** : le moteur de Poisson décide les buts, les cartons, les remplacements et les blessures, et chaque sous-étape a vérifié, sur 100 matchs, que ces résultats sont identiques avant et après (déterminisme 100 / 100). Tout aléa du rendu vient d'un hachage sha256 de `event_ref` (ou de `player_id|event_ref|sel`), jamais de `random`. Les hashs ci-dessous sont lus dans `git log`.
+
+### 19.1 Sous-étapes closes
+
+**Audit initial.** `4154584` : audit de la physique du ballon (sections 0 à 4) et ticket 17.
+
+**B1, friction de l'air** (`af6f493`, section 6). Objectif : décélérer le ballon (`dv/dt = −c·v²`, 5 % par seconde à 15 m/s, `c` = 0,0033) et régler l'arrêt des rebonds. Mesure : le ballon arrive à 89-94 % de sa vitesse de départ sur une passe au sol, à 94-96 % sur un tir ; arrêt après le premier rebond en 3,76 s en moyenne sur un poteau (5,4 s sans friction), p90 4,38 s. Gain perceptible : oui, le ballon ralentit au lieu de garder sa vitesse. Décision : objectif « 3-4 s » accepté à 3,76-4,96 s (4-5 s crédible pour Football Manager).
+
+**B2, rebonds** (`d09d9cf`, section 5). Objectif : le ballon rebondit au lieu de s'arrêter net (sol, poteau, barre, restitution 0,70, −15 % de vitesse horizontale par rebond). Mesure : avant, arrêt net sur le poteau ; après, 1 à 5 rebonds, 2 à 3 s de plus (barre : 3 à 4 rebonds, sommet du premier 1,21 à 2,71 m sur 720 simulations). Gain perceptible : oui. Décision : aléa de direction de ±10° (« D8 » de la table de B2, section 5.3) ; durée physique plafonnée, images ajoutées après la séquence plutôt que dans `templates.py` (mesure : allonger la durée décalait 221 images sur 222).
+
+**B4, événements du ballon et parades** (`c149422`, section 7). Objectif : produire les événements visuels (but, parade, poteau, corner, sortie de but, touche, dégagement) sans changer le score. Mesure : 646 clips sur 1 586 (41 %) prolongés (515 parades, 131 poteaux) de 3,26 s en moyenne. Gain perceptible : oui (parades et poteaux animés). Décision : la parade est l'issue visuelle d'un non-but, décidée en amont.
+
+**B4-bis, consommation par le canvas et biais gardien** (`8febf44`, `783bc19`, section 8). Objectif : afficher ces événements et faire dépendre l'issue de la note du gardien. Mesure : gardien à 90 contre gardien à 20, 49,0 % contre 29,2 % de parades (+68 % en relatif) ; distribution globale préservée après recentrage (arrêts 39,7 % contre 39,9 %, 14 issues changées sur 1 586) ; 0 incohérence texte / animation sur 1 586 clips. Gain perceptible : oui. Décision : formule recentrée sur la moyenne des notes (74,7), validée par le propriétaire.
+
+**B3, rotation visible** (`f0f6383`, diagnostic `b715092`, sections 9 et 10). Objectif : rendre la rotation du ballon visible (traînée). Mesure : traînée de 12 positions (0,37 s) quand |spin| > 5 rad/s ; 10,3 % des clips montrent une traînée avant B5, 35,8 % après. Gain perceptible : oui sur les frappes enroulées. Décision : Option C (traînée suivant les positions réelles), ballon maintenu à 6 px.
+
+**B5, variétés de frappe** (`6bb8e5e`, `dbe65a9`, diagnostic `45946b5`, sections 11 et 12). Objectif : six types de frappe (tendu, enroulé léger, enroulé fort, extérieur du pied, volée, tête) avec spin et vitesse propres. Mesure : sur 1 259 vols, tendu 35,6 %, enroulé léger 13,1 %, enroulé fort 9,7 %, extérieur du pied 7,0 %, volée 15,3 %, tête 19,3 %, tous dans la fourchette de l'architecte ; traînée sur 35,8 % des clips. Gain perceptible : oui. Décisions : D1 à D6 de la section 11.7 (dont D6, périmètre des types et pourcentages), recalibrage du pool pied 0,70 / 0,19 / 0,11 vers 0,64 / 0,22 / 0,14.
+
+**B6-a, penalty : point exact et élan** (`b812330`, `798c616`). Objectif : ballon posé au point réglementaire (11 m de la ligne de but, y = 0) et élan du tireur. Mesure : seuls les 34 clips de penalty de l'échantillon changent ; le tireur part de 6 à 9 m (angle ±10°), attend 1 s, puis court à 6 m/s au plus ; le ballon ne suit plus le tireur. Gain perceptible : oui.
+
+**B6-b, trois types de penalty** (`815e7f7`, `b1f923c`, tickets `6d9c8c2`, `1ee9a89`). Objectif : penalty fort 30 %, placé 50 %, contre-pied 20 %, avec vitesse, spin et placement propres. Mesure : sur les 34 penaltys, 12 forts, 16 placés, 6 contre-pieds ; le type ne choisit jamais l'issue. Gain perceptible : oui. Tickets ouverts sur les captures de la graine 5 : 27 (le tireur dépasse le ballon) et 28 (adversaire près du départ du tireur, défaut préexistant).
+
+**B6-c, micro-variations par événement** (`80f2bd0`, `9965d63`, `1f562e9`, récapitulatif `f48e1ab`, section 13). Objectif : décalages de départ et dérives des joueurs propres à chaque événement. Mesure : variété des dérives 16,5 % vers 99,9 %, des décalages de départ 0 % vers 99,8 % ; plancher des dérives tiré dans [0,2 ; 0,5] m. Gain perceptible : faible isolément (les clips d'un même joueur ne répètent plus les mêmes mouvements). Décisions : A3 (plancher tiré) et option 1B (borne basse relevée à 0,2 m).
+
+**B6-d, réaction du gardien sur penalty** (`e8bb99e`, docs `626dbce`, `90cae5b`, section 14). Objectif : amplitude et côté du gardien cohérents avec l'issue. Mesure : sur 34 penaltys, arrêts avec le gardien du bon côté 5 sur 5 ; mauvais côté sur 55 % des buts. Gain perceptible : oui. Décision : Option 2 stricte, exception ponctuelle de `narrative_player.py` (une ligne, Cas C1).
+
+**B6-e, le NLG reçoit le type de frappe** (`88497f1`, `f5ba202`, `2674de0`, `2bc31e7`, `8f876ed`, `b37289a`, récapitulatif `c3ff089`, section 15). Objectif : le commentaire ne contredit plus le geste. Mesure : contradictions texte / type 157 vers 0 ; 504 phrases dont 80 conditions `strike_type`. Gain perceptible : oui (texte), ticket 23 fermé.
+
+**B7, coups francs directs** (`b0bb60c`, `ab826b6`, `396411b`, `5582b96`, `71ac316`, `eaac0df`, récapitulatif `a6cf0cb`, tickets `d1614fa`, `b2c6037`, section 16). Objectif : point exact, mur, profil de hauteur, blocage, gardien. Mesure : mur de 3 à 5 joueurs à 9,15 m, 31 tirs sur 35 coupent le mur à 2,12 m ou plus, 11 coups francs bloqués sur 11, point à 18,4-29,9 m. Gain perceptible : oui.
+
+**B8-a, contrôles au sol** (`250b71e`, `927f470`, récapitulatif `b5bf0e7`, section 17). Objectif : segment de contrôle (pied naturel, pied faible, semelle) sur les 7 gabarits avec réception. Mesure : 987 clips avec contrôle explicite sur 1 586 (62,2 %), 1 708 réceptions (88,7 / 10,2 / 1,1 %) ; différence de déplacement du porteur avec contrôle moins sans : médiane 0,005 m, p90 0,43 m. Gain perceptible : oui (le ballon ne se colle plus au joueur). Décisions : référentiel de gestes D8 du plan (pied droit, pied gauche, poitrine, tête, semelle) découpé en B8-a / B8-b / B8-c ; décisions 1 à 5 de B8 (contrôle approximatif = effet visuel seul ; NLG non exposé, ticket 40 ; pression à trois signaux ; impact accepté).
+
+**B8-b, pression et qualité technique** (`55bc0f1`, `c43b8b6`, récapitulatif `7cc7cfe`, section 18). Objectif : moduler le contrôle approximatif ou lourd par la pression et la qualité technique. Mesure : 10,3 % (pied naturel) et 35,5 % (pied faible) d'approximatifs observés, taux globaux recentrés sur B8-a ; 72 clips sur 1 552 modifiés (4,6 %). Gain perceptible : faible (la modulation redistribue les taux). Décision : exceptions de `sequence_generator.py` et de `narrative_player.py` (une ligne).
+
+**B8-c1, contact aérien du corner et du débordement** (`fa7a5d5`, `5795235`, tickets `e9bc472`, `5f137a7`). Objectif : le centre arrive à la hauteur de la tête (1,6 à 2,2 m) ou de la volée (0,4 à 1,0 m), le vol en part ; plus de ballon qui rebondit au sol avant le contact. Mesure (100 matchs, 303 clips modifiés, les 1 249 autres identiques) : images au sol avant le contact, médiane 55 vers 0 (corner) ; écart entre le buteur rendu et le ballon au contact sur le corner, médiane 4,7 vers 3,9 m, p90 8,1 vers 6,3 m ; durée du gabarit corner inchangée (7,0 s, centre de 2,1 s qui part à 4,9 s). Gain perceptible : oui. Décision : option B pour le corner (option A, 4,2 s, écartée : écart buteur-ballon médian de 36 m).
+
+### 19.2 Ce qui se voit à l'écran
+
+- **Rebonds crédibles** (B2) : le ballon rebondit sur le sol, le poteau et la barre au lieu de s'arrêter net.
+- **Friction** (B1) : le ballon ralentit et finit par s'arrêter en 4 à 5 s.
+- **Frappes variées et trajectoires enroulées** (B5, B3) : six types de frappe, traînée de rotation sur 35,8 % des clips.
+- **Parades, poteaux, barres, corners, sorties de but** (B4, B4-bis), avec un gardien dont la note change la part de parades.
+- **Penaltys variés** (B6-a, B6-b, B6-d) : ballon posé au point réglementaire, élan, trois types, gardien qui part du bon ou du mauvais côté.
+- **Murs sur coups francs** (B7) : mur de 3 à 5 joueurs, tir par-dessus, blocage, gardien.
+- **Contrôles au sol et modulations** (B8-a, B8-b) : le ballon arrive au pied, parfois s'échappe, selon la pression et la qualité technique.
+- **Contact aérien du corner et du débordement** (B8-c1) : le centre arrive en l'air, la tête ou la volée part de la hauteur du contact.
+- **Moins visible** : micro-variations par événement (B6-c) et commentaire cohérent avec le geste (B6-e).
+
+### 19.3 Ce qui n'a pas été fait
+
+- **B8-c2 est sans objet.** Le diagnostic (100 matchs, graine d'audit 20260923, 5 858 segments de ballon, 1 984 réceptions) a montré qu'**aucun gabarit ne produit de ballon en cloche** : `pass_lob` n'est déclenché par aucun segment (0 sur 5 858), les seules arches de passe viennent du comportement `shot` (0,8 m au plus, arrivée à `z` = 0,000 m, angle d'arrivée médian 3,9° sous l'horizontale), et `profondeur_1v1` n'en produit aucune (0 sur 108 réceptions). Un contrôle aérien crédible n'est donc pas possible en l'état. Les vrais lobs sont reportés (ticket 42).
+- **B8-c1, deux éléments non implémentés, non tranchés** : la durée du geste de tête et de volée (0,10-0,20 s et 0,15-0,25 s : sans ballon qui reste en l'air, rien à représenter vue de dessus) et la modulation par Heading et Jumping Reach (l'issue d'un tir de tête est décidée en amont, il n'y a rien à moduler).
+- **Hors Bloc B, renvoyé au Bloc A** : plongeon et délai de réaction du gardien (A1.2), joueurs figés pendant les rebonds, coup franc indirect, et la cohérence joueur-ballon (ticket 30, A1.6).
+
+### 19.4 Renvois
+
+- **Ticket 42** (`docs/known_issues.md`) : vrais lobs dans les gabarits.
+- **Ticket 30** : cohérence joueur-ballon (contact réel, distance, accélération sans contact interdite), Bloc A, A1.6. À B8-c1, le buteur rendu est encore à 3,9 m du ballon au contact du corner (médiane) et à 21,9 m sur le débordement (défaut ancien).
+- **Ticket 41** : ballon figé quand le passeur est inconnu : corner et débordement, et désormais **trois autres gabarits** (`contre_attaque`, `construction_placee`, `une_deux`, 14 clips, 0,9 %).
+- **Ticket 40** : exposer le type de contrôle au NLG (non traité).
+
+### 19.5 Statut
+
+**Bloc B clos.** Le chantier « vrais lobs » est noté (ticket 42) ; il sera ouvert à l'ouverture du Bloc A ou dans un B9 dédié.
