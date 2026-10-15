@@ -23,6 +23,7 @@ from ligue1sim.animation.templates import (
     build_from_template,
     pick_template,
 )
+from ligue1sim.animation import templates as tpl
 from ligue1sim.events import GoalEvent
 from ligue1sim.lineup import Lineup
 from ligue1sim.pitch_geometry import GRID_COLUMNS, GRID_ROWS, PITCH_LENGTH_M, PitchPoint, Zone, center_of
@@ -1593,3 +1594,116 @@ class TestAerialContactHeight:
         assert all(kf.ball.owner_id is not None for kf in sequence.keyframes)  # plus de « ballon disputé » (owner=None)
         assert sequence.keyframes[3].physics_tag == "cross"
         assert sequence.roster[sequence.keyframes[-1].ball.owner_id].role == "scorer"  # le buteur reçoit le centre
+
+
+class TestRoleGeometry:
+    """Chantier 1, sous-étape 1a : géométrie de rôle (`Role.geometry`). Le départ d'un rôle avec géométrie est dérivé de sa cible et de sa
+    position de formation ; sa course respecte, sur CHAQUE segment, le ratio (<= 0,55 de la vitesse max du poste) et l'accélération
+    (D <= 2,25 x T²). Aucun gabarit n'en porte encore : un rôle sans géométrie est inchangé (voir aussi les empreintes de structure)."""
+
+    _PROFILE = ((0.0, 0.0), (0.4, 0.4), (1.0, 1.0))
+    _ASSIST_PROFILE = ((0.0, 0.0), (0.4, 0.85), (1.0, 1.0))
+
+    def _template(self, duration: float, assist: bool = True) -> "tpl.Template":
+        roles = [tpl.Role("scorer", ANCHOR_STATIC, tuple(tpl.RoleFrame(t, p) for t, p in self._PROFILE), geometry=tpl.RoleGeometry(tpl.GEOM_ZONE))]
+        if assist:
+            geometry = tpl.RoleGeometry(tpl.GEOM_BEHIND_ZONE, cap_m=30.0)
+            roles.append(tpl.Role("assist", ANCHOR_STATIC, tuple(tpl.RoleFrame(t, p) for t, p in self._ASSIST_PROFILE), geometry=geometry))
+        times = [t for t, _ in self._PROFILE]
+        return tpl.Template(
+            name="geom_test", weight=1.0, duration=duration, roles=tuple(roles), tags=tuple((t, "x") for t in times),
+            ball_owner=tuple((t, "scorer") for t in times), context_score=lambda _: 1.0, ground_control=False,
+        )
+
+    def _build(self, duration: float, scorer: str, start: PitchPoint, zone: Zone = _SCORER_ZONE):
+        lineup = _lineup()
+        by_name = {p.name: p for p in lineup.players}
+        starts = {**_start_positions(lineup), by_name[scorer].id: start}
+        event = GoalEvent(club_name="Test FC", scorer=scorer, assist="mc1", minute=34, penalty=False, zone=zone, assist_zone=_ASSIST_ZONE)
+        return tpl.build_from_template(self._template(duration), event, lineup, starts), by_name[scorer].id
+
+    def _worst_ratios(self, sequence) -> tuple[float, float]:
+        """(pire ratio vitesse, pire D / (2,25 x T²)) sur tous les segments des rôles scriptés."""
+        from ligue1sim.animation.motion import MAX_SPEED_MPS
+        from ligue1sim.pitch_geometry import PITCH_WIDTH_M
+
+        worst_ratio = worst_accel = 0.0
+        for pid, entry in sequence.roster.items():
+            if entry.role is None:
+                continue
+            for a, b in zip(sequence.keyframes, sequence.keyframes[1:]):
+                seconds = b.t - a.t
+                distance = math.hypot((b.players[pid][0] - a.players[pid][0]) * PITCH_LENGTH_M, (b.players[pid][1] - a.players[pid][1]) * PITCH_WIDTH_M)
+                worst_ratio = max(worst_ratio, distance / seconds / MAX_SPEED_MPS[entry.poste])
+                worst_accel = max(worst_accel, distance / (2.25 * seconds**2))
+        return worst_ratio, worst_accel
+
+    @pytest.mark.parametrize("scorer", ["cb0", "mc0", "bu"])
+    @pytest.mark.parametrize("duration", [8.0, 2.5])
+    def test_matrix_zones_and_postes_respect_ratio_and_acceleration(self, scorer, duration):
+        # Zones de base (col 9, row 4) +-1 colonne, +-2 lignes ; départs de formation lointain, médian et proche ; DC (7 m/s), MC (8), BU (9).
+        for col in (8, 9, 10):
+            for row in (2, 3, 4, 5, 6):
+                for start in (PitchPoint(0.05, 0.5), PitchPoint(0.5, 0.2), PitchPoint(0.85, 0.8)):
+                    sequence, _ = self._build(duration, scorer, start, Zone(col=col, row=row))
+                    ratio, accel = self._worst_ratios(sequence)
+                    assert ratio <= 0.55, (scorer, duration, col, row, start, ratio)
+                    assert accel <= 1.0 + 1e-9, (scorer, duration, col, row, start, accel)
+
+    def test_a_player_already_within_range_keeps_his_formation_position(self):
+        close = PitchPoint(x=center_of(_SCORER_ZONE).x - 0.05, y=center_of(_SCORER_ZONE).y)  # 5,25 m de la zone
+        sequence, pid = self._build(8.0, "bu", close)
+        assert sequence.keyframes[0].players[pid] == (close.x, close.y)
+        assert sequence.keyframes[-1].players[pid] == pytest.approx((center_of(_SCORER_ZONE).x, center_of(_SCORER_ZONE).y))
+
+    def test_a_very_distant_player_is_brought_to_exactly_the_run_limit(self):
+        far = PitchPoint(0.02, 0.5)
+        sequence, pid = self._build(8.0, "cb0", far)
+        target = center_of(_SCORER_ZONE)
+        run_m = math.hypot((sequence.keyframes[0].players[pid][0] - target.x) * PITCH_LENGTH_M, (sequence.keyframes[0].players[pid][1] - target.y) * 68.0)
+        limit = tpl.role_run_limit_m(self._template(8.0).roles[0].frames, 8.0, 7.0)  # DC : 7 m/s
+        assert run_m == pytest.approx(limit)
+        assert limit == pytest.approx(0.5 * 7.0 * 8.0)  # le ratio mord (segment 0,4 -> 1,0 : progression 0,6 en 0,6 de la durée)
+        start = sequence.keyframes[0].players[pid]  # sur la droite cible -> formation
+        assert (start[1] - target.y) * (far.x - target.x) == pytest.approx((start[0] - target.x) * (far.y - target.y), abs=1e-9)
+
+    def test_a_short_segment_makes_the_acceleration_criterion_bind(self):
+        frames = (tpl.RoleFrame(0.0, 0.0), tpl.RoleFrame(1.0, 1.0))
+        assert tpl.role_run_limit_m(frames, 1.0, 9.0) == pytest.approx(2.25)  # ratio : 4,5 m ; accélération : 2,25 m
+        assert tpl.role_run_limit_m(frames, 10.0, 9.0) == pytest.approx(45.0)  # ratio : 45 m ; accélération : 225 m
+
+    def test_the_limit_takes_the_tightest_segment_and_the_optional_run_cap(self):
+        frames = (tpl.RoleFrame(0.0, 0.0), tpl.RoleFrame(0.1, 0.5), tpl.RoleFrame(1.0, 1.0))
+        limit = tpl.role_run_limit_m(frames, 10.0, 9.0)  # segment 1 : 1 s, progression 0,5 -> min(9, 4,5) ; segment 2 : 9 s, 0,5 -> loin
+        assert limit == pytest.approx(4.5)
+        assert tpl.role_run_limit_m(frames, 10.0, 9.0, run_cap_m=3.0) == pytest.approx(3.0)
+        assert tpl.role_run_limit_m((tpl.RoleFrame(0.0, 0.3), tpl.RoleFrame(1.0, 0.3)), 5.0, 9.0) == 0.0  # ne bouge jamais
+
+    def test_targets(self):
+        zone, assist = center_of(_SCORER_ZONE), center_of(_ASSIST_ZONE)
+        event = _goal_event()
+        assert tpl.geometry_target(tpl.RoleGeometry(tpl.GEOM_ZONE), event) == zone
+        assert tpl.geometry_target(tpl.RoleGeometry(tpl.GEOM_ASSIST_ZONE), event) == assist
+        behind = tpl.geometry_target(tpl.RoleGeometry(tpl.GEOM_BEHIND_ZONE, cap_m=10.0), event)
+        assert math.hypot((behind.x - zone.x) * PITCH_LENGTH_M, (behind.y - zone.y) * 68.0) == pytest.approx(10.0)
+        assert (behind.x - zone.x) * (assist.x - zone.x) + (behind.y - zone.y) * (assist.y - zone.y) > 0  # côté de la zone d'assist
+        goal = tpl.geometry_target(tpl.RoleGeometry(tpl.GEOM_TOWARD_GOAL, cap_m=5.0), event)
+        assert math.hypot((goal.x - zone.x) * PITCH_LENGTH_M, (goal.y - zone.y) * 68.0) == pytest.approx(5.0)
+        assert goal.x > zone.x
+        with pytest.raises(ValueError):
+            tpl.geometry_target(tpl.RoleGeometry("inconnue"), event)
+
+    def test_behind_zone_keeps_at_least_six_metres_from_the_zone_even_when_zone_and_assist_zone_coincide(self):
+        event = GoalEvent(club_name="Test FC", scorer="bu", assist="mc0", minute=34, penalty=False, zone=_SCORER_ZONE, assist_zone=_SCORER_ZONE)
+        zone = center_of(_SCORER_ZONE)
+        behind = tpl.geometry_target(tpl.RoleGeometry(tpl.GEOM_BEHIND_ZONE, cap_m=30.0), event)
+        assert math.hypot((behind.x - zone.x) * PITCH_LENGTH_M, (behind.y - zone.y) * 68.0) == pytest.approx(6.0)
+        assert behind.x < zone.x  # sans direction, vers son propre but
+
+    def test_build_is_deterministic(self):
+        first, _ = self._build(8.0, "cb0", PitchPoint(0.1, 0.4))
+        second, _ = self._build(8.0, "cb0", PitchPoint(0.1, 0.4))
+        assert first.to_json() == second.to_json()
+
+    def test_no_template_carries_a_geometry_yet(self):
+        assert all(role.geometry is None for template in TEMPLATES.values() for role in template.roles)
