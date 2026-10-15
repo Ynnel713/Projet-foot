@@ -986,6 +986,20 @@ class TestReboundDirectionIsBoundedAndDeterministic:
         assert low[2] < high[2] < 0.0
 
 
+def _cross_then_deflect_sequence(*, landing_z: float) -> Sequence:
+    """Centre (2,1 s) qui arrive à `landing_z` m puis ballon disputé (`deflect`, 2,8 s) : la géométrie de l'ancien corner."""
+    def with_z(kf, z):
+        return dataclasses.replace(kf, ball=dataclasses.replace(kf.ball, z=z))
+
+    keyframes = [
+        _kf(0.0, 0.556, 0.487, physics_tag=CROSS),
+        with_z(_kf(2.1, 0.930, 0.500, owner_id=None, physics_tag=DEFLECT), landing_z),
+        _kf(4.9, 0.875, 0.562),
+    ]
+    roster = {"p": RosterEntry(nom="X", poste="BU", role="scorer", numero=9, team_side="scorer")}
+    return Sequence(event_ref="ref", keyframes=keyframes, duration=4.9, meta={}, roster=roster)
+
+
 class TestBounceTagAndLandingBounce:
     def test_bounce_tag_follows_the_rebound_trajectory(self):
         sequence = _rebound_sequence("construction_placee", "barre")
@@ -1006,11 +1020,12 @@ class TestBounceTagAndLandingBounce:
             direct = trajectory.state_at(tau)
             assert (via_tag.x, via_tag.y, via_tag.z) == pytest.approx((direct.x, direct.y, direct.z), abs=1e-9)
 
-    def test_corner_cross_lands_and_bounces_without_changing_the_ground_path(self):
-        sequence = _rebound_sequence("corner", "but")
+    def test_cross_lands_and_bounces_without_changing_the_ground_path(self):
+        # B8-c1 : le corner ne contient plus de `deflect` après son centre (le contact a lieu à l'arrivée) ; le comportement reste couvert sur une
+        # séquence synthétique de même géométrie (centre de 2,1 s, ballon disputé de 2,8 s).
+        sequence = _cross_then_deflect_sequence(landing_z=0.0)
         frames = sequence.keyframes
-        index = next(i for i, kf in enumerate(frames) if kf.physics_tag == DEFLECT and frames[i - 1].physics_tag == CROSS)
-        kf_a, kf_b = frames[index], frames[index + 1]
+        kf_a, kf_b = frames[1], frames[2]
         duration = kf_b.t - kf_a.t
         zs = [ball_state_at(sequence, kf_a.t + duration * k / 200).z for k in range(1, 201)]
         landing_speed = -ball_state_at(sequence, kf_a.t).vz
@@ -1219,3 +1234,157 @@ class TestFreeKickFlightClearsTheWall:
                 total_m = sum(_xyz_distance_m(a, b) for a, b in zip(states, states[1:]))
                 avg = total_m / (sequence.keyframes[-1].t - sequence.keyframes[-2].t)
                 assert 12.0 <= avg <= 40.0, (minute, outcome, avg)
+
+
+# --- Phase 6, B8-c1 (14/10/2026) : arrivée en hauteur (tête, volée) -------------------------------------------------------------------
+# `kf_b.ball.z` est la hauteur d'ARRIVÉE d'un `cross` ou d'un `pass_lob` ; `kf_a.ball.z` la hauteur de DÉPART d'un `ball_flight` ; à 0, rien ne change.
+
+
+def _airborne_sequence(tag, *, end_z=0.0, start_z=0.0, duration=2.0):
+    def with_z(kf, z):
+        return dataclasses.replace(kf, ball=dataclasses.replace(kf.ball, z=z))
+
+    keyframes = [with_z(_kf(0.0, 0.55, 0.5, physics_tag=tag), start_z), with_z(_kf(duration, 0.87, 0.55), end_z)]
+    roster = {"p": RosterEntry(nom="X", poste="BU", role="scorer", numero=9, team_side="scorer")}
+    return Sequence(event_ref="ref", keyframes=keyframes, duration=duration, meta={}, roster=roster)
+
+
+class TestAirborneArrivalHeight:
+    @pytest.mark.parametrize("tag", [CROSS, PASS_LOB])
+    @pytest.mark.parametrize("end_z", [0.5, 1.0, 1.6, 1.96, 2.2])
+    def test_the_ball_arrives_at_the_keyframe_height(self, tag, end_z):
+        sequence = _airborne_sequence(tag, end_z=end_z)
+        assert ball_state_at(sequence, 0.0).z == pytest.approx(0.0, abs=1e-9)
+        assert ball_state_at(sequence, 2.0).z == pytest.approx(end_z, abs=1e-9)
+
+    @pytest.mark.parametrize("tag", [CROSS, PASS_LOB])
+    @pytest.mark.parametrize("end_z", [0.5, 1.6, 2.2])
+    def test_the_apex_is_never_below_the_arrival_height_and_the_ball_never_goes_underground(self, tag, end_z):
+        sequence = _airborne_sequence(tag, end_z=end_z)
+        zs = [ball_state_at(sequence, 2.0 * k / 400).z for k in range(401)]
+        assert min(zs) >= -1e-9
+        assert max(zs) >= end_z - 1e-9
+
+    @pytest.mark.parametrize("end_z", [1.6, 2.0, 2.2])
+    def test_a_cross_keeps_its_apex_within_the_validated_range(self, end_z):
+        sequence = _airborne_sequence(CROSS, end_z=end_z)
+        apex = max(ball_state_at(sequence, 2.0 * k / 400).z for k in range(401))
+        assert 2.0 - 1e-6 <= apex <= 2.5 + 1e-6, apex  # `_CROSS_HEIGHT_MIN_M` .. `_CROSS_HEIGHT_MAX_M`
+
+    @pytest.mark.parametrize("tag", [CROSS, PASS_LOB])
+    def test_a_ground_arrival_keeps_the_pre_b8c1_arch(self, tag):
+        from ligue1sim.animation.ball import _hat
+
+        sequence = _airborne_sequence(tag, end_z=0.0)
+        apex = ball_state_at(sequence, 1.0).z  # pic de la parabole à mi-parcours
+        assert apex > 0.1
+        for s in (0.1, 0.3, 0.7, 0.9):
+            assert ball_state_at(sequence, 2.0 * s).z == pytest.approx(apex * _hat(s), abs=1e-12)
+
+    @pytest.mark.parametrize("tag", [CROSS, PASS_LOB])
+    def test_vertical_speed_matches_the_height_profile(self, tag):
+        sequence = _airborne_sequence(tag, end_z=1.9)
+        eps = 1e-4
+        for t in (0.2, 0.9, 1.5, 1.9):
+            numeric = (ball_state_at(sequence, t + eps).z - ball_state_at(sequence, t - eps).z) / (2 * eps)
+            assert ball_state_at(sequence, t).vz == pytest.approx(numeric, rel=1e-3, abs=1e-3)
+
+
+class TestBallFlightStartsFromTheContactHeight:
+    def test_the_flight_starts_at_the_keyframe_height_and_ends_at_the_target_height(self):
+        sequence = _airborne_sequence(BALL_FLIGHT, start_z=1.9, end_z=0.8)
+        assert ball_state_at(sequence, 0.0).z == pytest.approx(1.9, abs=1e-9)
+        assert ball_state_at(sequence, 2.0).z == pytest.approx(0.8, abs=1e-9)
+        assert ball_state_at(sequence, 1.0).z == pytest.approx(1.35, abs=1e-9)  # rampe linéaire de l'un à l'autre
+
+    def test_a_ground_start_keeps_the_linear_ramp(self):
+        sequence = _airborne_sequence(BALL_FLIGHT, start_z=0.0, end_z=2.0)
+        for s in (0.0, 0.25, 0.5, 1.0):
+            assert ball_state_at(sequence, 2.0 * s).z == pytest.approx(2.0 * s, abs=1e-12)
+
+
+class TestFallAfterAnAirborneArrival:
+    def test_fall_then_bounce_falls_freely_to_the_ground_then_bounces_with_the_restitution(self):
+        from ligue1sim.animation.ball import _fall_then_bounce, _vertical_bounce
+
+        arrival_z, speed = 2.0, 3.0
+        impact = math.sqrt(speed**2 + 2 * GRAVITY_M_S2 * arrival_z)
+        fall_s = (impact - speed) / GRAVITY_M_S2
+        assert fall_s == pytest.approx(0.40, abs=0.01)  # 2 m de chute avec 3 m/s au départ : (6,95 - 3) / 9,81 s
+        assert _fall_then_bounce(arrival_z, speed, 0.0, 3.0)[0] == pytest.approx(arrival_z)
+        assert _fall_then_bounce(arrival_z, speed, fall_s * 0.5, 3.0)[0] < arrival_z
+        assert _fall_then_bounce(arrival_z, speed, fall_s, 3.0)[0] == pytest.approx(0.0, abs=1e-9)
+        zs = [_fall_then_bounce(arrival_z, speed, fall_s + 0.9 * k / 200, 3.0)[0] for k in range(201)]
+        assert max(zs) == pytest.approx((GROUND_RESTITUTION * impact) ** 2 / (2 * GRAVITY_M_S2), rel=0.02)
+        for tau in (0.0, 0.1, 0.8, 2.0):  # sans hauteur d'arrivée : exactement `_vertical_bounce`
+            assert _fall_then_bounce(0.0, speed, tau, 3.0) == _vertical_bounce(speed, tau, 3.0)
+
+    def test_a_deflect_after_a_high_arrival_continues_the_height_then_falls_and_bounces(self):
+        sequence = _cross_then_deflect_sequence(landing_z=1.96)
+        kf_a = sequence.keyframes[1]
+        assert ball_state_at(sequence, kf_a.t).z == pytest.approx(1.96, abs=1e-6)  # fin du centre
+        assert ball_state_at(sequence, kf_a.t + 1e-3).z == pytest.approx(1.96, abs=0.05)  # le segment suivant reprend à la même hauteur
+        zs = [ball_state_at(sequence, kf_a.t + 2.8 * k / 400).z for k in range(1, 401)]
+        assert min(zs) >= -1e-9
+        landing = -ball_state_at(sequence, kf_a.t).vz
+        fall_s = (math.sqrt(landing**2 + 2 * GRAVITY_M_S2 * 1.96) - landing) / GRAVITY_M_S2
+        fall_index = int(fall_s / 2.8 * 400)
+        assert all(a > b for a, b in zip(zs[:fall_index - 2], zs[1:fall_index - 1]))  # il tombe d'abord, image après image : pas de téléportation au sol
+        assert any(z > 0.2 for z in zs[fall_index + 5:])  # puis il rebondit
+
+
+class TestAerialContactOnCornerAndOverlap:
+    """B8-c1 : `corner` et `debordement_centre_tete` finissent par un contact aérien : le centre arrive à la hauteur du contact, le vol en part."""
+
+    _GABARITS = ("corner", "debordement_centre_tete")
+
+    @staticmethod
+    def _strike(sequence, gabarit):
+        from ligue1sim.animation.templates import strike_type_for
+
+        return strike_type_for(gabarit, sequence.event_ref).name
+
+    @pytest.mark.parametrize("gabarit", _GABARITS)
+    def test_the_contact_height_depends_on_the_strike_type_and_is_where_the_cross_arrives(self, gabarit):
+        seen = set()
+        for minute in range(1, 121):
+            sequence = _rebound_sequence(gabarit, "but", minute)
+            contact = sequence.keyframes[-2]
+            assert contact.physics_tag == BALL_FLIGHT
+            strike = self._strike(sequence, gabarit)
+            lo, hi = (0.4, 1.0) if strike == "reprise_vollee" else (1.6, 2.2)
+            assert lo <= contact.ball.z <= hi, (gabarit, minute, strike, contact.ball.z)
+            seen.add(strike)
+            assert ball_state_at(sequence, contact.t - 1e-6).z == pytest.approx(contact.ball.z, abs=2e-3)  # le centre arrive à cette hauteur
+            assert ball_state_at(sequence, contact.t + 1e-6).z == pytest.approx(contact.ball.z, abs=2e-3)  # et le vol en part
+        assert seen == {"tete", "reprise_vollee"}
+
+    @pytest.mark.parametrize("gabarit", _GABARITS)
+    def test_there_is_no_ground_bounce_between_the_arrival_of_the_cross_and_the_contact(self, gabarit):
+        for minute in range(1, 41):
+            sequence = _rebound_sequence(gabarit, "but", minute)
+            contact = sequence.keyframes[-2]
+            assert all(kf.physics_tag != DEFLECT for kf in sequence.keyframes), gabarit
+            cross_start = next(kf for kf in sequence.keyframes if kf.physics_tag == CROSS)
+            zs = [ball_state_at(sequence, cross_start.t + (contact.t - cross_start.t) * k / 300).z for k in range(60, 300)]  # dès 20 % du centre
+            assert min(zs) > 0.3, (gabarit, minute)  # en l'air tout le long du centre : jamais de contact avec le sol
+
+    @pytest.mark.parametrize("gabarit", _GABARITS)
+    def test_the_cross_segment_is_tagged_cross_and_reaches_the_scorer(self, gabarit):
+        sequence = _rebound_sequence(gabarit, "but", 34)
+        cross_index = next(i for i, kf in enumerate(sequence.keyframes) if kf.physics_tag == CROSS)
+        assert sequence.keyframes[cross_index + 1].ball.owner_id == sequence.keyframes[-2].ball.owner_id  # le buteur reçoit le centre
+        assert sequence.keyframes[cross_index + 1] is sequence.keyframes[-2]  # le contact EST l'arrivée du centre
+
+    def test_the_templates_keep_their_duration_and_the_cross_of_the_corner_starts_later(self):
+        assert TEMPLATES["corner"].duration == 7.0  # option B : la durée d'avant, le centre part à 4,9 s et arrive au contact à 7,0 s
+        assert TEMPLATES["debordement_centre_tete"].duration == 6.0
+        cross_start = next(kf for kf in _rebound_sequence("corner", "but").keyframes if kf.physics_tag == CROSS)
+        assert cross_start.t == pytest.approx(4.9)
+
+    @pytest.mark.parametrize("gabarit", _GABARITS)
+    def test_without_flight_the_clip_ends_at_the_contact_height(self, gabarit):
+        for outcome in ("tacle", "degagement"):
+            sequence = _rebound_sequence(gabarit, outcome, 34)
+            assert sequence.keyframes[-1].ball.z >= 0.4
+            assert ball_state_at(sequence, sequence.duration).z == pytest.approx(sequence.keyframes[-1].ball.z, abs=1e-9)

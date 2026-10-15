@@ -755,15 +755,25 @@ class TestTemplateStructureUnchangedByPhysicsTags:
     `contre_attaque`, `decalage_enroulee`, `profondeur_1v1`, `recuperation_haute`, `une_deux`) -- chaque réception au sol reçoit un segment de
     contrôle (keyframes insérés, ballon décalé du joueur, tags `controle_<geste>`). Preuve de cause unique : avec `Template.ground_control`
     à `False` sur les 12 gabarits, le code redonne exactement les 12 anciennes empreintes. `corner` et `debordement_centre_tete` (réception aérienne,
-    B8-c), `coup_franc`, `penalty` et `percee_individuelle` (aucune réception) gardent la leur."""
+    B8-c), `coup_franc`, `penalty` et `percee_individuelle` (aucune réception) gardent la leur.
+
+    Septième exception délibérée (Phase 6, B8-c1, 14/10/2026) : `corner` et `debordement_centre_tete` ont une empreinte mise à jour -- leur dernier
+    keyframe est un contact AÉRIEN (`Template.aerial_contact`) : sa hauteur `ball.z` (1,6 à 2,2 m pour une tête, 0,4 à 1,0 m pour une volée) remplace le
+    `ball_height` de 0,3 m ; `corner` est en plus retimé (durée 7,0 s inchangée, keyframe « ballon disputé » supprimé, centre de 2,1 s qui part à
+    4,9 s et arrive au contact à 7,0 s, nouveau keyframe à t_ratio 0,7). Preuve de cause unique : avec les anciennes définitions des deux gabarits (durée, rôles, tags, `ball_owner`, `ball_height`, `ball_position` et
+    `physics_tags` d'avant) et `aerial_contact=False`, le code redonne exactement les anciennes empreintes (`corner` cfc64237...,
+    `debordement_centre_tete` 06543fdd...) ; avec le nouveau gabarit mais `aerial_contact=False`, `corner` donne une troisième empreinte (3bce8e74...),
+    et l'ancien gabarit avec `aerial_contact=True` une quatrième (d9d7cffc...) : la durée et la hauteur du contact y contribuent chacune. Pour
+    `debordement_centre_tete`, le seul changement de `physics_tags` (`shot` -> `cross`) ne change pas l'empreinte (le champ est neutralisé) : seule la
+    hauteur du contact la modifie."""
 
     _EXPECTED_STRUCTURE_HASH = {
         "but_gag": "82585674d2a0633eced9f75a39ee5e914643a8c1b25a47d545fc70c8965e29db",
         "construction_placee": "65b5ad5b7323521829e6c056ae2d3f43df29bfb79f46336be1fe4437565bf0ae",
         "contre_attaque": "4273ab175e79155b86d96e879cc9ecb93fa85d675f48e93151212d8050c34b1f",
-        "corner": "cfc642378285192fb8f4e59ce0a6ec25679b837b273293de8e82e3f1641e7293",
+        "corner": "5086502e6020d2ff4c293776dee443643211b703cc4cb3eb37474f585e6eefbf",
         "coup_franc": "ff70b15275eb85d5baefeb5acea5f4a81e25319618a6e25cc978600aca72f959",
-        "debordement_centre_tete": "06543fdddb12bdc4959eb29b0ca83b146bc5f8e312e233f196c9df1225658819",
+        "debordement_centre_tete": "233d958978da2a443675c2345ca56c15ad14ed4c5e9852143bbd339556173aa9",
         "decalage_enroulee": "bc960f8f29e583ad06e16a3c1749222f74900c73f25888f401ebe15695dfa46d",
         "penalty": "7972e9a2d7afe7e1caa593950d3b7fa5e7cde43195b04a14bcc0c77a0b38a888",
         "percee_individuelle": "4fd4c5ef14c5b020821ecf2638a54c0e58c5a8a35e11001e66b458b4cd1633ca",
@@ -1535,3 +1545,51 @@ class TestControlPressureModulation:
                 assert plain.keyframes[0].ball == pressed.keyframes[0].ball and plain.keyframes[-1].ball == pressed.keyframes[-1].ball
                 original = lambda sequence: [(kf.t, kf.ball.owner_id) for kf in sequence.keyframes if not kf.tag.startswith(("controle_", "reprise_"))]
                 assert original(plain) == original(pressed), (name, minute)
+
+
+class TestAerialContactHeight:
+    """Phase 6, B8-c1 : le dernier keyframe de `corner` et de `debordement_centre_tete` est un contact aérien dont la hauteur dépend du type de frappe
+    (tête 1,6 à 2,2 m, volée 0,4 à 1,0 m), tirée par sha256 de `event_ref` ; aucun autre gabarit n'est concerné."""
+
+    _AERIAL = ("corner", "debordement_centre_tete")
+
+    def test_only_the_two_header_templates_have_an_aerial_contact(self):
+        assert {name for name, template in TEMPLATES.items() if template.aerial_contact} == set(self._AERIAL)
+
+    def test_the_contact_height_follows_the_strike_type(self):
+        import dataclasses
+
+        from ligue1sim.animation.templates import strike_type_for
+
+        lineup = _lineup()
+        kinds = Counter()
+        for name in self._AERIAL:
+            for minute in range(1, 201):
+                event = dataclasses.replace(_goal_event(minute=minute), club_name=f"c{minute}")
+                sequence = BUILDERS[name](event, lineup, _start_positions(lineup))
+                strike = strike_type_for(name, sequence.event_ref).name
+                lo, hi = (0.4, 1.0) if strike == "reprise_vollee" else (1.6, 2.2)
+                assert lo <= sequence.keyframes[-1].ball.z <= hi, (name, minute, strike)
+                kinds[strike] += 1
+        assert 0.04 <= kinds["reprise_vollee"] / sum(kinds.values()) <= 0.16  # la volée reste ~10 % des frappes de ces gabarits
+
+    def test_the_contact_height_is_deterministic_and_varies_with_the_event(self):
+        from ligue1sim.animation.templates import _contact_height_m
+
+        heights = [_contact_height_m("corner", f"goal:c{i}:bu:34") for i in range(300)]
+        assert heights == [_contact_height_m("corner", f"goal:c{i}:bu:34") for i in range(300)]
+        assert len({round(h, 6) for h in heights}) > 200
+
+    def test_other_templates_keep_a_ground_final_keyframe(self):
+        lineup = _lineup()
+        for name in sorted(set(BUILDERS) - set(self._AERIAL)):
+            sequence = BUILDERS[name](_goal_event(penalty=(name == "penalty")), lineup, _start_positions(lineup))
+            assert sequence.keyframes[-1].ball.z == 0.0, name
+
+    def test_the_corner_contact_is_the_arrival_of_the_cross(self):
+        lineup = _lineup()
+        sequence = BUILDERS["corner"](_goal_event(), lineup, _start_positions(lineup))
+        assert [kf.t for kf in sequence.keyframes] == pytest.approx([0.0, 2.1, 4.2, 4.9, 7.0])  # option B : durée 7,0 s, centre de 4,9 à 7,0 s
+        assert all(kf.ball.owner_id is not None for kf in sequence.keyframes)  # plus de « ballon disputé » (owner=None)
+        assert sequence.keyframes[3].physics_tag == "cross"
+        assert sequence.roster[sequence.keyframes[-1].ball.owner_id].role == "scorer"  # le buteur reçoit le centre

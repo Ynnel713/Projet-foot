@@ -503,12 +503,16 @@ class TestAccelerationConstraintOnRealGabarits:
 # `_insert_ground_controls` neutralisé (identité), le code actuel redonne exactement les empreintes d'avant :
 # but_gag ("d08dadff3471f811", "c7acfb230b442645"), construction_placee ("9e0fcb91c8afb6f8", ...), contre_attaque ("06d519a0433e127a", ...).
 # Mesure sur 100 matchs : le déplacement du porteur pendant la fenêtre vient des gabarits (max 5,85 m sans contrôle, 6,30 m avec) ; aucune exception motion.py.
+# Phase 6, B8-c1 (14/10/2026) : `corner` est retimé (durée 7,0 s inchangée ; le centre part à 4,9 s et le contact a lieu à son arrivée, plus de « ballon
+# disputé » ; un keyframe de plus à t_ratio 0,7), ce qui change les trajectoires des joueurs : l'empreinte de `corner` est recalculée. Preuve que B8-c1 est la SEULE cause : avec l'ancienne définition du gabarit
+# (durée, rôles, tags, `ball_owner`, `ball_height`, `ball_position`, `physics_tags` d'avant), le code actuel redonne exactement l'empreinte précédente
+# ("f05064d66238d5db", "39a32789ddad7788"). L'empreinte ne contient que les joueurs : `ball.py` n'y intervient pas.
 _WITNESS_DIGESTS = {
     # gabarit: (empreinte des images brutes `interpolate`, empreinte après contrainte d'accélération)
     "but_gag": ("2adb64758544b738", "5413574bb0047c48"),
     "construction_placee": ("ff696c5902800e79", "b89f6245b693bd81"),
     "contre_attaque": ("b08cb2b75e7031cd", "a23371edfce032df"),
-    "corner": ("f05064d66238d5db", "39a32789ddad7788"),
+    "corner": ("2e573082648af3d4", "46b52565c7ea2d7b"),
     "percee_individuelle": ("e81f855c96b7ccfe", "e81f855c96b7ccfe"),
 }
 
