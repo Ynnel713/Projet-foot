@@ -1707,3 +1707,115 @@ class TestRoleGeometry:
 
     def test_no_template_carries_a_geometry_yet(self):
         assert all(role.geometry is None for template in TEMPLATES.values() for role in template.roles)
+
+
+class TestTacticalSupports:
+    """Chantier 1, sous-étape 1b : un rôle générique (support) dont `Role.geometry` est renseignée est tiré par `_resolve_roles` selon sa
+    cible : parmi les postes attendus (repli : tous les joueurs de champ), le plus proche de la cible d'après la position de formation ;
+    égalité : nom ; support1 avant support2. Sans géométrie, le tri alphabétique d'origine est conservé (aucun gabarit n'est migré)."""
+
+    _TARGET = center_of(_SCORER_ZONE)
+
+    def _at(self, dx_m: float, dy_m: float = 0.0) -> PitchPoint:
+        return PitchPoint(x=self._TARGET.x + dx_m / PITCH_LENGTH_M, y=self._TARGET.y + dy_m / 68.0)
+
+    def _starts(self, lineup: Lineup, **near: PitchPoint) -> dict[int, PitchPoint]:
+        """Tous les joueurs loin de la cible (de plus en plus loin dans l'ordre de la compo), sauf ceux de `near` (par nom)."""
+        starts = {p.id: self._at(-30.0 - 2.0 * i) for i, p in enumerate(lineup.players)}
+        starts.update({next(p.id for p in lineup.players if p.name == name): point for name, point in near.items()})
+        return starts
+
+    def _support(self, name: str, postes: tuple[str, ...] = ()) -> "tpl.Role":
+        frames = (tpl.RoleFrame(0.0, 0.0), tpl.RoleFrame(1.0, 1.0))
+        return tpl.Role(name, ANCHOR_STATIC, frames, geometry=tpl.RoleGeometry(tpl.GEOM_ZONE, preferred_postes=frozenset(postes)))
+
+    def _resolve(self, roles, starts, lineup: Lineup | None = None) -> dict[str, str]:
+        lineup = lineup or _lineup()
+        names = ("scorer", "assist") + tuple(r.name for r in roles)
+        return {k: p.name for k, p in tpl._resolve_roles(_goal_event(), lineup, names, tuple(roles), starts).items()}
+
+    def test_the_pool_is_filtered_by_expected_poste_before_distance(self):
+        lineup = _lineup()  # le LB est le plus proche, mais seuls les DC sont attendus
+        starts = self._starts(lineup, lb=self._at(-2.0), cb0=self._at(-20.0), cb1=self._at(-30.0))
+        assert self._resolve([self._support("support1", ("DC",))], starts)["support1"] == "cb0"
+
+    def test_the_nearest_player_of_the_pool_is_chosen(self):
+        lineup = _lineup()
+        starts = self._starts(lineup, cb0=self._at(-20.0), cb1=self._at(-12.0))
+        assert self._resolve([self._support("support1", ("DC",))], starts)["support1"] == "cb1"
+
+    def test_a_tie_is_broken_by_name(self):
+        lineup = _lineup()
+        starts = self._starts(lineup, cb0=self._at(-10.0, 3.0), cb1=self._at(-10.0, -3.0))  # même distance : 10,44 m
+        assert self._resolve([self._support("support1", ("DC",))], starts)["support1"] == "cb0"
+        starts = self._starts(lineup, cb0=self._at(-10.0, -3.0), cb1=self._at(-10.0, 3.0))
+        assert self._resolve([self._support("support1", ("DC",))], starts)["support1"] == "cb0"  # indépendant de la position
+
+    def test_an_empty_pool_falls_back_to_every_field_player(self):
+        lineup = _lineup()  # aucun ATT dans la compo : le MDC, le plus proche, est tiré
+        starts = self._starts(lineup, mdc=self._at(-5.0), cb0=self._at(-15.0))
+        assert self._resolve([self._support("support1", ("ATT",))], starts)["support1"] == "mdc"
+
+    def test_without_expected_postes_every_field_player_is_a_candidate(self):
+        lineup = _lineup()
+        starts = self._starts(lineup, ag=self._at(-4.0))
+        assert self._resolve([self._support("support1")], starts)["support1"] == "ag"
+
+    def test_support1_is_drawn_before_support2_whatever_the_order_of_the_roles(self):
+        lineup = _lineup()
+        starts = self._starts(lineup, cb0=self._at(-20.0), cb1=self._at(-10.0))
+        for roles in (
+            [self._support("support1", ("DC",)), self._support("support2", ("DC",))],
+            [self._support("support2", ("DC",)), self._support("support1", ("DC",))],
+        ):
+            resolved = self._resolve(roles, starts)
+            assert (resolved["support1"], resolved["support2"]) == ("cb1", "cb0")
+
+    def test_a_support_is_never_the_scorer_the_assist_a_keeper_or_already_drawn(self):
+        lineup = _lineup()  # buteur bu, passeur mc0 : tous les deux, avec le gardien, sont les plus proches de la cible
+        starts = self._starts(lineup, bu=self._at(-1.0), mc0=self._at(-2.0), gk=self._at(-3.0), cb0=self._at(-20.0), cb1=self._at(-21.0))
+        resolved = self._resolve([self._support("support1"), self._support("support2")], starts)
+        assert {resolved["support1"], resolved["support2"]}.isdisjoint({"bu", "mc0", "gk"})
+        assert resolved["support1"] != resolved["support2"]
+
+    def test_a_substitute_is_a_candidate_and_a_player_without_position_is_not(self):
+        from dataclasses import replace
+
+        lineup = replace(_lineup(), substitutes=[_player("DC", 70.0, "sub", 12)])
+        starts = {**self._starts(lineup, cb0=self._at(-20.0)), 12: self._at(-8.0)}
+        assert self._resolve([self._support("support1", ("DC",))], starts, lineup)["support1"] == "sub"
+        del starts[12]
+        assert self._resolve([self._support("support1", ("DC",))], starts, lineup)["support1"] == "cb0"
+        only_scorer_and_assist = {p.id: self._at(-10.0) for p in lineup.players if p.name in ("bu", "mc0")}
+        assert "support1" not in self._resolve([self._support("support1")], only_scorer_and_assist, lineup)
+
+    def test_resolution_is_deterministic(self):
+        lineup = _lineup()
+        starts = self._starts(lineup, cb0=self._at(-10.0, 3.0), cb1=self._at(-10.0, -3.0))
+        roles = [self._support("support1", ("DC",)), self._support("support2")]
+        assert self._resolve(roles, starts) == self._resolve(roles, starts)
+
+    def test_build_from_template_uses_the_tactical_draw(self):
+        lineup = _lineup()
+        times = (0.0, 1.0)
+        template = tpl.Template(
+            name="geom_test", weight=1.0, duration=8.0, tags=tuple((t, "x") for t in times), ball_owner=tuple((t, "scorer") for t in times),
+            roles=(
+                tpl.Role("scorer", ANCHOR_STATIC, (tpl.RoleFrame(0.0, 0.0), tpl.RoleFrame(1.0, 1.0))),
+                self._support("support1", ("DC",)),
+            ),
+            context_score=lambda _: 1.0, ground_control=False,
+        )
+        starts = self._starts(lineup, cb0=self._at(-20.0), cb1=self._at(-12.0))
+        assert tpl.build_from_template(template, _goal_event(), lineup, starts).meta["roles"]["support1"] == "cb1"
+
+    def test_roles_without_geometry_stay_alphabetical(self):
+        lineup = _lineup()
+        starts = self._starts(lineup, lb=self._at(-1.0))  # sans géométrie, la proximité n'intervient pas
+        plain = tpl.Role("support1", ANCHOR_STATIC, (tpl.RoleFrame(0.0, 0.0), tpl.RoleFrame(1.0, 1.0)))
+        assert self._resolve([plain], starts)["support1"] == "ad"  # premier nom par ordre alphabétique hors buteur, passeur et gardien
+        assert tpl._resolve_roles(_goal_event(), lineup, ("scorer", "assist", "support1"))["support1"].name == "ad"  # appel d'avant 1b
+        for name in BUILDERS:  # aucun gabarit migré
+            assert all(role.geometry is None for role in TEMPLATES[name].roles)
+        sequence = BUILDERS["contre_attaque"](_goal_event(), lineup, _start_positions(lineup))
+        assert sequence.meta["roles"]["support1"] == "ad"
