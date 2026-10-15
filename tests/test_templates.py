@@ -786,7 +786,7 @@ class TestTemplateStructureUnchangedByPhysicsTags:
         "decalage_enroulee": "bc960f8f29e583ad06e16a3c1749222f74900c73f25888f401ebe15695dfa46d",
         "penalty": "7972e9a2d7afe7e1caa593950d3b7fa5e7cde43195b04a14bcc0c77a0b38a888",
         "percee_individuelle": "7dda924ea183a11583d3539da5cadd0b95d46733059d7d6901729da617f28021",
-        "profondeur_1v1": "f8678e12337a02d11163ac0e8830b303682ccccb8bcf00f5ae2634268e65b469",
+        "profondeur_1v1": "72001bb8a4e7e0a03cbc38616bc13fa468f342f5adce9e38c2327126666ad988",
         "recuperation_haute": "a63fbaec00fc77ef1aaf1a99c743dd9bffdb5a4c47fd2bf65dad09f06751cd8b",
         "une_deux": "202c14b7feab0b93b529151d0cd1b505cccb57bb4c479e51f98266a08fc9a22b",
     }

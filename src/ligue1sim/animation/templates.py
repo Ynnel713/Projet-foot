@@ -1456,7 +1456,17 @@ _TEMPLATE_CORNER = Template(
 _TEMPLATE_PROFONDEUR_1V1 = Template(
     name="profondeur_1v1",
     weight=0.9,
-    duration=6.0,
+    # Chantier 1, 1c (15/10/2026) : durée 6,0 -> 7,0 s et géométrie de rôle sur le scorer SEUL (cible event.zone, inchangée). L'assist
+    # ne bouge quasiment pas (progress 0,2 au maximum) : pas de géométrie ajoutée, gain de réalisme marginal pour un risque de
+    # régression couplée au contrôle au sol (décision explicite, 1c).
+    #
+    # Effet de bord mesuré (100 matchs, graine d'audit 20260923, scripts/measure_geometry.py) : la passe assist -> scorer à t_ratio=0,3
+    # (ball_owner) est mesurée entre la position FIXE de l'assist et celle du scorer à 30 % de sa progression -- cette dernière est
+    # désormais plus avancée vers la zone de tir (départ rapproché par la géométrie), ce qui allonge ce segment précis plus vite que son
+    # temps imparti ne croît. 14 clips sur 1552 passent le seuil de 30 m/s (0 avant 1c), uniquement sur ce gabarit. Aucune exigence
+    # actuellement testée n'est violée (EG-JOU-11 / ticket 47 restent "Planifié", pas encore gardés par un test automatique) -- à
+    # reprendre en 1g/1h (ticket 47) avant de considérer le chantier 1 clos, pas dans ce commit.
+    duration=7.0,
     roles=(
         # ANCHOR_SCORER, pas ANCHOR_STATIC (fix du 23/09/2026) : le passeur
         # en profondeur doit suivre sa passe d'un ou deux pas plutôt que
@@ -1464,7 +1474,7 @@ _TEMPLATE_PROFONDEUR_1V1 = Template(
         # relevé 0.1 -> 0.15/0.2, couplage à event.zone assumé (voir
         # contre_attaque).
         Role("assist", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.15), RoleFrame(1.0, 0.2))),
-        Role("scorer", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.3), RoleFrame(1.0, 1.0))),
+        Role("scorer", ANCHOR_SCORER, (RoleFrame(0.0, 0.0), RoleFrame(0.3, 0.3), RoleFrame(1.0, 1.0)), geometry=RoleGeometry(GEOM_ZONE)),
     ),
     tags=((0.0, "appel"), (0.3, "passe"), (1.0, "1v1")),
     ball_owner=((0.0, "assist"), (0.3, "scorer"), (1.0, "scorer")),
