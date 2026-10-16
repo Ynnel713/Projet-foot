@@ -841,6 +841,20 @@ Dans les 14 cas, le segment est une passe au sol (`pass_ground`) et aucune réce
 
 ---
 
+## 49. `canvas.html` dessine les acteurs scriptés (rôle actif) plus gros que les joueurs de décor
+
+**Description.** `render/canvas.html` (ligne ~676) utilise deux rayons distincts : `sizes.activeRadius` pour un joueur dont le rôle est actif (`pa.active`, c'est-à-dire un acteur scripté de l'action -- buteur, passeur...) et `sizes.playerRadius`, plus petit, pour tout le reste (joueurs de décor). Remarque du propriétaire (16/10/2026, en marge de la démo visuelle de la Phase 5 du chantier "mouvement collectif") : dans le rendu final, **tous les ronds doivent impérativement être de la même taille**, sans distinction visuelle entre acteurs scriptés et décor.
+
+**Portée.** Changement du rendu réel (`render/canvas.html`), visible sur tous les matchs -- pas un script de démo jetable, et sans rapport avec la logique de `sequence_generator.py` (Phase 5 ou toute autre phase du chantier "mouvement collectif"). Fichier interdit sauf exception validée par le propriétaire (`CLAUDE.md`) ; la remarque ci-dessus vaut déclaration d'intention mais pas encore une demande de correction immédiate (le propriétaire a choisi de la noter pour plus tard).
+
+**Correctif pressenti.** Remplacer `pa.active ? sizes.activeRadius : sizes.playerRadius` par un rayon unique (probablement `sizes.playerRadius` pour tous), ligne ~676 de `render/canvas.html`. Vérifier les effets de bord sur `drawHeading`/`drawCarrierName` (qui prennent `radius` en paramètre) et sur la lisibilité des numéros (`NUMBER_FONT_RATIO` dépend de `radius`).
+
+**Fichiers concernés.** `render/canvas.html`.
+
+**Priorité.** À fixer par le propriétaire. **Statut.** Ouvert. Non corrigé -- à traiter en commit isolé, séparé de tout chantier en cours.
+
+---
+
 # Décisions du propriétaire (entrées documentaires — ce ne sont pas des tickets)
 
 ## Décision propriétaire — dispositifs clubs conservés (D3)
