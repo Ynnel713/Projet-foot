@@ -51,7 +51,18 @@ précis, la position elle-même devient exactement constante d'un échantillon
 dérivation choisi). Ils seront supprimés à l'étape 4 du PDF (physique
 joueurs), qui remplacera `motion.interpolate` par un système à base de
 vitesse/accélération. Ne pas lisser dans ce brief -- ce serait masquer la
-cause plutôt que la corriger."""
+cause plutôt que la corriger.
+
+**Addendum A1.1 (16/10/2026).** `motion.py` a depuis ajouté une continuité de
+vitesse ENTRE segments (tangente blendée aux keyframes intérieurs, Hermite
+cubique -- voir sa docstring de module), qui supprime l'arrêt-redémarrage
+STRUCTUREL à chaque keyframe pour le cas normal (Bézier ease-in-out). Les
+DEUX cas listés ci-dessus restent INCHANGÉS par A1.1 : ni le repli linéaire
+(segment "trop rapide", plateau en fin de segment) ni le saut de segment
+"impossible" (ticket 12/43 de `docs/known_issues.md`) ne portent de tangente
+-- A1.1 documente explicitement ne pas les corriger (périmètre resserré,
+voir `motion.py`). Les pics > 400 m/s² décrits ici restent donc un défaut
+réel, non affecté par A1.1."""
 
 from __future__ import annotations
 

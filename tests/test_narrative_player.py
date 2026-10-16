@@ -677,14 +677,24 @@ class TestAccelerationConstraintOnRealGabarits:
 # `scorer_lineup`, donc les MC/MDC côté scorer retombent sur la probabilité par défaut (40 %), comme LB/RB et
 # BU/SA/ATT. Les 5 témoins contiennent chacun au moins un décor éligible tiré, donc tous recalculés une troisième
 # fois. Preuve que cette Phase 3 est la SEULE cause : avec `_support_initiative_eligible` neutralisée (retour
-# `False`), le code actuel redonne exactement les 5 empreintes de la Phase 2 ci-dessus.
+# `False`), le code actuel redonne exactement les 5 empreintes de la Phase 2 ci-dessus
+# ("467921a3ab674416"/"78bdd54b9c3de3e0" pour but_gag, "cd7dadddac09f46a"/"5313d1b40ed4a13b" pour
+# construction_placee, "1a21da46c15f3965"/"f9e81c5fee453081" pour contre_attaque, "747167b286eef170"/
+# "f503d11480b6a823" pour corner, "023f5a24b49cd6ac"/"023f5a24b49cd6ac" pour percee_individuelle).
+# Bloc A, A1.1 (16/10/2026) : `motion.py` ajoute une tangente de vitesse blendée à chaque keyframe intérieur
+# (`_keyframe_tangent`) et un Hermite cubique par segment (`_hermite_component`) à la place du Bézier ease-in-out à
+# tangentes nulles -- trajectoire continue à travers les keyframes au lieu d'un arrêt-redémarrage à chacun. Les 5
+# témoins contiennent chacun au moins un keyframe intérieur, donc tous recalculés une quatrième fois. Preuve que
+# cette A1.1 est la SEULE cause : avec `motion._keyframe_tangent` neutralisée (retour `(0.0, 0.0)`, équivalent à
+# l'ancien comportement à tangentes nulles), le code actuel redonne exactement les 5 empreintes de la Phase 3
+# ci-dessus, bit à bit.
 _WITNESS_DIGESTS = {
     # gabarit: (empreinte des images brutes `interpolate`, empreinte après contrainte d'accélération)
-    "but_gag": ("467921a3ab674416", "78bdd54b9c3de3e0"),
-    "construction_placee": ("cd7dadddac09f46a", "5313d1b40ed4a13b"),
-    "contre_attaque": ("1a21da46c15f3965", "f9e81c5fee453081"),
-    "corner": ("747167b286eef170", "f503d11480b6a823"),
-    "percee_individuelle": ("023f5a24b49cd6ac", "023f5a24b49cd6ac"),
+    "but_gag": ("f1528bb8cc9be886", "376ff38503dcbd89"),
+    "construction_placee": ("36498a77e4bebb2d", "51f07fc321487d34"),
+    "contre_attaque": ("368fd48169ed50b8", "bac841b320147d41"),
+    "corner": ("835ec5acbcb9ccad", "ff898a4e682fd712"),
+    "percee_individuelle": ("f814d25b8faa35af", "f814d25b8faa35af"),
 }
 
 

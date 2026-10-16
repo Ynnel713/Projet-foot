@@ -11,6 +11,20 @@ décidés. Aucun tirage aléatoire : `interpolate` est une fonction pure de
 `(sequence, t)`, voir tests/test_motion.py (continuité, déterminisme,
 non-collision).
 
+**A1.1, inertie/accélération (16/10/2026, Bloc A) : trajectoire continue à
+travers les keyframes.** Avant A1.1, un joueur s'arrêtait (vitesse nulle)
+à CHAQUE keyframe avant de repartir (Bézier ease-in-out par segment isolé) --
+cause du résiduel documenté (clips > 1,05x vmax / > 10 m/s² au rendu). Chaque
+keyframe INTÉRIEUR porte désormais une tangente de vitesse blendée (différence
+centrée sur les deux segments voisins, voir `_keyframe_tangent`), et chaque
+segment est un Hermite cubique à ces tangentes (`_hermite_component`) au lieu
+d'un Bézier à tangentes nulles -- la position AUX keyframes ne change jamais
+(contrat préservé), seule l'allure ENTRE deux keyframes change. Premier et
+dernier keyframe de la séquence entière : tangente nulle, inchangé (un geste
+démarre et finit à l'arrêt). Cette continuité reste purement STATIQUE
+(dérivée de `sequence.keyframes`, jamais un état d'exécution) : `interpolate`
+reste une fonction pure, sans mémoire d'appel.
+
 **Poste (comportement 2, vitesse max) et rôle (comportements 3-4, décalage
 temporel/"runner") sont lus directement sur `sequence.roster`** (voir
 `animation.types.Sequence.roster`/`RosterEntry`) -- une `Sequence` est
@@ -196,23 +210,127 @@ def _real_distance_m(a: tuple[float, float], b: tuple[float, float]) -> float:
     return math.hypot(dx_m, dy_m)
 
 
+# --- Continuité de vitesse entre segments (A1.1, 16/10/2026) --------------
+# Avant A1.1, chaque segment démarrait et finissait à vitesse nulle (progress
+# = _ease_progress, dérivée nulle en 0 et 1) : un joueur s'arrêtait donc à
+# CHAQUE keyframe avant de repartir, cause du résiduel documenté dans
+# `Plan architecte Simulafoot.md` §3.3 (352/1552 clips > 1,05x vmax, 348 >
+# 10 m/s² au rendu, mesure fraîche du 16/10/2026, graine 20260923).
+#
+# A1.1 remplace les tangentes nulles par une tangente BLENDÉE à chaque
+# keyframe INTÉRIEUR (différence centrée sur les deux segments voisins,
+# donnée purement STATIQUE dérivée de `sequence.keyframes` -- jamais un état
+# d'exécution, `interpolate` reste une fonction PURE de `(sequence, t)`,
+# voir `tests/test_motion.py::TestDeterminism`), et un Hermite cubique par
+# segment (positions ET tangentes aux deux bords) à la place du Bézier
+# ease-in-out à tangentes nulles. Nulle au premier ET dernier keyframe de
+# TOUTE la séquence (un geste démarre et finit à l'arrêt -- inchangé).
+#
+# `_TANGENT_MAX_RATIO` : plafond sur la norme de la tangente (fraction de
+# v_max), nécessaire car un Hermite à tangentes non nulles peut dépasser v_max
+# EN COURS de segment même avec des tangentes d'extrémité individuellement
+# sous v_max (dépassement classique d'une spline cubique). Valeur = 1.0,
+# choisie pour sa lecture physique directe (un joueur ne peut pas être
+# "lancé" à une vitesse de jonction supérieure à sa propre vitesse de
+# pointe) -- MAIS, revue par `simulafoot-reviewer` (16/10/2026) : ce n'est
+# PAS une borne structurelle garantissant v_max en tout point du segment
+# (calcul : avec des tangentes anti-parallèles à la corde toutes deux au
+# plafond et une corde proche du seuil `_EASE_SAFE_AVG_SPEED_RATIO`, le pic
+# de vitesse Hermite peut dépasser v_max au-delà de la tolérance déjà testée
+# -- `_TANGENT_MAX_RATIO` borne chaque tangente individuellement, jamais la
+# combinaison tangentes+corde du segment). La garantie est donc, comme pour
+# `_EASE_SAFE_AVG_SPEED_RATIO`, EMPIRIQUE : VÉRIFIÉE par
+# `tests/test_motion.py::TestVelocityContinuity` (dense, les 12 gabarits
+# réels, qui ne produisent jamais cette configuration adversariale -- marge
+# confortable, le test passe encore sans régression jusqu'à 2,0). Un futur
+# gabarit avec un changement de direction marqué près d'un keyframe devra
+# être revérifié par ce même test, pas supposé sûr par construction.
+_TANGENT_MAX_RATIO = 1.0
+
+
+def _keyframe_tangent(sequence: Sequence, idx: int, player_id: PlayerId, v_max: float) -> tuple[float, float]:
+    """Vitesse (unités normalisées/s, même convention que `v_max` --
+    `max_speed_normalized`) au keyframe d'indice `idx` pour `player_id` :
+    différence centrée entre le keyframe précédent et le keyframe suivant,
+    divisée par leur écart de temps total -- nulle au premier et dernier
+    keyframe de la séquence (`idx` hors [1, len-2]) ou si les deux voisins
+    partagent le même instant (`dt <= 0`, séquence à un seul keyframe
+    répété). Clampée en norme réelle (mètres/s, voir `_real_distance_m`) à
+    `v_max * PITCH_LENGTH_M * _TANGENT_MAX_RATIO`, direction préservée (même
+    principe que `physics._clamp_velocity_change`)."""
+    keyframes = sequence.keyframes
+    if idx <= 0 or idx >= len(keyframes) - 1:
+        return (0.0, 0.0)
+    kf_prev, kf_next = keyframes[idx - 1], keyframes[idx + 1]
+    dt = kf_next.t - kf_prev.t
+    if dt <= 0:
+        return (0.0, 0.0)
+    p_prev = kf_prev.players[player_id]
+    p_next = kf_next.players[player_id]
+    vx = (p_next[0] - p_prev[0]) / dt
+    vy = (p_next[1] - p_prev[1]) / dt
+    speed_m_s = math.hypot(vx * PITCH_LENGTH_M, vy * PITCH_WIDTH_M)
+    cap_m_s = v_max * PITCH_LENGTH_M * _TANGENT_MAX_RATIO
+    if speed_m_s <= cap_m_s or speed_m_s < 1e-9:
+        return (vx, vy)
+    scale = cap_m_s / speed_m_s
+    return (vx * scale, vy * scale)
+
+
+def _hermite_component(p0: float, p1: float, m0: float, m1: float, s: float, duration: float) -> float:
+    """Composante (x OU y) d'un Hermite cubique standard : `p0`/`p1` aux
+    bords (`s=0`/`s=1`), tangentes `m0`/`m1` (unités/s, mises à l'échelle de
+    `s` par `duration`) -- `h(0) = p0` et `h(1) = p1` EXACTEMENT (position
+    au keyframe inchangée, seule l'allure entre deux keyframes change),
+    `h'(0)/duration = m0` et `h'(1)/duration = m1` (continuité de vitesse
+    avec les segments voisins aux deux bords)."""
+    s2, s3 = s * s, s * s * s
+    h00 = 2 * s3 - 3 * s2 + 1
+    h10 = s3 - 2 * s2 + s
+    h01 = -2 * s3 + 3 * s2
+    h11 = s3 - s2
+    return h00 * p0 + h10 * duration * m0 + h01 * p1 + h11 * duration * m1
+
+
 def _interpolate_segment(
-    pos_a: tuple[float, float], pos_b: tuple[float, float], elapsed: float, duration: float, v_max: float
+    pos_a: tuple[float, float],
+    pos_b: tuple[float, float],
+    elapsed: float,
+    duration: float,
+    v_max: float,
+    tangent_a: tuple[float, float] = (0.0, 0.0),
+    tangent_b: tuple[float, float] = (0.0, 0.0),
 ) -> tuple[float, float]:
     """Position entre `pos_a` (t=0 du segment) et `pos_b` (t=duration),
-    `elapsed` secondes après le début du segment -- Bézier ease-in-out
-    (comportement 1) si le trajet est atteignable à vitesse max sans
-    dépasser le pic mesuré (voir _EASE_SAFE_AVG_SPEED_RATIO), sinon repli
-    linéaire à vitesse constante (v_max ou moins) : seule façon de GARANTIR
-    qu'aucun instant ne dépasse jamais v_max (comportement 2), même quand le
-    gabarit demande un trajet trop long pour le temps imparti."""
+    `elapsed` secondes après le début du segment -- Hermite cubique à
+    tangentes `tangent_a`/`tangent_b` (comportement 1, continuité de vitesse
+    A1.1 ; `(0, 0)` aux deux bords retombe exactement sur l'ancien Bézier
+    ease-in-out, comportement historique inchangé bit-à-bit) si le trajet
+    est atteignable à vitesse max sans dépasser le pic mesuré (voir
+    _EASE_SAFE_AVG_SPEED_RATIO -- garantie EMPIRIQUE, vérifiée par
+    `tests/test_motion.py::TestVelocityContinuity` sur les gabarits réels,
+    voir `_TANGENT_MAX_RATIO`, PAS une borne structurelle en toute
+    généralité), sinon repli linéaire à vitesse constante (v_max ou moins,
+    tangentes ignorées) : seule façon de GARANTIR STRUCTURELLEMENT qu'aucun
+    instant ne dépasse jamais v_max (comportement 2), même quand le gabarit
+    demande un trajet trop long pour le temps imparti -- ce repli n'offre
+    donc pas la continuité de vitesse A1.1, comme documenté en tête de
+    module (cas "segment impossible", aucun des 12 gabarits actuels ne
+    l'atteint)."""
     if duration <= 0:
         return pos_b
     distance_m = _real_distance_m(pos_a, pos_b)
     required_avg_speed = (distance_m / PITCH_LENGTH_M) / duration  # unités normalisées/s, cohérent avec v_max
 
     if required_avg_speed <= v_max * _EASE_SAFE_AVG_SPEED_RATIO:
-        progress = _ease_progress(min(1.0, max(0.0, elapsed / duration)))
+        if tangent_a == (0.0, 0.0) and tangent_b == (0.0, 0.0):
+            progress = _ease_progress(min(1.0, max(0.0, elapsed / duration)))
+        else:
+            s = min(1.0, max(0.0, elapsed / duration))
+            return (
+                _hermite_component(pos_a[0], pos_b[0], tangent_a[0], tangent_b[0], s, duration),
+                _hermite_component(pos_a[1], pos_b[1], tangent_a[1], tangent_b[1], s, duration),
+            )
     else:
         # Mouvement linéaire à v_max : progress = distance parcourable / distance totale.
         normalized_distance = distance_m / PITCH_LENGTH_M
@@ -242,8 +360,10 @@ def _player_position_at(sequence: Sequence, player_id: PlayerId, t: float, v_max
     if idx_a == idx_b:
         return sequence.keyframes[idx_a].players[player_id]
     kf_a, kf_b = sequence.keyframes[idx_a], sequence.keyframes[idx_b]
+    tangent_a = _keyframe_tangent(sequence, idx_a, player_id, v_max)
+    tangent_b = _keyframe_tangent(sequence, idx_b, player_id, v_max)
     return _interpolate_segment(
-        kf_a.players[player_id], kf_b.players[player_id], elapsed, kf_b.t - kf_a.t, v_max
+        kf_a.players[player_id], kf_b.players[player_id], elapsed, kf_b.t - kf_a.t, v_max, tangent_a, tangent_b
     )
 
 

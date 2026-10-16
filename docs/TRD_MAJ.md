@@ -141,3 +141,25 @@ Aucun nouveau ticket ouvert par ce chantier. Limite déjà connue (compos synth�
 ### Écarts à corriger au prochain remaniement du PDF
 - Section 9 / Bloc A : nuancer « En cours » avec l'avancement détaillé de A1.3/A2.1/A2.3 ci-dessus une fois la Phase 5 commitée.
 - Ce fichier est mis à jour à chaque sous-étape terminée (règle de `CLAUDE.md`).
+
+## v1.9 — 16/10/2026 (état du dépôt : `3d07e29` ; A1.1 codée, testée, mesurée, pas encore commitée)
+
+Phase 5 du chantier "mouvement collectif" commitée et poussée (`a5e7d3d`) depuis le v1.8 — chantier **entièrement clos (5/5 phases)**. Démarrage du Bloc A, **A1.1** (inertie/accélération/décélération, `src/ligue1sim/animation/motion.py`) : codée, testée, mesurée, revue `simulafoot-reviewer` effectuée, pas encore commitée.
+
+| ID | Statut v1.8 | Statut v1.9 | Preuve |
+|---|---|---|---|
+| EG-JOU-05 (Bloc A) | Partiel : A1.3 ~5/5 phases (Phase 5 en attente de commit) ; A1.1, A1.2, A1.4-1.6, A2.2, A2.4, A2.5 et Bloc C restent à faire | Partiel : chantier "mouvement collectif" (A1.3/A2.1/A2.3 partiels) entièrement clos et poussé. A1.1 codée/testée/mesurée (pas encore commitée) : clips > 1,05x vmax rendu 352 → 21 (-94 %, pipeline réel 100 matchs, graine 20260923) ; clips > 10 m/s² rendu 348 → 357 (+2,6 %, compromis jugé acceptable, voir `Plan architecte Simulafoot.md` §3.3). A1.2, A1.4-1.6, A2.2, A2.4, A2.5 et Bloc C restent à faire | `Plan architecte Simulafoot.md` §3.2bis, §3.3 |
+| EG-JOU-11 (buteur à sa zone ; 0 passe > 30 m/s ; dépassements 1,05x vmax en forte baisse) | Résiduel 351/1 552 (22,6 %) à la clôture du chantier 1 | Résiduel ramené à 21/1 552 (1,4 %) par A1.1 (pipeline réel 100 matchs, graine 20260923) — gain direct sur cette exigence, pas encore commité | `Plan architecte Simulafoot.md` §3.3 ; mesure pipeline réel, `scripts/measure_geometry.py` |
+
+### Tickets (section 11)
+Aucun ticket fermé ni ouvert par A1.1. Tickets 12 (sauts de trajectoire) et 43 (frames 0/1 de `physics.py`) explicitement rattachés à A1.1 par le Plan mais laissés hors périmètre par décision du propriétaire (cas "segment impossible", non traité) — restent ouverts tels quels.
+
+### Points ouverts
+- Démo visuelle d'A1.1 à envoyer au propriétaire avant commit (même protocole que les phases précédentes).
+- Retiming des `t_ratio` de passe (proposition P-A) : reporté en ticket séparé après clôture d'A1.1, non encore ouvert formellement.
+
+Déterminisme bit-à-bit d'A1.1 confirmé (16/10/2026) : deux exécutions séparées du pipeline réel 100 matchs, même hash moteur, 1552/1552 images identiques.
+
+### Écarts à corriger au prochain remaniement du PDF
+- Section 9 / Bloc A : chantier "mouvement collectif" à marquer clos (A1.3/A2.1/A2.3 partiels) ; A1.1 à faire passer d'« à faire » à son état une fois commitée.
+- Ce fichier est mis à jour à chaque sous-étape terminée (règle de `CLAUDE.md`).

@@ -241,11 +241,49 @@ PLAN).
 
 ### 3.3 A1 — mouvement individuel et équipe : À FAIRE (après le chantier 1)
 
-**A1.1 — inertie, accélération, décélération.**
-- Objectif : trajectoire continue des joueurs, sans arrêt à chaque keyframe. C'est la cause du résiduel de 591 clips (contrainte d'accélération sur une courbe qui s'arrête à chaque keyframe). Rattaché : ticket 43 (images 0 et 1 jamais corrigées) et ticket 12 (sauts de trajectoire).
-- Périmètre : `src/ligue1sim/animation/motion.py`, éventuellement `src/ligue1sim/animation/physics.py`.
-- Gain attendu : clips au-dessus de 1,05 fois vmax et au-dessus de 10 m/s² (591 et 352 après le chantier 1) en forte baisse. Retiming des t_ratio de passe (proposition P-A) à reprendre ensuite : il fait passer les passes lentes (3,6 à 6,5 m/s en médiane) à environ 10 m/s.
-- Dépendances : chantier 1. Statut : à faire.
+**A1.1 — inertie, accélération, décélération. Codée, testée, mesurée (16/10/2026). En attente de revue finale
+avant commit.**
+- Objectif : trajectoire continue des joueurs, sans arrêt à chaque keyframe. Rattaché : ticket 43 (images 0 et 1
+  jamais corrigées, non traité -- hors périmètre, voir ci-dessous) et ticket 12 (sauts de trajectoire, idem).
+- Cadrage par `simulafoot-architect` (lecture seule) : baseline du Plan (591/352) périmée, remesurée fraîchement
+  à **352/1552 clips > 1,05x vmax, 348/1552 > 10 m/s²** (pipeline réel, 100 matchs, graine 20260923, avant A1.1).
+  Décisions du propriétaire : `physics.py` traité avec la même prudence que `motion.py` (exception demandée, mais
+  non modifié -- tout reste dans `motion.py`) ; Option A retenue (continuité analytique, `motion.interpolate` reste
+  pur) plutôt que l'option qui aurait étendu la logique séquentielle de `physics.py` ; retiming des `t_ratio` de
+  passe (proposition P-A) reporté en ticket séparé après clôture d'A1.1 ; `src/ligue1sim/animation/state.py` mis à
+  jour en documentation (aucun appelant de production, voir le fichier).
+- Mécanisme : chaque keyframe INTÉRIEUR porte une tangente de vitesse blendée (différence centrée sur les deux
+  segments voisins, donnée statique dérivée de `sequence.keyframes`, `_keyframe_tangent`), et chaque segment est un
+  Hermite cubique à ces tangentes (`_hermite_component`) à la place du Bézier ease-in-out à tangentes nulles -- la
+  position AUX keyframes ne change jamais, seule l'allure ENTRE deux keyframes change. Premier/dernier keyframe de
+  toute la séquence : tangente nulle, inchangé. Tangente clampée à `_TANGENT_MAX_RATIO = 1,0` x vmax (un joueur ne
+  peut pas être lancé plus vite qu'à sa propre vitesse de pointe à une jonction) -- **constante produit**, validée
+  par sensibilité testée (0,5/1,0/1,3/2,0, résultat quasi identique sur les 12 gabarits réels, voir §7) plutôt que
+  par simple intuition, et par la revue `simulafoot-reviewer` qui a néanmoins noté que ce n'est pas une borne
+  structurelle garantie en toute généralité (seulement empirique, comme `_EASE_SAFE_AVG_SPEED_RATIO`) -- commentaire
+  de `motion.py` corrigé en conséquence.
+- Mesure avant/après (pipeline réel, 100 matchs, graine 20260923) : clips > 1,05x vmax rendu **352 -> 21 (-94 %)** ;
+  clips > 10 m/s² rendu **348 -> 357 (+2,6 %)**, régression mineure mais le rendu reste strictement plafonné à
+  10 m/s² par `physics.apply_acceleration_constraint` (non modifié) -- l'augmentation signifie que la contrainte
+  sature un peu plus souvent (le Hermite introduit une légère bosse de courbure en milieu de segment, absente de
+  l'ancien Bézier à tangentes nulles), pas qu'un seuil physique est dépassé ; compromis jugé acceptable par
+  `simulafoot-reviewer`. Sauts bruts > 1 m : 0 -> 0, inchangé. Arrivée du scorer : médiane 0,14 m -> 0,09 m,
+  amélioré. Suite complète : 1780 passés, 13 désélectionnés, 0 échec (même compte qu'avant). Déterminisme bit-à-bit
+  confirmé : deux exécutions séparées du pipeline 100 matchs, même hash moteur (`161ec4b783203a41`), 1552/1552
+  images identiques.
+- Revue `simulafoot-reviewer` : un défaut majeur de DOCUMENTATION corrigé avant clôture (commentaire sur
+  `_TANGENT_MAX_RATIO` affirmant à tort une garantie structurelle -- corrigé pour refléter une garantie empirique,
+  vérifiée par `tests/test_motion.py::TestVelocityContinuity`, à reconfirmer pour tout futur gabarit). Aucun défaut
+  bloquant sur le comportement, la portée ou les tests.
+- Empreintes témoins (`tests/test_narrative_player.py::_WITNESS_DIGESTS`) recalculées avec preuve de cause unique
+  (tangente neutralisée -> empreintes de la Phase 3 du chantier "mouvement collectif" retrouvées exactement).
+- `tests/test_templates.py::TestPipelineSpeedHeadroom` (seuil 30 %) : remesuré, toujours vert, aucun ajustement
+  nécessaire.
+- Hors périmètre (décision explicite) : ticket 43 (frames 0/1 de `physics.py`), ticket 12 (segment "impossible"),
+  retiming des `t_ratio` (proposition P-A) -- tous laissés en l'état, à traiter séparément si besoin.
+- Périmètre : `src/ligue1sim/animation/motion.py` (exception accordée), `src/ligue1sim/animation/state.py`
+  (documentation seule).
+- Dépendances : chantier 1 (clos).
 
 **A1.2 — gardiens.**
 - Objectif : déplacements sur la ligne, sorties, plongeons complets (Option 1 reportée de B6-d), replacements.
