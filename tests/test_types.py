@@ -285,6 +285,8 @@ class TestToJson:
         assert payload["background"] == {}
 
     def test_background_shape_matches_the_documented_contract(self):
+        # Chantier "mouvement collectif", Phase 2 (16/10/2026) : `points` toujours présent dans le JSON, liste vide quand
+        # `BackgroundTrack.points` est `None` (comportement historique, rétrocompatible).
         sequence = Sequence(
             event_ref="ref",
             keyframes=[_keyframe(0.0, {1: (0.4, 0.5)})],
@@ -297,9 +299,24 @@ class TestToJson:
             background={2: BackgroundTrack(start=(0.2, 0.3), drift=(0.04, -0.01))},
         )
         payload = sequence.to_json()
-        assert payload["background"] == {"2": {"start": [0.2, 0.3], "drift": [0.04, -0.01]}}
+        assert payload["background"] == {"2": {"start": [0.2, 0.3], "drift": [0.04, -0.01], "points": []}}
         for value in payload["background"]["2"].values():
             assert isinstance(value, list)
+
+    def test_background_shape_includes_points_when_present(self):
+        sequence = Sequence(
+            event_ref="ref",
+            keyframes=[_keyframe(0.0, {1: (0.4, 0.5)})],
+            duration=1.0,
+            meta={},
+            roster={
+                1: RosterEntry(nom="Buteur", poste="BU", role="scorer", numero=9, team_side="scorer"),
+                2: RosterEntry(nom="Decor", poste="DC", role=None, numero=4, team_side="opponent"),
+            },
+            background={2: BackgroundTrack(start=(0.2, 0.3), drift=(0.04, -0.01), points=((0.21, 0.29), (0.22, 0.28)))},
+        )
+        payload = sequence.to_json()
+        assert payload["background"]["2"]["points"] == [[0.21, 0.29], [0.22, 0.28]]
 
     def test_keyframe_shape_matches_the_documented_contract(self):
         payload = self._sample_sequence().to_json()

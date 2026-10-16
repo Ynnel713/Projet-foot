@@ -101,15 +101,28 @@ class RosterEntry:
 class BackgroundTrack:
     """Trajectoire continue (PAS des keyframes) d'un joueur "décor" -- suivi
     par la `Sequence` (voir `Sequence.background`) mais jamais mis en scène
-    par un gabarit : pas de Bézier/keyframes, juste un micro-mouvement
-    déterministe de `start` vers `start + drift`, parcouru avec la même
-    courbe ease-in-out que les joueurs actifs (voir `motion._ease_progress`)
-    -- aucune vitesse à plafonner par poste, l'amplitude de `drift` est déjà
-    bornée à la construction (voir `sequence_generator.enrich_with_background`,
-    Point 1 du bilan simulation physique du 23/09/2026)."""
+    par un gabarit : pas de Bézier/keyframes à la gabarit, juste un
+    micro-mouvement déterministe de `start` vers `start + drift`, parcouru
+    avec la même courbe ease-in-out que les joueurs actifs (voir
+    `motion._ease_progress`) -- aucune vitesse à plafonner par poste,
+    l'amplitude de `drift` est déjà bornée à la construction (voir
+    `sequence_generator.enrich_with_background`, Point 1 du bilan simulation
+    physique du 23/09/2026).
+
+    Chantier "mouvement collectif", Phase 2 (16/10/2026) : `points`, champ
+    optionnel RÉTROCOMPATIBLE -- `None`/vide (défaut) donne le comportement
+    HISTORIQUE, un seul segment `start -> start + drift`, bit-à-bit inchangé.
+    Renseigné, `motion._background_position_at` découpe la trajectoire en
+    `len(points) + 1` segments de durée égale, `start -> points[0] -> ... ->
+    points[-1] -> start + drift`, chacun parcouru avec la MÊME courbe
+    ease-in-out (jamais une nouvelle courbe, jamais de plafond de vitesse) --
+    remplace la ligne droite actuelle par un tracé à plusieurs points, sans
+    perdre la fluidité déjà acquise (continuité garantie aux jonctions :
+    `_ease_progress(0) = 0`, `_ease_progress(1) = 1`)."""
 
     start: tuple[float, float]  # position de formation, référentiel normalisé
     drift: tuple[float, float]  # déplacement (dx, dy) atteint à t=duration, ajouté à start
+    points: tuple[tuple[float, float], ...] | None = None  # points intermédiaires, normalisés -- voir Phase 2 ci-dessus
 
 
 @dataclass(frozen=True)
@@ -215,7 +228,7 @@ class Sequence:
                     },
                     ...
                 },
-                "background": {"<player_id>": {"start": [x, y], "drift": [dx, dy]}, ...},
+                "background": {"<player_id>": {"start": [x, y], "drift": [dx, dy], "points": [[x, y], ...]}, ...},
                 "keyframes": [
                     {
                         "t": float,
@@ -247,7 +260,10 @@ class Sequence:
                 for player_id, entry in self.roster.items()
             },
             "background": {
-                str(player_id): {"start": list(track.start), "drift": list(track.drift)}
+                str(player_id): {
+                    "start": list(track.start), "drift": list(track.drift),
+                    "points": [list(p) for p in track.points] if track.points else [],
+                }
                 for player_id, track in self.background.items()
             },
             "keyframes": [

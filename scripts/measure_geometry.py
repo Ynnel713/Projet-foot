@@ -1,10 +1,13 @@
-"""Mesure de la géométrie des clips rendus (chantier 1, `docs/known_issues.md` tickets 46 et 47) -- harnais versionné.
+"""Mesure de la géométrie des clips rendus (chantier 1, `docs/known_issues.md` tickets 46 et 47 ; chantier "mouvement collectif",
+Phases 1 à 3) -- harnais versionné.
 
 `run` simule N matchs de l'audit (`narrative_audit.py`, graine 20260923), construit les clips avec `build_clips` et enregistre, par clip :
 l'empreinte des images, et pour chaque acteur scripté la vitesse (rapportée à la vitesse max de son poste), l'accélération et le saut en
 une image, AVANT et APRÈS la contrainte d'accélération, plus l'écart entre sa position rendue et sa position scriptée au dernier
 keyframe. Chaque passe (changement de porteur entre deux keyframes) donne sa durée, sa corde 3D et son chemin 3D (somme des images).
-`compare` rapproche deux mesures clip à clip (images identiques, clips en dépassement, passes > 30 m/s...).
+Chaque joueur de décor (hors gardien) donne l'amplitude (m) de l'écart latéral de départ qui lui est appliqué (`dispersion_m`,
+chantier "mouvement collectif", Phase 1). `compare` rapproche deux mesures clip à clip (images identiques, clips en
+dépassement, passes > 30 m/s, dispersion moyenne...).
 
 Rien n'est modifié dans le code du produit : les fonctions de `narrative_player` et de `templates` sont enveloppées en mémoire, le
 temps du script. Compos de l'audit : synthétiques (4-2-3-1, notes égales, sans entraîneur) -- biais connu, voir le ticket 46.
@@ -59,6 +62,22 @@ def run(n: int, root: Path) -> dict:
     from ligue1sim.clubs import Club
     from ligue1sim.lineup import pick_best_formation
     from ligue1sim.pitch_geometry import PITCH_LENGTH_M as L, PITCH_WIDTH_M as W
+
+    try:  # chantier "mouvement collectif", Phase 1 (16/10/2026) : absent avant cette phase, mesure dégradée proprement (liste vide)
+        from ligue1sim.animation.sequence_generator import _start_dispersion
+    except ImportError:
+        _start_dispersion = None
+    try:  # chantier "mouvement collectif", Phase 3 (16/10/2026) : absent avant cette phase, mesure dégradée proprement (liste vide)
+        from ligue1sim.animation.sequence_generator import (
+            _SUPPORT_INITIATIVE_MAX_M,
+            _SUPPORT_LANE_M,
+            _support_initiative,
+            _support_initiative_eligible,
+            _support_initiative_probability,
+            _support_initiative_selected,
+        )
+    except ImportError:
+        _support_initiative = None
     from ligue1sim.schedule import Match
     from ligue1sim.simulation import LeagueContext, simulate_match
     from narrative import build_timeline, match_result_from
@@ -94,6 +113,56 @@ def run(n: int, root: Path) -> dict:
                         for a, b in zip(kfs, kfs[1:]) if b.t > a.t]
             actors[entry.role] = {"poste": entry.poste, "segment_ratio": max(segments, default=0.0), "arrival_gap_m": arrival,
                                   "post": _kinematics(rendered, dt, v_max), "pre": _kinematics(track(pre, pid), dt, v_max)}
+        # Chantier "mouvement collectif", Phase 1 (16/10/2026) : amplitude (m) de l'écart latéral appliqué par
+        # `sequence_generator._start_dispersion` à chaque joueur de décor (hors gardien, hors mur de coup franc, hors
+        # remplaçant en_jeu -- déjà exclus par `_start_dispersion`/ses appelants). Mesure DIRECTE de ce que la Phase 1 ajoute,
+        # pas une mesure indirecte sur les positions rendues : la largeur d'une ligne tactique (ex. latéral à latéral) est
+        # volontaire et bien plus grande que l'amplitude de dispersion, toute mesure sur les positions absolues la noierait.
+        # Absente avant la Phase 1 (`_start_dispersion` n'existe pas encore) : liste vide, mesure dégradée proprement. Gardien
+        # exclu (jamais dispersé, voir ses appelants dans `sequence_generator.py`) ; mur de coup franc et remplaçant en_jeu
+        # non filtrés ici (rares, mesure diagnostique -- pas une garantie chiffrée exacte sur ces deux cas limites).
+        dispersion_m = (
+            [abs(_start_dispersion(pid, seq.event_ref)[1]) * W for pid, entry in roster.items() if entry.role is None and entry.poste != "GK"]
+            if _start_dispersion is not None else []
+        )
+        # Chantier "mouvement collectif", Phase 2 (16/10/2026) : saut de position (m) d'une image à l'autre pour chaque
+        # joueur de décor, RENDU (après `interpolate`, trajectoire à plusieurs points le cas échéant) -- même définition
+        # que `_JUMP_MAX_M` déjà utilisée pour les acteurs scriptés. Critère d'acceptation de la Phase 2 : "aucun segment
+        # ne présente plus de saut... qu'aujourd'hui", donc mesuré pour TOUS les gabarits (aucune garde try/except : cette
+        # mesure ne dépend d'aucune fonction absente avant Phase 2, seulement de `frames` déjà disponible).
+        decor_jump_m = []
+        for pid, entry in roster.items():
+            if entry.role is not None:
+                continue
+            decor_track = track(frames, pid)
+            decor_jump_m.append(max((math.hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(decor_track, decor_track[1:])), default=0.0))
+        # Chantier "mouvement collectif", Phase 3 (16/10/2026) : mesure DIRECTE (même principe que `dispersion_m`) de la
+        # fréquence/amplitude des initiatives de soutien par poste, et compteur de violations de secteur (doit rester à 0
+        # par construction -- `_support_initiative` clampe toujours au couloir/plafond, mais le critère d'acceptation
+        # exige une mesure chiffrée, pas seulement "garanti par le code"). `players_by_name` : effectif COMPLET des deux
+        # équipes (titulaires + remplaçants), pour résoudre l'attribut pertinent (Work Rate/Positioning) d'un MC/MDC --
+        # suffisant pour une mesure diagnostique, pas la vue filtrée par minute que `_build_clip` utilise en production.
+        support_rows: list[dict] = []
+        if _support_initiative is not None:
+            scorer_lineup_full = timeline.home_lineup if event.team == timeline.home_team else timeline.away_lineup
+            opponent_lineup_full = timeline.away_lineup if event.team == timeline.home_team else timeline.home_lineup
+            players_by_name = {
+                p.name: p for lu in (scorer_lineup_full, opponent_lineup_full) for p in list(lu.players) + list(lu.substitutes)
+            }
+            for pid, entry in roster.items():
+                if entry.role is not None or not _support_initiative_eligible(entry.poste, entry.team_side):
+                    continue
+                probability = _support_initiative_probability(entry.poste, entry.team_side, players_by_name.get(entry.nom))
+                selected = _support_initiative_selected(pid, seq.event_ref, probability)
+                row = {"poste": entry.poste, "team_side": entry.team_side, "selected": selected}
+                if selected:
+                    dx, dy = _support_initiative(entry.poste, pid, entry.team_side, seq.event_ref)
+                    row["amplitude_m"] = math.hypot(dx * L, dy * W)
+                    row["lateral_m"] = abs(dy) * W
+                    row["sector_violation"] = (
+                        row["amplitude_m"] > _SUPPORT_INITIATIVE_MAX_M + 1e-6 or row["lateral_m"] > _SUPPORT_LANE_M[entry.poste] + 1e-6
+                    )
+                support_rows.append(row)
         passes = []
         for a, b in zip(seq.keyframes, seq.keyframes[1:]):
             if a.ball.owner_id is None or b.ball.owner_id is None or a.ball.owner_id == b.ball.owner_id or b.t <= a.t:
@@ -104,7 +173,8 @@ def run(n: int, root: Path) -> dict:
                            "path": sum(math.dist(p, q) for p, q in zip(ball, ball[1:]))})
         digest = hashlib.sha1(repr([(round(f.t, 6), sorted((k, round(s.x, 6), round(s.y, 6)) for k, s in f.players.items())) for f in frames]).encode())
         rows.append({"key": [event.minute, event.main_player, event.team, len(rows)], "gabarit": event.gabarit, "duration": seq.duration,
-                     "frames": digest.hexdigest()[:16], "actors": actors, "passes": passes})
+                     "frames": digest.hexdigest()[:16], "actors": actors, "passes": passes, "dispersion_m": dispersion_m,
+                     "decor_jump_m": decor_jump_m, "support_rows": support_rows})
         return frames, roster, ball_events
 
     templates.build_from_template, np_._apply_acceleration_constraint_to_frames, np_._build_clip = spy_build, spy_accel, spy_clip
@@ -135,11 +205,31 @@ def _summary(rows: list[dict]) -> str:
     passes = [p for r in rows for p in r["passes"]]
     gaps = [r["actors"]["scorer"]["arrival_gap_m"] for r in rows if "scorer" in r["actors"]]
     segs = [a["segment_ratio"] for r in rows for a in r["actors"].values()]
+    dispersions = [d for r in rows for d in r.get("dispersion_m", [])]  # .get : compatible avec une mesure antérieure à la Phase 1
+    decor_jumps = [j for r in rows for j in r.get("decor_jump_m", [])]  # .get : compatible avec une mesure antérieure à la Phase 2
     over = lambda key, limit: f"rendu {_over(rows, 'post', key, limit)}, brut {_over(rows, 'pre', key, limit)}"  # noqa: E731
+    dispersion_str = f" | dispersion de départ : moyenne {statistics.mean(dispersions):.2f} m (n={len(dispersions)})" if dispersions else ""
+    decor_jump_str = (
+        f" | saut décor > {_JUMP_MAX_M:.0f} m : {sum(j > _JUMP_MAX_M for j in decor_jumps)} (n={len(decor_jumps)})" if decor_jumps else ""
+    )
+    support = [s for r in rows for s in r.get("support_rows", [])]  # .get : compatible avec une mesure antérieure à la Phase 3
+    support_str = ""
+    if support:
+        by_poste: dict[str, list[int]] = defaultdict(lambda: [0, 0])
+        amplitudes, violations = [], 0
+        for s in support:
+            by_poste[s["poste"]][1] += 1
+            if s["selected"]:
+                by_poste[s["poste"]][0] += 1
+                amplitudes.append(s["amplitude_m"])
+                violations += s["sector_violation"]
+        freq = ", ".join(f"{poste} {sel}/{tot} ({sel / tot:.0%})" for poste, (sel, tot) in sorted(by_poste.items()))
+        amplitude_str = f"moyenne {statistics.mean(amplitudes):.2f} m (n={len(amplitudes)})" if amplitudes else "n=0"
+        support_str = f" | initiatives de soutien : {freq} | amplitude {amplitude_str} | violations de secteur : {violations}"
     return (f"{len(rows)} clips | acteurs > 0,55 (keyframes) {sum(s > 0.5501 for s in segs)} | > {_OVERSHOOT} x vmax : {over('ratio', _OVERSHOOT)} "
             f"| > {_ACCEL_MAX:.0f} m/s2 : {over('accel', _ACCEL_MAX + _ACCEL_TOLERANCE)} | saut > {_JUMP_MAX_M:.0f} m : {over('jump', _JUMP_MAX_M)} | passes > {_PASS_MAX_M_S:.0f} m/s "
             f"(chemin / corde) {sum(p['path'] / p['dt'] > _PASS_MAX_M_S for p in passes)} / {sum(p['chord'] / p['dt'] > _PASS_MAX_M_S for p in passes)} sur {len(passes)} "
-            f"| arrivée du scorer : médiane {statistics.median(gaps):.2f} m")
+            f"| arrivée du scorer : médiane {statistics.median(gaps):.2f} m{dispersion_str}{decor_jump_str}{support_str}")
 
 
 def compare(a: dict, b: dict) -> str:

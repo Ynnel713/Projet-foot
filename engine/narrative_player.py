@@ -288,7 +288,10 @@ def _build_clip(
     # narrative.py) -- seul changement dans ce fichier, aucune autre
     # modification.
     sequence = BUILDERS[event.gabarit](goal_event, scorer_lineup, start_positions, event.outcome, opponent_lineup)  # B8-b : pression adverse sur les contrôles
-    sequence = enrich_with_background(sequence, opponent_lineup, event.outcome, opponent_lineup.en_jeu)
+    # Chantier mouvement collectif, Phase 3 (16/10/2026) : exception accordée séparément pour CE changement précis
+    # (transmettre `scorer_lineup`, déjà en scope depuis _scorer_view ligne 260, pour qu'un MC/MDC côté scorer tiré
+    # pour une initiative de soutien résolve son `Player` -- voir sequence_generator._support_initiative_direction).
+    sequence = enrich_with_background(sequence, opponent_lineup, event.outcome, opponent_lineup.en_jeu, scorer_lineup=scorer_lineup)
     sequence = replace(sequence, roster={
         pid: replace(entry, numero=(scorer_numeros if entry.team_side == "scorer" else opponent_numeros).get(pid, entry.numero))
         for pid, entry in sequence.roster.items()

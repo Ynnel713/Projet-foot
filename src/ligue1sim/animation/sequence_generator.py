@@ -39,7 +39,7 @@ from ligue1sim.events import GoalEvent, PlayerMatchStat
 from ligue1sim.lineup import Lineup
 from ligue1sim.pitch_geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, PitchPoint
 from ligue1sim.pitch_layout import place_starting_xi
-from ligue1sim.players import GOALKEEPER
+from ligue1sim.players import GOALKEEPER, Player
 
 
 @dataclass(frozen=True)
@@ -602,8 +602,200 @@ def _free_kick_wall(sequence: Sequence, opponent_positions: dict[PlayerId, Pitch
     return starts, (sign * magnitude_m * px / PITCH_LENGTH_M, sign * magnitude_m * py / PITCH_WIDTH_M)
 
 
+# --- Chantier "mouvement collectif", Phase 1 (16/10/2026) : dispersion des lignes de départ ------------------------------
+# PRD/PLAN validés par le propriétaire (docs/PRD.md, docs/PLAN.md) : les joueurs de décor sont alignés en rangées parfaites
+# à leur position de départ (`place_starting_xi`, `src/ligue1sim/pitch_layout.py` -- fichier NON touché, exception demandée
+# et accordée pour CE fichier (`sequence_generator.py`) seulement). Écart latéral déterministe appliqué APRÈS la position de
+# formation mais AVANT `_tactical_drift`, pour que la direction du drift (`_toward`) se recalcule depuis le nouveau départ et
+# reste cohérente. Sel dédié ("start_dispersion", jamais partagé avec `_tactical_drift`) : un même sel aurait corrélé
+# artificiellement l'écart de départ et la direction du drift pendant l'action, faussant à la fois le réalisme et la mesure
+# de dispersion. Jamais en profondeur (toujours `(0.0, dy)`) : préserve l'ordre des lignes tactiques et l'amplitude déjà
+# calibrée de `_tactical_drift`/`_cb_line_drift`, qui n'ont pas besoin d'être retouchés. Exclu : le gardien (position déjà
+# recalculée par `_gk_base_position`, hors sujet "ligne") et les membres du mur de coup franc (`wall_starts`, alignement
+# tactique volontaire) -- appliqué uniquement dans la branche "cas général" de chaque appelant.
+_START_DISPERSION_MAX_M = 1.0  # amplitude latérale max, proposée en conception, validée par le propriétaire (16/10/2026)
+
+
+def _start_dispersion(player_id: PlayerId, event_ref: str) -> tuple[float, float]:
+    """Écart latéral déterministe (chantier mouvement collectif, Phase 1) : tirage SIGNÉ (centré sur 0, pas uniquement d'un
+    côté) dans `[-_START_DISPERSION_MAX_M, _START_DISPERSION_MAX_M]`, sha256 de `player_id|event_ref|"start_dispersion"`
+    (`_event_unit`). `(0.0, dy)` normalisé : à additionner à la position de départ issue de la formation, jamais à sa cible."""
+    unit = _event_unit(player_id, event_ref, "start_dispersion")
+    dy_m = (unit * 2.0 - 1.0) * _START_DISPERSION_MAX_M
+    return (0.0, dy_m / PITCH_WIDTH_M)
+
+
+# --- Chantier "mouvement collectif", Phase 2 (16/10/2026) : trajectoire à plusieurs points -------------------------------
+# PRD/PLAN validés par le propriétaire : le drift d'un joueur de décor était une ligne droite (`start` -> `start + drift`,
+# un seul segment). Exception accordée (16/10/2026) pour `types.py` (nouveau champ optionnel `BackgroundTrack.points`,
+# rétrocompatible) et `motion.py` (`_background_position_at` découpe la trajectoire en plusieurs segments égaux quand
+# `points` est renseigné, voir sa docstring) -- ici, dans `sequence_generator.py` (déjà autorisé), on calcule SEULEMENT
+# les points eux-mêmes. `_DRIFT_WAYPOINT_COUNT = 2` : validé par le propriétaire (16/10/2026). Chaque point est décalé
+# PERPENDICULAIREMENT au segment direct start->end (jamais le long, qui changerait juste la vitesse de parcours, pas le
+# tracé) -- sel dédié par point ("drift_waypoint|k", jamais partagé avec `_start_dispersion`/`_tactical_drift`).
+_DRIFT_WAYPOINT_COUNT = 2  # points intermédiaires, validé par le propriétaire (16/10/2026)
+_DRIFT_WAYPOINT_JITTER_MAX_M = 0.5  # écart perpendiculaire max au tracé direct, proposé en conception (16/10/2026)
+
+
+def _drift_waypoints(player_id: PlayerId, event_ref: str, start: tuple[float, float], drift: tuple[float, float]) -> tuple[tuple[float, float], ...] | None:
+    """Points intermédiaires du trajet `start -> start + drift` d'un joueur de décor (chantier mouvement collectif,
+    Phase 2) : `_DRIFT_WAYPOINT_COUNT` points espacés également sur le tracé direct, chacun décalé perpendiculairement
+    d'un écart signé déterministe dans `[-_DRIFT_WAYPOINT_JITTER_MAX_M, _DRIFT_WAYPOINT_JITTER_MAX_M]`. `None` si le
+    joueur ne bouge pas (`drift` nul) : aucune direction à partir de laquelle calculer une perpendiculaire."""
+    end = (start[0] + drift[0], start[1] + drift[1])
+    length_m = math.hypot((end[0] - start[0]) * PITCH_LENGTH_M, (end[1] - start[1]) * PITCH_WIDTH_M)
+    if length_m <= 1e-9:
+        return None
+    ux_m, uy_m = (end[0] - start[0]) * PITCH_LENGTH_M / length_m, (end[1] - start[1]) * PITCH_WIDTH_M / length_m
+    perp_x_m, perp_y_m = -uy_m, ux_m
+    points = []
+    for k in range(1, _DRIFT_WAYPOINT_COUNT + 1):
+        progress_k = k / (_DRIFT_WAYPOINT_COUNT + 1)
+        base_x, base_y = start[0] + drift[0] * progress_k, start[1] + drift[1] * progress_k
+        offset_m = (_event_unit(player_id, f"{event_ref}|{k}", "drift_waypoint") * 2.0 - 1.0) * _DRIFT_WAYPOINT_JITTER_MAX_M
+        points.append((base_x + perp_x_m * offset_m / PITCH_LENGTH_M, base_y + perp_y_m * offset_m / PITCH_WIDTH_M))
+    return tuple(points)
+
+
+# --- Chantier "mouvement collectif", Phase 3 (16/10/2026) : initiatives de soutien par poste --------------------------
+# PRD/PLAN validés par le propriétaire (docs/PRD.md, docs/PLAN.md, section Phase 3) : un joueur de décor éligible peut,
+# selon son poste ET son camp dans CETTE séquence, REMPLACER son `_tactical_drift` habituel par une initiative de
+# soutien identifiable -- jamais additif, jamais pour un gardien, un membre du mur de coup franc, ou un remplaçant
+# en_jeu (position réelle suivie, pas une ligne de formation de référence, même raison que Phase 1).
+#
+# Camp = direction, JAMAIS l'inverse (voir `tests.test_sequence_generator.TestTacticalDrift.
+# test_opponent_fullbacks_never_push_forward_end_to_end`, invariant déjà testé avant ce chantier : le modèle ne capture
+# qu'UNE SEULE phase de jeu par clip, `team_side="scorer"` toujours en attaque, `"opponent"` toujours en défense sur
+# CETTE séquence précise) :
+#   - LB/RB (dédoublement offensif) : UNIQUEMENT côté `scorer` -- un latéral adverse ne monte jamais pendant que son
+#     équipe encaisse, quel que soit son profil.
+#   - BU/SA/ATT (repli défensif) : UNIQUEMENT côté `opponent` -- un attaquant de l'équipe qui marque ne redescend pas
+#     défendre pendant sa propre action.
+#   - MC/MDC (décision du propriétaire 16/10/2026, anticipe Phase 4) : les DEUX camps, direction forcée par le camp
+#     comme les deux groupes ci-dessus (+1 côté scorer, -1 côté opponent) -- jamais par l'attribut. MOC volontairement
+#     exclu (décision du propriétaire) : déjà regroupé avec MDC/MC dans `_tactical_drift_unfloored` mais jugé trop
+#     proche du jeu pour une initiative distincte.
+#
+# L'attribut du joueur module la FRÉQUENCE (probabilité de tirage), jamais le sens : Work Rate côté `scorer` (rejoindre
+# l'attaque, profil "box-to-box"), Positioning côté `opponent` (repli défensif, profil défensif) -- voir
+# `_support_initiative_probability`.
+#
+# Secteur tactiquement crédible = rectangle couloir (± `_SUPPORT_LANE_M[poste]`, latéral) x profondeur (jusqu'à
+# `_SUPPORT_INITIATIVE_MAX_M`, signée par le camp), réduit par le plafond d'amplitude global (cercle
+# `_SUPPORT_INITIATIVE_MAX_M`, mise à l'échelle uniforme si dépassé -- même principe que `_floor_drift_magnitude`) :
+# un couloir plus étroit que le plafond (LB/RB, MC/MDC) est donc un VRAI filtre, pas un rayon redondant avec
+# l'amplitude max (un rayon simple centré au même point ne rejette jamais rien qu'elle ne rejette déjà). Vérifié sur
+# CHAQUE image du clip par construction : `_drift_waypoints`/`motion._background_position_at` interpolent une
+# trajectoire monotone par segments entre `start` et `start + drift`, jamais un rebond hors de ce segment.
+_SUPPORT_INITIATIVE_PROBABILITY = 0.40  # tirage par joueur éligible et par clip (LB/RB, BU/SA/ATT, MC/MDC sans attribut connu), sel dédié, validé (16/10/2026)
+_SUPPORT_MIDFIELD_PROBABILITY_RANGE = (0.20, 0.60)  # MC/MDC avec l'attribut pertinent connu : probabilité linéaire sur l'échelle FM 1-20, validé (16/10/2026)
+_SUPPORT_INITIATIVE_MAX_M = 12.0  # amplitude max d'une initiative (vs _MAX_DRIFT_MAGNITUDE ~5 % du terrain pour le petit drift existant), validé (16/10/2026)
+_SUPPORT_LANE_M = {  # demi-largeur de couloir latéral max par poste, validé (16/10/2026)
+    "LB": 6.0, "RB": 6.0,
+    "MC": 8.0, "MDC": 8.0,
+    "BU": 10.0, "SA": 10.0, "ATT": 10.0,
+}
+_SUPPORT_OVERLAP_POSTES = frozenset({"LB", "RB"})  # dédoublement offensif, côté scorer uniquement (PRD, pas de choix)
+_SUPPORT_COVER_POSTES = frozenset({"BU", "SA", "ATT"})  # repli défensif, côté opponent uniquement (PRD, pas de choix)
+_SUPPORT_MIDFIELD_POSTES = frozenset({"MC", "MDC"})  # les deux camps, direction forcée par le camp
+
+
+def _support_initiative_eligible(poste: str, team_side: str) -> bool:
+    """Un seul mécanisme actif par (poste, camp) à la fois -- voir le bloc de commentaires ci-dessus pour pourquoi
+    LB/RB et BU/SA/ATT sont restreints à un seul camp chacun."""
+    if poste in _SUPPORT_OVERLAP_POSTES:
+        return team_side == "scorer"
+    if poste in _SUPPORT_COVER_POSTES:
+        return team_side == "opponent"
+    return poste in _SUPPORT_MIDFIELD_POSTES
+
+
+def _support_initiative_probability(poste: str, team_side: str, player: Player | None) -> float:
+    """Probabilité de tirage (`_support_initiative_selected`). LB/RB, BU/SA/ATT : `_SUPPORT_INITIATIVE_PROBABILITY`
+    fixe. MC/MDC : modulée par l'attribut pertinent pour CE camp (Work Rate côté `scorer`, Positioning côté
+    `opponent`), linéaire sur `_SUPPORT_MIDFIELD_PROBABILITY_RANGE` pour l'échelle FM 1-20. Attribut manquant
+    (`player.attributes` `None`/incomplet, ~93 % des joueurs au 26/09/2026, voir `players.FM_ATTRIBUTE_CATEGORIES`) :
+    comportement par défaut cohérent (exigence Phase 4 du PLAN), retombe sur `_SUPPORT_INITIATIVE_PROBABILITY`."""
+    if poste not in _SUPPORT_MIDFIELD_POSTES:
+        return _SUPPORT_INITIATIVE_PROBABILITY
+    attributes = player.attributes if player is not None else None
+    attribute_name = "Work Rate" if team_side == "scorer" else "Positioning"
+    value = attributes.get(attribute_name) if attributes else None
+    if value is None:
+        return _SUPPORT_INITIATIVE_PROBABILITY
+    lo, hi = _SUPPORT_MIDFIELD_PROBABILITY_RANGE
+    unit = max(0.0, min(1.0, (value - 1) / 19.0))
+    return lo + unit * (hi - lo)
+
+
+def _support_initiative_selected(player_id: PlayerId, event_ref: str, probability: float) -> bool:
+    """Tirage déterministe (sel dédié `"support_initiative_select"`, jamais partagé) : True si CE joueur initie un
+    mouvement de soutien sur CE clip, à `probability` (voir `_support_initiative_probability`)."""
+    return _event_unit(player_id, event_ref, "support_initiative_select") < probability
+
+
+def _support_initiative_direction(poste: str, team_side: str) -> float:
+    """+1.0 = vers l'avant (rejoint l'attaque / dédoublement), -1.0 = vers l'arrière (repli défensif) -- TOUJOURS
+    déterminé par le camp (voir le bloc de commentaires ci-dessus), jamais par l'attribut.
+
+    Piste de lecture pour MC/MDC : cette fonction renvoie exactement `_forward_sign(team_side)` pour ce groupe (+1
+    côté scorer, -1 côté opponent). `_support_initiative` multiplie ensuite ce résultat PAR `_forward_sign(team_side)`
+    une seconde fois -- le signe final est donc TOUJOURS +1 pour MC/MDC, quel que soit le camp. Ce n'est pas un bug :
+    dans le référentiel partagé de la `Sequence`, le but que rejoint un scorer ET le but propre vers lequel un
+    opponent se replie sont tous les deux à x=1 (voir `_gk_base_position`), donc la même direction absolue est
+    attendue dans les deux cas."""
+    if poste in _SUPPORT_OVERLAP_POSTES:
+        return 1.0
+    if poste in _SUPPORT_COVER_POSTES:
+        return -1.0
+    return 1.0 if team_side == "scorer" else -1.0
+
+
+def _support_initiative(poste: str, player_id: PlayerId, team_side: str, event_ref: str) -> tuple[float, float]:
+    """Initiative de soutien (chantier mouvement collectif, Phase 3) -- REMPLACE `_tactical_drift` pour le joueur
+    tiré (`_support_initiative_selected`), jamais additif. Profondeur tirée dans `[0, _SUPPORT_INITIATIVE_MAX_M]`
+    (sel `"support_depth"`), signée par `_support_initiative_direction` puis par `_forward_sign(team_side)` (même
+    convention que `_tactical_drift_unfloored`). Latéral tiré, signé et centré, dans `[-_SUPPORT_LANE_M[poste],
+    _SUPPORT_LANE_M[poste]]` (sel `"support_lateral"`, même tirage centré que `_start_dispersion`). Mis à l'échelle
+    uniforme si le total dépasse `_SUPPORT_INITIATIVE_MAX_M` (préserve la direction, jamais un plafond en conflit
+    avec le couloir -- même principe que `_floor_drift_magnitude`)."""
+    direction = _support_initiative_direction(poste, team_side)
+    forward = _forward_sign(team_side)
+    depth_m = _event_unit(player_id, event_ref, "support_depth") * _SUPPORT_INITIATIVE_MAX_M
+    lateral_m = (_event_unit(player_id, event_ref, "support_lateral") * 2.0 - 1.0) * _SUPPORT_LANE_M[poste]
+    total_m = math.hypot(depth_m, lateral_m)
+    if total_m > _SUPPORT_INITIATIVE_MAX_M:
+        scale = _SUPPORT_INITIATIVE_MAX_M / total_m
+        depth_m, lateral_m = depth_m * scale, lateral_m * scale
+    return (forward * direction * depth_m / PITCH_LENGTH_M, lateral_m / PITCH_WIDTH_M)
+
+
+def _drift_or_support_initiative(
+    poste: str,
+    player_id: PlayerId,
+    team_side: str,
+    start: tuple[float, float],
+    ball_target: tuple[float, float],
+    cb_line_drift: tuple[float, float],
+    event_ref: str,
+    player: Player | None,
+    eligible: bool,
+) -> tuple[float, float]:
+    """`_tactical_drift`, SAUF si `eligible` (poste/camp/hors remplaçant -- voir appelants) ET le tirage
+    `_support_initiative_selected` retombe dessus : alors `_support_initiative` REMPLACE `_tactical_drift` pour ce
+    joueur sur ce clip, jamais additif. Point d'entrée commun aux 3 sites de construction de `BackgroundTrack`
+    (`enrich_with_background` x2, `opponent_field_tracks`), pour garantir leur parité par construction."""
+    if eligible and _support_initiative_selected(player_id, event_ref, _support_initiative_probability(poste, team_side, player)):
+        return _support_initiative(poste, player_id, team_side, event_ref)
+    return _tactical_drift(poste, player_id, team_side, start, ball_target, cb_line_drift, event_ref)
+
+
 def enrich_with_background(
-    sequence: Sequence, opponent_lineup: Lineup, outcome: str | None = None, en_jeu: dict[str, PitchPoint | None] | None = None
+    sequence: Sequence,
+    opponent_lineup: Lineup,
+    outcome: str | None = None,
+    en_jeu: dict[str, PitchPoint | None] | None = None,
+    scorer_lineup: Lineup | None = None,
 ) -> Sequence:
     """Complète une `Sequence` déjà produite (par `generate_sequence`, ou
     directement un gabarit) avec les joueurs "décor" : le reste de l'équipe
@@ -631,7 +823,13 @@ def enrich_with_background(
     (`_penalty_gk_drift`). `None` (défaut, tous les appelants hors `narrative_player`) : amplitude seule. Aucun effet hors penalty.
 
     `en_jeu` (étape 0b-2) : joueurs adverses sur le terrain, voir `_opponent_positions`. `None` et sans attribut `en_jeu` sur `opponent_lineup` : comportement
-    historique, bit à bit."""
+    historique, bit à bit.
+
+    `scorer_lineup` (chantier mouvement collectif, Phase 3) : `Lineup` de l'équipe qui marque, pour résoudre le `Player` (donc ses
+    `attributes`) d'un MC/MDC tiré pour une initiative de soutien -- voir `_support_initiative_probability`. `None` (défaut, tout
+    appelant qui ne fournit pas cette exception) : les MC/MDC côté scorer retombent sur la probabilité par défaut fixe
+    (`_SUPPORT_INITIATIVE_PROBABILITY`, 40 %, comme LB/RB et BU/SA/ATT), jamais une erreur -- seul `engine/narrative_player.py` la
+    fournit en production."""
     if en_jeu is None:
         en_jeu = getattr(opponent_lineup, "en_jeu", None)
     active_ids = {player_id for player_id, entry in sequence.roster.items() if entry.role is not None}
@@ -650,12 +848,20 @@ def enrich_with_background(
     scorer_cb_drift = _cb_line_drift(
         f"{sequence.event_ref}|scorer", sum(scorer_cb_ys) / len(scorer_cb_ys), ball_target[1]
     ) if scorer_cb_ys else (0.0, 0.0)
+    scorer_players_by_name = {p.name: p for p in scorer_lineup.players} if scorer_lineup is not None else {}
     for player_id, start in scorer_starts.items():
         entry = sequence.roster[player_id]
         if entry.poste == GOALKEEPER:
             start = _gk_base_position("scorer")
-        drift = _tactical_drift(entry.poste, player_id, "scorer", start, ball_target, scorer_cb_drift, sequence.event_ref)
-        background[player_id] = BackgroundTrack(start=start, drift=drift)
+        else:
+            dx, dy = _start_dispersion(player_id, sequence.event_ref)
+            start = (start[0] + dx, start[1] + dy)
+        drift = _drift_or_support_initiative(
+            entry.poste, player_id, "scorer", start, ball_target, scorer_cb_drift, sequence.event_ref,
+            scorer_players_by_name.get(entry.nom), _support_initiative_eligible(entry.poste, "scorer"),
+        )
+        points = _drift_waypoints(player_id, sequence.event_ref, start, drift)
+        background[player_id] = BackgroundTrack(start=start, drift=drift, points=points)
 
     opponent_positions = _opponent_positions(opponent_lineup, en_jeu)
     opponent_by_id = {player_id_of(p): p for p in (list(opponent_lineup.players) + (list(opponent_lineup.substitutes) if en_jeu is not None else []))}
@@ -666,6 +872,9 @@ def enrich_with_background(
     ) if opponent_cb_ys else (0.0, 0.0)
 
     wall_starts, wall_drift = _free_kick_wall(sequence, opponent_positions, opponent_by_id) if sequence.meta.get("template") == "coup_franc" else ({}, (0.0, 0.0))
+    # En_jeu (étape 0b-2) : la position d'un remplaçant entré en jeu est une position RÉELLE suivie, pas une ligne de
+    # formation théorique -- hors sujet "dispersion des lignes" (docs/PLAN.md, Phase 1), jamais dispersée.
+    substitute_ids = {player_id_of(p) for p in opponent_lineup.substitutes}
 
     opponent_roster: dict[PlayerId, RosterEntry] = {}
     for player_id, point in opponent_positions.items():
@@ -673,15 +882,24 @@ def enrich_with_background(
         start = _gk_base_position("opponent") if player.poste == GOALKEEPER else (point.x, point.y)
         if player.poste == GOALKEEPER and sequence.meta.get("template") == "coup_franc":
             start = _free_kick_gk_start(player_id, sequence.event_ref, sequence.keyframes[0].ball.y)  # B7-d : départ moins avancé, côté ballon
+        points = None
         if player_id in wall_starts:
-            start, drift = wall_starts[player_id], wall_drift  # B7-b : mur d'un coup franc, dérive partagée
+            start, drift = wall_starts[player_id], wall_drift  # B7-b : mur d'un coup franc, dérive partagée -- tracé direct
+            # conservé à dessein (Phase 2 ne s'applique pas ici) : un mur avance en bloc, pas joueur par joueur.
         elif player.poste == GOALKEEPER and sequence.meta.get("template") == "penalty":
             drift = _penalty_gk_drift(player_id, sequence.event_ref, ball_target[1], outcome)
         elif player.poste == GOALKEEPER and sequence.meta.get("template") == "coup_franc":
             drift = _free_kick_gk_drift(player_id, sequence.event_ref, start[1], ball_target[1], outcome)  # B7-d
         else:
-            drift = _tactical_drift(player.poste, player_id, "opponent", start, ball_target, opponent_cb_drift, sequence.event_ref)
-        background[player_id] = BackgroundTrack(start=start, drift=drift)
+            if player.poste != GOALKEEPER and player_id not in substitute_ids:
+                dx, dy = _start_dispersion(player_id, sequence.event_ref)
+                start = (start[0] + dx, start[1] + dy)
+            eligible = _support_initiative_eligible(player.poste, "opponent") and player_id not in substitute_ids
+            drift = _drift_or_support_initiative(
+                player.poste, player_id, "opponent", start, ball_target, opponent_cb_drift, sequence.event_ref, player, eligible,
+            )
+            points = _drift_waypoints(player_id, sequence.event_ref, start, drift)
+        background[player_id] = BackgroundTrack(start=start, drift=drift, points=points)
         opponent_roster[player_id] = RosterEntry(
             nom=player.name,
             poste=player.poste,
@@ -717,14 +935,22 @@ def opponent_field_tracks(
     by_id = {player_id_of(p): p for p in (list(opponent_lineup.players) + (list(opponent_lineup.substitutes) if en_jeu is not None else []))}
     cb_ys = [point.y for pid, point in positions.items() if by_id[pid].poste == "DC"]
     cb_drift = _cb_line_drift(f"{event_ref}|opponent", sum(cb_ys) / len(cb_ys), ball_target[1]) if cb_ys else (0.0, 0.0)
-    return {
-        pid: BackgroundTrack(
-            start=(point.x, point.y),
-            drift=_tactical_drift(by_id[pid].poste, pid, "opponent", (point.x, point.y), ball_target, cb_drift, event_ref),
+    substitute_ids = {player_id_of(p) for p in opponent_lineup.substitutes}  # en_jeu : position réelle suivie, jamais dispersée
+    tracks: dict[PlayerId, BackgroundTrack] = {}
+    for pid, point in positions.items():
+        if by_id[pid].poste == GOALKEEPER:
+            continue
+        if pid in substitute_ids:
+            start = (point.x, point.y)
+        else:
+            dx, dy = _start_dispersion(pid, event_ref)
+            start = (point.x + dx, point.y + dy)
+        eligible = _support_initiative_eligible(by_id[pid].poste, "opponent") and pid not in substitute_ids
+        drift = _drift_or_support_initiative(
+            by_id[pid].poste, pid, "opponent", start, ball_target, cb_drift, event_ref, by_id[pid], eligible,
         )
-        for pid, point in positions.items()
-        if by_id[pid].poste != GOALKEEPER
-    }
+        tracks[pid] = BackgroundTrack(start=start, drift=drift, points=_drift_waypoints(pid, event_ref, start, drift))
+    return tracks
 
 
 def nearest_opponent_distance_m(

@@ -8,15 +8,31 @@ from ligue1sim.animation.sequence_generator import (
     _GK_LATERAL_MAX_M,
     _MAX_DRIFT_FLOOR_M,
     _MIN_DRIFT_MAGNITUDE_M,
+    _DRIFT_WAYPOINT_COUNT,
+    _DRIFT_WAYPOINT_JITTER_MAX_M,
+    _START_DISPERSION_MAX_M,
+    _SUPPORT_INITIATIVE_MAX_M,
+    _SUPPORT_INITIATIVE_PROBABILITY,
+    _SUPPORT_LANE_M,
+    _SUPPORT_MIDFIELD_PROBABILITY_RANGE,
     MatchState,
     _cb_line_drift,
+    _drift_or_support_initiative,
+    _drift_waypoints,
     _forward_sign,
     _gk_base_position,
+    _start_dispersion,
     _start_positions,
+    _support_initiative,
+    _support_initiative_direction,
+    _support_initiative_eligible,
+    _support_initiative_probability,
+    _support_initiative_selected,
     _tactical_drift,
     deterministic_rng,
     enrich_with_background,
     generate_sequence,
+    opponent_field_tracks,
 )
 from ligue1sim.animation.spatial import PitchLayoutState
 from ligue1sim.animation.templates import BUILDERS, player_id_of
@@ -312,9 +328,24 @@ class TestEnrichWithBackground:
         # "Test statistique" du bilan : sur 100 buts (contexte/gabarit
         # variés via event_index), la position finale de CHAQUE joueur
         # décor doit rester cohérente avec sa position de formation -- jamais
-        # à plus de ~5% du terrain (voir sequence_generator._MAX_DRIFT_MAGNITUDE),
-        # jamais un téléport ailleurs sur le terrain.
-        max_allowed = 0.05 + 1e-9
+        # à plus de ~5% du terrain (voir sequence_generator._MAX_DRIFT_MAGNITUDE)
+        # OU, chantier mouvement collectif Phase 3, dans le secteur couloir
+        # (`_SUPPORT_LANE_M`) x profondeur borné par `_SUPPORT_INITIATIVE_MAX_M`
+        # (12 m) -- jamais un téléport ailleurs sur le terrain. Le maximum
+        # atteignable (hypot normalisé mixte x/y, mêmes unités que le drift
+        # historique) est calculé à partir des constantes de production,
+        # jamais un chiffre en dur : le point le plus défavorable de
+        # l'enveloppe couloir/profondeur est à la borne latérale du couloir
+        # (le plus grand facteur de normalisation, 1/PITCH_WIDTH_M), avec la
+        # profondeur restante jusqu'au cercle d'amplitude 12 m.
+        max_support_hypot = max(
+            math.hypot(
+                math.sqrt(max(_SUPPORT_INITIATIVE_MAX_M**2 - lane_m**2, 0.0)) / PITCH_LENGTH_M,
+                lane_m / PITCH_WIDTH_M,
+            )
+            for lane_m in _SUPPORT_LANE_M.values()
+        )
+        max_allowed = max(0.05, max_support_hypot) + 1e-9
         for event_index in range(100):
             sequence, _lineup_, _opponent = _enriched_sequence(event_index=event_index, minute=1 + event_index % 90)
             for track in sequence.background.values():
@@ -483,6 +514,384 @@ class TestTacticalDriftVariesByEvent:
 
         assert _event_unit(7, "goal:A:x:1", "drift_x") != _event_unit(7, "goal:B:y:2", "drift_x")
         assert _event_unit(7, "goal:A:x:1", "drift_x") != _event_unit(7, "goal:A:x:1", "drift_y")
+
+
+class TestStartDispersion:
+    """Chantier "mouvement collectif", Phase 1 (16/10/2026) : écart latéral déterministe appliqué à un joueur de décor avant
+    `_tactical_drift`, pour casser l'alignement en rangées de `place_starting_xi` (PRD/PLAN validés par le propriétaire).
+    Jamais en profondeur (toujours `dx = 0.0`), amplitude `±_START_DISPERSION_MAX_M` (1,0 m, validée par le propriétaire)."""
+
+    def test_never_moves_in_depth(self):
+        for i in range(50):
+            dx, _dy = _start_dispersion(i, f"goal:Test FC:p{i}:{i % 90 + 1}")
+            assert dx == 0.0
+
+    def test_stays_within_the_validated_amplitude(self):
+        for i in range(200):
+            _dx, dy = _start_dispersion(i, f"goal:Test FC:p{i}:{i % 90 + 1}")
+            assert abs(dy) * PITCH_WIDTH_M <= _START_DISPERSION_MAX_M + 1e-9
+
+    def test_the_sign_is_centered_not_always_the_same_side(self):
+        signs = {math.copysign(1.0, _start_dispersion(i, f"goal:Test FC:p{i}:{i % 90 + 1}")[1]) for i in range(50)}
+        assert signs == {-1.0, 1.0}
+
+    def test_is_deterministic_for_a_player_and_an_event(self):
+        args = (7, "goal:Test FC:p1:12")
+        assert _start_dispersion(*args) == _start_dispersion(*args)
+
+    def test_same_player_disperses_differently_on_different_events(self):
+        values = {_start_dispersion(7, f"goal:Test FC:p{i}:{i % 90 + 1}")[1] for i in range(30)}
+        assert len(values) >= 25
+
+    def test_uses_a_salt_distinct_from_the_tactical_drift(self):
+        from ligue1sim.animation.sequence_generator import _event_unit
+
+        assert _event_unit(7, "goal:A:x:1", "start_dispersion") != _event_unit(7, "goal:A:x:1", "drift_y")
+
+
+class TestDriftWaypoints:
+    """Chantier "mouvement collectif", Phase 2 (16/10/2026) : points intermédiaires du trajet `start -> start + drift`
+    d'un joueur de décor, pour une trajectoire moins rectiligne (PRD/PLAN + exception types.py/motion.py validés par le
+    propriétaire). `_DRIFT_WAYPOINT_COUNT` points (2, validé), décalés perpendiculairement au tracé direct."""
+
+    _START = (0.4, 0.4)
+    _DRIFT = (0.04, -0.03)
+
+    def test_returns_none_for_a_player_who_does_not_move(self):
+        assert _drift_waypoints(7, "goal:Test FC:p1:12", self._START, (0.0, 0.0)) is None
+
+    def test_returns_the_validated_number_of_points(self):
+        points = _drift_waypoints(7, "goal:Test FC:p1:12", self._START, self._DRIFT)
+        assert points is not None
+        assert len(points) == _DRIFT_WAYPOINT_COUNT == 2
+
+    def test_points_are_spaced_evenly_along_the_direct_path(self):
+        # Projection de chaque point sur l'axe start->end, en MÈTRES (la perpendicularité du décalage est garantie dans ce
+        # référentiel par construction -- voir _drift_waypoints, pas dans le référentiel normalisé où x/y n'ont pas la même
+        # échelle physique, 105 m contre 68 m) : doit tomber à k/(N+1) de la distance totale, décalage le long du tracé nul.
+        from ligue1sim.pitch_geometry import PITCH_LENGTH_M, PITCH_WIDTH_M
+
+        points = _drift_waypoints(7, "goal:Test FC:p1:12", self._START, self._DRIFT)
+        end_m = ((self._START[0] + self._DRIFT[0]) * PITCH_LENGTH_M, (self._START[1] + self._DRIFT[1]) * PITCH_WIDTH_M)
+        start_m = (self._START[0] * PITCH_LENGTH_M, self._START[1] * PITCH_WIDTH_M)
+        for k, point in enumerate(points, start=1):
+            expected_progress = k / (_DRIFT_WAYPOINT_COUNT + 1)
+            expected_m = (
+                self._START[0] * PITCH_LENGTH_M + self._DRIFT[0] * PITCH_LENGTH_M * expected_progress,
+                self._START[1] * PITCH_WIDTH_M + self._DRIFT[1] * PITCH_WIDTH_M * expected_progress,
+            )
+            point_m = (point[0] * PITCH_LENGTH_M, point[1] * PITCH_WIDTH_M)
+            along = (point_m[0] - expected_m[0]) * (end_m[0] - start_m[0]) + (point_m[1] - expected_m[1]) * (end_m[1] - start_m[1])
+            assert abs(along) < 1e-6
+
+    def test_perpendicular_offset_stays_within_the_validated_amplitude(self):
+        import math
+
+        from ligue1sim.pitch_geometry import PITCH_LENGTH_M, PITCH_WIDTH_M
+
+        for i in range(50):
+            points = _drift_waypoints(i, f"goal:Test FC:p{i}:{i % 90 + 1}", self._START, self._DRIFT)
+            for k, point in enumerate(points, start=1):
+                progress_k = k / (_DRIFT_WAYPOINT_COUNT + 1)
+                base = (self._START[0] + self._DRIFT[0] * progress_k, self._START[1] + self._DRIFT[1] * progress_k)
+                offset_m = math.hypot((point[0] - base[0]) * PITCH_LENGTH_M, (point[1] - base[1]) * PITCH_WIDTH_M)
+                assert offset_m <= _DRIFT_WAYPOINT_JITTER_MAX_M + 1e-9
+
+    def test_is_deterministic_for_a_player_and_an_event(self):
+        args = (7, "goal:Test FC:p1:12", self._START, self._DRIFT)
+        assert _drift_waypoints(*args) == _drift_waypoints(*args)
+
+    def test_same_player_gets_different_waypoints_on_different_events(self):
+        values = {_drift_waypoints(7, f"goal:Test FC:p{i}:{i % 90 + 1}", self._START, self._DRIFT) for i in range(30)}
+        assert len(values) >= 25
+
+    def test_uses_a_salt_distinct_from_the_other_drift_mechanisms(self):
+        from ligue1sim.animation.sequence_generator import _event_unit
+
+        assert _event_unit(7, "goal:A:x:1|1", "drift_waypoint") != _event_unit(7, "goal:A:x:1", "start_dispersion")
+        assert _event_unit(7, "goal:A:x:1|1", "drift_waypoint") != _event_unit(7, "goal:A:x:1", "drift_y")
+
+
+def _player_with_attributes(poste: str, name: str, player_id: int, attributes: dict[str, int] | None) -> Player:
+    return Player(
+        prenom=name, nom="", nationalite="France", age=25, poste=poste, note=70.0,
+        club="Test FC", championnat="TEST", id=player_id, attributes=attributes,
+    )
+
+
+class TestSupportInitiativeEligibility:
+    """Chantier "mouvement collectif", Phase 3 (16/10/2026) : un seul mécanisme actif par (poste, camp) à la fois --
+    voir le bloc de commentaires au-dessus de `_support_initiative_eligible` dans sequence_generator.py pour pourquoi
+    LB/RB et BU/SA/ATT sont restreints à un seul camp (invariant déjà testé par
+    `TestTacticalDrift.test_opponent_fullbacks_never_push_forward_end_to_end` : le modèle ne capture qu'une seule
+    phase de jeu par clip)."""
+
+    def test_overlap_postes_only_eligible_for_the_scoring_team(self):
+        for poste in ("LB", "RB"):
+            assert _support_initiative_eligible(poste, "scorer") is True
+            assert _support_initiative_eligible(poste, "opponent") is False
+
+    def test_cover_postes_only_eligible_for_the_conceding_team(self):
+        for poste in ("BU", "SA", "ATT"):
+            assert _support_initiative_eligible(poste, "opponent") is True
+            assert _support_initiative_eligible(poste, "scorer") is False
+
+    def test_midfield_postes_eligible_for_both_teams(self):
+        for poste in ("MC", "MDC"):
+            assert _support_initiative_eligible(poste, "scorer") is True
+            assert _support_initiative_eligible(poste, "opponent") is True
+
+    def test_moc_is_never_eligible_owner_decision(self):
+        assert _support_initiative_eligible("MOC", "scorer") is False
+        assert _support_initiative_eligible("MOC", "opponent") is False
+
+    def test_goalkeeper_is_never_eligible(self):
+        assert _support_initiative_eligible("GK", "scorer") is False
+        assert _support_initiative_eligible("GK", "opponent") is False
+
+    def test_other_postes_are_never_eligible(self):
+        for poste in ("DC", "AG", "AD"):
+            assert _support_initiative_eligible(poste, "scorer") is False
+            assert _support_initiative_eligible(poste, "opponent") is False
+
+
+class TestSupportInitiativeDirection:
+    """La direction est TOUJOURS déterminée par le camp, jamais par l'attribut (décision du propriétaire 16/10/2026) :
+    +1 = rejoint l'attaque, -1 = repli défensif."""
+
+    def test_overlap_postes_always_go_forward_regardless_of_team_side_argument(self):
+        for poste in ("LB", "RB"):
+            assert _support_initiative_direction(poste, "scorer") == 1.0
+            assert _support_initiative_direction(poste, "opponent") == 1.0  # jamais appelé en pratique (non éligible), mais sans ambiguïté
+
+    def test_cover_postes_always_go_backward_regardless_of_team_side_argument(self):
+        for poste in ("BU", "SA", "ATT"):
+            assert _support_initiative_direction(poste, "scorer") == -1.0
+            assert _support_initiative_direction(poste, "opponent") == -1.0
+
+    def test_midfield_direction_follows_the_team_side(self):
+        for poste in ("MC", "MDC"):
+            assert _support_initiative_direction(poste, "scorer") == 1.0
+            assert _support_initiative_direction(poste, "opponent") == -1.0
+
+
+class TestSupportInitiativeProbability:
+    """L'attribut du joueur module la FRÉQUENCE (probabilité de tirage), jamais le sens -- Work Rate côté scorer
+    (rejoindre l'attaque), Positioning côté opponent (repli défensif), linéaire sur `_SUPPORT_MIDFIELD_PROBABILITY_RANGE`
+    pour l'échelle FM 1-20. LB/RB et BU/SA/ATT : probabilité fixe, aucun attribut n'entre en jeu."""
+
+    def test_overlap_and_cover_postes_use_the_fixed_probability_regardless_of_attributes(self):
+        player = _player_with_attributes("LB", "p", 1, {"Work Rate": 20, "Positioning": 1})
+        assert _support_initiative_probability("LB", "scorer", player) == _SUPPORT_INITIATIVE_PROBABILITY
+        player = _player_with_attributes("BU", "p", 1, {"Work Rate": 1, "Positioning": 20})
+        assert _support_initiative_probability("BU", "opponent", player) == _SUPPORT_INITIATIVE_PROBABILITY
+
+    def test_midfield_without_player_falls_back_to_the_fixed_probability(self):
+        assert _support_initiative_probability("MC", "scorer", None) == _SUPPORT_INITIATIVE_PROBABILITY
+        assert _support_initiative_probability("MDC", "opponent", None) == _SUPPORT_INITIATIVE_PROBABILITY
+
+    def test_midfield_without_the_relevant_attribute_falls_back_to_the_fixed_probability(self):
+        player = _player_with_attributes("MC", "p", 1, {"Passing": 15})  # ni Work Rate ni Positioning
+        assert _support_initiative_probability("MC", "scorer", player) == _SUPPORT_INITIATIVE_PROBABILITY
+        assert _support_initiative_probability("MC", "opponent", player) == _SUPPORT_INITIATIVE_PROBABILITY
+        assert _support_initiative_probability("MC", "scorer", _player_with_attributes("MC", "p", 1, None)) == _SUPPORT_INITIATIVE_PROBABILITY
+
+    def test_midfield_scorer_side_uses_work_rate_at_the_validated_bounds(self):
+        lo, hi = _SUPPORT_MIDFIELD_PROBABILITY_RANGE
+        low_player = _player_with_attributes("MC", "p", 1, {"Work Rate": 1})
+        high_player = _player_with_attributes("MC", "p", 1, {"Work Rate": 20})
+        assert _support_initiative_probability("MC", "scorer", low_player) == pytest.approx(lo)
+        assert _support_initiative_probability("MC", "scorer", high_player) == pytest.approx(hi)
+
+    def test_midfield_opponent_side_uses_positioning_at_the_validated_bounds(self):
+        lo, hi = _SUPPORT_MIDFIELD_PROBABILITY_RANGE
+        low_player = _player_with_attributes("MDC", "p", 1, {"Positioning": 1})
+        high_player = _player_with_attributes("MDC", "p", 1, {"Positioning": 20})
+        assert _support_initiative_probability("MDC", "opponent", low_player) == pytest.approx(lo)
+        assert _support_initiative_probability("MDC", "opponent", high_player) == pytest.approx(hi)
+
+    def test_midfield_scorer_side_ignores_positioning_opponent_side_ignores_work_rate(self):
+        # Travail de relance (Work Rate) ne compte PAS côté opponent (seul Positioning y module), et inversement.
+        player = _player_with_attributes("MC", "p", 1, {"Work Rate": 20, "Positioning": 1})
+        lo, _hi = _SUPPORT_MIDFIELD_PROBABILITY_RANGE
+        assert _support_initiative_probability("MC", "opponent", player) == pytest.approx(lo)  # Positioning=1 -> borne basse
+        player = _player_with_attributes("MC", "p", 1, {"Work Rate": 1, "Positioning": 20})
+        assert _support_initiative_probability("MC", "scorer", player) == pytest.approx(lo)  # Work Rate=1 -> borne basse
+
+
+class TestSupportInitiativeSelection:
+    def test_is_deterministic_for_a_player_and_an_event(self):
+        args = (7, "goal:Test FC:p1:12", 0.4)
+        assert _support_initiative_selected(*args) == _support_initiative_selected(*args)
+
+    def test_proportion_over_many_draws_is_close_to_the_target_probability(self):
+        for probability in (0.40, 0.20, 0.60):
+            selected = sum(_support_initiative_selected(i, f"goal:Test FC:p{i}:{i % 90 + 1}", probability) for i in range(2000))
+            assert abs(selected / 2000 - probability) < 0.03
+
+    def test_uses_a_salt_distinct_from_the_other_drift_mechanisms(self):
+        from ligue1sim.animation.sequence_generator import _event_unit
+
+        assert _event_unit(7, "goal:A:x:1", "support_initiative_select") != _event_unit(7, "goal:A:x:1", "drift_y")
+        assert _event_unit(7, "goal:A:x:1", "support_initiative_select") != _event_unit(7, "goal:A:x:1", "start_dispersion")
+
+
+class TestSupportInitiative:
+    """Secteur tactiquement crédible (couloir `_SUPPORT_LANE_M[poste]` x profondeur `_SUPPORT_INITIATIVE_MAX_M`),
+    réduit par le plafond d'amplitude global -- jamais un rayon simple redondant (voir le bloc de commentaires de
+    sequence_generator.py)."""
+
+    def test_is_deterministic_for_a_player_and_an_event(self):
+        args = ("MC", 7, "scorer", "goal:Test FC:p1:12")
+        assert _support_initiative(*args) == _support_initiative(*args)
+
+    def test_same_player_gets_different_initiatives_on_different_events(self):
+        values = {_support_initiative("MC", 7, "scorer", f"goal:Test FC:p{i}:{i % 90 + 1}") for i in range(30)}
+        assert len(values) >= 25
+
+    def test_amplitude_never_exceeds_the_global_cap_in_metres(self):
+        for poste in _SUPPORT_LANE_M:
+            for team_side in ("scorer", "opponent"):
+                for i in range(100):
+                    dx, dy = _support_initiative(poste, i, team_side, f"goal:Test FC:p{i}:{i % 90 + 1}")
+                    magnitude_m = math.hypot(dx * PITCH_LENGTH_M, dy * PITCH_WIDTH_M)
+                    assert magnitude_m <= _SUPPORT_INITIATIVE_MAX_M + 1e-9
+
+    def test_lateral_offset_never_exceeds_the_lane_for_its_poste(self):
+        for poste, lane_m in _SUPPORT_LANE_M.items():
+            for team_side in ("scorer", "opponent"):
+                for i in range(100):
+                    _dx, dy = _support_initiative(poste, i, team_side, f"goal:Test FC:p{i}:{i % 90 + 1}")
+                    assert abs(dy) * PITCH_WIDTH_M <= lane_m + 1e-9
+
+    def test_overlap_postes_move_toward_the_opponent_goal_for_the_scoring_team(self):
+        # team_side="scorer" : son but adverse est à x=1 (_forward_sign) -- un dédoublement avance dans ce sens.
+        found_forward = False
+        for i in range(200):
+            dx, _dy = _support_initiative("LB", i, "scorer", f"goal:Test FC:p{i}:{i % 90 + 1}")
+            assert dx >= -1e-9
+            found_forward = found_forward or dx > 1e-6
+        assert found_forward
+
+    def test_cover_postes_move_toward_their_own_goal_for_the_conceding_team(self):
+        # team_side="opponent" : son PROPRE but est à x=1 (_gk_base_position : x=1-advance pour ce camp) -- un repli
+        # défensif avance donc vers x croissant, comme un dédoublement scorer (les deux convergent vers x=1 dans ce
+        # référentiel partagé, voir le bloc de commentaires de sequence_generator.py).
+        found_backward = False
+        for i in range(200):
+            dx, _dy = _support_initiative("BU", i, "opponent", f"goal:Test FC:p{i}:{i % 90 + 1}")
+            assert dx >= -1e-9
+            found_backward = found_backward or dx > 1e-6
+        assert found_backward
+
+    def test_uses_salts_distinct_from_the_other_drift_mechanisms(self):
+        from ligue1sim.animation.sequence_generator import _event_unit
+
+        assert _event_unit(7, "goal:A:x:1", "support_depth") != _event_unit(7, "goal:A:x:1", "drift_x")
+        assert _event_unit(7, "goal:A:x:1", "support_lateral") != _event_unit(7, "goal:A:x:1", "start_dispersion")
+
+
+class TestDriftOrSupportInitiative:
+    """Point d'entrée commun aux 3 sites de construction de `BackgroundTrack` -- garantit leur parité par
+    construction (même fonction, mêmes arguments, même logique)."""
+
+    _START = (0.4, 0.4)
+    _BALL_TARGET = (0.9, 0.5)
+    _CB_DRIFT = (0.0, 0.0)
+
+    def test_falls_back_to_tactical_drift_when_not_eligible(self):
+        expected = _tactical_drift("DC", 7, "opponent", self._START, self._BALL_TARGET, self._CB_DRIFT, "goal:A:x:1")
+        actual = _drift_or_support_initiative("DC", 7, "opponent", self._START, self._BALL_TARGET, self._CB_DRIFT, "goal:A:x:1", None, False)
+        assert actual == expected
+
+    def test_falls_back_to_tactical_drift_when_eligible_but_not_selected(self):
+        # Probabilité nulle par construction (joueur/événement qui ne passerait jamais le tirage) -- on force le
+        # chemin "non sélectionné" directement via `eligible=False` pour un poste normalement éligible, même
+        # comportement attendu que `_tactical_drift` seul.
+        expected = _tactical_drift("LB", 7, "scorer", self._START, self._BALL_TARGET, self._CB_DRIFT, "goal:A:x:1")
+        actual = _drift_or_support_initiative("LB", 7, "scorer", self._START, self._BALL_TARGET, self._CB_DRIFT, "goal:A:x:1", None, False)
+        assert actual == expected
+
+    def test_uses_support_initiative_when_eligible_and_selected(self):
+        # Cherche un (player_id, event_ref) qui passe le tirage à la probabilité fixe, pour un poste éligible.
+        found = False
+        for i in range(200):
+            event_ref = f"goal:Test FC:p{i}:{i % 90 + 1}"
+            if not _support_initiative_selected(i, event_ref, _SUPPORT_INITIATIVE_PROBABILITY):
+                continue
+            expected = _support_initiative("LB", i, "scorer", event_ref)
+            actual = _drift_or_support_initiative("LB", i, "scorer", self._START, self._BALL_TARGET, self._CB_DRIFT, event_ref, None, True)
+            assert actual == expected
+            found = True
+            break
+        assert found
+
+
+class TestSupportInitiativeIntegration:
+    """Intégration via `enrich_with_background`/`opponent_field_tracks`, sur un échantillon de buts réels (mêmes
+    fixtures que `_enriched_sequence`) : parité stricte entre les deux fonctions, substituts et gardien jamais
+    concernés, latéraux adverses toujours à `dx == 0.0` (invariant Phase 6 préservé, voir
+    `TestTacticalDrift.test_opponent_fullbacks_never_push_forward_end_to_end`)."""
+
+    def test_enrich_and_opponent_field_tracks_stay_in_parity_across_many_goals(self):
+        for event_index in range(60):
+            sequence, _lineup_, opponent = _enriched_sequence(event_index=event_index, minute=1 + event_index % 90)
+            ball_target = (sequence.keyframes[-1].ball.x, sequence.keyframes[-1].ball.y)
+            tracks = opponent_field_tracks(opponent, sequence.event_ref, ball_target)
+            for player_id, track in tracks.items():
+                assert sequence.background[player_id] == track, (event_index, player_id)
+
+    def test_opponent_fullbacks_still_never_push_forward_with_support_initiatives_enabled(self):
+        for event_index in range(60):
+            sequence, _lineup_, opponent = _enriched_sequence(event_index=event_index, minute=1 + event_index % 90)
+            for player in opponent.players:
+                if player.poste not in ("LB", "RB"):
+                    continue
+                player_id = player_id_of(player)
+                if player_id not in sequence.background:
+                    continue
+                dx, _dy = sequence.background[player_id].drift
+                assert dx == 0.0
+
+    def test_substitutes_never_get_a_support_initiative(self):
+        import dataclasses
+
+        opponent = dataclasses.replace(_opponent_lineup(), substitutes=[_player("BU", 65.0, "opp-sub", 112)])
+        en_jeu = {p.name: None for p in opponent.players if p.name != "opp-bu"}
+        en_jeu["opp-sub"] = PitchPoint(x=0.75, y=0.31)
+        substitute_id = player_id_of(next(p for p in opponent.substitutes if p.name == "opp-sub"))
+        lineup = _lineup()
+        for event_index in range(30):
+            event = _goal_event(minute=1 + event_index % 90)
+            state = _pitch_layout_state(lineup)
+            rng = deterministic_rng("match-bg", event_index)
+            raw = generate_sequence(event, lineup, state, _match_state(), rng, match_id="match-bg", event_index=event_index)
+            enriched = enrich_with_background(raw, opponent, "but", en_jeu)
+            if substitute_id not in enriched.background:
+                continue
+            track = enriched.background[substitute_id]
+            expected = _tactical_drift(
+                "BU", substitute_id, "opponent", track.start,
+                (enriched.keyframes[-1].ball.x, enriched.keyframes[-1].ball.y), (0.0, 0.0), enriched.event_ref,
+            )
+            assert track.drift == expected
+
+    def test_a_scorer_side_overlap_eventually_appears_end_to_end(self):
+        # Pendant du test opposé (fullback adverse qui ne monte jamais) : prouve que le mécanisme est bien
+        # atteignable côté scorer, pas seulement défini en théorie.
+        found = False
+        for event_index in range(100):
+            sequence, lineup, _opponent = _enriched_sequence(event_index=event_index, minute=1 + event_index % 90)
+            for player in lineup.players:
+                if player.poste not in ("LB", "RB"):
+                    continue
+                player_id = player_id_of(player)
+                if player_id not in sequence.background:
+                    continue
+                dx, _dy = sequence.background[player_id].drift
+                if dx > 1e-6:
+                    found = True
+        assert found
 
 
 class TestGkBasePosition:

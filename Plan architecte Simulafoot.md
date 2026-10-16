@@ -157,6 +157,44 @@ Ordre du chantier : 1a → 1b → 1c → 1d → 1e-1 → 1f → 1e-2 → 1g → 
 
 **Prochaine étape.** A1.1 (inertie, accélération, décélération continue) — ouvre le reste du Bloc A.
 
+### 3.2bis Chantier "mouvement collectif" (joueurs de décor) : EN COURS (16/10/2026)
+
+Démarré après la clôture complète du chantier 1, en parallèle de A1.1 (périmètre disjoint : réalisme des joueurs de
+décor, aucune touche à `motion.py`/`physics.py` pour l'inertie des acteurs scriptés). Cadré par `docs/PRD.md` et
+`docs/PLAN.md` (5 phases, chacune bloquée par la précédente), validés par le propriétaire et commités (`48993e4`).
+Couvre une partie de A1.3 et A2.1 ci-dessous (voir ces entrées) — pas d'identifiant TRD dédié, relève de l'exigence
+umbrella EG-JOU-05 (Bloc A).
+
+**Phase 1 — dispersion des lignes de départ.** Codée, testée, mesurée (100 matchs, graine 20260923 : dispersion
+moyenne 0,50 m sur ~27 000 joueurs de décor, moteur identique). **Pas commitée.**
+
+**Phase 2 — mouvement continu pendant l'action (`BackgroundTrack.points`).** Codée, testée (saut décor > 1 m : 0).
+**Pas commitée.**
+
+**Phase 3 — initiatives de soutien par poste.** Codée, testée (130 tests dédiés + suite complète 1743 passés),
+mesurée (100 matchs : fréquence ~40 % par poste éligible, amplitude moyenne 7,52 m sur 0-12 m, 0 violation de secteur,
+moteur identique). **Pas commitée.** Décisions produit validées par le propriétaire (16/10/2026) :
+- Postes éligibles : LB/RB (dédoublement offensif, côté équipe qui attaque uniquement), BU/SA/ATT (repli défensif,
+  côté équipe qui défend uniquement), MC/MDC (les deux côtés) — MOC exclu. Restriction par camp nécessaire pour
+  respecter un invariant déjà testé avant ce chantier (un camp ne capture qu'UNE SEULE phase de jeu par clip).
+- **Écart de périmètre signalé par `simulafoot-reviewer` et confirmé intentionnel** : pour MC/MDC, la direction
+  (rejoindre l'attaque ou se replier) reste forcée par le camp, mais la PROBABILITÉ de tirage est modulée par
+  l'attribut pertinent du joueur (Work Rate côté attaque, Positioning côté défense, linéaire 20-60 % sur l'échelle
+  FM 1-20) — ceci anticipe une partie de la Phase 4 du PLAN (« modulation par attributs individuels »), initialement
+  prévue APRÈS la Phase 3. Décision explicite du propriétaire, pas un écart silencieux. Phase 4 (reste des attributs,
+  autres postes) et Phase 5 (style de coach, hors périmètre) restent À FAIRE.
+- Exceptions fichiers accordées séparément : `sequence_generator.py` (remplace `_tactical_drift` pour le joueur tiré),
+  `engine/narrative_player.py` (1 paramètre `scorer_lineup`, 1 site d'appel).
+
+**Revue `simulafoot-reviewer` (16/10/2026, Phase 2 + Phase 3).** Deux défauts mineurs trouvés et corrigés : régression
+bit-à-bit non testée dans `motion._background_position_at` (cas `duration <= 0` renvoyait `start + drift` au lieu de
+`start`, introduite en Phase 2, sans impact sur les 12 gabarits réels) et un commentaire inexact dans
+`enrich_with_background` (« 50/50 » au lieu de « 40 % fixe »). Aucun défaut bloquant. Verdict : code fonctionnellement
+solide, parité `enrich_with_background`/`opponent_field_tracks` et déterminisme vérifiés, résultat sportif intact.
+
+**Prochaines étapes.** Démonstration visuelle groupée Phases 1+2+3 pour validation du propriétaire, puis commit
+(probablement 1 par phase), puis Phase 4 (reste) / Phase 5 si le propriétaire les maintient au périmètre.
+
 ### 3.3 A1 — mouvement individuel et équipe : À FAIRE (après le chantier 1)
 
 **A1.1 — inertie, accélération, décélération.**
@@ -171,7 +209,7 @@ Ordre du chantier : 1a → 1b → 1c → 1d → 1e-1 → 1f → 1e-2 → 1g → 
 
 **A1.3 — joueurs hors action.**
 - Objectif : appels, replacements, soutien, courses croisées des partenaires du porteur.
-- Périmètre : `templates.py`, `sequence_generator.py`. Dépendances : A1.1. Statut : à faire.
+- Périmètre : `templates.py`, `sequence_generator.py`. Dépendances : A1.1. Statut : **en cours, via le chantier "mouvement collectif" (16/10/2026, `docs/PRD.md`/`docs/PLAN.md`, 5 phases) — démarré indépendamment de A1.1 (déterminisme/réalisme des joueurs de décor, pas de refonte de `motion.py`).** Phases 1 (dispersion des lignes de départ), 2 (mouvement continu, `BackgroundTrack.points`) et 3 (initiatives de soutien par poste, LB/RB/BU/SA/ATT/MC/MDC) codées et testées, **pas commitées** (en attente de validation visuelle groupée) — voir §3.2bis ci-dessous. Phases 4 (modulation par attributs individuels) et 5 (style de coach) restantes, sauf pour MC/MDC où la modulation par attribut (Work Rate/Positioning) a été anticipée dès la Phase 3 (décision du propriétaire 16/10/2026, voir §3.2bis).
 
 **A1.4 — pressing, couverture, repli, marquage, bloc équipe.**
 - Reclassé en A2 : à rattacher à A2.1 (respect du dispositif) ou A2.3 (profil coach). Rattachement à trancher.
@@ -188,9 +226,9 @@ Ordre du chantier : 1a → 1b → 1c → 1d → 1e-1 → 1f → 1e-2 → 1g → 
 
 Toute constante comportementale est à re-mesurer sur des compos réelles avant validation.
 
-- A2.1 respect du dispositif (4-3-3, 4-2-3-1, 4-4-2 identifiables ; fluidité : latéral qui dédouble, ailier qui se replie). Dépendances : A1.1.
+- A2.1 respect du dispositif (4-3-3, 4-2-3-1, 4-4-2 identifiables ; fluidité : latéral qui dédouble, ailier qui se replie). Dépendances : A1.1. **Partiellement couvert** par la Phase 3 du chantier "mouvement collectif" (latéral qui dédouble LB/RB, attaquant BU/SA/ATT qui replie, milieu MC/MDC selon profil — voir A1.3, §3.2bis) ; l'ailier (AG/AD) qui se replie reste hors périmètre de ce chantier, à faire ici si besoin.
 - A2.2 modulation par le score (mené et coach défensif : se découvre un peu ; mène et coach défensif : repli ; mène et coach offensif : continue ; mené et coach offensif : surenchère). Dépendances : A2.1.
-- A2.3 modulation par le profil du coach (pressing, offensif, défensif, contre, possession pilotent la hauteur du bloc). Dépendances : A2.1.
+- A2.3 modulation par le profil du coach (pressing, offensif, défensif, contre, possession pilotent la hauteur du bloc). Dépendances : A2.1. **Inchangé, hors périmètre du chantier "mouvement collectif"** (décision du propriétaire 16/10/2026 : seul le profil INDIVIDUEL du joueur est anticipé en Phase 3, pour MC/MDC, pas le style du coach).
 - A2.4 remplacements contextuels (coach défensif qui mène : entre un défenseur ; coach offensif mené : entre un attaquant). Dépend du moteur Poisson : exception à valider avant toute modification. Rattachement possible du ticket 45 (gardien expulsé sans remplaçant).
 - A2.5 arrêts de jeu (gardien d'une équipe menée qui monte sur corner). Dépendances : A1.2.
 

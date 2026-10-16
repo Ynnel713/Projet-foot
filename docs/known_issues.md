@@ -767,6 +767,8 @@ Dans les 14 cas, le segment est une passe au sol (`pass_ground`) et aucune réce
 
 **Priorité.** Basse à moyenne. **Résolution.** Hors périmètre de l'étape 0a ; à rattacher à l'étape 2 (A1.1, inertie) du Bloc A. **Statut.** Ouvert. Non corrigé.
 
+**Addendum (16/10/2026, chantier "mouvement collectif", Phase 3).** Le signal "décors avec chemin > 10 m" cité ci-dessus comme piste de diagnostic est désormais confondu avec un comportement NORMAL et voulu : une initiative de soutien (`sequence_generator._support_initiative`) peut légitimement atteindre jusqu'à 12 m, sélectionnée ~40 % du temps par poste éligible (mesure réelle, 100 matchs, graine 20260923 : amplitude moyenne 7,52 m sur 7 520 initiatives, 0 violation de secteur). Toute future réutilisation de cette métrique pour diagnostiquer ce ticket devra distinguer les décors "en initiative" (attendu, borné) des autres.
+
 ---
 
 ## 44. Attribution moteur vs rendu sur les buts réels : rôles absents à la minute

@@ -657,13 +657,34 @@ class TestAccelerationConstraintOnRealGabarits:
 # besoin de correction d'accélération sur ce clip témoin, départ déjà réaliste). Preuve que 1f est la SEULE cause : avec
 # `geometry=None` sur les trois rôles, le code actuel redonne exactement l'empreinte précédente ("2e573082648af3d4"/
 # "46b52565c7ea2d7b").
+# Chantier "mouvement collectif", Phase 1 (16/10/2026) : `_start_dispersion` (sequence_generator.py) écarte latéralement les
+# joueurs de décor de leur ligne de formation avant `_tactical_drift`, sur les deux équipes -- les 5 témoins contiennent tous
+# au moins un décor de champ hors gardien/mur/substitut en_jeu, donc tous recalculés (`but_gag`, `construction_placee`,
+# `contre_attaque`, `corner`, `percee_individuelle`). Preuve que cette Phase 1 est la SEULE cause : avec `_start_dispersion`
+# neutralisée (retour `(0.0, 0.0)`), le code actuel redonne exactement les 5 empreintes précédentes ("0ff6fe3304d23938"/
+# "7671f77e105c6115" pour but_gag, "0858943d9f3a7e55"/"7ace6109febe5566" pour construction_placee, "1b546dda1ca4f3d8"/
+# "867086d4e95127b3" pour contre_attaque, "77a70be9b579d065" pour corner, "4a00cea671b14edd" pour percee_individuelle).
+# Chantier "mouvement collectif", Phase 2 (16/10/2026) : `_drift_waypoints` (sequence_generator.py) ajoute des points
+# intermédiaires au trajet des mêmes joueurs de décor, interpolés via `motion._background_position_at` étendu -- les 5
+# témoins recalculés une seconde fois. Preuve que cette Phase 2 est la SEULE cause : avec `_drift_waypoints` neutralisée
+# (retour `None`), le code actuel redonne exactement les 5 empreintes de la Phase 1 ci-dessus
+# ("a59b916aaf39bb74"/"85c9f6844267147d" pour but_gag, "6431e6275eeab54a"/"43be5c4e23debc14" pour construction_placee,
+# "983fed7ac8355bf4"/"4f0752c395fdc1d8" pour contre_attaque, "ba0651535383a275" pour corner, "ababefe45449bbfe" pour
+# percee_individuelle).
+# Chantier "mouvement collectif", Phase 3 (16/10/2026) : `_drift_or_support_initiative` (sequence_generator.py)
+# remplace `_tactical_drift` par une initiative de soutien pour un joueur éligible tiré au sort (LB/RB côté scorer,
+# BU/SA/ATT côté opponent, MC/MDC des deux côtés) -- `_raw_and_corrected_frames` appelle `enrich_with_background` sans
+# `scorer_lineup`, donc les MC/MDC côté scorer retombent sur la probabilité par défaut (40 %), comme LB/RB et
+# BU/SA/ATT. Les 5 témoins contiennent chacun au moins un décor éligible tiré, donc tous recalculés une troisième
+# fois. Preuve que cette Phase 3 est la SEULE cause : avec `_support_initiative_eligible` neutralisée (retour
+# `False`), le code actuel redonne exactement les 5 empreintes de la Phase 2 ci-dessus.
 _WITNESS_DIGESTS = {
     # gabarit: (empreinte des images brutes `interpolate`, empreinte après contrainte d'accélération)
-    "but_gag": ("0ff6fe3304d23938", "7671f77e105c6115"),
-    "construction_placee": ("0858943d9f3a7e55", "7ace6109febe5566"),
-    "contre_attaque": ("1b546dda1ca4f3d8", "867086d4e95127b3"),
-    "corner": ("77a70be9b579d065", "77a70be9b579d065"),
-    "percee_individuelle": ("4a00cea671b14edd", "4a00cea671b14edd"),
+    "but_gag": ("467921a3ab674416", "78bdd54b9c3de3e0"),
+    "construction_placee": ("cd7dadddac09f46a", "5313d1b40ed4a13b"),
+    "contre_attaque": ("1a21da46c15f3965", "f9e81c5fee453081"),
+    "corner": ("747167b286eef170", "f503d11480b6a823"),
+    "percee_individuelle": ("023f5a24b49cd6ac", "023f5a24b49cd6ac"),
 }
 
 

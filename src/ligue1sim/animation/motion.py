@@ -337,9 +337,27 @@ def _background_position_at(track: BackgroundTrack, t: float, duration: float) -
     actifs (`_ease_progress`) pour un mouvement visuellement cohérent avec
     le reste de la scène. Aucun plafond de vitesse (comportement 2) : l'
     amplitude de `drift` est déjà bornée à la construction
-    (`sequence_generator.enrich_with_background`)."""
-    progress = _ease_progress(t / duration) if duration > 0 else 0.0
-    return (track.start[0] + track.drift[0] * progress, track.start[1] + track.drift[1] * progress)
+    (`sequence_generator.enrich_with_background`).
+
+    Chantier "mouvement collectif", Phase 2 (16/10/2026) : `track.points` vide/`None` (défaut) -- UN SEUL segment
+    `start -> start + drift`, comportement historique inchangé bit-à-bit (branche ci-dessous jamais empruntée). Renseigné
+    -- `len(points) + 1` segments de durée ÉGALE, chacun parcouru avec la MÊME courbe `_ease_progress` (jamais de nouvelle
+    courbe, jamais de plafond de vitesse, même esprit que le segment unique ci-dessus). Continuité garantie aux jonctions :
+    `_ease_progress(0) = 0` et `_ease_progress(1) = 1` exactement, donc la position en fin d'un segment est bit-à-bit celle
+    en début du suivant -- aucun saut introduit, seule la richesse du TRACÉ change (ligne droite -> plusieurs points)."""
+    if duration <= 0:
+        return track.start
+    end = (track.start[0] + track.drift[0], track.start[1] + track.drift[1])
+    if not track.points:
+        progress = _ease_progress(t / duration)
+        return (track.start[0] + track.drift[0] * progress, track.start[1] + track.drift[1] * progress)
+    waypoints = (track.start, *track.points, end)
+    segment_s = duration / (len(waypoints) - 1)
+    clamped_t = min(duration, max(0.0, t))
+    index = min(len(waypoints) - 2, int(clamped_t / segment_s))
+    progress = _ease_progress((clamped_t - index * segment_s) / segment_s)
+    a, b = waypoints[index], waypoints[index + 1]
+    return (a[0] + (b[0] - a[0]) * progress, a[1] + (b[1] - a[1]) * progress)
 
 
 def _raw_position_at(sequence: Sequence, player_id: PlayerId, t: float) -> tuple[float, float]:

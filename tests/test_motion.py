@@ -6,6 +6,7 @@ import pytest
 from ligue1sim.animation.motion import (
     MAX_SPEED_MPS,
     _apply_avoidance,
+    _background_position_at,
     _ease_progress,
     _reacts_immediately,
     _real_distance_m,
@@ -275,11 +276,13 @@ class TestFrameStateShape:
         assert _reacts_immediately(None) is False
 
 
-def _background_sequence(*, active_pos=(0.1, 0.1), background_start=(0.9, 0.9), drift=(0.03, -0.02), duration=4.0):
+def _background_sequence(*, active_pos=(0.1, 0.1), background_start=(0.9, 0.9), drift=(0.03, -0.02), duration=4.0, points=None):
     """Sequence minimale à 1 joueur actif (keyframes) + 1 joueur "décor"
     (background) -- ils démarrent volontairement loin l'un de l'autre pour
     ne jamais déclencher `_apply_avoidance` (voir `_AVOIDANCE_TRIGGER_M`),
-    afin d'isoler le comportement du drift lui-même."""
+    afin d'isoler le comportement du drift lui-même. `points` (chantier
+    "mouvement collectif", Phase 2) : `None` par défaut, comportement
+    historique à un seul segment."""
     ball = BallState(x=active_pos[0], y=active_pos[1], z=0.0, spin=0.0, owner_id="active")
     keyframes = [
         Keyframe(t=0.0, ball=ball, players={"active": active_pos}, tag=""),
@@ -289,7 +292,7 @@ def _background_sequence(*, active_pos=(0.1, 0.1), background_start=(0.9, 0.9), 
         "active": RosterEntry(nom="Actif", poste="BU", role="scorer", numero=9, team_side="scorer"),
         "decor": RosterEntry(nom="Decor", poste="DC", role=None, numero=4, team_side="opponent"),
     }
-    background = {"decor": BackgroundTrack(start=background_start, drift=drift)}
+    background = {"decor": BackgroundTrack(start=background_start, drift=drift, points=points)}
     return Sequence(
         event_ref="ref", keyframes=keyframes, duration=duration, meta={}, roster=roster, background=background
     )
@@ -332,6 +335,73 @@ class TestBackgroundInterpolation:
             frame = interpolate(sequence, t)
             dist = _real_distance_m((0.9, 0.9), (frame.players["decor"].x, frame.players["decor"].y))
             assert dist <= max_reach + 1e-9
+
+    def test_a_zero_or_negative_duration_returns_the_track_start_not_start_plus_drift(self):
+        # Cas dégénéré (`duration <= 0`) : aucune interpolation possible, `progress` vaut 0 par convention (comme pour
+        # les joueurs actifs, voir _player_position_at) -- jamais `start + drift`, avec ou sans `points` renseignés.
+        track = BackgroundTrack(start=(0.4, 0.4), drift=(0.03, -0.02), points=None)
+        assert _background_position_at(track, 0.0, 0.0) == track.start
+        assert _background_position_at(track, 0.0, -1.0) == track.start
+        track_with_points = BackgroundTrack(start=(0.4, 0.4), drift=(0.03, -0.02), points=((0.41, 0.39),))
+        assert _background_position_at(track_with_points, 0.0, 0.0) == track_with_points.start
+
+
+class TestBackgroundInterpolationWithWaypoints:
+    """Chantier "mouvement collectif", Phase 2 (16/10/2026) : `BackgroundTrack.points` renseigné -- `_background_position_at`
+    découpe la trajectoire en plusieurs segments égaux au lieu d'un seul, chacun parcouru avec la même courbe ease-in-out."""
+
+    _POINTS = ((0.91, 0.93), (0.92, 0.90))
+
+    def test_starts_at_track_start_and_ends_at_start_plus_drift(self):
+        sequence = _background_sequence(background_start=(0.9, 0.9), drift=(0.03, -0.02), points=self._POINTS)
+        start_frame = interpolate(sequence, 0.0)
+        end_frame = interpolate(sequence, sequence.duration)
+        assert (start_frame.players["decor"].x, start_frame.players["decor"].y) == pytest.approx((0.9, 0.9))
+        assert (end_frame.players["decor"].x, end_frame.players["decor"].y) == pytest.approx((0.93, 0.88))
+
+    def test_passes_through_each_intermediate_point_exactly_at_its_segment_boundary(self):
+        sequence = _background_sequence(background_start=(0.9, 0.9), drift=(0.03, -0.02), points=self._POINTS)
+        segment_s = sequence.duration / (len(self._POINTS) + 1)
+        for k, point in enumerate(self._POINTS, start=1):
+            frame = interpolate(sequence, segment_s * k)
+            assert (frame.players["decor"].x, frame.players["decor"].y) == pytest.approx(point, abs=1e-9)
+
+    def test_is_continuous_across_segment_boundaries_no_jump(self):
+        # Échantillonnage dense autour de chaque jonction : la position ne doit jamais sauter (voir _ease_progress(0)=0,
+        # _ease_progress(1)=1 exactement -- la jonction est partagée par les deux segments voisins).
+        sequence = _background_sequence(background_start=(0.9, 0.9), drift=(0.03, -0.02), points=self._POINTS)
+        segment_s = sequence.duration / (len(self._POINTS) + 1)
+        for k in range(1, len(self._POINTS) + 1):
+            boundary = segment_s * k
+            just_before = interpolate(sequence, boundary - 1e-6)
+            just_after = interpolate(sequence, boundary + 1e-6)
+            dist = _real_distance_m(
+                (just_before.players["decor"].x, just_before.players["decor"].y),
+                (just_after.players["decor"].x, just_after.players["decor"].y),
+            )
+            assert dist < 0.01, f"saut de {dist:.4f} m à la jonction {k}"
+
+    def test_empty_points_tuple_behaves_like_none(self):
+        # `()` (tuple vide, falsy) doit retomber sur le comportement historique à un seul segment, comme `None`.
+        with_empty = _background_sequence(background_start=(0.9, 0.9), drift=(0.03, -0.02), points=())
+        with_none = _background_sequence(background_start=(0.9, 0.9), drift=(0.03, -0.02), points=None)
+        for t in (0.0, 1.3, 2.7, 4.0):
+            a = interpolate(with_empty, t).players["decor"]
+            b = interpolate(with_none, t).players["decor"]
+            assert (a.x, a.y) == (b.x, b.y)
+
+    def test_waypoints_can_deviate_from_the_direct_line(self):
+        # Contraste volontaire avec test_background_player_never_strays_beyond_its_drift_bound ci-dessus (qui ne vaut que
+        # pour le tracé direct, points=None) : avec des points décalés, le joueur PEUT s'écarter de la ligne droite
+        # start->start+drift à un instant intermédiaire -- c'est le but de la Phase 2. Comparaison au point qu'une
+        # trajectoire directe (sans points) donnerait au même instant (même progression 1/3 du tracé).
+        start, drift = (0.9, 0.9), (0.03, -0.02)
+        direct_at_k1 = (start[0] + drift[0] / 3.0, start[1] + drift[1] / 3.0)
+        sequence = _background_sequence(background_start=start, drift=drift, points=self._POINTS)
+        segment_s = sequence.duration / (len(self._POINTS) + 1)
+        frame = interpolate(sequence, segment_s)
+        dist = _real_distance_m(direct_at_k1, (frame.players["decor"].x, frame.players["decor"].y))
+        assert dist > 0.5  # écart net (le point choisi pour ce test est à ~4 m de la ligne droite à cet instant)
 
 
 def _impossible_sequence(*, duration: float = 0.1) -> Sequence:
