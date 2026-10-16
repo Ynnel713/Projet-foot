@@ -676,19 +676,35 @@ def _drift_waypoints(player_id: PlayerId, event_ref: str, start: tuple[float, fl
 #     exclu (décision du propriétaire) : déjà regroupé avec MDC/MC dans `_tactical_drift_unfloored` mais jugé trop
 #     proche du jeu pour une initiative distincte.
 #
-# L'attribut du joueur module la FRÉQUENCE (probabilité de tirage), jamais le sens : Work Rate côté `scorer` (rejoindre
-# l'attaque, profil "box-to-box"), Positioning côté `opponent` (repli défensif, profil défensif) -- voir
-# `_support_initiative_probability`.
+# L'attribut du joueur module la FRÉQUENCE (probabilité de tirage, `_support_initiative_probability`) ET désormais
+# (chantier mouvement collectif, Phase 4, 16/10/2026) l'INTENSITÉ (facteur sur l'amplitude max, jamais sur le
+# couloir -- `_support_initiative_intensity`) -- jamais le SENS, qui reste fixé par le camp (voir ci-dessus). Pour
+# chaque poste, fréquence et intensité utilisent systématiquement deux attributs FM26 DISTINCTS (jamais le même pour
+# les deux axes), validés par le propriétaire :
+#   - LB/RB (dédoublement) : fréquence = Pace (explosivité du profil qui part en appel), intensité = Stamina
+#     (capacité à tenir l'effort sur la durée du match).
+#   - BU/SA/ATT (repli) : fréquence = moyenne(Work Rate, Stamina) -- aucun des deux seul ne suffit à un repli
+#     fréquent et crédible, décision du propriétaire 16/10/2026 -- intensité = Determination (volonté de revenir
+#     défendre à contre-emploi de son instinct offensif).
+#   - MC/MDC : fréquence = Work Rate côté `scorer` / Positioning côté `opponent` (inchangé depuis Phase 3),
+#     intensité = Stamina (cohérent avec LB/RB).
+# `player.attributes` est sur l'échelle RÉELLE 0-99 (EF-DON-03 du TRD, `players.FM_ATTRIBUTE_CATEGORIES`), PAS 1-20 --
+# bug corrigé en Phase 4 (la formule Phase 3, MC/MDC, utilisait par erreur 1-20 ; sur données réelles, où Work
+# Rate/Positioning vont de 5 à 99, cela clampait presque tout l'effectif à la borne haute de probabilité, écrasant le
+# contraste voulu). Toute constante produit (ci-dessous) est proposée avant modification, jamais une évidence
+# technique.
 #
 # Secteur tactiquement crédible = rectangle couloir (± `_SUPPORT_LANE_M[poste]`, latéral) x profondeur (jusqu'à
-# `_SUPPORT_INITIATIVE_MAX_M`, signée par le camp), réduit par le plafond d'amplitude global (cercle
-# `_SUPPORT_INITIATIVE_MAX_M`, mise à l'échelle uniforme si dépassé -- même principe que `_floor_drift_magnitude`) :
-# un couloir plus étroit que le plafond (LB/RB, MC/MDC) est donc un VRAI filtre, pas un rayon redondant avec
-# l'amplitude max (un rayon simple centré au même point ne rejette jamais rien qu'elle ne rejette déjà). Vérifié sur
-# CHAQUE image du clip par construction : `_drift_waypoints`/`motion._background_position_at` interpolent une
-# trajectoire monotone par segments entre `start` et `start + drift`, jamais un rebond hors de ce segment.
-_SUPPORT_INITIATIVE_PROBABILITY = 0.40  # tirage par joueur éligible et par clip (LB/RB, BU/SA/ATT, MC/MDC sans attribut connu), sel dédié, validé (16/10/2026)
-_SUPPORT_MIDFIELD_PROBABILITY_RANGE = (0.20, 0.60)  # MC/MDC avec l'attribut pertinent connu : probabilité linéaire sur l'échelle FM 1-20, validé (16/10/2026)
+# `_SUPPORT_INITIATIVE_MAX_M` x intensité), réduit par le plafond d'amplitude global (cercle, mise à l'échelle
+# uniforme si dépassé -- même principe que `_floor_drift_magnitude`) : un couloir plus étroit que le plafond (LB/RB,
+# MC/MDC) est donc un VRAI filtre, pas un rayon redondant avec l'amplitude max (un rayon simple centré au même point
+# ne rejette jamais rien qu'elle ne rejette déjà). Vérifié sur CHAQUE image du clip par construction :
+# `_drift_waypoints`/`motion._background_position_at` interpolent une trajectoire monotone par segments entre
+# `start` et `start + drift`, jamais un rebond hors de ce segment.
+_SUPPORT_INITIATIVE_PROBABILITY = 0.40  # tirage par joueur éligible et par clip, sans attribut connu, sel dédié, validé (16/10/2026)
+_SUPPORT_PROBABILITY_RANGE = (0.20, 0.60)  # avec l'attribut pertinent connu : probabilité linéaire sur l'échelle FM 0-99, validé (16/10/2026)
+_SUPPORT_INTENSITY_RANGE = (0.6, 1.0)  # facteur multiplicatif sur _SUPPORT_INITIATIVE_MAX_M, linéaire sur l'échelle FM 0-99, validé Phase 4 (16/10/2026)
+_FM_ATTRIBUTE_SCALE = (0, 99)  # échelle réelle de `Player.attributes` (EF-DON-03 du TRD) -- jamais 1-20
 _SUPPORT_INITIATIVE_MAX_M = 12.0  # amplitude max d'une initiative (vs _MAX_DRIFT_MAGNITUDE ~5 % du terrain pour le petit drift existant), validé (16/10/2026)
 _SUPPORT_LANE_M = {  # demi-largeur de couloir latéral max par poste, validé (16/10/2026)
     "LB": 6.0, "RB": 6.0,
@@ -698,6 +714,17 @@ _SUPPORT_LANE_M = {  # demi-largeur de couloir latéral max par poste, validé (
 _SUPPORT_OVERLAP_POSTES = frozenset({"LB", "RB"})  # dédoublement offensif, côté scorer uniquement (PRD, pas de choix)
 _SUPPORT_COVER_POSTES = frozenset({"BU", "SA", "ATT"})  # repli défensif, côté opponent uniquement (PRD, pas de choix)
 _SUPPORT_MIDFIELD_POSTES = frozenset({"MC", "MDC"})  # les deux camps, direction forcée par le camp
+_SUPPORT_FREQUENCY_ATTRIBUTES = {  # Phase 4 (16/10/2026) -- MC/MDC exclu, cas spécial par camp dans _support_initiative_probability
+    "LB": ("Pace",), "RB": ("Pace",),
+    "BU": ("Work Rate", "Stamina"), "SA": ("Work Rate", "Stamina"), "ATT": ("Work Rate", "Stamina"),
+}
+_SUPPORT_INTENSITY_ATTRIBUTES = {  # Phase 4 (16/10/2026) -- un seul attribut par poste, toujours distinct de celui de la fréquence ;
+    # contrairement à `_SUPPORT_FREQUENCY_ATTRIBUTES` ci-dessus, MC/MDC N'EST PAS exclu ici (pas de cas spécial par camp : un
+    # seul attribut d'intensité, Stamina, pour les deux camps -- l'asymétrie entre les deux dicts est volontaire, pas un oubli).
+    "LB": ("Stamina",), "RB": ("Stamina",),
+    "BU": ("Determination",), "SA": ("Determination",), "ATT": ("Determination",),
+    "MC": ("Stamina",), "MDC": ("Stamina",),
+}
 
 
 def _support_initiative_eligible(poste: str, team_side: str) -> bool:
@@ -710,21 +737,49 @@ def _support_initiative_eligible(poste: str, team_side: str) -> bool:
     return poste in _SUPPORT_MIDFIELD_POSTES
 
 
+def _attribute_unit(player: Player | None, *attribute_names: str) -> float | None:
+    """Fraction dans [0, 1] sur l'échelle RÉELLE `_FM_ATTRIBUTE_SCALE` (0-99, jamais 1-20) de la moyenne d'un ou
+    plusieurs attributs FM26 de `player` -- `None` si `player` est `None` ou si au moins un des attributs cités est
+    absent (`player.attributes` `None` pour ~93 % des joueurs au 26/09/2026, voir le commentaire de
+    `players.FM_ATTRIBUTE_CATEGORIES` ; parmi le reste, couverture partielle non chiffrée précisément ici) :
+    comportement par défaut cohérent (exigence Phase 4 du PLAN), jamais une valeur partielle silencieuse. Un seul
+    nom : la moyenne d'un seul élément est lui-même, pas de cas spécial."""
+    if player is None or player.attributes is None:
+        return None
+    values = [player.attributes.get(name) for name in attribute_names]
+    if any(value is None for value in values):
+        return None
+    lo, hi = _FM_ATTRIBUTE_SCALE
+    return max(0.0, min(1.0, (sum(values) / len(values) - lo) / (hi - lo)))
+
+
 def _support_initiative_probability(poste: str, team_side: str, player: Player | None) -> float:
-    """Probabilité de tirage (`_support_initiative_selected`). LB/RB, BU/SA/ATT : `_SUPPORT_INITIATIVE_PROBABILITY`
-    fixe. MC/MDC : modulée par l'attribut pertinent pour CE camp (Work Rate côté `scorer`, Positioning côté
-    `opponent`), linéaire sur `_SUPPORT_MIDFIELD_PROBABILITY_RANGE` pour l'échelle FM 1-20. Attribut manquant
-    (`player.attributes` `None`/incomplet, ~93 % des joueurs au 26/09/2026, voir `players.FM_ATTRIBUTE_CATEGORIES`) :
-    comportement par défaut cohérent (exigence Phase 4 du PLAN), retombe sur `_SUPPORT_INITIATIVE_PROBABILITY`."""
-    if poste not in _SUPPORT_MIDFIELD_POSTES:
+    """Probabilité de tirage (`_support_initiative_selected`), modulée par l'attribut (ou la moyenne de deux
+    attributs) pertinent pour ce poste (`_SUPPORT_FREQUENCY_ATTRIBUTES`, MC/MDC : Work Rate côté `scorer`/Positioning
+    côté `opponent`, cas spécial inchangé depuis Phase 3), linéaire sur `_SUPPORT_PROBABILITY_RANGE`. Attribut(s)
+    manquant(s) : comportement par défaut cohérent (exigence Phase 4 du PLAN), retombe sur
+    `_SUPPORT_INITIATIVE_PROBABILITY`."""
+    if poste in _SUPPORT_MIDFIELD_POSTES:
+        attribute_names = ("Work Rate",) if team_side == "scorer" else ("Positioning",)
+    else:
+        attribute_names = _SUPPORT_FREQUENCY_ATTRIBUTES[poste]
+    unit = _attribute_unit(player, *attribute_names)
+    if unit is None:
         return _SUPPORT_INITIATIVE_PROBABILITY
-    attributes = player.attributes if player is not None else None
-    attribute_name = "Work Rate" if team_side == "scorer" else "Positioning"
-    value = attributes.get(attribute_name) if attributes else None
-    if value is None:
-        return _SUPPORT_INITIATIVE_PROBABILITY
-    lo, hi = _SUPPORT_MIDFIELD_PROBABILITY_RANGE
-    unit = max(0.0, min(1.0, (value - 1) / 19.0))
+    lo, hi = _SUPPORT_PROBABILITY_RANGE
+    return lo + unit * (hi - lo)
+
+
+def _support_initiative_intensity(poste: str, player: Player | None) -> float:
+    """Facteur multiplicatif dans `_SUPPORT_INTENSITY_RANGE` appliqué à `_SUPPORT_INITIATIVE_MAX_M` (jamais à
+    `_SUPPORT_LANE_M`, le couloir reste celui déjà validé comme secteur tactiquement crédible -- voir
+    `_support_initiative`), modulé par l'attribut pertinent pour ce poste (`_SUPPORT_INTENSITY_ATTRIBUTES`). Attribut
+    manquant : 1.0 par défaut -- comportement bit-à-bit identique à la Phase 3 déjà mesurée (amplitude moyenne
+    7,52 m), jamais une régression pour un joueur sans attribut."""
+    unit = _attribute_unit(player, *_SUPPORT_INTENSITY_ATTRIBUTES[poste])
+    if unit is None:
+        return 1.0
+    lo, hi = _SUPPORT_INTENSITY_RANGE
     return lo + unit * (hi - lo)
 
 
@@ -751,21 +806,26 @@ def _support_initiative_direction(poste: str, team_side: str) -> float:
     return 1.0 if team_side == "scorer" else -1.0
 
 
-def _support_initiative(poste: str, player_id: PlayerId, team_side: str, event_ref: str) -> tuple[float, float]:
-    """Initiative de soutien (chantier mouvement collectif, Phase 3) -- REMPLACE `_tactical_drift` pour le joueur
-    tiré (`_support_initiative_selected`), jamais additif. Profondeur tirée dans `[0, _SUPPORT_INITIATIVE_MAX_M]`
-    (sel `"support_depth"`), signée par `_support_initiative_direction` puis par `_forward_sign(team_side)` (même
-    convention que `_tactical_drift_unfloored`). Latéral tiré, signé et centré, dans `[-_SUPPORT_LANE_M[poste],
-    _SUPPORT_LANE_M[poste]]` (sel `"support_lateral"`, même tirage centré que `_start_dispersion`). Mis à l'échelle
-    uniforme si le total dépasse `_SUPPORT_INITIATIVE_MAX_M` (préserve la direction, jamais un plafond en conflit
-    avec le couloir -- même principe que `_floor_drift_magnitude`)."""
+def _support_initiative(
+    poste: str, player_id: PlayerId, team_side: str, event_ref: str, player: Player | None = None
+) -> tuple[float, float]:
+    """Initiative de soutien (chantier mouvement collectif, Phase 3, intensité ajoutée en Phase 4) -- REMPLACE
+    `_tactical_drift` pour le joueur tiré (`_support_initiative_selected`), jamais additif. Profondeur tirée dans
+    `[0, _SUPPORT_INITIATIVE_MAX_M * intensité]` (`_support_initiative_intensity`, sel `"support_depth"`), signée par
+    `_support_initiative_direction` puis par `_forward_sign(team_side)` (même convention que
+    `_tactical_drift_unfloored`). Latéral tiré, signé et centré, dans `[-_SUPPORT_LANE_M[poste],
+    _SUPPORT_LANE_M[poste]]` (sel `"support_lateral"`, même tirage centré que `_start_dispersion`, JAMAIS réduit par
+    l'intensité -- le couloir reste le secteur tactiquement crédible déjà validé). Mis à l'échelle uniforme si le
+    total dépasse le plafond effectif (préserve la direction, jamais un plafond en conflit avec le couloir -- même
+    principe que `_floor_drift_magnitude`)."""
     direction = _support_initiative_direction(poste, team_side)
     forward = _forward_sign(team_side)
-    depth_m = _event_unit(player_id, event_ref, "support_depth") * _SUPPORT_INITIATIVE_MAX_M
+    effective_max_m = _SUPPORT_INITIATIVE_MAX_M * _support_initiative_intensity(poste, player)
+    depth_m = _event_unit(player_id, event_ref, "support_depth") * effective_max_m
     lateral_m = (_event_unit(player_id, event_ref, "support_lateral") * 2.0 - 1.0) * _SUPPORT_LANE_M[poste]
     total_m = math.hypot(depth_m, lateral_m)
-    if total_m > _SUPPORT_INITIATIVE_MAX_M:
-        scale = _SUPPORT_INITIATIVE_MAX_M / total_m
+    if total_m > effective_max_m:
+        scale = effective_max_m / total_m
         depth_m, lateral_m = depth_m * scale, lateral_m * scale
     return (forward * direction * depth_m / PITCH_LENGTH_M, lateral_m / PITCH_WIDTH_M)
 
@@ -786,7 +846,7 @@ def _drift_or_support_initiative(
     joueur sur ce clip, jamais additif. Point d'entrée commun aux 3 sites de construction de `BackgroundTrack`
     (`enrich_with_background` x2, `opponent_field_tracks`), pour garantir leur parité par construction."""
     if eligible and _support_initiative_selected(player_id, event_ref, _support_initiative_probability(poste, team_side, player)):
-        return _support_initiative(poste, player_id, team_side, event_ref)
+        return _support_initiative(poste, player_id, team_side, event_ref, player)
     return _tactical_drift(poste, player_id, team_side, start, ball_target, cb_line_drift, event_ref)
 
 
@@ -825,11 +885,11 @@ def enrich_with_background(
     `en_jeu` (étape 0b-2) : joueurs adverses sur le terrain, voir `_opponent_positions`. `None` et sans attribut `en_jeu` sur `opponent_lineup` : comportement
     historique, bit à bit.
 
-    `scorer_lineup` (chantier mouvement collectif, Phase 3) : `Lineup` de l'équipe qui marque, pour résoudre le `Player` (donc ses
-    `attributes`) d'un MC/MDC tiré pour une initiative de soutien -- voir `_support_initiative_probability`. `None` (défaut, tout
-    appelant qui ne fournit pas cette exception) : les MC/MDC côté scorer retombent sur la probabilité par défaut fixe
-    (`_SUPPORT_INITIATIVE_PROBABILITY`, 40 %, comme LB/RB et BU/SA/ATT), jamais une erreur -- seul `engine/narrative_player.py` la
-    fournit en production."""
+    `scorer_lineup` (chantier mouvement collectif, Phase 3, Phase 4) : `Lineup` de l'équipe qui marque, pour résoudre le
+    `Player` (donc ses `attributes`) d'un LB/RB/MC/MDC côté scorer tiré pour une initiative de soutien -- voir
+    `_support_initiative_probability`/`_support_initiative_intensity`. `None` (défaut, tout appelant qui ne fournit
+    pas cette exception) : ces postes retombent sur les valeurs par défaut fixes (`_SUPPORT_INITIATIVE_PROBABILITY`
+    40 %, intensité 1.0), jamais une erreur -- seul `engine/narrative_player.py` la fournit en production."""
     if en_jeu is None:
         en_jeu = getattr(opponent_lineup, "en_jeu", None)
     active_ids = {player_id for player_id, entry in sequence.roster.items() if entry.role is not None}

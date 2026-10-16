@@ -11,11 +11,16 @@ from ligue1sim.animation.sequence_generator import (
     _DRIFT_WAYPOINT_COUNT,
     _DRIFT_WAYPOINT_JITTER_MAX_M,
     _START_DISPERSION_MAX_M,
+    _FM_ATTRIBUTE_SCALE,
+    _SUPPORT_FREQUENCY_ATTRIBUTES,
     _SUPPORT_INITIATIVE_MAX_M,
     _SUPPORT_INITIATIVE_PROBABILITY,
+    _SUPPORT_INTENSITY_ATTRIBUTES,
+    _SUPPORT_INTENSITY_RANGE,
     _SUPPORT_LANE_M,
-    _SUPPORT_MIDFIELD_PROBABILITY_RANGE,
+    _SUPPORT_PROBABILITY_RANGE,
     MatchState,
+    _attribute_unit,
     _cb_line_drift,
     _drift_or_support_initiative,
     _drift_waypoints,
@@ -26,6 +31,7 @@ from ligue1sim.animation.sequence_generator import (
     _support_initiative,
     _support_initiative_direction,
     _support_initiative_eligible,
+    _support_initiative_intensity,
     _support_initiative_probability,
     _support_initiative_selected,
     _tactical_drift,
@@ -675,15 +681,68 @@ class TestSupportInitiativeDirection:
             assert _support_initiative_direction(poste, "opponent") == -1.0
 
 
-class TestSupportInitiativeProbability:
-    """L'attribut du joueur module la FRÉQUENCE (probabilité de tirage), jamais le sens -- Work Rate côté scorer
-    (rejoindre l'attaque), Positioning côté opponent (repli défensif), linéaire sur `_SUPPORT_MIDFIELD_PROBABILITY_RANGE`
-    pour l'échelle FM 1-20. LB/RB et BU/SA/ATT : probabilité fixe, aucun attribut n'entre en jeu."""
+class TestAttributeUnit:
+    """Chantier mouvement collectif, Phase 4 (16/10/2026) : fraction dans [0, 1] sur l'échelle RÉELLE des attributs
+    FM26 (`_FM_ATTRIBUTE_SCALE`, 0-99 -- jamais 1-20, EF-DON-03 du TRD, bug corrigé en Phase 4 : la formule Phase 3,
+    MC/MDC, utilisait par erreur 1-20, clampant presque tout l'effectif réel -- 5 à 99 observé -- à la borne haute)."""
 
-    def test_overlap_and_cover_postes_use_the_fixed_probability_regardless_of_attributes(self):
-        player = _player_with_attributes("LB", "p", 1, {"Work Rate": 20, "Positioning": 1})
+    def test_none_player_returns_none(self):
+        assert _attribute_unit(None, "Work Rate") is None
+
+    def test_player_without_attributes_returns_none(self):
+        assert _attribute_unit(_player_with_attributes("MC", "p", 1, None), "Work Rate") is None
+
+    def test_missing_attribute_returns_none(self):
+        assert _attribute_unit(_player_with_attributes("MC", "p", 1, {"Passing": 15}), "Work Rate") is None
+
+    def test_bounds_match_the_real_scale_not_one_to_twenty(self):
+        lo, hi = _FM_ATTRIBUTE_SCALE
+        assert (lo, hi) == (0, 99)
+        assert _attribute_unit(_player_with_attributes("MC", "p", 1, {"Work Rate": lo}), "Work Rate") == pytest.approx(0.0)
+        assert _attribute_unit(_player_with_attributes("MC", "p", 1, {"Work Rate": hi}), "Work Rate") == pytest.approx(1.0)
+
+    def test_a_single_name_is_its_own_average(self):
+        player = _player_with_attributes("MC", "p", 1, {"Work Rate": 50})
+        assert _attribute_unit(player, "Work Rate") == _attribute_unit(player, "Work Rate", "Work Rate")
+
+    def test_averages_several_attributes(self):
+        player = _player_with_attributes("BU", "p", 1, {"Work Rate": 0, "Stamina": 99})
+        assert _attribute_unit(player, "Work Rate", "Stamina") == pytest.approx(0.5)
+
+    def test_any_missing_attribute_among_several_returns_none(self):
+        player = _player_with_attributes("BU", "p", 1, {"Work Rate": 50})  # Stamina absente
+        assert _attribute_unit(player, "Work Rate", "Stamina") is None
+
+
+class TestSupportInitiativeProbability:
+    """L'attribut du joueur module la FRÉQUENCE (probabilité de tirage), jamais le sens -- un attribut (ou une
+    moyenne de deux) distinct par poste (`_SUPPORT_FREQUENCY_ATTRIBUTES`, MC/MDC : cas spécial par camp, Work Rate
+    côté scorer / Positioning côté opponent, inchangé depuis Phase 3), linéaire sur `_SUPPORT_PROBABILITY_RANGE`
+    pour l'échelle FM RÉELLE (0-99)."""
+
+    def test_overlap_postes_use_pace(self):
+        lo, hi = _SUPPORT_PROBABILITY_RANGE
+        assert _SUPPORT_FREQUENCY_ATTRIBUTES["LB"] == ("Pace",)
+        low = _player_with_attributes("LB", "p", 1, {"Pace": 0})
+        high = _player_with_attributes("RB", "p", 1, {"Pace": 99})
+        assert _support_initiative_probability("LB", "scorer", low) == pytest.approx(lo)
+        assert _support_initiative_probability("RB", "scorer", high) == pytest.approx(hi)
+
+    def test_cover_postes_average_work_rate_and_stamina(self):
+        # Aucun des deux seul ne suffit à un repli fréquent et crédible (décision du propriétaire 16/10/2026).
+        lo, hi = _SUPPORT_PROBABILITY_RANGE
+        assert _SUPPORT_FREQUENCY_ATTRIBUTES["BU"] == ("Work Rate", "Stamina")
+        low = _player_with_attributes("BU", "p", 1, {"Work Rate": 0, "Stamina": 0})
+        high = _player_with_attributes("ATT", "p", 1, {"Work Rate": 99, "Stamina": 99})
+        mixed = _player_with_attributes("SA", "p", 1, {"Work Rate": 99, "Stamina": 0})  # un seul fort -> milieu de plage
+        assert _support_initiative_probability("BU", "opponent", low) == pytest.approx(lo)
+        assert _support_initiative_probability("ATT", "opponent", high) == pytest.approx(hi)
+        assert _support_initiative_probability("SA", "opponent", mixed) == pytest.approx((lo + hi) / 2.0)
+
+    def test_overlap_and_cover_postes_without_the_relevant_attribute_fall_back_to_the_fixed_probability(self):
+        player = _player_with_attributes("LB", "p", 1, {"Work Rate": 99})  # Pace absent
         assert _support_initiative_probability("LB", "scorer", player) == _SUPPORT_INITIATIVE_PROBABILITY
-        player = _player_with_attributes("BU", "p", 1, {"Work Rate": 1, "Positioning": 20})
+        player = _player_with_attributes("BU", "p", 1, {"Work Rate": 99})  # Stamina absente -> moyenne impossible
         assert _support_initiative_probability("BU", "opponent", player) == _SUPPORT_INITIATIVE_PROBABILITY
 
     def test_midfield_without_player_falls_back_to_the_fixed_probability(self):
@@ -697,26 +756,79 @@ class TestSupportInitiativeProbability:
         assert _support_initiative_probability("MC", "scorer", _player_with_attributes("MC", "p", 1, None)) == _SUPPORT_INITIATIVE_PROBABILITY
 
     def test_midfield_scorer_side_uses_work_rate_at_the_validated_bounds(self):
-        lo, hi = _SUPPORT_MIDFIELD_PROBABILITY_RANGE
-        low_player = _player_with_attributes("MC", "p", 1, {"Work Rate": 1})
-        high_player = _player_with_attributes("MC", "p", 1, {"Work Rate": 20})
+        lo, hi = _SUPPORT_PROBABILITY_RANGE
+        low_player = _player_with_attributes("MC", "p", 1, {"Work Rate": 0})
+        high_player = _player_with_attributes("MC", "p", 1, {"Work Rate": 99})
         assert _support_initiative_probability("MC", "scorer", low_player) == pytest.approx(lo)
         assert _support_initiative_probability("MC", "scorer", high_player) == pytest.approx(hi)
 
     def test_midfield_opponent_side_uses_positioning_at_the_validated_bounds(self):
-        lo, hi = _SUPPORT_MIDFIELD_PROBABILITY_RANGE
-        low_player = _player_with_attributes("MDC", "p", 1, {"Positioning": 1})
-        high_player = _player_with_attributes("MDC", "p", 1, {"Positioning": 20})
+        lo, hi = _SUPPORT_PROBABILITY_RANGE
+        low_player = _player_with_attributes("MDC", "p", 1, {"Positioning": 0})
+        high_player = _player_with_attributes("MDC", "p", 1, {"Positioning": 99})
         assert _support_initiative_probability("MDC", "opponent", low_player) == pytest.approx(lo)
         assert _support_initiative_probability("MDC", "opponent", high_player) == pytest.approx(hi)
 
     def test_midfield_scorer_side_ignores_positioning_opponent_side_ignores_work_rate(self):
         # Travail de relance (Work Rate) ne compte PAS côté opponent (seul Positioning y module), et inversement.
-        player = _player_with_attributes("MC", "p", 1, {"Work Rate": 20, "Positioning": 1})
-        lo, _hi = _SUPPORT_MIDFIELD_PROBABILITY_RANGE
-        assert _support_initiative_probability("MC", "opponent", player) == pytest.approx(lo)  # Positioning=1 -> borne basse
-        player = _player_with_attributes("MC", "p", 1, {"Work Rate": 1, "Positioning": 20})
-        assert _support_initiative_probability("MC", "scorer", player) == pytest.approx(lo)  # Work Rate=1 -> borne basse
+        player = _player_with_attributes("MC", "p", 1, {"Work Rate": 99, "Positioning": 0})
+        lo, _hi = _SUPPORT_PROBABILITY_RANGE
+        assert _support_initiative_probability("MC", "opponent", player) == pytest.approx(lo)  # Positioning=0 -> borne basse
+        player = _player_with_attributes("MC", "p", 1, {"Work Rate": 0, "Positioning": 99})
+        assert _support_initiative_probability("MC", "scorer", player) == pytest.approx(lo)  # Work Rate=0 -> borne basse
+
+
+class TestSupportInitiativeIntensity:
+    """Chantier mouvement collectif, Phase 4 (16/10/2026) : facteur multiplicatif sur `_SUPPORT_INITIATIVE_MAX_M`
+    (jamais sur `_SUPPORT_LANE_M`), un attribut par poste, TOUJOURS distinct de celui de la fréquence pour ce même
+    poste (`_SUPPORT_INTENSITY_ATTRIBUTES`)."""
+
+    def test_default_is_1_0_without_player(self):
+        for poste in _SUPPORT_INTENSITY_ATTRIBUTES:
+            assert _support_initiative_intensity(poste, None) == 1.0
+
+    def test_default_is_1_0_without_the_relevant_attribute(self):
+        player = _player_with_attributes("LB", "p", 1, {"Passing": 15})
+        assert _support_initiative_intensity("LB", player) == 1.0
+
+    def test_intensity_attribute_always_differs_from_the_frequency_attribute(self):
+        for poste, frequency_names in _SUPPORT_FREQUENCY_ATTRIBUTES.items():
+            assert _SUPPORT_INTENSITY_ATTRIBUTES[poste] != frequency_names
+        for poste in ("MC", "MDC"):  # cas spécial : fréquence = Work Rate/Positioning selon le camp
+            assert "Work Rate" not in _SUPPORT_INTENSITY_ATTRIBUTES[poste]
+            assert "Positioning" not in _SUPPORT_INTENSITY_ATTRIBUTES[poste]
+
+    def test_lb_rb_use_stamina_at_the_validated_bounds(self):
+        lo, hi = _SUPPORT_INTENSITY_RANGE
+        assert _SUPPORT_INTENSITY_ATTRIBUTES["LB"] == ("Stamina",)
+        low = _player_with_attributes("LB", "p", 1, {"Stamina": 0})
+        high = _player_with_attributes("RB", "p", 1, {"Stamina": 99})
+        assert _support_initiative_intensity("LB", low) == pytest.approx(lo)
+        assert _support_initiative_intensity("RB", high) == pytest.approx(hi)
+
+    def test_cover_postes_use_determination_at_the_validated_bounds(self):
+        lo, hi = _SUPPORT_INTENSITY_RANGE
+        assert _SUPPORT_INTENSITY_ATTRIBUTES["BU"] == ("Determination",)
+        low = _player_with_attributes("BU", "p", 1, {"Determination": 0})
+        high = _player_with_attributes("ATT", "p", 1, {"Determination": 99})
+        assert _support_initiative_intensity("BU", low) == pytest.approx(lo)
+        assert _support_initiative_intensity("ATT", high) == pytest.approx(hi)
+
+    def test_midfield_uses_stamina_at_the_validated_bounds(self):
+        lo, hi = _SUPPORT_INTENSITY_RANGE
+        assert _SUPPORT_INTENSITY_ATTRIBUTES["MC"] == ("Stamina",)
+        low = _player_with_attributes("MC", "p", 1, {"Stamina": 0})
+        high = _player_with_attributes("MDC", "p", 1, {"Stamina": 99})
+        assert _support_initiative_intensity("MC", low) == pytest.approx(lo)
+        assert _support_initiative_intensity("MDC", high) == pytest.approx(hi)
+
+    def test_never_exceeds_1_0_or_goes_below_the_validated_floor(self):
+        lo, hi = _SUPPORT_INTENSITY_RANGE
+        assert hi == 1.0
+        for poste, (name,) in _SUPPORT_INTENSITY_ATTRIBUTES.items():
+            for value in (0, 25, 50, 75, 99):
+                factor = _support_initiative_intensity(poste, _player_with_attributes(poste, "p", 1, {name: value}))
+                assert lo - 1e-9 <= factor <= hi + 1e-9
 
 
 class TestSupportInitiativeSelection:
@@ -763,6 +875,33 @@ class TestSupportInitiative:
                 for i in range(100):
                     _dx, dy = _support_initiative(poste, i, team_side, f"goal:Test FC:p{i}:{i % 90 + 1}")
                     assert abs(dy) * PITCH_WIDTH_M <= lane_m + 1e-9
+
+    def test_low_intensity_player_stays_within_the_reduced_cap_and_moves_less_on_average(self):
+        # Chantier mouvement collectif, Phase 4 (16/10/2026) : l'intensité réduit le plafond de profondeur/amplitude
+        # globale, JAMAIS le couloir latéral (secteur tactiquement crédible déjà validé en Phase 3).
+        lo, hi = _SUPPORT_INTENSITY_RANGE
+        low_stamina = _player_with_attributes("LB", "p", 1, {"Stamina": 0})
+        high_stamina = _player_with_attributes("RB", "p", 1, {"Stamina": 99})
+        effective_max_m = _SUPPORT_INITIATIVE_MAX_M * lo
+        low_magnitudes, high_magnitudes = [], []
+        for i in range(200):
+            event_ref = f"goal:Test FC:p{i}:{i % 90 + 1}"
+            dx, dy = _support_initiative("LB", i, "scorer", event_ref, low_stamina)
+            magnitude_m = math.hypot(dx * PITCH_LENGTH_M, dy * PITCH_WIDTH_M)
+            assert magnitude_m <= effective_max_m + 1e-9
+            low_magnitudes.append(magnitude_m)
+            high_dx, high_dy = _support_initiative("RB", i, "scorer", event_ref, high_stamina)
+            high_magnitudes.append(math.hypot(high_dx * PITCH_LENGTH_M, high_dy * PITCH_WIDTH_M))
+        assert hi == 1.0
+        assert sum(low_magnitudes) < sum(high_magnitudes) * 0.9  # intensité basse (0,6) nettement plus courte en moyenne que pleine intensité (1,0)
+
+    def test_full_intensity_matches_the_default_player_none_behaviour(self):
+        hi = _SUPPORT_INTENSITY_RANGE[1]
+        assert hi == 1.0
+        full_stamina = _player_with_attributes("LB", "p", 1, {"Stamina": 99})
+        for i in range(30):
+            event_ref = f"goal:Test FC:p{i}:{i % 90 + 1}"
+            assert _support_initiative("LB", i, "scorer", event_ref, full_stamina) == _support_initiative("LB", i, "scorer", event_ref, None)
 
     def test_overlap_postes_move_toward_the_opponent_goal_for_the_scoring_team(self):
         # team_side="scorer" : son but adverse est à x=1 (_forward_sign) -- un dédoublement avance dans ce sens.

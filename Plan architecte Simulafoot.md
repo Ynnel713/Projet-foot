@@ -165,35 +165,45 @@ décor, aucune touche à `motion.py`/`physics.py` pour l'inertie des acteurs scr
 Couvre une partie de A1.3 et A2.1 ci-dessous (voir ces entrées) — pas d'identifiant TRD dédié, relève de l'exigence
 umbrella EG-JOU-05 (Bloc A).
 
-**Phase 1 — dispersion des lignes de départ.** Codée, testée, mesurée (100 matchs, graine 20260923 : dispersion
-moyenne 0,50 m sur ~27 000 joueurs de décor, moteur identique). **Pas commitée.**
+**Phases 1 à 3 — CLOSES, commitées (`e16b2c8`, poussé sur `origin/main`).**
+- Phase 1 (dispersion des lignes de départ) : dispersion moyenne 0,50 m sur ~27 000 joueurs de décor.
+- Phase 2 (mouvement continu, `BackgroundTrack.points`) : saut décor > 1 m : 0.
+- Phase 3 (initiatives de soutien par poste) : LB/RB (dédoublement, côté attaque uniquement), BU/SA/ATT (repli,
+  côté défense uniquement), MC/MDC (les deux côtés, MOC exclu) — restriction par camp nécessaire pour respecter un
+  invariant déjà testé avant ce chantier (un camp ne capture qu'UNE SEULE phase de jeu par clip). Fréquence ~40 %
+  par poste éligible, amplitude moyenne 7,52 m sur 0-12 m, 0 violation de secteur, moteur identique. Pour MC/MDC,
+  la direction reste forcée par le camp mais la probabilité anticipait déjà une partie de la Phase 4 (décision
+  explicite du propriétaire, pas un écart silencieux).
+- Revue `simulafoot-reviewer` : 2 défauts mineurs corrigés avant commit (régression bit-à-bit non testée dans
+  `motion._background_position_at` pour `duration <= 0`, introduite en Phase 2 ; commentaire inexact « 50/50 » au
+  lieu de « 40 % fixe »). Suite complète 1743 passés au moment du commit.
 
-**Phase 2 — mouvement continu pendant l'action (`BackgroundTrack.points`).** Codée, testée (saut décor > 1 m : 0).
-**Pas commitée.**
+**Phase 4 — modulation par qualités individuelles du joueur. Codée, testée, mesurée (16/10/2026). En attente de
+validation visuelle avant commit.**
+- **Bug corrigé, déjà présent dans le code commité de Phase 3** : la modulation de probabilité pour MC/MDC
+  utilisait une formule supposant l'échelle FM 1-20 (`(value-1)/19`), alors que `Player.attributes` est réellement
+  sur l'échelle 0-99 (EF-DON-03 du TRD) — sur données réelles (Work Rate/Positioning observés de 5 à 99), presque
+  tout l'effectif était clampé à la borne haute de probabilité, écrasant le contraste voulu. Nouvelle fonction
+  `_attribute_unit` (échelle 0-99 correcte), réutilisée partout.
+- Fréquence (probabilité de tirage) généralisée aux 3 groupes de postes, chacun avec son propre attribut (décision
+  du propriétaire, attributs spécifiques par poste plutôt qu'une réutilisation générique) : LB/RB = Pace ; BU/SA/ATT
+  = moyenne(Work Rate, Stamina) ; MC/MDC = Work Rate (scorer)/Positioning (opponent), inchangé.
+- Nouvel axe, l'intensité (facteur 0,6-1,0 sur l'amplitude max, jamais sur le couloir) : LB/RB = Stamina ;
+  BU/SA/ATT = Determination ; MC/MDC = Stamina — toujours un attribut DISTINCT de celui de la fréquence pour le
+  même poste.
+- Aucun nouveau fichier ni site d'appel : tout reste dans `sequence_generator.py` (exception déjà accordée).
+- Mesure de contraste (critère d'acceptation du PLAN) : profil faible (attributs à 0) vs fort (à 99) sur LB, BU et
+  MC — fréquence 20 %→60 % et amplitude moyenne strictement croissante dans les 3 cas. Compos synthétiques de
+  l'audit n'ayant jamais d'attributs renseignés, le pipeline 100 matchs est, comme attendu, 100 % identique à
+  Phase 3 (1552/1552 images) — limite déjà connue (`known_issues.md`), pas un défaut.
+- Revue `simulafoot-reviewer` : aucun défaut bloquant ni majeur. 2 corrections mineures de documentation (chiffre
+  non sourcé retiré, commentaire miroir ajouté sur l'asymétrie volontaire entre les deux dictionnaires d'attributs).
+  Suite complète 1761 passés, 13 désélectionnés, 0 échec.
+- Démo visuelle envoyée au propriétaire (même latéral, même tirage de sélection, Stamina 0 vs 99 : course de
+  dédoublement 7,1 m contre 11,9 m).
 
-**Phase 3 — initiatives de soutien par poste.** Codée, testée (130 tests dédiés + suite complète 1743 passés),
-mesurée (100 matchs : fréquence ~40 % par poste éligible, amplitude moyenne 7,52 m sur 0-12 m, 0 violation de secteur,
-moteur identique). **Pas commitée.** Décisions produit validées par le propriétaire (16/10/2026) :
-- Postes éligibles : LB/RB (dédoublement offensif, côté équipe qui attaque uniquement), BU/SA/ATT (repli défensif,
-  côté équipe qui défend uniquement), MC/MDC (les deux côtés) — MOC exclu. Restriction par camp nécessaire pour
-  respecter un invariant déjà testé avant ce chantier (un camp ne capture qu'UNE SEULE phase de jeu par clip).
-- **Écart de périmètre signalé par `simulafoot-reviewer` et confirmé intentionnel** : pour MC/MDC, la direction
-  (rejoindre l'attaque ou se replier) reste forcée par le camp, mais la PROBABILITÉ de tirage est modulée par
-  l'attribut pertinent du joueur (Work Rate côté attaque, Positioning côté défense, linéaire 20-60 % sur l'échelle
-  FM 1-20) — ceci anticipe une partie de la Phase 4 du PLAN (« modulation par attributs individuels »), initialement
-  prévue APRÈS la Phase 3. Décision explicite du propriétaire, pas un écart silencieux. Phase 4 (reste des attributs,
-  autres postes) et Phase 5 (style de coach, hors périmètre) restent À FAIRE.
-- Exceptions fichiers accordées séparément : `sequence_generator.py` (remplace `_tactical_drift` pour le joueur tiré),
-  `engine/narrative_player.py` (1 paramètre `scorer_lineup`, 1 site d'appel).
-
-**Revue `simulafoot-reviewer` (16/10/2026, Phase 2 + Phase 3).** Deux défauts mineurs trouvés et corrigés : régression
-bit-à-bit non testée dans `motion._background_position_at` (cas `duration <= 0` renvoyait `start + drift` au lieu de
-`start`, introduite en Phase 2, sans impact sur les 12 gabarits réels) et un commentaire inexact dans
-`enrich_with_background` (« 50/50 » au lieu de « 40 % fixe »). Aucun défaut bloquant. Verdict : code fonctionnellement
-solide, parité `enrich_with_background`/`opponent_field_tracks` et déterminisme vérifiés, résultat sportif intact.
-
-**Prochaines étapes.** Démonstration visuelle groupée Phases 1+2+3 pour validation du propriétaire, puis commit
-(probablement 1 par phase), puis Phase 4 (reste) / Phase 5 si le propriétaire les maintient au périmètre.
+**Prochaines étapes.** Validation visuelle de la Phase 4 par le propriétaire, puis commit, puis Phase 5 (style de
+coach) si le propriétaire la maintient au périmètre.
 
 ### 3.3 A1 — mouvement individuel et équipe : À FAIRE (après le chantier 1)
 
