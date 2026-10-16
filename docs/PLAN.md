@@ -118,12 +118,12 @@ Chaque club est relié, de façon stable, à son style de jeu d'entraîneur déj
 
 ### Critères d'acceptation
 
-- [ ] Mesure chiffrée du contraste de comportement entre deux styles de jeu (ex. pressing vs défensif) sur l'échantillon
-- [ ] Un même club produit le même style d'un match à l'autre (stabilité vérifiée)
-- [ ] Déterminisme bit-à-bit vérifié
-- [ ] Résultat sportif inchangé, feuille de match avant-match inchangée
-- [ ] Propriétaire valide visuellement le contraste collectif sur l'échantillon
-- [ ] Suite de tests complète passée, revue `simulafoot-reviewer` effectuée
+- [x] Mesure chiffrée du contraste de comportement entre deux styles de jeu (ex. pressing vs défensif) sur l'échantillon
+- [x] Un même club produit le même style d'un match à l'autre (stabilité vérifiée)
+- [x] Déterminisme bit-à-bit vérifié (deux exécutions séparées du pipeline 100 matchs, style de coach actif : 1552/1552 images identiques, même hash moteur)
+- [x] Résultat sportif inchangé, feuille de match avant-match inchangée (`simulation.py`, `pitch_layout.py` non modifiés — confirmé par `simulafoot-reviewer`)
+- [x] Propriétaire valide visuellement le contraste collectif sur l'échantillon (démo Pressing vs Défensif, même séquence/tirage, seul le style du club scoreur change)
+- [x] Suite de tests complète passée, revue `simulafoot-reviewer` effectuée (1780 passés, 13 désélectionnés, 0 échec ; revue : aucun défaut bloquant ni majeur)
 
 ## Bloquée par
 

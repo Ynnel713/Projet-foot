@@ -35,6 +35,7 @@ from ligue1sim.animation.templates import (
     strike_type_for,
 )
 from ligue1sim.animation.types import BackgroundTrack, PlayerId, RosterEntry, Sequence
+from ligue1sim.coaches import coach_styles
 from ligue1sim.events import GoalEvent, PlayerMatchStat
 from ligue1sim.lineup import Lineup
 from ligue1sim.pitch_geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, PitchPoint
@@ -727,6 +728,85 @@ _SUPPORT_INTENSITY_ATTRIBUTES = {  # Phase 4 (16/10/2026) -- un seul attribut pa
 }
 
 
+# --- Chantier "mouvement collectif", Phase 5 (16/10/2026) : style de jeu d'entraîneur et comportement collectif ---
+# PRD/PLAN validés par le propriétaire (docs/PLAN.md, section Phase 5) : chaque club est relié à son style de jeu
+# (`coaches.coach_styles`, lecture seule, fichier non modifié) qui module, EN PLUS de l'attribut individuel (Phase 4),
+# deux choses distinctes :
+#   1. L'INTENSITÉ COLLECTIVE des initiatives de soutien (probabilité ET amplitude, décision du propriétaire
+#      16/10/2026 -- le PLAN ne citait que l'intensité, étendu aux deux axes comme en Phase 4) : un multiplicateur par
+#      AXE tactique (`"offense"` = LB/RB + MC/MDC côté `scorer` ; `"defense"` = BU/SA/ATT + MC/MDC côté `opponent`),
+#      cumulé (produit) sur tous les styles marqués pour ce club (`_SUPPORT_COACH_STYLE_MODIFIERS`), jamais les mêmes
+#      valeurs que `simulation.STYLE_*` (qui pilotent le résultat sportif, fichier interdit, jamais lu ni modifié ici
+#      -- seule `coaches.coach_styles` est réutilisée, en lecture seule). "Contre attaque" (dépend d'une donnée de
+#      match non disponible au niveau d'un clip isolé) et "Possession" (n'affecte même pas le score dans le moteur)
+#      sont volontairement sans effet ici. Le résultat est replafonné à `_SUPPORT_PROBABILITY_RANGE`/`[0, 1]` pour la
+#      probabilité et à `1.0` pour l'intensité (préserve le plafond de 12 m déjà validé en Phase 3, jamais dépassé).
+#   2. La HAUTEUR DU BLOC (`_block_height_shift`) : un décalage de PROFONDEUR (jamais latéral) partagé par toute
+#      l'équipe de décor d'un clip -- même principe que `_start_dispersion` (Phase 1 : appliqué au `start`, APRÈS la
+#      formation mais AVANT `_tactical_drift`/`_support_initiative`), mais sur l'axe x au lieu de y, et partagé par
+#      équipe plutôt que tiré par joueur (le "bloc" est une notion d'équipe, pas individuelle). Portée volontairement
+#      réduite (décision du propriétaire 16/10/2026) : ne touche QUE les joueurs de décor d'UN clip, jamais les
+#      acteurs scriptés de l'action (`templates.py`, non concerné), jamais `pitch_layout.py` (formation/feuille de
+#      match avant-match, protégé par le PLAN lui-même, ligne 7 de `docs/PLAN.md` -- aucune exception demandée ni
+#      nécessaire, ce fichier n'est pas touché).
+#
+# `club_name` : `opponent_lineup.club_name` toujours disponible ; côté `scorer`, seulement si l'appelant fournit
+# `scorer_lineup` (même limite déjà acceptée pour l'attribut individuel en Phase 4, pas une régression nouvelle) --
+# `None` : comportement neutre (multiplicateur 1.0, décalage nul), jamais une erreur, même convention que
+# `coaches.coach_styles` elle-même (`frozenset()` si le club est inconnu de `data/Coachs-Simulafoot.xlsx`).
+_SUPPORT_COACH_STYLE_MODIFIERS = {  # style -> (multiplicateur offense, multiplicateur defense), validé (16/10/2026)
+    "Pressing": (1.20, 1.20),
+    "Offensif": (1.20, 0.80),
+    "Défensif": (0.80, 1.20),
+}
+_BLOCK_HEIGHT_MAX_M = 4.0  # décalage de profondeur max par équipe, nettement sous l'écart entre deux lignes tactiques (8-11 m), validé (16/10/2026)
+_BLOCK_HEIGHT_DELTA_M = {  # contribution signée par style marqué (cumulée puis replafonnée à ±_BLOCK_HEIGHT_MAX_M), validé (16/10/2026)
+    "Pressing": 4.0,  # bloc haut
+    "Offensif": 2.0,
+    "Défensif": -4.0,  # bloc bas
+}
+
+
+def _coach_support_axis(poste: str, team_side: str) -> str:
+    """`"offense"` (LB/RB, ou MC/MDC côté `scorer`) ou `"defense"` (BU/SA/ATT, ou MC/MDC côté `opponent`) -- même
+    split que `_support_initiative_eligible`, réutilisé pour appliquer le bon multiplicateur de style côté
+    `_coach_style_modifier`."""
+    if poste in _SUPPORT_OVERLAP_POSTES:
+        return "offense"
+    if poste in _SUPPORT_COVER_POSTES:
+        return "defense"
+    return "offense" if team_side == "scorer" else "defense"
+
+
+def _coach_style_modifier(club_name: str | None, axis: str) -> float:
+    """Produit des multiplicateurs (`_SUPPORT_COACH_STYLE_MODIFIERS`) de tous les styles marqués pour `club_name`
+    sur `axis` (`"offense"`/`"defense"`) -- même convention "cumulée" que `simulation.STYLE_*` (voir le commentaire
+    de `coaches.py`), jamais les mêmes constantes. `club_name` `None` ou club inconnu (`coach_styles` renvoie
+    `frozenset()`) : 1.0, neutre."""
+    if club_name is None:
+        return 1.0
+    index = 0 if axis == "offense" else 1
+    modifier = 1.0
+    for style in coach_styles(club_name):
+        pair = _SUPPORT_COACH_STYLE_MODIFIERS.get(style)
+        if pair is not None:
+            modifier *= pair[index]
+    return modifier
+
+
+def _block_height_shift(club_name: str | None, team_side: str) -> float:
+    """Décalage de profondeur normalisé (delta sur `start[0]`, jamais `start[1]`), partagé par toute l'équipe de
+    décor de `team_side` dans CE clip -- somme des contributions signées (`_BLOCK_HEIGHT_DELTA_M`) de tous les
+    styles marqués pour `club_name`, replafonnée à `±_BLOCK_HEIGHT_MAX_M`, puis orientée par `_forward_sign` (bloc
+    "haut" = vers le but adverse, même convention que `_support_initiative_direction`). `club_name` `None` ou club
+    inconnu : 0.0, neutre -- comportement historique inchangé."""
+    if club_name is None:
+        return 0.0
+    total_m = sum(_BLOCK_HEIGHT_DELTA_M.get(style, 0.0) for style in coach_styles(club_name))
+    total_m = max(-_BLOCK_HEIGHT_MAX_M, min(_BLOCK_HEIGHT_MAX_M, total_m))
+    return _forward_sign(team_side) * total_m / PITCH_LENGTH_M
+
+
 def _support_initiative_eligible(poste: str, team_side: str) -> bool:
     """Un seul mécanisme actif par (poste, camp) à la fois -- voir le bloc de commentaires ci-dessus pour pourquoi
     LB/RB et BU/SA/ATT sont restreints à un seul camp chacun."""
@@ -753,34 +833,43 @@ def _attribute_unit(player: Player | None, *attribute_names: str) -> float | Non
     return max(0.0, min(1.0, (sum(values) / len(values) - lo) / (hi - lo)))
 
 
-def _support_initiative_probability(poste: str, team_side: str, player: Player | None) -> float:
+def _support_initiative_probability(poste: str, team_side: str, player: Player | None, club_name: str | None = None) -> float:
     """Probabilité de tirage (`_support_initiative_selected`), modulée par l'attribut (ou la moyenne de deux
     attributs) pertinent pour ce poste (`_SUPPORT_FREQUENCY_ATTRIBUTES`, MC/MDC : Work Rate côté `scorer`/Positioning
     côté `opponent`, cas spécial inchangé depuis Phase 3), linéaire sur `_SUPPORT_PROBABILITY_RANGE`. Attribut(s)
     manquant(s) : comportement par défaut cohérent (exigence Phase 4 du PLAN), retombe sur
-    `_SUPPORT_INITIATIVE_PROBABILITY`."""
+    `_SUPPORT_INITIATIVE_PROBABILITY`. Multiplié par le style de coach du club (Phase 5, `_coach_style_modifier`),
+    puis replafonné à `[0, 1]` (une probabilité ne peut jamais sortir de cet intervalle)."""
     if poste in _SUPPORT_MIDFIELD_POSTES:
         attribute_names = ("Work Rate",) if team_side == "scorer" else ("Positioning",)
     else:
         attribute_names = _SUPPORT_FREQUENCY_ATTRIBUTES[poste]
     unit = _attribute_unit(player, *attribute_names)
     if unit is None:
-        return _SUPPORT_INITIATIVE_PROBABILITY
-    lo, hi = _SUPPORT_PROBABILITY_RANGE
-    return lo + unit * (hi - lo)
+        base = _SUPPORT_INITIATIVE_PROBABILITY
+    else:
+        lo, hi = _SUPPORT_PROBABILITY_RANGE
+        base = lo + unit * (hi - lo)
+    modifier = _coach_style_modifier(club_name, _coach_support_axis(poste, team_side))
+    return max(0.0, min(1.0, base * modifier))
 
 
-def _support_initiative_intensity(poste: str, player: Player | None) -> float:
+def _support_initiative_intensity(poste: str, team_side: str, player: Player | None, club_name: str | None = None) -> float:
     """Facteur multiplicatif dans `_SUPPORT_INTENSITY_RANGE` appliqué à `_SUPPORT_INITIATIVE_MAX_M` (jamais à
     `_SUPPORT_LANE_M`, le couloir reste celui déjà validé comme secteur tactiquement crédible -- voir
     `_support_initiative`), modulé par l'attribut pertinent pour ce poste (`_SUPPORT_INTENSITY_ATTRIBUTES`). Attribut
     manquant : 1.0 par défaut -- comportement bit-à-bit identique à la Phase 3 déjà mesurée (amplitude moyenne
-    7,52 m), jamais une régression pour un joueur sans attribut."""
+    7,52 m), jamais une régression pour un joueur sans attribut. Multiplié par le style de coach du club (Phase 5,
+    `_coach_style_modifier`), puis replafonné à `1.0` (préserve le plafond de 12 m déjà validé en Phase 3, jamais
+    dépassé même avec un bonus de style)."""
     unit = _attribute_unit(player, *_SUPPORT_INTENSITY_ATTRIBUTES[poste])
     if unit is None:
-        return 1.0
-    lo, hi = _SUPPORT_INTENSITY_RANGE
-    return lo + unit * (hi - lo)
+        base = 1.0
+    else:
+        lo, hi = _SUPPORT_INTENSITY_RANGE
+        base = lo + unit * (hi - lo)
+    modifier = _coach_style_modifier(club_name, _coach_support_axis(poste, team_side))
+    return min(1.0, base * modifier)
 
 
 def _support_initiative_selected(player_id: PlayerId, event_ref: str, probability: float) -> bool:
@@ -807,7 +896,7 @@ def _support_initiative_direction(poste: str, team_side: str) -> float:
 
 
 def _support_initiative(
-    poste: str, player_id: PlayerId, team_side: str, event_ref: str, player: Player | None = None
+    poste: str, player_id: PlayerId, team_side: str, event_ref: str, player: Player | None = None, club_name: str | None = None
 ) -> tuple[float, float]:
     """Initiative de soutien (chantier mouvement collectif, Phase 3, intensité ajoutée en Phase 4) -- REMPLACE
     `_tactical_drift` pour le joueur tiré (`_support_initiative_selected`), jamais additif. Profondeur tirée dans
@@ -820,7 +909,7 @@ def _support_initiative(
     principe que `_floor_drift_magnitude`)."""
     direction = _support_initiative_direction(poste, team_side)
     forward = _forward_sign(team_side)
-    effective_max_m = _SUPPORT_INITIATIVE_MAX_M * _support_initiative_intensity(poste, player)
+    effective_max_m = _SUPPORT_INITIATIVE_MAX_M * _support_initiative_intensity(poste, team_side, player, club_name)
     depth_m = _event_unit(player_id, event_ref, "support_depth") * effective_max_m
     lateral_m = (_event_unit(player_id, event_ref, "support_lateral") * 2.0 - 1.0) * _SUPPORT_LANE_M[poste]
     total_m = math.hypot(depth_m, lateral_m)
@@ -840,13 +929,15 @@ def _drift_or_support_initiative(
     event_ref: str,
     player: Player | None,
     eligible: bool,
+    club_name: str | None = None,
 ) -> tuple[float, float]:
     """`_tactical_drift`, SAUF si `eligible` (poste/camp/hors remplaçant -- voir appelants) ET le tirage
     `_support_initiative_selected` retombe dessus : alors `_support_initiative` REMPLACE `_tactical_drift` pour ce
     joueur sur ce clip, jamais additif. Point d'entrée commun aux 3 sites de construction de `BackgroundTrack`
-    (`enrich_with_background` x2, `opponent_field_tracks`), pour garantir leur parité par construction."""
-    if eligible and _support_initiative_selected(player_id, event_ref, _support_initiative_probability(poste, team_side, player)):
-        return _support_initiative(poste, player_id, team_side, event_ref, player)
+    (`enrich_with_background` x2, `opponent_field_tracks`), pour garantir leur parité par construction. `club_name`
+    (Phase 5) : style de coach du club de `team_side`, voir `_coach_style_modifier`."""
+    if eligible and _support_initiative_selected(player_id, event_ref, _support_initiative_probability(poste, team_side, player, club_name)):
+        return _support_initiative(poste, player_id, team_side, event_ref, player, club_name)
     return _tactical_drift(poste, player_id, team_side, start, ball_target, cb_line_drift, event_ref)
 
 
@@ -885,11 +976,14 @@ def enrich_with_background(
     `en_jeu` (étape 0b-2) : joueurs adverses sur le terrain, voir `_opponent_positions`. `None` et sans attribut `en_jeu` sur `opponent_lineup` : comportement
     historique, bit à bit.
 
-    `scorer_lineup` (chantier mouvement collectif, Phase 3, Phase 4) : `Lineup` de l'équipe qui marque, pour résoudre le
-    `Player` (donc ses `attributes`) d'un LB/RB/MC/MDC côté scorer tiré pour une initiative de soutien -- voir
-    `_support_initiative_probability`/`_support_initiative_intensity`. `None` (défaut, tout appelant qui ne fournit
-    pas cette exception) : ces postes retombent sur les valeurs par défaut fixes (`_SUPPORT_INITIATIVE_PROBABILITY`
-    40 %, intensité 1.0), jamais une erreur -- seul `engine/narrative_player.py` la fournit en production."""
+    `scorer_lineup` (chantier mouvement collectif, Phase 3, Phase 4, Phase 5) : `Lineup` de l'équipe qui marque, pour
+    résoudre le `Player` (donc ses `attributes`) d'un LB/RB/MC/MDC côté scorer tiré pour une initiative de soutien --
+    voir `_support_initiative_probability`/`_support_initiative_intensity` -- et son `club_name` (style de coach,
+    `_coach_style_modifier`/`_block_height_shift`). `None` (défaut, tout appelant qui ne fournit pas cette
+    exception) : ces postes retombent sur les valeurs par défaut fixes (`_SUPPORT_INITIATIVE_PROBABILITY` 40 %,
+    intensité 1.0, décalage de bloc nul), jamais une erreur -- seul `engine/narrative_player.py` la fournit en
+    production. Côté `opponent`, `club_name` est TOUJOURS disponible (`opponent_lineup.club_name`, champ
+    obligatoire)."""
     if en_jeu is None:
         en_jeu = getattr(opponent_lineup, "en_jeu", None)
     active_ids = {player_id for player_id, entry in sequence.roster.items() if entry.role is not None}
@@ -909,16 +1003,17 @@ def enrich_with_background(
         f"{sequence.event_ref}|scorer", sum(scorer_cb_ys) / len(scorer_cb_ys), ball_target[1]
     ) if scorer_cb_ys else (0.0, 0.0)
     scorer_players_by_name = {p.name: p for p in scorer_lineup.players} if scorer_lineup is not None else {}
+    scorer_club_name = scorer_lineup.club_name if scorer_lineup is not None else None
     for player_id, start in scorer_starts.items():
         entry = sequence.roster[player_id]
         if entry.poste == GOALKEEPER:
             start = _gk_base_position("scorer")
         else:
             dx, dy = _start_dispersion(player_id, sequence.event_ref)
-            start = (start[0] + dx, start[1] + dy)
+            start = (start[0] + dx + _block_height_shift(scorer_club_name, "scorer"), start[1] + dy)
         drift = _drift_or_support_initiative(
             entry.poste, player_id, "scorer", start, ball_target, scorer_cb_drift, sequence.event_ref,
-            scorer_players_by_name.get(entry.nom), _support_initiative_eligible(entry.poste, "scorer"),
+            scorer_players_by_name.get(entry.nom), _support_initiative_eligible(entry.poste, "scorer"), scorer_club_name,
         )
         points = _drift_waypoints(player_id, sequence.event_ref, start, drift)
         background[player_id] = BackgroundTrack(start=start, drift=drift, points=points)
@@ -953,10 +1048,11 @@ def enrich_with_background(
         else:
             if player.poste != GOALKEEPER and player_id not in substitute_ids:
                 dx, dy = _start_dispersion(player_id, sequence.event_ref)
-                start = (start[0] + dx, start[1] + dy)
+                start = (start[0] + dx + _block_height_shift(opponent_lineup.club_name, "opponent"), start[1] + dy)
             eligible = _support_initiative_eligible(player.poste, "opponent") and player_id not in substitute_ids
             drift = _drift_or_support_initiative(
                 player.poste, player_id, "opponent", start, ball_target, opponent_cb_drift, sequence.event_ref, player, eligible,
+                opponent_lineup.club_name,
             )
             points = _drift_waypoints(player_id, sequence.event_ref, start, drift)
         background[player_id] = BackgroundTrack(start=start, drift=drift, points=points)
@@ -1004,10 +1100,11 @@ def opponent_field_tracks(
             start = (point.x, point.y)
         else:
             dx, dy = _start_dispersion(pid, event_ref)
-            start = (point.x + dx, point.y + dy)
+            start = (point.x + dx + _block_height_shift(opponent_lineup.club_name, "opponent"), point.y + dy)
         eligible = _support_initiative_eligible(by_id[pid].poste, "opponent") and pid not in substitute_ids
         drift = _drift_or_support_initiative(
             by_id[pid].poste, pid, "opponent", start, ball_target, cb_drift, event_ref, by_id[pid], eligible,
+            opponent_lineup.club_name,
         )
         tracks[pid] = BackgroundTrack(start=start, drift=drift, points=_drift_waypoints(pid, event_ref, start, drift))
     return tracks

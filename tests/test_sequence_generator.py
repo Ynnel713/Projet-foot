@@ -11,7 +11,10 @@ from ligue1sim.animation.sequence_generator import (
     _DRIFT_WAYPOINT_COUNT,
     _DRIFT_WAYPOINT_JITTER_MAX_M,
     _START_DISPERSION_MAX_M,
+    _BLOCK_HEIGHT_DELTA_M,
+    _BLOCK_HEIGHT_MAX_M,
     _FM_ATTRIBUTE_SCALE,
+    _SUPPORT_COACH_STYLE_MODIFIERS,
     _SUPPORT_FREQUENCY_ATTRIBUTES,
     _SUPPORT_INITIATIVE_MAX_M,
     _SUPPORT_INITIATIVE_PROBABILITY,
@@ -21,7 +24,10 @@ from ligue1sim.animation.sequence_generator import (
     _SUPPORT_PROBABILITY_RANGE,
     MatchState,
     _attribute_unit,
+    _block_height_shift,
     _cb_line_drift,
+    _coach_style_modifier,
+    _coach_support_axis,
     _drift_or_support_initiative,
     _drift_waypoints,
     _forward_sign,
@@ -785,11 +791,11 @@ class TestSupportInitiativeIntensity:
 
     def test_default_is_1_0_without_player(self):
         for poste in _SUPPORT_INTENSITY_ATTRIBUTES:
-            assert _support_initiative_intensity(poste, None) == 1.0
+            assert _support_initiative_intensity(poste, "scorer", None) == 1.0
 
     def test_default_is_1_0_without_the_relevant_attribute(self):
         player = _player_with_attributes("LB", "p", 1, {"Passing": 15})
-        assert _support_initiative_intensity("LB", player) == 1.0
+        assert _support_initiative_intensity("LB", "scorer", player) == 1.0
 
     def test_intensity_attribute_always_differs_from_the_frequency_attribute(self):
         for poste, frequency_names in _SUPPORT_FREQUENCY_ATTRIBUTES.items():
@@ -803,32 +809,144 @@ class TestSupportInitiativeIntensity:
         assert _SUPPORT_INTENSITY_ATTRIBUTES["LB"] == ("Stamina",)
         low = _player_with_attributes("LB", "p", 1, {"Stamina": 0})
         high = _player_with_attributes("RB", "p", 1, {"Stamina": 99})
-        assert _support_initiative_intensity("LB", low) == pytest.approx(lo)
-        assert _support_initiative_intensity("RB", high) == pytest.approx(hi)
+        assert _support_initiative_intensity("LB", "scorer", low) == pytest.approx(lo)
+        assert _support_initiative_intensity("RB", "scorer", high) == pytest.approx(hi)
 
     def test_cover_postes_use_determination_at_the_validated_bounds(self):
         lo, hi = _SUPPORT_INTENSITY_RANGE
         assert _SUPPORT_INTENSITY_ATTRIBUTES["BU"] == ("Determination",)
         low = _player_with_attributes("BU", "p", 1, {"Determination": 0})
         high = _player_with_attributes("ATT", "p", 1, {"Determination": 99})
-        assert _support_initiative_intensity("BU", low) == pytest.approx(lo)
-        assert _support_initiative_intensity("ATT", high) == pytest.approx(hi)
+        assert _support_initiative_intensity("BU", "opponent", low) == pytest.approx(lo)
+        assert _support_initiative_intensity("ATT", "opponent", high) == pytest.approx(hi)
 
     def test_midfield_uses_stamina_at_the_validated_bounds(self):
         lo, hi = _SUPPORT_INTENSITY_RANGE
         assert _SUPPORT_INTENSITY_ATTRIBUTES["MC"] == ("Stamina",)
         low = _player_with_attributes("MC", "p", 1, {"Stamina": 0})
         high = _player_with_attributes("MDC", "p", 1, {"Stamina": 99})
-        assert _support_initiative_intensity("MC", low) == pytest.approx(lo)
-        assert _support_initiative_intensity("MDC", high) == pytest.approx(hi)
+        assert _support_initiative_intensity("MC", "scorer", low) == pytest.approx(lo)
+        assert _support_initiative_intensity("MDC", "opponent", high) == pytest.approx(hi)
 
     def test_never_exceeds_1_0_or_goes_below_the_validated_floor(self):
         lo, hi = _SUPPORT_INTENSITY_RANGE
         assert hi == 1.0
         for poste, (name,) in _SUPPORT_INTENSITY_ATTRIBUTES.items():
             for value in (0, 25, 50, 75, 99):
-                factor = _support_initiative_intensity(poste, _player_with_attributes(poste, "p", 1, {name: value}))
+                factor = _support_initiative_intensity(poste, "scorer", _player_with_attributes(poste, "p", 1, {name: value}))
                 assert lo - 1e-9 <= factor <= hi + 1e-9
+
+
+class TestCoachSupportAxis:
+    """Chantier mouvement collectif, Phase 5 (16/10/2026) : même split que `_support_initiative_eligible`, réutilisé
+    pour appliquer le bon multiplicateur de style de coach par axe tactique."""
+
+    def test_overlap_postes_are_offense(self):
+        assert _coach_support_axis("LB", "scorer") == "offense"
+        assert _coach_support_axis("RB", "scorer") == "offense"
+
+    def test_cover_postes_are_defense(self):
+        assert _coach_support_axis("BU", "opponent") == "defense"
+        assert _coach_support_axis("ATT", "opponent") == "defense"
+
+    def test_midfield_axis_follows_the_team_side(self):
+        assert _coach_support_axis("MC", "scorer") == "offense"
+        assert _coach_support_axis("MDC", "opponent") == "defense"
+
+
+class TestCoachStyleModifier:
+    """Multiplicateur cumulé (produit) de tous les styles marqués pour un club, par axe (`_SUPPORT_COACH_STYLE_MODIFIERS`).
+    `club_name` `None` ou club inconnu : 1.0, neutre."""
+
+    def test_none_club_is_neutral(self):
+        assert _coach_style_modifier(None, "offense") == 1.0
+        assert _coach_style_modifier(None, "defense") == 1.0
+
+    def test_unknown_club_is_neutral(self, monkeypatch):
+        import ligue1sim.animation.sequence_generator as sg
+
+        monkeypatch.setattr(sg, "coach_styles", lambda club_name: frozenset())
+        assert _coach_style_modifier("Unknown FC", "offense") == 1.0
+        assert _coach_style_modifier("Unknown FC", "defense") == 1.0
+
+    def test_pressing_boosts_both_axes(self, monkeypatch):
+        import ligue1sim.animation.sequence_generator as sg
+
+        monkeypatch.setattr(sg, "coach_styles", lambda club_name: frozenset({"Pressing"}))
+        offense, defense = _SUPPORT_COACH_STYLE_MODIFIERS["Pressing"]
+        assert _coach_style_modifier("Press FC", "offense") == pytest.approx(offense)
+        assert _coach_style_modifier("Press FC", "defense") == pytest.approx(defense)
+
+    def test_offensif_boosts_offense_and_hinders_defense(self, monkeypatch):
+        import ligue1sim.animation.sequence_generator as sg
+
+        monkeypatch.setattr(sg, "coach_styles", lambda club_name: frozenset({"Offensif"}))
+        offense, defense = _SUPPORT_COACH_STYLE_MODIFIERS["Offensif"]
+        assert offense > 1.0 and defense < 1.0
+        assert _coach_style_modifier("Off FC", "offense") == pytest.approx(offense)
+        assert _coach_style_modifier("Off FC", "defense") == pytest.approx(defense)
+
+    def test_defensif_is_the_mirror_of_offensif(self, monkeypatch):
+        import ligue1sim.animation.sequence_generator as sg
+
+        monkeypatch.setattr(sg, "coach_styles", lambda club_name: frozenset({"Défensif"}))
+        offense, defense = _SUPPORT_COACH_STYLE_MODIFIERS["Défensif"]
+        assert offense < 1.0 and defense > 1.0
+
+    def test_contre_attaque_and_possession_have_no_effect(self, monkeypatch):
+        import ligue1sim.animation.sequence_generator as sg
+
+        monkeypatch.setattr(sg, "coach_styles", lambda club_name: frozenset({"Contre attaque", "Possession"}))
+        assert _coach_style_modifier("CA FC", "offense") == 1.0
+        assert _coach_style_modifier("CA FC", "defense") == 1.0
+
+    def test_several_styles_cumulate_as_a_product(self, monkeypatch):
+        import ligue1sim.animation.sequence_generator as sg
+
+        monkeypatch.setattr(sg, "coach_styles", lambda club_name: frozenset({"Pressing", "Offensif"}))
+        pressing_offense, _pressing_defense = _SUPPORT_COACH_STYLE_MODIFIERS["Pressing"]
+        offensif_offense, _offensif_defense = _SUPPORT_COACH_STYLE_MODIFIERS["Offensif"]
+        assert _coach_style_modifier("Both FC", "offense") == pytest.approx(pressing_offense * offensif_offense)
+
+
+class TestBlockHeightShift:
+    """Décalage de profondeur partagé par équipe (jamais latéral), somme des contributions signées des styles
+    marqués (`_BLOCK_HEIGHT_DELTA_M`), replafonnée à `±_BLOCK_HEIGHT_MAX_M`."""
+
+    def test_none_club_has_no_shift(self):
+        assert _block_height_shift(None, "scorer") == 0.0
+
+    def test_unknown_club_has_no_shift(self, monkeypatch):
+        import ligue1sim.animation.sequence_generator as sg
+
+        monkeypatch.setattr(sg, "coach_styles", lambda club_name: frozenset())
+        assert _block_height_shift("Unknown FC", "scorer") == 0.0
+
+    def test_pressing_pushes_the_block_forward_for_the_scoring_team(self, monkeypatch):
+        import ligue1sim.animation.sequence_generator as sg
+
+        monkeypatch.setattr(sg, "coach_styles", lambda club_name: frozenset({"Pressing"}))
+        dx = _block_height_shift("Press FC", "scorer")
+        assert dx > 0.0  # forward = _forward_sign("scorer") = +1, bloc haut = +_BLOCK_HEIGHT_DELTA_M["Pressing"]
+        assert dx * PITCH_LENGTH_M == pytest.approx(_BLOCK_HEIGHT_DELTA_M["Pressing"])
+
+    def test_defensif_pulls_the_block_back_for_the_conceding_team(self, monkeypatch):
+        import ligue1sim.animation.sequence_generator as sg
+
+        monkeypatch.setattr(sg, "coach_styles", lambda club_name: frozenset({"Défensif"}))
+        dx = _block_height_shift("Def FC", "opponent")
+        # team_side="opponent" : forward = -1 ; bloc bas = _BLOCK_HEIGHT_DELTA_M["Défensif"] (négatif) ; produit positif.
+        assert dx > 0.0
+        assert abs(dx) * PITCH_LENGTH_M == pytest.approx(abs(_BLOCK_HEIGHT_DELTA_M["Défensif"]))
+
+    def test_cumulated_deltas_are_clamped_to_the_validated_ceiling(self, monkeypatch):
+        import ligue1sim.animation.sequence_generator as sg
+
+        # Styles fictifs pour forcer un dépassement de la somme des deltas réels -- vérifie seulement le clamp.
+        monkeypatch.setattr(sg, "_BLOCK_HEIGHT_DELTA_M", {"A": 10.0, "B": 10.0})
+        monkeypatch.setattr(sg, "coach_styles", lambda club_name: frozenset({"A", "B"}))
+        dx = _block_height_shift("Extreme FC", "scorer")
+        assert abs(dx) * PITCH_LENGTH_M == pytest.approx(_BLOCK_HEIGHT_MAX_M)
 
 
 class TestSupportInitiativeSelection:
@@ -1031,6 +1149,68 @@ class TestSupportInitiativeIntegration:
                 if dx > 1e-6:
                     found = True
         assert found
+
+
+class TestCoachStyleIntegration:
+    """Chantier mouvement collectif, Phase 5 (16/10/2026) : intégration via `enrich_with_background` (style de
+    coach du club adverse, toujours disponible via `opponent_lineup.club_name`)."""
+
+    def test_opponent_club_style_shifts_the_decor_block_height(self, monkeypatch):
+        import ligue1sim.animation.sequence_generator as sg
+
+        opponent = _opponent_lineup()
+
+        monkeypatch.setattr(sg, "coach_styles", lambda club_name: frozenset())
+        lineup = _lineup()
+        neutral_starts = {}
+        for event_index in range(10):
+            event = _goal_event(minute=1 + event_index % 90)
+            raw = generate_sequence(event, lineup, _pitch_layout_state(lineup), _match_state(), deterministic_rng("match-bg", event_index), match_id="match-bg", event_index=event_index)
+            neutral_starts[event_index] = enrich_with_background(raw, opponent).background
+
+        monkeypatch.setattr(sg, "coach_styles", lambda club_name: frozenset({"Pressing"}) if club_name == opponent.club_name else frozenset())
+        expected_shift_m = _block_height_shift(opponent.club_name, "opponent") * PITCH_LENGTH_M
+        found_shift = False
+        for event_index in range(10):
+            event = _goal_event(minute=1 + event_index % 90)
+            raw = generate_sequence(event, lineup, _pitch_layout_state(lineup), _match_state(), deterministic_rng("match-bg", event_index), match_id="match-bg", event_index=event_index)
+            pressing_background = enrich_with_background(raw, opponent).background
+            for pid, neutral_track in neutral_starts[event_index].items():
+                opp_player = next((p for p in opponent.players if player_id_of(p) == pid), None)
+                if opp_player is None or opp_player.poste == "GK":
+                    continue
+                pressing_track = pressing_background[pid]
+                delta_m = (pressing_track.start[0] - neutral_track.start[0]) * PITCH_LENGTH_M
+                # Cas général : décalage plein (signé par _forward_sign("opponent"), voir _block_height_shift). Mur
+                # de coup franc (branche séparée, jamais décalée) : 0 toléré -- exception déjà établie, pas une
+                # nouvelle régression (voir le bloc de commentaires de Phase 1).
+                assert delta_m == pytest.approx(expected_shift_m, abs=1e-6) or delta_m == pytest.approx(0.0, abs=1e-9)
+                if abs(delta_m) > 1e-6:
+                    found_shift = True
+        assert found_shift
+        assert abs(expected_shift_m) > 1e-6  # le style choisi (Pressing) doit produire un décalage non nul
+
+    def test_same_club_produces_the_same_style_modifier_across_different_matches(self, monkeypatch):
+        import ligue1sim.animation.sequence_generator as sg
+
+        monkeypatch.setattr(sg, "coach_styles", lambda club_name: frozenset({"Offensif"}) if club_name == "Stable FC" else frozenset())
+        values = {_coach_style_modifier("Stable FC", "offense") for _ in range(20)}
+        assert len(values) == 1  # fonction pure de club_name : même club -> même multiplicateur, toujours
+
+    def test_club_style_modulates_probability_within_the_clamped_bounds(self, monkeypatch):
+        import ligue1sim.animation.sequence_generator as sg
+
+        monkeypatch.setattr(sg, "coach_styles", lambda club_name: frozenset({"Pressing"}))
+        neutral = _support_initiative_probability("LB", "scorer", None, None)
+        with_pressing = _support_initiative_probability("LB", "scorer", None, "Press FC")
+        assert with_pressing == pytest.approx(min(1.0, neutral * _SUPPORT_COACH_STYLE_MODIFIERS["Pressing"][0]))
+
+    def test_club_style_never_pushes_intensity_above_1_0(self, monkeypatch):
+        import ligue1sim.animation.sequence_generator as sg
+
+        monkeypatch.setattr(sg, "coach_styles", lambda club_name: frozenset({"Pressing"}))
+        high_player = _player_with_attributes("LB", "p", 1, {"Stamina": 99})
+        assert _support_initiative_intensity("LB", "scorer", high_player, "Press FC") == 1.0
 
 
 class TestGkBasePosition:

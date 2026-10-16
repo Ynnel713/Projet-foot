@@ -122,3 +122,22 @@ Fermés en 1h : 46 (test aveugle, refondu en 1g), 47 (passes > 30 m/s, fermé po
 - Section 5.2 : B7 et B8 passent à « Implémenté ».
 - Glossaire : ajouter « géométrie de rôle », « support tactique », « modèle A ».
 - Ce fichier est mis à jour à chaque sous-étape terminée (règle de `CLAUDE.md`).
+
+## v1.8 — 16/10/2026 (état du dépôt : `bb748dc` ; Phase 5 codée, testée, pas encore commitée)
+
+Chantier "mouvement collectif" (joueurs de décor, A1.3/A2.1/A2.3, umbrella EG-JOU-05 Bloc A) : Phases 1 à 4 commitées (`e16b2c8`, `bb748dc`, poussées sur `origin/main`), Phase 5 codée et mesurée mais pas encore commitée — rattrapage de ce fichier resté à l'état v1.7 (avant le début de ce chantier).
+
+| ID | Statut v1.7 | Statut v1.8 | Preuve |
+|---|---|---|---|
+| EG-JOU-05 (Bloc A) | Partiel : chantier 1 entièrement clos (1a-1h) ; A1, A2 et Bloc C restent à faire | Partiel : A1.3 couverte à ~5/5 phases (Phases 1-4 commitées, Phase 5 codée/testée/mesurée, en attente de démo visuelle et commit) ; A2.1 et A2.3 partiellement couverts par la Phase 3 (dédoublement/repli par poste) et la Phase 5 (style de coach) respectivement ; A1.1, A1.2, A1.4-1.6, A2.2, A2.4, A2.5 et Bloc C restent à faire | `Plan architecte Simulafoot.md` §3.2bis, §3.3, §3.4 |
+
+### Tickets (section 11)
+Aucun nouveau ticket ouvert par ce chantier. Limite déjà connue (compos synthétiques de l'audit sans attributs ni style de coach renseignés) : confirmée inchangée pour la Phase 5 (pipeline 100 matchs 100 % identique à la Phase 4 sur ces compos).
+
+### Points ouverts
+- Démo visuelle de la Phase 5 (styles de coach contrastés) à envoyer au propriétaire avant commit.
+- Une fois la Phase 5 commitée, le chantier "mouvement collectif" sera entièrement clos (5/5 phases du PLAN) ; reste alors A1 (hors A1.3), A2 (hors A2.1/A2.3 partiels) et le Bloc C.
+
+### Écarts à corriger au prochain remaniement du PDF
+- Section 9 / Bloc A : nuancer « En cours » avec l'avancement détaillé de A1.3/A2.1/A2.3 ci-dessus une fois la Phase 5 commitée.
+- Ce fichier est mis à jour à chaque sous-étape terminée (règle de `CLAUDE.md`).

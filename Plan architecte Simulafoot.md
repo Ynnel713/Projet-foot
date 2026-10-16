@@ -178,8 +178,7 @@ umbrella EG-JOU-05 (Bloc A).
   `motion._background_position_at` pour `duration <= 0`, introduite en Phase 2 ; commentaire inexact « 50/50 » au
   lieu de « 40 % fixe »). Suite complète 1743 passés au moment du commit.
 
-**Phase 4 — modulation par qualités individuelles du joueur. Codée, testée, mesurée (16/10/2026). En attente de
-validation visuelle avant commit.**
+**Phase 4 — modulation par qualités individuelles du joueur. CLOSE, commitée (`bb748dc`, poussé sur `origin/main`).**
 - **Bug corrigé, déjà présent dans le code commité de Phase 3** : la modulation de probabilité pour MC/MDC
   utilisait une formule supposant l'échelle FM 1-20 (`(value-1)/19`), alors que `Player.attributes` est réellement
   sur l'échelle 0-99 (EF-DON-03 du TRD) — sur données réelles (Work Rate/Positioning observés de 5 à 99), presque
@@ -202,8 +201,43 @@ validation visuelle avant commit.**
 - Démo visuelle envoyée au propriétaire (même latéral, même tirage de sélection, Stamina 0 vs 99 : course de
   dédoublement 7,1 m contre 11,9 m).
 
-**Prochaines étapes.** Validation visuelle de la Phase 4 par le propriétaire, puis commit, puis Phase 5 (style de
-coach) si le propriétaire la maintient au périmètre.
+**Phase 5 — style de jeu d'entraîneur et comportement collectif. Codée, testée, mesurée (16/10/2026). En attente
+de démo visuelle et de validation du propriétaire avant commit.**
+- Cadrage par `simulafoot-architect` (lecture seule) : aucun nouveau fichier interdit, `coaches.py` (lecture seule,
+  `coach_styles(club_name) -> frozenset[str]`) ne nécessite pas d'exception, `pitch_layout.py` reste intact.
+- Deux volets, lecture de `coaches.coach_styles` (jamais `simulation.STYLE_*`/`match_stats._POSSESSION_STYLE_BONUS`,
+  mécanismes séparés pour le résultat sportif, non dupliqués) :
+  1. Multiplicateur de style par axe tactique (`"offense"` = LB/RB + MC/MDC côté scorer ; `"defense"` = BU/SA/ATT +
+     MC/MDC côté opponent), appliqué à la fois à la probabilité ET à l'intensité des initiatives de soutien
+     (Phases 3/4) — décision explicite du propriétaire d'étendre le texte littéral du PLAN (qui ne citait que
+     l'intensité). Pressing ×1,20 sur les deux axes ; Offensif ×1,20 offensif/×0,80 défensif ; Défensif ×0,80
+     offensif/×1,20 défensif ; cumul par produit si plusieurs styles marqués ; Contre-attaque et Possession sans
+     effet (pas de donnée de match dispo au niveau d'un clip isolé / n'affectent même pas le score dans le moteur).
+     Replafonné à `[0, 1]` (probabilité) et `1,0` (intensité, préserve le plafond de 12 m de la Phase 3).
+  2. Hauteur du bloc (`_block_height_shift`) : décalage de profondeur partagé par équipe (jamais latéral), décor
+     uniquement (jamais `pitch_layout.py`, jamais les acteurs scriptés), même point d'insertion que la dispersion
+     de la Phase 1. Pressing +4 m, Offensif +2 m, Défensif −4 m, cumulés puis plafonnés à ±4 m (nettement sous
+     l'écart entre deux lignes tactiques, 8-11 m).
+  3. `club_name` : toujours disponible côté `opponent` ; côté `scorer`, seulement si `scorer_lineup` est fourni
+     (même limite déjà acceptée en Phase 4) — `None`/club inconnu : comportement neutre garanti, jamais une erreur.
+- Mesure de contraste (critère d'acceptation du PLAN) : Pressing vs Défensif sur un club synthétique — probabilité
+  LB (axe offense) 48,0 % vs 32,0 % (neutre 40,0 %), intensité 1,000 vs 0,800, hauteur de bloc +4 m vs −4 m (côté
+  scorer) — contraste confirmé sur les 2 volets.
+- Régression "sans coach" (compos synthétiques de l'audit, clubs absents de `data/Coachs-Simulafoot.xlsx`) :
+  pipeline 100 matchs 100 % identique à la Phase 4 (1552/1552 images, même hash moteur) — limite déjà connue
+  (compos synthétiques sans attributs ni style), pas un défaut.
+- Déterminisme bit-à-bit avec un style de coach ACTIF (deux exécutions séparées du pipeline 100 matchs, Pressing/
+  Défensif patchés sur les clubs synthétiques) : confirmé — 1552/1552 images identiques, même hash moteur
+  (`161ec4b783203a41`), mêmes statistiques dans les deux exécutions.
+- Revue `simulafoot-reviewer` : aucun défaut bloquant ni majeur. Suggestions mineures non bloquantes (formulation
+  de docstring, `measure_geometry.py` qui ne capte pas encore l'effet de style sur la fréquence/intensité côté
+  mesure canonique — hors scope du diff, un script de contraste dédié existe en scratchpad). Suite complète 1780
+  passés, 13 désélectionnés, 0 échec.
+
+**Prochaines étapes.** Démo visuelle de la Phase 5 (styles de coach contrastés) envoyée au propriétaire pour
+validation, puis commit (isolé si possible, sinon redemander le découpage) — jamais de push sans demande
+explicite. Une fois Phase 5 close, le chantier "mouvement collectif" sera entièrement terminé (5/5 phases du
+PLAN).
 
 ### 3.3 A1 — mouvement individuel et équipe : À FAIRE (après le chantier 1)
 
@@ -219,7 +253,7 @@ coach) si le propriétaire la maintient au périmètre.
 
 **A1.3 — joueurs hors action.**
 - Objectif : appels, replacements, soutien, courses croisées des partenaires du porteur.
-- Périmètre : `templates.py`, `sequence_generator.py`. Dépendances : A1.1. Statut : **en cours, via le chantier "mouvement collectif" (16/10/2026, `docs/PRD.md`/`docs/PLAN.md`, 5 phases) — démarré indépendamment de A1.1 (déterminisme/réalisme des joueurs de décor, pas de refonte de `motion.py`).** Phases 1 (dispersion des lignes de départ), 2 (mouvement continu, `BackgroundTrack.points`) et 3 (initiatives de soutien par poste, LB/RB/BU/SA/ATT/MC/MDC) codées et testées, **pas commitées** (en attente de validation visuelle groupée) — voir §3.2bis ci-dessous. Phases 4 (modulation par attributs individuels) et 5 (style de coach) restantes, sauf pour MC/MDC où la modulation par attribut (Work Rate/Positioning) a été anticipée dès la Phase 3 (décision du propriétaire 16/10/2026, voir §3.2bis).
+- Périmètre : `templates.py`, `sequence_generator.py`. Dépendances : A1.1. Statut : **en cours, via le chantier "mouvement collectif" (16/10/2026, `docs/PRD.md`/`docs/PLAN.md`, 5 phases) — démarré indépendamment de A1.1 (déterminisme/réalisme des joueurs de décor, pas de refonte de `motion.py`).** Phases 1 à 3 commitées (`e16b2c8`) et Phase 4 commitée (`bb748dc`), toutes deux poussées sur `origin/main` — voir §3.2bis ci-dessous. Phase 5 (style de coach) codée, testée, mesurée, **pas encore commitée** (en attente de démo visuelle et de validation du propriétaire).
 
 **A1.4 — pressing, couverture, repli, marquage, bloc équipe.**
 - Reclassé en A2 : à rattacher à A2.1 (respect du dispositif) ou A2.3 (profil coach). Rattachement à trancher.
@@ -238,7 +272,7 @@ Toute constante comportementale est à re-mesurer sur des compos réelles avant 
 
 - A2.1 respect du dispositif (4-3-3, 4-2-3-1, 4-4-2 identifiables ; fluidité : latéral qui dédouble, ailier qui se replie). Dépendances : A1.1. **Partiellement couvert** par la Phase 3 du chantier "mouvement collectif" (latéral qui dédouble LB/RB, attaquant BU/SA/ATT qui replie, milieu MC/MDC selon profil — voir A1.3, §3.2bis) ; l'ailier (AG/AD) qui se replie reste hors périmètre de ce chantier, à faire ici si besoin.
 - A2.2 modulation par le score (mené et coach défensif : se découvre un peu ; mène et coach défensif : repli ; mène et coach offensif : continue ; mené et coach offensif : surenchère). Dépendances : A2.1.
-- A2.3 modulation par le profil du coach (pressing, offensif, défensif, contre, possession pilotent la hauteur du bloc). Dépendances : A2.1. **Inchangé, hors périmètre du chantier "mouvement collectif"** (décision du propriétaire 16/10/2026 : seul le profil INDIVIDUEL du joueur est anticipé en Phase 3, pour MC/MDC, pas le style du coach).
+- A2.3 modulation par le profil du coach (pressing, offensif, défensif, contre, possession pilotent la hauteur du bloc). Dépendances : A2.1. **Partiellement couvert** par la Phase 5 du chantier "mouvement collectif" (voir §3.2bis) — intensité/probabilité des initiatives de soutien ET hauteur du bloc des joueurs de décor modulées par le style de coach (Pressing/Offensif/Défensif, lecture de `coaches.coach_styles`). Note corrigée (cette entrée disait auparavant « hors périmètre » par décision du propriétaire du 16/10/2026 — cette décision-là portait seulement sur la Phase 3, c'est-à-dire ne pas anticiper le style de coach dans la formule MC/MDC, pas une fermeture de la Phase 5 ; A2.3 reste néanmoins **partiel** ici, la portée Phase 5 étant volontairement réduite au décor d'un clip isolé, jamais le dispositif/la formation (`pitch_layout.py` intact) ni les remplacements (A2.4, toujours à faire).
 - A2.4 remplacements contextuels (coach défensif qui mène : entre un défenseur ; coach offensif mené : entre un attaquant). Dépend du moteur Poisson : exception à valider avant toute modification. Rattachement possible du ticket 45 (gardien expulsé sans remplaçant).
 - A2.5 arrêts de jeu (gardien d'une équipe menée qui monte sur corner). Dépendances : A1.2.
 
