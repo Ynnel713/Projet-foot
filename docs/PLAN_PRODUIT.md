@@ -42,6 +42,8 @@ La barre de progression du lecteur (`canvas.html`) n'affiche plus tous les marqu
 
 **User stories** : US-13 (cas pilote)
 
+**Statut** : Implémentée, validée QC (`/valider-etape`, sous-étape `temps-forts-multiphases-02`, 22/10/2026) — en attente de la validation visuelle du propriétaire (dernier critère ci-dessous).
+
 **Gabarit pilote confirmé (22/10/2026)** : `contre_attaque`. Scénario donné par le propriétaire : possession adverse → perte de balle (tacle, passe interceptée, ou autre) → contre-attaque (conclusion existante, inchangée). Deux phases de construction enchaînées (possession adverse, puis perte de balle/turnover) avant la conclusion.
 
 ### Ce qu'on livre
@@ -50,11 +52,11 @@ Les phases de construction « possession adverse » et « perte de balle » pré
 
 ### Critères d'acceptation
 
-- [ ] Sur l'échantillon de référence, les clips du gabarit pilote durent au moins 20 secondes
-- [ ] Aucun saut de position mesurable à la jonction entre la phase de construction et la conclusion
-- [ ] Déterminisme bit-à-bit vérifié
-- [ ] Résultat sportif (score, buteurs, cartons, remplacements) strictement identique
-- [ ] Les 11 autres gabarits sont 100 % identiques clip à clip (aucun effet de bord)
+- [x] Sur l'échantillon de référence, les clips du gabarit pilote durent au moins 20 secondes
+- [x] Aucun saut de position mesurable à la jonction entre la phase de construction et la conclusion
+- [x] Déterminisme bit-à-bit vérifié
+- [x] Résultat sportif (score, buteurs, cartons, remplacements) strictement identique
+- [x] Les 11 autres gabarits sont 100 % identiques clip à clip (aucun effet de bord)
 - [ ] Propriétaire valide visuellement la continuité sur un échantillon de clips du gabarit pilote
 
 ## Bloquée par
