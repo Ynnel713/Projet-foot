@@ -93,6 +93,12 @@ def _goal_event(*, scorer: str = "bu", assist: str | None = "mc0", minute: int =
     )
 
 
+def _opponent_lineup() -> Lineup:
+    postes = ["DC", "DC", "LB", "RB", "MDC", "MC", "MC", "AG", "AD", "BU"]
+    players = [_player("GK", 65.0, "opp-gk", 101)] + [_player(poste, 65.0, f"opp-{i}", 102 + i) for i, poste in enumerate(postes)]
+    return Lineup(club_name="Opponent FC", formation="4-3-3", players=players, rating=65.0)
+
+
 class TestTemplateRichness:
     """Critère minimal de richesse (23/09/2026, suite à l'audit visuel de
     scripts/preview_templates.py) : chaque gabarit doit avoir au moins 3
@@ -1743,7 +1749,12 @@ class TestControlPressureModulation:
             explicit_none = BUILDERS[name](event, lineup, starts, "but", None)
             with_opponents = BUILDERS[name](event, lineup, starts, "but", opponents)
             assert default.to_json() == explicit_none.to_json(), name
-            assert with_opponents.duration == default.duration, name  # la pression ne change jamais la durée
+            # Exception déliberée (ticket 02, temps-forts-multiphases, 22/10/2026) : `contre_attaque` est le seul gabarit
+            # où `opponent_lineup` fait maintenant plus que moduler la pression -- il déclenche aussi la phase de
+            # construction "possession adverse -> perte de balle" (voir TestContreAttaqueConstructionPhase), qui
+            # allonge délibérément la durée. Les 11 autres gabarits gardent l'invariant inchangé.
+            if name != "contre_attaque":
+                assert with_opponents.duration == default.duration, name  # la pression ne change jamais la durée
             assert with_opponents.event_ref == default.event_ref, name
 
     def test_templates_without_ground_control_ignore_the_opponent_lineup(self):
@@ -1763,7 +1774,11 @@ class TestControlPressureModulation:
 
     def test_the_sporting_outcome_and_the_receivers_are_never_modified_by_the_pressure(self):
         lineup, opponents = _lineup(), self._opponents()
-        for name in self._CONTROLLED:
+        # Exception délibérée (ticket 02, temps-forts-multiphases, 22/10/2026) : `contre_attaque` est exclu de cette
+        # comparaison structurelle (ses premier/dernier keyframes changent désormais avec `opponent_lineup`, par
+        # construction -- voir `_prefix_adverse_possession`). L'invariant plus profond (même buteur/passeur, résultat
+        # sportif inchangé) est vérifié séparément dans `TestContreAttaqueConstructionPhase`.
+        for name in (n for n in self._CONTROLLED if n != "contre_attaque"):
             for minute in range(1, 11):
                 event = _goal_event(minute=minute)
                 starts = _start_positions(lineup)
@@ -2097,3 +2112,144 @@ class TestTacticalSupports:
         assert all(role.geometry is None for role in TEMPLATES["penalty"].roles if role.name not in ("scorer", "assist"))
         sequence = BUILDERS["penalty"](_goal_event(), lineup, _start_positions(lineup))
         assert sequence.meta["roles"]["support1"] == "ad"
+
+
+class TestContreAttaqueConstructionPhase:
+    """Ticket 02 (temps-forts-multiphases, POC gabarit pilote `contre_attaque`, 22/10/2026, `docs/PLAN_PRODUIT.md` Phase 2) :
+    phase de construction "possession adverse -> perte de balle" avant le geste decisif existant, inchange."""
+
+    def test_without_opponent_lineup_stays_exactly_as_before(self):
+        lineup = _lineup()
+        event, starts = _goal_event(), _start_positions(lineup)
+        with_none = BUILDERS["contre_attaque"](event, lineup, starts, "but", None)
+        without = BUILDERS["contre_attaque"](event, lineup, starts, "but")
+        assert with_none.to_json() == without.to_json()
+
+    def test_with_opponent_lineup_prefixes_two_opponents_and_extends_duration(self):
+        lineup, opponents = _lineup(), _opponent_lineup()
+        event, starts = _goal_event(), _start_positions(lineup)
+        plain = BUILDERS["contre_attaque"](event, lineup, starts, "but")
+        extended = BUILDERS["contre_attaque"](event, lineup, starts, "but", opponents)
+
+        assert extended.duration > plain.duration
+        assert extended.duration >= 20.0  # plancher produit NFR-P02, garanti par construction
+
+        opponent_ids = {pid for pid, entry in extended.roster.items() if entry.team_side == "opponent"}
+        assert len(opponent_ids) == 2
+        assert all(entry.role is not None for pid, entry in extended.roster.items() if pid in opponent_ids)
+
+        # Les deux adversaires sont presents, a position fixe, dans CHAQUE keyframe (invariant 2 de Sequence).
+        for kf in extended.keyframes:
+            assert opponent_ids <= set(kf.players)
+        for opp_id in opponent_ids:
+            positions = {kf.players[opp_id] for kf in extended.keyframes}
+            assert len(positions) == 1  # immobile du debut a la fin (choix du proprietaire, 22/10/2026)
+
+        # Le keyframe d'origine (recuperation, support1) est repris tel quel, juste decale dans le temps -- mais ca ne
+        # prouve PAS l'absence de saut (voir test dedie ci-dessous, qui compare le VRAI point de jonction visuelle :
+        # dernier keyframe du prefixe -> premier keyframe d'origine, pas `extended` compare a lui-meme).
+        junction = next(kf for kf in extended.keyframes if kf.tag == "recuperation")
+        assert junction.ball.x == plain.keyframes[0].ball.x
+        assert junction.ball.y == plain.keyframes[0].ball.y
+        assert junction.ball.owner_id == plain.keyframes[0].ball.owner_id
+        for pid, pos in plain.keyframes[0].players.items():
+            assert junction.players[pid] == pos
+
+        # Resultat sportif inchange : meme buteur, meme passeur, meme score -- ce POC n'habille que le rendu.
+        assert extended.meta["roles"] == plain.meta["roles"]
+
+    def test_no_position_jump_at_the_real_junction_between_prefix_and_original_sequence(self):
+        # BLOQUANT trouve en revue (simulafoot-reviewer, 22/10/2026) : la jonction a verifier est entre le DERNIER
+        # keyframe du prefixe ("perte_balle", le ballon chez l'adversaire) et le PREMIER keyframe d'origine
+        # ("recuperation", le ballon chez support1) -- pas `extended` compare a lui-meme (voir test ci-dessus, qui ne
+        # couvrait pas ce point et laissait passer un saut de ~11 m mesure en revue).
+        lineup, opponents = _lineup(), _opponent_lineup()
+        for minute in range(1, 21):
+            event = _goal_event(minute=minute)
+            starts = _start_positions(lineup)
+            extended = BUILDERS["contre_attaque"](event, lineup, starts, "but", opponents)
+            perte_balle = next(kf for kf in extended.keyframes if kf.tag == "perte_balle")
+            recuperation = next(kf for kf in extended.keyframes if kf.tag == "recuperation")
+            assert perte_balle.t == recuperation.t  # meme instant : transfert de possession, pas un trajet
+            assert perte_balle.ball.x == recuperation.ball.x, minute
+            assert perte_balle.ball.y == recuperation.ball.y, minute
+            for pid in set(perte_balle.players) & set(recuperation.players):
+                assert perte_balle.players[pid] == recuperation.players[pid], (minute, pid)
+
+    def test_duration_floor_is_guaranteed_by_construction_not_just_observed(self):
+        # Trouvé en vérification sur le vrai pipeline (22/10/2026) : une marge de construction FIXE (8-12 s) repassait
+        # sous le plancher de 20 s quand la durée de base du gabarit était à son minimum (86/213 clips réels). Le
+        # plancher doit tenir pour CHAQUE event_ref, pas seulement en moyenne sur un échantillon.
+        lineup, opponents = _lineup(), _opponent_lineup()
+        starts = _start_positions(lineup)
+        for minute in range(1, 101):
+            event = _goal_event(minute=minute)
+            sequence = BUILDERS["contre_attaque"](event, lineup, starts, "but", opponents)
+            assert 20.0 <= sequence.duration < 40.0, minute  # plage produit [20, 40[ s, validee 22/10/2026
+
+    def test_duration_spans_the_full_product_range_not_a_narrow_band(self):
+        # Le proprietaire a explicitement demande que la duree couvre toute la plage [20, 40[ s, pas seulement
+        # [20, 24[ (marge initiale trop etroite, corrigee le 22/10/2026).
+        lineup, opponents = _lineup(), _opponent_lineup()
+        starts = _start_positions(lineup)
+        durations = [
+            BUILDERS["contre_attaque"](_goal_event(minute=minute), lineup, starts, "but", opponents).duration
+            for minute in range(1, 201)
+        ]
+        assert max(durations) - min(durations) > 10.0  # vraie variete, pas une bande etroite
+        assert max(durations) >= 30.0  # couvre la moitie haute de la plage sur cet echantillon
+
+    def test_is_deterministic(self):
+        lineup, opponents = _lineup(), _opponent_lineup()
+        event, starts = _goal_event(), _start_positions(lineup)
+        first = BUILDERS["contre_attaque"](event, lineup, starts, "but", opponents)
+        second = BUILDERS["contre_attaque"](event, lineup, starts, "but", opponents)
+        assert first.to_json() == second.to_json()
+
+    def test_duration_does_not_depend_on_the_outcome(self):
+        # US-14/NFR-P01 : la duree TOTALE ne doit jamais permettre de deviner l'issue. Le point de jonction (t du
+        # keyframe "perte_balle") PEUT varier avec l'issue (floor_gap comble l'ecart a la duree de base, elle-meme
+        # variable selon le vol apres frappe) -- mais ce terme s'annule exactement dans la duree TOTALE tant que la
+        # duree de base reste sous le plancher de 20 s (toujours vrai ici : 9.0 a ~17.3 s max pour contre_attaque),
+        # ce qui est la seule garantie qui compte cote produit. Verifie sur plusieurs issues et plusieurs minutes.
+        lineup, opponents = _lineup(), _opponent_lineup()
+        starts = _start_positions(lineup)
+        for minute in range(1, 21):
+            event = _goal_event(minute=minute)
+            durations = {
+                outcome: BUILDERS["contre_attaque"](event, lineup, starts, outcome, opponents).duration
+                for outcome in ("but", "hors_cadre", "arret", "poteau")
+            }
+            assert len(set(durations.values())) == 1, (minute, durations)
+
+    def test_eleven_other_gabarits_are_untouched(self):
+        lineup, opponents = _lineup(), _opponent_lineup()
+        event, starts = _goal_event(), _start_positions(lineup)
+        for name in BUILDERS:
+            if name == "contre_attaque":
+                continue
+            plain = BUILDERS[name](event, lineup, starts, "but")
+            with_opponents = BUILDERS[name](event, lineup, starts, "but", opponents)
+            assert with_opponents.duration == plain.duration, name
+
+    def test_degenerate_construction_phase_when_the_conclusion_already_exceeds_the_ceiling(self):
+        # MINEUR releve en revue (simulafoot-reviewer, 22/10/2026) : mesure reelle sur 100 matchs -> ~14/213 clips
+        # contre_attaque ont une conclusion ("arret"/"poteau") qui depasse DEJA 40 s a elle seule. `headroom` tombe
+        # alors a 0 et la phase de construction dure 0 s : elle ne s'affiche jamais (ballon d'emblee au point de
+        # recuperation), mais SANS saut de position -- comportement accepte par le proprietaire (22/10/2026), le
+        # plafond ne borne que la duree AJOUTEE par la construction, pas la conclusion existante (inchangeable).
+        import dataclasses
+
+        lineup, opponents = _lineup(), _opponent_lineup()
+        event, starts = _goal_event(), _start_positions(lineup)
+        plain = BUILDERS["contre_attaque"](event, lineup, starts, "but")
+        forced = dataclasses.replace(plain, duration=45.0)  # simule une conclusion deja au-dela du plafond de 40 s
+
+        extended = tpl._prefix_adverse_possession(forced, opponents)
+
+        assert extended.duration == 45.0  # headroom=0 -> aucune seconde ajoutee par le prefixe
+        perte_balle = next(kf for kf in extended.keyframes if kf.tag == "perte_balle")
+        recuperation = next(kf for kf in extended.keyframes if kf.tag == "recuperation")
+        assert perte_balle.t == recuperation.t == 0.0  # prefixe de duree nulle : les deux tombent au meme instant
+        assert perte_balle.ball.x == recuperation.ball.x
+        assert perte_balle.ball.y == recuperation.ball.y

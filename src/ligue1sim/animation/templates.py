@@ -1713,7 +1713,133 @@ def build_contre_attaque(
     event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None,
     opponent_lineup: Lineup | None = None,
 ) -> Sequence:
-    return build_from_template(TEMPLATES["contre_attaque"], event, lineup, start_positions, outcome, opponent_lineup)
+    sequence = build_from_template(TEMPLATES["contre_attaque"], event, lineup, start_positions, outcome, opponent_lineup)
+    if opponent_lineup is None:
+        return sequence
+    return _prefix_adverse_possession(sequence, opponent_lineup)
+
+
+# Ticket 02 (temps-forts-multiphases, POC gabarit pilote contre_attaque, 22/10/2026) : phase de construction "possession
+# adverse -> perte de balle" avant le geste decisif existant (inchange). Plancher ET plafond PRODUIT (docs/PRD_PRODUIT.md,
+# TRD_PRODUIT.md NFR-P02, 22/10/2026) : [20, 40[ secondes, le plancher GARANTI PAR CONSTRUCTION (jamais statistique) --
+# voir `_prefix_adverse_possession`. Variete deterministe sur toute cette plage, validee par le proprietaire
+# (22/10/2026) pour qu'elle reste aleatoire (jamais correlee a l'issue ni a la nature de l'action). Le tirage DEFINITIF
+# complet (nombre de phases, decorrele de l'issue pour TOUS les gabarits) reste le ticket 06 -- ce POC ne couvre que
+# contre_attaque.
+_DURATION_FLOOR_S = 20.0
+_DURATION_CEILING_S = 40.0
+
+
+def _prefix_adverse_possession(sequence: Sequence, opponent_lineup: Lineup) -> Sequence:
+    """Prefixe une Sequence deja construite avec une phase "possession adverse" (passe entre les deux adversaires de
+    champ les plus proches du point de recuperation) suivie de la "perte de balle" -- opp_b (le 2e adversaire) perd le
+    ballon EXACTEMENT au point de recuperation de `support1` (pas a sa propre position de formation, voir BLOQUANT
+    corrige en revue le 22/10/2026), pour une jonction a distance ZERO avec `sequence.keyframes[0]` (reutilise tel
+    quel). Scenario confirme par le proprietaire (22/10/2026). Les deux adversaires scriptes restent visibles et
+    IMMOBILES jusqu'a la fin du clip (choix du proprietaire) -- un seul point fixe chacun (opp_a : sa position de
+    formation ; opp_b : le point de recuperation), reinjecte dans tous les keyframes (prefixe ET sequence d'origine
+    decalee) pour respecter l'invariant 2 de `Sequence` (meme ensemble de joueurs partout). Repli neutre (sequence
+    inchangee) si l'adversaire a moins de 2 joueurs de champ, ou si `support1` n'est pas resolu -- compo degeneree,
+    pas un cas a cacher derriere une erreur.
+
+    `sequence_generator.enrich_with_background` exclut deja tout joueur "actif" (role non None dans `sequence.roster`,
+    voir la garde ajoutee la-bas) -- les deux adversaires scriptes ici ne sont donc jamais aussi places en decor."""
+    from ligue1sim.animation.sequence_generator import opponent_field_tracks  # import tardif, meme convention que _PressureContext plus haut
+
+    recovery_players = sequence.keyframes[0].players  # compo complete de l'equipe qui marque, deja a sa position de depart
+    support1_id = next((pid for pid, entry in sequence.roster.items() if entry.role == "support1"), None)
+    if support1_id is None:
+        return sequence  # compo degeneree (support1 non resolu) -- meme repli neutre que "moins de 2 adversaires" plus bas
+    recovery_point = PitchPoint(*recovery_players[support1_id])
+    ball_target = (sequence.keyframes[-1].ball.x, sequence.keyframes[-1].ball.y)
+
+    tracks = opponent_field_tracks(opponent_lineup, sequence.event_ref, ball_target)
+    if len(tracks) < 2:
+        return sequence
+
+    # Titulaires ET remplaçants (même principe que enrich_with_background/opponent_field_tracks) : `tracks` peut
+    # porter un remplaçant entré en jeu (en_jeu), pas seulement les 11 titulaires.
+    opponent_by_id = {player_id_of(p): p for p in list(opponent_lineup.players) + list(opponent_lineup.substitutes)}
+    numeros = numeros_by_player_id(opponent_lineup)
+
+    def _distance_m(start: tuple[float, float]) -> float:
+        return math.hypot((start[0] - recovery_point.x) * PITCH_LENGTH_M, (start[1] - recovery_point.y) * PITCH_WIDTH_M)
+
+    ordered = sorted(tracks.items(), key=lambda item: (round(_distance_m(item[1].start), 6), opponent_by_id[item[0]].name))
+    (opp_a_id, track_a), (opp_b_id, _track_b) = ordered[0], ordered[1]
+    # BLOQUANT corrigé (revue simulafoot-reviewer, 22/10/2026) : opp_b doit perdre le ballon EXACTEMENT là où `support1`
+    # le récupère (`recovery_point`), jamais à sa propre position de formation -- sinon le ballon "téléporte" de ~11 m
+    # entre le dernier keyframe du préfixe et le premier keyframe d'origine (mesuré en revue). opp_b reste donc figé à
+    # `recovery_point`, pas à `track_b.start`, pour TOUTE la durée du clip (même choix "immobile" du propriétaire) --
+    # narrativement cohérent : le défenseur battu reste là où le tacle/l'interception a eu lieu.
+    opponent_recovery_point = (recovery_point.x, recovery_point.y)
+    frozen_opponents = {opp_a_id: track_a.start, opp_b_id: opponent_recovery_point}
+
+    # Plancher ET plafond garantis PAR CONSTRUCTION (NFR-P02) : `floor_base` comble l'écart entre la durée déjà
+    # produite par le gabarit (variable selon vol/contrôles) et le plancher de 20 s, sans jamais le dépasser inutilement
+    # (jamais une marge fixe ignorant la durée de base -- voir mesure du 22/10/2026 : 86/213 clips réels sous 20 s avec
+    # une marge fixe de 8-12 s). `variety` est ensuite tirée dans TOUT le `headroom` restant jusqu'au plafond de 40 s --
+    # jamais une plage fixe qui pourrait le dépasser (2e mesure du 22/10/2026 : une plage de variété fixe [0,20[ s
+    # ajoutée après coup a produit un clip à 44,1 s quand la durée de base dépassait déjà le plancher).
+    #
+    # `floor_base` est calculé INDÉPENDAMMENT de `sequence.duration` via `max()` (jamais `sequence.duration +
+    # (plancher - sequence.duration)`) : la durée de base varie avec l'ISSUE (longueur du vol après frappe), donc un
+    # calcul qui la réintroduit par soustraction-puis-réaddition peut différer de quelques ulps flottants entre deux
+    # issues du même `event_ref` -- NFR-P01/US-14 exige une durée totale IDENTIQUE, pas seulement proche (trouvé par
+    # test_duration_does_not_depend_on_the_outcome, 22/10/2026). `max()` ignore `sequence.duration` dès qu'elle est
+    # sous le plancher (le cas normal pour `contre_attaque`, base observée 9 à ~17 s), donc `floor_base` -- et donc
+    # `headroom` -- ne dépend alors plus que de `event_ref`, jamais de l'issue. Seul le cas rare où la durée de base
+    # dépasse déjà 20 s réintroduit une dépendance (inévitable : il faut alors respecter le plafond de 40 s en priorité).
+    floor_base = max(_DURATION_FLOOR_S, sequence.duration)
+    headroom = max(0.0, _DURATION_CEILING_S - floor_base)
+    variety = headroom * _flight_unit(sequence.event_ref, "contre_attaque_construction_duration")
+    total_duration = floor_base + variety
+    construction_duration = total_duration - sequence.duration
+
+    # MINEUR releve en revue (simulafoot-reviewer, 22/10/2026) : si `sequence.duration` depasse DEJA 40 s a elle
+    # seule (headroom=0, cas mesure ~14/213 clips reels, issues "arret"/"poteau"), `construction_duration` vaut
+    # exactement 0 -- la phase de construction ne s'affiche donc jamais a l'ecran (le ballon apparait d'emblee au
+    # point de recuperation). Aucun saut de position pour autant (ball.py/motion.py renvoient la position de FIN
+    # d'un segment de duree nulle, jamais celle de depart) -- comportement accepte explicitement par le
+    # proprietaire (22/10/2026) : seule la duree AJOUTEE par la construction est plafonnee a 40 s, pas la
+    # conclusion existante qu'on n'a pas le droit de raccourcir. Verrouille par
+    # test_degenerate_construction_phase_when_the_conclusion_already_exceeds_the_ceiling.
+    prefix = [
+        Keyframe(
+            t=0.0,
+            ball=BallState(x=track_a.start[0], y=track_a.start[1], z=0.0, spin=0.0, owner_id=opp_a_id),
+            players={**recovery_players, **frozen_opponents},
+            tag="possession_adverse",
+        ),
+        Keyframe(
+            # Meme point que recovery_point (x,y identiques, pas juste proches) : shifted[0] (ci-dessous) porte le
+            # meme ballon a la meme position -- jonction a distance ZERO, pas seulement sous tolerance.
+            t=construction_duration,
+            ball=BallState(x=opponent_recovery_point[0], y=opponent_recovery_point[1], z=0.0, spin=0.0, owner_id=opp_b_id),
+            players={**recovery_players, **frozen_opponents},
+            tag="perte_balle",
+        ),
+    ]
+    shifted = [
+        replace(kf, t=kf.t + construction_duration, players={**kf.players, **frozen_opponents})
+        for kf in sequence.keyframes
+    ]
+    opponent_roster = {
+        opp_a_id: RosterEntry(
+            nom=opponent_by_id[opp_a_id].name, poste=opponent_by_id[opp_a_id].poste,
+            role="construction_possession_adverse", numero=numeros[opp_a_id], team_side="opponent",
+        ),
+        opp_b_id: RosterEntry(
+            nom=opponent_by_id[opp_b_id].name, poste=opponent_by_id[opp_b_id].poste,
+            role="construction_perte_balle", numero=numeros[opp_b_id], team_side="opponent",
+        ),
+    }
+    return replace(
+        sequence,
+        keyframes=prefix + shifted,
+        duration=total_duration,  # pas sequence.duration + construction_duration, voir commentaire ci-dessus
+        roster={**sequence.roster, **opponent_roster},
+    )
 
 
 def build_construction_placee(

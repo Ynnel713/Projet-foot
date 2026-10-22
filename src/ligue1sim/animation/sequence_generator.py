@@ -1033,6 +1033,12 @@ def enrich_with_background(
 
     opponent_roster: dict[PlayerId, RosterEntry] = {}
     for player_id, point in opponent_positions.items():
+        if player_id in active_ids:
+            # Ticket 02 (temps-forts-multiphases, 22/10/2026) : un adversaire deja scripte ACTIVEMENT par le gabarit lui-meme
+            # (role non None dans sequence.roster -- ex. contre_attaque, phase "possession adverse") reste suivi par ses
+            # propres keyframes jusqu'au bout ; ne jamais aussi le placer en decor (invariant 3 de Sequence). Aucun des 12
+            # gabarits actuels ne scripte d'adversaire actif hors ce cas : no-op pour tous les autres.
+            continue
         player = opponent_by_id[player_id]
         start = _gk_base_position("opponent") if player.poste == GOALKEEPER else (point.x, point.y)
         if player.poste == GOALKEEPER and sequence.meta.get("template") == "coup_franc":
