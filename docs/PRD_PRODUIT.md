@@ -34,9 +34,9 @@ Le porteur du projet (Olivier), développeur et utilisateur principal, usage quo
 ## Critères de succès
 
 - Le calcul du résultat d'un match (score, buteurs, événements) reste quasi instantané, quelle que soit la richesse des temps forts affichés ensuite.
-- Chaque temps fort animé dure entre 10 et 40 secondes, jamais moins de 10 secondes.
+- Chaque temps fort animé dure entre 20 et 40 secondes, jamais moins de 20 secondes.
 - Sur un échantillon de temps forts, la durée ne permet pas de deviner l'issue : pas de corrélation mesurable entre durée et but marqué.
-- Un match produit entre 10 et 20 temps forts, chacun pouvant enchaîner plusieurs phases de jeu avant sa conclusion.
+- Un match produit entre 10 et 15 temps forts, chacun pouvant enchaîner plusieurs phases de jeu (construction, récupération, etc.) avant sa conclusion, avec une grande variété d'enchaînements d'un temps fort à l'autre.
 - Rien dans l'interface ne permet de déduire, avant qu'il ne se termine, le nombre de temps forts restants ou si le temps fort en cours est le dernier du match.
 - L'animation d'un match s'ouvre en moins de 10 secondes au premier chargement (sans cache).
 - Les 9 championnats, la Coupe du Monde, la Ligue des Champions et une Compétition Perso sont simulables de bout en bout, résultats et classements inclus.
@@ -65,7 +65,7 @@ Le porteur du projet (Olivier), développeur et utilisateur principal, usage quo
 - Le commentaire live est toujours produit, quel que soit le mécanisme utilisé en coulisses ; un repli automatique garantit qu'il n'y a jamais d'écran vide faute de génération de texte.
 - Un joueur ou un club pour lequel une donnée détaillée manque (attributs, style d'entraîneur) se comporte de façon neutre par défaut, jamais en erreur ni en blocage visible.
 - Le résultat affiché (score, buteurs, cartons, remplacements) est strictement identique entre le classement/les statistiques et l'animation rejouée du même match : jamais de divergence visible entre les deux.
-- La durée de chaque temps fort est tirée aléatoirement entre 10 et 40 secondes, indépendamment de son issue (but ou non), pour qu'aucun signal de durée ne permette de deviner le résultat à l'avance.
+- La durée de chaque temps fort est tirée aléatoirement entre 20 et 40 secondes, indépendamment de son issue (but ou non), pour qu'aucun signal de durée ne permette de deviner le résultat à l'avance.
 - Un temps fort peut enchaîner plusieurs phases de jeu distinctes (perte de balle, transition, faute, coup de pied arrêté…) avant sa conclusion, plutôt que de démarrer directement sur le geste décisif.
 - Le nombre total de temps forts d'un match et leur répartition dans le temps ne sont jamais révélés à l'avance ; rien dans l'interface n'indique, pendant le visionnage d'un temps fort, qu'il s'agit du dernier.
 

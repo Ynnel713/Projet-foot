@@ -1,12 +1,12 @@
 # 02: POC — phase de construction chaînée au gabarit pilote `contre_attaque`
 
-**What to build:** pour les temps forts qui utilisent le gabarit `contre_attaque`, l'utilisateur voit désormais une phase de construction (perte de balle / transition) avant le geste décisif, au lieu de démarrer directement sur l'action finale. Le ballon et les joueurs repartent exactement de la position où la phase de construction s'est arrêtée, sans saut visible à la jonction. Les 11 autres gabarits restent inchangés (un seul geste décisif, comme aujourd'hui).
+**What to build:** pour les temps forts qui utilisent le gabarit `contre_attaque`, l'utilisateur voit désormais deux phases de construction enchaînées avant le geste décisif — possession adverse, puis perte de balle (tacle, passe interceptée, ou autre) — au lieu de démarrer directement sur l'action finale. Scénario confirmé par le propriétaire (22/10/2026). Le ballon et les joueurs repartent exactement de la position où chaque phase s'est arrêtée, sans saut visible aux jonctions. Les 11 autres gabarits restent inchangés (un seul geste décisif, comme aujourd'hui).
 
-**Blocked by:** None dans ce lot de tickets. Préalable externe, piloté ailleurs : clôture du chantier « mouvement collectif » (Phase 5) et d'A1.1 (inertie) sur `motion.py`/`templates.py`, pour ne pas cumuler deux refontes en parallèle.
+**Blocked by:** None dans ce lot de tickets. Préalable externe déjà vérifié satisfait (22/10/2026) : clôture du chantier « mouvement collectif » Phase 5 (`a5e7d3d`) et d'A1.1 (`cf63f0f`), tous deux commités.
 
 **Status:** ready-for-agent
 
-- [ ] Sur l'échantillon de référence, les clips du gabarit `contre_attaque` durent au moins 10 secondes
+- [ ] Sur l'échantillon de référence, les clips du gabarit pilote durent au moins 20 secondes
 - [ ] Aucun saut de position mesurable à la jonction entre la phase de construction et la conclusion
 - [ ] Déterminisme bit-à-bit vérifié (sha256 de `event_ref`, jamais `random`/`hash()`/horloge)
 - [ ] Résultat sportif (score, buteurs, cartons, remplacements) strictement identique

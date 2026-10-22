@@ -14,7 +14,7 @@ Simulafoot est un projet personnel en production active, avec un TRD existant vo
 - Un temps fort n'est plus un gabarit unique mais l'enchaînement déterministe de 1 à 3 « phases de construction » (nouveaux gabarits courts, sans geste décisif : perte de balle, transition, pressing, faute...) suivies d'une « phase de conclusion » correspondant à l'un des 12 gabarits existants, inchangés en tant que tels. (US-13)
 - Chaque phase démarre exactement là où la précédente s'est arrêtée (continuité des positions des joueurs scriptés, des joueurs de décor, et du ballon) — aucun saut visible à la jonction entre deux phases.
 - Le nombre de phases et leur durée sont tirés déterministiquement (sha256 de `event_ref`, même mécanisme que le reste du rendu) en ignorant strictement si l'événement se conclut par un but — garantit l'absence de corrélation durée/issue. (US-14)
-- La durée totale d'un temps fort tombe dans [10, 40] secondes, jamais sous 10 secondes.
+- La durée totale d'un temps fort tombe dans [20, 40] secondes, jamais sous 20 secondes. **Exception validée par le propriétaire (22/10/2026)** : si la phase de conclusion existante (inchangée par ce chantier) dépasse déjà 40 secondes à elle seule — mesuré sur ~6,6 % des clips `contre_attaque` réels, issues « arrêt »/« poteau » —, la phase de construction n'ajoute alors aucune seconde supplémentaire (durée ajoutée = 0) et la durée totale dépasse 40 secondes en conséquence. Seule la durée AJOUTÉE par la construction est plafonnée à 40 secondes moins la durée de la conclusion ; la conclusion existante n'est jamais raccourcie pour tenir ce plafond.
 - Aucune phase de construction n'introduit de nouvel aléa sportif : le moteur Poisson et `events.py` restent inchangés (décision D-001 ci-dessous).
 
 **Contrat API `/animation` et barre de progression.**
@@ -32,14 +32,14 @@ Inchangé (voir TRD existant, ENF-FIA/ENF-SEC). Rien dans ce chantier n'ajoute d
 ## Performance & fiabilité
 
 - **NFR-P01** — Sur un échantillon de temps forts, la durée n'est pas statistiquement corrélée à l'issue (but ou non).
-- **NFR-P02** — Chaque temps fort dure entre 10 et 40 secondes ; 0 clip hors bornes sur l'échantillon de référence.
+- **NFR-P02** — Chaque temps fort dure entre 20 et 40 secondes ; 0 clip hors bornes sur l'échantillon de référence, sauf si la conclusion existante (inchangée) dépasse déjà 40 s à elle seule, auquel cas la durée ajoutée par la construction est 0 et la durée totale égale celle de la conclusion seule (voir exception validée ci-dessus).
 - **NFR-P03** — À la jonction entre deux phases, aucun joueur (scripté ou décor) ne présente un saut de position supérieur à la tolérance déjà en vigueur ailleurs dans le rendu.
 - **NFR-P04** — L'animation d'un match s'ouvre en moins de 10 secondes au premier chargement, y compris avec des temps forts multi-phases plus longs à construire (repris du PRD).
 - **NFR-P05** — Déterminisme bit-à-bit conservé (même graine = mêmes positions, mêmes durées, mêmes choix de phases).
 
 ## Stratégie de tests
 
-- **TEST-01** — Plancher de durée (10 s) respecté par construction, quel que soit le nombre de phases tirées.
+- **TEST-01** — Plancher de durée (20 s) respecté par construction, quel que soit le nombre de phases tirées.
 - **TEST-02** — Absence de corrélation mesurée entre durée totale d'un temps fort et son issue, sur pipeline réel.
 - **TEST-03** — Continuité aux jonctions de phases (ballon + joueurs), sur un échantillon de temps forts multi-phases.
 - **TEST-04** — Déterminisme bit-à-bit sur des temps forts multi-phases.
@@ -51,7 +51,7 @@ Inchangé (voir TRD existant, ENF-FIA/ENF-SEC). Rien dans ce chantier n'ajoute d
 - **D-001** — Construction multi-phases : habillage narratif pur, aucun nouvel événement réel dans le moteur. **Validé.**
 - **D-002** — Barre de progression : marqueurs masqués jusqu'à visionnage. **Validé.**
 - **D-003** — Contrat API `/animation` inchangé ; dissimulation traitée côté front uniquement. **Recommandé, à valider.**
-- **D-004** — Bibliothèque de phases de construction : un petit catalogue fixe (de l'ordre de 4 à 6 types réutilisables), combiné déterministiquement avec les 12 gabarits de conclusion existants, plutôt qu'une génération libre illimitée. **Recommandé, à valider.**
+- **D-004** — Bibliothèque de phases de construction : un catalogue fixe de l'ordre de 8 à 12 types réutilisables (par exemple : possession adverse, perte de balle/tacle, interception, pressing, faute, transition, récupération haute...), combiné déterministiquement avec les 12 gabarits de conclusion existants, plutôt qu'une génération libre illimitée. **Validé (22/10/2026)** — taille augmentée de 4-6 à 8-12 types pour la variété demandée par le propriétaire.
 
 ## Hors périmètre technique
 
@@ -64,4 +64,4 @@ Inchangé (voir TRD existant, ENF-FIA/ENF-SEC). Rien dans ce chantier n'ajoute d
 
 - Risque technique majeur : `templates.py`, `narrative.py`, `sequence_generator.py`, `ball.py`/`motion.py` sont tous sous exception explicite requise par `CLAUDE.md` — toute implémentation nécessitera de demander ces exceptions avant de coder.
 - Dépendance d'ordre : ce chantier suppose probablement la clôture du chantier « mouvement collectif » (Phase 5 en attente) et d'A1.1 (inertie), pour ne pas cumuler deux refontes de `motion.py`/`templates.py` en parallèle — à confirmer avec `simulafoot-architect` au moment de planifier.
-- D-003 et D-004 sont des recommandations de cadrage, pas des constantes déjà validées — à reproposer individuellement avant implémentation, comme toute constante produit.
+- D-003 est une recommandation de cadrage, pas une constante déjà validée — à reproposer avant implémentation, comme toute constante produit. D-004 est validé (22/10/2026).

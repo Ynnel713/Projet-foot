@@ -1,12 +1,12 @@
-# 06: Tirage déterministe de la durée (10-40s), décorrélé de l'issue
+# 06: Tirage déterministe de la durée (20-40s), décorrélé de l'issue
 
-**What to build:** le nombre de phases de construction (1 à 3) et la durée totale d'un temps fort sont tirés déterministiquement (sha256 de `event_ref`), avec un plancher strict de 10 secondes et un plafond de 40 secondes, sans aucune dépendance au fait que l'événement se conclue par un but ou non. L'utilisateur ne peut plus deviner l'issue à partir de la durée du clip.
+**What to build:** le nombre de phases de construction (1 à 3) et la durée totale d'un temps fort sont tirés déterministiquement (sha256 de `event_ref`), avec un plancher strict de 20 secondes et un plafond de 40 secondes sur la durée AJOUTÉE par la construction, sans aucune dépendance au fait que l'événement se conclue par un but ou non. L'utilisateur ne peut plus deviner l'issue à partir de la durée du clip. **Exception validée par le propriétaire (22/10/2026)** : si la conclusion existante (inchangée) dépasse déjà 40 secondes à elle seule, la construction n'ajoute aucune seconde et la durée totale dépasse 40 secondes en conséquence — la conclusion n'est jamais raccourcie pour tenir ce plafond.
 
 **Blocked by:** 05 (généralisation complète aux 12 gabarits).
 
 **Status:** ready-for-agent
 
-- [ ] 0 clip sous 10 secondes et 0 clip au-dessus de 40 secondes sur l'échantillon de référence
+- [ ] 0 clip sous 20 secondes ; 0 clip au-dessus de 40 secondes sur l'échantillon de référence, sauf les clips dont la conclusion seule dépasse déjà 40 secondes (exception validée ci-dessus)
 - [ ] Sur l'échantillon, aucune corrélation statistique mesurable entre durée et issue (but / non-but)
 - [ ] Déterminisme bit-à-bit vérifié
 - [ ] Résultat sportif strictement identique

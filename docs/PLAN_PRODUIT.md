@@ -4,8 +4,8 @@
 
 ## Décisions architecturales
 
-- **Mécanisme** : chaque temps fort devient une séquence de 1 à 3 « phases de construction » (nouveaux gabarits courts, sans geste décisif : perte de balle, transition, pressing, faute...) suivies d'une « phase de conclusion » correspondant à l'un des 12 gabarits existants, inchangés en tant que tels. Jamais 0 phase de construction — garantit le plancher de 10 secondes sur tous les temps forts, pas seulement les buts.
-- **Catalogue de phases** : ensemble fixe (de l'ordre de 4 à 6 types réutilisables), pas de génération libre/combinatoire illimitée (D-004).
+- **Mécanisme** : chaque temps fort devient une séquence de 1 à 3 « phases de construction » (nouveaux gabarits courts, sans geste décisif : perte de balle, transition, pressing, faute...) suivies d'une « phase de conclusion » correspondant à l'un des 12 gabarits existants, inchangés en tant que tels. Jamais 0 phase de construction — garantit le plancher de 20 secondes sur tous les temps forts, pas seulement les buts.
+- **Catalogue de phases** : ensemble fixe de l'ordre de 8 à 12 types réutilisables (validé 22/10/2026, D-004) — par exemple possession adverse, perte de balle/tacle, interception, pressing, faute, transition, récupération haute... — pas de génération libre/combinatoire illimitée.
 - **Tirage déterministe** : sha256 de `event_ref` pour le nombre de phases et leur durée, même mécanisme que le reste du rendu ; ignore strictement si l'événement se conclut par un but ou non (D-001).
 - **Moteur sportif** : le moteur Poisson et `events.py` ne sont jamais modifiés ; aucune phase de construction n'introduit de nouvel aléa sportif (D-001).
 - **Front / API** : la barre de progression (`canvas.html`) ne révèle un marqueur de temps fort qu'une fois ce temps fort atteint pendant la lecture (D-002) ; le contrat API `/animation` reste inchangé, le payload continue d'être transmis en une fois (D-003).
@@ -42,13 +42,15 @@ La barre de progression du lecteur (`canvas.html`) n'affiche plus tous les marqu
 
 **User stories** : US-13 (cas pilote)
 
+**Gabarit pilote confirmé (22/10/2026)** : `contre_attaque`. Scénario donné par le propriétaire : possession adverse → perte de balle (tacle, passe interceptée, ou autre) → contre-attaque (conclusion existante, inchangée). Deux phases de construction enchaînées (possession adverse, puis perte de balle/turnover) avant la conclusion.
+
 ### Ce qu'on livre
 
-Un unique type de phase de construction (par exemple « perte de balle / transition ») précède un seul gabarit de conclusion existant choisi comme pilote, pour les temps forts qui l'utilisent. Le ballon et les joueurs (scriptés et décor) repartent exactement de la position où la phase de construction s'est arrêtée, sans saut visible à la jonction. Visible dans la vraie PWA pour ce gabarit uniquement ; les 11 autres gabarits restent inchangés (un seul geste décisif, comme aujourd'hui).
+Les phases de construction « possession adverse » et « perte de balle » précèdent le gabarit de conclusion `contre_attaque`, pour les temps forts qui l'utilisent. Le ballon et les joueurs (scriptés et décor) repartent exactement de la position où chaque phase s'est arrêtée, sans saut visible aux jonctions. Visible dans la vraie PWA pour ce gabarit uniquement ; les 11 autres gabarits restent inchangés (un seul geste décisif, comme aujourd'hui).
 
 ### Critères d'acceptation
 
-- [ ] Sur l'échantillon de référence, les clips du gabarit pilote durent au moins 10 secondes
+- [ ] Sur l'échantillon de référence, les clips du gabarit pilote durent au moins 20 secondes
 - [ ] Aucun saut de position mesurable à la jonction entre la phase de construction et la conclusion
 - [ ] Déterminisme bit-à-bit vérifié
 - [ ] Résultat sportif (score, buteurs, cartons, remplacements) strictement identique
@@ -67,7 +69,7 @@ Un unique type de phase de construction (par exemple « perte de balle / transit
 
 ### Ce qu'on livre
 
-Le catalogue complet de phases de construction (D-004, de l'ordre de 4 à 6 types) devient combinable avec l'ensemble des 12 gabarits de conclusion existants, pas seulement le pilote de la Phase 2. Chaque gabarit de conclusion est précédé d'au moins un type de phase de construction tactiquement cohérent avec lui.
+Le catalogue complet de phases de construction (D-004, de l'ordre de 8 à 12 types) devient combinable avec l'ensemble des 12 gabarits de conclusion existants, pas seulement le pilote de la Phase 2. Chaque gabarit de conclusion est précédé d'au moins un type de phase de construction tactiquement cohérent avec lui.
 
 ### Critères d'acceptation
 
@@ -83,17 +85,17 @@ Le catalogue complet de phases de construction (D-004, de l'ordre de 4 à 6 type
 
 ---
 
-## Phase 4 : Tirage déterministe de la durée (10-40s), décorrélé de l'issue
+## Phase 4 : Tirage déterministe de la durée (20-40s), décorrélé de l'issue
 
 **User stories** : US-14
 
 ### Ce qu'on livre
 
-Le nombre de phases de construction (1 à 3) et la durée totale d'un temps fort sont tirés déterministiquement, avec un plancher strict de 10 secondes et un plafond de 40 secondes, sans aucune dépendance au fait que l'événement se conclue par un but ou non.
+Le nombre de phases de construction (1 à 3) et la durée totale d'un temps fort sont tirés déterministiquement, avec un plancher strict de 20 secondes et un plafond de 40 secondes sur la durée AJOUTÉE par la construction, sans aucune dépendance au fait que l'événement se conclue par un but ou non. **Exception validée par le propriétaire (22/10/2026)** : si la conclusion existante (inchangée) dépasse déjà 40 secondes à elle seule (cas mesuré, ~6,6 % des clips `contre_attaque` réels, issues « arrêt »/« poteau »), la construction n'ajoute aucune seconde et la durée totale dépasse 40 secondes en conséquence — la conclusion n'est jamais raccourcie pour tenir ce plafond.
 
 ### Critères d'acceptation
 
-- [ ] 0 clip sous 10 secondes et 0 clip au-dessus de 40 secondes sur l'échantillon de référence
+- [ ] 0 clip sous 20 secondes ; 0 clip au-dessus de 40 secondes sur l'échantillon de référence, sauf les clips dont la conclusion seule dépasse déjà 40 secondes (exception validée ci-dessus)
 - [ ] Sur l'échantillon, aucune corrélation statistique mesurable entre durée et issue (but / non-but)
 - [ ] Déterminisme bit-à-bit vérifié
 - [ ] Résultat sportif strictement identique
