@@ -1,0 +1,22 @@
+﻿{
+    "C:\\Users\\omariani\\.claude\\agents\\controle-qualite.md":  {
+                                                                      "maj":  "2026-10-22T10:02:29.9580179Z",
+                                                                      "sha256":  "CC745289B7E0178ECF7853E3C9CD8F261AD5436109B6859F52CB41E952679993"
+                                                                  },
+    "C:\\Users\\omariani\\.claude\\skills\\valider-etape\\SKILL.md":  {
+                                                                          "maj":  "2026-10-22T10:02:29.9776418Z",
+                                                                          "sha256":  "909CD40E2E8DB73018117AFB4ABB0FC415569CE2C77F47A85F94DFC13EFDA2CD"
+                                                                      },
+    "C:\\Users\\omariani\\OneDrive - CY Cergy Paris Université\\Documents\\OLYV\\Projet foot\\simulafoot\\.claude\\qc\\append.ps1":  {
+                                                                                                                                         "maj":  "2026-10-22T10:02:29.9829814Z",
+                                                                                                                                         "sha256":  "94414469463A3B4F92AE33A6831D16972712DB715DFCB8DCB3C3E50EAEC5D967"
+                                                                                                                                     },
+    "C:\\Users\\omariani\\OneDrive - CY Cergy Paris Université\\Documents\\OLYV\\Projet foot\\simulafoot\\.claude\\qc\\verrou-commit.ps1":  {
+                                                                                                                                                "maj":  "2026-10-22T10:02:29.9895221Z",
+                                                                                                                                                "sha256":  "B6D792FD769F93DB324546B5CE1E9616651FBFF2A31B81A8ADA9AB2252CA1D29"
+                                                                                                                                            },
+    "C:\\Users\\omariani\\OneDrive - CY Cergy Paris Université\\Documents\\OLYV\\Projet foot\\simulafoot\\.claude\\qc\\detection-git.ps1":  {
+                                                                                                                                                "maj":  "2026-10-22T10:02:29.9939803Z",
+                                                                                                                                                "sha256":  "D9C12A219BE577323D94E525B5CF322D0E6E06530B0F56D53ED1A660C9AA2AD0"
+                                                                                                                                            }
+}

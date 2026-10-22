@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^(Bash|PowerShell|mcp__terminal__.*)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe",
+            "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${CLAUDE_PROJECT_DIR}/.claude/qc/verrou-commit.ps1"],
+            "onFailure": "block"
+          }
+        ]
+      }
+    ]
+  }
+}
