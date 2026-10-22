@@ -99,6 +99,15 @@ def _opponent_lineup() -> Lineup:
     return Lineup(club_name="Opponent FC", formation="4-3-3", players=players, rating=65.0)
 
 
+# Ticket 02 (temps-forts-multiphases, 22/10/2026, contre_attaque seul) généralisé par le ticket 03 (22/10/2026) à ces 4
+# gabarits : `opponent_lineup`, fourni, déclenche désormais `_prefix_adverse_possession` (pas seulement la modulation
+# de pression au sol) sur ces 5 gabarits -- les 7 autres gardent l'invariant "opponent_lineup ne change rien hors
+# pression".
+_GABARITS_WITH_CONSTRUCTION_PREFIX = (
+    "contre_attaque", "construction_placee", "debordement_centre_tete", "une_deux", "profondeur_1v1",
+)
+
+
 class TestTemplateRichness:
     """Critère minimal de richesse (23/09/2026, suite à l'audit visuel de
     scripts/preview_templates.py) : chaque gabarit doit avoir au moins 3
@@ -1749,17 +1758,23 @@ class TestControlPressureModulation:
             explicit_none = BUILDERS[name](event, lineup, starts, "but", None)
             with_opponents = BUILDERS[name](event, lineup, starts, "but", opponents)
             assert default.to_json() == explicit_none.to_json(), name
-            # Exception déliberée (ticket 02, temps-forts-multiphases, 22/10/2026) : `contre_attaque` est le seul gabarit
-            # où `opponent_lineup` fait maintenant plus que moduler la pression -- il déclenche aussi la phase de
+            # Exception déliberée (ticket 02 puis 03, temps-forts-multiphases, 22/10/2026) : ces 5 gabarits sont les
+            # seuls où `opponent_lineup` fait maintenant plus que moduler la pression -- il déclenche aussi la phase de
             # construction "possession adverse -> perte de balle" (voir TestContreAttaqueConstructionPhase), qui
-            # allonge délibérément la durée. Les 11 autres gabarits gardent l'invariant inchangé.
-            if name != "contre_attaque":
+            # allonge délibérément la durée. Les 7 autres gabarits gardent l'invariant inchangé.
+            if name not in _GABARITS_WITH_CONSTRUCTION_PREFIX:
                 assert with_opponents.duration == default.duration, name  # la pression ne change jamais la durée
             assert with_opponents.event_ref == default.event_ref, name
 
     def test_templates_without_ground_control_ignore_the_opponent_lineup(self):
         lineup, opponents = _lineup(), self._opponents()
         for name in TestGroundControls._UNTOUCHED:
+            # Exception déliberée (ticket 03, temps-forts-multiphases, 22/10/2026) : `debordement_centre_tete` reste
+            # sans contrôle au sol (ground_control=False, inchangé), mais `opponent_lineup` déclenche désormais aussi
+            # `_prefix_adverse_possession` pour ce gabarit -- il ne l'ignore donc plus totalement. Les 4 autres
+            # gabarits "untouched" (aucune réception à moduler) restent inchangés par `opponent_lineup`.
+            if name in _GABARITS_WITH_CONSTRUCTION_PREFIX:
+                continue
             event = _goal_event(penalty=(name == "penalty"))
             starts = _start_positions(lineup)
             assert BUILDERS[name](event, lineup, starts, "but", opponents).to_json() == BUILDERS[name](event, lineup, starts, "but").to_json(), name
@@ -1774,11 +1789,12 @@ class TestControlPressureModulation:
 
     def test_the_sporting_outcome_and_the_receivers_are_never_modified_by_the_pressure(self):
         lineup, opponents = _lineup(), self._opponents()
-        # Exception délibérée (ticket 02, temps-forts-multiphases, 22/10/2026) : `contre_attaque` est exclu de cette
-        # comparaison structurelle (ses premier/dernier keyframes changent désormais avec `opponent_lineup`, par
-        # construction -- voir `_prefix_adverse_possession`). L'invariant plus profond (même buteur/passeur, résultat
-        # sportif inchangé) est vérifié séparément dans `TestContreAttaqueConstructionPhase`.
-        for name in (n for n in self._CONTROLLED if n != "contre_attaque"):
+        # Exception délibérée (ticket 02 puis 03, temps-forts-multiphases, 22/10/2026) : `contre_attaque`,
+        # `construction_placee`, `une_deux` et `profondeur_1v1` sont exclus de cette comparaison structurelle (leurs
+        # premier/dernier keyframes changent désormais avec `opponent_lineup`, par construction -- voir
+        # `_prefix_adverse_possession`). L'invariant plus profond (même buteur/passeur, résultat sportif inchangé) est
+        # vérifié séparément dans `TestConstructionPrefixGeneralization`.
+        for name in (n for n in self._CONTROLLED if n not in _GABARITS_WITH_CONSTRUCTION_PREFIX):
             for minute in range(1, 11):
                 event = _goal_event(minute=minute)
                 starts = _start_positions(lineup)
@@ -2222,11 +2238,13 @@ class TestContreAttaqueConstructionPhase:
             }
             assert len(set(durations.values())) == 1, (minute, durations)
 
-    def test_eleven_other_gabarits_are_untouched(self):
+    def test_seven_other_gabarits_are_untouched(self):
+        # Ticket 03 (22/10/2026) a generalise le prefixe a 4 gabarits de plus (construction_placee,
+        # debordement_centre_tete, une_deux, profondeur_1v1) -- 7 gabarits restent inchanges, pas 11.
         lineup, opponents = _lineup(), _opponent_lineup()
         event, starts = _goal_event(), _start_positions(lineup)
         for name in BUILDERS:
-            if name == "contre_attaque":
+            if name in _GABARITS_WITH_CONSTRUCTION_PREFIX:
                 continue
             plain = BUILDERS[name](event, lineup, starts, "but")
             with_opponents = BUILDERS[name](event, lineup, starts, "but", opponents)
@@ -2253,3 +2271,126 @@ class TestContreAttaqueConstructionPhase:
         assert perte_balle.t == recuperation.t == 0.0  # prefixe de duree nulle : les deux tombent au meme instant
         assert perte_balle.ball.x == recuperation.ball.x
         assert perte_balle.ball.y == recuperation.ball.y
+
+
+class TestConstructionPrefixGeneralization:
+    """Ticket 03 (temps-forts-multiphases, 22/10/2026) : `_prefix_adverse_possession` (ticket 02, validé sur
+    `contre_attaque`) généralisé à `construction_placee`, `debordement_centre_tete`, `une_deux` et `profondeur_1v1` --
+    même scénario, même mécanisme (recommandation du propriétaire, 22/10/2026 : pas de catalogue de types à tirer au
+    hasard par gabarit, la variété géographique suffit). La jonction se retrouve par POSITION dans les keyframes
+    (`extended.keyframes[1]` = dernier keyframe du préfixe, `extended.keyframes[2]` = premier keyframe d'origine
+    décalé), pas par nom de tag littéral -- ces 4 gabarits n'ont pas le tag `recuperation` au premier keyframe
+    (`debordement`/`passe`/`appel` selon le gabarit, voir leurs définitions dans `templates.py`)."""
+
+    _GABARITS = ("construction_placee", "debordement_centre_tete", "une_deux", "profondeur_1v1")
+
+    @pytest.mark.parametrize("name", _GABARITS)
+    def test_with_opponent_lineup_prefixes_two_opponents_and_extends_duration(self, name):
+        lineup, opponents = _lineup(), _opponent_lineup()
+        event, starts = _goal_event(), _start_positions(lineup)
+        plain = BUILDERS[name](event, lineup, starts, "but")
+        extended = BUILDERS[name](event, lineup, starts, "but", opponents)
+
+        assert extended.duration > plain.duration
+        assert extended.duration >= 20.0  # plancher produit NFR-P02, garanti par construction
+
+        opponent_ids = {pid for pid, entry in extended.roster.items() if entry.team_side == "opponent"}
+        assert len(opponent_ids) == 2
+        for kf in extended.keyframes:
+            assert opponent_ids <= set(kf.players)
+        for opp_id in opponent_ids:
+            positions = {kf.players[opp_id] for kf in extended.keyframes}
+            assert len(positions) == 1  # immobile du debut a la fin
+
+        # Resultat sportif inchange : meme buteur/passeur -- ce mecanisme n'habille que le rendu.
+        assert extended.meta["roles"] == plain.meta["roles"]
+
+    @pytest.mark.parametrize("name", _GABARITS)
+    def test_no_position_jump_at_the_real_junction_between_prefix_and_original_sequence(self, name):
+        lineup, opponents = _lineup(), _opponent_lineup()
+        for minute in range(1, 21):
+            event = _goal_event(minute=minute)
+            starts = _start_positions(lineup)
+            extended = BUILDERS[name](event, lineup, starts, "but", opponents)
+            perte_balle, junction = extended.keyframes[1], extended.keyframes[2]
+            assert perte_balle.tag == "perte_balle"
+            assert perte_balle.t == junction.t  # meme instant : transfert de possession, pas un trajet
+            assert perte_balle.ball.x == junction.ball.x, (name, minute)
+            assert perte_balle.ball.y == junction.ball.y, (name, minute)
+            for pid in set(perte_balle.players) & set(junction.players):
+                assert perte_balle.players[pid] == junction.players[pid], (name, minute, pid)
+
+    @pytest.mark.parametrize("name", _GABARITS)
+    def test_duration_floor_and_ceiling_guaranteed_by_construction(self, name):
+        lineup, opponents = _lineup(), _opponent_lineup()
+        starts = _start_positions(lineup)
+        for minute in range(1, 101):
+            event = _goal_event(minute=minute)
+            sequence = BUILDERS[name](event, lineup, starts, "but", opponents)
+            assert 20.0 <= sequence.duration < 40.0, (name, minute)
+
+    @pytest.mark.parametrize("name", _GABARITS)
+    def test_is_deterministic(self, name):
+        lineup, opponents = _lineup(), _opponent_lineup()
+        event, starts = _goal_event(), _start_positions(lineup)
+        first = BUILDERS[name](event, lineup, starts, "but", opponents)
+        second = BUILDERS[name](event, lineup, starts, "but", opponents)
+        assert first.to_json() == second.to_json()
+
+    @pytest.mark.parametrize("name", _GABARITS)
+    def test_duration_does_not_depend_on_the_outcome(self, name):
+        lineup, opponents = _lineup(), _opponent_lineup()
+        starts = _start_positions(lineup)
+        for minute in range(1, 21):
+            event = _goal_event(minute=minute)
+            durations = {
+                outcome: BUILDERS[name](event, lineup, starts, outcome, opponents).duration
+                for outcome in ("but", "hors_cadre", "arret", "poteau")
+            }
+            assert len(set(durations.values())) == 1, (name, minute, durations)
+
+    @pytest.mark.parametrize("name", _GABARITS)
+    def test_degenerate_construction_phase_when_the_conclusion_already_exceeds_the_ceiling(self, name):
+        import dataclasses
+
+        lineup, opponents = _lineup(), _opponent_lineup()
+        event, starts = _goal_event(), _start_positions(lineup)
+        plain = BUILDERS[name](event, lineup, starts, "but")
+        forced = dataclasses.replace(plain, duration=45.0)  # simule une conclusion deja au-dela du plafond de 40 s
+
+        extended = tpl._prefix_adverse_possession(forced, opponents)
+
+        assert extended.duration == 45.0  # headroom=0 -> aucune seconde ajoutee par le prefixe
+        perte_balle, junction = extended.keyframes[1], extended.keyframes[2]
+        assert perte_balle.t == junction.t == 0.0
+        assert perte_balle.ball.x == junction.ball.x
+        assert perte_balle.ball.y == junction.ball.y
+
+    def test_construction_is_skipped_when_the_goal_has_no_credited_assist(self):
+        # MAJEUR releve en revue (simulafoot-reviewer, 22/10/2026) : exception plancher documentee (TRD_PRODUIT.md
+        # NFR-P02, ticket 03) -- sur ces 2 gabarits, le point d'ancrage (premier keyframe) est le passeur (`assist`).
+        # Un but sans passe decisive creditee (`event.assist is None`, dette connue du 23/09/2026, `_resolve_roles`
+        # ligne ~411) laisse ce role non resolu : `sequence.keyframes[0].ball.owner_id` est alors `None`, et
+        # `_prefix_adverse_possession` applique son repli neutre deja documente (pas d'adversaire invente pour une
+        # action qui n'a jamais eu de passeur reel). Verrouille ce chemin, mesure a ~4% des clips reels sous 20 s
+        # sur ces 2 gabarits -- non couvert avant cette revue.
+        lineup, opponents = _lineup(), _opponent_lineup()
+        starts = _start_positions(lineup)
+        for name in ("debordement_centre_tete", "profondeur_1v1"):
+            event = _goal_event(assist=None)
+            plain = BUILDERS[name](event, lineup, starts, "but")
+            extended = BUILDERS[name](event, lineup, starts, "but", opponents)
+            assert extended.to_json() == plain.to_json(), name  # repli neutre : sequence inchangee, pas de crash
+
+    def test_construction_still_applies_without_a_credited_assist_when_anchored_elsewhere(self):
+        # Contraste avec le test ci-dessus (demande en revue, 22/10/2026) : `construction_placee` (ancrage
+        # `support1`, tactique, jamais lie a un passeur reel) et `une_deux` (ancrage `scorer`, toujours resolu) ne
+        # dependent pas d'un passeur credite -- la construction s'applique meme sans assist.
+        lineup, opponents = _lineup(), _opponent_lineup()
+        starts = _start_positions(lineup)
+        for name in ("construction_placee", "une_deux"):
+            event = _goal_event(assist=None)
+            plain = BUILDERS[name](event, lineup, starts, "but")
+            extended = BUILDERS[name](event, lineup, starts, "but", opponents)
+            assert extended.duration > plain.duration, name
+            assert extended.duration >= 20.0, name
