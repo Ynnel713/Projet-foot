@@ -69,6 +69,8 @@ Les phases de construction « possession adverse » et « perte de balle » pré
 
 **User stories** : US-13 (complet)
 
+**Statut** : Lot 1/3 livré — ticket 03 (`construction_placee`, `debordement_centre_tete`, `une_deux`, `profondeur_1v1`), validé QC (`/valider-etape`, sous-étape `temps-forts-multiphases-03`, 22/10/2026). Un seul type de phase réutilisé pour ces 5 gabarits (pas un catalogue de types tiré par gabarit, tranché avec le propriétaire le 22/10/2026 : le nom de "type" n'est jamais affiché par le rendu, la variété géographique suffit). Lots 2 (ticket 04 : `recuperation_haute`, `decalage_enroulee`, `percee_individuelle`) et 3 (ticket 05 : coups de pied arrêtés et cas solo) restent à faire avant que les critères ci-dessous couvrent les 12 gabarits. Exception plancher constatée sur ce lot (TRD NFR-P02) : un but sans passeur crédité laisse `debordement_centre_tete`/`profondeur_1v1` sans phase de construction (~4 % des clips mesurés).
+
 ### Ce qu'on livre
 
 Le catalogue complet de phases de construction (D-004, de l'ordre de 8 à 12 types) devient combinable avec l'ensemble des 12 gabarits de conclusion existants, pas seulement le pilote de la Phase 2. Chaque gabarit de conclusion est précédé d'au moins un type de phase de construction tactiquement cohérent avec lui.

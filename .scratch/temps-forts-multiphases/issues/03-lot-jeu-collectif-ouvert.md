@@ -14,3 +14,7 @@
 - [ ] Propriétaire valide visuellement un échantillon représentatif des 4 gabarits
 
 **Note :** fichiers sous exception (`CLAUDE.md`) concernés selon ce qui est réellement touché — demander l'exception avant de coder.
+
+**Exceptions constatées et validées par le propriétaire (22/10/2026)**, voir `docs/TRD_PRODUIT.md` NFR-P02 :
+- Plafond : si la conclusion existante dépasse déjà 40 s à elle seule (arrêt/poteau), la construction n'ajoute aucune seconde — même exception que le ticket 02.
+- Plancher : sur `debordement_centre_tete`/`profondeur_1v1`, un but sans passeur crédité laisse la phase de construction omise (pas d'adversaire inventé pour une action sans passeur réel) — ~4 % des clips mesurés sur ces 2 gabarits.
