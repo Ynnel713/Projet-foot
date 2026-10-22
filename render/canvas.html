@@ -61,6 +61,7 @@
   .progress-marker.chance { width: 9px; height: 9px; background: #9aa0a6; transform: translate(-50%, -50%) rotate(45deg); z-index: 1; }
   .progress-marker:hover { filter: brightness(1.25); }
   .progress-marker.current { box-shadow: 0 0 0 2px #ffd700; z-index: 3; }
+  .progress-marker.upcoming { display: none; }  /* temps fort pas encore atteint : jamais revele a l'avance */
   #clipCounter { min-width: 72px; text-align: right; font: 12px/1 sans-serif; color: #fff; white-space: nowrap; }
 
   /* Mode embarque uniquement (classe `embed` posee par le JS, jamais en
@@ -818,8 +819,16 @@ function startPlayer(SEQUENCE_DATA, bridge) {
   });
 
   function updateMarkers(activeIdx) {
-    markerEls.forEach((el, idx) => el.classList.toggle('current', idx === activeIdx));
-    clipCounterEl.textContent = 'Clip ' + (activeIdx + 1) + ' / ' + clips.length;
+    maxRevealedIdx = Math.max(maxRevealedIdx, activeIdx);
+    markerEls.forEach((el, idx) => {
+      el.classList.toggle('current', idx === activeIdx);
+      el.classList.toggle('upcoming', idx > maxRevealedIdx);
+    });
+    // Le total (clips.length) ne fuite jamais avant le dernier clip : sinon le nombre exact de
+    // temps forts du match serait devine des le premier clip (ticket 01, temps-forts-multiphases).
+    clipCounterEl.textContent = maxRevealedIdx === clips.length - 1
+      ? 'Clip ' + (activeIdx + 1) + ' / ' + clips.length
+      : 'Clip ' + (activeIdx + 1);
   }
 
   function eventLabel(clip) {
@@ -884,6 +893,7 @@ function startPlayer(SEQUENCE_DATA, bridge) {
   }
 
   let currentIdx = 0;
+  let maxRevealedIdx = 0; // temps fort le plus loin deja atteint pendant le visionnage, jamais diminue
   let playing = true;
   let pausedAtS = 0;
   let startPerfMs = null;

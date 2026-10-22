@@ -16,6 +16,8 @@
 
 ## Phase 1 : Masquage des temps forts à venir (barre de progression)
 
+**Statut** : Implémentée, validée QC (`/valider-etape`, sous-étape `temps-forts-multiphases-01`, 22/10/2026) — en attente de la validation visuelle du propriétaire (dernier critère ci-dessous). Un défaut supplémentaire trouvé en revue (le compteur `Clip N / Total` révélait le total dès le premier clip) a été corrigé dans le même ticket.
+
 **User stories** : US-15, US-16
 
 ### Ce qu'on livre
@@ -24,10 +26,10 @@ La barre de progression du lecteur (`canvas.html`) n'affiche plus tous les marqu
 
 ### Critères d'acceptation
 
-- [ ] Au lancement d'un match, aucun marqueur n'est visible au-delà du temps fort en cours ou déjà passé
-- [ ] Un marqueur apparaît exactement quand son temps fort commence à être lu
-- [ ] Revenir en arrière sur un temps fort déjà vu reste possible, son marqueur reste visible
-- [ ] Aucune régression sur le reste du lecteur (lecture, pause, enchaînement de clips)
+- [x] Au lancement d'un match, aucun marqueur n'est visible au-delà du temps fort en cours ou déjà passé
+- [x] Un marqueur apparaît exactement quand son temps fort commence à être lu
+- [x] Revenir en arrière sur un temps fort déjà vu reste possible, son marqueur reste visible
+- [x] Aucune régression sur le reste du lecteur (lecture, pause, enchaînement de clips)
 - [ ] Propriétaire valide qu'il ne peut pas deviner, en début de match, combien de temps forts il reste à voir
 
 ## Bloquée par

@@ -192,7 +192,7 @@ def test_playbar_has_the_four_controls_in_order_and_a_clip_counter():
     height = int(re.search(r"height: (\d+)px", css).group(1))
     assert 48 <= height <= 56 and "background: rgba(0, 0, 0, 0.7)" in css
     assert "width: 32px; height: 32px" in CANVAS  # boutons de 32 x 32 px
-    assert "'Clip ' + (activeIdx + 1) + ' / ' + clips.length" in CANVAS
+    assert "'Clip ' + (activeIdx + 1)" in CANVAS
     # Comportement : lecture/pause bascule l'icône, précédent/suivant naviguent, un marqueur saute au clip.
     assert "playPauseBtn.innerHTML = playing ? ICON_PAUSE : ICON_PLAY;" in CANVAS
     assert "jumpToClip(currentIdx - 1)" in CANVAS and "jumpToClip(currentIdx + 1)" in CANVAS
@@ -207,6 +207,23 @@ def test_progress_bar_distinguishes_goal_markers_from_chance_markers():
     assert "border-radius: 50%" in goal and "#ffffff" in goal  # but : cercle blanc plein
     assert "rotate(45deg)" in chance and "#9aa0a6" in chance  # occasion : losange gris
     assert "z-index: 2" in goal and "z-index: 1" in chance  # un but n'est jamais masqué par une occasion voisine
+
+
+def test_upcoming_markers_are_hidden_until_their_clip_is_reached():
+    # Un marqueur de temps fort pas encore atteint n'est jamais affiché (ticket 01, temps-forts-multiphases).
+    upcoming_css = re.search(r"\.progress-marker\.upcoming \{([^}]*)\}", CANVAS).group(1)
+    assert "display: none" in upcoming_css
+    assert "let maxRevealedIdx = 0;" in CANVAS  # point le plus loin déjà atteint, jamais réinitialisé en arrière
+    assert "maxRevealedIdx = Math.max(maxRevealedIdx, activeIdx);" in CANVAS
+    assert "el.classList.toggle('upcoming', idx > maxRevealedIdx);" in CANVAS
+
+
+def test_clip_counter_never_reveals_the_total_before_the_last_clip_is_reached():
+    # Le total (clips.length) ne doit jamais fuiter avant que le dernier clip ne soit atteint --
+    # sinon le compteur annonce d'avance combien de temps forts compte le match (ticket 01).
+    assert "maxRevealedIdx === clips.length - 1" in CANVAS
+    assert "'Clip ' + (activeIdx + 1) + ' / ' + clips.length" in CANVAS
+    assert "'Clip ' + (activeIdx + 1);" in CANVAS
 
 
 # --- Filets de but, animation au but, éclaircissement du score (Phase 5, sous-étape 4) ---------------------------
