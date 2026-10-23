@@ -93,6 +93,8 @@ Le catalogue complet de phases de construction (D-004, de l'ordre de 8 à 12 typ
 
 **User stories** : US-14
 
+**Statut** : Livrée, validée QC (sous-étape `temps-forts-multiphases-06`, 23/10/2026). Durée FINALE du clip (suite du tir comprise) identique pour toutes les issues d'une même action ; 0 clip hors [20, 40[ s sur l'échantillon de référence (contre 22 sous 20 s et 92 à 40 s ou plus avant). Résidu de corrélation accepté par le propriétaire (AUC 0,549, détectable seulement sur `debordement_centre_tete`, voir TRD NFR-P01). « Nombre de phases 1 à 3 » sorti de cette phase (variété visuelle, non planifié). Reste : validation visuelle du propriétaire.
+
 ### Ce qu'on livre
 
 Le nombre de phases de construction (1 à 3) et la durée totale d'un temps fort sont tirés déterministiquement, avec un plancher strict de 20 secondes et un plafond de 40 secondes sur la durée AJOUTÉE par la construction, sans aucune dépendance au fait que l'événement se conclue par un but ou non. **Exception validée par le propriétaire (22/10/2026)** : si la conclusion existante (inchangée) dépasse déjà 40 secondes à elle seule (cas mesuré, ~6,6 % des clips `contre_attaque` réels, issues « arrêt »/« poteau »), la construction n'ajoute aucune seconde et la durée totale dépasse 40 secondes en conséquence — la conclusion n'est jamais raccourcie pour tenir ce plafond.
