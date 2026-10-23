@@ -1,6 +1,8 @@
 import math
 import pytest
 
+import ligue1sim.animation.sequence_generator as tpl_sg
+
 from ligue1sim.animation.motion import interpolate
 from ligue1sim.animation.sequence_generator import (
     _GK_BASE_ADVANCE_M,
@@ -434,11 +436,60 @@ class TestTacticalDrift:
         assert dx_defending == 0.0  # ne monte pas en phase défensive
         assert abs(dy_defending) <= 0.02  # couvre sur place, léger ajustement latéral seulement
 
-    def test_the_whole_center_back_line_shares_the_exact_same_drift(self):
-        # Compactage de ligne (Point 2) : PAS un drift individuel par DC.
+    # test_the_whole_center_back_line_shares_the_exact_same_drift existait ici (Point 2, 23/09/2026) : il verrouillait un
+    # drift STRICTEMENT identique pour tous les DC d'une ligne -- exactement le défaut "les DC ne bougent qu'en bloc" que
+    # corrige mouvement-riche-tous-joueurs/01 (décision du propriétaire, 23/10/2026). Remplacé par les tests ci-dessous :
+    # trajectoires individuelles distinctes, mais bornées dans la zone d'un DC.
+
+    def test_center_backs_move_individually_within_their_zone(self):
         cb_drift = _cb_line_drift("team-x", avg_cb_y=0.4, ball_y=0.7)
-        for player_id, start in ((2, (0.15, 0.35)), (3, (0.15, 0.45))):
-            assert _tactical_drift("DC", player_id, "scorer", start, self._BALL_ON_THE_RIGHT, cb_drift) == cb_drift
+        lateral_max = tpl_sg._CB_LATERAL_MAX_M / PITCH_WIDTH_M + 1e-9
+        distinct = 0
+        for k in range(50):
+            ref = f"evt-{k}"
+            drifts = [
+                _tactical_drift("DC", pid, side, start, self._BALL_ON_THE_RIGHT, cb_drift, ref)
+                for pid, start in ((2, (0.15, 0.35)), (3, (0.15, 0.45)))
+                for side in ("scorer", "opponent")
+            ]
+            distinct += drifts[0] != drifts[2]  # deux DC différents, même camp
+            for dx, dy in drifts:
+                assert 0.0 <= dx * PITCH_LENGTH_M <= tpl_sg._CB_DEPTH_MAX_M + 1e-9  # jamais dans le mauvais sens
+                assert abs(dy) <= lateral_max
+                assert math.hypot(dx * PITCH_LENGTH_M, dy * PITCH_WIDTH_M) <= tpl_sg._CB_INDIVIDUAL_MAX_M + 1e-9
+        assert distinct == 50
+
+    def test_background_center_backs_stay_under_the_shared_speed_ceiling(self):
+        from ligue1sim.animation.motion import _background_position_at, effective_max_speed_normalized
+
+        for event_index in range(10):
+            sequence, _lineup_, _opp = _enriched_sequence(event_index=event_index)
+            v_cap_mps = effective_max_speed_normalized("DC") * PITCH_LENGTH_M
+            dt = 1.0 / 30.0
+            for pid, track in sequence.background.items():
+                if sequence.roster[pid].poste != "DC":
+                    continue
+                t, prev = dt, _background_position_at(track, 0.0, sequence.duration)
+                while t <= sequence.duration:
+                    cur = _background_position_at(track, t, sequence.duration)
+                    v = math.hypot((cur[0] - prev[0]) * PITCH_LENGTH_M, (cur[1] - prev[1]) * PITCH_WIDTH_M) / dt
+                    assert v <= v_cap_mps, (event_index, pid, t, v)
+                    prev, t = cur, t + dt
+
+    def test_center_back_far_from_the_ball_covers_towards_the_axis(self):
+        # Ballon à droite (y=0.8), DC à gauche (y=0.3), à ~35 m : hors du rayon de suivi (15 m), seule la couverture joue.
+        # Chaque tirage le rapproche de l'axe (dy >= 0) sans jamais le faire dépasser l'axe.
+        no_line = (0.0, 0.0)
+        dys = [_tactical_drift("DC", 2, "opponent", (0.85, 0.3), (0.95, 0.8), no_line, f"e{k}")[1] for k in range(100)]
+        assert all(0.0 <= dy and 0.3 + dy <= 0.5 for dy in dys)
+        assert sum(dys) / len(dys) > 0.0
+        # Revue QC (23/10/2026) : un DC proche de l'axe ne le dépasse jamais par sa couverture. Positions réalistes (>= 1 m
+        # de l'axe) : à quelques centimètres, le plancher de visibilité (0,2-0,5 m, `_floor_drift_magnitude`) peut
+        # étirer un drift minuscule de quelques centimètres au-delà -- cas absent du terrain réel.
+        for y0 in (0.45, 0.47, 0.485):
+            for k in range(100):
+                dy = _tactical_drift("DC", 2, "opponent", (0.85, y0), (0.95, 0.95), no_line, f"e{k}")[1]
+                assert y0 + dy <= 0.5 + 1e-12, (y0, k, dy)
 
     def test_center_back_line_compacts_towards_the_ball_side(self):
         cb_drift_right = _cb_line_drift("team-x", avg_cb_y=0.4, ball_y=0.8)

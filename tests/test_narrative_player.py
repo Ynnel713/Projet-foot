@@ -694,13 +694,20 @@ class TestAccelerationConstraintOnRealGabarits:
 # cette A1.1 est la SEULE cause : avec `motion._keyframe_tangent` neutralisée (retour `(0.0, 0.0)`, équivalent à
 # l'ancien comportement à tangentes nulles), le code actuel redonne exactement les 5 empreintes de la Phase 3
 # ci-dessus, bit à bit.
+# mouvement-riche-tous-joueurs/01 (23/10/2026) : `_cb_individual_drift` (sequence_generator.py) donne à chaque DC de décor
+# un mouvement individuel au lieu de la seule dérive de ligne partagée -- les 5 témoins contiennent des DC de décor, donc
+# tous recalculés une cinquième fois. Preuve que ce ticket est la SEULE cause : avec `_cb_individual_drift` neutralisée
+# (retour de la dérive de ligne `cb_line_drift` telle quelle, ancien comportement), le code actuel redonne exactement les
+# 5 empreintes précédentes ("f1528bb8cc9be886"/"376ff38503dcbd89" pour but_gag, "36498a77e4bebb2d"/"51f07fc321487d34"
+# pour construction_placee, "368fd48169ed50b8"/"bac841b320147d41" pour contre_attaque, "835ec5acbcb9ccad"/
+# "ff898a4e682fd712" pour corner, "f814d25b8faa35af" pour percee_individuelle).
 _WITNESS_DIGESTS = {
     # gabarit: (empreinte des images brutes `interpolate`, empreinte après contrainte d'accélération)
-    "but_gag": ("f1528bb8cc9be886", "376ff38503dcbd89"),
-    "construction_placee": ("36498a77e4bebb2d", "51f07fc321487d34"),
-    "contre_attaque": ("368fd48169ed50b8", "bac841b320147d41"),
-    "corner": ("835ec5acbcb9ccad", "ff898a4e682fd712"),
-    "percee_individuelle": ("f814d25b8faa35af", "f814d25b8faa35af"),
+    "but_gag": ("7f5df1e0d4e3470d", "6fa380f95acdb9fe"),
+    "construction_placee": ("e8298667a3dc9767", "892f547dbb97f4a7"),
+    "contre_attaque": ("0d9fa79a30cf8e4d", "de33a4d1ee2b0417"),
+    "corner": ("addd0bde5dc00f61", "9268096bdae5d3c3"),
+    "percee_individuelle": ("051fde9e17987ff0", "051fde9e17987ff0"),
 }
 
 

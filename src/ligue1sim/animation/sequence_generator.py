@@ -431,6 +431,46 @@ def _tactical_drift(
     return _floor_drift_magnitude(dx, dy, player_id, event_ref)
 
 
+# --- mouvement-riche-tous-joueurs/01 (23/10/2026) : mouvement individuel des défenseurs centraux --------------------------
+# Constantes produit validées par le propriétaire (23/10/2026). Chaque DC garde la dérive partagée de sa ligne
+# (`_cb_line_drift`, compacité) et y ajoute sa part individuelle, tirée avec ses propres sels : couverture (le DC loin du
+# ballon resserre vers l'axe), suivi (glisse vers le point où l'action se termine -- là où se trouve l'attaquant qui
+# conclut -- s'il est à moins de `_CB_TRACKING_RADIUS_M`), profondeur (l'équipe qui défend recule, celle qui attaque
+# monte légèrement ; dans le repère partagé les deux vont vers x croissant). Aucune règle de vitesse propre : sur un clip
+# de 20 s ou plus, 3 m restent très loin du plafond partagé (`motion.effective_max_speed_normalized`, vérifié en test).
+_CB_INDIVIDUAL_MAX_M = 3.0  # déplacement total max d'un DC
+_CB_LATERAL_MAX_M = 3.0  # couloir latéral (± autour du départ), dérive de ligne comprise
+_CB_DEPTH_MAX_M = 2.0  # profondeur : 0 à 2 m, jamais dans l'autre sens
+_CB_TRACKING_RADIUS_M = 15.0  # au-delà, pas de suivi
+
+
+def _cb_individual_drift(
+    player_id: PlayerId,
+    start: tuple[float, float],
+    ball_target: tuple[float, float],
+    cb_line_drift: tuple[float, float],
+    event_ref: str,
+    same_side: bool,
+) -> tuple[float, float]:
+    dx_m = _CB_DEPTH_MAX_M * _event_unit(player_id, event_ref, "cb_depth")
+    dy_m = cb_line_drift[1] * PITCH_WIDTH_M
+    if not same_side:
+        cover_m = min(_CB_LATERAL_MAX_M * _event_unit(player_id, event_ref, "cb_cover"), abs(0.5 - start[1]) * PITCH_WIDTH_M)  # jamais au-delà de l'axe
+        dy_m += _toward(0.5, start[1], cover_m / PITCH_WIDTH_M) * PITCH_WIDTH_M
+    to_x_m, to_y_m = (ball_target[0] - start[0]) * PITCH_LENGTH_M, (ball_target[1] - start[1]) * PITCH_WIDTH_M
+    distance_m = math.hypot(to_x_m, to_y_m)
+    if 1e-9 < distance_m <= _CB_TRACKING_RADIUS_M:
+        step_m = _CB_INDIVIDUAL_MAX_M * _event_unit(player_id, event_ref, "cb_tracking")
+        dx_m += to_x_m / distance_m * step_m
+        dy_m += to_y_m / distance_m * step_m
+    dx_m = min(_CB_DEPTH_MAX_M, max(0.0, dx_m))
+    dy_m = min(_CB_LATERAL_MAX_M, max(-_CB_LATERAL_MAX_M, dy_m))
+    magnitude_m = math.hypot(dx_m, dy_m)
+    if magnitude_m > _CB_INDIVIDUAL_MAX_M:
+        dx_m, dy_m = dx_m * _CB_INDIVIDUAL_MAX_M / magnitude_m, dy_m * _CB_INDIVIDUAL_MAX_M / magnitude_m
+    return dx_m / PITCH_LENGTH_M, dy_m / PITCH_WIDTH_M
+
+
 def _tactical_drift_unfloored(
     poste: str,
     player_id: PlayerId,
@@ -446,8 +486,9 @@ def _tactical_drift_unfloored(
     keyframe de la Sequence -- là où l'action aboutit, pas une cible qui
     suit le ballon en continu (un seul drift calculé une fois, voir
     `BackgroundTrack`). `cb_line_drift` : le drift partagé de toute la ligne
-    de défenseurs centraux (voir `_cb_line_drift`), utilisé tel quel pour un
-    `DC` -- ignoré pour tout autre poste. Plancher de visibilité appliqué
+    de défenseurs centraux (voir `_cb_line_drift`), base commune à laquelle
+    chaque `DC` ajoute sa part individuelle (`_cb_individual_drift`) --
+    ignoré pour tout autre poste. Plancher de visibilité appliqué
     par l'appelant public `_tactical_drift`, pas ici (cette fonction ne
     calcule QUE la direction/l'amplitude tactique brute)."""
     start_x, start_y = start
@@ -466,7 +507,7 @@ def _tactical_drift_unfloored(
         return (0.0, _toward(ball_y, start_y, max_shift * y_unit))
 
     if poste == "DC":
-        return cb_line_drift
+        return _cb_individual_drift(player_id, start, ball_target, cb_line_drift, event_ref, same_side)
 
     if poste in ("LB", "RB"):
         if not same_side:
