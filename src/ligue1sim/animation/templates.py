@@ -1720,15 +1720,19 @@ def build_contre_attaque(
 
 
 # Ticket 02 (temps-forts-multiphases, POC gabarit pilote contre_attaque, 22/10/2026), generalise par le ticket 03
-# (22/10/2026) a construction_placee/debordement_centre_tete/une_deux/profondeur_1v1 : phase de construction
-# "possession adverse -> perte de balle" avant le geste decisif existant (inchange). Plancher ET plafond PRODUIT
-# (docs/PRD_PRODUIT.md, TRD_PRODUIT.md NFR-P02, 22/10/2026) : [20, 40[ secondes, le plancher GARANTI PAR CONSTRUCTION
-# (jamais statistique) -- voir `_prefix_adverse_possession`. Variete deterministe sur toute cette plage, validee par
-# le proprietaire (22/10/2026) pour qu'elle reste aleatoire (jamais correlee a l'issue ni a la nature de l'action).
-# Un seul type de phase de construction pour ces 5 gabarits (pas un catalogue de types a tirer en plus, tranche avec
-# le proprietaire le 22/10/2026 : la variete geographique suffit, voir docstring de `_prefix_adverse_possession`). Le
-# tirage DEFINITIF complet (nombre de phases, decorrele de l'issue pour TOUS les gabarits) reste le ticket 06 -- ce
-# mecanisme ne couvre encore que ces 5 gabarits sur 12, les 7 autres restent inchanges.
+# (construction_placee/debordement_centre_tete/une_deux/profondeur_1v1) puis le ticket 04
+# (recuperation_haute/decalage_enroulee/percee_individuelle, 22/10/2026 -- y compris percee_individuelle, action
+# solo cote conclusion : tranche avec le proprietaire que la construction ne decrit que la perte de balle ADVERSE,
+# jamais le cote collectif/solo de la conclusion elle-meme) : phase de construction "possession adverse -> perte de
+# balle" avant le geste decisif existant (inchange). Plancher ET plafond PRODUIT (docs/PRD_PRODUIT.md,
+# TRD_PRODUIT.md NFR-P02, 22/10/2026) : [20, 40[ secondes, le plancher GARANTI PAR CONSTRUCTION (jamais statistique)
+# -- voir `_prefix_adverse_possession`. Variete deterministe sur toute cette plage, validee par le proprietaire
+# (22/10/2026) pour qu'elle reste aleatoire (jamais correlee a l'issue ni a la nature de l'action). Un seul type de
+# phase de construction pour ces 8 gabarits (pas un catalogue de types a tirer en plus, tranche avec le proprietaire
+# le 22/10/2026 : la variete geographique suffit, voir docstring de `_prefix_adverse_possession`). Le tirage
+# DEFINITIF complet (nombre de phases, decorrele de l'issue pour TOUS les gabarits) reste le ticket 06 -- ce
+# mecanisme ne couvre encore que ces 8 gabarits sur 12, les 4 autres (coups de pied arretes et cas solo, ticket 05)
+# restent inchanges.
 _DURATION_FLOOR_S = 20.0
 _DURATION_CEILING_S = 40.0
 
@@ -1758,10 +1762,11 @@ def _prefix_adverse_possession(sequence: Sequence, opponent_lineup: Lineup) -> S
     champ les plus proches du point de recuperation) suivie de la "perte de balle" -- opp_b (le 2e adversaire) perd le
     ballon EXACTEMENT au point de recuperation (pas a sa propre position de formation, voir BLOQUANT corrige en revue
     le 22/10/2026), pour une jonction a distance ZERO avec `sequence.keyframes[0]` (reutilise tel quel). Scenario
-    confirme par le proprietaire (22/10/2026), generalise a tous les gabarits qui l'appellent (ticket 03, 22/10/2026) :
-    meme mecanisme quel que soit le role qui porte le ballon au premier keyframe (`support1` pour
-    `contre_attaque`/`construction_placee`, `assist` pour `debordement_centre_tete`/`profondeur_1v1`, `scorer` pour
-    `une_deux`) -- le point de recuperation est celui du PORTEUR REEL du ballon a t=0 (`keyframes[0].ball.owner_id`),
+    confirme par le proprietaire (22/10/2026), generalise a tous les gabarits qui l'appellent (tickets 03 et 04,
+    22/10/2026) : meme mecanisme quel que soit le role qui porte le ballon au premier keyframe (`support1` pour
+    `contre_attaque`/`construction_placee`/`recuperation_haute`, `assist` pour
+    `debordement_centre_tete`/`profondeur_1v1`/`decalage_enroulee`, `scorer` pour `une_deux`/`percee_individuelle`)
+    -- le point de recuperation est celui du PORTEUR REEL du ballon a t=0 (`keyframes[0].ball.owner_id`),
     jamais un nom de role en dur : la variete geographique (recuperation haute ou basse) vient deja gratuitement de la
     position reelle de l'evenement, pas d'un choix de "type" supplementaire (tranche avec le proprietaire, 22/10/2026
     -- un nom de "type" de phase n'est jamais affiche par le rendu, voir `Keyframe.tag`). Les deux adversaires scriptes
@@ -1825,7 +1830,7 @@ def _prefix_adverse_possession(sequence: Sequence, opponent_lineup: Lineup) -> S
     headroom = max(0.0, _DURATION_CEILING_S - floor_base)
     # Cle de salage parametree par gabarit (ticket 03, 22/10/2026) : chaque gabarit tire sa propre variete,
     # independamment des autres, meme si plusieurs partagent le meme `event_ref` (match/minute) -- jamais le nom
-    # "contre_attaque" en dur pour un tirage qui s'applique maintenant a 5 gabarits.
+    # "contre_attaque" en dur pour un tirage qui s'applique maintenant a 8 gabarits.
     variety = headroom * _flight_unit(sequence.event_ref, f"{sequence.meta['template']}_construction_duration")
     total_duration = floor_base + variety
     construction_duration = total_duration - sequence.duration
@@ -1923,7 +1928,10 @@ def build_percee_individuelle(
     event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None,
     opponent_lineup: Lineup | None = None,
 ) -> Sequence:
-    return build_from_template(TEMPLATES["percee_individuelle"], event, lineup, start_positions, outcome, opponent_lineup)
+    sequence = build_from_template(TEMPLATES["percee_individuelle"], event, lineup, start_positions, outcome, opponent_lineup)
+    if opponent_lineup is None:
+        return sequence
+    return _prefix_adverse_possession(sequence, opponent_lineup)
 
 
 def build_une_deux(
@@ -2016,7 +2024,10 @@ def build_recuperation_haute(
     event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None,
     opponent_lineup: Lineup | None = None,
 ) -> Sequence:
-    return build_from_template(TEMPLATES["recuperation_haute"], event, lineup, start_positions, outcome, opponent_lineup)
+    sequence = build_from_template(TEMPLATES["recuperation_haute"], event, lineup, start_positions, outcome, opponent_lineup)
+    if opponent_lineup is None:
+        return sequence
+    return _prefix_adverse_possession(sequence, opponent_lineup)
 
 
 # Brief "real Magnus effect" (23/09/2026), Tâche 3, puis Phase 6 B5 (08/10/2026) : le spin de la frappe enroulée n'est plus
@@ -2028,7 +2039,10 @@ def build_decalage_enroulee(
     event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None,
     opponent_lineup: Lineup | None = None,
 ) -> Sequence:
-    return build_from_template(TEMPLATES["decalage_enroulee"], event, lineup, start_positions, outcome, opponent_lineup)
+    sequence = build_from_template(TEMPLATES["decalage_enroulee"], event, lineup, start_positions, outcome, opponent_lineup)
+    if opponent_lineup is None:
+        return sequence
+    return _prefix_adverse_possession(sequence, opponent_lineup)
 
 
 def penalty_runup_start(event_ref: str) -> PitchPoint:

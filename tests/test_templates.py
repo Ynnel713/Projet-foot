@@ -99,12 +99,14 @@ def _opponent_lineup() -> Lineup:
     return Lineup(club_name="Opponent FC", formation="4-3-3", players=players, rating=65.0)
 
 
-# Ticket 02 (temps-forts-multiphases, 22/10/2026, contre_attaque seul) généralisé par le ticket 03 (22/10/2026) à ces 4
-# gabarits : `opponent_lineup`, fourni, déclenche désormais `_prefix_adverse_possession` (pas seulement la modulation
-# de pression au sol) sur ces 5 gabarits -- les 7 autres gardent l'invariant "opponent_lineup ne change rien hors
-# pression".
+# Ticket 02 (temps-forts-multiphases, 22/10/2026, contre_attaque seul) généralisé par le ticket 03 (4 gabarits) puis
+# le ticket 04 (recuperation_haute, decalage_enroulee, percee_individuelle, 22/10/2026) : `opponent_lineup`, fourni,
+# déclenche désormais `_prefix_adverse_possession` (pas seulement la modulation de pression au sol) sur ces 8
+# gabarits -- les 4 autres (coups de pied arrêtés et cas solo, ticket 05) gardent l'invariant "opponent_lineup ne
+# change rien hors pression".
 _GABARITS_WITH_CONSTRUCTION_PREFIX = (
     "contre_attaque", "construction_placee", "debordement_centre_tete", "une_deux", "profondeur_1v1",
+    "recuperation_haute", "decalage_enroulee", "percee_individuelle",
 )
 
 
@@ -1767,10 +1769,10 @@ class TestControlPressureModulation:
             explicit_none = BUILDERS[name](event, lineup, starts, "but", None)
             with_opponents = BUILDERS[name](event, lineup, starts, "but", opponents)
             assert default.to_json() == explicit_none.to_json(), name
-            # Exception déliberée (ticket 02 puis 03, temps-forts-multiphases, 22/10/2026) : ces 5 gabarits sont les
+            # Exception déliberée (tickets 02/03/04, temps-forts-multiphases, 22/10/2026) : ces 8 gabarits sont les
             # seuls où `opponent_lineup` fait maintenant plus que moduler la pression -- il déclenche aussi la phase de
             # construction "possession adverse -> perte de balle" (voir TestContreAttaqueConstructionPhase), qui
-            # allonge délibérément la durée. Les 7 autres gabarits gardent l'invariant inchangé.
+            # allonge délibérément la durée. Les 4 autres gabarits gardent l'invariant inchangé.
             if name not in _GABARITS_WITH_CONSTRUCTION_PREFIX:
                 assert with_opponents.duration == default.duration, name  # la pression ne change jamais la durée
             assert with_opponents.event_ref == default.event_ref, name
@@ -1778,10 +1780,11 @@ class TestControlPressureModulation:
     def test_templates_without_ground_control_ignore_the_opponent_lineup(self):
         lineup, opponents = _lineup(), self._opponents()
         for name in TestGroundControls._UNTOUCHED:
-            # Exception déliberée (ticket 03, temps-forts-multiphases, 22/10/2026) : `debordement_centre_tete` reste
-            # sans contrôle au sol (ground_control=False, inchangé), mais `opponent_lineup` déclenche désormais aussi
-            # `_prefix_adverse_possession` pour ce gabarit -- il ne l'ignore donc plus totalement. Les 4 autres
-            # gabarits "untouched" (aucune réception à moduler) restent inchangés par `opponent_lineup`.
+            # Exception déliberée (tickets 03/04, temps-forts-multiphases, 22/10/2026) : `debordement_centre_tete` et
+            # `percee_individuelle` restent sans contrôle au sol à moduler (ground_control=False / aucune réception,
+            # inchangé), mais `opponent_lineup` déclenche désormais aussi `_prefix_adverse_possession` pour ces deux
+            # gabarits -- ils ne l'ignorent donc plus totalement. Les 3 autres gabarits "untouched" (aucune réception
+            # à moduler, hors périmètre de ce chantier) restent inchangés par `opponent_lineup`.
             if name in _GABARITS_WITH_CONSTRUCTION_PREFIX:
                 continue
             event = _goal_event(penalty=(name == "penalty"))
@@ -1798,11 +1801,11 @@ class TestControlPressureModulation:
 
     def test_the_sporting_outcome_and_the_receivers_are_never_modified_by_the_pressure(self):
         lineup, opponents = _lineup(), self._opponents()
-        # Exception délibérée (ticket 02 puis 03, temps-forts-multiphases, 22/10/2026) : `contre_attaque`,
-        # `construction_placee`, `une_deux` et `profondeur_1v1` sont exclus de cette comparaison structurelle (leurs
-        # premier/dernier keyframes changent désormais avec `opponent_lineup`, par construction -- voir
-        # `_prefix_adverse_possession`). L'invariant plus profond (même buteur/passeur, résultat sportif inchangé) est
-        # vérifié séparément dans `TestConstructionPrefixGeneralization`.
+        # Exception délibérée (tickets 02/03/04, temps-forts-multiphases, 22/10/2026) : tous les gabarits de
+        # `_GABARITS_WITH_CONSTRUCTION_PREFIX` présents dans `_CONTROLLED` sont exclus de cette comparaison
+        # structurelle (leurs premier/dernier keyframes changent désormais avec `opponent_lineup`, par construction
+        # -- voir `_prefix_adverse_possession`) -- ne reste testé ici que `but_gag`. L'invariant plus profond (même
+        # buteur/passeur, résultat sportif inchangé) est vérifié séparément dans `TestConstructionPrefixGeneralization`.
         for name in (n for n in self._CONTROLLED if n not in _GABARITS_WITH_CONSTRUCTION_PREFIX):
             for minute in range(1, 11):
                 event = _goal_event(minute=minute)
@@ -2262,9 +2265,10 @@ class TestContreAttaqueConstructionPhase:
             }
             assert len(set(durations.values())) == 1, (minute, durations)
 
-    def test_seven_other_gabarits_are_untouched(self):
-        # Ticket 03 (22/10/2026) a generalise le prefixe a 4 gabarits de plus (construction_placee,
-        # debordement_centre_tete, une_deux, profondeur_1v1) -- 7 gabarits restent inchanges, pas 11.
+    def test_four_other_gabarits_are_untouched(self):
+        # Ticket 03 (construction_placee, debordement_centre_tete, une_deux, profondeur_1v1) puis ticket 04
+        # (recuperation_haute, decalage_enroulee, percee_individuelle, 22/10/2026) ont generalise le prefixe a 7
+        # gabarits de plus -- 4 gabarits restent inchanges (coups de pied arretes et but_gag, ticket 05), pas 11.
         lineup, opponents = _lineup(), _opponent_lineup()
         event, starts = _goal_event(), _start_positions(lineup)
         for name in BUILDERS:
@@ -2298,16 +2302,22 @@ class TestContreAttaqueConstructionPhase:
 
 
 class TestConstructionPrefixGeneralization:
-    """Ticket 03 (temps-forts-multiphases, 22/10/2026) : `_prefix_adverse_possession` (ticket 02, validé sur
-    `contre_attaque`) généralisé à `construction_placee`, `debordement_centre_tete`, `une_deux` et `profondeur_1v1` --
-    même scénario, même mécanisme (recommandation du propriétaire, 22/10/2026 : pas de catalogue de types à tirer au
-    hasard par gabarit, la variété géographique suffit). La jonction se retrouve via `_perte_balle_and_junction`
-    (le keyframe juste après celui tagué "perte_balle"), pas par nom de tag littéral ni par index fixe -- ces 4
-    gabarits n'ont pas le tag `recuperation` au premier keyframe (`debordement`/`passe`/`appel` selon le gabarit,
-    voir leurs définitions dans `templates.py`), et le ticket 07 (22/10/2026) a inséré un keyframe de balancement
-    dans le préfixe, qui ne compte donc plus un nombre fixe de 2 éléments."""
+    """Tickets 03 et 04 (temps-forts-multiphases, 22/10/2026) : `_prefix_adverse_possession` (ticket 02, validé sur
+    `contre_attaque`) généralisé à `construction_placee`, `debordement_centre_tete`, `une_deux`, `profondeur_1v1`
+    (ticket 03) puis `recuperation_haute`, `decalage_enroulee`, `percee_individuelle` (ticket 04, y compris ce
+    dernier malgré son nom "solo" -- tranché avec le propriétaire : la construction décrit la perte de balle
+    ADVERSE, jamais le côté collectif/solo de la conclusion elle-même) -- même scénario, même mécanisme
+    (recommandation du propriétaire, 22/10/2026 : pas de catalogue de types à tirer au hasard par gabarit, la
+    variété géographique suffit). La jonction se retrouve via `_perte_balle_and_junction` (le keyframe juste après
+    celui tagué "perte_balle"), pas par nom de tag littéral ni par index fixe -- ces gabarits n'ont pas tous le tag
+    `recuperation` au premier keyframe (`debordement`/`passe`/`appel`/`pressing`/`decalage`/`controle` selon le
+    gabarit, voir leurs définitions dans `templates.py`), et le ticket 07 (22/10/2026) a inséré un keyframe de
+    balancement dans le préfixe, qui ne compte donc plus un nombre fixe de 2 éléments."""
 
-    _GABARITS = ("construction_placee", "debordement_centre_tete", "une_deux", "profondeur_1v1")
+    _GABARITS = (
+        "construction_placee", "debordement_centre_tete", "une_deux", "profondeur_1v1",
+        "recuperation_haute", "decalage_enroulee", "percee_individuelle",
+    )
 
     @pytest.mark.parametrize("name", _GABARITS)
     def test_with_opponent_lineup_prefixes_two_opponents_and_extends_duration(self, name):
@@ -2405,27 +2415,29 @@ class TestConstructionPrefixGeneralization:
 
     def test_construction_is_skipped_when_the_goal_has_no_credited_assist(self):
         # MAJEUR releve en revue (simulafoot-reviewer, 22/10/2026) : exception plancher documentee (TRD_PRODUIT.md
-        # NFR-P02, ticket 03) -- sur ces 2 gabarits, le point d'ancrage (premier keyframe) est le passeur (`assist`).
-        # Un but sans passe decisive creditee (`event.assist is None`, dette connue du 23/09/2026, `_resolve_roles`
-        # ligne ~411) laisse ce role non resolu : `sequence.keyframes[0].ball.owner_id` est alors `None`, et
-        # `_prefix_adverse_possession` applique son repli neutre deja documente (pas d'adversaire invente pour une
-        # action qui n'a jamais eu de passeur reel). Verrouille ce chemin, mesure a ~4% des clips reels sous 20 s
-        # sur ces 2 gabarits -- non couvert avant cette revue.
+        # NFR-P02, ticket 03, etendue au ticket 04 pour `decalage_enroulee`) -- sur ces gabarits, le point d'ancrage
+        # (premier keyframe) est le passeur (`assist`), role ANCHOR_STATIC sans geometrie pour `decalage_enroulee`
+        # (meme mecanisme de resolution que `debordement_centre_tete`/`profondeur_1v1`, voir `_resolve_roles` ligne
+        # ~411 : jamais de repli generique pour "assist"). Un but sans passe decisive creditee (`event.assist is
+        # None`, dette connue du 23/09/2026) laisse ce role non resolu : `sequence.keyframes[0].ball.owner_id` est
+        # alors `None`, et `_prefix_adverse_possession` applique son repli neutre deja documente (pas d'adversaire
+        # invente pour une action qui n'a jamais eu de passeur reel).
         lineup, opponents = _lineup(), _opponent_lineup()
         starts = _start_positions(lineup)
-        for name in ("debordement_centre_tete", "profondeur_1v1"):
+        for name in ("debordement_centre_tete", "profondeur_1v1", "decalage_enroulee"):
             event = _goal_event(assist=None)
             plain = BUILDERS[name](event, lineup, starts, "but")
             extended = BUILDERS[name](event, lineup, starts, "but", opponents)
             assert extended.to_json() == plain.to_json(), name  # repli neutre : sequence inchangee, pas de crash
 
     def test_construction_still_applies_without_a_credited_assist_when_anchored_elsewhere(self):
-        # Contraste avec le test ci-dessus (demande en revue, 22/10/2026) : `construction_placee` (ancrage
-        # `support1`, tactique, jamais lie a un passeur reel) et `une_deux` (ancrage `scorer`, toujours resolu) ne
-        # dependent pas d'un passeur credite -- la construction s'applique meme sans assist.
+        # Contraste avec le test ci-dessus (demande en revue, 22/10/2026) : `construction_placee`/`recuperation_haute`
+        # (ancrage `support1`, tactique, jamais lie a un passeur reel), `une_deux` (ancrage `scorer`, toujours
+        # resolu) et `percee_individuelle` (ancrage `scorer`, seul role du gabarit) ne dependent pas d'un passeur
+        # credite -- la construction s'applique meme sans assist.
         lineup, opponents = _lineup(), _opponent_lineup()
         starts = _start_positions(lineup)
-        for name in ("construction_placee", "une_deux"):
+        for name in ("construction_placee", "une_deux", "recuperation_haute", "percee_individuelle"):
             event = _goal_event(assist=None)
             plain = BUILDERS[name](event, lineup, starts, "but")
             extended = BUILDERS[name](event, lineup, starts, "but", opponents)
