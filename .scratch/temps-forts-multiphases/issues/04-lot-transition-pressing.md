@@ -2,7 +2,7 @@
 
 **What to build:** les gabarits `recuperation_haute`, `decalage_enroulee` et `percee_individuelle` reçoivent chacun une phase de construction compatible, même principe que les lots précédents.
 
-**Blocked by:** 03 (lot "jeu collectif ouvert") — séquencé pour garder `templates.py` vert lot après lot, un seul lot à la fois sur ce fichier partagé.
+**Blocked by:** 03 (lot "jeu collectif ouvert") — séquencé pour garder `templates.py` vert lot après lot, un seul lot à la fois sur ce fichier partagé. Et 07 (mouvement des adversaires scriptés pendant la construction) — défaut visuel signalé par le propriétaire (22/10/2026), à régler avant de généraliser à 3 gabarits de plus plutôt que de le répandre davantage.
 
 **Status:** ready-for-agent
 
