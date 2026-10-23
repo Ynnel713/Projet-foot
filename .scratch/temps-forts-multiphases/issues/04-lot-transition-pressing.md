@@ -13,6 +13,8 @@
 - [ ] Les gabarits hors de ce lot sont 100 % identiques clip à clip
 - [ ] Propriétaire valide visuellement un échantillon représentatif des 3 gabarits
 
-**Point à trancher avec le propriétaire avant de coder `percee_individuelle` :** ce gabarit est conçu comme une action solo ("percée individuelle") ; lui ajouter une phase de construction collective contredit potentiellement son nom/design (signalé dans `docs/gabarit_durations_inventory.md`). Ne pas trancher seul — demander au propriétaire si la phase de construction doit rester solo (ex. pressing individuel avant la percée) ou si le gabarit sort du périmètre de ce chantier.
+**Décision prise avec le propriétaire (22/10/2026)** sur `percee_individuelle` : même mécanisme que les autres gabarits. La construction décrit la perte de balle ADVERSE, jamais le côté collectif/solo de la conclusion elle-même — pas de conflit avec le caractère "solo" de ce gabarit.
+
+**Exception plancher constatée (voir `docs/TRD_PRODUIT.md` NFR-P02)** : sur `decalage_enroulee` (ancrage passeur comme `debordement_centre_tete`/`profondeur_1v1`), un but sans passeur crédité laisse la construction omise (~4-5 % des clips mesurés). `recuperation_haute` (ancrage `support1`, tactique) et `percee_individuelle` (ancrage `scorer`, seul rôle du gabarit) n'ont pas cette exception.
 
 **Note :** fichiers sous exception (`CLAUDE.md`) concernés selon ce qui est réellement touché — demander l'exception avant de coder.
