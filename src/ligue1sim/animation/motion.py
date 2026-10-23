@@ -110,6 +110,28 @@ def max_speed_normalized(poste: str | None) -> float:
     return speed / PITCH_LENGTH_M
 
 
+# --- Plafond de vitesse partagé (plafond-vitesse-partage/01, 23/10/2026) -----
+# Seul point qui module le plafond d'un poste : chaque effet (fatigue, duel, mouvement riche...) fournit un facteur
+# dans [0, 1], les facteurs se MULTIPLIENT, et le résultat ne descend jamais sous le plancher commun -- aucun effet,
+# seul ou cumulé, ne fait paraître un joueur à l'arrêt. Plancher validé par le propriétaire : 75 % (resserrable à 70 %).
+SPEED_FACTOR_FLOOR = 0.75
+
+
+def combined_speed_factor(*factors: float | None) -> float:
+    """Produit des facteurs (chacun borné à [0, 1] ; `None` = effet non applicable, neutre), borné à
+    [`SPEED_FACTOR_FLOOR`, 1.0]. Sans facteur : 1.0 exactement (comportement d'avant inchangé)."""
+    product = 1.0
+    for factor in factors:
+        if factor is not None:
+            product *= min(1.0, max(0.0, factor))
+    return max(SPEED_FACTOR_FLOOR, product)
+
+
+def effective_max_speed_normalized(poste: str | None, *factors: float | None) -> float:
+    """Plafond du poste (`max_speed_normalized`) modulé par les effets actifs, voir `combined_speed_factor`."""
+    return max_speed_normalized(poste) * combined_speed_factor(*factors)
+
+
 # --- Décalage temporel déterministe (comportement 3) ----------------------
 _MAX_START_OFFSET_RATIO = 0.3  # fraction de la durée totale
 
@@ -489,7 +511,7 @@ def _raw_position_at(sequence: Sequence, player_id: PlayerId, t: float) -> tuple
         return _background_position_at(sequence.background[player_id], t, sequence.duration)
 
     entry = sequence.roster[player_id]
-    v_max = max_speed_normalized(entry.poste)
+    v_max = effective_max_speed_normalized(entry.poste)  # aucun effet branché à ce jour : facteur 1.0, plafond brut
     offset = 0.0 if _reacts_immediately(entry.role) else _start_offset(player_id, sequence.duration, event_ref=sequence.event_ref)
     return _player_position_at(sequence, player_id, t - offset, v_max)
 

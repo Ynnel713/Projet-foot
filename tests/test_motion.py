@@ -5,12 +5,15 @@ import pytest
 
 from ligue1sim.animation.motion import (
     MAX_SPEED_MPS,
+    SPEED_FACTOR_FLOOR,
     _apply_avoidance,
     _background_position_at,
     _ease_progress,
     _reacts_immediately,
     _real_distance_m,
     _start_offset,
+    combined_speed_factor,
+    effective_max_speed_normalized,
     interpolate,
     max_speed_normalized,
 )
@@ -92,6 +95,36 @@ class TestMaxSpeedNormalized:
 
     def test_goalkeeper_is_the_slowest(self):
         assert max_speed_normalized("GK") < max_speed_normalized("BU")
+
+
+class TestSharedSpeedCeiling:
+    """plafond-vitesse-partage/01 (23/10/2026) : un seul point module le plafond du poste."""
+
+    def test_no_effect_gives_exactly_the_raw_ceiling(self):
+        for poste in (*MAX_SPEED_MPS, None, "XX"):
+            assert effective_max_speed_normalized(poste) == max_speed_normalized(poste)
+            assert effective_max_speed_normalized(poste, None, None) == max_speed_normalized(poste)
+
+    def test_effects_multiply(self):
+        assert combined_speed_factor(0.9, 0.9) == pytest.approx(0.81)
+
+    def test_combined_factor_never_leaves_floor_and_one(self):
+        rng = random.Random(0)
+        for _ in range(2000):
+            factors = [rng.uniform(-1.0, 2.0) for _ in range(rng.randint(0, 8))]
+            assert SPEED_FACTOR_FLOOR <= combined_speed_factor(*factors) <= 1.0, factors
+
+    def test_floor_is_the_owner_validated_value(self):
+        assert SPEED_FACTOR_FLOOR == 0.75
+
+    def test_interpolation_uses_the_shared_point(self, monkeypatch):
+        import ligue1sim.animation.motion as motion_module
+
+        calls = []
+        original = motion_module.effective_max_speed_normalized
+        monkeypatch.setattr(motion_module, "effective_max_speed_normalized", lambda *a: calls.append(a) or original(*a))
+        interpolate(_sequence("contre_attaque", _lineup()), 1.0)
+        assert calls
 
 
 class TestStartOffset:
