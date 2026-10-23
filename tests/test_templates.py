@@ -2420,22 +2420,24 @@ class TestConstructionPrefixGeneralization:
         assert perte_balle.ball.x == junction.ball.x
         assert perte_balle.ball.y == junction.ball.y
 
-    def test_construction_is_skipped_when_the_goal_has_no_credited_assist(self):
-        # MAJEUR releve en revue (simulafoot-reviewer, 22/10/2026) : exception plancher documentee (TRD_PRODUIT.md
-        # NFR-P02, ticket 03, etendue au ticket 04 pour `decalage_enroulee`) -- sur ces gabarits, le point d'ancrage
-        # (premier keyframe) est le passeur (`assist`), role ANCHOR_STATIC sans geometrie pour `decalage_enroulee`
-        # (meme mecanisme de resolution que `debordement_centre_tete`/`profondeur_1v1`, voir `_resolve_roles` ligne
-        # ~411 : jamais de repli generique pour "assist"). Un but sans passe decisive creditee (`event.assist is
-        # None`, dette connue du 23/09/2026) laisse ce role non resolu : `sequence.keyframes[0].ball.owner_id` est
-        # alors `None`, et `_prefix_adverse_possession` applique son repli neutre deja documente (pas d'adversaire
-        # invente pour une action qui n'a jamais eu de passeur reel).
+    def test_construction_falls_back_on_the_ball_when_the_goal_has_no_credited_assist(self):
+        # Remplace test_construction_is_skipped_when_the_goal_has_no_credited_assist (tickets 03/04), qui verrouillait
+        # l'ancienne exception plancher : un but sans passe decisive creditee (`event.assist is None`) laisse le role
+        # `assist` -- point d'ancrage de ces 3 gabarits -- non resolu, et la construction etait omise. Mesure du
+        # ticket 06 (23/10/2026) : cette omission ne touchait presque que des buts et laissait 22 clips sur 1552 sous
+        # 20 s, un indice d'issue. Decision du proprietaire (23/10/2026) : ancrage de repli sur la position du ballon
+        # a t=0. Verifie : construction presente, duree >= 20 s, jonction ballon a distance zero.
         lineup, opponents = _lineup(), _opponent_lineup()
         starts = _start_positions(lineup)
         for name in ("debordement_centre_tete", "profondeur_1v1", "decalage_enroulee"):
             event = _goal_event(assist=None)
             plain = BUILDERS[name](event, lineup, starts, "but")
             extended = BUILDERS[name](event, lineup, starts, "but", opponents)
-            assert extended.to_json() == plain.to_json(), name  # repli neutre : sequence inchangee, pas de crash
+            assert tpl.construction_duration_of(extended) is not None, name
+            assert extended.duration >= tpl._DURATION_FLOOR_S, name
+            perte_balle, junction = _perte_balle_and_junction(extended.keyframes)
+            assert (perte_balle.ball.x, perte_balle.ball.y) == (plain.keyframes[0].ball.x, plain.keyframes[0].ball.y), name
+            assert (junction.ball.x, junction.ball.y) == (plain.keyframes[0].ball.x, plain.keyframes[0].ball.y), name
 
     def test_construction_still_applies_without_a_credited_assist_when_anchored_elsewhere(self):
         # Contraste avec le test ci-dessus (demande en revue, 22/10/2026) : `construction_placee`/`recuperation_haute`

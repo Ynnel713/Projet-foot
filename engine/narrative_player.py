@@ -40,7 +40,15 @@ from ligue1sim.animation.physics import apply_acceleration_constraint
 from ligue1sim.animation.sequence_generator import enrich_with_background
 from ligue1sim.animation.serialize import frame_sequence_to_json
 from ligue1sim.animation.spatial import placed_player_to_normalized
-from ligue1sim.animation.templates import BUILDERS, TEMPLATES, numeros_by_player_id, player_id_of
+from ligue1sim.animation.templates import (
+    BUILDERS,
+    TEMPLATES,
+    construction_duration_of,
+    numeros_by_player_id,
+    player_id_of,
+    retime_construction,
+    target_clip_duration_s,
+)
 from ligue1sim.animation.types import PlayerId, RosterEntry
 from ligue1sim.events import CardEvent, GoalEvent, PlayerMatchStat, SubstitutionEvent
 from ligue1sim.kits import match_kit_colors
@@ -53,6 +61,11 @@ from ball_events import BallPlan, plan_ball_events
 from narrative import BUT, NarrativeEvent, Timeline
 
 _FPS = 30
+
+# Ticket 06 (temps-forts-multiphases, 23/10/2026) : TOUTES les issues qu'un clip peut avoir (buts, occasions, penalty
+# manqué) -- la durée cible est calculée sur la plus longue d'entre elles, pour qu'elle ne révèle jamais l'issue réelle.
+# Volontairement plus large que les listes de narrative.py : une issue en trop ne fait qu'élargir le max.
+_ALL_OUTCOMES = ("but", "arret", "hors_cadre", "tacle", "degagement", "poteau", "barre")
 
 # --- Position de départ d'un remplaçant (Tâche 2) -----------------------
 # Pas de position de formation réelle pour un joueur entré en jeu -- il
@@ -288,6 +301,27 @@ def _build_clip(
     # narrative.py) -- seul changement dans ce fichier, aucune autre
     # modification.
     sequence = BUILDERS[event.gabarit](goal_event, scorer_lineup, start_positions, event.outcome, opponent_lineup)  # B8-b : pression adverse sur les contrôles
+    keeper = next((p.name for p in list(opponent_full.players) + list(opponent_full.substitutes) if p.group == GOALKEEPER and p.name in opponent_present), None)
+    target_s = None
+    construction_s = construction_duration_of(sequence)
+    if construction_s is not None:
+        # Ticket 06 (décision du propriétaire, 23/10/2026) : durée FINALE du clip (suite du tir comprise) identique
+        # pour toutes les issues d'un même événement -- la construction absorbe l'écart, la conclusion n'est jamais
+        # raccourcie. `end_tau` ne dépend que de la géométrie de la frappe, pas du décalage temporel de la conclusion.
+        def conclusion_s(seq, outcome):
+            tail = plan_ball_events(seq, outcome, event.minute, event.main_player, keeper).end_tau
+            return seq.duration - (construction_duration_of(seq) or 0.0) + tail
+
+        longest = max(
+            conclusion_s(
+                sequence if outcome == event.outcome
+                else BUILDERS[event.gabarit](goal_event, scorer_lineup, start_positions, outcome, opponent_lineup),
+                outcome,
+            )
+            for outcome in _ALL_OUTCOMES
+        )
+        target_s = target_clip_duration_s(sequence.event_ref, event.gabarit, longest)
+        sequence = retime_construction(sequence, target_s - conclusion_s(sequence, event.outcome))
     # Chantier mouvement collectif, Phase 3 (16/10/2026) : exception accordée séparément pour CE changement précis
     # (transmettre `scorer_lineup`, déjà en scope depuis _scorer_view ligne 260, pour qu'un MC/MDC côté scorer tiré
     # pour une initiative de soutien résolve son `Player` -- voir sequence_generator._support_initiative_direction).
@@ -304,9 +338,16 @@ def _build_clip(
         frames.append(interpolate(sequence, t))
         t += step
     frames = _apply_acceleration_constraint_to_frames(frames, step)
-    keeper = next((p.name for p in list(opponent_full.players) + list(opponent_full.substitutes) if p.group == GOALKEEPER and p.name in opponent_present), None)
+    if target_s is not None and frames[-1].t < sequence.duration - 1e-9:
+        # Dernière image calée sur la fin exacte de la séquence (joueurs inchangés, ballon à cet instant) : sans elle,
+        # la durée d'un clip sans suite de tir serait arrondie à l'image inférieure, différemment selon l'issue.
+        # Ajoutée APRÈS la contrainte d'accélération, comme le gel des joueurs de `_extend_with_ball_path` : moins
+        # d'une image de joueurs figés en fin de clip, aucun déplacement donc aucun saut.
+        frames.append(replace(frames[-1], t=sequence.duration, ball=interpolate(sequence, sequence.duration).ball))
     plan = plan_ball_events(sequence, event.outcome, event.minute, event.main_player, keeper)
     frames = _extend_with_ball_path(frames, sequence, plan, step)
+    if target_s is not None and abs(frames[-1].t - target_s) < 1e-6:
+        frames[-1] = replace(frames[-1], t=target_s)  # absorbe l'arrondi flottant : durée bit-identique entre issues
     # Un événement daté à l'instant exact du contact peut tomber jusqu'à une image après la dernière image d'un clip
     # non prolongé : sa date est bornée à la durée du clip.
     clip_end = frames[-1].t

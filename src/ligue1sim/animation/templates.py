@@ -1828,9 +1828,13 @@ def _prefix_adverse_possession(sequence: Sequence, opponent_lineup: Lineup) -> S
 
     recovery_players = sequence.keyframes[0].players  # compo complete de l'equipe qui marque, deja a sa position de depart
     recovery_player_id = sequence.keyframes[0].ball.owner_id
-    if recovery_player_id is None:
-        return sequence  # compo degeneree (porteur du ballon a t=0 non resolu) -- meme repli neutre que "moins de 2 adversaires" plus bas
-    recovery_point = PitchPoint(*recovery_players[recovery_player_id])
+    # Ticket 06 (decision du proprietaire, 23/10/2026) : porteur non resolu (but sans passeur credite sur un gabarit
+    # ancre sur `assist`) -> ancrage de repli sur la position du ballon a t=0, jamais une construction omise (qui
+    # laissait ces clips sous 20 s, presque uniquement sur des buts : indice d'issue).
+    kf0_ball = sequence.keyframes[0].ball
+    recovery_point = (
+        PitchPoint(kf0_ball.x, kf0_ball.y) if recovery_player_id is None else PitchPoint(*recovery_players[recovery_player_id])
+    )
     ball_target = (sequence.keyframes[-1].ball.x, sequence.keyframes[-1].ball.y)
 
     tracks = opponent_field_tracks(opponent_lineup, sequence.event_ref, ball_target)
@@ -1925,6 +1929,7 @@ def _prefix_adverse_possession(sequence: Sequence, opponent_lineup: Lineup) -> S
         keyframes=prefix + shifted,
         duration=total_duration,  # pas sequence.duration + construction_duration, voir commentaire ci-dessus
         roster={**sequence.roster, **opponent_roster},
+        meta={**sequence.meta, _CONSTRUCTION_META_KEY: construction_duration},
     )
 
 
@@ -2030,6 +2035,7 @@ def _prefix_dead_ball_foul(
         keyframes=prefix + shifted,
         duration=total_duration,
         roster={**sequence.roster, **opponent_roster},
+        meta={**sequence.meta, _CONSTRUCTION_META_KEY: construction_duration},
     )
 
 
@@ -2098,7 +2104,50 @@ def _prefix_deflected_out(sequence: Sequence, opponent_lineup: Lineup) -> Sequen
         keyframes=prefix + shifted,
         duration=total_duration,
         roster={**sequence.roster, **opponent_roster},
+        meta={**sequence.meta, _CONSTRUCTION_META_KEY: construction_duration},
     )
+
+
+# Ticket 06 : les 3 fonctions de prefixe produisent exactement 3 keyframes et notent leur duree dans `meta`, pour que
+# le lecteur puisse retailler la construction une fois connue la duree reelle de la suite du tir (rebond/parade).
+_CONSTRUCTION_META_KEY = "construction_s"
+_CONSTRUCTION_KEYFRAMES = 3
+
+
+def construction_duration_of(sequence: Sequence) -> float | None:
+    """Duree de la phase de construction de `sequence`, `None` si elle n'en a pas (repli neutre, compo degeneree)."""
+    return sequence.meta.get(_CONSTRUCTION_META_KEY)
+
+
+def retime_construction(sequence: Sequence, construction_s: float) -> Sequence:
+    """Redonne `construction_s` secondes a la construction de `sequence` (>= 0) : les 3 keyframes du prefixe sont
+    replaces au debut / milieu / fin de la nouvelle duree, la conclusion est decalee d'autant, sans autre changement
+    (positions, porteurs et tags identiques -- la jonction reste a distance zero)."""
+    old_s = construction_duration_of(sequence)
+    if old_s is None:
+        return sequence
+    construction_s = max(0.0, construction_s)
+    prefix_times = (0.0, construction_s / 2.0, construction_s)
+    # `construction_s + (t - old_s)` et non `t + (construction_s - old_s)` : a la jonction (t == old_s) le resultat
+    # vaut EXACTEMENT `construction_s`, sans ecart flottant qui casserait l'ordre des keyframes.
+    keyframes = [
+        replace(kf, t=prefix_times[i] if i < _CONSTRUCTION_KEYFRAMES else construction_s + (kf.t - old_s))
+        for i, kf in enumerate(sequence.keyframes)
+    ]
+    return replace(
+        sequence, keyframes=keyframes, duration=construction_s + (sequence.duration - old_s),
+        meta={**sequence.meta, _CONSTRUCTION_META_KEY: construction_s},
+    )
+
+
+def target_clip_duration_s(event_ref: str, template: str, longest_conclusion_s: float) -> float:
+    """Duree FINALE d'un clip (suite du tir comprise), identique quelle que soit l'issue (ticket 06, decision du
+    proprietaire 23/10/2026) : `longest_conclusion_s` est la conclusion la plus longue parmi TOUTES les issues
+    possibles de l'evenement, donc la cible ne depend que de `event_ref`. Tiree dans [max(20, cette conclusion), 40[,
+    meme formule que `_construction_duration_s` ; au-dela de 40 s (exception validee) la cible vaut cette conclusion."""
+    floor_base = max(_DURATION_FLOOR_S, longest_conclusion_s)
+    headroom = max(0.0, _DURATION_CEILING_S - floor_base)
+    return floor_base + headroom * _flight_unit(event_ref, f"{template}_clip_duration")
 
 
 def build_construction_placee(

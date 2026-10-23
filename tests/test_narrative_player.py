@@ -5,6 +5,7 @@ de test -- même motif déjà établi dans ce projet, voir la docstring
 d'`apps/streamlit_preview.py` sur l'indépendance volontaire des fichiers)."""
 
 import dataclasses
+import math
 from types import SimpleNamespace
 
 import pytest
@@ -24,6 +25,7 @@ from ligue1sim.simulation import LeagueContext, simulate_match
 
 from ball_events import BALL_EVENT_TYPES, plan_ball_events
 from narrative import BUT, build_timeline, match_result_from
+import narrative_player
 from narrative_player import (
     build_clips,
     clips_to_json,
@@ -483,10 +485,14 @@ class TestOutcomeTransmittedToTemplate:
                 captured.clear()
                 opponents.clear()
                 _build_clip_frames(timeline, event)
-                assert len(captured) == 1, (
-                    f"{timeline.match_id} minute={event.minute} : {len(captured)} appels a "
-                    "build_from_template (attendu exactement 1 par evenement)"
+                # Ticket 06 (23/10/2026) : la duree cible du clip est calculee sur la plus longue de TOUTES les issues
+                # possibles -- le gabarit est donc construit une fois pour l'issue reelle (1er appel), puis une fois
+                # pour chacune des autres issues (sauf repli sans construction : 1 seul appel).
+                assert len(captured) in (1, len(narrative_player._ALL_OUTCOMES)), (
+                    f"{timeline.match_id} minute={event.minute} : {len(captured)} appels a build_from_template"
                 )
+                if len(captured) > 1:
+                    assert set(captured) == set(narrative_player._ALL_OUTCOMES), (timeline.match_id, event.minute)
                 assert captured[0] == event.outcome, (
                     f"{timeline.match_id} minute={event.minute} : outcome transmis {captured[0]!r} "
                     f"!= event.outcome {event.outcome!r}"
@@ -903,3 +909,70 @@ class TestBallEventsInThePayload:
         clips = [dataclasses.replace(c, events_ball=()) for c in build_clips(timeline, max_occasions=2)]
         for payload in json.loads(clips_to_json(clips, timeline)):
             assert "events_ball" not in payload["metadata"]
+
+
+class TestClipDurationHidesTheOutcome:
+    """Ticket 06 (temps-forts-multiphases, 23/10/2026) : la durée FINALE d'un clip (suite du tir comprise) est
+    identique pour toutes les issues possibles d'un même événement, dans [20, 40[ s sauf conclusion seule plus longue."""
+
+    @staticmethod
+    def _events(n_events: int = 12):
+        timeline = build_timeline(_simulate_n(2)[0])
+        return timeline, list(timeline.events)[:n_events]
+
+    def test_final_duration_is_identical_for_every_outcome(self):
+        timeline, events = self._events()
+        assert events
+        for event in events:
+            durations = {}
+            for outcome in narrative_player._ALL_OUTCOMES:
+                frames, _roster = _build_clip_frames(timeline, dataclasses.replace(event, outcome=outcome))
+                if frames:
+                    durations[outcome] = frames[-1].t
+            assert len(set(durations.values())) == 1, (event.minute, event.gabarit, durations)
+
+    def test_final_duration_is_at_least_the_floor(self):
+        timeline, events = self._events()
+        for event in events:
+            frames, _roster = _build_clip_frames(timeline, event)
+            if frames:
+                assert frames[-1].t >= 20.0 - 1e-9, (event.minute, event.gabarit, frames[-1].t)
+
+    def test_retiming_the_construction_does_not_change_the_shot_tail(self):
+        lineup, opponents = _accel_lineup("home", 1), _accel_lineup("away", 101)
+        for name in ("contre_attaque", "corner", "penalty", "coup_franc"):
+            for outcome in ("arret", "poteau"):
+                event = dataclasses.replace(_accel_goal_event(), penalty=(name == "penalty"))
+                seq = BUILDERS[name](event, lineup, _accel_start_positions(lineup), outcome, opponents)
+                retimed = templates_module.retime_construction(seq, templates_module.construction_duration_of(seq) + 7.0)
+                assert retimed.duration == pytest.approx(seq.duration + 7.0)
+                assert plan_ball_events(retimed, outcome, 10, None, None).end_tau == pytest.approx(
+                    plan_ball_events(seq, outcome, 10, None, None).end_tau
+                ), (name, outcome)
+
+    def test_a_construction_retimed_to_zero_stays_ordered_and_continuous(self):
+        # Revue 23/10/2026 : cas limite d'une construction à 0 s (l'issue réelle est la plus longue et le tirage tombe
+        # au plancher) -- déjà possible avant le ticket 06, verrouillé ici après retaillage.
+        lineup, opponents = _accel_lineup("home", 1), _accel_lineup("away", 101)
+        seq = BUILDERS["contre_attaque"](_accel_goal_event(), lineup, _accel_start_positions(lineup), "arret", opponents)
+        retimed = templates_module.retime_construction(seq, 0.0)
+        times = [kf.t for kf in retimed.keyframes]
+        assert times == sorted(times) and times[:4] == [0.0, 0.0, 0.0, 0.0]
+
+        def junction_jump_m(s, c):
+            a, b = interpolate(s, c), interpolate(s, c + 1e-6)
+            return max(math.hypot((a.players[p].x - b.players[p].x) * PITCH_LENGTH_M,
+                                  (a.players[p].y - b.players[p].y) * PITCH_WIDTH_M) for p in a.players)
+
+        # Le retaillage n'ajoute aucune discontinuite : meme ecart a la jonction qu'avec la construction d'origine.
+        assert junction_jump_m(retimed, 0.0) == pytest.approx(
+            junction_jump_m(seq, templates_module.construction_duration_of(seq)), abs=1e-6
+        )
+
+    def test_the_last_frame_added_at_the_exact_end_never_moves_a_player(self):
+        timeline, events = self._events(6)
+        for event in events:
+            frames, _roster = _build_clip_frames(timeline, dataclasses.replace(event, outcome="hors_cadre"))
+            if len(frames) >= 2 and frames[-1].t - frames[-2].t < 1.0 / 30.0 - 1e-9:
+                for pid, state in frames[-1].players.items():
+                    assert (state.x, state.y) == (frames[-2].players[pid].x, frames[-2].players[pid].y), (event.minute, pid)
