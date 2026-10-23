@@ -99,14 +99,17 @@ def _opponent_lineup() -> Lineup:
     return Lineup(club_name="Opponent FC", formation="4-3-3", players=players, rating=65.0)
 
 
-# Ticket 02 (temps-forts-multiphases, 22/10/2026, contre_attaque seul) généralisé par le ticket 03 (4 gabarits) puis
-# le ticket 04 (recuperation_haute, decalage_enroulee, percee_individuelle, 22/10/2026) : `opponent_lineup`, fourni,
-# déclenche désormais `_prefix_adverse_possession` (pas seulement la modulation de pression au sol) sur ces 8
-# gabarits -- les 4 autres (coups de pied arrêtés et cas solo, ticket 05) gardent l'invariant "opponent_lineup ne
-# change rien hors pression".
+# Ticket 02 (temps-forts-multiphases, 22/10/2026, contre_attaque seul) généralisé par le ticket 03 (4 gabarits), le
+# ticket 04 (recuperation_haute, decalage_enroulee, percee_individuelle) puis le ticket 05 (coup_franc, corner,
+# penalty, but_gag, 22/10/2026) : `opponent_lineup`, fourni, déclenche désormais une phase de construction (pas
+# seulement la modulation de pression au sol) sur les 12 gabarits -- `_prefix_adverse_possession` pour `but_gag`
+# (même mécanisme que les 8 premiers), `_prefix_dead_ball_foul` pour `coup_franc`/`penalty` (la faute), et
+# `_prefix_deflected_out` pour `corner` (dégagement contré, direction inversée). Plus aucun gabarit n'ignore
+# `opponent_lineup` hors pression.
 _GABARITS_WITH_CONSTRUCTION_PREFIX = (
     "contre_attaque", "construction_placee", "debordement_centre_tete", "une_deux", "profondeur_1v1",
     "recuperation_haute", "decalage_enroulee", "percee_individuelle",
+    "coup_franc", "corner", "penalty", "but_gag",
 )
 
 
@@ -116,6 +119,14 @@ def _perte_balle_and_junction(keyframes):
     keyframe de balancement entre le debut du prefixe et "perte_balle", donc le nombre de keyframes du prefixe n'est
     plus garanti a 2."""
     idx = next(i for i, kf in enumerate(keyframes) if kf.tag == "perte_balle")
+    return keyframes[idx], keyframes[idx + 1]
+
+
+def _tagged_and_junction(keyframes, tag):
+    """Generalisation de `_perte_balle_and_junction` (ticket 05, 22/10/2026) : retrouve le dernier keyframe du
+    prefixe par SON TAG (ex. "placement" pour `_prefix_dead_ball_foul`, "sortie_en_corner" pour
+    `_prefix_deflected_out`) et celui juste apres (la vraie jonction), jamais par index fixe."""
+    idx = next(i for i, kf in enumerate(keyframes) if kf.tag == tag)
     return keyframes[idx], keyframes[idx + 1]
 
 
@@ -969,7 +980,13 @@ class TestTemplateStructureUnchangedByPhysicsTags:
     fixe du ballon disputé à t_ratio=0,3 (posée le 23/09/2026 juste pour éviter un ballon immobile, jamais une vraie position)
     devient le MILIEU des deux presseurs (`support1`/`support2`) à ce même t_ratio (`Template.dynamic_ball_position`, nouveau
     champ, vide par défaut sur les 11 autres gabarits). Preuve de cause unique : avec `dynamic_ball_position=()` et l'ancien
-    `ball_position=((0.3, (0.6, 0.5)),)` remis, le code redonne exactement l'ancienne empreinte ci-dessus."""
+    `ball_position=((0.3, (0.6, 0.5)),)` remis, le code redonne exactement l'ancienne empreinte ci-dessus.
+
+    Quatorzième exception délibérée (temps-forts-multiphases, ticket 05, 23/10/2026) : `penalty` a une empreinte mise à jour
+    -- les coéquipiers du tireur doivent être hors de l'arc (>= 9,15 m du point de penalty, Lois du jeu, décision du
+    propriétaire) : `_PENALTY_SUPPORT_LATERAL_MIN_M` passe de 6 m à ~7,31 m (dérivé de la géométrie réglementaire). Preuve de
+    cause unique : avec `_PENALTY_SUPPORT_LATERAL_MIN_M = 6.0` remis, le code redonne exactement l'ancienne empreinte
+    (f2e5e8f7...)."""
 
     _EXPECTED_STRUCTURE_HASH = {
         "but_gag": "c982c7c9f8905b2d948ecbc21c2009643fb30661471acfd64352f604a8801ecf",
@@ -979,7 +996,7 @@ class TestTemplateStructureUnchangedByPhysicsTags:
         "coup_franc": "ff70b15275eb85d5baefeb5acea5f4a81e25319618a6e25cc978600aca72f959",
         "debordement_centre_tete": "9a5039d4b4d9112586b7676f475bc7e7cec54ce265278006814c3dae681a95f8",
         "decalage_enroulee": "f2f8eae8553986557f62b7e938429e5ac182fef09c21f4d87fb2c0f158ff1090",
-        "penalty": "f2e5e8f763161da656bf4080c7991701714085723a65e69fe23af4ba4e883f28",
+        "penalty": "5e61ac3c0e5c0f965cb8a9846d25e746ada03d3c49d9ac932682fbd3711c8ade",
         "percee_individuelle": "7dda924ea183a11583d3539da5cadd0b95d46733059d7d6901729da617f28021",
         "profondeur_1v1": "72001bb8a4e7e0a03cbc38616bc13fa468f342f5adce9e38c2327126666ad988",
         "recuperation_haute": "bd403efaca280ffc63eab15b92c795468fc094a17e303c75e67d69639ebb4d62",
@@ -1762,6 +1779,12 @@ class TestControlPressureModulation:
     # --- branchement dans les gabarits ------------------------------------------------------------------------------------------------
     def test_every_builder_accepts_the_opponent_lineup_and_none_keeps_b8a(self):
         lineup, opponents = _lineup(), self._opponents()
+        # Ticket 05 (22/10/2026) a generalise la derniere vague (coup_franc/corner/penalty/but_gag) : les 12
+        # gabarits sont maintenant tous dans `_GABARITS_WITH_CONSTRUCTION_PREFIX` -- `opponent_lineup` allonge
+        # desormais TOUJOURS la duree (plus d'exception "la pression ne change jamais la duree" a verifier ici,
+        # voir `TestConstructionPrefixGeneralization`/`TestDeadBallConstructionPrefix` pour cette garantie par
+        # gabarit). Ce test ne verifie plus que l'invariant universel : `None` explicite == defaut, `event_ref` fixe.
+        assert set(BUILDERS) == set(_GABARITS_WITH_CONSTRUCTION_PREFIX)
         for name in BUILDERS:
             event = _goal_event(penalty=(name == "penalty"))
             starts = _start_positions(lineup)
@@ -1769,27 +1792,15 @@ class TestControlPressureModulation:
             explicit_none = BUILDERS[name](event, lineup, starts, "but", None)
             with_opponents = BUILDERS[name](event, lineup, starts, "but", opponents)
             assert default.to_json() == explicit_none.to_json(), name
-            # Exception déliberée (tickets 02/03/04, temps-forts-multiphases, 22/10/2026) : ces 8 gabarits sont les
-            # seuls où `opponent_lineup` fait maintenant plus que moduler la pression -- il déclenche aussi la phase de
-            # construction "possession adverse -> perte de balle" (voir TestContreAttaqueConstructionPhase), qui
-            # allonge délibérément la durée. Les 4 autres gabarits gardent l'invariant inchangé.
-            if name not in _GABARITS_WITH_CONSTRUCTION_PREFIX:
-                assert with_opponents.duration == default.duration, name  # la pression ne change jamais la durée
             assert with_opponents.event_ref == default.event_ref, name
 
-    def test_templates_without_ground_control_ignore_the_opponent_lineup(self):
-        lineup, opponents = _lineup(), self._opponents()
-        for name in TestGroundControls._UNTOUCHED:
-            # Exception déliberée (tickets 03/04, temps-forts-multiphases, 22/10/2026) : `debordement_centre_tete` et
-            # `percee_individuelle` restent sans contrôle au sol à moduler (ground_control=False / aucune réception,
-            # inchangé), mais `opponent_lineup` déclenche désormais aussi `_prefix_adverse_possession` pour ces deux
-            # gabarits -- ils ne l'ignorent donc plus totalement. Les 3 autres gabarits "untouched" (aucune réception
-            # à moduler, hors périmètre de ce chantier) restent inchangés par `opponent_lineup`.
-            if name in _GABARITS_WITH_CONSTRUCTION_PREFIX:
-                continue
-            event = _goal_event(penalty=(name == "penalty"))
-            starts = _start_positions(lineup)
-            assert BUILDERS[name](event, lineup, starts, "but", opponents).to_json() == BUILDERS[name](event, lineup, starts, "but").to_json(), name
+    # test_templates_without_ground_control_ignore_the_opponent_lineup existait ici (tickets 02/03) : il vérifiait
+    # que `TestGroundControls._UNTOUCHED` (aucun contrôle au sol à moduler) ignorait totalement `opponent_lineup`.
+    # Retiré au ticket 05 (22/10/2026), pas affaibli : ses 5 gabarits sont maintenant TOUS dans
+    # `_GABARITS_WITH_CONSTRUCTION_PREFIX` (le dernier, `coup_franc`/`corner`/`penalty`, vient de ce ticket), donc la
+    # prémisse du test ("opponent_lineup ne change rien pour ces gabarits") n'est plus jamais vraie -- plus un seul
+    # gabarit du catalogue n'ignore totalement `opponent_lineup`. Couverture reprise par
+    # `TestDeadBallConstructionPrefix`/`TestConstructionPrefixGeneralization` (ces gabarits ont bien une construction).
 
     def test_modulation_with_opponents_is_deterministic(self):
         lineup, opponents = _lineup(), self._opponents()
@@ -1799,21 +1810,13 @@ class TestControlPressureModulation:
                 starts = _start_positions(lineup)
                 assert BUILDERS[name](event, lineup, starts, "but", opponents).to_json() == BUILDERS[name](event, lineup, starts, "but", opponents).to_json()
 
-    def test_the_sporting_outcome_and_the_receivers_are_never_modified_by_the_pressure(self):
-        lineup, opponents = _lineup(), self._opponents()
-        # Exception délibérée (tickets 02/03/04, temps-forts-multiphases, 22/10/2026) : tous les gabarits de
-        # `_GABARITS_WITH_CONSTRUCTION_PREFIX` présents dans `_CONTROLLED` sont exclus de cette comparaison
-        # structurelle (leurs premier/dernier keyframes changent désormais avec `opponent_lineup`, par construction
-        # -- voir `_prefix_adverse_possession`) -- ne reste testé ici que `but_gag`. L'invariant plus profond (même
-        # buteur/passeur, résultat sportif inchangé) est vérifié séparément dans `TestConstructionPrefixGeneralization`.
-        for name in (n for n in self._CONTROLLED if n not in _GABARITS_WITH_CONSTRUCTION_PREFIX):
-            for minute in range(1, 11):
-                event = _goal_event(minute=minute)
-                starts = _start_positions(lineup)
-                plain, pressed = BUILDERS[name](event, lineup, starts, "but"), BUILDERS[name](event, lineup, starts, "but", opponents)
-                assert plain.keyframes[0].ball == pressed.keyframes[0].ball and plain.keyframes[-1].ball == pressed.keyframes[-1].ball
-                original = lambda sequence: [(kf.t, kf.ball.owner_id) for kf in sequence.keyframes if not kf.tag.startswith(("controle_", "reprise_"))]
-                assert original(plain) == original(pressed), (name, minute)
+    # test_the_sporting_outcome_and_the_receivers_are_never_modified_by_the_pressure existait ici (tickets 02/03/04) :
+    # il comparait la structure complète pour les gabarits de `_CONTROLLED` non encore couverts par une construction.
+    # Retiré au ticket 05 (22/10/2026), pas affaibli : `but_gag` (le dernier membre de `_CONTROLLED` qui restait) a
+    # maintenant lui aussi `_prefix_adverse_possession` -- `_CONTROLLED` est désormais un sous-ensemble strict de
+    # `_GABARITS_WITH_CONSTRUCTION_PREFIX`, la prémisse ("gabarits sous pression mais sans construction") n'a plus
+    # aucun membre. L'invariant plus profond (même buteur/passeur, résultat sportif inchangé) reste vérifié pour tous
+    # ces gabarits dans `TestConstructionPrefixGeneralization`/`TestDeadBallConstructionPrefix`.
 
 
 class TestAerialContactHeight:
@@ -2265,18 +2268,20 @@ class TestContreAttaqueConstructionPhase:
             }
             assert len(set(durations.values())) == 1, (minute, durations)
 
-    def test_four_other_gabarits_are_untouched(self):
-        # Ticket 03 (construction_placee, debordement_centre_tete, une_deux, profondeur_1v1) puis ticket 04
-        # (recuperation_haute, decalage_enroulee, percee_individuelle, 22/10/2026) ont generalise le prefixe a 7
-        # gabarits de plus -- 4 gabarits restent inchanges (coups de pied arretes et but_gag, ticket 05), pas 11.
+    def test_all_twelve_gabarits_now_have_a_construction_prefix(self):
+        # Ticket 03 (4 gabarits), ticket 04 (3 gabarits) puis ticket 05 (coup_franc, corner, penalty, but_gag,
+        # 22/10/2026) ont generalise le prefixe aux 12 gabarits du catalogue -- fin de la generalisation, critere
+        # d'acceptation du ticket 05 ("vérification croisée sur l'ensemble du catalogue"). Plus aucun gabarit
+        # "temoin" a verifier inchange : chacun a sa propre garantie testee dans
+        # TestConstructionPrefixGeneralization/TestDeadBallConstructionPrefix.
         lineup, opponents = _lineup(), _opponent_lineup()
         event, starts = _goal_event(), _start_positions(lineup)
+        assert set(BUILDERS) == set(_GABARITS_WITH_CONSTRUCTION_PREFIX)
         for name in BUILDERS:
-            if name in _GABARITS_WITH_CONSTRUCTION_PREFIX:
-                continue
             plain = BUILDERS[name](event, lineup, starts, "but")
             with_opponents = BUILDERS[name](event, lineup, starts, "but", opponents)
-            assert with_opponents.duration == plain.duration, name
+            assert with_opponents.duration >= plain.duration, name
+            assert with_opponents.duration >= 20.0, name  # plancher produit NFR-P02, garanti par construction
 
     def test_degenerate_construction_phase_when_the_conclusion_already_exceeds_the_ceiling(self):
         # MINEUR releve en revue (simulafoot-reviewer, 22/10/2026) : mesure reelle sur 100 matchs -> ~14/213 clips
@@ -2302,21 +2307,23 @@ class TestContreAttaqueConstructionPhase:
 
 
 class TestConstructionPrefixGeneralization:
-    """Tickets 03 et 04 (temps-forts-multiphases, 22/10/2026) : `_prefix_adverse_possession` (ticket 02, validé sur
-    `contre_attaque`) généralisé à `construction_placee`, `debordement_centre_tete`, `une_deux`, `profondeur_1v1`
-    (ticket 03) puis `recuperation_haute`, `decalage_enroulee`, `percee_individuelle` (ticket 04, y compris ce
-    dernier malgré son nom "solo" -- tranché avec le propriétaire : la construction décrit la perte de balle
-    ADVERSE, jamais le côté collectif/solo de la conclusion elle-même) -- même scénario, même mécanisme
-    (recommandation du propriétaire, 22/10/2026 : pas de catalogue de types à tirer au hasard par gabarit, la
-    variété géographique suffit). La jonction se retrouve via `_perte_balle_and_junction` (le keyframe juste après
-    celui tagué "perte_balle"), pas par nom de tag littéral ni par index fixe -- ces gabarits n'ont pas tous le tag
-    `recuperation` au premier keyframe (`debordement`/`passe`/`appel`/`pressing`/`decalage`/`controle` selon le
-    gabarit, voir leurs définitions dans `templates.py`), et le ticket 07 (22/10/2026) a inséré un keyframe de
-    balancement dans le préfixe, qui ne compte donc plus un nombre fixe de 2 éléments."""
+    """Tickets 03, 04 et 05 (temps-forts-multiphases, 22/10/2026) : `_prefix_adverse_possession` (ticket 02, validé
+    sur `contre_attaque`) généralisé à `construction_placee`, `debordement_centre_tete`, `une_deux`, `profondeur_1v1`
+    (ticket 03), `recuperation_haute`, `decalage_enroulee`, `percee_individuelle` (ticket 04, y compris ce dernier
+    malgré son nom "solo" -- tranché avec le propriétaire : la construction décrit la perte de balle ADVERSE, jamais
+    le côté collectif/solo de la conclusion elle-même), puis `but_gag` (ticket 05 -- même mécanisme, inchangé :
+    décision du propriétaire, rien dans sa structure ne l'oblige à diverger, contrairement à
+    `coup_franc`/`corner`/`penalty` qui ont leur propre mécanisme, voir `TestDeadBallConstructionPrefix`) -- même
+    scénario, même mécanisme (recommandation du propriétaire, 22/10/2026 : pas de catalogue de types à tirer au
+    hasard par gabarit, la variété géographique suffit). La jonction se retrouve via `_perte_balle_and_junction` (le
+    keyframe juste après celui tagué "perte_balle"), pas par nom de tag littéral ni par index fixe -- ces gabarits
+    n'ont pas tous le tag `recuperation` au premier keyframe (`debordement`/`passe`/`appel`/`pressing`/`decalage`/
+    `controle`/`centre` selon le gabarit, voir leurs définitions dans `templates.py`), et le ticket 07 (22/10/2026) a
+    inséré un keyframe de balancement dans le préfixe, qui ne compte donc plus un nombre fixe de 2 éléments."""
 
     _GABARITS = (
         "construction_placee", "debordement_centre_tete", "une_deux", "profondeur_1v1",
-        "recuperation_haute", "decalage_enroulee", "percee_individuelle",
+        "recuperation_haute", "decalage_enroulee", "percee_individuelle", "but_gag",
     )
 
     @pytest.mark.parametrize("name", _GABARITS)
@@ -2437,9 +2444,187 @@ class TestConstructionPrefixGeneralization:
         # credite -- la construction s'applique meme sans assist.
         lineup, opponents = _lineup(), _opponent_lineup()
         starts = _start_positions(lineup)
-        for name in ("construction_placee", "une_deux", "recuperation_haute", "percee_individuelle"):
+        for name in ("construction_placee", "une_deux", "recuperation_haute", "percee_individuelle", "but_gag"):
             event = _goal_event(assist=None)
             plain = BUILDERS[name](event, lineup, starts, "but")
             extended = BUILDERS[name](event, lineup, starts, "but", opponents)
             assert extended.duration > plain.duration, name
             assert extended.duration >= 20.0, name
+
+
+class TestDeadBallConstructionPrefix:
+    """Ticket 05 (temps-forts-multiphases, 22/10/2026) : mecanisme DIFFERENT de `_prefix_adverse_possession` pour
+    les coups de pied arretes -- `_prefix_dead_ball_foul` (coup_franc/penalty, la FAUTE, ballon deja mort, UN SEUL
+    adversaire) et `_prefix_deflected_out` (corner, le DEGAGEMENT CONTRE, direction inversee, un seul adversaire qui
+    ne bouge pas jusqu'au point de sortie). `but_gag` reste sur l'ancien mecanisme, voir
+    `TestConstructionPrefixGeneralization`."""
+
+    _GABARITS = ("coup_franc", "penalty", "corner")
+
+    @pytest.mark.parametrize("name", _GABARITS)
+    def test_duration_does_not_depend_on_the_outcome(self, name):
+        # NFR-P01/US-14 (QC 23/10/2026) : meme garantie que pour les gabarits de jeu ouvert, egalite EXACTE.
+        lineup, opponents = _lineup(), _opponent_lineup()
+        starts = _start_positions(lineup)
+        for minute in range(1, 21):
+            event = _goal_event(minute=minute, penalty=(name == "penalty"))
+            durations = {
+                outcome: BUILDERS[name](event, lineup, starts, outcome, opponents).duration
+                for outcome in ("but", "hors_cadre", "arret", "poteau")
+            }
+            assert len(set(durations.values())) == 1, (name, minute, durations)
+
+    @pytest.mark.parametrize("name", _GABARITS)
+    def test_extends_duration_within_the_product_range(self, name):
+        lineup, opponents = _lineup(), _opponent_lineup()
+        starts = _start_positions(lineup)
+        for minute in range(1, 101):
+            event = _goal_event(minute=minute, penalty=(name == "penalty"))
+            sequence = BUILDERS[name](event, lineup, starts, "but", opponents)
+            assert 20.0 <= sequence.duration < 40.0, (name, minute)
+
+    @pytest.mark.parametrize("name", _GABARITS)
+    def test_is_deterministic(self, name):
+        lineup, opponents = _lineup(), _opponent_lineup()
+        event, starts = _goal_event(penalty=(name == "penalty")), _start_positions(lineup)
+        first = BUILDERS[name](event, lineup, starts, "but", opponents)
+        second = BUILDERS[name](event, lineup, starts, "but", opponents)
+        assert first.to_json() == second.to_json()
+
+    @pytest.mark.parametrize("name", _GABARITS)
+    def test_sporting_outcome_is_unchanged(self, name):
+        lineup, opponents = _lineup(), _opponent_lineup()
+        event, starts = _goal_event(penalty=(name == "penalty")), _start_positions(lineup)
+        plain = BUILDERS[name](event, lineup, starts, "but")
+        extended = BUILDERS[name](event, lineup, starts, "but", opponents)
+        assert extended.meta["roles"] == plain.meta["roles"]
+
+    def test_coup_franc_foul_happens_exactly_at_the_free_kick_spot_with_one_opponent(self):
+        lineup, opponents = _lineup(), _opponent_lineup()
+        event, starts = _goal_event(), _start_positions(lineup)
+        plain = BUILDERS["coup_franc"](event, lineup, starts, "but")
+        extended = BUILDERS["coup_franc"](event, lineup, starts, "but", opponents)
+
+        opponent_ids = {pid for pid, entry in extended.roster.items() if entry.team_side == "opponent"}
+        assert len(opponent_ids) == 1  # un seul adversaire, pas deux comme _prefix_adverse_possession
+        fouler_id = next(iter(opponent_ids))
+
+        spot = (plain.keyframes[0].ball.x, plain.keyframes[0].ball.y)
+        placement, junction = _tagged_and_junction(extended.keyframes, "placement")
+        assert placement.ball.x == junction.ball.x == spot[0]
+        assert placement.ball.y == junction.ball.y == spot[1]
+        for kf in extended.keyframes:
+            # Le ballon ne voyage JAMAIS pour coup_franc (foul_point == ball_rest_point) tant qu'on est dans le
+            # prefixe -- apres la jonction (placement.t), le vol normal de la frappe reprend.
+            if kf.t <= placement.t:
+                assert (kf.ball.x, kf.ball.y) == spot, kf.tag
+
+        anchor = extended.keyframes[0].players[fouler_id]
+        assert anchor == spot  # le fautif est exactement au point de la faute
+        for kf in extended.keyframes:
+            if kf.t < placement.t:
+                assert _real_distance_m(kf.players[fouler_id], anchor) <= tpl._SWAY_AMPLITUDE_M + 1e-6, kf.tag
+            else:
+                # Revue 23/10/2026 : apres la faute, le fautif est a 9,15 m reglementaires du ballon pour le tir,
+                # jamais colle au ballon (decision du proprietaire).
+                assert _real_distance_m(kf.players[fouler_id], spot) == pytest.approx(tpl._REGULATION_DISTANCE_M), kf.tag
+
+    def test_penalty_foul_happens_in_the_box_then_the_ball_is_placed_on_the_spot(self):
+        from ligue1sim.pitch_geometry import PENALTY_AREA_WIDTH_M, PITCH_WIDTH_M
+
+        lineup, opponents = _lineup(), _opponent_lineup()
+        starts = _start_positions(lineup)
+        foul_points = set()
+        for minute in range(1, 21):
+            event = _goal_event(minute=minute, penalty=True)
+            plain = BUILDERS["penalty"](event, lineup, starts, "but")
+            extended = BUILDERS["penalty"](event, lineup, starts, "but", opponents)
+
+            opponent_ids = {pid for pid, entry in extended.roster.items() if entry.team_side == "opponent"}
+            assert len(opponent_ids) == 1, minute
+            fouler_id = next(iter(opponent_ids))
+
+            spot = (plain.keyframes[0].ball.x, plain.keyframes[0].ball.y)  # _PENALTY_SPOT, fixe
+            placement, junction = _tagged_and_junction(extended.keyframes, "placement")
+            assert placement.ball.x == junction.ball.x == spot[0], minute
+            assert placement.ball.y == junction.ball.y == spot[1], minute
+
+            foul_point = (extended.keyframes[0].ball.x, extended.keyframes[0].ball.y)
+            foul_points.add(foul_point)
+            # La faute est dans la surface (profondeur depuis la ligne de but, largeur centree), pas forcement au
+            # point de penalty -- decision du proprietaire (22/10/2026).
+            depth_m = (1.0 - foul_point[0]) * PITCH_LENGTH_M
+            lateral_m = abs(foul_point[1] - 0.5) * PITCH_WIDTH_M
+            assert -1e-6 <= depth_m <= PENALTY_AREA_DEPTH_M + 1e-6, minute
+            assert lateral_m <= PENALTY_AREA_WIDTH_M / 2.0 + 1e-6, minute
+
+            anchor = extended.keyframes[0].players[fouler_id]
+            assert anchor == foul_point, minute
+            # Decision du proprietaire (23/10/2026) : apres le placement, le fautif est a l'entree de la surface et
+            # hors de l'arc (>= 9,15 m du point de penalty) pour tout le tir.
+            for kf in extended.keyframes:
+                if kf.t >= placement.t:
+                    assert (1.0 - kf.players[fouler_id][0]) * PITCH_LENGTH_M == pytest.approx(PENALTY_AREA_DEPTH_M), (minute, kf.tag)
+                    assert _real_distance_m(kf.players[fouler_id], spot) >= tpl._REGULATION_DISTANCE_M - 1e-6, (minute, kf.tag)
+
+        assert len(foul_points) > 1  # vraie variete, pas toujours le meme point (decision du proprietaire)
+
+    def test_penalty_teammates_stand_outside_the_arc(self):
+        for i in range(200):
+            event_ref = f"penalty-arc-{i}"
+            for role in ("support1", "support2"):
+                p = tpl.penalty_support_position(event_ref, role)
+                assert _real_distance_m((p.x, p.y), (tpl._PENALTY_SPOT.x, tpl._PENALTY_SPOT.y)) >= tpl._REGULATION_DISTANCE_M - 1e-6, (i, role)
+
+    def test_corner_deflection_by_one_opponent_who_stays_at_his_own_position(self):
+        lineup, opponents = _lineup(), _opponent_lineup()
+        event, starts = _goal_event(), _start_positions(lineup)
+        plain = BUILDERS["corner"](event, lineup, starts, "but")
+        extended = BUILDERS["corner"](event, lineup, starts, "but", opponents)
+
+        opponent_ids = {pid for pid, entry in extended.roster.items() if entry.team_side == "opponent"}
+        assert len(opponent_ids) == 1  # un seul adversaire (le contreur), pas deux
+        defender_id = next(iter(opponent_ids))
+
+        corner_point = (plain.keyframes[0].ball.x, plain.keyframes[0].ball.y)
+        sortie, junction = _tagged_and_junction(extended.keyframes, "sortie_en_corner")
+        assert sortie.ball.x == junction.ball.x == corner_point[0]
+        assert sortie.ball.y == junction.ball.y == corner_point[1]
+        # Revue 23/10/2026 : ballon sans porteur pendant toute la construction (le defenseur n'est jamais au poteau).
+        assert all(kf.ball.owner_id is None for kf in extended.keyframes if kf.t <= sortie.t and kf is not junction)
+
+        # Le defenseur ne court pas jusqu'au poteau de corner -- il reste a SA position de depart (pas pinned au
+        # point de sortie, contrairement a opp_b dans _prefix_adverse_possession).
+        anchor = extended.keyframes[0].players[defender_id]
+        assert anchor != corner_point
+        for kf in extended.keyframes:
+            assert _real_distance_m(kf.players[defender_id], anchor) <= tpl._SWAY_AMPLITUDE_M + 1e-6, kf.tag
+
+        # Direction inversee par rapport a _prefix_adverse_possession : c'est le BALLON qui voyage (du defenseur
+        # jusqu'au poteau de corner), pas un joueur qui court.
+        assert (extended.keyframes[0].ball.x, extended.keyframes[0].ball.y) != corner_point
+
+    @pytest.mark.parametrize("name", _GABARITS)
+    def test_degenerate_construction_phase_when_the_conclusion_already_exceeds_the_ceiling(self, name):
+        import dataclasses
+
+        lineup, opponents = _lineup(), _opponent_lineup()
+        event, starts = _goal_event(penalty=(name == "penalty")), _start_positions(lineup)
+        plain = BUILDERS[name](event, lineup, starts, "but")
+        forced = dataclasses.replace(plain, duration=45.0)  # simule une conclusion deja au-dela du plafond de 40 s
+
+        if name == "corner":
+            extended = tpl._prefix_deflected_out(forced, opponents)
+            tag = "sortie_en_corner"
+        else:
+            spot = PitchPoint(*(plain.keyframes[0].ball.x, plain.keyframes[0].ball.y))
+            foul_point = tpl._penalty_foul_point(plain.event_ref) if name == "penalty" else spot
+            retreat = tpl._penalty_fouler_retreat(foul_point) if name == "penalty" else tpl._free_kick_fouler_retreat(spot)
+            extended = tpl._prefix_dead_ball_foul(forced, opponents, foul_point, spot, retreat)
+            tag = "placement"
+
+        assert extended.duration == 45.0  # headroom=0 -> aucune seconde ajoutee par le prefixe
+        last, junction = _tagged_and_junction(extended.keyframes, tag)
+        assert last.t == junction.t == 0.0
+        assert last.ball.x == junction.ball.x
+        assert last.ball.y == junction.ball.y

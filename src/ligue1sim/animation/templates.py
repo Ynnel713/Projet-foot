@@ -53,6 +53,7 @@ from ligue1sim.events import GoalEvent
 from ligue1sim.lineup import Lineup
 from ligue1sim.pitch_geometry import (
     PENALTY_AREA_DEPTH_M,
+    PENALTY_AREA_WIDTH_M,
     PENALTY_SPOT_DISTANCE_M,
     PITCH_LENGTH_M,
     PITCH_WIDTH_M,
@@ -95,7 +96,13 @@ _PENALTY_RUNUP_ANGLE_MAX_DEG = 10.0  # angle d'approche : +-10 degres autour de 
 # de l'axe tireur -> but (jamais le même côté pour les deux). Constantes proposées en conception, soumises à validation du
 # propriétaire : écart latéral de 6 à 15 m de l'axe (reste dans la largeur de la surface, environ 20,16 m de chaque côté).
 _PENALTY_SUPPORT_EDGE_X = 1.0 - PENALTY_AREA_DEPTH_M / PITCH_LENGTH_M
-_PENALTY_SUPPORT_LATERAL_MIN_M = 6.0
+# Lois du jeu (decision du proprietaire, 23/10/2026) : au penalty, tout joueur autre que tireur/gardien est hors de la
+# surface ET hors de l'arc (>= 9,15 m du point de penalty). Au bord des 16,5 m, l'arc impose un decalage lateral
+# minimal derive de la geometrie reglementaire (~7,31 m) -- l'ancien minimum de 6 m placait parfois un coequipier
+# dans l'arc.
+_REGULATION_DISTANCE_M = 9.15
+_PENALTY_ARC_LATERAL_MIN_M = math.sqrt(_REGULATION_DISTANCE_M**2 - (PENALTY_AREA_DEPTH_M - PENALTY_SPOT_DISTANCE_M) ** 2)
+_PENALTY_SUPPORT_LATERAL_MIN_M = _PENALTY_ARC_LATERAL_MIN_M
 _PENALTY_SUPPORT_LATERAL_MAX_M = 15.0
 
 # Phase 6, B7-a (14/10/2026) -- point du coup franc direct : constantes produit validées par le propriétaire. Remplace la zone de
@@ -1720,19 +1727,23 @@ def build_contre_attaque(
 
 
 # Ticket 02 (temps-forts-multiphases, POC gabarit pilote contre_attaque, 22/10/2026), generalise par le ticket 03
-# (construction_placee/debordement_centre_tete/une_deux/profondeur_1v1) puis le ticket 04
-# (recuperation_haute/decalage_enroulee/percee_individuelle, 22/10/2026 -- y compris percee_individuelle, action
-# solo cote conclusion : tranche avec le proprietaire que la construction ne decrit que la perte de balle ADVERSE,
-# jamais le cote collectif/solo de la conclusion elle-meme) : phase de construction "possession adverse -> perte de
-# balle" avant le geste decisif existant (inchange). Plancher ET plafond PRODUIT (docs/PRD_PRODUIT.md,
-# TRD_PRODUIT.md NFR-P02, 22/10/2026) : [20, 40[ secondes, le plancher GARANTI PAR CONSTRUCTION (jamais statistique)
-# -- voir `_prefix_adverse_possession`. Variete deterministe sur toute cette plage, validee par le proprietaire
+# (construction_placee/debordement_centre_tete/une_deux/profondeur_1v1), le ticket 04
+# (recuperation_haute/decalage_enroulee/percee_individuelle -- y compris percee_individuelle, action solo cote
+# conclusion : tranche avec le proprietaire que la construction ne decrit que la perte de balle ADVERSE, jamais le
+# cote collectif/solo de la conclusion elle-meme) puis le ticket 05 (coup_franc/penalty/corner/but_gag, 22/10/2026) :
+# phase de construction avant le geste decisif existant (inchange). but_gag reutilise "possession adverse -> perte
+# de balle" sans changement (meme ancrage generique que les 8 gabarits precedents, decision du proprietaire : rien
+# ne l'oblige a diverger). coup_franc/penalty ont un mecanisme DIFFERENT (`_prefix_dead_ball_foul` -- la construction
+# est la FAUTE, ballon deja mort/pose, un seul adversaire scripte) et corner aussi (`_prefix_deflected_out` -- le
+# DEGAGEMENT CONTRE, direction inversee : c'est NOUS qui perdons le ballon, un seul adversaire qui ne court pas
+# jusqu'au point de sortie). Plancher ET plafond PRODUIT (docs/PRD_PRODUIT.md, TRD_PRODUIT.md NFR-P02, 22/10/2026) :
+# [20, 40[ secondes, le plancher GARANTI PAR CONSTRUCTION (jamais statistique), calcul partage entre les 3 fonctions
+# de prefixe via `_construction_duration_s`. Variete deterministe sur toute cette plage, validee par le proprietaire
 # (22/10/2026) pour qu'elle reste aleatoire (jamais correlee a l'issue ni a la nature de l'action). Un seul type de
-# phase de construction pour ces 8 gabarits (pas un catalogue de types a tirer en plus, tranche avec le proprietaire
-# le 22/10/2026 : la variete geographique suffit, voir docstring de `_prefix_adverse_possession`). Le tirage
+# phase par CATEGORIE de gabarit (jeu ouvert vs coup de pied arrete), pas un catalogue de types a tirer en plus
+# (tranche avec le proprietaire le 22/10/2026 : la variete geographique suffit pour le jeu ouvert). Le tirage
 # DEFINITIF complet (nombre de phases, decorrele de l'issue pour TOUS les gabarits) reste le ticket 06 -- ce
-# mecanisme ne couvre encore que ces 8 gabarits sur 12, les 4 autres (coups de pied arretes et cas solo, ticket 05)
-# restent inchanges.
+# mecanisme couvre maintenant les 12 gabarits sur 12.
 _DURATION_FLOOR_S = 20.0
 _DURATION_CEILING_S = 40.0
 
@@ -1743,6 +1754,39 @@ _DURATION_CEILING_S = 40.0
 # Amplitude VALIDEE par le proprietaire (22/10/2026) : 0,5 m, assez pour casser l'effet statue sans ressembler a un
 # vrai mouvement tactique -- constante produit, pas a modifier sans nouvelle validation.
 _SWAY_AMPLITUDE_M = 0.5
+
+
+def _construction_duration_s(sequence: Sequence) -> tuple[float, float]:
+    """Plancher ET plafond garantis PAR CONSTRUCTION (NFR-P02) : `floor_base` comble l'écart entre la durée déjà
+    produite par le gabarit (variable selon vol/contrôles) et le plancher de 20 s, sans jamais le dépasser inutilement
+    (jamais une marge fixe ignorant la durée de base -- voir mesure du 22/10/2026 : 86/213 clips réels sous 20 s avec
+    une marge fixe de 8-12 s). `variety` est ensuite tirée dans TOUT le `headroom` restant jusqu'au plafond de 40 s --
+    jamais une plage fixe qui pourrait le dépasser (2e mesure du 22/10/2026 : une plage de variété fixe [0,20[ s
+    ajoutée après coup a produit un clip à 44,1 s quand la durée de base dépassait déjà le plancher).
+
+    `floor_base` est calculé INDÉPENDAMMENT de `sequence.duration` via `max()` (jamais `sequence.duration +
+    (plancher - sequence.duration)`) : la durée de base varie avec l'ISSUE (longueur du vol après frappe), donc un
+    calcul qui la réintroduit par soustraction-puis-réaddition peut différer de quelques ulps flottants entre deux
+    issues du même `event_ref` -- NFR-P01/US-14 exige une durée totale IDENTIQUE, pas seulement proche (trouvé par
+    test_duration_does_not_depend_on_the_outcome, 22/10/2026). `max()` ignore `sequence.duration` dès qu'elle est
+    sous le plancher (le cas normal pour `contre_attaque`, base observée 9 à ~17 s), donc `floor_base` -- et donc
+    `headroom` -- ne dépend alors plus que de `event_ref`, jamais de l'issue. Seul le cas rare où la durée de base
+    dépasse déjà 20 s réintroduit une dépendance (inévitable : il faut alors respecter le plafond de 40 s en
+    priorité) -- voir MINEUR documenté dans `_prefix_adverse_possession` sur le cas degenere construction_duration=0.
+
+    Cle de salage parametree par gabarit (`sequence.meta['template']`, ticket 03, 22/10/2026) : chaque gabarit tire
+    sa propre variete, independamment des autres, meme si plusieurs partagent le meme `event_ref` (match/minute) --
+    jamais un nom de gabarit en dur pour un tirage qui s'applique maintenant a 12 gabarits (ticket 05).
+
+    Factorisee hors de `_prefix_adverse_possession` (ticket 05, 22/10/2026) pour etre partagee avec les fonctions de
+    construction des coups de pied arretes (`_prefix_dead_ball_foul`, `_prefix_deflected_out`) -- meme garantie
+    plancher/plafond, jamais dupliquee (risque de divergence silencieuse sur un calcul aussi subtil)."""
+    floor_base = max(_DURATION_FLOOR_S, sequence.duration)
+    headroom = max(0.0, _DURATION_CEILING_S - floor_base)
+    variety = headroom * _flight_unit(sequence.event_ref, f"{sequence.meta['template']}_construction_duration")
+    total_duration = floor_base + variety
+    construction_duration = total_duration - sequence.duration
+    return total_duration, construction_duration
 
 
 def _swayed_point(point: tuple[float, float], event_ref: str, salt: str) -> tuple[float, float]:
@@ -1811,29 +1855,9 @@ def _prefix_adverse_possession(sequence: Sequence, opponent_lineup: Lineup) -> S
     opponent_recovery_point = (recovery_point.x, recovery_point.y)
     frozen_opponents = {opp_a_id: track_a.start, opp_b_id: opponent_recovery_point}
 
-    # Plancher ET plafond garantis PAR CONSTRUCTION (NFR-P02) : `floor_base` comble l'écart entre la durée déjà
-    # produite par le gabarit (variable selon vol/contrôles) et le plancher de 20 s, sans jamais le dépasser inutilement
-    # (jamais une marge fixe ignorant la durée de base -- voir mesure du 22/10/2026 : 86/213 clips réels sous 20 s avec
-    # une marge fixe de 8-12 s). `variety` est ensuite tirée dans TOUT le `headroom` restant jusqu'au plafond de 40 s --
-    # jamais une plage fixe qui pourrait le dépasser (2e mesure du 22/10/2026 : une plage de variété fixe [0,20[ s
-    # ajoutée après coup a produit un clip à 44,1 s quand la durée de base dépassait déjà le plancher).
-    #
-    # `floor_base` est calculé INDÉPENDAMMENT de `sequence.duration` via `max()` (jamais `sequence.duration +
-    # (plancher - sequence.duration)`) : la durée de base varie avec l'ISSUE (longueur du vol après frappe), donc un
-    # calcul qui la réintroduit par soustraction-puis-réaddition peut différer de quelques ulps flottants entre deux
-    # issues du même `event_ref` -- NFR-P01/US-14 exige une durée totale IDENTIQUE, pas seulement proche (trouvé par
-    # test_duration_does_not_depend_on_the_outcome, 22/10/2026). `max()` ignore `sequence.duration` dès qu'elle est
-    # sous le plancher (le cas normal pour `contre_attaque`, base observée 9 à ~17 s), donc `floor_base` -- et donc
-    # `headroom` -- ne dépend alors plus que de `event_ref`, jamais de l'issue. Seul le cas rare où la durée de base
-    # dépasse déjà 20 s réintroduit une dépendance (inévitable : il faut alors respecter le plafond de 40 s en priorité).
-    floor_base = max(_DURATION_FLOOR_S, sequence.duration)
-    headroom = max(0.0, _DURATION_CEILING_S - floor_base)
-    # Cle de salage parametree par gabarit (ticket 03, 22/10/2026) : chaque gabarit tire sa propre variete,
-    # independamment des autres, meme si plusieurs partagent le meme `event_ref` (match/minute) -- jamais le nom
-    # "contre_attaque" en dur pour un tirage qui s'applique maintenant a 8 gabarits.
-    variety = headroom * _flight_unit(sequence.event_ref, f"{sequence.meta['template']}_construction_duration")
-    total_duration = floor_base + variety
-    construction_duration = total_duration - sequence.duration
+    # Plancher ET plafond garantis PAR CONSTRUCTION (NFR-P02), calcul factorise dans `_construction_duration_s`
+    # (ticket 05, 22/10/2026) -- partage avec les fonctions de construction des coups de pied arretes.
+    total_duration, construction_duration = _construction_duration_s(sequence)
 
     # MINEUR releve en revue (simulafoot-reviewer, 22/10/2026) : si `sequence.duration` depasse DEJA 40 s a elle
     # seule (headroom=0, cas mesure ~14/213 clips reels, issues "arret"/"poteau"), `construction_duration` vaut
@@ -1900,6 +1924,179 @@ def _prefix_adverse_possession(sequence: Sequence, opponent_lineup: Lineup) -> S
         sequence,
         keyframes=prefix + shifted,
         duration=total_duration,  # pas sequence.duration + construction_duration, voir commentaire ci-dessus
+        roster={**sequence.roster, **opponent_roster},
+    )
+
+
+def _penalty_foul_point(event_ref: str) -> PitchPoint:
+    """Point de la faute ayant provoque le penalty (ticket 05, 22/10/2026) : dans la surface de reparation, PAS
+    forcement au point de penalty lui-meme (decision du proprietaire, 22/10/2026 -- plus realiste qu'une faute
+    toujours au meme endroit). Tire deterministiquement (sha256 de `event_ref`), uniforme sur la profondeur
+    [0, PENALTY_AREA_DEPTH_M] et la largeur [-PENALTY_AREA_WIDTH_M/2, +PENALTY_AREA_WIDTH_M/2] de la surface."""
+    depth_m = _flight_unit(event_ref, "penalty_foul_depth") * PENALTY_AREA_DEPTH_M
+    lateral_m = (_flight_unit(event_ref, "penalty_foul_lateral") * 2.0 - 1.0) * (PENALTY_AREA_WIDTH_M / 2.0)
+    return PitchPoint(x=1.0 - depth_m / PITCH_LENGTH_M, y=0.5 + lateral_m / PITCH_WIDTH_M)
+
+
+def _free_kick_fouler_retreat(spot: PitchPoint) -> PitchPoint:
+    """Fautif replace a 9,15 m reglementaires du ballon, entre le ballon et le centre du but defendu (x=1, y=0,5)."""
+    dx_m, dy_m = (1.0 - spot.x) * PITCH_LENGTH_M, (0.5 - spot.y) * PITCH_WIDTH_M
+    norm = math.hypot(dx_m, dy_m) or 1.0
+    step = min(_REGULATION_DISTANCE_M, norm) / norm
+    return PitchPoint(x=spot.x + dx_m * step / PITCH_LENGTH_M, y=spot.y + dy_m * step / PITCH_WIDTH_M)
+
+
+def _penalty_fouler_retreat(foul_point: PitchPoint) -> PitchPoint:
+    """Fautif replace a l'entree de la surface (ligne des 16,5 m, pret a intervenir sur un rebond), du cote de la
+    faute, hors de l'arc : meme regle que les coequipiers du tireur (`penalty_support_position`)."""
+    lateral_m = (foul_point.y - 0.5) * PITCH_WIDTH_M
+    side = 1.0 if lateral_m >= 0.0 else -1.0
+    lateral_m = side * max(abs(lateral_m), _PENALTY_ARC_LATERAL_MIN_M)
+    return PitchPoint(x=_PENALTY_SUPPORT_EDGE_X, y=0.5 + lateral_m / PITCH_WIDTH_M)
+
+
+def _prefix_dead_ball_foul(
+    sequence: Sequence, opponent_lineup: Lineup, foul_point: PitchPoint, ball_rest_point: PitchPoint,
+    fouler_retreat_point: PitchPoint,
+) -> Sequence:
+    """Prefixe une Sequence de coup de pied arrete (ticket 05, 22/10/2026, `coup_franc`/`penalty`) avec une phase
+    "faute" : UN SEUL adversaire (le fautif, le plus proche de `foul_point`) reste visible et se balance legerement
+    (meme mecanisme que `_prefix_adverse_possession`, ticket 07) exactement a `foul_point` -- different de
+    `_prefix_adverse_possession` : un seul adversaire scripte, pas deux (pas de "possession adverse" a raconter avant
+    une faute). Le ballon, lui, est IMMOBILE et sans porteur (deja "mort") des le debut de la construction, puis
+    rejoint `ball_rest_point` (le point FIXE du coup de pied arrete, celui que porte deja `sequence.keyframes[0]`)
+    EXACTEMENT au dernier keyframe du prefixe -- jonction a distance ZERO avec la sequence d'origine. Pour
+    `coup_franc`, `foul_point` et `ball_rest_point` sont le MEME point (la faute se produit reglementairement au
+    point du coup franc, `free_kick_spot(event_ref)`) : le ballon ne voyage donc jamais. Pour `penalty`,
+    `foul_point` (`_penalty_foul_point(event_ref)`, dans la surface, pas forcement au point de penalty lui-meme,
+    decision du proprietaire 22/10/2026) differe de `ball_rest_point` (`_PENALTY_SPOT`, fixe) : le ballon est "place"
+    par l'arbitre, voyage pendant la construction, exactement comme `_prefix_adverse_possession` fait voyager le
+    ballon entre ses deux adversaires. Repli neutre (sequence inchangee) si l'adversaire a moins d'1 joueur de champ
+    -- compo degeneree, pas un cas a cacher derriere une erreur."""
+    from ligue1sim.animation.sequence_generator import opponent_field_tracks  # import tardif, meme convention que _prefix_adverse_possession
+
+    tracks = opponent_field_tracks(opponent_lineup, sequence.event_ref, (foul_point.x, foul_point.y))
+    if len(tracks) < 1:
+        return sequence
+
+    opponent_by_id = {player_id_of(p): p for p in list(opponent_lineup.players) + list(opponent_lineup.substitutes)}
+    numeros = numeros_by_player_id(opponent_lineup)
+
+    def _distance_m(start: tuple[float, float]) -> float:
+        return math.hypot((start[0] - foul_point.x) * PITCH_LENGTH_M, (start[1] - foul_point.y) * PITCH_WIDTH_M)
+
+    fouler_id, _track = min(tracks.items(), key=lambda item: (round(_distance_m(item[1].start), 6), opponent_by_id[item[0]].name))
+
+    total_duration, construction_duration = _construction_duration_s(sequence)
+
+    recovery_players = sequence.keyframes[0].players
+    foul_xy = (foul_point.x, foul_point.y)
+    rest_xy = (ball_rest_point.x, ball_rest_point.y)
+    # Le fautif est a l'endroit de la faute pendant la phase "faute", puis rejoint `fouler_retreat_point` (distance
+    # reglementaire) pendant le placement et y reste pour toute la conclusion -- jamais colle au ballon au tir.
+    frozen = {fouler_id: (fouler_retreat_point.x, fouler_retreat_point.y)}
+    anchored = {**recovery_players, fouler_id: foul_xy}
+    swayed_fouler = _swayed_point(foul_xy, sequence.event_ref, f"{sequence.meta['template']}_construction_sway_{fouler_id}")
+    midpoint_players = {**anchored, fouler_id: swayed_fouler}
+
+    prefix = [
+        Keyframe(t=0.0, ball=BallState(x=foul_xy[0], y=foul_xy[1], z=0.0, spin=0.0, owner_id=None), players=anchored, tag="faute"),
+        Keyframe(
+            # Keyframe intermediaire (ticket 07) : seul le fautif se balance legerement -- le ballon reste encore
+            # au point de la faute ici, le "placement" (voyage vers `ball_rest_point`, s'il differe) se joue sur le
+            # DERNIER segment, meme logique que `_prefix_adverse_possession` (le transfert se joue a la fin).
+            t=construction_duration / 2.0,
+            ball=BallState(x=foul_xy[0], y=foul_xy[1], z=0.0, spin=0.0, owner_id=None),
+            players=midpoint_players,
+            tag="faute",
+        ),
+        # Tag distinct du reste du prefixe ("placement" plutot que "faute") : le ballon rejoint `ball_rest_point`
+        # (identique a `foul_point` pour coup_franc, different pour penalty) -- permet aux tests de retrouver la
+        # VRAIE jonction par recherche de tag, jamais par index fixe.
+        Keyframe(t=construction_duration, ball=BallState(x=rest_xy[0], y=rest_xy[1], z=0.0, spin=0.0, owner_id=None), players={**recovery_players, **frozen}, tag="placement"),
+    ]
+    shifted = [
+        replace(kf, t=kf.t + construction_duration, players={**kf.players, **frozen})
+        for kf in sequence.keyframes
+    ]
+    opponent_roster = {
+        fouler_id: RosterEntry(
+            nom=opponent_by_id[fouler_id].name, poste=opponent_by_id[fouler_id].poste,
+            role="construction_faute", numero=numeros[fouler_id], team_side="opponent",
+        ),
+    }
+    return replace(
+        sequence,
+        keyframes=prefix + shifted,
+        duration=total_duration,
+        roster={**sequence.roster, **opponent_roster},
+    )
+
+
+def _prefix_deflected_out(sequence: Sequence, opponent_lineup: Lineup) -> Sequence:
+    """Prefixe une Sequence de corner (ticket 05, 22/10/2026) avec une phase "degagement contre" : DIRECTION
+    INVERSEE par rapport a `_prefix_adverse_possession` -- ici c'est NOTRE equipe qui a le ballon (centre/tir en
+    cours, ballon sans porteur scripte) et le PERD, devie par UN SEUL adversaire (le defenseur le plus proche du
+    point reel de depart de la sequence d'origine -- le poteau de corner, `keyframes[0].ball`), pas l'inverse. Le
+    defenseur reste a SA PROPRE position de formation (il a juste devie le ballon au passage, il ne court pas
+    jusqu'au corner) ; seul le BALLON voyage, de la position du defenseur jusqu'au poteau de corner, sur la duree de
+    la construction. Repli neutre (sequence inchangee) si l'adversaire a moins d'1 joueur de champ."""
+    from ligue1sim.animation.sequence_generator import opponent_field_tracks
+
+    corner_xy = (sequence.keyframes[0].ball.x, sequence.keyframes[0].ball.y)
+    tracks = opponent_field_tracks(opponent_lineup, sequence.event_ref, corner_xy)
+    if len(tracks) < 1:
+        return sequence
+
+    opponent_by_id = {player_id_of(p): p for p in list(opponent_lineup.players) + list(opponent_lineup.substitutes)}
+    numeros = numeros_by_player_id(opponent_lineup)
+
+    def _distance_m(start: tuple[float, float]) -> float:
+        return math.hypot((start[0] - corner_xy[0]) * PITCH_LENGTH_M, (start[1] - corner_xy[1]) * PITCH_WIDTH_M)
+
+    defender_id, track = min(tracks.items(), key=lambda item: (round(_distance_m(item[1].start), 6), opponent_by_id[item[0]].name))
+
+    total_duration, construction_duration = _construction_duration_s(sequence)
+
+    recovery_players = sequence.keyframes[0].players
+    frozen = {defender_id: track.start}
+    anchored = {**recovery_players, **frozen}
+    swayed_defender = _swayed_point(track.start, sequence.event_ref, f"{sequence.meta['template']}_construction_sway_{defender_id}")
+    midpoint_players = {**anchored, defender_id: swayed_defender}
+
+    prefix = [
+        Keyframe(t=0.0, ball=BallState(x=track.start[0], y=track.start[1], z=0.0, spin=0.0, owner_id=None), players=anchored, tag="degagement_contre"),
+        Keyframe(
+            # Keyframe intermediaire (ticket 07) : le ballon reste pres du defenseur (balancement partage, meme
+            # point) -- le voyage reel jusqu'au poteau de corner se fait sur le dernier segment, meme logique que
+            # `_prefix_adverse_possession` (le "transfert" se joue a la fin, pas en continu).
+            t=construction_duration / 2.0,
+            ball=BallState(x=swayed_defender[0], y=swayed_defender[1], z=0.0, spin=0.0, owner_id=None),
+            players=midpoint_players,
+            tag="degagement_contre",
+        ),
+        Keyframe(
+            # Meme point que keyframes[0].ball d'origine (x,y identiques) : jonction a distance ZERO.
+            t=construction_duration,
+            ball=BallState(x=corner_xy[0], y=corner_xy[1], z=0.0, spin=0.0, owner_id=None),  # ballon sorti, sans porteur (le defenseur est reste a sa position)
+            players=anchored,
+            tag="sortie_en_corner",
+        ),
+    ]
+    shifted = [
+        replace(kf, t=kf.t + construction_duration, players={**kf.players, **frozen})
+        for kf in sequence.keyframes
+    ]
+    opponent_roster = {
+        defender_id: RosterEntry(
+            nom=opponent_by_id[defender_id].name, poste=opponent_by_id[defender_id].poste,
+            role="construction_degagement", numero=numeros[defender_id], team_side="opponent",
+        ),
+    }
+    return replace(
+        sequence,
+        keyframes=prefix + shifted,
+        duration=total_duration,
         roster={**sequence.roster, **opponent_roster},
     )
 
@@ -2000,14 +2197,20 @@ def build_coup_franc(
     base = TEMPLATES["coup_franc"]
     template = replace(base, ball_position=tuple((t, (spot.x, spot.y)) for t, _ in base.ball_position))
     starts = {**start_positions, player_id_of(scorer): free_kick_runup_start(event_ref)}
-    return build_from_template(template, event, lineup, starts, outcome, opponent_lineup)
+    sequence = build_from_template(template, event, lineup, starts, outcome, opponent_lineup)
+    if opponent_lineup is None:
+        return sequence
+    return _prefix_dead_ball_foul(sequence, opponent_lineup, spot, spot, _free_kick_fouler_retreat(spot))  # faute == point du coup franc, le ballon ne voyage pas
 
 
 def build_corner(
     event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None,
     opponent_lineup: Lineup | None = None,
 ) -> Sequence:
-    return build_from_template(TEMPLATES["corner"], event, lineup, start_positions, outcome, opponent_lineup)
+    sequence = build_from_template(TEMPLATES["corner"], event, lineup, start_positions, outcome, opponent_lineup)
+    if opponent_lineup is None:
+        return sequence
+    return _prefix_deflected_out(sequence, opponent_lineup)
 
 
 def build_profondeur_1v1(
@@ -2088,14 +2291,21 @@ def build_penalty(
     for role_name in ("support1", "support2"):
         if role_name in resolved:
             starts[player_id_of(resolved[role_name])] = penalty_support_position(event_ref, role_name)
-    return build_from_template(TEMPLATES["penalty"], event, lineup, starts, outcome, opponent_lineup)
+    sequence = build_from_template(TEMPLATES["penalty"], event, lineup, starts, outcome, opponent_lineup)
+    if opponent_lineup is None:
+        return sequence
+    foul_point = _penalty_foul_point(event_ref)
+    return _prefix_dead_ball_foul(sequence, opponent_lineup, foul_point, _PENALTY_SPOT, _penalty_fouler_retreat(foul_point))
 
 
 def build_but_gag(
     event: GoalEvent, lineup: Lineup, start_positions: dict[PlayerId, PitchPoint], outcome: str | None = None,
     opponent_lineup: Lineup | None = None,
 ) -> Sequence:
-    return build_from_template(TEMPLATES["but_gag"], event, lineup, start_positions, outcome, opponent_lineup)
+    sequence = build_from_template(TEMPLATES["but_gag"], event, lineup, start_positions, outcome, opponent_lineup)
+    if opponent_lineup is None:
+        return sequence
+    return _prefix_adverse_possession(sequence, opponent_lineup)
 
 
 BUILDERS: dict[str, Callable[..., Sequence]] = {
