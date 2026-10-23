@@ -108,6 +108,15 @@ _GABARITS_WITH_CONSTRUCTION_PREFIX = (
 )
 
 
+def _perte_balle_and_junction(keyframes):
+    """Retrouve le dernier keyframe du prefixe ("perte_balle") et celui juste apres (la jonction reelle avec la
+    sequence d'origine) PAR POSITION relative au tag, jamais par index fixe -- le ticket 07 (22/10/2026) a insere un
+    keyframe de balancement entre le debut du prefixe et "perte_balle", donc le nombre de keyframes du prefixe n'est
+    plus garanti a 2."""
+    idx = next(i for i, kf in enumerate(keyframes) if kf.tag == "perte_balle")
+    return keyframes[idx], keyframes[idx + 1]
+
+
 class TestTemplateRichness:
     """Critère minimal de richesse (23/09/2026, suite à l'audit visuel de
     scripts/preview_templates.py) : chaque gabarit doit avoir au moins 3
@@ -2154,12 +2163,27 @@ class TestContreAttaqueConstructionPhase:
         assert len(opponent_ids) == 2
         assert all(entry.role is not None for pid, entry in extended.roster.items() if pid in opponent_ids)
 
-        # Les deux adversaires sont presents, a position fixe, dans CHAQUE keyframe (invariant 2 de Sequence).
+        # Les deux adversaires sont presents dans CHAQUE keyframe (invariant 2 de Sequence), ancres a leur point de
+        # formation/recuperation -- un leger balancement borne (ticket 07, 22/10/2026) remplace le figement total,
+        # jamais au-dela de `_SWAY_AMPLITUDE_M`.
         for kf in extended.keyframes:
             assert opponent_ids <= set(kf.players)
         for opp_id in opponent_ids:
-            positions = {kf.players[opp_id] for kf in extended.keyframes}
-            assert len(positions) == 1  # immobile du debut a la fin (choix du proprietaire, 22/10/2026)
+            anchor = extended.keyframes[0].players[opp_id]
+            for kf in extended.keyframes:
+                assert _real_distance_m(kf.players[opp_id], anchor) <= tpl._SWAY_AMPLITUDE_M + 1e-6, (opp_id, kf.tag)
+
+        # MAJEUR releve en revue (simulafoot-reviewer, 22/10/2026) : le balancement couvre aussi le(s) role(s)
+        # actif(s) du camp qui marque (ex. support1), pas seulement les 2 adversaires -- verrouille ce chemin, sur
+        # les keyframes du PREFIXE uniquement (ces roles reprennent leur mouvement normal dans la conclusion).
+        perte_balle_idx = next(i for i, kf in enumerate(extended.keyframes) if kf.tag == "perte_balle")
+        prefix_keyframes = extended.keyframes[: perte_balle_idx + 1]
+        active_scorer_ids = {pid for pid, entry in extended.roster.items() if entry.team_side == "scorer" and entry.role is not None}
+        assert active_scorer_ids
+        for pid in active_scorer_ids:
+            anchor = extended.keyframes[0].players[pid]
+            for kf in prefix_keyframes:
+                assert _real_distance_m(kf.players[pid], anchor) <= tpl._SWAY_AMPLITUDE_M + 1e-6, (pid, kf.tag)
 
         # Le keyframe d'origine (recuperation, support1) est repris tel quel, juste decale dans le temps -- mais ca ne
         # prouve PAS l'absence de saut (voir test dedie ci-dessous, qui compare le VRAI point de jonction visuelle :
@@ -2277,10 +2301,11 @@ class TestConstructionPrefixGeneralization:
     """Ticket 03 (temps-forts-multiphases, 22/10/2026) : `_prefix_adverse_possession` (ticket 02, validé sur
     `contre_attaque`) généralisé à `construction_placee`, `debordement_centre_tete`, `une_deux` et `profondeur_1v1` --
     même scénario, même mécanisme (recommandation du propriétaire, 22/10/2026 : pas de catalogue de types à tirer au
-    hasard par gabarit, la variété géographique suffit). La jonction se retrouve par POSITION dans les keyframes
-    (`extended.keyframes[1]` = dernier keyframe du préfixe, `extended.keyframes[2]` = premier keyframe d'origine
-    décalé), pas par nom de tag littéral -- ces 4 gabarits n'ont pas le tag `recuperation` au premier keyframe
-    (`debordement`/`passe`/`appel` selon le gabarit, voir leurs définitions dans `templates.py`)."""
+    hasard par gabarit, la variété géographique suffit). La jonction se retrouve via `_perte_balle_and_junction`
+    (le keyframe juste après celui tagué "perte_balle"), pas par nom de tag littéral ni par index fixe -- ces 4
+    gabarits n'ont pas le tag `recuperation` au premier keyframe (`debordement`/`passe`/`appel` selon le gabarit,
+    voir leurs définitions dans `templates.py`), et le ticket 07 (22/10/2026) a inséré un keyframe de balancement
+    dans le préfixe, qui ne compte donc plus un nombre fixe de 2 éléments."""
 
     _GABARITS = ("construction_placee", "debordement_centre_tete", "une_deux", "profondeur_1v1")
 
@@ -2299,8 +2324,20 @@ class TestConstructionPrefixGeneralization:
         for kf in extended.keyframes:
             assert opponent_ids <= set(kf.players)
         for opp_id in opponent_ids:
-            positions = {kf.players[opp_id] for kf in extended.keyframes}
-            assert len(positions) == 1  # immobile du debut a la fin
+            anchor = extended.keyframes[0].players[opp_id]
+            for kf in extended.keyframes:
+                assert _real_distance_m(kf.players[opp_id], anchor) <= tpl._SWAY_AMPLITUDE_M + 1e-6, (name, opp_id, kf.tag)
+
+        # MAJEUR releve en revue (simulafoot-reviewer, 22/10/2026) : balancement verrouille aussi sur le(s) role(s)
+        # actif(s) du camp qui marque, sur les keyframes du PREFIXE uniquement (mouvement normal dans la conclusion).
+        perte_balle_idx = next(i for i, kf in enumerate(extended.keyframes) if kf.tag == "perte_balle")
+        prefix_keyframes = extended.keyframes[: perte_balle_idx + 1]
+        active_scorer_ids = {pid for pid, entry in extended.roster.items() if entry.team_side == "scorer" and entry.role is not None}
+        assert active_scorer_ids, name
+        for pid in active_scorer_ids:
+            anchor = extended.keyframes[0].players[pid]
+            for kf in prefix_keyframes:
+                assert _real_distance_m(kf.players[pid], anchor) <= tpl._SWAY_AMPLITUDE_M + 1e-6, (name, pid, kf.tag)
 
         # Resultat sportif inchange : meme buteur/passeur -- ce mecanisme n'habille que le rendu.
         assert extended.meta["roles"] == plain.meta["roles"]
@@ -2312,7 +2349,7 @@ class TestConstructionPrefixGeneralization:
             event = _goal_event(minute=minute)
             starts = _start_positions(lineup)
             extended = BUILDERS[name](event, lineup, starts, "but", opponents)
-            perte_balle, junction = extended.keyframes[1], extended.keyframes[2]
+            perte_balle, junction = _perte_balle_and_junction(extended.keyframes)
             assert perte_balle.tag == "perte_balle"
             assert perte_balle.t == junction.t  # meme instant : transfert de possession, pas un trajet
             assert perte_balle.ball.x == junction.ball.x, (name, minute)
@@ -2361,7 +2398,7 @@ class TestConstructionPrefixGeneralization:
         extended = tpl._prefix_adverse_possession(forced, opponents)
 
         assert extended.duration == 45.0  # headroom=0 -> aucune seconde ajoutee par le prefixe
-        perte_balle, junction = extended.keyframes[1], extended.keyframes[2]
+        perte_balle, junction = _perte_balle_and_junction(extended.keyframes)
         assert perte_balle.t == junction.t == 0.0
         assert perte_balle.ball.x == junction.ball.x
         assert perte_balle.ball.y == junction.ball.y

@@ -1732,6 +1732,26 @@ def build_contre_attaque(
 _DURATION_FLOOR_S = 20.0
 _DURATION_CEILING_S = 40.0
 
+# Ticket 07 (temps-forts-multiphases, 22/10/2026) : le figement total des joueurs scriptes pendant la construction
+# (adversaires ET role(s) actif(s) du camp qui marque, tous immobiles via `recovery_players`/`frozen_opponents`
+# reinjectes identiques dans les 2 keyframes du prefixe) donnait l'impression d'une vitesse qui "saute" entre la
+# construction (figee) et la conclusion (normale), signale par le proprietaire apres test en conditions reelles.
+# Amplitude VALIDEE par le proprietaire (22/10/2026) : 0,5 m, assez pour casser l'effet statue sans ressembler a un
+# vrai mouvement tactique -- constante produit, pas a modifier sans nouvelle validation.
+_SWAY_AMPLITUDE_M = 0.5
+
+
+def _swayed_point(point: tuple[float, float], event_ref: str, salt: str) -> tuple[float, float]:
+    """Decale `point` d'un petit vecteur deterministe (sha256 de `event_ref`, jamais `random`/`hash()`/horloge) de
+    norme dans [0, `_SWAY_AMPLITUDE_M`] metres, direction uniforme sur [0, 2pi[ -- `salt` doit etre UNIQUE par joueur
+    ET par gabarit pour que chacun se balance dans une direction propre (jamais tous synchrones). Resultat clampe
+    dans le terrain (meme convention que `geometry_target`), au cas ou l'ancrage est deja tout pres d'un bord."""
+    angle = _flight_unit(event_ref, f"{salt}_angle") * 2.0 * math.pi
+    magnitude_m = _flight_unit(event_ref, f"{salt}_magnitude") * _SWAY_AMPLITUDE_M
+    x = point[0] + magnitude_m * math.cos(angle) / PITCH_LENGTH_M
+    y = point[1] + magnitude_m * math.sin(angle) / PITCH_WIDTH_M
+    return (min(1.0, max(0.0, x)), min(1.0, max(0.0, y)))
+
 
 def _prefix_adverse_possession(sequence: Sequence, opponent_lineup: Lineup) -> Sequence:
     """Prefixe une Sequence deja construite avec une phase "possession adverse" (passe entre les deux adversaires de
@@ -1745,9 +1765,11 @@ def _prefix_adverse_possession(sequence: Sequence, opponent_lineup: Lineup) -> S
     jamais un nom de role en dur : la variete geographique (recuperation haute ou basse) vient deja gratuitement de la
     position reelle de l'evenement, pas d'un choix de "type" supplementaire (tranche avec le proprietaire, 22/10/2026
     -- un nom de "type" de phase n'est jamais affiche par le rendu, voir `Keyframe.tag`). Les deux adversaires scriptes
-    restent visibles et IMMOBILES jusqu'a la fin du clip (choix du proprietaire) -- un seul point fixe chacun (opp_a :
-    sa position de formation ; opp_b : le point de recuperation), reinjecte dans tous les keyframes (prefixe ET
-    sequence d'origine decalee) pour respecter l'invariant 2 de `Sequence` (meme ensemble de joueurs partout). Repli
+    restent visibles et se balancent legerement (ticket 07, 22/10/2026 -- voir plus bas) autour d'un point d'ancrage
+    fixe chacun (opp_a : sa position de formation ; opp_b : le point de recuperation), reinjecte dans tous les
+    keyframes de la sequence d'origine decalee (shifted) pour respecter l'invariant 2 de `Sequence` (meme ensemble de
+    joueurs partout) -- SEUL le keyframe intermediaire du prefixe (voir `_SWAY_AMPLITUDE_M`) s'ecarte de l'ancrage ;
+    les points de jonction (t=0 et la fin du prefixe) restent bit-a-bit identiques a l'ancrage, jamais de saut. Repli
     neutre (sequence inchangee) si l'adversaire a moins de 2 joueurs de champ, ou si le porteur du ballon a t=0 n'est
     pas resolu -- compo degeneree, pas un cas a cacher derriere une erreur.
 
@@ -1816,11 +1838,34 @@ def _prefix_adverse_possession(sequence: Sequence, opponent_lineup: Lineup) -> S
     # proprietaire (22/10/2026) : seule la duree AJOUTEE par la construction est plafonnee a 40 s, pas la
     # conclusion existante qu'on n'a pas le droit de raccourcir. Verrouille par
     # test_degenerate_construction_phase_when_the_conclusion_already_exceeds_the_ceiling.
+    anchored = {**recovery_players, **frozen_opponents}
+
+    # Ticket 07 : le(s) role(s) actif(s) du camp qui marque (pas seulement les 2 adversaires) sont eux aussi figes
+    # sur `recovery_players` pendant toute la construction -- meme traitement de balancement pour les deux groupes,
+    # chacun avec son propre sel pour ne jamais se balancer de facon synchronisee/robotique.
+    active_scorer_ids = {pid for pid, entry in sequence.roster.items() if entry.role is not None}
+    swaying_ids = active_scorer_ids | {opp_a_id, opp_b_id}
+    sway_salt_prefix = f"{sequence.meta['template']}_construction_sway"
+    midpoint_players = {
+        **anchored,
+        **{pid: _swayed_point(anchored[pid], sequence.event_ref, f"{sway_salt_prefix}_{pid}") for pid in swaying_ids},
+    }
+    midpoint_opp_a = midpoint_players[opp_a_id]
+
     prefix = [
         Keyframe(
             t=0.0,
             ball=BallState(x=track_a.start[0], y=track_a.start[1], z=0.0, spin=0.0, owner_id=opp_a_id),
-            players={**recovery_players, **frozen_opponents},
+            players=anchored,
+            tag="possession_adverse",
+        ),
+        Keyframe(
+            # Keyframe intermediaire (ticket 07) : seul point ou les joueurs scriptes s'ecartent de leur ancrage,
+            # d'un balancement leger et borne (`_SWAY_AMPLITUDE_M`) -- jamais aux deux bouts du prefixe, qui doivent
+            # rester bit-a-bit identiques a l'ancrage pour ne jamais introduire de saut de position.
+            t=construction_duration / 2.0,
+            ball=BallState(x=midpoint_opp_a[0], y=midpoint_opp_a[1], z=0.0, spin=0.0, owner_id=opp_a_id),
+            players=midpoint_players,
             tag="possession_adverse",
         ),
         Keyframe(
@@ -1828,7 +1873,7 @@ def _prefix_adverse_possession(sequence: Sequence, opponent_lineup: Lineup) -> S
             # meme ballon a la meme position -- jonction a distance ZERO, pas seulement sous tolerance.
             t=construction_duration,
             ball=BallState(x=opponent_recovery_point[0], y=opponent_recovery_point[1], z=0.0, spin=0.0, owner_id=opp_b_id),
-            players={**recovery_players, **frozen_opponents},
+            players=anchored,
             tag="perte_balle",
         ),
     ]

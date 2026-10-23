@@ -2,10 +2,11 @@
 
 **What to build:** les deux adversaires scriptés de la phase "possession adverse -> perte de balle" (tickets 02/03, `_prefix_adverse_possession`) sont actuellement IMMOBILES du début à la fin du clip (choix délibéré du ticket 02). Testé en live par le propriétaire (22/10/2026) : perçu comme une vitesse qui "saute" bizarrement — figé pendant toute la construction, puis vitesse normale d'un coup sur la conclusion. Avec 5 gabarits sur 12 concernés depuis le ticket 03, c'est devenu plus visible qu'au stade du POC. À corriger avant de généraliser aux 7 gabarits restants (tickets 04/05), pour ne pas répandre le défaut avant de le régler.
 
-**Décision à prendre avec le propriétaire avant de coder** : quel mouvement donner aux deux adversaires à la place du figement total ? Options à explorer (analyse `simulafoot-architect` recommandée avant de coder, complexe/transverse) :
-- Les traiter comme des joueurs de décor normaux (`sequence_generator.enrich_with_background`) au lieu de les figer explicitement — réutilise le mécanisme de mouvement déjà existant pour le décor, à vérifier que ça reste compatible avec leurs 2 positions-clés (point de perte de balle notamment, qui ne doit pas sauter).
-- Un léger mouvement idle (balancement, ajustement de position) sans déplacement réel.
-- Attendre et réutiliser le mécanisme de plafond de vitesse partagé (`.scratch/plafond-vitesse-partage/`, chantier séparé piloté ailleurs) si sa portée couvre ce cas.
+**Décision prise avec le propriétaire (22/10/2026)**, après analyse `simulafoot-architect` :
+- **Option retenue** : léger balancement borné (idle sway), codé directement dans `_prefix_adverse_possession` (`templates.py`) via un keyframe intermédiaire au milieu de la construction — pas de réutilisation de `enrich_with_background` (incompatible avec le point de jonction exact, aurait réintroduit le bug de "téléportation" du ticket 02) ni d'attente du plafond de vitesse partagé (chantier externe pas encore codé, pas un prérequis réel).
+- **Amplitude validée** : 0,5 m (`_SWAY_AMPLITUDE_M`), constante produit.
+- **Périmètre étendu** : pas seulement les 2 adversaires scriptés — aussi le(s) rôle(s) actif(s) du camp qui marque (ex. le récupérateur), eux aussi totalement figés pendant la construction (constat de l'architecte, confirmé par le propriétaire).
+- Les deux points de jonction (début du préfixe, et la vraie jonction "perte_balle" -> conclusion) restent bit-à-bit identiques à l'ancrage — seul le keyframe intermédiaire s'écarte, jamais au-delà de l'amplitude validée.
 
 **Blocked by:** 03 (lot "jeu collectif ouvert") — déjà fait, c'est ce qui a rendu le défaut plus visible.
 
