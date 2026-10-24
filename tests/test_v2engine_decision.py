@@ -8,6 +8,9 @@ import random
 from v2engine.ball_state import BallState
 from v2engine.decision import (
     DECISION_INTERVAL_S,
+    key_pass_spot_probability,
+    vision_range_m,
+    visible_teammates,
     best_choice_probability,
     choose_action,
     evaluate_options,
@@ -53,7 +56,8 @@ def test_pressure_lowers_shot_and_dribble_values() -> None:
     assert pressed["dribble"] < free["dribble"]
 
 
-def test_pass_prefers_open_teammate_closer_to_goal_over_nearest_marked_one() -> None:
+def test_pass_prefers_open_teammate_closer_to_goal_over_nearest_marked_one(monkeypatch) -> None:
+    monkeypatch.setattr("v2engine.decision.random.random", lambda: 0.0)  # la passe clé est repérée (Vision, ticket 02)
     holder = _player(position=Vec2(40.0, 34.0))
     near_marked = _player("Proche", position=Vec2(43.0, 34.0))
     marker = _player("Marqueur", team="away", position=Vec2(43.5, 34.0))
@@ -112,3 +116,31 @@ def test_new_holder_decides_immediately_after_winning_the_ball(monkeypatch) -> N
     monkeypatch.setattr("v2engine.match.resolve_tackle", lambda tackler, holder: type("W", (), {"won": True})())
     _step_ball(ball, 0.1, [holder, tackler], now_s=3.0)
     assert ball.holder == "Tacleur" and ball.next_decision_s == 3.0
+
+
+# --- Ticket 02 : Vision -----------------------------------------------------------------------------------------
+
+
+def test_vision_curves_match_validated_points() -> None:
+    assert [round(vision_range_m(v), 6) for v in (99, 55, 11)] == [50.0, 30.0, 10.0]
+    assert [round(key_pass_spot_probability(v), 6) for v in (99, 55, 11)] == [0.9, 0.5, 0.1]
+
+
+def test_teammate_beyond_vision_range_is_not_considered_but_nearest_always_is() -> None:
+    holder = _player(position=Vec2(20.0, 34.0), attributes={"Vision": 11})  # portée 10 m
+    nearest = _player("Proche", position=Vec2(20.0, 50.0))  # 16 m : hors portée, mais le plus proche
+    far = _player("Loin", position=Vec2(20.0, 60.0))
+    assert [p.name for p in visible_teammates(holder, [nearest, far], GOAL)] == ["Proche"]
+
+
+def test_high_vision_plays_long_passes_at_least_twice_as_often_as_low() -> None:
+    def long_pass_rate(vision: int) -> float:
+        holder = _player(position=Vec2(30.0, 34.0), attributes={"Vision": vision})
+        short = _player("Court", position=Vec2(34.0, 30.0))
+        long_ = _player("Long", position=Vec2(60.0, 20.0))  # 33 m, gagne ~25 m vers le but
+        random.seed(20260923)
+        picks = [next(o for o in evaluate_options(holder, [holder, short, long_], GOAL, None) if o.kind == "pass").target.name
+                 for _ in range(2000)]
+        return picks.count("Long") / len(picks)
+
+    assert long_pass_rate(90) >= 2 * long_pass_rate(30)

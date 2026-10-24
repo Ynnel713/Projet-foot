@@ -28,12 +28,22 @@ _BEST_CHOICE_AMPLITUDE = 0.25
 
 # Poids de calibration (pas des constantes produit) : réglés pour que des matchs simulés tombent
 # dans les fourchettes validées -- 8 à 15 tirs par équipe, 2 à 3,5 buts par match (voir
-# scripts/measure_v2_decisions.py). Mesure du 24/10/2026, 6 matchs de Ligue 1, graine d'audit :
-# 11,0 tirs par équipe, 2,17 buts par match (avec SHOT 1,0 / DRIBBLE 0,12 : 50 tirs, 17,5 buts).
-SHOT_WEIGHT = 0.2
+# scripts/measure_v2_decisions.py). Recalibré le 24/10/2026 après Vision (ticket 02), validé par le propriétaire :
+# 6 matchs de Ligue 1, graine d'audit -> 13,0 tirs par équipe, 2,67 buts par match (avec SHOT 0,2 / DRIBBLE 0,06 :
+# 21,8 tirs, 7,17 buts une fois Vision branchée).
+SHOT_WEIGHT = 0.1
 PASS_WEIGHT = 0.25
-DRIBBLE_WEIGHT = 0.06
+DRIBBLE_WEIGHT = 0.04
 _PROGRESS_SCALE_M = 20.0  # une passe vers un coéquipier 20 m plus près du but vaut le maximum de progression
+
+# Vision (ticket v2-cerveau-joueurs/02, constantes validées par le propriétaire le 24/10/2026) : QUELS coéquipiers le
+# porteur envisage. Portée 99 -> 50 m, 55 -> 30 m, 11 -> 10 m ; une passe qui fait gagner au moins
+# `_KEY_PASS_GAIN_M` vers le but n'est repérée qu'avec la probabilité 99 -> 90 %, 55 -> 50 %, 11 -> 10 %. Le
+# coéquipier le plus proche est toujours vu. Même courbe partagée que les autres attributs (`success_probability`),
+# bornes en mètres pour la portée. Pas de poids par poste : bien voir le jeu compte à tous les postes.
+_VISION_RANGE_M = (30.0, 20.0, 10.0, 50.0)  # baseline, amplitude, min, max
+_KEY_PASS_GAIN_M = 15.0
+_KEY_PASS_SPOT = (0.5, 0.4)  # baseline, amplitude
 
 
 @dataclass(frozen=True)
@@ -52,11 +62,43 @@ def pressure(player: PlayerState, opponents: list[PlayerState]) -> float:
     return max(0.0, 1.0 - nearest / PRESSURE_RADIUS_M)
 
 
+def vision_range_m(vision: float) -> float:
+    baseline, amplitude, low, high = _VISION_RANGE_M
+    return success_probability(vision, baseline=baseline, amplitude=amplitude, min_prob=low, max_prob=high)
+
+
+def key_pass_spot_probability(vision: float) -> float:
+    baseline, amplitude = _KEY_PASS_SPOT
+    return success_probability(vision, baseline=baseline, amplitude=amplitude)
+
+
+def visible_teammates(holder: PlayerState, teammates: list[PlayerState], goal: Vec2) -> list[PlayerState]:
+    """Coéquipiers que le porteur envisage pour une passe (Vision, voir `_VISION_RANGE_M`) : à portée, et pour une
+    passe qui fait gagner beaucoup de terrain, seulement s'il la repère à cette décision-ci. Le plus proche est
+    toujours vu, même à Vision très basse."""
+    if not teammates:
+        return []
+    vision = player_attribute(holder, "Vision")
+    reach = vision_range_m(vision)
+    spot = key_pass_spot_probability(vision)
+    holder_to_goal = holder.position.distance_to(goal)
+    nearest = min(teammates, key=lambda p: holder.position.distance_to(p.position))
+    seen = []
+    for mate in teammates:
+        if mate is not nearest:
+            if holder.position.distance_to(mate.position) > reach:
+                continue
+            if holder_to_goal - mate.position.distance_to(goal) >= _KEY_PASS_GAIN_M and random.random() >= spot:
+                continue
+        seen.append(mate)
+    return seen
+
+
 def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2, keeper: PlayerState | None) -> list[Action]:
     """Les options du porteur avec leur valeur (plus haut = meilleur). Tirer n'existe qu'à portée
     (`SHOOTING_RANGE_M`), passer seulement s'il a un coéquipier ; conduire est toujours possible."""
     opponents = [p for p in players if p.team != holder.team]
-    teammates = [p for p in players if p.team == holder.team and p.name != holder.name]
+    teammates = visible_teammates(holder, [p for p in players if p.team == holder.team and p.name != holder.name], goal)
     gene = pressure(holder, opponents)
     holder_to_goal = holder.position.distance_to(goal)
 
