@@ -5,9 +5,10 @@ import { getBracket, getGroups, getMatches, getPitchView } from "../api/client";
 import ClubLogo from "../components/common/ClubLogo";
 import PitchField from "../components/pitch/PitchField";
 import LivePanel from "../components/pitch/LivePanel";
-import MatchAnimation from "../components/pitch/MatchAnimation";
+import AnimationDialog from "../components/pitch/AnimationDialog";
 import { GoalAlerts, MultiplexTicker } from "../components/pitch/GoalAlerts";
 import { MATCH_END, MIN_PER_TICK, TICK_MS, buildOtherGoals } from "../utils/liveReplay";
+import { LIVE_AND_ANIMATION_ENABLED } from "../config/features";
 
 // Terrain VERTICAL (portrait, demandé le 02/10/2026) : c'est l'orientation NATIVE du placement calculé côté moteur
 // (pitch_layout.place_starting_xi) -- domicile en haut (y 10-42), extérieur en bas (y 58-90), x = position latérale 0-100 --, donc
@@ -32,6 +33,13 @@ export default function PitchView() {
   // (portrait 68 x 105) ; elle ne peut pas venir du CSS seul : la colonne `auto` est dimensionnée avant que la hauteur en % soit résolue.
   const pitchBox = useRef(null);
   const [pitchH, setPitchH] = useState(null);
+
+  // Version 1 (24/10/2026) : live textuel et animation désactivés -- cet écran n'est plus
+  // accessible depuis l'UI (voir LiveButton/AnimationButton/MatchRow), mais redirige quand
+  // même si quelqu'un tombe sur l'URL directement (lien, historique).
+  useEffect(() => {
+    if (!LIVE_AND_ANIMATION_ENABLED) navigate("/", { replace: true });
+  }, [navigate]);
 
   const home = params.get("home");
   const away = params.get("away");
@@ -133,6 +141,7 @@ export default function PitchView() {
     );
   }
   if (!data) return <div className="p-6 text-sm text-gray-400">Chargement…</div>;
+  if (!LIVE_AND_ANIMATION_ENABLED) return null;
 
   // Événements du fil et score à l'horloge courante (au coup de sifflet final : le score réel du match).
   const visibleEvents = (data.live ?? []).filter((e) => e.minute <= clock);
@@ -216,29 +225,6 @@ export default function PitchView() {
             }
           />
         </div>
-      </div>
-    </div>
-  );
-}
-
-// Fenêtre modale de l'animation : un calque plein écran (le layout de la fiche, calé sur la hauteur de la fenêtre, n'est PAS modifié).
-// L'iframe n'est montée que si MatchAnimation obtient un payload ; fermer la fenêtre démonte tout.
-function AnimationDialog({ competitionId, matchParams, onClose }) {
-  useEffect(() => {
-    const onKey = (e) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  return (
-    <div role="dialog" aria-modal="true" aria-label="Animation du match" className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-3">
-      <div className="w-full max-w-5xl max-h-full overflow-y-auto rounded-xl bg-surface border border-white/10 p-3 flex flex-col gap-2">
-        <div className="flex justify-end">
-          <button onClick={onClose} className="text-xs text-gray-400">
-            Fermer ✕
-          </button>
-        </div>
-        <MatchAnimation key={JSON.stringify(matchParams)} competitionId={competitionId} matchParams={matchParams} />
       </div>
     </div>
   );

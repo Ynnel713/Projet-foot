@@ -1,10 +1,12 @@
 import { Play } from "lucide-react";
+import { LIVE_AND_ANIMATION_ENABLED } from "../../config/features";
 
 // Bouton LIVE d'un match (championnat, poules, tableau : toutes les compétitions), TOUJOURS actif. Match déjà joué : il rouvre le live
 // (replay à l'horloge accélérée) ; match pas encore joué : l'écran simule d'abord (journée / tour), puis ouvre le live -- pastille bleue.
 // Le clic ne remonte pas (la ligne ouvre le détail classique). Hitbox : le bouton EST la zone cliquable (relative, z-10,
 // pointer-events-auto, flex centré, hauteur fixe), pas d'enveloppe en ligne autour.
 export default function LiveButton({ played, onLive, compact = false }) {
+  if (!LIVE_AND_ANIMATION_ENABLED) return null;
   return (
     <button
       type="button"
