@@ -34,24 +34,46 @@ def register_weights(attribute: str, weights: dict[str, float]) -> None:
 
 # Centre de la courbe (note moyenne réelle de la base, voir Guide_attributs_joueurs.pdf, §1) et
 # demi-étendue utilisée pour centrer/normaliser une note avant de la passer à
-# `success_probability` ci-dessous.
+# `success_probability`/`duel_probability` ci-dessous.
 _CURVE_CENTER = 55.0
 _CURVE_HALF_SPAN = 44.0  # note 99 -> t=1.0 ; note 11 -> t=-1.0
+
+# Écart de note (points) au-delà duquel l'effet d'un duel est considéré au maximum -- voir
+# `duel_probability`.
+_DUEL_HALF_SPAN = 40.0
+
+
+def _cubic_curve(t: float, baseline: float, amplitude: float, min_prob: float, max_prob: float) -> float:
+    """Forme commune à `success_probability` et `duel_probability` : `t` (-1 à 1) mappé en
+    probabilité via un terme cubique (dérivée nulle au centre, croissante vers les bords -- effet
+    quasi neutre entre 45 et 55, amplifié aux extrêmes, §2 du guide), bornée à [min_prob, max_prob]
+    (jamais 0 ni 1, règle "jamais binaire" du guide)."""
+    clamped_t = max(-1.0, min(1.0, t))
+    shaped = clamped_t**3
+    return max(min_prob, min(max_prob, baseline + shaped * amplitude))
 
 
 def success_probability(note: float, *, baseline: float = 0.6, amplitude: float = 0.35,
                          min_prob: float = 0.05, max_prob: float = 0.95) -> float:
     """Probabilité de réussite d'une action pilotée par un attribut noté `note` (0-99), en
     respectant deux des règles de conception du guide (§2, `Guide_attributs_joueurs.pdf`) :
-    jamais binaire (bornée à [`min_prob`, `max_prob`], jamais 0 ni 1 même à note extrême) et
-    courbe non linéaire (effet quasi neutre entre 45 et 55, amplifié vers les extrêmes -- via un
-    terme cubique, dont la dérivée est nulle au centre et croît vers les bords). Mécanisme
-    partagé (construit une fois, consommé par chaque action probabiliste future : First Touch
-    ici, Passing/Tackling/Finishing... dans les phases suivantes) -- `baseline`/`amplitude`
-    propres à chaque action, cette fonction ne fixe que la FORME de la courbe."""
-    t = max(-1.0, min(1.0, (note - _CURVE_CENTER) / _CURVE_HALF_SPAN))
-    shaped = t**3
-    return max(min_prob, min(max_prob, baseline + shaped * amplitude))
+    jamais binaire et courbe non linéaire (voir `_cubic_curve`). Mécanisme partagé (construit une
+    fois, consommé par chaque action probabiliste future : First Touch ici, Passing/Finishing...
+    dans les phases suivantes) -- `baseline`/`amplitude` propres à chaque action, cette fonction
+    ne fixe que la FORME de la courbe."""
+    t = (note - _CURVE_CENTER) / _CURVE_HALF_SPAN
+    return _cubic_curve(t, baseline, amplitude, min_prob, max_prob)
+
+
+def duel_probability(attacker_rating: float, defender_rating: float, *, baseline: float = 0.5,
+                      amplitude: float = 0.4, min_prob: float = 0.05, max_prob: float = 0.95) -> float:
+    """Probabilité que le camp `attacker_rating` l'emporte sur `defender_rating` dans un duel
+    direct (ex. tacle, Phase 3) -- même courbe que `success_probability` (voir `_cubic_curve`),
+    mais centrée sur l'ÉCART entre les deux notes plutôt que sur une note isolée : un léger
+    écart de force a un effet quasi neutre, un gros écart devient nettement favorable, jamais
+    une victoire garantie même à écart extrême."""
+    t = (attacker_rating - defender_rating) / _DUEL_HALF_SPAN
+    return _cubic_curve(t, baseline, amplitude, min_prob, max_prob)
 
 
 def player_attribute(player, name: str, default: int = 60) -> int:

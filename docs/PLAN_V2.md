@@ -71,21 +71,23 @@ Un joueur en possession du ballon peut le contrôler (qualité du contrôle pilo
 
 ## Phase 3 — Duels et tacles
 
+**Statut** : Livrée (24/10/2026). Code : `v2engine/duel.py` (tentative de tacle, risque de faute, issue du duel), `v2engine/attributes.py` (`duel_probability`, même courbe que `success_probability` mais centrée sur un écart de notes). Tests : `tests/test_v2engine_duel.py` (7) + 1 test Phase 2 neutralisé explicitement vis-à-vis des tacles, tous verts.
+
 **User stories** : US-27
 
 **Attributs couverts** : Tackling, Strength, Balance, Aggression
 
 ### Ce qu'on livre
 
-Quand un adversaire est à proximité du porteur du ballon, un duel peut se déclencher (tacle), résolu par un tirage pondéré par Tackling/Strength/Balance/Aggression des deux joueurs, modulé par leur poste (table de pondération de la Phase 1). Une Aggression haute augmente les tacles tentés et le risque de faute (contrepartie attendue par le guide), pas seulement le taux de réussite.
+Quand un adversaire est à portée directe (1,5 m) du porteur du ballon, il peut tenter un tacle -- fréquence de la tentative pilotée par Aggression seule, issue du duel pilotée par Tackling (tacleur, avec un peu d'Aggression) contre la moyenne Strength/Balance du porteur. Un tacle raté a un risque de faute piloté par Aggression seule, indépendamment de Tackling (contrepartie attendue par le guide). Pas de lecture tactique de QUAND tacler (IA placeholder, D-V08) ni de conséquence de jeu pour une faute (pas de coup franc : Phase 5+). La table de pondération par poste (D-V07) reste vide : ces 4 attributs ne sont pas différenciés par poste dans ce modèle (un tacle est un tacle, quel que soit le poste de qui le tente) -- à revoir si un besoin concret apparaît.
 
 ### Critères d'acceptation
 
-- [ ] Un joueur proche du porteur adverse peut tenter un tacle, résolu par les attributs des deux joueurs
-- [ ] Un écart de Tackling/Strength/Balance favorise mesurablement le joueur le mieux noté, sans jamais garantir l'issue à 100 %
-- [ ] Une Aggression haute produit plus de fautes/tacles ratés qu'une Aggression basse, à Tackling égal
-- [ ] Le mode batch reste cohérent avec le mode « regarder »
-- [ ] La V1 reste 100 % inchangée
+- [x] Un joueur proche du porteur adverse peut tenter un tacle, résolu par les attributs des deux joueurs
+- [x] Un écart de Tackling/Strength/Balance favorise mesurablement le joueur le mieux noté, sans jamais garantir l'issue à 100 %
+- [x] Une Aggression haute produit plus de fautes/tacles ratés qu'une Aggression basse, à Tackling égal
+- [x] Le mode batch reste cohérent avec le mode « regarder » (même fonction `_step_ball`, aucun rendu construit à ce stade)
+- [x] La V1 reste 100 % inchangée
 
 ### Bloquée par
 

@@ -55,6 +55,9 @@ def test_player_receives_controls_and_passes_to_nearest_teammate(monkeypatch) ->
     ball = BallState(position=Vec2(50.0, 34.0), velocity=Vec2(0.0, 0.0))
 
     monkeypatch.setattr("v2engine.match.attempt_control", lambda player: True)
+    # L'adversaire est volontairement à portée de tacle (Phase 3) : neutralisé ici pour ne tester
+    # que la passe (Phase 2) -- voir tests/test_v2engine_duel.py pour les tacles eux-mêmes.
+    monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression: False)
     _step_ball(ball, 0.1, players)
     assert ball.holder == "Receveur"
     assert ball.velocity == Vec2(0.0, 0.0)

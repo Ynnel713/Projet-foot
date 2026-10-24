@@ -13,6 +13,7 @@ from ligue1sim.lineup import Lineup, pick_best_formation
 
 from v2engine.attributes import player_attribute
 from v2engine.ball_state import BallState
+from v2engine.duel import resolve_tackle, should_attempt_tackle
 from v2engine.formation import initial_positions
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch
 from v2engine.movement import PlayerState, step
@@ -24,6 +25,10 @@ PLAYER_RADIUS_M = 0.3
 # Distance de contact ballon-joueur (Phase 2) : somme des deux rayons -- en dessous, un joueur
 # peut tenter de contrôler le ballon (voir `possession.attempt_control`).
 CONTROL_RADIUS_M = BALL_RADIUS_M + PLAYER_RADIUS_M
+# Distance de contact direct (Phase 3) : en dessous, un adversaire du porteur peut tenter un
+# tacle (voir `duel.should_attempt_tackle`) -- plus large que CONTROL_RADIUS_M (contact entre
+# deux joueurs, pas entre un joueur et le ballon seul).
+TACKLE_RADIUS_M = 1.5
 # Distance en dessous de laquelle un joueur va vers le ballon plutôt que vers sa position de
 # formation -- IA placeholder (D-V08), pas une vraie prise de décision.
 CHASE_RADIUS_M = 15.0
@@ -72,18 +77,41 @@ def _resolve_player_collisions(players: list[PlayerState]) -> None:
                 b.position = clamp_to_pitch(b.position + push)
 
 
+def _nearest_opponent_in_range(holder: PlayerState, players: list[PlayerState], radius_m: float) -> PlayerState | None:
+    opponents_in_range = [
+        p for p in players if p.team != holder.team and holder.position.distance_to(p.position) < radius_m
+    ]
+    if not opponents_in_range:
+        return None
+    return min(opponents_in_range, key=lambda p: holder.position.distance_to(p.position))
+
+
 def _step_ball(ball: BallState, dt: float, players: list[PlayerState]) -> None:
-    """Avance le ballon d'un tick (mutation en place) : si un joueur le contrôle déjà, il le
-    transmet aussitôt à un coéquipier (Phase 2, Passing/Technique) ; sinon trajectoire physique
-    simple, et tout joueur à son contact tente de le contrôler (First Touch). Un contrôle raté
-    fait partir le ballon dans une direction imprévisible plutôt que d'être proprement reçu --
-    interaction passive, comme en Phase 1, pas un rebond volontaire."""
+    """Avance le ballon d'un tick (mutation en place) : si un joueur le contrôle déjà, un
+    adversaire à portée directe peut d'abord tenter un tacle (Phase 3, Tackling/Strength/
+    Balance/Aggression) ; sinon le porteur transmet aussitôt à un coéquipier (Phase 2, Passing/
+    Technique). Loin de tout porteur, trajectoire physique simple, et tout joueur à son contact
+    tente de contrôler le ballon (First Touch) -- un contrôle raté le fait partir dans une
+    direction imprévisible plutôt que d'être proprement reçu (interaction passive, comme en
+    Phase 1, pas un rebond volontaire)."""
     if ball.holder is not None:
         holder = next((p for p in players if p.name == ball.holder), None)
         if holder is None:
             ball.holder = None  # détenteur introuvable (ne devrait pas arriver hors test) -- ballon relâché
             return
         ball.position = holder.position
+
+        challenger = _nearest_opponent_in_range(holder, players, TACKLE_RADIUS_M)
+        if challenger is not None and should_attempt_tackle(player_attribute(challenger, "Aggression")):
+            result = resolve_tackle(challenger, holder)
+            if result.won:
+                ball.holder = challenger.name
+                ball.velocity = Vec2(0.0, 0.0)
+            # Tacle raté (faute ou non) : le porteur garde le ballon ce tick, rien d'autre ne
+            # change -- la faute en elle-même n'a pas encore de conséquence de jeu (coup franc,
+            # Phase 5+, voir docs/PLAN_V2.md).
+            return
+
         teammates = [p for p in players if p.team == holder.team]
         target = choose_pass_target(holder, teammates)
         if target is None:
