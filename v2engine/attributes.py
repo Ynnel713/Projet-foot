@@ -32,6 +32,28 @@ def register_weights(attribute: str, weights: dict[str, float]) -> None:
     _WEIGHTS[attribute] = dict(weights)
 
 
+# Centre de la courbe (note moyenne réelle de la base, voir Guide_attributs_joueurs.pdf, §1) et
+# demi-étendue utilisée pour centrer/normaliser une note avant de la passer à
+# `success_probability` ci-dessous.
+_CURVE_CENTER = 55.0
+_CURVE_HALF_SPAN = 44.0  # note 99 -> t=1.0 ; note 11 -> t=-1.0
+
+
+def success_probability(note: float, *, baseline: float = 0.6, amplitude: float = 0.35,
+                         min_prob: float = 0.05, max_prob: float = 0.95) -> float:
+    """Probabilité de réussite d'une action pilotée par un attribut noté `note` (0-99), en
+    respectant deux des règles de conception du guide (§2, `Guide_attributs_joueurs.pdf`) :
+    jamais binaire (bornée à [`min_prob`, `max_prob`], jamais 0 ni 1 même à note extrême) et
+    courbe non linéaire (effet quasi neutre entre 45 et 55, amplifié vers les extrêmes -- via un
+    terme cubique, dont la dérivée est nulle au centre et croît vers les bords). Mécanisme
+    partagé (construit une fois, consommé par chaque action probabiliste future : First Touch
+    ici, Passing/Tackling/Finishing... dans les phases suivantes) -- `baseline`/`amplitude`
+    propres à chaque action, cette fonction ne fixe que la FORME de la courbe."""
+    t = max(-1.0, min(1.0, (note - _CURVE_CENTER) / _CURVE_HALF_SPAN))
+    shaped = t**3
+    return max(min_prob, min(max_prob, baseline + shaped * amplitude))
+
+
 def player_attribute(player, name: str, default: int = 60) -> int:
     """Valeur de l'attribut `name` pour `player`, ou `default` si absent. Un joueur sans
     attributs enrichis (`player.attributes is None`) ou avec cette seule colonne manquante se

@@ -70,6 +70,11 @@ class PlayerState:
     stamina: float
     home_target: Vec2  # position de formation à rejoindre hors pressing du ballon (voir match.py)
     radius_m: float = 0.3
+    # Attributs bruts du joueur (voir `ligue1sim.players.Player.attributes`), pour les phases
+    # suivantes (First Touch, Passing...) via `attributes.player_attribute` -- `pace`/
+    # `acceleration`/`stamina` ci-dessus restent des champs dédiés (chemin chaud, lu à chaque
+    # tick par `step`), ce champ sert aux attributs plus occasionnels (voir `possession.py`).
+    attributes: dict[str, int] | None = None
 
 
 def step(state: PlayerState, dt: float, target: Vec2, minute: float) -> PlayerState:

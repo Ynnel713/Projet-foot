@@ -8,16 +8,17 @@ from ligue1sim.players import Player
 from ligue1sim.season import CLUBS_PATH
 
 from v2engine.attributes import player_attribute
+from v2engine.ball_state import BallState
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
-from v2engine.match import BALL_RADIUS_M, PLAYER_RADIUS_M, _resolve_player_collisions, _step_ball, simulate_match
+from v2engine.match import CONTROL_RADIUS_M, PLAYER_RADIUS_M, _resolve_player_collisions, _step_ball, simulate_match
 from v2engine.movement import PlayerState, accel_time_s, stamina_factor, step
 
 
 def _player_state(name: str = "P", pace: float = 60, acceleration: float = 60, stamina: float = 60,
-                   position: Vec2 = Vec2(0.0, 0.0)) -> PlayerState:
+                   position: Vec2 = Vec2(0.0, 0.0), attributes: dict[str, int] | None = None) -> PlayerState:
     return PlayerState(
         name=name, team="home", poste="BU", position=position, velocity=Vec2(0.0, 0.0),
-        pace=pace, acceleration=acceleration, stamina=stamina, home_target=position,
+        pace=pace, acceleration=acceleration, stamina=stamina, home_target=position, attributes=attributes,
     )
 
 
@@ -67,16 +68,21 @@ def test_overlapping_players_are_pushed_apart() -> None:
     assert players[0].position.distance_to(players[1].position) >= 2 * PLAYER_RADIUS_M - 1e-6
 
 
-def test_ball_bounces_off_player_instead_of_passing_through() -> None:
+def test_ball_at_contact_either_held_or_deflected_never_stuck_overlapping(monkeypatch) -> None:
+    """Depuis la Phase 2 (contact/contrôle), un ballon à portée d'un joueur est soit contrôlé
+    (tenu exactement à sa position -- comportement voulu, voir test_v2engine_possession.py), soit
+    dévié s'il rate son contrôle -- jamais figé en superposition sans que l'un ou l'autre se
+    produise."""
     runner = _player_state(position=Vec2(50.0, 34.0))
     runner.velocity = Vec2(5.0, 0.0)
-    ball_position = Vec2(50.0, 34.0)  # superposé au joueur
-    ball_velocity = Vec2(0.0, 0.0)
+    ball = BallState(position=Vec2(50.0, 34.0), velocity=Vec2(0.0, 0.0))  # superposé au joueur
 
-    new_position, new_velocity = _step_ball(ball_position, ball_velocity, 0.1, [runner])
+    monkeypatch.setattr("v2engine.match.attempt_control", lambda player: False)
+    _step_ball(ball, 0.1, [runner])
 
-    assert new_velocity.length() > 0.0  # a reçu une vitesse de l'interaction, pas resté immobile
-    assert new_position.distance_to(runner.position) >= BALL_RADIUS_M + PLAYER_RADIUS_M - 1e-6
+    assert ball.holder is None
+    assert ball.velocity.length() > 0.0  # a reçu une vitesse de l'interaction, pas resté immobile
+    assert ball.position.distance_to(runner.position) >= CONTROL_RADIUS_M - 1e-6
 
 
 def test_full_short_match_runs_without_crashing() -> None:

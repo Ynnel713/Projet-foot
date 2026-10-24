@@ -45,21 +45,23 @@ Les 22 joueurs (données réelles via `clubs.py`/`players.py`/`lineup.py`) se d�
 
 ## Phase 2 — Contact ballon et passes
 
+**Statut** : Livrée (24/10/2026). Code : `v2engine/possession.py` (contrôle, choix du coéquipier, passe), `v2engine/ball_state.py` (possession), `v2engine/attributes.py` (`success_probability`, courbe non linéaire partagée, D-V07/guide §2). Tests : `tests/test_v2engine_possession.py` (6) + mise à jour de `tests/test_v2engine_movement.py` (1 test adapté à la nouvelle sémantique du ballon), tous verts.
+
 **User stories** : US-27
 
 **Attributs couverts** : First Touch, Passing, Technique
 
 ### Ce qu'on livre
 
-Un joueur en possession du ballon peut le contrôler (qualité du contrôle pilotée par First Touch) et le passer à un coéquipier (précision/réussite pilotées par Passing, gamme de gestes par Technique). Le ballon suit une trajectoire physique simple entre les deux joueurs. Toujours pas de tir, de duel ni de gardien à ce stade.
+Un joueur en possession du ballon peut le contrôler (qualité du contrôle pilotée par First Touch) et le passer à un coéquipier (précision/réussite pilotées par Passing, gamme de gestes par Technique). Le ballon suit une trajectoire physique simple entre les deux joueurs. Toujours pas de tir, de duel ni de gardien à ce stade. Introduit `success_probability` (`attributes.py`), le mécanisme partagé note → probabilité (courbe cubique, plate entre 45 et 55, amplifiée aux extrêmes, jamais 0 % ni 100 %) que toutes les actions probabilistes des phases suivantes réutiliseront.
 
 ### Critères d'acceptation
 
-- [ ] Un joueur peut recevoir, contrôler et transmettre le ballon à un coéquipier
-- [ ] Un First Touch bas produit visiblement plus de ballons mal contrôlés qu'un First Touch élevé, à situation égale
-- [ ] Un Passing bas produit visiblement plus de passes imprécises/ratées qu'un Passing élevé
-- [ ] Le mode batch reste cohérent avec le mode « regarder »
-- [ ] La V1 reste 100 % inchangée
+- [x] Un joueur peut recevoir, contrôler et transmettre le ballon à un coéquipier
+- [x] Un First Touch bas produit visiblement plus de ballons mal contrôlés qu'un First Touch élevé, à situation égale
+- [x] Un Passing bas produit visiblement plus de passes imprécises/ratées qu'un Passing élevé
+- [x] Le mode batch reste cohérent avec le mode « regarder » (même fonction `_step_ball`, aucun rendu construit à ce stade)
+- [x] La V1 reste 100 % inchangée
 
 ### Bloquée par
 
