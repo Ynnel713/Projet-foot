@@ -4,10 +4,28 @@ import { ArrowLeft, LoaderCircle, Pause, Play } from "lucide-react";
 import { createV2Match, getPersoClubs } from "../api/client";
 import dims from "../utils/pitchGeometry.json";
 
-// Vitesse 1x : un tick enregistré toutes les BASE_INTERVAL_MS -- un match complet (~5 100 ticks,
-// voir api/routers/v2.py) se regarde en ~3 min à vitesse 1x, moins avec x2/x4 (voir SPEED_OPTIONS).
-const BASE_INTERVAL_MS = 35;
-const SPEED_OPTIONS = [1, 2, 4];
+// Vitesses en multiples du TEMPS RÉEL (validées par le propriétaire, 24/10/2026) : x8 par défaut, soit ~11 min
+// pour 90 minutes de match. Entre deux positions enregistrées (~1 s de match d'écart, voir api/routers/v2.py),
+// joueurs et ballon glissent en ligne droite au lieu de sauter (voir `interpolatedTick`).
+const SPEED_OPTIONS = [4, 8, 16];
+const DEFAULT_SPEED = 8;
+
+// Position à `seconds` de match, interpolée entre les deux ticks enregistrés qui l'encadrent. Les joueurs gardent
+// le même ordre d'un tick à l'autre (liste construite une fois côté moteur).
+function interpolatedTick(trace, seconds) {
+  const last = trace.ticks.length - 1;
+  const exact = Math.min(last, Math.max(0, seconds / trace.tick_seconds));
+  const i = Math.min(last, Math.floor(exact));
+  const a = trace.ticks[i];
+  const b = trace.ticks[Math.min(last, i + 1)];
+  const f = exact - i;
+  const mix = (u, v) => u + (v - u) * f;
+  return {
+    minute: mix(a.minute, b.minute),
+    players: a.players.map((p, k) => ({ ...p, x: mix(p.x, b.players[k].x), y: mix(p.y, b.players[k].y) })),
+    ball: { x: mix(a.ball.x, b.ball.x), y: mix(a.ball.y, b.ball.y) },
+  };
+}
 
 // Écran V2 (docs/PRD_PRODUIT.md US-27 à 29, docs/PLAN_V2.md Phase 4) : lance un match isolé, puis
 // rejoue sa trace déjà calculée (voir v2engine/match.py) -- le score n'est révélé qu'au fil des
@@ -20,9 +38,9 @@ export default function V2Match() {
   const [launching, setLaunching] = useState(false);
   const [error, setError] = useState(null);
   const [trace, setTrace] = useState(null);
-  const [tickIndex, setTickIndex] = useState(0);
+  const [seconds, setSeconds] = useState(0); // temps de match lu (s)
   const [playing, setPlaying] = useState(false);
-  const [speed, setSpeed] = useState(2);
+  const [speed, setSpeed] = useState(DEFAULT_SPEED);
 
   useEffect(() => {
     getPersoClubs()
@@ -38,16 +56,21 @@ export default function V2Match() {
 
   useEffect(() => {
     if (!playing || !trace) return undefined;
-    const timer = setInterval(() => {
-      setTickIndex((i) => {
-        if (i + 1 >= trace.ticks.length) {
-          setPlaying(false);
-          return i;
-        }
-        return i + 1;
+    const end = (trace.ticks.length - 1) * trace.tick_seconds;
+    let frame;
+    let previous = performance.now();
+    const loop = (now) => {
+      const elapsed = (now - previous) / 1000;
+      previous = now;
+      setSeconds((t) => {
+        const next = Math.min(end, t + elapsed * speed);
+        if (next >= end) setPlaying(false);
+        return next;
       });
-    }, BASE_INTERVAL_MS / speed);
-    return () => clearInterval(timer);
+      frame = requestAnimationFrame(loop);
+    };
+    frame = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(frame);
   }, [playing, speed, trace]);
 
   async function handleLaunch() {
@@ -60,7 +83,7 @@ export default function V2Match() {
     try {
       const result = await createV2Match({ home, away });
       setTrace(result);
-      setTickIndex(0);
+      setSeconds(0);
       setPlaying(true);
     } catch {
       setError("Échec de la simulation.");
@@ -112,11 +135,11 @@ export default function V2Match() {
     );
   }
 
-  const tick = trace.ticks[tickIndex];
+  const tick = interpolatedTick(trace, seconds);
   const revealedGoals = trace.goals.filter((g) => g.minute <= tick.minute);
   const homeGoals = revealedGoals.filter((g) => g.team === "home").length;
   const awayGoals = revealedGoals.filter((g) => g.team === "away").length;
-  const finished = tickIndex >= trace.ticks.length - 1;
+  const finished = seconds >= (trace.ticks.length - 1) * trace.tick_seconds;
 
   return (
     <div className="flex flex-col h-full p-2.5 gap-2">
