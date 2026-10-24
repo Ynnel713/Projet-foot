@@ -7,7 +7,7 @@ import dims from "../utils/pitchGeometry.json";
 // Vitesses en multiples du TEMPS RÉEL (validées par le propriétaire, 24/10/2026) : x8 par défaut, soit ~11 min
 // pour 90 minutes de match. Entre deux positions enregistrées (~1 s de match d'écart, voir api/routers/v2.py),
 // joueurs et ballon glissent en ligne droite au lieu de sauter (voir `interpolatedTick`).
-const SPEED_OPTIONS = [4, 8, 16];
+const SPEED_OPTIONS = [1, 4, 8, 16]; // x1 = vitesse réelle (ajoutée à la demande du propriétaire, 24/10/2026)
 const DEFAULT_SPEED = 8;
 
 // Position à `seconds` de match, interpolée entre les deux ticks enregistrés qui l'encadrent. Les joueurs gardent
