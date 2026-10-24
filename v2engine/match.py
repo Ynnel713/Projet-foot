@@ -17,6 +17,7 @@ from v2engine.duel import resolve_tackle, should_attempt_tackle
 from v2engine.formation import initial_positions
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch
 from v2engine.movement import PlayerState, step
+from v2engine.off_ball import RUN_INTERVAL_S, choose_space
 from v2engine.decision import DECISION_INTERVAL_S, DRIBBLE_SPEED_FACTOR, choose_action
 from v2engine.possession import attempt_control, pass_velocity
 from v2engine.shooting import attempt_shot
@@ -187,12 +188,29 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
         break
 
 
-def _step_player(player: PlayerState, ball: BallState, dt: float, minute: float) -> PlayerState:
+def _step_player(
+    player: PlayerState,
+    ball: BallState,
+    dt: float,
+    minute: float,
+    players: list[PlayerState] | None = None,
+    runs: dict[str, tuple[Vec2, float]] | None = None,
+) -> PlayerState:
     """Le porteur conduit vers le but adverse, un peu moins vite qu'en course (`DRIBBLE_SPEED_FACTOR`) ;
-    les autres vont au ballon s'il est proche, sinon à leur position de formation (IA placeholder,
-    D-V08 -- les déplacements sans ballon viennent avec les tickets 03/04 de la Phase 5)."""
+    ses coéquipiers (hors gardien) cherchent un espace libre (Off the Ball, `off_ball.choose_space`,
+    réévalué toutes les `RUN_INTERVAL_S`, mémorisé dans `runs`) ; les autres vont au ballon s'il est
+    proche, sinon à leur position de formation (IA placeholder, D-V08 -- anticipation : ticket 04)."""
     if player.name == ball.holder:
         return step(player, dt, _OPPONENT_GOAL[player.team], minute, DRIBBLE_SPEED_FACTOR)
+    holder = next((p for p in players or [] if p.name == ball.holder), None)
+    if runs is not None and holder is not None and holder.team == player.team and player.poste != "GK":
+        now_s = minute * 60.0
+        target, next_s = runs.get(player.name, (None, 0.0))
+        if target is None or now_s >= next_s:
+            opponents = [p for p in players if p.team != player.team]
+            target = choose_space(player, opponents, 1.0 if player.team == "home" else -1.0)
+            runs[player.name] = (target, now_s + RUN_INTERVAL_S)
+        return step(player, dt, target, minute)
     near_ball = ball.position.distance_to(player.position) < CHASE_RADIUS_M
     return step(player, dt, ball.position if near_ball else player.home_target, minute)
 
@@ -220,10 +238,11 @@ def simulate_match(
 
     trace = MatchTrace(home=home_club.name, away=away_club.name, tick_seconds=tick_seconds * record_every)
 
+    runs: dict[str, tuple[Vec2, float]] = {}  # espace visé par chaque joueur sans ballon (Off the Ball)
     n_ticks = int(duration_minutes * 60.0 / tick_seconds)
     for i in range(n_ticks):
         minute = i * tick_seconds / 60.0
-        players = [_step_player(p, ball, tick_seconds, minute) for p in players]
+        players = [_step_player(p, ball, tick_seconds, minute, players, runs) for p in players]
         _resolve_player_collisions(players)
         scoring_team = _step_ball(ball, tick_seconds, players, i * tick_seconds)
         if scoring_team is not None:

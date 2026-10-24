@@ -132,7 +132,7 @@ Un porteur du ballon à moins de 20 m du but adverse tente sa chance plutôt que
 | Phase | Ce qu'on ajoute au moteur | Attributs |
 |---|---|---|
 | 5. Cerveau des joueurs | Vraie décision du porteur et des non-porteurs (remplace l'IA placeholder D-V08) | Decisions, Vision, Off the Ball, Anticipation, Flair, Teamwork |
-| 6. Défense organisée | Bloc, marquage, pressing | Positioning, Marking, Work Rate, Concentration |
+| 6. Défense organisée | Bloc, marquage, pressing | Positioning, Marking, Work Rate, Concentration — reprend aussi le critère en match reporté du ticket 03 (Off the Ball : espace des coéquipiers du porteur) |
 | 7. Gestes offensifs | Dribble, centre, tête, frappe de loin | Dribbling, Crossing, Heading, Jumping Reach, Long Shots, Bravery, Agility |
 | 8. Ballon hors du terrain | Touches, corners, coups francs, penalties | Corners, Free Kick Taking, Long Throws, Penalty Taking |
 | 9. Gardien complet | Sorties, centres, relances | Aerial Reach, Command of Area, Communication, Kicking, Throwing, Rushing Out, Punching, Eccentricity |
