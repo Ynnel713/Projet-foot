@@ -58,6 +58,13 @@ def test_missing_attributes_fall_back_to_neutral_default() -> None:
     assert player_attribute(partial_attributes, "Finishing") == 80
 
 
+def test_step_keeps_player_attributes() -> None:
+    # Régression : `step` reconstruisait le joueur sans ses attributs, qui retombaient tous à la valeur par défaut
+    # (60) dès le 2ᵉ tick -- passes, contrôles, tacles et tirs ignoraient alors les vraies notes.
+    state = _run_toward_target(_player_state(attributes={"Passing": 90}), Vec2(10.0, 0.0), n_ticks=3)
+    assert player_attribute(state, "Passing") == 90
+
+
 def test_overlapping_players_are_pushed_apart() -> None:
     a = _player_state(name="A", position=Vec2(50.0, 34.0))
     b = _player_state(name="B", position=Vec2(50.1, 34.0))  # chevauchement (rayon 0.3 m chacun)

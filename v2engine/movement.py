@@ -77,12 +77,13 @@ class PlayerState:
     attributes: dict[str, int] | None = None
 
 
-def step(state: PlayerState, dt: float, target: Vec2, minute: float) -> PlayerState:
+def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_factor: float = 1.0) -> PlayerState:
     """Avance `state` de `dt` secondes, en dirigeant le joueur vers `target` (sa position de
     formation ou le ballon, voir `match.py`) -- vitesse plafonnée par Pace et la fatigue
     (Stamina), montée en vitesse pilotée par Acceleration. IA de déplacement volontairement
-    simpliste (D-V08) : `target` est choisi par l'appelant, pas par ce module."""
-    effective_max_speed = max_speed_mps(state.pace) * stamina_factor(state.stamina, minute)
+    simpliste (D-V08) : `target` est choisi par l'appelant, pas par ce module. `speed_factor` :
+    part de la vitesse max (ex. conduite de balle, `decision.DRIBBLE_SPEED_FACTOR`)."""
+    effective_max_speed = max_speed_mps(state.pace) * stamina_factor(state.stamina, minute) * speed_factor
     to_target = target - state.position
     desired_velocity = to_target.normalized() * effective_max_speed if to_target.length() > 0.1 else Vec2(0.0, 0.0)
 
@@ -113,4 +114,5 @@ def step(state: PlayerState, dt: float, target: Vec2, minute: float) -> PlayerSt
         stamina=state.stamina,
         home_target=state.home_target,
         radius_m=state.radius_m,
+        attributes=state.attributes,
     )

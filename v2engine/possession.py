@@ -1,7 +1,5 @@
 """Contrôle et passe (Phase 2, docs/PLAN_V2.md) : un joueur qui touche le ballon tente de le
-contrôler (First Touch), puis, s'il y parvient, le transmet aussitôt à un coéquipier (Passing/
-Technique) -- pas encore de conduite de balle ni de lecture tactique du jeu (IA placeholder,
-D-V08 ; la vraie prise de décision vient en Phase 5+, voir docs/PLAN_V2.md)."""
+contrôler (First Touch), puis exécute la passe choisie par `decision.py` (Passing/Technique)."""
 
 from __future__ import annotations
 
@@ -26,13 +24,13 @@ def attempt_control(player: PlayerState) -> bool:
     return random.random() < success_probability(first_touch)
 
 
-def choose_pass_target(passer: PlayerState, teammates: list[PlayerState]) -> PlayerState | None:
-    """Coéquipier visé par une passe -- le plus proche, hors soi-même (IA placeholder, D-V08 :
-    aucune lecture tactique du jeu pour l'instant). `None` si aucun coéquipier disponible."""
-    candidates = [p for p in teammates if p.name != passer.name]
-    if not candidates:
-        return None
-    return min(candidates, key=lambda p: passer.position.distance_to(p.position))
+def pass_accuracy(passer: PlayerState) -> float:
+    """Probabilité qu'une passe de `passer` arrive où il la destine -- Passing (réussite de la
+    passe) et Technique (gamme de gestes), voir `success_probability`. Partagée par l'exécution
+    (`pass_velocity`) et l'évaluation de l'option « passer » (`decision.py`)."""
+    passing = player_attribute(passer, "Passing")
+    technique = player_attribute(passer, "Technique")
+    return (success_probability(passing) + success_probability(technique)) / 2.0
 
 
 def pass_velocity(passer: PlayerState, target: PlayerState) -> Vec2:
@@ -41,9 +39,7 @@ def pass_velocity(passer: PlayerState, target: PlayerState) -> Vec2:
     probabilité de réussite (voir `success_probability`). Une passe ratée part vers un point
     décalé aléatoirement autour du coéquipier visé plutôt que de l'atteindre -- jamais une passe
     garantie, même à notes élevées (règle "jamais binaire" du guide)."""
-    passing = player_attribute(passer, "Passing")
-    technique = player_attribute(passer, "Technique")
-    accuracy = (success_probability(passing) + success_probability(technique)) / 2.0
+    accuracy = pass_accuracy(passer)
 
     aim_point = target.position
     if random.random() > accuracy:

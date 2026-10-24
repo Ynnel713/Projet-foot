@@ -8,6 +8,7 @@ from ligue1sim.season import CLUBS_PATH
 
 from v2engine.ball_state import BallState
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
+from v2engine.decision import Action
 from v2engine.match import GOAL_CENTER_Y, _step_ball, simulate_match
 from v2engine.movement import PlayerState
 from v2engine.shooting import shot_probability
@@ -56,6 +57,7 @@ def test_scored_shot_resets_ball_to_center_and_releases_holder(monkeypatch) -> N
     ball = BallState(position=shooter.position, velocity=Vec2(0.0, 0.0), holder="Buteur")
 
     monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression: False)
+    monkeypatch.setattr("v2engine.match.choose_action", lambda *args: Action("shot", 1.0))  # issue du tir seule testée ici
     monkeypatch.setattr("v2engine.match.attempt_shot", lambda shooter, keeper, distance_m, goal_center_y: True)
     scoring_team = _step_ball(ball, 0.1, [shooter, keeper])
 
@@ -70,6 +72,7 @@ def test_missed_shot_gives_ball_to_the_opposing_keeper(monkeypatch) -> None:
     ball = BallState(position=shooter.position, velocity=Vec2(0.0, 0.0), holder="Buteur")
 
     monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression: False)
+    monkeypatch.setattr("v2engine.match.choose_action", lambda *args: Action("shot", 1.0))  # issue du tir seule testée ici
     monkeypatch.setattr("v2engine.match.attempt_shot", lambda shooter, keeper, distance_m, goal_center_y: False)
     scoring_team = _step_ball(ball, 0.1, [shooter, keeper])
 

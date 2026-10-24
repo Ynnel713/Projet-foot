@@ -12,9 +12,11 @@ import random
 from v2engine.attributes import duel_probability, player_attribute
 from v2engine.movement import PlayerState
 
-# Distance (m) en dessous de laquelle un porteur tente sa chance plutôt que de chercher une
-# passe -- IA de décision placeholder (D-V08), pas une vraie lecture tactique.
-SHOOTING_RANGE_M = 20.0
+# Distance de tir maximale (m) : au-delà, l'option « tirer » n'existe pas pour le porteur (voir
+# `decision.py`, qui choisit QUAND tirer). Constante validée par le propriétaire (24/10/2026,
+# ticket v2-cerveau-joueurs/01, 20 m auparavant).
+SHOOTING_RANGE_M = 30.0
+_FAR_DISTANCE_FACTOR = 0.10  # chance à la distance maximale, en part de celle d'un tir à bout portant (validée 24/10/2026)
 
 _CLOSE_RANGE_M = 6.0  # profondeur approximative de la surface de but -- tir à pleine chance en dessous
 
@@ -27,12 +29,12 @@ _NEUTRAL_KEEPER_RATING = 60.0
 
 
 def _distance_factor(distance_m: float) -> float:
-    """1.0 à bout portant, décroît linéairement jusqu'à un plancher à la limite de la zone de
-    tir -- jamais 0 (un tir à la limite reste à faible pourcentage, pas impossible)."""
+    """1.0 à bout portant, décroît linéairement jusqu'à `_FAR_DISTANCE_FACTOR` à la limite de la
+    zone de tir -- jamais 0 (un tir à la limite reste à faible pourcentage, pas impossible)."""
     if distance_m <= _CLOSE_RANGE_M:
         return 1.0
-    ratio = (distance_m - _CLOSE_RANGE_M) / (SHOOTING_RANGE_M - _CLOSE_RANGE_M)
-    return max(0.15, 1.0 - min(1.0, ratio))
+    ratio = min(1.0, (distance_m - _CLOSE_RANGE_M) / (SHOOTING_RANGE_M - _CLOSE_RANGE_M))
+    return 1.0 - ratio * (1.0 - _FAR_DISTANCE_FACTOR)
 
 
 def _angle_factor(shooter_y: float, goal_center_y: float, distance_m: float) -> float:

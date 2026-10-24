@@ -123,18 +123,26 @@ Un porteur du ballon à moins de 20 m du but adverse tente sa chance plutôt que
 
 ---
 
-## Phase 5+ — Attributs dispensables (après qu'un match complet existe)
+## Phases 5 à 10 — Attributs restants (ordre validé par le propriétaire le 24/10/2026)
 
-**User stories** : US-27 (approfondissement)
+**User stories** : US-27 (approfondissement). Exigence : toutes les notes influencent réellement le comportement, façon Football Manager (référence : `Guide_attributs_joueurs.pdf`). La V1 est gelée, sans moteur graphique : tout l'effort porte sur la V2.
 
-**Statut** : non découpée en tickets précis à ce stade — à détailler une fois la Phase 4 livrée et validée par le propriétaire.
+**Principe d'ordre** : un attribut n'a d'effet que si l'action qu'il pilote existe dans le moteur. On construit l'action, puis on y branche les attributs.
 
-**Attributs restants à intégrer, par groupe, sans ordre de priorité encore fixé entre eux** :
-- Prise de décision / lecture de jeu : Decisions, Vision, Anticipation, Concentration, Off the Ball (déjà en Phase 1 en placeholder — vraie IA ici), Teamwork, Flair, Work Rate
-- Coups de pied arrêtés spécialisés : Corners, Free Kick Taking, Long Throws, Penalty Taking
-- Jeu de tête et duels aériens : Jumping Reach, Heading, Crossing, Long Shots, Marking, Dribbling
-- Gardien, le reste : Aerial Reach, Command of Area, Communication, Kicking, Throwing, Eccentricity, Punching (Tendency), Rushing Out (Tendency)
-- Caractère et intangibles : Determination, Courage (Bravery), Leadership, Weak foot, Pieds, Preferred moves
+| Phase | Ce qu'on ajoute au moteur | Attributs |
+|---|---|---|
+| 5. Cerveau des joueurs | Vraie décision du porteur et des non-porteurs (remplace l'IA placeholder D-V08) | Decisions, Vision, Off the Ball, Anticipation, Flair, Teamwork |
+| 6. Défense organisée | Bloc, marquage, pressing | Positioning, Marking, Work Rate, Concentration |
+| 7. Gestes offensifs | Dribble, centre, tête, frappe de loin | Dribbling, Crossing, Heading, Jumping Reach, Long Shots, Bravery, Agility |
+| 8. Ballon hors du terrain | Touches, corners, coups francs, penalties | Corners, Free Kick Taking, Long Throws, Penalty Taking |
+| 9. Gardien complet | Sorties, centres, relances | Aerial Reach, Command of Area, Communication, Kicking, Throwing, Rushing Out, Punching, Eccentricity |
+| 10. Caractère et profil | Moral selon le score, pied fort, habitudes | Determination, Leadership, Weak foot, Pieds, Preferred moves |
+
+Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement aux compétitions (D-V10).
+
+**Phase 5 découpée** : `.scratch/v2-cerveau-joueurs/issues/` (01 à 06). Phases 6 à 10 : à découper une fois la précédente livrée.
+
+**Correctif préalable (24/10/2026)** : `movement.step` perdait les attributs des joueurs dès le 2ᵉ tick (retour à 60 par défaut) ; passes, contrôles, tacles et tirs des Phases 2 à 4 ignoraient donc les vraies notes en match. Corrigé, test de régression dans `tests/test_v2engine_movement.py`.
 
 ### Bloquée par
 
