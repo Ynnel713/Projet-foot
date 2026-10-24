@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Trophy, Wand2, Star, Medal, Plus, Users } from "lucide-react";
+import { Trophy, Wand2, Star, Medal, Plus, Users, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { createChampionsLeague, createWorldCup } from "../api/client";
@@ -84,7 +84,7 @@ export default function Home() {
         </CardRow>
       </section>
 
-      <section>
+      <section className="mb-7">
         <h2 className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-3">Création</h2>
         <CardRow>
           <CreateTile
@@ -92,6 +92,18 @@ export default function Home() {
             title="Compétition perso"
             description="Clubs ou sélections, puis le format de ton choix : championnat, championnat + élimination, ou élimination directe."
             onClick={() => navigate("/custom")}
+          />
+        </CardRow>
+      </section>
+
+      <section>
+        <h2 className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-3">Expérimental</h2>
+        <CardRow>
+          <Tile
+            icon={Zap}
+            title="Version 2 (bêta)"
+            description="Moteur physique piloté par les attributs réels des joueurs : l'issue émerge de la simulation, aucun score décidé à l'avance."
+            onClick={() => navigate("/v2")}
           />
         </CardRow>
       </section>

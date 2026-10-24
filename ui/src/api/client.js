@@ -24,6 +24,11 @@ export const getLeagues = () => request("/api/leagues");
 export const getPersoClubs = () => request("/api/clubs");
 export const getNations = () => request("/api/nations");
 
+// V2 (docs/TRD_V2.md) : simule un match isolé de bout en bout et renvoie sa trace complète
+// (positions + buts horodatés) -- rien à passer ici sauf les deux clubs, le résultat n'est
+// jamais connu avant que la réponse n'arrive.
+export const createV2Match = (body) => request("/api/v2/matches", { method: "POST", body: JSON.stringify(body) });
+
 export const createCompetition = (body) =>
   request("/api/competitions", { method: "POST", body: JSON.stringify(body) });
 

@@ -227,7 +227,7 @@ def simulate_match(
         _resolve_player_collisions(players)
         scoring_team = _step_ball(ball, tick_seconds, players, i * tick_seconds)
         if scoring_team is not None:
-            trace.record_goal(scoring_team)
+            trace.record_goal(scoring_team, minute)
 
         if i % record_every == 0:
             trace.record(

@@ -97,7 +97,7 @@ Quand un adversaire est à portée directe (1,5 m) du porteur du ballon, il peut
 
 ## Phase 4 — Tirs et gardien (match complet jouable, score inclus)
 
-**Statut** : Livrée côté moteur (24/10/2026). Code : `v2engine/shooting.py` (`shot_probability`, modulée par distance/angle), score accumulé dans `trace.MatchTrace.home_goals`/`away_goals`. Tests : `tests/test_v2engine_shooting.py` (6), tous verts. **Reste à faire, hors de ce ticket moteur** : la tuile « Version 2 (bêta) » sur l'accueil et l'écran qui regarde un match en direct ne sont pas construits (aucun rendu n'existe encore dans tout ce premier plan, voir Phase 1-3) — un chantier de rendu séparé est nécessaire avant que ce critère-là soit vérifiable ; noté explicitement plutôt que coché à tort.
+**Statut** : Livrée, moteur ET rendu (24/10/2026). Moteur : `v2engine/shooting.py` (`shot_probability`, modulée par distance/angle), score et buts horodatés dans `trace.MatchTrace` (`home_goals`/`away_goals`/`goals`). API : `api/routers/v2.py` (`POST /api/v2/matches`, trace sérialisée). UI : `ui/src/routes/V2Match.jsx` (choix des deux clubs, terrain SVG simple rejouant la trace à vitesse réglable x1/x2/x4, score révélé au fil des buts horodatés, jamais avant) + tuile « Version 2 (bêta) » sur l'accueil (`Home.jsx`). Vérifié dans le navigateur : match PSG-OM lancé, calculé (~26 s), lu avec score progressif et pause/vitesse fonctionnels. Tests moteur : `tests/test_v2engine_shooting.py` (6), tous verts.
 
 **User stories** : US-27, US-29
 
@@ -113,7 +113,7 @@ Un porteur du ballon à moins de 20 m du but adverse tente sa chance plutôt que
 - [x] Un Finishing/Composure élevé augmente mesurablement le taux de conversion, sans jamais garantir un but
 - [x] Un gardien avec un Reflexes/One on Ones élevé arrête mesurablement plus de tirs qu'un gardien noté bas, à tir égal
 - [x] Un match complet (coup d'envoi à coup de sifflet final) se joue de bout en bout et produit un score, sans score pré-décidé (`simulate_match` expose `home_goals`/`away_goals`)
-- [ ] Le match est regardable depuis la nouvelle tuile « Version 2 (bêta) » de l'accueil, sans connaître le score avant de lancer la lecture — **pas encore fait : aucun rendu/UI construit dans ce plan, chantier séparé à cadrer**
+- [x] Le match est regardable depuis la nouvelle tuile « Version 2 (bêta) » de l'accueil, sans connaître le score avant de lancer la lecture
 - [x] Le mode « tout simuler sans regarder » produit aussi un score exploitable, sur le même moteur
 - [x] La V1 reste 100 % inchangée
 

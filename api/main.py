@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 
 from ligue1sim.faces import FACES_DIR
 
-from api.routers import competitions, leagues
+from api.routers import competitions, leagues, v2
 
 app = FastAPI(title="Simulafoot API")
 
@@ -41,6 +41,7 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 app.include_router(leagues.router, prefix="/api")
 app.include_router(competitions.router, prefix="/api")
+app.include_router(v2.router, prefix="/api")
 
 # Photos de joueurs (voir ligue1sim.faces) -- non versionnées, absentes tant
 # que scripts/extract_faces.py n'a pas tourné localement. Chemin distinct de
