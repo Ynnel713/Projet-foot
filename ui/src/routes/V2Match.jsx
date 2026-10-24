@@ -81,8 +81,17 @@ export default function V2Match() {
           émerge de la simulation. Un match complet prend quelques dizaines de secondes à calculer.
         </p>
 
-        <ClubSelect label="Domicile" value={home} onChange={setHome} clubs={clubs} />
-        <ClubSelect label="Extérieur" value={away} onChange={setAway} clubs={clubs} />
+        {clubs.length === 0 && !error ? (
+          // Premier appel après démarrage de l'API : lecture du fichier joueurs, ~15 s mesurées (24/10/2026).
+          <p className="flex items-center gap-2 text-sm text-gray-400">
+            <LoaderCircle size={16} className="animate-spin" /> Chargement des clubs…
+          </p>
+        ) : (
+          <>
+            <ClubSelect label="Domicile" value={home} onChange={setHome} clubs={clubs} />
+            <ClubSelect label="Extérieur" value={away} onChange={setAway} clubs={clubs} />
+          </>
+        )}
 
         {error && <p className="text-sm text-red-400">{error}</p>}
 
