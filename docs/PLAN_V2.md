@@ -97,23 +97,25 @@ Quand un adversaire est à portée directe (1,5 m) du porteur du ballon, il peut
 
 ## Phase 4 — Tirs et gardien (match complet jouable, score inclus)
 
+**Statut** : Livrée côté moteur (24/10/2026). Code : `v2engine/shooting.py` (`shot_probability`, modulée par distance/angle), score accumulé dans `trace.MatchTrace.home_goals`/`away_goals`. Tests : `tests/test_v2engine_shooting.py` (6), tous verts. **Reste à faire, hors de ce ticket moteur** : la tuile « Version 2 (bêta) » sur l'accueil et l'écran qui regarde un match en direct ne sont pas construits (aucun rendu n'existe encore dans tout ce premier plan, voir Phase 1-3) — un chantier de rendu séparé est nécessaire avant que ce critère-là soit vérifiable ; noté explicitement plutôt que coché à tort.
+
 **User stories** : US-27, US-29
 
 **Attributs couverts** : Finishing, Composure (côté tireur) ; Reflexes, Handling, One on Ones (côté gardien, essentiels seulement — Communication/Kicking/Throwing/Aerial Reach/Command of Area/les tendances viennent en Phase 5+)
 
 ### Ce qu'on livre
 
-Un joueur en position de tir peut tenter sa chance ; l'issue (cadré, arrêté, but) est résolue par Finishing/Composure côté tireur et Reflexes/Handling/One on Ones côté gardien, modulés par la distance/l'angle issus de la physique. À la fin de ce ticket, un match complet est jouable de bout en bout : l'issue (score) émerge entièrement du moteur, pour la première fois sans aucun score décidé à l'avance. C'est le jalon livrable de ce premier plan (US-29 : regardable sans connaître le score à l'avance, ou simulable d'un coup sans regarder).
+Un porteur du ballon à moins de 20 m du but adverse tente sa chance plutôt que de chercher une passe (IA de décision placeholder, D-V08) ; l'issue (but ou non) est résolue par Finishing/Composure côté tireur et Reflexes/One on Ones/Handling côté gardien, modulée par la distance et l'angle de tir (facteurs géométriques calculés depuis les positions réelles, jamais 0 ni 1 — un tir à la limite de la zone ou sous un angle fermé reste possible, juste moins probable). Un but remet le ballon au centre ; un tir non converti donne le ballon au gardien adverse (repli simple, pas de sortie de but/corner modélisée). Le score (`home_goals`/`away_goals`) émerge entièrement du moteur, pour la première fois sans aucun résultat pré-décidé.
 
 ### Critères d'acceptation
 
-- [ ] Un tir est résolu par les attributs du tireur et du gardien, jamais par un tirage indépendant des données
-- [ ] Un Finishing/Composure élevé augmente mesurablement le taux de conversion, sans jamais garantir un but
-- [ ] Un gardien avec un Reflexes/One on Ones élevé arrête mesurablement plus de tirs qu'un gardien noté bas, à tir égal
-- [ ] Un match complet (coup d'envoi à coup de sifflet final) se joue de bout en bout et produit un score, sans score pré-décidé
-- [ ] Le match est regardable depuis la nouvelle tuile « Version 2 (bêta) » de l'accueil, sans connaître le score avant de lancer la lecture
-- [ ] Le mode « tout simuler sans regarder » produit aussi un score exploitable, sur le même moteur
-- [ ] La V1 reste 100 % inchangée
+- [x] Un tir est résolu par les attributs du tireur et du gardien, jamais par un tirage indépendant des données
+- [x] Un Finishing/Composure élevé augmente mesurablement le taux de conversion, sans jamais garantir un but
+- [x] Un gardien avec un Reflexes/One on Ones élevé arrête mesurablement plus de tirs qu'un gardien noté bas, à tir égal
+- [x] Un match complet (coup d'envoi à coup de sifflet final) se joue de bout en bout et produit un score, sans score pré-décidé (`simulate_match` expose `home_goals`/`away_goals`)
+- [ ] Le match est regardable depuis la nouvelle tuile « Version 2 (bêta) » de l'accueil, sans connaître le score avant de lancer la lecture — **pas encore fait : aucun rendu/UI construit dans ce plan, chantier séparé à cadrer**
+- [x] Le mode « tout simuler sans regarder » produit aussi un score exploitable, sur le même moteur
+- [x] La V1 reste 100 % inchangée
 
 ### Bloquée par
 

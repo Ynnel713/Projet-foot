@@ -18,7 +18,13 @@ from v2engine.formation import initial_positions
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch
 from v2engine.movement import PlayerState, step
 from v2engine.possession import attempt_control, choose_pass_target, pass_velocity
+from v2engine.shooting import SHOOTING_RANGE_M, attempt_shot
 from v2engine.trace import BallSnapshot, MatchTrace, PlayerSnapshot
+
+GOAL_CENTER_Y = PITCH_WIDTH_M / 2.0
+# But adverse d'une équipe, par convention de ce moteur (voir `formation.initial_positions`,
+# D-V03 : domicile attaque vers x=PITCH_LENGTH_M, extérieur vers x=0).
+_OPPONENT_GOAL = {"home": Vec2(PITCH_LENGTH_M, GOAL_CENTER_Y), "away": Vec2(0.0, GOAL_CENTER_Y)}
 
 BALL_RADIUS_M = 0.11
 PLAYER_RADIUS_M = 0.3
@@ -86,19 +92,28 @@ def _nearest_opponent_in_range(holder: PlayerState, players: list[PlayerState], 
     return min(opponents_in_range, key=lambda p: holder.position.distance_to(p.position))
 
 
-def _step_ball(ball: BallState, dt: float, players: list[PlayerState]) -> None:
+def _goalkeeper(team: str, players: list[PlayerState]) -> PlayerState | None:
+    """Gardien de `team`, ou `None` si l'effectif n'en compte aucun (cas synthétique sans
+    gardien, voir docs/PLAN_V2.md Phase 1) -- `shooting.shot_probability` s'en accommode (repli
+    neutre, jamais une erreur)."""
+    return next((p for p in players if p.team == team and p.poste == "GK"), None)
+
+
+def _step_ball(ball: BallState, dt: float, players: list[PlayerState]) -> str | None:
     """Avance le ballon d'un tick (mutation en place) : si un joueur le contrôle déjà, un
     adversaire à portée directe peut d'abord tenter un tacle (Phase 3, Tackling/Strength/
-    Balance/Aggression) ; sinon le porteur transmet aussitôt à un coéquipier (Phase 2, Passing/
-    Technique). Loin de tout porteur, trajectoire physique simple, et tout joueur à son contact
-    tente de contrôler le ballon (First Touch) -- un contrôle raté le fait partir dans une
-    direction imprévisible plutôt que d'être proprement reçu (interaction passive, comme en
-    Phase 1, pas un rebond volontaire)."""
+    Balance/Aggression) ; sinon, à portée du but adverse, il tente sa chance (Phase 4, Finishing/
+    Composure contre Reflexes/One on Ones/Handling du gardien) ; sinon il transmet à un
+    coéquipier (Phase 2, Passing/Technique). Loin de tout porteur, trajectoire physique simple,
+    et tout joueur à son contact tente de contrôler le ballon (First Touch) -- un contrôle raté
+    le fait partir dans une direction imprévisible plutôt que d'être proprement reçu (interaction
+    passive, comme en Phase 1, pas un rebond volontaire). Retourne l'équipe qui vient de marquer
+    ("home"/"away"), ou `None`."""
     if ball.holder is not None:
         holder = next((p for p in players if p.name == ball.holder), None)
         if holder is None:
             ball.holder = None  # détenteur introuvable (ne devrait pas arriver hors test) -- ballon relâché
-            return
+            return None
         ball.position = holder.position
 
         challenger = _nearest_opponent_in_range(holder, players, TACKLE_RADIUS_M)
@@ -110,7 +125,30 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState]) -> None:
             # Tacle raté (faute ou non) : le porteur garde le ballon ce tick, rien d'autre ne
             # change -- la faute en elle-même n'a pas encore de conséquence de jeu (coup franc,
             # Phase 5+, voir docs/PLAN_V2.md).
-            return
+            return None
+
+        opponent_team = "away" if holder.team == "home" else "home"
+        goal = _OPPONENT_GOAL[holder.team]
+        distance_to_goal = holder.position.distance_to(goal)
+        if distance_to_goal <= SHOOTING_RANGE_M:
+            keeper = _goalkeeper(opponent_team, players)
+            scored = attempt_shot(holder, keeper, distance_to_goal, GOAL_CENTER_Y)
+            if scored:
+                ball.holder = None
+                ball.position = Vec2(PITCH_LENGTH_M / 2.0, PITCH_WIDTH_M / 2.0)  # remise en jeu au centre
+                ball.velocity = Vec2(0.0, 0.0)
+                return holder.team
+            # Tir non converti (arrêté ou cadré sans but) : le gardien adverse récupère le ballon
+            # -- repli simple (pas de sortie de but/corner modélisée, Phase 5+), voir
+            # docs/PLAN_V2.md. Sans gardien identifiable (effectif synthétique), le ballon reste
+            # simplement libre là où le tir a été tenté.
+            if keeper is not None:
+                ball.holder = keeper.name
+                ball.position = keeper.position
+            else:
+                ball.holder = None
+                ball.velocity = Vec2(0.0, 0.0)
+            return None
 
         teammates = [p for p in players if p.team == holder.team]
         target = choose_pass_target(holder, teammates)
@@ -119,7 +157,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState]) -> None:
         else:
             ball.velocity = pass_velocity(holder, target)
             ball.holder = None
-        return
+        return None
 
     ball.position = clamp_to_pitch(ball.position + ball.velocity * dt)
     ball.velocity = ball.velocity * (BALL_FRICTION_PER_S**dt)
@@ -178,7 +216,9 @@ def simulate_match(
             for p in players
         ]
         _resolve_player_collisions(players)
-        _step_ball(ball, tick_seconds, players)
+        scoring_team = _step_ball(ball, tick_seconds, players)
+        if scoring_team is not None:
+            trace.record_goal(scoring_team)
 
         if i % record_every == 0:
             trace.record(
