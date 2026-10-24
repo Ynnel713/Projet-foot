@@ -4,7 +4,7 @@ Phase 1, plus la possession (quel joueur le contrôle, le cas échéant). Distin
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from v2engine.geometry import Vec2
 
@@ -17,3 +17,7 @@ class BallState:
     # Instant (s de match) avant lequel le porteur garde son choix en cours -- conduite de balle
     # entre deux réévaluations (`decision.DECISION_INTERVAL_S`).
     next_decision_s: float = 0.0
+    # Adversaires qui ont lu la passe en cours et le point où ils courent la couper (Anticipation,
+    # `anticipation.pass_readers`) ; vidé dès que quelqu'un contrôle le ballon.
+    readers: dict[str, Vec2] = field(default_factory=dict)
+    last_pass_team: str | None = None  # équipe de la dernière passe, pour repérer une interception
