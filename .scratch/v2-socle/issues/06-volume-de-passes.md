@@ -4,7 +4,7 @@
 
 **Blocked by:** None.
 
-**Status:** fait (25/10/2026), en attente de commit
+**Status:** livré (25/10/2026, `f48ca33`), validé QC
 
 - [x] Nombre de passes par match dans la fourchette réelle (chiffre à sourcer : Opta ou FBref)
 - [x] Durée moyenne de possession par joueur et nombre de touches avant de passer dans les ordres de grandeur réels (à sourcer)

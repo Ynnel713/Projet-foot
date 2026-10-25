@@ -38,6 +38,11 @@ CONTROL_RADIUS_M = BALL_RADIUS_M + PLAYER_RADIUS_M
 # tacle (voir `duel.should_attempt_tackle`) -- plus large que CONTROL_RADIUS_M (contact entre
 # deux joueurs, pas entre un joueur et le ballon seul).
 TACKLE_RADIUS_M = 1.5
+# Un duel par confrontation (v2-socle/03, validé le 25/10/2026) : un défenseur tente au plus un tacle
+# tant qu'il reste à moins de CONFRONTATION_END_M du même porteur ; un tacle raté l'élimine
+# FAILED_TACKLE_RECOVERY_S (temps pour se relever et se replacer). Durée réelle non trouvée : ordre de grandeur.
+CONFRONTATION_END_M = 3.0
+FAILED_TACKLE_RECOVERY_S = 1.5
 # Distance en dessous de laquelle un joueur va vers le ballon plutôt que vers sa position de
 # formation -- IA placeholder (D-V08), pas une vraie prise de décision.
 CHASE_RADIUS_M = 15.0
@@ -104,7 +109,7 @@ def _goalkeeper(team: str, players: list[PlayerState]) -> PlayerState | None:
 def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: float = 0.0) -> str | None:
     """Avance le ballon d'un tick (mutation en place) : si un joueur le contrôle déjà, un
     adversaire à portée directe peut d'abord tenter un tacle (Phase 3, Tackling/Strength/
-    Balance/Aggression) ; sinon, après son temps de réception (`possession.reception_delay_s`, v2-socle/06)
+    Balance/Aggression ; au plus un par confrontation, v2-socle/03) ; sinon, après son temps de réception (`possession.reception_delay_s`, v2-socle/06)
     puis toutes les `DECISION_INTERVAL_S`, il choisit de tirer, passer ou
     conduire (Phase 5, `decision.choose_action`, Decisions) -- tir résolu par Finishing/Composure
     contre le gardien (Phase 4), passe par Passing/Technique (Phase 2), conduite = il garde le
@@ -120,9 +125,18 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
             return None
         ball.position = holder.position
 
-        challenger = _nearest_opponent_in_range(holder, players, TACKLE_RADIUS_M)
+        if ball.engaged_holder != holder.name:  # nouveau porteur : nouvelles confrontations
+            ball.engaged, ball.engaged_holder = set(), holder.name
+        ball.engaged = {n for n in ball.engaged
+                        if any(p.name == n and p.position.distance_to(holder.position) < CONFRONTATION_END_M for p in players)}
+        candidates = [p for p in players
+                      if p.name not in ball.engaged and ball.tackle_ban_until_s.get(p.name, 0.0) <= now_s]
+        challenger = _nearest_opponent_in_range(holder, candidates, TACKLE_RADIUS_M)
         if challenger is not None and should_attempt_tackle(player_attribute(challenger, "Aggression"), dt):
+            ball.engaged.add(challenger.name)
             result = resolve_tackle(challenger, holder)
+            if not result.won:
+                ball.tackle_ban_until_s[challenger.name] = now_s + FAILED_TACKLE_RECOVERY_S
             if result.won:
                 ball.holder = challenger.name
                 # nouveau porteur : contrôle et lève la tête avant de décider (v2-socle/06)
@@ -175,6 +189,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
             ball.velocity = Vec2(0.0, 0.0)  # conduite : le ballon suit le porteur (voir `simulate_match`)
         return None
 
+    ball.engaged_holder = None  # ballon libre : les confrontations en cours sont finies (v2-socle/03)
     ball.position = clamp_to_pitch(ball.position + ball.velocity * dt)
     ball.velocity = ball.velocity * (BALL_FRICTION_PER_S**dt)
     if ball.velocity.length() < BALL_STOPPED_MPS:

@@ -23,3 +23,8 @@ class BallState:
     last_pass_team: str | None = None  # équipe de la dernière passe, pour repérer une interception
     receiver: str | None = None  # coéquipier visé par la passe en cours, qui vient au-devant du ballon (v2-socle/01)
     receiving: bool = False  # porteur encore dans son temps de réception, avant sa première décision (v2-socle/06)
+    # Duels (v2-socle/03) : défenseurs ayant déjà tenté leur tacle dans la confrontation en cours avec
+    # `engaged_holder`, et instant jusqu'auquel un défenseur au tacle raté ne peut plus tacler.
+    engaged: set[str] = field(default_factory=set)
+    engaged_holder: str | None = None
+    tackle_ban_until_s: dict[str, float] = field(default_factory=dict)

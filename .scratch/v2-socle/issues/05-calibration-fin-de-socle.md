@@ -12,3 +12,5 @@
 - [ ] Passes réussies toujours 70-90 % et passes perdues toujours au plus 25 % (acquis du ticket 04, à ne pas perdre)
 - [ ] Constantes produit et critères chiffrés (données réelles sourcées, voir `docs/REVUE_ATTRIBUTS_V2.md`) validés par le propriétaire avant le code
 - [ ] Suite V2 verte ; V1 inchangée
+
+- Reporté du ticket 03 (25/10/2026) : buts à 3,65 par match sur 20 matchs (cible 2-3,5), passes chez l'adversaire à 25,5 % sur 1 match (plafond 25 %). Mesurer sur au moins 50 matchs pour réduire la part du hasard.

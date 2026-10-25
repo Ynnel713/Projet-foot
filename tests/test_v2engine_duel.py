@@ -96,3 +96,63 @@ class _WonTackle:
 class _LostTackle:
     won = False
     foul = False
+
+
+# --- v2-socle/03 : un duel par confrontation ---------------------------------------------------------------------
+def _count_attempts(monkeypatch) -> list[str]:
+    attempts: list[str] = []
+    monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression, dt: True)
+    monkeypatch.setattr("v2engine.match.resolve_tackle",
+                        lambda tackler, holder: attempts.append(tackler.name) or _LostTackle())
+    monkeypatch.setattr("v2engine.match.choose_action", lambda *args: type("A", (), {"kind": "dribble"})())
+    return attempts
+
+
+def test_defender_tackles_at_most_once_per_confrontation(monkeypatch) -> None:
+    holder = _player("Porteur", position=Vec2(50.0, 34.0))
+    challenger = _player("Adversaire", team="away", position=Vec2(50.5, 34.0))
+    ball = BallState(position=holder.position, velocity=Vec2(0.0, 0.0), holder="Porteur")
+    attempts = _count_attempts(monkeypatch)
+    for i in range(50):  # 5 s au contact, bien après la fin de son élimination
+        _step_ball(ball, 0.1, [holder, challenger], now_s=i * 0.1)
+    assert attempts == ["Adversaire"]
+
+
+def test_failed_tackler_cannot_retry_before_recovery_even_in_a_new_confrontation(monkeypatch) -> None:
+    from v2engine.match import FAILED_TACKLE_RECOVERY_S
+
+    holder = _player("Porteur", position=Vec2(50.0, 34.0))
+    near, far = Vec2(50.5, 34.0), Vec2(55.0, 34.0)
+    ball = BallState(position=holder.position, velocity=Vec2(0.0, 0.0), holder="Porteur")
+    attempts = _count_attempts(monkeypatch)
+    _step_ball(ball, 0.1, [holder, _player("Adversaire", team="away", position=near)], now_s=0.0)
+    _step_ball(ball, 0.1, [holder, _player("Adversaire", team="away", position=far)], now_s=0.1)  # confrontation finie
+    _step_ball(ball, 0.1, [holder, _player("Adversaire", team="away", position=near)], now_s=1.0)  # encore éliminé
+    assert attempts == ["Adversaire"]
+    _step_ball(ball, 0.1, [holder, _player("Adversaire", team="away", position=near)], now_s=FAILED_TACKLE_RECOVERY_S)
+    assert attempts == ["Adversaire", "Adversaire"]
+
+
+def test_other_defender_can_still_tackle_while_the_first_is_engaged(monkeypatch) -> None:
+    holder = _player("Porteur", position=Vec2(50.0, 34.0))
+    first = _player("Premier", team="away", position=Vec2(50.3, 34.0))
+    second = _player("Second", team="away", position=Vec2(50.0, 35.0))
+    ball = BallState(position=holder.position, velocity=Vec2(0.0, 0.0), holder="Porteur")
+    attempts = _count_attempts(monkeypatch)
+    for i in range(3):
+        _step_ball(ball, 0.1, [holder, first, second], now_s=i * 0.1)
+    assert attempts == ["Premier", "Second"]
+
+
+def test_confrontation_ends_when_the_ball_goes_loose(monkeypatch) -> None:
+    holder = _player("Porteur", position=Vec2(50.0, 34.0))
+    defender = _player("Adversaire", team="away", position=Vec2(50.5, 34.0))
+    ball = BallState(position=holder.position, velocity=Vec2(0.0, 0.0), holder="Porteur")
+    attempts = _count_attempts(monkeypatch)
+    _step_ball(ball, 0.1, [holder, defender], now_s=0.0)
+    ball.holder = None  # ballon relâché (contrôle raté...), puis repris par le même porteur
+    ball.position = Vec2(30.0, 34.0)
+    _step_ball(ball, 0.1, [holder, defender], now_s=0.1)
+    ball.holder = "Porteur"
+    _step_ball(ball, 0.1, [holder, defender], now_s=2.0)  # élimination finie : nouvelle confrontation
+    assert attempts == ["Adversaire", "Adversaire"]
