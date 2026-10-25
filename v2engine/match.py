@@ -12,7 +12,7 @@ from ligue1sim.clubs import Club
 from ligue1sim.lineup import Lineup, pick_best_formation
 
 from v2engine.attributes import player_attribute
-from v2engine.anticipation import loose_ball_target, pass_readers
+from v2engine.anticipation import loose_ball_target, meeting_point, pass_readers
 from v2engine.ball_state import BallState
 from v2engine.duel import resolve_tackle, should_attempt_tackle
 from v2engine.formation import initial_positions
@@ -44,6 +44,7 @@ CHASE_RADIUS_M = 15.0
 # ponytail : décroissance exponentielle simple (par seconde), pas un vrai coefficient de
 # frottement calibré -- à affiner si le rendu le justifie.
 BALL_FRICTION_PER_S = 0.6
+BALL_STOPPED_MPS = 0.5  # en dessous, une passe est considérée morte (ballon quasi arrêté)
 
 
 def _build_players(lineup: Lineup, team: str, positions: dict[str, Vec2]) -> list[PlayerState]:
@@ -164,6 +165,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
             ball.velocity = pass_velocity(holder, action.target)
             ball.holder = None
             ball.last_pass_team = holder.team
+            ball.receiver = action.target.name
             opponents = [p for p in players if p.team != holder.team]
             ball.readers = pass_readers(holder.position, ball.velocity, action.target.position, opponents)
         else:
@@ -172,6 +174,8 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
 
     ball.position = clamp_to_pitch(ball.position + ball.velocity * dt)
     ball.velocity = ball.velocity * (BALL_FRICTION_PER_S**dt)
+    if ball.velocity.length() < BALL_STOPPED_MPS:
+        ball.receiver = None  # passe morte : ballon libre pour tous, plus de receveur désigné
 
     for player in players:
         if ball.position.distance_to(player.position) >= CONTROL_RADIUS_M:
@@ -179,9 +183,11 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
         if attempt_control(player):
             ball.holder = player.name
             ball.readers = {}
+            ball.receiver = None
             ball.next_decision_s = now_s
             ball.velocity = Vec2(0.0, 0.0)
         else:
+            ball.receiver = None  # contrôle raté : le ballon n'est plus « pour » personne
             away = ball.position - player.position
             # Ballon et joueur exactement superposés (direction de séparation indéfinie) : repart
             # dans le sens de course du joueur, ou une direction fixe à défaut de vitesse.
@@ -203,7 +209,8 @@ def _step_player(
 ) -> PlayerState:
     """Le porteur conduit vers le but adverse, un peu moins vite qu'en course (`DRIBBLE_SPEED_FACTOR`) ;
     ses coéquipiers (hors gardien) cherchent un espace libre (Off the Ball, `off_ball.choose_space`,
-    réévalué toutes les `RUN_INTERVAL_S`, mémorisé dans `runs`) ; un adversaire qui a lu la passe court la
+    réévalué toutes les `RUN_INTERVAL_S`, mémorisé dans `runs`) ; le receveur visé d'une passe court au-devant
+    du ballon (`anticipation.meeting_point`, v2-socle/01) ; un adversaire qui a lu la passe court la
     couper (Anticipation, `ball.readers`) ; les autres vont au ballon s'il est proche -- ballon libre : vers
     son point d'arrêt selon Anticipation --, sinon à leur position de formation (IA placeholder, D-V08)."""
     if player.name == ball.holder:
@@ -217,9 +224,14 @@ def _step_player(
             target = choose_space(player, opponents, 1.0 if player.team == "home" else -1.0)
             runs[player.name] = (target, now_s + RUN_INTERVAL_S)
         return step(player, dt, target, minute)
+    if ball.holder is None and player.name == ball.receiver:  # vient au-devant de la passe (v2-socle/01)
+        return step(player, dt, meeting_point(player, ball.position, ball.velocity, BALL_FRICTION_PER_S), minute)
     if ball.holder is None and player.name in ball.readers:
         return step(player, dt, ball.readers[player.name], minute)  # a lu la passe : court la couper
-    if ball.position.distance_to(player.position) >= CHASE_RADIUS_M:
+    nearest_of_team = ball.holder is None and player is min(
+        (p for p in players or [player] if p.team == player.team), key=lambda p: p.position.distance_to(ball.position)
+    )  # sur un ballon libre, le plus proche de chaque équipe y va toujours, même au-delà de CHASE_RADIUS_M
+    if ball.position.distance_to(player.position) >= CHASE_RADIUS_M and not nearest_of_team:
         return step(player, dt, player.home_target, minute)
     if ball.holder is None:  # ballon libre : vise où il va s'arrêter, selon Anticipation
         return step(player, dt, loose_ball_target(player, ball.position, ball.velocity, BALL_FRICTION_PER_S), minute)

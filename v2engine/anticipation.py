@@ -62,3 +62,18 @@ def loose_ball_target(player: PlayerState, ball_position: Vec2, ball_velocity: V
     `friction_per_s` par seconde : il parcourt encore v / -ln(f)), selon Anticipation."""
     stop = ball_position + ball_velocity * (1.0 / -math.log(friction_per_s))
     return ball_position + (stop - ball_position) * loose_ball_lead(player_attribute(player, "Anticipation"))
+
+
+def meeting_point(player: PlayerState, ball_position: Vec2, ball_velocity: Vec2, friction_per_s: float) -> Vec2:
+    """Point de la trajectoire RÉELLE du ballon (freiné de `friction_per_s` par seconde) que `player` peut
+    atteindre le plus tôt, à sa vitesse de pointe -- là où un receveur vient couper le ballon (ticket
+    v2-socle/01). S'il ne peut l'atteindre nulle part en route, son point d'arrêt."""
+    log_f = math.log(friction_per_s)
+    speed = max_speed_mps(player.pace)
+    t = 0.0
+    while t < 4.0:  # au-delà, le ballon est quasiment arrêté (il a parcouru 87 % de sa course à 0,6/s)
+        point = ball_position + ball_velocity * ((friction_per_s**t - 1.0) / log_f)
+        if player.position.distance_to(point) <= speed * t:
+            return point
+        t += 0.1
+    return ball_position + ball_velocity * (1.0 / -log_f)
