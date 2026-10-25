@@ -55,9 +55,9 @@ def main(n_matches: int) -> None:
                 calls["interceptions"] += 1
         return result
 
-    def counting_pass(passer, target):
+    def counting_pass(passer, target, *args):
         pass_lengths.append(passer.position.distance_to(target.position))
-        return real_pass_velocity(passer, target)
+        return real_pass_velocity(passer, target, *args)
 
     def counting_shot(shooter, *args):
         shots[shooter.team] += 1

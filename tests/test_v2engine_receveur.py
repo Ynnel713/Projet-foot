@@ -34,7 +34,7 @@ def test_receiver_runs_to_meet_the_pass_instead_of_his_space() -> None:
 def test_receiver_is_cleared_once_someone_controls_the_ball(monkeypatch) -> None:
     receiver = _player("Receveur", position=Vec2(30.0, 34.0))
     ball = BallState(position=Vec2(30.0, 34.0), velocity=Vec2(0.0, 0.0), receiver="Receveur")
-    monkeypatch.setattr("v2engine.match.attempt_control", lambda player: True)
+    monkeypatch.setattr("v2engine.match.attempt_control", lambda player, *args: True)
     _step_ball(ball, 0.1, [receiver])
     assert ball.holder == "Receveur" and ball.receiver is None
 
@@ -47,7 +47,7 @@ def test_receiver_is_released_when_the_pass_dies_or_control_fails(monkeypatch) -
 
     receiver = _player("Receveur", position=Vec2(30.5, 34.0))  # là où le ballon arrive ce tick
     missed = BallState(position=Vec2(30.0, 34.0), velocity=Vec2(5.0, 0.0), receiver="Receveur")
-    monkeypatch.setattr("v2engine.match.attempt_control", lambda player: False)
+    monkeypatch.setattr("v2engine.match.attempt_control", lambda player, *args: False)
     _step_ball(missed, 0.1, [receiver])
     assert missed.receiver is None
 

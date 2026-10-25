@@ -84,7 +84,7 @@ def test_ball_at_contact_either_held_or_deflected_never_stuck_overlapping(monkey
     runner.velocity = Vec2(5.0, 0.0)
     ball = BallState(position=Vec2(50.0, 34.0), velocity=Vec2(0.0, 0.0))  # superposé au joueur
 
-    monkeypatch.setattr("v2engine.match.attempt_control", lambda player: False)
+    monkeypatch.setattr("v2engine.match.attempt_control", lambda player, *args: False)
     _step_ball(ball, 0.1, [runner])
 
     assert ball.holder is None

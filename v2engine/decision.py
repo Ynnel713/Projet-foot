@@ -13,12 +13,11 @@ from dataclasses import dataclass
 from v2engine.attributes import player_attribute, success_probability
 from v2engine.geometry import Vec2
 from v2engine.movement import PlayerState
-from v2engine.possession import pass_accuracy
+from v2engine.possession import pass_success_probability, pressure
 from v2engine.shooting import SHOOTING_RANGE_M, shot_probability
 
 # Constantes produit validées par le propriétaire (24/10/2026).
 DECISION_INTERVAL_S = 0.5  # le porteur réévalue ses options deux fois par seconde
-PRESSURE_RADIUS_M = 5.0  # gêne maximale au contact, nulle à 5 m
 DRIBBLE_SPEED_FACTOR = 0.85  # part de sa vitesse max, balle au pied
 # Decisions -> probabilité de prendre la meilleure option : 99 -> 95 %, 55 -> 70 %, 11 -> 45 %. Même FORME de courbe
 # que le guide (quasi plate entre 45 et 55), mais centrée sur 70 % : un joueur moyen choisit bien la plupart du temps.
@@ -51,15 +50,6 @@ class Action:
     kind: str  # "shot" | "pass" | "dribble"
     value: float
     target: PlayerState | None = None  # coéquipier visé, pour une passe
-
-
-def pressure(player: PlayerState, opponents: list[PlayerState]) -> float:
-    """Gêne subie par `player` (0 à 1) : 1 au contact de l'adversaire le plus proche, 0 à
-    `PRESSURE_RADIUS_M` ou au-delà."""
-    if not opponents:
-        return 0.0
-    nearest = min(player.position.distance_to(o.position) for o in opponents)
-    return max(0.0, 1.0 - nearest / PRESSURE_RADIUS_M)
 
 
 def vision_range_m(vision: float) -> float:
@@ -107,13 +97,12 @@ def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2
         chance = shot_probability(holder, keeper, holder_to_goal, goal.y)
         options.append(Action("shot", SHOT_WEIGHT * chance * (1.0 - 0.5 * gene)))
     if teammates:
-        accuracy = pass_accuracy(holder)
-
         def pass_value(mate: PlayerState) -> float:
             gain = holder_to_goal - mate.position.distance_to(goal)
             progress = min(1.0, max(0.0, 0.5 + gain / (2.0 * _PROGRESS_SCALE_M)))
             openness = 1.0 - pressure(mate, opponents)
-            return PASS_WEIGHT * accuracy * (0.3 + 0.7 * progress) * openness
+            success = pass_success_probability(holder, mate, opponents)  # difficulté de CETTE passe (v2-socle/04)
+            return PASS_WEIGHT * success * (0.3 + 0.7 * progress) * openness
 
         best_mate = max(teammates, key=pass_value)
         options.append(Action("pass", pass_value(best_mate), best_mate))

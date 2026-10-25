@@ -6,6 +6,7 @@ from __future__ import annotations
 from v2engine.ball_state import BallState
 from v2engine.duel import attempt_tackle_probability, foul_probability, tackle_success_probability
 from v2engine.geometry import Vec2
+from v2engine.decision import Action
 from v2engine.match import TACKLE_RADIUS_M, _step_ball
 from v2engine.movement import PlayerState
 
@@ -75,12 +76,13 @@ def test_failed_tackle_keeps_possession_without_falling_through_to_a_pass(monkey
     assert ball.holder == "Porteur"  # ni transfert au tacleur, ni passe exécutée ce tick
 
 
-def test_no_opponent_in_range_falls_through_to_normal_pass() -> None:
+def test_no_opponent_in_range_falls_through_to_normal_pass(monkeypatch) -> None:
     holder = _player("Porteur", position=Vec2(50.0, 34.0))
     distant_opponent = _player("Loin", team="away", position=Vec2(50.0, 34.0 + TACKLE_RADIUS_M + 5.0))
     teammate = _player("Coequipier", position=Vec2(60.0, 34.0))
     ball = BallState(position=Vec2(50.0, 34.0), velocity=Vec2(0.0, 0.0), holder="Porteur")
 
+    monkeypatch.setattr("v2engine.match.choose_action", lambda *args: Action("pass", 1.0, teammate))  # choix testé ailleurs
     _step_ball(ball, 0.1, [holder, distant_opponent, teammate])
 
     assert ball.holder is None  # la passe (Phase 2) s'est bien exécutée, faute d'adversaire à portée

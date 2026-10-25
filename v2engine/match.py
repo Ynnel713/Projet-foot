@@ -20,7 +20,7 @@ from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitc
 from v2engine.movement import PlayerState, step
 from v2engine.off_ball import RUN_INTERVAL_S, choose_space
 from v2engine.decision import DECISION_INTERVAL_S, DRIBBLE_SPEED_FACTOR, choose_action
-from v2engine.possession import attempt_control, pass_velocity
+from v2engine.possession import BALL_FRICTION_PER_S, BALL_STOPPED_MPS, attempt_control, pass_velocity
 from v2engine.shooting import attempt_shot
 from v2engine.trace import BallSnapshot, MatchTrace, PlayerSnapshot
 
@@ -43,8 +43,6 @@ TACKLE_RADIUS_M = 1.5
 CHASE_RADIUS_M = 15.0
 # ponytail : décroissance exponentielle simple (par seconde), pas un vrai coefficient de
 # frottement calibré -- à affiner si le rendu le justifie.
-BALL_FRICTION_PER_S = 0.6
-BALL_STOPPED_MPS = 0.5  # en dessous, une passe est considérée morte (ballon quasi arrêté)
 
 
 def _build_players(lineup: Lineup, team: str, positions: dict[str, Vec2]) -> list[PlayerState]:
@@ -162,7 +160,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
             return None
 
         if action.kind == "pass":
-            ball.velocity = pass_velocity(holder, action.target)
+            ball.velocity = pass_velocity(holder, action.target, [p for p in players if p.team != holder.team])
             ball.holder = None
             ball.last_pass_team = holder.team
             ball.receiver = action.target.name
@@ -180,7 +178,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
     for player in players:
         if ball.position.distance_to(player.position) >= CONTROL_RADIUS_M:
             continue
-        if attempt_control(player):
+        if attempt_control(player, ball.velocity, [p for p in players if p.team != player.team]):
             ball.holder = player.name
             ball.readers = {}
             ball.receiver = None

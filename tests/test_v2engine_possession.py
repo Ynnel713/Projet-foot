@@ -54,7 +54,7 @@ def test_player_receives_controls_and_passes_to_nearest_teammate(monkeypatch) ->
     players = [receiver, near_teammate, far_teammate, opponent]
     ball = BallState(position=Vec2(50.0, 34.0), velocity=Vec2(0.0, 0.0))
 
-    monkeypatch.setattr("v2engine.match.attempt_control", lambda player: True)
+    monkeypatch.setattr("v2engine.match.attempt_control", lambda player, *args: True)
     # L'adversaire est volontairement à portée de tacle (Phase 3) : neutralisé ici pour ne tester
     # que la passe (Phase 2) -- voir tests/test_v2engine_duel.py pour les tacles eux-mêmes.
     monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression: False)
@@ -78,7 +78,7 @@ def test_failed_control_deflects_ball_instead_of_receiving_it(monkeypatch) -> No
     defender.velocity = Vec2(3.0, 1.0)
     ball = BallState(position=Vec2(30.0, 34.0), velocity=Vec2(0.0, 0.0))
 
-    monkeypatch.setattr("v2engine.match.attempt_control", lambda player: False)
+    monkeypatch.setattr("v2engine.match.attempt_control", lambda player, *args: False)
     _step_ball(ball, 0.1, [defender])
 
     assert ball.holder is None

@@ -43,7 +43,7 @@ def test_reader_runs_to_cut_the_pass_and_reading_is_cleared_on_control(monkeypat
     assert moved.position.y < reader.position.y  # se rapproche de la trajectoire, pas du ballon
 
     ball.position, ball.velocity = moved.position, Vec2(0.0, 0.0)  # le ballon arrive sur lui
-    monkeypatch.setattr("v2engine.match.attempt_control", lambda player: True)
+    monkeypatch.setattr("v2engine.match.attempt_control", lambda player, *args: True)
     _step_ball(ball, 0.1, [moved])
     assert ball.holder == "Lecteur" and ball.readers == {}
 
