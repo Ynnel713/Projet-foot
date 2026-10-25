@@ -127,6 +127,8 @@ Un porteur du ballon à moins de 20 m du but adverse tente sa chance plutôt que
 
 **User stories** : US-27 (approfondissement). Exigence : toutes les notes influencent réellement le comportement, façon Football Manager (référence : `Guide_attributs_joueurs.pdf`). La V1 est gelée, sans moteur graphique : tout l'effort porte sur la V2.
 
+**Référence** : le rayon propre de chacun des 47 attributs (ce qu'il pilote, et que lui seul pilote) est fixé dans `docs/CARTE_ATTRIBUTS_V2.md` ; la revue des attributs déjà branchés, avec données réelles, dans `docs/REVUE_ATTRIBUTS_V2.md`. Tout ticket d'attribut s'y conforme.
+
 **Principe d'ordre** : un attribut n'a d'effet que si l'action qu'il pilote existe dans le moteur. On construit l'action, puis on y branche les attributs.
 
 | Phase | Ce qu'on ajoute au moteur | Attributs |
