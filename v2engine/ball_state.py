@@ -22,3 +22,4 @@ class BallState:
     readers: dict[str, Vec2] = field(default_factory=dict)
     last_pass_team: str | None = None  # équipe de la dernière passe, pour repérer une interception
     receiver: str | None = None  # coéquipier visé par la passe en cours, qui vient au-devant du ballon (v2-socle/01)
+    receiving: bool = False  # porteur encore dans son temps de réception, avant sa première décision (v2-socle/06)

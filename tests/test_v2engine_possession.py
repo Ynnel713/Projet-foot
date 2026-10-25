@@ -57,13 +57,13 @@ def test_player_receives_controls_and_passes_to_nearest_teammate(monkeypatch) ->
     monkeypatch.setattr("v2engine.match.attempt_control", lambda player, *args: True)
     # L'adversaire est volontairement à portée de tacle (Phase 3) : neutralisé ici pour ne tester
     # que la passe (Phase 2) -- voir tests/test_v2engine_duel.py pour les tacles eux-mêmes.
-    monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression: False)
+    monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression, dt: False)
     _step_ball(ball, 0.1, players)
     assert ball.holder == "Receveur"
     assert ball.velocity == Vec2(0.0, 0.0)
 
     monkeypatch.setattr("v2engine.possession.random.random", lambda: 0.0)  # force une passe précise
-    _step_ball(ball, 0.1, players)
+    _step_ball(ball, 0.1, players, now_s=ball.next_decision_s)  # après son temps de réception (v2-socle/06)
 
     assert ball.holder is None
     assert ball.velocity.length() > 0.0

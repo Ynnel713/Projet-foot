@@ -56,7 +56,7 @@ def test_scored_shot_resets_ball_to_center_and_releases_holder(monkeypatch) -> N
     keeper = _player("Gardien", poste="GK", team="away", position=Vec2(PITCH_LENGTH_M, GOAL_CENTER_Y))
     ball = BallState(position=shooter.position, velocity=Vec2(0.0, 0.0), holder="Buteur")
 
-    monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression: False)
+    monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression, dt: False)
     monkeypatch.setattr("v2engine.match.choose_action", lambda *args: Action("shot", 1.0))  # issue du tir seule testée ici
     monkeypatch.setattr("v2engine.match.attempt_shot", lambda shooter, keeper, distance_m, goal_center_y: True)
     scoring_team = _step_ball(ball, 0.1, [shooter, keeper])
@@ -71,7 +71,7 @@ def test_missed_shot_gives_ball_to_the_opposing_keeper(monkeypatch) -> None:
     keeper = _player("Gardien", poste="GK", team="away", position=Vec2(PITCH_LENGTH_M, GOAL_CENTER_Y))
     ball = BallState(position=shooter.position, velocity=Vec2(0.0, 0.0), holder="Buteur")
 
-    monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression: False)
+    monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression, dt: False)
     monkeypatch.setattr("v2engine.match.choose_action", lambda *args: Action("shot", 1.0))  # issue du tir seule testée ici
     monkeypatch.setattr("v2engine.match.attempt_shot", lambda shooter, keeper, distance_m, goal_center_y: False)
     scoring_team = _step_ball(ball, 0.1, [shooter, keeper])

@@ -128,3 +128,24 @@ def pass_velocity(passer: PlayerState, target: PlayerState, opponents: Sequence[
     error = _DOSAGE_ERROR[0] + (_DOSAGE_ERROR[1] - _DOSAGE_ERROR[0]) * quality
     speed = min(MAX_PASS_MPS, _launch_speed(passer.position.distance_to(aim)) * (1.0 + random.uniform(-error, error)))
     return (aim - passer.position).normalized() * speed
+
+
+# --- Rythme : temps entre la réception et la première décision (ticket v2-socle/06, validé le 25/10/2026) -----
+# Réel : 2,49 s en moyenne par possession de joueur, 4,61 s pour un gardien (arXiv 2308.05460). First Touch
+# règle ce temps (contrôle orienté qui fait gagner du temps : 99 -> 1,7 s, 55 -> 2,3 s, 11 -> 2,9 s, niveau
+# calé sur 20 matchs le 25/10/2026, fourchette validée 1,7-2,5 s pour 55) ; la pression le réduit jusqu'à moitié
+# au contact ; un gardien sans pression ne joue jamais avant 3,5 s.
+_RECEPTION_S = (2.3, 0.6, 1.7, 2.9)  # baseline, amplitude, min, max (inversé : bonne note = temps court)
+_KEEPER_MIN_RECEPTION_S = 3.5
+# Pendant ce temps, il avance à 40 % de sa vitesse max (~3 m/s pour un joueur moyen) : réel ~2,9 m/s à la
+# réception, Ligue 1 (UCLan, eprint 12267) ; validé le 25/10/2026.
+RECEPTION_SPEED_FACTOR = 0.4
+
+
+def reception_delay_s(player: PlayerState, opponents: Sequence[PlayerState] = ()) -> float:
+    baseline, amplitude, low, high = _RECEPTION_S
+    calm = low + high - success_probability(player_attribute(player, "First Touch"), baseline=baseline,
+                                                amplitude=amplitude, min_prob=low, max_prob=high)
+    if player.poste == "GK":
+        calm = max(calm, _KEEPER_MIN_RECEPTION_S)
+    return calm * (1.0 - 0.5 * pressure(player, opponents))

@@ -18,6 +18,7 @@ from v2engine.decision import (
 from v2engine.geometry import PITCH_LENGTH_M, Vec2
 from v2engine.match import GOAL_CENTER_Y, _step_ball, _step_player
 from v2engine.movement import PlayerState, max_speed_mps
+from v2engine.possession import reception_delay_s
 
 GOAL = Vec2(PITCH_LENGTH_M, GOAL_CENTER_Y)
 
@@ -108,14 +109,16 @@ def test_heavily_pressed_holder_at_15_m_prefers_open_pass_over_shot() -> None:
     assert options["pass"] > options["shot"]
 
 
-def test_new_holder_decides_immediately_after_winning_the_ball(monkeypatch) -> None:
+def test_new_holder_decides_after_his_reception_time_when_winning_the_ball(monkeypatch) -> None:
     holder = _player("Porteur")
     tackler = _player("Tacleur", team="away", position=holder.position + Vec2(0.5, 0.0))
     ball = BallState(position=holder.position, velocity=Vec2(0.0, 0.0), holder="Porteur", next_decision_s=10.0)
-    monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression: True)
+    monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression, dt: True)
     monkeypatch.setattr("v2engine.match.resolve_tackle", lambda tackler, holder: type("W", (), {"won": True})())
     _step_ball(ball, 0.1, [holder, tackler], now_s=3.0)
-    assert ball.holder == "Tacleur" and ball.next_decision_s == 3.0
+    # v2-socle/06 : il contrôle et lève la tête avant de décider (temps de réception selon First Touch et pression)
+    assert ball.holder == "Tacleur"
+    assert ball.next_decision_s == 3.0 + reception_delay_s(tackler, [holder])
 
 
 # --- Ticket 02 : Vision -----------------------------------------------------------------------------------------

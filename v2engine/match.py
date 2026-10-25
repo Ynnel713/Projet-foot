@@ -20,7 +20,7 @@ from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitc
 from v2engine.movement import PlayerState, step
 from v2engine.off_ball import RUN_INTERVAL_S, choose_space
 from v2engine.decision import DECISION_INTERVAL_S, DRIBBLE_SPEED_FACTOR, choose_action
-from v2engine.possession import BALL_FRICTION_PER_S, BALL_STOPPED_MPS, attempt_control, pass_velocity
+from v2engine.possession import BALL_FRICTION_PER_S, BALL_STOPPED_MPS, RECEPTION_SPEED_FACTOR, attempt_control, pass_velocity, reception_delay_s
 from v2engine.shooting import attempt_shot
 from v2engine.trace import BallSnapshot, MatchTrace, PlayerSnapshot
 
@@ -104,7 +104,8 @@ def _goalkeeper(team: str, players: list[PlayerState]) -> PlayerState | None:
 def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: float = 0.0) -> str | None:
     """Avance le ballon d'un tick (mutation en place) : si un joueur le contrôle déjà, un
     adversaire à portée directe peut d'abord tenter un tacle (Phase 3, Tackling/Strength/
-    Balance/Aggression) ; sinon, toutes les `DECISION_INTERVAL_S`, il choisit de tirer, passer ou
+    Balance/Aggression) ; sinon, après son temps de réception (`possession.reception_delay_s`, v2-socle/06)
+    puis toutes les `DECISION_INTERVAL_S`, il choisit de tirer, passer ou
     conduire (Phase 5, `decision.choose_action`, Decisions) -- tir résolu par Finishing/Composure
     contre le gardien (Phase 4), passe par Passing/Technique (Phase 2), conduite = il garde le
     ballon et avance (voir `simulate_match`). Loin de tout porteur, trajectoire physique simple,
@@ -120,11 +121,13 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
         ball.position = holder.position
 
         challenger = _nearest_opponent_in_range(holder, players, TACKLE_RADIUS_M)
-        if challenger is not None and should_attempt_tackle(player_attribute(challenger, "Aggression")):
+        if challenger is not None and should_attempt_tackle(player_attribute(challenger, "Aggression"), dt):
             result = resolve_tackle(challenger, holder)
             if result.won:
                 ball.holder = challenger.name
-                ball.next_decision_s = now_s  # nouveau porteur : décide tout de suite
+                # nouveau porteur : contrôle et lève la tête avant de décider (v2-socle/06)
+                ball.next_decision_s = now_s + reception_delay_s(challenger, [p for p in players if p.team != challenger.team])
+                ball.receiving = True
                 ball.velocity = Vec2(0.0, 0.0)
             # Tacle raté (faute ou non) : le porteur garde le ballon ce tick, rien d'autre ne
             # change -- la faute en elle-même n'a pas encore de conséquence de jeu (coup franc,
@@ -134,6 +137,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
         if now_s < ball.next_decision_s:
             return None  # conduite en cours : le porteur garde le ballon jusqu'à sa prochaine réévaluation
         ball.next_decision_s = now_s + DECISION_INTERVAL_S
+        ball.receiving = False
 
         opponent_team = "away" if holder.team == "home" else "home"
         goal = _OPPONENT_GOAL[holder.team]
@@ -152,7 +156,8 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
             # simplement libre là où le tir a été tenté.
             if keeper is not None:
                 ball.holder = keeper.name
-                ball.next_decision_s = now_s
+                ball.next_decision_s = now_s + reception_delay_s(keeper, [p for p in players if p.team != keeper.team])
+                ball.receiving = True
                 ball.position = keeper.position
             else:
                 ball.holder = None
@@ -182,7 +187,8 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
             ball.holder = player.name
             ball.readers = {}
             ball.receiver = None
-            ball.next_decision_s = now_s
+            ball.next_decision_s = now_s + reception_delay_s(player, [p for p in players if p.team != player.team])
+            ball.receiving = True
             ball.velocity = Vec2(0.0, 0.0)
         else:
             ball.receiver = None  # contrôle raté : le ballon n'est plus « pour » personne
@@ -205,14 +211,17 @@ def _step_player(
     players: list[PlayerState] | None = None,
     runs: dict[str, tuple[Vec2, float]] | None = None,
 ) -> PlayerState:
-    """Le porteur conduit vers le but adverse, un peu moins vite qu'en course (`DRIBBLE_SPEED_FACTOR`) ;
+    """Le porteur avance vers le but adverse : au pas de contrôle pendant sa réception (`RECEPTION_SPEED_FACTOR`,
+    v2-socle/06), puis en conduite, un peu moins vite qu'en course (`DRIBBLE_SPEED_FACTOR`) ;
     ses coéquipiers (hors gardien) cherchent un espace libre (Off the Ball, `off_ball.choose_space`,
     réévalué toutes les `RUN_INTERVAL_S`, mémorisé dans `runs`) ; le receveur visé d'une passe court au-devant
     du ballon (`anticipation.meeting_point`, v2-socle/01) ; un adversaire qui a lu la passe court la
     couper (Anticipation, `ball.readers`) ; les autres vont au ballon s'il est proche -- ballon libre : vers
     son point d'arrêt selon Anticipation --, sinon à leur position de formation (IA placeholder, D-V08)."""
     if player.name == ball.holder:
-        return step(player, dt, _OPPONENT_GOAL[player.team], minute, DRIBBLE_SPEED_FACTOR)
+        # pendant sa réception, il avance au pas de contrôle ; ensuite, en conduite (v2-socle/06)
+        speed = RECEPTION_SPEED_FACTOR if ball.receiving else DRIBBLE_SPEED_FACTOR
+        return step(player, dt, _OPPONENT_GOAL[player.team], minute, speed)
     holder = next((p for p in players or [] if p.name == ball.holder), None)
     if runs is not None and holder is not None and holder.team == player.team and player.poste != "GK":
         now_s = minute * 60.0

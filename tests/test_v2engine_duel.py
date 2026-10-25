@@ -53,7 +53,7 @@ def test_won_tackle_transfers_possession(monkeypatch) -> None:
     challenger = _player("Adversaire", team="away", position=Vec2(50.5, 34.0))
     ball = BallState(position=Vec2(50.0, 34.0), velocity=Vec2(0.0, 0.0), holder="Porteur")
 
-    monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression: True)
+    monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression, dt: True)
     monkeypatch.setattr("v2engine.match.resolve_tackle", lambda tackler, holder: _WonTackle())
 
     _step_ball(ball, 0.1, [holder, challenger])
@@ -68,7 +68,7 @@ def test_failed_tackle_keeps_possession_without_falling_through_to_a_pass(monkey
     teammate = _player("Coequipier", position=Vec2(60.0, 34.0))
     ball = BallState(position=Vec2(50.0, 34.0), velocity=Vec2(0.0, 0.0), holder="Porteur")
 
-    monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression: True)
+    monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression, dt: True)
     monkeypatch.setattr("v2engine.match.resolve_tackle", lambda tackler, holder: _LostTackle())
 
     _step_ball(ball, 0.1, [holder, challenger, teammate])

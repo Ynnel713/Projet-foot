@@ -6,16 +6,20 @@ pas de lecture tactique de QUAND tacler, ça viendra en Phase 5+."""
 
 from __future__ import annotations
 
+import math
 import random
 from dataclasses import dataclass
 
 from v2engine.attributes import duel_probability, player_attribute, success_probability
 from v2engine.movement import PlayerState
 
-# Probabilité de BASE qu'un adversaire à portée tente un tacle ce tick plutôt que d'éviter le
-# contact (guide, Aggression : "NOTE HAUTE : tacles plus tôt... NOTE BASSE : évite le contact").
-_ATTEMPT_BASELINE = 0.5
-_ATTEMPT_AMPLITUDE = 0.35
+# Taux de BASE (tentatives par seconde de contact) auquel un adversaire à portée tente un tacle
+# plutôt que d'éviter le contact (guide, Aggression : "NOTE HAUTE : tacles plus tôt... NOTE BASSE :
+# évite le contact"). Taux par seconde, pas par tick (v2-socle/06, validé le 25/10/2026) : cible
+# 30-40 tacles tentés par match, réel Premier League ~33 (premierleague.com) ; écart Aggression
+# conservé (~x2 entre notes extrêmes, comme l'ancien 0,5 ± 0,35).
+_ATTEMPT_BASELINE = 0.03
+_ATTEMPT_AMPLITUDE = 0.021
 
 # Probabilité de BASE qu'un tacle raté se transforme en faute, modulée par Aggression seule --
 # contrepartie du guide (plus de duels tentés, plus de fautes), indépendante de Tackling.
@@ -24,8 +28,9 @@ _FOUL_AMPLITUDE = 0.25
 
 
 def attempt_tackle_probability(aggression: float) -> float:
-    """Probabilité qu'un adversaire à portée tente un tacle CE tick -- voir `_ATTEMPT_BASELINE`."""
-    return success_probability(aggression, baseline=_ATTEMPT_BASELINE, amplitude=_ATTEMPT_AMPLITUDE)
+    """Taux (par seconde) auquel un adversaire à portée tente un tacle -- voir `_ATTEMPT_BASELINE`."""
+    return success_probability(aggression, baseline=_ATTEMPT_BASELINE, amplitude=_ATTEMPT_AMPLITUDE,
+                               min_prob=0.0, max_prob=1.0)
 
 
 def foul_probability(aggression: float) -> float:
@@ -44,8 +49,9 @@ def tackle_success_probability(tackler: PlayerState, holder: PlayerState) -> flo
     return duel_probability(tackler_rating, holder_resistance)
 
 
-def should_attempt_tackle(aggression: float) -> bool:
-    return random.random() < attempt_tackle_probability(aggression)
+def should_attempt_tackle(aggression: float, dt: float) -> bool:
+    """Tirage sur un tick de `dt` secondes : indépendant du pas de simulation (taux par seconde)."""
+    return random.random() < 1.0 - math.exp(-attempt_tackle_probability(aggression) * dt)
 
 
 @dataclass(frozen=True)
