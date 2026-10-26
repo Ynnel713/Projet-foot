@@ -37,7 +37,7 @@
 | **Concentration** | Garder sa vigilance tout le match : probabilité de « trous » (oubli de marquage, réaction tardive) qui augmente en fin de match et juste après un but | la qualité de lecture (Anticipation) | Le bas a des absences, surtout en fin de match et après avoir marqué ; le haut est régulier | Anticipation ; Marking ; Stamina (fatigue) | à créer (phase 6) |
 | **Positioning** | Placement **défensif de zone** sans adversaire désigné : tenir la ligne, fermer les couloirs, couvrir | suivre un adversaire précis (Marking) | Le haut est toujours au bon endroit sans courir ; le bas laisse des trous entre les lignes | Marking ; Anticipation ; Teamwork | à créer (phase 6) |
 | **Flair** | Tendance à tenter l'inattendu (geste rare, passe aveugle, dribble au lieu de la passe simple) | la réussite du geste (Technique, Dribbling) | Le haut surprend une défense fermée et perd plus de ballons ; le bas joue simple et prévisible | Technique ; Decisions | ticket v2-cerveau-joueurs/05 |
-| **Composure** | Amortir la **pression** sur toutes les actions (adversaire proche, moment clé) | la qualité de base de l'action | Sous pression, le haut garde sa précision ; le bas se précipite. Sans pression : aucune différence | Finishing ; Passing ; First Touch | branché (tir seulement) ; à revoir (toutes les actions, sous pression seulement) |
+| **Composure** | Amortir la **pression** sur toutes les actions (adversaire proche, moment clé) | la qualité de base de l'action | Sous pression, le haut garde sa précision ; le bas se précipite. Sans pression : aucune différence | Finishing ; Passing ; First Touch | branché (passe et contrôle sous pression, v2-socle/04 ; tir sans condition : dérogation A2) |
 | **Determination** | Garder l'intensité et la qualité quand ça tourne mal : mené au score, fin de match, après une erreur | l'effort de base (Work Rate) | Mené 0-2 à la 80e, le haut est toujours à 100 % ; le bas baisse les bras | Work Rate ; Leadership | à créer (phase 10) |
 | **Aggression** | Engagement au contact : tôt et fort, ou temporiser ; risque de faute et de carton | la qualité du geste (Tackling) | Le haut récupère haut et fait des fautes ; le bas laisse l'adversaire se retourner | Tackling ; Bravery ; Work Rate (pressing) | branché ; à revoir (socle 03) |
 | **Bravery** | Accepter le contact risqué : tête dans la mêlée, contrer un tir, plonger dans les pieds | l'envie d'aller au contact au sol (Aggression) | Le haut bloque les frappes et va au duel aérien ; le bas retire la jambe | Jumping Reach ; Heading ; Aggression | à créer (phase 7) |
@@ -108,3 +108,63 @@ Chaque paire ci-dessous se combine, mais chaque attribut garde son rayon.
 | First Touch → Technique → Dribbling | recevoir, réussir le geste difficile, éliminer |
 | Aggression + Tackling | l'envie d'engager, et la qualité du geste |
 | Reflexes / One on Ones / Handling | arrêt réflexe, face-à-face, puis captée ou repoussée |
+
+## Interactions et règle anti double comptage (ticket v2-collectif/18, validé le 26/10/2026)
+
+### La règle
+
+| # | Règle | En simple |
+|---|---|---|
+| R1 | **Un effet, un attribut responsable.** Un effet est un changement mesurable de comportement ou de réussite dans une situation donnée. | Si Anticipation fait déjà démarrer plus tôt, aucun autre attribut ne donne ce même bonus. |
+| R2 | **Les attributs s'enchaînent par les temps du cerveau** (perception, décision, exécution, ADR 0001), chacun avec son propre tirage. Pas de mélange « 0,8 × A + 0,2 × B » dans une même probabilité. | Vision montre la passe, Decisions la choisit, Passing la réussit : trois étapes, pas une moyenne. |
+| R3 | **Un attribut modulateur n'agit que dans sa condition**, en réduisant un facteur de difficulté : Composure (pression), Concentration (fatigue, après un but), Determination (score défavorable). | Sans pression, Composure ne change rien. |
+| R4 | **Les effets indirects ne visent que les coéquipiers** : Leadership, Communication. | Leadership aide la coordination, pas la précision de ses propres passes. |
+| R5 | **Le physique est une capacité**, utilisée partout où le joueur se déplace ou doit arriver à temps ; ce n'est pas un bonus supplémentaire. | Pace sert à la course et au test « peut-il couper la passe ? » : c'est la même vitesse. |
+
+**Plafond d'écart.** Entre 99 et 11, l'écart mesuré sur un indicateur reste dans la fourchette réelle quand elle est connue (test de profils, `scripts/measure_v2.py --profil`).
+
+**Garde automatique.** `tests/test_v2engine_rayon_attributs.py` analyse l'arbre syntaxique du moteur. Il échoue si :
+- un attribut est lu hors des modules de son rayon, ou avec un nom non littéral ;
+- une note est lue directement dans `.attributes` hors de `attributes.py` ;
+- une capacité physique (`.pace`, `.acceleration`, `.stamina`) est lue hors des modules qui en ont besoin (R5) ;
+- un calcul combine des notes de plusieurs attributs hors des dérogations listées (A2, A3, A8) ;
+- une entrée de la liste devient périmée (dérogation levée sans mise à jour).
+
+Limite connue : un mélange qui passe par des variables intermédiaires n'est pas détecté ; la grille de relecture le couvre.
+
+### Les interactions du guide
+
+| Paire | Rôle de chacun | Combinaison | État (26/10/2026) | Branchement |
+|---|---|---|---|---|
+| Anticipation + Positioning | A : lire tôt ; P : être déjà au bon endroit | P place, A déclenche plus tôt | A branché ; P à créer | Tickets collectif 04, 05, 09 |
+| Vision + Decisions + Passing | V : voir ; D : choisir ; P : réussir et doser | Chaîne en trois tirages | Conforme | — |
+| Off the Ball + Acceleration + Pace | OtB : quand et où faire l'appel ; Acc : le premier mètre ; Pace : la pointe | OtB choisit, le physique exécute | OtB branché ; Acc à recaler | Tickets 12, 16 |
+| Work Rate + Stamina | WR : combien d'efforts ; St : la réserve | WR consomme, St limite | WR non branché | Ticket 12 |
+| Teamwork + Positioning | T : vouloir tenir sa place ; P : savoir où elle est | P calcule la place, T décide d'y rester | À créer | Tickets 04, 09 |
+| Dribbling + Flair + Decisions | F : tenter ; D : bon moment ; Dr : réussir | Tendance, choix, exécution | À créer | Étape duels, ticket 19 |
+| Concentration + Anticipation | C : risque de trou d'attention ; A : qualité de lecture | C peut annuler une lecture, jamais l'améliorer | C à créer | Ticket 09 |
+| Crossing + Vision + Decisions | V : voir le centre ; D : moment ; Cr : trajectoire | Chaîne | À créer | Phase 7 |
+| Composure + Finishing | F : placement du tir ; C : seulement la part due à la pression | C réduit la gêne (R3) | Non conforme (dérogation A2) | Ticket du tir |
+| Pace + Acceleration + Positioning | P : se placer tôt ; Acc et Pace : rattraper | P réduit le besoin de vitesse | P à créer | Ticket 05 |
+
+### Audit du moteur (26/10/2026)
+
+| # | Constat | Verdict | Suite |
+|---|---|---|---|
+| A1 | Tacle : réussite à 0,8 × Tackling + 0,2 × Aggression, alors qu'Aggression règle déjà la fréquence et la faute | Double comptage (R1, R2) | **Corrigé** : réussite selon Tackling seul |
+| A2 | Tir : qualité à 0,8 × Finishing + 0,2 × Composure, même sans pression | Double comptage (R2, R3) | **Dérogation** jusqu'au ticket du tir (il faut d'abord une pression sur le tir, donc une nouvelle constante) |
+| A3 | Porteur au tacle : Strength et Balance à égalité, Dribbling absent | Écart à la carte (Balance joue après le contact) | **Dérogation** jusqu'à l'étape duels |
+| A4 | First Touch : réussite du contrôle et temps de réception. La pression du receveur joue aussi deux fois : elle rend le contrôle plus difficile (modulée par Composure) et raccourcit le temps de réception (sans Composure). Passing règle aussi deux choses : la réussite et le dosage, qui pèse sur la difficulté du contrôle | Conforme : ce sont deux facettes du contrôle orienté (et de la passe). Pour le temps de réception, la pression ne rend pas le geste plus difficile, elle oblige à jouer plus vite : ce n'est pas une difficulté, donc Composure n'a pas à l'amortir (R3) | — |
+| A5 | Composure réduit la pression sur la passe et le contrôle | Conforme (R3) | — |
+| A6 | Pace dans le test « peut-il couper la passe ? » | Conforme (R5) | — |
+| A7 | Off the Ball choisit le meilleur espace selon la note | Conforme (qualité de l'appel) ; Decisions garde le choix du porteur | — |
+| A8 | Gardien : note à 0,5 × Reflexes + 0,3 × One on Ones + 0,2 × Handling pour tous les tirs, alors que la section D réserve Reflexes aux tirs proches, One on Ones aux face-à-face, et que Handling ne règle pas l'arrêt | Mélange (R2) et écart à la carte | **Dérogation proposée** jusqu'à la phase 9 (gardien complet), à confirmer par le propriétaire |
+| A9 | Valeur d'une passe pour le porteur : la réussite compte déjà un receveur marqué (adversaire à moins de 2 m) et l'ouverture (`1 - pression`, sur 5 m) le pénalise une seconde fois | Double comptage d'une situation (R1), pas d'un attribut | **Reporté** au ticket collectif 13 (valeur future d'une passe), qui refait cette évaluation |
+
+### Grille de relecture (à cocher dans chaque ticket, vérifiée par `simulafoot-reviewer`)
+
+1. Chaque effet ajouté a-t-il un seul attribut responsable, conforme à son rayon dans cette carte ? (R1)
+2. Les attributs qui se combinent passent-ils par des tirages distincts (perception, décision, exécution), sans mélange pondéré ? (R2)
+3. Un attribut modulateur n'agit-il que dans sa condition, en réduisant une difficulté ? (R3)
+4. Un effet indirect ne vise-t-il que les coéquipiers ? (R4)
+5. L'écart entre 99 et 11 reste-t-il dans la fourchette réelle connue, mesuré avec `--profil` ? (plafond d'écart)

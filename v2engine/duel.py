@@ -41,10 +41,11 @@ def foul_probability(aggression: float) -> float:
 
 
 def tackle_success_probability(tackler: PlayerState, holder: PlayerState) -> float:
-    """Probabilité que `tackler` gagne le ballon face à `holder` -- Tackling (dominant) et un peu
-    d'Aggression côté tacleur, Strength/Balance côté porteur (guide : Strength "gagne les duels,
-    protège le ballon dos au but" ; Balance "conduit le ballon en étant poussé")."""
-    tackler_rating = 0.8 * player_attribute(tackler, "Tackling") + 0.2 * player_attribute(tackler, "Aggression")
+    """Probabilité que `tackler` gagne le ballon face à `holder` -- Tackling seul côté tacleur (qualité du geste ;
+    Aggression règle déjà la fréquence des tentatives et le risque de faute : pas de double comptage, règle R1 de
+    docs/CARTE_ATTRIBUTS_V2.md, ticket v2-collectif/18), Strength/Balance côté porteur (guide : Strength "gagne les
+    duels, protège le ballon dos au but" ; Balance "conduit le ballon en étant poussé")."""
+    tackler_rating = player_attribute(tackler, "Tackling")
     holder_resistance = (player_attribute(holder, "Strength") + player_attribute(holder, "Balance")) / 2.0
     return duel_probability(tackler_rating, holder_resistance)
 

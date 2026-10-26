@@ -8,7 +8,7 @@
 
 **Status:** ready-for-agent (constantes à proposer avant le code)
 
-**Point de vigilance :** le ping-pong a été corrigé au ticket socle 06 par le temps de réception : ce ticket ne doit pas le réintroduire.
+**Point de vigilance :** le ping-pong a été corrigé au ticket socle 06 par le temps de réception : ce ticket ne doit pas le réintroduire. Reprend aussi A9 (`docs/CARTE_ATTRIBUTS_V2.md`) : dans la valeur d'une passe, un receveur marqué est pénalisé deux fois (réussite de la passe et ouverture).
 
 - [ ] À situation égale, une passe qui ouvre une solution suivante est choisie mesurablement plus souvent qu'une passe sûre sans suite
 - [ ] Les acquis du rythme tiennent (ticket socle 06 : 15-17 passes par minute, 3-5 passes par possession)

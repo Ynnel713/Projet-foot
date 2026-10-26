@@ -156,3 +156,11 @@ def test_confrontation_ends_when_the_ball_goes_loose(monkeypatch) -> None:
     ball.holder = "Porteur"
     _step_ball(ball, 0.1, [holder, defender], now_s=2.0)  # élimination finie : nouvelle confrontation
     assert attempts == ["Adversaire", "Adversaire"]
+
+
+def test_aggression_does_not_change_tackle_success() -> None:
+    # Aggression règle la fréquence des tentatives et la faute, pas la réussite (règle R1, ticket v2-collectif/18)
+    holder = _player("Porteur", attributes={"Strength": 60, "Balance": 60})
+    calm = _player("Calme", attributes={"Tackling": 70, "Aggression": 10})
+    fierce = _player("Agressif", attributes={"Tackling": 70, "Aggression": 99})
+    assert tackle_success_probability(calm, holder) == tackle_success_probability(fierce, holder)

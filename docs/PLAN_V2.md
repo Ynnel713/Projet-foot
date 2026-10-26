@@ -79,7 +79,7 @@ Un joueur en possession du ballon peut le contrôler (qualité du contrôle pilo
 
 ### Ce qu'on livre
 
-Quand un adversaire est à portée directe (1,5 m) du porteur du ballon, il peut tenter un tacle -- fréquence de la tentative pilotée par Aggression seule, issue du duel pilotée par Tackling (tacleur, avec un peu d'Aggression) contre la moyenne Strength/Balance du porteur. Un tacle raté a un risque de faute piloté par Aggression seule, indépendamment de Tackling (contrepartie attendue par le guide). Pas de lecture tactique de QUAND tacler (IA placeholder, D-V08) ni de conséquence de jeu pour une faute (pas de coup franc : Phase 5+). La table de pondération par poste (D-V07) reste vide : ces 4 attributs ne sont pas différenciés par poste dans ce modèle (un tacle est un tacle, quel que soit le poste de qui le tente) -- à revoir si un besoin concret apparaît.
+Quand un adversaire est à portée directe (1,5 m) du porteur du ballon, il peut tenter un tacle -- fréquence de la tentative pilotée par Aggression seule, issue du duel pilotée par Tackling (tacleur ; Aggression ne règle plus que la tentative et la faute depuis le ticket v2-collectif/18) contre la moyenne Strength/Balance du porteur. Un tacle raté a un risque de faute piloté par Aggression seule, indépendamment de Tackling (contrepartie attendue par le guide). Pas de lecture tactique de QUAND tacler (IA placeholder, D-V08) ni de conséquence de jeu pour une faute (pas de coup franc : Phase 5+). La table de pondération par poste (D-V07) reste vide : ces 4 attributs ne sont pas différenciés par poste dans ce modèle (un tacle est un tacle, quel que soit le poste de qui le tente) -- à revoir si un besoin concret apparaît.
 
 ### Critères d'acceptation
 
