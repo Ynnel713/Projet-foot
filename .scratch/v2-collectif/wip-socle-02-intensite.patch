@@ -1,0 +1,320 @@
+diff --git a/v2engine/match.py b/v2engine/match.py
+index ec9db7d..4cb8ca2 100644
+--- a/v2engine/match.py
++++ b/v2engine/match.py
+@@ -8,6 +8,8 @@ D-V04) ; un rendu, pas encore construit, la rejouera ensuite. Une seule fonction
+ 
+ from __future__ import annotations
+ 
++import dataclasses
++
+ from ligue1sim.clubs import Club
+ from ligue1sim.lineup import Lineup, pick_best_formation
+ 
+@@ -17,7 +19,7 @@ from v2engine.ball_state import BallState
+ from v2engine.duel import resolve_tackle, should_attempt_tackle
+ from v2engine.formation import initial_positions
+ from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch
+-from v2engine.movement import PlayerState, step
++from v2engine.movement import PlayerState, intensity, max_speed_mps, step
+ from v2engine.off_ball import RUN_INTERVAL_S, choose_space
+ from v2engine.decision import DECISION_INTERVAL_S, DRIBBLE_SPEED_FACTOR, choose_action
+ from v2engine.possession import BALL_FRICTION_PER_S, BALL_STOPPED_MPS, RECEPTION_SPEED_FACTOR, attempt_control, pass_velocity, reception_delay_s
+@@ -43,6 +45,25 @@ TACKLE_RADIUS_M = 1.5
+ # FAILED_TACKLE_RECOVERY_S (temps pour se relever et se replacer). Durée réelle non trouvée : ordre de grandeur.
+ CONFRONTATION_END_M = 3.0
+ FAILED_TACKLE_RECOVERY_S = 1.5
++# Intensité de course sans ballon (v2-socle/02, validé le 25/10/2026) : part de la vitesse max selon la
++# situation et l'attribut mental qui la gouverne (Pace reste la seule vitesse max). Réel : 9-14 km par
++# match, 2-3 % de la distance au-dessus de 25 km/h ; course à haute intensité très variable au même poste
++# (écart-type ~17 %, Bradley et al. 2009, Premier League).
++PRESS_INTENSITY = ((11.0, 0.55), (55.0, 0.8), (99.0, 1.0))  # Work Rate : presser, ballon libre, couper une passe
++RUN_INTENSITY = ((11.0, 0.5), (55.0, 0.7), (99.0, 0.95))  # Off the Ball : appels de balle
++RECOVERY_INTENSITY = ((11.0, 0.35), (55.0, 0.5), (99.0, 0.7))  # Teamwork : revenir à sa place dans le bloc
++RECEIVER_INTENSITY = 0.7  # receveur visé qui vient au-devant de la passe (0,9 donnait trop de sprints, validé le 26/10/2026)
++ARRIVAL_RADIUS_M = 10.0  # à moins de 10 m de sa cible, il trottine (vitesse proportionnelle, 2 m/s au plus) ; validé le 26/10/2026
++WALK_MPS = 2.0
++# Bloc qui coulisse (v2-socle/02, validé le 26/10/2026) : la place de formation (hors gardien) se décale d'une
++# part du décalage du ballon par rapport au centre -- le centre d'équipe suit surtout le ballon en longueur
++# (Frencken et al. 2012) ; parts non trouvées, ordres de grandeur ajustables (30-70 % et 15-45 %).
++BLOCK_SHIFT = (0.3, 0.15)  # longueur, largeur
++# Pressing par à-coups : au plus PRESS_BURST_S d'effort (fenêtre de 5-6 s des analyses de pressing, CMU/StatsBomb),
++# puis il souffle au trot selon Work Rate (non trouvé, ordre de grandeur) ; le suivant le plus proche prend le relais.
++PRESS_BURST_S = 5.0
++PRESS_REST_S = ((11.0, 20.0), (55.0, 10.0), (99.0, 5.0))
++FORWARD_RUN_M = 5.0  # un appel n'est un sprint (Off the Ball) que vers l'avant, à plus de 5 m ; sinon trot (Teamwork)
+ # Distance en dessous de laquelle un joueur va vers le ballon plutôt que vers sa position de
+ # formation -- IA placeholder (D-V08), pas une vraie prise de décision.
+ CHASE_RADIUS_M = 15.0
+@@ -68,6 +89,7 @@ def _build_players(lineup: Lineup, team: str, positions: dict[str, Vec2]) -> lis
+                 home_target=pos,
+                 radius_m=PLAYER_RADIUS_M,
+                 attributes=player.attributes,
++                fatigue_minute=0.0,
+             )
+         )
+     return states
+@@ -218,6 +240,15 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
+         break
+ 
+ 
++def _step_off_ball(player: PlayerState, dt: float, target: Vec2, minute: float, factor: float) -> PlayerState:
++    """Déplacement vers une place (appel, position de formation) : à `factor` de sa vitesse max, puis
++    au pas à l'approche (v2-socle/02, `ARRIVAL_RADIUS_M`)."""
++    distance = player.position.distance_to(target)
++    if distance < ARRIVAL_RADIUS_M:
++        factor = min(factor, WALK_MPS * distance / ARRIVAL_RADIUS_M / max_speed_mps(player.pace))
++    return step(player, dt, target, minute, factor)
++
++
+ def _step_player(
+     player: PlayerState,
+     ball: BallState,
+@@ -225,6 +256,7 @@ def _step_player(
+     minute: float,
+     players: list[PlayerState] | None = None,
+     runs: dict[str, tuple[Vec2, float]] | None = None,
++    pressing: dict[str, tuple[float | None, float]] | None = None,
+ ) -> PlayerState:
+     """Le porteur avance vers le but adverse : au pas de contrôle pendant sa réception (`RECEPTION_SPEED_FACTOR`,
+     v2-socle/06), puis en conduite, un peu moins vite qu'en course (`DRIBBLE_SPEED_FACTOR`) ;
+@@ -238,6 +270,9 @@ def _step_player(
+         speed = RECEPTION_SPEED_FACTOR if ball.receiving else DRIBBLE_SPEED_FACTOR
+         return step(player, dt, _OPPONENT_GOAL[player.team], minute, speed)
+     holder = next((p for p in players or [] if p.name == ball.holder), None)
++    if player.poste != "GK":  # le bloc coulisse avec le ballon (v2-socle/02)
++        shift = Vec2((ball.position.x - PITCH_LENGTH_M / 2.0) * BLOCK_SHIFT[0], (ball.position.y - PITCH_WIDTH_M / 2.0) * BLOCK_SHIFT[1])
++        player = dataclasses.replace(player, home_target=clamp_to_pitch(player.home_target + shift))
+     if runs is not None and holder is not None and holder.team == player.team and player.poste != "GK":
+         now_s = minute * 60.0
+         target, next_s = runs.get(player.name, (None, 0.0))
+@@ -245,19 +280,41 @@ def _step_player(
+             opponents = [p for p in players if p.team != player.team]
+             target = choose_space(player, opponents, 1.0 if player.team == "home" else -1.0)
+             runs[player.name] = (target, now_s + RUN_INTERVAL_S)
+-        return step(player, dt, target, minute)
++        forward = (target.x - player.position.x) * (1.0 if player.team == "home" else -1.0)
++        mental = ("Off the Ball", RUN_INTENSITY) if forward > FORWARD_RUN_M else ("Teamwork", RECOVERY_INTENSITY)
++        return _step_off_ball(player, dt, target, minute, intensity(player_attribute(player, mental[0]), mental[1]))
+     if ball.holder is None and player.name == ball.receiver:  # vient au-devant de la passe (v2-socle/01)
+-        return step(player, dt, meeting_point(player, ball.position, ball.velocity, BALL_FRICTION_PER_S), minute)
++        return step(player, dt, meeting_point(player, ball.position, ball.velocity, BALL_FRICTION_PER_S), minute,
++                    RECEIVER_INTENSITY)
++    press = intensity(player_attribute(player, "Work Rate"), PRESS_INTENSITY)
+     if ball.holder is None and player.name in ball.readers:
+-        return step(player, dt, ball.readers[player.name], minute)  # a lu la passe : court la couper
+-    nearest_of_team = ball.holder is None and player is min(
+-        (p for p in players or [player] if p.team == player.team), key=lambda p: p.position.distance_to(ball.position)
+-    )  # sur un ballon libre, le plus proche de chaque équipe y va toujours, même au-delà de CHASE_RADIUS_M
++        return step(player, dt, ball.readers[player.name], minute, press)  # a lu la passe : court la couper
++    now_s = minute * 60.0
++    resting = (lambda p: pressing is not None and holder is not None and pressing.get(p.name, (None, 0.0))[1] > now_s)
++    chaser = not resting(player) and player.name == min(
++        (p for p in players or [player] if p.team == player.team and not resting(p)) or [player],
++        key=lambda p: p.position.distance_to(ball.position),
++    ).name  # le plus proche de chaque équipe (hors presseurs qui soufflent) presse ou chasse le ballon
++    if pressing is not None and holder is not None:  # pressing par à-coups (v2-socle/02)
++        start, rest_until = pressing.get(player.name, (None, 0.0))
++        if not chaser:
++            pressing[player.name] = (None, rest_until)
++        elif start is None:
++            pressing[player.name] = (now_s, rest_until)
++        elif now_s - start >= PRESS_BURST_S:
++            pressing[player.name] = (None, now_s + intensity(player_attribute(player, "Work Rate"), PRESS_REST_S))
++            chaser = False
++    if ball.holder is None and ball.receiver is not None and player.team == ball.last_pass_team:
++        chaser = False  # passe en cours : le receveur visé est le seul de son équipe à aller au ballon
++    nearest_of_team = ball.holder is None and chaser
++    teamwork = intensity(player_attribute(player, "Teamwork"), RECOVERY_INTENSITY)
+     if ball.position.distance_to(player.position) >= CHASE_RADIUS_M and not nearest_of_team:
+-        return step(player, dt, player.home_target, minute)
++        return _step_off_ball(player, dt, player.home_target, minute, teamwork)
++    if not chaser:  # un seul presseur par équipe (v2-socle/02) : les autres suivent l'action en bloc, à leur place
++        return _step_off_ball(player, dt, player.home_target, minute, teamwork)
+     if ball.holder is None:  # ballon libre : vise où il va s'arrêter, selon Anticipation
+-        return step(player, dt, loose_ball_target(player, ball.position, ball.velocity, BALL_FRICTION_PER_S), minute)
+-    return step(player, dt, ball.position, minute)
++        return step(player, dt, loose_ball_target(player, ball.position, ball.velocity, BALL_FRICTION_PER_S), minute, press)
++    return step(player, dt, ball.position, minute, press)
+ 
+ 
+ def simulate_match(
+@@ -284,10 +341,11 @@ def simulate_match(
+     trace = MatchTrace(home=home_club.name, away=away_club.name, tick_seconds=tick_seconds * record_every)
+ 
+     runs: dict[str, tuple[Vec2, float]] = {}  # espace visé par chaque joueur sans ballon (Off the Ball)
++    pressing: dict[str, tuple[float | None, float]] = {}  # début de l'effort de pressing, fin du temps pour souffler
+     n_ticks = int(duration_minutes * 60.0 / tick_seconds)
+     for i in range(n_ticks):
+         minute = i * tick_seconds / 60.0
+-        players = [_step_player(p, ball, tick_seconds, minute, players, runs) for p in players]
++        players = [_step_player(p, ball, tick_seconds, minute, players, runs, pressing) for p in players]
+         _resolve_player_collisions(players)
+         scoring_team = _step_ball(ball, tick_seconds, players, i * tick_seconds)
+         if scoring_team is not None:
+diff --git a/v2engine/movement.py b/v2engine/movement.py
+index 3492a2d..876b9b5 100644
+--- a/v2engine/movement.py
++++ b/v2engine/movement.py
+@@ -26,6 +26,10 @@ _STAMINA_FLOOR_POINTS: tuple[tuple[float, float], ...] = ((5.0, 0.60), (99.0, 0.
+ _STAMINA_DECAY_START_POINTS: tuple[tuple[float, float], ...] = ((5.0, 45.0), (99.0, 75.0))
+ 
+ MATCH_END_MINUTE = 90.0
++# Fatigue liée à l'effort (v2-socle/02, validé le 25/10/2026) : la « minute de fatigue » avance au rythme de
++# l'effort (vitesse / vitesse max), rapporté à l'effort moyen d'un joueur (réel ~7 km/h de moyenne, soit
++# ~0,25 de sa vitesse max) -- un joueur qui court plus se fatigue plus tôt.
++REFERENCE_EFFORT = 0.25
+ 
+ 
+ def _lerp(note: float, points: tuple[tuple[float, float], ...]) -> float:
+@@ -39,6 +43,12 @@ def _lerp(note: float, points: tuple[tuple[float, float], ...]) -> float:
+     return points[-1][1]
+ 
+ 
++def intensity(note: float, points: tuple[tuple[float, float], ...]) -> float:
++    """Intensité de course (part de la vitesse max) choisie selon un attribut mental, par repères
++    (note, intensité) -- v2-socle/02 : le mental décide de l'usage de la capacité physique."""
++    return _lerp(note, points)
++
++
+ def max_speed_mps(pace: float) -> float:
+     return _lerp(pace, _PACE_POINTS) * KMH_TO_MS
+ 
+@@ -75,6 +85,9 @@ class PlayerState:
+     # `acceleration`/`stamina` ci-dessus restent des champs dédiés (chemin chaud, lu à chaque
+     # tick par `step`), ce champ sert aux attributs plus occasionnels (voir `possession.py`).
+     attributes: dict[str, int] | None = None
++    # Minute de fatigue (v2-socle/02) : None = fatigue selon la minute de match seule (comportement
++    # d'origine, cas de test) ; un nombre = horloge qui avance selon l'effort (voir `REFERENCE_EFFORT`).
++    fatigue_minute: float | None = None
+ 
+ 
+ def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_factor: float = 1.0) -> PlayerState:
+@@ -83,7 +96,9 @@ def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_facto
+     (Stamina), montée en vitesse pilotée par Acceleration. IA de déplacement volontairement
+     simpliste (D-V08) : `target` est choisi par l'appelant, pas par ce module. `speed_factor` :
+     part de la vitesse max (ex. conduite de balle, `decision.DRIBBLE_SPEED_FACTOR`)."""
+-    effective_max_speed = max_speed_mps(state.pace) * stamina_factor(state.stamina, minute) * speed_factor
++    fatigue_minute = minute if state.fatigue_minute is None else state.fatigue_minute
++    top_speed = max_speed_mps(state.pace) * stamina_factor(state.stamina, fatigue_minute)
++    effective_max_speed = top_speed * speed_factor
+     to_target = target - state.position
+     desired_velocity = to_target.normalized() * effective_max_speed if to_target.length() > 0.1 else Vec2(0.0, 0.0)
+ 
+@@ -103,6 +118,8 @@ def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_facto
+         new_velocity = new_velocity.normalized() * effective_max_speed
+ 
+     new_position = clamp_to_pitch(state.position + new_velocity * dt)
++    if state.fatigue_minute is not None and top_speed > 0.0:
++        fatigue_minute += dt / 60.0 * (new_velocity.length() / top_speed) / REFERENCE_EFFORT
+     return PlayerState(
+         name=state.name,
+         team=state.team,
+@@ -115,4 +132,5 @@ def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_facto
+         home_target=state.home_target,
+         radius_m=state.radius_m,
+         attributes=state.attributes,
++        fatigue_minute=None if state.fatigue_minute is None else fatigue_minute,
+     )
+diff --git a/tests/test_v2engine_course.py b/tests/test_v2engine_course.py
+new file mode 100644
+index 0000000..c103b1d
+--- /dev/null
++++ b/tests/test_v2engine_course.py
+@@ -0,0 +1,96 @@
++"""Tests du moteur V2, ticket v2-socle/02 (intensité de course : fin du sprint permanent). Voir
++.scratch/v2-socle/issues/02-intensite-de-course.md."""
++
++from __future__ import annotations
++
++import math
++
++from v2engine.ball_state import BallState
++from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
++from v2engine.match import (
++    ARRIVAL_RADIUS_M,
++    BLOCK_SHIFT,
++    PRESS_BURST_S,
++    PRESS_INTENSITY,
++    WALK_MPS,
++    _step_off_ball,
++    _step_player,
++)
++from v2engine.movement import PlayerState, intensity, max_speed_mps, step
++
++CENTER = Vec2(PITCH_LENGTH_M / 2.0, PITCH_WIDTH_M / 2.0)
++
++
++def _player(name: str = "P", team: str = "home", poste: str = "MC", position: Vec2 = CENTER, pace: float = 60,
++            stamina: float = 60, attributes: dict[str, int] | None = None, fatigue_minute: float | None = None) -> PlayerState:
++    return PlayerState(
++        name=name, team=team, poste=poste, position=position, velocity=Vec2(0.0, 0.0),
++        pace=pace, acceleration=60, stamina=stamina, home_target=position, attributes=attributes,
++        fatigue_minute=fatigue_minute,
++    )
++
++
++def test_work_rate_sets_pressing_intensity_at_validated_points() -> None:
++    for note, expected in ((11, 0.55), (55, 0.8), (99, 1.0)):
++        assert math.isclose(intensity(note, PRESS_INTENSITY), expected)
++
++
++def test_pace_only_sets_top_speed_near_his_place() -> None:
++    # à l'approche de sa place, rapide ou lent marchent au même pas : Pace n'est que la vitesse max
++    def walk_speed(pace: float) -> float:
++        p = _player(pace=pace, position=CENTER + Vec2(ARRIVAL_RADIUS_M / 2.0, 0.0))
++        for _ in range(20):
++            p = _step_off_ball(p, 0.1, CENTER, 10.0, 1.0)
++        return p.velocity.length()
++    assert math.isclose(walk_speed(20), walk_speed(95), rel_tol=0.05)
++    assert walk_speed(95) <= WALK_MPS + 1e-9
++
++
++def test_effort_advances_fatigue_faster_than_walking() -> None:
++    target = CENTER + Vec2(500.0, 0.0)
++    sprinter = _player(fatigue_minute=0.0)
++    walker = _player(fatigue_minute=0.0)
++    for _ in range(600):  # 60 s
++        sprinter = step(sprinter, 0.1, target, 1.0, 1.0)
++        walker = step(walker, 0.1, target, 1.0, 0.2)
++    assert sprinter.fatigue_minute > 3.0 * walker.fatigue_minute
++
++
++def test_high_work_rate_low_stamina_fades_before_high_stamina() -> None:
++    # même effort (même minute de fatigue), Stamina basse : vitesse max plus basse en fin de match
++    def top_speed(stamina: float) -> float:
++        p = _player(stamina=stamina, fatigue_minute=80.0)
++        for _ in range(40):
++            p = step(p, 0.1, CENTER + Vec2(500.0, 0.0), 80.0, 1.0)
++        return p.velocity.length()
++    assert top_speed(20) < top_speed(90) <= max_speed_mps(60)
++
++
++def test_block_slides_with_the_ball() -> None:
++    p = _player(position=CENTER)
++    ball = BallState(position=CENTER + Vec2(20.0, 10.0), velocity=Vec2(0.0, 0.0), holder="X")
++    holder = _player("X", team="away", position=ball.position)
++    other = _player("Proche", team="home", position=ball.position + Vec2(1.0, 0.0))  # presse à sa place
++    moved = _step_player(p, ball, 0.1, 10.0, [p, holder, other])
++    shifted = CENTER + Vec2(20.0 * BLOCK_SHIFT[0], 10.0 * BLOCK_SHIFT[1])
++    assert moved.velocity.x > 0.0 and moved.velocity.y > 0.0  # il part vers sa place décalée
++    assert moved.position.distance_to(shifted) < CENTER.distance_to(shifted)
++
++
++def test_presser_rests_after_his_burst_and_the_next_one_takes_over() -> None:
++    holder = _player("Porteur", team="away", position=CENTER)
++    first = _player("Premier", position=CENTER + Vec2(4.0, 0.0), attributes={"Work Rate": 55})
++    second = _player("Second", position=CENTER + Vec2(8.0, 0.0), attributes={"Work Rate": 55})
++    ball = BallState(position=CENTER, velocity=Vec2(0.0, 0.0), holder="Porteur")
++    pressing: dict[str, tuple[float | None, float]] = {}
++    players = [holder, first, second]
++
++    def tick(now_s: float) -> None:
++        for p in (first, second):
++            _step_player(p, ball, 0.1, now_s / 60.0, players, None, pressing)
++    tick(0.0)
++    assert pressing["Premier"][0] == 0.0 and pressing["Second"][0] is None  # un seul presseur
++    tick(PRESS_BURST_S)
++    assert pressing["Premier"][1] > PRESS_BURST_S  # il souffle
++    tick(PRESS_BURST_S + 0.1)
++    assert pressing["Second"][0] is not None  # le suivant prend le relais

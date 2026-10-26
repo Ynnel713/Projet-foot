@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 et 03 (ajuste les deux mécanismes).
 
-**Status:** ready-for-agent
+**Status:** remplacé (26/10/2026) : Teamwork sans ballon → `.scratch/v2-collectif/issues/04-bloc-de-reference-dynamique.md` ; Teamwork avec ballon → `19-profils-et-tendances.md`.
 
 - [ ] À situation égale, un porteur à Teamwork haut passe mesurablement plus souvent au partenaire mieux placé
 - [ ] Une équipe à Teamwork élevé reste mesurablement plus compacte (écart moyen entre ses joueurs) qu'une équipe à Teamwork bas

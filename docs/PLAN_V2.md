@@ -134,7 +134,7 @@ Un porteur du ballon à moins de 20 m du but adverse tente sa chance plutôt que
 | Phase | Ce qu'on ajoute au moteur | Attributs |
 |---|---|---|
 | 5. Cerveau des joueurs | Vraie décision du porteur et des non-porteurs (remplace l'IA placeholder D-V08) | Decisions, Vision, Off the Ball, Anticipation, Flair, Teamwork |
-| 6. Défense organisée | Bloc, marquage, pressing | Positioning, Marking, Work Rate, Concentration — reprend aussi le critère en match reporté du ticket 03 (Off the Ball : espace des coéquipiers du porteur) |
+| 6. Défense organisée | Remplacée par le chantier « intelligence collective » (ci-dessous) | Positioning, Marking, Work Rate, Concentration, Teamwork, Flair — et le critère en match reporté du ticket cerveau 03 |
 | 7. Gestes offensifs | Dribble, centre, tête, frappe de loin | Dribbling, Crossing, Heading, Jumping Reach, Long Shots, Bravery, Agility |
 | 8. Ballon hors du terrain | Touches, corners, coups francs, penalties | Corners, Free Kick Taking, Long Throws, Penalty Taking |
 | 9. Gardien complet | Sorties, centres, relances | Aerial Reach, Command of Area, Communication, Kicking, Throwing, Rushing Out, Punching, Eccentricity |
@@ -142,7 +142,34 @@ Un porteur du ballon à moins de 20 m du but adverse tente sa chance plutôt que
 
 Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement aux compétitions (D-V10).
 
-**Phase 5 découpée** : `.scratch/v2-cerveau-joueurs/issues/` (01 à 06). Phases 6 à 10 : à découper une fois la précédente livrée.
+**Phase 5 découpée** : `.scratch/v2-cerveau-joueurs/issues/` (01 à 04 livrés ; 05 et 06 absorbés par le chantier « intelligence collective » ci-dessous). Socle (`.scratch/v2-socle/issues/`) : 01, 03, 04 et 06 livrés ; 02 et 05 absorbés par ce même chantier.
+
+### Chantier « intelligence collective » (décidé le 26/10/2026, remplace la phase 6)
+
+**Pourquoi.** Les réglages génériques faits pour coller aux chiffres réels ont fini par produire des comportements incohérents : avec un seul presseur et un bloc qui coulisse, personne ne couvrait plus, et la mesure du 26/10 donnait 59 tirs par équipe et 17,8 buts par match. Décision du propriétaire : implémenter d'abord les **principes** du football (structure collective, compensations, transitions, puis circulation et comportements individuels), et ne recalibrer qu'ensuite.
+
+**Principes de travail.**
+- Les données réelles restent la boussole, mais ce sont des **indicateurs de calibration**, pas des objectifs à atteindre par un réglage générique. Une seule calibration, à la fin (ticket 22).
+- Chaque joueur suit quatre temps : **perception, interprétation, décision, exécution**. Voir, choisir et réussir sont trois choses distinctes.
+- Les attributs changent les **comportements** (options envisagées, espaces repérés), pas seulement la réussite des actions. Chaque effet n'est compté qu'une fois (règle anti double comptage).
+- Pas de scripts : les situations et les combinaisons orientent les choix, sans les imposer. Les attributs donnent des **tendances**, jamais des seuils qui interdisent une action.
+- La validation passe aussi par des **tests tactiques ciblés** (compensation, pressing, circulation, profils, fatigue, diversité, cohérence) et par la **relecture** des intentions enregistrées dans la trace.
+
+**Tickets** : `.scratch/v2-collectif/issues/` (01 à 22), dans cet ordre d'exécution :
+
+| Étape | Tickets | Contenu |
+|---|---|---|
+| A. Fondations | 01, 02, 18, 03 | Banc de mesure et tests tactiques ; perception, décision, exécution et intentions tracées ; règle des interactions entre attributs ; reconnaissance de la situation de jeu |
+| B. Structure collective | 04, 05, 06 | Bloc de référence dynamique ; hauteur du bloc ; soutien du porteur et lignes de passe |
+| C. Défense organisée | 07, 08, 09 | Rôles défensifs (presser, couvrir, marquer, fermer l'axe) ; pressing coordonné ; compensations en cascade |
+| D. Transitions | 10, 11 | Attaque-défense ; défense-attaque |
+| E. Effort | 12 | Intensité selon le rôle et réserve d'énergie (reprise du socle 02 et de son code non commité) |
+| F. Circulation | 13, 14, 15 | Valeur future d'une passe ; combinaisons collectives ; construction face au pressing |
+| G. Attaque | 16, 17 | Appels complémentaires ; surcharges et déséquilibres |
+| H. Individus | 19, 20, 21 | Profils et tendances (Flair, Teamwork, Preferred Moves) ; conscience de ses limites ; adaptation au score, au temps et à la fatigue |
+| I. Calibration | 22 | Calibration générale (reprise du socle 05), sur au moins 50 matchs |
+
+**Hors chantier, dans les phases suivantes** : centres et jeu aérien du dernier tiers (phase 7) ; coups de pied arrêtés, avec placement, blocs, marquage et seconds ballons (phase 8) ; relance du gardien (phase 9, en lien avec le ticket 15) ; Leadership individuel et moral (phase 10, en lien avec le ticket 21).
 
 **Correctif préalable (24/10/2026)** : `movement.step` perdait les attributs des joueurs dès le 2ᵉ tick (retour à 60 par défaut) ; passes, contrôles, tacles et tirs des Phases 2 à 4 ignoraient donc les vraies notes en match. Corrigé, test de régression dans `tests/test_v2engine_movement.py`.
 

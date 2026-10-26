@@ -4,7 +4,7 @@
 
 **Blocked by:** 02, 03 et 06 du socle (01 et 04 livrés).
 
-**Status:** ready-for-agent (constantes à proposer avant le code)
+**Status:** remplacé (26/10/2026) par `.scratch/v2-collectif/issues/22-calibration-generale.md` (critères repris tels quels).
 
 - [ ] Tirs par équipe 8-15, buts par match 2-3,5 (repris des tickets 01 et 04)
 - [ ] Receveur visé : au moins 50 % des passes (repris du ticket 01 ; 36,1 % mesuré au ticket 04)

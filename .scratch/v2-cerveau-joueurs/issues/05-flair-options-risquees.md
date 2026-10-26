@@ -4,7 +4,7 @@
 
 **Blocked by:** 01.
 
-**Status:** ready-for-agent
+**Status:** remplacé (26/10/2026) par `.scratch/v2-collectif/issues/19-profils-et-tendances.md` (critères repris).
 
 - [ ] Un joueur à Flair haut tente mesurablement plus d'options risquées ET perd plus de ballons qu'un joueur à Flair bas : les deux effets doivent apparaître
 - [ ] Effet probabiliste, jamais binaire ; courbe partagée `attributes.success_probability`/`duel_probability` (neutre entre 45 et 55), pas de courbe propre

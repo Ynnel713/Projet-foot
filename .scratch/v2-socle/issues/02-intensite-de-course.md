@@ -16,7 +16,7 @@ Réalité (Biology of Sport 2024, Di Mascio & Bradley 2013) : 9 à 14 km par mat
 
 **Blocked by:** 01 (le receveur doit déjà venir au ballon, sinon la mesure des sprints est faussée).
 
-**Status:** ready-for-agent (constantes à proposer avant le code)
+**Status:** remplacé (26/10/2026) par le chantier `.scratch/v2-collectif/` : intensité et énergie → ticket 12 ; presseur unique → 07 ; pressing par à-coups → 08 ; bloc qui coulisse → 04 ; Determination → 21. Code du 26/10 sauvegardé dans `.scratch/v2-collectif/wip-socle-02-intensite.patch` (non appliqué), à reprendre dans ces tickets.
 
 - [ ] Distance totale par joueur et par match dans la fourchette réelle 9-14 km
 - [ ] Part de la distance au-dessus de 25 km/h dans la fourchette réelle 2-3 %
