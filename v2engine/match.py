@@ -8,6 +8,8 @@ D-V04) ; un rendu, pas encore construit, la rejouera ensuite. Une seule fonction
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from ligue1sim.clubs import Club
 from ligue1sim.lineup import Lineup, pick_best_formation
 
@@ -267,11 +269,13 @@ def simulate_match(
     duration_minutes: float = 90.0,
     tick_seconds: float = 0.1,
     record_every: int = 10,
+    observer: Callable[[float, list[PlayerState], BallState, str | None], None] | None = None,
 ) -> MatchTrace:
     """Simule un match de bout en bout (Phase 1 : déplacement seul, pas encore de score) et
     retourne sa trace complète (voir `trace.py`). `record_every` : un tick sur N est conservé dans
     la trace (sous-échantillonnage du rendu, le calcul physique tourne à `tick_seconds` quoi qu'il
-    arrive)."""
+    arrive). `observer` : appelé à chaque tick avec (instant en s, joueurs, ballon, équipe qui vient de
+    marquer ou None) -- lecture seule, pour les mesures (`scripts/measure_v2.py`), sans effet sur le jeu."""
     home_lineup = pick_best_formation(home_club)
     away_lineup = pick_best_formation(away_club)
 
@@ -292,6 +296,8 @@ def simulate_match(
         scoring_team = _step_ball(ball, tick_seconds, players, i * tick_seconds)
         if scoring_team is not None:
             trace.record_goal(scoring_team, minute)
+        if observer is not None:
+            observer(i * tick_seconds, players, ball, scoring_team)
 
         if i % record_every == 0:
             trace.record(

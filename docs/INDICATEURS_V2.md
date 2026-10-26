@@ -1,0 +1,114 @@
+# Indicateurs de mesure du moteur V2
+
+Référence du ticket `.scratch/v2-collectif/issues/01-banc-de-mesure-tactique.md`. Chaque indicateur est calculé par `scripts/measure_v2.py` sur N matchs à graines fixes.
+
+**Principe (décision du propriétaire, 26/10/2026).** Les valeurs réelles sont des **indicateurs de calibration**, pas des objectifs. Les indicateurs sont lus comme des **distributions conditionnelles** (zone du ballon, score, minute ; phase de jeu une fois le ticket 03 livré), et pas comme une seule moyenne.
+
+**Sources.** Les valeurs réelles des indicateurs tactiques viennent de la recherche documentaire fournie par le propriétaire le 26/10/2026. Les liens sont repris tels quels ; les chiffres sont à relire dans le texte intégral avant de servir de critère d'acceptation.
+
+**Découpages communs.** Zone du ballon : tiers défensif, tiers médian, tiers offensif (du point de vue de l'équipe en possession). Score : mène, égalité, menée. Minute : tranches de 15 min. Phase de jeu : après le ticket 03.
+
+## 1. Indicateurs classiques (cibles déjà validées)
+
+| Indicateur | Définition | Unité | Cible |
+|---|---|---|---|
+| Passes par minute | Passes des deux équipes / minutes jouées | /min | 15-17 |
+| Temps par possession de joueur | Temps entre la prise et la perte du ballon par un joueur | s | 2-3 |
+| Possession d'équipe | Temps entre deux changements d'équipe en possession | s | 11-16 |
+| Passes par possession | Passes pendant une possession d'équipe | nombre | 3-5 |
+| Passes réussies | Passes reçues par un coéquipier / passes | % | 70-90 |
+| Passes chez l'adversaire | Passes reçues par un adversaire / passes | % | ≤ 25 |
+| Receveur visé | Passes reçues par le coéquipier visé / passes | % | ≥ 50 |
+| Passes longues | Passes de plus de 32 m : part et réussite | % | 10-19 % des passes, ~47 % réussies |
+| Tirs | Tirs par équipe et par match | nombre | 8-15 |
+| Buts | Buts par match | nombre | 2-3,5 |
+| Tacles | Tacles tentés par match | nombre | 30-40 |
+| Choix du porteur | Part de passes, conduites et tirs | % | suivi |
+| Distance | Km par joueur de champ, par poste | km | 9-14 ; ordre des postes de Bradley 2009 |
+| Haute intensité | Part de la distance au-dessus de 25 km/h ; part du temps au-dessus de 19,8 km/h | % | 2-3 ; 2-5 |
+| Baisse de fin de match | Course au-dessus de 19,8 km/h : dernier quart d'heure contre premier | % | 10-30 |
+
+## 2. Indicateurs tactiques
+
+| # | Indicateur | Définition | Unité | Valeur réelle |
+|---|---|---|---|---|
+| 1 | Longueur et largeur d'équipe | Écart en x et en y entre joueurs de champ extrêmes, avec et sans ballon | m | Environ 31-46 m de long et 35-48 m de large en match professionnel ; bloc médian de la Coupe du monde 2022 : 27,2 × 40,1 m ([PMC8805357](https://pmc.ncbi.nlm.nih.gov/articles/PMC8805357/), [FIFA](https://www.fifatrainingcentre.com/en/fwc2022/technical-and-tactical-analysis/controlling-the-game-without-the-ball--the-mid-block-and-compactness.php)) |
+| 1b | Surface et stretch index | Aire de l'enveloppe convexe des joueurs de champ ; distance moyenne des joueurs au centre de l'équipe | m², m | Suivi |
+| 2 | Distance entre lignes | Joueurs de champ regroupés en 3 lignes selon x ; écart entre lignes successives | m | Défense-milieu 10,2 ± 3,8 m ; milieu-attaque 13,3 ± 4,2 m ([Forcher et al. 2023](https://pure.rug.nl/ws/portalfiles/portal/1058208693/forcher-et-al-2023-is-a-compact-organization-important-for-defensive-success-in-elite-soccer-analysis-based-on-player.pdf), [PMC12511544](https://pmc.ncbi.nlm.nih.gov/articles/PMC12511544/)) |
+| 2b | Hauteur du bloc | Position x moyenne de la ligne défensive, depuis son propre but | m | Suivi |
+| 3 | Compacité autour du ballon | Distance moyenne au ballon des 5 défenseurs les plus proches | m | Légèrement plus compacte sur les séquences défensives réussies, effet faible ([Forcher et al. 2023](https://research.rug.nl/en/publications/is-a-compact-organization-important-for-defensive-success-in-elit/)) |
+| 3b | Supériorité locale | Défenseurs moins attaquants dans un rayon de 10 m autour du ballon | nombre | Supériorité à 10 m : récupération en moins de 5 s portée de 30,2 % à 36,2 % ([PMC13581790](https://pmc.ncbi.nlm.nih.gov/articles/PMC13581790/)) |
+| 4 | Solutions de passe ouvertes | À chaque décision du porteur, coéquipiers dont la probabilité de réception sans interception dépasse un seuil de disponibilité (0,5) | nombre | Pas de moyenne universelle ; méthode par probabilité de réception ([Springer 2022](https://link.springer.com/article/10.1007/s10618-022-00827-2)) |
+| 5 | Défense préventive | En possession, joueurs de champ derrière le ballon, comparés aux attaquants adverses dans cette zone ; et, 1 s après une perte, part des cas avec 4 joueurs ou plus derrière le ballon | nombre, % | 3,70 défenseurs contre 2,01 attaquants en moyenne ; 4 ou plus à 1 s : signal favorable au contre-pressing ([PMC13581790](https://pmc.ncbi.nlm.nih.gov/articles/PMC13581790/), [Springer 2021](https://link.springer.com/article/10.1007/s10618-021-00763-7)) |
+| 6 | Récupération après une perte | Temps entre la perte et la reprise, en classes 0-5 s, 5-12 s, 12-15 s, plus de 15 s | % par classe | Bundesliga : 30,2 % en moins de 5 s sans supériorité locale ([PMC13581790](https://pmc.ncbi.nlm.nih.gov/articles/PMC13581790/)) |
+| 7 | Repli après une perte | Trois mesures distinctes : latence (délai avant que le centre de l'équipe recule à plus de 1 m/s), vitesse de recul, temps pour reformer le bloc (longueur revenue sous sa valeur défensive médiane) | s, m/s, s | Pas de valeur publique robuste |
+| 8 | Pertes en transition | Ballon reperdu moins de 5 s après une récupération : nombre par match et part des récupérations, par zone | /match, % | Définition cohérente avec la littérature ([PubMed 38045740](https://pubmed.ncbi.nlm.nih.gov/38045740/)) |
+| 9 | Couverture du presseur | Part du temps de pressing pendant lequel un second défenseur est dans la zone de couverture : ellipse orientée vers le but, d'environ 3 m derrière le porteur à 9 m devant lui | % | Zone de pression elliptique selon l'angle ([KIT](https://publikationen.bibliothek.kit.edu/1000187744/170106643), [PMC5968892](https://pmc.ncbi.nlm.nih.gov/articles/PMC5968892/)) |
+| 10 | Appels et redondance | Appel : course de plus de 0,7 s au-dessus de 15 km/h d'un coéquipier du porteur ; appels par joueur et par match, par poste ; part des appels simultanés visant la même zone (moins de 5 m) | /joueur/match, % | 15,1 appels par joueur et par match, de 5,5 (défenseurs centraux) à 19,2 (milieux offensifs) ([PLOS One 2022](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0265540)) |
+| 11 | Occasions de contre | Tirs dans les 15 s après une récupération, séparés selon la zone de récupération : son propre camp (contre-attaque) ou camp adverse (récupération haute) | /match | Fenêtre de 15 s jusqu'au tir ([FIFA EFI](https://www.fifatrainingcentre.com/media/native/tournaments/womens-world-cup/2023/FIFA%20Enhanced%20Football%20Intelligence%20(EFI)%20Explainations_EN%20v1.1.pdf)) |
+
+**Plus tard, dans les tickets concernés** (ils demandent des mécanismes qui n'existent pas encore) : temps d'arrivée du défenseur (ticket 09), lignes adverses cassées et valeur de l'espace créé (ticket 13), contrôle de la profondeur (ticket 05), indicateurs par phase de jeu (ticket 03), conditionnement par style tactique et qualité relative des équipes (ticket 22).
+
+## 3. Seuils de mesure
+
+Ils définissent la mesure et ne changent pas le jeu (`scripts/v2_indicators.py`). Ceux qui sont marqués « proposé » sont soumis à la validation du propriétaire.
+
+| Seuil | Valeur | Origine |
+|---|---|---|
+| Solutions de passe : probabilité de réception | ≥ 0,5 | Recherche du propriétaire |
+| Solutions de passe : portée | ≤ 40 m | Proposé |
+| Presseur : distance au porteur | < 3 m | Proposé |
+| Ellipse de couverture | 3 m derrière le porteur à 9 m devant, demi-largeur 4 m | Recherche du propriétaire ; demi-largeur proposée |
+| Supériorité locale : rayon | 10 m | Recherche du propriétaire |
+| Compacité autour du ballon | 5 défenseurs les plus proches | Forcher et al. 2023 |
+| Appel | > 0,7 s au-dessus de 15 km/h, créant une option de passe (ou conclu par la réception) | Recherche du propriétaire |
+| Appels redondants | Simultanés, finissant à moins de 5 m l'un de l'autre | Proposé |
+| Perte en transition | < 5 s après la récupération | Recherche du propriétaire |
+| Occasion de contre | Tir < 15 s après la récupération | Recherche du propriétaire |
+| Repli : seuil de recul, fenêtre de suivi | 1 m/s ; 10 s | Proposé |
+| Repli : bloc reformé | Longueur revenue sous sa médiane sans ballon du match, si elle la dépassait à la perte | Proposé |
+| Passe longue | > 32 m | Opta |
+
+**Cas particuliers.** Un but clôt la possession : l'engagement n'est compté ni comme une perte ni comme une récupération. Un appel interrompu par une perte de balle n'est pas compté. Les lignes sont obtenues en coupant aux deux plus grands écarts de profondeur : la coupe est fragile quand un attaquant est isolé (4-2-3-1).
+
+## 4. Tests tactiques
+
+- **Scénario rejouable** : positions de départ fixées, événement forcé (exemple : le latéral droit monte, le ballon est perdu), N graines ; un indicateur comparé avec et sans le mécanisme testé.
+- **Profils** : un attribut forcé à 99 pour une équipe et à 11 pour l'autre, puis les rôles inversés pour neutraliser l'avantage du terrain.
+- **Diversité** : dispersion des indicateurs d'une graine à l'autre, ni nulle ni excessive.
+- **Déterminisme** : même graine, mêmes chiffres.
+
+## 5. Mesure de référence (moteur à `07f33b3`, 26/10/2026)
+
+`uv run python -m scripts.measure_v2 20` (graines 20260923 à 20260942). Point de comparaison pour les tickets suivants ; le découpage par zone, score et minute s'obtient avec `--detail`.
+
+| Indicateur | Référence | Valeur réelle |
+|---|---|---|
+| Passes par minute | 15,1 | 15-17 |
+| Passes réussies / chez l'adversaire | 75,5 % / 24,4 % | 70-90 % / ≤ 25 % |
+| Receveur visé | 54,9 % | ≥ 50 % |
+| Passes longues : part / réussite | 2,2 % / 81 % | 10-19 % / ~47 % |
+| Tirs par équipe / buts par match | 11,4 / 3,65 | 8-15 / 2-3,5 |
+| Tacles par match | 38,4 | 30-40 |
+| Temps par possession de joueur / possession d'équipe | 2,0 s / 14,7 s | 2-3 s / 11-16 s |
+| Km par joueur de champ | 24,3 (défenseurs centraux 20,2, avant-centres 32,5) | 9-14 |
+| Distance au-dessus de 25 km/h / temps au-dessus de 19,8 km/h | 45 % / 37 % | 2-3 % / 2-5 % |
+| Baisse de la course intense en fin de match | 18 % | 10-30 % |
+| Longueur × largeur sans ballon | 45,0 × 35,9 m | 31-46 × 35-48 m |
+| Défense-milieu / milieu-attaque (sans ballon) | 16,7 / 23,4 m | 10,2 / 13,3 m |
+| Compacité autour du ballon | 19,6 m | — |
+| Supériorité locale des défenseurs | -0,5 | — |
+| Défense préventive : joueurs derrière le ballon / adversaires | 8,0 / 1,3 | 3,7 / 2,0 |
+| 4 joueurs ou plus derrière le ballon 1 s après la perte | 98 % | — |
+| Récupération 0-5 s / 5-12 s / 12-15 s / plus de 15 s | 33 / 26 / 8 / 34 % | 30 % en moins de 5 s |
+| Pertes en transition (part des récupérations) | 32 % | — |
+| Tirs de contre par match (récupération dans son camp / camp adverse) | 0,25 / 21,3 | — |
+| Repli : latence / vitesse de recul / bloc reformé | 1,6 s / -0,25 m/s / 2,9 s | — |
+| Couverture du presseur | 56 % | — |
+| Solutions de passe ouvertes | 5,4 | — |
+| Appels par joueur et par match | 156 (défenseurs centraux) à 507 (avant-centres) | 5,5 à 19,2 |
+| Appels redondants | 28 % | — |
+
+**Profils (20 matchs, 10 affiches jouées deux fois, rôles inversés).** Work Rate 99 contre 11 : chiffres identiques, car le moteur à `07f33b3` n'utilise pas encore Work Rate. Cela confirme que le plan d'expérience n'introduit pas d'écart parasite. Off the Ball 99 contre 11 : 271 contre 227 appels par joueur, 18,0 contre 11,1 km de course intense, 26,5 contre 19,5 km.
+
+**Lecture.** Les écarts aux valeurs réelles reflètent les défauts connus du moteur actuel (tout le monde sprinte, bloc figé, personne ne couvre) que le chantier « intelligence collective » doit corriger : ce ne sont pas des cibles à régler une par une.

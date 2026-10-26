@@ -1,0 +1,173 @@
+"""Banc de mesure du moteur V2 (ticket v2-collectif/01) : simule N matchs entre clubs de Ligue 1, graines
+fixes, et donne tous les indicateurs de `docs/INDICATEURS_V2.md` (classiques et tactiques), découpés par
+zone du ballon, score et tranche de 15 minutes.
+
+Usage : uv run python -m scripts.measure_v2 [nombre_de_matchs] [--profil "Work Rate"] [--detail] [--json chemin]
+
+`--profil <Attribut>` : test de profils. L'attribut est forcé à 99 pour une équipe et à 11 pour l'autre,
+les rôles s'inversant d'un match à l'autre (neutralise l'avantage du terrain) ; le rapport compare les deux
+niveaux. `--detail` : affiche les découpages. Lecture seule : le jeu n'est pas modifié (sauf l'attribut du
+profil testé)."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import random
+import statistics
+import sys
+from collections.abc import Callable
+
+from ligue1sim.clubs import load_clubs
+from ligue1sim.season import CLUBS_PATH
+
+import v2engine.match as match
+from ligue1sim.lineup import pick_best_formation
+
+from scripts.v2_indicators import Collector
+
+AUDIT_SEED = 20260923
+HIGH, LOW = 99, 11
+TICK_S = 0.1
+
+
+def _hook(collector: Collector, clock: dict[str, float]) -> Callable[[], None]:
+    """Branche le collecteur sur les fonctions publiques du moteur ; retourne la fonction qui les restaure."""
+    real = {name: getattr(match, name) for name in ("pass_velocity", "attempt_shot", "resolve_tackle", "choose_action")}
+
+    def pass_velocity(passer, target, *args, **kwargs):
+        collector.on_pass(passer, target)
+        return real["pass_velocity"](passer, target, *args, **kwargs)
+
+    def attempt_shot(shooter, *args, **kwargs):
+        collector.on_shot(shooter, clock["now"] + clock["dt"])  # le tir a lieu pendant le tick en cours
+        return real["attempt_shot"](shooter, *args, **kwargs)
+
+    def resolve_tackle(*args, **kwargs):
+        collector.on_tackle()
+        return real["resolve_tackle"](*args, **kwargs)
+
+    def choose_action(*args, **kwargs):
+        action = real["choose_action"](*args, **kwargs)
+        collector.on_choice(action.kind)
+        return action
+
+    match.pass_velocity, match.attempt_shot = pass_velocity, attempt_shot
+    match.resolve_tackle, match.choose_action = resolve_tackle, choose_action
+    return lambda: [setattr(match, name, fn) for name, fn in real.items()]
+
+
+def _force_attribute(attribute: str, high_team: str, team_of: dict[str, str]) -> Callable[[], None]:
+    """Force `attribute` à 99 pour `high_team` et à 11 pour l'autre, dans tous les modules du moteur. `team_of`
+    (nom -> équipe) sert aux joueurs encore sans équipe : Pace, Acceleration et Stamina sont lus à la
+    construction des joueurs, sur les fiches de la base."""
+    patched = []
+    for name, module in list(sys.modules.items()):
+        if name.startswith("v2engine") and hasattr(module, "player_attribute"):
+            real = module.player_attribute
+
+            def forced(player, attr, _real=real):
+                team = getattr(player, "team", None) or team_of.get(getattr(player, "name", None))
+                if attr == attribute and team in ("home", "away"):
+                    return HIGH if team == high_team else LOW
+                return _real(player, attr)
+            module.player_attribute = forced
+            patched.append((module, real))
+    return lambda: [setattr(m, "player_attribute", r) for m, r in patched]
+
+
+def run(n_matches: int, profile: str | None = None, duration_minutes: float = 90.0) -> Collector:
+    clubs = load_clubs(CLUBS_PATH, "Ligue 1")
+    collector = Collector()
+    collector.minutes_per_match = duration_minutes
+    clock = {"now": 0.0, "dt": TICK_S}
+    restore = _hook(collector, clock)
+    try:
+        for i in range(n_matches):
+            # profils : chaque affiche est jouée deux fois, même graine, rôles haut/bas inversés
+            k = i // 2 if profile else i
+            random.seed(AUDIT_SEED + k)
+            clock["now"] = 0.0
+            home, away = clubs[(2 * k) % len(clubs)], clubs[(2 * k + 1) % len(clubs)]
+            high_team = "home" if i % 2 == 0 else "away"
+            team_of = {p.name: "home" for p in pick_best_formation(home).players}
+            team_of.update({p.name: "away" for p in pick_best_formation(away).players})
+            unforce = _force_attribute(profile, high_team, team_of) if profile else (lambda: None)
+
+            def observer(now_s, players, ball, scoring_team):
+                clock["now"] = now_s
+                if profile and not collector.levels:
+                    collector.levels = {p.name: ("haut" if p.team == high_team else "bas") for p in players}
+                collector.on_tick(now_s, players, ball, scoring_team, TICK_S)
+            try:
+                match.simulate_match(home, away, duration_minutes=duration_minutes, tick_seconds=TICK_S, observer=observer)
+            finally:
+                unforce()
+            collector.end_match()
+    finally:
+        restore()
+    return collector
+
+
+def report(c: Collector, detail: bool = False) -> dict:
+    n = max(1, c.matches)
+    k = c.count
+    passes = max(1, k["passes"])
+    minutes = getattr(c, "minutes_per_match", 90.0) * n
+    out: dict[str, object] = {
+        "matchs": c.matches,
+        "passes par minute": k["passes"] / minutes,
+        "passes réussies (part)": k["passes réussies"] / passes,
+        "passes chez l'adversaire (part)": k["passes chez l'adversaire"] / passes,
+        "receveur visé (part)": k["receveur visé"] / passes,
+        "passes longues (part)": k["passes longues"] / passes,
+        "passes longues réussies (part)": k["passes longues réussies"] / max(1, k["passes longues"]),
+        "tirs par équipe": k["tirs"] / (2 * n),
+        "buts par match": k["buts"] / n,
+        "tacles par match": k["tacles"] / n,
+        "pertes de balle par match": k["pertes de balle"] / n,
+        "pertes en transition par match": None,
+        "tirs de contre par match (récupération dans son camp)": k["tirs de contre, récupération propre camp"] / n,
+        "tirs de contre par match (récupération dans le camp adverse)": k["tirs de contre, récupération camp adverse"] / n,
+        "appels par match": k["appels"] / n,
+    }
+    choices = sum(v for key, v in k.items() if key.startswith("choix "))
+    for key, v in sorted(k.items()):
+        if key.startswith("choix "):
+            out[f"{key} (part)"] = v / max(1, choices)
+    recoveries = max(1, k["récupérations"])
+    for key, v in sorted(k.items()):
+        if key.startswith("récupération "):
+            out[f"{key} (part)"] = v / recoveries
+    relost = c.stats.get("pertes en transition (part des récupérations)")
+    out["pertes en transition par match"] = sum(relost.values) / n if relost else 0.0
+    out["km par joueur de champ, par poste"] = {p: round(statistics.fmean(v), 2) for p, v in sorted(c.km.items())}
+    for name, stat in sorted(c.stats.items()):
+        out[name] = statistics.fmean(stat.values) if stat.values else None
+        if detail and stat.by:
+            out[name + " — découpage"] = {f"{a}={b}": round(statistics.fmean(v), 2) for (a, b), v in sorted(stat.by.items())}
+    return out
+
+
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("matches", nargs="?", type=int, default=20, help="avec --profil : nombre pair (affiche jouée deux fois)")
+    parser.add_argument("--profil", default=None)
+    parser.add_argument("--detail", action="store_true")
+    parser.add_argument("--json", default=None)
+    args = parser.parse_args(argv)
+    result = report(run(args.matches, args.profil), args.detail)
+    for key, value in result.items():
+        if isinstance(value, dict):
+            print(f"{key} :")
+            for sub, v in value.items():
+                print(f"    {sub} : {v}")
+        else:
+            print(f"{key} : {round(value, 3) if isinstance(value, float) else value}")
+    if args.json:
+        with open(args.json, "w", encoding="utf-8") as f:
+            json.dump(result, f, ensure_ascii=False, indent=2)
+
+
+if __name__ == "__main__":
+    main()
