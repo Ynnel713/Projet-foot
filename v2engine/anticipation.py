@@ -24,6 +24,18 @@ def _curve(note: float, params: tuple[float, float, float, float]) -> float:
     return success_probability(note, baseline=baseline, amplitude=amplitude, min_prob=low, max_prob=high)
 
 
+# Délai de réaction à un changement de situation (ticket v2-collectif/03, validé le 26/10/2026) : 99 -> 0,4 s,
+# 55 -> 0,7 s, 11 -> 1,0 s. Réf. : 0,7 s, temps de réaction par défaut du modèle de pression Unravel Sports (tracking).
+_REACTION_S = (0.7, 0.3, 0.4, 1.0)  # baseline, amplitude, min, max (inversé : bonne note = délai court)
+MAX_REACTION_S = _REACTION_S[3]
+
+
+def reaction_delay_s(player: PlayerState) -> float:
+    """Temps pour qu'un joueur se rende compte d'un changement de situation de son équipe (perte, récupération)."""
+    _, _, low, high = _REACTION_S
+    return low + high - _curve(player_attribute(player, "Anticipation"), _REACTION_S)
+
+
 def read_pass_probability(anticipation: float) -> float:
     return _curve(anticipation, _READ_PASS)
 

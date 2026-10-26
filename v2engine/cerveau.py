@@ -10,6 +10,7 @@ de match."""
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import partial
 
 from v2engine.anticipation import loose_ball_target, meeting_point
 from v2engine.ball_state import BallState
@@ -39,6 +40,7 @@ class Intention:
     mate: str | None = None  # joueur visé, le cas échéant (porteur pressé, passeur dont on coupe la passe…)
     reason: str = ""  # raison lisible, sans chiffre (stable tant que le rôle dure)
     distance_m: float | None = None  # distance utile à la raison (au ballon, au point d'interception…)
+    situation: str | None = None  # situation de jeu de son équipe telle qu'il la perçoit (ticket v2-collectif/03)
 
     def explain(self) -> str:
         """Raison lisible avec sa distance (formatée à la lecture seulement : le match n'en paie pas le coût)."""
@@ -91,13 +93,14 @@ def interpret(player: PlayerState, ball: BallState, seen: Perception, runs_enabl
 
 
 def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, players: list[PlayerState],
-           minute: float, runs: dict[str, tuple[Vec2, float]] | None) -> Intention:
+           minute: float, runs: dict[str, tuple[Vec2, float]] | None, situation: str | None = None) -> Intention:
     """Action, cible et intensité selon le rôle (règles d'avant le ticket v2-collectif/02, inchangées)."""
+    make = partial(Intention, situation=situation)  # situation perçue, portée par l'intention (ticket 03)
     if role == PORTEUR:
         if ball.receiving:  # pendant sa réception, il avance au pas de contrôle (v2-socle/06)
-            return Intention(role, "contrôler", OPPONENT_GOAL[player.team], RECEPTION_SPEED_FACTOR,
+            return make(role, "contrôler", OPPONENT_GOAL[player.team], RECEPTION_SPEED_FACTOR,
                              reason="temps de réception, il lève la tête")
-        return Intention(role, "conduire", OPPONENT_GOAL[player.team], DRIBBLE_SPEED_FACTOR, reason="conduite vers le but")
+        return make(role, "conduire", OPPONENT_GOAL[player.team], DRIBBLE_SPEED_FACTOR, reason="conduite vers le but")
     if role == APPEL:
         now_s = minute * 60.0
         target, next_s = runs.get(player.name, (None, 0.0))
@@ -105,29 +108,30 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
             opponents = [p for p in players if p.team != player.team]
             target = choose_space(player, opponents, 1.0 if player.team == "home" else -1.0)
             runs[player.name] = (target, now_s + RUN_INTERVAL_S)
-        return Intention(role, "se démarquer", target, mate=seen.holder.name, reason="appel vers un espace libre")
+        return make(role, "se démarquer", target, mate=seen.holder.name, reason="appel vers un espace libre")
     if role == RECEVEUR:
         point = meeting_point(player, ball.position, ball.velocity, BALL_FRICTION_PER_S)
-        return Intention(role, "venir au ballon", point, reason="passe pour lui, il va à sa rencontre")
+        return make(role, "venir au ballon", point, reason="passe pour lui, il va à sa rencontre")
     if role == LECTURE:
-        return Intention(role, "couper la passe", seen.read_point, reason="passe lue, il court l'intercepter",
+        return make(role, "couper la passe", seen.read_point, reason="passe lue, il court l'intercepter",
                          distance_m=player.position.distance_to(seen.read_point))
     if role == REPLACEMENT:
-        return Intention(role, "se replacer", player.home_target, reason="loin du ballon, il rejoint sa place")
+        return make(role, "se replacer", player.home_target, reason="loin du ballon, il rejoint sa place")
     if role == BALLON_LIBRE:
         point = loose_ball_target(player, ball.position, ball.velocity, BALL_FRICTION_PER_S)
-        return Intention(role, "aller au ballon", point, reason="ballon libre, il va le chercher",
+        return make(role, "aller au ballon", point, reason="ballon libre, il va le chercher",
                          distance_m=seen.ball_distance)
     if role == SOUTIEN:
-        return Intention(role, "aller au ballon", ball.position, mate=ball.holder, reason="soutien de son porteur",
+        return make(role, "aller au ballon", ball.position, mate=ball.holder, reason="soutien de son porteur",
                          distance_m=seen.ball_distance)
     why = "presse le porteur adverse" if seen.holder is not None else "va au porteur"
-    return Intention(role, "aller au ballon", ball.position, mate=ball.holder, reason=why, distance_m=seen.ball_distance)
+    return make(role, "aller au ballon", ball.position, mate=ball.holder, reason=why, distance_m=seen.ball_distance)
 
 
 def think(player: PlayerState, ball: BallState, players: list[PlayerState], minute: float,
-          runs: dict[str, tuple[Vec2, float]] | None) -> Intention:
-    """Perception, interprétation, décision : l'intention du joueur à cet instant."""
+          runs: dict[str, tuple[Vec2, float]] | None, situation: str | None = None) -> Intention:
+    """Perception, interprétation, décision : l'intention du joueur à cet instant. `situation` : situation de jeu
+    perçue (ticket v2-collectif/03), portée par l'intention ; elle n'oriente pas encore les rôles (tickets 04+)."""
     seen = perceive(player, ball, players)
     role = interpret(player, ball, seen, runs is not None, players)
-    return decide(player, role, ball, seen, players, minute, runs)
+    return decide(player, role, ball, seen, players, minute, runs, situation)

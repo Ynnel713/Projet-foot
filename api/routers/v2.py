@@ -68,6 +68,9 @@ class IntentionSegmentOut(BaseModel):
 class PlayerIntentionsOut(BaseModel):
     player: str
     segments: list[IntentionSegmentOut]
+    # délai avant de percevoir un changement de situation de son équipe (Anticipation, ticket v2-collectif/03) :
+    # la situation perçue se déduit de celle de l'équipe, sans alourdir les segments
+    reaction_delay_s: float | None = None
 
 
 class DecisionOut(BaseModel):
@@ -80,6 +83,13 @@ class DecisionOut(BaseModel):
     best: bool
 
 
+class SituationOut(BaseModel):
+    """Changement de situation de jeu d'une équipe, valable jusqu'au changement suivant (ticket v2-collectif/03)."""
+    minute: float
+    team: str
+    situation: str
+
+
 class MatchTraceOut(BaseModel):
     home: str
     away: str
@@ -90,6 +100,7 @@ class MatchTraceOut(BaseModel):
     ticks: list[TickOut]
     intentions: list[PlayerIntentionsOut] = []
     decisions: list[DecisionOut] = []
+    situations: list[SituationOut] = []
 
 
 def intention_segments(trace: MatchTrace) -> list[PlayerIntentionsOut]:
@@ -103,7 +114,8 @@ def intention_segments(trace: MatchTrace) -> list[PlayerIntentionsOut]:
             if not seq or (seq[-1].role, seq[-1].action, seq[-1].mate) != (i.role, i.action, i.mate):
                 seq.append(IntentionSegmentOut(minute=tick.minute, role=i.role, action=i.action, mate=i.mate,
                                                reason=i.reason))
-    return [PlayerIntentionsOut(player=name, segments=seq) for name, seq in segments.items()]
+    return [PlayerIntentionsOut(player=name, segments=seq, reaction_delay_s=trace.reaction_delays_s.get(name))
+            for name, seq in segments.items()]
 
 
 def _find_club(name: str):
@@ -142,4 +154,5 @@ def create_match(payload: SimulateV2Request) -> MatchTraceOut:
         intentions=intention_segments(trace),
         decisions=[DecisionOut(minute=d.minute, player=d.player, team=d.team, action=d.action, target=d.target,
                                considered=d.considered, best=d.best) for d in trace.decisions],
+        situations=[SituationOut(minute=s.minute, team=s.team, situation=s.situation) for s in trace.situations],
     )

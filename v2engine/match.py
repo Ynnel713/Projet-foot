@@ -14,7 +14,7 @@ from ligue1sim.clubs import Club
 from ligue1sim.lineup import Lineup, pick_best_formation
 
 from v2engine.attributes import player_attribute
-from v2engine.anticipation import pass_readers
+from v2engine.anticipation import pass_readers, reaction_delay_s
 from v2engine.ball_state import BallState
 from v2engine.duel import resolve_tackle, should_attempt_tackle
 from v2engine.formation import initial_positions
@@ -24,7 +24,8 @@ from v2engine.cerveau import GOAL_CENTER_Y, OPPONENT_GOAL, Intention, think
 from v2engine.decision import DECISION_INTERVAL_S, choose_action
 from v2engine.possession import BALL_FRICTION_PER_S, BALL_STOPPED_MPS, attempt_control, pass_velocity, reception_delay_s
 from v2engine.shooting import attempt_shot
-from v2engine.trace import BallSnapshot, DecisionRecord, MatchTrace, PlayerSnapshot
+from v2engine.situation import SituationTracker
+from v2engine.trace import BallSnapshot, DecisionRecord, MatchTrace, PlayerSnapshot, SituationRecord
 
 # But adverse d'une équipe, par convention de ce moteur (voir `formation.initial_positions`,
 # D-V03 : domicile attaque vers x=PITCH_LENGTH_M, extérieur vers x=0).
@@ -230,11 +231,13 @@ def _step_player(
     players: list[PlayerState] | None = None,
     runs: dict[str, tuple[Vec2, float]] | None = None,
     intentions: dict[str, Intention] | None = None,
+    situations: SituationTracker | None = None,
 ) -> PlayerState:
     """Un tick d'un joueur : son cerveau (`cerveau.think` : perception, interprétation, décision) donne son
     intention, puis l'exécution le déplace vers la cible, à l'intensité voulue (ADR 0001). `runs` : espaces visés
     par les coéquipiers du porteur (Off the Ball) ; `intentions` : si fourni, reçoit l'intention du joueur."""
-    intention = think(player, ball, players or [], minute, runs)
+    perceived = situations.perceived(player, minute * 60.0) if situations is not None else None
+    intention = think(player, ball, players or [], minute, runs, perceived)
     if intentions is not None:
         intentions[player.name] = intention
     return step(player, dt, intention.target, minute, intention.intensity)
@@ -267,10 +270,17 @@ def simulate_match(
 
     runs: dict[str, tuple[Vec2, float]] = {}  # espace visé par chaque joueur sans ballon (Off the Ball)
     intentions: dict[str, Intention] = {}  # intention de chaque joueur au dernier tick (ADR 0001)
+    trace.reaction_delays_s = {p.name: reaction_delay_s(p) for p in players}
+    situations = SituationTracker(delays_s=dict(trace.reaction_delays_s))  # situation de jeu (ticket v2-collectif/03)
+    scoring_team = None
     n_ticks = int(duration_minutes * 60.0 / tick_seconds)
     for i in range(n_ticks):
         minute = i * tick_seconds / 60.0
-        players = [_step_player(p, ball, tick_seconds, minute, players, runs, intentions) for p in players]
+        before = dict(situations.current)
+        for team, situation in situations.update(i * tick_seconds, ball, players, scoring_team).items():
+            if situation != before[team] or i == 0:
+                trace.situations.append(SituationRecord(minute, team, situation))
+        players = [_step_player(p, ball, tick_seconds, minute, players, runs, intentions, situations) for p in players]
         _resolve_player_collisions(players)
         scoring_team = _step_ball(ball, tick_seconds, players, i * tick_seconds, trace.decisions)
         if scoring_team is not None:

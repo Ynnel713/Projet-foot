@@ -158,7 +158,7 @@ Limite connue : un mélange qui passe par des variables intermédiaires n'est pa
 | A5 | Composure réduit la pression sur la passe et le contrôle | Conforme (R3) | — |
 | A6 | Pace dans le test « peut-il couper la passe ? » | Conforme (R5) | — |
 | A7 | Off the Ball choisit le meilleur espace selon la note | Conforme (qualité de l'appel) ; Decisions garde le choix du porteur | — |
-| A8 | Gardien : note à 0,5 × Reflexes + 0,3 × One on Ones + 0,2 × Handling pour tous les tirs, alors que la section D réserve Reflexes aux tirs proches, One on Ones aux face-à-face, et que Handling ne règle pas l'arrêt | Mélange (R2) et écart à la carte | **Dérogation proposée** jusqu'à la phase 9 (gardien complet), à confirmer par le propriétaire |
+| A8 | Gardien : note à 0,5 × Reflexes + 0,3 × One on Ones + 0,2 × Handling pour tous les tirs, alors que la section D réserve Reflexes aux tirs proches, One on Ones aux face-à-face, et que Handling ne règle pas l'arrêt | Mélange (R2) et écart à la carte | **Dérogation** jusqu'à la phase 9 (gardien complet), confirmée par le propriétaire le 26/10/2026 |
 | A9 | Valeur d'une passe pour le porteur : la réussite compte déjà un receveur marqué (adversaire à moins de 2 m) et l'ouverture (`1 - pression`, sur 5 m) le pénalise une seconde fois | Double comptage d'une situation (R1), pas d'un attribut | **Reporté** au ticket collectif 13 (valeur future d'une passe), qui refait cette évaluation |
 
 ### Grille de relecture (à cocher dans chaque ticket, vérifiée par `simulafoot-reviewer`)

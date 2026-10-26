@@ -154,6 +154,11 @@ export default function V2Match() {
             {trace.home} {homeGoals} - {awayGoals} {trace.away}
           </div>
           <div className="text-[11px] text-gray-500 tabular-nums">{Math.floor(tick.minute)}'</div>
+          <div className="text-[11px] text-gray-400">
+            <span className="text-[#4f8ef7]">{situationAt(trace, "home", tick.minute)}</span>
+            {" · "}
+            <span className="text-[#e0b84a]">{situationAt(trace, "away", tick.minute)}</span>
+          </div>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           {SPEED_OPTIONS.map((s) => (
@@ -190,6 +195,19 @@ export default function V2Match() {
   );
 }
 
+// Situation de jeu d'une équipe à `minute` : dernier changement enregistré avant cet instant (ticket v2-collectif/03).
+function situationAt(trace, team, minute) {
+  return (trace.situations || []).filter((s) => s.team === team && s.minute <= minute).at(-1)?.situation || "";
+}
+
+// Situation perçue : celle de son équipe, mais l'ancienne tant que son délai de réaction n'est pas écoulé.
+function perceivedSituation(trace, team, minute, delayS) {
+  const changes = (trace.situations || []).filter((s) => s.team === team && s.minute <= minute);
+  const last = changes.at(-1);
+  if (last && (minute - last.minute) * 60 < delayS && changes.length > 1) return changes.at(-2).situation;
+  return last?.situation || "";
+}
+
 // Intention du joueur sélectionné à l'instant lu : dernier segment commencé avant `tick.minute` (la trace n'envoie
 // un segment qu'au changement de rôle ou d'action), et dernière décision prise s'il a eu le ballon.
 function IntentionPanel({ trace, tick, selected }) {
@@ -197,7 +215,8 @@ function IntentionPanel({ trace, tick, selected }) {
     return <p className="text-center text-xs text-gray-500">Touchez un joueur pour voir ce qu'il cherche à faire.</p>;
   }
   const player = tick.players.find((p) => p.name === selected);
-  const segments = (trace.intentions || []).find((i) => i.player === selected)?.segments || [];
+  const intentions = (trace.intentions || []).find((i) => i.player === selected);
+  const segments = intentions?.segments || [];
   const current = segments.filter((s) => s.minute <= tick.minute).at(-1);
   const decision = (trace.decisions || []).filter((d) => d.player === selected && d.minute <= tick.minute).at(-1);
   const ACTIONS = { pass: "passe", dribble: "conduite", shot: "tir" };
@@ -206,6 +225,11 @@ function IntentionPanel({ trace, tick, selected }) {
       <div className="font-semibold text-white">
         {selected} {player && <span className="text-xs text-gray-400">({player.poste})</span>}
       </div>
+      {player && (
+        <div className="text-xs text-gray-400">
+          Situation perçue : {perceivedSituation(trace, player.team, tick.minute, intentions?.reaction_delay_s || 0)}
+        </div>
+      )}
       {current ? (
         <div>
           <span className="text-accent">{current.role}</span> : {current.action}

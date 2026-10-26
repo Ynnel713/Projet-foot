@@ -46,6 +46,14 @@ class DecisionRecord:
 
 
 @dataclass(frozen=True)
+class SituationRecord:
+    """Changement de situation de jeu d'une équipe (ticket v2-collectif/03)."""
+    minute: float
+    team: str
+    situation: str
+
+
+@dataclass(frozen=True)
 class GoalEvent:
     minute: float
     team: str  # "home" / "away"
@@ -64,6 +72,8 @@ class MatchTrace:
     away_goals: int = 0
     goals: list[GoalEvent] = field(default_factory=list)
     decisions: list[DecisionRecord] = field(default_factory=list)
+    situations: list[SituationRecord] = field(default_factory=list)
+    reaction_delays_s: dict[str, float] = field(default_factory=dict)  # par joueur (Anticipation, ticket v2-collectif/03)
 
     def record(self, minute: float, players: list[PlayerSnapshot], ball: BallSnapshot) -> None:
         self.ticks.append(Tick(minute=minute, players=tuple(players), ball=ball))

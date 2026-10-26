@@ -22,6 +22,6 @@
 
 - Règle (R1 à R5, plafond d'écart), table des interactions, audit du moteur et grille de relecture : section « Interactions et règle anti double comptage » de `docs/CARTE_ATTRIBUTS_V2.md`.
 - Correction A1 : la réussite du tacle ne dépend plus que de Tackling.
-- Dérogations : A2 (Composure dans le tir, jusqu'au ticket du tir) et A3 (Strength et Balance du porteur, jusqu'à l'étape duels), validées ; A8 (note du gardien, jusqu'à la phase 9) proposée, à confirmer. A9 (pression du receveur comptée deux fois dans la valeur d'une passe) reportée au ticket 13.
+- Dérogations : A2 (Composure dans le tir, jusqu'au ticket du tir) et A3 (Strength et Balance du porteur, jusqu'à l'étape duels), validées ; A8 (note du gardien, jusqu'à la phase 9) confirmée le 26/10/2026. A9 (pression du receveur comptée deux fois dans la valeur d'une passe) reportée au ticket 13.
 - Mesure sur 20 matchs avant et après A1 : tacles 38,4 → 39,45 ; buts 3,65 → 3,45 ; tirs par équipe 11,35 → 11,05 ; autres indicateurs à moins de 1 %.
 - Garde automatique : `tests/test_v2engine_rayon_attributs.py`.

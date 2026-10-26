@@ -42,7 +42,7 @@ PHYSICAL_ALLOWED = {"Pace": {"movement", "anticipation"}, "Acceleration": {"move
 TOLERATED_MIXES = {
     frozenset({"Finishing", "Composure"}),  # A2 : jusqu'au ticket du tir
     frozenset({"Strength", "Balance"}),  # A3 : jusqu'à l'étape duels
-    frozenset({"Reflexes", "One on Ones", "Handling"}),  # A8 : note du gardien, jusqu'à la phase 9
+    frozenset({"Reflexes", "One on Ones", "Handling"}),  # A8 : note du gardien, jusqu'à la phase 9 (confirmée le 26/10/2026)
 }
 
 

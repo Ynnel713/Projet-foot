@@ -135,6 +135,10 @@ def report(c: Collector, detail: bool = False) -> dict:
     for key, v in sorted(k.items()):
         if key.startswith("choix "):
             out[f"{key} (part)"] = v / max(1, choices)
+    in_situation = sum(v for key, v in k.items() if key.startswith("temps en "))
+    for key, v in sorted(k.items()):
+        if key.startswith("temps en "):
+            out[f"part du {key} (deux équipes)"] = v / max(1e-9, in_situation)
     recoveries = max(1, k["récupérations"])
     for key, v in sorted(k.items()):
         if key.startswith("récupération "):

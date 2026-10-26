@@ -6,7 +6,7 @@ Référence du ticket `.scratch/v2-collectif/issues/01-banc-de-mesure-tactique.m
 
 **Sources.** Les valeurs réelles des indicateurs tactiques viennent de la recherche documentaire fournie par le propriétaire le 26/10/2026. Les liens sont repris tels quels ; les chiffres sont à relire dans le texte intégral avant de servir de critère d'acceptation.
 
-**Découpages communs.** Zone du ballon : tiers défensif, tiers médian, tiers offensif (du point de vue de l'équipe en possession). Score : mène, égalité, menée. Minute : tranches de 15 min. Phase de jeu : après le ticket 03.
+**Découpages communs.** Zone du ballon : tiers défensif, tiers médian, tiers offensif (du point de vue de l'équipe en possession). Score : mène, égalité, menée. Minute : tranches de 15 min. Situation de jeu (ticket v2-collectif/03) : possession installée, défense placée, transition offensive, transition défensive, dernier tiers ; pour les indicateurs autour du ballon, c'est la situation de l'équipe qui défend. La part du temps passée dans chaque situation est aussi rapportée.
 
 ## 1. Indicateurs classiques (cibles déjà validées)
 
@@ -112,3 +112,5 @@ Ils définissent la mesure et ne changent pas le jeu (`scripts/v2_indicators.py`
 **Profils (20 matchs, 10 affiches jouées deux fois, rôles inversés).** Work Rate 99 contre 11 : chiffres identiques, car le moteur à `07f33b3` n'utilise pas encore Work Rate. Cela confirme que le plan d'expérience n'introduit pas d'écart parasite. Off the Ball 99 contre 11 : 271 contre 227 appels par joueur, 18,0 contre 11,1 km de course intense, 26,5 contre 19,5 km.
 
 **Lecture.** Les écarts aux valeurs réelles reflètent les défauts connus du moteur actuel (tout le monde sprinte, bloc figé, personne ne couvre) que le chantier « intelligence collective » doit corriger : ce ne sont pas des cibles à régler une par une.
+
+**Situations de jeu (ticket v2-collectif/03, 20 matchs, moteur à `4205ab9`).** Part du temps, deux équipes confondues : possession installée 29 %, défense placée 30 %, transition défensive 20 %, transition offensive 19 %, dernier tiers 2 %. Valeur réelle comparable : non trouvée ; le dernier tiers, très bas, est à surveiller quand le soutien du porteur et les appels (tickets 06 et 16) changeront la progression.

@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
 from v2engine.movement import PlayerState
 from v2engine.possession import pass_success_probability
+from v2engine.situation import SituationTracker
 
 KMH = 1.0 / 3.6
 # Seuils de mesure (docs/INDICATEURS_V2.md, section « Seuils de mesure ») -- ils ne changent pas le jeu.
@@ -202,6 +203,7 @@ class Collector:
 
     def _reset_match(self) -> None:
         self.goals: Counter = Counter()
+        self.situations = SituationTracker()  # même lecture que le moteur (ticket v2-collectif/03)
         self.dist: Counter = Counter()
         self.hi_by: Counter = Counter()  # course au-dessus de 19,8 km/h par joueur (m)
         self.levels: dict[str, str] = {}  # joueur -> niveau du profil testé ("haut"/"bas"), voir measure_v2
@@ -255,6 +257,9 @@ class Collector:
             self.goals[scoring_team] += 1
             self.count["buts"] += 1
             self._close_possession(now_s)
+        current = self.situations.update(now_s, ball, players, scoring_team)
+        for team, situation in current.items():
+            self.count["temps en " + situation] += dt
         self._possession(now_s, ball, by_name)
         if self.team is not None:
             self._runs(now_s, players, ball)
@@ -403,7 +408,8 @@ class Collector:
                 continue
             phase = "avec ballon" if team == self.team else "sans ballon"
             seen = zone(self.team, ball.position.x) if self.team else "sans possession"  # vue de l'équipe en possession
-            keys = {"zone": seen, "score": _score_state(self.goals, team), "minute": sl}
+            keys = {"zone": seen, "score": _score_state(self.goals, team), "minute": sl,
+                    "situation": self.situations.current[team]}
             length, width = length_width(pts)
             self.stats[f"longueur {phase} (m)"].add(length, **keys)
             if phase == "sans ballon":
@@ -419,7 +425,8 @@ class Collector:
         if self.team is None:
             return
         att, dfd = self.team, ("away" if self.team == "home" else "home")
-        keys = {"zone": zone(att, ball.position.x), "score": _score_state(self.goals, att), "minute": sl}
+        keys = {"zone": zone(att, ball.position.x), "score": _score_state(self.goals, att), "minute": sl,
+                "situation": self.situations.current[dfd]}  # vue de l'équipe qui défend : ces indicateurs la décrivent
         defenders, attackers = outfield(players, dfd), outfield(players, att)
         self.stats["compacité autour du ballon (m)"].add(local_compactness(ball.position, defenders), **keys)
         self.stats["supériorité locale des défenseurs (nombre)"].add(local_superiority(ball.position, defenders, attackers), **keys)
