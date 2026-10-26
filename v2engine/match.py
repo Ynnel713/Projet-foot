@@ -14,22 +14,21 @@ from ligue1sim.clubs import Club
 from ligue1sim.lineup import Lineup, pick_best_formation
 
 from v2engine.attributes import player_attribute
-from v2engine.anticipation import loose_ball_target, meeting_point, pass_readers
+from v2engine.anticipation import pass_readers
 from v2engine.ball_state import BallState
 from v2engine.duel import resolve_tackle, should_attempt_tackle
 from v2engine.formation import initial_positions
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch
 from v2engine.movement import PlayerState, step
-from v2engine.off_ball import RUN_INTERVAL_S, choose_space
-from v2engine.decision import DECISION_INTERVAL_S, DRIBBLE_SPEED_FACTOR, choose_action
-from v2engine.possession import BALL_FRICTION_PER_S, BALL_STOPPED_MPS, RECEPTION_SPEED_FACTOR, attempt_control, pass_velocity, reception_delay_s
+from v2engine.cerveau import GOAL_CENTER_Y, OPPONENT_GOAL, Intention, think
+from v2engine.decision import DECISION_INTERVAL_S, choose_action
+from v2engine.possession import BALL_FRICTION_PER_S, BALL_STOPPED_MPS, attempt_control, pass_velocity, reception_delay_s
 from v2engine.shooting import attempt_shot
-from v2engine.trace import BallSnapshot, MatchTrace, PlayerSnapshot
+from v2engine.trace import BallSnapshot, DecisionRecord, MatchTrace, PlayerSnapshot
 
-GOAL_CENTER_Y = PITCH_WIDTH_M / 2.0
 # But adverse d'une équipe, par convention de ce moteur (voir `formation.initial_positions`,
 # D-V03 : domicile attaque vers x=PITCH_LENGTH_M, extérieur vers x=0).
-_OPPONENT_GOAL = {"home": Vec2(PITCH_LENGTH_M, GOAL_CENTER_Y), "away": Vec2(0.0, GOAL_CENTER_Y)}
+_OPPONENT_GOAL = OPPONENT_GOAL
 
 BALL_RADIUS_M = 0.11
 PLAYER_RADIUS_M = 0.3
@@ -45,9 +44,6 @@ TACKLE_RADIUS_M = 1.5
 # FAILED_TACKLE_RECOVERY_S (temps pour se relever et se replacer). Durée réelle non trouvée : ordre de grandeur.
 CONFRONTATION_END_M = 3.0
 FAILED_TACKLE_RECOVERY_S = 1.5
-# Distance en dessous de laquelle un joueur va vers le ballon plutôt que vers sa position de
-# formation -- IA placeholder (D-V08), pas une vraie prise de décision.
-CHASE_RADIUS_M = 15.0
 # ponytail : décroissance exponentielle simple (par seconde), pas un vrai coefficient de
 # frottement calibré -- à affiner si le rendu le justifie.
 
@@ -108,7 +104,8 @@ def _goalkeeper(team: str, players: list[PlayerState]) -> PlayerState | None:
     return next((p for p in players if p.team == team and p.poste == "GK"), None)
 
 
-def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: float = 0.0) -> str | None:
+def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: float = 0.0,
+               decisions: list[DecisionRecord] | None = None) -> str | None:
     """Avance le ballon d'un tick (mutation en place) : si un joueur le contrôle déjà, un
     adversaire à portée directe peut d'abord tenter un tacle (Phase 3, Tackling/Strength/
     Balance/Aggression ; au plus un par confrontation, v2-socle/03) ; sinon, après son temps de réception (`possession.reception_delay_s`, v2-socle/06)
@@ -159,6 +156,11 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
         goal = _OPPONENT_GOAL[holder.team]
         keeper = _goalkeeper(opponent_team, players)
         action = choose_action(holder, players, goal, keeper)
+        if decisions is not None:
+            target = getattr(action, "target", None)
+            decisions.append(DecisionRecord(now_s / 60.0, holder.name, holder.team, action.kind,
+                                            target.name if target is not None else None,
+                                            getattr(action, "considered", 1), getattr(action, "best", True)))
         if action.kind == "shot":
             scored = attempt_shot(holder, keeper, holder.position.distance_to(goal), GOAL_CENTER_Y)
             if scored:
@@ -227,39 +229,15 @@ def _step_player(
     minute: float,
     players: list[PlayerState] | None = None,
     runs: dict[str, tuple[Vec2, float]] | None = None,
+    intentions: dict[str, Intention] | None = None,
 ) -> PlayerState:
-    """Le porteur avance vers le but adverse : au pas de contrôle pendant sa réception (`RECEPTION_SPEED_FACTOR`,
-    v2-socle/06), puis en conduite, un peu moins vite qu'en course (`DRIBBLE_SPEED_FACTOR`) ;
-    ses coéquipiers (hors gardien) cherchent un espace libre (Off the Ball, `off_ball.choose_space`,
-    réévalué toutes les `RUN_INTERVAL_S`, mémorisé dans `runs`) ; le receveur visé d'une passe court au-devant
-    du ballon (`anticipation.meeting_point`, v2-socle/01) ; un adversaire qui a lu la passe court la
-    couper (Anticipation, `ball.readers`) ; les autres vont au ballon s'il est proche -- ballon libre : vers
-    son point d'arrêt selon Anticipation --, sinon à leur position de formation (IA placeholder, D-V08)."""
-    if player.name == ball.holder:
-        # pendant sa réception, il avance au pas de contrôle ; ensuite, en conduite (v2-socle/06)
-        speed = RECEPTION_SPEED_FACTOR if ball.receiving else DRIBBLE_SPEED_FACTOR
-        return step(player, dt, _OPPONENT_GOAL[player.team], minute, speed)
-    holder = next((p for p in players or [] if p.name == ball.holder), None)
-    if runs is not None and holder is not None and holder.team == player.team and player.poste != "GK":
-        now_s = minute * 60.0
-        target, next_s = runs.get(player.name, (None, 0.0))
-        if target is None or now_s >= next_s:
-            opponents = [p for p in players if p.team != player.team]
-            target = choose_space(player, opponents, 1.0 if player.team == "home" else -1.0)
-            runs[player.name] = (target, now_s + RUN_INTERVAL_S)
-        return step(player, dt, target, minute)
-    if ball.holder is None and player.name == ball.receiver:  # vient au-devant de la passe (v2-socle/01)
-        return step(player, dt, meeting_point(player, ball.position, ball.velocity, BALL_FRICTION_PER_S), minute)
-    if ball.holder is None and player.name in ball.readers:
-        return step(player, dt, ball.readers[player.name], minute)  # a lu la passe : court la couper
-    nearest_of_team = ball.holder is None and player is min(
-        (p for p in players or [player] if p.team == player.team), key=lambda p: p.position.distance_to(ball.position)
-    )  # sur un ballon libre, le plus proche de chaque équipe y va toujours, même au-delà de CHASE_RADIUS_M
-    if ball.position.distance_to(player.position) >= CHASE_RADIUS_M and not nearest_of_team:
-        return step(player, dt, player.home_target, minute)
-    if ball.holder is None:  # ballon libre : vise où il va s'arrêter, selon Anticipation
-        return step(player, dt, loose_ball_target(player, ball.position, ball.velocity, BALL_FRICTION_PER_S), minute)
-    return step(player, dt, ball.position, minute)
+    """Un tick d'un joueur : son cerveau (`cerveau.think` : perception, interprétation, décision) donne son
+    intention, puis l'exécution le déplace vers la cible, à l'intensité voulue (ADR 0001). `runs` : espaces visés
+    par les coéquipiers du porteur (Off the Ball) ; `intentions` : si fourni, reçoit l'intention du joueur."""
+    intention = think(player, ball, players or [], minute, runs)
+    if intentions is not None:
+        intentions[player.name] = intention
+    return step(player, dt, intention.target, minute, intention.intensity)
 
 
 def simulate_match(
@@ -288,12 +266,13 @@ def simulate_match(
     trace = MatchTrace(home=home_club.name, away=away_club.name, tick_seconds=tick_seconds * record_every)
 
     runs: dict[str, tuple[Vec2, float]] = {}  # espace visé par chaque joueur sans ballon (Off the Ball)
+    intentions: dict[str, Intention] = {}  # intention de chaque joueur au dernier tick (ADR 0001)
     n_ticks = int(duration_minutes * 60.0 / tick_seconds)
     for i in range(n_ticks):
         minute = i * tick_seconds / 60.0
-        players = [_step_player(p, ball, tick_seconds, minute, players, runs) for p in players]
+        players = [_step_player(p, ball, tick_seconds, minute, players, runs, intentions) for p in players]
         _resolve_player_collisions(players)
-        scoring_team = _step_ball(ball, tick_seconds, players, i * tick_seconds)
+        scoring_team = _step_ball(ball, tick_seconds, players, i * tick_seconds, trace.decisions)
         if scoring_team is not None:
             trace.record_goal(scoring_team, minute)
         if observer is not None:
@@ -302,7 +281,8 @@ def simulate_match(
         if i % record_every == 0:
             trace.record(
                 minute,
-                [PlayerSnapshot(name=p.name, team=p.team, poste=p.poste, position=p.position) for p in players],
+                [PlayerSnapshot(name=p.name, team=p.team, poste=p.poste, position=p.position, intention=intentions.get(p.name))
+                 for p in players],
                 BallSnapshot(position=ball.position),
             )
 

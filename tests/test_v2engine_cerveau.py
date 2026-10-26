@@ -1,0 +1,135 @@
+"""Tests du cerveau du joueur V2 (ADR 0001, ticket v2-collectif/02) : rôles, intentions tracées, journal des
+décisions, et séparation voir / choisir / réussir."""
+
+from __future__ import annotations
+
+import random
+
+from v2engine import cerveau
+from v2engine.anticipation import pass_readers
+from v2engine.ball_state import BallState
+from v2engine.decision import choose_action
+from v2engine.geometry import Vec2
+from v2engine.movement import PlayerState
+from v2engine.possession import pass_velocity
+from v2engine.trace import DecisionRecord, MatchTrace, PlayerSnapshot
+
+
+def _p(name: str, team: str = "home", x: float = 50.0, y: float = 34.0, poste: str = "MC",
+       attributes: dict[str, int] | None = None) -> PlayerState:
+    return PlayerState(name=name, team=team, poste=poste, position=Vec2(x, y), velocity=Vec2(0.0, 0.0),
+                       pace=60, acceleration=60, stamina=60, home_target=Vec2(x, y), attributes=attributes)
+
+
+def _ball(x: float = 50.0, y: float = 34.0, **kw) -> BallState:
+    return BallState(position=Vec2(x, y), velocity=kw.pop("velocity", Vec2(0.0, 0.0)), **kw)
+
+
+# --- Rôles et intentions ------------------------------------------------------------------------------------------
+def test_holder_controls_then_drives() -> None:
+    holder = _p("H")
+    receiving = cerveau.think(holder, _ball(holder="H", receiving=True), [holder], 1.0, {})
+    driving = cerveau.think(holder, _ball(holder="H", receiving=False), [holder], 1.0, {})
+    assert (receiving.role, receiving.action) == (cerveau.PORTEUR, "contrôler")
+    assert (driving.role, driving.action) == (cerveau.PORTEUR, "conduire")
+    assert receiving.intensity < driving.intensity
+
+
+def test_teammate_of_the_holder_makes_a_run_and_remembers_it() -> None:
+    holder, mate, rival = _p("H"), _p("M", x=60), _p("R", team="away", x=70)
+    runs: dict = {}
+    intention = cerveau.think(mate, _ball(holder="H"), [holder, mate, rival], 1.0, runs)
+    assert (intention.role, intention.mate) == (cerveau.APPEL, "H") and runs["M"][0] == intention.target
+
+
+def test_receiver_reader_loose_ball_pressure_and_replacement_roles() -> None:
+    receiver, reader, far = _p("R", x=60), _p("X", team="away", x=55), _p("F", team="away", x=10)
+    passer = _p("P", x=45)
+    in_flight = _ball(52, 34, velocity=Vec2(5.0, 0.0), receiver="R", readers={"X": Vec2(56, 34)})
+    players = [receiver, reader, far, passer]
+    assert cerveau.think(receiver, in_flight, players, 1.0, {}).role == cerveau.RECEVEUR
+    lecture = cerveau.think(reader, in_flight, players, 1.0, {})
+    assert lecture.role == cerveau.LECTURE and lecture.explain() == "passe lue, il court l'intercepter (1 m)"
+    near_mate = _p("N", team="away", x=50)
+    assert cerveau.think(far, in_flight, players + [near_mate], 1.0, {}).role == cerveau.REPLACEMENT
+    loose = _ball(52, 34)
+    assert cerveau.think(passer, loose, players, 1.0, {}).role == cerveau.BALLON_LIBRE
+    held = _ball(60, 34, holder="R")
+    pressing = cerveau.think(reader, held, players, 1.0, None)
+    assert (pressing.role, pressing.mate) == (cerveau.PRESSEUR, "R")
+
+
+def test_keeper_near_his_own_holder_supports_him_instead_of_pressing() -> None:
+    holder, keeper = _p("H", x=12), _p("G", x=5, poste="GK")
+    support = cerveau.think(keeper, _ball(12, 34, holder="H"), [holder, keeper], 1.0, {})
+    assert (support.role, support.mate, support.reason) == (cerveau.SOUTIEN, "H", "soutien de son porteur")
+
+
+def test_every_player_has_a_complete_intention_in_the_trace() -> None:
+    from ligue1sim.clubs import load_clubs
+    from ligue1sim.season import CLUBS_PATH
+    from v2engine.match import simulate_match
+    clubs = load_clubs(CLUBS_PATH, "Ligue 1")
+    random.seed(20260923)
+    trace = simulate_match(clubs[0], clubs[1], duration_minutes=1.0)
+    for tick in trace.ticks:
+        for p in tick.players:
+            i = p.intention
+            assert i is not None and i.role and i.action and i.target is not None and 0.0 < i.intensity <= 1.0
+            assert i.explain()
+    assert trace.decisions and all(isinstance(d, DecisionRecord) for d in trace.decisions)
+    assert all(d.considered >= 1 for d in trace.decisions)
+
+
+# --- Voir, choisir, réussir : trois tirages distincts --------------------------------------------------------------
+def test_perception_alone_decides_whether_the_pass_is_read(monkeypatch) -> None:
+    reader = _p("X", team="away", x=55, y=36)
+    start, aim = Vec2(45, 34), Vec2(65, 34)
+    monkeypatch.setattr("v2engine.anticipation.random.random", lambda: 0.0)
+    assert "X" in pass_readers(start, Vec2(12.0, 0.0), aim, [reader])
+    monkeypatch.setattr("v2engine.anticipation.random.random", lambda: 0.999)
+    assert "X" not in pass_readers(start, Vec2(12.0, 0.0), aim, [reader])
+
+
+def test_decision_alone_decides_whether_the_best_option_is_taken(monkeypatch) -> None:
+    holder, mate = _p("H", x=30), _p("M", x=33, y=40)  # pas de passe décisive : seul le tirage de Decisions joue
+    players = [holder, mate, _p("D", team="away", x=31)]
+    goal = Vec2(105.0, 34.0)
+    draws: list[float] = []
+
+    def forced(value: float):
+        return lambda: draws.append(value) or value
+    monkeypatch.setattr("v2engine.decision.random.random", forced(0.0))
+    best = choose_action(holder, players, goal, None)
+    monkeypatch.setattr("v2engine.decision.random.random", forced(0.999))
+    monkeypatch.setattr("v2engine.decision.random.choice", lambda options: options[0])
+    other = choose_action(holder, players, goal, None)
+    assert draws == [0.0, 0.999]  # un seul tirage par décision : celui de Decisions (aucun tirage de Vision)
+    assert best.best and not other.best and best.considered == other.considered and best.kind != other.kind
+
+
+def test_execution_alone_decides_the_quality_of_the_pass(monkeypatch) -> None:
+    passer, target = _p("P", x=40, attributes={"Passing": 60}), _p("T", x=60)
+    monkeypatch.setattr("v2engine.possession.random.random", lambda: 0.0)  # passe précise
+    monkeypatch.setattr("v2engine.possession.random.uniform", lambda a, b: a)
+    slow = pass_velocity(passer, target, [])
+    monkeypatch.setattr("v2engine.possession.random.uniform", lambda a, b: b)
+    fast = pass_velocity(passer, target, [])
+    assert fast.length() > slow.length()  # même intention, même choix : seul le dosage (exécution) change
+
+
+# --- Relecture : API ----------------------------------------------------------------------------------------------
+def test_api_sends_intentions_only_when_role_or_action_changes() -> None:
+    from api.routers.v2 import intention_segments
+    trace = MatchTrace(home="A", away="B", tick_seconds=1.0)
+    go = cerveau.Intention(cerveau.BALLON_LIBRE, "aller au ballon", Vec2(0, 0), reason="ballon libre", distance_m=4.2)
+    nearer = cerveau.Intention(cerveau.BALLON_LIBRE, "aller au ballon", Vec2(0, 0), reason="ballon libre", distance_m=1.0)
+    press_a = cerveau.Intention(cerveau.PRESSEUR, "aller au ballon", Vec2(0, 0), mate="A", reason="presse le porteur adverse")
+    press_b = cerveau.Intention(cerveau.PRESSEUR, "aller au ballon", Vec2(0, 0), mate="B", reason="presse le porteur adverse")
+    for minute, intention in ((0.0, go), (0.1, nearer), (0.2, press_a), (0.3, press_b)):
+        trace.record(minute, [PlayerSnapshot("J", "home", "MC", Vec2(0, 0), intention)], None)
+    [player] = intention_segments(trace)
+    assert [(s.minute, s.role, s.mate, s.reason) for s in player.segments] == [
+        (0.0, cerveau.BALLON_LIBRE, None, "ballon libre"),  # la distance change, pas le segment
+        (0.2, cerveau.PRESSEUR, "A", "presse le porteur adverse"),
+        (0.3, cerveau.PRESSEUR, "B", "presse le porteur adverse")]  # nouveau porteur pressé : nouveau segment

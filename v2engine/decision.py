@@ -8,7 +8,7 @@ résolue par `shooting.py`/`possession.py`/`duel.py`."""
 from __future__ import annotations
 
 import random
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from v2engine.attributes import player_attribute, success_probability
 from v2engine.geometry import Vec2
@@ -50,6 +50,8 @@ class Action:
     kind: str  # "shot" | "pass" | "dribble"
     value: float
     target: PlayerState | None = None  # coéquipier visé, pour une passe
+    considered: int = 1  # options envisagées à cette décision (journal des décisions, ADR 0001)
+    best: bool = True  # meilleure option prise (Decisions)
 
 
 def vision_range_m(vision: float) -> float:
@@ -118,5 +120,5 @@ def choose_action(holder: PlayerState, players: list[PlayerState], goal: Vec2, k
     hasard -- jamais binaire, même à 99."""
     options = sorted(evaluate_options(holder, players, goal, keeper), key=lambda a: a.value, reverse=True)
     if len(options) == 1 or random.random() < best_choice_probability(player_attribute(holder, "Decisions")):
-        return options[0]
-    return random.choice(options[1:])
+        return replace(options[0], considered=len(options), best=True)
+    return replace(random.choice(options[1:]), considered=len(options), best=False)

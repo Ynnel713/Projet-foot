@@ -13,6 +13,7 @@ from ligue1sim.clubs import load_all_clubs
 from ligue1sim.season import CLUBS_PATH
 
 from v2engine.match import simulate_match
+from v2engine.trace import MatchTrace
 
 router = APIRouter(prefix="/v2", tags=["v2"])
 
@@ -53,6 +54,32 @@ class GoalEventOut(BaseModel):
     team: str
 
 
+class IntentionSegmentOut(BaseModel):
+    """Intention d'un joueur à partir de `minute`, jusqu'au segment suivant (ADR 0001). Un segment ne commence
+    que quand le rôle, l'action ou le joueur visé change, pour garder la réponse légère ; la raison n'a donc pas
+    de chiffre (la distance varie à chaque instant)."""
+    minute: float
+    role: str
+    action: str
+    mate: str | None
+    reason: str
+
+
+class PlayerIntentionsOut(BaseModel):
+    player: str
+    segments: list[IntentionSegmentOut]
+
+
+class DecisionOut(BaseModel):
+    minute: float
+    player: str
+    team: str
+    action: str
+    target: str | None
+    considered: int
+    best: bool
+
+
 class MatchTraceOut(BaseModel):
     home: str
     away: str
@@ -61,6 +88,22 @@ class MatchTraceOut(BaseModel):
     away_goals: int
     goals: list[GoalEventOut]
     ticks: list[TickOut]
+    intentions: list[PlayerIntentionsOut] = []
+    decisions: list[DecisionOut] = []
+
+
+def intention_segments(trace: MatchTrace) -> list[PlayerIntentionsOut]:
+    segments: dict[str, list[IntentionSegmentOut]] = {}
+    for tick in trace.ticks:
+        for p in tick.players:
+            if p.intention is None:
+                continue
+            seq = segments.setdefault(p.name, [])
+            i = p.intention
+            if not seq or (seq[-1].role, seq[-1].action, seq[-1].mate) != (i.role, i.action, i.mate):
+                seq.append(IntentionSegmentOut(minute=tick.minute, role=i.role, action=i.action, mate=i.mate,
+                                               reason=i.reason))
+    return [PlayerIntentionsOut(player=name, segments=seq) for name, seq in segments.items()]
 
 
 def _find_club(name: str):
@@ -96,4 +139,7 @@ def create_match(payload: SimulateV2Request) -> MatchTraceOut:
             )
             for tick in trace.ticks
         ],
+        intentions=intention_segments(trace),
+        decisions=[DecisionOut(minute=d.minute, player=d.player, team=d.team, action=d.action, target=d.target,
+                               considered=d.considered, best=d.best) for d in trace.decisions],
     )

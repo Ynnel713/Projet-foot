@@ -1,0 +1,14 @@
+# Glossaire Simulafoot
+
+Termes du domaine, tels qu'employés dans le code, les tickets et la documentation.
+
+## Moteur V2 — cerveau du joueur (ADR 0001)
+
+- **Perception** : ce qu'un joueur détecte à un instant (porteur, ballon, trajectoire, passe lue, coéquipiers vus). Attributs : Vision, Anticipation, Concentration.
+- **Interprétation** : lecture de la situation qui donne au joueur son **rôle** à cet instant.
+- **Rôle** : la fonction d'un joueur à un instant : porteur, appel, soutien, receveur visé, lecture de passe, ballon libre, presseur, replacement. Un rôle n'est pas un poste (le poste est fixe, le rôle change à chaque instant).
+- **Décision** : le choix de l'action, de la cible et de l'intensité. Attributs : Decisions, puis les tendances (Flair, Teamwork…).
+- **Exécution** : la réalisation du geste ou du déplacement, avec sa qualité. Attributs techniques et physiques.
+- **Intention** : la sortie du cerveau à chaque tick : rôle, action, cible, intensité, raison. Enregistrée dans la trace.
+- **Intensité** : part de la vitesse maximale du joueur utilisée pour un déplacement (0 à 1).
+- **Journal des décisions** : liste des décisions du porteur (instant, action, cible, options envisagées, meilleure option prise ou non). Les « options envisagées » sont les types d'action possibles (conduire, tirer, une passe vers le meilleur coéquipier vu), au plus trois.

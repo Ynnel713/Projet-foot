@@ -41,6 +41,7 @@ export default function V2Match() {
   const [seconds, setSeconds] = useState(0); // temps de match lu (s)
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(DEFAULT_SPEED);
+  const [selected, setSelected] = useState(null); // joueur dont on lit l'intention (ADR 0001)
 
   useEffect(() => {
     getPersoClubs()
@@ -83,6 +84,7 @@ export default function V2Match() {
     try {
       const result = await createV2Match({ home, away });
       setTrace(result);
+      setSelected(null); // le joueur sélectionné n'est peut-être pas de ce match
       setSeconds(0);
       setPlaying(true);
     } catch {
@@ -174,13 +176,50 @@ export default function V2Match() {
       </div>
 
       <div className="flex-1 min-h-0 flex items-center justify-center">
-        <V2Pitch tick={tick} />
+        <V2Pitch tick={tick} selected={selected} onSelect={setSelected} />
       </div>
+
+      <IntentionPanel trace={trace} tick={tick} selected={selected} />
 
       {finished && (
         <p className="text-center text-sm text-gold font-semibold">
           Match terminé : {trace.home} {homeGoals} - {awayGoals} {trace.away}
         </p>
+      )}
+    </div>
+  );
+}
+
+// Intention du joueur sélectionné à l'instant lu : dernier segment commencé avant `tick.minute` (la trace n'envoie
+// un segment qu'au changement de rôle ou d'action), et dernière décision prise s'il a eu le ballon.
+function IntentionPanel({ trace, tick, selected }) {
+  if (!selected) {
+    return <p className="text-center text-xs text-gray-500">Touchez un joueur pour voir ce qu'il cherche à faire.</p>;
+  }
+  const player = tick.players.find((p) => p.name === selected);
+  const segments = (trace.intentions || []).find((i) => i.player === selected)?.segments || [];
+  const current = segments.filter((s) => s.minute <= tick.minute).at(-1);
+  const decision = (trace.decisions || []).filter((d) => d.player === selected && d.minute <= tick.minute).at(-1);
+  const ACTIONS = { pass: "passe", dribble: "conduite", shot: "tir" };
+  return (
+    <div className="rounded-lg bg-surface px-3 py-2 text-sm text-gray-200">
+      <div className="font-semibold text-white">
+        {selected} {player && <span className="text-xs text-gray-400">({player.poste})</span>}
+      </div>
+      {current ? (
+        <div>
+          <span className="text-accent">{current.role}</span> : {current.action}
+          {current.mate ? ` (${current.mate})` : ""} — {current.reason}
+        </div>
+      ) : (
+        <div className="text-gray-500">Pas encore d'intention enregistrée.</div>
+      )}
+      {decision && (
+        <div className="text-xs text-gray-400">
+          Dernière décision ({Math.floor(decision.minute)}') : {ACTIONS[decision.action] || decision.action}
+          {decision.target ? ` vers ${decision.target}` : ""}, {decision.considered} option(s) envisagée(s),{" "}
+          {decision.best ? "la meilleure" : "pas la meilleure"}
+        </div>
       )}
     </div>
   );
@@ -249,7 +288,7 @@ function GoalEnd({ flip }) {
   );
 }
 
-function V2Pitch({ tick }) {
+function V2Pitch({ tick, selected, onSelect }) {
   const pad = MARGIN + TRACK;
   const stripe = L / STRIPES;
   return (
@@ -292,8 +331,10 @@ function V2Pitch({ tick }) {
           cy={p.y}
           r={1.1}
           fill={p.team === "home" ? "#4f8ef7" : "#e0b84a"}
-          stroke="rgba(0,0,0,0.4)"
-          strokeWidth={0.1}
+          stroke={p.name === selected ? "white" : "rgba(0,0,0,0.4)"}
+          strokeWidth={p.name === selected ? 0.4 : 0.1}
+          onClick={() => onSelect(p.name === selected ? null : p.name)}
+          style={{ cursor: "pointer" }}
         />
       ))}
       <circle cx={tick.ball.x} cy={tick.ball.y} r={0.4} fill="white" stroke="black" strokeWidth={0.1} />

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from v2engine.cerveau import Intention
 from v2engine.geometry import Vec2
 
 
@@ -17,6 +18,7 @@ class PlayerSnapshot:
     team: str  # "home" / "away"
     poste: str
     position: Vec2
+    intention: Intention | None = None  # ce que le joueur cherche à faire à cet instant (ADR 0001)
 
 
 @dataclass(frozen=True)
@@ -29,6 +31,18 @@ class Tick:
     minute: float  # minute de match simulée
     players: tuple[PlayerSnapshot, ...]
     ball: BallSnapshot
+
+
+@dataclass(frozen=True)
+class DecisionRecord:
+    """Une décision du porteur (journal des décisions, ADR 0001)."""
+    minute: float
+    player: str
+    team: str
+    action: str  # "shot" | "pass" | "dribble"
+    target: str | None  # coéquipier visé, pour une passe
+    considered: int  # options envisagées
+    best: bool  # meilleure option prise
 
 
 @dataclass(frozen=True)
@@ -49,6 +63,7 @@ class MatchTrace:
     home_goals: int = 0
     away_goals: int = 0
     goals: list[GoalEvent] = field(default_factory=list)
+    decisions: list[DecisionRecord] = field(default_factory=list)
 
     def record(self, minute: float, players: list[PlayerSnapshot], ball: BallSnapshot) -> None:
         self.ticks.append(Tick(minute=minute, players=tuple(players), ball=ball))
