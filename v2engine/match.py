@@ -284,6 +284,7 @@ def simulate_match(
         for team, situation in situations.update(i * tick_seconds, ball, players, scoring_team).items():
             if situation != before[team] or i == 0:
                 trace.situations.append(SituationRecord(minute, team, situation))
+        bloc.update(players, ball)  # hauteur de ligne sans ballon (ticket v2-collectif/05)
         players = [_step_player(p, ball, tick_seconds, minute, players, runs, intentions, situations, bloc) for p in players]
         _resolve_player_collisions(players)
         scoring_team = _step_ball(ball, tick_seconds, players, i * tick_seconds, trace.decisions)

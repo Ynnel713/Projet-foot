@@ -36,6 +36,7 @@ COUNTER_WINDOW_S = 15.0
 RETREAT_SPEED_MPS, RETREAT_WINDOW_S = 1.0, 10.0
 RECOVERY_CLASSES = ((5.0, "0-5 s"), (12.0, "5-12 s"), (15.0, "12-15 s"), (math.inf, "plus de 15 s"))
 LONG_PASS_M = 32.0
+FREE_PASSER_M = 9.0  # porteur libre : défenseur le plus proche à 9 m ou plus (pressé : PRESS_RADIUS_M), ticket 05
 SPRINT_MPS, HIGH_INTENSITY_MPS = 25.0 * KMH, 19.8 * KMH
 
 
@@ -108,6 +109,13 @@ def line_gaps(team: str, points: Sequence[Vec2]) -> tuple[float, float] | None:
         return None
     means = [statistics.fmean(line) for line in ls]
     return means[1] - means[0], means[2] - means[1]
+
+
+def is_deep_pass(team: str, target: Vec2, players: Sequence[PlayerState]) -> bool:
+    """Passe en profondeur : sa cible est plus près du but adverse que le dernier défenseur de champ adverse."""
+    rivals = outfield(players, "away" if team == "home" else "home")
+    last = max((progress(team, p.position.x) for p in rivals), default=None)
+    return last is not None and progress(team, target.x) > last
 
 
 def slope(pairs: Sequence[tuple[float, float]]) -> float:
@@ -225,7 +233,8 @@ class Collector:
         self.team_since = 0.0
         self.team_passes = 0
         self.last_sample = -math.inf
-        self.pending_pass: tuple[str, str, float] | None = None  # (équipe, receveur visé, longueur)
+        self.pending_pass: tuple[str, str, float, bool] | None = None  # (équipe, receveur visé, longueur, en profondeur)
+        self.players: list[PlayerState] = []  # joueurs au dernier tick (lecture des passes en profondeur)
         self.recoveries: list[tuple[float, str, str, Vec2, bool]] = []  # (instant, équipe, zone, lieu, close)
         self.relost: list[tuple[str, bool]] = []  # par récupération : (zone, reperdu en moins de 5 s)
         self.retreat_done: list[dict] = []
@@ -242,7 +251,9 @@ class Collector:
         length = passer.position.distance_to(target.position)
         self.count["passes"] += 1
         self.count["passes longues"] += length > LONG_PASS_M
-        self.pending_pass = (passer.team, target.name, length)
+        deep = is_deep_pass(passer.team, target.position, self.players)
+        self.count["passes en profondeur"] += deep
+        self.pending_pass = (passer.team, target.name, length, deep)
         self.team_passes += 1
 
     def on_shot(self, shooter: PlayerState, now_s: float) -> None:
@@ -262,6 +273,7 @@ class Collector:
     def on_tick(self, now_s: float, players: list[PlayerState], ball, scoring_team: str | None, dt: float = 0.1) -> None:
         minute = now_s / 60.0
         by_name = {p.name: p for p in players}
+        self.players = players
         self._speeds(players, minute, dt)
         if scoring_team is not None:  # but : la possession se clôt, l'engagement n'est pas une perte de balle
             self.goals[scoring_team] += 1
@@ -328,7 +340,8 @@ class Collector:
             return
         team = by_name[holder].team
         if self.pending_pass is not None:
-            pass_team, target, length = self.pending_pass
+            pass_team, target, length, deep = self.pending_pass
+            self.count["passes en profondeur réussies"] += team == pass_team and deep
             self.count["passes réussies"] += team == pass_team
             self.count["passes longues réussies"] += team == pass_team and length > LONG_PASS_M
             self.count["passes chez l'adversaire"] += team != pass_team
@@ -431,13 +444,26 @@ class Collector:
             if gaps:
                 self.stats[f"distance défense-milieu {phase} (m)"].add(gaps[0], **keys)
                 self.stats[f"distance milieu-attaque {phase} (m)"].add(gaps[1], **keys)
-            self.stats[f"hauteur du bloc {phase} (m)"].add(block_height(team, pts), **keys)
+            height = block_height(team, pts)
+            self.stats[f"hauteur du bloc {phase} (m)"].add(height, **keys)
+            holder = by_name.get(ball.holder) if ball.holder else None
+            if phase == "sans ballon":  # ticket 05 : ligne et ballon, pression sur le porteur
+                self.stats["écart ligne-ballon sans ballon (m)"].add(progress(team, ball.position.x) - height, **keys)
+                if holder is not None and holder.team != team:
+                    gap = min(p.position.distance_to(holder.position) for p in own)
+                    if gap < PRESS_RADIUS_M or gap >= FREE_PASSER_M:
+                        state = "pressé" if gap < PRESS_RADIUS_M else "libre"
+                        self.stats[f"hauteur du bloc sans ballon, porteur {state} (m)"].add(height, **keys)
+                        self.stats[f"écart ligne-ballon sans ballon, porteur {state} (m)"].add(
+                            progress(team, ball.position.x) - height, **keys)  # à position du ballon comparable
             self.follow["longueur"].append((ball.position.x, statistics.fmean(p.x for p in pts)))
             self.follow["largeur"].append((ball.position.y, statistics.fmean(p.y for p in pts)))
             level = self.levels.get(own[0].name)
             if level:  # profils : compacité de l'équipe haute contre l'équipe basse
                 self.stats[f"profil {level} : stretch index (m)"].add(stretch_index(pts))
                 self.stats[f"profil {level} : longueur (m)"].add(length)
+                if phase == "sans ballon":
+                    self.stats[f"profil {level} : hauteur du bloc sans ballon (m)"].add(height)
                 if gaps:
                     self.profile_gaps[level].append(gaps[0])
         if self.team is None:

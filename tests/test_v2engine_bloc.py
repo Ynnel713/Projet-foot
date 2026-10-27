@@ -1,5 +1,6 @@
 """Tests du bloc de référence dynamique V2 (ticket v2-collectif/04) : le bloc suit le ballon, change de forme selon
-la situation, Positioning règle l'erreur de placement et Teamwork l'écart toléré."""
+la situation, Positioning règle l'erreur de placement et Teamwork l'écart toléré. Et la hauteur de la ligne défensive
+sans ballon (ticket v2-collectif/05)."""
 
 from __future__ import annotations
 
@@ -7,7 +8,10 @@ import math
 import random
 
 from v2engine.ball_state import BallState
-from v2engine.bloc import BLOCK_SHIFT, POSSESSION_ADVANCE_M, SHAPE_WITH_BALL, SHAPE_WITHOUT_BALL, Bloc, positioning_error_m, teamwork_tolerance_m
+from v2engine.bloc import (
+    BLOCK_SHIFT, CUSHION_BASE_M, LINE_HEIGHT_M, POSSESSION_ADVANCE_M, PRESSURE_STEP_M, SHAPE_WITH_BALL, SHAPE_WITHOUT_BALL,
+    Bloc, positioning_error_m, teamwork_tolerance_m,
+)
 from v2engine.cerveau import REPLACEMENT, think
 from v2engine.geometry import Vec2
 from v2engine.movement import PlayerState
@@ -162,3 +166,86 @@ def test_the_block_is_wired_in_the_match_and_stays_deterministic() -> None:
     assert "tenir sa place" in actions
     assert [[(p.position.x, p.position.y) for p in t.players] for t in traces[0].ticks] == \
         [[(p.position.x, p.position.y) for p in t.players] for t in traces[1].ticks]
+
+
+# --- Hauteur de la ligne défensive sans ballon (ticket v2-collectif/05) ---------------------------------------------
+def _line_case(holder_gap: float | None, striker_x: float = 100.0, defender_pace: int = 60, striker_pace: int = 60):
+    """Domicile défend (TEAM, ballon au centre tenu par l'extérieur) ; `holder_gap` : distance du défenseur domicile le
+    plus proche au porteur (None : ballon en vol)."""
+    team = [_p(p.name, p.home_target.x, p.home_target.y, poste=p.poste) for p in TEAM]
+    for p in team:
+        if p.name.startswith("D"):
+            p.pace = defender_pace
+        p.position = Vec2(10.0, 5.0) if p.name != "M1" else Vec2(52.5 - (holder_gap or 30.0), 34.0)
+    holder = _p("H", 52.5, 34.0, team="away")
+    striker = _p("S", striker_x, 34.0, poste="BU", team="away")
+    striker.pace = striker_pace
+    players = [*team, holder, striker]
+    bloc = Bloc.from_players(players)
+    bloc.update(players, BallState(position=Vec2(52.5, 34.0), velocity=Vec2(0.0, 0.0), holder=None if holder_gap is None else "H"))
+    return bloc, team
+
+
+def test_line_height_at_the_centre_and_pressure_on_the_passer() -> None:
+    assert math.isclose(_line_case(None)[0].lines["home"], LINE_HEIGHT_M)  # ballon en vol : ni pressé ni libre
+    assert math.isclose(_line_case(6.0)[0].lines["home"], LINE_HEIGHT_M)  # entre 3 et 9 m : neutre
+    assert math.isclose(_line_case(2.0)[0].lines["home"], LINE_HEIGHT_M + PRESSURE_STEP_M)  # pressé : la ligne monte
+    assert math.isclose(_line_case(12.0)[0].lines["home"], LINE_HEIGHT_M - PRESSURE_STEP_M)  # libre : elle recule
+
+
+def test_the_line_stays_behind_the_most_advanced_attacker_with_a_speed_margin() -> None:
+    even, _ = _line_case(None, striker_x=30.0)
+    assert math.isclose(even.lines["home"], 30.0 - CUSHION_BASE_M)  # même vitesse : la base seule
+    slow, _ = _line_case(None, striker_x=30.0, defender_pace=11, striker_pace=99)
+    assert slow.lines["home"] < even.lines["home"] - 5.0  # défenseurs lents contre attaquant rapide : plus bas
+
+
+def test_the_block_sits_on_its_line_for_both_teams() -> None:
+    bloc, team = _line_case(None)
+    xs = [bloc.reference(p, CENTER_BALL, DEFENSE_PLACEE).x for p in team if p.poste != "GK"]
+    assert math.isclose(min(xs), LINE_HEIGHT_M)
+    away = [_p(f"B{i}", 105.0 - p.home_target.x, p.home_target.y, poste=p.poste, team="away") for i, p in enumerate(TEAM)]
+    rivals = [_p("R", 52.5, 34.0, team="home"), _p("R2", 5.0, 34.0, poste="BU", team="home")]
+    bloc = Bloc.from_players([*away, *rivals])
+    bloc.update([*away, *rivals], BallState(position=Vec2(52.5, 34.0), velocity=Vec2(0.0, 0.0), holder=None))
+    xs = [bloc.reference(p, CENTER_BALL, DEFENSE_PLACEE).x for p in away if p.poste != "GK"]
+    assert math.isclose(max(xs), 105.0 - LINE_HEIGHT_M)
+
+
+def test_with_the_ball_the_line_rule_does_not_apply() -> None:
+    bloc, team = _line_case(2.0)
+    free = Bloc.from_players(team)
+    player = next(p for p in team if p.name == "D0")
+    assert bloc.reference(player, CENTER_BALL, POSSESSION_INSTALLEE) == free.reference(player, CENTER_BALL, POSSESSION_INSTALLEE)
+
+
+def test_the_line_follows_an_off_centre_ball_for_both_teams() -> None:
+    ball = BallState(position=Vec2(72.5, 34.0), velocity=Vec2(0.0, 0.0), holder=None)
+    players = [*_line_case(None)[1], _p("H", 52.5, 34.0, team="away"), _p("S", 100.0, 34.0, poste="BU", team="away")]
+    home = Bloc.from_players(players)
+    home.update(players, ball)
+    assert math.isclose(home.lines["home"], LINE_HEIGHT_M + 20.0 * BLOCK_SHIFT[0])  # ballon 20 m plus haut : la ligne monte
+    away = [_p(f"B{i}", 105.0 - p.home_target.x, p.home_target.y, poste=p.poste, team="away") for i, p in enumerate(TEAM)]
+    rivals = [_p("R", 72.5, 34.0, team="home"), _p("R2", 5.0, 34.0, poste="BU", team="home")]
+    for p in away:
+        p.position = Vec2(95.0, 5.0)
+    bloc = Bloc.from_players([*away, *rivals])
+    bloc.update([*away, *rivals], BallState(position=Vec2(72.5, 34.0), velocity=Vec2(0.0, 0.0), holder="R"))
+    # extérieur : ballon 20 m plus près de son but, porteur libre (défenseur le plus proche à plus de 9 m)
+    assert math.isclose(bloc.lines["away"], LINE_HEIGHT_M - 20.0 * BLOCK_SHIFT[0] - PRESSURE_STEP_M)
+    rivals[1].position = Vec2(80.0, 34.0)  # attaquant à 25 m du but extérieur, même vitesse
+    bloc.update([*away, *rivals], BallState(position=Vec2(52.5, 34.0), velocity=Vec2(0.0, 0.0), holder=None))
+    assert math.isclose(bloc.lines["away"], 25.0 - CUSHION_BASE_M)
+
+
+def test_the_margin_uses_the_slowest_defender_of_the_last_line_only() -> None:
+    from v2engine.movement import max_speed_mps
+    _, team = _line_case(None, striker_x=30.0)
+    for p in team:  # un milieu très lent ne compte pas ; deux défenseurs de vitesses différentes : le plus lent compte
+        p.pace = {"M0": 1, "D0": 40, "D1": 80}.get(p.name, 60)
+    players = [*team, _p("H", 52.5, 34.0, team="away"), _p("S", 30.0, 34.0, poste="BU", team="away")]
+    players[-1].pace = 90
+    bloc = Bloc.from_players(players)
+    bloc.update(players, BallState(position=Vec2(52.5, 34.0), velocity=Vec2(0.0, 0.0), holder=None))
+    gain = (1.0 - max_speed_mps(40) / max_speed_mps(90)) * 30.0
+    assert math.isclose(bloc.lines["home"], 30.0 - CUSHION_BASE_M - gain)

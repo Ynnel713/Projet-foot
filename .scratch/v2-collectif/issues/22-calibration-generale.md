@@ -4,7 +4,7 @@
 
 **Attributs :** Tous.
 
-**Blocked by:** Tickets 01 à 21.
+**Blocked by:** Tickets 01 à 21 et 23.
 
 **Status:** ready-for-agent (constantes à proposer avant le code)
 

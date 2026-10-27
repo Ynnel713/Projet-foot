@@ -15,7 +15,17 @@ Constantes validées par le propriétaire le 27/10/2026 (valeurs de départ, aju
 - avec ballon, le bloc monte de 8 m vers le but adverse (validé à 15 m le 27/10/2026, ajustable par mesure ; mesuré sur
   20 matchs à 0, 5, 8, 11 et 15 m : de 5,7 à 25,7 tirs par équipe ; 8 m (13,7 tirs, 3,0 buts) garde tirs et buts dans les
   fourchettes réelles ;
-  sans lui, le bloc d'attaque restait centré sur la place du coup d'envoi, dans sa moitié : tirs divisés par deux)."""
+  sans lui, le bloc d'attaque restait centré sur la place du coup d'envoi, dans sa moitié : tirs divisés par deux).
+
+Hauteur de la ligne défensive sans ballon (ticket v2-collectif/05, validé le 27/10/2026, valeurs de départ ajustables) :
+le bloc se place pour que sa dernière ligne soit à la plus basse de deux hauteurs, jamais à moins de 5 m de son but :
+- 35 m de son but ballon au centre, suivant le ballon comme le bloc (ligne médiane 45 m, moyenne 47 m, dans
+  arXiv 2511.06191 ; plus bas ici faute de hors-jeu, ticket 23), plage 30-45 m ; + 5 m si le porteur adverse est pressé
+  (adversaire à moins de 3 m), - 5 m s'il est libre (le plus proche à 9 m ou plus), progressif entre les deux
+  (« ballon couvert, on monte ; ballon libre, on recule » ; écart chiffré non trouvé) ;
+- derrière l'attaquant adverse le plus avancé, d'une marge de 2 m plus ce qu'il gagne sur 30 m sur le défenseur le plus
+  lent de la ligne (vitesses max, Pace : capacité, règle R5 ; repère de la carte des attributs « le rapide prend 3-4 m
+  sur 30 m » ; base de 2 m non trouvée)."""
 
 from __future__ import annotations
 
@@ -25,7 +35,8 @@ from dataclasses import dataclass, field
 
 from v2engine.attributes import player_attribute, success_probability
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch
-from v2engine.movement import PlayerState
+from v2engine.ball_state import BallState
+from v2engine.movement import PlayerState, max_speed_mps
 from v2engine.situation import DEFENSE_PLACEE, TRANSITION_DEFENSIVE
 
 BLOCK_SHIFT = (0.5, 0.3)  # part du décalage du ballon suivie par le bloc : longueur, largeur
@@ -37,9 +48,18 @@ POSITIONING_REDRAW_S = 5.0
 _POSITIONING_ERROR_M = (2.5, 2.0, 0.5, 4.0)
 _TEAMWORK_TOLERANCE_M = (6.0, 4.0, 2.0, 9.0)
 ARRIVAL_M = 1.0  # place atteinte à 1 m près (pas une constante produit : l'erreur de Positioning va de 0,5 à 4 m)
+LINE_HEIGHT_M = 35.0  # dernière ligne, depuis son but, ballon au centre et porteur ni pressé ni libre
+PRESSURE_STEP_M = 5.0  # la ligne monte (porteur pressé) ou recule (porteur libre) d'autant
+PRESSED_M, FREE_M = 3.0, 9.0  # distance du défenseur le plus proche au porteur : pressé en dessous, libre au-delà
+CUSHION_BASE_M, CUSHION_RUN_M = 2.0, 30.0  # marge derrière l'attaquant le plus avancé : base + gain sur une course de 30 m
 _DEPTH_MARGIN_M = 5.0  # le bloc garde sa dernière ligne à 5 m de son but (marge de `formation`), pas une constante produit
 _CENTER = Vec2(PITCH_LENGTH_M / 2.0, PITCH_WIDTH_M / 2.0)
 _WITHOUT_BALL = (DEFENSE_PLACEE, TRANSITION_DEFENSIVE)
+
+
+def _progress(team: str, x: float) -> float:
+    """Distance à son propre but, dans l'axe du terrain (domicile défend x = 0)."""
+    return x if team == "home" else PITCH_LENGTH_M - x
 
 
 def _inverse(note: float, params: tuple[float, float, float, float]) -> float:
@@ -71,6 +91,7 @@ class Bloc:
     shapes: dict[str, _Shape]
     errors: dict[str, tuple[Vec2, float]] = field(default_factory=dict)  # joueur -> (erreur, prochain tirage)
     returning: set[str] = field(default_factory=set)  # joueurs repartis vers leur place, jusqu'à l'atteindre
+    lines: dict[str, float] = field(default_factory=dict)  # équipe -> hauteur de sa dernière ligne sans ballon (`update`)
 
     @classmethod
     def from_players(cls, players: list[PlayerState]) -> Bloc:
@@ -84,6 +105,28 @@ class Bloc:
             shapes[team] = _Shape(Vec2(cx, cy), max(xs) - min(xs), max(ys) - min(ys), min(xs) - cx, max(xs) - cx)
         return cls(shapes)
 
+    def update(self, players: list[PlayerState], ball: BallState) -> None:
+        """Hauteur de la dernière ligne de chaque équipe, si elle n'a pas le ballon (une fois par tick)."""
+        holder = next((p for p in players if p.name == ball.holder), None) if ball.holder else None
+        for team in self.shapes:
+            own = [p for p in players if p.team == team and p.poste != "GK"]
+            rivals = [p for p in players if p.team != team and p.poste != "GK"]
+            if not own or not rivals:
+                self.lines.pop(team, None)
+                continue
+            height = LINE_HEIGHT_M + (_progress(team, ball.position.x) - _CENTER.x) * BLOCK_SHIFT[0]
+            if holder is not None and holder.team != team:
+                gap = min(p.position.distance_to(holder.position) for p in own)
+                free = min(max((gap - PRESSED_M) / (FREE_M - PRESSED_M), 0.0), 1.0)  # 0 pressé, 1 libre
+                height += PRESSURE_STEP_M * (1.0 - 2.0 * free)
+            deepest = max(rivals, key=lambda p: -_progress(team, p.position.x))  # attaquant le plus près de notre but
+            back = min(_progress(team, p.home_target.x) for p in own)
+            # ligne la plus basse de la forme de départ (bandes espacées d'au moins 10 m : 1 m de tolérance suffit)
+            slowest = min(max_speed_mps(p.pace) for p in own if _progress(team, p.home_target.x) <= back + 1.0)
+            gain = max(0.0, 1.0 - slowest / max_speed_mps(deepest.pace)) * CUSHION_RUN_M
+            height = min(height, _progress(team, deepest.position.x) - CUSHION_BASE_M - gain)
+            self.lines[team] = max(height, _DEPTH_MARGIN_M)
+
     def reference(self, player: PlayerState, ball: Vec2, situation: str) -> Vec2:
         """Place du joueur dans le bloc, sans l'erreur de Positioning. Le gardien garde sa place de départ."""
         shape = self.shapes.get(player.team)
@@ -96,6 +139,9 @@ class Bloc:
         forward = 1.0 if player.team == "home" else -1.0  # convention du moteur : domicile attaque vers x croissant
         cx = shape.center.x + (ball.x - _CENTER.x) * BLOCK_SHIFT[0] + (forward * POSSESSION_ADVANCE_M if with_ball else 0.0)
         cy = shape.center.y + (ball.y - _CENTER.y) * BLOCK_SHIFT[1]
+        line = None if with_ball else self.lines.get(player.team)
+        if line is not None:  # sans ballon : le bloc se cale sur la hauteur de sa dernière ligne (ticket 05)
+            cx = line - shape.back * sx if player.team == "home" else PITCH_LENGTH_M - line - shape.front * sx
         # la forme entière reste sur le terrain, ses lignes extrêmes à 5 m au moins de chaque ligne de but
         cx = min(max(cx, _DEPTH_MARGIN_M - shape.back * sx), PITCH_LENGTH_M - _DEPTH_MARGIN_M - shape.front * sx)
         offset = player.home_target - shape.center

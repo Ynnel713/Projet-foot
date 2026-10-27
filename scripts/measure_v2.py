@@ -122,6 +122,8 @@ def report(c: Collector, detail: bool = False) -> dict:
         "receveur visé (part)": k["receveur visé"] / passes,
         "passes longues (part)": k["passes longues"] / passes,
         "passes longues réussies (part)": k["passes longues réussies"] / max(1, k["passes longues"]),
+        "passes en profondeur (part)": k["passes en profondeur"] / passes,
+        "passes en profondeur réussies (part)": k["passes en profondeur réussies"] / max(1, k["passes en profondeur"]),
         "tirs par équipe": k["tirs"] / (2 * n),
         "buts par match": k["buts"] / n,
         "tacles par match": k["tacles"] / n,

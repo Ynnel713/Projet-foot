@@ -155,12 +155,12 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 - Pas de scripts : les situations et les combinaisons orientent les choix, sans les imposer. Les attributs donnent des **tendances**, jamais des seuils qui interdisent une action.
 - La validation passe aussi par des **tests tactiques ciblés** (compensation, pressing, circulation, profils, fatigue, diversité, cohérence) et par la **relecture** des intentions enregistrées dans la trace.
 
-**Tickets** : `.scratch/v2-collectif/issues/` (01 à 22), dans cet ordre d'exécution :
+**Tickets** : `.scratch/v2-collectif/issues/` (01 à 23), dans cet ordre d'exécution :
 
 | Étape | Tickets | Contenu |
 |---|---|---|
 | A. Fondations | 01, 02, 18, 03 | Banc de mesure et tests tactiques ; perception, décision, exécution et intentions tracées ; règle des interactions entre attributs ; reconnaissance de la situation de jeu |
-| B. Structure collective | 04, 05, 06 | Bloc de référence dynamique ; hauteur du bloc ; soutien du porteur et lignes de passe |
+| B. Structure collective | 04, 05, 23, 06 | Bloc de référence dynamique ; hauteur du bloc ; hors-jeu (ajouté le 27/10/2026) ; soutien du porteur et lignes de passe |
 | C. Défense organisée | 07, 08, 09 | Rôles défensifs (presser, couvrir, marquer, fermer l'axe) ; pressing coordonné ; compensations en cascade |
 | D. Transitions | 10, 11 | Attaque-défense ; défense-attaque |
 | E. Effort | 12 | Intensité selon le rôle et réserve d'énergie (reprise du socle 02 et de son code non commité) |

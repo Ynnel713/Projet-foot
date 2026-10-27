@@ -30,6 +30,12 @@ def test_block_follow_slope() -> None:  # ticket v2-collectif/04 : part du dépl
     assert ind.slope([(5, 1), (5, 2)]) == 0.0
 
 
+def test_deep_pass_is_beyond_the_last_outfield_defender() -> None:  # ticket v2-collectif/05
+    players = [_p("D", "away", 80, 30), _p("G", "away", 104, 34, poste="GK")]
+    assert ind.is_deep_pass("home", Vec2(85, 30), players) and not ind.is_deep_pass("home", Vec2(75, 30), players)
+    assert ind.is_deep_pass("away", Vec2(20, 30), [_p("D", "home", 25, 30)])
+
+
 def test_hull_area_and_stretch_index() -> None:
     square = [Vec2(0, 0), Vec2(10, 0), Vec2(10, 10), Vec2(0, 10), Vec2(5, 5)]  # le point central ne compte pas
     assert math.isclose(ind.hull_area(square), 100.0)

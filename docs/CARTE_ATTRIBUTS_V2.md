@@ -15,7 +15,7 @@
 
 | Attribut | Rayon propre | Ne pilote pas | Où on le voit (moyen contre très bon) | Liens | État |
 |---|---|---|---|---|---|
-| **Pace** | Vitesse maximale, et rien d'autre | quand il sprinte (mental), la montée en vitesse (Acceleration) | Sur une course lancée où les deux sprintent, le rapide prend 3-4 m sur 30 m | Acceleration (le couple « inarrêtable ») | branché ; à revoir (socle 02) |
+| **Pace** | Vitesse maximale, et rien d'autre | quand il sprinte (mental), la montée en vitesse (Acceleration) | Sur une course lancée où les deux sprintent, le rapide prend 3-4 m sur 30 m | Acceleration (le couple « inarrêtable ») | branché ; aussi capacité dans la hauteur de ligne (ticket v2-collectif/05 : marge laissée derrière l'attaquant le plus avancé selon l'écart de vitesse, règle R5) ; à revoir (socle 02) |
 | **Acceleration** | Temps pour atteindre sa vitesse max (les 5-10 premiers mètres) | la vitesse de pointe | Gagne le premier mètre : départ d'appel, sortie de dribble, retour au pressing | Pace (diesel ou sprinter court) ; Agility | branché ; à recaler sur les temps réels |
 | **Agility** | Changer de direction, freiner, se retourner sans perdre de vitesse | la vitesse en ligne droite, l'équilibre au contact | Dribbleur qui crochète sans ralentir ; défenseur qui suit le crochet ; gardien qui plonge et se relève vite | Dribbling ; Balance | à créer (étape duels) |
 | **Balance** | Rester debout et continuer l'action APRÈS un contact | gagner le contact (Strength) | Après une bousculade, le très bon continue sa conduite ou sa frappe ; le moyen tombe ou perd le ballon | Strength (gagner contre rester debout) | branché ; à revoir (après le contact) |
@@ -145,7 +145,7 @@ Limite connue : un mélange qui passe par des variables intermédiaires n'est pa
 | Concentration + Anticipation | C : risque de trou d'attention ; A : qualité de lecture | C peut annuler une lecture, jamais l'améliorer | C à créer | Ticket 09 |
 | Crossing + Vision + Decisions | V : voir le centre ; D : moment ; Cr : trajectoire | Chaîne | À créer | Phase 7 |
 | Composure + Finishing | F : placement du tir ; C : seulement la part due à la pression | C réduit la gêne (R3) | Non conforme (dérogation A2) | Ticket du tir |
-| Pace + Acceleration + Positioning | P : se placer tôt ; Acc et Pace : rattraper | P réduit le besoin de vitesse | P à créer | Ticket 05 |
+| Pace + Acceleration + Positioning | P : se placer tôt ; Acc et Pace : rattraper | P réduit le besoin de vitesse | Pace branché dans la hauteur de ligne (ticket 05, capacité seule) ; Acceleration non utilisée ; P tient sa place (ticket 04) | Repli préventif : ticket 10 |
 
 ### Audit du moteur (26/10/2026)
 
