@@ -36,6 +36,8 @@ ALLOWED = {
     "Reflexes": {"shooting"},
     "One on Ones": {"shooting"},
     "Handling": {"shooting"},
+    "Positioning": {"bloc"},  # erreur de placement dans le bloc (ticket v2-collectif/04)
+    "Teamwork": {"bloc"},  # écart toléré avant de se replacer (ticket v2-collectif/04)
 }
 PHYSICAL_ALLOWED = {"Pace": {"movement", "anticipation"}, "Acceleration": {"movement"}, "Stamina": {"movement"}}
 # Mélanges de plusieurs attributs dans un même calcul tolérés (dérogations de la carte).

@@ -17,3 +17,5 @@
 - [ ] Constantes produit et critères chiffrés (données réelles sourcées, ou « non trouvé ») validés par le propriétaire avant le code
 - [ ] Les chiffres réels sont des indicateurs de calibration, pas des objectifs : pas de réglage générique pour les atteindre avant la calibration générale (ticket 22)
 - [ ] Suite V2 verte ; V1 inchangée
+
+**Reporté du ticket 04 (27/10/2026) :** critère « une équipe à Teamwork élevé reste mesurablement plus compacte qu'une équipe à Teamwork bas ». Au ticket 04, Teamwork ne règle que les joueurs qui se replacent (écart 0,5 % du stretch index) ; il doit aussi agir sur qui quitte le bloc pour aller au ballon. À surveiller aussi : tacles montés à 52 par match avec le bloc (fourchette réelle 30-40).

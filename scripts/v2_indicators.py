@@ -110,6 +110,14 @@ def line_gaps(team: str, points: Sequence[Vec2]) -> tuple[float, float] | None:
     return means[1] - means[0], means[2] - means[1]
 
 
+def slope(pairs: Sequence[tuple[float, float]]) -> float:
+    """Pente de la droite des moindres carrés de y en fonction de x (0 si x ne varie pas)."""
+    xs, ys = [a for a, _ in pairs], [b for _, b in pairs]
+    mx, my = statistics.fmean(xs), statistics.fmean(ys)
+    var = sum((x - mx) ** 2 for x in xs)
+    return sum((x - mx) * (y - my) for x, y in zip(xs, ys)) / var if var > 0 else 0.0
+
+
 def block_height(team: str, points: Sequence[Vec2]) -> float:
     """Position moyenne (m) de la ligne défensive depuis son propre but."""
     return statistics.fmean(lines(team, points)[0])
@@ -226,6 +234,8 @@ class Collector:
         self.retreat: list[dict] = []
         self.runs: dict[str, _Run] = {}
         self.run_log: list[tuple[str, float, float, Vec2]] = []  # (joueur, début, fin, position finale)
+        self.follow: dict[str, list[tuple[float, float]]] = defaultdict(list)  # axe -> (ballon, centre d'équipe)
+        self.profile_gaps: dict[str, list[float]] = defaultdict(list)  # niveau -> distances défense-milieu
 
     # --- événements du moteur ---
     def on_pass(self, passer: PlayerState, target: PlayerState) -> None:
@@ -422,6 +432,14 @@ class Collector:
                 self.stats[f"distance défense-milieu {phase} (m)"].add(gaps[0], **keys)
                 self.stats[f"distance milieu-attaque {phase} (m)"].add(gaps[1], **keys)
             self.stats[f"hauteur du bloc {phase} (m)"].add(block_height(team, pts), **keys)
+            self.follow["longueur"].append((ball.position.x, statistics.fmean(p.x for p in pts)))
+            self.follow["largeur"].append((ball.position.y, statistics.fmean(p.y for p in pts)))
+            level = self.levels.get(own[0].name)
+            if level:  # profils : compacité de l'équipe haute contre l'équipe basse
+                self.stats[f"profil {level} : stretch index (m)"].add(stretch_index(pts))
+                self.stats[f"profil {level} : longueur (m)"].add(length)
+                if gaps:
+                    self.profile_gaps[level].append(gaps[0])
         if self.team is None:
             return
         att, dfd = self.team, ("away" if self.team == "home" else "home")
@@ -485,5 +503,11 @@ class Collector:
                 self.stats[f"profil {level} : course intense par joueur (m)"].add(self.hi_by[name])
                 self.stats[f"profil {level} : appels par joueur"].add(per_player.get(name, 0))
                 self.stats[f"profil {level} : km par joueur"].add(self.dist[name] / 1000.0)
+        for axis, pairs in self.follow.items():  # pente : part du déplacement du ballon suivie par le centre d'équipe
+            if len(pairs) > 2:
+                self.stats[f"suivi du ballon par le bloc, {axis} (pente)"].add(slope(pairs))
+        for level, gaps in self.profile_gaps.items():
+            if len(gaps) > 1:
+                self.stats[f"profil {level} : écart-type distance défense-milieu (m)"].add(statistics.pstdev(gaps))
         self.count["appels"] += len(self.run_log)
         self._reset_match()

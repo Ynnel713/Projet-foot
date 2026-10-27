@@ -1,0 +1,133 @@
+"""Bloc de référence dynamique (ticket v2-collectif/04) : la place d'un joueur loin du ballon n'est plus sa position
+de coup d'envoi mais une position de référence dans le bloc de son équipe. Le bloc suit le ballon (surtout dans la
+longueur) et change de forme selon la situation de jeu perçue (ticket 03) : resserré sans ballon, étiré avec.
+
+Deux attributs, en deux temps distincts (règle R2, docs/CARTE_ATTRIBUTS_V2.md) : Positioning calcule la place
+(erreur de placement), puis Teamwork décide d'y retourner (écart toléré avant de se replacer).
+
+Constantes validées par le propriétaire le 27/10/2026 (valeurs de départ, ajustables) :
+- suivi du ballon : 50 % de son décalage au centre du terrain en longueur, 30 % en largeur (Frencken et al. 2012 :
+  le centre de l'équipe suit surtout le ballon dans la longueur ; parts exactes non trouvées), plages 30-70 % et 15-45 % ;
+- forme sans ballon 32 x 40 m, avec ballon 42 x 46 m (longueur x largeur, joueurs de champ ; réel 31-46 x 35-48 m,
+  bloc médian de la Coupe du monde 2022 à 27,2 x 40,1 m) ;
+- Positioning, erreur de placement tirée toutes les 5 s : 99 -> 0,5 m, 55 -> 2 m, 11 -> 4 m (ordre de grandeur) ;
+- Teamwork, écart toléré : 99 -> 2 m, 55 -> 5 m, 11 -> 9 m (ordre de grandeur) ;
+- avec ballon, le bloc monte de 8 m vers le but adverse (validé à 15 m le 27/10/2026, ajustable par mesure ; mesuré sur
+  20 matchs à 0, 5, 8, 11 et 15 m : de 5,7 à 25,7 tirs par équipe ; 8 m (13,7 tirs, 3,0 buts) garde tirs et buts dans les
+  fourchettes réelles ;
+  sans lui, le bloc d'attaque restait centré sur la place du coup d'envoi, dans sa moitié : tirs divisés par deux)."""
+
+from __future__ import annotations
+
+import math
+import random
+from dataclasses import dataclass, field
+
+from v2engine.attributes import player_attribute, success_probability
+from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch
+from v2engine.movement import PlayerState
+from v2engine.situation import DEFENSE_PLACEE, TRANSITION_DEFENSIVE
+
+BLOCK_SHIFT = (0.5, 0.3)  # part du décalage du ballon suivie par le bloc : longueur, largeur
+SHAPE_WITHOUT_BALL = (32.0, 40.0)  # longueur, largeur visées (m)
+SHAPE_WITH_BALL = (42.0, 46.0)
+POSSESSION_ADVANCE_M = 8.0  # le bloc monte vers le but adverse quand l'équipe a le ballon
+POSITIONING_REDRAW_S = 5.0
+# baseline, amplitude, min, max (inversés : bonne note = petite valeur, voir `_inverse`)
+_POSITIONING_ERROR_M = (2.5, 2.0, 0.5, 4.0)
+_TEAMWORK_TOLERANCE_M = (6.0, 4.0, 2.0, 9.0)
+ARRIVAL_M = 1.0  # place atteinte à 1 m près (pas une constante produit : l'erreur de Positioning va de 0,5 à 4 m)
+_DEPTH_MARGIN_M = 5.0  # le bloc garde sa dernière ligne à 5 m de son but (marge de `formation`), pas une constante produit
+_CENTER = Vec2(PITCH_LENGTH_M / 2.0, PITCH_WIDTH_M / 2.0)
+_WITHOUT_BALL = (DEFENSE_PLACEE, TRANSITION_DEFENSIVE)
+
+
+def _inverse(note: float, params: tuple[float, float, float, float]) -> float:
+    baseline, amplitude, low, high = params
+    return low + high - success_probability(note, baseline=baseline, amplitude=amplitude, min_prob=low, max_prob=high)
+
+
+def positioning_error_m(player: PlayerState) -> float:
+    return _inverse(player_attribute(player, "Positioning"), _POSITIONING_ERROR_M)
+
+
+def teamwork_tolerance_m(player: PlayerState) -> float:
+    return _inverse(player_attribute(player, "Teamwork"), _TEAMWORK_TOLERANCE_M)
+
+
+@dataclass
+class _Shape:
+    center: Vec2  # centre de la formation de départ (moyenne des joueurs de champ)
+    length: float
+    width: float
+    back: float  # écart en x au centre du joueur de plus petit x (négatif)
+    front: float  # écart en x au centre du joueur de plus grand x (positif)
+
+
+@dataclass
+class Bloc:
+    """Forme de départ de chaque équipe (`from_players`), erreurs de placement en cours et joueurs en train de se
+    replacer."""
+    shapes: dict[str, _Shape]
+    errors: dict[str, tuple[Vec2, float]] = field(default_factory=dict)  # joueur -> (erreur, prochain tirage)
+    returning: set[str] = field(default_factory=set)  # joueurs repartis vers leur place, jusqu'à l'atteindre
+
+    @classmethod
+    def from_players(cls, players: list[PlayerState]) -> Bloc:
+        shapes = {}
+        for team in {p.team for p in players}:
+            pts = [p.home_target for p in players if p.team == team and p.poste != "GK"]
+            if not pts:  # équipe sans joueur de champ : pas de bloc, chacun garde sa place de départ
+                continue
+            xs, ys = [p.x for p in pts], [p.y for p in pts]
+            cx, cy = sum(xs) / len(xs), sum(ys) / len(ys)
+            shapes[team] = _Shape(Vec2(cx, cy), max(xs) - min(xs), max(ys) - min(ys), min(xs) - cx, max(xs) - cx)
+        return cls(shapes)
+
+    def reference(self, player: PlayerState, ball: Vec2, situation: str) -> Vec2:
+        """Place du joueur dans le bloc, sans l'erreur de Positioning. Le gardien garde sa place de départ."""
+        shape = self.shapes.get(player.team)
+        if shape is None or player.poste == "GK":
+            return player.home_target
+        with_ball = situation not in _WITHOUT_BALL
+        length, width = SHAPE_WITH_BALL if with_ball else SHAPE_WITHOUT_BALL
+        sx = length / shape.length if shape.length > 0 else 1.0
+        sy = width / shape.width if shape.width > 0 else 1.0
+        forward = 1.0 if player.team == "home" else -1.0  # convention du moteur : domicile attaque vers x croissant
+        cx = shape.center.x + (ball.x - _CENTER.x) * BLOCK_SHIFT[0] + (forward * POSSESSION_ADVANCE_M if with_ball else 0.0)
+        cy = shape.center.y + (ball.y - _CENTER.y) * BLOCK_SHIFT[1]
+        # la forme entière reste sur le terrain, ses lignes extrêmes à 5 m au moins de chaque ligne de but
+        cx = min(max(cx, _DEPTH_MARGIN_M - shape.back * sx), PITCH_LENGTH_M - _DEPTH_MARGIN_M - shape.front * sx)
+        offset = player.home_target - shape.center
+        return clamp_to_pitch(Vec2(cx + offset.x * sx, cy + offset.y * sy))
+
+    def target(self, player: PlayerState, ball: Vec2, situation: str, now_s: float) -> Vec2:
+        """Place visée : la référence, décalée sans ballon de l'erreur de Positioning du moment (placement défensif de
+        zone, règle R3 ; tirée toutes les 5 s, direction quelconque, distance uniforme entre 0 et deux fois l'erreur
+        moyenne). Le gardien n'est pas concerné."""
+        if situation not in _WITHOUT_BALL or player.poste == "GK":
+            return self.reference(player, ball, situation)
+        error, next_s = self.errors.get(player.name, (None, 0.0))
+        if error is None or now_s >= next_s:
+            angle = random.uniform(0.0, 2.0 * math.pi)
+            distance = random.uniform(0.0, 2.0 * positioning_error_m(player))
+            error = Vec2(math.cos(angle) * distance, math.sin(angle) * distance)
+            self.errors[player.name] = (error, now_s + POSITIONING_REDRAW_S)
+        return clamp_to_pitch(self.reference(player, ball, situation) + error)
+
+    def replacement(self, player: PlayerState, ball: Vec2, situation: str, now_s: float) -> Vec2 | None:
+        """Place à rejoindre, ou None s'il la tient (Teamwork). Il ne repart que s'il s'en écarte de plus que sa
+        tolérance ; reparti, il va jusqu'à sa place (à ARRIVAL_M près). Le gardien rejoint toujours la sienne."""
+        place = self.target(player, ball, situation, now_s)
+        if player.poste == "GK":
+            return place
+        distance = player.position.distance_to(place)
+        if player.name in self.returning:
+            if distance > ARRIVAL_M:
+                return place
+            self.returning.discard(player.name)
+            return None
+        if distance > teamwork_tolerance_m(player):
+            self.returning.add(player.name)
+            return place
+        return None

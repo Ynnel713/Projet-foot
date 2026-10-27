@@ -33,13 +33,14 @@ def best_space_probability(off_the_ball: float) -> float:
     return success_probability(off_the_ball, baseline=_BEST_SPACE_BASELINE, amplitude=_BEST_SPACE_AMPLITUDE)
 
 
-def choose_space(player: PlayerState, opponents: list[PlayerState], forward: float) -> Vec2:
-    """Point libre visé par `player` (coéquipier du porteur), autour de sa place de formation. `forward` : +1 si
-    son équipe attaque vers x croissant, -1 sinon. Un espace vaut sa distance à l'adversaire le plus proche ;
-    à égalité, le plus avancé gagne."""
+def choose_space(player: PlayerState, opponents: list[PlayerState], forward: float, anchor: Vec2 | None = None) -> Vec2:
+    """Point libre visé par `player` (coéquipier du porteur), autour de `anchor` (sa place dans le bloc, ticket
+    v2-collectif/04 ; à défaut, sa place de formation). `forward` : +1 si son équipe attaque vers x croissant, -1
+    sinon. Un espace vaut sa distance à l'adversaire le plus proche ; à égalité, le plus avancé gagne."""
     radius = search_radius_m(player_attribute(player, "Off the Ball"))
+    origin = player.home_target if anchor is None else anchor
     candidates = [
-        clamp_to_pitch(player.home_target + Vec2(forward * fx * radius, ly * radius))
+        clamp_to_pitch(origin + Vec2(forward * fx * radius, ly * radius))
         for fx in _FORWARD_STEPS
         for ly in _LATERAL_STEPS
     ]

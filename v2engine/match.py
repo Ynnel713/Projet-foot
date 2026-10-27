@@ -16,6 +16,7 @@ from ligue1sim.lineup import Lineup, pick_best_formation
 from v2engine.attributes import player_attribute
 from v2engine.anticipation import pass_readers, reaction_delay_s
 from v2engine.ball_state import BallState
+from v2engine.bloc import Bloc
 from v2engine.duel import resolve_tackle, should_attempt_tackle
 from v2engine.formation import initial_positions
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch
@@ -232,12 +233,14 @@ def _step_player(
     runs: dict[str, tuple[Vec2, float]] | None = None,
     intentions: dict[str, Intention] | None = None,
     situations: SituationTracker | None = None,
+    bloc: Bloc | None = None,
 ) -> PlayerState:
     """Un tick d'un joueur : son cerveau (`cerveau.think` : perception, interprétation, décision) donne son
     intention, puis l'exécution le déplace vers la cible, à l'intensité voulue (ADR 0001). `runs` : espaces visés
-    par les coéquipiers du porteur (Off the Ball) ; `intentions` : si fourni, reçoit l'intention du joueur."""
+    par les coéquipiers du porteur (Off the Ball) ; `intentions` : si fourni, reçoit l'intention du joueur ; `bloc` :
+    bloc de référence de chaque équipe (ticket v2-collectif/04), où il se replace et d'où partent ses appels."""
     perceived = situations.perceived(player, minute * 60.0) if situations is not None else None
-    intention = think(player, ball, players or [], minute, runs, perceived)
+    intention = think(player, ball, players or [], minute, runs, perceived, bloc)
     if intentions is not None:
         intentions[player.name] = intention
     return step(player, dt, intention.target, minute, intention.intensity)
@@ -272,6 +275,7 @@ def simulate_match(
     intentions: dict[str, Intention] = {}  # intention de chaque joueur au dernier tick (ADR 0001)
     trace.reaction_delays_s = {p.name: reaction_delay_s(p) for p in players}
     situations = SituationTracker(delays_s=dict(trace.reaction_delays_s))  # situation de jeu (ticket v2-collectif/03)
+    bloc = Bloc.from_players(players)  # bloc de référence dynamique (ticket v2-collectif/04)
     scoring_team = None
     n_ticks = int(duration_minutes * 60.0 / tick_seconds)
     for i in range(n_ticks):
@@ -280,7 +284,7 @@ def simulate_match(
         for team, situation in situations.update(i * tick_seconds, ball, players, scoring_team).items():
             if situation != before[team] or i == 0:
                 trace.situations.append(SituationRecord(minute, team, situation))
-        players = [_step_player(p, ball, tick_seconds, minute, players, runs, intentions, situations) for p in players]
+        players = [_step_player(p, ball, tick_seconds, minute, players, runs, intentions, situations, bloc) for p in players]
         _resolve_player_collisions(players)
         scoring_team = _step_ball(ball, tick_seconds, players, i * tick_seconds, trace.decisions)
         if scoring_team is not None:

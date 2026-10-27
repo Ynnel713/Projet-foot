@@ -19,7 +19,7 @@ Le chantier « intelligence collective » (`docs/PLAN_V2.md`) va ajouter la reco
 2. **L'intention est l'unique sortie du cerveau** : rôle, action, cible (point et joueur), intensité, raison lisible. L'exécution du déplacement ne lit que l'intention. Exception assumée de ce premier passage : le choix du porteur (passer, tirer, conduire : Vision et Decisions) reste pris dans `match._step_ball` via `decision.choose_action`, et c'est le journal des décisions qui le trace ; l'intention du porteur décrit son déplacement (contrôle, conduite). L'intention enregistrée est celle du début du tick, avant que le ballon ne bouge.
 3. **Chaque attribut est rattaché à un seul temps** (règle anti double comptage, ticket 18) :
    - perception : Vision, Anticipation, Concentration (à venir) ;
-   - décision : Decisions, Off the Ball (choix de l'espace), et plus tard les tendances (Flair, Teamwork) ;
+   - décision : Decisions, Off the Ball (choix de l'espace), Positioning (où est sa place dans le bloc, sans ballon) puis Teamwork (y retourner ou la tenir), en deux temps distincts (ticket v2-collectif/04), et plus tard les tendances (Flair) ;
    - exécution : techniques et physiques.
 
    Un même effet n'est jamais compté dans deux temps.

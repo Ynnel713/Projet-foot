@@ -25,6 +25,11 @@ def test_length_and_width() -> None:
     assert ind.length_width([Vec2(10, 20), Vec2(40, 30), Vec2(25, 60)]) == (30, 40)
 
 
+def test_block_follow_slope() -> None:  # ticket v2-collectif/04 : part du déplacement du ballon suivie par le centre
+    assert math.isclose(ind.slope([(0, 10), (10, 15), (20, 20)]), 0.5)
+    assert ind.slope([(5, 1), (5, 2)]) == 0.0
+
+
 def test_hull_area_and_stretch_index() -> None:
     square = [Vec2(0, 0), Vec2(10, 0), Vec2(10, 10), Vec2(0, 10), Vec2(5, 5)]  # le point central ne compte pas
     assert math.isclose(ind.hull_area(square), 100.0)

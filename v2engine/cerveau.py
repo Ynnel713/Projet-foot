@@ -14,6 +14,7 @@ from functools import partial
 
 from v2engine.anticipation import loose_ball_target, meeting_point
 from v2engine.ball_state import BallState
+from v2engine.bloc import Bloc
 from v2engine.decision import DRIBBLE_SPEED_FACTOR
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
 from v2engine.movement import PlayerState
@@ -93,8 +94,10 @@ def interpret(player: PlayerState, ball: BallState, seen: Perception, runs_enabl
 
 
 def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, players: list[PlayerState],
-           minute: float, runs: dict[str, tuple[Vec2, float]] | None, situation: str | None = None) -> Intention:
-    """Action, cible et intensité selon le rôle (règles d'avant le ticket v2-collectif/02, inchangées)."""
+           minute: float, runs: dict[str, tuple[Vec2, float]] | None, situation: str | None = None,
+           bloc: Bloc | None = None) -> Intention:
+    """Action, cible et intensité selon le rôle (règles d'avant le ticket v2-collectif/02 ; avec `bloc`, le
+    replacement et les appels partent de la place du joueur dans le bloc, ticket v2-collectif/04)."""
     make = partial(Intention, situation=situation)  # situation perçue, portée par l'intention (ticket 03)
     if role == PORTEUR:
         if ball.receiving:  # pendant sa réception, il avance au pas de contrôle (v2-socle/06)
@@ -106,7 +109,8 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
         target, next_s = runs.get(player.name, (None, 0.0))
         if target is None or now_s >= next_s:
             opponents = [p for p in players if p.team != player.team]
-            target = choose_space(player, opponents, 1.0 if player.team == "home" else -1.0)
+            anchor = bloc.reference(player, ball.position, situation) if bloc and situation else None
+            target = choose_space(player, opponents, 1.0 if player.team == "home" else -1.0, anchor)
             runs[player.name] = (target, now_s + RUN_INTERVAL_S)
         return make(role, "se démarquer", target, mate=seen.holder.name, reason="appel vers un espace libre")
     if role == RECEVEUR:
@@ -116,7 +120,13 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
         return make(role, "couper la passe", seen.read_point, reason="passe lue, il court l'intercepter",
                          distance_m=player.position.distance_to(seen.read_point))
     if role == REPLACEMENT:
-        return make(role, "se replacer", player.home_target, reason="loin du ballon, il rejoint sa place")
+        if bloc is None or situation is None:  # sans bloc (tests unitaires) : sa place de départ
+            return make(role, "se replacer", player.home_target, reason="loin du ballon, il rejoint sa place")
+        place = bloc.replacement(player, ball.position, situation, minute * 60.0)  # ticket v2-collectif/04
+        if place is None:
+            return make(role, "tenir sa place", player.position, reason="loin du ballon, il tient sa place dans le bloc")
+        return make(role, "se replacer", place, reason="loin du ballon, il rejoint sa place dans le bloc",
+                    distance_m=player.position.distance_to(place))
     if role == BALLON_LIBRE:
         point = loose_ball_target(player, ball.position, ball.velocity, BALL_FRICTION_PER_S)
         return make(role, "aller au ballon", point, reason="ballon libre, il va le chercher",
@@ -129,9 +139,9 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
 
 
 def think(player: PlayerState, ball: BallState, players: list[PlayerState], minute: float,
-          runs: dict[str, tuple[Vec2, float]] | None, situation: str | None = None) -> Intention:
+          runs: dict[str, tuple[Vec2, float]] | None, situation: str | None = None, bloc: Bloc | None = None) -> Intention:
     """Perception, interprétation, décision : l'intention du joueur à cet instant. `situation` : situation de jeu
-    perçue (ticket v2-collectif/03), portée par l'intention ; elle n'oriente pas encore les rôles (tickets 04+)."""
+    perçue (ticket v2-collectif/03) ; avec `bloc`, elle donne la forme du bloc où il se replace (ticket 04)."""
     seen = perceive(player, ball, players)
     role = interpret(player, ball, seen, runs is not None, players)
-    return decide(player, role, ball, seen, players, minute, runs, situation)
+    return decide(player, role, ball, seen, players, minute, runs, situation, bloc)
