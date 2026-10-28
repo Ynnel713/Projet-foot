@@ -100,7 +100,10 @@ def run(n_matches: int, profile: str | None = None, duration_minutes: float = 90
                     collector.levels = {p.name: ("haut" if p.team == high_team else "bas") for p in players}
                 collector.on_tick(now_s, players, ball, scoring_team, TICK_S)
             try:
-                match.simulate_match(home, away, duration_minutes=duration_minutes, tick_seconds=TICK_S, observer=observer)
+                trace = match.simulate_match(home, away, duration_minutes=duration_minutes, tick_seconds=TICK_S,
+                                             observer=observer)
+                for event in trace.offsides:  # hors-jeu sifflés (ticket v2-collectif/23)
+                    collector.on_offside(event)
             finally:
                 unforce()
             collector.end_match()
@@ -126,6 +129,8 @@ def report(c: Collector, detail: bool = False) -> dict:
         "passes en profondeur réussies (part)": k["passes en profondeur réussies"] / max(1, k["passes en profondeur"]),
         "tirs par équipe": k["tirs"] / (2 * n),
         "buts par match": k["buts"] / n,
+        "hors-jeu par match": k["hors-jeu"] / n,
+        "hors-jeu par équipe": k["hors-jeu"] / (2 * n),
         "tacles par match": k["tacles"] / n,
         "pertes de balle par match": k["pertes de balle"] / n,
         "pertes en transition par match": None,

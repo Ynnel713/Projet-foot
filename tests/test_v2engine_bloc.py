@@ -9,12 +9,13 @@ import random
 
 from v2engine.ball_state import BallState
 from v2engine.bloc import (
-    BLOCK_SHIFT, CUSHION_BASE_M, LINE_HEIGHT_M, POSSESSION_ADVANCE_M, PRESSURE_STEP_M, SHAPE_WITH_BALL, SHAPE_WITHOUT_BALL,
-    Bloc, positioning_error_m, teamwork_tolerance_m,
+    BLOCK_SHIFT, LINE_HEIGHT_M, LINE_LAG_MAX_S, POSSESSION_ADVANCE_M, PRESSURE_STEP_M, SHAPE_WITH_BALL, SHAPE_WITHOUT_BALL,
+    Bloc, line_lag_s, positioning_error_m, teamwork_tolerance_m,
 )
 from v2engine.cerveau import REPLACEMENT, think
 from v2engine.geometry import Vec2
 from v2engine.movement import PlayerState
+from v2engine.offside import TRAP_DEPTH_M
 from v2engine.situation import DEFENSE_PLACEE, POSSESSION_INSTALLEE
 
 
@@ -193,11 +194,13 @@ def test_line_height_at_the_centre_and_pressure_on_the_passer() -> None:
     assert math.isclose(_line_case(12.0)[0].lines["home"], LINE_HEIGHT_M - PRESSURE_STEP_M)  # libre : elle recule
 
 
-def test_the_line_stays_behind_the_most_advanced_attacker_with_a_speed_margin() -> None:
+def test_the_line_can_hold_above_an_isolated_attacker_up_to_the_trap_depth() -> None:
+    """Ticket 23 : la ligne n'est plus tenue derrière l'attaquant le plus avancé (c'était le garde-fou du ticket
+    05, faute de hors-jeu) ; elle peut se tenir jusqu'à TRAP_DEPTH_M au-dessus de lui."""
     even, _ = _line_case(None, striker_x=30.0)
-    assert math.isclose(even.lines["home"], 30.0 - CUSHION_BASE_M)  # même vitesse : la base seule
+    assert math.isclose(even.lines["home"], LINE_HEIGHT_M)  # 35 m : 5 m au-dessus de l'attaquant, dans le piège
     slow, _ = _line_case(None, striker_x=30.0, defender_pace=11, striker_pace=99)
-    assert slow.lines["home"] < even.lines["home"] - 5.0  # défenseurs lents contre attaquant rapide : plus bas
+    assert slow.lines["home"] < even.lines["home"] - 5.0  # trop lente : elle redescend derrière l'attaquant
 
 
 def test_the_block_sits_on_its_line_for_both_teams() -> None:
@@ -235,7 +238,7 @@ def test_the_line_follows_an_off_centre_ball_for_both_teams() -> None:
     assert math.isclose(bloc.lines["away"], LINE_HEIGHT_M - 20.0 * BLOCK_SHIFT[0] - PRESSURE_STEP_M)
     rivals[1].position = Vec2(80.0, 34.0)  # attaquant à 25 m du but extérieur, même vitesse
     bloc.update([*away, *rivals], BallState(position=Vec2(52.5, 34.0), velocity=Vec2(0.0, 0.0), holder=None))
-    assert math.isclose(bloc.lines["away"], 25.0 - CUSHION_BASE_M)
+    assert math.isclose(bloc.lines["away"], 25.0 + TRAP_DEPTH_M)  # le piège la laisse monter au-dessus de lui
 
 
 def test_the_margin_uses_the_slowest_defender_of_the_last_line_only() -> None:
@@ -248,4 +251,24 @@ def test_the_margin_uses_the_slowest_defender_of_the_last_line_only() -> None:
     bloc = Bloc.from_players(players)
     bloc.update(players, BallState(position=Vec2(52.5, 34.0), velocity=Vec2(0.0, 0.0), holder=None))
     gain = (1.0 - max_speed_mps(40) / max_speed_mps(90)) * 30.0
-    assert math.isclose(bloc.lines["home"], 30.0 - CUSHION_BASE_M - gain)
+    assert math.isclose(bloc.lines["home"], 30.0 + TRAP_DEPTH_M - gain)
+
+
+def test_a_slow_line_follows_the_rise_with_a_delay() -> None:
+    """Ticket 23, directive « piège collectif » : la ligne monte en bloc, mais un défenseur au Teamwork faible la
+    suit avec du retard -- la faille qui laisse l'attaquant en jeu."""
+    for note, lag in ((99, 0.0), (55, 0.75), (11, 1.5)):
+        assert math.isclose(line_lag_s(_p("D", 18, 20, Positioning=note, Teamwork=note)), lag, abs_tol=1e-9)
+    assert math.isclose(line_lag_s(_p("D", 18, 20, Positioning=99, Teamwork=11)), LINE_LAG_MAX_S)  # le maillon faible
+    bloc, team = _line_case(None)
+    slow = next(p for p in team if p.name == "D0")
+    for p in team:
+        p.attributes = {"Positioning": 99, "Teamwork": 99}
+    slow.attributes = {"Positioning": 11, "Teamwork": 11}
+    low = BallState(position=Vec2(52.5, 34.0), velocity=Vec2(0.0, 0.0), holder=None)
+    bloc.update([*team, _p("H", 52.5, 34.0, team="away"), _p("S", 40.0, 34.0, poste="BU", team="away")], low, 0.0)
+    high = BallState(position=Vec2(85.0, 34.0), velocity=Vec2(0.0, 0.0), holder=None)
+    bloc.update([*team, _p("H", 85.0, 34.0, team="away"), _p("S", 40.0, 34.0, poste="BU", team="away")], high, 1.0)
+    lagging = bloc.reference(slow, high.position, DEFENSE_PLACEE, 1.0).x
+    alert = bloc.reference(next(p for p in team if p.name == "D1"), high.position, DEFENSE_PLACEE, 1.0).x
+    assert lagging < alert - 1.0  # le retardataire est resté plus près de son but : il joue l'attaquant en jeu

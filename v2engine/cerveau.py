@@ -9,7 +9,7 @@ de match."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import partial
 
 from v2engine.anticipation import loose_ball_target, meeting_point
@@ -19,6 +19,7 @@ from v2engine.decision import DRIBBLE_SPEED_FACTOR
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
 from v2engine.movement import PlayerState
 from v2engine.off_ball import RUN_INTERVAL_S, choose_space
+from v2engine.offside import HESITATION_INTENSITY, clamp_to_onside, offside_line, respects_the_line
 from v2engine.possession import BALL_FRICTION_PER_S, RECEPTION_SPEED_FACTOR
 
 GOAL_CENTER_Y = PITCH_WIDTH_M / 2.0
@@ -30,6 +31,8 @@ CHASE_RADIUS_M = 15.0
 # Rôles (GLOSSARY.md) et actions.
 PORTEUR, APPEL, SOUTIEN, RECEVEUR, LECTURE, BALLON_LIBRE, PRESSEUR, REPLACEMENT = (
     "porteur", "appel", "soutien", "receveur visé", "lecture de passe", "ballon libre", "presseur", "replacement")
+# Hors-jeu sifflé : l'attaquant fautif recule le temps de la remise en jeu (ticket v2-collectif/23).
+HORS_JEU = "hors-jeu"
 
 
 @dataclass(frozen=True)
@@ -109,8 +112,13 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
         target, next_s = runs.get(player.name, (None, 0.0))
         if target is None or now_s >= next_s:
             opponents = [p for p in players if p.team != player.team]
-            anchor = bloc.reference(player, ball.position, situation) if bloc and situation else None
+            anchor = bloc.reference(player, ball.position, situation, now_s) if bloc and situation else None
             target = choose_space(player, opponents, 1.0 if player.team == "home" else -1.0, anchor)
+            # Hors-jeu (ticket 23) : l'attaquant règle son appel sur la ligne, d'autant plus qu'il a de l'Off the
+            # Ball. Un joueur à faible Off the Ball part au-delà et se fait prendre. Un seul tirage par appel.
+            line = offside_line(player.team, ball.position, opponents)
+            if line is not None and respects_the_line(player):
+                target = clamp_to_onside(player.team, target, line)
             runs[player.name] = (target, now_s + RUN_INTERVAL_S)
         return make(role, "se démarquer", target, mate=seen.holder.name, reason="appel vers un espace libre")
     if role == RECEVEUR:
@@ -142,6 +150,16 @@ def think(player: PlayerState, ball: BallState, players: list[PlayerState], minu
           runs: dict[str, tuple[Vec2, float]] | None, situation: str | None = None, bloc: Bloc | None = None) -> Intention:
     """Perception, interprétation, décision : l'intention du joueur à cet instant. `situation` : situation de jeu
     perçue (ticket v2-collectif/03) ; avec `bloc`, elle donne la forme du bloc où il se replace (ticket 04)."""
+    now_s = minute * 60.0
+    if now_s < ball.offside_out_until.get(player.name, 0.0):
+        # Hors-jeu sifflé (ticket v2-collectif/23) : l'attaquant fautif recule le temps que la défense se replace.
+        return Intention(HORS_JEU, "reculer", player.home_target, HESITATION_INTENSITY,
+                         reason="hors-jeu sifflé, il recule vers sa place", situation=situation)
     seen = perceive(player, ball, players)
     role = interpret(player, ball, seen, runs is not None, players)
-    return decide(player, role, ball, seen, players, minute, runs, situation, bloc)
+    intention = decide(player, role, ball, seen, players, minute, runs, situation, bloc)
+    if now_s < ball.hesitation.get(player.name, 0.0):
+        # « Play the whistle » : le défenseur qui a vu le drapeau lève la main et attend, sans s'arrêter de jouer.
+        return replace(intention, intensity=min(intention.intensity, HESITATION_INTENSITY),
+                       reason="il lève la main, il attend le sifflet")
+    return intention

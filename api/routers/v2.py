@@ -54,6 +54,15 @@ class GoalEventOut(BaseModel):
     team: str
 
 
+class OffsideEventOut(BaseModel):
+    """Hors-jeu sifflé (ticket v2-collectif/23) : `team` est l'équipe qui le commet."""
+    minute: float
+    team: str
+    player: str
+    x: float
+    y: float
+
+
 class IntentionSegmentOut(BaseModel):
     """Intention d'un joueur à partir de `minute`, jusqu'au segment suivant (ADR 0001). Un segment ne commence
     que quand le rôle, l'action ou le joueur visé change, pour garder la réponse légère ; la raison n'a donc pas
@@ -101,6 +110,7 @@ class MatchTraceOut(BaseModel):
     intentions: list[PlayerIntentionsOut] = []
     decisions: list[DecisionOut] = []
     situations: list[SituationOut] = []
+    offsides: list[OffsideEventOut] = []
 
 
 def intention_segments(trace: MatchTrace) -> list[PlayerIntentionsOut]:
@@ -155,4 +165,5 @@ def create_match(payload: SimulateV2Request) -> MatchTraceOut:
         decisions=[DecisionOut(minute=d.minute, player=d.player, team=d.team, action=d.action, target=d.target,
                                considered=d.considered, best=d.best) for d in trace.decisions],
         situations=[SituationOut(minute=s.minute, team=s.team, situation=s.situation) for s in trace.situations],
+        offsides=[OffsideEventOut(minute=o.minute, team=o.team, player=o.player, x=o.x, y=o.y) for o in trace.offsides],
     )

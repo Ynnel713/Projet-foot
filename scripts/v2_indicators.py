@@ -269,6 +269,11 @@ class Collector:
     def on_choice(self, kind: str) -> None:
         self.count["choix " + kind] += 1
 
+    def on_offside(self, event) -> None:
+        """Hors-jeu sifflé (ticket v2-collectif/23) ; `event` : `v2engine.trace.OffsideEvent`."""
+        self.count["hors-jeu"] += 1
+        self.count["hors-jeu " + event.team] += 1
+
     # --- tick ---
     def on_tick(self, now_s: float, players: list[PlayerState], ball, scoring_team: str | None, dt: float = 0.1) -> None:
         minute = now_s / 60.0

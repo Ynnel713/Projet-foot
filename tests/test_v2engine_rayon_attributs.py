@@ -25,10 +25,10 @@ ALLOWED = {
     "Balance": {"duel"},
     "Aggression": {"duel", "match"},  # fréquence des tentatives et faute, jamais la réussite du tacle
     "Tackling": {"duel"},
-    "Anticipation": {"anticipation"},
+    "Anticipation": {"anticipation", "match"},  # + voir le drapeau du hors-jeu (ticket 23)
     "Decisions": {"decision"},
     "Vision": {"decision"},
-    "Off the Ball": {"off_ball"},
+    "Off the Ball": {"off_ball", "offside"},  # + régler l'appel sur la ligne du hors-jeu (ticket 23)
     "Composure": {"possession", "shooting"},
     "First Touch": {"possession"},
     "Passing": {"possession"},

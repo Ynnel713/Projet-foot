@@ -59,6 +59,18 @@ class GoalEvent:
     team: str  # "home" / "away"
 
 
+@dataclass(frozen=True)
+class OffsideEvent:
+    """Hors-jeu sifflé (ticket v2-collectif/23) : `team` est l'équipe qui le commet (celle de l'attaquant
+    signalé), `player` le joueur signalé, `x`/`y` l'endroit où le ballon a été touché (le coup franc est donné
+    là, simplifié)."""
+    minute: float
+    team: str  # "home" / "away"
+    player: str
+    x: float
+    y: float
+
+
 @dataclass
 class MatchTrace:
     home: str
@@ -73,6 +85,7 @@ class MatchTrace:
     goals: list[GoalEvent] = field(default_factory=list)
     decisions: list[DecisionRecord] = field(default_factory=list)
     situations: list[SituationRecord] = field(default_factory=list)
+    offsides: list[OffsideEvent] = field(default_factory=list)  # hors-jeu sifflés (ticket v2-collectif/23)
     reaction_delays_s: dict[str, float] = field(default_factory=dict)  # par joueur (Anticipation, ticket v2-collectif/03)
 
     def record(self, minute: float, players: list[PlayerSnapshot], ball: BallSnapshot) -> None:
@@ -86,3 +99,4 @@ class MatchTrace:
         else:
             raise ValueError(f"équipe inconnue : {team!r} (attendu 'home' ou 'away')")
         self.goals.append(GoalEvent(minute=minute, team=team))
+

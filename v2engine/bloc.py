@@ -17,15 +17,22 @@ Constantes validées par le propriétaire le 27/10/2026 (valeurs de départ, aju
   fourchettes réelles ;
   sans lui, le bloc d'attaque restait centré sur la place du coup d'envoi, dans sa moitié : tirs divisés par deux).
 
-Hauteur de la ligne défensive sans ballon (ticket v2-collectif/05, validé le 27/10/2026, valeurs de départ ajustables) :
-le bloc se place pour que sa dernière ligne soit à la plus basse de deux hauteurs, jamais à moins de 5 m de son but :
+Hauteur de la ligne défensive sans ballon (ticket v2-collectif/05, revue par le ticket v2-collectif/23 le
+28/10/2026) : le bloc se place pour que sa dernière ligne soit à la plus basse de deux hauteurs, jamais à moins
+de 5 m de son but :
 - 35 m de son but ballon au centre, suivant le ballon comme le bloc (ligne médiane 45 m, moyenne 47 m, dans
-  arXiv 2511.06191 ; plus bas ici faute de hors-jeu, ticket 23), plage 30-45 m ; + 5 m si le porteur adverse est pressé
-  (adversaire à moins de 3 m), - 5 m s'il est libre (le plus proche à 9 m ou plus), progressif entre les deux
-  (« ballon couvert, on monte ; ballon libre, on recule » ; écart chiffré non trouvé) ;
-- derrière l'attaquant adverse le plus avancé, d'une marge de 2 m plus ce qu'il gagne sur 30 m sur le défenseur le plus
-  lent de la ligne (vitesses max, Pace : capacité, règle R5 ; repère de la carte des attributs « le rapide prend 3-4 m
-  sur 30 m » ; base de 2 m non trouvée)."""
+  arXiv 2511.06191) ; + 5 m si le porteur adverse est pressé (adversaire à moins de 3 m), - 5 m s'il est libre
+  (le plus proche à 9 m ou plus), progressif entre les deux ;
+- au plus 5 m AU-DESSUS de l'attaquant adverse le plus avancé (`offside.TRAP_DEPTH_M`), moins ce que l'attaquant
+  gagne sur 30 m sur le défenseur le plus lent de la ligne (vitesses max, Pace : capacité, règle R5). Jusqu'au
+  ticket 23, la ligne devait rester 2 m DERRIÈRE cet attaquant : sans hors-jeu c'était le seul garde-fou, et il
+  interdisait le piège par construction. Le hors-jeu le remplace : la ligne peut monter au-dessus de l'attaquant,
+  au risque d'être prise dans le dos (mesuré, ticket 23) ;
+- la ligne monte en bloc, mais chaque défenseur la suit avec un retard d'autant plus grand que son Teamwork est
+  faible (`line_lag_s` : 99 -> 0 s, 55 -> 0,75 s, 11 -> 1,5 s). Le Positioning n'est pas relu ici : il agit déjà
+  par l'erreur de placement du ticket 04, qui décale le défenseur de la ligne de la même façon. C'est la faille
+  collective : un seul défenseur en retard remet tout le monde en jeu, puisque le hors-jeu se juge sur les
+  positions réelles."""
 
 from __future__ import annotations
 
@@ -37,6 +44,7 @@ from v2engine.attributes import player_attribute, success_probability
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch
 from v2engine.ball_state import BallState
 from v2engine.movement import PlayerState, max_speed_mps
+from v2engine.offside import TRAP_DEPTH_M
 from v2engine.situation import DEFENSE_PLACEE, TRANSITION_DEFENSIVE
 
 BLOCK_SHIFT = (0.5, 0.3)  # part du décalage du ballon suivie par le bloc : longueur, largeur
@@ -51,7 +59,11 @@ ARRIVAL_M = 1.0  # place atteinte à 1 m près (pas une constante produit : l'er
 LINE_HEIGHT_M = 35.0  # dernière ligne, depuis son but, ballon au centre et porteur ni pressé ni libre
 PRESSURE_STEP_M = 5.0  # la ligne monte (porteur pressé) ou recule (porteur libre) d'autant
 PRESSED_M, FREE_M = 3.0, 9.0  # distance du défenseur le plus proche au porteur : pressé en dessous, libre au-delà
-CUSHION_BASE_M, CUSHION_RUN_M = 2.0, 30.0  # marge derrière l'attaquant le plus avancé : base + gain sur une course de 30 m
+CUSHION_RUN_M = 30.0  # rabaissement de la ligne quand elle est plus lente que l'attaquant le plus avancé
+# Réaction de la ligne (ticket v2-collectif/23, directive « piège collectif » du 28/10/2026) : la ligne monte en
+# bloc, mais un défenseur au Teamwork faible suit avec un retard -- c'est la faille qui laisse
+# l'attaquant en jeu (le classique appel dans le dos d'une ligne qui monte). 99 -> 0 s, 55 -> 0,75 s, 11 -> 1,5 s.
+LINE_LAG_MAX_S = 1.5
 _DEPTH_MARGIN_M = 5.0  # le bloc garde sa dernière ligne à 5 m de son but (marge de `formation`), pas une constante produit
 _CENTER = Vec2(PITCH_LENGTH_M / 2.0, PITCH_WIDTH_M / 2.0)
 _WITHOUT_BALL = (DEFENSE_PLACEE, TRANSITION_DEFENSIVE)
@@ -75,6 +87,15 @@ def teamwork_tolerance_m(player: PlayerState) -> float:
     return _inverse(player_attribute(player, "Teamwork"), _TEAMWORK_TOLERANCE_M)
 
 
+def line_lag_s(player: PlayerState) -> float:
+    """Retard avec lequel `player` suit la montée de sa ligne (99 -> 0 s, 55 -> 0,75 s, 11 -> 1,5 s). C'est la
+    discipline collective qui est en jeu, donc Teamwork seul : l'écart de placement dû au Positioning est déjà
+    tiré par `target` (ticket 04), et un défenseur décalé joue lui aussi l'attaquant en jeu -- deux effets
+    distincts, un attribut chacun (règles R1 et R2 de la carte)."""
+    return (1.0 - success_probability(player_attribute(player, "Teamwork"), baseline=0.5, amplitude=0.5,
+                                      min_prob=0.0, max_prob=1.0)) * LINE_LAG_MAX_S
+
+
 @dataclass
 class _Shape:
     center: Vec2  # centre de la formation de départ (moyenne des joueurs de champ)
@@ -92,6 +113,9 @@ class Bloc:
     errors: dict[str, tuple[Vec2, float]] = field(default_factory=dict)  # joueur -> (erreur, prochain tirage)
     returning: set[str] = field(default_factory=set)  # joueurs repartis vers leur place, jusqu'à l'atteindre
     lines: dict[str, float] = field(default_factory=dict)  # équipe -> hauteur de sa dernière ligne sans ballon (`update`)
+    # équipe -> (instant, hauteur) : courte mémoire de la ligne, pour que chaque défenseur la suive avec son
+    # propre retard (`line_lag_s`, ticket v2-collectif/23)
+    line_history: dict[str, list[tuple[float, float]]] = field(default_factory=dict)
 
     @classmethod
     def from_players(cls, players: list[PlayerState]) -> Bloc:
@@ -105,7 +129,7 @@ class Bloc:
             shapes[team] = _Shape(Vec2(cx, cy), max(xs) - min(xs), max(ys) - min(ys), min(xs) - cx, max(xs) - cx)
         return cls(shapes)
 
-    def update(self, players: list[PlayerState], ball: BallState) -> None:
+    def update(self, players: list[PlayerState], ball: BallState, now_s: float = 0.0) -> None:
         """Hauteur de la dernière ligne de chaque équipe, si elle n'a pas le ballon (une fois par tick)."""
         holder = next((p for p in players if p.name == ball.holder), None) if ball.holder else None
         for team in self.shapes:
@@ -124,11 +148,38 @@ class Bloc:
             # ligne la plus basse de la forme de départ (bandes espacées d'au moins 10 m : 1 m de tolérance suffit)
             slowest = min(max_speed_mps(p.pace) for p in own if _progress(team, p.home_target.x) <= back + 1.0)
             gain = max(0.0, 1.0 - slowest / max_speed_mps(deepest.pace)) * CUSHION_RUN_M
-            height = min(height, _progress(team, deepest.position.x) - CUSHION_BASE_M - gain)
+            # ticket 23 : la ligne peut se tenir jusqu'à TRAP_DEPTH_M au-dessus de l'attaquant le plus avancé ;
+            # si elle est plus lente que lui, le gain de vitesse la fait redescendre (critère Pace du ticket 05).
+            height = min(height, _progress(team, deepest.position.x) + TRAP_DEPTH_M - gain)
             self.lines[team] = max(height, _DEPTH_MARGIN_M)
+            history = self.line_history.setdefault(team, [])
+            history.append((now_s, self.lines[team]))
+            while len(history) > 1 and now_s - history[0][0] > LINE_LAG_MAX_S:
+                history.pop(0)
 
-    def reference(self, player: PlayerState, ball: Vec2, situation: str) -> Vec2:
-        """Place du joueur dans le bloc, sans l'erreur de Positioning. Le gardien garde sa place de départ."""
+    def _line_for(self, player: PlayerState, now_s: float) -> float | None:
+        """Hauteur de ligne telle que `player` la perçoit : la ligne d'il y a `line_lag_s(player)` secondes."""
+        line = self.lines.get(player.team)
+        if line is None:
+            return None
+        history = self.line_history.get(player.team)
+        lag = line_lag_s(player)
+        if not history or lag <= 0.0:
+            return line
+        wanted = now_s - lag
+        seen = history[0][1]
+        for instant, value in history:
+            if instant <= wanted:
+                seen = value
+            else:
+                break
+        return seen
+
+    def reference(self, player: PlayerState, ball: Vec2, situation: str, now_s: float = 0.0) -> Vec2:
+        """Place du joueur dans le bloc, sans l'erreur de Positioning. Le gardien garde sa place de départ.
+        `now_s` sert au retard de réaction (`line_lag_s`) : sans lui (0.0), un joueur au Teamwork faible voit la
+        ligne de l'entrée la plus ancienne de l'historique au lieu de la ligne courante -- passer l'instant du tick
+        dans le moteur, la valeur par défaut ne sert qu'aux tests sans historique."""
         shape = self.shapes.get(player.team)
         if shape is None or player.poste == "GK":
             return player.home_target
@@ -139,7 +190,7 @@ class Bloc:
         forward = 1.0 if player.team == "home" else -1.0  # convention du moteur : domicile attaque vers x croissant
         cx = shape.center.x + (ball.x - _CENTER.x) * BLOCK_SHIFT[0] + (forward * POSSESSION_ADVANCE_M if with_ball else 0.0)
         cy = shape.center.y + (ball.y - _CENTER.y) * BLOCK_SHIFT[1]
-        line = None if with_ball else self.lines.get(player.team)
+        line = None if with_ball else self._line_for(player, now_s)
         if line is not None:  # sans ballon : le bloc se cale sur la hauteur de sa dernière ligne (ticket 05)
             cx = line - shape.back * sx if player.team == "home" else PITCH_LENGTH_M - line - shape.front * sx
         # la forme entière reste sur le terrain, ses lignes extrêmes à 5 m au moins de chaque ligne de but
@@ -152,14 +203,14 @@ class Bloc:
         zone, règle R3 ; tirée toutes les 5 s, direction quelconque, distance uniforme entre 0 et deux fois l'erreur
         moyenne). Le gardien n'est pas concerné."""
         if situation not in _WITHOUT_BALL or player.poste == "GK":
-            return self.reference(player, ball, situation)
+            return self.reference(player, ball, situation, now_s)
         error, next_s = self.errors.get(player.name, (None, 0.0))
         if error is None or now_s >= next_s:
             angle = random.uniform(0.0, 2.0 * math.pi)
             distance = random.uniform(0.0, 2.0 * positioning_error_m(player))
             error = Vec2(math.cos(angle) * distance, math.sin(angle) * distance)
             self.errors[player.name] = (error, now_s + POSITIONING_REDRAW_S)
-        return clamp_to_pitch(self.reference(player, ball, situation) + error)
+        return clamp_to_pitch(self.reference(player, ball, situation, now_s) + error)
 
     def replacement(self, player: PlayerState, ball: Vec2, situation: str, now_s: float) -> Vec2 | None:
         """Place à rejoindre, ou None s'il la tient (Teamwork). Il ne repart que s'il s'en écarte de plus que sa

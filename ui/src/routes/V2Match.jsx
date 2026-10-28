@@ -142,6 +142,11 @@ export default function V2Match() {
   const homeGoals = revealedGoals.filter((g) => g.team === "home").length;
   const awayGoals = revealedGoals.filter((g) => g.team === "away").length;
   const finished = seconds >= (trace.ticks.length - 1) * trace.tick_seconds;
+  // Coup de sifflet du hors-jeu (ticket v2-collectif/23) : affiché 15 secondes de match après l'événement, pour
+  // rester lisible aux vitesses de lecture (x8 par défaut, soit un peu moins de 2 s réelles).
+  const recentOffside = (trace.offsides || [])
+    .filter((o) => o.minute <= tick.minute && tick.minute - o.minute < 15 / 60)
+    .at(-1);
 
   return (
     <div className="flex flex-col h-full p-2.5 gap-2">
@@ -158,6 +163,10 @@ export default function V2Match() {
             <span className="text-[#4f8ef7]">{situationAt(trace, "home", tick.minute)}</span>
             {" · "}
             <span className="text-[#e0b84a]">{situationAt(trace, "away", tick.minute)}</span>
+          </div>
+          <div className="text-[11px] h-[14px] font-semibold text-gold tabular-nums">
+            {recentOffside &&
+              `⚑ Hors-jeu — ${recentOffside.player} (${recentOffside.team === "home" ? trace.home : trace.away})`}
           </div>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">

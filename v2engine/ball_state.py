@@ -28,3 +28,12 @@ class BallState:
     engaged: set[str] = field(default_factory=set)
     engaged_holder: str | None = None
     tackle_ban_until_s: dict[str, float] = field(default_factory=dict)
+    # Hors-jeu (ticket v2-collectif/23) : joueurs signalés au départ de la passe en cours. Vidé dès que quelqu'un
+    # contrôle le ballon, qu'il meurt ou qu'un coup franc est donné.
+    offside_watch: set[str] = field(default_factory=set)
+    # Défenseurs qui lèvent la main et attendent le sifflet (Anticipation, directive « play the whistle ») :
+    # nom -> instant jusqu'auquel ils relâchent leur effort. Survit à la fin de la passe : il expire tout seul, et
+    # le joueur qui récupère le ballon en sort (il joue, lui).
+    hesitation: dict[str, float] = field(default_factory=dict)
+    # Attaquant fautif écarté de l'action après le coup franc : nom -> instant jusqu'auquel il recule.
+    offside_out_until: dict[str, float] = field(default_factory=dict)

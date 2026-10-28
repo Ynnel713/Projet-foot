@@ -13,6 +13,7 @@ from dataclasses import dataclass, replace
 from v2engine.attributes import player_attribute, success_probability
 from v2engine.geometry import Vec2
 from v2engine.movement import PlayerState
+from v2engine.offside import is_clearly_offside
 from v2engine.possession import pass_success_probability, pressure
 from v2engine.shooting import SHOOTING_RANGE_M, shot_probability
 
@@ -90,7 +91,12 @@ def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2
     """Les options du porteur avec leur valeur (plus haut = meilleur). Tirer n'existe qu'à portée
     (`SHOOTING_RANGE_M`), passer seulement s'il a un coéquipier ; conduire est toujours possible."""
     opponents = [p for p in players if p.team != holder.team]
-    teammates = visible_teammates(holder, [p for p in players if p.team == holder.team and p.name != holder.name], goal)
+    mates = [p for p in players if p.team == holder.team and p.name != holder.name]
+    # Hors-jeu (ticket v2-collectif/23) : le porteur ne sert pas un coéquipier qu'il voit nettement au-delà de la
+    # ligne (le ballon est à ses pieds, donc sa position est celle du ballon). Il reste les appels à la limite,
+    # ceux que l'arbitre juge -- un professionnel ne joue pas une passe à un joueur cinq mètres hors-jeu.
+    teammates = [p for p in visible_teammates(holder, mates, goal)
+                 if not is_clearly_offside(holder.team, p.position, holder.position, opponents)]
     gene = pressure(holder, opponents)
     holder_to_goal = holder.position.distance_to(goal)
 

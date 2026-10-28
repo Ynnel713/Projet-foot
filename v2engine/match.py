@@ -8,6 +8,7 @@ D-V04) ; un rendu, pas encore construit, la rejouera ensuite. Une seule fonction
 
 from __future__ import annotations
 
+import random
 from collections.abc import Callable
 
 from ligue1sim.clubs import Club
@@ -23,10 +24,11 @@ from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitc
 from v2engine.movement import PlayerState, step
 from v2engine.cerveau import GOAL_CENTER_Y, OPPONENT_GOAL, Intention, think
 from v2engine.decision import DECISION_INTERVAL_S, choose_action
+from v2engine.offside import HESITATION_S, OFFSIDE_OUT_S, offside_at_pass, sees_the_flag_probability
 from v2engine.possession import BALL_FRICTION_PER_S, BALL_STOPPED_MPS, attempt_control, pass_velocity, reception_delay_s
 from v2engine.shooting import attempt_shot
 from v2engine.situation import SituationTracker
-from v2engine.trace import BallSnapshot, DecisionRecord, MatchTrace, PlayerSnapshot, SituationRecord
+from v2engine.trace import BallSnapshot, DecisionRecord, MatchTrace, OffsideEvent, PlayerSnapshot, SituationRecord
 
 # But adverse d'une équipe, par convention de ce moteur (voir `formation.initial_positions`,
 # D-V03 : domicile attaque vers x=PITCH_LENGTH_M, extérieur vers x=0).
@@ -106,8 +108,42 @@ def _goalkeeper(team: str, players: list[PlayerState]) -> PlayerState | None:
     return next((p for p in players if p.team == team and p.poste == "GK"), None)
 
 
+def _clear_offside(ball: BallState) -> None:
+    """Efface le signalement de la passe en cours. Le flottement des défenseurs (`hesitation`) n'est PAS effacé :
+    celui qui a levé la main attend le sifflet, ou la fin du flottement, même si la passe est morte entre-temps
+    (« play the whistle », directive du 28/10/2026). Il expire tout seul à `now_s + HESITATION_S`."""
+    ball.offside_watch = set()
+
+
+def _award_offside_free_kick(ball: BallState, offender: PlayerState, players: list[PlayerState], now_s: float) -> None:
+    """Coup franc indirect simplifié (ticket v2-collectif/23) : le ballon va au défenseur de champ le plus proche
+    de l'endroit de la faute -- jamais au gardien, pour ne pas fabriquer une passe en retrait catastrophique. Le
+    fautif est écarté de l'action `OFFSIDE_OUT_S` secondes, le temps qu'il recule (directive du propriétaire,
+    28/10/2026). Pas de barrière ni de sortie de balle : le moteur n'a pas encore de coups de pied arrêtés."""
+    defenders = [p for p in players if p.team != offender.team and p.poste != "GK"]
+    if not defenders:  # effectif synthétique sans joueur de champ adverse : tout le monde peut tirer
+        defenders = [p for p in players if p.team != offender.team]
+    _clear_offside(ball)
+    ball.hesitation = {}  # le sifflet tombe : plus personne n'attend, le jeu repart
+    ball.receiver = None
+    ball.readers = {}
+    ball.velocity = Vec2(0.0, 0.0)
+    ball.offside_out_until[offender.name] = now_s + OFFSIDE_OUT_S
+    if not defenders:
+        ball.holder = None
+        return
+    where = ball.position  # lieu de la faute, à quelques dizaines de centimètres du fautif
+    taker = min(defenders, key=lambda p: p.position.distance_to(where))
+    ball.position = taker.position
+    ball.holder = taker.name
+    ball.receiving = True
+    ball.engaged, ball.engaged_holder = set(), taker.name
+    ball.next_decision_s = now_s + reception_delay_s(taker, [p for p in players if p.team == offender.team])
+
+
 def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: float = 0.0,
-               decisions: list[DecisionRecord] | None = None) -> str | None:
+               decisions: list[DecisionRecord] | None = None,
+               offsides: list[OffsideEvent] | None = None) -> str | None:
     """Avance le ballon d'un tick (mutation en place) : si un joueur le contrôle déjà, un
     adversaire à portée directe peut d'abord tenter un tacle (Phase 3, Tackling/Strength/
     Balance/Aggression ; au plus un par confrontation, v2-socle/03) ; sinon, après son temps de réception (`possession.reception_delay_s`, v2-socle/06)
@@ -131,7 +167,8 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
         ball.engaged = {n for n in ball.engaged
                         if any(p.name == n and p.position.distance_to(holder.position) < CONFRONTATION_END_M for p in players)}
         candidates = [p for p in players
-                      if p.name not in ball.engaged and ball.tackle_ban_until_s.get(p.name, 0.0) <= now_s]
+                      if p.name not in ball.engaged and ball.tackle_ban_until_s.get(p.name, 0.0) <= now_s
+                      and ball.offside_out_until.get(p.name, 0.0) <= now_s]  # le fautif recule, il ne défend pas
         challenger = _nearest_opponent_in_range(holder, candidates, TACKLE_RADIUS_M)
         if challenger is not None and should_attempt_tackle(player_attribute(challenger, "Aggression"), dt):
             ball.engaged.add(challenger.name)
@@ -140,10 +177,12 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                 ball.tackle_ban_until_s[challenger.name] = now_s + FAILED_TACKLE_RECOVERY_S
             if result.won:
                 ball.holder = challenger.name
+                ball.hesitation.pop(challenger.name, None)  # il a le ballon : il joue, il n'attend plus
                 # nouveau porteur : contrôle et lève la tête avant de décider (v2-socle/06)
                 ball.next_decision_s = now_s + reception_delay_s(challenger, [p for p in players if p.team != challenger.team])
                 ball.receiving = True
                 ball.velocity = Vec2(0.0, 0.0)
+                _clear_offside(ball)  # nouveau porteur : la passe signalée est terminée
             # Tacle raté (faute ou non) : le porteur garde le ballon ce tick, rien d'autre ne
             # change -- la faute en elle-même n'a pas encore de conséquence de jeu (coup franc,
             # Phase 5+, voir docs/PLAN_V2.md).
@@ -164,6 +203,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                                             target.name if target is not None else None,
                                             getattr(action, "considered", 1), getattr(action, "best", True)))
         if action.kind == "shot":
+            _clear_offside(ball)  # la passe signalée est morte : le ballon est tiré
             scored = attempt_shot(holder, keeper, holder.position.distance_to(goal), GOAL_CENTER_Y)
             if scored:
                 ball.holder = None
@@ -191,6 +231,18 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
             ball.receiver = action.target.name
             opponents = [p for p in players if p.team != holder.team]
             ball.readers = pass_readers(holder.position, ball.velocity, action.target.position, opponents)
+            # Hors-jeu (ticket v2-collectif/23) : jugement AU DÉPART, sur les positions réelles. Le signalement ne
+            # vaut coup franc que si l'un de ces joueurs touche ensuite le ballon.
+            mates = [p for p in players if p.team == holder.team and p.name != holder.name]
+            _clear_offside(ball)
+            flagged = offside_at_pass(holder.team, ball.position, mates, opponents)
+            if flagged:
+                ball.offside_watch = set(flagged)
+                # « Play the whistle » : les défenseurs qui voient le drapeau lèvent la main et attendent (ils ne
+                # s'arrêtent pas : le moteur ne siffle qu'au contact du ballon).
+                for opponent in opponents:
+                    if random.random() < sees_the_flag_probability(player_attribute(opponent, "Anticipation")):
+                        ball.hesitation[opponent.name] = now_s + HESITATION_S
         else:
             ball.velocity = Vec2(0.0, 0.0)  # conduite : le ballon suit le porteur (voir `simulate_match`)
         return None
@@ -200,19 +252,33 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
     ball.velocity = ball.velocity * (BALL_FRICTION_PER_S**dt)
     if ball.velocity.length() < BALL_STOPPED_MPS:
         ball.receiver = None  # passe morte : ballon libre pour tous, plus de receveur désigné
+        _clear_offside(ball)  # plus de passe en cours : plus de hors-jeu à siffler
 
     for player in players:
         if ball.position.distance_to(player.position) >= CONTROL_RADIUS_M:
             continue
+        if now_s < ball.offside_out_until.get(player.name, 0.0):
+            continue  # écarté de l'action après un coup franc : il recule, il ne joue pas ce ballon
+        if player.name in ball.offside_watch:
+            # Il touche le ballon en position de hors-jeu : coup franc indirect, même si le contrôle échoue
+            # (« s'il le touche, c'est sifflé, point barre », directive du 28/10/2026).
+            if offsides is not None:
+                offsides.append(OffsideEvent(minute=now_s / 60.0, team=player.team, player=player.name,
+                                             x=ball.position.x, y=ball.position.y))
+            _award_offside_free_kick(ball, player, players, now_s)
+            return None
         if attempt_control(player, ball.velocity, [p for p in players if p.team != player.team]):
             ball.holder = player.name
+            ball.hesitation.pop(player.name, None)  # il a le ballon : il joue, il n'attend plus
             ball.readers = {}
             ball.receiver = None
+            _clear_offside(ball)
             ball.next_decision_s = now_s + reception_delay_s(player, [p for p in players if p.team != player.team])
             ball.receiving = True
             ball.velocity = Vec2(0.0, 0.0)
         else:
             ball.receiver = None  # contrôle raté : le ballon n'est plus « pour » personne
+            _clear_offside(ball)  # la passe est morte pour le hors-jeu : le ballon est retombé sur un autre
             away = ball.position - player.position
             # Ballon et joueur exactement superposés (direction de séparation indéfinie) : repart
             # dans le sens de course du joueur, ou une direction fixe à défaut de vitesse.
@@ -284,10 +350,10 @@ def simulate_match(
         for team, situation in situations.update(i * tick_seconds, ball, players, scoring_team).items():
             if situation != before[team] or i == 0:
                 trace.situations.append(SituationRecord(minute, team, situation))
-        bloc.update(players, ball)  # hauteur de ligne sans ballon (ticket v2-collectif/05)
+        bloc.update(players, ball, i * tick_seconds)  # hauteur de ligne sans ballon (tickets 05 et 23)
         players = [_step_player(p, ball, tick_seconds, minute, players, runs, intentions, situations, bloc) for p in players]
         _resolve_player_collisions(players)
-        scoring_team = _step_ball(ball, tick_seconds, players, i * tick_seconds, trace.decisions)
+        scoring_team = _step_ball(ball, tick_seconds, players, i * tick_seconds, trace.decisions, trace.offsides)
         if scoring_team is not None:
             trace.record_goal(scoring_team, minute)
         if observer is not None:
