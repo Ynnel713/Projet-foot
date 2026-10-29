@@ -14,9 +14,10 @@ from v2engine.geometry import PITCH_LENGTH_M, Vec2
 from v2engine.match import _award_offside_free_kick, _clear_offside, _step_ball
 from v2engine.movement import PlayerState
 from v2engine.offside import (
-    OFFSIDE_OUT_S, OFFSIDE_TOLERANCE_M, clamp_to_onside, is_clearly_offside, is_offside_position,
-    keep_onside_probability, offside_at_pass, offside_line, respects_the_line, second_last_defender_progress,
-    sees_the_flag_probability,
+    OFFSIDE_OUT_S, OFFSIDE_TOLERANCE_M, PASS_MARGIN_REFERENCE_VISION,
+    PASS_OFFSIDE_MARGIN_M, clamp_to_onside, is_clearly_offside, is_offside_position, keep_onside_probability,
+    line_read_error_m, offside_at_pass, offside_line, pass_margin_m, perceived_defence_line, respects_the_line,
+    second_last_defender_progress, sees_the_flag_probability,
 )
 from v2engine.trace import MatchTrace
 
@@ -195,19 +196,138 @@ def test_off_the_ball_decides_who_respects_the_line() -> None:
     assert high > low + 100  # 380 contre 220 environ
 
 
-def test_the_passer_does_not_serve_a_mate_he_sees_clearly_offside() -> None:
+def test_the_passer_does_not_serve_a_mate_he_sees_clearly_offside(monkeypatch) -> None:
     """Ticket 23 : sans ce filtre, le porteur choisissait le coéquipier le plus avancé et le plus libre -- donc
     souvent celui qui était cinq mètres au-delà de la ligne. Mesuré : 21,5 hors-jeu par match au lieu de 3,4."""
     defence = _defence()  # ligne à 82 m de son but, ballon du porteur à 60 m
     near_line = _p("A1", 82.4, 34.0, poste="BU")  # 0,4 m au-delà : sous l'œil du passeur, il joue la passe
     far_beyond = _p("A2", 90.0, 20.0, poste="BU")  # 8 m au-delà : il le voit, il ne le sert pas
-    mate = _p("A3", 65.0, 20.0)
-    assert is_clearly_offside("home", far_beyond.position, Vec2(60.0, 34.0), defence)
-    assert not is_clearly_offside("home", near_line.position, Vec2(60.0, 34.0), defence)
+    ball = Vec2(60.0, 34.0)
+    assert is_clearly_offside("home", far_beyond.position, ball, defence)
+    assert not is_clearly_offside("home", near_line.position, ball, defence)
+    # Câblage : la ligne perçue est fixée pour que le résultat ne dépende pas du tirage du porteur.
+    monkeypatch.setattr("v2engine.decision.perceived_defence_line", lambda team, opponents, vision: 82.0)
     holder = _p("A4", 60.0, 34.0)
-    options = evaluate_options(holder, [holder, near_line, far_beyond, mate, *defence], Vec2(105.0, 34.0), None)
-    passing = next(a for a in options if a.kind == "pass")
-    assert passing.target.name != "A2"
+    # Seul A2 est disponible : le porteur préfère conduire plutôt que de le servir.
+    options = evaluate_options(holder, [holder, far_beyond, *defence], Vec2(105.0, 34.0), None)
+    assert all(a.kind != "pass" or a.target.name != "A2" for a in options)
+    # A1 est à la limite mais dans la marge : il est bien proposé.
+    options = evaluate_options(holder, [holder, near_line, *defence], Vec2(105.0, 34.0), None)
+    assert next(a for a in options if a.kind == "pass").target.name == "A1"
+
+
+# --- L'œil du passeur (Vision, deuxième passe du 28/10/2026) ------------------------------------------------
+def test_the_blind_spot_narrows_as_the_passer_vision_grows() -> None:
+    """Correction du 29/10/2026 (option S2) : la marge est un angle mort -- tout ce qu'elle dépasse la tolérance de
+    l'arbitre est une passe sifflée. Elle se resserre donc avec la Vision, garde le seuil validé de 0,5 m pour un
+    passeur moyen, et ne descend jamais sous la tolérance (le meilleur passeur ne refuse pas une passe légale)."""
+    assert math.isclose(pass_margin_m(PASS_MARGIN_REFERENCE_VISION), PASS_OFFSIDE_MARGIN_M)  # Vision moyenne de la base
+    margins = [pass_margin_m(v) for v in range(0, 101)]
+    assert all(b <= a for a, b in zip(margins, margins[1:]))  # jamais plus large quand la Vision monte
+    assert min(margins) >= OFFSIDE_TOLERANCE_M and math.isclose(pass_margin_m(100), OFFSIDE_TOLERANCE_M)
+    assert pass_margin_m(11) > pass_margin_m(PASS_MARGIN_REFERENCE_VISION) > pass_margin_m(99)
+
+
+def test_a_poor_passer_serves_a_mate_just_offside_that_a_great_one_refuses() -> None:
+    """Même situation, seule la Vision change, lecture de la ligne parfaite (82 m). Le receveur à 0,4 m au-delà
+    est hors-jeu pour l'arbitre : le passeur de Vision 11 ne le voit pas et le sert, celui de Vision 99 le voit et
+    le refuse. Le receveur à 0,2 m au-delà est en jeu : les deux le servent."""
+    defence = _defence()  # avant-dernier adversaire à 82 m, ballon à 60 m
+    ball = Vec2(60.0, 34.0)
+    offside_mate = _p("A1", 82.4, 34.0, poste="BU")
+    onside_mate = _p("A2", 82.2, 34.0, poste="BU")
+    assert offside_at_pass("home", ball, [offside_mate, onside_mate], defence) == {"A1"}  # l'arbitre, sans Vision
+    assert not is_clearly_offside("home", offside_mate.position, ball, defence, pass_margin_m(11), 82.0)
+    assert is_clearly_offside("home", offside_mate.position, ball, defence, pass_margin_m(99), 82.0)
+    for vision in (11, 99):
+        assert not is_clearly_offside("home", onside_mate.position, ball, defence, pass_margin_m(vision), 82.0)
+
+
+def test_with_a_perfect_reading_no_passer_refuses_a_legal_pass() -> None:
+    """Le meilleur passeur n'est jamais pénalisé : sur la vraie ligne, aucun coéquipier en jeu (jusqu'à la
+    tolérance) n'est refusé, quelle que soit la Vision."""
+    defence = _defence()
+    ball = Vec2(60.0, 34.0)
+    for vision in (0, 11, 55, 63.4, 80, 99, 100):
+        for cm in range(-30, 31):
+            mate = Vec2(82.0 + cm / 100.0, 34.0)
+            assert not is_clearly_offside("home", mate, ball, defence, pass_margin_m(vision), 82.0), (vision, cm)
+
+
+def test_better_vision_never_means_more_offside_errors(monkeypatch) -> None:
+    """Banc discriminant réduit (audit du 29/10/2026) : vrai `evaluate_options`, un seul coéquipier toujours vu,
+    placé de -0,3 à +1,2 m de la ligne ; seule la Vision du porteur varie. Erreurs = passes jouées vers un joueur
+    réellement hors-jeu + passes légales refusées. Elles ne croissent pas avec la Vision, et restent possibles même
+    chez les meilleurs (l'erreur de lecture de la ligne)."""
+    defence = _defence()
+    goal = Vec2(105.0, 34.0)
+    monkeypatch.setattr("v2engine.decision.visible_teammates", lambda holder, mates, goal: mates)
+    random.seed(20260923)
+    offside_d = [0.31 + 0.05 * i for i in range(18)]
+    onside_d = [-0.30 + 0.05 * i for i in range(13)]
+
+    def played(vision: float, d: float, n: int = 60) -> float:
+        holder = _p("A4", 60.0, 34.0, Vision=vision)
+        mate = _p("A1", 82.0 + d, 34.0, poste="BU")
+        return sum(any(a.kind == "pass" for a in evaluate_options(holder, [holder, mate, *defence], goal, None))
+                   for _ in range(n)) / n
+
+    errors = {}
+    for vision in (11, 63.4, 99):
+        whistled = sum(played(vision, d) for d in offside_d) / len(offside_d)
+        refused = 1.0 - sum(played(vision, d) for d in onside_d) / len(onside_d)
+        errors[vision] = whistled + refused
+    assert errors[99] <= errors[63.4] + 0.01 <= errors[11] + 0.02, errors
+    assert errors[63.4] > 0.0 and errors[99] > 0.0, errors
+
+
+def test_the_line_the_passer_reads_is_wrong_by_at_most_his_vision_error() -> None:
+    assert line_read_error_m(99) < line_read_error_m(55) < line_read_error_m(0)
+    defence = _defence()
+    random.seed(7)  # erreurs reproductibles : un passeur de Vision 0 surestime parfois, c'est la passe sifflée
+    errors = [perceived_defence_line("home", defence, 0) - 82.0 for _ in range(200)]
+    assert max(errors) > 0.1 and min(errors) < -0.1  # il se trompe dans les deux sens
+    assert max(abs(e) for e in errors) <= line_read_error_m(0) + 1e-9
+
+
+def test_a_perceived_line_turns_an_offside_mate_into_a_legal_one() -> None:
+    """Le passeur qui surestime la ligne -- il ne voit pas le défenseur qui la tient -- sert un joueur hors-jeu,
+    et l'arbitre siffle : c'est l'erreur humaine demandée le 28/10/2026."""
+    defence = _defence()
+    mate = _p("A1", 83.0, 34.0, poste="BU")  # 1 m au-delà de la vraie ligne
+    ball = Vec2(60.0, 34.0)
+    assert is_clearly_offside("home", mate.position, ball, defence, 0.5, 82.0)
+    assert not is_clearly_offside("home", mate.position, ball, defence, 0.5, 84.0)  # ligne crue à 84 m
+
+
+def test_the_offside_filter_uses_the_passer_own_margin(monkeypatch) -> None:
+    """Câblage : `evaluate_options` lit bien `pass_margin_m` ET la ligne perçue (pas la ligne parfaite), avec la
+    Vision du porteur en entrée."""
+    defence = _defence()  # vraie ligne : 82 m
+    holder = _p("A4", 60.0, 34.0, Vision=99)
+    beyond = _p("A1", 83.5, 34.0, poste="BU")  # 1,5 m au-delà de la vraie ligne, seul coéquipier disponible
+    squad = [holder, beyond, *defence]
+    seen: list[float] = []
+
+    def margin(vision: float) -> float:
+        seen.append(vision)
+        return 1.0  # bon passeur : il ose
+
+    monkeypatch.setattr("v2engine.decision.visible_teammates", lambda holder, mates, goal: mates)
+    monkeypatch.setattr("v2engine.decision.pass_margin_m", margin)
+    # La VRAIE ligne (82 m) refuserait ce coéquipier, même avec 1 m de marge : seule une ligne crue plus haute
+    # l'autorise -- c'est donc bien `perceived_defence_line` qui est lu, et non la ligne exacte.
+    monkeypatch.setattr("v2engine.decision.perceived_defence_line", lambda team, opponents, vision: 85.0)
+    assert next(a for a in evaluate_options(holder, squad, Vec2(105.0, 34.0), None)
+                if a.kind == "pass").target.name == "A1"
+    # Ligne crue plus basse que la vraie : il refuse un coéquipier à 82,8 m, que la vraie ligne autoriserait
+    # (82,8 < 82 + 1,0) mais pas la ligne crue (82,8 > 80 + 1,0).
+    close = _p("A1", 82.8, 34.0, poste="BU")
+    monkeypatch.setattr("v2engine.decision.perceived_defence_line", lambda team, opponents, vision: 80.0)
+    assert all(a.kind != "pass" for a in evaluate_options(holder, [holder, close, *defence], Vec2(105.0, 34.0), None))
+    assert not is_clearly_offside("home", close.position, Vec2(60.0, 34.0), defence, 1.0, 82.0)
+    # Et la Vision passée au seuil est bien celle du porteur, pas une constante.
+    assert seen and set(seen) == {99}
 
 
 def test_an_appel_that_respects_the_line_is_brought_back_just_behind_it() -> None:

@@ -13,7 +13,7 @@ from dataclasses import dataclass, replace
 from v2engine.attributes import player_attribute, success_probability
 from v2engine.geometry import Vec2
 from v2engine.movement import PlayerState
-from v2engine.offside import is_clearly_offside
+from v2engine.offside import is_clearly_offside, pass_margin_m, perceived_defence_line
 from v2engine.possession import pass_success_probability, pressure
 from v2engine.shooting import SHOOTING_RANGE_M, shot_probability
 
@@ -92,11 +92,16 @@ def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2
     (`SHOOTING_RANGE_M`), passer seulement s'il a un coéquipier ; conduire est toujours possible."""
     opponents = [p for p in players if p.team != holder.team]
     mates = [p for p in players if p.team == holder.team and p.name != holder.name]
-    # Hors-jeu (ticket v2-collectif/23) : le porteur ne sert pas un coéquipier qu'il voit nettement au-delà de la
-    # ligne (le ballon est à ses pieds, donc sa position est celle du ballon). Il reste les appels à la limite,
-    # ceux que l'arbitre juge -- un professionnel ne joue pas une passe à un joueur cinq mètres hors-jeu.
+    # Hors-jeu (ticket v2-collectif/23, deuxième passe du 28/10/2026) : le porteur ne sert pas un coéquipier qu'il
+    # voit nettement au-delà de la ligne -- mais ce qu'il voit dépend de sa Vision. Trois leviers, tous sur la Vision
+    # (docs/CARTE_ATTRIBUTS_V2.md, audit A12) : la portée (`visible_teammates`), le seuil de tolérance
+    # (`pass_margin_m`, angle mort de 0,85 m à Vision 0 à 0,3 m à Vision 100) et l'erreur de lecture de la ligne (`perceived_defence_line`, 0,05 à 0,25 m).
+    # Les deux derniers se composent en un seul seuil effectif, d'où les passes que l'arbitre siffle.
+    vision = player_attribute(holder, "Vision")
+    margin = pass_margin_m(vision)
+    seen_line = perceived_defence_line(holder.team, opponents, vision)
     teammates = [p for p in visible_teammates(holder, mates, goal)
-                 if not is_clearly_offside(holder.team, p.position, holder.position, opponents)]
+                 if not is_clearly_offside(holder.team, p.position, holder.position, opponents, margin, seen_line)]
     gene = pressure(holder, opponents)
     holder_to_goal = holder.position.distance_to(goal)
 

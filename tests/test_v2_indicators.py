@@ -130,6 +130,20 @@ def test_counter_shot_within_fifteen_seconds_of_a_recovery() -> None:
     assert c.count["tirs de contre, récupération propre camp"] == 1 and c.count["tirs"] == 2
 
 
+def test_close_range_shots_measure_the_keeper_exposure() -> None:
+    """Demande du propriétaire (28/10/2026) : la part des tirs pris à moins de 16 m, pour mesurer la vraie
+    exposition du gardien derrière un piège haut."""
+    c, _home, _away = _collector_with_two_teams()
+    near = _p("H9", "home", PITCH_LENGTH_M - 10.0, 34.0)  # 10 m du but adverse
+    edge = _p("H8", "home", PITCH_LENGTH_M - 16.0, 34.0)  # pile sur le seuil : compté
+    far = _p("H7", "home", PITCH_LENGTH_M - 30.0, 34.0)  # 30 m : pas un tir de près
+    for shooter in (near, edge, far):
+        c.on_shot(shooter, 1.0)
+    away_side = _p("A9", "away", 10.0, 34.0)  # 10 m du but des visiteurs (x = 0)
+    c.on_shot(away_side, 2.0)
+    assert c.count["tirs"] == 4 and c.count["tirs de près"] == 3
+
+
 def test_retreat_latency_after_a_loss() -> None:
     c, home, away = _collector_with_two_teams()
     c.on_tick(0.0, home + away, _ball(30, 30, "H0"), None)
@@ -317,12 +331,14 @@ def test_report_turns_counts_into_rates() -> None:
     c = ind.Collector()
     c.matches, c.minutes_per_match = 2, 90.0
     c.count.update({"passes": 3600, "passes réussies": 2700, "passes chez l'adversaire": 900, "receveur visé": 1800,
-                    "passes longues": 360, "passes longues réussies": 180, "tirs": 40, "buts": 5, "tacles": 70,
-                    "choix pass": 3, "choix dribble": 1})
+                    "passes longues": 360, "passes longues réussies": 180, "tirs": 40, "tirs de près": 21, "buts": 5,
+                    "tacles": 70, "choix pass": 3, "choix dribble": 1})
     out = report(c)
     assert out["passes par minute"] == 20.0 and out["passes réussies (part)"] == 0.75
     assert out["tirs par équipe"] == 10.0 and out["buts par match"] == 2.5 and out["tacles par match"] == 35.0
     assert out["passes longues réussies (part)"] == 0.5 and out["choix pass (part)"] == 0.75
+    # Une clé mal orthographiée renverrait 0,0 sans bruit (Counters) : on vérifie les deux clés du nouvel indicateur.
+    assert out["tirs de près (16 m) par équipe"] == 5.25 and out["part des tirs de près (16 m)"] == 0.525
 
 
 def test_measure_is_wired_on_a_real_match() -> None:

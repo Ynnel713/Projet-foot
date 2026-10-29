@@ -128,6 +128,8 @@ def report(c: Collector, detail: bool = False) -> dict:
         "passes en profondeur (part)": k["passes en profondeur"] / passes,
         "passes en profondeur réussies (part)": k["passes en profondeur réussies"] / max(1, k["passes en profondeur"]),
         "tirs par équipe": k["tirs"] / (2 * n),
+        "tirs de près (16 m) par équipe": k["tirs de près"] / (2 * n),
+        "part des tirs de près (16 m)": k["tirs de près"] / max(1, k["tirs"]),
         "buts par match": k["buts"] / n,
         "hors-jeu par match": k["hors-jeu"] / n,
         "hors-jeu par équipe": k["hors-jeu"] / (2 * n),

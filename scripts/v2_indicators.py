@@ -17,6 +17,7 @@ from collections import Counter, defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 
+from v2engine.cerveau import OPPONENT_GOAL
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
 from v2engine.movement import PlayerState
 from v2engine.possession import pass_success_probability
@@ -36,6 +37,7 @@ COUNTER_WINDOW_S = 15.0
 RETREAT_SPEED_MPS, RETREAT_WINDOW_S = 1.0, 10.0
 RECOVERY_CLASSES = ((5.0, "0-5 s"), (12.0, "5-12 s"), (15.0, "12-15 s"), (math.inf, "plus de 15 s"))
 LONG_PASS_M = 32.0
+SHOT_CLOSE_RANGE_M = 16.0  # tir « de près » : demande du propriétaire (28/10/2026) pour mesurer l'exposition du gardien
 FREE_PASSER_M = 9.0  # porteur libre : défenseur le plus proche à 9 m ou plus (pressé : PRESS_RADIUS_M), ticket 05
 SPRINT_MPS, HIGH_INTENSITY_MPS = 25.0 * KMH, 19.8 * KMH
 
@@ -116,6 +118,11 @@ def is_deep_pass(team: str, target: Vec2, players: Sequence[PlayerState]) -> boo
     rivals = outfield(players, "away" if team == "home" else "home")
     last = max((progress(team, p.position.x) for p in rivals), default=None)
     return last is not None and progress(team, target.x) > last
+
+
+def opponent_goal_center(team: str) -> Vec2:
+    """Centre du but que `team` attaque (domicile : x = 105), à la même source que le moteur (`cerveau`)."""
+    return OPPONENT_GOAL[team]
 
 
 def slope(pairs: Sequence[tuple[float, float]]) -> float:
@@ -258,6 +265,8 @@ class Collector:
 
     def on_shot(self, shooter: PlayerState, now_s: float) -> None:
         self.count["tirs"] += 1
+        distance = shooter.position.distance_to(opponent_goal_center(shooter.team))
+        self.count["tirs de près"] += distance <= SHOT_CLOSE_RANGE_M
         last = self.recoveries[-1] if self.recoveries else None
         if last is not None and last[1] == shooter.team and now_s - last[0] <= COUNTER_WINDOW_S:
             camp = "camp adverse" if progress(shooter.team, last[3].x) > PITCH_LENGTH_M / 2.0 else "propre camp"
