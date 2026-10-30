@@ -28,6 +28,9 @@ class BallState:
     engaged: set[str] = field(default_factory=set)
     engaged_holder: str | None = None
     tackle_ban_until_s: dict[str, float] = field(default_factory=dict)
+    # Contrôle raté (ticket v2-collectif/25) : instant jusqu'auquel le joueur qui l'a raté ne peut pas retenter.
+    control_ban_until_s: dict[str, float] = field(default_factory=dict)
+    released_by: str | None = None  # passeur de la passe en cours : il ne la touche pas en la lâchant (ticket 25)
     # Hors-jeu (ticket v2-collectif/23) : joueurs signalés au départ de la passe en cours. Vidé dès que quelqu'un
     # contrôle le ballon, qu'il meurt ou qu'un coup franc est donné.
     offside_watch: set[str] = field(default_factory=set)

@@ -45,6 +45,9 @@ class Intention:
     reason: str = ""  # raison lisible, sans chiffre (stable tant que le rôle dure)
     distance_m: float | None = None  # distance utile à la raison (au ballon, au point d'interception…)
     situation: str | None = None  # situation de jeu de son équipe telle qu'il la perçoit (ticket v2-collectif/03)
+    # vitesse de la cible quand elle bouge (le porteur qu'il presse ou soutient) : la loi d'arrivée de
+    # `movement.step` porte alors sur la vitesse de rapprochement (ticket v2-collectif/25)
+    target_velocity: Vec2 = Vec2(0.0, 0.0)
 
     def explain(self) -> str:
         """Raison lisible avec sa distance (formatée à la lecture seulement : le match n'en paie pas le coût)."""
@@ -141,9 +144,11 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
                          distance_m=seen.ball_distance)
     if role == SOUTIEN:
         return make(role, "aller au ballon", ball.position, mate=ball.holder, reason="soutien de son porteur",
-                         distance_m=seen.ball_distance)
+                         distance_m=seen.ball_distance, target_velocity=seen.holder.velocity)
     why = "presse le porteur adverse" if seen.holder is not None else "va au porteur"
-    return make(role, "aller au ballon", ball.position, mate=ball.holder, reason=why, distance_m=seen.ball_distance)
+    moving = seen.holder.velocity if seen.holder is not None else Vec2(0.0, 0.0)
+    return make(role, "aller au ballon", ball.position, mate=ball.holder, reason=why, distance_m=seen.ball_distance,
+                target_velocity=moving)
 
 
 def think(player: PlayerState, ball: BallState, players: list[PlayerState], minute: float,

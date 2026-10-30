@@ -12,17 +12,16 @@ from pydantic import BaseModel
 from ligue1sim.clubs import load_all_clubs
 from ligue1sim.season import CLUBS_PATH
 
-from v2engine.match import simulate_match
+from v2engine.match import TICK_SECONDS, simulate_match
 from v2engine.trace import MatchTrace
 
 router = APIRouter(prefix="/v2", tags=["v2"])
 
-# Granularité du calcul physique et sous-échantillonnage de la trace enregistrée -- mesuré sur
-# pipeline réel (24/10/2026) : ~26 s pour un match complet de 90 minutes, ~5 100 ticks
-# enregistrés. ponytail : pas optimisé (collision O(n²), voir v2engine/match.py) -- à revoir si
-# ça devient gênant à l'usage.
-_TICK_SECONDS = 0.15
-_RECORD_EVERY = 7
+# Granularité du calcul physique et sous-échantillonnage de la trace enregistrée : le pas du produit, le même que
+# celui du banc de mesure (ticket v2-collectif/25, validé le 29/10/2026), et une image par seconde.
+# ponytail : pas optimisé (collision O(n²), voir v2engine/match.py) -- à revoir si ça devient gênant à l'usage.
+_TICK_SECONDS = TICK_SECONDS
+_RECORD_EVERY = 10
 
 
 class SimulateV2Request(BaseModel):

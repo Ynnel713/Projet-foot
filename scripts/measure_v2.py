@@ -2,7 +2,7 @@
 fixes, et donne tous les indicateurs de `docs/INDICATEURS_V2.md` (classiques et tactiques), découpés par
 zone du ballon, score et tranche de 15 minutes.
 
-Usage : uv run python -m scripts.measure_v2 [nombre_de_matchs] [--profil "Work Rate"] [--detail] [--json chemin]
+Usage : uv run python -m scripts.measure_v2 [nombre_de_matchs] [--profil "Work Rate"] [--detail] [--json chemin] [--pas 0.15]
 
 `--profil <Attribut>` : test de profils. L'attribut est forcé à 99 pour une équipe et à 11 pour l'autre,
 les rôles s'inversant d'un match à l'autre (neutralise l'avantage du terrain) ; le rapport compare les deux
@@ -16,6 +16,7 @@ import json
 import random
 import statistics
 import sys
+import time
 from collections.abc import Callable
 
 from ligue1sim.clubs import load_clubs
@@ -28,7 +29,7 @@ from scripts.v2_indicators import Collector
 
 AUDIT_SEED = 20260923
 HIGH, LOW = 99, 11
-TICK_S = 0.1
+TICK_S = match.TICK_SECONDS  # le pas du produit (ticket v2-collectif/25) : le banc mesure le match regardé
 
 
 def _hook(collector: Collector, clock: dict[str, float]) -> Callable[[], None]:
@@ -76,11 +77,12 @@ def _force_attribute(attribute: str, high_team: str, team_of: dict[str, str]) ->
     return lambda: [setattr(m, "player_attribute", r) for m, r in patched]
 
 
-def run(n_matches: int, profile: str | None = None, duration_minutes: float = 90.0) -> Collector:
+def run(n_matches: int, profile: str | None = None, duration_minutes: float = 90.0, tick_s: float = TICK_S) -> Collector:
     clubs = load_clubs(CLUBS_PATH, "Ligue 1")
     collector = Collector()
     collector.minutes_per_match = duration_minutes
-    clock = {"now": 0.0, "dt": TICK_S}
+    clock = {"now": 0.0, "dt": tick_s}
+    started = time.perf_counter()
     restore = _hook(collector, clock)
     try:
         for i in range(n_matches):
@@ -98,9 +100,9 @@ def run(n_matches: int, profile: str | None = None, duration_minutes: float = 90
                 clock["now"] = now_s
                 if profile and not collector.levels:
                     collector.levels = {p.name: ("haut" if p.team == high_team else "bas") for p in players}
-                collector.on_tick(now_s, players, ball, scoring_team, TICK_S)
+                collector.on_tick(now_s, players, ball, scoring_team, tick_s)
             try:
-                trace = match.simulate_match(home, away, duration_minutes=duration_minutes, tick_seconds=TICK_S,
+                trace = match.simulate_match(home, away, duration_minutes=duration_minutes, tick_seconds=tick_s,
                                              observer=observer)
                 for event in trace.offsides:  # hors-jeu sifflés (ticket v2-collectif/23)
                     collector.on_offside(event)
@@ -109,6 +111,7 @@ def run(n_matches: int, profile: str | None = None, duration_minutes: float = 90
             collector.end_match()
     finally:
         restore()
+    collector.seconds_per_match = (time.perf_counter() - started) / max(1, n_matches)
     return collector
 
 
@@ -139,6 +142,7 @@ def report(c: Collector, detail: bool = False) -> dict:
         "tirs de contre par match (récupération dans son camp)": k["tirs de contre, récupération propre camp"] / n,
         "tirs de contre par match (récupération dans le camp adverse)": k["tirs de contre, récupération camp adverse"] / n,
         "appels par match": k["appels"] / n,
+        "temps de calcul par match (s)": getattr(c, "seconds_per_match", None),
     }
     choices = sum(v for key, v in k.items() if key.startswith("choix "))
     for key, v in sorted(k.items()):
@@ -168,8 +172,9 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--profil", default=None)
     parser.add_argument("--detail", action="store_true")
     parser.add_argument("--json", default=None)
+    parser.add_argument("--pas", type=float, default=TICK_S, help="pas de calcul (s), par défaut celui du produit")
     args = parser.parse_args(argv)
-    result = report(run(args.matches, args.profil), args.detail)
+    result = report(run(args.matches, args.profil, tick_s=args.pas), args.detail)
     for key, value in result.items():
         if isinstance(value, dict):
             print(f"{key} :")

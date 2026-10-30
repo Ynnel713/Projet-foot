@@ -35,6 +35,15 @@ _MISS_SHARE = (0.10, 0.25)  # passe ratée : déviation de 10 à 25 % de la long
 IDEAL_ARRIVAL_MPS = 6.0  # dosage : vitesse du ballon en arrivant au receveur
 MAX_PASS_MPS = 30.0
 _DOSAGE_ERROR = (0.30, 0.05)  # erreur de vitesse : +/- 30 % à Passing 11, +/- 5 % à 99
+# Contrôle raté (ticket v2-collectif/25, validé le 29/10/2026 ; données réelles : non trouvé) : le ballon s'échappe
+# dans sa direction, dévié de +/- 20° (contrôle facile) à +/- 60° (le plus difficile), à la moitié de sa vitesse, et
+# le même joueur ne peut retenter qu'après `MISS_RETRY_S`.
+MISS_DEVIATION_MIN_DEG = 20.0
+MISS_DEVIATION_MAX_DEG = 60.0
+MISS_SPEED_SHARE = 0.5
+MISS_RETRY_S = 0.5
+# difficulté du contrôle le plus dur : ballon à la vitesse max d'une passe, adversaire au contact, Composure 11
+_HARDEST_CONTROL = _BASE_DIFFICULTY + _CONTROL_DIFFICULTY_PER_MPS * (MAX_PASS_MPS - IDEAL_ARRIVAL_MPS) + _PRESSURE_DIFFICULTY
 
 
 def pressure(player: PlayerState, opponents: Sequence[PlayerState]) -> float:
@@ -97,6 +106,22 @@ def attempt_control(player: PlayerState, ball_velocity: Vec2 = Vec2(0.0, 0.0),
     (vitesse par rapport au ballon idéal, pression). Jamais garanti (règle « jamais binaire » du guide)."""
     difficulty = control_difficulty(player, ball_velocity, opponents)
     return random.random() < duel_probability(player_attribute(player, "First Touch"), difficulty, **_SUCCESS)
+
+
+def missed_control_velocity(player: PlayerState, ball_velocity: Vec2, opponents: Sequence[PlayerState] = ()) -> Vec2:
+    """Vitesse du ballon après un contrôle raté : il continue dans sa direction, dévié d'un angle d'autant plus
+    grand que le contrôle était difficile, à `MISS_SPEED_SHARE` de sa vitesse. Un ballon quasi arrêté que le
+    joueur percute en courant part devant lui."""
+    base = ball_velocity if ball_velocity.length() >= BALL_STOPPED_MPS else player.velocity
+    if base.length() < 1e-9:
+        base = Vec2(1.0, 0.0)  # ni ballon ni joueur en mouvement : direction fixe
+    hardness = (control_difficulty(player, ball_velocity, opponents) - _BASE_DIFFICULTY) / (_HARDEST_CONTROL - _BASE_DIFFICULTY)
+    limit = MISS_DEVIATION_MIN_DEG + (MISS_DEVIATION_MAX_DEG - MISS_DEVIATION_MIN_DEG) * min(1.0, max(0.0, hardness))
+    angle = math.radians(random.uniform(-limit, limit))
+    speed = max(MISS_SPEED_SHARE * base.length(), 1.0)  # jamais collé au pied : au moins 1 m/s
+    direction = base.normalized()
+    cos_a, sin_a = math.cos(angle), math.sin(angle)
+    return Vec2(direction.x * cos_a - direction.y * sin_a, direction.x * sin_a + direction.y * cos_a) * speed
 
 
 def _launch_speed(distance_m: float) -> float:

@@ -11,7 +11,7 @@ from v2engine.attributes import player_attribute
 from v2engine.ball_state import BallState
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
 from v2engine.match import CONTROL_RADIUS_M, PLAYER_RADIUS_M, _resolve_player_collisions, _step_ball, simulate_match
-from v2engine.movement import PlayerState, accel_time_s, stamina_factor, step
+from v2engine.movement import PlayerState, accel_tau_s, stamina_factor, step
 
 
 def _player_state(name: str = "P", pace: float = 60, acceleration: float = 60, stamina: float = 60,
@@ -37,7 +37,7 @@ def test_higher_pace_covers_more_distance_in_same_time() -> None:
 
 
 def test_higher_acceleration_reaches_max_speed_sooner() -> None:
-    assert accel_time_s(99) < accel_time_s(5)
+    assert accel_tau_s(99) < accel_tau_s(5)
 
 
 def test_stamina_reduces_speed_late_in_match() -> None:

@@ -8,6 +8,7 @@ D-V04) ; un rendu, pas encore construit, la rejouera ensuite. Une seule fonction
 
 from __future__ import annotations
 
+import math
 import random
 from collections.abc import Callable
 
@@ -25,7 +26,8 @@ from v2engine.movement import PlayerState, step
 from v2engine.cerveau import GOAL_CENTER_Y, OPPONENT_GOAL, Intention, think
 from v2engine.decision import DECISION_INTERVAL_S, choose_action
 from v2engine.offside import HESITATION_S, OFFSIDE_OUT_S, offside_at_pass, sees_the_flag_probability
-from v2engine.possession import BALL_FRICTION_PER_S, BALL_STOPPED_MPS, attempt_control, pass_velocity, reception_delay_s
+from v2engine.possession import (BALL_FRICTION_PER_S, BALL_STOPPED_MPS, MISS_RETRY_S, attempt_control, missed_control_velocity,
+                                 pass_velocity, reception_delay_s)
 from v2engine.shooting import attempt_shot
 from v2engine.situation import SituationTracker
 from v2engine.trace import BallSnapshot, DecisionRecord, MatchTrace, OffsideEvent, PlayerSnapshot, SituationRecord
@@ -48,6 +50,9 @@ TACKLE_RADIUS_M = 1.5
 # FAILED_TACKLE_RECOVERY_S (temps pour se relever et se replacer). Durée réelle non trouvée : ordre de grandeur.
 CONFRONTATION_END_M = 3.0
 FAILED_TACKLE_RECOVERY_S = 1.5
+# Pas de calcul du produit (validé le 29/10/2026, ticket v2-collectif/25) : le même pour l'écran (`api/routers/v2.py`)
+# et pour le banc (`scripts/measure_v2.py`), pour que les chiffres mesurés décrivent le match regardé.
+TICK_SECONDS = 0.1
 # ponytail : décroissance exponentielle simple (par seconde), pas un vrai coefficient de
 # frottement calibré -- à affiner si le rendu le justifie.
 
@@ -161,6 +166,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
             ball.holder = None  # détenteur introuvable (ne devrait pas arriver hors test) -- ballon relâché
             return None
         ball.position = holder.position
+        ball.released_by = None  # ballon tenu : plus de passe en cours (sa passe, s'il en fait une, le redéfinit)
 
         if ball.engaged_holder != holder.name:  # nouveau porteur : nouvelles confrontations
             ball.engaged, ball.engaged_holder = set(), holder.name
@@ -227,6 +233,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
         if action.kind == "pass":
             ball.velocity = pass_velocity(holder, action.target, [p for p in players if p.team != holder.team])
             ball.holder = None
+            ball.released_by = holder.name
             ball.last_pass_team = holder.team
             ball.receiver = action.target.name
             opponents = [p for p in players if p.team != holder.team]
@@ -248,17 +255,21 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
         return None
 
     ball.engaged_holder = None  # ballon libre : les confrontations en cours sont finies (v2-socle/03)
+    start = ball.position
     ball.position = clamp_to_pitch(ball.position + ball.velocity * dt)
     ball.velocity = ball.velocity * (BALL_FRICTION_PER_S**dt)
     if ball.velocity.length() < BALL_STOPPED_MPS:
         ball.receiver = None  # passe morte : ballon libre pour tous, plus de receveur désigné
+        ball.readers = {}  # plus de passe à couper (ticket v2-collectif/25)
         _clear_offside(ball)  # plus de passe en cours : plus de hors-jeu à siffler
 
-    for player in players:
-        if ball.position.distance_to(player.position) >= CONTROL_RADIUS_M:
-            continue
+    # Contact sur le trajet (ticket v2-collectif/25) : le ballon touche tout joueur qu'il frôle PENDANT le pas, pas
+    # seulement au point d'arrivée ; le premier atteint tente le premier, quelle que soit son équipe.
+    for _, _, player in _contacts(start, ball.position, dt, players, ball.released_by):
         if now_s < ball.offside_out_until.get(player.name, 0.0):
             continue  # écarté de l'action après un coup franc : il recule, il ne joue pas ce ballon
+        if now_s < ball.control_ban_until_s.get(player.name, 0.0):
+            continue  # il vient de rater son contrôle : le ballon lui échappe
         if player.name in ball.offside_watch:
             # Il touche le ballon en position de hors-jeu : coup franc indirect, même si le contrôle échoue
             # (« s'il le touche, c'est sifflé, point barre », directive du 28/10/2026).
@@ -267,27 +278,56 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                                              x=ball.position.x, y=ball.position.y))
             _award_offside_free_kick(ball, player, players, now_s)
             return None
-        if attempt_control(player, ball.velocity, [p for p in players if p.team != player.team]):
+        opponents = [p for p in players if p.team != player.team]
+        ball.readers = {}  # la passe est finie, contrôlée ou non : personne ne court plus la couper
+        ball.receiver = None
+        ball.released_by = None  # quelqu'un d'autre a touché le ballon : le passeur peut de nouveau le jouer
+        _clear_offside(ball)
+        if attempt_control(player, ball.velocity, opponents):
             ball.holder = player.name
             ball.hesitation.pop(player.name, None)  # il a le ballon : il joue, il n'attend plus
-            ball.readers = {}
-            ball.receiver = None
-            _clear_offside(ball)
-            ball.next_decision_s = now_s + reception_delay_s(player, [p for p in players if p.team != player.team])
+            ball.position = player.position
+            ball.next_decision_s = now_s + reception_delay_s(player, opponents)
             ball.receiving = True
             ball.velocity = Vec2(0.0, 0.0)
         else:
-            ball.receiver = None  # contrôle raté : le ballon n'est plus « pour » personne
-            _clear_offside(ball)  # la passe est morte pour le hors-jeu : le ballon est retombé sur un autre
-            away = ball.position - player.position
-            # Ballon et joueur exactement superposés (direction de séparation indéfinie) : repart
-            # dans le sens de course du joueur, ou une direction fixe à défaut de vitesse.
-            direction = away.normalized() if away.length() > 1e-9 else (
-                player.velocity.normalized() if player.velocity.length() > 1e-9 else Vec2(1.0, 0.0)
-            )
-            ball.velocity = player.velocity if player.velocity.length() > 0.1 else direction * 1.0
-            ball.position = clamp_to_pitch(player.position + direction * CONTROL_RADIUS_M)
+            # Contrôle raté : le ballon s'échappe vraiment (déviation, moitié de sa vitesse) et le même joueur ne peut
+            # retenter qu'après `MISS_RETRY_S` ; il repart du bord du joueur, jamais superposé.
+            ball.velocity = missed_control_velocity(player, ball.velocity, opponents)
+            ball.position = clamp_to_pitch(player.position + ball.velocity.normalized() * CONTROL_RADIUS_M)
+            ball.control_ban_until_s[player.name] = now_s + MISS_RETRY_S
         break
+    return None
+
+
+def _contacts(start: Vec2, end: Vec2, dt: float, players: list[PlayerState],
+              released_by: str | None = None) -> list[tuple[float, float, PlayerState]]:
+    """Joueurs que le ballon frôle à moins de `CONTROL_RADIUS_M` pendant le pas, de `start` à `end`, triés par
+    instant de contact (0 = début du pas). Mouvement relatif : le joueur a lui aussi bougé pendant ce pas (sa
+    position de début est estimée par sa vitesse). `released_by` : passeur du ballon, qui ne touche pas sa passe
+    tant qu'elle s'éloigne de lui."""
+    hits = []
+    for player in players:
+        r0 = start - (player.position - player.velocity * dt)  # ballon vu du joueur, en début de pas
+        r1 = end - player.position  # et en fin de pas
+        seg = r1 - r0
+        length2 = seg.x * seg.x + seg.y * seg.y
+        if (player.name == released_by and length2 >= 1e-12 and r0.length() < CONTROL_RADIUS_M
+                and r0.x * seg.x + r0.y * seg.y >= 0.0):
+            continue  # sa propre passe qui part de ses pieds : il ne la touche pas en la lâchant
+        s = 0.0 if length2 < 1e-12 else min(1.0, max(0.0, -(r0.x * seg.x + r0.y * seg.y) / length2))
+        closest = r0 + seg * s
+        if closest.length() < CONTROL_RADIUS_M:
+            # instant d'entrée dans le rayon (pas seulement du point le plus proche) : le premier atteint tente
+            # le premier
+            if length2 < 1e-12 or r0.length() < CONTROL_RADIUS_M:
+                entry = 0.0
+            else:
+                back = math.sqrt(max(0.0, CONTROL_RADIUS_M**2 - closest.length() ** 2) / length2)
+                entry = max(0.0, s - back)
+            hits.append((entry, closest.length(), player))
+    hits.sort(key=lambda hit: (hit[0], hit[1]))  # à égalité (déjà au contact), le plus proche d'abord
+    return hits
 
 
 def _step_player(
@@ -309,7 +349,7 @@ def _step_player(
     intention = think(player, ball, players or [], minute, runs, perceived, bloc)
     if intentions is not None:
         intentions[player.name] = intention
-    return step(player, dt, intention.target, minute, intention.intensity)
+    return step(player, dt, intention.target, minute, intention.intensity, intention.target_velocity)
 
 
 def simulate_match(
@@ -317,7 +357,7 @@ def simulate_match(
     away_club: Club,
     *,
     duration_minutes: float = 90.0,
-    tick_seconds: float = 0.1,
+    tick_seconds: float = TICK_SECONDS,
     record_every: int = 10,
     observer: Callable[[float, list[PlayerState], BallState, str | None], None] | None = None,
 ) -> MatchTrace:

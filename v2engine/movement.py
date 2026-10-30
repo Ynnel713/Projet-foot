@@ -5,6 +5,7 @@ session /grill-me du 24/10/2026) : à recalibrer si le rendu le justifie."""
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 from v2engine.geometry import Vec2, clamp_to_pitch
@@ -14,10 +15,16 @@ KMH_TO_MS = 1.0 / 3.6
 # Repères (note, km/h) du guide pour Pace : 99 -> 36-37, 50 -> 30, 10 -> 25.
 _PACE_POINTS: tuple[tuple[float, float], ...] = ((10.0, 25.0), (50.0, 30.0), (99.0, 36.5))
 
-# Le guide ne donne pas de repère chiffré pour Acceleration (description qualitative seulement) :
-# temps (s) pour atteindre sa vitesse de pointe, estimé sur la même fourchette de notes.
-# ponytail : repères choisis à dire d'expert, pas mesurés -- à recalibrer si le rendu le justifie.
-_ACCEL_POINTS: tuple[tuple[float, float], ...] = ((5.0, 2.5), (50.0, 1.5), (99.0, 0.5))
+# Montée en vitesse (ticket v2-collectif/25, validé le 29/10/2026) : modèle exponentiel du sprint
+# v(t) = v_max·(1 − e^(−t/τ)) (Furusawa 1927 ; Samozino et Morin, profil force-vitesse), τ selon Acceleration.
+# Accélération au départ v_max/τ : ~7,3 m/s² pour un joueur moyen, 10,1 m/s² au mieux. Réel : footballeurs pros
+# F0 = 5,18 N/kg, V0 = 10,29 m/s, soit τ ≈ 2 s (PMC9819841, premier sprint).
+_TAU_POINTS: tuple[tuple[float, float], ...] = ((11.0, 1.5), (55.0, 1.2), (99.0, 1.0))
+# Freinage borné, le même pour tous en attendant Agility (phase 7) : à l'approche d'une cible et à toute baisse
+# d'intensité. Réel : les freinages au-dessus de 3,5 m/s² sont fréquents en match, plus que les accélérations
+# (Harper, Carling et Kiely 2019, Sports Medicine) ; valeur maximale non trouvée.
+DECEL_MAX_MPS2 = 7.0
+ARRIVAL_DEADZONE_M = 0.1  # en deçà, le joueur est arrivé : il ne vise plus aucune vitesse
 
 # Fatigue (Stamina) : plancher de vitesse en fin de match et minute à partir de laquelle la baisse
 # démarre, aux deux extrêmes de note (guide : bonne Stamina stable jusqu'à la 85e, mauvaise
@@ -43,8 +50,9 @@ def max_speed_mps(pace: float) -> float:
     return _lerp(pace, _PACE_POINTS) * KMH_TO_MS
 
 
-def accel_time_s(acceleration: float) -> float:
-    return _lerp(acceleration, _ACCEL_POINTS)
+def accel_tau_s(acceleration: float) -> float:
+    """Constante de temps τ (s) de la montée en vitesse : 63 % de la vitesse visée après τ."""
+    return _lerp(acceleration, _TAU_POINTS)
 
 
 def stamina_factor(stamina: float, minute: float) -> float:
@@ -77,32 +85,47 @@ class PlayerState:
     attributes: dict[str, int] | None = None
 
 
-def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_factor: float = 1.0) -> PlayerState:
+def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_factor: float = 1.0,
+         target_velocity: Vec2 = Vec2(0.0, 0.0)) -> PlayerState:
     """Avance `state` de `dt` secondes, en dirigeant le joueur vers `target` (sa position de
     formation ou le ballon, voir `match.py`) -- vitesse plafonnée par Pace et la fatigue
-    (Stamina), montée en vitesse pilotée par Acceleration. IA de déplacement volontairement
+    (Stamina), montée en vitesse exponentielle pilotée par Acceleration, freinage borné et loi
+    d'arrivée (ticket v2-collectif/25). IA de déplacement volontairement
     simpliste (D-V08) : `target` est choisi par l'appelant, pas par ce module. `speed_factor` :
-    part de la vitesse max (ex. conduite de balle, `decision.DRIBBLE_SPEED_FACTOR`)."""
+    part de la vitesse max (ex. conduite de balle, `decision.DRIBBLE_SPEED_FACTOR`). `target_velocity` : vitesse
+    de la cible quand elle bouge (le porteur qu'il presse) -- la loi d'arrivée porte alors sur la vitesse de
+    rapprochement, sans quoi il resterait à sa distance de freinage derrière un porteur en conduite."""
     effective_max_speed = max_speed_mps(state.pace) * stamina_factor(state.stamina, minute) * speed_factor
     to_target = target - state.position
-    desired_velocity = to_target.normalized() * effective_max_speed if to_target.length() > 0.1 else Vec2(0.0, 0.0)
-
-    accel_time = accel_time_s(state.acceleration)
-    accel_mag = effective_max_speed / accel_time if accel_time > 0 else effective_max_speed
-
-    delta = desired_velocity - state.velocity
-    delta_length = delta.length()
-    max_delta = accel_mag * dt
-    if delta_length > 1e-9:
-        new_velocity = state.velocity + delta * (min(max_delta, delta_length) / delta_length)
+    distance = to_target.length()
+    if distance > ARRIVAL_DEADZONE_M:
+        # loi d'arrivée : jamais plus vite que la vitesse dont il peut freiner avant la cible, soit √(2·a·d). Forme
+        # en pas discret : la vitesse v' de fin de pas telle qu'il puisse encore s'arrêter après avoir parcouru ce pas
+        # ((v + v')/2·dt), pour ne pas dépasser quel que soit `dt`.
+        relative = state.velocity - target_velocity
+        closing = max(0.0, (relative.x * to_target.x + relative.y * to_target.y) / distance)
+        half_step = 0.5 * DECEL_MAX_MPS2 * dt
+        room = max(0.0, distance - 0.5 * closing * dt)
+        stopping_speed = math.sqrt(half_step * half_step + 2.0 * DECEL_MAX_MPS2 * room) - half_step
+        desired_velocity = target_velocity + to_target * (stopping_speed / distance)
+        if desired_velocity.length() > effective_max_speed:
+            desired_velocity = desired_velocity.normalized() * effective_max_speed
     else:
-        new_velocity = state.velocity
+        desired_velocity = Vec2(0.0, 0.0)
 
-    speed = new_velocity.length()
-    if speed > effective_max_speed > 0.0:
-        new_velocity = new_velocity.normalized() * effective_max_speed
+    # Montée en vitesse : forme exacte en pas discret (indépendante de `dt`). Si elle ferait ralentir (baisse
+    # d'intensité, arrivée, changement de direction), le joueur freine à `DECEL_MAX_MPS2` vers la vitesse visée.
+    velocity = state.velocity
+    candidate = desired_velocity + (velocity - desired_velocity) * math.exp(-dt / accel_tau_s(state.acceleration))
+    if candidate.length() >= velocity.length():
+        new_velocity = candidate
+    else:
+        delta = desired_velocity - velocity
+        brake = DECEL_MAX_MPS2 * dt
+        new_velocity = desired_velocity if delta.length() <= brake else velocity + delta * (brake / delta.length())
 
-    new_position = clamp_to_pitch(state.position + new_velocity * dt)
+    # vitesse moyenne du pas (trapèzes) : exacte pour un freinage constant, très proche pour l'exponentielle
+    new_position = clamp_to_pitch(state.position + (velocity + new_velocity) * (0.5 * dt))
     return PlayerState(
         name=state.name,
         team=state.team,

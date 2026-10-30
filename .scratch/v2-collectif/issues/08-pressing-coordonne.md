@@ -16,3 +16,7 @@
 - [ ] Constantes produit et critères chiffrés (données réelles sourcées, ou « non trouvé ») validés par le propriétaire avant le code
 - [ ] Les chiffres réels sont des indicateurs de calibration, pas des objectifs : pas de réglage générique pour les atteindre avant la calibration générale (ticket 22)
 - [ ] Suite V2 verte ; V1 inchangée
+
+## Base de référence après le ticket 25 (30/10/2026)
+
+Depuis le ticket 25, le presseur rattrape vraiment le porteur en conduite, puisque la loi d'arrivée tient compte de la vitesse de la cible. Mesure de référence sur 20 matchs à 0,1 s : 87 tacles, 755 pertes de balle et 4,85 buts par match, et 9 % du temps en défense placée (contre 60 tacles, 581 pertes, 2,75 buts et 17 % avant). Deux défauts antérieurs, désormais visibles, sont à traiter ici. Tout adversaire à moins de 15 m du ballon devient presseur, ce qui forme un essaim. Un défenseur battu qui reste à moins de 3 m du porteur ne peut plus retenter de tacle (`CONFRONTATION_END_M`, revue expert du ticket 25, A4).
