@@ -204,13 +204,18 @@ class Bloc:
         moyenne). Le gardien n'est pas concerné."""
         if situation not in _WITHOUT_BALL or player.poste == "GK":
             return self.reference(player, ball, situation, now_s)
+        return clamp_to_pitch(self.reference(player, ball, situation, now_s) + self.placement_error(player, now_s))
+
+    def placement_error(self, player: PlayerState, now_s: float) -> Vec2:
+        """Erreur de placement du moment (Positioning), tirée toutes les 5 s : sert à sa place dans le bloc comme à
+        la couverture (ticket v2-collectif/07), une seule erreur par joueur."""
         error, next_s = self.errors.get(player.name, (None, 0.0))
         if error is None or now_s >= next_s:
             angle = random.uniform(0.0, 2.0 * math.pi)
             distance = random.uniform(0.0, 2.0 * positioning_error_m(player))
             error = Vec2(math.cos(angle) * distance, math.sin(angle) * distance)
             self.errors[player.name] = (error, now_s + POSITIONING_REDRAW_S)
-        return clamp_to_pitch(self.reference(player, ball, situation, now_s) + error)
+        return error
 
     def replacement(self, player: PlayerState, ball: Vec2, situation: str, now_s: float) -> Vec2 | None:
         """Place à rejoindre, ou None s'il la tient (Teamwork). Il ne repart que s'il s'en écarte de plus que sa

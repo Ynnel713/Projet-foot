@@ -36,10 +36,13 @@ ALLOWED = {
     "Reflexes": {"shooting"},
     "One on Ones": {"shooting"},
     "Handling": {"shooting"},
-    "Positioning": {"bloc"},  # erreur de placement dans le bloc (ticket v2-collectif/04)
-    "Teamwork": {"bloc"},  # écart toléré avant de se replacer (ticket v2-collectif/04)
+    "Positioning": {"bloc"},  # erreur de placement dans le bloc, reprise par la couverture (tickets v2-collectif/04 et 07)
+    "Teamwork": {"bloc", "defense"},  # écart toléré avant de se replacer (04) ; quitter le bloc pour le ballon (07)
+    "Marking": {"defense"},  # distance de marquage d'un attaquant dangereux (ticket v2-collectif/07)
 }
-PHYSICAL_ALLOWED = {"Pace": {"movement", "anticipation", "bloc"}, "Acceleration": {"movement"}, "Stamina": {"movement"}}
+# defense : temps d'arrivée qui désigne le presseur et la couverture (ticket v2-collectif/07)
+PHYSICAL_ALLOWED = {"Pace": {"movement", "anticipation", "bloc", "defense"}, "Acceleration": {"movement", "defense"},
+                    "Stamina": {"movement"}}
 # Mélanges de plusieurs attributs dans un même calcul tolérés (dérogations de la carte).
 TOLERATED_MIXES = {
     frozenset({"Finishing", "Composure"}),  # A2 : jusqu'au ticket du tir

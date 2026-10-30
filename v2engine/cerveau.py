@@ -16,6 +16,7 @@ from v2engine.anticipation import loose_ball_target, meeting_point
 from v2engine.ball_state import BallState
 from v2engine.bloc import Bloc
 from v2engine.decision import DRIBBLE_SPEED_FACTOR
+from v2engine.defense import COUVERTURE, MARQUAGE, PRESSEUR, DefensiveRoles
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
 from v2engine.movement import PlayerState
 from v2engine.off_ball import RUN_INTERVAL_S, choose_space
@@ -29,8 +30,9 @@ OPPONENT_GOAL = {"home": Vec2(PITCH_LENGTH_M, GOAL_CENTER_Y), "away": Vec2(0.0, 
 CHASE_RADIUS_M = 15.0
 
 # Rôles (GLOSSARY.md) et actions.
-PORTEUR, APPEL, SOUTIEN, RECEVEUR, LECTURE, BALLON_LIBRE, PRESSEUR, REPLACEMENT = (
-    "porteur", "appel", "soutien", "receveur visé", "lecture de passe", "ballon libre", "presseur", "replacement")
+# Rôles défensifs (presseur, couverture, marquage) : `defense.py` (ticket v2-collectif/07).
+PORTEUR, APPEL, SOUTIEN, RECEVEUR, LECTURE, BALLON_LIBRE, REPLACEMENT = (
+    "porteur", "appel", "soutien", "receveur visé", "lecture de passe", "ballon libre", "replacement")
 # Hors-jeu sifflé : l'attaquant fautif recule le temps de la remise en jeu (ticket v2-collectif/23).
 HORS_JEU = "hors-jeu"
 
@@ -81,8 +83,9 @@ def nearest_of_team(player: PlayerState, ball: BallState, players: list[PlayerSt
 
 
 def interpret(player: PlayerState, ball: BallState, seen: Perception, runs_enabled: bool,
-              players: list[PlayerState]) -> str:
-    """Rôle du joueur à cet instant."""
+              players: list[PlayerState], defense: DefensiveRoles | None = None, now_s: float = 0.0) -> str:
+    """Rôle du joueur à cet instant. Avec `defense` (ticket v2-collectif/07), le joueur de champ dont l'adversaire a le
+    ballon prend le rôle que son équipe lui a attribué ; sans rôle, il tient le bloc, sauf s'il le quitte (Teamwork)."""
     if player.name == ball.holder:
         return PORTEUR
     if runs_enabled and seen.holder is not None and seen.holder.team == player.team and player.poste != "GK":
@@ -91,6 +94,13 @@ def interpret(player: PlayerState, ball: BallState, seen: Perception, runs_enabl
         return RECEVEUR
     if seen.read_point is not None:
         return LECTURE
+    if defense is not None and seen.holder is not None and seen.holder.team != player.team and player.poste != "GK":
+        assigned = defense.assignments.get(player.name)
+        if assigned is not None:
+            return assigned.role
+        if seen.ball_distance < CHASE_RADIUS_M and defense.leaves_the_bloc(player, now_s):
+            return PRESSEUR
+        return REPLACEMENT
     if seen.ball_distance >= CHASE_RADIUS_M and not nearest_of_team(player, ball, players):
         return REPLACEMENT
     if ball.holder is None:
@@ -101,7 +111,7 @@ def interpret(player: PlayerState, ball: BallState, seen: Perception, runs_enabl
 
 def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, players: list[PlayerState],
            minute: float, runs: dict[str, tuple[Vec2, float]] | None, situation: str | None = None,
-           bloc: Bloc | None = None) -> Intention:
+           bloc: Bloc | None = None, defense: DefensiveRoles | None = None) -> Intention:
     """Action, cible et intensité selon le rôle (règles d'avant le ticket v2-collectif/02 ; avec `bloc`, le
     replacement et les appels partent de la place du joueur dans le bloc, ticket v2-collectif/04)."""
     make = partial(Intention, situation=situation)  # situation perçue, portée par l'intention (ticket 03)
@@ -145,24 +155,35 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
     if role == SOUTIEN:
         return make(role, "aller au ballon", ball.position, mate=ball.holder, reason="soutien de son porteur",
                          distance_m=seen.ball_distance, target_velocity=seen.holder.velocity)
-    why = "presse le porteur adverse" if seen.holder is not None else "va au porteur"
+    assigned = defense.assignments.get(player.name) if defense is not None else None
+    if role in (COUVERTURE, MARQUAGE):
+        why = "couvre son presseur, entre le porteur et le but" if role == COUVERTURE else "marque un attaquant dangereux, côté but"
+        return make(role, "couvrir" if role == COUVERTURE else "marquer", assigned.target, mate=assigned.mate,
+                    reason=why, distance_m=player.position.distance_to(assigned.target),
+                    target_velocity=assigned.target_velocity)
+    if defense is not None and seen.holder is not None and assigned is None and player.poste != "GK":
+        why = "quitte le bloc pour aller au ballon"  # indiscipline (Teamwork, ticket v2-collectif/07)
+    else:
+        why = "presse le porteur adverse" if seen.holder is not None else "va au porteur"
     moving = seen.holder.velocity if seen.holder is not None else Vec2(0.0, 0.0)
     return make(role, "aller au ballon", ball.position, mate=ball.holder, reason=why, distance_m=seen.ball_distance,
                 target_velocity=moving)
 
 
 def think(player: PlayerState, ball: BallState, players: list[PlayerState], minute: float,
-          runs: dict[str, tuple[Vec2, float]] | None, situation: str | None = None, bloc: Bloc | None = None) -> Intention:
+          runs: dict[str, tuple[Vec2, float]] | None, situation: str | None = None, bloc: Bloc | None = None,
+          defense: DefensiveRoles | None = None) -> Intention:
     """Perception, interprétation, décision : l'intention du joueur à cet instant. `situation` : situation de jeu
-    perçue (ticket v2-collectif/03) ; avec `bloc`, elle donne la forme du bloc où il se replace (ticket 04)."""
+    perçue (ticket v2-collectif/03) ; avec `bloc`, elle donne la forme du bloc où il se replace (ticket 04) ; avec
+    `defense`, les rôles défensifs attribués par son équipe (ticket 07)."""
     now_s = minute * 60.0
     if now_s < ball.offside_out_until.get(player.name, 0.0):
         # Hors-jeu sifflé (ticket v2-collectif/23) : l'attaquant fautif recule le temps que la défense se replace.
         return Intention(HORS_JEU, "reculer", player.home_target, HESITATION_INTENSITY,
                          reason="hors-jeu sifflé, il recule vers sa place", situation=situation)
     seen = perceive(player, ball, players)
-    role = interpret(player, ball, seen, runs is not None, players)
-    intention = decide(player, role, ball, seen, players, minute, runs, situation, bloc)
+    role = interpret(player, ball, seen, runs is not None, players, defense, now_s)
+    intention = decide(player, role, ball, seen, players, minute, runs, situation, bloc, defense)
     if now_s < ball.hesitation.get(player.name, 0.0):
         # « Play the whistle » : le défenseur qui a vu le drapeau lève la main et attend, sans s'arrêter de jouer.
         return replace(intention, intensity=min(intention.intensity, HESITATION_INTENSITY),

@@ -4,7 +4,7 @@
 
 **Attributs :** Positioning, Anticipation, Teamwork, Decisions, Concentration ; Pace + Acceleration pour le temps d'arrivée.
 
-**Blocked by:** 07.
+**Blocked by:** 07, 25 (socle cinématique et contact).
 
 **Status:** ready-for-agent (constantes à proposer avant le code)
 
@@ -15,3 +15,11 @@
 - [ ] Constantes produit et critères chiffrés (données réelles sourcées, ou « non trouvé ») validés par le propriétaire avant le code
 - [ ] Les chiffres réels sont des indicateurs de calibration, pas des objectifs : pas de réglage générique pour les atteindre avant la calibration générale (ticket 22)
 - [ ] Suite V2 verte ; V1 inchangée
+
+**Reporté du ticket 07 (réserve A2 de l'expert, rattachée ici par le propriétaire le 30/10/2026)**
+
+- Le problème : quand une passe est en l'air (36 % du temps de jeu, mesuré sur 4 matchs), `DefensiveRoles.update` ne donne aucun rôle (`v2engine/defense.py`). Les défenseurs reviennent alors à l'ancienne règle, « ballon libre à moins de 15 m, sinon bloc ».
+- La conséquence : le marqueur lâche son attaquant au moment où la passe part vers lui. C'est probablement pour cela qu'un marqueur à Marking 99 reste à 3,66 m de son attaquant, en médiane, pour 1 m visé.
+- La piste de l'expert : tant que `ball.receiver` est renseigné, attribuer les rôles comme si le receveur était déjà le porteur. Le presseur vise le point de réception (`meeting_point`) et les marqueurs restent en place. Les lecteurs de passe gardent leur priorité.
+- [ ] Un rôle défensif est attribué pendant plus de 90 % du temps de possession adverse, passes en vol comprises
+- [ ] La distance médiane entre le marqueur et son attaquant baisse à Marking 99 (`diag_marking.py`, à recréer hors dépôt)
