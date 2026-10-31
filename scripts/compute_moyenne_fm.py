@@ -6,9 +6,10 @@ issue des attributs FM, "Moyenne joueur" restant intacte à côté. Pour chaque 
    listés dans le groupe de son poste principal (players.fm_weighted_mean) ;
 2. remise à l'échelle actuelle par rangs, au sein de sa famille de table (DC, Latéral, MDC, MC,
    MOC, Ailier, BU, GK ; players.fm_table_family) : le joueur reçoit la "Moyenne joueur" de même
-   rang dans sa famille (notes par défaut < 30 exclues). Le classement suit FM, la distribution des notes (~35-91) reste celle sur laquelle
-   le moteur est calibré -- la moyenne brute est deux fois plus resserrée (écart-type 6,3
-   contre 12,7).
+   rang dans sa famille (notes par défaut < 30 exclues de la référence). Le classement suit FM,
+   la distribution des notes (19-91, les joueurs sans attributs FM gardant leur note par défaut)
+   reste celle sur laquelle le moteur est calibré -- la moyenne brute est deux fois plus
+   resserrée (écart-type 6,3 contre 12,7).
 Joueur sans attributs FM : Moyenne FM = Moyenne joueur.
 
 À relancer après toute mise à jour des attributs ou de Moyenne joueur, puis
@@ -47,7 +48,11 @@ PLACEHOLDER_BELOW = 30
 
 
 def rank_rescale(raw: dict[int, float], reference: list[float]) -> dict[int, float]:
-    """{clé: valeur brute} -> {clé: valeur de `reference` au même rang} (ex aequo : même valeur)."""
+    """{clé: valeur brute} -> {clé: valeur de `reference` au même rang} (ex aequo : même valeur).
+    Référence vide (famille sans note >= PLACEHOLDER_BELOW) : {} -- ses joueurs gardent leur
+    Moyenne joueur."""
+    if not reference:
+        return {}
     ref = sorted(reference)
     order = sorted(raw, key=raw.get)
     out, i = {}, 0

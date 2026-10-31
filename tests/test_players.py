@@ -277,3 +277,4 @@ def test_rank_rescale_keeps_reference_scale_and_fm_order():
     out = rank_rescale({"a": 60.0, "b": 70.0, "c": 70.0, "d": 80.0}, [40, 50, 60, 90])
     assert out["a"] == 40 and out["d"] == 90  # bornes de l'échelle de référence
     assert out["b"] == out["c"] == 55  # ex aequo : même note
+    assert rank_rescale({"a": 60.0}, []) == {}  # famille sans référence : note d'origine gardée

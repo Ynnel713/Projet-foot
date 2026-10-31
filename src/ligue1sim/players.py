@@ -296,7 +296,8 @@ def weighted_attributes(attributes: dict[str, int], note: float, poste: str | No
 
 
 # Importance de chaque attribut par poste pour la "Moyenne FM" (30/10/2026,
-# demandée par le propriétaire, niveaux proposés par Claude -- à valider) :
+# demandée par le propriétaire, niveaux proposés par Claude et validés par
+# le propriétaire le 31/10/2026, ticket donnees-moyenne-fm/01) :
 # 4 = essentiel, 3 = important, 2 = utile, 1 = secondaire, 0 = hors calcul.
 # Poids doublé à chaque niveau (8/4/2/1) : comme le CA de FM, la note est
 # portée par les attributs clés du poste (finition d'un BU, pas son marquage).
