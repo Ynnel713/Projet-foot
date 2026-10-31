@@ -105,7 +105,8 @@ def interpret(player: PlayerState, ball: BallState, seen: Perception, runs_enabl
         assigned = defense.assignments.get(player.name)
         if assigned is not None:
             return assigned.role
-        if seen.ball_distance < CHASE_RADIUS_M and defense.leaves_the_bloc(player, now_s):
+        if (seen.ball_distance < CHASE_RADIUS_M and not defense.resting(player, now_s)  # il souffle (ticket 08)
+                and defense.leaves_the_bloc(player, now_s)):
             return PRESSEUR
         return REPLACEMENT
     if seen.ball_distance >= CHASE_RADIUS_M and not nearest_of_team(player, ball, players):
@@ -193,6 +194,10 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
         why = "couvre son presseur, entre le porteur et le but" if role == COUVERTURE else "marque un attaquant dangereux, côté but"
         return make(role, "couvrir" if role == COUVERTURE else "marquer", assigned.target, mate=assigned.mate,
                     reason=why, distance_m=player.position.distance_to(assigned.target),
+                    target_velocity=assigned.target_velocity)
+    if role == PRESSEUR and assigned is not None:  # course orientée, à l'intensité de son Work Rate (ticket 08)
+        return make(role, "presser", assigned.target, assigned.intensity, mate=assigned.mate,
+                    reason="presse le porteur adverse", distance_m=seen.ball_distance,
                     target_velocity=assigned.target_velocity)
     if defense is not None and seen.holder is not None and assigned is None and player.poste != "GK":
         why = "quitte le bloc pour aller au ballon"  # indiscipline (Teamwork, ticket v2-collectif/07)

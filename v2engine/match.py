@@ -171,8 +171,9 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
 
         if ball.engaged_holder != holder.name:  # nouveau porteur : nouvelles confrontations
             ball.engaged, ball.engaged_holder = set(), holder.name
-        ball.engaged = {n for n in ball.engaged
-                        if any(p.name == n and p.position.distance_to(holder.position) < CONFRONTATION_END_M for p in players)}
+        # un défenseur battu resté à moins de 3 m retente une fois relevé (réserve A4 du ticket 25, traitée au ticket 08)
+        ball.engaged = {n for n in ball.engaged if ball.tackle_ban_until_s.get(n, 0.0) > now_s
+                        and any(p.name == n and p.position.distance_to(holder.position) < CONFRONTATION_END_M for p in players)}
         candidates = [p for p in players
                       if p.name not in ball.engaged and ball.tackle_ban_until_s.get(p.name, 0.0) <= now_s
                       and ball.offside_out_until.get(p.name, 0.0) <= now_s]  # le fautif recule, il ne défend pas

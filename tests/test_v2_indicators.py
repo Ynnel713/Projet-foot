@@ -354,3 +354,11 @@ def test_crowding_ignores_support_next_to_the_holder() -> None:
     holder, support, a, b = _p("h", "home", 50, 34), _p("s", "home", 53, 34), _p("a", "home", 70, 10), _p("b", "home", 72, 10)
     assert ind.crowded([holder, support, a, b], []) == 1.0
     assert ind.crowded([holder, support, a, b], [], holder="h") == 2 / 3
+
+
+def test_open_options_threshold_counts_only_easy_passes() -> None:
+    holder, mate = _p("H", "home", 50, 34), _p("M", "home", 62, 34)
+    marker = _p("X", "away", 63, 34)
+    chance = ind.pass_chances(holder, [holder, mate], [marker])[0]
+    assert ind.open_options(holder, [holder, mate], [marker], threshold=chance) == 1
+    assert ind.open_options(holder, [holder, mate], [marker], threshold=min(1.0, chance + 0.01)) == 0

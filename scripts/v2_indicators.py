@@ -27,6 +27,7 @@ KMH = 1.0 / 3.6
 # Seuils de mesure (docs/INDICATEURS_V2.md, section « Seuils de mesure ») -- ils ne changent pas le jeu.
 OPTION_RANGE_M = 40.0
 OPTION_PROBABILITY = 0.7  # même seuil que le jeu (`off_ball.OPEN_LANE_PROBABILITY`, ticket 06)
+EASY_OPTION_PROBABILITY = 0.8  # solution « facile » (ticket 08, validé le 31/10/2026) : le seuil de 0,5 ne voit pas la pression
 PRESS_RADIUS_M = 3.0
 COVER_BEHIND_M, COVER_AHEAD_M, COVER_HALF_WIDTH_M = 3.0, 9.0, 4.0
 LOCAL_RADIUS_M = 10.0
@@ -192,11 +193,16 @@ def pressing_cover(holder: PlayerState, defenders: Sequence[PlayerState], defend
     return any(d is not presser and in_cover_zone(holder.position, defended_goal, d.position) for d in defenders)
 
 
-def open_options(holder: PlayerState, mates: Sequence[PlayerState], opponents: Sequence[PlayerState]) -> int:
-    """Coéquipiers à moins de OPTION_RANGE_M dont la passe arriverait (modèle du moteur) avec au moins
-    OPTION_PROBABILITY."""
-    return sum(1 for m in mates if m is not holder and holder.position.distance_to(m.position) <= OPTION_RANGE_M
-               and pass_success_probability(holder, m, opponents) >= OPTION_PROBABILITY)
+def pass_chances(holder: PlayerState, mates: Sequence[PlayerState], opponents: Sequence[PlayerState]) -> list[float]:
+    """Chance de réussite (modèle du moteur) de la passe vers chaque coéquipier à moins de OPTION_RANGE_M."""
+    return [pass_success_probability(holder, m, opponents) for m in mates
+            if m is not holder and holder.position.distance_to(m.position) <= OPTION_RANGE_M]
+
+
+def open_options(holder: PlayerState, mates: Sequence[PlayerState], opponents: Sequence[PlayerState],
+                 threshold: float = OPTION_PROBABILITY) -> int:
+    """Coéquipiers à moins de OPTION_RANGE_M dont la passe arriverait (modèle du moteur) avec au moins `threshold`."""
+    return sum(1 for chance in pass_chances(holder, mates, opponents) if chance >= threshold)
 
 
 # --- Accumulation -------------------------------------------------------------------------------------------------
@@ -264,6 +270,7 @@ class Collector:
         self.run_log: list[tuple[str, float, float, Vec2]] = []  # (joueur, début, fin, position finale)
         self.follow: dict[str, list[tuple[float, float]]] = defaultdict(list)  # axe -> (ballon, centre d'équipe)
         self.profile_gaps: dict[str, list[float]] = defaultdict(list)  # niveau -> distances défense-milieu
+        self.press_open: tuple[str, float] | None = None  # pressing en cours (ticket 08) : (équipe qui presse, début)
 
     # --- événements du moteur ---
     def on_pass(self, passer: PlayerState, target: PlayerState) -> None:
@@ -318,6 +325,7 @@ class Collector:
         if self.team is not None:
             self._runs(now_s, players, ball)
         self._retreat(now_s, players, ball)
+        self._pressing(now_s, players, ball, by_name, dt)
         if now_s - self.last_sample >= self.every - 1e-9:
             self.last_sample = now_s
             self._geometry(now_s, players, ball, by_name)
@@ -453,6 +461,29 @@ class Collector:
             still.append(r)
         self.retreat = still
 
+    def _pressing(self, now_s, players, ball, by_name, dt):
+        """Ticket 08 : pressings (un défenseur passe à moins de PRESS_RADIUS_M du porteur) suivis d'une récupération
+        de l'équipe qui presse dans les 5 s ; profils : temps passé à presser et distance presseur-porteur."""
+        holder = by_name.get(ball.holder) if ball.holder else None
+        if self.press_open is not None and self.team == self.press_open[0]:
+            self.count["pressings suivis d'une récupération en 5 s"] += now_s - self.press_open[1] <= 5.0
+            self.press_open = None
+        if self.press_open is not None and now_s - self.press_open[1] > 5.0:
+            self.press_open = None
+        if holder is None:
+            return
+        rivals = [p for p in players if p.team != holder.team and p.poste != "GK"]
+        presser = min(rivals, key=lambda p: p.position.distance_to(holder.position), default=None)
+        if presser is None or presser.position.distance_to(holder.position) >= PRESS_RADIUS_M:
+            return
+        if self.press_open is None:
+            self.press_open = (presser.team, now_s)
+            self.count["pressings"] += 1
+        level = self.levels.get(presser.name)
+        if level:
+            self.count[f"profil {level} : temps de pressing (s)"] += dt
+            self.stats[f"profil {level} : distance presseur-porteur (m)"].add(presser.position.distance_to(holder.position))
+
     def _geometry(self, now_s, players, ball, by_name):
         minute = now_s / 60.0
         sl = f"{int(minute // 15) * 15}-{int(minute // 15) * 15 + 15} min"
@@ -526,10 +557,19 @@ class Collector:
                 self.stats["couverture du presseur (part)"].add(1.0 if cover else 0.0, **keys)
             mates = [p for p in players if p.team == holder.team]
             all_opponents = [p for p in players if p.team == dfd]  # gardien compris, comme dans le moteur
-            options = open_options(holder, mates, all_opponents)
+            chances = pass_chances(holder, mates, all_opponents)
+            options = sum(1 for c in chances if c >= OPTION_PROBABILITY)
+            easy = sum(1 for c in chances if c >= EASY_OPTION_PROBABILITY)
             self.stats["solutions de passe ouvertes (nombre)"].add(options, **keys)
+            self.stats["solutions de passe faciles (nombre)"].add(easy, **keys)
+            if chances:
+                self.stats["réussite moyenne des passes disponibles (part)"].add(sum(chances) / len(chances), **keys)
             if level:
                 self.stats[f"profil {level} : solutions de passe ouvertes (nombre)"].add(options)
+            defending = self.levels.get(defenders[0].name) if defenders else None
+            if defending:  # ticket 08 : solutions laissées au porteur par l'équipe haute ou basse
+                self.stats[f"profil {defending} : solutions laissées au porteur adverse (nombre)"].add(options)
+                self.stats[f"profil {defending} : solutions faciles laissées au porteur adverse (nombre)"].add(easy)
 
     def end_match(self) -> None:
         self.matches += 1

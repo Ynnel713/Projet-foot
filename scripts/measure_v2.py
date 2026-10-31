@@ -151,6 +151,10 @@ def report(c: Collector, detail: bool = False) -> dict:
         "tirs de contre par match (récupération dans son camp)": k["tirs de contre, récupération propre camp"] / n,
         "tirs de contre par match (récupération dans le camp adverse)": k["tirs de contre, récupération camp adverse"] / n,
         "appels par match": k["appels"] / n,
+        "pressings par match": k["pressings"] / n,
+        "pressings suivis d'une récupération en 5 s (part)": k["pressings suivis d'une récupération en 5 s"] / max(1, k["pressings"]),
+        "profil haut : temps de pressing par match (s)": k["profil haut : temps de pressing (s)"] / n,
+        "profil bas : temps de pressing par match (s)": k["profil bas : temps de pressing (s)"] / n,
         "temps de calcul par match (s)": getattr(c, "seconds_per_match", None),
     }
     choices = sum(v for key, v in k.items() if key.startswith("choix "))

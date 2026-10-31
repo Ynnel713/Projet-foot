@@ -61,6 +61,7 @@ Ils définissent la mesure et ne changent pas le jeu (`scripts/v2_indicators.py`
 | Seuil | Valeur | Origine |
 |---|---|---|
 | Solutions de passe : probabilité de réception | ≥ 0,7 (ticket 06, 30/10/2026 ; 0,5 avant, sur la zone plate de la courbe de duel) | Recherche du propriétaire |
+| Solutions de passe faciles : probabilité de réception | ≥ 0,8 | Validé par le propriétaire (31/10/2026, ticket 08) |
 | Solutions de passe : portée | ≤ 40 m | Proposé |
 | Presseur : distance au porteur | < 3 m | Proposé |
 | Ellipse de couverture | 3 m derrière le porteur à 9 m devant, demi-largeur 4 m | Recherche du propriétaire ; demi-largeur proposée |
@@ -141,3 +142,5 @@ Ils définissent la mesure et ne changent pas le jeu (`scripts/v2_indicators.py`
 **Correction C5 du ticket 06 (diagnostic, 4 matchs, 31/10/2026).** Les mesures de 20 matchs ci-dessus datent d'avant C5 : pendant une passe de son équipe, les coéquipiers autres que le receveur gardent leur appel au lieu de courir au ballon. Regroupement avec ballon, porteur inclus : 6,8 → **4,9 %**. Le reste est fait à 93 % de croisements passagers (les deux joueurs visent des points écartés de plus de 5 m), à 89 % en transition offensive. Point de départ du ticket 22, qui refera la mesure sur 20 matchs (réserve A1 du ticket 06).
 
 **Le passeur ne reprend plus sa passe (ticket v2-collectif/26, 20 matchs, 31/10/2026).** Depuis le ticket 25 (`4d71418`), une passe sur deux (53 %) revenait au passeur au pas suivant et comptait comme réussie : toutes les mesures de passes, tirs, buts et hors-jeu depuis ce commit sont faussées. Avant (`c379ba6`) → après, mêmes graines : reprises par le passeur 53 → 0,8 % (2 matchs) ; receveur visé 19,5 → 60,8 % ; passes réussies 75,4 → 64,3 % ; passes chez l'adversaire 24,6 → 35,6 % (15 à 20 % au haut niveau) ; passes par minute 23,8 → 16,2 ; tirs 18,2 → 8,2 par équipe ; buts 4,3 → 1,75 par match ; hors-jeu 0,2 → 0,75 par match ; possession d'équipe 8,9 → 9,7 s. Nouvelle base pour la recalibration du hors-jeu et le ticket 22.
+
+**Pressing coordonné (ticket v2-collectif/08, 20 matchs, 31/10/2026).** Avant (`8043889`) → après : pressings 1130 → 1122 par match, récupérés en 5 s 37 → 39 % ; solutions ouvertes 5,21 → 5,31 ; solutions faciles (≥ 0,8) 1,42 → 1,57 ; tacles 67,9 → 52,8 ; pertes 545 → 578 ; pertes en transition 24 → 29 % ; passes 18,5 → 17,6 par minute ; buts 2,1 → 2,0. Profils (99 contre 11) : Aggression, distance presseur-porteur 1,24 contre 1,49 m ; Anticipation, solutions faciles laissées 1,51 contre 1,59 ; Teamwork 1,69 contre 1,53 (sens inverse) ; Work Rate 1,62 contre 1,61. Réserve : le pressing n'a pas d'effet mesuré sur les passes, reprise au ticket 27.
