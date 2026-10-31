@@ -67,7 +67,7 @@ def test_load_clubs_rejects_odd_number_of_clubs(tmp_path):
             "Nationalité": ["France"] * 33,
             "Âge": [25] * 33,
             "Poste": ["MC"] * 33,
-            "Moyenne joueur": [70] * 33,
+            "Moyenne FM": [70] * 33,
         }
     )
     path = tmp_path / "joueurs.xlsx"
@@ -87,7 +87,7 @@ def test_load_clubs_rejects_understaffed_club(tmp_path):
             "Nationalité": ["France"] * 25,
             "Âge": [25] * 25,
             "Poste": ["MC"] * 25,
-            "Moyenne joueur": [70] * 25,
+            "Moyenne FM": [70] * 25,
         }
     )
     path = tmp_path / "joueurs.xlsx"
@@ -165,7 +165,7 @@ def test_load_clubs_rejects_out_of_range_note(tmp_path):
             "Nationalité": ["France"] * 22,
             "Âge": [25] * 22,
             "Poste": ["MC"] * 22,
-            "Moyenne joueur": [70] * 21 + [150],
+            "Moyenne FM": [70] * 21 + [150],
         }
     )
     path = tmp_path / "joueurs.xlsx"
@@ -185,7 +185,7 @@ def test_load_clubs_defaults_to_no_secondary_poste_when_column_absent(tmp_path):
             "Nationalité": ["France"] * 22,
             "Âge": [25] * 22,
             "Poste": ["MC"] * 22,
-            "Moyenne joueur": [70] * 22,
+            "Moyenne FM": [70] * 22,
         }
     )
     path = tmp_path / "joueurs.xlsx"
@@ -205,7 +205,7 @@ def test_load_clubs_parses_secondary_postes_when_present(tmp_path):
             "Nationalité": ["France"] * 22,
             "Âge": [25] * 22,
             "Poste": ["RB"] + ["MC"] * 21,
-            "Moyenne joueur": [70] * 22,
+            "Moyenne FM": [70] * 22,
             "Poste secondaire": ["MC / MDC"] + [None] * 21,
         }
     )
@@ -230,7 +230,7 @@ def test_load_clubs_splits_a_compound_poste_into_primary_and_secondary(tmp_path)
             "Nationalité": ["France"] * 22,
             "Âge": [25] * 22,
             "Poste": ["AD / AG / BU"] + ["MC"] * 21,
-            "Moyenne joueur": [70] * 22,
+            "Moyenne FM": [70] * 22,
         }
     )
     path = tmp_path / "joueurs.xlsx"
@@ -254,7 +254,7 @@ def test_load_clubs_combines_compound_poste_with_declared_secondary_column(tmp_p
             "Nationalité": ["France"] * 22,
             "Âge": [25] * 22,
             "Poste": ["AD / AG"] + ["MC"] * 21,
-            "Moyenne joueur": [70] * 22,
+            "Moyenne FM": [70] * 22,
             "Poste secondaire": ["MOC"] + [None] * 21,
         }
     )
@@ -280,7 +280,7 @@ def test_load_clubs_allows_missing_nom_for_mononym_players(tmp_path):
             "Nationalité": ["France"] * 22,
             "Âge": [25] * 22,
             "Poste": ["MC"] * 22,
-            "Moyenne joueur": [70] * 22,
+            "Moyenne FM": [70] * 22,
         }
     )
     path = tmp_path / "joueurs.xlsx"
@@ -310,7 +310,7 @@ def test_load_clubs_without_fm26_columns_leaves_attributes_none(tmp_path):
             "Nationalité": ["France"] * 22,
             "Âge": [25] * 22,
             "Poste": ["MC"] * 22,
-            "Moyenne joueur": [70] * 22,
+            "Moyenne FM": [70] * 22,
         }
     )
     path = tmp_path / "joueurs.xlsx"
@@ -339,7 +339,7 @@ def test_load_clubs_reads_fm26_columns_when_present(tmp_path):
             "Nationalité": ["France"] * 22,
             "Âge": [25] * 22,
             "Poste": ["MC"] * 22,
-            "Moyenne joueur": [70] * 22,
+            "Moyenne FM": [70] * 22,
             "Crossing": [65] + [None] * 21,
             "Pace": [95] + [None] * 21,
             "Postes FM naturels": ["DR, WBR"] + [None] * 21,

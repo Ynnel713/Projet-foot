@@ -25,7 +25,11 @@ NOM_COLUMN = "Nom"
 NATIONALITE_COLUMN = "Nationalité"
 AGE_COLUMN = "Âge"
 POSTE_COLUMN = "Poste"
-NOTE_COLUMN = "Moyenne joueur"
+# Note qui fait foi dans la V1 depuis le 30/10/2026 (décision du propriétaire) :
+# attributs FM pondérés par poste, remis à l'échelle de "Moyenne joueur" --
+# calculée par scripts/compute_moyenne_fm.py. "Moyenne joueur" reste dans le
+# fichier, intacte, mais n'est plus lue par le moteur.
+NOTE_COLUMN = "Moyenne FM"
 # Optionnelle : absente du fichier historique, remplie au cas par cas. Un ou
 # plusieurs postes séparés par " / " (ex. "MC / MDC"). N'est volontairement
 # pas dans REQUIRED_COLUMNS ni vérifiée par
@@ -47,9 +51,9 @@ PIED_COLUMN = "Pieds"
 # Enrichissement FM26 (26/09/2026, voir scripts/scrape_fminside_attributes.py) :
 # absent pour la plupart des joueurs tant que le scraping n'est pas terminé,
 # donc volontairement pas dans REQUIRED_COLUMNS -- même traitement que
-# CATEGORIE_COLUMN/POSTE_SECONDAIRE_COLUMN ci-dessus. Pas de note globale FM
-# (Ability/Note FM, retirées le 26/09/2026) : Moyenne joueur (NOTE_COLUMN)
-# fait foi, les attributs FM ne servent qu'à décrire le profil du joueur.
+# CATEGORIE_COLUMN/POSTE_SECONDAIRE_COLUMN ci-dessus. Les attributs FM
+# décrivent le profil du joueur et, depuis le 30/10/2026, fondent aussi la
+# note qui fait foi (NOTE_COLUMN, "Moyenne FM").
 POSTES_FM_COLUMN = "Postes FM naturels"
 TAILLE_FM_COLUMN = "Taille FM (cm)"
 WEAK_FOOT_COLUMN = "Weak foot (/5)"

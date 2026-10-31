@@ -251,15 +251,12 @@ def _importance(name: str, poste: str | None) -> float:
 
 
 def weighted_attributes(attributes: dict[str, int], note: float, poste: str | None = None) -> dict[str, int]:
-    """Recale les attributs FM26 bruts (scrapés sur fminside) sur la seule
-    note qui fait foi dans le moteur, Moyenne joueur (décision du
-    26/09/2026 : on abandonne toute note globale FM concurrente comme
-    "Ability" -- voir l'historique de scripts/scrape_fminside_attributes.py).
-    Moyenne joueur ne devient pas une note globale concurrente (elle reste la
-    seule utilisée par le moteur, voir clubs.NOTE_COLUMN) -- elle sert
-    seulement à recentrer le PROFIL (attributs affichés, radar/barres) sur le
-    niveau réel du joueur plutôt que sur celui, potentiellement biaisé, que
-    fminside lui attribue seul.
+    """Recale les attributs FM26 bruts (scrapés sur fminside) sur la note
+    qui fait foi dans le moteur (`note`, colonne clubs.NOTE_COLUMN : "Moyenne
+    FM" depuis le 30/10/2026, "Moyenne joueur" avant) -- elle sert à
+    recentrer le PROFIL (attributs affichés, radar/barres) sur cette note.
+    Moyenne FM étant elle-même tirée de ces attributs, le recalage est faible
+    pour un joueur enrichi FM.
 
     Seuls les attributs jugés pertinents pour `poste` (importance 1 ou 2,
     voir _RAW_IMPORTANCE -- décision utilisateur du 28/09/2026) entrent dans
@@ -296,6 +293,98 @@ def weighted_attributes(attributes: dict[str, int], note: float, poste: str | No
         return round(min(99, max(0, value + correction_unit / weight)))
 
     return {name: rescale(name, value) for name, value in attributes.items()}
+
+
+# Importance de chaque attribut par poste pour la "Moyenne FM" (30/10/2026,
+# demandée par le propriétaire, niveaux proposés par Claude -- à valider) :
+# 4 = essentiel, 3 = important, 2 = utile, 1 = secondaire, 0 = hors calcul.
+# Poids doublé à chaque niveau (8/4/2/1) : comme le CA de FM, la note est
+# portée par les attributs clés du poste (finition d'un BU, pas son marquage).
+# Indépendante de _RAW_IMPORTANCE, qui ne sert qu'à weighted_attributes.
+_FM_LEVEL_COLUMNS = ("GK", "DC", "Latéral", "MDC", "MC", "MOC", "Ailier", "BU")
+_FM_LEVEL_WEIGHT = {0: 0, 1: 1, 2: 2, 3: 4, 4: 8}
+_FM_LEVELS: dict[str, tuple[int, ...]] = {
+    #                    GK DC Lat MDC MC MOC Ail BU
+    "Crossing":         (0, 1, 4, 1, 2, 2, 3, 1),
+    "Dribbling":        (0, 1, 2, 2, 2, 3, 4, 3),
+    "Finishing":        (0, 1, 1, 1, 2, 3, 3, 4),
+    "First Touch":      (1, 2, 2, 3, 3, 4, 3, 3),
+    "Heading":          (0, 4, 2, 2, 1, 1, 1, 3),
+    "Long Shots":       (0, 1, 1, 2, 2, 3, 2, 2),
+    "Marking":          (0, 4, 3, 3, 2, 1, 1, 1),
+    "Passing":          (2, 2, 3, 4, 4, 4, 3, 2),
+    "Tackling":         (0, 4, 3, 4, 2, 1, 1, 1),
+    "Technique":        (1, 2, 2, 3, 3, 4, 4, 3),
+    "Aggression":       (1, 2, 2, 3, 2, 1, 1, 2),
+    "Anticipation":     (3, 4, 3, 4, 3, 3, 3, 4),
+    "Bravery":          (2, 3, 2, 2, 2, 1, 1, 2),
+    "Composure":        (3, 3, 2, 3, 3, 4, 3, 4),
+    "Concentration":    (4, 4, 3, 4, 3, 2, 2, 2),
+    "Decisions":        (4, 3, 3, 4, 4, 4, 3, 3),
+    "Determination":    (2, 2, 2, 2, 2, 2, 2, 2),
+    "Flair":            (0, 1, 1, 1, 2, 4, 4, 3),
+    "Leadership":       (2, 2, 1, 2, 2, 1, 1, 1),
+    "Off the Ball":     (0, 1, 2, 1, 3, 4, 4, 4),
+    "Positioning":      (4, 4, 4, 4, 2, 1, 1, 1),
+    "Teamwork":         (2, 3, 3, 4, 4, 3, 3, 2),
+    "Vision":           (2, 2, 2, 3, 4, 4, 3, 2),
+    "Work Rate":        (1, 2, 4, 4, 4, 2, 3, 2),
+    "Acceleration":     (2, 3, 4, 2, 2, 3, 4, 4),
+    "Agility":          (4, 2, 2, 2, 2, 3, 3, 3),
+    "Balance":          (2, 2, 2, 2, 2, 3, 3, 3),
+    "Jumping Reach":    (2, 4, 1, 2, 1, 1, 1, 3),
+    "Natural Fitness":  (1, 1, 2, 2, 2, 1, 1, 1),
+    "Pace":             (1, 3, 4, 2, 2, 3, 4, 4),
+    "Stamina":          (1, 2, 4, 3, 4, 3, 3, 2),
+    "Strength":         (1, 4, 2, 3, 2, 1, 2, 3),
+    "Corners":          (0, 0, 1, 0, 1, 1, 1, 0),
+    "Free Kick Taking": (0, 0, 1, 1, 1, 1, 1, 1),
+    "Long Throws":      (0, 0, 1, 0, 0, 0, 0, 0),
+    "Penalty Taking":   (0, 0, 0, 0, 0, 1, 1, 1),
+    "Aerial Reach":     (3, 0, 0, 0, 0, 0, 0, 0),
+    "Command of Area":  (3, 0, 0, 0, 0, 0, 0, 0),
+    "Communication":    (3, 0, 0, 0, 0, 0, 0, 0),
+    "Handling":         (4, 0, 0, 0, 0, 0, 0, 0),
+    "Kicking":          (2, 0, 0, 0, 0, 0, 0, 0),
+    "One on Ones":      (4, 0, 0, 0, 0, 0, 0, 0),
+    "Reflexes":         (4, 0, 0, 0, 0, 0, 0, 0),
+    "Throwing":         (2, 0, 0, 0, 0, 0, 0, 0),
+    # Eccentricity, Punching/Rushing Out (Tendency) : des tendances, pas des niveaux -- hors calcul
+}
+_FM_POSTE_COLUMNS: dict[str, tuple[str, ...]] = {
+    "GK": ("GK",), "DC": ("DC",), "LB": ("Latéral",), "RB": ("Latéral",), "MDC": ("MDC",),
+    "MC": ("MC",), "MOC": ("MOC",), "MO": ("MOC",), "AG": ("Ailier",), "AD": ("Ailier",),
+    "BU": ("BU",), "SA": ("MOC", "BU"), "ATT": ("Ailier", "MOC", "BU"),
+}
+
+
+def fm_weight(name: str, poste: str | None) -> float:
+    """Poids de l'attribut `name` pour `poste` dans la Moyenne FM (voir
+    _FM_LEVELS) -- moyenne des colonnes pour SA/ATT, 0 si inconnu."""
+    columns = _FM_POSTE_COLUMNS.get(poste or "")
+    levels = _FM_LEVELS.get(name)
+    if not columns or not levels:
+        return 0.0
+    return sum(_FM_LEVEL_WEIGHT[levels[_FM_LEVEL_COLUMNS.index(c)]] for c in columns) / len(columns)
+
+
+def fm_weighted_mean(attributes: dict[str, int], poste: str | None) -> float | None:
+    """Moyenne des attributs FM bruts pondérée par leur importance pour
+    `poste` (_FM_LEVELS, 4 niveaux) -- base de la colonne "Moyenne FM"
+    (scripts/compute_moyenne_fm.py), avant sa remise à l'échelle. None si
+    aucun attribut pertinent n'est renseigné."""
+    weights = {name: fm_weight(name, poste) for name in attributes}
+    relevant = {name: w for name, w in weights.items() if w > 0}
+    if not relevant:
+        return None
+    return sum(w * attributes[name] for name, w in relevant.items()) / sum(relevant.values())
+
+
+def fm_table_family(poste: str | None) -> tuple[str, ...]:
+    """Colonne(s) de _FM_LEVELS utilisées pour `poste` (LB et RB -> ("Latéral",)) :
+    deux postes de la même famille sont notés avec la même table, donc
+    comparables entre eux -- () si poste inconnu."""
+    return _FM_POSTE_COLUMNS.get(poste or "", ())
 
 
 @dataclass(frozen=True)

@@ -2471,9 +2471,8 @@ def _render_player_profile_card(player: Player) -> None:
         tags.append(f"Pied faible {player.weak_foot:.0f}/5")
     tags_html = "".join(f'<span class="pp-tag">{t}</span>' for t in tags if t)
 
-    # Moyenne joueur fait foi (26/09/2026) -- les attributs FM26 servent à
-    # décrire le profil du joueur (technique/physique/mental), jamais à
-    # calculer une note globale concurrente.
+    # player.note = "Moyenne FM" depuis le 30/10/2026 (attributs FM26
+    # pondérés par poste, voir scripts/compute_moyenne_fm.py).
     note_value = player.note
     note_tier = _fm_tier(note_value)
 

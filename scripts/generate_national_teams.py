@@ -67,7 +67,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from ligue1sim.clubs import load_all_clubs  # noqa: E402
+from ligue1sim.clubs import NOTE_COLUMN, load_all_clubs  # noqa: E402
 from ligue1sim.players import Player, position_group  # noqa: E402
 
 GAME_PATH = "data/joueurs.xlsx"
@@ -241,7 +241,7 @@ def _build_block(country: str, flag: str, selected: dict[str, list[Player]]) -> 
         ]
         rows.append([", ".join(missing_parts), None, None, None, None, None])
 
-    rows.append(["Poste", "ID", "Prénom", "Nom", "Club", "Moyenne joueur"])
+    rows.append(["Poste", "ID", "Prénom", "Nom", "Club", NOTE_COLUMN])
     for g in GROUP_ORDER:
         for p in selected[g]:
             rows.append([GROUP_LABEL[g], p.id, p.prenom, p.nom, p.club, p.note])

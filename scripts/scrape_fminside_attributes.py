@@ -14,8 +14,8 @@ Principe
    (les colonnes existantes ne sont jamais modifiées). Le tableau Excel "Tableau8" est étendu.
    + infos complémentaires de la fiche : postes naturels, taille, weak foot (/5) et preferred
    moves (ces derniers seulement avec un compte fminside connecté, voir --cookie).
-   Pas de note globale FM (Ability/Note FM, retirées le 26/09/2026 : Moyenne joueur fait foi,
-   les attributs servent uniquement à décrire le profil du joueur -- voir data/joueurs.xlsx).
+   Pas de note globale FM écrite ici (Ability/Note FM, retirées le 26/09/2026) : la note qui
+   fait foi, "Moyenne FM", se calcule ensuite avec scripts/compute_moyenne_fm.py.
 5. Produit un rapport CSV de matching (à relire pour les AMBIGU / INTROUVABLE / CONFLIT) et
    accepte un fichier de corrections manuelles.
 
@@ -103,9 +103,9 @@ EXTRA_COLUMNS = [POS_COL, HEIGHT_COL, WF_COL, MOVES_COL]
 # (redondant), et les 16 colonnes au-delà du top 2 en possession n'étaient de toute
 # façon récupérables que via une session navigateur manuelle, pas ce script. Voir
 # data/joueurs_backup_20260925_234546.xlsx pour la dernière version qui les avait.
-# Ability/Note FM (retirées le 26/09/2026) : Moyenne joueur fait foi dans le moteur,
-# les attributs FM servent uniquement à décrire le profil du joueur -- plus de note
-# globale FM à calculer ou écrire. Le rating fminside (badge de recherche) reste
+# Ability/Note FM (retirées le 26/09/2026) : plus de note globale écrite par ce script
+# ("Moyenne FM", qui fait foi depuis le 30/10/2026, vient de scripts/compute_moyenne_fm.py).
+# Le rating fminside (badge de recherche) reste
 # utilisé en interne pour le scoring anti-homonymes (Candidate.ability, voir
 # score_candidate), mais n'est plus écrit dans le classeur.
 NEW_COLUMNS = ATTRIBUTES + [URL_COL] + EXTRA_COLUMNS

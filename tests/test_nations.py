@@ -12,15 +12,13 @@ def test_load_national_teams_returns_only_complete_squads_of_18():
     # fournissaient pas toujours assez de joueurs bien notés par groupe de
     # poste pour boucler un 23/23 -- voir la docstring du script.
     #
-    # Le Brésil fait exception à 17 (retour utilisateur du 28/09/2026) :
-    # "Lucas Paquetá" y était listé deux fois (deux lignes distinctes de
-    # "Infos principales", même nom/club/note -- doublon de saisie), corrigé
-    # en supprimant la ligne en trop plutôt qu'en réduisant le quota général.
+    # Le Brésil était à 17 (doublon "Lucas Paquetá" retiré sans régénérer
+    # les onglets) jusqu'à leur régénération du 30/10/2026 : 18 partout.
     teams = load_national_teams(DATA_PATH)
 
     assert len(teams) > 0
     counts = {t.name: len(t.players) for t in teams}
-    assert all(count == 17 if "Brésil" in name else count == 18 for name, count in counts.items())
+    assert all(count == 18 for count in counts.values())
     assert len({t.name for t in teams}) == len(teams)  # pas de doublon de pays
 
 

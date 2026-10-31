@@ -8,6 +8,8 @@ from ligue1sim.players import (
     SCORER_WEIGHT,
     Player,
     best_distance_to_group,
+    fm_table_family,
+    fm_weighted_mean,
     nearest_distance_to_group,
     position_group,
     poste_distance,
@@ -236,3 +238,42 @@ class TestWeightedAttributes:
         assert result["Marking"] == 40
         assert result["Tackling"] == 55
         assert result["Heading"] == 35
+
+
+class TestFmWeightedMean:
+    def test_only_relevant_attributes_count_weighted_by_importance(self):
+        # BU : Finishing essentiel (poids 8), Determination utile (2), Marking secondaire (1).
+        attrs = {"Finishing": 90, "Determination": 60, "Marking": 10}
+        assert fm_weighted_mean(attrs, "BU") == (8 * 90 + 2 * 60 + 1 * 10) / 11
+
+    def test_finishing_outweighs_marking_for_a_striker_not_for_a_defender(self):
+        finisher = {"Finishing": 90, "Marking": 40}
+        stopper = {"Finishing": 40, "Marking": 90}
+        assert fm_weighted_mean(finisher, "BU") > fm_weighted_mean(stopper, "BU")
+        assert fm_weighted_mean(stopper, "DC") > fm_weighted_mean(finisher, "DC")
+
+    def test_goalkeeper_column(self):
+        # GK : Reflexes essentiel (8), Kicking utile (2), Finishing hors calcul.
+        attrs = {"Reflexes": 80, "Kicking": 50, "Finishing": 99}
+        assert fm_weighted_mean(attrs, "GK") == (8 * 80 + 2 * 50) / 10
+
+    def test_none_without_relevant_attribute(self):
+        assert fm_weighted_mean({"Corners": 80}, "BU") is None
+
+    def test_table_family_groups_postes_sharing_a_table(self):
+        # LB/RB partagent la table Latéral (recalés ensemble), distincte de DC.
+        assert fm_table_family("LB") == fm_table_family("RB") == ("Latéral",)
+        assert fm_table_family("DC") != fm_table_family("LB")
+        assert fm_table_family("XYZ") == ()
+
+
+def test_rank_rescale_keeps_reference_scale_and_fm_order():
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+    from compute_moyenne_fm import rank_rescale
+
+    out = rank_rescale({"a": 60.0, "b": 70.0, "c": 70.0, "d": 80.0}, [40, 50, 60, 90])
+    assert out["a"] == 40 and out["d"] == 90  # bornes de l'échelle de référence
+    assert out["b"] == out["c"] == 55  # ex aequo : même note
