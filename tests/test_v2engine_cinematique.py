@@ -207,6 +207,33 @@ def test_passer_does_not_touch_his_own_pass_as_it_leaves(monkeypatch) -> None:
     assert tried == [] and ball.holder is None
 
 
+
+@pytest.mark.parametrize("dt", STEPS)
+@pytest.mark.parametrize("pass_deg", range(0, 360, 45))
+@pytest.mark.parametrize("run_deg", range(0, 360, 90))
+def test_moving_passer_does_not_touch_his_own_pass_as_it_leaves(monkeypatch, dt, pass_deg, run_deg) -> None:
+    """Ticket v2-collectif/26 : il a bougé pendant le pas où il passe, en freinant (sa vitesse a baissé de 5 à
+    4 m/s) : l'estimation de sa position de début de pas est décalée de quelques centimètres, et le ballon, parti
+    de ses pieds, s'éloigne quand même de lui."""
+    tried: list[str] = []
+    monkeypatch.setattr("v2engine.match.attempt_control", lambda player, *a, **k: tried.append(player.name) or True)
+    release = Vec2(50.0, 34.0)
+    run = Vec2(math.cos(math.radians(run_deg)), math.sin(math.radians(run_deg)))
+    passer = _player(name="passeur", position=release + run * (4.5 * dt))  # 5 m/s au départ, 4 m/s à la fin
+    passer.velocity = run * 4.0
+    pass_dir = Vec2(math.cos(math.radians(pass_deg)), math.sin(math.radians(pass_deg)))
+    ball = BallState(position=release, velocity=pass_dir * 12.0, released_by="passeur")
+    _step_ball(ball, dt, [passer])
+    assert tried == [] and ball.holder is None
+
+
+def test_passer_can_take_back_a_pass_coming_back_to_him(monkeypatch) -> None:
+    monkeypatch.setattr("v2engine.match.attempt_control", lambda *a, **k: True)
+    passer = _player(name="passeur", position=Vec2(50.0, 34.0))
+    ball = BallState(position=Vec2(51.0, 34.0), velocity=Vec2(-8.0, 0.0), released_by="passeur")  # elle revient
+    _step_ball(ball, 0.1, [passer])
+    assert ball.holder == "passeur"
+
 # --- Cible mobile (revue expert du 29/10/2026, A1) ------------------------------------------------------------
 
 def _chase(dt: float, chaser_pace: float, seconds: float = 12.0) -> list[float]:

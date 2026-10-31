@@ -313,9 +313,12 @@ def _contacts(start: Vec2, end: Vec2, dt: float, players: list[PlayerState],
         r1 = end - player.position  # et en fin de pas
         seg = r1 - r0
         length2 = seg.x * seg.x + seg.y * seg.y
+        # Sa propre passe qui part de ses pieds : il ne la touche pas en la lâchant. « Elle s'éloigne » se juge sur la
+        # distance, pas sur la direction de r0 : au départ r0 est presque nul et sa direction n'est que l'erreur
+        # d'estimation de sa position de début de pas (ticket v2-collectif/26).
         if (player.name == released_by and length2 >= 1e-12 and r0.length() < CONTROL_RADIUS_M
-                and r0.x * seg.x + r0.y * seg.y >= 0.0):
-            continue  # sa propre passe qui part de ses pieds : il ne la touche pas en la lâchant
+                and r1.length() >= r0.length()):
+            continue
         s = 0.0 if length2 < 1e-12 else min(1.0, max(0.0, -(r0.x * seg.x + r0.y * seg.y) / length2))
         closest = r0 + seg * s
         if closest.length() < CONTROL_RADIUS_M:

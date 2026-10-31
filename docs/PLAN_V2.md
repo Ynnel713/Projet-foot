@@ -160,7 +160,7 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 | Étape | Tickets | Contenu |
 |---|---|---|
 | A. Fondations | 01, 02, 18, 03 | Banc de mesure et tests tactiques ; perception, décision, exécution et intentions tracées ; règle des interactions entre attributs ; reconnaissance de la situation de jeu |
-| B. Structure collective | 04, 05, 23, 25, 06 | Bloc de référence dynamique ; hauteur du bloc ; hors-jeu (ajouté le 27/10/2026) ; socle cinématique et contact du ballon (ajouté le 29/10/2026 après l'audit global : arrivée et freinage, contact sur le trajet du ballon, un seul pas de temps) ; soutien du porteur et lignes de passe |
+| B. Structure collective | 04, 05, 23, 25, 06, 26 | Bloc de référence dynamique ; hauteur du bloc ; hors-jeu (ajouté le 27/10/2026) ; socle cinématique et contact du ballon (ajouté le 29/10/2026 après l'audit global : arrivée et freinage, contact sur le trajet du ballon, un seul pas de temps) ; soutien du porteur et lignes de passe ; le passeur ne reprend plus sa propre passe (ajouté le 31/10/2026, correctif du 25) |
 | C. Défense organisée | 07, 08, 09 | Rôles défensifs (presser, couvrir, marquer, fermer l'axe) ; pressing coordonné ; compensations en cascade |
 | D. Transitions | 10, 11 | Attaque-défense ; défense-attaque |
 | E. Effort | 12 | Intensité selon le rôle et réserve d'énergie (reprise du socle 02 et de son code non commité) |
@@ -169,7 +169,7 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 | H. Individus | 19, 20, 21 | Profils et tendances (Flair, Teamwork, Preferred Moves) ; conscience de ses limites ; adaptation au score, au temps et à la fatigue |
 | I. Calibration | 22 | Calibration générale (reprise du socle 05), sur au moins 50 matchs |
 
-**Avancement (31/10/2026)** : livrés 01 (`a20a6af`), 02 (`832b53c`), 18 en partie (`4205ab9`), 03 (`926f96d`), 04 (`c505f65`), 05 (`48c11cb`), 23 (`e64780b`, `b4a7264`), 25 (`4d71418`), 07 (`8043889`), 06 (`b8461d9`, validé expert avec réserves A1-A2 acceptées + QC) ; 08 en cours sur sa branche. Points reportés au ticket 22 par le 06 : buts (2,75 par match), regroupement hors porteur, effet d'Off the Ball sur les solutions de passe, appels des DC et latéraux.
+**Avancement (31/10/2026)** : livrés 01 (`a20a6af`), 02 (`832b53c`), 18 en partie (`4205ab9`), 03 (`926f96d`), 04 (`c505f65`), 05 (`48c11cb`), 23 (`e64780b`, `b4a7264`), 25 (`4d71418`), 07 (`8043889`), 06 (`b8461d9`, validé expert avec réserves A1-A2 acceptées + QC) ; 26 (passeur qui reprenait sa passe, validé expert + QC) ; 08 en cours sur sa branche. Le 26 change la base de mesure (passes, tirs, buts, hors-jeu : voir `INDICATEURS_V2.md`) ; toute mesure faite depuis `4d71418` est à refaire. Points reportés au ticket 22 par le 06 : buts (2,75 par match), regroupement hors porteur, effet d'Off the Ball sur les solutions de passe, appels des DC et latéraux.
 
 **Hors chantier, dans les phases suivantes** : centres et jeu aérien du dernier tiers (phase 7) ; coups de pied arrêtés, avec placement, blocs, marquage et seconds ballons (phase 8) ; relance du gardien (phase 9, en lien avec le ticket 15) ; Leadership individuel et moral (phase 10, en lien avec le ticket 21).
 
