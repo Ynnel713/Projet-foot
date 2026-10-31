@@ -133,3 +133,67 @@ def test_api_sends_intentions_only_when_role_or_action_changes() -> None:
         (0.0, cerveau.BALLON_LIBRE, None, "ballon libre"),  # la distance change, pas le segment
         (0.2, cerveau.PRESSEUR, "A", "presse le porteur adverse"),
         (0.3, cerveau.PRESSEUR, "B", "presse le porteur adverse")]  # nouveau porteur pressé : nouveau segment
+
+
+# --- Équilibre derrière le ballon (ticket v2-collectif/06) ----------------------------------------------------------
+def _balance_ahead_share(teamwork: int, situation: str) -> float:
+    """Part des appels du défenseur le plus reculé qui le mènent devant le ballon (x > 40)."""
+    holder = _p("H", x=40.0)
+    deep = _p("DC1", x=38.0, y=20.0, poste="DC", attributes={"Teamwork": teamwork, "Off the Ball": 99})
+    other = _p("DC2", x=36.0, y=48.0, poste="DC")
+    forward = _p("BU", x=60.0, poste="BU")
+    players = [holder, deep, other, forward, _p("Adv", team="away", x=20.0, y=5.0)]
+    random.seed(20260923)
+    ahead = sum(cerveau.think(deep, _ball(40.0, 34.0, holder="H"), players, 1.0, {}, situation).target.x > 40.0
+                for _ in range(400))
+    return ahead / 400
+
+
+def test_rest_defenders_stay_behind_the_ball_in_settled_possession() -> None:
+    from v2engine.situation import POSSESSION_INSTALLEE, TRANSITION_OFFENSIVE
+
+    assert _balance_ahead_share(99, POSSESSION_INSTALLEE) == 0.0  # discipliné : jamais devant le ballon
+    free = _balance_ahead_share(99, TRANSITION_OFFENSIVE)  # hors possession installée : appel libre
+    assert free > 0.3
+    loose = _balance_ahead_share(11, POSSESSION_INSTALLEE)  # Teamwork 11 : monte 35 % du temps
+    assert 0.2 * free < loose < 0.5 * free
+
+
+def test_rest_defenders_are_the_two_deepest_outfield_players_except_the_holder() -> None:
+    holder = _p("H", x=10.0, poste="DC")
+    keeper = _p("GK", x=2.0, poste="GK")
+    team = [holder, keeper, _p("A", x=20.0), _p("B", x=30.0), _p("C", x=40.0)]
+    assert [p.name for p in cerveau._rest_defenders(team, holder, 1.0)] == ["A", "B"]
+    assert [p.name for p in cerveau._rest_defenders(team, holder, -1.0)] == ["C", "B"]
+
+
+def test_runner_keeps_his_space_until_he_reaches_it_or_three_seconds() -> None:
+    holder = _p("H", x=40.0)
+    far = _p("M", x=50.0, y=20.0)
+    players = [holder, far, _p("Adv", team="away", x=20.0, y=5.0)]
+    space = Vec2(65.0, 10.0)  # choisi à t = 10 s, loin du joueur
+
+    def target(player, now_s: float) -> Vec2:
+        runs = {"M": (space, 10.0 + cerveau.SPACE_HOLD_MAX_S)}
+        return cerveau.think(player, _ball(40.0, 34.0, holder="H"), players, now_s / 60.0, runs).target
+
+    random.seed(3)
+    assert target(far, 12.9) == space  # pas encore atteint : il le garde
+    assert target(far, 13.0) != space  # 3 s : il en cherche un autre
+    there = _p("M", x=65.0, y=11.0)  # à 1 m de l'espace
+    assert target(there, 10.5) == space  # atteint, mais moins de 1 s : il reste
+    assert target(there, 11.0) != space  # atteint après 1 s : il en cherche un autre
+
+
+def test_teammates_keep_their_run_while_their_pass_is_in_flight() -> None:
+    passer, receiver, mate, rival = _p("P", x=45), _p("R", x=60), _p("M", x=53, y=30), _p("X", team="away", x=70)
+    players = [passer, receiver, mate, rival]
+    space = Vec2(70.0, 20.0)
+    runs = {"M": (space, 60.0 + cerveau.SPACE_HOLD_MAX_S)}
+    own_pass = _ball(52, 34, velocity=Vec2(5.0, 0.0), receiver="R", last_pass_team="home")
+    run = cerveau.think(mate, own_pass, players, 1.0, runs)
+    assert (run.role, run.target, run.mate) == (cerveau.APPEL, space, "R")  # il poursuit son appel, pas le ballon
+    assert cerveau.think(receiver, own_pass, players, 1.0, runs).role == cerveau.RECEVEUR
+    rival_pass = _ball(52, 34, velocity=Vec2(5.0, 0.0), receiver="Y", last_pass_team="away")
+    assert cerveau.think(mate, rival_pass, players, 1.0, runs).role == cerveau.BALLON_LIBRE
+    assert cerveau.think(mate, _ball(52, 34), players, 1.0, runs).role == cerveau.BALLON_LIBRE  # ballon perdu

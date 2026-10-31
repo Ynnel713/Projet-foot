@@ -57,3 +57,45 @@ def test_high_off_the_ball_finds_more_space_than_low() -> None:
         return sum(min(t.distance_to(o.position) for o in opponents) for t in targets) / len(targets)
 
     assert mean_space(90) >= 1.3 * mean_space(30)
+
+
+# --- Ticket v2-collectif/06 : soutien du porteur ------------------------------------------------------------------
+def test_space_reachable_by_the_holder_comes_first() -> None:
+    from dataclasses import replace
+    from unittest import mock
+
+    from v2engine.off_ball import OPEN_LANE_PROBABILITY
+    from v2engine.possession import pass_success_probability
+
+    runner = _player(attributes={"Off the Ball": 99})
+    holder = _player("Porteur", position=Vec2(30.0, 34.0))
+    opponents = [_player("Adv", team="away", position=Vec2(40.0, 45.0))]
+
+    def reach(target: Vec2) -> float:
+        return pass_success_probability(holder, replace(runner, position=target), opponents)
+
+    with mock.patch("random.random", return_value=0.0):  # meilleur espace
+        alone = choose_space(runner, opponents, forward=1.0)
+        supported = choose_space(runner, opponents, forward=1.0, holder=holder)
+    assert reach(alone) < OPEN_LANE_PROBABILITY  # le plus libre est trop loin du porteur
+    assert reach(supported) >= OPEN_LANE_PROBABILITY
+
+
+def test_space_keeps_its_distance_from_teammates() -> None:
+    from v2engine.off_ball import SPACING_MIN_M
+
+    runner = _player(attributes={"Off the Ball": 99})
+    opponents = [_player("Adv", team="away", position=Vec2(52.0, 34.0))]
+    mates = [Vec2(60.0, 26.5), Vec2(60.0, 41.5), Vec2(55.0, 34.0)]
+    random.seed(20260923)
+    for _ in range(200):
+        target = choose_space(runner, opponents, forward=1.0, mates=mates)
+        assert min(target.distance_to(m) for m in mates) >= SPACING_MIN_M
+
+
+def test_crowded_teammates_fall_back_to_the_usual_choice() -> None:
+    runner = _player(attributes={"Off the Ball": 99})
+    opponents = [_player("Adv", team="away", position=Vec2(52.0, 34.0))]
+    random.seed(1)
+    target = choose_space(runner, opponents, forward=1.0, mates=[runner.home_target])  # aucun espace à 8 m : pas bloqué
+    assert target.distance_to(runner.home_target) <= 15.0 * 1.2 + 1e-9

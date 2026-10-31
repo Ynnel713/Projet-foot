@@ -348,3 +348,9 @@ def test_measure_is_wired_on_a_real_match() -> None:
     assert c.count["passes"] > 0 and sum(v for k, v in c.count.items() if k.startswith("choix ")) > 0
     assert 5.0 < out["passes par minute"] < 100.0  # rapporté aux 3 minutes jouées (sur 90, on serait sous 1)
     assert c.stats["longueur avec ballon (m)"].values and c.stats["solutions de passe ouvertes (nombre)"].values
+
+
+def test_crowding_ignores_support_next_to_the_holder() -> None:
+    holder, support, a, b = _p("h", "home", 50, 34), _p("s", "home", 53, 34), _p("a", "home", 70, 10), _p("b", "home", 72, 10)
+    assert ind.crowded([holder, support, a, b], []) == 1.0
+    assert ind.crowded([holder, support, a, b], [], holder="h") == 2 / 3

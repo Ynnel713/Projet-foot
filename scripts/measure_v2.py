@@ -22,6 +22,7 @@ from collections.abc import Callable
 from ligue1sim.clubs import load_clubs
 from ligue1sim.season import CLUBS_PATH
 
+import v2engine.cerveau as cerveau
 import v2engine.match as match
 from ligue1sim.lineup import pick_best_formation
 
@@ -53,9 +54,17 @@ def _hook(collector: Collector, clock: dict[str, float]) -> Callable[[], None]:
         collector.on_choice(action.kind)
         return action
 
+    real_stays = cerveau.stays_behind
+
+    def stays_behind(player):
+        stays = real_stays(player)
+        collector.on_balance(player, stays)
+        return stays
+
     match.pass_velocity, match.attempt_shot = pass_velocity, attempt_shot
     match.resolve_tackle, match.choose_action = resolve_tackle, choose_action
-    return lambda: [setattr(match, name, fn) for name, fn in real.items()]
+    cerveau.stays_behind = stays_behind
+    return lambda: [setattr(match, name, fn) for name, fn in real.items()] + [setattr(cerveau, "stays_behind", real_stays)]
 
 
 def _force_attribute(attribute: str, high_team: str, team_of: dict[str, str]) -> Callable[[], None]:

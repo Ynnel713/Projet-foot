@@ -21,12 +21,12 @@ from v2engine.cerveau import OPPONENT_GOAL
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
 from v2engine.movement import PlayerState
 from v2engine.possession import pass_success_probability
-from v2engine.situation import SituationTracker
+from v2engine.situation import POSSESSION_INSTALLEE, SituationTracker
 
 KMH = 1.0 / 3.6
 # Seuils de mesure (docs/INDICATEURS_V2.md, section « Seuils de mesure ») -- ils ne changent pas le jeu.
 OPTION_RANGE_M = 40.0
-OPTION_PROBABILITY = 0.5
+OPTION_PROBABILITY = 0.7  # même seuil que le jeu (`off_ball.OPEN_LANE_PROBABILITY`, ticket 06)
 PRESS_RADIUS_M = 3.0
 COVER_BEHIND_M, COVER_AHEAD_M, COVER_HALF_WIDTH_M = 3.0, 9.0, 4.0
 LOCAL_RADIUS_M = 10.0
@@ -40,6 +40,7 @@ LONG_PASS_M = 32.0
 SHOT_CLOSE_RANGE_M = 16.0  # tir « de près » : demande du propriétaire (28/10/2026) pour mesurer l'exposition du gardien
 FREE_PASSER_M = 9.0  # porteur libre : défenseur le plus proche à 9 m ou plus (pressé : PRESS_RADIUS_M), ticket 05
 SPRINT_MPS, HIGH_INTENSITY_MPS = 25.0 * KMH, 19.8 * KMH
+CROWDED_M = 5.0  # regroupement : coéquipier à moins de 5 m, hors duel (ticket 06)
 
 
 def forward(team: str) -> float:
@@ -157,6 +158,17 @@ def preventive(team: str, ball: Vec2, own: Sequence[PlayerState], opponents: Seq
     behind = sum(1 for p in own if progress(team, p.position.x) < line)
     threats = sum(1 for p in opponents if progress(team, p.position.x) < line)
     return behind, threats
+
+
+def crowded(own: Sequence[PlayerState], opponents: Sequence[PlayerState], holder: str | None = None) -> float | None:
+    """Part des joueurs de `own` hors duel (aucun adversaire à moins de PRESS_RADIUS_M) qui ont un coéquipier à
+    moins de CROWDED_M -- regroupement (ticket 06). Le porteur `holder` est exclu : se montrer près de lui est du
+    soutien, pas du regroupement (critère validé le 31/10/2026). None si tous sont en duel."""
+    own = [p for p in own if p.name != holder]
+    free = [p for p in own if all(p.position.distance_to(o.position) >= PRESS_RADIUS_M for o in opponents)]
+    if not free:
+        return None
+    return sum(1 for p in free if any(m is not p and p.position.distance_to(m.position) < CROWDED_M for m in own)) / len(free)
 
 
 def in_cover_zone(holder: Vec2, defended_goal: Vec2, point: Vec2) -> bool:
@@ -277,6 +289,12 @@ class Collector:
 
     def on_choice(self, kind: str) -> None:
         self.count["choix " + kind] += 1
+
+    def on_balance(self, player: PlayerState, stays: bool) -> None:
+        """Défenseur d'équilibre dont l'appel le mènerait devant le ballon : y va-t-il quand même ? (ticket 06)"""
+        key = "équilibre : appels devant le ballon maintenus (part)"
+        level = self.levels.get(player.name)
+        self.stats[f"profil {level} : {key}" if level else key].add(0.0 if stays else 1.0)
 
     def on_offside(self, event) -> None:
         """Hors-jeu sifflé (ticket v2-collectif/23) ; `event` : `v2engine.trace.OffsideEvent`."""
@@ -472,6 +490,9 @@ class Collector:
                             progress(team, ball.position.x) - height, **keys)  # à position du ballon comparable
             self.follow["longueur"].append((ball.position.x, statistics.fmean(p.x for p in pts)))
             self.follow["largeur"].append((ball.position.y, statistics.fmean(p.y for p in pts)))
+            packed = crowded(own, outfield(players, "away" if team == "home" else "home"), self.holder)
+            if packed is not None:
+                self.stats[f"regroupement {phase} : coéquipiers à moins de 5 m hors duel (part)"].add(packed, **keys)
             level = self.levels.get(own[0].name)
             if level:  # profils : compacité de l'équipe haute contre l'équipe basse
                 self.stats[f"profil {level} : stretch index (m)"].add(stretch_index(pts))
@@ -491,6 +512,12 @@ class Collector:
         behind, threats = preventive(att, ball.position, attackers, outfield(players, dfd))
         self.stats["défense préventive : joueurs derrière le ballon"].add(behind, **keys)
         self.stats["défense préventive : adversaires dans cette zone"].add(threats, **keys)
+        level = self.levels.get(attackers[0].name) if attackers else None
+        if self.situations.current[att] == POSSESSION_INSTALLEE:  # équilibre derrière le ballon (ticket 06)
+            self.stats["possession installée : au moins 1 joueur derrière le ballon (part)"].add(1.0 if behind >= 1 else 0.0, **keys)
+            if level:
+                self.stats[f"profil {level} : possession installée, 2 joueurs ou plus derrière le ballon (part)"].add(
+                    1.0 if behind >= 2 else 0.0)
         holder = by_name.get(ball.holder) if ball.holder else None
         if holder is not None:
             goal = Vec2(0.0 if dfd == "home" else PITCH_LENGTH_M, PITCH_WIDTH_M / 2.0)
@@ -499,7 +526,10 @@ class Collector:
                 self.stats["couverture du presseur (part)"].add(1.0 if cover else 0.0, **keys)
             mates = [p for p in players if p.team == holder.team]
             all_opponents = [p for p in players if p.team == dfd]  # gardien compris, comme dans le moteur
-            self.stats["solutions de passe ouvertes (nombre)"].add(open_options(holder, mates, all_opponents), **keys)
+            options = open_options(holder, mates, all_opponents)
+            self.stats["solutions de passe ouvertes (nombre)"].add(options, **keys)
+            if level:
+                self.stats[f"profil {level} : solutions de passe ouvertes (nombre)"].add(options)
 
     def end_match(self) -> None:
         self.matches += 1

@@ -9,6 +9,7 @@ de match."""
 
 from __future__ import annotations
 
+import random
 from dataclasses import dataclass, replace
 from functools import partial
 
@@ -16,18 +17,21 @@ from v2engine.anticipation import loose_ball_target, meeting_point
 from v2engine.ball_state import BallState
 from v2engine.bloc import Bloc
 from v2engine.decision import DRIBBLE_SPEED_FACTOR
-from v2engine.defense import COUVERTURE, MARQUAGE, PRESSEUR, DefensiveRoles
+from v2engine.defense import COUVERTURE, MARQUAGE, PRESSEUR, DefensiveRoles, leave_probability
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
 from v2engine.movement import PlayerState
-from v2engine.off_ball import RUN_INTERVAL_S, choose_space
+from v2engine.off_ball import RUN_INTERVAL_S, SPACE_HOLD_MAX_S, SPACE_REACHED_M, choose_space
 from v2engine.offside import HESITATION_INTENSITY, clamp_to_onside, offside_line, respects_the_line
 from v2engine.possession import BALL_FRICTION_PER_S, RECEPTION_SPEED_FACTOR
+from v2engine.situation import POSSESSION_INSTALLEE
 
 GOAL_CENTER_Y = PITCH_WIDTH_M / 2.0
 OPPONENT_GOAL = {"home": Vec2(PITCH_LENGTH_M, GOAL_CENTER_Y), "away": Vec2(0.0, GOAL_CENTER_Y)}
 # Distance en dessous de laquelle un joueur va vers le ballon plutôt que vers sa position de
 # formation -- IA placeholder (D-V08), pas une vraie prise de décision.
 CHASE_RADIUS_M = 15.0
+# Joueurs de champ qui restent derrière le ballon en possession installée (validé le 30/10/2026, ticket v2-collectif/06).
+REST_DEFENDERS = 2
 
 # Rôles (GLOSSARY.md) et actions.
 # Rôles défensifs (presseur, couverture, marquage) : `defense.py` (ticket v2-collectif/07).
@@ -92,6 +96,9 @@ def interpret(player: PlayerState, ball: BallState, seen: Perception, runs_enabl
         return APPEL
     if seen.is_receiver:
         return RECEVEUR
+    if runs_enabled and ball.holder is None and ball.receiver is not None and ball.last_pass_team == player.team \
+            and player.poste != "GK":
+        return APPEL  # passe de son équipe en l'air : il poursuit son appel, sans courir au ballon (ticket 06)
     if seen.read_point is not None:
         return LECTURE
     if defense is not None and seen.holder is not None and seen.holder.team != player.team and player.poste != "GK":
@@ -109,6 +116,17 @@ def interpret(player: PlayerState, ball: BallState, seen: Perception, runs_enabl
     return SOUTIEN if seen.holder is not None and seen.holder.team == player.team else PRESSEUR
 
 
+def stays_behind(player: PlayerState) -> bool:
+    """Le défenseur d'équilibre dont l'appel le mènerait devant le ballon reste-t-il derrière ? Teamwork (ticket 06)."""
+    return random.random() >= leave_probability(player)
+
+
+def _rest_defenders(team: list[PlayerState], holder: PlayerState, forward: float) -> list[PlayerState]:
+    """Les `REST_DEFENDERS` joueurs de champ les plus reculés de l'équipe, porteur exclu (ticket v2-collectif/06)."""
+    field_players = [p for p in team if p is not holder and p.poste != "GK"]
+    return sorted(field_players, key=lambda p: forward * p.position.x)[:REST_DEFENDERS]
+
+
 def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, players: list[PlayerState],
            minute: float, runs: dict[str, tuple[Vec2, float]] | None, situation: str | None = None,
            bloc: Bloc | None = None, defense: DefensiveRoles | None = None) -> Intention:
@@ -123,17 +141,32 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
     if role == APPEL:
         now_s = minute * 60.0
         target, next_s = runs.get(player.name, (None, 0.0))
-        if target is None or now_s >= next_s:
+        # Il garde son espace jusqu'à y être (au moins RUN_INTERVAL_S), au plus SPACE_HOLD_MAX_S (ticket v2-collectif/06).
+        reached = target is not None and player.position.distance_to(target) <= SPACE_REACHED_M \
+            and now_s >= next_s - SPACE_HOLD_MAX_S + RUN_INTERVAL_S
+        if target is None or now_s >= next_s or reached:
             opponents = [p for p in players if p.team != player.team]
             anchor = bloc.reference(player, ball.position, situation, now_s) if bloc and situation else None
-            target = choose_space(player, opponents, 1.0 if player.team == "home" else -1.0, anchor)
+            forward = 1.0 if player.team == "home" else -1.0
+            mates = [p for p in players if p.team == player.team and p is not player]
+            # positions des coéquipiers et espaces qu'ils visent en ce moment (appel encore en cours)
+            spots = [m.position for m in mates] + [runs[m.name][0] for m in mates
+                                                   if m.name in runs and runs[m.name][1] > now_s]
+            target = choose_space(player, opponents, forward, anchor, seen.holder, spots)
+            # Équilibre (ticket v2-collectif/06) : en possession installée, les deux joueurs de champ les plus reculés
+            # restent derrière le ballon, sauf l'indiscipliné qui monte quand même (Teamwork, courbe du ticket 07).
+            if situation == POSSESSION_INSTALLEE and forward * (target.x - ball.position.x) > 0.0 \
+                    and player in _rest_defenders(mates + [player], seen.holder, forward) \
+                    and stays_behind(player):
+                target = Vec2(ball.position.x, target.y)
             # Hors-jeu (ticket 23) : l'attaquant règle son appel sur la ligne, d'autant plus qu'il a de l'Off the
             # Ball. Un joueur à faible Off the Ball part au-delà et se fait prendre. Un seul tirage par appel.
             line = offside_line(player.team, ball.position, opponents)
             if line is not None and respects_the_line(player):
                 target = clamp_to_onside(player.team, target, line)
-            runs[player.name] = (target, now_s + RUN_INTERVAL_S)
-        return make(role, "se démarquer", target, mate=seen.holder.name, reason="appel vers un espace libre")
+            runs[player.name] = (target, now_s + SPACE_HOLD_MAX_S)
+        mate = seen.holder.name if seen.holder is not None else ball.receiver  # passe en l'air : le receveur
+        return make(role, "se démarquer", target, mate=mate, reason="appel vers un espace libre")
     if role == RECEVEUR:
         point = meeting_point(player, ball.position, ball.velocity, BALL_FRICTION_PER_S)
         return make(role, "venir au ballon", point, reason="passe pour lui, il va à sa rencontre")
