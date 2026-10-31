@@ -25,7 +25,7 @@ Simulation de football : moteur statistique (Poisson, `src/ligue1sim/`) + rendu 
 
 ## Validation avant de déclarer une tâche terminée
 1. Critères d'acceptation chiffrés définis avant le code.
-2. Tests ajoutés/adaptés, suite complète passée (compte comparé à l'attendu : 1 648 passés, 5 ignorés, 12 désélectionnés à 44497d1).
+2. Tests ajoutés/adaptés, suite complète passée (compte comparé à l'attendu : 2 124 passés, 13 désélectionnés le 31/10/2026 (arbre de travail sur 25514b5)).
 3. Déterminisme : mêmes empreintes sur deux exécutions ; mesure avant/après sur le pipeline réel si le rendu change.
 4. Revue par `simulafoot-reviewer` pour toute modification significative.
 5. Rapport distinguant tests réussis, échoués, non exécutés, et points à vérifier à l'écran.
