@@ -36,3 +36,10 @@
   - A3, A4 (facultatif) : accessibilité jugée sur la passe du porteur et non sa Vision ; joueur d'équilibre à la hauteur exacte du ballon.
   - Réserves A1 et A2 acceptées par le propriétaire : « Ok tour est bon », « Tout est bon ».
   - À surveiller au ticket 22 : buts (2,75), regroupement hors porteur (paires DC), différenciation Off the Ball, appels des DC et latéraux.
+- 31/10/2026, complément (correction C5, incluse dans le diff relu et dans `b8461d9`) : pendant une passe de son équipe, les coéquipiers autres que le receveur gardent leur appel au lieu de courir au ballon (`cerveau.interpret`, test `test_teammates_keep_their_run_while_their_pass_is_in_flight`) ; une passe adverse ou un ballon perdu restent disputés comme avant.
+  - Mesure (4 matchs, porteur inclus) : regroupement avec ballon 6,8 → 4,9 %. Le reste est fait à 93 % de croisements passagers (cibles écartées), à 89 % en transition offensive : hors périmètre, à reprendre au ticket 22. Mesure de 20 matchs non refaite (ticket clos).
+- 31/10/2026, passage 2 (complément C5, code inchangé, empreinte a3c4de37) : expert APPROVED_WITH_RESERVATIONS ; QC VALIDÉ ; clôture VALIDÉ.
+  - A1, A2 (réserves) : inchangées depuis le passage 1 ; acceptées par le propriétaire : « J'accepte A1 et A2 ».
+  - A5 (facultatif) : `docs/INDICATEURS_V2.md` présente encore 7,0 % (mesure d'avant C5) comme état après le ticket ; y ajouter le diagnostic C5 (4,9 %, 4 matchs).
+  - QC (non bloquant) : le critère 7 cite 2 123 passés ; suite au 31/10/2026 sur 25514b5 : 2 125 passés, 13 désélectionnés.
+  - À surveiller au ticket 22 : appels des DC et latéraux pendant une passe en l'air (C5 met tout joueur de champ non visé en appel).
