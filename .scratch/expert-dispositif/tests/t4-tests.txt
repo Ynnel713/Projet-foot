@@ -1,0 +1,2 @@
+Cas de test SYNTHÉTIQUE du dispositif de revue : le patch n'est PAS appliqué au dépôt. Lis le fichier actuel du dépôt et le patch pour juger le code tel qu'il serait après application.
+Suite de tests : non relancée pour ce cas synthétique (le patch n'est pas appliqué).

@@ -1,0 +1,11 @@
+--- a/v2engine/offside.py
++++ b/v2engine/offside.py
+@@ -54,7 +54,7 @@
+ from v2engine.geometry import PITCH_LENGTH_M, Vec2
+ from v2engine.movement import PlayerState
+ 
+-OFFSIDE_TOLERANCE_M = 0.3  # écart en dessous duquel deux joueurs sont « à hauteur »
++OFFSIDE_TOLERANCE_M = 0.5  # écart en dessous duquel deux joueurs sont « à hauteur »
+ TRAP_DEPTH_M = 5.0  # la ligne peut se tenir jusqu'à 5 m au-dessus de l'attaquant le plus avancé
+ # Œil du passeur : au-delà d'un demi-mètre, un professionnel voit que son coéquipier est hors-jeu et ne le sert
+ # pas. En dessous, il joue la passe -- c'est le hors-jeu « à la limite », celui que l'arbitre met deux minutes à

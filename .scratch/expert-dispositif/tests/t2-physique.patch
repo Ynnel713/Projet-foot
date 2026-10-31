@@ -1,0 +1,11 @@
+--- a/v2engine/movement.py
++++ b/v2engine/movement.py
+@@ -116,7 +116,7 @@
+     # Montée en vitesse : forme exacte en pas discret (indépendante de `dt`). Si elle ferait ralentir (baisse
+     # d'intensité, arrivée, changement de direction), le joueur freine à `DECEL_MAX_MPS2` vers la vitesse visée.
+     velocity = state.velocity
+-    candidate = desired_velocity + (velocity - desired_velocity) * math.exp(-dt / accel_tau_s(state.acceleration))
++    candidate = desired_velocity + (velocity - desired_velocity) * math.exp(-1.0 / accel_tau_s(state.acceleration))  # réactivité : réponse fixe par pas
+     if candidate.length() >= velocity.length():
+         new_velocity = candidate
+     else:

@@ -1,0 +1,4 @@
+Cas de test SYNTHÉTIQUE : patch non appliqué au dépôt.
+Suite de tests : non relancée.
+Mesure 20 matchs : NON exécutée.
+IMPORTANT pour cette revue : aucune exécution n'est possible (ni script, ni mesure) ; une demande de vérifications ne pourra pas être traitée. Conclus avec ce dont tu disposes.

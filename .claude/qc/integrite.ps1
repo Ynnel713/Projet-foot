@@ -23,7 +23,10 @@ $fichiersSurveilles = @(
     "C:\Users\omariani\.claude\skills\valider-etape\SKILL.md",
     (Join-Path $PSScriptRoot "append.ps1"),
     (Join-Path $PSScriptRoot "verrou-commit.ps1"),
-    (Join-Path $PSScriptRoot "detection-git.ps1")
+    (Join-Path $PSScriptRoot "detection-git.ps1"),
+    # cloture.py est execute par le verrou ; expert.md fixe les outils (lecture seule) de l'expert.
+    (Join-Path $PSScriptRoot "..\skills\valider-ticket-simulafoot\cloture.py"),
+    (Join-Path $PSScriptRoot "..\agents\expert.md")
 )
 
 function Get-EmpreintesReference {

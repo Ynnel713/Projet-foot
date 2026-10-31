@@ -1,0 +1,20 @@
+--- a/v2engine/off_ball.py
++++ b/v2engine/off_ball.py
+@@ -56,7 +56,7 @@
+     radius = search_radius_m(player_attribute(player, "Off the Ball"))
+     origin = player.home_target if anchor is None else anchor
+     candidates = [
+-        clamp_to_pitch(origin + Vec2(forward * fx * radius, ly * radius))
++        clamp_to_pitch(origin + Vec2(-forward * fx * radius, ly * radius))
+         for fx in _FORWARD_STEPS
+         for ly in _LATERAL_STEPS
+     ]
+@@ -67,7 +67,7 @@
+         reachable = holder is None or pass_success_probability(
+             holder, replace(player, position=point), opponents) >= OPEN_LANE_PROBABILITY
+         nearest = min((point.distance_to(o.position) for o in opponents), default=0.0)
+-        return reachable, nearest + 0.01 * forward * point.x
++        return reachable, nearest - 0.01 * forward * point.x
+ 
+     ranked = sorted(candidates, key=openness, reverse=True)
+     if random.random() < best_space_probability(player_attribute(player, "Off the Ball")) or len(ranked) == 1:
