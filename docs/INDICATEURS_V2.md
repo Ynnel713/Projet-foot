@@ -52,7 +52,7 @@ Référence du ticket `.scratch/v2-collectif/issues/01-banc-de-mesure-tactique.m
 | 10 | Appels et redondance | Appel : course de plus de 0,7 s au-dessus de 15 km/h d'un coéquipier du porteur ; appels par joueur et par match, par poste ; part des appels simultanés visant la même zone (moins de 5 m) | /joueur/match, % | 15,1 appels par joueur et par match, de 5,5 (défenseurs centraux) à 19,2 (milieux offensifs) ([PLOS One 2022](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0265540)) |
 | 11 | Occasions de contre | Tirs dans les 15 s après une récupération, séparés selon la zone de récupération : son propre camp (contre-attaque) ou camp adverse (récupération haute) | /match | Fenêtre de 15 s jusqu'au tir ([FIFA EFI](https://www.fifatrainingcentre.com/media/native/tournaments/womens-world-cup/2023/FIFA%20Enhanced%20Football%20Intelligence%20(EFI)%20Explainations_EN%20v1.1.pdf)) |
 
-**Plus tard, dans les tickets concernés** (ils demandent des mécanismes qui n'existent pas encore) : temps d'arrivée du défenseur (ticket 09), lignes adverses cassées et valeur de l'espace créé (ticket 13), contrôle de la profondeur (ticket 05), indicateurs par phase de jeu (ticket 03), conditionnement par style tactique et qualité relative des équipes (ticket 22).
+**Plus tard, dans les tickets concernés** (ils demandent des mécanismes qui n'existent pas encore) : temps d'arrivée du défenseur (ticket 09), lignes adverses cassées et valeur de l'espace créé (ticket 13 : mesurées hors du banc, dans le ticket ; à intégrer au banc au ticket 14), contrôle de la profondeur (ticket 05), indicateurs par phase de jeu (ticket 03), conditionnement par style tactique et qualité relative des équipes (ticket 22).
 
 ## 3. Seuils de mesure
 

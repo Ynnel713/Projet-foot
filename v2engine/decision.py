@@ -35,6 +35,11 @@ SHOT_WEIGHT = 0.1
 PASS_WEIGHT = 0.25
 DRIBBLE_WEIGHT = 0.04
 _PROGRESS_SCALE_M = 20.0  # une passe vers un coéquipier 20 m plus près du but vaut le maximum de progression
+# Valeur future d'une passe (ticket v2-collectif/13, validé par le propriétaire le 01/11/2026) : part de la valeur qui
+# vient de la meilleure passe suivante du receveur (réussite x progression depuis le porteur, mêmes parts que le gain
+# immédiat), le reste du gain immédiat. La suite vaut au moins la position atteinte (il garde le ballon) : sans
+# meilleure suite, la passe garde sa valeur d'avant. Pas de suite en contre-attaque (décisions du 01/11/2026).
+_FOLLOW_UP_SHARE = 0.4
 
 # Vision (ticket v2-cerveau-joueurs/02, constantes validées par le propriétaire le 24/10/2026) : QUELS coéquipiers le
 # porteur envisage. Portée 99 -> 50 m, 55 -> 30 m, 11 -> 10 m ; une passe qui fait gagner au moins
@@ -122,6 +127,7 @@ def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2
                  if not is_clearly_offside(holder.team, p.position, holder.position, opponents, margin, seen_line)]
     gene = pressure(holder, opponents)
     holder_to_goal = holder.position.distance_to(goal)
+    seen_full = teammates  # suites possibles du receveur (ticket 13)
     if mode == CONTRE_ATTAQUE and gene == 0.0:  # seule une passe qui fait avancer compte (ticket v2-collectif/11)
         teammates = [p for p in teammates if p.position.distance_to(goal) < holder_to_goal]
 
@@ -131,17 +137,41 @@ def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2
         chance = shot_probability(holder, keeper, holder_to_goal, goal.y)
         options.append(Action("shot", SHOT_WEIGHT * chance * (1.0 - 0.5 * gene)))
     if teammates:
-        def pass_value(mate: PlayerState) -> float:
-            gain = holder_to_goal - mate.position.distance_to(goal)
-            progress = min(1.0, max(0.0, 0.5 + gain / (2.0 * _PROGRESS_SCALE_M)))
-            openness = 1.0 - pressure(mate, opponents)
-            success = pass_success_probability(holder, mate, opponents)  # difficulté de CETTE passe (v2-socle/04)
-            fixed, progressive = _PASS_SHARES[mode]
-            return PASS_WEIGHT * success * (fixed + progressive * progress) * openness
+        fixed, progressive = _PASS_SHARES[mode]
 
-        best_mate = max(teammates, key=pass_value)
-        options.append(Action("pass", pass_value(best_mate), best_mate))
+        def follow_up(mate: PlayerState, kept: float) -> float:
+            # meilleure passe suivante du receveur, vers un coéquipier que le porteur voit lui-même (Vision) ; le
+            # passeur n'en fait pas partie (pas d'aller-retour) ; réussite selon le Passing et la pression du receveur ;
+            # progression comptée depuis le porteur : là où le ballon arrive après les deux passes ; même échelle que
+            # le gain immédiat (parts du mode) ; au moins `kept`, la position déjà atteinte s'il garde le ballon
+            return max(kept, max((pass_success_probability(mate, nxt, opponents)
+                                  * (fixed + progressive * _progress(holder_to_goal - nxt.position.distance_to(goal)))
+                                  for nxt in seen_full if nxt is not mate
+                                  and not is_clearly_offside(holder.team, nxt.position, mate.position, opponents,
+                                                             margin, seen_line)),
+                                 default=0.0))
+
+        # en contre-attaque, la progression seule, sans suite : on joue vite vers l'avant (ticket 11)
+        share = 0.0 if mode == CONTRE_ATTAQUE else _FOLLOW_UP_SHARE
+
+        def pass_value(mate: PlayerState) -> float:
+            mate_to_goal = mate.position.distance_to(goal)
+            now = fixed + progressive * _progress(holder_to_goal - mate_to_goal)
+            success = pass_success_probability(holder, mate, opponents)  # le ballon arrive (v2-socle/04)
+            # temps disponible : il garde le ballon assez longtemps pour jouer (A9 reclassé au ticket 13 : ce n'est
+            # pas la réussite de la passe, mais le risque de le perdre juste après la réception)
+            openness = 1.0 - pressure(mate, opponents)
+            future = follow_up(mate, now) if share else 0.0  # sans meilleure suite : la valeur d'avant le ticket 13
+            return PASS_WEIGHT * success * ((1.0 - share) * now + share * future) * openness
+
+        value, best_mate = max(((pass_value(m), m) for m in teammates), key=lambda vm: vm[0])
+        options.append(Action("pass", value, best_mate))
     return options
+
+
+def _progress(gain_m: float) -> float:
+    """Progression d'une passe qui rapproche le receveur du but de `gain_m` : 0,5 sans gain, 1 à +20 m, 0 à -20 m."""
+    return min(1.0, max(0.0, 0.5 + gain_m / (2.0 * _PROGRESS_SCALE_M)))
 
 
 def best_choice_probability(decisions: float) -> float:
