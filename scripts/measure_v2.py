@@ -23,6 +23,7 @@ from ligue1sim.clubs import load_clubs
 from ligue1sim.season import CLUBS_PATH
 
 import v2engine.cerveau as cerveau
+import v2engine.defense as defense
 import v2engine.match as match
 from ligue1sim.lineup import pick_best_formation
 
@@ -61,10 +62,18 @@ def _hook(collector: Collector, clock: dict[str, float]) -> Callable[[], None]:
         collector.on_balance(player, stays)
         return stays
 
+    real_trigger = defense.DefensiveRoles.start_team_press
+
+    def trigger(self, team, players, now_s):  # pressing d'équipe déclenché (réserve A2 du ticket 08)
+        collector.on_trigger()
+        return real_trigger(self, team, players, now_s)
+
     match.pass_velocity, match.attempt_shot = pass_velocity, attempt_shot
     match.resolve_tackle, match.choose_action = resolve_tackle, choose_action
     cerveau.stays_behind = stays_behind
-    return lambda: [setattr(match, name, fn) for name, fn in real.items()] + [setattr(cerveau, "stays_behind", real_stays)]
+    defense.DefensiveRoles.start_team_press = trigger
+    return lambda: ([setattr(match, name, fn) for name, fn in real.items()] + [setattr(cerveau, "stays_behind", real_stays)]
+                    + [setattr(defense.DefensiveRoles, "start_team_press", real_trigger)])
 
 
 def _force_attribute(attribute: str, high_team: str, team_of: dict[str, str]) -> Callable[[], None]:
@@ -146,11 +155,16 @@ def report(c: Collector, detail: bool = False) -> dict:
         "hors-jeu par match": k["hors-jeu"] / n,
         "hors-jeu par équipe": k["hors-jeu"] / (2 * n),
         "tacles par match": k["tacles"] / n,
+        "pressings d'équipe déclenchés par match": k["pressings d'équipe déclenchés"] / n,
         "pertes de balle par match": k["pertes de balle"] / n,
         "pertes en transition par match": None,
         "tirs de contre par match (récupération dans son camp)": k["tirs de contre, récupération propre camp"] / n,
         "tirs de contre par match (récupération dans le camp adverse)": k["tirs de contre, récupération camp adverse"] / n,
         "appels par match": k["appels"] / n,
+        "pressings par match": k["pressings"] / n,
+        "pressings suivis d'une récupération en 5 s (part)": k["pressings suivis d'une récupération en 5 s"] / max(1, k["pressings"]),
+        "profil haut : temps de pressing par match (s)": k["profil haut : temps de pressing (s)"] / n,
+        "profil bas : temps de pressing par match (s)": k["profil bas : temps de pressing (s)"] / n,
         "temps de calcul par match (s)": getattr(c, "seconds_per_match", None),
     }
     choices = sum(v for key, v in k.items() if key.startswith("choix "))

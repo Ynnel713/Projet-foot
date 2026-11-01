@@ -25,3 +25,7 @@ Le ticket 25 (socle cinématique et contact) a déplacé les indicateurs. Chiffr
 ## Base de référence après le ticket 26 (01/11/2026)
 
 Les chiffres ci-dessus (ticket 25) sont faussés : une passe sur deux revenait au passeur et comptait comme réussie (ticket 26). Nouvelle base, 20 matchs, mêmes graines, `c379ba6` + correctif : passes chez l'adversaire 35,6 % (15 à 20 % au haut niveau), passes réussies 64,3 %, tirs 8,2 par équipe, buts 1,75 par match, hors-jeu 0,75 par match. Hors-jeu (diagnostic de 8 matchs) : la règle fonctionne (50 % des passes vers un receveur hors-jeu sifflées) ; le déficit vient des attaquants, trop loin de la ligne (8,6 m en médiane) et de passes en profondeur presque absentes (0,2 %). Leviers : tickets 16, 11 et 13 ; pas de recalibration de la règle du hors-jeu (décision du propriétaire, 01/11/2026). Détail : `INDICATEURS_V2.md` et `.scratch/v2-collectif/diagnostic-hors-jeu-30-10-2026.md`.
+
+## À surveiller depuis le ticket 08 (01/11/2026)
+
+Réserve A3 de l'expert : la distance d'arrêt du presseur à Aggression 11 (1,6 m) dépasse le rayon de tacle (1,5 m). Un presseur peu agressif ne tacle que si le porteur vient vers lui. C'est voulu (il laisse le porteur se retourner), mais cela pèse sur le nombre de tacles à régler ici.

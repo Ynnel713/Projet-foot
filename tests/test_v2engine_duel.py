@@ -108,14 +108,22 @@ def _count_attempts(monkeypatch) -> list[str]:
     return attempts
 
 
-def test_defender_tackles_at_most_once_per_confrontation(monkeypatch) -> None:
+def test_beaten_defender_still_close_retries_only_once_recovered(monkeypatch) -> None:
+    # ticket v2-collectif/08 (réserve A4 du ticket 25) : un tacle par confrontation, puis un nouveau une fois relevé
+    from v2engine.match import FAILED_TACKLE_RECOVERY_S
+
     holder = _player("Porteur", position=Vec2(50.0, 34.0))
     challenger = _player("Adversaire", team="away", position=Vec2(50.5, 34.0))
     ball = BallState(position=holder.position, velocity=Vec2(0.0, 0.0), holder="Porteur")
     attempts = _count_attempts(monkeypatch)
-    for i in range(50):  # 5 s au contact, bien après la fin de son élimination
+    times = []
+    for i in range(50):  # 5 s au contact
+        before = len(attempts)
         _step_ball(ball, 0.1, [holder, challenger], now_s=i * 0.1)
-    assert attempts == ["Adversaire"]
+        if len(attempts) > before:
+            times.append(i * 0.1)
+    assert len(times) == 4  # 0 s, puis à chaque fin d'élimination (1,5 s)
+    assert all(b - a >= FAILED_TACKLE_RECOVERY_S - 1e-9 for a, b in zip(times, times[1:]))
 
 
 def test_failed_tackler_cannot_retry_before_recovery_even_in_a_new_confrontation(monkeypatch) -> None:

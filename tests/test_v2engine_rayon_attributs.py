@@ -23,9 +23,9 @@ ALLOWED = {
     "Stamina": {"match"},
     "Strength": {"duel"},
     "Balance": {"duel"},
-    "Aggression": {"duel", "match"},  # fréquence des tentatives et faute, jamais la réussite du tacle
+    "Aggression": {"duel", "match", "defense"},  # fréquence des tentatives et faute ; distance d'arrêt du presseur (08)
     "Tackling": {"duel"},
-    "Anticipation": {"anticipation", "match"},  # + voir le drapeau du hors-jeu (ticket 23)
+    "Anticipation": {"anticipation", "match", "defense"},  # + drapeau du hors-jeu (23) ; ligne fermée au pressing (08)
     "Decisions": {"decision"},
     "Vision": {"decision"},
     "Off the Ball": {"off_ball", "offside"},  # + régler l'appel sur la ligne du hors-jeu (ticket 23)
@@ -38,6 +38,7 @@ ALLOWED = {
     "Handling": {"shooting"},
     "Positioning": {"bloc"},  # erreur de placement dans le bloc, reprise par la couverture (tickets v2-collectif/04 et 07)
     "Teamwork": {"bloc", "defense"},  # écart toléré avant de se replacer (04) ; quitter le bloc pour le ballon (07)
+    "Work Rate": {"defense"},  # intensité et repos du presseur (ticket v2-collectif/08)
     "Marking": {"defense"},  # distance de marquage d'un attaquant dangereux (ticket v2-collectif/07)
 }
 # defense : temps d'arrivée qui désigne le presseur et la couverture (ticket v2-collectif/07)
