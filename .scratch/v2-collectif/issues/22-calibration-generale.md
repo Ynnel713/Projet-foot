@@ -21,3 +21,7 @@
 ## Base de référence après le ticket 25 (30/10/2026)
 
 Le ticket 25 (socle cinématique et contact) a déplacé les indicateurs. Chiffres sur 20 matchs, graines 20260923 et suivantes, au pas du produit de 0,1 s : 4,85 buts, 17,8 tirs par équipe, 87 tacles et 755 pertes de balle par match ; 23 km par joueur de champ et 23 % de la distance au-dessus de 25 km/h. Avant ce ticket : 2,75 buts, 60 tacles, 30,5 km. Le propriétaire a accepté cette dérive le 30/10/2026 (réserve A1 de l'expert) : le réglage revient à ce ticket. Détail : `25-socle-cinematique-et-contact.md`, section « Mesures ».
+
+## Base de référence après le ticket 26 (01/11/2026)
+
+Les chiffres ci-dessus (ticket 25) sont faussés : une passe sur deux revenait au passeur et comptait comme réussie (ticket 26). Nouvelle base, 20 matchs, mêmes graines, `c379ba6` + correctif : passes chez l'adversaire 35,6 % (15 à 20 % au haut niveau), passes réussies 64,3 %, tirs 8,2 par équipe, buts 1,75 par match, hors-jeu 0,75 par match. Hors-jeu (diagnostic de 8 matchs) : la règle fonctionne (50 % des passes vers un receveur hors-jeu sifflées) ; le déficit vient des attaquants, trop loin de la ligne (8,6 m en médiane) et de passes en profondeur presque absentes (0,2 %). Leviers : tickets 16, 11 et 13 ; pas de recalibration de la règle du hors-jeu (décision du propriétaire, 01/11/2026). Détail : `INDICATEURS_V2.md` et `.scratch/v2-collectif/diagnostic-hors-jeu-30-10-2026.md`.

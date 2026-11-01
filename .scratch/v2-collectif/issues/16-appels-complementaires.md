@@ -17,3 +17,7 @@
 - [ ] Constantes produit et critères chiffrés (données réelles sourcées, ou « non trouvé ») validés par le propriétaire avant le code
 - [ ] Les chiffres réels sont des indicateurs de calibration, pas des objectifs : pas de réglage générique pour les atteindre avant la calibration générale (ticket 22)
 - [ ] Suite V2 verte ; V1 inchangée
+
+## Comments
+
+- 01/11/2026, diagnostic du hors-jeu après le ticket 26 (8 matchs, graine d'audit, `c379ba6` + correctif du 26) : l'arbitrage fonctionne (50 % des passes vers un receveur hors-jeu sont sifflées, 41 % avant le ticket 25), mais les attaquants ne jouent pas sur la ligne. L'attaquant le plus avancé est à 8,6 m derrière la ligne en médiane, à moins de 2 m lors de 5,5 % des passes seulement (12,6 % avant le 25) ; receveur hors-jeu : 15 passes en 8 matchs ; passes en profondeur : 0,2 % des passes ; hors-jeu : 0,6 à 0,75 par match (3 à 4 dans le football réel). Ce ticket (appels à l'épaule du dernier défenseur, profondeur non redondante) est l'un des leviers, avec les tickets 11 et 13 ; le propriétaire a écarté le 01/11/2026 une recalibration de la règle du hors-jeu, qui gonflerait le chiffre sans corriger le jeu. Détail : `.scratch/v2-collectif/diagnostic-hors-jeu-30-10-2026.md`.
