@@ -16,14 +16,15 @@ from functools import partial
 from v2engine.anticipation import loose_ball_target, meeting_point
 from v2engine.ball_state import BallState
 from v2engine.bloc import Bloc
-from v2engine.decision import DRIBBLE_SPEED_FACTOR
+from v2engine.decision import CONTRE_ATTAQUE, DRIBBLE_SPEED_FACTOR
 from v2engine.defense import COUVERTURE, MARQUAGE, PRESSEUR, DefensiveRoles, leave_probability
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
 from v2engine.movement import PlayerState
-from v2engine.off_ball import RUN_INTERVAL_S, SPACE_HOLD_MAX_S, SPACE_REACHED_M, choose_space
+from v2engine.off_ball import COUNTER_RUN_DEPTH_M, RUN_INTERVAL_S, SPACE_HOLD_MAX_S, SPACE_REACHED_M, choose_space
 from v2engine.offside import HESITATION_INTENSITY, clamp_to_onside, offside_line, respects_the_line
 from v2engine.possession import BALL_FRICTION_PER_S, RECEPTION_SPEED_FACTOR
-from v2engine.situation import POSSESSION_INSTALLEE
+from v2engine.situation import POSSESSION_INSTALLEE, TRANSITION_OFFENSIVE
+from v2engine.transition import TransitionPlay
 
 GOAL_CENTER_Y = PITCH_WIDTH_M / 2.0
 OPPONENT_GOAL = {"home": Vec2(PITCH_LENGTH_M, GOAL_CENTER_Y), "away": Vec2(0.0, GOAL_CENTER_Y)}
@@ -129,9 +130,11 @@ def _rest_defenders(team: list[PlayerState], holder: PlayerState, forward: float
 
 def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, players: list[PlayerState],
            minute: float, runs: dict[str, tuple[Vec2, float]] | None, situation: str | None = None,
-           bloc: Bloc | None = None, defense: DefensiveRoles | None = None) -> Intention:
+           bloc: Bloc | None = None, defense: DefensiveRoles | None = None,
+           transition: TransitionPlay | None = None) -> Intention:
     """Action, cible et intensité selon le rôle (règles d'avant le ticket v2-collectif/02 ; avec `bloc`, le
-    replacement et les appels partent de la place du joueur dans le bloc, ticket v2-collectif/04)."""
+    replacement et les appels partent de la place du joueur dans le bloc, ticket v2-collectif/04 ; avec `transition`,
+    l'appel dans la profondeur d'une contre-attaque, ticket v2-collectif/11)."""
     make = partial(Intention, situation=situation)  # situation perçue, portée par l'intention (ticket 03)
     if role == PORTEUR:
         if ball.receiving:  # pendant sa réception, il avance au pas de contrôle (v2-socle/06)
@@ -141,13 +144,21 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
     if role == APPEL:
         now_s = minute * 60.0
         target, next_s = runs.get(player.name, (None, 0.0))
+        forward = 1.0 if player.team == "home" else -1.0
+        # Contre-attaque (ticket v2-collectif/11) : dès qu'il a perçu la récupération (Anticipation, délai de réaction),
+        # le coéquipier devant le ballon lance un nouvel appel, dans la profondeur.
+        counter = transition is not None and transition.mode.get(player.team) == CONTRE_ATTAQUE \
+            and situation == TRANSITION_OFFENSIVE and forward * (player.position.x - ball.position.x) > 0.0
+        launch = counter and player.name not in transition.launched
         # Il garde son espace jusqu'à y être (au moins RUN_INTERVAL_S), au plus SPACE_HOLD_MAX_S (ticket v2-collectif/06).
         reached = target is not None and player.position.distance_to(target) <= SPACE_REACHED_M \
             and now_s >= next_s - SPACE_HOLD_MAX_S + RUN_INTERVAL_S
-        if target is None or now_s >= next_s or reached:
+        if target is None or now_s >= next_s or reached or launch:
             opponents = [p for p in players if p.team != player.team]
             anchor = bloc.reference(player, ball.position, situation, now_s) if bloc and situation else None
-            forward = 1.0 if player.team == "home" else -1.0
+            if counter:
+                transition.launched.add(player.name)
+                anchor = (player.home_target if anchor is None else anchor) + Vec2(forward * COUNTER_RUN_DEPTH_M, 0.0)
             mates = [p for p in players if p.team == player.team and p is not player]
             # positions des coéquipiers et espaces qu'ils visent en ce moment (appel encore en cours)
             spots = [m.position for m in mates] + [runs[m.name][0] for m in mates
@@ -205,7 +216,7 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
 
 def think(player: PlayerState, ball: BallState, players: list[PlayerState], minute: float,
           runs: dict[str, tuple[Vec2, float]] | None, situation: str | None = None, bloc: Bloc | None = None,
-          defense: DefensiveRoles | None = None) -> Intention:
+          defense: DefensiveRoles | None = None, transition: TransitionPlay | None = None) -> Intention:
     """Perception, interprétation, décision : l'intention du joueur à cet instant. `situation` : situation de jeu
     perçue (ticket v2-collectif/03) ; avec `bloc`, elle donne la forme du bloc où il se replace (ticket 04) ; avec
     `defense`, les rôles défensifs attribués par son équipe (ticket 07)."""
@@ -216,7 +227,7 @@ def think(player: PlayerState, ball: BallState, players: list[PlayerState], minu
                          reason="hors-jeu sifflé, il recule vers sa place", situation=situation)
     seen = perceive(player, ball, players)
     role = interpret(player, ball, seen, runs is not None, players, defense, now_s)
-    intention = decide(player, role, ball, seen, players, minute, runs, situation, bloc, defense)
+    intention = decide(player, role, ball, seen, players, minute, runs, situation, bloc, defense, transition)
     if now_s < ball.hesitation.get(player.name, 0.0):
         # « Play the whistle » : le défenseur qui a vu le drapeau lève la main et attend, sans s'arrêter de jouer.
         return replace(intention, intensity=min(intention.intensity, HESITATION_INTENSITY),

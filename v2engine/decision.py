@@ -45,6 +45,22 @@ _VISION_RANGE_M = (30.0, 20.0, 10.0, 50.0)  # baseline, amplitude, min, max
 _KEY_PASS_GAIN_M = 15.0
 _KEY_PASS_SPOT = (0.5, 0.4)  # baseline, amplitude
 
+# Transition défense-attaque (ticket v2-collectif/11, constantes validées par le propriétaire le 01/11/2026 ; part réelle
+# des contre-attaques non trouvée). À la récupération, le porteur choisit entre contre-attaque et conservation. La
+# contre-attaque est le bon choix si les adversaires de champ derrière le ballon ne dépassent pas de plus de
+# `COUNTER_MAX_EXCESS` ses coéquipiers de champ devant lui.
+# Decisions règle la probabilité de prendre le bon choix (même courbe que `choose_action`).
+CONTRE_ATTAQUE, CONSERVATION = "contre-attaque", "conservation"
+COUNTER_MAX_EXCESS = 2
+# Valeur d'une passe : part fixe + part de progression. Hors transition 0,3 + 0,7 ; en contre-attaque, la progression
+# seule, et une passe qui ne fait pas avancer n'est pas envisagée, sauf sous pression (adversaire à moins de 5 m) : il
+# peut alors ressortir en retrait, avec la valeur de contre-attaque, donc après toute passe vers l'avant (réserve A2 de
+# l'expert, variante validée par le propriétaire le 01/11/2026) ; en conservation, d'abord la sûreté pour sortir de la
+# zone de pression.
+_PASS_SHARES = {None: (0.3, 0.7), CONTRE_ATTAQUE: (0.0, 1.0), CONSERVATION: (0.7, 0.3)}
+# En contre-attaque, conduite deux fois plus volontiers sans adversaire à 5 m (gêne nulle : `possession.PRESSURE_RADIUS_M`).
+COUNTER_DRIBBLE_BOOST = 2.0
+
 
 @dataclass(frozen=True)
 class Action:
@@ -87,9 +103,11 @@ def visible_teammates(holder: PlayerState, teammates: list[PlayerState], goal: V
     return seen
 
 
-def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2, keeper: PlayerState | None) -> list[Action]:
+def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2, keeper: PlayerState | None,
+                     mode: str | None = None) -> list[Action]:
     """Les options du porteur avec leur valeur (plus haut = meilleur). Tirer n'existe qu'à portée
-    (`SHOOTING_RANGE_M`), passer seulement s'il a un coéquipier ; conduire est toujours possible."""
+    (`SHOOTING_RANGE_M`), passer seulement s'il a un coéquipier ; conduire est toujours possible. `mode` : choix de
+    transition de son équipe, contre-attaque ou conservation (ticket v2-collectif/11), sinon `None`."""
     opponents = [p for p in players if p.team != holder.team]
     mates = [p for p in players if p.team == holder.team and p.name != holder.name]
     # Hors-jeu (ticket v2-collectif/23, deuxième passe du 28/10/2026) : le porteur ne sert pas un coéquipier qu'il
@@ -104,8 +122,11 @@ def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2
                  if not is_clearly_offside(holder.team, p.position, holder.position, opponents, margin, seen_line)]
     gene = pressure(holder, opponents)
     holder_to_goal = holder.position.distance_to(goal)
+    if mode == CONTRE_ATTAQUE and gene == 0.0:  # seule une passe qui fait avancer compte (ticket v2-collectif/11)
+        teammates = [p for p in teammates if p.position.distance_to(goal) < holder_to_goal]
 
-    options = [Action("dribble", DRIBBLE_WEIGHT * (1.0 - gene))]
+    boost = COUNTER_DRIBBLE_BOOST if mode == CONTRE_ATTAQUE and gene == 0.0 else 1.0
+    options = [Action("dribble", DRIBBLE_WEIGHT * (1.0 - gene) * boost)]
     if holder_to_goal <= SHOOTING_RANGE_M:
         chance = shot_probability(holder, keeper, holder_to_goal, goal.y)
         options.append(Action("shot", SHOT_WEIGHT * chance * (1.0 - 0.5 * gene)))
@@ -115,7 +136,8 @@ def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2
             progress = min(1.0, max(0.0, 0.5 + gain / (2.0 * _PROGRESS_SCALE_M)))
             openness = 1.0 - pressure(mate, opponents)
             success = pass_success_probability(holder, mate, opponents)  # difficulté de CETTE passe (v2-socle/04)
-            return PASS_WEIGHT * success * (0.3 + 0.7 * progress) * openness
+            fixed, progressive = _PASS_SHARES[mode]
+            return PASS_WEIGHT * success * (fixed + progressive * progress) * openness
 
         best_mate = max(teammates, key=pass_value)
         options.append(Action("pass", pass_value(best_mate), best_mate))
@@ -126,10 +148,28 @@ def best_choice_probability(decisions: float) -> float:
     return success_probability(decisions, baseline=_BEST_CHOICE_BASELINE, amplitude=_BEST_CHOICE_AMPLITUDE)
 
 
-def choose_action(holder: PlayerState, players: list[PlayerState], goal: Vec2, keeper: PlayerState | None) -> Action:
+def choose_action(holder: PlayerState, players: list[PlayerState], goal: Vec2, keeper: PlayerState | None,
+                  mode: str | None = None) -> Action:
     """Prend la meilleure option avec la probabilité donnée par Decisions, sinon une autre au
     hasard -- jamais binaire, même à 99."""
-    options = sorted(evaluate_options(holder, players, goal, keeper), key=lambda a: a.value, reverse=True)
+    options = sorted(evaluate_options(holder, players, goal, keeper, mode), key=lambda a: a.value, reverse=True)
     if len(options) == 1 or random.random() < best_choice_probability(player_attribute(holder, "Decisions")):
         return replace(options[0], considered=len(options), best=True)
     return replace(random.choice(options[1:]), considered=len(options), best=False)
+
+
+def counter_is_favorable(holder: PlayerState, players: list[PlayerState]) -> bool:
+    """Contre-attaque jouable : adversaires de champ derrière le ballon (entre lui et le but visé) moins coéquipiers
+    de champ devant lui, porteur exclu, au plus `COUNTER_MAX_EXCESS` (ticket v2-collectif/11)."""
+    forward = 1.0 if holder.team == "home" else -1.0
+    ahead = [p for p in players if p.poste != "GK" and p is not holder
+             and forward * (p.position.x - holder.position.x) > 0.0]
+    behind = sum(p.team != holder.team for p in ahead)
+    return behind - (len(ahead) - behind) <= COUNTER_MAX_EXCESS
+
+
+def choose_transition(holder: PlayerState, players: list[PlayerState]) -> str:
+    """Choix du porteur qui vient de récupérer le ballon : le bon choix (contre-attaque si elle est jouable, sinon
+    conservation) avec la probabilité donnée par Decisions, sinon l'autre."""
+    best, other = (CONTRE_ATTAQUE, CONSERVATION) if counter_is_favorable(holder, players) else (CONSERVATION, CONTRE_ATTAQUE)
+    return best if random.random() < best_choice_probability(player_attribute(holder, "Decisions")) else other

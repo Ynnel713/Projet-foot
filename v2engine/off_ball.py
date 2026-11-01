@@ -22,6 +22,9 @@ OPEN_LANE_PROBABILITY = 0.7  # espace trouvable : passe au moins aussi sûre qu'
 SPACING_MIN_M = 8.0  # écart minimal à un coéquipier (sa position ou l'espace qu'il vise)
 SPACE_REACHED_M = 2.0  # espace atteint : il en cherche un autre (pas avant RUN_INTERVAL_S)
 SPACE_HOLD_MAX_S = 3.0  # au plus tard, il en cherche un autre
+# Contre-attaque (ticket v2-collectif/11, validé le 01/11/2026) : un coéquipier devant le ballon cherche son espace
+# 15 m plus loin vers l'avant que sa place dans le bloc, sans dépasser la ligne du hors-jeu s'il la respecte.
+COUNTER_RUN_DEPTH_M = 15.0
 
 # Constantes produit validées par le propriétaire (24/10/2026).
 RUN_INTERVAL_S = 1.0  # délai minimal avant de chercher un autre espace (ticket 06 : garde jusqu'à l'atteindre)

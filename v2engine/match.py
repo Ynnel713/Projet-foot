@@ -31,6 +31,7 @@ from v2engine.possession import (BALL_FRICTION_PER_S, BALL_STOPPED_MPS, MISS_RET
                                  pass_velocity, reception_delay_s)
 from v2engine.shooting import attempt_shot
 from v2engine.situation import SituationTracker
+from v2engine.transition import TransitionPlay
 from v2engine.trace import BallSnapshot, DecisionRecord, MatchTrace, OffsideEvent, PlayerSnapshot, SituationRecord
 
 # But adverse d'une équipe, par convention de ce moteur (voir `formation.initial_positions`,
@@ -149,7 +150,7 @@ def _award_offside_free_kick(ball: BallState, offender: PlayerState, players: li
 
 def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: float = 0.0,
                decisions: list[DecisionRecord] | None = None,
-               offsides: list[OffsideEvent] | None = None) -> str | None:
+               offsides: list[OffsideEvent] | None = None, modes: dict[str, str] | None = None) -> str | None:
     """Avance le ballon d'un tick (mutation en place) : si un joueur le contrôle déjà, un
     adversaire à portée directe peut d'abord tenter un tacle (Phase 3, Tackling/Strength/
     Balance/Aggression ; au plus un par confrontation, v2-socle/03) ; sinon, après son temps de réception (`possession.reception_delay_s`, v2-socle/06)
@@ -203,7 +204,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
         opponent_team = "away" if holder.team == "home" else "home"
         goal = _OPPONENT_GOAL[holder.team]
         keeper = _goalkeeper(opponent_team, players)
-        action = choose_action(holder, players, goal, keeper)
+        action = choose_action(holder, players, goal, keeper, (modes or {}).get(holder.team))  # ticket v2-collectif/11
         if decisions is not None:
             target = getattr(action, "target", None)
             decisions.append(DecisionRecord(now_s / 60.0, holder.name, holder.team, action.kind,
@@ -345,6 +346,7 @@ def _step_player(
     situations: SituationTracker | None = None,
     bloc: Bloc | None = None,
     defense: DefensiveRoles | None = None,
+    transition: TransitionPlay | None = None,
 ) -> PlayerState:
     """Un tick d'un joueur : son cerveau (`cerveau.think` : perception, interprétation, décision) donne son
     intention, puis l'exécution le déplace vers la cible, à l'intensité voulue (ADR 0001). `runs` : espaces visés
@@ -352,7 +354,7 @@ def _step_player(
     bloc de référence de chaque équipe (ticket v2-collectif/04), où il se replace et d'où partent ses appels ;
     `defense` : rôles défensifs de l'équipe sans ballon (ticket v2-collectif/07)."""
     perceived = situations.perceived(player, minute * 60.0) if situations is not None else None
-    intention = think(player, ball, players or [], minute, runs, perceived, bloc, defense)
+    intention = think(player, ball, players or [], minute, runs, perceived, bloc, defense, transition)
     if intentions is not None:
         intentions[player.name] = intention
     return step(player, dt, intention.target, minute, intention.intensity, intention.target_velocity)
@@ -389,6 +391,7 @@ def simulate_match(
     situations = SituationTracker(delays_s=dict(trace.reaction_delays_s))  # situation de jeu (ticket v2-collectif/03)
     bloc = Bloc.from_players(players)  # bloc de référence dynamique (ticket v2-collectif/04)
     defense = DefensiveRoles()  # rôles défensifs (ticket v2-collectif/07)
+    transition = TransitionPlay()  # contre-attaque ou conservation après une récupération (ticket v2-collectif/11)
     scoring_team = None
     n_ticks = int(duration_minutes * 60.0 / tick_seconds)
     for i in range(n_ticks):
@@ -397,12 +400,14 @@ def simulate_match(
         for team, situation in situations.update(i * tick_seconds, ball, players, scoring_team).items():
             if situation != before[team] or i == 0:
                 trace.situations.append(SituationRecord(minute, team, situation))
+        transition.update(situations, ball, players, i * tick_seconds)
         bloc.update(players, ball, i * tick_seconds)  # hauteur de ligne sans ballon (tickets 05 et 23)
         defense.update(players, ball, bloc, i * tick_seconds)
-        players = [_step_player(p, ball, tick_seconds, minute, players, runs, intentions, situations, bloc, defense)
-                   for p in players]
+        players = [_step_player(p, ball, tick_seconds, minute, players, runs, intentions, situations, bloc, defense,
+                                transition) for p in players]
         _resolve_player_collisions(players)
-        scoring_team = _step_ball(ball, tick_seconds, players, i * tick_seconds, trace.decisions, trace.offsides)
+        scoring_team = _step_ball(ball, tick_seconds, players, i * tick_seconds, trace.decisions, trace.offsides,
+                                  transition.mode)
         if scoring_team is not None:
             trace.record_goal(scoring_team, minute)
         if observer is not None:
