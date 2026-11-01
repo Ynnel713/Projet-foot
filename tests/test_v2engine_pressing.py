@@ -8,7 +8,8 @@ import random
 from scripts.v2_indicators import open_options
 from v2engine import cerveau
 from v2engine.ball_state import BallState
-from v2engine.defense import (MARQUAGE, PRESS_BURST_S, PRESSEUR, SHADOW_M, DefensiveRoles, follow_probability,
+from v2engine.defense import (BACKWARD_PASS_M, MARQUAGE, PRESS_BURST_S, PRESSEUR, SHADOW_M, DefensiveRoles,
+                              follow_probability,
                               good_lane_probability, press_intensity, press_point, press_rest_s, stop_distance_m)
 from v2engine.geometry import Vec2
 from v2engine.match import _resolve_player_collisions, _step_ball, _step_player
@@ -111,7 +112,10 @@ def _options_after(seconds: float, trigger: bool, seed: int) -> int:
                  if p.team == "home" else p for p in players]
         players = moved
     holder = players[0]
-    return open_options(holder, [p for p in players if p.team == "away"], [p for p in players if p.team == "home"])
+    # seuil 0,5 de l'écriture du test : depuis le ticket 06, l'indicateur compte à 0,7, et les passes de cette scène
+    # (zone plate de la courbe) n'y arrivent presque jamais, pressing ou non (0,3 contre 0,1 solution)
+    return open_options(holder, [p for p in players if p.team == "away"], [p for p in players if p.team == "home"],
+                        threshold=0.5)
 
 
 def test_coordinated_press_closes_more_options_than_an_individual_press() -> None:
@@ -148,3 +152,64 @@ def test_resting_presser_does_not_go_back_to_the_ball_out_of_indiscipline() -> N
     defense.update(players, ball, None, 0.0)
     defense.rest_until["Las"], defense.leaving["Las"] = 100.0, (True, 1e9)
     assert cerveau.think(tired, ball, players, 1.0 / 60.0, None, defense=defense).role == cerveau.REPLACEMENT
+
+def _triggered_after_pass(back_m: float) -> bool:
+    """« Ancien » donne à H, qui est `back_m` plus près de son but (l'extérieur défend x = 105)."""
+    players = _scene(99)
+    players[1] = _p("Ancien", team="away", x=40 - back_m, y=34)
+    defense = DefensiveRoles()
+    ball = _back_pass(defense, players)
+    defense.update(players, ball, None, 0.1)
+    return defense.trigger_until.get("home", 0.0) > 0.1
+
+
+def test_only_a_real_back_pass_triggers_the_team_press() -> None:
+    # réserve A2 de l'expert : une passe latérale ou à peine en arrière n'est pas une passe en retrait
+    assert not _triggered_after_pass(0.0) and not _triggered_after_pass(BACKWARD_PASS_M - 0.5)
+    assert _triggered_after_pass(BACKWARD_PASS_M + 0.5)
+
+
+def test_presser_back_on_the_same_holder_keeps_his_effort() -> None:
+    # réserve A4 de l'expert : relayé un instant puis revenu, son effort de 5 s n'est pas remis à zéro
+    holder = _p("H", team="away", x=40)
+    first, second = _p("Premier", x=45), _p("Second", x=50)
+    ball = BallState(position=holder.position, velocity=Vec2(0.0, 0.0), holder="H")
+    defense = DefensiveRoles()
+    defense.update([holder, first, second], ball, None, 0.0)
+    near = _p("Second", x=40.2)  # Second passe devant un instant
+    defense.update([holder, first, near], ball, None, 2.0)
+    assert defense.assignments["Second"].role == PRESSEUR
+    defense.update([holder, first, second], ball, None, 2.1)
+    assert defense.assignments["Premier"].role == PRESSEUR and defense.burst["Premier"] == ("H", 0.0)
+    defense.update([holder, first, second], ball, None, PRESS_BURST_S)
+    assert defense.assignments["Second"].role == PRESSEUR and "Premier" not in defense.burst  # il souffle
+
+def test_presser_back_on_the_holder_after_another_possession_starts_a_new_effort() -> None:
+    # A1 de l'expert (passage 2) : son effort ne vaut que pour la détention en cours
+    h, h2 = _p("H", team="away", x=40), _p("H2", team="away", x=60)
+    p, q, r = _p("P", x=43), _p("Q", x=63), _p("R", x=50)
+    players = [h, h2, p, q, r]
+    defense = DefensiveRoles()
+    ball = BallState(position=h.position, velocity=Vec2(0.0, 0.0), holder="H")
+    for k in range(21):  # P presse H 2 s
+        defense.update(players, ball, None, k * 0.1)
+    ball.holder, ball.position = "H2", h2.position  # H passe à H2, pressé par Q
+    defense.update(players, ball, None, 3.0)
+    assert defense.assignments["Q"].role == PRESSEUR
+    ball.holder, ball.position = "H", h.position  # H récupère le ballon, P est le plus proche
+    defense.update(players, ball, None, 10.0)
+    assert defense.assignments["P"].role == PRESSEUR and not defense.resting(p, 10.1)
+    assert defense.burst["P"] == ("H", 10.0)
+
+
+def test_presser_reads_the_lane_again_at_each_possession() -> None:
+    # A2 de l'expert (passage 2) : un tirage par détention, pas un trait figé par paire de joueurs
+    h, h2, near = _p("H", team="away", x=40), _p("H2", team="away", x=60), _p("R", team="away", x=30)
+    p, q = _p("P", x=43), _p("Q", x=63)
+    defense = DefensiveRoles()
+    ball = BallState(position=h.position, velocity=Vec2(0.0, 0.0), holder="H")
+    defense.update([h, h2, near, p, q], ball, None, 0.0)
+    assert ("P", "H") in defense.lanes
+    ball.holder, ball.position = "H2", h2.position
+    defense.update([h, h2, near, p, q], ball, None, 1.0)
+    assert ("P", "H") not in defense.lanes  # oubliée : elle sera lue de nouveau quand H aura le ballon

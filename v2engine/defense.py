@@ -35,9 +35,10 @@ décalage et parts non trouvés, ordres de grandeur ajustables) :
   la part des bonnes lectures (99 -> 85 %, 55 -> 65 %, 11 -> 40 %, sinon un autre receveur), un tirage par porteur ;
 - distance d'arrêt face au porteur, Aggression (engagement au contact) : 99 -> 0,8 m, 55 -> 1,2 m, 11 -> 1,6 m, au-delà
   du rayon de tacle (1,5 m) : il laisse le porteur se retourner ;
-- déclencheurs collectifs (passe en retrait, porteur qui reçoit en reculant vers son but, contrôle raté) : pressing
-  d'équipe pendant `TRIGGER_S` = 5 s ; chaque partenaire suit, Teamwork 99 -> 95 %, 55 -> 80 %, 11 -> 55 %, un tirage
-  par déclenchement, et marque côté ballon, le plus libre d'abord, chaque receveur à moins de `FOLLOW_M` = 15 m du ballon."""
+- déclencheurs collectifs (passe en retrait d'au moins `BACKWARD_PASS_M` = 3 m, réserve A2 de l'expert ; porteur qui
+  reçoit en reculant vers son but ; contrôle raté) : pressing d'équipe pendant `TRIGGER_S` = 5 s ; chaque partenaire
+  suit, Teamwork 99 -> 95 %, 55 -> 80 %, 11 -> 55 %, un tirage par déclenchement, et marque côté ballon, le plus libre
+  d'abord, chaque receveur à moins de `FOLLOW_M` = 15 m du ballon."""
 
 from __future__ import annotations
 
@@ -72,6 +73,7 @@ TRIGGER_S = 5.0
 FOLLOW_M = 15.0
 OPTION_RANGE_M = 40.0  # receveurs considérés par le presseur (même portée que l'indicateur des solutions de passe)
 BACKWARD_MPS = 0.5  # porteur qui reçoit en reculant vers son but : vitesse vers son but au-delà de 0,5 m/s
+BACKWARD_PASS_M = 3.0  # passe en retrait : le receveur est au moins 3 m plus près de son but (réserve A2 de l'expert)
 MISS_FRESH_S = 0.25  # un contrôle raté déclenche s'il date de moins de 0,25 s
 
 
@@ -162,7 +164,8 @@ class DefensiveRoles:
     # titulaires du tick précédent : (rôle, porteur) -> défenseur (`HOLD_MARGIN_S`)
     holders: dict[tuple[str, str], str] = field(default_factory=dict)
     # pressing coordonné (ticket 08)
-    burst: dict[str, tuple[str, float]] = field(default_factory=dict)  # presseur -> (porteur, début de l'effort)
+    # presseur -> (porteur, début de l'effort) ; gardé s'il revient sur le même porteur (réserve A4 de l'expert)
+    burst: dict[str, tuple[str, float]] = field(default_factory=dict)
     rest_until: dict[str, float] = field(default_factory=dict)  # presseur qui souffle -> fin du repos
     lanes: dict[tuple[str, str], str | None] = field(default_factory=dict)  # (presseur, porteur) -> receveur fermé
     trigger_until: dict[str, float] = field(default_factory=dict)  # équipe -> fin du pressing d'équipe
@@ -174,7 +177,7 @@ class DefensiveRoles:
     def resting(self, player: PlayerState, now_s: float) -> bool:
         return self.rest_until.get(player.name, 0.0) > now_s
 
-    def _trigger(self, team: str, players: list[PlayerState], now_s: float) -> None:
+    def start_team_press(self, team: str, players: list[PlayerState], now_s: float) -> None:
         self.trigger_until[team] = now_s + TRIGGER_S
         self.followed = {}
         for p in players:
@@ -184,12 +187,13 @@ class DefensiveRoles:
     def _watch_triggers(self, players: list[PlayerState], ball: BallState, holder: PlayerState | None,
                         now_s: float) -> None:
         """Déclencheurs du pressing d'équipe : passe en retrait, réception en reculant vers son but, contrôle raté."""
+        self.seen_misses = {m for m in self.seen_misses if m[1] > now_s}  # échus : oubliés (A4 de l'expert, passage 2)
         for name, until in ball.control_ban_until_s.items():
             if until > now_s and (name, until) not in self.seen_misses:
                 self.seen_misses.add((name, until))
                 missed = next((p for p in players if p.name == name), None)
                 if missed is not None and until - now_s >= MISS_RETRY_S - MISS_FRESH_S:
-                    self._trigger("away" if missed.team == "home" else "home", players, now_s)
+                    self.start_team_press("away" if missed.team == "home" else "home", players, now_s)
         if holder is None:
             return
         goal = own_goal(holder.team)
@@ -198,8 +202,8 @@ class DefensiveRoles:
         if previous is None or previous[0] == holder.name or previous[1] != holder.team:
             return
         backward = holder.velocity.x * (1.0 if goal.x > holder.position.x else -1.0) > BACKWARD_MPS
-        if progress < previous[2] or backward:
-            self._trigger("away" if holder.team == "home" else "home", players, now_s)
+        if progress < previous[2] - BACKWARD_PASS_M or backward:
+            self.start_team_press("away" if holder.team == "home" else "home", players, now_s)
 
     def _lane(self, presser: PlayerState, holder: PlayerState, players: list[PlayerState],
               goal: Vec2) -> PlayerState | None:
@@ -233,6 +237,10 @@ class DefensiveRoles:
         if holder is None:  # titulaires gardés : le même porteur peut récupérer le ballon après la passe
             return
         previous, self.holders = self.holders, {}
+        # effort et ligne lue valent pour la détention en cours : oubliés quand le porteur change (A1 et A2 de l'expert,
+        # passage 2 ; sans cela, un presseur retrouvant plus tard ce porteur était mis au repos après un effort quasi nul)
+        self.burst = {k: v for k, v in self.burst.items() if v[0] == holder.name}
+        self.lanes = {k: v for k, v in self.lanes.items() if k[1] == holder.name}
         team = "away" if holder.team == "home" else "home"
         goal = own_goal(team)
         free = [p for p in players if p.team == team and p.poste != "GK"]
@@ -243,13 +251,14 @@ class DefensiveRoles:
                              min(fresh, key=lambda p: arrival_time_s(p, holder.position)))
         start = self.burst.get(presser.name)
         if start is None or start[0] != holder.name:
-            self.burst = {presser.name: (holder.name, now_s)}
+            self.burst[presser.name] = (holder.name, now_s)
         elif now_s - start[1] >= PRESS_BURST_S and len(fresh) > 1:  # effort fini : il souffle, un autre prend le relais
             self.rest_until[presser.name] = now_s + press_rest_s(presser)
+            del self.burst[presser.name]  # reposé, il repartira pour un nouvel effort
             fresh.remove(presser)
             presser = min(fresh, key=lambda p: arrival_time_s(p, holder.position))
             self.holders[(PRESSEUR, holder.name)] = presser.name
-            self.burst = {presser.name: (holder.name, now_s)}
+            self.burst[presser.name] = (holder.name, now_s)
         target = press_point(presser, holder, self._lane(presser, holder, players, goal))
         self.assignments[presser.name] = Assignment(PRESSEUR, target, holder.name, holder.velocity,
                                                     press_intensity(presser))

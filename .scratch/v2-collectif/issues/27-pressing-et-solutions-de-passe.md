@@ -1,4 +1,4 @@
-# 26: Effet du pressing sur les solutions de passe
+# 27: Effet du pressing sur les solutions de passe
 
 **What to build:** comprendre puis corriger pourquoi le pressing coordonné du ticket 08 laisse au porteur un peu plus de solutions de passe faciles (≥ 80 % de réussite, ≤ 40 m) au lieu d'en fermer. Le bloc doit rester compact pendant le pressing, de façon que suiveurs et presseur ne libèrent pas d'autres receveurs.
 
@@ -12,7 +12,7 @@
 
 ## Acceptance criteria
 
-- [ ] Commencer par mesurer la fréquence des déclenchements collectifs par match (réserve A2 du ticket 08 : la passe en retrait n'a pas de seuil)
+- [ ] Commencer par la fréquence des déclenchements collectifs par match (réserve A2 du ticket 08). Base du 01/11/2026, seuil de recul de 3 m : 692 par match sur 20 matchs ; sur 2 matchs, environ 200 passes en retrait, 340 réceptions en reculant (`BACKWARD_MPS`) et 114 contrôles ratés. La réception en reculant est la cause principale
 
 - [ ] Le pressing coordonné laisse moins de solutions faciles que l'absence de pressing coordonné (même graine, 20 matchs)
 - [ ] Teamwork haut laisse moins de solutions faciles que Teamwork bas

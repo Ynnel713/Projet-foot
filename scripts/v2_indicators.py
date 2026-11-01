@@ -291,6 +291,9 @@ class Collector:
             camp = "camp adverse" if progress(shooter.team, last[3].x) > PITCH_LENGTH_M / 2.0 else "propre camp"
             self.count["tirs de contre, récupération " + camp] += 1
 
+    def on_trigger(self) -> None:
+        self.count["pressings d'équipe déclenchés"] += 1
+
     def on_tackle(self) -> None:
         self.count["tacles"] += 1
 
