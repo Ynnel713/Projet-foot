@@ -25,7 +25,7 @@ export default function ClubBadge({ clubName, color, size = 56, className = "" }
   return (
     <div
       style={{ ...style, backgroundColor: color }}
-      className={`rounded-full flex items-center justify-center font-extrabold text-white shrink-0 ${className}`}
+      className={`rounded-full flex items-center justify-center font-bold text-white shrink-0 ${className}`}
     >
       {clubInitials(clubName)}
     </div>

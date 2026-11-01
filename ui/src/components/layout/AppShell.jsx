@@ -15,7 +15,7 @@ export default function AppShell({ children }) {
     // Le padding en env(safe-area-inset-*) protège des zones d'encoche/
     // indicateur home, qui passent sur les CÔTÉS en paysage sur iPhone.
     <div
-      className="app-bg h-dvh w-dvw flex flex-col text-gray-100 overflow-hidden"
+      className="bg-bg h-dvh w-dvw flex flex-col text-gray-100 overflow-hidden"
       style={{ paddingLeft: "env(safe-area-inset-left)", paddingRight: "env(safe-area-inset-right)" }}
     >
       {!hideHeader && <Header />}

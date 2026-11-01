@@ -6,7 +6,7 @@ export default function SectionPanel({ icon: Icon, title, className = "", childr
     <div className={`rounded-xl bg-white/[0.03] border border-white/10 p-4 ${className}`}>
       <div className="flex items-center gap-1.5 mb-2.5">
         {Icon && <Icon size={13} className="text-gold shrink-0" />}
-        <span className="text-[11px] font-bold uppercase tracking-wide text-white/60">{title}</span>
+        <span className="text-caption font-bold uppercase tracking-wide text-white/60">{title}</span>
       </div>
       {children}
     </div>

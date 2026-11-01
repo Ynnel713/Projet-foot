@@ -75,7 +75,7 @@ export default function StandingsTable({ rows, competitionId }) {
 }
 
 function RankChange({ value }) {
-  if (value > 0) return <ChevronUp size={14} className="text-emerald-500" />;
-  if (value < 0) return <ChevronDown size={14} className="text-red-500" />;
+  if (value > 0) return <ChevronUp size={14} className="text-win" />;
+  if (value < 0) return <ChevronDown size={14} className="text-loss" />;
   return <Minus size={12} className="text-gray-600" />;
 }

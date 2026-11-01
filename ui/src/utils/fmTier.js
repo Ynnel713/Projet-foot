@@ -1,10 +1,15 @@
 // Vert/orange/rouge pour une note ou un attribut FM26 (échelle 0-99) -- mêmes
-// seuils et couleurs que app._fm_tier côté Streamlit (retour terrain du
-// 27/09/2026 : vert strictement au-dessus de 70).
-const TIER_COLORS = { good: "#1e8e3e", avg: "#c99a12", poor: "#c0392b" };
-// Variante plus claire, réservée aux libellés du radar (mêmes valeurs que
-// app._radar_svg côté Streamlit -- plus lisible sur fond sombre qu'un aplat).
-const RADAR_TIER_COLORS = { good: "#3ddc70", avg: "#e0b13a", poor: "#e0645a" };
+// seuils que app._fm_tier côté Streamlit (retour terrain du 27/09/2026 : vert
+// strictement au-dessus de 70). Couleurs : tokens de ui/src/index.css.
+// Aplat sous texte blanc (badge de note) -- mêmes valeurs qu'avant la refonte.
+const TIER_FILL_COLORS = {
+  good: "var(--color-tier-good-fill)",
+  avg: "var(--color-tier-avg-fill)",
+  poor: "var(--color-tier-poor-fill)",
+};
+// Texte sur fond sombre (valeurs d'attributs, libellés du radar) : variante
+// claire, lisible ; le vert et le rouge sont ceux des résultats (un seul vert).
+const TIER_TEXT_COLORS = { good: "var(--color-win)", avg: "var(--color-tier-avg)", poor: "var(--color-loss)" };
 
 export function fmTier(value) {
   if (value > 70) return "good";
@@ -13,9 +18,9 @@ export function fmTier(value) {
 }
 
 export function fmTierColor(value) {
-  return TIER_COLORS[fmTier(value)];
+  return TIER_FILL_COLORS[fmTier(value)];
 }
 
-export function fmRadarTierColor(value) {
-  return RADAR_TIER_COLORS[fmTier(value)];
+export function fmTierTextColor(value) {
+  return TIER_TEXT_COLORS[fmTier(value)];
 }

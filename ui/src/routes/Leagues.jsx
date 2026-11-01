@@ -67,7 +67,7 @@ export default function Leagues() {
       </button>
 
       {loading && <p className="text-sm text-gray-400">Chargement des championnats…</p>}
-      {!loading && error && <p className="text-sm text-red-400">{error}</p>}
+      {!loading && error && <p className="text-sm text-loss">{error}</p>}
 
       {!loading && !error && !drilldownLeagues && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

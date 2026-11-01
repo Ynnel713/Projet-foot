@@ -21,7 +21,7 @@ export default function LeagueCard({ name, nbClubs, subtitle, cta, countryCode, 
       )}
       <h3 className="font-semibold text-sm leading-tight">{name}</h3>
       <p className="text-xs text-gray-400">{subtitle ?? (nbClubs != null ? `${nbClubs} clubs` : "Format libre")}</p>
-      <span className="mt-auto pt-2 text-xs font-medium text-accent">
+      <span className="mt-auto pt-2 text-xs font-medium text-link">
         {cta ?? (isCustom ? "Créer →" : "Lancer la saison →")}
       </span>
     </motion.button>

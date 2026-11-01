@@ -140,7 +140,7 @@ export default function Nations() {
                   )}
                   <span className="flex-1 min-w-0 truncate">{label}</span>
                 </div>
-                <div className="flex items-center justify-between text-[10px] text-gray-500">
+                <div className="flex items-center justify-between text-caption text-gray-500">
                   <span className="truncate">{n.confederation}</span>
                   <span className="text-gold shrink-0 pl-2">{starRating(n.strength, allStrengths)}</span>
                 </div>

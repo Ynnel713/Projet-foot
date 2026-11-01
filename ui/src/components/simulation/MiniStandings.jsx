@@ -5,9 +5,9 @@ import ClubLogo from "../common/ClubLogo";
 // Mêmes teintes que le radar/les attributs FM (voir fmTier.js) -- vert/gris/
 // rouge, réutilisées ici comme code couleur "bon/neutre/mauvais" pour les
 // résultats et buts du classement condensé, plutôt qu'une nouvelle palette.
-const GOOD = "#3ddc70";
-const NEUTRAL = "#9ca3af"; // gray-400
-const BAD = "#e0645a";
+const GOOD = "var(--color-win)";
+const NEUTRAL = "var(--color-draw)";
+const BAD = "var(--color-loss)";
 
 // Classement condensé affiché à côté de la journée -- élargi le 28/09/2026
 // (retour terrain) pour reprendre les colonnes V/N/D/BP/BC/Diff de
@@ -29,7 +29,7 @@ export default function MiniStandings({ standings, leaderboards, className = "" 
   return (
     <aside className={`flex-col border-l border-white/5 bg-surface/40 p-3 overflow-y-auto ${className}`}>
       <h3 className="text-sm font-semibold text-gray-400 mb-2">Classement</h3>
-      <table className="w-full text-[13px] border-collapse table-fixed">
+      <table className="w-full text-data border-collapse table-fixed">
         <thead>
           <tr className="text-gray-500 text-xs">
             <th className="text-left font-medium pb-1.5 w-5">#</th>
@@ -85,7 +85,7 @@ function MiniLeaderboard({ title, rows, onTitleClick }) {
     <div className="flex-1 min-w-0">
       <button
         onClick={onTitleClick}
-        className="text-[11px] font-semibold text-gray-500 mb-1 hover:text-accent hover:underline transition-colors"
+        className="text-caption font-semibold text-gray-500 mb-1 hover:text-link hover:underline transition-colors"
       >
         {title}
       </button>
@@ -93,7 +93,7 @@ function MiniLeaderboard({ title, rows, onTitleClick }) {
         {rows.slice(0, 5).map((row, i) => (
           <div
             key={`${row.player}-${row.club}`}
-            className="flex items-center gap-1 text-[11px] px-1.5 py-1 rounded bg-white/[0.02]"
+            className="flex items-center gap-1 text-caption px-1.5 py-1 rounded bg-white/[0.02]"
           >
             <span className="w-3.5 text-gray-500 shrink-0">{i + 1}</span>
             <ClubLogo clubName={row.club} size={13} />

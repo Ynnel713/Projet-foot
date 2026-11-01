@@ -47,12 +47,12 @@ export default function Home() {
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       <header className="mb-7">
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-white">Choisis ta compétition</h1>
-        <p className="mt-1.5 text-[13px] leading-snug text-[#9AA9C3] max-w-md">
+        <h1 className="font-display text-3xl sm:text-4xl font-bold text-white">Choisis ta compétition</h1>
+        <p className="mt-1.5 text-data leading-snug text-gray-400 max-w-md">
           Simule une saison complète dans un grand championnat, ou construis ta propre compétition avec les clubs et
           sélections de ton choix.
         </p>
-        <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-accent/10 border border-accent/30 px-3 py-1 text-xs font-medium text-accent">
+        <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-accent/10 border border-accent/30 px-3 py-1 text-xs font-medium text-link">
           <Users size={13} /> {PLAYER_COUNT.toLocaleString("fr-FR")} joueurs disponibles
         </div>
       </header>
@@ -138,9 +138,9 @@ function Tile({ icon: Icon, title, description, premium, loading, onClick }) {
                  hover:bg-white/[0.04] hover:border-white/20 transition-colors
                  min-h-[160px] w-[280px] shrink-0 snap-start sm:w-auto sm:shrink disabled:opacity-60"
     >
-      <Icon size={28} className={premium ? "text-gold" : "text-accent"} />
+      <Icon size={28} className={premium ? "text-gold" : "text-link"} />
       <h3 className="font-semibold text-sm text-white">{title}</h3>
-      <p className="text-[13px] leading-snug text-[#9AA9C3]">{loading ? "Tirage des poules…" : description}</p>
+      <p className="text-data leading-snug text-gray-400">{loading ? "Tirage des poules…" : description}</p>
     </motion.button>
   );
 }
@@ -161,17 +161,17 @@ function CreateTile({ icon: Icon, title, description, onClick }) {
                  min-h-[100px] w-[280px] shrink-0 snap-start sm:w-auto sm:shrink"
     >
       <div className="h-11 w-11 rounded-full bg-accent/15 flex items-center justify-center shrink-0">
-        <Plus size={22} className="text-accent" />
+        <Plus size={22} className="text-link" />
       </div>
       <div className="min-w-0">
         <div className="flex items-center gap-2">
-          <Icon size={16} className="text-accent shrink-0" />
+          <Icon size={16} className="text-link shrink-0" />
           <h3 className="font-semibold text-sm text-white">{title}</h3>
-          <span className="text-[10px] font-bold uppercase tracking-wide text-accent bg-accent/10 rounded-full px-1.5 py-0.5">
+          <span className="text-caption font-bold uppercase tracking-wide text-link bg-accent/10 rounded-full px-1.5 py-0.5">
             Nouveau
           </span>
         </div>
-        <p className="mt-1 text-[13px] leading-snug text-[#9AA9C3]">{description}</p>
+        <p className="mt-1 text-data leading-snug text-gray-400">{description}</p>
       </div>
     </motion.button>
   );

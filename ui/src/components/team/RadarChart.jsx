@@ -1,4 +1,4 @@
-import { fmRadarTierColor } from "../../utils/fmTier";
+import { fmTierTextColor } from "../../utils/fmTier";
 
 // Port fidèle de app._radar_svg (Streamlit) : araignée des moyennes par
 // catégorie d'attributs FM26, mêmes proportions et couleurs. `selected`
@@ -53,10 +53,10 @@ export default function RadarChart({ categories, size = 230, selected, onSelect 
           />
         );
       })}
-      <polygon points={polygon} fill="#1e8e3e55" stroke="#3ddc70" strokeWidth="2" />
+      <polygon points={polygon} style={{ fill: "var(--color-tier-good-fill)", fillOpacity: 0.33, stroke: "var(--color-win)" }} strokeWidth="2" />
       {points.map(([x, y], i) => {
         const isSelected = categories[i].name === selected;
-        return <circle key={i} cx={x} cy={y} r={isSelected ? 5 : 3} fill="#3ddc70" />;
+        return <circle key={i} cx={x} cy={y} r={isSelected ? 5 : 3} style={{ fill: "var(--color-win)" }} />;
       })}
       {categories.map(({ name, value }, i) => {
         const angle = angleFor(i);
@@ -77,14 +77,14 @@ export default function RadarChart({ categories, size = 230, selected, onSelect 
               x={lx}
               y={ly - 8}
               textAnchor={anchor}
-              fontFamily="Manrope, sans-serif"
+              fontFamily="IBM Plex Sans, sans-serif"
               fontSize="14"
-              fontWeight="800"
-              fill={isSelected ? "#ffffff" : "rgba(230,230,235,0.8)"}
+              fontWeight="600"
+              fill={isSelected ? "white" : "rgba(230,230,235,0.8)"}
             >
               {name}
             </text>
-            <text x={lx} y={ly + 11} textAnchor={anchor} fontFamily="Manrope, sans-serif" fontSize="17" fontWeight="800" fill={fmRadarTierColor(value)}>
+            <text x={lx} y={ly + 11} textAnchor={anchor} fontFamily="Barlow Condensed, sans-serif" fontSize="19" fontWeight="700" style={{ fill: fmTierTextColor(value) }}>
               {value.toFixed(0)}
             </text>
           </g>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Wrench, Brain, Dumbbell, Target, Star, Sparkles } from "lucide-react";
 import { BASE_URL } from "../../api/client";
-import { fmTierColor } from "../../utils/fmTier";
+import { fmTierColor, fmTierTextColor } from "../../utils/fmTier";
 import { attributesByCategory, radarCategories } from "../../utils/fmAttributes";
 import { nationalityFlagUrl } from "../../utils/nationalityFlags";
 import { posteCoordinates } from "../../utils/posteCoordinates";
@@ -50,16 +50,16 @@ export default function PlayerProfile({ player }) {
             {flagUrl && <img src={flagUrl} alt={player.nationalite} className="h-4 rounded-sm shrink-0" />}
             <span className="text-sm text-gray-400">{player.nationalite}</span>
           </div>
-          <div className="font-extrabold text-3xl text-white leading-tight mt-1">{player.name}</div>
+          <div className="font-display font-bold text-4xl text-white leading-tight mt-1">{player.name}</div>
           {pied && (
             <div className="flex items-center gap-2 mt-1.5">
-              <span className="text-[13px] text-gray-400">Pied {pied.toLowerCase()}</span>
+              <span className="text-data text-gray-400">Pied {pied.toLowerCase()}</span>
               {player.weak_foot != null && <StarRating value={player.weak_foot} size={14} />}
             </div>
           )}
           <div className="flex flex-wrap gap-1.5 mt-3">
             {tags.filter(Boolean).map((t) => (
-              <span key={t} className="text-[12px] font-semibold px-2.5 py-1 rounded-full bg-white/[0.07] border border-white/10 text-white/85">
+              <span key={t} className="text-data font-semibold px-2.5 py-1 rounded-full bg-white/[0.07] border border-white/10 text-white/85">
                 {t}
               </span>
             ))}
@@ -68,7 +68,7 @@ export default function PlayerProfile({ player }) {
 
         <div className="flex items-center gap-3 pt-1">
           <MiniPitchLandscape poste={player.poste} secondaryPostes={player.poste_secondaire} width={96} height={76} />
-          <div className="text-[12px] text-white/80 max-w-[180px] flex flex-col gap-2.5">
+          <div className="text-data text-white/80 max-w-[180px] flex flex-col gap-2.5">
             <div>
               <div className="text-white/55 font-bold uppercase tracking-wide mb-0.5">Poste(s) préféré(s)</div>
               <div className="text-white font-semibold">{posteLabel(player.poste)}</div>
@@ -84,13 +84,13 @@ export default function PlayerProfile({ player }) {
           className="w-24 h-24 rounded-2xl flex flex-col items-center justify-center shrink-0"
           style={{ backgroundColor: fmTierColor(player.note) }}
         >
-          <div className="font-extrabold text-5xl text-white leading-none">{player.note.toFixed(0)}</div>
-          <div className="text-[10px] font-bold uppercase tracking-wide text-white/85 mt-1">Note</div>
+          <div className="font-display font-bold text-6xl text-white leading-none">{player.note.toFixed(0)}</div>
+          <div className="text-caption font-bold uppercase tracking-wide text-white/85 mt-1">Note</div>
         </div>
       </div>
 
       {player.preferred_moves && (
-        <div className="text-[12.5px] text-white/75 -mt-3">
+        <div className="text-data text-white/75 -mt-3">
           <b className="text-white">Preferred moves :</b> {player.preferred_moves}
         </div>
       )}
@@ -98,7 +98,7 @@ export default function PlayerProfile({ player }) {
       {player.attributes ? (
         <PlayerAttributesBody player={player} />
       ) : (
-        <p className="text-[13px] italic text-white/45">
+        <p className="text-data italic text-white/45">
           Caractéristiques FM26 pas encore récupérées pour ce joueur.
         </p>
       )}
@@ -145,15 +145,15 @@ function MiniPitchLandscape({ poste, secondaryPostes = [], width = 96, height = 
 
   return (
     <svg viewBox={`0 0 ${width} ${height}`} width={width} height={height} className="shrink-0">
-      <rect x="1" y="1" width={width - 2} height={height - 2} rx="10" fill="#0d3320" stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
+      <rect x="1" y="1" width={width - 2} height={height - 2} rx="10" style={{ fill: "var(--color-pitch)" }} stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
       <line x1={width / 2} y1="1" x2={width / 2} y2={height - 1} stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
       <circle cx={width / 2} cy={height / 2} r={height * 0.18} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
       <rect x="1" y={height * 0.22} width={width * 0.16} height={height * 0.56} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
       <rect x={width - 1 - width * 0.16} y={height * 0.22} width={width * 0.16} height={height * 0.56} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
       {secondary.map(({ cx, cy }, i) => (
-        <circle key={i} cx={cx} cy={cy} r={height * 0.075} fill="rgba(230,230,235,0.35)" stroke="#0d3320" strokeWidth="1" />
+        <circle key={i} cx={cx} cy={cy} r={height * 0.075} fill="rgba(230,230,235,0.35)" style={{ stroke: "var(--color-pitch)" }} strokeWidth="1" />
       ))}
-      <circle cx={main.cx} cy={main.cy} r={height * 0.11} fill="#3ddc70" stroke="#0d3320" strokeWidth="1.5" />
+      <circle cx={main.cx} cy={main.cy} r={height * 0.11} style={{ fill: "var(--color-win)", stroke: "var(--color-pitch)" }} strokeWidth="1.5" />
     </svg>
   );
 }
@@ -168,7 +168,7 @@ function FlatCategory({ icon: Icon, title, children }) {
     <div>
       <div className="flex items-center gap-1.5 mb-2">
         {Icon && <Icon size={14} className="text-white/45 shrink-0" />}
-        <span className="text-[11px] font-bold uppercase tracking-wide text-white/55">{title}</span>
+        <span className="text-caption font-bold uppercase tracking-wide text-white/55">{title}</span>
       </div>
       {children}
     </div>
@@ -183,12 +183,12 @@ function AttributeRows({ rows, highlight }) {
         return (
           <div
             key={name}
-            className={`flex justify-between gap-3 text-[13px] leading-[1.6] px-1.5 -mx-1.5 rounded transition-colors ${
-              isHighlighted ? "bg-[#3ddc70]/15 text-white" : "text-white/85"
+            className={`flex justify-between gap-3 text-data leading-[1.6] px-1.5 -mx-1.5 rounded transition-colors ${
+              isHighlighted ? "bg-win/15 text-white" : "text-white/85"
             }`}
           >
             <span className="truncate">{name}</span>
-            <b style={{ color: fmTierColor(value) }} className="tabular-nums shrink-0">
+            <b style={{ color: fmTierTextColor(value) }} className="tabular-nums shrink-0">
               {value}
             </b>
           </div>
@@ -229,7 +229,7 @@ function PlayerAttributesBody({ player }) {
         <div className="flex flex-col gap-6">
           {player.categorie && (
             <FlatCategory icon={Sparkles} title="Style de jeu">
-              <div className="text-[13px] text-white/90">{player.categorie.replaceAll("_", " ")}</div>
+              <div className="text-data text-white/90">{player.categorie.replaceAll("_", " ")}</div>
             </FlatCategory>
           )}
           {colA.filter(Boolean).map(({ category, rows }) => (

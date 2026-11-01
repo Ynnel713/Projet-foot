@@ -17,7 +17,7 @@ export default function PlayerCard({ player, onSelect }) {
       className="relative bg-white/[0.04] border border-white/10 rounded-xl p-2 text-center transition-colors hover:bg-white/[0.06]"
     >
       <div
-        className="absolute top-1.5 left-1.5 min-w-[22px] h-[22px] px-1 rounded-md flex items-center justify-center text-[11px] font-extrabold text-white"
+        className="absolute top-1.5 left-1.5 min-w-[22px] h-[22px] px-1 rounded-md flex items-center justify-center text-caption font-bold text-white"
         style={{ backgroundColor: fmTierColor(player.note) }}
       >
         {player.note.toFixed(0)}
@@ -34,7 +34,7 @@ export default function PlayerCard({ player, onSelect }) {
         </div>
       )}
       <div className="font-bold text-xs text-white truncate">{player.name}</div>
-      <div className="text-[10.5px] text-gray-400 mt-0.5">{meta}</div>
+      <div className="text-caption text-gray-400 mt-0.5">{meta}</div>
     </button>
   );
 }

@@ -335,6 +335,23 @@ Vérification du Bloc A : déterminisme 100/100, mesure des comportements, captu
 
 ---
 
+## 5bis. CHANTIER REFONTE UX/UI : EN COURS (01/11/2026)
+
+Audit UX/UI et direction « la loge de presse, de nuit » validés par le propriétaire le 01/11/2026. Frontend uniquement (`ui/`) ; moteur, API et fichiers interdits non touchés. Système de référence : `docs/DESIGN.md`. Tickets : `.scratch/refonte-ui/issues/`.
+
+Lots, dans l'ordre :
+1. Fondations (tokens, typographie, fond uni) — livré (01/11/2026), validé expert + QC (`.scratch/refonte-ui/issues/01-fondations-design-system.md`).
+2. Cadre de navigation (espace de compétition à onglets, « Reprendre », fin du cul-de-sac des lignes de match).
+3. Boucle centrale mobile d'abord (ligne de match, classement unifié, barre d'action commune).
+4. Feuille de match V1 (données existantes de `/pitch`).
+5. Club et joueur (effectif en tableau, calendrier, fiche joueur en français).
+6. Tournois et moments forts (arbre des phases finales, écran de sacre).
+7. Finitions (accueil, championnats, recherche d'équipes, V2).
+
+Décisions API en attente du propriétaire (non bloquantes pour les lots 1 à 4) : cache de `/api/leagues` (12,5 s par appel), champ `journee` dans `MatchOut` (forme, calendrier), persistance des compétitions.
+
+---
+
 ## 6. TICKETS OUVERTS PAR THÈME
 
 Source : `docs/known_issues.md` (tickets 1 à 45). Fermés ou résolus : 1, 2, 5, 7, 8, 14, 23, 33. Les tickets 46 à 48 sont annoncés par l'Architecte et seront écrits en 1h.

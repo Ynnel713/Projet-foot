@@ -1,17 +1,62 @@
 /* La police doit être importée AVANT @import "tailwindcss" : celui-ci se
    développe en règles CSS concrètes à la compilation, et un @import doit
    précéder toute autre règle (sinon warning de build, police non garantie). */
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
 /* Tailwind v4 : les tokens de thème se déclarent en CSS (plus besoin de
    tailwind.config.js pour ça) -- utilisables ensuite comme bg-bg, text-gold,
-   border-accent, font-sans, etc. dans les classes Tailwind. */
+   border-accent, font-sans, etc. dans les classes Tailwind. Système complet et
+   règles d'usage : docs/DESIGN.md (refonte UI, lot 1, 01/11/2026). Une couleur
+   = un sens : accent/link = action, win/draw/loss = résultat ou note, gold =
+   trophée et club suivi uniquement. */
 @theme {
-  --color-bg: #0a1220;
-  --color-surface: #101a2c;
-  --color-gold: #f5c84a;
-  --color-accent: #3b82f6;
+  /* Fond uni et 3 surfaces de plus en plus claires (pas d'ombres). */
+  --color-bg: #0b0f14;
+  --color-surface: #121821;
+  --color-surface-2: #18202b;
+  --color-surface-3: #1f2834;
+  --color-line: #232d3a;
+  --color-gold: #e3b341;
+  /* Gazon des petits terrains d'illustration (fiche joueur). */
+  --color-pitch: #0d3320;
+  /* accent = aplat de bouton (texte blanc 4,65:1) ; link = texte bleu sur fond sombre. */
+  --color-accent: #2f6fe4;
+  --color-link: #6ea1ff;
+  --color-win: #3fb950;
+  --color-draw: #8b98a9;
+  --color-loss: #f85149;
+  /* Paliers de note FM (seuils dans utils/fmTier.js). Texte : win / tier-avg /
+     loss ; aplat sous texte blanc : *-fill (valeurs d'avant la refonte). */
+  --color-tier-avg: #e0b13a;
+  --color-tier-good-fill: #1e8e3e;
+  --color-tier-avg-fill: #c99a12;
+  --color-tier-poor-fill: #c0392b;
+  /* Une seule palette neutre, légèrement bleutée, pour gray ET slate (les deux
+     coexistaient). Sur le fond : gray-100 16:1, gray-400 7,9:1, gray-500 5,5:1 ;
+     gray-600 et plus foncés : icônes et filets seulement, jamais du texte utile. */
+  --color-gray-50: #f3f6f9;
+  --color-gray-100: #e8edf3;
+  --color-gray-200: #d3dbe5;
+  --color-gray-300: #b6c1ce;
+  --color-gray-400: #9aa7b8;
+  --color-gray-500: #7d8a9b;
+  --color-gray-600: #5c6878;
+  --color-gray-700: #3a4554;
+  --color-gray-800: #232d3a;
+  --color-gray-900: #18202b;
+  --color-gray-950: #0b0f14;
+  --color-slate-50: var(--color-gray-50);
+  --color-slate-100: var(--color-gray-100);
+  --color-slate-200: var(--color-gray-200);
+  --color-slate-300: var(--color-gray-300);
+  --color-slate-400: var(--color-gray-400);
+  --color-slate-500: var(--color-gray-500);
+  --color-slate-600: var(--color-gray-600);
+  --color-slate-700: var(--color-gray-700);
+  --color-slate-800: var(--color-gray-800);
+  --color-slate-900: var(--color-gray-900);
+  --color-slate-950: var(--color-gray-950);
   /* Fil « commentaire en direct » (écran match) : cyan du bouton LIVE et de la timeline, couleurs des types d'événements. */
   --color-live: #2dd4bf;
   --color-live-card: #1a232e;
@@ -21,7 +66,14 @@
   --color-ev-red: #ef4444;
   --color-ev-sub: #38bdf8;
   --color-ev-neutral: #94a3b8;
-  --font-sans: "Inter", "Manrope", system-ui, sans-serif;
+  /* sans : texte et tableaux (chiffres alignés) ; display : scores, titres, gros chiffres. */
+  --font-sans: "IBM Plex Sans", system-ui, sans-serif;
+  --font-display: "Barlow Condensed", "IBM Plex Sans", sans-serif;
+  /* Plancher de lisibilité : rien sous `caption` (11 px) ; `data` (13 px) pour les tableaux. */
+  --text-caption: 11px;
+  --text-caption--line-height: 1rem;
+  --text-data: 13px;
+  --text-data--line-height: 1.25rem;
 }
 
 /* Pulsation douce du bouton LIVE (match joué) et clignotement du badge LIVE ; désactivés si l'utilisateur préfère moins de mouvement. */
@@ -46,36 +98,14 @@ body,
   margin: 0;
 }
 
+/* Fond uni (refonte UI, lot 1) : le visuel de stade et ses halos passaient
+   derrière les titres et les tableaux et dégradaient le contraste ; le
+   caractère « foot » vient désormais des couleurs des clubs et de la
+   typographie, pas d'une image de fond. */
 body {
   background-color: var(--color-bg);
-  color: #e5e7eb;
+  color: var(--color-gray-100);
   font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
   overscroll-behavior: none; /* évite le "pull to refresh" accidentel en jeu */
-}
-
-/* Fond bleu marine avec un léger halo vert/bleu en haut (maquette FM du
-   28/09/2026), + le visuel de stade "Simulafoot" fourni le même jour comme
-   fond de marque -- assombri par un voile sombre (sinon le texte "SIMULA
-   FOOT" et le ballon entrent en conflit avec le contenu de chaque écran)
-   pour rester une ambiance discrète en arrière-plan, pas une image au
-   premier plan. Posé sur le conteneur racine de l'app (AppShell), pas sur
-   `body` : ce conteneur est lui-même opaque et couvre tout le viewport
-   (h-dvh w-dvw), donc un fond posé sur `body` ne se voyait jamais.
-   `background-attachment: fixed` : l'image ne défile pas avec le contenu
-   (immobile derrière, même sur les écrans qui scrollent). */
-.app-bg {
-  background-color: var(--color-bg);
-  background-image:
-    radial-gradient(1200px 500px at 15% -10%, rgba(61, 220, 112, 0.08), transparent 60%),
-    radial-gradient(900px 500px at 100% 0%, rgba(59, 130, 246, 0.07), transparent 55%),
-    linear-gradient(rgba(10, 18, 32, 0.97) 0%, rgba(10, 18, 32, 0.9) 35%, rgba(10, 18, 32, 0.78) 100%),
-    url("/branding/stadium-wallpaper.png");
-  background-size: auto, auto, cover, cover;
-  background-position:
-    0 0,
-    0 0,
-    center,
-    center;
-  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat;
-  background-attachment: fixed;
 }

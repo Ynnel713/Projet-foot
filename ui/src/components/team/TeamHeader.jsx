@@ -1,4 +1,4 @@
-import { fmTierColor } from "../../utils/fmTier";
+import { fmTierTextColor } from "../../utils/fmTier";
 import ClubBadge from "./ClubBadge";
 
 // Équivalent PWA de app._render_team_header (Streamlit) : écusson du club
@@ -12,7 +12,7 @@ export default function TeamHeader({ roster }) {
       <div className="flex items-center gap-3 flex-wrap">
         <ClubBadge clubName={roster.club} color={roster.color} size={56} />
         <div className="min-w-0">
-          <div className="font-extrabold text-lg text-white truncate">{roster.club}</div>
+          <div className="font-display font-bold text-2xl text-white truncate">{roster.club}</div>
           <div className="text-xs text-gray-400">
             {roster.championnat} · {roster.players.length} joueurs
           </div>
@@ -20,7 +20,7 @@ export default function TeamHeader({ roster }) {
       </div>
 
       <div className="flex gap-2 flex-wrap">
-        <StatTile label="Note globale" value={roster.note.toFixed(0)} color={fmTierColor(roster.note)} />
+        <StatTile label="Note globale" value={roster.note.toFixed(0)} color={fmTierTextColor(roster.note)} />
         <StatTile label="Âge moyen" value={roster.age_moyen.toFixed(1)} />
         {roster.valeur_totale != null && (
           <StatTile label="Valeur estimée" value={`€${roster.valeur_totale.toFixed(0)}M`} />
@@ -33,8 +33,8 @@ export default function TeamHeader({ roster }) {
 function StatTile({ label, value, color }) {
   return (
     <div className="bg-white/[0.03] border border-white/10 rounded-lg px-3 py-1.5 text-center min-w-[84px]">
-      <div className="text-[9.5px] font-bold uppercase tracking-wide text-gray-400">{label}</div>
-      <div className="text-xl font-extrabold leading-tight" style={color ? { color } : undefined}>
+      <div className="text-caption font-bold uppercase tracking-wide text-gray-400">{label}</div>
+      <div className="font-display text-2xl font-bold leading-tight" style={color ? { color } : undefined}>
         {value}
       </div>
     </div>

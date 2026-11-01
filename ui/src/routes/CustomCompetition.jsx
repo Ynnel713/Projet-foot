@@ -141,17 +141,17 @@ function WizardHeader({ step, onBack }) {
           return (
             <div key={label} className="flex items-center gap-2 flex-1">
               <div
-                className={`h-6 w-6 shrink-0 rounded-full flex items-center justify-center text-[11px] font-bold border ${
+                className={`h-6 w-6 shrink-0 rounded-full flex items-center justify-center text-caption font-bold border ${
                   active
                     ? "bg-accent border-accent text-white"
                     : done
-                      ? "bg-accent/20 border-accent/50 text-accent"
+                      ? "bg-accent/20 border-accent/50 text-link"
                       : "bg-surface border-white/10 text-gray-500"
                 }`}
               >
                 {done ? <Check size={12} /> : n}
               </div>
-              <span className={`text-[11px] font-medium hidden sm:inline ${active ? "text-white" : "text-gray-500"}`}>
+              <span className={`text-caption font-medium hidden sm:inline ${active ? "text-white" : "text-gray-500"}`}>
                 {label}
               </span>
               {n < STEP_LABELS.length && <div className={`h-px flex-1 ${done ? "bg-accent/50" : "bg-white/10"}`} />}
@@ -170,9 +170,9 @@ function BigChoice({ icon: Icon, title, description, onClick }) {
       className="rounded-2xl p-5 flex flex-col items-start gap-2 text-left bg-surface border border-white/10
                  hover:bg-white/[0.04] hover:border-accent/50 transition-colors min-h-[140px]"
     >
-      <Icon size={26} className="text-accent" />
+      <Icon size={26} className="text-link" />
       <h3 className="font-semibold text-sm text-white">{title}</h3>
-      <p className="text-[13px] leading-snug text-[#9AA9C3]">{description}</p>
+      <p className="text-data leading-snug text-gray-400">{description}</p>
     </button>
   );
 }
@@ -181,7 +181,7 @@ function StepType({ onSelect }) {
   return (
     <div className="p-4 sm:p-6 max-w-2xl mx-auto">
       <h1 className="text-xl font-bold text-white mb-1">Clubs ou sélections ?</h1>
-      <p className="text-[13px] text-[#9AA9C3] mb-5">Le vivier de la compétition sera composé uniquement de l'un ou de l'autre.</p>
+      <p className="text-data text-gray-400 mb-5">Le vivier de la compétition sera composé uniquement de l'un ou de l'autre.</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <BigChoice
           icon={Shield}
@@ -204,7 +204,7 @@ function StepFormat({ onSelect }) {
   return (
     <div className="p-4 sm:p-6 max-w-2xl mx-auto">
       <h1 className="text-xl font-bold text-white mb-1">Quel format ?</h1>
-      <p className="text-[13px] text-[#9AA9C3] mb-5">Le format choisit aussi comment les équipes seront départagées.</p>
+      <p className="text-data text-gray-400 mb-5">Le format choisit aussi comment les équipes seront départagées.</p>
       <div className="grid grid-cols-1 gap-3">
         {FORMATS.map((f) => (
           <BigChoice key={f.id} icon={f.icon} title={f.title} description={f.description} onClick={() => onSelect(f.id)} />
@@ -223,7 +223,7 @@ function LegsPicker({ label, value, onChange }) {
           <button
             key={v}
             onClick={() => onChange(Number(v))}
-            className={`h-11 rounded-lg text-[12px] font-medium border transition-colors px-1 ${
+            className={`h-11 rounded-lg text-data font-medium border transition-colors px-1 ${
               value === Number(v) ? "bg-accent border-accent text-white" : "bg-surface border-white/10 text-gray-300"
             }`}
           >
@@ -251,7 +251,7 @@ function StepParams({
     <div className="p-4 sm:p-6 max-w-2xl mx-auto flex flex-col gap-5">
       <div>
         <h1 className="text-xl font-bold text-white mb-1">Réglages</h1>
-        <p className="text-[13px] text-[#9AA9C3]">
+        <p className="text-data text-gray-400">
           {format === "LEAGUE" && "Nombre d'équipes et format des confrontations."}
           {format === "HYBRID" && "Nombre d'équipes (poules de 4) et confrontations de chaque phase."}
           {format === "KNOCKOUT" && "Nombre d'équipes et confrontations du tableau."}
@@ -293,7 +293,7 @@ function StepParams({
                   }`}
                 >
                   <span className="font-bold text-sm">{o.teams}</span>
-                  <span className="text-[10px] opacity-80">{o.qualifiers} qualifiés</span>
+                  <span className="text-caption opacity-80">{o.qualifiers} qualifiés</span>
                 </button>
               ))}
             </div>
@@ -390,7 +390,7 @@ function StepTeams({ entityType, teamCount, creating, onCreate }) {
           {entityType === "club" ? "Choisis tes clubs" : "Choisis tes sélections"}
         </h1>
         <span
-          className={`text-sm font-semibold tabular-nums ${canCreate ? "text-accent" : "text-gray-400"}`}
+          className={`text-sm font-semibold tabular-nums ${canCreate ? "text-link" : "text-gray-400"}`}
         >
           {selected.length} / {teamCount}
         </span>
@@ -425,7 +425,7 @@ function StepTeams({ entityType, teamCount, creating, onCreate }) {
           parent à s'agrandir (voir AppShell pour le même besoin). */}
       <div className="flex-1 min-h-0 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 gap-1.5 content-start">
         {!pool && !error && <p className="text-sm text-gray-400 col-span-full">Chargement…</p>}
-        {error && <p className="text-sm text-red-400 col-span-full">{error}</p>}
+        {error && <p className="text-sm text-loss col-span-full">{error}</p>}
         {pool &&
           filtered.map((c) => {
             const isSelected = selected.includes(c.name);
@@ -444,7 +444,7 @@ function StepTeams({ entityType, teamCount, creating, onCreate }) {
                   {entityType === "club" && <ClubLogo clubName={c.name} size={18} />}
                   <span className="flex-1 min-w-0 truncate">{label}</span>
                 </div>
-                <div className="flex items-center justify-between text-[10px] text-gray-500">
+                <div className="flex items-center justify-between text-caption text-gray-500">
                   <span className="truncate">{c.category}</span>
                   <span className="text-gold shrink-0 pl-2">{starRating(c.strength, allStrengths)}</span>
                 </div>
