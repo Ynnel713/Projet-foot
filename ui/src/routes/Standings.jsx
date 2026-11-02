@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
 import { getStandings, getLeaderboards } from "../api/client";
 import StandingsTable from "../components/standings/StandingsTable";
 import LeaderboardTable from "../components/standings/LeaderboardTable";
@@ -26,9 +25,6 @@ export default function Standings() {
 
   return (
     <div className="p-3 flex flex-col gap-4">
-      <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-xs text-gray-400 self-start">
-        <ArrowLeft size={14} /> Retour
-      </button>
       <StandingsTable rows={rows} competitionId={id} />
       {leaderboards && (leaderboards.scorers.length > 0 || leaderboards.assists.length > 0) && (
         <div className="flex gap-4">

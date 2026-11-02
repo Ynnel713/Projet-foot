@@ -2,11 +2,10 @@ import { Home } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useGameStore } from "../../store/useGameStore";
 
-// Bouton accueil : seul moyen de revenir à l'écran d'accueil depuis n'importe
-// quel écran maintenant que le ruban de navigation du bas a été retiré (voir
-// AppShell) -- chaque écran interne (Classement, Poules, Tableau, Buteurs...)
-// garde son propre "Retour" local, mais l'accueil doit rester joignable en un
-// clic depuis partout.
+// Bouton accueil : l'accueil reste joignable en un clic depuis partout. À
+// l'intérieur d'une compétition, on circule par ses onglets (CompetitionLayout,
+// refonte UI lot 2) ; le nom affiché à droite est celui de la compétition
+// active, conservé au rechargement (store persistant).
 export default function Header() {
   const activeCompetitionLabel = useGameStore((s) => s.activeCompetitionLabel);
   const navigate = useNavigate();

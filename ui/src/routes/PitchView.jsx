@@ -34,12 +34,18 @@ export default function PitchView() {
   const pitchBox = useRef(null);
   const [pitchH, setPitchH] = useState(null);
 
-  // Version 1 (24/10/2026) : live textuel et animation désactivés -- cet écran n'est plus
-  // accessible depuis l'UI (voir LiveButton/AnimationButton/MatchRow), mais redirige quand
-  // même si quelqu'un tombe sur l'URL directement (lien, historique).
+  // Version 1 (24/10/2026) : live textuel et animation désactivés. Les lignes de match y
+  // mènent encore au clic (feuille de match prévue au lot 4 de la refonte UI) : on remplace
+  // cette URL par l'onglet d'où vient le match, déduit de ses paramètres (poule/phase de
+  // ligue, tour d'élimination, journée de championnat), sinon par l'espace de la compétition
+  // -- jamais l'accueil, qui faisait perdre la compétition (refonte UI, lot 2). `replace`
+  // plutôt que `navigate(-1)` : sûr même si l'effet est rejoué (StrictMode) ou si l'URL a
+  // été ouverte directement.
   useEffect(() => {
-    if (!LIVE_AND_ANIMATION_ENABLED) navigate("/", { replace: true });
-  }, [navigate]);
+    if (LIVE_AND_ANIMATION_ENABLED) return;
+    const tab = params.has("group") ? "groups" : params.has("round_number") ? "bracket" : params.has("journee") ? "simulate" : "";
+    navigate(`/competition/${id}/${tab}`, { replace: true });
+  }, [navigate, id, params]);
 
   const home = params.get("home");
   const away = params.get("away");

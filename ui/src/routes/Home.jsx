@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { Trophy, Wand2, Star, Medal, Plus, Users, Zap } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Trophy, Wand2, Star, Medal, Plus, Users, Zap, ArrowRight } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { createChampionsLeague, createWorldCup } from "../api/client";
+import { createChampionsLeague, createWorldCup, getCompetition } from "../api/client";
 import { useGameStore } from "../store/useGameStore";
 
 // Nombre de joueurs de la base -- voir data/joueurs.xlsx (7 564 au
@@ -56,6 +56,8 @@ export default function Home() {
           <Users size={13} /> {PLAYER_COUNT.toLocaleString("fr-FR")} joueurs disponibles
         </div>
       </header>
+
+      <ResumeCard />
 
       <section className="mb-7">
         <h2 className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-3">Compétitions officielles</h2>
@@ -174,5 +176,47 @@ function CreateTile({ icon: Icon, title, description, onClick }) {
         <p className="mt-1 text-data leading-snug text-gray-400">{description}</p>
       </div>
     </motion.button>
+  );
+}
+
+// « Reprendre » (refonte UI, lot 2) : la compétition en cours, mémorisée dans
+// le store persistant. Vérifiée auprès de l'API à chaque affichage : elle vit en
+// mémoire côté serveur, un 404 (API redémarrée) l'efface ; une erreur réseau
+// la garde (l'API peut juste être en train de démarrer).
+function ResumeCard() {
+  const activeId = useGameStore((s) => s.activeCompetitionId);
+  const clearActiveCompetition = useGameStore((s) => s.clearActiveCompetition);
+  const [status, setStatus] = useState(null);
+
+  useEffect(() => {
+    if (!activeId) return;
+    let alive = true;
+    getCompetition(activeId)
+      .then((s) => alive && setStatus(s))
+      .catch((err) => alive && err.status === 404 && clearActiveCompetition());
+    return () => {
+      alive = false;
+    };
+  }, [activeId, clearActiveCompetition]);
+
+  if (!activeId || status?.id !== activeId) return null;
+  const progress = status.champion
+    ? `Terminée · Champion : ${status.champion}`
+    : status.total_journees
+      ? `Journée ${status.current_journee} / ${status.total_journees}`
+      : "En cours";
+
+  return (
+    <Link
+      to={`/competition/${activeId}`}
+      className="mb-7 flex items-center gap-4 rounded-xl bg-surface border border-line px-5 py-4 hover:bg-surface-2 transition-colors"
+    >
+      <div className="min-w-0 flex-1">
+        <div className="text-caption font-bold uppercase tracking-wide text-link">Reprendre</div>
+        <div className="font-display text-2xl font-bold text-white truncate">{status.championnat ?? "Compétition perso"}</div>
+        <div className="text-data text-gray-400">{progress}</div>
+      </div>
+      <ArrowRight size={22} className="text-link shrink-0" />
+    </Link>
   );
 }

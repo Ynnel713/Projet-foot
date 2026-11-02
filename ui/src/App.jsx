@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AppShell from "./components/layout/AppShell";
+import CompetitionLayout, { CompetitionIndex } from "./components/layout/CompetitionLayout";
 import Home from "./routes/Home";
 import Leagues from "./routes/Leagues";
 import Nations from "./routes/Nations";
@@ -23,14 +24,18 @@ export default function App() {
           <Route path="/leagues" element={<Leagues />} />
           <Route path="/nations" element={<Nations />} />
           <Route path="/custom" element={<CustomCompetition />} />
-          <Route path="/competition/:id/simulate" element={<Simulation />} />
-          <Route path="/competition/:id/standings" element={<Standings />} />
-          <Route path="/competition/:id/clubs/:clubName" element={<TeamRoster />} />
-          <Route path="/competition/:id/clubs/:clubName/players/:playerName" element={<PlayerPage />} />
+          {/* Espace de compétition à onglets (refonte UI, lot 2) ; la vue terrain reste plein écran, hors onglets. */}
           <Route path="/competition/:id/pitch" element={<PitchView />} />
-          <Route path="/competition/:id/groups" element={<Groups />} />
-          <Route path="/competition/:id/bracket" element={<Bracket />} />
-          <Route path="/competition/:id/leaderboards" element={<Leaderboards />} />
+          <Route path="/competition/:id" element={<CompetitionLayout />}>
+            <Route index element={<CompetitionIndex />} />
+            <Route path="simulate" element={<Simulation />} />
+            <Route path="standings" element={<Standings />} />
+            <Route path="clubs/:clubName" element={<TeamRoster />} />
+            <Route path="clubs/:clubName/players/:playerName" element={<PlayerPage />} />
+            <Route path="groups" element={<Groups />} />
+            <Route path="bracket" element={<Bracket />} />
+            <Route path="leaderboards" element={<Leaderboards />} />
+          </Route>
           <Route path="/v2" element={<V2Match />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

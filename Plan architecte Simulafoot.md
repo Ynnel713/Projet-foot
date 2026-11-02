@@ -340,8 +340,8 @@ Vérification du Bloc A : déterminisme 100/100, mesure des comportements, captu
 Audit UX/UI et direction « la loge de presse, de nuit » validés par le propriétaire le 01/11/2026. Frontend uniquement (`ui/`) ; moteur, API et fichiers interdits non touchés. Système de référence : `docs/DESIGN.md`. Tickets : `.scratch/refonte-ui/issues/`.
 
 Lots, dans l'ordre :
-1. Fondations (tokens, typographie, fond uni) — livré (01/11/2026), validé expert + QC (`.scratch/refonte-ui/issues/01-fondations-design-system.md`).
-2. Cadre de navigation (espace de compétition à onglets, « Reprendre », fin du cul-de-sac des lignes de match).
+1. Fondations (tokens, typographie, fond uni) — livré (01/11/2026), validé expert + QC, commit `316d2ef` (`.scratch/refonte-ui/issues/01-fondations-design-system.md`).
+2. Cadre de navigation (espace de compétition à onglets, « Reprendre », fin du cul-de-sac des lignes de match) — livré (02/11/2026), validé expert + QC (`.scratch/refonte-ui/issues/02-cadre-navigation.md`).
 3. Boucle centrale mobile d'abord (ligne de match, classement unifié, barre d'action commune).
 4. Feuille de match V1 (données existantes de `/pitch`).
 5. Club et joueur (effectif en tableau, calendrier, fiche joueur en français).

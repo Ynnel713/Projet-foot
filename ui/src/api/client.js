@@ -15,7 +15,8 @@ async function request(path, options = {}) {
   });
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`API ${path} -> ${res.status} : ${body}`);
+    // `status` : distingue une compétition disparue (404, API redémarrée) d'une erreur réseau.
+    throw Object.assign(new Error(`API ${path} -> ${res.status} : ${body}`), { status: res.status });
   }
   return res.json();
 }
