@@ -1,6 +1,6 @@
 # 19: Profils et tendances individuelles
 
-**What to build:** Deux joueurs au même poste avec le même rôle ne jouent pas de la même manière : les attributs modifient aussi les actions envisagées, les espaces repérés et les solutions préférées. Un joueur à grande Vision reconnaît plus d'occasions. Intègre les tendances de la base (Preferred Moves, 55 types) comme des penchants, jamais comme des ordres. Reprend le ticket cerveau 05 (Flair : options risquées) et la partie « avec ballon » du ticket cerveau 06 (Teamwork : donner au partenaire mieux placé).
+**What to build:** Deux joueurs au même poste avec le même rôle ne jouent pas de la même manière : les attributs modifient aussi les actions envisagées, les espaces repérés et les solutions préférées. Un joueur à grande Vision reconnaît plus d'occasions. Intègre les tendances de la base (Preferred Moves) comme des penchants, jamais comme des ordres : ce ticket porte les lignes « porteur » du catalogue `.scratch/v2-attributs-restants/issues/05-catalogue-gestes-preferes.md` (58 valeurs), une seule implémentation par ligne. Reprend le ticket cerveau 05 (Flair : options risquées) et la partie « avec ballon » du ticket cerveau 06 (Teamwork : donner au partenaire mieux placé).
 
 **Attributs :** Flair, Teamwork, Vision, Decisions, Preferred Moves.
 

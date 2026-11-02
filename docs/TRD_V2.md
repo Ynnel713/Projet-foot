@@ -48,7 +48,7 @@ Inchangé — aucune nouvelle donnée personnelle, aucun nouvel accès réseau e
 ## Décisions techniques
 
 - **D-V01** — Module V2 entièrement séparé, zéro fichier protégé V1 modifié. **Validé.**
-- **D-V02** — Réutilisation en lecture seule de `clubs.py`/`players.py`/`lineup.py` (et plus tard `season.py`/`standings.py`/`schedule.py`/les modules de compétitions). **Validé.**
+- **D-V02** — Réutilisation en lecture seule de `clubs.py`/`players.py`/`lineup.py`/`coaches.py` (`coaches.py` ajouté le 02/11/2026 avec la levée de D-V10) (et plus tard `season.py`/`standings.py`/`schedule.py`/les modules de compétitions). **Validé.**
 - **D-V03** — Physique continue à plat (x/y), pas de hauteur de ballon pour l'instant ; duels aériens résolus par tirage pondéré. **Validé, révisable plus tard** (le porteur du projet a formulé ce choix comme « dans un premier temps »).
 - **D-V04** — Calcul server-side Python ; trace complète calculée une fois, rejouée ensuite par le rendu à vitesse réglable façon Football Manager. **Validé.**
 - **D-V05** — Les deux modes (regarder / tout simuler sans regarder) coexistent sur le même moteur. **Validé.**
@@ -56,14 +56,13 @@ Inchangé — aucune nouvelle donnée personnelle, aucun nouvel accès réseau e
 - **D-V07** — Table de pondération attribut × poste : mécanisme partagé, construit une fois, consommé par toute la résolution d'actions. **Validé.**
 - **D-V08** — Premier ticket de déplacement : IA placeholder (position de formation / vers le ballon), pas de vraie prise de décision avant que le mouvement de base fonctionne. **Validé.**
 - **D-V09** — Premier jalon jouable : un seul match isolé, pas encore branché aux compétitions existantes. **Validé.**
-- **D-V10** — Influence des coachs sur le moteur V2 : différée, hors périmètre de ce TRD. **Décision du porteur du projet.**
+- **D-V10** — Influence des coachs sur le moteur V2 : différée à l'origine. **Levée par le porteur du projet le 02/11/2026** : les styles du coach (Contre attaque, Pressing, Défensif, Offensif, Possession) orientent le comportement collectif, la gestion du score et les remplacements. Chantier : `.scratch/v2-coach-et-gestion-de-match/`.
 - **D-V11** — Découpage en tickets : un ticket par attribut (jusqu'à 47), ordonnés essentiels d'abord (déplacement → contact/passes → duels/tacles → tirs/gardien, un match complet devient jouable dès cette étape) puis attributs dispensables (coups de pied arrêtés spécialisés, tendances gardien, Leadership...). **Validé** — détail des tickets : `docs/PLAN_V2.md`.
 
 ## Hors périmètre technique
 
 - Toute modification des fichiers protégés V1 (liste complète : voir `CLAUDE.md`).
 - Hauteur du ballon / vraie physique 3D (centres, têtes, lobes réellement simulés) — différée (D-V03).
-- Influence des coachs sur le moteur — différée (D-V10).
 - Branchement sur les compétitions existantes (championnat, poules, Coupe du Monde, Ligue des Champions, Compétition Perso) — différé après le premier match isolé (D-V09).
 - Contrôle tactique de l'utilisateur pendant un match (choix de tactique en direct, changements) — hors périmètre, comme en V1.
 - Garantie de déterminisme bit-à-bit — explicitement non retenue pour la V2 (D-V06).

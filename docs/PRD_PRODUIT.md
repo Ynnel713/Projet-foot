@@ -72,7 +72,7 @@ Le porteur du projet (Olivier), développeur et utilisateur principal, usage quo
 - Multilingue — français uniquement.
 - Audit ou certification d'accessibilité formelle (niveau AA) — pas une priorité vu l'usage réel.
 - Calcul d'une « note FM » dédiée — abandonné ; « Moyenne joueur » reste la seule note qui alimente le moteur.
-- V2, pour ce premier lot (détail : `docs/TRD_V2.md`) : influence des coachs sur le moteur physique, hauteur du ballon / vraie physique 3D (centres et têtes résolus par un tirage pondéré en attendant), branchement sur les compétitions existantes (championnat, poules, Coupe du Monde, Ligue des Champions, Compétition Perso), déterminisme bit-à-bit garanti (contrairement à la V1).
+- V2, pour ce premier lot (détail : `docs/TRD_V2.md`) : hauteur du ballon / vraie physique 3D (centres et têtes résolus par un tirage pondéré en attendant), branchement sur les compétitions existantes (championnat, poules, Coupe du Monde, Ligue des Champions, Compétition Perso), déterminisme bit-à-bit garanti (contrairement à la V1).
 
 ## Décisions d'implémentation
 

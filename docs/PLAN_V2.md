@@ -11,7 +11,7 @@
 - Déterminisme assoupli, pas de garantie bit-à-bit pour la V2 (D-V06).
 - Table de pondération attribut × poste construite une fois en Phase 1, consommée par toutes les phases suivantes (D-V07).
 - Découpage en un ticket par attribut, ordre essentiels d'abord : un match doit devenir jouable dès la fin de la Phase 4 ; les attributs dispensables viennent après (D-V11).
-- Coachs et compétitions existantes : hors périmètre de ce plan (D-V09/D-V10) — chantiers séparés, à planifier plus tard.
+- Compétitions existantes : hors périmètre de ce plan (D-V09), chantier séparé, à planifier plus tard. Coachs : D-V10 levée le 02/11/2026, chantier `.scratch/v2-coach-et-gestion-de-match/`.
 
 ---
 
@@ -140,7 +140,7 @@ Un porteur du ballon à moins de 20 m du but adverse tente sa chance plutôt que
 | 9. Gardien complet | Sorties, centres, relances | Aerial Reach, Command of Area, Communication, Kicking, Throwing, Rushing Out, Punching, Eccentricity |
 | 10. Caractère et profil | Moral selon le score, pied fort, habitudes | Determination, Leadership, Weak foot, Pieds, Preferred moves |
 
-Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement aux compétitions (D-V10).
+Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement aux compétitions (D-V09).
 
 **Phase 5 découpée** : `.scratch/v2-cerveau-joueurs/issues/` (01 à 04 livrés ; 05 et 06 absorbés par le chantier « intelligence collective » ci-dessous). Socle (`.scratch/v2-socle/issues/`) : 01, 03, 04 et 06 livrés ; 02 et 05 absorbés par ce même chantier.
 

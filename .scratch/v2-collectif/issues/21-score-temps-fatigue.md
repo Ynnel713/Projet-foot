@@ -8,7 +8,7 @@
 
 **Status:** ready-for-agent (constantes à proposer avant le code)
 
-**Point de vigilance :** Determination et Leadership étaient prévus en phase 10 : ce ticket en avance la partie collective.
+**Point de vigilance :** Determination et Leadership étaient prévus en phase 10 : ce ticket en avance la partie collective. L'adaptation au score doit être exposée comme des paramètres (minute de début, amplitude) que `.scratch/v2-coach-et-gestion-de-match/issues/02-gestion-du-score-selon-le-coach.md` module par le style du coach, sans seconde mécanique.
 
 - [ ] Hauteur du bloc et prise de risque mesurablement différentes selon le score et la minute
 - [ ] Mené 0-2 à la 80e, un joueur à Determination haute garde mesurablement plus d'intensité
