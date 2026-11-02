@@ -38,22 +38,42 @@ décalage et parts non trouvés, ordres de grandeur ajustables) :
 - déclencheurs collectifs (passe en retrait d'au moins `BACKWARD_PASS_M` = 3 m, réserve A2 de l'expert ; porteur qui
   reçoit en reculant vers son but ; contrôle raté) : pressing d'équipe pendant `TRIGGER_S` = 5 s ; chaque partenaire
   suit, Teamwork 99 -> 95 %, 55 -> 80 %, 11 -> 55 %, un tirage par déclenchement, et marque côté ballon, le plus libre
-  d'abord, chaque receveur à moins de `FOLLOW_M` = 15 m du ballon."""
+  d'abord, chaque receveur à moins de `FOLLOW_M` = 15 m du ballon.
+
+Passe adverse en vol (réserve A2 du ticket 07, reprise au ticket v2-collectif/09) : les rôles sont attribués comme si
+le receveur avait déjà le ballon, à son point de réception ; sans cela, le marqueur lâchait son attaquant au départ de
+la passe (rôle attribué 57,5 % du temps de possession adverse, mesure du 01/11/2026). Les déclencheurs du pressing
+suivent toujours le vrai porteur ; les lecteurs de passe gardent leur priorité. L'effort du presseur (`burst`) compte
+donc depuis le départ de la passe vers son porteur, vol compris.
+
+Compensations (ticket v2-collectif/09, constantes validées par le propriétaire le 01/11/2026 ; valeurs réelles non
+trouvées, ordres de grandeur) : un défenseur (DC, LB, RB) à plus de `HOLE_AWAY_M` = 10 m de sa place dans le bloc sans
+ballon laisse un trou si personne n'est à moins de `HOLE_FILLED_M` = 5 m de cette place, qu'elle est dans sa moitié
+entre le ballon et son but, et qu'un attaquant adverse non marqué (porteur compris) en est à `HOLE_DANGER_M` = 20 m ou
+moins. Le comble
+le premier, dans l'ordre milieu défensif, central voisin, latéral opposé, qui arrive avant cet attaquant (temps
+d'arrivée, plus son délai de réaction d'Anticipation) et qui accepte de quitter sa place (Teamwork, courbe du
+ticket 08, un tirage par trou, gardé jusqu'au retour de l'absent) ; Positioning règle la précision de son placement, comme pour la couverture. Le
+titulaire en route garde la place tant qu'il arrive au plus `HOLD_MARGIN_S` après l'attaquant ; arrivé, il la tient
+jusqu'à ce que le joueur absent revienne à moins de 5 m. Deux niveaux de cascade au plus. Decisions et Concentration n'y sont pas (règles R1 et
+R3) ; le repli du joueur qui a quitté sa place relève du ticket 10."""
 
 from __future__ import annotations
 
 import math
 import random
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
+from v2engine.anticipation import meeting_point, reaction_delay_s
 from v2engine.attributes import player_attribute, success_probability
 from v2engine.ball_state import BallState
 from v2engine.bloc import POSITIONING_REDRAW_S, Bloc
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch
 from v2engine.movement import PlayerState, accel_tau_s, max_speed_mps
-from v2engine.possession import MISS_RETRY_S
+from v2engine.possession import BALL_FRICTION_PER_S, MISS_RETRY_S
+from v2engine.situation import DEFENSE_PLACEE
 
-PRESSEUR, COUVERTURE, MARQUAGE = "presseur", "couverture", "marquage"
+PRESSEUR, COUVERTURE, MARQUAGE, COMPENSATION = "presseur", "couverture", "marquage", "compensation"
 
 COVER_DEPTH_M = 6.0
 DANGER_M = 25.0
@@ -75,6 +95,11 @@ OPTION_RANGE_M = 40.0  # receveurs considérés par le presseur (même portée q
 BACKWARD_MPS = 0.5  # porteur qui reçoit en reculant vers son but : vitesse vers son but au-delà de 0,5 m/s
 BACKWARD_PASS_M = 3.0  # passe en retrait : le receveur est au moins 3 m plus près de son but (réserve A2 de l'expert)
 MISS_FRESH_S = 0.25  # un contrôle raté déclenche s'il date de moins de 0,25 s
+HOLE_AWAY_M = 10.0  # compensations (ticket v2-collectif/09)
+HOLE_FILLED_M = 5.0
+HOLE_DANGER_M = 20.0
+CASCADE_LEVELS = 2
+_HOLE_POSTES = ("DC", "LB", "RB")
 
 
 def own_goal(team: str) -> Vec2:
@@ -161,7 +186,7 @@ class DefensiveRoles:
     """Rôles de l'équipe sans ballon (`update`, une fois par tick) et indiscipline de chaque joueur (`leaves_the_bloc`)."""
     assignments: dict[str, Assignment] = field(default_factory=dict)
     leaving: dict[str, tuple[bool, float]] = field(default_factory=dict)  # joueur -> (quitte le bloc, prochain tirage)
-    # titulaires du tick précédent : (rôle, porteur) -> défenseur (`HOLD_MARGIN_S`)
+    # titulaires du tick précédent : (rôle, porteur) -> défenseur (`HOLD_MARGIN_S`) ; (COMPENSATION, absent) -> compensateur
     holders: dict[tuple[str, str], str] = field(default_factory=dict)
     # pressing coordonné (ticket 08)
     # presseur -> (porteur, début de l'effort) ; gardé s'il revient sur le même porteur (réserve A4 de l'expert)
@@ -173,6 +198,9 @@ class DefensiveRoles:
     followed: dict[str, str] = field(default_factory=dict)  # partenaire qui suit -> receveur qu'il ferme
     last_holder: tuple[str, str, float] | None = None  # (nom, équipe, progression) du porteur précédent
     seen_misses: set[tuple[str, float]] = field(default_factory=set)
+    # compensations (ticket 09)
+    willing: dict[tuple[str, str], bool] = field(default_factory=dict)  # (absent, candidat) -> accepte (Teamwork)
+    levels: dict[str, int] = field(default_factory=dict)  # compensateur -> niveau de cascade de sa compensation
 
     def resting(self, player: PlayerState, now_s: float) -> bool:
         return self.rest_until.get(player.name, 0.0) > now_s
@@ -210,7 +238,7 @@ class DefensiveRoles:
         """Receveur dont le presseur ferme la ligne : le plus dangereux s'il lit bien (Anticipation), sinon un autre."""
         key = (presser.name, holder.name)
         if key not in self.lanes:
-            options = sorted((p for p in players if p.team == holder.team and p is not holder and p.poste != "GK"
+            options = sorted((p for p in players if p.team == holder.team and p.name != holder.name and p.poste != "GK"
                               and p.position.distance_to(holder.position) <= OPTION_RANGE_M),
                              key=lambda p: p.position.distance_to(goal))
             if not options:
@@ -233,17 +261,28 @@ class DefensiveRoles:
     def update(self, players: list[PlayerState], ball: BallState, bloc: Bloc | None, now_s: float) -> None:
         self.assignments = {}
         holder = next((p for p in players if p.name == ball.holder), None) if ball.holder else None
-        self._watch_triggers(players, ball, holder, now_s)
-        if holder is None:  # titulaires gardés : le même porteur peut récupérer le ballon après la passe
-            return
-        previous, self.holders = self.holders, {}
-        # effort et ligne lue valent pour la détention en cours : oubliés quand le porteur change (A1 et A2 de l'expert,
-        # passage 2 ; sans cela, un presseur retrouvant plus tard ce porteur était mis au repos après un effort quasi nul)
-        self.burst = {k: v for k, v in self.burst.items() if v[0] == holder.name}
-        self.lanes = {k: v for k, v in self.lanes.items() if k[1] == holder.name}
+        self._watch_triggers(players, ball, holder, now_s)  # le vrai porteur, même pendant une passe
+        previous = self.holders
+        if holder is None:  # passe en vol (réserve A2) : le receveur, à son point de réception
+            receiver = next((p for p in players if p.name == ball.receiver), None) if ball.receiver else None
+            if receiver is None or ball.last_pass_team != receiver.team:
+                return
+            point = clamp_to_pitch(meeting_point(receiver, ball.position, ball.velocity, BALL_FRICTION_PER_S))
+            holder = replace(receiver, position=point, velocity=Vec2(0.0, 0.0))
+            # titulaires du passeur gardés : il peut récupérer le ballon (passe coupée, rendue) ; ceux des
+            # compensations sont réécrits à chaque tick par `_compensate`, qui lit `previous`
+            self.holders = {k: v for k, v in previous.items() if k[1] != holder.name and k[0] != COMPENSATION}
+        else:
+            self.holders = {}
+            # effort et ligne lue valent pour la détention en cours : oubliés quand le porteur change (A1 et A2 de
+            # l'expert, passage 2 ; sans cela, un presseur retrouvant plus tard ce porteur était mis au repos après un
+            # effort quasi nul)
+            self.burst = {k: v for k, v in self.burst.items() if v[0] == holder.name}
+            self.lanes = {k: v for k, v in self.lanes.items() if k[1] == holder.name}
         team = "away" if holder.team == "home" else "home"
         goal = own_goal(team)
-        free = [p for p in players if p.team == team and p.poste != "GK"]
+        # le lecteur de passe court la couper (priorité dans `cerveau`) : pas d'autre rôle pour lui
+        free = [p for p in players if p.team == team and p.poste != "GK" and p.name not in ball.readers]
         if not free:
             return
         fresh = [p for p in free if not self.resting(p, now_s)] or free  # celui qui souffle ne presse pas
@@ -272,7 +311,7 @@ class DefensiveRoles:
             self.assignments[cover.name] = Assignment(COUVERTURE, spot, holder.name, holder.velocity)
             free.remove(cover)
         # l'attaquant qui recule après un hors-jeu sifflé (ticket 23) n'est pas marqué
-        dangerous = sorted((p for p in players if p.team == holder.team and p is not holder and p.poste != "GK"
+        dangerous = sorted((p for p in players if p.team == holder.team and p.name != holder.name and p.poste != "GK"
                             and p.position.distance_to(goal) <= DANGER_M and ball.offside_out_until.get(p.name, 0.0) <= now_s),
                            key=lambda p: p.position.distance_to(goal))
         for attacker in dangerous:
@@ -282,11 +321,14 @@ class DefensiveRoles:
             spot = _goal_side(attacker.position, goal, marking_distance_m(marker))
             self.assignments[marker.name] = Assignment(MARQUAGE, spot, attacker.name, attacker.velocity)
             free.remove(marker)
+        if bloc is not None:  # niveaux de cascade gardés tant qu'aucun tick ne les recalcule (ballon libre)
+            levels, self.levels = self.levels, {}
+            self._compensate(players, ball, holder, team, goal, free, bloc, previous, levels, now_s)
         if self.trigger_until.get(team, 0.0) > now_s:  # pressing d'équipe : les partenaires proches suivent (Teamwork)
             marked = {a.mate for a in self.assignments.values()}
             defenders = [p for p in players if p.team == team]
             # le plus libre d'abord : le plus loin de tout défenseur
-            near = sorted((p for p in players if p.team == holder.team and p is not holder and p.poste != "GK"
+            near = sorted((p for p in players if p.team == holder.team and p.name != holder.name and p.poste != "GK"
                            and p.name not in marked and p.position.distance_to(holder.position) <= FOLLOW_M),
                           key=lambda p: -min(d.position.distance_to(p.position) for d in defenders))
             # chacun garde son receveur jusqu'à la fin du pressing d'équipe (sans quoi il change de cible en courant)
@@ -304,6 +346,68 @@ class DefensiveRoles:
                 self.assignments[marker.name] = Assignment(MARQUAGE, spot, receiver.name, receiver.velocity)
                 free.remove(marker)
 
+    def _compensate(self, players: list[PlayerState], ball: BallState, holder: PlayerState, team: str, goal: Vec2,
+                    free: list[PlayerState], bloc: Bloc, previous: dict[tuple[str, str], str],
+                    levels: dict[str, int], now_s: float) -> None:
+        """Compensations (ticket v2-collectif/09) : la place d'un défenseur parti est comblée par le premier, dans
+        l'ordre de `_rank`, qui arrive avant l'attaquant le plus proche et accepte de quitter la sienne (Teamwork)."""
+        mates = [p for p in players if p.team == team and p.poste != "GK"]
+        marked = {a.mate for a in self.assignments.values() if a.role == MARQUAGE}
+        # le porteur compte, même pressé : l'ailier servi qui file vers la place vide est la menace du scénario de
+        # référence (réserve A2 de l'expert, passage 1) ; l'attaquant qui recule après un hors-jeu sifflé (ticket 23) non
+        threats = [p for p in players if p.team == holder.team and p.poste != "GK" and p.name not in marked
+                   and ball.offside_out_until.get(p.name, 0.0) <= now_s]
+        threats = [holder if p.name == holder.name else p for p in threats]  # receveur : à son point de réception
+        free_names = {p.name for p in free}
+        ball_depth = abs(holder.position.x - goal.x)
+        closed = set()
+        for owner in (p for p in mates if p.poste in _HOLE_POSTES):
+            level = levels.get(owner.name, 0) + 1  # il compense lui-même : sa place est un trou de niveau 2
+            key = (COMPENSATION, owner.name)
+            # titulaire : seulement s'il est encore libre (passé marqueur, il n'occupe plus la place pour elle)
+            incumbent_name = previous.get(key) if previous.get(key) in free_names else None
+            place = bloc.reference(owner, holder.position, DEFENSE_PLACEE, now_s)
+            depth = abs(place.x - goal.x)
+            away = owner.position.distance_to(place)
+            if away <= HOLE_FILLED_M:
+                closed.add(owner.name)  # revenu : le trou est fini, ses tirages Teamwork aussi
+            # il rend la place quand le joueur absent revient à moins de 5 m, on ne la comble qu'au-delà de 10 m
+            if level > CASCADE_LEVELS or away <= (HOLE_FILLED_M if incumbent_name else HOLE_AWAY_M) \
+                    or depth > PITCH_LENGTH_M / 2.0 or depth >= ball_depth \
+                    or any(m is not owner and m.name != incumbent_name
+                           and m.position.distance_to(place) < HOLE_FILLED_M for m in mates):
+                continue
+            attacker = min(threats, key=lambda p: p.position.distance_to(place), default=None)
+            if attacker is None or attacker.position.distance_to(place) > HOLE_DANGER_M:
+                continue
+            deadline = arrival_time_s(attacker, place)
+            # arrivé (à 5 m de la place ou du point qu'il vise), il la tient jusqu'au retour de l'absent ; en route, il
+            # la garde s'il n'arrive pas plus de `HOLD_MARGIN_S` après l'attaquant
+            chosen = next((p for p in free if p.name == incumbent_name and (
+                min(p.position.distance_to(place), p.position.distance_to(place + bloc.placement_error(p, now_s)))
+                <= HOLE_FILLED_M or arrival_time_s(p, place) <= deadline + HOLD_MARGIN_S)), None)
+            if chosen is None:
+                ranked = sorted((p for p in free if p is not owner and _rank(p, owner) is not None),
+                                key=lambda p: (_rank(p, owner), p.position.distance_to(place)))
+                chosen = next((p for p in ranked if arrival_time_s(p, place) + reaction_delay_s(p) <= deadline
+                               and self._willing(owner, p)), None)
+            if chosen is None:
+                continue
+            self.holders[key] = chosen.name
+            self.levels[chosen.name] = level
+            spot = clamp_to_pitch(place + bloc.placement_error(chosen, now_s))  # Positioning, comme la couverture
+            self.assignments[chosen.name] = Assignment(COMPENSATION, spot, owner.name, Vec2(0.0, 0.0))
+            free.remove(chosen)
+        # un tirage par trou : gardé tant que l'absent n'est pas revenu, même si le danger s'éloigne un instant
+        self.willing = {k: v for k, v in self.willing.items() if k[0] not in closed}
+
+    def _willing(self, owner: PlayerState, candidate: PlayerState) -> bool:
+        """Accepte-t-il de quitter sa place pour combler celle de `owner` ? Teamwork, un tirage par trou."""
+        key = (owner.name, candidate.name)
+        if key not in self.willing:
+            self.willing[key] = random.random() < follow_probability(candidate)
+        return self.willing[key]
+
     def leaves_the_bloc(self, player: PlayerState, now_s: float) -> bool:
         """Sans rôle et près du ballon, quitte-t-il quand même le bloc pour y aller ? Tiré toutes les 5 s (Teamwork)."""
         leaves, next_s = self.leaving.get(player.name, (False, 0.0))
@@ -311,3 +415,14 @@ class DefensiveRoles:
             leaves = random.random() < leave_probability(player)
             self.leaving[player.name] = (leaves, now_s + LEAVE_REDRAW_S)
         return leaves
+
+
+def _rank(candidate: PlayerState, owner: PlayerState) -> int | None:
+    """Ordre des compensateurs (ticket 09) : milieu défensif, central, latéral opposé (l'un ou l'autre pour un central)."""
+    if candidate.poste == "MDC":
+        return 0
+    if candidate.poste == "DC":
+        return 1
+    if candidate.poste in ("LB", "RB") and candidate.poste != owner.poste:
+        return 2
+    return None

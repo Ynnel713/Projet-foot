@@ -10,6 +10,8 @@
 
 **Point de vigilance :** le ticket v2-socle/05 est absorbé ici.
 
+**Reporté du ticket 09 (réserve A2 de l'expert, acceptée par le propriétaire le 02/11/2026 : « J'accepte ») :** les tacles passent de 44,75 à 51,15 par match (+14 %, 20 matchs, graine d'audit, `7a94d64` puis ticket 09), au-dessus de la fourchette réelle de 30 à 40. Cause probable : le presseur envoyé au point de réception pendant une passe adverse en vol (passe en vol seule : 55,6). À reprendre dans la calibration des tacles.
+
 - [ ] Reprise du ticket socle 05 : tirs 8-15 par équipe, buts 2-3,5 par match, receveur visé au moins 50 %, passes de plus de 32 m (environ 47 % réussies, 10-19 % des passes), passes réussies 70-90 %, au plus 25 % chez l'adversaire
 - [ ] Rythme du ticket socle 06 (15-17 passes par minute, 2-3 s par joueur, possessions de 11-16 s), tacles 30-40, courses du ticket 12
 - [ ] Indicateurs tactiques du ticket 01 dans leurs fourchettes

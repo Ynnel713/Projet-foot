@@ -36,8 +36,10 @@ ALLOWED = {
     "Reflexes": {"shooting"},
     "One on Ones": {"shooting"},
     "Handling": {"shooting"},
-    "Positioning": {"bloc"},  # erreur de placement dans le bloc, reprise par la couverture (tickets v2-collectif/04 et 07)
-    "Teamwork": {"bloc", "defense"},  # écart toléré avant de se replacer (04) ; quitter le bloc pour le ballon (07)
+    # erreur de placement dans le bloc, reprise par la couverture et la compensation (tickets v2-collectif/04, 07 et 09)
+    "Positioning": {"bloc"},
+    # écart toléré avant de se replacer (04) ; quitter le bloc pour le ballon (07) ; accepter de compenser (09)
+    "Teamwork": {"bloc", "defense"},
     "Work Rate": {"defense"},  # intensité et repos du presseur (ticket v2-collectif/08)
     "Marking": {"defense"},  # distance de marquage d'un attaquant dangereux (ticket v2-collectif/07)
 }

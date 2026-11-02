@@ -17,7 +17,7 @@ from v2engine.anticipation import loose_ball_target, meeting_point
 from v2engine.ball_state import BallState
 from v2engine.bloc import Bloc
 from v2engine.decision import CONTRE_ATTAQUE, DRIBBLE_SPEED_FACTOR
-from v2engine.defense import COUVERTURE, MARQUAGE, PRESSEUR, DefensiveRoles, leave_probability
+from v2engine.defense import COMPENSATION, COUVERTURE, MARQUAGE, PRESSEUR, DefensiveRoles, leave_probability
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
 from v2engine.movement import PlayerState
 from v2engine.off_ball import COUNTER_RUN_DEPTH_M, RUN_INTERVAL_S, SPACE_HOLD_MAX_S, SPACE_REACHED_M, choose_space
@@ -102,6 +102,10 @@ def interpret(player: PlayerState, ball: BallState, seen: Perception, runs_enabl
         return APPEL  # passe de son équipe en l'air : il poursuit son appel, sans courir au ballon (ticket 06)
     if seen.read_point is not None:
         return LECTURE
+    # passe adverse en vol : il garde le rôle attribué comme si le receveur avait le ballon (réserve A2, ticket 09)
+    if defense is not None and ball.holder is None and ball.receiver is not None and player.poste != "GK" \
+            and ball.last_pass_team not in (None, player.team) and player.name in defense.assignments:
+        return defense.assignments[player.name].role
     if defense is not None and seen.holder is not None and seen.holder.team != player.team and player.poste != "GK":
         assigned = defense.assignments.get(player.name)
         if assigned is not None:
@@ -206,6 +210,10 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
         return make(role, "couvrir" if role == COUVERTURE else "marquer", assigned.target, mate=assigned.mate,
                     reason=why, distance_m=player.position.distance_to(assigned.target),
                     target_velocity=assigned.target_velocity)
+    if role == COMPENSATION:  # ticket v2-collectif/09
+        return make(role, "compenser", assigned.target, mate=assigned.mate,
+                    reason="comble la place laissée par un coéquipier",
+                    distance_m=player.position.distance_to(assigned.target))
     if role == PRESSEUR and assigned is not None:  # course orientée, à l'intensité de son Work Rate (ticket 08)
         return make(role, "presser", assigned.target, assigned.intensity, mate=assigned.mate,
                     reason="presse le porteur adverse", distance_m=seen.ball_distance,
