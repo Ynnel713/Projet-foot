@@ -13,6 +13,7 @@ import {
 import ProgressBar from "../components/simulation/ProgressBar";
 import MatchRow from "../components/simulation/MatchRow";
 import MiniStandings from "../components/simulation/MiniStandings";
+import AnimationDialog from "../components/pitch/AnimationDialog";
 
 export default function Simulation() {
   const { id } = useParams();
@@ -24,6 +25,9 @@ export default function Simulation() {
   const [loading, setLoading] = useState(false);
   const [launching, setLaunching] = useState(false); // « Lancement du live… » (simulation de la journée avant le premier live)
   const [error, setError] = useState(null);
+  // Fenêtre « Voir l'animation » ouverte directement depuis la liste, sans passer par la fiche match qui révèle le
+  // score (US-15/16, docs/PRD_PRODUIT.md) -- null = fermée, sinon le match concerné.
+  const [animationMatch, setAnimationMatch] = useState(null);
 
   // Charge le calendrier de la journée courante -- joué ou pas encore : les
   // matchs à venir doivent être visibles AVANT simulation (MatchRow affiche
@@ -138,9 +142,23 @@ export default function Simulation() {
 
         <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-1.5">
           {matches.map((m) => (
-            <MatchRow key={`${m.home}-${m.away}`} match={m} onClick={() => openPitch(m)} onLive={() => openLive(m)} />
+            <MatchRow
+              key={`${m.home}-${m.away}`}
+              match={m}
+              onClick={() => openPitch(m)}
+              onLive={() => openLive(m)}
+              onAnimation={() => setAnimationMatch(m)}
+            />
           ))}
         </div>
+
+        {animationMatch && (
+          <AnimationDialog
+            competitionId={id}
+            matchParams={{ home: animationMatch.home, away: animationMatch.away, journee: status.current_journee }}
+            onClose={() => setAnimationMatch(null)}
+          />
+        )}
 
         {/* Boutons d'action sous la liste des matchs plutôt qu'en survol
             flottant -- retour terrain du 28/09/2026, pour que le geste
@@ -179,12 +197,15 @@ export default function Simulation() {
     </div>
   );
 
-  // Bouton LIVE d'une ligne, toujours actif. Match déjà joué : on ouvre directement son live (rejoué à l'horloge accélérée).
-  // Match pas encore joué : le moteur simule la journée d'un bloc (les résultats des autres matchs alimentent les alertes buts du live),
-  // puis on ouvre le live du match. `replay=1` : le live part de la minute 0.
+  // Bouton LIVE d'une ligne, toujours actif -- ouvre directement l'ANIMATION (23/10/2026, correction : amenait avant
+  // au live textuel de PitchView, laissé de côté pour l'instant). Match déjà joué : animation immédiate, sans jamais
+  // afficher le score au préalable (AnimationDialog/MatchAnimation n'affiche qu'un chronomètre de chargement, jamais
+  // le score ni le commentaire). Match pas encore joué : le moteur simule la journée d'un bloc (les résultats des
+  // autres matchs alimentent les alertes buts ailleurs dans l'app), puis l'animation du match s'ouvre automatiquement
+  // -- aucune étape intermédiaire ne révèle quoi que ce soit sur CE match avant que l'animation ne commence.
   async function openLive(match) {
     if (match.played) {
-      openPitch(match, "live");
+      setAnimationMatch(match);
       return;
     }
     setLaunching(true);
@@ -196,7 +217,7 @@ export default function Simulation() {
       setStandings(res.standings);
       setLeaderboards(await getLeaderboards(id));
       const played = res.matches_played.find((m) => m.home === match.home && m.away === match.away);
-      openPitch(played ?? match, "live", res.status.current_journee);
+      setAnimationMatch(played ?? match);
     } catch {
       setError("Échec du lancement du live.");
     } finally {

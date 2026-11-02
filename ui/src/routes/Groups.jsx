@@ -5,6 +5,7 @@ import { getGroups, simulateGroupsMatchday, startKnockout } from "../api/client"
 import { shortScorerName } from "../utils/playerName";
 import TeamLink from "../components/common/TeamLink";
 import LiveButton from "../components/common/LiveButton";
+import AnimationDialog from "../components/pitch/AnimationDialog";
 
 export default function Groups() {
   const { id } = useParams();
@@ -13,6 +14,9 @@ export default function Groups() {
   const [loading, setLoading] = useState(false);
   const [launching, setLaunching] = useState(false); // « Lancement du live… » : simulation de la journée avant le premier live
   const [error, setError] = useState(null);
+  // Fenêtre « Voir l'animation » (bouton Animation ou LIVE), sans jamais révéler le score avant (US-15/16,
+  // docs/PRD_PRODUIT.md) -- { match, group, matchday } ou null.
+  const [animationMatch, setAnimationMatch] = useState(null);
 
   const load = useCallback(() => {
     getGroups(id)
@@ -43,9 +47,11 @@ export default function Groups() {
     }
   }
 
-  // Live d'un match de poule / de phase de ligue, quelle que soit la compétition (Coupe du Monde, Ligue des Champions, perso). Match déjà joué :
-  // on rouvre son live. Pas encore joué : on simule la journée (toutes les poules d'un bloc : le moteur n'a qu'un compteur de journée),
-  // puis on ouvre le live de CE match. `replay=1` : le live part de la minute 0.
+  // Live d'un match de poule / de phase de ligue, quelle que soit la compétition (Coupe du Monde, Ligue des Champions, perso) --
+  // ouvre directement l'ANIMATION (23/10/2026, correction : amenait avant au live textuel de PitchView, laissé de côté pour
+  // l'instant). Match déjà joué : animation immédiate, sans jamais afficher le score au préalable. Pas encore joué : on simule
+  // la journée (toutes les poules d'un bloc : le moteur n'a qu'un compteur de journée), puis l'animation de CE match s'ouvre
+  // automatiquement -- aucune étape intermédiaire ne révèle quoi que ce soit sur ce match avant que l'animation ne commence.
   async function openLive(group, match, played) {
     let matchday = data.groups_matchday - 1;
     if (!played) {
@@ -60,16 +66,7 @@ export default function Groups() {
       }
       setLaunching(false);
     }
-    navigate(
-      `/competition/${id}/pitch?${new URLSearchParams({
-        home: match.home,
-        away: match.away,
-        group: group.name,
-        matchday,
-        tab: "live",
-        replay: "1",
-      })}`,
-    );
+    setAnimationMatch({ match, group: group.name, matchday });
   }
 
   if (error) return <div className="p-6 text-sm text-gray-400">{error}</div>;
@@ -142,6 +139,19 @@ export default function Groups() {
           <LoaderCircle size={36} className="animate-spin text-live" />
           <span className="text-sm font-semibold text-slate-100">Lancement du live...</span>
         </div>
+      )}
+
+      {animationMatch && (
+        <AnimationDialog
+          competitionId={id}
+          matchParams={{
+            home: animationMatch.match.home,
+            away: animationMatch.match.away,
+            group: animationMatch.group,
+            matchday: animationMatch.matchday,
+          }}
+          onClose={() => setAnimationMatch(null)}
+        />
       )}
     </div>
   );

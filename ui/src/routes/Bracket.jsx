@@ -5,6 +5,7 @@ import { getBracket, simulateBracketRound, advanceBracketRound } from "../api/cl
 import { shortScorerName } from "../utils/playerName";
 import TeamLink from "../components/common/TeamLink";
 import LiveButton from "../components/common/LiveButton";
+import AnimationDialog from "../components/pitch/AnimationDialog";
 
 // "Tour N" -> terminologie foot standard, calculée depuis le nombre de
 // confrontations du tour (1 confrontation = finale, 2 = 1/2, 4 = 1/4, 8 =
@@ -29,6 +30,8 @@ export default function Bracket() {
   const [loading, setLoading] = useState(false);
   const [launching, setLaunching] = useState(false); // « Lancement du live… » : simulation du tour avant le premier live
   const [error, setError] = useState(null);
+  // Fenêtre « Voir l'animation », sans jamais révéler le score avant (US-15/16, docs/PRD_PRODUIT.md) -- matchParams ou null.
+  const [animationMatch, setAnimationMatch] = useState(null);
 
   const load = useCallback(() => {
     getBracket(id)
@@ -50,8 +53,10 @@ export default function Bracket() {
     }
   }
 
-  // Live d'une manche d'une confrontation (toutes compétitions à élimination directe). Manche déjà jouée : on rouvre son live. Pas encore
-  // jouée : on simule le tour (le moteur joue un tour d'un bloc), puis on ouvre le live de CETTE manche.
+  // Live d'une manche d'une confrontation (toutes compétitions à élimination directe) -- ouvre directement l'ANIMATION
+  // (23/10/2026, correction : amenait avant au live textuel de PitchView, laissé de côté pour l'instant). Manche déjà
+  // jouée : animation immédiate, sans jamais afficher le score au préalable. Pas encore jouée : on simule le tour (le
+  // moteur joue un tour d'un bloc), puis l'animation de CETTE manche s'ouvre automatiquement.
   async function openLive(round, tie, legIndex) {
     let source = data;
     if (tie.legs.length <= legIndex) {
@@ -68,16 +73,7 @@ export default function Bracket() {
     const played = source.rounds.find((r) => r.number === round.number)?.ties.find((t) => t.home === tie.home && t.away === tie.away);
     const leg = played?.legs[legIndex];
     if (!leg) return;
-    navigate(
-      `/competition/${id}/pitch?${new URLSearchParams({
-        home: leg.home,
-        away: leg.away,
-        round_number: round.number,
-        leg: legIndex,
-        tab: "live",
-        replay: "1",
-      })}`,
-    );
+    setAnimationMatch({ home: leg.home, away: leg.away, round_number: round.number, leg: legIndex });
   }
 
   if (error) return <div className="p-6 text-sm text-gray-400">{error}</div>;
@@ -154,6 +150,8 @@ export default function Bracket() {
           <span className="text-sm font-semibold text-slate-100">Lancement du live...</span>
         </div>
       )}
+
+      {animationMatch && <AnimationDialog competitionId={id} matchParams={animationMatch} onClose={() => setAnimationMatch(null)} />}
 
       {!data.is_complete && (
         <div className="shrink-0 p-3 border-t border-white/5">

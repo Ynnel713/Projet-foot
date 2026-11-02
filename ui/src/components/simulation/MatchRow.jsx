@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import LiveButton from "../common/LiveButton";
+import AnimationButton from "../common/AnimationButton";
 import ClubLink from "../common/ClubLink";
 import { shortScorerName } from "../../utils/playerName";
 
@@ -11,7 +12,7 @@ function scorersText(scorers, club) {
     .join(", ");
 }
 
-export default function MatchRow({ match, onClick, onLive }) {
+export default function MatchRow({ match, onClick, onLive, onAnimation }) {
   const notPlayed = !match.played;
   const diff = notPlayed ? 0 : match.home_goals - match.away_goals;
   const border = notPlayed
@@ -55,7 +56,10 @@ export default function MatchRow({ match, onClick, onLive }) {
         </span>
         <ClubLink name={match.away} stopPropagation align="end" logoSize={22} className="justify-self-start text-base" />
         <span className="text-[11px] text-gray-500 truncate justify-self-end text-right">{awayScorers}</span>
-        {onLive && <LiveButton played={!notPlayed} onLive={onLive} />}
+        <div className="flex items-center gap-1.5 justify-self-end">
+          {onAnimation && !notPlayed && <AnimationButton onAnimation={onAnimation} />}
+          {onLive && <LiveButton played={!notPlayed} onLive={onLive} />}
+        </div>
       </div>
     </motion.div>
   );
