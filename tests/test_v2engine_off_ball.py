@@ -9,7 +9,8 @@ from v2engine.ball_state import BallState
 from v2engine.geometry import Vec2
 from v2engine.match import _step_player
 from v2engine.movement import PlayerState
-from v2engine.off_ball import best_space_probability, choose_space, search_radius_m
+from v2engine.off_ball import (DEPTH_LANE_M, best_space_probability, choose_space, depth_run, depth_run_probability,
+                               search_radius_m)
 
 
 def _player(name: str = "P", team: str = "home", poste: str = "MC", position: Vec2 = Vec2(50.0, 34.0),
@@ -99,3 +100,80 @@ def test_crowded_teammates_fall_back_to_the_usual_choice() -> None:
     random.seed(1)
     target = choose_space(runner, opponents, forward=1.0, mates=[runner.home_target])  # aucun espace à 8 m : pas bloqué
     assert target.distance_to(runner.home_target) <= 15.0 * 1.2 + 1e-9
+
+
+# Appel dans le dos (ticket v2-collectif/16). Ligne du hors-jeu à 80 m de son but, ballon à 50 m, place à 70 m.
+LINE = 80.0
+ANCHOR = Vec2(70.0, 34.0)
+
+
+def _depth_runner(off_the_ball: int = 99) -> PlayerState:
+    return _player("Coureur", poste="BU", position=Vec2(68.0, 34.0), attributes={"Off the Ball": off_the_ball})
+
+
+def _holder(vision: int = 99, passing: int = 99) -> PlayerState:
+    return _player("Porteur", position=Vec2(50.0, 34.0), attributes={"Vision": vision, "Passing": passing})
+
+
+def _depth_share(runner: PlayerState, holder: PlayerState, mates: list[Vec2] | None = None, n: int = 2000) -> float:
+    random.seed(20260923)
+    return sum(depth_run(runner, ANCHOR, holder.position, LINE, holder, 1.0, mates or []) is not None
+               for _ in range(n)) / n
+
+
+def test_depth_run_curves_match_validated_points() -> None:
+    exploit_99 = depth_run_probability(_depth_runner(55), _holder()) / 0.35
+    assert [round(depth_run_probability(_depth_runner(v), _holder()) / exploit_99, 3) for v in (99, 55, 11)]         == [0.6, 0.35, 0.1]
+    exploit = [depth_run_probability(_depth_runner(55), _holder(v, v)) / 0.35 for v in (99, 55, 11)]
+    assert [round(e, 2) for e in exploit] == [0.95, 0.70, 0.47]
+
+
+def test_depth_run_targets_the_line_at_the_width_of_his_place() -> None:
+    random.seed(1)
+    target = next(t for t in (depth_run(_depth_runner(), ANCHOR, Vec2(50.0, 34.0), LINE, _holder(), 1.0, [])
+                              for _ in range(50)) if t is not None)
+    assert target == Vec2(LINE, ANCHOR.y)
+    away = _player("Coureur", team="away", position=Vec2(105.0 - 68.0, 34.0), attributes={"Off the Ball": 99})
+    random.seed(1)
+    target = next(t for t in (depth_run(away, Vec2(105.0 - 70.0, 34.0), Vec2(105.0 - 50.0, 34.0), LINE, _holder(),
+                                        -1.0, []) for _ in range(50)) if t is not None)
+    assert target.x == 105.0 - LINE
+
+
+def test_no_depth_run_behind_the_ball_far_from_the_line_or_without_holder() -> None:
+    runner = _depth_runner()
+    random.seed(1)
+    for _ in range(200):
+        assert depth_run(runner, ANCHOR, Vec2(75.0, 34.0), LINE, _holder(), 1.0, []) is None  # derrière le ballon
+        assert depth_run(runner, Vec2(55.0, 34.0), Vec2(50.0, 34.0), LINE, _holder(), 1.0, []) is None  # 25 m
+        assert depth_run(runner, ANCHOR, Vec2(50.0, 34.0), LINE, None, 1.0, []) is None  # passe en l'air
+
+
+def test_two_depth_runs_never_share_a_lane() -> None:
+    same_lane = [Vec2(LINE - 1.0, ANCHOR.y + DEPTH_LANE_M - 1.0)]
+    other_lane = [Vec2(LINE - 1.0, ANCHOR.y + DEPTH_LANE_M + 1.0)]
+    assert _depth_share(_depth_runner(), _holder(), same_lane) == 0.0
+    assert _depth_share(_depth_runner(), _holder(), other_lane) > 0.4
+
+
+def test_high_off_the_ball_runs_in_behind_more_often() -> None:
+    assert _depth_share(_depth_runner(99), _holder()) >= 2.0 * _depth_share(_depth_runner(11), _holder())
+
+
+def test_a_weak_holder_makes_the_runner_give_up() -> None:
+    strong, weak = _depth_share(_depth_runner(), _holder(99, 99)), _depth_share(_depth_runner(), _holder(11, 11))
+    assert strong >= 2.0 * weak > 0.0  # jamais binaire : un porteur faible n'annule pas tout
+
+
+def test_a_launched_depth_run_is_held_without_a_new_draw() -> None:
+    runner, holder = _depth_runner(11), _holder(11, 11)  # tirage quasi perdu d'avance
+    other = _player("Autre", position=Vec2(55.0, 30.0), attributes={"Vision": 11, "Passing": 11})
+    random.seed(1)
+    for _ in range(100):
+        assert depth_run(runner, ANCHOR, holder.position, LINE, holder, 1.0, [], "Porteur") == Vec2(LINE, ANCHOR.y)
+        assert depth_run(runner, ANCHOR, holder.position, LINE, None, 1.0, [], "Porteur") == Vec2(LINE, ANCHOR.y)
+        assert depth_run(runner, ANCHOR, Vec2(75.0, 34.0), LINE, holder, 1.0, [], "Porteur") is None  # passé derrière
+    assert sum(depth_run(runner, ANCHOR, other.position, LINE, other, 1.0, [], "Porteur") is not None
+               for _ in range(500)) < 100  # nouveau porteur : il retire au sort
+    lane = [Vec2(LINE - 1.0, ANCHOR.y)]
+    assert depth_run(runner, ANCHOR, holder.position, LINE, holder, 1.0, lane, "Porteur") is None  # couloir pris

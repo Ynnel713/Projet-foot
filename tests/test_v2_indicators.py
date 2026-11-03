@@ -276,6 +276,21 @@ def test_retreat_speed_block_reform_and_players_behind_the_ball() -> None:
     assert c.stats["4 joueurs ou plus derrière le ballon 1 s après la perte (part)"].values == [1.0]
 
 
+def test_retreat_speed_of_the_players_ahead_of_the_ball() -> None:
+    """Ticket 10 : 1,5 s après la perte, vitesse vers son but des seuls joueurs qui étaient devant le ballon."""
+    c = ind.Collector(geometry_every_s=1e9)
+    away = [_p("A0", "away", 80, 30)]
+    at_loss = [_p("H0", "home", 10, 30), _p("H1", "home", 20, 30), _p("H2", "home", 75, 30), _p("H4", "home", 65, 30),
+               _p("H3", "home", 90, 30)]
+    c.on_tick(0.0, at_loss + away, _ball(75, 30, "H2"), None)
+    c.on_tick(0.1, at_loss + away, _ball(80, 30, "A0"), None)  # home perd ; H2 à 5 m, H4 à 15 m, H3 devant le ballon
+    later = [_p("H0", "home", 10, 30), _p("H1", "home", 20, 30), _p("H2", "home", 78, 30, vx=3.0),
+             _p("H4", "home", 65, 30), _p("H3", "home", 88, 30, vx=-4.0)]
+    c.on_tick(1.6, later + away, _ball(80, 30, "A0"), None)
+    c.end_match()
+    assert c.stats["repli : vitesse des joueurs devant le ballon à 1,5 s (m/s)"].values == [4.0]  # H3 seul, il revient
+
+
 # --- Commande de mesure -------------------------------------------------------------------------------------------
 def test_profile_forces_physical_attributes_read_on_database_players() -> None:
     import v2engine.match as match
@@ -363,3 +378,33 @@ def test_open_options_threshold_counts_only_easy_passes() -> None:
     chance = ind.pass_chances(holder, [holder, mate], [marker])[0]
     assert ind.open_options(holder, [holder, mate], [marker], threshold=chance) == 1
     assert ind.open_options(holder, [holder, mate], [marker], threshold=min(1.0, chance + 0.01)) == 0
+
+
+def test_combination_indicators_read_the_pass_log() -> None:
+    # ticket v2-collectif/14 : C2, retour au passeur, une-deux, troisième homme
+    c = ind.Collector()
+    log = [
+        dict(t=0.0, team="home", passer="a", target="b", gain=0.0, start=Vec2(40, 34), end=Vec2(40, 20),
+             progressive=False, follow="c", done=True),  # sans gain, suite prévue c
+        dict(t=1.0, team="home", passer="b", target="c", gain=12.0, start=Vec2(40, 20), end=Vec2(55, 25),
+             progressive=True, follow=None, done=True),  # le troisième homme, et elle fait avancer
+        dict(t=2.0, team="home", passer="c", target="d", gain=0.0, start=Vec2(55, 25), end=Vec2(55, 40),
+             progressive=False, follow=None, done=True),
+        dict(t=3.0, team="home", passer="d", target="c", gain=8.0, start=Vec2(55, 40), end=Vec2(62, 25),
+             progressive=False, follow=None, done=True),  # retour vers c, avancé de 7 m : une-deux
+    ]
+    c.pass_log = log
+    c._combinations()
+    k = c.count
+    assert k["passes sans gain réussies"] == 2 and k["passes sans gain suivies d'une passe qui fait avancer"] == 1
+    assert k["troisième homme (suite prévue jouée et réussie)"] == 1
+    assert k["retours au passeur en 3 s"] == 1 and k["une-deux"] == 1
+
+
+def test_triangle_needs_three_open_passes_and_an_angle() -> None:
+    holder, a, b = _p("h", "home", 50, 34), _p("a", "home", 60, 28), _p("b", "home", 60, 40)
+    assert ind.triangle(holder, [holder, a, b], [])
+    aligned = _p("b", "home", 70, 22)  # dans l'axe de a : pas de triangle
+    assert not ind.triangle(holder, [holder, a, aligned], [])
+    assert ind.breaks_a_line("home", Vec2(30, 34), Vec2(60, 34),
+                             [_p(f"o{i}", "away", x, 10 + 6 * i) for i, x in enumerate((45, 46, 47, 75, 76, 90, 91))])

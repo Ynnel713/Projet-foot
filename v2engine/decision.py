@@ -13,6 +13,7 @@ from dataclasses import dataclass, replace
 from v2engine.attributes import player_attribute, success_probability
 from v2engine.geometry import Vec2
 from v2engine.movement import PlayerState
+from v2engine.off_ball import OPEN_LANE_PROBABILITY
 from v2engine.offside import is_clearly_offside, pass_margin_m, perceived_defence_line
 from v2engine.possession import pass_success_probability, pressure
 from v2engine.shooting import SHOOTING_RANGE_M, shot_probability
@@ -40,6 +41,13 @@ _PROGRESS_SCALE_M = 20.0  # une passe vers un coéquipier 20 m plus près du but
 # immédiat), le reste du gain immédiat. La suite vaut au moins la position atteinte (il garde le ballon) : sans
 # meilleure suite, la passe garde sa valeur d'avant. Pas de suite en contre-attaque (décisions du 01/11/2026).
 _FOLLOW_UP_SHARE = 0.4
+# Plan de passe (ticket v2-collectif/14, validé par le propriétaire le 02/11/2026) : la suite prévue par le passeur est
+# transmise au receveur. À sa première décision, il l'adopte selon son Teamwork (même courbe que tenir le bloc,
+# `defense._STAYS` : 99 -> 100 %, 55 -> 85 %, 11 -> 65 %), puis la tient si la passe reste jouable (réussite au moins
+# `OPEN_LANE_PROBABILITY`) et que sa Vision la voit : sa valeur est alors majorée de `PLAN_BONUS`. Sinon il l'abandonne.
+PLAN_BONUS = 0.3
+_ADOPT_PLAN = (0.85, 0.2, 0.65, 1.0)  # baseline, amplitude, min, max
+PLAN_HELD, PLAN_DROPPED, PLAN_UNSEEN, PLAN_REFUSED = "tenu", "abandonné", "non vu", "refusé"
 
 # Vision (ticket v2-cerveau-joueurs/02, constantes validées par le propriétaire le 24/10/2026) : QUELS coéquipiers le
 # porteur envisage. Portée 99 -> 50 m, 55 -> 30 m, 11 -> 10 m ; une passe qui fait gagner au moins
@@ -74,6 +82,14 @@ class Action:
     target: PlayerState | None = None  # coéquipier visé, pour une passe
     considered: int = 1  # options envisagées à cette décision (journal des décisions, ADR 0001)
     best: bool = True  # meilleure option prise (Decisions)
+    follow: str | None = None  # suite prévue pour le receveur d'une passe, s'il en a une meilleure (ticket 14)
+    plan: str | None = None  # sort du plan reçu : PLAN_HELD, _DROPPED, _UNSEEN ou _REFUSED (ticket 14)
+
+
+def adopt_plan_probability(player: PlayerState) -> float:
+    baseline, amplitude, low, high = _ADOPT_PLAN
+    return success_probability(player_attribute(player, "Teamwork"), baseline=baseline, amplitude=amplitude,
+                               min_prob=low, max_prob=high)
 
 
 def vision_range_m(vision: float) -> float:
@@ -109,10 +125,11 @@ def visible_teammates(holder: PlayerState, teammates: list[PlayerState], goal: V
 
 
 def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2, keeper: PlayerState | None,
-                     mode: str | None = None) -> list[Action]:
+                     mode: str | None = None, planned: str | None = None) -> list[Action]:
     """Les options du porteur avec leur valeur (plus haut = meilleur). Tirer n'existe qu'à portée
     (`SHOOTING_RANGE_M`), passer seulement s'il a un coéquipier ; conduire est toujours possible. `mode` : choix de
-    transition de son équipe, contre-attaque ou conservation (ticket v2-collectif/11), sinon `None`."""
+    transition de son équipe, contre-attaque ou conservation (ticket v2-collectif/11), sinon `None`. `planned` :
+    coéquipier que son passeur a prévu pour la suite (plan de passe, ticket v2-collectif/14)."""
     opponents = [p for p in players if p.team != holder.team]
     mates = [p for p in players if p.team == holder.team and p.name != holder.name]
     # Hors-jeu (ticket v2-collectif/23, deuxième passe du 28/10/2026) : le porteur ne sert pas un coéquipier qu'il
@@ -131,6 +148,10 @@ def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2
     if mode == CONTRE_ATTAQUE and gene == 0.0:  # seule une passe qui fait avancer compte (ticket v2-collectif/11)
         teammates = [p for p in teammates if p.position.distance_to(goal) < holder_to_goal]
 
+    # Plan reçu (ticket 14) : adopté selon Teamwork (un tirage), jamais en contre-attaque.
+    held = planned if planned is not None and mode != CONTRE_ATTAQUE \
+        and random.random() < adopt_plan_probability(holder) else None
+
     boost = COUNTER_DRIBBLE_BOOST if mode == CONTRE_ATTAQUE and gene == 0.0 else 1.0
     options = [Action("dribble", DRIBBLE_WEIGHT * (1.0 - gene) * boost)]
     if holder_to_goal <= SHOOTING_RANGE_M:
@@ -139,33 +160,48 @@ def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2
     if teammates:
         fixed, progressive = _PASS_SHARES[mode]
 
-        def follow_up(mate: PlayerState, kept: float) -> float:
+        def follow_up(mate: PlayerState) -> tuple[float, str | None]:
             # meilleure passe suivante du receveur, vers un coéquipier que le porteur voit lui-même (Vision) ; le
             # passeur n'en fait pas partie (pas d'aller-retour) ; réussite selon le Passing et la pression du receveur ;
             # progression comptée depuis le porteur : là où le ballon arrive après les deux passes ; même échelle que
-            # le gain immédiat (parts du mode) ; au moins `kept`, la position déjà atteinte s'il garde le ballon
-            return max(kept, max((pass_success_probability(mate, nxt, opponents)
-                                  * (fixed + progressive * _progress(holder_to_goal - nxt.position.distance_to(goal)))
-                                  for nxt in seen_full if nxt is not mate
-                                  and not is_clearly_offside(holder.team, nxt.position, mate.position, opponents,
-                                                             margin, seen_line)),
-                                 default=0.0))
+            # le gain immédiat (parts du mode). Avec sa valeur, le coéquipier de cette suite (plan, ticket 14).
+            return max(((pass_success_probability(mate, nxt, opponents)
+                         * (fixed + progressive * _progress(holder_to_goal - nxt.position.distance_to(goal))), nxt.name)
+                        for nxt in seen_full if nxt is not mate
+                        and not is_clearly_offside(holder.team, nxt.position, mate.position, opponents,
+                                                   margin, seen_line)),
+                       key=lambda vn: vn[0], default=(0.0, None))
 
         # en contre-attaque, la progression seule, sans suite : on joue vite vers l'avant (ticket 11)
         share = 0.0 if mode == CONTRE_ATTAQUE else _FOLLOW_UP_SHARE
 
-        def pass_value(mate: PlayerState) -> float:
+        def pass_value(mate: PlayerState) -> tuple[float, str | None]:
             mate_to_goal = mate.position.distance_to(goal)
             now = fixed + progressive * _progress(holder_to_goal - mate_to_goal)
             success = pass_success_probability(holder, mate, opponents)  # le ballon arrive (v2-socle/04)
             # temps disponible : il garde le ballon assez longtemps pour jouer (A9 reclassé au ticket 13 : ce n'est
             # pas la réussite de la passe, mais le risque de le perdre juste après la réception)
             openness = 1.0 - pressure(mate, opponents)
-            future = follow_up(mate, now) if share else 0.0  # sans meilleure suite : la valeur d'avant le ticket 13
-            return PASS_WEIGHT * success * ((1.0 - share) * now + share * future) * openness
+            # la suite vaut au moins la position atteinte (il garde le ballon) ; sans meilleure suite, la valeur
+            # d'avant le ticket 13, et pas de plan à transmettre
+            future, follow = now, None
+            if share:
+                best_next, nxt = follow_up(mate)
+                if best_next > now:
+                    future, follow = best_next, nxt
+            # plan tenu : la passe prévue par son passeur, encore jouable, vaut davantage (ticket 14)
+            bonus = 1.0 + PLAN_BONUS if mate.name == held and success >= OPEN_LANE_PROBABILITY else 1.0
+            return PASS_WEIGHT * success * ((1.0 - share) * now + share * future) * openness * bonus, follow
 
-        value, best_mate = max(((pass_value(m), m) for m in teammates), key=lambda vm: vm[0])
-        options.append(Action("pass", value, best_mate))
+        (value, follow), best_mate = max(((pass_value(m), m) for m in teammates), key=lambda vm: vm[0][0])
+        options.append(Action("pass", value, best_mate, follow=follow))
+    if planned is not None and mode != CONTRE_ATTAQUE:  # sort du plan, pour la mesure (ticket 14)
+        # abandonné : la cible est vue mais la ligne s'est fermée ; non vu : hors de sa Vision ou hors-jeu évident
+        target = next((m for m in teammates if m.name == held), None)
+        state = PLAN_REFUSED if held is None else PLAN_UNSEEN if target is None \
+            else PLAN_HELD if pass_success_probability(holder, target, opponents) >= OPEN_LANE_PROBABILITY \
+            else PLAN_DROPPED
+        options = [replace(o, plan=state) for o in options]
     return options
 
 
@@ -179,10 +215,11 @@ def best_choice_probability(decisions: float) -> float:
 
 
 def choose_action(holder: PlayerState, players: list[PlayerState], goal: Vec2, keeper: PlayerState | None,
-                  mode: str | None = None) -> Action:
+                  mode: str | None = None, planned: str | None = None) -> Action:
     """Prend la meilleure option avec la probabilité donnée par Decisions, sinon une autre au
-    hasard -- jamais binaire, même à 99."""
-    options = sorted(evaluate_options(holder, players, goal, keeper, mode), key=lambda a: a.value, reverse=True)
+    hasard -- jamais binaire, même à 99. `planned` : suite prévue par son passeur (ticket v2-collectif/14)."""
+    options = sorted(evaluate_options(holder, players, goal, keeper, mode, planned), key=lambda a: a.value,
+                     reverse=True)
     if len(options) == 1 or random.random() < best_choice_probability(player_attribute(holder, "Decisions")):
         return replace(options[0], considered=len(options), best=True)
     return replace(random.choice(options[1:]), considered=len(options), best=False)

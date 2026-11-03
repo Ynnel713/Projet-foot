@@ -17,13 +17,15 @@ from v2engine.anticipation import loose_ball_target, meeting_point
 from v2engine.ball_state import BallState
 from v2engine.bloc import Bloc
 from v2engine.decision import CONTRE_ATTAQUE, DRIBBLE_SPEED_FACTOR
-from v2engine.defense import COMPENSATION, COUVERTURE, MARQUAGE, PRESSEUR, DefensiveRoles, leave_probability
+from v2engine.defense import (COMPENSATION, COUVERTURE, MARQUAGE, PRESSEUR, REST_DEFENDERS, DefensiveRoles,
+                              leave_probability, press_intensity)
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
 from v2engine.movement import PlayerState
-from v2engine.off_ball import COUNTER_RUN_DEPTH_M, RUN_INTERVAL_S, SPACE_HOLD_MAX_S, SPACE_REACHED_M, choose_space
+from v2engine.off_ball import (COUNTER_RUN_DEPTH_M, RUN_INTERVAL_S, SPACE_HOLD_MAX_S, SPACE_REACHED_M, choose_space,
+                               depth_run)
 from v2engine.offside import HESITATION_INTENSITY, clamp_to_onside, offside_line, respects_the_line
 from v2engine.possession import BALL_FRICTION_PER_S, RECEPTION_SPEED_FACTOR
-from v2engine.situation import POSSESSION_INSTALLEE, TRANSITION_OFFENSIVE
+from v2engine.situation import DEFENSE_PLACEE, POSSESSION_INSTALLEE, TRANSITION_DEFENSIVE, TRANSITION_OFFENSIVE
 from v2engine.transition import TransitionPlay
 
 GOAL_CENTER_Y = PITCH_WIDTH_M / 2.0
@@ -31,8 +33,6 @@ OPPONENT_GOAL = {"home": Vec2(PITCH_LENGTH_M, GOAL_CENTER_Y), "away": Vec2(0.0, 
 # Distance en dessous de laquelle un joueur va vers le ballon plutôt que vers sa position de
 # formation -- IA placeholder (D-V08), pas une vraie prise de décision.
 CHASE_RADIUS_M = 15.0
-# Joueurs de champ qui restent derrière le ballon en possession installée (validé le 30/10/2026, ticket v2-collectif/06).
-REST_DEFENDERS = 2
 
 # Rôles (GLOSSARY.md) et actions.
 # Rôles défensifs (presseur, couverture, marquage) : `defense.py` (ticket v2-collectif/07).
@@ -40,6 +40,9 @@ PORTEUR, APPEL, SOUTIEN, RECEVEUR, LECTURE, BALLON_LIBRE, REPLACEMENT = (
     "porteur", "appel", "soutien", "receveur visé", "lecture de passe", "ballon libre", "replacement")
 # Hors-jeu sifflé : l'attaquant fautif recule le temps de la remise en jeu (ticket v2-collectif/23).
 HORS_JEU = "hors-jeu"
+# Transition défensive (ticket v2-collectif/10) : le joueur sans rôle devant le ballon revient dans le bloc.
+REPLI = "repli"
+_OFFENSIVE_ROLES = (PORTEUR, APPEL, SOUTIEN, RECEVEUR)
 
 
 @dataclass(frozen=True)
@@ -134,7 +137,7 @@ def _rest_defenders(team: list[PlayerState], holder: PlayerState, forward: float
 
 
 def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, players: list[PlayerState],
-           minute: float, runs: dict[str, tuple[Vec2, float]] | None, situation: str | None = None,
+           minute: float, runs: dict[str, tuple[Vec2, float] | tuple[Vec2, float, str]] | None, situation: str | None = None,
            bloc: Bloc | None = None, defense: DefensiveRoles | None = None,
            transition: TransitionPlay | None = None) -> Intention:
     """Action, cible et intensité selon le rôle (règles d'avant le ticket v2-collectif/02 ; avec `bloc`, le
@@ -148,17 +151,23 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
         return make(role, "conduire", OPPONENT_GOAL[player.team], DRIBBLE_SPEED_FACTOR, reason="conduite vers le but")
     if role == APPEL:
         now_s = minute * 60.0
-        target, next_s = runs.get(player.name, (None, 0.0))
+        target, next_s, *held = runs.get(player.name, (None, 0.0))  # 3e terme : porteur d'un appel dans le dos (16)
         forward = 1.0 if player.team == "home" else -1.0
         # Contre-attaque (ticket v2-collectif/11) : dès qu'il a perçu la récupération (Anticipation, délai de réaction),
         # le coéquipier devant le ballon lance un nouvel appel, dans la profondeur.
         counter = transition is not None and transition.mode.get(player.team) == CONTRE_ATTAQUE \
             and situation == TRANSITION_OFFENSIVE and forward * (player.position.x - ball.position.x) > 0.0
         launch = counter and player.name not in transition.launched
+        # Plan de passe (ticket v2-collectif/14) : la suite prévue par le passeur relance son appel une fois, à la passe,
+        # vers un espace où le receveur le trouve.
+        plan = ball.plan
+        planned_by = plan[0] if plan is not None and plan[1] == player.name \
+            and plan[0] in (ball.holder, ball.receiver) else None
+        relaunch = planned_by is not None and next_s - SPACE_HOLD_MAX_S < plan[2]  # appel choisi avant la passe
         # Il garde son espace jusqu'à y être (au moins RUN_INTERVAL_S), au plus SPACE_HOLD_MAX_S (ticket v2-collectif/06).
         reached = target is not None and player.position.distance_to(target) <= SPACE_REACHED_M \
             and now_s >= next_s - SPACE_HOLD_MAX_S + RUN_INTERVAL_S
-        if target is None or now_s >= next_s or reached or launch:
+        if target is None or now_s >= next_s or reached or launch or relaunch:
             opponents = [p for p in players if p.team != player.team]
             anchor = bloc.reference(player, ball.position, situation, now_s) if bloc and situation else None
             if counter:
@@ -168,19 +177,27 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
             # positions des coéquipiers et espaces qu'ils visent en ce moment (appel encore en cours)
             spots = [m.position for m in mates] + [runs[m.name][0] for m in mates
                                                    if m.name in runs and runs[m.name][1] > now_s]
-            target = choose_space(player, opponents, forward, anchor, seen.holder, spots)
+            passer = seen.holder if planned_by is None else next((p for p in players if p.name == planned_by), None)
+            line = offside_line(player.team, ball.position, opponents)
+            # Appel dans le dos (ticket v2-collectif/16), sinon un espace libre autour de sa place.
+            # Un appel dans le dos lancé est tenu, sans nouveau tirage, tant qu'il reste possible.
+            # L'appel tenu ne survit pas à une perte de balle : trop ancien, il est retiré au sort.
+            held_for = held[0] if held and now_s - next_s <= SPACE_HOLD_MAX_S else None
+            deep = line is not None and depth_run(player, anchor or player.home_target, ball.position, line, passer,
+                                                  forward, spots, held_for)
+            target = deep or choose_space(player, opponents, forward, anchor, passer, spots)
             # Équilibre (ticket v2-collectif/06) : en possession installée, les deux joueurs de champ les plus reculés
             # restent derrière le ballon, sauf l'indiscipliné qui monte quand même (Teamwork, courbe du ticket 07).
             if situation == POSSESSION_INSTALLEE and forward * (target.x - ball.position.x) > 0.0 \
                     and player in _rest_defenders(mates + [player], seen.holder, forward) \
                     and stays_behind(player):
-                target = Vec2(ball.position.x, target.y)
+                target, deep = Vec2(ball.position.x, target.y), False  # appel annulé : il n'est pas tenu
             # Hors-jeu (ticket 23) : l'attaquant règle son appel sur la ligne, d'autant plus qu'il a de l'Off the
             # Ball. Un joueur à faible Off the Ball part au-delà et se fait prendre. Un seul tirage par appel.
-            line = offside_line(player.team, ball.position, opponents)
             if line is not None and respects_the_line(player):
                 target = clamp_to_onside(player.team, target, line)
-            runs[player.name] = (target, now_s + SPACE_HOLD_MAX_S)
+            runs[player.name] = (target, now_s + SPACE_HOLD_MAX_S) if not deep \
+                else (target, now_s + SPACE_HOLD_MAX_S, passer.name if passer is not None else held_for)
         mate = seen.holder.name if seen.holder is not None else ball.receiver  # passe en l'air : le receveur
         return make(role, "se démarquer", target, mate=mate, reason="appel vers un espace libre")
     if role == RECEVEUR:
@@ -189,6 +206,13 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
     if role == LECTURE:
         return make(role, "couper la passe", seen.read_point, reason="passe lue, il court l'intercepter",
                          distance_m=player.position.distance_to(seen.read_point))
+    if role == REPLACEMENT and situation == TRANSITION_DEFENSIVE and bloc is not None \
+            and (1.0 if player.team == "home" else -1.0) * (player.position.x - ball.position.x) > 0.0:
+        # Repli (ticket v2-collectif/10) : devant le ballon à la perte, il rejoint sa place dans le bloc sans attendre
+        # l'écart toléré (Teamwork), à l'intensité de ses efforts sans ballon (Work Rate, courbe du presseur).
+        place = bloc.target(player, ball.position, situation, minute * 60.0)
+        return make(REPLI, "se replier", place, press_intensity(player), reason="ballon perdu, il revient dans le bloc",
+                    distance_m=player.position.distance_to(place))
     if role == REPLACEMENT:
         if bloc is None or situation is None:  # sans bloc (tests unitaires) : sa place de départ
             return make(role, "se replacer", player.home_target, reason="loin du ballon, il rejoint sa place")
@@ -228,17 +252,25 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
 
 
 def think(player: PlayerState, ball: BallState, players: list[PlayerState], minute: float,
-          runs: dict[str, tuple[Vec2, float]] | None, situation: str | None = None, bloc: Bloc | None = None,
-          defense: DefensiveRoles | None = None, transition: TransitionPlay | None = None) -> Intention:
+          runs: dict[str, tuple[Vec2, float] | tuple[Vec2, float, str]] | None, situation: str | None = None, bloc: Bloc | None = None,
+          defense: DefensiveRoles | None = None, transition: TransitionPlay | None = None,
+          previous: Intention | None = None) -> Intention:
     """Perception, interprétation, décision : l'intention du joueur à cet instant. `situation` : situation de jeu
     perçue (ticket v2-collectif/03) ; avec `bloc`, elle donne la forme du bloc où il se replace (ticket 04) ; avec
-    `defense`, les rôles défensifs attribués par son équipe (ticket 07)."""
+    `defense`, les rôles défensifs attribués par son équipe (ticket 07) ; `previous` : son intention au tick
+    précédent (ticket 10)."""
     now_s = minute * 60.0
     if now_s < ball.offside_out_until.get(player.name, 0.0):
         # Hors-jeu sifflé (ticket v2-collectif/23) : l'attaquant fautif recule le temps que la défense se replace.
         return Intention(HORS_JEU, "reculer", player.home_target, HESITATION_INTENSITY,
                          reason="hors-jeu sifflé, il recule vers sa place", situation=situation)
     seen = perceive(player, ball, players)
+    # Réaction à la perte (ticket v2-collectif/10) : tant qu'il ne l'a pas perçue (délai de réaction d'Anticipation,
+    # `SituationTracker.perceived`), il poursuit son action offensive.
+    if previous is not None and previous.role in _OFFENSIVE_ROLES \
+            and situation not in (None, DEFENSE_PLACEE, TRANSITION_DEFENSIVE) \
+            and seen.holder is not None and seen.holder.team != player.team:
+        return previous
     role = interpret(player, ball, seen, runs is not None, players, defense, now_s)
     intention = decide(player, role, ball, seen, players, minute, runs, situation, bloc, defense, transition)
     if now_s < ball.hesitation.get(player.name, 0.0):

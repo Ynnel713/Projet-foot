@@ -197,3 +197,21 @@ def test_teammates_keep_their_run_while_their_pass_is_in_flight() -> None:
     rival_pass = _ball(52, 34, velocity=Vec2(5.0, 0.0), receiver="Y", last_pass_team="away")
     assert cerveau.think(mate, rival_pass, players, 1.0, runs).role == cerveau.BALLON_LIBRE
     assert cerveau.think(mate, _ball(52, 34), players, 1.0, runs).role == cerveau.BALLON_LIBRE  # ballon perdu
+
+
+def test_a_depth_run_is_remembered_and_held_at_the_next_search(monkeypatch) -> None:
+    holder, mate = _p("H"), _p("M", x=70, poste="BU")
+    defenders = [_p("D1", team="away", x=80, y=20), _p("D2", team="away", x=80, y=48), _p("G", team="away", x=104)]
+    monkeypatch.setattr(cerveau.random, "random", lambda: 0.999)  # tout nouveau tirage serait perdu
+    runs: dict = {"M": (Vec2(80.0, 34.0), 59.0, "H")}  # appel dans le dos lancé pour H, délai à peine écoulé
+    intention = cerveau.think(mate, _ball(holder="H"), [holder, mate, *defenders], 1.0, runs)
+    assert intention.target.x >= 79.0 and runs["M"][2] == "H"  # il tient la ligne, sans nouveau tirage
+
+
+def test_a_held_depth_run_does_not_survive_a_loss_of_the_ball(monkeypatch) -> None:
+    holder, mate = _p("H"), _p("M", x=70, poste="BU")
+    defenders = [_p("D1", team="away", x=80, y=20), _p("D2", team="away", x=80, y=48), _p("G", team="away", x=104)]
+    monkeypatch.setattr(cerveau.random, "random", lambda: 0.999)  # tout nouveau tirage serait perdu
+    runs: dict = {"M": (Vec2(80.0, 34.0), 10.0, "H")}  # lancé pour H, il y a 50 s : la possession a changé depuis
+    intention = cerveau.think(mate, _ball(holder="H"), [holder, mate, *defenders], 1.0, runs)
+    assert intention.target.x < 79.0 and len(runs["M"]) == 2  # retiré au sort, perdu : espace ordinaire

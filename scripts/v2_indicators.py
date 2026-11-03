@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from v2engine.cerveau import OPPONENT_GOAL
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
 from v2engine.movement import PlayerState
+from v2engine.offside import offside_line
 from v2engine.possession import pass_success_probability
 from v2engine.situation import POSSESSION_INSTALLEE, SituationTracker
 
@@ -33,15 +34,28 @@ COVER_BEHIND_M, COVER_AHEAD_M, COVER_HALF_WIDTH_M = 3.0, 9.0, 4.0
 LOCAL_RADIUS_M = 10.0
 LOCAL_DEFENDERS = 5
 RUN_SPEED_MPS, RUN_MIN_S, RUN_SAME_ZONE_M = 15.0 * KMH, 0.7, 5.0
+ON_THE_LINE_M, NEAR_THE_LINE_M = 2.0, 5.0  # appel dans le dos ; jeu sur la ligne à la passe (ticket 16)
 TRANSITION_LOSS_S = 5.0
 COUNTER_WINDOW_S = 15.0
 RETREAT_SPEED_MPS, RETREAT_WINDOW_S = 1.0, 10.0
+# Repli (ticket v2-collectif/10) : vitesse vers son but, 1,5 s après la perte, des joueurs qui étaient devant le ballon
+CHOICE_AFTER_S = 1.5
 RECOVERY_CLASSES = ((5.0, "0-5 s"), (12.0, "5-12 s"), (15.0, "12-15 s"), (math.inf, "plus de 15 s"))
 LONG_PASS_M = 32.0
 SHOT_CLOSE_RANGE_M = 16.0  # tir « de près » : demande du propriétaire (28/10/2026) pour mesurer l'exposition du gardien
 FREE_PASSER_M = 9.0  # porteur libre : défenseur le plus proche à 9 m ou plus (pressé : PRESS_RADIUS_M), ticket 05
 SPRINT_MPS, HIGH_INTENSITY_MPS = 25.0 * KMH, 19.8 * KMH
 CROWDED_M = 5.0  # regroupement : coéquipier à moins de 5 m, hors duel (ticket 06)
+# Combinaisons (ticket v2-collectif/14, validé le 02/11/2026) : passe « sans gain » sous 5 m vers le but ; passe qui
+# fait avancer : elle casse une ligne adverse ou gagne au moins 10 m ; retour au passeur dans les 3 s ; une-deux si le
+# passeur a avancé d'au moins 5 m entre sa passe et le retour ; triangle : deux coéquipiers à 30 m au plus, trois
+# passes toutes au moins à 0,7 et un angle de 20 à 160 degrés au porteur.
+NO_GAIN_M = 5.0
+PROGRESSIVE_GAIN_M = 10.0
+RETURN_WINDOW_S = 3.0
+ONE_TWO_MIN_GAIN_M = 5.0
+TRIANGLE_RANGE_M = 30.0
+TRIANGLE_ANGLES_DEG = (20.0, 160.0)
 
 
 def forward(team: str) -> float:
@@ -113,6 +127,28 @@ def line_gaps(team: str, points: Sequence[Vec2]) -> tuple[float, float] | None:
         return None
     means = [statistics.fmean(line) for line in ls]
     return means[1] - means[0], means[2] - means[1]
+
+
+def breaks_a_line(team: str, start: Vec2, end: Vec2, players: Sequence[PlayerState]) -> bool:
+    """Passe qui casse une ligne : la position moyenne d'une ligne adverse (`lines`) est entre le passeur et la cible."""
+    rivals = [p.position for p in outfield(players, "away" if team == "home" else "home")]
+    a, b = progress(team, start.x), progress(team, end.x)
+    return any(a < statistics.fmean(line) < b for line in lines(team, rivals) if line)
+
+
+def triangle(holder: PlayerState, mates: Sequence[PlayerState], opponents: Sequence[PlayerState]) -> bool:
+    """Au moins un triangle de passes autour du porteur (définition du ticket v2-collectif/14)."""
+    near = [m for m in mates if m is not holder and holder.position.distance_to(m.position) <= TRIANGLE_RANGE_M
+            and pass_success_probability(holder, m, opponents) >= OPTION_PROBABILITY]
+    low, high = TRIANGLE_ANGLES_DEG
+    for i, a in enumerate(near):
+        for b in near[i + 1:]:
+            u, v = a.position - holder.position, b.position - holder.position
+            cos = (u.x * v.x + u.y * v.y) / max(1e-9, u.length() * v.length())
+            if low <= math.degrees(math.acos(max(-1.0, min(1.0, cos)))) <= high \
+                    and pass_success_probability(a, b, opponents) >= OPTION_PROBABILITY:
+                return True
+    return False
 
 
 def is_deep_pass(team: str, target: Vec2, players: Sequence[PlayerState]) -> bool:
@@ -268,9 +304,14 @@ class Collector:
         self.retreat: list[dict] = []
         self.runs: dict[str, _Run] = {}
         self.run_log: list[tuple[str, float, float, Vec2]] = []  # (joueur, début, fin, position finale)
+        self.deep_runs: Counter = Counter()  # appels finis à ON_THE_LINE_M ou moins de la ligne, par joueur (16)
         self.follow: dict[str, list[tuple[float, float]]] = defaultdict(list)  # axe -> (ballon, centre d'équipe)
         self.profile_gaps: dict[str, list[float]] = defaultdict(list)  # niveau -> distances défense-milieu
         self.press_open: tuple[str, float] | None = None  # pressing en cours (ticket 08) : (équipe qui presse, début)
+        self.now = 0.0  # instant du dernier tick
+        self.planned: str | None = None  # suite prévue par la dernière décision (plan de passe, ticket 14)
+        # passes du match (ticket 14) : instant, équipe, passeur, cible, gain (m), avance, suite prévue, réussie
+        self.pass_log: list[dict] = []
 
     # --- événements du moteur ---
     def on_pass(self, passer: PlayerState, target: PlayerState) -> None:
@@ -280,7 +321,27 @@ class Collector:
         deep = is_deep_pass(passer.team, target.position, self.players)
         self.count["passes en profondeur"] += deep
         self.pending_pass = (passer.team, target.name, length, deep)
+        self._line_at_pass(passer)
         self.team_passes += 1
+        goal = opponent_goal_center(passer.team)
+        gain = passer.position.distance_to(goal) - target.position.distance_to(goal)
+        self.pass_log.append({"t": self.now, "team": passer.team, "passer": passer.name, "target": target.name,
+                              "gain": gain, "start": passer.position, "end": target.position,
+                              "progressive": gain >= PROGRESSIVE_GAIN_M
+                              or breaks_a_line(passer.team, passer.position, target.position, self.players),
+                              "follow": self.planned, "done": False})
+
+    def _line_at_pass(self, passer: PlayerState) -> None:
+        """Jeu sur la ligne (ticket 16) : distance de l'attaquant le plus avancé à la ligne du hors-jeu, à la passe."""
+        line = offside_line(passer.team, passer.position, [p for p in self.players if p.team != passer.team])
+        mates = [progress(passer.team, p.position.x) for p in self.players
+                 if p.team == passer.team and p.poste != "GK" and p.name != passer.name]
+        if line is None or not mates:
+            return
+        gap = line - max(mates)
+        self.stats["attaquant le plus avancé à la passe : distance à la ligne (m)"].add(gap)
+        self.stats["attaquant le plus avancé à la passe : 2 m ou moins de la ligne (part)"].add(1.0 if gap <= ON_THE_LINE_M else 0.0)
+        self.stats["attaquant le plus avancé à la passe : 5 m ou moins de la ligne (part)"].add(1.0 if gap <= NEAR_THE_LINE_M else 0.0)
 
     def on_shot(self, shooter: PlayerState, now_s: float) -> None:
         self.count["tirs"] += 1
@@ -297,8 +358,17 @@ class Collector:
     def on_tackle(self) -> None:
         self.count["tacles"] += 1
 
-    def on_choice(self, kind: str) -> None:
+    def on_choice(self, kind: str, follow: str | None = None, plan: str | None = None) -> None:
         self.count["choix " + kind] += 1
+        self.planned = follow
+        if plan is not None:  # sort du plan reçu (ticket 14)
+            self.count["plans reçus"] += 1
+            self.count["plan " + plan] += 1
+        holder = next((p for p in self.players if p.name == self.holder), None)
+        if holder is not None:  # triangles autour du porteur, à chaque décision (ticket 14)
+            mates = [p for p in self.players if p.team == holder.team]
+            rivals = [p for p in self.players if p.team != holder.team]
+            self.stats["décisions avec au moins un triangle (part)"].add(1.0 if triangle(holder, mates, rivals) else 0.0)
 
     def on_balance(self, player: PlayerState, stays: bool) -> None:
         """Défenseur d'équilibre dont l'appel le mènerait devant le ballon : y va-t-il quand même ? (ticket 06)"""
@@ -314,6 +384,7 @@ class Collector:
     # --- tick ---
     def on_tick(self, now_s: float, players: list[PlayerState], ball, scoring_team: str | None, dt: float = 0.1) -> None:
         minute = now_s / 60.0
+        self.now = now_s
         by_name = {p.name: p for p in players}
         self.players = players
         self._speeds(players, minute, dt)
@@ -389,6 +460,8 @@ class Collector:
             self.count["passes longues réussies"] += team == pass_team and length > LONG_PASS_M
             self.count["passes chez l'adversaire"] += team != pass_team
             self.count["receveur visé"] += holder == target
+            if holder == target and self.pass_log:
+                self.pass_log[-1]["done"] = True
             self.pending_pass = None
         if team == self.team:
             return
@@ -406,7 +479,7 @@ class Collector:
                 self.count["récupérations"] += 1
             self.loss_open[lost] = now_s
             self.retreat.append({"team": lost, "start": now_s, "latency": None, "speeds": [], "lengths": [],
-                                 "behind": None, "length0": None})
+                                 "behind": None, "length0": None, "choice": None})
             self.count["pertes de balle"] += 1
         self.team, self.team_since, self.team_passes = team, now_s, 0
 
@@ -416,6 +489,7 @@ class Collector:
                 run = self.runs.pop(p.name)
                 if now_s - run.start_s >= RUN_MIN_S:
                     self.run_log.append((p.name, run.start_s, now_s, p.position))
+                    self._deep_run(p.name, p.team, p.position, players, ball)
                 continue
             if p.team != self.team or p.poste == "GK" or p.name == ball.holder:
                 self.runs.pop(p.name, None)  # ponytail: appel interrompu par une perte de balle, non compté
@@ -427,6 +501,12 @@ class Collector:
                 run = self.runs.pop(p.name)
                 if now_s - run.start_s >= RUN_MIN_S and self._creates_option(p, players, ball):
                     self.run_log.append((p.name, run.start_s, now_s, run.last))
+                    self._deep_run(p.name, p.team, run.last, players, ball)
+
+    def _deep_run(self, name: str, team: str, end: Vec2, players, ball) -> None:
+        line = offside_line(team, ball.position, [p for p in players if p.team != team])
+        if line is not None and progress(team, end.x) >= line - ON_THE_LINE_M:
+            self.deep_runs[name] += 1
 
     def _creates_option(self, runner: PlayerState, players, ball) -> bool:
         """Un appel compte s'il crée une option de passe : receveur visé d'une passe en cours, ou solution
@@ -457,12 +537,28 @@ class Collector:
             if r["length0"] is None:
                 r["length0"] = length
             r["lengths"].append((elapsed, length))
+            if r["choice"] is None and ball is not None:  # joueurs devant le ballon à la perte (ticket 10)
+                r["choice"] = {p.name for p in own if forward(r["team"]) * (p.position.x - ball.position.x) > 0.0}
+            elif r["choice"] and elapsed >= CHOICE_AFTER_S:
+                self._retreat_speeds(r, own)
+                r["choice"] = set()
             if r["behind"] is None and elapsed >= 1.0 and ball is not None:  # 1 s après la perte (au tick près)
                 r["behind"], _ = preventive(r["team"], ball.position, own, ())
                 self.stats["4 joueurs ou plus derrière le ballon 1 s après la perte (part)"].add(
                     1.0 if r["behind"] >= 4 else 0.0)
             still.append(r)
         self.retreat = still
+
+    def _retreat_speeds(self, r, own):
+        """Ticket 10 : 1,5 s après la perte, vitesse vers son but des joueurs qui étaient devant le ballon (profils
+        Work Rate)."""
+        for p in own:
+            if p.name in r["choice"]:
+                back = -forward(r["team"]) * p.velocity.x
+                self.stats["repli : vitesse des joueurs devant le ballon à 1,5 s (m/s)"].add(back)
+                level = self.levels.get(p.name)
+                if level:
+                    self.stats[f"profil {level} : vitesse de repli à 1,5 s (m/s)"].add(back)
 
     def _pressing(self, now_s, players, ball, by_name, dt):
         """Ticket 08 : pressings (un défenseur passe à moins de PRESS_RADIUS_M du porteur) suivis d'une récupération
@@ -569,6 +665,10 @@ class Collector:
                 self.stats["réussite moyenne des passes disponibles (part)"].add(sum(chances) / len(chances), **keys)
             if level:
                 self.stats[f"profil {level} : solutions de passe ouvertes (nombre)"].add(options)
+                space = [min(m.position.distance_to(o.position) for o in all_opponents)
+                         for m in mates if m is not holder and m.poste != "GK"]
+                if space and all_opponents:  # critère reporté du ticket cerveau 03 (ticket 16)
+                    self.stats[f"profil {level} : espace des coéquipiers du porteur (m)"].add(statistics.fmean(space))
             defending = self.levels.get(defenders[0].name) if defenders else None
             if defending:  # ticket 08 : solutions laissées au porteur par l'équipe haute ou basse
                 self.stats[f"profil {defending} : solutions laissées au porteur adverse (nombre)"].add(options)
@@ -615,6 +715,7 @@ class Collector:
             if self.poste.get(name) not in (None, "GK"):
                 self.stats[f"profil {level} : course intense par joueur (m)"].add(self.hi_by[name])
                 self.stats[f"profil {level} : appels par joueur"].add(per_player.get(name, 0))
+                self.stats[f"profil {level} : appels dans le dos par joueur"].add(self.deep_runs[name])
                 self.stats[f"profil {level} : km par joueur"].add(self.dist[name] / 1000.0)
         for axis, pairs in self.follow.items():  # pente : part du déplacement du ballon suivie par le centre d'équipe
             if len(pairs) > 2:
@@ -623,4 +724,26 @@ class Collector:
             if len(gaps) > 1:
                 self.stats[f"profil {level} : écart-type distance défense-milieu (m)"].add(statistics.pstdev(gaps))
         self.count["appels"] += len(self.run_log)
+        self.count["appels dans le dos"] += sum(self.deep_runs.values())
+        self._combinations()
         self._reset_match()
+
+    def _combinations(self) -> None:
+        """Enchaînements de passes du match (ticket v2-collectif/14)."""
+        k = self.count
+        for p, q in zip(self.pass_log, self.pass_log[1:] + [None]):
+            if not p["done"]:
+                continue
+            k["passes réussies (journal)"] += 1
+            nxt = q if q is not None and q["passer"] == p["target"] and q["team"] == p["team"] else None
+            if p["gain"] < NO_GAIN_M:  # C2 du ticket 13
+                k["passes sans gain réussies"] += 1
+                k["passes sans gain suivies d'une passe qui fait avancer"] += nxt is not None and nxt["progressive"]
+            if nxt is None:
+                continue
+            if nxt["target"] == p["passer"] and nxt["t"] - p["t"] <= RETURN_WINDOW_S:
+                k["retours au passeur en 3 s"] += 1
+                one_two = progress(p["team"], nxt["end"].x) - progress(p["team"], p["start"].x) >= ONE_TWO_MIN_GAIN_M
+                k["une-deux"] += one_two
+            if p["follow"] is not None and nxt["target"] == p["follow"] and nxt["done"]:
+                k["troisième homme (suite prévue jouée et réussie)"] += 1

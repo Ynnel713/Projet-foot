@@ -56,7 +56,13 @@ d'arrivée, plus son délai de réaction d'Anticipation) et qui accepte de quitt
 ticket 08, un tirage par trou, gardé jusqu'au retour de l'absent) ; Positioning règle la précision de son placement, comme pour la couverture. Le
 titulaire en route garde la place tant qu'il arrive au plus `HOLD_MARGIN_S` après l'attaquant ; arrivé, il la tient
 jusqu'à ce que le joueur absent revienne à moins de 5 m. Deux niveaux de cascade au plus. Decisions et Concentration n'y sont pas (règles R1 et
-R3) ; le repli du joueur qui a quitté sa place relève du ticket 10."""
+R3) ; le repli du joueur qui a quitté sa place relève du ticket 10.
+
+Contre-pressing (ticket v2-collectif/10, constantes validées par le propriétaire le 02/11/2026) : une perte dans le jeu
+(ni ballon pris par le gardien, ni coup franc de hors-jeu, ni engagement) déclenche le pressing d'équipe ci-dessus
+pour l'équipe qui a perdu, pendant `TRIGGER_S` = 5 s. Ne suivent que les joueurs à `FOLLOW_M` = 15 m ou moins du
+ballon (Teamwork, même tirage), sauf les `REST_DEFENDERS` = 2 joueurs de champ les plus reculés, qui protègent
+l'axe. Les autres se replient (`cerveau`, intensité de Work Rate, `press_intensity`)."""
 
 from __future__ import annotations
 
@@ -71,7 +77,7 @@ from v2engine.bloc import POSITIONING_REDRAW_S, Bloc
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch
 from v2engine.movement import PlayerState, accel_tau_s, max_speed_mps
 from v2engine.possession import BALL_FRICTION_PER_S, MISS_RETRY_S
-from v2engine.situation import DEFENSE_PLACEE
+from v2engine.situation import DEFENSE_PLACEE, TRANSITION_DEFENSIVE
 
 PRESSEUR, COUVERTURE, MARQUAGE, COMPENSATION = "presseur", "couverture", "marquage", "compensation"
 
@@ -100,6 +106,9 @@ HOLE_FILLED_M = 5.0
 HOLE_DANGER_M = 20.0
 CASCADE_LEVELS = 2
 _HOLE_POSTES = ("DC", "LB", "RB")
+# Joueurs de champ qui restent derrière le ballon en possession installée (validé le 30/10/2026, ticket v2-collectif/06),
+# et qui ne contre-pressent pas à la perte (ticket v2-collectif/10)
+REST_DEFENDERS = 2
 
 
 def own_goal(team: str) -> Vec2:
@@ -205,16 +214,27 @@ class DefensiveRoles:
     def resting(self, player: PlayerState, now_s: float) -> bool:
         return self.rest_until.get(player.name, 0.0) > now_s
 
-    def start_team_press(self, team: str, players: list[PlayerState], now_s: float) -> None:
+    def start_team_press(self, team: str, players: list[PlayerState], now_s: float,
+                         excluded: frozenset[str] = frozenset()) -> None:
         self.trigger_until[team] = now_s + TRIGGER_S
         self.followed = {}
         for p in players:
             if p.team == team:
-                self.follows[p.name] = random.random() < follow_probability(p)
+                self.follows[p.name] = p.name not in excluded and random.random() < follow_probability(p)
+
+    def _counter_press(self, team: str, players: list[PlayerState], ball: BallState, now_s: float) -> None:
+        """Contre-pressing à la perte (ticket v2-collectif/10) : pressing d'équipe pour `team`, suivi seulement par les
+        joueurs proches du ballon, hors les plus reculés."""
+        goal = own_goal(team)
+        field_players = sorted((p for p in players if p.team == team and p.poste != "GK"),
+                               key=lambda p: abs(p.position.x - goal.x))
+        far = {p.name for p in field_players if p.position.distance_to(ball.position) > FOLLOW_M}
+        self.start_team_press(team, players, now_s, frozenset(far | {p.name for p in field_players[:REST_DEFENDERS]}))
 
     def _watch_triggers(self, players: list[PlayerState], ball: BallState, holder: PlayerState | None,
-                        now_s: float) -> None:
-        """Déclencheurs du pressing d'équipe : passe en retrait, réception en reculant vers son but, contrôle raté."""
+                        now_s: float, situations: dict[str, str] | None = None) -> None:
+        """Déclencheurs du pressing d'équipe : passe en retrait, réception en reculant vers son but, contrôle raté ;
+        avec `situations`, perte dans le jeu (contre-pressing, ticket v2-collectif/10)."""
         self.seen_misses = {m for m in self.seen_misses if m[1] > now_s}  # échus : oubliés (A4 de l'expert, passage 2)
         for name, until in ball.control_ban_until_s.items():
             if until > now_s and (name, until) not in self.seen_misses:
@@ -227,6 +247,11 @@ class DefensiveRoles:
         goal = own_goal(holder.team)
         progress = abs(holder.position.x - goal.x)
         previous, self.last_holder = self.last_holder, (holder.name, holder.team, progress)
+        # perte dans le jeu (ticket v2-collectif/10) : ni ballon pris par le gardien, ni coup franc de hors-jeu
+        if previous is not None and previous[1] != holder.team and situations is not None \
+                and situations.get(previous[1]) == TRANSITION_DEFENSIVE and holder.poste != "GK" \
+                and not any(until > now_s for until in ball.offside_out_until.values()):
+            self._counter_press(previous[1], players, ball, now_s)
         if previous is None or previous[0] == holder.name or previous[1] != holder.team:
             return
         backward = holder.velocity.x * (1.0 if goal.x > holder.position.x else -1.0) > BACKWARD_MPS
@@ -258,10 +283,12 @@ class DefensiveRoles:
         self.holders[(role, mate)] = best.name
         return best
 
-    def update(self, players: list[PlayerState], ball: BallState, bloc: Bloc | None, now_s: float) -> None:
+    def update(self, players: list[PlayerState], ball: BallState, bloc: Bloc | None, now_s: float,
+               situations: dict[str, str] | None = None) -> None:
+        """`situations` : situation de chaque équipe (`SituationTracker.current`), pour le contre-pressing (ticket 10)."""
         self.assignments = {}
         holder = next((p for p in players if p.name == ball.holder), None) if ball.holder else None
-        self._watch_triggers(players, ball, holder, now_s)  # le vrai porteur, même pendant une passe
+        self._watch_triggers(players, ball, holder, now_s, situations)  # le vrai porteur, même pendant une passe
         previous = self.holders
         if holder is None:  # passe en vol (réserve A2) : le receveur, à son point de réception
             receiver = next((p for p in players if p.name == ball.receiver), None) if ball.receiver else None

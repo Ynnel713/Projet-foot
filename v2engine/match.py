@@ -211,7 +211,10 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
         opponent_team = "away" if holder.team == "home" else "home"
         goal = _OPPONENT_GOAL[holder.team]
         keeper = _goalkeeper(opponent_team, players)
-        action = choose_action(holder, players, goal, keeper, (modes or {}).get(holder.team))  # ticket v2-collectif/11
+        # plan de passe (ticket v2-collectif/14) : lu par son receveur à sa première décision, effacé à toute décision
+        planned = ball.plan[1] if ball.plan is not None and ball.plan[0] == holder.name else None
+        ball.plan = None
+        action = choose_action(holder, players, goal, keeper, (modes or {}).get(holder.team), planned)  # ticket 11
         if decisions is not None:
             target = getattr(action, "target", None)
             decisions.append(DecisionRecord(now_s / 60.0, holder.name, holder.team, action.kind,
@@ -247,6 +250,8 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
             ball.released_by = holder.name
             ball.last_pass_team = holder.team
             ball.receiver = action.target.name
+            follow = getattr(action, "follow", None)
+            ball.plan = (action.target.name, follow, now_s) if follow is not None else None
             opponents = [p for p in players if p.team != holder.team]
             ball.readers = pass_readers(holder.position, ball.velocity, action.target.position, opponents)
             # Hors-jeu (ticket v2-collectif/23) : jugement AU DÉPART, sur les positions réelles. Le signalement ne
@@ -373,7 +378,8 @@ def _step_player(
     bloc de référence de chaque équipe (ticket v2-collectif/04), où il se replace et d'où partent ses appels ;
     `defense` : rôles défensifs de l'équipe sans ballon (ticket v2-collectif/07)."""
     perceived = situations.perceived(player, minute * 60.0) if situations is not None else None
-    intention = think(player, ball, players or [], minute, runs, perceived, bloc, defense, transition)
+    previous = intentions.get(player.name) if intentions is not None else None  # réaction à la perte (ticket 10)
+    intention = think(player, ball, players or [], minute, runs, perceived, bloc, defense, transition, previous)
     if intentions is not None:
         intentions[player.name] = intention
     return step(player, dt, intention.target, minute, intention.intensity, intention.target_velocity)
@@ -425,7 +431,7 @@ def simulate_match(
                 trace.situations.append(SituationRecord(minute, team, situation))
         transition.update(situations, ball, players, i * tick_seconds)
         bloc.update(players, ball, i * tick_seconds)  # hauteur de ligne sans ballon (tickets 05 et 23)
-        defense.update(players, ball, bloc, i * tick_seconds)
+        defense.update(players, ball, bloc, i * tick_seconds, situations.current)  # contre-pressing (ticket 10)
         players = [_step_player(p, ball, tick_seconds, minute, players, runs, intentions, situations, bloc, defense,
                                 transition) for p in players]
         _resolve_player_collisions(players)

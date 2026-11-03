@@ -3,11 +3,13 @@ fixes, et donne tous les indicateurs de `docs/INDICATEURS_V2.md` (classiques et 
 zone du ballon, score et tranche de 15 minutes.
 
 Usage : uv run python -m scripts.measure_v2 [nombre_de_matchs] [--profil "Work Rate"] [--detail] [--json chemin] [--pas 0.15]
+[--sans-plan]
 
 `--profil <Attribut>` : test de profils. L'attribut est forcé à 99 pour une équipe et à 11 pour l'autre,
 les rôles s'inversant d'un match à l'autre (neutralise l'avantage du terrain) ; le rapport compare les deux
 niveaux. `--detail` : affiche les découpages. Lecture seule : le jeu n'est pas modifié (sauf l'attribut du
-profil testé)."""
+profil testé). `--sans-plan` : le passeur ne transmet aucun plan de passe (ticket v2-collectif/14 désactivé, même
+moteur sinon), pour comparer à graines égales."""
 
 from __future__ import annotations
 
@@ -18,6 +20,7 @@ import statistics
 import sys
 import time
 from collections.abc import Callable
+from dataclasses import replace
 
 from ligue1sim.clubs import load_clubs
 from ligue1sim.season import CLUBS_PATH
@@ -34,7 +37,7 @@ HIGH, LOW = 99, 11
 TICK_S = match.TICK_SECONDS  # le pas du produit (ticket v2-collectif/25) : le banc mesure le match regardé
 
 
-def _hook(collector: Collector, clock: dict[str, float]) -> Callable[[], None]:
+def _hook(collector: Collector, clock: dict[str, float], plans: bool = True) -> Callable[[], None]:
     """Branche le collecteur sur les fonctions publiques du moteur ; retourne la fonction qui les restaure."""
     real = {name: getattr(match, name) for name in ("pass_velocity", "attempt_shot", "resolve_tackle", "choose_action")}
 
@@ -52,7 +55,9 @@ def _hook(collector: Collector, clock: dict[str, float]) -> Callable[[], None]:
 
     def choose_action(*args, **kwargs):
         action = real["choose_action"](*args, **kwargs)
-        collector.on_choice(action.kind)
+        if not plans:  # sans suite transmise, aucun plan n'est lu ni relancé (ticket 14 désactivé)
+            action = replace(action, follow=None)
+        collector.on_choice(action.kind, action.follow, action.plan)
         return action
 
     real_stays = cerveau.stays_behind
@@ -64,9 +69,9 @@ def _hook(collector: Collector, clock: dict[str, float]) -> Callable[[], None]:
 
     real_trigger = defense.DefensiveRoles.start_team_press
 
-    def trigger(self, team, players, now_s):  # pressing d'équipe déclenché (réserve A2 du ticket 08)
+    def trigger(self, team, players, now_s, *args):  # pressing d'équipe déclenché (réserve A2 du ticket 08), contre-pressing compris
         collector.on_trigger()
-        return real_trigger(self, team, players, now_s)
+        return real_trigger(self, team, players, now_s, *args)
 
     match.pass_velocity, match.attempt_shot = pass_velocity, attempt_shot
     match.resolve_tackle, match.choose_action = resolve_tackle, choose_action
@@ -95,13 +100,14 @@ def _force_attribute(attribute: str, high_team: str, team_of: dict[str, str]) ->
     return lambda: [setattr(m, "player_attribute", r) for m, r in patched]
 
 
-def run(n_matches: int, profile: str | None = None, duration_minutes: float = 90.0, tick_s: float = TICK_S) -> Collector:
+def run(n_matches: int, profile: str | None = None, duration_minutes: float = 90.0, tick_s: float = TICK_S,
+        plans: bool = True) -> Collector:
     clubs = load_clubs(CLUBS_PATH, "Ligue 1")
     collector = Collector()
     collector.minutes_per_match = duration_minutes
     clock = {"now": 0.0, "dt": tick_s}
     started = time.perf_counter()
-    restore = _hook(collector, clock)
+    restore = _hook(collector, clock, plans)
     try:
         for i in range(n_matches):
             # profils : chaque affiche est jouée deux fois, même graine, rôles haut/bas inversés
@@ -161,11 +167,26 @@ def report(c: Collector, detail: bool = False) -> dict:
         "tirs de contre par match (récupération dans son camp)": k["tirs de contre, récupération propre camp"] / n,
         "tirs de contre par match (récupération dans le camp adverse)": k["tirs de contre, récupération camp adverse"] / n,
         "appels par match": k["appels"] / n,
+        "appels dans le dos par match": k["appels dans le dos"] / n,  # ticket v2-collectif/16
         "pressings par match": k["pressings"] / n,
         "pressings suivis d'une récupération en 5 s (part)": k["pressings suivis d'une récupération en 5 s"] / max(1, k["pressings"]),
         "profil haut : temps de pressing par match (s)": k["profil haut : temps de pressing (s)"] / n,
         "profil bas : temps de pressing par match (s)": k["profil bas : temps de pressing (s)"] / n,
         "temps de calcul par match (s)": getattr(c, "seconds_per_match", None),
+        # combinaisons (ticket v2-collectif/14)
+        "passes sans gain suivies d'une passe qui fait avancer (part, C2)":
+            k["passes sans gain suivies d'une passe qui fait avancer"] / max(1, k["passes sans gain réussies"]),
+        "retours au passeur en 3 s (part des passes réussies)":
+            k["retours au passeur en 3 s"] / max(1, k["passes réussies (journal)"]),
+        "retours au passeur en 3 s hors une-deux (part)":
+            (k["retours au passeur en 3 s"] - k["une-deux"]) / max(1, k["passes réussies (journal)"]),
+        "une-deux par équipe et par match": k["une-deux"] / (2 * n),
+        "troisième homme par équipe et par match": k["troisième homme (suite prévue jouée et réussie)"] / (2 * n),
+        "plans reçus par match": k["plans reçus"] / n,
+        "plans tenus (part)": k["plan tenu"] / max(1, k["plans reçus"]),
+        "plans abandonnés, ligne fermée (part)": k["plan abandonné"] / max(1, k["plans reçus"]),
+        "plans abandonnés, cible non vue ou hors-jeu (part)": k["plan non vu"] / max(1, k["plans reçus"]),
+        "plans refusés, Teamwork (part)": k["plan refusé"] / max(1, k["plans reçus"]),
     }
     choices = sum(v for key, v in k.items() if key.startswith("choix "))
     for key, v in sorted(k.items()):
@@ -196,8 +217,9 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--detail", action="store_true")
     parser.add_argument("--json", default=None)
     parser.add_argument("--pas", type=float, default=TICK_S, help="pas de calcul (s), par défaut celui du produit")
+    parser.add_argument("--sans-plan", action="store_true", help="ticket v2-collectif/14 désactivé")
     args = parser.parse_args(argv)
-    result = report(run(args.matches, args.profil, tick_s=args.pas), args.detail)
+    result = report(run(args.matches, args.profil, tick_s=args.pas, plans=not args.sans_plan), args.detail)
     for key, value in result.items():
         if isinstance(value, dict):
             print(f"{key} :")

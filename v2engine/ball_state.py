@@ -40,6 +40,9 @@ class BallState:
     hesitation: dict[str, float] = field(default_factory=dict)
     # Attaquant fautif écarté de l'action après le coup franc : nom -> instant jusqu'auquel il recule.
     offside_out_until: dict[str, float] = field(default_factory=dict)
+    # Plan de passe (ticket v2-collectif/14) : (receveur, suite prévue par le passeur, instant de la passe). Lu par le
+    # receveur à sa première décision, puis effacé à toute décision d'un porteur.
+    plan: tuple[str, str, float] | None = None
     # Tir qui finira au fond (tirage déjà fait au départ) : équipe du tireur tant que le ballon est en route vers le but.
     # Le but ne compte qu'à l'arrivée du ballon sur la ligne, jamais au départ du tir.
     shot_for: str | None = None

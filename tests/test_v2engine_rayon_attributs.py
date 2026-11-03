@@ -27,19 +27,20 @@ ALLOWED = {
     "Tackling": {"duel"},
     "Anticipation": {"anticipation", "match", "defense"},  # + drapeau du hors-jeu (23) ; ligne fermée au pressing (08)
     "Decisions": {"decision"},
-    "Vision": {"decision"},
+    "Vision": {"decision", "off_ball"},  # + le coureur tente l'appel dans le dos si le porteur le voit (16)
     "Off the Ball": {"off_ball", "offside"},  # + régler l'appel sur la ligne du hors-jeu (ticket 23)
     "Composure": {"possession", "shooting"},
     "First Touch": {"possession"},
-    "Passing": {"possession"},
+    "Passing": {"possession", "off_ball"},  # + ... et s'il sait le servir (ticket v2-collectif/16)
     "Finishing": {"shooting"},
     "Reflexes": {"shooting"},
     "One on Ones": {"shooting"},
     "Handling": {"shooting"},
     # erreur de placement dans le bloc, reprise par la couverture et la compensation (tickets v2-collectif/04, 07 et 09)
     "Positioning": {"bloc"},
-    # écart toléré avant de se replacer (04) ; quitter le bloc pour le ballon (07) ; accepter de compenser (09)
-    "Teamwork": {"bloc", "defense"},
+    # écart toléré avant de se replacer (04) ; quitter le bloc pour le ballon (07) ; accepter de compenser (09) ;
+    # adopter le plan de passe de son passeur (14)
+    "Teamwork": {"bloc", "defense", "decision"},
     "Work Rate": {"defense"},  # intensité et repos du presseur (ticket v2-collectif/08)
     "Marking": {"defense"},  # distance de marquage d'un attaquant dangereux (ticket v2-collectif/07)
 }
