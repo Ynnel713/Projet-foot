@@ -28,6 +28,7 @@ from ligue1sim.world_cup import start_world_cup
 from api import store
 from api.animation import build_match_animation_json
 from api.schemas import (
+    ClubFixturesOut,
     BracketOut,
     CompetitionStatus,
     CreateCompetitionRequest,
@@ -39,6 +40,7 @@ from api.schemas import (
     SimulateResponse,
 )
 from api.serializers import (
+    club_fixtures_out,
     bracket_out,
     groups_status,
     leaderboards_out,
@@ -217,6 +219,17 @@ def get_roster(comp_id: str, club_name: str) -> RosterOut:
     if club is None:
         raise HTTPException(404, f"Club introuvable dans cette compétition : {club_name}")
     return roster_out(club)
+
+
+@router.get("/{comp_id}/clubs/{club_name}/fixtures", response_model=ClubFixturesOut)
+def get_club_fixtures(comp_id: str, club_name: str) -> ClubFixturesOut:
+    """Calendrier et forme d'un club en championnat (lecture seule ; page club, onglet Calendrier)."""
+    competition = _get_or_404(comp_id)
+    if not any(c.name == club_name for c in competition.clubs):
+        raise HTTPException(404, f"Club introuvable dans cette compétition : {club_name}")
+    if competition.season is None:
+        raise HTTPException(409, "Calendrier disponible en championnat uniquement.")
+    return club_fixtures_out(competition, club_name)
 
 
 @router.get("/{comp_id}/leaderboards", response_model=LeaderboardsOut)

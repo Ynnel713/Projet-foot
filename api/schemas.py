@@ -260,6 +260,26 @@ class PlayerOut(BaseModel):
     photo_url: str | None = None
 
 
+class FixtureOut(BaseModel):
+    journee: int
+    home: str  # ordre réel du match (c'est lui que /pitch attend), pas « club puis adversaire »
+    away: str
+    opponent: str
+    home_away: Literal["home", "away"]  # lieu du club demandé
+    played: bool
+    home_goals: int | None = None
+    away_goals: int | None = None
+    result: Literal["W", "D", "L"] | None = None  # du point de vue du club demandé ; None si pas joué
+
+
+class ClubFixturesOut(BaseModel):
+    club: str
+    current_journee: int
+    total_journees: int
+    fixtures: list[FixtureOut]
+    form: list[Literal["W", "D", "L"]]  # 5 derniers matchs joués au plus, le plus récent en dernier
+
+
 class RosterOut(BaseModel):
     club: str
     championnat: str

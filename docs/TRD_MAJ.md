@@ -168,3 +168,8 @@ Déterminisme bit-à-bit d'A1.1 confirmé (16/10/2026) : deux exécutions sépar
 - `knockout.py` : `simulate_tie_leg` joue UNE manche (la dernière désigne le vainqueur, tirs au but compris) ; `simulate_tie` la répète ; `simulate_round_leg` joue une manche pour toutes les confrontations d'un tour. `simulate_round` garde son ordre de tirage (« Simuler tout » inchangé). Moteur Poisson et 3c non touchés.
 - API : `POST /competitions/{id}/bracket/simulate-leg` (409 si le tour est joué) ; `BracketOut.current_legs` / `current_legs_played` (manches du tour courant) ; `TieOut.home_goals/away_goals` donnent le cumul provisoire dès l'aller, `winner` reste `None` jusqu'à la dernière manche. Aucun champ ajouté à `Tie` (rien à migrer pour une sauvegarde ancienne).
 - Tickets (section 11) : aucun ouvert ni fermé.
+
+## Refonte UI, ticket 06 : club et joueur (03/11/2026)
+- API : `GET /competitions/{id}/clubs/{club}/fixtures` (lecture seule) : `ClubFixturesOut` = `fixtures` (une `FixtureOut` par match du club : `journee`, `home`, `away` dans l'ordre réel du match, `opponent`, `home_away`, `played`, scores, `result` W/D/L du point de vue du club), `current_journee`, `total_journees`, `form` (5 derniers résultats, le plus récent en dernier). 404 si le club est inconnu, 409 hors championnat (pas de calendrier : formats KNOCKOUT et HYBRID). Aucune simulation, aucun fichier protégé.
+- Interface : libellés français des attributs dans `ui/src/utils/fmAttributes.js` (`attributeLabel`, les clés restent les noms du moteur) ; jeton de taille `text-title` (32 px) dans `index.css`.
+- Tickets (section 11) : aucun ouvert ni fermé.

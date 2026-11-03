@@ -22,6 +22,8 @@ import logging
 from api.live_commentary import build_live_feed
 from api.nlg_live import generate_nlg_feed
 from api.schemas import (
+    ClubFixturesOut,
+    FixtureOut,
     BenchPlayerOut,
     BracketOut,
     CompetitionStatus,
@@ -322,6 +324,41 @@ def roster_out(club: Club) -> RosterOut:
         age_moyen=age_moyen,
         valeur_totale=sum(valeurs) if valeurs else None,
         players=[player_out(p) for p in players],
+    )
+
+
+def club_fixtures_out(competition: CustomCompetition, club_name: str) -> ClubFixturesOut:
+    """Calendrier d'un club (championnat) : tous ses matchs par journée, forme sur ses 5 derniers matchs joués. Lecture seule."""
+    season = competition.season
+    fixtures: list[FixtureOut] = []
+    for journee in season.calendar:
+        for m in journee.matches:
+            if club_name not in (m.home, m.away):
+                continue
+            at_home = m.home == club_name
+            result = None
+            if m.played:
+                mine, theirs = (m.home_goals, m.away_goals) if at_home else (m.away_goals, m.home_goals)
+                result = "W" if mine > theirs else "L" if mine < theirs else "D"
+            fixtures.append(
+                FixtureOut(
+                    journee=journee.number,
+                    home=m.home,
+                    away=m.away,
+                    opponent=m.away if at_home else m.home,
+                    home_away="home" if at_home else "away",
+                    played=m.played,
+                    home_goals=m.home_goals,
+                    away_goals=m.away_goals,
+                    result=result,
+                )
+            )
+    return ClubFixturesOut(
+        club=club_name,
+        current_journee=season.current_journee_number,
+        total_journees=season.total_journees,
+        fixtures=fixtures,
+        form=[f.result for f in fixtures if f.result][-5:],
     )
 
 

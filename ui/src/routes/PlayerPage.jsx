@@ -1,19 +1,13 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { useParams } from "react-router-dom";
 import { getRoster } from "../api/client";
 import PlayerProfile from "../components/team/PlayerProfile";
 
-// Fiche joueur en écran indépendant (28/09/2026, retour terrain : "les 2
-// doivent être indépendantes, actuellement elles sont liées") -- avant,
-// cliquer un joueur (depuis le terrain ou l'effectif) affichait sa fiche
-// coincée à l'intérieur de la fiche équipe. Recharge l'effectif du club pour
-// retrouver ce joueur par son nom -- pas encore d'endpoint "un seul joueur"
-// côté API, donc même mécanisme que l'ancien `?player=` de TeamRoster, mais
-// sur un écran à lui seul plutôt qu'imbriqué dans l'effectif.
+// Fiche joueur en écran indépendant (28/09/2026, retour terrain : "les 2 doivent être indépendantes, actuellement elles sont liées").
+// Recharge l'effectif du club pour retrouver ce joueur par son nom -- pas encore d'endpoint "un seul joueur" côté API. Refonte UI,
+// lot 5 : plus de bouton « Retour » (les onglets de la compétition et le retour du navigateur le remplacent).
 export default function PlayerPage() {
   const { id, clubName, playerName } = useParams();
-  const navigate = useNavigate();
   const [player, setPlayer] = useState(null);
   const [error, setError] = useState(null);
 
@@ -31,13 +25,11 @@ export default function PlayerPage() {
 
   return (
     <div className="p-3 flex flex-col gap-3">
-      <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-xs text-gray-400 self-start">
-        <ArrowLeft size={14} /> Retour
-      </button>
-
-      {error && <p className="text-sm text-gray-400 px-1">{error}</p>}
-      {!error && !player && <p className="text-sm text-gray-400 px-1">Chargement…</p>}
-      {player && <PlayerProfile player={player} />}
+      <div className="mx-auto w-full max-w-6xl flex flex-col gap-3">
+        {error && <p className="text-sm text-gray-400 px-1">{error}</p>}
+        {!error && !player && <p className="text-sm text-gray-400 px-1">Chargement…</p>}
+        {player && <PlayerProfile player={player} />}
+      </div>
     </div>
   );
 }

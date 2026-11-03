@@ -1,74 +1,63 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
-import { getRoster } from "../api/client";
+import { useParams } from "react-router-dom";
+import { getRoster, getClubFixtures } from "../api/client";
 import TeamHeader from "../components/team/TeamHeader";
-import PlayerCard from "../components/team/PlayerCard";
+import RosterTable from "../components/team/RosterTable";
+import FixturesList from "../components/team/FixturesList";
 
-// Ordre d'affichage des effectifs : défense -> milieu -> attaque -- même
-// ordre que app._POSTE_DISPLAY_ORDER côté Streamlit.
-const POSTE_DISPLAY_ORDER = ["GK", "DC", "LB", "RB", "MDC", "MC", "MOC", "AG", "AD", "SA", "BU", "ATT"];
-
-function groupByPoste(players) {
-  const groups = new Map();
-  for (const p of players) {
-    if (!groups.has(p.poste)) groups.set(p.poste, []);
-    groups.get(p.poste).push(p);
-  }
-  const known = POSTE_DISPLAY_ORDER.filter((poste) => groups.has(poste));
-  const unknown = [...groups.keys()].filter((poste) => !POSTE_DISPLAY_ORDER.includes(poste)).sort();
-  return [...known, ...unknown].map((poste) => [poste, [...groups.get(poste)].sort((a, b) => b.note - a.note)]);
-}
-
-// Fiche équipe : liste l'effectif, ne montre plus jamais la fiche d'un
-// joueur en interne (retour du 28/09/2026 : "les 2 doivent être
-// indépendantes, actuellement elles sont liées") -- cliquer un joueur
-// navigue vers sa propre page (PlayerPage), effectif et fiche joueur sont
-// désormais deux écrans complètement séparés.
+// Page d'un club (refonte UI, lot 5) : en-tête compact (chiffres clés + forme), puis deux onglets -- Effectif (tableau par ligne) et
+// Calendrier (championnat seulement : l'API répond 409 hors championnat, l'onglet est alors absent). Le retour se fait par les onglets
+// de la compétition, plus de bouton « Retour ». Cliquer un joueur ouvre sa fiche (PlayerPage), écran indépendant de l'effectif.
 export default function TeamRoster() {
   const { id, clubName } = useParams();
-  const navigate = useNavigate();
   const [roster, setRoster] = useState(null);
+  const [fixtures, setFixtures] = useState(null);
   const [error, setError] = useState(null);
+  const [tab, setTab] = useState("squad");
 
   useEffect(() => {
     setRoster(null);
+    setFixtures(null);
     setError(null);
+    setTab("squad");
     getRoster(id, clubName).catch(() => setError("Effectif indisponible pour ce club.")).then((r) => r && setRoster(r));
+    getClubFixtures(id, clubName).then(setFixtures).catch(() => setFixtures(null));
   }, [id, clubName]);
 
   return (
     <div className="p-3 flex flex-col gap-3">
-      <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-xs text-gray-400 self-start">
-        <ArrowLeft size={14} /> Retour
-      </button>
+      <div className="mx-auto w-full max-w-4xl flex flex-col gap-3">
+        {error && <p className="text-sm text-gray-400 px-1">{error}</p>}
+        {!error && !roster && <p className="text-sm text-gray-400 px-1">Chargement…</p>}
 
-      {error && <p className="text-sm text-gray-400 px-1">{error}</p>}
-      {!error && !roster && <p className="text-sm text-gray-400 px-1">Chargement…</p>}
-
-      {roster && (
-        <>
-          <TeamHeader roster={roster} />
-          {groupByPoste(roster.players).map(([poste, players]) => (
-            <div key={poste}>
-              <div className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-1.5">
-                {poste} · {players.length} joueur{players.length > 1 ? "s" : ""}
+        {roster && (
+          <>
+            <TeamHeader roster={roster} form={fixtures?.form} />
+            {fixtures && (
+              <div role="tablist" className="flex gap-1 border-b border-line">
+                <TabButton active={tab === "squad"} onClick={() => setTab("squad")} label="Effectif" />
+                <TabButton active={tab === "fixtures"} onClick={() => setTab("fixtures")} label="Calendrier" />
               </div>
-              <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(96px, 1fr))" }}>
-                {players.map((player) => (
-                  <PlayerCard
-                    key={player.id ?? player.name}
-                    player={player}
-                    onSelect={() =>
-                      navigate(`/competition/${id}/clubs/${encodeURIComponent(clubName)}/players/${encodeURIComponent(player.name)}`)
-                    }
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
-        </>
-      )}
+            )}
+            {tab === "fixtures" && fixtures ? <FixturesList fixtures={fixtures} /> : <RosterTable players={roster.players} club={clubName} />}
+          </>
+        )}
+      </div>
     </div>
+  );
+}
+
+function TabButton({ active, onClick, label }) {
+  return (
+    <button
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={`min-h-11 md:min-h-9 px-4 text-sm border-b-2 -mb-px ${
+        active ? "border-accent text-white font-semibold" : "border-transparent text-gray-400 hover:text-gray-200"
+      }`}
+    >
+      {label}
+    </button>
   );
 }

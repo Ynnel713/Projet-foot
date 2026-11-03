@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Wrench, Brain, Dumbbell, Target, Star, Sparkles } from "lucide-react";
 import { BASE_URL } from "../../api/client";
 import { fmTierColor, fmTierTextColor } from "../../utils/fmTier";
-import { attributesByCategory, radarCategories } from "../../utils/fmAttributes";
+import { attributeLabel, attributesByCategory, radarCategories } from "../../utils/fmAttributes";
 import { nationalityFlagUrl } from "../../utils/nationalityFlags";
 import { posteCoordinates } from "../../utils/posteCoordinates";
 import { posteLabel } from "../../utils/posteLabels";
@@ -11,6 +11,10 @@ import StarRating from "./StarRating";
 import SectionPanel from "./SectionPanel";
 
 const PIED_LABELS = { D: "Droit", G: "Gauche" };
+
+function playerInitials(name) {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "?";
+}
 const CATEGORY_ICONS = { Technique: Wrench, Gardien: Wrench, Mental: Brain, Physique: Dumbbell, "Coups de pied arrêtés": Target };
 
 // Équivalent PWA de app._render_player_profile_card (Streamlit), redessiné
@@ -31,17 +35,17 @@ export default function PlayerProfile({ player }) {
   const flagUrl = nationalityFlagUrl(player.nationalite);
 
   return (
-    <div className="rounded-2xl bg-surface border border-white/10 p-5 sm:p-7 flex flex-col gap-6">
+    <div className="rounded-xl bg-surface border border-line p-4 sm:p-6 flex flex-col gap-6">
       <div className="flex items-start gap-5 flex-wrap">
         {player.photo_url ? (
           <img
             src={`${BASE_URL}${player.photo_url}`}
             alt=""
-            className="w-28 h-28 rounded-2xl object-cover border border-white/10 shrink-0"
+            className="w-28 h-28 rounded-xl object-cover border border-line shrink-0"
           />
         ) : (
-          <div className="w-28 h-28 rounded-2xl flex items-center justify-center bg-white/[0.06] text-white/35 text-4xl shrink-0">
-            ?
+          <div className="w-28 h-28 rounded-xl flex items-center justify-center bg-surface-2 text-gray-500 font-display font-bold text-3xl shrink-0" aria-hidden="true">
+            {playerInitials(player.name)}
           </div>
         )}
 
@@ -50,7 +54,7 @@ export default function PlayerProfile({ player }) {
             {flagUrl && <img src={flagUrl} alt={player.nationalite} className="h-4 rounded-sm shrink-0" />}
             <span className="text-sm text-gray-400">{player.nationalite}</span>
           </div>
-          <div className="font-display font-bold text-4xl text-white leading-tight mt-1">{player.name}</div>
+          <div className="font-display font-bold text-title text-white mt-1">{player.name}</div>
           {pied && (
             <div className="flex items-center gap-2 mt-1.5">
               <span className="text-data text-gray-400">Pied {pied.toLowerCase()}</span>
@@ -59,7 +63,7 @@ export default function PlayerProfile({ player }) {
           )}
           <div className="flex flex-wrap gap-1.5 mt-3">
             {tags.filter(Boolean).map((t) => (
-              <span key={t} className="text-data font-semibold px-2.5 py-1 rounded-full bg-white/[0.07] border border-white/10 text-white/85">
+              <span key={t} className="text-data font-medium px-2.5 py-1 rounded-lg bg-surface-2 text-gray-200">
                 {t}
               </span>
             ))}
@@ -68,37 +72,40 @@ export default function PlayerProfile({ player }) {
 
         <div className="flex items-center gap-3 pt-1">
           <MiniPitchLandscape poste={player.poste} secondaryPostes={player.poste_secondaire} width={96} height={76} />
-          <div className="text-data text-white/80 max-w-[180px] flex flex-col gap-2.5">
+          <div className="text-data text-gray-300 max-w-[180px] flex flex-col gap-2.5">
             <div>
-              <div className="text-white/55 font-bold uppercase tracking-wide mb-0.5">Poste(s) préféré(s)</div>
-              <div className="text-white font-semibold">{posteLabel(player.poste)}</div>
+              <div className="text-caption font-medium text-gray-400 mb-0.5">Poste(s) préféré(s)</div>
+              <div className="text-gray-100 font-semibold">{posteLabel(player.poste)}</div>
               {player.poste_secondaire?.length > 0 && (
-                <div className="text-white/60">{player.poste_secondaire.map(posteLabel).join(" / ")}</div>
+                <div className="text-gray-400">{player.poste_secondaire.map(posteLabel).join(" / ")}</div>
               )}
             </div>
             {player.attributes && <PointsForts player={player} />}
           </div>
         </div>
 
-        <div
-          className="w-24 h-24 rounded-2xl flex flex-col items-center justify-center shrink-0"
-          style={{ backgroundColor: fmTierColor(player.note) }}
-        >
-          <div className="font-display font-bold text-6xl text-white leading-none">{player.note.toFixed(0)}</div>
-          <div className="text-caption font-bold uppercase tracking-wide text-white/85 mt-1">Note</div>
+        <div className="flex flex-col items-center gap-1 shrink-0">
+          <div
+            className="w-12 h-12 rounded-xl flex items-center justify-center font-display font-bold text-title text-white leading-none tabular-nums"
+            style={{ backgroundColor: fmTierColor(player.note) }}
+            aria-label={`Note ${player.note.toFixed(0)}`}
+          >
+            {player.note.toFixed(0)}
+          </div>
+          <div className="text-caption font-medium text-gray-400">Note</div>
         </div>
       </div>
 
       {player.preferred_moves && (
-        <div className="text-data text-white/75 -mt-3">
-          <b className="text-white">Preferred moves :</b> {player.preferred_moves}
+        <div className="text-data text-gray-300 -mt-3">
+          <b className="text-gray-100">Gestes préférés :</b> {player.preferred_moves}
         </div>
       )}
 
       {player.attributes ? (
         <PlayerAttributesBody player={player} />
       ) : (
-        <p className="text-data italic text-white/45">
+        <p className="text-data italic text-gray-500">
           Caractéristiques FM26 pas encore récupérées pour ce joueur.
         </p>
       )}
@@ -110,13 +117,13 @@ function PointsForts({ player }) {
   const best = Object.entries(player.attributes)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 4)
-    .map(([name]) => name)
+    .map(([name]) => attributeLabel(name))
     .join(", ");
 
   return (
     <div>
-      <div className="text-white/55 font-bold uppercase tracking-wide mb-0.5">Points forts</div>
-      <div className="text-white/85">{best}</div>
+      <div className="text-caption font-medium text-gray-400 mb-0.5">Points forts</div>
+      <div className="text-gray-200">{best}</div>
     </div>
   );
 }
@@ -167,8 +174,8 @@ function FlatCategory({ icon: Icon, title, children }) {
   return (
     <div>
       <div className="flex items-center gap-1.5 mb-2">
-        {Icon && <Icon size={14} className="text-white/45 shrink-0" />}
-        <span className="text-caption font-bold uppercase tracking-wide text-white/55">{title}</span>
+        {Icon && <Icon size={14} className="text-gray-500 shrink-0" />}
+        <span className="text-caption font-medium text-gray-400">{title}</span>
       </div>
       {children}
     </div>
@@ -183,11 +190,11 @@ function AttributeRows({ rows, highlight }) {
         return (
           <div
             key={name}
-            className={`flex justify-between gap-3 text-data leading-[1.6] px-1.5 -mx-1.5 rounded transition-colors ${
-              isHighlighted ? "bg-win/15 text-white" : "text-white/85"
+            className={`flex justify-between gap-3 text-data leading-[1.6] px-1.5 -mx-1.5 rounded-lg ${
+              isHighlighted ? "bg-win/15 text-white" : "text-gray-200"
             }`}
           >
-            <span className="truncate">{name}</span>
+            <span className="truncate">{attributeLabel(name)}</span>
             <b style={{ color: fmTierTextColor(value) }} className="tabular-nums shrink-0">
               {value}
             </b>
@@ -229,7 +236,7 @@ function PlayerAttributesBody({ player }) {
         <div className="flex flex-col gap-6">
           {player.categorie && (
             <FlatCategory icon={Sparkles} title="Style de jeu">
-              <div className="text-data text-white/90">{player.categorie.replaceAll("_", " ")}</div>
+              <div className="text-data text-gray-200">{player.categorie.replaceAll("_", " ")}</div>
             </FlatCategory>
           )}
           {colA.filter(Boolean).map(({ category, rows }) => (

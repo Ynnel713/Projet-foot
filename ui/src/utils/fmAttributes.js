@@ -8,6 +8,26 @@ export const FM_ATTRIBUTE_CATEGORIES = {
   "Coups de pied arrêtés": ["Corners", "Free Kick Taking", "Long Throws", "Penalty Taking"],
 };
 
+// Libellés français affichés pour les attributs (refonte UI, lot 5) -- les clés restent les noms du moteur et des données (ne jamais les
+// traduire ailleurs : le surlignage du radar compare ces noms). Un nom absent de la table s'affiche tel quel.
+const ATTRIBUTE_LABELS = {
+  Crossing: "Centres", Dribbling: "Dribble", Finishing: "Finition", "First Touch": "Premier contrôle", Heading: "Jeu de tête",
+  "Long Shots": "Tirs de loin", Marking: "Marquage", Passing: "Passes", Tackling: "Tacles", Technique: "Technique",
+  "Aerial Reach": "Portée aérienne", "Command of Area": "Autorité dans la surface", Communication: "Communication",
+  Eccentricity: "Excentricité", Handling: "Prise de balle", Kicking: "Jeu au pied", "One on Ones": "Un contre un",
+  "Punching (Tendency)": "Boxe (tendance)", Reflexes: "Réflexes", "Rushing Out (Tendency)": "Sorties (tendance)", Throwing: "Relance à la main",
+  Aggression: "Agressivité", Anticipation: "Anticipation", Bravery: "Courage", Composure: "Sang-froid", Concentration: "Concentration",
+  Decisions: "Décisions", Determination: "Détermination", Flair: "Inspiration", Leadership: "Leadership", "Off the Ball": "Appels sans ballon",
+  Positioning: "Placement", Teamwork: "Esprit d'équipe", Vision: "Vision", "Work Rate": "Volume de jeu",
+  Acceleration: "Accélération", Agility: "Agilité", Balance: "Équilibre", "Jumping Reach": "Détente", "Natural Fitness": "Condition naturelle",
+  Pace: "Vitesse", Stamina: "Endurance", Strength: "Force",
+  Corners: "Corners", "Free Kick Taking": "Coups francs", "Long Throws": "Touches longues", "Penalty Taking": "Penalties",
+};
+
+export function attributeLabel(name) {
+  return ATTRIBUTE_LABELS[name] ?? name;
+}
+
 // Catégories dans l'ordre d'affichage pour ce joueur -- gardien en premier
 // pour un gardien (retour terrain du 27/09/2026), sinon l'ordre habituel.
 export function categoryOrder(poste) {

@@ -74,6 +74,9 @@
   --text-caption--line-height: 1rem;
   --text-data: 13px;
   --text-data--line-height: 1.25rem;
+  /* Titre d'écran (32 px de l'échelle DESIGN.md) : nom du club, nom du joueur. */
+  --text-title: 32px;
+  --text-title--line-height: 1.15;
 }
 
 /* Pulsation douce du bouton LIVE (match joué) et clignotement du badge LIVE ; désactivés si l'utilisateur préfère moins de mouvement. */

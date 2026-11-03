@@ -7,7 +7,7 @@ export default function StarRating({ value, max = 5, size = 12 }) {
   return (
     <span className="inline-flex items-center gap-0.5">
       {Array.from({ length: max }, (_, i) => (
-        <Star key={i} size={size} className={i < value ? "text-gold" : "text-white/20"} fill={i < value ? "currentColor" : "none"} />
+        <Star key={i} size={size} className={i < value ? "text-tier-avg" : "text-gray-700"} fill={i < value ? "currentColor" : "none"} />
       ))}
     </span>
   );
