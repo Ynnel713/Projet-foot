@@ -11,6 +11,8 @@ Lancement (accès stable partagé, un seul port -- voir "simulafoot.bat") :
 
 from __future__ import annotations
 
+import threading
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -23,7 +25,15 @@ from ligue1sim.faces import FACES_DIR
 
 from api.routers import competitions, leagues, v2
 
-app = FastAPI(title="Simulafoot API")
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    # Le premier match V2 attendait ~40 s de chargements à froid (joueurs, entraîneurs) : on les fait au démarrage, en
+    # tâche de fond, sans retarder la disponibilité de l'API.
+    threading.Thread(target=v2.prewarm, daemon=True).start()
+    yield
+
+
+app = FastAPI(title="Simulafoot API", lifespan=lifespan)
 
 # CORS large en dev seulement (frontend Vite sur un autre port pendant le
 # développement) -- sans effet une fois le frontend buildé et servi par ce

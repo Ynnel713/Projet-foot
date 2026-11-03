@@ -27,7 +27,7 @@ from v2engine.cerveau import GOAL_CENTER_Y, OPPONENT_GOAL, Intention, think
 from v2engine.decision import DECISION_INTERVAL_S, choose_action
 from v2engine.defense import DefensiveRoles
 from v2engine.offside import HESITATION_S, OFFSIDE_OUT_S, offside_at_pass, sees_the_flag_probability
-from v2engine.possession import (BALL_FRICTION_PER_S, BALL_STOPPED_MPS, MISS_RETRY_S, attempt_control, missed_control_velocity,
+from v2engine.possession import (BALL_FRICTION_PER_S, BALL_STOPPED_MPS, MAX_PASS_MPS, MISS_RETRY_S, attempt_control, missed_control_velocity,
                                  pass_velocity, reception_delay_s)
 from v2engine.shooting import attempt_shot
 from v2engine.situation import SituationTracker
@@ -37,6 +37,8 @@ from v2engine.trace import BallSnapshot, DecisionRecord, MatchTrace, OffsideEven
 # But adverse d'une équipe, par convention de ce moteur (voir `formation.initial_positions`,
 # D-V03 : domicile attaque vers x=PITCH_LENGTH_M, extérieur vers x=0).
 _OPPONENT_GOAL = OPPONENT_GOAL
+# Vitesse d'un tir : celle de la passe la plus appuyée (pas de constante nouvelle), soit 30 m/s, 1 s pour 30 m.
+SHOT_SPEED_MPS = MAX_PASS_MPS
 
 BALL_RADIUS_M = 0.11
 PLAYER_RADIUS_M = 0.3
@@ -90,9 +92,13 @@ def _resolve_player_collisions(players: list[PlayerState]) -> None:
     for i in range(len(players)):
         for j in range(i + 1, len(players)):
             a, b = players[i], players[j]
-            delta = b.position - a.position
-            dist = delta.length()
             min_dist = a.radius_m + b.radius_m
+            pa, pb = a.position, b.position
+            # rejet rapide sans allouer : si un écart d'axe atteint déjà `min_dist`, la distance aussi (la quasi-totalité des paires)
+            if abs(pb.x - pa.x) >= min_dist or abs(pb.y - pa.y) >= min_dist:
+                continue
+            delta = pb - pa
+            dist = delta.length()
             if 0.0 < dist < min_dist:
                 push = delta.normalized() * ((min_dist - dist) / 2.0)
                 a.position = clamp_to_pitch(a.position - push)
@@ -215,10 +221,12 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
             _clear_offside(ball)  # la passe signalée est morte : le ballon est tiré
             scored = attempt_shot(holder, keeper, holder.position.distance_to(goal), GOAL_CENTER_Y)
             if scored:
+                # le ballon part vraiment vers le but et le but ne compte qu'à son arrivée (`SHOT_SPEED_MPS`)
                 ball.holder = None
-                ball.position = Vec2(PITCH_LENGTH_M / 2.0, PITCH_WIDTH_M / 2.0)  # remise en jeu au centre
-                ball.velocity = Vec2(0.0, 0.0)
-                return holder.team
+                ball.velocity = (goal - ball.position).normalized() * SHOT_SPEED_MPS
+                ball.shot_for = holder.team
+                ball.receiver, ball.readers = None, {}
+                return None
             # Tir non converti (arrêté ou cadré sans but) : le gardien adverse récupère le ballon
             # -- repli simple (pas de sortie de but/corner modélisée, Phase 5+), voir
             # docs/PLAN_V2.md. Sans gardien identifiable (effectif synthétique), le ballon reste
@@ -258,6 +266,16 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
         return None
 
     ball.engaged_holder = None  # ballon libre : les confrontations en cours sont finies (v2-socle/03)
+    if ball.shot_for is not None:
+        # tir cadré en route : personne ne le touche (le gardien est battu d'avance), il avance en ligne droite jusqu'à
+        # la ligne de but, où le but est compté et le jeu repart du centre
+        if ball.position.distance_to(_OPPONENT_GOAL[ball.shot_for]) > ball.velocity.length() * dt:
+            ball.position = ball.position + ball.velocity * dt
+            return None
+        team, ball.shot_for = ball.shot_for, None
+        ball.position = Vec2(PITCH_LENGTH_M / 2.0, PITCH_WIDTH_M / 2.0)  # remise en jeu au centre
+        ball.velocity = Vec2(0.0, 0.0)
+        return team
     start = ball.position
     ball.position = clamp_to_pitch(ball.position + ball.velocity * dt)
     ball.velocity = ball.velocity * (BALL_FRICTION_PER_S**dt)
@@ -369,12 +387,14 @@ def simulate_match(
     tick_seconds: float = TICK_SECONDS,
     record_every: int = 10,
     observer: Callable[[float, list[PlayerState], BallState, str | None], None] | None = None,
+    on_start: Callable[[MatchTrace], None] | None = None,
 ) -> MatchTrace:
     """Simule un match de bout en bout (Phase 1 : déplacement seul, pas encore de score) et
     retourne sa trace complète (voir `trace.py`). `record_every` : un tick sur N est conservé dans
     la trace (sous-échantillonnage du rendu, le calcul physique tourne à `tick_seconds` quoi qu'il
     arrive). `observer` : appelé à chaque tick avec (instant en s, joueurs, ballon, équipe qui vient de
-    marquer ou None) -- lecture seule, pour les mesures (`scripts/measure_v2.py`), sans effet sur le jeu."""
+    marquer ou None) -- lecture seule, pour les mesures (`scripts/measure_v2.py`), sans effet sur le jeu. `on_start` :
+    reçoit la trace dès sa création, avant le premier tick : l'API la lit pendant qu'elle se remplit (rejeu en direct)."""
     home_lineup = pick_best_formation(home_club)
     away_lineup = pick_best_formation(away_club)
 
@@ -389,6 +409,8 @@ def simulate_match(
     runs: dict[str, tuple[Vec2, float]] = {}  # espace visé par chaque joueur sans ballon (Off the Ball)
     intentions: dict[str, Intention] = {}  # intention de chaque joueur au dernier tick (ADR 0001)
     trace.reaction_delays_s = {p.name: reaction_delay_s(p) for p in players}
+    if on_start is not None:
+        on_start(trace)
     situations = SituationTracker(delays_s=dict(trace.reaction_delays_s))  # situation de jeu (ticket v2-collectif/03)
     bloc = Bloc.from_players(players)  # bloc de référence dynamique (ticket v2-collectif/04)
     defense = DefensiveRoles()  # rôles défensifs (ticket v2-collectif/07)
@@ -419,7 +441,7 @@ def simulate_match(
                 minute,
                 [PlayerSnapshot(name=p.name, team=p.team, poste=p.poste, position=p.position, intention=intentions.get(p.name))
                  for p in players],
-                BallSnapshot(position=ball.position),
+                BallSnapshot(position=ball.position, holder=ball.holder),
             )
 
     return trace

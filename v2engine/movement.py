@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from functools import lru_cache
 
 from v2engine.geometry import Vec2, clamp_to_pitch
 
@@ -35,6 +36,7 @@ _STAMINA_DECAY_START_POINTS: tuple[tuple[float, float], ...] = ((5.0, 45.0), (99
 MATCH_END_MINUTE = 90.0
 
 
+@lru_cache(maxsize=None)
 def _lerp(note: float, points: tuple[tuple[float, float], ...]) -> float:
     """Interpolation linéaire par repères, bornée aux extrémités (jamais d'extrapolation hors de
     la plage connue)."""
@@ -58,7 +60,7 @@ def accel_tau_s(acceleration: float) -> float:
 def stamina_factor(stamina: float, minute: float) -> float:
     """Multiplicateur de vitesse (0-1) dû à la fatigue à `minute` de match -- 1.0 avant le début
     de la baisse, décroît linéairement jusqu'au plancher à la 90e."""
-    floor = _lerp(stamina, _STAMINA_FLOOR_POINTS)
+    floor = _lerp(stamina, _STAMINA_FLOOR_POINTS)  # `_lerp` est mis en cache : mêmes notes à chaque tick
     decay_start = _lerp(stamina, _STAMINA_DECAY_START_POINTS)
     if minute <= decay_start:
         return 1.0

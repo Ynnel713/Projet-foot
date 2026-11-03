@@ -51,7 +51,8 @@ def test_higher_keeper_reflexes_and_one_on_ones_reduce_conversion_at_equal_shot(
     )
 
 
-def test_scored_shot_resets_ball_to_center_and_releases_holder(monkeypatch) -> None:
+def test_scored_shot_counts_only_when_the_ball_reaches_the_goal_line(monkeypatch) -> None:
+    # Un tir ne compte pas au départ : le ballon part vers le but et le but est sifflé à son arrivée, jamais avant.
     shooter = _player("Buteur", position=Vec2(PITCH_LENGTH_M - 8.0, GOAL_CENTER_Y))
     keeper = _player("Gardien", poste="GK", team="away", position=Vec2(PITCH_LENGTH_M, GOAL_CENTER_Y))
     ball = BallState(position=shooter.position, velocity=Vec2(0.0, 0.0), holder="Buteur")
@@ -59,11 +60,29 @@ def test_scored_shot_resets_ball_to_center_and_releases_holder(monkeypatch) -> N
     monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression, dt: False)
     monkeypatch.setattr("v2engine.match.choose_action", lambda *args: Action("shot", 1.0))  # issue du tir seule testée ici
     monkeypatch.setattr("v2engine.match.attempt_shot", lambda shooter, keeper, distance_m, goal_center_y: True)
-    scoring_team = _step_ball(ball, 0.1, [shooter, keeper])
-
-    assert scoring_team == "home"
+    assert _step_ball(ball, 0.1, [shooter, keeper]) is None  # départ du tir : pas encore de but
     assert ball.holder is None
-    assert ball.position == Vec2(PITCH_LENGTH_M / 2.0, PITCH_WIDTH_M / 2.0)
+    assert ball.position == shooter.position
+
+    results, positions = [], []
+    for _ in range(20):  # 8 m à 30 m/s : trois pas de 0,1 s
+        results.append(_step_ball(ball, 0.1, [shooter, keeper]))
+        positions.append(ball.position)
+        if results[-1] is not None:
+            break
+    assert results[-1] == "home"
+    assert results[:-1] == [None] * (len(results) - 1)
+    assert 2 <= len(results) <= 4  # ni instantané, ni interminable
+    assert all(a.x < b.x for a, b in zip(positions, positions[1:-1]))  # le ballon avance vers le but adverse
+    assert positions[-2].x > shooter.position.x
+    assert ball.position == Vec2(PITCH_LENGTH_M / 2.0, PITCH_WIDTH_M / 2.0)  # le jeu repart du centre
+
+
+def test_ball_snapshot_names_the_holder() -> None:
+    from v2engine.trace import BallSnapshot
+
+    assert BallSnapshot(position=Vec2(1.0, 2.0)).holder is None
+    assert BallSnapshot(position=Vec2(1.0, 2.0), holder="Buteur").holder == "Buteur"
 
 
 def test_missed_shot_gives_ball_to_the_opposing_keeper(monkeypatch) -> None:

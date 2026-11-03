@@ -24,6 +24,7 @@ class PlayerSnapshot:
 @dataclass(frozen=True)
 class BallSnapshot:
     position: Vec2
+    holder: str | None = None  # porteur du ballon à cet instant (None = ballon en l'air ou libre), pour afficher son nom
 
 
 @dataclass(frozen=True)

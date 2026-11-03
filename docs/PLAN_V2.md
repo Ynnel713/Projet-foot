@@ -173,6 +173,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **Hors chantier, dans les phases suivantes** : centres et jeu aérien du dernier tiers (phase 7) ; coups de pied arrêtés, avec placement, blocs, marquage et seconds ballons (phase 8) ; relance du gardien (phase 9, en lien avec le ticket 15) ; Leadership individuel et moral (phase 10, en lien avec le ticket 21).
 
+**Correctifs écran (03/11/2026, `.scratch/v2-correctifs-ecran/issues/01`)** : rejeu en direct (le match se calcule pendant qu'on le regarde, démarrage en quelques secondes), préchauffage des chargements au démarrage de l'API, moteur 1,6 fois plus rapide à comportement identique ; un tir gagnant va jusqu'à la ligne avant de compter ; nom du porteur sous son rond. Livré, validé expert (réserves A1-A2 acceptées) + QC.
+
 **Correctif préalable (24/10/2026)** : `movement.step` perdait les attributs des joueurs dès le 2ᵉ tick (retour à 60 par défaut) ; passes, contrôles, tacles et tirs des Phases 2 à 4 ignoraient donc les vraies notes en match. Corrigé, test de régression dans `tests/test_v2engine_movement.py`.
 
 ### Bloquée par

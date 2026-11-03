@@ -1,14 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, LoaderCircle, Pause, Play } from "lucide-react";
-import { createV2Match, getPersoClubs } from "../api/client";
+import { getPersoClubs, getV2Match, startV2Match } from "../api/client";
 import dims from "../utils/pitchGeometry.json";
+import { goalBall } from "../utils/v2GoalBall";
 
 // Vitesses en multiples du TEMPS RÉEL (validées par le propriétaire, 24/10/2026) : x8 par défaut, soit ~11 min
 // pour 90 minutes de match. Entre deux positions enregistrées (~1 s de match d'écart, voir api/routers/v2.py),
 // joueurs et ballon glissent en ligne droite au lieu de sauter (voir `interpolatedTick`).
 const SPEED_OPTIONS = [1, 4, 8, 16]; // x1 = vitesse réelle (ajoutée à la demande du propriétaire, 24/10/2026)
 const DEFAULT_SPEED = 8;
+// Le rejeu démarre quand ce nombre d'images (~1 s de match chacune) est calculé ; le reste arrive pendant qu'on regarde.
+const START_BUFFER_TICKS = 60;
+const POLL_MS = 1000;
 
 // Position à `seconds` de match, interpolée entre les deux ticks enregistrés qui l'encadrent. Les joueurs gardent
 // le même ordre d'un tick à l'autre (liste construite une fois côté moteur).
@@ -20,10 +24,13 @@ function interpolatedTick(trace, seconds) {
   const b = trace.ticks[Math.min(last, i + 1)];
   const f = exact - i;
   const mix = (u, v) => u + (v - u) * f;
+  const minute = mix(a.minute, b.minute);
+  // but entre les deux images : le ballon entre dans le but au lieu de glisser vers le rond central
+  const scored = goalBall(a, b, minute, trace.goals, dims.pitch_length_m, dims.pitch_width_m);
   return {
-    minute: mix(a.minute, b.minute),
+    minute,
     players: a.players.map((p, k) => ({ ...p, x: mix(p.x, b.players[k].x), y: mix(p.y, b.players[k].y) })),
-    ball: { x: mix(a.ball.x, b.ball.x), y: mix(a.ball.y, b.ball.y) },
+    ball: scored ? { ...scored, holder: null } : { x: mix(a.ball.x, b.ball.x), y: mix(a.ball.y, b.ball.y), holder: a.ball.holder },
   };
 }
 
@@ -42,6 +49,10 @@ export default function V2Match() {
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(DEFAULT_SPEED);
   const [selected, setSelected] = useState(null); // joueur dont on lit l'intention (ADR 0001)
+  const [computed, setComputed] = useState(0); // images déjà calculées, pendant l'attente avant le démarrage
+  const traceRef = useRef(null); // dernière trace reçue, lue par la boucle de lecture sans la relancer à chaque lecture
+  const runRef = useRef(0); // numéro du lancement en cours : un lancement périmé ou un démontage arrête sa lecture
+  useEffect(() => () => { runRef.current += 1; }, []);
 
   useEffect(() => {
     getPersoClubs()
@@ -56,16 +67,18 @@ export default function V2Match() {
   }, []);
 
   useEffect(() => {
-    if (!playing || !trace) return undefined;
-    const end = (trace.ticks.length - 1) * trace.tick_seconds;
+    if (!playing || !traceRef.current) return undefined;
     let frame;
     let previous = performance.now();
     const loop = (now) => {
       const elapsed = (now - previous) / 1000;
       previous = now;
+      const live = traceRef.current;
+      const end = (live.ticks.length - 1) * live.tick_seconds;
       setSeconds((t) => {
         const next = Math.min(end, t + elapsed * speed);
-        if (next >= end) setPlaying(false);
+        // fin de la lecture seulement si le calcul est fini ; sinon on attend les images suivantes
+        if (next >= end && live.done) setPlaying(false);
         return next;
       });
       frame = requestAnimationFrame(loop);
@@ -81,16 +94,37 @@ export default function V2Match() {
     }
     setLaunching(true);
     setError(null);
+    setComputed(0);
+    const run = ++runRef.current;
     try {
-      const result = await createV2Match({ home, away });
-      setTrace(result);
-      setSelected(null); // le joueur sélectionné n'est peut-être pas de ce match
-      setSeconds(0);
-      setPlaying(true);
+      const { id } = await startV2Match({ home, away });
+      let ticks = [];
+      let started = false;
+      for (;;) {
+        const res = await getV2Match(id, ticks.length);
+        if (run !== runRef.current) return;
+        if (res.error) throw new Error(res.error);
+        ticks = ticks.concat(res.ticks);
+        const live = { ...res, ticks };
+        traceRef.current = live;
+        setComputed(ticks.length);
+        if (started) {
+          setTrace(live);
+        } else if (ticks.length >= START_BUFFER_TICKS || (res.done && ticks.length > 1)) {
+          started = true;
+          setTrace(live);
+          setSelected(null); // le joueur sélectionné n'est peut-être pas de ce match
+          setSeconds(0);
+          setPlaying(true);
+          setLaunching(false);
+        }
+        if (res.done) break;
+        await new Promise((resolve) => setTimeout(resolve, POLL_MS));
+      }
     } catch {
-      setError("Échec de la simulation.");
+      if (run === runRef.current) setError("Échec de la simulation.");
     } finally {
-      setLaunching(false);
+      if (run === runRef.current) setLaunching(false);
     }
   }
 
@@ -103,7 +137,7 @@ export default function V2Match() {
         <h1 className="text-2xl font-extrabold text-white">⚽ Version 2 (bêta)</h1>
         <p className="text-sm text-gray-400">
           Moteur physique piloté par les attributs réels des joueurs : l'issue n'est pas décidée à l'avance, elle
-          émerge de la simulation. Un match complet prend quelques dizaines de secondes à calculer.
+          émerge de la simulation. Le match se calcule pendant que tu le regardes : il démarre après quelques secondes.
         </p>
 
         {clubs.length === 0 && !error ? (
@@ -127,7 +161,8 @@ export default function V2Match() {
         >
           {launching ? (
             <>
-              <LoaderCircle size={18} className="animate-spin" /> Simulation du match…
+              <LoaderCircle size={18} className="animate-spin" /> Préparation du match…{" "}
+              {computed > 0 && `${Math.floor((computed * 100) / START_BUFFER_TICKS)} %`}
             </>
           ) : (
             "Lancer le match"
@@ -141,7 +176,9 @@ export default function V2Match() {
   const revealedGoals = trace.goals.filter((g) => g.minute <= tick.minute);
   const homeGoals = revealedGoals.filter((g) => g.team === "home").length;
   const awayGoals = revealedGoals.filter((g) => g.team === "away").length;
-  const finished = seconds >= (trace.ticks.length - 1) * trace.tick_seconds;
+  const available = (trace.ticks.length - 1) * trace.tick_seconds; // images déjà calculées
+  const finished = trace.done && seconds >= available;
+  const waiting = !trace.done && seconds >= available; // le rejeu a rattrapé le calcul
   // Coup de sifflet du hors-jeu (ticket v2-collectif/23) : affiché 15 secondes de match après l'événement, pour
   // rester lisible aux vitesses de lecture (x8 par défaut, soit un peu moins de 2 s réelles).
   const recentOffside = (trace.offsides || [])
@@ -158,7 +195,10 @@ export default function V2Match() {
           <div className="font-bold text-white tabular-nums">
             {trace.home} {homeGoals} - {awayGoals} {trace.away}
           </div>
-          <div className="text-[11px] text-gray-500 tabular-nums">{Math.floor(tick.minute)}'</div>
+          <div className="text-[11px] text-gray-500 tabular-nums">
+            {Math.floor(tick.minute)}'
+            {!trace.done && ` · calcul ${Math.floor(available / 60)}'${waiting ? " (en attente…)" : ""}`}
+          </div>
           <div className="text-[11px] text-gray-400">
             <span className="text-[#4f8ef7]">{situationAt(trace, "home", tick.minute)}</span>
             {" · "}
@@ -223,6 +263,7 @@ function IntentionPanel({ trace, tick, selected }) {
   if (!selected) {
     return <p className="text-center text-xs text-gray-500">Touchez un joueur pour voir ce qu'il cherche à faire.</p>;
   }
+  // intentions et décisions n'arrivent qu'une fois le calcul fini
   const player = tick.players.find((p) => p.name === selected);
   const intentions = (trace.intentions || []).find((i) => i.player === selected);
   const segments = intentions?.segments || [];
@@ -245,7 +286,9 @@ function IntentionPanel({ trace, tick, selected }) {
           {current.mate ? ` (${current.mate})` : ""} — {current.reason}
         </div>
       ) : (
-        <div className="text-gray-500">Pas encore d'intention enregistrée.</div>
+        <div className="text-gray-500">
+          {trace.done ? "Pas encore d'intention enregistrée." : "Intentions disponibles à la fin du calcul du match."}
+        </div>
       )}
       {decision && (
         <div className="text-xs text-gray-400">
@@ -324,6 +367,7 @@ function GoalEnd({ flip }) {
 function V2Pitch({ tick, selected, onSelect }) {
   const pad = MARGIN + TRACK;
   const stripe = L / STRIPES;
+  const holder = tick.players.find((p) => p.name === tick.ball.holder);
   return (
     <svg
       viewBox={`${-pad} ${-pad} ${L + 2 * pad} ${W + 2 * pad}`}
@@ -370,6 +414,23 @@ function V2Pitch({ tick, selected, onSelect }) {
           style={{ cursor: "pointer" }}
         />
       ))}
+      {holder && (
+        // nom du porteur, sous son rond ; le contour sombre le garde lisible sur la pelouse comme sur les lignes
+        <text
+          x={holder.x}
+          y={holder.y + 3.2}
+          textAnchor="middle"
+          fontSize={1.8}
+          fontWeight="bold"
+          fill="white"
+          stroke="black"
+          strokeWidth={0.35}
+          paintOrder="stroke"
+          style={{ pointerEvents: "none" }}
+        >
+          {holder.name}
+        </text>
+      )}
       <circle cx={tick.ball.x} cy={tick.ball.y} r={0.4} fill="white" stroke="black" strokeWidth={0.1} />
     </svg>
   );

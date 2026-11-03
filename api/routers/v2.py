@@ -6,10 +6,15 @@ d'une route de listing dédiée ici)."""
 
 from __future__ import annotations
 
+import threading
+import uuid
+from dataclasses import dataclass
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from ligue1sim.clubs import load_all_clubs
+from ligue1sim.coaches import preferred_formations
 from ligue1sim.season import CLUBS_PATH
 
 from v2engine.match import TICK_SECONDS, simulate_match
@@ -40,6 +45,7 @@ class PlayerSnapshotOut(BaseModel):
 class BallSnapshotOut(BaseModel):
     x: float
     y: float
+    holder: str | None = None  # porteur du ballon : son nom s'affiche sous son rond
 
 
 class TickOut(BaseModel):
@@ -112,6 +118,25 @@ class MatchTraceOut(BaseModel):
     offsides: list[OffsideEventOut] = []
 
 
+class MatchProgressOut(BaseModel):
+    """État d'un match en cours de calcul (rejeu en direct) : seulement les images à partir de `first_tick`, pour que
+    chaque lecture reste légère. Intentions et décisions, lourdes, n'arrivent qu'une fois le match fini."""
+    done: bool
+    error: str | None = None
+    home: str
+    away: str
+    tick_seconds: float
+    home_goals: int
+    away_goals: int
+    goals: list[GoalEventOut]
+    situations: list[SituationOut]
+    offsides: list[OffsideEventOut]
+    first_tick: int
+    ticks: list[TickOut]
+    intentions: list[PlayerIntentionsOut] = []
+    decisions: list[DecisionOut] = []
+
+
 def intention_segments(trace: MatchTrace) -> list[PlayerIntentionsOut]:
     segments: dict[str, list[IntentionSegmentOut]] = {}
     for tick in trace.ticks:
@@ -136,6 +161,32 @@ def _find_club(name: str):
     raise HTTPException(status_code=404, detail=f"Club introuvable : {name!r}")
 
 
+def _tick_out(tick) -> TickOut:
+    return TickOut(
+        minute=tick.minute,
+        players=[PlayerSnapshotOut(name=p.name, team=p.team, poste=p.poste, x=p.position.x, y=p.position.y)
+                 for p in tick.players],
+        ball=BallSnapshotOut(x=tick.ball.position.x, y=tick.ball.position.y, holder=tick.ball.holder),
+    )
+
+
+def _decisions_out(trace: MatchTrace) -> list[DecisionOut]:
+    return [DecisionOut(minute=d.minute, player=d.player, team=d.team, action=d.action, target=d.target,
+                        considered=d.considered, best=d.best) for d in trace.decisions]
+
+
+def _situations_out(trace: MatchTrace) -> list[SituationOut]:
+    return [SituationOut(minute=s.minute, team=s.team, situation=s.situation) for s in list(trace.situations)]
+
+
+def _offsides_out(trace: MatchTrace) -> list[OffsideEventOut]:
+    return [OffsideEventOut(minute=o.minute, team=o.team, player=o.player, x=o.x, y=o.y) for o in list(trace.offsides)]
+
+
+def _goals_out(trace: MatchTrace) -> list[GoalEventOut]:
+    return [GoalEventOut(minute=g.minute, team=g.team) for g in list(trace.goals)]
+
+
 @router.post("/matches", response_model=MatchTraceOut)
 def create_match(payload: SimulateV2Request) -> MatchTraceOut:
     home_club = _find_club(payload.home)
@@ -148,21 +199,104 @@ def create_match(payload: SimulateV2Request) -> MatchTraceOut:
         tick_seconds=trace.tick_seconds,
         home_goals=trace.home_goals,
         away_goals=trace.away_goals,
-        goals=[GoalEventOut(minute=g.minute, team=g.team) for g in trace.goals],
-        ticks=[
-            TickOut(
-                minute=tick.minute,
-                players=[
-                    PlayerSnapshotOut(name=p.name, team=p.team, poste=p.poste, x=p.position.x, y=p.position.y)
-                    for p in tick.players
-                ],
-                ball=BallSnapshotOut(x=tick.ball.position.x, y=tick.ball.position.y),
-            )
-            for tick in trace.ticks
-        ],
+        goals=_goals_out(trace),
+        ticks=[_tick_out(tick) for tick in trace.ticks],
         intentions=intention_segments(trace),
-        decisions=[DecisionOut(minute=d.minute, player=d.player, team=d.team, action=d.action, target=d.target,
-                               considered=d.considered, best=d.best) for d in trace.decisions],
-        situations=[SituationOut(minute=s.minute, team=s.team, situation=s.situation) for s in trace.situations],
-        offsides=[OffsideEventOut(minute=o.minute, team=o.team, player=o.player, x=o.x, y=o.y) for o in trace.offsides],
+        decisions=_decisions_out(trace),
+        situations=_situations_out(trace),
+        offsides=_offsides_out(trace),
     )
+
+
+# --- Rejeu en direct : le match se calcule en tâche de fond et l'écran le lit par morceaux, pour commencer à le
+# rejouer après quelques secondes au lieu d'attendre la fin du calcul (3 minutes environ). Le calcul va plus vite que
+# le rejeu à x8 ; à x16 le rejeu peut rattraper le calcul, l'écran attend alors les images suivantes.
+@dataclass
+class _Job:
+    home: str
+    away: str
+    trace: MatchTrace | None = None  # créée par `simulate_match` au démarrage, lue ici pendant qu'elle se remplit
+    done: bool = False
+    error: str | None = None
+    cancelled: bool = False  # levé par un nouveau lancement (donc avant toute éviction) : le calcul s'arrête au tick suivant
+
+
+_MAX_JOBS = 8  # ponytail : en mémoire, un seul processus ; les plus anciens sont oubliés au-delà
+_jobs: dict[str, _Job] = {}
+_jobs_lock = threading.Lock()
+
+
+class _Cancelled(Exception):
+    pass
+
+
+def _run_job(job: _Job, home_club, away_club) -> None:
+    def stop_if_cancelled(*_):
+        if job.cancelled:
+            raise _Cancelled
+    try:
+        simulate_match(home_club, away_club, duration_minutes=90.0, tick_seconds=_TICK_SECONDS,
+                       record_every=_RECORD_EVERY, observer=stop_if_cancelled,
+                       on_start=lambda trace: setattr(job, "trace", trace))
+    except _Cancelled:
+        job.error = "annulé"
+    except Exception as exc:  # le calcul tourne hors requête : l'erreur doit remonter à l'écran, pas se perdre
+        job.error = f"{type(exc).__name__}: {exc}"
+    finally:
+        job.done = True
+
+
+class MatchStartedOut(BaseModel):
+    id: str
+
+
+@router.post("/matches/start", response_model=MatchStartedOut)
+def start_match(payload: SimulateV2Request) -> MatchStartedOut:
+    home_club = _find_club(payload.home)
+    away_club = _find_club(payload.away)
+    job = _Job(home=home_club.name, away=away_club.name)
+    job_id = uuid.uuid4().hex
+    with _jobs_lock:
+        for previous in _jobs.values():  # un seul écran : le match précédent n'est plus regardé, son calcul s'arrête
+            previous.cancelled = True
+        _jobs[job_id] = job
+        while len(_jobs) > _MAX_JOBS:
+            del _jobs[next(iter(_jobs))]
+    threading.Thread(target=_run_job, args=(job, home_club, away_club), daemon=True).start()
+    return MatchStartedOut(id=job_id)
+
+
+@router.get("/matches/{job_id}", response_model=MatchProgressOut)
+def match_progress(job_id: str, from_tick: int = 0) -> MatchProgressOut:
+    job = _jobs.get(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Match introuvable (API redémarrée ?)")
+    trace = job.trace
+    done = job.done  # lu AVANT les images : si le calcul est fini, elles sont toutes là
+    if trace is None:
+        return MatchProgressOut(done=done, error=job.error, home=job.home, away=job.away,
+                                tick_seconds=_TICK_SECONDS * _RECORD_EVERY, home_goals=0, away_goals=0,
+                                goals=[], situations=[], offsides=[], first_tick=from_tick, ticks=[])
+    first = max(0, from_tick)
+    return MatchProgressOut(
+        done=done,
+        error=job.error,
+        home=trace.home,
+        away=trace.away,
+        tick_seconds=trace.tick_seconds,
+        home_goals=trace.home_goals,
+        away_goals=trace.away_goals,
+        goals=_goals_out(trace),
+        situations=_situations_out(trace),
+        offsides=_offsides_out(trace),
+        first_tick=first,
+        ticks=[_tick_out(tick) for tick in trace.ticks[first:]],
+        intentions=intention_segments(trace) if done else [],
+        decisions=_decisions_out(trace) if done else [],
+    )
+
+
+def prewarm() -> None:
+    """Charge à froid, au démarrage de l'API, ce qui coûte au premier match (fichier des joueurs ~30 s, entraîneurs ~9 s)."""
+    load_all_clubs(CLUBS_PATH)
+    preferred_formations()

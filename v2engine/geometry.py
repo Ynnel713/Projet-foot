@@ -35,7 +35,7 @@ class Vec2:
         return Vec2(self.x / length, self.y / length) if length > 1e-9 else Vec2(0.0, 0.0)
 
     def distance_to(self, other: Vec2) -> float:
-        return (self - other).length()
+        return math.hypot(self.x - other.x, self.y - other.y)
 
 
 def clamp_to_pitch(position: Vec2) -> Vec2:

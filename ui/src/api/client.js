@@ -29,6 +29,9 @@ export const getNations = () => request("/api/nations");
 // (positions + buts horodatés) -- rien à passer ici sauf les deux clubs, le résultat n'est
 // jamais connu avant que la réponse n'arrive.
 export const createV2Match = (body) => request("/api/v2/matches", { method: "POST", body: JSON.stringify(body) });
+// Rejeu en direct : le calcul démarre en tâche de fond, puis on lit les images au fur et à mesure (à partir de `fromTick`).
+export const startV2Match = (body) => request("/api/v2/matches/start", { method: "POST", body: JSON.stringify(body) });
+export const getV2Match = (id, fromTick) => request(`/api/v2/matches/${id}?from_tick=${fromTick}`);
 
 export const createCompetition = (body) =>
   request("/api/competitions", { method: "POST", body: JSON.stringify(body) });
