@@ -76,4 +76,6 @@ export const startKnockout = (id) => request(`/api/competitions/${id}/knockout/s
 export const getBracket = (id) => request(`/api/competitions/${id}/bracket`);
 export const simulateBracketRound = (id) =>
   request(`/api/competitions/${id}/bracket/simulate-round`, { method: "POST" });
+export const simulateBracketLeg = (id) =>
+  request(`/api/competitions/${id}/bracket/simulate-leg`, { method: "POST" });
 export const advanceBracketRound = (id) => request(`/api/competitions/${id}/bracket/advance`, { method: "POST" });

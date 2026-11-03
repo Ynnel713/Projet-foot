@@ -396,6 +396,10 @@ def simulate_groups_matchday(comp_id: str) -> GroupsStatusOut:
     return groups_status(competition)
 
 
+def _bracket_response(competition: CustomCompetition) -> BracketOut:
+    return bracket_out(competition.bracket, competition.current_round_legs)
+
+
 @router.post("/{comp_id}/knockout/start", response_model=BracketOut)
 def start_knockout(comp_id: str) -> BracketOut:
     competition = _get_or_404(comp_id)
@@ -405,7 +409,7 @@ def start_knockout(comp_id: str) -> BracketOut:
     if competition.bracket is not None:
         raise HTTPException(409, "Phase à élimination déjà commencée.")
     competition.start_knockout_from_groups()
-    return bracket_out(competition.bracket)
+    return _bracket_response(competition)
 
 
 @router.get("/{comp_id}/bracket", response_model=BracketOut)
@@ -414,7 +418,7 @@ def get_bracket(comp_id: str) -> BracketOut:
     _require_bracket_format(competition)
     if competition.bracket is None:
         raise HTTPException(409, "Phase à élimination pas encore commencée -- utilise /knockout/start.")
-    return bracket_out(competition.bracket)
+    return _bracket_response(competition)
 
 
 @router.post("/{comp_id}/bracket/simulate-round", response_model=BracketOut)
@@ -426,7 +430,20 @@ def simulate_bracket_round(comp_id: str) -> BracketOut:
     if competition.bracket.current_round.played:
         raise HTTPException(409, "Ce tour est déjà joué -- utilise /bracket/advance.")
     competition.simulate_bracket_round()
-    return bracket_out(competition.bracket)
+    return _bracket_response(competition)
+
+
+@router.post("/{comp_id}/bracket/simulate-leg", response_model=BracketOut)
+def simulate_bracket_leg(comp_id: str) -> BracketOut:
+    """Joue UNE manche de tout le tour courant (tous les allers, puis tous les retours) ; `simulate-round` joue les manches restantes."""
+    competition = _get_or_404(comp_id)
+    _require_bracket_format(competition)
+    if competition.bracket is None:
+        raise HTTPException(409, "Phase à élimination pas encore commencée -- utilise /knockout/start.")
+    if competition.bracket.current_round.played:
+        raise HTTPException(409, "Ce tour est déjà joué -- utilise /bracket/advance.")
+    competition.simulate_bracket_leg()
+    return _bracket_response(competition)
 
 
 @router.post("/{comp_id}/bracket/advance", response_model=BracketOut)
@@ -438,4 +455,4 @@ def advance_bracket(comp_id: str) -> BracketOut:
     if not competition.bracket.current_round.played:
         raise HTTPException(409, "Ce tour n'est pas encore joué -- utilise /bracket/simulate-round.")
     competition.advance_bracket_round()
-    return bracket_out(competition.bracket)
+    return _bracket_response(competition)

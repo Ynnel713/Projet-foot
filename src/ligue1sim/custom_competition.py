@@ -13,7 +13,7 @@ import streamlit as st
 from ligue1sim.clubs import Club
 from ligue1sim.events import AvailabilityTracker
 from ligue1sim.groups import Group, make_groups, qualified_from_groups, simulate_group_matchday
-from ligue1sim.knockout import Bracket, advance_round, generate_bracket, simulate_round
+from ligue1sim.knockout import Bracket, advance_round, generate_bracket, simulate_round, simulate_round_leg
 from ligue1sim.schedule import Match
 from ligue1sim.season import Season
 from ligue1sim.simulation import FormTracker, LeagueContext
@@ -134,9 +134,21 @@ class CustomCompetition:
             return self.final_legs if self.final_legs is not None else knockout_legs
         return knockout_legs
 
+    @property
+    def current_round_legs(self) -> int:
+        """Manches du tour courant (public : lu par l'API pour l'affichage)."""
+        return self._round_legs
+
     def simulate_bracket_round(self) -> None:
         clubs_by_name = {c.name: c for c in self.clubs}
         simulate_round(
+            self.bracket.current_round, self._round_legs, clubs_by_name, self.context, self.suspensions, self.injuries, self.form
+        )
+
+    def simulate_bracket_leg(self) -> None:
+        """Une seule manche du tour courant (l'aller, puis le retour...)."""
+        clubs_by_name = {c.name: c for c in self.clubs}
+        simulate_round_leg(
             self.bracket.current_round, self._round_legs, clubs_by_name, self.context, self.suspensions, self.injuries, self.form
         )
 

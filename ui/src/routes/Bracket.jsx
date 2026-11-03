@@ -1,9 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, useOutletContext } from "react-router-dom";
 import { LoaderCircle } from "lucide-react";
-import { getBracket, simulateBracketRound, advanceBracketRound } from "../api/client";
+import { getBracket, simulateBracketRound, simulateBracketLeg, advanceBracketRound } from "../api/client";
 import TeamLink from "../components/common/TeamLink";
-import LiveButton from "../components/common/LiveButton";
 import MatchRow from "../components/matches/MatchRow";
 import ActionBar from "../components/common/ActionBar";
 import AnimationDialog from "../components/pitch/AnimationDialog";
@@ -45,11 +44,12 @@ export default function Bracket() {
     load();
   }, [load]);
 
-  async function handleToggle() {
+  // `action` : "leg" (une manche de tout le tour), "round" (toutes les manches restantes) ou "advance" (tour suivant).
+  async function handleAction(action) {
     setLoading(true);
     try {
-      const current = data.rounds[data.rounds.length - 1];
-      setData(current.played ? await advanceBracketRound(id) : await simulateBracketRound(id));
+      const call = { leg: simulateBracketLeg, round: simulateBracketRound, advance: advanceBracketRound }[action];
+      setData(await call(id));
       refresh();
     } finally {
       setLoading(false);
@@ -57,14 +57,14 @@ export default function Bracket() {
   }
 
   // Live d'une manche d'une confrontation (toutes compétitions à élimination directe) -- ouvre directement l'ANIMATION. Manche déjà
-  // jouée : animation immédiate, sans jamais afficher le score au préalable. Pas encore jouée : on simule le tour (le moteur joue un
-  // tour d'un bloc), puis l'animation de CETTE manche s'ouvre automatiquement.
+  // jouée : animation immédiate, sans jamais afficher le score au préalable. Prochaine manche à jouer : on simule cette manche du tour,
+  // puis son animation s'ouvre automatiquement. Une manche plus lointaine (retour avant l'aller) n'est pas proposée (voir TieCard).
   async function openLive(round, tie, legIndex) {
     let source = data;
     if (tie.legs.length <= legIndex) {
       setLaunching(true);
       try {
-        source = await simulateBracketRound(id);
+        source = await simulateBracketLeg(id);
         setData(source);
         refresh();
       } catch {
@@ -84,12 +84,15 @@ export default function Bracket() {
 
   const currentRound = data.rounds[data.rounds.length - 1];
   const previousRounds = data.rounds.slice(0, -1);
+  const legsLeft = data.current_legs - data.current_legs_played;
+  const legName = data.current_legs === 2 ? (data.current_legs_played === 0 ? "l'aller" : "le retour") : `la manche ${data.current_legs_played + 1}`;
   const currentHasByes = currentRound.ties.some((t) => t.is_bye);
 
   const tieCard = (round, t) => (
     <TieCard
       key={`${t.home}-${t.away ?? "bye"}`}
       tie={t}
+      totalLegs={round === currentRound ? data.current_legs : 1}
       onOpenSheet={(leg, i) =>
         navigate(`/competition/${id}/pitch?${new URLSearchParams({ home: leg.home, away: leg.away, round_number: round.number, leg: i })}`)
       }
@@ -133,7 +136,14 @@ export default function Bracket() {
       {animationMatch && <AnimationDialog competitionId={id} matchParams={animationMatch} onClose={() => setAnimationMatch(null)} />}
 
       {!data.is_complete && (
-        <ActionBar primary={{ label: currentRound.played ? "Tour suivant →" : "Simuler ce tour", onClick: handleToggle, loading }} />
+        <ActionBar
+          primary={
+            currentRound.played
+              ? { label: "Tour suivant →", onClick: () => handleAction("advance"), loading }
+              : { label: data.current_legs === 1 ? "Simuler ce tour" : `Simuler ${legName}`, onClick: () => handleAction("leg"), loading }
+          }
+          secondary={!currentRound.played && legsLeft > 1 ? { label: "Simuler tout le tour", onClick: () => handleAction("round"), disabled: loading } : undefined}
+        />
       )}
 
       {launching && (
@@ -150,7 +160,7 @@ const LEG_LABELS = ["Aller", "Retour", "Manche 3"];
 
 // Confrontation : manche unique = une ligne de match ; aller-retour = score cumulé puis chaque manche. Le vainqueur est en blanc
 // et en gras. Le score de chaque manche ouvre sa feuille de match (`leg.home` / `leg.away` : l'ordre de la manche, inversé au retour).
-function TieCard({ tie: t, onOpenSheet, onLive }) {
+function TieCard({ tie: t, totalLegs, onOpenSheet, onLive }) {
   const tone = (club) => (t.winner ? (t.winner === club ? "text-white font-semibold" : "text-gray-400") : "text-gray-100");
 
   if (t.is_bye) {
@@ -162,7 +172,9 @@ function TieCard({ tie: t, onOpenSheet, onLive }) {
     );
   }
 
-  if (t.legs.length <= 1) {
+  const nbLegs = Math.max(t.legs.length, totalLegs);
+
+  if (nbLegs <= 1) {
     const leg = t.legs[0];
     return (
       <div className="rounded-xl bg-surface border border-line overflow-hidden">
@@ -187,17 +199,20 @@ function TieCard({ tie: t, onOpenSheet, onLive }) {
         <TeamLink name={t.away} className={`justify-self-start text-data ${tone(t.away)}`} />
       </div>
       {t.decided_by_penalties && <PenaltyLine tie={t} />}
-      {t.legs.length === 0 && (
-        <div className="flex justify-center pb-2">
-          <LiveButton played={false} onLive={() => onLive(0)} compact />
-        </div>
-      )}
-      {t.legs.map((leg, i) => (
-        <div key={i} className="border-t border-line">
-          <p className="px-3 pt-1.5 text-caption text-gray-500">{LEG_LABELS[i] ?? `Manche ${i + 1}`}</p>
-          <MatchRow match={leg} onOpenSheet={() => onOpenSheet(leg, i)} onLive={() => onLive(i)} />
-        </div>
-      ))}
+      {Array.from({ length: nbLegs }, (_, i) => {
+        const leg = t.legs[i];
+        const host = i % 2 === 0 ? [t.home, t.away] : [t.away, t.home];
+        return (
+          <div key={i} className="border-t border-line">
+            <p className="px-3 pt-1.5 text-caption text-gray-500">{LEG_LABELS[i] ?? `Manche ${i + 1}`}</p>
+            <MatchRow
+              match={leg ?? { home: host[0], away: host[1], played: false }}
+              onOpenSheet={leg ? () => onOpenSheet(leg, i) : undefined}
+              onLive={i <= t.legs.length ? () => onLive(i) : undefined} // une manche n'est proposée qu'après la précédente
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }

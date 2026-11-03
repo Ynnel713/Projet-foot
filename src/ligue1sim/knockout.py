@@ -110,6 +110,56 @@ def generate_bracket(clubs: list[Club]) -> Bracket:
     return Bracket(rounds=[Round(number=1, ties=ties)])
 
 
+def simulate_tie_leg(
+    tie: Tie,
+    legs: int,
+    clubs_by_name: dict[str, Club],
+    context: LeagueContext,
+    suspensions: AvailabilityTracker | None = None,
+    injuries: AvailabilityTracker | None = None,
+    form: FormTracker | None = None,
+) -> None:
+    """Simule UNE manche de la confrontation (la prochaine, sur `legs` au total) ; la dernière manche désigne le vainqueur.
+
+    Chaque manche est un vrai match qu'un joueur suspendu/blessé peut
+    manquer : les indisponibilités sont donc lues et mises à jour manche par
+    manche, pas une fois pour toute la confrontation (voir simulation.simulate_journee
+    pour la même séquence appliquée à une journée de championnat). Sans effet si la confrontation est jouée."""
+    if tie.played:
+        return
+
+    suspensions = suspensions if suspensions is not None else AvailabilityTracker()
+    injuries = injuries if injuries is not None else AvailabilityTracker()
+
+    home_club, away_club = clubs_by_name[tie.home], clubs_by_name[tie.away]
+    leg_index = len(tie.legs)
+    host, guest = (home_club, away_club) if leg_index % 2 == 0 else (away_club, home_club)
+    suspended_host, injured_host = suspensions.unavailable_players(host.name), injuries.unavailable_players(host.name)
+    suspended_guest, injured_guest = suspensions.unavailable_players(guest.name), injuries.unavailable_players(guest.name)
+    unavailable_host = suspended_host | injured_host
+    unavailable_guest = suspended_guest | injured_guest
+
+    host_goals, guest_goals, events = simulate_match(
+        host,
+        guest,
+        context,
+        unavailable_host,
+        unavailable_guest,
+        form,
+        suspended_home=suspended_host,
+        injured_home=injured_host,
+        suspended_away=suspended_guest,
+        injured_away=injured_guest,
+    )
+    tie.legs.append(Match(host.name, guest.name, host_goals, guest_goals, events))
+
+    new_suspensions, new_injuries = ([], []) if events is None else collect_new_bans(events)
+    settle_trackers(suspensions, injuries, {host.name, guest.name}, new_suspensions, new_injuries)
+
+    if len(tie.legs) >= legs:
+        _decide_tie(tie, home_club, away_club)
+
+
 def simulate_tie(
     tie: Tie,
     legs: int,
@@ -119,43 +169,14 @@ def simulate_tie(
     injuries: AvailabilityTracker | None = None,
     form: FormTracker | None = None,
 ) -> None:
-    """Simule une confrontation non encore jouée (`legs` manches).
-
-    Chaque manche est un vrai match qu'un joueur suspendu/blessé peut
-    manquer : les indisponibilités sont donc lues et mises à jour manche par
-    manche, pas une fois pour toute la confrontation (voir simulation.simulate_journee
-    pour la même séquence appliquée à une journée de championnat)."""
-    if tie.played:
-        return
-
+    """Simule toutes les manches restantes d'une confrontation (`legs` manches au total)."""
     suspensions = suspensions if suspensions is not None else AvailabilityTracker()
     injuries = injuries if injuries is not None else AvailabilityTracker()
+    while not tie.played:
+        simulate_tie_leg(tie, legs, clubs_by_name, context, suspensions, injuries, form)
 
-    home_club, away_club = clubs_by_name[tie.home], clubs_by_name[tie.away]
-    for leg_index in range(legs):
-        host, guest = (home_club, away_club) if leg_index % 2 == 0 else (away_club, home_club)
-        suspended_host, injured_host = suspensions.unavailable_players(host.name), injuries.unavailable_players(host.name)
-        suspended_guest, injured_guest = suspensions.unavailable_players(guest.name), injuries.unavailable_players(guest.name)
-        unavailable_host = suspended_host | injured_host
-        unavailable_guest = suspended_guest | injured_guest
 
-        host_goals, guest_goals, events = simulate_match(
-            host,
-            guest,
-            context,
-            unavailable_host,
-            unavailable_guest,
-            form,
-            suspended_home=suspended_host,
-            injured_home=injured_host,
-            suspended_away=suspended_guest,
-            injured_away=injured_guest,
-        )
-        tie.legs.append(Match(host.name, guest.name, host_goals, guest_goals, events))
-
-        new_suspensions, new_injuries = ([], []) if events is None else collect_new_bans(events)
-        settle_trackers(suspensions, injuries, {host.name, guest.name}, new_suspensions, new_injuries)
-
+def _decide_tie(tie: Tie, home_club: Club, away_club: Club) -> None:
     agg_home, agg_away = tie.aggregate()
     if agg_home > agg_away:
         tie.winner = tie.home
@@ -181,6 +202,22 @@ def simulate_round(
     injuries = injuries if injuries is not None else AvailabilityTracker()
     for tie in round_.ties:
         simulate_tie(tie, legs, clubs_by_name, context, suspensions, injuries, form)
+
+
+def simulate_round_leg(
+    round_: Round,
+    legs: int,
+    clubs_by_name: dict[str, Club],
+    context: LeagueContext,
+    suspensions: AvailabilityTracker | None = None,
+    injuries: AvailabilityTracker | None = None,
+    form: FormTracker | None = None,
+) -> None:
+    """Une manche de plus pour chaque confrontation non jouée du tour (tous les allers, puis tous les retours...)."""
+    suspensions = suspensions if suspensions is not None else AvailabilityTracker()
+    injuries = injuries if injuries is not None else AvailabilityTracker()
+    for tie in round_.ties:
+        simulate_tie_leg(tie, legs, clubs_by_name, context, suspensions, injuries, form)
 
 
 def advance_round(bracket: Bracket) -> None:

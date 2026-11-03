@@ -225,6 +225,9 @@ class BracketOut(BaseModel):
     rounds: list[RoundOut]
     is_complete: bool
     champion: str | None
+    # Manches du tour COURANT : total (finale comprise) et déjà jouées -- l'écran en déduit « Simuler l'aller / le retour ».
+    current_legs: int = 1
+    current_legs_played: int = 0
 
 
 class LeaderboardRow(BaseModel):

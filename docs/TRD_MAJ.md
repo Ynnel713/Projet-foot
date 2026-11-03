@@ -163,3 +163,8 @@ Déterminisme bit-à-bit d'A1.1 confirmé (16/10/2026) : deux exécutions sépar
 ### Écarts à corriger au prochain remaniement du PDF
 - Section 9 / Bloc A : chantier "mouvement collectif" à marquer clos (A1.3/A2.1/A2.3 partiels) ; A1.1 à faire passer d'« à faire » à son état une fois commitée.
 - Ce fichier est mis à jour à chaque sous-étape terminée (règle de `CLAUDE.md`).
+
+## Refonte UI, ticket 05 : phases finales, manches une par une (03/11/2026)
+- `knockout.py` : `simulate_tie_leg` joue UNE manche (la dernière désigne le vainqueur, tirs au but compris) ; `simulate_tie` la répète ; `simulate_round_leg` joue une manche pour toutes les confrontations d'un tour. `simulate_round` garde son ordre de tirage (« Simuler tout » inchangé). Moteur Poisson et 3c non touchés.
+- API : `POST /competitions/{id}/bracket/simulate-leg` (409 si le tour est joué) ; `BracketOut.current_legs` / `current_legs_played` (manches du tour courant) ; `TieOut.home_goals/away_goals` donnent le cumul provisoire dès l'aller, `winner` reste `None` jusqu'à la dernière manche. Aucun champ ajouté à `Tie` (rien à migrer pour une sauvegarde ancienne).
+- Tickets (section 11) : aucun ouvert ni fermé.

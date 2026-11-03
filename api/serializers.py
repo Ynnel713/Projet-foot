@@ -255,7 +255,7 @@ def groups_status(competition: CustomCompetition) -> GroupsStatusOut:
 
 def tie_out(tie: Tie) -> TieOut:
     home_goals = away_goals = None
-    if tie.played and not tie.is_bye:
+    if tie.legs and not tie.is_bye:  # cumul provisoire dès l'aller ; le vainqueur n'est connu qu'après la dernière manche
         home_goals, away_goals = tie.aggregate()
     return TieOut(
         home=tie.home,
@@ -270,8 +270,10 @@ def tie_out(tie: Tie) -> TieOut:
     )
 
 
-def bracket_out(bracket: Bracket) -> BracketOut:
+def bracket_out(bracket: Bracket, current_legs: int = 1) -> BracketOut:
     return BracketOut(
+        current_legs=current_legs,
+        current_legs_played=max((len(t.legs) for t in bracket.current_round.ties), default=0),
         rounds=[RoundOut(number=r.number, ties=[tie_out(t) for t in r.ties], played=r.played, label=r.label) for r in bracket.rounds],
         is_complete=bracket.is_complete,
         champion=bracket.champion,

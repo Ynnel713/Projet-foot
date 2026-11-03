@@ -342,9 +342,10 @@ Audit UX/UI et direction « la loge de presse, de nuit » validés par le propri
 Lots, dans l'ordre :
 1. Fondations (tokens, typographie, fond uni) — livré (01/11/2026), validé expert + QC, commit `316d2ef` (`.scratch/refonte-ui/issues/01-fondations-design-system.md`).
 2. Cadre de navigation (espace de compétition à onglets, « Reprendre », fin du cul-de-sac des lignes de match) — livré (02/11/2026), validé expert + QC (`.scratch/refonte-ui/issues/02-cadre-navigation.md`).
-3. Boucle centrale mobile d'abord (ligne de match, classement unifié, barre d'action commune) — livré (03/11/2026), validé expert + QC ; classement unique sans V / N / D (11 px, 20 px par ligne), ligne de match à zones cliquables distinctes (score, club, buteur), barre d'action commune (`.scratch/refonte-ui/issues/03-boucle-centrale.md`). La simulation des manches une par une reste à écrire en ticket séparé.
+3. Boucle centrale mobile d'abord (ligne de match, classement unifié, barre d'action commune) — livré (03/11/2026), validé expert + QC ; classement unique sans V / N / D (11 px, 20 px par ligne), ligne de match à zones cliquables distinctes (score, club, buteur), barre d'action commune (`.scratch/refonte-ui/issues/03-boucle-centrale.md`). La simulation des manches une par une fait l'objet du ticket 05.
 4. Feuille de match V1 (données existantes de `/pitch`) — avancé avant le lot 3 (02/11/2026) ; livré (03/11/2026), validé expert + QC ; terrain sur bureau seulement, notes en chiffre neutre, recul du MDC de 5 % à l'affichage ; défaut préexistant des matchs retour (404) corrigé dans l'API (décision du propriétaire du 02/11/2026) (`.scratch/refonte-ui/issues/04-feuille-de-match.md`).
 5. Club et joueur (effectif en tableau, calendrier, fiche joueur en français).
+5. Phases finales, manches simulées une par une (ticket issu des retours du propriétaire) — livré (03/11/2026), validé expert + QC : `simulate_tie_leg` / `simulate_round_leg` (le moteur Poisson n'est pas touché), `POST /bracket/simulate-leg`, bouton « Simuler l'aller » / « Simuler le retour » (`.scratch/refonte-ui/issues/05-manches-une-par-une.md`).
 6. Tournois et moments forts (arbre des phases finales, écran de sacre).
 7. Finitions (accueil, championnats, recherche d'équipes, V2).
 
