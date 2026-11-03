@@ -26,7 +26,7 @@ ALLOWED = {
     "Aggression": {"duel", "match", "defense"},  # fréquence des tentatives et faute ; distance d'arrêt du presseur (08)
     "Tackling": {"duel"},
     "Anticipation": {"anticipation", "match", "defense"},  # + drapeau du hors-jeu (23) ; ligne fermée au pressing (08)
-    "Decisions": {"decision"},
+    "Decisions": {"decision", "restart"},  # restart : choix du receveur d'une remise en jeu (ticket 29)
     "Vision": {"decision", "off_ball"},  # + le coureur tente l'appel dans le dos si le porteur le voit (16)
     "Off the Ball": {"off_ball", "offside"},  # + régler l'appel sur la ligne du hors-jeu (ticket 23)
     "Composure": {"possession", "shooting"},

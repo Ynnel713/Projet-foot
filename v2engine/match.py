@@ -14,6 +14,7 @@ from collections.abc import Callable
 
 from ligue1sim.clubs import Club
 from ligue1sim.lineup import Lineup, pick_best_formation
+from ligue1sim.pitch_geometry import GOAL_WIDTH_M
 
 from v2engine.attributes import player_attribute
 from v2engine.anticipation import pass_readers, reaction_delay_s
@@ -29,16 +30,25 @@ from v2engine.defense import DefensiveRoles
 from v2engine.offside import HESITATION_S, OFFSIDE_OUT_S, offside_at_pass, sees_the_flag_probability
 from v2engine.possession import (BALL_FRICTION_PER_S, BALL_STOPPED_MPS, MAX_PASS_MPS, MISS_RETRY_S, attempt_control, missed_control_velocity,
                                  pass_velocity, reception_delay_s)
+from v2engine.restart import (AERIAL_LANDING_M, AERIEN, LONG_RESTART_M, SOL, award, exit_point, is_aerial, kickoff,
+                              restart_target)
 from v2engine.shooting import attempt_shot
 from v2engine.situation import SituationTracker
 from v2engine.transition import TransitionPlay
-from v2engine.trace import BallSnapshot, DecisionRecord, MatchTrace, OffsideEvent, PlayerSnapshot, SituationRecord
+from v2engine.trace import (BallSnapshot, DecisionRecord, MatchTrace, OffsideEvent, PlayerSnapshot, RestartEvent,
+                            SituationRecord)
 
 # But adverse d'une équipe, par convention de ce moteur (voir `formation.initial_positions`,
 # D-V03 : domicile attaque vers x=PITCH_LENGTH_M, extérieur vers x=0).
 _OPPONENT_GOAL = OPPONENT_GOAL
 # Vitesse d'un tir : celle de la passe la plus appuyée (pas de constante nouvelle), soit 30 m/s, 1 s pour 30 m.
 SHOT_SPEED_MPS = MAX_PASS_MPS
+# Tir non converti qui part à côté (ticket v2-collectif/29, validé par délégation le 03/11/2026) : 45 % des tirs non
+# contrés sont cadrés en Premier League (premierleague.com, 20 saisons) et environ 14 % de ceux-ci finissent au fond,
+# d'où 0,55 / 0,86 = 0,64 des tirs non convertis à côté ; les contres naissent du contact sur le trajet. Écart au
+# poteau : 0,5 à 5 m (réel non trouvé, ordre de grandeur).
+SHOT_WIDE_SHARE = 0.64
+SHOT_WIDE_M = (0.5, 5.0)
 
 BALL_RADIUS_M = 0.11
 PLAYER_RADIUS_M = 0.3
@@ -154,9 +164,48 @@ def _award_offside_free_kick(ball: BallState, offender: PlayerState, players: li
     ball.next_decision_s = now_s + reception_delay_s(taker, [p for p in players if p.team == offender.team])
 
 
+def _play_restart(ball: BallState, players: list[PlayerState], now_s: float,
+                  restarts: list[RestartEvent] | None) -> None:
+    """Ballon mort (ticket v2-collectif/29) : posé au point de remise jusqu'à la reprise, puis joué par le preneur, par
+    une passe vers le receveur de `restart.restart_target`. Pas de hors-jeu sur une remise en jeu."""
+    r = ball.restart
+    ball.position, ball.velocity = r.spot, Vec2(0.0, 0.0)
+    if now_s < r.until_s:
+        return
+    ball.restart = None
+    taker = next((p for p in players if p.name == r.taker), None)
+    if taker is None:
+        return  # effectif synthétique sans preneur : ballon libre au point de remise
+    taker.position = r.spot  # ponytail : un preneur en retard est posé au point ; à animer si la relecture le montre
+    target = restart_target(taker, r.kind, players)
+    if restarts is not None:
+        restarts.append(RestartEvent(r.minute, r.kind, r.team, r.spot.x, r.spot.y, r.last_toucher,
+                                     now_s - r.minute * 60.0, target is not None
+                                     and taker.position.distance_to(target.position) > LONG_RESTART_M,
+                                     target.name if target is not None else None))
+    opponents = [p for p in players if p.team != taker.team]
+    if target is None:  # personne à servir : il garde le ballon et joue
+        ball.holder = taker.name
+        ball.receiving = True
+        ball.next_decision_s = now_s + reception_delay_s(taker, opponents)
+        return
+    ball.velocity = pass_velocity(taker, target, opponents)
+    ball.last_toucher = ball.released_by = taker.name
+    ball.last_pass_team = taker.team
+    ball.receiver = target.name
+    ball.plan = None
+    _clear_offside(ball)
+    if is_aerial(r.kind, taker, target):  # ballon en l'air : on ne le touche qu'à son point de chute
+        ball.mode, ball.readers = AERIEN, {}
+        ball.aerial_left_m = taker.position.distance_to(target.position) - AERIAL_LANDING_M
+    else:
+        ball.readers = pass_readers(taker.position, ball.velocity, target.position, opponents)
+
+
 def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: float = 0.0,
                decisions: list[DecisionRecord] | None = None,
-               offsides: list[OffsideEvent] | None = None, modes: dict[str, str] | None = None) -> str | None:
+               offsides: list[OffsideEvent] | None = None, modes: dict[str, str] | None = None,
+               restarts: list[RestartEvent] | None = None) -> str | None:
     """Avance le ballon d'un tick (mutation en place) : si un joueur le contrôle déjà, un
     adversaire à portée directe peut d'abord tenter un tacle (Phase 3, Tackling/Strength/
     Balance/Aggression ; au plus un par confrontation, v2-socle/03) ; sinon, après son temps de réception (`possession.reception_delay_s`, v2-socle/06)
@@ -167,13 +216,17 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
     et tout joueur à son contact tente de contrôler le ballon (First Touch) -- un contrôle raté
     le fait partir dans une direction imprévisible plutôt que d'être proprement reçu (interaction
     passive, comme en Phase 1, pas un rebond volontaire). Retourne l'équipe qui vient de marquer
-    ("home"/"away"), ou `None`."""
+    ("home"/"away"), ou `None`. Ballon sorti : remise en jeu (ticket v2-collectif/29)."""
+    if ball.restart is not None:
+        _play_restart(ball, players, now_s, restarts)
+        return None
     if ball.holder is not None:
         holder = next((p for p in players if p.name == ball.holder), None)
         if holder is None:
             ball.holder = None  # détenteur introuvable (ne devrait pas arriver hors test) -- ballon relâché
             return None
         ball.position = holder.position
+        ball.last_toucher = holder.name
         ball.released_by = None  # ballon tenu : plus de passe en cours (sa passe, s'il en fait une, le redéfinit)
 
         if ball.engaged_holder != holder.name:  # nouveau porteur : nouvelles confrontations
@@ -230,10 +283,19 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                 ball.shot_for = holder.team
                 ball.receiver, ball.readers = None, {}
                 return None
-            # Tir non converti (arrêté ou cadré sans but) : le gardien adverse récupère le ballon
-            # -- repli simple (pas de sortie de but/corner modélisée, Phase 5+), voir
-            # docs/PLAN_V2.md. Sans gardien identifiable (effectif synthétique), le ballon reste
-            # simplement libre là où le tir a été tenté.
+            # Tir non converti. À côté (ticket v2-collectif/29) : le ballon part vers la ligne de but, hors du cadre, et
+            # peut être contré en route ; il sort (sortie de but, ou corner s'il est dévié par un défenseur). Cadré : le
+            # gardien adverse le récupère (arrêts variés : ticket 28). Sans gardien identifiable (effectif synthétique),
+            # le ballon reste simplement libre là où le tir a été tenté.
+            if random.random() < SHOT_WIDE_SHARE:
+                side = 1.0 if random.random() < 0.5 else -1.0
+                wide = GOAL_WIDTH_M / 2.0 + random.uniform(*SHOT_WIDE_M)
+                aim = Vec2(goal.x, GOAL_CENTER_Y + side * wide)
+                ball.holder = None
+                ball.velocity = (aim - ball.position).normalized() * SHOT_SPEED_MPS
+                ball.released_by = holder.name
+                ball.receiver, ball.readers, ball.last_pass_team = None, {}, holder.team
+                return None
             if keeper is not None:
                 ball.holder = keeper.name
                 ball.next_decision_s = now_s + reception_delay_s(keeper, [p for p in players if p.team != keeper.team])
@@ -273,21 +335,38 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
     ball.engaged_holder = None  # ballon libre : les confrontations en cours sont finies (v2-socle/03)
     if ball.shot_for is not None:
         # tir cadré en route : personne ne le touche (le gardien est battu d'avance), il avance en ligne droite jusqu'à
-        # la ligne de but, où le but est compté et le jeu repart du centre
+        # la ligne de but, où le but est compté et l'équipe qui a encaissé engage (ticket v2-collectif/29)
         if ball.position.distance_to(_OPPONENT_GOAL[ball.shot_for]) > ball.velocity.length() * dt:
             ball.position = ball.position + ball.velocity * dt
             return None
         team, ball.shot_for = ball.shot_for, None
-        ball.position = Vec2(PITCH_LENGTH_M / 2.0, PITCH_WIDTH_M / 2.0)  # remise en jeu au centre
         ball.velocity = Vec2(0.0, 0.0)
+        ball.restart = kickoff("away" if team == "home" else "home", players, now_s)
         return team
     start = ball.position
-    ball.position = clamp_to_pitch(ball.position + ball.velocity * dt)
+    end = ball.position + ball.velocity * dt
+    out = exit_point(start, end)
+    if out is not None:  # ballon sorti (ticket v2-collectif/29) : mort, remise en jeu pour l'adversaire du dernier toucheur
+        line, point = out
+        toucher = next((p for p in players if p.name == ball.last_toucher), None)
+        ball.restart = award(line, point, toucher, players, now_s)
+        ball.position, ball.velocity = point, Vec2(0.0, 0.0)
+        ball.receiver, ball.readers, ball.released_by, ball.plan = None, {}, None, None
+        ball.mode, ball.aerial_left_m = SOL, 0.0
+        _clear_offside(ball)
+        return None
+    ball.position = end
     ball.velocity = ball.velocity * (BALL_FRICTION_PER_S**dt)
+    if ball.aerial_left_m > 0.0:  # ballon en l'air (ticket v2-collectif/29) : il retombe à son point de chute
+        ball.aerial_left_m -= start.distance_to(end)
     if ball.velocity.length() < BALL_STOPPED_MPS:
         ball.receiver = None  # passe morte : ballon libre pour tous, plus de receveur désigné
         ball.readers = {}  # plus de passe à couper (ticket v2-collectif/25)
         _clear_offside(ball)  # plus de passe en cours : plus de hors-jeu à siffler
+        ball.aerial_left_m = 0.0
+    if ball.aerial_left_m > 0.0:
+        return None  # en l'air : personne ne le touche sur son trajet
+    ball.mode = SOL
 
     # Contact sur le trajet (ticket v2-collectif/25) : le ballon touche tout joueur qu'il frôle PENDANT le pas, pas
     # seulement au point d'arrivée ; le premier atteint tente le premier, quelle que soit son équipe.
@@ -304,6 +383,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                                              x=ball.position.x, y=ball.position.y))
             _award_offside_free_kick(ball, player, players, now_s)
             return None
+        ball.last_toucher = player.name  # contrôlé ou non, il l'a touché (ticket v2-collectif/29)
         opponents = [p for p in players if p.team != player.team]
         ball.readers = {}  # la passe est finie, contrôlée ou non : personne ne court plus la couper
         ball.receiver = None
@@ -409,6 +489,7 @@ def simulate_match(
 
     players = _build_players(home_lineup, "home", home_positions) + _build_players(away_lineup, "away", away_positions)
     ball = BallState(position=Vec2(PITCH_LENGTH_M / 2.0, PITCH_WIDTH_M / 2.0), velocity=Vec2(0.0, 0.0))
+    ball.restart = kickoff("home", players, 0.0, dead_s=0.0)  # coup d'envoi du match (ticket v2-collectif/29)
 
     trace = MatchTrace(home=home_club.name, away=away_club.name, tick_seconds=tick_seconds * record_every)
 
@@ -436,7 +517,7 @@ def simulate_match(
                                 transition) for p in players]
         _resolve_player_collisions(players)
         scoring_team = _step_ball(ball, tick_seconds, players, i * tick_seconds, trace.decisions, trace.offsides,
-                                  transition.mode)
+                                  transition.mode, trace.restarts)
         if scoring_team is not None:
             trace.record_goal(scoring_team, minute)
         if observer is not None:
@@ -447,7 +528,7 @@ def simulate_match(
                 minute,
                 [PlayerSnapshot(name=p.name, team=p.team, poste=p.poste, position=p.position, intention=intentions.get(p.name))
                  for p in players],
-                BallSnapshot(position=ball.position, holder=ball.holder),
+                BallSnapshot(position=ball.position, holder=ball.holder, mode=ball.mode, dead=ball.restart is not None),
             )
 
     return trace

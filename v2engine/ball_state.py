@@ -6,7 +6,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from typing import TYPE_CHECKING
+
 from v2engine.geometry import Vec2
+
+if TYPE_CHECKING:
+    from v2engine.restart import Restart
 
 
 @dataclass
@@ -46,3 +51,10 @@ class BallState:
     # Tir qui finira au fond (tirage déjà fait au départ) : équipe du tireur tant que le ballon est en route vers le but.
     # Le but ne compte qu'à l'arrivée du ballon sur la ligne, jamais au départ du tir.
     shot_for: str | None = None
+    # Ballon mort (ticket v2-collectif/29) : dernier joueur à l'avoir touché (il décide de la remise en jeu), remise en
+    # attente tant que le ballon est mort, mode du ballon et distance qu'il doit encore parcourir en l'air avant de
+    # pouvoir être touché (point de chute).
+    last_toucher: str | None = None
+    restart: Restart | None = None
+    mode: str = "sol"
+    aerial_left_m: float = 0.0

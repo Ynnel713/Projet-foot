@@ -10,7 +10,7 @@ import math
 import random
 
 from v2engine.attributes import player_attribute, success_probability
-from v2engine.geometry import Vec2
+from v2engine.geometry import Vec2, clamp_to_pitch
 from v2engine.movement import PlayerState, max_speed_mps
 
 # Constantes produit validées par le propriétaire (24/10/2026), courbe partagée du guide.
@@ -73,7 +73,8 @@ def loose_ball_target(player: PlayerState, ball_position: Vec2, ball_velocity: V
     """Point visé sur un ballon libre : entre sa position actuelle et son point d'arrêt (ballon freiné de
     `friction_per_s` par seconde : il parcourt encore v / -ln(f)), selon Anticipation."""
     stop = ball_position + ball_velocity * (1.0 / -math.log(friction_per_s))
-    return ball_position + (stop - ball_position) * loose_ball_lead(player_attribute(player, "Anticipation"))
+    # borné au terrain : au-delà de la ligne, le ballon est sorti (ticket v2-collectif/29)
+    return clamp_to_pitch(ball_position + (stop - ball_position) * loose_ball_lead(player_attribute(player, "Anticipation")))
 
 
 def meeting_point(player: PlayerState, ball_position: Vec2, ball_velocity: Vec2, friction_per_s: float) -> Vec2:
@@ -86,6 +87,6 @@ def meeting_point(player: PlayerState, ball_position: Vec2, ball_velocity: Vec2,
     while t < 4.0:  # au-delà, le ballon est quasiment arrêté (il a parcouru 87 % de sa course à 0,6/s)
         point = ball_position + ball_velocity * ((friction_per_s**t - 1.0) / log_f)
         if player.position.distance_to(point) <= speed * t:
-            return point
+            return clamp_to_pitch(point)  # borné au terrain (ticket v2-collectif/29)
         t += 0.1
-    return ball_position + ball_velocity * (1.0 / -log_f)
+    return clamp_to_pitch(ball_position + ball_velocity * (1.0 / -log_f))

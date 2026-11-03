@@ -75,7 +75,10 @@ def test_scored_shot_counts_only_when_the_ball_reaches_the_goal_line(monkeypatch
     assert 2 <= len(results) <= 4  # ni instantané, ni interminable
     assert all(a.x < b.x for a, b in zip(positions, positions[1:-1]))  # le ballon avance vers le but adverse
     assert positions[-2].x > shooter.position.x
-    assert ball.position == Vec2(PITCH_LENGTH_M / 2.0, PITCH_WIDTH_M / 2.0)  # le jeu repart du centre
+    # l'équipe qui a encaissé engage, du centre (ticket v2-collectif/29)
+    assert ball.restart is not None and ball.restart.kind == "engagement" and ball.restart.team == "away"
+    _step_ball(ball, 0.1, [shooter, keeper], 1.0)
+    assert ball.position == Vec2(PITCH_LENGTH_M / 2.0, PITCH_WIDTH_M / 2.0)
 
 
 def test_ball_snapshot_names_the_holder() -> None:
@@ -93,10 +96,27 @@ def test_missed_shot_gives_ball_to_the_opposing_keeper(monkeypatch) -> None:
     monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression, dt: False)
     monkeypatch.setattr("v2engine.match.choose_action", lambda *args: Action("shot", 1.0))  # issue du tir seule testée ici
     monkeypatch.setattr("v2engine.match.attempt_shot", lambda shooter, keeper, distance_m, goal_center_y: False)
+    monkeypatch.setattr("v2engine.match.SHOT_WIDE_SHARE", 0.0)  # tir cadré (ticket v2-collectif/29)
     scoring_team = _step_ball(ball, 0.1, [shooter, keeper])
 
     assert scoring_team is None
     assert ball.holder == "Gardien"
+
+
+def test_wide_shot_leaves_the_pitch_for_a_goal_kick(monkeypatch) -> None:
+    # Tir à côté (ticket v2-collectif/29) : le ballon file vers la ligne de but hors du cadre et sort ; sortie de but.
+    shooter = _player("Buteur", position=Vec2(PITCH_LENGTH_M - 20.0, GOAL_CENTER_Y))
+    keeper = _player("Gardien", poste="GK", team="away", position=Vec2(PITCH_LENGTH_M - 1.0, GOAL_CENTER_Y))
+    ball = BallState(position=shooter.position, velocity=Vec2(0.0, 0.0), holder="Buteur")
+    monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression, dt: False)
+    monkeypatch.setattr("v2engine.match.choose_action", lambda *args: Action("shot", 1.0))
+    monkeypatch.setattr("v2engine.match.attempt_shot", lambda shooter, keeper, distance_m, goal_center_y: False)
+    monkeypatch.setattr("v2engine.match.SHOT_WIDE_SHARE", 1.0)
+    for i in range(30):
+        _step_ball(ball, 0.1, [shooter, keeper], i * 0.1)
+        if ball.restart is not None:
+            break
+    assert ball.restart is not None and ball.restart.kind == "sortie de but" and ball.restart.team == "away"
 
 
 def test_full_short_match_exposes_a_score() -> None:

@@ -25,6 +25,9 @@ Référence du ticket `.scratch/v2-collectif/issues/01-banc-de-mesure-tactique.m
 | Buts | Buts par match | nombre | 2-3,5 |
 | Tacles | Tacles tentés par match | nombre | 30-40 |
 | Hors-jeu | Hors-jeu sifflés par match, et par équipe | nombre | 3,2-3,5 par match, soit 1,6-1,8 par équipe (Ligue 1 2023-24 et 2024-25 ; 3,54 en Premier League 2024-25) |
+| Remises en jeu | Touches, sorties de but, corners et engagements joués par match (ticket 29, `RestartEvent` de la trace) | nombre | touches ≈ 42 (PL 2018-19), corners ≈ 10 ; sorties de but : non trouvé ; critère du ticket 29 : touches 30-55, corners 6-14, sorties de but 8-25 |
+| Remises jouées long | Part des remises dont le receveur visé est à plus de 25 m du preneur (`restart.LONG_RESTART_M`), par type | % | sorties de but : environ 50 % sortent de la surface (PL 2024-25, Opta) ; touches et corners : suivi |
+| Temps de jeu effectif | 1 − temps de ballon mort / temps de match (ticket 29) | % | réel 53-56 % (CIES 2026) avec fautes, remplacements et blessures ; sans eux, critère du ticket 29 : 65-80 % |
 | Choix du porteur | Part de passes, conduites et tirs | % | suivi |
 | Distance | Km par joueur de champ, par poste | km | 9-14 ; ordre des postes de Bradley 2009 |
 | Haute intensité | Part de la distance au-dessus de 25 km/h ; part du temps au-dessus de 19,8 km/h | % | 2-3 ; 2-5 |

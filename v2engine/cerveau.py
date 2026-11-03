@@ -25,6 +25,7 @@ from v2engine.off_ball import (COUNTER_RUN_DEPTH_M, RUN_INTERVAL_S, SPACE_HOLD_M
                                depth_run)
 from v2engine.offside import HESITATION_INTENSITY, clamp_to_onside, offside_line, respects_the_line
 from v2engine.possession import BALL_FRICTION_PER_S, RECEPTION_SPEED_FACTOR
+from v2engine.restart import KICKOFF, REPLACING_INTENSITY, place
 from v2engine.situation import DEFENSE_PLACEE, POSSESSION_INSTALLEE, TRANSITION_DEFENSIVE, TRANSITION_OFFENSIVE
 from v2engine.transition import TransitionPlay
 
@@ -42,6 +43,8 @@ PORTEUR, APPEL, SOUTIEN, RECEVEUR, LECTURE, BALLON_LIBRE, REPLACEMENT = (
 HORS_JEU = "hors-jeu"
 # Transition défensive (ticket v2-collectif/10) : le joueur sans rôle devant le ballon revient dans le bloc.
 REPLI = "repli"
+# Ballon mort (ticket v2-collectif/29) : le preneur va jouer la remise en jeu.
+REMISE = "remise en jeu"
 _OFFENSIVE_ROLES = (PORTEUR, APPEL, SOUTIEN, RECEVEUR)
 
 
@@ -260,6 +263,17 @@ def think(player: PlayerState, ball: BallState, players: list[PlayerState], minu
     `defense`, les rôles défensifs attribués par son équipe (ticket 07) ; `previous` : son intention au tick
     précédent (ticket 10)."""
     now_s = minute * 60.0
+    if ball.restart is not None:
+        # Ballon mort (ticket v2-collectif/29) : le preneur va au point de remise, les autres se replacent en trottinant
+        # (place dans le bloc ; à l'engagement, place de départ dans leur camp), à distance réglementaire.
+        restart = ball.restart
+        if player.name == restart.taker:
+            return Intention(REMISE, "aller tirer la remise", restart.spot, REPLACING_INTENSITY,
+                             reason=f"{restart.kind} pour son équipe, il la joue", situation=situation)
+        wanted = player.home_target if restart.kind == KICKOFF or bloc is None or situation is None \
+            else bloc.target(player, restart.spot, situation, now_s)
+        return Intention(REPLACEMENT, "se replacer", place(player, restart, wanted), REPLACING_INTENSITY,
+                         reason=f"ballon mort ({restart.kind}), il se replace", situation=situation)
     if now_s < ball.offside_out_until.get(player.name, 0.0):
         # Hors-jeu sifflé (ticket v2-collectif/23) : l'attaquant fautif recule le temps que la défense se replace.
         return Intention(HORS_JEU, "reculer", player.home_target, HESITATION_INTENSITY,

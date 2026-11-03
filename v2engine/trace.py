@@ -25,6 +25,8 @@ class PlayerSnapshot:
 class BallSnapshot:
     position: Vec2
     holder: str | None = None  # porteur du ballon à cet instant (None = ballon en l'air ou libre), pour afficher son nom
+    mode: str = "sol"  # "sol" ou "aérien" (ticket v2-collectif/29), pour le rendu
+    dead: bool = False  # ballon mort, en attente d'une remise en jeu (ticket v2-collectif/29)
 
 
 @dataclass(frozen=True)
@@ -72,6 +74,23 @@ class OffsideEvent:
     y: float
 
 
+@dataclass(frozen=True)
+class RestartEvent:
+    """Remise en jeu jouée (ticket v2-collectif/29) : `minute` de la sortie (ou du but), `kind` touche, sortie de but,
+    corner ou engagement, `team` l'équipe qui remet en jeu, `x`/`y` le point de remise, `last_toucher` le dernier
+    joueur à avoir touché le ballon, `dead_s` la durée du ballon mort, `long` jouée au-delà de `LONG_RESTART_M`
+    (`restart.py`), `target` le receveur visé."""
+    minute: float
+    kind: str
+    team: str
+    x: float
+    y: float
+    last_toucher: str | None
+    dead_s: float
+    long: bool
+    target: str | None = None
+
+
 @dataclass
 class MatchTrace:
     home: str
@@ -87,6 +106,7 @@ class MatchTrace:
     decisions: list[DecisionRecord] = field(default_factory=list)
     situations: list[SituationRecord] = field(default_factory=list)
     offsides: list[OffsideEvent] = field(default_factory=list)  # hors-jeu sifflés (ticket v2-collectif/23)
+    restarts: list[RestartEvent] = field(default_factory=list)  # remises en jeu (ticket v2-collectif/29)
     reaction_delays_s: dict[str, float] = field(default_factory=dict)  # par joueur (Anticipation, ticket v2-collectif/03)
 
     def record(self, minute: float, players: list[PlayerSnapshot], ball: BallSnapshot) -> None:

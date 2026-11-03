@@ -101,7 +101,7 @@ def _force_attribute(attribute: str, high_team: str, team_of: dict[str, str]) ->
 
 
 def run(n_matches: int, profile: str | None = None, duration_minutes: float = 90.0, tick_s: float = TICK_S,
-        plans: bool = True) -> Collector:
+        plans: bool = True, start: int = 0) -> Collector:
     clubs = load_clubs(CLUBS_PATH, "Ligue 1")
     collector = Collector()
     collector.minutes_per_match = duration_minutes
@@ -109,7 +109,7 @@ def run(n_matches: int, profile: str | None = None, duration_minutes: float = 90
     started = time.perf_counter()
     restore = _hook(collector, clock, plans)
     try:
-        for i in range(n_matches):
+        for i in range(start, start + n_matches):  # `start` : découper un banc en lots parallèles
             # profils : chaque affiche est jouée deux fois, même graine, rôles haut/bas inversés
             k = i // 2 if profile else i
             random.seed(AUDIT_SEED + k)
@@ -130,6 +130,8 @@ def run(n_matches: int, profile: str | None = None, duration_minutes: float = 90
                                              observer=observer)
                 for event in trace.offsides:  # hors-jeu sifflés (ticket v2-collectif/23)
                     collector.on_offside(event)
+                for event in trace.restarts:  # remises en jeu (ticket v2-collectif/29)
+                    collector.on_restart(event)
             finally:
                 unforce()
             collector.end_match()
@@ -160,6 +162,15 @@ def report(c: Collector, detail: bool = False) -> dict:
         "buts par match": k["buts"] / n,
         "hors-jeu par match": k["hors-jeu"] / n,
         "hors-jeu par équipe": k["hors-jeu"] / (2 * n),
+        # ballon mort (ticket v2-collectif/29)
+        "touches par match": k["remises : touche"] / n,
+        "sorties de but par match": k["remises : sortie de but"] / n,
+        "corners par match": k["remises : corner"] / n,
+        "engagements par match": k["remises : engagement"] / n,
+        "touches jouées long (part)": k["remises jouées long : touche"] / max(1, k["remises : touche"]),
+        "sorties de but jouées long (part)": k["remises jouées long : sortie de but"] / max(1, k["remises : sortie de but"]),
+        "corners joués long (part)": k["remises jouées long : corner"] / max(1, k["remises : corner"]),
+        "temps de jeu effectif (part)": 1.0 - k["temps de ballon mort (s)"] / (60.0 * minutes),
         "tacles par match": k["tacles"] / n,
         "pressings d'équipe déclenchés par match": k["pressings d'équipe déclenchés"] / n,
         "pertes de balle par match": k["pertes de balle"] / n,
@@ -218,8 +229,10 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--json", default=None)
     parser.add_argument("--pas", type=float, default=TICK_S, help="pas de calcul (s), par défaut celui du produit")
     parser.add_argument("--sans-plan", action="store_true", help="ticket v2-collectif/14 désactivé")
+    parser.add_argument("--debut", type=int, default=0, help="indice du premier match (lots parallèles)")
     args = parser.parse_args(argv)
-    result = report(run(args.matches, args.profil, tick_s=args.pas, plans=not args.sans_plan), args.detail)
+    result = report(run(args.matches, args.profil, tick_s=args.pas, plans=not args.sans_plan, start=args.debut),
+                    args.detail)
     for key, value in result.items():
         if isinstance(value, dict):
             print(f"{key} :")

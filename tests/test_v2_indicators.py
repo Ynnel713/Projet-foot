@@ -17,7 +17,8 @@ def _p(name: str, team: str, x: float, y: float, poste: str = "MC", vx: float = 
 
 
 def _ball(x: float, y: float, holder: str | None = None, receiver: str | None = None):
-    return SimpleNamespace(position=Vec2(x, y), holder=holder, receiver=receiver)
+    # ballon vivant : pas de remise en jeu en attente (ticket v2-collectif/29)
+    return SimpleNamespace(position=Vec2(x, y), holder=holder, receiver=receiver, restart=None)
 
 
 # --- Géométrie ----------------------------------------------------------------------------------------------------

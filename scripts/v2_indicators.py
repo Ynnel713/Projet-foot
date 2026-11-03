@@ -381,6 +381,12 @@ class Collector:
         self.count["hors-jeu"] += 1
         self.count["hors-jeu " + event.team] += 1
 
+    def on_restart(self, event) -> None:
+        """Remise en jeu jouée (ticket v2-collectif/29) ; `event` : `v2engine.trace.RestartEvent`."""
+        self.count["remises : " + event.kind] += 1
+        self.count["remises jouées long : " + event.kind] += event.long
+        self.count["temps de ballon mort (s)"] += event.dead_s
+
     # --- tick ---
     def on_tick(self, now_s: float, players: list[PlayerState], ball, scoring_team: str | None, dt: float = 0.1) -> None:
         minute = now_s / 60.0

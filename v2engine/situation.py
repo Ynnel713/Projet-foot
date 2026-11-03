@@ -48,6 +48,10 @@ class SituationTracker:
     def update(self, now_s: float, ball: BallState, players: list[PlayerState], scored: str | None = None) -> dict[str, str]:
         if scored is not None:  # but : l'autre équipe engage, ce n'est pas une transition
             self.possession, self.changed_at_s, self.transition, self.kick_off = _other(scored), now_s, False, True
+        elif ball.restart is not None:  # remise en jeu (ticket v2-collectif/29) : ni perte ni récupération
+            self.kick_off = False
+            if ball.restart.team != self.possession:
+                self.possession, self.changed_at_s, self.transition = ball.restart.team, now_s, False
         elif ball.holder is not None:
             team = next((p.team for p in players if p.name == ball.holder), None)
             if team is not None and self.kick_off:
