@@ -16,9 +16,9 @@ export default function AnimationButton({ onAnimation, compact = false }) {
         e.stopPropagation();
         onAnimation();
       }}
-      className={`relative z-10 pointer-events-auto cursor-pointer justify-self-end shrink-0 rounded-[10px] flex items-center justify-center gap-1.5
-                  bg-surface border border-white/15 text-gray-200 font-semibold tracking-wide transition-transform hover:brightness-125 active:scale-95
-                  ${compact ? "h-6 min-w-[3.5rem] px-2 text-[10px]" : "h-9 min-w-[4.75rem] px-3 text-xs"}`}
+      className={`relative z-10 pointer-events-auto cursor-pointer justify-self-end shrink-0 rounded-lg flex items-center justify-center gap-1.5
+                  bg-surface border border-line text-gray-200 font-semibold tracking-wide transition-transform hover:brightness-125 active:scale-95
+                  ${compact ? "h-6 min-w-14 px-2 text-caption" : "h-9 min-w-[4.75rem] px-3 text-xs"}`}
     >
       <Video size={compact ? 9 : 11} aria-hidden="true" />
       Animation

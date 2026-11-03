@@ -12,7 +12,7 @@ import ClubLogo from "./ClubLogo";
 //     façon fiable partout) + nom du pays SEUL, jamais d'écusson de club
 //     (retour terrain du 29/09/2026 : "juste drapeau + nom pays").
 //   - club : écusson (ClubLogo), comme ClubLink partout ailleurs dans l'app.
-export default function TeamLink({ name, className = "", stopPropagation = false, align = "start" }) {
+export default function TeamLink({ name, className = "", stopPropagation = false, align = "start", logoSize = 18 }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const { code, label } = parseFlaggedName(name);
@@ -31,7 +31,7 @@ export default function TeamLink({ name, className = "", stopPropagation = false
       {isNation ? (
         <img src={flagUrl(code)} alt="" className="h-3.5 w-5 rounded-sm object-cover shrink-0" />
       ) : (
-        <ClubLogo clubName={name} size={18} />
+        <ClubLogo clubName={name} size={logoSize} />
       )}
       <span className="truncate">{isNation ? label : name}</span>
     </button>

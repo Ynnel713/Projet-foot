@@ -24,20 +24,14 @@ export default function Standings() {
   if (rows.length === 0) return <div className="p-6 text-sm text-gray-400">Aucun classement disponible.</div>;
 
   return (
-    <div className="p-3 flex flex-col gap-4">
-      <StandingsTable rows={rows} competitionId={id} />
+    <div className="p-3 flex flex-col gap-4 mx-auto w-full max-w-[1280px]">
+      <section className="rounded-xl bg-surface border border-line overflow-hidden">
+        <StandingsTable rows={rows} showRankChange followable />
+      </section>
       {leaderboards && (leaderboards.scorers.length > 0 || leaderboards.assists.length > 0) && (
         <div className="flex gap-4">
-          <LeaderboardTable
-            title="Buteurs"
-            rows={leaderboards.scorers}
-            onTitleClick={() => navigate(`/competition/${id}/leaderboards`)}
-          />
-          <LeaderboardTable
-            title="Passeurs"
-            rows={leaderboards.assists}
-            onTitleClick={() => navigate(`/competition/${id}/leaderboards`)}
-          />
+          <LeaderboardTable title="Buteurs" rows={leaderboards.scorers} onTitleClick={() => navigate(`/competition/${id}/leaderboards`)} />
+          <LeaderboardTable title="Passeurs" rows={leaderboards.assists} onTitleClick={() => navigate(`/competition/${id}/leaderboards`)} />
         </div>
       )}
     </div>

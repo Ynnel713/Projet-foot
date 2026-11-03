@@ -1,24 +1,24 @@
 import { Play } from "lucide-react";
 import { LIVE_AND_ANIMATION_ENABLED } from "../../config/features";
 
-// Bouton LIVE d'un match (championnat, poules, tableau : toutes les compétitions), TOUJOURS actif. Match déjà joué : il rouvre le live
-// (replay à l'horloge accélérée) ; match pas encore joué : l'écran simule d'abord (journée / tour), puis ouvre le live -- pastille bleue.
-// Le clic ne remonte pas (la ligne ouvre le détail classique). Hitbox : le bouton EST la zone cliquable (relative, z-10,
+// Bouton LIVE d'un match (championnat, poules, tableau : toutes les compétitions), TOUJOURS actif : il ouvre directement l'ANIMATION
+// du match (sans révéler le score). Match déjà joué : animation immédiate ; match pas encore joué : l'écran simule d'abord
+// (journée / tour), puis ouvre l'animation -- pastille bleue. Hitbox : le bouton EST la zone cliquable (relative, z-10,
 // pointer-events-auto, flex centré, hauteur fixe), pas d'enveloppe en ligne autour.
 export default function LiveButton({ played, onLive, compact = false }) {
   if (!LIVE_AND_ANIMATION_ENABLED) return null;
   return (
     <button
       type="button"
-      aria-label="Ouvrir le match en direct"
-      title={played ? "Revoir le match en direct" : "Lancer le match en direct"}
+      aria-label="Lancer l'animation du match"
+      title={played ? "Revoir l'animation du match" : "Simuler puis lancer l'animation du match"}
       onClick={(e) => {
         e.stopPropagation();
         onLive();
       }}
-      className={`relative z-10 pointer-events-auto cursor-pointer justify-self-end shrink-0 rounded-[10px] flex items-center justify-center gap-1.5
-                  bg-live text-[#0f1419] font-bold tracking-wide transition-transform hover:brightness-110 active:scale-95
-                  ${compact ? "h-6 min-w-[3.5rem] px-2 text-[10px]" : "h-9 min-w-[4.75rem] px-3 text-xs"} ${played ? "live-btn-pulse" : ""}`}
+      className={`relative z-10 pointer-events-auto cursor-pointer justify-self-end shrink-0 rounded-lg flex items-center justify-center gap-1.5
+                  bg-live text-bg font-bold tracking-wide transition-transform hover:brightness-110 active:scale-95
+                  ${compact ? "h-6 min-w-14 px-2 text-caption" : "h-9 min-w-[4.75rem] px-3 text-xs"} ${played ? "live-btn-pulse" : ""}`}
     >
       <Play size={compact ? 9 : 11} fill="currentColor" aria-hidden="true" />
       LIVE

@@ -25,10 +25,12 @@ export default function ClubLogo({ clubName, size = 20, className = "" }) {
 
   return (
     <div
-      style={{ ...style, fontSize: size * 0.4 }}
+      style={{ ...style, fontSize: size < 24 ? 11 : size * 0.4 }}
       className={`rounded-full bg-white/10 text-white/50 flex items-center justify-center font-bold shrink-0 ${className}`}
+      aria-hidden="true"
     >
-      {clubInitials(clubName)}
+      {/* Petit écusson : une seule lettre à 11 px (plancher du design system) ; deux lettres au-delà. */}
+      {size < 24 ? clubInitials(clubName)[0] : clubInitials(clubName)}
     </div>
   );
 }

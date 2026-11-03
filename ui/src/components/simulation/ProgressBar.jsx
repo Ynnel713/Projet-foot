@@ -11,9 +11,9 @@ export default function ProgressBar({ current, total }) {
         </span>
         <span>{pct}%</span>
       </div>
-      <div className="h-2 w-full rounded-full bg-white/10 overflow-hidden">
+      <div className="h-2 w-full rounded-full bg-surface-3 overflow-hidden">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-accent to-gold transition-[width] duration-300"
+          className="h-full rounded-full bg-accent transition-[width] duration-300"
           style={{ width: `${pct}%` }}
         />
       </div>

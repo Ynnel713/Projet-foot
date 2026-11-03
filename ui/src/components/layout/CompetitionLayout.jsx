@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, Navigate, Outlet, useLocation, useOutletContext, useParams } from "react-router-dom";
 import { BarChart3, CalendarDays, GitFork, LayoutGrid, ListOrdered, Trophy } from "lucide-react";
 import { getCompetition, getGroups } from "../../api/client";
@@ -42,6 +42,10 @@ export default function CompetitionLayout() {
   // données déjà chargées (l'erreur ne s'affiche que s'il n'y a rien d'autre).
   const [data, setData] = useState(null); // { id, status, groups }
   const [error, setError] = useState(null); // { id, message }
+  // Rechargement demandé par une page après une simulation (lot 3) : « Champion » et « Phase finale » se mettent à jour
+  // tout de suite, sans attendre le prochain changement d'onglet.
+  const [reloads, setReloads] = useState(0);
+  const refresh = useCallback(() => setReloads((n) => n + 1), []);
 
   // Rechargé à chaque changement de page : « Phase finale » doit s'activer
   // juste après « Lancer les barrages » (Groups navigue alors vers /bracket).
@@ -64,7 +68,7 @@ export default function CompetitionLayout() {
     return () => {
       alive = false;
     };
-  }, [id, pathname, setActiveCompetition]);
+  }, [id, pathname, reloads, setActiveCompetition]);
 
   if (data?.id !== id) {
     if (error?.id !== id) return <div className="p-6 text-sm text-gray-400">Chargement…</div>;
@@ -100,7 +104,7 @@ export default function CompetitionLayout() {
 
       <div className="flex-1 min-w-0 min-h-0 flex flex-col">
         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-          <Outlet context={data} />
+          <Outlet context={{ ...data, refresh }} />
         </div>
         <nav
           className="md:hidden shrink-0 flex border-t border-line bg-surface"
