@@ -108,7 +108,13 @@ def test_the_match_hands_the_plan_to_its_receiver_only_and_clears_it(monkeypatch
         assert seen[-1] == (holder, read) and ball.plan is None
 
 
-def test_the_planned_mate_relaunches_only_once() -> None:
+def _no_depth_run(monkeypatch) -> None:
+    # La relance passe d'abord par l'appel dans le dos (ticket 16) : neutralisé ici, la scène ne dépend plus de la graine.
+    monkeypatch.setattr("v2engine.cerveau.depth_run", lambda *args, **kwargs: None)
+
+
+def test_the_planned_mate_relaunches_only_once(monkeypatch) -> None:
+    _no_depth_run(monkeypatch)
     receiver, mate = _p("R", 50, 34), _p("P", 62, 30)
     opponents = [_p("Coupe", 55, 32.3, team="away"), _p("Coupe2", 58, 31.3, team="away"),
                  _p("Def", 70, 30, team="away"), _p("Def2", 70, 40, team="away")]
@@ -133,7 +139,8 @@ def test_the_passer_transmits_the_follow_up_he_counted() -> None:
     assert _pass([_p("H", 40, 34), _p("M", 40, 22)], None).follow is None  # sans meilleure suite, pas de plan
 
 
-def test_the_planned_mate_relaunches_his_run_where_the_receiver_finds_him() -> None:
+def test_the_planned_mate_relaunches_his_run_where_the_receiver_finds_him(monkeypatch) -> None:
+    _no_depth_run(monkeypatch)
     receiver, mate = _p("R", 50, 34), _p("P", 62, 30)
     opponents = [_p("Coupe", 55, 32.3, team="away"), _p("Coupe2", 58, 31.3, team="away"),
                  _p("Def", 70, 30, team="away"), _p("Def2", 70, 40, team="away")]
@@ -152,3 +159,18 @@ def test_the_planned_mate_relaunches_his_run_where_the_receiver_finds_him() -> N
     assert target != old
     assert pass_success_probability(receiver, mate.__class__(**{**mate.__dict__, "position": target}),
                                     opponents) >= OPEN_LANE_PROBABILITY
+
+
+def test_a_depth_run_takes_precedence_over_the_planned_space(monkeypatch) -> None:
+    # Réserve A3 de la clôture 10-14-16 : à la relance, l'appel dans le dos (ticket 16) passe avant l'espace où le
+    # receveur le trouve ; il est alors tenu pour le receveur, devenu le passeur pris en compte.
+    receiver, mate = _p("R", 50, 34), _p("P", 62, 30)
+    opponents = [_p("Coupe", 55, 32.3, team="away"), _p("Coupe2", 58, 31.3, team="away"),
+                 _p("Def", 70, 30, team="away"), _p("Def2", 70, 40, team="away")]
+    players = [_p("H", 40, 34), receiver, mate, *opponents]
+    monkeypatch.setattr("v2engine.cerveau.depth_run", lambda *args, **kwargs: Vec2(68.0, 30.0))
+    ball = BallState(position=Vec2(42, 34), velocity=Vec2(8, 0), receiver="R", last_pass_team="home",
+                     plan=("R", "P", 9.5))
+    runs = {"P": (Vec2(66.0, 30.0), 12.0)}
+    decide(mate, APPEL, ball, perceive(mate, ball, players), players, 10.0 / 60.0, runs)
+    assert len(runs["P"]) == 3 and runs["P"][2] == "R"
