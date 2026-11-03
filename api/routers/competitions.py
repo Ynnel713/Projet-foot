@@ -266,7 +266,9 @@ def _find_match_in_bracket(
     round_ = next((r for r in bracket.rounds if r.number == round_number), None)
     if round_ is None:
         return None
-    tie = next((t for t in round_.ties if t.home == home and t.away == away), None)
+    # Les deux sens : l'UI envoie le domicile de la manche (`leg.home`), inversé au match retour
+    # par rapport au tie (refonte UI, lot 4).
+    tie = next((t for t in round_.ties if {t.home, t.away} == {home, away}), None)
     if tie is None or not (0 <= leg < len(tie.legs)):
         return None
     return tie.legs[leg]

@@ -1,11 +1,14 @@
 import { useLocation } from "react-router-dom";
 import Header from "./Header";
+import { LIVE_AND_ANIMATION_ENABLED } from "../../config/features";
 
 export default function AppShell({ children }) {
-  // La vue terrain a besoin de toute la hauteur possible (terrain horizontal
-  // en paysage) et affiche déjà son propre mini-en-tête (retour + score) --
-  // l'en-tête global n'y apporte rien, juste 48px de terrain en moins.
-  const hideHeader = useLocation().pathname.endsWith("/pitch");
+  // La vue terrain (live + animation) a besoin de toute la hauteur possible et
+  // affiche déjà son propre mini-en-tête (retour + score) -- l'en-tête global
+  // n'y apporte rien. En V1, `/pitch` est la feuille de match, dans l'espace de
+  // la compétition : l'en-tête reste (refonte UI, lot 4).
+  const onPitch = useLocation().pathname.endsWith("/pitch");
+  const hideHeader = LIVE_AND_ANIMATION_ENABLED && onPitch;
 
   return (
     // h-dvh/w-dvw (dynamic viewport) plutôt que h-screen/100vh : évite le

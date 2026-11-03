@@ -3,6 +3,7 @@ import { Link, Navigate, Outlet, useLocation, useOutletContext, useParams } from
 import { BarChart3, CalendarDays, GitFork, LayoutGrid, ListOrdered, Trophy } from "lucide-react";
 import { getCompetition, getGroups } from "../../api/client";
 import { useGameStore } from "../../store/useGameStore";
+import { matchOriginTab } from "../../utils/matchOrigin";
 
 // Espace d'une compétition (refonte UI, lot 2) : onglets toujours visibles --
 // barre en bas sur mobile, colonne à gauche à partir de `md` -- autour de
@@ -34,7 +35,7 @@ function tabsFor(status, groups) {
 
 export default function CompetitionLayout() {
   const { id } = useParams();
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const setActiveCompetition = useGameStore((s) => s.setActiveCompetition);
   // Résultats étiquetés par `id` : ceux d'une autre compétition ne s'affichent
   // jamais, et une erreur passagère pendant un rechargement ne masque pas les
@@ -80,7 +81,9 @@ export default function CompetitionLayout() {
   const { status, groups } = data;
   const tabs = tabsFor(status, groups);
   const base = `/competition/${id}`;
-  const isActive = (to) => pathname.startsWith(`${base}/${to}`);
+  // Feuille de match (lot 4) : l'onglet d'où vient le match reste actif.
+  const current = pathname === `${base}/pitch` ? `${base}/${matchOriginTab(new URLSearchParams(search))}` : pathname;
+  const isActive = (to) => current.startsWith(`${base}/${to}`);
 
   return (
     <div className="h-full flex flex-col md:flex-row">

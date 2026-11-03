@@ -10,6 +10,8 @@ import Standings from "./routes/Standings";
 import TeamRoster from "./routes/TeamRoster";
 import PlayerPage from "./routes/PlayerPage";
 import PitchView from "./routes/PitchView";
+import MatchSheet from "./routes/MatchSheet";
+import { LIVE_AND_ANIMATION_ENABLED } from "./config/features";
 import Groups from "./routes/Groups";
 import Bracket from "./routes/Bracket";
 import Leaderboards from "./routes/Leaderboards";
@@ -24,10 +26,12 @@ export default function App() {
           <Route path="/leagues" element={<Leagues />} />
           <Route path="/nations" element={<Nations />} />
           <Route path="/custom" element={<CustomCompetition />} />
-          {/* Espace de compétition à onglets (refonte UI, lot 2) ; la vue terrain reste plein écran, hors onglets. */}
-          <Route path="/competition/:id/pitch" element={<PitchView />} />
+          {/* Espace de compétition à onglets (refonte UI, lot 2). Un match joué ouvre la feuille de match dans
+              les onglets (lot 4) ; avec le live et l'animation réactivés, la vue terrain plein écran reprend sa place. */}
+          {LIVE_AND_ANIMATION_ENABLED && <Route path="/competition/:id/pitch" element={<PitchView />} />}
           <Route path="/competition/:id" element={<CompetitionLayout />}>
             <Route index element={<CompetitionIndex />} />
+            {!LIVE_AND_ANIMATION_ENABLED && <Route path="pitch" element={<MatchSheet />} />}
             <Route path="simulate" element={<Simulation />} />
             <Route path="standings" element={<Standings />} />
             <Route path="clubs/:clubName" element={<TeamRoster />} />

@@ -8,7 +8,6 @@ import LivePanel from "../components/pitch/LivePanel";
 import AnimationDialog from "../components/pitch/AnimationDialog";
 import { GoalAlerts, MultiplexTicker } from "../components/pitch/GoalAlerts";
 import { MATCH_END, MIN_PER_TICK, TICK_MS, buildOtherGoals } from "../utils/liveReplay";
-import { LIVE_AND_ANIMATION_ENABLED } from "../config/features";
 
 // Terrain VERTICAL (portrait, demandé le 02/10/2026) : c'est l'orientation NATIVE du placement calculé côté moteur
 // (pitch_layout.place_starting_xi) -- domicile en haut (y 10-42), extérieur en bas (y 58-90), x = position latérale 0-100 --, donc
@@ -34,18 +33,8 @@ export default function PitchView() {
   const pitchBox = useRef(null);
   const [pitchH, setPitchH] = useState(null);
 
-  // Version 1 (24/10/2026) : live textuel et animation désactivés. Les lignes de match y
-  // mènent encore au clic (feuille de match prévue au lot 4 de la refonte UI) : on remplace
-  // cette URL par l'onglet d'où vient le match, déduit de ses paramètres (poule/phase de
-  // ligue, tour d'élimination, journée de championnat), sinon par l'espace de la compétition
-  // -- jamais l'accueil, qui faisait perdre la compétition (refonte UI, lot 2). `replace`
-  // plutôt que `navigate(-1)` : sûr même si l'effet est rejoué (StrictMode) ou si l'URL a
-  // été ouverte directement.
-  useEffect(() => {
-    if (LIVE_AND_ANIMATION_ENABLED) return;
-    const tab = params.has("group") ? "groups" : params.has("round_number") ? "bracket" : params.has("journee") ? "simulate" : "";
-    navigate(`/competition/${id}/${tab}`, { replace: true });
-  }, [navigate, id, params]);
+  // Version 1 (24/10/2026) : live textuel et animation désactivés ; cette vue n'est alors pas routée,
+  // un clic sur un match ouvre la feuille de match (MatchSheet, refonte UI lot 4, voir App.jsx).
 
   const home = params.get("home");
   const away = params.get("away");
@@ -147,7 +136,6 @@ export default function PitchView() {
     );
   }
   if (!data) return <div className="p-6 text-sm text-gray-400">Chargement…</div>;
-  if (!LIVE_AND_ANIMATION_ENABLED) return null;
 
   // Événements du fil et score à l'horloge courante (au coup de sifflet final : le score réel du match).
   const visibleEvents = (data.live ?? []).filter((e) => e.minute <= clock);
