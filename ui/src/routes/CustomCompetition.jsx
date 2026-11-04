@@ -129,8 +129,8 @@ const STEP_LABELS = ["Type", "Format", "Réglages", "Équipes"];
 
 function WizardHeader({ step, onBack }) {
   return (
-    <div className="shrink-0 px-4 pt-4 pb-3 border-b border-white/5">
-      <button onClick={onBack} className="flex items-center gap-1 text-xs text-gray-400 mb-3">
+    <div className="shrink-0 px-4 pt-4 pb-3 border-b border-line">
+      <button onClick={onBack} className="flex items-center gap-1 min-h-11 text-data text-gray-400 mb-1">
         <ArrowLeft size={14} /> {step === 1 ? "Accueil" : "Retour"}
       </button>
       <div className="flex items-center gap-2">
@@ -146,7 +146,7 @@ function WizardHeader({ step, onBack }) {
                     ? "bg-accent border-accent text-white"
                     : done
                       ? "bg-accent/20 border-accent/50 text-link"
-                      : "bg-surface border-white/10 text-gray-500"
+                      : "bg-surface border-line text-gray-500"
                 }`}
               >
                 {done ? <Check size={12} /> : n}
@@ -154,7 +154,7 @@ function WizardHeader({ step, onBack }) {
               <span className={`text-caption font-medium hidden sm:inline ${active ? "text-white" : "text-gray-500"}`}>
                 {label}
               </span>
-              {n < STEP_LABELS.length && <div className={`h-px flex-1 ${done ? "bg-accent/50" : "bg-white/10"}`} />}
+              {n < STEP_LABELS.length && <div className={`h-px flex-1 ${done ? "bg-accent/50" : "bg-line"}`} />}
             </div>
           );
         })}
@@ -167,8 +167,8 @@ function BigChoice({ icon: Icon, title, description, onClick }) {
   return (
     <button
       onClick={onClick}
-      className="rounded-2xl p-5 flex flex-col items-start gap-2 text-left bg-surface border border-white/10
-                 hover:bg-white/[0.04] hover:border-accent/50 transition-colors min-h-[140px]"
+      className="rounded-xl p-5 flex flex-col items-start gap-2 text-left bg-surface border border-line
+                 hover:bg-surface-2 hover:border-accent/50 transition-colors min-h-[140px]"
     >
       <Icon size={26} className="text-link" />
       <h3 className="font-semibold text-sm text-white">{title}</h3>
@@ -217,14 +217,14 @@ function StepFormat({ onSelect }) {
 function LegsPicker({ label, value, onChange }) {
   return (
     <div>
-      <label className="text-xs text-gray-400">{label}</label>
+      <label className="text-data text-gray-400">{label}</label>
       <div className="grid grid-cols-3 gap-1.5 mt-1.5">
         {Object.entries(LEGS_LABELS).map(([v, l]) => (
           <button
             key={v}
             onClick={() => onChange(Number(v))}
             className={`h-11 rounded-lg text-data font-medium border transition-colors px-1 ${
-              value === Number(v) ? "bg-accent border-accent text-white" : "bg-surface border-white/10 text-gray-300"
+              value === Number(v) ? "bg-accent border-accent text-white" : "bg-surface border-line text-gray-300"
             }`}
           >
             {l}
@@ -261,7 +261,7 @@ function StepParams({
       {format === "LEAGUE" && (
         <>
           <div>
-            <label className="text-xs text-gray-400">Nombre d'équipes</label>
+            <label className="text-data text-gray-400">Nombre d'équipes</label>
             <div className="flex items-center gap-3 mt-1.5">
               <input
                 type="range"
@@ -282,14 +282,14 @@ function StepParams({
       {format === "HYBRID" && (
         <>
           <div>
-            <label className="text-xs text-gray-400">Nombre d'équipes</label>
+            <label className="text-data text-gray-400">Nombre d'équipes</label>
             <div className="grid grid-cols-3 gap-1.5 mt-1.5">
               {HYBRID_TEAM_OPTIONS.map((o) => (
                 <button
                   key={o.teams}
                   onClick={() => setTeamCount(o.teams)}
-                  className={`h-14 rounded-lg text-xs font-medium border transition-colors flex flex-col items-center justify-center gap-0.5 ${
-                    teamCount === o.teams ? "bg-accent border-accent text-white" : "bg-surface border-white/10 text-gray-300"
+                  className={`h-14 rounded-lg text-data font-medium border transition-colors flex flex-col items-center justify-center gap-0.5 ${
+                    teamCount === o.teams ? "bg-accent border-accent text-white" : "bg-surface border-line text-gray-300"
                   }`}
                 >
                   <span className="font-bold text-sm">{o.teams}</span>
@@ -307,14 +307,14 @@ function StepParams({
       {format === "KNOCKOUT" && (
         <>
           <div>
-            <label className="text-xs text-gray-400">Nombre d'équipes</label>
+            <label className="text-data text-gray-400">Nombre d'équipes</label>
             <div className="grid grid-cols-3 gap-1.5 mt-1.5">
               {KNOCKOUT_TEAM_OPTIONS.map((n) => (
                 <button
                   key={n}
                   onClick={() => setTeamCount(n)}
                   className={`h-11 rounded-lg text-sm font-semibold border transition-colors ${
-                    teamCount === n ? "bg-accent border-accent text-white" : "bg-surface border-white/10 text-gray-300"
+                    teamCount === n ? "bg-accent border-accent text-white" : "bg-surface border-line text-gray-300"
                   }`}
                 >
                   {n}
@@ -393,6 +393,11 @@ function StepTeams({ entityType, teamCount, creating, onCreate }) {
           className={`text-sm font-semibold tabular-nums ${canCreate ? "text-link" : "text-gray-400"}`}
         >
           {selected.length} / {teamCount}
+          {selected.length > 0 && (
+            <button onClick={() => setSelected([])} className="ml-3 min-h-11 sm:min-h-0 text-data font-medium text-link">
+              Tout effacer
+            </button>
+          )}
         </span>
       </div>
 
@@ -401,7 +406,7 @@ function StepTeams({ entityType, teamCount, creating, onCreate }) {
         placeholder={entityType === "club" ? "Rechercher un club…" : "Rechercher une sélection…"}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="h-10 shrink-0 rounded-lg bg-surface border border-white/10 px-3 text-sm outline-none focus:border-accent"
+        className="h-11 shrink-0 rounded-lg bg-surface border border-line px-3 text-sm outline-none focus:border-accent"
       />
 
       {categories.length > 0 && (
@@ -410,8 +415,8 @@ function StepTeams({ entityType, teamCount, creating, onCreate }) {
             <button
               key={c}
               onClick={() => setCategoryFilter(c)}
-              className={`h-8 px-3 rounded-full text-xs font-medium whitespace-nowrap border ${
-                categoryFilter === c ? "bg-accent border-accent text-white" : "bg-surface border-white/10 text-gray-300"
+              className={`h-11 sm:h-8 px-3 rounded-full text-data font-medium whitespace-nowrap border ${
+                categoryFilter === c ? "bg-accent border-accent text-white" : "bg-surface border-line text-gray-300"
               }`}
             >
               {c}
@@ -446,7 +451,7 @@ function StepTeams({ entityType, teamCount, creating, onCreate }) {
                 </div>
                 <div className="flex items-center justify-between text-caption text-gray-500">
                   <span className="truncate">{c.category}</span>
-                  <span className="text-gold shrink-0 pl-2">{starRating(c.strength, allStrengths)}</span>
+                  <span className="text-tier-avg shrink-0 pl-2">{starRating(c.strength, allStrengths)}</span>
                 </div>
               </button>
             );

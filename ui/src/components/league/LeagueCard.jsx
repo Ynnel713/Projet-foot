@@ -1,15 +1,11 @@
-import { motion } from "framer-motion";
 
 export default function LeagueCard({ name, nbClubs, subtitle, cta, countryCode, isCustom = false, onLaunch }) {
   return (
-    <motion.button
+    <button
       type="button"
-      whileHover={{ scale: 1.03 }}
-      whileTap={{ scale: 0.98 }}
-      transition={{ duration: 0.2 }}
       onClick={onLaunch}
-      className={`relative rounded-2xl p-4 flex flex-col items-start gap-1.5 text-left bg-surface ${
-        isCustom ? "border-2 border-dashed border-gold/60" : "border border-white/5"
+      className={`relative rounded-xl p-4 flex flex-col items-start gap-1.5 text-left bg-surface hover:bg-surface-2 transition-colors ${
+        isCustom ? "border-2 border-dashed border-accent/40" : "border border-line"
       }`}
     >
       {!isCustom && countryCode && (
@@ -20,10 +16,10 @@ export default function LeagueCard({ name, nbClubs, subtitle, cta, countryCode, 
         />
       )}
       <h3 className="font-semibold text-sm leading-tight">{name}</h3>
-      <p className="text-xs text-gray-400">{subtitle ?? (nbClubs != null ? `${nbClubs} clubs` : "Format libre")}</p>
-      <span className="mt-auto pt-2 text-xs font-medium text-link">
+      <p className="text-data text-gray-400">{subtitle ?? (nbClubs != null ? `${nbClubs} clubs` : "Format libre")}</p>
+      <span className="mt-auto pt-2 text-data font-medium text-link">
         {cta ?? (isCustom ? "Créer →" : "Lancer la saison →")}
       </span>
-    </motion.button>
+    </button>
   );
 }

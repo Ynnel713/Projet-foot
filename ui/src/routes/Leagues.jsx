@@ -61,7 +61,7 @@ export default function Leagues() {
     <div className="p-4">
       <button
         onClick={() => (drilldownLeagues ? setDrilldown(null) : navigate("/"))}
-        className="flex items-center gap-1 text-xs text-gray-400 mb-3"
+        className="flex items-center gap-1 min-h-11 text-data text-gray-400 mb-1"
       >
         <ArrowLeft size={14} /> {drilldownLeagues ? "Tous les championnats" : "Accueil"}
       </button>

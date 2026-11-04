@@ -131,7 +131,7 @@ export default function V2Match() {
   if (!trace) {
     return (
       <div className="p-4 sm:p-6 max-w-xl mx-auto flex flex-col gap-4">
-        <button onClick={() => navigate("/")} className="flex items-center gap-1 text-xs text-gray-400 self-start">
+        <button onClick={() => navigate("/")} className="flex items-center gap-1 min-h-11 text-data text-gray-400 self-start">
           <ArrowLeft size={14} /> Retour
         </button>
         <h1 className="text-2xl font-extrabold text-white">⚽ Version 2 (bêta)</h1>
@@ -188,23 +188,23 @@ export default function V2Match() {
   return (
     <div className="flex flex-col h-full p-2.5 gap-2">
       <div className="flex items-center justify-between gap-2">
-        <button onClick={() => navigate("/")} className="flex items-center gap-1 text-xs text-gray-400 shrink-0">
+        <button onClick={() => navigate("/")} className="flex items-center gap-1 min-h-11 text-data text-gray-400 shrink-0">
           <ArrowLeft size={14} /> Retour
         </button>
         <div className="text-center">
           <div className="font-bold text-white tabular-nums">
             {trace.home} {homeGoals} - {awayGoals} {trace.away}
           </div>
-          <div className="text-[11px] text-gray-500 tabular-nums">
+          <div className="text-caption text-gray-500 tabular-nums">
             {Math.floor(tick.minute)}'
             {!trace.done && ` · calcul ${Math.floor(available / 60)}'${waiting ? " (en attente…)" : ""}`}
           </div>
-          <div className="text-[11px] text-gray-400">
+          <div className="text-caption text-gray-400">
             <span className="text-[#4f8ef7]">{situationAt(trace, "home", tick.minute)}</span>
             {" · "}
             <span className="text-[#e0b84a]">{situationAt(trace, "away", tick.minute)}</span>
           </div>
-          <div className="text-[11px] h-[14px] font-semibold text-gold tabular-nums">
+          <div className="text-caption h-[14px] font-semibold text-gold tabular-nums">
             {recentOffside &&
               `⚑ Hors-jeu — ${recentOffside.player} (${recentOffside.team === "home" ? trace.home : trace.away})`}
           </div>
@@ -214,7 +214,7 @@ export default function V2Match() {
             <button
               key={s}
               onClick={() => setSpeed(s)}
-              className={`text-xs px-2 py-1 rounded ${speed === s ? "bg-accent text-white" : "bg-surface text-gray-400"}`}
+              className={`text-data px-2 py-1 rounded ${speed === s ? "bg-accent text-white" : "bg-surface text-gray-400"}`}
             >
               x{s}
             </button>
@@ -261,7 +261,7 @@ function perceivedSituation(trace, team, minute, delayS) {
 // un segment qu'au changement de rôle ou d'action), et dernière décision prise s'il a eu le ballon.
 function IntentionPanel({ trace, tick, selected }) {
   if (!selected) {
-    return <p className="text-center text-xs text-gray-500">Touchez un joueur pour voir ce qu'il cherche à faire.</p>;
+    return <p className="text-center text-data text-gray-500">Touchez un joueur pour voir ce qu'il cherche à faire.</p>;
   }
   // intentions et décisions n'arrivent qu'une fois le calcul fini
   const player = tick.players.find((p) => p.name === selected);
@@ -273,10 +273,10 @@ function IntentionPanel({ trace, tick, selected }) {
   return (
     <div className="rounded-lg bg-surface px-3 py-2 text-sm text-gray-200">
       <div className="font-semibold text-white">
-        {selected} {player && <span className="text-xs text-gray-400">({player.poste})</span>}
+        {selected} {player && <span className="text-data text-gray-400">({player.poste})</span>}
       </div>
       {player && (
-        <div className="text-xs text-gray-400">
+        <div className="text-data text-gray-400">
           Situation perçue : {perceivedSituation(trace, player.team, tick.minute, intentions?.reaction_delay_s || 0)}
         </div>
       )}
@@ -291,7 +291,7 @@ function IntentionPanel({ trace, tick, selected }) {
         </div>
       )}
       {decision && (
-        <div className="text-xs text-gray-400">
+        <div className="text-data text-gray-400">
           Dernière décision ({Math.floor(decision.minute)}') : {ACTIONS[decision.action] || decision.action}
           {decision.target ? ` vers ${decision.target}` : ""}, {decision.considered} option(s) envisagée(s),{" "}
           {decision.best ? "la meilleure" : "pas la meilleure"}
@@ -308,7 +308,7 @@ function ClubSelect({ label, value, onChange, clubs }) {
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-10 rounded-lg bg-surface border border-white/10 px-2 text-white"
+        className="h-10 rounded-lg bg-surface border border-line px-2 text-white"
       >
         {clubs.map((c) => (
           <option key={c.name} value={c.name}>

@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Trophy, Wand2, Star, Medal, Plus, Users, Zap, ArrowRight } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
 import { createChampionsLeague, createWorldCup, getCompetition } from "../api/client";
 import { useGameStore } from "../store/useGameStore";
 
@@ -47,12 +46,12 @@ export default function Home() {
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       <header className="mb-7">
-        <h1 className="font-display text-3xl sm:text-4xl font-bold text-white">Choisis ta compétition</h1>
+        <h1 className="font-display text-2xl font-bold text-white">Choisis ta compétition</h1>
         <p className="mt-1.5 text-data leading-snug text-gray-400 max-w-md">
           Simule une saison complète dans un grand championnat, ou construis ta propre compétition avec les clubs et
           sélections de ton choix.
         </p>
-        <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-accent/10 border border-accent/30 px-3 py-1 text-xs font-medium text-link">
+        <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-accent/10 border border-accent/30 px-3 py-1 text-data font-medium text-link">
           <Users size={13} /> {PLAYER_COUNT.toLocaleString("fr-FR")} joueurs disponibles
         </div>
       </header>
@@ -60,7 +59,7 @@ export default function Home() {
       <ResumeCard />
 
       <section className="mb-7">
-        <h2 className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-3">Compétitions officielles</h2>
+        <h2 className="text-data font-bold uppercase tracking-wide text-gray-500 mb-3">Compétitions officielles</h2>
         <CardRow>
           {OFFICIAL_COMPETITIONS.map(({ to, icon: Icon, title, description }) => (
             <Tile key={to} icon={Icon} title={title} description={description} onClick={() => navigate(to)} />
@@ -87,7 +86,7 @@ export default function Home() {
       </section>
 
       <section className="mb-7">
-        <h2 className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-3">Création</h2>
+        <h2 className="text-data font-bold uppercase tracking-wide text-gray-500 mb-3">Création</h2>
         <CardRow>
           <CreateTile
             icon={Wand2}
@@ -99,7 +98,7 @@ export default function Home() {
       </section>
 
       <section>
-        <h2 className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-3">Expérimental</h2>
+        <h2 className="text-data font-bold uppercase tracking-wide text-gray-500 mb-3">Expérimental</h2>
         <CardRow>
           <Tile
             icon={Zap}
@@ -129,21 +128,18 @@ function CardRow({ children }) {
 
 function Tile({ icon: Icon, title, description, premium, loading, onClick }) {
   return (
-    <motion.button
+    <button
       type="button"
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      transition={{ duration: 0.2 }}
       onClick={onClick}
       disabled={loading}
-      className="rounded-2xl p-5 flex flex-col items-start gap-2 text-left bg-surface border border-white/10
-                 hover:bg-white/[0.04] hover:border-white/20 transition-colors
+      className="rounded-xl p-5 flex flex-col items-start gap-2 text-left bg-surface border border-line
+                 hover:bg-surface-2 hover:border-gray-700 transition-colors
                  min-h-[160px] w-[280px] shrink-0 snap-start sm:w-auto sm:shrink disabled:opacity-60"
     >
       <Icon size={28} className={premium ? "text-gold" : "text-link"} />
       <h3 className="font-semibold text-sm text-white">{title}</h3>
       <p className="text-data leading-snug text-gray-400">{loading ? "Tirage des poules…" : description}</p>
-    </motion.button>
+    </button>
   );
 }
 
@@ -152,14 +148,11 @@ function Tile({ icon: Icon, title, description, premium, loading, onClick }) {
 // jaune "premium" (retour audit UX du 28/09/2026).
 function CreateTile({ icon: Icon, title, description, onClick }) {
   return (
-    <motion.button
+    <button
       type="button"
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      transition={{ duration: 0.2 }}
       onClick={onClick}
-      className="rounded-2xl p-5 flex items-center gap-4 text-left bg-surface border-2 border-dashed border-accent/40
-                 hover:bg-white/[0.04] hover:border-accent/60 transition-colors
+      className="rounded-xl p-5 flex items-center gap-4 text-left bg-surface border-2 border-dashed border-accent/40
+                 hover:bg-surface-2 hover:border-accent/60 transition-colors
                  min-h-[100px] w-[280px] shrink-0 snap-start sm:w-auto sm:shrink"
     >
       <div className="h-11 w-11 rounded-full bg-accent/15 flex items-center justify-center shrink-0">
@@ -175,7 +168,7 @@ function CreateTile({ icon: Icon, title, description, onClick }) {
         </div>
         <p className="mt-1 text-data leading-snug text-gray-400">{description}</p>
       </div>
-    </motion.button>
+    </button>
   );
 }
 
