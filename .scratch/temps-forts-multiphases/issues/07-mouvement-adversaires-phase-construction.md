@@ -12,7 +12,7 @@
 
 **Blocks:** 04 (lot "transition / pressing") — séquencé en premier pour ne pas répandre le défaut à 3 gabarits de plus avant de le régler.
 
-**Status:** ready-for-agent
+**Status:** livré (23/10/2026, `9610f61`) ; statut mis à jour le 04/11/2026 d'après `git log` (l'ancien statut n'avait pas été reporté)
 
 - [ ] Décision du propriétaire actée sur le mouvement à donner (option ci-dessus ou autre)
 - [ ] Les deux adversaires scriptés ne donnent plus l'impression d'un figement total pendant la construction, sur les 5 gabarits déjà traités

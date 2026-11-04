@@ -4,7 +4,7 @@
 
 **Blocked by:** 03 (lot "jeu collectif ouvert") — séquencé pour garder `templates.py` vert lot après lot, un seul lot à la fois sur ce fichier partagé. Et 07 (mouvement des adversaires scriptés pendant la construction) — défaut visuel signalé par le propriétaire (22/10/2026), à régler avant de généraliser à 3 gabarits de plus plutôt que de le répandre davantage.
 
-**Status:** ready-for-agent
+**Status:** livré (23/10/2026, `1aaddd4`) ; statut mis à jour le 04/11/2026 d'après `git log` (l'ancien statut n'avait pas été reporté)
 
 - [ ] Chacun des 3 gabarits de ce lot est précédé d'au moins un type de phase de construction tactiquement cohérent
 - [ ] Continuité des positions (ballon + joueurs) vérifiée sur un échantillon couvrant les 3 gabarits

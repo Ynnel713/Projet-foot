@@ -4,7 +4,7 @@
 
 **Blocked by:** 04 (lot "transition / pressing") — séquencé pour garder `templates.py` vert lot après lot.
 
-**Status:** ready-for-agent
+**Status:** livré (23/10/2026, `ac0bc3e`) ; statut mis à jour le 04/11/2026 d'après `git log` (l'ancien statut n'avait pas été reporté)
 
 - [ ] Chacun des 4 gabarits de ce lot est précédé d'au moins un type de phase de construction cohérent avec son contexte (coup de pied arrêté ou solo)
 - [ ] Continuité des positions (ballon + joueurs) vérifiée sur un échantillon couvrant les 4 gabarits

@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** implemented — en attente de validation propriétaire (`/valider-etape`)
+**Status:** livré (22/10/2026, `f7e9d39`) ; statut mis à jour le 04/11/2026 d'après `git log` (l'ancien statut n'avait pas été reporté)
 
 - [x] Au lancement d'un match, aucun marqueur n'est visible au-delà du temps fort en cours ou déjà passé — vérifié visuellement (`scripts/render_player_preview.py`)
 - [x] Un marqueur apparaît exactement quand son temps fort commence à être lu — idem

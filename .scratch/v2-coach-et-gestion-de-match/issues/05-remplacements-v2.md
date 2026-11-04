@@ -11,9 +11,9 @@ Les remplacements sont enregistrés dans la trace (minute, sortant, entrant) et 
 
 **Attributs :** Stamina (via la fatigue) ; attributs seuls (table poste/attributs, D-V07) pour le choix de l'entrant ; Postes naturels (via v2-attributs-restants/04).
 
-**Blocked by:** 01, 02, 03 (mi-temps) ; v2-collectif/12 ; v2-attributs-restants/02 (arrêts de jeu) et 04.
+**Blocked by:** 01, 02, 03, 07 (mi-temps) ; v2-collectif/12 ; v2-attributs-restants/02 (arrêts de jeu) et 04.
 
-**Status:** à faire (constantes à proposer avant le code)
+**Status:** découpé (04/11/2026, audit de granularité) en 05a (mécanique du remplacement, poste pour poste sur la fatigue) et 05b (remplacements tactiques, cartons, blessures). Ticket chapeau : ne pas l'implémenter tel quel ; le texte ci-dessous reste la référence de détail. Une référence à ce ticket sans lettre vaut pour tous ses morceaux.
 
 **Point de vigilance :** la sélection des remplaçants réutilise `ligue1sim.lineup` en lecture seule (D-V02). Aucun joueur expulsé ne peut être remplacé. Choix de l'entrant par les attributs seuls (table poste/attributs, D-V07), jamais par la Moyenne FM : décision du propriétaire du 02/11/2026.
 

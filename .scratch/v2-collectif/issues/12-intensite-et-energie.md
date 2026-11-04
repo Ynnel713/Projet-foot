@@ -4,11 +4,13 @@
 
 **Attributs :** Work Rate, Off the Ball, Teamwork, Stamina, Pace, Acceleration.
 
-**Blocked by:** 07, 08, 10.
+**Blocked by:** 07, 08, 10, 25 (socle cinématique et contact).
 
-**Status:** ready-for-agent (constantes à proposer avant le code)
+**Status:** à faire (constantes à proposer avant le code)
 
 **Point de vigilance :** code sauvegardé dans `.scratch/v2-collectif/wip-socle-02-intensite.patch` du 26/10 : intensités par attribut, fatigue liée à l'effort, approche au trot à 10 m, receveur à 0,7. Mesure sur 20 matchs : 10,5 km et 23 % de baisse en fin de match (bons) ; sprints à 7,2 % et Off the Ball de sens inverse (à corriger).
+
+**Depuis le ticket 25 (29/10/2026) :** la loi d'arrivée (« approche au trot à 10 m », `ARRIVAL_RADIUS_M` du patch) et le freinage relèvent du ticket 25, plus de ce ticket. Le patch vise un `_step_player` antérieur à `cerveau.py` : il n'est plus applicable tel quel ; seules ses intensités et sa fatigue liée à l'effort restent à reprendre ici.
 
 - [ ] Critères du ticket socle 02 repris tels que validés : 9-14 km par joueur ; 2-3 % de la distance au-dessus de 25 km/h ; ordre des postes de Bradley 2009 ; Work Rate 99 contre 11 : +25 à 45 % de course intense ; Off the Ball 99 contre 11 : 1,5 à 2 fois plus d'appels ; baisse d'environ 20 % de la course intense en fin de match
 - [ ] Test de fatigue : des efforts répétés dégradent progressivement la capacité à presser, revenir et tenir la structure

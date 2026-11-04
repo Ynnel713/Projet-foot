@@ -9,7 +9,7 @@
 
 **Blocked by:** v2-collectif/19.
 
-**Status:** à faire (constantes à proposer avant le code)
+**Status:** découpé (04/11/2026, audit de granularité) en 04a (pied fort et pied faible) et 04b (postes naturels). Ticket chapeau : ne pas l'implémenter tel quel ; le texte ci-dessous reste la référence de détail. Une référence à ce ticket sans lettre vaut pour tous ses morceaux.
 
 **Point de vigilance :** Pieds est vide pour 61 % des joueurs. Proposer au propriétaire un repli (neutre, ou déduction depuis Weak foot = 5 → ambidextre) avant le code ; enrichissement des données en ticket 06.
 

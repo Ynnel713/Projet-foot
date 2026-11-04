@@ -8,7 +8,7 @@
 
 **Blocked by:** commit des modifications en cours de l'écran V2 et de `api/routers/v2.py` (feuille de match), pour ne pas mélanger deux travaux dans un commit.
 
-**Status:** à faire
+**Status:** fusionné (04/11/2026) dans `.scratch/v2-hauteur-ballon/issues/01-camera-inclinee.md` (point 6 et deux critères repris) : même fichier, et l'affichage à hauteur fixe n'était qu'une étape avant la vraie hauteur. Audit de granularité.
 
 **Origine (03/11/2026) :** réserve A1 de l'expert sur le ticket v2-collectif/29, acceptée par le propriétaire (« Oui j'accepte »).
 

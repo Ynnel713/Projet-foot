@@ -6,7 +6,7 @@
 
 **Blocked by:** 01, 02.
 
-**Status:** à faire (constantes à proposer avant le code)
+**Status:** découpé (04/11/2026, audit de granularité) en 03a (dans les airs), 03b (placement, sorties, arrêts) et 03c (relances). Ticket chapeau : ne pas l'implémenter tel quel ; le texte ci-dessous reste la référence de détail. Une référence à ce ticket sans lettre vaut pour tous ses morceaux.
 
 **Point de vigilance :** Rushing Out, Punching et Eccentricity sont des **tendances**, pas des qualités (`docs/TRD_V2.md`) : elles changent le style, jamais le niveau. Eccentricity alimente aussi la propension du gardien à monter (v2-coach-et-gestion-de-match/04).
 

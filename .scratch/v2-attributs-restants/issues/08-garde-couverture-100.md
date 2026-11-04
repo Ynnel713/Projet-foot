@@ -1,4 +1,6 @@
-# 08: Garde de couverture : 100 % des caractéristiques branchées
+# 08: Garde de couverture : 100 % des caractéristiques et des 58 gestes branchés
+
+**Fusion du 04/11/2026** (audit de granularité) : la garde du ticket 05 (les 58 gestes préférés tous rattachés à un mécanisme) est la même garde que celle-ci, avec la même liste d'exceptions. Elle est reprise ici. Le ticket 05 reste ouvert : il garde la grille et le branchement mesuré de chaque geste (fréquence, réussite inchangée).
 
 **What to build:** Un test qui liste les colonnes de caractéristiques de `data/joueurs.xlsx` (47 attributs + Taille FM, Weak foot, Pieds, Preferred moves, Postes FM naturels) et échoue si l'une d'elles n'est lue par aucun module de `v2engine/`, sauf si elle figure dans une liste d'exceptions explicite et justifiée. Étend la garde existante `tests/test_v2engine_rayon_attributs.py` plutôt que d'en créer une seconde.
 
@@ -14,4 +16,5 @@ Exceptions attendues au départ (à valider par le propriétaire) : Natural Fitn
 
 - [ ] Le test échoue si une caractéristique n'est ni lue par `v2engine/` ni dans la liste d'exceptions
 - [ ] Chaque exception cite le ticket qui la lèvera
+- [ ] Repris du ticket 05 : les 58 valeurs distinctes de `Preferred moves` sont toutes rattachées à un mécanisme et à un ticket porteur (grille du ticket 05) ; le test échoue si une nouvelle valeur apparaît sans rattachement, ou si une paire contradictoire est additionnée au lieu d'être signalée
 - [ ] Suite V2 verte

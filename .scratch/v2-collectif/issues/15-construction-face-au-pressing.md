@@ -6,7 +6,7 @@
 
 **Blocked by:** 08, 13.
 
-**Status:** ready-for-agent (constantes à proposer avant le code)
+**Status:** à faire (constantes à proposer avant le code)
 
 - [ ] Part de jeu long mesurablement plus forte face à un pressing haut, à situation égale
 - [ ] Pertes de balle dans son propre tiers dans une fourchette réelle (à sourcer)

@@ -6,7 +6,7 @@
 
 **Blocked by:** 14, 16.
 
-**Status:** ready-for-agent (constantes à proposer avant le code)
+**Status:** à faire (constantes à proposer avant le code)
 
 - [ ] Test de profils : deux équipes identiques tactiquement, avec des profils différents, ont des comportements différents et cohérents
 - [ ] Les deux-contre-un créés débouchent mesurablement plus souvent sur une progression

@@ -4,9 +4,11 @@
 
 **Attributs :** Tous.
 
-**Blocked by:** Tickets 01 à 21 et 23.
+**Blocked by:** Tickets 01 à 21 et 23 ; 28 à 33 ; `v2-attributs-restants/01`, `02`, `03`, `07` et `11` ; `v2-coach-et-gestion-de-match/03` (revue de réalisme du 03/11/2026 : tout ce qui change le nombre ou la forme des actions passe avant la calibration, qui ne se fait qu'une fois, sur le moteur complet). Passent après elle : `v2-attributs-restants/10`, `05`, `04`, `09` (avec un simple contrôle de non-régression).
 
-**Status:** ready-for-agent (constantes à proposer avant le code)
+**Critères repris le 03/11/2026 :** C2 du ticket 14 (une passe sans gain suivie d'une passe qui fait avancer, 39 % visé contre 30 à 32 % mesurés), échelle de progression de la deuxième passe au-delà de 20 m (A2 du ticket 13), nouveaux indicateurs des tickets 28 à 32 (touches, sorties de but, corners, fautes, tirs par zone, passes à une touche, grosses occasions) et temps de jeu effectif.
+
+**Status:** découpé (04/11/2026, audit de granularité) en trois lots successifs : 22a (volumes, passes, rythme), 22b (tactique), 22c (tirs, buts, arrêts de jeu). Ticket chapeau : ne pas l'implémenter tel quel ; le texte ci-dessous reste la référence de détail. Une référence à ce ticket sans lettre vaut pour tous ses morceaux. La calibration reste unique, sur le moteur complet.
 
 **Point de vigilance :** le ticket v2-socle/05 est absorbé ici.
 
@@ -19,6 +21,7 @@
 - [ ] Constantes produit et critères chiffrés (données réelles sourcées, ou « non trouvé ») validés par le propriétaire avant le code
 - [ ] Les chiffres réels sont des indicateurs de calibration, pas des objectifs : pas de réglage générique pour les atteindre avant la calibration générale (ticket 22)
 - [ ] Suite V2 verte ; V1 inchangée
+- [ ] Repris du ticket 29 (réserve A2 acceptée le 03/11/2026) : temps de jeu effectif 65 à 80 % tant que fautes et remplacements manquent, sinon 53 à 56 % (réel, CIES) ; au ticket 29 : 86,6 %
 
 ## Base de référence après le ticket 25 (30/10/2026)
 
@@ -31,3 +34,10 @@ Les chiffres ci-dessus (ticket 25) sont faussés : une passe sur deux revenait a
 ## À surveiller depuis le ticket 08 (01/11/2026)
 
 Réserve A3 de l'expert : la distance d'arrêt du presseur à Aggression 11 (1,6 m) dépasse le rayon de tacle (1,5 m). Un presseur peu agressif ne tacle que si le porteur vient vers lui. C'est voulu (il laisse le porteur se retourner), mais cela pèse sur le nombre de tacles à régler ici.
+
+## À surveiller depuis le ticket 10 (03/11/2026, réserves A1 à A3 acceptées par le propriétaire)
+
+Série d'au moins 40 matchs avec dispersion (16 matchs donnent des buts de 2,94 ou 3,56 pour le même état) :
+- latence du repli (2,53 s) : pas de valeur réelle trouvée ; ordre de grandeur Bundesliga 2010/11, meilleures équipes : ballon récupéré en environ 1 s (temps de récupération, pas de réaction) ;
+- tirs de contre après récupération dans son camp (4,8 → 4,75) : remesurer aussi les réserves 09 C3 et 09 A1 et 11 A1 (contre-attaque « non jouable » mieux sanctionnée ?) ;
+- hors-jeu (1,6 par match) et recul du bloc (centre d'équipe à −0,76 m/s après la perte) : la règle « pas de montée en transition défensive » fait reculer l'équipe (+0,22 m/s) mais fait tomber le hors-jeu à 0,69 et monte les tirs de contre à 6,2 ; une règle plus fine (par exemple après les premières secondes) reste à essayer ici. Rouvrir si le hors-jeu reste sous 2 par match.

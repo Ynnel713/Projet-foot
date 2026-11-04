@@ -4,7 +4,7 @@
 
 **Blocked by:** 02 (POC — phase de construction chaînée au gabarit pilote).
 
-**Status:** ready-for-agent
+**Status:** livré (22/10/2026, `1691286`) ; statut mis à jour le 04/11/2026 d'après `git log` (l'ancien statut n'avait pas été reporté)
 
 - [ ] Chacun des 4 gabarits de ce lot est précédé d'au moins un type de phase de construction tactiquement cohérent
 - [ ] Continuité des positions (ballon + joueurs) vérifiée sur un échantillon couvrant les 4 gabarits

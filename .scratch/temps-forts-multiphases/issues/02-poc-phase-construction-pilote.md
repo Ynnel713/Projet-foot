@@ -4,7 +4,7 @@
 
 **Blocked by:** None dans ce lot de tickets. Préalable externe déjà vérifié satisfait (22/10/2026) : clôture du chantier « mouvement collectif » Phase 5 (`a5e7d3d`) et d'A1.1 (`cf63f0f`), tous deux commités.
 
-**Status:** ready-for-agent
+**Status:** livré (22/10/2026, `c8cd06b`) ; statut mis à jour le 04/11/2026 d'après `git log` (l'ancien statut n'avait pas été reporté)
 
 - [ ] Sur l'échantillon de référence, les clips du gabarit pilote durent au moins 20 secondes
 - [ ] Aucun saut de position mesurable à la jonction entre la phase de construction et la conclusion

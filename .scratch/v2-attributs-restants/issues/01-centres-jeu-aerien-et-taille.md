@@ -4,11 +4,13 @@
 
 1. **Arriver au ballon** : Taille FM (`Taille FM (cm)`, repli sur `Taille (cm)`, puis neutre) + Jumping Reach, pondérés par Bravery (aller au contact) ; Strength pour le placement au contact.
 2. **Bien le jouer** : Heading (direction, puissance) pour le joueur qui l'emporte.
-3. Les frappes lointaines (> 20 m) sont résolues par Long Shots, distinct de Finishing.
+3. ~~Frappes lointaines par Long Shots~~ : déplacé au ticket `v2-collectif/28` (même calcul de tir, frontière Finishing / Long Shots tranchée là-bas ; recommandation de l'expert acceptée le 03/11/2026). L'issue d'une tête passe par le calcul de tir du 28.
 
-**Attributs :** Crossing, Heading, Jumping Reach, Bravery, Long Shots, Taille.
+**Attributs :** Crossing, Heading, Jumping Reach, Bravery, Taille (Long Shots : ticket `v2-collectif/28`). Les types de centres (enroulé, tendu, en retrait, au ras du sol) sont au ticket 11.
 
-**Blocked by:** v2-collectif/18 (règle anti double comptage).
+**Complément (03/11/2026, D-V03 révisée, `docs/ETUDE_HAUTEUR_V2.md`) :** le ballon a désormais une vraie hauteur (`v2-hauteur-ballon/02`) et chaque joueur une tranche de hauteur accessible (`v2-hauteur-ballon/03`). Le tirage pondéré ne réunit que les joueurs capables d'atteindre le ballon à temps (bonne position au bon instant, hauteur dans leur portée de tête). Le moteur trace un événement « saut » (joueur, instant, hauteur de pointe) ; l'écran remonte le rond du sauteur, son ombre restant au sol. Les joueurs restent à plat dans le moteur.
+
+**Blocked by:** v2-collectif/18 (règle anti double comptage), v2-collectif/28a (calcul du tir, pour la tête), v2-hauteur-ballon/03 (hauteur du ballon et portée des joueurs).
 
 **Status:** à faire (constantes à proposer avant le code)
 
@@ -18,7 +20,8 @@
 - [ ] Jumping Reach élevé compense une partie de l'écart de taille (mesuré)
 - [ ] Le gagnant du duel cadre mieux sa tête avec un Heading élevé
 - [ ] Crossing élevé : plus de centres atteignant un coéquipier
-- [ ] Long Shots élevé : plus de frappes lointaines cadrées ; Decisions règle la tentative (pas de double comptage)
 - [ ] Joueur sans taille renseignée : comportement neutre (taille moyenne du poste)
+- [ ] Seuls les joueurs capables d'atteindre le ballon à temps disputent le duel (scène fixe : un joueur trop loin ou trop petit n'y figure pas)
+- [ ] Chaque duel aérien trace un saut, visible à l'écran (rond remonté, ombre au sol)
 - [ ] Constantes produit et critères chiffrés validés par le propriétaire avant le code
 - [ ] Suite V2 verte ; V1 inchangée

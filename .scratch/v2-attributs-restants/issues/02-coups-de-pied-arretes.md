@@ -4,9 +4,11 @@
 
 **Attributs :** Corners, Free Kick Taking, Long Throws, Penalty Taking ; Composure (penalty) ; Taille, Jumping Reach, Heading (via 01).
 
-**Blocked by:** 01.
+**Blocked by:** 01, `v2-collectif/29` (ballon mort) et `v2-collectif/30` (fautes sifflées).
 
-**Status:** à faire (constantes à proposer avant le code)
+**Mise à jour du 03/11/2026 (revue de réalisme) :** la sortie du ballon (touche, sortie de but, corner) et les remises en jeu simples sont désormais au ticket `v2-collectif/29`, les fautes sifflées et les coups francs simples au `v2-collectif/30`. Ce ticket se limite à l'**exécution travaillée** des coups de pied arrêtés (placement, mur, marquage, duel aérien, seconds ballons, choix du tireur par attribut) et aux penalties, s'ils n'ont pas été livrés au 30.
+
+**Status:** découpé (04/11/2026, audit de granularité) en 02a (penalty) et 02b (corners, coups francs et touches longues travaillés). Ticket chapeau : ne pas l'implémenter tel quel ; le texte ci-dessous reste la référence de détail. Une référence à ce ticket sans lettre vaut pour tous ses morceaux.
 
 **Point de vigilance :** prérequis de v2-coach-et-gestion-de-match/04 (gardien qui monte sur corner). Le placement doit prévoir un nombre de joueurs montés variable, réglable par l'état du match.
 

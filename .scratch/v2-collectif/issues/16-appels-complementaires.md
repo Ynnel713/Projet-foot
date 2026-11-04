@@ -74,7 +74,7 @@ Proposition validée par le propriétaire le 02/11/2026. Ajustement imposé par 
 
 Constat : l'inversion d'Off the Ball est confirmée disparue (C1 tenait déjà avant). Le mécanisme va dans le bon sens mais son effet est faible (+10 % d'appels dans le dos) : C3 et C4 (médiane) ne sont pas atteints. Piste à diagnostiquer avant toute retouche : part des recherches d'espace où `depth_run` est candidat (joueur devant le ballon, place à 20 m de la ligne) et part abandonnée ensuite (« plans abandonnés, ligne fermée » 0,457 → 0,484).
 
-**Status:** en cours (02/11/2026) — critères C3 et C4 non atteints ; déterminisme, suite complète et revue non faits.
+**Statut intermédiaire (02/11/2026, dépassé) :** en cours — critères C3 et C4 non atteints ; déterminisme, suite complète et revue non faits.
 
 ## Diagnostic (02/11/2026, matchs standard, graine d'audit, `depth_run` instrumenté hors dépôt)
 

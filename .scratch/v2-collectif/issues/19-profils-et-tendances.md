@@ -6,7 +6,7 @@
 
 **Blocked by:** 13, 18.
 
-**Status:** ready-for-agent (constantes à proposer avant le code)
+**Status:** à faire (constantes à proposer avant le code)
 
 **Point de vigilance :** les tickets v2-cerveau-joueurs/05 et /06 sont absorbés ici (et dans le ticket 04 pour Teamwork sans ballon).
 

@@ -8,7 +8,7 @@ C'est un **événement rare**, comme dans la réalité.
 
 **Attributs :** Determination ; Eccentricity du gardien (v2-attributs-restants/03) ; Taille, Jumping Reach et Heading du gardien pour le duel aérien (v2-attributs-restants/01) ; Pace et Stamina pour le retour.
 
-**Blocked by:** 02, 03 ; v2-attributs-restants/01, 02 et 03.
+**Blocked by:** 02, 03 ; v2-attributs-restants/01, 02b (corners et coups francs travaillés) et 03 (a, b ; Eccentricity au 03b).
 
 **Status:** à faire (constantes à proposer avant le code)
 

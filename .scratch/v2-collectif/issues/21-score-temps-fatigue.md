@@ -6,7 +6,7 @@
 
 **Blocked by:** 04, 12.
 
-**Status:** ready-for-agent (constantes à proposer avant le code)
+**Status:** à faire (constantes à proposer avant le code)
 
 **Point de vigilance :** Determination et Leadership étaient prévus en phase 10 : ce ticket en avance la partie collective. L'adaptation au score doit être exposée comme des paramètres (minute de début, amplitude) que `.scratch/v2-coach-et-gestion-de-match/issues/02-gestion-du-score-selon-le-coach.md` module par le style du coach, sans seconde mécanique.
 
