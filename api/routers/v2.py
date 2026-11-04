@@ -14,7 +14,9 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from ligue1sim.clubs import load_all_clubs
-from ligue1sim.coaches import preferred_formations
+from ligue1sim.coaches import coach_name, preferred_formations
+from ligue1sim.lineup import bench, pick_best_formation
+from ligue1sim.players import ATTACKER, DEFENDER, GOALKEEPER, MIDFIELDER, position_group
 from ligue1sim.season import CLUBS_PATH
 
 from v2engine.match import TICK_SECONDS, simulate_match
@@ -161,6 +163,46 @@ def _find_club(name: str):
         if option.name == name:
             return option.as_club()
     raise HTTPException(status_code=404, detail=f"Club introuvable : {name!r}")
+
+
+_BENCH_SIZE = 9  # remplaçants sur la feuille de match (Ligue 1)
+_GROUP_ORDER = {GOALKEEPER: 0, DEFENDER: 1, MIDFIELDER: 2, ATTACKER: 3}
+
+
+class LineupPlayerOut(BaseModel):
+    name: str
+    poste: str
+    number: int
+
+
+class LineupOut(BaseModel):
+    """Feuille de match d'un club, telle que `simulate_match` la choisit (`pick_best_formation`, déterministe)."""
+    club: str
+    formation: str
+    coach: str | None
+    starters: list[LineupPlayerOut]
+    bench: list[LineupPlayerOut]
+
+
+def numbered_lineup(club) -> LineupOut:
+    """Numéros de maillot attribués à l'affichage : gardien 1, puis de la défense à l'attaque (2 à 11), remplaçants
+    à partir de 12 -- les données n'ont pas de numéros réels."""
+    lineup = pick_best_formation(club)
+    starters = sorted(lineup.players, key=lambda p: lineup.bands.get(p.name, _GROUP_ORDER.get(position_group(p.poste), 2)))
+    subs = sorted(bench(club, lineup), key=lambda p: -p.note)
+    keepers = [p for p in subs if position_group(p.poste) == GOALKEEPER][:1]  # un gardien remplaçant, s'il y en a
+    subs = keepers + [p for p in subs if p not in keepers][:_BENCH_SIZE - len(keepers)]
+    subs.sort(key=lambda p: _GROUP_ORDER.get(position_group(p.poste), 2))
+    return LineupOut(
+        club=club.name, formation=lineup.formation, coach=coach_name(club.name),
+        starters=[LineupPlayerOut(name=p.name, poste=p.poste, number=i) for i, p in enumerate(starters, start=1)],
+        bench=[LineupPlayerOut(name=p.name, poste=p.poste, number=i) for i, p in enumerate(subs, start=12)],
+    )
+
+
+@router.get("/lineup", response_model=LineupOut)
+def club_lineup(club: str) -> LineupOut:  # nom en paramètre de requête : certains noms de club contiennent un « / »
+    return numbered_lineup(_find_club(club))
 
 
 def _tick_out(tick) -> TickOut:

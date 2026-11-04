@@ -32,6 +32,8 @@ export const createV2Match = (body) => request("/api/v2/matches", { method: "POS
 // Rejeu en direct : le calcul démarre en tâche de fond, puis on lit les images au fur et à mesure (à partir de `fromTick`).
 export const startV2Match = (body) => request("/api/v2/matches/start", { method: "POST", body: JSON.stringify(body) });
 export const getV2Match = (id, fromTick) => request(`/api/v2/matches/${id}?from_tick=${fromTick}`);
+// Feuille de match V2 : titulaires et remplaçants numérotés, entraîneur.
+export const getV2Lineup = (club) => request(`/api/v2/lineup?club=${encodeURIComponent(club)}`);
 
 export const createCompetition = (body) =>
   request("/api/competitions", { method: "POST", body: JSON.stringify(body) });

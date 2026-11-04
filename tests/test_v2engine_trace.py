@@ -99,3 +99,28 @@ def test_v2_match_route_rejects_unknown_club() -> None:
     with pytest.raises(HTTPException) as error:
         create_match(SimulateV2Request(home="Club inexistant", away="Autre inexistant"))
     assert error.value.status_code == 404
+
+
+def test_numbered_lineup_keeper_first_then_bench_from_12() -> None:
+    # Feuille de match V2 : gardien 1, onze numérotés 1 à 11, au plus 9 remplaçants dont un gardien, à partir de 12.
+    from api.routers.v2 import numbered_lineup
+    from ligue1sim.clubs import Club
+    from ligue1sim.players import Player
+
+    postes = ["GK"] * 3 + ["DC"] * 5 + ["LB", "RB"] * 2 + ["MC"] * 5 + ["MDC", "MOC"] * 2 + ["AG", "AD", "BU"] * 2
+    players = [Player(prenom=f"p{i}", nom="", nationalite="France", age=25, poste=poste, note=60.0 + i % 7, club="T",
+                      championnat="TEST") for i, poste in enumerate(postes)]
+    lineup = numbered_lineup(Club(name="T", players=players))
+    assert [p.number for p in lineup.starters] == list(range(1, 12))
+    assert lineup.starters[0].poste == "GK"
+    assert len(lineup.bench) == 9 and [p.number for p in lineup.bench] == list(range(12, 21))
+    assert sum(p.poste == "GK" for p in lineup.bench) == 1
+    assert not {p.name for p in lineup.bench} & {p.name for p in lineup.starters}
+
+
+def test_lineup_route_rejects_unknown_club() -> None:
+    from api.routers.v2 import club_lineup
+
+    with pytest.raises(HTTPException) as error:
+        club_lineup("Club inexistant")
+    assert error.value.status_code == 404

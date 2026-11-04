@@ -1,15 +1,21 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, LoaderCircle, Pause, Play } from "lucide-react";
-import { getPersoClubs, getV2Match, startV2Match } from "../api/client";
+import { getPersoClubs, getV2Lineup, getV2Match, startV2Match } from "../api/client";
 import dims from "../utils/pitchGeometry.json";
 import { goalBall } from "../utils/v2GoalBall";
 
-// Vitesses en multiples du TEMPS RÉEL (validées par le propriétaire, 24/10/2026) : x8 par défaut, soit ~11 min
-// pour 90 minutes de match. Entre deux positions enregistrées (~1 s de match d'écart, voir api/routers/v2.py),
-// joueurs et ballon glissent en ligne droite au lieu de sauter (voir `interpolatedTick`).
-const SPEED_OPTIONS = [1, 4, 8, 16]; // x1 = vitesse réelle (ajoutée à la demande du propriétaire, 24/10/2026)
-const DEFAULT_SPEED = 8;
+// Vitesses en multiples du TEMPS RÉEL (demande du propriétaire, 03/11/2026) : x1 par défaut, jusqu'à x8. Entre
+// deux positions enregistrées (~1 s de match d'écart, voir api/routers/v2.py), joueurs et ballon glissent en ligne
+// droite au lieu de sauter (voir `interpolatedTick`).
+const SPEED_OPTIONS = [1, 1.5, 2, 4, 8];
+const DEFAULT_SPEED = 1;
+// Ralenti de chaque but : une fois le but vu (et REPLAY_AFTER_S de plus), on revient REPLAY_BEFORE_S avant et on
+// rejoue l'action à REPLAY_SPEED, puis la lecture reprend là où elle était.
+const REPLAY_BEFORE_S = 8;
+const REPLAY_AFTER_S = 2;
+const REPLAY_SPEED = 0.4;
+const HALF_TIME_MIN = 45;
 // Le rejeu démarre quand ce nombre d'images (~1 s de match chacune) est calculé ; le reste arrive pendant qu'on regarde.
 const START_BUFFER_TICKS = 60;
 const POLL_MS = 1000;
@@ -50,6 +56,12 @@ export default function V2Match() {
   const [speed, setSpeed] = useState(DEFAULT_SPEED);
   const [selected, setSelected] = useState(null); // joueur dont on lit l'intention (ADR 0001)
   const [computed, setComputed] = useState(0); // images déjà calculées, pendant l'attente avant le démarrage
+  const [lineups, setLineups] = useState(null); // { home, away } : feuilles de match numérotées
+  const [replaying, setReplaying] = useState(false);
+  const secondsRef = useRef(0);
+  const [seen, setSeen] = useState(0); // instant le plus avancé déjà vu : le score ne recule pas pendant un ralenti
+  const replayRef = useRef(null); // { end } : instant où le ralenti en cours s'arrête
+  const replayedRef = useRef(0); // buts déjà rejoués au ralenti
   const traceRef = useRef(null); // dernière trace reçue, lue par la boucle de lecture sans la relancer à chaque lecture
   const runRef = useRef(0); // numéro du lancement en cours : un lancement périmé ou un démontage arrête sa lecture
   useEffect(() => () => { runRef.current += 1; }, []);
@@ -75,12 +87,25 @@ export default function V2Match() {
       previous = now;
       const live = traceRef.current;
       const end = (live.ticks.length - 1) * live.tick_seconds;
-      setSeconds((t) => {
-        const next = Math.min(end, t + elapsed * speed);
-        // fin de la lecture seulement si le calcul est fini ; sinon on attend les images suivantes
-        if (next >= end && live.done) setPlaying(false);
-        return next;
-      });
+      const replay = replayRef.current;
+      let next = Math.min(end, secondsRef.current + elapsed * (replay ? REPLAY_SPEED : speed));
+      if (replay && next >= replay.end) {
+        replayRef.current = null;
+        setReplaying(false);
+      } else if (!replay) {
+        const goal = live.goals[replayedRef.current];
+        if (goal && next >= goal.minute * 60 + REPLAY_AFTER_S) {
+          replayedRef.current += 1;
+          replayRef.current = { end: next };
+          setReplaying(true);
+          next = Math.max(0, goal.minute * 60 - REPLAY_BEFORE_S);
+        }
+      }
+      secondsRef.current = next;
+      setSeen((s) => Math.max(s, next));
+      setSeconds(next);
+      // fin de la lecture seulement si le calcul est fini ; sinon on attend les images suivantes
+      if (next >= end && live.done && !replayRef.current) setPlaying(false);
       frame = requestAnimationFrame(loop);
     };
     frame = requestAnimationFrame(loop);
@@ -97,7 +122,12 @@ export default function V2Match() {
     setComputed(0);
     const run = ++runRef.current;
     try {
-      const { id } = await startV2Match({ home, away });
+      const [{ id }, homeLineup, awayLineup] = await Promise.all([
+        startV2Match({ home, away }),
+        getV2Lineup(home),
+        getV2Lineup(away),
+      ]);
+      setLineups({ home: homeLineup, away: awayLineup });
       let ticks = [];
       let started = false;
       for (;;) {
@@ -114,6 +144,11 @@ export default function V2Match() {
           started = true;
           setTrace(live);
           setSelected(null); // le joueur sélectionné n'est peut-être pas de ce match
+          secondsRef.current = 0;
+          setSeen(0);
+          replayRef.current = null;
+          replayedRef.current = 0;
+          setReplaying(false);
           setSeconds(0);
           setPlaying(true);
           setLaunching(false);
@@ -173,7 +208,15 @@ export default function V2Match() {
   }
 
   const tick = interpolatedTick(trace, seconds);
-  const revealedGoals = trace.goals.filter((g) => g.minute <= tick.minute);
+  // Changement de camp à la mi-temps : le moteur garde « domicile attaque vers x croissant » tout le match (terrain
+  // symétrique, rien n'y dépend du côté) ; l'écran tourne la scène d'un demi-tour en 2e période.
+  const secondHalf = tick.minute >= HALF_TIME_MIN;
+  const view = secondHalf ? rotated(tick) : tick;
+  const numbers = Object.fromEntries(
+    ["home", "away"].flatMap((t) => (lineups?.[t]?.starters || []).map((p) => [p.name, p.number])),
+  );
+  // score : jusqu'à l'instant le plus avancé déjà vu, pour qu'il ne recule pas pendant un ralenti
+  const revealedGoals = trace.goals.filter((g) => g.minute * 60 <= Math.max(seen, seconds));
   const homeGoals = revealedGoals.filter((g) => g.team === "home").length;
   const awayGoals = revealedGoals.filter((g) => g.team === "away").length;
   const available = (trace.ticks.length - 1) * trace.tick_seconds; // images déjà calculées
@@ -196,7 +239,7 @@ export default function V2Match() {
             {trace.home} {homeGoals} - {awayGoals} {trace.away}
           </div>
           <div className="text-caption text-gray-500 tabular-nums">
-            {Math.floor(tick.minute)}'
+            {Math.floor(tick.minute)}' · {secondHalf ? "2e" : "1re"} période
             {!trace.done && ` · calcul ${Math.floor(available / 60)}'${waiting ? " (en attente…)" : ""}`}
           </div>
           <div className="text-caption text-gray-400">
@@ -210,6 +253,19 @@ export default function V2Match() {
           </div>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
+          {replaying && (
+            <button
+              onClick={() => {
+                secondsRef.current = replayRef.current?.end ?? secondsRef.current;
+                replayRef.current = null;
+                setReplaying(false);
+              }}
+              className="text-data px-2 py-1 rounded bg-red-600 text-white font-semibold"
+              title="Passer le ralenti"
+            >
+              RALENTI ⏭
+            </button>
+          )}
           {SPEED_OPTIONS.map((s) => (
             <button
               key={s}
@@ -229,8 +285,20 @@ export default function V2Match() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 flex items-center justify-center">
-        <V2Pitch tick={tick} selected={selected} onSelect={setSelected} />
+      <div className="flex-1 min-h-0 flex items-center justify-center gap-3">
+        <LineupPanel lineup={lineups?.home} color="#4f8ef7" />
+        <div className="flex flex-col items-center gap-1 w-full max-w-4xl">
+          <Momentum trace={trace} seen={Math.max(seen, seconds)} />
+          <V2Pitch
+            tick={view}
+            seconds={seconds}
+            numbers={numbers}
+            lineups={lineups}
+            selected={selected}
+            onSelect={setSelected}
+          />
+        </div>
+        <LineupPanel lineup={lineups?.away} color="#e0b84a" />
       </div>
 
       <IntentionPanel trace={trace} tick={tick} selected={selected} />
@@ -239,6 +307,108 @@ export default function V2Match() {
         <p className="text-center text-sm text-gold font-semibold">
           Match terminé : {trace.home} {homeGoals} - {awayGoals} {trace.away}
         </p>
+      )}
+    </div>
+  );
+}
+
+// Match momentum : une barre par minute, vers le haut quand domicile pousse, vers le bas quand l'extérieur pousse.
+// Poussée d'un instant = position du ballon dans la longueur (repère moteur : domicile attaque vers x croissant tout le
+// match), accentuée près des buts, plus un bonus à l'équipe qui a le ballon ; moyenne sur la minute.
+// ponytail : heuristique territoire + possession, sans les tirs (journal des décisions envoyé seulement en fin de
+// calcul) ; à enrichir avec tirs et occasions si la courbe paraît trop plate.
+const MOMENTUM_MINUTES = 90;
+const POSSESSION_BONUS = 0.15;
+
+function momentumByMinute(trace) {
+  const sums = new Array(MOMENTUM_MINUTES).fill(0);
+  const counts = new Array(MOMENTUM_MINUTES).fill(0);
+  for (const t of trace.ticks) {
+    const m = Math.min(MOMENTUM_MINUTES - 1, Math.floor(t.minute));
+    const dx = (t.ball.x - L / 2) / (L / 2);
+    const holderTeam = t.ball.holder && t.players.find((p) => p.name === t.ball.holder)?.team;
+    sums[m] += dx * Math.abs(dx) + (holderTeam === "home" ? POSSESSION_BONUS : holderTeam === "away" ? -POSSESSION_BONUS : 0);
+    counts[m] += 1;
+  }
+  return sums.map((v, m) => (counts[m] ? v / counts[m] : null));
+}
+
+function Momentum({ trace, seen }) {
+  // recalculé quand de nouvelles images arrivent (une fois par seconde), pas à chaque image affichée
+  const values = useMemo(() => momentumByMinute(trace), [trace]);
+  const now = seen / 60;
+  const X = 4; // largeur d'une minute (unités du viewBox)
+  const H = 14; // demi-hauteur
+  // échelle sur les minutes déjà jouées seulement : la courbe ne trahit rien de la suite
+  const scale = H / Math.max(0.2, ...values.map((v, m) => (m < now ? Math.abs(v ?? 0) : 0)));
+  const goals = trace.goals.filter((g) => g.minute <= now);
+  const width = MOMENTUM_MINUTES * X;
+  return (
+    <svg viewBox={`-2 -6 ${width + 4} ${2 * H + 12}`} className="w-full" style={{ maxHeight: 110 }}>
+      <title>Match momentum</title>
+      <rect x={0} y={0} width={width} height={H} fill="rgba(79,142,247,0.12)" />
+      <rect x={0} y={H} width={width} height={H} fill="rgba(224,184,74,0.12)" />
+      {values.map((v, m) =>
+        v == null || m >= now ? null : (
+          <rect
+            key={m}
+            x={m * X + 0.4}
+            width={X - 0.8}
+            y={v > 0 ? H - v * scale : H}
+            height={Math.abs(v) * scale}
+            fill={v > 0 ? "#4f8ef7" : "#e0b84a"}
+          />
+        ),
+      )}
+      <line x1={0} y1={H} x2={width} y2={H} stroke="rgba(255,255,255,0.3)" strokeWidth={0.2} />
+      <line x1={HALF_TIME_MIN * X} y1={0} x2={HALF_TIME_MIN * X} y2={2 * H} stroke="white" strokeWidth={0.6} />
+      {goals.map((g, i) => (
+        <text
+          key={i}
+          x={g.minute * X}
+          y={g.team === "home" ? -3 : 2 * H + 3}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontSize={5}
+        >
+          ⚽
+        </text>
+      ))}
+    </svg>
+  );
+}
+
+// Demi-tour de la scène autour du rond central (2e période) : chaque équipe attaque l'autre but.
+function rotated(tick) {
+  const turn = (o) => ({ ...o, x: L - o.x, y: W - o.y });
+  return { ...tick, players: tick.players.map(turn), ball: turn(tick.ball) };
+}
+
+// Composition d'une équipe, à côté du terrain : numéro, poste, nom ; banc et entraîneur dessous.
+function LineupPanel({ lineup, color }) {
+  if (!lineup) return null;
+  const row = (p) => (
+    <li key={p.name} className="flex gap-1.5 leading-tight">
+      <span className="w-5 text-right font-bold tabular-nums" style={{ color }}>
+        {p.number}
+      </span>
+      <span className="w-9 text-gray-500">{p.poste}</span>
+      <span className="truncate text-gray-200">{p.name}</span>
+    </li>
+  );
+  return (
+    <div className="hidden lg:flex flex-col gap-1 w-52 shrink-0 text-caption self-stretch overflow-y-auto">
+      <div className="font-bold text-sm truncate" style={{ color }}>
+        {lineup.club}
+      </div>
+      <div className="text-gray-500">{lineup.formation}</div>
+      <ul className="flex flex-col gap-0.5">{lineup.starters.map(row)}</ul>
+      <div className="mt-2 text-gray-400 font-semibold">Remplaçants</div>
+      <ul className="flex flex-col gap-0.5">{lineup.bench.map(row)}</ul>
+      {lineup.coach && (
+        <div className="mt-2 text-gray-400">
+          Entraîneur : <span className="text-gray-200">{lineup.coach}</span>
+        </div>
       )}
     </div>
   );
@@ -360,6 +530,78 @@ const TRACK = 2; // piste autour du bord (m)
 const STRIPES = 18; // bandes de tonte sur la longueur
 const LINE = { fill: "none", stroke: "rgba(255,255,255,0.9)", strokeWidth: 0.15 };
 
+const BENCH_ZONE = 7; // bande sous la piste, côté tribune principale, où sont les bancs (m)
+const BENCH_Y = W + MARGIN + TRACK + 3; // axe des bancs
+const BENCH_GAP = 4; // des bancs à la ligne médiane (m)
+const SEAT = 1.6; // largeur d'un siège (m)
+const WARMING_UP = 3; // remplaçants de champ qui s'échauffent en 2e période
+const WARM_UP_FROM_S = HALF_TIME_MIN * 60;
+
+function PlayerNumber({ x, y, value, size = 1.4 }) {
+  if (value == null) return null;
+  return (
+    <text
+      x={x}
+      y={y}
+      textAnchor="middle"
+      dominantBaseline="central"
+      fontSize={size}
+      fontWeight="bold"
+      fill="white"
+      stroke="rgba(0,0,0,0.6)"
+      strokeWidth={0.2}
+      paintOrder="stroke"
+      style={{ pointerEvents: "none" }}
+    >
+      {value}
+    </text>
+  );
+}
+
+// Banc d'une équipe sous le terrain (`side` -1 : à gauche de la ligne médiane, 1 : à droite) : entraîneur et
+// remplaçants assis ; en 2e période, quelques remplaçants de champ trottinent le long de la ligne de touche, de leur
+// côté du terrain (mouvement de va-et-vient purement décoratif, fonction du temps de match lu).
+function Bench({ lineup, side, color, seconds }) {
+  const warmers = seconds >= WARM_UP_FROM_S ? lineup.bench.filter((p) => p.poste !== "GK").slice(0, WARMING_UP) : [];
+  const seated = lineup.bench.filter((p) => !warmers.includes(p));
+  const seats = seated.length + 1; // + l'entraîneur, au bout côté ligne médiane
+  const length = seats * SEAT + 1;
+  const x0 = side < 0 ? L / 2 - BENCH_GAP - length : L / 2 + BENCH_GAP;
+  const seatX = (i) => (side < 0 ? x0 + length - 0.5 - SEAT * (i + 0.5) : x0 + 0.5 + SEAT * (i + 0.5));
+  return (
+    <g>
+      <rect x={x0} y={BENCH_Y - 1.6} width={length} height={3.2} rx={0.6} fill="rgba(20,24,30,0.85)" stroke="rgba(255,255,255,0.5)" strokeWidth={0.12} />
+      <g>
+        <rect x={seatX(0) - 0.8} y={BENCH_Y - 0.8} width={1.6} height={1.6} rx={0.3} fill="#222" stroke="white" strokeWidth={0.12} />
+        <text x={seatX(0)} y={BENCH_Y} textAnchor="middle" dominantBaseline="central" fontSize={1} fill="white" fontWeight="bold">
+          E
+        </text>
+        <title>{`Entraîneur${lineup.coach ? ` : ${lineup.coach}` : ""}`}</title>
+      </g>
+      {seated.map((p, i) => (
+        <g key={p.name}>
+          <circle cx={seatX(i + 1)} cy={BENCH_Y} r={0.75} fill={color} opacity={0.85} stroke="rgba(0,0,0,0.4)" strokeWidth={0.08} />
+          <PlayerNumber x={seatX(i + 1)} y={BENCH_Y} value={p.number} size={0.9} />
+          <title>{`${p.number} ${p.name} (${p.poste})`}</title>
+        </g>
+      ))}
+      {warmers.map((p, i) => {
+        // va-et-vient sur 12 m, chacun décalé, entre la ligne de touche et la piste
+        const phase = seconds * 0.35 + i * 2.1;
+        const x = L / 2 + side * (24 + 6 + 6 * Math.sin(phase));
+        const y = W + 1.5 + i * 1.4;
+        return (
+          <g key={p.name}>
+            <circle cx={x} cy={y} r={0.9} fill={color} opacity={0.75} stroke="rgba(0,0,0,0.4)" strokeWidth={0.08} />
+            <PlayerNumber x={x} y={y} value={p.number} size={1} />
+            <title>{`${p.number} ${p.name} s'échauffe`}</title>
+          </g>
+        );
+      })}
+    </g>
+  );
+}
+
 // Arc de la surface (hors surface uniquement) : intersection du cercle de rayon ARC_R autour du point de penalty
 // avec la ligne de surface.
 const ARC_DY = Math.sqrt(ARC_R ** 2 - (PA_DEPTH - SPOT) ** 2);
@@ -378,15 +620,16 @@ function GoalEnd({ flip }) {
   );
 }
 
-function V2Pitch({ tick, selected, onSelect }) {
+function V2Pitch({ tick, seconds, numbers, lineups, selected, onSelect }) {
   const pad = MARGIN + TRACK;
   const stripe = L / STRIPES;
   const holder = tick.players.find((p) => p.name === tick.ball.holder);
+  const height = W + 2 * pad + BENCH_ZONE;
   return (
     <svg
-      viewBox={`${-pad} ${-pad} ${L + 2 * pad} ${W + 2 * pad}`}
+      viewBox={`${-pad} ${-pad} ${L + 2 * pad} ${height}`}
       className="w-full max-w-4xl rounded-lg"
-      style={{ aspectRatio: `${L + 2 * pad} / ${W + 2 * pad}` }}
+      style={{ aspectRatio: `${L + 2 * pad} / ${height}` }}
     >
       <defs>
         <pattern id="v2-net" width={0.5} height={0.5} patternUnits="userSpaceOnUse">
@@ -394,6 +637,7 @@ function V2Pitch({ tick, selected, onSelect }) {
           <path d="M 0 0 L 0.5 0 M 0 0 L 0 0.5" stroke="rgba(255,255,255,0.6)" strokeWidth={0.05} />
         </pattern>
       </defs>
+      <rect x={-pad} y={-pad} width={L + 2 * pad} height={height} fill="#5a5f66" />
       <rect x={-pad} y={-pad} width={L + 2 * pad} height={W + 2 * pad} fill="#9c4a3c" />
       <rect x={-MARGIN} y={-MARGIN} width={L + 2 * MARGIN} height={W + 2 * MARGIN} fill="#2f7d32" />
       {Array.from({ length: STRIPES }, (_, i) => (
@@ -414,19 +658,21 @@ function V2Pitch({ tick, selected, onSelect }) {
       ))}
       <GoalEnd />
       <GoalEnd flip />
+      {lineups && <Bench lineup={lineups.home} side={-1} color="#4f8ef7" seconds={seconds} />}
+      {lineups && <Bench lineup={lineups.away} side={1} color="#e0b84a" seconds={seconds} />}
 
       {tick.players.map((p) => (
-        <circle
-          key={p.name}
-          cx={p.x}
-          cy={p.y}
-          r={1.1}
-          fill={p.team === "home" ? "#4f8ef7" : "#e0b84a"}
-          stroke={p.name === selected ? "white" : "rgba(0,0,0,0.4)"}
-          strokeWidth={p.name === selected ? 0.4 : 0.1}
-          onClick={() => onSelect(p.name === selected ? null : p.name)}
-          style={{ cursor: "pointer" }}
-        />
+        <g key={p.name} onClick={() => onSelect(p.name === selected ? null : p.name)} style={{ cursor: "pointer" }}>
+          <circle
+            cx={p.x}
+            cy={p.y}
+            r={1.3}
+            fill={p.team === "home" ? "#4f8ef7" : "#e0b84a"}
+            stroke={p.name === selected ? "white" : "rgba(0,0,0,0.4)"}
+            strokeWidth={p.name === selected ? 0.4 : 0.1}
+          />
+          <PlayerNumber x={p.x} y={p.y} value={numbers[p.name]} />
+        </g>
       ))}
       {holder && (
         // nom du porteur, sous son rond ; le contour sombre le garde lisible sur la pelouse comme sur les lignes
