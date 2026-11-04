@@ -307,13 +307,16 @@ def anticipation_share(holder: PlayerState) -> float:
 
 def choose_action(holder: PlayerState, players: list[PlayerState], goal: Vec2, keeper: PlayerState | None,
                   mode: str | None = None, planned: str | None = None,
-                  felt: dict[int, float] | None = None) -> Action:
+                  felt: dict[int, float] | None = None, set_piece: bool = False) -> Action:
     """Prend l'option qu'il CROIT la meilleure (ticket 33) : valeur réelle brouillée par sa perception (Decisions,
     Composure sous pression), conduites jugées avec son Anticipation. Deux options proches font hésiter même un très
     bon joueur ; un joueur faible se trompe surtout entre options voisines. `planned` : ticket v2-collectif/14.
     `felt` : son erreur sur chaque direction de conduite (en écarts-types), gardée pendant sa possession ; complétée
-    ici si besoin."""
+    ici si besoin. `set_piece` : coup franc (ticket v2-collectif/30), il frappe ou passe, la conduite n'est pas une
+    option."""
     options = evaluate_options(holder, players, goal, keeper, mode, planned)
+    if set_piece:
+        options = [o for o in options if o.kind != "dribble"] or options
     best = options[0]
     tagged = dict(considered=len(options), best_kind=best.kind)
     if len(options) == 1:
@@ -334,11 +337,11 @@ def choose_action(holder: PlayerState, players: list[PlayerState], goal: Vec2, k
         if index not in felt:
             felt[index] = random.gauss(0.0, 1.0)
     # 1) direction qu'il retient : la meilleure à ses yeux, avec son erreur gardée sur chaque direction
-    drive = max((o for o in options if o.kind == "dribble"),
+    drive = max((o for o in options if o.kind == "dribble"), default=None,
                 key=lambda o: seen_as.get(o.point, o).value + felt[direction[o.point]] * sigma)
     # 2) cette conduite contre chaque passe et le tir, une erreur fraîche par option
     perceived = []
-    for option in [drive] + [o for o in options if o.kind != "dribble"]:
+    for option in ([drive] if drive is not None else []) + [o for o in options if o.kind != "dribble"]:
         seen = seen_as.get(option.point, option) if option.kind == "dribble" else option
         perceived.append((seen.value + random.gauss(0.0, sigma), option, seen.point))
     _, chosen, point = max(perceived, key=lambda t: t[0])

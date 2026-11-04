@@ -12,6 +12,7 @@ from v2engine.geometry import Vec2
 
 if TYPE_CHECKING:
     from v2engine.restart import Restart
+    from v2engine.trace import FoulEvent
 
 
 @dataclass
@@ -61,3 +62,7 @@ class BallState:
     dribble: tuple[str, Vec2] | None = None
     felt: tuple[str, dict[int, float]] | None = None  # erreur du porteur par direction de conduite (ticket 33)
     aerial_left_m: float = 0.0
+    # Faute (ticket v2-collectif/30) : avantage en cours (faute, instant où il est acquis) ; coup franc dont le preneur
+    # a le ballon et n'a pas encore joué (il frappe ou passe, jamais ne conduit).
+    advantage: tuple[FoulEvent, float] | None = None
+    set_piece: Restart | None = None

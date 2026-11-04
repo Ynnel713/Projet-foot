@@ -132,6 +132,8 @@ def run(n_matches: int, profile: str | None = None, duration_minutes: float = 90
                     collector.on_offside(event)
                 for event in trace.restarts:  # remises en jeu (ticket v2-collectif/29)
                     collector.on_restart(event)
+                for event in trace.fouls:  # fautes (ticket v2-collectif/30)
+                    collector.on_foul(event)
             finally:
                 unforce()
             collector.end_match()
@@ -172,6 +174,17 @@ def report(c: Collector, detail: bool = False) -> dict:
         "corners joués long (part)": k["remises jouées long : corner"] / max(1, k["remises : corner"]),
         "temps de jeu effectif (part)": 1.0 - k["temps de ballon mort (s)"] / (60.0 * minutes),
         "tacles par match": k["tacles"] / n,
+        # fautes (ticket v2-collectif/30)
+        "fautes par match": k["fautes"] / n,
+        "avantages acquis (part des fautes)": k["fautes : avantage"] / max(1, k["fautes"]),
+        "coups francs par match": k["fautes : coup franc"] / n,
+        "penaltys par match": k["fautes : penalty"] / n,
+        "fautes inconsidérées (part)": k["fautes : gravité inconsidérée"] / max(1, k["fautes"]),
+        "fautes avec excès d'engagement (part)": k["fautes : gravité excès d'engagement"] / max(1, k["fautes"]),
+        "coups francs du dernier tiers frappés au but (part)":
+            k["coups francs du dernier tiers frappés"] / max(1, k["coups francs du dernier tiers"]),
+        "profil haut : fautes par match": k["profil haut : fautes"] / n,
+        "profil bas : fautes par match": k["profil bas : fautes"] / n,
         "pressings d'équipe déclenchés par match": k["pressings d'équipe déclenchés"] / n,
         "pertes de balle par match": k["pertes de balle"] / n,
         "pertes en transition par match": None,

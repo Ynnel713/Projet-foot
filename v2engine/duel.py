@@ -21,10 +21,19 @@ from v2engine.movement import PlayerState
 _ATTEMPT_BASELINE = 0.03
 _ATTEMPT_AMPLITUDE = 0.021
 
-# Probabilité de BASE qu'un tacle raté se transforme en faute, modulée par Aggression seule --
-# contrepartie du guide (plus de duels tentés, plus de fautes), indépendante de Tackling.
-_FOUL_BASELINE = 0.15
+# Probabilité de BASE qu'un tacle (gagné ou raté : un tacle qui touche le ballon peut aussi faucher) soit une faute,
+# modulée par Aggression seule -- contrepartie du guide (plus de duels tentés, plus de fautes), indépendante de
+# Tackling. Ticket v2-collectif/30, validé le 04/11/2026 : environ 30 % des tacles, soit une dizaine de fautes par
+# match sur ~35 tacles ; le reste des 21-26 fautes réelles (CIES) vient des fautes de contact.
+_FOUL_BASELINE = 0.30
 _FOUL_AMPLITUDE = 0.25
+
+# Gravité d'une faute (Lois du jeu, loi 12 : imprudente, inconsidérée, excès d'engagement), enregistrée pour les
+# cartons (ticket v2-attributs-restants/09a). Parts fixes, indépendantes d'Aggression qui règle déjà la fréquence
+# des fautes (pas de double comptage) ; validées le 04/11/2026, réel non trouvé (à sourcer au 09a).
+CARELESS, RECKLESS, EXCESSIVE = "imprudente", "inconsidérée", "excès d'engagement"  # sans carton, jaune, rouge
+_RECKLESS_SHARE = 0.12
+_EXCESSIVE_SHARE = 0.005
 
 
 def attempt_tackle_probability(aggression: float) -> float:
@@ -33,8 +42,14 @@ def attempt_tackle_probability(aggression: float) -> float:
                                min_prob=0.0, max_prob=1.0)
 
 
+def foul_severity() -> str:
+    """Gravité d'une faute (voir `_RECKLESS_SHARE`)."""
+    r = random.random()
+    return EXCESSIVE if r < _EXCESSIVE_SHARE else RECKLESS if r < _EXCESSIVE_SHARE + _RECKLESS_SHARE else CARELESS
+
+
 def foul_probability(aggression: float) -> float:
-    """Probabilité qu'un tacle raté devienne une faute -- voir `_FOUL_BASELINE`. Dépend
+    """Probabilité qu'un tacle soit une faute -- voir `_FOUL_BASELINE`. Dépend
     uniquement d'Aggression, jamais de Tackling (le critère d'acceptation de cette phase compare
     les deux à Tackling égal, voir docs/PLAN_V2.md)."""
     return success_probability(aggression, baseline=_FOUL_BASELINE, amplitude=_FOUL_AMPLITUDE)
@@ -58,12 +73,13 @@ def should_attempt_tackle(aggression: float, dt: float) -> bool:
 @dataclass(frozen=True)
 class TackleResult:
     won: bool  # le tacleur gagne le ballon
-    foul: bool  # faute sifflée (uniquement évaluée sur un tacle raté, voir docs/PLAN_V2.md)
+    foul: bool  # faute commise (ticket v2-collectif/30) : le ballon reste à l'équipe du porteur
 
 
 def resolve_tackle(tackler: PlayerState, holder: PlayerState) -> TackleResult:
     """Résout un tacle déjà tenté (voir `should_attempt_tackle`) : jamais une issue garantie,
-    même à écart d'attributs extrême (règle "jamais binaire" du guide, voir `duel_probability`)."""
+    même à écart d'attributs extrême (règle "jamais binaire" du guide, voir `duel_probability`). Une faute annule le
+    gain du ballon."""
     won = random.random() < tackle_success_probability(tackler, holder)
-    foul = (not won) and random.random() < foul_probability(player_attribute(tackler, "Aggression"))
-    return TackleResult(won=won, foul=foul)
+    foul = random.random() < foul_probability(player_attribute(tackler, "Aggression"))
+    return TackleResult(won=won and not foul, foul=foul)

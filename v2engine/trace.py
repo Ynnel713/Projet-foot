@@ -91,6 +91,22 @@ class RestartEvent:
     dead_s: float
     long: bool
     target: str | None = None
+    shot: bool = False  # coup franc frappé au but (ticket v2-collectif/30)
+
+
+@dataclass(frozen=True)
+class FoulEvent:
+    """Faute (ticket v2-collectif/30) : `team` et `player` le fautif, `victim` le joueur fauté, `x`/`y` le lieu,
+    `severity` la gravité (`duel.foul_severity`), `outcome` ce qu'en a fait l'arbitre : coup franc, penalty ou
+    avantage (laissé jouer et acquis)."""
+    minute: float
+    team: str
+    player: str
+    victim: str
+    x: float
+    y: float
+    severity: str
+    outcome: str
 
 
 @dataclass
@@ -109,6 +125,7 @@ class MatchTrace:
     situations: list[SituationRecord] = field(default_factory=list)
     offsides: list[OffsideEvent] = field(default_factory=list)  # hors-jeu sifflés (ticket v2-collectif/23)
     restarts: list[RestartEvent] = field(default_factory=list)  # remises en jeu (ticket v2-collectif/29)
+    fouls: list[FoulEvent] = field(default_factory=list)  # fautes (ticket v2-collectif/30)
     reaction_delays_s: dict[str, float] = field(default_factory=dict)  # par joueur (Anticipation, ticket v2-collectif/03)
     # Minute du coup d'envoi de la 2e période (ticket v2-coach-et-gestion-de-match/07) ; None tant qu'elle n'est pas
     # jouée. Le moteur garde son sens de jeu : c'est l'écran qui retourne la scène à partir de cette minute.

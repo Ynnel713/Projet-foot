@@ -20,7 +20,7 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass
 
-from ligue1sim.pitch_geometry import PENALTY_AREA_DEPTH_M, PENALTY_AREA_WIDTH_M
+from ligue1sim.pitch_geometry import PENALTY_AREA_DEPTH_M, PENALTY_AREA_WIDTH_M, PENALTY_SPOT_DISTANCE_M
 
 from v2engine.attributes import player_attribute
 from v2engine.decision import best_choice_probability
@@ -29,8 +29,14 @@ from v2engine.movement import PlayerState
 from v2engine.possession import pass_success_probability, pressure
 
 THROW_IN, GOAL_KICK, CORNER, KICKOFF = "touche", "sortie de but", "corner", "engagement"
-DEAD_S = {THROW_IN: 15.0, GOAL_KICK: 25.0, CORNER: 30.0, KICKOFF: 45.0}
-RESTART_DISTANCE_M = {THROW_IN: 2.0, GOAL_KICK: 9.15, CORNER: 9.15, KICKOFF: 9.15}
+FREE_KICK, PENALTY = "coup franc", "penalty"  # ticket v2-collectif/30
+# Coup franc : 33 s, délai moyen réel avant de le jouer (theanalyst.com, Premier League) ; penalty provisoire : 60 s,
+# non sourcé. Validés le 04/11/2026 (ticket v2-collectif/30).
+DEAD_S = {THROW_IN: 15.0, GOAL_KICK: 25.0, CORNER: 30.0, KICKOFF: 45.0, FREE_KICK: 33.0, PENALTY: 60.0}
+RESTART_DISTANCE_M = {THROW_IN: 2.0, GOAL_KICK: 9.15, CORNER: 9.15, KICKOFF: 9.15, FREE_KICK: 9.15, PENALTY: 9.15}
+# Penalty provisoire (ticket v2-collectif/30, en attendant `v2-attributs-restants/02a`) : conversion neutre, sans
+# attribut ; réel 76-82 % (Ligue 1 2023-24 : 81 %, ligue1.com ; CIES depuis 2020 : 82,2 %), validée le 04/11/2026.
+PENALTY_CONVERSION = 0.78
 GOAL_AREA_DEPTH_M = 5.5
 GOAL_AREA_HALF_WIDTH_M = 9.16
 THROW_MAX_M = 25.0
@@ -82,9 +88,11 @@ def exit_point(start: Vec2, end: Vec2) -> tuple[str, Vec2] | None:
 def _taker(kind: str, team: str, spot: Vec2, players: list[PlayerState]) -> PlayerState | None:
     """Preneur, par proximité et rôle : gardien sur une sortie de but ; touche : le plus proche, un latéral à distance
     à peu près égale (même tranche de 5 m) ; corner : le joueur offensif le plus proche (ni gardien ni défenseur
-    central) ; engagement : le joueur de champ le plus proche du centre."""
+    central) ; engagement : le joueur de champ le plus proche du centre ; coup franc : le gardien dans sa propre
+    surface, sinon le joueur de champ le plus proche ; penalty provisoire : le joueur de champ le plus proche (le
+    tireur désigné viendra avec le ticket `v2-attributs-restants/02a`)."""
     mates = [p for p in players if p.team == team]
-    if kind == GOAL_KICK:
+    if kind == GOAL_KICK or (kind == FREE_KICK and in_penalty_area(_other(team), spot)):
         keeper = next((p for p in mates if p.poste == "GK"), None)
         if keeper is not None:
             return keeper
@@ -119,6 +127,18 @@ def award(line: str, point: Vec2, last_toucher: PlayerState | None, players: lis
     return Restart(kind, team, spot, taker.name if taker else None, now_s + DEAD_S[kind], now_s / 60.0, name)
 
 
+def foul_restart(victim_team: str, spot: Vec2, players: list[PlayerState], now_s: float) -> Restart:
+    """Faute sifflée (ticket v2-collectif/30) : coup franc à l'équipe victime au lieu de la faute, ou penalty
+    provisoire si la faute a lieu dans la surface que cette équipe attaque."""
+    if in_penalty_area(victim_team, spot):
+        x = PITCH_LENGTH_M - PENALTY_SPOT_DISTANCE_M if victim_team == "home" else PENALTY_SPOT_DISTANCE_M
+        kind, spot = PENALTY, Vec2(x, PITCH_WIDTH_M / 2.0)
+    else:
+        kind = FREE_KICK
+    taker = _taker(kind, victim_team, spot, players)
+    return Restart(kind, victim_team, spot, taker.name if taker else None, now_s + DEAD_S[kind], now_s / 60.0)
+
+
 def kickoff(team: str, players: list[PlayerState], now_s: float, dead_s: float = DEAD_S[KICKOFF]) -> Restart:
     taker = _taker(KICKOFF, team, _CENTER, players)
     return Restart(KICKOFF, team, _CENTER, taker.name if taker else None, now_s + dead_s, now_s / 60.0)
@@ -134,7 +154,7 @@ def place(player: PlayerState, restart: Restart, wanted: Vec2) -> Vec2:
     if restart.kind == KICKOFF:  # chacun dans son camp
         half = PITCH_LENGTH_M / 2.0
         target = Vec2(min(target.x, half - 0.5) if _defends_low_x(player.team) else max(target.x, half + 0.5), target.y)
-    if player.team != restart.team:
+    if player.team != restart.team and not (restart.kind == PENALTY and player.poste == "GK"):  # le gardien reste
         gap = target - restart.spot
         distance = RESTART_DISTANCE_M[restart.kind]
         if gap.length() < distance:

@@ -386,6 +386,18 @@ class Collector:
         self.count["remises : " + event.kind] += 1
         self.count["remises jouées long : " + event.kind] += event.long
         self.count["temps de ballon mort (s)"] += event.dead_s
+        if event.kind == "coup franc" and _final_third(event.team, event.x):
+            self.count["coups francs du dernier tiers"] += 1
+            self.count["coups francs du dernier tiers frappés"] += event.shot
+
+    def on_foul(self, event) -> None:
+        """Faute (ticket v2-collectif/30) ; `event` : `v2engine.trace.FoulEvent`."""
+        self.count["fautes"] += 1
+        self.count["fautes : " + event.outcome] += 1
+        self.count["fautes : gravité " + event.severity] += 1
+        level = self.levels.get(event.player)
+        if level:
+            self.count[f"profil {level} : fautes"] += 1
 
     # --- tick ---
     def on_tick(self, now_s: float, players: list[PlayerState], ball, scoring_team: str | None, dt: float = 0.1) -> None:
@@ -753,3 +765,8 @@ class Collector:
                 k["une-deux"] += one_two
             if p["follow"] is not None and nxt["target"] == p["follow"] and nxt["done"]:
                 k["troisième homme (suite prévue jouée et réussie)"] += 1
+
+
+def _final_third(team: str, x: float) -> bool:
+    """Le point `x` est-il dans le dernier tiers que `team` attaque (domicile attaque vers x = 105) ?"""
+    return x >= 70.0 if team == "home" else x <= 35.0
