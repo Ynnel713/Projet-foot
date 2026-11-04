@@ -69,18 +69,35 @@ def test_pass_prefers_open_teammate_closer_to_goal_over_nearest_marked_one(monke
 
 def test_high_decisions_picks_best_option_more_often_than_low() -> None:
     def best_rate(decisions: int) -> float:
-        holder = _player(position=Vec2(PITCH_LENGTH_M - 10.0, GOAL_CENTER_Y), attributes={"Decisions": decisions})
+        holder = _player(position=Vec2(PITCH_LENGTH_M - 6.0, GOAL_CENTER_Y), attributes={"Decisions": decisions})
         mate = _player("Coequipier", position=Vec2(60.0, 20.0))
         players = [holder, mate]
         best = max(evaluate_options(holder, players, GOAL, None), key=lambda o: o.value).kind
         random.seed(20260923)
         return sum(choose_action(holder, players, GOAL, None).kind == best for _ in range(2000)) / 2000
 
+    # un choix nettement meilleur (tir à 6 m, deux fois la meilleure conduite) : vu par presque tous les bons
+    # décideurs ; un très mauvais décideur s'en écarte souvent, l'erreur étant calée pour que la courbe validée tienne
+    # en moyenne sur un match (ticket v2-collectif/33 ; mesuré le 04/11/2026 : 98,5 % à 95, 32 % à 20)
+    assert best_rate(95) >= 0.95 and best_rate(95) >= best_rate(20) + 0.4
+
+
+def test_close_options_split_low_decisions_far_more_than_high() -> None:
+    # deux passes latérales proches (ticket 33) : le très bon joueur prend presque toujours la meilleure, le faible hésite
+    def best_rate(decisions: int) -> float:
+        holder = _player(position=Vec2(40.0, 34.0), attributes={"Decisions": decisions})
+        players = [holder, _player("B", position=Vec2(40.0, 46.0)), _player("A", position=Vec2(40.0, 22.0)),
+                   _player("T", position=Vec2(55.0, 26.0)), _player("Def", team="away", position=Vec2(75.0, 30.0))]
+        random.seed(20260923)
+        picks = [choose_action(holder, players, GOAL, None) for _ in range(2000)]
+        return sum(a.best for a in picks) / 2000
+
     assert best_rate(95) > best_rate(20) + 0.2
 
 
-def test_lone_holder_dribbles_toward_goal_at_reduced_speed() -> None:
-    holder = _player("Seul", position=Vec2(30.0, 34.0))
+def test_lone_holder_dribbles_toward_goal_at_reduced_speed(monkeypatch) -> None:
+    monkeypatch.setattr("v2engine.decision.random.gauss", lambda mu, sigma: 0.0)  # perception exacte : droit au but
+    holder = _player("Seul", position=Vec2(30.0, 34.0), attributes={"Decisions": 99})  # droit au but, le meilleur choix
     ball = BallState(position=holder.position, velocity=Vec2(0.0, 0.0), holder="Seul")
     _step_ball(ball, 0.1, [holder], now_s=0.0)
     assert ball.holder == "Seul"

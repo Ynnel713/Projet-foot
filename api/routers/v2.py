@@ -95,6 +95,8 @@ class DecisionOut(BaseModel):
     target: str | None
     considered: int
     best: bool
+    best_kind: str | None = None  # meilleur choix factuel (ticket v2-collectif/33)
+    gap: float = 0.0  # valeur perdue par rapport au meilleur choix factuel, en part de celui-ci
 
 
 class SituationOut(BaseModel):
@@ -172,7 +174,8 @@ def _tick_out(tick) -> TickOut:
 
 def _decisions_out(trace: MatchTrace) -> list[DecisionOut]:
     return [DecisionOut(minute=d.minute, player=d.player, team=d.team, action=d.action, target=d.target,
-                        considered=d.considered, best=d.best) for d in trace.decisions]
+                        considered=d.considered, best=d.best, best_kind=d.best_kind, gap=d.gap)
+            for d in trace.decisions]
 
 
 def _situations_out(trace: MatchTrace) -> list[SituationOut]:

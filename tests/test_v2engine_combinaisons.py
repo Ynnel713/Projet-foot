@@ -28,8 +28,11 @@ def _p(name: str, x: float, y: float, team: str = "home", **attributes: int) -> 
 
 def _scene(closed: bool = False, **receiver_attributes: int) -> list[PlayerState]:
     """Le receveur R (porteur ici) et deux coéquipiers presque symétriques : Q, un peu plus avancé, est la meilleure
-    passe sans plan ; P est la suite prévue par le passeur. `closed` : un défenseur se place sur la ligne R -> P."""
-    players = [_p("R", 50, 34, Decisions=55, **receiver_attributes), _p("Q", 61, 42), _p("P", 60, 26),
+    passe sans plan ; P est la suite prévue par le passeur. `closed` : un défenseur se place sur la ligne R -> P.
+    Decisions 99 (ticket v2-collectif/33) : à 55, l'erreur de perception calée sur la courbe validée noie l'effet du
+    plan parmi neuf options proches (mesuré le 04/11/2026 : +10 points pour le plan, +4 pour Teamwork) ; à 99, il se
+    lit nettement (+56 et +23 points)."""
+    players = [_p("R", 50, 34, Decisions=99, **receiver_attributes), _p("Q", 61, 42), _p("P", 60, 26),
                _p("Def", 80, 30, team="away"), _p("Def2", 80, 40, team="away")]
     if closed:
         players += [_p("Ferme", 55, 30, team="away"), _p("Ferme2", 57, 28.4, team="away")]
@@ -90,7 +93,7 @@ def test_a_plan_whose_target_is_out_of_sight_is_counted_apart() -> None:
 def test_the_match_hands_the_plan_to_its_receiver_only_and_clears_it(monkeypatch) -> None:
     seen = []
 
-    def fake_choose(holder, players, goal, keeper, mode, planned):
+    def fake_choose(holder, players, goal, keeper, mode, planned, *perception):
         seen.append((holder.name, planned))
         mate = next(p for p in players if p.name == "R")
         return Action("pass", 1.0, mate, follow="P") if holder.name == "H" else Action("dribble", 1.0)

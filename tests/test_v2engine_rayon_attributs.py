@@ -25,11 +25,14 @@ ALLOWED = {
     "Balance": {"duel"},
     "Aggression": {"duel", "match", "defense"},  # fréquence des tentatives et faute ; distance d'arrêt du presseur (08)
     "Tackling": {"duel"},
-    "Anticipation": {"anticipation", "match", "defense"},  # + drapeau du hors-jeu (23) ; ligne fermée au pressing (08)
+    # + drapeau du hors-jeu (23) ; ligne fermée au pressing (08) ; perception du porteur : prolonger la course des
+    # adversaires pendant sa conduite (ticket v2-collectif/33)
+    "Anticipation": {"anticipation", "match", "defense", "decision"},
     "Decisions": {"decision", "restart"},  # restart : choix du receveur d'une remise en jeu (ticket 29)
     "Vision": {"decision", "off_ball"},  # + le coureur tente l'appel dans le dos si le porteur le voit (16)
     "Off the Ball": {"off_ball", "offside"},  # + régler l'appel sur la ligne du hors-jeu (ticket 23)
-    "Composure": {"possession", "shooting"},
+    "Composure": {"possession", "shooting", "decision"},  # + erreur de perception sous pression (ticket 33)
+    "Dribbling": {"decision"},  # chance de garder le ballon en conduisant, dans la valeur factuelle (ticket 33)
     "First Touch": {"possession"},
     "Passing": {"possession", "off_ball"},  # + ... et s'il sait le servir (ticket v2-collectif/16)
     "Finishing": {"shooting"},
@@ -45,7 +48,9 @@ ALLOWED = {
     "Marking": {"defense"},  # distance de marquage d'un attaquant dangereux (ticket v2-collectif/07)
 }
 # defense : temps d'arrivée qui désigne le presseur et la couverture (ticket v2-collectif/07)
-PHYSICAL_ALLOWED = {"Pace": {"movement", "anticipation", "bloc", "defense"}, "Acceleration": {"movement", "defense"},
+# decision : course du porteur contre les adversaires vers l'espace libre (ticket v2-collectif/33)
+PHYSICAL_ALLOWED = {"Pace": {"movement", "anticipation", "bloc", "defense", "decision"},
+                    "Acceleration": {"movement", "defense"},
                     "Stamina": {"movement"}}
 # Mélanges de plusieurs attributs dans un même calcul tolérés (dérogations de la carte).
 TOLERATED_MIXES = {

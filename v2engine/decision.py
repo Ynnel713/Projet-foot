@@ -1,22 +1,27 @@
-"""Décision du porteur (Phase 5, ticket v2-cerveau-joueurs/01, docs/PLAN_V2.md) : remplace l'IA
-placeholder D-V08 (« tire à moins de 20 m, sinon passe au plus proche »). Le porteur évalue trois
-options -- tirer, passer, conduire -- d'après la situation réelle, puis Decisions règle la
-probabilité de prendre la MEILLEURE (Guide_attributs_joueurs.pdf, Decisions) ; sinon il prend
-l'une des autres. Seul le CHOIX est décidé ici : la réussite du tir, de la passe ou du duel reste
-résolue par `shooting.py`/`possession.py`/`duel.py`."""
+"""Décision du porteur (Phase 5, ticket v2-cerveau-joueurs/01 ; refondue au ticket v2-collectif/33). Deux étages :
+- valeur FACTUELLE de chaque option (tirer, passer à chaque coéquipier envisagé, conduire dans cinq directions),
+  calculée avec les vraies capacités du porteur dans une monnaie commune, le danger attendu (`danger.py`) ;
+- PERCEPTION : le porteur prend l'option qu'il croit la meilleure. Sa perception des valeurs est brouillée par
+  Decisions (ampleur de l'erreur), Composure (sous pression seulement) et Anticipation (part du déplacement des
+  défenseurs qu'il prolonge) ; Vision filtre les coéquipiers envisagés. Exécution dans la valeur, mental dans la
+  perception, sans double comptage (docs/CARTE_ATTRIBUTS_V2.md).
+Seul le CHOIX est décidé ici : la réussite du tir, de la passe ou du duel reste résolue par
+`shooting.py`/`possession.py`/`duel.py`."""
 
 from __future__ import annotations
 
+import math
 import random
 from dataclasses import dataclass, replace
 
 from v2engine.attributes import player_attribute, success_probability
-from v2engine.geometry import Vec2
-from v2engine.movement import PlayerState
+from v2engine.danger import danger, loss_cost
+from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
+from v2engine.movement import PlayerState, max_speed_mps
 from v2engine.off_ball import OPEN_LANE_PROBABILITY
 from v2engine.offside import is_clearly_offside, pass_margin_m, perceived_defence_line
 from v2engine.possession import pass_success_probability, pressure
-from v2engine.shooting import SHOOTING_RANGE_M, shot_probability
+from v2engine.shooting import SHOOTING_RANGE_M, block_probability, shot_probability
 
 # Constantes produit validées par le propriétaire (24/10/2026).
 DECISION_INTERVAL_S = 0.5  # le porteur réévalue ses options deux fois par seconde
@@ -27,18 +32,27 @@ DRIBBLE_SPEED_FACTOR = 0.85  # part de sa vitesse max, balle au pied
 _BEST_CHOICE_BASELINE = 0.70
 _BEST_CHOICE_AMPLITUDE = 0.25
 
-# Poids de calibration (pas des constantes produit) : réglés pour que des matchs simulés tombent
-# dans les fourchettes validées -- 8 à 15 tirs par équipe, 2 à 3,5 buts par match (voir
-# scripts/measure_v2_decisions.py). Recalibré le 24/10/2026 après Vision (ticket 02), validé par le propriétaire :
-# 6 matchs de Ligue 1, graine d'audit -> 13,0 tirs par équipe, 2,67 buts par match (avec SHOT 0,2 / DRIBBLE 0,06 :
-# 21,8 tirs, 7,17 buts une fois Vision branchée).
-SHOT_WEIGHT = 0.1
-PASS_WEIGHT = 0.25
-DRIBBLE_WEIGHT = 0.04
-_PROGRESS_SCALE_M = 20.0  # une passe vers un coéquipier 20 m plus près du but vaut le maximum de progression
+# Monnaie commune (ticket v2-collectif/33, constantes validées le 03/11/2026 par délégation du propriétaire) : valeur
+# d'une option = chance de garder le ballon x danger de l'endroit atteint - chance de le perdre x danger qu'y aurait
+# l'adversaire. Les anciens poids de volume (tir 0,1, passe 0,25, conduite 0,04) ont disparu.
+# Conduite : cinq directions (droit au but, diagonales, côtés ; le retrait passe par la passe), espace libre testé
+# tous les 2 m jusqu'à 10 m : un point est libre si le porteur, balle au pied, y arrive au moins 0,3 s avant tout
+# adversaire. Course d'un adversaire (corrigée le 04/11/2026 après la revue de l'expert, modèle à temps de réaction
+# type Spearman 2018) : il garde son élan pendant `REACTION_S`, puis court droit au point à sa vitesse max, sans
+# montée en vitesse ; jamais plus vite que sa vitesse max, et un défenseur lancé vers le point y arrive avant un
+# défenseur arrêté. Chance de garder le ballon : courbe Dribbling 99 -> 95 %, 55 -> 83 %,
+# 11 -> 71 % au contact ; sans adversaire à 5 m, seule une mauvaise touche le fait perdre, un dixième de ce risque
+# (`FREE_TOUCH_SHARE`, ajouté le 04/11/2026 : sans lui, une conduite dans le vide perdait le ballon 17 fois sur 100) ;
+# puis la même part que la passe et le tir perdue sous pression (1 - 0,5 x gêne).
+DRIBBLE_DIRECTIONS_DEG = (0.0, 45.0, -45.0, 90.0, -90.0)
+DRIBBLE_STEP_M, DRIBBLE_REACH_M, DRIBBLE_MARGIN_S = 2.0, 10.0, 0.3
+REACTION_S = 0.3
+_KEEP_BALL = (0.83, 0.12)  # baseline, amplitude (Dribbling)
+PRESSURE_KEEP_SHARE = 0.5  # part de la chance de garder perdue au contact d'un adversaire (passe et conduite)
+FREE_TOUCH_SHARE = 0.1
 # Valeur future d'une passe (ticket v2-collectif/13, validé par le propriétaire le 01/11/2026) : part de la valeur qui
-# vient de la meilleure passe suivante du receveur (réussite x progression depuis le porteur, mêmes parts que le gain
-# immédiat), le reste du gain immédiat. La suite vaut au moins la position atteinte (il garde le ballon) : sans
+# vient de la meilleure passe suivante du receveur (réussite x danger atteint, ticket 33), le reste du danger au
+# receveur. La suite vaut au moins la position atteinte (il garde le ballon) : sans
 # meilleure suite, la passe garde sa valeur d'avant. Pas de suite en contre-attaque (décisions du 01/11/2026).
 _FOLLOW_UP_SHARE = 0.4
 # Plan de passe (ticket v2-collectif/14, validé par le propriétaire le 02/11/2026) : la suite prévue par le passeur est
@@ -65,14 +79,28 @@ _KEY_PASS_SPOT = (0.5, 0.4)  # baseline, amplitude
 # Decisions règle la probabilité de prendre le bon choix (même courbe que `choose_action`).
 CONTRE_ATTAQUE, CONSERVATION = "contre-attaque", "conservation"
 COUNTER_MAX_EXCESS = 2
-# Valeur d'une passe : part fixe + part de progression. Hors transition 0,3 + 0,7 ; en contre-attaque, la progression
-# seule, et une passe qui ne fait pas avancer n'est pas envisagée, sauf sous pression (adversaire à moins de 5 m) : il
-# peut alors ressortir en retrait, avec la valeur de contre-attaque, donc après toute passe vers l'avant (réserve A2 de
-# l'expert, variante validée par le propriétaire le 01/11/2026) ; en conservation, d'abord la sûreté pour sortir de la
-# zone de pression.
-_PASS_SHARES = {None: (0.3, 0.7), CONTRE_ATTAQUE: (0.0, 1.0), CONSERVATION: (0.7, 0.3)}
-# En contre-attaque, conduite deux fois plus volontiers sans adversaire à 5 m (gêne nulle : `possession.PRESSURE_RADIUS_M`).
-COUNTER_DRIBBLE_BOOST = 2.0
+# Dans la nouvelle monnaie (ticket 33), même sens : en contre-attaque, le gain de danger pèse plus et la perte moins ;
+# en conservation, l'inverse. (gain, perte) ; le tir n'en dépend pas.
+_TRANSITION_WEIGHTS = {None: (1.0, 1.0), CONTRE_ATTAQUE: (1.3, 0.7), CONSERVATION: (0.7, 1.3)}
+
+# Perception (ticket 33). Decisions : écart-type de l'erreur sur chaque valeur perçue, en part de la meilleure valeur
+# réelle, linéaire entre les repères de `_ERROR_POINTS`, réglé le 04/11/2026 pour que le taux de meilleur choix suivi,
+# en moyenne sur un match, suive la courbe validée (`best_choice_probability` : 95 / 70 / 45 %), mesuré par
+# `scripts/measure_v2_meilleur_choix.py`. Composure : erreur multipliée par 1 + gêne x k, k 99 -> 0,2, 55 -> 0,6,
+# 11 -> 1 (rien sans adversaire à moins de 5 m). Anticipation : part de l'élan des adversaires (pendant leur temps de
+# réaction) qu'il prolonge en jugeant l'espace libre (99 -> 100 %, 55 -> 65 %, 11 -> 30 %).
+_ERROR_POINTS = ((11.0, 1.1), (40.0, 0.42), (55.0, 0.36), (75.0, 0.26), (99.0, 0.08))  # (Decisions, part de la meilleure valeur)
+# Meilleur choix suivi : choix qui perd moins de 10 % de la valeur du meilleur (« erreur légère » du panneau) ; entre
+# deux options presque équivalentes, prendre l'une ou l'autre n'est pas une erreur (validé le 04/11/2026).
+BEST_CHOICE_TOLERANCE = 0.1
+# Choix en deux temps (revue de l'expert, A4, 04/11/2026). 1) La direction de conduite : son erreur sur chaque
+# direction est tirée une fois pendant sa possession et gardée (il se fait une idée de l'espace et s'y tient ; tirée
+# toutes les 0,5 s, elle le faisait zigzaguer entre directions de valeur égale, 80 % des directions étant bloquées :
+# 45 % des conduites consécutives changeaient de cap de 90° ou plus). 2) Conduire, passer à tel coéquipier ou tirer :
+# une erreur par option, retirée à chaque décision ; la conduite y compte pour UNE option (sa direction retenue), et
+# non cinq, qui lui donnaient cinq chances de paraître la meilleure.
+_COMPOSURE_K = (0.6, -0.4)
+_ANTICIPATION_SHARE = (0.65, 0.35)
 
 
 @dataclass(frozen=True)
@@ -84,6 +112,9 @@ class Action:
     best: bool = True  # meilleure option prise (Decisions)
     follow: str | None = None  # suite prévue pour le receveur d'une passe, s'il en a une meilleure (ticket 14)
     plan: str | None = None  # sort du plan reçu : PLAN_HELD, _DROPPED, _UNSEEN ou _REFUSED (ticket 14)
+    point: Vec2 | None = None  # cible de conduite, tenue jusqu'à la décision suivante (ticket 33)
+    best_kind: str | None = None  # meilleur choix factuel de cette décision (ticket 33)
+    gap: float = 0.0  # valeur réelle perdue par rapport au meilleur choix factuel, en part de celui-ci (ticket 33)
 
 
 def adopt_plan_probability(player: PlayerState) -> float:
@@ -126,8 +157,9 @@ def visible_teammates(holder: PlayerState, teammates: list[PlayerState], goal: V
 
 def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2, keeper: PlayerState | None,
                      mode: str | None = None, planned: str | None = None) -> list[Action]:
-    """Les options du porteur avec leur valeur (plus haut = meilleur). Tirer n'existe qu'à portée
-    (`SHOOTING_RANGE_M`), passer seulement s'il a un coéquipier ; conduire est toujours possible. `mode` : choix de
+    """Les options du porteur avec leur valeur FACTUELLE (ticket v2-collectif/33 : danger attendu, vraies capacités),
+    de la meilleure à la moins bonne : un tir à portée (`SHOOTING_RANGE_M`), une passe par coéquipier envisagé (Vision),
+    une conduite par direction (`DRIBBLE_DIRECTIONS_DEG`). `mode` : choix de
     transition de son équipe, contre-attaque ou conservation (ticket v2-collectif/11), sinon `None`. `planned` :
     coéquipier que son passeur a prévu pour la suite (plan de passe, ticket v2-collectif/14)."""
     opponents = [p for p in players if p.team != holder.team]
@@ -152,49 +184,35 @@ def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2
     held = planned if planned is not None and mode != CONTRE_ATTAQUE \
         and random.random() < adopt_plan_probability(holder) else None
 
-    boost = COUNTER_DRIBBLE_BOOST if mode == CONTRE_ATTAQUE and gene == 0.0 else 1.0
-    options = [Action("dribble", DRIBBLE_WEIGHT * (1.0 - gene) * boost)]
+    team = holder.team
+    options = dribble_options(holder, opponents, gene, mode, projection=1.0)
     if holder_to_goal <= SHOOTING_RANGE_M:
+        # chance de but, sauf s'il est contré par un défenseur dans la ligne de tir (même règle qu'à la résolution) ;
+        # un tir manqué ne coûte rien (sortie de but ou corner) ; le ticket 28 affinera occasion et issues
         chance = shot_probability(holder, keeper, holder_to_goal, goal.y)
-        options.append(Action("shot", SHOT_WEIGHT * chance * (1.0 - 0.5 * gene)))
-    if teammates:
-        fixed, progressive = _PASS_SHARES[mode]
-
-        def follow_up(mate: PlayerState) -> tuple[float, str | None]:
-            # meilleure passe suivante du receveur, vers un coéquipier que le porteur voit lui-même (Vision) ; le
-            # passeur n'en fait pas partie (pas d'aller-retour) ; réussite selon le Passing et la pression du receveur ;
-            # progression comptée depuis le porteur : là où le ballon arrive après les deux passes ; même échelle que
-            # le gain immédiat (parts du mode). Avec sa valeur, le coéquipier de cette suite (plan, ticket 14).
-            return max(((pass_success_probability(mate, nxt, opponents)
-                         * (fixed + progressive * _progress(holder_to_goal - nxt.position.distance_to(goal))), nxt.name)
-                        for nxt in seen_full if nxt is not mate
-                        and not is_clearly_offside(holder.team, nxt.position, mate.position, opponents,
-                                                   margin, seen_line)),
-                       key=lambda vn: vn[0], default=(0.0, None))
-
-        # en contre-attaque, la progression seule, sans suite : on joue vite vers l'avant (ticket 11)
-        share = 0.0 if mode == CONTRE_ATTAQUE else _FOLLOW_UP_SHARE
-
-        def pass_value(mate: PlayerState) -> tuple[float, str | None]:
-            mate_to_goal = mate.position.distance_to(goal)
-            now = fixed + progressive * _progress(holder_to_goal - mate_to_goal)
-            success = pass_success_probability(holder, mate, opponents)  # le ballon arrive (v2-socle/04)
-            # temps disponible : il garde le ballon assez longtemps pour jouer (A9 reclassé au ticket 13 : ce n'est
-            # pas la réussite de la passe, mais le risque de le perdre juste après la réception)
-            openness = 1.0 - pressure(mate, opponents)
-            # la suite vaut au moins la position atteinte (il garde le ballon) ; sans meilleure suite, la valeur
-            # d'avant le ticket 13, et pas de plan à transmettre
-            future, follow = now, None
-            if share:
-                best_next, nxt = follow_up(mate)
-                if best_next > now:
-                    future, follow = best_next, nxt
-            # plan tenu : la passe prévue par son passeur, encore jouable, vaut davantage (ticket 14)
-            bonus = 1.0 + PLAN_BONUS if mate.name == held and success >= OPEN_LANE_PROBABILITY else 1.0
-            return PASS_WEIGHT * success * ((1.0 - share) * now + share * future) * openness * bonus, follow
-
-        (value, follow), best_mate = max(((pass_value(m), m) for m in teammates), key=lambda vm: vm[0][0])
-        options.append(Action("pass", value, best_mate, follow=follow))
+        options.append(Action("shot", chance * (1.0 - block_probability(holder, goal, opponents))))
+    # suite du receveur (ticket 13) : meilleure passe suivante vers un coéquipier que le porteur voit lui-même ; le
+    # passeur n'en fait pas partie (pas d'aller-retour) ; pas de suite en contre-attaque (on joue vite vers l'avant)
+    share = 0.0 if mode == CONTRE_ATTAQUE else _FOLLOW_UP_SHARE
+    for mate in teammates:
+        success = pass_success_probability(holder, mate, opponents)  # le ballon arrive (v2-socle/04)
+        # temps disponible : il garde le ballon assez longtemps pour jouer (A9 reclassé au ticket 13)
+        keep = success * (1.0 - PRESSURE_KEEP_SHARE * pressure(mate, opponents))
+        now = danger(mate.position, team)
+        future, follow = now, None
+        if share:
+            best_next, nxt = max(((pass_success_probability(mate, n, opponents) * danger(n.position, team), n.name)
+                                  for n in seen_full if n is not mate
+                                  and not is_clearly_offside(team, n.position, mate.position, opponents, margin,
+                                                             seen_line)),
+                                 key=lambda vn: vn[0], default=(0.0, None))
+            if best_next > now:  # la suite vaut au moins la position atteinte (il garde le ballon)
+                future, follow = best_next, nxt
+        reached = (1.0 - share) * now + share * future
+        if mate.name == held and success >= OPEN_LANE_PROBABILITY:  # plan tenu, encore jouable (ticket 14)
+            reached *= 1.0 + PLAN_BONUS
+        midway = Vec2((holder.position.x + mate.position.x) / 2.0, (holder.position.y + mate.position.y) / 2.0)
+        options.append(Action("pass", option_value(holder, mode, keep, reached, midway), mate, follow=follow))
     if planned is not None and mode != CONTRE_ATTAQUE:  # sort du plan, pour la mesure (ticket 14)
         # abandonné : la cible est vue mais la ligne s'est fermée ; non vu : hors de sa Vision ou hors-jeu évident
         target = next((m for m in teammates if m.name == held), None)
@@ -202,27 +220,131 @@ def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2
             else PLAN_HELD if pass_success_probability(holder, target, opponents) >= OPEN_LANE_PROBABILITY \
             else PLAN_DROPPED
         options = [replace(o, plan=state) for o in options]
+    return sorted(options, key=lambda a: a.value, reverse=True)
+
+
+def option_value(holder: PlayerState, mode: str | None, keep: float, reached: float, lost_at: Vec2) -> float:
+    """Monnaie commune (ticket 33) : s'il garde le ballon, le danger d'ici plus le gain (pondéré par la transition) ;
+    s'il le perd, le danger qu'aurait l'adversaire là où il le perd (pondéré aussi)."""
+    here = danger(holder.position, holder.team)
+    gain_weight, loss_weight = _TRANSITION_WEIGHTS[mode]
+    return keep * (here + gain_weight * (reached - here)) - (1.0 - keep) * loss_weight * loss_cost(lost_at, holder.team)
+
+
+def keep_ball_probability(holder: PlayerState, gene: float) -> float:
+    """Chance de garder le ballon en conduisant (ticket 33) : Dribbling compte d'autant plus qu'un adversaire est
+    proche ; sous pression, la même part perdue que pour la passe et le tir."""
+    baseline, amplitude = _KEEP_BALL
+    skill = success_probability(player_attribute(holder, "Dribbling"), baseline=baseline, amplitude=amplitude)
+    contested = FREE_TOUCH_SHARE + (1.0 - FREE_TOUCH_SHARE) * gene  # 0,1 sans adversaire à 5 m, 1 au contact
+    return (1.0 - (1.0 - skill) * contested) * (1.0 - PRESSURE_KEEP_SHARE * gene)
+
+
+def arrival_s(opponent: PlayerState, point: Vec2, projection: float = 1.0) -> float:
+    """Temps pour qu'un adversaire atteigne `point` : il garde son élan pendant `REACTION_S` (la part `projection`
+    de cet élan, telle que le porteur la voit), puis court droit au point à sa vitesse max."""
+    # ponytail: pas de montée en vitesse ni de trajectoire courbe ; jamais plus rapide que la vitesse max depuis t = 0
+    start = opponent.position + opponent.velocity * (projection * REACTION_S)
+    return REACTION_S + start.distance_to(point) / max_speed_mps(opponent.pace)
+
+
+def free_point(holder: PlayerState, opponents: list[PlayerState], heading: Vec2, projection: float) -> Vec2 | None:
+    """Dernier point libre dans la direction `heading` (tous les `DRIBBLE_STEP_M` jusqu'à `DRIBBLE_REACH_M`) : le
+    porteur, balle au pied, y arrive `DRIBBLE_MARGIN_S` avant tout adversaire, dont il prolonge le déplacement pour
+    la part `projection` (1 : le vrai ; moins : ce que son Anticipation lui fait voir, `arrival_s`). `None` : rien
+    de libre."""
+    speed = max_speed_mps(holder.pace) * DRIBBLE_SPEED_FACTOR
+    reached = None
+    for step in range(1, int(DRIBBLE_REACH_M / DRIBBLE_STEP_M) + 1):
+        point = holder.position + heading * (step * DRIBBLE_STEP_M)
+        if not (0.0 <= point.x <= PITCH_LENGTH_M and 0.0 <= point.y <= PITCH_WIDTH_M):
+            break
+        run_s = step * DRIBBLE_STEP_M / speed
+        if any(arrival_s(o, point, projection) < run_s + DRIBBLE_MARGIN_S for o in opponents):
+            break
+        reached = point
+    return reached
+
+
+def dribble_options(holder: PlayerState, opponents: list[PlayerState], gene: float, mode: str | None,
+                    projection: float) -> list[Action]:
+    """Une conduite par direction (`DRIBBLE_DIRECTIONS_DEG`). Sans espace libre dans une direction, il y va quand
+    même au duel, sans gain (valeur de garder le ballon sur place). Toujours cinq options, dans le même ordre."""
+    forward = 1.0 if holder.team == "home" else -1.0
+    keep = keep_ball_probability(holder, gene)
+    options = []
+    for angle in DRIBBLE_DIRECTIONS_DEG:
+        rad = math.radians(angle)
+        heading = Vec2(forward * math.cos(rad), math.sin(rad))
+        reached = free_point(holder, opponents, heading, projection)
+        value = option_value(holder, mode, keep, danger(reached or holder.position, holder.team), holder.position)
+        options.append(Action("dribble", value, point=reached or holder.position + heading * DRIBBLE_STEP_M))
     return options
-
-
-def _progress(gain_m: float) -> float:
-    """Progression d'une passe qui rapproche le receveur du but de `gain_m` : 0,5 sans gain, 1 à +20 m, 0 à -20 m."""
-    return min(1.0, max(0.0, 0.5 + gain_m / (2.0 * _PROGRESS_SCALE_M)))
 
 
 def best_choice_probability(decisions: float) -> float:
     return success_probability(decisions, baseline=_BEST_CHOICE_BASELINE, amplitude=_BEST_CHOICE_AMPLITUDE)
 
 
+def _curve(note: float, shape: tuple[float, float]) -> float:
+    baseline, amplitude = shape
+    return success_probability(note, baseline=baseline, amplitude=amplitude, min_prob=0.0, max_prob=2.0)
+
+
+def perception_error(holder: PlayerState, gene: float) -> float:
+    """Écart-type de l'erreur de perception, en part de la meilleure valeur réelle : Decisions, puis Composure sous
+    pression seulement (ticket 33)."""
+    note = min(max(player_attribute(holder, "Decisions"), _ERROR_POINTS[0][0]), _ERROR_POINTS[-1][0])
+    (n0, e0), (n1, e1) = next(pair for pair in zip(_ERROR_POINTS, _ERROR_POINTS[1:]) if note <= pair[1][0])
+    error = e0 + (note - n0) / (n1 - n0) * (e1 - e0)
+    return error * (1.0 + gene * _curve(player_attribute(holder, "Composure"), _COMPOSURE_K))
+
+
+def anticipation_share(holder: PlayerState) -> float:
+    """Part du déplacement des adversaires que le porteur prolonge pendant sa conduite (ticket 33)."""
+    return min(1.0, _curve(player_attribute(holder, "Anticipation"), _ANTICIPATION_SHARE))
+
+
 def choose_action(holder: PlayerState, players: list[PlayerState], goal: Vec2, keeper: PlayerState | None,
-                  mode: str | None = None, planned: str | None = None) -> Action:
-    """Prend la meilleure option avec la probabilité donnée par Decisions, sinon une autre au
-    hasard -- jamais binaire, même à 99. `planned` : suite prévue par son passeur (ticket v2-collectif/14)."""
-    options = sorted(evaluate_options(holder, players, goal, keeper, mode, planned), key=lambda a: a.value,
-                     reverse=True)
-    if len(options) == 1 or random.random() < best_choice_probability(player_attribute(holder, "Decisions")):
-        return replace(options[0], considered=len(options), best=True)
-    return replace(random.choice(options[1:]), considered=len(options), best=False)
+                  mode: str | None = None, planned: str | None = None,
+                  felt: dict[int, float] | None = None) -> Action:
+    """Prend l'option qu'il CROIT la meilleure (ticket 33) : valeur réelle brouillée par sa perception (Decisions,
+    Composure sous pression), conduites jugées avec son Anticipation. Deux options proches font hésiter même un très
+    bon joueur ; un joueur faible se trompe surtout entre options voisines. `planned` : ticket v2-collectif/14.
+    `felt` : son erreur sur chaque direction de conduite (en écarts-types), gardée pendant sa possession ; complétée
+    ici si besoin."""
+    options = evaluate_options(holder, players, goal, keeper, mode, planned)
+    best = options[0]
+    tagged = dict(considered=len(options), best_kind=best.kind)
+    if len(options) == 1:
+        return replace(best, best=True, **tagged)
+    opponents = [p for p in players if p.team != holder.team]
+    gene = pressure(holder, opponents)
+    # conduites telles qu'il les voit : même direction, espace jugé avec son Anticipation (dans l'ordre des directions)
+    share = anticipation_share(holder)
+    # la valeur RÉELLE d'une conduite vue autrement reste celle de la vraie direction (il s'arrête où l'espace
+    # s'arrête) ; une direction se reconnaît à son point réel, distinct d'une direction à l'autre
+    real_dribbles = dribble_options(holder, opponents, gene, mode, 1.0)
+    direction = {real.point: i for i, real in enumerate(real_dribbles)}
+    seen_as = {} if share >= 1.0 else {
+        real.point: seen for real, seen in zip(real_dribbles, dribble_options(holder, opponents, gene, mode, share))}
+    felt = {} if felt is None else felt
+    sigma = perception_error(holder, gene) * max(abs(best.value), 1e-3)
+    for index in range(len(real_dribbles)):
+        if index not in felt:
+            felt[index] = random.gauss(0.0, 1.0)
+    # 1) direction qu'il retient : la meilleure à ses yeux, avec son erreur gardée sur chaque direction
+    drive = max((o for o in options if o.kind == "dribble"),
+                key=lambda o: seen_as.get(o.point, o).value + felt[direction[o.point]] * sigma)
+    # 2) cette conduite contre chaque passe et le tir, une erreur fraîche par option
+    perceived = []
+    for option in [drive] + [o for o in options if o.kind != "dribble"]:
+        seen = seen_as.get(option.point, option) if option.kind == "dribble" else option
+        perceived.append((seen.value + random.gauss(0.0, sigma), option, seen.point))
+    _, chosen, point = max(perceived, key=lambda t: t[0])
+    # valeur perdue, en part de la meilleure ; une option presque équivalente compte comme le meilleur choix
+    gap = (best.value - chosen.value) / max(abs(best.value), 1e-9)
+    return replace(chosen, point=point, best=gap < BEST_CHOICE_TOLERANCE, gap=gap, **tagged)
 
 
 def counter_is_favorable(holder: PlayerState, players: list[PlayerState]) -> bool:

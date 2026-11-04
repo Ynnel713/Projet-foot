@@ -46,6 +46,8 @@ class DecisionRecord:
     target: str | None  # coéquipier visé, pour une passe
     considered: int  # options envisagées
     best: bool  # meilleure option prise
+    best_kind: str | None = None  # meilleur choix factuel (ticket v2-collectif/33)
+    gap: float = 0.0  # valeur réelle perdue par rapport au meilleur choix factuel, en part de celui-ci
 
 
 @dataclass(frozen=True)

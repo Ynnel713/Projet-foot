@@ -151,6 +151,9 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
         if ball.receiving:  # pendant sa réception, il avance au pas de contrôle (v2-socle/06)
             return make(role, "contrôler", OPPONENT_GOAL[player.team], RECEPTION_SPEED_FACTOR,
                              reason="temps de réception, il lève la tête")
+        # direction choisie à sa dernière décision (ticket v2-collectif/33), sinon droit au but
+        if ball.dribble is not None and ball.dribble[0] == player.name:
+            return make(role, "conduire", ball.dribble[1], DRIBBLE_SPEED_FACTOR, reason="conduite vers l'espace libre")
         return make(role, "conduire", OPPONENT_GOAL[player.team], DRIBBLE_SPEED_FACTOR, reason="conduite vers le but")
     if role == APPEL:
         now_s = minute * 60.0

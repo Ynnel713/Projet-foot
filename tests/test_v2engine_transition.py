@@ -8,7 +8,7 @@ import random
 
 from v2engine import cerveau
 from v2engine.ball_state import BallState
-from v2engine.decision import (CONSERVATION, CONTRE_ATTAQUE, COUNTER_DRIBBLE_BOOST, COUNTER_MAX_EXCESS,
+from v2engine.decision import (CONSERVATION, CONTRE_ATTAQUE, COUNTER_MAX_EXCESS,
                                choose_transition, counter_is_favorable, evaluate_options)
 from v2engine.geometry import Vec2
 from v2engine.movement import PlayerState
@@ -78,19 +78,25 @@ def test_pressed_holder_in_counter_can_still_play_back_but_after_any_forward_pas
         return [o for o in evaluate_options(holder, [holder, presser, *players], GOAL, None, mode) if o.kind == "pass"]
     assert len(passes([back])) == 1  # seul en retrait : une sortie de passe existe (réserve A2 de l'expert)
     assert 0.0 < passes([back])[0].value < passes([back], CONSERVATION)[0].value  # mais pas la valeur de conservation
+    # ticket v2-collectif/33 : dans la monnaie du danger attendu, la ressortie n'est plus classée d'office après toute
+    # passe vers l'avant (sous pression, le retrait peut être le meilleur choix) ; le sens reste : la contre-attaque
+    # pèse le gain, donc valorise la passe vers l'avant et pénalise le retrait plus qu'en conservation.
     forward = _p("Fwd", x=52, y=20)
-    assert [o.target.name for o in passes([back, forward])] == ["Fwd"]  # une passe vers l'avant passe avant
+
+    def value(name, mode):
+        return next(o.value for o in passes([back, forward], mode) if o.target.name == name)
+    assert value("Fwd", CONTRE_ATTAQUE) > value("Fwd", CONSERVATION)
+    assert value("Back", CONTRE_ATTAQUE) < value("Back", CONSERVATION)
 
 
-def test_counter_doubles_the_wish_to_drive_only_without_an_opponent_within_five_metres() -> None:
+def test_counter_weighs_the_danger_gained_by_driving_more_and_conservation_less() -> None:
+    # ticket 33 : même sens que le doublement de la conduite du ticket 11, dans la monnaie du danger attendu
     holder = _p("H", x=40)
 
-    def dribble(players, mode):
-        return next(o.value for o in evaluate_options(holder, players, GOAL, None, mode) if o.kind == "dribble")
-    free = [holder, _p("R", team="away", x=80)]
-    assert dribble(free, CONTRE_ATTAQUE) == COUNTER_DRIBBLE_BOOST * dribble(free, None)
-    pressed = [holder, _p("R", team="away", x=43)]
-    assert dribble(pressed, CONTRE_ATTAQUE) == dribble(pressed, None)
+    def dribble(mode):
+        return max(o.value for o in evaluate_options(holder, [holder, _p("R", team="away", x=80)], GOAL, None, mode)
+                   if o.kind == "dribble")
+    assert dribble(CONTRE_ATTAQUE) > dribble(None) > dribble(CONSERVATION)
 
 
 def _recover(tracker: SituationTracker, play: TransitionPlay, now_s: float, holder: PlayerState,

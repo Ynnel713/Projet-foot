@@ -5,7 +5,8 @@ from __future__ import annotations
 
 import random
 
-from v2engine.decision import CONSERVATION, CONTRE_ATTAQUE, PASS_WEIGHT, choose_action, evaluate_options
+from v2engine.danger import danger
+from v2engine.decision import CONSERVATION, CONTRE_ATTAQUE, choose_action, evaluate_options, option_value
 from v2engine.geometry import Vec2
 from v2engine.movement import PlayerState
 from v2engine.possession import pass_success_probability
@@ -35,24 +36,30 @@ def _pass(players: list[PlayerState], mode: str | None = None):
 
 def test_lateral_pass_that_opens_a_next_pass_is_chosen_far_more_often() -> None:
     assert _pass(_scene()).target.name == "A"
-    players = _scene(Decisions=55)
+    players = _scene(Decisions=99)
     random.seed(20260923)
     picks = [choose_action(players[0], players, GOAL, None) for _ in range(2000)]
     to = {name: sum(a.kind == "pass" and a.target.name == name for a in picks) / 2000 for name in ("A", "B")}
-    # critère C1 ; seul le meilleur receveur est une option, d'où B à 0 : la discrimination vient de l'assertion du
-    # début (sans la suite, A et B sont symétriques et l'égalité désigne B, premier de la liste)
-    assert to["A"] >= 0.65 and to["B"] <= 0.35
+    # critère C1, revu au ticket v2-collectif/33 : chaque coéquipier vu et chaque direction de conduite est une option,
+    # et les conduites valent ici presque la passe vers A (2 % d'écart) ; avant : A >= 65 %, B à 0. La suite garde son
+    # effet, lisible à Decisions 99 : A, qui l'ouvre, bien plus souvent que B, symétrique sans elle (mesuré le
+    # 04/11/2026 : A 25 %, B 6 % ; à Decisions 55, A 16 %, B 13 %, l'erreur calée sur la courbe validée l'estompe).
+    assert to["A"] >= to["B"] + 0.15 and to["A"] >= 3 * to["B"]
 
 
-def test_without_a_better_next_pass_the_value_is_the_one_before_the_ticket() -> None:
+def test_without_a_better_next_pass_the_value_is_the_one_before_the_ticket(monkeypatch) -> None:
     # le receveur n'a que le porteur comme suite, exclu (pas d'aller-retour) : la suite vaut la position atteinte,
-    # dans l'échelle du mode -- hors transition comme en conservation (sûreté d'abord, ticket 11)
+    # dans la monnaie du danger attendu (ticket 33), hors transition comme en conservation
     holder, mate = _p("H", 40, 34), _p("M", 40, 22)
-    gain = holder.position.distance_to(GOAL) - mate.position.distance_to(GOAL)
-    for mode, (fixed, progressive) in ((None, (0.3, 0.7)), (CONSERVATION, (0.7, 0.3))):
-        expected = PASS_WEIGHT * pass_success_probability(holder, mate, []) * (fixed + progressive * (0.5 + gain / 40.0))
+    midway = Vec2(40, 28)
+    for mode in (None, CONSERVATION):
+        expected = option_value(holder, mode, pass_success_probability(holder, mate, []), danger(mate.position, "home"),
+                                midway)
         assert abs(_pass([holder, mate], mode).value - expected) < 1e-12
-    assert _pass([holder, mate, _p("T", 60, 26)]).value > _pass([holder, mate]).value
+    # une vraie suite fait monter la valeur : T aux abords de la surface, vu (Vision neutralisée ici)
+    holder, mate = _p("H", 60, 34), _p("M", 60, 22)
+    monkeypatch.setattr("v2engine.decision.visible_teammates", lambda h, mates, goal: mates)
+    assert _pass([holder, mate, _p("T", 85, 26)]).value > _pass([holder, mate]).value
 
 
 def test_low_vision_holder_does_not_read_the_next_pass_of_the_receiver() -> None:

@@ -32,7 +32,7 @@ from v2engine.possession import (BALL_FRICTION_PER_S, BALL_STOPPED_MPS, MAX_PASS
                                  pass_velocity, reception_delay_s)
 from v2engine.restart import (AERIAL_LANDING_M, AERIEN, LONG_RESTART_M, SOL, award, exit_point, is_aerial, kickoff,
                               restart_target)
-from v2engine.shooting import attempt_shot
+from v2engine.shooting import attempt_shot, draw_blocker
 from v2engine.situation import SituationTracker
 from v2engine.transition import TransitionPlay
 from v2engine.trace import (BallSnapshot, DecisionRecord, MatchTrace, OffsideEvent, PlayerSnapshot, RestartEvent,
@@ -49,6 +49,7 @@ SHOT_SPEED_MPS = MAX_PASS_MPS
 # poteau : 0,5 à 5 m (réel non trouvé, ordre de grandeur).
 SHOT_WIDE_SHARE = 0.64
 SHOT_WIDE_M = (0.5, 5.0)
+SHOT_DEFLECTION_DEG = 60.0  # tir contré : déviation maximale (ticket 33, ordre de grandeur, réel non trouvé)
 
 BALL_RADIUS_M = 0.11
 PLAYER_RADIUS_M = 0.3
@@ -267,14 +268,37 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
         # plan de passe (ticket v2-collectif/14) : lu par son receveur à sa première décision, effacé à toute décision
         planned = ball.plan[1] if ball.plan is not None and ball.plan[0] == holder.name else None
         ball.plan = None
-        action = choose_action(holder, players, goal, keeper, (modes or {}).get(holder.team), planned)  # ticket 11
+        # erreur sur les directions de conduite gardée pendant sa possession (ticket 33, A4) ; nouveau porteur, nouvelle
+        # idée de l'espace -- ponytail: un joueur qui reperd puis reprend le ballon sans autre porteur entre-temps la garde
+        if ball.felt is None or ball.felt[0] != holder.name:
+            ball.felt = (holder.name, {})
+        action = choose_action(holder, players, goal, keeper, (modes or {}).get(holder.team), planned,  # ticket 11
+                               ball.felt[1])
         if decisions is not None:
             target = getattr(action, "target", None)
             decisions.append(DecisionRecord(now_s / 60.0, holder.name, holder.team, action.kind,
                                             target.name if target is not None else None,
-                                            getattr(action, "considered", 1), getattr(action, "best", True)))
+                                            getattr(action, "considered", 1), getattr(action, "best", True),
+                                            getattr(action, "best_kind", None), getattr(action, "gap", 0.0)))
+        point = getattr(action, "point", None)
+        ball.dribble = (holder.name, point) if action.kind == "dribble" and point is not None else None
         if action.kind == "shot":
             _clear_offside(ball)  # la passe signalée est morte : le ballon est tiré
+            blocker = draw_blocker(holder, goal, [p for p in players if p.team != holder.team])
+            if blocker is not None:
+                # Contré (ticket v2-collectif/33) : le ballon rebondit sur le défenseur, dévié d'au plus 60° et à moitié
+                # de sa vitesse ; libre, il peut sortir (corner s'il file derrière la ligne de but) ou être repris.
+                shot = (goal - holder.position).normalized()
+                turn = math.radians(random.uniform(-SHOT_DEFLECTION_DEG, SHOT_DEFLECTION_DEG))
+                bounce = Vec2(shot.x * math.cos(turn) - shot.y * math.sin(turn),
+                              shot.x * math.sin(turn) + shot.y * math.cos(turn))
+                ball.holder = None
+                ball.velocity = bounce * (SHOT_SPEED_MPS / 2.0)
+                ball.position = clamp_to_pitch(blocker.position + bounce * CONTROL_RADIUS_M)
+                ball.last_toucher = blocker.name
+                ball.control_ban_until_s[blocker.name] = now_s + MISS_RETRY_S
+                ball.released_by, ball.receiver, ball.readers, ball.last_pass_team = None, None, {}, holder.team
+                return None
             scored = attempt_shot(holder, keeper, holder.position.distance_to(goal), GOAL_CENTER_Y)
             if scored:
                 # le ballon part vraiment vers le but et le but ne compte qu'à son arrivée (`SHOT_SPEED_MPS`)

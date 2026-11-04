@@ -293,12 +293,26 @@ function IntentionPanel({ trace, tick, selected }) {
       {decision && (
         <div className="text-data text-gray-400">
           Dernière décision ({Math.floor(decision.minute)}') : {ACTIONS[decision.action] || decision.action}
-          {decision.target ? ` vers ${decision.target}` : ""}, {decision.considered} option(s) envisagée(s),{" "}
-          {decision.best ? "la meilleure" : "pas la meilleure"}
+          {decision.target ? ` vers ${decision.target}` : ""}, {decision.considered} option(s) envisagée(s)
+          {decision.best_kind ? "" : decision.best ? ", la meilleure" : ", pas la meilleure"}
+          {decision.best_kind && (
+            <div>
+              Meilleur choix : {ACTIONS[decision.best_kind] || decision.best_kind}. Choisi :{" "}
+              {ACTIONS[decision.action] || decision.action}
+              {decision.gap > 0 ? ` (${errorLabel(decision.gap)})` : ""}
+            </div>
+          )}
         </div>
       )}
     </div>
   );
+}
+
+// Écart de valeur avec le meilleur choix factuel, en part de celui-ci (ticket v2-collectif/33).
+function errorLabel(gap) {
+  // sous 10 % : erreur légère, comptée comme le meilleur choix (BEST_CHOICE_TOLERANCE, texte du ticket)
+  if (gap < 0.1) return "erreur légère";
+  return gap < 0.4 ? "erreur nette" : "erreur lourde";
 }
 
 function ClubSelect({ label, value, onChange, clubs }) {

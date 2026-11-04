@@ -57,4 +57,7 @@ class BallState:
     last_toucher: str | None = None
     restart: Restart | None = None
     mode: str = "sol"
+    # Conduite en cours (ticket v2-collectif/33) : (porteur, point visé), tenue jusqu'à sa décision suivante.
+    dribble: tuple[str, Vec2] | None = None
+    felt: tuple[str, dict[int, float]] | None = None  # erreur du porteur par direction de conduite (ticket 33)
     aerial_left_m: float = 0.0

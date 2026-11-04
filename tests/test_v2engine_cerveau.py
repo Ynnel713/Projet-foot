@@ -8,7 +8,7 @@ import random
 from v2engine import cerveau
 from v2engine.anticipation import pass_readers
 from v2engine.ball_state import BallState
-from v2engine.decision import choose_action
+from v2engine.decision import DRIBBLE_DIRECTIONS_DEG, choose_action
 from v2engine.geometry import Vec2
 from v2engine.movement import PlayerState
 from v2engine.possession import pass_velocity
@@ -91,21 +91,23 @@ def test_perception_alone_decides_whether_the_pass_is_read(monkeypatch) -> None:
     assert "X" not in pass_readers(start, Vec2(12.0, 0.0), aim, [reader])
 
 
-def test_decision_alone_decides_whether_the_best_option_is_taken(monkeypatch) -> None:
-    holder, mate = _p("H", x=30), _p("M", x=33, y=40)  # pas de passe décisive : seul le tirage de Decisions joue
+def test_perception_alone_decides_whether_the_best_option_is_taken(monkeypatch) -> None:
+    # ticket v2-collectif/33 : seule l'erreur de perception choisit -- une par direction de conduite (gardée pendant
+    # la possession), puis une par option comparée (la conduite retenue, chaque passe, le tir)
+    holder, mate = _p("H", x=30), _p("M", x=33, y=40)  # pas de passe décisive
     players = [holder, mate, _p("D", team="away", x=31)]
     goal = Vec2(105.0, 34.0)
     draws: list[float] = []
-
-    def forced(value: float):
-        return lambda: draws.append(value) or value
-    monkeypatch.setattr("v2engine.decision.random.random", forced(0.0))
+    monkeypatch.setattr("v2engine.decision.random.gauss", lambda mu, sigma: draws.append(sigma) or 0.0)
     best = choose_action(holder, players, goal, None)
-    monkeypatch.setattr("v2engine.decision.random.random", forced(0.999))
-    monkeypatch.setattr("v2engine.decision.random.choice", lambda options: options[0])
+    directions = len(DRIBBLE_DIRECTIONS_DEG)
+    assert len(draws) == directions + (best.considered - directions + 1) and best.best and best.gap == 0.0
+    # l'autre option comparée (conduite retenue, puis la passe) paraît bien meilleure qu'elle n'est
+    slot = directions if best.kind == "pass" else directions + 1
+    boosted = iter([0.0] * slot + [5.0])
+    monkeypatch.setattr("v2engine.decision.random.gauss", lambda mu, sigma: next(boosted, 0.0))
     other = choose_action(holder, players, goal, None)
-    assert draws == [0.0, 0.999]  # un seul tirage par décision : celui de Decisions (aucun tirage de Vision)
-    assert best.best and not other.best and best.considered == other.considered and best.kind != other.kind
+    assert not other.best and other.gap > 0.0 and other.best_kind == best.kind and best.considered == other.considered
 
 
 def test_execution_alone_decides_the_quality_of_the_pass(monkeypatch) -> None:
