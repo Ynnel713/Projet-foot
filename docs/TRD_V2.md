@@ -49,7 +49,7 @@ Inchangé — aucune nouvelle donnée personnelle, aucun nouvel accès réseau e
 
 - **D-V01** — Module V2 entièrement séparé, zéro fichier protégé V1 modifié. **Validé.**
 - **D-V02** — Réutilisation en lecture seule de `clubs.py`/`players.py`/`lineup.py`/`coaches.py` (`coaches.py` ajouté le 02/11/2026 avec la levée de D-V10) (et plus tard `season.py`/`standings.py`/`schedule.py`/les modules de compétitions). **Validé.**
-- **D-V03** — Physique continue à plat (x/y), pas de hauteur de ballon pour l'instant ; duels aériens résolus par tirage pondéré. **Validé, révisable plus tard** (le porteur du projet a formulé ce choix comme « dans un premier temps »).
+- **D-V03** — Physique continue à plat (x/y), pas de hauteur de ballon pour l'instant ; duels aériens résolus par tirage pondéré. **Validé, révisable plus tard** (le porteur du projet a formulé ce choix comme « dans un premier temps »). **Révisée le 03/11/2026** : le moteur calcule la hauteur du ballon (`z`, `vz`, gravité, rebonds) ; les joueurs restent à plat, un saut est un événement de la trace ; le duel aérien garde un tirage pondéré, entre les seuls joueurs capables d'atteindre le ballon. Étude `docs/ETUDE_HAUTEUR_V2.md`, chantier `.scratch/v2-hauteur-ballon/`.
 - **D-V04** — Calcul server-side Python ; trace complète calculée une fois, rejouée ensuite par le rendu à vitesse réglable façon Football Manager. **Validé.**
 - **D-V05** — Les deux modes (regarder / tout simuler sans regarder) coexistent sur le même moteur. **Validé.**
 - **D-V06** — Déterminisme assoupli pour la V2 (pas de garantie bit-à-bit), contrairement à la règle dure de la V1. **Validé**, divergence de règle assumée.
@@ -62,7 +62,7 @@ Inchangé — aucune nouvelle donnée personnelle, aucun nouvel accès réseau e
 ## Hors périmètre technique
 
 - Toute modification des fichiers protégés V1 (liste complète : voir `CLAUDE.md`).
-- Hauteur du ballon / vraie physique 3D (centres, têtes, lobes réellement simulés) — différée (D-V03).
+- Vraie physique 3D (effet du ballon, vent, physique verticale des joueurs), perspective avec effet de fuite — hors périmètre (D-V03 révisée : seule la hauteur du ballon est simulée).
 - Branchement sur les compétitions existantes (championnat, poules, Coupe du Monde, Ligue des Champions, Compétition Perso) — différé après le premier match isolé (D-V09).
 - Contrôle tactique de l'utilisateur pendant un match (choix de tactique en direct, changements) — hors périmètre, comme en V1.
 - Garantie de déterminisme bit-à-bit — explicitement non retenue pour la V2 (D-V06).

@@ -28,9 +28,11 @@ Données (base `data/joueurs.xlsx`, 7 473 lignes) : Taille FM 95,5 %, Weak foot 
 | 04 | Pied fort, pied faible et postes naturels | v2-collectif/19 |
 | 05 | Catalogue des 58 gestes préférés | v2-collectif/19 ; 01-04 pour les gestes concernés |
 | 06 | Enrichissement des données (gestes préférés, pied fort) | — |
-| 07 | Duels : Agility, Dribbling, Balance après contact | — |
+| 07 | Duels : Agility, Dribbling, Balance après contact, duel un contre un varié et tacle glissé (élargi le 03/11/2026) | — |
 | 08 | Garde de couverture : 100 % des caractéristiques branchées | tous les précédents (s'enrichit au fil de l'eau) |
-| 09 | Discipline : fautes, cartons et blessures | 02, 07 |
+| 09 | Discipline : fautes, cartons, blessures et échauffourées | 02, 07, v2-collectif/29 et 30 |
+| 10 | Types de finition (placée, puissante, enroulée, première intention, côté ouvert ou fermé ; lob et dribble du gardien après 03) | v2-collectif/28, 19, 22 ; 03 et 07 pour le lob et le dribble du gardien |
+| 11 | Centres variés (enroulé, tendu, en retrait, au ras du sol) | 01, v2-collectif/28, v2-collectif/29 |
 
 ## Règle de composition (revue expert A7)
 

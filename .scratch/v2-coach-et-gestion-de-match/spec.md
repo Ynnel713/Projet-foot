@@ -22,10 +22,11 @@ Revue expert du 02/11/2026 : REJECTED (A1 à A11), tickets corrigés le jour mê
 |---|---|---|
 | 01 | Styles du coach traduits en consignes d'équipe | v2-collectif/05, 08, 10, 11, 12, 13, 15, 16, 17 |
 | 02 | Gestion du score selon le style du coach | 01 ; v2-collectif/21 |
-| 03 | Mi-temps et temps additionnel | v2-attributs-restants/02 |
+| 03 | Temps additionnel (mi-temps déplacée au 07) | 07 ; v2-attributs-restants/02 |
 | 04 | Tout pour égaliser : risques et gardien qui monte | 02, 03 ; v2-attributs-restants/01, 02, 03 |
-| 05 | Remplacements en V2 | 01, 02, 03 ; v2-collectif/12 ; v2-attributs-restants/02, 04 |
+| 05 | Remplacements en V2 | 01, 02, 03, 07 ; v2-collectif/12 ; v2-attributs-restants/02, 04 |
 | 06 | Remplacements V1 selon le coach, le résultat et la fatigue | — (option b et modification de `events.py` validées le 02/11/2026) |
+| 07 | Mi-temps dans le moteur : arrêt, replacement, coup d'envoi | — |
 
 ## Règles communes
 

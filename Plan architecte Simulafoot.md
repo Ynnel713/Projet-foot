@@ -241,8 +241,7 @@ PLAN).
 
 ### 3.3 A1 — mouvement individuel et équipe : À FAIRE (après le chantier 1)
 
-**A1.1 — inertie, accélération, décélération. Codée, testée, mesurée (16/10/2026). En attente de revue finale
-avant commit.**
+**A1.1 — inertie, accélération, décélération. CLOSE, commitée et poussée (`cf63f0f`, 16/10/2026).**
 - Objectif : trajectoire continue des joueurs, sans arrêt à chaque keyframe. Rattaché : ticket 43 (images 0 et 1
   jamais corrigées, non traité -- hors périmètre, voir ci-dessous) et ticket 12 (sauts de trajectoire, idem).
 - Cadrage par `simulafoot-architect` (lecture seule) : baseline du Plan (591/352) périmée, remesurée fraîchement
@@ -291,14 +290,16 @@ avant commit.**
 
 **A1.3 — joueurs hors action.**
 - Objectif : appels, replacements, soutien, courses croisées des partenaires du porteur.
-- Périmètre : `templates.py`, `sequence_generator.py`. Dépendances : A1.1. Statut : **en cours, via le chantier "mouvement collectif" (16/10/2026, `docs/PRD.md`/`docs/PLAN.md`, 5 phases) — démarré indépendamment de A1.1 (déterminisme/réalisme des joueurs de décor, pas de refonte de `motion.py`).** Phases 1 à 3 commitées (`e16b2c8`) et Phase 4 commitée (`bb748dc`), toutes deux poussées sur `origin/main` — voir §3.2bis ci-dessous. Phase 5 (style de coach) codée, testée, mesurée, **pas encore commitée** (en attente de démo visuelle et de validation du propriétaire).
+- Périmètre : `templates.py`, `sequence_generator.py`. Dépendances : A1.1. Statut : **CLOSE, via le chantier "mouvement collectif" (16/10/2026, `docs/PRD.md`/`docs/PLAN.md`, 5 phases) — démarré indépendamment de A1.1 (déterminisme/réalisme des joueurs de décor, pas de refonte de `motion.py`).** Phases 1 à 3 (`e16b2c8`), Phase 4 (`bb748dc`) et Phase 5, style de coach (`a5e7d3d`) toutes commitées et poussées sur `origin/main` — voir §3.2bis ci-dessous. Chantier 5/5 phases clos.
 
 **A1.4 — pressing, couverture, repli, marquage, bloc équipe.**
 - Reclassé en A2 : à rattacher à A2.1 (respect du dispositif) ou A2.3 (profil coach). Rattachement à trancher.
 
-**A1.5 — évitement et placement adverse.**
-- Objectif : l'évitement à 1,5 m (`motion._apply_avoidance`) provoque à lui seul 137 clips au-dessus de 1,05 fois vmax avant contrainte et les sauts bruts supérieurs à 1 m. Tickets 28 (adversaire à 1,5 m du départ du tireur de penalty) et 48 (nouveaux départs scriptés contre placement adverse d'`enrich_with_background`).
-- Périmètre : `motion.py`, `sequence_generator.py`. Dépendances : chantier 1, A1.1. Statut : à faire.
+**A1.5 — évitement et placement adverse. Cadrée (22/10/2026), implémentation pas commencée.**
+- Objectif initial (périmé) : « 137 clips » — chiffre mesuré avant A1.1, jamais isolé pour la part spécifique à l'évitement. Remesure fraîche après A1.1 (pipeline réel, 100 matchs, graine 20260923, HEAD `cf63f0f`) : résiduel réel 21/1552 clips (1,4 %) > 1,05x vmax, **100 % imputable à `motion._apply_avoidance`** (neutralisation isolée : 0/0 sans évitement) ; contribue aussi à 39/357 clips > 10 m/s² (part mineure) et 100 % des sauts bruts > 1 m (42, déjà absorbés à 0 au rendu). Tickets 28 (adversaire à 1,5 m du départ du tireur de penalty) et 48 (nouveaux départs scriptés contre placement adverse d'`enrich_with_background`).
+- Décisions du propriétaire (22/10/2026) : priorité confirmée malgré le résiduel désormais petit ; EG-JOU-07 du TRD (3 m exigés autour du tireur de penalty, aujourd'hui ~1,5 m garantis) reste hors périmètre, différée ; Option 1 retenue (placement adverse dépendant des départs scriptés réels, traite la cause du ticket 48) plutôt qu'un ajustement du rayon/force de `_apply_avoidance`.
+- Complexité découverte en cours de conception : pour préserver la parité testée `enrich_with_background`/`opponent_field_tracks`, il faut faire transiter les positions de départ scriptées du côté buteur jusqu'à `opponent_field_tracks` (nouveau paramètre optionnel) — mécanisme et constante de marge encore à valider avec le propriétaire avant code.
+- Périmètre : `motion.py` (exception déjà accordée pour A1.1, à reconfirmer), `sequence_generator.py` (exception du chantier "mouvement collectif" ne couvre pas A1.5, nouvelle exception nécessaire). Dépendances : chantier 1, A1.1 (tous deux clos). Statut : cadrée, en attente du feu vert pour coder.
 
 **A1.6 — cohérence joueur-ballon.**
 - Objectif : définir un contact réel (distance, pas d'accélération sans contact), ne pas se fier à `ball.owner_id`. Tickets 30 (priorité haute) et 41 (ballon figé quand le passeur est inconnu, y compris contre_attaque, construction_placee, une_deux). Ticket 42 (vrais lobs) : lieu de traitement à trancher à l'ouverture de A1.6 ou en B9 dédié.

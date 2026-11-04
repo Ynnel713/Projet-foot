@@ -1,0 +1,119 @@
+matchs : 10
+passes par minute : 16.017
+passes réussies (part) : 0.627
+passes chez l'adversaire (part) : 0.373
+receveur visé (part) : 0.586
+passes longues (part) : 0.002
+passes longues réussies (part) : 0.484
+passes en profondeur (part) : 0.004
+passes en profondeur réussies (part) : 0.375
+tirs par équipe : 10.45
+tirs de près (16 m) par équipe : 1.5
+part des tirs de près (16 m) : 0.144
+buts par match : 2.7
+hors-jeu par match : 1.8
+hors-jeu par équipe : 0.9
+tacles par match : 50.9
+pressings d'équipe déclenchés par match : 686.5
+pertes de balle par match : 576.3
+pertes en transition par match : 150.2
+tirs de contre par match (récupération dans son camp) : 3.6
+tirs de contre par match (récupération dans le camp adverse) : 14.2
+appels par match : 1635.4
+appels dans le dos par match : 58.8
+pressings par match : 1099.9
+pressings suivis d'une récupération en 5 s (part) : 0.386
+profil haut : temps de pressing par match (s) : 0.0
+profil bas : temps de pressing par match (s) : 0.0
+temps de calcul par match (s) : 502.714
+passes sans gain suivies d'une passe qui fait avancer (part, C2) : 0.323
+retours au passeur en 3 s (part des passes réussies) : 0.072
+retours au passeur en 3 s hors une-deux (part) : 0.055
+une-deux par équipe et par match : 7.2
+troisième homme par équipe et par match : 21.4
+plans reçus par match : 173.3
+plans tenus (part) : 0.392
+plans abandonnés, ligne fermée (part) : 0.388
+plans abandonnés, cible non vue ou hors-jeu (part) : 0.1
+plans refusés, Teamwork (part) : 0.12
+choix dribble (part) : 0.278
+choix pass (part) : 0.712
+choix shot (part) : 0.01
+part du temps en dernier tiers (deux équipes) : 0.073
+part du temps en défense placée (deux équipes) : 0.167
+part du temps en possession installée (deux équipes) : 0.134
+part du temps en transition défensive (deux équipes) : 0.333
+part du temps en transition offensive (deux équipes) : 0.293
+récupération 0-5 s (part) : 0.262
+récupération 12-15 s (part) : 0.092
+récupération 5-12 s (part) : 0.485
+récupération plus de 15 s (part) : 0.16
+km par joueur de champ, par poste :
+    AD : 22.07
+    AG : 22.12
+    BU : 22.33
+    DC : 22.61
+    LB : 23.17
+    MC : 22.36
+    MDC : 22.16
+    MOC : 22.11
+    RB : 22.96
+    tous : 22.46
+4 joueurs ou plus derrière le ballon 1 s après la perte (part) : 0.983
+appels par joueur et par match : AD : 143.529
+appels par joueur et par match : AG : 138.111
+appels par joueur et par match : BU : 189.714
+appels par joueur et par match : DC : 20.894
+appels par joueur et par match : LB : 40.722
+appels par joueur et par match : MC : 65.167
+appels par joueur et par match : MDC : 68.312
+appels par joueur et par match : MOC : 151.286
+appels par joueur et par match : RB : 29.632
+appels redondants (part) : 0.02
+attaquant le plus avancé à la passe : 2 m ou moins de la ligne (part) : 0.15
+attaquant le plus avancé à la passe : 5 m ou moins de la ligne (part) : 0.267
+attaquant le plus avancé à la passe : distance à la ligne (m) : 11.224
+baisse de la course intense en fin de match (part) : 0.206
+compacité autour du ballon (m) : 10.909
+couverture du presseur (part) : 0.543
+distance au-dessus de 25 km/h (part) : 0.186
+distance défense-milieu avec ballon (m) : 19.898
+distance défense-milieu sans ballon (m) : 16.204
+distance milieu-attaque avec ballon (m) : 18.976
+distance milieu-attaque sans ballon (m) : 15.158
+décisions avec au moins un triangle (part) : 0.361
+défense préventive : adversaires dans cette zone : 3.842
+défense préventive : joueurs derrière le ballon : 6.975
+hauteur du bloc avec ballon (m) : 24.564
+hauteur du bloc sans ballon (m) : 33.299
+hauteur du bloc sans ballon, porteur libre (m) : 33.749
+hauteur du bloc sans ballon, porteur pressé (m) : 31.948
+largeur avec ballon (m) : 47.919
+largeur sans ballon (m) : 41.297
+longueur avec ballon (m) : 45.273
+longueur sans ballon (m) : 36.46
+passes par possession : 2.487
+pertes en transition (part des récupérations) : 0.261
+possession d'équipe (s) : 9.305
+possession installée : au moins 1 joueur derrière le ballon (part) : 0.999
+regroupement avec ballon : coéquipiers à moins de 5 m hors duel (part) : 0.044
+regroupement sans ballon : coéquipiers à moins de 5 m hors duel (part) : 0.122
+repli : latence (s) : 2.222
+repli : temps pour reformer le bloc (s) : 3.667
+repli : vitesse de recul (m/s) : -0.756
+réussite moyenne des passes disponibles (part) : 0.591
+solutions de passe faciles (nombre) : 1.643
+solutions de passe ouvertes (nombre) : 2.101
+stretch index avec ballon (m) : 20.264
+stretch index sans ballon (m) : 16.804
+suivi du ballon par le bloc, largeur (pente) : 0.307
+suivi du ballon par le bloc, longueur (pente) : 0.362
+supériorité locale des défenseurs (nombre) : 0.798
+surface avec ballon (m²) : 1551.673
+surface sans ballon (m²) : 1082.035
+temps au-dessus de 19,8 km/h (part) : 0.292
+temps par possession de joueur (s) : 1.96
+écart ligne-ballon sans ballon (m) : 18.386
+écart ligne-ballon sans ballon, porteur libre (m) : 43.707
+écart ligne-ballon sans ballon, porteur pressé (m) : 20.432
+équilibre : appels devant le ballon maintenus (part) : 0.048

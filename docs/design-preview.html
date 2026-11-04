@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulafoot — Design preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,500,700,800&display=swap">
+<style>
+  :root {
+    --primary: #1E9E5A;
+    --primary-dark: #157A44;
+    --secondary: #F5A623;
+    --n-0: #FFFFFF;
+    --n-50: #F7F8FA;
+    --n-100: #E7EAEF;
+    --n-300: #C7CDD6;
+    --n-500: #8A93A3;
+    --n-700: #4B5564;
+    --n-800: #1F2733;
+    --n-900: #0F172A;
+    --success: #2BAA5D;
+    --warning: #F5C518;
+    --error: #E63946;
+    --info: #3B82F6;
+
+    --font-display: 'Cabinet Grotesk', 'Plus Jakarta Sans', sans-serif;
+    --font-body: 'Plus Jakarta Sans', sans-serif;
+    --font-data: 'DM Sans', sans-serif;
+    --font-code: 'JetBrains Mono', monospace;
+
+    --sp-2xs: 2px; --sp-xs: 4px; --sp-sm: 8px; --sp-md: 16px;
+    --sp-lg: 24px; --sp-xl: 32px; --sp-2xl: 48px; --sp-3xl: 64px;
+
+    --r-sm: 6px; --r-md: 10px; --r-lg: 16px; --r-full: 9999px;
+
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+    --ease-move: cubic-bezier(0.65, 0, 0.35, 1);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--n-50);
+    color: var(--n-900);
+    font-family: var(--font-body);
+    line-height: 1.5;
+  }
+  h1, h2, h3, .display { font-family: var(--font-display); font-weight: 700; margin: 0; }
+  section { padding: var(--sp-3xl) var(--sp-xl); max-width: 1280px; margin: 0 auto; }
+  .section-label {
+    font-family: var(--font-code); font-size: 12px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--n-500); margin-bottom: var(--sp-md);
+  }
+  .swatch-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--sp-md); margin-bottom: var(--sp-xl); }
+  .swatch { border-radius: var(--r-md); overflow: hidden; border: 1px solid var(--n-100); }
+  .swatch .chip { height: 72px; }
+  .swatch .meta { padding: var(--sp-sm) var(--sp-md); background: var(--n-0); font-family: var(--font-code); font-size: 12px; }
+  .swatch .meta b { display: block; font-family: var(--font-body); font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+
+  .btn { font-family: var(--font-body); font-weight: 600; font-size: 14px; padding: 10px 18px; border-radius: var(--r-md); border: none; cursor: pointer; transition: transform 150ms var(--ease-move), filter 150ms; }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { filter: brightness(1.08); }
+  .btn-secondary { background: var(--secondary); color: var(--n-900); }
+  .btn-ghost { background: transparent; color: var(--primary); border: 1.5px solid var(--n-100); }
+  .row { display: flex; gap: var(--sp-md); flex-wrap: wrap; align-items: center; margin-bottom: var(--sp-lg); }
+
+  .field { display: flex; flex-direction: column; gap: 6px; width: 220px; }
+  .field label { font-size: 12px; font-weight: 600; color: var(--n-700); }
+  .field input { font-family: var(--font-body); padding: 9px 12px; border-radius: var(--r-sm); border: 1.5px solid var(--n-300); font-size: 14px; }
+  .field input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(30,158,90,0.15); }
+  .field.error input { border-color: var(--error); }
+  .field.error .hint { color: var(--error); font-size: 12px; }
+
+  .alert { padding: var(--sp-md); border-radius: var(--r-md); font-size: 14px; margin-bottom: var(--sp-sm); display: flex; gap: var(--sp-sm); align-items: center; }
+  .alert-success { background: #EAF8EF; color: var(--primary-dark); border: 1px solid #BFEBCF; }
+  .alert-warning { background: #FEF7E0; color: #8A6D00; border: 1px solid #F6E6A8; }
+  .alert-error { background: #FCEAEB; color: var(--error); border: 1px solid #F6C3C6; }
+  .alert-info { background: #EAF2FE; color: var(--info); border: 1px solid #C6DCFB; }
+
+  .card { background: var(--n-0); border-radius: var(--r-lg); border: 1px solid var(--n-100); padding: var(--sp-lg); }
+
+  table { width: 100%; border-collapse: collapse; font-family: var(--font-data); font-size: 14px; font-variant-numeric: tabular-nums; }
+  th { text-align: left; font-family: var(--font-code); font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--n-500); padding: var(--sp-sm) var(--sp-md); border-bottom: 2px solid var(--n-100); }
+  td { padding: 10px var(--sp-md); border-bottom: 1px solid var(--n-100); }
+  tr:hover td { background: var(--n-50); }
+  .num { text-align: right; }
+  .pos { width: 28px; height: 28px; border-radius: var(--r-sm); display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; }
+  .pos-up { background: #EAF8EF; color: var(--primary-dark); }
+  .pos-mid { background: var(--n-100); color: var(--n-700); }
+  .crest { width: 22px; height: 22px; border-radius: 50%; display: inline-block; vertical-align: middle; margin-right: 8px; }
+
+  /* Dashboard mockup */
+  .app-shell { display: grid; grid-template-columns: 220px 1fr; min-height: 560px; border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--n-100); background: var(--n-0); }
+  .sidebar { background: var(--n-900); color: white; padding: var(--sp-lg) var(--sp-md); }
+  .sidebar .brand { font-family: var(--font-display); font-size: 20px; font-weight: 800; color: white; margin-bottom: var(--sp-xl); display: flex; align-items: center; gap: 8px; }
+  .sidebar .brand .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--secondary); }
+  .nav-item { padding: 10px var(--sp-sm); border-radius: var(--r-sm); font-size: 14px; font-weight: 500; color: var(--n-300); margin-bottom: 4px; cursor: pointer; }
+  .nav-item.active { background: rgba(255,255,255,0.08); color: white; }
+  .main { padding: var(--sp-lg) var(--sp-xl); }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-lg); }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--secondary); display: inline-flex; align-items: center; justify-content: center; font-weight: 700; color: var(--n-900); font-family: var(--font-display); }
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-md); margin-bottom: var(--sp-lg); }
+  .stat-card { background: var(--n-0); border: 1px solid var(--n-100); border-radius: var(--r-md); padding: var(--sp-md); }
+  .stat-card .label { font-family: var(--font-code); font-size: 11px; color: var(--n-500); text-transform: uppercase; letter-spacing: 0.05em; }
+  .stat-card .value { font-family: var(--font-display); font-size: 28px; font-weight: 800; margin-top: 4px; }
+  .stat-card .delta { font-size: 12px; color: var(--primary-dark); font-weight: 600; margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<section>
+  <div class="section-label">01 · Specimen typographique</div>
+  <h1 class="display" style="font-size: 72px; line-height: 1.05; margin-bottom: var(--sp-sm);">Simulafoot</h1>
+  <p style="font-family: var(--font-display); font-size: 24px; font-weight: 500; color: var(--n-700); margin-bottom: var(--sp-xl);">
+    L'OM arrache le point du nul à la 93e — Cabinet Grotesk, display
+  </p>
+  <p style="max-width: 640px; font-size: 16px; color: var(--n-800); margin-bottom: var(--sp-xl);">
+    Après une saison entière simulée joueur par joueur, le classement de Ligue 1 se joue sur les dix dernières minutes :
+    deux cartons rouges, un but refusé pour hors-jeu, et un gardien remplaçant qui sauve sa équipe d'une relégation
+    qu'on ne voyait plus venir depuis la 30e journée. — Plus Jakarta Sans, body.
+  </p>
+  <div class="card" style="max-width: 420px; margin-bottom: var(--sp-xl);">
+    <div class="section-label" style="margin-bottom: var(--sp-sm);">Data / tabular-nums</div>
+    <table>
+      <tr><th>Buteur</th><th class="num">Buts</th><th class="num">Passes D.</th></tr>
+      <tr><td>K. Mbappé</td><td class="num">24</td><td class="num">7</td></tr>
+      <tr><td>R. Lacazette</td><td class="num">18</td><td class="num">11</td></tr>
+      <tr><td>J. David</td><td class="num">16</td><td class="num">4</td></tr>
+    </table>
+  </div>
+  <pre style="font-family: var(--font-code); background: var(--n-900); color: #C9F2D9; padding: var(--sp-md); border-radius: var(--r-md); font-size: 13px; max-width: 480px; overflow-x: auto;">GET /api/matches/2026-04-12/resume
+{ "score": [2, 1], "buteurs": ["Mbappé'71", "David'84"] }</pre>
+</section>
+
+<section>
+  <div class="section-label">02 · Palette &amp; composants</div>
+  <div class="swatch-grid">
+    <div class="swatch"><div class="chip" style="background: var(--primary);"></div><div class="meta"><b>Primary</b>#1E9E5A</div></div>
+    <div class="swatch"><div class="chip" style="background: var(--secondary);"></div><div class="meta"><b>Secondary</b>#F5A623</div></div>
+    <div class="swatch"><div class="chip" style="background: var(--n-900);"></div><div class="meta"><b>Neutral 900</b>#0F172A</div></div>
+    <div class="swatch"><div class="chip" style="background: var(--n-100);"></div><div class="meta"><b>Neutral 100</b>#E7EAEF</div></div>
+    <div class="swatch"><div class="chip" style="background: var(--success);"></div><div class="meta"><b>Success</b>#2BAA5D</div></div>
+    <div class="swatch"><div class="chip" style="background: var(--warning);"></div><div class="meta"><b>Warning</b>#F5C518</div></div>
+    <div class="swatch"><div class="chip" style="background: var(--error);"></div><div class="meta"><b>Error</b>#E63946</div></div>
+    <div class="swatch"><div class="chip" style="background: var(--info);"></div><div class="meta"><b>Info</b>#3B82F6</div></div>
+  </div>
+
+  <div class="row">
+    <button class="btn btn-primary">Lancer la saison</button>
+    <button class="btn btn-secondary">Rejouer ce match</button>
+    <button class="btn btn-ghost">Voir le détail</button>
+  </div>
+
+  <div class="row">
+    <div class="field"><label>Nom du club</label><input placeholder="Olympique de Marseille"></div>
+    <div class="field"><label>Budget transfert (M€)</label><input placeholder="42"></div>
+    <div class="field error"><label>Code club</label><input value="OM!"><span class="hint">3 lettres majuscules attendues</span></div>
+  </div>
+
+  <div class="alert alert-success">✓ Saison 2026-2027 générée — 380 matchs programmés.</div>
+  <div class="alert alert-warning">⚠ J. Mendes suspendu 2 matchs (2 cartons jaunes cumulés).</div>
+  <div class="alert alert-error">✕ Composition invalide : 2 gardiens sur la feuille de match.</div>
+  <div class="alert alert-info">ⓘ Le mercato d'hiver ouvre le 1er janvier.</div>
+</section>
+
+<section>
+  <div class="section-label">03 · Mockup — tableau de bord de compétition</div>
+  <div class="app-shell">
+    <div class="sidebar">
+      <div class="brand"><span class="dot"></span>Simulafoot</div>
+      <div class="nav-item active">Classement</div>
+      <div class="nav-item">Calendrier</div>
+      <div class="nav-item">Buteurs &amp; passeurs</div>
+      <div class="nav-item">Mon club</div>
+      <div class="nav-item">Mercato</div>
+    </div>
+    <div class="main">
+      <div class="topbar">
+        <h2 class="display" style="font-size: 22px;">Ligue 1 — Journée 28</h2>
+        <div class="avatar">OM</div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-card"><div class="label">Buts/match</div><div class="value">2.84</div><div class="delta">+0.12 vs J27</div></div>
+        <div class="stat-card"><div class="label">Cartons rouges</div><div class="value">3</div><div class="delta">journée 28</div></div>
+        <div class="stat-card"><div class="label">Meilleur buteur</div><div class="value">24</div><div class="delta">K. Mbappé</div></div>
+        <div class="stat-card"><div class="label">Matchs simulés</div><div class="value">336</div><div class="delta">/ 380</div></div>
+      </div>
+      <table>
+        <tr><th>#</th><th>Club</th><th class="num">Pts</th><th class="num">J</th><th class="num">+/-</th></tr>
+        <tr><td><span class="pos pos-up">1</span></td><td><span class="crest" style="background: var(--primary);"></span>Paris SG</td><td class="num">68</td><td class="num">28</td><td class="num">+41</td></tr>
+        <tr><td><span class="pos pos-up">2</span></td><td><span class="crest" style="background: var(--info);"></span>Monaco</td><td class="num">61</td><td class="num">28</td><td class="num">+24</td></tr>
+        <tr><td><span class="pos pos-mid">3</span></td><td><span class="crest" style="background: var(--secondary);"></span>Marseille</td><td class="num">55</td><td class="num">28</td><td class="num">+18</td></tr>
+        <tr><td><span class="pos pos-mid">4</span></td><td><span class="crest" style="background: var(--n-700);"></span>Lille</td><td class="num">52</td><td class="num">28</td><td class="num">+11</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>

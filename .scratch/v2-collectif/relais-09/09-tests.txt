@@ -1,0 +1,57 @@
+# Ticket v2-collectif/09 - tests et mesures
+
+## Suite complete (arbre courant = 7a94d64 + fichiers du ticket ; autres modifications non liees presentes : api, ui, tests/test_api_animation.py)
+Commande : PYTHONHASHSEED=0 uv run pytest tests -q -p no:cacheprovider
+........................................................................ [ 98%]
+..............................                                           [100%]
+2262 passed, 13 deselected in 1385.99s (0:23:05)
+(attendu avant le ticket : 2 249 = 2 244 du 01/11 + 5 du ticket 13 commite ; + 13 tests de tests/test_v2engine_compensations.py)
+
+## Mesures sur la base 7a94d64 (copies hors depot : base13 = git archive 7a94d64 ; apres13 = base13 + defense.py et cerveau.py du ticket), graine d'audit, scripts/measure_v2.py 20 matchs (les deux en parallele)
+### base13
+passes par minute : 15.873
+passes réussies (part) : 0.61
+tirs par équipe : 12.5
+buts par match : 2.5
+tacles par match : 44.75
+pertes de balle par match : 595.25
+pertes en transition par match : 169.75
+tirs de contre par match (récupération dans son camp) : 3.45
+tirs de contre par match (récupération dans le camp adverse) : 17.25
+temps de calcul par match (s) : 181.868
+passes par possession : 2.387
+pertes en transition (part des récupérations) : 0.285
+Diagnostic roles (diag_roles.py, hors depot, 4 matchs, Marking force 99/11) :
+4 matchs ; rÃ´le attribuÃ© pendant la possession adverse (passes en vol comprises) : 56.6%
+sans rÃ´le mais avec un lecteur de passe : 12.0%
+milieu dÃ©fensif en compensation : 0.0% du temps de possession adverse
+distance marqueur-attaquant, haut : mÃ©diane 8.05 m (42313 ticks)
+distance marqueur-attaquant, bas : mÃ©diane 8.40 m (41448 ticks)
+distance marqueur-attaquant, tous : mÃ©diane 8.24 m (83761 ticks)
+### apres13
+passes par minute : 15.903
+passes réussies (part) : 0.636
+tirs par équipe : 12.25
+buts par match : 2.7
+tacles par match : 50.0
+pertes de balle par match : 562.2
+pertes en transition par match : 144.65
+tirs de contre par match (récupération dans son camp) : 4.5
+tirs de contre par match (récupération dans le camp adverse) : 15.5
+temps de calcul par match (s) : 206.505
+passes par possession : 2.531
+pertes en transition (part des récupérations) : 0.257
+Diagnostic roles (diag_roles.py, hors depot, 4 matchs, Marking force 99/11) :
+4 matchs ; rÃ´le attribuÃ© pendant la possession adverse (passes en vol comprises) : 98.8%
+sans rÃ´le mais avec un lecteur de passe : 0.0%
+milieu dÃ©fensif en compensation : 7.7% du temps de possession adverse
+distance marqueur-attaquant, haut : mÃ©diane 7.48 m (56507 ticks)
+distance marqueur-attaquant, bas : mÃ©diane 7.82 m (59037 ticks)
+distance marqueur-attaquant, tous : mÃ©diane 7.68 m (115544 ticks)
+
+## Mesures anterieures sur 81f3b3d (sans ticket 13), detail dans le fichier ticket section Resultats
+Decomposition C3, 20 matchs : avant 3,35 tirs (400,7 recuperations dans son camp) ; A2 seul 4,30 (395,0) ; A2 + compensations 4,55 (400,1).
+Temps de calcul mesure seul (1 match) : 273 s avant, 241 s apres.
+C1 deplacements reels (tests/test_v2engine_compensations.py::_run, 1000 tirages) : moyen 96,2 %, Teamwork 99 99,2 %, Teamwork 11 91,3 %.
+Determinisme : empreinte sha256(repr(trace)) 10 min, graine d'audit, deux executions : e40b0564d4a4a897 identique (script C:/Users/omariani/AppData/Local/Temp/claude/C--Users-omariani-OneDrive---CY-Cergy-Paris-Universit--Documents-OLYV-Projet-foot-simulafoot/53247325-5ef2-4f85-9131-da60dde6196c/scratchpad/empreinte.py).
+Scripts de diagnostic : C:/Users/omariani/AppData/Local/Temp/claude/C--Users-omariani-OneDrive---CY-Cergy-Paris-Universit--Documents-OLYV-Projet-foot-simulafoot/53247325-5ef2-4f85-9131-da60dde6196c/scratchpad/diag_roles.py, C:/Users/omariani/AppData/Local/Temp/claude/C--Users-omariani-OneDrive---CY-Cergy-Paris-Universit--Documents-OLYV-Projet-foot-simulafoot/53247325-5ef2-4f85-9131-da60dde6196c/scratchpad/diag_trous.py

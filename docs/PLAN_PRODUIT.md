@@ -110,3 +110,7 @@ Le nombre de phases de construction (1 à 3) et la durée totale d'un temps fort
 ## Bloquée par
 
 - Phase 3
+
+## Chantier mis en pause après cette phase (23/10/2026)
+
+**Décision du propriétaire (interview `/grill-me`, session forkée, 23/10/2026)** : le rendu animé reste peu cohérent sur la majorité des joueurs (mouvement en bloc/générique hors rôle scripté actif, cf. `docs/known_issues.md` et `docs/PRD_PRODUIT.md` US-19) — priorité donnée à corriger ce problème de fond avant de poursuivre la richesse narrative. Une fois la Phase 4 ci-dessus terminée et validée, ce chantier (`temps-forts-multiphases`) s'arrête ici (le travail déjà livré, phases 1 à 4, reste en place) ; la session principale bascule sur `.scratch/plafond-vitesse-partage/01` puis `.scratch/mouvement-riche-tous-joueurs/01` à `/09`. Aucune reprise de ce chantier n'est planifiée pour l'instant.
