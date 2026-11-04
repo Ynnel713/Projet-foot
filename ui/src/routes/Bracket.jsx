@@ -6,27 +6,17 @@ import TeamLink from "../components/common/TeamLink";
 import MatchRow from "../components/matches/MatchRow";
 import ActionBar from "../components/common/ActionBar";
 import AnimationDialog from "../components/pitch/AnimationDialog";
+import BracketTree from "../components/bracket/BracketTree";
+import ChampionPanel from "../components/bracket/ChampionPanel";
+import { roundTitle } from "../utils/bracketLabels";
 
-// "Tour N" -> terminologie foot standard, calculée depuis le nombre de
-// confrontations du tour (1 confrontation = finale, 2 = 1/2, 4 = 1/4, 8 =
-// 1/8...) plutôt que depuis `round.number` -- une finale qui s'appelait
-// "Tour 4" n'a pas de sens pour l'utilisateur (retour terrain du
-// 29/09/2026).
-function roundLabel(nbTies) {
-  if (nbTies === 1) return "Finale";
-  if (nbTies === 2) return "1/2 finale";
-  return `1/${nbTies}e de finale`;
-}
-
-// Libellé d'un tour : celui imposé par le moteur (« Barrages » de la Ligue des Champions) sinon déduit du nombre de confrontations.
-function roundTitle(round) {
-  return round.label ?? roundLabel(round.ties.length);
-}
-
+// Phase finale (refonte UI, lot 6) : bureau = arbre (une colonne par tour) à gauche + détail du tour sélectionné à droite ; mobile =
+// sélecteur de tours + détail du tour choisi. Le tour courant est présélectionné ; toute action de simulation y ramène la sélection.
 export default function Bracket() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { refresh } = useOutletContext();
+  const { refresh, status } = useOutletContext();
+  const [selected, setSelected] = useState(null); // numéro du tour affiché ; null = le tour courant
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [launching, setLaunching] = useState(false); // « Lancement du live… » : simulation du tour avant le premier live
@@ -50,6 +40,7 @@ export default function Bracket() {
     try {
       const call = { leg: simulateBracketLeg, round: simulateBracketRound, advance: advanceBracketRound }[action];
       setData(await call(id));
+      setSelected(null);
       refresh();
     } finally {
       setLoading(false);
@@ -83,10 +74,10 @@ export default function Bracket() {
   if (!data) return <div className="p-6 text-sm text-gray-400">Chargement…</div>;
 
   const currentRound = data.rounds[data.rounds.length - 1];
-  const previousRounds = data.rounds.slice(0, -1);
+  const shownRound = data.rounds.find((r) => r.number === selected) ?? currentRound;
   const legsLeft = data.current_legs - data.current_legs_played;
   const legName = data.current_legs === 2 ? (data.current_legs_played === 0 ? "l'aller" : "le retour") : `la manche ${data.current_legs_played + 1}`;
-  const currentHasByes = currentRound.ties.some((t) => t.is_bye);
+  const shownHasByes = shownRound.ties.some((t) => t.is_bye);
 
   const tieCard = (round, t) => (
     <TieCard
@@ -102,34 +93,42 @@ export default function Bracket() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 min-h-0 overflow-y-auto p-3">
-        <div className="mx-auto w-full max-w-4xl">
-          {data.is_complete && (
-            <div className="rounded-lg bg-gold/10 border border-gold/30 text-gold text-sm px-3 py-2 text-center font-semibold mb-3">
-              🏆 Champion : {data.champion}
-            </div>
-          )}
+      <div className="flex-1 min-h-0 overflow-y-auto p-3 flex flex-col gap-3">
+        {data.is_complete && (
+          <ChampionPanel competitionId={id} champion={data.champion} subtitle={status?.championnat} bracket={data} />
+        )}
 
-          <h2 className="font-display text-2xl font-semibold text-white mb-2">{roundTitle(currentRound)}</h2>
-          {currentHasByes && (
-            <p className="text-caption text-gray-500 mb-2">
-              Le nombre de qualifiés n'est pas une puissance de 2 : les mieux classés sont exemptés (qualifiés d'office)
-              uniquement à ce tour, pour ramener le tableau à une puissance de 2. Aucun exempt aux tours suivants.
-            </p>
-          )}
-          <div className="flex flex-col gap-2">{currentRound.ties.map((t) => tieCard(currentRound, t))}</div>
+        {/* Mobile : un tour à la fois, choisi par puces. */}
+        <div role="group" aria-label="Choisir un tour" className="lg:hidden flex gap-1 overflow-x-auto shrink-0">
+          {data.rounds.map((r) => (
+            <button
+              key={r.number}
+              onClick={() => setSelected(r.number)}
+              aria-pressed={r.number === shownRound.number}
+              className={`min-h-11 px-3 shrink-0 rounded-lg text-data ${
+                r.number === shownRound.number ? "bg-surface-3 text-white font-semibold" : "bg-surface-2 text-gray-300"
+              }`}
+            >
+              {roundTitle(r)}
+            </button>
+          ))}
+        </div>
 
-          {/* Tours précédents, sous le tour en cours (l'arbre complet arrive au lot 6). */}
-          {previousRounds.length > 0 && (
-            <div className="mt-6 pt-4 border-t border-line">
-              {previousRounds.map((r) => (
-                <div key={r.number} className="mb-4">
-                  <h3 className="text-sm font-semibold text-gray-400 mb-1.5">{roundTitle(r)}</h3>
-                  <div className="flex flex-col gap-2">{r.ties.map((t) => tieCard(r, t))}</div>
-                </div>
-              ))}
-            </div>
-          )}
+        <div className="flex-1 min-h-0 lg:min-h-[24rem] flex flex-col lg:flex-row gap-3">
+          <div className="hidden lg:block flex-1 min-w-0 overflow-auto rounded-xl bg-bg">
+            <BracketTree rounds={data.rounds} selectedNumber={shownRound.number} currentNumber={currentRound.number} onSelect={setSelected} />
+          </div>
+
+          <div className="lg:w-[26rem] lg:shrink-0 lg:overflow-y-auto">
+            <h2 className="font-display text-2xl font-semibold text-white mb-2">{roundTitle(shownRound)}</h2>
+            {shownHasByes && (
+              <p className="text-caption text-gray-500 mb-2">
+                Le nombre de qualifiés n'est pas une puissance de 2 : les mieux classés sont exemptés (qualifiés d'office)
+                uniquement à ce tour, pour ramener le tableau à une puissance de 2. Aucun exempt aux tours suivants.
+              </p>
+            )}
+            <div className="flex flex-col gap-2">{shownRound.ties.map((t) => tieCard(shownRound, t))}</div>
+          </div>
         </div>
       </div>
 

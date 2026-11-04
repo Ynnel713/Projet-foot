@@ -346,7 +346,7 @@ Lots, dans l'ordre :
 4. Feuille de match V1 (données existantes de `/pitch`) — avancé avant le lot 3 (02/11/2026) ; livré (03/11/2026), validé expert + QC ; terrain sur bureau seulement, notes en chiffre neutre, recul du MDC de 5 % à l'affichage ; défaut préexistant des matchs retour (404) corrigé dans l'API (décision du propriétaire du 02/11/2026) (`.scratch/refonte-ui/issues/04-feuille-de-match.md`).
 4 bis. Phases finales, manches simulées une par une (ticket issu des retours du propriétaire) — livré (03/11/2026), validé expert + QC : `simulate_tie_leg` / `simulate_round_leg` (le moteur Poisson n'est pas touché), `POST /bracket/simulate-leg`, bouton « Simuler l'aller » / « Simuler le retour » (`.scratch/refonte-ui/issues/05-manches-une-par-une.md`).
 5. Club et joueur (effectif en tableau, calendrier et forme, fiche joueur en français) — livré (03/11/2026), validé expert + QC : nouvel endpoint en lecture seule `GET /clubs/{club}/fixtures` (moteur non touché), page club à deux onglets, 47 attributs traduits (`.scratch/refonte-ui/issues/06-club-et-joueur.md`).
-6. Tournois et moments forts (arbre des phases finales, écran de sacre).
+6. Tournois et moments forts (arbre des phases finales, écran de sacre) — livré (04/11/2026), validé expert + QC : arbre par tour (bureau) et sélecteur de tours (mobile), écran de sacre commun au championnat et aux tableaux (parcours ou podium, meilleur buteur et passeur), frontend seulement (`.scratch/refonte-ui/issues/07-tournois-et-sacre.md`).
 7. Finitions (accueil, championnats, recherche d'équipes, V2).
 
 Décisions API en attente du propriétaire (non bloquantes pour les lots 1 à 4) : cache de `/api/leagues` (12,5 s par appel), champ `journee` dans `MatchOut` (forme, calendrier), persistance des compétitions.

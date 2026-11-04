@@ -15,6 +15,7 @@ import MatchRow from "../components/matches/MatchRow";
 import MiniStandings from "../components/simulation/MiniStandings";
 import ActionBar from "../components/common/ActionBar";
 import AnimationDialog from "../components/pitch/AnimationDialog";
+import ChampionPanel from "../components/bracket/ChampionPanel";
 
 export default function Simulation() {
   const { id } = useParams();
@@ -156,10 +157,8 @@ export default function Simulation() {
         <div className="flex-1 min-h-0 overflow-y-auto p-3 flex flex-col gap-3">
           <ProgressBar current={status?.current_journee} total={status?.total_journees} />
 
-          {status?.is_over && (
-            <div className="rounded-lg bg-gold/10 border border-gold/30 text-gold text-sm px-3 py-2 text-center font-semibold">
-              🏆 Champion : {status.champion}
-            </div>
+          {status?.is_over && standings.length > 0 && (
+            <ChampionPanel competitionId={id} champion={status.champion} subtitle={status.championnat} standings={standings} />
           )}
 
           <section className="rounded-xl bg-surface border border-line overflow-hidden">
