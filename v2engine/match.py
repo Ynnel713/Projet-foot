@@ -513,7 +513,10 @@ def simulate_match(
 
     players = _build_players(home_lineup, "home", home_positions) + _build_players(away_lineup, "away", away_positions)
     ball = BallState(position=Vec2(PITCH_LENGTH_M / 2.0, PITCH_WIDTH_M / 2.0), velocity=Vec2(0.0, 0.0))
-    ball.restart = kickoff("home", players, 0.0, dead_s=0.0)  # coup d'envoi du match (ticket v2-collectif/29)
+    # Coup d'envoi du match (ticket v2-collectif/29) par l'équipe tirée au sort (Loi 8) ; l'autre engage la 2e période
+    # (ticket v2-coach-et-gestion-de-match/07).
+    first = "home" if random.random() < 0.5 else "away"
+    ball.restart = kickoff(first, players, 0.0, dead_s=0.0)
 
     trace = MatchTrace(home=home_club.name, away=away_club.name, tick_seconds=tick_seconds * record_every)
 
@@ -528,11 +531,27 @@ def simulate_match(
     transition = TransitionPlay()  # contre-attaque ou conservation après une récupération (ticket v2-collectif/11)
     scoring_team = None
     n_ticks = int(duration_minutes * 60.0 / tick_seconds)
+    half_tick = n_ticks // 2
     for i in range(n_ticks):
         minute = i * tick_seconds / 60.0
+        if i == half_tick and i > 0:
+            # Mi-temps (ticket v2-coach-et-gestion-de-match/07) : l'action en cours s'arrête (passe ou tir en vol,
+            # hors-jeu signalé, remise en attente), chacun reprend sa place de départ et l'autre équipe engage.
+            # Même sens de jeu qu'en 1re période : l'écran retourne la scène (terrain symétrique, rien n'y dépend du
+            # côté). Le replacement est immédiat : la pause n'est pas jouée, l'écran la cache derrière un bandeau.
+            for p in players:
+                p.position, p.velocity = p.home_target, Vec2(0.0, 0.0)
+            ball = BallState(position=Vec2(PITCH_LENGTH_M / 2.0, PITCH_WIDTH_M / 2.0), velocity=Vec2(0.0, 0.0))
+            ball.restart = kickoff("away" if first == "home" else "home", players, i * tick_seconds, dead_s=0.0)
+            situations = SituationTracker(delays_s=dict(trace.reaction_delays_s))
+            bloc, defense, transition = Bloc.from_players(players), DefensiveRoles(), TransitionPlay()
+            runs.clear()
+            intentions.clear()
+            scoring_team = None
+            trace.second_half_start_minute = minute
         before = dict(situations.current)
         for team, situation in situations.update(i * tick_seconds, ball, players, scoring_team).items():
-            if situation != before[team] or i == 0:
+            if situation != before[team] or i in (0, half_tick):
                 trace.situations.append(SituationRecord(minute, team, situation))
         transition.update(situations, ball, players, i * tick_seconds)
         bloc.update(players, ball, i * tick_seconds)  # hauteur de ligne sans ballon (tickets 05 et 23)

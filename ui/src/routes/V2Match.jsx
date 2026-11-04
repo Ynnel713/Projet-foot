@@ -15,7 +15,11 @@ const DEFAULT_SPEED = 1;
 const REPLAY_BEFORE_S = 8;
 const REPLAY_AFTER_S = 2;
 const REPLAY_SPEED = 0.4;
-const HALF_TIME_MIN = 45;
+const HALF_TIME_MIN = 45; // repli tant que le moteur n'a pas encore donné le début de la 2e période
+const HALF_TIME_BANNER_MS = 3000; // bandeau « MI-TEMPS », en temps réel quelle que soit la vitesse (ticket 07)
+
+// Début de la 2e période selon le moteur (ticket v2-coach-et-gestion-de-match/07).
+const halfStart = (trace) => trace.second_half_start_minute ?? HALF_TIME_MIN;
 // Le rejeu démarre quand ce nombre d'images (~1 s de match chacune) est calculé ; le reste arrive pendant qu'on regarde.
 const START_BUFFER_TICKS = 60;
 const POLL_MS = 1000;
@@ -28,7 +32,10 @@ function interpolatedTick(trace, seconds) {
   const i = Math.min(last, Math.floor(exact));
   const a = trace.ticks[i];
   const b = trace.ticks[Math.min(last, i + 1)];
-  const f = exact - i;
+  // la mi-temps replace tout le monde d'un coup : pas de glissade entre la dernière image de la 1re période et la
+  // première de la 2e (elle est cachée par le bandeau)
+  const half = halfStart(trace);
+  const f = a.minute < half && b.minute >= half ? 0 : exact - i;
   const mix = (u, v) => u + (v - u) * f;
   const minute = mix(a.minute, b.minute);
   // but entre les deux images : le ballon entre dans le but au lieu de glisser vers le rond central
@@ -62,6 +69,8 @@ export default function V2Match() {
   const [seen, setSeen] = useState(0); // instant le plus avancé déjà vu : le score ne recule pas pendant un ralenti
   const replayRef = useRef(null); // { end } : instant où le ralenti en cours s'arrête
   const replayedRef = useRef(0); // buts déjà rejoués au ralenti
+  const [halfBanner, setHalfBanner] = useState(false);
+  const halfRef = useRef({ shown: false, until: 0 }); // bandeau de mi-temps : déjà montré, fin (horloge réelle)
   const traceRef = useRef(null); // dernière trace reçue, lue par la boucle de lecture sans la relancer à chaque lecture
   const runRef = useRef(0); // numéro du lancement en cours : un lancement périmé ou un démontage arrête sa lecture
   useEffect(() => () => { runRef.current += 1; }, []);
@@ -89,7 +98,20 @@ export default function V2Match() {
       const end = (live.ticks.length - 1) * live.tick_seconds;
       const replay = replayRef.current;
       let next = Math.min(end, secondsRef.current + elapsed * (replay ? REPLAY_SPEED : speed));
-      if (replay && next >= replay.end) {
+      const half = halfRef.current;
+      const halfS = live.second_half_start_minute != null ? live.second_half_start_minute * 60 : null;
+      if (half.until) {
+        next = secondsRef.current; // bandeau en cours : le match attend
+        if (now >= half.until) {
+          half.until = 0;
+          setHalfBanner(false);
+        }
+      } else if (!half.shown && !replay && halfS != null && next >= halfS) {
+        half.shown = true;
+        half.until = now + HALF_TIME_BANNER_MS;
+        setHalfBanner(true);
+        next = halfS;
+      } else if (replay && next >= replay.end) {
         replayRef.current = null;
         setReplaying(false);
       } else if (!replay) {
@@ -148,6 +170,8 @@ export default function V2Match() {
           setSeen(0);
           replayRef.current = null;
           replayedRef.current = 0;
+          halfRef.current = { shown: false, until: 0 };
+          setHalfBanner(false);
           setReplaying(false);
           setSeconds(0);
           setPlaying(true);
@@ -210,7 +234,7 @@ export default function V2Match() {
   const tick = interpolatedTick(trace, seconds);
   // Changement de camp à la mi-temps : le moteur garde « domicile attaque vers x croissant » tout le match (terrain
   // symétrique, rien n'y dépend du côté) ; l'écran tourne la scène d'un demi-tour en 2e période.
-  const secondHalf = tick.minute >= HALF_TIME_MIN;
+  const secondHalf = tick.minute >= halfStart(trace);
   const view = secondHalf ? rotated(tick) : tick;
   const numbers = Object.fromEntries(
     ["home", "away"].flatMap((t) => (lineups?.[t]?.starters || []).map((p) => [p.name, p.number])),
@@ -287,7 +311,7 @@ export default function V2Match() {
 
       <div className="flex-1 min-h-0 flex items-center justify-center gap-3">
         <LineupPanel lineup={lineups?.home} color="#4f8ef7" />
-        <div className="flex flex-col items-center gap-1 w-full max-w-4xl">
+        <div className="relative flex flex-col items-center gap-1 w-full max-w-4xl">
           <Momentum trace={trace} seen={Math.max(seen, seconds)} />
           <V2Pitch
             tick={view}
@@ -297,6 +321,16 @@ export default function V2Match() {
             selected={selected}
             onSelect={setSelected}
           />
+          {halfBanner && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg pointer-events-none">
+              <div className="text-center">
+                <div className="text-3xl font-extrabold text-white tracking-widest">MI-TEMPS</div>
+                <div className="text-lg text-gray-200 tabular-nums">
+                  {trace.home} {homeGoals} - {awayGoals} {trace.away}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
         <LineupPanel lineup={lineups?.away} color="#e0b84a" />
       </div>

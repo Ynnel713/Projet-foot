@@ -110,6 +110,9 @@ class MatchTrace:
     offsides: list[OffsideEvent] = field(default_factory=list)  # hors-jeu sifflés (ticket v2-collectif/23)
     restarts: list[RestartEvent] = field(default_factory=list)  # remises en jeu (ticket v2-collectif/29)
     reaction_delays_s: dict[str, float] = field(default_factory=dict)  # par joueur (Anticipation, ticket v2-collectif/03)
+    # Minute du coup d'envoi de la 2e période (ticket v2-coach-et-gestion-de-match/07) ; None tant qu'elle n'est pas
+    # jouée. Le moteur garde son sens de jeu : c'est l'écran qui retourne la scène à partir de cette minute.
+    second_half_start_minute: float | None = None
 
     def record(self, minute: float, players: list[PlayerSnapshot], ball: BallSnapshot) -> None:
         self.ticks.append(Tick(minute=minute, players=tuple(players), ball=ball))

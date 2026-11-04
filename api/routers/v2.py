@@ -120,6 +120,7 @@ class MatchTraceOut(BaseModel):
     decisions: list[DecisionOut] = []
     situations: list[SituationOut] = []
     offsides: list[OffsideEventOut] = []
+    second_half_start_minute: float | None = None  # coup d'envoi de la 2e période (ticket v2-coach-et-gestion-de-match/07)
 
 
 class MatchProgressOut(BaseModel):
@@ -135,6 +136,7 @@ class MatchProgressOut(BaseModel):
     goals: list[GoalEventOut]
     situations: list[SituationOut]
     offsides: list[OffsideEventOut]
+    second_half_start_minute: float | None = None  # coup d'envoi de la 2e période (ticket v2-coach-et-gestion-de-match/07)
     first_tick: int
     ticks: list[TickOut]
     intentions: list[PlayerIntentionsOut] = []
@@ -250,6 +252,7 @@ def create_match(payload: SimulateV2Request) -> MatchTraceOut:
         decisions=_decisions_out(trace),
         situations=_situations_out(trace),
         offsides=_offsides_out(trace),
+        second_half_start_minute=trace.second_half_start_minute,
     )
 
 
@@ -334,6 +337,7 @@ def match_progress(job_id: str, from_tick: int = 0) -> MatchProgressOut:
         goals=_goals_out(trace),
         situations=_situations_out(trace),
         offsides=_offsides_out(trace),
+        second_half_start_minute=trace.second_half_start_minute,
         first_tick=first,
         ticks=[_tick_out(tick) for tick in trace.ticks[first:]],
         intentions=intention_segments(trace) if done else [],
