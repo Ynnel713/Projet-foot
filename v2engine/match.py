@@ -11,7 +11,7 @@ from __future__ import annotations
 import math
 import random
 from collections.abc import Callable
-from dataclasses import replace
+from dataclasses import dataclass, replace
 
 from ligue1sim.clubs import Club
 from ligue1sim.lineup import Lineup, pick_best_formation
@@ -32,7 +32,8 @@ from v2engine.defense import DefensiveRoles
 from v2engine.offside import HESITATION_S, OFFSIDE_OUT_S, offside_at_pass, sees_the_flag_probability
 from v2engine.possession import (BALL_FRICTION_PER_S, BALL_STOPPED_MPS, MAX_PASS_MPS, MISS_RETRY_S, attempt_control, missed_control_velocity,
                                  pass_velocity, reception_delay_s)
-from v2engine.restart import (AERIAL_LANDING_M, AERIEN, FREE_KICK, LONG_RESTART_M, PENALTY, PENALTY_CONVERSION, SOL,
+from v2engine.added_time import GRACE_S, HARD_STOP_S, added_minutes, played_minute
+from v2engine.restart import (AERIAL_LANDING_M, AERIEN, CORNER, FREE_KICK, LONG_RESTART_M, PENALTY, PENALTY_CONVERSION, SOL,
                               award, exit_point, foul_restart, is_aerial, kickoff, restart_target)
 from v2engine.shooting import attempt_shot, draw_blocker
 from v2engine.situation import SituationTracker
@@ -145,6 +146,30 @@ def _clear_offside(ball: BallState) -> None:
     celui qui a levé la main attend le sifflet, ou la fin du flottement, même si la passe est morte entre-temps
     (« play the whistle », directive du 28/10/2026). Il expire tout seul à `now_s + HESITATION_S`."""
     ball.offside_watch = set()
+
+
+@dataclass
+class LateSetPiece:
+    """Fin de période (ticket v2-coach-et-gestion-de-match/03) : l'arbitre ne siffle pas tant qu'un corner, un coup
+    franc ou un penalty accordé n'est pas joué ; l'action qui en découle va à son terme (prochain ballon mort ou
+    changement de possession), `GRACE_S` au plus ; butoir `hard_stop_s` contre une chaîne de corners sans fin."""
+    hard_stop_s: float = float("inf")
+    team: str | None = None  # équipe du dernier coup de pied arrêté attendu
+    grace_until_s: float | None = None
+
+    def whistle(self, ball: BallState, players: list[PlayerState], now_s: float) -> bool:
+        if now_s >= self.hard_stop_s:
+            return True
+        r = ball.restart
+        if r is not None and r.kind in (CORNER, FREE_KICK, PENALTY):
+            self.team, self.grace_until_s = r.team, None
+            return False
+        if self.team is None or r is not None:
+            return True
+        if self.grace_until_s is None:
+            self.grace_until_s = now_s + GRACE_S
+        holder_team = next((p.team for p in players if p.name == ball.holder), None)
+        return now_s >= self.grace_until_s or holder_team not in (None, self.team)
 
 
 def _award_offside_free_kick(ball: BallState, offender: PlayerState, players: list[PlayerState], now_s: float) -> None:
@@ -582,6 +607,7 @@ def _step_player(
     bloc: Bloc | None = None,
     defense: DefensiveRoles | None = None,
     transition: TransitionPlay | None = None,
+    played_minute: float | None = None,
 ) -> PlayerState:
     """Un tick d'un joueur : son cerveau (`cerveau.think` : perception, interprétation, décision) donne son
     intention, puis l'exécution le déplace vers la cible, à l'intensité voulue (ADR 0001). `runs` : espaces visés
@@ -593,7 +619,10 @@ def _step_player(
     intention = think(player, ball, players or [], minute, runs, perceived, bloc, defense, transition, previous)
     if intentions is not None:
         intentions[player.name] = intention
-    return step(player, dt, intention.target, minute, intention.intensity, intention.target_velocity)
+    # Fatigue sur le temps de jeu (`played_minute`, temps additionnel de la 1re période retiré en 2e) et non sur
+    # l'horloge du moteur (ticket v2-coach-et-gestion-de-match/03, réserve A1 du passage 2 de l'expert).
+    return step(player, dt, intention.target, minute if played_minute is None else played_minute, intention.intensity,
+                intention.target_velocity)
 
 
 def simulate_match(
@@ -639,9 +668,31 @@ def simulate_match(
     scoring_team = None
     n_ticks = int(duration_minutes * 60.0 / tick_seconds)
     half_tick = n_ticks // 2
-    for i in range(n_ticks):
+    # Temps additionnel (ticket v2-coach-et-gestion-de-match/03) : annoncé à la fin du temps réglementaire de chaque
+    # période, puis la période se termine à la fin annoncée, sauf coup de pied arrêté déjà accordé (voir `LateSetPiece.whistle`).
+    period, period_start_tick, regular_end_tick = 1, 0, half_tick
+    end_tick: int | None = None
+    late = LateSetPiece()
+    i = 0
+    while True:
         minute = i * tick_seconds / 60.0
-        if i == half_tick and i > 0:
+        if end_tick is None and i >= regular_end_tick:
+            start_min = period_start_tick * tick_seconds / 60.0
+            n = added_minutes(period, duration_minutes / 2.0,
+                              sum(1 for g in trace.goals if g.minute >= start_min),
+                              sum(1 for f in trace.fouls if f.outcome == PENALTY and f.minute >= start_min),
+                              f"{home_club.name}|{away_club.name}",
+                              fouls=sum(1 for f in trace.fouls if f.minute >= start_min),
+                              restarts=sum(1 for r in trace.restarts if r.minute >= start_min))
+            trace.added_minutes.append(n)
+            end_tick = i + round(n * 60.0 / tick_seconds)
+            late = LateSetPiece(hard_stop_s=end_tick * tick_seconds + HARD_STOP_S)
+        if end_tick is not None and i >= end_tick and late.whistle(ball, players, i * tick_seconds):
+            if period == 2:
+                break
+            period, period_start_tick, end_tick = 2, i, None
+            regular_end_tick = i + (n_ticks - half_tick)
+        if i == period_start_tick and period == 2:
             # Mi-temps (ticket v2-coach-et-gestion-de-match/07) : l'action en cours s'arrête (passe ou tir en vol,
             # hors-jeu signalé, remise en attente), chacun reprend sa place de départ et l'autre équipe engage.
             # Même sens de jeu qu'en 1re période : l'écran retourne la scène (terrain symétrique, rien n'y dépend du
@@ -658,13 +709,14 @@ def simulate_match(
             trace.second_half_start_minute = minute
         before = dict(situations.current)
         for team, situation in situations.update(i * tick_seconds, ball, players, scoring_team).items():
-            if situation != before[team] or i in (0, half_tick):
+            if situation != before[team] or i == period_start_tick:
                 trace.situations.append(SituationRecord(minute, team, situation))
         transition.update(situations, ball, players, i * tick_seconds)
         bloc.update(players, ball, i * tick_seconds)  # hauteur de ligne sans ballon (tickets 05 et 23)
         defense.update(players, ball, bloc, i * tick_seconds, situations.current)  # contre-pressing (ticket 10)
+        played = played_minute(minute, trace.second_half_start_minute, half_tick * tick_seconds / 60.0)
         players = [_step_player(p, ball, tick_seconds, minute, players, runs, intentions, situations, bloc, defense,
-                                transition) for p in players]
+                                transition, played_minute=played) for p in players]
         _resolve_player_collisions(players)
         scoring_team = _step_ball(ball, tick_seconds, players, i * tick_seconds, trace.decisions, trace.offsides,
                                   transition.mode, trace.restarts, trace.fouls)
@@ -680,5 +732,6 @@ def simulate_match(
                  for p in players],
                 BallSnapshot(position=ball.position, holder=ball.holder, mode=ball.mode, dead=ball.restart is not None),
             )
+        i += 1
 
     return trace

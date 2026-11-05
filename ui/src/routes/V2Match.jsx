@@ -20,6 +20,20 @@ const HALF_TIME_BANNER_MS = 3000; // bandeau « MI-TEMPS », en temps réel quel
 
 // Début de la 2e période selon le moteur (ticket v2-coach-et-gestion-de-match/07).
 const halfStart = (trace) => trace.second_half_start_minute ?? HALF_TIME_MIN;
+// Minute affichée, temps additionnel compris (ticket v2-coach-et-gestion-de-match/03, même règle que
+// `v2engine.added_time.display_minute`) : 12', 45+2', 67', 90+4'. Renvoie aussi la période et, en temps additionnel,
+// les minutes annoncées.
+function clock(trace, minute) {
+  const second = trace.second_half_start_minute != null && minute >= trace.second_half_start_minute;
+  const elapsed = second ? minute - trace.second_half_start_minute : minute;
+  const base = second ? HALF_TIME_MIN : 0;
+  const added = elapsed >= HALF_TIME_MIN;
+  return {
+    second,
+    label: added ? `${base + HALF_TIME_MIN}+${Math.floor(elapsed - HALF_TIME_MIN) + 1}'` : `${Math.floor(base + elapsed)}'`,
+    announced: added ? trace.added_minutes?.[second ? 1 : 0] : null,
+  };
+}
 // Le rejeu démarre quand ce nombre d'images (~1 s de match chacune) est calculé ; le reste arrive pendant qu'on regarde.
 const START_BUFFER_TICKS = 60;
 const POLL_MS = 1000;
@@ -234,7 +248,8 @@ export default function V2Match() {
   const tick = interpolatedTick(trace, seconds);
   // Changement de camp à la mi-temps : le moteur garde « domicile attaque vers x croissant » tout le match (terrain
   // symétrique, rien n'y dépend du côté) ; l'écran tourne la scène d'un demi-tour en 2e période.
-  const secondHalf = tick.minute >= halfStart(trace);
+  const time = clock(trace, tick.minute);
+  const secondHalf = time.second;
   const view = secondHalf ? rotated(tick) : tick;
   const numbers = Object.fromEntries(
     ["home", "away"].flatMap((t) => (lineups?.[t]?.starters || []).map((p) => [p.name, p.number])),
@@ -263,7 +278,8 @@ export default function V2Match() {
             {trace.home} {homeGoals} - {awayGoals} {trace.away}
           </div>
           <div className="text-caption text-gray-500 tabular-nums">
-            {Math.floor(tick.minute)}' · {secondHalf ? "2e" : "1re"} période
+            {time.label}
+            {time.announced != null && ` (+${time.announced})`} · {secondHalf ? "2e" : "1re"} période
             {!trace.done && ` · calcul ${Math.floor(available / 60)}'${waiting ? " (en attente…)" : ""}`}
           </div>
           <div className="text-caption text-gray-400">
@@ -316,6 +332,7 @@ export default function V2Match() {
           <V2Pitch
             tick={view}
             seconds={seconds}
+            warmUpFromS={halfStart(trace) * 60}
             numbers={numbers}
             lineups={lineups}
             selected={selected}
@@ -351,14 +368,15 @@ export default function V2Match() {
 // match), accentuée près des buts, plus un bonus à l'équipe qui a le ballon ; moyenne sur la minute.
 // ponytail : heuristique territoire + possession, sans les tirs (journal des décisions envoyé seulement en fin de
 // calcul) ; à enrichir avec tirs et occasions si la courbe paraît trop plate.
-const MOMENTUM_MINUTES = 90;
+const MOMENTUM_MINUTES = 90; // minimum : le temps additionnel allonge la frise (ticket v2-coach-et-gestion-de-match/03)
 const POSSESSION_BONUS = 0.15;
 
 function momentumByMinute(trace) {
-  const sums = new Array(MOMENTUM_MINUTES).fill(0);
-  const counts = new Array(MOMENTUM_MINUTES).fill(0);
+  const n = Math.max(MOMENTUM_MINUTES, Math.ceil(trace.ticks.at(-1)?.minute ?? 0));
+  const sums = new Array(n).fill(0);
+  const counts = new Array(n).fill(0);
   for (const t of trace.ticks) {
-    const m = Math.min(MOMENTUM_MINUTES - 1, Math.floor(t.minute));
+    const m = Math.min(n - 1, Math.floor(t.minute));
     const dx = (t.ball.x - L / 2) / (L / 2);
     const holderTeam = t.ball.holder && t.players.find((p) => p.name === t.ball.holder)?.team;
     sums[m] += dx * Math.abs(dx) + (holderTeam === "home" ? POSSESSION_BONUS : holderTeam === "away" ? -POSSESSION_BONUS : 0);
@@ -376,7 +394,7 @@ function Momentum({ trace, seen }) {
   // échelle sur les minutes déjà jouées seulement : la courbe ne trahit rien de la suite
   const scale = H / Math.max(0.2, ...values.map((v, m) => (m < now ? Math.abs(v ?? 0) : 0)));
   const goals = trace.goals.filter((g) => g.minute <= now);
-  const width = MOMENTUM_MINUTES * X;
+  const width = values.length * X;
   return (
     <svg viewBox={`-2 -6 ${width + 4} ${2 * H + 12}`} className="w-full" style={{ maxHeight: 110 }}>
       <title>Match momentum</title>
@@ -395,7 +413,7 @@ function Momentum({ trace, seen }) {
         ),
       )}
       <line x1={0} y1={H} x2={width} y2={H} stroke="rgba(255,255,255,0.3)" strokeWidth={0.2} />
-      <line x1={HALF_TIME_MIN * X} y1={0} x2={HALF_TIME_MIN * X} y2={2 * H} stroke="white" strokeWidth={0.6} />
+      <line x1={halfStart(trace) * X} y1={0} x2={halfStart(trace) * X} y2={2 * H} stroke="white" strokeWidth={0.6} />
       {goals.map((g, i) => (
         <text
           key={i}
@@ -496,7 +514,7 @@ function IntentionPanel({ trace, tick, selected }) {
       )}
       {decision && (
         <div className="text-data text-gray-400">
-          Dernière décision ({Math.floor(decision.minute)}') : {ACTIONS[decision.action] || decision.action}
+          Dernière décision ({clock(trace, decision.minute).label}) : {ACTIONS[decision.action] || decision.action}
           {decision.target ? ` vers ${decision.target}` : ""}, {decision.considered} option(s) envisagée(s)
           {decision.best_kind ? "" : decision.best ? ", la meilleure" : ", pas la meilleure"}
           {decision.best_kind && (
@@ -569,7 +587,6 @@ const BENCH_Y = W + MARGIN + TRACK + 3; // axe des bancs
 const BENCH_GAP = 4; // des bancs à la ligne médiane (m)
 const SEAT = 1.6; // largeur d'un siège (m)
 const WARMING_UP = 3; // remplaçants de champ qui s'échauffent en 2e période
-const WARM_UP_FROM_S = HALF_TIME_MIN * 60;
 
 function PlayerNumber({ x, y, value, size = 1.4 }) {
   if (value == null) return null;
@@ -595,8 +612,9 @@ function PlayerNumber({ x, y, value, size = 1.4 }) {
 // Banc d'une équipe sous le terrain (`side` -1 : à gauche de la ligne médiane, 1 : à droite) : entraîneur et
 // remplaçants assis ; en 2e période, quelques remplaçants de champ trottinent le long de la ligne de touche, de leur
 // côté du terrain (mouvement de va-et-vient purement décoratif, fonction du temps de match lu).
-function Bench({ lineup, side, color, seconds }) {
-  const warmers = seconds >= WARM_UP_FROM_S ? lineup.bench.filter((p) => p.poste !== "GK").slice(0, WARMING_UP) : [];
+// échauffement à partir du coup d'envoi de la 2e période, après le temps additionnel de la 1re (ticket coach/03)
+function Bench({ lineup, side, color, seconds, warmUpFromS }) {
+  const warmers = seconds >= warmUpFromS ? lineup.bench.filter((p) => p.poste !== "GK").slice(0, WARMING_UP) : [];
   const seated = lineup.bench.filter((p) => !warmers.includes(p));
   const seats = seated.length + 1; // + l'entraîneur, au bout côté ligne médiane
   const length = seats * SEAT + 1;
@@ -654,7 +672,7 @@ function GoalEnd({ flip }) {
   );
 }
 
-function V2Pitch({ tick, seconds, numbers, lineups, selected, onSelect }) {
+function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, selected, onSelect }) {
   const pad = MARGIN + TRACK;
   const stripe = L / STRIPES;
   const holder = tick.players.find((p) => p.name === tick.ball.holder);
@@ -692,8 +710,8 @@ function V2Pitch({ tick, seconds, numbers, lineups, selected, onSelect }) {
       ))}
       <GoalEnd />
       <GoalEnd flip />
-      {lineups && <Bench lineup={lineups.home} side={-1} color="#4f8ef7" seconds={seconds} />}
-      {lineups && <Bench lineup={lineups.away} side={1} color="#e0b84a" seconds={seconds} />}
+      {lineups && <Bench lineup={lineups.home} side={-1} color="#4f8ef7" seconds={seconds} warmUpFromS={warmUpFromS} />}
+      {lineups && <Bench lineup={lineups.away} side={1} color="#e0b84a" seconds={seconds} warmUpFromS={warmUpFromS} />}
 
       {tick.players.map((p) => (
         <g key={p.name} onClick={() => onSelect(p.name === selected ? null : p.name)} style={{ cursor: "pointer" }}>

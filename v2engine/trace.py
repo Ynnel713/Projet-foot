@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from v2engine.added_time import display_minute
 from v2engine.cerveau import Intention
 from v2engine.geometry import Vec2
 
@@ -130,6 +131,12 @@ class MatchTrace:
     # Minute du coup d'envoi de la 2e période (ticket v2-coach-et-gestion-de-match/07) ; None tant qu'elle n'est pas
     # jouée. Le moteur garde son sens de jeu : c'est l'écran qui retourne la scène à partir de cette minute.
     second_half_start_minute: float | None = None
+    # Minutes de temps additionnel annoncées à la fin de chaque période (ticket v2-coach-et-gestion-de-match/03).
+    added_minutes: list[int] = field(default_factory=list)
+
+    def display_minute(self, minute: float) -> str:
+        """Minute affichée (`12'`, `45+2'`, `90+4'`) d'un instant de la trace, pour le rendu et la narration."""
+        return display_minute(minute, self.second_half_start_minute)
 
     def record(self, minute: float, players: list[PlayerSnapshot], ball: BallSnapshot) -> None:
         self.ticks.append(Tick(minute=minute, players=tuple(players), ball=ball))

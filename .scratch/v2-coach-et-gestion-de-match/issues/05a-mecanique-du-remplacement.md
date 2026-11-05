@@ -14,6 +14,8 @@
 
 **Status:** à faire (constantes à proposer avant le code)
 
+**Lien avec le temps additionnel (ticket 03, 04/11/2026) :** le fond de 2e période de `v2engine/added_time.BACKGROUND_S` (180 à 330 s) inclut aujourd'hui les remplacements. Quand ils sont joués ici, compter le temps perdu par remplacement dans `added_minutes` et retirer leur part du fond, pour ne pas les compter deux fois.
+
 ## Acceptance criteria
 
 - [ ] Nombre de remplacements et minutes dans des fourchettes réelles sourcées (ou « non trouvé ») ; aucun avant la mi-temps (le remplacement sur blessure arrive avec `v2-attributs-restants/09b`)

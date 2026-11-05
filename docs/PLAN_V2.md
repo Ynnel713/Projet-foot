@@ -197,6 +197,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **Fautes, avantage et coups francs (04/11/2026, ticket `v2-collectif/30`)** : livré, validé expert + QC. Faute tirée sur tout tacle (30 % à Aggression 50), avantage selon la carte du danger (0,02, 3 s), coup franc de 33 s frappé ou passé par le preneur le plus proche, penalty provisoire à 78 % jusqu'au `v2-attributs-restants/02a`, gravité tracée pour le 09a. Fautes 9,4 par match (réel 21-26) : écart renvoyé au 22a ; coups francs frappés au but : critère renvoyé au 02b. Suite : coach `03`.
 
+**Temps additionnel (04/11/2026, ticket `v2-coach-et-gestion-de-match/03`)** : implémenté, en attente de clôture. Loi 7 : on rattrape buts (60 s), penalties (60 s) et un fond par période pour les causes pas encore jouées (blessures, VAR, cartons ; remplacements en 2e période jusqu'au ticket 05a), pas les remises en jeu ordinaires. Tirage sha256, sans toucher au flux `random`. Un corner, coup franc ou penalty accordé à la fin est joué, l'action va à son terme (30 s au plus). Mesuré sur 30 matchs : 2,7 min puis 5,4 min, 8,1 au total ; la fatigue suit le temps de jeu, pas l'horloge du moteur (Ligue 1 2025-26 : plus de 8 min). Minute `45+N'` / `90+N'` dans la trace et à l'écran. Environ 10 % de jeu en plus par match, repris à la calibration 22.
+
 **Correctif préalable (24/10/2026)** : `movement.step` perdait les attributs des joueurs dès le 2ᵉ tick (retour à 60 par défaut) ; passes, contrôles, tacles et tirs des Phases 2 à 4 ignoraient donc les vraies notes en match. Corrigé, test de régression dans `tests/test_v2engine_movement.py`.
 
 ### Bloquée par
