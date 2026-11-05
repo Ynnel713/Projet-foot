@@ -8,11 +8,11 @@ collé à un coéquipier."""
 
 from __future__ import annotations
 
-import random
 from collections.abc import Sequence
 from dataclasses import replace
 
 from v2engine.attributes import player_attribute, success_probability
+from v2engine.flux import DECISION, PLACEMENT
 from v2engine.geometry import PITCH_LENGTH_M, Vec2, clamp_to_pitch
 from v2engine.movement import PlayerState
 from v2engine.offside import ONSIDE_MARGIN_M
@@ -91,7 +91,7 @@ def depth_run(player: PlayerState, anchor: Vec2, ball: Vec2, line: float, holder
     if any(depth(t.x) >= line - ONSIDE_MARGIN_M - SPACE_REACHED_M and abs(t.y - anchor.y) < DEPTH_LANE_M
            for t in mate_targets):
         return None  # profondeur déjà prise dans ce couloir : il ne double pas l'appel
-    if not holding and random.random() >= depth_run_probability(player, holder):
+    if not holding and PLACEMENT.random() >= depth_run_probability(player, holder):
         return None
     return clamp_to_pitch(Vec2(line if forward > 0 else PITCH_LENGTH_M - line, anchor.y))
 
@@ -121,6 +121,6 @@ def choose_space(player: PlayerState, opponents: list[PlayerState], forward: flo
         return reachable, nearest + 0.01 * forward * point.x
 
     ranked = sorted(candidates, key=openness, reverse=True)
-    if random.random() < best_space_probability(player_attribute(player, "Off the Ball")) or len(ranked) == 1:
+    if DECISION.random() < best_space_probability(player_attribute(player, "Off the Ball")) or len(ranked) == 1:
         return ranked[0]
-    return random.choice(ranked[1:])
+    return DECISION.choice(ranked[1:])

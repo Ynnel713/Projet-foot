@@ -13,3 +13,4 @@ Règle : `CLAUDE.md`, section « Estimer la durée d'un ticket » (05/11/2026). 
 |---|---|---|---|---|---|---|---|---|---|
 | 05/11/2026 | v2-realisme/01f | mesure | 110 | 70 | − 36 % | 20/50/30/10 | 15/20/20/15 | élevée | Boucle de match déjà écrite dans un test existant ; aide de test seule, développement surestimé ; 20 min de corrections après la revue de l'expert (notes à champ dédié, mode de transition) |
 | 05/11/2026 | v2-realisme/01a | mesure | 135 | 140 | + 4 % | 30/45/30/30 | 30/30/30/50 | moyenne | — (sous 30 %) ; intégration plus longue (contrôle A/A et 60 matchs de mesure supplémentaires), développement plus court |
+| 06/11/2026 | v2-realisme/01b | mesure | 130 | 130 | 0 % | 20/50/30/30 | 15/35/30/50 | moyenne | — (sous 30 %) ; développement plus court (migration par script), intégration plus longue (2 tests dépendants de la graine, correction après le passage 1, mesure refaite) |

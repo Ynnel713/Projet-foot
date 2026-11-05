@@ -62,7 +62,7 @@ def test_player_receives_controls_and_passes_to_nearest_teammate(monkeypatch) ->
     assert ball.holder == "Receveur"
     assert ball.velocity == Vec2(0.0, 0.0)
 
-    monkeypatch.setattr("v2engine.possession.random.random", lambda: 0.0)  # force une passe précise
+    monkeypatch.setattr("v2engine.flux.PASSE.random", lambda: 0.0)  # force une passe précise
     _step_ball(ball, 0.1, players, now_s=ball.next_decision_s)  # après son temps de réception (v2-socle/06)
 
     assert ball.holder is None

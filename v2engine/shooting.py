@@ -9,11 +9,11 @@ toujours sa chance, pas de lecture tactique de quand tirer)."""
 from __future__ import annotations
 
 import math
-import random
 
 from ligue1sim.pitch_geometry import GOAL_WIDTH_M
 
 from v2engine.attributes import duel_probability, player_attribute, success_probability
+from v2engine.flux import TIR
 from v2engine.geometry import Vec2, in_penalty_area
 from v2engine.movement import PlayerState
 
@@ -183,7 +183,7 @@ def occasion_quality(player: PlayerState, goal: Vec2, keeper: PlayerState | None
 
 def attempt_shot(shooter: PlayerState, goal: Vec2, keeper: PlayerState | None, opponents: list[PlayerState]) -> bool:
     """`True` si le tir (non contré) devient un but."""
-    return random.random() < shot_probability(shooter, goal, keeper, opponents)
+    return TIR.random() < shot_probability(shooter, goal, keeper, opponents)
 
 
 def _blockers(shooter: PlayerState, goal: Vec2, opponents: list[PlayerState]) -> list[tuple[PlayerState, float]]:
@@ -208,7 +208,7 @@ def block_probability(shooter: PlayerState, goal: Vec2, opponents: list[PlayerSt
 
 def draw_blocker(shooter: PlayerState, goal: Vec2, opponents: list[PlayerState]) -> PlayerState | None:
     """Le défenseur qui contre ce tir-ci, ou `None` s'il passe (un tirage par défenseur de la ligne)."""
-    return next((o for o, chance in _blockers(shooter, goal, opponents) if random.random() < chance), None)
+    return next((o for o, chance in _blockers(shooter, goal, opponents) if TIR.random() < chance), None)
 
 
 # Issue d'un tir cadré arrêté (ticket v2-collectif/28b, constantes proposées le 05/11/2026, validées par délégation du
@@ -245,14 +245,14 @@ def save_shares(chance: float, origin: Vec2, goal: Vec2) -> tuple[float, float, 
 def save_outcome(chance: float, origin: Vec2, goal: Vec2) -> str:
     """Tire l'issue d'un arrêt : `HELD`, `PARRIED` ou `TIPPED` (un tirage)."""
     held, parried, _ = save_shares(chance, origin, goal)
-    r = random.random()
+    r = TIR.random()
     return HELD if r < held else PARRIED if r < held + parried else TIPPED
 
 
 def _shot_side(origin: Vec2, goal: Vec2) -> float:
     """Côté (+1 ou -1 en y) vers lequel file le tir prolongé ; tir central : au hasard."""
     if excentricity(origin, goal) < _CENTRAL_SHOT:
-        return 1.0 if random.random() < 0.5 else -1.0
+        return 1.0 if TIR.random() < 0.5 else -1.0
     return 1.0 if goal.y > origin.y else -1.0
 
 
@@ -264,11 +264,11 @@ def parry_velocity(origin: Vec2, goal: Vec2, keeper_at: Vec2, outcome: str, shot
     ballon claqué au-dessus de la barre, corner aussi (réserve A2 de l'expert, 05/11/2026 ; vraie hauteur avec
     `v2-hauteur-ballon/02a`)."""
     side = _shot_side(origin, goal)
-    speed = shot_speed * random.uniform(*PARRY_SPEED_SHARE)
+    speed = shot_speed * TIR.uniform(*PARRY_SPEED_SHARE)
     into_pitch = 1.0 if origin.x > goal.x else -1.0
     if outcome == TIPPED:
-        aim = Vec2(goal.x - into_pitch * 2.0, goal.y + side * (GOAL_WIDTH_M / 2.0 + random.uniform(*TIP_WIDE_M)))
+        aim = Vec2(goal.x - into_pitch * 2.0, goal.y + side * (GOAL_WIDTH_M / 2.0 + TIR.uniform(*TIP_WIDE_M)))
         return (aim - keeper_at).normalized() * speed
     high = 90.0 if excentricity(origin, goal) < _CENTRAL_SHOT else PARRY_ANGLE_DEG[1]
-    angle = math.radians(random.uniform(PARRY_ANGLE_DEG[0], high))
+    angle = math.radians(TIR.uniform(PARRY_ANGLE_DEG[0], high))
     return Vec2(into_pitch * math.sin(angle), side * math.cos(angle)) * speed

@@ -140,8 +140,8 @@ def fingerprint(scene: Scene) -> str:
 
 
 def seed_scene(value: int) -> None:
-    """Graine d'une scène : le module `random` (tirages pas encore migrés, D-V06) et les flux par sous-système
-    (perception, décision : ticket v2-realisme/01a), comme `simulate_match` au coup d'envoi."""
+    """Graine d'une scène : le module `random` (base des matchs, D-V06) et les flux par sous-système
+    (tickets v2-realisme/01a et 01b), comme `simulate_match` au coup d'envoi."""
     random.seed(value)
     seed_streams(value)
 

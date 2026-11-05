@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import random
 
+from scenes import seed_scene
 from v2engine import cerveau
 from v2engine.ball_state import BallState
 from v2engine.bloc import Bloc
@@ -41,7 +42,7 @@ def _scene(holder_poste: str = "MC") -> list[PlayerState]:
 
 
 def test_loss_starts_a_counter_press_followed_near_the_ball_but_not_by_the_deepest() -> None:
-    random.seed(1)
+    seed_scene(1)  # le module `random` ne tire plus pour la défense : les flux suivent la graine (ticket v2-realisme/01b)
     players = _scene()
     defense = _loss(players, "Gagnant", {"home": TRANSITION_DEFENSIVE, "away": TRANSITION_OFFENSIVE})
     assert defense.trigger_until["home"] > 0.1

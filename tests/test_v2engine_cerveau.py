@@ -112,10 +112,10 @@ def test_perception_alone_decides_whether_the_best_option_is_taken(monkeypatch) 
 
 def test_execution_alone_decides_the_quality_of_the_pass(monkeypatch) -> None:
     passer, target = _p("P", x=40, attributes={"Passing": 60}), _p("T", x=60)
-    monkeypatch.setattr("v2engine.possession.random.random", lambda: 0.0)  # passe précise
-    monkeypatch.setattr("v2engine.possession.random.uniform", lambda a, b: a)
+    monkeypatch.setattr("v2engine.flux.PASSE.random", lambda: 0.0)  # passe précise
+    monkeypatch.setattr("v2engine.flux.PASSE.uniform", lambda a, b: a)
     slow = pass_velocity(passer, target, [])
-    monkeypatch.setattr("v2engine.possession.random.uniform", lambda a, b: b)
+    monkeypatch.setattr("v2engine.flux.PASSE.uniform", lambda a, b: b)
     fast = pass_velocity(passer, target, [])
     assert fast.length() > slow.length()  # même intention, même choix : seul le dosage (exécution) change
 
@@ -204,7 +204,8 @@ def test_teammates_keep_their_run_while_their_pass_is_in_flight() -> None:
 def test_a_depth_run_is_remembered_and_held_at_the_next_search(monkeypatch) -> None:
     holder, mate = _p("H"), _p("M", x=70, poste="BU")
     defenders = [_p("D1", team="away", x=80, y=20), _p("D2", team="away", x=80, y=48), _p("G", team="away", x=104)]
-    monkeypatch.setattr(cerveau.random, "random", lambda: 0.999)  # tout nouveau tirage serait perdu
+    monkeypatch.setattr("v2engine.flux.PLACEMENT.random", lambda: 0.999)  # tout nouvel appel serait perdu
+    monkeypatch.setattr("v2engine.flux.DEFENSE.random", lambda: 0.999)
     runs: dict = {"M": (Vec2(80.0, 34.0), 59.0, "H")}  # appel dans le dos lancé pour H, délai à peine écoulé
     intention = cerveau.think(mate, _ball(holder="H"), [holder, mate, *defenders], 1.0, runs)
     assert intention.target.x >= 79.0 and runs["M"][2] == "H"  # il tient la ligne, sans nouveau tirage
@@ -213,7 +214,8 @@ def test_a_depth_run_is_remembered_and_held_at_the_next_search(monkeypatch) -> N
 def test_a_held_depth_run_does_not_survive_a_loss_of_the_ball(monkeypatch) -> None:
     holder, mate = _p("H"), _p("M", x=70, poste="BU")
     defenders = [_p("D1", team="away", x=80, y=20), _p("D2", team="away", x=80, y=48), _p("G", team="away", x=104)]
-    monkeypatch.setattr(cerveau.random, "random", lambda: 0.999)  # tout nouveau tirage serait perdu
+    monkeypatch.setattr("v2engine.flux.PLACEMENT.random", lambda: 0.999)  # tout nouvel appel serait perdu
+    monkeypatch.setattr("v2engine.flux.DEFENSE.random", lambda: 0.999)
     runs: dict = {"M": (Vec2(80.0, 34.0), 10.0, "H")}  # lancé pour H, il y a 50 s : la possession a changé depuis
     intention = cerveau.think(mate, _ball(holder="H"), [holder, mate, *defenders], 1.0, runs)
     assert intention.target.x < 79.0 and len(runs["M"]) == 2  # retiré au sort, perdu : espace ordinaire

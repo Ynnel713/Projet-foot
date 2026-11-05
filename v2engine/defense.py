@@ -67,13 +67,13 @@ l'axe. Les autres se replient (`cerveau`, intensité de Work Rate, `press_intens
 from __future__ import annotations
 
 import math
-import random
 from dataclasses import dataclass, field, replace
 
 from v2engine.anticipation import meeting_point, reaction_delay_s
 from v2engine.attributes import player_attribute, success_probability
 from v2engine.ball_state import BallState
 from v2engine.bloc import POSITIONING_REDRAW_S, Bloc
+from v2engine.flux import DEFENSE
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch
 from v2engine.movement import PlayerState, accel_tau_s, max_speed_mps
 from v2engine.possession import BALL_FRICTION_PER_S, MISS_RETRY_S
@@ -220,7 +220,7 @@ class DefensiveRoles:
         self.followed = {}
         for p in players:
             if p.team == team:
-                self.follows[p.name] = p.name not in excluded and random.random() < follow_probability(p)
+                self.follows[p.name] = p.name not in excluded and DEFENSE.random() < follow_probability(p)
 
     def _counter_press(self, team: str, players: list[PlayerState], ball: BallState, now_s: float) -> None:
         """Contre-pressing à la perte (ticket v2-collectif/10) : pressing d'équipe pour `team`, suivi seulement par les
@@ -268,10 +268,10 @@ class DefensiveRoles:
                              key=lambda p: p.position.distance_to(goal))
             if not options:
                 self.lanes[key] = None
-            elif len(options) == 1 or random.random() < good_lane_probability(presser):
+            elif len(options) == 1 or DEFENSE.random() < good_lane_probability(presser):
                 self.lanes[key] = options[0].name
             else:
-                self.lanes[key] = random.choice(options[1:]).name
+                self.lanes[key] = DEFENSE.choice(options[1:]).name
         return next((p for p in players if p.name == self.lanes[key]), None)
 
     def _keep(self, previous: dict[tuple[str, str], str], role: str, mate: str, free: list[PlayerState], point: Vec2,
@@ -432,14 +432,14 @@ class DefensiveRoles:
         """Accepte-t-il de quitter sa place pour combler celle de `owner` ? Teamwork, un tirage par trou."""
         key = (owner.name, candidate.name)
         if key not in self.willing:
-            self.willing[key] = random.random() < follow_probability(candidate)
+            self.willing[key] = DEFENSE.random() < follow_probability(candidate)
         return self.willing[key]
 
     def leaves_the_bloc(self, player: PlayerState, now_s: float) -> bool:
         """Sans rôle et près du ballon, quitte-t-il quand même le bloc pour y aller ? Tiré toutes les 5 s (Teamwork)."""
         leaves, next_s = self.leaving.get(player.name, (False, 0.0))
         if now_s >= next_s:
-            leaves = random.random() < leave_probability(player)
+            leaves = DEFENSE.random() < leave_probability(player)
             self.leaving[player.name] = (leaves, now_s + LEAVE_REDRAW_S)
         return leaves
 

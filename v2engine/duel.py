@@ -7,10 +7,10 @@ pas de lecture tactique de QUAND tacler, ça viendra en Phase 5+."""
 from __future__ import annotations
 
 import math
-import random
 from dataclasses import dataclass
 
 from v2engine.attributes import duel_probability, player_attribute, success_probability
+from v2engine.flux import ARBITRAGE, DUEL
 from v2engine.movement import PlayerState
 
 # Taux de BASE (tentatives par seconde de contact) auquel un adversaire à portée tente un tacle
@@ -44,7 +44,7 @@ def attempt_tackle_probability(aggression: float) -> float:
 
 def foul_severity() -> str:
     """Gravité d'une faute (voir `_RECKLESS_SHARE`)."""
-    r = random.random()
+    r = ARBITRAGE.random()
     return EXCESSIVE if r < _EXCESSIVE_SHARE else RECKLESS if r < _EXCESSIVE_SHARE + _RECKLESS_SHARE else CARELESS
 
 
@@ -67,7 +67,7 @@ def tackle_success_probability(tackler: PlayerState, holder: PlayerState) -> flo
 
 def should_attempt_tackle(aggression: float, dt: float) -> bool:
     """Tirage sur un tick de `dt` secondes : indépendant du pas de simulation (taux par seconde)."""
-    return random.random() < 1.0 - math.exp(-attempt_tackle_probability(aggression) * dt)
+    return DUEL.random() < 1.0 - math.exp(-attempt_tackle_probability(aggression) * dt)
 
 
 @dataclass(frozen=True)
@@ -80,6 +80,6 @@ def resolve_tackle(tackler: PlayerState, holder: PlayerState) -> TackleResult:
     """Résout un tacle déjà tenté (voir `should_attempt_tackle`) : jamais une issue garantie,
     même à écart d'attributs extrême (règle "jamais binaire" du guide, voir `duel_probability`). Une faute annule le
     gain du ballon."""
-    won = random.random() < tackle_success_probability(tackler, holder)
-    foul = random.random() < foul_probability(player_attribute(tackler, "Aggression"))
+    won = DUEL.random() < tackle_success_probability(tackler, holder)
+    foul = DUEL.random() < foul_probability(player_attribute(tackler, "Aggression"))
     return TackleResult(won=won and not foul, foul=foul)

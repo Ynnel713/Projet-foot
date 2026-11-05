@@ -75,7 +75,7 @@ def test_space_reachable_by_the_holder_comes_first() -> None:
     def reach(target: Vec2) -> float:
         return pass_success_probability(holder, replace(runner, position=target), opponents)
 
-    with mock.patch("random.random", return_value=0.0):  # meilleur espace
+    with mock.patch("v2engine.flux.DECISION.random", return_value=0.0):  # meilleur espace
         alone = choose_space(runner, opponents, forward=1.0)
         supported = choose_space(runner, opponents, forward=1.0, holder=holder)
     assert reach(alone) < OPEN_LANE_PROBABILITY  # le plus libre est trop loin du porteur

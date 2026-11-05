@@ -8,10 +8,10 @@ receveur plus ou moins difficile. Composure réduit la part de difficulté due �
 from __future__ import annotations
 
 import math
-import random
 from collections.abc import Sequence
 
 from v2engine.attributes import duel_probability, player_attribute, success_probability
+from v2engine.flux import PASSE
 from v2engine.geometry import Vec2
 from v2engine.movement import PlayerState
 
@@ -105,7 +105,7 @@ def attempt_control(player: PlayerState, ball_velocity: Vec2 = Vec2(0.0, 0.0),
     """Un joueur au contact du ballon tente de le contrôler : First Touch contre la difficulté du ballon reçu
     (vitesse par rapport au ballon idéal, pression). Jamais garanti (règle « jamais binaire » du guide)."""
     difficulty = control_difficulty(player, ball_velocity, opponents)
-    return random.random() < duel_probability(player_attribute(player, "First Touch"), difficulty, **_SUCCESS)
+    return PASSE.random() < duel_probability(player_attribute(player, "First Touch"), difficulty, **_SUCCESS)
 
 
 def missed_control_velocity(player: PlayerState, ball_velocity: Vec2, opponents: Sequence[PlayerState] = ()) -> Vec2:
@@ -117,7 +117,7 @@ def missed_control_velocity(player: PlayerState, ball_velocity: Vec2, opponents:
         base = Vec2(1.0, 0.0)  # ni ballon ni joueur en mouvement : direction fixe
     hardness = (control_difficulty(player, ball_velocity, opponents) - _BASE_DIFFICULTY) / (_HARDEST_CONTROL - _BASE_DIFFICULTY)
     limit = MISS_DEVIATION_MIN_DEG + (MISS_DEVIATION_MAX_DEG - MISS_DEVIATION_MIN_DEG) * min(1.0, max(0.0, hardness))
-    angle = math.radians(random.uniform(-limit, limit))
+    angle = math.radians(PASSE.uniform(-limit, limit))
     speed = max(MISS_SPEED_SHARE * base.length(), 1.0)  # jamais collé au pied : au moins 1 m/s
     direction = base.normalized()
     cos_a, sin_a = math.cos(angle), math.sin(angle)
@@ -138,9 +138,9 @@ def pass_aim(passer: PlayerState, target: PlayerState, opponents: Sequence[Playe
     arrival = max(BALL_STOPPED_MPS, speed + distance * log_f)  # < 6 m/s si la vitesse est plafonnée (passe > ~47 m)
     travel_s = math.log(arrival / speed) / log_f
     aim = target.position + target.velocity * (travel_s * dosage_quality(passer))  # dans la course, selon le dosage
-    if random.random() >= pass_success_probability(passer, target, opponents):
-        angle = random.uniform(0.0, 2.0 * math.pi)
-        miss = random.uniform(*_MISS_SHARE) * distance
+    if PASSE.random() >= pass_success_probability(passer, target, opponents):
+        angle = PASSE.uniform(0.0, 2.0 * math.pi)
+        miss = PASSE.uniform(*_MISS_SHARE) * distance
         aim = aim + Vec2(miss * math.cos(angle), miss * math.sin(angle))
     return aim
 
@@ -151,7 +151,7 @@ def pass_velocity(passer: PlayerState, target: PlayerState, opponents: Sequence[
     aim = pass_aim(passer, target, opponents)
     quality = dosage_quality(passer)
     error = _DOSAGE_ERROR[0] + (_DOSAGE_ERROR[1] - _DOSAGE_ERROR[0]) * quality
-    speed = min(MAX_PASS_MPS, _launch_speed(passer.position.distance_to(aim)) * (1.0 + random.uniform(-error, error)))
+    speed = min(MAX_PASS_MPS, _launch_speed(passer.position.distance_to(aim)) * (1.0 + PASSE.uniform(-error, error)))
     return (aim - passer.position).normalized() * speed
 
 

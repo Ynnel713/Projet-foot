@@ -23,7 +23,7 @@ from v2engine.ball_state import BallState
 from v2engine.bloc import Bloc
 from v2engine.danger import danger
 from v2engine.duel import foul_severity, resolve_tackle, should_attempt_tackle
-from v2engine.flux import seed_streams
+from v2engine.flux import ARBITRAGE, PERCEPTION, TIR, seed_streams
 from v2engine.formation import initial_positions
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch
 from v2engine.movement import PlayerState, step
@@ -289,7 +289,7 @@ def _play_penalty(ball: BallState, taker: PlayerState, players: list[PlayerState
     `PENALTY_CONVERSION` ; raté, le gardien garde le ballon (ponytail : ni poteau ni ballon repoussé avant le 02a)."""
     ball.last_toucher = taker.name
     goal = _OPPONENT_GOAL[taker.team]
-    scored = random.random() < PENALTY_CONVERSION
+    scored = TIR.random() < PENALTY_CONVERSION
     if shots is not None:
         shots.append(ShotEvent(minute, taker.team, taker.name, taker.position.x, taker.position.y,
                                PENALTY_CONVERSION, "but" if scored else HELD, "penalty"))
@@ -466,7 +466,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                 # Contré (ticket v2-collectif/33) : le ballon rebondit sur le défenseur, dévié d'au plus 60° et à moitié
                 # de sa vitesse ; libre, il peut sortir (corner s'il file derrière la ligne de but) ou être repris.
                 shot = (goal - holder.position).normalized()
-                turn = math.radians(random.uniform(-SHOT_DEFLECTION_DEG, SHOT_DEFLECTION_DEG))
+                turn = math.radians(TIR.uniform(-SHOT_DEFLECTION_DEG, SHOT_DEFLECTION_DEG))
                 bounce = Vec2(shot.x * math.cos(turn) - shot.y * math.sin(turn),
                               shot.x * math.sin(turn) + shot.y * math.cos(turn))
                 ball.holder = None
@@ -490,10 +490,10 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
             # peut être contré en route ; il sort (sortie de but, ou corner s'il est dévié par un défenseur). Cadré : le
             # gardien adverse le récupère (arrêts variés : ticket 28). Sans gardien identifiable (effectif synthétique),
             # le ballon reste simplement libre là où le tir a été tenté.
-            if random.random() < SHOT_WIDE_SHARE:
+            if TIR.random() < SHOT_WIDE_SHARE:
                 record("à côté")
-                side = 1.0 if random.random() < 0.5 else -1.0
-                wide = GOAL_WIDTH_M / 2.0 + random.uniform(*SHOT_WIDE_M)
+                side = 1.0 if TIR.random() < 0.5 else -1.0
+                wide = GOAL_WIDTH_M / 2.0 + TIR.uniform(*SHOT_WIDE_M)
                 aim = Vec2(goal.x, GOAL_CENTER_Y + side * wide)
                 ball.holder = None
                 ball.velocity = (aim - ball.position).normalized() * SHOT_SPEED_MPS
@@ -547,7 +547,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                 # « Play the whistle » : les défenseurs qui voient le drapeau lèvent la main et attendent (ils ne
                 # s'arrêtent pas : le moteur ne siffle qu'au contact du ballon).
                 for opponent in opponents:
-                    if random.random() < sees_the_flag_probability(player_attribute(opponent, "Anticipation")):
+                    if PERCEPTION.random() < sees_the_flag_probability(player_attribute(opponent, "Anticipation")):
                         ball.hesitation[opponent.name] = now_s + HESITATION_S
         else:
             ball.velocity = Vec2(0.0, 0.0)  # conduite : le ballon suit le porteur (voir `simulate_match`)
@@ -717,7 +717,7 @@ def simulate_match(
     marquer ou None) -- lecture seule, pour les mesures (`scripts/measure_v2.py`), sans effet sur le jeu. `on_start` :
     reçoit la trace dès sa création, avant le premier tick : l'API la lit pendant qu'elle se remplit (rejeu en direct)."""
     # Flux aléatoires par sous-système (ticket v2-realisme/01a, D-V13) : un seul tirage du module `random` donne
-    # la base du match ; perception et décision en dérivent chacune leur propre suite.
+    # la base du match ; chaque sous-système en dérive sa propre suite (01b).
     seed_streams(random.getrandbits(64))
     home_lineup = pick_best_formation(home_club)
     away_lineup = pick_best_formation(away_club)
@@ -729,7 +729,7 @@ def simulate_match(
     ball = BallState(position=Vec2(PITCH_LENGTH_M / 2.0, PITCH_WIDTH_M / 2.0), velocity=Vec2(0.0, 0.0))
     # Coup d'envoi du match (ticket v2-collectif/29) par l'équipe tirée au sort (Loi 8) ; l'autre engage la 2e période
     # (ticket v2-coach-et-gestion-de-match/07).
-    first = "home" if random.random() < 0.5 else "away"
+    first = "home" if ARBITRAGE.random() < 0.5 else "away"
     ball.restart = kickoff(first, players, 0.0, dead_s=0.0)
 
     trace = MatchTrace(home=home_club.name, away=away_club.name, tick_seconds=tick_seconds * record_every)

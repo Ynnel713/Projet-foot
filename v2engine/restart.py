@@ -17,13 +17,13 @@ Pas de vitesse propre à la touche : le ballon suit la loi de passe (`possession
 
 from __future__ import annotations
 
-import random
 from dataclasses import dataclass
 
 from ligue1sim.pitch_geometry import PENALTY_SPOT_DISTANCE_M
 
 from v2engine.attributes import player_attribute
 from v2engine.decision import best_choice_probability
+from v2engine.flux import DECISION
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, in_penalty_area
 from v2engine.movement import PlayerState
 from v2engine.possession import pass_success_probability, pressure
@@ -181,9 +181,9 @@ def restart_target(taker: PlayerState, kind: str, players: list[PlayerState]) ->
         return pass_success_probability(taker, mate, opponents) * (1.0 - pressure(mate, opponents)) * progress
 
     ranked = sorted(mates, key=value, reverse=True)
-    if len(ranked) == 1 or random.random() < best_choice_probability(player_attribute(taker, "Decisions")):
+    if len(ranked) == 1 or DECISION.random() < best_choice_probability(player_attribute(taker, "Decisions")):
         return ranked[0]
-    return random.choice(ranked[1:])
+    return DECISION.choice(ranked[1:])
 
 
 def is_aerial(kind: str, taker: PlayerState, target: PlayerState) -> bool:

@@ -37,12 +37,12 @@ de 5 m de son but :
 from __future__ import annotations
 
 import math
-import random
 from dataclasses import dataclass, field
 
 from v2engine.attributes import player_attribute, success_probability
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch
 from v2engine.ball_state import BallState
+from v2engine.flux import PLACEMENT
 from v2engine.movement import PlayerState, max_speed_mps
 from v2engine.offside import TRAP_DEPTH_M
 from v2engine.situation import DEFENSE_PLACEE, TRANSITION_DEFENSIVE
@@ -211,8 +211,8 @@ class Bloc:
         la couverture (ticket v2-collectif/07), une seule erreur par joueur."""
         error, next_s = self.errors.get(player.name, (None, 0.0))
         if error is None or now_s >= next_s:
-            angle = random.uniform(0.0, 2.0 * math.pi)
-            distance = random.uniform(0.0, 2.0 * positioning_error_m(player))
+            angle = PLACEMENT.uniform(0.0, 2.0 * math.pi)
+            distance = PLACEMENT.uniform(0.0, 2.0 * positioning_error_m(player))
             error = Vec2(math.cos(angle) * distance, math.sin(angle) * distance)
             self.errors[player.name] = (error, now_s + POSITIONING_REDRAW_S)
         return error

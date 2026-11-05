@@ -165,8 +165,9 @@ def test_the_compensator_keeps_the_place_until_the_owner_is_back_within_5_m() ->
     assert _compensator(_update(halfway, bloc, defense=defense)) is None  # 7 m sans titulaire : pas de trou (> 10 m)
 
 
-def test_cascade_stops_after_two_levels() -> None:
+def test_cascade_stops_after_two_levels(monkeypatch) -> None:
     random.seed(0)
+    monkeypatch.setattr("v2engine.flux.DEFENSE.random", lambda: 0.0)  # chaque candidat accepte : seule la structure compte
     players, bloc, place, _ = _scene(mdc_offset=Vec2(-5.0, -30.0), Teamwork=99)
     players = [replace(p, attributes={"Teamwork": 99}) if p.name == "DC2" else p for p in players]
     defense = _update(players, bloc)

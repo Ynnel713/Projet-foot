@@ -77,8 +77,8 @@ def _arrival_speed(launch: float, distance: float) -> float:
 
 
 def test_well_dosed_pass_arrives_at_ideal_speed_and_in_the_run(monkeypatch) -> None:
-    monkeypatch.setattr("v2engine.possession.random.random", lambda: 0.0)  # passe réussie
-    monkeypatch.setattr("v2engine.possession.random.uniform", lambda a, b: 0.0)  # pas d'erreur de dosage
+    monkeypatch.setattr("v2engine.flux.PASSE.random", lambda: 0.0)  # passe réussie
+    monkeypatch.setattr("v2engine.flux.PASSE.uniform", lambda a, b: 0.0)  # pas d'erreur de dosage
     passer = _player(attributes={"Passing": 99})
     runner = _player("R", position=Vec2(55.0, 34.0), velocity=Vec2(0.0, 5.0))
     aim = pass_aim(passer, runner)
@@ -88,30 +88,30 @@ def test_well_dosed_pass_arrives_at_ideal_speed_and_in_the_run(monkeypatch) -> N
 
 
 def test_pass_speed_is_capped_at_30_mps(monkeypatch) -> None:
-    monkeypatch.setattr("v2engine.possession.random.random", lambda: 0.0)
+    monkeypatch.setattr("v2engine.flux.PASSE.random", lambda: 0.0)
     passer = _player(attributes={"Passing": 99})
     far = _player("R", position=Vec2(95.0, 34.0))  # 65 m
     assert pass_velocity(passer, far).length() <= MAX_PASS_MPS + 1e-9
 
 
 def test_poor_dosage_spreads_the_arrival_speed(monkeypatch) -> None:
-    monkeypatch.setattr("v2engine.possession.random.random", lambda: 0.0)
+    monkeypatch.setattr("v2engine.flux.PASSE.random", lambda: 0.0)
     receiver = _player("R", position=Vec2(50.0, 34.0))
     for note, error in ((11, 0.30), (99, 0.05)):
-        monkeypatch.setattr("v2engine.possession.random.uniform", lambda a, b: b)  # erreur maximale
+        monkeypatch.setattr("v2engine.flux.PASSE.uniform", lambda a, b: b)  # erreur maximale
         launch = pass_velocity(_player(attributes={"Passing": note}), receiver).length()
         ideal = IDEAL_ARRIVAL_MPS - 20.0 * math.log(BALL_FRICTION_PER_S)
         assert math.isclose(launch, ideal * (1.0 + error))
 
 
 def test_missed_pass_deviates_by_10_to_25_percent_of_its_length(monkeypatch) -> None:
-    monkeypatch.setattr("v2engine.possession.random.random", lambda: 0.999)  # passe ratée
+    monkeypatch.setattr("v2engine.flux.PASSE.random", lambda: 0.999)  # passe ratée
     passer = _player(attributes={"Passing": 60})
     receiver = _player("R", position=Vec2(70.0, 34.0))  # 40 m
     random.seed(3)
     deviations = []
     real_uniform = random.Random(5).uniform
-    monkeypatch.setattr("v2engine.possession.random.uniform", real_uniform)
+    monkeypatch.setattr("v2engine.flux.PASSE.uniform", real_uniform)
     for _ in range(300):
         deviations.append(pass_aim(passer, receiver).distance_to(receiver.position) / 40.0)
     assert min(deviations) >= 0.10 - 1e-9 and max(deviations) <= 0.25 + 1e-9

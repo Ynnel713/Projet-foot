@@ -9,7 +9,6 @@ de match."""
 
 from __future__ import annotations
 
-import random
 from dataclasses import dataclass, replace
 from functools import partial
 
@@ -19,6 +18,7 @@ from v2engine.bloc import Bloc
 from v2engine.decision import CONTRE_ATTAQUE, DRIBBLE_SPEED_FACTOR
 from v2engine.defense import (COMPENSATION, COUVERTURE, MARQUAGE, PRESSEUR, REST_DEFENDERS, DefensiveRoles,
                               leave_probability, press_intensity)
+from v2engine.flux import DEFENSE
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
 from v2engine.movement import PlayerState
 from v2engine.off_ball import (COUNTER_RUN_DEPTH_M, RUN_INTERVAL_S, SPACE_HOLD_MAX_S, SPACE_REACHED_M, choose_space,
@@ -130,7 +130,7 @@ def interpret(player: PlayerState, ball: BallState, seen: Perception, runs_enabl
 
 def stays_behind(player: PlayerState) -> bool:
     """Le défenseur d'équilibre dont l'appel le mènerait devant le ballon reste-t-il derrière ? Teamwork (ticket 06)."""
-    return random.random() >= leave_probability(player)
+    return DEFENSE.random() >= leave_probability(player)
 
 
 def _rest_defenders(team: list[PlayerState], holder: PlayerState, forward: float) -> list[PlayerState]:
