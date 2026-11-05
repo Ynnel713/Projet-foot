@@ -1,0 +1,232 @@
+diff --git a/api/routers/competitions.py b/api/routers/competitions.py
+index af98767..5fc665a 100644
+--- a/api/routers/competitions.py
++++ b/api/routers/competitions.py
+@@ -15,7 +15,9 @@ son tableau existe déjà, pas besoin de "start".
+ 
+ from __future__ import annotations
+ 
+-from fastapi import APIRouter, HTTPException, Response
++import logging
++
++from fastapi import APIRouter, BackgroundTasks, HTTPException, Response
+ 
+ from ligue1sim.champions_league import start_champions_league
+ from ligue1sim.clubs import load_clubs, list_perso_clubs
+@@ -53,6 +55,8 @@ from api.serializers import (
+ 
+ router = APIRouter(prefix="/competitions", tags=["competitions"])
+ 
++_logger = logging.getLogger(__name__)
++
+ 
+ def _get_or_404(comp_id: str) -> CustomCompetition:
+     try:
+@@ -61,6 +65,32 @@ def _get_or_404(comp_id: str) -> CustomCompetition:
+         raise HTTPException(404, "Compétition introuvable.")
+ 
+ 
++PREWARM_LIMIT = 1
++"""Nombre de matchs préchauffés par journée simulée. Revue QC du 23/10/2026 (`animation-prechauffage-cache`,
++1er passage REFUSÉ) : préchauffer toute la journée tourne dans le même process `uvicorn` mono-worker que les
++requêtes réelles (`simulafoot.bat`, pas de `--workers`), donc contend sous le même GIL avec quiconque ouvre une
++animation pendant la boucle -- jusqu'à 90-140 s de calcul séquentiel pour ~10 matchs Ligue 1, sans aucune priorité
++sur le match réellement regardé. Borné à 1 (le premier match de la journée, le plus probable d'être regardé en
++premier -- ordre d'affichage de `MatchRow`) : le pire cas de contention ajoutée reste un seul calcul à froid
++(8,7-10,6 s documentés, `docs/ticket4_latency_audit.md`), du même ordre qu'une requête d'animation normale déjà
++acceptée aujourd'hui, au lieu de le multiplier par le nombre de matchs de la journée."""
++
++
++def _prewarm_animations(matches: list[Match], label: str) -> None:
++    """Remplit le cache LRU de `build_match_animation_json` juste après simulation, en tâche de fond (après l'envoi
++    de la réponse HTTP) -- pour qu'un clic ultérieur sur "Voir l'animation"/"LIVE" tombe déjà en cache au lieu de
++    recalculer à froid (ticket 4, docs/known_issues.md ; latence à froid mesurée, non résolue par le cache seul :
++    voir docs/ticket4_latency_audit.md). Borné à `PREWARM_LIMIT` matchs par l'appelant (voir sa docstring) --
++    cette fonction ne tronque pas elle-même la liste reçue, pour rester testable indépendamment de la limite.
++    Best-effort : une erreur sur un match ne doit jamais faire échouer les autres ni remonter au client, qui a
++    déjà reçu sa réponse."""
++    for match in matches:
++        try:
++            build_match_animation_json(match, label)
++        except Exception:
++            _logger.exception("Préchauffage de l'animation échoué pour %s - %s (%s)", match.home, match.away, label)
++
++
+ @router.post("", response_model=CompetitionStatus)
+ def create_competition(req: CreateCompetitionRequest) -> CompetitionStatus:
+     if req.source == "league":
+@@ -125,7 +155,7 @@ def get_competition(comp_id: str) -> CompetitionStatus:
+ 
+ 
+ @router.post("/{comp_id}/simulate-current", response_model=SimulateResponse)
+-def simulate_current(comp_id: str) -> SimulateResponse:
++def simulate_current(comp_id: str, background_tasks: BackgroundTasks) -> SimulateResponse:
+     """Simule la journée courante SANS avancer -- un bouton qui alterne entre
+     "Simuler la journée" (cet endpoint) et "Journée suivante →" (`/advance`
+     ci-dessous), un seul actif à la fois selon que la journée courante a déjà
+@@ -145,6 +175,8 @@ def simulate_current(comp_id: str) -> SimulateResponse:
+     rows = serialize_standings(competition, prev_ranks)
+     store.update_ranks(comp_id, {row.club: row.rank for row in rows})
+ 
++    background_tasks.add_task(_prewarm_animations, list(journee.matches[:PREWARM_LIMIT]), f"j{journee.number}")
++
+     return SimulateResponse(
+         status=serialize_status(comp_id, competition),
+         matches_played=[match_out(m) for m in journee.matches],
+@@ -180,23 +212,29 @@ def advance(comp_id: str) -> SimulateResponse:
+ 
+ 
+ @router.post("/{comp_id}/simulate-all", response_model=SimulateResponse)
+-def simulate_all(comp_id: str) -> SimulateResponse:
++def simulate_all(comp_id: str, background_tasks: BackgroundTasks) -> SimulateResponse:
+     competition = _get_or_404(comp_id)
+     if competition.format != CompetitionFormat.LEAGUE:
+         raise HTTPException(501, "Seul le format LEAGUE est simulable pour le moment.")
+ 
+     all_played: list[MatchOut] = []
+     season = competition.season
++    last_journee = season.current_journee
+     while not season.is_season_over:
+         journee = season.current_journee
+         season.simulate_current_journee()
+         all_played += [match_out(m) for m in journee.matches]
++        last_journee = journee
+         if not season.is_season_over:
+             season.next_journee()
+ 
+     rows = serialize_standings(competition, {})
+     store.update_ranks(comp_id, {row.club: row.rank for row in rows})
+ 
++    # Seule la dernière journée (celle affichée par l'écran "Simulation" juste après) est préchauffée -- toutes les
++    # préchauffer coûterait aussi cher en calcul que l'économie visée (une saison entière de matchs jamais regardés).
++    background_tasks.add_task(_prewarm_animations, list(last_journee.matches[:PREWARM_LIMIT]), f"j{last_journee.number}")
++
+     return SimulateResponse(
+         status=serialize_status(comp_id, competition),
+         matches_played=all_played,
+diff --git a/tests/test_api_animation.py b/tests/test_api_animation.py
+index acca8eb..40de484 100644
+--- a/tests/test_api_animation.py
++++ b/tests/test_api_animation.py
+@@ -8,7 +8,7 @@ import json
+ import time
+ 
+ import pytest
+-from fastapi import HTTPException
++from fastapi import BackgroundTasks, HTTPException
+ 
+ from ligue1sim import lineup as lineup_module
+ from ligue1sim import simulation
+@@ -25,7 +25,7 @@ from api.animation import (
+     build_match_animation,
+     build_match_animation_json,
+ )
+-from api.routers.competitions import get_match_animation, simulate_current
++from api.routers.competitions import PREWARM_LIMIT, _prewarm_animations, get_match_animation, simulate_all, simulate_current
+ 
+ 
+ @pytest.fixture
+@@ -33,7 +33,7 @@ def played_competition():
+     clubs = load_clubs(CLUBS_PATH, "Ligue 1")
+     competition = CustomCompetition(format="LEAGUE", legs=2, clubs=clubs, label="Ligue 1")
+     comp_id = store.create(competition)
+-    simulate_current(comp_id)
++    simulate_current(comp_id, BackgroundTasks())
+     return comp_id, competition, clubs
+ 
+ 
+@@ -164,6 +164,94 @@ def test_unavailable_payloads_are_not_cached(played_competition):
+     assert not animation_module._cache
+ 
+ 
++def test_prewarm_animations_populates_cache_for_played_matches(played_competition):
++    _, competition, _ = played_competition
++    animation_module.clear_cache()
++    match, reference = _first_animable(competition)
++
++    _prewarm_animations(competition.season.calendar[0].matches, "j1")
++
++    assert len(animation_module._cache) >= 1
++    assert json.loads(build_match_animation_json(match, "j1")) == reference
++
++
++def test_prewarm_animations_is_best_effort_one_failure_does_not_stop_the_rest(played_competition, monkeypatch):
++    _, competition, _ = played_competition
++    animation_module.clear_cache()
++    good_match, reference = _first_animable(competition)
++    bad_match = next(m for m in competition.season.calendar[0].matches if m is not good_match)
++
++    real = animation_module.build_match_animation_json
++
++    def flaky(match, label):
++        if match is bad_match:
++            raise RuntimeError("boom")
++        return real(match, label)
++
++    monkeypatch.setattr("api.routers.competitions.build_match_animation_json", flaky)
++
++    _prewarm_animations([bad_match, good_match], "j1")  # ne lève jamais, malgré l'échec sur bad_match
++
++    monkeypatch.undo()
++    assert json.loads(build_match_animation_json(good_match, "j1")) == reference
++
++
++def test_simulate_current_schedules_prewarm_with_the_matching_label(monkeypatch):
++    """Vérifie le câblage (ticket "raccourcir le chargement de l'animation") : la tâche de fond planifiée par
++    `simulate_current` porte exactement le libellé que `get_match_animation`/`_locate_match` utiliseront ensuite
++    pour cette journée -- sinon le préchauffage remplirait le cache sous la mauvaise clé -- et reste bornée à
++    `PREWARM_LIMIT` match(s) (revue QC du 23/10/2026 : toute la journée contend avec les requêtes réelles dans le
++    même process mono-worker, voir la docstring de `PREWARM_LIMIT`)."""
++    clubs = load_clubs(CLUBS_PATH, "Ligue 1")
++    competition = CustomCompetition(format="LEAGUE", legs=2, clubs=clubs, label="Ligue 1")
++    comp_id = store.create(competition)
++
++    scheduled = []
++    monkeypatch.setattr(
++        "api.routers.competitions._prewarm_animations",
++        lambda matches, label: scheduled.append((list(matches), label)),
++    )
++
++    bg = BackgroundTasks()
++    simulate_current(comp_id, bg)
++    for task in bg.tasks:
++        task.func(*task.args, **task.kwargs)
++
++    assert len(scheduled) == 1
++    matches, label = scheduled[0]
++    assert label == "j1"
++    assert matches == competition.season.calendar[0].matches[:PREWARM_LIMIT]
++    assert len(matches) == PREWARM_LIMIT
++
++
++def test_simulate_all_schedules_prewarm_for_the_last_journee_only(monkeypatch):
++    """Même garantie que `test_simulate_current_schedules_prewarm_with_the_matching_label`, pour `simulate_all` --
++    revue QC du 23/10/2026 (2e passage REFUSÉ) : ce call site applique la même troncature `PREWARM_LIMIT` mais
++    n'avait aucun test dédié, alors que c'est la route du bouton "Simuler tout" de l'écran Simulation. Vérifie en
++    particulier que seule la DERNIÈRE journée (celle affichée ensuite, pas toute la saison) est programmée."""
++    clubs = load_clubs(CLUBS_PATH, "Ligue 1")
++    competition = CustomCompetition(format="LEAGUE", legs=2, clubs=clubs, label="Ligue 1")
++    comp_id = store.create(competition)
++    total_journees = competition.season.total_journees
++
++    scheduled = []
++    monkeypatch.setattr(
++        "api.routers.competitions._prewarm_animations",
++        lambda matches, label: scheduled.append((list(matches), label)),
++    )
++
++    bg = BackgroundTasks()
++    simulate_all(comp_id, bg)
++    for task in bg.tasks:
++        task.func(*task.args, **task.kwargs)
++
++    assert len(scheduled) == 1  # une seule tâche programmée, pas une par journée de la saison
++    matches, label = scheduled[0]
++    assert label == f"j{total_journees}"
++    assert matches == competition.season.calendar[total_journees - 1].matches[:PREWARM_LIMIT]
++    assert len(matches) == PREWARM_LIMIT
++
++
+ def test_animation_coordinates_are_rounded_to_four_decimals(played_competition):
+     _, competition, _ = played_competition
+     _, out = _first_animable(competition)
