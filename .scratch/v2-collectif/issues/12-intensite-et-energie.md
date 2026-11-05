@@ -6,7 +6,7 @@
 
 **Blocked by:** 07, 08, 10, 25 (socle cinématique et contact).
 
-**Status:** à faire (constantes à proposer avant le code)
+**Status:** découpé (05/11/2026, chantier `v2-realisme`, validé par le propriétaire) en `v2-realisme/12d` (intensité de course selon le rôle), `12e` (réserve d'énergie qui dépend de l'effort, Stamina), `12f` (répétition des sprints et récupération). Ticket chapeau : ne pas l'implémenter tel quel ; le texte ci-dessous reste la référence de détail. Une référence à ce ticket sans lettre vaut pour tous ses morceaux.
 
 **Point de vigilance :** code sauvegardé dans `.scratch/v2-collectif/wip-socle-02-intensite.patch` du 26/10 : intensités par attribut, fatigue liée à l'effort, approche au trot à 10 m, receveur à 0,7. Mesure sur 20 matchs : 10,5 km et 23 % de baisse en fin de match (bons) ; sprints à 7,2 % et Off the Ball de sens inverse (à corriger).
 

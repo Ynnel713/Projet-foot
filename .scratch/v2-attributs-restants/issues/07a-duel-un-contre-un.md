@@ -14,7 +14,7 @@ Le geste dépend de la distance au défenseur, de l'espace, de la vitesse, de la
 
 **Bloque :** 09a, 09b ; 10b (dribble du gardien) ; `v2-collectif/22a`.
 
-**Status:** à faire (constantes à proposer avant le code)
+**Status:** découpé (05/11/2026, chantier `v2-realisme`, validé par le propriétaire) en `v2-realisme/04a` (fondation : même risque de perte évalué et résolu, Dribbling), `04g` (contournement), `04h` (crochet), `04i` (protection du ballon), `04j` (tacle glissé, diversité des gestes). Ticket chapeau : ne pas l'implémenter tel quel ; le texte ci-dessous reste la référence de détail. Une référence à ce ticket sans lettre vaut pour tous ses morceaux. Ce que ce ticket bloque (09a, 09b, 10b, `v2-collectif/22a`) attend désormais ces morceaux.
 
 **Point de vigilance :** Strength gagne le contact, Balance joue après (07b) : ne pas compter deux fois (v2-collectif/18).
 

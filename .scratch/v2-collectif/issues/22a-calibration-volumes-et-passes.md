@@ -12,6 +12,8 @@
 
 **Status:** à faire (constantes à proposer avant le code)
 
+**Calibration finale (05/11/2026, décision du propriétaire) :** 22a, 22b et 22c forment la calibration **finale**, après les principaux développements tactiques, physiques et collectifs (chantier `v2-realisme` : orientation et perception 07, 08 ; occupation 09 ; défense 10 ; contacts 11 ; déplacements 12 ; conduite et duel 04), en plus de la liste ci-dessus. Elle part des valeurs des calibrations **provisoires** `v2-realisme/18d` (volumes, rythme) et `18e` (tirs, gardien), marquées « provisoire », et peut toutes les revoir. Au moins 500 matchs (`v2-realisme/01e`).
+
 ## Acceptance criteria
 
 - [ ] Rythme du ticket socle 06 : 15-17 passes par minute, 2-3 s par joueur, possessions de 11-16 s

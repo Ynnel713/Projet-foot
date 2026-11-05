@@ -12,7 +12,7 @@
 
 **Bloque :** `v2-collectif/22a`.
 
-**Status:** à faire (constantes à proposer avant le code)
+**Status:** découpé (05/11/2026, chantier `v2-realisme`, validé par le propriétaire) en `v2-realisme/12a` (freinage, Agility), `12b` (perte de vitesse en virage, Agility), `12c` (Balance après le contact, levée de la dérogation A3), avec `07f` (rotation du corps, Agility). Ticket chapeau : ne pas l'implémenter tel quel ; le texte ci-dessous reste la référence de détail. Une référence à ce ticket sans lettre vaut pour tous ses morceaux.
 
 **Point de vigilance :** Strength gagne le contact, Balance joue après : ne pas compter deux fois (v2-collectif/18).
 

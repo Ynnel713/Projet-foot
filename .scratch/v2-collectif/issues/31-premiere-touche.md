@@ -8,7 +8,9 @@
 
 **Attributs :** First Touch, Technique (jeu de première), Anticipation (préparer le geste), Decisions (choisir). Le rayon exact de chacun est fixé dans `docs/CARTE_ATTRIBUTS_V2.md` avant le code, sans double comptage (ticket `v2-collectif/18`).
 
-**Blocked by:** 14 (plan de passe).
+**Blocked by:** 14 (plan de passe, livré) ; `v2-realisme/07a` (orientation du corps), `07c` (réception de face, de profil ou dos au jeu), `07e` (réorientation avant l'action), `08c` (scan avant la réception).
+
+**Complément (05/11/2026, décision du propriétaire) :** orientation et prise d'information sont avancées avant ce ticket et en forment la base. Le contrôle orienté s'appuie sur le type de réception (`v2-realisme/07c`) et sur le cap du corps (`07a`, `07e`) ; le jeu à une touche suppose que le receveur ait vu la suite (mémoire et scan, `08b`, `08c`). L'effet de l'orientation sur la durée de réception reste au `v2-realisme/07d`, après ce ticket.
 
 **Status:** à faire (constantes à proposer avant le code)
 

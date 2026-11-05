@@ -16,7 +16,7 @@ Les styles se cumulent (un coach peut en cocher jusqu'à 5) avec un plafond, com
 
 **Blocked by:** v2-collectif/05, 08, 11, 13 (livrés) et 10, 12, 15, 16, 17 (pas encore livrés).
 
-**Status:** à faire (D-V10 levée le 02/11/2026 ; constantes à proposer avant le code)
+**Status:** découpé (05/11/2026, chantier `v2-realisme`, validé par le propriétaire ; D-V10 levée le 02/11/2026) en `v2-realisme/13a` (lecture des styles, consignes neutres), `13b` (Pressing), `13c` (Défensif), `13d` (Offensif), `13e` (Contre-attaque), `13f` (Possession et tempo), `13g` (largeur), `13h` (rôles selon la formation), `13i` (validation : critères de ce ticket repris). Ticket chapeau : ne pas l'implémenter tel quel ; le texte ci-dessous reste la référence de détail. Une référence à ce ticket sans lettre vaut pour tous ses morceaux.
 
 **Point de vigilance :** le style ne doit pas rendre une équipe meilleure ; il déplace le risque (le pressing gagne des ballons hauts mais laisse de l'espace dans le dos, le défensif encaisse moins mais tire moins). Sans coach ou sans style : comportement neutre.
 

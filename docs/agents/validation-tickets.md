@@ -4,7 +4,9 @@ Règle : `CLAUDE.md`, section « Clôture des tickets ». Procédure : skill `/v
 
 ## Cycle
 
-`/to-tickets` → `/implement` (tdd, code-review) → suite de tests → statut `implémenté` → `/valider-ticket-simulafoot` → statut `livré, validé expert + QC` → commit.
+`/to-tickets` → annonce de l'estimation → `/implement` (tdd, code-review) → suite de tests → statut `implémenté` → `/valider-ticket-simulafoot` → statut `livré, validé expert + QC` → durée réelle comparée à l'estimation, ligne ajoutée à `suivi-estimations.md` → commit.
+
+Estimation : règle dans `CLAUDE.md` (« Estimer la durée d'un ticket ») ; registre et format dans [suivi-estimations.md](suivi-estimations.md). Ce suivi n'entre pas dans la table de clôture : il ne bloque ni le verdict ni le commit.
 
 `/implement` se termine par un commit : le verrou de commit le bloque tant que la dernière entrée du journal n'est pas une clôture `<id>/cloture` VALIDÉ écrite par `cloture.py decision` et encore vraie (voir « Verrou de commit »). Une entrée QC `VALIDÉ` seule ne suffit pas.
 

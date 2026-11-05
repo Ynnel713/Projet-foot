@@ -30,11 +30,17 @@ Interface : PWA React (`ui/`) + API FastAPI (`api/`) ; Streamlit (`app.py`) hist
 - Imports entre modules par leur API publique uniquement (ticket 19).
 - Projet sur OneDrive : `link-mode = copy` ; la jonction `ui/node_modules` se retire comme jonction, sans suppression récursive. Fins de ligne : garder celles du fichier modifié (index en LF, arbre souvent en CRLF).
 
+## Estimer la durée d'un ticket
+- Tout ticket porte une estimation en travail effectif : analyse, développement, tests, intégration et vérifications, total, confiance (élevée, moyenne, faible), hypothèses. Le temps machine (suite complète, séries de matchs) est noté à part, hors total.
+- Avant de commencer : annoncer l'estimation du ticket. Si le périmètre change en cours de route : annoncer la nouvelle estimation avant de continuer.
+- À la clôture : temps réellement passé, comparé à l'estimation ; cause expliquée si l'écart dépasse 30 %. Intégré au rapport de clôture et ajouté au registre `docs/agents/suivi-estimations.md`.
+- Un ticket estimé au-delà d'environ 2 h est examiné pour découpage avant le code (seuil indicatif).
+
 ## Terminer une tâche
 1. Critères d'acceptation chiffrés posés avant le code.
 2. Tests ajoutés ou adaptés ; suite complète passée, compte comparé à l'attendu ci-dessus.
 3. Déterminisme : mêmes empreintes sur deux exécutions (V2 : à graine fixée) ; mesure avant/après sur le pipeline réel si le comportement change.
-4. Rapport séparant tests réussis, échoués, non exécutés, et points à vérifier à l'écran.
+4. Rapport séparant tests réussis, échoués, non exécutés, et points à vérifier à l'écran ; il donne aussi la durée estimée et la durée réelle (voir « Estimer la durée d'un ticket »).
 5. Ticket : clôture par `/valider-ticket-simulafoot` (voir ci-dessous).
 6. Commit avec les seuls hunks de la tâche ; push uniquement sur demande. Dans la documentation, un commit se cite par son préfixe, lu dans `git log`, jamais de mémoire.
 

@@ -10,7 +10,7 @@
 
 **Bloque :** 03 (a, b, c) ; `v2-coach-et-gestion-de-match/04` et `05a` ; `v2-collectif/22a`. Alimente le temps additionnel (`v2-coach-et-gestion-de-match/03`) sans le bloquer (décision Q14 du 03/11/2026).
 
-**Status:** à faire (constantes à proposer avant le code)
+**Status:** découpé (05/11/2026, chantier `v2-realisme`, validé par le propriétaire) en `v2-realisme/16a` (placement offensif sur corner), `16b` (défense en zone, individuelle ou mixte), `16c` (appels et écrans), `16d` (exécution, Corners), `16e` (coup franc direct et mur, Free Kick Taking), `16f` (touche longue, Long Throws), `16g` (validation). Ticket chapeau : ne pas l'implémenter tel quel ; le texte ci-dessous reste la référence de détail. Une référence à ce ticket sans lettre vaut pour tous ses morceaux.
 
 ## Acceptance criteria
 
