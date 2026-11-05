@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import random
 
-from scenes import Scene, ab, fingerprint, player, run, with_attribute
+from scenes import Scene, ab, fingerprint, player, run, seed_scene, with_attribute
 from v2engine.ball_state import BallState
 from v2engine.geometry import Vec2
 
@@ -30,7 +30,7 @@ def test_full_scene_is_deterministic_at_fixed_seed() -> None:
     prints = []
     for _ in range(2):
         scene = _scene(_players())
-        random.seed(11)
+        seed_scene(11)
         run(scene, 10.0)
         prints.append(fingerprint(scene))
     assert prints[0] == prints[1]

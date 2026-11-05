@@ -85,9 +85,9 @@ def test_every_player_has_a_complete_intention_in_the_trace() -> None:
 def test_perception_alone_decides_whether_the_pass_is_read(monkeypatch) -> None:
     reader = _p("X", team="away", x=55, y=36)
     start, aim = Vec2(45, 34), Vec2(65, 34)
-    monkeypatch.setattr("v2engine.anticipation.random.random", lambda: 0.0)
+    monkeypatch.setattr("v2engine.flux.PERCEPTION.random", lambda: 0.0)
     assert "X" in pass_readers(start, Vec2(12.0, 0.0), aim, [reader])
-    monkeypatch.setattr("v2engine.anticipation.random.random", lambda: 0.999)
+    monkeypatch.setattr("v2engine.flux.PERCEPTION.random", lambda: 0.999)
     assert "X" not in pass_readers(start, Vec2(12.0, 0.0), aim, [reader])
 
 
@@ -98,14 +98,14 @@ def test_perception_alone_decides_whether_the_best_option_is_taken(monkeypatch) 
     players = [holder, mate, _p("D", team="away", x=31)]
     goal = Vec2(105.0, 34.0)
     draws: list[float] = []
-    monkeypatch.setattr("v2engine.decision.random.gauss", lambda mu, sigma: draws.append(sigma) or 0.0)
+    monkeypatch.setattr("v2engine.flux.PERCEPTION.gauss", lambda mu, sigma: draws.append(sigma) or 0.0)
     best = choose_action(holder, players, goal, None)
     directions = len(DRIBBLE_DIRECTIONS_DEG)
     assert len(draws) == directions + (best.considered - directions + 1) and best.best and best.gap == 0.0
     # l'autre option comparée (conduite retenue, puis la passe) paraît bien meilleure qu'elle n'est
     slot = directions if best.kind == "pass" else directions + 1
     boosted = iter([0.0] * slot + [5.0])
-    monkeypatch.setattr("v2engine.decision.random.gauss", lambda mu, sigma: next(boosted, 0.0))
+    monkeypatch.setattr("v2engine.flux.PERCEPTION.gauss", lambda mu, sigma: next(boosted, 0.0))
     other = choose_action(holder, players, goal, None)
     assert not other.best and other.gap > 0.0 and other.best_kind == best.kind and best.considered == other.considered
 

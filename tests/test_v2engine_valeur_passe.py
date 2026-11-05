@@ -78,7 +78,8 @@ def test_the_next_pass_is_judged_on_the_receiver_passing() -> None:
 
 
 def test_no_follow_up_in_a_counter_attack(monkeypatch) -> None:
-    monkeypatch.setattr("v2engine.decision.random.random", lambda: 0.0)
+    monkeypatch.setattr("v2engine.flux.PERCEPTION.random", lambda: 0.0)  # passe clé repérée
+    monkeypatch.setattr("v2engine.flux.DECISION.random", lambda: 0.0)  # plan adopté
     base = [_p("H", 40, 34), _p("F", 50, 24)]
     marked_t = [_p("T", 62, 26), _p("Marqueur", 62.3, 26, team="away")]  # T, marqué de près : jamais servi direct
 

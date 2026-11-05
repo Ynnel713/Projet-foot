@@ -11,11 +11,11 @@ Seul le CHOIX est décidé ici : la réussite du tir, de la passe ou du duel res
 from __future__ import annotations
 
 import math
-import random
 from dataclasses import dataclass, replace
 
 from v2engine.attributes import player_attribute, success_probability
 from v2engine.danger import danger, loss_cost
+from v2engine.flux import DECISION, PERCEPTION
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
 from v2engine.movement import PlayerState, max_speed_mps
 from v2engine.off_ball import OPEN_LANE_PROBABILITY
@@ -149,7 +149,7 @@ def visible_teammates(holder: PlayerState, teammates: list[PlayerState], goal: V
         if mate is not nearest:
             if holder.position.distance_to(mate.position) > reach:
                 continue
-            if holder_to_goal - mate.position.distance_to(goal) >= _KEY_PASS_GAIN_M and random.random() >= spot:
+            if holder_to_goal - mate.position.distance_to(goal) >= _KEY_PASS_GAIN_M and PERCEPTION.random() >= spot:
                 continue
         seen.append(mate)
     return seen
@@ -182,7 +182,7 @@ def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2
 
     # Plan reçu (ticket 14) : adopté selon Teamwork (un tirage), jamais en contre-attaque.
     held = planned if planned is not None and mode != CONTRE_ATTAQUE \
-        and random.random() < adopt_plan_probability(holder) else None
+        and DECISION.random() < adopt_plan_probability(holder) else None
 
     team = holder.team
     options = dribble_options(holder, opponents, gene, mode, projection=1.0)
@@ -334,7 +334,7 @@ def choose_action(holder: PlayerState, players: list[PlayerState], goal: Vec2, k
     sigma = perception_error(holder, gene) * max(abs(best.value), 1e-3)
     for index in range(len(real_dribbles)):
         if index not in felt:
-            felt[index] = random.gauss(0.0, 1.0)
+            felt[index] = PERCEPTION.gauss(0.0, 1.0)
     # 1) direction qu'il retient : la meilleure à ses yeux, avec son erreur gardée sur chaque direction
     drive = max((o for o in options if o.kind == "dribble"), default=None,
                 key=lambda o: seen_as.get(o.point, o).value + felt[direction[o.point]] * sigma)
@@ -342,7 +342,7 @@ def choose_action(holder: PlayerState, players: list[PlayerState], goal: Vec2, k
     perceived = []
     for option in ([drive] if drive is not None else []) + [o for o in options if o.kind != "dribble"]:
         seen = seen_as.get(option.point, option) if option.kind == "dribble" else option
-        perceived.append((seen.value + random.gauss(0.0, sigma), option, seen.point))
+        perceived.append((seen.value + PERCEPTION.gauss(0.0, sigma), option, seen.point))
     _, chosen, point = max(perceived, key=lambda t: t[0])
     # valeur perdue, en part de la meilleure ; une option presque équivalente compte comme le meilleur choix
     gap = (best.value - chosen.value) / max(abs(best.value), 1e-9)
@@ -363,4 +363,4 @@ def choose_transition(holder: PlayerState, players: list[PlayerState]) -> str:
     """Choix du porteur qui vient de récupérer le ballon : le bon choix (contre-attaque si elle est jouable, sinon
     conservation) avec la probabilité donnée par Decisions, sinon l'autre."""
     best, other = (CONTRE_ATTAQUE, CONSERVATION) if counter_is_favorable(holder, players) else (CONSERVATION, CONTRE_ATTAQUE)
-    return best if random.random() < best_choice_probability(player_attribute(holder, "Decisions")) else other
+    return best if DECISION.random() < best_choice_probability(player_attribute(holder, "Decisions")) else other

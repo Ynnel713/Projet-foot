@@ -7,9 +7,9 @@ ballon va s'arrêter plutôt que sa position actuelle. L'interception elle-même
 from __future__ import annotations
 
 import math
-import random
 
 from v2engine.attributes import player_attribute, success_probability
+from v2engine.flux import PERCEPTION
 from v2engine.geometry import Vec2, clamp_to_pitch
 from v2engine.movement import PlayerState, max_speed_mps
 
@@ -64,7 +64,7 @@ def pass_readers(start: Vec2, velocity: Vec2, aim: Vec2, opponents: list[PlayerS
             continue
         if opponent.position.distance_to(point) / max_speed_mps(opponent.pace) > along / speed:
             continue
-        if random.random() < read_pass_probability(player_attribute(opponent, "Anticipation")):
+        if PERCEPTION.random() < read_pass_probability(player_attribute(opponent, "Anticipation")):
             readers[opponent.name] = point
     return readers
 

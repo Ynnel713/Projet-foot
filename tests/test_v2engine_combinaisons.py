@@ -77,7 +77,8 @@ def test_teamwork_sets_how_often_the_plan_is_adopted() -> None:
 
 
 def test_no_plan_in_a_counter_attack(monkeypatch) -> None:
-    monkeypatch.setattr("v2engine.decision.random.random", lambda: 0.0)
+    monkeypatch.setattr("v2engine.flux.PERCEPTION.random", lambda: 0.0)  # passe clé repérée
+    monkeypatch.setattr("v2engine.flux.DECISION.random", lambda: 0.0)  # plan adopté
     players = _scene()
     with_plan = _pass(players, "P", CONTRE_ATTAQUE)
     # ni bonus ni sort compté : en contre-attaque, le plan n'existe pas (pas « refusé » par le Teamwork)

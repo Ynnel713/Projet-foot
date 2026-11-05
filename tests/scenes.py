@@ -35,6 +35,7 @@ from v2engine.ball_state import BallState
 from v2engine.bloc import Bloc
 from v2engine.cerveau import Intention
 from v2engine.defense import DefensiveRoles
+from v2engine.flux import seed_streams
 from v2engine.geometry import Vec2
 from v2engine.match import _resolve_player_collisions, _step_ball, _step_player
 from v2engine.movement import PlayerState
@@ -138,6 +139,13 @@ def fingerprint(scene: Scene) -> str:
     return hashlib.sha256(repr(state).encode()).hexdigest()[:16]
 
 
+def seed_scene(value: int) -> None:
+    """Graine d'une scène : le module `random` (tirages pas encore migrés, D-V06) et les flux par sous-système
+    (perception, décision : ticket v2-realisme/01a), comme `simulate_match` au coup d'envoi."""
+    random.seed(value)
+    seed_streams(value)
+
+
 def ab(players: list[PlayerState], make: Callable[[list[PlayerState]], Scene], seconds: float, seed: int,
        measure: Callable[[Scene], T], attribute: str, value: int, only: str | None = None) -> tuple[T, T]:
     """Même scène, même graine : A avec `players` tels quels, B avec `attribute` à `value` (sur `only` ou sur tous).
@@ -146,7 +154,7 @@ def ab(players: list[PlayerState], make: Callable[[list[PlayerState]], Scene], s
     results = []
     for profile in ([replace(p) for p in players], with_attribute(players, attribute, value, only)):
         scene = make(profile)
-        random.seed(seed)  # ponytail: flux global (D-V06) ; un flux par sous-système arrive avec v2-realisme/01a
+        seed_scene(seed)
         run(scene, seconds)
         results.append(measure(scene))
     return results[0], results[1]

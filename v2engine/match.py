@@ -23,6 +23,7 @@ from v2engine.ball_state import BallState
 from v2engine.bloc import Bloc
 from v2engine.danger import danger
 from v2engine.duel import foul_severity, resolve_tackle, should_attempt_tackle
+from v2engine.flux import seed_streams
 from v2engine.formation import initial_positions
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch
 from v2engine.movement import PlayerState, step
@@ -715,6 +716,9 @@ def simulate_match(
     arrive). `observer` : appelé à chaque tick avec (instant en s, joueurs, ballon, équipe qui vient de
     marquer ou None) -- lecture seule, pour les mesures (`scripts/measure_v2.py`), sans effet sur le jeu. `on_start` :
     reçoit la trace dès sa création, avant le premier tick : l'API la lit pendant qu'elle se remplit (rejeu en direct)."""
+    # Flux aléatoires par sous-système (ticket v2-realisme/01a, D-V13) : un seul tirage du module `random` donne
+    # la base du match ; perception et décision en dérivent chacune leur propre suite.
+    seed_streams(random.getrandbits(64))
     home_lineup = pick_best_formation(home_club)
     away_lineup = pick_best_formation(away_club)
 

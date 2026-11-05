@@ -26,7 +26,7 @@ def test_anticipation_curves_match_validated_points() -> None:
 
 
 def test_only_opponents_in_the_lane_who_can_get_there_first_read_the_pass(monkeypatch) -> None:
-    monkeypatch.setattr("v2engine.anticipation.random.random", lambda: 0.0)  # la lecture réussit toujours
+    monkeypatch.setattr("v2engine.flux.PERCEPTION.random", lambda: 0.0)  # la lecture réussit toujours
     start, aim = Vec2(20.0, 34.0), Vec2(50.0, 34.0)
     in_lane = _player("Couloir", position=Vec2(40.0, 39.0))  # 5 m de la trajectoire
     off_lane = _player("Loin", position=Vec2(40.0, 50.0))  # 16 m

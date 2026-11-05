@@ -58,7 +58,7 @@ def test_pressure_lowers_shot_and_dribble_values() -> None:
 
 
 def test_pass_prefers_open_teammate_closer_to_goal_over_nearest_marked_one(monkeypatch) -> None:
-    monkeypatch.setattr("v2engine.decision.random.random", lambda: 0.0)  # la passe clé est repérée (Vision, ticket 02)
+    monkeypatch.setattr("v2engine.flux.PERCEPTION.random", lambda: 0.0)  # la passe clé est repérée (Vision, ticket 02)
     holder = _player(position=Vec2(40.0, 34.0))
     near_marked = _player("Proche", position=Vec2(43.0, 34.0))
     marker = _player("Marqueur", team="away", position=Vec2(43.5, 34.0))
@@ -96,7 +96,7 @@ def test_close_options_split_low_decisions_far_more_than_high() -> None:
 
 
 def test_lone_holder_dribbles_toward_goal_at_reduced_speed(monkeypatch) -> None:
-    monkeypatch.setattr("v2engine.decision.random.gauss", lambda mu, sigma: 0.0)  # perception exacte : droit au but
+    monkeypatch.setattr("v2engine.flux.PERCEPTION.gauss", lambda mu, sigma: 0.0)  # perception exacte : droit au but
     holder = _player("Seul", position=Vec2(30.0, 34.0), attributes={"Decisions": 99})  # droit au but, le meilleur choix
     ball = BallState(position=holder.position, velocity=Vec2(0.0, 0.0), holder="Seul")
     _step_ball(ball, 0.1, [holder], now_s=0.0)

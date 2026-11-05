@@ -48,10 +48,10 @@ gardien sans toucher le ballon.
 
 from __future__ import annotations
 
-import random
 from collections.abc import Sequence
 
 from v2engine.attributes import player_attribute, success_probability
+from v2engine.flux import DECISION, PERCEPTION
 from v2engine.geometry import PITCH_LENGTH_M, Vec2
 from v2engine.movement import PlayerState
 
@@ -169,7 +169,7 @@ def perceived_defence_line(team: str, opponents: Sequence[PlayerState], vision: 
     if line is None:
         return None
     error = line_read_error_m(vision)
-    return line + random.uniform(-error, error)
+    return line + PERCEPTION.uniform(-error, error)
 
 
 def keep_onside_probability(off_the_ball: float) -> float:
@@ -180,7 +180,7 @@ def keep_onside_probability(off_the_ball: float) -> float:
 
 def respects_the_line(player: PlayerState) -> bool:
     """Tirage : cet attaquant respecte-t-il la ligne du hors-jeu sur cet appel ?"""
-    return random.random() < keep_onside_probability(player_attribute(player, "Off the Ball"))
+    return DECISION.random() < keep_onside_probability(player_attribute(player, "Off the Ball"))
 
 
 def clamp_to_onside(team: str, point: Vec2, line: float, margin: float = ONSIDE_MARGIN_M) -> Vec2:
