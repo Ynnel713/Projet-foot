@@ -96,6 +96,7 @@ def test_missed_shot_gives_ball_to_the_opposing_keeper(monkeypatch) -> None:
     monkeypatch.setattr("v2engine.match.choose_action", lambda *args: Action("shot", 1.0))  # issue du tir seule testée ici
     monkeypatch.setattr("v2engine.match.attempt_shot", lambda shooter, goal, keeper, opponents: False)
     monkeypatch.setattr("v2engine.match.SHOT_WIDE_SHARE", 0.0)  # tir cadré (ticket v2-collectif/29)
+    monkeypatch.setattr("v2engine.match.save_outcome", lambda *args: "capté")  # arrêt capté (ticket v2-collectif/28b)
     scoring_team = _step_ball(ball, 0.1, [shooter, keeper])
 
     assert scoring_team is None

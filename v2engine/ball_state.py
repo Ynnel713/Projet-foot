@@ -66,3 +66,8 @@ class BallState:
     # a le ballon et n'a pas encore joué (il frappe ou passe, jamais ne conduit).
     advantage: tuple[FoulEvent, float] | None = None
     set_piece: Restart | None = None
+    # Origine d'un tir (ticket v2-collectif/28b) : départ de la passe en cours, ballon qui vient d'un tir contré ou
+    # repoussé, et (joueur, façon dont il a eu le ballon, endroit) à son dernier contrôle.
+    pass_from: Vec2 | None = None
+    rebound: bool = False
+    came_from: tuple[str, str, Vec2] | None = None

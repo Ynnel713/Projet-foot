@@ -18,7 +18,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 
 from v2engine.cerveau import OPPONENT_GOAL
-from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
+from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, in_penalty_area
 from v2engine.movement import PlayerState
 from v2engine.offside import offside_line
 from v2engine.possession import pass_success_probability
@@ -389,6 +389,15 @@ class Collector:
         if event.kind == "coup franc" and _final_third(event.team, event.x):
             self.count["coups francs du dernier tiers"] += 1
             self.count["coups francs du dernier tiers frappés"] += event.shot
+
+    def on_shot_event(self, event) -> None:
+        """Tir tracé avec son issue et son origine (ticket v2-collectif/28b) ; `event` : `v2engine.trace.ShotEvent`."""
+        self.count["tirs tracés"] += 1
+        self.count["tirs : " + event.outcome] += 1
+        self.count["tirs, origine : " + event.origin] += 1
+        self.count["qualité des occasions (somme)"] += event.quality
+        if event.outcome == "but" and in_penalty_area(event.team, Vec2(event.x, event.y)):
+            self.count["buts dans la surface"] += 1
 
     def on_foul(self, event) -> None:
         """Faute (ticket v2-collectif/30) ; `event` : `v2engine.trace.FoulEvent`."""

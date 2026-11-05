@@ -134,6 +134,8 @@ def run(n_matches: int, profile: str | None = None, duration_minutes: float = 90
                     collector.on_restart(event)
                 for event in trace.fouls:  # fautes (ticket v2-collectif/30)
                     collector.on_foul(event)
+                for event in trace.shots:  # tirs et leur issue (ticket v2-collectif/28b)
+                    collector.on_shot_event(event)
             finally:
                 unforce()
             collector.end_match()
@@ -174,6 +176,18 @@ def report(c: Collector, detail: bool = False) -> dict:
         "corners joués long (part)": k["remises jouées long : corner"] / max(1, k["remises : corner"]),
         "temps de jeu effectif (part)": 1.0 - k["temps de ballon mort (s)"] / (60.0 * minutes),
         "tacles par match": k["tacles"] / n,
+        # issues du tir (ticket v2-collectif/28b) : sur les tirs tracés, contrés et penaltys compris
+        "tirs tracés par équipe": k["tirs tracés"] / (2 * n),
+        "tirs cadrés (part)": sum(k["tirs : " + o] for o in ("but", "capté", "repoussé", "claqué")) / max(1, k["tirs tracés"]),
+        "tirs contrés (part)": k["tirs : contré"] / max(1, k["tirs tracés"]),
+        "tirs à côté (part)": k["tirs : à côté"] / max(1, k["tirs tracés"]),
+        "conversion des tirs (part)": k["tirs : but"] / max(1, k["tirs tracés"]),
+        "buts dans la surface (part)": k["buts dans la surface"] / max(1, k["tirs : but"]),
+        "qualité moyenne de l'occasion": k["qualité des occasions (somme)"] / max(1, k["tirs tracés"]),
+        "arrêts par match": sum(k["tirs : " + o] for o in ("capté", "repoussé", "claqué")) / n,
+        "arrêts captés (part)": k["tirs : capté"] / max(1, sum(k["tirs : " + o] for o in ("capté", "repoussé", "claqué"))),
+        "arrêts repoussés (part)": k["tirs : repoussé"] / max(1, sum(k["tirs : " + o] for o in ("capté", "repoussé", "claqué"))),
+        "arrêts claqués (part)": k["tirs : claqué"] / max(1, sum(k["tirs : " + o] for o in ("capté", "repoussé", "claqué"))),
         # fautes (ticket v2-collectif/30)
         "fautes par match": k["fautes"] / n,
         "avantages acquis (part des fautes)": k["fautes : avantage"] / max(1, k["fautes"]),
@@ -216,6 +230,9 @@ def report(c: Collector, detail: bool = False) -> dict:
     for key, v in sorted(k.items()):
         if key.startswith("choix "):
             out[f"{key} (part)"] = v / max(1, choices)
+    for key, v in sorted(k.items()):  # origine des tirs (ticket v2-collectif/28b)
+        if key.startswith("tirs, origine : "):
+            out[f"{key} (part)"] = v / max(1, k["tirs tracés"])
     in_situation = sum(v for key, v in k.items() if key.startswith("temps en "))
     for key, v in sorted(k.items()):
         if key.startswith("temps en "):

@@ -96,6 +96,23 @@ class RestartEvent:
 
 
 @dataclass(frozen=True)
+class ShotEvent:
+    """Tir (ticket v2-collectif/28b) : `team` et `player` le tireur, `x`/`y` le lieu du tir, `quality` la qualité de
+    l'occasion (ticket 28a, chance de but s'il n'est pas contré, contre compris), `outcome` l'issue tirée au départ (but,
+    à côté, contré, capté, repoussé, claqué ; un tir « à côté » peut encore être dévié en route), `origin` comment le
+    tireur a eu le ballon (passe au sol, passe en retrait, passe en profondeur, centre, dribble, rebond, récupération,
+    coup franc, penalty). Le rendu rejoue l'issue enregistrée."""
+    minute: float
+    team: str
+    player: str
+    x: float
+    y: float
+    quality: float
+    outcome: str
+    origin: str
+
+
+@dataclass(frozen=True)
 class FoulEvent:
     """Faute (ticket v2-collectif/30) : `team` et `player` le fautif, `victim` le joueur fauté, `x`/`y` le lieu,
     `severity` la gravité (`duel.foul_severity`), `outcome` ce qu'en a fait l'arbitre : coup franc, penalty ou
@@ -127,6 +144,7 @@ class MatchTrace:
     offsides: list[OffsideEvent] = field(default_factory=list)  # hors-jeu sifflés (ticket v2-collectif/23)
     restarts: list[RestartEvent] = field(default_factory=list)  # remises en jeu (ticket v2-collectif/29)
     fouls: list[FoulEvent] = field(default_factory=list)  # fautes (ticket v2-collectif/30)
+    shots: list[ShotEvent] = field(default_factory=list)  # tirs et leur issue (ticket v2-collectif/28b)
     reaction_delays_s: dict[str, float] = field(default_factory=dict)  # par joueur (Anticipation, ticket v2-collectif/03)
     # Minute du coup d'envoi de la 2e période (ticket v2-coach-et-gestion-de-match/07) ; None tant qu'elle n'est pas
     # jouée. Le moteur garde son sens de jeu : c'est l'écran qui retourne la scène à partir de cette minute.

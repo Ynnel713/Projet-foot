@@ -209,3 +209,66 @@ def block_probability(shooter: PlayerState, goal: Vec2, opponents: list[PlayerSt
 def draw_blocker(shooter: PlayerState, goal: Vec2, opponents: list[PlayerState]) -> PlayerState | None:
     """Le défenseur qui contre ce tir-ci, ou `None` s'il passe (un tirage par défenseur de la ligne)."""
     return next((o for o, chance in _blockers(shooter, goal, opponents) if random.random() < chance), None)
+
+
+# Issue d'un tir cadré arrêté (ticket v2-collectif/28b, constantes proposées le 05/11/2026, validées par délégation du
+# propriétaire). Opta classe les arrêts (capté, repoussé, du bout des gants...) sans publier de répartition ; aucune
+# étude publique sur les seconds ballons : ordres de grandeur. Repère : environ 20 % des corners viennent d'un arrêt
+# (relevé de 200 matchs PL et Championship, sans méthode publiée). Gardien neutre (A8) jusqu'au ticket
+# v2-attributs-restants/03b : ni Handling ni Reflexes ici. Ni la force ni la hauteur du tir n'existent encore
+# (v2-hauteur-ballon/02a, v2-attributs-restants/10a) : la difficulté passe par la chance de but et l'excentrement.
+HELD, PARRIED, TIPPED = "capté", "repoussé", "claqué"
+SAVE_DIFFICULTY_REF = 0.30  # chance de but au-delà de laquelle l'arrêt est le plus difficile possible
+SAVE_HELD_SHARE = (0.70, 0.25)  # part captée : tir facile, tir le plus difficile (interpolation linéaire)
+SAVE_OUT_SHARE = (0.25, 0.60)  # parmi les non captés, part claquée hors du terrain : tir central, tir le plus excentré
+SAVE_EXCENTRIC_REF_M = 20.0  # écart latéral du tireur au centre du but qui fait un tir « le plus excentré »
+PARRY_SPEED_SHARE = (0.25, 0.50)  # vitesse du ballon repoussé ou claqué, en part de la vitesse du tir
+PARRY_ANGLE_DEG = (25.0, 80.0)  # repoussé : angle avec la ligne de but, du côté où file le tir
+TIP_WIDE_M = (0.5, 3.0)  # claqué : point de sortie derrière la ligne, au-delà du poteau (ordre de grandeur)
+_CENTRAL_SHOT = 0.1  # excentrement en dessous duquel le côté de la repoussée est tiré au hasard
+
+
+def excentricity(origin: Vec2, goal: Vec2) -> float:
+    """0 pour un tir face au but, 1 pour un tir parti à `SAVE_EXCENTRIC_REF_M` ou plus de l'axe."""
+    return min(1.0, abs(origin.y - goal.y) / SAVE_EXCENTRIC_REF_M)
+
+
+def save_shares(chance: float, origin: Vec2, goal: Vec2) -> tuple[float, float, float]:
+    """Parts (capté, repoussé, claqué) d'un arrêt, selon la chance de but du tir (`shot_probability`) et son
+    excentrement : un tir dangereux est moins souvent capté, un tir excentré plus souvent claqué en corner."""
+    difficulty = min(1.0, chance / SAVE_DIFFICULTY_REF)
+    held = SAVE_HELD_SHARE[0] + (SAVE_HELD_SHARE[1] - SAVE_HELD_SHARE[0]) * difficulty
+    out = SAVE_OUT_SHARE[0] + (SAVE_OUT_SHARE[1] - SAVE_OUT_SHARE[0]) * excentricity(origin, goal)
+    return held, (1.0 - held) * (1.0 - out), (1.0 - held) * out
+
+
+def save_outcome(chance: float, origin: Vec2, goal: Vec2) -> str:
+    """Tire l'issue d'un arrêt : `HELD`, `PARRIED` ou `TIPPED` (un tirage)."""
+    held, parried, _ = save_shares(chance, origin, goal)
+    r = random.random()
+    return HELD if r < held else PARRIED if r < held + parried else TIPPED
+
+
+def _shot_side(origin: Vec2, goal: Vec2) -> float:
+    """Côté (+1 ou -1 en y) vers lequel file le tir prolongé ; tir central : au hasard."""
+    if excentricity(origin, goal) < _CENTRAL_SHOT:
+        return 1.0 if random.random() < 0.5 else -1.0
+    return 1.0 if goal.y > origin.y else -1.0
+
+
+def parry_velocity(origin: Vec2, goal: Vec2, keeper_at: Vec2, outcome: str, shot_speed: float) -> Vec2:
+    """Vitesse du ballon après une parade (`PARRIED` ou `TIPPED`), depuis le gardien en `keeper_at`. Repoussé : vers le
+    terrain, du côté où file le tir, à `PARRY_ANGLE_DEG` de la ligne de but (tir central : jusqu'à l'axe). Claqué : vers
+    un point derrière la ligne de but, au-delà du poteau de ce côté (corner : le gardien touche en dernier). Le gardien
+    étant devant sa ligne, le ballon claqué la franchit parfois entre les poteaux : vu de dessus, sans hauteur, c'est un
+    ballon claqué au-dessus de la barre, corner aussi (réserve A2 de l'expert, 05/11/2026 ; vraie hauteur avec
+    `v2-hauteur-ballon/02a`)."""
+    side = _shot_side(origin, goal)
+    speed = shot_speed * random.uniform(*PARRY_SPEED_SHARE)
+    into_pitch = 1.0 if origin.x > goal.x else -1.0
+    if outcome == TIPPED:
+        aim = Vec2(goal.x - into_pitch * 2.0, goal.y + side * (GOAL_WIDTH_M / 2.0 + random.uniform(*TIP_WIDE_M)))
+        return (aim - keeper_at).normalized() * speed
+    high = 90.0 if excentricity(origin, goal) < _CENTRAL_SHOT else PARRY_ANGLE_DEG[1]
+    angle = math.radians(random.uniform(PARRY_ANGLE_DEG[0], high))
+    return Vec2(into_pitch * math.sin(angle), side * math.cos(angle)) * speed
