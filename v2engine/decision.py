@@ -21,7 +21,7 @@ from v2engine.movement import PlayerState, max_speed_mps
 from v2engine.off_ball import OPEN_LANE_PROBABILITY
 from v2engine.offside import is_clearly_offside, pass_margin_m, perceived_defence_line
 from v2engine.possession import pass_success_probability, pressure
-from v2engine.shooting import SHOOTING_RANGE_M, block_probability, shot_probability
+from v2engine.shooting import SHOOTING_RANGE_M, occasion_quality
 
 # Constantes produit validées par le propriétaire (24/10/2026).
 DECISION_INTERVAL_S = 0.5  # le porteur réévalue ses options deux fois par seconde
@@ -187,10 +187,9 @@ def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2
     team = holder.team
     options = dribble_options(holder, opponents, gene, mode, projection=1.0)
     if holder_to_goal <= SHOOTING_RANGE_M:
-        # chance de but, sauf s'il est contré par un défenseur dans la ligne de tir (même règle qu'à la résolution) ;
-        # un tir manqué ne coûte rien (sortie de but ou corner) ; le ticket 28 affinera occasion et issues
-        chance = shot_probability(holder, keeper, holder_to_goal, goal.y)
-        options.append(Action("shot", chance * (1.0 - block_probability(holder, goal, opponents))))
+        # qualité de l'occasion (ticket 28a) : chance de but, sauf s'il est contré dans le cône de tir (même règle qu'à
+        # la résolution) ; un tir manqué ne coûte rien (sortie de but ou corner) ; les issues viennent au ticket 28b
+        options.append(Action("shot", occasion_quality(holder, goal, keeper, opponents)))
     # suite du receveur (ticket 13) : meilleure passe suivante vers un coéquipier que le porteur voit lui-même ; le
     # passeur n'en fait pas partie (pas d'aller-retour) ; pas de suite en contre-attaque (on joue vite vers l'avant)
     share = 0.0 if mode == CONTRE_ATTAQUE else _FOLLOW_UP_SHARE

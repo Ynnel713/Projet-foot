@@ -426,7 +426,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                 ball.control_ban_until_s[blocker.name] = now_s + MISS_RETRY_S
                 ball.released_by, ball.receiver, ball.readers, ball.last_pass_team = None, None, {}, holder.team
                 return None
-            scored = attempt_shot(holder, keeper, holder.position.distance_to(goal), GOAL_CENTER_Y)
+            scored = attempt_shot(holder, goal, keeper, [p for p in players if p.team != holder.team])
             if scored:
                 # le ballon part vraiment vers le but et le but ne compte qu'à son arrivée (`SHOT_SPEED_MPS`)
                 ball.holder = None

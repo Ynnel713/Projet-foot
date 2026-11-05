@@ -6,9 +6,9 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
-from ligue1sim.pitch_geometry import PITCH_LENGTH_M, PITCH_WIDTH_M
+from ligue1sim.pitch_geometry import PENALTY_AREA_DEPTH_M, PENALTY_AREA_WIDTH_M, PITCH_LENGTH_M, PITCH_WIDTH_M
 
-__all__ = ["PITCH_LENGTH_M", "PITCH_WIDTH_M", "Vec2", "clamp_to_pitch"]
+__all__ = ["PITCH_LENGTH_M", "PITCH_WIDTH_M", "Vec2", "clamp_to_pitch", "in_penalty_area"]
 
 
 @dataclass(frozen=True)
@@ -42,3 +42,9 @@ def clamp_to_pitch(position: Vec2) -> Vec2:
     """Empêche un joueur ou le ballon de sortir du rectangle du terrain -- simplification
     volontaire de la Phase 1 (pas de sortie en touche/remise en jeu modélisée)."""
     return Vec2(min(max(position.x, 0.0), PITCH_LENGTH_M), min(max(position.y, 0.0), PITCH_WIDTH_M))
+
+
+def in_penalty_area(team: str, position: Vec2) -> bool:
+    """`position` est-elle dans la surface de réparation que `team` attaque ? (`home` attaque vers x = 105)"""
+    depth = PITCH_LENGTH_M - position.x if team == "home" else position.x
+    return depth <= PENALTY_AREA_DEPTH_M and abs(position.y - PITCH_WIDTH_M / 2.0) <= PENALTY_AREA_WIDTH_M / 2.0

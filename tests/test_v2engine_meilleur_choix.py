@@ -51,13 +51,22 @@ def test_midfielder_with_open_field_ahead_drives_rather_than_plays_back() -> Non
     assert high_drive >= low_drive + 0.1 and high_back <= low_back / 3
 
 
-def test_at_the_box_edge_a_good_finisher_shoots_and_a_poor_one_finds_the_free_teammate() -> None:
+def test_at_the_box_edge_a_good_finisher_shoots_and_a_poor_one_looks_for_something_else() -> None:
+    # Scène revue au ticket 28a : D3 (93 ; 32,5) cachait une part du but dans le cône de tir, et un coéquipier libre à
+    # 11 m du but vaut désormais mieux qu'un tir de 15 m, même pour un bon finisseur (17 % contre 10 % de chance de
+    # base) ; le partenaire est donc excentré, et le défenseur qui gêne le porteur sort du cône.
     def scene(finishing: int) -> list[PlayerState]:
-        return [_p("A", 90, Finishing=finishing), _p("Free", 94, 37), _p("Back", 82, 30),
-                _p("D1", 97, 30, team="away"), _p("D2", 98, 42, team="away"), _p("D3", 93, 32.5, team="away")]  # D3 colle le porteur, hors de la ligne de tir
+        return [_p("A", 90, Finishing=finishing), _p("Wide", 94, 42), _p("Back", 82, 30),
+                _p("D1", 97, 30, team="away"), _p("D2", 98, 42, team="away"), _p("D3", 91.5, 30.5, team="away")]
     assert _best(scene(90)).kind == "shot"
-    poor = _best(scene(25))
-    assert poor.kind == "pass" and poor.target.name == "Free"
+    assert _best(scene(25)).kind != "shot"
+
+
+def test_a_free_teammate_closer_to_goal_is_worth_more_than_a_shot_from_the_box_edge() -> None:
+    players = [_p("A", 90, Finishing=90), _p("Free", 94, 37), _p("Back", 82, 30),
+               _p("D1", 97, 30, team="away"), _p("D2", 98, 42, team="away"), _p("D3", 91.5, 30.5, team="away")]
+    best = _best(players)
+    assert best.kind == "pass" and best.target.name == "Free"
 
 
 def test_pressed_near_his_own_goal_the_back_pass_is_the_best_choice() -> None:
@@ -136,7 +145,8 @@ def test_best_choice_and_gap_reach_the_trace_and_the_api() -> None:
 def test_a_defender_in_the_shot_line_blocks_shots_and_lowers_their_value() -> None:
     from v2engine.shooting import BLOCK_CHANCE, block_probability, draw_blocker
     shooter = _p("A", 85)
-    in_line, beside, behind = _p("D", 92, team="away"), _p("E", 92, 37, team="away"), _p("F", 80, team="away")
+    # à 5 m du tireur, sans le gêner, son corps (1 m de part et d'autre) cache tout le but (cône du ticket 28a)
+    in_line, beside, behind = _p("D", 90, team="away"), _p("E", 92, 37, team="away"), _p("F", 80, team="away")
     assert block_probability(shooter, GOAL, [in_line]) == BLOCK_CHANCE
     assert block_probability(shooter, GOAL, [beside, behind]) == 0.0
     assert block_probability(shooter, GOAL, [in_line, _p("G", 95, 34.5, team="away")]) > BLOCK_CHANCE

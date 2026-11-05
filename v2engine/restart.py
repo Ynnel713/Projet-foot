@@ -20,11 +20,11 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass
 
-from ligue1sim.pitch_geometry import PENALTY_AREA_DEPTH_M, PENALTY_AREA_WIDTH_M, PENALTY_SPOT_DISTANCE_M
+from ligue1sim.pitch_geometry import PENALTY_SPOT_DISTANCE_M
 
 from v2engine.attributes import player_attribute
 from v2engine.decision import best_choice_probability
-from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
+from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, in_penalty_area
 from v2engine.movement import PlayerState
 from v2engine.possession import pass_success_probability, pressure
 
@@ -161,12 +161,6 @@ def place(player: PlayerState, restart: Restart, wanted: Vec2) -> Vec2:
             away = gap.normalized() if gap.length() > 1e-6 else (_CENTER - restart.spot).normalized()
             target = restart.spot + away * distance
     return Vec2(min(max(target.x, 0.0), PITCH_LENGTH_M), min(max(target.y, 0.0), PITCH_WIDTH_M))
-
-
-def in_penalty_area(team: str, position: Vec2) -> bool:
-    """`position` est-elle dans la surface de réparation que `team` attaque ?"""
-    depth = PITCH_LENGTH_M - position.x if team == "home" else position.x
-    return depth <= PENALTY_AREA_DEPTH_M and abs(position.y - PITCH_WIDTH_M / 2.0) <= PENALTY_AREA_WIDTH_M / 2.0
 
 
 def restart_target(taker: PlayerState, kind: str, players: list[PlayerState]) -> PlayerState | None:

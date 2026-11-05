@@ -21,4 +21,6 @@
 - [ ] Effet des attributs probabiliste, jamais binaire ; rayon de chaque attribut conforme à `docs/CARTE_ATTRIBUTS_V2.md` (ticket 18)
 - [ ] Leviers et critères validés par le propriétaire avant le code
 - [ ] Repris du ticket 22 : courbes partagées de `attributes` ; chiffres réels sourcés, ou « non trouvé »
+- [ ] Repris de la réserve A1 du ticket v2-collectif/28a (acceptée le 05/11/2026) : volume de tirs (37,5 par équipe, réel 12-15) et part dans la surface (22 %, réel environ 68 %). Traiter l'écart xG du tir contre xT moyen de la conservation (le tir l'emporte entre 12 et 27 m dans l'axe dès qu'il est démarqué) : valeur de suite au lieu du xT moyen, ou seuil de tir relatif, comparés. Aucune référence calibrée ne se fonde sur les 4,44 buts par match du 28a
+- [ ] Repris de la réserve A2 du ticket 28a (si le 28b ne l'a pas traitée) : un tir manqué ne coûte rien dans la décision, une passe ou une conduite paie la perte ; scène contrôlée « tir à 25 m contre conservation » avant et après
 - [ ] Série d'au moins 40 matchs avec dispersion rapportée ; suite V2 verte ; V1 inchangée

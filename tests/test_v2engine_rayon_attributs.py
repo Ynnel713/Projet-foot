@@ -31,11 +31,13 @@ ALLOWED = {
     "Decisions": {"decision", "restart"},  # restart : choix du receveur d'une remise en jeu (ticket 29)
     "Vision": {"decision", "off_ball"},  # + le coureur tente l'appel dans le dos si le porteur le voit (16)
     "Off the Ball": {"off_ball", "offside"},  # + régler l'appel sur la ligne du hors-jeu (ticket 23)
-    "Composure": {"possession", "shooting", "decision"},  # + erreur de perception sous pression (ticket 33)
+    # tir sous pression par `shooting.shot_composure_factor`, courbe propre (ticket 28a) ; + perception sous pression (33)
+    "Composure": {"possession", "decision", "shooting"},
     "Dribbling": {"decision"},  # chance de garder le ballon en conduisant, dans la valeur factuelle (ticket 33)
     "First Touch": {"possession"},
     "Passing": {"possession", "off_ball"},  # + ... et s'il sait le servir (ticket v2-collectif/16)
-    "Finishing": {"shooting"},
+    "Finishing": {"shooting"},  # dans la surface ; Long Shots en dehors (ticket 28a)
+    "Long Shots": {"shooting"},
     "Reflexes": {"shooting"},
     "One on Ones": {"shooting"},
     "Handling": {"shooting"},
@@ -54,7 +56,6 @@ PHYSICAL_ALLOWED = {"Pace": {"movement", "anticipation", "bloc", "defense", "dec
                     "Stamina": {"movement"}}
 # Mélanges de plusieurs attributs dans un même calcul tolérés (dérogations de la carte).
 TOLERATED_MIXES = {
-    frozenset({"Finishing", "Composure"}),  # A2 : jusqu'au ticket du tir
     frozenset({"Strength", "Balance"}),  # A3 : jusqu'à l'étape duels
     frozenset({"Reflexes", "One on Ones", "Handling"}),  # A8 : note du gardien, jusqu'à la phase 9 (confirmée le 26/10/2026)
 }
