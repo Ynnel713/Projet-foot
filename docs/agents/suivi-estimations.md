@@ -11,3 +11,4 @@ Règle : `CLAUDE.md`, section « Estimer la durée d'un ticket » (05/11/2026). 
 
 | Date de clôture | Ticket | Catégorie | Estimé (min) | Réel (min) | Écart | Postes estimés | Postes réels | Confiance annoncée | Cause de l'écart |
 |---|---|---|---|---|---|---|---|---|---|
+| 05/11/2026 | v2-realisme/01f | mesure | 110 | 70 | − 36 % | 20/50/30/10 | 15/20/20/15 | élevée | Boucle de match déjà écrite dans un test existant ; aide de test seule, développement surestimé ; 20 min de corrections après la revue de l'expert (notes à champ dédié, mode de transition) |

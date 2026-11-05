@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import random
 
+from scenes import Scene, run
 from scripts.v2_indicators import open_options
 from v2engine import cerveau
 from v2engine.ball_state import BallState
@@ -12,7 +13,7 @@ from v2engine.defense import (BACKWARD_PASS_M, MARQUAGE, PRESS_BURST_S, PRESSEUR
                               follow_probability,
                               good_lane_probability, press_intensity, press_point, press_rest_s, stop_distance_m)
 from v2engine.geometry import Vec2
-from v2engine.match import _resolve_player_collisions, _step_ball, _step_player
+from v2engine.match import _step_player
 from v2engine.movement import PlayerState
 
 
@@ -130,16 +131,9 @@ def test_coordinated_press_does_not_make_recoveries_automatic() -> None:
         random.seed(seed)
         players = _scene(99) + [_p("GK", team="away", x=100, y=34, poste="GK"), _p("GKh", x=3, y=34, poste="GK")]
         defense = DefensiveRoles()
-        ball = _back_pass(defense, players)
-        for k in range(60):  # 6 s
-            now = 0.1 + k * 0.1
-            defense.update(players, ball, None, now)
-            players = [_step_player(p, ball, 0.1, now / 60.0, players, None, None, None, None, defense) for p in players]
-            _resolve_player_collisions(players)
-            _step_ball(ball, 0.1, players, now)
-            if ball.holder is not None and next(p for p in players if p.name == ball.holder).team == "home":
-                regained += 1
-                break
+        scene = Scene(players, _back_pass(defense, players), defense=defense, start_s=0.1)  # défense seule, sans bloc
+        if run(scene, 6.0, until=lambda s: s.ball.holder is not None and s.get(s.ball.holder).team == "home"):
+            regained += 1
     assert regained < 15  # moins de la moitié des cas
 
 

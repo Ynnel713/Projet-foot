@@ -3,6 +3,7 @@ Lecture seule de la V1 : aucun fichier protégé importé."""
 
 from __future__ import annotations
 
+from scenes import player, with_attribute
 from v2engine.ball_state import BallState
 from v2engine.duel import attempt_tackle_probability, foul_probability, tackle_success_probability
 from v2engine.geometry import Vec2
@@ -29,11 +30,13 @@ def test_tackle_outcome_never_binary_even_at_extreme_attribute_gap() -> None:
 
 
 def test_higher_tackling_strength_balance_favor_the_tackler() -> None:
-    strong_tackler = _player("Costaud", attributes={"Tackling": 90, "Aggression": 60})
-    weak_holder = _player("Fragile", attributes={"Strength": 20, "Balance": 20})
+    # Fabrique de scènes partagée (ticket v2-realisme/01f) : un profil de base, une note qui varie.
+    tackler, holder = player("Tacleur", poste="MDC", Aggression=60), player("Porteur", "away", poste="MDC")
+    strong_tackler = with_attribute([tackler], "Tackling", 90)[0]
+    weak_holder = with_attribute(with_attribute([holder], "Strength", 20), "Balance", 20)[0]
 
-    weak_tackler = _player("Maladroit", attributes={"Tackling": 20, "Aggression": 60})
-    strong_holder = _player("Robuste", attributes={"Strength": 90, "Balance": 90})
+    weak_tackler = with_attribute([tackler], "Tackling", 20)[0]
+    strong_holder = with_attribute(with_attribute([holder], "Strength", 90), "Balance", 90)[0]
 
     assert tackle_success_probability(strong_tackler, weak_holder) > tackle_success_probability(
         weak_tackler, strong_holder
