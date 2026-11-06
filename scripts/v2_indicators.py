@@ -17,7 +17,7 @@ from collections import Counter, defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 
-from v2engine.cerveau import OPPONENT_GOAL
+from v2engine.cerveau import APPEL, OPPONENT_GOAL, TENIR
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, in_penalty_area
 from v2engine.movement import PlayerState
 from v2engine.offside import offside_line
@@ -307,6 +307,8 @@ class Collector:
         self.loss_open: dict[str, float] = {}  # équipe qui a perdu -> instant de la perte
         self.retreat: list[dict] = []
         self.runs: dict[str, _Run] = {}
+        self.last_call_role: dict[str, str] = {}  # dernier rôle APPEL / TENIR du joueur (ticket 02g)
+        self.role_switches: Counter = Counter()  # passages APPEL <-> TENIR, par joueur
         self.run_log: list[tuple[str, float, float, Vec2]] = []  # (joueur, début, fin, position finale)
         self.deep_runs: Counter = Counter()  # appels finis à ON_THE_LINE_M ou moins de la ligne, par joueur (16)
         self.follow: dict[str, list[tuple[float, float]]] = defaultdict(list)  # axe -> (ballon, centre d'équipe)
@@ -379,6 +381,13 @@ class Collector:
         key = "équilibre : appels devant le ballon maintenus (part)"
         level = self.levels.get(player.name)
         self.stats[f"profil {level} : {key}" if level else key].add(0.0 if stays else 1.0)
+
+    def on_role(self, name: str, role: str) -> None:
+        """Rôle d'un joueur à ce tick : compte les passages APPEL <-> TENIR (ticket v2-realisme/02g, réserve A2)."""
+        if role in (APPEL, TENIR):
+            if self.last_call_role.get(name, role) != role:
+                self.role_switches[name] += 1
+            self.last_call_role[name] = role
 
     def on_offside(self, event) -> None:
         """Hors-jeu sifflé (ticket v2-collectif/23) ; `event` : `v2engine.trace.OffsideEvent`."""
@@ -748,6 +757,7 @@ class Collector:
         for name, poste in self.poste.items():  # tous les joueurs de champ, y compris ceux sans appel
             if poste != "GK":
                 self.stats[f"appels par joueur et par match : {poste}"].add(per_player.get(name, 0))
+                self.stats["alternances appel / tenir par joueur et par match"].add(self.role_switches[name])
                 # ticket v2-realisme/01d : par poste, à côté des km (repères R4 à R6)
                 self.stats[f"distance au-dessus de 19,8 km/h par joueur (m) : {poste}"].add(self.hi_by[name])
                 self.stats[f"sprints par joueur et par match : {poste}"].add(self.sprints[name])

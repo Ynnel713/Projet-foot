@@ -21,11 +21,12 @@ from v2engine.defense import (COMPENSATION, COUVERTURE, MARQUAGE, PRESSEUR, REST
 from v2engine.flux import DEFENSE
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
 from v2engine.movement import PlayerState
-from v2engine.off_ball import (COUNTER_RUN_DEPTH_M, RUN_INTERVAL_S, SPACE_HOLD_MAX_S, SPACE_REACHED_M, choose_space,
-                               depth_run)
+from v2engine.off_ball import (COUNTER_RUN_DEPTH_M, RUN_INTERVAL_S, SPACE_HOLD_MAX_S, SPACE_REACHED_M,
+                               choose_space, depth_run, player_call_delay_s)
 from v2engine.offside import HESITATION_INTENSITY, clamp_to_onside, offside_line, respects_the_line
 from v2engine.possession import BALL_FRICTION_PER_S, RECEPTION_SPEED_FACTOR
 from v2engine.restart import KICKOFF, REPLACING_INTENSITY, place
+from v2engine.roles import DEFAULT_ROLE
 from v2engine.situation import (DEFENSE_PLACEE, DERNIER_TIERS, POSSESSION_INSTALLEE, TRANSITION_DEFENSIVE,
                                 TRANSITION_OFFENSIVE)
 from v2engine.transition import TransitionPlay
@@ -42,11 +43,21 @@ PORTEUR, APPEL, SOUTIEN, RECEVEUR, LECTURE, BALLON_LIBRE, REPLACEMENT = (
     "porteur", "appel", "soutien", "receveur visé", "lecture de passe", "ballon libre", "replacement")
 # En possession, le joueur qui ne fait pas d'appel tient sa place de référence (ticket v2-realisme/02f).
 TENIR = "tenir sa place"
-# Règle PROVISOIRE (ticket v2-realisme/02f, remplacée par la vraie sélection au 02g) : en possession installée et au
-# dernier tiers, seuls les PROVISIONAL_RUNNERS coéquipiers les plus proches du ballon parmi ceux qui sont devant lui
-# gardent l'appel ; les autres tiennent leur place. Pas de transition offensive : la contre-attaque lance ses appels (11).
-PROVISIONAL_RUNNERS = 2
-HOLD_SITUATIONS = (POSSESSION_INSTALLEE, DERNIER_TIERS)
+# Qui fait un appel (ticket v2-realisme/02g ; constantes proposées par Claude, validées par délégation du propriétaire,
+# chiffres réels non trouvés sauf le repère de 5,5 à 19,2 appels par 90 min selon le poste, CIES 2023) : à chaque
+# instant de possession, au plus CALLER_CAP[situation] coéquipiers devant le ballon appellent, choisis parmi les rôles
+# de projection (CALLER_ROLES) puis, à défaut, parmi les rôles intermédiaires (CALLER_IF_FREE) ; tous les autres
+# tiennent leur place. Sans situation (tests) : tous appellent, comme avant.
+CALLER_CAP = {POSSESSION_INSTALLEE: 2, DERNIER_TIERS: 3, TRANSITION_OFFENSIVE: 3}
+CALLER_ROLES = frozenset({"ailier de couloir", "ailier intérieur", "piston", "meneur excentré", "second attaquant",
+                          "avant-centre", "buteur axial", "milieu offensif", "mezzala", "box to box"})
+CALLER_IF_FREE = frozenset({"latéral", "milieu relayeur", "meneur", "pivot"})  # le latéral : ballon du côté opposé
+# Le délai d'Off the Ball ne joue qu'en construction : une contre-attaque (11) se déclenche déjà au délai de réaction.
+CALL_DELAY_SITUATIONS = (POSSESSION_INSTALLEE, DERNIER_TIERS)
+# Un appelant choisi garde sa place (sans nouveau délai) tant qu'il reste éligible ; absent plus d'une seconde, il est
+# oublié et repasse par la sélection (réserve A2 de l'expert au 02f : pas d'alternance APPEL / TENIR).
+CALLER_MEMORY_S = 1.0
+CALLER_BEHIND_M = 3.0  # le ballon qui dépasse de moins de 3 m un appelant choisi ne lui retire pas son appel
 # Hors-jeu sifflé : l'attaquant fautif recule le temps de la remise en jeu (ticket v2-collectif/23).
 HORS_JEU = "hors-jeu"
 # Transition défensive (ticket v2-collectif/10) : le joueur sans rôle devant le ballon revient dans le bloc.
@@ -101,41 +112,83 @@ def nearest_of_team(player: PlayerState, ball: BallState, players: list[PlayerSt
         (p for p in players or [player] if p.team == player.team), key=lambda p: p.position.distance_to(ball.position))
 
 
-def _runs_or_holds(player: PlayerState, ball: BallState, players: list[PlayerState], situation: str | None) -> str:
-    """Rôle du coéquipier du porteur : APPEL, ou TENIR s'il n'est pas l'un des PROVISIONAL_RUNNERS plus proches du ballon
-    parmi ceux qui sont devant lui (règle provisoire du ticket v2-realisme/02f). Sans situation (tests), tous appellent."""
-    if situation not in HOLD_SITUATIONS:
+def _call_rank(p: PlayerState, ball: BallState, runs: dict, now_s: float, forward: float) -> tuple | None:
+    """Rang d'un coéquipier pour l'appel (plus petit = prioritaire), ou None s'il ne peut pas appeler : d'abord le
+    joueur du plan de passe (A3), puis celui dont l'appel est en cours (A2, pas d'alternance), puis les rôles de
+    projection avant les rôles intermédiaires, puis le plus proche du ballon (ticket v2-realisme/02g)."""
+    dist = p.position.distance_to(ball.position)
+    plan = ball.plan
+    if plan is not None and plan[1] == p.name and plan[0] in (ball.holder, ball.receiver):
+        return (0, 0, 0, dist, p.name)
+    role = p.role or DEFAULT_ROLE.get(p.poste, "")
+    if role in CALLER_ROLES:
+        tier = 0
+    elif role in CALLER_IF_FREE:
+        if role == "latéral" and (p.position.y - GOAL_CENTER_Y) * (ball.position.y - GOAL_CENTER_Y) >= 0.0:
+            return None
+        tier = 1
+    else:
+        return None
+    run, chosen = runs.get(p.name), ball.callers.get(p.name)
+    running = run is not None and run[1] > now_s and p.position.distance_to(run[0]) > SPACE_REACHED_M
+    kept = running or (chosen is not None and now_s - chosen[1] <= CALLER_MEMORY_S)
+    # devant le ballon ; un appelant déjà choisi n'est évincé que s'il est resté plus de CALLER_BEHIND_M derrière lui
+    if forward * (p.position.x - ball.position.x) <= (-CALLER_BEHIND_M if kept else 0.0):
+        return None
+    return (1, 0 if kept else 1, tier, dist, p.name)
+
+
+def _runs_or_holds(player: PlayerState, ball: BallState, players: list[PlayerState], situation: str | None,
+                   runs: dict | None, now_s: float) -> str:
+    """Rôle du coéquipier du porteur : APPEL s'il fait partie des CALLER_CAP[situation] premiers au classement de
+    `_call_rank`, et que son délai (Off the Ball, `call_delay_s`) est écoulé ; sinon TENIR (ticket v2-realisme/02g)."""
+    # Sa situation perçue peut retarder sur la réalité (délai de réaction, `SituationTracker.perceived`) : tant qu'il croit
+    # encore défendre alors que son équipe a le ballon, il suit la règle de la transition offensive.
+    cap = CALLER_CAP.get(TRANSITION_OFFENSIVE if situation in (DEFENSE_PLACEE, TRANSITION_DEFENSIVE) else situation)
+    if cap is None or runs is None:
         return APPEL
     forward = 1.0 if player.team == "home" else -1.0
-    if forward * (player.position.x - ball.position.x) <= 0.0:
+    mine = _call_rank(player, ball, runs, now_s, forward)
+    better = 0
+    if mine is not None:
+        for p in players:
+            if (p is not player and p.team == player.team and p.poste != "GK" and p.name != ball.holder
+                    and p.name != ball.receiver):
+                other = _call_rank(p, ball, runs, now_s, forward)
+                if other is not None and other < mine:
+                    better += 1
+                    if better >= cap:
+                        break
+    if mine is None or better >= cap:
+        ball.callers.pop(player.name, None)
         return TENIR
-    mine, closer = player.position.distance_to(ball.position), 0
-    for p in players:
-        if (p is not player and p.team == player.team and p.poste != "GK" and p.name != ball.holder
-                and forward * (p.position.x - ball.position.x) > 0.0 and p.position.distance_to(ball.position) < mine):
-            closer += 1
-            if closer >= PROVISIONAL_RUNNERS:
-                return TENIR
-    return APPEL
+    chosen = ball.callers.get(player.name)
+    since = chosen[0] if chosen is not None and now_s - chosen[1] <= CALLER_MEMORY_S else now_s
+    ball.callers[player.name] = (since, now_s)
+    if mine[0] == 0 or situation not in CALL_DELAY_SITUATIONS:  # plan de passe, ou contre-attaque : pas de délai
+        return APPEL
+    if mine[1] == 0 and not (chosen is not None and now_s - chosen[1] <= CALLER_MEMORY_S):
+        return APPEL  # appel déjà en cours (sa course) : il ne repasse pas par le délai
+    return APPEL if now_s - since >= player_call_delay_s(player) else TENIR
 
 
 def interpret(player: PlayerState, ball: BallState, seen: Perception, runs_enabled: bool,
               players: list[PlayerState], defense: DefensiveRoles | None = None, now_s: float = 0.0,
-              situation: str | None = None) -> str:
+              situation: str | None = None, runs: dict | None = None) -> str:
     """Rôle du joueur à cet instant. Avec `defense` (ticket v2-collectif/07), le joueur de champ dont l'adversaire a le
     ballon prend le rôle que son équipe lui a attribué ; sans rôle, il tient le bloc, sauf s'il le quitte (Teamwork).
     Avec `situation` (ticket v2-realisme/02f), le coéquipier du porteur appelle ou tient sa place."""
     if player.name == ball.holder:
         return PORTEUR
     if runs_enabled and seen.holder is not None and seen.holder.team == player.team and player.poste != "GK":
-        return _runs_or_holds(player, ball, players, situation)
+        return _runs_or_holds(player, ball, players, situation, runs, now_s)
     if seen.is_receiver:
         return RECEVEUR
     if runs_enabled and ball.holder is None and ball.receiver is not None and ball.last_pass_team == player.team \
             and player.poste != "GK":
         # passe de son équipe en l'air : il poursuit son appel, sans courir au ballon (ticket 06) ; qui appelle se
         # juge sur le ballon en vol (02f)
-        return _runs_or_holds(player, ball, players, situation)
+        return _runs_or_holds(player, ball, players, situation, runs, now_s)
     if seen.read_point is not None:
         return LECTURE
     # passe adverse en vol : il garde le rôle attribué comme si le receveur avait le ballon (réserve A2, ticket 09)
@@ -326,7 +379,7 @@ def think(player: PlayerState, ball: BallState, players: list[PlayerState], minu
             and situation not in (None, DEFENSE_PLACEE, TRANSITION_DEFENSIVE) \
             and seen.holder is not None and seen.holder.team != player.team:
         return previous
-    role = interpret(player, ball, seen, runs is not None, players, defense, now_s, situation)
+    role = interpret(player, ball, seen, runs is not None, players, defense, now_s, situation, runs)
     intention = decide(player, role, ball, seen, players, minute, runs, situation, bloc, defense, transition)
     if now_s < ball.hesitation.get(player.name, 0.0):
         # « Play the whistle » : le défenseur qui a vu le drapeau lève la main et attend, sans s'arrêter de jouer.

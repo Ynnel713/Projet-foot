@@ -4,7 +4,7 @@
 
 **Constat vérifié :** aucun indicateur ne vérifie aujourd'hui le côté moyen occupé par poste ni la cohérence rôle / position.
 
-**What to build:** Ajouter au banc : position moyenne (x, y) par poste et par phase, part du temps de chaque poste latéral dans son couloir, appels et km par poste. Rapport sur 50 matchs, comparé à la référence du 01d ; aucune calibration.
+**What to build:** Ajouter au banc : (réserves A1 et A2 de l'expert au 02g) nombre d'épisodes `APPEL` par poste et par 90 min, maximum d'appelants simultanés par équipe et par situation, passages APPEL / TENIR à l'intérieur d'une même possession et leur part de moins de 1,5 s, via `Collector.on_role` ; position moyenne (x, y) par poste et par phase, part du temps de chaque poste latéral dans son couloir, appels et km par poste. Rapport sur 50 matchs, comparé à la référence du 01d ; aucune calibration.
 
 **Attributs :** aucun
 

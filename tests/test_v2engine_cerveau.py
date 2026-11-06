@@ -141,15 +141,18 @@ def test_api_sends_intentions_only_when_role_or_action_changes() -> None:
 def _balance_ahead_share(teamwork: int, situation: str) -> float:
     """Part des appels du défenseur le plus reculé qui le mènent devant le ballon (x > 30). Le porteur est derrière
     lui (relance courte) : depuis le ticket v2-realisme/02f, un joueur derrière le ballon tient sa place, seul un
-    défenseur devant le ballon peut encore appeler."""
+    joueur devant le ballon peut encore appeler. Depuis le 02g, un défenseur central n'appelle plus en possession : le
+    joueur d'équilibre testé est ici un box to box, l'un des deux plus reculés de l'équipe."""
     holder = _p("H", x=30.0)
     deep = _p("DC1", x=38.0, y=20.0, poste="DC", attributes={"Teamwork": teamwork, "Off the Ball": 99})
+    deep.role = "box to box"
     other = _p("DC2", x=36.0, y=48.0, poste="DC")
     forward = _p("BU", x=60.0, poste="BU")
     players = [holder, deep, other, forward, _p("Adv", team="away", x=20.0, y=5.0)]
     random.seed(20260923)
-    ahead = sum(cerveau.think(deep, _ball(30.0, 34.0, holder="H"), players, 1.0, {}, situation).target.x > 30.0
-                for _ in range(400))
+    ball = _ball(30.0, 34.0, holder="H")
+    cerveau.think(deep, ball, players, 1.0 - 0.5 / 60.0, {}, situation)  # choisi : son délai (Off the Ball) court
+    ahead = sum(cerveau.think(deep, ball, players, 1.0, {}, situation).target.x > 30.0 for _ in range(400))
     return ahead / 400
 
 
@@ -223,35 +226,135 @@ def test_a_held_depth_run_does_not_survive_a_loss_of_the_ball(monkeypatch) -> No
     assert intention.target.x < 79.0 and len(runs["M"]) == 2  # retiré au sort, perdu : espace ordinaire
 
 
-# --- Tenir sa place en possession (ticket v2-realisme/02f) -----------------------------------------------------------
+# --- Tenir sa place en possession (02f), qui appelle (02g) -----------------------------------------------------------
+_SCENE_ROLES = {"A0": "milieu relayeur", "A1": "avant-centre", "A2": "ailier de couloir", "A3": "défenseur central",
+                "A4": "mezzala", "A5": "sentinelle", "A6": "défenseur central", "A7": "latéral défensif", "A8": "regista"}
+
+
 def _settled_scene() -> tuple[list[PlayerState], PlayerState, BallState]:
-    """Possession installée au milieu : porteur à x = 50, neuf coéquipiers de champ (cinq devant, quatre derrière)."""
+    """Possession installée au milieu : porteur à x = 50, neuf coéquipiers de champ (cinq devant, quatre derrière), chacun
+    avec son rôle (A1, A2, A4 : projection ; A0 : intermédiaire ; A3 : devant le ballon mais rôle qui n'appelle pas)."""
     holder = _p("H", x=50.0, y=34.0)
     mates = [_p(f"A{i}", x=x, y=y, poste="MC") for i, (x, y) in enumerate(
         ((55, 20), (58, 34), (62, 48), (70, 10), (75, 58), (40, 20), (35, 34), (30, 48), (25, 10)))]
+    for mate in mates:
+        mate.role = _SCENE_ROLES[mate.name]
     rival = _p("R", team="away", x=60.0, y=30.0)
     return [holder, *mates, _p("GK", x=3.0, poste="GK"), rival], holder, _ball(50.0, 34.0, holder="H")
 
 
-def test_settled_possession_keeps_only_the_two_nearest_runners_ahead_of_the_ball() -> None:
+_TICKS = tuple(1.0 + i * 0.15 / 60.0 for i in range(11))  # 1,5 s de match au pas de 0,15 s : plus que tout délai d'appel
+
+
+def _roles(players: list[PlayerState], ball: BallState, situation: str | None, runs: dict | None = None,
+           minutes: tuple[float, ...] = _TICKS) -> dict[str, str]:
+    """Rôle de chaque coéquipier de champ du porteur aux instants `minutes` (le premier choisit les appelants, le
+    dernier est après leur délai d'Off the Ball) ; renvoie ceux du dernier instant."""
+    runs = {} if runs is None else runs
+    roles: dict[str, str] = {}
+    for minute in minutes:
+        roles = {p.name: cerveau.think(p, ball, players, minute, runs, situation).role
+                 for p in players if p.team == "home" and p.name not in ("H", "GK")}
+    return roles
+
+
+def _callers(roles: dict[str, str]) -> list[str]:
+    return sorted(n for n, r in roles.items() if r == cerveau.APPEL)
+
+
+def test_settled_possession_keeps_the_two_best_ranked_runners_and_the_others_hold() -> None:
     from v2engine.situation import POSSESSION_INSTALLEE
 
     players, _, ball = _settled_scene()
-    roles = {p.name: cerveau.think(p, ball, players, 1.0, {}, POSSESSION_INSTALLEE).role
-             for p in players if p.team == "home" and p.name not in ("H", "GK")}
-    assert sorted(n for n, r in roles.items() if r == cerveau.APPEL) == ["A0", "A1"]  # les deux plus proches devant
-    assert all(r == cerveau.TENIR for n, r in roles.items() if n not in ("A0", "A1"))
+    roles = _roles(players, ball, POSSESSION_INSTALLEE)
+    # rôles de projection d'abord (A1 à 8 m, A2 à 17 m, A4 à 29 m), l'intermédiaire A0 ensuite : A1 et A2
+    assert _callers(roles) == ["A1", "A2"]
+    assert all(r == cerveau.TENIR for n, r in roles.items() if n not in ("A1", "A2"))
     assert cerveau.think(players[0], ball, players, 1.0, {}, POSSESSION_INSTALLEE).role == cerveau.PORTEUR
 
 
-def test_the_runner_rule_only_applies_in_possession_not_in_transition_or_without_situation() -> None:
-    from v2engine.situation import DERNIER_TIERS, TRANSITION_OFFENSIVE
+def test_the_cap_depends_on_the_situation_and_without_situation_everyone_calls() -> None:
+    from v2engine.situation import DEFENSE_PLACEE, DERNIER_TIERS, TRANSITION_DEFENSIVE, TRANSITION_OFFENSIVE
 
     players, _, ball = _settled_scene()
+    # dernier tiers et transition offensive : 3 appelants (A4 rejoint A1 et A2). C'est aussi le cas d'une contre-attaque
+    # qui arrive au dernier tiers (réserve A1 de l'expert au 02f) : elle garde 3 appelants au lieu de 2.
+    for situation in (DERNIER_TIERS, TRANSITION_OFFENSIVE):
+        assert _callers(_roles(players, ball, situation)) == ["A1", "A2", "A4"]
+    # situation perçue avec retard (il croit encore défendre alors que son équipe a le ballon) : règle de la transition
+    for situation in (DEFENSE_PLACEE, TRANSITION_DEFENSIVE):
+        assert _callers(_roles(players, _ball(50.0, 34.0, holder="H"), situation)) == ["A1", "A2", "A4"]
     mates = [p for p in players if p.team == "home" and p.name not in ("H", "GK")]
-    for situation in (TRANSITION_OFFENSIVE, None):  # contre-attaque (11) et tests sans situation : tous appellent
-        assert {cerveau.think(p, ball, players, 1.0, {}, situation).role for p in mates} == {cerveau.APPEL}
-    assert sum(cerveau.think(p, ball, players, 1.0, {}, DERNIER_TIERS).role == cerveau.APPEL for p in mates) == 2
+    # tests sans situation : tous appellent comme avant
+    assert {cerveau.think(p, ball, players, 1.0, {}, None).role for p in mates} == {cerveau.APPEL}
+
+
+def test_roles_that_build_or_cover_never_call_even_when_nearest_to_the_ball() -> None:
+    from v2engine.situation import POSSESSION_INSTALLEE
+
+    players, _, ball = _settled_scene()
+    ahead = next(p for p in players if p.name == "A3")
+    ahead.position = Vec2(52.0, 34.0)  # devant le ballon, le plus proche
+    for role in ("défenseur central", "sentinelle", "récupérateur", "regista", "latéral défensif"):
+        ahead.role = role
+        assert _roles(players, _ball(50.0, 34.0, holder="H"), POSSESSION_INSTALLEE)["A3"] == cerveau.TENIR
+    ahead.role = "ailier de couloir"
+    # même place, rôle de projection ; balle neuve : A1 et A2, déjà choisis sur l'autre balle, n'ont pas la priorité
+    assert _roles(players, _ball(50.0, 34.0, holder="H"), POSSESSION_INSTALLEE)["A3"] == cerveau.APPEL
+
+
+def test_a_full_back_calls_only_when_the_ball_is_on_the_other_side() -> None:
+    from v2engine.situation import POSSESSION_INSTALLEE
+
+    players, _, _ = _settled_scene()
+    back = next(p for p in players if p.name == "A0")
+    back.role, back.position = "latéral", Vec2(55.0, 60.0)  # côté y > 34
+    for p in players:
+        if p.name in ("A1", "A2", "A4"):
+            p.role = "défenseur central"  # personne d'autre devant ne peut appeler
+    same_side, other_side = _ball(50.0, 50.0, holder="H"), _ball(50.0, 10.0, holder="H")
+    assert _roles(players, same_side, POSSESSION_INSTALLEE)["A0"] == cerveau.TENIR
+    assert _roles(players, other_side, POSSESSION_INSTALLEE)["A0"] == cerveau.APPEL
+
+
+def test_off_the_ball_sets_the_delay_before_the_run_starts() -> None:
+    from v2engine.off_ball import call_delay_s
+    from v2engine.situation import POSSESSION_INSTALLEE
+
+    assert abs(call_delay_s(99) - 0.3) < 1e-9 and abs(call_delay_s(11) - 1.0) < 1e-9
+    assert call_delay_s(99) < call_delay_s(70) < call_delay_s(55) < call_delay_s(30) < call_delay_s(11)
+    for note in (99, 11):
+        holder = _p("H")
+        mate = _p("W", x=60.0, y=20.0, attributes={"Off the Ball": note})
+        mate.role = "ailier de couloir"
+        ball, players, delay = _ball(holder="H"), [holder, mate], call_delay_s(note)
+        first = cerveau.think(mate, ball, players, 1.0, {}, POSSESSION_INSTALLEE)
+        too_early = cerveau.think(mate, ball, players, (60.0 + delay - 0.1) / 60.0, {}, POSSESSION_INSTALLEE)
+        in_time = cerveau.think(mate, ball, players, (60.0 + delay + 0.1) / 60.0, {}, POSSESSION_INSTALLEE)
+        assert (first.role, too_early.role, in_time.role) == (cerveau.TENIR, cerveau.TENIR, cerveau.APPEL)
+
+
+def test_a_runner_in_full_run_keeps_his_call_instead_of_alternating_with_a_nearer_mate() -> None:
+    from v2engine.situation import POSSESSION_INSTALLEE
+
+    players, _, ball = _settled_scene()
+    runs = {"A4": (Vec2(85.0, 58.0), 70.0)}  # A4, le plus loin des projections, court vers un espace encore lointain
+    assert _callers(_roles(players, ball, POSSESSION_INSTALLEE, runs)) == ["A1", "A4"]  # A2 cède, A4 ne lâche pas
+    runs = {"A4": (Vec2(75.0, 58.0), 70.0)}  # espace atteint : candidat ordinaire, donc évincé (balle neuve)
+    assert _callers(_roles(players, _ball(50.0, 34.0, holder="H"), POSSESSION_INSTALLEE, runs)) == ["A1", "A2"]
+    runs = {"A4": (Vec2(85.0, 58.0), 50.0)}  # appel périmé : même chose
+    assert _callers(_roles(players, _ball(50.0, 34.0, holder="H"), POSSESSION_INSTALLEE, runs)) == ["A1", "A2"]
+
+
+def test_the_player_named_by_the_pass_plan_stays_a_caller() -> None:
+    from v2engine.situation import POSSESSION_INSTALLEE
+
+    players, _, ball = _settled_scene()
+    a6 = next(p for p in players if p.name == "A6")  # défenseur central derrière le ballon
+    ball.plan = ("H", "A6", 0.0)  # suite prévue de la passe du porteur : appelant sans délai
+    assert cerveau.think(a6, ball, players, 1.0, {}, POSSESSION_INSTALLEE).role == cerveau.APPEL
+    ball.plan = ("X", "A6", 0.0)  # plan d'un autre porteur : ignoré
+    assert cerveau.think(a6, ball, players, 1.0, {}, POSSESSION_INSTALLEE).role == cerveau.TENIR
 
 
 def test_the_receiver_and_the_runners_of_a_pass_in_flight_are_kept() -> None:
@@ -259,10 +362,9 @@ def test_the_receiver_and_the_runners_of_a_pass_in_flight_are_kept() -> None:
 
     players, _, _ = _settled_scene()
     flight = _ball(53.0, 34.0, velocity=Vec2(10.0, 0.0), receiver="A1", last_pass_team="home")
-    roles = {p.name: cerveau.think(p, flight, players, 1.0, {}, POSSESSION_INSTALLEE).role
-             for p in players if p.team == "home" and p.name not in ("H", "GK")}
+    roles = _roles(players, flight, POSSESSION_INSTALLEE)
     assert roles["A1"] == cerveau.RECEVEUR
-    assert sum(r == cerveau.APPEL for r in roles.values()) <= cerveau.PROVISIONAL_RUNNERS
+    assert _callers(roles) == ["A2", "A4"]  # le receveur ne prend pas de place d'appelant
     assert all(r in (cerveau.APPEL, cerveau.TENIR, cerveau.RECEVEUR) for r in roles.values())
 
 
@@ -270,10 +372,12 @@ def test_away_team_holds_in_mirror_and_the_intention_shows_the_role() -> None:
     from v2engine.situation import POSSESSION_INSTALLEE
 
     holder, ahead, behind = _p("H", team="away", x=50.0), _p("F", team="away", x=40.0), _p("B", team="away", x=60.0)
+    ahead.role = behind.role = "avant-centre"
     players = [holder, ahead, behind, _p("R", x=30.0)]
     ball = _ball(50.0, 34.0, holder="H")
-    run = cerveau.think(ahead, ball, players, 1.0, {}, POSSESSION_INSTALLEE)
-    hold = cerveau.think(behind, ball, players, 1.0, {}, POSSESSION_INSTALLEE)
+    cerveau.think(ahead, ball, players, 1.0, {}, POSSESSION_INSTALLEE)  # choisi : son délai (Off the Ball) court
+    run = cerveau.think(ahead, ball, players, 1.0 + 1.0 / 60.0, {}, POSSESSION_INSTALLEE)
+    hold = cerveau.think(behind, ball, players, 1.0 + 1.0 / 60.0, {}, POSSESSION_INSTALLEE)
     assert run.role == cerveau.APPEL and hold.role == cerveau.TENIR
     assert hold.action in ("se replacer", "tenir sa place") and "en possession" in hold.reason
 
@@ -303,3 +407,21 @@ def test_a_player_holding_his_place_keeps_doing_so_until_he_has_seen_the_loss() 
     assert held.role == cerveau.TENIR
     rival_ball = _ball(50.0, 34.0, holder="R")  # perte de balle, pas encore perçue : même intention
     assert cerveau.think(mate, rival_ball, players, 1.0, {}, POSSESSION_INSTALLEE, previous=held) is held
+
+
+def test_a_chosen_caller_keeps_his_place_when_a_nearer_mate_appears_and_is_forgotten_once_gone() -> None:
+    from v2engine.situation import POSSESSION_INSTALLEE
+
+    players, _, ball = _settled_scene()
+    assert _callers(_roles(players, ball, POSSESSION_INSTALLEE)) == ["A1", "A2"]
+    a4 = next(p for p in players if p.name == "A4")
+    a4.position = Vec2(52.0, 34.0)  # A4 devient le plus proche du ballon : il n'évince pas A2, déjà choisi
+    assert _callers(_roles(players, ball, POSSESSION_INSTALLEE, minutes=(1.03, 1.032))) == ["A1", "A2"]
+    a2 = next(p for p in players if p.name == "A2")
+    a2.position = Vec2(45.0, 48.0)  # A2 passe derrière le ballon : il n'est plus éligible, A4 prend la place libre
+    later = tuple(1.03 + i * 0.15 / 60.0 for i in range(11))  # A4 attend ensuite son propre délai
+    assert _callers(_roles(players, ball, POSSESSION_INSTALLEE, minutes=later)) == ["A1", "A4"]
+    # absent plus d'une seconde, un appelant est oublié : il repasse par la sélection et par son délai
+    gone = _ball(50.0, 34.0, holder="H")
+    gone.callers["A1"] = (10.0, 10.0)
+    assert cerveau.think(next(p for p in players if p.name == "A1"), gone, players, 2.0, {}, POSSESSION_INSTALLEE).role         == cerveau.TENIR

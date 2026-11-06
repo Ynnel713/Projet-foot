@@ -39,6 +39,7 @@ DEPTH_LANE_M = 15.0  # pas d'appel dans le dos à moins de 15 m (en largeur) d'u
 # Constantes produit validées par le propriétaire (24/10/2026).
 RUN_INTERVAL_S = 1.0  # délai minimal avant de chercher un autre espace (ticket 06 : garde jusqu'à l'atteindre)
 _SEARCH_RADIUS_M = (8.0, 7.0, 2.0, 15.0)  # baseline, amplitude, min, max : 99 -> 15 m, 55 -> 8 m, 11 -> 2 m
+_CALL_DELAY_S = (0.65, 0.35, 0.3, 1.0)  # baseline, amplitude, min, max (ticket v2-realisme/02g)
 _FORWARD_SHARE = 2.0 / 3.0  # part du rayon cherchée vers l'avant ; le reste (1/3) en arrière
 # Choisir le meilleur espace : 99 -> 95 %, 55 -> 70 %, 11 -> 45 % (même courbe que Decisions).
 _BEST_SPACE_BASELINE = 0.70
@@ -52,6 +53,19 @@ _LATERAL_STEPS = (-0.5, 0.0, 0.5)
 def search_radius_m(off_the_ball: float) -> float:
     baseline, amplitude, low, high = _SEARCH_RADIUS_M
     return success_probability(off_the_ball, baseline=baseline, amplitude=amplitude, min_prob=low, max_prob=high)
+
+
+def call_delay_s(off_the_ball: float) -> float:
+    """Délai entre le moment où un coéquipier est choisi pour appeler et le début de son appel (ticket v2-realisme/02g) :
+    Off the Ball 99 -> 0,3 s, 55 -> 0,65 s, 11 -> 1,0 s (ordre de grandeur d'un temps de réaction, chiffre réel non trouvé)."""
+    baseline, amplitude, low, high = _CALL_DELAY_S
+    return low + high - success_probability(off_the_ball, baseline=baseline, amplitude=amplitude, min_prob=low,
+                                            max_prob=high)
+
+
+def player_call_delay_s(player: PlayerState) -> float:
+    """`call_delay_s` de la note d'Off the Ball du joueur."""
+    return call_delay_s(player_attribute(player, "Off the Ball"))
 
 
 def best_space_probability(off_the_ball: float) -> float:

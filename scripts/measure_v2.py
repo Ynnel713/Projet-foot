@@ -60,6 +60,13 @@ def _hook(collector: Collector, clock: dict[str, float], plans: bool = True) -> 
         collector.on_choice(action.kind, action.follow, action.plan)
         return action
 
+    real_think = match.think
+
+    def think(player, *args, **kwargs):
+        intention = real_think(player, *args, **kwargs)
+        collector.on_role(player.name, intention.role)
+        return intention
+
     real_stays = cerveau.stays_behind
 
     def stays_behind(player):
@@ -75,9 +82,9 @@ def _hook(collector: Collector, clock: dict[str, float], plans: bool = True) -> 
 
     match.pass_velocity, match.attempt_shot = pass_velocity, attempt_shot
     match.resolve_tackle, match.choose_action = resolve_tackle, choose_action
-    cerveau.stays_behind = stays_behind
+    cerveau.stays_behind, match.think = stays_behind, think
     defense.DefensiveRoles.start_team_press = trigger
-    return lambda: ([setattr(match, name, fn) for name, fn in real.items()] + [setattr(cerveau, "stays_behind", real_stays)]
+    return lambda: ([setattr(match, name, fn) for name, fn in real.items()] + [setattr(cerveau, "stays_behind", real_stays), setattr(match, "think", real_think)]
                     + [setattr(defense.DefensiveRoles, "start_team_press", real_trigger)])
 
 
@@ -266,10 +273,10 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--pas", type=float, default=TICK_S, help="pas de calcul (s), par défaut celui du produit")
     parser.add_argument("--sans-plan", action="store_true", help="ticket v2-collectif/14 désactivé")
     parser.add_argument("--debut", type=int, default=0, help="indice du premier match (lots parallèles)")
-    parser.add_argument("--sans-tenir", action="store_true", help="ticket v2-realisme/02f désactivé : tous les coéquipiers du porteur appellent")
+    parser.add_argument("--sans-tenir", action="store_true", help="tickets v2-realisme/02f et 02g désactivés : tous les coéquipiers du porteur appellent")
     args = parser.parse_args(argv)
     if args.sans_tenir:
-        cerveau.HOLD_SITUATIONS = ()
+        cerveau.CALLER_CAP = {}
     result = report(run(args.matches, args.profil, tick_s=args.pas, plans=not args.sans_plan, start=args.debut),
                     args.detail)
     for key, value in result.items():

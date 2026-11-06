@@ -49,6 +49,10 @@ class BallState:
     # Plan de passe (ticket v2-collectif/14) : (receveur, suite prévue par le passeur, instant de la passe). Lu par le
     # receveur à sa première décision, puis effacé à toute décision d'un porteur.
     plan: tuple[str, str, float] | None = None
+    # Appelants choisis (ticket v2-realisme/02g) : nom -> (instant du choix, dernier instant où il l'était encore). Sert
+    # au délai avant l'appel (Off the Ball) et à la stabilité du choix : un appelant garde sa place tant qu'il reste
+    # éligible, sans nouveau délai (`cerveau.CALLER_MEMORY_S`).
+    callers: dict[str, tuple[float, float]] = field(default_factory=dict)
     # Tir qui finira au fond (tirage déjà fait au départ) : équipe du tireur tant que le ballon est en route vers le but.
     # Le but ne compte qu'à l'arrivée du ballon sur la ligne, jamais au départ du tir.
     shot_for: str | None = None
