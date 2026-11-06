@@ -45,6 +45,8 @@ LONG_PASS_M = 32.0
 SHOT_CLOSE_RANGE_M = 16.0  # tir « de près » : demande du propriétaire (28/10/2026) pour mesurer l'exposition du gardien
 FREE_PASSER_M = 9.0  # porteur libre : défenseur le plus proche à 9 m ou plus (pressé : PRESS_RADIUS_M), ticket 05
 SPRINT_MPS, HIGH_INTENSITY_MPS = 25.0 * KMH, 19.8 * KMH
+SPRINT_MIN_S = 1.0  # sprint : au-dessus de SPRINT_MPS pendant au moins 1 s (ticket v2-realisme/01d)
+MATCH_90_S = 90 * 60.0  # appels ramenés à 90 min, comme la source (CIES n° 88, ticket v2-realisme/01d)
 CROWDED_M = 5.0  # regroupement : coéquipier à moins de 5 m, hors duel (ticket 06)
 # Combinaisons (ticket v2-collectif/14, validé le 02/11/2026) : passe « sans gain » sous 5 m vers le but ; passe qui
 # fait avancer : elle casse une ligne adverse ou gagne au moins 10 m ; retour au passeur dans les 3 s ; une-deux si le
@@ -286,7 +288,9 @@ class Collector:
         self.levels: dict[str, str] = {}  # joueur -> niveau du profil testé ("haut"/"bas"), voir measure_v2
         self.poste: dict[str, str] = {}
         self.sprint = self.hi = self.total = 0.0
-        self.hi_time = self.time = 0.0
+        self.hi_time = self.sprint_time = self.time = 0.0
+        self.sprint_run: Counter = Counter()  # durée de la course en cours au-dessus de SPRINT_MPS, par joueur (s)
+        self.sprints: Counter = Counter()  # sprints d'au moins SPRINT_MIN_S, par joueur (ticket v2-realisme/01d)
         self.hi_first = self.hi_last = 0.0
         self.holder: str | None = None
         self.holder_since = 0.0
@@ -442,6 +446,10 @@ class Collector:
             self.time += dt
             if v > SPRINT_MPS:
                 self.sprint += v * dt
+                self.sprint_time += dt
+                self.sprint_run[p.name] += dt
+            else:
+                self._close_sprint(p.name)
             if v > HIGH_INTENSITY_MPS:
                 self.hi += v * dt
                 self.hi_by[p.name] += v * dt
@@ -450,6 +458,10 @@ class Collector:
                     self.hi_first += v * dt
                 elif minute >= 75.0:
                     self.hi_last += v * dt
+
+    def _close_sprint(self, name: str) -> None:
+        if self.sprint_run.pop(name, 0.0) >= SPRINT_MIN_S - 1e-9:
+            self.sprints[name] += 1
 
     def _close_possession(self, now_s):
         if self.holder is not None:
@@ -710,6 +722,11 @@ class Collector:
         if self.total > 0:
             self.stats["distance au-dessus de 25 km/h (part)"].add(self.sprint / self.total)
             self.stats["temps au-dessus de 19,8 km/h (part)"].add(self.hi_time / self.time)
+            # ticket v2-realisme/01d : la source mesure la distance (repère R6), le temps reste suivi
+            self.stats["distance au-dessus de 19,8 km/h (part)"].add(self.hi / self.total)
+            self.stats["temps au-dessus de 25 km/h (part)"].add(self.sprint_time / self.time)
+        for name in list(self.sprint_run):  # sprint encore en cours au coup de sifflet final
+            self._close_sprint(name)
         if self.hi_first > 0:
             self.stats["baisse de la course intense en fin de match (part)"].add(1.0 - self.hi_last / self.hi_first)
         for r in self.retreat_done + self.retreat:
@@ -731,6 +748,14 @@ class Collector:
         for name, poste in self.poste.items():  # tous les joueurs de champ, y compris ceux sans appel
             if poste != "GK":
                 self.stats[f"appels par joueur et par match : {poste}"].add(per_player.get(name, 0))
+                # ticket v2-realisme/01d : par poste, à côté des km (repères R4 à R6)
+                self.stats[f"distance au-dessus de 19,8 km/h par joueur (m) : {poste}"].add(self.hi_by[name])
+                self.stats[f"sprints par joueur et par match : {poste}"].add(self.sprints[name])
+                self.stats["sprints par joueur et par match"].add(self.sprints[name])
+                if self.now > 0:
+                    per_90 = per_player.get(name, 0) * MATCH_90_S / self.now
+                    self.stats[f"appels par joueur et par 90 min : {poste}"].add(per_90)
+                    self.stats["appels par joueur et par 90 min"].add(per_90)
         redundant = 0
         for a, s1, e1, p1 in self.run_log:
             if any(b != a and s2 < e1 and s1 < e2 and p1.distance_to(p2) < RUN_SAME_ZONE_M
@@ -751,6 +776,7 @@ class Collector:
             if len(gaps) > 1:
                 self.stats[f"profil {level} : écart-type distance défense-milieu (m)"].add(statistics.pstdev(gaps))
         self.count["appels"] += len(self.run_log)
+        self.count["durée de match (s)"] += self.now  # temps additionnel compris (ticket v2-realisme/01d)
         self.count["appels dans le dos"] += sum(self.deep_runs.values())
         self._combinations()
         self._reset_match()

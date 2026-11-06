@@ -208,6 +208,71 @@ def test_distance_sprint_share_and_late_decline() -> None:
     assert math.isclose(sum(c.km["tous"]), 9.1 / 1000.0)  # 8 m de sprint + 1,1 m de marche
 
 
+def _run_profile(c: ind.Collector, name: str, speeds_kmh: list[tuple[float, int]], poste: str = "MC") -> None:
+    """Un joueur seul, en ligne droite : (vitesse en km/h, nombre de ticks de 0,1 s) bout à bout."""
+    k = 0
+    for kmh, ticks in speeds_kmh:
+        for _ in range(ticks):
+            c.on_tick(0.1 * k, [_p(name, "home", 50, 34, poste=poste, vx=kmh / 3.6)], _ball(0, 0), None)
+            k += 1
+
+
+def test_high_intensity_distance_and_time_shares_on_a_synthetic_run() -> None:
+    # ticket v2-realisme/01d : 10 s à 20 km/h puis 10 s à 10 km/h ; repère R6 en distance, le temps reste suivi
+    c = ind.Collector(geometry_every_s=1e9)
+    _run_profile(c, "A", [(20.0, 100), (10.0, 100)], poste="DC")
+    c.end_match()
+    fast, slow = 20.0 / 3.6 * 10.0, 10.0 / 3.6 * 10.0
+    assert math.isclose(c.stats["distance au-dessus de 19,8 km/h (part)"].values[0], fast / (fast + slow))  # 2/3
+    assert math.isclose(c.stats["temps au-dessus de 19,8 km/h (part)"].values[0], 0.5)
+    assert c.stats["temps au-dessus de 25 km/h (part)"].values == [0.0]
+    assert math.isclose(c.stats["distance au-dessus de 19,8 km/h par joueur (m) : DC"].values[0], fast)
+    assert c.stats["sprints par joueur et par match : DC"].values == [0]
+    assert math.isclose(sum(c.km["DC"]), (fast + slow) / 1000.0)
+
+
+def test_a_sprint_lasts_at_least_one_second_and_one_open_at_the_whistle_counts() -> None:
+    c = ind.Collector(geometry_every_s=1e9)
+    # 1,5 s à 28,8 km/h (sprint), 0,5 s de marche, 0,5 s à 28,8 km/h (trop court), 1 s de marche, 1 s à 28,8 km/h
+    _run_profile(c, "S", [(28.8, 15), (3.6, 5), (28.8, 5), (3.6, 10), (28.8, 10)])
+    c.end_match()
+    assert c.stats["sprints par joueur et par match"].values == [2]
+    assert math.isclose(c.stats["temps au-dessus de 25 km/h (part)"].values[0], 3.0 / 4.5)
+
+
+def test_runs_are_also_given_per_90_minutes() -> None:
+    c, _, away = _collector_with_two_teams()
+    holder, ball = _p("H0", "home", 30, 30), _ball(30, 30, "H0")
+    c.on_tick(0.0, [holder] + away, ball, None)
+    for k in range(10):  # 1 s à 21,6 km/h à 10 m du porteur : un appel
+        c.on_tick(0.1 * k, [holder, _p("R", "home", 40, 30, vx=6.0)] + away, ball, None)
+    c.on_tick(45 * 60.0, [holder, _p("R", "home", 40, 30)] + away, ball, None)  # match arrêté à 45 min
+    c.end_match()
+    assert c.stats["appels par joueur et par match : MC"].values.count(1) == 1
+    assert 2.0 in c.stats["appels par joueur et par 90 min : MC"].values  # 1 appel en 45 min : 2 par 90 min
+
+
+def test_passes_per_match_and_per_minute_of_effective_play() -> None:
+    from scripts.measure_v2 import report
+    c = ind.Collector()
+    c.matches, c.minutes_per_match = 2, 90.0
+    # matchs de 100 min (temps additionnel compris), dont 30 min de ballon mort
+    c.count.update({"passes": 1800, "temps de ballon mort (s)": 2 * 30 * 60.0, "durée de match (s)": 2 * 100 * 60.0})
+    out = report(c)
+    assert out["passes par match"] == 900.0
+    assert math.isclose(out["passes par minute de jeu effectif"], 1800 / 140)  # 2 × 70 min de jeu effectif
+    assert math.isclose(out["temps de jeu effectif (part)"], 0.7)
+    assert out["passes par minute"] == 10.0  # par minute de match réglementaire, comme la source (941 / 90)
+
+
+def test_match_duration_includes_added_time() -> None:
+    c = ind.Collector(geometry_every_s=1e9)
+    c.on_tick(0.0, [_p("A", "home", 50, 34)], _ball(0, 0), None)
+    c.on_tick(95 * 60.0, [_p("A", "home", 50, 34)], _ball(0, 0), None)  # coup de sifflet final à 95 min
+    c.end_match()
+    assert c.count["durée de match (s)"] == 95 * 60.0
+
+
 def test_geometry_is_split_by_zone_score_and_minute() -> None:
     c = ind.Collector(geometry_every_s=1.0)
     home = [_p(f"H{i}", "home", 30 + 5 * i, 20 + 5 * i) for i in range(10)]

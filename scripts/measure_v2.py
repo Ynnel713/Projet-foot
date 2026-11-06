@@ -150,9 +150,15 @@ def report(c: Collector, detail: bool = False) -> dict:
     k = c.count
     passes = max(1, k["passes"])
     minutes = getattr(c, "minutes_per_match", 90.0) * n
+    # durée réelle, temps additionnel compris : passes et ballon mort sont comptés sur tout le match (ticket
+    # v2-realisme/01d) ; à défaut (collecteur construit à la main), la durée réglementaire
+    played = k["durée de match (s)"] / 60.0 or minutes
     out: dict[str, object] = {
         "matchs": c.matches,
         "passes par minute": k["passes"] / minutes,
+        # ticket v2-realisme/01d (repère R7) : la source compte les passes par match ; 15-17 vaut par minute de jeu effectif
+        "passes par match": k["passes"] / n,
+        "passes par minute de jeu effectif": k["passes"] / max(1e-9, played - k["temps de ballon mort (s)"] / 60.0),
         "passes réussies (part)": k["passes réussies"] / passes,
         "passes chez l'adversaire (part)": k["passes chez l'adversaire"] / passes,
         "receveur visé (part)": k["receveur visé"] / passes,
@@ -174,7 +180,7 @@ def report(c: Collector, detail: bool = False) -> dict:
         "touches jouées long (part)": k["remises jouées long : touche"] / max(1, k["remises : touche"]),
         "sorties de but jouées long (part)": k["remises jouées long : sortie de but"] / max(1, k["remises : sortie de but"]),
         "corners joués long (part)": k["remises jouées long : corner"] / max(1, k["remises : corner"]),
-        "temps de jeu effectif (part)": 1.0 - k["temps de ballon mort (s)"] / (60.0 * minutes),
+        "temps de jeu effectif (part)": 1.0 - k["temps de ballon mort (s)"] / (60.0 * played),
         "tacles par match": k["tacles"] / n,
         # issues du tir (ticket v2-collectif/28b) : sur les tirs tracés, contrés et penaltys compris
         "tirs tracés par équipe": k["tirs tracés"] / (2 * n),

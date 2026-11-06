@@ -32,14 +32,18 @@ Référence du ticket `.scratch/v2-collectif/issues/01-banc-de-mesure-tactique.m
 | Issues des arrêts | Part des arrêts captés, repoussés en jeu, claqués derrière la ligne (corner) ; arrêts par match (ticket 28b) | %, nombre | répartition non publiée (Opta la relève sans la publier) ; environ 20 % des corners viennent d'un arrêt (ordre de grandeur, sans méthode publiée) |
 | Origine des tirs | Part des tirs selon la façon dont le tireur a eu le ballon : passe au sol, en retrait, en profondeur, centre, dribble (plus de 5 m porté), rebond, récupération, coup franc, penalty (ticket 28b) | % | suivi, pas de cible |
 | Qualité moyenne de l'occasion | Moyenne, par tir tracé, de la chance de but de l'occasion au moment du tir (ticket 28a, contre compris) | probabilité | environ 0,10-0,11 (xG moyen d'un tir en Big 5, ordre de grandeur) |
-| Temps de jeu effectif | 1 − temps de ballon mort / temps de match (ticket 29) | % | réel 53-56 % (CIES 2026) avec fautes, remplacements et blessures ; sans eux, critère du ticket 29 : 65-80 % |
+| Temps de jeu effectif | 1 − temps de ballon mort / temps de match (ticket 29 ; durée réelle du match, temps additionnel compris, depuis le ticket v2-realisme/01d) | % | réel 53-56 % (CIES 2026) avec fautes, remplacements et blessures ; sans eux, critère du ticket 29 : 65-80 % |
 | Fautes | Fautes commises par match, sifflées ou laissées en avantage (ticket 30, `FoulEvent` de la trace) ; aussi par profil (Aggression haute ou basse) | nombre | 21 (Premier League) à 26,4 (Ligue 1) par match ([CIES](https://football-observatory.com/Foul-analysis-at-big-5-league-level-from-2219), saison non précisée) ; critère du ticket 30 : 18-28 |
 | Avantages acquis | Fautes laissées en avantage et non rappelées / fautes (ticket 30) | % | Non trouvé |
 | Coups francs et penaltys | Coups francs et penaltys sifflés par match (ticket 30) | nombre | penaltys environ 0,34 par match (Ligue 1 2023-24 : 105 penaltys) ; critère du ticket 30 : 0,15-0,5 |
 | Coups francs frappés au but | Coups francs joués dans le dernier tiers adverse (35 m) et frappés directement / coups francs joués dans ce tiers (ticket 30) | % | environ 19 % (Manchester City, Opta, [The Analyst](https://theanalyst.com/articles/free-kicks-why-are-teams-not-shooting-as-much)) ; critère du ticket 30 : 10-25 % |
 | Gravité des fautes | Part des fautes inconsidérées (jaune) et avec excès d'engagement (rouge), loi 12 (ticket 30, pour les cartons du ticket `v2-attributs-restants/09a`) | % | Non trouvé ; constantes 12 % et 0,5 % |
 | Choix du porteur | Part de passes, conduites et tirs | % | suivi |
-| Distance | Km par joueur de champ, par poste | km | 9-14 ; ordre des postes de Bradley 2009 |
+| Distance | Km par joueur de champ, par poste | km | 9-14 ; ordre des postes de Bradley 2009 ; 10,2 à 12,0 km par poste (section 6, R4) |
+| Haute intensité, en distance (ticket v2-realisme/01d) | Distance des joueurs de champ au-dessus de 19,8 km/h / distance totale ; et distance au-dessus de 19,8 km/h par joueur, par poste | %, m | 6-10 % ; 586 à 1 113 m par poste (section 6, R6) |
+| Temps au-dessus de 25 km/h (ticket v2-realisme/01d) | Temps cumulé des joueurs de champ au-dessus de 25 km/h / temps cumulé | % | suivi |
+| Sprints (ticket v2-realisme/01d) | Passages au-dessus de 25 km/h tenus au moins 1 s, par joueur de champ et par match, et par poste | nombre | suivi, pas de repère sourcé |
+| Passes par match (ticket v2-realisme/01d) | Passes tentées des deux équipes / matchs ; et passes / minutes de jeu effectif (durée réelle du match, temps additionnel compris, moins le ballon mort) | nombre, /min | 890-940 par match ; 15-17 par minute de jeu effectif (section 6, R7) |
 | Haute intensité | Part de la distance au-dessus de 25 km/h ; part du temps au-dessus de 19,8 km/h | % | 2-3 ; 2-5 (la source mesure la distance au-dessus de 19,8 km/h : à redéfinir, voir section 6, R6) |
 | Baisse de fin de match | Course au-dessus de 19,8 km/h : dernier quart d'heure contre premier | % | 10-30 |
 
@@ -85,7 +89,8 @@ Ils définissent la mesure et ne changent pas le jeu (`scripts/v2_indicators.py`
 | Ellipse de couverture | 3 m derrière le porteur à 9 m devant, demi-largeur 4 m | Recherche du propriétaire ; demi-largeur proposée |
 | Supériorité locale : rayon | 10 m | Recherche du propriétaire |
 | Compacité autour du ballon | 5 défenseurs les plus proches | Forcher et al. 2023 |
-| Appel | > 0,7 s au-dessus de 15 km/h, créant une option de passe (ou conclu par la réception) | Recherche du propriétaire |
+| Appel | > 0,7 s au-dessus de 15 km/h, créant une option de passe (ou conclu par la réception) ; aussi ramené à 90 min (× 5 400 s / durée du match), comme la source (ticket v2-realisme/01d) | CIES n° 88 (section 6, R5) |
+| Sprint | Au-dessus de 25 km/h pendant au moins 1 s (un sprint encore en cours au coup de sifflet final compte) | Proposé (ticket v2-realisme/01d), accepté d'office par le propriétaire |
 | Appels redondants | Simultanés, finissant à moins de 5 m l'un de l'autre | Proposé |
 | Perte en transition | < 5 s après la récupération | Recherche du propriétaire |
 | Occasion de contre | Tir < 15 s après la récupération | Recherche du propriétaire |
@@ -182,12 +187,12 @@ Les 7 repères de l'audit de réalisme (`.scratch/v2-realisme/spec.md`, section 
 | R1 | Tirs par équipe : 8 à 15 | Opta Analyst, « Finding Their Range » (31/03/2025) : 8,3 tirs par match hors de la surface, soit 31,7 % des tirs | Premier League 2024-25, au 31/03/2025 | Tir Opta : toute tentative au but, contrés et penaltys compris | tirs par équipe et par match | `tirs tracés par équipe` (`ShotEvent`, contrés et penaltys compris, ticket 28b) | Aucun sur le périmètre. Valeur réelle **calculée** (8,3 / 0,317 / 2 ≈ 13,1 par équipe), non publiée telle quelle. `tirs par équipe` (`on_shot`, décision de tirer) n'est pas le bon indicateur : il ne compte pas les penaltys. | **Bloquant**, sur `tirs tracés par équipe` |
 | R2 | Conversion : 10 à 11 % | Même article : 14,7 % des tirs de la surface et 4,2 % des tirs extérieurs vont au but | Premier League 2024-25 | Buts / tirs, penaltys compris (« sauf mention contraire ») | % | `conversion des tirs (part)` : tirs tracés terminés en but / tirs tracés | Aucun sur le périmètre (penaltys compris, buts contre son camp exclus des deux côtés). Valeur réelle **calculée** : 14,7 % × 0,683 + 4,2 % × 0,317 ≈ 11,4 %, au-dessus de la fourchette proposée. | **Bloquant**, fourchette élargie à **10 à 12 %** |
 | R3 | Buts dans la surface : 80 à 90 % | Même article : 11,5 % des buts marqués de l'extérieur de la surface en 2023-24 (plus bas historique), 11,7 % en 2024-25 au 31/03/2025 | Premier League 2023-24 et 2024-25 | Origine du tir dans la surface ou sur ses lignes, penaltys compris | % des buts | `buts dans la surface (part)` : buts sur tir dont l'origine est dans la surface / buts sur tir | Aucun (même origine, penaltys compris). Valeur réelle 88 à 89 %. | **Bloquant** |
-| R4 | Distance par joueur de champ : 9 à 14 km | Modric, Versic, Morgans et Sekulic, *Biology of Sport* 2023, 40(4) : 949-958 | Ligue des champions 2020-21, phase de groupes, 20 matchs, 244 matchs complets de joueurs de champ (InStat, 25 Hz) | Distance totale des joueurs ayant joué tout le match | km par joueur et par match | `km par joueur`, par poste | Le banc compte le temps additionnel ; la source aussi (match complet). Valeurs réelles par poste : 10,2 km (défenseurs centraux) à 12,0 km (milieux centraux). 9 à 14 km est une enveloppe large, pas une cible. | **Indicatif** (cible de calibration : 10 à 12 km, ordre des postes de la source) |
+| R4 | Distance par joueur de champ : 9 à 14 km | Modric, Versic, Morgans et Sekulic, *Biology of Sport* 2023, 40(4) : 949-958 | Ligue des champions 2020-21, phase de groupes, 20 matchs, 244 matchs complets de joueurs de champ (InStat, 25 Hz) | Distance totale des joueurs ayant joué tout le match | km par joueur et par match | `km par joueur de champ, par poste` | Le banc compte le temps additionnel ; la source aussi (match complet). Valeurs réelles par poste : 10,2 km (défenseurs centraux) à 12,0 km (milieux centraux). 9 à 14 km est une enveloppe large, pas une cible. | **Indicatif** (cible de calibration : 10 à 12 km, ordre des postes de la source) |
 | R5 | Appels par joueur : 5 à 20 (15,1 en moyenne) | CIES Football Observatory, rapport mensuel n° 88 (octobre 2023), données SkillCorner. **Correction** : la section 2 citait PLOS One 2022, une revue systématique qui ne contient pas ces chiffres. | 3 261 matchs de 27 ligues (Europe et Amériques), saison 2023 ou 2023-24 | Course de plus de 0,7 s au-dessus de 15 km/h d'un joueur qui devient une option de passe, avec une forte probabilité d'être choisi par le porteur (position et orientation du corps) ; phases offensives seulement | appels par joueur et par 90 min | `appels par joueur` : course de plus de 0,7 s au-dessus de 15 km/h d'un coéquipier du porteur, comptée si le coureur est le receveur visé ou si, à la fin de la course, sa probabilité de réception atteint 0,7 | Vitesse, durée et phase identiques. Diffère sur l'option : le banc juge la réception (sans interception), la source juge la chance d'être choisi. Le banc peut donc compter des courses que la source exclut, et inversement. Moyennes par poste : 5,5 (défenseurs centraux) à 19,2 (milieux offensifs). | **Indicatif** (ordre de grandeur et ordre des postes) |
-| R6 | Haute intensité : 2 à 5 % au-dessus de 19,8 km/h | Modric et al. 2023 (voir R4) | Voir R4 | Distance au-dessus de 5,5 m/s (19,8 km/h) | m, et part de la distance totale | `temps au-dessus de 19,8 km/h (part)` | La source donne une **distance** (586 à 1 113 m par poste, soit 5,8 à 10,3 % de la distance totale, part calculée), le banc une **part du temps**. 2 à 5 % ne correspond à aucune des deux mesures de la source. | **À redéfinir** (01d : part de la distance au-dessus de 19,8 km/h, cible 6 à 10 %) |
+| R6 | Haute intensité : 2 à 5 % au-dessus de 19,8 km/h | Modric et al. 2023 (voir R4) | Voir R4 | Distance au-dessus de 5,5 m/s (19,8 km/h) | m, et part de la distance totale | `temps au-dessus de 19,8 km/h (part)` | La source donne une **distance** (586 à 1 113 m par poste, soit 5,8 à 10,3 % de la distance totale, part calculée), le banc une **part du temps**. 2 à 5 % ne correspond à aucune des deux mesures de la source. | **À redéfinir** (01d : part de la distance au-dessus de 19,8 km/h, cible 6 à 10 %). Par poste, distance totale et distance au-dessus de 19,8 km/h (Big 5 ; hors Big 5) : défenseurs centraux 10,24 km et 716 m (7,0 %) ; 10,17 km et 586 m (5,8 %) ; milieux centraux 11,97 km et 1 001 m (8,4 %) ; 11,82 km et 857 m (7,3 %) ; latéraux 11,07 km et 1 072 m (9,7 %) ; 10,84 km et 954 m (8,8 %) ; attaquants 10,32 km et 811 m (7,9 %) ; 10,85 km et 1 038 m (9,6 %) ; milieux excentrés 10,84 km et 1 113 m (10,3 %) ; 11,25 km et 1 070 m (9,5 %) |
 | R7 | Passes par minute : 15 à 17 | Opta Analyst (16/01/2026) : 941,0 passes par match (deux équipes) en 2023-24, 893,4 en 2024-25 | Premier League 2023-24 et 2024-25 | Passes tentées des deux équipes, par match | passes par match | `passes par minute` : passes tentées des deux équipes / 90 min | 941 passes sur 90 min font **10,5 par minute de match** ; 15 à 17 ne s'obtient qu'en divisant par le temps de jeu effectif (941 / 56 min ≈ 16,8). La fourchette mêle donc un dénominateur de temps effectif et une mesure par minute de match. Le banc mesure aujourd'hui 10,96 passes par minute de match, soit environ 990 passes par match, proche de la source : la fourchette 15-17 appliquée à cette mesure pousserait à tort vers 50 % de passes en trop. | **À redéfinir** (01d : passes par match, cible 890 à 940, et passes par minute de jeu effectif, cible 15 à 17) |
 
-**Mesure actuelle du banc (`a9a74f9`, 20 matchs, graine d'audit 20260923), pour situer chaque repère, pas pour le régler** : R1 37,7 tirs tracés par équipe ; R2 5,4 % ; R3 48 % ; R4 17,4 km par joueur (16,9 à 17,7 selon le poste, sans ordre des postes) ; R5 22 (défenseurs centraux) à 102 (avant-centres) appels par joueur ; R6 17,2 % du temps au-dessus de 19,8 km/h ; R7 10,96 passes par minute de match (temps de jeu effectif 62,8 %, soit 17,5 par minute de jeu effectif). Six repères sur sept hors de la valeur réelle (R7 seul en est proche), R1 à R6 très au-delà : les calibrations provisoires (18d, 18e) partent de loin.
+**Mesure actuelle du banc (`a9a74f9`, 20 matchs, graine d'audit 20260923), pour situer chaque repère, pas pour le régler** : R1 37,7 tirs tracés par équipe ; R2 5,4 % ; R3 48 % ; R4 17,4 km par joueur (16,9 à 17,7 selon le poste, sans ordre des postes) ; R5 22 (défenseurs centraux) à 102 (avant-centres) appels par joueur ; R6 17,2 % du temps au-dessus de 19,8 km/h ; R7 10,96 passes par minute de match (temps de jeu effectif 62,8 % de 90 min, soit 17,5 par minute de jeu effectif ; recalculé au 01d sur la durée réelle du match, temps additionnel compris : 66,5 % et 14,9, voir section 7). Six repères sur sept hors de la valeur réelle (R7 seul en est proche), R1 à R6 très au-delà : les calibrations provisoires (18d, 18e) partent de loin.
 
 **Écarts de définition à traiter au 01d** : R6 (temps → distance au-dessus de 19,8 km/h), R7 (dénominateur : passes par match et par minute de jeu effectif), R1 (lire `tirs tracés par équipe`, pas `tirs par équipe`). R5 reste indicatif tant que le banc juge l'option de passe par la réception plutôt que par la chance d'être choisi.
 
@@ -199,3 +204,39 @@ Les 7 repères de l'audit de réalisme (`.scratch/v2-realisme/spec.md`, section 
 - [Opta Analyst, passes par match](https://theanalyst.com/articles/premier-league-teams-still-more-direct-2025-26)
 - [Modric et al. 2023, PMC10588580](https://pmc.ncbi.nlm.nih.gov/articles/PMC10588580/)
 - [Bradley et al. 2009, PubMed 19153866](https://pubmed.ncbi.nlm.nih.gov/19153866/)
+
+## 7. Référence physique du banc (ticket v2-realisme/01d, moteur à `adf431a`, 06/11/2026)
+
+`uv run python -m scripts.measure_v2 50` (graine d'audit 20260923, 50 matchs, un seul processus). Indicateurs définis en section 1 et 3 ; repères réels en section 6. Mesure reproductible : deux exécutions de 2 matchs donnent la même sortie (empreinte 3abfd02d).
+
+| Indicateur | Banc (50 matchs) | Repère réel (section 6) |
+|---|---|---|
+| Km par joueur de champ | 17,45 | 10,2 à 12,0 par poste (R4) |
+| Distance au-dessus de 19,8 km/h (part) | 39,3 % | 6 à 10 % (R6) |
+| Temps au-dessus de 19,8 km/h (part) | 17,3 % | suivi |
+| Distance au-dessus de 25 km/h (part) | 14,8 % | 2-3 % (section 1) |
+| Temps au-dessus de 25 km/h (part) | 5,7 % | suivi |
+| Sprints par joueur et par match | 146,5 | suivi |
+| Appels par joueur et par 90 min | 49,4 | 15,1 (R5) |
+| Passes par match | 990 | 890 à 940 (R7) |
+| Passes par minute de match / de jeu effectif | 11,00 / 14,92 | 10,5 / 15 à 17 (R7) |
+| Temps de jeu effectif (part de la durée réelle du match) | 66,5 % | 53 à 56 % avec fautes, remplacements et blessures (section 1) |
+| Tirs tracés par équipe | 38,05 | environ 13 (R1) |
+| Conversion des tirs | 5,4 % | 10 à 12 % (R2) |
+| Buts dans la surface | 57,0 % | 88 à 89 % (R3) |
+
+**Par poste** (moyenne par joueur et par match) :
+
+| Poste | Km | Distance au-dessus de 19,8 km/h (m) | Part de la distance | Sprints | Appels par 90 min |
+|---|---|---|---|---|---|
+| défenseur central (DC) | 17,33 | 6 924 | 40,0 % | 169,0 | 20,2 |
+| latéral gauche (LB) | 17,72 | 7 396 | 41,7 % | 184,4 | 31,0 |
+| latéral droit (RB) | 17,68 | 7 471 | 42,3 % | 194,8 | 25,3 |
+| milieu défensif (MDC) | 16,96 | 6 092 | 35,9 % | 104,6 | 45,3 |
+| milieu central (MC) | 17,38 | 6 616 | 38,1 % | 120,1 | 46,2 |
+| milieu offensif (MOC) | 17,56 | 6 635 | 37,8 % | 112,8 | 81,8 |
+| ailier gauche (AG) | 17,45 | 6 675 | 38,3 % | 121,9 | 76,7 |
+| ailier droit (AD) | 17,45 | 6 723 | 38,5 % | 125,6 | 77,0 |
+| avant-centre (BU) | 17,68 | 7 051 | 39,9 % | 150,5 | 91,8 |
+
+**Lecture.** Les joueurs courent 45 à 70 % de trop (17,5 km contre 10,2 à 12,0), presque 40 % de leur distance au-dessus de 19,8 km/h (contre 6 à 10 %), et l'ordre des postes n'existe pas : 16,96 à 17,72 km pour tous, alors que la source sépare nettement les milieux centraux (11,97 km) des défenseurs centraux (10,24 km). Plus de 100 sprints par joueur, plus de 3 fois trop d'appels. Seul le volume de passes est proche du réel (990 par match, 14,9 par minute de jeu effectif, juste sous la fourchette). Les deux indicateurs de jeu effectif se calculent sur la durée réelle du match, temps additionnel compris (99,8 min en moyenne) : sur 90 min, ils valaient 62,8 % et 17,5. C'est le symptôme C5 de l'audit : la cible des calibrations provisoires (18d, 18e), pas un réglage à faire ici.
