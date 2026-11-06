@@ -315,11 +315,63 @@ def test_an_inverted_winger_cuts_inside_and_a_touchline_winger_stays_wide() -> N
     assert abs(wide.y - 34.0) > abs(inside.y - 34.0) + 8.0
 
 
-def test_the_role_does_not_change_the_place_without_the_ball() -> None:
-    team = _with_roles({"D0": "piston", "M1": "récupérateur"})
+def test_a_role_without_a_place_does_not_change_anything() -> None:
+    # un rôle absent de la table, ou vide, garde la place d'avant 02d / 02e, avec ou sans ballon
+    team = _with_roles({"D0": "rôle inconnu", "M1": ""})
     plain, roled = Bloc.from_players(TEAM), Bloc.from_players(team)
-    for p, q in zip(TEAM, team):
-        assert roled.reference(q, CENTER_BALL, DEFENSE_PLACEE) == plain.reference(p, CENTER_BALL, DEFENSE_PLACEE)
+    for situation in (DEFENSE_PLACEE, POSSESSION_INSTALLEE):
+        for p, q in zip(TEAM, team):
+            assert roled.reference(q, CENTER_BALL, situation) == plain.reference(p, CENTER_BALL, situation)
+
+
+def test_every_role_has_a_place_without_the_ball() -> None:
+    from v2engine.bloc import ROLE_PLACE_WITHOUT_BALL
+    from v2engine.roles import ROLES
+    assert set(ROLES) == set(ROLE_PLACE_WITHOUT_BALL)
+
+
+def test_a_touchline_winger_drops_and_a_centre_forward_stays_high_without_the_ball() -> None:
+    # ticket 02e, critère 1 : même joueur, deux rôles, même scène
+    def height(role: str) -> float:
+        team = _with_roles({"M0": role})
+        return Bloc.from_players(team).reference(next(p for p in team if p.name == "M0"), CENTER_BALL, DEFENSE_PLACEE).x
+    assert height("avant-centre") - height("ailier de couloir") >= 8.0
+
+
+def test_a_wing_back_tracks_back_to_the_defensive_line_without_the_ball() -> None:
+    # critère 2 : piston placé au milieu contre latéral défensif ; il rejoint la ligne des défenseurs sans la dépasser
+    team = _with_roles({"M0": "piston", "M3": "latéral défensif"})
+    bloc = Bloc.from_players(team)
+    xs = {p.name: bloc.reference(p, CENTER_BALL, DEFENSE_PLACEE).x for p in team}
+    assert xs["M3"] - xs["M0"] >= 8.0
+    assert xs["M0"] >= min(xs[f"D{i}"] for i in range(4)) - 1e-9  # jamais derrière la dernière ligne
+
+
+def test_roles_redistribute_inside_the_low_block_without_moving_or_resizing_it() -> None:
+    # critère 3 : 32 x 40 m, centre conservé
+    plain = Bloc.from_players(TEAM)
+    team = _with_roles({"D0": "piston", "D3": "latéral défensif", "M0": "ailier de couloir", "M1": "récupérateur",
+                        "M2": "ailier intérieur", "A0": "pivot", "A1": "buteur axial"})
+    bloc = Bloc.from_players(team)
+    pts = [bloc.reference(p, CENTER_BALL, DEFENSE_PLACEE) for p in team if p.poste != "GK"]
+    ref = [plain.reference(p, CENTER_BALL, DEFENSE_PLACEE) for p in TEAM if p.poste != "GK"]
+    assert math.isclose(sum(p.x for p in pts), sum(p.x for p in ref), abs_tol=1e-6)
+    assert math.isclose(sum(p.y for p in pts), sum(p.y for p in ref), abs_tol=1e-6)
+    assert math.isclose(max(p.x for p in pts) - min(p.x for p in pts), SHAPE_WITHOUT_BALL[0], abs_tol=1e-6)
+    assert math.isclose(max(p.y for p in pts) - min(p.y for p in pts), SHAPE_WITHOUT_BALL[1], abs_tol=1e-6)
+
+
+def test_the_low_block_keeps_the_defensive_line_for_both_teams() -> None:
+    # critère 4 : la dernière ligne sans ballon reste celle des défenseurs, équipe visiteuse en miroir
+    roles = {"M0": "piston", "M1": "récupérateur", "M2": "ailier de couloir", "M3": "sentinelle"}
+    home = _with_roles(roles)
+    away = [dataclasses.replace(p, team="away", home_target=Vec2(105.0 - p.home_target.x, p.home_target.y),
+                                position=Vec2(105.0 - p.position.x, p.position.y)) for p in home]
+    for team, deep in ((home, min), (away, max)):
+        bloc = Bloc.from_players(team)
+        xs = {p.name: bloc.reference(p, CENTER_BALL, DEFENSE_PLACEE).x for p in team if p.poste != "GK"}
+        defenders = [xs[f"D{i}"] for i in range(4)]
+        assert math.isclose(deep(xs.values()), deep(defenders), abs_tol=1e-9)
 
 
 def test_the_away_team_is_mirrored() -> None:

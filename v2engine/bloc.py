@@ -40,7 +40,13 @@ par délégation ; chiffres réels non trouvés, ordres de grandeur tactiques) :
 mise à l'échelle du bloc. La forme décalée sert aussi à mesurer le bloc avec ballon (centre, longueur, largeur) : les
 rôles redistribuent les joueurs DANS le bloc 42 x 46 m déjà calibré, sans le déplacer ni l'agrandir (1 m de bloc en
 plus = environ 1,4 tir par équipe, mesuré au ticket 04). Un rôle absent de la table, ou vide, ne bouge pas : le
-comportement d'avant 02d. Sans ballon, rien ne change (les rôles défensifs arrivent en 02e et 10)."""
+comportement d'avant 02d.
+
+Place sans ballon propre au rôle (ticket v2-realisme/02e, mêmes principes, table `ROLE_PLACE_WITHOUT_BALL`) : le bloc
+sans ballon reste 32 x 40 m, calé sur la hauteur de sa dernière ligne. Les rôles redistribuent les joueurs dans ce
+bloc ; personne ne passe derrière la dernière ligne de la forme de départ (`without_ball_place`), la ligne reste donc
+celle des défenseurs. Le repli défensif propre à chaque rôle (qui suit son latéral, qui reste prêt à ressortir) en
+découle ; la couverture et les zones arrivent au ticket 10."""
 
 from __future__ import annotations
 
@@ -85,6 +91,19 @@ ROLE_PLACE_WITH_BALL: dict[str, tuple[float, float]] = {
     "ailier de couloir": (8.0, 2.0), "ailier intérieur": (6.0, -8.0), "meneur excentré": (2.0, -5.0),
     "second attaquant": (-2.0, 0.0), "avant-centre": (3.0, 0.0), "buteur axial": (5.0, 0.0), "pivot": (-5.0, 0.0),
 }
+# Même table, sans ballon (ticket v2-realisme/02e, constantes proposées par Claude le 06/11/2026, validées par
+# délégation ; chiffres réels non trouvés, ordres de grandeur tactiques). Les défenseurs ne bougent pas : leur ligne
+# est celle du bloc (`Bloc.update`). Le piston, l'ailier de couloir et le récupérateur redescendent ; l'ailier
+# intérieur et le meneur excentré restent plus hauts qu'eux ; les attaquants restent hauts, prêts à ressortir.
+ROLE_PLACE_WITHOUT_BALL: dict[str, tuple[float, float]] = {
+    "gardien": (0.0, 0.0), "défenseur central": (0.0, 0.0),
+    "latéral": (0.0, -2.0), "latéral défensif": (0.0, -3.0), "piston": (-10.0, -3.0),
+    "sentinelle": (-3.0, 0.0), "récupérateur": (-5.0, 0.0), "regista": (-2.0, 0.0),
+    "milieu relayeur": (0.0, 0.0), "box to box": (-2.0, 0.0), "mezzala": (-2.0, -2.0),
+    "meneur": (-2.0, 0.0), "milieu offensif": (-2.0, 0.0),
+    "ailier de couloir": (-8.0, -2.0), "ailier intérieur": (-2.0, -5.0), "meneur excentré": (-3.0, -4.0),
+    "second attaquant": (-2.0, 0.0), "avant-centre": (3.0, 0.0), "buteur axial": (5.0, 0.0), "pivot": (2.0, 0.0),
+}
 _ON_AXIS_M = 1.0  # à moins de 1 m de l'axe, pas de côté : seule l'avance s'applique
 _WITHOUT_BALL = (DEFENSE_PLACEE, TRANSITION_DEFENSIVE)
 
@@ -127,7 +146,24 @@ class _Shape:
 
 def with_ball_place(player: PlayerState) -> Vec2:
     """Place de départ du joueur décalée selon son rôle, pour le jeu avec ballon (ticket 02d)."""
-    ahead, wide = ROLE_PLACE_WITH_BALL.get(player.role, (0.0, 0.0))
+    return _role_place(player, ROLE_PLACE_WITH_BALL)
+
+
+def deepest_x(shape: _Shape, team: str) -> float:
+    """Abscisse de la dernière ligne de la forme de départ (celle des défenseurs)."""
+    return shape.center.x + (shape.back if team == "home" else shape.front)
+
+
+def without_ball_place(player: PlayerState, deepest: float) -> Vec2:
+    """Place de départ décalée selon son rôle, pour le jeu sans ballon (ticket 02e). Personne ne passe derrière la
+    dernière ligne de la forme de départ (`deepest`) : un piston ou un récupérateur qui redescend rejoint la ligne
+    des défenseurs, il ne la recule pas."""
+    place = _role_place(player, ROLE_PLACE_WITHOUT_BALL)
+    return Vec2(max(place.x, deepest) if player.team == "home" else min(place.x, deepest), place.y)
+
+
+def _role_place(player: PlayerState, table: dict[str, tuple[float, float]]) -> Vec2:
+    ahead, wide = table.get(player.role, (0.0, 0.0))
     start = player.home_target
     forward = 1.0 if player.team == "home" else -1.0
     side = start.y - _CENTER.y
@@ -150,6 +186,7 @@ class Bloc:
     shapes: dict[str, _Shape]
     # forme de départ décalée par les rôles (ticket 02d) : sert au bloc avec ballon ; égale à `shapes` sans rôle
     shapes_ball: dict[str, _Shape] = field(default_factory=dict)
+    shapes_low: dict[str, _Shape] = field(default_factory=dict)  # idem sans ballon (ticket 02e)
     errors: dict[str, tuple[Vec2, float]] = field(default_factory=dict)  # joueur -> (erreur, prochain tirage)
     returning: set[str] = field(default_factory=set)  # joueurs repartis vers leur place, jusqu'à l'atteindre
     lines: dict[str, float] = field(default_factory=dict)  # équipe -> hauteur de sa dernière ligne sans ballon (`update`)
@@ -159,14 +196,16 @@ class Bloc:
 
     @classmethod
     def from_players(cls, players: list[PlayerState]) -> Bloc:
-        shapes, shapes_ball = {}, {}
+        shapes, shapes_ball, shapes_low = {}, {}, {}
         for team in {p.team for p in players}:
             field_players = [p for p in players if p.team == team and p.poste != "GK"]
             if not field_players:  # équipe sans joueur de champ : pas de bloc, chacun garde sa place de départ
                 continue
             shapes[team] = _shape_of([p.home_target for p in field_players])
             shapes_ball[team] = _shape_of([with_ball_place(p) for p in field_players])
-        return cls(shapes, shapes_ball)
+            deepest = deepest_x(shapes[team], team)
+            shapes_low[team] = _shape_of([without_ball_place(p, deepest) for p in field_players])
+        return cls(shapes, shapes_ball, shapes_low)
 
     def update(self, players: list[PlayerState], ball: BallState, now_s: float = 0.0) -> None:
         """Hauteur de la dernière ligne de chaque équipe, si elle n'a pas le ballon (une fois par tick)."""
@@ -226,6 +265,9 @@ class Bloc:
         start, anchor = player.home_target, shape.center  # le bloc reste centré sur le centre de la forme de départ
         if with_ball:  # place décalée par le rôle, et forme mesurée sur ces places (ticket 02d)
             shape, start = self.shapes_ball.get(player.team, shape), with_ball_place(player)
+        elif player.team in self.shapes_low:  # idem sans ballon (ticket 02e)
+            start = without_ball_place(player, deepest_x(shape, player.team))
+            shape = self.shapes_low[player.team]
         length, width = SHAPE_WITH_BALL if with_ball else SHAPE_WITHOUT_BALL
         sx = length / shape.length if shape.length > 0 else 1.0
         sy = width / shape.width if shape.width > 0 else 1.0
