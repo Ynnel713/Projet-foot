@@ -260,9 +260,15 @@ class TestKeeperBias:
     def test_a_top_keeper_produces_significantly_more_parades_than_a_weak_one(self):
         import random
 
+        import numpy as np
+
         import narrative
         from test_narrative_player import _simulate_n
 
+        # match tiré à graine fixe (ticket v2-realisme/01h) : le moteur V1 tire dans `random` et `numpy.random`, non
+        # semés ici ; un match rare (gardien 90 à 0,377 au lieu de 0,435 ± 0,05) faisait échouer le test au hasard
+        random.seed(20260923)
+        np.random.seed(20260923)
         match = _with_keeper_notes(_simulate_n(1)[0], home_note=90.0, away_note=20.0)
         faced = {"top": [0, 0], "weak": [0, 0]}  # [parades, non-buts]
         for seed in range(25):
