@@ -139,14 +139,16 @@ def test_api_sends_intentions_only_when_role_or_action_changes() -> None:
 
 # --- Équilibre derrière le ballon (ticket v2-collectif/06) ----------------------------------------------------------
 def _balance_ahead_share(teamwork: int, situation: str) -> float:
-    """Part des appels du défenseur le plus reculé qui le mènent devant le ballon (x > 40)."""
-    holder = _p("H", x=40.0)
+    """Part des appels du défenseur le plus reculé qui le mènent devant le ballon (x > 30). Le porteur est derrière
+    lui (relance courte) : depuis le ticket v2-realisme/02f, un joueur derrière le ballon tient sa place, seul un
+    défenseur devant le ballon peut encore appeler."""
+    holder = _p("H", x=30.0)
     deep = _p("DC1", x=38.0, y=20.0, poste="DC", attributes={"Teamwork": teamwork, "Off the Ball": 99})
     other = _p("DC2", x=36.0, y=48.0, poste="DC")
     forward = _p("BU", x=60.0, poste="BU")
     players = [holder, deep, other, forward, _p("Adv", team="away", x=20.0, y=5.0)]
     random.seed(20260923)
-    ahead = sum(cerveau.think(deep, _ball(40.0, 34.0, holder="H"), players, 1.0, {}, situation).target.x > 40.0
+    ahead = sum(cerveau.think(deep, _ball(30.0, 34.0, holder="H"), players, 1.0, {}, situation).target.x > 30.0
                 for _ in range(400))
     return ahead / 400
 
@@ -219,3 +221,85 @@ def test_a_held_depth_run_does_not_survive_a_loss_of_the_ball(monkeypatch) -> No
     runs: dict = {"M": (Vec2(80.0, 34.0), 10.0, "H")}  # lancé pour H, il y a 50 s : la possession a changé depuis
     intention = cerveau.think(mate, _ball(holder="H"), [holder, mate, *defenders], 1.0, runs)
     assert intention.target.x < 79.0 and len(runs["M"]) == 2  # retiré au sort, perdu : espace ordinaire
+
+
+# --- Tenir sa place en possession (ticket v2-realisme/02f) -----------------------------------------------------------
+def _settled_scene() -> tuple[list[PlayerState], PlayerState, BallState]:
+    """Possession installée au milieu : porteur à x = 50, neuf coéquipiers de champ (cinq devant, quatre derrière)."""
+    holder = _p("H", x=50.0, y=34.0)
+    mates = [_p(f"A{i}", x=x, y=y, poste="MC") for i, (x, y) in enumerate(
+        ((55, 20), (58, 34), (62, 48), (70, 10), (75, 58), (40, 20), (35, 34), (30, 48), (25, 10)))]
+    rival = _p("R", team="away", x=60.0, y=30.0)
+    return [holder, *mates, _p("GK", x=3.0, poste="GK"), rival], holder, _ball(50.0, 34.0, holder="H")
+
+
+def test_settled_possession_keeps_only_the_two_nearest_runners_ahead_of_the_ball() -> None:
+    from v2engine.situation import POSSESSION_INSTALLEE
+
+    players, _, ball = _settled_scene()
+    roles = {p.name: cerveau.think(p, ball, players, 1.0, {}, POSSESSION_INSTALLEE).role
+             for p in players if p.team == "home" and p.name not in ("H", "GK")}
+    assert sorted(n for n, r in roles.items() if r == cerveau.APPEL) == ["A0", "A1"]  # les deux plus proches devant
+    assert all(r == cerveau.TENIR for n, r in roles.items() if n not in ("A0", "A1"))
+    assert cerveau.think(players[0], ball, players, 1.0, {}, POSSESSION_INSTALLEE).role == cerveau.PORTEUR
+
+
+def test_the_runner_rule_only_applies_in_possession_not_in_transition_or_without_situation() -> None:
+    from v2engine.situation import DERNIER_TIERS, TRANSITION_OFFENSIVE
+
+    players, _, ball = _settled_scene()
+    mates = [p for p in players if p.team == "home" and p.name not in ("H", "GK")]
+    for situation in (TRANSITION_OFFENSIVE, None):  # contre-attaque (11) et tests sans situation : tous appellent
+        assert {cerveau.think(p, ball, players, 1.0, {}, situation).role for p in mates} == {cerveau.APPEL}
+    assert sum(cerveau.think(p, ball, players, 1.0, {}, DERNIER_TIERS).role == cerveau.APPEL for p in mates) == 2
+
+
+def test_the_receiver_and_the_runners_of_a_pass_in_flight_are_kept() -> None:
+    from v2engine.situation import POSSESSION_INSTALLEE
+
+    players, _, _ = _settled_scene()
+    flight = _ball(53.0, 34.0, velocity=Vec2(10.0, 0.0), receiver="A1", last_pass_team="home")
+    roles = {p.name: cerveau.think(p, flight, players, 1.0, {}, POSSESSION_INSTALLEE).role
+             for p in players if p.team == "home" and p.name not in ("H", "GK")}
+    assert roles["A1"] == cerveau.RECEVEUR
+    assert sum(r == cerveau.APPEL for r in roles.values()) <= cerveau.PROVISIONAL_RUNNERS
+    assert all(r in (cerveau.APPEL, cerveau.TENIR, cerveau.RECEVEUR) for r in roles.values())
+
+
+def test_away_team_holds_in_mirror_and_the_intention_shows_the_role() -> None:
+    from v2engine.situation import POSSESSION_INSTALLEE
+
+    holder, ahead, behind = _p("H", team="away", x=50.0), _p("F", team="away", x=40.0), _p("B", team="away", x=60.0)
+    players = [holder, ahead, behind, _p("R", x=30.0)]
+    ball = _ball(50.0, 34.0, holder="H")
+    run = cerveau.think(ahead, ball, players, 1.0, {}, POSSESSION_INSTALLEE)
+    hold = cerveau.think(behind, ball, players, 1.0, {}, POSSESSION_INSTALLEE)
+    assert run.role == cerveau.APPEL and hold.role == cerveau.TENIR
+    assert hold.action in ("se replacer", "tenir sa place") and "en possession" in hold.reason
+
+
+def test_teamwork_decides_whether_a_holder_s_mate_returns_to_his_place_in_possession() -> None:
+    from v2engine.bloc import Bloc
+    from v2engine.situation import POSSESSION_INSTALLEE
+
+    players, _, ball = _settled_scene()
+    team = [p for p in players if p.team == "home"]
+    bloc = Bloc.from_players(team)
+    for teamwork, expected in ((99, "se replacer"), (11, "tenir sa place")):
+        player = _p("T", x=30.0, y=48.0, attributes={"Positioning": 99, "Teamwork": teamwork})
+        bloc.returning.clear()
+        place = bloc.reference(player, ball.position, POSSESSION_INSTALLEE)
+        player.position = place + Vec2(0.0, 5.0)  # 5 m de sa place : au-delà de 2 m, en deçà de 9 m
+        intention = cerveau.think(player, ball, [*team, player], 1.0, {}, POSSESSION_INSTALLEE, bloc)
+        assert intention.role == cerveau.TENIR and intention.action == expected
+
+
+def test_a_player_holding_his_place_keeps_doing_so_until_he_has_seen_the_loss() -> None:
+    from v2engine.situation import POSSESSION_INSTALLEE
+
+    players, _, ball = _settled_scene()
+    mate = next(p for p in players if p.name == "A6")
+    held = cerveau.think(mate, ball, players, 1.0, {}, POSSESSION_INSTALLEE)
+    assert held.role == cerveau.TENIR
+    rival_ball = _ball(50.0, 34.0, holder="R")  # perte de balle, pas encore perçue : même intention
+    assert cerveau.think(mate, rival_ball, players, 1.0, {}, POSSESSION_INSTALLEE, previous=held) is held

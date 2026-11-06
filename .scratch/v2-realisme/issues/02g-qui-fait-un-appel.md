@@ -45,3 +45,7 @@ Temps machine, non compté : suite complète (environ 40 min) ; mesure 50 matchs
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+
+## Comments
+
+- 06/11/2026 (réserves de l'expert au 02f, à traiter ici) : **A1** la contre-attaque qui atteint le dernier tiers garde ses appels (`DERNIER_TIERS` prime sur `TRANSITION_OFFENSIVE`) ; **A2** hystérésis : un appelant garde son appel tant que son espace n'est pas atteint, pas d'alternance APPEL / TENIR ; mesurer le taux d'alternance par joueur ; **A3** le joueur désigné par `ball.plan` reste appelant. Test de scène pour chacune. La règle provisoire `PROVISIONAL_RUNNERS` / `HOLD_SITUATIONS` de `cerveau.py` est remplacée, pas superposée.

@@ -6,7 +6,7 @@ Termes du domaine, tels qu'employés dans le code, les tickets et la documentati
 
 - **Perception** : ce qu'un joueur détecte à un instant (porteur, ballon, trajectoire, passe lue, coéquipiers vus). Attributs : Vision, Anticipation, Concentration.
 - **Interprétation** : lecture de la situation qui donne au joueur son **rôle** à cet instant.
-- **Rôle** : la fonction d'un joueur à un instant : porteur, appel, soutien, receveur visé, lecture de passe, ballon libre, presseur, replacement. Un rôle n'est pas un poste (le poste est fixe, le rôle change à chaque instant).
+- **Rôle** : la fonction d'un joueur à un instant : porteur, appel, soutien, receveur visé, lecture de passe, ballon libre, presseur, replacement, tenir sa place (en possession, le joueur sans appel qui garde sa place de référence). Un rôle n'est pas un poste (le poste est fixe, le rôle change à chaque instant).
 - **Décision** : le choix de l'action, de la cible et de l'intensité. Attributs : Decisions, puis les tendances (Flair, Teamwork…).
 - **Exécution** : la réalisation du geste ou du déplacement, avec sa qualité. Attributs techniques et physiques.
 - **Intention** : la sortie du cerveau à chaque tick : rôle, action, cible, intensité, raison. Enregistrée dans la trace.

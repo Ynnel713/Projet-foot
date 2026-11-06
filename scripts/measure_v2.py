@@ -3,7 +3,7 @@ fixes, et donne tous les indicateurs de `docs/INDICATEURS_V2.md` (classiques et 
 zone du ballon, score et tranche de 15 minutes.
 
 Usage : uv run python -m scripts.measure_v2 [nombre_de_matchs] [--profil "Work Rate"] [--detail] [--json chemin] [--pas 0.15]
-[--sans-plan]
+[--sans-plan] [--sans-tenir]
 
 `--profil <Attribut>` : test de profils. L'attribut est forcé à 99 pour une équipe et à 11 pour l'autre,
 les rôles s'inversant d'un match à l'autre (neutralise l'avantage du terrain) ; le rapport compare les deux
@@ -266,7 +266,10 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--pas", type=float, default=TICK_S, help="pas de calcul (s), par défaut celui du produit")
     parser.add_argument("--sans-plan", action="store_true", help="ticket v2-collectif/14 désactivé")
     parser.add_argument("--debut", type=int, default=0, help="indice du premier match (lots parallèles)")
+    parser.add_argument("--sans-tenir", action="store_true", help="ticket v2-realisme/02f désactivé : tous les coéquipiers du porteur appellent")
     args = parser.parse_args(argv)
+    if args.sans_tenir:
+        cerveau.HOLD_SITUATIONS = ()
     result = report(run(args.matches, args.profil, tick_s=args.pas, plans=not args.sans_plan, start=args.debut),
                     args.detail)
     for key, value in result.items():
