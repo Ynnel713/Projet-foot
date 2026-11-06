@@ -19,3 +19,4 @@ Règle : `CLAUDE.md`, section « Estimer la durée d'un ticket » (05/11/2026). 
 | 06/11/2026 | v2-realisme/01h | correctif de test | 30 | 30 | 0 % | 15/5/5/5 | 15/5/5/5 | élevée | — |
 | 06/11/2026 | v2-realisme/17a | documentation | 75 | 60 | − 20 % | 30/30/0/15 | 25/20/0/15 | élevée | — (sous 30 %) ; durée réelle estimée, non chronométrée ; scan par arbre syntaxique plus rapide que prévu |
 | 06/11/2026 | v2-realisme/01e | mesure | 130 | 115 | − 12 % | 20/60/30/20 | 10/45/25/35 | moyenne | — (sous 30 %) ; analyse plus courte (matchs déjà indépendants), corrections après le passage 1 |
+| 06/11/2026 | v2-realisme/02a | placement | 105 | 60 | − 43 % | 25/30/30/20 | 10/10/25/15 | élevée | écart > 30 % : changement de dix lignes, fabrique de scènes (01f) déjà en place ; durée réelle estimée, non chronométrée |

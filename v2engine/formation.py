@@ -16,6 +16,9 @@ _WIDTH_MARGIN_M = 5.0
 _DEPTH_MARGIN_M = 5.0
 _DEPTH_SPAN_M = 40.0  # du gardien à la ligne la plus avancée -- reste dans sa moitié de terrain au coup d'envoi
 _GENERIC_BAND = {GOALKEEPER: 0, DEFENDER: 1, MIDFIELDER: 2, ATTACKER: 3}
+# Couloir de chaque poste, vu de son propre but (0 = gauche de l'équipe, 1 = axe, 2 = droite) -- même convention que
+# `pitch_layout._LANE`. Les postes absents sont axiaux. Le côté ne dépend jamais du nom du joueur (ticket v2-realisme/02a).
+_LANE = {"LB": 0, "AG": 0, "RB": 2, "AD": 2}
 
 
 def _bands(lineup: Lineup) -> dict[str, int]:
@@ -38,6 +41,8 @@ def initial_positions(lineup: Lineup, *, attacking_right: bool) -> dict[str, Vec
     if not by_band:
         return {}
 
+    # ordre de la lineup = ordre stable à poste égal (affectation des places, jamais le nom)
+    rank = {p.name: (_LANE.get(p.poste, 1), i) for i, p in enumerate(lineup.players)}
     nb_bands = max(by_band) + 1
     positions: dict[str, Vec2] = {}
     for band, names in by_band.items():
@@ -47,6 +52,11 @@ def initial_positions(lineup: Lineup, *, attacking_right: bool) -> dict[str, Vec
         )
         usable_width = PITCH_WIDTH_M - 2 * _WIDTH_MARGIN_M
         step = usable_width / (len(names) + 1)
-        for i, name in enumerate(sorted(names), start=1):
+        # y croît vers le bas de l'écran (viewBox en mètres) : en attaquant vers +x, la gauche de l'équipe est en y
+        # petit ; en attaquant vers x=0, elle est en y grand, d'où l'ordre inversé.
+        ordered = sorted(names, key=lambda n: rank.get(n, (1, len(rank))))
+        if not attacking_right:
+            ordered.reverse()
+        for i, name in enumerate(ordered, start=1):
             positions[name] = Vec2(x, _WIDTH_MARGIN_M + i * step)
     return positions

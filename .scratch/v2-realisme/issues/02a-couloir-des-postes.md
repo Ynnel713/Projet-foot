@@ -14,7 +14,7 @@
 
 **Bloque :** 02b, 02c, 02h.
 
-**Status:** à faire
+**Status:** livré (06/11/2026), validé expert + QC
 
 ## Estimation
 
@@ -42,3 +42,8 @@ Temps machine, non compté : suite complète (environ 40 min).
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+
+## Comments
+
+- 06/11/2026 : expert `APPROVED_WITH_RESERVATIONS`, QC `VALIDÉ`, clôture `VALIDÉ` (journal). Réserve A1 : à poste égal, l'ordre suit la note du joueur (ordre de `lineup.players`) et non la place de l'onglet « Dispositifs tactiques », que `Lineup` ne conserve pas ; repli prévu par le ticket. Si 02b ou 02c ont besoin des places, exposer l'indice de place dans `Lineup` (lecture seule, D-V02). Réserve A2 : graine de `test_the_match_hands_the_team_choice_to_the_holder_decision` passée de 20260923 à 20260925 (test dépendant du tirage, logique inchangée) ; à surveiller aux tickets 02b et 02c. Facultatif A3 non traité (variable inutilisée dans le test d'intégration). Réserves acceptées d'office, selon la règle permanente du propriétaire sur les recommandations des experts.
+- Durée : estimée 1 h 45, réelle environ 1 h (non chronométrée), écart environ − 43 % : changement de dix lignes, fabrique de scènes déjà en place, cas de la base complète écrit d'un trait. Temps machine : suite complète 14 min 16 s, hors total.
