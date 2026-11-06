@@ -12,7 +12,7 @@
 
 **Bloque :** 02d, 02e, 02h.
 
-**Status:** à faire (constantes à proposer avant le code)
+**Status:** livré (06/11/2026), validé expert + QC
 
 ## Estimation
 
@@ -40,3 +40,9 @@ Temps machine, non compté : suite complète (environ 40 min) ; mesure 20 matchs
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+
+## Comments
+
+- 06/11/2026 : constantes proposées par Claude, sans source chiffrée trouvée (ordres de grandeur), validées par délégation du propriétaire : ailier 26 m, latéral 22 m de l'axe ; écart entre joueurs d'un même poste axial DC 16, MDC 12, MC 16, MOC 14, SA/BU/ATT 14 (`v2engine/formation.py`). Mesure 20 matchs (distance moyenne à l'axe, m) : AG 21,3 ; AD 20,7 ; LB 18,8 ; RB 18,7 ; MC 10,0 ; DC 9,4 ; MDC 7,2 ; BU 7,0 ; MOC 6,6 (SA et ATT absents de l'échantillon). Déterminisme : même empreinte sur deux exécutions (`af9c7e9e13354fb8`).
+- 06/11/2026 : passage 1 de l'expert `APPROVED_WITH_RESERVATIONS` (A1 ordre de la lineup, A2 test fragile, A3 déterminisme non rapporté) ; corrigées, puis passage 2 `APPROVED_WITH_RESERVATIONS` (seule réserve : durée réelle, ci-dessous). QC `VALIDÉ`, clôture `VALIDÉ` (journal). Un premier calcul de clôture est `BLOQUÉ` dans le journal : mon fichier de rapport omettait la section « Identification », recopiée en entier ensuite. Réserves acceptées d'office, règle permanente du propriétaire. Le test de transition joue désormais jusqu'à 5 graines (l'assertion est inchangée) ; le chiffre « Attendu » de `CLAUDE.md` (2 399) est à mettre à jour : 2 415 en comptant 02a et 02b, calculé et non obtenu en un seul passage.
+- Durée : estimée 1 h 50, réelle environ 2 h 05 (non chronométrée), écart environ + 14 % : deux passes de l'expert et correction de l'ordre de la lineup. Temps machine, hors total : mesure 20 matchs 9 min 40 s (deux fois), suite complète environ 15 min (trois passages, dont un faussé par la charge).

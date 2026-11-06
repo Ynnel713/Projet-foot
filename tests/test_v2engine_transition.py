@@ -163,9 +163,15 @@ def test_the_match_hands_the_team_choice_to_the_holder_decision(monkeypatch) -> 
     seen = []
     real = match.choose_action
     monkeypatch.setattr(match, "choose_action", lambda *args: seen.append(args[4]) or real(*args))
-    random.seed(20260925)  # changée au ticket v2-realisme/02a : les côtés selon le poste déplacent les tirages (20260923 ne montrait plus les deux choix en 2 minutes)
     clubs = load_clubs(CLUBS_PATH, "Ligue 1")
-    match.simulate_match(clubs[0], clubs[1], duration_minutes=2.0)
+    # Deux minutes de jeu ne montrent pas toujours les deux choix : le tirage dépend du placement (le test cassait à chaque
+    # ticket de placement, réserve A2 du ticket v2-realisme/02a). On joue donc des graines successives, 5 au plus, jusqu'à
+    # voir les trois cas ; l'assertion reste la même.
+    for seed in range(20260923, 20260928):
+        random.seed(seed)
+        match.simulate_match(clubs[0], clubs[1], duration_minutes=2.0)
+        if {CONTRE_ATTAQUE, CONSERVATION} <= set(seen) and None in seen:
+            break
     assert {CONTRE_ATTAQUE, CONSERVATION} <= set(seen) and None in seen
 
 
