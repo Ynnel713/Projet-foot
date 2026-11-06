@@ -85,6 +85,7 @@ class PlayerState:
     # `acceleration`/`stamina` ci-dessus restent des champs dédiés (chemin chaud, lu à chaque
     # tick par `step`), ce champ sert aux attributs plus occasionnels (voir `possession.py`).
     attributes: dict[str, int] | None = None
+    role: str = ""  # rôle du joueur (voir `roles.py`), ticket v2-realisme/02c ; sans effet sur le jeu avant 02d/02e/09
 
 
 def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_factor: float = 1.0,
@@ -140,4 +141,5 @@ def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_facto
         home_target=state.home_target,
         radius_m=state.radius_m,
         attributes=state.attributes,
+        role=state.role,
     )

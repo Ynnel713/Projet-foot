@@ -34,6 +34,7 @@ from v2engine.offside import HESITATION_S, OFFSIDE_OUT_S, offside_at_pass, sees_
 from v2engine.possession import (BALL_FRICTION_PER_S, BALL_STOPPED_MPS, MAX_PASS_MPS, MISS_RETRY_S, attempt_control, missed_control_velocity,
                                  pass_velocity, reception_delay_s)
 from v2engine.added_time import GRACE_S, HARD_STOP_S, added_minutes, played_minute
+from v2engine.roles import role_of
 from v2engine.restart import (AERIAL_LANDING_M, AERIEN, CORNER, FREE_KICK, LONG_RESTART_M, PENALTY, PENALTY_CONVERSION, SOL,
                               award, exit_point, foul_restart, is_aerial, kickoff, restart_target)
 from v2engine.shooting import (HELD, TIPPED, attempt_shot, draw_blocker, occasion_quality, parry_velocity, save_outcome,
@@ -107,6 +108,7 @@ def _build_players(lineup: Lineup, team: str, positions: dict[str, Vec2]) -> lis
                 home_target=pos,
                 radius_m=PLAYER_RADIUS_M,
                 attributes=player.attributes,
+                role=role_of(player.poste, player.categorie),
             )
         )
     return states
@@ -809,7 +811,8 @@ def simulate_match(
         if i % record_every == 0:
             trace.record(
                 minute,
-                [PlayerSnapshot(name=p.name, team=p.team, poste=p.poste, position=p.position, intention=intentions.get(p.name))
+                [PlayerSnapshot(name=p.name, team=p.team, poste=p.poste, position=p.position,
+                                intention=intentions.get(p.name), role=p.role)
                  for p in players],
                 BallSnapshot(position=ball.position, holder=ball.holder, mode=ball.mode, dead=ball.restart is not None),
             )
