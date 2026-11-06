@@ -4,6 +4,7 @@ sans ballon (ticket v2-collectif/05)."""
 
 from __future__ import annotations
 
+import dataclasses
 import math
 import random
 
@@ -272,3 +273,61 @@ def test_a_slow_line_follows_the_rise_with_a_delay() -> None:
     lagging = bloc.reference(slow, high.position, DEFENSE_PLACEE, 1.0).x
     alert = bloc.reference(next(p for p in team if p.name == "D1"), high.position, DEFENSE_PLACEE, 1.0).x
     assert lagging < alert - 1.0  # le retardataire est resté plus près de son but : il joue l'attaquant en jeu
+
+
+# --- Place avec ballon propre au rôle (ticket v2-realisme/02d) ---
+
+def _with_roles(roles: dict[str, str], team: list[PlayerState] = TEAM) -> list[PlayerState]:
+    return [dataclasses.replace(p, role=roles.get(p.name, p.role)) for p in team]
+
+
+def test_every_role_has_a_place_with_the_ball() -> None:
+    from v2engine.bloc import ROLE_PLACE_WITH_BALL
+    from v2engine.roles import ROLES
+    assert set(ROLES) == set(ROLE_PLACE_WITH_BALL)  # 0 explicite plutôt qu'oubli
+
+
+def test_an_attacking_full_back_stands_higher_than_a_defensive_one_with_the_ball() -> None:
+    team = _with_roles({"D0": "piston", "D3": "latéral défensif"})
+    bloc = Bloc.from_players(team)
+    high = bloc.reference(next(p for p in team if p.name == "D0"), CENTER_BALL, POSSESSION_INSTALLEE)
+    low = bloc.reference(next(p for p in team if p.name == "D3"), CENTER_BALL, POSSESSION_INSTALLEE)
+    assert high.x - low.x >= 12.0  # 15 m de décalage de départ, un peu comprimés par le bloc
+
+
+def test_roles_redistribute_inside_the_block_without_moving_or_resizing_it() -> None:
+    plain = Bloc.from_players(TEAM)
+    team = _with_roles({"D0": "piston", "D3": "latéral défensif", "M1": "récupérateur", "M2": "box to box",
+                        "A0": "pivot", "A1": "buteur axial"})
+    bloc = Bloc.from_players(team)
+    pts = [bloc.reference(p, CENTER_BALL, POSSESSION_INSTALLEE) for p in team if p.poste != "GK"]
+    ref = [plain.reference(p, CENTER_BALL, POSSESSION_INSTALLEE) for p in TEAM if p.poste != "GK"]
+    assert math.isclose(sum(p.x for p in pts), sum(p.x for p in ref), abs_tol=1e-6)
+    assert math.isclose(max(p.x for p in pts) - min(p.x for p in pts), SHAPE_WITH_BALL[0], abs_tol=1e-6)
+    assert math.isclose(max(p.y for p in pts) - min(p.y for p in pts), SHAPE_WITH_BALL[1], abs_tol=1e-6)
+
+
+def test_an_inverted_winger_cuts_inside_and_a_touchline_winger_stays_wide() -> None:
+    team = _with_roles({"M0": "ailier de couloir", "M3": "ailier intérieur"})
+    bloc = Bloc.from_players(team)
+    wide = bloc.reference(next(p for p in team if p.name == "M0"), CENTER_BALL, POSSESSION_INSTALLEE)
+    inside = bloc.reference(next(p for p in team if p.name == "M3"), CENTER_BALL, POSSESSION_INSTALLEE)
+    assert abs(wide.y - 34.0) > abs(inside.y - 34.0) + 8.0
+
+
+def test_the_role_does_not_change_the_place_without_the_ball() -> None:
+    team = _with_roles({"D0": "piston", "M1": "récupérateur"})
+    plain, roled = Bloc.from_players(TEAM), Bloc.from_players(team)
+    for p, q in zip(TEAM, team):
+        assert roled.reference(q, CENTER_BALL, DEFENSE_PLACEE) == plain.reference(p, CENTER_BALL, DEFENSE_PLACEE)
+
+
+def test_the_away_team_is_mirrored() -> None:
+    away = [dataclasses.replace(p, team="away", role="piston" if p.name == "D0" else "",
+                                home_target=Vec2(105.0 - p.home_target.x, p.home_target.y),
+                                position=Vec2(105.0 - p.position.x, p.position.y)) for p in TEAM]
+    bloc = Bloc.from_players(away)
+    piston = next(p for p in away if p.name == "D0")
+    plain = Bloc.from_players([dataclasses.replace(p, role="") for p in away])
+    roleless = dataclasses.replace(piston, role="")
+    assert bloc.reference(piston, CENTER_BALL, POSSESSION_INSTALLEE).x < plain.reference(roleless, CENTER_BALL, POSSESSION_INSTALLEE).x

@@ -32,7 +32,15 @@ de 5 m de son but :
   faible (`line_lag_s` : 99 -> 0 s, 55 -> 0,75 s, 11 -> 1,5 s). Le Positioning n'est pas relu ici : il agit déjà
   par l'erreur de placement du ticket 04, qui décale le défenseur de la ligne de la même façon. C'est la faille
   collective : un seul défenseur en retard remet tout le monde en jeu, puisque le hors-jeu se juge sur les
-  positions réelles."""
+  positions réelles.
+
+Place avec ballon propre au rôle (ticket v2-realisme/02d, constantes proposées par Claude le 06/11/2026 et validées
+par délégation ; chiffres réels non trouvés, ordres de grandeur tactiques) : avec ballon, chaque joueur est décalé de
+`ROLE_PLACE_WITH_BALL[rôle]` = (avance vers le but adverse, écart à l'axe vers la touche ; négatif = rentre) AVANT la
+mise à l'échelle du bloc. La forme décalée sert aussi à mesurer le bloc avec ballon (centre, longueur, largeur) : les
+rôles redistribuent les joueurs DANS le bloc 42 x 46 m déjà calibré, sans le déplacer ni l'agrandir (1 m de bloc en
+plus = environ 1,4 tir par équipe, mesuré au ticket 04). Un rôle absent de la table, ou vide, ne bouge pas : le
+comportement d'avant 02d. Sans ballon, rien ne change (les rôles défensifs arrivent en 02e et 10)."""
 
 from __future__ import annotations
 
@@ -66,6 +74,18 @@ CUSHION_RUN_M = 30.0  # rabaissement de la ligne quand elle est plus lente que l
 LINE_LAG_MAX_S = 1.5
 _DEPTH_MARGIN_M = 5.0  # le bloc garde sa dernière ligne à 5 m de son but (marge de `formation`), pas une constante produit
 _CENTER = Vec2(PITCH_LENGTH_M / 2.0, PITCH_WIDTH_M / 2.0)
+# rôle -> (avance, écart à l'axe) en mètres sur la forme de départ, avec ballon. Les 20 rôles de `roles.ROLES` y
+# figurent (un test le vérifie) : 0 = reste à sa place de départ.
+ROLE_PLACE_WITH_BALL: dict[str, tuple[float, float]] = {
+    "gardien": (0.0, 0.0), "défenseur central": (0.0, 0.0),
+    "latéral": (5.0, 1.0), "latéral défensif": (-3.0, -2.0), "piston": (12.0, 4.0),
+    "sentinelle": (-4.0, 0.0), "récupérateur": (-6.0, 0.0), "regista": (-4.0, 0.0),
+    "milieu relayeur": (0.0, 0.0), "box to box": (4.0, 0.0), "mezzala": (2.0, 3.0),
+    "meneur": (4.0, 0.0), "milieu offensif": (6.0, 0.0),
+    "ailier de couloir": (8.0, 2.0), "ailier intérieur": (6.0, -8.0), "meneur excentré": (2.0, -5.0),
+    "second attaquant": (-2.0, 0.0), "avant-centre": (3.0, 0.0), "buteur axial": (5.0, 0.0), "pivot": (-5.0, 0.0),
+}
+_ON_AXIS_M = 1.0  # à moins de 1 m de l'axe, pas de côté : seule l'avance s'applique
 _WITHOUT_BALL = (DEFENSE_PLACEE, TRANSITION_DEFENSIVE)
 
 
@@ -105,11 +125,31 @@ class _Shape:
     front: float  # écart en x au centre du joueur de plus grand x (positif)
 
 
+def with_ball_place(player: PlayerState) -> Vec2:
+    """Place de départ du joueur décalée selon son rôle, pour le jeu avec ballon (ticket 02d)."""
+    ahead, wide = ROLE_PLACE_WITH_BALL.get(player.role, (0.0, 0.0))
+    start = player.home_target
+    forward = 1.0 if player.team == "home" else -1.0
+    side = start.y - _CENTER.y
+    if abs(side) > _ON_AXIS_M:  # vers la touche de son côté (ou vers l'axe, sans le franchir)
+        side = math.copysign(max(abs(side) + wide, 0.0), side)
+        return Vec2(start.x + forward * ahead, _CENTER.y + side)
+    return Vec2(start.x + forward * ahead, start.y)
+
+
+def _shape_of(pts: list[Vec2]) -> _Shape:
+    xs, ys = [p.x for p in pts], [p.y for p in pts]
+    cx, cy = sum(xs) / len(xs), sum(ys) / len(ys)
+    return _Shape(Vec2(cx, cy), max(xs) - min(xs), max(ys) - min(ys), min(xs) - cx, max(xs) - cx)
+
+
 @dataclass
 class Bloc:
     """Forme de départ de chaque équipe (`from_players`), erreurs de placement en cours et joueurs en train de se
     replacer."""
     shapes: dict[str, _Shape]
+    # forme de départ décalée par les rôles (ticket 02d) : sert au bloc avec ballon ; égale à `shapes` sans rôle
+    shapes_ball: dict[str, _Shape] = field(default_factory=dict)
     errors: dict[str, tuple[Vec2, float]] = field(default_factory=dict)  # joueur -> (erreur, prochain tirage)
     returning: set[str] = field(default_factory=set)  # joueurs repartis vers leur place, jusqu'à l'atteindre
     lines: dict[str, float] = field(default_factory=dict)  # équipe -> hauteur de sa dernière ligne sans ballon (`update`)
@@ -119,15 +159,14 @@ class Bloc:
 
     @classmethod
     def from_players(cls, players: list[PlayerState]) -> Bloc:
-        shapes = {}
+        shapes, shapes_ball = {}, {}
         for team in {p.team for p in players}:
-            pts = [p.home_target for p in players if p.team == team and p.poste != "GK"]
-            if not pts:  # équipe sans joueur de champ : pas de bloc, chacun garde sa place de départ
+            field_players = [p for p in players if p.team == team and p.poste != "GK"]
+            if not field_players:  # équipe sans joueur de champ : pas de bloc, chacun garde sa place de départ
                 continue
-            xs, ys = [p.x for p in pts], [p.y for p in pts]
-            cx, cy = sum(xs) / len(xs), sum(ys) / len(ys)
-            shapes[team] = _Shape(Vec2(cx, cy), max(xs) - min(xs), max(ys) - min(ys), min(xs) - cx, max(xs) - cx)
-        return cls(shapes)
+            shapes[team] = _shape_of([p.home_target for p in field_players])
+            shapes_ball[team] = _shape_of([with_ball_place(p) for p in field_players])
+        return cls(shapes, shapes_ball)
 
     def update(self, players: list[PlayerState], ball: BallState, now_s: float = 0.0) -> None:
         """Hauteur de la dernière ligne de chaque équipe, si elle n'a pas le ballon (une fois par tick)."""
@@ -184,18 +223,21 @@ class Bloc:
         if shape is None or player.poste == "GK":
             return player.home_target
         with_ball = situation not in _WITHOUT_BALL
+        start, anchor = player.home_target, shape.center  # le bloc reste centré sur le centre de la forme de départ
+        if with_ball:  # place décalée par le rôle, et forme mesurée sur ces places (ticket 02d)
+            shape, start = self.shapes_ball.get(player.team, shape), with_ball_place(player)
         length, width = SHAPE_WITH_BALL if with_ball else SHAPE_WITHOUT_BALL
         sx = length / shape.length if shape.length > 0 else 1.0
         sy = width / shape.width if shape.width > 0 else 1.0
         forward = 1.0 if player.team == "home" else -1.0  # convention du moteur : domicile attaque vers x croissant
-        cx = shape.center.x + (ball.x - _CENTER.x) * BLOCK_SHIFT[0] + (forward * POSSESSION_ADVANCE_M if with_ball else 0.0)
-        cy = shape.center.y + (ball.y - _CENTER.y) * BLOCK_SHIFT[1]
+        cx = anchor.x + (ball.x - _CENTER.x) * BLOCK_SHIFT[0] + (forward * POSSESSION_ADVANCE_M if with_ball else 0.0)
+        cy = anchor.y + (ball.y - _CENTER.y) * BLOCK_SHIFT[1]
         line = None if with_ball else self._line_for(player, now_s)
         if line is not None:  # sans ballon : le bloc se cale sur la hauteur de sa dernière ligne (ticket 05)
             cx = line - shape.back * sx if player.team == "home" else PITCH_LENGTH_M - line - shape.front * sx
         # la forme entière reste sur le terrain, ses lignes extrêmes à 5 m au moins de chaque ligne de but
         cx = min(max(cx, _DEPTH_MARGIN_M - shape.back * sx), PITCH_LENGTH_M - _DEPTH_MARGIN_M - shape.front * sx)
-        offset = player.home_target - shape.center
+        offset = start - shape.center
         return clamp_to_pitch(Vec2(cx + offset.x * sx, cy + offset.y * sy))
 
     def target(self, player: PlayerState, ball: Vec2, situation: str, now_s: float) -> Vec2:

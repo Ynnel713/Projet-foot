@@ -22,3 +22,4 @@ Règle : `CLAUDE.md`, section « Estimer la durée d'un ticket » (05/11/2026). 
 | 06/11/2026 | v2-realisme/02a | placement | 105 | 60 | − 43 % | 25/30/30/20 | 10/10/25/15 | élevée | écart > 30 % : changement de dix lignes, fabrique de scènes (01f) déjà en place ; durée réelle estimée, non chronométrée |
 | 06/11/2026 | v2-realisme/02b | placement | 110 | 125 | + 14 % | 20/40/30/20 | 15/40/40/30 | moyenne | — (sous 30 %) ; durée réelle estimée, non chronométrée ; deux passes de l'expert et correction de l'ordre de la lineup |
 | 06/11/2026 | v2-realisme/02c | données | 130 | 115 | − 12 % | 20/60/35/15 | 15/50/35/15 | élevée | — (sous 30 %) ; durée réelle estimée, non chronométrée ; deux passes de l'expert (underscores et repli silencieux), suite complète lancée deux fois |
+| 06/11/2026 | v2-realisme/02d | placement | 120 | 95 | − 21 % | 25/45/30/20 | 20/30/25/20 | moyenne | — (sous 30 %) ; durée réelle estimée, non chronométrée ; mesure par rôle écrite en un script |
