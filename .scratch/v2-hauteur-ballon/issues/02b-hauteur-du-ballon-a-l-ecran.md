@@ -15,8 +15,10 @@
 
 ## Acceptance criteria
 
+- [ ] Fluidité : images par seconde réelles mesurées sur navigateur visible, processeur ralenti 6 fois, 30 s, même match et même vitesse ; base = `41e573e`, intermédiaire = état du ticket 01, final = état du 02b ; baisse de 10 % au plus entre la base et le final (**reprend le critère non mesuré du ticket 01**, qui n'a eu qu'une mesure de substitution du coût de rendu)
 - [ ] Points de vol présents dans la trace et sérialisés par l'API (test)
 - [ ] Poids de la trace par match mesuré avant/après
 - [ ] À l'écran, centres et dégagements montent et retombent ; ombre au sol cohérente avec la hauteur
+- [ ] Sur un vrai corner centré et une vraie sortie de but longue : ballon aérien et son ombre visibles, ballon au sol inchangé (**inclut le critère reporté du ticket 01**, décision du propriétaire du 06/11/2026) ; ordre de dessin du ballon réellement en hauteur revu (réserve A3 de l'expert) ; opacité de l'ombre des joueurs revue à 375 px si elle est trop discrète
 - [ ] Mêmes empreintes de trace sur deux exécutions à graine fixée
 - [ ] `npm run build` OK, `npm run lint` sans nouvelle erreur ; suite complète au compte attendu ; V1 inchangée

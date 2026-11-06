@@ -48,6 +48,8 @@ class BallSnapshotOut(BaseModel):
     x: float
     y: float
     holder: str | None = None  # porteur du ballon : son nom s'affiche sous son rond
+    mode: str = "sol"  # "sol" ou "aérien" (ticket v2-collectif/29) : l'écran dessine un ballon aérien plus gros, avec son ombre
+    dead: bool = False  # ballon mort, en attente d'une remise en jeu : l'écran l'atténue
 
 
 class TickOut(BaseModel):
@@ -214,7 +216,8 @@ def _tick_out(tick) -> TickOut:
         minute=tick.minute,
         players=[PlayerSnapshotOut(name=p.name, team=p.team, poste=p.poste, x=p.position.x, y=p.position.y)
                  for p in tick.players],
-        ball=BallSnapshotOut(x=tick.ball.position.x, y=tick.ball.position.y, holder=tick.ball.holder),
+        ball=BallSnapshotOut(x=tick.ball.position.x, y=tick.ball.position.y, holder=tick.ball.holder,
+                             mode=tick.ball.mode, dead=tick.ball.dead),
     )
 
 

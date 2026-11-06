@@ -124,3 +124,20 @@ def test_lineup_route_rejects_unknown_club() -> None:
     with pytest.raises(HTTPException) as error:
         club_lineup("Club inexistant")
     assert error.value.status_code == 404
+
+
+def test_tick_out_serialises_ball_mode_and_dead_for_every_image() -> None:
+    # Ticket v2-hauteur-ballon/01 (repris de v2-correctifs-ecran/02) : l'écran dessine le ballon aérien et le ballon mort.
+    from api.routers.v2 import _tick_out
+    from v2engine.geometry import Vec2
+    from v2engine.trace import BallSnapshot, PlayerSnapshot, Tick
+
+    players = (PlayerSnapshot(name="A", team="home", poste="GK", position=Vec2(1.0, 2.0)),)
+    for ball, expected in [
+        (BallSnapshot(Vec2(10.0, 20.0)), ("sol", False)),
+        (BallSnapshot(Vec2(10.0, 20.0), mode="aérien"), ("aérien", False)),
+        (BallSnapshot(Vec2(10.0, 20.0), mode="sol", dead=True), ("sol", True)),
+    ]:
+        out = _tick_out(Tick(minute=1.0, players=players, ball=ball)).ball
+        assert (out.mode, out.dead) == expected
+        assert (out.x, out.y) == (10.0, 20.0)

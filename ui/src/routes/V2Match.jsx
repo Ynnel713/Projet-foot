@@ -4,6 +4,7 @@ import { ArrowLeft, LoaderCircle, Pause, Play } from "lucide-react";
 import { getPersoClubs, getV2Lineup, getV2Match, startV2Match } from "../api/client";
 import dims from "../utils/pitchGeometry.json";
 import { goalBall } from "../utils/v2GoalBall";
+import { COS, GROUND_MATRIX, project } from "../utils/v2Projection";
 
 // Vitesses en multiples du TEMPS RÉEL (demande du propriétaire, 03/11/2026) : x1 par défaut, jusqu'à x8. Entre
 // deux positions enregistrées (~1 s de match d'écart, voir api/routers/v2.py), joueurs et ballon glissent en ligne
@@ -54,10 +55,14 @@ function interpolatedTick(trace, seconds) {
   const minute = mix(a.minute, b.minute);
   // but entre les deux images : le ballon entre dans le but au lieu de glisser vers le rond central
   const scored = goalBall(a, b, minute, trace.goals, dims.pitch_length_m, dims.pitch_width_m);
+  // mode (« sol » / « aérien ») et ballon mort : ceux de l'image de départ (ticket v2-hauteur-ballon/01)
+  const state = { mode: a.ball.mode, dead: a.ball.dead };
   return {
     minute,
     players: a.players.map((p, k) => ({ ...p, x: mix(p.x, b.players[k].x), y: mix(p.y, b.players[k].y) })),
-    ball: scored ? { ...scored, holder: null } : { x: mix(a.ball.x, b.ball.x), y: mix(a.ball.y, b.ball.y), holder: a.ball.holder },
+    ball: scored
+      ? { ...scored, holder: null, ...state }
+      : { x: mix(a.ball.x, b.ball.x), y: mix(a.ball.y, b.ball.y), holder: a.ball.holder, ...state },
   };
 }
 
@@ -620,32 +625,38 @@ function Bench({ lineup, side, color, seconds, warmUpFromS }) {
   const length = seats * SEAT + 1;
   const x0 = side < 0 ? L / 2 - BENCH_GAP - length : L / 2 + BENCH_GAP;
   const seatX = (i) => (side < 0 ? x0 + length - 0.5 - SEAT * (i + 0.5) : x0 + 0.5 + SEAT * (i + 0.5));
+  // sièges et remplaçants : ronds et chiffres projetés (jamais écrasés) ; les bancs eux-mêmes sont à plat
+  const seat = project(seatX(0), BENCH_Y);
   return (
     <g>
-      <rect x={x0} y={BENCH_Y - 1.6} width={length} height={3.2} rx={0.6} fill="rgba(20,24,30,0.85)" stroke="rgba(255,255,255,0.5)" strokeWidth={0.12} />
+      <g transform={GROUND_MATRIX}>
+        <rect x={x0} y={BENCH_Y - 1.6} width={length} height={3.2} rx={0.6} fill="rgba(20,24,30,0.85)" stroke="rgba(255,255,255,0.5)" strokeWidth={0.12} />
+      </g>
       <g>
-        <rect x={seatX(0) - 0.8} y={BENCH_Y - 0.8} width={1.6} height={1.6} rx={0.3} fill="#222" stroke="white" strokeWidth={0.12} />
-        <text x={seatX(0)} y={BENCH_Y} textAnchor="middle" dominantBaseline="central" fontSize={1} fill="white" fontWeight="bold">
+        <rect x={seat.x - 0.8} y={seat.y - 0.8} width={1.6} height={1.6} rx={0.3} fill="#222" stroke="white" strokeWidth={0.12} />
+        <text x={seat.x} y={seat.y} textAnchor="middle" dominantBaseline="central" fontSize={1} fill="white" fontWeight="bold">
           E
         </text>
         <title>{`Entraîneur${lineup.coach ? ` : ${lineup.coach}` : ""}`}</title>
       </g>
-      {seated.map((p, i) => (
-        <g key={p.name}>
-          <circle cx={seatX(i + 1)} cy={BENCH_Y} r={0.75} fill={color} opacity={0.85} stroke="rgba(0,0,0,0.4)" strokeWidth={0.08} />
-          <PlayerNumber x={seatX(i + 1)} y={BENCH_Y} value={p.number} size={0.9} />
-          <title>{`${p.number} ${p.name} (${p.poste})`}</title>
-        </g>
-      ))}
+      {seated.map((p, i) => {
+        const c = project(seatX(i + 1), BENCH_Y);
+        return (
+          <g key={p.name}>
+            <circle cx={c.x} cy={c.y} r={0.75} fill={color} opacity={0.85} stroke="rgba(0,0,0,0.4)" strokeWidth={0.08} />
+            <PlayerNumber x={c.x} y={c.y} value={p.number} size={0.9} />
+            <title>{`${p.number} ${p.name} (${p.poste})`}</title>
+          </g>
+        );
+      })}
       {warmers.map((p, i) => {
         // va-et-vient sur 12 m, chacun décalé, entre la ligne de touche et la piste
         const phase = seconds * 0.35 + i * 2.1;
-        const x = L / 2 + side * (24 + 6 + 6 * Math.sin(phase));
-        const y = W + 1.5 + i * 1.4;
+        const c = project(L / 2 + side * (24 + 6 + 6 * Math.sin(phase)), W + 1.5 + i * 1.4);
         return (
           <g key={p.name}>
-            <circle cx={x} cy={y} r={0.9} fill={color} opacity={0.75} stroke="rgba(0,0,0,0.4)" strokeWidth={0.08} />
-            <PlayerNumber x={x} y={y} value={p.number} size={1} />
+            <circle cx={c.x} cy={c.y} r={0.9} fill={color} opacity={0.75} stroke="rgba(0,0,0,0.4)" strokeWidth={0.08} />
+            <PlayerNumber x={c.x} y={c.y} value={p.number} size={1} />
             <title>{`${p.number} ${p.name} s'échauffe`}</title>
           </g>
         );
@@ -672,14 +683,49 @@ function GoalEnd({ flip }) {
   );
 }
 
+// Joueurs, buts et ballon sur la caméra inclinée (ticket v2-hauteur-ballon/01).
+const PLAYER_R = 1.3; // rayon du rond d'un joueur (m)
+// Le rond d'un joueur est dessiné à la hauteur de sa taille : sans cela il recouvrirait son ombre. Valeur validée par
+// le propriétaire le 06/11/2026 ; si l'ombre est trop discrète sur téléphone, jouer sur son opacité, pas sur cette hauteur.
+const PLAYER_LIFT = 1.8;
+const SHADOW_K = 0.8; // ombre d'un joueur : ovale de rayon 0,8 × celui du rond (validé le 04/11/2026)
+const SHADOW_OPACITY = 0.25;
+const CROSSBAR = 2.44; // hauteur de la barre transversale (m)
+const BALL_R = 0.4;
+const BALL_AIR_R = 0.6;
+const BALL_AIR_Z = 1; // hauteur fixe d'un ballon aérien, jusqu'au ticket 02b (vraie hauteur à l'écran)
+
+// Poteaux et barre d'un but (`x` : ligne de but), par la projection : z = 0 puis z = 2,44 m.
+function GoalFrame({ x }) {
+  const ys = [W / 2 - GOAL_WIDTH / 2, W / 2 + GOAL_WIDTH / 2];
+  const [foot0, foot1] = ys.map((y) => project(x, y));
+  const [top0, top1] = ys.map((y) => project(x, y, CROSSBAR));
+  const stroke = { stroke: "white", strokeWidth: 0.3, strokeLinecap: "round" };
+  return (
+    <g style={{ pointerEvents: "none" }}>
+      <line x1={foot0.x} y1={foot0.y} x2={top0.x} y2={top0.y} {...stroke} />
+      <line x1={foot1.x} y1={foot1.y} x2={top1.x} y2={top1.y} {...stroke} />
+      <line x1={top0.x} y1={top0.y} x2={top1.x} y2={top1.y} {...stroke} />
+    </g>
+  );
+}
+
 function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, selected, onSelect }) {
   const pad = MARGIN + TRACK;
   const stripe = L / STRIPES;
-  const holder = tick.players.find((p) => p.name === tick.ball.holder);
-  const height = W + 2 * pad + BENCH_ZONE;
+  const height = (W + 2 * pad + BENCH_ZONE) * COS;
+  // du fond (y petit) vers l'avant : le joueur le plus proche de la caméra recouvre le plus lointain
+  const players = [...tick.players]
+    .sort((a, b) => a.y - b.y)
+    .map((p) => ({ ...p, ground: project(p.x, p.y), body: project(p.x, p.y, PLAYER_LIFT) }));
+  const holder = players.find((p) => p.name === tick.ball.holder);
+  const air = tick.ball.mode === "aérien";
+  const ballGround = project(tick.ball.x, tick.ball.y);
+  const ball = project(tick.ball.x, tick.ball.y, air ? BALL_AIR_Z : 0);
+  const ballR = air ? BALL_AIR_R : BALL_R;
   return (
     <svg
-      viewBox={`${-pad} ${-pad} ${L + 2 * pad} ${height}`}
+      viewBox={`${-pad} ${-pad * COS} ${L + 2 * pad} ${height}`}
       className="w-full max-w-4xl rounded-lg"
       style={{ aspectRatio: `${L + 2 * pad} / ${height}` }}
     >
@@ -689,48 +735,94 @@ function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, selected, onSel
           <path d="M 0 0 L 0.5 0 M 0 0 L 0 0.5" stroke="rgba(255,255,255,0.6)" strokeWidth={0.05} />
         </pattern>
       </defs>
-      <rect x={-pad} y={-pad} width={L + 2 * pad} height={height} fill="#5a5f66" />
-      <rect x={-pad} y={-pad} width={L + 2 * pad} height={W + 2 * pad} fill="#9c4a3c" />
-      <rect x={-MARGIN} y={-MARGIN} width={L + 2 * MARGIN} height={W + 2 * MARGIN} fill="#2f7d32" />
-      {Array.from({ length: STRIPES }, (_, i) => (
-        <rect key={i} x={i * stripe} y={-MARGIN} width={stripe} height={W + 2 * MARGIN} fill={i % 2 ? "#3a8f3c" : "#2f7d32"} />
-      ))}
+      {/* 1. pelouse et lignes : à plat, écrasées par la même projection (z = 0) */}
+      <g transform={GROUND_MATRIX}>
+        <rect x={-pad} y={-pad} width={L + 2 * pad} height={W + 2 * pad + BENCH_ZONE} fill="#5a5f66" />
+        <rect x={-pad} y={-pad} width={L + 2 * pad} height={W + 2 * pad} fill="#9c4a3c" />
+        <rect x={-MARGIN} y={-MARGIN} width={L + 2 * MARGIN} height={W + 2 * MARGIN} fill="#2f7d32" />
+        {Array.from({ length: STRIPES }, (_, i) => (
+          <rect key={i} x={i * stripe} y={-MARGIN} width={stripe} height={W + 2 * MARGIN} fill={i % 2 ? "#3a8f3c" : "#2f7d32"} />
+        ))}
 
-      <rect x={0} y={0} width={L} height={W} {...LINE} />
-      <line x1={L / 2} y1={0} x2={L / 2} y2={W} {...LINE} />
-      <circle cx={L / 2} cy={W / 2} r={CENTER_CIRCLE_R} {...LINE} />
-      <circle cx={L / 2} cy={W / 2} r={0.3} fill="white" />
-      {[
-        [0, 0, 0],
-        [L, 0, 90],
-        [L, W, 180],
-        [0, W, 270],
-      ].map(([x, y, rot]) => (
-        <path key={rot} d={`M ${CORNER_R} 0 A ${CORNER_R} ${CORNER_R} 0 0 1 0 ${CORNER_R}`} transform={`translate(${x} ${y}) rotate(${rot})`} {...LINE} />
-      ))}
-      <GoalEnd />
-      <GoalEnd flip />
+        <rect x={0} y={0} width={L} height={W} {...LINE} />
+        <line x1={L / 2} y1={0} x2={L / 2} y2={W} {...LINE} />
+        <circle cx={L / 2} cy={W / 2} r={CENTER_CIRCLE_R} {...LINE} />
+        <circle cx={L / 2} cy={W / 2} r={0.3} fill="white" />
+        {[
+          [0, 0, 0],
+          [L, 0, 90],
+          [L, W, 180],
+          [0, W, 270],
+        ].map(([x, y, rot]) => (
+          <path key={rot} d={`M ${CORNER_R} 0 A ${CORNER_R} ${CORNER_R} 0 0 1 0 ${CORNER_R}`} transform={`translate(${x} ${y}) rotate(${rot})`} {...LINE} />
+        ))}
+        <GoalEnd />
+        <GoalEnd flip />
+      </g>
       {lineups && <Bench lineup={lineups.home} side={-1} color="#4f8ef7" seconds={seconds} warmUpFromS={warmUpFromS} />}
       {lineups && <Bench lineup={lineups.away} side={1} color="#e0b84a" seconds={seconds} warmUpFromS={warmUpFromS} />}
 
-      {tick.players.map((p) => (
+      {/* 2. ombres au sol */}
+      {players.map((p) => (
+        <ellipse
+          key={`shadow-${p.name}`}
+          cx={p.ground.x}
+          cy={p.ground.y}
+          rx={PLAYER_R * SHADOW_K}
+          ry={PLAYER_R * SHADOW_K * COS}
+          fill="black"
+          opacity={SHADOW_OPACITY}
+          style={{ pointerEvents: "none" }}
+        />
+      ))}
+      {air && (
+        <ellipse
+          cx={ballGround.x}
+          cy={ballGround.y}
+          rx={ballR}
+          ry={ballR * COS}
+          fill="black"
+          opacity={0.3}
+          style={{ pointerEvents: "none" }}
+        />
+      )}
+
+      {/* 3. joueurs, triés du fond vers l'avant : vrais cercles */}
+      {players.map((p) => (
         <g key={p.name} onClick={() => onSelect(p.name === selected ? null : p.name)} style={{ cursor: "pointer" }}>
           <circle
-            cx={p.x}
-            cy={p.y}
-            r={1.3}
+            cx={p.body.x}
+            cy={p.body.y}
+            r={PLAYER_R}
             fill={p.team === "home" ? "#4f8ef7" : "#e0b84a"}
             stroke={p.name === selected ? "white" : "rgba(0,0,0,0.4)"}
             strokeWidth={p.name === selected ? 0.4 : 0.1}
           />
-          <PlayerNumber x={p.x} y={p.y} value={numbers[p.name]} />
+          <PlayerNumber x={p.body.x} y={p.body.y} value={numbers[p.name]} />
         </g>
       ))}
+
+      {/* 4. buts en hauteur */}
+      <GoalFrame x={0} />
+      <GoalFrame x={L} />
+
+      {/* 5. ballon : plus gros et remonté s'il est aérien (hauteur fixe d'un mètre, provisoire) ; atténué s'il est mort */}
+      <circle
+        cx={ball.x}
+        cy={ball.y}
+        r={ballR}
+        fill="white"
+        stroke="black"
+        strokeWidth={0.1}
+        opacity={tick.ball.dead ? 0.6 : 1}
+        style={{ pointerEvents: "none" }}
+      />
+
+      {/* 6. nom du porteur, sous son rond ; le contour sombre le garde lisible sur la pelouse comme sur les lignes */}
       {holder && (
-        // nom du porteur, sous son rond ; le contour sombre le garde lisible sur la pelouse comme sur les lignes
         <text
-          x={holder.x}
-          y={holder.y + 3.2}
+          x={holder.body.x}
+          y={holder.body.y + 3.2}
           textAnchor="middle"
           fontSize={1.8}
           fontWeight="bold"
@@ -743,7 +835,6 @@ function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, selected, onSel
           {holder.name}
         </text>
       )}
-      <circle cx={tick.ball.x} cy={tick.ball.y} r={0.4} fill="white" stroke="black" strokeWidth={0.1} />
     </svg>
   );
 }
