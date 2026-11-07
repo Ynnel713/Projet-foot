@@ -106,6 +106,44 @@ export default function V2Match() {
       .catch(() => setError("Impossible de charger les clubs."));
   }, []);
 
+  // Rejeu de développement, absent du build de production (ticket v2-ecran-match/00) :
+  // /v2?fixture=<nom>[&t=<minute>][&speed=<x>][&paused=1] rejoue une trace réelle enregistrée, sans l'API.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return undefined;
+    const query = new URLSearchParams(window.location.search);
+    const name = query.get("fixture");
+    if (!name) return undefined;
+    let cancelled = false;
+    import("../dev/fixture.js")
+      .then(({ loadFixture }) => loadFixture(name))
+      .then(({ lineups: recorded, ...live }) => {
+        if (cancelled) return;
+        const asked_t = Number(query.get("t") || 0);
+        const start = Number.isFinite(asked_t) ? Math.min(Math.max(0, asked_t) * 60, (live.ticks.length - 1) * live.tick_seconds) : 0;
+        const halfS = live.second_half_start_minute != null ? live.second_half_start_minute * 60 : null;
+        const asked = Number(query.get("speed"));
+        if (SPEED_OPTIONS.includes(asked)) setSpeed(asked);
+        traceRef.current = live;
+        setLineups(recorded);
+        setTrace(live);
+        setComputed(live.ticks.length);
+        secondsRef.current = start;
+        setSeen(start);
+        setSeconds(start);
+        // les buts et la mi-temps d'avant `start` sont réputés déjà vus : pas de ralenti ni de bandeau rétroactifs
+        replayRef.current = null;
+        replayedRef.current = live.goals.filter((g) => g.minute * 60 + REPLAY_AFTER_S <= start).length;
+        halfRef.current = { shown: halfS != null && start >= halfS, until: 0 };
+        setHalfBanner(false);
+        setReplaying(false);
+        setPlaying(query.get("paused") !== "1");
+      })
+      .catch(() => setError(`Trace « ${name} » introuvable (voir scripts/record_v2_trace.py).`));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   useEffect(() => {
     if (!playing || !traceRef.current) return undefined;
     let frame;

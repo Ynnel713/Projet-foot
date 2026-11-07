@@ -213,6 +213,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **Correctif préalable (24/10/2026)** : `movement.step` perdait les attributs des joueurs dès le 2ᵉ tick (retour à 60 par défaut) ; passes, contrôles, tacles et tirs des Phases 2 à 4 ignoraient donc les vraies notes en match. Corrigé, test de régression dans `tests/test_v2engine_movement.py`.
 
+**Chantier « écran Match » (07/11/2026, `.scratch/v2-ecran-match/`)** : refonte UX/UI de l'écran V2 (retransmission en trois zones, couleurs de club, compositions en cartes, momentum, chronologie, statistiques, sélecteur Match complet / Temps forts), 20 tickets EM-00 à EM-19, environ 36 h ; pas de modification du moteur, deux tickets de données (EM-17, EM-18) en sérialisation seulement. Mis en attente derrière le moteur graphique à la demande du propriétaire. `EM-00` livré (07/11/2026) : banc de rejeu d'une trace réelle enregistrée (`scripts/record_v2_trace.py`, `/v2?fixture=<nom>&t=<minute>`, développement seulement).
+
 ### Bloquée par
 
 - Phase 4
