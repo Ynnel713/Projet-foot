@@ -334,3 +334,39 @@ La courbe monte bien avec l'éloignement du ballon (4,7 → 7,3 → 12,0 m) mais
 
 **Écarts au réel, sans réglage.** Aucun repère réel pour la position du gardien (consigne d'entraîneur de 1 à 6 m de la ligne en face-à-face, tenue). Tirs par équipe 23,8 et buts 3,08 par match : voir le point d'étape 18a. La hausse de la chance des tirs due au 03c (0,061 → 0,081, aujourd'hui 0,064) reste à décomposer au ticket 03h.
 
+
+## 12. Gardien : la ligne du 03c et la chance des tirs, saut de cible (ticket v2-realisme/03h, 50 matchs appariés, 07/11/2026)
+
+`uv run python -m scripts.bench_series 50 --processus 7 --json .scratch/v2-realisme/mesures/03h-avec-ligne.json` (A, moteur du 03g) et `PYTHONPATH=. uv run python .scratch/v2-realisme/mesures/03h-serie-sans-ligne.py 50 --processus 7 --json .scratch/v2-realisme/mesures/03h-sans-ligne.json` (B, même moteur avec `gardien.LINE_RATIO = 0`, qui redonne le placement du 03b), puis `uv run python -m scripts.decomposition_tirs avec.json sans.json`. Graine d'audit 20260923, mêmes 50 matchs. **Mesure seulement, aucune constante modifiée.** La série A redonne exactement celle du 03g (chance 0,0637, buts 3,08).
+
+**La hausse du 03c n'existe plus.** Le 03c avait mesuré, sur 20 matchs, une chance des tirs de 0,0611 → 0,0813 et 2,75 → 3,60 buts avec la ligne. Sur le moteur actuel (50 matchs) : chance **0,0637 avec la ligne contre 0,0684 sans**, écart A − B **−0,0037** [−0,0093 ; +0,0019] (non significatif), buts **3,08 contre 3,08** (écart 0 ± 0,58), tirs par équipe 23,8 contre 23,3 (+0,49 [−0,77 ; +1,75]). La ligne du 03c ne fait donc pas monter la chance des tirs aujourd'hui. Hypothèse non démontrée par cette mesure : la hausse venait en partie des 215 sorties par match du 03d (le gardien courait sur les passes de son équipe), supprimées depuis.
+
+**Décomposition de l'écart (quatre termes qui se somment, IC 95 % sur les 50 écarts par match).** Chances moyennes par tir, agrégées sur tous les tirs (A / B ; les termes du tableau sont des moyennes des écarts par match, d'où de petits écarts avec la différence de ces moyennes) : à la place réelle du gardien 0,0637 / 0,0684 ; à son point visé 0,0577 / 0,0617 ; sur la bissectrice du 03b sans ligne 0,0598 / 0,0628.
+
+| Terme | Valeur | IC 95 % |
+|---|---|---|
+| Dynamique avec la ligne : P(A, réelle) − P(A, visé) | +0,0059 | [+0,0042 ; +0,0077] |
+| Cible (ligne et face-à-face) : P(A, visé) − P(A, 03b) | −0,0022 | [−0,0026 ; −0,0017] |
+| Mélange de tirs : P(A, 03b) − P(B, 03b) | −0,0021 | [−0,0070 ; +0,0028] |
+| Dynamique sans la ligne : P(B, 03b) − P(B, réelle) | −0,0054 | [−0,0069 ; −0,0040] |
+| **Écart total** | **−0,0037** | [−0,0093 ; +0,0019] |
+
+- **Dynamique** : le gardien n'est jamais exactement sur son point visé au moment du tir (**1,09 m** avec la ligne, 0,97 m sans) et cela *augmente* la chance de **+0,0055 à +0,0059** dans les deux séries ; la différence entre les deux dynamiques est nulle (+0,0005 [−0,0013 ; +0,0024]). C'est le plus gros terme et il ne dépend pas de la ligne. **Hypothèse, non démontrée** (réserve A2 de l'expert) : il relèverait du ticket 03f (appuis au moment du tir) ; mais les tireurs tirent peut-être de préférence quand le gardien est décalé (biais de sélection), et s'écarter d'un point visé optimisé augmente mécaniquement la chance. Le 03f est le ticket qui peut le tester.
+- **Cible** : la ligne et la profondeur de face-à-face *baissent* la chance de 0,0022. Séparées : face-à-face seul (série B) −0,0011 [−0,0018 ; −0,0004], ligne seule (A moins B) **−0,0011** [−0,0020 ; −0,0001]. Le critère « P(B, 03b) = P(B, visé) » posé au ticket était faux : le point visé contient la profondeur de face-à-face du 03e, que la bissectrice du 03b ne contient pas.
+- **Mélange de tirs** : non significatif. Chance de l'endroit (`base_chance`) 0,0774 avec la ligne contre 0,0817 sans (écart −0,0026 [−0,0086 ; +0,0035]), distance au but 21,65 contre 21,70 m (−0,11 m [−0,48 ; +0,25]).
+- La somme des quatre termes est vérifiée par un test (`tests/test_v2_indicators.py`) à 1e-12 près.
+
+**Effets sur la position du gardien (A − B).** Distance moyenne du gardien à son but **+3,87 m** [+3,80 ; +3,94] (significatif) ; écart à la bissectrice sans ligne au tir 0,30 contre 0,27 m (la bissectrice reste tenue, 98,2 % contre 97,6 % sous 2 m) ; écart à son point visé réel au tir 1,09 contre 0,97 m (+0,12 m [−0,01 ; +0,25]). Cet indicateur (« gardien au tir : écart à son point visé réel ») lit la cible réelle du gardien et corrige la réserve A4 du 03g : l'écart à la bissectrice sans ligne mesure l'avancée voulue par la ligne et non une erreur.
+
+**Saut de cible (réserve A3 du 03c, réserve A1 du 03b).** Entre deux instants consécutifs où le gardien est en placement (accumulé par match) :
+
+| | Avec la ligne | Sans la ligne | Écart A − B |
+|---|---|---|---|
+| Saut moyen entre deux instants (m) | 0,151 | 0,078 | +0,073 [+0,071 ; +0,075] |
+| Part des sauts de plus de 1,0 m | 1,21 % | 0,30 % | +0,91 point |
+| Part du temps en course à plus de 5,0 m/s (en placement) | 2,47 % | 0,85 % | +1,62 point |
+| Saut maximal du match (m) | 20,22 | 20,22 | 0 |
+
+La ligne multiplie par deux le saut moyen et par quatre les grands sauts, mais ces sauts restent rares (1,2 % des instants) et le gardien, limité par sa vitesse et son accélération, ne court plus de 5 m/s que 2,5 % du temps en placement. **Le saut maximal est le même dans les deux séries et à chaque match (20,22 m).** Relevé sur un match : le ballon passe du centre de la ligne de but au point de corner en un seul instant (remise en jeu), et le point visé passe du centre du but au bord de la surface (20,16 m de côté, plus 1,5 m de profondeur) ; c'est un changement de place du ballon, pas un défaut du placement. Conclusion : **pas de défaut mesuré** (moyenne, grands sauts, course) ; le saut n'est pas mesuré hors remises en jeu ni sur le mouvement rendu (inversions, accélérations), et pas en fonction de la distance du ballon (réserve A1 de l'expert) ; si le gardien paraît nerveux au rendu, la piste serait de lisser la cible sur environ 0,5 s (non faite, constante à proposer).
+
+**Limites.** (1) Les chances sont des chances de but par tir non contré selon `shot_probability`, pas des buts : les buts observés (3,08 contre 3,08) sont trop bruités pour départager (±0,5 par match). (2) La dynamique est calculée sur le dernier point visé du gardien en placement ou en face-à-face ; au tir il l'est dans 100 % des cas mesurés. (3) La limite du 03c (A2) reste : sans effet sur cette décomposition. (4) La série A n'a pas la hausse du 03c : le plafond de 16 m, la ligne de référence du bloc et la couverture de la profondeur ne sont pas modifiés ici.

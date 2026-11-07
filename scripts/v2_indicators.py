@@ -15,7 +15,7 @@ import math
 import statistics
 from collections import Counter, defaultdict
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 import v2engine.cerveau as cerveau
 from v2engine.cerveau import APPEL, CHASE_RADIUS_M, OPPONENT_GOAL, TENIR, nearest_of_team
@@ -26,7 +26,7 @@ from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, in_penalty_ar
 from v2engine.movement import PlayerState
 from v2engine.offside import offside_line
 from v2engine.possession import pass_success_probability
-from v2engine.shooting import shot_probability
+from v2engine.shooting import base_chance, shot_probability
 from v2engine.situation import POSSESSION_INSTALLEE, TRANSITION_DEFENSIVE, TRANSITION_OFFENSIVE, SituationTracker
 
 KMH = 1.0 / 3.6
@@ -64,6 +64,10 @@ KEEPER_ZONES_M = (BALL_DISTANCE_M[0], FACE_RANGE_M, BALL_DISTANCE_M[1])
 DISPUTED_WINDOW_S = 2.0
 TIGHT_WINDOW_S = 1.0  # sortie « très disputée » : l'adversaire arrive au plus 1,0 s après lui (la fenêtre de 2,0 s en couvre 95 %)
 LEAD_CAP_S = 10.0  # avance du gardien sur l'adversaire, plafonnée (aucun adversaire de champ : infinie)
+# Saut de cible (ticket v2-realisme/03h, seuils proposés, acceptés d'office) : changement de point visé de plus de 1,0 m entre
+# deux instants en placement ; gardien « en course » en placement au-dessus de 5,0 m/s.
+BIG_JUMP_M = 1.0
+PLACEMENT_RUN_MPS = 5.0
 TRANSITIONS = (TRANSITION_OFFENSIVE, TRANSITION_DEFENSIVE)
 CROWDED_M = 5.0  # regroupement : coéquipier à moins de 5 m, hors duel (ticket 06)
 # Combinaisons (ticket v2-collectif/14, validé le 02/11/2026) : passe « sans gain » sous 5 m vers le but ; passe qui
@@ -342,6 +346,9 @@ class Collector:
         self.keeper_dist: dict[str, list[float]] = {}
         self.keeper_disputed: dict[str, bool] = {}  # gardien -> sortie en cours disputée (ticket v2-realisme/03g)
         self.keeper_masked: dict[str, str | None] = {}  # gardien -> course gagnante masquée en cours (03g)
+        self.keeper_target: dict[str, Vec2 | None] = {}  # gardien -> point visé en placement ou face-à-face (03h)
+        # gardien en placement (03h) : [instants, sauts mesurés, somme des sauts, grands sauts, plus grand saut, instants en course]
+        self.keeper_place: dict[str, list[float]] = {}
         self.run_log: list[tuple[str, float, float, Vec2]] = []  # (joueur, début, fin, position finale)
         self.deep_runs: Counter = Counter()  # appels finis à ON_THE_LINE_M ou moins de la ligne, par joueur (16)
         self.follow: dict[str, list[tuple[float, float]]] = defaultdict(list)  # axe -> (ballon, centre d'équipe)
@@ -397,6 +404,17 @@ class Collector:
         self.stats["chance du tir (shot_probability)"].add(shot_probability(shooter, goal, keeper, opponents))
         if keeper is None:
             return
+        # ticket v2-realisme/03h : le même tir avec le gardien à son point visé, puis sur la bissectrice sans ligne (03b)
+        aim = self.keeper_target.get(keeper.name)
+        self.stats["gardien au tir : en placement ou face-à-face (part)"].add(0.0 if aim is None else 1.0)
+        self.stats["chance du tir : gardien à son point visé"].add(
+            shot_probability(shooter, goal, keeper if aim is None else replace(keeper, position=aim), opponents))
+        self.stats["chance du tir : gardien sur la bissectrice sans ligne (03b)"].add(shot_probability(
+            shooter, goal, replace(keeper, position=bisector_point(keeper, shooter.position)), opponents))
+        self.stats["tir : chance de l'endroit (base_chance)"].add(base_chance(shooter.position, goal))
+        self.stats["tir : distance au but (m)"].add(shooter.position.distance_to(goal))
+        if aim is not None:
+            self.stats["gardien au tir : écart à son point visé réel (m)"].add(keeper.position.distance_to(aim))
         direction = bisector_direction(shooter.position, goal)
         offset = keeper.position - shooter.position
         off_line = abs(offset.x * direction.y - offset.y * direction.x)  # distance du gardien à la droite bissectrice
@@ -428,6 +446,19 @@ class Collector:
             state = "placement, ballon libre laissé"
         previous = self.keeper_state.get(keeper.name)
         self.keeper_state[keeper.name] = state
+        placed = state.startswith(PLACEMENT)
+        last_target = self.keeper_target.get(keeper.name)
+        if placed:  # ticket v2-realisme/03h : saut du point visé entre deux instants en placement, et course
+            acc = self.keeper_place.setdefault(keeper.name, [0.0] * 6)
+            acc[0] += 1
+            acc[5] += keeper.velocity.length() > PLACEMENT_RUN_MPS
+            if previous is not None and previous.startswith(PLACEMENT) and last_target is not None:
+                jump = intention.target.distance_to(last_target)
+                acc[1] += 1
+                acc[2] += jump
+                acc[3] += jump > BIG_JUMP_M
+                acc[4] = max(acc[4], jump)
+        self.keeper_target[keeper.name] = intention.target if placed or state == FACE_A_FACE else None
         if state == FACE_A_FACE and previous != FACE_A_FACE:  # ticket v2-realisme/03e : épisodes de face-à-face
             self.count["gardien : face-à-face"] += 1
         if state == SORTIE and previous != SORTIE:
@@ -980,6 +1011,13 @@ class Collector:
                     episodes = self.call_episodes[name] * MATCH_90_S / self.now  # ticket v2-realisme/02h, réserve A1 du 02g
                     self.stats[f"épisodes APPEL par joueur et par 90 min : {poste}"].add(episodes)
                     self.stats["épisodes APPEL par joueur et par 90 min"].add(episodes)
+        for n, jumps, total, big, most, running in self.keeper_place.values():  # saut de cible du gardien en placement (03h)
+            if jumps:
+                self.stats["gardien en placement : saut de cible moyen (m)"].add(total / jumps)
+                self.stats["gardien en placement : saut de cible de plus de 1 m (part)"].add(big / jumps)
+                self.stats["gardien en placement : saut de cible maximal du match (m)"].add(most)
+            if n:
+                self.stats["gardien en placement : en course à plus de 5 m/s (part)"].add(running / n)
         for far_max, far_sum, n in self.keeper_dist.values():  # le gardien et son but (ticket v2-realisme/03a)
             self.stats["distance maximale du gardien à son but (m)"].add(far_max)
             self.stats["distance moyenne du gardien à son but (m)"].add(far_sum / n)

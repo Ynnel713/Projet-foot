@@ -793,3 +793,70 @@ def test_face_to_face_shot_gap_to_the_target_depth_is_measured() -> None:
         c.on_shot_context(shooter, goal, keeper, [keeper])
         gaps += c.stats["face-à-face : gardien au tir, écart à la profondeur visée (m)"].values
     assert gaps == [0.0, 2.5]
+
+
+# --- Gardien : chance du tir et saut de cible (ticket v2-realisme/03h) ---------------------------------------------------
+def test_shot_chance_is_also_computed_with_the_keeper_at_his_aim_and_on_the_bisector_without_line() -> None:
+    from dataclasses import replace
+    from v2engine.cerveau import Intention
+    from v2engine.gardien import bisector_point
+    from v2engine.shooting import base_chance, shot_probability
+    goal = Vec2(PITCH_LENGTH_M, 34.0)
+    shooter = _p("S", "home", PITCH_LENGTH_M - 20.0, 34.0)
+    keeper = _p("K", "away", PITCH_LENGTH_M - 2.0, 34.0, poste="GK")  # sur sa ligne, son point visé est plus avancé
+    aim = Vec2(PITCH_LENGTH_M - 9.0, 34.0)
+    c = ind.Collector(geometry_every_s=1e9)
+    c.on_keeper(keeper, Intention("gardien", "se replacer", aim, reason="placement : ..."))
+    c.on_shot_context(shooter, goal, keeper, [keeper])
+    stats = c.stats
+    at_aim = shot_probability(shooter, goal, replace(keeper, position=aim), [keeper])
+    on_bisector = shot_probability(shooter, goal, replace(keeper, position=bisector_point(keeper, shooter.position)), [keeper])
+    assert stats["chance du tir : gardien à son point visé"].values == [at_aim]
+    assert stats["chance du tir : gardien sur la bissectrice sans ligne (03b)"].values == [on_bisector]
+    assert stats["chance du tir (shot_probability)"].values[0] != at_aim  # le gardien n'est pas à son point visé
+    assert stats["gardien au tir : en placement ou face-à-face (part)"].values == [1.0]
+    assert stats["gardien au tir : écart à son point visé réel (m)"].values == [7.0]
+    assert stats["tir : chance de l'endroit (base_chance)"].values == [base_chance(shooter.position, goal)]
+    assert stats["tir : distance au but (m)"].values == [20.0]
+    # un gardien qui n'est pas en placement (intervention) : le point visé est sa place réelle, rien n'est inventé
+    other = ind.Collector(geometry_every_s=1e9)
+    other.on_keeper(keeper, Intention("gardien", "aller au ballon", aim, reason="intervention : ..."))
+    other.on_shot_context(shooter, goal, keeper, [keeper])
+    assert other.stats["gardien au tir : en placement ou face-à-face (part)"].values == [0.0]
+    assert other.stats["chance du tir : gardien à son point visé"].values == other.stats["chance du tir (shot_probability)"].values
+    assert "gardien au tir : écart à son point visé réel (m)" not in other.stats
+
+
+def test_the_four_terms_of_the_decomposition_add_up_to_the_difference_between_two_series() -> None:
+    from scripts.decomposition_tirs import KEYS, TERMS, decompose
+    a = dict(zip(KEYS, (0.081, 0.070, 0.066)))
+    b = dict(zip(KEYS, (0.062, 0.061, 0.061)))
+    out = decompose(a, b)
+    assert math.isclose(sum(out[t] for t in TERMS), out["écart total"], abs_tol=1e-12)
+    assert math.isclose(out["écart total"], 0.081 - 0.062, abs_tol=1e-12)
+    assert math.isclose(out["cible (ligne et face-à-face)"], 0.004, abs_tol=1e-12)  # 0,070 - 0,066
+    assert math.isclose(out["mélange de tirs"], 0.005, abs_tol=1e-12)  # 0,066 - 0,061
+    same = decompose(a, a)  # deux séries identiques : aucun écart, le terme de cible reste celui de la série
+    assert same["écart total"] == 0.0 and same["mélange de tirs"] == 0.0
+
+
+def test_target_jump_and_running_are_accumulated_per_match_only_between_two_placement_instants() -> None:
+    from dataclasses import replace
+    from v2engine.cerveau import Intention
+    c = ind.Collector(geometry_every_s=1e9)
+    keeper = _p("K", "home", 5.0, 34.0, poste="GK")
+
+    def step(reason: str, x: float, speed: float = 0.0) -> None:
+        c.on_keeper(replace(keeper, velocity=Vec2(speed, 0.0)), Intention("gardien", "se replacer", Vec2(x, 34.0), reason=reason))
+
+    step("placement : ...", 3.0)
+    step("placement : ...", 3.5, 6.0)  # saut 0,5 m, en course
+    step("placement : ...", 6.5)  # saut 3,0 m
+    step("sortie : ballon libre", 20.0)  # pas un placement : aucun saut
+    step("placement : ...", 3.0)  # premier placement après la sortie : pas de saut mesuré
+    step("placement : ...", 3.0)  # saut nul
+    c.end_match()
+    assert c.stats["gardien en placement : saut de cible moyen (m)"].values == [(0.5 + 3.0 + 0.0) / 3]
+    assert c.stats["gardien en placement : saut de cible de plus de 1 m (part)"].values == [1 / 3]
+    assert c.stats["gardien en placement : saut de cible maximal du match (m)"].values == [3.0]
+    assert c.stats["gardien en placement : en course à plus de 5 m/s (part)"].values == [1 / 5]  # 1 instant sur 5 en placement
