@@ -271,3 +271,54 @@ def test_the_keeper_runs_while_the_attacker_is_far_then_creeps_below_the_stop_th
     assert 0.0 < creeping < gardien.FACE_INTENSITY
     for pace in (10, 60, 99):  # quel que soit le gardien, les petits pas restent sous le seuil d'arrêt
         assert creeping * movement.max_speed_mps(pace) < gardien.FACE_STOPPED_MPS
+
+
+# --- Scènes de référence et réserves des clôtures (ticket v2-realisme/03g) -----------------------------------------------
+def _replay(others, ball_at: Vec2, holder: str | None = None, line: float | None = None):
+    """Le gardien domicile (x = 5) pense dans cette scène ; rend (son intention, le ballon, les joueurs)."""
+    keeper = _keeper()
+    ball = BallState(position=ball_at, velocity=Vec2(0.0, 0.0), holder=holder)
+    players = [keeper, *others]
+    bloc = Bloc(shapes={}, lines={"home": line, "away": 10.0}) if line is not None else None
+    return cerveau.think(keeper, ball, players, 1.0, {}, bloc=bloc), ball, players
+
+
+def test_reference_scenes_replayed_give_the_traced_state_and_the_aimed_depth() -> None:
+    attacker = lambda x: player("A", "away", x, 34.0, "BU")  # noqa: E731
+    defender = player("D", "home", 10.0, 34.0, "DC")
+    scenes = [  # (nom, scène, état tracé, profondeur visée)
+        ("ballon loin, sans ligne", _replay([attacker(95.0)], Vec2(60.0, 34.0)), "placement", gardien.DEPTH_M[1]),
+        ("ballon loin, ligne à 40 m", _replay([attacker(95.0)], Vec2(60.0, 34.0), line=40.0), "placement",
+         gardien.DEPTH_LINE_MAX_M),
+        ("ballon près du but, tenu par un défenseur", _replay([attacker(95.0), player("D", "home", 8.0, 34.0, "DC")],
+                                                           Vec2(8.0, 34.0), holder="D"), "placement", gardien.DEPTH_M[0]),
+        ("face-à-face à 16 m", _replay([attacker(16.0)], Vec2(16.0, 34.0), holder="A"), "face-à-face", 4.0),
+        ("défenseur sur l'axe", _replay([attacker(16.0), defender], Vec2(16.0, 34.0), holder="A"), "placement",
+         gardien.depth_for_ball(16.0)),
+        ("ballon libre, attaquant loin", _replay([attacker(55.0)], Vec2(25.0, 34.0)), "sortie", None),
+    ]
+    for name, (out, _, _), state, depth in scenes:
+        assert out.reason.startswith(state), name
+        if depth is not None:  # en sortie, la cible est le point du ballon libre, pas une profondeur de placement
+            assert out.target.x == pytest.approx(depth, abs=0.05), name
+
+
+def test_with_a_defender_nearer_to_the_loose_ball_the_keeper_stays_and_the_defender_goes() -> None:
+    # réserve A1 du 03d : ballon à 18 m du gardien, défenseur à 15 m du ballon, attaquant à 30 m. Le gardien gagnerait la
+    # course, mais le défenseur est plus proche : le filtre de portée le laisse en placement et le défenseur y va.
+    defender, attacker = player("D", "home", 8.0, 34.0, "DC"), player("A", "away", 53.0, 34.0, "BU")
+    keeper_out, ball, players = _replay([defender, attacker], Vec2(23.0, 34.0))
+    assert gardien.race(players[0], ball, players).rush  # il gagnerait la course
+    assert keeper_out.reason.startswith("placement")
+    mate_out = cerveau.think(defender, ball, players, 1.0, {})
+    assert mate_out.target.distance_to(ball.position) < 3.0  # le défenseur va au ballon
+
+
+def test_a_high_line_is_honoured_in_the_face_to_face_depth() -> None:
+    # réserve A1 du 03e : ligne à 40 m, porteur seul à 22 m (profondeur de face-à-face 5,5 m, placement de la ligne 6,7 m)
+    attacker = player("A", "away", 22.0, 34.0, "BU")
+    out, ball, players = _replay([attacker], Vec2(22.0, 34.0), holder="A", line=40.0)
+    assert out.reason.startswith("face-à-face")
+    assert out.target.x >= gardien.placement(players[0], ball.position, 40.0).x - 1e-9
+    low, _, _ = _replay([attacker], Vec2(22.0, 34.0), holder="A", line=10.0)  # ligne basse : la profondeur de face-à-face
+    assert low.target.x == pytest.approx(gardien.face_depth(22.0), abs=0.05)

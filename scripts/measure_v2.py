@@ -67,7 +67,7 @@ def _hook(collector: Collector, clock: dict[str, float], plans: bool = True) -> 
         intention = real_think(player, *args, **kwargs)
         collector.on_role(player.name, intention.role)
         if player.poste == "GK":
-            collector.on_keeper(player, intention)  # ticket v2-realisme/03d
+            collector.on_keeper(player, intention, *args[:2])  # ticket v2-realisme/03d ; ballon et joueurs : 03g
         return intention
 
     real_stays = cerveau.stays_behind
@@ -225,6 +225,12 @@ def report(c: Collector, detail: bool = False) -> dict:
         "gardien : sorties hors de sa surface (part)": k["gardien : sorties hors de sa surface"] / max(1, k["gardien : sorties"]),
         "gardien : ballons libres à sa portée laissés par match": k["gardien : ballons libres laissés"] / n,
         "gardien : face-à-face par match": k["gardien : face-à-face"] / n,  # ticket v2-realisme/03e
+        # ticket v2-realisme/03g
+        "gardien : sorties disputées par match": k["gardien : sorties disputées"] / n,
+        "gardien : sorties très disputées par match": k["gardien : sorties très disputées"] / n,
+        "gardien : sorties disputées gagnées (part)": k["gardien : sorties disputées gagnées"] / max(1, k["gardien : sorties disputées"]),
+        "gardien : courses gagnantes masquées, coéquipier plus rapide, par match": k["gardien : course gagnante masquée, coéquipier"] / n,
+        "gardien : courses gagnantes masquées, coéquipier battu, par match": k["gardien : course gagnante masquée, battu"] / n,
         "face-à-face : tirs par match": k["face-à-face : tirs"] / n,
         "appels par match": k["appels"] / n,
         "appels dans le dos par match": k["appels dans le dos"] / n,  # ticket v2-collectif/16

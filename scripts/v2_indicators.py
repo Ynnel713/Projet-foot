@@ -18,9 +18,10 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 
 import v2engine.cerveau as cerveau
-from v2engine.cerveau import APPEL, OPPONENT_GOAL, TENIR
-from v2engine.gardien import (BALL_DISTANCE_M, BISECTOR_TOLERANCE_M, FACE_A_FACE, FACE_STOPPED_MPS, PLACEMENT, RELANCE,
-                              SORTIE, bisector_direction, bisector_point, face_to_face, own_goal)
+from v2engine.cerveau import APPEL, CHASE_RADIUS_M, OPPONENT_GOAL, TENIR, nearest_of_team
+from v2engine.defense import arrival_time_s
+from v2engine.gardien import (BALL_DISTANCE_M, BISECTOR_TOLERANCE_M, FACE_A_FACE, FACE_RANGE_M, FACE_STOPPED_MPS, PLACEMENT,
+                              RELANCE, SORTIE, bisector_direction, bisector_point, face_depth, face_to_face, own_goal, race)
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, in_penalty_area
 from v2engine.movement import PlayerState
 from v2engine.offside import offside_line
@@ -56,6 +57,13 @@ MATCH_90_S = 90 * 60.0  # appels ramenés à 90 min, comme la source (CIES n° 8
 # de son propre but (-1 = gauche, +1 = droite, convention de `formation._LANE`).
 SHORT_SWITCH_S = 1.5
 LATERAL_SIDE = {"LB": -1.0, "AG": -1.0, "RB": 1.0, "AD": 1.0}
+# Gardien (ticket v2-realisme/03g, seuils proposés, acceptés d'office) : zones du ballon, par distance à son but (bornes de
+# `BALL_DISTANCE_M` et de `FACE_RANGE_M`) ; sortie « disputée » quand l'adversaire de champ le plus rapide arrive au point
+# visé au plus 2,0 s après le gardien.
+KEEPER_ZONES_M = (BALL_DISTANCE_M[0], FACE_RANGE_M, BALL_DISTANCE_M[1])
+DISPUTED_WINDOW_S = 2.0
+TIGHT_WINDOW_S = 1.0  # sortie « très disputée » : l'adversaire arrive au plus 1,0 s après lui (la fenêtre de 2,0 s en couvre 95 %)
+LEAD_CAP_S = 10.0  # avance du gardien sur l'adversaire, plafonnée (aucun adversaire de champ : infinie)
 TRANSITIONS = (TRANSITION_OFFENSIVE, TRANSITION_DEFENSIVE)
 CROWDED_M = 5.0  # regroupement : coéquipier à moins de 5 m, hors duel (ticket 06)
 # Combinaisons (ticket v2-collectif/14, validé le 02/11/2026) : passe « sans gain » sous 5 m vers le but ; passe qui
@@ -332,6 +340,8 @@ class Collector:
         self.side_time: dict[str, list[int]] = {}
         # gardien (ticket v2-realisme/03a) : par gardien, distance maximale, somme et nombre d'échantillons (m à son but)
         self.keeper_dist: dict[str, list[float]] = {}
+        self.keeper_disputed: dict[str, bool] = {}  # gardien -> sortie en cours disputée (ticket v2-realisme/03g)
+        self.keeper_masked: dict[str, str | None] = {}  # gardien -> course gagnante masquée en cours (03g)
         self.run_log: list[tuple[str, float, float, Vec2]] = []  # (joueur, début, fin, position finale)
         self.deep_runs: Counter = Counter()  # appels finis à ON_THE_LINE_M ou moins de la ligne, par joueur (16)
         self.follow: dict[str, list[tuple[float, float]]] = defaultdict(list)  # axe -> (ballon, centre d'équipe)
@@ -403,11 +413,16 @@ class Collector:
             self.stats["face-à-face : gardien arrêté au tir (part)"].add(1.0 if speed < FACE_STOPPED_MPS else 0.0)
             self.stats["face-à-face : gardien au tir, distance à sa ligne (m)"].add(abs(keeper.position.x - goal.x))
             self.stats["face-à-face : tireur au tir, distance au but (m)"].add(shooter.position.distance_to(goal))
+            # ticket v2-realisme/03g (réserve A2 du 03e) : écart à la profondeur visée pour cette distance de tir
+            self.stats["face-à-face : gardien au tir, écart à la profondeur visée (m)"].add(
+                abs(abs(keeper.position.x - goal.x) - face_depth(shooter.position.distance_to(goal))))
 
-    def on_keeper(self, keeper: PlayerState, intention) -> None:
+    def on_keeper(self, keeper: PlayerState, intention, ball=None, players=None) -> None:
         """État du gardien à ce tick (ticket v2-realisme/03d, lu dans la raison de son intention) : sorties (épisodes),
         sorties réussies (de la sortie à la relance : il a le ballon), distance du point visé à son but, part hors de sa
-        surface, ballons libres à sa portée qu'il laisse (il reste en placement : adversaire plus rapide ou trop loin)."""
+        surface, ballons libres à sa portée qu'il laisse (il reste en placement : adversaire plus rapide ou trop loin).
+        Avec le ballon et les joueurs (ticket v2-realisme/03g) : sorties disputées et leur issue, courses gagnantes que le
+        filtre de portée lui fait laisser."""
         state = intention.reason.split(" :", 1)[0]
         if state == PLACEMENT and "garde sa place" in intention.reason:
             state = "placement, ballon libre laissé"
@@ -420,10 +435,40 @@ class Collector:
             self.count["gardien : sorties"] += 1
             self.stats["gardien : sortie, point visé à son but (m)"].add(intention.target.distance_to(own_goal(keeper.team)))
             self.count["gardien : sorties hors de sa surface"] += not in_penalty_area(opponent, intention.target)
+            if ball is not None and players is not None:  # ticket v2-realisme/03g : un adversaire arrive-t-il aussi ?
+                lead = race(keeper, ball, players)
+                self.keeper_disputed[keeper.name] = lead.rival_s - lead.keeper_s <= DISPUTED_WINDOW_S
+                self.count["gardien : sorties disputées"] += self.keeper_disputed[keeper.name]
+                self.count["gardien : sorties très disputées"] += lead.rival_s - lead.keeper_s <= TIGHT_WINDOW_S
+                self.stats["gardien : sortie, avance sur l'adversaire (s)"].add(
+                    min(LEAD_CAP_S, lead.rival_s - lead.keeper_s))
         elif previous == SORTIE and state == RELANCE:
             self.count["gardien : sorties réussies"] += 1
+            if self.keeper_disputed.pop(keeper.name, False):
+                self.count["gardien : sorties disputées gagnées"] += 1
         elif state == "placement, ballon libre laissé" and previous != state:
             self.count["gardien : ballons libres laissés"] += 1
+        if ball is not None and players is not None:
+            self._masked_race(keeper, ball, players, state)
+
+    def _masked_race(self, keeper: PlayerState, ball, players, state: str) -> None:
+        """Ticket v2-realisme/03g (réserve A1 du 03d) : ballon libre (pas une passe de son équipe) que le gardien gagnerait
+        face aux adversaires mais qu'il laisse parce qu'il est à `CHASE_RADIUS_M` ou plus et que ce n'est pas le plus
+        proche de son équipe (filtre de portée). Épisodes ; `coéquipier` : le plus proche de son équipe arrive avant
+        l'adversaire le plus rapide (le filtre a raison), `battu` : il arrive après (course perdue pour l'équipe)."""
+        own_pass = ball.receiver is not None and ball.last_pass_team == keeper.team
+        outside = (ball.holder is None and not own_pass and state.startswith(PLACEMENT)
+                   and keeper.position.distance_to(ball.position) >= CHASE_RADIUS_M
+                   and not nearest_of_team(keeper, ball, players))
+        kind = None
+        if outside:
+            lead = race(keeper, ball, players)
+            if lead.rush:
+                mates = [arrival_time_s(p, lead.point) for p in players if p.team == keeper.team and p is not keeper]
+                kind = "coéquipier" if min(mates, default=math.inf) <= lead.rival_s else "battu"
+        if kind is not None and self.keeper_masked.get(keeper.name) != kind:
+            self.count["gardien : course gagnante masquée, " + kind] += 1
+        self.keeper_masked[keeper.name] = kind
 
     def on_trigger(self) -> None:
         self.count["pressings d'équipe déclenchés"] += 1
@@ -775,6 +820,18 @@ class Collector:
         self.stats[f"gardien, ballon loin : distance à sa ligne, {band} (m)"].add(depth)
         self.stats[f"gardien, ballon loin : écart à la ligne défensive, {band} (m)"].add(height - depth)
 
+    def _keeper_by_zone(self, team: str, players, ball) -> None:
+        """Ticket v2-realisme/03g : distance (m) du gardien de `team` à sa ligne de but, par zone du ballon (distance du ballon
+        à son but : moins de 12 m, 12 à 25 m, 25 à 40 m, 40 m et plus)."""
+        keeper = next((p for p in players if p.team == team and p.poste == "GK"), None)
+        if keeper is None:
+            return
+        far = ball.position.distance_to(own_goal(team))
+        low, mid, high = KEEPER_ZONES_M
+        zone_name = (f"moins de {low:.0f} m" if far < low else f"{low:.0f} à {mid:.0f} m" if far < mid
+                     else f"{mid:.0f} à {high:.0f} m" if far < high else f"{high:.0f} m et plus")
+        self.stats[f"gardien, ballon à {zone_name} : distance à sa ligne (m)"].add(progress(team, keeper.position.x))
+
     def _geometry(self, now_s, players, ball, by_name):
         minute = now_s / 60.0
         sl = f"{int(minute // 15) * 15}-{int(minute // 15) * 15 + 15} min"
@@ -802,6 +859,7 @@ class Collector:
             height = block_height(team, pts)
             self.stats[f"hauteur du bloc {phase} (m)"].add(height, **keys)
             self._keeper_behind_line(team, players, ball, height)
+            self._keeper_by_zone(team, players, ball)
             holder = by_name.get(ball.holder) if ball.holder else None
             if phase == "sans ballon":  # ticket 05 : ligne et ballon, pression sur le porteur
                 self.stats["écart ligne-ballon sans ballon (m)"].add(progress(team, ball.position.x) - height, **keys)

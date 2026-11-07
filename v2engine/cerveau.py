@@ -368,15 +368,15 @@ def _keeper(player: PlayerState, ball: BallState, seen: Perception, players: lis
     state = gardien.state(player, ball, seen.is_receiver, seen.read_point is not None, course is not None and course.rush,
                           one_on_one)
     inner = {RELANCE: PORTEUR, INTERVENTION: RECEVEUR if seen.is_receiver else LECTURE, SORTIE: BALLON_LIBRE}.get(state)
+    line = bloc.lines.get(player.team) if bloc else None  # ligne du bloc à l'instant même, sans retard (ticket 03c)
     if state == FACE_A_FACE:  # il avance sur la bissectrice, à petits pas dès que l'attaquant est à portée de tir
         gap = ball.position.distance_to(player.position)
         depth = gardien.face_depth(ball.position.distance_to(gardien.own_goal(player.team)))
         why = "il avance sur la bissectrice pour fermer l'angle" + (
             ", à petits pas : l'attaquant est à portée de tir" if gap <= gardien.FACE_SET_DISTANCE_M else "")
-        return Intention(GARDIEN, "fermer l'angle", gardien.bisector_point(player, ball.position, depth_m=depth),
+        return Intention(GARDIEN, "fermer l'angle", gardien.bisector_point(player, ball.position, line, depth),
                          gardien.face_intensity(gap), reason=f"{FACE_A_FACE} : {why}", situation=situation)
     if inner is None:  # PLACEMENT
-        line = bloc.lines.get(player.team) if bloc else None  # ligne du bloc à l'instant même, sans retard (ticket 03c)
         why = "il se place sur la bissectrice ballon-poteaux"
         if course is not None:  # ballon libre à sa portée, mais il ne sort pas : trop loin de son but, ou l'adversaire arrive avant
             if course.point.distance_to(gardien.own_goal(player.team)) > gardien.RUSH_MAX_FROM_GOAL_M:

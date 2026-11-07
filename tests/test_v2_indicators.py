@@ -700,3 +700,96 @@ def test_face_to_face_shots_and_episodes_are_counted_with_the_keeper_speed() -> 
     for reason in ("placement : ...", "face-à-face : il avance", "face-à-face : à petits pas", "placement : ...", "face-à-face : ..."):
         c.on_keeper(keeper, Intention("gardien", "fermer l'angle", Vec2(4.0, 34.0), reason=reason))
     assert c.count["gardien : face-à-face"] == 2  # deux épisodes
+
+
+# --- Gardien : validation (ticket v2-realisme/03g) ------------------------------------------------------------------
+def test_keeper_distance_to_his_line_is_split_by_the_ball_zone_for_both_teams() -> None:
+    def depths(ball_x: float) -> dict[str, list[float]]:
+        c = ind.Collector(geometry_every_s=0.0)
+        players = [_p("GH", "home", 6.0, 34, poste="GK"), _p("GA", "away", PITCH_LENGTH_M - 5.0, 34, poste="GK")]
+        players += [_p(f"H{i}", "home", 30.0 + i, 20.0 + 10 * i) for i in range(3)]
+        players += [_p(f"A{i}", "away", 70.0 + i, 20.0 + 10 * i) for i in range(3)]
+        c.on_tick(0.0, players, _ball(ball_x, 34), None)
+        return {k.split(" : ")[0]: v.values for k, v in c.stats.items() if k.startswith("gardien, ballon à ")}
+
+    assert depths(8.0) == {"gardien, ballon à moins de 12 m": [6.0], "gardien, ballon à 40 m et plus": [5.0]}
+    assert depths(20.0) == {"gardien, ballon à 12 à 25 m": [6.0], "gardien, ballon à 40 m et plus": [5.0]}
+    assert depths(30.0) == {"gardien, ballon à 25 à 40 m": [6.0], "gardien, ballon à 40 m et plus": [5.0]}
+    assert depths(PITCH_LENGTH_M - 30.0) == {"gardien, ballon à 40 m et plus": [6.0], "gardien, ballon à 25 à 40 m": [5.0]}
+
+
+def _loose(x: float):
+    from v2engine.ball_state import BallState
+    return BallState(position=Vec2(x, 34.0), velocity=Vec2(0.0, 0.0))
+
+
+def test_a_rush_is_disputed_when_an_attacker_arrives_within_the_window_and_won_when_the_keeper_gets_the_ball() -> None:
+    from v2engine.cerveau import Intention
+    from v2engine.defense import arrival_time_s
+    from v2engine.gardien import race
+
+    def episode(rival_x: float, end: bool) -> ind.Collector:
+        c = ind.Collector(geometry_every_s=1e9)
+        keeper, rival = _p("K", "home", 5.0, 34.0, poste="GK"), _p("A", "away", rival_x, 34.0, poste="BU")
+        players, ball = [keeper, rival], _loose(25.0)
+        for reason in ("placement : ...", "sortie : ballon libre", "sortie : ballon libre") + (("relance : ...",) if end else ()):
+            c.on_keeper(keeper, Intention("gardien", "aller au ballon", Vec2(25.0, 34.0), reason=reason), ball, players)
+        return c
+
+    near = _p("K", "home", 5.0, 34.0, poste="GK")
+    lead_close, lead_far = race(near, _loose(25.0), [near, _p("A", "away", 45.0, 34.0)]), race(
+        near, _loose(25.0), [near, _p("A", "away", 95.0, 34.0)])
+    assert lead_close.rival_s - lead_close.keeper_s <= ind.DISPUTED_WINDOW_S < lead_far.rival_s - lead_far.keeper_s
+    assert arrival_time_s(near, Vec2(25.0, 34.0)) == lead_close.keeper_s
+    disputed, free = episode(45.0, end=True), episode(95.0, end=False)
+    assert disputed.count["gardien : sorties"] == 1 and disputed.count["gardien : sorties disputées"] == 1
+    assert disputed.count["gardien : sorties disputées gagnées"] == 1  # un épisode, gagné à la relance
+    assert disputed.count["gardien : sorties très disputées"] == 1  # l'adversaire est à égalité avec lui (écart nul)
+    assert free.count["gardien : sorties très disputées"] == 0
+    assert disputed.stats["gardien : sortie, avance sur l'adversaire (s)"].values == [lead_close.rival_s - lead_close.keeper_s]
+    assert free.stats["gardien : sortie, avance sur l'adversaire (s)"].values == [lead_far.rival_s - lead_far.keeper_s]
+    assert free.count["gardien : sorties"] == 1 and free.count["gardien : sorties disputées"] == 0
+    assert free.count["gardien : sorties disputées gagnées"] == 0
+    assert episode(95.0, end=True).count["gardien : sorties disputées gagnées"] == 0  # gagné, mais pas disputé
+
+
+def test_a_winning_race_left_to_a_teammate_is_counted_by_the_teammate_outcome() -> None:
+    from dataclasses import replace
+    from v2engine.cerveau import Intention
+    from v2engine.defense import arrival_time_s
+    from v2engine.gardien import race
+
+    def left(mate: PlayerState, ball) -> ind.Collector:
+        c = ind.Collector(geometry_every_s=1e9)
+        keeper, rival = _p("K", "home", 5.0, 34.0, poste="GK"), _p("A", "away", 47.0, 34.0, poste="BU")
+        players = [keeper, mate, rival]
+        for _ in range(3):  # trois ticks du même épisode : compté une fois
+            c.on_keeper(keeper, Intention("gardien", "se replacer", Vec2(3.0, 34.0), reason="placement : ..."), ball, players)
+        return c
+
+    ball = _loose(23.0)  # à 18 m du gardien, l'attaquant à 24 m
+    fast_mate = _p("D", "home", 5.5, 34.0, poste="DC")  # à 17,5 m du ballon, juste plus proche que le gardien
+    slow_mate = replace(fast_mate, pace=1, acceleration=1)  # le gardien gagne la course, ce défenseur lent la perdrait
+    keeper, rival = _p("K", "home", 5.0, 34.0, poste="GK"), _p("A", "away", 47.0, 34.0, poste="BU")
+    lead = race(keeper, ball, [keeper, fast_mate, rival])
+    assert lead.rush and arrival_time_s(fast_mate, lead.point) <= lead.rival_s < arrival_time_s(slow_mate, lead.point)
+    assert left(fast_mate, ball).count["gardien : course gagnante masquée, coéquipier"] == 1
+    assert left(fast_mate, ball).count["gardien : course gagnante masquée, battu"] == 0
+    assert left(slow_mate, ball).count["gardien : course gagnante masquée, battu"] == 1
+    near_ball = left(_p("D", "home", 45.0, 34.0, poste="DC"), _loose(23.0))  # le gardien est le plus proche des siens : il y va
+    assert near_ball.count["gardien : course gagnante masquée, coéquipier"] == 0
+    assert near_ball.count["gardien : course gagnante masquée, battu"] == 0
+    close = left(fast_mate, _loose(12.0))  # à moins de 15 m du gardien : le filtre ne masque rien
+    assert not any(k.startswith("gardien : course gagnante masquée") for k in close.count)
+
+
+def test_face_to_face_shot_gap_to_the_target_depth_is_measured() -> None:
+    goal = Vec2(PITCH_LENGTH_M, 34.0)
+    shooter = _p("S", "home", PITCH_LENGTH_M - 16.0, 34.0)  # profondeur visée pour 16 m : 4,0 m
+    gaps = []
+    for keeper_depth in (4.0, 6.5):
+        c = ind.Collector(geometry_every_s=1e9)
+        keeper = _p("K", "away", PITCH_LENGTH_M - keeper_depth, 34.0, poste="GK")
+        c.on_shot_context(shooter, goal, keeper, [keeper])
+        gaps += c.stats["face-à-face : gardien au tir, écart à la profondeur visée (m)"].values
+    assert gaps == [0.0, 2.5]

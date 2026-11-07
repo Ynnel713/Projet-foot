@@ -153,7 +153,8 @@ def depth_for_ball(distance_m: float, line_m: float | None = None) -> float:
 
 def bisector_point(player: PlayerState, ball: Vec2, line_m: float | None = None, depth_m: float | None = None) -> Vec2:
     """Point de la bissectrice ballon-poteaux à la distance de sa ligne que demande la distance du ballon (ou `depth_m`,
-    face-à-face, ticket 03e), dans sa surface de réparation. Si le ballon est plus près de la ligne que cette distance
+    face-à-face, ticket 03e, sans jamais reculer derrière le placement que demande `line_m`, ticket 03g), dans sa surface
+    de réparation. Si le ballon est plus près de la ligne que cette distance
     (près de la ligne de but), le point est pris à la distance minimale `DEPTH_M[0]` ; sur la ligne même, le gardien va
     au ballon."""
     goal = own_goal(player.team)
@@ -161,7 +162,9 @@ def bisector_point(player: PlayerState, ball: Vec2, line_m: float | None = None,
     direction = bisector_direction(ball, goal)
     reach = ball.distance_to(goal)
     if abs(direction.x) > 1e-6:
-        depth = depth_for_ball(reach, line_m) if depth_m is None else max(depth_m, depth_for_ball(reach))
+        depth = depth_for_ball(reach, line_m)
+        if depth_m is not None:
+            depth = max(depth_m, depth)
         along = (goal.x + inward * depth - ball.x) / direction.x  # distance, sur la bissectrice, jusqu'à cette profondeur
         if along < 0.0:  # le ballon est plus près de la ligne que `depth`
             along = (goal.x + inward * DEPTH_M[0] - ball.x) / direction.x
