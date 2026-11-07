@@ -1,4 +1,5 @@
-"""Gardien (tickets v2-realisme/03a et 03b) : placement sur la bissectrice de l'angle ballon-poteaux."""
+"""Gardien (tickets v2-realisme/03a, 03b et 03c) : placement sur la bissectrice de l'angle ballon-poteaux, plus avancé
+quand la ligne défensive est haute et le ballon loin."""
 
 from __future__ import annotations
 
@@ -9,6 +10,7 @@ import pytest
 from tests.scenes import Scene, player, run
 from v2engine import cerveau, gardien
 from v2engine.ball_state import BallState
+from v2engine.bloc import Bloc
 from v2engine.geometry import PENALTY_AREA_DEPTH_M, PENALTY_AREA_WIDTH_M, PITCH_LENGTH_M, Vec2
 
 GOAL_HOME, GOAL_AWAY = Vec2(0.0, 34.0), Vec2(PITCH_LENGTH_M, 34.0)
@@ -73,3 +75,44 @@ def test_the_keeper_reaches_the_bisector_point_within_three_seconds(ball_at: Vec
     scene = Scene([keeper, mate], ball, runs={}, intentions={})
     run(scene, 3.0)
     assert scene.get("G").position.distance_to(gardien.bisector_point(keeper, ball_at)) < 0.5
+
+
+def test_a_higher_line_pushes_the_keeper_forward_when_the_ball_is_far() -> None:
+    far = Vec2(60.0, 34.0)
+    low, high = gardien.bisector_point(_keeper(), far, 20.0).x, gardien.bisector_point(_keeper(), far, 40.0).x
+    assert low == pytest.approx(gardien.DEPTH_M[1])  # ligne à 20 m : 0,4 x 20 = 8 m, pas plus loin que le 03b
+    assert high == pytest.approx(gardien.DEPTH_LINE_MAX_M) and high > low + 5.0
+    assert gardien.bisector_point(_keeper(), far, None).x == pytest.approx(low)  # sans ligne connue : le 03b
+
+
+def test_the_depth_grows_with_the_line_and_stays_capped_inside_the_area() -> None:
+    depths = [gardien.bisector_point(_keeper(), Vec2(60.0, 34.0), line).x for line in (5.0, 20.0, 25.0, 30.0, 35.0, 40.0, 55.0)]
+    assert depths == sorted(depths) and depths[2] < depths[3] < depths[4]
+    assert max(depths) == pytest.approx(gardien.DEPTH_LINE_MAX_M) and max(depths) < PENALTY_AREA_DEPTH_M
+
+
+def test_the_line_counts_in_proportion_to_the_ball_distance_and_not_at_all_near_the_goal() -> None:
+    near = Vec2(12.0, 34.0)  # ballon à 12 m : la ligne ne change rien (la bissectrice du 03b reste entière)
+    assert gardien.bisector_point(_keeper(), near, 45.0) == gardien.bisector_point(_keeper(), near)
+    middle = [gardien.bisector_point(_keeper(), Vec2(x, 34.0), 40.0).x for x in (12.0, 20.0, 30.0, 40.0)]
+    assert middle == sorted(middle) and middle[0] == pytest.approx(gardien.DEPTH_M[0])
+
+
+def test_the_point_stays_on_the_bisector_with_a_high_line() -> None:
+    for ball in (Vec2(55, 34), Vec2(45, 12), Vec2(48, 60)):
+        point = gardien.bisector_point(_keeper(), ball, 45.0)
+        post_low, post_high = Vec2(0.0, 34.0 - 3.66), Vec2(0.0, 34.0 + 3.66)
+        assert _angle(ball, post_low, point) == pytest.approx(_angle(ball, point, post_high), abs=0.01)
+
+
+def test_the_brain_reads_the_line_of_the_bloc_of_its_own_team_at_that_instant() -> None:
+    keeper, mate = _keeper(), player("D", "home", 40.0, 34.0, "DC")
+    ball = BallState(position=Vec2(70.0, 34.0), velocity=Vec2(0.0, 0.0))
+    bloc = Bloc(shapes={}, lines={"home": 40.0, "away": 10.0})
+    with_line = cerveau.think(keeper, ball, [keeper, mate], 1.0, {}, bloc=bloc)
+    assert with_line.target == gardien.bisector_point(keeper, ball.position, 40.0) and with_line.target.x > gardien.DEPTH_M[1]
+    without = cerveau.think(keeper, ball, [keeper, mate], 1.0, {})
+    assert without.target == gardien.bisector_point(keeper, ball.position)
+    away = player("G2", "away", PITCH_LENGTH_M - 5.0, 34.0, "GK")  # l'équipe visiteuse lit sa propre ligne (10 m)
+    other = cerveau.think(away, ball, [away, player("D2", "away", 80.0, 34.0, "DC")], 1.0, {}, bloc=bloc)
+    assert other.target == gardien.bisector_point(away, ball.position, 10.0)

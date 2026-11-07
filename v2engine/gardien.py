@@ -26,6 +26,14 @@ DEPTH_M = (1.5, 8.0)
 BALL_DISTANCE_M = (12.0, 40.0)
 BISECTOR_TOLERANCE_M = 2.0
 
+# Hauteur selon la ligne défensive (ticket v2-realisme/03c ; chiffres réels non trouvés, ordres de grandeur, constantes
+# proposées par Claude et validées par délégation du propriétaire le 07/11/2026) : quand le ballon est loin, le gardien
+# couvre l'espace derrière la ligne. Profondeur visée = `LINE_RATIO` x hauteur de la ligne (depuis son but), plafonnée à
+# `DEPTH_LINE_MAX_M` (dans la surface, 16,5 m) ; elle ne compte que si elle dépasse la profondeur de 03b, et d'autant
+# plus que le ballon est loin (même pente de 12 m à 40 m). Aucun retard : il lit la ligne du bloc à l'instant même.
+LINE_RATIO = 0.4
+DEPTH_LINE_MAX_M = 16.0
+
 GARDIEN = "gardien"
 PLACEMENT, SORTIE, INTERVENTION, RELANCE = "placement", "sortie", "intervention", "relance"
 
@@ -55,14 +63,19 @@ def bisector_direction(ball: Vec2, goal: Vec2) -> Vec2:
     return bisector.normalized() if bisector.length() > 1e-6 else (goal - ball).normalized()
 
 
-def depth_for_ball(distance_m: float) -> float:
-    """Distance à sa ligne de but (m) du gardien, selon la distance du ballon à son but : bornée à `DEPTH_M`."""
+def depth_for_ball(distance_m: float, line_m: float | None = None) -> float:
+    """Distance à sa ligne de but (m) du gardien, selon la distance du ballon à son but : `DEPTH_M` (ticket 03b). Avec la
+    hauteur de la ligne défensive `line_m` (ticket 03c), il avance au-delà de `DEPTH_M[1]` vers `LINE_RATIO x line_m`
+    (plafond `DEPTH_LINE_MAX_M`), au prorata de l'éloignement du ballon : près du ballon, rien ne change."""
     near, far = BALL_DISTANCE_M
     share = min(1.0, max(0.0, (distance_m - near) / (far - near)))
-    return DEPTH_M[0] + (DEPTH_M[1] - DEPTH_M[0]) * share
+    depth = DEPTH_M[0] + (DEPTH_M[1] - DEPTH_M[0]) * share
+    if line_m is not None:
+        depth += share * max(0.0, min(DEPTH_LINE_MAX_M, LINE_RATIO * line_m) - DEPTH_M[1])
+    return depth
 
 
-def bisector_point(player: PlayerState, ball: Vec2) -> Vec2:
+def bisector_point(player: PlayerState, ball: Vec2, line_m: float | None = None) -> Vec2:
     """Point de la bissectrice ballon-poteaux à la distance de sa ligne que demande la distance du ballon, dans sa
     surface de réparation. Si le ballon est plus près de la ligne que cette distance (près de la ligne de but), le point
     est pris à la distance minimale `DEPTH_M[0]` ; sur la ligne même, le gardien va au ballon."""
@@ -71,7 +84,7 @@ def bisector_point(player: PlayerState, ball: Vec2) -> Vec2:
     direction = bisector_direction(ball, goal)
     reach = ball.distance_to(goal)
     if abs(direction.x) > 1e-6:
-        depth = depth_for_ball(reach)
+        depth = depth_for_ball(reach, line_m)
         along = (goal.x + inward * depth - ball.x) / direction.x  # distance, sur la bissectrice, jusqu'à cette profondeur
         if along < 0.0:  # le ballon est plus près de la ligne que `depth`
             along = (goal.x + inward * DEPTH_M[0] - ball.x) / direction.x
@@ -82,6 +95,7 @@ def bisector_point(player: PlayerState, ball: Vec2) -> Vec2:
     return Vec2(goal.x + inward * depth_now, goal.y + side)
 
 
-def placement(player: PlayerState, ball: Vec2) -> Vec2:
-    """Place visée en état `placement` (ticket v2-realisme/03b) : le point de la bissectrice ballon-poteaux."""
-    return bisector_point(player, ball)
+def placement(player: PlayerState, ball: Vec2, line_m: float | None = None) -> Vec2:
+    """Place visée en état `placement` (tickets v2-realisme/03b et 03c) : le point de la bissectrice ballon-poteaux, à la
+    profondeur que demandent la distance du ballon et la hauteur de la ligne défensive `line_m` (sans elle : 03b)."""
+    return bisector_point(player, ball, line_m)

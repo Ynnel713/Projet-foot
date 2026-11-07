@@ -363,7 +363,8 @@ def _keeper(player: PlayerState, ball: BallState, seen: Perception, players: lis
     state = gardien.state(player, ball, seen.is_receiver, seen.read_point is not None, reach)
     inner = {RELANCE: PORTEUR, INTERVENTION: RECEVEUR if seen.is_receiver else LECTURE, SORTIE: BALLON_LIBRE}.get(state)
     if inner is None:  # PLACEMENT
-        return Intention(GARDIEN, "se replacer", gardien.placement(player, ball.position),
+        line = bloc.lines.get(player.team) if bloc else None  # ligne du bloc à l'instant même, sans retard (ticket 03c)
+        return Intention(GARDIEN, "se replacer", gardien.placement(player, ball.position, line),
                          reason=f"{PLACEMENT} : il se place sur la bissectrice ballon-poteaux", situation=situation)
     moved = decide(player, inner, ball, seen, players, minute, runs, situation, bloc, defense, transition)
     return replace(moved, role=GARDIEN, reason=f"{state} : {moved.reason}")

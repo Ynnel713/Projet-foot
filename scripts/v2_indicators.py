@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 
 import v2engine.cerveau as cerveau
 from v2engine.cerveau import APPEL, OPPONENT_GOAL, TENIR
-from v2engine.gardien import BISECTOR_TOLERANCE_M, bisector_direction, bisector_point
+from v2engine.gardien import BALL_DISTANCE_M, BISECTOR_TOLERANCE_M, bisector_direction, bisector_point
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, in_penalty_area
 from v2engine.movement import PlayerState
 from v2engine.offside import offside_line
@@ -733,6 +733,17 @@ class Collector:
                     t[2] += 1
                     t[3] += ok
 
+    def _keeper_behind_line(self, team: str, players, ball, height: float) -> None:
+        """Ticket v2-realisme/03c : ballon à `BALL_DISTANCE_M[1]` ou plus du but de `team`, distance (m) de son gardien à sa
+        ligne de but et écart à la ligne défensive réelle (hauteur moyenne de sa dernière ligne), par tranche de ligne."""
+        keeper = next((p for p in players if p.team == team and p.poste == "GK"), None)
+        if keeper is None or progress(team, ball.position.x) < BALL_DISTANCE_M[1]:
+            return
+        band = "ligne < 25 m" if height < 25.0 else "ligne 25-35 m" if height < 35.0 else "ligne >= 35 m"
+        depth = progress(team, keeper.position.x)
+        self.stats[f"gardien, ballon loin : distance à sa ligne, {band} (m)"].add(depth)
+        self.stats[f"gardien, ballon loin : écart à la ligne défensive, {band} (m)"].add(height - depth)
+
     def _geometry(self, now_s, players, ball, by_name):
         minute = now_s / 60.0
         sl = f"{int(minute // 15) * 15}-{int(minute // 15) * 15 + 15} min"
@@ -759,6 +770,7 @@ class Collector:
                 self.stats[f"distance milieu-attaque {phase} (m)"].add(gaps[1], **keys)
             height = block_height(team, pts)
             self.stats[f"hauteur du bloc {phase} (m)"].add(height, **keys)
+            self._keeper_behind_line(team, players, ball, height)
             holder = by_name.get(ball.holder) if ball.holder else None
             if phase == "sans ballon":  # ticket 05 : ligne et ballon, pression sur le porteur
                 self.stats["écart ligne-ballon sans ballon (m)"].add(progress(team, ball.position.x) - height, **keys)

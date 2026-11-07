@@ -294,3 +294,9 @@ Le rôle des joueurs au **départ** des courses que le banc compte comme appels 
 **Appelant retenu et passe ouverte (indicateur 21, réserve A3 du 02g).** 30,1 % seulement des joueurs au rôle `APPEL` sont, à la seconde de la mesure, une solution de passe du porteur (chance de réception d'au moins 0,7). Le filtre « espace exploitable par une passe du porteur » non réalisé au 02g est donc visible : près de sept appelants sur dix ont une chance de réception sous 0,7 (cette chance dépend de la couverture, mais aussi de la distance et du Passing du porteur : la cause n'est pas isolée, et il n'y a pas de référence, par exemple la même part pour les joueurs en `TENIR`). Un ticket dédié peut se justifier ; ce ticket ne règle rien.
 
 **Écarts au réel, sans réglage.** Km : 14,6 par joueur contre 10,2 à 12,0 selon le poste (R4), ordre des postes encore faible (LB / RB 12,95 à BU 17,02, la source place les milieux centraux au plus haut). Appels du banc : 45,4 contre 15,1 en moyenne (R5). Épisodes APPEL : pas de repère. Évolution depuis le 01d (50 matchs) : km 17,45 → 14,59, appels du banc 49,4 → 45,4.
+
+## 10. Gardien : bissectrice et hauteur (tickets v2-realisme/03b et 03c, 20 matchs, 07/11/2026)
+
+- **Au tir (03b)** : écart du gardien adverse à la bissectrice de l'angle ballon-poteaux (m), part des tirs sous `BISECTOR_TOLERANCE_M` (2 m), écart à son point visé, chance du tir (`shot_probability`). 03b : 0,25 m, 98,1 %, 1,76 m, 0,061.
+- **Ballon loin (03c)** : ballon à `BALL_DISTANCE_M[1]` (40 m) ou plus de son but, distance du gardien à sa ligne de but et écart à la ligne défensive réelle (hauteur moyenne de la dernière ligne de champ), par tranche de ligne (sous 25 m, 25 à 35 m, 35 m et plus), échantillonné comme le reste de la géométrie. Avant / après le 03c : distance à sa ligne 7,1 à 7,7 → 11,5 à 13,4 m ; écart à la ligne 11,1 / 22,4 / 40,1 → 7,0 / 16,8 / 35,2 m. Pas de repère réel trouvé.
+
