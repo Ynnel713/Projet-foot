@@ -34,7 +34,7 @@ Z_95 = 1.96
 # Parts tirées des compteurs (`measure_v2.report`) : absentes d'un match quand le compteur y est nul, elles y valent 0
 # (point A2 de l'expert, ticket 01e). Les autres indicateurs absents d'un match (poste absent de la formation) sont
 # écartés de ses valeurs.
-ZERO_WHEN_ABSENT = ("choix ", "tirs, origine : ", "part du temps en ", "récupération ")
+ZERO_WHEN_ABSENT = ("choix ", "tirs, origine : ", "part du temps en ", "récupération ", "appels du banc, rôle au départ : ")
 SECONDS_PER_MATCH = 75.0  # un match de 90 min, un processus (référence du ticket v2-realisme/01d : 74,9 s)
 # Accélération en parallèle, mesurée au ticket 01e : 100 matchs sur 7 processus en 48,5 min, soit 2,6 fois plus vite
 # qu'un seul processus, sur 8 fils logiques (4 cœurs physiques supposés). Modèle : 0,65 par cœur physique occupé.

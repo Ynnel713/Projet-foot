@@ -239,6 +239,26 @@ def report(c: Collector, detail: bool = False) -> dict:
         "plans abandonnés, cible non vue ou hors-jeu (part)": k["plan non vu"] / max(1, k["plans reçus"]),
         "plans refusés, Teamwork (part)": k["plan refusé"] / max(1, k["plans reçus"]),
     }
+    # structure (ticket v2-realisme/02h)
+    out["passages APPEL / TENIR dans une possession par match"] = k["passages APPEL / TENIR dans une possession"] / n
+    out["passages APPEL / TENIR dans une possession : état de moins de 1,5 s (part)"] = (
+        k["passages APPEL / TENIR dans une possession, état de moins de 1,5 s"]
+        / max(1, k["passages APPEL / TENIR dans une possession"]))
+    out["appels arrêtés dans une possession, en moins de 1,5 s (part des APPEL qui se terminent par TENIR)"] = (
+        k["appels arrêtés dans une possession, en moins de 1,5 s"] / max(1, k["appels arrêtés dans une possession"]))
+    for key, v in sorted(k.items()):  # rôle des joueurs que le banc compte comme appelants (réserve A1 du 02g)
+        if key.startswith("appels du banc, rôle au départ : "):
+            out[f"{key} (part)"] = v / max(1, k["appels"])
+        elif key.startswith("appelants simultanés, somme : "):
+            situation = key.removeprefix("appelants simultanés, somme : ")
+            out[f"appelants simultanés d'une équipe en possession, moyenne : {situation}"] = (
+                v / max(1, k["appelants simultanés, instants : " + situation]))
+            out[f"appelants simultanés au-dessus du plafond du moteur, part des instants : {situation}"] = (
+                k["appelants simultanés au-dessus du plafond, instants : " + situation]
+                / max(1, k["appelants simultanés, instants : " + situation]))
+    for name, stat in sorted(c.stats.items()):
+        if name.startswith("appelants simultanés d'une équipe, maximum du match : ") and stat.values:
+            out[name.replace("maximum du match", "maximum de la série")] = max(stat.values)
     choices = sum(v for key, v in k.items() if key.startswith("choix "))
     for key, v in sorted(k.items()):
         if key.startswith("choix "):

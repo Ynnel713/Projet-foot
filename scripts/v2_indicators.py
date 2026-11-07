@@ -17,12 +17,13 @@ from collections import Counter, defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 
+import v2engine.cerveau as cerveau
 from v2engine.cerveau import APPEL, OPPONENT_GOAL, TENIR
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, in_penalty_area
 from v2engine.movement import PlayerState
 from v2engine.offside import offside_line
 from v2engine.possession import pass_success_probability
-from v2engine.situation import POSSESSION_INSTALLEE, SituationTracker
+from v2engine.situation import POSSESSION_INSTALLEE, TRANSITION_DEFENSIVE, TRANSITION_OFFENSIVE, SituationTracker
 
 KMH = 1.0 / 3.6
 # Seuils de mesure (docs/INDICATEURS_V2.md, section « Seuils de mesure ») -- ils ne changent pas le jeu.
@@ -47,6 +48,12 @@ FREE_PASSER_M = 9.0  # porteur libre : défenseur le plus proche à 9 m ou plus 
 SPRINT_MPS, HIGH_INTENSITY_MPS = 25.0 * KMH, 19.8 * KMH
 SPRINT_MIN_S = 1.0  # sprint : au-dessus de SPRINT_MPS pendant au moins 1 s (ticket v2-realisme/01d)
 MATCH_90_S = 90 * 60.0  # appels ramenés à 90 min, comme la source (CIES n° 88, ticket v2-realisme/01d)
+# Structure (ticket v2-realisme/02h, seuils proposés, acceptés d'office) : un passage APPEL / TENIR qui met fin à un état
+# de moins de 1,5 s est une alternance (même seuil que le diagnostic du 02g) ; côté de l'axe de chaque poste latéral, vu
+# de son propre but (-1 = gauche, +1 = droite, convention de `formation._LANE`).
+SHORT_SWITCH_S = 1.5
+LATERAL_SIDE = {"LB": -1.0, "AG": -1.0, "RB": 1.0, "AD": 1.0}
+TRANSITIONS = (TRANSITION_OFFENSIVE, TRANSITION_DEFENSIVE)
 CROWDED_M = 5.0  # regroupement : coéquipier à moins de 5 m, hors duel (ticket 06)
 # Combinaisons (ticket v2-collectif/14, validé le 02/11/2026) : passe « sans gain » sous 5 m vers le but ; passe qui
 # fait avancer : elle casse une ligne adverse ou gagne au moins 10 m ; retour au passeur dans les 3 s ; une-deux si le
@@ -265,6 +272,7 @@ def _score_state(goals: Counter, team: str) -> str:
 class _Run:
     start_s: float
     last: Vec2
+    role: str = ""  # rôle du joueur au départ de la course (ticket v2-realisme/02h)
 
 
 class Collector:
@@ -309,6 +317,15 @@ class Collector:
         self.runs: dict[str, _Run] = {}
         self.last_call_role: dict[str, str] = {}  # dernier rôle APPEL / TENIR du joueur (ticket 02g)
         self.role_switches: Counter = Counter()  # passages APPEL <-> TENIR, par joueur
+        # structure (ticket v2-realisme/02h)
+        self.roles: dict[str, str] = {}  # dernier rôle de chaque joueur (Intention.role)
+        self.call_episodes: Counter = Counter()  # épisodes APPEL (rôle APPEL après un autre rôle), par joueur
+        self.call_state: dict[str, tuple[str, float, tuple]] = {}  # joueur -> (APPEL / TENIR, depuis, possession)
+        self.possession_switches: Counter = Counter()  # passages APPEL <-> TENIR dans une même possession, par joueur
+        self.max_callers: dict[str, int] = {}  # situation -> plus d'appelants simultanés d'une équipe en possession
+        self.place_acc: dict[tuple[str, str], list[float]] = {}  # (joueur, phase) -> [échantillons, profondeur, côté]
+        # joueur latéral -> [échantillons, du bon côté, échantillons hors transition, du bon côté hors transition]
+        self.side_time: dict[str, list[int]] = {}
         self.run_log: list[tuple[str, float, float, Vec2]] = []  # (joueur, début, fin, position finale)
         self.deep_runs: Counter = Counter()  # appels finis à ON_THE_LINE_M ou moins de la ligne, par joueur (16)
         self.follow: dict[str, list[tuple[float, float]]] = defaultdict(list)  # axe -> (ballon, centre d'équipe)
@@ -383,11 +400,32 @@ class Collector:
         self.stats[f"profil {level} : {key}" if level else key].add(0.0 if stays else 1.0)
 
     def on_role(self, name: str, role: str) -> None:
-        """Rôle d'un joueur à ce tick : compte les passages APPEL <-> TENIR (ticket v2-realisme/02g, réserve A2)."""
+        """Rôle d'un joueur à ce tick : compte les passages APPEL <-> TENIR (ticket v2-realisme/02g, réserve A2), puis, au
+        ticket v2-realisme/02h, les épisodes APPEL et les passages APPEL <-> TENIR à l'intérieur d'une même possession
+        (deux rôles qui se suivent sans autre rôle entre eux ; `self.now` retarde d'un tick, les durées n'en pâtissent pas)."""
+        previous = self.roles.get(name)
+        self.roles[name] = role
+        if role == APPEL and previous != APPEL:
+            self.call_episodes[name] += 1
         if role in (APPEL, TENIR):
             if self.last_call_role.get(name, role) != role:
                 self.role_switches[name] += 1
             self.last_call_role[name] = role
+        possession = (self.team, self.team_since)
+        state = self.call_state.get(name)
+        if role not in (APPEL, TENIR):
+            self.call_state.pop(name, None)
+        elif state is None or state[2] != possession:
+            self.call_state[name] = (role, self.now, possession)
+        elif state[0] != role:
+            short = self.now - state[1] < SHORT_SWITCH_S
+            self.possession_switches[name] += 1
+            self.count["passages APPEL / TENIR dans une possession"] += 1
+            self.count["passages APPEL / TENIR dans une possession, état de moins de 1,5 s"] += short
+            if state[0] == APPEL:  # un appel qui s'arrête : le vrai clignotement (TENIR -> APPEL est le délai d'Off the Ball)
+                self.count["appels arrêtés dans une possession"] += 1
+                self.count["appels arrêtés dans une possession, en moins de 1,5 s"] += short
+            self.call_state[name] = (role, self.now, possession)
 
     def on_offside(self, event) -> None:
         """Hors-jeu sifflé (ticket v2-collectif/23) ; `event` : `v2engine.trace.OffsideEvent`."""
@@ -437,6 +475,7 @@ class Collector:
             self.count["temps en " + situation] += dt
         self._possession(now_s, ball, by_name)
         if self.team is not None:
+            self._callers(players)
             self._runs(now_s, players, ball)
         self._retreat(now_s, players, ball)
         self._pressing(now_s, players, ball, by_name, dt)
@@ -531,24 +570,43 @@ class Collector:
             self.count["pertes de balle"] += 1
         self.team, self.team_since, self.team_passes = team, now_s, 0
 
+    def _callers(self, players) -> None:
+        """Appelants simultanés de l'équipe en possession (rôle APPEL), par situation de jeu (ticket v2-realisme/02h)."""
+        situation = self.situations.current[self.team]
+        callers = sum(1 for p in players if p.team == self.team and self.roles.get(p.name) == APPEL)
+        self.max_callers[situation] = max(self.max_callers.get(situation, 0), callers)
+        self.count["appelants simultanés, somme : " + situation] += callers
+        self.count["appelants simultanés, instants : " + situation] += 1
+        cap = cerveau.CALLER_CAP.get(situation)  # plafond du moteur (lu à l'appel : `--sans-tenir` le vide)
+        if cap is not None and callers > cap:
+            self.count["appelants simultanés au-dessus du plafond, instants : " + situation] += 1
+
+    def _log_run(self, name: str, run: _Run, end_s: float, where: Vec2) -> None:
+        """Un appel du banc est compté ; on garde le rôle que le joueur avait au départ de la course (02h, réserve A1 du
+        02g : un joueur qui tient sa place et rejoint sa position à pleine vitesse est compté par le banc)."""
+        self.run_log.append((name, run.start_s, end_s, where))
+        self.count["appels du banc, rôle au départ : " + (run.role or "inconnu")] += 1
+
     def _runs(self, now_s, players, ball):
         for p in players:
             if p.name == ball.holder and p.name in self.runs:  # appel conclu par la réception : il compte
                 run = self.runs.pop(p.name)
                 if now_s - run.start_s >= RUN_MIN_S:
-                    self.run_log.append((p.name, run.start_s, now_s, p.position))
+                    self._log_run(p.name, run, now_s, p.position)
                     self._deep_run(p.name, p.team, p.position, players, ball)
                 continue
             if p.team != self.team or p.poste == "GK" or p.name == ball.holder:
                 self.runs.pop(p.name, None)  # ponytail: appel interrompu par une perte de balle, non compté
                 continue
             if p.velocity.length() > RUN_SPEED_MPS:
-                run = self.runs.setdefault(p.name, _Run(now_s, p.position))
+                run = self.runs.get(p.name)
+                if run is None:
+                    run = self.runs[p.name] = _Run(now_s, p.position, self.roles.get(p.name, ""))
                 run.last = p.position
             elif p.name in self.runs:
                 run = self.runs.pop(p.name)
                 if now_s - run.start_s >= RUN_MIN_S and self._creates_option(p, players, ball):
-                    self.run_log.append((p.name, run.start_s, now_s, run.last))
+                    self._log_run(p.name, run, now_s, run.last)
                     self._deep_run(p.name, p.team, run.last, players, ball)
 
     def _deep_run(self, name: str, team: str, end: Vec2, players, ball) -> None:
@@ -631,6 +689,28 @@ class Collector:
             self.count[f"profil {level} : temps de pressing (s)"] += dt
             self.stats[f"profil {level} : distance presseur-porteur (m)"].add(presser.position.distance_to(holder.position))
 
+    def _place(self, team: str, own: Sequence[PlayerState], phase: str) -> None:
+        """Place de chaque joueur de champ, vue de son propre but : profondeur (m depuis sa ligne de but) et côté (m depuis
+        l'axe, négatif = gauche de l'équipe, positif = droite) ; et, pour les postes latéraux, part du temps passée du côté
+        de leur poste, au total et hors transition (ticket v2-realisme/02h). Un échantillon par appel à `_geometry`."""
+        sign = forward(team)
+        transition = self.situations.current[team] in TRANSITIONS
+        for p in own:
+            lateral = sign * (p.position.y - PITCH_WIDTH_M / 2.0)
+            acc = self.place_acc.setdefault((p.name, phase), [0, 0.0, 0.0])
+            acc[0] += 1
+            acc[1] += progress(team, p.position.x)
+            acc[2] += lateral
+            side = LATERAL_SIDE.get(p.poste)
+            if side is not None:
+                ok = lateral * side > 0.0
+                t = self.side_time.setdefault(p.name, [0, 0, 0, 0])
+                t[0] += 1
+                t[1] += ok
+                if not transition:
+                    t[2] += 1
+                    t[3] += ok
+
     def _geometry(self, now_s, players, ball, by_name):
         minute = now_s / 60.0
         sl = f"{int(minute // 15) * 15}-{int(minute // 15) * 15 + 15} min"
@@ -640,6 +720,7 @@ class Collector:
             if len(pts) < 3:
                 continue
             phase = "avec ballon" if team == self.team else "sans ballon"
+            self._place(team, own, phase)
             seen = zone(self.team, ball.position.x) if self.team else "sans possession"  # vue de l'équipe en possession
             keys = {"zone": seen, "score": _score_state(self.goals, team), "minute": sl,
                     "situation": self.situations.current[team]}
@@ -711,6 +792,11 @@ class Collector:
             self.stats["solutions de passe faciles (nombre)"].add(easy, **keys)
             if chances:
                 self.stats["réussite moyenne des passes disponibles (part)"].add(sum(chances) / len(chances), **keys)
+            for m in mates:  # réserve A3 du 02g : l'appelant retenu est-il une solution de passe pour le porteur ?
+                if m is not holder and self.roles.get(m.name) == APPEL:
+                    free = (holder.position.distance_to(m.position) <= OPTION_RANGE_M
+                            and pass_success_probability(holder, m, all_opponents) >= OPTION_PROBABILITY)
+                    self.stats["appelant retenu : passe ouverte pour le porteur (part)"].add(1.0 if free else 0.0, **keys)
             if level:
                 self.stats[f"profil {level} : solutions de passe ouvertes (nombre)"].add(options)
                 space = [min(m.position.distance_to(o.position) for o in all_opponents)
@@ -758,6 +844,8 @@ class Collector:
             if poste != "GK":
                 self.stats[f"appels par joueur et par match : {poste}"].add(per_player.get(name, 0))
                 self.stats["alternances appel / tenir par joueur et par match"].add(self.role_switches[name])
+                self.stats["passages APPEL / TENIR dans une possession par joueur et par match"].add(
+                    self.possession_switches[name])  # ticket v2-realisme/02h, réserve A2 du 02g
                 # ticket v2-realisme/01d : par poste, à côté des km (repères R4 à R6)
                 self.stats[f"distance au-dessus de 19,8 km/h par joueur (m) : {poste}"].add(self.hi_by[name])
                 self.stats[f"sprints par joueur et par match : {poste}"].add(self.sprints[name])
@@ -766,6 +854,21 @@ class Collector:
                     per_90 = per_player.get(name, 0) * MATCH_90_S / self.now
                     self.stats[f"appels par joueur et par 90 min : {poste}"].add(per_90)
                     self.stats["appels par joueur et par 90 min"].add(per_90)
+                    episodes = self.call_episodes[name] * MATCH_90_S / self.now  # ticket v2-realisme/02h, réserve A1 du 02g
+                    self.stats[f"épisodes APPEL par joueur et par 90 min : {poste}"].add(episodes)
+                    self.stats["épisodes APPEL par joueur et par 90 min"].add(episodes)
+        for situation, most in self.max_callers.items():  # plus d'appelants simultanés d'une équipe, ce match
+            self.stats["appelants simultanés d'une équipe, maximum du match : " + situation].add(most)
+        for (name, phase), (n, depth, lateral) in self.place_acc.items():  # place moyenne par poste et par phase (02h)
+            poste = self.poste.get(name)
+            if poste and poste != "GK" and n:
+                self.stats[f"place moyenne {phase} : {poste} : profondeur (m)"].add(depth / n)
+                self.stats[f"place moyenne {phase} : {poste} : côté (m, négatif = gauche)"].add(lateral / n)
+        for name, (n, ok, n_calm, ok_calm) in self.side_time.items():
+            poste = self.poste[name]
+            self.stats[f"part du temps du côté de son poste : {poste}"].add(ok / n)
+            if n_calm:
+                self.stats[f"part du temps du côté de son poste, hors transition : {poste}"].add(ok_calm / n_calm)
         redundant = 0
         for a, s1, e1, p1 in self.run_log:
             if any(b != a and s2 < e1 and s1 < e2 and p1.distance_to(p2) < RUN_SAME_ZONE_M

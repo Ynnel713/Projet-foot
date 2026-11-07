@@ -430,6 +430,10 @@ def test_measure_is_wired_on_a_real_match() -> None:
     assert 5.0 < out["passes par minute"] < 100.0  # rapporté aux 3 minutes jouées (sur 90, on serait sous 1)
     assert c.stats["longueur avec ballon (m)"].values and c.stats["solutions de passe ouvertes (nombre)"].values
     assert out["pressings d'équipe déclenchés par match"] == c.count["pressings d'équipe déclenchés"] > 0  # réserve A2, ticket 08
+    # ticket v2-realisme/02h : chaque appel du banc a un rôle de départ, les places moyennes sont rapportées
+    assert sum(v for k, v in c.count.items() if k.startswith("appels du banc, rôle au départ : ")) == c.count["appels"]
+    assert any(name.startswith("place moyenne avec ballon") for name in c.stats)
+    assert any(name.startswith("part du temps du côté de son poste") for name in c.stats)
 
 
 def test_crowding_ignores_support_next_to_the_holder() -> None:
@@ -474,3 +478,153 @@ def test_triangle_needs_three_open_passes_and_an_angle() -> None:
     assert not ind.triangle(holder, [holder, a, aligned], [])
     assert ind.breaks_a_line("home", Vec2(30, 34), Vec2(60, 34),
                              [_p(f"o{i}", "away", x, 10 + 6 * i) for i, x in enumerate((45, 46, 47, 75, 76, 90, 91))])
+
+
+# --- Structure (ticket v2-realisme/02h) ---------------------------------------------------------------------------------
+def test_mean_place_by_post_is_seen_from_the_own_goal_and_the_own_side() -> None:
+    c = ind.Collector()
+    home = [_p("LB", "home", 20, 10, poste="LB"), _p("DC", "home", 20, 34, poste="DC"), _p("MC", "home", 40, 34)]
+    away = [_p("RB", "away", 85, 10, poste="RB"), _p("DX", "away", 85, 34, poste="DC"), _p("MX", "away", 65, 34)]
+    c.on_tick(0.0, home + away, _ball(50, 34), None)
+    c.end_match()
+    s = c.stats
+    assert s["place moyenne sans ballon : LB : profondeur (m)"].values == [20.0]
+    assert s["place moyenne sans ballon : RB : profondeur (m)"].values == [20.0]  # 105 - 85 : vu de son but
+    assert s["place moyenne sans ballon : LB : côté (m, négatif = gauche)"].values == [-24.0]
+    assert s["place moyenne sans ballon : RB : côté (m, négatif = gauche)"].values == [24.0]  # miroir de l'équipe visiteuse
+    assert s["place moyenne sans ballon : DC : côté (m, négatif = gauche)"].values == [0.0, 0.0]
+    assert s["part du temps du côté de son poste : LB"].values == [1.0]
+    assert s["part du temps du côté de son poste : RB"].values == [1.0]
+
+
+def test_a_wing_post_on_the_wrong_side_and_the_transition_filter() -> None:
+    c = ind.Collector()
+    home = [_p("LB", "home", 20, 10, poste="LB"), _p("DC", "home", 20, 34, poste="DC"), _p("MC", "home", 40, 34)]
+    away = [_p("AX", "away", 85, 20), _p("DX", "away", 85, 34, poste="DC"), _p("MX", "away", 65, 34)]
+    c.on_tick(0.0, home + away, _ball(50, 34), None)  # du bon côté, hors transition
+    c.situations.current["home"] = ind.TRANSITION_OFFENSIVE
+    crossed = [_p("LB", "home", 20, 50, poste="LB")] + home[1:]  # passé à droite, en transition
+    c._place("home", crossed, "sans ballon")
+    c.end_match()
+    assert c.stats["part du temps du côté de son poste : LB"].values == [0.5]
+    assert c.stats["part du temps du côté de son poste, hors transition : LB"].values == [1.0]
+
+
+def test_simultaneous_callers_are_counted_per_team_in_possession() -> None:
+    c = ind.Collector(geometry_every_s=1e9)
+    home = [_p(f"H{i}", "home", 30 + i, 30) for i in range(4)]
+    away = [_p(f"A{i}", "away", 60 + i, 30) for i in range(3)]
+    for t, callers in enumerate((2, 3, 1)):
+        c.on_role("H0", "porteur")
+        for i in range(1, 4):
+            c.on_role(f"H{i}", ind.APPEL if i <= callers else ind.TENIR)
+        c.on_tick(0.1 * t, home + away, _ball(30, 30, "H0"), None)
+    assert max(c.max_callers.values()) == 3  # le porteur n'est jamais compté
+    c.on_role("A0", ind.APPEL)  # l'équipe qui défend n'a pas la possession : ses rôles ne comptent pas
+    c.on_tick(0.5, home + away, _ball(30, 30, "H0"), None)
+    assert max(c.max_callers.values()) == 3
+    c.end_match()
+    assert [s.values for n, s in c.stats.items() if n.startswith("appelants simultanés d'une équipe")] == [[3]]
+
+
+def test_instants_above_the_engine_cap_are_counted(monkeypatch) -> None:
+    from v2engine import situation as sit
+    every = (sit.POSSESSION_INSTALLEE, sit.DEFENSE_PLACEE, sit.TRANSITION_OFFENSIVE, sit.TRANSITION_DEFENSIVE,
+             sit.DERNIER_TIERS)
+    monkeypatch.setattr(ind.cerveau, "CALLER_CAP", {s: 2 for s in every})
+    c = ind.Collector(geometry_every_s=1e9)
+    home = [_p(f"H{i}", "home", 30 + i, 30) for i in range(4)]
+    away = [_p(f"A{i}", "away", 60 + i, 30) for i in range(3)]
+    for t, callers in enumerate((2, 3, 3, 1)):
+        for i in range(1, 4):
+            c.on_role(f"H{i}", ind.APPEL if i <= callers else ind.TENIR)
+        c.on_tick(0.1 * t, home + away, _ball(30, 30, "H0"), None)
+    over = sum(v for k, v in c.count.items() if k.startswith("appelants simultanés au-dessus du plafond"))
+    instants = sum(v for k, v in c.count.items() if k.startswith("appelants simultanés, instants"))
+    assert (over, instants) == (2, 4)
+
+
+def test_call_episodes_are_counted_per_90_minutes_by_post() -> None:
+    c = ind.Collector(geometry_every_s=1e9)
+    players = [_p("X", "home", 30, 30), _p("H0", "home", 31, 30)]
+    c.on_tick(0.0, players, _ball(31, 30, "H0"), None)
+    for role in (ind.APPEL, ind.APPEL, ind.TENIR, ind.APPEL):  # deux épisodes APPEL, séparés par TENIR
+        c.on_role("X", role)
+    c.on_tick(45 * 60.0, players, _ball(31, 30, "H0"), None)
+    c.end_match()
+    assert 4.0 in c.stats["épisodes APPEL par joueur et par 90 min : MC"].values  # 2 épisodes en 45 min
+
+
+def test_switches_are_counted_inside_a_possession_only() -> None:
+    c = ind.Collector(geometry_every_s=1e9)
+    players = [_p("X", "home", 30, 30), _p("H0", "home", 31, 30), _p("A0", "away", 60, 30)]
+    c.on_tick(0.0, players, _ball(31, 30, "H0"), None)  # possession de home depuis 0 s
+    c.on_role("X", ind.TENIR)
+    c.on_tick(1.0, players, _ball(31, 30, "H0"), None)
+    c.on_role("X", ind.APPEL)  # passage après 1 s : alternance courte
+    c.on_tick(4.0, players, _ball(31, 30, "H0"), None)
+    c.on_role("X", ind.TENIR)  # passage après 3 s
+    c.on_role("X", "soutien")  # un autre rôle interrompt la suite : pas de passage
+    c.on_role("X", ind.APPEL)
+    assert c.count["passages APPEL / TENIR dans une possession"] == 2
+    assert c.count["passages APPEL / TENIR dans une possession, état de moins de 1,5 s"] == 1
+    # seul l'appel qui s'arrête (APPEL -> TENIR) est un clignotement ; TENIR -> APPEL est le délai d'Off the Ball
+    assert c.count["appels arrêtés dans une possession"] == 1
+    assert c.count["appels arrêtés dans une possession, en moins de 1,5 s"] == 0  # cet appel a duré 3 s
+    c.on_tick(4.5, players, _ball(31, 30, "H0"), None)
+    c.on_role("X", ind.TENIR)  # l'appel relancé s'arrête après 0,5 s : clignotement
+    assert c.count["appels arrêtés dans une possession"] == 2
+    assert c.count["appels arrêtés dans une possession, en moins de 1,5 s"] == 1
+    c.on_role("X", ind.APPEL)
+    c.on_tick(5.0, players, _ball(60, 30, "A0"), None)  # home perd le ballon
+    c.on_tick(6.0, players, _ball(31, 30, "H0"), None)  # et le reprend : nouvelle possession
+    c.on_role("X", ind.TENIR)  # APPEL -> TENIR à cheval sur deux possessions : non compté ici
+    assert c.count["passages APPEL / TENIR dans une possession"] == 4
+    assert c.possession_switches["X"] == 4 and c.role_switches["X"] == 6  # l'ancien compteur compte tout
+
+
+def test_bench_runs_keep_the_role_the_player_had_at_the_start_of_the_run() -> None:
+    c, _, away = _collector_with_two_teams()
+    holder, ball = _p("H0", "home", 30, 30), _ball(30, 30, "H0")
+    c.on_tick(0.0, [holder] + away, ball, None)
+    c.on_role("R", ind.TENIR)  # il tient sa place et rejoint sa position à pleine vitesse
+    for k in range(10):
+        if k == 5:
+            c.on_role("R", ind.APPEL)  # le rôle change en cours de course : le départ fait foi
+        c.on_tick(0.1 * k, [holder, _p("R", "home", 40, 30, vx=6.0)] + away, ball, None)
+    c.on_tick(1.0, [holder, _p("R", "home", 40, 30)] + away, ball, None)
+    assert len(c.run_log) == 1 and c.count["appels du banc, rôle au départ : " + ind.TENIR] == 1
+    assert c.count["appels du banc, rôle au départ : " + ind.APPEL] == 0
+
+
+def test_the_called_player_is_a_pass_option_only_when_he_is_not_covered() -> None:
+    def share(marker_x: float) -> float:
+        c = ind.Collector()
+        home = [_p("H0", "home", 30, 30), _p("R", "home", 42, 30), _p("M", "home", 35, 45)]
+        away = [_p("A0", "away", marker_x, 30), _p("A1", "away", 70, 10), _p("A2", "away", 72, 50)]
+        c.on_role("R", ind.APPEL)
+        c.on_tick(0.0, home + away, _ball(30, 30, "H0"), None)
+        return c.stats["appelant retenu : passe ouverte pour le porteur (part)"].values[0]
+    assert share(80.0) == 1.0  # personne près de la ligne de passe
+    assert share(41.5) == 0.0  # un adversaire collé au receveur : chance de passe de 0,61, sous le seuil de 0,7
+
+
+def test_report_gives_the_structure_indicators() -> None:
+    from scripts.measure_v2 import report
+    c = ind.Collector()
+    c.matches = 2
+    c.count.update({"passages APPEL / TENIR dans une possession": 10,
+                    "passages APPEL / TENIR dans une possession, état de moins de 1,5 s": 3, "appels": 20,
+                    "appels du banc, rôle au départ : " + ind.TENIR: 15, "appels du banc, rôle au départ : " + ind.APPEL: 5,
+                    "appels arrêtés dans une possession": 4, "appels arrêtés dans une possession, en moins de 1,5 s": 1,
+                    "appelants simultanés au-dessus du plafond, instants : dernier tiers": 3,
+                    "appelants simultanés, somme : dernier tiers": 12, "appelants simultanés, instants : dernier tiers": 6})
+    c.stats["appelants simultanés d'une équipe, maximum du match : dernier tiers"].values.extend([2, 3])
+    out = report(c)
+    assert out["passages APPEL / TENIR dans une possession par match"] == 5.0
+    assert out["passages APPEL / TENIR dans une possession : état de moins de 1,5 s (part)"] == 0.3
+    assert out["appels arrêtés dans une possession, en moins de 1,5 s (part des APPEL qui se terminent par TENIR)"] == 0.25
+    assert out["appelants simultanés au-dessus du plafond du moteur, part des instants : dernier tiers"] == 0.5
+    assert out["appels du banc, rôle au départ : tenir sa place (part)"] == 0.75
+    assert out["appelants simultanés d'une équipe en possession, moyenne : dernier tiers"] == 2.0
+    assert out["appelants simultanés d'une équipe, maximum de la série : dernier tiers"] == 3
