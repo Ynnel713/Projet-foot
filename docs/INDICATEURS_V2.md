@@ -370,3 +370,48 @@ La courbe monte bien avec l'éloignement du ballon (4,7 → 7,3 → 12,0 m) mais
 La ligne multiplie par deux le saut moyen et par quatre les grands sauts, mais ces sauts restent rares (1,2 % des instants) et le gardien, limité par sa vitesse et son accélération, ne court plus de 5 m/s que 2,5 % du temps en placement. **Le saut maximal est le même dans les deux séries et à chaque match (20,22 m).** Relevé sur un match : le ballon passe du centre de la ligne de but au point de corner en un seul instant (remise en jeu), et le point visé passe du centre du but au bord de la surface (20,16 m de côté, plus 1,5 m de profondeur) ; c'est un changement de place du ballon, pas un défaut du placement. Conclusion : **pas de défaut mesuré** (moyenne, grands sauts, course) ; le saut n'est pas mesuré hors remises en jeu ni sur le mouvement rendu (inversions, accélérations), et pas en fonction de la distance du ballon (réserve A1 de l'expert) ; si le gardien paraît nerveux au rendu, la piste serait de lisser la cible sur environ 0,5 s (non faite, constante à proposer).
 
 **Limites.** (1) Les chances sont des chances de but par tir non contré selon `shot_probability`, pas des buts : les buts observés (3,08 contre 3,08) sont trop bruités pour départager (±0,5 par match). (2) La dynamique est calculée sur le dernier point visé du gardien en placement ou en face-à-face ; au tir il l'est dans 100 % des cas mesurés. (3) La limite du 03c (A2) reste : sans effet sur cette décomposition. (4) La série A n'a pas la hausse du 03c : le plafond de 16 m, la ligne de référence du bloc et la couverture de la profondeur ne sont pas modifiés ici.
+
+## 13. Gardien : issue du ballon après une sortie, par ballon (ticket v2-realisme/03i, 50 matchs, 07/11/2026)
+
+`uv run python -m scripts.bench_series 50 --processus 7 --json .scratch/v2-realisme/mesures/03i.json` (graine d'audit 20260923, rapport `03i.txt`), moteur du 03h (`32209f1`) avec les indicateurs du 03i. **Mesure seulement, aucune calibration, aucun réglage du filtre de portée.**
+
+**Indicateurs ajoutés au banc (seuils du ticket).** Un **ballon** est un épisode continu de ballon libre : de la perte du porteur à la prise du ballon par un joueur ou à l'arrêt du jeu (remise en jeu en attente). Pour chaque ballon où le gardien est en sortie au moins une fois, on suit sa **première** sortie : qui a le ballon **3 s** après (gardien, coéquipier, adversaire, ballon encore libre, ou jeu arrêté par type de remise), s'il y a eu un **tir adverse dans les 5 s après** la sortie, et (ajouté pendant la mesure) si le ballon **est lui-même un tir adverse** (tir de l'adversaire dans les 5 s **avant** la sortie). Les courses gagnantes masquées du 03g sont recomptées **par ballon**. Les ballons suivis moins de 5 s en fin de match sont comptés à part (« non résolus ») : le compteur est collecté mais **pas encore affiché dans le rapport** (réserve A2 de l'expert, à ajouter à un prochain ticket de bancs ; l'égalité ballons = épisodes indique qu'il est très faible). Les instants sont ceux du tick qui précède l'appel du gardien (retard d'un tick de 0,1 s).
+
+**Les sorties sont déjà des ballons, pas des épisodes qui clignotent.** 35,0 ballons avec sortie par match [32,7 ; 37,3] pour 35,0 épisodes de sortie : le rapport est exactement 1. Même chose pour les courses gagnantes masquées (coéquipier plus rapide 18,68 [17,34 ; 20,02] contre 18,7 par épisode ; coéquipier battu 2,92 [2,14 ; 3,70] contre 2,92). Le clignotement supposé aux réserves A1 et A2 du 03g n'existe pas pour les sorties ; il existe pour le face-à-face (32 épisodes par match, 03e). Les chiffres du 03g restent donc exacts, y compris le majorant de 2,9 courses perdues par match, qui est en fait le nombre de ballons.
+
+**Issue à 3 s, tous les ballons avec sortie (moyenne des parts par match, IC 95 %).**
+
+| Ballon 3 s après la première sortie | Part | IC 95 % |
+|---|---|---|
+| Au gardien | 4,9 % | [3,7 ; 6,1] |
+| À un coéquipier | 2,2 % | [1,5 ; 2,9] |
+| À l'adversaire | 0,9 % | [0,5 ; 1,4] |
+| Encore libre | 12,2 % | [10,6 ; 13,9] |
+| Sortie de but | 57,2 % | [55,1 ; 59,2] |
+| Corner | 19,4 % | [17,6 ; 21,2] |
+| Engagement (but) | 3,2 % | [2,3 ; 4,1] |
+| Autre arrêt de jeu | 0 % | |
+
+**Trouvaille : 70,9 % de ces ballons sont des tirs adverses** [69,0 ; 72,8] (tir de l'adversaire dans les 5 s qui précèdent la sortie). Le gardien est donc surtout en « sortie » sur un tir qui part, et la sortie se termine en sortie de but (57 %), en corner (19 %) ou en but (3 %), pas en prise de balle. La part de sorties « gagnées » de 4,9 % du 03g (relance) correspond au 4,9 % de ballons au gardien ici : elle ne dit presque rien sur les sorties sur ballon en profondeur. Un tir adverse **après** la sortie est rare (1,3 % [0,8 ; 1,8]).
+
+**Ballons qui ne sont pas des tirs** (10,16 par match [9,26 ; 11,07], 29 % des ballons) : c'est le cas visé par la réserve A1 du 03d (passe en profondeur coupée).
+
+| Ballon 3 s après | Part | IC 95 % |
+|---|---|---|
+| Au gardien | 14,9 % | [11,6 ; 18,2] |
+| À un coéquipier | 5,8 % | [2,8 ; 8,9] |
+| À l'adversaire | 2,4 % | [1,2 ; 3,5] |
+| Encore libre | 24,1 % | [20,5 ; 27,7] |
+| Sortie de but | 5,9 % | [3,7 ; 8,1] |
+| Corner | 45,5 % | [40,9 ; 50,2] |
+| Engagement (but) | 1,4 % | [0,4 ; 2,3] |
+
+Sur ces ballons, le gardien a le ballon 3 s après environ six fois plus souvent que l'adversaire (14,9 % contre 2,4 %), et l'adversaire ne l'a que dans 2,4 % des cas : le gardien ne perd pas le ballon au profit de l'attaquant. Mais seuls 20,7 % sont des prises nettes (gardien ou coéquipier), et **45,5 % finissent en corner**, ce que cet indicateur n'explique pas. Hypothèse, non démontrée : ballons déviés ou dégagés derrière la ligne par le gardien ou un défenseur, ou tirs plus anciens que la fenêtre de 5 s. Le ballon ne distingue pas non plus une passe en profondeur adverse d'un dégagement ou d'une passe en retrait de sa propre équipe ; la preuve du cas « passe en profondeur coupée » reste donc **indirecte**.
+
+**Limites.** (1) Environ 10 ballons hors tir par match : les intervalles sont larges (±3 à ±5 points). (2) « Tir » = tir de l'adversaire dans les 5 s qui précèdent la première sortie (fenêtre du ticket, non calibrée). (3) Le ballon est suivi depuis la première sortie : un ballon qui change de nature (déviation, rebond) reste classé selon cet instant. (4) Les ballons où la sortie arrive en fin de match, avec moins de 5 s de suivi, sont écartés (compte « non résolus »).
+
+**Réserve A1 de l'expert (acceptée).** Le « 71 % de tirs » est une **proximité temporelle** (tir adverse dans les 5 s qui précèdent la sortie), pas l'état du ballon : un rebond ou un ballon contré y sont aussi classés « tir ». Les 45,5 % de corners des ballons hors tir restent sans explication (pistes non testées : centres ou corners joués longs, tirs plus anciens que 5 s). **Condition :** avant de régler le filtre de portée ou la sortie sur tir (05b, 18e), trier par état du ballon (tir en vol, rebond, centre) dans le ticket concerné ; ne pas prendre ce 71 % pour une preuve de tir en vol.
+
+**À décider par le propriétaire (aucun réglage fait ici).** Le moteur traite un tir en vol comme un ballon libre pour le déclenchement de la sortie du gardien (`gardien.race`, 03d) : sur 71 % des ballons à sortie, le gardien « va chercher le ballon » vers son point d'arrêt au lieu de se placer pour l'arrêt. Le rapprocher de l'arrêt par portée (`v2-realisme/05b`) ou du calibrage 18e est une piste ; elle n'est pas dans le périmètre du 03i.
+
+**Déterminisme.** Deux exécutions de 2 matchs (`03i-det1.txt`, `03i-det2.txt`) : sorties identiques, hors la ligne de durée de calcul.

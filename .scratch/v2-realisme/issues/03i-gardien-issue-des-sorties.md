@@ -12,7 +12,7 @@
 
 **Bloque :** 18e.
 
-**Status:** à faire (créé le 07/11/2026, réserves A1 et A2 de l'expert du 03g)
+**Status:** livré (07/11/2026), validé expert + QC
 
 ## Estimation
 
@@ -29,8 +29,16 @@ Temps machine, non compté : suite complète (environ 40 min) ; série de 50 mat
 
 ## Acceptance criteria
 
-- [ ] Constantes de mesure proposées avant le code
-- [ ] Issue par ballon mesurée sur 50 matchs ; courses gagnantes masquées recomptées par ballon
-- [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
-- [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
-- [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+- [x] Constantes de mesure proposées avant le code : 3 s et 5 s sont celles du ticket, aucune constante du moteur
+- [x] Issue par ballon mesurée sur 50 matchs ; courses gagnantes masquées recomptées par ballon (`docs/INDICATEURS_V2.md` section 13) : 35,0 ballons avec sortie par match, 71 % issus d'un tir adverse, 4,9 % au gardien à 3 s ; masquées par ballon 18,68 et 2,92, égales aux épisodes
+- [x] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % : 2 h 05 estimées (non chronométrées) contre 1 h 30, soit + 39 % ; cause au registre `docs/agents/suivi-estimations.md`
+- [x] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions (2 matchs, `.scratch/v2-realisme/mesures/03i-det1.txt` et `03i-det2.txt`, hors ligne de durée de calcul)
+- [x] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md` : 2 524 passés, 14 désélectionnés (attendu 2 520 + 4 tests ajoutés) ; `CLAUDE.md` mis à jour
+
+## Comments
+
+- **Périmètre élargi en cours de mesure.** La première série a donné 80 % de « jeu arrêté » à 3 s ; un match instrumenté a montré que ces ballons sont des tirs adverses (32 sur 44). Ajoutés : type de remise en jeu, ballon issu d'un tir adverse des 5 s précédentes, issue des ballons hors tir. Trois séries de 50 matchs (la dernière fait foi).
+- **Hypothèse du ticket réfutée.** Les sorties ne clignotent pas : ballons et épisodes sont en rapport exactement 1 ; le clignotement existe pour le face-à-face (03e). Pas d'hystérésis nécessaire, regroupement par ballon retenu.
+- **À trancher par le propriétaire (aucun réglage fait).** Le gardien « sort » surtout sur des tirs en vol (traités comme ballon libre par `gardien.race`) : voir `docs/INDICATEURS_V2.md` section 13.
+- **Fichiers modifiés :** `scripts/v2_indicators.py`, `scripts/measure_v2.py`, `tests/test_v2_indicators.py`. Aucun fichier protégé.
+- **Clôture (07/11/2026).** Expert `APPROVED_WITH_RESERVATIONS` (empreinte 86cd9c86), QC `VALIDÉ`, décision de clôture `VALIDÉ`. Réserves **A1** (le 71 % de « tirs » est une proximité temporelle, pas l'état du ballon ; trier par état du ballon avant tout réglage au 05b ou 18e ; les 45,5 % de corners hors tir restent inexpliqués) et **A2** (compteur « non résolus » collecté mais absent du rapport, à ajouter à un prochain ticket de bancs) acceptées par délégation du propriétaire (« Considère que je valide automatiquement toutes tes recommandations et celles des experts », 05/11/2026). A1 est consignée dans `docs/INDICATEURS_V2.md` section 13 ; A2 reste à faire.

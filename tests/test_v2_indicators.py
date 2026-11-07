@@ -860,3 +860,73 @@ def test_target_jump_and_running_are_accumulated_per_match_only_between_two_plac
     assert c.stats["gardien en placement : saut de cible de plus de 1 m (part)"].values == [1 / 3]
     assert c.stats["gardien en placement : saut de cible maximal du match (m)"].values == [3.0]
     assert c.stats["gardien en placement : en course à plus de 5 m/s (part)"].values == [1 / 5]  # 1 instant sur 5 en placement
+
+
+# --- Gardien : issue des sorties par ballon (ticket v2-realisme/03i) -------------------------------------------------
+def _exit_ball(held_from_3s: str | None, shooter_team: str | None = None, dead: bool = False, ticks: int = 7,
+               shot_before: bool = False) -> ind.Collector:
+    """Un ballon libre, sortie du gardien au premier instant (puis un clignotement entre placement et sortie), le ballon
+    pris par `held_from_3s` à partir du 4e instant (3 s après la sortie), un tir à 2 s de `shooter_team`."""
+    from dataclasses import replace
+    from v2engine.cerveau import Intention
+    from v2engine.restart import Restart
+    c = ind.Collector(geometry_every_s=1e9)
+    keeper = _p("K", "home", 5.0, 34.0, poste="GK")
+    players = [keeper, _p("M", "home", 30.0, 34.0), _p("A", "away", 20.0, 34.0, poste="BU")]
+    for i in range(ticks):
+        ball = replace(_loose(20.0), holder=held_from_3s if i >= 3 else None, restart=Restart("corner", "away", Vec2(0.0, 0.0), None, 99.0, 0.0) if dead and i >= 3 else None)
+        if i == 0 and shot_before:
+            c.on_shot(_p("S", "away", 50.0, 34.0), 0.0)  # le ballon est lui-même un tir adverse
+        reason = "sortie : ballon libre (...)" if i in (0, 2) else "placement : ..."  # deux épisodes d'état, un seul ballon
+        c.on_keeper(keeper, Intention("gardien", "aller au ballon", Vec2(20.0, 34.0), reason=reason), ball, players)
+        if i == 2 and shooter_team:
+            c.on_shot(_p("S", shooter_team, 50.0, 34.0), 2.0)
+        c.on_tick(float(i), players, ball, None, dt=1.0)
+    return c
+
+
+def test_an_exit_is_counted_once_per_ball_with_who_holds_it_3_s_later_and_the_opponent_shot_in_5_s() -> None:
+    won = _exit_ball("K", shooter_team="away")
+    assert won.count["gardien : sorties"] == 2  # deux épisodes d'état (le clignotement du 03g)...
+    assert won.count["gardien : ballons avec sortie"] == 1  # ... mais un seul ballon
+    assert won.count["gardien : ballons avec sortie, ballon à 3 s : gardien"] == 1
+    assert won.count["gardien : ballons avec sortie, tir adverse dans les 5 s"] == 1
+    assert won.count["gardien : ballons avec sortie, tir adverse dans les 5 s avant"] == 0  # le tir vient après la sortie
+    assert won.count["gardien : ballons avec sortie hors tir"] == 1  # le tir vient après : le ballon n'en était pas un
+    assert won.count["gardien : ballons avec sortie hors tir, ballon à 3 s : gardien"] == 1
+    lost = _exit_ball("A")
+    assert lost.count["gardien : ballons avec sortie, ballon à 3 s : adversaire"] == 1
+    assert lost.count["gardien : ballons avec sortie, tir adverse dans les 5 s"] == 0
+    assert _exit_ball("M", shooter_team="home").count["gardien : ballons avec sortie, ballon à 3 s : coéquipier"] == 1
+    own_shot = _exit_ball("M", shooter_team="home")
+    assert own_shot.count["gardien : ballons avec sortie, tir adverse dans les 5 s"] == 0  # un tir de son équipe ne compte pas
+    assert _exit_ball(None).count["gardien : ballons avec sortie, ballon à 3 s : libre"] == 1
+    assert _exit_ball(None, dead=True).count["gardien : ballons avec sortie, ballon à 3 s : arrêt : corner"] == 1
+
+
+def test_a_loose_ball_that_is_an_opponent_shot_is_flagged() -> None:
+    c = _exit_ball("K", shot_before=True)
+    assert c.count["gardien : ballons avec sortie, tir adverse dans les 5 s avant"] == 1
+    assert c.count["gardien : ballons avec sortie hors tir"] == 0
+    assert c.count["gardien : ballons avec sortie, tir adverse dans les 5 s"] == 0  # ce tir précède la sortie : pas un tir « après »
+
+
+def test_an_exit_followed_less_than_5_s_is_not_counted_and_is_reported_unresolved() -> None:
+    c = _exit_ball("K", ticks=5)  # suivi 4 s seulement
+    assert c.count["gardien : ballons avec sortie"] == 0
+    c.end_match()
+    assert c.count["gardien : ballons avec sortie, non résolus en fin de match"] == 1
+
+
+def test_a_masked_winning_race_is_counted_once_per_loose_ball() -> None:
+    from dataclasses import replace
+    from v2engine.cerveau import Intention
+    c = ind.Collector(geometry_every_s=1e9)
+    keeper, rival = _p("K", "home", 5.0, 34.0, poste="GK"), _p("A", "away", 47.0, 34.0, poste="BU")
+    players = [keeper, _p("D", "home", 5.5, 34.0, poste="DC"), rival]  # le défenseur arrive avant l'adversaire (filtre de portée)
+    for i in range(4):
+        ball = replace(_loose(23.0), holder="D" if i == 3 else None)
+        c.on_keeper(keeper, Intention("gardien", "se replacer", Vec2(3.0, 34.0), reason="placement : ..."), ball, players)
+        c.on_tick(float(i), players, ball, None, dt=1.0)
+    assert c.count["gardien : ballons avec course gagnante masquée, coéquipier"] == 1
+    assert c.count["gardien : ballons avec course gagnante masquée, battu"] == 0

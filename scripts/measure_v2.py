@@ -155,6 +155,11 @@ def run(n_matches: int, profile: str | None = None, duration_minutes: float = 90
     return collector
 
 
+def _share(k, held: str) -> float:
+    """Part des ballons avec sortie (ticket v2-realisme/03i) dont l'état à 3 s est `held`."""
+    return k["gardien : ballons avec sortie, ballon à 3 s : " + held] / max(1, k["gardien : ballons avec sortie"])
+
+
 def report(c: Collector, detail: bool = False) -> dict:
     n = max(1, c.matches)
     k = c.count
@@ -231,6 +236,30 @@ def report(c: Collector, detail: bool = False) -> dict:
         "gardien : sorties disputées gagnées (part)": k["gardien : sorties disputées gagnées"] / max(1, k["gardien : sorties disputées"]),
         "gardien : courses gagnantes masquées, coéquipier plus rapide, par match": k["gardien : course gagnante masquée, coéquipier"] / n,
         "gardien : courses gagnantes masquées, coéquipier battu, par match": k["gardien : course gagnante masquée, battu"] / n,
+        # ticket v2-realisme/03i : par ballon libre (premier épisode de sortie), pas par épisode d'état
+        "gardien : ballons avec sortie par match": k["gardien : ballons avec sortie"] / n,
+        "gardien : ballons avec sortie, ballon à 3 s, au gardien (part)": _share(k, "gardien"),
+        "gardien : ballons avec sortie, ballon à 3 s, à un coéquipier (part)": _share(k, "coéquipier"),
+        "gardien : ballons avec sortie, ballon à 3 s, à l'adversaire (part)": _share(k, "adversaire"),
+        "gardien : ballons avec sortie, ballon à 3 s, encore libre (part)": _share(k, "libre"),
+        "gardien : ballons avec sortie, ballon à 3 s, sortie de but (part)": _share(k, "arrêt : sortie de but"),
+        "gardien : ballons avec sortie, ballon à 3 s, corner (part)": _share(k, "arrêt : corner"),
+        "gardien : ballons avec sortie, ballon à 3 s, but encaissé ou marqué (engagement) (part)": _share(k, "arrêt : engagement"),
+        "gardien : ballons avec sortie, ballon à 3 s, autre arrêt de jeu (part)": _share(k, "arrêt : autre"),
+        "gardien : ballons avec sortie, ballon issu d'un tir adverse des 5 s précédentes (part)":
+            k["gardien : ballons avec sortie, tir adverse dans les 5 s avant"] / max(1, k["gardien : ballons avec sortie"]),
+        "gardien : ballons avec sortie, tir adverse dans les 5 s (part)":
+            k["gardien : ballons avec sortie, tir adverse dans les 5 s"] / max(1, k["gardien : ballons avec sortie"]),
+        "gardien : ballons avec sortie hors tir par match": k["gardien : ballons avec sortie hors tir"] / n,
+        **{f"gardien : ballons avec sortie hors tir, ballon à 3 s, {label} (part)":
+           k["gardien : ballons avec sortie hors tir, ballon à 3 s : " + held] / max(1, k["gardien : ballons avec sortie hors tir"])
+           for label, held in (("au gardien", "gardien"), ("à un coéquipier", "coéquipier"), ("à l'adversaire", "adversaire"),
+                               ("encore libre", "libre"), ("sortie de but", "arrêt : sortie de but"),
+                               ("corner", "arrêt : corner"), ("engagement", "arrêt : engagement"))},
+        "gardien : ballons avec course gagnante masquée, coéquipier plus rapide, par match":
+            k["gardien : ballons avec course gagnante masquée, coéquipier"] / n,
+        "gardien : ballons avec course gagnante masquée, coéquipier battu, par match":
+            k["gardien : ballons avec course gagnante masquée, battu"] / n,
         "face-à-face : tirs par match": k["face-à-face : tirs"] / n,
         "appels par match": k["appels"] / n,
         "appels dans le dos par match": k["appels dans le dos"] / n,  # ticket v2-collectif/16

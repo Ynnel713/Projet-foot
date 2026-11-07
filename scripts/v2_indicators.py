@@ -26,6 +26,7 @@ from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, in_penalty_ar
 from v2engine.movement import PlayerState
 from v2engine.offside import offside_line
 from v2engine.possession import pass_success_probability
+from v2engine.restart import CORNER, GOAL_KICK, KICKOFF
 from v2engine.shooting import base_chance, shot_probability
 from v2engine.situation import POSSESSION_INSTALLEE, TRANSITION_DEFENSIVE, TRANSITION_OFFENSIVE, SituationTracker
 
@@ -68,6 +69,10 @@ LEAD_CAP_S = 10.0  # avance du gardien sur l'adversaire, plafonnée (aucun adver
 # deux instants en placement ; gardien « en course » en placement au-dessus de 5,0 m/s.
 BIG_JUMP_M = 1.0
 PLACEMENT_RUN_MPS = 5.0
+# Issue d'une sortie, par ballon (ticket v2-realisme/03i, seuils du ticket) : qui a le ballon 3 s après la première sortie du
+# gardien sur un ballon libre, et tir adverse dans les 5 s après cette sortie.
+HELD_AFTER_EXIT_S = 3.0
+SHOT_AFTER_EXIT_S = 5.0
 TRANSITIONS = (TRANSITION_OFFENSIVE, TRANSITION_DEFENSIVE)
 CROWDED_M = 5.0  # regroupement : coéquipier à moins de 5 m, hors duel (ticket 06)
 # Combinaisons (ticket v2-collectif/14, validé le 02/11/2026) : passe « sans gain » sous 5 m vers le but ; passe qui
@@ -349,6 +354,10 @@ class Collector:
         self.keeper_target: dict[str, Vec2 | None] = {}  # gardien -> point visé en placement ou face-à-face (03h)
         # gardien en placement (03h) : [instants, sauts mesurés, somme des sauts, grands sauts, plus grand saut, instants en course]
         self.keeper_place: dict[str, list[float]] = {}
+        # ballon libre (03i) : épisode en cours (ni porteur ni ballon mort) avec ses courses masquées et sa première sortie
+        self.free_ball: dict | None = None
+        self.last_shot: dict[str, float] = {}  # équipe -> instant de son dernier tir (03i)
+        self.exits: list[dict] = []  # premières sorties par ballon encore suivies (3 s puis 5 s) : t, équipe, gardien, tir, issue
         self.run_log: list[tuple[str, float, float, Vec2]] = []  # (joueur, début, fin, position finale)
         self.deep_runs: Counter = Counter()  # appels finis à ON_THE_LINE_M ou moins de la ligne, par joueur (16)
         self.follow: dict[str, list[tuple[float, float]]] = defaultdict(list)  # axe -> (ballon, centre d'équipe)
@@ -391,6 +400,9 @@ class Collector:
 
     def on_shot(self, shooter: PlayerState, now_s: float) -> None:
         self.count["tirs"] += 1
+        self.last_shot[shooter.team] = now_s
+        for exit_ in self.exits:  # ticket v2-realisme/03i : tir de l'adversaire du gardien dans les 5 s après sa sortie
+            exit_["shot"] |= shooter.team != exit_["team"] and 0.0 <= now_s - exit_["t"] <= SHOT_AFTER_EXIT_S + 1e-9
         distance = shooter.position.distance_to(opponent_goal_center(shooter.team))
         self.count["tirs de près"] += distance <= SHOT_CLOSE_RANGE_M
         last = self.recoveries[-1] if self.recoveries else None
@@ -479,8 +491,56 @@ class Collector:
                 self.count["gardien : sorties disputées gagnées"] += 1
         elif state == "placement, ballon libre laissé" and previous != state:
             self.count["gardien : ballons libres laissés"] += 1
+        if ball is not None and state == SORTIE:  # ticket v2-realisme/03i : la première sortie de ce ballon libre
+            free = self._free_ball(ball)
+            if free is not None and free["exit"] is None:
+                since = [self.now - t for team, t in self.last_shot.items() if team != keeper.team]
+                free["exit"] = {"t": self.now, "team": keeper.team, "keeper": keeper.name, "shot": False, "held": None,
+                                "from_shot": any(0.0 <= s <= SHOT_AFTER_EXIT_S for s in since)}  # le ballon est un tir adverse
+                self.exits.append(free["exit"])
         if ball is not None and players is not None:
             self._masked_race(keeper, ball, players, state)
+
+    def _free_ball(self, ball) -> dict | None:
+        """Épisode de ballon libre en cours (ticket v2-realisme/03i) : de la perte du porteur à la prise du ballon par un
+        joueur ou à l'arrêt du jeu. Un ballon dont l'état du gardien clignote reste un seul ballon. `None` si le ballon est
+        tenu ou mort."""
+        if ball.holder is not None or ball.restart is not None:
+            return None
+        if self.free_ball is None:
+            self.free_ball = {"masked": set(), "exit": None}
+        return self.free_ball
+
+    def _close_free_ball(self) -> None:
+        """Fin de l'épisode : les courses gagnantes masquées sont comptées une fois par ballon et par catégorie."""
+        for kind in self.free_ball["masked"] if self.free_ball else ():
+            self.count["gardien : ballons avec course gagnante masquée, " + kind] += 1
+        self.free_ball = None
+
+    def _follow_exits(self, ball, by_name) -> None:
+        """Suit les premières sorties par ballon : issue à `HELD_AFTER_EXIT_S`, comptage à `SHOT_AFTER_EXIT_S`."""
+        if self.free_ball is not None and self._free_ball(ball) is None:
+            self._close_free_ball()
+        for exit_ in list(self.exits):
+            age = self.now - exit_["t"]
+            if exit_["held"] is None and age >= HELD_AFTER_EXIT_S - 1e-9:
+                holder = by_name.get(ball.holder)
+                exit_["held"] = ("arrêt : " + (ball.restart.kind if ball.restart.kind in (GOAL_KICK, CORNER, KICKOFF) else "autre")
+                                 if ball.restart is not None else "libre" if holder is None
+                                 else "gardien" if holder.name == exit_["keeper"]
+                                 else "coéquipier" if holder.team == exit_["team"] else "adversaire")
+            if age >= SHOT_AFTER_EXIT_S - 1e-9:
+                self.exits.remove(exit_)
+                self._count_exit(exit_)
+
+    def _count_exit(self, exit_: dict) -> None:
+        self.count["gardien : ballons avec sortie"] += 1
+        self.count["gardien : ballons avec sortie, ballon à 3 s : " + exit_["held"]] += 1
+        self.count["gardien : ballons avec sortie, tir adverse dans les 5 s"] += exit_["shot"]
+        self.count["gardien : ballons avec sortie, tir adverse dans les 5 s avant"] += exit_["from_shot"]
+        if not exit_["from_shot"]:  # les ballons qui ne sont pas des tirs (passe en profondeur, rebond, dégagement)
+            self.count["gardien : ballons avec sortie hors tir"] += 1
+            self.count["gardien : ballons avec sortie hors tir, ballon à 3 s : " + exit_["held"]] += 1
 
     def _masked_race(self, keeper: PlayerState, ball, players, state: str) -> None:
         """Ticket v2-realisme/03g (réserve A1 du 03d) : ballon libre (pas une passe de son équipe) que le gardien gagnerait
@@ -499,6 +559,9 @@ class Collector:
                 kind = "coéquipier" if min(mates, default=math.inf) <= lead.rival_s else "battu"
         if kind is not None and self.keeper_masked.get(keeper.name) != kind:
             self.count["gardien : course gagnante masquée, " + kind] += 1
+        free = self._free_ball(ball) if kind is not None else None
+        if free is not None:  # ticket v2-realisme/03i : la même course, comptée une fois par ballon
+            free["masked"].add(kind)
         self.keeper_masked[keeper.name] = kind
 
     def on_trigger(self) -> None:
@@ -600,6 +663,7 @@ class Collector:
         for team, situation in current.items():
             self.count["temps en " + situation] += dt
         self._possession(now_s, ball, by_name)
+        self._follow_exits(ball, by_name)
         if self.team is not None:
             self._callers(players)
             self._runs(now_s, players, ball)
@@ -1054,6 +1118,9 @@ class Collector:
                 self.stats[f"profil {level} : écart-type distance défense-milieu (m)"].add(statistics.pstdev(gaps))
         self.count["appels"] += len(self.run_log)
         self.count["durée de match (s)"] += self.now  # temps additionnel compris (ticket v2-realisme/01d)
+        self.count["gardien : ballons avec sortie, non résolus en fin de match"] += len(self.exits)  # moins de 5 s de suivi
+        if self.free_ball is not None:
+            self._close_free_ball()
         self.count["appels dans le dos"] += sum(self.deep_runs.values())
         self._combinations()
         self._reset_match()
