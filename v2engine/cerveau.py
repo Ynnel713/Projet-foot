@@ -19,6 +19,8 @@ from v2engine.decision import CONTRE_ATTAQUE, DRIBBLE_SPEED_FACTOR
 from v2engine.defense import (COMPENSATION, COUVERTURE, MARQUAGE, PRESSEUR, REST_DEFENDERS, DefensiveRoles,
                               leave_probability, press_intensity)
 from v2engine.flux import DEFENSE
+from v2engine.gardien import GARDIEN, INTERVENTION, PLACEMENT, RELANCE, SORTIE
+from v2engine import gardien
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
 from v2engine.movement import PlayerState
 from v2engine.off_ball import (COUNTER_RUN_DEPTH_M, RUN_INTERVAL_S, SPACE_HOLD_MAX_S, SPACE_REACHED_M,
@@ -178,6 +180,8 @@ def interpret(player: PlayerState, ball: BallState, seen: Perception, runs_enabl
     """Rôle du joueur à cet instant. Avec `defense` (ticket v2-collectif/07), le joueur de champ dont l'adversaire a le
     ballon prend le rôle que son équipe lui a attribué ; sans rôle, il tient le bloc, sauf s'il le quitte (Teamwork).
     Avec `situation` (ticket v2-realisme/02f), le coéquipier du porteur appelle ou tient sa place."""
+    if player.poste == "GK":  # le gardien ne passe plus par la règle générale (ticket v2-realisme/03a)
+        return GARDIEN
     if player.name == ball.holder:
         return PORTEUR
     if runs_enabled and seen.holder is not None and seen.holder.team == player.team and player.poste != "GK":
@@ -230,6 +234,8 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
     replacement et les appels partent de la place du joueur dans le bloc, ticket v2-collectif/04 ; avec `transition`,
     l'appel dans la profondeur d'une contre-attaque, ticket v2-collectif/11)."""
     make = partial(Intention, situation=situation)  # situation perçue, portée par l'intention (ticket 03)
+    if role == GARDIEN:
+        return _keeper(player, ball, seen, players, minute, runs, situation, bloc, defense, transition)
     if role == PORTEUR:
         if ball.receiving:  # pendant sa réception, il avance au pas de contrôle (v2-socle/06)
             return make(role, "contrôler", OPPONENT_GOAL[player.team], RECEPTION_SPEED_FACTOR,
@@ -346,6 +352,21 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
     moving = seen.holder.velocity if seen.holder is not None else Vec2(0.0, 0.0)
     return make(role, "aller au ballon", ball.position, mate=ball.holder, reason=why, distance_m=seen.ball_distance,
                 target_velocity=moving)
+
+
+def _keeper(player: PlayerState, ball: BallState, seen: Perception, players: list[PlayerState], minute: float,
+            runs: dict | None, situation: str | None, bloc: Bloc | None, defense: DefensiveRoles | None,
+            transition: TransitionPlay | None) -> Intention:
+    """Intention du gardien (ticket v2-realisme/03a) : son état (`gardien.state`) et, hors placement, le geste de la règle
+    générale correspondante (porteur, receveur visé, passe lue, ballon libre). Il ne presse plus et ne vient plus en soutien."""
+    reach = ball.holder is None and (seen.ball_distance < CHASE_RADIUS_M or nearest_of_team(player, ball, players))
+    state = gardien.state(player, ball, seen.is_receiver, seen.read_point is not None, reach)
+    inner = {RELANCE: PORTEUR, INTERVENTION: RECEVEUR if seen.is_receiver else LECTURE, SORTIE: BALLON_LIBRE}.get(state)
+    if inner is None:  # PLACEMENT
+        return Intention(GARDIEN, "se replacer", gardien.placement(player), reason=f"{PLACEMENT} : il tient sa place devant son but",
+                         situation=situation)
+    moved = decide(player, inner, ball, seen, players, minute, runs, situation, bloc, defense, transition)
+    return replace(moved, role=GARDIEN, reason=f"{state} : {moved.reason}")
 
 
 def think(player: PlayerState, ball: BallState, players: list[PlayerState], minute: float,

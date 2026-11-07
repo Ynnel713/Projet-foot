@@ -81,13 +81,16 @@ def test_no_cover_for_a_holder_on_the_goal_and_no_marker_for_an_offside_attacker
     assert all(a.role != MARQUAGE for a in roles.assignments.values())
 
 
-def test_goalkeeper_coming_out_is_not_reported_as_leaving_the_bloc() -> None:
+def test_goalkeeper_near_an_opposing_holder_neither_presses_nor_leaves_the_bloc() -> None:
+    # ticket v2-realisme/03a : avant, le gardien à moins de 15 m du porteur adverse le pressait (règle générale)
     holder = _p("H", team="away", x=12)
     keeper = _p("GK", x=3, poste="GK")
     players = [holder, _p("P", x=10), keeper]
     defense = _roles(players, "H")
     ball = BallState(position=holder.position, velocity=Vec2(0.0, 0.0), holder="H")
-    assert cerveau.think(keeper, ball, players, 1.0, None, defense=defense).reason == "presse le porteur adverse"
+    intention = cerveau.think(keeper, ball, players, 1.0, None, defense=defense)
+    assert intention.role == cerveau.GARDIEN and intention.reason.startswith("placement")
+    assert intention.action != "aller au ballon"
 
 
 def test_dangerous_attacker_is_marked_goal_side_tighter_by_a_good_marker() -> None:

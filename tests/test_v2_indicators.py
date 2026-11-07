@@ -628,3 +628,14 @@ def test_report_gives_the_structure_indicators() -> None:
     assert out["appels du banc, rôle au départ : tenir sa place (part)"] == 0.75
     assert out["appelants simultanés d'une équipe en possession, moyenne : dernier tiers"] == 2.0
     assert out["appelants simultanés d'une équipe, maximum de la série : dernier tiers"] == 3
+
+
+def test_keeper_distance_to_his_own_goal_is_seen_for_both_teams() -> None:
+    # ticket v2-realisme/03a : le gardien domicile défend x = 0, le gardien visiteur x = 105 (centre du but à y = 34)
+    c = ind.Collector(geometry_every_s=1e9)
+    for k, (home_x, away_x) in enumerate(((5.0, 100.0), (15.0, 90.0))):
+        players = [_p("GH", "home", home_x, 34, poste="GK"), _p("GA", "away", away_x, 34, poste="GK")]
+        c.on_tick(0.1 * k, players, _ball(50, 34), None)
+    c.end_match()
+    assert sorted(c.stats["distance maximale du gardien à son but (m)"].values) == [15.0, 15.0]
+    assert sorted(c.stats["distance moyenne du gardien à son but (m)"].values) == [10.0, 10.0]

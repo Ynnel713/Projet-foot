@@ -326,6 +326,8 @@ class Collector:
         self.place_acc: dict[tuple[str, str], list[float]] = {}  # (joueur, phase) -> [échantillons, profondeur, côté]
         # joueur latéral -> [échantillons, du bon côté, échantillons hors transition, du bon côté hors transition]
         self.side_time: dict[str, list[int]] = {}
+        # gardien (ticket v2-realisme/03a) : par gardien, distance maximale, somme et nombre d'échantillons (m à son but)
+        self.keeper_dist: dict[str, list[float]] = {}
         self.run_log: list[tuple[str, float, float, Vec2]] = []  # (joueur, début, fin, position finale)
         self.deep_runs: Counter = Counter()  # appels finis à ON_THE_LINE_M ou moins de la ligne, par joueur (16)
         self.follow: dict[str, list[tuple[float, float]]] = defaultdict(list)  # axe -> (ballon, centre d'équipe)
@@ -487,6 +489,9 @@ class Collector:
         for p in players:
             self.poste[p.name] = p.poste
             if p.poste == "GK":
+                far = p.position.distance_to(opponent_goal_center("away" if p.team == "home" else "home"))
+                acc = self.keeper_dist.setdefault(p.name, [0.0, 0.0, 0])
+                acc[0], acc[1], acc[2] = max(acc[0], far), acc[1] + far, acc[2] + 1
                 continue
             v = p.velocity.length()
             self.dist[p.name] += v * dt
@@ -857,6 +862,9 @@ class Collector:
                     episodes = self.call_episodes[name] * MATCH_90_S / self.now  # ticket v2-realisme/02h, réserve A1 du 02g
                     self.stats[f"épisodes APPEL par joueur et par 90 min : {poste}"].add(episodes)
                     self.stats["épisodes APPEL par joueur et par 90 min"].add(episodes)
+        for far_max, far_sum, n in self.keeper_dist.values():  # le gardien et son but (ticket v2-realisme/03a)
+            self.stats["distance maximale du gardien à son but (m)"].add(far_max)
+            self.stats["distance moyenne du gardien à son but (m)"].add(far_sum / n)
         for situation, most in self.max_callers.items():  # plus d'appelants simultanés d'une équipe, ce match
             self.stats["appelants simultanés d'une équipe, maximum du match : " + situation].add(most)
         for (name, phase), (n, depth, lateral) in self.place_acc.items():  # place moyenne par poste et par phase (02h)

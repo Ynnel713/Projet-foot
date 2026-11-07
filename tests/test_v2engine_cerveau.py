@@ -59,10 +59,58 @@ def test_receiver_reader_loose_ball_pressure_and_replacement_roles() -> None:
     assert (pressing.role, pressing.mate) == (cerveau.PRESSEUR, "R")
 
 
-def test_keeper_near_his_own_holder_supports_him_instead_of_pressing() -> None:
+def test_keeper_near_his_own_holder_keeps_his_place_instead_of_supporting_him() -> None:
+    # ticket v2-realisme/03a : avant, le gardien à moins de 15 m de son porteur venait en soutien (règle générale)
     holder, keeper = _p("H", x=12), _p("G", x=5, poste="GK")
-    support = cerveau.think(keeper, _ball(12, 34, holder="H"), [holder, keeper], 1.0, {})
-    assert (support.role, support.mate, support.reason) == (cerveau.SOUTIEN, "H", "soutien de son porteur")
+    placed = cerveau.think(keeper, _ball(12, 34, holder="H"), [holder, keeper], 1.0, {})
+    assert placed.role == cerveau.GARDIEN and placed.reason.startswith("placement") and placed.mate is None
+    assert placed.action == "se replacer" and placed.target == keeper.home_target
+
+
+def test_keeper_near_an_opposing_holder_does_not_press() -> None:
+    keeper, striker = _p("G", x=5, poste="GK"), _p("S", team="away", x=15)
+    held = cerveau.think(keeper, _ball(15, 34, holder="S"), [keeper, striker], 1.0, {})
+    assert held.role == cerveau.GARDIEN and held.reason.startswith("placement")
+    assert held.action != "aller au ballon" and held.target == keeper.home_target
+
+
+def test_keeper_states_are_traced_in_the_reason() -> None:
+    keeper = _p("G", x=5, poste="GK")
+    holding = cerveau.think(keeper, _ball(5, 34, holder="G"), [keeper], 1.0, {})
+    assert (holding.role, holding.action) == (cerveau.GARDIEN, "conduire") and holding.reason.startswith("relance")
+    other = _p("A", team="away", x=40)
+    incoming = _ball(15, 34, velocity=Vec2(-8.0, 0.0), receiver="G")  # passe en retrait pour lui
+    receiving = cerveau.think(keeper, incoming, [keeper, other], 1.0, {})
+    assert (receiving.role, receiving.action) == (cerveau.GARDIEN, "venir au ballon")
+    assert receiving.reason.startswith("intervention")
+    read = cerveau.think(keeper, _ball(15, 34, velocity=Vec2(5.0, 0.0), readers={"G": Vec2(20, 34)}, receiver="A"),
+                         [keeper, other], 1.0, {})
+    assert read.reason.startswith("intervention") and read.action == "couper la passe"
+
+
+def test_keeper_still_comes_out_for_a_loose_ball_in_reach_only() -> None:
+    keeper, mate = _p("G", x=5, poste="GK"), _p("D", x=30, poste="DC")
+    near = cerveau.think(keeper, _ball(12, 34), [keeper, mate], 1.0, {})
+    assert near.reason.startswith("sortie") and near.action == "aller au ballon"
+    far_ball = _ball(60, 34)  # loin, et un défenseur est plus près : le gardien reste placé
+    far = cerveau.think(keeper, far_ball, [keeper, mate], 1.0, {})
+    assert far.reason.startswith("placement") and far.target == keeper.home_target
+
+
+def test_keeper_never_presses_or_supports_in_a_real_match() -> None:
+    from ligue1sim.clubs import load_clubs
+    from ligue1sim.season import CLUBS_PATH
+    from v2engine.match import simulate_match
+    clubs = load_clubs(CLUBS_PATH, "Ligue 1")
+    random.seed(20260923)
+    trace = simulate_match(clubs[0], clubs[1], duration_minutes=4.0)
+    keepers = [p.intention for tick in trace.ticks for p in tick.players if p.poste == "GK"]
+    # hors remises en jeu (ticket 29) et hors « play the whistle » (hors-jeu, ticket 23), qui change la raison de tous
+    live = [i for i in keepers if i.role != cerveau.REMISE and not i.reason.startswith(("ballon mort", "il lève la main"))]
+    assert live and all(i.role == cerveau.GARDIEN for i in live)
+    assert {i.reason.split(" : ")[0] for i in live} <= {"placement", "sortie", "intervention", "relance"}
+    assert any(i.reason.startswith("placement") for i in live)
+    assert not {i.role for i in keepers} & {cerveau.PRESSEUR, cerveau.SOUTIEN, cerveau.BALLON_LIBRE}
 
 
 def test_every_player_has_a_complete_intention_in_the_trace() -> None:
