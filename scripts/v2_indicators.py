@@ -19,8 +19,8 @@ from dataclasses import dataclass, field
 
 import v2engine.cerveau as cerveau
 from v2engine.cerveau import APPEL, OPPONENT_GOAL, TENIR
-from v2engine.gardien import (BALL_DISTANCE_M, BISECTOR_TOLERANCE_M, PLACEMENT, RELANCE, SORTIE, bisector_direction,
-                              bisector_point, own_goal)
+from v2engine.gardien import (BALL_DISTANCE_M, BISECTOR_TOLERANCE_M, FACE_A_FACE, FACE_STOPPED_MPS, PLACEMENT, RELANCE,
+                              SORTIE, bisector_direction, bisector_point, face_to_face, own_goal)
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, in_penalty_area
 from v2engine.movement import PlayerState
 from v2engine.offside import offside_line
@@ -395,6 +395,14 @@ class Collector:
             1.0 if off_line <= BISECTOR_TOLERANCE_M else 0.0)
         self.stats["gardien au tir : écart au point visé (m)"].add(
             keeper.position.distance_to(bisector_point(keeper, shooter.position)))
+        if face_to_face(keeper, shooter, opponents):  # ticket v2-realisme/03e : tir en face-à-face, gardien à cet instant
+            speed = keeper.velocity.length()
+            self.count["face-à-face : tirs"] += 1
+            self.stats["face-à-face : chance du tir"].add(shot_probability(shooter, goal, keeper, opponents))
+            self.stats["face-à-face : gardien au tir, vitesse (m/s)"].add(speed)
+            self.stats["face-à-face : gardien arrêté au tir (part)"].add(1.0 if speed < FACE_STOPPED_MPS else 0.0)
+            self.stats["face-à-face : gardien au tir, distance à sa ligne (m)"].add(abs(keeper.position.x - goal.x))
+            self.stats["face-à-face : tireur au tir, distance au but (m)"].add(shooter.position.distance_to(goal))
 
     def on_keeper(self, keeper: PlayerState, intention) -> None:
         """État du gardien à ce tick (ticket v2-realisme/03d, lu dans la raison de son intention) : sorties (épisodes),
@@ -405,6 +413,8 @@ class Collector:
             state = "placement, ballon libre laissé"
         previous = self.keeper_state.get(keeper.name)
         self.keeper_state[keeper.name] = state
+        if state == FACE_A_FACE and previous != FACE_A_FACE:  # ticket v2-realisme/03e : épisodes de face-à-face
+            self.count["gardien : face-à-face"] += 1
         if state == SORTIE and previous != SORTIE:
             opponent = "away" if keeper.team == "home" else "home"
             self.count["gardien : sorties"] += 1

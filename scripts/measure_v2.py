@@ -224,6 +224,8 @@ def report(c: Collector, detail: bool = False) -> dict:
         "gardien : sorties réussies (part)": k["gardien : sorties réussies"] / max(1, k["gardien : sorties"]),
         "gardien : sorties hors de sa surface (part)": k["gardien : sorties hors de sa surface"] / max(1, k["gardien : sorties"]),
         "gardien : ballons libres à sa portée laissés par match": k["gardien : ballons libres laissés"] / n,
+        "gardien : face-à-face par match": k["gardien : face-à-face"] / n,  # ticket v2-realisme/03e
+        "face-à-face : tirs par match": k["face-à-face : tirs"] / n,
         "appels par match": k["appels"] / n,
         "appels dans le dos par match": k["appels dans le dos"] / n,  # ticket v2-collectif/16
         "pressings par match": k["pressings"] / n,

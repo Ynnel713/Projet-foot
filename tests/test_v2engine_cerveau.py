@@ -69,9 +69,12 @@ def test_keeper_near_his_own_holder_keeps_his_place_instead_of_supporting_him() 
 
 def test_keeper_near_an_opposing_holder_does_not_press() -> None:
     keeper, striker = _p("G", x=5, poste="GK"), _p("S", team="away", x=15)
-    held = cerveau.think(keeper, _ball(15, 34, holder="S"), [keeper, striker], 1.0, {})
+    # un défenseur sur la ligne de tir : pas de face-à-face (ticket v2-realisme/03e), le gardien reste en placement
+    held = cerveau.think(keeper, _ball(15, 34, holder="S"), [keeper, striker, _p("D", x=10)], 1.0, {})
     assert held.role == cerveau.GARDIEN and held.reason.startswith("placement")
     assert held.action != "aller au ballon" and held.target == gardien.placement(keeper, Vec2(15.0, 34.0))
+    alone = cerveau.think(keeper, _ball(15, 34, holder="S"), [keeper, striker], 1.0, {})  # seul face à lui : face-à-face
+    assert alone.role == cerveau.GARDIEN and alone.reason.startswith("face-à-face") and alone.action != "aller au ballon"
 
 
 def test_keeper_states_are_traced_in_the_reason() -> None:

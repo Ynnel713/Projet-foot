@@ -19,6 +19,7 @@ from v2engine.defense import arrival_time_s
 from v2engine.geometry import PENALTY_AREA_DEPTH_M, PENALTY_AREA_WIDTH_M, PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
 from v2engine.movement import PlayerState
 from v2engine.possession import BALL_FRICTION_PER_S
+from v2engine.shooting import block_probability
 
 # Placement sur la bissectrice (ticket v2-realisme/03b ; chiffres réels non trouvés, ordres de grandeur, constantes
 # proposées par Claude et validées par délégation du propriétaire le 06/11/2026) : le gardien se tient sur la bissectrice
@@ -46,18 +47,61 @@ DEPTH_LINE_MAX_M = 16.0
 RUSH_MARGIN_S = 0.5
 RUSH_MAX_FROM_GOAL_M = 35.0
 
+# Face-à-face (ticket v2-realisme/03e ; chiffres réels non trouvés, seul repère : une consigne d'entraîneur de 1 à 6 m de
+# sa ligne, sans étude ; ordres de grandeur, constantes proposées par Claude et validées par délégation du propriétaire le
+# 07/11/2026) : un adversaire de champ porte le ballon à `FACE_RANGE_M` ou moins de son but, sans coéquipier du gardien
+# (hors lui) sur la ligne de tir (`shooting.block_probability` nulle). Le gardien avance sur la bissectrice à
+# `FACE_ADVANCE_SHARE` de la distance du porteur à son but (plafond `FACE_DEPTH_MAX_M`), jamais moins que son placement
+# normal, à `FACE_INTENSITY` de sa vitesse max tant que le porteur est à plus de `FACE_SET_DISTANCE_M` de lui ; à moins, il
+# ne fait plus que de petits pas (`FACE_CREEP_INTENSITY` de sa vitesse max, environ 1 m/s), prêt à s'arrêter : un tir part de 12 à 17 m du but, à 7 à 12 m du
+# gardien (scène du 07/11/2026), donc une distance d'arrêt de 8 m arriverait après le tir. Seuil de contrôle du banc :
+# arrêté = sous `FACE_STOPPED_MPS` au moment du tir.
+FACE_RANGE_M = 25.0
+FACE_ADVANCE_SHARE = 0.25
+FACE_DEPTH_MAX_M = 6.0
+FACE_INTENSITY = 0.6
+FACE_SET_DISTANCE_M = 16.0
+FACE_CREEP_INTENSITY = 0.12
+FACE_STOPPED_MPS = 1.5
+
 GARDIEN = "gardien"
-PLACEMENT, SORTIE, INTERVENTION, RELANCE = "placement", "sortie", "intervention", "relance"
+PLACEMENT, SORTIE, INTERVENTION, RELANCE, FACE_A_FACE = "placement", "sortie", "intervention", "relance", "face-à-face"
 
 
-def state(player: PlayerState, ball: BallState, is_receiver: bool, has_read: bool, loose_in_reach: bool) -> str:
+def face_to_face(keeper: PlayerState, holder: PlayerState | None, players: list[PlayerState]) -> bool:
+    """Vrai si `holder` (porteur du ballon) est seul face au gardien `keeper` : adversaire de champ, à `FACE_RANGE_M` ou
+    moins du but du gardien, sans coéquipier du gardien sur sa ligne de tir. Un défenseur resté derrière lui ne compte pas."""
+    if holder is None or holder.team == keeper.team or holder.poste == "GK":
+        return False
+    goal = own_goal(keeper.team)
+    if holder.position.distance_to(goal) > FACE_RANGE_M:
+        return False
+    return block_probability(holder, goal, [p for p in players if p.team == keeper.team]) == 0.0
+
+
+def face_depth(holder_distance_m: float) -> float:
+    """Distance à sa ligne (m) où le gardien se met face à un porteur seul à `holder_distance_m` de son but."""
+    return min(FACE_DEPTH_MAX_M, FACE_ADVANCE_SHARE * holder_distance_m)
+
+
+def face_intensity(holder_gap_m: float) -> float:
+    """Part de sa vitesse max à laquelle le gardien avance en face-à-face : `FACE_INTENSITY` tant que le porteur est à plus de
+    `FACE_SET_DISTANCE_M` de lui, ensuite de quoi il ne fait plus que de petits pas (`FACE_CREEP_INTENSITY`)."""
+    return FACE_INTENSITY if holder_gap_m > FACE_SET_DISTANCE_M else FACE_CREEP_INTENSITY
+
+
+def state(player: PlayerState, ball: BallState, is_receiver: bool, has_read: bool, loose_in_reach: bool,
+          one_on_one: bool = False) -> str:
     """État du gardien : `loose_in_reach` vaut vrai si le ballon est libre et à sa portée (à moins de CHASE_RADIUS_M, ou
-    s'il est le plus proche de son équipe, règle du cerveau pour tout joueur)."""
+    s'il est le plus proche de son équipe, règle du cerveau pour tout joueur) ; `one_on_one` : un adversaire est seul face
+    à lui avec le ballon (`face_to_face`)."""
     if player.name == ball.holder:
         return RELANCE
     if is_receiver or has_read:
         return INTERVENTION
-    return SORTIE if loose_in_reach else PLACEMENT
+    if loose_in_reach:
+        return SORTIE
+    return FACE_A_FACE if one_on_one else PLACEMENT
 
 
 @dataclass(frozen=True)
@@ -107,16 +151,17 @@ def depth_for_ball(distance_m: float, line_m: float | None = None) -> float:
     return depth
 
 
-def bisector_point(player: PlayerState, ball: Vec2, line_m: float | None = None) -> Vec2:
-    """Point de la bissectrice ballon-poteaux à la distance de sa ligne que demande la distance du ballon, dans sa
-    surface de réparation. Si le ballon est plus près de la ligne que cette distance (près de la ligne de but), le point
-    est pris à la distance minimale `DEPTH_M[0]` ; sur la ligne même, le gardien va au ballon."""
+def bisector_point(player: PlayerState, ball: Vec2, line_m: float | None = None, depth_m: float | None = None) -> Vec2:
+    """Point de la bissectrice ballon-poteaux à la distance de sa ligne que demande la distance du ballon (ou `depth_m`,
+    face-à-face, ticket 03e), dans sa surface de réparation. Si le ballon est plus près de la ligne que cette distance
+    (près de la ligne de but), le point est pris à la distance minimale `DEPTH_M[0]` ; sur la ligne même, le gardien va
+    au ballon."""
     goal = own_goal(player.team)
     inward = 1.0 if player.team == "home" else -1.0
     direction = bisector_direction(ball, goal)
     reach = ball.distance_to(goal)
     if abs(direction.x) > 1e-6:
-        depth = depth_for_ball(reach, line_m)
+        depth = depth_for_ball(reach, line_m) if depth_m is None else max(depth_m, depth_for_ball(reach))
         along = (goal.x + inward * depth - ball.x) / direction.x  # distance, sur la bissectrice, jusqu'à cette profondeur
         if along < 0.0:  # le ballon est plus près de la ligne que `depth`
             along = (goal.x + inward * DEPTH_M[0] - ball.x) / direction.x

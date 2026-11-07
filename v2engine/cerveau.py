@@ -19,7 +19,7 @@ from v2engine.decision import CONTRE_ATTAQUE, DRIBBLE_SPEED_FACTOR
 from v2engine.defense import (COMPENSATION, COUVERTURE, MARQUAGE, PRESSEUR, REST_DEFENDERS, DefensiveRoles,
                               leave_probability, press_intensity)
 from v2engine.flux import DEFENSE
-from v2engine.gardien import GARDIEN, INTERVENTION, PLACEMENT, RELANCE, SORTIE
+from v2engine.gardien import FACE_A_FACE, GARDIEN, INTERVENTION, PLACEMENT, RELANCE, SORTIE
 from v2engine import gardien
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
 from v2engine.movement import PlayerState
@@ -364,8 +364,17 @@ def _keeper(player: PlayerState, ball: BallState, seen: Perception, players: lis
     reach = ball.holder is None and not own_pass and (seen.ball_distance < CHASE_RADIUS_M
                                                       or nearest_of_team(player, ball, players))
     course = gardien.race(player, ball, players) if reach else None  # ticket v2-realisme/03d : sort-il avant l'attaquant ?
-    state = gardien.state(player, ball, seen.is_receiver, seen.read_point is not None, course is not None and course.rush)
+    one_on_one = gardien.face_to_face(player, seen.holder, players)  # ticket v2-realisme/03e : un attaquant seul face à lui
+    state = gardien.state(player, ball, seen.is_receiver, seen.read_point is not None, course is not None and course.rush,
+                          one_on_one)
     inner = {RELANCE: PORTEUR, INTERVENTION: RECEVEUR if seen.is_receiver else LECTURE, SORTIE: BALLON_LIBRE}.get(state)
+    if state == FACE_A_FACE:  # il avance sur la bissectrice, à petits pas dès que l'attaquant est à portée de tir
+        gap = ball.position.distance_to(player.position)
+        depth = gardien.face_depth(ball.position.distance_to(gardien.own_goal(player.team)))
+        why = "il avance sur la bissectrice pour fermer l'angle" + (
+            ", à petits pas : l'attaquant est à portée de tir" if gap <= gardien.FACE_SET_DISTANCE_M else "")
+        return Intention(GARDIEN, "fermer l'angle", gardien.bisector_point(player, ball.position, depth_m=depth),
+                         gardien.face_intensity(gap), reason=f"{FACE_A_FACE} : {why}", situation=situation)
     if inner is None:  # PLACEMENT
         line = bloc.lines.get(player.team) if bloc else None  # ligne du bloc à l'instant même, sans retard (ticket 03c)
         why = "il se place sur la bissectrice ballon-poteaux"

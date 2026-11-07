@@ -680,3 +680,23 @@ def test_keeper_rush_episodes_successes_distance_and_loose_balls_left() -> None:
     assert c.count["gardien : sorties hors de sa surface"] == 1 and c.count["gardien : ballons libres laissés"] == 1
     assert c.stats["gardien : sortie, point visé à son but (m)"].values == [28.0, 10.0]
 
+
+def test_face_to_face_shots_and_episodes_are_counted_with_the_keeper_speed() -> None:
+    # ticket v2-realisme/03e : tir de face-à-face (tireur seul à 16 m) ; un défenseur sur l'axe l'exclut
+    from dataclasses import replace
+    from v2engine.cerveau import Intention
+    c = ind.Collector(geometry_every_s=1e9)
+    goal = Vec2(PITCH_LENGTH_M, 34.0)
+    shooter = _p("S", "home", PITCH_LENGTH_M - 16.0, 34.0)
+    slow = replace(_p("K", "away", PITCH_LENGTH_M - 4.0, 34.0, poste="GK"), velocity=Vec2(0.5, 0.0))
+    fast = replace(slow, velocity=Vec2(4.0, 0.0))
+    c.on_shot_context(shooter, goal, slow, [slow])
+    c.on_shot_context(shooter, goal, fast, [fast])
+    c.on_shot_context(shooter, goal, slow, [slow, _p("D", "away", PITCH_LENGTH_M - 8.0, 34.0)])  # défenseur sur l'axe
+    assert c.count["face-à-face : tirs"] == 2
+    assert c.stats["face-à-face : gardien arrêté au tir (part)"].values == [1.0, 0.0]
+    assert c.stats["face-à-face : gardien au tir, distance à sa ligne (m)"].values == [4.0, 4.0]
+    keeper = _p("K", "home", 5.0, 34.0, poste="GK")
+    for reason in ("placement : ...", "face-à-face : il avance", "face-à-face : à petits pas", "placement : ...", "face-à-face : ..."):
+        c.on_keeper(keeper, Intention("gardien", "fermer l'angle", Vec2(4.0, 34.0), reason=reason))
+    assert c.count["gardien : face-à-face"] == 2  # deux épisodes

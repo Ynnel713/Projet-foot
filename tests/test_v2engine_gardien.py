@@ -4,11 +4,12 @@ quand la ligne défensive est haute et le ballon loin."""
 from __future__ import annotations
 
 import math
+from dataclasses import replace
 
 import pytest
 
-from tests.scenes import Scene, player, run
-from v2engine import cerveau, gardien
+from tests.scenes import Scene, player, run, seed_scene
+from v2engine import cerveau, gardien, movement
 from v2engine.ball_state import BallState
 from v2engine.bloc import Bloc
 from v2engine.geometry import PENALTY_AREA_DEPTH_M, PENALTY_AREA_WIDTH_M, PITCH_LENGTH_M, Vec2
@@ -174,3 +175,99 @@ def test_the_keeper_does_not_chase_a_pass_of_his_own_team_but_chases_the_same_ba
     ball.receiver = None  # la passe est ratée : ballon libre
     assert cerveau.think(keeper, ball, players, 1.0, {}).reason.startswith("sortie")
 
+
+
+# --- Face-à-face (ticket v2-realisme/03e) ----------------------------------------------------------------------------
+def _one_on_one(attacker_x: float = 16.0, attacker_y: float = 34.0, defender: tuple[float, float] | None = None):
+    keeper, attacker = _keeper(), player("A", "away", attacker_x, attacker_y, "BU")
+    players = [keeper, attacker]
+    if defender is not None:
+        players.append(player("D", "home", defender[0], defender[1], "DC"))
+    return keeper, attacker, players, BallState(position=attacker.position, velocity=Vec2(0.0, 0.0), holder="A")
+
+
+def test_a_lone_attacker_with_the_ball_in_front_of_goal_puts_the_keeper_in_face_to_face_and_he_comes_out() -> None:
+    keeper, attacker, players, ball = _one_on_one()  # attaquant seul à 16 m dans l'axe
+    assert gardien.face_to_face(keeper, attacker, players)
+    out = cerveau.think(keeper, ball, players, 1.0, {})
+    assert out.reason.startswith("face-à-face")  # état tracé
+    assert out.target.x == pytest.approx(gardien.face_depth(16.0), abs=0.05) == pytest.approx(4.0, abs=0.05)
+    assert out.target.x > gardien.placement(keeper, ball.position).x  # plus avancé que placé
+    assert out.target.y == pytest.approx(34.0)  # dans l'axe : sur la bissectrice
+
+
+def test_a_defender_of_his_team_on_the_shot_line_keeps_the_keeper_in_placement() -> None:
+    keeper, attacker, players, ball = _one_on_one(defender=(10.0, 34.0))
+    assert not gardien.face_to_face(keeper, attacker, players)
+    out = cerveau.think(keeper, ball, players, 1.0, {})
+    assert out.reason.startswith("placement") and out.target == gardien.bisector_point(keeper, ball.position)
+
+
+def test_a_defender_who_stayed_behind_the_attacker_or_far_to_the_side_does_not_break_the_face_to_face() -> None:
+    for spot in [(22.0, 34.0), (10.0, 50.0)]:  # derrière le porteur ; loin du cône de tir
+        keeper, attacker, players, _ = _one_on_one(defender=spot)
+        assert gardien.face_to_face(keeper, attacker, players)
+
+
+def test_beyond_the_range_or_for_a_goalkeeper_or_a_teammate_there_is_no_face_to_face() -> None:
+    keeper, far, players, _ = _one_on_one(gardien.FACE_RANGE_M + 2.0)
+    assert not gardien.face_to_face(keeper, far, players)
+    keeper, near, players, _ = _one_on_one(gardien.FACE_RANGE_M - 2.0)
+    assert gardien.face_to_face(keeper, near, players)
+    assert not gardien.face_to_face(keeper, replace(near, poste="GK"), players)  # le gardien adverse n'est pas un attaquant
+    assert not gardien.face_to_face(keeper, replace(near, team="home"), players)  # un coéquipier non plus
+    assert not gardien.face_to_face(keeper, None, players)
+
+
+def test_the_face_to_face_is_mirrored_for_the_away_team() -> None:
+    keeper = player("G", "away", PITCH_LENGTH_M - 5.0, 34.0, "GK")
+    attacker = player("A", "home", PITCH_LENGTH_M - 16.0, 34.0, "BU")
+    ball = BallState(position=attacker.position, velocity=Vec2(0.0, 0.0), holder="A")
+    out = cerveau.think(keeper, ball, [keeper, attacker], 1.0, {})
+    assert out.reason.startswith("face-à-face") and PITCH_LENGTH_M - out.target.x == pytest.approx(4.0, abs=0.05)
+
+
+def test_the_depth_grows_with_the_attacker_distance_up_to_the_cap_and_is_never_below_the_placement() -> None:
+    depths = [gardien.face_depth(d) for d in (8.0, 16.0, 24.0, 30.0)]
+    assert depths == sorted(depths) and depths[-1] == gardien.FACE_DEPTH_MAX_M
+    keeper = _keeper()
+    for ball_at in [Vec2(4.0, 20.0), Vec2(10.0, 34.0), Vec2(20.0, 34.0)]:  # même près de sa ligne, jamais plus reculé
+        assert (gardien.bisector_point(keeper, ball_at, depth_m=1.0).x
+                >= gardien.bisector_point(keeper, ball_at).x - 1e-9)
+
+
+def test_the_keeper_comes_out_then_creeps_before_the_shot() -> None:
+    # attaquant hors de portée de tir (35 m), ballon aux pieds ; il progresse, le gardien avance puis s'arrête avant le tir
+    seed_scene(1)
+    keeper, attacker, players, _ = _one_on_one(35.0)
+    scene = Scene.full(players, holder="A")
+    seen: dict[str, float] = {}
+
+    def shot(s: Scene) -> bool:
+        if s.ball.holder != "A":
+            seen["speed"], seen["depth"] = s.get("G").velocity.length(), s.get("G").position.x
+            return True
+        return False
+
+    assert run(scene, 20.0, until=shot)
+    assert seen["depth"] > 2.5  # il est sorti de sa ligne
+    assert seen["speed"] < gardien.FACE_STOPPED_MPS  # et il est arrêté au moment du tir
+
+
+def test_the_face_to_face_run_is_deterministic() -> None:
+    logs = []
+    for _ in range(2):
+        seed_scene(1)
+        keeper, attacker, players, _ = _one_on_one(35.0)
+        scene = Scene.full(players, holder="A")
+        run(scene, 6.0)
+        logs.append(scene.log)
+    assert logs[0] == logs[1]
+
+
+def test_the_keeper_runs_while_the_attacker_is_far_then_creeps_below_the_stop_threshold() -> None:
+    assert gardien.face_intensity(gardien.FACE_SET_DISTANCE_M + 1.0) == gardien.FACE_INTENSITY
+    creeping = gardien.face_intensity(gardien.FACE_SET_DISTANCE_M)
+    assert 0.0 < creeping < gardien.FACE_INTENSITY
+    for pace in (10, 60, 99):  # quel que soit le gardien, les petits pas restent sous le seuil d'arrêt
+        assert creeping * movement.max_speed_mps(pace) < gardien.FACE_STOPPED_MPS
