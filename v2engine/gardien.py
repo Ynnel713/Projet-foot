@@ -9,12 +9,16 @@ ballon). Aucun attribut de gardien ici (`v2-attributs-restants/03b`)."""
 from __future__ import annotations
 
 import math
+from dataclasses import dataclass
 
 from ligue1sim.pitch_geometry import GOAL_WIDTH_M
 
+from v2engine.anticipation import loose_ball_target
 from v2engine.ball_state import BallState
+from v2engine.defense import arrival_time_s
 from v2engine.geometry import PENALTY_AREA_DEPTH_M, PENALTY_AREA_WIDTH_M, PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
 from v2engine.movement import PlayerState
+from v2engine.possession import BALL_FRICTION_PER_S
 
 # Placement sur la bissectrice (ticket v2-realisme/03b ; chiffres réels non trouvés, ordres de grandeur, constantes
 # proposées par Claude et validées par délégation du propriétaire le 06/11/2026) : le gardien se tient sur la bissectrice
@@ -34,6 +38,14 @@ BISECTOR_TOLERANCE_M = 2.0
 LINE_RATIO = 0.4
 DEPTH_LINE_MAX_M = 16.0
 
+# Sortie sur un ballon libre (ticket v2-realisme/03d ; chiffres réels non trouvés, ordres de grandeur, constantes
+# proposées par Claude et validées par délégation du propriétaire le 07/11/2026) : sur un ballon libre à sa portée, le
+# gardien compare son temps d'arrivée au point où il va (`loose_ball_target`) à celui de l'adversaire de champ le plus
+# rapide (`defense.arrival_time_s`) ; il sort s'il arrive au moins `RUSH_MARGIN_S` avant, et si ce point est à
+# `RUSH_MAX_FROM_GOAL_M` ou moins de son but ; sinon il reste en placement.
+RUSH_MARGIN_S = 0.5
+RUSH_MAX_FROM_GOAL_M = 35.0
+
 GARDIEN = "gardien"
 PLACEMENT, SORTIE, INTERVENTION, RELANCE = "placement", "sortie", "intervention", "relance"
 
@@ -46,6 +58,26 @@ def state(player: PlayerState, ball: BallState, is_receiver: bool, has_read: boo
     if is_receiver or has_read:
         return INTERVENTION
     return SORTIE if loose_in_reach else PLACEMENT
+
+
+@dataclass(frozen=True)
+class Race:
+    """Course au ballon libre : `rush` vaut vrai si le gardien sort ; temps d'arrivée du gardien et de l'adversaire de champ
+    le plus rapide (`inf` s'il n'y en a pas) au point visé `point`."""
+    rush: bool
+    keeper_s: float
+    rival_s: float
+    point: Vec2
+
+
+def race(player: PlayerState, ball: BallState, players: list[PlayerState]) -> Race:
+    """Course du gardien `player` sur le ballon libre `ball` contre les adversaires de champ de `players`."""
+    point = loose_ball_target(player, ball.position, ball.velocity, BALL_FRICTION_PER_S)
+    keeper_s = arrival_time_s(player, point)
+    rival_s = min((arrival_time_s(p, point) for p in players if p.team != player.team and p.poste != "GK"),
+                  default=math.inf)
+    close_enough = point.distance_to(own_goal(player.team)) <= RUSH_MAX_FROM_GOAL_M
+    return Race(close_enough and keeper_s + RUSH_MARGIN_S <= rival_s, keeper_s, rival_s, point)
 
 
 def own_goal(team: str) -> Vec2:

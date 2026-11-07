@@ -659,3 +659,24 @@ def test_shot_context_gives_the_shot_chance_and_the_keeper_gap_to_the_bisector()
     c.on_shot_context(shooter, Vec2(PITCH_LENGTH_M, 34.0), None, [])  # sans gardien : la chance seule
     assert 0.0 < c.stats["chance du tir (shot_probability)"].values[0] < 1.0
     assert "gardien au tir : écart à la bissectrice (m)" not in c.stats
+
+
+def test_keeper_rush_episodes_successes_distance_and_loose_balls_left() -> None:
+    from v2engine.cerveau import Intention
+    c = ind.Collector(geometry_every_s=1e9)
+    keeper = _p("K", "home", 5.0, 34.0, poste="GK")
+
+    def step(reason: str, target: Vec2) -> None:
+        c.on_keeper(keeper, Intention("gardien", "aller au ballon", target, reason=reason))
+
+    step("placement : il se place sur la bissectrice ballon-poteaux", Vec2(3.0, 34.0))
+    step("sortie : ballon libre (il arrive en 2.0 s, l'adversaire en 3.5 s)", Vec2(28.0, 34.0))  # hors de sa surface
+    step("sortie : ballon libre (il arrive en 1.5 s, l'adversaire en 3.5 s)", Vec2(26.0, 34.0))  # même épisode
+    step("relance : il a le ballon", Vec2(25.0, 34.0))  # sortie réussie
+    step("sortie : ballon libre (...)", Vec2(10.0, 34.0))  # nouvel épisode, dans sa surface
+    step("placement : l'adversaire arrive avant lui (1.0 s contre 2.0 s), il garde sa place", Vec2(3.0, 34.0))  # raté
+    step("placement : le ballon est trop loin de son but, il garde sa place", Vec2(3.0, 34.0))  # même ballon laissé
+    assert c.count["gardien : sorties"] == 2 and c.count["gardien : sorties réussies"] == 1
+    assert c.count["gardien : sorties hors de sa surface"] == 1 and c.count["gardien : ballons libres laissés"] == 1
+    assert c.stats["gardien : sortie, point visé à son but (m)"].values == [28.0, 10.0]
+

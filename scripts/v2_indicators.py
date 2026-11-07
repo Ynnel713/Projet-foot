@@ -19,7 +19,8 @@ from dataclasses import dataclass, field
 
 import v2engine.cerveau as cerveau
 from v2engine.cerveau import APPEL, OPPONENT_GOAL, TENIR
-from v2engine.gardien import BALL_DISTANCE_M, BISECTOR_TOLERANCE_M, bisector_direction, bisector_point
+from v2engine.gardien import (BALL_DISTANCE_M, BISECTOR_TOLERANCE_M, PLACEMENT, RELANCE, SORTIE, bisector_direction,
+                              bisector_point, own_goal)
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, in_penalty_area
 from v2engine.movement import PlayerState
 from v2engine.offside import offside_line
@@ -321,6 +322,7 @@ class Collector:
         self.role_switches: Counter = Counter()  # passages APPEL <-> TENIR, par joueur
         # structure (ticket v2-realisme/02h)
         self.roles: dict[str, str] = {}  # dernier rôle de chaque joueur (Intention.role)
+        self.keeper_state: dict[str, str] = {}  # dernier état de chaque gardien (ticket v2-realisme/03d)
         self.call_episodes: Counter = Counter()  # épisodes APPEL (rôle APPEL après un autre rôle), par joueur
         self.call_state: dict[str, tuple[str, float, tuple]] = {}  # joueur -> (APPEL / TENIR, depuis, possession)
         self.possession_switches: Counter = Counter()  # passages APPEL <-> TENIR dans une même possession, par joueur
@@ -393,6 +395,25 @@ class Collector:
             1.0 if off_line <= BISECTOR_TOLERANCE_M else 0.0)
         self.stats["gardien au tir : écart au point visé (m)"].add(
             keeper.position.distance_to(bisector_point(keeper, shooter.position)))
+
+    def on_keeper(self, keeper: PlayerState, intention) -> None:
+        """État du gardien à ce tick (ticket v2-realisme/03d, lu dans la raison de son intention) : sorties (épisodes),
+        sorties réussies (de la sortie à la relance : il a le ballon), distance du point visé à son but, part hors de sa
+        surface, ballons libres à sa portée qu'il laisse (il reste en placement : adversaire plus rapide ou trop loin)."""
+        state = intention.reason.split(" :", 1)[0]
+        if state == PLACEMENT and "garde sa place" in intention.reason:
+            state = "placement, ballon libre laissé"
+        previous = self.keeper_state.get(keeper.name)
+        self.keeper_state[keeper.name] = state
+        if state == SORTIE and previous != SORTIE:
+            opponent = "away" if keeper.team == "home" else "home"
+            self.count["gardien : sorties"] += 1
+            self.stats["gardien : sortie, point visé à son but (m)"].add(intention.target.distance_to(own_goal(keeper.team)))
+            self.count["gardien : sorties hors de sa surface"] += not in_penalty_area(opponent, intention.target)
+        elif previous == SORTIE and state == RELANCE:
+            self.count["gardien : sorties réussies"] += 1
+        elif state == "placement, ballon libre laissé" and previous != state:
+            self.count["gardien : ballons libres laissés"] += 1
 
     def on_trigger(self) -> None:
         self.count["pressings d'équipe déclenchés"] += 1

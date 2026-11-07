@@ -100,3 +100,22 @@ def test_shot_trace_is_reproducible_at_fixed_seed() -> None:
         runs.append(simulate_match(clubs[0], clubs[1], duration_minutes=10).shots)
     assert runs[0] == runs[1]
     assert all(s.outcome in {"but", "à côté", "contré", HELD, PARRIED, TIPPED} for s in runs[0])
+
+
+def test_a_keeper_outside_his_area_never_holds_the_ball_with_his_hands(monkeypatch) -> None:
+    # ticket v2-realisme/03d : le tirage donne « capté », mais hors de sa surface le gardien repousse (au pied)
+    def held_at(keeper_at: Vec2) -> tuple[str, str | None]:
+        shooter = _player("Buteur", position=Vec2(PITCH_LENGTH_M - 30.0, GOAL_CENTER_Y))
+        keeper = _player("Gardien", team="away", poste="GK", position=keeper_at)
+        ball = BallState(position=shooter.position, velocity=Vec2(0.0, 0.0), holder="Buteur")
+        monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression, dt: False)
+        monkeypatch.setattr("v2engine.match.choose_action", lambda *args: Action("shot", 1.0))
+        monkeypatch.setattr("v2engine.match.attempt_shot", lambda *args: False)
+        monkeypatch.setattr("v2engine.match.SHOT_WIDE_SHARE", 0.0)
+        monkeypatch.setattr("v2engine.match.save_outcome", lambda *args: HELD)
+        shots = []
+        _step_ball(ball, 0.1, [shooter, keeper], 0.0, shots=shots)
+        return shots[0].outcome, ball.holder
+
+    assert held_at(Vec2(PITCH_LENGTH_M - 10.0, GOAL_CENTER_Y)) == (HELD, "Gardien")  # dans sa surface : capté
+    assert held_at(Vec2(PITCH_LENGTH_M - 22.0, GOAL_CENTER_Y)) == (PARRIED, None)  # hors de sa surface : repoussé

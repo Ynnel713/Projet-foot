@@ -116,3 +116,61 @@ def test_the_brain_reads_the_line_of_the_bloc_of_its_own_team_at_that_instant() 
     away = player("G2", "away", PITCH_LENGTH_M - 5.0, 34.0, "GK")  # l'équipe visiteuse lit sa propre ligne (10 m)
     other = cerveau.think(away, ball, [away, player("D2", "away", 80.0, 34.0, "DC")], 1.0, {}, bloc=bloc)
     assert other.target == gardien.bisector_point(away, ball.position, 10.0)
+
+
+# --- Sortie sur un ballon libre (ticket v2-realisme/03d) -------------------------------------------------------------
+def _loose_ball(at: Vec2, rival_x: float | None, keeper_x: float = 5.0):
+    keeper = _keeper(x=keeper_x)
+    players = [keeper]
+    if rival_x is not None:
+        players.append(player("A", "away", rival_x, 34.0, "BU"))
+    return keeper, BallState(position=at, velocity=Vec2(0.0, 0.0)), players
+
+
+def test_the_keeper_rushes_when_the_attacker_is_much_farther_and_stays_when_he_is_closer() -> None:
+    keeper, ball, far = _loose_ball(Vec2(25.0, 34.0), rival_x=55.0)  # lui à 20 m du ballon, l'attaquant à 30 m
+    assert gardien.race(keeper, ball, far).rush
+    out = cerveau.think(keeper, ball, far, 1.0, {})
+    assert out.reason.startswith("sortie") and "il arrive en" in out.reason  # décision tracée avec les deux temps
+    keeper, ball, close = _loose_ball(Vec2(25.0, 34.0), rival_x=35.0)  # l'attaquant à 10 m
+    assert not gardien.race(keeper, ball, close).rush
+    stays = cerveau.think(keeper, ball, close, 1.0, {})
+    assert stays.reason.startswith("placement") and "arrive avant lui" in stays.reason
+    assert stays.target == gardien.bisector_point(keeper, ball.position)
+
+
+def test_the_margin_decides_between_two_attackers_a_little_before_and_after() -> None:
+    from v2engine.movement import max_speed_mps
+    speed = max_speed_mps(60)
+    for gap_s, expected in ((gardien.RUSH_MARGIN_S - 0.2, False), (gardien.RUSH_MARGIN_S + 0.2, True)):
+        keeper, ball, players = _loose_ball(Vec2(25.0, 34.0), rival_x=25.0 + 20.0 + gap_s * speed)  # même vitesse et même montée
+        assert gardien.race(keeper, ball, players).rush is expected
+
+
+def test_no_rush_beyond_the_distance_cap_even_without_any_attacker() -> None:
+    near = _loose_ball(Vec2(gardien.RUSH_MAX_FROM_GOAL_M - 3.0, 34.0), rival_x=None, keeper_x=20.0)
+    far = _loose_ball(Vec2(gardien.RUSH_MAX_FROM_GOAL_M + 3.0, 34.0), rival_x=None, keeper_x=20.0)
+    assert gardien.race(near[0], near[1], near[2]).rush and not gardien.race(far[0], far[1], far[2]).rush
+    assert "trop loin de son but" in cerveau.think(far[0], far[1], far[2], 1.0, {}).reason
+
+
+def test_the_rival_goalkeeper_does_not_count_as_a_rival_and_the_race_is_mirrored_for_the_away_team() -> None:
+    keeper, ball, players = _loose_ball(Vec2(25.0, 34.0), rival_x=None)
+    players.append(player("G2", "away", 24.0, 34.0, "GK"))  # le gardien adverse, tout près : ignoré
+    assert gardien.race(keeper, ball, players).rush
+    away = player("G", "away", PITCH_LENGTH_M - 5.0, 34.0, "GK")
+    mirror = [away, player("A", "home", PITCH_LENGTH_M - 55.0, 34.0, "BU")]
+    mirror_ball = BallState(position=Vec2(PITCH_LENGTH_M - 25.0, 34.0), velocity=Vec2(0.0, 0.0))
+    assert gardien.race(away, mirror_ball, mirror).rush
+    assert gardien.race(away, mirror_ball, [away, player("A", "home", PITCH_LENGTH_M - 35.0, 34.0, "BU")]).rush is False
+
+
+def test_the_keeper_does_not_chase_a_pass_of_his_own_team_but_chases_the_same_ball_when_it_is_loose() -> None:
+    keeper, ball, players = _loose_ball(Vec2(20.0, 34.0), rival_x=None, keeper_x=8.0)
+    mate = player("D", "home", 30.0, 34.0, "DC")
+    players.append(mate)
+    ball.velocity, ball.receiver, ball.last_pass_team = Vec2(-5.0, 0.0), "D", "home"  # passe de son équipe, en vol
+    assert cerveau.think(keeper, ball, players, 1.0, {}).reason.startswith("placement")
+    ball.receiver = None  # la passe est ratée : ballon libre
+    assert cerveau.think(keeper, ball, players, 1.0, {}).reason.startswith("sortie")
+

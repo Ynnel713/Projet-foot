@@ -359,14 +359,27 @@ def _keeper(player: PlayerState, ball: BallState, seen: Perception, players: lis
             transition: TransitionPlay | None) -> Intention:
     """Intention du gardien (ticket v2-realisme/03a) : son état (`gardien.state`) et, hors placement, le geste de la règle
     générale correspondante (porteur, receveur visé, passe lue, ballon libre). Il ne presse plus et ne vient plus en soutien."""
-    reach = ball.holder is None and (seen.ball_distance < CHASE_RADIUS_M or nearest_of_team(player, ball, players))
-    state = gardien.state(player, ball, seen.is_receiver, seen.read_point is not None, reach)
+    # ticket 03d : la passe de son équipe en vol n'est pas un ballon libre pour lui (son receveur va la prendre)
+    own_pass = ball.receiver is not None and ball.last_pass_team == player.team
+    reach = ball.holder is None and not own_pass and (seen.ball_distance < CHASE_RADIUS_M
+                                                      or nearest_of_team(player, ball, players))
+    course = gardien.race(player, ball, players) if reach else None  # ticket v2-realisme/03d : sort-il avant l'attaquant ?
+    state = gardien.state(player, ball, seen.is_receiver, seen.read_point is not None, course is not None and course.rush)
     inner = {RELANCE: PORTEUR, INTERVENTION: RECEVEUR if seen.is_receiver else LECTURE, SORTIE: BALLON_LIBRE}.get(state)
     if inner is None:  # PLACEMENT
         line = bloc.lines.get(player.team) if bloc else None  # ligne du bloc à l'instant même, sans retard (ticket 03c)
+        why = "il se place sur la bissectrice ballon-poteaux"
+        if course is not None:  # ballon libre à sa portée, mais il ne sort pas : trop loin de son but, ou l'adversaire arrive avant
+            if course.point.distance_to(gardien.own_goal(player.team)) > gardien.RUSH_MAX_FROM_GOAL_M:
+                why = "le ballon est trop loin de son but, il garde sa place"
+            else:
+                why = f"l'adversaire arrive avant lui ({course.rival_s:.1f} s contre {course.keeper_s:.1f} s), il garde sa place"
         return Intention(GARDIEN, "se replacer", gardien.placement(player, ball.position, line),
-                         reason=f"{PLACEMENT} : il se place sur la bissectrice ballon-poteaux", situation=situation)
+                         reason=f"{PLACEMENT} : {why}", situation=situation)
     moved = decide(player, inner, ball, seen, players, minute, runs, situation, bloc, defense, transition)
+    if state == SORTIE:  # la décision est fondée sur les temps d'arrivée, tracée
+        moved = replace(moved, reason=f"{moved.reason} (il arrive en {course.keeper_s:.1f} s, l'adversaire en "
+                                      f"{course.rival_s:.1f} s)")
     return replace(moved, role=GARDIEN, reason=f"{state} : {moved.reason}")
 
 

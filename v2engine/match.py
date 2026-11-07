@@ -25,7 +25,7 @@ from v2engine.danger import danger
 from v2engine.duel import foul_severity, resolve_tackle, should_attempt_tackle
 from v2engine.flux import ARBITRAGE, PERCEPTION, TIR, seed_streams
 from v2engine.formation import initial_positions
-from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch
+from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch, in_penalty_area
 from v2engine.movement import PlayerState, step
 from v2engine.cerveau import GOAL_CENTER_Y, OPPONENT_GOAL, Intention, think
 from v2engine.decision import DECISION_INTERVAL_S, choose_action
@@ -37,7 +37,7 @@ from v2engine.added_time import GRACE_S, HARD_STOP_S, added_minutes, played_minu
 from v2engine.roles import role_of
 from v2engine.restart import (AERIAL_LANDING_M, AERIEN, CORNER, FREE_KICK, LONG_RESTART_M, PENALTY, PENALTY_CONVERSION, SOL,
                               award, exit_point, foul_restart, is_aerial, kickoff, restart_target)
-from v2engine.shooting import (HELD, TIPPED, attempt_shot, draw_blocker, occasion_quality, parry_velocity, save_outcome,
+from v2engine.shooting import (HELD, PARRIED, TIPPED, attempt_shot, draw_blocker, occasion_quality, parry_velocity, save_outcome,
                                shot_probability)
 from v2engine.situation import SituationTracker
 from v2engine.transition import TransitionPlay
@@ -508,6 +508,8 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                 # ponytail : la parade est instantanée, au gardien ; trajectoire du tir jusqu'à lui avec la hauteur
                 # du ballon (v2-hauteur-ballon/02a).
                 outcome = save_outcome(chance, shot_at, goal)
+                if outcome == HELD and not in_penalty_area(holder.team, keeper.position):
+                    outcome = PARRIED  # hors de sa surface, jamais à la main (ticket v2-realisme/03d) : le tirage reste le même
                 record(outcome)
                 if outcome == HELD:
                     ball.holder = keeper.name

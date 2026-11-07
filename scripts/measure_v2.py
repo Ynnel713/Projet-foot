@@ -66,6 +66,8 @@ def _hook(collector: Collector, clock: dict[str, float], plans: bool = True) -> 
     def think(player, *args, **kwargs):
         intention = real_think(player, *args, **kwargs)
         collector.on_role(player.name, intention.role)
+        if player.poste == "GK":
+            collector.on_keeper(player, intention)  # ticket v2-realisme/03d
         return intention
 
     real_stays = cerveau.stays_behind
@@ -218,6 +220,10 @@ def report(c: Collector, detail: bool = False) -> dict:
         "pertes en transition par match": None,
         "tirs de contre par match (récupération dans son camp)": k["tirs de contre, récupération propre camp"] / n,
         "tirs de contre par match (récupération dans le camp adverse)": k["tirs de contre, récupération camp adverse"] / n,
+        "gardien : sorties par match": k["gardien : sorties"] / n,  # ticket v2-realisme/03d
+        "gardien : sorties réussies (part)": k["gardien : sorties réussies"] / max(1, k["gardien : sorties"]),
+        "gardien : sorties hors de sa surface (part)": k["gardien : sorties hors de sa surface"] / max(1, k["gardien : sorties"]),
+        "gardien : ballons libres à sa portée laissés par match": k["gardien : ballons libres laissés"] / n,
         "appels par match": k["appels"] / n,
         "appels dans le dos par match": k["appels dans le dos"] / n,  # ticket v2-collectif/16
         "pressings par match": k["pressings"] / n,
