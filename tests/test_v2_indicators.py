@@ -639,3 +639,23 @@ def test_keeper_distance_to_his_own_goal_is_seen_for_both_teams() -> None:
     c.end_match()
     assert sorted(c.stats["distance maximale du gardien à son but (m)"].values) == [15.0, 15.0]
     assert sorted(c.stats["distance moyenne du gardien à son but (m)"].values) == [10.0, 10.0]
+
+
+def test_shot_context_gives_the_shot_chance_and_the_keeper_gap_to_the_bisector() -> None:
+    # ticket v2-realisme/03b : le gardien adverse est sur la bissectrice (y = 34 pour un tir dans l'axe) ou à côté
+    def gap(keeper_y: float) -> tuple[float, float]:
+        c = ind.Collector(geometry_every_s=1e9)
+        shooter = _p("S", "home", 90.0, 34.0)
+        keeper = _p("K", "away", 100.0, keeper_y, poste="GK")
+        c.on_shot_context(shooter, Vec2(PITCH_LENGTH_M, 34.0), keeper, [keeper])
+        return (c.stats["gardien au tir : écart à la bissectrice (m)"].values[0],
+                c.stats["gardien au tir : écart à la bissectrice sous le seuil (part)"].values[0])
+    on_axis, within_axis = gap(34.0)
+    assert math.isclose(on_axis, 0.0, abs_tol=1e-6) and within_axis == 1.0
+    off, within = gap(38.0)
+    assert math.isclose(off, 4.0, abs_tol=1e-6) and within == 0.0
+    c = ind.Collector(geometry_every_s=1e9)
+    shooter = _p("S", "home", 90.0, 34.0)
+    c.on_shot_context(shooter, Vec2(PITCH_LENGTH_M, 34.0), None, [])  # sans gardien : la chance seule
+    assert 0.0 < c.stats["chance du tir (shot_probability)"].values[0] < 1.0
+    assert "gardien au tir : écart à la bissectrice (m)" not in c.stats

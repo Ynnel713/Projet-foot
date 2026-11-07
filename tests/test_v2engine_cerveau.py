@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import random
 
-from v2engine import cerveau
+from v2engine import cerveau, gardien
 from v2engine.anticipation import pass_readers
 from v2engine.ball_state import BallState
 from v2engine.decision import DRIBBLE_DIRECTIONS_DEG, choose_action
@@ -64,14 +64,14 @@ def test_keeper_near_his_own_holder_keeps_his_place_instead_of_supporting_him() 
     holder, keeper = _p("H", x=12), _p("G", x=5, poste="GK")
     placed = cerveau.think(keeper, _ball(12, 34, holder="H"), [holder, keeper], 1.0, {})
     assert placed.role == cerveau.GARDIEN and placed.reason.startswith("placement") and placed.mate is None
-    assert placed.action == "se replacer" and placed.target == keeper.home_target
+    assert placed.action == "se replacer" and placed.target == gardien.placement(keeper, Vec2(12.0, 34.0))
 
 
 def test_keeper_near_an_opposing_holder_does_not_press() -> None:
     keeper, striker = _p("G", x=5, poste="GK"), _p("S", team="away", x=15)
     held = cerveau.think(keeper, _ball(15, 34, holder="S"), [keeper, striker], 1.0, {})
     assert held.role == cerveau.GARDIEN and held.reason.startswith("placement")
-    assert held.action != "aller au ballon" and held.target == keeper.home_target
+    assert held.action != "aller au ballon" and held.target == gardien.placement(keeper, Vec2(15.0, 34.0))
 
 
 def test_keeper_states_are_traced_in_the_reason() -> None:
@@ -94,7 +94,7 @@ def test_keeper_still_comes_out_for_a_loose_ball_in_reach_only() -> None:
     assert near.reason.startswith("sortie") and near.action == "aller au ballon"
     far_ball = _ball(60, 34)  # loin, et un défenseur est plus près : le gardien reste placé
     far = cerveau.think(keeper, far_ball, [keeper, mate], 1.0, {})
-    assert far.reason.startswith("placement") and far.target == keeper.home_target
+    assert far.reason.startswith("placement") and far.target == gardien.placement(keeper, far_ball.position)
 
 
 def test_keeper_never_presses_or_supports_in_a_real_match() -> None:

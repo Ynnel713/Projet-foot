@@ -47,6 +47,7 @@ def _hook(collector: Collector, clock: dict[str, float], plans: bool = True) -> 
 
     def attempt_shot(shooter, *args, **kwargs):
         collector.on_shot(shooter, clock["now"] + clock["dt"])  # le tir a lieu pendant le tick en cours
+        collector.on_shot_context(shooter, *args)  # (but, gardien adverse, adversaires), ticket v2-realisme/03b
         return real["attempt_shot"](shooter, *args, **kwargs)
 
     def resolve_tackle(*args, **kwargs):

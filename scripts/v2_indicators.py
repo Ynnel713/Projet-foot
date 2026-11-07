@@ -19,10 +19,12 @@ from dataclasses import dataclass, field
 
 import v2engine.cerveau as cerveau
 from v2engine.cerveau import APPEL, OPPONENT_GOAL, TENIR
+from v2engine.gardien import BISECTOR_TOLERANCE_M, bisector_direction, bisector_point
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, in_penalty_area
 from v2engine.movement import PlayerState
 from v2engine.offside import offside_line
 from v2engine.possession import pass_success_probability
+from v2engine.shooting import shot_probability
 from v2engine.situation import POSSESSION_INSTALLEE, TRANSITION_DEFENSIVE, TRANSITION_OFFENSIVE, SituationTracker
 
 KMH = 1.0 / 3.6
@@ -376,6 +378,21 @@ class Collector:
         if last is not None and last[1] == shooter.team and now_s - last[0] <= COUNTER_WINDOW_S:
             camp = "camp adverse" if progress(shooter.team, last[3].x) > PITCH_LENGTH_M / 2.0 else "propre camp"
             self.count["tirs de contre, récupération " + camp] += 1
+
+    def on_shot_context(self, shooter: PlayerState, goal: Vec2, keeper: PlayerState | None, opponents) -> None:
+        """Au tir (ticket v2-realisme/03b) : chance du tir (`shot_probability`) et position du gardien adverse, à l'écart de la
+        bissectrice de l'angle ballon-poteaux et de son point visé (`gardien.placement`). Lecture seule."""
+        self.stats["chance du tir (shot_probability)"].add(shot_probability(shooter, goal, keeper, opponents))
+        if keeper is None:
+            return
+        direction = bisector_direction(shooter.position, goal)
+        offset = keeper.position - shooter.position
+        off_line = abs(offset.x * direction.y - offset.y * direction.x)  # distance du gardien à la droite bissectrice
+        self.stats["gardien au tir : écart à la bissectrice (m)"].add(off_line)
+        self.stats["gardien au tir : écart à la bissectrice sous le seuil (part)"].add(
+            1.0 if off_line <= BISECTOR_TOLERANCE_M else 0.0)
+        self.stats["gardien au tir : écart au point visé (m)"].add(
+            keeper.position.distance_to(bisector_point(keeper, shooter.position)))
 
     def on_trigger(self) -> None:
         self.count["pressings d'équipe déclenchés"] += 1
