@@ -44,3 +44,9 @@ Temps machine, non compté : suite complète (environ 40 min) ; mesure 50 matchs
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+
+## Reprises du 05a (réserves de l'expert, 08/11/2026)
+
+- **A2** : allumer `SHOT_FLIGHT_RESOLUTION` et retirer du jeu ouvert la branche `attempt_shot` / `shot_for` / `classify_unscored` ; test de garde sans monkeypatch de l'interrupteur.
+- **A3** : `OccasionTracker.update` ferme l'occasion sur l'issue provisoire « en vol » : la fermer quand l'issue se décide sur la ligne (ou relire l'issue définitive) ; `measure_v2` doit compter les tirs depuis la trace, plus par `attempt_shot`. Test : un tir en vol qui marque donne une occasion d'issue « tir : but ».
+- **À surveiller** : le tir est freiné comme une passe (environ 15 m/s à l'arrivée d'un tir de 30 m), ce qui donne au gardien plus de temps qu'en réalité tant que le 35a n'est pas livré.

@@ -275,6 +275,18 @@ def classify_unscored(shooter: PlayerState, goal: Vec2, keeper: PlayerState | No
     return OVER if TIR.random() < over_share else WIDE
 
 
+def draw_shot_error(shooter: PlayerState, goal: Vec2, opponents: list[PlayerState]) -> tuple[float, float] | None:
+    """Tir en vol (ticket v2-realisme/05a) : écarts d'angle tirés au départ, en largeur (rad, autour de l'axe vers le centre
+    du but) et en hauteur (rad, autour de la visée à `SHOT_AIM_HEIGHT_M`) ; `None` pour un tir dévissé. Mêmes lois que
+    `classify_unscored` (35b), sans tirage du but : l'issue se lit sur la ligne. Dévissé : `SHANK_SHARE` x (écart
+    relatif)² des tirs hors du cadre, soit la même part des tirs ratés qu'au 35b."""
+    sigma = shot_error_sigma(shooter, goal, opponents)
+    wide, high = on_target_axes(shooter, goal, opponents)
+    if TIR.random() < SHANK_SHARE * (sigma / SHOT_ERROR_SIGMA_RAD) ** 2 * (1.0 - wide * high):
+        return None
+    return TIR.gauss(0.0, sigma), TIR.gauss(0.0, sigma)
+
+
 def shank_velocity(shooter: PlayerState, goal: Vec2, shot_speed: float) -> Vec2:
     """Vitesse d'un tir dévissé : lente, tournée de `SHANK_ANGLE_DEG` de l'axe du but, d'un côté tiré au hasard."""
     turn = math.radians(TIR.uniform(*SHANK_ANGLE_DEG)) * (1.0 if TIR.random() < 0.5 else -1.0)

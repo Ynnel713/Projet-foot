@@ -15,7 +15,7 @@ from dataclasses import dataclass, replace
 
 from ligue1sim.clubs import Club
 from ligue1sim.lineup import Lineup, pick_best_formation
-from ligue1sim.pitch_geometry import GOAL_WIDTH_M
+from ligue1sim.pitch_geometry import GOAL_HEIGHT_M, GOAL_WIDTH_M
 
 from v2engine.attributes import player_attribute
 from v2engine.anticipation import pass_readers, reaction_delay_s
@@ -38,8 +38,8 @@ from v2engine.added_time import GRACE_S, HARD_STOP_S, added_minutes, played_minu
 from v2engine.roles import role_of
 from v2engine.restart import (AERIAL_LANDING_M, AERIEN, CORNER, FREE_KICK, LONG_RESTART_M, PENALTY, PENALTY_CONVERSION, SOL,
                               award, exit_point, foul_restart, is_aerial, kickoff, restart_target)
-from v2engine.shooting import (HELD, OVER, PARRIED, SHANKED, TIPPED, WIDE, attempt_shot, classify_unscored,
-                               draw_blocker, occasion_quality, parry_velocity, save_outcome, shank_velocity,
+from v2engine.shooting import (HELD, OVER, PARRIED, SHANKED, SHOT_AIM_HEIGHT_M, TIPPED, WIDE, attempt_shot,
+                               classify_unscored, draw_blocker, draw_shot_error, occasion_quality, parry_velocity, save_outcome, shank_velocity,
                                shot_probability)
 from v2engine.situation import SituationTracker
 from v2engine.transition import TransitionPlay
@@ -56,6 +56,12 @@ SHOT_SPEED_MPS = MAX_PASS_MPS
 # 35b (`shooting.classify_unscored`), selon la note du tireur, la pression et la distance, plus par une part fixe.
 SHOT_WIDE_M = (0.5, 5.0)
 SHOT_DEFLECTION_DEG = 60.0  # tir contré : déviation maximale (ticket 33, ordre de grandeur, réel non trouvé)
+# Tir en vol (ticket v2-realisme/05a, validé par délégation le 08/11/2026) : le ballon part vers son point d'arrivée
+# (axe du but + écart d'exécution du 35b) et l'issue se lit au franchissement de la ligne : but entre les poteaux et
+# sous la barre, sortie de but sinon. Coupé par défaut : sans l'arrêt du gardien (v2-realisme/05b), tout tir cadré
+# entrerait (environ un tir sur trois). Le 05b l'allume.
+SHOT_FLIGHT_RESOLUTION = False
+SHOT_FLYING = "en vol"  # issue provisoire d'un tir en vol dans la trace, remplacée sur la ligne
 # Origine d'un tir (ticket v2-collectif/28b, trace seulement, sans effet sur le jeu ; ordres de grandeur validés par
 # délégation) : le tireur a « dribblé » s'il a porté le ballon plus de `DRIBBLE_ORIGIN_M` depuis son contrôle ; une
 # passe reçue est « en profondeur » si elle a fait gagner au moins `DEEP_ORIGIN_M` vers le but, « en retrait » si elle
@@ -216,6 +222,7 @@ def _whistle(ball: BallState, event: FoulEvent, players: list[PlayerState], now_
     ball.restart = foul_restart(victim_team, Vec2(event.x, event.y), players, now_s)
     ball.advantage, ball.set_piece = None, None
     ball.holder, ball.velocity, ball.shot_for, ball.dribble = None, Vec2(0.0, 0.0), None, None
+    ball.shot_flight = None
     ball.receiver, ball.readers, ball.released_by, ball.plan = None, {}, None, None
     ball.mode, ball.aerial_left_m = SOL, 0.0
     ball.pass_from, ball.rebound, ball.shot_wide = None, False, False
@@ -299,6 +306,17 @@ def _shot_origin(ball: BallState, shooter: PlayerState, set_piece: bool) -> str:
     if came is None or came[0] != shooter.name:
         return "récupération"
     return "dribble" if shooter.position.distance_to(came[2]) > DRIBBLE_ORIGIN_M else came[1]
+
+
+def _shank(ball: BallState, shooter: PlayerState, goal: Vec2, now_s: float) -> None:
+    """Tir dévissé (ticket v2-collectif/35b) : ballon lent, très écarté, libre ; le tireur ne le rejoue pas aussitôt, et
+    c'est lui le dernier toucheur si le ballon sort."""
+    ball.holder = None
+    ball.velocity = shank_velocity(shooter, goal, SHOT_SPEED_MPS)
+    ball.position = clamp_to_pitch(shooter.position + ball.velocity.normalized() * CONTROL_RADIUS_M)
+    ball.last_toucher = shooter.name
+    ball.control_ban_until_s[shooter.name] = now_s + MISS_RETRY_S
+    ball.released_by, ball.receiver, ball.readers, ball.last_pass_team = None, None, {}, shooter.team
 
 
 def _play_penalty(ball: BallState, taker: PlayerState, players: list[PlayerState],
@@ -516,6 +534,23 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                 ball.control_ban_until_s[blocker.name] = now_s + MISS_RETRY_S
                 ball.released_by, ball.receiver, ball.readers, ball.last_pass_team = None, None, {}, holder.team
                 return None
+            if SHOT_FLIGHT_RESOLUTION:
+                error = draw_shot_error(holder, goal, opponents)
+                if error is not None:
+                    # Tir en vol (ticket v2-realisme/05a) : aucun tirage du but ici, l'issue se lit sur la ligne.
+                    # ponytail : personne ne touche le ballon en route ; arrêt et contre physiques avec 05b et 05c.
+                    record(SHOT_FLYING)
+                    axis = (goal - holder.position).normalized()
+                    c, s = math.cos(error[0]), math.sin(error[0])
+                    ball.holder = None
+                    ball.velocity = Vec2(axis.x * c - axis.y * s, axis.x * s + axis.y * c) * SHOT_SPEED_MPS
+                    ball.shot_flight = (holder.team, shot_at, math.tan(error[1]), len(shots) - 1 if shots is not None else -1)
+                    ball.last_toucher = ball.released_by = holder.name
+                    ball.receiver, ball.readers, ball.last_pass_team = None, {}, holder.team
+                    return None
+                record(SHANKED)  # dévissé : comme au 35b
+                _shank(ball, holder, goal, now_s)
+                return None
             chance = shot_probability(holder, goal, keeper, opponents)
             scored = attempt_shot(holder, goal, keeper, opponents)
             if scored:
@@ -535,12 +570,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                 # Dévissé (ticket v2-collectif/35b) : ballon lent, très écarté, libre ; le tireur ne le rejoue pas
                 # aussitôt, et c'est lui le dernier toucheur si le ballon sort.
                 record(kind)
-                ball.holder = None
-                ball.velocity = shank_velocity(holder, goal, SHOT_SPEED_MPS)
-                ball.position = clamp_to_pitch(holder.position + ball.velocity.normalized() * CONTROL_RADIUS_M)
-                ball.last_toucher = holder.name
-                ball.control_ban_until_s[holder.name] = now_s + MISS_RETRY_S
-                ball.released_by, ball.receiver, ball.readers, ball.last_pass_team = None, None, {}, holder.team
+                _shank(ball, holder, goal, now_s)
                 return None
             if kind in (WIDE, OVER):
                 record(kind)  # au-dessus : tracé comme tel, rejoué à plat comme un tir à côté (v2-hauteur-ballon/02a)
@@ -623,6 +653,22 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
     start = ball.position
     end = ball.position + ball.velocity * dt
     out = exit_point(start, end)
+    if ball.shot_flight is not None and out is not None:
+        # Tir en vol sur la ligne (ticket v2-realisme/05a) : but s'il passe entre les poteaux et sous la barre, à la
+        # hauteur prise depuis le départ (visée + pente) ; sinon il sort comme tout ballon (sortie de but).
+        team, origin, slope, rank = ball.shot_flight
+        ball.shot_flight = None
+        line, point = out
+        height = SHOT_AIM_HEIGHT_M + origin.distance_to(point) * slope
+        between = line == "but" and abs(point.y - GOAL_CENTER_Y) < GOAL_WIDTH_M / 2.0
+        scored = between and height < GOAL_HEIGHT_M
+        if shots is not None and rank >= 0:
+            shots[rank] = replace(shots[rank], outcome="but" if scored else OVER if between else WIDE)
+        if scored:
+            _settle_advantage(ball, fouls)
+            ball.position, ball.velocity = point, Vec2(0.0, 0.0)
+            ball.restart = kickoff("away" if team == "home" else "home", players, now_s)
+            return team
     if out is not None:  # ballon sorti (ticket v2-collectif/29) : mort, remise en jeu pour l'adversaire du dernier toucheur
         line, point = out
         toucher = next((p for p in players if p.name == ball.last_toucher), None)
@@ -648,6 +694,10 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
         ball.aerial_left_m = 0.0
     if ball.aerial_left_m > 0.0:
         return None  # en l'air : personne ne le touche sur son trajet
+    if ball.shot_flight is not None:
+        if ball.velocity.length() >= BALL_STOPPED_MPS:
+            return None  # tir en vol : personne ne le touche avant la ligne (05b et 05c)
+        ball.shot_flight = None  # ponytail : tir mort avant la ligne (59 m de course à 30 m/s), rendu au jeu, issue « en vol »
     aerial = ball.mode == AERIEN  # ballon qui retombe d'une passe en l'air : un centre, pour l'origine d'un tir
     ball.mode = SOL
 
