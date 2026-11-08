@@ -275,6 +275,25 @@ def classify_unscored(shooter: PlayerState, goal: Vec2, keeper: PlayerState | No
     return OVER if TIR.random() < over_share else WIDE
 
 
+FLYING = "en vol"  # issue provisoire d'un tir en vol dans la trace, remplacée quand il est arrêté ou franchit la ligne
+
+# Arrêt par portée (ticket v2-realisme/05b, constantes proposées le 08/11/2026, validées par délégation du propriétaire ;
+# gardien neutre, ses notes viennent au v2-attributs-restants/03b). Quand le ballon passe au plus près de lui, le gardien
+# l'atteint si l'écart est dans sa portée à cet instant : `KEEPER_STANDING_REACH_M` sans plonger (corps et bras), puis,
+# après `KEEPER_REACTION_S`, il gagne `KEEPER_DIVE_MPS` jusqu'à `KEEPER_DIVE_REACH_M`. Ordres de grandeur, chiffres réels
+# non trouvés (temps de réaction d'un gardien sur tir, portée et durée d'un plongeon) ; réglage sur la mesure au 05h.
+KEEPER_REACTION_S = 0.25
+KEEPER_STANDING_REACH_M = 1.0
+KEEPER_DIVE_REACH_M = 2.8
+KEEPER_DIVE_MPS = 4.0
+
+
+def keeper_reach_m(elapsed_s: float) -> float:
+    """Portée latérale du gardien (m) `elapsed_s` après la frappe."""
+    dive = KEEPER_DIVE_MPS * max(0.0, elapsed_s - KEEPER_REACTION_S)
+    return min(KEEPER_DIVE_REACH_M, KEEPER_STANDING_REACH_M + dive)
+
+
 def draw_shot_error(shooter: PlayerState, goal: Vec2, opponents: list[PlayerState]) -> tuple[float, float] | None:
     """Tir en vol (ticket v2-realisme/05a) : écarts d'angle tirés au départ, en largeur (rad, autour de l'axe vers le centre
     du but) et en hauteur (rad, autour de la visée à `SHOT_AIM_HEIGHT_M`) ; `None` pour un tir dévissé. Mêmes lois que

@@ -16,6 +16,23 @@ if TYPE_CHECKING:
 
 
 @dataclass
+class ShotFlight:
+    """Tir en vol (tickets v2-realisme/05a et 05b) : `team` du tireur, `origin` le point de départ, `slope` la pente
+    verticale (tangente de l'écart en hauteur), `rank` le rang du tir dans la trace (-1 sans trace), `chance` sa chance de
+    but au départ (sert à l'issue d'un arrêt, ticket 28b), `on_target` s'il finira dans le cadre (le gardien ne va que
+    sur ceux-là), `keeper_at_m` la distance parcourue quand il passe au plus près du gardien (`None` : déjà jugé ou pas
+    de gardien), `elapsed_s` le temps de vol."""
+    team: str
+    origin: Vec2
+    slope: float
+    rank: int
+    chance: float = 0.0
+    on_target: bool = False
+    keeper_at_m: float | None = None
+    elapsed_s: float = 0.0
+
+
+@dataclass
 class BallState:
     position: Vec2
     velocity: Vec2
@@ -59,9 +76,8 @@ class BallState:
     # Tir « à côté » en route vers la ligne de but, hors du cadre (ticket v2-realisme/03k) : vrai tant que le ballon suit la
     # trajectoire du tir ; effacé dès qu'il change d'état (touché, sorti, ballon mort, nouvelle action).
     shot_wide: bool = False
-    # Tir en vol dont l'issue se lit sur la ligne (ticket v2-realisme/05a, `match.SHOT_FLIGHT_RESOLUTION`) : (équipe du
-    # tireur, point de départ, pente verticale = tangente de l'écart en hauteur, rang du tir dans la trace ou -1).
-    shot_flight: tuple[str, Vec2, float, int] | None = None
+    # Tir en vol dont l'issue se lit sur son trajet (tickets v2-realisme/05a et 05b, `match.SHOT_FLIGHT_RESOLUTION`).
+    shot_flight: ShotFlight | None = None
     # Ballon mort (ticket v2-collectif/29) : dernier joueur à l'avoir touché (il décide de la remise en jeu), remise en
     # attente tant que le ballon est mort, mode du ballon et distance qu'il doit encore parcourir en l'air avant de
     # pouvoir être touché (point de chute).

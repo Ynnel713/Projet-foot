@@ -111,6 +111,10 @@ class ShotEvent:
     quality: float
     outcome: str
     origin: str
+    # Tir en vol (ticket v2-realisme/05b) : temps de vol (s) et écart au gardien (m) quand le ballon passe au plus près de
+    # lui ; `None` si le gardien n'a pas eu à juger le tir (hors cadre, tir tiré au départ).
+    keeper_time_s: float | None = None
+    keeper_gap_m: float | None = None
 
 
 @dataclass(frozen=True)

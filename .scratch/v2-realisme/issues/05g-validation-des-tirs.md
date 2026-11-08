@@ -8,7 +8,7 @@
 
 **Attributs :** aucun
 
-**Blocked by:** 05a (Tir : le ballon part vers son point d'arrivée, le but n'est plus tiré au départ); 05b (Arrêt : le gardien atteint ou non le ballon); 05c (Contre : le défenseur touche réellement le tir); 05d (Déviation du ballon au contact d'un corps); 05e (La valeur du tir dans la décision suit la résolution physique); 01d (Banc : distance par poste, temps et distance à haute intensité, appels selon la définition sourcée).
+**Blocked by:** 05a (Tir : le ballon part vers son point d'arrivée, le but n'est plus tiré au départ); 05b (Arrêt : le gardien atteint ou non le ballon); 05c (Contre : le défenseur touche réellement le tir); 05d (Déviation du ballon au contact d'un corps); 05e (La valeur du tir dans la décision suit la résolution physique); 01d (Banc : distance par poste, temps et distance à haute intensité, appels selon la définition sourcée); 05h (Allumer le tir physique, découpé du 05b le 08/11/2026).
 
 **Bloque :** 18a, 18e.
 

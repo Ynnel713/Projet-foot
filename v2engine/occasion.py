@@ -23,7 +23,7 @@ from v2engine.geometry import Vec2
 from v2engine.movement import PlayerState, max_speed_mps
 from v2engine.offside import offside_at_pass
 from v2engine.possession import BALL_FRICTION_PER_S, BALL_STOPPED_MPS, pass_success_probability
-from v2engine.shooting import SHOOTING_RANGE_M, occasion_quality
+from v2engine.shooting import FLYING, SHOOTING_RANGE_M, occasion_quality
 from v2engine.trace import ChanceEvent, ShotEvent
 
 # Seuil de grosse occasion (ticket 28c, proposé le 08/11/2026, validé par délégation du propriétaire) : voir le ticket
@@ -138,13 +138,16 @@ class ChanceTracker:
         self.open: dict[str, _Open] = {}
         self.seen_shots = 0
         self.holder_team: str | None = None
+        self.flying: dict[str, int] = {}  # tir en vol par équipe (rang dans la trace) : issue connue plus tard (05b)
 
     def update(self, minute: float, ball: BallState, players: list[PlayerState], shots: list[ShotEvent],
                origin_of: Callable[[PlayerState], str]) -> None:
-        new_shots, self.seen_shots = shots[self.seen_shots:], len(shots)
+        first, self.seen_shots = self.seen_shots, len(shots)
+        new_shots = shots[first:]
         holder = next((p for p in players if p.name == ball.holder), None) if ball.holder is not None else None
         for team in _TEAMS:
-            shot = next((s for s in reversed(new_shots) if s.team == team), None)
+            rank = next((first + i for i in range(len(new_shots) - 1, -1, -1) if new_shots[i].team == team), None)
+            shot = shots[rank] if rank is not None else None
             danger, who = situation_danger(team, ball, players)
             state = self.open.get(team)
             if state is None and max(danger, shot.quality if shot else 0.0) >= SEQUENCE_FLOOR:
@@ -158,7 +161,13 @@ class ChanceTracker:
                 if shot.quality > state.peak:  # tir d'une première intention : sa qualité au départ
                     state.peak, state.peak_minute, state.player = shot.quality, minute, shot.player
                     state.x, state.y, state.origin = shot.x, shot.y, shot.origin
-                self._close(team, minute, "tir : " + shot.outcome, shot=True)
+                if shot.outcome == FLYING:
+                    self.flying[team] = rank  # tir en vol (ticket v2-realisme/05a) : on attend son issue
+                else:
+                    self._close(team, minute, "tir : " + shot.outcome, shot=True)
+            elif team in self.flying:
+                if shots[self.flying[team]].outcome != FLYING:
+                    self._close(team, minute, "tir : " + shots[self.flying.pop(team)].outcome, shot=True)
             elif danger < SEQUENCE_FLOOR:
                 self._close(team, minute, self._outcome(team, ball, holder, players))
         self.holder_team = holder.team if holder is not None else None
@@ -183,6 +192,7 @@ class ChanceTracker:
                                             state.y, state.peak, outcome, state.origin, shot))
 
     def close_all(self, minute: float, outcome: str = "fin de période") -> None:
+        self.flying = {}
         for team in list(self.open):
             self._close(team, minute, outcome)
         self.holder_team = None

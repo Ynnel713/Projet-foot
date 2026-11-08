@@ -14,10 +14,10 @@ from v2engine.ball_state import BallState
 from v2engine.decision import Action
 from v2engine.flux import TIR
 from v2engine.geometry import PITCH_LENGTH_M, Vec2
-from v2engine.match import GOAL_CENTER_Y, SHOT_FLYING, _step_ball
+from v2engine.match import GOAL_CENTER_Y, _step_ball
 from v2engine.movement import PlayerState
 from v2engine.restart import GOAL_KICK, KICKOFF
-from v2engine.shooting import OVER, SHOT_AIM_HEIGHT_M, WIDE, draw_shot_error, shot_error_sigma
+from v2engine.shooting import FLYING, OVER, SHOT_AIM_HEIGHT_M, WIDE, draw_shot_error, shot_error_sigma
 
 DISTANCE_M = 20.0
 
@@ -50,7 +50,7 @@ def _fly(monkeypatch, lateral_m: float, height_m: float = SHOT_AIM_HEIGHT_M):
         path.append(ball.position)
         if scored is not None or ball.restart is not None:
             break
-        assert shots[0].outcome == SHOT_FLYING and ball.shot_in_flight  # rien n'est décidé avant la ligne
+        assert shots[0].outcome == FLYING and ball.shot_in_flight  # rien n'est décidé avant la ligne
     return ball, shots, path, scored
 
 

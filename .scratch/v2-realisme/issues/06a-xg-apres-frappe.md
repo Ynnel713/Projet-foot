@@ -10,7 +10,7 @@
 
 **Lien avec l'existant :** complète `v2-collectif/28c` (étape 0) sans le modifier.
 
-**Blocked by:** 05b (Arrêt : le gardien atteint ou non le ballon); `v2-collectif/28c`.
+**Blocked by:** 05b (Arrêt : le gardien atteint ou non le ballon); `v2-collectif/28c`; 05h (Allumer le tir physique, découpé du 05b le 08/11/2026).
 
 **Bloque :** 05e, 06b.
 

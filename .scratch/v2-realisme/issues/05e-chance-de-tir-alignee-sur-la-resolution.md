@@ -8,7 +8,7 @@
 
 **Attributs :** aucun
 
-**Blocked by:** 05b (Arrêt : le gardien atteint ou non le ballon); 05c (Contre : le défenseur touche réellement le tir); 06a (xG après frappe : la qualité d'exécution mesurée).
+**Blocked by:** 05b (Arrêt : le gardien atteint ou non le ballon); 05c (Contre : le défenseur touche réellement le tir); 06a (xG après frappe : la qualité d'exécution mesurée); 05h (Allumer le tir physique, découpé du 05b le 08/11/2026).
 
 **Bloque :** 05g, 06c.
 
