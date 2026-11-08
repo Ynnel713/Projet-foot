@@ -91,7 +91,7 @@ def carry_tranche(kind: str, value: float, bins: tuple) -> str:
     low = max(b for b in bins if b <= value)
     high = next((b for b in bins if b > low), None)
     return f"{kind} [{low:g} ; {'+' if high is None else format(high, 'g')}["
-EXIT_STATES = ("tir : but", "tir : à côté", "tir : contré", "tir : repoussé", "tir : claqué", "tir : capté",
+EXIT_STATES = ("tir : but", "tir : à côté", "tir : au-dessus", "tir : dévissé","tir : contré", "tir : repoussé", "tir : claqué", "tir : capté",
                "rebond sans tir récent", "passe ou centre", "autre")
 TRANSITIONS = (TRANSITION_OFFENSIVE, TRANSITION_DEFENSIVE)
 CROWDED_M = 5.0  # regroupement : coéquipier à moins de 5 m, hors duel (ticket 06)

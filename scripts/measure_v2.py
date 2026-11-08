@@ -235,6 +235,8 @@ def report(c: Collector, detail: bool = False) -> dict:
         "tirs cadrés (part)": sum(k["tirs : " + o] for o in ("but", "capté", "repoussé", "claqué")) / max(1, k["tirs tracés"]),
         "tirs contrés (part)": k["tirs : contré"] / max(1, k["tirs tracés"]),
         "tirs à côté (part)": k["tirs : à côté"] / max(1, k["tirs tracés"]),
+        "tirs au-dessus (part)": k["tirs : au-dessus"] / max(1, k["tirs tracés"]),  # ticket v2-collectif/35b
+        "tirs dévissés (part)": k["tirs : dévissé"] / max(1, k["tirs tracés"]),
         "conversion des tirs (part)": k["tirs : but"] / max(1, k["tirs tracés"]),
         "buts dans la surface (part)": k["buts dans la surface"] / max(1, k["tirs : but"]),
         "qualité moyenne de l'occasion": k["qualité des occasions (somme)"] / max(1, k["tirs tracés"]),

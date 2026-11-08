@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import math
 
-from ligue1sim.pitch_geometry import GOAL_WIDTH_M
+from ligue1sim.pitch_geometry import GOAL_HEIGHT_M, GOAL_WIDTH_M
 
 from v2engine.attributes import duel_probability, player_attribute, success_probability
 from v2engine.flux import TIR
@@ -209,6 +209,78 @@ def block_probability(shooter: PlayerState, goal: Vec2, opponents: list[PlayerSt
 def draw_blocker(shooter: PlayerState, goal: Vec2, opponents: list[PlayerState]) -> PlayerState | None:
     """Le défenseur qui contre ce tir-ci, ou `None` s'il passe (un tirage par défenseur de la ligne)."""
     return next((o for o, chance in _blockers(shooter, goal, opponents) if TIR.random() < chance), None)
+
+
+# Cadrage du tir (ticket v2-collectif/35b, constantes proposées le 08/11/2026, validées par délégation du propriétaire).
+# Le tireur vise le centre du but, à `SHOT_AIM_HEIGHT_M` du sol ; le ballon s'en écarte d'un angle gaussien (écart-type
+# `SHOT_ERROR_SIGMA_RAD`, le même en largeur et en hauteur) : il est cadré s'il reste entre les poteaux et sous la barre,
+# à la distance du tir. Ce ticket ne change PAS la chance de but (`shot_probability`, déjà portée par Finishing ou Long Shots
+# et la pression) : il décompose le tir non converti en cadré (arrêté), à côté, au-dessus ou dévissé, avec
+# P(but) = P(cadré) x P(but | cadré). La note et la pression jouent donc une seule fois sur le but ; elles règlent ici
+# l'écart du ballon, donc la part de tirs ratés. Réel : 37,6 % des tirs cadrés en moyenne (CIES Football Observatory,
+# données InStat 2018-19), précision plus faible à grande distance ; part de tirs cadrés par distance, écart d'angle
+# du tireur et part de dévissés : non trouvés. Écart d'angle réglé sur le repère de 30 à 35 % de tirs cadrés (28b) : 0,18 rad (10°) donne 32,2 % sur 798 tirs
+# de 16 matchs, 26 % à côté, 21 % au-dessus, 2,4 % dévissés (grille de 0,08 à 0,24 rad et 0,6 à 1,22 m de hauteur de visée
+# dans `.scratch/v2-collectif/mesures/35b-calib.py`) ;
+# pression : écart augmenté de `SHOT_ERROR_PRESSURE_GAIN` x la pénalité de pression (0 à 0,4, Composure comprise) ;
+# dévissé : `SHANK_SHARE` des tirs ratés pour un tireur moyen sans pression, proportionnel au carré de l'écart (donc
+# plus fréquent à note basse et sous pression, jamais nul), ballon à `SHANK_SPEED_SHARE` de la vitesse du tir, parti
+# à `SHANK_ANGLE_DEG` de l'axe du but d'un côté tiré au hasard (parfois en touche). Les tirs au-dessus ne prennent leur
+# vraie trajectoire qu'avec `v2-hauteur-ballon/02a` : l'issue est tracée, rejouée à plat comme un tir à côté.
+CADRE, WIDE, OVER, SHANKED = "cadré", "à côté", "au-dessus", "dévissé"
+SHOT_ERROR_SIGMA_RAD = 0.18
+SHOT_AIM_HEIGHT_M = 1.0  # visée à 1 m du sol (coins bas, ballon rasant ; hauteur de visée réelle non trouvée)
+SHOT_ERROR_PRESSURE_GAIN = 1.0
+SHANK_SHARE = 0.04
+SHANK_SPEED_SHARE = 0.4
+SHANK_ANGLE_DEG = (40.0, 90.0)
+
+
+def shot_error_sigma(shooter: PlayerState, goal: Vec2, opponents: list[PlayerState]) -> float:
+    """Écart-type (rad) de l'écart du ballon à la visée : plus petit pour une bonne note, plus grand sous pression."""
+    skill = (duel_probability(shooting_note(shooter), _NEUTRAL_KEEPER_RATING) / 0.5) ** SHOOTER_SKILL_EXPONENT
+    pressure = shot_pressure(shooter, goal, opponents) * shot_composure_factor(shooter)
+    return SHOT_ERROR_SIGMA_RAD * (1.0 + SHOT_ERROR_PRESSURE_GAIN * pressure) / skill
+
+
+def _inside(half_angle: float, sigma: float) -> float:
+    """Chance qu'un écart gaussien d'écart-type `sigma` reste dans ±`half_angle`."""
+    return math.erf(half_angle / (sigma * math.sqrt(2.0)))
+
+
+def on_target_axes(shooter: PlayerState, goal: Vec2, opponents: list[PlayerState]) -> tuple[float, float]:
+    """Chance de rester entre les poteaux et chance de rester sous la barre (visée au centre du but, à `SHOT_AIM_HEIGHT_M`).
+    Vers le bas, le sol ne fait pas rater le cadre : seul l'écart vers le haut compte pour la hauteur."""
+    low, high, _ = _goal_angle(shooter.position, goal)
+    sigma = shot_error_sigma(shooter, goal, opponents)
+    height = math.atan2(GOAL_HEIGHT_M - SHOT_AIM_HEIGHT_M, shooter.position.distance_to(goal))
+    return _inside((high - low) / 2.0, sigma), 0.5 * (1.0 + _inside(height, sigma))
+
+
+def classify_unscored(shooter: PlayerState, goal: Vec2, keeper: PlayerState | None,
+                      opponents: list[PlayerState]) -> str:
+    """Issue d'un tir non contré qui n'a pas marqué : `CADRE` (le gardien l'arrête), `WIDE`, `OVER` ou `SHANKED`. Tirage
+    conditionnel au non-but : P(cadré sans but) = (cadré - but) / (1 - but)."""
+    chance = shot_probability(shooter, goal, keeper, opponents)
+    wide, high = on_target_axes(shooter, goal, opponents)
+    on_target = max(wide * high, chance)
+    if TIR.random() < (on_target - chance) / (1.0 - chance):
+        return CADRE
+    sigma_ratio = shot_error_sigma(shooter, goal, opponents) / SHOT_ERROR_SIGMA_RAD
+    if TIR.random() < SHANK_SHARE * sigma_ratio ** 2:
+        return SHANKED
+    # ponytail: ballon raté en largeur ou en hauteur, part des deux axes supposée indépendante ; vraie hauteur avec
+    # v2-hauteur-ballon/02a
+    over_share = (1.0 - high) / max(1e-9, (1.0 - wide) + (1.0 - high))
+    return OVER if TIR.random() < over_share else WIDE
+
+
+def shank_velocity(shooter: PlayerState, goal: Vec2, shot_speed: float) -> Vec2:
+    """Vitesse d'un tir dévissé : lente, tournée de `SHANK_ANGLE_DEG` de l'axe du but, d'un côté tiré au hasard."""
+    turn = math.radians(TIR.uniform(*SHANK_ANGLE_DEG)) * (1.0 if TIR.random() < 0.5 else -1.0)
+    axis = (goal - shooter.position).normalized()
+    return Vec2(axis.x * math.cos(turn) - axis.y * math.sin(turn),
+                axis.x * math.sin(turn) + axis.y * math.cos(turn)) * (shot_speed * SHANK_SPEED_SHARE)
 
 
 # Issue d'un tir cadré arrêté (ticket v2-collectif/28b, constantes proposées le 05/11/2026, validées par délégation du

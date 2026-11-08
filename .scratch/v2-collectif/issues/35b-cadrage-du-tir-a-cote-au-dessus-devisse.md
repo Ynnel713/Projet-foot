@@ -10,15 +10,41 @@
 
 **Bloque :** 35c, 22c.
 
-**Status:** à faire (constantes à proposer avant le code)
+**Status:** livré (08/11/2026), validé expert + QC
 
 **Hors de ce ticket :** pied fort et pied faible (`v2-attributs-restants/04a`, qui s'applique ensuite à chacun de ces gestes) ; choix du geste (placée, enroulée, `v2-attributs-restants/10a`).
 
 ## Acceptance criteria
 
-- [ ] Constantes et chiffres réels (sourcés ou « non trouvé ») validés par le propriétaire avant le code
-- [ ] Scène contrôlée : un tireur à note basse met plus de tirs à côté qu'un tireur à note haute, à même endroit ; la pression augmente les tirs non cadrés
-- [ ] Dévissé : rare, plus fréquent à note basse et sous pression ; jamais pour 0 %
-- [ ] En match : tirs cadrés 30-35 % des tirs (repère du 28b), à côté et au-dessus rapportés ; `SHOT_WIDE_SHARE` retiré
-- [ ] Rayon des attributs conforme à `docs/CARTE_ATTRIBUTS_V2.md`, sans double comptage ; test de rayon à jour
-- [ ] Déterminisme à graine fixée ; suite V2 verte ; V1 inchangée
+- [x] Constantes et chiffres réels (sourcés ou « non trouvé ») validés par le propriétaire avant le code (proposées par Claude le 08/11/2026, validées par délégation ; l'écart d'angle a ensuite été réglé par mesure, 0,11 proposé puis 0,18 rad retenu, voir Comments)
+- [x] Scène contrôlée : un tireur à note basse met plus de tirs à côté qu'un tireur à note haute, à même endroit ; la pression augmente les tirs non cadrés (`test_a_low_note_misses_the_frame_more_often_than_a_high_note_from_the_same_spot`, `test_pressure_increases_the_shots_off_the_frame`)
+- [x] Dévissé : rare, plus fréquent à note basse et sous pression ; jamais pour 0 % (`test_shanked_shots_are_rare_never_zero_and_commoner_with_a_low_note_or_under_pressure` ; 2,4 % des tirs en match)
+- [x] En match : tirs cadrés 30-35 % des tirs (repère du 28b), à côté et au-dessus rapportés ; `SHOT_WIDE_SHARE` retiré (48 matchs : cadrés 32,4 %, à côté 26,1 %, au-dessus 20,9 %, dévissés 2,4 %)
+- [x] Rayon des attributs conforme à `docs/CARTE_ATTRIBUTS_V2.md`, sans double comptage ; test de rayon à jour (Finishing et Long Shots restent lus par `shooting` seul ; la chance de but n'est pas modifiée, le cadrage décompose P(but) = P(cadré) x P(but | cadré) ; carte mise à jour, `test_v2engine_rayon_attributs` inchangé et vert)
+- [x] Déterminisme à graine fixée ; suite V2 verte ; V1 inchangée (`measure_v2 2` deux fois, identique hors temps de calcul : `35b-det1.txt`, `35b-det2.txt` ; suite complète 2 567 passés, 14 désélectionnés, 34 min 18 s ; attendu 2 559 + 8 nouveaux tests ; aucun fichier V1 ni protégé touché)
+- [x] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (voir Comments et `docs/agents/suivi-estimations.md`)
+
+## Estimation
+
+| Poste | Durée |
+|---|---|
+| Analyse et compréhension du code | 20 min |
+| Développement | 45 min |
+| Tests unitaires et comportementaux | 35 min |
+| Intégration et vérifications | 30 min |
+| **Total (travail effectif)** | **2 h 10** |
+
+Confiance : moyenne. Hypothèses : la chance de but reste telle quelle ; seul le tir non converti est décomposé.
+Temps machine, non compté : suite complète (34 min), deux séries de 24 matchs, calibration hors ligne (16 matchs), déterminisme.
+
+## Comments
+
+- 08/11/2026 : **Constantes** (proposées par Claude avant le code, validées par délégation du propriétaire ; chiffres réels : 37,6 % de tirs cadrés en moyenne et précision plus faible à grande distance, CIES Football Observatory, données InStat 2018-19 ; effet de la pression : StatsBomb, 14 % de buts sans pression contre 7 % sous pression ; part par distance, écart d'angle du tireur, hauteur de visée et part de dévissés : non trouvés, ordres de grandeur). `SHOT_ERROR_SIGMA_RAD` **0,18 rad** (proposé à 0,11 avant le code, réglé par mesure : voir plus bas), `SHOT_AIM_HEIGHT_M` 1,0 (ajoutée : un modèle symétrique en hauteur donnait 35 % de tirs au-dessus contre 15 % à côté), `SHOT_ERROR_PRESSURE_GAIN` 1,0 (écart + 40 % au plus), `SHANK_SHARE` 0,04 des tirs ratés, `SHANK_SPEED_SHARE` 0,4, `SHANK_ANGLE_DEG` 40 à 90.
+- 08/11/2026 : **Réalisé.** `v2engine/shooting.py` (`shot_error_sigma`, `on_target_axes`, `classify_unscored`, `shank_velocity`, issues `CADRE`, `WIDE`, `OVER`, `SHANKED`), `v2engine/match.py` (`SHOT_WIDE_SHARE` retirée ; dévissé : ballon libre et lent, tireur sans reprise immédiate ; au-dessus : tracé comme tel, rejoué à plat comme un tir à côté), `scripts/measure_v2.py` et `scripts/v2_indicators.py` (indicateurs « tirs au-dessus » et « tirs dévissés », états de sortie), `docs/CARTE_ATTRIBUTS_V2.md`, tests : nouveau `tests/test_v2engine_cadrage_tir.py` (8 tests), cinq tests existants adaptés (le monkeypatch de `SHOT_WIDE_SHARE` devient celui de `classify_unscored` ; un test rendu indépendant du tirage de l'arrêt).
+- 08/11/2026 : **Principe.** Le but est tiré d'abord, comme avant (`shot_probability`, inchangée) : le nombre de buts ne bouge pas par construction. Le tir non converti est ensuite réparti : cadré (arrêté par le gardien) avec la probabilité (cadré - but) / (1 - but), puis dévissé, puis au-dessus ou à côté selon que l'écart est en hauteur ou en largeur (écart gaussien en angle, vers le bas le sol ne fait pas rater). Finishing ou Long Shots et la pression jouent donc une seule fois sur le but et règlent ici l'écart du ballon.
+- 08/11/2026 : **Mesure (48 matchs en deux séries de 24, graines 0 à 23 et 100 à 123 ; avant = `04d-apres.json`, 20 matchs).** Tirs cadrés 30,8 % → 32,4 % ; à côté 49,7 % → 26,1 % ; au-dessus 0 → 20,9 % ; dévissés 0 → 2,4 % ; contrés 19,5 % → 18,1 %. Arrêts par match 11,8 → 11,0 et 13,4 ; sorties de but 19,6 → 18,3 et 19,5 ; corners 10,9 → 10,0 et 11,3. **Alerte levée** : la première série donnait 8,1 % de conversion et 3,75 buts par match (5,5 % et 2,55 avant) ; la seconde 5,6 % et 2,79, au niveau de toutes les séries précédentes (5,5 à 6,6 %) : bruit d'échantillon, la chance de but n'a pas changé. Premier modèle (visée à mi-hauteur, écart symétrique, 0,11 rad) rejeté par la mesure : 27,5 % de cadrés et 35 % de tirs au-dessus.
+- 08/11/2026 : **Calibration hors ligne** (`.scratch/v2-collectif/mesures/35b-calib.py`, 798 tirs de 16 matchs, grille de 0,08 à 0,24 rad et de 0,6 à 1,22 m) : 0,18 rad et visée à 1 m donnent 32,2 % de cadrés, 26,4 % à côté, 20,8 % au-dessus, 2,4 % dévissés ; confirmé en match (32,4 %).
+- 08/11/2026 : **Limites.** (1) La répartition à côté / au-dessus (56 / 44 % des ratés) sort du modèle, aucun chiffre réel trouvé. (2) Aucune différence de pied (pied fort et faible : `v2-attributs-restants/04a`), ni difficulté d'arrivée du ballon (34b, 34c) : le cadrage ne lit que la note, la pression et la distance. (3) Le tir au-dessus est rejoué à plat (ballon vers un point hors des poteaux) jusqu'à `v2-hauteur-ballon/02a`. (4) Le côté du tir à côté et du dévissé est tiré au hasard. (5) Un tir dévissé est un ballon libre ordinaire : il n'est pas protégé de la sortie du gardien ni des joueurs (pas de drapeau `shot_wide`).
+- 08/11/2026 : **Durée** : estimée 2 h 10 (130 min ; 20/45/35/30), réelle environ 2 h 50 (170 min ; 25/55/35/55, non chronométrée), écart environ + 31 % : le premier modèle (symétrique en hauteur) a été rejeté par la mesure, d'où un modèle corrigé, une calibration hors ligne et une seconde série de 24 matchs pour lever l'alerte sur la conversion. Temps machine, hors total : deux séries de 24 matchs (environ 20 min chacune en 8 lots), calibration (environ 25 min), déterminisme (environ 8 min), suite complète 34 min 18 s.
+- 08/11/2026 : **Clôture.** Expert : `APPROVED_WITH_RESERVATIONS` (empreinte 28c79bfe…). QC (`valider-etape`) : `VALIDÉ`. Décision de clôture : `VALIDÉ`. Suite complète sur l'état final : 2 567 passés, 14 désélectionnés (34 min 18 s). Réserves de l'expert, **acceptées par le propriétaire le 08/11/2026** (« Accepter A1, A2 et A3 ») : **A1** (tir au-dessus rejoué à plat comme un tir à côté, environ 21 % des tirs ; à reprendre avec `v2-hauteur-ballon/02a` : trajectoire de `OVER` au-dessus de la barre, test « un `OVER` passe au-dessus de la hauteur de barre à la ligne ») ; **A2** (constantes finales réglées par mesure après le code : 0,18 rad, visée à 1 m, 0,04, 0,4, 40 à 90° ; le propriétaire en est informé) ; **A3** (vérifier buts et conversion sur la prochaine série de 50 matchs, 05a ou 04e : environ 3,0 buts par match et 5,5 à 6,6 % ; un écart persistant rouvrirait l'analyse). À surveiller : à la livraison du pied fort et faible (`v2-attributs-restants/04a`) et des difficultés d'arrivée (34b, 34c), `shot_error_sigma` est le point d'entrée, sans addition à la chance de but. Facultatifs, non traités (ils rouvriraient la revue) : docstring de `v2engine/trace.py:103` à compléter par « au-dessus » et « dévissé », espace manquante dans `EXIT_STATES` (`scripts/v2_indicators.py:94`), `ball.rebound` non posé sur un tir dévissé. Réserves du QC : mêmes points (procédure des constantes, docstring, espace).
+- 08/11/2026 : **Second passage de clôture.** La première clôture listait aussi le ticket, `docs/PLAN_V2.md`, `docs/INDICATEURS_V2.md` et `docs/agents/suivi-estimations.md` parmi les fichiers revus ; or ils changent après la clôture (statut, commentaires) et rouvriraient la revue au moment du commit. Liste réduite au code, aux tests, à `docs/CARTE_ATTRIBUTS_V2.md` et à `CLAUDE.md`. Code et tests inchangés, nouvel avis de l'expert (empreinte d0d772b5…) : `APPROVED_WITH_RESERVATIONS`, mêmes réserves A1, A2 et A3, déjà acceptées par le propriétaire ; QC inchangé (`VALIDÉ`). Décision de clôture : `VALIDÉ`.

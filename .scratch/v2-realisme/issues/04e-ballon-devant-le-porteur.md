@@ -43,3 +43,11 @@ Temps machine, non compté : suite complète (environ 40 min) ; mesure 20 matchs
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+- [ ] Reprise 04d A2 : vitesse moyenne balle au pied par tranche de Dribbling (Pace égal) ajoutée au banc (`v2_indicators.py` ou `--profil Dribbling`), relevée avant et après le ticket
+- [ ] Reprise 04d A1 : série de 50 matchs (tirs de près par équipe, distance au but des tirs, buts) comparée à la fourchette de `docs/INDICATEURS_V2.md` ; `CONTACT_SLOWDOWN` (0,15) proposé au propriétaire pour recalage (0,08 à 0,10) si les tirs de près en sortent
+
+## Reprises du 04d (réserves de l'expert acceptées le 08/11/2026)
+
+- **A1** : le joueur moyen ralentit d'environ 10 % en pratique (80 % des intervalles de conduite ont une gêne ≥ 0,5, adversaire à moins de 2,5 m), alors que le 04d visait à ne pas le déplacer. Sur 20 matchs : tirs de près par équipe 4,98 → 4,30, buts 2,95 → 2,55 (dans le bruit). La touche de balle du 04e change la conduite : la mesure à 50 matchs se fait ici, avant tout calage de constante.
+- **A2** : le critère « Dribbling 99 contre 11, même Pace : vitesse moyenne balle au pied plus élevée » du 04d n'est vérifié que par un test de scène ; aucun indicateur du banc ne le mesure en match.
+- Facultatif (A3) : renforcer deux tests du 04d (`test_high_dribbling_covers_more_ground_than_low_at_the_same_pace` a une assertion tautologique ; `test_a_slower_carry_reaches_less_free_space` accepte `slow is None`).

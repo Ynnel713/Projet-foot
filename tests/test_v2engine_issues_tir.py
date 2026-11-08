@@ -61,7 +61,7 @@ def test_tipped_save_goes_behind_the_line_for_a_corner(monkeypatch) -> None:
     monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression, dt: False)
     monkeypatch.setattr("v2engine.match.choose_action", lambda *args: Action("shot", 1.0))
     monkeypatch.setattr("v2engine.match.attempt_shot", lambda *args: False)
-    monkeypatch.setattr("v2engine.match.SHOT_WIDE_SHARE", 0.0)
+    monkeypatch.setattr("v2engine.match.classify_unscored", lambda *args: "cadré")
     monkeypatch.setattr("v2engine.match.save_outcome", lambda *args: TIPPED)
     shots = []
     for i in range(40):
@@ -79,7 +79,7 @@ def test_parried_ball_stays_live_and_the_keeper_does_not_hold_it(monkeypatch) ->
     monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression, dt: False)
     monkeypatch.setattr("v2engine.match.choose_action", lambda *args: Action("shot", 1.0))
     monkeypatch.setattr("v2engine.match.attempt_shot", lambda *args: False)
-    monkeypatch.setattr("v2engine.match.SHOT_WIDE_SHARE", 0.0)
+    monkeypatch.setattr("v2engine.match.classify_unscored", lambda *args: "cadré")
     monkeypatch.setattr("v2engine.match.save_outcome", lambda *args: PARRIED)
     shots = []
     _step_ball(ball, 0.1, [shooter, keeper], 0.0, shots=shots)
@@ -99,7 +99,7 @@ def test_shot_trace_is_reproducible_at_fixed_seed() -> None:
         random.seed(20260923)
         runs.append(simulate_match(clubs[0], clubs[1], duration_minutes=10).shots)
     assert runs[0] == runs[1]
-    assert all(s.outcome in {"but", "à côté", "contré", HELD, PARRIED, TIPPED} for s in runs[0])
+    assert all(s.outcome in {"but", "à côté", "au-dessus", "dévissé", "contré", HELD, PARRIED, TIPPED} for s in runs[0])
 
 
 def test_a_keeper_outside_his_area_never_holds_the_ball_with_his_hands(monkeypatch) -> None:
@@ -111,7 +111,7 @@ def test_a_keeper_outside_his_area_never_holds_the_ball_with_his_hands(monkeypat
         monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression, dt: False)
         monkeypatch.setattr("v2engine.match.choose_action", lambda *args: Action("shot", 1.0))
         monkeypatch.setattr("v2engine.match.attempt_shot", lambda *args: False)
-        monkeypatch.setattr("v2engine.match.SHOT_WIDE_SHARE", 0.0)
+        monkeypatch.setattr("v2engine.match.classify_unscored", lambda *args: "cadré")
         monkeypatch.setattr("v2engine.match.save_outcome", lambda *args: HELD)
         shots = []
         _step_ball(ball, 0.1, [shooter, keeper], 0.0, shots=shots)
@@ -130,7 +130,7 @@ def _wide_shot(monkeypatch):
     monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression, dt: False)
     monkeypatch.setattr("v2engine.match.choose_action", lambda *args: Action("shot", 1.0))
     monkeypatch.setattr("v2engine.match.attempt_shot", lambda *args: False)
-    monkeypatch.setattr("v2engine.match.SHOT_WIDE_SHARE", 1.0)
+    monkeypatch.setattr("v2engine.match.classify_unscored", lambda *args: "à côté")
     monkeypatch.setattr("v2engine.match.draw_blocker", lambda *args: None)
     _step_ball(ball, 0.1, [shooter, keeper], 0.0, shots=[])
     return ball, [shooter, keeper]

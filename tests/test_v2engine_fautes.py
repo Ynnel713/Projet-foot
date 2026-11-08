@@ -172,7 +172,8 @@ def test_a_shot_during_the_advantage_settles_it_even_when_saved(monkeypatch) -> 
     monkeypatch.setattr("v2engine.match.choose_action", lambda *a, **k: Action("shot", 0.1))
     monkeypatch.setattr("v2engine.match.draw_blocker", lambda *a, **k: None)
     monkeypatch.setattr("v2engine.match.attempt_shot", lambda *a, **k: False)
-    monkeypatch.setattr("v2engine.match.SHOT_WIDE_SHARE", 0.0)  # cadré : le gardien capte
+    monkeypatch.setattr("v2engine.match.classify_unscored", lambda *args: "cadré")  # cadré : le gardien capte
+    monkeypatch.setattr("v2engine.match.save_outcome", lambda *args: "capté")  # capté, sans dépendre du tirage
     ball.next_decision_s = 0.0
     _step_ball(ball, DT, players, 10.5, fouls=fouls)
     assert ball.holder == "GK"

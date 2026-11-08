@@ -37,7 +37,8 @@ from v2engine.added_time import GRACE_S, HARD_STOP_S, added_minutes, played_minu
 from v2engine.roles import role_of
 from v2engine.restart import (AERIAL_LANDING_M, AERIEN, CORNER, FREE_KICK, LONG_RESTART_M, PENALTY, PENALTY_CONVERSION, SOL,
                               award, exit_point, foul_restart, is_aerial, kickoff, restart_target)
-from v2engine.shooting import (HELD, PARRIED, TIPPED, attempt_shot, draw_blocker, occasion_quality, parry_velocity, save_outcome,
+from v2engine.shooting import (HELD, OVER, PARRIED, SHANKED, TIPPED, WIDE, attempt_shot, classify_unscored,
+                               draw_blocker, occasion_quality, parry_velocity, save_outcome, shank_velocity,
                                shot_probability)
 from v2engine.situation import SituationTracker
 from v2engine.transition import TransitionPlay
@@ -49,11 +50,9 @@ from v2engine.trace import (BallSnapshot, DecisionRecord, FoulEvent, MatchTrace,
 _OPPONENT_GOAL = OPPONENT_GOAL
 # Vitesse d'un tir : celle de la passe la plus appuyée (pas de constante nouvelle), soit 30 m/s, 1 s pour 30 m.
 SHOT_SPEED_MPS = MAX_PASS_MPS
-# Tir non converti qui part à côté (ticket v2-collectif/29, validé par délégation le 03/11/2026) : 45 % des tirs non
-# contrés sont cadrés en Premier League (premierleague.com, 20 saisons) et environ 14 % de ceux-ci finissent au fond,
-# d'où 0,55 / 0,86 = 0,64 des tirs non convertis à côté ; les contres naissent du contact sur le trajet. Écart au
-# poteau : 0,5 à 5 m (réel non trouvé, ordre de grandeur).
-SHOT_WIDE_SHARE = 0.64
+# Tir non converti raté (ticket v2-collectif/29, validé par délégation le 03/11/2026) : écart au poteau de 0,5 à 5 m
+# (réel non trouvé, ordre de grandeur). Que le tir soit cadré, à côté, au-dessus ou dévissé se tire depuis le ticket
+# 35b (`shooting.classify_unscored`), selon la note du tireur, la pression et la distance, plus par une part fixe.
 SHOT_WIDE_M = (0.5, 5.0)
 SHOT_DEFLECTION_DEG = 60.0  # tir contré : déviation maximale (ticket 33, ordre de grandeur, réel non trouvé)
 # Origine d'un tir (ticket v2-collectif/28b, trace seulement, sans effet sur le jeu ; ordres de grandeur validés par
@@ -514,8 +513,20 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
             # peut être contré en route ; il sort (sortie de but, ou corner s'il est dévié par un défenseur). Cadré : le
             # gardien adverse le récupère (arrêts variés : ticket 28). Sans gardien identifiable (effectif synthétique),
             # le ballon reste simplement libre là où le tir a été tenté.
-            if TIR.random() < SHOT_WIDE_SHARE:
-                record("à côté")
+            kind = classify_unscored(holder, goal, keeper, opponents)
+            if kind == SHANKED:
+                # Dévissé (ticket v2-collectif/35b) : ballon lent, très écarté, libre ; le tireur ne le rejoue pas
+                # aussitôt, et c'est lui le dernier toucheur si le ballon sort.
+                record(kind)
+                ball.holder = None
+                ball.velocity = shank_velocity(holder, goal, SHOT_SPEED_MPS)
+                ball.position = clamp_to_pitch(holder.position + ball.velocity.normalized() * CONTROL_RADIUS_M)
+                ball.last_toucher = holder.name
+                ball.control_ban_until_s[holder.name] = now_s + MISS_RETRY_S
+                ball.released_by, ball.receiver, ball.readers, ball.last_pass_team = None, None, {}, holder.team
+                return None
+            if kind in (WIDE, OVER):
+                record(kind)  # au-dessus : tracé comme tel, rejoué à plat comme un tir à côté (v2-hauteur-ballon/02a)
                 side = 1.0 if TIR.random() < 0.5 else -1.0
                 wide = GOAL_WIDTH_M / 2.0 + TIR.uniform(*SHOT_WIDE_M)
                 aim = Vec2(goal.x, GOAL_CENTER_Y + side * wide)
