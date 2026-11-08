@@ -864,7 +864,7 @@ def test_target_jump_and_running_are_accumulated_per_match_only_between_two_plac
 
 # --- Gardien : issue des sorties par ballon (ticket v2-realisme/03i) -------------------------------------------------
 def _exit_ball(held_from_3s: str | None, shooter_team: str | None = None, dead: bool = False, ticks: int = 7,
-               shot_before: bool = False) -> ind.Collector:
+               shot_before: bool = False, **flags) -> ind.Collector:
     """Un ballon libre, sortie du gardien au premier instant (puis un clignotement entre placement et sortie), le ballon
     pris par `held_from_3s` à partir du 4e instant (3 s après la sortie), un tir à 2 s de `shooter_team`."""
     from dataclasses import replace
@@ -874,7 +874,7 @@ def _exit_ball(held_from_3s: str | None, shooter_team: str | None = None, dead: 
     keeper = _p("K", "home", 5.0, 34.0, poste="GK")
     players = [keeper, _p("M", "home", 30.0, 34.0), _p("A", "away", 20.0, 34.0, poste="BU")]
     for i in range(ticks):
-        ball = replace(_loose(20.0), holder=held_from_3s if i >= 3 else None, restart=Restart("corner", "away", Vec2(0.0, 0.0), None, 99.0, 0.0) if dead and i >= 3 else None)
+        ball = replace(_loose(20.0), holder=held_from_3s if i >= 3 else None, **flags, restart=Restart("corner", "away", Vec2(0.0, 0.0), None, 99.0, 0.0) if dead and i >= 3 else None)
         if i == 0 and shot_before:
             c.on_shot(_p("S", "away", 50.0, 34.0), 0.0)  # le ballon est lui-même un tir adverse
         reason = "sortie : ballon libre (...)" if i in (0, 2) else "placement : ..."  # deux épisodes d'état, un seul ballon
@@ -930,3 +930,53 @@ def test_a_masked_winning_race_is_counted_once_per_loose_ball() -> None:
         c.on_tick(float(i), players, ball, None, dt=1.0)
     assert c.count["gardien : ballons avec course gagnante masquée, coéquipier"] == 1
     assert c.count["gardien : ballons avec course gagnante masquée, battu"] == 0
+
+
+# --- Gardien : état du ballon à la sortie (ticket v2-realisme/03j) ---------------------------------------------------
+def _exit_counts(events=(), **flags) -> ind.Collector:
+    """Collecteur après une sortie à l'instant 0 et les tirs tracés `events` : (instant, équipe, issue). Aucun appel à `on_shot`,
+    comme pour un tir contré : le ballon est « hors tir » au sens du 03i."""
+    c = _exit_ball("K", **flags)
+    for second, team, outcome in events:
+        c.on_shot_event(SimpleNamespace(minute=second / 60.0, team=team, outcome=outcome, origin="passe au sol", quality=0.1,
+                                        x=50.0, y=34.0))
+    c.end_match()
+    return c
+
+
+def _exit_states(events=(), **flags) -> dict[str, int]:
+    c = _exit_counts(events, **flags)
+    states = {k.split("état : ")[1]: v for k, v in c.count.items()
+              if k.startswith("gardien : ballons avec sortie, état : ") and "ballon à 3 s" not in k}
+    assert sum(states.values()) == c.count["gardien : ballons avec sortie"] == 1  # une seule catégorie par ballon
+    assert set(states) <= set(ind.EXIT_STATES)  # chaque état est repris par le rapport
+    return states
+
+
+def test_an_exit_ball_takes_the_outcome_of_the_latest_opponent_shot_in_the_5_s_before() -> None:
+    assert _exit_states([(0.0, "away", "à côté")]) == {"tir : à côté": 1}
+    assert _exit_states([(-4.0, "away", "contré"), (-1.0, "away", "claqué")]) == {"tir : claqué": 1}  # le plus récent
+    assert _exit_states([(-3.0, "away", "but")]) == {"tir : but": 1}
+
+
+def test_an_exit_ball_ignores_own_team_and_older_shots_and_falls_back_on_the_ball_flags() -> None:
+    assert _exit_states([(0.0, "home", "à côté")]) == {"autre": 1}  # tir de l'équipe du gardien
+    assert _exit_states([(-6.0, "away", "à côté")]) == {"autre": 1}  # plus ancien que 5 s
+    assert _exit_states([(-6.0, "away", "à côté")], rebound=True) == {"rebond sans tir récent": 1}
+    assert _exit_states(receiver="M") == {"passe ou centre": 1}
+    assert _exit_states(rebound=True, receiver="M") == {"rebond sans tir récent": 1}  # le rebond prime sur la passe
+
+
+def test_an_exit_ball_accepts_a_shot_read_one_tick_late_and_not_two_and_a_held_shot_is_a_state() -> None:
+    assert _exit_states([(0.1, "away", "à côté")]) == {"tir : à côté": 1}  # tir lu un tick après la sortie (écart -0,1 s)
+    assert _exit_states([(0.2, "away", "à côté")]) == {"autre": 1}  # deux ticks : refusé
+    assert _exit_states([(0.0, "away", "capté")]) == {"tir : capté": 1}  # penalty arrêté : l'état existe
+
+
+def test_the_old_off_shot_group_is_crossed_with_the_states_and_the_corner() -> None:
+    c = _exit_counts([(0.0, "away", "contré")], rebound=True)  # `on_shot` n'a pas vu ce tir contré : « hors tir » au 03i
+    assert c.count["gardien : ballons avec sortie hors tir"] == 1
+    assert c.count["gardien : ballons avec sortie hors tir du 03i, état : tir : contré"] == 1
+    assert c.count["gardien : ballons avec sortie hors tir du 03i, état : tir : contré, corner"] == 0  # ballon pris par le gardien
+    corner = _exit_counts([(0.0, "away", "contré")], dead=True)  # le ballon sort : corner à 3 s
+    assert corner.count["gardien : ballons avec sortie hors tir du 03i, état : tir : contré, corner"] == 1

@@ -73,6 +73,12 @@ PLACEMENT_RUN_MPS = 5.0
 # gardien sur un ballon libre, et tir adverse dans les 5 s après cette sortie.
 HELD_AFTER_EXIT_S = 3.0
 SHOT_AFTER_EXIT_S = 5.0
+# État du ballon à la sortie (ticket v2-realisme/03j, définitions proposées, acceptées d'office) : le tir tracé de l'adversaire
+# dans les 5 s qui précèdent la sortie (`SHOT_AFTER_EXIT_S`, plus un tick de retard de lecture) donne l'état par son issue ;
+# à défaut, les drapeaux du ballon (`rebound`, `receiver`).
+SHOT_MATCH_LAG_S = 0.15
+EXIT_STATES = ("tir : but", "tir : à côté", "tir : contré", "tir : repoussé", "tir : claqué", "tir : capté",
+               "rebond sans tir récent", "passe ou centre", "autre")
 TRANSITIONS = (TRANSITION_OFFENSIVE, TRANSITION_DEFENSIVE)
 CROWDED_M = 5.0  # regroupement : coéquipier à moins de 5 m, hors duel (ticket 06)
 # Combinaisons (ticket v2-collectif/14, validé le 02/11/2026) : passe « sans gain » sous 5 m vers le but ; passe qui
@@ -357,6 +363,8 @@ class Collector:
         # ballon libre (03i) : épisode en cours (ni porteur ni ballon mort) avec ses courses masquées et sa première sortie
         self.free_ball: dict | None = None
         self.last_shot: dict[str, float] = {}  # équipe -> instant de son dernier tir (03i)
+        self.shot_log: list[tuple[float, str, str]] = []  # tirs tracés du match : (instant en s, équipe, issue) (03j)
+        self.exit_log: list[dict] = []  # ballons avec sortie suivis 5 s, à classer par état en fin de match (03j)
         self.exits: list[dict] = []  # premières sorties par ballon encore suivies (3 s puis 5 s) : t, équipe, gardien, tir, issue
         self.run_log: list[tuple[str, float, float, Vec2]] = []  # (joueur, début, fin, position finale)
         self.deep_runs: Counter = Counter()  # appels finis à ON_THE_LINE_M ou moins de la ligne, par joueur (16)
@@ -496,7 +504,8 @@ class Collector:
             if free is not None and free["exit"] is None:
                 since = [self.now - t for team, t in self.last_shot.items() if team != keeper.team]
                 free["exit"] = {"t": self.now, "team": keeper.team, "keeper": keeper.name, "shot": False, "held": None,
-                                "from_shot": any(0.0 <= s <= SHOT_AFTER_EXIT_S for s in since)}  # le ballon est un tir adverse
+                                "from_shot": any(0.0 <= s <= SHOT_AFTER_EXIT_S for s in since),  # le ballon est un tir adverse
+                                "rebound": bool(ball.rebound), "receiver": ball.receiver is not None}  # état du ballon (03j)
                 self.exits.append(free["exit"])
         if ball is not None and players is not None:
             self._masked_race(keeper, ball, players, state)
@@ -533,7 +542,27 @@ class Collector:
                 self.exits.remove(exit_)
                 self._count_exit(exit_)
 
+    def _exit_state(self, exit_: dict) -> str:
+        """État du ballon à la première sortie (ticket v2-realisme/03j) : issue du dernier tir de l'adversaire dans les 5 s qui
+        précèdent, sinon drapeaux du ballon (rebond, passe) ; `autre` : dégagement, déviation, ballon perdu."""
+        shots = [(t, outcome) for t, team, outcome in self.shot_log
+                 if team != exit_["team"] and -SHOT_MATCH_LAG_S <= exit_["t"] - t <= SHOT_AFTER_EXIT_S]
+        if shots:
+            return "tir : " + max(shots)[1]
+        return "rebond sans tir récent" if exit_["rebound"] else "passe ou centre" if exit_["receiver"] else "autre"
+
+    def _classify_exits(self) -> None:
+        for exit_ in self.exit_log:
+            state = self._exit_state(exit_)
+            self.count["gardien : ballons avec sortie, état : " + state] += 1
+            self.count[f"gardien : ballons avec sortie, état : {state}, ballon à 3 s : " + exit_["held"]] += 1
+            if not exit_["from_shot"]:  # croisement avec le « hors tir » du 03i (réserve A1 du 03i, critère 4 du 03j)
+                self.count["gardien : ballons avec sortie hors tir du 03i, état : " + state] += 1
+                self.count[f"gardien : ballons avec sortie hors tir du 03i, état : {state}, corner"] += exit_["held"] == "arrêt : corner"
+        self.exit_log = []
+
     def _count_exit(self, exit_: dict) -> None:
+        self.exit_log.append(exit_)
         self.count["gardien : ballons avec sortie"] += 1
         self.count["gardien : ballons avec sortie, ballon à 3 s : " + exit_["held"]] += 1
         self.count["gardien : ballons avec sortie, tir adverse dans les 5 s"] += exit_["shot"]
@@ -633,6 +662,7 @@ class Collector:
     def on_shot_event(self, event) -> None:
         """Tir tracé avec son issue et son origine (ticket v2-collectif/28b) ; `event` : `v2engine.trace.ShotEvent`."""
         self.count["tirs tracés"] += 1
+        self.shot_log.append((event.minute * 60.0, event.team, event.outcome))  # ticket v2-realisme/03j
         self.count["tirs : " + event.outcome] += 1
         self.count["tirs, origine : " + event.origin] += 1
         self.count["qualité des occasions (somme)"] += event.quality
@@ -1121,6 +1151,7 @@ class Collector:
         self.count["gardien : ballons avec sortie, non résolus en fin de match"] += len(self.exits)  # moins de 5 s de suivi
         if self.free_ball is not None:
             self._close_free_ball()
+        self._classify_exits()
         self.count["appels dans le dos"] += sum(self.deep_runs.values())
         self._combinations()
         self._reset_match()

@@ -415,3 +415,65 @@ Sur ces ballons, le gardien a le ballon 3 s après environ six fois plus souvent
 **À décider par le propriétaire (aucun réglage fait ici).** Le moteur traite un tir en vol comme un ballon libre pour le déclenchement de la sortie du gardien (`gardien.race`, 03d) : sur 71 % des ballons à sortie, le gardien « va chercher le ballon » vers son point d'arrêt au lieu de se placer pour l'arrêt. Le rapprocher de l'arrêt par portée (`v2-realisme/05b`) ou du calibrage 18e est une piste ; elle n'est pas dans le périmètre du 03i.
 
 **Déterminisme.** Deux exécutions de 2 matchs (`03i-det1.txt`, `03i-det2.txt`) : sorties identiques, hors la ligne de durée de calcul.
+
+## 14. Gardien : sorties triées par état du ballon (ticket v2-realisme/03j, 50 matchs, 08/11/2026)
+
+`uv run python -m scripts.bench_series 50 --processus 7 --json .scratch/v2-realisme/mesures/03j.json` (graine d'audit 20260923, rapport `03j.txt`), moteur du 03i (`e76ddf5`) avec les indicateurs du 03j. **Mesure seulement : aucune constante du moteur, aucun réglage du filtre de portée, de `gardien.race` ni de la sortie sur tir.** Réserve A1 de l'expert du 03i.
+
+**Définition de l'état (proposée avant le code, acceptée d'office).** Chaque ballon avec sortie reçoit un seul état, lu à sa première sortie. Le moteur ne pose `shot_for` que pour un tir qui entre ; un tir « à côté », contré ou arrêté n'a aucun drapeau propre. L'état vient donc de **l'issue du dernier tir tracé de l'adversaire** (`ShotEvent`) dans les 5 s qui précèdent la sortie (but, à côté, contré, repoussé, claqué ; l'instant du tir et celui de la sortie coïncident au tick près, écart minimal 0,0 s sur un match instrumenté) ; à défaut, par les drapeaux du ballon : `rebound` (rebond sans tir récent), `receiver` (passe ou centre), sinon « autre » (dégagement, déviation, ballon perdu). Le tir de sa propre équipe ou plus ancien que 5 s n'entre pas. Le compteur « non résolus » (réserve A2 du 03i) est ajouté au rapport : **0,0 par match**.
+
+**Nombre de ballons avec sortie par état (par match, IC 95 %).**
+
+| État du ballon à la sortie | Par match | IC 95 % | Part |
+|---|---|---|---|
+| Tir à côté | 22,26 | [20,67 ; 23,85] | 63,6 % |
+| Tir contré | 7,32 | [6,59 ; 8,05] | 20,9 % |
+| Tir claqué par le gardien | 1,80 | [1,42 ; 2,18] | 5,1 % |
+| Tir qui entre (but) | 1,10 | [0,79 ; 1,41] | 3,1 % |
+| Tir repoussé par le gardien | 0,80 | [0,55 ; 1,05] | 2,3 % |
+| Passe ou centre | 0,58 | [0,37 ; 0,79] | 1,7 % |
+| Autre (dégagement, déviation) | 1,16 | [0,89 ; 1,43] | 3,3 % |
+| Rebond sans tir récent | 0 | | 0 % |
+| **Total** | **35,02** | [32,73 ; 37,31] | 100 % |
+
+La somme des états égale les ballons avec sortie du 03i (35,02), vérifié par un test et par la mesure.
+
+**Les tirs sont 95,0 % des ballons avec sortie, pas 71 %.** Le chiffre du 03i était sous-estimé : il s'appuyait sur l'appel du banc au tir (`on_shot`), qui ne voit pas les tirs contrés (deux cas relevés sur un match instrumenté : 61 appels pour 74 événements tracés). Les 10,2 ballons « hors tir » du 03i sont pour l'essentiel des **tirs contrés** (7,3 par match). Le corner, 45,5 % de ces ballons au 03i, est expliqué : un tir contré finit en corner dans 54,9 % des cas, un tir claqué dans 96,7 %.
+
+**Croisement avec le « hors tir » du 03i (critère 4 du ticket).** Les 10,16 ballons par match que le 03i classait « hors tir » se répartissent ainsi, avec la part qui finit en corner (somme : 4,64 corners par match, soit 45,7 % ; le 03i donnait 45,5 %) :
+
+| État du ballon | Ballons « hors tir » du 03i par match | dont corner par match |
+|---|---|---|
+| Tir contré | 7,32 | 4,02 |
+| Autre (dégagement, déviation) | 1,16 | 0,32 |
+| Tir à côté | 0,66 | 0,08 |
+| Passe ou centre | 0,58 | 0,02 |
+| Tir claqué | 0,20 | 0,20 |
+| Tir qui entre | 0,14 | 0 |
+| Tir repoussé | 0,10 | 0 |
+| Tir capté, rebond sans tir récent | 0 | 0 |
+
+Les corners « hors tir » sont donc des **tirs contrés** à 87 % (4,02 sur 4,64), pas des centres ni des dégagements : les centres et les dégagements pèsent 0,34 corner par match. L'état « tir capté » est classé mais vaut 0 (un tir capté laisse le ballon au gardien, il n'y a pas de sortie).
+
+**Issue à 3 s selon l'état (agrégé sur 50 matchs).**
+
+| État | Gardien | Coéquipier | Adversaire | Encore libre | Sortie de but | Corner | But |
+|---|---|---|---|---|---|---|---|
+| Tir à côté (1 113 ballons) | 0,7 % | 0,6 % | 0,4 % | 5,8 % | **89,1 %** | 3,2 % | 0 % |
+| Tir contré (366) | 16,4 % | 1,1 % | 0 % | 26,8 % | 0,8 % | **54,9 %** | 0 % |
+| Tir claqué (90) | 0 % | 0 % | 0 % | 1,1 % | 2,2 % | **96,7 %** | 0 % |
+| Tir repoussé (40) | 0 % | 15,0 % | 7,5 % | **77,5 %** | 0 % | 0 % | 0 % |
+| Tir qui entre (55) | 0 % | 0 % | 0 % | 0 % | 0 % | 0 % | **100 %** |
+| Passe ou centre (29) | 3,4 % | 3,4 % | 3,4 % | **72,4 %** | 10,3 % | 3,4 % | 3,4 % |
+| Autre (58) | 19,0 % | 32,8 % | 17,2 % | 3,4 % | 0 % | 27,6 % | 0 % |
+
+**Ce que cela dit du gardien.**
+- **Le gardien « sort » surtout sur un tir qui s'en va.** 22,3 ballons par match sont des tirs à côté, qui finissent en sortie de but dans 89 % des cas ; le gardien a le ballon à 3 s dans 0,7 %. Ces « sorties » sont une course vers un ballon qui quitte le terrain. La part de sorties « gagnées » (4,9 % au 03g et au 03i) mélange ces 22 courses perdues d'avance avec les rares vraies sorties.
+- **Le cas visé par la réserve A1 du 03d (passe en profondeur coupée) est trop rare pour être prouvé.** « Passe ou centre » : 0,58 ballon par match (29 sur 50 matchs), « autre » 1,16 (58). À 72 % encore libre à 3 s pour les passes, aucune conclusion sur le gain du ballon n'est permise. Cette preuve ne se fera pas par le banc sur matchs entiers : une scène contrôlée (`tests/scenes.py`) ou un ticket qui force la situation est la voie.
+- **Sur « autre »** (dégagements, déviations), le gardien a le ballon à 3 s dans 19 % des cas, un coéquipier dans 33 %, l'adversaire dans 17 % : seul état où la sortie ressemble à une vraie prise de ballon (58 ballons, intervalle large).
+
+**Limites.** (1) L'état « tir » est une proximité de 5 s entre le tir tracé de l'adversaire et la sortie ; un tir dévié puis un second ballon dans la fenêtre seraient classés « tir ». (2) Un tir « à côté » peut encore être dévié en route (`ShotEvent`) : classé « à côté ». (3) « Rebond sans tir récent » vaut 0 : les drapeaux `rebound` ne servent jamais seuls. (4) Parts de l'issue à 3 s agrégées (pas d'intervalle par état) ; les états rares (passe 29, repoussé 40, but 55) ont des effectifs faibles. (5) « Passe ou centre » est lu par `receiver` seul : il mélange les passes adverses coupées et les passes de sa propre équipe vers le gardien (passe en retrait) ; 0,58 ballon par match, effectif trop faible pour les séparer, à faire par `last_pass_team` dans une prochaine mesure (réserve A2 du 03j).
+
+**À décider par le propriétaire (aucun réglage fait ici).** Le moteur traite un tir en vol comme un ballon libre pour déclencher la sortie du gardien (`gardien.race`, 03d, `loose_in_reach`) : 63,6 % des sorties sont des courses vers un tir à côté. Les candidats à écarter de ce déclencheur sont les **tirs à côté et les tirs qui entrent : 23,4 ballons par match**, les seuls dont la trajectoire est décidée au départ du tir. Les 9,9 autres tirs par match (contrés, repoussés, claqués) sont des ballons déviés, donc des seconds ballons que le gardien peut jouer (16,4 % des contrés finissent au gardien, 77,5 % des repoussés restent libres) : ils restent des ballons libres. Projection : environ 11,7 sorties par match (35,02 − 22,26 − 1,10), **à mesurer, non affirmée** ; le chiffre « environ 2 » (tous les tirs retirés) est une borne basse, qui ferait perdre au gardien le réflexe de suivre un rebond. C'est une modification de comportement du gardien, à traiter en ticket dédié (`v2-realisme/03k`) ou avec le `05b` (arrêt par portée), avec mesure avant et après sur les deux populations (tirs en vol et ballons déviés).
+
+**Déterminisme.** Deux exécutions de 2 matchs (`03j-det1.txt`, `03j-det2.txt`) : sorties identiques, hors la ligne de durée de calcul.

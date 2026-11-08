@@ -15,7 +15,7 @@ Interface : PWA React (`ui/`) + API FastAPI (`api/`) ; Streamlit (`app.py`) hist
 ## Commandes
 - API + UI : `simulafoot.bat` (uvicorn :8000, Vite :5173), ou `uv run uvicorn api.main:app --port 8000` et `npm run dev --prefix ui`.
 - Tests : `PYTHONHASHSEED=0 uv run pytest tests -q -p no:cacheprovider` (environ 40 min). Toujours via `uv run` : `pytest` nu échoue (ticket 9). Marqueur `integration` exclu par défaut (`-m integration`, ~30 min).
-- Attendu : **2 524 passés, 14 désélectionnés** (07/11/2026, ticket v2-realisme/03i).
+- Attendu : **2 528 passés, 14 désélectionnés** (08/11/2026, ticket v2-realisme/03j).
 - UI, dans `ui/` : `npm run build` (OK) et `npm run lint` (0 erreur, 5 avertissements).
 - Mesures : `scripts/measure_geometry.py` (V1, graine d'audit 20260923), `scripts/measure_v2.py` et `scripts/v2_indicators.py` (V2).
 

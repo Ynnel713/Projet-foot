@@ -30,7 +30,7 @@ import v2engine.defense as defense
 import v2engine.match as match
 from ligue1sim.lineup import pick_best_formation
 
-from scripts.v2_indicators import Collector
+from scripts.v2_indicators import EXIT_STATES, Collector
 
 AUDIT_SEED = 20260923
 HIGH, LOW = 99, 11
@@ -155,6 +155,23 @@ def run(n_matches: int, profile: str | None = None, duration_minutes: float = 90
     return collector
 
 
+def _exit_states(k, n: int) -> dict[str, float]:
+    """Ballons avec sortie par état du ballon (ticket v2-realisme/03j) : nombre par match, puis part de chaque issue à 3 s."""
+    out = {}
+    for state in EXIT_STATES:
+        key = "gardien : ballons avec sortie, état : " + state
+        out[key + " (par match)"] = k[key] / n
+        for label, held in (("au gardien", "gardien"), ("à un coéquipier", "coéquipier"), ("à l'adversaire", "adversaire"),
+                            ("encore libre", "libre"), ("sortie de but", "arrêt : sortie de but"), ("corner", "arrêt : corner"),
+                            ("engagement", "arrêt : engagement")):
+            # part non définie (None) quand aucun ballon dans cet état : elle ne pèse pas comme un zéro dans la moyenne par match
+            out[f"{key}, ballon à 3 s, {label} (part)"] = k[f"{key}, ballon à 3 s : {held}"] / k[key] if k[key] else None
+        cross = f"gardien : ballons avec sortie hors tir du 03i, état : {state}"
+        out[cross + " (par match)"] = k[cross] / n
+        out[cross + ", corner (par match)"] = k[cross + ", corner"] / n
+    return out
+
+
 def _share(k, held: str) -> float:
     """Part des ballons avec sortie (ticket v2-realisme/03i) dont l'état à 3 s est `held`."""
     return k["gardien : ballons avec sortie, ballon à 3 s : " + held] / max(1, k["gardien : ballons avec sortie"])
@@ -251,6 +268,10 @@ def report(c: Collector, detail: bool = False) -> dict:
         "gardien : ballons avec sortie, tir adverse dans les 5 s (part)":
             k["gardien : ballons avec sortie, tir adverse dans les 5 s"] / max(1, k["gardien : ballons avec sortie"]),
         "gardien : ballons avec sortie hors tir par match": k["gardien : ballons avec sortie hors tir"] / n,
+        # ticket v2-realisme/03j : par état du ballon à la sortie, nombre par match et issue à 3 s (part de l'état)
+        "gardien : ballons avec sortie, non résolus en fin de match, par match":
+            k["gardien : ballons avec sortie, non résolus en fin de match"] / n,  # réserve A2 du 03i
+        **_exit_states(k, n),
         **{f"gardien : ballons avec sortie hors tir, ballon à 3 s, {label} (part)":
            k["gardien : ballons avec sortie hors tir, ballon à 3 s : " + held] / max(1, k["gardien : ballons avec sortie hors tir"])
            for label, held in (("au gardien", "gardien"), ("à un coéquipier", "coéquipier"), ("à l'adversaire", "adversaire"),
