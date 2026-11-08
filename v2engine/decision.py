@@ -20,7 +20,7 @@ from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
 from v2engine.movement import PlayerState, max_speed_mps
 from v2engine.off_ball import OPEN_LANE_PROBABILITY
 from v2engine.offside import is_clearly_offside, pass_margin_m, perceived_defence_line
-from v2engine.possession import pass_success_probability, pressure
+from v2engine.possession import BALL_FRICTION_PER_S, BALL_STOPPED_MPS, pass_success_probability, pressure
 from v2engine.shooting import SHOOTING_RANGE_M, occasion_quality
 
 # Constantes produit validées par le propriétaire (24/10/2026).
@@ -58,6 +58,14 @@ FREE_TOUCH_SHARE = 0.1
 # 1 - garde^(intervalle / durée). 1,5 s : la conduite évaluée va jusqu'à 10 m (`DRIBBLE_REACH_M`) à 85 % de la vitesse
 # d'un joueur moyen (environ 7 m/s), soit 1,4 s ; au-delà de 10 m, le porteur réévalue (`DECISION_INTERVAL_S`).
 DRIBBLE_REFERENCE_S = 1.5
+# Où va le ballon perdu en conduite (ticket v2-realisme/04b, constantes proposées le 08/11/2026, validées d'office ;
+# chiffres réels : non trouvés). Un adversaire à moins de `DISPOSSESSION_RADIUS_M` (la portée du tacle, `match.TACKLE_RADIUS_M`)
+# prend le ballon avec la probabilité de la gêne (70 % à 1,5 m, 100 % au contact) ; sinon, ou si le ballon lui échappe, c'est
+# une touche trop longue : il s'arrête devant le porteur à une distance tirée dans `LONG_TOUCH_M`, dans un angle de
+# +/- `LONG_TOUCH_DEG` autour de sa direction de conduite. Sans adversaire au contact, jamais de dépossession.
+DISPOSSESSION_RADIUS_M = 1.5
+LONG_TOUCH_M = (1.5, 4.0)
+LONG_TOUCH_DEG = 30.0
 # Valeur future d'une passe (ticket v2-collectif/13, validé par le propriétaire le 01/11/2026) : part de la valeur qui
 # vient de la meilleure passe suivante du receveur (réussite x danger atteint, ticket 33), le reste du danger au
 # receveur. La suite vaut au moins la position atteinte (il garde le ballon) : sans
@@ -257,6 +265,21 @@ def dribble_loss_probability(holder: PlayerState, gene: float, duration_s: float
 def dribble_lost(holder: PlayerState, opponents: list[PlayerState], duration_s: float = DECISION_INTERVAL_S) -> bool:
     """Tirage de la perte du ballon sur un intervalle de décision de conduite (ticket v2-realisme/04a)."""
     return DUEL.random() < dribble_loss_probability(holder, pressure(holder, opponents), duration_s)
+
+
+def lost_carry_outcome(holder: PlayerState, opponents: list[PlayerState],
+                       heading: Vec2) -> tuple[PlayerState | None, Vec2 | None]:
+    """Où va le ballon perdu en conduite (ticket v2-realisme/04b) : `(adversaire, None)` s'il est dépossédé, sinon
+    `(None, vitesse du ballon)` pour une touche trop longue dans la direction `heading` (vitesse de départ pour que le
+    ballon, freiné, s'arrête à la distance tirée). Aucun attribut lu : le tirage est celui de la perte (flux DUEL)."""
+    near = [o for o in opponents if holder.position.distance_to(o.position) < DISPOSSESSION_RADIUS_M]
+    if near and DUEL.random() < pressure(holder, opponents):
+        return min(near, key=lambda o: holder.position.distance_to(o.position)), None
+    distance = DUEL.uniform(*LONG_TOUCH_M)
+    angle = math.radians(DUEL.uniform(-LONG_TOUCH_DEG, LONG_TOUCH_DEG))
+    d = heading.normalized()
+    direction = Vec2(d.x * math.cos(angle) - d.y * math.sin(angle), d.x * math.sin(angle) + d.y * math.cos(angle))
+    return None, direction * (BALL_STOPPED_MPS - distance * math.log(BALL_FRICTION_PER_S))
 
 
 def arrival_s(opponent: PlayerState, point: Vec2, projection: float = 1.0) -> float:

@@ -39,7 +39,7 @@ TICK_S = match.TICK_SECONDS  # le pas du produit (ticket v2-collectif/25) : le b
 
 def _hook(collector: Collector, clock: dict[str, float], plans: bool = True) -> Callable[[], None]:
     """Branche le collecteur sur les fonctions publiques du moteur ; retourne la fonction qui les restaure."""
-    real = {name: getattr(match, name) for name in ("pass_velocity", "attempt_shot", "resolve_tackle", "choose_action", "dribble_lost")}
+    real = {name: getattr(match, name) for name in ("pass_velocity", "attempt_shot", "resolve_tackle", "choose_action", "dribble_lost", "lost_carry_outcome")}
 
     def pass_velocity(passer, target, *args, **kwargs):
         collector.on_pass(passer, target)
@@ -58,6 +58,11 @@ def _hook(collector: Collector, clock: dict[str, float], plans: bool = True) -> 
         lost = real["dribble_lost"](holder, opponents, *args, **kwargs)
         collector.on_dribble(holder, opponents, lost)
         return lost
+
+    def lost_carry_outcome(*args, **kwargs):  # ticket v2-realisme/04b : où va le ballon perdu en conduite
+        outcome = real["lost_carry_outcome"](*args, **kwargs)
+        collector.on_lost_carry(outcome[0] is not None)
+        return outcome
 
     def choose_action(*args, **kwargs):
         action = real["choose_action"](*args, **kwargs)
@@ -92,6 +97,7 @@ def _hook(collector: Collector, clock: dict[str, float], plans: bool = True) -> 
 
     match.pass_velocity, match.attempt_shot = pass_velocity, attempt_shot
     match.resolve_tackle, match.choose_action, match.dribble_lost = resolve_tackle, choose_action, dribble_lost
+    match.lost_carry_outcome = lost_carry_outcome
     cerveau.stays_behind, match.think = stays_behind, think
     defense.DefensiveRoles.start_team_press = trigger
     return lambda: ([setattr(match, name, fn) for name, fn in real.items()] + [setattr(cerveau, "stays_behind", real_stays), setattr(match, "think", real_think)]
@@ -262,6 +268,10 @@ def report(c: Collector, detail: bool = False) -> dict:
         "conduite sans adversaire proche (gêne < 0,1) : perte par intervalle (part)": k["conduite libre : pertes"] / max(1, k["conduite libre : intervalles"]),
         "conduite serrée (gêne >= 0,5) : intervalles par match": k["conduite serrée : intervalles"] / n,
         "conduite serrée (gêne >= 0,5) : perte par intervalle (part)": k["conduite serrée : pertes"] / max(1, k["conduite serrée : intervalles"]),
+        # ticket v2-realisme/04b : issue du ballon perdu en conduite (dépossession au contact, ou touche trop longue)
+        "conduite : pertes par dépossession par match": k["conduite : dépossessions"] / n,
+        "conduite : pertes par touche trop longue par match": k["conduite : touches trop longues"] / n,
+        "conduite : part des pertes par dépossession": k["conduite : dépossessions"] / max(1, k["conduite : pertes"]),
         # ticket v2-realisme/03k : tirs en vol retirés de la sortie du gardien ; joueurs de champ qui courent encore derrière
         "gardien : placements sur tir en vol par match (deux gardiens)": k["gardien : placements sur tir en vol"] / n,
         "tir à côté en vol : joueurs de champ en course vers le ballon par match": k["tir à côté en vol : joueurs de champ en course vers le ballon"] / n,

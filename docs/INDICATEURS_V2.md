@@ -532,3 +532,16 @@ Sur les 413 lignes comparées, 219 sortent de l'IC (le moteur change vraiment de
 **Déterminisme.** Deux exécutions de `measure_v2 2` à graine fixée donnent des sorties identiques, à la ligne de temps de calcul près.
 
 **Suite complète.** 2 544 passés, 14 désélectionnés (trois tests existants adaptés : raison « face-à-face » du gardien admise par un test à graine fixée, conduite à 99 de Finishing pour le « bon finisseur » du bord de surface, choix de la passe imposé dans le test de réception).
+
+## 17. Conduite : où va le ballon perdu (ticket v2-realisme/04b, 20 matchs, 08/11/2026)
+
+**Ce que fait le moteur.** Une perte de conduite (04a) a deux issues, tirées dans le flux DUEL par `decision.lost_carry_outcome`. Un adversaire à moins de 1,5 m (la portée du tacle) prend le ballon avec la probabilité de la gêne (70 % à 1,5 m, 100 % au contact) : le ballon lui passe comme sur un tacle gagné. Sinon, c'est une touche trop longue : le ballon part devant le porteur et s'arrête, après une course de 1,5 à 4 m depuis le point où il est lâché (à environ 0,4 m du porteur), dans ± 30° de sa direction de conduite, puis il est disputé comme tout ballon libre (rôle `BALLON_LIBRE`, porteur écarté 0,5 s). Sans adversaire au contact, jamais de dépossession. Aucun attribut n'est lu (la déviation ne dépend plus de la vitesse de course, de Composure ni du flux PASSE). Chiffres réels pour ces bornes : non trouvés.
+
+**Indicateurs ajoutés** (`scripts/measure_v2.py`, `scripts/v2_indicators.py`) : pertes par dépossession et par touche trop longue par match, part des dépossessions.
+
+**Résultat (20 matchs, graine d'audit 20260923).** 86,6 pertes de conduite par match [79,6 ; 93,5] (87,6 sur 50 matchs au 04a) : **46,2 dépossessions (53,4 %)** [42,7 ; 49,7] et **40,4 touches trop longues (46,6 %)** [35,8 ; 45,0]. Perte par intervalle : 0,42 % en conduite libre, 4,36 % en conduite serrée (0,64 % et 4,30 % au 04a). Volumes voisins du 04a, hors comparaison appariée (20 contre 50 matchs) : conduite 72,5 % des décisions (73,7 %), passes 848 par match (816), tirs par équipe 18,3 (19,4), tacles 41,2 (42,2), buts 2,95 (2,78), tous dans le bruit.
+
+**Lecture.** La part de dépossession vient de la proportion de pertes subies avec un adversaire à moins de 1,5 m, non d'un réglage. Ce que devient la touche trop longue (reprise par le porteur, par l'adversaire, par un coéquipier) n'est pas tracé ici : il est regardé au 04c. Les volumes de conduite (réserve A1 du 04a) restent à examiner au 04c ; ils ne sont pas une référence de réalisme.
+
+**Déterminisme.** Deux exécutions de `measure_v2 2` à graine fixée donnent des sorties identiques, à la ligne de temps de calcul près.
+

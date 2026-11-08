@@ -28,7 +28,7 @@ from v2engine.formation import initial_positions
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch, in_penalty_area
 from v2engine.movement import PlayerState, step
 from v2engine.cerveau import GOAL_CENTER_Y, OPPONENT_GOAL, Intention, think
-from v2engine.decision import DECISION_INTERVAL_S, choose_action, dribble_lost
+from v2engine.decision import DECISION_INTERVAL_S, choose_action, dribble_lost, lost_carry_outcome
 from v2engine.defense import DefensiveRoles
 from v2engine.offside import HESITATION_S, OFFSIDE_OUT_S, offside_at_pass, sees_the_flag_probability
 from v2engine.possession import (BALL_FRICTION_PER_S, BALL_STOPPED_MPS, MAX_PASS_MPS, MISS_RETRY_S, attempt_control, missed_control_velocity,
@@ -452,10 +452,22 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
         ball.dribble = (holder.name, point) if action.kind == "dribble" and point is not None else None
         rivals = [p for p in players if p.team != holder.team]
         if action.kind == "dribble" and dribble_lost(holder, rivals):
-            # Ballon perdu en conduite (ticket v2-realisme/04a), même risque que celui de l'évaluation. Il s'échappe
-            # comme un contrôle raté ; où il va exactement est l'objet du ticket 04b.
-            ball.dribble, ball.holder = None, None
-            ball.velocity = missed_control_velocity(holder, holder.velocity, rivals)
+            # Ballon perdu en conduite (ticket v2-realisme/04a), même risque que celui de l'évaluation. Où il va (ticket
+            # 04b) : à l'adversaire au contact, comme un tacle gagné, ou libre devant le porteur (touche trop longue).
+            ball.dribble = None
+            heading = (point - holder.position) if point is not None else holder.velocity
+            if heading.length() < 1e-9:
+                heading = goal - holder.position
+            taker, ball.velocity = lost_carry_outcome(holder, rivals, heading)
+            if taker is not None:
+                ball.holder = taker.name
+                ball.hesitation.pop(taker.name, None)
+                ball.next_decision_s = now_s + reception_delay_s(taker, [p for p in players if p.team != taker.team])
+                ball.receiving = True
+                ball.velocity = Vec2(0.0, 0.0)
+                _clear_offside(ball)
+                return None
+            ball.holder = None
             ball.position = clamp_to_pitch(holder.position + ball.velocity.normalized() * CONTROL_RADIUS_M)
             ball.control_ban_until_s[holder.name] = now_s + MISS_RETRY_S
             ball.last_toucher, ball.released_by, ball.receiver, ball.readers = holder.name, None, None, {}

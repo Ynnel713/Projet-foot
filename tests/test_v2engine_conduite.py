@@ -1,20 +1,23 @@
-"""Tests du moteur V2, ticket v2-realisme/04a : le risque de perdre le ballon en conduisant est le même à l'évaluation
+"""Tests du moteur V2, tickets v2-realisme/04a et 04b : le risque de perdre le ballon en conduisant est le même à l'évaluation
 (`decision.keep_ball_probability`) et à la résolution (`decision.dribble_lost`, un tirage par intervalle de décision).
-Voir .scratch/v2-realisme/issues/04a-conduite-risque-unifie.md."""
+Voir .scratch/v2-realisme/issues/04a-conduite-risque-unifie.md. Ticket 04b : où va le ballon perdu (dépossession
+au contact, sinon touche trop longue), `decision.lost_carry_outcome`."""
 
 from __future__ import annotations
 
+import math
 from dataclasses import replace
 
 from v2engine import decision
 from v2engine.ball_state import BallState
-from v2engine.decision import (DECISION_INTERVAL_S, DRIBBLE_REFERENCE_S, Action, dribble_loss_probability, dribble_lost,
-                               evaluate_options, keep_ball_probability)
-from v2engine.flux import DUEL
+from v2engine.decision import (DECISION_INTERVAL_S, DISPOSSESSION_RADIUS_M, DRIBBLE_REFERENCE_S, LONG_TOUCH_DEG, LONG_TOUCH_M,
+                               Action, dribble_loss_probability, dribble_lost, evaluate_options, keep_ball_probability,
+                               lost_carry_outcome)
+from v2engine.flux import DUEL, PASSE
 from v2engine.geometry import PITCH_LENGTH_M, Vec2
-from v2engine.match import GOAL_CENTER_Y, _step_ball
+from v2engine.match import GOAL_CENTER_Y, TACKLE_RADIUS_M, _step_ball
 from v2engine.movement import PlayerState
-from v2engine.possession import pressure
+from v2engine.possession import BALL_FRICTION_PER_S, BALL_STOPPED_MPS, pressure
 
 GOAL = Vec2(PITCH_LENGTH_M, GOAL_CENTER_Y)
 
@@ -104,3 +107,84 @@ def test_a_kept_carry_goes_on_as_before(monkeypatch) -> None:
     ball, _ = _carry(monkeypatch, lost=False)
     assert ball.holder == "Porteur" and ball.dribble == ("Porteur", Vec2(58.0, 34.0))
 
+
+
+# --- Ticket v2-realisme/04b : où va le ballon perdu ---------------------------------------------------------------
+
+HEADING = Vec2(1.0, 0.0)
+
+
+def _outcomes(holder: PlayerState, opponents: list[PlayerState], trials: int = 2000) -> list[tuple[PlayerState | None, Vec2 | None]]:
+    DUEL.seed(20261108)
+    return [lost_carry_outcome(holder, opponents, HEADING) for _ in range(trials)]
+
+
+def _rest_distance(velocity: Vec2) -> float:
+    """Distance à laquelle un ballon lancé à `velocity` s'arrête (freinage du moteur, arrêt sous `BALL_STOPPED_MPS`)."""
+    return (velocity.length() - BALL_STOPPED_MPS) / -math.log(BALL_FRICTION_PER_S)
+
+
+def test_the_dispossession_reach_is_the_tackle_reach() -> None:
+    assert DISPOSSESSION_RADIUS_M == TACKLE_RADIUS_M
+
+
+def test_without_an_opponent_in_contact_the_ball_is_never_taken_and_runs_ahead_within_the_bounds() -> None:
+    holder = _player(attributes={"Dribbling": 55})
+    for rivals in ([], [_player("Adv", "away", holder.position + Vec2(1.6, 0.0))], [_player("Adv", "away", holder.position + Vec2(3.0, 0.0))]):
+        for taker, velocity in _outcomes(holder, rivals):
+            assert taker is None and velocity is not None
+            assert LONG_TOUCH_M[0] - 1e-9 <= _rest_distance(velocity) <= LONG_TOUCH_M[1] + 1e-9
+            assert abs(math.degrees(math.atan2(velocity.y, velocity.x))) <= LONG_TOUCH_DEG + 1e-9
+
+
+def test_in_contact_both_outcomes_happen_and_the_share_follows_the_pressure() -> None:
+    holder = _player(attributes={"Dribbling": 55})
+    for gap in (0.5, 1.4):
+        rival = _player("Adv", "away", holder.position + Vec2(gap, 0.0))
+        outcomes = _outcomes(holder, [rival], trials=5000)
+        taken = sum(taker is rival for taker, _ in outcomes) / len(outcomes)
+        assert 0.0 < taken < 1.0
+        assert abs(taken - pressure(holder, [rival])) < 0.03  # 0,90 à 0,5 m, 0,72 à 1,4 m
+        assert all((taker is None) == (velocity is not None) for taker, velocity in outcomes)
+
+
+def test_the_nearest_opponent_in_contact_takes_the_ball() -> None:
+    holder = _player()
+    near, far = _player("Proche", "away", holder.position + Vec2(0.4, 0.0)), _player("Loin", "away", holder.position + Vec2(1.2, 0.0))
+    takers = {taker.name for taker, _ in _outcomes(holder, [far, near]) if taker is not None}
+    assert takers == {"Proche"}
+
+
+def test_the_lost_ball_reads_no_attribute_and_no_other_stream() -> None:
+    # point de vigilance du 04a (réserve A4) : ni Composure, ni First Touch, ni vitesse de course, ni le flux PASSE
+    rival = lambda: [_player("Adv", "away", Vec2(50.8, 34.0))]
+    weak = _player(attributes={"Composure": 11, "First Touch": 11, "Dribbling": 55})
+    strong = replace(_player(attributes={"Composure": 99, "First Touch": 99, "Dribbling": 55}), velocity=Vec2(7.0, 0.0))
+    passe_before = PASSE.getstate()
+    summary = lambda holder: [(taker is not None, velocity) for taker, velocity in _outcomes(holder, rival(), 200)]
+    assert summary(weak) == summary(strong) and {kept for kept, _ in summary(weak)} == {True, False}
+    assert PASSE.getstate() == passe_before
+
+
+def _lost_carry_with_rival_at(gap: float, monkeypatch) -> tuple[BallState, PlayerState, PlayerState]:
+    holder = replace(_player("Porteur", attributes={"Dribbling": 55}), velocity=Vec2(5.0, 0.0))
+    rival = _player("Adv", "away", holder.position + Vec2(gap, 0.0))
+    ball = BallState(position=holder.position, velocity=Vec2(0.0, 0.0), holder="Porteur")
+    monkeypatch.setattr("v2engine.match.choose_action", lambda *args: Action("dribble", 1.0, point=Vec2(58.0, 34.0)))
+    monkeypatch.setattr("v2engine.match.dribble_lost", lambda *args, **kwargs: True)
+    DUEL.seed(1)
+    _step_ball(ball, 0.1, [holder, rival], now_s=1.0)
+    return ball, holder, rival
+
+
+def test_a_dispossession_hands_the_ball_to_the_opponent_like_a_won_tackle(monkeypatch) -> None:
+    monkeypatch.setattr("v2engine.match.lost_carry_outcome", lambda holder, rivals, heading: (rivals[0], None))
+    ball, _, _ = _lost_carry_with_rival_at(0.3, monkeypatch)
+    assert ball.holder == "Adv" and ball.receiving and ball.dribble is None
+    assert ball.velocity == Vec2(0.0, 0.0) and ball.next_decision_s > 1.0
+
+
+def test_a_long_touch_leaves_the_ball_free_ahead_of_the_carrier(monkeypatch) -> None:
+    ball, holder, _ = _lost_carry_with_rival_at(6.0, monkeypatch)
+    assert ball.holder is None and ball.control_ban_until_s["Porteur"] > 1.0
+    assert ball.velocity.x > 0.0 and ball.position.x > holder.position.x  # devant lui, vers l'avant

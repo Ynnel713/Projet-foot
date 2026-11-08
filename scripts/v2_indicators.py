@@ -522,6 +522,10 @@ class Collector:
             self.count[name + " : intervalles"] += 1
             self.count[name + " : pertes"] += bool(lost)
 
+    def on_lost_carry(self, dispossessed: bool) -> None:
+        """Ticket v2-realisme/04b : issue d'un ballon perdu en conduite, dépossession par l'adversaire ou touche trop longue."""
+        self.count["conduite : dépossessions" if dispossessed else "conduite : touches trop longues"] += 1
+
     def on_shot_chaser(self, player: PlayerState, intention, ball) -> None:
         """Ticket v2-realisme/03k : joueurs de champ en rôle `BALLON_LIBRE` (ils courent vers le ballon) pendant un tir en vol,
         en épisodes par joueur et par tir. Mesure seule : le ticket ne les modifie pas."""
