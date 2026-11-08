@@ -51,7 +51,8 @@ ALLOWED = {
 }
 # defense : temps d'arrivée qui désigne le presseur et la couverture (ticket v2-collectif/07)
 # decision : course du porteur contre les adversaires vers l'espace libre (ticket v2-collectif/33)
-PHYSICAL_ALLOWED = {"Pace": {"movement", "anticipation", "bloc", "defense", "decision"},
+# occasion (ticket v2-collectif/28c) : temps pour atteindre un ballon libre, la même vitesse de pointe (R5), mesure seule
+PHYSICAL_ALLOWED = {"Pace": {"movement", "anticipation", "bloc", "defense", "decision", "occasion"},
                     "Acceleration": {"movement", "defense"},
                     "Stamina": {"movement"}}
 # Mélanges de plusieurs attributs dans un même calcul tolérés (dérogations de la carte).

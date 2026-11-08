@@ -729,6 +729,14 @@ class Collector:
         if event.outcome == "but" and in_penalty_area(event.team, Vec2(event.x, event.y)):
             self.count["buts dans la surface"] += 1
 
+    def on_chance(self, event) -> None:
+        """Grosse occasion, avec ou sans tir (ticket v2-collectif/28c) ; `event` : `v2engine.trace.ChanceEvent`."""
+        self.count["grosses occasions"] += 1
+        self.count["grosses occasions sans tir"] += not event.shot
+        self.count["grosses occasions : danger au pic (somme)"] += event.danger
+        self.count["grosses occasions, issue : " + event.outcome] += 1
+        self.count["grosses occasions, origine : " + event.origin] += 1
+
     def on_foul(self, event) -> None:
         """Faute (ticket v2-collectif/30) ; `event` : `v2engine.trace.FoulEvent`."""
         self.count["fautes"] += 1

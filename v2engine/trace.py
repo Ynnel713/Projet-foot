@@ -114,6 +114,27 @@ class ShotEvent:
 
 
 @dataclass(frozen=True)
+class ChanceEvent:
+    """Grosse occasion (ticket v2-collectif/28c) : séquence dangereuse de `team` dont le pic de danger atteint le seuil
+    (`occasion.BIG_CHANCE_DANGER`), avec ou sans tir. `start`, `peak_minute`, `end` : début, pic et fin de la séquence
+    (minutes) ; `player`, `x`/`y` : l'attaquant de la meilleure occasion au pic et sa position ; `danger` : le pic
+    (qualité de l'occasion x chance que le ballon lui parvienne) ; `outcome` : « tir : <issue du tir> », tacle,
+    interception, gardien, dégagement, ballon non repris, danger retombé, « ballon mort : <remise> » ou fin de période ;
+    `origin` : comment la situation est née, même vocabulaire que le tir (`ShotEvent.origin`)."""
+    start: float
+    peak_minute: float
+    end: float
+    team: str
+    player: str
+    x: float
+    y: float
+    danger: float
+    outcome: str
+    origin: str
+    shot: bool
+
+
+@dataclass(frozen=True)
 class FoulEvent:
     """Faute (ticket v2-collectif/30) : `team` et `player` le fautif, `victim` le joueur fauté, `x`/`y` le lieu,
     `severity` la gravité (`duel.foul_severity`), `outcome` ce qu'en a fait l'arbitre : coup franc, penalty ou
@@ -146,6 +167,7 @@ class MatchTrace:
     restarts: list[RestartEvent] = field(default_factory=list)  # remises en jeu (ticket v2-collectif/29)
     fouls: list[FoulEvent] = field(default_factory=list)  # fautes (ticket v2-collectif/30)
     shots: list[ShotEvent] = field(default_factory=list)  # tirs et leur issue (ticket v2-collectif/28b)
+    chances: list[ChanceEvent] = field(default_factory=list)  # grosses occasions, avec ou sans tir (ticket 28c)
     reaction_delays_s: dict[str, float] = field(default_factory=dict)  # par joueur (Anticipation, ticket v2-collectif/03)
     # Minute du coup d'envoi de la 2e période (ticket v2-coach-et-gestion-de-match/07) ; None tant qu'elle n'est pas
     # jouée. Le moteur garde son sens de jeu : c'est l'écran qui retourne la scène à partir de cette minute.

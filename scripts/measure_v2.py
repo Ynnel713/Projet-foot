@@ -162,6 +162,8 @@ def run(n_matches: int, profile: str | None = None, duration_minutes: float = 90
                     collector.on_foul(event)
                 for event in trace.shots:  # tirs et leur issue (ticket v2-collectif/28b)
                     collector.on_shot_event(event)
+                for event in trace.chances:  # grosses occasions (ticket v2-collectif/28c)
+                    collector.on_chance(event)
             finally:
                 unforce()
             collector.end_match()
@@ -244,6 +246,10 @@ def report(c: Collector, detail: bool = False) -> dict:
         "arrêts captés (part)": k["tirs : capté"] / max(1, sum(k["tirs : " + o] for o in ("capté", "repoussé", "claqué"))),
         "arrêts repoussés (part)": k["tirs : repoussé"] / max(1, sum(k["tirs : " + o] for o in ("capté", "repoussé", "claqué"))),
         "arrêts claqués (part)": k["tirs : claqué"] / max(1, sum(k["tirs : " + o] for o in ("capté", "repoussé", "claqué"))),
+        # grosses occasions, avec ou sans tir (ticket v2-collectif/28c)
+        "grosses occasions par match": k["grosses occasions"] / n,
+        "grosses occasions sans tir (part)": k["grosses occasions sans tir"] / max(1, k["grosses occasions"]),
+        "grosses occasions : danger moyen au pic": k["grosses occasions : danger au pic (somme)"] / max(1, k["grosses occasions"]),
         # fautes (ticket v2-collectif/30)
         "fautes par match": k["fautes"] / n,
         "avantages acquis (part des fautes)": k["fautes : avantage"] / max(1, k["fautes"]),
@@ -376,6 +382,9 @@ def report(c: Collector, detail: bool = False) -> dict:
     for key, v in sorted(k.items()):  # origine des tirs (ticket v2-collectif/28b)
         if key.startswith("tirs, origine : "):
             out[f"{key} (part)"] = v / max(1, k["tirs tracés"])
+    for key, v in sorted(k.items()):  # issue et origine des grosses occasions (ticket v2-collectif/28c)
+        if key.startswith(("grosses occasions, issue : ", "grosses occasions, origine : ")):
+            out[f"{key} (part)"] = v / max(1, k["grosses occasions"])
     in_situation = sum(v for key, v in k.items() if key.startswith("temps en "))
     for key, v in sorted(k.items()):
         if key.startswith("temps en "):

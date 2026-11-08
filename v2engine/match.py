@@ -30,6 +30,7 @@ from v2engine.movement import PlayerState, step
 from v2engine.cerveau import GOAL_CENTER_Y, OPPONENT_GOAL, Intention, think
 from v2engine.decision import DECISION_INTERVAL_S, choose_action, dribble_lost, lost_carry_outcome
 from v2engine.defense import DefensiveRoles
+from v2engine.occasion import ChanceTracker
 from v2engine.offside import HESITATION_S, OFFSIDE_OUT_S, offside_at_pass, sees_the_flag_probability
 from v2engine.possession import (BALL_FRICTION_PER_S, BALL_STOPPED_MPS, MAX_PASS_MPS, MISS_RETRY_S, attempt_control, missed_control_velocity,
                                  pass_velocity, reception_delay_s)
@@ -269,8 +270,24 @@ def _received_as(ball: BallState, player: PlayerState, aerial: bool) -> str:
         return "récupération"
     if aerial:
         return "centre"
-    gain = (player.position.x - ball.pass_from.x) * (1.0 if player.team == "home" else -1.0)
+    return _pass_kind(ball.pass_from, player)
+
+
+def _pass_kind(start: Vec2, player: PlayerState) -> str:
+    """Passe partie de `start` vers `player` : en retrait, en profondeur (gain d'au moins `DEEP_ORIGIN_M`) ou au sol."""
+    gain = (player.position.x - start.x) * (1.0 if player.team == "home" else -1.0)
     return "passe en retrait" if gain < 0.0 else "passe en profondeur" if gain >= DEEP_ORIGIN_M else "passe au sol"
+
+
+def _danger_origin(ball: BallState, player: PlayerState) -> str:
+    """Comment est née la situation dangereuse de `player` (ticket v2-collectif/28c), vocabulaire du tir : porteur,
+    l'origine de son tir s'il tirait ; coéquipier du porteur, la passe à venir ; ballon libre, la façon dont il le
+    recevrait."""
+    if ball.holder == player.name:
+        return _shot_origin(ball, player, ball.set_piece is not None and ball.set_piece.taker == player.name)
+    if ball.holder is not None:
+        return _pass_kind(ball.position, player)
+    return _received_as(ball, player, ball.mode == AERIEN)
 
 
 def _shot_origin(ball: BallState, shooter: PlayerState, set_piece: bool) -> str:
@@ -781,6 +798,7 @@ def simulate_match(
     bloc = Bloc.from_players(players)  # bloc de référence dynamique (ticket v2-collectif/04)
     defense = DefensiveRoles()  # rôles défensifs (ticket v2-collectif/07)
     transition = TransitionPlay()  # contre-attaque ou conservation après une récupération (ticket v2-collectif/11)
+    chances = ChanceTracker(trace.chances)  # danger et grosses occasions, lecture seule (ticket v2-collectif/28c)
     scoring_team = None
     n_ticks = int(duration_minutes * 60.0 / tick_seconds)
     half_tick = n_ticks // 2
@@ -805,6 +823,7 @@ def simulate_match(
             end_tick = i + round(n * 60.0 / tick_seconds)
             late = LateSetPiece(hard_stop_s=end_tick * tick_seconds + HARD_STOP_S)
         if end_tick is not None and i >= end_tick and late.whistle(ball, players, i * tick_seconds):
+            chances.close_all(minute)
             if period == 2:
                 break
             period, period_start_tick, end_tick = 2, i, None
@@ -841,6 +860,7 @@ def simulate_match(
                                   trace.shots)
         if scoring_team is not None:
             trace.record_goal(scoring_team, minute)
+        chances.update(minute, ball, players, trace.shots, lambda p: _danger_origin(ball, p))
         if observer is not None:
             observer(i * tick_seconds, players, ball, scoring_team)
 

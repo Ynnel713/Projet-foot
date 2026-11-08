@@ -9,7 +9,7 @@
 
 **Attributs :** aucun.
 
-**Blocked by:** `v2-collectif/28` (danger), 29 (sorties et corners), 30 (fautes), 31 (belles séquences à une touche), `v2-mise-en-scene/01`. Les célébrations (04) et les échauffourées (`v2-attributs-restants/09c`) s'y ajoutent à leur livraison.
+**Blocked by:** `v2-collectif/28` (28c livré le 08/11/2026 ; avant de lire `MatchTrace.chances`, traiter ses réserves A1, séquence coupée en deux, et A2, origine « récupération » ambiguë : voir le ticket 28c, Comments) (danger), 29 (sorties et corners), 30 (fautes), 31 (belles séquences à une touche), `v2-mise-en-scene/01`. Les célébrations (04) et les échauffourées (`v2-attributs-restants/09c`) s'y ajoutent à leur livraison.
 
 **Status:** à faire (constantes à proposer avant le code)
 
