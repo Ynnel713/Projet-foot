@@ -95,7 +95,7 @@ def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_facto
     (Stamina), montée en vitesse exponentielle pilotée par Acceleration, freinage borné et loi
     d'arrivée (ticket v2-collectif/25). IA de déplacement volontairement
     simpliste (D-V08) : `target` est choisi par l'appelant, pas par ce module. `speed_factor` :
-    part de la vitesse max (ex. conduite de balle, `decision.DRIBBLE_SPEED_FACTOR`). `target_velocity` : vitesse
+    part de la vitesse max (ex. conduite de balle, `decision.dribble_speed_factor`). `target_velocity` : vitesse
     de la cible quand elle bouge (le porteur qu'il presse) -- la loi d'arrivée porte alors sur la vitesse de
     rapprochement, sans quoi il resterait à sa distance de freinage derrière un porteur en conduite."""
     effective_max_speed = max_speed_mps(state.pace) * stamina_factor(state.stamina, minute) * speed_factor

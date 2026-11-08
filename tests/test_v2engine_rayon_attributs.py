@@ -33,7 +33,7 @@ ALLOWED = {
     "Off the Ball": {"off_ball", "offside"},  # + régler l'appel sur la ligne du hors-jeu (ticket 23)
     # tir sous pression par `shooting.shot_composure_factor`, courbe propre (ticket 28a) ; + perception sous pression (33)
     "Composure": {"possession", "decision", "shooting"},
-    "Dribbling": {"decision"},  # chance de garder le ballon en conduisant : valeur factuelle (ticket 33) et perte tirée (04a)
+    "Dribbling": {"decision"},  # chance de garder le ballon en conduisant : valeur factuelle (ticket 33) et perte tirée (04a) ; vitesse balle au pied (04d)
     "First Touch": {"possession"},
     "Passing": {"possession", "off_ball"},  # + ... et s'il sait le servir (ticket v2-collectif/16)
     "Finishing": {"shooting"},  # dans la surface ; Long Shots en dehors (ticket 28a)

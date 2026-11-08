@@ -15,7 +15,7 @@ from functools import partial
 from v2engine.anticipation import loose_ball_target, meeting_point
 from v2engine.ball_state import BallState
 from v2engine.bloc import Bloc
-from v2engine.decision import CONTRE_ATTAQUE, DRIBBLE_SPEED_FACTOR
+from v2engine.decision import CONTRE_ATTAQUE, dribble_speed_factor
 from v2engine.defense import (COMPENSATION, COUVERTURE, MARQUAGE, PRESSEUR, REST_DEFENDERS, DefensiveRoles,
                               leave_probability, press_intensity)
 from v2engine.flux import DEFENSE
@@ -26,7 +26,7 @@ from v2engine.movement import PlayerState
 from v2engine.off_ball import (COUNTER_RUN_DEPTH_M, RUN_INTERVAL_S, SPACE_HOLD_MAX_S, SPACE_REACHED_M,
                                choose_space, depth_run, player_call_delay_s)
 from v2engine.offside import HESITATION_INTENSITY, clamp_to_onside, offside_line, respects_the_line
-from v2engine.possession import BALL_FRICTION_PER_S, RECEPTION_SPEED_FACTOR
+from v2engine.possession import BALL_FRICTION_PER_S, RECEPTION_SPEED_FACTOR, pressure
 from v2engine.restart import KICKOFF, REPLACING_INTENSITY, place
 from v2engine.roles import DEFAULT_ROLE
 from v2engine.situation import (DEFENSE_PLACEE, DERNIER_TIERS, POSSESSION_INSTALLEE, TRANSITION_DEFENSIVE,
@@ -240,10 +240,12 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
         if ball.receiving:  # pendant sa réception, il avance au pas de contrôle (v2-socle/06)
             return make(role, "contrôler", OPPONENT_GOAL[player.team], RECEPTION_SPEED_FACTOR,
                              reason="temps de réception, il lève la tête")
+        # vitesse balle au pied : la même fonction et la même gêne qu'à l'évaluation de la conduite (ticket v2-realisme/04d)
+        speed = dribble_speed_factor(player, pressure(player, [p for p in players if p.team != player.team]))
         # direction choisie à sa dernière décision (ticket v2-collectif/33), sinon droit au but
         if ball.dribble is not None and ball.dribble[0] == player.name:
-            return make(role, "conduire", ball.dribble[1], DRIBBLE_SPEED_FACTOR, reason="conduite vers l'espace libre")
-        return make(role, "conduire", OPPONENT_GOAL[player.team], DRIBBLE_SPEED_FACTOR, reason="conduite vers le but")
+            return make(role, "conduire", ball.dribble[1], speed, reason="conduite vers l'espace libre")
+        return make(role, "conduire", OPPONENT_GOAL[player.team], speed, reason="conduite vers le but")
     if role == APPEL:
         now_s = minute * 60.0
         target, next_s, *held = runs.get(player.name, (None, 0.0))  # 3e terme : porteur d'un appel dans le dos (16)

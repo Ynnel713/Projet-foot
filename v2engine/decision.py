@@ -25,7 +25,13 @@ from v2engine.shooting import SHOOTING_RANGE_M, occasion_quality
 
 # Constantes produit validées par le propriétaire (24/10/2026).
 DECISION_INTERVAL_S = 0.5  # le porteur réévalue ses options deux fois par seconde
-DRIBBLE_SPEED_FACTOR = 0.85  # part de sa vitesse max, balle au pied
+# Vitesse balle au pied (ticket v2-realisme/04d, constantes proposées le 08/11/2026, validées d'office ; chiffres réels :
+# non trouvés, ordres de grandeur) : part de la vitesse max (Pace reste la vitesse max). Sans adversaire à 5 m : 0,85 à
+# Dribbling 55 (valeur d'avant), 0,90 à 99, 0,80 à 11 (courbe commune des attributs) ; au contact, jusqu'à
+# `CONTACT_SLOWDOWN` de cette part en moins, au prorata de la gêne. Une seule fonction, `dribble_speed_factor`, sert à
+# l'évaluation de l'espace atteint (`free_point`) et au déplacement du porteur (`cerveau`).
+_CARRY_SPEED = (0.85, 0.05)  # baseline, amplitude (Dribbling)
+CONTACT_SLOWDOWN = 0.15
 # Decisions -> probabilité de prendre la meilleure option : 99 -> 95 %, 55 -> 70 %, 11 -> 45 %. Même FORME de courbe
 # que le guide (quasi plate entre 45 et 55), mais centrée sur 70 % : un joueur moyen choisit bien la plupart du temps.
 # Pas de poids par poste (`register_weights`) : bien choisir son action compte autant à tous les postes.
@@ -256,6 +262,14 @@ def keep_ball_probability(holder: PlayerState, gene: float) -> float:
     return 1.0 - (1.0 - skill) * contested
 
 
+def dribble_speed_factor(holder: PlayerState, gene: float) -> float:
+    """Part de sa vitesse max à laquelle le porteur conduit sous la gêne `gene` (0 sans adversaire à 5 m, 1 au contact) :
+    Dribbling sans adversaire, moins `CONTACT_SLOWDOWN` x `gene` (ticket v2-realisme/04d)."""
+    baseline, amplitude = _CARRY_SPEED
+    free = success_probability(player_attribute(holder, "Dribbling"), baseline=baseline, amplitude=amplitude)
+    return free * (1.0 - CONTACT_SLOWDOWN * gene)
+
+
 def dribble_loss_probability(holder: PlayerState, gene: float, duration_s: float) -> float:
     """Chance de perdre le ballon en conduisant `duration_s` secondes sous la gêne `gene` : la chance de garder de
     `keep_ball_probability`, rapportée à la durée (événement par unité de temps, indépendant du pas)."""
@@ -290,12 +304,16 @@ def arrival_s(opponent: PlayerState, point: Vec2, projection: float = 1.0) -> fl
     return REACTION_S + start.distance_to(point) / max_speed_mps(opponent.pace)
 
 
-def free_point(holder: PlayerState, opponents: list[PlayerState], heading: Vec2, projection: float) -> Vec2 | None:
+def free_point(holder: PlayerState, opponents: list[PlayerState], heading: Vec2, projection: float,
+               speed_factor: float | None = None) -> Vec2 | None:
     """Dernier point libre dans la direction `heading` (tous les `DRIBBLE_STEP_M` jusqu'à `DRIBBLE_REACH_M`) : le
     porteur, balle au pied, y arrive `DRIBBLE_MARGIN_S` avant tout adversaire, dont il prolonge le déplacement pour
-    la part `projection` (1 : le vrai ; moins : ce que son Anticipation lui fait voir, `arrival_s`). `None` : rien
-    de libre."""
-    speed = max_speed_mps(holder.pace) * DRIBBLE_SPEED_FACTOR
+    la part `projection` (1 : le vrai ; moins : ce que son Anticipation lui fait voir, `arrival_s`). `speed_factor` :
+    part de sa vitesse max balle au pied (`dribble_speed_factor`, ticket 04d) ; sans lui, celle sans adversaire. `None` :
+    rien de libre."""
+    if speed_factor is None:
+        speed_factor = dribble_speed_factor(holder, 0.0)
+    speed = max_speed_mps(holder.pace) * speed_factor
     reached = None
     for step in range(1, int(DRIBBLE_REACH_M / DRIBBLE_STEP_M) + 1):
         point = holder.position + heading * (step * DRIBBLE_STEP_M)
@@ -314,11 +332,12 @@ def dribble_options(holder: PlayerState, opponents: list[PlayerState], gene: flo
     même au duel, sans gain (valeur de garder le ballon sur place). Toujours cinq options, dans le même ordre."""
     forward = 1.0 if holder.team == "home" else -1.0
     keep = keep_ball_probability(holder, gene)
+    speed_factor = dribble_speed_factor(holder, gene)
     options = []
     for angle in DRIBBLE_DIRECTIONS_DEG:
         rad = math.radians(angle)
         heading = Vec2(forward * math.cos(rad), math.sin(rad))
-        reached = free_point(holder, opponents, heading, projection)
+        reached = free_point(holder, opponents, heading, projection, speed_factor)
         value = option_value(holder, mode, keep, danger(reached or holder.position, holder.team), holder.position)
         options.append(Action("dribble", value, point=reached or holder.position + heading * DRIBBLE_STEP_M))
     return options
