@@ -18,7 +18,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 
 import v2engine.cerveau as cerveau
-from v2engine.cerveau import APPEL, CHASE_RADIUS_M, OPPONENT_GOAL, TENIR, nearest_of_team
+from v2engine.cerveau import APPEL, BALLON_LIBRE, CHASE_RADIUS_M, OPPONENT_GOAL, TENIR, nearest_of_team
 from v2engine.defense import arrival_time_s
 from v2engine.gardien import (BALL_DISTANCE_M, BISECTOR_TOLERANCE_M, FACE_A_FACE, FACE_RANGE_M, FACE_STOPPED_MPS, PLACEMENT,
                               RELANCE, SORTIE, bisector_direction, bisector_point, face_depth, face_to_face, own_goal, race)
@@ -346,6 +346,7 @@ class Collector:
         # structure (ticket v2-realisme/02h)
         self.roles: dict[str, str] = {}  # dernier rôle de chaque joueur (Intention.role)
         self.keeper_state: dict[str, str] = {}  # dernier état de chaque gardien (ticket v2-realisme/03d)
+        self.shot_chasers: dict[str, bool] = {}  # joueur de champ en course vers un tir en vol (ticket v2-realisme/03k)
         self.call_episodes: Counter = Counter()  # épisodes APPEL (rôle APPEL après un autre rôle), par joueur
         self.call_state: dict[str, tuple[str, float, tuple]] = {}  # joueur -> (APPEL / TENIR, depuis, possession)
         self.possession_switches: Counter = Counter()  # passages APPEL <-> TENIR dans une même possession, par joueur
@@ -463,7 +464,7 @@ class Collector:
         filtre de portée lui fait laisser."""
         state = intention.reason.split(" :", 1)[0]
         if state == PLACEMENT and "garde sa place" in intention.reason:
-            state = "placement, ballon libre laissé"
+            state = "placement, tir en vol" if "tir en vol" in intention.reason else "placement, ballon libre laissé"  # 03k
         previous = self.keeper_state.get(keeper.name)
         self.keeper_state[keeper.name] = state
         placed = state.startswith(PLACEMENT)
@@ -497,6 +498,8 @@ class Collector:
             self.count["gardien : sorties réussies"] += 1
             if self.keeper_disputed.pop(keeper.name, False):
                 self.count["gardien : sorties disputées gagnées"] += 1
+        elif state == "placement, tir en vol" and previous != state:  # ticket v2-realisme/03k : épisodes, les deux gardiens
+            self.count["gardien : placements sur tir en vol"] += 1
         elif state == "placement, ballon libre laissé" and previous != state:
             self.count["gardien : ballons libres laissés"] += 1
         if ball is not None and state == SORTIE:  # ticket v2-realisme/03i : la première sortie de ce ballon libre
@@ -509,6 +512,15 @@ class Collector:
                 self.exits.append(free["exit"])
         if ball is not None and players is not None:
             self._masked_race(keeper, ball, players, state)
+
+    def on_shot_chaser(self, player: PlayerState, intention, ball) -> None:
+        """Ticket v2-realisme/03k : joueurs de champ en rôle `BALLON_LIBRE` (ils courent vers le ballon) pendant un tir en vol,
+        en épisodes par joueur et par tir. Mesure seule : le ticket ne les modifie pas."""
+        chasing = intention.role == BALLON_LIBRE and ball.shot_in_flight
+        if chasing and not self.shot_chasers.get(player.name):
+            kind = "tir à côté" if ball.shot_wide else "tir qui entre"
+            self.count[f"{kind} en vol : joueurs de champ en course vers le ballon"] += 1
+        self.shot_chasers[player.name] = chasing
 
     def _free_ball(self, ball) -> dict | None:
         """Épisode de ballon libre en cours (ticket v2-realisme/03i) : de la perte du porteur à la prise du ballon par un

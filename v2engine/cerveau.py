@@ -361,8 +361,9 @@ def _keeper(player: PlayerState, ball: BallState, seen: Perception, players: lis
     générale correspondante (porteur, receveur visé, passe lue, ballon libre). Il ne presse plus et ne vient plus en soutien."""
     # ticket 03d : la passe de son équipe en vol n'est pas un ballon libre pour lui (son receveur va la prendre)
     own_pass = ball.receiver is not None and ball.last_pass_team == player.team
-    reach = ball.holder is None and not own_pass and (seen.ball_distance < CHASE_RADIUS_M
-                                                      or nearest_of_team(player, ball, players))
+    # ticket 03k : un tir en vol (qui entre ou à côté) ne peut pas être pris, le gardien garde sa place pour l'arrêt
+    reach = ball.holder is None and not own_pass and not ball.shot_in_flight \
+        and (seen.ball_distance < CHASE_RADIUS_M or nearest_of_team(player, ball, players))
     course = gardien.race(player, ball, players) if reach else None  # ticket v2-realisme/03d : sort-il avant l'attaquant ?
     one_on_one = gardien.face_to_face(player, seen.holder, players)  # ticket v2-realisme/03e : un attaquant seul face à lui
     state = gardien.state(player, ball, seen.is_receiver, seen.read_point is not None, course is not None and course.rush,
@@ -378,6 +379,8 @@ def _keeper(player: PlayerState, ball: BallState, seen: Perception, players: lis
                          gardien.face_intensity(gap), reason=f"{FACE_A_FACE} : {why}", situation=situation)
     if inner is None:  # PLACEMENT
         why = "il se place sur la bissectrice ballon-poteaux"
+        if ball.shot_in_flight:
+            why = "tir en vol : il garde sa place pour l'arrêt, le ballon ne peut pas être pris"
         if course is not None:  # ballon libre à sa portée, mais il ne sort pas : trop loin de son but, ou l'adversaire arrive avant
             if course.point.distance_to(gardien.own_goal(player.team)) > gardien.RUSH_MAX_FROM_GOAL_M:
                 why = "le ballon est trop loin de son but, il garde sa place"

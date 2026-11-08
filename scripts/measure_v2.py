@@ -68,6 +68,8 @@ def _hook(collector: Collector, clock: dict[str, float], plans: bool = True) -> 
         collector.on_role(player.name, intention.role)
         if player.poste == "GK":
             collector.on_keeper(player, intention, *args[:2])  # ticket v2-realisme/03d ; ballon et joueurs : 03g
+        else:
+            collector.on_shot_chaser(player, intention, args[0])  # ticket v2-realisme/03k
         return intention
 
     real_stays = cerveau.stays_behind
@@ -247,6 +249,10 @@ def report(c: Collector, detail: bool = False) -> dict:
         "gardien : sorties hors de sa surface (part)": k["gardien : sorties hors de sa surface"] / max(1, k["gardien : sorties"]),
         "gardien : ballons libres à sa portée laissés par match": k["gardien : ballons libres laissés"] / n,
         "gardien : face-à-face par match": k["gardien : face-à-face"] / n,  # ticket v2-realisme/03e
+        # ticket v2-realisme/03k : tirs en vol retirés de la sortie du gardien ; joueurs de champ qui courent encore derrière
+        "gardien : placements sur tir en vol par match (deux gardiens)": k["gardien : placements sur tir en vol"] / n,
+        "tir à côté en vol : joueurs de champ en course vers le ballon par match": k["tir à côté en vol : joueurs de champ en course vers le ballon"] / n,
+        "tir qui entre en vol : joueurs de champ en course vers le ballon par match": k["tir qui entre en vol : joueurs de champ en course vers le ballon"] / n,
         # ticket v2-realisme/03g
         "gardien : sorties disputées par match": k["gardien : sorties disputées"] / n,
         "gardien : sorties très disputées par match": k["gardien : sorties très disputées"] / n,

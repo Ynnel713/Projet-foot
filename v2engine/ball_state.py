@@ -56,6 +56,9 @@ class BallState:
     # Tir qui finira au fond (tirage déjà fait au départ) : équipe du tireur tant que le ballon est en route vers le but.
     # Le but ne compte qu'à l'arrivée du ballon sur la ligne, jamais au départ du tir.
     shot_for: str | None = None
+    # Tir « à côté » en route vers la ligne de but, hors du cadre (ticket v2-realisme/03k) : vrai tant que le ballon suit la
+    # trajectoire du tir ; effacé dès qu'il change d'état (touché, sorti, ballon mort, nouvelle action).
+    shot_wide: bool = False
     # Ballon mort (ticket v2-collectif/29) : dernier joueur à l'avoir touché (il décide de la remise en jeu), remise en
     # attente tant que le ballon est mort, mode du ballon et distance qu'il doit encore parcourir en l'air avant de
     # pouvoir être touché (point de chute).
@@ -75,3 +78,8 @@ class BallState:
     pass_from: Vec2 | None = None
     rebound: bool = False
     came_from: tuple[str, str, Vec2] | None = None
+
+    @property
+    def shot_in_flight(self) -> bool:
+        """Vrai pour un tir en vol que personne ne peut prendre : tir qui entre (`shot_for`) ou tir à côté (`shot_wide`)."""
+        return self.shot_for is not None or self.shot_wide

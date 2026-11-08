@@ -477,3 +477,34 @@ Les corners « hors tir » sont donc des **tirs contrés** à 87 % (4,02 sur 4,6
 **À décider par le propriétaire (aucun réglage fait ici).** Le moteur traite un tir en vol comme un ballon libre pour déclencher la sortie du gardien (`gardien.race`, 03d, `loose_in_reach`) : 63,6 % des sorties sont des courses vers un tir à côté. Les candidats à écarter de ce déclencheur sont les **tirs à côté et les tirs qui entrent : 23,4 ballons par match**, les seuls dont la trajectoire est décidée au départ du tir. Les 9,9 autres tirs par match (contrés, repoussés, claqués) sont des ballons déviés, donc des seconds ballons que le gardien peut jouer (16,4 % des contrés finissent au gardien, 77,5 % des repoussés restent libres) : ils restent des ballons libres. Projection : environ 11,7 sorties par match (35,02 − 22,26 − 1,10), **à mesurer, non affirmée** ; le chiffre « environ 2 » (tous les tirs retirés) est une borne basse, qui ferait perdre au gardien le réflexe de suivre un rebond. C'est une modification de comportement du gardien, à traiter en ticket dédié (`v2-realisme/03k`) ou avec le `05b` (arrêt par portée), avec mesure avant et après sur les deux populations (tirs en vol et ballons déviés).
 
 **Déterminisme.** Deux exécutions de 2 matchs (`03j-det1.txt`, `03j-det2.txt`) : sorties identiques, hors la ligne de durée de calcul.
+
+## 15. Gardien : tirs en vol retirés du déclencheur de sortie (ticket v2-realisme/03k, 50 matchs appariés, 08/11/2026)
+
+`uv run python -m scripts.bench_series 50 --processus 7 --json .scratch/v2-realisme/mesures/03k.json` (graine d'audit 20260923, rapport `03k.txt`), comparée à `03j.json` (`--comparer`, rapport `03k-comparaison.txt`). **Changement de comportement, sans aucune constante nouvelle** : le moteur pose un drapeau `shot_wide` au départ d'un tir « à côté » (le tir qui entre avait déjà `shot_for`) ; `BallState.shot_in_flight` les réunit ; dans `cerveau._keeper`, un tir en vol n'entre plus dans `reach` : le gardien reste en placement, avec la raison tracée « tir en vol : il garde sa place pour l'arrêt, le ballon ne peut pas être pris ». Le drapeau est effacé aux cinq sites qui remettent déjà `pass_from` et `rebound` à zéro (touche d'un joueur, ballon sorti, ballon mort, remise en jeu, nouvelle action d'un porteur). Un ballon contré, repoussé ou claqué (`rebound`, sans drapeau) reste un ballon libre. Deux indicateurs ajoutés : placements du gardien sur tir en vol (état « placement, tir en vol », distinct de « ballon libre laissé ») et joueurs de champ en rôle `BALLON_LIBRE` pendant un tir en vol (mesure seule).
+
+**Sorties du gardien par match (50 matchs appariés).**
+
+| État du ballon à la première sortie | 03j (avant) | 03k (après) | Écart apparié |
+|---|---|---|---|
+| Tir à côté | 22,26 | 0,74 | −21,52 ± 1,6 |
+| Tir qui entre (but) | 1,10 | **0** | −1,10 ± 0,31 |
+| Tir contré | 7,32 | 7,48 | bruit |
+| Tir claqué | 1,80 | 1,84 | bruit |
+| Tir repoussé | 0,80 | 0,74 | bruit |
+| Passe ou centre | 0,58 | 0,48 | bruit |
+| Autre (dégagement, déviation) | 1,16 | 1,34 | bruit |
+| **Ballons avec sortie** | **35,02** | **12,62** | **−22,4 ± 1,9** |
+
+Les sorties (épisodes de l'état) sont 12,68 par match, contre 35,02 ; elles ne coïncident plus exactement avec les ballons avec sortie (écart de 0,06, dont 0,02 ballon non résolu en fin de match). La projection du ticket (environ 11,7) est dépassée de 8 % (12,6), sous les 20 % demandés : l'écart vient de la hausse de « autre » et de « contré » dans le bruit, et des tirs à côté touchés en route (ci-dessous).
+
+**Les 0,74 sorties restantes sur « tir à côté » (critère du ticket : 0).** Aucune n'est un tir en vol : toutes sont « tir récent » au sens de l'indicateur (croisement avec le « hors tir » du 03i : 0). Une sonde sur 4 matchs (4 cas) montre un ballon à 12 à 13 m/s, `shot_wide` déjà faux depuis 0,1 à 0,3 s, dernier joueur à l'avoir touché (un défenseur) : le tir à côté a été **touché en route**, le drapeau est tombé comme le ticket le prévoit (« effacé dès que le ballon change d'état »), le ballon est redevenu un ballon libre ordinaire et le gardien peut le disputer. Ce sont 3 % des 23,4 tirs à côté par match. Le critère « 0 » est donc tenu pour un tir en vol et non pour un tir dévié.
+
+**Placement sur tir en vol et courses des autres.**
+- Placements des deux gardiens sur un tir en vol : 63,5 par match (deux gardiens, soit 31,8 par gardien) pour environ 26,5 tirs en vol par match (23,4 à côté et environ 3,1 qui entrent), soit environ 53 épisodes pour deux gardiens : la raison « tir en vol » est produite pour les deux gardiens, y compris celui du camp du tireur (réserve A3 de l'expert, trace trompeuse, comportement identique). Les 10 épisodes en plus ne sont pas expliqués (alternance d'état d'un gardien pendant un même tir, possible) : c'est un compte d'épisodes de trace, à lire avec prudence, sans effet sur le moteur (réserve A2 de l'expert). Les « ballons libres laissés » baissent de 42,5 à 34,3 (−8,2 ± 2,4) : l'indicateur ne compte plus les tirs en vol.
+- **Joueurs de champ qui courent encore derrière un tir en vol (non modifiés, critère du ticket) :** 177,6 épisodes par match sur un tir à côté (soit 7,6 joueurs par tir à côté, pour 23,4 tirs à côté par match) et 18,2 sur un tir qui entre. Ce défaut reste entier côté joueurs de champ ; l'arrêt par portée reste au 05b, la correction éventuelle à proposer au propriétaire.
+
+**Qualité des sorties restantes.** Sorties réussies 5,0 % → 13,9 % (+8,4 points), sorties disputées gagnées 4,9 % → 13,7 % (+8,6 points, IC [5,9 ; 11,3]), sorties disputées 33,3 → 12,2 par match, sorties très disputées 9,1 → 5,6. Ballon au gardien à 3 s : 4,6 % → 12,8 %. La « sortie gagnée » mesure maintenant des ballons disputables.
+
+**Effets de jeu, sans réglage (écarts appariés, IC 95 %).** Aucun n'est au-delà du bruit : buts par match +0,04 [−0,50 ; +0,58] (3,08 → 3,12), tirs par équipe −0,30 [−1,31 ; +0,71], chance moyenne des tirs +0,00001 [−0,006 ; +0,006], arrêts par match −0,46 [−1,48 ; +0,56], corners par match −0,5 [−1,56 ; +0,56], conversion −0,0002, distance moyenne du gardien à son but +0,007 m [−0,05 ; +0,06]. Sur les 411 lignes comparées, 40 sortent de l'IC à 95 % : 32 sont des indicateurs du gardien ou de ses sorties, attendus ; les 8 autres sont de très petits écarts (réussite moyenne des passes +0,0018, largeur avec ballon −0,04 m, quelques indicateurs du milieu défensif sur 39 matchs) sans lien avec le gardien, que le hasard seul produit (à 5 %, 411 lignes en donnent environ 20).
+
+**À décider par le propriétaire.** Les joueurs de champ qui courent derrière un tir à côté (177,6 épisodes par match) : ticket à créer après le 05b si l'on veut qu'ils gardent leur place comme le gardien. Le tir contré (7,5 par match) reste un ballon libre pour le gardien ; il finit en corner dans 55 % des cas.

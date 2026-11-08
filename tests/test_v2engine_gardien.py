@@ -322,3 +322,37 @@ def test_a_high_line_is_honoured_in_the_face_to_face_depth() -> None:
     assert out.target.x >= gardien.placement(players[0], ball.position, 40.0).x - 1e-9
     low, _, _ = _replay([attacker], Vec2(22.0, 34.0), holder="A", line=10.0)  # ligne basse : la profondeur de face-à-face
     assert low.target.x == pytest.approx(gardien.face_depth(22.0), abs=0.05)
+
+
+# --- Tir en vol (ticket v2-realisme/03k) -----------------------------------------------------------------------------
+def _shot_in_flight(**flags):
+    """Tir adverse à côté du but de l'équipe du gardien, ballon à 25 m, gardien le plus proche et seul sur le ballon."""
+    keeper, ball, players = _loose_ball(Vec2(25.0, 34.0), rival_x=None)
+    ball.velocity, ball.released_by, ball.last_pass_team = Vec2(-20.0, 3.0), "A", "away"
+    for name, value in flags.items():
+        setattr(ball, name, value)
+    return keeper, ball, players
+
+
+def test_the_keeper_keeps_his_place_on_a_shot_in_flight_and_the_trace_says_so() -> None:
+    keeper, ball, players = _shot_in_flight()  # même ballon, sans drapeau : ballon libre, il sort (non-régression du 03d)
+    assert cerveau.think(keeper, ball, players, 1.0, {}).reason.startswith("sortie")
+    for flags in ({"shot_wide": True}, {"shot_for": "away"}):  # tir à côté, tir qui entre
+        keeper, ball, players = _shot_in_flight(**flags)
+        out = cerveau.think(keeper, ball, players, 1.0, {})
+        assert out.reason.startswith("placement") and "tir en vol" in out.reason
+        assert out.target == gardien.bisector_point(keeper, ball.position)
+
+
+def test_a_deflected_ball_stays_a_loose_ball_for_the_keeper() -> None:
+    keeper, ball, players = _shot_in_flight(rebound=True)  # tir contré, repoussé ou claqué : second ballon, sans drapeau
+    assert not ball.shot_in_flight
+    assert cerveau.think(keeper, ball, players, 1.0, {}).reason.startswith("sortie")
+
+
+def test_the_shot_in_flight_rule_is_mirrored_for_the_away_team() -> None:
+    away = player("G", "away", PITCH_LENGTH_M - 5.0, 34.0, "GK")
+    ball = BallState(position=Vec2(PITCH_LENGTH_M - 25.0, 34.0), velocity=Vec2(20.0, 3.0), released_by="H", last_pass_team="home")
+    assert cerveau.think(away, ball, [away], 1.0, {}).reason.startswith("sortie")
+    ball.shot_wide = True
+    assert cerveau.think(away, ball, [away], 1.0, {}).reason.startswith("placement")

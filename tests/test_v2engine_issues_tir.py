@@ -119,3 +119,47 @@ def test_a_keeper_outside_his_area_never_holds_the_ball_with_his_hands(monkeypat
 
     assert held_at(Vec2(PITCH_LENGTH_M - 10.0, GOAL_CENTER_Y)) == (HELD, "Gardien")  # dans sa surface : capté
     assert held_at(Vec2(PITCH_LENGTH_M - 22.0, GOAL_CENTER_Y)) == (PARRIED, None)  # hors de sa surface : repoussé
+
+
+# --- Tir en vol (ticket v2-realisme/03k) -----------------------------------------------------------------------------
+def _wide_shot(monkeypatch):
+    """Un tir tenté et tiré à côté : (ballon, joueurs) juste après la frappe."""
+    shooter = _player("Buteur", position=Vec2(PITCH_LENGTH_M - 25.0, GOAL_CENTER_Y))
+    keeper = _player("Gardien", team="away", poste="GK", position=Vec2(PITCH_LENGTH_M - 1.0, GOAL_CENTER_Y))
+    ball = BallState(position=shooter.position, velocity=Vec2(0.0, 0.0), holder="Buteur")
+    monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression, dt: False)
+    monkeypatch.setattr("v2engine.match.choose_action", lambda *args: Action("shot", 1.0))
+    monkeypatch.setattr("v2engine.match.attempt_shot", lambda *args: False)
+    monkeypatch.setattr("v2engine.match.SHOT_WIDE_SHARE", 1.0)
+    monkeypatch.setattr("v2engine.match.draw_blocker", lambda *args: None)
+    _step_ball(ball, 0.1, [shooter, keeper], 0.0, shots=[])
+    return ball, [shooter, keeper]
+
+
+def test_a_wide_shot_is_flagged_in_flight_and_a_saved_or_scoring_one_is_not_flagged_wide(monkeypatch) -> None:
+    ball, _ = _wide_shot(monkeypatch)
+    assert ball.shot_wide and ball.shot_in_flight and ball.shot_for is None
+    assert not BallState(position=Vec2(0.0, 0.0), velocity=Vec2(0.0, 0.0)).shot_in_flight  # ballon libre ordinaire
+    assert BallState(position=Vec2(0.0, 0.0), velocity=Vec2(0.0, 0.0), shot_for="home").shot_in_flight  # tir qui entre
+
+
+def test_the_wide_shot_flag_is_cleared_when_a_player_touches_the_ball_or_it_leaves_the_pitch(monkeypatch) -> None:
+    ball, players = _wide_shot(monkeypatch)
+    for i in range(1, 80):  # la ligne de but dépassée : sortie de but, ballon mort
+        _step_ball(ball, 0.1, players, i * 0.1)
+        if ball.restart is not None:
+            break
+    assert ball.restart is not None and not ball.shot_wide
+    ball, players = _wide_shot(monkeypatch)
+    ball.position = Vec2(PITCH_LENGTH_M - 3.0, GOAL_CENTER_Y)  # un défenseur sur la trajectoire touche le ballon
+    defender = _player("Defenseur", team="away", poste="DC", position=ball.position)
+    _step_ball(ball, 0.1, [players[0], defender], 0.5)
+    assert not ball.shot_wide
+
+
+def test_a_new_action_by_a_holder_clears_the_flag(monkeypatch) -> None:
+    ball, players = _wide_shot(monkeypatch)
+    ball.holder = "Gardien"  # ramassé ailleurs : le ballon est tenu, sa prochaine action le décrit
+    monkeypatch.setattr("v2engine.match.choose_action", lambda *args: Action("dribble", 1.0))  # il ne retire pas
+    _step_ball(ball, 0.1, players, 0.5)
+    assert not ball.shot_wide

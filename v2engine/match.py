@@ -218,7 +218,7 @@ def _whistle(ball: BallState, event: FoulEvent, players: list[PlayerState], now_
     ball.holder, ball.velocity, ball.shot_for, ball.dribble = None, Vec2(0.0, 0.0), None, None
     ball.receiver, ball.readers, ball.released_by, ball.plan = None, {}, None, None
     ball.mode, ball.aerial_left_m = SOL, 0.0
-    ball.pass_from, ball.rebound = None, False
+    ball.pass_from, ball.rebound, ball.shot_wide = None, False, False
     ball.hesitation = {}
     _clear_offside(ball)
     if fouls is not None:
@@ -343,7 +343,7 @@ def _play_restart(ball: BallState, players: list[PlayerState], now_s: float,
         ball.next_decision_s = now_s + reception_delay_s(taker, opponents)
         return
     ball.velocity = pass_velocity(taker, target, opponents)
-    ball.pass_from, ball.rebound = taker.position, False
+    ball.pass_from, ball.rebound, ball.shot_wide = taker.position, False, False
     ball.last_toucher = ball.released_by = taker.name
     ball.last_pass_team = taker.team
     ball.receiver = target.name
@@ -431,7 +431,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
             ball.felt = (holder.name, {})
         # coup franc (ticket v2-collectif/30) : il frappe ou passe, jamais ne conduit
         set_piece = ball.set_piece is not None and ball.set_piece.taker == holder.name
-        ball.pass_from, ball.rebound = None, False  # nouvelle action : l'origine d'un tir à venir repart de lui
+        ball.pass_from, ball.rebound, ball.shot_wide = None, False, False  # nouvelle action : l'origine d'un tir à venir repart de lui
         action = choose_action(holder, players, goal, keeper, (modes or {}).get(holder.team), planned,  # ticket 11
                                ball.felt[1], set_piece)
         if set_piece:
@@ -501,6 +501,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                 ball.velocity = (aim - ball.position).normalized() * SHOT_SPEED_MPS
                 ball.released_by = holder.name
                 ball.receiver, ball.readers, ball.last_pass_team = None, {}, holder.team
+                ball.shot_wide = True  # tir en vol hors du cadre : le gardien ne peut pas le prendre (ticket v2-realisme/03k)
                 return None
             if keeper is not None:
                 # Arrêt (ticket v2-collectif/28b) : capté, repoussé en jeu ou claqué derrière la ligne (corner), selon
@@ -583,7 +584,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
         ball.position, ball.velocity = point, Vec2(0.0, 0.0)
         ball.receiver, ball.readers, ball.released_by, ball.plan = None, {}, None, None
         ball.mode, ball.aerial_left_m = SOL, 0.0
-        ball.pass_from, ball.rebound = None, False
+        ball.pass_from, ball.rebound, ball.shot_wide = None, False, False
         _clear_offside(ball)
         return None
     ball.position = end
@@ -617,7 +618,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
             return None
         ball.last_toucher = player.name  # contrôlé ou non, il l'a touché (ticket v2-collectif/29)
         received = _received_as(ball, player, aerial)
-        ball.pass_from, ball.rebound = None, False
+        ball.pass_from, ball.rebound, ball.shot_wide = None, False, False
         opponents = [p for p in players if p.team != player.team]
         ball.readers = {}  # la passe est finie, contrôlée ou non : personne ne court plus la couper
         ball.receiver = None

@@ -980,3 +980,41 @@ def test_the_old_off_shot_group_is_crossed_with_the_states_and_the_corner() -> N
     assert c.count["gardien : ballons avec sortie hors tir du 03i, état : tir : contré, corner"] == 0  # ballon pris par le gardien
     corner = _exit_counts([(0.0, "away", "contré")], dead=True)  # le ballon sort : corner à 3 s
     assert corner.count["gardien : ballons avec sortie hors tir du 03i, état : tir : contré, corner"] == 1
+
+
+def test_a_keeper_placed_on_a_shot_in_flight_is_not_a_loose_ball_left_behind() -> None:
+    # ticket v2-realisme/03k : la raison « tir en vol : il garde sa place » ne compte pas comme ballon libre laissé
+    from v2engine.cerveau import Intention
+    c = ind.Collector(geometry_every_s=1e9)
+    keeper = _p("K", "home", 5.0, 34.0, poste="GK")
+
+    def step(reason: str) -> None:
+        c.on_keeper(keeper, Intention("gardien", "se replacer", Vec2(3.0, 34.0), reason=reason))
+
+    step("placement : il se place sur la bissectrice ballon-poteaux")
+    step("placement : tir en vol : il garde sa place pour l'arrêt, le ballon ne peut pas être pris")
+    step("placement : tir en vol : il garde sa place pour l'arrêt, le ballon ne peut pas être pris")  # même tir
+    step("placement : le ballon est trop loin de son but, il garde sa place")
+    assert c.count["gardien : placements sur tir en vol"] == 1 and c.count["gardien : ballons libres laissés"] == 1
+
+
+def test_field_players_running_at_a_shot_in_flight_are_counted_once_per_episode() -> None:
+    from v2engine.ball_state import BallState
+    from v2engine.cerveau import BALLON_LIBRE, TENIR, Intention
+    c = ind.Collector(geometry_every_s=1e9)
+    player = _p("D", "away", 90.0, 34.0)
+    wide = BallState(position=Vec2(60.0, 34.0), velocity=Vec2(20.0, 0.0), shot_wide=True)
+    entering = BallState(position=Vec2(60.0, 34.0), velocity=Vec2(20.0, 0.0), shot_for="home")
+    plain = BallState(position=Vec2(60.0, 34.0), velocity=Vec2(5.0, 0.0))
+
+    def step(role: str, ball) -> None:
+        c.on_shot_chaser(player, Intention(role, "x", Vec2(60.0, 34.0)), ball)
+
+    step(BALLON_LIBRE, wide)
+    step(BALLON_LIBRE, wide)  # même épisode
+    step(TENIR, wide)
+    step(BALLON_LIBRE, wide)  # nouvel épisode
+    step(BALLON_LIBRE, plain)  # ballon libre ordinaire : pas un tir en vol
+    step(BALLON_LIBRE, entering)  # le drapeau tombe, le rôle reste : nouvel épisode, tir qui entre
+    assert c.count["tir à côté en vol : joueurs de champ en course vers le ballon"] == 2
+    assert c.count["tir qui entre en vol : joueurs de champ en course vers le ballon"] == 1
