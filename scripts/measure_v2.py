@@ -30,7 +30,7 @@ import v2engine.defense as defense
 import v2engine.match as match
 from ligue1sim.lineup import pick_best_formation
 
-from scripts.v2_indicators import EXIT_STATES, Collector
+from scripts.v2_indicators import CARRY_PREFIX, EXIT_STATES, Collector
 
 AUDIT_SEED = 20260923
 HIGH, LOW = 99, 11
@@ -52,7 +52,10 @@ def _hook(collector: Collector, clock: dict[str, float], plans: bool = True) -> 
 
     def resolve_tackle(*args, **kwargs):
         collector.on_tackle()
-        return real["resolve_tackle"](*args, **kwargs)
+        result = real["resolve_tackle"](*args, **kwargs)
+        if result.won:
+            collector.on_tackle_won(args[1])  # (tacleur, porteur), ticket v2-realisme/04c
+        return result
 
     def dribble_lost(holder, opponents, *args, **kwargs):  # ticket v2-realisme/04a : un tirage de perte par intervalle de conduite
         lost = real["dribble_lost"](holder, opponents, *args, **kwargs)
@@ -333,6 +336,17 @@ def report(c: Collector, detail: bool = False) -> dict:
         "plans abandonnés, cible non vue ou hors-jeu (part)": k["plan non vu"] / max(1, k["plans reçus"]),
         "plans refusés, Teamwork (part)": k["plan refusé"] / max(1, k["plans reçus"]),
     }
+    # calibration de la conduite (ticket v2-realisme/04c) : risque évalué contre perte observée, par tranche
+    for tranche in sorted({key[len(CARRY_PREFIX):].rsplit(" : ", 1)[0] for key in k if key.startswith(CARRY_PREFIX)}):
+        base, n_int = f"{CARRY_PREFIX}{tranche} : ", k[f"{CARRY_PREFIX}{tranche} : intervalles"]
+        evaluated, drawn = k[base + "risque évalué (somme)"] / n_int, k[base + "pertes"] / n_int
+        total = (k[base + "pertes"] + k[base + "pertes par tacle"]) / n_int
+        out[f"{base}intervalles par match"] = n_int / n
+        out[f"{base}risque évalué (part)"] = evaluated
+        out[f"{base}perte tirée (part)"] = drawn
+        out[f"{base}écart évalué / tirée (points)"] = 100.0 * (drawn - evaluated)
+        out[f"{base}perte avec tacle gagné (part)"] = total
+        out[f"{base}écart évalué / avec tacle (points)"] = 100.0 * (total - evaluated)
     # structure (ticket v2-realisme/02h)
     out["passages APPEL / TENIR dans une possession par match"] = k["passages APPEL / TENIR dans une possession"] / n
     out["passages APPEL / TENIR dans une possession : état de moins de 1,5 s (part)"] = (

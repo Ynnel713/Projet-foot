@@ -19,6 +19,8 @@ from dataclasses import dataclass, field, replace
 
 import v2engine.cerveau as cerveau
 from v2engine.cerveau import APPEL, BALLON_LIBRE, CHASE_RADIUS_M, OPPONENT_GOAL, TENIR, nearest_of_team
+from v2engine.attributes import player_attribute
+from v2engine.decision import DECISION_INTERVAL_S, dribble_loss_probability
 from v2engine.defense import arrival_time_s
 from v2engine.gardien import (BALL_DISTANCE_M, BISECTOR_TOLERANCE_M, FACE_A_FACE, FACE_RANGE_M, FACE_STOPPED_MPS, PLACEMENT,
                               RELANCE, SORTIE, bisector_direction, bisector_point, face_depth, face_to_face, own_goal, race)
@@ -77,6 +79,18 @@ SHOT_AFTER_EXIT_S = 5.0
 # dans les 5 s qui précèdent la sortie (`SHOT_AFTER_EXIT_S`, plus un tick de retard de lecture) donne l'état par son issue ;
 # à défaut, les drapeaux du ballon (`rebound`, `receiver`).
 SHOT_MATCH_LAG_S = 0.15
+# Calibration de la conduite (ticket v2-realisme/04c, tranches proposées le 08/11/2026, acceptées d'office) : bornes basses
+# des tranches de gêne du porteur (0 : aucun adversaire à 5 m ; 1 : au contact) et de Dribbling. Mesure seule.
+CARRY_PRESSURE_BINS = (0.0, 0.1, 0.3, 0.5, 0.7, 0.9)
+CARRY_DRIBBLING_BINS = (0, 40, 55, 70)
+CARRY_PREFIX = "calibration conduite, "
+
+
+def carry_tranche(kind: str, value: float, bins: tuple) -> str:
+    """Tranche de `value` parmi les bornes basses `bins` : `kind` suivi de `[bas ; haut[` (la dernière est ouverte)."""
+    low = max(b for b in bins if b <= value)
+    high = next((b for b in bins if b > low), None)
+    return f"{kind} [{low:g} ; {'+' if high is None else format(high, 'g')}["
 EXIT_STATES = ("tir : but", "tir : à côté", "tir : contré", "tir : repoussé", "tir : claqué", "tir : capté",
                "rebond sans tir récent", "passe ou centre", "autre")
 TRANSITIONS = (TRANSITION_OFFENSIVE, TRANSITION_DEFENSIVE)
@@ -373,6 +387,7 @@ class Collector:
         self.profile_gaps: dict[str, list[float]] = defaultdict(list)  # niveau -> distances défense-milieu
         self.press_open: tuple[str, float] | None = None  # pressing en cours (ticket 08) : (équipe qui presse, début)
         self.now = 0.0  # instant du dernier tick
+        self.carry_open: dict[str, tuple[float, tuple[str, ...]]] = {}  # porteur -> (instant du tirage, tranches), ticket 04c
         self.planned: str | None = None  # suite prévue par la dernière décision (plan de passe, ticket 14)
         # passes du match (ticket 14) : instant, équipe, passeur, cible, gain (m), avance, suite prévue, réussie
         self.pass_log: list[dict] = []
@@ -521,6 +536,26 @@ class Collector:
         for name in classes:
             self.count[name + " : intervalles"] += 1
             self.count[name + " : pertes"] += bool(lost)
+        # ticket v2-realisme/04c : risque évalué (la fonction que lit l'évaluation de l'option) contre perte tirée, par tranche
+        expected = dribble_loss_probability(holder, gene, DECISION_INTERVAL_S)
+        tranches = (carry_tranche("gêne", gene, CARRY_PRESSURE_BINS),
+                    carry_tranche("Dribbling", player_attribute(holder, "Dribbling"), CARRY_DRIBBLING_BINS))
+        for tranche in tranches:
+            self.count[f"{CARRY_PREFIX}{tranche} : intervalles"] += 1
+            self.count[f"{CARRY_PREFIX}{tranche} : risque évalué (somme)"] += expected
+            self.count[f"{CARRY_PREFIX}{tranche} : pertes"] += bool(lost)
+        if lost:
+            self.carry_open.pop(holder.name, None)
+        else:
+            self.carry_open[holder.name] = (self.now, tranches)  # intervalle ouvert : un tacle gagné avant le suivant le ferme
+
+    def on_tackle_won(self, holder: PlayerState) -> None:
+        """Ticket v2-realisme/04c : tacle gagné sur un porteur en conduite, pendant l'intervalle qui suit son tirage (le tacle
+        est tiré à part du risque de conduite, 04a). Compté dans les tranches de cet intervalle."""
+        opened = self.carry_open.pop(holder.name, None)
+        if opened is not None and self.now - opened[0] < DECISION_INTERVAL_S - 1e-9:
+            for tranche in opened[1]:
+                self.count[f"{CARRY_PREFIX}{tranche} : pertes par tacle"] += 1
 
     def on_lost_carry(self, dispossessed: bool) -> None:
         """Ticket v2-realisme/04b : issue d'un ballon perdu en conduite, dépossession par l'adversaire ou touche trop longue."""

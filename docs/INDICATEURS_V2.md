@@ -545,3 +545,31 @@ Sur les 413 lignes comparées, 219 sortent de l'IC (le moteur change vraiment de
 
 **Déterminisme.** Deux exécutions de `measure_v2 2` à graine fixée donnent des sorties identiques, à la ligne de temps de calcul près.
 
+
+## 18. Conduite : risque annoncé, probabilité calculée, résultat observé (ticket v2-realisme/04c, 50 matchs, 08/11/2026)
+
+**Ce que mesure l'indicateur.** À chaque tirage de perte de conduite (un par intervalle de décision de 0,5 s, `decision.dribble_lost`), le banc note le risque évalué à cet instant (`dribble_loss_probability`, la fonction que lit l'évaluation de l'option) et la perte tirée, rangés par tranche de gêne du porteur (`pressure`) et par tranche de Dribbling (`CARRY_PRESSURE_BINS`, `CARRY_DRIBBLING_BINS`, `scripts/v2_indicators.py`). Écart = perte tirée − risque évalué, en points. Deuxième colonne : la perte « avec tacle gagné » compte aussi le tacle gagné sur ce porteur avant sa décision suivante (le tacle est tiré à part, 04a). Mesure seule : le jeu n'est pas modifié.
+
+**Résultat (50 matchs, graine d'audit 20260923), par tranche de gêne.**
+
+| Gêne | Intervalles par match | Risque évalué | Perte tirée | Écart (points) | Perte avec tacle | Écart avec tacle |
+|---|---|---|---|---|---|---|
+| [0 ; 0,1[ | 136,0 | 0,62 % | 0,63 % | +0,01 | 0,63 % | +0,01 |
+| [0,1 ; 0,3[ | 92,9 | 1,62 % | 1,76 % | +0,15 | 1,76 % | +0,15 |
+| [0,3 ; 0,5[ | 197,9 | 2,66 % | 2,47 % | −0,19 | 2,48 % | −0,18 |
+| [0,5 ; 0,7[ | 597,4 | 3,72 % | 3,54 % | −0,19 | 3,59 % | −0,13 |
+| [0,7 ; 0,9[ | 1 208,7 | 4,71 % | 4,76 % | +0,05 | 5,04 % | +0,33 |
+| [0,9 ; +[ | 8,3 | 5,35 % | 5,76 % | +0,40 | 5,76 % | +0,40 |
+
+Par Dribbling : [0 ; 40[ 36,7 intervalles, écart −0,18 ; [40 ; 55[ 349,0, −0,24 ; [55 ; 70[ 1 221,0, +0,03 ; [70 ; +[ 634,6, −0,02 (risque évalué 4,5 % → 3,5 % de la tranche basse à la haute).
+
+**Lecture.**
+- **Critère tenu** : écart maximal 0,40 point (sous 3 points) sur toutes les tranches de gêne, 0,24 sur celles de Dribbling. Le plus grand écart tombe sur la tranche la plus vide (8 intervalles par match, 417 sur la série, erreur type environ 1,1 point) : il est dans le bruit. Les autres écarts sont de 0 à 1,7 erreur type.
+- **Ce que la mesure prouve et ne prouve pas.** L'évaluation et le tirage lisent la même fonction (04a) : l'accord est attendu, et l'indicateur sert de garde-fou si l'un des deux dérive (test synthétique : un moteur qui perdrait deux fois plus donne un écart égal au risque évalué). Il ne dit pas que le niveau de risque est réaliste : 3,86 % par intervalle de 0,5 s, soit 86,5 pertes de conduite par match ; chiffre de référence réel : non trouvé (voir la section 16).
+- **Le tacle n'ajoute pas de perte cachée** : 3,8 tacles gagnés par match tombent dans un intervalle de conduite ouvert (sur 2 241 intervalles), soit +0,0 à +0,3 point selon la tranche. Les 42,1 tacles par match tombent donc pour l'essentiel hors d'un intervalle de conduite ouvert (porteur qui vient de recevoir, de passer ou de tirer) ; cette répartition n'est pas analysée ici.
+- **Limite de la colonne « avec tacle »** (réserve A1 de l'expert) : un tacle gagné n'est compté que s'il tombe aux ticks +0,1 à +0,4 s après le tirage ; le tick +0,5 s, où le moteur résout le tacle juste avant la décision suivante, est exclu (`< DECISION_INTERVAL_S`). Environ un tacle sur cinq de ceux qui tombent dans un intervalle ouvert (3,8 par match) est donc manqué, soit au plus 0,8 par match et environ +0,1 point sur la tranche concernée. Le critère des 3 points (colonne « perte tirée ») n'est pas touché. Correctif d'une ligne si la colonne devient une mesure : `<= DECISION_INTERVAL_S + 1e-9`, avec un test à 0,5 s compté.
+- **Dribbling pèse peu par intervalle** (3,5 à 4,5 % de la tranche haute à la basse) : l'effet est réel mais faible sur 0,5 s ; sur la durée de référence de 1,5 s il se cumule (section 16).
+
+**À refaire** après les tickets 04e, 07 et 11 (`python -m scripts.measure_v2 50`, clés `calibration conduite, …`).
+
+**Réserves du 04b non traitées ici** (le ticket 04c est une validation, sans changement de moteur) : A1, la dépossession ne reprend pas les garde-fous du tacle (`engaged`, `tackle_ban_until_s`, `offside_out_until`) ; A3, le porteur écarté 0,5 s dépasse le ballon libre. Le banc ne voit pas ces états depuis `lost_carry_outcome` : à traiter dans un ticket dédié si le propriétaire le décide.

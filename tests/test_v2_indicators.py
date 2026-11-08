@@ -4,11 +4,14 @@ sur des positions construites à la main."""
 from __future__ import annotations
 
 import math
+from dataclasses import replace
 from types import SimpleNamespace
 
 from scripts import v2_indicators as ind
+from v2engine.decision import DECISION_INTERVAL_S, dribble_loss_probability
 from v2engine.geometry import PITCH_LENGTH_M, Vec2
 from v2engine.movement import PlayerState
+from v2engine.possession import pressure
 
 
 def _p(name: str, team: str, x: float, y: float, poste: str = "MC", vx: float = 0.0, vy: float = 0.0) -> PlayerState:
@@ -1032,3 +1035,58 @@ def test_carry_loss_draws_are_counted_by_the_pressure_on_the_holder() -> None:
     assert c.count["conduite : intervalles"] == 3 and c.count["conduite : pertes"] == 1
     assert c.count["conduite serrée : intervalles"] == 2 and c.count["conduite serrée : pertes"] == 1
     assert c.count["conduite libre : intervalles"] == 1 and c.count["conduite libre : pertes"] == 0
+
+
+def _carry_holder(dribbling: int) -> PlayerState:
+    return replace(_p("H", "home", 50.0, 34.0), attributes={"Dribbling": dribbling})
+
+
+def test_carry_tranches_are_bounded_below_and_the_last_is_open() -> None:
+    assert ind.carry_tranche("gêne", 0.0, ind.CARRY_PRESSURE_BINS) == "gêne [0 ; 0.1["
+    assert ind.carry_tranche("gêne", 0.1, ind.CARRY_PRESSURE_BINS) == "gêne [0.1 ; 0.3["
+    assert ind.carry_tranche("gêne", 1.0, ind.CARRY_PRESSURE_BINS) == "gêne [0.9 ; +["
+    assert ind.carry_tranche("Dribbling", 55, ind.CARRY_DRIBBLING_BINS) == "Dribbling [55 ; 70["
+
+
+def test_carry_calibration_curve_is_exact_on_synthetic_draws() -> None:
+    # ticket v2-realisme/04c : des tirages synthétiques qui perdent exactement la part évaluée donnent un écart nul ; un
+    # moteur qui perdrait deux fois plus donne un écart égal au risque évalué (la courbe détecte le désalignement)
+    from scripts.measure_v2 import report
+    holder, rivals = _carry_holder(55), [_p("A", "away", 50.5, 34.0)]  # gêne 0,9 : tranche [0,9 ; +[
+    expected = dribble_loss_probability(holder, pressure(holder, rivals), DECISION_INTERVAL_S)
+    for factor, gap in ((1.0, 0.0), (2.0, 100.0 * expected)):
+        c = ind.Collector(geometry_every_s=1e9)
+        c.matches = 1
+        for i in range(10000):
+            c.on_dribble(holder, rivals, i < round(10000 * expected * factor))
+        out = report(c)
+        for tranche in ("gêne [0.9 ; +[", "Dribbling [55 ; 70["):
+            base = f"{ind.CARRY_PREFIX}{tranche} : "
+            assert out[base + "intervalles par match"] == 10000.0
+            assert abs(out[base + "risque évalué (part)"] - expected) < 1e-12
+            assert abs(out[base + "écart évalué / tirée (points)"] - gap) < 0.01 + 1e-9
+
+
+def test_a_tackle_won_closes_the_open_carry_interval_only_once_and_only_inside_it() -> None:
+    from scripts.measure_v2 import report
+    c = ind.Collector(geometry_every_s=1e9)
+    c.matches = 1
+    holder, rivals = _carry_holder(55), [_p("A", "away", 50.5, 34.0)]
+    c.now = 10.0
+    c.on_dribble(holder, rivals, False)
+    c.now = 10.3
+    c.on_tackle_won(holder)  # dans l'intervalle de 0,5 s : compté
+    c.on_tackle_won(holder)  # l'intervalle est fermé : pas deux fois
+    c.now = 20.0
+    c.on_dribble(holder, rivals, False)
+    c.now = 20.5
+    c.on_tackle_won(holder)  # au tirage suivant : plus dans l'intervalle
+    c.now = 30.0
+    c.on_dribble(holder, rivals, True)  # perdu au tirage : pas d'intervalle ouvert
+    c.now = 30.1
+    c.on_tackle_won(holder)
+    out = report(c)
+    base = f"{ind.CARRY_PREFIX}gêne [0.9 ; +[ : "
+    assert out[base + "intervalles par match"] == 3.0
+    assert c.count[base + "pertes par tacle"] == 1 and c.count[base + "pertes"] == 1
+    assert abs(out[base + "perte avec tacle gagné (part)"] - 2 / 3) < 1e-12
