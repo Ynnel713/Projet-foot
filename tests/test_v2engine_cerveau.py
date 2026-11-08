@@ -111,7 +111,8 @@ def test_keeper_never_presses_or_supports_in_a_real_match() -> None:
     # hors remises en jeu (ticket 29) et hors « play the whistle » (hors-jeu, ticket 23), qui change la raison de tous
     live = [i for i in keepers if i.role != cerveau.REMISE and not i.reason.startswith(("ballon mort", "il lève la main"))]
     assert live and all(i.role == cerveau.GARDIEN for i in live)
-    assert {i.reason.split(" : ")[0] for i in live} <= {"placement", "sortie", "intervention", "relance"}
+    # « face-à-face » (ticket 03e) est une raison légitime du gardien ; la graine du match la fait apparaître depuis le 04a
+    assert {i.reason.split(" : ")[0] for i in live} <= {"placement", "sortie", "intervention", "relance", "face-à-face"}
     assert any(i.reason.startswith("placement") for i in live)
     assert not {i.role for i in keepers} & {cerveau.PRESSEUR, cerveau.SOUTIEN, cerveau.BALLON_LIBRE}
 

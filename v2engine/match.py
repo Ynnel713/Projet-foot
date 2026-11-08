@@ -28,7 +28,7 @@ from v2engine.formation import initial_positions
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch, in_penalty_area
 from v2engine.movement import PlayerState, step
 from v2engine.cerveau import GOAL_CENTER_Y, OPPONENT_GOAL, Intention, think
-from v2engine.decision import DECISION_INTERVAL_S, choose_action
+from v2engine.decision import DECISION_INTERVAL_S, choose_action, dribble_lost
 from v2engine.defense import DefensiveRoles
 from v2engine.offside import HESITATION_S, OFFSIDE_OUT_S, offside_at_pass, sees_the_flag_probability
 from v2engine.possession import (BALL_FRICTION_PER_S, BALL_STOPPED_MPS, MAX_PASS_MPS, MISS_RETRY_S, attempt_control, missed_control_velocity,
@@ -450,6 +450,16 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                                             getattr(action, "best_kind", None), getattr(action, "gap", 0.0)))
         point = getattr(action, "point", None)
         ball.dribble = (holder.name, point) if action.kind == "dribble" and point is not None else None
+        rivals = [p for p in players if p.team != holder.team]
+        if action.kind == "dribble" and dribble_lost(holder, rivals):
+            # Ballon perdu en conduite (ticket v2-realisme/04a), même risque que celui de l'évaluation. Il s'échappe
+            # comme un contrôle raté ; où il va exactement est l'objet du ticket 04b.
+            ball.dribble, ball.holder = None, None
+            ball.velocity = missed_control_velocity(holder, holder.velocity, rivals)
+            ball.position = clamp_to_pitch(holder.position + ball.velocity.normalized() * CONTROL_RADIUS_M)
+            ball.control_ban_until_s[holder.name] = now_s + MISS_RETRY_S
+            ball.last_toucher, ball.released_by, ball.receiver, ball.readers = holder.name, None, None, {}
+            return None
         if action.kind == "shot":
             _settle_advantage(ball, fouls)  # un tir réalise l'avantage (loi 12 ; réserve A1 de l'expert, ticket 30)
             _clear_offside(ball)  # la passe signalée est morte : le ballon est tiré

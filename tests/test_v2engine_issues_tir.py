@@ -161,5 +161,6 @@ def test_a_new_action_by_a_holder_clears_the_flag(monkeypatch) -> None:
     ball, players = _wide_shot(monkeypatch)
     ball.holder = "Gardien"  # ramassé ailleurs : le ballon est tenu, sa prochaine action le décrit
     monkeypatch.setattr("v2engine.match.choose_action", lambda *args: Action("dribble", 1.0))  # il ne retire pas
+    monkeypatch.setattr("v2engine.match.dribble_lost", lambda *args, **kwargs: False)  # ticket 04a : pas de perte tirée ici
     _step_ball(ball, 0.1, players, 0.5)
     assert not ball.shot_wide

@@ -25,7 +25,7 @@ from v2engine.gardien import (BALL_DISTANCE_M, BISECTOR_TOLERANCE_M, FACE_A_FACE
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, in_penalty_area
 from v2engine.movement import PlayerState
 from v2engine.offside import offside_line
-from v2engine.possession import pass_success_probability
+from v2engine.possession import pass_success_probability, pressure
 from v2engine.restart import CORNER, GOAL_KICK, KICKOFF
 from v2engine.shooting import base_chance, shot_probability
 from v2engine.situation import POSSESSION_INSTALLEE, TRANSITION_DEFENSIVE, TRANSITION_OFFENSIVE, SituationTracker
@@ -512,6 +512,15 @@ class Collector:
                 self.exits.append(free["exit"])
         if ball is not None and players is not None:
             self._masked_race(keeper, ball, players, state)
+
+    def on_dribble(self, holder: PlayerState, opponents, lost: bool) -> None:
+        """Ticket v2-realisme/04a : un tirage de perte de conduite (un par intervalle de décision), selon la gêne du porteur
+        (0 : aucun adversaire à 5 m ; 1 : au contact)."""
+        gene = pressure(holder, opponents)
+        classes = ["conduite"] + (["conduite libre"] if gene < 0.1 else []) + (["conduite serrée"] if gene >= 0.5 else [])
+        for name in classes:
+            self.count[name + " : intervalles"] += 1
+            self.count[name + " : pertes"] += bool(lost)
 
     def on_shot_chaser(self, player: PlayerState, intention, ball) -> None:
         """Ticket v2-realisme/03k : joueurs de champ en rôle `BALLON_LIBRE` (ils courent vers le ballon) pendant un tir en vol,

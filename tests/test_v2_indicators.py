@@ -1018,3 +1018,17 @@ def test_field_players_running_at_a_shot_in_flight_are_counted_once_per_episode(
     step(BALLON_LIBRE, entering)  # le drapeau tombe, le rôle reste : nouvel épisode, tir qui entre
     assert c.count["tir à côté en vol : joueurs de champ en course vers le ballon"] == 2
     assert c.count["tir qui entre en vol : joueurs de champ en course vers le ballon"] == 1
+
+
+def test_carry_loss_draws_are_counted_by_the_pressure_on_the_holder() -> None:
+    # ticket v2-realisme/04a : un tirage par intervalle de conduite, classé libre (gêne < 0,1) ou serré (gêne >= 0,5)
+    c = ind.Collector(geometry_every_s=1e9)
+    holder = _p("H", "home", 50.0, 34.0)
+    close = [_p("A", "away", 50.5, 34.0)]
+    far = [_p("A", "away", 60.0, 34.0)]
+    c.on_dribble(holder, close, True)
+    c.on_dribble(holder, close, False)
+    c.on_dribble(holder, far, False)
+    assert c.count["conduite : intervalles"] == 3 and c.count["conduite : pertes"] == 1
+    assert c.count["conduite serrée : intervalles"] == 2 and c.count["conduite serrée : pertes"] == 1
+    assert c.count["conduite libre : intervalles"] == 1 and c.count["conduite libre : pertes"] == 0

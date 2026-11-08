@@ -99,6 +99,7 @@ def test_the_match_hands_the_plan_to_its_receiver_only_and_clears_it(monkeypatch
         mate = next(p for p in players if p.name == "R")
         return Action("pass", 1.0, mate, follow="P") if holder.name == "H" else Action("dribble", 1.0)
     monkeypatch.setattr("v2engine.match.choose_action", fake_choose)
+    monkeypatch.setattr("v2engine.match.dribble_lost", lambda *args, **kwargs: False)  # ticket 04a : pas de perte tirée ici
     players = [_p("H", 40, 34), *_scene()]
 
     ball = BallState(position=Vec2(40, 34), velocity=Vec2(0, 0), holder="H")

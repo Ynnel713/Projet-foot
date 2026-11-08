@@ -108,6 +108,7 @@ def _count_attempts(monkeypatch) -> list[str]:
     monkeypatch.setattr("v2engine.match.resolve_tackle",
                         lambda tackler, holder: attempts.append(tackler.name) or _LostTackle())
     monkeypatch.setattr("v2engine.match.choose_action", lambda *args: type("A", (), {"kind": "dribble"})())
+    monkeypatch.setattr("v2engine.match.dribble_lost", lambda *args, **kwargs: False)  # ticket 04a : pas de perte tirée ici
     return attempts
 
 

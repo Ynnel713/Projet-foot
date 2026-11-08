@@ -508,3 +508,27 @@ Les sorties (épisodes de l'état) sont 12,68 par match, contre 35,02 ; elles ne
 **Effets de jeu, sans réglage (écarts appariés, IC 95 %).** Aucun n'est au-delà du bruit : buts par match +0,04 [−0,50 ; +0,58] (3,08 → 3,12), tirs par équipe −0,30 [−1,31 ; +0,71], chance moyenne des tirs +0,00001 [−0,006 ; +0,006], arrêts par match −0,46 [−1,48 ; +0,56], corners par match −0,5 [−1,56 ; +0,56], conversion −0,0002, distance moyenne du gardien à son but +0,007 m [−0,05 ; +0,06]. Sur les 411 lignes comparées, 40 sortent de l'IC à 95 % : 32 sont des indicateurs du gardien ou de ses sorties, attendus ; les 8 autres sont de très petits écarts (réussite moyenne des passes +0,0018, largeur avec ballon −0,04 m, quelques indicateurs du milieu défensif sur 39 matchs) sans lien avec le gardien, que le hasard seul produit (à 5 %, 411 lignes en donnent environ 20).
 
 **À décider par le propriétaire.** Les joueurs de champ qui courent derrière un tir à côté (177,6 épisodes par match) : ticket à créer après le 05b si l'on veut qu'ils gardent leur place comme le gardien. Le tir contré (7,5 par match) reste un ballon libre pour le gardien ; il finit en corner dans 55 % des cas.
+
+## 16. Conduite : même risque de perte à l'évaluation et à la résolution (ticket v2-realisme/04a, 50 matchs appariés, 08/11/2026)
+
+**Ce que fait le moteur.** Une seule fonction, `decision.keep_ball_probability`, donne la chance de garder le ballon en conduisant sur une durée de référence `DRIBBLE_REFERENCE_S` = 1,5 s. L'évaluation de l'option (`dribble_loss_probability`) et la résolution en match (`dribble_lost`, un tirage par intervalle de décision de 0,5 s, flux DUEL) la lisent toutes les deux ; la perte par intervalle vaut `1 − garde^(intervalle / 1,5 s)`. La perte « sous pression » (`PRESSURE_KEEP_SHARE`) a quitté la conduite pour ne pas compter deux fois avec le tacle, qui reste tiré à part ; elle reste pour les passes. Strength et Balance ne sont pas lus (règle R1 de la carte des attributs).
+
+**Indicateurs ajoutés** (`scripts/measure_v2.py`, `scripts/v2_indicators.py`) : intervalles de conduite par match, pertes par match et par intervalle, ventilés conduite libre (gêne < 0,1) et serrée (gêne ≥ 0,5).
+
+**Résultat de la série (50 matchs, graine d'audit 20260923, comparée à la série du 03k).**
+- Conduite : 2 277 intervalles par match [2 203 ; 2 351], 87,6 pertes par match [84,1 ; 91,1], soit 3,85 % par intervalle. Libre : 141 intervalles, 0,64 % de perte ; serrée : 1 839 intervalles, 4,30 %. Le risque réel croît avec la gêne, comme l'évaluation.
+- Chiffre de référence réel : non trouvé. Aucune source chiffrée sur la réussite moyenne des dribbles en conduite serrée ; l'ordre de grandeur, environ 50 % de dribbles réussis chez les dribbleurs de volume, vaut comme indication et non comme cible. Aucune constante n'a été réglée sur ce chiffre.
+
+**Effets sur le jeu (écarts appariés, IC 95 %, sans réglage).** Le porteur ne voit plus la pression compter deux fois dans la conduite ; elle devient donc l'option la plus attractive.
+- Choix de la conduite 45,3 % → 73,7 % des décisions (+28,4 points [26,5 ; 30,3]), passe 51,6 % → 24,7 %, tir 3,05 % → 1,52 %. Part des décisions, une conduite se prolonge sur plusieurs décisions.
+- Passes par match 1 032 → 816 (−215,8 [−232,7 ; −198,9]), réussite des passes 69,5 % → 72,4 % (+2,9 points), pertes de balle par match 343 → 295 (−47,8), temps par possession de joueur 2,26 s → 3,02 s (+0,76 s), possession d'équipe +2,6 s.
+- Tirs par équipe 23,5 → 19,4 (−4,1 [−5,7 ; −2,5]), part des tirs issus d'une conduite 60,2 % → 69,8 %, tirs de contre −9,4 par match. Buts par match 3,12 → 2,78 (−0,34 [−1,13 ; +0,45], dans le bruit), tirs cadrés +2,1 points, arrêts par match 15,2 → 13,0.
+- Tacles par match 33,1 → 42,2 (+9,2 [7,9 ; 10,5]) : plus de conduites sous pression, donc plus de tacles tentés au taux calibré. Fautes +3,0 par match, coups francs +2,6, corners −2,6.
+- Appels par match −153, course à plus de 19,8 km/h −2,3 points de la distance : moins de passes à préparer.
+Sur les 413 lignes comparées, 219 sortent de l'IC (le moteur change vraiment de répartition entre conduite et passe) ; le but, la conversion et la répartition des tirs de près restent dans le bruit.
+
+**Lecture.** Les passes passent de 91 au-dessus à 125 au-dessous de la référence R7 (941 par match, Premier League 2023-24) : la baisse ne vaut pas rapprochement du réel. Les tirs tracés par équipe (23,2 contre 28,7 au 03k) restent au-dessus des 8 à 15 de R1. Le surcroît de conduite est le point à surveiller (74 % des décisions, dont 81 % des intervalles avec un adversaire à moins de 2,5 m) ; ces volumes ne sont pas une référence de réalisme (réserve A1 de l'expert, à traiter aux tickets 04b et 04c). Le tir recule de 3,05 % à 1,52 % des décisions : à regarder au 04b/04c. Le tacle (calibré à 33 par match au ticket précédent) monte à 42 : son recalibrage est à décider avec le propriétaire, non fait ici.
+
+**Déterminisme.** Deux exécutions de `measure_v2 2` à graine fixée donnent des sorties identiques, à la ligne de temps de calcul près.
+
+**Suite complète.** 2 544 passés, 14 désélectionnés (trois tests existants adaptés : raison « face-à-face » du gardien admise par un test à graine fixée, conduite à 99 de Finishing pour le « bon finisseur » du bord de surface, choix de la passe imposé dans le test de réception).

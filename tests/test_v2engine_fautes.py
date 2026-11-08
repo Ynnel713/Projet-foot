@@ -32,6 +32,7 @@ def _foul_once(monkeypatch) -> None:
     monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression, dt: next(calls, False))
     monkeypatch.setattr("v2engine.match.resolve_tackle", lambda tackler, holder: _Foul())
     monkeypatch.setattr("v2engine.match.choose_action", lambda *a, **k: Action("dribble", 0.0, point=Vec2(60, 34)))
+    monkeypatch.setattr("v2engine.match.dribble_lost", lambda *args, **kwargs: False)  # ticket 04a : pas de perte tirée ici
 
 
 def _scene(x: float, y: float = 34.0) -> tuple[BallState, list[PlayerState]]:

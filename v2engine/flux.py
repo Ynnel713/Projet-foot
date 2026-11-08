@@ -8,7 +8,7 @@ profils devient attribuable au sous-système qui a changé.
 `random.seed` reste la seule graine d'un match (D-V06 inchangée, déterminisme à graine fixée).
 
 Flux (01a puis 01b) : perception (ce que le joueur voit ou lit, drapeau de hors-jeu compris) ; décision (ce qu'il
-choisit, dont l'espace d'un appel et le partenaire d'une remise en jeu) ; duel (tentative, issue et faute du tacle) ;
+choisit, dont l'espace d'un appel et le partenaire d'une remise en jeu) ; duel (tentative, issue et faute du tacle, perte de balle en conduite) ;
 passe (contrôle, précision et dosage) ; tir (déclenchement, contre, arrêt, déviation, non cadré, penalty) ; placement
 (erreur de Positioning, appel en profondeur) ; défense (rôles défensifs, suivi, compensation, défenseur d'équilibre) ;
 arbitrage (gravité d'une faute, tirage au sort du coup d'envoi). Plus aucun tirage du moteur dans le module `random`

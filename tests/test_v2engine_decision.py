@@ -51,8 +51,13 @@ def test_shot_option_exists_up_to_30_m_and_not_beyond() -> None:
 def test_pressure_lowers_shot_and_dribble_values() -> None:
     holder = _player(position=Vec2(PITCH_LENGTH_M - 15.0, GOAL_CENTER_Y))
     marker = _player("Marqueur", team="away", position=holder.position + Vec2(0.5, 0.0))
-    free = {o.kind: o.value for o in evaluate_options(holder, [holder], GOAL, None)}
-    pressed = {o.kind: o.value for o in evaluate_options(holder, [holder, marker], GOAL, None)}
+    def best(options) -> dict:  # la meilleure conduite (un dict par genre garderait la dernière direction, de côté)
+        values = {}
+        for o in options:
+            values[o.kind] = max(o.value, values.get(o.kind, o.value))
+        return values
+    free = best(evaluate_options(holder, [holder], GOAL, None))
+    pressed = best(evaluate_options(holder, [holder, marker], GOAL, None))
     assert pressed["shot"] < free["shot"]
     assert pressed["dribble"] < free["dribble"]
 

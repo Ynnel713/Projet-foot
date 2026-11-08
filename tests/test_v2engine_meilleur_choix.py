@@ -58,7 +58,9 @@ def test_at_the_box_edge_a_good_finisher_shoots_and_a_poor_one_looks_for_somethi
     def scene(finishing: int) -> list[PlayerState]:
         return [_p("A", 90, Finishing=finishing), _p("Wide", 94, 42), _p("Back", 82, 30),
                 _p("D1", 97, 30, team="away"), _p("D2", 98, 42, team="away"), _p("D3", 91.5, 30.5, team="away")]
-    assert _best(scene(90)).kind == "shot"
+    # ticket 04a : la conduite n'est plus pénalisée par la pression, elle vaut 0,117 ici contre 0,113 pour un tir à 90 ;
+    # « bon finisseur » se lit donc à 99 (tir 0,129), le mauvais finisseur ne tire toujours pas
+    assert _best(scene(99)).kind == "shot"
     assert _best(scene(25)).kind != "shot"
 
 

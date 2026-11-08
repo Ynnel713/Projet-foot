@@ -15,7 +15,7 @@ from dataclasses import dataclass, replace
 
 from v2engine.attributes import player_attribute, success_probability
 from v2engine.danger import danger, loss_cost
-from v2engine.flux import DECISION, PERCEPTION
+from v2engine.flux import DECISION, DUEL, PERCEPTION
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
 from v2engine.movement import PlayerState, max_speed_mps
 from v2engine.off_ball import OPEN_LANE_PROBABILITY
@@ -42,14 +42,22 @@ _BEST_CHOICE_AMPLITUDE = 0.25
 # montée en vitesse ; jamais plus vite que sa vitesse max, et un défenseur lancé vers le point y arrive avant un
 # défenseur arrêté. Chance de garder le ballon : courbe Dribbling 99 -> 95 %, 55 -> 83 %,
 # 11 -> 71 % au contact ; sans adversaire à 5 m, seule une mauvaise touche le fait perdre, un dixième de ce risque
-# (`FREE_TOUCH_SHARE`, ajouté le 04/11/2026 : sans lui, une conduite dans le vide perdait le ballon 17 fois sur 100) ;
-# puis la même part que la passe et le tir perdue sous pression (1 - 0,5 x gêne).
+# (`FREE_TOUCH_SHARE`, ajouté le 04/11/2026 : sans lui, une conduite dans le vide perdait le ballon 17 fois sur 100).
+# Ticket v2-realisme/04a : cette chance est celle d'une conduite de `DRIBBLE_REFERENCE_S` ; la même fonction sert à
+# l'évaluation (`keep_ball_probability`) et à la résolution (`dribble_lost`, un tirage par intervalle de décision). La
+# part perdue sous pression que la passe et le tir gardent (`PRESSURE_KEEP_SHARE`) n'en fait plus partie : la
+# pression qui prend le ballon à un porteur est le tacle, qui reste tiré à part dans `match` (pas de double compte).
 DRIBBLE_DIRECTIONS_DEG = (0.0, 45.0, -45.0, 90.0, -90.0)
 DRIBBLE_STEP_M, DRIBBLE_REACH_M, DRIBBLE_MARGIN_S = 2.0, 10.0, 0.3
 REACTION_S = 0.3
 _KEEP_BALL = (0.83, 0.12)  # baseline, amplitude (Dribbling)
-PRESSURE_KEEP_SHARE = 0.5  # part de la chance de garder perdue au contact d'un adversaire (passe et conduite)
+PRESSURE_KEEP_SHARE = 0.5  # part de la chance de garder perdue au contact d'un adversaire (passe ; plus la conduite, 04a)
 FREE_TOUCH_SHARE = 0.1
+# Durée d'une conduite évaluée (ticket v2-realisme/04a, proposée le 08/11/2026, validée d'office) : la chance de garder
+# le ballon vaut pour une conduite de cette durée ; la perte tirée à chaque intervalle s'en déduit :
+# 1 - garde^(intervalle / durée). 1,5 s : la conduite évaluée va jusqu'à 10 m (`DRIBBLE_REACH_M`) à 85 % de la vitesse
+# d'un joueur moyen (environ 7 m/s), soit 1,4 s ; au-delà de 10 m, le porteur réévalue (`DECISION_INTERVAL_S`).
+DRIBBLE_REFERENCE_S = 1.5
 # Valeur future d'une passe (ticket v2-collectif/13, validé par le propriétaire le 01/11/2026) : part de la valeur qui
 # vient de la meilleure passe suivante du receveur (réussite x danger atteint, ticket 33), le reste du danger au
 # receveur. La suite vaut au moins la position atteinte (il garde le ballon) : sans
@@ -231,12 +239,24 @@ def option_value(holder: PlayerState, mode: str | None, keep: float, reached: fl
 
 
 def keep_ball_probability(holder: PlayerState, gene: float) -> float:
-    """Chance de garder le ballon en conduisant (ticket 33) : Dribbling compte d'autant plus qu'un adversaire est
-    proche ; sous pression, la même part perdue que pour la passe et le tir."""
+    """Chance de garder le ballon en conduisant pendant `DRIBBLE_REFERENCE_S` (tickets 33 et v2-realisme/04a) : Dribbling
+    compte d'autant plus qu'un adversaire est proche, un dixième de ce risque sans adversaire à 5 m. Seule fonction de
+    ce risque : l'évaluation de l'option et le tirage de la perte (`dribble_lost`) l'appellent."""
     baseline, amplitude = _KEEP_BALL
     skill = success_probability(player_attribute(holder, "Dribbling"), baseline=baseline, amplitude=amplitude)
     contested = FREE_TOUCH_SHARE + (1.0 - FREE_TOUCH_SHARE) * gene  # 0,1 sans adversaire à 5 m, 1 au contact
-    return (1.0 - (1.0 - skill) * contested) * (1.0 - PRESSURE_KEEP_SHARE * gene)
+    return 1.0 - (1.0 - skill) * contested
+
+
+def dribble_loss_probability(holder: PlayerState, gene: float, duration_s: float) -> float:
+    """Chance de perdre le ballon en conduisant `duration_s` secondes sous la gêne `gene` : la chance de garder de
+    `keep_ball_probability`, rapportée à la durée (événement par unité de temps, indépendant du pas)."""
+    return 1.0 - keep_ball_probability(holder, gene) ** (duration_s / DRIBBLE_REFERENCE_S)
+
+
+def dribble_lost(holder: PlayerState, opponents: list[PlayerState], duration_s: float = DECISION_INTERVAL_S) -> bool:
+    """Tirage de la perte du ballon sur un intervalle de décision de conduite (ticket v2-realisme/04a)."""
+    return DUEL.random() < dribble_loss_probability(holder, pressure(holder, opponents), duration_s)
 
 
 def arrival_s(opponent: PlayerState, point: Vec2, projection: float = 1.0) -> float:

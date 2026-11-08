@@ -53,6 +53,7 @@ def test_receiver_decides_once_his_reception_time_is_over(monkeypatch) -> None:
     _step_ball(ball, 0.1, [receiver], now_s=10.0)
     assert ball.receiving
     monkeypatch.setattr("v2engine.match.choose_action", lambda *args: type("A", (), {"kind": "dribble"})())
+    monkeypatch.setattr("v2engine.match.dribble_lost", lambda *args, **kwargs: False)  # ticket 04a : pas de perte tirée ici
     _step_ball(ball, 0.1, [receiver], now_s=12.3)
     assert not ball.receiving and math.isclose(ball.next_decision_s, 12.8)
 
