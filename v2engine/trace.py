@@ -119,6 +119,7 @@ class ShotEvent:
     # Contre physique (ticket v2-realisme/05c) : point de contact du tir contré.
     block_x: float | None = None
     block_y: float | None = None
+    block_exit_deg: float | None = None  # angle de sortie du ballon contré avec la direction du tir (0 : il continue ; ticket 05d)
 
 
 @dataclass(frozen=True)

@@ -32,8 +32,8 @@ from v2engine.decision import DECISION_INTERVAL_S, choose_action, dribble_lost, 
 from v2engine.defense import DefensiveRoles
 from v2engine.occasion import ChanceTracker
 from v2engine.offside import HESITATION_S, OFFSIDE_OUT_S, offside_at_pass, sees_the_flag_probability
-from v2engine.possession import (BALL_FRICTION_PER_S, BALL_STOPPED_MPS, MAX_PASS_MPS, MISS_RETRY_S, attempt_control, missed_control_velocity,
-                                 pass_velocity, reception_delay_s)
+from v2engine.possession import (BALL_FRICTION_PER_S, BALL_STOPPED_MPS, MAX_PASS_MPS, MISS_RETRY_S, attempt_control, deflect,
+                                 missed_control_velocity, pass_velocity, reception_delay_s)
 from v2engine.added_time import GRACE_S, HARD_STOP_S, added_minutes, played_minute
 from v2engine.roles import role_of
 from v2engine.restart import (AERIAL_LANDING_M, AERIEN, CORNER, FREE_KICK, LONG_RESTART_M, PENALTY, PENALTY_CONVERSION, SOL,
@@ -51,7 +51,6 @@ from v2engine.trace import (BallSnapshot, DecisionRecord, FoulEvent, MatchTrace,
 _OPPONENT_GOAL = OPPONENT_GOAL
 # Vitesse d'un tir : celle de la passe la plus appuyée (pas de constante nouvelle), soit 30 m/s, 1 s pour 30 m.
 SHOT_SPEED_MPS = MAX_PASS_MPS
-SHOT_DEFLECTION_DEG = 60.0  # tir contré : déviation maximale (ticket 33, ordre de grandeur, réel non trouvé ; 05d)
 # Tir en vol (ticket v2-realisme/05a, validé par délégation le 08/11/2026) : le ballon part vers son point d'arrivée
 # (axe du but + écart d'exécution du 35b) et l'issue se lit sur son trajet : arrêt si le gardien l'atteint (05b), but
 # entre les poteaux et sous la barre, sortie de but sinon. Seul chemin du tir en jeu depuis le 05h (plus de tirage du but
@@ -351,8 +350,9 @@ def _blocked(ball: BallState, flight: ShotFlight, start: Vec2, end: Vec2, dt: fl
              now_s: float, shots: list[ShotEvent] | None) -> bool:
     """Contre physique (ticket v2-realisme/05c) : le tir en vol touche le premier défenseur de champ adverse qu'il frôle à
     sa portée (`shooting.block_reach_m`, selon le temps écoulé depuis la frappe) ; chacun tente une fois par tir et contre
-    avec la chance `BLOCK_CHANCE`. Contré : tracé avec le point de contact, le ballon rebondit de ce point, dévié d'au plus
-    `SHOT_DEFLECTION_DEG` à la moitié de sa vitesse (ticket 33 ; déviation physique au 05d), libre. Retourne vrai si contré."""
+    avec la chance `BLOCK_CHANCE`. Contré : le ballon touche sa portée au point où il y entre (réserve A1 de l'expert, 05c)
+    et repart de ce point, libre, dévié selon l'endroit de l'impact (`possession.deflect`, ticket 05d) ; point de contact
+    et angle de sortie tracés. Retourne vrai si contré."""
     defenders = [p for p in players if p.team != flight.team and p.poste != "GK" and p.name not in flight.tried]
     for entry, gap, player in _contacts(start, end, dt, defenders, radius=BLOCK_WIDTH_M):
         if gap > block_reach_m(flight.elapsed_s + entry * dt):
@@ -360,14 +360,20 @@ def _blocked(ball: BallState, flight: ShotFlight, start: Vec2, end: Vec2, dt: fl
         flight.tried.add(player.name)
         if TIR.random() >= BLOCK_CHANCE:
             continue  # au contact, le ballon passe quand même
-        point = start + (end - start) * entry
+        reach = block_reach_m(flight.elapsed_s + entry * dt)
+        seg = end - start
+        shot = seg.normalized()
+        along = (player.position.x - start.x) * shot.x + (player.position.y - start.y) * shot.y
+        closest = start + shot * min(max(along, 0.0), seg.length())  # passage au plus près du corps
+        back = math.sqrt(max(0.0, reach * reach - gap * gap))
+        point = start + shot * max(0.0, min(max(along, 0.0), seg.length()) - back)  # entrée dans sa portée
+        out = deflect(ball.velocity, closest, player.position, reach, TIR)
+        exit_deg = math.degrees(math.acos(max(-1.0, min(1.0, out.normalized().x * shot.x + out.normalized().y * shot.y))))
         if shots is not None and flight.rank >= 0:
-            shots[flight.rank] = replace(shots[flight.rank], outcome="contré", block_x=point.x, block_y=point.y)
-        shot = (end - start).normalized()
-        turn = math.radians(TIR.uniform(-SHOT_DEFLECTION_DEG, SHOT_DEFLECTION_DEG))
-        bounce = Vec2(shot.x * math.cos(turn) - shot.y * math.sin(turn), shot.x * math.sin(turn) + shot.y * math.cos(turn))
-        ball.velocity = bounce * (ball.velocity.length() / 2.0)
-        ball.position = clamp_to_pitch(point + bounce * CONTROL_RADIUS_M)
+            shots[flight.rank] = replace(shots[flight.rank], outcome="contré", block_x=point.x, block_y=point.y,
+                                         block_exit_deg=exit_deg)
+        ball.velocity = out
+        ball.position = clamp_to_pitch(point + out.normalized() * CONTROL_RADIUS_M)
         ball.shot_flight, ball.shot_wide, ball.rebound = None, False, True
         ball.last_toucher = player.name
         ball.control_ban_until_s[player.name] = now_s + MISS_RETRY_S

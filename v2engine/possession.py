@@ -8,6 +8,7 @@ receveur plus ou moins difficile. Composure réduit la part de difficulté due �
 from __future__ import annotations
 
 import math
+import random
 from collections.abc import Sequence
 
 from v2engine.attributes import duel_probability, player_attribute, success_probability
@@ -174,3 +175,35 @@ def reception_delay_s(player: PlayerState, opponents: Sequence[PlayerState] = ()
     if player.poste == "GK":
         calm = max(calm, _KEEPER_MIN_RECEPTION_S)
     return calm * (1.0 - 0.5 * pressure(player, opponents))
+
+
+# Déviation au contact d'un corps (ticket v2-realisme/05d, proposé le 09/11/2026, validé par délégation du propriétaire).
+# Le corps (ou la jambe tendue) est un cylindre vertical de rayon `radius_m` : le ballon le touche au point où il entre
+# dans ce rayon ; la normale en ce point dépend du décalage latéral du ballon par rapport au centre. La composante
+# normale de la vitesse est renvoyée avec le coefficient de restitution `DEFLECTION_RESTITUTION`, la composante
+# tangentielle est gardée (ballon effleuré : presque pas dévié) ; puis un écart tiré dans ±`DEFLECTION_NOISE_DEG`
+# (surface du corps irrégulière, rotation du ballon absente avant le 14c). Restitution ballon contre corps humain : non
+# trouvée (ordre de grandeur 0,3 à 0,5, corps mou et jambe qui amortit) ; écart : ordre de grandeur.
+DEFLECTION_RESTITUTION = 0.4
+DEFLECTION_NOISE_DEG = 15.0
+
+
+def deflect(velocity: Vec2, ball_at: Vec2, body_at: Vec2, radius_m: float, rng: random.Random) -> Vec2:
+    """Vitesse du ballon après le contact d'un corps centré en `body_at` (portée `radius_m`), le ballon allant à
+    `velocity` et passant en `ball_at` au plus près du corps. Contact dans l'axe : renvoyé vers d'où il vient, à
+    `DEFLECTION_RESTITUTION` de sa vitesse ; contact excentré : dévié du côté de l'impact, d'autant moins qu'il est
+    effleuré. `rng` : flux du geste qui dévie (tir, passe...)."""
+    speed = velocity.length()
+    if speed < 1e-9:
+        return velocity
+    d = velocity * (1.0 / speed)
+    offset = ball_at - body_at
+    side = offset - d * (offset.x * d.x + offset.y * d.y)  # décalage latéral du ballon, perpendiculaire à sa course
+    u = min(1.0, side.length() / radius_m) if radius_m > 1e-9 else 0.0
+    perp = side.normalized() if side.length() > 1e-9 else Vec2(0.0, 0.0)
+    normal = perp * u - d * math.sqrt(max(0.0, 1.0 - u * u))  # du centre du corps vers le point d'impact
+    along = velocity.x * normal.x + velocity.y * normal.y  # négatif : le ballon rentre dans le corps
+    out = velocity - normal * ((1.0 + DEFLECTION_RESTITUTION) * along) if along < 0.0 else velocity
+    turn = math.radians(rng.uniform(-DEFLECTION_NOISE_DEG, DEFLECTION_NOISE_DEG))
+    c, s = math.cos(turn), math.sin(turn)
+    return Vec2(out.x * c - out.y * s, out.x * s + out.y * c)

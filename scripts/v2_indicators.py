@@ -54,6 +54,9 @@ LONG_PASS_M = 32.0
 # passe au gardien (vitesse du tir freinée, `possession.BALL_FRICTION_PER_S`). Tranches de lecture, sans effet sur le jeu.
 SAVE_DISTANCE_BANDS = ((11.0, "moins de 11 m"), (18.0, "11-18 m"), (25.0, "18-25 m"), (math.inf, "25 m et plus"))
 SAVE_SPEED_BANDS = ((18.0, "moins de 18 m/s"), (24.0, "18-24 m/s"), (math.inf, "24 m/s et plus"))
+# Sortie d'un tir contré par rapport à la direction du tir (ticket v2-realisme/05d) : effleuré (il continue), dévié,
+# renvoyé de côté, renvoyé vers le tireur.
+BLOCK_EXIT_BANDS = ((45.0, "0-45°"), (90.0, "45-90°"), (135.0, "90-135°"), (math.inf, "135-180°"))
 SHOT_CLOSE_RANGE_M = 16.0  # tir « de près » : demande du propriétaire (28/10/2026) pour mesurer l'exposition du gardien
 FREE_PASSER_M = 9.0  # porteur libre : défenseur le plus proche à 9 m ou plus (pressé : PRESS_RADIUS_M), ticket 05
 SPRINT_MPS, HIGH_INTENSITY_MPS = 25.0 * KMH, 19.8 * KMH
@@ -732,6 +735,10 @@ class Collector:
         self.count["qualité des occasions (somme)"] += event.quality
         if event.outcome == "but" and in_penalty_area(event.team, Vec2(event.x, event.y)):
             self.count["buts dans la surface"] += 1
+        exit_deg = getattr(event, "block_exit_deg", None)
+        if exit_deg is not None:  # direction de sortie des tirs contrés (ticket v2-realisme/05d)
+            band = next(label for limit, label in BLOCK_EXIT_BANDS if exit_deg < limit)
+            self.count["tirs contrés, sortie " + band] += 1
         keeper_s = getattr(event, "keeper_time_s", None)  # événement construit à la main dans les tests : sans ce champ
         if keeper_s is not None and event.outcome in ("but", "capté", "repoussé", "claqué"):
             # tir cadré jugé par le gardien (ticket v2-realisme/05h) : arrêté ou non, par distance et par vitesse au gardien

@@ -38,3 +38,8 @@ Temps machine, non compté : suite complète (environ 40 min) ; mesure 50 matchs
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+
+## Reprises du 05d (réserves de l'expert, 09/11/2026)
+
+- **A2** : corners par match 8,6 → 6,6 avec la déviation physique des contres (repère réel environ 10) : mesurer la part des contres qui sortent derrière la ligne et en touche, et en traiter la cause (hauteur, orientation du corps) avant tout recalage compensatoire.
+- **A1** : dans `match._blocked`, prendre la position du défenseur à l'instant du contact (`player.position − player.velocity·dt·(1 − entry)`) pour le point de contact et `deflect` ; test : défenseur qui traverse l'axe à 5 m/s, côté de la déviation celui du décalage au contact. À faire avant que la parade ou le contrôle raté n'adoptent `deflect`.
