@@ -397,6 +397,12 @@ def report(c: Collector, detail: bool = False) -> dict:
         if key.startswith("tirs cadrés jugés, "):
             out["taux d'arrêt, " + key.removeprefix("tirs cadrés jugés, ")] = k[key.replace("jugés", "arrêtés")] / v
             out[key + " (effectif)"] = v  # réserve A2 de l'expert, 05h : effectif de chaque tranche
+    # xG (ticket v2-realisme/06a) : par match, à comparer aux buts ; xG neutre sur les tirs hors penalty, xG après frappe
+    # sur les tirs non contrés
+    out["xG neutre par match"] = k["xG neutre (somme)"] / n
+    out["xG après frappe par match"] = k["xG après frappe (somme)"] / n
+    out["xG neutre moyen par tir"] = k["xG neutre (somme)"] / max(1, k["xG neutre (tirs)"])
+    out["xG après frappe moyen par tir non contré"] = k["xG après frappe (somme)"] / max(1, k["xG après frappe (tirs)"])
     for key, v in sorted(k.items()):  # direction de sortie des tirs contrés (ticket v2-realisme/05d)
         if key.startswith("tirs contrés, sortie "):
             out[key + " (part)"] = v / max(1, k["tirs : contré"])

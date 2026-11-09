@@ -39,8 +39,8 @@ from v2engine.roles import role_of
 from v2engine.restart import (AERIAL_LANDING_M, AERIEN, CORNER, FREE_KICK, LONG_RESTART_M, PENALTY, PENALTY_CONVERSION, SOL,
                               award, exit_point, foul_restart, is_aerial, kickoff, restart_target)
 from v2engine.shooting import (BLOCK_CHANCE, BLOCK_WIDTH_M, FLYING, HELD, OVER, PARRIED, SHANKED, SHOT_AIM_HEIGHT_M, WIDE,
-                               block_reach_m, draw_shot_error, keeper_reach_m, occasion_quality, parry_velocity, save_outcome, shank_velocity,
-                               shot_probability)
+                               block_reach_m, draw_shot_error, keeper_reach_m, neutral_xg, occasion_quality, parry_velocity,
+                               post_shot_xg, save_outcome, shank_velocity, shot_probability)
 from v2engine.situation import SituationTracker
 from v2engine.transition import TransitionPlay
 from v2engine.trace import (BallSnapshot, DecisionRecord, FoulEvent, MatchTrace, OffsideEvent, PlayerSnapshot, ShotEvent,
@@ -332,7 +332,8 @@ def _keeper_reaches(ball: BallState, flight: ShotFlight, start: Vec2, end: Vec2,
     rank = flight.rank if shots is not None else -1
     if rank >= 0:
         shots[rank] = replace(shots[rank], keeper_time_s=elapsed, keeper_gap_m=gap,
-                              keeper_speed_mps=ball.velocity.length())  # vitesse au début du pas (réserve A4, 05h)
+                              keeper_speed_mps=ball.velocity.length(),  # vitesse au début du pas (réserve A4, 05h)
+                              post_shot_xg=post_shot_xg(gap, elapsed))  # ticket 06a
     if gap > keeper_reach_m(elapsed):
         return False
     goal = _OPPONENT_GOAL[flight.team]
@@ -371,7 +372,7 @@ def _blocked(ball: BallState, flight: ShotFlight, start: Vec2, end: Vec2, dt: fl
         exit_deg = math.degrees(math.acos(max(-1.0, min(1.0, out.normalized().x * shot.x + out.normalized().y * shot.y))))
         if shots is not None and flight.rank >= 0:
             shots[flight.rank] = replace(shots[flight.rank], outcome="contré", block_x=point.x, block_y=point.y,
-                                         block_exit_deg=exit_deg)
+                                         block_exit_deg=exit_deg, post_shot_xg=None)
         ball.velocity = out
         ball.position = clamp_to_pitch(point + out.normalized() * CONTROL_RADIUS_M)
         ball.shot_flight, ball.shot_wide, ball.rebound = None, False, True
@@ -600,7 +601,9 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                 if shots is not None:
                     shots.append(ShotEvent(now_s / 60.0, holder.team, holder.name, shot_at.x, shot_at.y,
                                            occasion_quality(holder, goal, keeper, opponents), outcome,
-                                           _shot_origin(ball, holder, set_piece)))
+                                           _shot_origin(ball, holder, set_piece),
+                                           xg=neutral_xg(holder, goal, keeper, opponents),
+                                           post_shot_xg=0.0 if outcome == SHANKED else None))
             error = draw_shot_error(holder, goal, opponents)
             if error is None:
                 record(SHANKED)  # dévissé (ticket v2-collectif/35b)
@@ -625,6 +628,8 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                                 and SHOT_AIM_HEIGHT_M + to_line * flight.slope < GOAL_HEIGHT_M)
             if keeper is not None:
                 flight.keeper_from = keeper.position
+            if shots is not None and (not flight.on_target or keeper is None):  # xG après frappe (06a) : hors cadre 0
+                shots[-1] = replace(shots[-1], post_shot_xg=1.0 if flight.on_target else 0.0)
             if flight.on_target and keeper is not None:
                 along = (keeper.position.x - shot_at.x) * heading.x + (keeper.position.y - shot_at.y) * heading.y
                 flight.keeper_at_m = min(max(along, 0.0), to_line)

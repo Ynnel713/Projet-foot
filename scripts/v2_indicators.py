@@ -735,6 +735,11 @@ class Collector:
         self.count["qualité des occasions (somme)"] += event.quality
         if event.outcome == "but" and in_penalty_area(event.team, Vec2(event.x, event.y)):
             self.count["buts dans la surface"] += 1
+        for key, name in (("xG neutre", "xg"), ("xG après frappe", "post_shot_xg")):  # ticket v2-realisme/06a
+            value = getattr(event, name, None)
+            if value is not None:
+                self.count[key + " (somme)"] += value
+                self.count[key + " (tirs)"] += 1
         exit_deg = getattr(event, "block_exit_deg", None)
         if exit_deg is not None:  # direction de sortie des tirs contrés (ticket v2-realisme/05d)
             band = next(label for limit, label in BLOCK_EXIT_BANDS if exit_deg < limit)

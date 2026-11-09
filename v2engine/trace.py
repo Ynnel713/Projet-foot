@@ -120,6 +120,10 @@ class ShotEvent:
     block_x: float | None = None
     block_y: float | None = None
     block_exit_deg: float | None = None  # angle de sortie du ballon contré avec la direction du tir (0 : il continue ; ticket 05d)
+    # xG (ticket v2-realisme/06a) : neutre (tireur et gardien moyens, `shooting.neutral_xg`) ; après frappe, pour un tir non
+    # contré (`shooting.post_shot_xg`, 0 hors du cadre) ; `None` si non défini (tir contré, penalty).
+    xg: float | None = None
+    post_shot_xg: float | None = None
 
 
 @dataclass(frozen=True)

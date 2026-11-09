@@ -39,3 +39,7 @@ Temps machine, non compté : suite complète (environ 40 min) ; mesure 50 matchs
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+
+## Reprise du 06a (réserve A1 de l'expert, 09/11/2026), préalable à toute exploitation de l'xG après frappe
+
+- L'xG après frappe dépasse les buts de + 0,31 ± 0,12 par match (environ 8 %) à gardien neutre et issue déterministe : un gardien moyen paraîtrait éviter des buts. Ajouter au banc un indicateur de calibration (somme des xG après frappe moins buts sur tirs cadrés non contrés), puis fixer l'étalement (`shooting.PSXG_SPREAD_M`, 0,3 m) : le réduire, ou en faire une vraie dispersion du gardien avec ses notes (`v2-attributs-restants/03b`). Test : à graine d'audit, sur 50 matchs, écart sous 2 erreurs types.

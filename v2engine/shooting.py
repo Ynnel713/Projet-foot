@@ -9,6 +9,7 @@ toujours sa chance, pas de lecture tactique de quand tirer)."""
 from __future__ import annotations
 
 import math
+from dataclasses import replace
 
 from ligue1sim.pitch_geometry import GOAL_HEIGHT_M, GOAL_WIDTH_M
 
@@ -306,6 +307,27 @@ def keeper_reach_m(elapsed_s: float) -> float:
     """Portée latérale du gardien (m) `elapsed_s` après la frappe."""
     dive = KEEPER_DIVE_MPS * max(0.0, elapsed_s - KEEPER_REACTION_S)
     return min(KEEPER_DIVE_REACH_M, KEEPER_STANDING_REACH_M + dive)
+
+
+# xG (ticket v2-realisme/06a, proposé le 09/11/2026, validé par délégation du propriétaire ; décision D-V12). xG neutre :
+# chance de but d'un tireur moyen face à un gardien moyen, à la même place, dans la même situation (adversaires, position
+# du gardien, contre compris) : `occasion_quality` avec les notes neutres. xG après frappe : chance qu'un gardien moyen,
+# placé où est le vrai gardien, n'atteigne pas un ballon passant à cet écart après ce temps de vol (portée du 05b), avec
+# une incertitude de portée de `PSXG_SPREAD_M` (logistique) ; 0 pour un tir hors du cadre. Dispersion de la portée d'un
+# gardien : non trouvée, ordre de grandeur.
+PSXG_SPREAD_M = 0.3
+
+
+def neutral_xg(shooter: PlayerState, goal: Vec2, keeper: PlayerState | None, opponents: list[PlayerState]) -> float:
+    """xG neutre d'un tir de `shooter` : indépendant des notes du tireur et du gardien (neutres, `attributes=None`)."""
+    neutral = replace(shooter, attributes=None)
+    rivals = [replace(o, attributes=None) if keeper is not None and o is keeper else o for o in opponents]
+    return occasion_quality(neutral, goal, replace(keeper, attributes=None) if keeper is not None else None, rivals)
+
+
+def post_shot_xg(gap_m: float, elapsed_s: float) -> float:
+    """xG après frappe d'un tir cadré qui passe à `gap_m` du gardien `elapsed_s` après la frappe."""
+    return 1.0 / (1.0 + math.exp(-(gap_m - keeper_reach_m(elapsed_s)) / PSXG_SPREAD_M))
 
 
 def draw_shot_error(shooter: PlayerState, goal: Vec2, opponents: list[PlayerState]) -> tuple[float, float] | None:
