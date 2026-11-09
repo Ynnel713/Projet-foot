@@ -31,7 +31,7 @@ import v2engine.match as match
 from v2engine.shooting import NEUTRAL_ATTRIBUTES
 from ligue1sim.lineup import pick_best_formation
 
-from scripts.v2_indicators import CARRY_PREFIX, EXIT_STATES, Collector, shot_decomposition
+from scripts.v2_indicators import CARRY_PREFIX, EXIT_STATES, Collector, shot_decomposition, xg_calibration
 
 AUDIT_SEED = 20260923
 HIGH, LOW = 99, 11
@@ -409,6 +409,7 @@ def report(c: Collector, detail: bool = False) -> dict:
     out["xG neutre moyen par tir"] = k["xG neutre (somme)"] / max(1, k["xG neutre (tirs)"])
     out["xG après frappe moyen par tir non contré"] = k["xG après frappe (somme)"] / max(1, k["xG après frappe (tirs)"])
     out.update(shot_decomposition(k, n))
+    out.update(xg_calibration(k, n))  # ticket v2-realisme/06c
     for key, v in sorted(k.items()):  # direction de sortie des tirs contrés (ticket v2-realisme/05d)
         if key.startswith("tirs contrés, sortie "):
             out[key + " (part)"] = v / max(1, k["tirs : contré"])

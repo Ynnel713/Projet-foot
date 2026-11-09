@@ -81,7 +81,8 @@ def _per_match(results: list[dict]) -> dict[str, list[float | None]]:
     keys = sorted({k for r in results for k in r["indicateurs"]})
 
     def default(key: str) -> float | None:
-        return 0.0 if key.startswith(ZERO_WHEN_ABSENT) else None
+        # sommes divisées par le nombre de matchs (« …, par match », tickets 06b et 06c) : nulles quand rien n'est compté
+        return 0.0 if key.startswith(ZERO_WHEN_ABSENT) or key.endswith(", par match") else None
 
     return {k: [r["indicateurs"].get(k, default(k)) for r in results] for k in keys}
 

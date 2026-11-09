@@ -1107,11 +1107,14 @@ def test_shot_decomposition_splits_occasion_execution_and_keeper_by_note() -> No
     c.on_shot_event(SimpleNamespace(minute=4.0, team="home", player="B", x=94.0, y=34.0, outcome="but",
                                     origin="penalty", quality=0.8, xg=None, post_shot_xg=None))  # penalty : hors décomposition
     out = ind.shot_decomposition(c.count, 1)
+    block = ind.block_probability(shooter, Vec2(PITCH_LENGTH_M, 34.0), [marker, keeper])
+    assert 0.0 < block < 1.0  # le défenseur dans l'axe peut contrer
     for band in ("tous", "Finishing (surface) [70 ; +[", "Composure sous pression [0 ; 40[", "Reflexes du gardien [40 ; 55["):
         key = ind.SHOT_PREFIX + band + " : "
         assert out[key + "tirs (effectif)"] == 3 and out[key + "tirs non contrés (effectif)"] == 2
         assert math.isclose(out[key + "occasion, xG neutre moyen par tir"], 0.2)
-        assert math.isclose(out[key + "exécution, gain par tir non contré"], (0.9 - 0.5) / 2)  # xG après frappe - xG neutre
+        # xG après frappe - chance neutre hors contre (réserve A1 du 06b, ticket 06c)
+        assert math.isclose(out[key + "exécution, gain par tir non contré"], (0.9 - 0.5 / (1.0 - block)) / 2)
         assert math.isclose(out[key + "gardien, gain par tir non contré"], (0.9 - 1.0) / 2)  # xG après frappe - buts
     assert not any("Long Shots" in key for key in out)
     calibration = "calibration xG après frappe, tirs cadrés jugés : xG après frappe moins buts"
@@ -1119,6 +1122,45 @@ def test_shot_decomposition_splits_occasion_execution_and_keeper_by_note() -> No
     for spread in ind.PSXG_SPREADS_M:  # le tir capté, recalculé à chaque étalement ; le but sans écart tracé garde 0,8
         recomputed = 1.0 / (1.0 + math.exp(-(0.2 - ind.keeper_reach_m(0.5)) / spread))
         assert math.isclose(out[f"{calibration} à l'étalement {spread:g} m, par match"], 0.8 + recomputed - 1.0)
+
+
+def test_xg_calibration_splits_goals_minus_xg_into_block_execution_and_keeper() -> None:  # ticket v2-realisme/06c
+    goal = Vec2(PITCH_LENGTH_M, 34.0)
+    average = replace(_p("M", "home", PITCH_LENGTH_M - 8.0, 34.0, poste="BU"), attributes={"Finishing": 60})
+    strong = replace(_p("S", "home", PITCH_LENGTH_M - 8.0, 30.0, poste="BU"), attributes={"Finishing": 90})
+    keeper = replace(_p("G", "away", PITCH_LENGTH_M - 1.0, 34.0, poste="GK"), attributes={})
+    marker = _p("D", "away", PITCH_LENGTH_M - 7.0, 34.0)  # dans l'axe du tireur moyen seulement
+    c = ind.Collector()
+    reach = ind.keeper_reach_m(0.5)
+    # (tireur, minute, xG, xG après frappe, issue, écart au gardien, temps de vol)
+    shots = ((average, 1.0, 0.25, 0.8, "but", reach + 0.5, 0.5), (average, 2.0, 0.25, 0.3, "capté", reach - 0.5, 0.5),
+             (average, 3.0, 0.25, None, "contré", None, None), (strong, 4.0, 0.04, 0.0, "à côté", None, None))
+    for shooter, minute, xg, psxg, outcome, gap, elapsed in shots:
+        c.on_shot_notes(minute, shooter, keeper, [marker, keeper])
+        c.on_shot_event(SimpleNamespace(minute=minute, team="home", player=shooter.name, x=shooter.position.x,
+                                        y=shooter.position.y, outcome=outcome, origin="passe au sol", quality=xg, xg=xg,
+                                        post_shot_xg=psxg, keeper_gap_m=gap, keeper_time_s=elapsed, keeper_speed_mps=20.0))
+    out = ind.xg_calibration(c.count, 2)
+    block = ind.block_probability(average, goal, [marker, keeper])
+    assert 0.0 < block < 1.0 and ind.block_probability(strong, goal, [marker, keeper]) == 0.0
+    for group, shots_in, goals, xg_sum in (("tous les tireurs", 4, 1, 0.79), ("tireurs moyens", 3, 1, 0.75)):
+        key = f"{ind.CALIBRATION_PREFIX}{group}, toutes tranches : "
+        assert out[key + "tirs (effectif)"] == shots_in and math.isclose(out[key + "taux de buts"], goals / shots_in)
+        low, high = out[key + "taux de buts, IC95 bas"], out[key + "taux de buts, IC95 haut"]
+        assert 0.0 < low < goals / shots_in < high < 1.0
+        stages = sum(out[f"{key}étage {s}, par match"] for s in ind.STAGES)
+        assert math.isclose(out[key + "buts moins xG, par match"], (goals - xg_sum) / 2)
+        assert math.isclose(stages, (goals - xg_sum) / 2, abs_tol=1e-9)  # les trois étages font tout l'écart
+    key = f"{ind.CALIBRATION_PREFIX}tireurs moyens, xG [0.2 ; 0.35[ : "
+    open_xg = 0.25 / (1.0 - block)
+    assert math.isclose(out[key + "étage exécution, par match"], (0.8 + 0.3 - 2 * open_xg) / 2)
+    assert math.isclose(out[key + "étage gardien, par match"], (1.0 - 0.8 - 0.3) / 2)
+    assert math.isclose(out[key + "étage contre, par match"], (2 * open_xg - 3 * 0.25) / 2)
+    assert f"{ind.CALIBRATION_PREFIX}tireurs moyens, xG [0.03 ; 0.06[ : tirs (effectif)" not in out  # tireur fort à part
+    # réserve A2 du 06b : les deux tirs cadrés jugés, rangés par écart à la portée du gardien
+    for gap, psxg, goals in ((0.5, 0.8, 1), (-0.5, 0.3, 0)):  # au-delà de la portée, en deçà
+        band = ind.carry_tranche("écart (m)", gap, ind.REACH_GAP_BINS)
+        assert math.isclose(out[f"{ind.KEEPER_GAP_PREFIX}{band} : xG après frappe moins buts, par match"], (psxg - goals) / 2)
 
 
 def test_a_forced_profile_leaves_the_neutral_xg_neutral() -> None:  # ticket v2-realisme/06b, réserve A1 de l'expert

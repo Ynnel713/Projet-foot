@@ -605,3 +605,54 @@ Par Dribbling : [0 ; 40[ 36,7 intervalles, écart −0,18 ; [40 ; 55[ 349,0, −
 - **Composure sous pression** : tranches de 73 à 1 172 tirs sur la série, gain d'exécution +0,05 à +0,06 sans ordre net (étalement 0,3 m) ; pas de profil forcé dans ce ticket.
 
 **À refaire** après 06c et `v2-attributs-restants/03b` (`python -m scripts.measure_v2 50`, puis `--profil Finishing` et `--profil "Long Shots"`).
+
+## 20. Calibration de l'xG neutre : courbe et étages de l'écart (ticket v2-realisme/06c, 500 matchs, 09/11/2026)
+
+**Ce que mesurent les indicateurs.** Clés `calibration xG neutre, …` et `gardien par écart à la portée, …` (`scripts/v2_indicators.py`, `xg_calibration`). Tirs hors penalty rangés par tranche d'xG neutre (`XG_BINS`), pour tous les tireurs et pour les tireurs moyens (note de tir dans [55 ; 70[, `AVERAGE_NOTE`, autour de la note neutre 60) : effectif, xG moyen, taux de buts et son intervalle de Wilson à 95 %, buts moins xG par match. L'écart est découpé tir par tir en trois étages dont la somme est exactement buts moins xG :
+- **contre** : chance neutre hors contre (xG / (1 − chance de contre prévue, `shooting.block_probability`, lue à la frappe)) pour un tir non contré, buts pour un tir contré, moins l'xG ; négatif : plus de contres réels que prévu ;
+- **exécution** : xG après frappe moins chance neutre hors contre, sur les tirs non contrés (corrige le biais du contre du §19, réserve A1 de l'expert au 06b) ;
+- **gardien** : buts moins xG après frappe, sur les tirs non contrés.
+
+Série : matchs 1000 à 1499 (indépendants des 50 matchs du 06b), banc 01e, 7 processus, 440 min machine (estimation affichée 240 min, à recaler) ; fichiers `.scratch/v2-realisme/mesures/06c-serie.*`. Intervalles à 95 % : Wilson sur le taux agrégé, banc 01e sur les valeurs par match (`…, par match` vaut 0 dans un match sans tir de la tranche).
+
+**Courbe, tireurs moyens (11 128 tirs).** Étages en buts par match.
+
+| Tranche d'xG | Tirs | xG moyen | Taux de buts [IC95] | Buts − xG par match [IC95] | Contre | Exécution | Gardien |
+|---|---|---|---|---|---|---|---|
+| [0 ; 0,03[ | 7 556 | 0,017 | 0,023 [0,020 ; 0,026] | +0,086 [+0,038 ; +0,134] | +0,007 | +0,095 | −0,015 |
+| [0,03 ; 0,06[ | 2 177 | 0,041 | 0,088 [0,077 ; 0,101] | +0,206 [+0,149 ; +0,263] | −0,006 | +0,225 | −0,013 |
+| [0,06 ; 0,1[ | 585 | 0,076 | 0,178 [0,149 ; 0,211] | +0,119 [+0,082 ; +0,156] | −0,001 | +0,131 | −0,010 |
+| [0,1 ; 0,2[ | 392 | 0,140 | 0,250 [0,210 ; 0,295] | +0,086 [+0,053 ; +0,119] | +0,002 | +0,096 | −0,012 |
+| [0,2 ; 0,35[ | 185 | 0,259 | 0,276 [0,216 ; 0,344] | +0,006 [−0,020 ; +0,032] | −0,001 | +0,012 | −0,004 |
+| [0,35 ; 0,5[ | 45 | 0,424 | 0,111 [0,048 ; 0,235] | −0,028 [−0,040 ; −0,016] | +0,000 | −0,023 | −0,006 |
+| 0,5 et plus | 188 | 0,777 | 0,378 [0,312 ; 0,449] | −0,150 [−0,187 ; −0,113] | −0,054 | −0,132 | +0,036 |
+| **toutes** | **11 128** | **0,048** | **0,062 [0,058 ; 0,067]** | **+0,325 [+0,225 ; +0,426]** | **−0,053** | **+0,404** | **−0,025** |
+
+**Tous les tireurs (23 340 tirs)** : taux de buts par tranche 0,021 ; 0,093 ; 0,198 ; 0,269 ; 0,240 ; 0,219 ; 0,383 pour des xG moyens 0,017 ; 0,042 ; 0,076 ; 0,140 ; 0,260 ; 0,412 ; 0,778. Au total, buts 3,88 et xG neutre 3,04 par match, écart +0,83 [+0,66 ; +0,99] : contre −0,17 [−0,21 ; −0,13], exécution +0,93 [+0,79 ; +1,08], gardien +0,07 [−0,00 ; +0,13]. L'écart de plus que chez les tireurs moyens est attendu : l'xG neutre ignore les notes, l'exécution des bons tireurs s'y ajoute (§19).
+
+**Lecture.**
+- **Courbe trop plate.** Une seule tranche est calibrée (0,2 à 0,35). En dessous de 0,2, le taux réel vaut 1,3 à 2,3 fois l'xG ; au-dessus de 0,35, il en vaut la moitié environ (0,38 pour un xG moyen de 0,78). L'xG neutre sous-estime les petites occasions et surestime les grosses.
+- **L'écart vient de l'exécution.** Chez les tireurs moyens, l'étage exécution fait +0,40 des +0,33 buts par match d'écart ; le contre −0,05, le gardien −0,03. La résolution physique (trajectoire avec erreur de visée, portée du gardien) ne suit pas la formule analytique (`_XG_LOGIT` et facteurs de `shot_probability`) : une frappe de loin cadrée bat plus souvent le gardien que la formule ne le dit, une frappe de près sur une grosse occasion le bat moins souvent. C'est exactement l'objet du 05e (recaler la formule d'évaluation sur la résolution) : ce tableau lui sert de point de départ.
+- **Contre.** Prévu juste pour les tranches sous 0,5 ; au-dessus, il y a plus de contres réels que prévu (−0,05 chez les moyens, −0,16 pour tous) : de près, le contre physique (05c) touche plus que le cône de la décision.
+- **Gardien.** Proche de 0 au total (lissage seul, voir ci-dessous) ; +0,04 au-dessus de 0,5 : sur ces tirs, le ballon passe le plus souvent juste au-delà de la portée, là où l'xG après frappe lissé reste sous 1.
+
+**Gain du gardien par écart à sa portée (réserve A2 de l'expert au 06b ; tirs cadrés jugés).** Écart = distance du ballon au gardien quand il passe, moins la portée du gardien moyen à cet instant (`keeper_reach_m`).
+
+| Écart (m) | Tirs | xG après frappe moyen | Taux de buts | xG après frappe − buts, par match |
+|---|---|---|---|---|
+| moins de −0,3 | 4 346 | 0,015 | 0 | +0,129 |
+| [−0,3 ; −0,15[ | 407 | 0,186 | 0 | +0,151 |
+| [−0,15 ; 0[ | 404 | 0,375 | 0 | +0,303 |
+| [0 ; 0,15[ | 344 | 0,614 | 1 | −0,266 |
+| [0,15 ; 0,3[ | 302 | 0,815 | 1 | −0,112 |
+| 0,3 et plus | 1 176 | 0,977 | 1 | −0,054 |
+
+L'arrêt est déterministe (aucun but en deçà de la portée, aucun arrêt au-delà) alors que l'xG après frappe est lissé : tout le « gain du gardien » vient de ce lissage et de la répartition des écarts, qui change avec le tireur (Long Shots : écarts surtout très négatifs). Explication du résidu du §19 confirmée. Aucun gardien ne se juge sur cet indicateur tant que l'arrêt ne dépend pas des notes (`v2-attributs-restants/03b`).
+
+**Étalement de l'xG après frappe, revérifié sur ces 500 matchs indépendants.** xG après frappe moins buts des tirs cadrés jugés, par match : 0,05 m −0,20 [−0,26 ; −0,15] ; 0,10 m −0,15 [−0,21 ; −0,09] ; **0,15 m −0,066 [−0,132 ; −0,001]** ; 0,20 m +0,039 [−0,032 ; +0,111] ; 0,30 m +0,28 [+0,20 ; +0,36]. La valeur en vigueur (0,15 m) sous-estime de peu, à la limite de l'intervalle (−0,07 sur 3,8 buts par match, 2 %) ; le zéro tombe vers 0,18 m. Aucun réglage dans ce ticket (constante de mesure, sans effet sur le jeu) : à proposer au propriétaire avec le 05e.
+
+**Profils forcés relancés avec l'exécution corrigée (réserve A1 du 06b ; 20 matchs par profil, mêmes matchs, mêmes tirs que le §19).** Gain d'exécution par tir non contré, contre la chance hors contre : Finishing (surface) 11 : −0,055, 99 : +0,101, écart 99 − 11 **+0,148 ± 0,039** (3,8 erreurs types) ; Long Shots (dehors) 11 : −0,010, 99 : +0,020, écart **+0,032 ± 0,007** (4,4 erreurs types). Les deux niveaux baissent d'environ 0,02 (biais du contre retiré), l'écart entre notes ne change pas. Fichiers `06c-fin*`, `06c-ls*`.
+
+**Déterminisme.** Deux exécutions de 10 matchs (1000 à 1004 : `06c-det1`, `06c-det2`, 784 indicateurs ; 1005 à 1009 : `06c-det1b`, `06c-det2b`, 797 indicateurs) : tout est identique, seul le temps de calcul diffère.
+
+**À refaire** après le 05e (même commande : `uv run python -m scripts.bench_series 500 --debut 1000 --processus 7`) : la courbe des tireurs moyens doit alors passer par la diagonale, tranche par tranche.
