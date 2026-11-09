@@ -1,0 +1,14 @@
+{
+ "frames": 901,
+ "median": 16.7,
+ "p95": 16.8,
+ "max": 17,
+ "nodes": 247,
+ "cpu": {
+  "frames": 899,
+  "taskMsPerFrame": 5.78,
+  "scriptMsPerFrame": 1.89,
+  "layoutMsPerFrame": 0.78,
+  "styleMsPerFrame": 0.72
+ }
+}
