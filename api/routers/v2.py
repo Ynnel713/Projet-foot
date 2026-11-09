@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from ligue1sim.clubs import load_all_clubs
 from ligue1sim.coaches import coach_name, preferred_formations
+from ligue1sim.kits import CLUB_KIT, kit_for
 from ligue1sim.lineup import bench, pick_best_formation
 from ligue1sim.players import ATTACKER, DEFENDER, GOALKEEPER, MIDFIELDER, position_group
 from ligue1sim.season import CLUBS_PATH
@@ -188,6 +189,14 @@ class LineupOut(BaseModel):
     coach: str | None
     starters: list[LineupPlayerOut]
     bench: list[LineupPlayerOut]
+    # couleurs de maillot (ticket v2-ecran-match/02) : principale et secondaire du kit du club, ou le gris du kit par
+    # défaut quand le club n'en a pas (`known_kit` faux)
+    color: str
+    secondary: str
+    known_kit: bool
+    # maillot extérieur réel (chantier kits-maillots, KM-02), None si le club n'en a pas
+    away_color: str | None = None
+    away_secondary: str | None = None
 
 
 def numbered_lineup(club) -> LineupOut:
@@ -199,8 +208,11 @@ def numbered_lineup(club) -> LineupOut:
     keepers = [p for p in subs if position_group(p.poste) == GOALKEEPER][:1]  # un gardien remplaçant, s'il y en a
     subs = keepers + [p for p in subs if p not in keepers][:_BENCH_SIZE - len(keepers)]
     subs.sort(key=lambda p: _GROUP_ORDER.get(position_group(p.poste), 2))
+    kit = kit_for(club.name)
     return LineupOut(
         club=club.name, formation=lineup.formation, coach=coach_name(club.name),
+        color=kit.primary, secondary=kit.secondary, known_kit=club.name in CLUB_KIT,
+        away_color=kit.away_primary, away_secondary=kit.away_secondary,
         starters=[LineupPlayerOut(name=p.name, poste=p.poste, number=i) for i, p in enumerate(starters, start=1)],
         bench=[LineupPlayerOut(name=p.name, poste=p.poste, number=i) for i, p in enumerate(subs, start=12)],
     )

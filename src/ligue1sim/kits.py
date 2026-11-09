@@ -13,11 +13,17 @@ ont un kit dédié, plus quelques clubs notables d'"Autres clubs" (Fenerbahce,
 Galatasaray, Shakhtar Donetsk, FK Bodø/Glimt, et les 6 clubs de la Ligue des
 Champions sans championnat repris). Tout club non couvert retombe sur
 `_DEFAULT_KIT` (gris neutre).
+
+Depuis le chantier kits-maillots (09/11/2026), 185 clubs prennent les couleurs réelles de leurs maillots 2025/26
+(domicile et extérieur), extraites des packs « FC'12 kitpack » d'einherjer83 pour FM Slovakia (`kit_colors_data.py`,
+généré par `scripts/extract_kit_colors.py`) : couleurs seules, aucune image ni logo dans le dépôt.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+
+from ligue1sim.kit_colors_data import EXTRACTED_KITS
 
 
 @dataclass(frozen=True)
@@ -25,6 +31,9 @@ class Kit:
     primary: str
     secondary: str
     pattern: str  # voir _PATTERN_BUILDERS
+    # maillot extérieur (couleurs réelles des packs de kits, chantier kits-maillots) ; None si inconnu
+    away_primary: str | None = None
+    away_secondary: str | None = None
 
 
 _DEFAULT_KIT = Kit(primary="#6b7280", secondary="#d1d5db", pattern="trim")
@@ -210,6 +219,13 @@ CLUB_KIT: dict[str, Kit] = {
     "Sabah FK": Kit("#00693e", "#ffffff", "trim"),
 }
 
+# Couleurs réelles 2025/26 (chantier kits-maillots, KM-02, choix du propriétaire du 09/11/2026 : « tout extraire ») :
+# pour les 185 clubs couverts par les packs FM Slovakia (einherjer83), domicile et extérieur extraits des images
+# remplacent les couleurs ci-dessus ; le motif dessiné (`pattern`) est conservé, « trim » pour un club nouveau.
+for _club, (_home, _home2, _away, _away2) in EXTRACTED_KITS.items():
+    _old = CLUB_KIT.get(_club)
+    CLUB_KIT[_club] = Kit(_home, _home2, _old.pattern if _old else "trim", _away, _away2)
+
 # Silhouette de maillot (t-shirt sport stylisé, sans aucun élément de marque),
 # dans un viewBox 0-100. Réutilisée comme remplissage principal et comme
 # clip-path pour que tous les motifs restent dans les limites du maillot.
@@ -253,6 +269,12 @@ def _pattern_overlay(kit: Kit, clip_id: str) -> str:
     return ""
 
 
+def kit_for(club_name: str) -> Kit:
+    """Kit de `club_name`, ou le kit par défaut (gris neutre) si le club n'a pas d'entrée dédiée ; `club_name in
+    CLUB_KIT` dit lequel des deux (écran V2, ticket v2-ecran-match/02)."""
+    return CLUB_KIT.get(club_name, _DEFAULT_KIT)
+
+
 def primary_color(club_name: str) -> str:
     """Couleur principale (hex) du kit de `club_name`, ou celle du kit par
     défaut si le club n'a pas d'entrée dédiée -- pour représenter un club
@@ -286,14 +308,20 @@ def match_kit_colors(home_club: str, away_club: str) -> tuple[tuple[str, str], t
     extérieure bascule sur sa couleur secondaire -- exactement comme un
     vrai maillot extérieur change de couleur en cas de clash avec le
     domicile, plutôt que d'introduire une palette arbitraire déconnectée de
-    l'identité du club."""
+    l'identité du club.
+
+    Depuis les couleurs réelles (chantier kits-maillots, revue de clôture du 09/11/2026, réserve A1 de l'expert,
+    validée par délégation du propriétaire) : un maillot uni a une secondaire égale à sa principale ; en cas de clash,
+    l'extérieur prend donc le premier candidat assez contrasté parmi sa secondaire, puis la principale et la
+    secondaire de son vrai maillot extérieur, et à défaut le plus éloigné ; la bordure reste sa principale."""
     home = CLUB_KIT.get(home_club, _DEFAULT_KIT)
     away = CLUB_KIT.get(away_club, _DEFAULT_KIT)
-    if _color_distance(home.primary, away.primary) < _CLASH_THRESHOLD:
-        away_colors = (away.secondary, away.primary)
-    else:
-        away_colors = (away.primary, away.secondary)
-    return (home.primary, home.secondary), away_colors
+    if _color_distance(home.primary, away.primary) >= _CLASH_THRESHOLD:
+        return (home.primary, home.secondary), (away.primary, away.secondary)
+    candidates = [c for c in (away.secondary, away.away_primary, away.away_secondary) if c]
+    fill = next((c for c in candidates if _color_distance(home.primary, c) >= _CLASH_THRESHOLD),
+                max(candidates, key=lambda c: _color_distance(home.primary, c)))
+    return (home.primary, home.secondary), (fill, away.primary)
 
 
 def jersey_svg(club_name: str, *, size: int = 42, badge_id: str = "") -> str:

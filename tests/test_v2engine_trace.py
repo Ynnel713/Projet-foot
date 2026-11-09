@@ -118,6 +118,34 @@ def test_numbered_lineup_keeper_first_then_bench_from_12() -> None:
     assert not {p.name for p in lineup.bench} & {p.name for p in lineup.starters}
 
 
+def test_lineup_route_gives_club_kit_colors() -> None:
+    # Couleurs de maillot dans la feuille de match V2 (ticket v2-ecran-match/02) : le PSG a son kit dédié.
+    from api.routers.v2 import club_lineup
+
+    lineup = club_lineup("Paris Saint-Germain")
+    # couleurs réelles extraites des packs de kits (chantier kits-maillots, KM-02), domicile et extérieur
+    assert (lineup.color, lineup.secondary, lineup.known_kit) == ("#293657", "#7d2537", True)
+    assert (lineup.away_color, lineup.away_secondary) == ("#f1f1f1", "#c51c1c")
+    # les autres champs de la route sont inchangés : mêmes clés qu'avant, plus les couleurs
+    assert set(lineup.model_dump()) == {"club", "formation", "coach", "starters", "bench", "color", "secondary", "known_kit",
+                                        "away_color", "away_secondary"}
+    assert lineup.club == "Paris Saint-Germain" and [p.number for p in lineup.starters] == list(range(1, 12))
+
+
+def test_lineup_without_kit_falls_back_to_default_grey() -> None:
+    # Club sans kit dédié : gris du kit par défaut, signalé par `known_kit` faux (ticket v2-ecran-match/02).
+    from api.routers.v2 import numbered_lineup
+    from ligue1sim.clubs import Club
+    from ligue1sim.players import Player
+
+    postes = ["GK"] * 2 + ["DC"] * 4 + ["LB", "RB"] + ["MC"] * 4 + ["AG", "AD", "BU"] * 2
+    players = [Player(prenom=f"p{i}", nom="", nationalite="France", age=25, poste=poste, note=60.0, club="Sans kit",
+                      championnat="TEST") for i, poste in enumerate(postes)]
+    lineup = numbered_lineup(Club(name="Sans kit", players=players))
+    assert (lineup.color, lineup.secondary, lineup.known_kit) == ("#6b7280", "#d1d5db", False)
+    assert (lineup.away_color, lineup.away_secondary) == (None, None)
+
+
 def test_lineup_route_rejects_unknown_club() -> None:
     from api.routers.v2 import club_lineup
 
