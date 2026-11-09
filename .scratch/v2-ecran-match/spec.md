@@ -18,7 +18,10 @@ compositions et caméra 2.5D. L'écran V1 (`PitchView`, `render/canvas.html`, pr
 - Chaque image (60 fois par seconde) appelle `setSeconds` : **tout** l'écran se redessine, y compris compositions et
   momentum, qui ne changent presque jamais. Aucun `memo`.
 - Rendu du terrain : un SVG en mètres réels + `project(x, y, z)` (`utils/v2Projection.js`), caméra inclinée de 25°
-  **sans perspective** (validée le 04/11/2026, ticket `v2-hauteur-ballon/01`). Une seule projection pour le sol, les
+  **sans perspective** (validée le 04/11/2026, ticket `v2-hauteur-ballon/01`). **Écart documenté du 09/11/2026** :
+  à la réouverture du ticket `v2-hauteur-ballon/01`, l'angle est passé de 25° à **35°** (toujours sans point de fuite),
+  écart accepté par le propriétaire par rapport à la décision du 07/11/2026 ; ce n'est pas une régression. Le propriétaire
+  a ordonné de ne plus modifier l'angle. Les « points d'avant » des tests de projection (EM-05) sont ceux de 35°. Une seule projection pour le sol, les
   joueurs, le ballon, les bancs. Cette projection est le contrat avec le moteur et les évolutions 2.5D (`02b`, `03`) :
   on n'y touche pas.
 - Système de design existant : `docs/DESIGN.md` + tokens `@theme` dans `ui/src/index.css` (direction « la loge de
@@ -146,7 +149,7 @@ On prolonge le design system existant plutôt qu'en créer un second (cohérence
   assombrit les bords du terrain pour le fondre dans l'interface. Pas d'effet lumineux.
 - **Gazon** : bandes de tonte sobres `#24603A` / `#2A6B3F` (aujourd'hui `#2f7d32` / `#3a8f3c`, trop vives), lignes
   `rgba(255,255,255,0.85)` à 0,12 m (aujourd'hui 0,15 m), but et filets conservés. Profondeur : un seul dégradé vertical
-  fonctionnel (côté lointain 6 % plus sombre) ; la perspective reste celle de `project()` (inclinaison de 25°, sans point
+  fonctionnel (côté lointain 6 % plus sombre) ; la perspective reste celle de `project()` (inclinaison de 35° depuis le 09/11/2026, écart documenté ci-dessus, sans point
   de fuite) pour que joueurs et lignes coïncident. Un vrai effet trapèze est exclu : il imposerait de changer la
   projection du moteur d'affichage, ce que vous interdisez (et la liste « hors périmètre » du chantier hauteur-ballon).
 - **Typographie** : Barlow Condensed 700 pour le score (56 à 72 px sur bureau) et les noms de club (20 à 22 px, majuscules,

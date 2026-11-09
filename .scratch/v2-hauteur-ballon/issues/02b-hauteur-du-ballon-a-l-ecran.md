@@ -22,3 +22,9 @@
 - [ ] Sur un vrai corner centré et une vraie sortie de but longue : ballon aérien et son ombre visibles, ballon au sol inchangé (**inclut le critère reporté du ticket 01**, décision du propriétaire du 06/11/2026) ; ordre de dessin du ballon réellement en hauteur revu (réserve A3 de l'expert) ; opacité de l'ombre des joueurs revue à 375 px si elle est trop discrète
 - [ ] Mêmes empreintes de trace sur deux exécutions à graine fixée
 - [ ] `npm run build` OK, `npm run lint` sans nouvelle erreur ; suite complète au compte attendu ; V1 inchangée
+
+**Point de vigilance (reporté de la réouverture du ticket 01, 09/11/2026, demande du propriétaire)** : quand le ballon aura
+sa vraie hauteur, revoir l'**ordre de dessin ballon, buts, gardien**. Aujourd'hui (`V2Pitch`), les buts sont dessinés
+après les joueurs et le ballon après les buts : un ballon qui passe derrière la barre ou dans le filet, ou un gardien
+collé à sa ligne (partie du rond côté filet vue à travers le filet semi-transparent), peut être dessiné dans le mauvais
+ordre. Depuis le 09/11/2026 le but est une cage en volume (filets latéraux et toit à 2,44 m) et α = 35°.

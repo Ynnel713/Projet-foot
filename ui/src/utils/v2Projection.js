@@ -2,8 +2,9 @@
 // section 5). Une seule projection pour tout ce que l'écran pose sur le terrain : (x, y) au sol et z en hauteur, en
 // mètres, donnent un point de l'écran, en mètres aussi. Le terrain est écrasé de cos α dans le sens de la largeur, et
 // un point à la hauteur z remonte de z·sin α. Le sens de la longueur (x) ne change pas.
-// α = 25° depuis la verticale : valeur validée par le propriétaire le 04/11/2026 après prototype (0° contre 35°).
-const TILT = (25 * Math.PI) / 180;
+// α = 35° depuis la verticale : validé par le propriétaire le 09/11/2026 (réouverture du ticket), à la place des 25°
+// du 04/11/2026, trop peu lisibles sans perspective (terrain écrasé de 18 %, barre remontée de 1,4 m).
+const TILT = (35 * Math.PI) / 180;
 export const COS = Math.cos(TILT);
 export const SIN = Math.sin(TILT);
 

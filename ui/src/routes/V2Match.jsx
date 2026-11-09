@@ -716,7 +716,6 @@ function GoalEnd({ flip }) {
       <rect x={0} y={y0 - GA_WIDTH / 2} width={GA_DEPTH} height={GA_WIDTH} {...LINE} />
       <circle cx={SPOT} cy={y0} r={0.25} fill="white" />
       <path d={`M ${PA_DEPTH} ${y0 - ARC_DY} A ${ARC_R} ${ARC_R} 0 0 1 ${PA_DEPTH} ${y0 + ARC_DY}`} {...LINE} />
-      <rect x={-NET} y={y0 - GOAL_WIDTH / 2} width={NET} height={GOAL_WIDTH} fill="url(#v2-net)" stroke="white" strokeWidth={0.2} />
     </g>
   );
 }
@@ -733,14 +732,24 @@ const BALL_R = 0.4;
 const BALL_AIR_R = 0.6;
 const BALL_AIR_Z = 1; // hauteur fixe d'un ballon aérien, jusqu'au ticket 02b (vraie hauteur à l'écran)
 
-// Poteaux et barre d'un but (`x` : ligne de but), par la projection : z = 0 puis z = 2,44 m.
-function GoalFrame({ x }) {
+// But en volume (`x` : ligne de but, `out` : -1 côté x = 0, 1 côté x = L), tout par la projection.
+// La caméra ne tourne qu'autour de l'axe x : le plan du cadre (x constant) est vu par la tranche, poteaux et barre
+// tombent sur la ligne de but. Ce qui rend la hauteur lisible, c'est la cage : toit du filet à 2,44 m et filets
+// latéraux, qui s'étendent en x sur la profondeur du filet (rouverture du 09/11/2026).
+function GoalFrame({ x, out }) {
   const ys = [W / 2 - GOAL_WIDTH / 2, W / 2 + GOAL_WIDTH / 2];
+  const back = x + out * NET;
+  const pts = (...p) => p.map(([px, py, pz]) => project(px, py, pz)).map((q) => `${q.x},${q.y}`).join(" ");
+  const net = { fill: "url(#v2-net)", stroke: "rgba(255,255,255,0.7)", strokeWidth: 0.1, strokeLinejoin: "round" };
   const [foot0, foot1] = ys.map((y) => project(x, y));
   const [top0, top1] = ys.map((y) => project(x, y, CROSSBAR));
   const stroke = { stroke: "white", strokeWidth: 0.3, strokeLinecap: "round" };
   return (
     <g style={{ pointerEvents: "none" }}>
+      {/* filet latéral du fond, toit, filet latéral de devant (vers la caméra), du plus lointain au plus proche */}
+      <polygon points={pts([x, ys[0], 0], [back, ys[0], 0], [back, ys[0], CROSSBAR], [x, ys[0], CROSSBAR])} {...net} />
+      <polygon points={pts([x, ys[0], CROSSBAR], [back, ys[0], CROSSBAR], [back, ys[1], CROSSBAR], [x, ys[1], CROSSBAR])} {...net} />
+      <polygon points={pts([x, ys[1], 0], [back, ys[1], 0], [back, ys[1], CROSSBAR], [x, ys[1], CROSSBAR])} {...net} />
       <line x1={foot0.x} y1={foot0.y} x2={top0.x} y2={top0.y} {...stroke} />
       <line x1={foot1.x} y1={foot1.y} x2={top1.x} y2={top1.y} {...stroke} />
       <line x1={top0.x} y1={top0.y} x2={top1.x} y2={top1.y} {...stroke} />
@@ -841,8 +850,8 @@ function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, selected, onSel
       ))}
 
       {/* 4. buts en hauteur */}
-      <GoalFrame x={0} />
-      <GoalFrame x={L} />
+      <GoalFrame x={0} out={-1} />
+      <GoalFrame x={L} out={1} />
 
       {/* 5. ballon : plus gros et remonté s'il est aérien (hauteur fixe d'un mètre, provisoire) ; atténué s'il est mort */}
       <circle
