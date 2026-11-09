@@ -29,7 +29,7 @@ from v2engine.movement import PlayerState
 from v2engine.offside import offside_line
 from v2engine.possession import BALL_FRICTION_PER_S, MAX_PASS_MPS as SHOT_SPEED_MPS, pass_success_probability, pressure
 from v2engine.restart import CORNER, GOAL_KICK, KICKOFF
-from v2engine.shooting import base_chance, shot_probability
+from v2engine.shooting import base_chance, keeper_reach_m, shot_pressure, shot_probability, shooting_note
 from v2engine.situation import POSSESSION_INSTALLEE, TRANSITION_DEFENSIVE, TRANSITION_OFFENSIVE, SituationTracker
 
 KMH = 1.0 / 3.6
@@ -91,6 +91,12 @@ SHOT_MATCH_LAG_S = 0.15
 CARRY_PRESSURE_BINS = (0.0, 0.1, 0.3, 0.5, 0.7, 0.9)
 CARRY_DRIBBLING_BINS = (0, 40, 55, 70)
 CARRY_PREFIX = "calibration conduite, "
+# Décomposition du tir (ticket v2-realisme/06b, tranches proposées le 09/11/2026, acceptées d'office) : mêmes bornes que
+# Dribbling au 04c ; étalements de l'xG après frappe essayés pour sa calibration (réserve A1 du 06a), en m.
+SHOT_NOTE_BINS = CARRY_DRIBBLING_BINS
+SHOT_PREFIX = "décomposition du tir, "
+PSXG_SPREADS_M = (0.05, 0.1, 0.15, 0.2, 0.3)
+SAVE_OUTCOMES = ("but", "capté", "repoussé", "claqué")  # tir cadré jugé par le gardien
 
 
 def carry_tranche(kind: str, value: float, bins: tuple) -> str:
@@ -98,6 +104,30 @@ def carry_tranche(kind: str, value: float, bins: tuple) -> str:
     low = max(b for b in bins if b <= value)
     high = next((b for b in bins if b > low), None)
     return f"{kind} [{low:g} ; {'+' if high is None else format(high, 'g')}["
+
+
+def shot_decomposition(k: Counter, n_matches: int) -> dict[str, float]:
+    """Indicateurs du 06b tirés des comptes de `Collector._decompose_shot` : par tranche, effectifs, xG neutre moyen par
+    tir (l'occasion), gain d'exécution et gain du gardien par tir non contré ; calibration de l'xG après frappe par match."""
+    out: dict[str, float] = {}
+    for key in sorted(k):
+        if key.startswith(SHOT_PREFIX) and key.endswith(" : tirs"):
+            band = key.removesuffix(" : tirs")
+            open_ = max(1, k[band + " : tirs non contrés"])
+            out[band + " : tirs (effectif)"] = k[key]
+            out[band + " : tirs non contrés (effectif)"] = k[band + " : tirs non contrés"]
+            out[band + " : occasion, xG neutre moyen par tir"] = k[band + " : xG neutre"] / k[key]
+            out[band + " : exécution, gain par tir non contré"] = (
+                k[band + " : xG après frappe"] - k[band + " : xG neutre non contrés"]) / open_
+            out[band + " : gardien, gain par tir non contré"] = (k[band + " : xG après frappe"] - k[band + " : buts"]) / open_
+    calibration = "calibration xG après frappe, tirs cadrés jugés"
+    for key in sorted(k):
+        if key.startswith(calibration + " : xG après frappe"):
+            out[key.replace(" : xG après frappe", " : xG après frappe moins buts") + ", par match"] = (
+                k[key] - k[calibration + " : buts"]) / max(1, n_matches)
+    return out
+
+
 EXIT_STATES = ("tir : but", "tir : à côté", "tir : au-dessus", "tir : dévissé","tir : contré", "tir : repoussé", "tir : claqué", "tir : capté",
                "rebond sans tir récent", "passe ou centre", "autre")
 TRANSITIONS = (TRANSITION_OFFENSIVE, TRANSITION_DEFENSIVE)
@@ -386,6 +416,7 @@ class Collector:
         self.free_ball: dict | None = None
         self.last_shot: dict[str, float] = {}  # équipe -> instant de son dernier tir (03i)
         self.shot_log: list[tuple[float, str, str]] = []  # tirs tracés du match : (instant en s, équipe, issue) (03j)
+        self.shot_notes: dict[tuple[float, str], list[str]] = {}  # (minute, tireur) -> tranches de notes au tir (06b)
         self.exit_log: list[dict] = []  # ballons avec sortie suivis 5 s, à classer par état en fin de match (03j)
         self.exits: list[dict] = []  # premières sorties par ballon encore suivies (3 s puis 5 s) : t, équipe, gardien, tir, issue
         self.run_log: list[tuple[str, float, float, Vec2]] = []  # (joueur, début, fin, position finale)
@@ -740,6 +771,7 @@ class Collector:
             if value is not None:
                 self.count[key + " (somme)"] += value
                 self.count[key + " (tirs)"] += 1
+        self._decompose_shot(event)
         exit_deg = getattr(event, "block_exit_deg", None)
         if exit_deg is not None:  # direction de sortie des tirs contrés (ticket v2-realisme/05d)
             band = next(label for limit, label in BLOCK_EXIT_BANDS if exit_deg < limit)
@@ -755,6 +787,47 @@ class Collector:
                 band = next(label for limit, label in bands if value < limit)
                 self.count[f"tirs cadrés jugés, {kind} {band}"] += 1
                 self.count[f"tirs cadrés arrêtés, {kind} {band}"] += event.outcome != "but"
+
+    def on_shot_notes(self, minute: float, shooter: PlayerState, keeper: PlayerState | None, opponents) -> None:
+        """Au tir (ticket v2-realisme/06b) : tranches de notes qui jouent sur ce tir, lues au moment de la frappe ; le tir
+        tracé (`on_shot_event`) les retrouve par sa minute et son tireur."""
+        surface = in_penalty_area(shooter.team, shooter.position)
+        kind = "Finishing (surface)" if surface else "Long Shots (hors surface)"
+        notes = ["tous", carry_tranche(kind, shooting_note(shooter), SHOT_NOTE_BINS)]
+        if shot_pressure(shooter, OPPONENT_GOAL[shooter.team], opponents) > 0.0:
+            notes.append(carry_tranche("Composure sous pression", player_attribute(shooter, "Composure"), SHOT_NOTE_BINS))
+        if keeper is not None:
+            notes.append(carry_tranche("Reflexes du gardien", player_attribute(keeper, "Reflexes"), SHOT_NOTE_BINS))
+        self.shot_notes[(minute, shooter.name)] = notes
+
+    def _decompose_shot(self, event) -> None:
+        """Occasion, exécution, gardien (ticket v2-realisme/06b) : xG neutre (l'occasion), xG après frappe moins xG neutre
+        (l'exécution, tirs non contrés), xG après frappe moins buts (le gardien), par tranche de notes ; calibration de
+        l'xG après frappe sur les tirs cadrés jugés (réserve A1 du 06a). Penaltys exclus (pas d'xG neutre)."""
+        xg, psxg = getattr(event, "xg", None), getattr(event, "post_shot_xg", None)
+        if xg is None:
+            return
+        goal = event.outcome == "but"
+        for note in self.shot_notes.get((event.minute, event.player), ["tous"]):
+            key = SHOT_PREFIX + note
+            self.count[key + " : tirs"] += 1
+            self.count[key + " : xG neutre"] += xg
+            if psxg is not None:
+                self.count[key + " : tirs non contrés"] += 1
+                self.count[key + " : xG neutre non contrés"] += xg
+                self.count[key + " : xG après frappe"] += psxg
+                self.count[key + " : buts"] += goal
+        if psxg is None or event.outcome not in SAVE_OUTCOMES:
+            return
+        calibration = "calibration xG après frappe, tirs cadrés jugés"
+        self.count[calibration + " : tirs"] += 1
+        self.count[calibration + " : buts"] += goal
+        self.count[calibration + " : xG après frappe"] += psxg
+        gap, elapsed = getattr(event, "keeper_gap_m", None), getattr(event, "keeper_time_s", None)
+        for spread in PSXG_SPREADS_M:  # même formule que `shooting.post_shot_xg`, à un autre étalement
+            z = 0.0 if gap is None else max(-50.0, min(50.0, (gap - keeper_reach_m(elapsed)) / spread))
+            value = psxg if gap is None else 1.0 / (1.0 + math.exp(-z))
+            self.count[f"{calibration} : xG après frappe à l'étalement {spread:g} m"] += value
 
     def on_chance(self, event) -> None:
         """Grosse occasion, avec ou sans tir (ticket v2-collectif/28c) ; `event` : `v2engine.trace.ChanceEvent`."""

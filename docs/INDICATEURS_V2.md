@@ -575,3 +575,33 @@ Par Dribbling : [0 ; 40[ 36,7 intervalles, écart −0,18 ; [40 ; 55[ 349,0, −
 **À refaire** après les tickets 04e, 07 et 11 (`python -m scripts.measure_v2 50`, clés `calibration conduite, …`).
 
 **Réserves du 04b non traitées ici** (le ticket 04c est une validation, sans changement de moteur) : A1, la dépossession ne reprend pas les garde-fous du tacle (`engaged`, `tackle_ban_until_s`, `offside_out_until`) ; A3, le porteur écarté 0,5 s dépasse le ballon libre. Le banc ne voit pas ces états depuis `lost_carry_outcome` : à traiter dans un ticket dédié si le propriétaire le décide.
+
+## 19. Tir : occasion, exécution, gardien, par attribut (ticket v2-realisme/06b, 50 matchs et profils forcés, 09/11/2026)
+
+**Ce que mesurent les indicateurs.** Chaque tir hors penalty (clés `décomposition du tir, …`, `scripts/v2_indicators.py`) est rangé, au moment de la frappe, dans la tranche de la note qui joue sur lui (`SHOT_NOTE_BINS`, mêmes bornes que Dribbling au 04c) : Finishing dans la surface ou Long Shots dehors (`shooting.shooting_note`), Composure si le tireur est pressé (`shot_pressure` > 0), Reflexes du gardien adverse. Par tranche :
+- **occasion** : xG neutre moyen par tir (tireur et gardien moyens, section 06a), contrés compris ;
+- **exécution** : xG après frappe moins xG neutre, par tir non contré (ce que la frappe ajoute ou retire à l'occasion) ;
+- **gardien** : xG après frappe moins buts, par tir non contré (buts évités par le gardien par rapport à un gardien moyen ; positif : il en évite).
+- **calibration de l'xG après frappe** (réserve A1 du 06a) : xG après frappe moins buts sur les tirs cadrés jugés par le gardien, par match, recalculé pour plusieurs étalements (`PSXG_SPREADS_M`) à partir de l'écart et du temps tracés.
+
+**Calibration (50 matchs, graine d'audit, 10 lots de 5, jeu identique au 06a).** xG après frappe moins buts, par match : étalement 0,05 m −0,12 ± 0,07 ; 0,10 m −0,06 ± 0,08 ; **0,15 m +0,02 ± 0,09** ; 0,20 m +0,12 ± 0,11 ; 0,30 m (valeur du 06a) +0,33 ± 0,12. `shooting.PSXG_SPREAD_M` passe à 0,15 m (critère : écart sous 2 erreurs types, tenu).
+
+**Par attribut : profils forcés (note 99 contre 11, 20 matchs par profil, 5 lots appariés de 4 matchs, étalement 0,15 m).** La copie neutre du tireur et du gardien (`shooting.NEUTRAL_ATTRIBUTES`, même valeur par défaut que `attributes=None`) n'est pas forcée (`measure_v2._force_attribute`, réserve A1 de l'expert : la première série avait un xG neutre qui recevait la note forcée). Écart 99 − 11 : moyenne des écarts par lot apparié (même graine, rôles inversés) ± erreur type.
+
+| Profil | Tranche | Tirs (non contrés) | Occasion (xG neutre) | Exécution, par tir | Gardien, par tir |
+|---|---|---|---|---|---|
+| Finishing (surface) | 11 | 104 (79) | 0,221 | −0,027 | −0,018 |
+| Finishing (surface) | 99 | 147 (114) | 0,146 | +0,117 | +0,003 |
+| Finishing, écart 99 − 11 | | | −0,060 ± 0,034 | **+0,139 ± 0,036** | +0,021 ± 0,013 |
+| Long Shots (dehors) | 11 | 189 (160) | 0,019 | −0,005 | −0,005 |
+| Long Shots (dehors) | 99 | 369 (290) | 0,021 | +0,023 | +0,011 |
+| Long Shots, écart 99 − 11 | | | +0,003 ± 0,001 | **+0,030 ± 0,008** | +0,015 ± 0,003 |
+
+**Lecture.**
+- **Exécution** : le gain croît avec la note, de 3,9 erreurs types pour Finishing dans la surface et de 4,0 pour Long Shots dehors. Une note de 11 retire de l'occasion (−0,03 et −0,005 par tir), une note de 99 en ajoute.
+- **Occasion** : avec Finishing 99, l'équipe tire plus (147 tirs contre 104) depuis de moins bonnes positions (xG neutre 0,146 contre 0,221, 1,8 erreur type) : la décision de tirer lit `shot_probability`, qui contient la note. Effet de décision, pas un double comptage de l'exécution. Pour Long Shots, l'écart d'occasion (+0,003) est négligeable.
+- **Gardien** : les notes du gardien n'agissent pas encore sur l'arrêt physique (portée neutre du 05b ; `v2-attributs-restants/03b`). Sur la série de 50 matchs, le gain du gardien vaut +0,009 par tir pour Reflexes 55-70 comme pour 70 et plus. Le résidu qui dépend du tireur (+0,015 ± 0,003 pour Long Shots, +0,021 ± 0,013 pour Finishing) ne vient pas du gardien : l'issue est déterministe (but si l'écart dépasse la portée) alors que l'xG après frappe est lissé (étalement 0,15 m). Un tir arrêté de peu compte donc un peu de gain, et un but de peu en retire un peu. Le solde dépend de la répartition des écarts autour de la portée, qui change avec le tireur. C'est l'explication probable ; elle n'a pas été mesurée tranche par tranche. À reprendre au 06c.
+- **Niveau absolu** : l'exécution est biaisée vers le haut, d'environ xG × p_contre / (1 − p_contre), parce que l'xG neutre (`occasion_quality`) compte le contre alors que l'xG après frappe ne porte que sur les tirs non contrés (réserve A2 de l'expert). Le 06c comparera l'xG après frappe à la chance neutre non contrée. Ici, seules les différences entre tranches d'occasion proche comptent.
+- **Composure sous pression** : tranches de 73 à 1 172 tirs sur la série, gain d'exécution +0,05 à +0,06 sans ordre net (étalement 0,3 m) ; pas de profil forcé dans ce ticket.
+
+**À refaire** après 06c et `v2-attributs-restants/03b` (`python -m scripts.measure_v2 50`, puis `--profil Finishing` et `--profil "Long Shots"`).

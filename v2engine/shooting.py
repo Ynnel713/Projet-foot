@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import replace
+from types import MappingProxyType
 
 from ligue1sim.pitch_geometry import GOAL_HEIGHT_M, GOAL_WIDTH_M
 
@@ -314,15 +315,22 @@ def keeper_reach_m(elapsed_s: float) -> float:
 # du gardien, contre compris) : `occasion_quality` avec les notes neutres. xG après frappe : chance qu'un gardien moyen,
 # placé où est le vrai gardien, n'atteigne pas un ballon passant à cet écart après ce temps de vol (portée du 05b), avec
 # une incertitude de portée de `PSXG_SPREAD_M` (logistique) ; 0 pour un tir hors du cadre. Dispersion de la portée d'un
-# gardien : non trouvée, ordre de grandeur.
-PSXG_SPREAD_M = 0.3
+# gardien : non trouvée, ordre de grandeur. Étalement ramené de 0,3 à 0,15 m (ticket v2-realisme/06b, réserve A1 du 06a,
+# validé par délégation du propriétaire) : sur 50 matchs, xG après frappe moins buts des tirs cadrés jugés passe de
+# + 0,33 ± 0,12 à + 0,02 ± 0,09 par match.
+PSXG_SPREAD_M = 0.15
+# Attributs d'une copie neutre (ticket v2-realisme/06b, réserve A1 de l'expert) : vide, donc chaque note vaut la valeur par
+# défaut de `player_attribute` comme pour `attributes=None` ; reconnaissable par son identité (un profil forcé du banc,
+# `scripts/measure_v2._force_attribute`, ne la force pas).
+NEUTRAL_ATTRIBUTES = MappingProxyType({})
 
 
 def neutral_xg(shooter: PlayerState, goal: Vec2, keeper: PlayerState | None, opponents: list[PlayerState]) -> float:
-    """xG neutre d'un tir de `shooter` : indépendant des notes du tireur et du gardien (neutres, `attributes=None`)."""
-    neutral = replace(shooter, attributes=None)
-    rivals = [replace(o, attributes=None) if keeper is not None and o is keeper else o for o in opponents]
-    return occasion_quality(neutral, goal, replace(keeper, attributes=None) if keeper is not None else None, rivals)
+    """xG neutre d'un tir de `shooter` : indépendant des notes du tireur et du gardien (`NEUTRAL_ATTRIBUTES`)."""
+    neutral = replace(shooter, attributes=NEUTRAL_ATTRIBUTES)
+    neutral_keeper = replace(keeper, attributes=NEUTRAL_ATTRIBUTES) if keeper is not None else None
+    rivals = [neutral_keeper if keeper is not None and o is keeper else o for o in opponents]
+    return occasion_quality(neutral, goal, neutral_keeper, rivals)
 
 
 def post_shot_xg(gap_m: float, elapsed_s: float) -> float:

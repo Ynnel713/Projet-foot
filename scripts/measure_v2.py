@@ -28,9 +28,10 @@ from ligue1sim.season import CLUBS_PATH
 import v2engine.cerveau as cerveau
 import v2engine.defense as defense
 import v2engine.match as match
+from v2engine.shooting import NEUTRAL_ATTRIBUTES
 from ligue1sim.lineup import pick_best_formation
 
-from scripts.v2_indicators import CARRY_PREFIX, EXIT_STATES, Collector
+from scripts.v2_indicators import CARRY_PREFIX, EXIT_STATES, Collector, shot_decomposition
 
 AUDIT_SEED = 20260923
 HIGH, LOW = 99, 11
@@ -108,11 +109,14 @@ def _new_shots(collector: Collector, live: dict, now_s: float, players) -> None:
     que l'ancien comptage par `attempt_shot` : ni les tirs contrés, ni les penaltys."""
     shots = live["trace"].shots
     for event in shots[live["shots"]:]:
-        if event.outcome == "contré" or event.origin == "penalty":
+        if event.origin == "penalty":
             continue
         shooter = next(p for p in players if p.name == event.player)
         opponents = [p for p in players if p.team != shooter.team]
         keeper = next((p for p in opponents if p.poste == "GK"), None)
+        collector.on_shot_notes(event.minute, shooter, keeper, opponents)  # ticket v2-realisme/06b, contrés compris
+        if event.outcome == "contré":
+            continue
         collector.on_shot(shooter, now_s)
         collector.on_shot_context(shooter, match.OPPONENT_GOAL[shooter.team], keeper, opponents)
     live["shots"] = len(shots)
@@ -129,7 +133,8 @@ def _force_attribute(attribute: str, high_team: str, team_of: dict[str, str]) ->
 
             def forced(player, attr, _real=real):
                 team = getattr(player, "team", None) or team_of.get(getattr(player, "name", None))
-                if attr == attribute and team in ("home", "away"):
+                # copie neutre de l'xG neutre (ticket v2-realisme/06b) : jamais forcée (réserve A1 de l'expert)
+                if attr == attribute and team in ("home", "away") and getattr(player, "attributes", None) is not NEUTRAL_ATTRIBUTES:
                     return HIGH if team == high_team else LOW
                 return _real(player, attr)
             module.player_attribute = forced
@@ -403,6 +408,7 @@ def report(c: Collector, detail: bool = False) -> dict:
     out["xG après frappe par match"] = k["xG après frappe (somme)"] / n
     out["xG neutre moyen par tir"] = k["xG neutre (somme)"] / max(1, k["xG neutre (tirs)"])
     out["xG après frappe moyen par tir non contré"] = k["xG après frappe (somme)"] / max(1, k["xG après frappe (tirs)"])
+    out.update(shot_decomposition(k, n))
     for key, v in sorted(k.items()):  # direction de sortie des tirs contrés (ticket v2-realisme/05d)
         if key.startswith("tirs contrés, sortie "):
             out[key + " (part)"] = v / max(1, k["tirs : contré"])

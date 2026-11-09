@@ -1090,3 +1090,49 @@ def test_a_tackle_won_closes_the_open_carry_interval_only_once_and_only_inside_i
     assert out[base + "intervalles par match"] == 3.0
     assert c.count[base + "pertes par tacle"] == 1 and c.count[base + "pertes"] == 1
     assert abs(out[base + "perte avec tacle gagné (part)"] - 2 / 3) < 1e-12
+
+
+def test_shot_decomposition_splits_occasion_execution_and_keeper_by_note() -> None:  # ticket v2-realisme/06b
+    shooter = replace(_p("B", "home", PITCH_LENGTH_M - 8.0, 34.0, poste="BU"),
+                      attributes={"Finishing": 80, "Long Shots": 20, "Composure": 30})
+    keeper = replace(_p("G", "away", PITCH_LENGTH_M - 1.0, 34.0, poste="GK"), attributes={"Reflexes": 50})
+    marker = _p("D", "away", PITCH_LENGTH_M - 7.0, 34.0)  # au contact, entre le tireur et le but : tir sous pression
+    c = ind.Collector()
+    shots = ((1.0, 0.3, 0.8, "but", None, None), (2.0, 0.2, 0.1, "capté", 0.2, 0.5), (3.0, 0.1, None, "contré", None, None))
+    for minute, xg, psxg, outcome, gap, elapsed in shots:
+        c.on_shot_notes(minute, shooter, keeper, [marker, keeper])
+        c.on_shot_event(SimpleNamespace(minute=minute, team="home", player="B", x=shooter.position.x, y=34.0,
+                                        outcome=outcome, origin="passe au sol", quality=xg, xg=xg, post_shot_xg=psxg,
+                                        keeper_gap_m=gap, keeper_time_s=elapsed, keeper_speed_mps=20.0))
+    c.on_shot_event(SimpleNamespace(minute=4.0, team="home", player="B", x=94.0, y=34.0, outcome="but",
+                                    origin="penalty", quality=0.8, xg=None, post_shot_xg=None))  # penalty : hors décomposition
+    out = ind.shot_decomposition(c.count, 1)
+    for band in ("tous", "Finishing (surface) [70 ; +[", "Composure sous pression [0 ; 40[", "Reflexes du gardien [40 ; 55["):
+        key = ind.SHOT_PREFIX + band + " : "
+        assert out[key + "tirs (effectif)"] == 3 and out[key + "tirs non contrés (effectif)"] == 2
+        assert math.isclose(out[key + "occasion, xG neutre moyen par tir"], 0.2)
+        assert math.isclose(out[key + "exécution, gain par tir non contré"], (0.9 - 0.5) / 2)  # xG après frappe - xG neutre
+        assert math.isclose(out[key + "gardien, gain par tir non contré"], (0.9 - 1.0) / 2)  # xG après frappe - buts
+    assert not any("Long Shots" in key for key in out)
+    calibration = "calibration xG après frappe, tirs cadrés jugés : xG après frappe moins buts"
+    assert math.isclose(out[calibration + ", par match"], 0.9 - 1.0)
+    for spread in ind.PSXG_SPREADS_M:  # le tir capté, recalculé à chaque étalement ; le but sans écart tracé garde 0,8
+        recomputed = 1.0 / (1.0 + math.exp(-(0.2 - ind.keeper_reach_m(0.5)) / spread))
+        assert math.isclose(out[f"{calibration} à l'étalement {spread:g} m, par match"], 0.8 + recomputed - 1.0)
+
+
+def test_a_forced_profile_leaves_the_neutral_xg_neutral() -> None:  # ticket v2-realisme/06b, réserve A1 de l'expert
+    from scripts.measure_v2 import _force_attribute
+    from v2engine.shooting import neutral_xg, shooting_note
+
+    shooter = replace(_p("B", "home", PITCH_LENGTH_M - 10.0, 34.0, poste="BU"), attributes={"Finishing": 50})
+    keeper = replace(_p("G", "away", PITCH_LENGTH_M - 1.0, 34.0, poste="GK"), attributes={})
+    goal = Vec2(PITCH_LENGTH_M, 34.0)
+    free = neutral_xg(shooter, goal, keeper, [keeper])
+    for high in ("home", "away"):
+        unforce = _force_attribute("Finishing", high, {})
+        try:
+            assert shooting_note(shooter) == (99 if high == "home" else 11)  # le profil force bien le vrai joueur
+            assert neutral_xg(shooter, goal, keeper, [keeper]) == free  # mais pas sa copie neutre
+        finally:
+            unforce()
