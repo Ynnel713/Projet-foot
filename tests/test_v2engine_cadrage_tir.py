@@ -11,7 +11,7 @@ from v2engine.flux import TIR
 from v2engine.geometry import PITCH_LENGTH_M, Vec2
 from v2engine.match import GOAL_CENTER_Y, SHOT_SPEED_MPS, _step_ball
 from v2engine.movement import PlayerState
-from v2engine.shooting import (CADRE, OVER, SHANKED, WIDE, classify_unscored, on_target_axes, shot_error_sigma,
+from v2engine.shooting import (CADRE, FLYING, OVER, SHANKED, WIDE, classify_unscored, on_target_axes, shot_error_sigma,
                                shot_probability)
 
 GOAL = Vec2(PITCH_LENGTH_M, GOAL_CENTER_Y)
@@ -82,28 +82,32 @@ def test_the_unscored_shots_decompose_the_goal_chance_without_changing_it() -> N
     assert abs(draws[CADRE] / sum(draws.values()) - expected) < 0.02
 
 
-def _shot(monkeypatch, kind: str):
+def _shot(monkeypatch, error):
     shooter = _player("Buteur", position=Vec2(PITCH_LENGTH_M - 22.0, GOAL_CENTER_Y))
     keeper = _player("Gardien", team="away", poste="GK", position=Vec2(PITCH_LENGTH_M - 1.0, GOAL_CENTER_Y))
     ball = BallState(position=shooter.position, velocity=Vec2(0.0, 0.0), holder="Buteur")
     monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression, dt: False)
     monkeypatch.setattr("v2engine.match.choose_action", lambda *args: Action("shot", 1.0))
-    monkeypatch.setattr("v2engine.match.attempt_shot", lambda *args: False)
     monkeypatch.setattr("v2engine.match.draw_blocker", lambda *args: None)
-    monkeypatch.setattr("v2engine.match.classify_unscored", lambda *args: kind)
+    monkeypatch.setattr("v2engine.match.draw_shot_error", lambda *args: error)  # tir en vol (05h) : écart imposé
     shots = []
     _step_ball(ball, 0.1, [shooter, keeper], 0.0, shots=shots)
-    return ball, shots
+    return ball, shots, [shooter, keeper]
 
 
 def test_an_over_the_bar_shot_is_traced_over_and_flies_out_like_a_wide_one(monkeypatch) -> None:
-    ball, shots = _shot(monkeypatch, OVER)
-    assert shots[0].outcome == OVER and ball.shot_wide and ball.holder is None
+    ball, shots, players = _shot(monkeypatch, (0.0, 0.3))  # 0,3 rad vers le haut : au-dessus de la barre
+    assert shots[0].outcome == FLYING and ball.shot_wide and ball.holder is None
     assert abs(ball.velocity.length() - SHOT_SPEED_MPS) < 1e-6
+    for i in range(1, 40):
+        _step_ball(ball, 0.1, players, i * 0.1, shots=shots)
+        if ball.restart is not None:
+            break
+    assert shots[0].outcome == OVER and ball.restart.kind == "sortie de but"
 
 
 def test_a_shanked_shot_is_slow_wide_of_the_goal_axis_and_free_for_everyone(monkeypatch) -> None:
-    ball, shots = _shot(monkeypatch, SHANKED)
+    ball, shots, _ = _shot(monkeypatch, None)
     assert shots[0].outcome == SHANKED and not ball.shot_wide and ball.holder is None
     assert ball.last_toucher == "Buteur" and ball.control_ban_until_s["Buteur"] > 0.0
     assert abs(ball.velocity.length() - 0.4 * SHOT_SPEED_MPS) < 1e-6

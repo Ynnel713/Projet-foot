@@ -3,7 +3,10 @@ docs/PLAN_V2.md, critères d'acceptation. Lecture seule de la V1 : aucun fichier
 
 from __future__ import annotations
 
+import math
+
 from ligue1sim.clubs import load_clubs
+from ligue1sim.pitch_geometry import GOAL_WIDTH_M
 from ligue1sim.season import CLUBS_PATH
 
 from v2engine.ball_state import BallState
@@ -58,7 +61,8 @@ def test_scored_shot_counts_only_when_the_ball_reaches_the_goal_line(monkeypatch
 
     monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression, dt: False)
     monkeypatch.setattr("v2engine.match.choose_action", lambda *args: Action("shot", 1.0))  # issue du tir seule testée ici
-    monkeypatch.setattr("v2engine.match.attempt_shot", lambda shooter, goal, keeper, opponents: True)
+    # tir en vol (05h) à 3 m du centre : hors de portée du gardien, au centre de sa ligne, en 0,3 s
+    monkeypatch.setattr("v2engine.match.draw_shot_error", lambda *args: (math.atan2(3.0, 8.0), 0.0))
     assert _step_ball(ball, 0.1, [shooter, keeper]) is None  # départ du tir : pas encore de but
     assert ball.holder is None
     assert ball.position == shooter.position
@@ -94,12 +98,15 @@ def test_missed_shot_gives_ball_to_the_opposing_keeper(monkeypatch) -> None:
 
     monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression, dt: False)
     monkeypatch.setattr("v2engine.match.choose_action", lambda *args: Action("shot", 1.0))  # issue du tir seule testée ici
-    monkeypatch.setattr("v2engine.match.attempt_shot", lambda shooter, goal, keeper, opponents: False)
-    monkeypatch.setattr("v2engine.match.classify_unscored", lambda *args: "cadré")  # tir cadré (ticket v2-collectif/29)
+    monkeypatch.setattr("v2engine.match.draw_shot_error", lambda *args: (0.0, 0.0))  # tir en vol droit sur le gardien
     monkeypatch.setattr("v2engine.match.save_outcome", lambda *args: "capté")  # arrêt capté (ticket v2-collectif/28b)
-    scoring_team = _step_ball(ball, 0.1, [shooter, keeper])
+    results = []
+    for i in range(5):  # 8 m de vol : le gardien, sur sa ligne, l'arrête à son passage
+        results.append(_step_ball(ball, 0.1, [shooter, keeper], i * 0.1))
+        if ball.holder == "Gardien":
+            break
 
-    assert scoring_team is None
+    assert all(result is None for result in results)
     assert ball.holder == "Gardien"
 
 
@@ -110,8 +117,7 @@ def test_wide_shot_leaves_the_pitch_for_a_goal_kick(monkeypatch) -> None:
     ball = BallState(position=shooter.position, velocity=Vec2(0.0, 0.0), holder="Buteur")
     monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression, dt: False)
     monkeypatch.setattr("v2engine.match.choose_action", lambda *args: Action("shot", 1.0))
-    monkeypatch.setattr("v2engine.match.attempt_shot", lambda shooter, goal, keeper, opponents: False)
-    monkeypatch.setattr("v2engine.match.classify_unscored", lambda *args: "à côté")
+    monkeypatch.setattr("v2engine.match.draw_shot_error", lambda *args: (math.atan2(GOAL_WIDTH_M / 2.0 + 2.0, 20.0), 0.0))
     for i in range(30):
         _step_ball(ball, 0.1, [shooter, keeper], i * 0.1)
         if ball.restart is not None:

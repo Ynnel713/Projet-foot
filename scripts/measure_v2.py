@@ -39,16 +39,11 @@ TICK_S = match.TICK_SECONDS  # le pas du produit (ticket v2-collectif/25) : le b
 
 def _hook(collector: Collector, clock: dict[str, float], plans: bool = True) -> Callable[[], None]:
     """Branche le collecteur sur les fonctions publiques du moteur ; retourne la fonction qui les restaure."""
-    real = {name: getattr(match, name) for name in ("pass_velocity", "attempt_shot", "resolve_tackle", "choose_action", "dribble_lost", "lost_carry_outcome")}
+    real = {name: getattr(match, name) for name in ("pass_velocity", "resolve_tackle", "choose_action", "dribble_lost", "lost_carry_outcome")}
 
     def pass_velocity(passer, target, *args, **kwargs):
         collector.on_pass(passer, target)
         return real["pass_velocity"](passer, target, *args, **kwargs)
-
-    def attempt_shot(shooter, *args, **kwargs):
-        collector.on_shot(shooter, clock["now"] + clock["dt"])  # le tir a lieu pendant le tick en cours
-        collector.on_shot_context(shooter, *args)  # (but, gardien adverse, adversaires), ticket v2-realisme/03b
-        return real["attempt_shot"](shooter, *args, **kwargs)
 
     def resolve_tackle(*args, **kwargs):
         collector.on_tackle()
@@ -98,13 +93,29 @@ def _hook(collector: Collector, clock: dict[str, float], plans: bool = True) -> 
         collector.on_trigger()
         return real_trigger(self, team, players, now_s, *args)
 
-    match.pass_velocity, match.attempt_shot = pass_velocity, attempt_shot
+    match.pass_velocity = pass_velocity
     match.resolve_tackle, match.choose_action, match.dribble_lost = resolve_tackle, choose_action, dribble_lost
     match.lost_carry_outcome = lost_carry_outcome
     cerveau.stays_behind, match.think = stays_behind, think
     defense.DefensiveRoles.start_team_press = trigger
     return lambda: ([setattr(match, name, fn) for name, fn in real.items()] + [setattr(cerveau, "stays_behind", real_stays), setattr(match, "think", real_think)]
                     + [setattr(defense.DefensiveRoles, "start_team_press", real_trigger)])
+
+
+def _new_shots(collector: Collector, live: dict, now_s: float, players) -> None:
+    """Tirs du pas qui vient de finir, lus dans la trace (ticket v2-realisme/05h, réserve A3 du 05a) : le tir et son
+    contexte (but, gardien adverse, adversaires) au moment de la frappe ; les joueurs n'ont pas bougé depuis. Mêmes tirs
+    que l'ancien comptage par `attempt_shot` : ni les tirs contrés, ni les penaltys."""
+    shots = live["trace"].shots
+    for event in shots[live["shots"]:]:
+        if event.outcome == "contré" or event.origin == "penalty":
+            continue
+        shooter = next(p for p in players if p.name == event.player)
+        opponents = [p for p in players if p.team != shooter.team]
+        keeper = next((p for p in opponents if p.poste == "GK"), None)
+        collector.on_shot(shooter, now_s)
+        collector.on_shot_context(shooter, match.OPPONENT_GOAL[shooter.team], keeper, opponents)
+    live["shots"] = len(shots)
 
 
 def _force_attribute(attribute: str, high_team: str, team_of: dict[str, str]) -> Callable[[], None]:
@@ -146,14 +157,17 @@ def run(n_matches: int, profile: str | None = None, duration_minutes: float = 90
             team_of.update({p.name: "away" for p in pick_best_formation(away).players})
             unforce = _force_attribute(profile, high_team, team_of) if profile else (lambda: None)
 
+            live = {"trace": None, "shots": 0}
+
             def observer(now_s, players, ball, scoring_team):
                 clock["now"] = now_s
                 if profile and not collector.levels:
                     collector.levels = {p.name: ("haut" if p.team == high_team else "bas") for p in players}
+                _new_shots(collector, live, now_s, players)
                 collector.on_tick(now_s, players, ball, scoring_team, tick_s)
             try:
                 trace = match.simulate_match(home, away, duration_minutes=duration_minutes, tick_seconds=tick_s,
-                                             observer=observer)
+                                             observer=observer, on_start=lambda t: live.update(trace=t))
                 for event in trace.offsides:  # hors-jeu sifflés (ticket v2-collectif/23)
                     collector.on_offside(event)
                 for event in trace.restarts:  # remises en jeu (ticket v2-collectif/29)
@@ -379,6 +393,9 @@ def report(c: Collector, detail: bool = False) -> dict:
     for key, v in sorted(k.items()):
         if key.startswith("choix "):
             out[f"{key} (part)"] = v / max(1, choices)
+    for key, v in sorted(k.items()):  # taux d'arrêt des tirs cadrés par distance et par vitesse (ticket v2-realisme/05h)
+        if key.startswith("tirs cadrés jugés, "):
+            out["taux d'arrêt, " + key.removeprefix("tirs cadrés jugés, ")] = k[key.replace("jugés", "arrêtés")] / v
     for key, v in sorted(k.items()):  # origine des tirs (ticket v2-collectif/28b)
         if key.startswith("tirs, origine : "):
             out[f"{key} (part)"] = v / max(1, k["tirs tracés"])

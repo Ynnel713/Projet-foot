@@ -27,7 +27,7 @@ from v2engine.gardien import (BALL_DISTANCE_M, BISECTOR_TOLERANCE_M, FACE_A_FACE
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, in_penalty_area
 from v2engine.movement import PlayerState
 from v2engine.offside import offside_line
-from v2engine.possession import pass_success_probability, pressure
+from v2engine.possession import BALL_FRICTION_PER_S, MAX_PASS_MPS as SHOT_SPEED_MPS, pass_success_probability, pressure
 from v2engine.restart import CORNER, GOAL_KICK, KICKOFF
 from v2engine.shooting import base_chance, shot_probability
 from v2engine.situation import POSSESSION_INSTALLEE, TRANSITION_DEFENSIVE, TRANSITION_OFFENSIVE, SituationTracker
@@ -50,6 +50,10 @@ RETREAT_SPEED_MPS, RETREAT_WINDOW_S = 1.0, 10.0
 CHOICE_AFTER_S = 1.5
 RECOVERY_CLASSES = ((5.0, "0-5 s"), (12.0, "5-12 s"), (15.0, "12-15 s"), (math.inf, "plus de 15 s"))
 LONG_PASS_M = 32.0
+# Taux d'arrêt des tirs cadrés par tranche (ticket v2-realisme/05h) : distance du tir au but, vitesse du ballon quand il
+# passe au gardien (vitesse du tir freinée, `possession.BALL_FRICTION_PER_S`). Tranches de lecture, sans effet sur le jeu.
+SAVE_DISTANCE_BANDS = ((11.0, "moins de 11 m"), (18.0, "11-18 m"), (25.0, "18-25 m"), (math.inf, "25 m et plus"))
+SAVE_SPEED_BANDS = ((18.0, "moins de 18 m/s"), (24.0, "18-24 m/s"), (math.inf, "24 m/s et plus"))
 SHOT_CLOSE_RANGE_M = 16.0  # tir « de près » : demande du propriétaire (28/10/2026) pour mesurer l'exposition du gardien
 FREE_PASSER_M = 9.0  # porteur libre : défenseur le plus proche à 9 m ou plus (pressé : PRESS_RADIUS_M), ticket 05
 SPRINT_MPS, HIGH_INTENSITY_MPS = 25.0 * KMH, 19.8 * KMH
@@ -728,6 +732,15 @@ class Collector:
         self.count["qualité des occasions (somme)"] += event.quality
         if event.outcome == "but" and in_penalty_area(event.team, Vec2(event.x, event.y)):
             self.count["buts dans la surface"] += 1
+        keeper_s = getattr(event, "keeper_time_s", None)  # événement construit à la main dans les tests : sans ce champ
+        if keeper_s is not None and event.outcome in ("but", "capté", "repoussé", "claqué"):
+            # tir cadré jugé par le gardien (ticket v2-realisme/05h) : arrêté ou non, par distance et par vitesse au gardien
+            distance = Vec2(event.x, event.y).distance_to(OPPONENT_GOAL[event.team])
+            speed = SHOT_SPEED_MPS * BALL_FRICTION_PER_S ** keeper_s
+            for kind, value, bands in (("distance", distance, SAVE_DISTANCE_BANDS), ("vitesse", speed, SAVE_SPEED_BANDS)):
+                band = next(label for limit, label in bands if value < limit)
+                self.count[f"tirs cadrés jugés, {kind} {band}"] += 1
+                self.count[f"tirs cadrés arrêtés, {kind} {band}"] += event.outcome != "but"
 
     def on_chance(self, event) -> None:
         """Grosse occasion, avec ou sans tir (ticket v2-collectif/28c) ; `event` : `v2engine.trace.ChanceEvent`."""

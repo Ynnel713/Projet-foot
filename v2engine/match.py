@@ -38,8 +38,8 @@ from v2engine.added_time import GRACE_S, HARD_STOP_S, added_minutes, played_minu
 from v2engine.roles import role_of
 from v2engine.restart import (AERIAL_LANDING_M, AERIEN, CORNER, FREE_KICK, LONG_RESTART_M, PENALTY, PENALTY_CONVERSION, SOL,
                               award, exit_point, foul_restart, is_aerial, kickoff, restart_target)
-from v2engine.shooting import (FLYING, HELD, OVER, PARRIED, SHANKED, SHOT_AIM_HEIGHT_M, TIPPED, WIDE, attempt_shot,
-                               classify_unscored, draw_blocker, draw_shot_error, keeper_reach_m, occasion_quality, parry_velocity, save_outcome, shank_velocity,
+from v2engine.shooting import (FLYING, HELD, OVER, PARRIED, SHANKED, SHOT_AIM_HEIGHT_M, WIDE, draw_blocker, draw_shot_error,
+                               keeper_reach_m, occasion_quality, parry_velocity, save_outcome, shank_velocity,
                                shot_probability)
 from v2engine.situation import SituationTracker
 from v2engine.transition import TransitionPlay
@@ -51,16 +51,11 @@ from v2engine.trace import (BallSnapshot, DecisionRecord, FoulEvent, MatchTrace,
 _OPPONENT_GOAL = OPPONENT_GOAL
 # Vitesse d'un tir : celle de la passe la plus appuyée (pas de constante nouvelle), soit 30 m/s, 1 s pour 30 m.
 SHOT_SPEED_MPS = MAX_PASS_MPS
-# Tir non converti raté (ticket v2-collectif/29, validé par délégation le 03/11/2026) : écart au poteau de 0,5 à 5 m
-# (réel non trouvé, ordre de grandeur). Que le tir soit cadré, à côté, au-dessus ou dévissé se tire depuis le ticket
-# 35b (`shooting.classify_unscored`), selon la note du tireur, la pression et la distance, plus par une part fixe.
-SHOT_WIDE_M = (0.5, 5.0)
 SHOT_DEFLECTION_DEG = 60.0  # tir contré : déviation maximale (ticket 33, ordre de grandeur, réel non trouvé)
 # Tir en vol (ticket v2-realisme/05a, validé par délégation le 08/11/2026) : le ballon part vers son point d'arrivée
-# (axe du but + écart d'exécution du 35b) et l'issue se lit au franchissement de la ligne : but entre les poteaux et
-# sous la barre, sortie de but sinon. Coupé par défaut : sans l'arrêt du gardien (v2-realisme/05b), tout tir cadré
-# entrerait (environ un tir sur trois). Le 05b l'allume.
-SHOT_FLIGHT_RESOLUTION = False
+# (axe du but + écart d'exécution du 35b) et l'issue se lit sur son trajet : arrêt si le gardien l'atteint (05b), but
+# entre les poteaux et sous la barre, sortie de but sinon. Seul chemin du tir en jeu depuis le 05h (plus de tirage du but
+# au départ) ; le penalty garde sa conversion provisoire (`_play_penalty`).
 # Origine d'un tir (ticket v2-collectif/28b, trace seulement, sans effet sur le jeu ; ordres de grandeur validés par
 # délégation) : le tireur a « dribblé » s'il a porté le ballon plus de `DRIBBLE_ORIGIN_M` depuis son contrôle ; une
 # passe reçue est « en profondeur » si elle a fait gagner au moins `DEEP_ORIGIN_M` vers le but, « en retrait » si elle
@@ -347,16 +342,16 @@ def _keeper_reaches(ball: BallState, flight: ShotFlight, start: Vec2, end: Vec2,
     if rank >= 0:
         shots[rank] = replace(shots[rank], outcome=outcome)
     ball.shot_flight = None
-    ball.position = point
-    _keeper_save(ball, keeper, outcome, flight.origin, goal, flight.team, players, now_s)
+    _keeper_save(ball, keeper, outcome, flight.origin, goal, flight.team, players, now_s, point)
     return True
 
 
 def _keeper_save(ball: BallState, keeper: PlayerState, outcome: str, origin: Vec2, goal: Vec2, shooter_team: str,
-                 players: list[PlayerState], now_s: float) -> None:
-    """Suite d'un arrêt (ticket v2-collectif/28b) : capté, le gardien a le ballon ; repoussé ou claqué, le ballon repart
-    de lui, libre."""
+                 players: list[PlayerState], now_s: float, at: Vec2) -> None:
+    """Suite d'un arrêt (ticket v2-collectif/28b) au point de contact `at` (réserve A2 du 05b) : capté, le gardien a le
+    ballon, amené à ce point (ponytail : pas de plongeon animé) ; repoussé ou claqué, le ballon repart de ce point, libre."""
     if outcome == HELD:
+        keeper.position = clamp_to_pitch(at)
         ball.holder = keeper.name
         ball.next_decision_s = now_s + reception_delay_s(keeper, [p for p in players if p.team == shooter_team])
         ball.receiving = True
@@ -364,8 +359,8 @@ def _keeper_save(ball: BallState, keeper: PlayerState, outcome: str, origin: Vec
         ball.velocity = Vec2(0.0, 0.0)
         return
     ball.holder = None
-    ball.velocity = parry_velocity(origin, goal, keeper.position, outcome, SHOT_SPEED_MPS)
-    ball.position = clamp_to_pitch(keeper.position + ball.velocity.normalized() * CONTROL_RADIUS_M)
+    ball.velocity = parry_velocity(origin, goal, at, outcome, SHOT_SPEED_MPS)
+    ball.position = clamp_to_pitch(at + ball.velocity.normalized() * CONTROL_RADIUS_M)
     ball.last_toucher = keeper.name
     ball.control_ban_until_s[keeper.name] = now_s + MISS_RETRY_S
     ball.released_by, ball.receiver, ball.readers, ball.last_pass_team = None, None, {}, shooter_team
@@ -587,81 +582,36 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                 ball.control_ban_until_s[blocker.name] = now_s + MISS_RETRY_S
                 ball.released_by, ball.receiver, ball.readers, ball.last_pass_team = None, None, {}, holder.team
                 return None
-            if SHOT_FLIGHT_RESOLUTION:
-                error = draw_shot_error(holder, goal, opponents)
-                if error is not None:
-                    # Tir en vol (ticket v2-realisme/05a) : aucun tirage du but ici, l'issue se lit sur la ligne.
-                    # ponytail : personne ne touche le ballon en route ; arrêt et contre physiques avec 05b et 05c.
-                    record(FLYING)
-                    axis = (goal - holder.position).normalized()
-                    c, s = math.cos(error[0]), math.sin(error[0])
-                    heading = Vec2(axis.x * c - axis.y * s, axis.x * s + axis.y * c)
-                    ball.holder = None
-                    ball.velocity = heading * SHOT_SPEED_MPS
-                    flight = ShotFlight(holder.team, shot_at, math.tan(error[1]), len(shots) - 1 if shots is not None else -1,
-                                        shot_probability(holder, goal, keeper, opponents))
-                    # Point d'arrivée sur la ligne et passage au plus près du gardien (ticket v2-realisme/05b) : il ne
-                    # va que sur un tir qui finira dans le cadre.
-                    to_line = (goal.x - shot_at.x) / heading.x if abs(heading.x) > 1e-9 else -1.0
-                    arrival = shot_at + heading * to_line
-                    flight.on_target = (to_line > 0.0 and abs(arrival.y - GOAL_CENTER_Y) < GOAL_WIDTH_M / 2.0
-                                        and SHOT_AIM_HEIGHT_M + to_line * flight.slope < GOAL_HEIGHT_M)
-                    if flight.on_target and keeper is not None:
-                        along = (keeper.position.x - shot_at.x) * heading.x + (keeper.position.y - shot_at.y) * heading.y
-                        flight.keeper_at_m = min(max(along, 0.0), to_line)
-                    ball.shot_flight = flight
-                    ball.last_toucher = ball.released_by = holder.name
-                    ball.receiver, ball.readers, ball.last_pass_team = None, {}, holder.team
-                    return None
-                record(SHANKED)  # dévissé : comme au 35b
+            error = draw_shot_error(holder, goal, opponents)
+            if error is None:
+                record(SHANKED)  # dévissé (ticket v2-collectif/35b)
                 _shank(ball, holder, goal, now_s)
                 return None
-            chance = shot_probability(holder, goal, keeper, opponents)
-            scored = attempt_shot(holder, goal, keeper, opponents)
-            if scored:
-                record("but")
-                # le ballon part vraiment vers le but et le but ne compte qu'à son arrivée (`SHOT_SPEED_MPS`)
-                ball.holder = None
-                ball.velocity = (goal - ball.position).normalized() * SHOT_SPEED_MPS
-                ball.shot_for = holder.team
-                ball.receiver, ball.readers = None, {}
-                return None
-            # Tir non converti. À côté (ticket v2-collectif/29) : le ballon part vers la ligne de but, hors du cadre, et
-            # peut être contré en route ; il sort (sortie de but, ou corner s'il est dévié par un défenseur). Cadré : le
-            # gardien adverse le récupère (arrêts variés : ticket 28). Sans gardien identifiable (effectif synthétique),
-            # le ballon reste simplement libre là où le tir a été tenté.
-            kind = classify_unscored(holder, goal, keeper, opponents)
-            if kind == SHANKED:
-                # Dévissé (ticket v2-collectif/35b) : ballon lent, très écarté, libre ; le tireur ne le rejoue pas
-                # aussitôt, et c'est lui le dernier toucheur si le ballon sort.
-                record(kind)
-                _shank(ball, holder, goal, now_s)
-                return None
-            if kind in (WIDE, OVER):
-                record(kind)  # au-dessus : tracé comme tel, rejoué à plat comme un tir à côté (v2-hauteur-ballon/02a)
-                side = 1.0 if TIR.random() < 0.5 else -1.0
-                wide = GOAL_WIDTH_M / 2.0 + TIR.uniform(*SHOT_WIDE_M)
-                aim = Vec2(goal.x, GOAL_CENTER_Y + side * wide)
-                ball.holder = None
-                ball.velocity = (aim - ball.position).normalized() * SHOT_SPEED_MPS
-                ball.released_by = holder.name
-                ball.receiver, ball.readers, ball.last_pass_team = None, {}, holder.team
-                ball.shot_wide = True  # tir en vol hors du cadre : le gardien ne peut pas le prendre (ticket v2-realisme/03k)
-                return None
+            # Tir en vol (tickets v2-realisme/05a et 05b, allumé au 05h) : aucun tirage du but ici, l'issue se lit sur
+            # son trajet : arrêt si le gardien l'atteint, but ou sortie de but sur la ligne.
+            record(FLYING)
+            axis = (goal - holder.position).normalized()
+            c, s = math.cos(error[0]), math.sin(error[0])
+            heading = Vec2(axis.x * c - axis.y * s, axis.x * s + axis.y * c)
+            ball.holder = None
+            ball.velocity = heading * SHOT_SPEED_MPS
+            flight = ShotFlight(holder.team, shot_at, math.tan(error[1]), len(shots) - 1 if shots is not None else -1,
+                                shot_probability(holder, goal, keeper, opponents))
+            # Point d'arrivée sur la ligne et passage au plus près du gardien (ticket v2-realisme/05b) : il ne va que sur
+            # un tir qui finira dans le cadre.
+            to_line = (goal.x - shot_at.x) / heading.x if abs(heading.x) > 1e-9 else -1.0
+            arrival = shot_at + heading * to_line
+            flight.on_target = (to_line > 0.0 and abs(arrival.y - GOAL_CENTER_Y) < GOAL_WIDTH_M / 2.0
+                                and SHOT_AIM_HEIGHT_M + to_line * flight.slope < GOAL_HEIGHT_M)
             if keeper is not None:
-                # Arrêt (ticket v2-collectif/28b) : capté, repoussé en jeu ou claqué derrière la ligne (corner), selon
-                # la difficulté du tir et son excentrement ; gardien neutre jusqu'au ticket v2-attributs-restants/03b.
-                # ponytail : la parade est instantanée, au gardien ; trajectoire du tir jusqu'à lui avec la hauteur
-                # du ballon (v2-hauteur-ballon/02a).
-                outcome = save_outcome(chance, shot_at, goal)
-                if outcome == HELD and not in_penalty_area(holder.team, keeper.position):
-                    outcome = PARRIED  # hors de sa surface, jamais à la main (ticket v2-realisme/03d) : le tirage reste le même
-                record(outcome)
-                _keeper_save(ball, keeper, outcome, shot_at, goal, holder.team, players, now_s)
-            else:
-                record(HELD)  # effectif synthétique sans gardien : le ballon reste libre là où le tir a été tenté
-                ball.holder = None
-                ball.velocity = Vec2(0.0, 0.0)
+                flight.keeper_from = keeper.position
+            if flight.on_target and keeper is not None:
+                along = (keeper.position.x - shot_at.x) * heading.x + (keeper.position.y - shot_at.y) * heading.y
+                flight.keeper_at_m = min(max(along, 0.0), to_line)
+            ball.shot_flight = flight
+            ball.shot_wide = not flight.on_target  # hors du cadre (ticket v2-realisme/03k)
+            ball.last_toucher = ball.released_by = holder.name
+            ball.receiver, ball.readers, ball.last_pass_team = None, {}, holder.team
             return None
 
         if action.kind == "pass":

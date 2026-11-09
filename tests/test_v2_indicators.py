@@ -381,13 +381,13 @@ def test_hooks_are_restored_and_the_observer_changes_nothing() -> None:
     from ligue1sim.clubs import load_clubs
     from ligue1sim.season import CLUBS_PATH
     from scripts.measure_v2 import run
-    real = (match.pass_velocity, match.attempt_shot, match.resolve_tackle, match.choose_action)
+    real = (match.pass_velocity, match.resolve_tackle, match.choose_action)
     clubs = load_clubs(CLUBS_PATH, "Ligue 1")
     random.seed(20260923)
     plain = match.simulate_match(clubs[0], clubs[1], duration_minutes=2.0)
     first = run(1, duration_minutes=2.0)
     second = run(1, duration_minutes=2.0)
-    assert (match.pass_velocity, match.attempt_shot, match.resolve_tackle, match.choose_action) == real
+    assert (match.pass_velocity, match.resolve_tackle, match.choose_action) == real
     assert first.count == second.count  # déterminisme : même graine, mêmes chiffres
     random.seed(20260923)
     observed = match.simulate_match(clubs[0], clubs[1], duration_minutes=2.0, observer=lambda *a: None)

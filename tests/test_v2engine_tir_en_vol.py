@@ -1,5 +1,5 @@
 """Tir en vol (ticket v2-realisme/05a) : le ballon part vers son point d'arrivée et l'issue se lit sur la ligne de but,
-jamais au départ du tir. Interrupteur `SHOT_FLIGHT_RESOLUTION`, coupé par défaut jusqu'à l'arrêt du gardien (05b)."""
+jamais au départ du tir. Seul chemin du tir en jeu depuis le 05h (interrupteur retiré)."""
 
 from __future__ import annotations
 
@@ -27,21 +27,14 @@ def _player(name: str, team: str, poste: str, position: Vec2) -> PlayerState:
                        acceleration=60, stamina=60, home_target=position, attributes=None)
 
 
-def _forbidden(*args, **kwargs):
-    raise AssertionError("le but ne se tire plus au départ du tir")
-
-
 def _fly(monkeypatch, lateral_m: float, height_m: float = SHOT_AIM_HEIGHT_M):
     """Tir de 20 m, face au but, réglé pour arriver sur la ligne à `lateral_m` du centre et à `height_m` du sol."""
     shooter = _player("Buteur", "home", "BU", Vec2(PITCH_LENGTH_M - DISTANCE_M, GOAL_CENTER_Y))
     keeper = _player("Gardien", "away", "GK", Vec2(PITCH_LENGTH_M - 1.0, GOAL_CENTER_Y + 10.0))
     ball = BallState(position=shooter.position, velocity=Vec2(0.0, 0.0), holder="Buteur")
-    monkeypatch.setattr(match, "SHOT_FLIGHT_RESOLUTION", True)
     monkeypatch.setattr(match, "should_attempt_tackle", lambda aggression, dt: False)
     monkeypatch.setattr(match, "choose_action", lambda *args: Action("shot", 1.0))
     monkeypatch.setattr(match, "draw_blocker", lambda *args: None)
-    monkeypatch.setattr(match, "attempt_shot", _forbidden)
-    monkeypatch.setattr(match, "classify_unscored", _forbidden)
     error = (math.atan2(lateral_m, DISTANCE_M), math.atan2(height_m - SHOT_AIM_HEIGHT_M, DISTANCE_M))
     monkeypatch.setattr(match, "draw_shot_error", lambda *args: error)
     shots, path, scored = [], [], None
@@ -54,8 +47,9 @@ def _fly(monkeypatch, lateral_m: float, height_m: float = SHOT_AIM_HEIGHT_M):
     return ball, shots, path, scored
 
 
-def test_the_switch_is_off_until_the_keeper_can_save() -> None:
-    assert match.SHOT_FLIGHT_RESOLUTION is False
+def test_the_goal_is_never_drawn_at_the_shot_any_more() -> None:
+    # garde du 05h : plus d'interrupteur ni de tirage du but au départ dans le moteur (garde en match : test_v2engine_issues_tir)
+    assert not any(hasattr(match, name) for name in ("SHOT_FLIGHT_RESOLUTION", "attempt_shot", "classify_unscored"))
 
 
 def test_a_shot_inside_the_post_is_a_goal_only_when_it_crosses_the_line(monkeypatch) -> None:

@@ -166,8 +166,11 @@ class ChanceTracker:
                 else:
                     self._close(team, minute, "tir : " + shot.outcome, shot=True)
             elif team in self.flying:
-                if shots[self.flying[team]].outcome != FLYING:
-                    self._close(team, minute, "tir : " + shots[self.flying.pop(team)].outcome, shot=True)
+                # issue lue sur la trajectoire ; tir sans issue (sifflet pendant le vol, ballon mort avant la ligne) : « en
+                # vol » (réserve A3 du 05b)
+                outcome = shots[self.flying[team]].outcome
+                if outcome != FLYING or ball.shot_flight is None:
+                    self._close(team, minute, "tir : " + outcome, shot=True)
             elif danger < SEQUENCE_FLOOR:
                 self._close(team, minute, self._outcome(team, ball, holder, players))
         self.holder_team = holder.team if holder is not None else None
@@ -186,6 +189,7 @@ class ChanceTracker:
         return "dégagement" if toucher is not None and toucher.team != team else "ballon non repris"
 
     def _close(self, team: str, minute: float, outcome: str, shot: bool = False) -> None:
+        self.flying.pop(team, None)
         state = self.open.pop(team)
         if state.peak >= BIG_CHANCE_DANGER:
             self.chances.append(ChanceEvent(state.start, state.peak_minute, minute, team, state.player, state.x,

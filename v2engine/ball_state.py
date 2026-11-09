@@ -30,6 +30,7 @@ class ShotFlight:
     on_target: bool = False
     keeper_at_m: float | None = None
     elapsed_s: float = 0.0
+    keeper_from: Vec2 | None = None  # position du gardien adverse à la frappe : il y reste pendant le vol (réserve A1, 05h)
 
 
 @dataclass
@@ -76,7 +77,7 @@ class BallState:
     # Tir « à côté » en route vers la ligne de but, hors du cadre (ticket v2-realisme/03k) : vrai tant que le ballon suit la
     # trajectoire du tir ; effacé dès qu'il change d'état (touché, sorti, ballon mort, nouvelle action).
     shot_wide: bool = False
-    # Tir en vol dont l'issue se lit sur son trajet (tickets v2-realisme/05a et 05b, `match.SHOT_FLIGHT_RESOLUTION`).
+    # Tir en vol dont l'issue se lit sur son trajet (tickets v2-realisme/05a et 05b, allumé au 05h).
     shot_flight: ShotFlight | None = None
     # Ballon mort (ticket v2-collectif/29) : dernier joueur à l'avoir touché (il décide de la remise en jeu), remise en
     # attente tant que le ballon est mort, mode du ballon et distance qu'il doit encore parcourir en l'air avant de

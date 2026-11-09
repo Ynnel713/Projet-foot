@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+import math
 import random
+
+from ligue1sim.pitch_geometry import GOAL_WIDTH_M
 
 from v2engine.ball_state import BallState
 from v2engine.decision import Action
 from v2engine.geometry import PITCH_LENGTH_M, Vec2
 from v2engine.match import GOAL_CENTER_Y, _step_ball
 from v2engine.movement import PlayerState
-from v2engine.shooting import HELD, PARRIED, TIPPED, parry_velocity, save_outcome, save_shares
+from v2engine.shooting import FLYING, HELD, PARRIED, TIPPED, parry_velocity, save_outcome, save_shares
 
 GOAL = Vec2(PITCH_LENGTH_M, GOAL_CENTER_Y)
 CENTRAL_FAR = Vec2(PITCH_LENGTH_M - 25.0, GOAL_CENTER_Y)  # tir central, lointain : chance faible
@@ -60,8 +63,7 @@ def test_tipped_save_goes_behind_the_line_for_a_corner(monkeypatch) -> None:
     ball = BallState(position=shooter.position, velocity=Vec2(0.0, 0.0), holder="Buteur")
     monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression, dt: False)
     monkeypatch.setattr("v2engine.match.choose_action", lambda *args: Action("shot", 1.0))
-    monkeypatch.setattr("v2engine.match.attempt_shot", lambda *args: False)
-    monkeypatch.setattr("v2engine.match.classify_unscored", lambda *args: "cadré")
+    monkeypatch.setattr("v2engine.match.draw_shot_error", lambda *args: (0.0, 0.0))  # tir en vol vers le centre du but
     monkeypatch.setattr("v2engine.match.save_outcome", lambda *args: TIPPED)
     shots = []
     for i in range(40):
@@ -78,11 +80,13 @@ def test_parried_ball_stays_live_and_the_keeper_does_not_hold_it(monkeypatch) ->
     ball = BallState(position=shooter.position, velocity=Vec2(0.0, 0.0), holder="Buteur")
     monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression, dt: False)
     monkeypatch.setattr("v2engine.match.choose_action", lambda *args: Action("shot", 1.0))
-    monkeypatch.setattr("v2engine.match.attempt_shot", lambda *args: False)
-    monkeypatch.setattr("v2engine.match.classify_unscored", lambda *args: "cadré")
+    monkeypatch.setattr("v2engine.match.draw_shot_error", lambda *args: (0.0, 0.0))  # tir en vol vers le centre du but
     monkeypatch.setattr("v2engine.match.save_outcome", lambda *args: PARRIED)
     shots = []
-    _step_ball(ball, 0.1, [shooter, keeper], 0.0, shots=shots)
+    for i in range(20):  # jusqu'au gardien (arrêt par portée, 05b)
+        _step_ball(ball, 0.1, [shooter, keeper], i * 0.1, shots=shots)
+        if shots[0].outcome != FLYING:
+            break
     assert ball.holder is None and ball.velocity.length() > 0.0 and ball.rebound
     assert ball.last_toucher == "Gardien" and ball.position.x < PITCH_LENGTH_M
     assert shots[0].outcome == PARRIED and 0.0 < shots[0].quality < 1.0
@@ -99,7 +103,10 @@ def test_shot_trace_is_reproducible_at_fixed_seed() -> None:
         random.seed(20260923)
         runs.append(simulate_match(clubs[0], clubs[1], duration_minutes=10).shots)
     assert runs[0] == runs[1]
-    assert all(s.outcome in {"but", "à côté", "au-dessus", "dévissé", "contré", HELD, PARRIED, TIPPED} for s in runs[0])
+    assert all(s.outcome in {"but", "à côté", "au-dessus", "dévissé", "contré", FLYING, HELD, PARRIED, TIPPED} for s in runs[0])
+    # garde du 05h, sans monkeypatch : en jeu, un tir cadré n'a d'issue que par sa trajectoire (le gardien l'a jugé)
+    framed = [s for s in runs[0] if s.outcome in {"but", HELD, PARRIED, TIPPED} and s.origin != "penalty"]
+    assert framed and all(s.keeper_time_s is not None for s in framed)
 
 
 def test_a_keeper_outside_his_area_never_holds_the_ball_with_his_hands(monkeypatch) -> None:
@@ -110,11 +117,13 @@ def test_a_keeper_outside_his_area_never_holds_the_ball_with_his_hands(monkeypat
         ball = BallState(position=shooter.position, velocity=Vec2(0.0, 0.0), holder="Buteur")
         monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression, dt: False)
         monkeypatch.setattr("v2engine.match.choose_action", lambda *args: Action("shot", 1.0))
-        monkeypatch.setattr("v2engine.match.attempt_shot", lambda *args: False)
-        monkeypatch.setattr("v2engine.match.classify_unscored", lambda *args: "cadré")
+        monkeypatch.setattr("v2engine.match.draw_shot_error", lambda *args: (0.0, 0.0))  # tir en vol, droit sur lui
         monkeypatch.setattr("v2engine.match.save_outcome", lambda *args: HELD)
         shots = []
-        _step_ball(ball, 0.1, [shooter, keeper], 0.0, shots=shots)
+        for i in range(20):
+            _step_ball(ball, 0.1, [shooter, keeper], i * 0.1, shots=shots)
+            if shots[0].outcome != FLYING:
+                break
         return shots[0].outcome, ball.holder
 
     assert held_at(Vec2(PITCH_LENGTH_M - 10.0, GOAL_CENTER_Y)) == (HELD, "Gardien")  # dans sa surface : capté
@@ -129,8 +138,7 @@ def _wide_shot(monkeypatch):
     ball = BallState(position=shooter.position, velocity=Vec2(0.0, 0.0), holder="Buteur")
     monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression, dt: False)
     monkeypatch.setattr("v2engine.match.choose_action", lambda *args: Action("shot", 1.0))
-    monkeypatch.setattr("v2engine.match.attempt_shot", lambda *args: False)
-    monkeypatch.setattr("v2engine.match.classify_unscored", lambda *args: "à côté")
+    monkeypatch.setattr("v2engine.match.draw_shot_error", lambda *args: (math.atan2(GOAL_WIDTH_M / 2.0 + 2.0, 25.0), 0.0))
     monkeypatch.setattr("v2engine.match.draw_blocker", lambda *args: None)
     _step_ball(ball, 0.1, [shooter, keeper], 0.0, shots=[])
     return ball, [shooter, keeper]
@@ -152,6 +160,7 @@ def test_the_wide_shot_flag_is_cleared_when_a_player_touches_the_ball_or_it_leav
     assert ball.restart is not None and not ball.shot_wide
     ball, players = _wide_shot(monkeypatch)
     ball.position = Vec2(PITCH_LENGTH_M - 3.0, GOAL_CENTER_Y)  # un défenseur sur la trajectoire touche le ballon
+    ball.shot_flight = None  # sorti de son vol (ballon mort avant la ligne ; contre physique au 05c)
     defender = _player("Defenseur", team="away", poste="DC", position=ball.position)
     _step_ball(ball, 0.1, [players[0], defender], 0.5)
     assert not ball.shot_wide

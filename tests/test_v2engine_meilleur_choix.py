@@ -168,7 +168,7 @@ def test_a_blocked_shot_bounces_off_the_defender_and_is_a_loose_ball(monkeypatch
     shooter, blocker = _p("A", 85), _p("D", 92, team="away")
     monkeypatch.setattr("v2engine.match.choose_action", lambda *args: Action("shot", 0.1))
     monkeypatch.setattr("v2engine.match.draw_blocker", lambda *args: blocker)
-    monkeypatch.setattr("v2engine.match.attempt_shot", lambda *args: (_ for _ in ()).throw(AssertionError("tir passé")))
+    monkeypatch.setattr("v2engine.match.draw_shot_error", lambda *args: (_ for _ in ()).throw(AssertionError("tir passé")))
     monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression, dt: False)
     ball = BallState(position=shooter.position, velocity=Vec2(0.0, 0.0), holder="A")
     assert _step_ball(ball, 0.1, [shooter, blocker]) is None

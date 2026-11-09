@@ -372,6 +372,13 @@ def _keeper(player: PlayerState, ball: BallState, seen: Perception, players: lis
                           one_on_one)
     inner = {RELANCE: PORTEUR, INTERVENTION: RECEVEUR if seen.is_receiver else LECTURE, SORTIE: BALLON_LIBRE}.get(state)
     line = bloc.lines.get(player.team) if bloc else None  # ligne du bloc à l'instant même, sans retard (ticket 03c)
+    flight = ball.shot_flight
+    if flight is not None and flight.team != player.team and flight.keeper_from is not None:
+        # Réserve A1 du 05b (ticket v2-realisme/05h) : pendant le vol, il reste sur ses appuis de la frappe ; l'arrêt se
+        # joue sur sa portée (`shooting.keeper_reach_m`), son déplacement n'est pas compté deux fois.
+        return Intention(GARDIEN, "se replacer", flight.keeper_from,
+                         reason=f"{PLACEMENT} : tir en vol : il reste sur ses appuis de la frappe, l'arrêt se joue sur sa portée",
+                         situation=situation)
     if state == FACE_A_FACE:  # il avance sur la bissectrice, à petits pas dès que l'attaquant est à portée de tir
         gap = ball.position.distance_to(player.position)
         depth = gardien.face_depth(ball.position.distance_to(gardien.own_goal(player.team)))

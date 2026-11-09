@@ -281,11 +281,14 @@ FLYING = "en vol"  # issue provisoire d'un tir en vol dans la trace, remplacée 
 # gardien neutre, ses notes viennent au v2-attributs-restants/03b). Quand le ballon passe au plus près de lui, le gardien
 # l'atteint si l'écart est dans sa portée à cet instant : `KEEPER_STANDING_REACH_M` sans plonger (corps et bras), puis,
 # après `KEEPER_REACTION_S`, il gagne `KEEPER_DIVE_MPS` jusqu'à `KEEPER_DIVE_REACH_M`. Ordres de grandeur, chiffres réels
-# non trouvés (temps de réaction d'un gardien sur tir, portée et durée d'un plongeon) ; réglage sur la mesure au 05h.
-KEEPER_REACTION_S = 0.25
+# non trouvés (temps de réaction d'un gardien sur tir, portée et durée d'un plongeon). Réglage du 05h (09/11/2026,
+# validé par délégation) : réaction 0,25 -> 0,30 s et plongeon 4,0 -> 3,0 m/s, recalés hors ligne sur 1 103 tirs de 24
+# matchs (temps de vol et écart au gardien tracés) vers le repère d'environ 70 % d'arrêts des tirs cadrés (77 à 80 %
+# avant) ; à reprendre avec la puissance de frappe (`v2-collectif/35a`), qui rendra les tirs plus rapides.
+KEEPER_REACTION_S = 0.30
 KEEPER_STANDING_REACH_M = 1.0
 KEEPER_DIVE_REACH_M = 2.8
-KEEPER_DIVE_MPS = 4.0
+KEEPER_DIVE_MPS = 3.0
 
 
 def keeper_reach_m(elapsed_s: float) -> float:

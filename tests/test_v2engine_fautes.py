@@ -171,11 +171,13 @@ def test_a_shot_during_the_advantage_settles_it_even_when_saved(monkeypatch) -> 
     assert ball.advantage is not None
     monkeypatch.setattr("v2engine.match.choose_action", lambda *a, **k: Action("shot", 0.1))
     monkeypatch.setattr("v2engine.match.draw_blocker", lambda *a, **k: None)
-    monkeypatch.setattr("v2engine.match.attempt_shot", lambda *a, **k: False)
-    monkeypatch.setattr("v2engine.match.classify_unscored", lambda *args: "cadré")  # cadré : le gardien capte
+    monkeypatch.setattr("v2engine.match.draw_shot_error", lambda *a, **k: (0.0, 0.0))  # tir en vol, au centre du but
     monkeypatch.setattr("v2engine.match.save_outcome", lambda *args: "capté")  # capté, sans dépendre du tirage
     ball.next_decision_s = 0.0
-    _step_ball(ball, DT, players, 10.5, fouls=fouls)
+    for i in range(30):  # le gardien, dans l'axe, arrête le tir en vol (05b, allumé au 05h)
+        _step_ball(ball, DT, players, 10.5 + i * DT, fouls=fouls)
+        if ball.holder == "GK":
+            break
     assert ball.holder == "GK"
-    _step_ball(ball, DT, players, 10.6, fouls=fouls)
+    _step_ball(ball, DT, players, 10.5 + (i + 1) * DT, fouls=fouls)
     assert ball.restart is None and [f.outcome for f in fouls] == ["avantage"]

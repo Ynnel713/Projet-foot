@@ -1,13 +1,12 @@
 """Arrêt par portée (ticket v2-realisme/05b) : quand le tir en vol passe au plus près du gardien, il l'atteint si l'écart
-tient dans sa portée à cet instant (réaction, puis plongeon) ; sinon le ballon continue. Interrupteur
-`SHOT_FLIGHT_RESOLUTION` allumé dans ces scènes seulement."""
+tient dans sa portée à cet instant (réaction, puis plongeon) ; sinon le ballon continue. Allumé en match au 05h."""
 
 from __future__ import annotations
 
 import math
 
 from v2engine import match
-from v2engine.ball_state import BallState
+from v2engine.ball_state import BallState, ShotFlight
 from v2engine.decision import Action
 from v2engine.geometry import PITCH_LENGTH_M, Vec2
 from v2engine.match import GOAL_CENTER_Y, _step_ball
@@ -32,7 +31,6 @@ def _shoot(monkeypatch, distance_m: float, lateral_m: float, keeper_y: float = 0
     shooter = _player("Buteur", "home", "BU", Vec2(PITCH_LENGTH_M - distance_m, GOAL_CENTER_Y))
     keeper = _player("Gardien", "away", "GK", Vec2(PITCH_LENGTH_M - keeper_depth_m, GOAL_CENTER_Y + keeper_y))
     ball = BallState(position=shooter.position, velocity=Vec2(0.0, 0.0), holder="Buteur")
-    monkeypatch.setattr(match, "SHOT_FLIGHT_RESOLUTION", True)
     monkeypatch.setattr(match, "should_attempt_tackle", lambda aggression, dt: False)
     monkeypatch.setattr(match, "choose_action", lambda *args: Action("shot", 1.0))
     monkeypatch.setattr(match, "draw_blocker", lambda *args: None)
@@ -44,6 +42,7 @@ def _shoot(monkeypatch, distance_m: float, lateral_m: float, keeper_y: float = 0
         scored = _step_ball(ball, 0.1, [shooter, keeper], tick * 0.1, shots=shots)
         if scored is not None or not ball.shot_in_flight:
             break
+    _shoot.last = (ball, shooter, keeper)  # pour les tests qui regardent la scène après l'arrêt
     return shots[0], scored
 
 
@@ -73,20 +72,22 @@ def test_the_closer_the_shot_the_fewer_saves(monkeypatch) -> None:
 
 
 def test_a_faster_shot_beats_the_keeper_where_a_slower_one_is_saved(monkeypatch) -> None:
-    assert _shoot(monkeypatch, 14.0, 2.5, speed_mps=25.0)[0].outcome in SAVES
-    assert _shoot(monkeypatch, 14.0, 2.5, speed_mps=60.0)[0].outcome == "but"
+    # 1,8 m du centre (réglage du gardien au 05h : plongeon plus lent)
+    assert _shoot(monkeypatch, 14.0, 1.8, speed_mps=25.0)[0].outcome in SAVES
+    assert _shoot(monkeypatch, 14.0, 1.8, speed_mps=60.0)[0].outcome == "but"
 
 
 def test_a_badly_placed_keeper_concedes_where_a_well_placed_one_saves(monkeypatch) -> None:
-    assert _shoot(monkeypatch, 20.0, 2.5, keeper_y=0.0)[0].outcome in SAVES
-    assert _shoot(monkeypatch, 20.0, 2.5, keeper_y=-2.5)[0].outcome == "but"
+    assert _shoot(monkeypatch, 20.0, 2.0, keeper_y=0.0)[0].outcome in SAVES  # 2 m du centre (réglage du 05h)
+    assert _shoot(monkeypatch, 20.0, 2.0, keeper_y=-2.5)[0].outcome == "but"
 
 
 def test_a_big_chance_ended_by_a_flying_shot_takes_the_shot_final_outcome() -> None:
     chances = []
     tracker = ChanceTracker(chances)
     ball = BallState(position=Vec2(PITCH_LENGTH_M - 8.0, GOAL_CENTER_Y), velocity=Vec2(25.0, 0.0), holder=None)
-    ball.shot_wide = True  # ballon en vol : aucun danger de jeu, seule la qualité du tir ouvre la séquence
+    # ballon en vol : aucun danger de jeu, seule la qualité du tir ouvre la séquence
+    ball.shot_flight = ShotFlight("home", Vec2(PITCH_LENGTH_M - 8.0, GOAL_CENTER_Y), 0.0, 0)
     shots = [ShotEvent(10.0, "home", "Buteur", PITCH_LENGTH_M - 8.0, GOAL_CENTER_Y, 0.4, FLYING, "passe au sol")]
     tracker.update(10.0, ball, [], shots, lambda p: "")
     tracker.update(10.01, ball, [], shots, lambda p: "")
@@ -94,3 +95,28 @@ def test_a_big_chance_ended_by_a_flying_shot_takes_the_shot_final_outcome() -> N
     shots[0] = ShotEvent(10.0, "home", "Buteur", PITCH_LENGTH_M - 8.0, GOAL_CENTER_Y, 0.4, "but", "passe au sol")
     tracker.update(10.02, ball, [], shots, lambda p: "")
     assert len(chances) == 1 and chances[0].outcome == "tir : but" and chances[0].shot
+
+
+def test_a_flying_shot_cut_by_the_whistle_closes_its_big_chance_at_the_next_step() -> None:
+    # réserve A3 du 05b : un tir en vol sans issue (sifflet, ballon mort avant la ligne) ne laisse pas l'occasion ouverte
+    chances = []
+    tracker = ChanceTracker(chances)
+    ball = BallState(position=Vec2(PITCH_LENGTH_M - 8.0, GOAL_CENTER_Y), velocity=Vec2(25.0, 0.0), holder=None)
+    ball.shot_flight = ShotFlight("home", Vec2(PITCH_LENGTH_M - 8.0, GOAL_CENTER_Y), 0.0, 0)
+    shots = [ShotEvent(10.0, "home", "Buteur", PITCH_LENGTH_M - 8.0, GOAL_CENTER_Y, 0.4, FLYING, "passe au sol")]
+    tracker.update(10.0, ball, [], shots, lambda p: "")
+    ball.shot_flight = None  # sifflet pendant le vol : l'issue reste « en vol »
+    tracker.update(10.01, ball, [], shots, lambda p: "")
+    assert len(chances) == 1 and chances[0].outcome == "tir : " + FLYING and tracker.flying == {}
+
+
+def test_after_a_save_the_ball_leaves_from_the_contact_point(monkeypatch) -> None:
+    # réserve A2 du 05b : le ballon ne saute plus du point de contact au corps du gardien
+    for outcome in SAVES:
+        monkeypatch.setattr(match, "save_outcome", lambda *args, _o=outcome: _o)
+        shot, _ = _shoot(monkeypatch, 20.0, 0.0, keeper_y=0.8)
+        ball, shooter, keeper = _shoot.last
+        assert shot.outcome == outcome
+        contact = Vec2(PITCH_LENGTH_M - 1.0, GOAL_CENTER_Y)  # passage du tir au plus près du gardien, à 0,8 m de lui
+        assert ball.position.distance_to(contact) <= match.CONTROL_RADIUS_M + 1e-9
+        assert outcome != HELD or (keeper.position == contact and ball.holder == "Gardien")
