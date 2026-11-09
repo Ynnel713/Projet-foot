@@ -33,7 +33,7 @@ def _shoot(monkeypatch, distance_m: float, lateral_m: float, keeper_y: float = 0
     ball = BallState(position=shooter.position, velocity=Vec2(0.0, 0.0), holder="Buteur")
     monkeypatch.setattr(match, "should_attempt_tackle", lambda aggression, dt: False)
     monkeypatch.setattr(match, "choose_action", lambda *args: Action("shot", 1.0))
-    monkeypatch.setattr(match, "draw_blocker", lambda *args: None)
+    monkeypatch.setattr(match, "BLOCK_CHANCE", 0.0)  # pas de contre (05c)
     monkeypatch.setattr(match, "draw_shot_error", lambda *args: (math.atan2(lateral_m, distance_m), 0.0))
     if speed_mps is not None:
         monkeypatch.setattr(match, "SHOT_SPEED_MPS", speed_mps)

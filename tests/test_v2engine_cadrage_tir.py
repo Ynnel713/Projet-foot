@@ -88,7 +88,7 @@ def _shot(monkeypatch, error):
     ball = BallState(position=shooter.position, velocity=Vec2(0.0, 0.0), holder="Buteur")
     monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression, dt: False)
     monkeypatch.setattr("v2engine.match.choose_action", lambda *args: Action("shot", 1.0))
-    monkeypatch.setattr("v2engine.match.draw_blocker", lambda *args: None)
+    monkeypatch.setattr("v2engine.match.BLOCK_CHANCE", 0.0)  # pas de contre (05c)
     monkeypatch.setattr("v2engine.match.draw_shot_error", lambda *args: error)  # tir en vol (05h) : écart imposé
     shots = []
     _step_ball(ball, 0.1, [shooter, keeper], 0.0, shots=shots)

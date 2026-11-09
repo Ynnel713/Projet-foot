@@ -38,8 +38,8 @@ from v2engine.added_time import GRACE_S, HARD_STOP_S, added_minutes, played_minu
 from v2engine.roles import role_of
 from v2engine.restart import (AERIAL_LANDING_M, AERIEN, CORNER, FREE_KICK, LONG_RESTART_M, PENALTY, PENALTY_CONVERSION, SOL,
                               award, exit_point, foul_restart, is_aerial, kickoff, restart_target)
-from v2engine.shooting import (FLYING, HELD, OVER, PARRIED, SHANKED, SHOT_AIM_HEIGHT_M, WIDE, draw_blocker, draw_shot_error,
-                               keeper_reach_m, occasion_quality, parry_velocity, save_outcome, shank_velocity,
+from v2engine.shooting import (BLOCK_CHANCE, BLOCK_WIDTH_M, FLYING, HELD, OVER, PARRIED, SHANKED, SHOT_AIM_HEIGHT_M, WIDE,
+                               block_reach_m, draw_shot_error, keeper_reach_m, occasion_quality, parry_velocity, save_outcome, shank_velocity,
                                shot_probability)
 from v2engine.situation import SituationTracker
 from v2engine.transition import TransitionPlay
@@ -51,7 +51,7 @@ from v2engine.trace import (BallSnapshot, DecisionRecord, FoulEvent, MatchTrace,
 _OPPONENT_GOAL = OPPONENT_GOAL
 # Vitesse d'un tir : celle de la passe la plus appuyée (pas de constante nouvelle), soit 30 m/s, 1 s pour 30 m.
 SHOT_SPEED_MPS = MAX_PASS_MPS
-SHOT_DEFLECTION_DEG = 60.0  # tir contré : déviation maximale (ticket 33, ordre de grandeur, réel non trouvé)
+SHOT_DEFLECTION_DEG = 60.0  # tir contré : déviation maximale (ticket 33, ordre de grandeur, réel non trouvé ; 05d)
 # Tir en vol (ticket v2-realisme/05a, validé par délégation le 08/11/2026) : le ballon part vers son point d'arrivée
 # (axe du but + écart d'exécution du 35b) et l'issue se lit sur son trajet : arrêt si le gardien l'atteint (05b), but
 # entre les poteaux et sous la barre, sortie de but sinon. Seul chemin du tir en jeu depuis le 05h (plus de tirage du but
@@ -332,7 +332,8 @@ def _keeper_reaches(ball: BallState, flight: ShotFlight, start: Vec2, end: Vec2,
     gap = keeper.position.distance_to(point)
     rank = flight.rank if shots is not None else -1
     if rank >= 0:
-        shots[rank] = replace(shots[rank], keeper_time_s=elapsed, keeper_gap_m=gap)
+        shots[rank] = replace(shots[rank], keeper_time_s=elapsed, keeper_gap_m=gap,
+                              keeper_speed_mps=ball.velocity.length())  # vitesse au début du pas (réserve A4, 05h)
     if gap > keeper_reach_m(elapsed):
         return False
     goal = _OPPONENT_GOAL[flight.team]
@@ -344,6 +345,35 @@ def _keeper_reaches(ball: BallState, flight: ShotFlight, start: Vec2, end: Vec2,
     ball.shot_flight = None
     _keeper_save(ball, keeper, outcome, flight.origin, goal, flight.team, players, now_s, point)
     return True
+
+
+def _blocked(ball: BallState, flight: ShotFlight, start: Vec2, end: Vec2, dt: float, players: list[PlayerState],
+             now_s: float, shots: list[ShotEvent] | None) -> bool:
+    """Contre physique (ticket v2-realisme/05c) : le tir en vol touche le premier défenseur de champ adverse qu'il frôle à
+    sa portée (`shooting.block_reach_m`, selon le temps écoulé depuis la frappe) ; chacun tente une fois par tir et contre
+    avec la chance `BLOCK_CHANCE`. Contré : tracé avec le point de contact, le ballon rebondit de ce point, dévié d'au plus
+    `SHOT_DEFLECTION_DEG` à la moitié de sa vitesse (ticket 33 ; déviation physique au 05d), libre. Retourne vrai si contré."""
+    defenders = [p for p in players if p.team != flight.team and p.poste != "GK" and p.name not in flight.tried]
+    for entry, gap, player in _contacts(start, end, dt, defenders, radius=BLOCK_WIDTH_M):
+        if gap > block_reach_m(flight.elapsed_s + entry * dt):
+            continue  # pas encore à sa portée : il peut encore le toucher plus loin
+        flight.tried.add(player.name)
+        if TIR.random() >= BLOCK_CHANCE:
+            continue  # au contact, le ballon passe quand même
+        point = start + (end - start) * entry
+        if shots is not None and flight.rank >= 0:
+            shots[flight.rank] = replace(shots[flight.rank], outcome="contré", block_x=point.x, block_y=point.y)
+        shot = (end - start).normalized()
+        turn = math.radians(TIR.uniform(-SHOT_DEFLECTION_DEG, SHOT_DEFLECTION_DEG))
+        bounce = Vec2(shot.x * math.cos(turn) - shot.y * math.sin(turn), shot.x * math.sin(turn) + shot.y * math.cos(turn))
+        ball.velocity = bounce * (ball.velocity.length() / 2.0)
+        ball.position = clamp_to_pitch(point + bounce * CONTROL_RADIUS_M)
+        ball.shot_flight, ball.shot_wide, ball.rebound = None, False, True
+        ball.last_toucher = player.name
+        ball.control_ban_until_s[player.name] = now_s + MISS_RETRY_S
+        ball.released_by, ball.receiver, ball.readers, ball.last_pass_team = None, None, {}, flight.team
+        return True
+    return False
 
 
 def _keeper_save(ball: BallState, keeper: PlayerState, outcome: str, origin: Vec2, goal: Vec2, shooter_team: str,
@@ -565,30 +595,14 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                     shots.append(ShotEvent(now_s / 60.0, holder.team, holder.name, shot_at.x, shot_at.y,
                                            occasion_quality(holder, goal, keeper, opponents), outcome,
                                            _shot_origin(ball, holder, set_piece)))
-            blocker = draw_blocker(holder, goal, opponents)
-            if blocker is not None:
-                record("contré")
-                ball.rebound = True
-                # Contré (ticket v2-collectif/33) : le ballon rebondit sur le défenseur, dévié d'au plus 60° et à moitié
-                # de sa vitesse ; libre, il peut sortir (corner s'il file derrière la ligne de but) ou être repris.
-                shot = (goal - holder.position).normalized()
-                turn = math.radians(TIR.uniform(-SHOT_DEFLECTION_DEG, SHOT_DEFLECTION_DEG))
-                bounce = Vec2(shot.x * math.cos(turn) - shot.y * math.sin(turn),
-                              shot.x * math.sin(turn) + shot.y * math.cos(turn))
-                ball.holder = None
-                ball.velocity = bounce * (SHOT_SPEED_MPS / 2.0)
-                ball.position = clamp_to_pitch(blocker.position + bounce * CONTROL_RADIUS_M)
-                ball.last_toucher = blocker.name
-                ball.control_ban_until_s[blocker.name] = now_s + MISS_RETRY_S
-                ball.released_by, ball.receiver, ball.readers, ball.last_pass_team = None, None, {}, holder.team
-                return None
             error = draw_shot_error(holder, goal, opponents)
             if error is None:
                 record(SHANKED)  # dévissé (ticket v2-collectif/35b)
                 _shank(ball, holder, goal, now_s)
                 return None
-            # Tir en vol (tickets v2-realisme/05a et 05b, allumé au 05h) : aucun tirage du but ici, l'issue se lit sur
-            # son trajet : arrêt si le gardien l'atteint, but ou sortie de but sur la ligne.
+            # Tir en vol (tickets v2-realisme/05a et 05b, allumé au 05h) : aucun tirage du but ni du contre ici, l'issue se
+            # lit sur son trajet : contre si un défenseur le touche (05c), arrêt si le gardien l'atteint, but ou sortie de
+            # but sur la ligne.
             record(FLYING)
             axis = (goal - holder.position).normalized()
             c, s = math.cos(error[0]), math.sin(error[0])
@@ -657,6 +671,9 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
     end = ball.position + ball.velocity * dt
     out = exit_point(start, end)
     flight = ball.shot_flight
+    # ponytail : contre jugé avant le gardien dans un même pas (3 m à 30 m/s) ; un défenseur derrière le gardien est rare
+    if flight is not None and _blocked(ball, flight, start, end, dt, players, now_s, shots):
+        return None
     if flight is not None and flight.keeper_at_m is not None and _keeper_reaches(ball, flight, start, end, dt, players,
                                                                                      now_s, shots):
         return None
@@ -706,7 +723,9 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
     if ball.shot_flight is not None:
         if ball.velocity.length() >= BALL_STOPPED_MPS:
             return None  # tir en vol : personne ne le touche avant la ligne (05b et 05c)
-        ball.shot_flight = None  # ponytail : tir mort avant la ligne (60 m de course à 30 m/s), rendu au jeu, issue « en vol »
+        # ponytail : tir mort avant la ligne (60 m de course à 30 m/s), rendu au jeu, issue « en vol » ; plus un tir à côté
+        # en vol non plus (réserve A5 de l'expert, 05h)
+        ball.shot_flight, ball.shot_wide = None, False
     aerial = ball.mode == AERIEN  # ballon qui retombe d'une passe en l'air : un centre, pour l'origine d'un tir
     ball.mode = SOL
 
@@ -752,8 +771,8 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
 
 
 def _contacts(start: Vec2, end: Vec2, dt: float, players: list[PlayerState],
-              released_by: str | None = None) -> list[tuple[float, float, PlayerState]]:
-    """Joueurs que le ballon frôle à moins de `CONTROL_RADIUS_M` pendant le pas, de `start` à `end`, triés par
+              released_by: str | None = None, radius: float = CONTROL_RADIUS_M) -> list[tuple[float, float, PlayerState]]:
+    """Joueurs que le ballon frôle à moins de `radius` (par défaut `CONTROL_RADIUS_M`) pendant le pas, de `start` à `end`, triés par
     instant de contact (0 = début du pas). Mouvement relatif : le joueur a lui aussi bougé pendant ce pas (sa
     position de début est estimée par sa vitesse). `released_by` : passeur du ballon, qui ne touche pas sa passe
     tant qu'elle s'éloigne de lui."""
@@ -771,13 +790,13 @@ def _contacts(start: Vec2, end: Vec2, dt: float, players: list[PlayerState],
             continue
         s = 0.0 if length2 < 1e-12 else min(1.0, max(0.0, -(r0.x * seg.x + r0.y * seg.y) / length2))
         closest = r0 + seg * s
-        if closest.length() < CONTROL_RADIUS_M:
+        if closest.length() < radius:
             # instant d'entrée dans le rayon (pas seulement du point le plus proche) : le premier atteint tente
             # le premier
-            if length2 < 1e-12 or r0.length() < CONTROL_RADIUS_M:
+            if length2 < 1e-12 or r0.length() < radius:
                 entry = 0.0
             else:
-                back = math.sqrt(max(0.0, CONTROL_RADIUS_M**2 - closest.length() ** 2) / length2)
+                back = math.sqrt(max(0.0, radius**2 - closest.length() ** 2) / length2)
                 entry = max(0.0, s - back)
             hits.append((entry, closest.length(), player))
     hits.sort(key=lambda hit: (hit[0], hit[1]))  # à égalité (déjà au contact), le plus proche d'abord

@@ -145,15 +145,14 @@ def test_best_choice_and_gap_reach_the_trace_and_the_api() -> None:
 
 
 def test_a_defender_in_the_shot_line_blocks_shots_and_lowers_their_value() -> None:
-    from v2engine.shooting import BLOCK_CHANCE, block_probability, draw_blocker
+    from v2engine.shooting import BLOCK_CHANCE, block_probability
     shooter = _p("A", 85)
     # à 5 m du tireur, sans le gêner, son corps (1 m de part et d'autre) cache tout le but (cône du ticket 28a)
     in_line, beside, behind = _p("D", 90, team="away"), _p("E", 92, 37, team="away"), _p("F", 80, team="away")
     assert block_probability(shooter, GOAL, [in_line]) == BLOCK_CHANCE
     assert block_probability(shooter, GOAL, [beside, behind]) == 0.0
     assert block_probability(shooter, GOAL, [in_line, _p("G", 95, 34.5, team="away")]) > BLOCK_CHANCE
-    random.seed(20260923)
-    assert abs(sum(draw_blocker(shooter, GOAL, [in_line]) is in_line for _ in range(4000)) / 4000 - BLOCK_CHANCE) < 0.03
+    # la résolution du contre est physique depuis le 05c (tests : `test_v2engine_contre.py`)
 
     def shot_value(opponents: list[PlayerState]) -> float:
         random.seed(1)
@@ -167,10 +166,13 @@ def test_a_blocked_shot_bounces_off_the_defender_and_is_a_loose_ball(monkeypatch
     from v2engine.match import _step_ball
     shooter, blocker = _p("A", 85), _p("D", 92, team="away")
     monkeypatch.setattr("v2engine.match.choose_action", lambda *args: Action("shot", 0.1))
-    monkeypatch.setattr("v2engine.match.draw_blocker", lambda *args: blocker)
-    monkeypatch.setattr("v2engine.match.draw_shot_error", lambda *args: (_ for _ in ()).throw(AssertionError("tir passé")))
+    monkeypatch.setattr("v2engine.match.BLOCK_CHANCE", 1.0)  # contre physique (05c) : au contact, il contre à coup sûr
+    monkeypatch.setattr("v2engine.match.draw_shot_error", lambda *args: (0.0, 0.0))  # droit sur lui
     monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression, dt: False)
     ball = BallState(position=shooter.position, velocity=Vec2(0.0, 0.0), holder="A")
-    assert _step_ball(ball, 0.1, [shooter, blocker]) is None
-    assert ball.holder is None and ball.last_toucher == "D" and ball.shot_for is None
-    assert ball.position.distance_to(blocker.position) < 0.5 and ball.velocity.length() > 0.0
+    for i in range(5):
+        assert _step_ball(ball, 0.1, [shooter, blocker], i * 0.1) is None
+        if ball.last_toucher == "D":
+            break
+    assert ball.holder is None and ball.last_toucher == "D" and ball.shot_for is None and not ball.shot_in_flight
+    assert ball.position.distance_to(blocker.position) < 1.5 and ball.velocity.length() > 0.0

@@ -104,8 +104,19 @@ def test_shot_trace_is_reproducible_at_fixed_seed() -> None:
         runs.append(simulate_match(clubs[0], clubs[1], duration_minutes=10).shots)
     assert runs[0] == runs[1]
     assert all(s.outcome in {"but", "à côté", "au-dessus", "dévissé", "contré", FLYING, HELD, PARRIED, TIPPED} for s in runs[0])
-    # garde du 05h, sans monkeypatch : en jeu, un tir cadré n'a d'issue que par sa trajectoire (le gardien l'a jugé)
-    framed = [s for s in runs[0] if s.outcome in {"but", HELD, PARRIED, TIPPED} and s.origin != "penalty"]
+
+
+def test_in_a_match_every_framed_shot_was_judged_by_the_keeper() -> None:
+    # garde du 05h, sans monkeypatch : en jeu, un tir cadré n'a d'issue que par sa trajectoire (le gardien l'a jugé) ;
+    # 30 minutes pour avoir des tirs cadrés à graine fixée
+    from ligue1sim.clubs import load_clubs
+    from ligue1sim.season import CLUBS_PATH
+    from v2engine.match import simulate_match
+
+    clubs = load_clubs(CLUBS_PATH, "Ligue 1")
+    random.seed(20260923)
+    shots = simulate_match(clubs[0], clubs[1], duration_minutes=30).shots
+    framed = [s for s in shots if s.outcome in {"but", HELD, PARRIED, TIPPED} and s.origin != "penalty"]
     assert framed and all(s.keeper_time_s is not None for s in framed)
 
 
@@ -139,7 +150,7 @@ def _wide_shot(monkeypatch):
     monkeypatch.setattr("v2engine.match.should_attempt_tackle", lambda aggression, dt: False)
     monkeypatch.setattr("v2engine.match.choose_action", lambda *args: Action("shot", 1.0))
     monkeypatch.setattr("v2engine.match.draw_shot_error", lambda *args: (math.atan2(GOAL_WIDTH_M / 2.0 + 2.0, 25.0), 0.0))
-    monkeypatch.setattr("v2engine.match.draw_blocker", lambda *args: None)
+    monkeypatch.setattr("v2engine.match.BLOCK_CHANCE", 0.0)  # pas de contre (05c)
     _step_ball(ball, 0.1, [shooter, keeper], 0.0, shots=[])
     return ball, [shooter, keeper]
 

@@ -67,6 +67,16 @@ KEEPER_OPEN_GOAL_MAX = 2.5
 # Réel : 20 à 28 % des tirs contrés (ordre de grandeur, ticket 28) ; 22,5 % en Bundesliga 2015-16 (189 sur 840).
 BLOCK_WIDTH_M = 1.0
 BLOCK_CHANCE = 0.6
+# Contre physique (ticket v2-realisme/05c, proposé le 09/11/2026, validé par délégation du propriétaire) : le tir en vol
+# touche un défenseur de champ qui passe à sa portée ; avant `BLOCK_REACTION_S` après la frappe, il n'a pas le temps de
+# tendre la jambe et seul son corps compte (`BLOCK_BODY_M`, la portée du contact ballon-joueur) ; ensuite, jambe tendue,
+# `BLOCK_WIDTH_M`. Au contact, il contre avec la chance `BLOCK_CHANCE` (sinon le ballon passe : entre les jambes, jambe
+# trop courte). Le cône de la décision (`block_probability`) reste l'estimateur jusqu'au 05e. Temps de réaction d'un
+# défenseur sur un tir : non trouvé ; 0,25 s d'abord (ordre du gardien) donnait 12,5 % de tirs contrés sur 50 matchs,
+# 0,10 s (il fait face au tireur, lit la frappe et engage la jambe tôt) est recalé hors ligne sur 1 074 tirs de 24 matchs
+# vers le repère réel de 22,5 % (21 % estimé).
+BLOCK_BODY_M = 0.41
+BLOCK_REACTION_S = 0.10
 
 # Repli neutre (gardien absent -- effectif synthétique sans gardien, voir docs/PLAN_V2.md
 # Phase 1) : proche de la moyenne réelle de la base (voir `attributes.player_attribute`).
@@ -206,9 +216,10 @@ def block_probability(shooter: PlayerState, goal: Vec2, opponents: list[PlayerSt
     return 1.0 - through
 
 
-def draw_blocker(shooter: PlayerState, goal: Vec2, opponents: list[PlayerState]) -> PlayerState | None:
-    """Le défenseur qui contre ce tir-ci, ou `None` s'il passe (un tirage par défenseur de la ligne)."""
-    return next((o for o, chance in _blockers(shooter, goal, opponents) if TIR.random() < chance), None)
+def block_reach_m(elapsed_s: float) -> float:
+    """Portée d'un défenseur sur un tir en vol (ticket v2-realisme/05c), `elapsed_s` après la frappe : son corps avant
+    `BLOCK_REACTION_S`, jambe tendue ensuite."""
+    return BLOCK_BODY_M if elapsed_s < BLOCK_REACTION_S else BLOCK_WIDTH_M
 
 
 # Cadrage du tir (ticket v2-collectif/35b, constantes proposées le 08/11/2026, validées par délégation du propriétaire).

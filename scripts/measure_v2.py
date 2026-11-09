@@ -396,6 +396,7 @@ def report(c: Collector, detail: bool = False) -> dict:
     for key, v in sorted(k.items()):  # taux d'arrêt des tirs cadrés par distance et par vitesse (ticket v2-realisme/05h)
         if key.startswith("tirs cadrés jugés, "):
             out["taux d'arrêt, " + key.removeprefix("tirs cadrés jugés, ")] = k[key.replace("jugés", "arrêtés")] / v
+            out[key + " (effectif)"] = v  # réserve A2 de l'expert, 05h : effectif de chaque tranche
     for key, v in sorted(k.items()):  # origine des tirs (ticket v2-collectif/28b)
         if key.startswith("tirs, origine : "):
             out[f"{key} (part)"] = v / max(1, k["tirs tracés"])

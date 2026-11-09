@@ -736,7 +736,9 @@ class Collector:
         if keeper_s is not None and event.outcome in ("but", "capté", "repoussé", "claqué"):
             # tir cadré jugé par le gardien (ticket v2-realisme/05h) : arrêté ou non, par distance et par vitesse au gardien
             distance = Vec2(event.x, event.y).distance_to(OPPONENT_GOAL[event.team])
-            speed = SHOT_SPEED_MPS * BALL_FRICTION_PER_S ** keeper_s
+            speed = getattr(event, "keeper_speed_mps", None)  # tracée depuis le 05c (réserve A4 du 05h)
+            if speed is None:
+                speed = SHOT_SPEED_MPS * BALL_FRICTION_PER_S ** keeper_s
             for kind, value, bands in (("distance", distance, SAVE_DISTANCE_BANDS), ("vitesse", speed, SAVE_SPEED_BANDS)):
                 band = next(label for limit, label in bands if value < limit)
                 self.count[f"tirs cadrés jugés, {kind} {band}"] += 1

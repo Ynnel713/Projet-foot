@@ -34,7 +34,7 @@ def _fly(monkeypatch, lateral_m: float, height_m: float = SHOT_AIM_HEIGHT_M):
     ball = BallState(position=shooter.position, velocity=Vec2(0.0, 0.0), holder="Buteur")
     monkeypatch.setattr(match, "should_attempt_tackle", lambda aggression, dt: False)
     monkeypatch.setattr(match, "choose_action", lambda *args: Action("shot", 1.0))
-    monkeypatch.setattr(match, "draw_blocker", lambda *args: None)
+    monkeypatch.setattr(match, "BLOCK_CHANCE", 0.0)  # pas de contre (05c)
     error = (math.atan2(lateral_m, DISTANCE_M), math.atan2(height_m - SHOT_AIM_HEIGHT_M, DISTANCE_M))
     monkeypatch.setattr(match, "draw_shot_error", lambda *args: error)
     shots, path, scored = [], [], None

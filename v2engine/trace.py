@@ -115,6 +115,10 @@ class ShotEvent:
     # lui ; `None` si le gardien n'a pas eu à juger le tir (hors cadre, tir tiré au départ).
     keeper_time_s: float | None = None
     keeper_gap_m: float | None = None
+    keeper_speed_mps: float | None = None  # vitesse du ballon quand il passe au gardien (réserve A4 du 05h)
+    # Contre physique (ticket v2-realisme/05c) : point de contact du tir contré.
+    block_x: float | None = None
+    block_y: float | None = None
 
 
 @dataclass(frozen=True)
