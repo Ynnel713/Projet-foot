@@ -62,6 +62,21 @@ class TickOut(BaseModel):
 class GoalEventOut(BaseModel):
     minute: float
     team: str
+    scorer: str | None = None  # buteur = dernier toucheur (ticket v2-realisme/19b)
+    last_toucher: str | None = None
+    own_goal: bool = False
+
+
+class TraceEventOut(BaseModel):
+    """Événement du journal (ticket v2-realisme/19b) : `cause` est l'identifiant de l'événement qui le précède."""
+    id: int
+    minute: float
+    kind: str
+    team: str | None
+    player: str | None
+    cause: int | None
+    detail: str | None = None
+    other: str | None = None
 
 
 class OffsideEventOut(BaseModel):
@@ -125,6 +140,7 @@ class MatchTraceOut(BaseModel):
     offsides: list[OffsideEventOut] = []
     second_half_start_minute: float | None = None  # coup d'envoi de la 2e période (ticket v2-coach-et-gestion-de-match/07)
     added_minutes: list[int] = []  # temps additionnel annoncé par période (ticket v2-coach-et-gestion-de-match/03)
+    events: list[TraceEventOut] = []  # journal des événements avec leurs causes (ticket v2-realisme/19b)
 
 
 class MatchProgressOut(BaseModel):
@@ -146,6 +162,7 @@ class MatchProgressOut(BaseModel):
     ticks: list[TickOut]
     intentions: list[PlayerIntentionsOut] = []
     decisions: list[DecisionOut] = []
+    events: list[TraceEventOut] = []  # en fin de match seulement, comme les décisions (ticket v2-realisme/19b)
 
 
 def intention_segments(trace: MatchTrace) -> list[PlayerIntentionsOut]:
@@ -233,6 +250,11 @@ def _tick_out(tick) -> TickOut:
     )
 
 
+def _events_out(trace: MatchTrace) -> list[TraceEventOut]:
+    return [TraceEventOut(id=e.id, minute=e.minute, kind=e.kind, team=e.team, player=e.player, cause=e.cause,
+                          detail=e.detail, other=e.other) for e in list(trace.events)]
+
+
 def _decisions_out(trace: MatchTrace) -> list[DecisionOut]:
     return [DecisionOut(minute=d.minute, player=d.player, team=d.team, action=d.action, target=d.target,
                         considered=d.considered, best=d.best, best_kind=d.best_kind, gap=d.gap)
@@ -248,7 +270,8 @@ def _offsides_out(trace: MatchTrace) -> list[OffsideEventOut]:
 
 
 def _goals_out(trace: MatchTrace) -> list[GoalEventOut]:
-    return [GoalEventOut(minute=g.minute, team=g.team) for g in list(trace.goals)]
+    return [GoalEventOut(minute=g.minute, team=g.team, scorer=g.scorer, last_toucher=g.last_toucher, own_goal=g.own_goal)
+            for g in list(trace.goals)]
 
 
 @router.post("/matches", response_model=MatchTraceOut)
@@ -271,6 +294,7 @@ def create_match(payload: SimulateV2Request) -> MatchTraceOut:
         offsides=_offsides_out(trace),
         second_half_start_minute=trace.second_half_start_minute,
         added_minutes=list(trace.added_minutes),
+        events=_events_out(trace),
     )
 
 
@@ -361,6 +385,7 @@ def match_progress(job_id: str, from_tick: int = 0) -> MatchProgressOut:
         ticks=[_tick_out(tick) for tick in trace.ticks[first:]],
         intentions=intention_segments(trace) if done else [],
         decisions=_decisions_out(trace) if done else [],
+        events=_events_out(trace) if done else [],
     )
 
 

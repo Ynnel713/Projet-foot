@@ -18,6 +18,9 @@ from ligue1sim.lineup import Lineup, pick_best_formation
 from ligue1sim.pitch_geometry import GOAL_HEIGHT_M, GOAL_WIDTH_M
 
 from v2engine.condition import effective_rating, intrinsic_rating
+from v2engine.trace import (ARRET, BUT, CONTRE, CONTROLE_RATE, FAUTE, HORS_JEU, PASSE, PERTE, REMISE,
+                            TOUCHE_LONGUE, EventLog)
+from v2engine.trace import TIR as TIR_EVENT  # `TIR` est le flux aléatoire des tirs (v2engine.flux)
 from v2engine.anticipation import pass_readers, reaction_delay_s
 from v2engine.ball_state import BallState, ShotFlight
 from v2engine.bloc import Bloc
@@ -36,7 +39,7 @@ from v2engine.possession import (BALL_FRICTION_PER_S, BALL_STOPPED_MPS, MAX_PASS
                                  missed_control_velocity, pass_velocity, reception_delay_s)
 from v2engine.added_time import GRACE_S, HARD_STOP_S, added_minutes, played_minute
 from v2engine.roles import role_of
-from v2engine.restart import (AERIAL_LANDING_M, AERIEN, CORNER, FREE_KICK, LONG_RESTART_M, PENALTY, PENALTY_CONVERSION, SOL,
+from v2engine.restart import (AERIAL_LANDING_M, AERIEN, CORNER, FREE_KICK, KICKOFF, LONG_RESTART_M, PENALTY, PENALTY_CONVERSION, SOL,
                               award, exit_point, foul_restart, is_aerial, kickoff, restart_target)
 from v2engine.shooting import (BLOCK_CHANCE, BLOCK_WIDTH_M, FLYING, HELD, OVER, PARRIED, SHANKED, SHOT_AIM_HEIGHT_M, WIDE,
                                block_reach_m, draw_shot_error, keeper_reach_m, neutral_xg, occasion_quality, parry_velocity,
@@ -207,6 +210,18 @@ def _award_offside_free_kick(ball: BallState, offender: PlayerState, players: li
     ball.next_decision_s = now_s + reception_delay_s(taker, [p for p in players if p.team == offender.team])
 
 
+def _log(ball: BallState, now_s: float, kind: str, team: str | None, player: str | None, detail: str | None = None,
+         other: str | None = None, start: bool = False) -> None:
+    """Écrit un événement dans le journal du match (ticket v2-realisme/19b), s'il y en a un ; aucun effet sur le jeu."""
+    if ball.log is not None:
+        ball.log.add(now_s / 60.0, kind, team, player, detail, other, start)
+
+
+# Dernier événement après lequel un toucher adverse est une perte de balle (ticket 19b), et la façon de la nommer.
+_LOST_BY = {PASSE: "passe interceptée", REMISE: "passe interceptée", CONTROLE_RATE: "contrôle",
+            TOUCHE_LONGUE: "conduite"}
+
+
 def _whistle(ball: BallState, event: FoulEvent, players: list[PlayerState], now_s: float,
              fouls: list[FoulEvent] | None) -> None:
     """Faute sifflée (ticket v2-collectif/30) : ballon mort au lieu de la faute, coup franc ou penalty pour l'équipe
@@ -223,12 +238,16 @@ def _whistle(ball: BallState, event: FoulEvent, players: list[PlayerState], now_
     _clear_offside(ball)
     if fouls is not None:
         fouls.append(replace(event, outcome=ball.restart.kind))
+    _log(ball, now_s, FAUTE, event.team, event.player, ball.restart.kind, event.victim)
 
 
 def _settle_advantage(ball: BallState, fouls: list[FoulEvent] | None) -> None:
     """L'avantage est acquis : la faute n'est plus sifflée (elle reste tracée, pour les cartons du ticket 09a)."""
     if ball.advantage is not None and fouls is not None:
         fouls.append(ball.advantage[0])
+    if ball.advantage is not None:
+        event = ball.advantage[0]
+        _log(ball, event.minute * 60.0, FAUTE, event.team, event.player, "avantage", event.victim)
     ball.advantage = None
 
 
@@ -343,6 +362,7 @@ def _keeper_reaches(ball: BallState, flight: ShotFlight, start: Vec2, end: Vec2,
     if rank >= 0:
         shots[rank] = replace(shots[rank], outcome=outcome)
     ball.shot_flight = None
+    _log(ball, now_s, ARRET, keeper.team, keeper.name, outcome)
     _keeper_save(ball, keeper, outcome, flight.origin, goal, flight.team, players, now_s, point)
     return True
 
@@ -381,6 +401,7 @@ def _blocked(ball: BallState, flight: ShotFlight, start: Vec2, end: Vec2, dt: fl
         ball.last_toucher = player.name
         ball.control_ban_until_s[player.name] = now_s + MISS_RETRY_S
         ball.released_by, ball.receiver, ball.readers, ball.last_pass_team = None, None, {}, flight.team
+        _log(ball, now_s, CONTRE, player.team, player.name)
         return True
     return False
 
@@ -416,6 +437,7 @@ def _play_penalty(ball: BallState, taker: PlayerState, players: list[PlayerState
     if shots is not None:
         shots.append(ShotEvent(minute, taker.team, taker.name, taker.position.x, taker.position.y,
                                PENALTY_CONVERSION, "but" if scored else HELD, "penalty"))
+    _log(ball, minute * 60.0, TIR_EVENT, taker.team, taker.name, "penalty")
     if scored:
         ball.velocity = (goal - ball.position).normalized() * SHOT_SPEED_MPS
         ball.shot_for = taker.team
@@ -445,6 +467,7 @@ def _play_restart(ball: BallState, players: list[PlayerState], now_s: float,
         if restarts is not None:
             restarts.append(RestartEvent(r.minute, r.kind, r.team, r.spot.x, r.spot.y, r.last_toucher,
                                          now_s - r.minute * 60.0, False, None, True))
+        _log(ball, now_s, REMISE, r.team, taker.name, r.kind)
         _play_penalty(ball, taker, players, shots, now_s / 60.0)
         return
     if r.kind == FREE_KICK:  # événement tracé à sa décision, quand on sait s'il frappe
@@ -457,6 +480,8 @@ def _play_restart(ball: BallState, players: list[PlayerState], now_s: float,
                                      now_s - r.minute * 60.0, target is not None
                                      and taker.position.distance_to(target.position) > LONG_RESTART_M,
                                      target.name if target is not None else None))
+    _log(ball, now_s, REMISE, r.team, taker.name, r.kind, target.name if target is not None else None,
+         start=r.kind == KICKOFF)
     opponents = [p for p in players if p.team != taker.team]
     if target is None:  # personne à servir : il garde le ballon et joue
         ball.holder = taker.name
@@ -523,6 +548,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
             if not result.won:
                 ball.tackle_ban_until_s[challenger.name] = now_s + FAILED_TACKLE_RECOVERY_S
             if result.won:
+                _log(ball, now_s, PERTE, holder.team, holder.name, "tacle", challenger.name)
                 ball.holder = challenger.name
                 ball.hesitation.pop(challenger.name, None)  # il a le ballon : il joue, il n'attend plus
                 # nouveau porteur : contrôle et lève la tête avant de décider (v2-socle/06)
@@ -563,6 +589,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                                              now_s - r.minute * 60.0, target is not None
                                              and holder.position.distance_to(target.position) > LONG_RESTART_M,
                                              target.name if target is not None else None, action.kind == "shot"))
+            _log(ball, now_s, REMISE, r.team, holder.name, r.kind, getattr(getattr(action, "target", None), "name", None))
         if decisions is not None:
             target = getattr(action, "target", None)
             decisions.append(DecisionRecord(now_s / 60.0, holder.name, holder.team, action.kind,
@@ -581,6 +608,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                 heading = goal - holder.position
             taker, ball.velocity = lost_carry_outcome(holder, rivals, heading)
             if taker is not None:
+                _log(ball, now_s, PERTE, holder.team, holder.name, "conduite", taker.name)
                 ball.holder = taker.name
                 ball.hesitation.pop(taker.name, None)
                 ball.next_decision_s = now_s + reception_delay_s(taker, [p for p in players if p.team != taker.team])
@@ -588,6 +616,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                 ball.velocity = Vec2(0.0, 0.0)
                 _clear_offside(ball)
                 return None
+            _log(ball, now_s, TOUCHE_LONGUE, holder.team, holder.name)
             ball.holder = None
             ball.position = clamp_to_pitch(holder.position + ball.velocity.normalized() * CONTROL_RADIUS_M)
             ball.control_ban_until_s[holder.name] = now_s + MISS_RETRY_S
@@ -606,6 +635,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                                            _shot_origin(ball, holder, set_piece),
                                            xg=neutral_xg(holder, goal, keeper, opponents),
                                            post_shot_xg=0.0 if outcome == SHANKED else None))
+                _log(ball, now_s, TIR_EVENT, holder.team, holder.name, outcome)
             error = draw_shot_error(holder, goal, opponents)
             if error is None:
                 record(SHANKED)  # dévissé (ticket v2-collectif/35b)
@@ -642,6 +672,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
             return None
 
         if action.kind == "pass":
+            _log(ball, now_s, PASSE, holder.team, holder.name, None, action.target.name)
             ball.velocity = pass_velocity(holder, action.target, [p for p in players if p.team != holder.team])
             ball.pass_from = holder.position
             ball.holder = None
@@ -676,6 +707,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
             ball.position = ball.position + ball.velocity * dt
             return None
         team, ball.shot_for = ball.shot_for, None
+        _log(ball, now_s, BUT, team, ball.last_toucher)
         _settle_advantage(ball, fouls)  # but pendant l'avantage : acquis
         ball.velocity = Vec2(0.0, 0.0)
         ball.restart = kickoff("away" if team == "home" else "home", players, now_s)
@@ -702,6 +734,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
         if shots is not None and rank >= 0:
             shots[rank] = replace(shots[rank], outcome="but" if scored else OVER if between else WIDE)
         if scored:
+            _log(ball, now_s, BUT, team, ball.last_toucher)
             _settle_advantage(ball, fouls)
             ball.position, ball.velocity = point, Vec2(0.0, 0.0)
             ball.restart = kickoff("away" if team == "home" else "home", players, now_s)
@@ -755,8 +788,12 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
             if offsides is not None:
                 offsides.append(OffsideEvent(minute=now_s / 60.0, team=player.team, player=player.name,
                                              x=ball.position.x, y=ball.position.y))
+            _log(ball, now_s, HORS_JEU, player.team, player.name)
             _award_offside_free_kick(ball, player, players, now_s)
             return None
+        last = ball.log.last_event() if ball.log is not None else None
+        if last is not None and last.kind in _LOST_BY and last.team != player.team:  # perte de balle (ticket 19b)
+            _log(ball, now_s, PERTE, last.team, last.player, _LOST_BY[last.kind], player.name)
         ball.last_toucher = player.name  # contrôlé ou non, il l'a touché (ticket v2-collectif/29)
         received = _received_as(ball, player, aerial)
         ball.pass_from, ball.rebound, ball.shot_wide = None, False, False
@@ -776,6 +813,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
         else:
             # Contrôle raté : le ballon s'échappe vraiment (déviation, moitié de sa vitesse) et le même joueur ne peut
             # retenter qu'après `MISS_RETRY_S` ; il repart du bord du joueur, jamais superposé.
+            _log(ball, now_s, CONTROLE_RATE, player.team, player.name)
             ball.velocity = missed_control_velocity(player, ball.velocity, opponents)
             ball.position = clamp_to_pitch(player.position + ball.velocity.normalized() * CONTROL_RADIUS_M)
             ball.control_ban_until_s[player.name] = now_s + MISS_RETRY_S
@@ -879,6 +917,7 @@ def simulate_match(
     ball.restart = kickoff(first, players, 0.0, dead_s=0.0)
 
     trace = MatchTrace(home=home_club.name, away=away_club.name, tick_seconds=tick_seconds * record_every)
+    ball.log = EventLog(trace.events)  # journal des événements (ticket v2-realisme/19b)
 
     runs: dict[str, tuple[Vec2, float]] = {}  # espace visé par chaque joueur sans ballon (Off the Ball)
     intentions: dict[str, Intention] = {}  # intention de chaque joueur au dernier tick (ADR 0001)
@@ -927,6 +966,7 @@ def simulate_match(
             for p in players:
                 p.position, p.velocity = p.home_target, Vec2(0.0, 0.0)
             ball = BallState(position=Vec2(PITCH_LENGTH_M / 2.0, PITCH_WIDTH_M / 2.0), velocity=Vec2(0.0, 0.0))
+            ball.log = EventLog(trace.events)  # le journal continue en 2e période (ticket v2-realisme/19b)
             ball.restart = kickoff("away" if first == "home" else "home", players, i * tick_seconds, dead_s=0.0)
             situations = SituationTracker(delays_s=dict(trace.reaction_delays_s))
             bloc, defense, transition = Bloc.from_players(players), DefensiveRoles(), TransitionPlay()
@@ -950,7 +990,9 @@ def simulate_match(
                                   transition.mode, trace.restarts, trace.fouls,
                                   trace.shots)
         if scoring_team is not None:
-            trace.record_goal(scoring_team, minute)
+            scorer = next((p for p in players if p.name == ball.last_toucher), None)  # l'engagement n'y touche pas
+            trace.record_goal(scoring_team, minute, scorer.name if scorer is not None else None,
+                              scorer is not None and scorer.team != scoring_team)
         chances.update(minute, ball, players, trace.shots, lambda p: _danger_origin(ball, p))
         if observer is not None:
             observer(i * tick_seconds, players, ball, scoring_team)

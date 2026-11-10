@@ -80,7 +80,7 @@ Statuts : **C** couvert (livré ou ticket ouvert suffisant) · **P** partiel · 
 | Erreurs défensives (alignement, dos, couverture, marquage) | P | ligne avec retard (Teamwork), marquage (07), perception `08e` ; couverture `10b`, `10c` | — |
 | Tacle manqué, défenseur éliminé sur crochet | P | tacle debout ; crochet `04h`, contournement `04g`, glissé `04j` | — |
 | Collision entre coéquipiers | P | collisions symétriques (`match.py:114`) ; `11a`, `11b` | — |
-| But contre son camp | V | possible physiquement (05d) mais non reconnu | **19b** |
+| But contre son camp | V | ~~possible physiquement (05d) mais non reconnu~~ impossible : un ballon dévié qui franchit la ligne devient corner ou sortie de but (corrigé le 10/11/2026, architecte) | **05i** (champ créé au 19b) |
 | Faute inutile | A | — | **21c** (faute tactique, tirage de maillot) |
 | Gardien : placement, sorties, face-à-face | C | `03a` à `03k` | — |
 | Gardien : boulettes, ballon relâché, mauvaise appréciation | P | capté / repoussé / claqué selon la difficulté, gardien neutre | `v2-attributs-restants/03b` complété |

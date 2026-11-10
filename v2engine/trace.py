@@ -64,6 +64,11 @@ class SituationRecord:
 class GoalEvent:
     minute: float
     team: str  # "home" / "away"
+    # Ticket v2-realisme/19b : buteur = dernier joueur à avoir touché le ballon ; but contre son camp si son équipe n'est
+    # pas celle qui marque (impossible avant le ticket 05i : un ballon dévié ne fait pas but).
+    scorer: str | None = None
+    last_toucher: str | None = None
+    own_goal: bool = False
 
 
 @dataclass(frozen=True)
@@ -162,6 +167,56 @@ class FoulEvent:
     outcome: str
 
 
+# Journal des événements (ticket v2-realisme/19b) : types d'événements.
+PASSE, CONTROLE_RATE, PERTE, TOUCHE_LONGUE = "passe", "contrôle raté", "perte", "touche longue"
+TIR, CONTRE, ARRET, BUT = "tir", "contre", "arrêt", "but"
+REMISE, FAUTE, HORS_JEU = "remise", "faute", "hors-jeu"
+
+
+@dataclass(frozen=True)
+class TraceEvent:
+    """Événement du journal (ticket v2-realisme/19b), dans l'ordre où le moteur le produit. `cause` : identifiant de
+    l'événement du ballon qui le précède (vide pour un engagement, qui ouvre une chaîne). `detail` : précision selon le
+    type (type de remise, issue d'un arrêt, façon de perdre le ballon) ; `other` : l'autre joueur (receveur visé, joueur
+    qui récupère le ballon, joueur fauté)."""
+    id: int
+    minute: float
+    kind: str
+    team: str | None
+    player: str | None
+    cause: int | None
+    detail: str | None = None
+    other: str | None = None
+
+
+class EventLog:
+    """Écrit le journal : chaque événement prend pour cause le dernier événement du ballon, puis le devient."""
+
+    def __init__(self, events: list[TraceEvent]) -> None:
+        self.events = events
+        self.last: int | None = events[-1].id if events else None
+
+    def add(self, minute: float, kind: str, team: str | None, player: str | None, detail: str | None = None,
+            other: str | None = None, start: bool = False) -> TraceEvent:
+        event = TraceEvent(len(self.events), minute, kind, team, player, None if start else self.last, detail, other)
+        self.events.append(event)
+        self.last = event.id
+        return event
+
+    def last_event(self) -> TraceEvent | None:
+        return None if self.last is None else self.events[self.last]
+
+
+def chain(events: list[TraceEvent], event_id: int) -> list[TraceEvent]:
+    """Chaîne de causes de l'événement `event_id`, de son origine (un engagement) à lui."""
+    out = []
+    current: int | None = event_id
+    while current is not None:
+        out.append(events[current])
+        current = events[current].cause
+    return out[::-1]
+
+
 @dataclass
 class MatchTrace:
     home: str
@@ -187,6 +242,7 @@ class MatchTrace:
     second_half_start_minute: float | None = None
     # Minutes de temps additionnel annoncées à la fin de chaque période (ticket v2-coach-et-gestion-de-match/03).
     added_minutes: list[int] = field(default_factory=list)
+    events: list[TraceEvent] = field(default_factory=list)  # journal ordonné, avec les causes (ticket v2-realisme/19b)
 
     def display_minute(self, minute: float) -> str:
         """Minute affichée (`12'`, `45+2'`, `90+4'`) d'un instant de la trace, pour le rendu et la narration."""
@@ -195,12 +251,12 @@ class MatchTrace:
     def record(self, minute: float, players: list[PlayerSnapshot], ball: BallSnapshot) -> None:
         self.ticks.append(Tick(minute=minute, players=tuple(players), ball=ball))
 
-    def record_goal(self, team: str, minute: float) -> None:
+    def record_goal(self, team: str, minute: float, scorer: str | None = None, own_goal: bool = False) -> None:
         if team == "home":
             self.home_goals += 1
         elif team == "away":
             self.away_goals += 1
         else:
             raise ValueError(f"équipe inconnue : {team!r} (attendu 'home' ou 'away')")
-        self.goals.append(GoalEvent(minute=minute, team=team))
+        self.goals.append(GoalEvent(minute=minute, team=team, scorer=scorer, last_toucher=scorer, own_goal=own_goal))
 

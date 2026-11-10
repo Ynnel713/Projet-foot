@@ -12,7 +12,7 @@ from v2engine.geometry import Vec2
 
 if TYPE_CHECKING:
     from v2engine.restart import Restart
-    from v2engine.trace import FoulEvent
+    from v2engine.trace import EventLog, FoulEvent
 
 
 @dataclass
@@ -99,6 +99,8 @@ class BallState:
     pass_from: Vec2 | None = None
     rebound: bool = False
     came_from: tuple[str, str, Vec2] | None = None
+    # Journal des événements du match (ticket v2-realisme/19b) : None hors match tracé (scènes de test qui n'en ont pas besoin).
+    log: EventLog | None = None
 
     @property
     def shot_in_flight(self) -> bool:

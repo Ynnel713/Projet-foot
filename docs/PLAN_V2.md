@@ -245,6 +245,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **Garde probabiliste (10/11/2026, ticket `v2-realisme/19c`)** : livré (10/11/2026), validé expert + QC. Test transversal `tests/test_v2engine_garde_probabiliste.py` : 9 résolutions, notes 11 et 99, situations facile et difficile, plancher 1 % (deux exceptions assumées) et hiérarchie des notes ; hors garde renvoyés : arrêt sans note du gardien (03b), contre sans note du défenseur (17b), dosage et passe ratée (23a) ; constat : le contrôle d'un 99 ne sent plus la difficulté (18d). Suite : 19b, puis 18a.
 
+**Journal des événements (10/11/2026, ticket `v2-realisme/19b`)** : livré (10/11/2026), validé expert + QC (réserve A1 : faute avec avantage écrite à son règlement, à corriger au 19e). `MatchTrace.events` : chaque événement (passe, contrôle raté, perte, tir, contre, arrêt, but, remise, faute, hors-jeu) a un identifiant et sa cause ; l'engagement ouvre une chaîne ; buteur et dernier toucheur sur chaque but ; API étendue sans casser les champs ; jeu identique sur 20 matchs. Découpé : `19e` (lecture de chaîne, origine des buts) et `05i` (but sur ballon dévié, contre son camp ; un but contre son camp est aujourd'hui impossible).
+
 ### Bloquée par
 
 - Phase 4
