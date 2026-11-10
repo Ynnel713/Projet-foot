@@ -12,6 +12,8 @@
 
 **Blocked by:** v2-collectif/18 (règle anti double comptage), v2-collectif/28a (calcul du tir, pour la tête), v2-hauteur-ballon/03 (hauteur du ballon et portée des joueurs).
 
+**Bloque :** 11 ; `v2-realisme/23b` (ajouté le 10/11/2026).
+
 **Status:** à faire, périmètre réduit (05/11/2026, chantier `v2-realisme`, validé par le propriétaire) : ce ticket garde le **centre** (Crossing : le porteur sur un côté centre, précision, centres atteignant un coéquipier). Le jeu aérien est découpé en `v2-realisme/15a` (qui attaque la trajectoire), `15b` (duel aérien : taille, Jumping Reach, Strength), `15c` (tête, Heading), `15d` (dégagement de la tête), `15e` (seconds ballons), `15f` (validation) ; les critères aériens ci-dessous y sont repris. Constantes à proposer avant le code.
 
 **Point de vigilance :** la taille ne doit pas tout écraser (un 1,75 m à grande détente gagne des duels contre un 1,90 m moyen). Ordre de grandeur de l'avantage de taille dans les duels aériens réels à sourcer ; « non trouvé » sinon.
