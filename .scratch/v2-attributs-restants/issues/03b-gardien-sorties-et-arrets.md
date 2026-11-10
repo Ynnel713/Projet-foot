@@ -26,3 +26,7 @@
 Source : `docs/AUDIT_ROADMAP_V2.md`. Constat du 06b et du 06c : depuis le tir physique (`v2-realisme/05h`), l'arrêt est déterministe à position donnée et les notes du gardien n'agissent pas (`shooting.py`, commentaire du 28b). Précisions : (1) Reflexes, One on Ones et Handling agissent sur la portée physique (réaction, plongeon, prise), centrés sur le gardien neutre calibré au 18e : un gardien moyen garde le taux d'arrêt calibré ; (2) les erreurs du gardien sont des issues possibles même pour un très bon gardien (ballon relâché dans la surface, mauvaise appréciation de la trajectoire, sortie mal calibrée) ; (3) la garde probabiliste `v2-realisme/19c` doit passer sur l'arrêt.
 
 - [ ] Gardien noté 99 : boulettes rares mais présentes sur 500 matchs ; gardien noté 40 : parade réflexe exceptionnelle présente
+
+## Renvoi de la garde probabiliste (10/11/2026, ticket `v2-realisme/19c`)
+
+L'arrêt ne lit aucune note du gardien : chance de but identique avec un gardien noté 11 ou 99 (portée physique seule, `shooting.keeper_reach_m`). Test d'écart connu : `test_known_gap_keeper_ratings_do_not_change_the_save` (`tests/test_v2engine_garde_probabiliste.py`). Quand ce ticket branchera les notes, retirer ce test et ajouter l'arrêt aux résolutions gardées (plancher 1 %, hiérarchie des notes).

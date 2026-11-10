@@ -46,3 +46,7 @@ Temps machine, non compté : suite complète (environ 40 min) ; séries de 500 m
 ## Complément de l'audit de la roadmap (10/11/2026)
 
 Source : `docs/AUDIT_ROADMAP_V2.md`. 12d et 12e passent avant ce ticket : calibrer les volumes de course alors que toutes les intentions visent la vitesse maximale (`cerveau.Intention.intensity`) et que la fatigue ne dépend que de la minute reviendrait à masquer deux mécanismes absents, ce que la règle des calibrations provisoires interdit. La mention « 12d si livré » du « What to build » devient « 12d et 12e livrés ».
+
+## Constat de la garde probabiliste (10/11/2026, ticket `v2-realisme/19c`)
+
+À First Touch 99, le contrôle le plus difficile (ballon à 28 m/s, adversaire à 0,5 m) touche le plafond de la courbe (0,97) comme le plus facile : la difficulté ne mord plus sur un très bon joueur. La garde tient (3 % d'échec). À examiner à la calibration ; test `test_finding_the_hardest_control_does_not_bite_on_a_99` (`tests/test_v2engine_garde_probabiliste.py`), qui échouera si la difficulté se remet à mordre.

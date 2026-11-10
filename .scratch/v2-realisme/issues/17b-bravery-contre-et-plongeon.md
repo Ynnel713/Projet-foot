@@ -39,3 +39,7 @@ Temps machine, non compté : suite complète (environ 40 min).
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+
+## Renvoi de la garde probabiliste (10/11/2026, ticket `v2-realisme/19c`)
+
+Le contre ne lit aucune note du défenseur (`shooting.BLOCK_CHANCE`). Test d'écart connu : `test_known_gap_the_block_reads_no_defender_rating` (`tests/test_v2engine_garde_probabiliste.py`). Quand Bravery agira sur le contre, retirer ce test et ajouter le contre aux résolutions gardées.

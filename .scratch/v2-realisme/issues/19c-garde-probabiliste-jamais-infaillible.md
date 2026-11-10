@@ -8,11 +8,11 @@
 
 **Attributs :** aucun
 
-**Blocked by:** 05e (en cours) ; 01f.
+**Blocked by:** 05e (livré) ; 01f (livré).
 
 **Bloque :** 18a ; `v2-collectif/22a` ; 23a (ajouté le 10/11/2026).
 
-**Status:** à faire (constantes à proposer avant le code)
+**Status:** livré (10/11/2026), validé expert + QC
 
 ## Estimation
 
@@ -40,3 +40,12 @@ Temps machine, non compté : suite complète (environ 40 min).
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+
+## Comments
+
+- 10/11/2026, constantes (validées par délégation du propriétaire, « Considère que je valide automatiquement toutes tes recommandations et celles des experts », 05/11/2026) : plancher 1 % de réussite et 1 % d'échec ; exceptions assumées : conduite sans adversaire à 5 m pour un 99 (perte 0,5 % sur 1,5 s, plancher 0,4 %) et but sur la frappe la plus difficile (35 m, angle fermé, sous pression) pour un 11 (0,56 %, plancher 0,5 %), chiffres réels non trouvés.
+- 10/11/2026, implémentation : `tests/test_v2engine_garde_probabiliste.py` (52 tests). Méthode : chaque résolution tire `flux.random() < p` ; la garde lit `p` (exact, sans bruit de tirage) pour 9 résolutions (passe, contrôle, conduite, tacle, tir cadré, but, tacle sans faute, appel réglé sur la ligne, drapeau vu), notes 11 et 99, situation facile et difficile ; un test par tirage (5 000 tirages du flux `DECISION`, `offside.respects_the_line`) vérifie l'équivalence. Hiérarchie des notes vérifiée pour chaque résolution (Aggression inversée : plus de fautes) ; queue des issues : un 99 peut dévisser, un 11 peut marquer de 35 m. Aucun code du moteur modifié.
+- Hors garde, renvoyés (tests d'écart connu, à retirer par le ticket correcteur) : arrêt sans note du gardien (`v2-attributs-restants/03b`) ; contre sans note du défenseur (`17b`) ; dosage de la passe de 0 à 1 et ampleur de la passe ratée indépendante de la note (`23a`). Non gardé : la tentative de tacle (`attempt_tackle_probability`, taux par seconde de 0,009 à 0,051), qui est une fréquence et non une issue. Constat : à First Touch 99, la difficulté du contrôle ne mord plus (0,97 au plus facile comme au plus difficile), renvoyé à `18d`.
+- Mesures : suite complète 2 707 passés, 14 désélectionnés (2 655 + 52, `.scratch/v2-realisme/mesures/19c-suite.txt`) ; déterminisme : fichier passé deux fois, mêmes résultats (seul tirage semé, `seed_scene(19)`).
+- Durée : estimée 90 min, réelle environ 75 min (analyse 20, développement 30, tests 15, intégration 10 ; estimée, non chronométrée), − 17 %. Temps machine hors total : 25 min de suite.
+- 10/11/2026, clôture : expert APPROVED, QC VALIDÉ, clôture VALIDÉ. Facultatifs de l'expert : A1, rejouer `scripts/shot_calibration.py` avec la garde aux lots de calibration (22a), le tir étant gardé sur sa formule analytique ; A2, passe difficile de 40 m et non du pire cas (60 m), à revoir si 23a ou 18d touchent la difficulté de distance. Réserve de forme du QC : la conduite est gardée sur sa durée de référence (1,5 s), alors que le moteur tire par intervalle de 0,5 s (perte d'un 99 libre : 0,17 % par tirage) ; la docstring du test dit « la chance que le moteur tire », exact pour les autres résolutions.

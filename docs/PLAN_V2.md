@@ -243,6 +243,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **Façade des notes (10/11/2026, ticket `v2-realisme/19a`)** : livré (10/11/2026), validé expert + QC (réserves acceptées : doc commitée avec le code ; à surveiller, `movement.step` à faire passer par la façade au premier ticket qui module une capacité physique). `v2engine/condition.py` : toute note se lit par `effective_rating` (règle R6 de `docs/CARTE_ATTRIBUTS_V2.md`), `PlayerCondition` vide porté par `PlayerState`, famille de chaque attribut ; aucun effet sur le jeu : 20 traces identiques à graine fixée. Débloque 19c (puis 19b, 18a) et les tickets 20 ; tickets 23a et 23b créés (erreur d'exécution continue de la passe et du centre, commits `3ca8cbc`, `073c24f`).
 
+**Garde probabiliste (10/11/2026, ticket `v2-realisme/19c`)** : livré (10/11/2026), validé expert + QC. Test transversal `tests/test_v2engine_garde_probabiliste.py` : 9 résolutions, notes 11 et 99, situations facile et difficile, plancher 1 % (deux exceptions assumées) et hiérarchie des notes ; hors garde renvoyés : arrêt sans note du gardien (03b), contre sans note du défenseur (17b), dosage et passe ratée (23a) ; constat : le contrôle d'un 99 ne sent plus la difficulté (18d). Suite : 19b, puis 18a.
+
 ### Bloquée par
 
 - Phase 4

@@ -58,3 +58,4 @@ Temps machine, non compté : suite complète (environ 40 min) ; mesure 50 matchs
 ## Comments
 
 - 10/11/2026, création (ticket documentaire `backlog-v2/erreur-execution-continue`, commit `3ca8cbc`) : expert APPROVED_WITH_RESERVATIONS, QC VALIDÉ. Réserves reportées ici, validées par délégation du propriétaire (« Oui reporte le », 10/11/2026) : A1 (six lecteurs de la chance de passe et remises en jeu), A2 (la ligne de passe et le marquage agissent par la physique, pas par l'écart), A5 (σ de vitesse, bornes, anticipation, nombre de tranches). Estimation portée à 2 h 30.
+- 10/11/2026, renvoi de la garde probabiliste (`19c`) : dosage de 0 à 1 et ampleur de la passe ratée indépendante de la note, test d'écart connu `test_known_gap_pass_dosage_and_miss_size_are_all_or_nothing` (`tests/test_v2engine_garde_probabiliste.py`) ; à retirer par ce ticket, et la passe gardée sur la nouvelle loi.
