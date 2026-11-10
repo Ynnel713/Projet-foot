@@ -11,7 +11,7 @@ Le changement de jeu en diagonale et le jeu long face au pressing restent au tic
 
 **Attributs :** Passing (exécution), Vision (voir l'espace), Decisions (choisir), Flair (options risquées). Rayons à fixer dans `docs/CARTE_ATTRIBUTS_V2.md`, sans double comptage.
 
-**Blocked by:** 33, 29, 16 (tous livrés) : démarrable. À livrer avec le 15.
+**Blocked by:** 33, 29, 16 (tous livrés) ; `v2-realisme/23a` (erreur d'exécution continue de la passe, ajouté le 10/11/2026). À livrer avec le 15.
 
 **Bloque :** 32b ; 22a.
 

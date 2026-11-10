@@ -14,7 +14,7 @@
 
 **Blocked by:** 05e (en cours, modifie `shooting.py`) ; 01f (fabrique de scènes, livré).
 
-**Bloque :** 18a ; 20a, 20b, 20f, 20g ; par convention, tout ticket qui lit une note après lui.
+**Bloque :** 18a ; 20a, 20b, 20f, 20g ; 23a (ajouté le 10/11/2026) ; par convention, tout ticket qui lit une note après lui.
 
 **Status:** à faire
 

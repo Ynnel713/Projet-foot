@@ -10,7 +10,7 @@
 
 **Blocked by:** 05e (en cours) ; 01f.
 
-**Bloque :** 18a ; `v2-collectif/22a`.
+**Bloque :** 18a ; `v2-collectif/22a` ; 23a (ajouté le 10/11/2026).
 
 **Status:** à faire (constantes à proposer avant le code)
 
