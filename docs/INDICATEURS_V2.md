@@ -656,3 +656,18 @@ L'arrêt est déterministe (aucun but en deçà de la portée, aucun arrêt au-d
 **Déterminisme.** Deux exécutions de 10 matchs (1000 à 1004 : `06c-det1`, `06c-det2`, 784 indicateurs ; 1005 à 1009 : `06c-det1b`, `06c-det2b`, 797 indicateurs) : tout est identique, seul le temps de calcul diffère.
 
 **À refaire** après le 05e (même commande : `uv run python -m scripts.bench_series 500 --debut 1000 --processus 7`) : la courbe des tireurs moyens doit alors passer par la diagonale, tranche par tranche.
+
+## 21. Valeur du tir dans la décision : chance évaluée contre résolution physique (ticket v2-realisme/05e, scènes et 2 x 120 matchs, 10/11/2026)
+
+Commande : `scripts/shot_calibration.py` (`scenes`, `relever`, `verifier`). Fichiers `.scratch/v2-realisme/mesures/05e-*`.
+
+**Avant (formule analytique et cône ; 120 matchs, graines 2000 à 2119, 5 680 tirs).** Aucune tranche de chance évaluée calibrée, et l'ordre est faux : sous 8 m de distance, chance 0,40, buts 0,20 ; de 8 à 12 m, chance 0,12, buts 0,28. Contres : 0,2 % prévus pour 9,9 % observés sous 0,05 de chance prévue, 60 % pour 40 % au-dessus de 0,5. Scène à 11 m face au but : 15 % évalué, 33 % réels ; à 6 m : 37 % évalué, 22 % réels.
+
+**Après (`shooting._flight_shares` : écart du ballon gaussien, cadre, portée du gardien coupée par la ligne au temps de vol, portée de chaque défenseur à sa place à l'arrivée du ballon, but et contre jugés ensemble, écart par écart ; aucune constante nouvelle).**
+
+* Scènes, 2 000 tirs par position, tireur et gardien neutres : 20 positions sur 20 sans défenseur dans l'intervalle à 95 % du taux de buts (écart maximal 1,2 point, `05e-scenes.txt`) ; contres, 7 scènes sur 7 (défenseur dans l'axe, deux qui se cachent, au contact, en course, à 2 m du tireur) ; but avec défenseurs, 6 sur 7 (défenseur à 2 m : 11,2 % contre 13,1 %).
+* Matchs (120, graines 2200 à 2319, 5 804 tirs) : chance évaluée moyenne 0,090, buts 0,093. Par tranche de chance évaluée, les 7 tranches calibrées : [0 ; 0,03[ 0,016 / 0,021 ; [0,03 ; 0,06[ 0,043 / 0,052 ; [0,06 ; 0,1[ 0,077 / 0,084 ; [0,1 ; 0,2[ 0,140 / 0,152 ; [0,2 ; 0,35[ 0,256 / 0,231 ; [0,35 ; 0,5[ 0,429 / 0,371 (89 tirs) ; [0,5 ; 1[ 0,758 / 0,712. Distance : 5 tranches sur 6 (12 à 16 m : 0,191 contre 0,146 [0,117 ; 0,180]). Angle : 3 sur 4 (15 à 25° : 0,062 contre 0,071 [0,063 ; 0,080]). Contres : 4 tranches sur 5 (sous 0,05 : 1,5 % prévus, 4,1 % observés).
+* Jeu : 48,4 tirs et 4,52 buts par match (avant 47,3 et 4,26), 20,2 % de tirs contrés (18,5 %), distance moyenne 21,4 m (20,8 m). Le tir vaut désormais ce que donne la physique du moteur, plus généreuse que le réel (environ 23 % à 15 m), face aux passes valorisées sur la grille réelle (xT) : réglage du volume et de la conversion au 22c, aucun ici. Temps de calcul inchangé (86,7 min pour 120 matchs sur 7 processus, 88,1 avant).
+* Déterminisme : 3 matchs (2200 à 2202) joués deux fois, mêmes 136 tirs, même empreinte (`72d464c777a8`), identiques aux mêmes matchs de la série.
+
+**Reste à faire.** Courbe du 06c sur 500 matchs (§20) non relancée dans ce ticket (environ 7 h de machine) ; le contrôle sur 120 matchs ci-dessus porte sur la même chance (l'xG neutre en est la version à notes neutres).

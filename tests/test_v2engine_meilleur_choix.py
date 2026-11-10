@@ -55,18 +55,22 @@ def test_at_the_box_edge_a_good_finisher_shoots_and_a_poor_one_looks_for_somethi
     # Scène revue au ticket 28a : D3 (93 ; 32,5) cachait une part du but dans le cône de tir, et un coéquipier libre à
     # 11 m du but vaut désormais mieux qu'un tir de 15 m, même pour un bon finisseur (17 % contre 10 % de chance de
     # base) ; le partenaire est donc excentré, et le défenseur qui gêne le porteur sort du cône.
+    # ticket v2-realisme/05e : la chance du tir est celle de la résolution physique, plus généreuse que le réel jusqu'au
+    # réglage du 22c (un tir de 15 m vaut 0,18 même à 25) ; la scène recule à 21 m, hors de la surface (Long Shots) :
+    # tir 0,111 à 99 contre 0,073 à 25, pour une passe excentrée à 0,091
     def scene(finishing: int) -> list[PlayerState]:
-        return [_p("A", 90, Finishing=finishing), _p("Wide", 94, 42), _p("Back", 82, 30),
-                _p("D1", 97, 30, team="away"), _p("D2", 98, 42, team="away"), _p("D3", 91.5, 30.5, team="away")]
-    # ticket 04a : la conduite n'est plus pénalisée par la pression, elle vaut 0,117 ici contre 0,113 pour un tir à 90 ;
-    # « bon finisseur » se lit donc à 99 (tir 0,129), le mauvais finisseur ne tire toujours pas
+        return [_p("A", 84, Long_Shots=finishing), _p("Wide", 94, 42), _p("Back", 82, 30),
+                _p("D1", 97, 30, team="away"), _p("D2", 98, 42, team="away"), _p("D3", 85.5, 30.5, team="away")]
+    # ticket 04a : la conduite n'est plus pénalisée par la pression ;
+    # « bon finisseur » se lit à 99, le mauvais finisseur ne tire toujours pas
     assert _best(scene(99)).kind == "shot"
     assert _best(scene(25)).kind != "shot"
 
 
 def test_a_free_teammate_closer_to_goal_is_worth_more_than_a_shot_from_the_box_edge() -> None:
-    players = [_p("A", 90, Finishing=90), _p("Free", 94, 37), _p("Back", 82, 30),
-               _p("D1", 97, 30, team="away"), _p("D2", 98, 42, team="away"), _p("D3", 91.5, 30.5, team="away")]
+    # ticket v2-realisme/05e : tir de loin à 21 m (0,108 à 90), le tir de 15 m valant 0,24 avec la chance physique
+    players = [_p("A", 84, Long_Shots=90), _p("Free", 94, 37), _p("Back", 82, 30),
+               _p("D1", 97, 30, team="away"), _p("D2", 98, 42, team="away"), _p("D3", 85.5, 30.5, team="away")]
     best = _best(players)
     assert best.kind == "pass" and best.target.name == "Free"
 

@@ -29,7 +29,7 @@ from v2engine.movement import PlayerState
 from v2engine.offside import offside_line
 from v2engine.possession import BALL_FRICTION_PER_S, MAX_PASS_MPS as SHOT_SPEED_MPS, pass_success_probability, pressure
 from v2engine.restart import CORNER, GOAL_KICK, KICKOFF
-from v2engine.shooting import (base_chance, block_probability, keeper_reach_m, shot_pressure, shot_probability,
+from v2engine.shooting import (base_chance, keeper_reach_m, neutral_open_chance, shot_pressure, shot_probability,
                                shooting_note)
 from v2engine.situation import POSSESSION_INSTALLEE, TRANSITION_DEFENSIVE, TRANSITION_OFFENSIVE, SituationTracker
 
@@ -462,7 +462,7 @@ class Collector:
         self.free_ball: dict | None = None
         self.last_shot: dict[str, float] = {}  # équipe -> instant de son dernier tir (03i)
         self.shot_log: list[tuple[float, str, str]] = []  # tirs tracés du match : (instant en s, équipe, issue) (03j)
-        self.shot_notes: dict[tuple[float, str], tuple] = {}  # (minute, tireur) -> (notes, chance de contre, tireur moyen), 06b et 06c
+        self.shot_notes: dict[tuple[float, str], tuple] = {}  # (minute, tireur) -> (notes, chance neutre hors contre, tireur moyen), 06b, 06c, 05e
         self.exit_log: list[dict] = []  # ballons avec sortie suivis 5 s, à classer par état en fin de match (03j)
         self.exits: list[dict] = []  # premières sorties par ballon encore suivies (3 s puis 5 s) : t, équipe, gardien, tir, issue
         self.run_log: list[tuple[str, float, float, Vec2]] = []  # (joueur, début, fin, position finale)
@@ -844,10 +844,10 @@ class Collector:
             notes.append(carry_tranche("Composure sous pression", player_attribute(shooter, "Composure"), SHOT_NOTE_BINS))
         if keeper is not None:
             notes.append(carry_tranche("Reflexes du gardien", player_attribute(keeper, "Reflexes"), SHOT_NOTE_BINS))
-        # ticket 06c : chance de contre prévue (sans note, celle de l'xG neutre) et tireur « moyen »
-        block = block_probability(shooter, OPPONENT_GOAL[shooter.team], opponents)
+        # ticket 06c : chance neutre hors contre (celle de l'xG neutre sans les contres ; ticket 05e) et tireur « moyen »
+        open_chance = neutral_open_chance(shooter, OPPONENT_GOAL[shooter.team], keeper, opponents)
         average = AVERAGE_NOTE[0] <= shooting_note(shooter) < AVERAGE_NOTE[1]
-        self.shot_notes[(minute, shooter.name)] = (notes, block, average)
+        self.shot_notes[(minute, shooter.name)] = (notes, open_chance, average)
 
     def _decompose_shot(self, event) -> None:
         """Occasion, exécution, gardien (ticket v2-realisme/06b) : xG neutre (l'occasion), xG après frappe moins xG neutre
@@ -857,8 +857,8 @@ class Collector:
         if xg is None:
             return
         goal = event.outcome == "but"
-        notes, block, average = self.shot_notes.get((event.minute, event.player), (["tous"], 0.0, False))
-        open_xg = xg / (1.0 - block)  # chance neutre hors contre (réserve A1 du 06b) ; la chance de contre reste sous 1
+        notes, open_chance, average = self.shot_notes.get((event.minute, event.player), (["tous"], None, False))
+        open_xg = xg if open_chance is None else open_chance  # chance neutre hors contre (réserve A1 du 06b, ticket 05e)
         for note in notes:
             key = SHOT_PREFIX + note
             self.count[key + " : tirs"] += 1

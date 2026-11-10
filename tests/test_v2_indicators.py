@@ -1107,14 +1107,14 @@ def test_shot_decomposition_splits_occasion_execution_and_keeper_by_note() -> No
     c.on_shot_event(SimpleNamespace(minute=4.0, team="home", player="B", x=94.0, y=34.0, outcome="but",
                                     origin="penalty", quality=0.8, xg=None, post_shot_xg=None))  # penalty : hors décomposition
     out = ind.shot_decomposition(c.count, 1)
-    block = ind.block_probability(shooter, Vec2(PITCH_LENGTH_M, 34.0), [marker, keeper])
-    assert 0.0 < block < 1.0  # le défenseur dans l'axe peut contrer
+    open_chance = ind.neutral_open_chance(shooter, Vec2(PITCH_LENGTH_M, 34.0), keeper, [marker, keeper])
+    assert 0.0 < open_chance < 1.0  # chance neutre hors contre, ticket 05e
     for band in ("tous", "Finishing (surface) [70 ; +[", "Composure sous pression [0 ; 40[", "Reflexes du gardien [40 ; 55["):
         key = ind.SHOT_PREFIX + band + " : "
         assert out[key + "tirs (effectif)"] == 3 and out[key + "tirs non contrés (effectif)"] == 2
         assert math.isclose(out[key + "occasion, xG neutre moyen par tir"], 0.2)
         # xG après frappe - chance neutre hors contre (réserve A1 du 06b, ticket 06c)
-        assert math.isclose(out[key + "exécution, gain par tir non contré"], (0.9 - 0.5 / (1.0 - block)) / 2)
+        assert math.isclose(out[key + "exécution, gain par tir non contré"], (0.9 - 2 * open_chance) / 2)
         assert math.isclose(out[key + "gardien, gain par tir non contré"], (0.9 - 1.0) / 2)  # xG après frappe - buts
     assert not any("Long Shots" in key for key in out)
     calibration = "calibration xG après frappe, tirs cadrés jugés : xG après frappe moins buts"
@@ -1141,8 +1141,8 @@ def test_xg_calibration_splits_goals_minus_xg_into_block_execution_and_keeper() 
                                         y=shooter.position.y, outcome=outcome, origin="passe au sol", quality=xg, xg=xg,
                                         post_shot_xg=psxg, keeper_gap_m=gap, keeper_time_s=elapsed, keeper_speed_mps=20.0))
     out = ind.xg_calibration(c.count, 2)
-    block = ind.block_probability(average, goal, [marker, keeper])
-    assert 0.0 < block < 1.0 and ind.block_probability(strong, goal, [marker, keeper]) == 0.0
+    open_xg = ind.neutral_open_chance(average, goal, keeper, [marker, keeper])  # chance neutre hors contre (ticket 05e)
+    assert 0.0 < open_xg < 1.0
     for group, shots_in, goals, xg_sum in (("tous les tireurs", 4, 1, 0.79), ("tireurs moyens", 3, 1, 0.75)):
         key = f"{ind.CALIBRATION_PREFIX}{group}, toutes tranches : "
         assert out[key + "tirs (effectif)"] == shots_in and math.isclose(out[key + "taux de buts"], goals / shots_in)
@@ -1152,7 +1152,6 @@ def test_xg_calibration_splits_goals_minus_xg_into_block_execution_and_keeper() 
         assert math.isclose(out[key + "buts moins xG, par match"], (goals - xg_sum) / 2)
         assert math.isclose(stages, (goals - xg_sum) / 2, abs_tol=1e-9)  # les trois étages font tout l'écart
     key = f"{ind.CALIBRATION_PREFIX}tireurs moyens, xG [0.2 ; 0.35[ : "
-    open_xg = 0.25 / (1.0 - block)
     assert math.isclose(out[key + "étage exécution, par match"], (0.8 + 0.3 - 2 * open_xg) / 2)
     assert math.isclose(out[key + "étage gardien, par match"], (1.0 - 0.8 - 0.3) / 2)
     assert math.isclose(out[key + "étage contre, par match"], (2 * open_xg - 3 * 0.25) / 2)

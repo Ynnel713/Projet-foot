@@ -18,6 +18,7 @@ from v2engine.attributes import duel_probability, player_attribute, success_prob
 from v2engine.flux import TIR
 from v2engine.geometry import Vec2, in_penalty_area
 from v2engine.movement import PlayerState
+from v2engine.possession import BALL_FRICTION_PER_S, MAX_PASS_MPS
 
 # Distance de tir maximale (m) : au-delà, l'option « tirer » n'existe pas pour le porteur (voir
 # `decision.py`, qui choisit QUAND tirer). Constante validée par le propriétaire (24/10/2026,
@@ -189,8 +190,12 @@ def shot_probability(shooter: PlayerState, goal: Vec2, keeper: PlayerState | Non
 def occasion_quality(player: PlayerState, goal: Vec2, keeper: PlayerState | None,
                      opponents: list[PlayerState]) -> float:
     """« S'il touchait le ballon ici, quelle serait sa chance de marquer ? » (ticket 28a) : chance de but d'un tir
-    depuis sa position, s'il n'est pas contré par un défenseur du cône de tir. Vaut pour un joueur qui ne tire pas."""
-    return shot_probability(player, goal, keeper, opponents) * (1.0 - block_probability(player, goal, opponents))
+    depuis sa position, contres compris. Vaut pour un joueur qui ne tire pas.
+    Depuis le ticket v2-realisme/05e, calculée avec les lois de la résolution physique (`_flight_shares`), plus avec la
+    formule analytique et le cône."""
+    # but et contre se jugent ensemble, écart par écart : un défenseur dans l'axe contre surtout des tirs qui allaient au
+    # but, un défenseur devant le gardien surtout des tirs que le gardien aurait arrêtés
+    return (1.0 - _shank_share(player, goal, opponents)) * _flight_shares(player, goal, keeper, opponents)[2]
 
 
 def attempt_shot(shooter: PlayerState, goal: Vec2, keeper: PlayerState | None, opponents: list[PlayerState]) -> bool:
@@ -310,6 +315,159 @@ def keeper_reach_m(elapsed_s: float) -> float:
     return min(KEEPER_DIVE_REACH_M, KEEPER_STANDING_REACH_M + dive)
 
 
+_ENGINE_TICK_S = 0.1  # pas de la boucle de match (`match.TICK_SECONDS`, égalité gardée par un test)
+
+
+def _flight_time_s(distance_m: float) -> float:
+    """Temps (s) que met un tir à parcourir `distance_m` dans la boucle de match : le ballon avance de sa vitesse à
+    chaque pas, puis freine (`BALL_FRICTION_PER_S`) ; l'infini s'il s'arrête avant."""
+    q = BALL_FRICTION_PER_S ** _ENGINE_TICK_S
+    rest = 1.0 - distance_m * (1.0 - q) / (MAX_PASS_MPS * _ENGINE_TICK_S)
+    return math.inf if rest <= 0.0 else _ENGINE_TICK_S * math.log(rest) / math.log(q)
+
+
+def _flight_distance_m(elapsed_s: float) -> float:
+    """Distance (m) parcourue par un tir au bout de `elapsed_s`, pas entiers de la boucle de match (inverse de
+    `_flight_time_s`)."""
+    q = BALL_FRICTION_PER_S ** _ENGINE_TICK_S
+    return MAX_PASS_MPS * _ENGINE_TICK_S * (1.0 - q ** (elapsed_s / _ENGINE_TICK_S)) / (1.0 - q)
+
+
+def _keeper_cover(origin: Vec2, goal: Vec2, axis: Vec2, keeper_at: Vec2) -> tuple[float, float] | tuple[()] | None:
+    """Angles (relatifs à `axis`) des tirs que le gardien atteint : ceux qui traversent sa portée avant la ligne de but,
+    soit le disque de portée coupé par la ligne, vu du tireur (`match._keeper_reaches` mesure l'écart au plus près du
+    gardien, ou sur la ligne si le ballon la franchit avant). Chaque bord a sa portée, au temps de vol jusqu'au point
+    de passage (tangence ou ligne de but). `()` : aucun ; `None` : tous (tireur dans sa portée)."""
+    offset = keeper_at - origin
+    distance, along = offset.length(), offset.x * axis.x + offset.y * axis.y
+    if distance <= keeper_reach_m(0.0):
+        return None
+    if along <= 0.0:
+        return ()  # gardien derrière le tireur, hors de portée : le ballon s'éloigne de lui
+    side = 1.0 if origin.x > goal.x else -1.0  # côté terrain de la ligne de but
+    centre, depth = _relative(origin, axis, keeper_at), keeper_at.x - goal.x
+    angles = []
+    for sign in (-1.0, 1.0):
+        reach = keeper_reach_m(_flight_time_s(distance))
+        for _ in range(3):  # portée au temps de vol jusqu'au point de tangence (point fixe, converge vite)
+            reach = keeper_reach_m(_flight_time_s(math.sqrt(max(0.0, distance * distance - reach * reach))))
+        if reach >= distance:
+            return None
+        turn = centre + sign * math.asin(reach / distance)
+        heading = Vec2(axis.x * math.cos(turn) - axis.y * math.sin(turn), axis.x * math.sin(turn) + axis.y * math.cos(turn))
+        if (origin.x + heading.x * math.sqrt(distance * distance - reach * reach) - goal.x) * side >= 0.0:
+            angles.append(turn)  # tangence encore devant la ligne
+        reach = keeper_reach_m(_flight_time_s(distance))
+        for _ in range(3):  # bord de la portée sur la ligne de but, au temps de vol jusqu'à lui
+            if abs(depth) >= reach:
+                break
+            point = Vec2(goal.x, keeper_at.y + sign * math.sqrt(reach * reach - depth * depth))
+            reach = keeper_reach_m(_flight_time_s(origin.distance_to(point)))
+        if abs(depth) < reach:
+            angles.append(_relative(origin, axis, Vec2(goal.x, keeper_at.y + sign * math.sqrt(reach * reach - depth * depth))))
+    return (min(angles), max(angles)) if angles else ()
+
+
+def _shank_share(shooter: PlayerState, goal: Vec2, opponents: list[PlayerState]) -> float:
+    """Part des tirs dévissés (`draw_shot_error`) : ils ne partent pas en vol, ni contrés ni cadrés."""
+    wide, under = on_target_axes(shooter, goal, opponents)
+    return SHANK_SHARE * (shot_error_sigma(shooter, goal, opponents) / SHOT_ERROR_SIGMA_RAD) ** 2 * (1.0 - wide * under)
+
+
+def _block_covers(shooter: PlayerState, goal: Vec2, opponents: list[PlayerState]) -> list[tuple[float, float]]:
+    """Écarts de tir (angles relatifs à l'axe vers le centre du but) qui passent à la portée de chaque défenseur de champ
+    devant le tireur (contre physique, `match._blocked`) : à sa place quand le ballon arrive à lui (il garde sa vitesse),
+    portée `block_reach_m` au temps de vol ; tout l'angle s'il est déjà au contact du tireur. Approximation : la portée
+    est prise sur la ligne joueur-tireur."""
+    axis = (goal - shooter.position).normalized()
+    to_goal = shooter.position.distance_to(goal)
+    covers = []
+    for opponent in opponents:
+        if opponent.poste == "GK":
+            continue
+        at = opponent.position
+        elapsed = math.inf
+        for _ in range(2):  # temps jusqu'à sa place à l'arrivée du ballon
+            elapsed = _flight_time_s(shooter.position.distance_to(at))
+            if math.isinf(elapsed):
+                break
+            at = opponent.position + opponent.velocity * elapsed
+        if math.isinf(elapsed):
+            continue
+        offset = at - shooter.position
+        along, gap = offset.x * axis.x + offset.y * axis.y, offset.length()
+        reach = block_reach_m(elapsed)
+        if gap <= reach:
+            covers.append((-math.inf, math.inf))
+        elif 0.0 < along <= to_goal:  # devant le tireur, avant le but
+            centre, half = _relative(shooter.position, axis, at), math.asin(reach / gap)
+            if elapsed < BLOCK_REACTION_S:
+                # la boucle de match juge le contact pas par pas : au premier pas où il tend la jambe, le ballon déjà passé
+                # peut encore être à sa portée (`BLOCK_WIDTH_M`) ; écarts qui l'y mettent, à la distance parcourue alors
+                ready = _flight_distance_m(math.ceil(BLOCK_REACTION_S / _ENGINE_TICK_S - 1e-9) * _ENGINE_TICK_S)
+                cosine = (ready * ready + gap * gap - BLOCK_WIDTH_M * BLOCK_WIDTH_M) / (2.0 * ready * gap)
+                if cosine < 1.0:
+                    half = max(half, math.acos(max(-1.0, cosine)))
+            covers.append((centre - half, centre + half))
+    return covers
+
+
+def _goal_angles(shooter: PlayerState, goal: Vec2, keeper: PlayerState | None) -> list[tuple[float, float]]:
+    """Écarts de tir qui donnent un but en largeur : l'angle du but privé de l'angle que couvre le gardien
+    (`_keeper_cover`). Sans gardien identifiable (effectif synthétique), repli neutre comme `keeper_position_factor` :
+    gardien bien placé, à `KEEPER_REFERENCE_M` de sa ligne sur l'axe du tir."""
+    low, high, axis = _goal_angle(shooter.position, goal)
+    keeper_at = keeper.position if keeper is not None else goal + (shooter.position - goal).normalized() * KEEPER_REFERENCE_M
+    covered = _keeper_cover(shooter.position, goal, axis, keeper_at)
+    if covered is None:
+        return []  # le ballon passe forcément à sa portée
+    if not covered or covered[1] <= low or covered[0] >= high:
+        return [(low, high)]
+    return [(lo, hi) for lo, hi in ((low, covered[0]), (covered[1], high)) if hi > lo]
+
+
+def _flight_shares(shooter: PlayerState, goal: Vec2, keeper: PlayerState | None,
+                   opponents: list[PlayerState]) -> tuple[float, float, float]:
+    """Tir en vol (non dévissé), écart en largeur gaussien (`shot_error_sigma`) : (chance de but sans les contres, chance
+    d'être contré, chance de but et de ne pas être contré). Les écarts sont découpés aux bords du but, de la portée du
+    gardien et de celle de chaque défenseur ; sur chaque tranche, un ballon contré par l'un n'atteint pas les suivants
+    (`BLOCK_CHANCE` par défenseur touché). La hauteur (sous la barre) ne joue que sur le but."""
+    sigma = shot_error_sigma(shooter, goal, opponents)
+    _, under = on_target_axes(shooter, goal, opponents)
+    scoring, covers = _goal_angles(shooter, goal, keeper), _block_covers(shooter, goal, opponents)
+
+    def below(angle: float) -> float:
+        return 0.5 * (1.0 + math.erf(angle / (sigma * math.sqrt(2.0))))
+
+    cuts = sorted({-math.inf, math.inf, *(c for span in scoring + covers for c in span)})
+    goal_share = blocked = goal_unblocked = 0.0
+    for lo, hi in zip(cuts, cuts[1:]):
+        mass = below(hi) - below(lo)
+        through = (1.0 - BLOCK_CHANCE) ** sum(1 for c_lo, c_hi in covers if c_lo <= lo and hi <= c_hi)
+        blocked += mass * (1.0 - through)
+        if any(g_lo <= lo and hi <= g_hi for g_lo, g_hi in scoring):
+            goal_share += mass * under
+            goal_unblocked += mass * under * through
+    return goal_share, blocked, goal_unblocked
+
+
+def physical_shot_chance(shooter: PlayerState, goal: Vec2, keeper: PlayerState | None,
+                         opponents: list[PlayerState]) -> float:
+    """Chance de but d'un tir non contré, calculée avec les lois de sa résolution (ticket v2-realisme/05e) : écart du
+    ballon gaussien (`shot_error_sigma`, note, pression et Composure comprises), dévissé (`draw_shot_error`), cadre
+    (entre les poteaux, sous la barre), arrêt si le ballon passe à la portée du gardien (`keeper_reach_m`) au temps de
+    vol jusqu'à lui ; gardien immobile pendant le vol (réserve A1 du 05h). Quelques `erf`, aucune constante nouvelle.
+    Approximation : largeur et hauteur supposées indépendantes, comme au 35b. Toute modification de la résolution
+    (gardien, cadrage, contre, vitesse du tir) se reporte ici ; contrôle : `scripts/shot_calibration.py`."""
+    return (1.0 - _shank_share(shooter, goal, opponents)) * _flight_shares(shooter, goal, keeper, opponents)[0]
+
+
+def physical_block_probability(shooter: PlayerState, goal: Vec2, opponents: list[PlayerState]) -> float:
+    """Chance que le tir soit contré, avec les lois du contre physique (ticket v2-realisme/05e, `_flight_shares`). Le
+    cône `block_probability` (tir visant un point du but au hasard) reste la règle du gardien (`gardien.py`)."""
+    return (1.0 - _shank_share(shooter, goal, opponents)) * _flight_shares(shooter, goal, None, opponents)[1]
+
+
 # xG (ticket v2-realisme/06a, proposé le 09/11/2026, validé par délégation du propriétaire ; décision D-V12). xG neutre :
 # chance de but d'un tireur moyen face à un gardien moyen, à la même place, dans la même situation (adversaires, position
 # du gardien, contre compris) : `occasion_quality` avec les notes neutres. xG après frappe : chance qu'un gardien moyen,
@@ -325,12 +483,25 @@ PSXG_SPREAD_M = 0.15
 NEUTRAL_ATTRIBUTES = MappingProxyType({})
 
 
-def neutral_xg(shooter: PlayerState, goal: Vec2, keeper: PlayerState | None, opponents: list[PlayerState]) -> float:
-    """xG neutre d'un tir de `shooter` : indépendant des notes du tireur et du gardien (`NEUTRAL_ATTRIBUTES`)."""
+def _neutralised(shooter: PlayerState, keeper: PlayerState | None, opponents: list[PlayerState]):
+    """Copies du tireur et du gardien aux notes neutres (`NEUTRAL_ATTRIBUTES`), et les adversaires avec ce gardien."""
     neutral = replace(shooter, attributes=NEUTRAL_ATTRIBUTES)
     neutral_keeper = replace(keeper, attributes=NEUTRAL_ATTRIBUTES) if keeper is not None else None
-    rivals = [neutral_keeper if keeper is not None and o is keeper else o for o in opponents]
+    return neutral, neutral_keeper, [neutral_keeper if keeper is not None and o is keeper else o for o in opponents]
+
+
+def neutral_xg(shooter: PlayerState, goal: Vec2, keeper: PlayerState | None, opponents: list[PlayerState]) -> float:
+    """xG neutre d'un tir de `shooter` : indépendant des notes du tireur et du gardien (`NEUTRAL_ATTRIBUTES`)."""
+    neutral, neutral_keeper, rivals = _neutralised(shooter, keeper, opponents)
     return occasion_quality(neutral, goal, neutral_keeper, rivals)
+
+
+def neutral_open_chance(shooter: PlayerState, goal: Vec2, keeper: PlayerState | None,
+                        opponents: list[PlayerState]) -> float:
+    """Chance neutre hors contre (tickets v2-realisme/06c et 05e) : l'xG neutre sans les contres, pour découper l'écart
+    buts moins xG en contre, exécution et gardien."""
+    neutral, neutral_keeper, rivals = _neutralised(shooter, keeper, opponents)
+    return physical_shot_chance(neutral, goal, neutral_keeper, rivals)
 
 
 def post_shot_xg(gap_m: float, elapsed_s: float) -> float:

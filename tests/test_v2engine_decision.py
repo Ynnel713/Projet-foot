@@ -74,16 +74,19 @@ def test_pass_prefers_open_teammate_closer_to_goal_over_nearest_marked_one(monke
 
 def test_high_decisions_picks_best_option_more_often_than_low() -> None:
     def best_rate(decisions: int) -> float:
-        holder = _player(position=Vec2(PITCH_LENGTH_M - 6.0, GOAL_CENTER_Y), attributes={"Decisions": decisions})
+        holder = _player(position=Vec2(PITCH_LENGTH_M - 9.0, GOAL_CENTER_Y), attributes={"Decisions": decisions})
         mate = _player("Coequipier", position=Vec2(60.0, 20.0))
-        players = [holder, mate]
-        best = max(evaluate_options(holder, players, GOAL, None), key=lambda o: o.value).kind
+        keeper = _player("Gardien", "away", "GK", Vec2(PITCH_LENGTH_M - 1.0, GOAL_CENTER_Y))
+        players = [holder, mate, keeper]
+        best = max(evaluate_options(holder, players, GOAL, keeper), key=lambda o: o.value).kind
         random.seed(20260923)
-        return sum(choose_action(holder, players, GOAL, None).kind == best for _ in range(2000)) / 2000
+        return sum(choose_action(holder, players, GOAL, keeper).kind == best for _ in range(2000)) / 2000
 
-    # un choix nettement meilleur (tir à 6 m, deux fois la meilleure conduite) : vu par presque tous les bons
-    # décideurs ; un très mauvais décideur s'en écarte souvent, l'erreur étant calée pour que la courbe validée tienne
-    # en moyenne sur un match (ticket v2-collectif/33 ; mesuré le 04/11/2026 : 98,5 % à 95, 32 % à 20)
+    # un choix nettement meilleur (tir à 9 m face à un gardien sur sa ligne, environ 1,6 fois la meilleure conduite ;
+    # à 6 m sans gardien jusqu'au ticket v2-realisme/05e, où la chance physique d'un but vide écrasait les autres
+    # options) : vu par presque tous les bons décideurs ; un très mauvais décideur s'en écarte souvent, l'erreur étant
+    # calée pour que la courbe validée tienne en moyenne sur un match (ticket v2-collectif/33 ; mesuré le 10/11/2026 sur
+    # cette scène seule : 99,4 % à 95, 57 % à 20)
     assert best_rate(95) >= 0.95 and best_rate(95) >= best_rate(20) + 0.4
 
 
