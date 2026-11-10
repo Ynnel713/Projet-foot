@@ -671,3 +671,49 @@ Commande : `scripts/shot_calibration.py` (`scenes`, `relever`, `verifier`). Fich
 * Déterminisme : 3 matchs (2200 à 2202) joués deux fois, mêmes 136 tirs, même empreinte (`72d464c777a8`), identiques aux mêmes matchs de la série.
 
 **Reste à faire.** Courbe du 06c sur 500 matchs (§20) non relancée dans ce ticket (environ 7 h de machine) ; le contrôle sur 120 matchs ci-dessus porte sur la même chance (l'xG neutre en est la version à notes neutres).
+
+## 22. Validation des tirs : trajectoire, cadrage, contres, arrêts (ticket v2-realisme/05g, 50 matchs et scènes, 10/11/2026)
+
+Commande : `scripts/shot_calibration.py rapport` sur 50 matchs (graines 2400 à 2449, 2 383 tirs, moteur avec la réserve A1 du 05d). Fichiers `.scratch/v2-realisme/mesures/05g-*`. Aucun réglage.
+
+**Issues par distance (part des tirs).**
+
+| Distance | Tirs | But | Arrêté | À côté | Au-dessus | Dévissé | Contré |
+|---|---|---|---|---|---|---|---|
+| 0 à 8 m | 92 | 0,337 | 0,130 | 0,163 | 0,022 | 0,000 | 0,348 |
+| 8 à 12 m | 108 | 0,231 | 0,241 | 0,102 | 0,176 | 0,009 | 0,241 |
+| 12 à 16 m | 232 | 0,207 | 0,211 | 0,228 | 0,151 | 0,017 | 0,185 |
+| 16 à 20 m | 337 | 0,107 | 0,187 | 0,344 | 0,139 | 0,021 | 0,202 |
+| 20 à 25 m | 830 | 0,049 | 0,193 | 0,398 | 0,139 | 0,027 | 0,195 |
+| 25 à 30 m | 784 | 0,031 | 0,168 | 0,422 | 0,128 | 0,042 | 0,209 |
+
+Conversion décroissante avec la distance, sans exception. Par angle sous lequel le tireur voit le but : buts 0,035 (sous 15°), 0,061 (15 à 25°), 0,242 (25 à 40°), 0,325 (au-delà), croissants.
+
+**Cadrage par note (tirs non contrés ni dévissés).** En match, l'effet de la note est noyé : Finishing (surface) 0,667 [0,53 ; 0,78] sous 55 (54 tirs), 0,439 [0,36 ; 0,52] de 55 à 70, 0,500 [0,44 ; 0,56] à 70 et plus ; Long Shots (dehors) 0,302, 0,296, 0,319. Distance, angle et pression moyens identiques d'une tranche à l'autre ; le cadrage prévu tir par tir (écart du ballon, géométrie, pression) ne varie que de 0,521 à 0,547 dans la surface et de 0,314 à 0,333 dehors : environ 3 points entre tranches, sous le bruit de 50 matchs. **Scène de référence** (position fixe, 2 000 tirs, gardien neutre, `05g-scenes-note.txt`) : à 14 m face au but, 0,398 (note 25), 0,563 (60), 0,694 (95) ; à 24 m, 0,243, 0,344, 0,432, intervalles disjoints. Le mécanisme agit ; son poids en match est faible : `duel_probability` cubique et exposant 0,5 de l'exécution (28a) donnent un coefficient de 0,979 à la note 45 et 1,049 à 80, soit ± 3,5 % sur l'écart du ballon (calcul de l'expert). **Critère du ticket non tenu en match**, écart consigné. L'inversion entre [40 ; 55[ (0,681, 47 tirs) et [55 ; 70[ (0,439, 139 tirs), z ≈ 2,9, dépasse l'effet prévu : fluctuation probable, à revérifier sur un échantillon plus grand. Sensibilité des attributs de tir (constante produit) à décider avec le propriétaire au 22c.
+
+**Contres selon les défenseurs dans le cône au départ.** 0 : 0,076 [0,060 ; 0,095] (909 tirs : défenseurs qui entrent dans la trajectoire) ; 1 : 0,280 ; 2 : 0,388 ; 3 et plus : 0,50 (10 tirs). Croissant.
+
+**Arrêts des tirs cadrés selon la vitesse au gardien.** Sous 20 m/s : 0,911 ; 20 à 24 : 0,816 ; 24 à 27 : 0,527 ; 27 et plus : 0,370. Décroissant.
+
+**Écarts au réel (repères du 01c), listés sans réglage (22c).** 23,8 tirs par équipe (repère 8 à 15) ; conversion 8,6 % (10 à 11 %) ; 27,2 % de cadrés (environ 33 %) ; 68,3 % des cadrés arrêtés (environ 70 %) ; 20,8 % de contrés (20 à 28 %) ; 2,8 % de dévissés ; 6,3 corners par match (environ 10) ; 4,1 buts par match.
+
+**Corners et contres (réserve A2 du 05d).** Suite directe d'un tir contré (remise en jeu dans les 5 s, dernier toucheur défenseur) : corner 25,9 %, touche 13,3 %, sortie de but 0,4 %, en jeu 60,4 %. Corners par match : 6,3, dont 2,56 après un contre et 0,94 après un tir claqué. Selon l'angle de sortie du contre : vers l'avant (moins de 30°), 71 % de corners ; de 30 à 90°, 43 % ; renvoyé vers le tireur (plus de 90°, 53 % des contres), 7 % de corners et 85 % en jeu. **Cause** : la déviation à plat (`possession.deflect`, 05d) renvoie la moitié des contres vers le tireur ; ni le ballon contré qui monte au-dessus de la barre (hauteur, `v2-hauteur-ballon/02a`) ni l'orientation de la jambe et du corps (`v2-realisme/07a`) n'existent. Traitement à ces tickets, aucun recalage compensatoire.
+
+**Biais de 12 à 16 m (réserve A1 du 05e).** Par distance : contre prévu contre observé, chance hors contre contre buts des non contrés, écart moyen au gardien :
+
+| Distance | Contre prévu | Contrés | Chance hors contre | Buts des non contrés | Écart au gardien (m) |
+|---|---|---|---|---|---|
+| 0 à 8 m | 0,190 | 0,348 | 0,528 | 0,517 | 1,81 |
+| 8 à 12 m | 0,176 | 0,241 | 0,327 | 0,305 | 1,23 |
+| 12 à 16 m | 0,162 | 0,185 | 0,227 | 0,254 | 1,23 |
+| 16 à 20 m | 0,194 | 0,202 | 0,126 | 0,134 | 1,38 |
+| 20 à 25 m | 0,198 | 0,195 | 0,064 | 0,061 | 1,24 |
+| 25 à 30 m | 0,182 | 0,209 | 0,028 | 0,039 | 1,33 |
+
+Sur ces 50 matchs, la tranche de 12 à 16 m n'est plus surévaluée (chance de but évaluée environ 0,19, buts 0,207) : l'écart du 05e (0,191 contre 0,146 sur 494 tirs) n'est pas reproduit, il relevait de l'échantillon. L'étage le plus faux est le contre près du but : 0,19 prévu contre 0,35 observé sous 8 m (défenseurs qui arrivent au contact, gardien et défenseurs en mouvement autour du tireur) ; le tir non contré reste juste à toutes les distances (écart au plus 0,03).
+
+**Scènes de référence rejouées.** Grille du 05e, 2 000 tirs par position (`05g-scenes.txt`) : 20 positions sur 20 dans l'intervalle à 95 %.
+
+**Réserve A1 du 05d.** Contre : point de contact et déviation pris à la place du défenseur au contact (`match._blocked`) ; défenseur qui traverse l'axe à 5 m/s : ballon dévié du côté du décalage au contact (test, au moins 36 cas sur 40 ; échoue sans la correction).
+
+**Déterminisme.** 3 matchs (2400 à 2402) joués deux fois : mêmes 130 tirs, empreinte `664a9a991c15`, identiques à la série.

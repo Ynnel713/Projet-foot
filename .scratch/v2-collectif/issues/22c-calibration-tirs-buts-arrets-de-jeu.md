@@ -22,3 +22,7 @@
 - [ ] Les chiffres réels sont des indicateurs, pas des objectifs ; leviers et critères validés par le propriétaire avant le code
 - [ ] Repris du ticket 22 : courbes partagées de `attributes` ; chiffres réels sourcés, ou « non trouvé »
 - [ ] Série d'au moins 40 matchs avec dispersion rapportée ; suite V2 verte ; V1 inchangée
+
+## Reprise du v2-realisme/05g (10/11/2026)
+
+- Poids de la note de tir sur le cadrage presque nul en match : `duel_probability` cubique et exposant 0,5 de l'exécution donnent un coefficient de 0,979 (note 45) à 1,049 (note 80), ± 3,5 % sur l'écart du ballon, soit 2 à 3 points de cadrage entre tranches (50 matchs, `docs/INDICATEURS_V2.md` §22 ; net en scène aux notes extrêmes : 40 % à 69 % à 14 m de 25 à 95). Sensibilité des attributs de tir (forme de la courbe ou exposant) : constante produit, à proposer au propriétaire avec la calibration.

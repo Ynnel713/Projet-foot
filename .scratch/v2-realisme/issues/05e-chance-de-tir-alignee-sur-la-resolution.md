@@ -12,7 +12,7 @@
 
 **Bloque :** 05g, 06c.
 
-**Status:** implémenté (10/11/2026) — en attente de /valider-ticket-simulafoot
+**Status:** livré (10/11/2026), validé expert + QC
 
 ## Estimation
 
@@ -71,3 +71,4 @@ Temps machine, non compté : suite complète (environ 40 min) ; mesure 500 match
 ## Comments
 
 - 10/11/2026, passage 1 : expert APPROVED_WITH_RESERVATIONS (empreinte 2b4c7a43) ; QC VALIDÉ. Réserves : A1, biais résiduel à 12-16 m (0,191 évalué contre 0,146 observé), reporté au 05g (écart au gardien selon la distance avant tout réglage) ; A2, grille des 20 scènes non archivée, corrigée (`05e-scenes.txt`, 20 sur 20 calibrées) ; A3, phrase du ticket contredite par l'implémentation (contre), corrigée ; A4 (facultatif), docstring de `occasion_quality` et champ « hors contre » du script, corrigés. Réserves acceptées par le propriétaire : « Je valide toutes tes recommandations et les avis d'expert » (10/11/2026).
+- 10/11/2026, passage 2, clôture : expert APPROVED_WITH_RESERVATIONS (empreinte 896c5cec) ; QC VALIDÉ ; clôture VALIDÉ (journal `v2-realisme/05e/cloture`), commit `839ad1f`. A2, A3 et A4 du passage 1 levées. Réserve A1 (biais 12-16 m) reconduite, acceptée par le propriétaire (« Je valide toutes tes recommandations et les avis d'expert », 10/11/2026), reportée au 05g ; facultatif A2 du passage 2 : reports inscrits dans le ticket 05g. Statut passé à « livré » dans le commit du 05g (le ticket faisait partie des fichiers revus du 05e).

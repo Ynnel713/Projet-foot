@@ -364,11 +364,13 @@ def _blocked(ball: BallState, flight: ShotFlight, start: Vec2, end: Vec2, dt: fl
         reach = block_reach_m(flight.elapsed_s + entry * dt)
         seg = end - start
         shot = seg.normalized()
-        along = (player.position.x - start.x) * shot.x + (player.position.y - start.y) * shot.y
+        # sa place à l'instant du contact (réserve A1 de l'expert, ticket 05d, repris au 05g) : il a bougé pendant le pas
+        body = player.position - player.velocity * (dt * (1.0 - entry))
+        along = (body.x - start.x) * shot.x + (body.y - start.y) * shot.y
         closest = start + shot * min(max(along, 0.0), seg.length())  # passage au plus près du corps
         back = math.sqrt(max(0.0, reach * reach - gap * gap))
         point = start + shot * max(0.0, min(max(along, 0.0), seg.length()) - back)  # entrée dans sa portée
-        out = deflect(ball.velocity, closest, player.position, reach, TIR)
+        out = deflect(ball.velocity, closest, body, reach, TIR)
         exit_deg = math.degrees(math.acos(max(-1.0, min(1.0, out.normalized().x * shot.x + out.normalized().y * shot.y))))
         if shots is not None and flight.rank >= 0:
             shots[flight.rank] = replace(shots[flight.rank], outcome="contré", block_x=point.x, block_y=point.y,

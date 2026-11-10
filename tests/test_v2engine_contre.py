@@ -89,3 +89,34 @@ def test_the_shot_is_not_blocked_at_the_strike_any_more(monkeypatch) -> None:
     shots = []
     _step_ball(ball, 0.1, [shooter, defender], 0.0, shots=shots)
     assert shots[0].outcome == FLYING and not hasattr(match, "draw_blocker")
+
+
+def _deflected_side(monkeypatch, seed: int) -> float:
+    """Défenseur qui traverse l'axe du tir à 5 m/s vers les y croissants, à 8 m du tireur : au contact (troisième pas), il
+    est encore sous l'axe (environ -0,2 m) ; en fin de pas, il est déjà au-dessus (+0,1 m). Retourne la vitesse en y du
+    ballon contré."""
+    monkeypatch.setattr(match, "BLOCK_CHANCE", 1.0)
+    monkeypatch.setattr(match, "should_attempt_tackle", lambda aggression, dt: False)
+    monkeypatch.setattr(match, "choose_action", lambda *args: Action("shot", 1.0))
+    monkeypatch.setattr(match, "draw_shot_error", lambda *args: (0.0, 0.0))
+    shooter = _player("Buteur", "home", "BU", SHOOTER_AT)
+    defender = _player("Defenseur", "away", "DC", SHOOTER_AT + Vec2(8.0, -1.4))
+    defender.velocity = Vec2(0.0, 5.0)
+    ball = BallState(position=shooter.position, velocity=Vec2(0.0, 0.0), holder="Buteur")
+    shots = []
+    TIR.seed(seed)
+    _step_ball(ball, 0.1, [shooter, defender], 0.0, shots=shots)  # la frappe
+    for tick in range(1, 6):
+        defender.position = defender.position + defender.velocity * 0.1  # il court pendant le vol
+        _step_ball(ball, 0.1, [shooter, defender], tick * 0.1, shots=shots)
+        if shots[0].outcome != FLYING:
+            break
+    assert shots[0].outcome == "contré"
+    return ball.velocity.y
+
+
+def test_the_deflection_side_is_that_of_the_defender_at_the_contact_not_at_the_end_of_the_step(monkeypatch) -> None:
+    # réserve A1 de l'expert (ticket 05d), reprise au 05g : le ballon passe au-dessus du corps au moment du contact, il
+    # est dévié vers les y croissants, quelle que soit la place du défenseur à la fin du pas
+    sides = [_deflected_side(monkeypatch, seed) for seed in range(40)]
+    assert sum(y > 0.0 for y in sides) >= 36
