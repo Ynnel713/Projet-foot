@@ -10,7 +10,7 @@
 
 **Lien avec l'existant :** découpe (validée le 05/11/2026) de `v2-attributs-restants/02b` : exécution.
 
-**Blocked by:** 16a (Corner : placement offensif); 14b (Effet latéral du ballon (enroulé)); `v2-attributs-restants/11`.
+**Blocked by:** 16a (Corner : placement offensif); 14b (Effet latéral du ballon (enroulé)); `v2-attributs-restants/11` ; 16j (Tireurs désignés) (ajouté le 10/11/2026, audit de la roadmap).
 
 **Bloque :** 16g.
 

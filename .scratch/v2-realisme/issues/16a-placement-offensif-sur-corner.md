@@ -12,7 +12,7 @@
 
 **Blocked by:** 15a (Qui attaque la trajectoire aérienne).
 
-**Bloque :** 16b, 16d.
+**Bloque :** 16b, 16d, 16i (ajouté le 10/11/2026, audit de la roadmap).
 
 **Status:** à faire (constantes à proposer avant le code)
 

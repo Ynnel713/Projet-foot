@@ -12,7 +12,7 @@
 
 **Blocked by:** `v2-collectif/28b` (issue du tir), `v2-collectif/29` (livré).
 
-**Bloque :** 02b, 03.
+**Bloque :** 02b, 03 ; `v2-attributs-restants/10b` (ajouté le 10/11/2026, audit de la roadmap).
 
 **Status:** à faire (constantes à proposer avant le code)
 

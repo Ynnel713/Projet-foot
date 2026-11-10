@@ -8,7 +8,7 @@
 
 **Blocked by:** 01, 02 (a, b) (dépendances d'origine du ticket 03, sans doute levables) ; `v2-collectif/28b` ; `v2-realisme/18e` (calibration provisoire du gardien neutre) (ajouté le 10/11/2026, audit de la roadmap).
 
-**Bloque :** 10b (lob et dribble du gardien) ; `v2-coach-et-gestion-de-match/04` (Eccentricity alimente la montée du gardien) ; `v2-collectif/22a`.
+**Bloque :** 10b (lob et dribble du gardien) ; `v2-coach-et-gestion-de-match/04` (Eccentricity alimente la montée du gardien) ; `v2-collectif/22a` ; `v2-realisme/03l` (ajouté le 10/11/2026, audit de la roadmap).
 
 **Status:** à faire (constantes à proposer avant le code)
 

@@ -8,7 +8,7 @@
 
 **Attributs :** aucun
 
-**Blocked by:** 16b (Corner : défense en zone, individuelle ou mixte); 16c (Corner : appels et écrans); 16d (Corner : exécution (Corners)); 16e (Coup franc direct et mur); 16f (Touche longue (Long Throws)).
+**Blocked by:** 16b (Corner : défense en zone, individuelle ou mixte); 16c (Corner : appels et écrans); 16d (Corner : exécution (Corners)); 16e (Coup franc direct et mur); 16f (Touche longue (Long Throws)) ; 16i (Coup franc centré) ; 16k (Touche ordinaire) (ajouté le 10/11/2026, audit de la roadmap).
 
 **Bloque :** rien.
 

@@ -4,11 +4,11 @@
 
 **Constat vérifié :** l'écran V2 dessine des ronds et un ballon (`ui/src/components/match/V2Pitch.jsx`) ; le filet est dessiné mais fixe ; aucun joueur au sol, aucun plongeon.
 
-**What to build:** Postures tirées des seuls événements de la trace (19b) : tacle glissé et joueur au sol (04j, 12c), plongeon du gardien vers le point d'arrêt (05b), joueur à terre après une faute, filet qui se creuse au point d'entrée du ballon, d'autant plus que le ballon va vite. Aucune posture sans l'événement correspondant.
+**What to build:** Postures tirées des seuls événements de la trace (19b) : tacle glissé et joueur au sol (04j, 12c), réaction du gardien tracée au 03l (plongeon vers le point d'arrêt, contre-pied, gardien figé qui regarde passer le ballon), joueur à terre après une faute, filet qui se creuse au point d'entrée du ballon, d'autant plus que le ballon va vite. Aucune posture sans l'événement correspondant.
 
 **Attributs :** aucun
 
-**Blocked by:** `v2-realisme/19b`, `v2-realisme/04j` ; `v2-hauteur-ballon/02b`.
+**Blocked by:** `v2-realisme/19b`, `v2-realisme/04j`, `v2-realisme/03l` ; `v2-hauteur-ballon/02b`.
 
 **Bloque :** rien.
 

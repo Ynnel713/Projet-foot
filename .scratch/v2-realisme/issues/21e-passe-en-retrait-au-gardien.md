@@ -8,7 +8,7 @@
 
 **Attributs :** aucun nouveau (First Touch, Composure du gardien déjà lus par le contrôle).
 
-**Blocked by:** `v2-attributs-restants/03c` (relances) ou `v2-collectif/32a` (passe en retrait), le premier livré des deux.
+**Blocked by:** 16h ; `v2-attributs-restants/03c` (relances) ou `v2-collectif/32a` (passe en retrait), le premier livré des deux.
 
 **Bloque :** rien.
 

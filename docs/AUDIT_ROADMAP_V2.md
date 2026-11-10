@@ -13,7 +13,7 @@
 3. **L'arbitre n'existe pas : le moteur siffle la vérité.** Toute faute tirée est sifflée, le hors-jeu est jugé sur les positions réelles. Sans écart entre le fait et la décision, la VAR n'a rien à corriger. La V2 n'a **aucun ticket VAR**, ni main, ni simulation, ni passe en retrait au gardien ; la gravité d'une faute est tirée dans des parts fixes, quelle que soit l'action.
 4. **Les événements ne sont pas reliés entre eux.** La trace range les événements par type, sans identifiant ni cause. On ne peut pas vérifier une chaîne « passe en retrait → contrôle raté → but », ni synchroniser une animation avec un événement de façon fiable, ni reconnaître un but contre son camp.
 
-**Avec la roadmap révisée (22 tickets ajoutés, 11 complétés, environ 41 h de travail effectif en plus), la réponse devient oui**, à trois conditions : la façade des notes (19a) est adoptée par tous les tickets qui suivent ; la calibration finale attend les effets de la condition et les fautes hors du tacle ; l'arbitre (21a) précède les cartons.
+**Avec la roadmap révisée (22 tickets ajoutés, 11 complétés, environ 41 h de travail effectif en plus ; 28 tickets et 52 h 35 avec les compléments des §12 et §13 sur le hors-jeu, les coups de pied arrêtés et le gardien), la réponse devient oui**, à trois conditions : la façade des notes (19a) est adoptée par tous les tickets qui suivent ; la calibration finale attend les effets de la condition et les fautes hors du tacle ; l'arbitre (21a) précède les cartons.
 
 **Ce qui est déjà bon, et qu'il ne faut pas refaire** : la courbe partagée qui borne toute réussite entre 5 et 95 % ; les flux aléatoires par sous-système (D-V13) ; la fabrique de scènes et les séries longues avec intervalles de confiance ; l'xG neutre, l'xG après frappe et leur décomposition ; le tir physique (trajectoire, arrêt par portée, contre, déviation) ; un hors-jeu juste (jugé au départ de la passe, hors-jeu passif non sifflé, piège de la ligne, attaquant qui règle son appel) ; la structure par rôles ; le gardien placé.
 
@@ -86,7 +86,7 @@ Statuts : **C** couvert (livré ou ticket ouvert suffisant) · **P** partiel · 
 | Gardien : boulettes, ballon relâché, mauvaise appréciation | P | capté / repoussé / claqué selon la difficulté, gardien neutre | `v2-attributs-restants/03b` complété |
 | Gardien : relance ratée, sortie au pied, passe en retrait | A (prévu en partie) | `03c` ; règle de la passe en retrait absente | **21e** |
 | Gardien : double parade, parade réflexe | P | second ballon après repoussé (28b) ; réflexe : `03b` | — |
-| Hors-jeu : jugement, passif, piège, appel réglé | C | `v2-collectif/23`, `offside.py` | — |
+| Hors-jeu : jugement, passif, piège, appel réglé | P (corrigé au §12 : rebond après un tir, déviation contre jeu volontaire, gêne d'un adversaire) | `v2-collectif/23`, `offside.py` | **21i** |
 | Appels en arc, temporisés, dans les intervalles | P | appels dans le dos (16), délai Off the Ball (02g) | **09i** ; intervalles `09c`, `09e` |
 | Défenseur qui décroche involontairement | C | retard de ligne selon Teamwork (`bloc.py`) | — |
 | Fautes, avantage, penalty | P | fautes de tacle seulement (9,4 par match contre 21-26) ; avantage selon le danger | **21c** |
@@ -272,3 +272,53 @@ Ballon avancé (14a à 14d), coups de pied arrêtés travaillés (16), Bravery e
 - Nouveaux fichiers : `.scratch/v2-realisme/issues/19a` à `19d`, `20a` à `20g`, `21a` à `21h`, `09i` ; `.scratch/v2-mise-en-scene/issues/05`, `06` ; ce rapport.
 - Fichiers complétés (ajouts seulement, aucun texte supprimé) : voir §7.2 ; lignes « Bloque » (ou « Blocked by » pour 09h) prolongées avec la mention datée, pour que les liens soient lisibles dans les deux sens : `v2-realisme/04g`, `04i`, `04j`, `07e`, `08e`, `09h`, `11c`, `11d`, `12e`, `12f`, `13b`, `v2-attributs-restants/09a`, `v2-collectif/22b` ; `.scratch/v2-realisme/spec.md` (section 11) ; `docs/PLAN_V2.md` (paragraphe « Audit de la roadmap »).
 - Aucun ticket livré modifié ; aucun ticket supprimé ; aucun fichier de code modifié.
+
+## 12. Complément : hors-jeu et coups de pied arrêtés (10/11/2026, question du propriétaire)
+
+Relecture ciblée de `offside.py`, `restart.py` et `match.py` (`_play_restart`, `_award_offside_free_kick`, passage du tir), puis des tickets 16a à 16g, `v2-attributs-restants/02a` et `02b`. Le §3.3 classait le hors-jeu « couvert » : c'était trop rapide.
+
+**Hors-jeu.** Juste aujourd'hui : jugement au départ d'une passe (coup franc joué en passe compris), tolérance de 0,3 m, hors-jeu passif non sifflé, pas de hors-jeu sur touche, sortie de but ni corner, piège de la ligne avec retard selon Teamwork, appel réglé par Off the Ball, passeur qui lit la ligne avec une erreur selon Vision, environ 3,1 hors-jeu par match (réel 3,2 à 3,5). Absent :
+
+| Cas de la loi 11 | État vérifié | Ticket |
+|---|---|---|
+| Attaquant hors-jeu au moment d'un tir, qui reprend le ballon repoussé ou renvoyé par un poteau | A : le tir efface le signalement (`match._step_ball`, branche du tir) ; but accordé à tort | **21i** |
+| Ballon dévié par un adversaire (le hors-jeu tient) ou joué volontairement par lui (il tombe, sauf arrêt volontaire, par n'importe quel joueur) | A : non distingué (`offside.py`, « Non modélisé ») ; la déviation existe depuis 05d | **21i** |
+| Gêne d'un adversaire sans toucher le ballon (devant le gardien, ballon disputé) | A | **21i** |
+| Sanction par coup franc indirect | A : le hors-jeu rend le ballon en jeu au défenseur le plus proche (`match._award_offside_free_kick`, « coup franc indirect simplifié »), sans ballon mort ni placement ; aucune faute ne donne d'indirect | **16h** |
+
+**Coups de pied arrêtés et touches.** Aujourd'hui : chacun reste à sa place dans le bloc, les adversaires repoussés à la distance réglementaire (`restart.place`) ; le preneur est le joueur le plus proche (`restart._taker`) ; le corner et la touche sont joués comme une passe ; le coup franc est frappé ou passé par le preneur, sans mur ; le penalty est provisoire (78 %, sans attribut). Couverture par la roadmap :
+
+| Fonctionnalité | État | Tickets | Action |
+|---|---|---|---|
+| Placement offensif sur corner | A (prévu) | 16a | — |
+| Défense de corner en zone, individuelle ou mixte | A (prévu) | 16b | — |
+| Appels et écrans sur corner | A (prévu) | 16c | — |
+| Exécution du corner (zone, rentrant, sortant, court) | A (prévu) | 16d | tireur par **16j** |
+| Mur et coup franc direct | A (prévu) | 16e | tireur par **16j** |
+| Touche longue | A (prévu) | 16f | tireur par **16j** |
+| Penalty : tireur, frappe, rebond | A (prévu) | `v2-attributs-restants/02a` | tireur par **16j** ; empiètement et gardien avancé (loi 14) ajoutés au 02a |
+| Coup franc indirect (hors-jeu, passe en retrait, jeu dangereux) | A | — | **16h** |
+| Coup franc centré : placement, ligne défensive, hors-jeu | A | 16a et 16b ne traitent que le corner | **16i** |
+| Choix des tireurs (une table par équipe, mise à jour après un changement) | A | chaque ticket refaisait « le meilleur » | **16j** |
+| Touche ordinaire : appels, marquage ; remise rapide | A | — | **16k** |
+| Balle à terre après un arrêt pour soins (loi 8) | A | — | ajoutée au `v2-attributs-restants/09b` |
+| Seconds ballons, jeu aérien | A (prévu) | 15a à 15f | — |
+| Validation | A (prévu) | 16g | bloqué aussi par 16i et 16k |
+
+**Nouveaux tickets (5, 9 h 25)** : `v2-realisme/21i` hors-jeu, cas de la loi 11 absents (P1, 2 h, dépend de 19b, 21a, 16h) ; `16h` coup franc indirect, le hors-jeu en vraie remise en jeu (P2, 2 h 10, prêt) ; `16i` coup franc centré (P2, 2 h, dépend de 16a, 16b, 16e, 16h) ; `16j` tireurs désignés (P2, 1 h 30, prêt) ; `16k` touche ordinaire et remise rapide (P2, 1 h 45, prêt). Liens réciproques ajoutés, avec la mention datée, dans 16a, 16b, 16d, 16e, 16f, 16g, `v2-attributs-restants/02a` et `09b` (tous à faire), et dans les tickets ouverts 19b, 21a, 21e, 21g (créés au premier passage de l'audit).
+
+**Totaux après ce complément** : 27 tickets, 50 h 35 de travail effectif (P0 4 tickets, 7 h 40 ; P1 12 tickets, 22 h 05 ; P2 9 tickets, 16 h 50 ; P3 2 tickets, 4 h).
+
+**Ordre** : 16h et 16j peuvent partir tout de suite (16j avant le penalty `02a`) ; 21i après 21a ; 16i et 16k avec le lot des coups de pied arrêtés, avant la validation 16g.
+
+## 13. Complément : le gardien battu sans plonger, et le dribble du gardien (10/11/2026, question du propriétaire)
+
+**Un gardien peut-il encaisser sans plonger, pris à contre-pied ou figé sur une frappe parfaite ?** Dans le résultat, oui : depuis le tir physique (05b, 05h), le but est marqué quand l'écart entre le ballon et le gardien dépasse sa portée au passage du ballon (1 m sans plonger, puis 3 m/s après 0,30 s, jusqu'à 2,8 m ; `shooting.keeper_reach_m`). Une lucarne opposée à bout portant est donc imparable. Mais le gardien n'a aucune décision : il ne devine jamais un côté, il ne peut pas partir du mauvais côté (sauf sa vitesse au moment du tir, prévue au 03f), et rien ne distingue « il plonge et ne l'a pas » de « il ne bouge pas » : la trace ne garde que l'écart et le temps de vol. La tête croisée à bout portant n'existe pas encore (jeu aérien, 15a à 15c). **Nouveau ticket `v2-realisme/03l`** (P1, 2 h) : anticipation d'un côté selon la lecture du tireur (Anticipation pour la justesse, Eccentricity pour la tendance à partir tôt), contre-pied qui réduit la portée de l'autre côté, gardien figé quand le ballon arrive avant sa réaction ou qu'il est pris à contre-pied ou masqué, plongeon en vain sinon (décision sur ce qu'il perçoit au départ du tir) ; réaction tracée et montrée à l'écran (`v2-mise-en-scene/05`, complété).
+
+**Un dribbleur peut-il éliminer le gardien en face-à-face, avec une faute possible (penalty, expulsion) ?** Partiellement, et pas avec les bons attributs. Le dribble du gardien n'existe que comme une conduite ordinaire autour de lui ; le gardien, s'il est à portée du porteur, intervient avec le tacle des joueurs de champ (tentative selon Aggression, réussite selon Tackling, faute environ 30 % des tacles). Une faute dans la surface donne déjà un penalty, mais sans carton (cartons : `v2-attributs-restants/09a`). Le ticket `v2-attributs-restants/10b` (lob et dribble du gardien, après la calibration finale) prévoyait le dribble par Dribbling contre One on Ones, sans la faute. **Complété** : intervention du gardien par One on Ones (et Bravery, 17b) au lieu de Tackling et Aggression ; faute du gardien sanctionnée selon `v2-realisme/21b` (jaune dans la surface s'il tente de jouer le ballon, rouge sinon ; rouge hors de la surface) ; finition après le dribble encore incertaine (but vide, angle fermé, défenseur sur la ligne). Bloqué aussi par 21b.
+
+**Le piqué par-dessus le gardien en face-à-face** (ajout du propriétaire) : prévu au même ticket `v2-attributs-restants/10b` comme un lob générique ; **précisé** comme une option de plus dans le choix de la finition (10a), jamais imposée : intéressant surtout quand le gardien sort ou se couche tôt (03l, 03e) ; réussite selon Technique et Composure ; Flair et « Likes To Lob Keeper » ne changent que la fréquence ; ratés physiques (trop long, trop court, à côté) avec la hauteur du ballon (`v2-hauteur-ballon/02a`) et la portée du gardien (05b) ; fréquence rare, rapportée sur 500 matchs sans réglage. 10b dépend aussi de 03l et de `v2-hauteur-ballon/02a`.
+
+Liens ajoutés, avec la mention datée : 03f et `v2-attributs-restants/03b` bloquent 03l ; `v2-mise-en-scene/05` dépend de 03l.
+
+**Totaux après les compléments des §12 et §13** : 28 tickets, 52 h 35 (P0 4 tickets, 7 h 40 ; P1 13 tickets, 24 h 05 ; P2 9 tickets, 16 h 50 ; P3 2 tickets, 4 h).

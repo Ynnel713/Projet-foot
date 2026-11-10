@@ -12,7 +12,7 @@
 
 **Blocked by:** 01f (Fabrique de scènes de test partagée).
 
-**Bloque :** 04h, 07b, 07c, 07e, 07f, 08a, 11d, `v2-collectif/31`.
+**Bloque :** 04h, 07b, 07c, 07e, 07f, 08a, 11d, `v2-collectif/31`, 03l (ajouté le 10/11/2026, audit de la roadmap).
 
 **Status:** à faire (constantes à proposer avant le code)
 

@@ -24,3 +24,7 @@
 ## Complément de l'audit de la roadmap (10/11/2026)
 
 Source : `docs/AUDIT_ROADMAP_V2.md`. Ce ticket garde la blessure sur contact. La blessure sans contact selon la charge, le joueur touché qui continue diminué et les crampes vont au `v2-realisme/20g`. La capacité réduite d'un blessé passe par la façade de la condition (`v2-realisme/19a`). Un joueur frais peut se blesser, un joueur fatigué peut finir sans blessure : la fatigue augmente le risque, elle ne le déclenche pas.
+
+Complément hors-jeu et coups de pied arrêtés (10/11/2026) : quand le jeu est arrêté pour des soins sans faute, il reprend par une balle à terre (loi 8) : ballon rendu au gardien si l'arrêt a lieu dans la surface, sinon à un joueur de l'équipe qui avait le ballon, adversaires à 4 m.
+
+- [ ] Reprise par balle à terre après un arrêt pour soins sans faute (scène)

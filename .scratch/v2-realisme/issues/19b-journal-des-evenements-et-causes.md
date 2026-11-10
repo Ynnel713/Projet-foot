@@ -14,7 +14,7 @@
 
 **Blocked by:** 05e (en cours, `match.py` partagé) ; 01f.
 
-**Bloque :** 18a ; 20d ; 21a, 21g ; `v2-mise-en-scene/05`, `06`. Alimente `v2-mise-en-scene/02` sans le bloquer.
+**Bloque :** 18a ; 20d ; 21a, 21g, 21i ; `v2-mise-en-scene/05`, `06`. Alimente `v2-mise-en-scene/02` sans le bloquer.
 
 **Status:** à faire
 

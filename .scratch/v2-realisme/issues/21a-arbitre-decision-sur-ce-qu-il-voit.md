@@ -10,7 +10,7 @@
 
 **Blocked by:** 19b.
 
-**Bloque :** 21d, 21f, 21g ; `v2-mise-en-scene/06` ; recommandé avant `v2-attributs-restants/09a`.
+**Bloque :** 21d, 21f, 21g, 21i ; `v2-mise-en-scene/06` ; recommandé avant `v2-attributs-restants/09a`.
 
 **Status:** à faire (constantes à proposer avant le code)
 

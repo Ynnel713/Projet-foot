@@ -10,7 +10,7 @@
 
 **Blocked by:** 11d, 04j.
 
-**Bloque :** `v2-attributs-restants/09a` ; 21c ; 21h.
+**Bloque :** `v2-attributs-restants/09a` ; 21c ; 21h ; `v2-attributs-restants/10b` (ajouté le 10/11/2026, audit de la roadmap).
 
 **Status:** à faire (constantes à proposer avant le code)
 

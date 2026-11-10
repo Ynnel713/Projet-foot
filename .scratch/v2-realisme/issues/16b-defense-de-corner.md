@@ -12,7 +12,7 @@
 
 **Blocked by:** 16a (Corner : placement offensif); 10f (Défense de la surface : premier poteau, second poteau, point de penalty, retrait); 13a (Consignes d'équipe : lecture des styles et structure neutre).
 
-**Bloque :** 16c, 16g.
+**Bloque :** 16c, 16g, 16i (ajouté le 10/11/2026, audit de la roadmap).
 
 **Status:** à faire (constantes à proposer avant le code)
 

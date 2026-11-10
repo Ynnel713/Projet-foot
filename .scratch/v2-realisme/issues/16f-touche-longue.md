@@ -10,7 +10,7 @@
 
 **Lien avec l'existant :** découpe (validée le 05/11/2026) de `v2-attributs-restants/02b` : touches longues.
 
-**Blocked by:** 15a (Qui attaque la trajectoire aérienne).
+**Blocked by:** 15a (Qui attaque la trajectoire aérienne) ; 16j (Tireurs désignés) (ajouté le 10/11/2026, audit de la roadmap).
 
 **Bloque :** 16g.
 

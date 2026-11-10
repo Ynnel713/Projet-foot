@@ -8,7 +8,7 @@
 
 **Attributs :** aucun
 
-**Blocked by:** 21a, 21d, 21f, 19b ; `v2-attributs-restants/09a`.
+**Blocked by:** 21a, 21d, 21f, 21i, 19b ; `v2-attributs-restants/09a`.
 
 **Bloque :** 21h. Alimente `v2-mise-en-scene/02` (moments VAR) sans le bloquer.
 

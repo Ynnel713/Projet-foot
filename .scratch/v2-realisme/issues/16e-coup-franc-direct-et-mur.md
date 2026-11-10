@@ -10,9 +10,9 @@
 
 **Lien avec l'existant :** découpe (validée le 05/11/2026) de `v2-attributs-restants/02b` : coup franc direct.
 
-**Blocked by:** 05b (Arrêt : le gardien atteint ou non le ballon); 14b (Effet latéral du ballon (enroulé)); `v2-collectif/35a`.
+**Blocked by:** 05b (Arrêt : le gardien atteint ou non le ballon); 14b (Effet latéral du ballon (enroulé)); `v2-collectif/35a` ; 16j (Tireurs désignés) (ajouté le 10/11/2026, audit de la roadmap).
 
-**Bloque :** 16g.
+**Bloque :** 16g, 16i (ajouté le 10/11/2026, audit de la roadmap).
 
 **Status:** à faire (constantes à proposer avant le code)
 

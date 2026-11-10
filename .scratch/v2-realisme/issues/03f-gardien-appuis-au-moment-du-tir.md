@@ -10,7 +10,7 @@
 
 **Blocked by:** 03b (Gardien : placement sur la bissectrice ballon-poteaux); 05b (Arrêt : le gardien atteint ou non le ballon).
 
-**Bloque :** rien.
+**Bloque :** 03l (ajouté le 10/11/2026, audit de la roadmap).
 
 **Status:** à faire (constantes à proposer avant le code)
 

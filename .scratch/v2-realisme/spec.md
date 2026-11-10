@@ -362,3 +362,18 @@ Rapport : `docs/AUDIT_ROADMAP_V2.md`. Aucun code modifié, aucun ticket livré m
 
 Hors de ce tableau : `v2-mise-en-scene/05` (gestes visibles, P3, 2 h) et `06` (réactions des joueurs, P3, 2 h).
 Total du complément : 22 tickets, 41 h 10 (P0 7 h 40 ; P1 20 h 05 ; P2 9 h 25 ; P3 4 h).
+
+## 12. Complément : hors-jeu et coups de pied arrêtés (10/11/2026)
+
+Rapport : `docs/AUDIT_ROADMAP_V2.md` §12. 5 tickets, 9 h 25.
+
+| Ticket | Titre | Prio | Catégorie | Estimation | Confiance | Dépend de |
+|---|---|---|---|---|---|---|
+| 21i | Hors-jeu : rebond après un tir, déviation contre jeu volontaire, gêne d'un adversaire | P1 | arbitrage | 2 h | moyenne | 19b, 21a, 16h |
+| 16h | Coup franc indirect : distinguer direct et indirect, hors-jeu en vraie remise en jeu | P2 | arbitrage | 2 h 10 | moyenne | v2-collectif/30 (livré) |
+| 16i | Coup franc centré : placement des deux équipes, ligne défensive et hors-jeu | P2 | placement | 2 h | moyenne | 16a, 16b, 16e, 16h |
+| 16j | Tireurs désignés : une table par équipe | P2 | données | 1 h 30 | élevée | v2-collectif/29 (livré) |
+| 16k | Touche ordinaire : appels, marquage et remise rapide | P2 | placement | 1 h 45 | moyenne | v2-collectif/29, 02g (livrés) |
+| 03l | Gardien : anticiper le côté, être pris à contre-pied, rester figé sur un tir imparable | P1 | décision | 2 h | moyenne | 03f, 07a, v2-attributs-restants/03b |
+
+03l vient du §13 de l'audit (complément gardien). Total des compléments du 10/11/2026 : 28 tickets, 52 h 35 (P0 7 h 40 ; P1 24 h 05 ; P2 16 h 50 ; P3 4 h).
