@@ -17,6 +17,7 @@ import math
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 
+from v2engine.condition import effective_rating
 from v2engine.ball_state import BallState
 from v2engine.cerveau import OPPONENT_GOAL
 from v2engine.geometry import Vec2
@@ -56,7 +57,7 @@ def _ball_path(ball: BallState) -> list[tuple[float, float, Vec2]]:
 
 def _arrival_s(player: PlayerState, point: Vec2) -> float:
     """Temps pour toucher le ballon en `point`, à sa vitesse max, sans temps de réaction (`anticipation.meeting_point`)."""
-    return max(0.0, player.position.distance_to(point) - TOUCH_M) / max_speed_mps(player.pace)
+    return max(0.0, player.position.distance_to(point) - TOUCH_M) / max_speed_mps(effective_rating(player, "Pace"))
 
 
 def reach_probability(player: PlayerState, ball: BallState, opponents: list[PlayerState]) -> tuple[float, Vec2 | None]:

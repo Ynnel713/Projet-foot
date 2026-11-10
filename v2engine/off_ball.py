@@ -11,7 +11,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import replace
 
-from v2engine.attributes import player_attribute, success_probability
+from v2engine.attributes import success_probability
+from v2engine.condition import effective_rating
 from v2engine.flux import DECISION, PLACEMENT
 from v2engine.geometry import PITCH_LENGTH_M, Vec2, clamp_to_pitch
 from v2engine.movement import PlayerState
@@ -65,7 +66,7 @@ def call_delay_s(off_the_ball: float) -> float:
 
 def player_call_delay_s(player: PlayerState) -> float:
     """`call_delay_s` de la note d'Off the Ball du joueur."""
-    return call_delay_s(player_attribute(player, "Off the Ball"))
+    return call_delay_s(effective_rating(player, "Off the Ball"))
 
 
 def best_space_probability(off_the_ball: float) -> float:
@@ -76,12 +77,12 @@ def depth_run_probability(runner: PlayerState, holder: PlayerState) -> float:
     """Chance qu'un coureur tente l'appel dans le dos : sa volonté (Off the Ball) fois la capacité du porteur à
     l'exploiter (Vision, puis Passing). Un porteur faible fait renoncer même un excellent coureur (ticket 16)."""
     baseline, amplitude, low, high = _DEPTH_RUN
-    will = success_probability(player_attribute(runner, "Off the Ball"), baseline=baseline, amplitude=amplitude,
+    will = success_probability(effective_rating(runner, "Off the Ball"), baseline=baseline, amplitude=amplitude,
                                min_prob=low, max_prob=high)
     baseline, amplitude, low, high = _EXPLOIT
-    sees = success_probability(player_attribute(holder, "Vision"), baseline=baseline, amplitude=amplitude,
+    sees = success_probability(effective_rating(holder, "Vision"), baseline=baseline, amplitude=amplitude,
                                min_prob=low, max_prob=high)
-    delivers = success_probability(player_attribute(holder, "Passing"), baseline=baseline, amplitude=amplitude,
+    delivers = success_probability(effective_rating(holder, "Passing"), baseline=baseline, amplitude=amplitude,
                                    min_prob=low, max_prob=high)
     return will * sees * delivers
 
@@ -118,7 +119,7 @@ def choose_space(player: PlayerState, opponents: list[PlayerState], forward: flo
     écarté, sauf s'il n'en reste aucun ; un espace trouvable par une passe de `holder` passe avant les autres
     (ticket v2-collectif/06). Puis un espace vaut sa distance à l'adversaire le plus proche ; à égalité, le plus
     avancé gagne."""
-    radius = search_radius_m(player_attribute(player, "Off the Ball"))
+    radius = search_radius_m(effective_rating(player, "Off the Ball"))
     origin = player.home_target if anchor is None else anchor
     candidates = [
         clamp_to_pitch(origin + Vec2(forward * fx * radius, ly * radius))
@@ -135,6 +136,6 @@ def choose_space(player: PlayerState, opponents: list[PlayerState], forward: flo
         return reachable, nearest + 0.01 * forward * point.x
 
     ranked = sorted(candidates, key=openness, reverse=True)
-    if DECISION.random() < best_space_probability(player_attribute(player, "Off the Ball")) or len(ranked) == 1:
+    if DECISION.random() < best_space_probability(effective_rating(player, "Off the Ball")) or len(ranked) == 1:
         return ranked[0]
     return DECISION.choice(ranked[1:])

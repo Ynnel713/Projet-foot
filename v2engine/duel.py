@@ -9,7 +9,8 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
-from v2engine.attributes import duel_probability, player_attribute, success_probability
+from v2engine.attributes import duel_probability, success_probability
+from v2engine.condition import effective_rating
 from v2engine.flux import ARBITRAGE, DUEL
 from v2engine.movement import PlayerState
 
@@ -60,8 +61,8 @@ def tackle_success_probability(tackler: PlayerState, holder: PlayerState) -> flo
     Aggression règle déjà la fréquence des tentatives et le risque de faute : pas de double comptage, règle R1 de
     docs/CARTE_ATTRIBUTS_V2.md, ticket v2-collectif/18), Strength/Balance côté porteur (guide : Strength "gagne les
     duels, protège le ballon dos au but" ; Balance "conduit le ballon en étant poussé")."""
-    tackler_rating = player_attribute(tackler, "Tackling")
-    holder_resistance = (player_attribute(holder, "Strength") + player_attribute(holder, "Balance")) / 2.0
+    tackler_rating = effective_rating(tackler, "Tackling")
+    holder_resistance = (effective_rating(holder, "Strength") + effective_rating(holder, "Balance")) / 2.0
     return duel_probability(tackler_rating, holder_resistance)
 
 
@@ -81,5 +82,5 @@ def resolve_tackle(tackler: PlayerState, holder: PlayerState) -> TackleResult:
     même à écart d'attributs extrême (règle "jamais binaire" du guide, voir `duel_probability`). Une faute annule le
     gain du ballon."""
     won = DUEL.random() < tackle_success_probability(tackler, holder)
-    foul = DUEL.random() < foul_probability(player_attribute(tackler, "Aggression"))
+    foul = DUEL.random() < foul_probability(effective_rating(tackler, "Aggression"))
     return TackleResult(won=won and not foul, foul=foul)

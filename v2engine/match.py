@@ -17,7 +17,7 @@ from ligue1sim.clubs import Club
 from ligue1sim.lineup import Lineup, pick_best_formation
 from ligue1sim.pitch_geometry import GOAL_HEIGHT_M, GOAL_WIDTH_M
 
-from v2engine.attributes import player_attribute
+from v2engine.condition import effective_rating, intrinsic_rating
 from v2engine.anticipation import pass_readers, reaction_delay_s
 from v2engine.ball_state import BallState, ShotFlight
 from v2engine.bloc import Bloc
@@ -101,9 +101,9 @@ def _build_players(lineup: Lineup, team: str, positions: dict[str, Vec2]) -> lis
                 poste=player.poste,
                 position=pos,
                 velocity=Vec2(0.0, 0.0),
-                pace=player_attribute(player, "Pace"),
-                acceleration=player_attribute(player, "Acceleration"),
-                stamina=player_attribute(player, "Stamina"),
+                pace=intrinsic_rating(player, "Pace"),
+                acceleration=intrinsic_rating(player, "Acceleration"),
+                stamina=intrinsic_rating(player, "Stamina"),
                 home_target=pos,
                 radius_m=PLAYER_RADIUS_M,
                 attributes=player.attributes,
@@ -517,7 +517,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                       if p.name not in ball.engaged and ball.tackle_ban_until_s.get(p.name, 0.0) <= now_s
                       and ball.offside_out_until.get(p.name, 0.0) <= now_s]  # le fautif recule, il ne défend pas
         challenger = _nearest_opponent_in_range(holder, candidates, TACKLE_RADIUS_M)
-        if challenger is not None and should_attempt_tackle(player_attribute(challenger, "Aggression"), dt):
+        if challenger is not None and should_attempt_tackle(effective_rating(challenger, "Aggression"), dt):
             ball.engaged.add(challenger.name)
             result = resolve_tackle(challenger, holder)
             if not result.won:
@@ -662,7 +662,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                 # « Play the whistle » : les défenseurs qui voient le drapeau lèvent la main et attendent (ils ne
                 # s'arrêtent pas : le moteur ne siffle qu'au contact du ballon).
                 for opponent in opponents:
-                    if PERCEPTION.random() < sees_the_flag_probability(player_attribute(opponent, "Anticipation")):
+                    if PERCEPTION.random() < sees_the_flag_probability(effective_rating(opponent, "Anticipation")):
                         ball.hesitation[opponent.name] = now_s + HESITATION_S
         else:
             ball.velocity = Vec2(0.0, 0.0)  # conduite : le ballon suit le porteur (voir `simulate_match`)

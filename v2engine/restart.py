@@ -21,7 +21,7 @@ from dataclasses import dataclass
 
 from ligue1sim.pitch_geometry import PENALTY_SPOT_DISTANCE_M
 
-from v2engine.attributes import player_attribute
+from v2engine.condition import effective_rating
 from v2engine.decision import best_choice_probability
 from v2engine.flux import DECISION
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, in_penalty_area
@@ -181,7 +181,7 @@ def restart_target(taker: PlayerState, kind: str, players: list[PlayerState]) ->
         return pass_success_probability(taker, mate, opponents) * (1.0 - pressure(mate, opponents)) * progress
 
     ranked = sorted(mates, key=value, reverse=True)
-    if len(ranked) == 1 or DECISION.random() < best_choice_probability(player_attribute(taker, "Decisions")):
+    if len(ranked) == 1 or DECISION.random() < best_choice_probability(effective_rating(taker, "Decisions")):
         return ranked[0]
     return DECISION.choice(ranked[1:])
 

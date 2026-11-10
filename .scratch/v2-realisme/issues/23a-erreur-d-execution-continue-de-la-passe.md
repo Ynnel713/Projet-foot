@@ -20,15 +20,17 @@ La chance de passe (`pass_success_probability`) doit rester alignée sur la nouv
 
 | Poste | Durée |
 |---|---|
-| Analyse et compréhension du code | 30 min |
-| Développement | 45 min |
-| Tests unitaires et comportementaux | 40 min |
-| Intégration et vérifications | 35 min |
-| **Total (travail effectif)** | **2 h 30** |
+| Analyse et compréhension du code | 35 min |
+| Développement | 1 h 30 |
+| Tests unitaires et comportementaux | 45 min |
+| Intégration et vérifications | 40 min |
+| **Total (travail effectif)** | **3 h 30** |
 
 Confiance : moyenne. Hypothèses : `19a` livré (lecture par la façade) ; l'alignement de la chance de décision réutilise la méthode du `05e` (`scripts/shot_calibration.py` adapté) ; écarts proposés à valider : direction σ ≈ 2° à Passing 99 et ≈ 8° à 11 sans pression, vitesse σ = a/√3 de l'erreur uniforme actuelle `_DOSAGE_ERROR` (environ 17 % à Passing 11, 2,9 % à 99) ; chiffre réel cherché, « non trouvé » sinon.
 
 **Estimation révisée (10/11/2026, avant le code)** : 2 h 30 au lieu de 2 h 00 (+ 30 min : six lecteurs de la chance de passe à aligner et remises en jeu à mesurer, réserve A1). Au-delà du seuil indicatif de 2 h, examiné pour découpage : non découpé, car aligner la décision dans un ticket séparé laisserait deux modèles de passe dans le moteur entre les deux livraisons.
+
+**Estimation révisée (10/11/2026, réserve A1 de la revue `backlog-v2/erreur-execution-continue-reserves`)** : 3 h 30 au lieu de 2 h 30. Les tickets du tir les plus proches ont pris 170 min (35b, erreur continue) et 220 min (05e, alignement de la décision) ; le développement passe de 45 min à 1 h 30 (construire une chance de passe qui reproduit une réussite décidée par la physique). L'expert recommandait un découpage en 23a1 et 23a2 ; le propriétaire a choisi de garder un seul ticket (« Garde le seul », 10/11/2026), écart au seuil de 2 h assumé.
 Temps machine, non compté : suite complète (environ 40 min) ; mesure 50 matchs avant / après.
 
 ## Tests

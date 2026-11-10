@@ -50,7 +50,8 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from v2engine.attributes import player_attribute, success_probability
+from v2engine.attributes import success_probability
+from v2engine.condition import effective_rating
 from v2engine.flux import DECISION, PERCEPTION
 from v2engine.geometry import PITCH_LENGTH_M, Vec2
 from v2engine.movement import PlayerState
@@ -180,7 +181,7 @@ def keep_onside_probability(off_the_ball: float) -> float:
 
 def respects_the_line(player: PlayerState) -> bool:
     """Tirage : cet attaquant respecte-t-il la ligne du hors-jeu sur cet appel ?"""
-    return DECISION.random() < keep_onside_probability(player_attribute(player, "Off the Ball"))
+    return DECISION.random() < keep_onside_probability(effective_rating(player, "Off the Ball"))
 
 
 def clamp_to_onside(team: str, point: Vec2, line: float, margin: float = ONSIDE_MARGIN_M) -> Vec2:

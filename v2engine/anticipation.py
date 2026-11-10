@@ -8,7 +8,8 @@ from __future__ import annotations
 
 import math
 
-from v2engine.attributes import player_attribute, success_probability
+from v2engine.attributes import success_probability
+from v2engine.condition import effective_rating
 from v2engine.flux import PERCEPTION
 from v2engine.geometry import Vec2, clamp_to_pitch
 from v2engine.movement import PlayerState, max_speed_mps
@@ -33,7 +34,7 @@ MAX_REACTION_S = _REACTION_S[3]
 def reaction_delay_s(player: PlayerState) -> float:
     """Temps pour qu'un joueur se rende compte d'un changement de situation de son équipe (perte, récupération)."""
     _, _, low, high = _REACTION_S
-    return low + high - _curve(player_attribute(player, "Anticipation"), _REACTION_S)
+    return low + high - _curve(effective_rating(player, "Anticipation"), _REACTION_S)
 
 
 def read_pass_probability(anticipation: float) -> float:
@@ -62,9 +63,9 @@ def pass_readers(start: Vec2, velocity: Vec2, aim: Vec2, opponents: list[PlayerS
         point = start + direction * along
         if opponent.position.distance_to(point) > READING_LANE_M:
             continue
-        if opponent.position.distance_to(point) / max_speed_mps(opponent.pace) > along / speed:
+        if opponent.position.distance_to(point) / max_speed_mps(effective_rating(opponent, "Pace")) > along / speed:
             continue
-        if PERCEPTION.random() < read_pass_probability(player_attribute(opponent, "Anticipation")):
+        if PERCEPTION.random() < read_pass_probability(effective_rating(opponent, "Anticipation")):
             readers[opponent.name] = point
     return readers
 
@@ -74,7 +75,7 @@ def loose_ball_target(player: PlayerState, ball_position: Vec2, ball_velocity: V
     `friction_per_s` par seconde : il parcourt encore v / -ln(f)), selon Anticipation."""
     stop = ball_position + ball_velocity * (1.0 / -math.log(friction_per_s))
     # borné au terrain : au-delà de la ligne, le ballon est sorti (ticket v2-collectif/29)
-    return clamp_to_pitch(ball_position + (stop - ball_position) * loose_ball_lead(player_attribute(player, "Anticipation")))
+    return clamp_to_pitch(ball_position + (stop - ball_position) * loose_ball_lead(effective_rating(player, "Anticipation")))
 
 
 def meeting_point(player: PlayerState, ball_position: Vec2, ball_velocity: Vec2, friction_per_s: float) -> Vec2:
@@ -82,7 +83,7 @@ def meeting_point(player: PlayerState, ball_position: Vec2, ball_velocity: Vec2,
     atteindre le plus tôt, à sa vitesse de pointe -- là où un receveur vient couper le ballon (ticket
     v2-socle/01). S'il ne peut l'atteindre nulle part en route, son point d'arrêt."""
     log_f = math.log(friction_per_s)
-    speed = max_speed_mps(player.pace)
+    speed = max_speed_mps(effective_rating(player, "Pace"))
     t = 0.0
     while t < 4.0:  # au-delà, le ballon est quasiment arrêté (il a parcouru 87 % de sa course à 0,6/s)
         point = ball_position + ball_velocity * ((friction_per_s**t - 1.0) / log_f)

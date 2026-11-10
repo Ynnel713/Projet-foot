@@ -16,7 +16,7 @@
 
 **Bloque :** 18a ; 20a, 20b, 20f, 20g ; 23a (ajouté le 10/11/2026) ; par convention, tout ticket qui lit une note après lui.
 
-**Status:** à faire
+**Status:** livré (10/11/2026), validé expert + QC
 
 ## Estimation
 
@@ -46,3 +46,10 @@ Temps machine, non compté : suite complète (environ 40 min) ; 20 matchs à gra
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+
+## Comments
+
+- 10/11/2026, implémentation : `v2engine/condition.py` (`effective_rating`, `intrinsic_rating`, `PlayerCondition` vide porté par `PlayerState`, `FAMILIES` d'après les sections A à D de la carte). Toutes les lectures de notes de `v2engine/` passent par la façade : 50 appels de `player_attribute` dans 11 modules (dont 3 de chargement dans `match.py`) et 9 lectures des champs `.pace` / `.acceleration` (anticipation, bloc, decision, defense, occasion) ; chargement des joueurs par `intrinsic_rating` (`match.py`) ; seul `movement.step` lit encore les champs (chemin chaud). Garde : `tests/test_v2engine_condition.py` (9 tests). Garde du rayon (`tests/test_v2engine_rayon_attributs.py`) adaptée : elle compte les appels de la façade ; les capacités physiques passent de `PHYSICAL_ALLOWED` à `ALLOWED` ; dérogation ajoutée pour le temps d'arrivée Pace + Acceleration de `defense.arrival_time_s` (somme de deux capacités en secondes, déjà présente, invisible tant qu'elle lisait les champs). Bancs : `scripts/measure_v2.py` force les notes en patchant `condition.player_attribute` (inchangé : il patche tout module qui l'expose) ; `scripts/measure_v2_decisions.py` patche désormais `condition.player_attribute`, donc une note forcée vaut dans tout le moteur et non plus dans trois modules. Règle R6 ajoutée à `docs/CARTE_ATTRIBUTS_V2.md`.
+- Mesures : 20 matchs à graine fixée (`AUDIT_SEED + k`, k = 0 à 19), empreinte sha256 de la trace : **20 sur 20 identiques avant et après** (`.scratch/v2-realisme/mesures/19a-empreintes-avant.txt`, `-apres.txt`) ; match 0 rejoué deux fois avant : même empreinte (déterminisme). Suite complète : 2 655 passés, 14 désélectionnés (2 646 + 9) (`19a-suite.txt`).
+- Durée : estimée 140 min, réelle environ 125 min (analyse 25, développement 45, tests 35, intégration 20 ; estimée, non chronométrée), − 11 %. Temps machine hors total : 2 × 8 min d'empreintes, 19 min de suite.
+- 10/11/2026, clôture : expert APPROVED_WITH_RESERVATIONS, QC VALIDÉ, clôture VALIDÉ. Réserves acceptées par délégation du propriétaire (« Considère que je valide automatiquement toutes tes recommandations et celles des experts », 05/11/2026) : A1, hunks 19a de la carte, du ticket et du registre commités avec le code (suivi documentaire admis par le verrou, vérifié sans hunk étranger) ; A2, puce de la garde remise à sa place. À surveiller : le premier ticket qui module Pace, Acceleration ou Stamina (12e, 20e, 20g) fait lire `movement.step` par le même accesseur que `effective_rating` (R5) ; `measure_v2_decisions` force désormais les notes dans tout le moteur.

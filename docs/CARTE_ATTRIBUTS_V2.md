@@ -120,15 +120,18 @@ Chaque paire ci-dessous se combine, mais chaque attribut garde son rayon.
 | R3 | **Un attribut modulateur n'agit que dans sa condition**, en réduisant un facteur de difficulté : Composure (pression), Concentration (fatigue, après un but), Determination (score défavorable). | Sans pression, Composure ne change rien. |
 | R4 | **Les effets indirects ne visent que les coéquipiers** : Leadership, Communication. | Leadership aide la coordination, pas la précision de ses propres passes. |
 | R5 | **Le physique est une capacité**, utilisée partout où le joueur se déplace ou doit arriver à temps ; ce n'est pas un bonus supplémentaire. | Pace sert à la course et au test « peut-il couper la passe ? » : c'est la même vitesse. |
+| R6 | **Une note se lit par la façade** `condition.effective_rating` (ticket v2-realisme/19a, 10/11/2026) : la note intrinsèque ne change jamais, seule son expression pourra dépendre de l'état du joueur (fatigue, forme, coup reçu, tickets 20). `attributes.player_attribute` est réservé à la façade, `condition.intrinsic_rating` au chargement des joueurs, les champs `.pace`, `.acceleration`, `.stamina` à `movement.step`. Chaque attribut a sa famille (physique, mental, technique, gardien : sections A à D ci-dessus). | Un ticket qui lit une note passe par la façade ; un effet de la fatigue se branche à un seul endroit. |
 
 **Plafond d'écart.** Entre 99 et 11, l'écart mesuré sur un indicateur reste dans la fourchette réelle quand elle est connue (test de profils, `scripts/measure_v2.py --profil`).
 
 **Garde automatique.** `tests/test_v2engine_rayon_attributs.py` analyse l'arbre syntaxique du moteur. Il échoue si :
 - un attribut est lu hors des modules de son rayon, ou avec un nom non littéral ;
 - une note est lue directement dans `.attributes` hors de `attributes.py` ;
-- une capacité physique (`.pace`, `.acceleration`, `.stamina`) est lue hors des modules qui en ont besoin (R5) ;
-- un calcul combine des notes de plusieurs attributs hors des dérogations listées (A3, A8 ; A2 levée au ticket 28a) ;
+- une capacité physique (`.pace`, `.acceleration`, `.stamina`) est lue par son champ hors de `movement.py` (R5, R6 : ailleurs, par la façade) ;
+- un calcul combine des notes de plusieurs attributs hors des dérogations listées (A3, A8, temps d'arrivée Pace + Acceleration ; A2 levée au ticket 28a) ;
 - une entrée de la liste devient périmée (dérogation levée sans mise à jour).
+
+`tests/test_v2engine_condition.py` échoue si une note est lue hors de la façade (R6).
 
 Limite connue : un mélange qui passe par des variables intermédiaires n'est pas détecté ; la grille de relecture le couvre.
 

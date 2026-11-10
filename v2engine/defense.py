@@ -70,7 +70,8 @@ import math
 from dataclasses import dataclass, field, replace
 
 from v2engine.anticipation import meeting_point, reaction_delay_s
-from v2engine.attributes import player_attribute, success_probability
+from v2engine.attributes import success_probability
+from v2engine.condition import effective_rating
 from v2engine.ball_state import BallState
 from v2engine.bloc import POSITIONING_REDRAW_S, Bloc
 from v2engine.flux import DEFENSE
@@ -118,18 +119,18 @@ def own_goal(team: str) -> Vec2:
 
 def arrival_time_s(player: PlayerState, point: Vec2) -> float:
     """Temps pour rejoindre `point` : distance à vitesse de pointe, plus le temps de montée en vitesse (capacité)."""
-    return player.position.distance_to(point) / max_speed_mps(player.pace) + accel_tau_s(player.acceleration)
+    return player.position.distance_to(point) / max_speed_mps(effective_rating(player, "Pace")) + accel_tau_s(effective_rating(player, "Acceleration"))
 
 
 def marking_distance_m(player: PlayerState) -> float:
     baseline, amplitude, low, high = _MARKING_M
-    return low + high - success_probability(player_attribute(player, "Marking"), baseline=baseline,
+    return low + high - success_probability(effective_rating(player, "Marking"), baseline=baseline,
                                             amplitude=amplitude, min_prob=low, max_prob=high)
 
 
 def leave_probability(player: PlayerState) -> float:
     baseline, amplitude, low, high = _STAYS
-    return 1.0 - success_probability(player_attribute(player, "Teamwork"), baseline=baseline, amplitude=amplitude,
+    return 1.0 - success_probability(effective_rating(player, "Teamwork"), baseline=baseline, amplitude=amplitude,
                                      min_prob=low, max_prob=high)
 
 
@@ -139,23 +140,23 @@ def _curve(note: float, curve: tuple[float, float, float, float]) -> float:
 
 
 def press_intensity(player: PlayerState) -> float:
-    return _curve(player_attribute(player, "Work Rate"), _PRESS_INTENSITY)
+    return _curve(effective_rating(player, "Work Rate"), _PRESS_INTENSITY)
 
 
 def press_rest_s(player: PlayerState) -> float:
-    return _curve(player_attribute(player, "Work Rate"), _PRESS_REST_S)
+    return _curve(effective_rating(player, "Work Rate"), _PRESS_REST_S)
 
 
 def good_lane_probability(player: PlayerState) -> float:
-    return _curve(player_attribute(player, "Anticipation"), _GOOD_LANE)
+    return _curve(effective_rating(player, "Anticipation"), _GOOD_LANE)
 
 
 def stop_distance_m(player: PlayerState) -> float:
-    return _curve(player_attribute(player, "Aggression"), _STOP_M)
+    return _curve(effective_rating(player, "Aggression"), _STOP_M)
 
 
 def follow_probability(player: PlayerState) -> float:
-    return _curve(player_attribute(player, "Teamwork"), _FOLLOWS)
+    return _curve(effective_rating(player, "Teamwork"), _FOLLOWS)
 
 
 def press_point(presser: PlayerState, holder: PlayerState, receiver: PlayerState | None) -> Vec2:

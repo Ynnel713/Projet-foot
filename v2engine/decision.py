@@ -13,7 +13,8 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, replace
 
-from v2engine.attributes import player_attribute, success_probability
+from v2engine.attributes import success_probability
+from v2engine.condition import effective_rating
 from v2engine.danger import danger, loss_cost
 from v2engine.flux import DECISION, DUEL, PERCEPTION
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
@@ -141,7 +142,7 @@ class Action:
 
 def adopt_plan_probability(player: PlayerState) -> float:
     baseline, amplitude, low, high = _ADOPT_PLAN
-    return success_probability(player_attribute(player, "Teamwork"), baseline=baseline, amplitude=amplitude,
+    return success_probability(effective_rating(player, "Teamwork"), baseline=baseline, amplitude=amplitude,
                                min_prob=low, max_prob=high)
 
 
@@ -161,7 +162,7 @@ def visible_teammates(holder: PlayerState, teammates: list[PlayerState], goal: V
     toujours vu, même à Vision très basse."""
     if not teammates:
         return []
-    vision = player_attribute(holder, "Vision")
+    vision = effective_rating(holder, "Vision")
     reach = vision_range_m(vision)
     spot = key_pass_spot_probability(vision)
     holder_to_goal = holder.position.distance_to(goal)
@@ -191,7 +192,7 @@ def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2
     # (docs/CARTE_ATTRIBUTS_V2.md, audit A12) : la portée (`visible_teammates`), le seuil de tolérance
     # (`pass_margin_m`, angle mort de 0,85 m à Vision 0 à 0,3 m à Vision 100) et l'erreur de lecture de la ligne (`perceived_defence_line`, 0,05 à 0,25 m).
     # Les deux derniers se composent en un seul seuil effectif, d'où les passes que l'arbitre siffle.
-    vision = player_attribute(holder, "Vision")
+    vision = effective_rating(holder, "Vision")
     margin = pass_margin_m(vision)
     seen_line = perceived_defence_line(holder.team, opponents, vision)
     teammates = [p for p in visible_teammates(holder, mates, goal)
@@ -257,7 +258,7 @@ def keep_ball_probability(holder: PlayerState, gene: float) -> float:
     compte d'autant plus qu'un adversaire est proche, un dixième de ce risque sans adversaire à 5 m. Seule fonction de
     ce risque : l'évaluation de l'option et le tirage de la perte (`dribble_lost`) l'appellent."""
     baseline, amplitude = _KEEP_BALL
-    skill = success_probability(player_attribute(holder, "Dribbling"), baseline=baseline, amplitude=amplitude)
+    skill = success_probability(effective_rating(holder, "Dribbling"), baseline=baseline, amplitude=amplitude)
     contested = FREE_TOUCH_SHARE + (1.0 - FREE_TOUCH_SHARE) * gene  # 0,1 sans adversaire à 5 m, 1 au contact
     return 1.0 - (1.0 - skill) * contested
 
@@ -266,7 +267,7 @@ def dribble_speed_factor(holder: PlayerState, gene: float) -> float:
     """Part de sa vitesse max à laquelle le porteur conduit sous la gêne `gene` (0 sans adversaire à 5 m, 1 au contact) :
     Dribbling sans adversaire, moins `CONTACT_SLOWDOWN` x `gene` (ticket v2-realisme/04d)."""
     baseline, amplitude = _CARRY_SPEED
-    free = success_probability(player_attribute(holder, "Dribbling"), baseline=baseline, amplitude=amplitude)
+    free = success_probability(effective_rating(holder, "Dribbling"), baseline=baseline, amplitude=amplitude)
     return free * (1.0 - CONTACT_SLOWDOWN * gene)
 
 
@@ -301,7 +302,7 @@ def arrival_s(opponent: PlayerState, point: Vec2, projection: float = 1.0) -> fl
     de cet élan, telle que le porteur la voit), puis court droit au point à sa vitesse max."""
     # ponytail: pas de montée en vitesse ni de trajectoire courbe ; jamais plus rapide que la vitesse max depuis t = 0
     start = opponent.position + opponent.velocity * (projection * REACTION_S)
-    return REACTION_S + start.distance_to(point) / max_speed_mps(opponent.pace)
+    return REACTION_S + start.distance_to(point) / max_speed_mps(effective_rating(opponent, "Pace"))
 
 
 def free_point(holder: PlayerState, opponents: list[PlayerState], heading: Vec2, projection: float,
@@ -313,7 +314,7 @@ def free_point(holder: PlayerState, opponents: list[PlayerState], heading: Vec2,
     rien de libre."""
     if speed_factor is None:
         speed_factor = dribble_speed_factor(holder, 0.0)
-    speed = max_speed_mps(holder.pace) * speed_factor
+    speed = max_speed_mps(effective_rating(holder, "Pace")) * speed_factor
     reached = None
     for step in range(1, int(DRIBBLE_REACH_M / DRIBBLE_STEP_M) + 1):
         point = holder.position + heading * (step * DRIBBLE_STEP_M)
@@ -355,15 +356,15 @@ def _curve(note: float, shape: tuple[float, float]) -> float:
 def perception_error(holder: PlayerState, gene: float) -> float:
     """Écart-type de l'erreur de perception, en part de la meilleure valeur réelle : Decisions, puis Composure sous
     pression seulement (ticket 33)."""
-    note = min(max(player_attribute(holder, "Decisions"), _ERROR_POINTS[0][0]), _ERROR_POINTS[-1][0])
+    note = min(max(effective_rating(holder, "Decisions"), _ERROR_POINTS[0][0]), _ERROR_POINTS[-1][0])
     (n0, e0), (n1, e1) = next(pair for pair in zip(_ERROR_POINTS, _ERROR_POINTS[1:]) if note <= pair[1][0])
     error = e0 + (note - n0) / (n1 - n0) * (e1 - e0)
-    return error * (1.0 + gene * _curve(player_attribute(holder, "Composure"), _COMPOSURE_K))
+    return error * (1.0 + gene * _curve(effective_rating(holder, "Composure"), _COMPOSURE_K))
 
 
 def anticipation_share(holder: PlayerState) -> float:
     """Part du déplacement des adversaires que le porteur prolonge pendant sa conduite (ticket 33)."""
-    return min(1.0, _curve(player_attribute(holder, "Anticipation"), _ANTICIPATION_SHARE))
+    return min(1.0, _curve(effective_rating(holder, "Anticipation"), _ANTICIPATION_SHARE))
 
 
 def choose_action(holder: PlayerState, players: list[PlayerState], goal: Vec2, keeper: PlayerState | None,
@@ -425,4 +426,4 @@ def choose_transition(holder: PlayerState, players: list[PlayerState]) -> str:
     """Choix du porteur qui vient de récupérer le ballon : le bon choix (contre-attaque si elle est jouable, sinon
     conservation) avec la probabilité donnée par Decisions, sinon l'autre."""
     best, other = (CONTRE_ATTAQUE, CONSERVATION) if counter_is_favorable(holder, players) else (CONSERVATION, CONTRE_ATTAQUE)
-    return best if DECISION.random() < best_choice_probability(player_attribute(holder, "Decisions")) else other
+    return best if DECISION.random() < best_choice_probability(effective_rating(holder, "Decisions")) else other

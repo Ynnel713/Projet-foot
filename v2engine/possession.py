@@ -11,7 +11,8 @@ import math
 import random
 from collections.abc import Sequence
 
-from v2engine.attributes import duel_probability, player_attribute, success_probability
+from v2engine.attributes import duel_probability, success_probability
+from v2engine.condition import effective_rating
 from v2engine.flux import PASSE
 from v2engine.geometry import Vec2
 from v2engine.movement import PlayerState
@@ -57,13 +58,13 @@ def pressure(player: PlayerState, opponents: Sequence[PlayerState]) -> float:
 
 def composure_factor(player: PlayerState) -> float:
     """Part de la difficulté due à la pression qui reste après Composure : 99 -> 0,5, 55 -> 0,75, 11 -> 1."""
-    return 1.5 - success_probability(player_attribute(player, "Composure"), baseline=0.75, amplitude=0.25,
+    return 1.5 - success_probability(effective_rating(player, "Composure"), baseline=0.75, amplitude=0.25,
                                      min_prob=0.5, max_prob=1.0)
 
 
 def dosage_quality(passer: PlayerState) -> float:
     """Qualité du dosage (0 à 1) selon Passing : 99 -> 1 (passe dans la course), 11 -> 0 (dans les pieds)."""
-    return success_probability(player_attribute(passer, "Passing"), baseline=0.5, amplitude=0.5, min_prob=0.0, max_prob=1.0)
+    return success_probability(effective_rating(passer, "Passing"), baseline=0.5, amplitude=0.5, min_prob=0.0, max_prob=1.0)
 
 
 def _lane_opponents(start: Vec2, end: Vec2, opponents: Sequence[PlayerState]) -> int:
@@ -93,7 +94,7 @@ def pass_difficulty(passer: PlayerState, receiver: PlayerState, opponents: Seque
 
 def pass_success_probability(passer: PlayerState, receiver: PlayerState, opponents: Sequence[PlayerState]) -> float:
     """Chance que la passe arrive où le passeur la destine : Passing contre la difficulté de CETTE passe."""
-    return duel_probability(player_attribute(passer, "Passing"), pass_difficulty(passer, receiver, opponents), **_SUCCESS)
+    return duel_probability(effective_rating(passer, "Passing"), pass_difficulty(passer, receiver, opponents), **_SUCCESS)
 
 
 def control_difficulty(player: PlayerState, ball_velocity: Vec2, opponents: Sequence[PlayerState]) -> float:
@@ -106,7 +107,7 @@ def attempt_control(player: PlayerState, ball_velocity: Vec2 = Vec2(0.0, 0.0),
     """Un joueur au contact du ballon tente de le contrôler : First Touch contre la difficulté du ballon reçu
     (vitesse par rapport au ballon idéal, pression). Jamais garanti (règle « jamais binaire » du guide)."""
     difficulty = control_difficulty(player, ball_velocity, opponents)
-    return PASSE.random() < duel_probability(player_attribute(player, "First Touch"), difficulty, **_SUCCESS)
+    return PASSE.random() < duel_probability(effective_rating(player, "First Touch"), difficulty, **_SUCCESS)
 
 
 def missed_control_velocity(player: PlayerState, ball_velocity: Vec2, opponents: Sequence[PlayerState] = ()) -> Vec2:
@@ -170,7 +171,7 @@ RECEPTION_SPEED_FACTOR = 0.4
 
 def reception_delay_s(player: PlayerState, opponents: Sequence[PlayerState] = ()) -> float:
     baseline, amplitude, low, high = _RECEPTION_S
-    calm = low + high - success_probability(player_attribute(player, "First Touch"), baseline=baseline,
+    calm = low + high - success_probability(effective_rating(player, "First Touch"), baseline=baseline,
                                                 amplitude=amplitude, min_prob=low, max_prob=high)
     if player.poste == "GK":
         calm = max(calm, _KEEPER_MIN_RECEPTION_S)

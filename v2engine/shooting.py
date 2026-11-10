@@ -14,7 +14,8 @@ from types import MappingProxyType
 
 from ligue1sim.pitch_geometry import GOAL_HEIGHT_M, GOAL_WIDTH_M
 
-from v2engine.attributes import duel_probability, player_attribute, success_probability
+from v2engine.attributes import duel_probability, success_probability
+from v2engine.condition import effective_rating
 from v2engine.flux import TIR
 from v2engine.geometry import Vec2, in_penalty_area
 from v2engine.movement import PlayerState
@@ -90,9 +91,9 @@ def _keeper_rating(keeper: PlayerState | None) -> float:
     if keeper is None:
         return _NEUTRAL_KEEPER_RATING
     return (
-        0.5 * player_attribute(keeper, "Reflexes")
-        + 0.3 * player_attribute(keeper, "One on Ones")
-        + 0.2 * player_attribute(keeper, "Handling")
+        0.5 * effective_rating(keeper, "Reflexes")
+        + 0.3 * effective_rating(keeper, "One on Ones")
+        + 0.2 * effective_rating(keeper, "Handling")
     )
 
 
@@ -146,7 +147,7 @@ def keeper_position_factor(origin: Vec2, goal: Vec2, keeper: PlayerState | None)
 
 def shot_composure_factor(shooter: PlayerState) -> float:
     """Part de la pénalité de pression qui reste après Composure, courbe propre au tir : 99 -> 2/3, 55 -> 5/6, 11 -> 1."""
-    return 5.0 / 3.0 - success_probability(player_attribute(shooter, "Composure"), baseline=5.0 / 6.0,
+    return 5.0 / 3.0 - success_probability(effective_rating(shooter, "Composure"), baseline=5.0 / 6.0,
                                            amplitude=1.0 / 6.0, min_prob=2.0 / 3.0, max_prob=1.0)
 
 
@@ -171,8 +172,8 @@ def shot_pressure(shooter: PlayerState, goal: Vec2, opponents: list[PlayerState]
 def shooting_note(shooter: PlayerState) -> int:
     """Exécution du tir (ticket 28a) : Finishing dans la surface de réparation, Long Shots en dehors, jamais les deux."""
     if in_penalty_area(shooter.team, shooter.position):
-        return player_attribute(shooter, "Finishing")
-    return player_attribute(shooter, "Long Shots")
+        return effective_rating(shooter, "Finishing")
+    return effective_rating(shooter, "Long Shots")
 
 
 def shot_probability(shooter: PlayerState, goal: Vec2, keeper: PlayerState | None,

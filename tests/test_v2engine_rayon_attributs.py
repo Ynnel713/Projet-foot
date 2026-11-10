@@ -14,12 +14,19 @@ import pathlib
 ENGINE = pathlib.Path(__file__).resolve().parents[1] / "v2engine"
 PHYSICAL_FIELDS = {"pace": "Pace", "acceleration": "Acceleration", "stamina": "Stamina"}
 
+# Lecture d'une note : la façade `condition.effective_rating` (jeu), `condition.intrinsic_rating` (chargement), ou
+# `attributes.player_attribute` (réservé à la façade depuis le ticket v2-realisme/19a).
+READERS = {"player_attribute", "effective_rating", "intrinsic_rating"}
+
 # Attribut -> modules où il peut être lu (rayon de docs/CARTE_ATTRIBUTS_V2.md). « match » : construction des joueurs
 # (Pace, Acceleration, Stamina recopiés dans PlayerState) et déclenchement du tacle (Aggression). Les physiques lus
-# ensuite par leur champ (`.pace`…) sont des capacités (règle R5) : modules listés à part.
+# en jeu sont des capacités (règle R5), lues par la façade depuis le 19a :
+# defense : temps d'arrivée qui désigne le presseur et la couverture (ticket v2-collectif/07)
+# decision : course du porteur contre les adversaires vers l'espace libre (ticket v2-collectif/33)
+# occasion (ticket v2-collectif/28c) : temps pour atteindre un ballon libre, la même vitesse de pointe (R5), mesure seule
 ALLOWED = {
-    "Pace": {"match"},
-    "Acceleration": {"match"},
+    "Pace": {"match", "anticipation", "bloc", "defense", "decision", "occasion"},
+    "Acceleration": {"match", "defense"},
     "Stamina": {"match"},
     "Strength": {"duel"},
     "Balance": {"duel"},
@@ -49,16 +56,14 @@ ALLOWED = {
     "Work Rate": {"defense"},  # intensité et repos du presseur (ticket v2-collectif/08)
     "Marking": {"defense"},  # distance de marquage d'un attaquant dangereux (ticket v2-collectif/07)
 }
-# defense : temps d'arrivée qui désigne le presseur et la couverture (ticket v2-collectif/07)
-# decision : course du porteur contre les adversaires vers l'espace libre (ticket v2-collectif/33)
-# occasion (ticket v2-collectif/28c) : temps pour atteindre un ballon libre, la même vitesse de pointe (R5), mesure seule
-PHYSICAL_ALLOWED = {"Pace": {"movement", "anticipation", "bloc", "defense", "decision", "occasion"},
-                    "Acceleration": {"movement", "defense"},
-                    "Stamina": {"movement"}}
 # Mélanges de plusieurs attributs dans un même calcul tolérés (dérogations de la carte).
 TOLERATED_MIXES = {
     frozenset({"Strength", "Balance"}),  # A3 : jusqu'à l'étape duels
     frozenset({"Reflexes", "One on Ones", "Handling"}),  # A8 : note du gardien, jusqu'à la phase 9 (confirmée le 26/10/2026)
+    # temps d'arrivée (`defense.arrival_time_s`) : course à vitesse de pointe + montée en régime, deux capacités
+    # physiques additionnées en secondes (règle R5), pas une pondération de notes ; visible depuis que les champs
+    # passent par la façade (ticket v2-realisme/19a)
+    frozenset({"Pace", "Acceleration"}),
 }
 
 
@@ -69,7 +74,7 @@ def _modules():
 
 def _attribute_calls(tree: ast.AST):
     for node in ast.walk(tree):
-        if isinstance(node, ast.Call) and getattr(node.func, "id", getattr(node.func, "attr", None)) == "player_attribute":
+        if isinstance(node, ast.Call) and getattr(node.func, "id", getattr(node.func, "attr", None)) in READERS:
             yield node
 
 
@@ -88,7 +93,7 @@ def _reads() -> dict[str, set[str]]:
 
 def test_each_attribute_is_read_only_within_its_reach() -> None:
     reads = _reads()
-    assert "<nom non littéral>" not in reads or reads["<nom non littéral>"] <= {"attributes"}, \
+    assert "<nom non littéral>" not in reads or reads["<nom non littéral>"] <= {"attributes", "condition"}, \
         f"player_attribute appelé avec un nom non littéral (rayon invérifiable) : {reads.get('<nom non littéral>')}"
     reads.pop("<nom non littéral>", None)
     outside = {attr: mods - ALLOWED.get(attr, set()) for attr, mods in reads.items() if mods - ALLOWED.get(attr, set())}
@@ -115,17 +120,16 @@ def test_raw_attribute_dicts_are_read_only_through_player_attribute() -> None:
     assert not (copies - {"attributes"}), f"note lue directement dans .attributes hors de attributes.py : {copies}"
 
 
-def test_physical_fields_are_read_only_where_a_capacity_is_needed() -> None:
+def test_physical_fields_are_read_only_by_movement() -> None:
+    # Depuis le ticket v2-realisme/19a, une capacité physique se lit par la façade (rayon vérifié par ALLOWED) ;
+    # le champ (`.pace`…) ne se lit que dans le chemin chaud de `movement.step`.
     found: dict[str, set[str]] = {}
     for module, tree in _modules():
         for node in ast.walk(tree):
-            if (isinstance(node, ast.Attribute) and node.attr in PHYSICAL_FIELDS and isinstance(node.ctx, ast.Load)
-                    and module != "match"):
+            if isinstance(node, ast.Attribute) and node.attr in PHYSICAL_FIELDS and isinstance(node.ctx, ast.Load):
                 found.setdefault(PHYSICAL_FIELDS[node.attr], set()).add(module)
-    found = {attr: mods - {"movement"} if attr != "Pace" else mods for attr, mods in found.items()}
-    # movement recopie les trois champs dans le nouvel état (`pace=state.pace`) : ce n'est pas un usage
-    outside = {attr: mods - PHYSICAL_ALLOWED[attr] for attr, mods in found.items() if mods - PHYSICAL_ALLOWED[attr]}
-    assert not outside, f"capacité physique lue hors des modules listés (règle R5) : {outside}"
+    outside = {attr: mods - {"movement"} for attr, mods in found.items() if mods - {"movement"}}
+    assert not outside, f"capacité physique lue par son champ hors de movement (passer par la façade) : {outside}"
 
 
 def _attrs_in(node: ast.AST) -> set[str]:

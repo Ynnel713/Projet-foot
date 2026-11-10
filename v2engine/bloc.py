@@ -53,7 +53,8 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 
-from v2engine.attributes import player_attribute, success_probability
+from v2engine.attributes import success_probability
+from v2engine.condition import effective_rating
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch
 from v2engine.ball_state import BallState
 from v2engine.flux import PLACEMENT
@@ -119,11 +120,11 @@ def _inverse(note: float, params: tuple[float, float, float, float]) -> float:
 
 
 def positioning_error_m(player: PlayerState) -> float:
-    return _inverse(player_attribute(player, "Positioning"), _POSITIONING_ERROR_M)
+    return _inverse(effective_rating(player, "Positioning"), _POSITIONING_ERROR_M)
 
 
 def teamwork_tolerance_m(player: PlayerState) -> float:
-    return _inverse(player_attribute(player, "Teamwork"), _TEAMWORK_TOLERANCE_M)
+    return _inverse(effective_rating(player, "Teamwork"), _TEAMWORK_TOLERANCE_M)
 
 
 def line_lag_s(player: PlayerState) -> float:
@@ -131,7 +132,7 @@ def line_lag_s(player: PlayerState) -> float:
     discipline collective qui est en jeu, donc Teamwork seul : l'écart de placement dû au Positioning est déjà
     tiré par `target` (ticket 04), et un défenseur décalé joue lui aussi l'attaquant en jeu -- deux effets
     distincts, un attribut chacun (règles R1 et R2 de la carte)."""
-    return (1.0 - success_probability(player_attribute(player, "Teamwork"), baseline=0.5, amplitude=0.5,
+    return (1.0 - success_probability(effective_rating(player, "Teamwork"), baseline=0.5, amplitude=0.5,
                                       min_prob=0.0, max_prob=1.0)) * LINE_LAG_MAX_S
 
 
@@ -224,8 +225,8 @@ class Bloc:
             deepest = max(rivals, key=lambda p: -_progress(team, p.position.x))  # attaquant le plus près de notre but
             back = min(_progress(team, p.home_target.x) for p in own)
             # ligne la plus basse de la forme de départ (bandes espacées d'au moins 10 m : 1 m de tolérance suffit)
-            slowest = min(max_speed_mps(p.pace) for p in own if _progress(team, p.home_target.x) <= back + 1.0)
-            gain = max(0.0, 1.0 - slowest / max_speed_mps(deepest.pace)) * CUSHION_RUN_M
+            slowest = min(max_speed_mps(effective_rating(p, "Pace")) for p in own if _progress(team, p.home_target.x) <= back + 1.0)
+            gain = max(0.0, 1.0 - slowest / max_speed_mps(effective_rating(deepest, "Pace"))) * CUSHION_RUN_M
             # ticket 23 : la ligne peut se tenir jusqu'à TRAP_DEPTH_M au-dessus de l'attaquant le plus avancé ;
             # si elle est plus lente que lui, le gain de vitesse la fait redescendre (critère Pace du ticket 05).
             height = min(height, _progress(team, deepest.position.x) + TRAP_DEPTH_M - gain)

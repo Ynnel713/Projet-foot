@@ -9,6 +9,7 @@ import math
 from dataclasses import dataclass
 from functools import lru_cache
 
+from v2engine.condition import PlayerCondition
 from v2engine.geometry import Vec2, clamp_to_pitch
 
 KMH_TO_MS = 1.0 / 3.6
@@ -80,12 +81,12 @@ class PlayerState:
     stamina: float
     home_target: Vec2  # position de formation à rejoindre hors pressing du ballon (voir match.py)
     radius_m: float = 0.3
-    # Attributs bruts du joueur (voir `ligue1sim.players.Player.attributes`), pour les phases
-    # suivantes (First Touch, Passing...) via `attributes.player_attribute` -- `pace`/
-    # `acceleration`/`stamina` ci-dessus restent des champs dédiés (chemin chaud, lu à chaque
-    # tick par `step`), ce champ sert aux attributs plus occasionnels (voir `possession.py`).
+    # Attributs bruts du joueur (voir `ligue1sim.players.Player.attributes`), lus par la façade
+    # `condition.effective_rating` (ticket v2-realisme/19a) -- `pace`/`acceleration`/`stamina` ci-dessus restent
+    # des champs dédiés (chemin chaud, lu à chaque tick par `step`) ; ailleurs, ils passent aussi par la façade.
     attributes: dict[str, int] | None = None
     role: str = ""  # rôle du joueur (voir `roles.py`), ticket v2-realisme/02c ; sans effet sur le jeu avant 02d/02e/09
+    condition: PlayerCondition = PlayerCondition()  # état qui module l'expression des notes (19a : vide)
 
 
 def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_factor: float = 1.0,
@@ -142,4 +143,5 @@ def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_facto
         radius_m=state.radius_m,
         attributes=state.attributes,
         role=state.role,
+        condition=state.condition,
     )

@@ -362,16 +362,16 @@ def test_retreat_speed_of_the_players_ahead_of_the_ball() -> None:
 
 # --- Commande de mesure -------------------------------------------------------------------------------------------
 def test_profile_forces_physical_attributes_read_on_database_players() -> None:
-    import v2engine.match as match
+    import v2engine.condition as condition  # chargement des joueurs par la façade (ticket v2-realisme/19a)
     from scripts.measure_v2 import _force_attribute
     fiche = SimpleNamespace(name="Joueur", attributes={"Pace": 50})  # fiche de la base : pas d'équipe
     restore = _force_attribute("Pace", "home", {"Joueur": "home"})
     try:
-        assert match.player_attribute(fiche, "Pace") == 99
-        assert match.player_attribute(_p("X", "away", 0, 0), "Pace") == 11
+        assert condition.intrinsic_rating(fiche, "Pace") == 99
+        assert condition.player_attribute(_p("X", "away", 0, 0), "Pace") == 11
     finally:
         restore()
-    assert match.player_attribute(fiche, "Pace") == 50
+    assert condition.intrinsic_rating(fiche, "Pace") == 50
 
 
 def test_hooks_are_restored_and_the_observer_changes_nothing() -> None:

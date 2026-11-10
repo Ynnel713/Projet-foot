@@ -17,10 +17,9 @@ from collections import Counter
 from ligue1sim.clubs import load_clubs
 from ligue1sim.season import CLUBS_PATH
 
-import v2engine.anticipation as anticipation
+import v2engine.condition as condition
 import v2engine.decision as decision
 import v2engine.match as match
-import v2engine.off_ball as off_ball
 
 AUDIT_SEED = 20260923
 
@@ -101,9 +100,7 @@ if __name__ == "__main__":
         else:
             setattr(decision, name, float(value))
     if forced:
-        real_attribute = decision.player_attribute
+        real_attribute = condition.player_attribute  # toutes les notes passent par la façade (ticket v2-realisme/19a)
         forced_attribute = lambda player, name, default=60: forced.get(name, real_attribute(player, name, default))  # noqa: E731
-        decision.player_attribute = forced_attribute
-        off_ball.player_attribute = forced_attribute
-        anticipation.player_attribute = forced_attribute
+        condition.player_attribute = forced_attribute
     main(int(sys.argv[1]) if len(sys.argv) > 1 else 10)
