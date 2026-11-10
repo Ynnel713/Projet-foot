@@ -12,7 +12,7 @@
 
 **Blocked by:** 04g (Duel un contre un : le contournement).
 
-**Bloque :** rien.
+**Bloque :** 21b ; `v2-mise-en-scene/05` (ajouté le 10/11/2026, audit de la roadmap).
 
 **Status:** à faire (constantes à proposer avant le code)
 

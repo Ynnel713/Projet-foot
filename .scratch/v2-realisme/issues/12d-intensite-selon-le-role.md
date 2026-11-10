@@ -1,6 +1,6 @@
 # 12d: Intensité de course selon le rôle
 
-**Chantier :** `v2-realisme` (audit de réalisme du 05/11/2026, `spec.md`). **Priorité :** P1 (tout le monde ne sprinte pas : trot, course, sprint selon ce qu'il fait). **Catégorie :** physique.
+**Chantier :** `v2-realisme` (audit de réalisme du 05/11/2026, `spec.md`). **Priorité :** P1 (tout le monde ne sprinte pas : trot, course, sprint selon ce qu'il fait). **Catégorie :** physique. **Promu P0 le 10/11/2026** (audit de la roadmap) : à faire après 18a et avant 18d.
 
 **Constat vérifié :** hors presseur et repli (Work Rate, tickets 08 et 10), remises en jeu et réception, les intentions visent l'intensité 1,0, c'est-à-dire la vitesse maximale (`cerveau.Intention.intensity`) ; mesure de référence : 37 % du temps au-dessus de 19,8 km/h (26/10/2026) contre 2-5 % au réel.
 
@@ -12,7 +12,7 @@
 
 **Blocked by:** 02f (Tenir sa position en possession).
 
-**Bloque :** 12e, 12g.
+**Bloque :** 12e, 12g, 18d (ajouté le 10/11/2026, audit de la roadmap).
 
 **Status:** à faire (constantes à proposer avant le code)
 
@@ -43,3 +43,7 @@ Temps machine, non compté : suite complète (environ 40 min) ; mesure 50 matchs
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+
+## Complément de l'audit de la roadmap (10/11/2026)
+
+Source : `docs/AUDIT_ROADMAP_V2.md`. Promu P0 et placé avant 18d : la calibration provisoire des volumes de course doit porter sur le vrai modèle d'intensité. Toute note lue passe par la façade `v2-realisme/19a`.

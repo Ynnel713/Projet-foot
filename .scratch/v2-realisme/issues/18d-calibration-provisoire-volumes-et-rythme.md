@@ -10,7 +10,7 @@
 
 **Attributs :** aucun
 
-**Blocked by:** 18a (Point d'étape après les fondations P0); 01e (Banc : séries de 500 à 2 000 matchs, parallélisées, avec intervalles de confiance).
+**Blocked by:** 18a (Point d'étape après les fondations P0); 01e (Banc : séries de 500 à 2 000 matchs, parallélisées, avec intervalles de confiance); 12d (Intensité de course selon le rôle); 12e (Réserve d'énergie) (ajouté le 10/11/2026, audit de la roadmap).
 
 **Bloque :** 18e, `v2-collectif/22a`.
 
@@ -42,3 +42,7 @@ Temps machine, non compté : suite complète (environ 40 min) ; séries de 500 m
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+
+## Complément de l'audit de la roadmap (10/11/2026)
+
+Source : `docs/AUDIT_ROADMAP_V2.md`. 12d et 12e passent avant ce ticket : calibrer les volumes de course alors que toutes les intentions visent la vitesse maximale (`cerveau.Intention.intensity`) et que la fatigue ne dépend que de la minute reviendrait à masquer deux mécanismes absents, ce que la règle des calibrations provisoires interdit. La mention « 12d si livré » du « What to build » devient « 12d et 12e livrés ».

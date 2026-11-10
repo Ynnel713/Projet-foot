@@ -12,7 +12,7 @@
 
 **Blocked by:** 04a (Conduite : même risque de perte à l'évaluation et à la résolution).
 
-**Bloque :** 04h, 04j.
+**Bloque :** 04h, 04j, 21c (ajouté le 10/11/2026, audit de la roadmap).
 
 **Status:** à faire (constantes à proposer avant le code)
 

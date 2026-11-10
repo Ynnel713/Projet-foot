@@ -8,7 +8,7 @@
 
 **Blocked by:** 07a (contacts du duel), 09a (gravité de la faute), `v2-coach-et-gestion-de-match/05a` (remplacement forcé) ; passe après `v2-collectif/22c`.
 
-**Bloque :** `v2-coach-et-gestion-de-match/05b` (cas « blessure »).
+**Bloque :** `v2-coach-et-gestion-de-match/05b` (cas « blessure ») ; `v2-realisme/20g` (blessures sans contact et crampes) (ajouté le 10/11/2026, audit de la roadmap).
 
 **Status:** à faire (constantes à proposer avant le code)
 
@@ -20,3 +20,7 @@
 - [ ] L'arrêt pour soins est compté dans le temps additionnel
 - [ ] Constantes produit et critères chiffrés validés par le propriétaire avant le code
 - [ ] Déterminisme à graine fixée ; suite V2 verte ; V1 inchangée
+
+## Complément de l'audit de la roadmap (10/11/2026)
+
+Source : `docs/AUDIT_ROADMAP_V2.md`. Ce ticket garde la blessure sur contact. La blessure sans contact selon la charge, le joueur touché qui continue diminué et les crampes vont au `v2-realisme/20g`. La capacité réduite d'un blessé passe par la façade de la condition (`v2-realisme/19a`). Un joueur frais peut se blesser, un joueur fatigué peut finir sans blessure : la fatigue augmente le risque, elle ne le déclenche pas.

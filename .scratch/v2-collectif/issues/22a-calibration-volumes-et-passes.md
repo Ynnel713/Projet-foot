@@ -6,7 +6,7 @@
 
 **Attributs :** tous.
 
-**Blocked by:** liste complète du ticket 22 : tickets 01 à 21 (18 : partie livrée ; ses critères restants sont clos par 22c) et 23 ; 28 (a, b, c) à 33 (32 : a et b) ; `v2-attributs-restants/01`, `02` (a, b), `03` (a, b, c), `07` (a, b) et `11` ; `v2-coach-et-gestion-de-match/03`.
+**Blocked by:** liste complète du ticket 22 : tickets 01 à 21 (18 : partie livrée ; ses critères restants sont clos par 22c) et 23 ; 28 (a, b, c) à 33 (32 : a et b) ; `v2-attributs-restants/01`, `02` (a, b), `03` (a, b, c), `07` (a, b) et `11` ; `v2-coach-et-gestion-de-match/03` ; `v2-realisme/20a`, `20b`, `20c`, `20d`, `20f`, `21c`, `19c` (ajouté le 10/11/2026, audit de la roadmap).
 
 **Bloque :** 22b.
 
@@ -26,3 +26,7 @@
 - [ ] Repris de la réserve A1 du ticket v2-collectif/28a (acceptée le 05/11/2026) : volume de tirs (37,5 par équipe, réel 12-15) et part dans la surface (22 %, réel environ 68 %). Traiter l'écart xG du tir contre xT moyen de la conservation (le tir l'emporte entre 12 et 27 m dans l'axe dès qu'il est démarqué) : valeur de suite au lieu du xT moyen, ou seuil de tir relatif, comparés. Aucune référence calibrée ne se fonde sur les 4,44 buts par match du 28a
 - [ ] Repris de la réserve A2 du ticket 28a (si le 28b ne l'a pas traitée) : un tir manqué ne coûte rien dans la décision, une passe ou une conduite paie la perte ; scène contrôlée « tir à 25 m contre conservation » avant et après
 - [ ] Série d'au moins 40 matchs avec dispersion rapportée ; suite V2 verte ; V1 inchangée
+
+## Complément de l'audit de la roadmap (10/11/2026)
+
+Source : `docs/AUDIT_ROADMAP_V2.md`. Calibrer seulement après les effets de la condition (20a à 20d, 20f) et après les fautes hors du tacle (21c) : l'écart de fautes (9,4 contre 21-26 par match) vient d'un mécanisme absent et ne doit pas être comblé par un réglage. La garde probabiliste (19c) est rejouée après chaque lot de calibration.

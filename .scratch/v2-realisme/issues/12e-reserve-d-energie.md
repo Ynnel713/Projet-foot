@@ -1,6 +1,6 @@
 # 12e: Réserve d'énergie qui dépend de l'effort
 
-**Chantier :** `v2-realisme` (audit de réalisme du 05/11/2026, `spec.md`). **Priorité :** P1 (la fatigue vient de ce qu'on a couru, pas seulement de la minute). **Catégorie :** physique.
+**Chantier :** `v2-realisme` (audit de réalisme du 05/11/2026, `spec.md`). **Priorité :** P1 (la fatigue vient de ce qu'on a couru, pas seulement de la minute). **Catégorie :** physique. **Promu P0 le 10/11/2026** (audit de la roadmap) : à faire après 12d et avant 18d.
 
 **Constat vérifié :** `movement.stamina_factor` (`movement.py:60`) ne dépend que de la minute et de Stamina, pas des efforts fournis.
 
@@ -12,7 +12,7 @@
 
 **Blocked by:** 12d (Intensité de course selon le rôle).
 
-**Bloque :** 12f, 12g, 13b.
+**Bloque :** 12f, 12g, 13b, 18d, 20a, 20b, 20c, 20e, 20g ; `v2-coach-et-gestion-de-match/05a` (ajouté le 10/11/2026, audit de la roadmap).
 
 **Status:** à faire (constantes à proposer avant le code)
 
@@ -43,3 +43,9 @@ Temps machine, non compté : suite complète (environ 40 min) ; mesure 50 matchs
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+
+## Complément de l'audit de la roadmap (10/11/2026)
+
+Source : `docs/AUDIT_ROADMAP_V2.md`. Promu P0 et placé avant 18d. Précisions : (1) la réserve est un état de `PlayerCondition` (`v2-realisme/19a`), tracé par joueur ; (2) elle remplace `movement.stamina_factor` pour la vitesse maximale, et c'est elle que liront les effets techniques (20a), mentaux (20b) et tactiques (20e) : Stamina n'agit qu'ici (taille et recharge), jamais une seconde fois ailleurs ; (3) la recharge pendant les arrêts de jeu et à la mi-temps est traitée au 20c ; (4) recommandation de modèle : deux composantes seulement, endurance (ce ticket) et explosivité (12f) ; pas de fatigue musculaire ni neuromusculaire séparée, qui ne produirait pas de différence observable distincte.
+
+- [ ] Test : joueur très sollicité contre joueur économe, même Stamina : réserve plus basse à la 70e

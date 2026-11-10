@@ -12,7 +12,7 @@
 
 **Blocked by:** 13a (Consignes d'équipe : lecture des styles et structure neutre); 12e (Réserve d'énergie qui dépend de l'effort).
 
-**Bloque :** 13i.
+**Bloque :** 13i, 20e (ajouté le 10/11/2026, audit de la roadmap).
 
 **Status:** à faire (constantes à proposer avant le code)
 

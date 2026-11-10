@@ -8,7 +8,7 @@
 
 **Attributs :** aucun
 
-**Blocked by:** 09b (Occuper la largeur en possession); 09c (Occuper les demi-espaces selon le rôle); 09d (Formations asymétriques); 09e (Distances entre les lignes en possession); 09g (Défense préventive : un défenseur de plus que les attaquants restés haut).
+**Blocked by:** 09b (Occuper la largeur en possession); 09c (Occuper les demi-espaces selon le rôle); 09d (Formations asymétriques); 09e (Distances entre les lignes en possession); 09g (Défense préventive : un défenseur de plus que les attaquants restés haut); 09i (Appels en arc et appels temporisés) (ajouté le 10/11/2026, audit de la roadmap).
 
 **Bloque :** rien.
 

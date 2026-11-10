@@ -10,7 +10,7 @@
 
 **Blocked by:** 07a (Orientation du corps : état propre et rotation bornée).
 
-**Bloque :** 07g, `v2-collectif/31`.
+**Bloque :** 07g, `v2-collectif/31`, 09i (ajouté le 10/11/2026, audit de la roadmap).
 
 **Status:** à faire (constantes à proposer avant le code)
 

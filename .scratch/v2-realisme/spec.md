@@ -324,3 +324,41 @@ P1 : 58 tickets, 101 h 55
 P2 : 20 tickets, 34 h 45
 Total : 120 tickets, 216 h 25
 Chemin critique interne : 01f → 03a → 03b → 05b → 06a → 05e → 05g → 18a → 18d → 18e (18 h 55)
+
+## 11. Complément de l'audit de la roadmap (10/11/2026)
+
+Rapport : `docs/AUDIT_ROADMAP_V2.md`. Aucun code modifié, aucun ticket livré modifié, aucun ticket supprimé.
+
+**Nouveaux domaines**
+- **19, fondations transverses (P0, avant 18a)** : 19a façade des notes (performance momentanée), 19b journal des événements et chaîne de causes, 19c garde probabiliste, 19d banc du rendement selon la minute. 7 h 40.
+- **20, condition physique (P1, 20g en P2)** : 20a technique, 20b lucidité, 20c récupération, 20d validation fatigue et remplacements, 20e bloc et pressing selon la capacité restante, 20f forme du jour, 20g blessures sans contact. 12 h 45.
+- **21, arbitrage et lois du jeu (P1 et P2)** : 21a arbitre qui perçoit, 21b gravité selon l'action, 21c fautes hors du tacle, 21d main, 21e passe en retrait au gardien, 21f simulation, 21g et 21h VAR. 15 h.
+- **09i** appels en arc et temporisés (P1, 1 h 45) ; `v2-mise-en-scene/05` et `06` (P3, 4 h).
+
+**Ordre modifié** : `05e` → `05g` ; `19d` en parallèle ; `19a` → `19c` → `19b` ; **18a** ; `12d` → `12e` (promus P0) ; **18d** → **18e**. 18a, 18d, 12d, 12e, `v2-collectif/21`, `22a`, coach `05a`, `v2-attributs-restants/03b`, `09a`, `09b` et `v2-mise-en-scene/02` portent une section « Complément de l'audit de la roadmap (10/11/2026) ».
+
+| Ticket | Titre | Prio | Catégorie | Estimation | Confiance | Dépend de |
+|---|---|---|---|---|---|---|
+| 19a | Performance momentanée : un seul point d'entrée pour lire une note | P0 | architecture | 2 h 20 | élevée | 05e |
+| 19b | Journal des événements et chaîne de causes | P0 | architecture | 2 h 05 | moyenne | 05e |
+| 19c | Garde probabiliste : jamais infaillible, jamais incapable | P0 | validation | 1 h 30 | élevée | 05e |
+| 19d | Banc : rendement selon la minute et la fatigue | P0 | mesure | 1 h 45 | élevée | 01d, 01e |
+| 20a | La fatigue dégrade l'exécution technique | P1 | exécution | 2 h | moyenne | 19a, 12e |
+| 20b | La fatigue dégrade la lucidité | P1 | décision | 2 h | moyenne | 19a, 12e |
+| 20c | Récupération pendant les arrêts de jeu et à la mi-temps | P1 | physique | 1 h 30 | moyenne | 12e |
+| 20d | Validation de la fatigue et des remplacements | P1 | validation | 1 h 30 | élevée | 19b, 19d, 20a, 20b, 20c, 12f |
+| 20e | Le bloc et le pressing suivent la capacité restante | P1 | décision | 2 h | moyenne | 12e, 10a, 10c, 13b |
+| 20f | Forme du jour | P1 | exécution | 1 h 45 | moyenne | 19a, 01e |
+| 20g | Blessures sans contact, coups et crampes | P2 | physique | 2 h | faible | v2-attributs-restants/09b, 12f, 19a |
+| 21a | L'arbitre décide sur ce qu'il voit | P1 | arbitrage | 2 h 05 | moyenne | 19b |
+| 21b | Gravité de la faute selon l'action | P1 | arbitrage | 2 h | moyenne | 11d, 04j |
+| 21c | Fautes hors du tacle | P1 | arbitrage | 2 h | moyenne | 11c, 04g, 04i, 21b |
+| 21d | La main | P2 | arbitrage | 2 h | faible | v2-hauteur-ballon/02a, 07a, 21a |
+| 21e | Passe en retrait au gardien | P1 | arbitrage | 1 h 30 | moyenne | v2-attributs-restants/03c ou v2-collectif/32a |
+| 21f | Simulation | P2 | arbitrage | 1 h 45 | faible | 21a, v2-attributs-restants/09a |
+| 21g | VAR : buts et penalties | P2 | arbitrage | 2 h 10 | moyenne | 21a, 21d, 21f, 19b, v2-attributs-restants/09a |
+| 21h | VAR : rouge direct et erreur d'identité | P2 | arbitrage | 1 h 30 | moyenne | 21g, 21b, v2-attributs-restants/09a |
+| 09i | Appels en arc et appels temporisés | P1 | décision | 1 h 45 | moyenne | 07e, 08e, 02g |
+
+Hors de ce tableau : `v2-mise-en-scene/05` (gestes visibles, P3, 2 h) et `06` (réactions des joueurs, P3, 2 h).
+Total du complément : 22 tickets, 41 h 10 (P0 7 h 40 ; P1 20 h 05 ; P2 9 h 25 ; P3 4 h).

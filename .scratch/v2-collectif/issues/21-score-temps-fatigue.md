@@ -4,7 +4,7 @@
 
 **Attributs :** Determination, Leadership (indirect), Stamina, Concentration.
 
-**Blocked by:** 04, 12.
+**Blocked by:** 04, 12 ; `v2-realisme/20b` (ajouté le 10/11/2026, audit de la roadmap).
 
 **Status:** à faire (constantes à proposer avant le code)
 
@@ -16,3 +16,7 @@
 - [ ] Constantes produit et critères chiffrés (données réelles sourcées, ou « non trouvé ») validés par le propriétaire avant le code
 - [ ] Les chiffres réels sont des indicateurs de calibration, pas des objectifs : pas de réglage générique pour les atteindre avant la calibration générale (ticket 22)
 - [ ] Suite V2 verte ; V1 inchangée
+
+## Complément de l'audit de la roadmap (10/11/2026)
+
+Source : `docs/AUDIT_ROADMAP_V2.md`. La partie « la fatigue modifie les choix » est reprise par `v2-realisme/20b` (lucidité, Concentration dans sa condition de fatigue). Ce ticket garde le score, la minute, Determination et les trous de vigilance après un but. La capacité à répéter les efforts relève de `v2-realisme/12f` ; le bloc qui recule avec la fatigue, de `v2-realisme/20e`.

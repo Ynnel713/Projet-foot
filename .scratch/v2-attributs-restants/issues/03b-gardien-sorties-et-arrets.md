@@ -6,7 +6,7 @@
 
 **Attributs :** Rushing Out, Eccentricity, Reflexes, One on Ones, Handling.
 
-**Blocked by:** 01, 02 (a, b) (dépendances d'origine du ticket 03, sans doute levables) ; `v2-collectif/28b`.
+**Blocked by:** 01, 02 (a, b) (dépendances d'origine du ticket 03, sans doute levables) ; `v2-collectif/28b` ; `v2-realisme/18e` (calibration provisoire du gardien neutre) (ajouté le 10/11/2026, audit de la roadmap).
 
 **Bloque :** 10b (lob et dribble du gardien) ; `v2-coach-et-gestion-de-match/04` (Eccentricity alimente la montée du gardien) ; `v2-collectif/22a`.
 
@@ -20,3 +20,9 @@
 - [ ] Dérogation A8 levée : Reflexes pour les tirs proches, One on Ones pour les face-à-face, Handling pour capter ou relâcher (moins de ballons relâchés quand il est élevé) (test de rayon des attributs, carte à jour)
 - [ ] Constantes produit et critères chiffrés validés par le propriétaire avant le code
 - [ ] Déterminisme à graine fixée ; suite V2 verte ; V1 inchangée
+
+## Complément de l'audit de la roadmap (10/11/2026)
+
+Source : `docs/AUDIT_ROADMAP_V2.md`. Constat du 06b et du 06c : depuis le tir physique (`v2-realisme/05h`), l'arrêt est déterministe à position donnée et les notes du gardien n'agissent pas (`shooting.py`, commentaire du 28b). Précisions : (1) Reflexes, One on Ones et Handling agissent sur la portée physique (réaction, plongeon, prise), centrés sur le gardien neutre calibré au 18e : un gardien moyen garde le taux d'arrêt calibré ; (2) les erreurs du gardien sont des issues possibles même pour un très bon gardien (ballon relâché dans la surface, mauvaise appréciation de la trajectoire, sortie mal calibrée) ; (3) la garde probabiliste `v2-realisme/19c` doit passer sur l'arrêt.
+
+- [ ] Gardien noté 99 : boulettes rares mais présentes sur 500 matchs ; gardien noté 40 : parade réflexe exceptionnelle présente

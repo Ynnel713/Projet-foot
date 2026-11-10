@@ -8,9 +8,9 @@
 
 **Attributs :** Aggression, Tackling (réussite, pour séparer faute et réussite) ; gestes ci-dessus.
 
-**Blocked by:** 02a (penalty), 07a (duels), `v2-collectif/29` (livré), `v2-collectif/30` ; passe après `v2-collectif/22c` (contrôle de non-régression).
+**Blocked by:** 02a (penalty), 07a (duels), `v2-collectif/29` (livré), `v2-collectif/30` ; passe après `v2-collectif/22c` (contrôle de non-régression) ; `v2-realisme/21b` (gravité selon l'action) ; `v2-realisme/21a` recommandé (décision de l'arbitre) (ajouté le 10/11/2026, audit de la roadmap).
 
-**Bloque :** 09b, 09c ; `v2-coach-et-gestion-de-match/05b` (remplacement après un carton). Alimente `v2-mise-en-scene/02` (cartons rouges, ajoutés à leur livraison) sans le bloquer.
+**Bloque :** 09b, 09c ; `v2-realisme/21f`, `21g`, `21h` (ajouté le 10/11/2026, audit de la roadmap) ; `v2-coach-et-gestion-de-match/05b` (remplacement après un carton). Alimente `v2-mise-en-scene/02` (cartons rouges, ajoutés à leur livraison) sans le bloquer.
 
 **Status:** à faire (constantes à proposer avant le code)
 
@@ -25,3 +25,7 @@
 - [ ] Cartons tracés et affichés à l'écran
 - [ ] Constantes produit et critères chiffrés validés par le propriétaire avant le code
 - [ ] Déterminisme à graine fixée ; suite V2 verte ; V1 inchangée
+
+## Complément de l'audit de la roadmap (10/11/2026)
+
+Source : `docs/AUDIT_ROADMAP_V2.md`. La gravité tirée dans des parts fixes (`duel.foul_severity`) est remplacée par la gravité de l'action (`v2-realisme/21b`), avec les cas de la loi 12 (occasion manifeste annulée, attaque prometteuse arrêtée). Le carton s'applique à la **décision** de l'arbitre (`v2-realisme/21a`), pas au fait réel, pour que la VAR (`21g`, `21h`) puisse corriger. Contestations : l'effet « Argues With Officials » reste ici ; l'animation va à `v2-mise-en-scene/06`.

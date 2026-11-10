@@ -12,7 +12,7 @@
 
 **Blocked by:** 12e (Réserve d'énergie qui dépend de l'effort).
 
-**Bloque :** 12g.
+**Bloque :** 12g, 20d, 20g (ajouté le 10/11/2026, audit de la roadmap).
 
 **Status:** à faire (constantes à proposer avant le code)
 

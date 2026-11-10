@@ -12,7 +12,7 @@
 
 **Blocked by:** 04a (Conduite : même risque de perte à l'évaluation et à la résolution); 07c (Réception de face, de profil ou dos au jeu); 11b (Collision asymétrique : Strength).
 
-**Bloque :** rien.
+**Bloque :** 21c (ajouté le 10/11/2026, audit de la roadmap).
 
 **Status:** à faire (constantes à proposer avant le code)
 

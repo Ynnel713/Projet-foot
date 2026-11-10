@@ -10,7 +10,7 @@
 
 **Blocked by:** 11b (Collision asymétrique : Strength).
 
-**Bloque :** 11e.
+**Bloque :** 11e, 21c (ajouté le 10/11/2026, audit de la roadmap).
 
 **Status:** à faire (constantes à proposer avant le code)
 

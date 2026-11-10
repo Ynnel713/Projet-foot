@@ -25,3 +25,7 @@
 - [ ] Le mode ne montre que ces moments, sans score ni repère futur avant chacun
 - [ ] En match (50 matchs, graine d'audit) : nombre de moments clés par match et leur répartition par issue, rapportés
 - [ ] Déterminisme à graine fixée ; suite V2 verte ; `npm run build` et `npm run lint` OK ; V1 inchangée
+
+## Complément de l'audit de la roadmap (10/11/2026)
+
+Source : `docs/AUDIT_ROADMAP_V2.md`. Moments VAR (but annulé, penalty accordé ou retiré, rouge après révision) ajoutés à la livraison de `v2-realisme/21g` et `21h`, sans bloquer ce ticket ; ils se lisent dans le journal des événements (`v2-realisme/19b`).

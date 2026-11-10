@@ -10,7 +10,7 @@
 
 **Blocked by:** 08b (Mémoire de perception : positions vues, datées et vieillissantes); 08c (Scan visuel avant la réception).
 
-**Bloque :** 08f.
+**Bloque :** 08f, 09i (ajouté le 10/11/2026, audit de la roadmap).
 
 **Status:** à faire (constantes à proposer avant le code)
 
