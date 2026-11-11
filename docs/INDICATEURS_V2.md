@@ -981,3 +981,39 @@ Commande : `scripts/bench_series.py 50 --processus 6`, fichiers `.scratch/v2-rea
 **Déterminisme.** Les 10 premiers matchs rejoués (`12e-det2.json`) : 2 450 clés par match communes, valeurs identiques. Suite complète : 2 751 passés, 14 désélectionnés.
 
 **Scène A/B du 19d, revue.** La minute ne fatigue plus : la scène compare le même joueur réserve pleine et réserve à 0,2 (5,3 m de conduite en 2 s contre 7,6 m), et un joueur réserve pleine à la 85e conduit autant qu'à la 15e ; probabilité de passe identique.
+
+## 28. Calibration provisoire des volumes de course (ticket v2-realisme/18d, 500 matchs, 11/11/2026)
+
+Commande : `scripts/bench_series.py 500 --processus 7`, fichiers `.scratch/v2-realisme/mesures/18d-500.*` ; série de réglage sur 50 matchs `18d-a.*` contre `12e-det1.*` (avant, mêmes graines) ; essais écartés : `18d-b.*` (marge de rattrapage 0,20). Constante **provisoire** retenue par délégation du propriétaire : le défenseur qui marque ou couvre suit l'allure de l'adversaire suivi plus `FOLLOW_CATCH_UP` = 0,10 de sa vitesse max, jamais sous sa course sans ballon (`defense.follow_intensity`, appelé par `cerveau.decide`). Avant : marquage et couverture au sprint quelle que soit l'allure de l'adversaire.
+
+**Diagnostic avant réglage (12e, 6 matchs, distance au-dessus de 19,8 km/h par intention).** Marquage : 32 à 38 % de la course rapide des défenseurs et des milieux ; ballon libre : 27 à 52 % (sprint réaliste, gardé) ; appels : 33 à 44 % de celle des attaquants.
+
+| Indicateur | 12e (50) | 18d (50) | 18d (500) | Repère |
+|---|---|---|---|---|
+| Distance au-dessus de 19,8 km/h (part) | 14,4 % | 9,8 % | 9,9 % [9,8 ; 9,9] | 6 à 10 % (R6) |
+| Distance au-dessus de 25 km/h (part) | 4,8 % | 2,7 % | 2,7 % | suivi |
+| Distance par joueur de champ (km) | 12,6 | 12,1 | 12,1 | 10 à 12 (R4) |
+| Sprints par joueur et par match | 34,2 | 18,7 | 18,6 | suivi |
+| Appels par joueur et par 90 min | 22,9 | 23,6 | 23,9 | 15,1 en moyenne (R5, indicatif) |
+| Passes par match ; par minute de jeu effectif | 911 ; 12,5 | 912 ; 12,5 | 916 ; 12,6 | 890 à 940 ; 15 à 17 (R7) |
+| Passes par possession | 2,58 | 2,70 | 2,70 | 3 à 5 |
+| Tirs tracés par équipe | 21,4 | 21,6 | 21,9 | 8 à 15 (R1) |
+| Buts par match ; conversion | 3,5 ; 8,2 % | 3,8 ; 8,8 % | 3,5 ; 8,1 % | 2 à 3,5 ; 10 à 12 % |
+| Tacles ; fautes par match | 47,2 ; 14,8 | 46,5 ; 14,9 | 47,1 ; 14,6 | 30 à 40 ; 21 à 26 |
+| Possession d'équipe (s) | 16,4 | 17,2 | 17,1 | suivi |
+| Hauteur du bloc sans ballon (m) | 31,7 | 31,8 | 31,9 | suivi |
+
+**Par poste, 500 matchs (km ; m au-dessus de 19,8 km/h, avant → après ; appels par 90 min).** DC 11,1 ; 956 → 433 ; 3,4. LB 10,6 ; 1 169 → 607 ; 8,2. RB 10,6 ; 1 185 → 602 ; 6,9. MDC 12,1 ; 1 849 → 881 ; 9,7. MC 12,0 ; 2 007 → 1 009 ; 21,2. MOC 13,4 ; 2 677 → 1 971 ; 55,0. AG 12,9 ; 2 471 → 1 987 ; 37,8. AD 13,0 ; 2 535 → 2 090 ; 37,4. BU 14,7 ; 2 687 → 2 478 ; 68,9. Repère réel au-dessus de 19,8 km/h (section 6, R6) : DC 586 à 716 m, MC 857 à 1 001 m, attaquants 811 à 1 113 m.
+
+**Constat.** La course rapide globale entre dans le repère (9,9 %) ; les milieux y sont (MC 1 009 m, MDC 881 m) ; le bloc, les passes, les tirs, les tacles et les fautes ne bougent pas au-delà du bruit. Fin de match (500 matchs) : course au-dessus de 19,8 km/h 0,112 (0-15) → 0,087 (75-90), − 22 % (repère 10 à 30 %).
+
+**Écarts restants, attribués.**
+- Attaquants environ deux fois au-dessus du réel (MOC, ailiers, BU : 2,0 à 2,5 km au-dessus de 19,8 km/h ; appels BU 69, MOC 55 par 90 min) et ordre des postes en distance totale inversé (BU en tête) : **mécanisme**, pas de récupération entre deux efforts, un appel suit l'autre sans pause (ticket 12f, explosivité). Essai écarté : `off_ball.RUN_INTERVAL_S` 1,0 → 2,5 s, sans effet mesurable (l'appel poursuit un espace qui bouge, le délai ne coupe pas la course).
+- Défenseurs sous le réel (DC 433 m contre 586 à 716 m) : **mécanisme**, presque aucune passe en profondeur (0,4 % des passes), donc peu de replis au sprint (`v2-collectif/32a`, 32b). Essai écarté : marge de rattrapage 0,20, sans effet sur les défenseurs (DC 434 → 464 m sur 50 matchs) et course rapide globale 10,1 %.
+- Passes par minute de jeu effectif sous 15 à 17 : temps de jeu effectif trop haut (73 %), sans remplacements ni assez de fautes ; **calibration finale** et tickets de règles.
+- Passes par possession (2,7 contre 3 à 5) et volume de tirs (R1) : choix du porteur (conduite 72 % des décisions), découpé au **18f**, puis tir et gardien au 18e.
+- Intensité des appels vers un espace libre gardée à 0,75 de la vitesse max (course réelle d'appel entre 19,8 et 25 km/h, test du 12d).
+
+**Attributs.** Work Rate garde son sens dans le marquage : il fixe le plancher de `follow_intensity` (Work Rate 5 / 50 / 99, adversaire arrêté : 0,45 / 0,55 / 0,65 ; adversaire à 0,8 de la vitesse max : 0,90 pour tous). Off the Ball et Stamina ne sont pas touchés.
+
+**Déterminisme.** Les 10 premiers matchs rejoués (`18d-det2.json`) contre les 10 premiers de la série de 500 : 2 432 clés communes, valeurs identiques.

@@ -17,7 +17,7 @@ from v2engine.ball_state import BallState
 from v2engine.bloc import Bloc
 from v2engine.decision import CONTRE_ATTAQUE, dribble_speed_factor
 from v2engine.defense import (COMPENSATION, COUVERTURE, MARQUAGE, PRESSEUR, REST_DEFENDERS, DefensiveRoles,
-                              replacement_intensity,
+                              replacement_intensity, follow_intensity,
                               leave_probability, press_intensity)
 from v2engine.flux import DEFENSE
 from v2engine.gardien import FACE_A_FACE, GARDIEN, INTERVENTION, PLACEMENT, RELANCE, SORTIE
@@ -343,7 +343,8 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
     assigned = defense.assignments.get(player.name) if defense is not None else None
     if role in (COUVERTURE, MARQUAGE):
         why = "couvre son presseur, entre le porteur et le but" if role == COUVERTURE else "marque un attaquant dangereux, côté but"
-        return make(role, "couvrir" if role == COUVERTURE else "marquer", assigned.target, mate=assigned.mate,
+        return make(role, "couvrir" if role == COUVERTURE else "marquer", assigned.target,
+                    follow_intensity(player, assigned.target_velocity), mate=assigned.mate,
                     reason=why, distance_m=player.position.distance_to(assigned.target),
                     target_velocity=assigned.target_velocity)
     if role == COMPENSATION:  # ticket v2-collectif/09

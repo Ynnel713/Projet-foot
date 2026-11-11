@@ -61,3 +61,28 @@ def test_a_space_run_from_decide_carries_its_intensity() -> None:
     intention = cerveau.think(mate, BallState(position=Vec2(50.0, 34.0), velocity=Vec2(0.0, 0.0), holder="H"),
                               [holder, mate, rival], 1.0, {})
     assert intention.role == cerveau.APPEL and intention.intensity in (run_intensity(mate, False), DEEP_RUN_INTENSITY)
+
+
+def test_a_marker_follows_the_pace_of_his_man_not_a_sprint() -> None:
+    """Ticket v2-realisme/18d : marquage et couverture à l'allure de l'adversaire suivi, plus une marge pour reprendre
+    l'écart ; jamais sous la course sans ballon, au plus le sprint."""
+    from v2engine.defense import FOLLOW_CATCH_UP, follow_intensity
+    marker = _p("D", team="away")
+    top = max_speed_mps(marker.pace)
+    assert follow_intensity(marker, Vec2(0.0, 0.0)) == replacement_intensity(marker, False)  # homme arrêté : course
+    jogging = Vec2(0.5 * top, 0.0)
+    assert follow_intensity(marker, jogging) == 0.5 + FOLLOW_CATCH_UP
+    assert follow_intensity(marker, Vec2(1.2 * top, 0.0)) == 1.0  # attaquant lancé plus vite que lui : sprint
+
+
+def test_marking_from_decide_carries_the_followed_pace() -> None:
+    from v2engine.defense import MARQUAGE, Assignment, DefensiveRoles, follow_intensity
+    marker, holder = _p("D", team="away", x=40.0), _p("H", x=60.0)
+    roles = DefensiveRoles()
+    roles.assignments["D"] = Assignment(MARQUAGE, Vec2(42.0, 34.0), "H", Vec2(3.0, 0.0))
+    intention = cerveau.decide(marker, MARQUAGE, BallState(position=Vec2(60.0, 34.0), velocity=Vec2(0.0, 0.0),
+                                                           holder="H"),
+                               cerveau.perceive(marker, BallState(position=Vec2(60.0, 34.0), velocity=Vec2(0.0, 0.0),
+                                                                  holder="H"), [marker, holder]),
+                               [marker, holder], 1.0, None, defense=roles)
+    assert intention.action == "marquer" and intention.intensity == follow_intensity(marker, Vec2(3.0, 0.0)) < 1.0

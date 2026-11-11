@@ -10,7 +10,7 @@
 
 **Attributs :** aucun
 
-**Blocked by:** 18d (Calibration provisoire 1 : volumes de course et rythme après les fondations P0); 05g (Validation des tirs : trajectoire, cadrage, contres, arrêts); 03g (Validation du placement et des sorties du gardien); 06b (Indicateurs : occasion, exécution, gardien, par attribut).
+**Blocked by:** 18d (Calibration provisoire 1 : volumes de course et rythme après les fondations P0); 18f (Calibration provisoire 1 bis : choix du porteur et rythme de décision) (ajouté le 11/11/2026, découpage du 18d); 05g (Validation des tirs : trajectoire, cadrage, contres, arrêts); 03g (Validation du placement et des sorties du gardien); 06b (Indicateurs : occasion, exécution, gardien, par attribut).
 
 **Bloque :** `v2-collectif/22c`.
 

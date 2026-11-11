@@ -97,6 +97,12 @@ _PRESS_REST_S = (10.0, -10.0, 5.0, 20.0)  # Work Rate (amplitude négative : bon
 # possession, trot (0,40 : 12 km/h ; 7-14,4 km/h). Le repli et le pressing gardent `_PRESS_INTENSITY` (sprint).
 _REPLACE_INTENSITY = (0.55, 0.10, 0.45, 0.65)  # Work Rate, sans ballon
 _HOLD_INTENSITY = (0.40, 0.08, 0.32, 0.48)  # Work Rate, en possession
+# Marquage et couverture à l'allure suivie (ticket v2-realisme/18d, PROVISOIRE, recommandée et retenue par délégation
+# du propriétaire, 11/11/2026 ; mesure : `docs/INDICATEURS_V2.md` section 28) : le défenseur suit l'allure de l'adversaire
+# qu'il marque ou couvre, plus `FOLLOW_CATCH_UP` de sa vitesse max pour reprendre l'écart (3 km/h pour un joueur
+# moyen ; 0,20 essayé : sans effet mesurable sur les défenseurs), jamais sous sa course sans ballon (`_REPLACE_INTENSITY`). Avant : sprint quelle que soit l'allure de l'adversaire
+# (38 % de la course au-dessus de 19,8 km/h des milieux venait du marquage).
+FOLLOW_CATCH_UP = 0.10
 _GOOD_LANE = (0.65, 0.25, 0.40, 0.85)  # Anticipation
 _STOP_M = (1.2, -0.4, 0.8, 1.6)  # Aggression
 _FOLLOWS = (0.8, 0.25, 0.55, 0.95)  # Teamwork
@@ -153,6 +159,13 @@ def replacement_intensity(player: PlayerState, in_possession: bool) -> float:
     """Part de sa vitesse max pour rejoindre sa place dans le bloc (ticket v2-realisme/12d) : trot en possession,
     course sans ballon, plus vite quand Work Rate est haut."""
     return _curve(effective_rating(player, "Work Rate"), _HOLD_INTENSITY if in_possession else _REPLACE_INTENSITY)
+
+
+def follow_intensity(player: PlayerState, target_velocity: Vec2) -> float:
+    """Part de sa vitesse max pour marquer ou couvrir (ticket v2-realisme/18d) : l'allure de l'adversaire suivi plus
+    `FOLLOW_CATCH_UP`, entre sa course sans ballon et le sprint."""
+    pace = target_velocity.length() / max_speed_mps(effective_rating(player, "Pace")) + FOLLOW_CATCH_UP
+    return min(1.0, max(replacement_intensity(player, False), pace))
 
 
 def press_rest_s(player: PlayerState) -> float:
