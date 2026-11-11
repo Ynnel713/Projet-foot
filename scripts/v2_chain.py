@@ -64,8 +64,11 @@ def _gives_ball(e: TraceEvent, events: list[TraceEvent], team: str) -> tuple[str
 
 
 def _breaks(e: TraceEvent, team: str) -> bool:
-    """Événement de l'adversaire en possession : la possession de `team` ne peut pas remonter au-delà."""
-    if e.team is None or e.team == team:
+    """La possession de `team` ne peut pas remonter au-delà de cet événement : événement de l'adversaire en possession,
+    ou perte et hors-jeu de `team` (le ballon est alors à l'adversaire ; réserve A1 de l'expert sur le 19e)."""
+    if e.team == team:
+        return e.kind in (PERTE, HORS_JEU)
+    if e.team is None:
         return False
     if e.kind in (ARRET, CONTRE, BUT):
         return False  # le ballon reste à disputer (rebond) ; un but adverse est précédé de son engagement
@@ -149,7 +152,10 @@ def main(argv: list[str] | None = None) -> None:
     args = parser.parse_args(argv)
     if args.match is not None:
         trace = play(args.match)
-        print(format_chain(trace.events, goals(trace.events)[args.but]))
+        found = goals(trace.events)
+        if not 0 <= args.but < len(found):
+            parser.error(f"le match {args.match} compte {len(found)} but(s) : --but entre 0 et {len(found) - 1}")
+        print(format_chain(trace.events, found[args.but]))
         return
     if args.processus > 1:
         from concurrent.futures import ProcessPoolExecutor

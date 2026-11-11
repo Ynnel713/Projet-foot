@@ -13,9 +13,14 @@ from __future__ import annotations
 import statistics
 from collections import Counter, defaultdict
 
+from v2engine.added_time import played_minute
+
 TRANCHE_MIN = 15.0
-TRANCHES = ("0-15", "15-30", "30-45", "45-60", "60-75", "75-90", "90 et plus")  # la dernière : temps additionnel
-FIRST, LAST = TRANCHES[0], TRANCHES[5]  # première et dernière tranche réglementaire, comparées
+HALF_MIN = 45.0
+# Tranches de temps JOUÉ (ticket 19f, réserve A1 de l'expert sur le 19d) : temps additionnel de chaque période à part.
+TRANCHES = ("0-15", "15-30", "30-45", "45 et plus", "45-60", "60-75", "75-90", "90 et plus")
+FIRST, LAST = "0-15", "75-90"  # première et dernière tranche réglementaire, comparées
+_REGULAR = ("0-15", "15-30", "30-45", "45-60", "60-75", "75-90")
 STAMINA_BINS = (0, 40, 55, 70)  # bornes basses des tranches de Stamina (mêmes que Dribbling au 04c)
 SPRINT_MPS, HIGH_INTENSITY_MPS = 25.0 / 3.6, 19.8 / 3.6  # mêmes seuils que le banc 01d
 SPRINT_MIN_S = 1.0
@@ -28,9 +33,16 @@ NINETY_S = 90.0 * 60.0
 PLAYER_MIN_S = 5.0 * 60.0
 
 
-def tranche(minute: float) -> str:
-    """Tranche de 15 minutes de temps de jeu écoulé ; au-delà de 90 minutes, « 90 et plus »."""
-    return TRANCHES[min(len(TRANCHES) - 1, int(max(0.0, minute) // TRANCHE_MIN))]
+def tranche(minute: float, second_half_start: float | None = None) -> str:
+    """Tranche de 15 minutes de temps joué d'un instant `minute` de l'horloge du moteur (ticket 19f). `second_half_start`
+    : minute d'horloge du coup d'envoi de la 2e période (`MatchTrace.second_half_start_minute`), None tant qu'elle n'est
+    pas jouée. Au-delà de la 45e en 1re période : « 45 et plus » ; au-delà de 90 minutes jouées : « 90 et plus »."""
+    if minute >= HALF_MIN and (second_half_start is None or minute < second_half_start):
+        return "45 et plus"
+    played = played_minute(max(0.0, minute), second_half_start, HALF_MIN)
+    if played >= 2 * HALF_MIN:
+        return "90 et plus"
+    return _REGULAR[int(played // TRANCHE_MIN)]
 
 
 def stamina_band(stamina: float) -> str:
@@ -48,26 +60,31 @@ class MinuteProfile:
     """Sommes par tranche, sur tous les matchs. Course : `run[(tranche, groupe, mesure)]` ; événements :
     `events[(tranche, groupe, indicateur)]`. Le groupe est « tous », le poste, la tranche de Stamina ou « joueur <nom> » ;
     un événement sans auteur connu ne compte que dans « tous ». Les sprints sont comptés dans la tranche où ils
-    commencent. `info` : poste et Stamina de chaque joueur vu."""
+    commencent. `info` : poste, Stamina et équipe de chaque joueur vu. `second_half_start` : début de la 2e période du
+    match en cours (horloge du moteur), posé par le banc ; il sert à passer au temps joué (`tranche`)."""
 
     def __init__(self) -> None:
-        self.run: Counter = Counter()  # mesures : temps, distance, intense, sprint, sprints, sans ballon, profondeur
+        self.run: Counter = Counter()  # temps, distance, intense, sprint, sprints, sans ballon, profondeur, bloc
         self.events: Counter = Counter()
-        self.info: dict[str, tuple[str, float]] = {}
+        self.info: dict[str, tuple[str, float, str]] = {}
         self.sprint_open: dict[str, tuple[float, str, tuple[str, ...]]] = {}  # joueur -> (durée, tranche, groupes)
+        self.second_half_start: float | None = None
+
+    def label(self, minute: float) -> str:
+        return tranche(minute, self.second_half_start)
 
     def groups(self, name: str | None) -> tuple[str, ...]:
         if name is None or name not in self.info:
             return (ALL,)
-        poste, stamina = self.info[name]
+        poste, stamina, _ = self.info[name]
         return ALL, poste, stamina_band(stamina), PLAYER_PREFIX + name
 
     def on_player(self, minute: float, name: str, poste: str, stamina: float, speed: float, dt: float,
-                  depth: float | None = None) -> None:
+                  depth: float | None = None, team: str = "") -> None:
         """Un joueur de champ à ce tick. `depth` : sa distance à son propre but (m) quand son équipe n'a pas le ballon,
         `None` sinon."""
-        self.info[name] = (poste, stamina)
-        sl, groups = tranche(minute), self.groups(name)
+        self.info[name] = (poste, stamina, team)
+        sl, groups = self.label(minute), self.groups(name)
         for g in groups:
             self.run[(sl, g, "temps")] += dt
             self.run[(sl, g, "distance")] += speed * dt
@@ -90,8 +107,17 @@ class MinuteProfile:
             for g in groups:
                 self.run[(start, g, "sprints")] += 1
 
+    def team(self, name: str | None) -> str | None:
+        return self.info[name][2] if name in self.info else None
+
+    def on_block(self, minute: float, height: float) -> None:
+        """Hauteur du bloc d'une équipe sans ballon à un échantillon de la géométrie (grandeur d'équipe, ticket 19f)."""
+        sl = self.label(minute)
+        self.run[(sl, ALL, "bloc échantillons")] += 1
+        self.run[(sl, ALL, "bloc")] += height
+
     def count(self, minute: float, key: str, amount: float = 1.0, actor: str | None = None) -> None:
-        sl = tranche(minute)
+        sl = self.label(minute)
         for g in self.groups(actor):
             self.events[(sl, g, key)] += amount
 
@@ -104,7 +130,7 @@ class MinuteProfile:
     def on_goal(self, minute: float, scoring_team: str, on_pitch: list[tuple[str, str]]) -> None:
         """But : un but par match dans « tous » ; pour chaque joueur de champ présent (`(nom, équipe)`), but marqué ou
         encaissé par son équipe pendant qu'il est sur le terrain."""
-        sl = tranche(minute)
+        sl = self.label(minute)
         self.events[(sl, ALL, "buts")] += 1
         for name, team in on_pitch:
             key = "buts marqués" if team == scoring_team else "buts encaissés"
@@ -121,6 +147,7 @@ class MinuteProfile:
             self.count(minute, "passes réussies", p["done"], actor=p.get("passer"))
             self.count(minute, "passes visées", actor=p.get("target"))
         self.events[(FIRST, ALL, "matchs")] += 1
+        self.second_half_start = None
 
     def merge(self, run: dict, events: dict, info: dict) -> None:
         """Fusion d'un autre profil (série parallèle, `scripts/bench_series.py`)."""
@@ -146,6 +173,7 @@ def group_metrics(profile: MinuteProfile, sl: str, g: str) -> dict[str, float | 
         "passes réussies (part)": _ratio(e[(sl, g, "passes réussies")], e[(sl, g, "passes")]),
         "contrôles ratés pour 100 passes visées": (
             None if not e[(sl, g, "passes visées")] else 100.0 * e[(sl, g, "contrôles ratés")] / e[(sl, g, "passes visées")]),
+        "autres contacts ratés pour 90 min": e[(sl, g, "contacts ratés")] * per90,
         "tirs cadrés (part des non contrés)": _ratio(e[(sl, g, "tirs cadrés")], e[(sl, g, "tirs non contrés")]),
         "tacles gagnés (part)": _ratio(e[(sl, g, "tacles gagnés")], e[(sl, g, "tacles")]),
         "position sans ballon (m depuis son but)": _ratio(r[(sl, g, "profondeur")], r[(sl, g, "sans ballon")]),
@@ -175,8 +203,7 @@ def _compare(first: dict, last: dict) -> dict[str, float]:
     return out
 
 
-def minute_report(profile: MinuteProfile, block_height: dict[str, float] | None = None,
-                  postes: tuple[str, ...] = ()) -> dict[str, float | None]:
+def minute_report(profile: MinuteProfile, postes: tuple[str, ...] = ()) -> dict[str, float | None]:
     """Chiffres publiés (section 23). D'abord, par tranche, tous les joueurs de champ (clés historiques : course, parts,
     sprints, technique, duels, hauteur du bloc d'équipe, tirs et buts par match). Puis, pour chaque poste et chaque
     tranche de Stamina, tous les indicateurs de `group_metrics` à chaque tranche et la comparaison 0-15 / 75-90."""
@@ -197,15 +224,16 @@ def minute_report(profile: MinuteProfile, block_height: dict[str, float] | None 
             out[f"{sl} : position sans ballon (m depuis son but)"] = _ratio(r[(sl, ALL, "profondeur")],
                                                                            r[(sl, ALL, "sans ballon")])
         out[f"{sl} : passes réussies (part)"] = _ratio(e[(sl, ALL, "passes réussies")], e[(sl, ALL, "passes")])
-        out[f"{sl} : contrôles ratés pour 100 passes"] = (
+        out[f"{sl} : contrôles ratés pour 100 passes"] = (  # passe ratée par son receveur visé (19f)
             None if not e[(sl, ALL, "passes")] else 100.0 * e[(sl, ALL, "contrôles ratés")] / e[(sl, ALL, "passes")])
+        out[f"{sl} : autres contacts ratés par match"] = e[(sl, ALL, "contacts ratés")] / matches
         out[f"{sl} : tirs cadrés (part des non contrés)"] = _ratio(e[(sl, ALL, "tirs cadrés")],
                                                                   e[(sl, ALL, "tirs non contrés")])
         out[f"{sl} : tacles gagnés (part)"] = _ratio(e[(sl, ALL, "tacles gagnés")], e[(sl, ALL, "tacles")])
         out[f"{sl} : tirs par match"] = e[(sl, ALL, "tirs")] / matches
         out[f"{sl} : buts par match"] = e[(sl, ALL, "buts")] / matches
-        if block_height and sl in block_height:
-            out[f"{sl} : hauteur du bloc sans ballon (m)"] = block_height[sl]
+        if r[(sl, ALL, "bloc échantillons")]:
+            out[f"{sl} : hauteur du bloc sans ballon (m)"] = r[(sl, ALL, "bloc")] / r[(sl, ALL, "bloc échantillons")]
     for g in list(postes) + [stamina_band(b) for b in STAMINA_BINS]:
         if not r[(FIRST, g, "temps")] or not r[(LAST, g, "temps")]:
             continue
@@ -232,7 +260,7 @@ def player_report(profile: MinuteProfile) -> dict:
     players, spread = {}, defaultdict(list)
     for name in sorted(profile.info):
         g = PLAYER_PREFIX + name
-        poste, stamina = profile.info[name]
+        poste, stamina, _ = profile.info[name]
         tranches = {sl: m for sl in TRANCHES if (m := group_metrics(profile, sl, g))}
         players[name] = {"poste": poste, "Stamina": stamina, "tranches": tranches}
         r = profile.run
@@ -244,11 +272,3 @@ def player_report(profile: MinuteProfile) -> dict:
     summary = {k: {"joueurs": len(v), **_quantiles(v)} for k, v in sorted(spread.items())}
     return {"joueurs": players, "synthèse": summary}
 
-
-def block_height_by_tranche(stat) -> dict[str, float]:
-    """Hauteur moyenne du bloc par tranche, lue dans le découpage « minute » du banc (`Stat.by`, clés `0-15 min`...)."""
-    acc: dict[str, list[float]] = defaultdict(list)
-    for (kind, label), values in stat.by.items():
-        if kind == "minute":
-            acc[tranche(float(label.split("-")[0]))].extend(values)
-    return {sl: sum(v) / len(v) for sl, v in acc.items() if v}

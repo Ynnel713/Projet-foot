@@ -722,7 +722,7 @@ Sur ces 50 matchs, la tranche de 12 à 16 m n'est plus surévaluée (chance de b
 
 Commande : `scripts/bench_series.py 50 --processus 7` (graines de `measure_v2`, matchs 0 à 49), clé « rendement par tranche de 15 min » ; module `scripts/v2_tranches.py`. Fichiers `.scratch/v2-realisme/mesures/19d-det1.*` et `19d-det2.*`. Mesure seule, aucun réglage.
 
-**Définitions.** Tranches de 15 minutes de **temps de jeu écoulé** (horloge du moteur) : 0-15 à 75-90, puis « 90 et plus » (temps additionnel de la seconde période). Le temps additionnel de la première période tombe dans la tranche 45-60. **Correctif du 11/11/2026 (réserve A1 de l'expert)** : l'horloge du moteur n'est pas le temps joué ; avec 2 à 3 minutes de temps additionnel en première période, la tranche « 75-90 » couvre environ les minutes jouées 72,5 à 87,5 et « 90 et plus » commence vers la 87e minute jouée : la baisse de fin de match est un peu sous-estimée. Découpage au temps joué : ticket 19f, avant le 18a. Course : joueurs de champ, distance par joueur et par minute (m/min, ce qui neutralise la durée inégale des tranches), part de la distance au-dessus de 19,8 et de 25 km/h, sprints (au moins 1 s au-dessus de 25 km/h, comptés dans la tranche où ils commencent) par joueur et par 15 min. Technique : passes reçues par le receveur visé, contrôles ratés (`contrôle raté` du journal 19b) pour 100 passes, tirs cadrés (but, capté, repoussé, claqué) parmi les tirs non contrés. Duels : tacles gagnés sur tacles tentés. Hauteur du bloc sans ballon (même mesure que la section 1). Comparaison de la première et de la dernière tranche réglementaire (0-15 et 75-90) par poste et par tranche de Stamina (0-40, 40-55, 55-70, 70 et plus).
+**Définitions.** Tranches de 15 minutes de **temps de jeu écoulé** (horloge du moteur) : 0-15 à 75-90, puis « 90 et plus » (temps additionnel de la seconde période). Le temps additionnel de la première période tombe dans la tranche 45-60. **Correctif du 11/11/2026 (réserve A1 de l'expert)** : l'horloge du moteur n'est pas le temps joué ; avec 2 à 3 minutes de temps additionnel en première période, la tranche « 75-90 » couvre environ les minutes jouées 72,5 à 87,5 et « 90 et plus » commence vers la 87e minute jouée : la baisse de fin de match est un peu sous-estimée. Découpage au temps joué : fait au ticket 19f, chiffres de la section 23 ter, qui remplacent ceux de cette section et de la 23 bis pour toute comparaison au réel. Course : joueurs de champ, distance par joueur et par minute (m/min, ce qui neutralise la durée inégale des tranches), part de la distance au-dessus de 19,8 et de 25 km/h, sprints (au moins 1 s au-dessus de 25 km/h, comptés dans la tranche où ils commencent) par joueur et par 15 min. Technique : passes reçues par le receveur visé, contrôles ratés (`contrôle raté` du journal 19b) pour 100 passes, tirs cadrés (but, capté, repoussé, claqué) parmi les tirs non contrés. Duels : tacles gagnés sur tacles tentés. Hauteur du bloc sans ballon (même mesure que la section 1). Comparaison de la première et de la dernière tranche réglementaire (0-15 et 75-90) par poste et par tranche de Stamina (0-40, 40-55, 55-70, 70 et plus).
 
 **Par tranche (50 matchs).**
 
@@ -794,6 +794,56 @@ Effectifs par poste : DC 41 joueurs, MC 28, BU 19, LB 17, RB 17, AG 16, AD 16, M
 
 **Déterminisme.** Les 10 premiers matchs rejoués à part (`19d-v2-det2.json`) : 21 730 valeurs par match identiques à celles de la série de 50 matchs. Les 77 chiffres « tous joueurs » du premier passage (`19d-det1.json`) sont identiques ; les autres clés ont été renommées (par groupe et par tranche).
 
+### 23 ter. Au temps joué, contrôles par passe visée (ticket v2-realisme/19f, 50 matchs, 11/11/2026)
+
+Réserves de l'expert sur le 19d et le 19e, acceptées par le propriétaire. Commande et graines inchangées (`scripts/bench_series.py 50 --processus 6`) ; fichiers `.scratch/v2-realisme/mesures/19f-det1.*` (50 matchs) et `19f-det2.*` (10 matchs). Lecture seule : aucun fichier `v2engine/` modifié.
+
+**Ce qui change dans la mesure.**
+- **Temps joué.** Les tranches suivent `played_minute` (`v2engine/added_time.py`), comme la fatigue : la seconde période commence au début de la tranche 45-60 quelle que soit la durée du temps additionnel de la première, qui a sa propre tranche « 45 et plus ». « 75-90 » couvre les minutes jouées 75 à 90 et « 90 et plus » le seul temps additionnel de la seconde période. La hauteur du bloc suit le même découpage (elle était découpée à part, à l'horloge).
+- **Contrôles.** Un contrôle raté n'est compté comme tel que sur une passe ou une remise de son équipe qui vise le joueur (« contrôles ratés pour 100 passes visées », par groupe ; « pour 100 passes », tous joueurs). Tout autre contact raté (interception manquée, ballon libre, passe qui visait un coéquipier) est compté à part : « autres contacts ratés » pour 90 minutes (par groupe) ou par match (tous joueurs).
+- **Buts personnels.** Un but contre son camp n'est plus le but personnel du dernier toucheur adverse.
+
+**Par tranche, tous joueurs (50 matchs).**
+
+| Tranche | m/min | > 19,8 km/h | > 25 km/h | Sprints / 15 min | Passes réussies | Contrôles ratés / 100 passes | Autres contacts ratés / match | Cadrés | Tacles gagnés | Bloc (m) | Tirs / match | Buts / match |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 0-15 | 139,0 | 0,379 | 0,170 | 20,1 | 0,710 | 3,1 | 4,2 | 0,311 | 0,250 | 31,3 | 7,46 | 0,74 |
+| 15-30 | 143,5 | 0,388 | 0,175 | 21,1 | 0,708 | 3,4 | 4,0 | 0,361 | 0,283 | 31,8 | 7,42 | 0,74 |
+| 30-45 | 138,3 | 0,374 | 0,167 | 19,7 | 0,716 | 3,2 | 4,4 | 0,348 | 0,267 | 32,0 | 7,04 | 0,66 |
+| 45 et plus | 140,5 | 0,382 | 0,172 | 20,5 | 0,713 | 4,2 | 1,0 | 0,302 | 0,254 | 31,9 | 2,16 | 0,12 |
+| 45-60 | 143,8 | 0,384 | 0,173 | 21,3 | 0,706 | 2,8 | 4,4 | 0,354 | 0,229 | 31,3 | 7,08 | 0,76 |
+| 60-75 | 141,8 | 0,376 | 0,161 | 19,3 | 0,705 | 3,1 | 4,5 | 0,331 | 0,292 | 32,1 | 6,88 | 0,56 |
+| 75-90 | 137,1 | 0,336 | 0,107 | 12,8 | 0,702 | 3,5 | 4,5 | 0,387 | 0,262 | 31,6 | 6,98 | 0,92 |
+| 90 et plus | 129,2 | 0,304 | 0,071 | 7,8 | 0,732 | 3,7 | 1,9 | 0,336 | 0,284 | 32,1 | 3,52 | 0,30 |
+
+Les tranches « 45 et plus » et « 90 et plus » sont courtes : leurs tirs et buts par match ne se comparent pas aux autres (les grandeurs par minute ou en part, oui).
+
+**Horloge contre temps joué : la baisse de fin de match était sous-estimée.** De 0-15 à 75-90, les sprints passent de 20,1 à 12,8 par joueur et par 15 min (− 36 %, contre − 27 % à l'horloge) et la part au-dessus de 25 km/h de 0,170 à 0,107 (− 37 %, contre − 28 %) ; la part au-dessus de 19,8 km/h baisse de 11 % (contre 8 %). La distance totale par minute baisse à peine (139,0 → 137,1). Les tranches 0-15 à 30-45 sont identiques aux chiffres de l'horloge (seule la seconde période change de découpage).
+
+**Par poste, 0-15 → 75-90.**
+
+| Poste | Sprints, 75-90 / 0-15 | Contrôles ratés / 100 passes visées | Autres contacts ratés / 90 min |
+|---|---|---|---|
+| DC | 0,63 | 4,2 → 6,7 | 1,4 → 1,7 |
+| LB | 0,65 | 4,1 → 3,3 | 0,6 → 0,8 |
+| RB | 0,65 | 2,0 → 3,1 | 0,7 → 0,3 |
+| MDC | 0,73 | 5,7 → 4,7 | 2,2 → 1,5 |
+| MC | 0,64 | 4,0 → 4,0 | 1,0 → 1,5 |
+| MOC | 0,57 | 1,7 → 3,6 | 2,4 → 2,0 |
+| AG | 0,57 | 2,0 → 3,7 | 0,4 → 1,3 |
+| AD | 0,60 | 3,9 → 3,5 | 1,1 → 1,6 |
+| BU | 0,64 | 1,9 → 1,3 | 1,7 → 0,9 |
+
+Séparés des contacts sur ballon adverse, les contrôles ratés des défenseurs reviennent au niveau des autres postes (DC 4,2 pour 100 passes visées en 0-15, contre 16,2 avec les interceptions manquées) : la réserve A2 est levée. Les écarts d'une tranche à l'autre restent sans tendance commune (DC et AG montent, MDC, LB et BU baissent), dans le bruit de quelques dizaines de ratés par poste et par tranche.
+
+**Par Stamina, 75-90 / 0-15.** Sprints : 0,09 sous 40 (un joueur), 0,28 de 40 à 55 (6), 0,53 de 55 à 70 (71), 0,73 à 70 et plus (102) ; course au-dessus de 19,8 km/h : 0,67, 0,70, 0,84, 0,91 ; distance totale : 0,98 à 1,01.
+
+**Par joueur (180 joueurs).** Sprints : rapport médian 0,65 (1er décile 0,36, 9e décile 0,86), contre 0,73 à l'horloge ; au-dessus de 19,8 km/h : 0,88 (0,75 ; 1,00) ; distance totale : 0,98 (0,93 ; 1,06). Contrôles ratés pour 100 passes visées et autres contacts ratés : écart médian 0.
+
+**Constat (inchangé dans sa forme, plus net).** Seule la course rapide baisse, à partir de la 75e minute jouée, d'autant plus que Stamina est bas ; technique, duels, position sans ballon et bloc restent plats. Ce sont ces chiffres que le 18a et le 20d comparent au réel.
+
+**Déterminisme.** Les 10 premiers matchs rejoués à part (`19f-det2.json`) : les 2 467 clés par match communes aux deux fichiers ont des valeurs identiques sur ces 10 matchs (les 29 clés de plus de la série de 50 sont des groupes rares absents des 10 premiers matchs).
+
 ## 24. Origine des buts : lecture de la chaîne (ticket v2-realisme/19e, 20 matchs, 11/11/2026)
 
 Commande : `uv run python -m scripts.v2_chain 20` (parts par origine) ; `uv run python -m scripts.v2_chain --match 7 --but 0` (chaîne d'un but, exemple dans `.scratch/v2-realisme/mesures/19e-chaine-match7.txt`). Matchs : graines et affiches du banc (`measure_v2`), sans collecteur. Fichiers `.scratch/v2-realisme/mesures/19e-avant.jsonl` et `19e-apres.jsonl`. Lecture seule du journal (19b).
@@ -819,3 +869,4 @@ Délai médian entre l'événement d'origine et le but : 3,3 s.
 
 **Journal corrigé (réserve A1 de l'expert sur le 19b).** La faute laissée en avantage est écrite quand l'avantage est accordé (`match._foul`), plus au règlement ; si l'arbitre revient à la faute, la décision est écrite à sa minute (« coup franc, après avantage »). Sur 20 matchs : minutes du journal croissantes dans 20 matchs (11 avant la correction), aucune faute causée par un but, empreintes du jeu (ticks, buts, tirs, fautes, remises) identiques dans 20 matchs sur 20 : le jeu n'a pas changé. Origines des buts identiques sur les deux exécutions.
 
+**Reprise au 19f (11/11/2026).** La remontée s'arrête aussi sur une perte ou un hors-jeu de l'équipe qui marque (le ballon est alors à l'adversaire ; but inclassable si sa reprise n'est pas écrite) ; `--but` hors limites donne une erreur claire. Sur les mêmes 20 matchs (`.scratch/v2-realisme/mesures/19f-chaine.json`) : 108 buts, parts identiques, aucun inclassable. Invariant du journal (minutes croissantes, aucune faute causée par un but) gardé par un test sur un match court à graine fixée.

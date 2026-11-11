@@ -32,7 +32,7 @@ from v2engine.shooting import NEUTRAL_ATTRIBUTES
 from ligue1sim.lineup import pick_best_formation
 
 from scripts.v2_indicators import CARRY_PREFIX, EXIT_STATES, Collector, shot_decomposition, xg_calibration
-from scripts.v2_tranches import block_height_by_tranche, minute_report, player_report
+from scripts.v2_tranches import minute_report, player_report
 
 AUDIT_SEED = 20260923
 HIGH, LOW = 99, 11
@@ -170,6 +170,8 @@ def run(n_matches: int, profile: str | None = None, duration_minutes: float = 90
                 if profile and not collector.levels:
                     collector.levels = {p.name: ("haut" if p.team == high_team else "bas") for p in players}
                 _new_shots(collector, live, now_s, players)
+                if live["trace"] is not None:  # temps joué des tranches (ticket v2-realisme/19f)
+                    collector.minutes.second_half_start = live["trace"].second_half_start_minute
                 collector.on_tick(now_s, players, ball, scoring_team, tick_s)
             try:
                 trace = match.simulate_match(home, away, duration_minutes=duration_minutes, tick_seconds=tick_s,
@@ -437,11 +439,9 @@ def report(c: Collector, detail: bool = False) -> dict:
         if detail and stat.by:
             out[name + " — découpage"] = {f"{a}={b}": round(statistics.fmean(v), 2) for (a, b), v in sorted(stat.by.items())}
     # ticket v2-realisme/19d : rendement par tranche de 15 minutes, par poste et par Stamina
-    block = c.stats.get("hauteur du bloc sans ballon (m)")
     postes = tuple(sorted(p for p in c.km if p != "tous"))
     out["rendement par tranche de 15 min"] = {
-        key: (round(v, 4) if isinstance(v, float) else v)
-        for key, v in minute_report(c.minutes, block_height_by_tranche(block) if block else None, postes).items()}
+        key: (round(v, 4) if isinstance(v, float) else v) for key, v in minute_report(c.minutes, postes).items()}
     out["rendement par joueur (tranches de 15 min)"] = player_report(c.minutes)  # dictionnaire imbriqué : hors « par match"
     return out
 

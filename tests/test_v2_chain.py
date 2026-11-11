@@ -156,3 +156,29 @@ def test_v2_chain_reads_a_trace() -> None:
     _kickoff(log, "home")
     goal = _goal(log, 0.5)
     assert vc.goals(trace.events) == [goal] and chain(trace.events, goal.id)[0].kind == "remise"
+
+
+def test_a_loss_by_the_scoring_team_stops_the_walk_back() -> None:
+    """Réserve A1 de l'expert sur le 19e : une perte de l'équipe qui marque rend le ballon ; si sa reprise n'est pas
+    écrite, le but est inclassable au lieu d'hériter d'une origine plus ancienne."""
+    log = EventLog([])
+    _kickoff(log, "home")
+    log.add(0.1, "perte", "home", "K", "tacle", "L")
+    log.add(0.2, "tir", "home", "B", "but")
+    origin = vc.goal_origin(log.events, _goal(log, 0.21))
+    assert origin.family == vc.INCLASSABLE and "perte" in origin.detail
+
+
+def test_journal_minutes_increase_and_no_foul_is_caused_by_a_goal_in_a_short_match() -> None:
+    """Réserve A3 de l'expert sur le 19e : invariant du journal gardé dans la suite (match court, graine fixée)."""
+    import random
+
+    from ligue1sim.clubs import load_clubs
+    from ligue1sim.season import CLUBS_PATH
+
+    clubs = load_clubs(CLUBS_PATH, "Ligue 1")
+    random.seed(20260923)
+    trace = match.simulate_match(clubs[0], clubs[1], duration_minutes=12.0)
+    events = trace.events
+    assert events and all(a.minute <= b.minute + 1e-9 for a, b in zip(events, events[1:]))
+    assert not any(e.kind == "faute" and e.cause is not None and events[e.cause].kind == "but" for e in events)

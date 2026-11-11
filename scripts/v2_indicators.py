@@ -32,7 +32,7 @@ from v2engine.restart import CORNER, GOAL_KICK, KICKOFF
 from v2engine.shooting import (base_chance, keeper_reach_m, neutral_open_chance, shot_pressure, shot_probability,
                                shooting_note)
 from v2engine.situation import POSSESSION_INSTALLEE, TRANSITION_DEFENSIVE, TRANSITION_OFFENSIVE, SituationTracker
-from v2engine.trace import BUT, CONTROLE_RATE
+from v2engine.trace import BUT, CONTROLE_RATE, PASSE, REMISE
 
 from scripts.v2_tranches import MinuteProfile
 
@@ -751,11 +751,17 @@ class Collector:
 
     def on_events(self, events) -> None:
         """Journal du match (`MatchTrace.events`, ticket v2-realisme/19b) : contrôles ratés et buteurs par tranche,
-        attribués au joueur (19d)."""
+        attribués au joueur (19d). Ticket 19f (réserve A2 de l'expert sur le 19d) : un contrôle raté n'est compté comme
+        tel que sur une passe ou une remise de son équipe qui le vise ; tout autre contact raté (interception manquée,
+        ballon libre, passe visant un coéquipier) est compté à part. Un but contre son camp n'est pas un but personnel
+        (réserve A3)."""
         for event in events:
             if event.kind == CONTROLE_RATE:
-                self.minutes.count(event.minute, "contrôles ratés", actor=event.player)
-            elif event.kind == BUT and event.player is not None:
+                cause = events[event.cause] if event.cause is not None else None
+                aimed = (cause is not None and cause.kind in (PASSE, REMISE) and cause.team == event.team
+                         and cause.other == event.player)
+                self.minutes.count(event.minute, "contrôles ratés" if aimed else "contacts ratés", actor=event.player)
+            elif event.kind == BUT and event.player is not None and self.minutes.team(event.player) == event.team:
                 self.minutes.count(event.minute, "buts personnels", actor=event.player)
 
     def on_choice(self, kind: str, follow: str | None = None, plan: str | None = None) -> None:
@@ -967,7 +973,7 @@ class Collector:
                 continue
             v = p.velocity.length()
             depth = progress(p.team, p.position.x) if self.team is not None and self.team != p.team else None
-            self.minutes.on_player(minute, p.name, p.poste, p.stamina, v, dt, depth)  # ticket v2-realisme/19d
+            self.minutes.on_player(minute, p.name, p.poste, p.stamina, v, dt, depth, p.team)  # tickets 19d et 19f
             self.dist[p.name] += v * dt
             self.total += v * dt
             self.time += dt
@@ -1239,6 +1245,8 @@ class Collector:
                 self.stats[f"distance milieu-attaque {phase} (m)"].add(gaps[1], **keys)
             height = block_height(team, pts)
             self.stats[f"hauteur du bloc {phase} (m)"].add(height, **keys)
+            if phase == "sans ballon":
+                self.minutes.on_block(minute, height)  # par tranche de temps joué (ticket v2-realisme/19f)
             self._keeper_behind_line(team, players, ball, height)
             self._keeper_by_zone(team, players, ball)
             holder = by_name.get(ball.holder) if ball.holder else None

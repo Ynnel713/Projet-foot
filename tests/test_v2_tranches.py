@@ -16,7 +16,10 @@ from v2engine.possession import pass_success_probability
 
 def test_tranches_of_fifteen_minutes_and_added_time() -> None:
     assert tr.tranche(0.0) == "0-15" and tr.tranche(14.99) == "0-15" and tr.tranche(15.0) == "15-30"
-    assert tr.tranche(89.9) == "75-90" and tr.tranche(90.0) == "90 et plus" and tr.tranche(97.0) == "90 et plus"
+    # ticket 19f (réserve A1 de l'expert sur le 19d) : temps JOUÉ ; 2e période commencée à la 47e minute d'horloge
+    assert tr.tranche(46.0) == "45 et plus" and tr.tranche(46.0, 47.0) == "45 et plus"  # temps additionnel de la 1re
+    assert tr.tranche(47.0, 47.0) == "45-60" and tr.tranche(91.9, 47.0) == "75-90"  # 89,9 minutes jouées
+    assert tr.tranche(92.0, 47.0) == "90 et plus" and tr.tranche(99.0, 47.0) == "90 et plus"
 
 
 def test_stamina_bands() -> None:
@@ -38,6 +41,7 @@ def test_running_per_minute_and_sprint_counted_where_it_starts() -> None:
 
 def test_technique_and_duels_by_tranche() -> None:
     profile = tr.MinuteProfile()
+    profile.second_half_start = 45.0
     profile.on_shot(10.0, "capté")
     profile.on_shot(10.5, "à côté")
     profile.on_shot(11.0, "contré")  # hors du cadrage
@@ -60,6 +64,7 @@ def _runner(minute_x: float) -> PlayerState:
 
 def test_collector_feeds_the_profile_and_compares_stamina() -> None:
     c = ind.Collector()
+    c.minutes.second_half_start = 45.0  # pas de temps additionnel en 1re période : horloge = temps joué
     ball = SimpleNamespace(position=Vec2(52.5, 34.0), holder=None, receiver=None, restart=None)
     for minute in (5.0, 80.0):
         speed = 7.0 if minute < 15 else 5.0  # le même joueur court moins vite en fin de match
@@ -81,6 +86,7 @@ def _two_players(profile: tr.MinuteProfile, minute: float) -> None:
 def test_events_are_attributed_to_the_player_his_poste_and_his_stamina() -> None:
     """Réserve du contrôle qualité (19d) : chaque indicateur par joueur et par poste, pas seulement la course."""
     profile = tr.MinuteProfile()
+    profile.second_half_start = 45.0
     for minute in (5.0, 80.0):
         _two_players(profile, minute)
     profile.on_shot(5.0, "capté", actor="A")
@@ -111,6 +117,7 @@ def test_events_are_attributed_to_the_player_his_poste_and_his_stamina() -> None
 
 def test_player_report_and_its_summary() -> None:
     profile = tr.MinuteProfile()
+    profile.second_half_start = 45.0
     for minute, speed in ((1.0, 6.0), (6.0, 6.0), (76.0, 3.0), (81.0, 3.0)):  # 2 × 5 min par tranche comparée
         profile.on_player(minute, "A", "BU", 20, speed, 300.0)
     profile.on_player(1.0, "B", "DC", 60, 5.0, 60.0)  # 1 minute seulement : hors synthèse
@@ -169,3 +176,44 @@ def test_same_player_at_15_and_85_minutes_runs_less_but_passes_the_same() -> Non
     assert run_85 < run_15
     assert pass_85 == pass_15
     assert _distance(85.0, 99)[0] > run_85  # un Stamina élevé perd moins à la 85e
+
+
+def test_played_time_moves_the_end_of_the_first_half_and_the_last_regular_minutes() -> None:
+    """Ticket 19f : la 89e minute jouée est dans « 75-90 » même avec 2 minutes de temps additionnel en 1re période."""
+    profile = tr.MinuteProfile()
+    profile.on_player(46.0, "A", "MC", 60, 4.0, 60.0)  # 1re période, temps additionnel
+    profile.second_half_start = 47.0
+    profile.on_player(90.0, "A", "MC", 60, 4.0, 60.0)  # 88 minutes jouées
+    profile.on_player(92.5, "A", "MC", 60, 4.0, 60.0)  # 90,5 minutes jouées
+    profile.on_block(90.0, 30.0)
+    profile.end_match([])
+    assert profile.run[("45 et plus", "tous", "temps")] == 60.0 and profile.run[("75-90", "tous", "temps")] == 60.0
+    assert profile.run[("90 et plus", "tous", "temps")] == 60.0
+    assert tr.minute_report(profile)["75-90 : hauteur du bloc sans ballon (m)"] == 30.0
+    assert profile.second_half_start is None  # remis à zéro pour le match suivant
+
+
+def test_a_missed_interception_is_not_a_missed_control_and_an_own_goal_is_not_personal() -> None:
+    """Ticket 19f (réserves A2 et A3 de l'expert sur le 19d) : seul le receveur visé d'une passe de son équipe rate un
+    contrôle ; un contact raté sur une passe adverse est compté à part ; un but contre son camp n'est pas personnel."""
+    from v2engine.trace import EventLog
+
+    c = ind.Collector()
+    ball = SimpleNamespace(position=Vec2(52.5, 34.0), holder=None, receiver=None, restart=None)
+    a = PlayerState(name="A", team="home", poste="MC", position=Vec2(50.0, 30.0), velocity=Vec2(0.0, 0.0),
+                    pace=60, acceleration=60, stamina=60, home_target=Vec2(50.0, 30.0))
+    d = PlayerState(name="D", team="away", poste="DC", position=Vec2(60.0, 30.0), velocity=Vec2(0.0, 0.0),
+                    pace=60, acceleration=60, stamina=60, home_target=Vec2(60.0, 30.0))
+    c.on_tick(60.0, [a, d], ball, None)
+    log = EventLog([])
+    log.add(1.0, "remise", "home", "K", "engagement", start=True)
+    log.add(1.1, "passe", "home", "K", other="A")
+    log.add(1.2, "contrôle raté", "home", "A")  # passe visée ratée : contrôle raté
+    log.add(1.3, "passe", "home", "A", other="K")
+    log.add(1.4, "contrôle raté", "away", "D")  # interception manquée : autre contact
+    log.add(1.5, "but", "home", "D")  # dernier toucheur adverse : contre son camp
+    c.on_events(log.events)
+    e = c.minutes.events
+    assert e[("0-15", "joueur A", "contrôles ratés")] == 1 and e[("0-15", "joueur D", "contrôles ratés")] == 0
+    assert e[("0-15", "joueur D", "contacts ratés")] == 1
+    assert e[("0-15", "joueur D", "buts personnels")] == 0
