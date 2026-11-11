@@ -50,3 +50,7 @@ Source : `docs/AUDIT_ROADMAP_V2.md`. 12d et 12e passent avant ce ticket : calibr
 ## Constat de la garde probabiliste (10/11/2026, ticket `v2-realisme/19c`)
 
 À First Touch 99, le contrôle le plus difficile (ballon à 28 m/s, adversaire à 0,5 m) touche le plafond de la courbe (0,97) comme le plus facile : la difficulté ne mord plus sur un très bon joueur. La garde tient (3 % d'échec). À examiner à la calibration ; test `test_finding_the_hardest_control_does_not_bite_on_a_99` (`tests/test_v2engine_garde_probabiliste.py`), qui échouera si la difficulté se remet à mordre.
+
+## Complément du point d'étape 18a (11/11/2026)
+
+Source : `docs/INDICATEURS_V2.md` section 25. Le choix du porteur (conduite 73 % des décisions) et le rythme de décision sont la cause commune du volume de tirs (R1, 24,3 par équipe) et du manque de passes (R7, 844 par match, 11,9 par minute de jeu effectif) : à inclure au réglage. Relire après réglage : tacles (43,9), fautes (14,1), possession d'équipe (17,6 s), passes visées vers les DC (environ 12 par match).

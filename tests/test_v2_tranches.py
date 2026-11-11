@@ -162,7 +162,10 @@ def _distance(minute: float, stamina: int) -> tuple[float, float]:
     scene = _scene(minute, stamina)
     seed_scene(19)
     start = scene.get("A").position
-    run(scene, 4.0)
+    # 2 s balle au pied (ticket v2-realisme/12d) : après sa passe, il court à l'intensité de son nouveau rôle, que la
+    # scène ne compare pas ; la mesure ne porte que sur la conduite.
+    run(scene, 2.0)
+    assert scene.ball.holder == "A"
     fresh = _scene(minute, stamina)  # passe lue sur la scène de départ : seule la minute diffère entre A et B
     chance = pass_success_probability(fresh.get("A"), fresh.get("B"), [fresh.get("G")])
     return scene.get("A").position.distance_to(start), chance

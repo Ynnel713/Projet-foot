@@ -38,6 +38,11 @@ DEPTH_REACH_M = 20.0  # place dans le bloc à 20 m ou moins de la ligne du hors-
 DEPTH_LANE_M = 15.0  # pas d'appel dans le dos à moins de 15 m (en largeur) d'un coéquipier posté ou parti sur la ligne
 
 # Constantes produit validées par le propriétaire (24/10/2026).
+# Intensité de l'appel (ticket v2-realisme/12d, recommandée et retenue par délégation du propriétaire, 11/11/2026) :
+# appel dans la profondeur ou de contre-attaque au sprint ; appel vers un espace libre en course rapide (0,75 de la
+# vitesse max, 22,5 km/h pour un joueur moyen ; 19,8-25 km/h au réel), plus vite quand Off the Ball est haut.
+DEEP_RUN_INTENSITY = 1.0
+_RUN_INTENSITY = (0.75, 0.10, 0.65, 0.85)  # Off the Ball
 RUN_INTERVAL_S = 1.0  # délai minimal avant de chercher un autre espace (ticket 06 : garde jusqu'à l'atteindre)
 _SEARCH_RADIUS_M = (8.0, 7.0, 2.0, 15.0)  # baseline, amplitude, min, max : 99 -> 15 m, 55 -> 8 m, 11 -> 2 m
 _CALL_DELAY_S = (0.65, 0.35, 0.3, 1.0)  # baseline, amplitude, min, max (ticket v2-realisme/02g)
@@ -49,6 +54,14 @@ _BEST_SPACE_AMPLITUDE = 0.25
 # Grille de points candidats, en fractions du rayon : avant/arrière x latéral. Pas une constante produit.
 _FORWARD_STEPS = (-1.0 / 3.0, 0.0, 1.0 / 3.0, _FORWARD_SHARE)
 _LATERAL_STEPS = (-0.5, 0.0, 0.5)
+
+
+def run_intensity(player: PlayerState, deep: bool) -> float:
+    """Part de sa vitesse max pendant l'appel (ticket v2-realisme/12d)."""
+    if deep:
+        return DEEP_RUN_INTENSITY
+    return success_probability(effective_rating(player, "Off the Ball"), baseline=_RUN_INTENSITY[0],
+                               amplitude=_RUN_INTENSITY[1], min_prob=_RUN_INTENSITY[2], max_prob=_RUN_INTENSITY[3])
 
 
 def search_radius_m(off_the_ball: float) -> float:

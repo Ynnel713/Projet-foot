@@ -17,6 +17,7 @@ from v2engine.ball_state import BallState
 from v2engine.bloc import Bloc
 from v2engine.decision import CONTRE_ATTAQUE, dribble_speed_factor
 from v2engine.defense import (COMPENSATION, COUVERTURE, MARQUAGE, PRESSEUR, REST_DEFENDERS, DefensiveRoles,
+                              replacement_intensity,
                               leave_probability, press_intensity)
 from v2engine.flux import DEFENSE
 from v2engine.gardien import FACE_A_FACE, GARDIEN, INTERVENTION, PLACEMENT, RELANCE, SORTIE
@@ -24,7 +25,7 @@ from v2engine import gardien
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
 from v2engine.movement import PlayerState
 from v2engine.off_ball import (COUNTER_RUN_DEPTH_M, RUN_INTERVAL_S, SPACE_HOLD_MAX_S, SPACE_REACHED_M,
-                               choose_space, depth_run, player_call_delay_s)
+                               choose_space, depth_run, player_call_delay_s, run_intensity)
 from v2engine.offside import HESITATION_INTENSITY, clamp_to_onside, offside_line, respects_the_line
 from v2engine.possession import BALL_FRICTION_PER_S, RECEPTION_SPEED_FACTOR, pressure
 from v2engine.restart import KICKOFF, REPLACING_INTENSITY, place
@@ -296,14 +297,18 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
             runs[player.name] = (target, now_s + SPACE_HOLD_MAX_S) if not deep \
                 else (target, now_s + SPACE_HOLD_MAX_S, passer.name if passer is not None else held_for)
         mate = seen.holder.name if seen.holder is not None else ball.receiver  # passe en l'air : le receveur
-        return make(role, "se démarquer", target, mate=mate, reason="appel vers un espace libre")
+        deep_or_counter = counter or len(runs.get(player.name, ())) == 3  # appel dans le dos tenu (3e terme)
+        return make(role, "se démarquer", target, run_intensity(player, deep_or_counter), mate=mate,
+                    reason="appel vers un espace libre")  # intensité selon le rôle (ticket v2-realisme/12d)
     if role == TENIR:  # ticket v2-realisme/02f : même seuil de Teamwork que sans ballon (`Bloc.replacement`)
         if bloc is None or situation is None:  # sans bloc (tests unitaires) : sa place de départ
-            return make(role, "se replacer", player.home_target, reason="en possession, il rejoint sa place")
+            return make(role, "se replacer", player.home_target, replacement_intensity(player, True),
+                        reason="en possession, il rejoint sa place")
         place = bloc.replacement(player, ball.position, situation, minute * 60.0)
         if place is None:
             return make(role, "tenir sa place", player.position, reason="en possession, il tient sa place dans le bloc")
-        return make(role, "se replacer", place, reason="en possession, il rejoint sa place dans le bloc",
+        return make(role, "se replacer", place, replacement_intensity(player, True),
+                    reason="en possession, il rejoint sa place dans le bloc",
                     distance_m=player.position.distance_to(place))
     if role == RECEVEUR:
         point = meeting_point(player, ball.position, ball.velocity, BALL_FRICTION_PER_S)
@@ -320,11 +325,13 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
                     distance_m=player.position.distance_to(place))
     if role == REPLACEMENT:
         if bloc is None or situation is None:  # sans bloc (tests unitaires) : sa place de départ
-            return make(role, "se replacer", player.home_target, reason="loin du ballon, il rejoint sa place")
+            return make(role, "se replacer", player.home_target, replacement_intensity(player, False),
+                        reason="loin du ballon, il rejoint sa place")
         place = bloc.replacement(player, ball.position, situation, minute * 60.0)  # ticket v2-collectif/04
         if place is None:
             return make(role, "tenir sa place", player.position, reason="loin du ballon, il tient sa place dans le bloc")
-        return make(role, "se replacer", place, reason="loin du ballon, il rejoint sa place dans le bloc",
+        return make(role, "se replacer", place, replacement_intensity(player, False),
+                    reason="loin du ballon, il rejoint sa place dans le bloc",
                     distance_m=player.position.distance_to(place))
     if role == BALLON_LIBRE:
         point = loose_ball_target(player, ball.position, ball.velocity, BALL_FRICTION_PER_S)

@@ -91,6 +91,12 @@ HOLD_MARGIN_S = 0.3
 # Pressing coordonné (ticket 08) : (baseline, amplitude, min, max) sur la courbe partagée
 _PRESS_INTENSITY = (0.8, 0.25, 0.55, 1.0)  # Work Rate
 _PRESS_REST_S = (10.0, -10.0, 5.0, 20.0)  # Work Rate (amplitude négative : bonne note = repos court)
+# Intensité selon le rôle (ticket v2-realisme/12d, constantes recommandées et retenues par délégation du propriétaire,
+# 11/11/2026) : part de la vitesse max pour rejoindre sa place, Work Rate (efforts sans ballon) la module. Vitesse max
+# d'un joueur moyen 30 km/h : sans ballon, course (0,55 : 16,5 km/h ; 14,4-19,8 km/h au réel, Bradley 2009) ; en
+# possession, trot (0,40 : 12 km/h ; 7-14,4 km/h). Le repli et le pressing gardent `_PRESS_INTENSITY` (sprint).
+_REPLACE_INTENSITY = (0.55, 0.10, 0.45, 0.65)  # Work Rate, sans ballon
+_HOLD_INTENSITY = (0.40, 0.08, 0.32, 0.48)  # Work Rate, en possession
 _GOOD_LANE = (0.65, 0.25, 0.40, 0.85)  # Anticipation
 _STOP_M = (1.2, -0.4, 0.8, 1.6)  # Aggression
 _FOLLOWS = (0.8, 0.25, 0.55, 0.95)  # Teamwork
@@ -141,6 +147,12 @@ def _curve(note: float, curve: tuple[float, float, float, float]) -> float:
 
 def press_intensity(player: PlayerState) -> float:
     return _curve(effective_rating(player, "Work Rate"), _PRESS_INTENSITY)
+
+
+def replacement_intensity(player: PlayerState, in_possession: bool) -> float:
+    """Part de sa vitesse max pour rejoindre sa place dans le bloc (ticket v2-realisme/12d) : trot en possession,
+    course sans ballon, plus vite quand Work Rate est haut."""
+    return _curve(effective_rating(player, "Work Rate"), _HOLD_INTENSITY if in_possession else _REPLACE_INTENSITY)
 
 
 def press_rest_s(player: PlayerState) -> float:

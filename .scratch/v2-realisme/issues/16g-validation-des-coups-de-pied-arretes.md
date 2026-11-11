@@ -37,3 +37,7 @@ Temps machine, non compté : suite complète (environ 40 min) ; mesure 50 matchs
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+
+## Complément du point d'étape 18a (11/11/2026)
+
+Critère à ajouter : part des buts sur coup de pied arrêté (`scripts/v2_chain.py`, famille « coup de pied arrêté »), repère environ 23,5 % hors penalties (Opta, Premier League) ; mesure du 19f : 0,9 % (1 but sur 108).

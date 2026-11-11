@@ -42,3 +42,11 @@ Temps machine, non compté : suite complète (environ 40 min) ; séries de 500 m
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+
+## Complément du point d'étape 18a (11/11/2026)
+
+Source : `docs/INDICATEURS_V2.md` section 25. Conversion déjà proche (9,9 %) ; l'écart principal est la part des buts dans la surface (61 %, repère 88 à 89 %) : 390 des 656 tirs cadrés partent de plus de 18 m. Relire les penaltys (0,02 par match, réel environ 0,34) après le 18d.
+
+## Condition reprise de l'expert sur le 12d (11/11/2026)
+
+Réserve A1 : après le 12d, conversion 7,8 % (xG moyen 0,083) et tacles 46,5 par match (`docs/INDICATEURS_V2.md` section 26). Relire R2 sur l'état après 12d, 12e et 18d, pas sur le 9,9 % du point d'étape (section 25).
