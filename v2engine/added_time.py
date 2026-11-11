@@ -40,8 +40,8 @@ def added_minutes(period: int, half_minutes: float, goals: int, penalties: int, 
 
 
 def played_minute(minute: float, second_half_start: float | None, half_minutes: float) -> float:
-    """Temps de jeu pour la fatigue : l'horloge du moteur, moins en 2e période le temps additionnel de la 1re (la
-    fatigue est calée sur 90 min, `movement.MATCH_END_MINUTE`)."""
+    """Temps de jeu : l'horloge du moteur, moins en 2e période le temps additionnel de la 1re (tranches du banc,
+    `scripts/v2_tranches.py` ; la fatigue suit la réserve d'énergie depuis le ticket v2-realisme/12e)."""
     if second_half_start is None or minute < second_half_start:
         return minute
     return half_minutes + minute - second_half_start

@@ -46,7 +46,9 @@ def test_physical_capacities_are_read_from_the_state_not_the_sheet() -> None:
 def test_the_condition_travels_with_the_player() -> None:
     state = _state(60, None)
     assert state.condition == PlayerCondition()
-    assert step(state, 0.1, Vec2(60, 34), minute=10.0).condition is state.condition
+    tired = PlayerState(**{**state.__dict__, "condition": PlayerCondition(energy=0.3)})
+    moved = step(tired, 0.1, Vec2(60, 34), minute=10.0)  # au trot : réserve gardée, recharge d'un pas (ticket 12e)
+    assert 0.3 < moved.condition.energy < 0.31
 
 
 def test_every_attribute_of_the_map_has_one_family() -> None:

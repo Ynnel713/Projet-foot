@@ -4,11 +4,13 @@ tranche, comparaison par Stamina, et scène A/B du même joueur à la 15e et à 
 from __future__ import annotations
 
 import math
+from dataclasses import replace
 from types import SimpleNamespace
 
 from scripts import v2_indicators as ind
 from scripts import v2_tranches as tr
 from tests.scenes import Scene, player, run, seed_scene
+from v2engine.condition import PlayerCondition
 from v2engine.geometry import Vec2
 from v2engine.movement import PlayerState
 from v2engine.possession import pass_success_probability
@@ -152,33 +154,34 @@ def test_collector_attributes_tackles_shots_goals_and_depth() -> None:
     assert math.isclose(r[("0-15", "joueur A", "profondeur")] / r[("0-15", "joueur A", "sans ballon")], 30.0)
 
 
-def _scene(minute: float, stamina: int) -> Scene:
-    players = [player("A", x=30.0, y=34.0, Stamina=stamina, Pace=70, Acceleration=70),
+def _scene(minute: float, stamina: int, energy: float = 1.0) -> Scene:
+    players = [replace(player("A", x=30.0, y=34.0, Stamina=stamina, Pace=70, Acceleration=70),
+                       condition=PlayerCondition(energy=energy)),
                player("B", x=45.0, y=20.0), player("G", "away", x=104.0, y=34.0, poste="GK")]
     return Scene.full(players, holder="A", start_s=minute * 60.0)
 
 
-def _distance(minute: float, stamina: int) -> tuple[float, float]:
-    scene = _scene(minute, stamina)
+def _distance(minute: float, stamina: int, energy: float = 1.0) -> tuple[float, float]:
+    scene = _scene(minute, stamina, energy)
     seed_scene(19)
     start = scene.get("A").position
     # 2 s balle au pied (ticket v2-realisme/12d) : après sa passe, il court à l'intensité de son nouveau rôle, que la
     # scène ne compare pas ; la mesure ne porte que sur la conduite.
     run(scene, 2.0)
     assert scene.ball.holder == "A"
-    fresh = _scene(minute, stamina)  # passe lue sur la scène de départ : seule la minute diffère entre A et B
+    fresh = _scene(minute, stamina, energy)  # passe lue sur la scène de départ : seule la minute diffère entre A et B
     chance = pass_success_probability(fresh.get("A"), fresh.get("B"), [fresh.get("G")])
     return scene.get("A").position.distance_to(start), chance
 
 
-def test_same_player_at_15_and_85_minutes_runs_less_but_passes_the_same() -> None:
-    """Scène A/B (19d) : même joueur, même graine, même scène, seule la minute change. Aujourd'hui la fatigue ne réduit
-    que la vitesse maximale : la course baisse à la 85e pour un Stamina bas, la probabilité de passe est identique."""
-    run_15, pass_15 = _distance(15.0, 20)
-    run_85, pass_85 = _distance(85.0, 20)
-    assert run_85 < run_15
-    assert pass_85 == pass_15
-    assert _distance(85.0, 99)[0] > run_85  # un Stamina élevé perd moins à la 85e
+def test_same_player_fresh_and_tired_runs_less_but_passes_the_same() -> None:
+    """Scène A/B (19d, revue au 12e) : même joueur, même graine, même scène ; seule sa réserve d'énergie change (la
+    minute ne fatigue plus). La fatigue ne réduit que la vitesse maximale : la course baisse quand la réserve est
+    basse, quelle que soit la minute ; la probabilité de passe est identique."""
+    run_fresh, pass_fresh = _distance(15.0, 20)
+    run_tired, pass_tired = _distance(85.0, 20, energy=0.2)
+    assert run_tired < run_fresh and pass_tired == pass_fresh
+    assert _distance(85.0, 20)[0] == run_fresh  # réserve pleine à la 85e : aucune perte
 
 
 def test_played_time_moves_the_end_of_the_first_half_and_the_last_regular_minutes() -> None:

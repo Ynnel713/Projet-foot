@@ -11,7 +11,7 @@ from v2engine.attributes import player_attribute
 from v2engine.ball_state import BallState
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
 from v2engine.match import CONTROL_RADIUS_M, PLAYER_RADIUS_M, _resolve_player_collisions, _step_ball, simulate_match
-from v2engine.movement import PlayerState, accel_tau_s, stamina_factor, step
+from v2engine.movement import PlayerState, accel_tau_s, energy_factor, max_speed_mps, spend_energy, step
 
 
 def _player_state(name: str = "P", pace: float = 60, acceleration: float = 60, stamina: float = 60,
@@ -40,11 +40,43 @@ def test_higher_acceleration_reaches_max_speed_sooner() -> None:
     assert accel_tau_s(99) < accel_tau_s(5)
 
 
-def test_stamina_reduces_speed_late_in_match() -> None:
-    late_minute = 85.0
-    assert stamina_factor(10, late_minute) < stamina_factor(95, late_minute)
-    # En début de match, la fatigue ne joue pas encore, quelle que soit la Stamina.
-    assert stamina_factor(10, 10.0) == 1.0
+def _sprint_then_walk(stamina: float, sprint_s: float = 60.0, walk_s: float = 60.0) -> tuple[float, float, float]:
+    """Ticket v2-realisme/12e : réserve après `sprint_s` au sprint (cible lointaine), puis après `walk_s` sur place."""
+    state = _player_state(stamina=stamina)
+    state = _run_toward_target(state, Vec2(10_000.0, 0.0), n_ticks=int(sprint_s / 0.1))
+    after_sprint, speed = state.condition.energy, state.velocity.length()
+    state = _run_toward_target(state, state.position, n_ticks=int(walk_s / 0.1))
+    return after_sprint, speed, state.condition.energy
+
+
+def test_a_sixty_second_sprint_empties_the_reserve_and_walking_refills_it_partly() -> None:
+    """Scène du ticket 12e : 60 s au sprint, vitesse max réduite ; 60 s de marche, remontée partielle."""
+    after_sprint, speed, after_walk = _sprint_then_walk(55)
+    assert after_sprint < 0.8 and speed < max_speed_mps(60) * 0.98  # réserve sous le genou : vitesse max réduite
+    assert after_sprint < after_walk < 1.0  # remontée partielle
+
+
+def test_high_stamina_tires_later_and_recovers_faster() -> None:
+    """Stamina 99 contre 11 : baisse plus tardive, recharge plus rapide ; le début du match ne dépend plus de la
+    minute (la réserve est pleine)."""
+    low, high = _sprint_then_walk(11, 40.0), _sprint_then_walk(99, 40.0)
+    assert high[0] > low[0] and high[1] > low[1]
+    assert high[2] - high[0] > low[2] - low[0]
+    assert energy_factor(1.0) == 1.0 and energy_factor(0.0) < energy_factor(0.4) < 1.0
+
+
+def test_a_busy_player_has_less_reserve_than_a_thrifty_one_with_the_same_stamina() -> None:
+    """Complément de l'audit (12e) : même Stamina, 70 minutes ; l'un fait un sprint de 6 s par minute, l'autre trotte."""
+    busy, thrifty = 1.0, 1.0
+    for _ in range(70):
+        for _ in range(60):
+            busy = spend_energy(busy, 60, 8.0, 0.1)  # 6 s au sprint
+        for _ in range(540):
+            busy = spend_energy(busy, 60, 2.0, 0.1)
+            thrifty = spend_energy(thrifty, 60, 3.0, 0.1)
+        for _ in range(60):
+            thrifty = spend_energy(thrifty, 60, 3.0, 0.1)
+    assert busy < 0.5 < thrifty == 1.0
 
 
 def test_missing_attributes_fall_back_to_neutral_default() -> None:
@@ -103,3 +135,6 @@ def test_full_short_match_runs_without_crashing() -> None:
         assert 0.0 <= snapshot.position.x <= PITCH_LENGTH_M
         assert 0.0 <= snapshot.position.y <= PITCH_WIDTH_M
     assert 0.0 <= first_tick.ball.position.x <= PITCH_LENGTH_M
+    # réserve d'énergie tracée par joueur (ticket v2-realisme/12e) : bornée, et entamée par quelqu'un en 2 minutes
+    energies = [s.energy for s in trace.ticks[-1].players]
+    assert all(0.0 <= e <= 1.0 for e in energies) and min(energies) < 1.0

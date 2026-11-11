@@ -21,6 +21,7 @@ class PlayerSnapshot:
     position: Vec2
     intention: Intention | None = None  # ce que le joueur cherche à faire à cet instant (ADR 0001)
     role: str = ""  # rôle du joueur (mezzala, pivot, latéral...), ticket v2-realisme/02c ; sans effet sur le jeu
+    energy: float = 1.0  # part de sa réserve d'énergie restante (ticket v2-realisme/12e)
 
 
 @dataclass(frozen=True)

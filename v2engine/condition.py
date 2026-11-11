@@ -40,7 +40,10 @@ _FIELDS = {"Pace": "pace", "Acceleration": "acceleration", "Stamina": "stamina"}
 
 @dataclass(frozen=True)
 class PlayerCondition:
-    """État du joueur qui module l'expression de ses notes. Vide jusqu'aux tickets 20 (fatigue, forme, coup reçu)."""
+    """État du joueur qui module l'expression de ses notes. `energy` : part de sa réserve d'énergie restante (0-1),
+    vidée par la course rapide et rechargée au repos (`movement.spend_energy`, ticket v2-realisme/12e) ; elle borne la
+    vitesse max et sera lue par les effets de la fatigue (20a, 20b, 20e)."""
+    energy: float = 1.0
 
 
 def family(attribute: str) -> str:

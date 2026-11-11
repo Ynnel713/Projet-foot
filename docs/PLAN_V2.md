@@ -255,6 +255,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **Intensité selon le rôle (11/11/2026, ticket `v2-realisme/12d`)** : livré (11/11/2026), validé expert + QC (réserves acceptées : conversion à relire au 18e ; documentation commitée avec le code). Trot pour rejoindre sa place en possession, course sans ballon (Work Rate), course rapide pour un appel vers un espace (Off the Ball), sprint dans la profondeur. Sur 50 matchs : distance au-dessus de 19,8 km/h 36,9 % → 15,6 %, km 14,0 → 12,5, appels 41 → 24 par 90 min, buts 4,8 → 3,6, bloc inchangé (section 26).
 
+**Réserve d'énergie (11/11/2026, ticket `v2-realisme/12e`)** : livré (11/11/2026), validé expert + QC (facultatif : recharge à la mi-temps au 20c, composante rapide au 12f). Réserve par joueur vidée par la course au-dessus de 14,4 km/h, rechargée en dessous ; Stamina règle taille et recharge ; vitesse max réduite sous 80 % de réserve ; la minute ne fatigue plus. Sur 50 matchs : baisse de la course rapide en fin de match − 23 % (repère 10 à 30 %), progressive, rapport 0,62 à 0,82 selon Stamina (section 27).
+
 **Origine des buts (11/11/2026, ticket `v2-realisme/19e`)** : livré (11/11/2026), validé expert + QC (améliorations facultatives reportées au 19f). `scripts/v2_chain.py` remonte la chaîne d'un but et classe son origine (section 24 de `docs/INDICATEURS_V2.md`) ; sur 20 matchs, 108 buts : récupération 81 %, erreur adverse 15 %, jeu placé 3 %, coup de pied arrêté 1 % (repère réel : environ 23,5 % hors penalties). Journal : la faute avec avantage est écrite à sa minute (réserve A1 du 19b) ; jeu identique sur 20 matchs.
 
 ### Bloquée par

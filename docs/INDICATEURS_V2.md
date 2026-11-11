@@ -955,3 +955,29 @@ Commande : `scripts/bench_series.py 50 --processus 6`, fichiers `.scratch/v2-rea
 **Scène A/B du 19d (section 23), adaptée.** Le milieu balle au pied passe vers 2,5 s ; après sa passe il court à l'intensité de son nouveau rôle, que la scène ne compare pas. La mesure porte désormais sur 2 s de conduite : 7,6 m à la 15e, 5,3 m à la 85e pour Stamina 20, 7,4 m pour Stamina 99, probabilité de passe identique (0,72).
 
 **Déterminisme.** Les 10 premiers matchs rejoués (`12d-det2.json`) : 2 444 clés par match communes, valeurs identiques. Rayon des attributs : Work Rate lu dans `defense.py`, Off the Ball dans `off_ball.py`, comme avant (`tests/test_v2engine_rayon_attributs.py` inchangé et vert) ; `docs/CARTE_ATTRIBUTS_V2.md` mis à jour.
+
+## 27. Réserve d'énergie (ticket v2-realisme/12e, 50 matchs, 11/11/2026)
+
+Commande : `scripts/bench_series.py 50 --processus 6`, fichiers `.scratch/v2-realisme/mesures/12e-det1.*` (après) contre `12d-det1.*` (avant, mêmes graines) ; premier réglage écarté : `12e-r1-det1.*`. Modèle et constantes : ticket 12e (`movement.spend_energy`, `energy_factor`, `PlayerCondition.energy`) ; la réserve se vide par la course au-dessus de 14,4 km/h et se recharge en dessous, Stamina règle sa taille et sa recharge, la vitesse max baisse sous 80 % de réserve (jusqu'à 0,6 réserve vide). La minute ne fatigue plus. Réserve tracée par joueur (`PlayerSnapshot.energy`).
+
+**Course par tranche de temps joué, tous joueurs de champ (distance au-dessus de 19,8 km/h, part ; sprints par joueur et par 15 min ; m/min).**
+
+| Tranche | 12d (fatigue par la minute) | 12e (réserve) |
+|---|---|---|
+| 0-15 | 0,163 ; 6,3 ; 126 | 0,164 ; 6,3 ; 127 |
+| 15-30 | 0,169 ; 7,0 ; 129 | 0,160 ; 6,2 ; 126 |
+| 30-45 | 0,163 ; 6,5 ; 127 | 0,152 ; 5,6 ; 126 |
+| 45-60 | 0,165 ; 6,6 ; 128 | 0,140 ; 4,9 ; 129 |
+| 60-75 | 0,162 ; 6,3 ; 129 | 0,129 ; 4,3 ; 125 |
+| 75-90 | 0,131 ; 3,6 ; 120 | 0,126 ; 4,1 ; 127 |
+| 90 et plus | 0,114 ; 2,3 ; 114 | 0,124 ; 4,0 ; 127 |
+
+**Baisse de fin de match** (course au-dessus de 19,8 km/h, 75-90 contre 0-15) : − 23 % pour tous (repère 10 à 30 % ; − 20 % au 12d, mais concentrée après la 75e minute) ; par Stamina, rapport 0,62 (40 à 55), 0,71 (55 à 70), 0,82 (70 et plus) ; par joueur, rapport médian 0,91 (1er décile 0,46, 9e décile 1,29) ; sprints : rapport médian 0,84. La distance totale reste plate (126 à 129 m/min).
+
+**Constat.** La fatigue suit maintenant l'effort : la course rapide baisse peu à peu dès le deuxième quart d'heure, au lieu d'une chute à partir de la 75e minute ; un joueur qui court beaucoup s'épuise plus tôt (1er décile 0,46) qu'un joueur économe (9e décile au-dessus de 1). Stamina garde son rôle (0,62 à 0,82). Le premier réglage, avec une recharge deux fois plus lente (`12e-r1-det1`), donnait − 38 % pour tous et − 36 % aux Stamina de 70 et plus : au-delà du repère, il a été écarté (ticket 12e, table des constantes).
+
+**Autres indicateurs (12d → 12e).** Distance au-dessus de 19,8 km/h 15,6 % → 14,4 % (repère 6 à 10 %) ; km par joueur 12,5 → 12,6 ; sprints 38,6 → 34,2 par match ; appels 24,0 → 22,9 par 90 min ; tirs tracés 23,3 → 21,4 par équipe ; buts 3,6 → 3,5 ; conversion 7,8 → 8,2 % ; buts dans la surface 64 → 60 % ; passes 894 → 911 ; bloc inchangé (31,7 m, lignes à 15,4 et 15,9 m). Aucun écart au repère ne s'aggrave nettement ; volumes et tirs restent au 18d et au 18e.
+
+**Déterminisme.** Les 10 premiers matchs rejoués (`12e-det2.json`) : 2 450 clés par match communes, valeurs identiques. Suite complète : 2 751 passés, 14 désélectionnés.
+
+**Scène A/B du 19d, revue.** La minute ne fatigue plus : la scène compare le même joueur réserve pleine et réserve à 0,2 (5,3 m de conduite en 2 s contre 7,6 m), et un joueur réserve pleine à la 85e conduit autant qu'à la 15e ; probabilité de passe identique.

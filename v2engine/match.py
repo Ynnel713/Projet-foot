@@ -879,8 +879,8 @@ def _step_player(
     intention = think(player, ball, players or [], minute, runs, perceived, bloc, defense, transition, previous)
     if intentions is not None:
         intentions[player.name] = intention
-    # Fatigue sur le temps de jeu (`played_minute`, temps additionnel de la 1re période retiré en 2e) et non sur
-    # l'horloge du moteur (ticket v2-coach-et-gestion-de-match/03, réserve A1 du passage 2 de l'expert).
+    # Temps de jeu (`played_minute`) transmis à `step`, qui ne le lit plus depuis la réserve d'énergie (ticket
+    # v2-realisme/12e) ; ponytail: paramètre gardé pour ses appelants, à retirer au premier ticket qui touche `step`.
     return step(player, dt, intention.target, minute if played_minute is None else played_minute, intention.intensity,
                 intention.target_velocity)
 
@@ -1002,7 +1002,7 @@ def simulate_match(
             trace.record(
                 minute,
                 [PlayerSnapshot(name=p.name, team=p.team, poste=p.poste, position=p.position,
-                                intention=intentions.get(p.name), role=p.role)
+                                intention=intentions.get(p.name), role=p.role, energy=p.condition.energy)
                  for p in players],
                 BallSnapshot(position=ball.position, holder=ball.holder, mode=ball.mode, dead=ball.restart is not None),
             )

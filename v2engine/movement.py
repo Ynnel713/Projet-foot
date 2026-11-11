@@ -28,13 +28,21 @@ _TAU_POINTS: tuple[tuple[float, float], ...] = ((11.0, 1.5), (55.0, 1.2), (99.0,
 DECEL_MAX_MPS2 = 7.0
 ARRIVAL_DEADZONE_M = 0.1  # en deçà, le joueur est arrivé : il ne vise plus aucune vitesse
 
-# Fatigue (Stamina) : plancher de vitesse en fin de match et minute à partir de laquelle la baisse
-# démarre, aux deux extrêmes de note (guide : bonne Stamina stable jusqu'à la 85e, mauvaise
-# Stamina "s'éteint dès la 60e-65e").
-_STAMINA_FLOOR_POINTS: tuple[tuple[float, float], ...] = ((5.0, 0.60), (99.0, 0.97))
-_STAMINA_DECAY_START_POINTS: tuple[tuple[float, float], ...] = ((5.0, 45.0), (99.0, 75.0))
-
-MATCH_END_MINUTE = 90.0
+# Réserve d'énergie (ticket v2-realisme/12e, constantes recommandées et retenues par délégation du propriétaire,
+# 11/11/2026), modèle à deux paramètres de la famille vitesse critique / D' (W' balance, Skiba 2012) : la course
+# au-dessus de `AEROBIC_SPEED_MPS` (14,4 km/h, haut du trot de Bradley 2009) vide la réserve de l'excès de vitesse
+# (m), la course en dessous la recharge à un débit fixe ; Stamina règle la taille et le débit. Valeurs de modèle
+# (taille, débit, genou, plancher) : non trouvées telles quelles, calées sur l'effort mesuré du banc après 12d
+# (médiane 1 035 m d'excès par match et par joueur de champ, 5 080 s sous 14,4 km/h), puis recharge choisie sur 6 matchs
+# entre trois candidates : course au-dessus de 19,8 km/h, dernier quart d'heure réglementaire contre le premier, − 21 %
+# pour tous (repère 10 à 30 %), − 27 % sous Stamina 75, − 7 % à 75 et plus et qu'un Stamina haut ne baisse presque pas (guide : bonne Stamina stable
+# jusqu'à la 85e, mauvaise Stamina "s'éteint dès la 60e-65e").
+AEROBIC_SPEED_MPS = 4.0
+_RESERVE_POINTS: tuple[tuple[float, float], ...] = ((5.0, 500.0), (55.0, 1000.0), (99.0, 1500.0))  # m d'excès
+_RECOVERY_POINTS: tuple[tuple[float, float], ...] = ((5.0, 0.06), (55.0, 0.15), (99.0, 0.30))  # m/s au repos ;
+# rapportée à la réserve, la recharge croît aussi avec Stamina (5 : 0,012 % par seconde ; 99 : 0,020 %)
+FATIGUE_KNEE = 0.8  # au-dessus de 80 % de sa réserve, aucune perte de vitesse ; en dessous, perte progressive
+FATIGUE_FLOOR = 0.6  # réserve vide : 60 % de sa vitesse max
 
 
 @lru_cache(maxsize=None)
@@ -58,15 +66,18 @@ def accel_tau_s(acceleration: float) -> float:
     return _lerp(acceleration, _TAU_POINTS)
 
 
-def stamina_factor(stamina: float, minute: float) -> float:
-    """Multiplicateur de vitesse (0-1) dû à la fatigue à `minute` de match -- 1.0 avant le début
-    de la baisse, décroît linéairement jusqu'au plancher à la 90e."""
-    floor = _lerp(stamina, _STAMINA_FLOOR_POINTS)  # `_lerp` est mis en cache : mêmes notes à chaque tick
-    decay_start = _lerp(stamina, _STAMINA_DECAY_START_POINTS)
-    if minute <= decay_start:
-        return 1.0
-    ratio = min(1.0, (minute - decay_start) / (MATCH_END_MINUTE - decay_start))
-    return 1.0 - ratio * (1.0 - floor)
+def energy_factor(energy: float) -> float:
+    """Multiplicateur de vitesse max (0-1) selon la part de réserve restante `energy` (ticket 12e)."""
+    return FATIGUE_FLOOR + (1.0 - FATIGUE_FLOOR) * min(1.0, energy / FATIGUE_KNEE)
+
+
+def spend_energy(energy: float, stamina: float, speed_mps: float, dt: float) -> float:
+    """Part de réserve après `dt` secondes à `speed_mps` (ticket 12e) : l'excès au-dessus de 14,4 km/h la vide,
+    la course plus lente la recharge, bornée à [0, 1]."""
+    reserve = _lerp(stamina, _RESERVE_POINTS)
+    excess = speed_mps - AEROBIC_SPEED_MPS
+    delta = -excess * dt if excess > 0.0 else _lerp(stamina, _RECOVERY_POINTS) * dt
+    return min(1.0, max(0.0, energy + delta / reserve))
 
 
 @dataclass
@@ -86,7 +97,7 @@ class PlayerState:
     # des champs dédiés (chemin chaud, lu à chaque tick par `step`) ; ailleurs, ils passent aussi par la façade.
     attributes: dict[str, int] | None = None
     role: str = ""  # rôle du joueur (voir `roles.py`), ticket v2-realisme/02c ; sans effet sur le jeu avant 02d/02e/09
-    condition: PlayerCondition = PlayerCondition()  # état qui module l'expression des notes (19a : vide)
+    condition: PlayerCondition = PlayerCondition()  # état qui module l'expression des notes (19a ; réserve, 12e)
 
 
 def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_factor: float = 1.0,
@@ -99,7 +110,8 @@ def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_facto
     part de la vitesse max (ex. conduite de balle, `decision.dribble_speed_factor`). `target_velocity` : vitesse
     de la cible quand elle bouge (le porteur qu'il presse) -- la loi d'arrivée porte alors sur la vitesse de
     rapprochement, sans quoi il resterait à sa distance de freinage derrière un porteur en conduite."""
-    effective_max_speed = max_speed_mps(state.pace) * stamina_factor(state.stamina, minute) * speed_factor
+    # fatigue : réserve d'énergie (ticket 12e) ; `minute` n'est plus lue ici (gardée pour les appelants)
+    effective_max_speed = max_speed_mps(state.pace) * energy_factor(state.condition.energy) * speed_factor
     to_target = target - state.position
     distance = to_target.length()
     if distance > ARRIVAL_DEADZONE_M:
@@ -143,5 +155,6 @@ def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_facto
         radius_m=state.radius_m,
         attributes=state.attributes,
         role=state.role,
-        condition=state.condition,
+        condition=PlayerCondition(energy=spend_energy(state.condition.energy, state.stamina,
+                                                      0.5 * (velocity.length() + new_velocity.length()), dt)),
     )
