@@ -223,9 +223,10 @@ _LOST_BY = {PASSE: "passe interceptée", REMISE: "passe interceptée", CONTROLE_
 
 
 def _whistle(ball: BallState, event: FoulEvent, players: list[PlayerState], now_s: float,
-             fouls: list[FoulEvent] | None) -> None:
+             fouls: list[FoulEvent] | None, after_advantage: bool = False) -> None:
     """Faute sifflée (ticket v2-collectif/30) : ballon mort au lieu de la faute, coup franc ou penalty pour l'équipe
-    fautée ; la passe, le tir ou la conduite en cours s'arrêtent."""
+    fautée ; la passe, le tir ou la conduite en cours s'arrêtent. `after_advantage` : l'arbitre revient à une faute
+    laissée en avantage, déjà écrite au journal à sa minute (ticket v2-realisme/19e)."""
     victim_team = "away" if event.team == "home" else "home"
     ball.restart = foul_restart(victim_team, Vec2(event.x, event.y), players, now_s)
     ball.advantage, ball.set_piece = None, None
@@ -238,16 +239,15 @@ def _whistle(ball: BallState, event: FoulEvent, players: list[PlayerState], now_
     _clear_offside(ball)
     if fouls is not None:
         fouls.append(replace(event, outcome=ball.restart.kind))
-    _log(ball, now_s, FAUTE, event.team, event.player, ball.restart.kind, event.victim)
+    detail = f"{ball.restart.kind}, après avantage" if after_advantage else ball.restart.kind
+    _log(ball, now_s, FAUTE, event.team, event.player, detail, event.victim)
 
 
 def _settle_advantage(ball: BallState, fouls: list[FoulEvent] | None) -> None:
-    """L'avantage est acquis : la faute n'est plus sifflée (elle reste tracée, pour les cartons du ticket 09a)."""
+    """L'avantage est acquis : la faute n'est plus sifflée (elle reste tracée, pour les cartons du ticket 09a). Rien
+    n'est écrit au journal : la faute l'a été quand l'avantage a été accordé (réserve A1 de l'expert, 19b ; ticket 19e)."""
     if ball.advantage is not None and fouls is not None:
         fouls.append(ball.advantage[0])
-    if ball.advantage is not None:
-        event = ball.advantage[0]
-        _log(ball, event.minute * 60.0, FAUTE, event.team, event.player, "avantage", event.victim)
     ball.advantage = None
 
 
@@ -261,6 +261,7 @@ def _foul(ball: BallState, fouler: PlayerState, victim: PlayerState, players: li
                       foul_severity(), "avantage")
     if danger(victim.position, victim.team) >= ADVANTAGE_DANGER_MIN:
         ball.advantage = (event, now_s + ADVANTAGE_S)
+        _log(ball, now_s, FAUTE, event.team, event.player, "avantage", event.victim)  # à sa minute (ticket 19e)
     else:
         _whistle(ball, event, players, now_s, fouls)
 
@@ -274,7 +275,7 @@ def _check_advantage(ball: BallState, players: list[PlayerState], now_s: float,
     event, until_s = ball.advantage
     holder = next((p for p in players if p.name == ball.holder), None)
     if holder is not None and holder.team == event.team:
-        _whistle(ball, event, players, now_s, fouls)
+        _whistle(ball, event, players, now_s, fouls, after_advantage=True)
         return True
     if now_s >= until_s:
         _settle_advantage(ball, fouls)

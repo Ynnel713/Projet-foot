@@ -793,3 +793,29 @@ Effectifs par poste : DC 41 joueurs, MC 28, BU 19, LB 17, RB 17, AG 16, AD 16, M
 **Constat (inchangé, maintenant par poste et par joueur).** À chaque poste et pour la médiane des joueurs, seule la course rapide baisse en fin de match : sprints de − 19 % (MDC) à − 36 % (AG), avec une baisse d'autant plus forte que Stamina est bas. La technique, les duels et la position sans ballon n'ont pas de tendance commune : les écarts par poste partent dans les deux sens (cadrage des AD 0,11 → 0,47, des RB 0,33 → 0), sur de petits nombres (une dizaine de tirs non contrés par poste et par tranche), et la médiane des joueurs est à 0. Les contrôles ratés des DC (16 → 24 pour 100 passes visées) sont le plus grand écart de technique, mais la même mesure baisse chez les MDC (15 → 11) et les RB (6,3 → 5,0), signe de bruit plutôt que de fatigue, puisque le moteur ne relie pas la technique à la minute (scène A/B). **Réserve A2 de l'expert (11/11/2026)** : le numérateur compte tout contact raté, interceptions manquées comprises, et le dénominateur les seules passes de son équipe qui visent le joueur ; le niveau des défenseurs (DC 16, contre 3,9 pour les BU) vient de leurs tentatives d'interception, pas d'un contrôle quatre fois moins bon. Seule la comparaison d'une tranche à l'autre dans un même groupe vaut. Dénominateur par tentative de contrôle : ticket 19f. Les buts marqués et encaissés montent un peu en fin de match à tous les postes (environ + 0,3 pour 90 min), dans le bruit de la tranche (0,84 contre 0,62 à 0,74 but par match). Les chiffres « tous joueurs » du tableau précédent sont identiques au premier passage : le jeu n'a pas changé.
 
 **Déterminisme.** Les 10 premiers matchs rejoués à part (`19d-v2-det2.json`) : 21 730 valeurs par match identiques à celles de la série de 50 matchs. Les 77 chiffres « tous joueurs » du premier passage (`19d-det1.json`) sont identiques ; les autres clés ont été renommées (par groupe et par tranche).
+
+## 24. Origine des buts : lecture de la chaîne (ticket v2-realisme/19e, 20 matchs, 11/11/2026)
+
+Commande : `uv run python -m scripts.v2_chain 20` (parts par origine) ; `uv run python -m scripts.v2_chain --match 7 --but 0` (chaîne d'un but, exemple dans `.scratch/v2-realisme/mesures/19e-chaine-match7.txt`). Matchs : graines et affiches du banc (`measure_v2`), sans collecteur. Fichiers `.scratch/v2-realisme/mesures/19e-avant.jsonl` et `19e-apres.jsonl`. Lecture seule du journal (19b).
+
+**Définitions.** En remontant la chaîne depuis le but, l'origine est le premier événement qui **donne le ballon** à l'équipe qui marque : remise en jeu de cette équipe, hors-jeu adverse (coup franc indirect, sans événement de remise), perte adverse (tacle, interception, conduite perdue au contact, contrôle raté, touche trop longue), arrêt ou contre de cette équipe sur un tir adverse. Les arrêts et contres adverses (rebond) et la faute adverse laissée en avantage ne rendent pas le ballon : l'attaque continue. Familles : **coup de pied arrêté** (corner, coup franc, coup franc de hors-jeu, penalty), **touche** (à part, pour l'ajouter selon la définition du repère), **jeu placé** (engagement, sortie de but, ou coup de pied arrêté et touche à plus de **15 s** du but, `SET_PIECE_WINDOW_S`), **erreur adverse** (contrôle raté, touche trop longue), **récupération** (interception, conduite perdue, tacle, arrêt, contre), **inclassable** (expliqué). Constantes recommandées et retenues par délégation du propriétaire (11/11/2026).
+
+**Par origine (20 matchs, 108 buts).**
+
+| Famille | Buts | Part | Détail |
+|---|---|---|---|
+| Récupération | 87 | 80,6 % | interception 52, conduite perdue 28, tacle 6, contre 1 |
+| Erreur adverse | 16 | 14,8 % | contrôle raté 10, touche trop longue 6 |
+| Jeu placé | 3 | 2,8 % | engagement 2, après touche 1 |
+| Touche | 1 | 0,9 % | |
+| Coup de pied arrêté | 1 | 0,9 % | corner 1 |
+| Inclassable | 0 | 0 % | |
+
+Délai médian entre l'événement d'origine et le but : 3,3 s.
+
+**Repère réel.** Opta Analyst : 23,5 % des buts de Premier League sur toute son histoire viennent de coups de pied arrêtés, **hors penalties** ; la part récente est plus haute (environ 27 % en 2025-2026, selon les définitions). Part des penalties, des touches, des récupérations et du jeu placé : non trouvé (aucune source primaire lue dans ce ticket).
+
+**Constat.** Le moteur produit presque tous ses buts en transition : 95 % viennent d'un ballon gagné à l'adversaire (récupération ou erreur), à 3 s du but en médiane. Les coups de pied arrêtés ne donnent presque rien (1 but sur 108, contre environ 1 sur 4 dans le réel), le jeu placé très peu (3 sur 108). Écart majeur, à attribuer au 18a : corners et coups francs peu dangereux (jeu aérien, 15f et `v2-attributs-restants/01`), attaque placée qui ne finit pas, et pertes de balle très nombreuses (« interception » compte aussi une passe ratée reprise par l'adversaire). Aucun réglage ici.
+
+**Journal corrigé (réserve A1 de l'expert sur le 19b).** La faute laissée en avantage est écrite quand l'avantage est accordé (`match._foul`), plus au règlement ; si l'arbitre revient à la faute, la décision est écrite à sa minute (« coup franc, après avantage »). Sur 20 matchs : minutes du journal croissantes dans 20 matchs (11 avant la correction), aucune faute causée par un but, empreintes du jeu (ticks, buts, tirs, fautes, remises) identiques dans 20 matchs sur 20 : le jeu n'a pas changé. Origines des buts identiques sur les deux exécutions.
+

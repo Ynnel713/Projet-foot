@@ -1,0 +1,491 @@
+ 46.23'  #622   remise         home  Odsonne Édouard engagement -> Florian Thauvin
+ 46.30'  #623   passe          home  Florian Thauvin -> Thorgan Hazard
+ 46.36'  #624   passe          home  Thorgan Hazard -> Florian Thauvin
+ 46.42'  #625   passe          home  Florian Thauvin -> Matthieu Udol
+ 46.47'  #626   faute          away  Gessime Yassine coup franc -> Matthieu Udol
+ 47.02'  #627   remise         home  Matthieu Udol coup franc -> Amadou Haidara
+ 47.02'  #628   passe          home  Matthieu Udol -> Amadou Haidara
+ 47.07'  #629   passe          home  Amadou Haidara -> Matthieu Udol
+ 47.26'  #630   perte          home  Matthieu Udol conduite -> Gessime Yassine
+ 47.28'  #631   passe          away  Gessime Yassine -> Pape Demba Diop
+ 47.39'  #632   passe          away  Pape Demba Diop -> Giovanni Reyna
+ 47.40'  #633   perte          away  Pape Demba Diop passe interceptée -> Florian Thauvin
+ 47.44'  #634   passe          home  Florian Thauvin -> Michaël Cuisance
+ 47.54'  #635   passe          home  Michaël Cuisance -> Florian Thauvin
+ 47.59'  #636   passe          home  Florian Thauvin -> Thorgan Hazard
+ 47.64'  #637   passe          home  Thorgan Hazard -> Odsonne Édouard
+ 47.64'  #638   perte          home  Thorgan Hazard passe interceptée -> Conrad Harder
+ 47.66'  #639   passe          away  Conrad Harder -> Lucas Høgsberg
+ 47.75'  #640   perte          away  Lucas Høgsberg conduite -> Odsonne Édouard
+ 47.77'  #641   passe          home  Odsonne Édouard -> Florian Thauvin
+ 47.82'  #642   passe          home  Florian Thauvin -> Thorgan Hazard
+ 47.82'  #643   perte          home  Florian Thauvin passe interceptée -> Conrad Harder
+ 47.91'  #644   perte          away  Conrad Harder conduite -> Michaël Cuisance
+ 47.94'  #645   passe          home  Michaël Cuisance -> Odsonne Édouard
+ 48.07'  #646   passe          home  Odsonne Édouard -> Thorgan Hazard
+ 48.14'  #647   perte          home  Thorgan Hazard conduite -> Pape Demba Diop
+ 48.16'  #648   passe          away  Pape Demba Diop -> Sebastian Nanasi
+ 48.28'  #649   passe          away  Sebastian Nanasi -> Conrad Harder
+ 48.32'  #650   passe          away  Conrad Harder -> Giovanni Reyna
+ 48.38'  #651   perte          away  Conrad Harder passe interceptée -> Michaël Cuisance
+ 48.40'  #652   passe          home  Michaël Cuisance -> Jonathan Gradit
+ 48.45'  #653   passe          home  Jonathan Gradit -> Florian Thauvin
+ 48.51'  #654   passe          home  Florian Thauvin -> Thorgan Hazard
+ 48.59'  #655   passe          home  Thorgan Hazard -> Michaël Cuisance
+ 48.64'  #656   passe          home  Michaël Cuisance -> Amadou Haidara
+ 48.70'  #657   passe          home  Amadou Haidara -> Thorgan Hazard
+ 48.75'  #658   perte          home  Amadou Haidara passe interceptée -> Sebastian Nanasi
+ 48.78'  #659   passe          away  Sebastian Nanasi -> Pape Demba Diop
+ 48.78'  #660   perte          away  Sebastian Nanasi passe interceptée -> Thorgan Hazard
+ 48.80'  #661   passe          home  Thorgan Hazard -> Michaël Cuisance
+ 48.82'  #662   contrôle raté  home  Michaël Cuisance 
+ 48.87'  #663   passe          home  Michaël Cuisance -> Odsonne Édouard
+ 48.89'  #664   contrôle raté  home  Odsonne Édouard 
+ 48.92'  #665   perte          home  Odsonne Édouard contrôle -> Conrad Harder
+ 49.04'  #666   passe          away  Conrad Harder -> Giovanni Reyna
+ 49.09'  #667   passe          away  Giovanni Reyna -> Gessime Yassine
+ 49.14'  #668   perte          away  Giovanni Reyna passe interceptée -> Amadou Haidara
+ 49.17'  #669   passe          home  Amadou Haidara -> Florian Thauvin
+ 49.17'  #670   perte          home  Amadou Haidara passe interceptée -> Gessime Yassine
+ 49.19'  #671   tir            away  Gessime Yassine en vol
+ 49.64'  #672   remise         home  Robin Risser sortie de but -> Amadou Haidara
+ 49.69'  #673   passe          home  Amadou Haidara -> Robin Risser
+ 49.77'  #674   passe          home  Robin Risser -> Thorgan Hazard
+ 49.78'  #675   perte          home  Robin Risser passe interceptée -> Conrad Harder
+ 49.81'  #676   passe          away  Conrad Harder -> Giovanni Reyna
+ 49.82'  #677   perte          away  Conrad Harder passe interceptée -> Michaël Cuisance
+ 49.84'  #678   passe          home  Michaël Cuisance -> Ruben Aguilar
+ 49.86'  #679   contrôle raté  home  Ruben Aguilar 
+ 49.92'  #680   passe          home  Ruben Aguilar -> Thorgan Hazard
+ 49.97'  #681   passe          home  Thorgan Hazard -> Odsonne Édouard
+ 50.20'  #682   tir            home  Odsonne Édouard en vol
+ 50.63'  #683   remise         away  Filip Jørgensen sortie de but -> Sebastian Nanasi
+ 50.70'  #684   perte          away  Filip Jørgensen passe interceptée -> Michaël Cuisance
+ 50.73'  #685   passe          home  Michaël Cuisance -> Ruben Aguilar
+ 50.82'  #686   perte          home  Ruben Aguilar conduite -> Sebastian Nanasi
+ 50.84'  #687   passe          away  Sebastian Nanasi -> Ben Chilwell
+ 50.93'  #688   touche longue  away  Ben Chilwell 
+ 50.94'  #689   perte          away  Ben Chilwell conduite -> Ruben Aguilar
+ 50.98'  #690   passe          home  Ruben Aguilar -> Samson Baidoo
+ 51.10'  #691   perte          home  Samson Baidoo conduite -> Conrad Harder
+ 51.14'  #692   tir            away  Conrad Harder en vol
+ 51.57'  #693   remise         home  Robin Risser sortie de but -> Amadou Haidara
+ 51.63'  #694   passe          home  Amadou Haidara -> Michaël Cuisance
+ 51.68'  #695   passe          home  Michaël Cuisance -> Amadou Haidara
+ 51.73'  #696   passe          home  Amadou Haidara -> Florian Thauvin
+ 51.74'  #697   perte          home  Amadou Haidara passe interceptée -> Sebastian Nanasi
+ 51.76'  #698   passe          away  Sebastian Nanasi -> Giovanni Reyna
+ 51.80'  #699   passe          away  Giovanni Reyna -> Sebastian Nanasi
+ 51.82'  #700   perte          away  Giovanni Reyna passe interceptée -> Thorgan Hazard
+ 51.85'  #701   passe          home  Thorgan Hazard -> Michaël Cuisance
+ 51.90'  #702   passe          home  Michaël Cuisance -> Florian Thauvin
+ 51.95'  #703   passe          home  Florian Thauvin -> Ruben Aguilar
+ 52.05'  #704   passe          home  Ruben Aguilar -> Thorgan Hazard
+ 52.11'  #705   passe          home  Thorgan Hazard -> Odsonne Édouard
+ 52.11'  #706   perte          home  Thorgan Hazard passe interceptée -> Sebastian Nanasi
+ 52.13'  #707   passe          away  Sebastian Nanasi -> Giovanni Reyna
+ 52.23'  #708   passe          away  Giovanni Reyna -> Conrad Harder
+ 52.36'  #709   passe          away  Conrad Harder -> Gessime Yassine
+ 52.44'  #710   passe          away  Gessime Yassine -> Giovanni Reyna
+ 52.45'  #711   perte          away  Gessime Yassine passe interceptée -> Matthieu Udol
+ 52.48'  #712   passe          home  Matthieu Udol -> Florian Thauvin
+ 52.54'  #713   passe          home  Florian Thauvin -> Odsonne Édouard
+ 52.66'  #714   touche longue  home  Odsonne Édouard 
+ 52.71'  #715   tir            home  Odsonne Édouard en vol
+ 52.71'  #716   contre         away  Dário Essugo 
+ 52.85'  #717   touche longue  home  Odsonne Édouard 
+ 52.87'  #718   perte          home  Odsonne Édouard conduite -> Lucas Høgsberg
+ 52.90'  #719   passe          away  Lucas Høgsberg -> Dário Essugo
+ 52.96'  #720   passe          away  Dário Essugo -> Ben Chilwell
+ 53.11'  #721   passe          away  Ben Chilwell -> Giovanni Reyna
+ 53.16'  #722   passe          away  Giovanni Reyna -> Conrad Harder
+ 53.16'  #723   perte          away  Giovanni Reyna passe interceptée -> Jean-Clair Todibo
+ 53.19'  #724   passe          home  Jean-Clair Todibo -> Thorgan Hazard
+ 53.25'  #725   passe          home  Thorgan Hazard -> Florian Thauvin
+ 53.36'  #726   passe          home  Florian Thauvin -> Thorgan Hazard
+ 53.40'  #727   passe          home  Thorgan Hazard -> Michaël Cuisance
+ 53.46'  #728   passe          home  Michaël Cuisance -> Florian Thauvin
+ 53.50'  #729   passe          home  Florian Thauvin -> Matthieu Udol
+ 53.71'  #730   passe          home  Matthieu Udol -> Odsonne Édouard
+ 53.76'  #731   touche longue  home  Odsonne Édouard 
+ 53.78'  #732   perte          home  Odsonne Édouard conduite -> Pape Demba Diop
+ 53.80'  #733   passe          away  Pape Demba Diop -> Dário Essugo
+ 53.86'  #734   passe          away  Dário Essugo -> Gessime Yassine
+ 53.92'  #735   passe          away  Gessime Yassine -> Giovanni Reyna
+ 53.92'  #736   perte          away  Gessime Yassine passe interceptée -> Florian Thauvin
+ 53.95'  #737   passe          home  Florian Thauvin -> Thorgan Hazard
+ 54.11'  #738   passe          home  Thorgan Hazard -> Odsonne Édouard
+ 54.12'  #739   perte          home  Thorgan Hazard passe interceptée -> Pape Demba Diop
+ 54.14'  #740   passe          away  Pape Demba Diop -> Giovanni Reyna
+ 54.21'  #741   passe          away  Giovanni Reyna -> Conrad Harder
+ 54.24'  #742   perte          away  Giovanni Reyna passe interceptée -> Amadou Haidara
+ 54.27'  #743   passe          home  Amadou Haidara -> Jean-Clair Todibo
+ 54.33'  #744   passe          home  Jean-Clair Todibo -> Thorgan Hazard
+ 54.39'  #745   passe          home  Thorgan Hazard -> Odsonne Édouard
+ 54.39'  #746   perte          home  Thorgan Hazard passe interceptée -> Conrad Harder
+ 54.48'  #747   passe          away  Conrad Harder -> Sebastian Nanasi
+ 54.54'  #748   touche longue  away  Sebastian Nanasi 
+ 54.58'  #749   passe          away  Sebastian Nanasi -> Gessime Yassine
+ 54.59'  #750   perte          away  Sebastian Nanasi passe interceptée -> Amadou Haidara
+ 54.62'  #751   passe          home  Amadou Haidara -> Odsonne Édouard
+ 54.69'  #752   touche longue  home  Odsonne Édouard 
+ 54.71'  #753   perte          home  Odsonne Édouard conduite -> Conrad Harder
+ 54.80'  #754   passe          away  Conrad Harder -> Giovanni Reyna
+ 54.80'  #755   perte          away  Conrad Harder passe interceptée -> Odsonne Édouard
+ 54.90'  #756   passe          home  Odsonne Édouard -> Thorgan Hazard
+ 54.94'  #757   passe          home  Thorgan Hazard -> Odsonne Édouard
+ 54.97'  #758   perte          home  Thorgan Hazard passe interceptée -> Pape Demba Diop
+ 55.01'  #759   passe          away  Pape Demba Diop -> Giovanni Reyna
+ 55.07'  #760   passe          away  Giovanni Reyna -> Sebastian Nanasi
+ 55.21'  #761   passe          away  Sebastian Nanasi -> Conrad Harder
+ 55.29'  #762   tir            away  Conrad Harder dévissé
+ 55.36'  #763   passe          home  Jean-Clair Todibo -> Matthieu Udol
+ 55.36'  #764   perte          home  Jean-Clair Todibo passe interceptée -> Conrad Harder
+ 55.43'  #765   passe          away  Conrad Harder -> Gessime Yassine
+ 55.49'  #766   passe          away  Gessime Yassine -> Conrad Harder
+ 55.59'  #767   touche longue  away  Conrad Harder 
+ 55.61'  #768   perte          away  Conrad Harder conduite -> Michaël Cuisance
+ 55.63'  #769   perte          home  Michaël Cuisance conduite -> Conrad Harder
+ 55.67'  #770   passe          away  Conrad Harder -> Giovanni Reyna
+ 55.72'  #771   passe          away  Giovanni Reyna -> Sebastian Nanasi
+ 55.80'  #772   perte          away  Giovanni Reyna passe interceptée -> Florian Thauvin
+ 55.83'  #773   passe          home  Florian Thauvin -> Thorgan Hazard
+ 55.93'  #774   passe          home  Thorgan Hazard -> Odsonne Édouard
+ 55.94'  #775   perte          home  Thorgan Hazard passe interceptée -> Ben Chilwell
+ 55.97'  #776   passe          away  Ben Chilwell -> Dário Essugo
+ 56.03'  #777   passe          away  Dário Essugo -> Conrad Harder
+ 56.10'  #778   touche longue  away  Conrad Harder 
+ 56.22'  #779   perte          away  Conrad Harder conduite -> Thorgan Hazard
+ 56.25'  #780   passe          home  Thorgan Hazard -> Michaël Cuisance
+ 56.33'  #781   passe          home  Michaël Cuisance -> Thorgan Hazard
+ 56.40'  #782   passe          home  Thorgan Hazard -> Odsonne Édouard
+ 56.40'  #783   perte          home  Thorgan Hazard passe interceptée -> Conrad Harder
+ 56.42'  #784   passe          away  Conrad Harder -> Giovanni Reyna
+ 56.56'  #785   passe          away  Giovanni Reyna -> Conrad Harder
+ 56.66'  #786   tir            away  Conrad Harder en vol
+ 56.66'  #787   contre         home  Jean-Clair Todibo 
+ 56.73'  #788   passe          home  Thorgan Hazard -> Amadou Haidara
+ 56.79'  #789   passe          home  Amadou Haidara -> Thorgan Hazard
+ 56.85'  #790   passe          home  Thorgan Hazard -> Odsonne Édouard
+ 57.01'  #791   tir            home  Odsonne Édouard en vol
+ 57.45'  #792   remise         away  Filip Jørgensen sortie de but -> Dário Essugo
+ 57.50'  #793   passe          away  Dário Essugo -> Ismaël Doukouré
+ 57.55'  #794   passe          away  Ismaël Doukouré -> Dário Essugo
+ 57.60'  #795   passe          away  Dário Essugo -> Filip Jørgensen
+ 57.68'  #796   passe          away  Filip Jørgensen -> Pape Demba Diop
+ 57.77'  #797   passe          away  Pape Demba Diop -> Gessime Yassine
+ 57.84'  #798   perte          away  Pape Demba Diop passe interceptée -> Odsonne Édouard
+ 57.96'  #799   perte          home  Odsonne Édouard conduite -> Genesis Antwi
+ 57.99'  #800   passe          away  Genesis Antwi -> Gessime Yassine
+ 58.02'  #801   perte          away  Genesis Antwi passe interceptée -> Jonathan Gradit
+ 58.07'  #802   passe          home  Jonathan Gradit -> Odsonne Édouard
+ 58.14'  #803   perte          home  Jonathan Gradit passe interceptée -> Conrad Harder
+ 58.16'  #804   passe          away  Conrad Harder -> Ismaël Doukouré
+ 58.26'  #805   passe          away  Ismaël Doukouré -> Conrad Harder
+ 58.37'  #806   passe          away  Conrad Harder -> Sebastian Nanasi
+ 58.39'  #807   perte          away  Conrad Harder passe interceptée -> Samson Baidoo
+ 58.46'  #808   faute          away  Sebastian Nanasi coup franc -> Samson Baidoo
+ 59.01'  #809   remise         home  Samson Baidoo coup franc -> Odsonne Édouard
+ 59.01'  #810   passe          home  Samson Baidoo -> Odsonne Édouard
+ 59.06'  #811   touche longue  home  Odsonne Édouard 
+ 59.08'  #812   perte          home  Odsonne Édouard conduite -> Dário Essugo
+ 59.11'  #813   passe          away  Dário Essugo -> Gessime Yassine
+ 59.28'  #814   passe          away  Gessime Yassine -> Conrad Harder
+ 59.30'  #815   perte          away  Gessime Yassine passe interceptée -> Amadou Haidara
+ 59.33'  #816   passe          home  Amadou Haidara -> Odsonne Édouard
+ 59.37'  #817   perte          home  Amadou Haidara passe interceptée -> Lucas Høgsberg
+ 59.41'  #818   passe          away  Lucas Høgsberg -> Dário Essugo
+ 59.48'  #819   passe          away  Dário Essugo -> Giovanni Reyna
+ 59.53'  #820   passe          away  Giovanni Reyna -> Conrad Harder
+ 59.60'  #821   passe          away  Conrad Harder -> Gessime Yassine
+ 59.61'  #822   perte          away  Conrad Harder passe interceptée -> Amadou Haidara
+ 59.64'  #823   passe          home  Amadou Haidara -> Odsonne Édouard
+ 59.73'  #824   passe          home  Odsonne Édouard -> Thorgan Hazard
+ 59.78'  #825   perte          home  Odsonne Édouard passe interceptée -> Pape Demba Diop
+ 59.81'  #826   passe          away  Pape Demba Diop -> Giovanni Reyna
+ 59.84'  #827   perte          away  Pape Demba Diop passe interceptée -> Florian Thauvin
+ 59.88'  #828   passe          home  Florian Thauvin -> Michaël Cuisance
+ 59.99'  #829   passe          home  Michaël Cuisance -> Florian Thauvin
+ 60.01'  #830   contrôle raté  home  Florian Thauvin 
+ 60.06'  #831   passe          home  Florian Thauvin -> Thorgan Hazard
+ 60.13'  #832   passe          home  Thorgan Hazard -> Odsonne Édouard
+ 60.19'  #833   perte          home  Thorgan Hazard passe interceptée -> Lucas Høgsberg
+ 60.21'  #834   passe          away  Lucas Høgsberg -> Ben Chilwell
+ 60.31'  #835   passe          away  Ben Chilwell -> Giovanni Reyna
+ 60.42'  #836   passe          away  Giovanni Reyna -> Conrad Harder
+ 60.52'  #837   faute          home  Ruben Aguilar avantage -> Conrad Harder
+ 60.55'  #838   passe          away  Conrad Harder -> Gessime Yassine
+ 60.55'  #839   perte          away  Conrad Harder passe interceptée -> Jean-Clair Todibo
+ 60.55'  #840   faute          home  Ruben Aguilar coup franc, après avantage -> Conrad Harder
+ 61.11'  #841   remise         away  Conrad Harder coup franc -> Sebastian Nanasi
+ 61.11'  #842   passe          away  Conrad Harder -> Sebastian Nanasi
+ 61.12'  #843   contrôle raté  away  Sebastian Nanasi 
+ 61.29'  #844   passe          away  Sebastian Nanasi -> Conrad Harder
+ 61.35'  #845   perte          away  Sebastian Nanasi tacle -> Samson Baidoo
+ 61.38'  #846   perte          home  Samson Baidoo conduite -> Sebastian Nanasi
+ 61.41'  #847   passe          away  Sebastian Nanasi -> Giovanni Reyna
+ 61.51'  #848   tir            away  Giovanni Reyna en vol
+ 61.94'  #849   remise         home  Robin Risser sortie de but -> Samson Baidoo
+ 61.99'  #850   passe          home  Jean-Clair Todibo -> Amadou Haidara
+ 62.04'  #851   passe          home  Amadou Haidara -> Jonathan Gradit
+ 62.10'  #852   passe          home  Jonathan Gradit -> Jean-Clair Todibo
+ 62.15'  #853   passe          home  Jean-Clair Todibo -> Robin Risser
+ 62.23'  #854   passe          home  Robin Risser -> Amadou Haidara
+ 62.29'  #855   passe          home  Amadou Haidara -> Florian Thauvin
+ 62.37'  #856   passe          home  Florian Thauvin -> Odsonne Édouard
+ 62.54'  #857   passe          home  Odsonne Édouard -> Matthieu Udol
+ 62.61'  #858   passe          home  Matthieu Udol -> Odsonne Édouard
+ 62.70'  #859   touche longue  home  Odsonne Édouard 
+ 62.72'  #860   perte          home  Odsonne Édouard conduite -> Dário Essugo
+ 62.72'  #861   contrôle raté  away  Dário Essugo 
+ 62.76'  #862   passe          away  Dário Essugo -> Pape Demba Diop
+ 62.85'  #863   passe          away  Pape Demba Diop -> Conrad Harder
+ 62.85'  #864   perte          away  Pape Demba Diop passe interceptée -> Odsonne Édouard
+ 62.87'  #865   perte          home  Odsonne Édouard tacle -> Pape Demba Diop
+ 62.89'  #866   passe          away  Pape Demba Diop -> Conrad Harder
+ 63.00'  #867   passe          away  Conrad Harder -> Giovanni Reyna
+ 63.03'  #868   perte          away  Conrad Harder passe interceptée -> Ruben Aguilar
+ 63.07'  #869   passe          home  Ruben Aguilar -> Samson Baidoo
+ 63.17'  #870   touche longue  home  Samson Baidoo 
+ 63.44'  #871   passe          home  Samson Baidoo -> Thorgan Hazard
+ 63.49'  #872   perte          home  Samson Baidoo passe interceptée -> Ismaël Doukouré
+ 63.54'  #873   passe          away  Ismaël Doukouré -> Giovanni Reyna
+ 63.59'  #874   perte          away  Ismaël Doukouré passe interceptée -> Jean-Clair Todibo
+ 63.61'  #875   passe          home  Jean-Clair Todibo -> Florian Thauvin
+ 63.66'  #876   passe          home  Florian Thauvin -> Amadou Haidara
+ 63.72'  #877   passe          home  Amadou Haidara -> Matthieu Udol
+ 63.99'  #878   perte          home  Matthieu Udol conduite -> Pape Demba Diop
+ 64.02'  #879   passe          away  Pape Demba Diop -> Gessime Yassine
+ 64.07'  #880   passe          away  Gessime Yassine -> Conrad Harder
+ 64.13'  #881   perte          away  Gessime Yassine passe interceptée -> Jean-Clair Todibo
+ 64.16'  #882   passe          home  Jean-Clair Todibo -> Odsonne Édouard
+ 64.24'  #883   perte          home  Odsonne Édouard conduite -> Ismaël Doukouré
+ 64.27'  #884   passe          away  Ismaël Doukouré -> Conrad Harder
+ 64.32'  #885   perte          away  Conrad Harder conduite -> Odsonne Édouard
+ 64.35'  #886   passe          home  Odsonne Édouard -> Thorgan Hazard
+ 64.41'  #887   passe          home  Thorgan Hazard -> Odsonne Édouard
+ 64.51'  #888   tir            home  Odsonne Édouard en vol
+ 64.94'  #889   remise         away  Filip Jørgensen sortie de but -> Pape Demba Diop
+ 64.99'  #890   passe          away  Pape Demba Diop -> Filip Jørgensen
+ 65.06'  #891   passe          away  Filip Jørgensen -> Ismaël Doukouré
+ 65.11'  #892   passe          away  Ismaël Doukouré -> Dário Essugo
+ 65.14'  #893   passe          away  Dário Essugo -> Ismaël Doukouré
+ 65.18'  #894   passe          away  Ismaël Doukouré -> Ben Chilwell
+ 65.47'  #895   remise         home  Ruben Aguilar touche -> Thorgan Hazard
+ 65.54'  #896   passe          home  Thorgan Hazard -> Odsonne Édouard
+ 65.54'  #897   perte          home  Thorgan Hazard passe interceptée -> Sebastian Nanasi
+ 65.57'  #898   passe          away  Sebastian Nanasi -> Ismaël Doukouré
+ 65.62'  #899   touche longue  away  Ismaël Doukouré 
+ 65.69'  #900   passe          away  Ismaël Doukouré -> Conrad Harder
+ 65.75'  #901   perte          away  Ismaël Doukouré passe interceptée -> Samson Baidoo
+ 65.75'  #902   contrôle raté  home  Samson Baidoo 
+ 65.76'  #903   perte          home  Samson Baidoo contrôle -> Conrad Harder
+ 65.79'  #904   passe          away  Conrad Harder -> Gessime Yassine
+ 65.79'  #905   perte          away  Conrad Harder passe interceptée -> Amadou Haidara
+ 65.84'  #906   passe          home  Amadou Haidara -> Florian Thauvin
+ 65.84'  #907   perte          home  Amadou Haidara passe interceptée -> Conrad Harder
+ 65.92'  #908   passe          away  Conrad Harder -> Gessime Yassine
+ 65.98'  #909   passe          away  Gessime Yassine -> Giovanni Reyna
+ 66.09'  #910   passe          away  Giovanni Reyna -> Sebastian Nanasi
+ 66.10'  #911   hors-jeu       away  Sebastian Nanasi 
+ 66.14'  #912   perte          home  Samson Baidoo conduite -> Sebastian Nanasi
+ 66.16'  #913   passe          away  Sebastian Nanasi -> Conrad Harder
+ 66.19'  #914   perte          away  Sebastian Nanasi passe interceptée -> Jean-Clair Todibo
+ 66.23'  #915   passe          home  Jean-Clair Todibo -> Michaël Cuisance
+ 66.27'  #916   passe          home  Michaël Cuisance -> Ruben Aguilar
+ 66.34'  #917   passe          home  Ruben Aguilar -> Michaël Cuisance
+ 66.39'  #918   passe          home  Michaël Cuisance -> Thorgan Hazard
+ 66.40'  #919   perte          home  Michaël Cuisance passe interceptée -> Conrad Harder
+ 66.42'  #920   passe          away  Conrad Harder -> Pape Demba Diop
+ 66.53'  #921   passe          away  Pape Demba Diop -> Conrad Harder
+ 66.69'  #922   passe          away  Conrad Harder -> Sebastian Nanasi
+ 66.70'  #923   perte          away  Conrad Harder passe interceptée -> Ruben Aguilar
+ 66.72'  #924   passe          home  Ruben Aguilar -> Michaël Cuisance
+ 66.75'  #925   perte          home  Ruben Aguilar passe interceptée -> Sebastian Nanasi
+ 66.75'  #926   contrôle raté  away  Sebastian Nanasi 
+ 66.83'  #927   perte          away  Conrad Harder conduite -> Michaël Cuisance
+ 66.85'  #928   passe          home  Michaël Cuisance -> Florian Thauvin
+ 66.89'  #929   passe          home  Ruben Aguilar -> Thorgan Hazard
+ 66.93'  #930   perte          home  Ruben Aguilar passe interceptée -> Ben Chilwell
+ 66.96'  #931   passe          away  Ben Chilwell -> Sebastian Nanasi
+ 66.96'  #932   perte          away  Ben Chilwell passe interceptée -> Thorgan Hazard
+ 66.98'  #933   passe          home  Thorgan Hazard -> Michaël Cuisance
+ 67.02'  #934   passe          home  Michaël Cuisance -> Thorgan Hazard
+ 67.03'  #935   perte          home  Michaël Cuisance passe interceptée -> Dário Essugo
+ 67.07'  #936   passe          away  Dário Essugo -> Giovanni Reyna
+ 67.12'  #937   passe          away  Giovanni Reyna -> Sebastian Nanasi
+ 67.20'  #938   passe          away  Sebastian Nanasi -> Conrad Harder
+ 67.20'  #939   perte          away  Sebastian Nanasi passe interceptée -> Thorgan Hazard
+ 67.22'  #940   passe          home  Thorgan Hazard -> Ruben Aguilar
+ 67.33'  #941   passe          home  Ruben Aguilar -> Odsonne Édouard
+ 67.38'  #942   perte          home  Ruben Aguilar passe interceptée -> Lucas Høgsberg
+ 67.41'  #943   passe          away  Lucas Høgsberg -> Ismaël Doukouré
+ 67.48'  #944   passe          away  Ismaël Doukouré -> Giovanni Reyna
+ 67.53'  #945   passe          away  Giovanni Reyna -> Sebastian Nanasi
+ 67.59'  #946   perte          away  Giovanni Reyna passe interceptée -> Florian Thauvin
+ 67.61'  #947   passe          home  Florian Thauvin -> Thorgan Hazard
+ 67.67'  #948   passe          home  Thorgan Hazard -> Michaël Cuisance
+ 67.72'  #949   passe          home  Michaël Cuisance -> Thorgan Hazard
+ 67.75'  #950   perte          home  Thorgan Hazard tacle -> Giovanni Reyna
+ 67.79'  #951   passe          away  Giovanni Reyna -> Sebastian Nanasi
+ 67.84'  #952   passe          away  Sebastian Nanasi -> Giovanni Reyna
+ 67.92'  #953   passe          away  Giovanni Reyna -> Conrad Harder
+ 67.97'  #954   passe          away  Conrad Harder -> Gessime Yassine
+ 67.98'  #955   perte          away  Conrad Harder passe interceptée -> Thorgan Hazard
+ 68.00'  #956   passe          home  Thorgan Hazard -> Amadou Haidara
+ 68.05'  #957   passe          home  Amadou Haidara -> Thorgan Hazard
+ 68.10'  #958   passe          home  Thorgan Hazard -> Florian Thauvin
+ 68.12'  #959   perte          home  Thorgan Hazard passe interceptée -> Giovanni Reyna
+ 68.15'  #960   passe          away  Giovanni Reyna -> Gessime Yassine
+ 68.25'  #961   passe          away  Gessime Yassine -> Giovanni Reyna
+ 68.30'  #962   perte          away  Gessime Yassine passe interceptée -> Florian Thauvin
+ 68.33'  #963   passe          home  Florian Thauvin -> Michaël Cuisance
+ 68.38'  #964   passe          home  Michaël Cuisance -> Thorgan Hazard
+ 68.44'  #965   perte          home  Thorgan Hazard conduite -> Ben Chilwell
+ 68.47'  #966   passe          away  Ben Chilwell -> Sebastian Nanasi
+ 68.58'  #967   passe          away  Sebastian Nanasi -> Giovanni Reyna
+ 68.65'  #968   perte          away  Sebastian Nanasi passe interceptée -> Thorgan Hazard
+ 68.67'  #969   passe          home  Thorgan Hazard -> Florian Thauvin
+ 68.73'  #970   perte          home  Thorgan Hazard passe interceptée -> Gessime Yassine
+ 68.77'  #971   passe          away  Gessime Yassine -> Giovanni Reyna
+ 68.83'  #972   passe          away  Giovanni Reyna -> Conrad Harder
+ 68.83'  #973   perte          away  Giovanni Reyna passe interceptée -> Florian Thauvin
+ 68.86'  #974   perte          home  Florian Thauvin conduite -> Giovanni Reyna
+ 68.88'  #975   passe          away  Giovanni Reyna -> Gessime Yassine
+ 68.97'  #976   perte          away  Gessime Yassine conduite -> Florian Thauvin
+ 68.99'  #977   passe          home  Florian Thauvin -> Odsonne Édouard
+ 69.14'  #978   perte          home  Odsonne Édouard conduite -> Dário Essugo
+ 69.16'  #979   passe          away  Dário Essugo -> Conrad Harder
+ 69.28'  #980   touche longue  away  Conrad Harder 
+ 69.31'  #981   perte          away  Conrad Harder conduite -> Florian Thauvin
+ 69.33'  #982   passe          home  Florian Thauvin -> Jonathan Gradit
+ 69.38'  #983   passe          home  Jonathan Gradit -> Florian Thauvin
+ 69.46'  #984   passe          home  Florian Thauvin -> Michaël Cuisance
+ 69.46'  #985   perte          home  Florian Thauvin passe interceptée -> Conrad Harder
+ 69.51'  #986   passe          away  Conrad Harder -> Giovanni Reyna
+ 69.51'  #987   perte          away  Conrad Harder passe interceptée -> Florian Thauvin
+ 69.53'  #988   passe          home  Florian Thauvin -> Amadou Haidara
+ 69.58'  #989   passe          home  Amadou Haidara -> Michaël Cuisance
+ 69.58'  #990   perte          home  Amadou Haidara passe interceptée -> Giovanni Reyna
+ 69.62'  #991   tir            away  Giovanni Reyna en vol
+ 70.05'  #992   remise         home  Robin Risser sortie de but -> Michaël Cuisance
+ 70.11'  #993   passe          home  Michaël Cuisance -> Robin Risser
+ 70.19'  #994   passe          home  Robin Risser -> Amadou Haidara
+ 70.23'  #995   passe          home  Amadou Haidara -> Florian Thauvin
+ 70.27'  #996   faute          away  Dário Essugo coup franc -> Florian Thauvin
+ 70.82'  #997   remise         home  Florian Thauvin coup franc -> Ruben Aguilar
+ 70.82'  #998   passe          home  Florian Thauvin -> Ruben Aguilar
+ 70.89'  #999   passe          home  Ruben Aguilar -> Odsonne Édouard
+ 71.05'  #1000  passe          home  Odsonne Édouard -> Ruben Aguilar
+ 71.05'  #1001  perte          home  Odsonne Édouard passe interceptée -> Dário Essugo
+ 71.05'  #1002  contrôle raté  away  Dário Essugo 
+ 71.11'  #1003  perte          away  Dário Essugo contrôle -> Odsonne Édouard
+ 71.29'  #1004  touche longue  home  Odsonne Édouard 
+ 71.54'  #1005  remise         away  Ben Chilwell touche -> Sebastian Nanasi
+ 71.60'  #1006  passe          away  Sebastian Nanasi -> Conrad Harder
+ 71.74'  #1007  passe          away  Conrad Harder -> Sebastian Nanasi
+ 71.92'  #1008  perte          away  Sebastian Nanasi conduite -> Ruben Aguilar
+ 71.94'  #1009  passe          home  Ruben Aguilar -> Michaël Cuisance
+ 72.00'  #1010  passe          home  Michaël Cuisance -> Thorgan Hazard
+ 72.04'  #1011  passe          home  Thorgan Hazard -> Florian Thauvin
+ 72.10'  #1012  passe          home  Florian Thauvin -> Odsonne Édouard
+ 72.15'  #1013  touche longue  home  Odsonne Édouard 
+ 72.17'  #1014  perte          home  Odsonne Édouard conduite -> Ben Chilwell
+ 72.19'  #1015  passe          away  Ben Chilwell -> Conrad Harder
+ 72.27'  #1016  touche longue  away  Conrad Harder 
+ 72.28'  #1017  contrôle raté  away  Conrad Harder 
+ 72.29'  #1018  perte          away  Conrad Harder contrôle -> Michaël Cuisance
+ 72.31'  #1019  passe          home  Michaël Cuisance -> Ruben Aguilar
+ 72.39'  #1020  passe          home  Ruben Aguilar -> Thorgan Hazard
+ 72.44'  #1021  passe          home  Thorgan Hazard -> Odsonne Édouard
+ 72.91'  #1022  perte          home  Odsonne Édouard conduite -> Ben Chilwell
+ 72.94'  #1023  passe          away  Ben Chilwell -> Ismaël Doukouré
+ 73.05'  #1024  passe          away  Filip Jørgensen -> Ismaël Doukouré
+ 73.11'  #1025  passe          away  Ismaël Doukouré -> Pape Demba Diop
+ 73.16'  #1026  passe          away  Pape Demba Diop -> Dário Essugo
+ 73.17'  #1027  perte          away  Pape Demba Diop passe interceptée -> Odsonne Édouard
+ 73.19'  #1028  tir            home  Odsonne Édouard en vol
+ 73.20'  #1029  arrêt          away  Filip Jørgensen capté
+ 73.26'  #1030  passe          away  Filip Jørgensen -> Pape Demba Diop
+ 73.31'  #1031  passe          away  Pape Demba Diop -> Lucas Høgsberg
+ 73.37'  #1032  passe          away  Lucas Høgsberg -> Filip Jørgensen
+ 73.44'  #1033  passe          away  Filip Jørgensen -> Pape Demba Diop
+ 73.49'  #1034  passe          away  Pape Demba Diop -> Lucas Høgsberg
+ 73.49'  #1035  perte          away  Pape Demba Diop passe interceptée -> Jean-Clair Todibo
+ 73.52'  #1036  tir            home  Jean-Clair Todibo en vol
+ 73.52'  #1037  arrêt          away  Filip Jørgensen capté
+ 73.58'  #1038  passe          away  Filip Jørgensen -> Lucas Høgsberg
+ 73.64'  #1039  passe          away  Lucas Høgsberg -> Dário Essugo
+ 73.71'  #1040  passe          away  Dário Essugo -> Ismaël Doukouré
+ 73.77'  #1041  passe          away  Ismaël Doukouré -> Filip Jørgensen
+ 73.92'  #1042  passe          away  Filip Jørgensen -> Gessime Yassine
+ 74.03'  #1043  perte          away  Gessime Yassine conduite -> Amadou Haidara
+ 74.05'  #1044  passe          home  Amadou Haidara -> Matthieu Udol
+ 74.10'  #1045  perte          home  Amadou Haidara passe interceptée -> Conrad Harder
+ 74.12'  #1046  passe          away  Conrad Harder -> Giovanni Reyna
+ 74.20'  #1047  passe          away  Giovanni Reyna -> Conrad Harder
+ 74.20'  #1048  perte          away  Giovanni Reyna passe interceptée -> Jean-Clair Todibo
+ 74.23'  #1049  passe          home  Jean-Clair Todibo -> Amadou Haidara
+ 74.32'  #1050  passe          home  Amadou Haidara -> Matthieu Udol
+ 74.38'  #1051  passe          home  Matthieu Udol -> Florian Thauvin
+ 74.44'  #1052  perte          home  Matthieu Udol passe interceptée -> Dário Essugo
+ 74.47'  #1053  passe          away  Dário Essugo -> Giovanni Reyna
+ 74.52'  #1054  passe          away  Giovanni Reyna -> Conrad Harder
+ 74.52'  #1055  perte          away  Giovanni Reyna passe interceptée -> Florian Thauvin
+ 74.55'  #1056  passe          home  Florian Thauvin -> Jonathan Gradit
+ 74.55'  #1057  perte          home  Florian Thauvin passe interceptée -> Giovanni Reyna
+ 74.57'  #1058  passe          away  Giovanni Reyna -> Conrad Harder
+ 74.66'  #1059  passe          away  Conrad Harder -> Giovanni Reyna
+ 74.73'  #1060  perte          away  Conrad Harder passe interceptée -> Jean-Clair Todibo
+ 74.75'  #1061  passe          home  Jean-Clair Todibo -> Odsonne Édouard
+ 74.90'  #1062  tir            home  Odsonne Édouard en vol
+ 75.33'  #1063  remise         away  Filip Jørgensen sortie de but -> Giovanni Reyna
+ 75.53'  #1064  faute          home  Michaël Cuisance avantage -> Conrad Harder
+ 75.62'  #1065  passe          away  Conrad Harder -> Sebastian Nanasi
+ 75.67'  #1066  passe          away  Sebastian Nanasi -> Conrad Harder
+ 75.68'  #1067  perte          away  Sebastian Nanasi passe interceptée -> Thorgan Hazard
+ 75.71'  #1068  passe          home  Thorgan Hazard -> Odsonne Édouard
+ 75.85'  #1069  passe          home  Odsonne Édouard -> Michaël Cuisance
+ 75.92'  #1070  perte          home  Odsonne Édouard passe interceptée -> Conrad Harder
+ 75.99'  #1071  tir            away  Conrad Harder en vol
+ 76.42'  #1072  remise         home  Robin Risser sortie de but -> Ruben Aguilar
+ 76.73'  #1073  remise         away  Sebastian Nanasi touche
+ 76.78'  #1074  passe          away  Sebastian Nanasi -> Giovanni Reyna
+ 76.84'  #1075  passe          away  Giovanni Reyna -> Sebastian Nanasi
+ 76.89'  #1076  perte          away  Sebastian Nanasi conduite -> Samson Baidoo
+ 76.94'  #1077  touche longue  home  Samson Baidoo 
+ 76.99'  #1078  passe          home  Thorgan Hazard -> Florian Thauvin
+ 77.05'  #1079  passe          home  Florian Thauvin -> Amadou Haidara
+ 77.09'  #1080  passe          home  Amadou Haidara -> Thorgan Hazard
+ 77.17'  #1081  perte          home  Amadou Haidara passe interceptée -> Gessime Yassine
+ 77.19'  #1082  passe          away  Gessime Yassine -> Conrad Harder
+ 77.26'  #1083  faute          home  Thorgan Hazard avantage -> Conrad Harder
+ 77.32'  #1084  tir            away  Conrad Harder en vol
+ 77.76'  #1085  remise         home  Robin Risser sortie de but -> Florian Thauvin
+ 77.82'  #1086  passe          home  Florian Thauvin -> Michaël Cuisance
+ 77.87'  #1087  passe          home  Michaël Cuisance -> Ruben Aguilar
+ 77.93'  #1088  passe          home  Ruben Aguilar -> Michaël Cuisance
+ 77.97'  #1089  passe          home  Michaël Cuisance -> Thorgan Hazard
+ 78.06'  #1090  passe          home  Thorgan Hazard -> Florian Thauvin
+ 78.12'  #1091  passe          home  Florian Thauvin -> Michaël Cuisance
+ 78.17'  #1092  perte          home  Michaël Cuisance conduite -> Ben Chilwell
+ 78.19'  #1093  passe          away  Ben Chilwell -> Sebastian Nanasi
+ 78.20'  #1094  perte          away  Ben Chilwell passe interceptée -> Thorgan Hazard
+ 78.26'  #1095  passe          home  Thorgan Hazard -> Ruben Aguilar
+ 78.32'  #1096  perte          home  Thorgan Hazard passe interceptée -> Ben Chilwell
+ 78.35'  #1097  touche longue  away  Ben Chilwell 
+ 78.41'  #1098  passe          away  Ben Chilwell -> Giovanni Reyna
+ 78.44'  #1099  passe          away  Giovanni Reyna -> Sebastian Nanasi
+ 78.44'  #1100  perte          away  Giovanni Reyna passe interceptée -> Samson Baidoo
+ 78.52'  #1101  perte          home  Samson Baidoo conduite -> Giovanni Reyna
+ 78.54'  #1102  passe          away  Giovanni Reyna -> Dário Essugo
+ 78.61'  #1103  passe          away  Dário Essugo -> Conrad Harder
+ 78.68'  #1104  passe          away  Conrad Harder -> Sebastian Nanasi
+ 78.72'  #1105  passe          away  Sebastian Nanasi -> Conrad Harder
+ 78.77'  #1106  perte          away  Sebastian Nanasi passe interceptée -> Florian Thauvin
+ 78.80'  #1107  passe          home  Florian Thauvin -> Michaël Cuisance
+ 78.85'  #1108  passe          home  Michaël Cuisance -> Samson Baidoo
+ 78.92'  #1109  perte          home  Samson Baidoo conduite -> Conrad Harder  <- origine
+ 78.95'  #1110  tir            away  Conrad Harder en vol
+ 78.96'  #1111  but            away  Conrad Harder 
+origine : récupération (conduite, 3 s avant le but)

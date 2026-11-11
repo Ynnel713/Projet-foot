@@ -249,6 +249,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **Rendement selon la minute (10/11/2026, ticket `v2-realisme/19d`)** : livré (11/11/2026), validé expert + QC (réserves A1 et A2 : tranches au temps joué et contrôles ratés par tentative, au 19f avant le 18a). Tous les indicateurs par poste, par Stamina et par joueur (section 23 bis) ; sprints de − 19 % (MDC) à − 36 % (AG) en fin de match, rapport médian par joueur 0,73, corrélé à Stamina (0,67) ; technique, duels et position sans ballon sans tendance. Banc par tranche de 15 minutes (`scripts/v2_tranches.py`, `docs/INDICATEURS_V2.md` section 23), mesure seule. Sur 50 matchs : seule la course rapide baisse, en fin de match (sprints − 27 %, part au-dessus de 25 km/h − 28 % de la tranche 0-15 à la tranche 75-90), selon Stamina (course au-dessus de 19,8 km/h × 0,73 sous 40, × 0,94 à 70 et plus) ; distance totale, passes, contrôles, cadrage, tacles et hauteur du bloc plats. Point de départ de 12d, 12e et 20.
 
+**Origine des buts (11/11/2026, ticket `v2-realisme/19e`)** : livré (11/11/2026), validé expert + QC (améliorations facultatives reportées au 19f). `scripts/v2_chain.py` remonte la chaîne d'un but et classe son origine (section 24 de `docs/INDICATEURS_V2.md`) ; sur 20 matchs, 108 buts : récupération 81 %, erreur adverse 15 %, jeu placé 3 %, coup de pied arrêté 1 % (repère réel : environ 23,5 % hors penalties). Journal : la faute avec avantage est écrite à sa minute (réserve A1 du 19b) ; jeu identique sur 20 matchs.
+
 ### Bloquée par
 
 - Phase 4
