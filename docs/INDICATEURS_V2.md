@@ -870,3 +870,59 @@ Délai médian entre l'événement d'origine et le but : 3,3 s.
 **Journal corrigé (réserve A1 de l'expert sur le 19b).** La faute laissée en avantage est écrite quand l'avantage est accordé (`match._foul`), plus au règlement ; si l'arbitre revient à la faute, la décision est écrite à sa minute (« coup franc, après avantage »). Sur 20 matchs : minutes du journal croissantes dans 20 matchs (11 avant la correction), aucune faute causée par un but, empreintes du jeu (ticks, buts, tirs, fautes, remises) identiques dans 20 matchs sur 20 : le jeu n'a pas changé. Origines des buts identiques sur les deux exécutions.
 
 **Reprise au 19f (11/11/2026).** La remontée s'arrête aussi sur une perte ou un hors-jeu de l'équipe qui marque (le ballon est alors à l'adversaire ; but inclassable si sa reprise n'est pas écrite) ; `--but` hors limites donne une erreur claire. Sur les mêmes 20 matchs (`.scratch/v2-realisme/mesures/19f-chaine.json`) : 108 buts, parts identiques, aucun inclassable. Invariant du journal (minutes croissantes, aucune faute causée par un but) gardé par un test sur un match court à graine fixée.
+
+## 25. Point d'étape après les fondations P0 (ticket v2-realisme/18a, 50 matchs, 11/11/2026)
+
+Série exploratoire, **aucun réglage**. Moteur à `681d9e0` (dernier changement du jeu : 19e, journal seulement ; jeu identique depuis le 19b). Commande : `scripts/bench_series.py 50 --processus 6` (graine d'audit 20260923, matchs 0 à 49), fichiers `.scratch/v2-realisme/mesures/19f-det1.*` ; déterminisme : les 10 premiers matchs rejoués (`19f-det2.*`) donnent les mêmes valeurs (2 467 clés par match). Origine des buts : `scripts/v2_chain.py 20` (`19f-chaine.json`). Mesure précédente comparable : section 6 (`a9a74f9`, 20 matchs).
+
+**Lecture des attributions.** *Mécanisme* : le moteur ne contient pas encore ce qui produit le comportement réel (une règle manque ou agit à tort) ; une constante ne suffirait pas sans fausser autre chose. *Calibration* : le mécanisme existe et va dans le bon sens, l'écart tient à des constantes (ticket de calibration provisoire 18d ou 18e). Une conséquence d'un autre écart est rattachée à sa cause.
+
+### 25.1 Repères de calibration (section 6)
+
+| # | Repère (réel) | Banc, 50 matchs | Section 6 (20 matchs) | Écart | Attribution |
+|---|---|---|---|---|---|
+| R1 | Tirs tracés par équipe : 8 à 15 (≈ 13,1) | 24,3 | 37,7 | × 1,85 | **Mécanisme, volume des transitions.** sur 48,5 tirs par match, 33,2 partent dans les 15 s d'une récupération dans le camp adverse et 2,7 d'une récupération dans son camp ; 24 % des tirs viennent directement d'une récupération et 56 % d'un dribble. Le porteur choisit la conduite 73 % du temps (passe 26 %), perd le ballon haut, l'adversaire le perd aussi vite : le match est une suite de transitions courtes (2,55 passes par possession, cible 3 à 5). Ce n'est pas d'abord le seuil de tir (xG moyen par tir 0,094, proche du réel) : c'est le nombre de ballons gagnés près du but. Tickets : choix du porteur et rythme de décision (18d), puis seuil de tir (18e). |
+| R2 | Conversion : 10 à 12 % | 9,9 % | 5,4 % | − 0,1 point | **Calibration**, presque dans la fourchette depuis les tickets 03 et 05 (gardien, trajectoire, arrêt). xG neutre moyen 0,094 par tir, xG après frappe 0,118 par tir non contré : le tir et le gardien sont cohérents entre eux (06c). Ticket : 18e, sans urgence. |
+| R3 | Buts dans la surface : 88 à 89 % | 61 % | 48 % | − 27 points | **Calibration de la valeur du tir dans la décision** (05e) **et de l'exécution de loin** (35b) : 390 des 656 tirs cadrés jugés partent de plus de 18 m (253 de 18 à 25 m, 137 au-delà), 173 de 11 à 18 m et 93 de moins de 11 m. Le mécanisme (chance évaluée alignée sur la résolution, 05e) existe ; la part des tirs de loin reste trop haute. Ticket : 18e. |
+| R4 | Distance par joueur de champ : 10 à 12 km, MC en tête | 14,0 km (LB 12,4 à BU 16,6) | 17,4 km | + 2 à + 4,5 km ; ordre des postes faux | **Mécanisme** : hors presseur et repli, chaque intention vise l'intensité 1,0 (vitesse maximale) ; aucun rôle ne trotte. L'avant-centre court le plus (16,6 km, contre 10,3 au réel) parce qu'il enchaîne les appels. Tickets : 12d (intensité selon le rôle), puis 18d. |
+| R5 | Appels par joueur et par 90 min : 5 à 20 (15,1) | 41,4 (DC 18 à BU 89) | 22 à 102 | × 2,7 | **Mécanisme** (même cause que R4 : appels au sprint, sans coût) et **définition** (le banc juge l'option par la réception, la source par la chance d'être choisi ; indicatif). L'ordre des postes est le bon (DC bas, BU et MOC hauts). Tickets : 12d, 12e, puis 18d. |
+| R6 | Distance au-dessus de 19,8 km/h : 6 à 10 % | 36,9 % (au-dessus de 25 km/h : 15,4 %) | 17,2 % du temps | × 4 | **Mécanisme** (même cause que R4) : la course rapide est le régime par défaut. 4,2 à 6,2 km par joueur au-dessus de 19,8 km/h (réel 0,6 à 1,1 km) ; 123 sprints par joueur et par match. Tickets : 12d, 12e, 18d. |
+| R7 | Passes par match : 890 à 940 ; par minute de jeu effectif : 15 à 17 | 844 ; 11,9 | 990 ; 14,9 | − 6 % ; − 25 % | **Mécanisme, choix du porteur** (conduite 73 %) et temps de jeu effectif trop haut (70,8 %, réel 53 à 56 % avec fautes et remplacements, que la V2 n'a pas encore : peu de fautes, aucun remplacement). La réussite est juste (72,7 % de passes réussies, cible 70 à 90 %), les passes longues absentes (1,5 %, cible 10 à 19 %). Tickets : 18d (rythme de décision), 14 (ballon avancé, jeu long). |
+
+**Lecture d'ensemble.** Les repères de **tir et de gardien** (R2, et en partie R3) sont désormais dans l'ordre de grandeur : les fondations P0 (03, 05, 06) ont fait leur effet (conversion 5,4 → 9,9 %, buts dans la surface 48 → 61 %). Les repères de **course** (R4, R5, R6) sont loin pour une seule raison de mécanisme, l'intensité par défaut, qui relève du 12d avant toute calibration. Le **volume de tirs** (R1) et les **passes** (R7) ont une cause commune : le porteur conduit trop et perd le ballon haut, ce qui fabrique des transitions.
+
+### 25.2 Autres indicateurs (section 1)
+
+| Indicateur | Cible | Banc | Attribution |
+|---|---|---|---|
+| Buts par match | 2 à 3,5 | 4,8 | Conséquence de R1 (volume de tirs) avec une conversion juste. |
+| Tacles par match | 30 à 40 | 43,9 | Conséquence de R1 et R7 (conduites nombreuses, duels nombreux). |
+| Fautes par match | 21 à 26,4 | 14,1 | **Calibration** (ticket 30, probabilité de faute par duel) ; à revoir après 18d, qui changera le nombre de duels. |
+| Penaltys par match | environ 0,34 | 0,02 | **Mécanisme** : presque aucune faute dans la surface (les duels y sont rares, les tirs partent de loin, R3). À relire après 18e. |
+| Hors-jeu par match | 3,2 à 3,5 | 0,72 | **Mécanisme** : la passe en profondeur est presque absente (0,4 % des passes) alors que 21,7 appels dans le dos sont faits par match ; le hors-jeu se joue sur la passe, pas sur l'appel. Tickets : 14 (ballon avancé), 18d. |
+| Touches ; corners par match | ≈ 42 ; ≈ 10 | 23,7 ; 6,7 | Conséquence de R7 (peu de jeu long, peu de ballons qui sortent). |
+| Possession d'équipe ; temps par possession de joueur | 11 à 16 s ; 2 à 3 s | 17,6 s ; 2,9 s | Dans l'ordre de grandeur ; la possession d'équipe longue vient des conduites (R7). |
+| Passes chez l'adversaire | ≤ 25 % | 24,7 % | À la limite. |
+| Passes visées vers les défenseurs centraux | environ 40 à 60 passes reçues par match au réel | environ 2 par DC et par 15 min (216 en 0-15 sur 50 matchs, environ 113 créneaux DC ; constat de l'expert sur le 19f), soit environ 12 par match | **Mécanisme** : la relance passe peu par les DC, cohérent avec la conduite à 73 % (R7) et la possession courte. À relire au 18d avec le choix du porteur ; si l'écart reste, ticket de relance à créer à ce moment. |
+| Hauteur du bloc sans ballon | suivi (section 2) | 31,7 m (porteur pressé 37,2 m, libre 43,0 m) | Suivi, sans repère chiffré. |
+
+### 25.3 Condition physique (19d, 19f)
+
+Ce que la fatigue change aujourd'hui (section 23 ter, temps joué) : la seule course rapide, à partir de la 75e minute jouée (sprints − 36 %, distance au-dessus de 25 km/h − 37 % de 0-15 à 75-90 ; rapport médian des sprints par joueur 0,65), d'autant plus que Stamina est bas (sprints × 0,28 de 40 à 55, × 0,73 à 70 et plus). Ce qu'elle ne change pas : la distance totale (rapport 0,98), la technique (passes, contrôles, cadrage), les duels, la position sans ballon et le bloc ; elle ne dépend ni des efforts fournis ni du rôle. Repère de la section 1 (« baisse de fin de match » de la course au-dessus de 19,8 km/h : 10 à 30 %) : − 11 %, dans la fourchette mais pour une mauvaise raison (la baisse suit l'horloge, `movement.stamina_factor`, pas l'énergie dépensée). **Mécanisme** : tickets 12e (réserve d'énergie, qui remplace la baisse par la minute), puis 20a à 20c (technique, lucidité, récupération) ; validation au 20d. Ordre de grandeur à revoir après 12d : avec 37 % de la distance au-dessus de 19,8 km/h, toute réserve d'énergie se viderait trop vite.
+
+### 25.4 Garde probabiliste (19c)
+
+Le test transversal (`tests/test_v2engine_garde_probabiliste.py`) garde 9 résolutions : ni infaillible (plancher 1 %, deux exceptions assumées) ni incapable, hiérarchie des notes respectée. Hors garde, avec leur ticket : arrêt sans note du gardien (03b, la portée physique décide seule), contre sans note du défenseur (17b, Bravery), dosage de la passe et passe ratée (23a, erreur d'exécution continue). Constat à suivre : le contrôle d'un 99 ne sent plus la difficulté (18d). Aucun de ces trous ne cause un écart de la section 25.1 ; ils comptent pour le réalisme d'une action, pas pour les volumes.
+
+### 25.5 Causalité : origine des buts (19e, 19f)
+
+108 buts sur 20 matchs : récupération 81 % (interception 48 %, conduite perdue 26 %, tacle 6 %), erreur adverse 15 %, jeu placé 3 %, coup de pied arrêté 1 %, touche 1 %, aucun inclassable ; 3,3 s en médiane entre l'origine et le but. Repère réel : environ 23,5 % des buts sur coup de pied arrêté hors penalties (Opta, Premier League). **Mécanisme** : le moteur ne travaille pas les coups de pied arrêtés (corners joués long à 91 %, mais aucun duel aérien ni placement offensif sur corner ; aucun coup franc du dernier tiers frappé au but ; 0,02 penalty par match). C'est cohérent avec R1 : tout le danger vient des transitions. Tickets existants : 15b à 15f (jeu aérien), 16a à 16i (coups de pied arrêtés), 16g (validation) ; ils sont P2 et ne changent pas l'ordre ci-dessous, mais la part des buts sur coup de pied arrêté doit entrer dans les critères du 16g (repère : environ 23,5 %).
+
+### 25.6 Tickets à avancer ou à créer, et ordre confirmé
+
+- **Ordre confirmé : 12d → 12e → 18d → 18e.** La plus grande famille d'écarts (R4, R5, R6) a une cause de mécanisme unique, l'intensité par défaut : le 12d la traite ; le 12e ne se règle qu'avec des intensités réalistes ; le 18d (course, rythme, passes) ne se calibre qu'après les deux ; le 18e (tirs, gardien) après le 18d, qui changera le nombre de transitions donc de tirs.
+- **À inclure au 18d** : le choix du porteur (part des conduites, 73 %) et le rythme de décision, cause commune de R1 et R7 ; relire tacles, fautes et possession après réglage.
+- **À inclure au 18e** : part des tirs de loin (R3) ; penaltys (0,02 par match) relus après 18d.
+- **À rapprocher** : 14 (ballon avancé : passes longues 1,5 %, passes en profondeur 0,4 %, hors-jeu 0,72 par match), après 18d.
+- **À compléter** : critère du 16g (part des buts sur coup de pied arrêté, repère environ 23,5 %).
+- **Aucun ticket nouveau aujourd'hui** : chaque écart a un ticket qui le traite ; seule la relance par les DC pourrait en demander un, après le 18d.
