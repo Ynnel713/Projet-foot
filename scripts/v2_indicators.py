@@ -32,6 +32,9 @@ from v2engine.restart import CORNER, GOAL_KICK, KICKOFF
 from v2engine.shooting import (base_chance, keeper_reach_m, neutral_open_chance, shot_pressure, shot_probability,
                                shooting_note)
 from v2engine.situation import POSSESSION_INSTALLEE, TRANSITION_DEFENSIVE, TRANSITION_OFFENSIVE, SituationTracker
+from v2engine.trace import BUT, CONTROLE_RATE
+
+from scripts.v2_tranches import MinuteProfile
 
 KMH = 1.0 / 3.6
 # Seuils de mesure (docs/INDICATEURS_V2.md, section « Seuils de mesure ») -- ils ne changent pas le jeu.
@@ -409,6 +412,7 @@ class Collector:
         self.count: Counter = Counter()
         self.km: dict[str, list[float]] = defaultdict(list)
         self.matches = 0
+        self.minutes = MinuteProfile()  # rendement par tranche de 15 minutes (ticket v2-realisme/19d)
         self._reset_match()
 
     def _reset_match(self) -> None:
@@ -633,9 +637,10 @@ class Collector:
         else:
             self.carry_open[holder.name] = (self.now, tranches)  # intervalle ouvert : un tacle gagné avant le suivant le ferme
 
-    def on_tackle_won(self, holder: PlayerState) -> None:
+    def on_tackle_won(self, holder: PlayerState, tackler: PlayerState | None = None) -> None:
         """Ticket v2-realisme/04c : tacle gagné sur un porteur en conduite, pendant l'intervalle qui suit son tirage (le tacle
         est tiré à part du risque de conduite, 04a). Compté dans les tranches de cet intervalle."""
+        self.minutes.count(self.now / 60.0, "tacles gagnés", actor=tackler.name if tackler else None)  # 19d
         opened = self.carry_open.pop(holder.name, None)
         if opened is not None and self.now - opened[0] < DECISION_INTERVAL_S - 1e-9:
             for tranche in opened[1]:
@@ -740,8 +745,18 @@ class Collector:
     def on_trigger(self) -> None:
         self.count["pressings d'équipe déclenchés"] += 1
 
-    def on_tackle(self) -> None:
+    def on_tackle(self, tackler: PlayerState | None = None) -> None:
         self.count["tacles"] += 1
+        self.minutes.count(self.now / 60.0, "tacles", actor=tackler.name if tackler else None)  # ticket v2-realisme/19d
+
+    def on_events(self, events) -> None:
+        """Journal du match (`MatchTrace.events`, ticket v2-realisme/19b) : contrôles ratés et buteurs par tranche,
+        attribués au joueur (19d)."""
+        for event in events:
+            if event.kind == CONTROLE_RATE:
+                self.minutes.count(event.minute, "contrôles ratés", actor=event.player)
+            elif event.kind == BUT and event.player is not None:
+                self.minutes.count(event.minute, "buts personnels", actor=event.player)
 
     def on_choice(self, kind: str, follow: str | None = None, plan: str | None = None) -> None:
         self.count["choix " + kind] += 1
@@ -806,6 +821,7 @@ class Collector:
     def on_shot_event(self, event) -> None:
         """Tir tracé avec son issue et son origine (ticket v2-collectif/28b) ; `event` : `v2engine.trace.ShotEvent`."""
         self.count["tirs tracés"] += 1
+        self.minutes.on_shot(event.minute, event.outcome, actor=getattr(event, "player", None))  # ticket v2-realisme/19d
         self.shot_log.append((event.minute * 60.0, event.team, event.outcome))  # ticket v2-realisme/03j
         self.count["tirs : " + event.outcome] += 1
         self.count["tirs, origine : " + event.origin] += 1
@@ -924,6 +940,8 @@ class Collector:
         if scoring_team is not None:  # but : la possession se clôt, l'engagement n'est pas une perte de balle
             self.goals[scoring_team] += 1
             self.count["buts"] += 1
+            self.minutes.on_goal(minute, scoring_team,  # ticket v2-realisme/19d
+                                 [(p.name, p.team) for p in players if p.poste != "GK"])
             self._close_possession(now_s)
         current = self.situations.update(now_s, ball, players, scoring_team)
         for team, situation in current.items():
@@ -948,6 +966,8 @@ class Collector:
                 acc[0], acc[1], acc[2] = max(acc[0], far), acc[1] + far, acc[2] + 1
                 continue
             v = p.velocity.length()
+            depth = progress(p.team, p.position.x) if self.team is not None and self.team != p.team else None
+            self.minutes.on_player(minute, p.name, p.poste, p.stamina, v, dt, depth)  # ticket v2-realisme/19d
             self.dist[p.name] += v * dt
             self.total += v * dt
             self.time += dt
@@ -1390,6 +1410,7 @@ class Collector:
         self._classify_exits()
         self.count["appels dans le dos"] += sum(self.deep_runs.values())
         self._combinations()
+        self.minutes.end_match(self.pass_log)  # ticket v2-realisme/19d
         self._reset_match()
 
     def _combinations(self) -> None:

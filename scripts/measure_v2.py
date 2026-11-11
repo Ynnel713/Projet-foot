@@ -32,6 +32,7 @@ from v2engine.shooting import NEUTRAL_ATTRIBUTES
 from ligue1sim.lineup import pick_best_formation
 
 from scripts.v2_indicators import CARRY_PREFIX, EXIT_STATES, Collector, shot_decomposition, xg_calibration
+from scripts.v2_tranches import block_height_by_tranche, minute_report, player_report
 
 AUDIT_SEED = 20260923
 HIGH, LOW = 99, 11
@@ -47,10 +48,10 @@ def _hook(collector: Collector, clock: dict[str, float], plans: bool = True) -> 
         return real["pass_velocity"](passer, target, *args, **kwargs)
 
     def resolve_tackle(*args, **kwargs):
-        collector.on_tackle()
+        collector.on_tackle(args[0])  # tacleur (ticket v2-realisme/19d)
         result = real["resolve_tackle"](*args, **kwargs)
         if result.won:
-            collector.on_tackle_won(args[1])  # (tacleur, porteur), ticket v2-realisme/04c
+            collector.on_tackle_won(args[1], args[0])  # (tacleur, porteur), tickets v2-realisme/04c et 19d
         return result
 
     def dribble_lost(holder, opponents, *args, **kwargs):  # ticket v2-realisme/04a : un tirage de perte par intervalle de conduite
@@ -183,6 +184,7 @@ def run(n_matches: int, profile: str | None = None, duration_minutes: float = 90
                     collector.on_shot_event(event)
                 for event in trace.chances:  # grosses occasions (ticket v2-collectif/28c)
                     collector.on_chance(event)
+                collector.on_events(trace.events)  # contrôles ratés par tranche (ticket v2-realisme/19d)
             finally:
                 unforce()
             collector.end_match()
@@ -434,6 +436,13 @@ def report(c: Collector, detail: bool = False) -> dict:
         out[name] = statistics.fmean(stat.values) if stat.values else None
         if detail and stat.by:
             out[name + " — découpage"] = {f"{a}={b}": round(statistics.fmean(v), 2) for (a, b), v in sorted(stat.by.items())}
+    # ticket v2-realisme/19d : rendement par tranche de 15 minutes, par poste et par Stamina
+    block = c.stats.get("hauteur du bloc sans ballon (m)")
+    postes = tuple(sorted(p for p in c.km if p != "tous"))
+    out["rendement par tranche de 15 min"] = {
+        key: (round(v, 4) if isinstance(v, float) else v)
+        for key, v in minute_report(c.minutes, block_height_by_tranche(block) if block else None, postes).items()}
+    out["rendement par joueur (tranches de 15 min)"] = player_report(c.minutes)  # dictionnaire imbriqué : hors « par match"
     return out
 
 

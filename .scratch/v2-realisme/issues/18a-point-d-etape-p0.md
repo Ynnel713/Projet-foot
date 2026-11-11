@@ -8,7 +8,7 @@
 
 **Attributs :** aucun
 
-**Blocked by:** 02h (Validation de la structure : côtés, rôles, appels, distances); 03g (Validation du placement et des sorties du gardien); 04c (Validation : risque annoncé, probabilité calculée, résultat observé); 05g (Validation des tirs : trajectoire, cadrage, contres, arrêts); 06b (Indicateurs : occasion, exécution, gardien, par attribut); 17a (Carte des attributs : état réel de branchement); 19a (Performance momentanée : façade des notes); 19b (Journal des événements et chaîne de causes); 19c (Garde probabiliste); 19d (Banc : rendement selon la minute) (ajouté le 10/11/2026, audit de la roadmap).
+**Blocked by:** 02h (Validation de la structure : côtés, rôles, appels, distances); 03g (Validation du placement et des sorties du gardien); 04c (Validation : risque annoncé, probabilité calculée, résultat observé); 05g (Validation des tirs : trajectoire, cadrage, contres, arrêts); 06b (Indicateurs : occasion, exécution, gardien, par attribut); 17a (Carte des attributs : état réel de branchement); 19a (Performance momentanée : façade des notes); 19b (Journal des événements et chaîne de causes); 19c (Garde probabiliste); 19d (Banc : rendement selon la minute) (ajouté le 10/11/2026, audit de la roadmap); 19e (Origine des buts) ; 19f (Banc : tranches au temps joué et contrôles par tentative) (ajouté le 11/11/2026, réserves de l'expert sur le 19d).
 
 **Bloque :** 18d.
 

@@ -60,6 +60,9 @@ def _one_match(args: tuple[int, str | None, float, float, bool]) -> dict:
         "count": dict(c.count),
         "stats": {name: s.values for name, s in c.stats.items()},
         "km": dict(c.km),
+        # ticket v2-realisme/19d : rendement par tranche et hauteur du bloc découpée par minute
+        "tranches": (dict(c.minutes.run), dict(c.minutes.events), dict(c.minutes.info)),
+        "bloc par minute": dict(c.stats["hauteur du bloc sans ballon (m)"].by) if "hauteur du bloc sans ballon (m)" in c.stats else {},
         "secondes": c.seconds_per_match,
         "indicateurs": _numeric(report(c)),
     }
@@ -96,6 +99,9 @@ def _merge_into(merged: Collector, r: dict) -> None:
         merged.stats[name].values.extend(values)
     for poste, values in r["km"].items():
         merged.km[poste].extend(values)
+    merged.minutes.merge(*r.get("tranches", ({}, {}, {})))  # ticket v2-realisme/19d
+    for key, values in r.get("bloc par minute", {}).items():
+        merged.stats["hauteur du bloc sans ballon (m)"].by[key].extend(values)
 
 
 def run_series(n_matches: int, processes: int = 1, profile: str | None = None, duration: float = 90.0,

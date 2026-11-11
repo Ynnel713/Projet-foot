@@ -52,6 +52,12 @@ def test_results_do_not_depend_on_the_number_of_processes() -> None:
         assert one["agrégé"][key] == pytest.approx(sequential[key], rel=1e-9)
     assert all(len(v) == 4 for v in one["par match"].values())
     assert any(k.startswith("km par joueur de champ, par poste : ") for k in one["par match"])  # km par poste
+    # ticket v2-realisme/19d : rendement par tranche fusionné comme dans un seul `run`
+    merged, single = one["agrégé"]["rendement par tranche de 15 min"], sequential["rendement par tranche de 15 min"]
+    assert merged.keys() == single.keys() and merged
+    assert all(merged[k] == pytest.approx(single[k], abs=1e-3) for k in merged)
+    by_player = "rendement par joueur (tranches de 15 min)"
+    assert one["agrégé"][by_player]["synthèse"] == pytest.approx(sequential[by_player]["synthèse"], rel=1e-9)
 
 
 def test_every_indicator_of_any_match_gets_per_match_values() -> None:

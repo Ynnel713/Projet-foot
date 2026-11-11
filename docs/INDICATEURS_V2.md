@@ -717,3 +717,79 @@ Sur ces 50 matchs, la tranche de 12 à 16 m n'est plus surévaluée (chance de b
 **Réserve A1 du 05d.** Contre : point de contact et déviation pris à la place du défenseur au contact (`match._blocked`) ; défenseur qui traverse l'axe à 5 m/s : ballon dévié du côté du décalage au contact (test, au moins 36 cas sur 40 ; échoue sans la correction).
 
 **Déterminisme.** 3 matchs (2400 à 2402) joués deux fois : mêmes 130 tirs, empreinte `664a9a991c15`, identiques à la série.
+
+## 23. Rendement selon la minute : ce que la fatigue change aujourd'hui (ticket v2-realisme/19d, 50 matchs et scène A/B, 10/11/2026)
+
+Commande : `scripts/bench_series.py 50 --processus 7` (graines de `measure_v2`, matchs 0 à 49), clé « rendement par tranche de 15 min » ; module `scripts/v2_tranches.py`. Fichiers `.scratch/v2-realisme/mesures/19d-det1.*` et `19d-det2.*`. Mesure seule, aucun réglage.
+
+**Définitions.** Tranches de 15 minutes de **temps de jeu écoulé** (horloge du moteur) : 0-15 à 75-90, puis « 90 et plus » (temps additionnel de la seconde période). Le temps additionnel de la première période tombe dans la tranche 45-60. **Correctif du 11/11/2026 (réserve A1 de l'expert)** : l'horloge du moteur n'est pas le temps joué ; avec 2 à 3 minutes de temps additionnel en première période, la tranche « 75-90 » couvre environ les minutes jouées 72,5 à 87,5 et « 90 et plus » commence vers la 87e minute jouée : la baisse de fin de match est un peu sous-estimée. Découpage au temps joué : ticket 19f, avant le 18a. Course : joueurs de champ, distance par joueur et par minute (m/min, ce qui neutralise la durée inégale des tranches), part de la distance au-dessus de 19,8 et de 25 km/h, sprints (au moins 1 s au-dessus de 25 km/h, comptés dans la tranche où ils commencent) par joueur et par 15 min. Technique : passes reçues par le receveur visé, contrôles ratés (`contrôle raté` du journal 19b) pour 100 passes, tirs cadrés (but, capté, repoussé, claqué) parmi les tirs non contrés. Duels : tacles gagnés sur tacles tentés. Hauteur du bloc sans ballon (même mesure que la section 1). Comparaison de la première et de la dernière tranche réglementaire (0-15 et 75-90) par poste et par tranche de Stamina (0-40, 40-55, 55-70, 70 et plus).
+
+**Par tranche (50 matchs).**
+
+| Tranche | m/min | > 19,8 km/h | > 25 km/h | Sprints / 15 min | Passes réussies | Contrôles ratés / 100 passes | Cadrés | Tacles gagnés | Bloc (m) | Tirs / match | Buts / match |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 0-15 | 139,0 | 0,379 | 0,170 | 20,1 | 0,710 | 6,5 | 0,311 | 0,250 | 31,3 | 7,46 | 0,74 |
+| 15-30 | 143,5 | 0,388 | 0,175 | 21,1 | 0,708 | 6,5 | 0,361 | 0,283 | 31,8 | 7,42 | 0,74 |
+| 30-45 | 138,3 | 0,374 | 0,167 | 19,7 | 0,716 | 6,7 | 0,348 | 0,267 | 32,0 | 7,04 | 0,66 |
+| 45-60 | 143,2 | 0,386 | 0,175 | 21,3 | 0,707 | 6,2 | 0,340 | 0,236 | 31,4 | 7,60 | 0,68 |
+| 60-75 | 142,5 | 0,379 | 0,166 | 20,1 | 0,708 | 6,8 | 0,331 | 0,273 | 31,7 | 6,84 | 0,62 |
+| 75-90 | 138,4 | 0,348 | 0,123 | 14,6 | 0,700 | 6,8 | 0,374 | 0,252 | 31,9 | 6,80 | 0,84 |
+| 90 et plus | 131,4 | 0,309 | 0,076 | 8,7 | 0,722 | 7,5 | 0,357 | 0,306 | 31,9 | 5,38 | 0,52 |
+
+**Par Stamina (0-15 contre 75-90).**
+
+| Stamina | m/min 0-15 | m/min 75-90 | Rapport | > 19,8 km/h 0-15 (m/min) | > 19,8 km/h 75-90 (m/min) | Rapport |
+|---|---|---|---|---|---|---|
+| 0-40 | 111,3 | 112,0 | 1,01 | 36,9 | 27,1 | 0,73 |
+| 40-55 | 133,7 | 133,2 | 1,00 | 45,5 | 35,6 | 0,78 |
+| 55-70 | 137,1 | 136,2 | 0,99 | 52,3 | 46,3 | 0,89 |
+| 70 et plus | 141,0 | 140,7 | 1,00 | 53,5 | 50,5 | 0,94 |
+
+Par poste, la distance totale de la tranche 75-90 vaut 0,98 à 1,01 fois celle de la tranche 0-15 ; la course au-dessus de 19,8 km/h vaut 0,87 (MOC, AG) à 0,95 (MDC). Tous les autres indicateurs par poste, par Stamina et par joueur : section 23 bis.
+
+**Constat : ce que la fatigue change.** Seule la course rapide baisse, et seulement en fin de match : de la tranche 0-15 à la tranche 75-90, la part au-dessus de 25 km/h passe de 0,170 à 0,123 (− 28 %) et les sprints de 20,1 à 14,6 par joueur et par 15 min (− 27 %), la part au-dessus de 19,8 km/h de 0,379 à 0,348 (− 8 %). La baisse suit la note de Stamina (course au-dessus de 19,8 km/h × 0,73 sous 40, × 0,94 à 70 et plus) : c'est le seul effet de `movement.stamina_factor`, qui abaisse la vitesse maximale à partir d'une minute qui dépend de Stamina. Les quatre premières tranches sont plates (aucune baisse avant la 75e).
+
+**Ce qu'elle ne change pas.** La distance totale par minute est plate à toutes les notes (rapport 0,99 à 1,01) : le joueur fatigué ne court pas moins, il court moins vite, la course rapide perdue devient de la course modérée. La technique et les décisions sont plates : passes réussies 0,700 à 0,722, contrôles ratés 6,2 à 7,5 pour 100 passes, cadrage 0,31 à 0,37 et tacles gagnés 0,24 à 0,31 sans tendance (écarts dans le bruit de 50 matchs, environ 300 tirs non contrés par tranche), hauteur du bloc 31,3 à 32,0 m. Les buts n'augmentent pas en fin de match de façon nette (0,84 contre 0,62 à 0,74, dans le bruit). Hypothèse de l'audit confirmée : seules les grandeurs de course baissent.
+
+**Scène A/B** (`tests/test_v2_tranches.py`, graine 19) : le même milieu balle au pied, sans adversaire devant lui, parcourt 18,8 m en 4 s à la 15e minute quel que soit son Stamina ; à la 85e, 15,2 m (Stamina 20), 15,6 m (60), 18,3 m (99). Sa probabilité de passe vers le même coéquipier est identique aux deux minutes (0,720) : `pass_success_probability` ne lit ni la minute ni la condition (`condition.effective_rating` rend la note intrinsèque, 19a).
+
+**Suites.** Fatigue de la technique (20a), de la lucidité (20b), récupération (20c), intensité selon le rôle (12d), réserve d'énergie (12e) : ce tableau sert de point de départ ; validation fatigue et remplacements au 20d. Écarts au réel à confronter aux repères du 01c au 18a, sans réglage ici.
+
+**Déterminisme.** Série de 50 matchs jouée deux fois : 1 918 valeurs identiques, seul le temps de calcul par match diffère. Jeu inchangé : aucun fichier du moteur (`v2engine/`) modifié, le banc ne fait que lire.
+
+### 23 bis. Par poste, par Stamina et par joueur : tous les indicateurs (11/11/2026, reprise après le refus du contrôle qualité)
+
+Le premier passage ne découpait par poste et par Stamina que la course ; passes, contrôles, cadrage, duels, sprints, position sans ballon et buts n'étaient que globaux, rien n'était donné par joueur, et les buts marqués et encaissés étaient confondus. Chaque événement est désormais attribué à son auteur, donc à son poste, à sa tranche de Stamina et à lui-même : passe au passeur, contrôle raté et passe visée au receveur, tir au tireur, tacle au tacleur, but personnel au buteur du journal (19b). Commande : `scripts/bench_series.py 50 --processus 6`, clés « rendement par tranche de 15 min » (postes et Stamina, toutes les tranches) et « rendement par joueur (tranches de 15 min) » (chaque joueur, chaque tranche, puis la synthèse). Fichiers `.scratch/v2-realisme/mesures/19d-v2-det1.*` (50 matchs) et `19d-v2-det2.*` (10 matchs).
+
+**Définitions ajoutées.** Contrôles ratés pour 100 **passes visées** (le receveur est l'auteur, au lieu de 100 passes de tous). Tirs, buts personnels, buts **marqués** et **encaissés** par l'équipe du joueur **pendant qu'il est sur le terrain** : pour 90 minutes jouées par le groupe (temps cumulé de ses joueurs). Pour « tous », un but compte une fois par match, comme avant. **Position sans ballon** : distance moyenne du joueur à son propre but quand son équipe n'a pas le ballon. C'est la mesure individuelle qui remplace la hauteur du bloc, une grandeur d'équipe qui n'a pas de sens par joueur ni par poste et reste donnée par tranche pour l'équipe. Par joueur : les 180 joueurs des 50 matchs ont tous joué au moins 5 minutes dans chacune des deux tranches comparées et entrent dans la synthèse, qui donne les déciles de leurs écarts. Deux joueurs de même nom dans deux clubs seraient confondus : aucun cas dans ces 50 matchs (180 noms pour 180 joueurs).
+
+**Par poste, 0-15 → 75-90 (50 matchs).**
+
+| Poste | Passes réussies | Contrôles ratés / 100 visées | Cadrés | Tacles gagnés | Position sans ballon (m) | Sprints / 15 min | > 25 km/h (m/min) | Buts marqués / 90 | Buts encaissés / 90 |
+|---|---|---|---|---|---|---|---|---|---|
+| DC | 0,80 → 0,77 | 16,2 → 23,5 | — | 0,24 → 0,30 | 32,0 → 32,1 | 27,1 → 19,9 | 29,8 → 21,6 | 2,35 → 2,64 | 2,04 → 2,35 |
+| LB | 0,73 → 0,73 | 7,4 → 6,8 | 0,17 → 0,33 | 0,20 → 0,20 | 36,4 → 37,5 | 13,7 → 10,3 | 16,7 → 12,3 | 2,30 → 2,55 | 2,23 → 2,62 |
+| RB | 0,77 → 0,79 | 6,3 → 5,0 | 0,33 → 0 | 0,32 → 0,50 | 36,4 → 37,2 | 16,1 → 12,0 | 19,7 → 14,1 | 2,08 → 2,40 | 2,27 → 2,53 |
+| MDC | 0,80 → 0,75 | 14,5 → 10,5 | 0,25 → 0,50 | 0,36 → 0,33 | 41,0 → 41,0 | 22,9 → 18,6 | 27,0 → 22,0 | 3,00 → 2,54 | 2,00 → 2,23 |
+| MC | 0,74 → 0,75 | 6,3 → 6,4 | 0,62 → 0,60 | 0,39 → 0,23 | 42,6 → 43,6 | 19,2 → 13,9 | 22,5 → 16,1 | 1,72 → 2,45 | 2,79 → 2,90 |
+| MOC | 0,68 → 0,69 | 4,9 → 5,1 | 0,16 → 0,30 | 0,26 → 0,31 | 53,8 → 53,7 | 17,3 → 11,4 | 20,4 → 13,5 | 2,18 → 2,27 | 1,91 → 2,45 |
+| AG | 0,64 → 0,60 | 2,9 → 6,0 | 0,47 → 0,29 | 0,16 → 0,32 | 54,4 → 54,8 | 16,3 → 10,5 | 20,3 → 12,9 | 2,22 → 2,49 | 1,96 → 2,36 |
+| AD | 0,61 → 0,62 | 6,2 → 6,3 | 0,11 → 0,47 | 0,13 → 0,27 | 53,9 → 53,9 | 16,4 → 11,3 | 20,0 → 13,7 | 2,32 → 2,80 | 2,05 → 2,66 |
+| BU | 0,64 → 0,64 | 3,9 → 2,4 | 0,31 → 0,37 | 0,22 → 0,17 | 63,0 → 63,7 | 21,6 → 15,7 | 27,3 → 19,5 | 2,09 → 2,38 | 2,43 → 2,49 |
+
+Effectifs par poste : DC 41 joueurs, MC 28, BU 19, LB 17, RB 17, AG 16, AD 16, MDC 14, MOC 12. Les buts sont des buts d'équipe pour 90 minutes jouées : chaque poste en voit autant, à l'aléa près (environ 0,7 but par match et par tranche).
+
+**Par Stamina, 0-15 → 75-90.** Effectifs : 102 joueurs à 70 et plus, 71 de 55 à 70, 6 de 40 à 55 et **un seul sous 40** (sa ligne est un cas, pas une moyenne).
+
+| Stamina | Passes réussies | Contrôles ratés / 100 visées | Tacles gagnés | Position sans ballon (m) | Sprints, 75-90 / 0-15 | > 25 km/h, 75-90 / 0-15 |
+|---|---|---|---|---|---|---|
+| 0-40 (1 joueur) | 0,64 → 0,50 | 33 → 59 | 0 → 0,33 | 40,6 → 42,5 | 0,16 | 0,21 |
+| 40-55 (6) | 0,63 → 0,63 | 27 → 30 | 0,50 → 0,13 | 45,9 → 46,4 | 0,42 | 0,38 |
+| 55-70 (71) | 0,70 → 0,67 | 8,2 → 7,4 | 0,24 → 0,21 | 42,5 → 43,5 | 0,64 | 0,64 |
+| 70 et plus (102) | 0,71 → 0,71 | 3,9 → 4,2 | 0,24 → 0,28 | 44,8 → 44,8 | 0,81 | 0,80 |
+
+**Par joueur (180 joueurs, déciles de l'écart entre 0-15 et 75-90).** Sprints : rapport médian 0,73 (1er décile 0,45, 9e décile 0,95) ; course au-dessus de 25 km/h : 0,73 (0,46 ; 0,92) ; au-dessus de 19,8 km/h : 0,92 (0,79 ; 1,04) ; distance totale : 0,995 (0,94 ; 1,06). La baisse des sprints suit Stamina (corrélation 0,67 sur 180 joueurs). Passes réussies : écart médian − 0,007 (− 0,20 ; + 0,13) ; contrôles ratés pour 100 passes visées : 0 (− 11 ; + 13) ; position sans ballon : + 1,6 m (− 5,6 ; + 5,0) ; tirs pour 90 min : 0 (− 2,4 ; + 1,2). Tacles gagnés et cadrage n'ont un écart que pour 95 et 46 joueurs (les autres n'ont ni tacle ni tir non contré dans l'une des deux tranches), centré sur 0.
+
+**Constat (inchangé, maintenant par poste et par joueur).** À chaque poste et pour la médiane des joueurs, seule la course rapide baisse en fin de match : sprints de − 19 % (MDC) à − 36 % (AG), avec une baisse d'autant plus forte que Stamina est bas. La technique, les duels et la position sans ballon n'ont pas de tendance commune : les écarts par poste partent dans les deux sens (cadrage des AD 0,11 → 0,47, des RB 0,33 → 0), sur de petits nombres (une dizaine de tirs non contrés par poste et par tranche), et la médiane des joueurs est à 0. Les contrôles ratés des DC (16 → 24 pour 100 passes visées) sont le plus grand écart de technique, mais la même mesure baisse chez les MDC (15 → 11) et les RB (6,3 → 5,0), signe de bruit plutôt que de fatigue, puisque le moteur ne relie pas la technique à la minute (scène A/B). **Réserve A2 de l'expert (11/11/2026)** : le numérateur compte tout contact raté, interceptions manquées comprises, et le dénominateur les seules passes de son équipe qui visent le joueur ; le niveau des défenseurs (DC 16, contre 3,9 pour les BU) vient de leurs tentatives d'interception, pas d'un contrôle quatre fois moins bon. Seule la comparaison d'une tranche à l'autre dans un même groupe vaut. Dénominateur par tentative de contrôle : ticket 19f. Les buts marqués et encaissés montent un peu en fin de match à tous les postes (environ + 0,3 pour 90 min), dans le bruit de la tranche (0,84 contre 0,62 à 0,74 but par match). Les chiffres « tous joueurs » du tableau précédent sont identiques au premier passage : le jeu n'a pas changé.
+
+**Déterminisme.** Les 10 premiers matchs rejoués à part (`19d-v2-det2.json`) : 21 730 valeurs par match identiques à celles de la série de 50 matchs. Les 77 chiffres « tous joueurs » du premier passage (`19d-det1.json`) sont identiques ; les autres clés ont été renommées (par groupe et par tranche).
