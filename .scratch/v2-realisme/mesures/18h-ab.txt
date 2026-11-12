@@ -1,0 +1,7 @@
+== 18h
+  meilleure passe, Passing 99 / 11 : 0.923 / 0.781  (écart +0.142)
+  meilleure passe, Composure 99 / 11 : 0.887 / 0.866  (écart +0.021)
+  part de passes choisies, Passing 99 / 11 : 0.527 / 0.297  (écart +0.230)
+  part de passes choisies, Dribbling 99 / 11 : 0.355 / 0.537  (écart -0.182)
+  part de passes choisies, Vision 99 / 11 : 0.438 / 0.273  (écart +0.165)
+  part de passes choisies, Decisions 99 / 11 : 0.323 / 0.580  (écart -0.257)

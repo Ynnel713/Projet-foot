@@ -96,7 +96,8 @@ CARRY_PRESSURE_BINS = (0.0, 0.1, 0.3, 0.5, 0.7, 0.9)
 CARRY_DRIBBLING_BINS = (0, 40, 55, 70)
 CARRY_PREFIX = "calibration conduite, "
 # Calibration de la passe (ticket v2-realisme/18g) : chance évaluée au lancement (`possession.pass_success_probability`,
-# celle que lit la décision) contre issue au premier contact : perdue si un adversaire touche le ballon le premier ; reçue
+# celle que lit la décision) contre issue au premier contact : perdue si un adversaire touche le ballon le premier, ou si
+# le ballon sort ou est sifflé avec remise pour l'adversaire sans contact (ticket 18h) ; reçue
 # par le receveur visé, pour information. Bornes basses des tranches de chance évaluée ; passes de jeu seulement.
 PASS_CHANCE_BINS = (0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)
 PASS_PREFIX = "calibration passe, "
@@ -971,7 +972,9 @@ class Collector:
         by_name = {p.name: p for p in players}
         self.players = players
         if self.pass_open is not None and ball.holder is None and ball.receiver is None:
-            self._close_pass_calibration(lost=False, received=False)  # passe morte, sortie ou sifflée sans contact (18g)
+            # sans contact : sortie ou sifflée avec remise adverse, perdue (18h) ; morte ou remise pour soi, non perdue (18g)
+            restart = getattr(ball, "restart", None)
+            self._close_pass_calibration(lost=restart is not None and restart.team != self.pass_open[0], received=False)
         self._speeds(players, minute, dt)
         if scoring_team is not None:  # but : la possession se clôt, l'engagement n'est pas une perte de balle
             self.goals[scoring_team] += 1

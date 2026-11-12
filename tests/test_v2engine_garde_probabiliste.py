@@ -181,4 +181,4 @@ def test_known_gap_pass_dosage_and_miss_size_are_all_or_nothing() -> None:
     # (`possession._MISS_SHARE`). Renvoyé à `v2-realisme/23a` (erreur d'exécution continue).
     assert possession.dosage_quality(_p("A", "home", 50, 34, 11)) == 0.0
     assert possession.dosage_quality(_p("A", "home", 50, 34, 99)) == 1.0
-    assert possession._MISS_SHARE == (0.10, 0.25)
+    assert possession._MISS_SHARE == (0.25, 0.50)  # ticket v2-realisme/18h (10 à 25 % auparavant)

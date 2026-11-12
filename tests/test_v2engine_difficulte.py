@@ -130,7 +130,8 @@ def test_poor_dosage_spreads_the_arrival_speed(monkeypatch) -> None:
         assert math.isclose(launch, ideal * (1.0 + error))
 
 
-def test_missed_pass_deviates_by_10_to_25_percent_of_its_length(monkeypatch) -> None:
+def test_missed_pass_deviates_by_25_to_50_percent_of_its_length(monkeypatch) -> None:
+    # ticket v2-realisme/18h : 25 à 50 % (10 à 25 % auparavant)
     monkeypatch.setattr("v2engine.flux.PASSE.random", lambda: 0.999)  # passe ratée
     passer = _player(attributes={"Passing": 60})
     receiver = _player("R", position=Vec2(70.0, 34.0))  # 40 m
@@ -140,8 +141,8 @@ def test_missed_pass_deviates_by_10_to_25_percent_of_its_length(monkeypatch) -> 
     monkeypatch.setattr("v2engine.flux.PASSE.uniform", real_uniform)
     for _ in range(300):
         deviations.append(pass_aim(passer, receiver).distance_to(receiver.position) / 40.0)
-    assert min(deviations) >= 0.10 - 1e-9 and max(deviations) <= 0.25 + 1e-9
-    assert max(deviations) - min(deviations) > 0.1  # la déviation varie bien dans la fourchette
+    assert min(deviations) >= 0.25 - 1e-9 and max(deviations) <= 0.50 + 1e-9
+    assert max(deviations) - min(deviations) > 0.15  # la déviation varie bien dans la fourchette
 
 
 def test_easy_ball_is_easy_to_control_and_fast_ball_is_harder() -> None:
@@ -152,13 +153,13 @@ def test_easy_ball_is_easy_to_control_and_fast_ball_is_harder() -> None:
 
 def test_evaluated_chance_combines_the_measured_cut_table_and_the_missed_pass() -> None:
     """Ticket v2-realisme/18g : chance que la passe ne soit pas perdue = produit des (1 - coupe) de chaque adversaire x
-    [précise x (1 - 0,05) + imprécise x part non perdue selon la longueur (0,77 de 10 à 35 m)]. Ne coupent pas : un
+    [précise x (1 - 0,05) + imprécise x part non perdue selon la longueur (0,64 au-delà de 10 m, ticket 18h)]. Ne coupent pas : un
     adversaire derrière le passeur, au-delà du receveur, ou à 6 m ou plus de la ligne."""
     passer = _player()
     receiver = _player("R", position=Vec2(45.0, 34.0))  # 15 m
     accurate = pass_accuracy_probability(passer, receiver, [])
     alone = pass_success_probability(passer, receiver, [])
-    assert math.isclose(alone, accurate * 0.95 + (1.0 - accurate) * 0.77)
+    assert math.isclose(alone, accurate * 0.95 + (1.0 - accurate) * 0.64)
     near = _player("N", team="away", position=Vec2(31.5, 34.2))  # près du passeur, à 0,2 m de la ligne : 0,75
     path = _player("W", team="away", position=Vec2(38.0, 35.5))  # sur le trajet, à 1,5 m : 0,16
     for silent in (Vec2(24.0, 34.0), Vec2(48.0, 34.0), Vec2(38.0, 40.5)):  # derrière, au-delà, à 6,5 m (hors pression)
@@ -166,7 +167,7 @@ def test_evaluated_chance_combines_the_measured_cut_table_and_the_missed_pass() 
                             alone)
     both = pass_success_probability(passer, receiver, [near, path])
     accurate_both = pass_accuracy_probability(passer, receiver, [near, path])  # la pression de N gêne l'exécution
-    assert math.isclose(both, (1 - 0.75) * (1 - 0.16) * (accurate_both * 0.95 + (1.0 - accurate_both) * 0.77))
+    assert math.isclose(both, (1 - 0.75) * (1 - 0.16) * (accurate_both * 0.95 + (1.0 - accurate_both) * 0.64))
 
 
 def test_the_missed_pass_draw_follows_the_accuracy_chance_lane_or_not() -> None:

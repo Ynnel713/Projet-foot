@@ -1089,3 +1089,28 @@ Commande : `scripts/measure_v2.py` en 4 lots (`--debut 0, 13, 26, 39`), fichiers
 **Effets sur le jeu (50 matchs, 18f → 18g ; repère).** Passes réussies 74,9 → 81,9 % (70 à 90 %) ; chez l'adversaire 23,1 → 14,9 % (15 à 20 %) ; passes par possession 2,81 → 4,35 (3 à 5) ; buts 2,96 → 2,50 (2 à 3,5) ; conduites 2 054 → 1 197 intervalles par match, pertes en conduite 83,5 → 46,3 ; **possession d'équipe 17,2 → 25,6 s (11 à 16, désormais au-dessus)** ; **passes par match 945 → 985 (890 à 940, plus au-dessus)** ; fautes 14,7 → 12,2 (21 à 26) ; solutions de passe ouvertes 2,1 → 4,8.
 
 **Scènes A/B** (`18g-ab-script.py`, 400 scènes du 18f ; `18g-ab-avant.txt`, `18g-ab.txt`). Aucun effet inversé ni annulé. Effets réduits : meilleure passe Passing 99 contre 11 + 0,514 → + 0,086, Composure + 0,072 → + 0,012 ; part de passes choisies, Passing + 0,620 → + 0,143. Vision + 0,108 → + 0,182, Dribbling − 0,148 → − 0,203, Decisions − 0,262 → − 0,222. Cause : dans le moteur, une passe ratée ne dévie que de 10 à 25 % de sa longueur et n'est perdue que 2 fois sur 10 environ ; Passing pèse peu sur l'issue réelle, et l'évaluation le reflète désormais. Ticket 18h.
+
+## 31. Passe ratée : déviation et perte de balle (ticket v2-realisme/18h, 50 matchs, 12/11/2026)
+
+Commande : `scripts/measure_v2.py` en 4 lots, fichiers `.scratch/v2-realisme/mesures/18h-50-lot*.*`, synthèse `18h-50-synthese.txt` ; référence : 18g (`18g-50-lot*.*`) et 18f livré (`18f-det1.*`), mêmes graines. Diagnostics hors dépôt (12 et 50 matchs), résumés dans le ticket.
+
+**Ce qui change.** Une passe ratée (tirage de précision perdu) dévie de 25 à 50 % de sa longueur, au lieu de 10 à 25 %. Une passe est désormais « perdue » si un adversaire touche le ballon le premier **ou** si le ballon sort ou est sifflé avec remise pour l'adversaire (réserve A3 du 18g) ; la table « passe imprécise non perdue » de l'évaluation est remesurée sur cette définition : 0,78 sous 10 m, 0,64 au-delà (coupe imprévue inchangée, 0,05).
+
+**Réel indicatif** (Premier League 2024-25, Total Football Analysis d'après les catégories FBref ; Opta, passes de plus de 35 yards : 47,3 %) : courte (moins de 13,7 m) 89,4 %, moyenne (13,7 à 27,4 m) 87,1 %, longue (plus de 27,4 m) 51,7 %. Moteur (réussie = reçue par un coéquipier au premier contact) : avant 84,9 / 79,5 / 75,8 % ; après 82,9 / 76,3 / 71,2 %. Passe imprécise reçue par le receveur visé : 61,7 → 50,2 %. Le profil réel n'est pas atteint : une passe précise est coupée environ 15 % du temps quelle que soit sa longueur (ticket 18i).
+
+**Calibration de la passe** (indicateur du 18g, définition du 18h).
+
+| Chance évaluée | Passes par match | Évaluée | Non perdue | Écart (points) |
+|---|---|---|---|---|
+| [0,5 ; 0,6[ | 21,2 | 0,559 | 0,561 | − 0,3 |
+| [0,6 ; 0,7[ | 65,7 | 0,664 | 0,653 | + 1,1 |
+| [0,7 ; 0,8[ | 180,6 | 0,767 | 0,733 | + 3,4 |
+| [0,8 ; 0,9[ | 260,8 | 0,845 | 0,817 | + 2,7 |
+| [0,9 ; +[ | 333,9 | 0,932 | 0,917 | + 1,5 |
+| toutes | 873,7 | 0,834 | 0,813 | + 2,2 |
+
+Tranches basses (moins de 0,5 ; 11,5 passes par match en tout) : − 10,5 (0,4 passe par match), + 3,7, + 2,1, + 5,3 (0,8 passe par match), − 2,1. Sous 5 points sur toutes les tranches d'au moins 100 passes sauf [0,3 ; 0,4[ (40 passes, + 5,3).
+
+**Effets sur le jeu (18f → 18g → 18h ; repère).** Passes par match 945 → 985 → **933** (890 à 940, de nouveau dans le repère) ; passes réussies 74,9 → 81,9 → 79,7 % (70 à 90 %) ; chez l'adversaire 23,1 → 14,9 → 16,6 % (15 à 20 %) ; passes par possession 2,81 → 4,35 → 3,84 (3 à 5) ; **possession d'équipe 17,2 → 25,6 → 23,8 s (11 à 16, toujours au-dessus)** ; buts 2,96 → 2,50 → 2,08 (2 à 3,5) ; pertes en conduite 83,5 → 46,3 → 56,3 ; une-deux par équipe 2,05 → 0,97 → 1,47.
+
+**Scènes A/B** (`18g-ab-script.py`, 400 scènes ; `18g-ab.txt` avant, `18h-ab.txt` après). Aucun effet inversé ni annulé. Passing regagne du poids : meilleure passe + 0,086 → + 0,142, part de passes choisies + 0,143 → + 0,230 ; Composure + 0,012 → + 0,021 ; Dribbling − 0,203 → − 0,182 ; Vision + 0,182 → + 0,165 ; Decisions − 0,222 → − 0,257.

@@ -1,0 +1,37 @@
+Calibration de la passe (définition 18h : adversaire en premier ou sortie/sifflé avec remise adverse), 50 matchs
+tranche                      passes/match  évaluée non perdue   écart reçue visé
+chance évaluée [0 ; 0.1[              0.4    0.053      0.158   -10.5      0.105
+chance évaluée [0.1 ; 0.2[            3.5    0.167      0.130    +3.7      0.124
+chance évaluée [0.2 ; 0.3[            1.9    0.223      0.202    +2.1      0.202
+chance évaluée [0.3 ; 0.4[            0.8    0.369      0.316    +5.3      0.263
+chance évaluée [0.4 ; 0.5[            4.9    0.464      0.486    -2.1      0.444
+chance évaluée [0.5 ; 0.6[           21.2    0.559      0.561    -0.3      0.516
+chance évaluée [0.6 ; 0.7[           65.7    0.664      0.653    +1.1      0.608
+chance évaluée [0.7 ; 0.8[          180.6    0.767      0.733    +3.4      0.679
+chance évaluée [0.8 ; 0.9[          260.8    0.845      0.817    +2.7      0.762
+chance évaluée [0.9 ; +[            333.9    0.932      0.917    +1.5      0.860
+toutes                              873.7    0.834      0.813    +2.2      0.759
+
+Indicateurs généraux, 50 matchs (mêmes graines) : 18f livré -> 18g -> 18h ; repère
+  passes par match                             945.240 ->   984.600 ->   933.440   890 à 940
+  passes par minute de jeu effectif             12.879 ->    13.360 ->    12.966   15 à 17
+  passes réussies (part)                         0.749 ->     0.819 ->     0.797   70 à 90 %
+  passes chez l'adversaire (part)                0.231 ->     0.149 ->     0.166   15 à 20 %
+  receveur visé (part)                           0.729 ->     0.797 ->     0.776   
+  passes par possession                          2.812 ->     4.346 ->     3.836   3 à 5
+  possession d'équipe (s)                       17.241 ->    25.552 ->    23.799   11 à 16
+  temps par possession de joueur (s)             2.776 ->     2.473 ->     2.562   2 à 3
+  buts par match                                 2.960 ->     2.500 ->     2.080   2 à 3,5
+  conduite : intervalles par match            2053.600 ->  1196.760 ->  1394.820   
+  conduite : pertes par match                   83.520 ->    46.300 ->    56.340   
+  solutions de passe ouvertes (nombre)           2.106 ->     4.818 ->     4.249   
+  une-deux par équipe et par match               2.050 ->     0.970 ->     1.470   
+  passes longues (part)                          0.011 ->     0.022 ->     0.022   
+  face-à-face : tirs par match                  12.600 ->     8.800 ->     8.860   
+  corners par match                              4.920 ->     6.760 ->     6.540   
+  fautes par match                              14.700 ->    12.160 ->    12.120   21 à 26
+
+Passes imprécises et réussite par longueur (diagnostic hors dépôt ; réussie = reçue par un coéquipier au premier contact)
+  avant (18g, 12 matchs)                               n 11085 ; imprécises 0.224 ; imprécise reçue par le visé 0.617 ; réussie courte 0.849 ; réussie moyenne 0.795 ; réussie longue 0.758
+  après (déviation 25-50 %, 50 matchs, table du 18g)   n 44692 ; imprécises 0.219 ; imprécise reçue par le visé 0.502 ; réussie courte 0.829 ; réussie moyenne 0.763 ; réussie longue 0.712
+  réel (indicatif)                                      réussie courte 0,894 ; moyenne 0,871 ; longue 0,517

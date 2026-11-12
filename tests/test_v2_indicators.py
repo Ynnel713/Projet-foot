@@ -1218,3 +1218,19 @@ def test_pass_calibration_curve_is_exact_on_synthetic_contacts() -> None:
         assert out[base + "passes par match"] == 10000.0
         assert abs(out[base + "chance évaluée (part)"] - chance) < 1e-12
         assert abs(out[base + "écart évaluée / non perdue (points)"] - 100.0 * (1.0 - chance) * (factor - 1.0)) < 0.01 + 1e-9
+
+
+def test_pass_out_of_play_for_the_opponent_counts_as_lost() -> None:
+    # ticket v2-realisme/18h : sans contact, une passe sortie ou sifflée avec remise pour l'adversaire est perdue ; remise
+    # pour soi ou ballon mort sur le terrain : non perdue
+    c = ind.Collector(geometry_every_s=1e9)
+    passer, target, rival = _p("H", "home", 50.0, 34.0), _p("T", "home", 62.0, 34.0), _p("A", "away", 70.0, 60.0)
+    players = [passer, target, rival]
+    c.players = players
+    for k, restart in enumerate((SimpleNamespace(team="away"), SimpleNamespace(team="home"), None)):
+        c.on_pass(passer, target, [rival])
+        ball = _ball(56.0, 34.0)
+        ball.restart = restart
+        c.on_tick(0.1 * (k + 1), players, ball, None)
+    base = f"{ind.PASS_PREFIX}toutes : "
+    assert c.count[base + "passes"] == 3 and c.count[base + "non perdues"] == 2

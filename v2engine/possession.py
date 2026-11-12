@@ -31,7 +31,9 @@ _MARKED_RADIUS_M = 2.0
 _CONTROL_DIFFICULTY_PER_MPS = 1.0  # contrôle : +1 par m/s d'écart à la vitesse d'arrivée idéale
 # Réussite = note contre difficulté (courbe partagée) : à égalité 50 %, 40 points d'avance ou plus ~97 %.
 _SUCCESS = dict(baseline=0.5, amplitude=0.47, min_prob=0.05, max_prob=0.98)
-_MISS_SHARE = (0.10, 0.25)  # passe ratée : déviation de 10 à 25 % de la longueur de la passe
+# passe ratée : déviation de 25 à 50 % de la longueur de la passe (ticket v2-realisme/18h, validé le 12/11/2026 ; 10 à 25 %
+# auparavant : la passe ratée restait chez son équipe presque 2 fois sur 3 et Passing pesait peu sur l'issue réelle)
+_MISS_SHARE = (0.25, 0.50)
 IDEAL_ARRIVAL_MPS = 6.0  # dosage : vitesse du ballon en arrivant au receveur
 MAX_PASS_MPS = 30.0
 _DOSAGE_ERROR = (0.30, 0.05)  # erreur de vitesse : +/- 30 % à Passing 11, +/- 5 % à 99
@@ -57,9 +59,9 @@ _NEAR_PASSER_M = 3.0
 _CUT_NEAR_PASSER = ((0.5, 0.75), (1.0, 0.14), (6.0, 0.01))  # (distance max à la trajectoire en m, chance de coupe)
 _CUT_ON_PATH = ((1.0, 0.31), (2.0, 0.16), (3.0, 0.07), (4.0, 0.04), (5.0, 0.02), (6.0, 0.01))
 UNFORESEEN_CUT = 0.05  # passe précise : adversaires qui croisent la trajectoire sans y être au départ
-# passe imprécise (10 à 25 % de sa longueur) non perdue (aucun adversaire ne la touche le premier), hors coupe de la
-# table, selon la longueur de la passe
-_MISS_NOT_LOST = ((10.0, 0.83), (35.0, 0.77), (math.inf, 0.62))  # (longueur max en m, part non perdue)
+# passe imprécise (25 à 50 % de sa longueur) non perdue, hors coupe de la table, selon la longueur de la passe (ticket
+# v2-realisme/18h, remesurée le 12/11/2026 : 50 matchs, sortie ou coup de sifflet pour l'adversaire compté perdu)
+_MISS_NOT_LOST = ((10.0, 0.78), (math.inf, 0.64))  # (longueur max en m, part non perdue)
 
 
 def pressure(player: PlayerState, opponents: Sequence[PlayerState]) -> float:
@@ -116,8 +118,9 @@ def pass_accuracy_probability(passer: PlayerState, receiver: PlayerState, oppone
 
 
 def pass_success_probability(passer: PlayerState, receiver: PlayerState, opponents: Sequence[PlayerState]) -> float:
-    """Chance que la passe ne soit pas perdue (ticket v2-realisme/18g) : aucun adversaire ne touche le ballon le premier,
-    même risque que celui que la passe court en jeu. C'est le sens que lui donne la décision (`decision.option_value` :
+    """Chance que la passe ne soit pas perdue (tickets v2-realisme/18g et 18h) : aucun adversaire ne touche le ballon le
+    premier, et le ballon ne sort pas (ni n'est sifflé) avec remise pour l'adversaire ; même risque que celui que la passe
+    court en jeu. C'est le sens que lui donne la décision (`decision.option_value` :
     garder, sinon perdre le ballon), comme le risque de perte de la conduite (04a). Coupe par adversaire : table du 18g ;
     précise, `UNFORESEEN_CUT` en plus ; imprécise, `_MISS_NOT_LOST` selon la longueur. Le contrôle du receveur n'y entre
     pas : raté, le ballon reste libre près de lui, ce n'est pas une perte."""

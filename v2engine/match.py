@@ -657,7 +657,9 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
             # un tir qui finira dans le cadre.
             to_line = (goal.x - shot_at.x) / heading.x if abs(heading.x) > 1e-9 else -1.0
             arrival = shot_at + heading * to_line
-            flight.on_target = (to_line > 0.0 and abs(arrival.y - GOAL_CENTER_Y) < GOAL_WIDTH_M / 2.0
+            # tir depuis la ligne même (to_line = 0, rebond sur la ligne) : cadré lui aussi, jugé par le gardien à l'instant
+            # 0 (ticket v2-realisme/18h : avec `> 0`, il n'était pas cadré mais entrait quand même, sans jugement)
+            flight.on_target = (to_line >= 0.0 and abs(arrival.y - GOAL_CENTER_Y) < GOAL_WIDTH_M / 2.0
                                 and SHOT_AIM_HEIGHT_M + to_line * flight.slope < GOAL_HEIGHT_M)
             if keeper is not None:
                 flight.keeper_from = keeper.position
