@@ -19,7 +19,7 @@ Estimation : règle dans `CLAUDE.md` (« Estimer la durée d'un ticket ») ; reg
 - le rapport est absent ou modifié (sha256), ou, relu, ne donne plus VALIDÉ avec la table de décision ;
 - un fichier indexé n'est ni revu ni du suivi documentaire (`docs/`, `.scratch/`, `Plan architecte Simulafoot.md`, `PROJET_SIMULAFOOT.md`, journal), ou un fichier revu diffère entre index et arbre de travail.
 
-`integrite.ps1` surveille aussi `cloture.py` et `expert.md`. Banc : `bash .scratch/expert-dispositif/tests/test-verrou.sh <dossier temporaire vide>` (36 scénarios, dépôt jetable, scripts réels).
+`integrite.ps1` surveille aussi `cloture.py`, `expert.md`, `controle-qualite.md` et `valider-etape/SKILL.md`, repérés par leur chemin relatif à la racine du dépôt (mêmes clés sous Windows et Linux) ; les exemplaires globaux `~/.claude/...` de ces deux derniers, s'ils existent, doivent être identiques à ceux du dépôt (anomalie DIVERGENT). Banc : `bash .scratch/expert-dispositif/tests/test-verrou.sh <dossier temporaire vide>` (39 scénarios, dépôt jetable, scripts réels ; I37-I38 non exécutés sous Windows). Session cloud Linux : environnement `projet-foot` (PowerShell 7, liens `powershell` et `powershell.exe` vers `pwsh`).
 
 Conséquence : un commit sans ticket clôturé est désormais refusé (avant, un QC `VALIDÉ` suffisait).
 

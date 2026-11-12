@@ -5,10 +5,12 @@
 set -u
 SRC="$(cd "$(dirname "$0")/../../.." && pwd)"
 R="$1/depot"
-rm -rf "$R"; mkdir -p "$R/.claude/qc" "$R/.claude/skills/valider-ticket-simulafoot" "$R/.claude/agents" "$R/v2engine" "$R/docs"
+rm -rf "$R"; mkdir -p "$R/.claude/qc" "$R/.claude/skills/valider-ticket-simulafoot" "$R/.claude/skills/valider-etape" "$R/.claude/agents" "$R/v2engine" "$R/docs"
 cp "$SRC"/.claude/qc/*.ps1 "$R/.claude/qc/"
 cp "$SRC/.claude/skills/valider-ticket-simulafoot/cloture.py" "$R/.claude/skills/valider-ticket-simulafoot/"
 cp "$SRC/.claude/agents/expert.md" "$R/.claude/agents/"
+cp "$SRC/.claude/agents/controle-qualite.md" "$R/.claude/agents/"
+cp "$SRC/.claude/skills/valider-etape/SKILL.md" "$R/.claude/skills/valider-etape/"
 cd "$R" || exit 1
 G() { git -c user.name=t -c user.email=t@t -c core.autocrlf=false "$@"; }
 G init -q; echo "v = 1" > v2engine/x.py; echo "w = 1" > v2engine/y.py; echo doc > docs/a.md
@@ -21,7 +23,7 @@ PASS=0; FAIL=0
 
 lock() {  # code de sortie du hook réel pour la commande donnée
   printf '{"tool_input":{"command":"%s"}}' "${1:-git commit -m essai}" \
-    | powershell -NoProfile -ExecutionPolicy Bypass -File .claude/qc/verrou-commit.ps1 > "$R.out" 2>&1
+    | HOME="${FAUXHOME:-$HOME}" powershell -NoProfile -ExecutionPolicy Bypass -File .claude/qc/verrou-commit.ps1 > "$R.out" 2>&1
   echo $?
 }
 qc() { powershell -NoProfile -ExecutionPolicy Bypass -File .claude/qc/append.ps1 -Action Append -SousEtape "$1" -Verdict "$2" -Justification "$3" > /dev/null; }
@@ -104,6 +106,18 @@ nominal;                                                                check "I
 reset; qc t/01 VALIDÉ ok;                                               check "I34 git push sans clôture" 2 "$(lock 'git push origin main')"
 nominal; G commit -qm "ticket"; echo "v = 4" > v2engine/x.py; G add v2engine/x.py
                                                                         check "I35 après commit, nouvelle modification sans nouvelle revue" 2 "$(lock)"
+
+nominal; echo "# x" >> .claude/agents/controle-qualite.md;              check "I36 agent controle-qualite du dépôt modifié (intégrité)" 2 "$(lock)"
+# Exemplaires globaux (~/.claude) : seulement si PowerShell lit $HOME dans la variable HOME (pwsh sous Linux/macOS).
+FH="$1/fauxhome"; rm -rf "$FH"; mkdir -p "$FH/.claude/agents" "$FH/.claude/skills/valider-etape"
+if [ "$(HOME="$FH" powershell -NoProfile -Command '$HOME' | tr -d '\r')" = "$FH" ]; then
+  nominal; cp .claude/agents/controle-qualite.md "$FH/.claude/agents/"; cp .claude/skills/valider-etape/SKILL.md "$FH/.claude/skills/valider-etape/"
+                                                                        check "I37 exemplaires globaux identiques au dépôt" 0 "$(FAUXHOME="$FH" lock)"
+  echo "# diverge" >> "$FH/.claude/skills/valider-etape/SKILL.md"
+  nominal;                                                              check "I38 exemplaire global divergent du dépôt" 2 "$(FAUXHOME="$FH" lock)"
+else
+  echo "NON EXÉCUTÉS I37-I38 : PowerShell ne lit pas \$HOME dans HOME (Windows) ; vérifier à la main avec les exemplaires réels."
+fi
 
 echo "---- $PASS réussis, $FAIL échoués"
 [ "$FAIL" = 0 ]

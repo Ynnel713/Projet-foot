@@ -18,16 +18,30 @@ param(
 
 $ErrorActionPreference = "Stop"
 $empreintesPath = Join-Path $PSScriptRoot "empreintes.json"
+# Racine du depot (.claude/qc -> .claude -> racine). Les fichiers surveilles sont reperes
+# par leur chemin relatif a cette racine, avec "/" : memes cles sous Windows et Linux.
+$racineDepot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $fichiersSurveilles = @(
-    "C:\Users\omariani\.claude\agents\controle-qualite.md",
-    "C:\Users\omariani\.claude\skills\valider-etape\SKILL.md",
-    (Join-Path $PSScriptRoot "append.ps1"),
-    (Join-Path $PSScriptRoot "verrou-commit.ps1"),
-    (Join-Path $PSScriptRoot "detection-git.ps1"),
+    ".claude/agents/controle-qualite.md",
+    ".claude/skills/valider-etape/SKILL.md",
+    ".claude/qc/append.ps1",
+    ".claude/qc/verrou-commit.ps1",
+    ".claude/qc/detection-git.ps1",
     # cloture.py est execute par le verrou ; expert.md fixe les outils (lecture seule) de l'expert.
-    (Join-Path $PSScriptRoot "..\skills\valider-ticket-simulafoot\cloture.py"),
-    (Join-Path $PSScriptRoot "..\agents\expert.md")
+    ".claude/skills/valider-ticket-simulafoot/cloture.py",
+    ".claude/agents/expert.md"
 )
+# Exemplaires globaux du poste (~/.claude), qui peuvent l'emporter sur ceux du depot :
+# s'ils existent, ils doivent etre identiques a l'exemplaire du depot ; absents, ignores.
+$exemplairesGlobaux = @(
+    @{ Global = (Join-Path $HOME ".claude/agents/controle-qualite.md"); Depot = ".claude/agents/controle-qualite.md" },
+    @{ Global = (Join-Path $HOME ".claude/skills/valider-etape/SKILL.md"); Depot = ".claude/skills/valider-etape/SKILL.md" }
+)
+
+function Get-CheminDepot {
+    param([string]$Relatif)
+    return (Join-Path $racineDepot $Relatif)
+}
 
 function Get-EmpreintesReference {
     if (-not (Test-Path $empreintesPath)) {
@@ -62,7 +76,8 @@ switch ($Action) {
         $conformes = @()
 
         foreach ($fichier in $fichiersSurveilles) {
-            $presentSurDisque = Test-Path $fichier
+            $chemin = Get-CheminDepot $fichier
+            $presentSurDisque = Test-Path $chemin
             $presentDansRef = [bool](Get-Member -InputObject $refData -Name $fichier -ErrorAction SilentlyContinue)
 
             if (-not $presentSurDisque -and -not $presentDansRef) { continue }
@@ -74,12 +89,23 @@ switch ($Action) {
                 $problemes += "NOUVEAU:$fichier (aucune empreinte de reference)"
                 continue
             }
-            $hashActuel = (Get-FileHash -Path $fichier -Algorithm SHA256).Hash
+            $hashActuel = (Get-FileHash -Path $chemin -Algorithm SHA256).Hash
             $hashRef = $refData.$fichier.sha256
             if ($hashActuel -eq $hashRef) {
                 $conformes += $fichier
             } else {
                 $problemes += "MODIFIE:$fichier"
+            }
+        }
+
+        foreach ($paire in $exemplairesGlobaux) {
+            if (-not (Test-Path $paire.Global)) { continue }
+            $cheminDepot = Get-CheminDepot $paire.Depot
+            if (-not (Test-Path $cheminDepot)) { continue }  # deja signale MANQUANT ci-dessus
+            $hashGlobal = (Get-FileHash -Path $paire.Global -Algorithm SHA256).Hash
+            $hashDepot = (Get-FileHash -Path $cheminDepot -Algorithm SHA256).Hash
+            if ($hashGlobal -ne $hashDepot) {
+                $problemes += "DIVERGENT:$($paire.Global) differe de $($paire.Depot)"
             }
         }
 
@@ -97,11 +123,12 @@ switch ($Action) {
         $nouvelles = [ordered]@{}
         $manquants = @()
         foreach ($fichier in $fichiersSurveilles) {
-            if (-not (Test-Path $fichier)) {
+            $chemin = Get-CheminDepot $fichier
+            if (-not (Test-Path $chemin)) {
                 $manquants += $fichier
                 continue
             }
-            $hash = (Get-FileHash -Path $fichier -Algorithm SHA256).Hash
+            $hash = (Get-FileHash -Path $chemin -Algorithm SHA256).Hash
             $nouvelles[$fichier] = @{ sha256 = $hash; maj = (Get-Date).ToUniversalTime().ToString("o") }
         }
         if ($manquants.Count -gt 0) {
