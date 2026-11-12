@@ -275,6 +275,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **Orientation du corps (12/11/2026, ticket `v2-realisme/07a`)** : livré (12/11/2026), validé expert + QC. Chaque joueur a un cap (`PlayerState.facing`) qui tourne d'au plus 360°/s vers le ballon, ou vers le sens de course au-dessus de 19,8 km/h ; tracé, transmis par l'API (degrés) et dessiné à l'écran (trait d'orientation). Aucun effet sur le jeu (mesures identiques au 18j à graine fixée), temps de calcul + 4 %. Constantes validées par délégation.
 
+**Type de réception (12/11/2026, ticket `v2-realisme/07c`)** : livré (12/11/2026), validé expert + QC (réserve A1 acceptée par délégation : direction d'arrivée du ballon à combiner au type, au 07d). Chaque contrôle est classé de face, de profil ou dos au jeu (angle cap / but adverse : 60° et 120°) et tracé (`trace.receptions`) ; le receveur visé d'une passe en vol s'ouvre vers le but en gardant le ballon devant lui, le temps que sa rotation le permet. Sur 20 matchs, passes reçues 87,4 % de face, 12,1 % de profil, 0,5 % dos au jeu (avant-centres 30 % de profil) ; le dos au jeu réel, dû au marqueur collé, relève de 04i et 08c. Jeu inchangé à graine fixée.
+
 ### Bloquée par
 
 - Phase 4

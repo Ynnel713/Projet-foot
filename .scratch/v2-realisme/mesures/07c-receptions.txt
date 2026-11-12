@@ -1,0 +1,20 @@
+20 matchs, 19917 réceptions
+toutes                               995.9 par match  de face  75.8 %  de profil  16.1 %  dos au jeu   8.1 %
+passes reçues (receveur visé)        804.0 par match  de face  87.4 %  de profil  12.1 %  dos au jeu   0.5 %
+autres (récupération, rebond...)     191.8 par match  de face  27.0 %  de profil  33.1 %  dos au jeu  39.9 %
+origine : centre                       2.8 par match  de face  89.1 %  de profil  10.9 %  dos au jeu   0.0 %
+origine : passe au sol               216.0 par match  de face  80.4 %  de profil  18.0 %  dos au jeu   1.6 %
+origine : passe en profondeur        103.5 par match  de face  61.9 %  de profil  37.2 %  dos au jeu   0.9 %
+origine : passe en retrait           496.5 par match  de face  94.6 %  de profil   4.9 %  dos au jeu   0.5 %
+origine : rebond                       5.0 par match  de face  33.7 %  de profil  39.6 %  dos au jeu  26.7 %
+origine : récupération               172.0 par match  de face  25.1 %  de profil  32.9 %  dos au jeu  41.9 %
+poste GK (passes reçues)              13.0 par match  de face  95.8 %  de profil   3.5 %  dos au jeu   0.8 %
+poste DC (passes reçues)              60.5 par match  de face  95.5 %  de profil   4.2 %  dos au jeu   0.2 %
+poste LB (passes reçues)              53.2 par match  de face  95.5 %  de profil   4.0 %  dos au jeu   0.5 %
+poste RB (passes reçues)              55.8 par match  de face  95.7 %  de profil   3.9 %  dos au jeu   0.4 %
+poste MDC (passes reçues)             49.1 par match  de face  91.6 %  de profil   7.7 %  dos au jeu   0.7 %
+poste MC (passes reçues)             158.8 par match  de face  88.9 %  de profil  10.4 %  dos au jeu   0.8 %
+poste MOC (passes reçues)             90.6 par match  de face  82.1 %  de profil  17.6 %  dos au jeu   0.3 %
+poste AG (passes reçues)              93.2 par match  de face  92.9 %  de profil   6.8 %  dos au jeu   0.3 %
+poste AD (passes reçues)              88.1 par match  de face  93.6 %  de profil   5.8 %  dos au jeu   0.6 %
+poste BU (passes reçues)             141.6 par match  de face  69.7 %  de profil  29.9 %  dos au jeu   0.4 %

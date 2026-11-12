@@ -42,3 +42,12 @@ Temps machine, non compté : suite complète (environ 40 min) ; mesure 50 matchs
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+
+## Comments
+
+**12/11/2026, repris du 07c (réserves acceptées par délégation du propriétaire).**
+- A1 (condition) : avant de lire le type de réception, le combiner avec la direction d'arrivée du ballon (`ReceptionEvent.ball_facing_deg`, `match._ball_facing_deg`) : un ballon qui arrive à plus de 90° du cap est un contrôle à l'aveugle ou dos au jeu, pas « de face ». Test : cap vers le but, ballon de derrière, joueur non visé, type ou pénalité attendus explicitement.
+- A2 : angle d'arrivée d'un ballon arrêté (0° aujourd'hui) : prendre l'angle entre le cap et la position du ballon.
+- A3 : hystérésis autour de `movement.FACING_RUN_SPEED_MPS` (réserve A1 du 07a), à faire dès que le cap agit sur le jeu.
+- Mesure : la part de dos au jeu de l'avant-centre (0,4 % au 07c) reste irréaliste tant que le marqueur collé n'empêche pas de se tourner (04i, 08c).
+

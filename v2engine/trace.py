@@ -104,6 +104,23 @@ class RestartEvent:
 
 
 @dataclass(frozen=True)
+class ReceptionEvent:
+    """Ballon contrôlé (ticket v2-realisme/07c) : `kind` de face, de profil ou dos au jeu (`reception.reception_type`),
+    `facing_goal_deg` l'angle entre le cap du receveur et le but adverse, `ball_facing_deg` l'angle entre son cap et la
+    direction d'où vient le ballon (0 : il lui fait face), `origin` comment il le reçoit (vocabulaire du tir : passe au
+    sol, en profondeur, en retrait, centre, récupération, rebond), `intended` s'il était le receveur visé de la passe."""
+    minute: float
+    team: str
+    player: str
+    poste: str
+    kind: str
+    facing_goal_deg: float
+    ball_facing_deg: float
+    origin: str
+    intended: bool
+
+
+@dataclass(frozen=True)
 class ShotEvent:
     """Tir (ticket v2-collectif/28b) : `team` et `player` le tireur, `x`/`y` le lieu du tir, `quality` la qualité de
     l'occasion (ticket 28a, chance de but s'il n'est pas contré, contre compris), `outcome` l'issue tirée au départ (but,
@@ -237,6 +254,7 @@ class MatchTrace:
     restarts: list[RestartEvent] = field(default_factory=list)  # remises en jeu (ticket v2-collectif/29)
     fouls: list[FoulEvent] = field(default_factory=list)  # fautes (ticket v2-collectif/30)
     shots: list[ShotEvent] = field(default_factory=list)  # tirs et leur issue (ticket v2-collectif/28b)
+    receptions: list[ReceptionEvent] = field(default_factory=list)  # contrôles et leur type (ticket v2-realisme/07c)
     chances: list[ChanceEvent] = field(default_factory=list)  # grosses occasions, avec ou sans tir (ticket 28c)
     reaction_delays_s: dict[str, float] = field(default_factory=dict)  # par joueur (Anticipation, ticket v2-collectif/03)
     # Minute du coup d'envoi de la 2e période (ticket v2-coach-et-gestion-de-match/07) ; None tant qu'elle n'est pas
