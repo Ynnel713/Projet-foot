@@ -1,0 +1,6 @@
+Ticket 07c, empreintes 20 matchs (07a-empreinte.py, graine 20260923 + k) ; avant = commit ab6f799 (worktree)
+Avant : 1180.52 s de calcul ; 44 buts ; 694 tirs
+Après (version livrée) 1 : 1138.37 s de calcul ; 44 buts ; 694 tirs
+Après (version livrée) 2 : 1125.96 s de calcul ; 44 buts ; 694 tirs
+Jeu avant == après (20/20) : True ; jeu et cap après 1 == après 2 : True.
+Temps de calcul : 1 180,5 s avant ; 1 138,4 et 1 126,0 s après (dans le bruit).

@@ -104,6 +104,20 @@ class RestartEvent:
 
 
 @dataclass(frozen=True)
+class ReceptionEvent:
+    """Réception d'une passe par un coéquipier, au premier contact (ticket v2-realisme/07c) : `kind` de face, de profil
+    ou dos au jeu (`orientation.reception_type`) ; `controlled` : contrôle réussi ; `received` : façon dont il a eu le
+    ballon (`match._received_as`). Mesure seule, sans effet sur le jeu."""
+    minute: float
+    team: str
+    player: str
+    poste: str
+    kind: str
+    controlled: bool
+    received: str
+
+
+@dataclass(frozen=True)
 class ShotEvent:
     """Tir (ticket v2-collectif/28b) : `team` et `player` le tireur, `x`/`y` le lieu du tir, `quality` la qualité de
     l'occasion (ticket 28a, chance de but s'il n'est pas contré, contre compris), `outcome` l'issue tirée au départ (but,
@@ -245,6 +259,7 @@ class MatchTrace:
     # Minutes de temps additionnel annoncées à la fin de chaque période (ticket v2-coach-et-gestion-de-match/03).
     added_minutes: list[int] = field(default_factory=list)
     events: list[TraceEvent] = field(default_factory=list)  # journal ordonné, avec les causes (ticket v2-realisme/19b)
+    receptions: list[ReceptionEvent] = field(default_factory=list)  # type de chaque réception (ticket v2-realisme/07c)
 
     def display_minute(self, minute: float) -> str:
         """Minute affichée (`12'`, `45+2'`, `90+4'`) d'un instant de la trace, pour le rendu et la narration."""

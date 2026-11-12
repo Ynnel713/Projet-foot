@@ -275,6 +275,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **Agility, vitesse de rotation du corps (12/11/2026, ticket `v2-realisme/07f`)** : livré (12/11/2026), validé expert + QC (sans réserve). La vitesse de rotation du cap dépend d'Agility (`orientation.turn_rate_rad_s`, courbe partagée) : 450°/s à 99, 360°/s à 55, 270°/s à 11 (valeur réelle non trouvée, validée par le propriétaire) ; demi-tour en 0,4 / 0,5 / 0,7 s en scène A/B. Agility lue dans `orientation` seulement ; sans effet sur le jeu avant le 07b (20 matchs identiques).
 
+**Type de réception (12/11/2026, ticket `v2-realisme/07c`)** : livré (12/11/2026), validé expert + QC (réserve A1 acceptée : peu de dos au jeu, à remesurer au 10g et avant le 07d). Chaque réception d'une passe est classée de face (cap à moins de 60° du but adverse), de profil (60 à 120°) ou dos au jeu, et tracée (`MatchTrace.receptions`) ; le receveur visé non marqué au départ de la passe s'ouvre entre le ballon et le but, s'il en a le temps (rotation, Agility). Sur 20 matchs : de face 76,0 %, de profil 22,9 %, dos au jeu 1,1 % (BU 1,7 %) ; cause : 1,2 % des passes vont à un receveur marqué à moins de 2 m. Jeu identique (20 matchs).
+
 ### Bloquée par
 
 - Phase 4

@@ -26,6 +26,12 @@ _TURN_RATE_DEG_S = (360.0, 90.0, 270.0, 450.0)  # baseline, amplitude, min, max
 FAST_RUN_MPS = 19.8 / 3.6
 # En deçà de cette distance, la direction du ballon n'a pas de sens (ballon dans ses pieds) : il garde son cap.
 BALL_DEADZONE_M = 0.1
+# Type de réception (ticket 07c, validé le 12/11/2026) selon l'angle entre le cap du receveur et la direction du but
+# adverse : de face sous 60°, de profil (ouvert) de 60 à 120°, dos au jeu au-delà. Trois secteurs égaux ; valeur réelle
+# non trouvée.
+FACE, PROFIL, DOS = "de face", "de profil", "dos au jeu"
+FACE_MAX_DEG = 60.0
+BACK_MIN_DEG = 120.0
 
 
 def turn_rate_rad_s(player) -> float:
@@ -46,11 +52,14 @@ def wrap(angle: float) -> float:
     return math.pi if wrapped == -math.pi else wrapped
 
 
-def desired_facing(position: Vec2, velocity: Vec2, ball: Vec2, current: float, holding: bool = False) -> float:
+def desired_facing(position: Vec2, velocity: Vec2, ball: Vec2, current: float, holding: bool = False,
+                   goal: Vec2 | None = None) -> float:
     """Direction voulue : celle de la course au-dessus de `FAST_RUN_MPS`, sinon celle du ballon ; `current` si le
     ballon est sur lui. Le porteur (`holding`) a le ballon dans ses pieds : il regarde où il va, et garde son cap
     à l'arrêt (le ballon du moteur est recopié sur sa position du pas précédent, sa direction serait l'inverse de sa
-    course ; réserve A1 de l'expert, 12/11/2026)."""
+    course ; réserve A1 de l'expert, 12/11/2026). Le receveur visé d'une passe en vol (`goal` : le but qu'il attaque)
+    s'ouvre : il vise la direction à mi-chemin entre le ballon et ce but, pour voir les deux (ticket 07c) ; il n'y
+    arrive avant le ballon que s'il en a le temps (rotation bornée, Agility)."""
     if holding:
         return math.atan2(velocity.y, velocity.x) if velocity.length() > 0.0 else current
     if velocity.length() >= FAST_RUN_MPS:
@@ -58,7 +67,28 @@ def desired_facing(position: Vec2, velocity: Vec2, ball: Vec2, current: float, h
     to_ball = ball - position
     if to_ball.length() <= BALL_DEADZONE_M:
         return current
+    if goal is not None:
+        return _open_body(to_ball, goal - position, current)
     return math.atan2(to_ball.y, to_ball.x)
+
+
+def _open_body(to_ball: Vec2, to_goal: Vec2, current: float) -> float:
+    """Direction à mi-chemin entre le ballon et le but (bissectrice). Ballon exactement à l'opposé du but : la
+    perpendiculaire au but la plus proche de son cap actuel (choix sans tirage)."""
+    if to_goal.length() < 1e-9:
+        return math.atan2(to_ball.y, to_ball.x)
+    middle = to_ball.normalized() + to_goal.normalized()
+    if middle.length() > 1e-6:
+        return math.atan2(middle.y, middle.x)
+    goal_angle = math.atan2(to_goal.y, to_goal.x)
+    return min((goal_angle + math.pi / 2, goal_angle - math.pi / 2), key=lambda a: abs(wrap(a - current)))
+
+
+def reception_type(facing: float, position: Vec2, goal: Vec2) -> str:
+    """Type de réception (ticket 07c) : de face, de profil ou dos au jeu, selon l'angle entre le cap et le but adverse."""
+    to_goal = goal - position
+    angle = abs(math.degrees(wrap(facing - math.atan2(to_goal.y, to_goal.x))))
+    return FACE if angle < FACE_MAX_DEG else DOS if angle > BACK_MIN_DEG else PROFIL
 
 
 def turn_towards(current: float, desired: float, dt: float, rate: float = TURN_RATE_RAD_S) -> float:

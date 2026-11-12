@@ -26,8 +26,9 @@ _BASE_DIFFICULTY = 10.0  # passe ou contrôle le plus facile
 _EASY_DISTANCE_M = 10.0
 _DIFFICULTY_PER_M = 1.8  # au-delà de 10 m : 25 m -> 37, 35 m -> 55, 45 m -> 73
 _PRESSURE_DIFFICULTY = 15.0  # adversaire au contact du joueur, nulle à `PRESSURE_RADIUS_M`
-_MARKED_DIFFICULTY = 10.0  # receveur avec un adversaire à moins de `_MARKED_RADIUS_M`
-_MARKED_RADIUS_M = 2.0
+_MARKED_DIFFICULTY = 10.0  # receveur avec un adversaire à moins de `MARKED_RADIUS_M`
+# receveur marqué : difficulté de la passe ; il ne s'ouvre pas avant la réception (`match._step_player`, ticket 07c)
+MARKED_RADIUS_M = 2.0
 _CONTROL_DIFFICULTY_PER_MPS = 1.0  # contrôle : +1 par m/s d'écart à la vitesse d'arrivée idéale
 # Réussite = note contre difficulté (courbe partagée) : à égalité 50 %, 40 points d'avance ou plus ~97 %.
 _SUCCESS = dict(baseline=0.5, amplitude=0.47, min_prob=0.05, max_prob=0.98)
@@ -110,7 +111,7 @@ def pass_difficulty(passer: PlayerState, receiver: PlayerState, opponents: Seque
     distance = passer.position.distance_to(receiver.position)
     difficulty = _BASE_DIFFICULTY + _DIFFICULTY_PER_M * max(0.0, distance - _EASY_DISTANCE_M)
     difficulty += _PRESSURE_DIFFICULTY * pressure(passer, opponents) * composure_factor(passer)
-    if any(receiver.position.distance_to(o.position) < _MARKED_RADIUS_M for o in opponents):
+    if any(receiver.position.distance_to(o.position) < MARKED_RADIUS_M for o in opponents):
         difficulty += _MARKED_DIFFICULTY
     return difficulty
 

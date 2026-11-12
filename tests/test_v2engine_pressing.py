@@ -62,7 +62,7 @@ def test_presser_relieved_after_his_burst_and_rests_by_work_rate() -> None:
     assert defense.resting(first, PRESS_BURST_S + 9.0) and not defense.resting(first, PRESS_BURST_S + 10.1)
 
 
-# Marking 99 : marqueur à 1 m, nettement sous `possession._MARKED_RADIUS_M` (3 m), pour un test peu bruité.
+# Marking 99 : marqueur à 1 m, nettement sous `possession.MARKED_RADIUS_M` (2 m), pour un test peu bruité.
 def _scene(teamwork: int) -> list[PlayerState]:
     return [_p("H", team="away", x=40, y=34), _p("Ancien", team="away", x=32, y=34),
             _p("R1", team="away", x=31, y=23), _p("R2", team="away", x=31, y=45),

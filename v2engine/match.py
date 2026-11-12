@@ -30,13 +30,14 @@ from v2engine.flux import ARBITRAGE, PERCEPTION, TIR, seed_streams
 from v2engine.formation import initial_positions
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch, in_penalty_area
 from v2engine.movement import PlayerState, step
-from v2engine.orientation import desired_facing, kickoff_facing, turn_rate_rad_s, turn_towards
+from v2engine.orientation import desired_facing, kickoff_facing, reception_type, turn_rate_rad_s, turn_towards
 from v2engine.cerveau import GOAL_CENTER_Y, OPPONENT_GOAL, Intention, think
 from v2engine.decision import DECISION_INTERVAL_S, choose_action, dribble_lost, lost_carry_outcome
 from v2engine.defense import DefensiveRoles
 from v2engine.occasion import ChanceTracker
 from v2engine.offside import HESITATION_S, OFFSIDE_OUT_S, offside_at_pass, sees_the_flag_probability
-from v2engine.possession import (BALL_FRICTION_PER_S, BALL_STOPPED_MPS, MAX_PASS_MPS, MISS_RETRY_S, attempt_control, deflect,
+from v2engine.possession import (BALL_FRICTION_PER_S, BALL_STOPPED_MPS, MARKED_RADIUS_M, MAX_PASS_MPS, MISS_RETRY_S,
+                                 attempt_control, deflect,
                                  missed_control_velocity, pass_velocity, reception_delay_s)
 from v2engine.added_time import GRACE_S, HARD_STOP_S, added_minutes, played_minute
 from v2engine.roles import role_of
@@ -48,7 +49,7 @@ from v2engine.shooting import (BLOCK_CHANCE, BLOCK_WIDTH_M, FLYING, HELD, OVER, 
 from v2engine.situation import SituationTracker
 from v2engine.transition import TransitionPlay
 from v2engine.trace import (BallSnapshot, DecisionRecord, FoulEvent, MatchTrace, OffsideEvent, PlayerSnapshot, ShotEvent,
-                            RestartEvent, SituationRecord)
+                            ReceptionEvent, RestartEvent, SituationRecord)
 
 # But adverse d'une équipe, par convention de ce moteur (voir `formation.initial_positions`,
 # D-V03 : domicile attaque vers x=PITCH_LENGTH_M, extérieur vers x=0).
@@ -502,6 +503,7 @@ def _play_restart(ball: BallState, players: list[PlayerState], now_s: float,
     ball.last_toucher = ball.released_by = taker.name
     ball.last_pass_team = taker.team
     ball.receiver = target.name
+    ball.receiver_marked = _marked(target, opponents)
     ball.plan = None
     _clear_offside(ball)
     if is_aerial(r.kind, taker, target):  # ballon en l'air : on ne le touche qu'à son point de chute
@@ -690,6 +692,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
             ball.released_by = holder.name
             ball.last_pass_team = holder.team
             ball.receiver = action.target.name
+            ball.receiver_marked = _marked(action.target, [p for p in players if p.team != holder.team])
             follow = getattr(action, "follow", None)
             ball.plan = (action.target.name, follow, now_s) if follow is not None else None
             opponents = [p for p in players if p.team != holder.team]
@@ -808,13 +811,19 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
             _log(ball, now_s, PERTE, last.team, last.player, _LOST_BY[last.kind], player.name)
         ball.last_toucher = player.name  # contrôlé ou non, il l'a touché (ticket v2-collectif/29)
         received = _received_as(ball, player, aerial)
+        reception = received not in ("rebond", "récupération")  # passe de son équipe (ticket 07c)
         ball.pass_from, ball.rebound, ball.shot_wide = None, False, False
         opponents = [p for p in players if p.team != player.team]
         ball.readers = {}  # la passe est finie, contrôlée ou non : personne ne court plus la couper
         ball.receiver = None
         ball.released_by = None  # quelqu'un d'autre a touché le ballon : le passeur peut de nouveau le jouer
         _clear_offside(ball)
-        if attempt_control(player, ball.velocity, opponents):
+        controlled = attempt_control(player, ball.velocity, opponents)
+        if reception and ball.receptions is not None:  # type de réception, mesure seule (ticket v2-realisme/07c)
+            ball.receptions.append(ReceptionEvent(now_s / 60.0, player.team, player.name, player.poste,
+                                                  reception_type(player.facing, player.position,
+                                                                 OPPONENT_GOAL[player.team]), controlled, received))
+        if controlled:
             ball.holder = player.name
             ball.came_from = (player.name, received, player.position)
             ball.hesitation.pop(player.name, None)  # il a le ballon : il joue, il n'attend plus
@@ -869,6 +878,12 @@ def _contacts(start: Vec2, end: Vec2, dt: float, players: list[PlayerState],
     return hits
 
 
+def _marked(receiver: PlayerState, opponents: list[PlayerState]) -> bool:
+    """Receveur marqué au départ de la passe : un adversaire à moins de `MARKED_RADIUS_M` (ticket v2-realisme/07c). Jugé
+    une fois par passe : un seuil relu à chaque pas ferait basculer son cap quand l'écart oscille autour de 2 m."""
+    return any(receiver.position.distance_to(o.position) < MARKED_RADIUS_M for o in opponents)
+
+
 def _step_player(
     player: PlayerState,
     ball: BallState,
@@ -899,8 +914,12 @@ def _step_player(
                  intention.target_velocity)
     # Cap du corps (ticket v2-realisme/07a) : tourne vers la course rapide ou le ballon, à la vitesse que lui permet
     # Agility (07f), sans effet sur le jeu.
+    # Receveur visé d'une passe en vol : il s'ouvre entre le ballon et le but adverse (ticket 07c), sauf s'il était marqué
+    # au départ de la passe (`_marked`, décision du propriétaire du 12/11/2026) : il reste face au ballon.
+    receiving = ball.holder is None and ball.receiver == player.name and not ball.receiver_marked
+    goal = OPPONENT_GOAL[player.team] if receiving else None
     moved.facing = turn_towards(player.facing, desired_facing(moved.position, moved.velocity, ball.position,
-                                                              player.facing, ball.holder == player.name), dt,
+                                                              player.facing, ball.holder == player.name, goal), dt,
                                 turn_rate_rad_s(player))
     return moved
 
@@ -939,6 +958,7 @@ def simulate_match(
 
     trace = MatchTrace(home=home_club.name, away=away_club.name, tick_seconds=tick_seconds * record_every)
     ball.log = EventLog(trace.events)  # journal des événements (ticket v2-realisme/19b)
+    ball.receptions = trace.receptions  # type de chaque réception (ticket v2-realisme/07c)
 
     runs: dict[str, tuple[Vec2, float]] = {}  # espace visé par chaque joueur sans ballon (Off the Ball)
     intentions: dict[str, Intention] = {}  # intention de chaque joueur au dernier tick (ADR 0001)
@@ -988,6 +1008,7 @@ def simulate_match(
                 p.position, p.velocity, p.facing = p.home_target, Vec2(0.0, 0.0), kickoff_facing(p.team)
             ball = BallState(position=Vec2(PITCH_LENGTH_M / 2.0, PITCH_WIDTH_M / 2.0), velocity=Vec2(0.0, 0.0))
             ball.log = EventLog(trace.events)  # le journal continue en 2e période (ticket v2-realisme/19b)
+            ball.receptions = trace.receptions
             ball.restart = kickoff("away" if first == "home" else "home", players, i * tick_seconds, dead_s=0.0)
             situations = SituationTracker(delays_s=dict(trace.reaction_delays_s))
             bloc, defense, transition = Bloc.from_players(players), DefensiveRoles(), TransitionPlay()

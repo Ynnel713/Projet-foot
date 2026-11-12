@@ -47,6 +47,8 @@ class BallState:
     readers: dict[str, Vec2] = field(default_factory=dict)
     last_pass_team: str | None = None  # équipe de la dernière passe, pour repérer une interception
     receiver: str | None = None  # coéquipier visé par la passe en cours, qui vient au-devant du ballon (v2-socle/01)
+    # receveur marqué au départ de la passe (adversaire à moins de `possession.MARKED_RADIUS_M`) : il ne s'ouvre pas (07c)
+    receiver_marked: bool = False
     receiving: bool = False  # porteur encore dans son temps de réception, avant sa première décision (v2-socle/06)
     # Duels (v2-socle/03) : défenseurs ayant déjà tenté leur tacle dans la confrontation en cours avec
     # `engaged_holder`, et instant jusqu'auquel un défenseur au tacle raté ne peut plus tacler.
@@ -101,6 +103,8 @@ class BallState:
     came_from: tuple[str, str, Vec2] | None = None
     # Journal des événements du match (ticket v2-realisme/19b) : None hors match tracé (scènes de test qui n'en ont pas besoin).
     log: EventLog | None = None
+    # Réceptions des passes, avec leur type (ticket v2-realisme/07c) : liste de la trace, None hors match tracé.
+    receptions: list | None = None
 
     @property
     def shot_in_flight(self) -> bool:

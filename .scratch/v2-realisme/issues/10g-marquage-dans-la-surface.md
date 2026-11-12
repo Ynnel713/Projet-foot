@@ -33,6 +33,7 @@ Temps machine, non compté : suite complète (environ 40 min) ; mesure 50 matchs
 
 ## Acceptance criteria
 
+- [ ] Repris de la réserve A1 du ticket v2-realisme/07c (acceptée le 12/11/2026) : répartition des types de réception par poste remesurée (`.scratch/v2-realisme/mesures/07c-repartition.py`) ; au 07c, dos au jeu 1,1 % (BU 1,7 %), parce que 1,2 % seulement des passes partent vers un receveur marqué à moins de 2 m et que 86 % des receveurs n'ont aucun adversaire à moins de 5 m ; à remesurer après ce ticket
 - [ ] Constantes produit et chiffres réels (sourcés ou « non trouvé ») validés par le propriétaire avant le code
 - [ ] Attaquants libres dans la surface au moment d'une passe dans la surface : part rapportée
 - [ ] Rayon des attributs conforme à `docs/CARTE_ATTRIBUTS_V2.md`, sans double comptage ; test de rayon à jour
