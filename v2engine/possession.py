@@ -54,17 +54,21 @@ _HARDEST_CONTROL = _BASE_DIFFICULTY + _CONTROL_DIFFICULTY_PER_MPS * (MAX_PASS_MP
 # ballon le premier, selon sa distance à la trajectoire, près du passeur (avancée jusqu'à `_NEAR_PASSER_M`) ou sur le
 # trajet. Données réelles : non trouvé (la table décrit le moteur ; à remesurer si le mouvement change, indicateur de
 # calibration de `scripts/v2_indicators.py`). Remplace le terme de couloir (`_LANE_DIFFICULTY`, + 12 par adversaire),
-# qui sous-comptait la coupe (évaluée 0,96, reçue 0,56 avec un adversaire dans le couloir).
+# qui sous-comptait la coupe (évaluée 0,96, reçue 0,56 avec un adversaire dans le couloir). Remesurée au ticket 18j
+# (portée du défenseur qui lit la passe, `match.READER_REACH_M`) : 50 matchs, ajustement sur 27 220 passes, contrôle sur
+# 24 945 (écart prévu / non perdue + 0,1 point au total ; `.scratch/v2-realisme/mesures/18j-ajustement.txt`), validé par
+# délégation du propriétaire le 12/11/2026.
 _NEAR_PASSER_M = 3.0
-_CUT_NEAR_PASSER = ((0.5, 0.75), (1.0, 0.14), (6.0, 0.01))  # (distance max à la trajectoire en m, chance de coupe)
-_CUT_ON_PATH = ((1.0, 0.31), (2.0, 0.16), (3.0, 0.07), (4.0, 0.04), (5.0, 0.02), (6.0, 0.01))
+_CUT_NEAR_PASSER = ((0.5, 0.82), (1.0, 0.21), (6.0, 0.02))  # (distance max à la trajectoire en m, chance de coupe)
+_CUT_ON_PATH = ((1.0, 0.43), (2.0, 0.25), (3.0, 0.12), (4.0, 0.07), (5.0, 0.03), (6.0, 0.02))
 # passe précise : adversaires qui croisent la trajectoire sans y être au départ (0,05 au 18g, 0,01 au 18i, validé le
-# 12/11/2026 : mesurée 0,007 à 0,009 sur 50 matchs ; l'ancien terme comptait surtout le ballon passé à côté du receveur)
+# 12/11/2026 : mesurée 0,007 à 0,009 sur 50 matchs ; l'ancien terme comptait surtout le ballon passé à côté du receveur ;
+# 0,014 au 18j, gardée)
 UNFORESEEN_CUT = 0.01
 # passe imprécise (25 à 50 % de sa longueur) non perdue, hors coupe de la table, selon la longueur de la passe (ticket
 # v2-realisme/18h : 50 matchs, sortie ou coup de sifflet pour l'adversaire compté perdu ; remesurée au 18i avec la portée
-# du receveur, 0,78 / 0,64 -> 0,85 / 0,68, validé le 12/11/2026)
-_MISS_NOT_LOST = ((10.0, 0.85), (math.inf, 0.68))  # (longueur max en m, part non perdue)
+# du receveur, 0,78 / 0,64 -> 0,85 / 0,68, validé le 12/11/2026 ; au 18j avec la portée du lecteur, 0,85 / 0,69)
+_MISS_NOT_LOST = ((10.0, 0.85), (math.inf, 0.69))  # (longueur max en m, part non perdue)
 
 
 def pressure(player: PlayerState, opponents: Sequence[PlayerState]) -> float:

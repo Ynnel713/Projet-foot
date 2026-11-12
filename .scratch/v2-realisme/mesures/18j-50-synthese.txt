@@ -1,0 +1,46 @@
+Indicateurs généraux, 50 matchs (mêmes graines) : 18i -> 18j (portée du lecteur et table remesurée)
+  passes par match                             1042.940 ->    997.680
+  passes par minute de jeu effectif              14.049 ->     13.584
+  passes réussies (part)                          0.862 ->      0.852
+  passes chez l'adversaire (part)                 0.116 ->      0.125
+  receveur visé (part)                            0.844 ->      0.835
+  passes par possession                           5.106 ->      4.630
+  possession d'équipe (s)                        28.348 ->     26.850
+  temps par possession de joueur (s)              2.524 ->      2.649
+  buts par match                                  2.640 ->      2.620
+  conduite : intervalles par match             1304.100 ->   1519.640
+  conduite : pertes par match                    54.560 ->     61.460
+  solutions de passe ouvertes (nombre)            4.707 ->      3.958
+  une-deux par équipe et par match                1.440 ->      1.720
+  passes longues (part)                           0.022 ->      0.023
+  passes longues réussies (part)                  0.560 ->      0.562
+  face-à-face : tirs par match                    9.040 ->     10.320
+  corners par match                               7.240 ->      7.300
+  fautes par match                               13.100 ->     13.020
+  tirs par équipe et par match                      nan ->        nan
+
+Calibration de la passe (18i)
+tranche                      passes/match  évaluée non perdue   écart reçue visé
+chance évaluée [0 ; 0.1[            0.3    0.057      0.067    -1.0      0.067
+chance évaluée [0.1 ; 0.2[          4.1    0.164      0.175    -1.1      0.160
+chance évaluée [0.2 ; 0.3[          3.5    0.219      0.236    -1.6      0.224
+chance évaluée [0.3 ; 0.4[          0.6    0.366      0.571   -20.5      0.500
+chance évaluée [0.4 ; 0.5[          4.5    0.471      0.540    -6.9      0.491
+chance évaluée [0.5 ; 0.6[         18.3    0.564      0.623    -5.9      0.573
+chance évaluée [0.6 ; 0.7[         49.2    0.662      0.690    -2.8      0.642
+chance évaluée [0.7 ; 0.8[        128.1    0.753      0.794    -4.2      0.740
+chance évaluée [0.8 ; 0.9[        342.2    0.847      0.874    -2.7      0.815
+chance évaluée [0.9 ; +[          443.5    0.959      0.970    -1.1      0.917
+
+Calibration de la passe (18j)
+tranche                      passes/match  évaluée non perdue   écart reçue visé
+chance évaluée [0 ; 0.1[            1.8    0.073      0.148    -7.5      0.125
+chance évaluée [0.1 ; 0.2[          4.2    0.141      0.147    -0.6      0.137
+chance évaluée [0.2 ; 0.3[          0.5    0.268      0.296    -2.8      0.259
+chance évaluée [0.3 ; 0.4[          3.0    0.369      0.439    -7.0      0.399
+chance évaluée [0.4 ; 0.5[         10.7    0.462      0.489    -2.7      0.435
+chance évaluée [0.5 ; 0.6[         20.5    0.553      0.572    -1.9      0.531
+chance évaluée [0.6 ; 0.7[         59.3    0.656      0.702    -4.6      0.658
+chance évaluée [0.7 ; 0.8[        116.0    0.756      0.759    -0.3      0.716
+chance évaluée [0.8 ; 0.9[        289.3    0.852      0.877    -2.5      0.818
+chance évaluée [0.9 ; +[          442.0    0.958      0.963    -0.5      0.909

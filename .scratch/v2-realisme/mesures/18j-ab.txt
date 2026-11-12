@@ -1,0 +1,8 @@
+warning: The `UV_NATIVE_TLS` environment variable is deprecated and will be removed in a future release. Use `UV_SYSTEM_CERTS` instead.
+== 18g
+  meilleure passe, Passing 99 / 11 : 0.950 / 0.816  (écart +0.134)
+  meilleure passe, Composure 99 / 11 : 0.914 / 0.894  (écart +0.020)
+  part de passes choisies, Passing 99 / 11 : 0.547 / 0.333  (écart +0.215)
+  part de passes choisies, Dribbling 99 / 11 : 0.367 / 0.565  (écart -0.197)
+  part de passes choisies, Vision 99 / 11 : 0.460 / 0.278  (écart +0.182)
+  part de passes choisies, Decisions 99 / 11 : 0.378 / 0.568  (écart -0.190)

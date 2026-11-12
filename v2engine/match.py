@@ -79,6 +79,12 @@ TACKLE_RADIUS_M = 1.5
 # même valeur reprise). Avec `CONTROL_RADIUS_M`, le ballon lui passait à côté (0,5 à 0,85 m) dans 8,6 % des passes
 # courtes précises. Donnée réelle de la portée : non trouvée.
 RECEIVER_REACH_M = BLOCK_WIDTH_M
+# Portée du défenseur qui a lu la passe (`ball.readers`, ticket v2-realisme/18j, valeur recommandée et validée par
+# délégation du propriétaire le 12/11/2026) : il court la couper et tend la jambe comme le receveur, même portée. Sans
+# délai de réaction : la lecture (`anticipation.pass_readers`) exige déjà qu'il soit sur la trajectoire avant le ballon.
+# Essai sur 12 matchs : passes chez l'adversaire 11,7 % (0,41 m) ; 13,3 % (0,7 m) ; 14,9 % (1,0 m), repère 15 à 20 %.
+# Donnée réelle de la portée : non trouvée.
+READER_REACH_M = RECEIVER_REACH_M
 # Un duel par confrontation (v2-socle/03, validé le 25/10/2026) : un défenseur tente au plus un tacle
 # tant qu'il reste à moins de CONFRONTATION_END_M du même porteur ; un tacle raté l'élimine
 # FAILED_TACKLE_RECOVERY_S (temps pour se relever et se replacer). Durée réelle non trouvée : ordre de grandeur.
@@ -833,13 +839,15 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
 def _ball_contacts(start: Vec2, end: Vec2, dt: float, players: list[PlayerState],
                    ball: BallState) -> list[tuple[float, float, PlayerState]]:
     """`_contacts` du ballon en jeu : `CONTROL_RADIUS_M` pour tous, sauf le receveur visé de la passe en cours, à
-    `RECEIVER_REACH_M` (ticket v2-realisme/18i)."""
-    if ball.receiver is None:
+    `RECEIVER_REACH_M` (ticket v2-realisme/18i), et les défenseurs qui l'ont lue, à `READER_REACH_M` (ticket 18j)."""
+    if ball.receiver is None and not ball.readers:
         return _contacts(start, end, dt, players, ball.released_by)
-    others = [p for p in players if p.name != ball.receiver]
+    others = [p for p in players if p.name != ball.receiver and p.name not in ball.readers]
     receiver = [p for p in players if p.name == ball.receiver]
+    readers = [p for p in players if p.name in ball.readers and p.name != ball.receiver]
     hits = (_contacts(start, end, dt, others, ball.released_by)
-            + _contacts(start, end, dt, receiver, ball.released_by, RECEIVER_REACH_M))
+            + _contacts(start, end, dt, receiver, ball.released_by, RECEIVER_REACH_M)
+            + _contacts(start, end, dt, readers, ball.released_by, READER_REACH_M))
     hits.sort(key=lambda hit: (hit[0], hit[1]))  # même ordre que `_contacts`
     return hits
 

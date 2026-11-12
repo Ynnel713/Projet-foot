@@ -37,3 +37,9 @@ Source : `docs/AUDIT_ROADMAP_V2.md`. Calibrer seulement après les effets de la 
 - A2 : passe longue trop réussie, 76,6 % contre 51,7 % dans le réel (passe précise longue : 90 %).
 - Calibration de la passe : chance évaluée trop basse de 5,9 et 6,9 points sur [0,5 ; 0,6[ et [0,4 ; 0,5[ (2,2 % des passes), écart accepté le 12/11/2026.
 - A4 (facultatif) : un contrôle jambe tendue à 1 m du corps a la même difficulté qu'un contrôle dans le corps.
+
+## Repris du ticket v2-realisme/18j (12/11/2026, réserves acceptées par délégation du propriétaire)
+
+- État après le 18j (portée du lecteur 1,0 m, table remesurée ; section 33 de `docs/INDICATEURS_V2.md`) : passes par match 998, chez l'adversaire 12,5 %, passes par possession 4,63, possession d'équipe 26,9 s, passe longue réussie 75,0 % ; les écarts de calibration du 18i sur [0,4 ; 0,6[ sont résorbés (− 2,7 et − 1,9).
+- A1 : calibration de la passe à − 7,0 points sur [0,3 ; 0,4[ (3 passes par match), systématique (− 7,1 hors ligne). Piste de l'expert : une case « deux adversaires ou plus près de la ligne » dans la table (interaction non multiplicative) plutôt que des retouches isolées.
+- A2 : évaluation légèrement pessimiste en jeu (biais pondéré environ − 1,4 point) : passeur un peu prudent, pertes en conduite 54,6 → 61,5 par match, solutions ouvertes 4,71 → 3,96. Remesurer la table une fois le choix du passeur stabilisé, par itération jusqu'au point fixe (ajustement en jeu plutôt que hors ligne).

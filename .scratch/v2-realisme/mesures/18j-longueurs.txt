@@ -1,0 +1,4 @@
+courte (< 13,7 m)    n  15560  réussie  90.6 %  chez l'adversaire   8.4 %  précises réussies  92.0 %
+moyenne              n  27795  réussie  84.6 %  chez l'adversaire  10.5 %  précises réussies  92.1 %
+longue (>= 27,4 m)   n   5012  réussie  75.0 %  chez l'adversaire  13.5 %  précises réussies  90.0 %
+toutes               n  48367  réussie  85.5 %  chez l'adversaire  10.1 %  précises réussies  91.9 %

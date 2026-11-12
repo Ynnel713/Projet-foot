@@ -147,7 +147,9 @@ def test_the_passer_transmits_the_follow_up_he_counted() -> None:
 def test_the_planned_mate_relaunches_his_run_where_the_receiver_finds_him(monkeypatch) -> None:
     _no_depth_run(monkeypatch)
     receiver, mate = _p("R", 50, 34), _p("P", 62, 30)
-    opponents = [_p("Coupe", 55, 32.3, team="away"), _p("Coupe2", 58, 31.3, team="away"),
+    # Coupe à y = 31,8 et Coupe2 à y = 30,8 (32,3 et 31,3 avant le ticket v2-realisme/18j) : avec la table de coupe
+    # remesurée, ils fermaient aussi l'espace relancé (64,7 ; 34) ; ils ferment toujours la ligne R -> P (à 0,5 m).
+    opponents = [_p("Coupe", 55, 31.8, team="away"), _p("Coupe2", 58, 30.8, team="away"),
                  _p("Def", 70, 30, team="away"), _p("Def2", 70, 40, team="away")]
     players = [_p("H", 40, 34), receiver, mate, *opponents]
     old = Vec2(66.0, 30.0)  # espace choisi avant la passe, pas encore atteint, ligne R -> P fermée par Coupe et Coupe2

@@ -1141,3 +1141,27 @@ Sous 5 points sur les tranches de 0,6 à 1 (97,8 % des passes) ; au-delà sur [0
 **Effets sur le jeu (18h → portée seule → 18i ; repère).** Passes par match 933 → 1 001 → **1 043** (890 à 940, au-dessus) ; passes réussies 79,7 → 86,1 → 86,2 % (70 à 90 %) ; chez l'adversaire 16,6 → 11,7 → 11,6 % (15 à 20 %, en dessous) ; passes par possession 3,84 → 4,67 → 5,11 (3 à 5) ; **possession d'équipe 23,8 → 27,0 → 28,3 s (11 à 16, plus loin encore)** ; buts 2,08 → 2,26 → 2,64 (2 à 3,5) ; pertes en conduite 56,3 → 66,2 → 54,6 ; une-deux par équipe 1,47 → 1,78 → 1,44 ; corners 6,5 → 5,6 → 7,2.
 
 **Scènes A/B** (`18g-ab-script.py`, 400 scènes ; `18i-ab.txt`). Aucun effet inversé ni annulé : Passing + 0,139 (meilleure passe), + 0,227 (part de passes choisies) ; Composure + 0,021 ; Dribbling − 0,185 ; Vision + 0,198 ; Decisions − 0,185.
+
+## 33. Portée du défenseur qui lit la passe et table remesurée (ticket v2-realisme/18j, 50 matchs, 12/11/2026)
+
+Commande : `scripts/measure_v2.py` en 4 lots (`PYTHONPATH=.`), fichiers `.scratch/v2-realisme/mesures/18j-50-lot*.*`, synthèse `18j-50-synthese.txt` (`18j-synthese.py`) ; référence : 18i (`18i-50-lot*.*`), mêmes graines. Essai de portée sur 12 matchs : `18j-variante.py`, `18j-var-*`. Diagnostic : `18i-diag-script.py` (portée seule : `18j-diag/` ; moteur final : `18j-diag-final/`), ajustement `18j-ajustement.py` (`18j-ajustement.txt`), longueurs `18j-longueurs.py` (`18j-longueurs.txt`).
+
+**Ce qui change.** Le défenseur qui a lu la passe (`anticipation.pass_readers`) touche le ballon à `match.READER_REACH_M` = 1,0 m, comme le receveur visé (18i) ; les autres joueurs gardent 0,41 m. Sans délai : la lecture exige déjà qu'il atteigne la trajectoire avant le ballon. Donnée réelle : non trouvée. Essai sur 12 matchs, passes chez l'adversaire : 11,7 % (0,41 m), 13,3 % (0,7 m), 14,9 % (1,0 m). Table de coupe de l'évaluation remesurée : près du passeur 0,82 / 0,21 / 0,02 ; trajet 0,43 / 0,25 / 0,12 / 0,07 / 0,03 / 0,02 ; coupe imprévue 0,01 ; passe imprécise non perdue 0,85 / 0,69.
+
+**Calibration de la passe** (indicateur du 18g, définition du 18h).
+
+| Chance évaluée | Passes par match | Évaluée | Non perdue | Écart 18j (points) | Écart 18i |
+|---|---|---|---|---|---|
+| [0,3 ; 0,4[ | 3,0 | 0,369 | 0,439 | − 7,0 | − 20,5 (0,6 par match) |
+| [0,4 ; 0,5[ | 10,7 | 0,462 | 0,489 | − 2,7 | − 6,9 |
+| [0,5 ; 0,6[ | 20,5 | 0,553 | 0,572 | − 1,9 | − 5,9 |
+| [0,6 ; 0,7[ | 59,3 | 0,656 | 0,702 | − 4,6 | − 2,8 |
+| [0,7 ; 0,8[ | 116,0 | 0,756 | 0,759 | − 0,3 | − 4,2 |
+| [0,8 ; 0,9[ | 289,3 | 0,852 | 0,877 | − 2,5 | − 2,7 |
+| [0,9 ; +[ | 442,0 | 0,958 | 0,963 | − 0,5 | − 1,1 |
+
+Sous 5 points sur toutes les tranches d'au moins 100 passes sauf [0,3 ; 0,4[ (0,3 % des passes).
+
+**Réussite par longueur** (reçue par un coéquipier au premier contact ; 48 367 passes) : 92,0 / 85,3 / 76,6 % (18i) → 90,6 / 84,6 / 75,0 % ; réel indicatif 89,4 / 87,1 / 51,7 %.
+
+**Effets sur le jeu (18i → 18j ; repère).** Passes par match 1 043 → 998 (890 à 940) ; passes réussies 86,2 → 85,2 % ; chez l'adversaire 11,6 → 12,5 % (15 à 20, en dessous) ; passes par possession 5,11 → 4,63 (3 à 5) ; possession d'équipe 28,3 → 26,9 s (11 à 16) ; buts 2,64 → 2,62 ; pertes en conduite 54,6 → 61,5 ; face-à-face 9,0 → 10,3 par match. Scènes A/B (`18j-ab.txt`) : aucun effet inversé ni annulé. Déterminisme : deux exécutions identiques hors temps de calcul.
