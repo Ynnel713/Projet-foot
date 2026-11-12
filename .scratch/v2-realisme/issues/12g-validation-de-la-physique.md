@@ -8,7 +8,7 @@
 
 **Attributs :** aucun
 
-**Blocked by:** 12a (Freinage individualisé : Agility); 12b (Perte de vitesse en virage); 12c (Balance : rester debout et continuer après un contact); 12d (Intensité de course selon le rôle); 12e (Réserve d'énergie qui dépend de l'effort); 12f (Répéter les sprints et récupérer); 01d (Banc : distance par poste, temps et distance à haute intensité, appels selon la définition sourcée).
+**Blocked by:** 12a (Freinage individualisé : Agility); 12b (Perte de vitesse en virage); 12c (Balance : rester debout et continuer après un contact); 12d (Intensité de course selon le rôle); 12e (Réserve d'énergie qui dépend de l'effort); 12f (Répéter les sprints et récupérer); 12h (Qualité du geste en déséquilibre, ajouté le 12/11/2026); 01d (Banc : distance par poste, temps et distance à haute intensité, appels selon la définition sourcée).
 
 **Bloque :** rien.
 
@@ -37,3 +37,4 @@ Temps machine, non compté : suite complète (environ 40 min) ; mesure 50 matchs
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+- [ ] Table de passe du 18g remesurée (coupe par adversaire, passe imprécise non perdue) et indicateur de calibration de la passe sous 5 points par tranche (50 matchs) : ce ticket change le mouvement (ajouté le 12/11/2026, revue du réalisme)

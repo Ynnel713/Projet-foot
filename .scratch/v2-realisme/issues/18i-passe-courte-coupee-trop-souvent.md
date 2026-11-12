@@ -1,8 +1,10 @@
 # 18i: Passe précise coupée trop souvent, même courte
 
-**Chantier :** `v2-realisme`. **Catégorie :** exécution, défense.
+**Chantier :** `v2-realisme`. **Priorité :** P0 (cohérence de la passe, avant la fin des fondations ; ordre revu le 12/11/2026, spec section 13). **Catégorie :** exécution, défense.
 
 **Origine :** ticket 18h (12/11/2026, 12 matchs, moteur après 18g). Une passe PRÉCISE (tirage de `possession.pass_aim` réussi) n'est reçue par un coéquipier que dans environ 85 % des cas, quelle que soit sa longueur : courte 85,4 %, moyenne 85,3 %, longue 86,0 %. Les échecs viennent des coupes (adversaire qui touche le ballon le premier : table du 18g, plus environ 5 % de coupes imprévues). Réel indicatif (toutes passes, précises ou non) : courte 89,4 %, moyenne 87,1 %, longue 51,7 % (Premier League 2024-25, Total Football Analysis d'après FBref). Une passe courte précise est presque jamais coupée dans le réel.
+
+**Cadrage (12/11/2026, décision du propriétaire) :** recherche d'une cause MÉCANIQUE ; aucune constante réglée pour atteindre un chiffre réel. Si le mécanisme est sain, refermer le ticket et laisser l'écart à `v2-collectif/22a`.
 
 **What to build :** Trouver pourquoi une passe courte précise est coupée aussi souvent qu'une longue (placement et course des défenseurs pendant la passe, `anticipation.pass_readers`, contacts du ballon avec un joueur proche du passeur, choix de passes dans le trafic) et corriger le mécanisme. Remesurer ensuite la table de coupe du 18g et l'indicateur de calibration de la passe.
 

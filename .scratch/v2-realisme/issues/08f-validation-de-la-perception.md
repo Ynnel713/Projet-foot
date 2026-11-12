@@ -38,3 +38,4 @@ Temps machine, non compté : suite complète (environ 40 min) ; mesure 50 matchs
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+- [ ] Table de passe du 18g remesurée (coupe par adversaire, passe imprécise non perdue) et indicateur de calibration de la passe sous 5 points par tranche (50 matchs) : ce ticket change le mouvement (ajouté le 12/11/2026, revue du réalisme)

@@ -128,8 +128,16 @@ Les dépendances détaillées sont dans chaque ticket. L'ordre ci-dessous les re
    - Tir (après la clôture de `v2-collectif/28b`, puis `35b` et `28c`, tickets existants à réaliser d'abord) : 05a → 05b → 05c → 05d → 05e → 05g ; 06a → 06b.
    - **Orientation et prise d'information, avancées le 05/11/2026 (décision du propriétaire)** : 07a → 07c, 07e, 07f ; 08a → 08b → 08c. Elles forment la base du contrôle orienté et du jeu à une touche : **`v2-collectif/31` les attend** (son « Blocked by » est complété), et donc 34a, 34b, 36a et 07d après lui.
    - **18a, point d'étape P0** (aucun réglage), puis **18d et 18e, calibrations provisoires** (section 6 bis). Aucun P1 ne démarre avant leur rapport.
-3. **Vague 2, P1** (ordre recommandé) : `v2-collectif/31` → 34a → 34b → 36a, puis 07d → 07b → 07g ; 08d, 08e → 08f ; 12d → 12e → 12f, 12a → 12b ; 11a → 11b → 11c, 12c, 11d → 11e ; 04d → 04e → 04f, 04g → 04h, 04i, 04j ; 09a → 09b → 09c, 09d, 09e, 09f → 09g → 09h ; 10a → 10b → 10c, 10d → 10i, 10e, 10f → 10g, 10h → 10j ; 03f, 05f, 06c, 17d, 18b ; 13a ; 18g (passe : même risque à l'évaluation et en vol, créé au 18f le 12/11/2026).
-4. **Vague 3, P2** : 14a → 14b → 14c → 14d ; 15a → 15f ; 16a → 16g ; 17b, 17c ; 01g dès 20 à 30 tickets clôturés.
+   - **Fin de la P0 (ordre revu le 12/11/2026, section 13)** : 18i (passe précise coupée trop souvent) → 07a → 07f → 07c → 07e ; 08a → 08b → 08c ; puis 18e (calibration provisoire 2).
+3. **Vague 2, P1** (ordre revu le 12/11/2026, décision du propriétaire, section 13 ; l'ordre d'origine y est conservé) :
+   - **Bloc 1, physique du joueur et du ballon (socle des gestes)** : 12a → 12b ; `v2-hauteur-ballon/02a` → `03` ; 11a → 11b → 11c → 12c → 12h → 11d → 11e ; 12f → 12g.
+   - **Bloc 2, gestes techniques** : `v2-collectif/31` → `v2-hauteur-ballon/04` ; `v2-collectif/34a` → `v2-collectif/34b` → `v2-collectif/35a` → `v2-collectif/34c` → `v2-collectif/36a` → `v2-collectif/36b` → `v2-collectif/34d` ; `v2-collectif/35c` ; 23a → `v2-collectif/15` et `v2-collectif/32a` (livrés ensemble) → `v2-collectif/32b` ; 07b → 07d → 07g ; 04e → 04f ; 04g → 04h, 04i, 04j ; 05f, 05i ; 03f.
+   - **Bloc 3, perception et décision** : 08d, 08e → 08f.
+   - **Bloc 4, tactique collective** : 09a → 09b → 09c, 09d, 09e, 09i, 09f → 09g → 09h ; 10a → 10b → 10c, 10d → 10i, 10e, 10f → 10g, 10h → 10j ; 13a.
+   - **Bloc 5, fatigue et arbitrage** : 20a, 20b, 20c, 20f → 20d ; 21a → 21b → 21c.
+   - **Bloc 6, validation** : 17d, 18b.
+   - **Après leurs prérequis hors de la P1** (placement du 12/11/2026, revue de l'expert) : 03l après `v2-attributs-restants/03b` ; 23b après `v2-attributs-restants/01` ; 21e et 21i après 16h (Vague 3) ; 20e après 13b (point 5).
+4. **Vague 3, P2** : 14a → 14b → 14c → 14d ; 15a → 15f ; 16a → 16g ; 16h → 21e, 21i (P1, placés après leur prérequis) ; 17b, 17c ; 01g dès 20 à 30 tickets clôturés.
 5. **Calibration finale et validation** : `v2-collectif/22a`, `22b`, `22c` (existants), puis 18c sur graines réservées ; styles d'équipe (13b à 13i) selon le point ouvert du plan.
 
 ## 6 bis. Calibrations : provisoires puis finale (décision du propriétaire du 05/11/2026)
@@ -377,3 +385,28 @@ Rapport : `docs/AUDIT_ROADMAP_V2.md` §12. 5 tickets, 9 h 25.
 | 03l | Gardien : anticiper le côté, être pris à contre-pied, rester figé sur un tir imparable | P1 | décision | 2 h | moyenne | 03f, 07a, v2-attributs-restants/03b |
 
 03l vient du §13 de l'audit (complément gardien). Total des compléments du 10/11/2026 : 28 tickets, 52 h 35 (P0 7 h 40 ; P1 24 h 05 ; P2 16 h 50 ; P3 4 h).
+
+## 13. Revue du réalisme et réordonnancement de la P1 (12/11/2026, ticket 18j)
+
+Revue demandée par le propriétaire (« analyse les tickets qui ont été fait et ceux qu'il reste à faire […] dis moi si tu vois des manques ou des lacunes », puis « ok crée les tickets et réordonne la P1 »). État au 12/11/2026 : 54 tickets livrés ; restent 8 P0 (07a, 07c, 07e, 07f, 08a, 08b, 08c, 18e) plus 18i, 70 P1 et 28 P2.
+
+**Constats (code du 12/11/2026).**
+- Acquis : mesure (banc, déterminisme, scènes), cohérence évaluation-résolution (04a, 05e, 18g, 18h), tir physique (05a à 05h), structure et gardien, accélération sourcée, réserve d'énergie.
+- Points sans corps : aucune orientation (07a à 07g) ; freinage identique pour tous et aucune perte de vitesse en virage (12a, 12b).
+- Ballon presque plat : hauteur réelle pour le tir seulement ; passe aérienne touchable à 3 m de sa chute ; ni rebond, ni effet, ni poteaux ; ballon collé au porteur (`v2-hauteur-ballon/02a`, 14a à 14d, `v2-collectif/35c`, 04e, 04f).
+- Geste indépendant de l'état du corps : tir, passe et contrôle ne lisent que note, distance et pression (34a à 34d, 35a, 36a, 36b, 07e, 23a ; manque : déséquilibre, 12h).
+- Contrôle au sol seulement (07c, `v2-collectif/31` ; manque : contrôle aérien, `v2-hauteur-ballon/04`).
+- Duels par tirage à portée ; collisions en position seule (11a à 11e, 04g à 04j, 15a à 15f).
+
+**Ordre revu.** Socle physique (inertie, hauteur du ballon, contacts) avant les gestes, gestes avant la perception fine et la tactique : les tickets de gestes et de duels s'appuient sur l'orientation (P0), la hauteur et les contacts, et seraient à reprendre s'ils passaient avant. Ordre d'origine (section 6, version du 05/11/2026) : `v2-collectif/31` → 34a → 34b → 36a, puis 07d → 07b → 07g ; 08d, 08e → 08f ; 12d → 12e → 12f, 12a → 12b ; 11a → 11b → 11c, 12c, 11d → 11e ; 04d → 04e → 04f, 04g → 04h, 04i, 04j ; 09a → 09b → 09c, 09d, 09e, 09f → 09g → 09h ; 10a → 10b → 10c, 10d → 10i, 10e, 10f → 10g, 10h → 10j ; 03f, 05f, 06c, 17d, 18b ; 13a ; 18g.
+
+**Tables de passe mesurées sur le moteur (18g, 18h).** Elles se périment quand le mouvement change : critère « table de passe remesurée, calibration de la passe sous 5 points » ajouté à 07g, 08f, 10j, 11e, 12g, 12h et `v2-hauteur-ballon/04`.
+
+| Ticket | Titre | Prio | Catégorie | Estimation | Confiance | Dépend de |
+|---|---|---|---|---|---|---|
+| 18g | Passe : même risque à l'évaluation et en vol (livré 12/11/2026) | P1 | exécution | 2 h (réel 7 h) | moyenne | 18f |
+| 18h | Passe ratée trop bénigne (livré 12/11/2026) | P1 | exécution | 2 h (réel 3 h 15) | faible | 18g |
+| 18i | Passe précise coupée trop souvent, même courte | P0 | exécution | 2 h 30 | faible | 18h |
+| 12h | Qualité du geste en déséquilibre | P1 | physique | 2 h 15 | faible | 12c, 07a |
+| `v2-hauteur-ballon/04` | Qualité du contrôle d'un ballon aérien ou rebondissant | P1 | exécution | 2 h 15 | faible | `v2-hauteur-ballon/03`, `v2-collectif/31` |
+| 18j | Revue du réalisme et réordonnancement de la P1 | P0 | documentation | 45 min | élevée | 18h |

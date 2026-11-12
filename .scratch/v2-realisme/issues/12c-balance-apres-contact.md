@@ -12,7 +12,7 @@
 
 **Blocked by:** 11b (Collision asymétrique : Strength).
 
-**Bloque :** 11e, 12g.
+**Bloque :** 11e, 12g, 12h (ajouté le 12/11/2026).
 
 **Status:** à faire (constantes à proposer avant le code)
 

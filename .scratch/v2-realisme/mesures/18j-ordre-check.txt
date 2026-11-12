@@ -1,0 +1,2 @@
+tickets dans l'ordre : 81
+AUCUNE VIOLATION : chaque prérequis est livré ou placé avant

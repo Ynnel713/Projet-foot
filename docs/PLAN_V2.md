@@ -267,6 +267,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **Passe ratée trop bénigne (12/11/2026, ticket `v2-realisme/18h`)** : livré (12/11/2026), validé expert + QC (réserve acceptée : passes courtes et moyennes encore sous le réel, 18i à traiter avant 22a). Déviation de la passe ratée 25-50 % de sa longueur (au lieu de 10-25 %) ; passe perdue aussi quand le ballon sort ou est sifflé avec remise adverse (réserve A3 du 18g) ; table de l'évaluation remesurée (0,78 / 0,64). Passes par match 985 → 933 (dans le repère), passes par possession 3,84, possession d'équipe 23,8 s (au-dessus du repère) ; Passing regagne du poids (scènes A/B + 0,143 → + 0,230). Profil réel par longueur non atteint : passe précise trop souvent coupée, ticket 18i. Correctif annexe : un tir tiré depuis la ligne de but est cadré et jugé par le gardien (section 31 de `docs/INDICATEURS_V2.md`).
 
+**Revue du réalisme et ordre de la P1 (12/11/2026, ticket `v2-realisme/18j`)** : livré (12/11/2026), validé expert + QC (passage 2 ; ordre contrôlé par `.scratch/v2-realisme/mesures/18j-ordre-check.py`). Revue des tickets faits et restants (section 13 de `.scratch/v2-realisme/spec.md`) : méthode et cohérence acquises, mais joueurs sans orientation, ballon presque plat, gestes indépendants de l'état du corps et duels par tirage. Fin de la P0 : 18i → 07a → 07f → 07c → 07e ; 08a → 08b → 08c ; 18e. P1 réordonnée en blocs : physique du joueur et du ballon, gestes, perception, tactique, fatigue et arbitrage, validation. Tickets ajoutés : 12h (geste en déséquilibre), `v2-hauteur-ballon/04` (contrôle aérien) ; table de passe du 18g à remesurer dans les validations qui changent le mouvement.
+
 ### Bloquée par
 
 - Phase 4
