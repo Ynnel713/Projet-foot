@@ -345,6 +345,23 @@ convertis en `NN-slug.md` après validation.
 - **Tests** : planche de rendu de toutes les couleurs du banc d'essai ; mesure d'images par seconde.
 - **Dépendances** : EM-03, EM-05. **Risques** : coût de rendu des dégradés (utiliser un seul `<defs>` partagé).
 
+### EM-20 — Lisibilité de la hauteur et de l'inclinaison à taille normale (V) — 120 min (moyenne) — ajouté le 09/11/2026
+- **Statut** : proposé ; création acceptée par le propriétaire le 09/11/2026. **Aucune ligne de code avant son feu vert
+  explicite** : le chantier écran attend derrière le moteur.
+- **Origine** : réouverture de `v2-hauteur-ballon/01` (09/11/2026). Verdict du propriétaire : à taille normale, inclinaison
+  imperceptible et cage du filet illisible sur téléphone. Cette limite vient de la projection sans point de fuite.
+- **Contraintes** : α = 35° figé, `project` intact, pas de perspective (EM-X3 exclu).
+- **Leviers retenus** (propriétaire, 09/11/2026), à implémenter dans cet ordre :
+  - **levier 4 en priorité** : trait du point au sol jusqu'au rond de chaque joueur ;
+  - levier 1 : faces du but ombrées ;
+  - levier 2 : épaisseur minimale de 1 px ;
+  - levier 3 : drapeaux de coin de 1,5 m.
+- **Levier reporté** : levier 5 (dégradé de profondeur renforcé), à réévaluer après la livraison d'EM-05 si le critère de
+  contraste du filet n'est pas atteint avec son dégradé de 6 %.
+- **Critères** : chiffrés et validés par le propriétaire le 09/11/2026, figés sans nouvel arbitrage. Voir
+  `issues/20-lisibilite-de-la-hauteur-a-l-ecran.md`.
+- **Dépendances** : EM-05, EM-07 (et EM-01 en amont).
+
 ### EM-08 — HUD supérieur : identité du match (V) — 120 min (moyenne)
 - **Objectif** : écussons, noms, score central très visible, minute, période, état.
 - **Résultat** : `MatchHud`/`ScoreBlock` aux jetons du design system ; écussons `ClubBadge` à 40 à 48 px ; lignes techniques
@@ -481,6 +498,7 @@ QC), commit des seuls hunks du ticket, puis ticket suivant.
 | 5 | EM-04 mise en page 3 zones | plus gros gain visuel, impose les proportions | 120 min |
 | 6 | EM-05 terrain | héros de l'écran | 120 min |
 | 7 | EM-07 marqueurs joueurs | lisibilité de l'action | 120 min |
+| 7b | EM-20 lisibilité hauteur et inclinaison (proposé, feu vert du propriétaire requis) | après EM-05 et EM-07 : s'appuie sur leurs couleurs et leur échelle | 120 min |
 | 8 | EM-08 HUD identité | repère immédiat du score | 120 min |
 | 9 | EM-10a, 10b compositions | accès aux équipes | 90 + 75 min |
 | 10 | EM-11a, 11b momentum | élément fort de l'expérience | 90 + 60 min |

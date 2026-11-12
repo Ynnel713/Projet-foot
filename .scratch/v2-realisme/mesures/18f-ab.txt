@@ -1,0 +1,14 @@
+== avant
+  meilleure passe, Passing 99 / 11 : 0.970 / 0.440  (écart +0.530)
+  meilleure passe, Composure 99 / 11 : 0.814 / 0.739  (écart +0.075)
+  part de passes choisies, Passing 99 / 11 : 0.657 / 0.037  (écart +0.620)
+  part de passes choisies, Dribbling 99 / 11 : 0.215 / 0.345  (écart -0.130)
+  part de passes choisies, Vision 99 / 11 : 0.297 / 0.203  (écart +0.095)
+  part de passes choisies, Decisions 99 / 11 : 0.200 / 0.500  (écart -0.300)
+== après
+  meilleure passe, Passing 99 / 11 : 0.970 / 0.456  (écart +0.514)
+  meilleure passe, Composure 99 / 11 : 0.848 / 0.776  (écart +0.072)
+  part de passes choisies, Passing 99 / 11 : 0.662 / 0.043  (écart +0.620)
+  part de passes choisies, Dribbling 99 / 11 : 0.258 / 0.405  (écart -0.148)
+  part de passes choisies, Vision 99 / 11 : 0.343 / 0.235  (écart +0.108)
+  part de passes choisies, Decisions 99 / 11 : 0.265 / 0.527  (écart -0.262)

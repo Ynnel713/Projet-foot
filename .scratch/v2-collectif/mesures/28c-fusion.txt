@@ -1,0 +1,30 @@
+matchs : 50 ; grosses occasions : 387
+buts par match : 3.24
+tirs tracés par équipe : 22.92
+grosses occasions par match : 7.74
+par lot : [7.57, 5.57, 8.57, 9.43, 7.83, 7.83, 7.0, 8.0]
+grosses occasions sans tir (part) : 0.522
+grosses occasions : danger moyen au pic : 0.440
+grosses occasions, issue : ballon mort : corner (part) : 0.034
+grosses occasions, issue : ballon mort : sortie de but (part) : 0.023
+grosses occasions, issue : ballon non repris (part) : 0.124
+grosses occasions, issue : danger retombé (part) : 0.085
+grosses occasions, issue : dégagement (part) : 0.152
+grosses occasions, issue : fin de période (part) : 0.003
+grosses occasions, issue : gardien (part) : 0.039
+grosses occasions, issue : interception (part) : 0.054
+grosses occasions, issue : tacle (part) : 0.008
+grosses occasions, issue : tir : au-dessus (part) : 0.036
+grosses occasions, issue : tir : but (part) : 0.204
+grosses occasions, issue : tir : capté (part) : 0.062
+grosses occasions, issue : tir : claqué (part) : 0.026
+grosses occasions, issue : tir : contré (part) : 0.054
+grosses occasions, issue : tir : repoussé (part) : 0.083
+grosses occasions, issue : tir : à côté (part) : 0.013
+grosses occasions, origine : dribble (part) : 0.196
+grosses occasions, origine : passe au sol (part) : 0.171
+grosses occasions, origine : passe en profondeur (part) : 0.134
+grosses occasions, origine : passe en retrait (part) : 0.018
+grosses occasions, origine : penalty (part) : 0.003
+grosses occasions, origine : rebond (part) : 0.114
+grosses occasions, origine : récupération (part) : 0.364

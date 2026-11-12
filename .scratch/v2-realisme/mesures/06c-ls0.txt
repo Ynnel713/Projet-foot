@@ -1,0 +1,811 @@
+matchs : 4
+passes par minute : 9.672
+passes par match : 870.5
+passes par minute de jeu effectif : 11.79
+passes réussies (part) : 0.718
+passes chez l'adversaire (part) : 0.252
+receveur visé (part) : 0.699
+passes longues (part) : 0.012
+passes longues réussies (part) : 0.381
+passes en profondeur (part) : 0.005
+passes en profondeur réussies (part) : 0.312
+tirs par équipe : 19.375
+tirs de près (16 m) par équipe : 4.5
+part des tirs de près (16 m) : 0.232
+buts par match : 1.5
+hors-jeu par match : 0.75
+hors-jeu par équipe : 0.375
+touches par match : 28.75
+sorties de but par match : 17.75
+corners par match : 4.75
+engagements par match : 3.5
+touches jouées long (part) : 0.0
+sorties de but jouées long (part) : 0.282
+corners joués long (part) : 1.0
+temps de jeu effectif (part) : 0.757
+tacles par match : 37.75
+tirs tracés par équipe : 19.375
+tirs cadrés (part) : 0.297
+tirs contrés (part) : 0.161
+tirs à côté (part) : 0.31
+tirs au-dessus (part) : 0.148
+tirs dévissés (part) : 0.084
+conversion des tirs (part) : 0.039
+buts dans la surface (part) : 0.667
+qualité moyenne de l'occasion : 0.064
+arrêts par match : 10.0
+arrêts captés (part) : 0.625
+arrêts repoussés (part) : 0.225
+arrêts claqués (part) : 0.15
+grosses occasions par match : 6.0
+grosses occasions sans tir (part) : 0.583
+grosses occasions : danger moyen au pic : 0.536
+fautes par match : 10.5
+avantages acquis (part des fautes) : 0.024
+coups francs par match : 10.25
+penaltys par match : 0.0
+fautes inconsidérées (part) : 0.095
+fautes avec excès d'engagement (part) : 0.0
+coups francs du dernier tiers frappés au but (part) : 0.0
+profil haut : fautes par match : 7.5
+profil bas : fautes par match : 3.0
+pressings d'équipe déclenchés par match : 849.75
+pertes de balle par match : 338.75
+pertes en transition par match : 59.75
+tirs de contre par match (récupération dans son camp) : 3.0
+tirs de contre par match (récupération dans le camp adverse) : 26.75
+gardien : sorties par match : 3.25
+gardien : sorties réussies (part) : 0.0
+gardien : sorties hors de sa surface (part) : 0.077
+gardien : ballons libres à sa portée laissés par match : 29.75
+gardien : face-à-face par match : 28.25
+conduite : intervalles par match : 2321.5
+conduite : pertes par match : 93.75
+conduite : perte par intervalle (part) : 0.04
+conduite sans adversaire proche (gêne < 0,1) : intervalles par match : 125.0
+conduite sans adversaire proche (gêne < 0,1) : perte par intervalle (part) : 0.012
+conduite serrée (gêne >= 0,5) : intervalles par match : 1929.25
+conduite serrée (gêne >= 0,5) : perte par intervalle (part) : 0.045
+conduite : pertes par dépossession par match : 50.5
+conduite : pertes par touche trop longue par match : 43.25
+conduite : part des pertes par dépossession : 0.539
+gardien : placements sur tir en vol par match (deux gardiens) : 35.5
+tir à côté en vol : joueurs de champ en course vers le ballon par match : 134.5
+tir qui entre en vol : joueurs de champ en course vers le ballon par match : 81.0
+gardien : sorties disputées par match : 3.25
+gardien : sorties très disputées par match : 2.25
+gardien : sorties disputées gagnées (part) : 0.0
+gardien : courses gagnantes masquées, coéquipier plus rapide, par match : 17.5
+gardien : courses gagnantes masquées, coéquipier battu, par match : 2.5
+gardien : ballons avec sortie par match : 3.25
+gardien : ballons avec sortie, ballon à 3 s, au gardien (part) : 0.077
+gardien : ballons avec sortie, ballon à 3 s, à un coéquipier (part) : 0.077
+gardien : ballons avec sortie, ballon à 3 s, à l'adversaire (part) : 0.231
+gardien : ballons avec sortie, ballon à 3 s, encore libre (part) : 0.154
+gardien : ballons avec sortie, ballon à 3 s, sortie de but (part) : 0.077
+gardien : ballons avec sortie, ballon à 3 s, corner (part) : 0.385
+gardien : ballons avec sortie, ballon à 3 s, but encaissé ou marqué (engagement) (part) : 0.0
+gardien : ballons avec sortie, ballon à 3 s, autre arrêt de jeu (part) : 0.0
+gardien : ballons avec sortie, ballon issu d'un tir adverse des 5 s précédentes (part) : 0.385
+gardien : ballons avec sortie, tir adverse dans les 5 s (part) : 0.231
+gardien : ballons avec sortie hors tir par match : 2.0
+gardien : ballons avec sortie, non résolus en fin de match, par match : 0.0
+gardien : ballons avec sortie, état : tir : but (par match) : 0.0
+gardien : ballons avec sortie, état : tir : but, ballon à 3 s, au gardien (part) : None
+gardien : ballons avec sortie, état : tir : but, ballon à 3 s, à un coéquipier (part) : None
+gardien : ballons avec sortie, état : tir : but, ballon à 3 s, à l'adversaire (part) : None
+gardien : ballons avec sortie, état : tir : but, ballon à 3 s, encore libre (part) : None
+gardien : ballons avec sortie, état : tir : but, ballon à 3 s, sortie de but (part) : None
+gardien : ballons avec sortie, état : tir : but, ballon à 3 s, corner (part) : None
+gardien : ballons avec sortie, état : tir : but, ballon à 3 s, engagement (part) : None
+gardien : ballons avec sortie hors tir du 03i, état : tir : but (par match) : 0.0
+gardien : ballons avec sortie hors tir du 03i, état : tir : but, corner (par match) : 0.0
+gardien : ballons avec sortie, état : tir : à côté (par match) : 0.0
+gardien : ballons avec sortie, état : tir : à côté, ballon à 3 s, au gardien (part) : None
+gardien : ballons avec sortie, état : tir : à côté, ballon à 3 s, à un coéquipier (part) : None
+gardien : ballons avec sortie, état : tir : à côté, ballon à 3 s, à l'adversaire (part) : None
+gardien : ballons avec sortie, état : tir : à côté, ballon à 3 s, encore libre (part) : None
+gardien : ballons avec sortie, état : tir : à côté, ballon à 3 s, sortie de but (part) : None
+gardien : ballons avec sortie, état : tir : à côté, ballon à 3 s, corner (part) : None
+gardien : ballons avec sortie, état : tir : à côté, ballon à 3 s, engagement (part) : None
+gardien : ballons avec sortie hors tir du 03i, état : tir : à côté (par match) : 0.0
+gardien : ballons avec sortie hors tir du 03i, état : tir : à côté, corner (par match) : 0.0
+gardien : ballons avec sortie, état : tir : au-dessus (par match) : 0.0
+gardien : ballons avec sortie, état : tir : au-dessus, ballon à 3 s, au gardien (part) : None
+gardien : ballons avec sortie, état : tir : au-dessus, ballon à 3 s, à un coéquipier (part) : None
+gardien : ballons avec sortie, état : tir : au-dessus, ballon à 3 s, à l'adversaire (part) : None
+gardien : ballons avec sortie, état : tir : au-dessus, ballon à 3 s, encore libre (part) : None
+gardien : ballons avec sortie, état : tir : au-dessus, ballon à 3 s, sortie de but (part) : None
+gardien : ballons avec sortie, état : tir : au-dessus, ballon à 3 s, corner (part) : None
+gardien : ballons avec sortie, état : tir : au-dessus, ballon à 3 s, engagement (part) : None
+gardien : ballons avec sortie hors tir du 03i, état : tir : au-dessus (par match) : 0.0
+gardien : ballons avec sortie hors tir du 03i, état : tir : au-dessus, corner (par match) : 0.0
+gardien : ballons avec sortie, état : tir : dévissé (par match) : 0.0
+gardien : ballons avec sortie, état : tir : dévissé, ballon à 3 s, au gardien (part) : None
+gardien : ballons avec sortie, état : tir : dévissé, ballon à 3 s, à un coéquipier (part) : None
+gardien : ballons avec sortie, état : tir : dévissé, ballon à 3 s, à l'adversaire (part) : None
+gardien : ballons avec sortie, état : tir : dévissé, ballon à 3 s, encore libre (part) : None
+gardien : ballons avec sortie, état : tir : dévissé, ballon à 3 s, sortie de but (part) : None
+gardien : ballons avec sortie, état : tir : dévissé, ballon à 3 s, corner (part) : None
+gardien : ballons avec sortie, état : tir : dévissé, ballon à 3 s, engagement (part) : None
+gardien : ballons avec sortie hors tir du 03i, état : tir : dévissé (par match) : 0.0
+gardien : ballons avec sortie hors tir du 03i, état : tir : dévissé, corner (par match) : 0.0
+gardien : ballons avec sortie, état : tir : contré (par match) : 0.25
+gardien : ballons avec sortie, état : tir : contré, ballon à 3 s, au gardien (part) : 0.0
+gardien : ballons avec sortie, état : tir : contré, ballon à 3 s, à un coéquipier (part) : 0.0
+gardien : ballons avec sortie, état : tir : contré, ballon à 3 s, à l'adversaire (part) : 0.0
+gardien : ballons avec sortie, état : tir : contré, ballon à 3 s, encore libre (part) : 0.0
+gardien : ballons avec sortie, état : tir : contré, ballon à 3 s, sortie de but (part) : 0.0
+gardien : ballons avec sortie, état : tir : contré, ballon à 3 s, corner (part) : 1.0
+gardien : ballons avec sortie, état : tir : contré, ballon à 3 s, engagement (part) : 0.0
+gardien : ballons avec sortie hors tir du 03i, état : tir : contré (par match) : 0.0
+gardien : ballons avec sortie hors tir du 03i, état : tir : contré, corner (par match) : 0.0
+gardien : ballons avec sortie, état : tir : repoussé (par match) : 0.25
+gardien : ballons avec sortie, état : tir : repoussé, ballon à 3 s, au gardien (part) : 0.0
+gardien : ballons avec sortie, état : tir : repoussé, ballon à 3 s, à un coéquipier (part) : 1.0
+gardien : ballons avec sortie, état : tir : repoussé, ballon à 3 s, à l'adversaire (part) : 0.0
+gardien : ballons avec sortie, état : tir : repoussé, ballon à 3 s, encore libre (part) : 0.0
+gardien : ballons avec sortie, état : tir : repoussé, ballon à 3 s, sortie de but (part) : 0.0
+gardien : ballons avec sortie, état : tir : repoussé, ballon à 3 s, corner (part) : 0.0
+gardien : ballons avec sortie, état : tir : repoussé, ballon à 3 s, engagement (part) : 0.0
+gardien : ballons avec sortie hors tir du 03i, état : tir : repoussé (par match) : 0.0
+gardien : ballons avec sortie hors tir du 03i, état : tir : repoussé, corner (par match) : 0.0
+gardien : ballons avec sortie, état : tir : claqué (par match) : 0.75
+gardien : ballons avec sortie, état : tir : claqué, ballon à 3 s, au gardien (part) : 0.0
+gardien : ballons avec sortie, état : tir : claqué, ballon à 3 s, à un coéquipier (part) : 0.0
+gardien : ballons avec sortie, état : tir : claqué, ballon à 3 s, à l'adversaire (part) : 0.0
+gardien : ballons avec sortie, état : tir : claqué, ballon à 3 s, encore libre (part) : 0.0
+gardien : ballons avec sortie, état : tir : claqué, ballon à 3 s, sortie de but (part) : 0.0
+gardien : ballons avec sortie, état : tir : claqué, ballon à 3 s, corner (part) : 1.0
+gardien : ballons avec sortie, état : tir : claqué, ballon à 3 s, engagement (part) : 0.0
+gardien : ballons avec sortie hors tir du 03i, état : tir : claqué (par match) : 0.0
+gardien : ballons avec sortie hors tir du 03i, état : tir : claqué, corner (par match) : 0.0
+gardien : ballons avec sortie, état : tir : capté (par match) : 0.0
+gardien : ballons avec sortie, état : tir : capté, ballon à 3 s, au gardien (part) : None
+gardien : ballons avec sortie, état : tir : capté, ballon à 3 s, à un coéquipier (part) : None
+gardien : ballons avec sortie, état : tir : capté, ballon à 3 s, à l'adversaire (part) : None
+gardien : ballons avec sortie, état : tir : capté, ballon à 3 s, encore libre (part) : None
+gardien : ballons avec sortie, état : tir : capté, ballon à 3 s, sortie de but (part) : None
+gardien : ballons avec sortie, état : tir : capté, ballon à 3 s, corner (part) : None
+gardien : ballons avec sortie, état : tir : capté, ballon à 3 s, engagement (part) : None
+gardien : ballons avec sortie hors tir du 03i, état : tir : capté (par match) : 0.0
+gardien : ballons avec sortie hors tir du 03i, état : tir : capté, corner (par match) : 0.0
+gardien : ballons avec sortie, état : rebond sans tir récent (par match) : 0.0
+gardien : ballons avec sortie, état : rebond sans tir récent, ballon à 3 s, au gardien (part) : None
+gardien : ballons avec sortie, état : rebond sans tir récent, ballon à 3 s, à un coéquipier (part) : None
+gardien : ballons avec sortie, état : rebond sans tir récent, ballon à 3 s, à l'adversaire (part) : None
+gardien : ballons avec sortie, état : rebond sans tir récent, ballon à 3 s, encore libre (part) : None
+gardien : ballons avec sortie, état : rebond sans tir récent, ballon à 3 s, sortie de but (part) : None
+gardien : ballons avec sortie, état : rebond sans tir récent, ballon à 3 s, corner (part) : None
+gardien : ballons avec sortie, état : rebond sans tir récent, ballon à 3 s, engagement (part) : None
+gardien : ballons avec sortie hors tir du 03i, état : rebond sans tir récent (par match) : 0.0
+gardien : ballons avec sortie hors tir du 03i, état : rebond sans tir récent, corner (par match) : 0.0
+gardien : ballons avec sortie, état : passe ou centre (par match) : 1.0
+gardien : ballons avec sortie, état : passe ou centre, ballon à 3 s, au gardien (part) : 0.0
+gardien : ballons avec sortie, état : passe ou centre, ballon à 3 s, à un coéquipier (part) : 0.0
+gardien : ballons avec sortie, état : passe ou centre, ballon à 3 s, à l'adversaire (part) : 0.25
+gardien : ballons avec sortie, état : passe ou centre, ballon à 3 s, encore libre (part) : 0.5
+gardien : ballons avec sortie, état : passe ou centre, ballon à 3 s, sortie de but (part) : 0.25
+gardien : ballons avec sortie, état : passe ou centre, ballon à 3 s, corner (part) : 0.0
+gardien : ballons avec sortie, état : passe ou centre, ballon à 3 s, engagement (part) : 0.0
+gardien : ballons avec sortie hors tir du 03i, état : passe ou centre (par match) : 1.0
+gardien : ballons avec sortie hors tir du 03i, état : passe ou centre, corner (par match) : 0.0
+gardien : ballons avec sortie, état : autre (par match) : 1.0
+gardien : ballons avec sortie, état : autre, ballon à 3 s, au gardien (part) : 0.25
+gardien : ballons avec sortie, état : autre, ballon à 3 s, à un coéquipier (part) : 0.0
+gardien : ballons avec sortie, état : autre, ballon à 3 s, à l'adversaire (part) : 0.5
+gardien : ballons avec sortie, état : autre, ballon à 3 s, encore libre (part) : 0.0
+gardien : ballons avec sortie, état : autre, ballon à 3 s, sortie de but (part) : 0.0
+gardien : ballons avec sortie, état : autre, ballon à 3 s, corner (part) : 0.25
+gardien : ballons avec sortie, état : autre, ballon à 3 s, engagement (part) : 0.0
+gardien : ballons avec sortie hors tir du 03i, état : autre (par match) : 1.0
+gardien : ballons avec sortie hors tir du 03i, état : autre, corner (par match) : 0.25
+gardien : ballons avec sortie hors tir, ballon à 3 s, au gardien (part) : 0.125
+gardien : ballons avec sortie hors tir, ballon à 3 s, à un coéquipier (part) : 0.0
+gardien : ballons avec sortie hors tir, ballon à 3 s, à l'adversaire (part) : 0.375
+gardien : ballons avec sortie hors tir, ballon à 3 s, encore libre (part) : 0.25
+gardien : ballons avec sortie hors tir, ballon à 3 s, sortie de but (part) : 0.125
+gardien : ballons avec sortie hors tir, ballon à 3 s, corner (part) : 0.125
+gardien : ballons avec sortie hors tir, ballon à 3 s, engagement (part) : 0.0
+gardien : ballons avec course gagnante masquée, coéquipier plus rapide, par match : 17.5
+gardien : ballons avec course gagnante masquée, coéquipier battu, par match : 2.5
+face-à-face : tirs par match : 8.75
+appels par match : 917.25
+appels dans le dos par match : 18.0
+pressings par match : 883.0
+pressings suivis d'une récupération en 5 s (part) : 0.265
+profil haut : temps de pressing par match (s) : 1198.475
+profil bas : temps de pressing par match (s) : 1094.9
+temps de calcul par match (s) : 499.097
+passes sans gain suivies d'une passe qui fait avancer (part, C2) : 0.293
+retours au passeur en 3 s (part des passes réussies) : 0.032
+retours au passeur en 3 s hors une-deux (part) : 0.027
+une-deux par équipe et par match : 1.625
+troisième homme par équipe et par match : 16.375
+plans reçus par match : 177.75
+plans tenus (part) : 0.368
+plans abandonnés, ligne fermée (part) : 0.373
+plans abandonnés, cible non vue ou hors-jeu (part) : 0.117
+plans refusés, Teamwork (part) : 0.142
+calibration conduite, Dribbling [0 ; 40[ : intervalles par match : 62.75
+calibration conduite, Dribbling [0 ; 40[ : risque évalué (part) : 0.034
+calibration conduite, Dribbling [0 ; 40[ : perte tirée (part) : 0.032
+calibration conduite, Dribbling [0 ; 40[ : écart évalué / tirée (points) : -0.193
+calibration conduite, Dribbling [0 ; 40[ : perte avec tacle gagné (part) : 0.036
+calibration conduite, Dribbling [0 ; 40[ : écart évalué / avec tacle (points) : 0.206
+calibration conduite, Dribbling [40 ; 55[ : intervalles par match : 316.25
+calibration conduite, Dribbling [40 ; 55[ : risque évalué (part) : 0.041
+calibration conduite, Dribbling [40 ; 55[ : perte tirée (part) : 0.042
+calibration conduite, Dribbling [40 ; 55[ : écart évalué / tirée (points) : 0.111
+calibration conduite, Dribbling [40 ; 55[ : perte avec tacle gagné (part) : 0.043
+calibration conduite, Dribbling [40 ; 55[ : écart évalué / avec tacle (points) : 0.269
+calibration conduite, Dribbling [55 ; 70[ : intervalles par match : 1555.5
+calibration conduite, Dribbling [55 ; 70[ : risque évalué (part) : 0.041
+calibration conduite, Dribbling [55 ; 70[ : perte tirée (part) : 0.042
+calibration conduite, Dribbling [55 ; 70[ : écart évalué / tirée (points) : 0.089
+calibration conduite, Dribbling [55 ; 70[ : perte avec tacle gagné (part) : 0.043
+calibration conduite, Dribbling [55 ; 70[ : écart évalué / avec tacle (points) : 0.217
+calibration conduite, Dribbling [70 ; +[ : intervalles par match : 387.0
+calibration conduite, Dribbling [70 ; +[ : risque évalué (part) : 0.038
+calibration conduite, Dribbling [70 ; +[ : perte tirée (part) : 0.034
+calibration conduite, Dribbling [70 ; +[ : écart évalué / tirée (points) : -0.423
+calibration conduite, Dribbling [70 ; +[ : perte avec tacle gagné (part) : 0.036
+calibration conduite, Dribbling [70 ; +[ : écart évalué / avec tacle (points) : -0.165
+calibration conduite, gêne [0 ; 0.1[ : intervalles par match : 125.0
+calibration conduite, gêne [0 ; 0.1[ : risque évalué (part) : 0.006
+calibration conduite, gêne [0 ; 0.1[ : perte tirée (part) : 0.012
+calibration conduite, gêne [0 ; 0.1[ : écart évalué / tirée (points) : 0.572
+calibration conduite, gêne [0 ; 0.1[ : perte avec tacle gagné (part) : 0.012
+calibration conduite, gêne [0 ; 0.1[ : écart évalué / avec tacle (points) : 0.572
+calibration conduite, gêne [0.1 ; 0.3[ : intervalles par match : 78.75
+calibration conduite, gêne [0.1 ; 0.3[ : risque évalué (part) : 0.016
+calibration conduite, gêne [0.1 ; 0.3[ : perte tirée (part) : 0.019
+calibration conduite, gêne [0.1 ; 0.3[ : écart évalué / tirée (points) : 0.29
+calibration conduite, gêne [0.1 ; 0.3[ : perte avec tacle gagné (part) : 0.019
+calibration conduite, gêne [0.1 ; 0.3[ : écart évalué / avec tacle (points) : 0.29
+calibration conduite, gêne [0.3 ; 0.5[ : intervalles par match : 188.5
+calibration conduite, gêne [0.3 ; 0.5[ : risque évalué (part) : 0.027
+calibration conduite, gêne [0.3 ; 0.5[ : perte tirée (part) : 0.023
+calibration conduite, gêne [0.3 ; 0.5[ : écart évalué / tirée (points) : -0.469
+calibration conduite, gêne [0.3 ; 0.5[ : perte avec tacle gagné (part) : 0.023
+calibration conduite, gêne [0.3 ; 0.5[ : écart évalué / avec tacle (points) : -0.469
+calibration conduite, gêne [0.5 ; 0.7[ : intervalles par match : 641.5
+calibration conduite, gêne [0.5 ; 0.7[ : risque évalué (part) : 0.038
+calibration conduite, gêne [0.5 ; 0.7[ : perte tirée (part) : 0.039
+calibration conduite, gêne [0.5 ; 0.7[ : écart évalué / tirée (points) : 0.118
+calibration conduite, gêne [0.5 ; 0.7[ : perte avec tacle gagné (part) : 0.04
+calibration conduite, gêne [0.5 ; 0.7[ : écart évalué / avec tacle (points) : 0.196
+calibration conduite, gêne [0.7 ; 0.9[ : intervalles par match : 1275.0
+calibration conduite, gêne [0.7 ; 0.9[ : risque évalué (part) : 0.048
+calibration conduite, gêne [0.7 ; 0.9[ : perte tirée (part) : 0.048
+calibration conduite, gêne [0.7 ; 0.9[ : écart évalué / tirée (points) : -0.05
+calibration conduite, gêne [0.7 ; 0.9[ : perte avec tacle gagné (part) : 0.05
+calibration conduite, gêne [0.7 ; 0.9[ : écart évalué / avec tacle (points) : 0.185
+calibration conduite, gêne [0.9 ; +[ : intervalles par match : 12.75
+calibration conduite, gêne [0.9 ; +[ : risque évalué (part) : 0.055
+calibration conduite, gêne [0.9 ; +[ : perte tirée (part) : 0.039
+calibration conduite, gêne [0.9 ; +[ : écart évalué / tirée (points) : -1.6
+calibration conduite, gêne [0.9 ; +[ : perte avec tacle gagné (part) : 0.059
+calibration conduite, gêne [0.9 ; +[ : écart évalué / avec tacle (points) : 0.36
+passages APPEL / TENIR dans une possession par match : 1553.75
+passages APPEL / TENIR dans une possession : état de moins de 1,5 s (part) : 0.504
+appels arrêtés dans une possession, en moins de 1,5 s (part des APPEL qui se terminent par TENIR) : 0.36
+appelants simultanés d'une équipe en possession, moyenne : dernier tiers : 0.297
+appelants simultanés au-dessus du plafond du moteur, part des instants : dernier tiers : 0.0
+appelants simultanés d'une équipe en possession, moyenne : défense placée : 0.003
+appelants simultanés au-dessus du plafond du moteur, part des instants : défense placée : 0.0
+appelants simultanés d'une équipe en possession, moyenne : possession installée : 1.288
+appelants simultanés au-dessus du plafond du moteur, part des instants : possession installée : 0.027
+appelants simultanés d'une équipe en possession, moyenne : transition offensive : 2.282
+appelants simultanés au-dessus du plafond du moteur, part des instants : transition offensive : 0.0
+appels du banc, rôle au départ : appel (part) : 0.315
+appels du banc, rôle au départ : ballon libre (part) : 0.076
+appels du banc, rôle au départ : compensation (part) : 0.002
+appels du banc, rôle au départ : couverture (part) : 0.011
+appels du banc, rôle au départ : lecture de passe (part) : 0.002
+appels du banc, rôle au départ : marquage (part) : 0.01
+appels du banc, rôle au départ : porteur (part) : 0.001
+appels du banc, rôle au départ : presseur (part) : 0.007
+appels du banc, rôle au départ : receveur visé (part) : 0.17
+appels du banc, rôle au départ : replacement (part) : 0.065
+appels du banc, rôle au départ : repli (part) : 0.008
+appels du banc, rôle au départ : tenir sa place (part) : 0.332
+appelants simultanés d'une équipe, maximum de la série : dernier tiers : 3
+appelants simultanés d'une équipe, maximum de la série : défense placée : 3
+appelants simultanés d'une équipe, maximum de la série : possession installée : 3
+appelants simultanés d'une équipe, maximum de la série : transition offensive : 3
+choix dribble (part) : 0.73
+choix pass (part) : 0.257
+choix shot (part) : 0.012
+taux d'arrêt, distance 11-18 m : 0.75
+tirs cadrés jugés, distance 11-18 m (effectif) : 8
+taux d'arrêt, distance 18-25 m : 0.917
+tirs cadrés jugés, distance 18-25 m (effectif) : 12
+taux d'arrêt, distance 25 m et plus : 1.0
+tirs cadrés jugés, distance 25 m et plus (effectif) : 15
+taux d'arrêt, distance moins de 11 m : 0.727
+tirs cadrés jugés, distance moins de 11 m (effectif) : 11
+taux d'arrêt, vitesse 18-24 m/s : 0.962
+tirs cadrés jugés, vitesse 18-24 m/s (effectif) : 26
+taux d'arrêt, vitesse 24 m/s et plus : 0.75
+tirs cadrés jugés, vitesse 24 m/s et plus (effectif) : 20
+xG neutre par match : 2.455
+xG après frappe par match : 1.956
+xG neutre moyen par tir : 0.063
+xG après frappe moyen par tir non contré : 0.06
+décomposition du tir, Composure sous pression [40 ; 55[ : tirs (effectif) : 4
+décomposition du tir, Composure sous pression [40 ; 55[ : tirs non contrés (effectif) : 4
+décomposition du tir, Composure sous pression [40 ; 55[ : occasion, xG neutre moyen par tir : 0.018
+décomposition du tir, Composure sous pression [40 ; 55[ : exécution, gain par tir non contré : -0.027
+décomposition du tir, Composure sous pression [40 ; 55[ : gardien, gain par tir non contré : 0.0
+décomposition du tir, Composure sous pression [55 ; 70[ : tirs (effectif) : 31
+décomposition du tir, Composure sous pression [55 ; 70[ : tirs non contrés (effectif) : 25
+décomposition du tir, Composure sous pression [55 ; 70[ : occasion, xG neutre moyen par tir : 0.051
+décomposition du tir, Composure sous pression [55 ; 70[ : exécution, gain par tir non contré : -0.049
+décomposition du tir, Composure sous pression [55 ; 70[ : gardien, gain par tir non contré : 0.019
+décomposition du tir, Composure sous pression [70 ; +[ : tirs (effectif) : 102
+décomposition du tir, Composure sous pression [70 ; +[ : tirs non contrés (effectif) : 85
+décomposition du tir, Composure sous pression [70 ; +[ : occasion, xG neutre moyen par tir : 0.047
+décomposition du tir, Composure sous pression [70 ; +[ : exécution, gain par tir non contré : 0.007
+décomposition du tir, Composure sous pression [70 ; +[ : gardien, gain par tir non contré : 0.015
+décomposition du tir, Finishing (surface) [0 ; 40[ : tirs (effectif) : 2
+décomposition du tir, Finishing (surface) [0 ; 40[ : tirs non contrés (effectif) : 2
+décomposition du tir, Finishing (surface) [0 ; 40[ : occasion, xG neutre moyen par tir : 0.213
+décomposition du tir, Finishing (surface) [0 ; 40[ : exécution, gain par tir non contré : 0.626
+décomposition du tir, Finishing (surface) [0 ; 40[ : gardien, gain par tir non contré : -0.161
+décomposition du tir, Finishing (surface) [40 ; 55[ : tirs (effectif) : 6
+décomposition du tir, Finishing (surface) [40 ; 55[ : tirs non contrés (effectif) : 6
+décomposition du tir, Finishing (surface) [40 ; 55[ : occasion, xG neutre moyen par tir : 0.031
+décomposition du tir, Finishing (surface) [40 ; 55[ : exécution, gain par tir non contré : -0.036
+décomposition du tir, Finishing (surface) [40 ; 55[ : gardien, gain par tir non contré : 0.0
+décomposition du tir, Finishing (surface) [55 ; 70[ : tirs (effectif) : 9
+décomposition du tir, Finishing (surface) [55 ; 70[ : tirs non contrés (effectif) : 8
+décomposition du tir, Finishing (surface) [55 ; 70[ : occasion, xG neutre moyen par tir : 0.147
+décomposition du tir, Finishing (surface) [55 ; 70[ : exécution, gain par tir non contré : -0.14
+décomposition du tir, Finishing (surface) [55 ; 70[ : gardien, gain par tir non contré : 0.042
+décomposition du tir, Finishing (surface) [70 ; +[ : tirs (effectif) : 34
+décomposition du tir, Finishing (surface) [70 ; +[ : tirs non contrés (effectif) : 27
+décomposition du tir, Finishing (surface) [70 ; +[ : occasion, xG neutre moyen par tir : 0.176
+décomposition du tir, Finishing (surface) [70 ; +[ : exécution, gain par tir non contré : -0.092
+décomposition du tir, Finishing (surface) [70 ; +[ : gardien, gain par tir non contré : 0.014
+décomposition du tir, Long Shots (hors surface) [0 ; 40[ : tirs (effectif) : 32
+décomposition du tir, Long Shots (hors surface) [0 ; 40[ : tirs non contrés (effectif) : 28
+décomposition du tir, Long Shots (hors surface) [0 ; 40[ : occasion, xG neutre moyen par tir : 0.016
+décomposition du tir, Long Shots (hors surface) [0 ; 40[ : exécution, gain par tir non contré : -0.021
+décomposition du tir, Long Shots (hors surface) [0 ; 40[ : gardien, gain par tir non contré : 0.0
+décomposition du tir, Long Shots (hors surface) [70 ; +[ : tirs (effectif) : 72
+décomposition du tir, Long Shots (hors surface) [70 ; +[ : tirs non contrés (effectif) : 59
+décomposition du tir, Long Shots (hors surface) [70 ; +[ : occasion, xG neutre moyen par tir : 0.019
+décomposition du tir, Long Shots (hors surface) [70 ; +[ : exécution, gain par tir non contré : 0.034
+décomposition du tir, Long Shots (hors surface) [70 ; +[ : gardien, gain par tir non contré : 0.024
+décomposition du tir, Reflexes du gardien [55 ; 70[ : tirs (effectif) : 42
+décomposition du tir, Reflexes du gardien [55 ; 70[ : tirs non contrés (effectif) : 34
+décomposition du tir, Reflexes du gardien [55 ; 70[ : occasion, xG neutre moyen par tir : 0.06
+décomposition du tir, Reflexes du gardien [55 ; 70[ : exécution, gain par tir non contré : 0.046
+décomposition du tir, Reflexes du gardien [55 ; 70[ : gardien, gain par tir non contré : -0.001
+décomposition du tir, Reflexes du gardien [70 ; +[ : tirs (effectif) : 113
+décomposition du tir, Reflexes du gardien [70 ; +[ : tirs non contrés (effectif) : 96
+décomposition du tir, Reflexes du gardien [70 ; +[ : occasion, xG neutre moyen par tir : 0.064
+décomposition du tir, Reflexes du gardien [70 ; +[ : exécution, gain par tir non contré : -0.028
+décomposition du tir, Reflexes du gardien [70 ; +[ : gardien, gain par tir non contré : 0.019
+décomposition du tir, tous : tirs (effectif) : 155
+décomposition du tir, tous : tirs non contrés (effectif) : 130
+décomposition du tir, tous : occasion, xG neutre moyen par tir : 0.063
+décomposition du tir, tous : exécution, gain par tir non contré : -0.009
+décomposition du tir, tous : gardien, gain par tir non contré : 0.014
+calibration xG après frappe, tirs cadrés jugés : xG après frappe moins buts, par match : 0.456
+calibration xG après frappe, tirs cadrés jugés : xG après frappe moins buts à l'étalement 0.05 m, par match : 0.23
+calibration xG après frappe, tirs cadrés jugés : xG après frappe moins buts à l'étalement 0.1 m, par match : 0.325
+calibration xG après frappe, tirs cadrés jugés : xG après frappe moins buts à l'étalement 0.15 m, par match : 0.456
+calibration xG après frappe, tirs cadrés jugés : xG après frappe moins buts à l'étalement 0.2 m, par match : 0.596
+calibration xG après frappe, tirs cadrés jugés : xG après frappe moins buts à l'étalement 0.3 m, par match : 0.888
+calibration xG neutre, tireurs moyens, toutes tranches : tirs (effectif) : 9
+calibration xG neutre, tireurs moyens, toutes tranches : xG neutre moyen : 0.147
+calibration xG neutre, tireurs moyens, toutes tranches : taux de buts : 0.0
+calibration xG neutre, tireurs moyens, toutes tranches : taux de buts, IC95 bas : 0.0
+calibration xG neutre, tireurs moyens, toutes tranches : taux de buts, IC95 haut : 0.299
+calibration xG neutre, tireurs moyens, toutes tranches : buts moins xG, par match : -0.33
+calibration xG neutre, tireurs moyens, toutes tranches : étage contre, par match : 0.034
+calibration xG neutre, tireurs moyens, toutes tranches : étage exécution, par match : -0.279
+calibration xG neutre, tireurs moyens, toutes tranches : étage gardien, par match : -0.084
+calibration xG neutre, tireurs moyens, xG [0 ; 0.03[ : tirs (effectif) : 3
+calibration xG neutre, tireurs moyens, xG [0 ; 0.03[ : xG neutre moyen : 0.022
+calibration xG neutre, tireurs moyens, xG [0 ; 0.03[ : taux de buts : 0.0
+calibration xG neutre, tireurs moyens, xG [0 ; 0.03[ : taux de buts, IC95 bas : 0.0
+calibration xG neutre, tireurs moyens, xG [0 ; 0.03[ : taux de buts, IC95 haut : 0.562
+calibration xG neutre, tireurs moyens, xG [0 ; 0.03[ : buts moins xG, par match : -0.017
+calibration xG neutre, tireurs moyens, xG [0 ; 0.03[ : étage contre, par match : -0.003
+calibration xG neutre, tireurs moyens, xG [0 ; 0.03[ : étage exécution, par match : -0.014
+calibration xG neutre, tireurs moyens, xG [0 ; 0.03[ : étage gardien, par match : 0.0
+calibration xG neutre, tireurs moyens, xG [0.03 ; 0.06[ : tirs (effectif) : 2
+calibration xG neutre, tireurs moyens, xG [0.03 ; 0.06[ : xG neutre moyen : 0.057
+calibration xG neutre, tireurs moyens, xG [0.03 ; 0.06[ : taux de buts : 0.0
+calibration xG neutre, tireurs moyens, xG [0.03 ; 0.06[ : taux de buts, IC95 bas : 0.0
+calibration xG neutre, tireurs moyens, xG [0.03 ; 0.06[ : taux de buts, IC95 haut : 0.658
+calibration xG neutre, tireurs moyens, xG [0.03 ; 0.06[ : buts moins xG, par match : -0.028
+calibration xG neutre, tireurs moyens, xG [0.03 ; 0.06[ : étage contre, par match : 0.01
+calibration xG neutre, tireurs moyens, xG [0.03 ; 0.06[ : étage exécution, par match : -0.038
+calibration xG neutre, tireurs moyens, xG [0.03 ; 0.06[ : étage gardien, par match : -0.001
+calibration xG neutre, tireurs moyens, xG [0.06 ; 0.1[ : tirs (effectif) : 1
+calibration xG neutre, tireurs moyens, xG [0.06 ; 0.1[ : xG neutre moyen : 0.073
+calibration xG neutre, tireurs moyens, xG [0.06 ; 0.1[ : taux de buts : 0.0
+calibration xG neutre, tireurs moyens, xG [0.06 ; 0.1[ : taux de buts, IC95 bas : 0.0
+calibration xG neutre, tireurs moyens, xG [0.06 ; 0.1[ : taux de buts, IC95 haut : 0.793
+calibration xG neutre, tireurs moyens, xG [0.06 ; 0.1[ : buts moins xG, par match : -0.018
+calibration xG neutre, tireurs moyens, xG [0.06 ; 0.1[ : étage contre, par match : 0.006
+calibration xG neutre, tireurs moyens, xG [0.06 ; 0.1[ : étage exécution, par match : 0.057
+calibration xG neutre, tireurs moyens, xG [0.06 ; 0.1[ : étage gardien, par match : -0.081
+calibration xG neutre, tireurs moyens, xG [0.1 ; 0.2[ : tirs (effectif) : 2
+calibration xG neutre, tireurs moyens, xG [0.1 ; 0.2[ : xG neutre moyen : 0.124
+calibration xG neutre, tireurs moyens, xG [0.1 ; 0.2[ : taux de buts : 0.0
+calibration xG neutre, tireurs moyens, xG [0.1 ; 0.2[ : taux de buts, IC95 bas : 0.0
+calibration xG neutre, tireurs moyens, xG [0.1 ; 0.2[ : taux de buts, IC95 haut : 0.658
+calibration xG neutre, tireurs moyens, xG [0.1 ; 0.2[ : buts moins xG, par match : -0.062
+calibration xG neutre, tireurs moyens, xG [0.1 ; 0.2[ : étage contre, par match : 0.021
+calibration xG neutre, tireurs moyens, xG [0.1 ; 0.2[ : étage exécution, par match : -0.081
+calibration xG neutre, tireurs moyens, xG [0.1 ; 0.2[ : étage gardien, par match : -0.001
+calibration xG neutre, tireurs moyens, xG [0.5 ; +[ : tirs (effectif) : 1
+calibration xG neutre, tireurs moyens, xG [0.5 ; +[ : xG neutre moyen : 0.821
+calibration xG neutre, tireurs moyens, xG [0.5 ; +[ : taux de buts : 0.0
+calibration xG neutre, tireurs moyens, xG [0.5 ; +[ : taux de buts, IC95 bas : 0.0
+calibration xG neutre, tireurs moyens, xG [0.5 ; +[ : taux de buts, IC95 haut : 0.793
+calibration xG neutre, tireurs moyens, xG [0.5 ; +[ : buts moins xG, par match : -0.205
+calibration xG neutre, tireurs moyens, xG [0.5 ; +[ : étage contre, par match : 0.0
+calibration xG neutre, tireurs moyens, xG [0.5 ; +[ : étage exécution, par match : -0.203
+calibration xG neutre, tireurs moyens, xG [0.5 ; +[ : étage gardien, par match : -0.002
+calibration xG neutre, tous les tireurs, toutes tranches : tirs (effectif) : 155
+calibration xG neutre, tous les tireurs, toutes tranches : xG neutre moyen : 0.063
+calibration xG neutre, tous les tireurs, toutes tranches : taux de buts : 0.039
+calibration xG neutre, tous les tireurs, toutes tranches : taux de buts, IC95 bas : 0.018
+calibration xG neutre, tous les tireurs, toutes tranches : taux de buts, IC95 haut : 0.082
+calibration xG neutre, tous les tireurs, toutes tranches : buts moins xG, par match : -0.955
+calibration xG neutre, tous les tireurs, toutes tranches : étage contre, par match : -0.218
+calibration xG neutre, tous les tireurs, toutes tranches : étage exécution, par match : -0.282
+calibration xG neutre, tous les tireurs, toutes tranches : étage gardien, par match : -0.456
+calibration xG neutre, tous les tireurs, xG [0 ; 0.03[ : tirs (effectif) : 105
+calibration xG neutre, tous les tireurs, xG [0 ; 0.03[ : xG neutre moyen : 0.016
+calibration xG neutre, tous les tireurs, xG [0 ; 0.03[ : taux de buts : 0.0
+calibration xG neutre, tous les tireurs, xG [0 ; 0.03[ : taux de buts, IC95 bas : 0.0
+calibration xG neutre, tous les tireurs, xG [0 ; 0.03[ : taux de buts, IC95 haut : 0.035
+calibration xG neutre, tous les tireurs, xG [0 ; 0.03[ : buts moins xG, par match : -0.426
+calibration xG neutre, tous les tireurs, xG [0 ; 0.03[ : étage contre, par match : 0.021
+calibration xG neutre, tous les tireurs, xG [0 ; 0.03[ : étage exécution, par match : -0.164
+calibration xG neutre, tous les tireurs, xG [0 ; 0.03[ : étage gardien, par match : -0.283
+calibration xG neutre, tous les tireurs, xG [0.03 ; 0.06[ : tirs (effectif) : 24
+calibration xG neutre, tous les tireurs, xG [0.03 ; 0.06[ : xG neutre moyen : 0.044
+calibration xG neutre, tous les tireurs, xG [0.03 ; 0.06[ : taux de buts : 0.083
+calibration xG neutre, tous les tireurs, xG [0.03 ; 0.06[ : taux de buts, IC95 bas : 0.023
+calibration xG neutre, tous les tireurs, xG [0.03 ; 0.06[ : taux de buts, IC95 haut : 0.258
+calibration xG neutre, tous les tireurs, xG [0.03 ; 0.06[ : buts moins xG, par match : 0.236
+calibration xG neutre, tous les tireurs, xG [0.03 ; 0.06[ : étage contre, par match : 0.025
+calibration xG neutre, tous les tireurs, xG [0.03 ; 0.06[ : étage exécution, par match : 0.385
+calibration xG neutre, tous les tireurs, xG [0.03 ; 0.06[ : étage gardien, par match : -0.173
+calibration xG neutre, tous les tireurs, xG [0.06 ; 0.1[ : tirs (effectif) : 8
+calibration xG neutre, tous les tireurs, xG [0.06 ; 0.1[ : xG neutre moyen : 0.073
+calibration xG neutre, tous les tireurs, xG [0.06 ; 0.1[ : taux de buts : 0.125
+calibration xG neutre, tous les tireurs, xG [0.06 ; 0.1[ : taux de buts, IC95 bas : 0.022
+calibration xG neutre, tous les tireurs, xG [0.06 ; 0.1[ : taux de buts, IC95 haut : 0.471
+calibration xG neutre, tous les tireurs, xG [0.06 ; 0.1[ : buts moins xG, par match : 0.103
+calibration xG neutre, tous les tireurs, xG [0.06 ; 0.1[ : étage contre, par match : 0.008
+calibration xG neutre, tous les tireurs, xG [0.06 ; 0.1[ : étage exécution, par match : 0.211
+calibration xG neutre, tous les tireurs, xG [0.06 ; 0.1[ : étage gardien, par match : -0.116
+calibration xG neutre, tous les tireurs, xG [0.1 ; 0.2[ : tirs (effectif) : 11
+calibration xG neutre, tous les tireurs, xG [0.1 ; 0.2[ : xG neutre moyen : 0.143
+calibration xG neutre, tous les tireurs, xG [0.1 ; 0.2[ : taux de buts : 0.091
+calibration xG neutre, tous les tireurs, xG [0.1 ; 0.2[ : taux de buts, IC95 bas : 0.016
+calibration xG neutre, tous les tireurs, xG [0.1 ; 0.2[ : taux de buts, IC95 haut : 0.377
+calibration xG neutre, tous les tireurs, xG [0.1 ; 0.2[ : buts moins xG, par match : -0.144
+calibration xG neutre, tous les tireurs, xG [0.1 ; 0.2[ : étage contre, par match : -0.075
+calibration xG neutre, tous les tireurs, xG [0.1 ; 0.2[ : étage exécution, par match : -0.096
+calibration xG neutre, tous les tireurs, xG [0.1 ; 0.2[ : étage gardien, par match : 0.026
+calibration xG neutre, tous les tireurs, xG [0.2 ; 0.35[ : tirs (effectif) : 1
+calibration xG neutre, tous les tireurs, xG [0.2 ; 0.35[ : xG neutre moyen : 0.254
+calibration xG neutre, tous les tireurs, xG [0.2 ; 0.35[ : taux de buts : 1.0
+calibration xG neutre, tous les tireurs, xG [0.2 ; 0.35[ : taux de buts, IC95 bas : 0.207
+calibration xG neutre, tous les tireurs, xG [0.2 ; 0.35[ : taux de buts, IC95 haut : 1.0
+calibration xG neutre, tous les tireurs, xG [0.2 ; 0.35[ : buts moins xG, par match : 0.186
+calibration xG neutre, tous les tireurs, xG [0.2 ; 0.35[ : étage contre, par match : 0.0
+calibration xG neutre, tous les tireurs, xG [0.2 ; 0.35[ : étage exécution, par match : 0.186
+calibration xG neutre, tous les tireurs, xG [0.2 ; 0.35[ : étage gardien, par match : 0.0
+calibration xG neutre, tous les tireurs, xG [0.35 ; 0.5[ : tirs (effectif) : 1
+calibration xG neutre, tous les tireurs, xG [0.35 ; 0.5[ : xG neutre moyen : 0.409
+calibration xG neutre, tous les tireurs, xG [0.35 ; 0.5[ : taux de buts : 0.0
+calibration xG neutre, tous les tireurs, xG [0.35 ; 0.5[ : taux de buts, IC95 bas : 0.0
+calibration xG neutre, tous les tireurs, xG [0.35 ; 0.5[ : taux de buts, IC95 haut : 0.793
+calibration xG neutre, tous les tireurs, xG [0.35 ; 0.5[ : buts moins xG, par match : -0.102
+calibration xG neutre, tous les tireurs, xG [0.35 ; 0.5[ : étage contre, par match : 0.0
+calibration xG neutre, tous les tireurs, xG [0.35 ; 0.5[ : étage exécution, par match : -0.095
+calibration xG neutre, tous les tireurs, xG [0.35 ; 0.5[ : étage gardien, par match : -0.007
+calibration xG neutre, tous les tireurs, xG [0.5 ; +[ : tirs (effectif) : 5
+calibration xG neutre, tous les tireurs, xG [0.5 ; +[ : xG neutre moyen : 0.847
+calibration xG neutre, tous les tireurs, xG [0.5 ; +[ : taux de buts : 0.2
+calibration xG neutre, tous les tireurs, xG [0.5 ; +[ : taux de buts, IC95 bas : 0.036
+calibration xG neutre, tous les tireurs, xG [0.5 ; +[ : taux de buts, IC95 haut : 0.624
+calibration xG neutre, tous les tireurs, xG [0.5 ; +[ : buts moins xG, par match : -0.808
+calibration xG neutre, tous les tireurs, xG [0.5 ; +[ : étage contre, par match : -0.197
+calibration xG neutre, tous les tireurs, xG [0.5 ; +[ : étage exécution, par match : -0.709
+calibration xG neutre, tous les tireurs, xG [0.5 ; +[ : étage gardien, par match : 0.097
+gardien par écart à la portée, écart (m) [-0.15 ; 0[ : tirs (effectif) : 4
+gardien par écart à la portée, écart (m) [-0.15 ; 0[ : xG après frappe moyen : 0.42
+gardien par écart à la portée, écart (m) [-0.15 ; 0[ : taux de buts : 0.0
+gardien par écart à la portée, écart (m) [-0.15 ; 0[ : xG après frappe moins buts, par match : 0.42
+gardien par écart à la portée, écart (m) [-0.3 ; -0.15[ : tirs (effectif) : 4
+gardien par écart à la portée, écart (m) [-0.3 ; -0.15[ : xG après frappe moyen : 0.155
+gardien par écart à la portée, écart (m) [-0.3 ; -0.15[ : taux de buts : 0.0
+gardien par écart à la portée, écart (m) [-0.3 ; -0.15[ : xG après frappe moins buts, par match : 0.155
+gardien par écart à la portée, écart (m) [-inf ; -0.3[ : tirs (effectif) : 32
+gardien par écart à la portée, écart (m) [-inf ; -0.3[ : xG après frappe moyen : 0.008
+gardien par écart à la portée, écart (m) [-inf ; -0.3[ : taux de buts : 0.0
+gardien par écart à la portée, écart (m) [-inf ; -0.3[ : xG après frappe moins buts, par match : 0.066
+gardien par écart à la portée, écart (m) [0 ; 0.15[ : tirs (effectif) : 2
+gardien par écart à la portée, écart (m) [0 ; 0.15[ : xG après frappe moyen : 0.641
+gardien par écart à la portée, écart (m) [0 ; 0.15[ : taux de buts : 1.0
+gardien par écart à la portée, écart (m) [0 ; 0.15[ : xG après frappe moins buts, par match : -0.179
+gardien par écart à la portée, écart (m) [0.3 ; +[ : tirs (effectif) : 4
+gardien par écart à la portée, écart (m) [0.3 ; +[ : xG après frappe moyen : 0.994
+gardien par écart à la portée, écart (m) [0.3 ; +[ : taux de buts : 1.0
+gardien par écart à la portée, écart (m) [0.3 ; +[ : xG après frappe moins buts, par match : -0.006
+tirs contrés, sortie 0-45° (part) : 0.12
+tirs contrés, sortie 135-180° (part) : 0.24
+tirs contrés, sortie 45-90° (part) : 0.2
+tirs contrés, sortie 90-135° (part) : 0.44
+tirs, origine : dribble (part) : 0.6
+tirs, origine : passe au sol (part) : 0.077
+tirs, origine : passe en profondeur (part) : 0.065
+tirs, origine : passe en retrait (part) : 0.019
+tirs, origine : rebond (part) : 0.019
+tirs, origine : récupération (part) : 0.219
+grosses occasions, issue : ballon mort : corner (part) : 0.125
+grosses occasions, issue : ballon non repris (part) : 0.042
+grosses occasions, issue : danger retombé (part) : 0.167
+grosses occasions, issue : dégagement (part) : 0.125
+grosses occasions, issue : interception (part) : 0.083
+grosses occasions, issue : tacle (part) : 0.042
+grosses occasions, issue : tir : au-dessus (part) : 0.042
+grosses occasions, issue : tir : but (part) : 0.083
+grosses occasions, issue : tir : capté (part) : 0.042
+grosses occasions, issue : tir : claqué (part) : 0.083
+grosses occasions, issue : tir : contré (part) : 0.083
+grosses occasions, issue : tir : à côté (part) : 0.083
+grosses occasions, origine : dribble (part) : 0.083
+grosses occasions, origine : passe au sol (part) : 0.125
+grosses occasions, origine : passe en profondeur (part) : 0.167
+grosses occasions, origine : passe en retrait (part) : 0.042
+grosses occasions, origine : rebond (part) : 0.25
+grosses occasions, origine : récupération (part) : 0.333
+part du temps en dernier tiers (deux équipes) : 0.073
+part du temps en défense placée (deux équipes) : 0.326
+part du temps en possession installée (deux équipes) : 0.278
+part du temps en transition défensive (deux équipes) : 0.174
+part du temps en transition offensive (deux équipes) : 0.149
+récupération 0-5 s (part) : 0.178
+récupération 12-15 s (part) : 0.086
+récupération 5-12 s (part) : 0.339
+récupération plus de 15 s (part) : 0.398
+km par joueur de champ, par poste :
+    AD : 15.02
+    AG : 14.85
+    BU : 17.04
+    DC : 13.73
+    LB : 12.36
+    MC : 14.28
+    MDC : 14.62
+    MOC : 15.43
+    RB : 12.59
+    tous : 14.33
+4 joueurs ou plus derrière le ballon 1 s après la perte (part) : 0.977
+alternances appel / tenir par joueur et par match : 119.763
+appelant retenu : passe ouverte pour le porteur (part) : 0.243
+appelants simultanés d'une équipe, maximum du match : dernier tiers : 3.0
+appelants simultanés d'une équipe, maximum du match : défense placée : 3.0
+appelants simultanés d'une équipe, maximum du match : possession installée : 3.0
+appelants simultanés d'une équipe, maximum du match : transition offensive : 3.0
+appels par joueur et par 90 min : 42.338
+appels par joueur et par 90 min : AD : 53.44
+appels par joueur et par 90 min : AG : 42.001
+appels par joueur et par 90 min : BU : 93.509
+appels par joueur et par 90 min : DC : 16.82
+appels par joueur et par 90 min : LB : 24.631
+appels par joueur et par 90 min : MC : 48.578
+appels par joueur et par 90 min : MDC : 44.523
+appels par joueur et par 90 min : MOC : 77.465
+appels par joueur et par 90 min : RB : 22.908
+appels par joueur et par match : AD : 58.0
+appels par joueur et par match : AG : 45.5
+appels par joueur et par match : BU : 101.375
+appels par joueur et par match : DC : 18.2
+appels par joueur et par match : LB : 26.667
+appels par joueur et par match : MC : 52.75
+appels par joueur et par match : MDC : 48.167
+appels par joueur et par match : MOC : 83.667
+appels par joueur et par match : RB : 24.75
+appels redondants (part) : 0.027
+attaquant le plus avancé à la passe : 2 m ou moins de la ligne (part) : 0.205
+attaquant le plus avancé à la passe : 5 m ou moins de la ligne (part) : 0.332
+attaquant le plus avancé à la passe : distance à la ligne (m) : 10.325
+baisse de la course intense en fin de match (part) : -0.143
+chance du tir (shot_probability) : 0.072
+chance du tir : gardien sur la bissectrice sans ligne (03b) : 0.073
+chance du tir : gardien à son point visé : 0.071
+compacité autour du ballon (m) : 13.002
+couverture du presseur (part) : 0.566
+distance au-dessus de 19,8 km/h (part) : 0.37
+distance au-dessus de 19,8 km/h par joueur (m) : AD : 4811.464
+distance au-dessus de 19,8 km/h par joueur (m) : AG : 5215.664
+distance au-dessus de 19,8 km/h par joueur (m) : BU : 6345.963
+distance au-dessus de 19,8 km/h par joueur (m) : DC : 5636.095
+distance au-dessus de 19,8 km/h par joueur (m) : LB : 4084.384
+distance au-dessus de 19,8 km/h par joueur (m) : MC : 5384.822
+distance au-dessus de 19,8 km/h par joueur (m) : MDC : 5963.871
+distance au-dessus de 19,8 km/h par joueur (m) : MOC : 5266.376
+distance au-dessus de 19,8 km/h par joueur (m) : RB : 4210.633
+distance au-dessus de 25 km/h (part) : 0.147
+distance défense-milieu avec ballon (m) : 19.119
+distance défense-milieu sans ballon (m) : 15.543
+distance maximale du gardien à son but (m) : 35.019
+distance milieu-attaque avec ballon (m) : 18.539
+distance milieu-attaque sans ballon (m) : 15.821
+distance moyenne du gardien à son but (m) : 11.964
+décisions avec au moins un triangle (part) : 0.181
+défense préventive : adversaires dans cette zone : 3.545
+défense préventive : joueurs derrière le ballon : 7.101
+face-à-face : chance du tir : 0.143
+face-à-face : gardien arrêté au tir (part) : 0.943
+face-à-face : gardien au tir, distance à sa ligne (m) : 3.59
+face-à-face : gardien au tir, vitesse (m/s) : 0.845
+face-à-face : gardien au tir, écart à la profondeur visée (m) : 1.241
+face-à-face : tireur au tir, distance au but (m) : 15.038
+gardien : sortie, avance sur l'adversaire (s) : 0.839
+gardien : sortie, point visé à son but (m) : 9.867
+gardien au tir : en placement ou face-à-face (part) : 1.0
+gardien au tir : écart au point visé (m) : 2.17
+gardien au tir : écart à la bissectrice (m) : 0.33
+gardien au tir : écart à la bissectrice sous le seuil (part) : 0.974
+gardien au tir : écart à son point visé réel (m) : 1.265
+gardien en placement : en course à plus de 5 m/s (part) : 0.02
+gardien en placement : saut de cible de plus de 1 m (part) : 0.01
+gardien en placement : saut de cible maximal du match (m) : 20.209
+gardien en placement : saut de cible moyen (m) : 0.131
+gardien, ballon loin : distance à sa ligne, ligne 25-35 m (m) : 12.933
+gardien, ballon loin : distance à sa ligne, ligne < 25 m (m) : 11.683
+gardien, ballon loin : distance à sa ligne, ligne >= 35 m (m) : 12.843
+gardien, ballon loin : écart à la ligne défensive, ligne 25-35 m (m) : 17.208
+gardien, ballon loin : écart à la ligne défensive, ligne < 25 m (m) : 7.278
+gardien, ballon loin : écart à la ligne défensive, ligne >= 35 m (m) : 33.7
+gardien, ballon à 12 à 25 m : distance à sa ligne (m) : 5.254
+gardien, ballon à 25 à 40 m : distance à sa ligne (m) : 7.774
+gardien, ballon à 40 m et plus : distance à sa ligne (m) : 12.412
+gardien, ballon à moins de 12 m : distance à sa ligne (m) : 5.371
+hauteur du bloc avec ballon (m) : 26.834
+hauteur du bloc sans ballon (m) : 33.205
+hauteur du bloc sans ballon, porteur libre (m) : 44.531
+hauteur du bloc sans ballon, porteur pressé (m) : 37.231
+largeur avec ballon (m) : 44.054
+largeur sans ballon (m) : 40.77
+longueur avec ballon (m) : 43.698
+longueur sans ballon (m) : 36.034
+part du temps du côté de son poste : AD : 0.99
+part du temps du côté de son poste : AG : 0.992
+part du temps du côté de son poste : LB : 0.995
+part du temps du côté de son poste : RB : 0.993
+part du temps du côté de son poste, hors transition : AD : 0.99
+part du temps du côté de son poste, hors transition : AG : 0.991
+part du temps du côté de son poste, hors transition : LB : 0.995
+part du temps du côté de son poste, hors transition : RB : 0.994
+passages APPEL / TENIR dans une possession par joueur et par match : 77.688
+passes par possession : 2.542
+pertes en transition (part des récupérations) : 0.176
+place moyenne avec ballon : AD : côté (m, négatif = gauche) : 19.87
+place moyenne avec ballon : AD : profondeur (m) : 56.748
+place moyenne avec ballon : AG : côté (m, négatif = gauche) : -22.41
+place moyenne avec ballon : AG : profondeur (m) : 53.812
+place moyenne avec ballon : BU : côté (m, négatif = gauche) : -0.394
+place moyenne avec ballon : BU : profondeur (m) : 64.238
+place moyenne avec ballon : DC : côté (m, négatif = gauche) : -0.185
+place moyenne avec ballon : DC : profondeur (m) : 24.484
+place moyenne avec ballon : LB : côté (m, négatif = gauche) : -19.01
+place moyenne avec ballon : LB : profondeur (m) : 32.488
+place moyenne avec ballon : MC : côté (m, négatif = gauche) : 1.83
+place moyenne avec ballon : MC : profondeur (m) : 38.886
+place moyenne avec ballon : MDC : côté (m, négatif = gauche) : -4.088
+place moyenne avec ballon : MDC : profondeur (m) : 33.089
+place moyenne avec ballon : MOC : côté (m, négatif = gauche) : -0.446
+place moyenne avec ballon : MOC : profondeur (m) : 52.328
+place moyenne avec ballon : RB : côté (m, négatif = gauche) : 18.715
+place moyenne avec ballon : RB : profondeur (m) : 33.134
+place moyenne sans ballon : AD : côté (m, négatif = gauche) : 18.933
+place moyenne sans ballon : AD : profondeur (m) : 54.741
+place moyenne sans ballon : AG : côté (m, négatif = gauche) : -19.666
+place moyenne sans ballon : AG : profondeur (m) : 52.581
+place moyenne sans ballon : BU : côté (m, négatif = gauche) : 0.45
+place moyenne sans ballon : BU : profondeur (m) : 63.904
+place moyenne sans ballon : DC : côté (m, négatif = gauche) : 0.574
+place moyenne sans ballon : DC : profondeur (m) : 32.096
+place moyenne sans ballon : LB : côté (m, négatif = gauche) : -17.134
+place moyenne sans ballon : LB : profondeur (m) : 37.556
+place moyenne sans ballon : MC : côté (m, négatif = gauche) : 2.039
+place moyenne sans ballon : MC : profondeur (m) : 44.583
+place moyenne sans ballon : MDC : côté (m, négatif = gauche) : -2.817
+place moyenne sans ballon : MDC : profondeur (m) : 40.172
+place moyenne sans ballon : MOC : côté (m, négatif = gauche) : 0.27
+place moyenne sans ballon : MOC : profondeur (m) : 53.496
+place moyenne sans ballon : RB : côté (m, négatif = gauche) : 17.598
+place moyenne sans ballon : RB : profondeur (m) : 37.353
+possession d'équipe (s) : 16.837
+possession installée : au moins 1 joueur derrière le ballon (part) : 0.995
+profil bas : appels dans le dos par joueur : 0.9
+profil bas : appels par joueur : 46.675
+profil bas : course intense par joueur (m) : 5201.277
+profil bas : distance presseur-porteur (m) : 1.38
+profil bas : espace des coéquipiers du porteur (m) : 13.715
+profil bas : hauteur du bloc sans ballon (m) : 31.704
+profil bas : km par joueur : 14.097
+profil bas : longueur (m) : 40.149
+profil bas : possession installée, 2 joueurs ou plus derrière le ballon (part) : 0.984
+profil bas : solutions de passe ouvertes (nombre) : 1.674
+profil bas : solutions faciles laissées au porteur adverse (nombre) : 1.311
+profil bas : solutions laissées au porteur adverse (nombre) : 1.724
+profil bas : stretch index (m) : 17.622
+profil bas : vitesse de repli à 1,5 s (m/s) : 1.468
+profil bas : écart-type distance défense-milieu (m) : 6.3
+profil bas : équilibre : appels devant le ballon maintenus (part) : 0.25
+profil haut : appels dans le dos par joueur : 0.9
+profil haut : appels par joueur : 45.05
+profil haut : course intense par joueur (m) : 5405.583
+profil haut : distance presseur-porteur (m) : 1.386
+profil haut : espace des coéquipiers du porteur (m) : 13.708
+profil haut : hauteur du bloc sans ballon (m) : 34.633
+profil haut : km par joueur : 14.561
+profil haut : longueur (m) : 39.459
+profil haut : possession installée, 2 joueurs ou plus derrière le ballon (part) : 0.984
+profil haut : solutions de passe ouvertes (nombre) : 1.724
+profil haut : solutions faciles laissées au porteur adverse (nombre) : 1.253
+profil haut : solutions laissées au porteur adverse (nombre) : 1.674
+profil haut : stretch index (m) : 17.339
+profil haut : vitesse de repli à 1,5 s (m/s) : 1.485
+profil haut : écart-type distance défense-milieu (m) : 6.28
+profil haut : équilibre : appels devant le ballon maintenus (part) : 0.0
+regroupement avec ballon : coéquipiers à moins de 5 m hors duel (part) : 0.043
+regroupement sans ballon : coéquipiers à moins de 5 m hors duel (part) : 0.122
+repli : latence (s) : 3.319
+repli : temps pour reformer le bloc (s) : 3.381
+repli : vitesse de recul (m/s) : -0.707
+repli : vitesse des joueurs devant le ballon à 1,5 s (m/s) : 1.476
+réussite moyenne des passes disponibles (part) : 0.557
+solutions de passe faciles (nombre) : 1.281
+solutions de passe ouvertes (nombre) : 1.698
+sprints par joueur et par match : 119.475
+sprints par joueur et par match : AD : 80.0
+sprints par joueur et par match : AG : 103.125
+sprints par joueur et par match : BU : 128.875
+sprints par joueur et par match : DC : 164.1
+sprints par joueur et par match : LB : 71.0
+sprints par joueur et par match : MC : 116.333
+sprints par joueur et par match : MDC : 151.833
+sprints par joueur et par match : MOC : 97.667
+sprints par joueur et par match : RB : 77.625
+stretch index avec ballon (m) : 18.717
+stretch index sans ballon (m) : 16.284
+suivi du ballon par le bloc, largeur (pente) : 0.317
+suivi du ballon par le bloc, longueur (pente) : 0.485
+supériorité locale des défenseurs (nombre) : 0.754
+surface avec ballon (m²) : 1376.586
+surface sans ballon (m²) : 1018.573
+temps au-dessus de 19,8 km/h (part) : 0.136
+temps au-dessus de 25 km/h (part) : 0.047
+temps par possession de joueur (s) : 2.965
+tir : chance de l'endroit (base_chance) : 0.088
+tir : distance au but (m) : 21.505
+écart ligne-ballon sans ballon (m) : 18.231
+écart ligne-ballon sans ballon, porteur libre (m) : 33.0
+écart ligne-ballon sans ballon, porteur pressé (m) : 18.553
+épisodes APPEL par joueur et par 90 min : 73.225
+épisodes APPEL par joueur et par 90 min : AD : 190.893
+épisodes APPEL par joueur et par 90 min : AG : 164.486
+épisodes APPEL par joueur et par 90 min : BU : 204.282
+épisodes APPEL par joueur et par 90 min : DC : 2.569
+épisodes APPEL par joueur et par 90 min : LB : 3.413
+épisodes APPEL par joueur et par 90 min : MC : 48.039
+épisodes APPEL par joueur et par 90 min : MDC : 9.256
+épisodes APPEL par joueur et par 90 min : MOC : 159.192
+épisodes APPEL par joueur et par 90 min : RB : 12.939

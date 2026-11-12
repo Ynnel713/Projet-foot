@@ -1,0 +1,1000 @@
+{
+ "buts": [
+  {
+   "match": 0,
+   "minute": 25.326666666666668,
+   "équipe": "home",
+   "buteur": "Cameron Archer",
+   "famille": "erreur adverse",
+   "détail": "contrôle raté",
+   "délai (s)": 7.9000000000000625
+  },
+  {
+   "match": 0,
+   "minute": 44.686666666666675,
+   "équipe": "home",
+   "buteur": "Marvin Senaya",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 3.700000000000472
+  },
+  {
+   "match": 1,
+   "minute": 3.2150000000000003,
+   "équipe": "away",
+   "buteur": "Antoine Mille",
+   "famille": "récupération",
+   "détail": "conduite",
+   "délai (s)": 2.1999999999999975
+  },
+  {
+   "match": 1,
+   "minute": 40.79666666666667,
+   "équipe": "away",
+   "buteur": "Jérémy Le Douaron",
+   "famille": "récupération",
+   "détail": "conduite",
+   "délai (s)": 4.299999999999926
+  },
+  {
+   "match": 1,
+   "minute": 46.225,
+   "équipe": "home",
+   "buteur": "Louis Mouton",
+   "famille": "erreur adverse",
+   "détail": "contrôle raté",
+   "délai (s)": 1.7999999999996419
+  },
+  {
+   "match": 1,
+   "minute": 57.120000000000005,
+   "équipe": "away",
+   "buteur": "Jérémy Le Douaron",
+   "famille": "récupération",
+   "détail": "conduite",
+   "délai (s)": 5.100000000000051
+  },
+  {
+   "match": 1,
+   "minute": 74.03166666666668,
+   "équipe": "home",
+   "buteur": "Louis Mouton",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 19.80000000000075
+  },
+  {
+   "match": 1,
+   "minute": 98.59,
+   "équipe": "home",
+   "buteur": "Amine El Ouazzani",
+   "famille": "récupération",
+   "détail": "tacle",
+   "délai (s)": 2.4999999999994316
+  },
+  {
+   "match": 2,
+   "minute": 7.371666666666667,
+   "équipe": "away",
+   "buteur": "Casper Tengstedt",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 2.59999999999998
+  },
+  {
+   "match": 2,
+   "minute": 26.436666666666667,
+   "équipe": "home",
+   "buteur": "Mohamed Bamba",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 8.09999999999988
+  },
+  {
+   "match": 2,
+   "minute": 53.28,
+   "équipe": "home",
+   "buteur": "Mohamed Bamba",
+   "famille": "récupération",
+   "détail": "conduite",
+   "délai (s)": 3.499999999999801
+  },
+  {
+   "match": 2,
+   "minute": 63.84166666666667,
+   "équipe": "home",
+   "buteur": "Mohamed Bamba",
+   "famille": "récupération",
+   "détail": "contre",
+   "délai (s)": 13.000000000000114
+  },
+  {
+   "match": 2,
+   "minute": 67.01333333333334,
+   "équipe": "away",
+   "buteur": "Casper Tengstedt",
+   "famille": "récupération",
+   "détail": "conduite",
+   "délai (s)": 2.8000000000000114
+  },
+  {
+   "match": 2,
+   "minute": 83.04333333333334,
+   "équipe": "home",
+   "buteur": "Jean-Victor Makengo",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 2.1999999999997044
+  },
+  {
+   "match": 2,
+   "minute": 84.10166666666667,
+   "équipe": "away",
+   "buteur": "Casper Tengstedt",
+   "famille": "jeu placé",
+   "détail": "engagement",
+   "délai (s)": 18.500000000000227
+  },
+  {
+   "match": 3,
+   "minute": 18.646666666666665,
+   "équipe": "away",
+   "buteur": "Junior Mwanga",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 1.899999999999764
+  },
+  {
+   "match": 3,
+   "minute": 55.72166666666667,
+   "équipe": "home",
+   "buteur": "Ayase Ueda",
+   "famille": "récupération",
+   "détail": "conduite",
+   "délai (s)": 1.8999999999999773
+  },
+  {
+   "match": 3,
+   "minute": 59.03,
+   "équipe": "away",
+   "buteur": "Amir Richardson",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 2.1999999999997044
+  },
+  {
+   "match": 3,
+   "minute": 67.56166666666667,
+   "équipe": "away",
+   "buteur": "Josh Maja",
+   "famille": "erreur adverse",
+   "détail": "contrôle raté",
+   "délai (s)": 22.300000000000182
+  },
+  {
+   "match": 3,
+   "minute": 72.06833333333334,
+   "équipe": "home",
+   "buteur": "Ayase Ueda",
+   "famille": "erreur adverse",
+   "détail": "touche trop longue",
+   "délai (s)": 13.300000000000693
+  },
+  {
+   "match": 3,
+   "minute": 93.71166666666667,
+   "équipe": "home",
+   "buteur": "Benjamin André",
+   "famille": "récupération",
+   "détail": "conduite",
+   "délai (s)": 2.8000000000000114
+  },
+  {
+   "match": 4,
+   "minute": 1.8166666666666667,
+   "équipe": "away",
+   "buteur": "Mohamed Amoura",
+   "famille": "erreur adverse",
+   "détail": "touche trop longue",
+   "délai (s)": 8.399999999999995
+  },
+  {
+   "match": 4,
+   "minute": 12.673333333333336,
+   "équipe": "away",
+   "buteur": "Mohamed Amoura",
+   "famille": "récupération",
+   "détail": "conduite",
+   "délai (s)": 7.8000000000001535
+  },
+  {
+   "match": 4,
+   "minute": 13.9,
+   "équipe": "away",
+   "buteur": "Sofiane Diop",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 10.400000000000027
+  },
+  {
+   "match": 4,
+   "minute": 34.96333333333334,
+   "équipe": "home",
+   "buteur": "Jean Vercruysse",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 1.4999999999999147
+  },
+  {
+   "match": 4,
+   "minute": 42.031666666666666,
+   "équipe": "away",
+   "buteur": "Mohamed Amoura",
+   "famille": "erreur adverse",
+   "détail": "contrôle raté",
+   "délai (s)": 19.09999999999968
+  },
+  {
+   "match": 4,
+   "minute": 54.05166666666667,
+   "équipe": "away",
+   "buteur": "Mohamed Amoura",
+   "famille": "jeu placé",
+   "détail": "après touche",
+   "délai (s)": 28.799999999999812
+  },
+  {
+   "match": 4,
+   "minute": 57.78,
+   "équipe": "home",
+   "buteur": "Edwin Quarshie",
+   "famille": "récupération",
+   "détail": "conduite",
+   "délai (s)": 4.799999999999898
+  },
+  {
+   "match": 4,
+   "minute": 58.913333333333334,
+   "équipe": "away",
+   "buteur": "Sofiane Diop",
+   "famille": "jeu placé",
+   "détail": "engagement",
+   "délai (s)": 22.99999999999997
+  },
+  {
+   "match": 4,
+   "minute": 60.925,
+   "équipe": "away",
+   "buteur": "Mohamed Amoura",
+   "famille": "erreur adverse",
+   "détail": "contrôle raté",
+   "délai (s)": 1.6999999999997328
+  },
+  {
+   "match": 4,
+   "minute": 72.18,
+   "équipe": "home",
+   "buteur": "Alexandre Lauray",
+   "famille": "récupération",
+   "détail": "conduite",
+   "délai (s)": 4.200000000000443
+  },
+  {
+   "match": 4,
+   "minute": 84.99166666666666,
+   "équipe": "away",
+   "buteur": "Mohamed Amoura",
+   "famille": "erreur adverse",
+   "détail": "touche trop longue",
+   "délai (s)": 7.19999999999942
+  },
+  {
+   "match": 4,
+   "minute": 88.76500000000001,
+   "équipe": "away",
+   "buteur": "Melvin Bard",
+   "famille": "récupération",
+   "détail": "tacle",
+   "délai (s)": 2.800000000000864
+  },
+  {
+   "match": 4,
+   "minute": 104.07000000000001,
+   "équipe": "away",
+   "buteur": "Mohamed Amoura",
+   "famille": "erreur adverse",
+   "détail": "contrôle raté",
+   "délai (s)": 1.8000000000000682
+  },
+  {
+   "match": 5,
+   "minute": 0.85,
+   "équipe": "away",
+   "buteur": "Amine Gouiri",
+   "famille": "récupération",
+   "détail": "conduite",
+   "délai (s)": 2.1999999999999975
+  },
+  {
+   "match": 5,
+   "minute": 4.465000000000001,
+   "équipe": "away",
+   "buteur": "Amine Gouiri",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 6.100000000000048
+  },
+  {
+   "match": 5,
+   "minute": 6.628333333333334,
+   "équipe": "away",
+   "buteur": "Amine Gouiri",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 4.600000000000026
+  },
+  {
+   "match": 5,
+   "minute": 15.330000000000002,
+   "équipe": "home",
+   "buteur": "Loïs Openda",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 5.200000000000067
+  },
+  {
+   "match": 5,
+   "minute": 20.706666666666667,
+   "équipe": "away",
+   "buteur": "Himad Abdelli",
+   "famille": "récupération",
+   "détail": "conduite",
+   "délai (s)": 1.8999999999999773
+  },
+  {
+   "match": 5,
+   "minute": 50.27333333333333,
+   "équipe": "home",
+   "buteur": "Pavel Sulc",
+   "famille": "erreur adverse",
+   "détail": "contrôle raté",
+   "délai (s)": 12.799999999999443
+  },
+  {
+   "match": 5,
+   "minute": 77.44000000000001,
+   "équipe": "away",
+   "buteur": "Amine Gouiri",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 3.9000000000007162
+  },
+  {
+   "match": 5,
+   "minute": 92.62333333333335,
+   "équipe": "away",
+   "buteur": "Amine Gouiri",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 1.8000000000009209
+  },
+  {
+   "match": 6,
+   "minute": 16.136666666666667,
+   "équipe": "away",
+   "buteur": "Ousmane Dembélé",
+   "famille": "récupération",
+   "détail": "conduite",
+   "délai (s)": 1.799999999999855
+  },
+  {
+   "match": 6,
+   "minute": 26.913333333333338,
+   "équipe": "away",
+   "buteur": "Ousmane Dembélé",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 4.200000000000017
+  },
+  {
+   "match": 6,
+   "minute": 39.215,
+   "équipe": "away",
+   "buteur": "João Neves",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 2.1000000000002217
+  },
+  {
+   "match": 6,
+   "minute": 51.22833333333334,
+   "équipe": "home",
+   "buteur": "Lassine Sinayoko",
+   "famille": "récupération",
+   "détail": "tacle",
+   "délai (s)": 1.8999999999999773
+  },
+  {
+   "match": 6,
+   "minute": 92.55833333333334,
+   "équipe": "away",
+   "buteur": "Ousmane Dembélé",
+   "famille": "récupération",
+   "détail": "conduite",
+   "délai (s)": 2.3999999999995225
+  },
+  {
+   "match": 6,
+   "minute": 95.20333333333335,
+   "équipe": "away",
+   "buteur": "João Neves",
+   "famille": "récupération",
+   "détail": "tacle",
+   "délai (s)": 1.6000000000002501
+  },
+  {
+   "match": 7,
+   "minute": 78.96166666666666,
+   "équipe": "away",
+   "buteur": "Conrad Harder",
+   "famille": "récupération",
+   "détail": "conduite",
+   "délai (s)": 2.6999999999992497
+  },
+  {
+   "match": 8,
+   "minute": 2.5933333333333337,
+   "équipe": "away",
+   "buteur": "Estéban Lepaul",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 2.6000000000000334
+  },
+  {
+   "match": 8,
+   "minute": 26.330000000000002,
+   "équipe": "away",
+   "buteur": "Ludovic Blas",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 4.699999999999989
+  },
+  {
+   "match": 8,
+   "minute": 40.44500000000001,
+   "équipe": "away",
+   "buteur": "Estéban Lepaul",
+   "famille": "touche",
+   "détail": "touche",
+   "délai (s)": 11.900000000000261
+  },
+  {
+   "match": 8,
+   "minute": 41.5,
+   "équipe": "away",
+   "buteur": "Estéban Lepaul",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 4.699999999999989
+  },
+  {
+   "match": 8,
+   "minute": 53.645,
+   "équipe": "home",
+   "buteur": "Kamory Doumbia",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 1.9999999999998863
+  },
+  {
+   "match": 8,
+   "minute": 56.951666666666675,
+   "équipe": "away",
+   "buteur": "Estéban Lepaul",
+   "famille": "récupération",
+   "détail": "conduite",
+   "délai (s)": 2.100000000000648
+  },
+  {
+   "match": 8,
+   "minute": 79.81500000000001,
+   "équipe": "away",
+   "buteur": "Estéban Lepaul",
+   "famille": "récupération",
+   "détail": "conduite",
+   "délai (s)": 4.900000000000659
+  },
+  {
+   "match": 8,
+   "minute": 86.83,
+   "équipe": "away",
+   "buteur": "Estéban Lepaul",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 3.1999999999996476
+  },
+  {
+   "match": 8,
+   "minute": 88.84,
+   "équipe": "away",
+   "buteur": "Estéban Lepaul",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 7.599999999999909
+  },
+  {
+   "match": 8,
+   "minute": 89.78500000000001,
+   "équipe": "away",
+   "buteur": "Ludovic Blas",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 1.6000000000002501
+  },
+  {
+   "match": 8,
+   "minute": 99.70333333333335,
+   "équipe": "away",
+   "buteur": "Estéban Lepaul",
+   "famille": "récupération",
+   "détail": "conduite",
+   "délai (s)": 2.200000000000557
+  },
+  {
+   "match": 9,
+   "minute": 32.305,
+   "équipe": "away",
+   "buteur": "Matthis Abline",
+   "famille": "récupération",
+   "détail": "conduite",
+   "délai (s)": 6.899999999999693
+  },
+  {
+   "match": 9,
+   "minute": 74.22833333333332,
+   "équipe": "home",
+   "buteur": "Romain Faivre",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 2.4999999999994316
+  },
+  {
+   "match": 10,
+   "minute": 43.14,
+   "équipe": "home",
+   "buteur": "Haris Belkebla",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 1.8999999999999773
+  },
+  {
+   "match": 10,
+   "minute": 50.39666666666667,
+   "équipe": "home",
+   "buteur": "Amine El Ouazzani",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 6.099999999999994
+  },
+  {
+   "match": 10,
+   "minute": 61.076666666666675,
+   "équipe": "home",
+   "buteur": "Louis Mouton",
+   "famille": "récupération",
+   "détail": "conduite",
+   "délai (s)": 2.400000000000375
+  },
+  {
+   "match": 10,
+   "minute": 64.21833333333333,
+   "équipe": "home",
+   "buteur": "Amine El Ouazzani",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 11.399999999999864
+  },
+  {
+   "match": 10,
+   "minute": 82.51666666666667,
+   "équipe": "home",
+   "buteur": "Branco van den Boomen",
+   "famille": "erreur adverse",
+   "détail": "touche trop longue",
+   "délai (s)": 2.9999999999998295
+  },
+  {
+   "match": 10,
+   "minute": 88.93666666666668,
+   "équipe": "away",
+   "buteur": "Jérémy Le Douaron",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 10.7000000000005
+  },
+  {
+   "match": 11,
+   "minute": 11.736666666666668,
+   "équipe": "home",
+   "buteur": "Isak Jensen",
+   "famille": "récupération",
+   "détail": "conduite",
+   "délai (s)": 2.4000000000000554
+  },
+  {
+   "match": 11,
+   "minute": 83.42333333333335,
+   "équipe": "home",
+   "buteur": "Mohamed Bamba",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 5.000000000000568
+  },
+  {
+   "match": 12,
+   "minute": 6.8133333333333335,
+   "équipe": "home",
+   "buteur": "Ayase Ueda",
+   "famille": "récupération",
+   "détail": "conduite",
+   "délai (s)": 8.099999999999987
+  },
+  {
+   "match": 12,
+   "minute": 60.910000000000004,
+   "équipe": "home",
+   "buteur": "Ayase Ueda",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 2.30000000000004
+  },
+  {
+   "match": 13,
+   "minute": 36.34166666666667,
+   "équipe": "away",
+   "buteur": "Mohamed Amoura",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 1.7999999999996419
+  },
+  {
+   "match": 13,
+   "minute": 58.08666666666667,
+   "équipe": "home",
+   "buteur": "Louis Mafouta",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 2.7000000000005286
+  },
+  {
+   "match": 13,
+   "minute": 65.725,
+   "équipe": "away",
+   "buteur": "Mohamed Amoura",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 22.39999999999924
+  },
+  {
+   "match": 13,
+   "minute": 80.145,
+   "équipe": "away",
+   "buteur": "Mohamed Amoura",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 19.19999999999959
+  },
+  {
+   "match": 13,
+   "minute": 87.29333333333334,
+   "équipe": "home",
+   "buteur": "Louis Mafouta",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 5.699999999999932
+  },
+  {
+   "match": 13,
+   "minute": 93.47666666666667,
+   "équipe": "home",
+   "buteur": "Billal Brahimi",
+   "famille": "coup de pied arrêté",
+   "détail": "corner",
+   "délai (s)": 8.89999999999958
+  },
+  {
+   "match": 14,
+   "minute": 18.40666666666667,
+   "équipe": "away",
+   "buteur": "Amine Gouiri",
+   "famille": "récupération",
+   "détail": "conduite",
+   "délai (s)": 6.700000000000088
+  },
+  {
+   "match": 14,
+   "minute": 62.44500000000001,
+   "équipe": "away",
+   "buteur": "Amine Gouiri",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 48.50000000000023
+  },
+  {
+   "match": 14,
+   "minute": 79.32833333333333,
+   "équipe": "away",
+   "buteur": "Amine Gouiri",
+   "famille": "récupération",
+   "détail": "tacle",
+   "délai (s)": 15.199999999999818
+  },
+  {
+   "match": 15,
+   "minute": 16.02,
+   "équipe": "home",
+   "buteur": "Lassine Sinayoko",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 1.799999999999855
+  },
+  {
+   "match": 15,
+   "minute": 27.693333333333335,
+   "équipe": "away",
+   "buteur": "Ousmane Dembélé",
+   "famille": "récupération",
+   "détail": "conduite",
+   "délai (s)": 9.299999999999855
+  },
+  {
+   "match": 15,
+   "minute": 39.92,
+   "équipe": "away",
+   "buteur": "Khvicha Kvaratskhelia",
+   "famille": "récupération",
+   "détail": "tacle",
+   "délai (s)": 6.80000000000021
+  },
+  {
+   "match": 15,
+   "minute": 81.87833333333333,
+   "équipe": "home",
+   "buteur": "Lassine Sinayoko",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 7.299999999999329
+  },
+  {
+   "match": 15,
+   "minute": 85.91833333333334,
+   "équipe": "away",
+   "buteur": "Ousmane Dembélé",
+   "famille": "récupération",
+   "détail": "conduite",
+   "délai (s)": 1.4999999999994884
+  },
+  {
+   "match": 15,
+   "minute": 92.07666666666667,
+   "équipe": "home",
+   "buteur": "Lassine Sinayoko",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 29.199999999999875
+  },
+  {
+   "match": 16,
+   "minute": 4.07,
+   "équipe": "home",
+   "buteur": "Matthieu Udol",
+   "famille": "erreur adverse",
+   "détail": "touche trop longue",
+   "délai (s)": 2.1000000000000085
+  },
+  {
+   "match": 16,
+   "minute": 25.35166666666667,
+   "équipe": "away",
+   "buteur": "Conrad Harder",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 6.400000000000148
+  },
+  {
+   "match": 16,
+   "minute": 27.34,
+   "équipe": "home",
+   "buteur": "Odsonne Édouard",
+   "famille": "erreur adverse",
+   "détail": "contrôle raté",
+   "délai (s)": 1.8999999999999773
+  },
+  {
+   "match": 16,
+   "minute": 33.36666666666667,
+   "équipe": "home",
+   "buteur": "Florian Thauvin",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 1.8000000000000682
+  },
+  {
+   "match": 16,
+   "minute": 40.01,
+   "équipe": "away",
+   "buteur": "Conrad Harder",
+   "famille": "erreur adverse",
+   "détail": "touche trop longue",
+   "délai (s)": 2.9999999999998295
+  },
+  {
+   "match": 16,
+   "minute": 69.48666666666666,
+   "équipe": "away",
+   "buteur": "Conrad Harder",
+   "famille": "erreur adverse",
+   "détail": "contrôle raté",
+   "délai (s)": 2.9999999999998295
+  },
+  {
+   "match": 17,
+   "minute": 1.985,
+   "équipe": "away",
+   "buteur": "Adrien Thomasson",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 2.1000000000000085
+  },
+  {
+   "match": 17,
+   "minute": 12.051666666666668,
+   "équipe": "home",
+   "buteur": "Mama Baldé",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 6.6000000000000725
+  },
+  {
+   "match": 17,
+   "minute": 25.57,
+   "équipe": "home",
+   "buteur": "Lucas Tousart",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 1.799999999999855
+  },
+  {
+   "match": 17,
+   "minute": 33.18833333333334,
+   "équipe": "away",
+   "buteur": "Estéban Lepaul",
+   "famille": "récupération",
+   "détail": "conduite",
+   "délai (s)": 2.0000000000003126
+  },
+  {
+   "match": 17,
+   "minute": 42.108333333333334,
+   "équipe": "away",
+   "buteur": "Estéban Lepaul",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 30.999999999999943
+  },
+  {
+   "match": 17,
+   "minute": 65.20166666666667,
+   "équipe": "away",
+   "buteur": "Estéban Lepaul",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 2.0999999999997954
+  },
+  {
+   "match": 18,
+   "minute": 5.5200000000000005,
+   "équipe": "away",
+   "buteur": "Matthis Abline",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 14.499999999999975
+  },
+  {
+   "match": 18,
+   "minute": 23.291666666666668,
+   "équipe": "home",
+   "buteur": "Cameron Archer",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 1.8999999999999773
+  },
+  {
+   "match": 18,
+   "minute": 76.88000000000001,
+   "équipe": "away",
+   "buteur": "Matthis Abline",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 2.100000000000648
+  },
+  {
+   "match": 19,
+   "minute": 18.966666666666665,
+   "équipe": "away",
+   "buteur": "Jérémy Le Douaron",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 2.2999999999998266
+  },
+  {
+   "match": 19,
+   "minute": 27.325,
+   "équipe": "away",
+   "buteur": "Jérémy Le Douaron",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 8.499999999999943
+  },
+  {
+   "match": 19,
+   "minute": 40.251666666666665,
+   "équipe": "home",
+   "buteur": "Amine El Ouazzani",
+   "famille": "récupération",
+   "détail": "interception",
+   "délai (s)": 6.599999999999966
+  },
+  {
+   "match": 19,
+   "minute": 73.28166666666668,
+   "équipe": "away",
+   "buteur": "Merwan Ifnaoui",
+   "famille": "récupération",
+   "détail": "conduite",
+   "délai (s)": 2.100000000000648
+  },
+  {
+   "match": 19,
+   "minute": 74.61833333333334,
+   "équipe": "home",
+   "buteur": "Amine El Ouazzani",
+   "famille": "erreur adverse",
+   "détail": "contrôle raté",
+   "délai (s)": 2.400000000000375
+  },
+  {
+   "match": 19,
+   "minute": 94.05,
+   "équipe": "away",
+   "buteur": "Mouhamed Diop",
+   "famille": "récupération",
+   "détail": "conduite",
+   "délai (s)": 1.9999999999998863
+  }
+ ],
+ "parts": {
+  "buts": 108,
+  "par famille": {
+   "coup de pied arrêté": 0.009259259259259259,
+   "touche": 0.009259259259259259,
+   "jeu placé": 0.027777777777777776,
+   "erreur adverse": 0.14814814814814814,
+   "récupération": 0.8055555555555556,
+   "inclassable": 0.0
+  },
+  "par détail": {
+   "coup de pied arrêté : corner": 0.009259259259259259,
+   "erreur adverse : contrôle raté": 0.09259259259259259,
+   "erreur adverse : touche trop longue": 0.05555555555555555,
+   "jeu placé : après touche": 0.009259259259259259,
+   "jeu placé : engagement": 0.018518518518518517,
+   "récupération : conduite": 0.25925925925925924,
+   "récupération : contre": 0.009259259259259259,
+   "récupération : interception": 0.48148148148148145,
+   "récupération : tacle": 0.05555555555555555,
+   "touche : touche": 0.009259259259259259
+  },
+  "inclassables": []
+ }
+}

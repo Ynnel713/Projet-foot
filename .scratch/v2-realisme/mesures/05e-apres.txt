@@ -1,0 +1,27 @@
+5804 tirs sur 120 matchs ; buts 0.093, chance évaluée 0.090
+par chance évaluée
+      [0 ; 0.03[   1888 tirs  chance 0.016  observé 0.021 [0.015 ; 0.028]  calibrée
+   [0.03 ; 0.06[   1575 tirs  chance 0.043  observé 0.052 [0.042 ; 0.064]  calibrée
+    [0.06 ; 0.1[    870 tirs  chance 0.077  observé 0.084 [0.067 ; 0.104]  calibrée
+     [0.1 ; 0.2[    820 tirs  chance 0.140  observé 0.152 [0.129 ; 0.179]  calibrée
+    [0.2 ; 0.35[    437 tirs  chance 0.256  observé 0.231 [0.194 ; 0.273]  calibrée
+    [0.35 ; 0.5[     89 tirs  chance 0.429  observé 0.371 [0.278 ; 0.475]  calibrée
+    [0.5 ; 1.01[    125 tirs  chance 0.758  observé 0.712 [0.627 ; 0.784]  calibrée
+par distance (m)
+         [0 ; 8[    230 tirs  chance 0.460  observé 0.461 [0.398 ; 0.525]  calibrée
+        [8 ; 12[    306 tirs  chance 0.280  observé 0.291 [0.243 ; 0.344]  calibrée
+       [12 ; 16[    494 tirs  chance 0.191  observé 0.146 [0.117 ; 0.180]  ÉCART
+       [16 ; 20[    898 tirs  chance 0.105  observé 0.122 [0.103 ; 0.146]  calibrée
+       [20 ; 25[   2014 tirs  chance 0.051  observé 0.056 [0.046 ; 0.066]  calibrée
+     [25 ; 30.1[   1862 tirs  chance 0.023  observé 0.028 [0.022 ; 0.037]  calibrée
+par angle (°)
+        [0 ; 15[   1344 tirs  chance 0.028  observé 0.024 [0.017 ; 0.033]  calibrée
+       [15 ; 25[   3593 tirs  chance 0.062  observé 0.071 [0.063 ; 0.080]  ÉCART
+       [25 ; 40[    576 tirs  chance 0.241  observé 0.219 [0.187 ; 0.254]  calibrée
+    [40 ; 180.1[    291 tirs  chance 0.433  observé 0.440 [0.384 ; 0.497]  calibrée
+contre, par chance de contre prévue
+      [0 ; 0.05[   1382 tirs  chance 0.015  observé 0.041 [0.031 ; 0.052]  ÉCART
+   [0.05 ; 0.15[   1187 tirs  chance 0.099  observé 0.104 [0.088 ; 0.123]  calibrée
+    [0.15 ; 0.3[   1888 tirs  chance 0.231  observé 0.235 [0.216 ; 0.254]  calibrée
+     [0.3 ; 0.5[   1184 tirs  chance 0.364  observé 0.374 [0.347 ; 0.402]  calibrée
+    [0.5 ; 1.01[    163 tirs  chance 0.582  observé 0.638 [0.562 ; 0.708]  calibrée
