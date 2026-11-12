@@ -28,6 +28,10 @@ _DIFFICULTY_PER_M = 1.8  # au-delà de 10 m : 25 m -> 37, 35 m -> 55, 45 m -> 73
 _PRESSURE_DIFFICULTY = 15.0  # adversaire au contact du joueur, nulle à `PRESSURE_RADIUS_M`
 _LANE_DIFFICULTY = 12.0  # par adversaire à moins de `_LANE_WIDTH_M` de la trajectoire
 _LANE_WIDTH_M = 2.0
+# Près du passeur (ticket v2-realisme/18f) : un adversaire ne ferme le couloir que s'il est à moins de son avancée le long
+# de la passe (cône de 45°), et toujours s'il est à portée de jambe tendue : même portée que le contre d'un tir
+# (`shooting.BLOCK_WIDTH_M`, jambe tendue plus ballon, validée), redite ici car `shooting` importe ce module.
+_LANE_REACH_M = 1.0
 _MARKED_DIFFICULTY = 10.0  # receveur avec un adversaire à moins de `_MARKED_RADIUS_M`
 _MARKED_RADIUS_M = 2.0
 _CONTROL_DIFFICULTY_PER_MPS = 1.0  # contrôle : +1 par m/s d'écart à la vitesse d'arrivée idéale
@@ -68,6 +72,10 @@ def dosage_quality(passer: PlayerState) -> float:
 
 
 def _lane_opponents(start: Vec2, end: Vec2, opponents: Sequence[PlayerState]) -> int:
+    """Adversaires dans le couloir de la passe : à moins de `_LANE_WIDTH_M` de la trajectoire, et près du passeur à
+    moins de leur avancée le long de celle-ci (cône de 45°) ou à portée de jambe (`_LANE_REACH_M`). Ticket
+    v2-realisme/18f : le presseur au contact compte déjà dans la pression du passeur ; sans le cône, il fermait aussi
+    le couloir de toute passe jouée de son côté, même à côté de lui (pression comptée deux fois)."""
     path = end - start
     length = path.length()
     if length < 1e-9:
@@ -77,7 +85,8 @@ def _lane_opponents(start: Vec2, end: Vec2, opponents: Sequence[PlayerState]) ->
     for o in opponents:
         rel = o.position - start
         along = rel.x * direction.x + rel.y * direction.y
-        if 0.0 < along < length and o.position.distance_to(start + direction * along) <= _LANE_WIDTH_M:
+        reach = min(_LANE_WIDTH_M, max(_LANE_REACH_M, along))
+        if 0.0 < along < length and o.position.distance_to(start + direction * along) <= reach:
             count += 1
     return count
 

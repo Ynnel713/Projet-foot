@@ -1017,3 +1017,44 @@ Commande : `scripts/bench_series.py 500 --processus 7`, fichiers `.scratch/v2-re
 **Attributs.** Work Rate garde son sens dans le marquage : il fixe le plancher de `follow_intensity` (Work Rate 5 / 50 / 99, adversaire arrêté : 0,45 / 0,55 / 0,65 ; adversaire à 0,8 de la vitesse max : 0,90 pour tous). Off the Ball et Stamina ne sont pas touchés.
 
 **Déterminisme.** Les 10 premiers matchs rejoués (`18d-det2.json`) contre les 10 premiers de la série de 500 : 2 432 clés communes, valeurs identiques.
+
+## 29. Choix du porteur : diagnostic et couloir de passe (ticket v2-realisme/18f, 50 matchs, 11/11/2026)
+
+Commande : `scripts/bench_series.py 50 --processus 7`, fichiers `.scratch/v2-realisme/mesures/18f-det1.*` (après) contre les 50 premiers matchs de `18d-500.*` (avant, mêmes graines) ; essais : `18f-cone12.*` (12 matchs) et `18f-cone50.*` (50 matchs), cône seul, sans la portée de jambe. Aucune constante existante modifiée : la cause est un mécanisme (pression comptée deux fois dans la difficulté de passe), corrigé par une règle géométrique (cône de pente 1, soit 45°, près du passeur) et une constante de modèle nouvelle, `possession._LANE_REACH_M` = 1,0 m (portée de jambe, même valeur que `shooting.BLOCK_WIDTH_M`), retenues par délégation du propriétaire.
+
+**Diagnostic (état 18d, 12 matchs, 37 440 décisions ; script de diagnostic du ticket 18f).**
+- La conduite est le meilleur choix **réel** dans 80 % des décisions (passe 19 %, tir 1 %) ; 5,7 % seulement des conduites choisies laissaient une passe meilleure : la perception (Decisions, Composure, Anticipation) n'est pas la cause.
+- La conduite est évaluée juste : garde évaluée sur 1,5 s contre ballon gardé 1,5 s après, par tranche de gêne du porteur : 0,98 / 0,98 (gêne 0), 0,91 / 0,93 (0,4), 0,88 / 0,89 (0,6), 0,86 / 0,84 (0,8). 84 % des conduites se jouent avec un adversaire à moins de 2,5 m.
+- La meilleure passe offerte à un porteur pressé ne réussit qu'à 0,60 (Passing moyen 57) : difficulté 10 + distance 13,2 + pression 8,3 + **couloir 12,0** + receveur marqué 0,2. Le presseur au contact (1 à 2 m) comptait deux fois : dans la pression du passeur et comme adversaire dans le couloir de **toute** passe jouée de son côté (à moins de 2 m de toute trajectoire qui part vers lui), même à côté de lui.
+- Correction (`possession._lane_opponents`) : près du passeur, un adversaire n'est dans le couloir que s'il est à moins de son avancée le long de la trajectoire (cône de 45°) ou à portée de jambe tendue (1 m, même portée que le contre d'un tir, `shooting.BLOCK_WIDTH_M`) ; au-delà de 2 m d'avancée, couloir de 2 m inchangé. Le cône seul (essai `18f-cone50`) laissait passer à côté d'un presseur à 1,2 m une passe qui frôle sa jambe (0,93 m) : le pressing coordonné ne fermait plus que 0,3 solution au lieu de 1,8 (`test_v2engine_pressing.py`) ; avec la portée de jambe, 1,7.
+- Second écart, hors de ce ticket : la chance de passe évaluée (0,82 en moyenne pour les passes choisies) dépasse la passe reçue par le receveur visé (0,72) ; la coupe en vol et le contrôle du receveur ne sont pas dans l'évaluation, et l'adversaire du couloir pèse deux fois à la résolution (difficulté puis coupe en vol) : **mécanisme**, ticket `v2-realisme/18g`.
+
+| Indicateur (moyenne par match, 50 matchs) | 18d | 18f, cône seul | 18f | Repère |
+|---|---|---|---|---|
+| Choix : conduite / passe / tir (part des décisions) | 70,8 / 27,8 / 1,4 % | 66,9 / 31,6 / 1,5 % | 68,3 / 30,2 / 1,4 % | suivi |
+| Passes par possession | 2,71 | 2,88 | 2,82 [2,75 ; 2,88] | 3 à 5 |
+| Passes par match ; par minute de jeu effectif | 912 ; 12,5 | 970 ; 13,1 | 945 [923 ; 968] ; 12,9 | 890 à 940 ; 15 à 17 (R7) |
+| Passes réussies ; chez l'adversaire | 74,2 ; 23,6 % | 75,4 ; 22,7 % | 74,9 ; 23,1 % | 70 à 90 % ; 15 à 20 % |
+| Solutions de passe ouvertes (nombre) | 1,93 | 2,24 | 2,11 | suivi |
+| Pertes en conduite ; pertes de balle (agrégé) par match | 89,6 ; 333 | 80,2 ; 331 | 83,5 ; 331 | suivi |
+| Tirs tracés par équipe | 21,6 | 21,4 | 21,3 | 8 à 15 (R1) |
+| Buts par match ; conversion | 3,8 ; 8,8 % | 4,1 ; 9,5 % | 2,96 [2,46 ; 3,46] ; 6,8 % | 2 à 3,5 ; 10 à 12 % |
+| Buts dans la surface (agrégé) | 59,0 % | 59,5 % | 64,9 % | 88 à 89 % (R3) |
+| Tacles ; fautes par match | 46,5 ; 14,9 | 45,6 ; 14,6 | 46,3 ; 14,7 | 30 à 40 ; 21 à 26 |
+| Possession d'équipe ; temps par possession de joueur (s) | 17,3 ; 2,88 | 17,3 ; 2,73 | 17,3 ; 2,79 | 11 à 16 ; 2 à 3 |
+| Distance au-dessus de 19,8 km/h (part) | 9,8 % | 9,9 % | 9,9 % | 6 à 10 % (R6) |
+
+Buts et conversion : 4,1 buts avec le cône seul, 2,96 avec la portée de jambe, pour deux règles presque identiques et des tirs inchangés ; la série de 500 matchs du 18d donnait 3,54 [3,37 ; 3,70]. Lu comme du bruit de 50 matchs (trajectoires de match divergentes), à relire sur 500 matchs au 18e.
+
+**Écarts restants, attribués.**
+- Passes par possession 2,82, sous 3 à 5 : les pertes de balle ne baissent pas (331 par match) ; une passe sur quatre finit chez l'adversaire, dont environ 10 points par la coupe en vol absente de l'évaluation : **mécanisme** (18g), puis réussite des passes à la calibration finale (`v2-collectif/22a`).
+- Passes par match 945, à la limite haute de 890 à 940 (intervalle [923 ; 968]), alors que les passes par minute de jeu effectif (12,9) restent sous 15 à 17 : le temps de jeu effectif est trop haut (74 %, réel 53 à 56 %, sans remplacements ni assez de fautes) ; à temps effectif réel, le même rythme donnerait environ 730 passes. **Calibration finale** et tickets de règles, pas de réglage ici (il éloignerait le rythme par minute effective).
+- Tirs tracés (R1) inchangés : les tirs viennent des récupérations hautes et des conduites (57 % après un dribble), pas du choix de la passe ; seuil et valeur du tir au **18e**.
+- Passes visées vers les DC : non relues séparément ; la conduite reste majoritaire chez tous les postes, relance au 18g puis au 22a.
+
+**Attributs.** Le cône ne lit aucune note. Scènes A/B (`18f-ab.txt`, 400 scènes de porteur pressé, 99 contre 11, règle d'avant contre d'après) : meilleure passe, Passing + 0,53 → + 0,51, Composure + 0,075 → + 0,072 ; part des passes choisies, Passing + 0,62 → + 0,62, Vision + 0,10 → + 0,11, Dribbling − 0,13 → − 0,15, Decisions − 0,30 → − 0,26 : aucun effet inversé ni annulé. Tests de garde (`test_v2engine_garde_probabiliste.py`, `test_v2engine_rayon_attributs.py`) verts dans la suite complète.
+
+**Déterminisme.** Les 10 premiers matchs rejoués (`18f-det2.json`) contre les 10 premiers de `18f-det1.json` : 2 437 clés communes, valeurs identiques. Suite complète : 2 754 passés, 14 désélectionnés (`18f-suite.txt`).
+
+**Série de 500 matchs (demande de l'expert, 12/11/2026).** `18f-500.*` (496 min de machine), comparaison appariée avec `18d-500` (`18f-comparaison.txt`, mêmes 500 matchs, après − avant) : passes par possession 2,70 → 2,81 (+ 0,12 [+ 0,10 ; + 0,13]) ; conduite − 2,3 points des décisions ; passes par match 916 → 948 (+ 32 [+ 28 ; + 36]), intervalle [941 ; 955], **0,8 au-dessus de la borne de 940** ; passes par minute de jeu effectif 12,6 → 12,9 ; temps par possession de joueur − 0,09 s. Sans écart significatif : buts (3,47 par match, écart − 0,07 [− 0,29 ; + 0,15]), conversion (8,1 %), buts dans la surface (58,8 %), tacles (46,9), fautes (14,7). La baisse des buts lue sur 50 matchs était du bruit.
+

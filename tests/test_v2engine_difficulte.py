@@ -47,6 +47,18 @@ def test_lane_marking_and_pressure_add_validated_points() -> None:
     assert math.isclose(pass_difficulty(passer, receiver, [marker]), 10.0 + 10.0)
 
 
+def test_presser_blocks_the_lane_only_in_front_of_the_passer() -> None:
+    """Ticket v2-realisme/18f : le presseur au contact compte déjà dans la pression du passeur ; il ne ferme en plus
+    le couloir que pour une passe jouée vers lui (cône de 45° près du passeur), pas pour une passe à côté de lui."""
+    passer = _player()
+    receiver = _player("R", position=Vec2(45.0, 34.0))  # 15 m : difficulté 19
+    beside = _player("B", team="away", position=Vec2(30.75, 35.3))  # à 1,5 m, à 60° de la passe
+    in_front = _player("F", team="away", position=Vec2(31.3, 34.75))  # à 1,5 m, à 30° de la passe
+    pressure_only = pass_difficulty(passer, receiver, [beside])
+    assert pressure_only < 19.0 + 12.0  # pression seule, pas de couloir
+    assert math.isclose(pass_difficulty(passer, receiver, [in_front]) - pressure_only, 12.0, abs_tol=0.1)
+
+
 def test_composure_halves_pressure_at_99_and_keeps_it_at_11() -> None:
     assert math.isclose(composure_factor(_player(attributes={"Composure": 99})), 0.5)
     assert math.isclose(composure_factor(_player(attributes={"Composure": 55})), 0.75)
