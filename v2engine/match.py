@@ -30,6 +30,7 @@ from v2engine.flux import ARBITRAGE, PERCEPTION, TIR, seed_streams
 from v2engine.formation import initial_positions
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch, in_penalty_area
 from v2engine.movement import PlayerState, step
+from v2engine.orientation import desired_facing, kickoff_facing, turn_towards
 from v2engine.cerveau import GOAL_CENTER_Y, OPPONENT_GOAL, Intention, think
 from v2engine.decision import DECISION_INTERVAL_S, choose_action, dribble_lost, lost_carry_outcome
 from v2engine.defense import DefensiveRoles
@@ -111,6 +112,7 @@ def _build_players(lineup: Lineup, team: str, positions: dict[str, Vec2]) -> lis
                 radius_m=PLAYER_RADIUS_M,
                 attributes=player.attributes,
                 role=role_of(player.poste, player.categorie),
+                facing=kickoff_facing(team),
             )
         )
     return states
@@ -883,8 +885,12 @@ def _step_player(
         intentions[player.name] = intention
     # Temps de jeu (`played_minute`) transmis à `step`, qui ne le lit plus depuis la réserve d'énergie (ticket
     # v2-realisme/12e) ; ponytail: paramètre gardé pour ses appelants, à retirer au premier ticket qui touche `step`.
-    return step(player, dt, intention.target, minute if played_minute is None else played_minute, intention.intensity,
-                intention.target_velocity)
+    moved = step(player, dt, intention.target, minute if played_minute is None else played_minute, intention.intensity,
+                 intention.target_velocity)
+    # Cap du corps (ticket v2-realisme/07a) : tourne vers la course rapide ou le ballon, sans effet sur le jeu.
+    moved.facing = turn_towards(player.facing, desired_facing(moved.position, moved.velocity, ball.position,
+                                                              player.facing, ball.holder == player.name), dt)
+    return moved
 
 
 def simulate_match(
@@ -967,7 +973,7 @@ def simulate_match(
             # Même sens de jeu qu'en 1re période : l'écran retourne la scène (terrain symétrique, rien n'y dépend du
             # côté). Le replacement est immédiat : la pause n'est pas jouée, l'écran la cache derrière un bandeau.
             for p in players:
-                p.position, p.velocity = p.home_target, Vec2(0.0, 0.0)
+                p.position, p.velocity, p.facing = p.home_target, Vec2(0.0, 0.0), kickoff_facing(p.team)
             ball = BallState(position=Vec2(PITCH_LENGTH_M / 2.0, PITCH_WIDTH_M / 2.0), velocity=Vec2(0.0, 0.0))
             ball.log = EventLog(trace.events)  # le journal continue en 2e période (ticket v2-realisme/19b)
             ball.restart = kickoff("away" if first == "home" else "home", players, i * tick_seconds, dead_s=0.0)
@@ -1004,7 +1010,8 @@ def simulate_match(
             trace.record(
                 minute,
                 [PlayerSnapshot(name=p.name, team=p.team, poste=p.poste, position=p.position,
-                                intention=intentions.get(p.name), role=p.role, energy=p.condition.energy)
+                                intention=intentions.get(p.name), role=p.role, energy=p.condition.energy,
+                                facing=p.facing)
                  for p in players],
                 BallSnapshot(position=ball.position, holder=ball.holder, mode=ball.mode, dead=ball.restart is not None),
             )

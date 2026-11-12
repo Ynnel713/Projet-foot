@@ -269,6 +269,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **Revue du réalisme et ordre de la P1 (12/11/2026, ticket `v2-realisme/18j`)** : livré (12/11/2026), validé expert + QC (passage 2 ; ordre contrôlé par `.scratch/v2-realisme/mesures/18j-ordre-check.py`). Revue des tickets faits et restants (section 13 de `.scratch/v2-realisme/spec.md`) : méthode et cohérence acquises, mais joueurs sans orientation, ballon presque plat, gestes indépendants de l'état du corps et duels par tirage. Fin de la P0 : 18i → 07a → 07f → 07c → 07e ; 08a → 08b → 08c ; 18e. P1 réordonnée en blocs : physique du joueur et du ballon, gestes, perception, tactique, fatigue et arbitrage, validation. Tickets ajoutés : 12h (geste en déséquilibre), `v2-hauteur-ballon/04` (contrôle aérien) ; table de passe du 18g à remesurer dans les validations qui changent le mouvement.
 
+**Orientation du corps (12/11/2026, ticket `v2-realisme/07a`)** : livré (12/11/2026), validé expert + QC (passage 2 ; réserve A2 acceptée : hystérésis au seuil de course rapide, au 07b). Chaque joueur a un cap (`PlayerState.facing`, `v2engine/orientation.py`), distinct de sa vitesse, qui tourne au plus à 360°/s (valeur réelle non trouvée, validée par le propriétaire) vers le sens de course au-dessus de 19,8 km/h, sinon vers le ballon (le porteur regarde où il va) ; face au but adverse au coup d'envoi. Tracé, transmis par l'API et dessiné à l'écran (trait au bord du rond). Aucun effet sur le jeu : 20 matchs identiques avant / après à graine fixée ; temps de calcul + 0,1 à + 5,9 % (bruit 5,7 %) ; suite 2 768 passés, 14 désélectionnés. Débloque 07b, 07c, 07e, 07f, 08a.
+
 ### Bloquée par
 
 - Phase 4

@@ -43,6 +43,7 @@ class PlayerSnapshotOut(BaseModel):
     poste: str
     x: float
     y: float
+    facing: float | None = None  # cap du corps en radians, 0 = vers x croissant (ticket v2-realisme/07a) : trait sur le rond
 
 
 class BallSnapshotOut(BaseModel):
@@ -243,7 +244,8 @@ def club_lineup(club: str) -> LineupOut:  # nom en paramètre de requête : cert
 def _tick_out(tick) -> TickOut:
     return TickOut(
         minute=tick.minute,
-        players=[PlayerSnapshotOut(name=p.name, team=p.team, poste=p.poste, x=p.position.x, y=p.position.y)
+        players=[PlayerSnapshotOut(name=p.name, team=p.team, poste=p.poste, x=p.position.x, y=p.position.y,
+                                   facing=p.facing)
                  for p in tick.players],
         ball=BallSnapshotOut(x=tick.ball.position.x, y=tick.ball.position.y, holder=tick.ball.holder,
                              mode=tick.ball.mode, dead=tick.ball.dead),

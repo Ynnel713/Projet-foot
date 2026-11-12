@@ -129,6 +129,9 @@ const PLAYER_R = 1.3; // rayon du rond d'un joueur (m)
 // Le rond d'un joueur est dessiné à la hauteur de sa taille : sans cela il recouvrirait son ombre. Valeur validée par
 // le propriétaire le 06/11/2026 ; si l'ombre est trop discrète sur téléphone, jouer sur son opacité, pas sur cette hauteur.
 const PLAYER_LIFT = 1.8;
+// Cap du corps (ticket v2-realisme/07a) : petit trait qui part du bord du rond, dans la direction où le joueur fait face
+// (raccourci par la caméra inclinée sur l'axe y, comme le terrain).
+const FACING_LEN = 0.9;
 const SHADOW_K = 0.8; // ombre d'un joueur : ovale de rayon 0,8 × celui du rond (validé le 04/11/2026)
 const SHADOW_OPACITY = 0.25;
 const CROSSBAR = 2.44; // hauteur de la barre transversale (m)
@@ -261,6 +264,18 @@ export default function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, 
             stroke={p.name === selected ? "white" : "rgba(0,0,0,0.4)"}
             strokeWidth={p.name === selected ? 0.4 : 0.1}
           />
+          {p.facing != null && (
+            <line
+              x1={p.body.x + Math.cos(p.facing) * PLAYER_R}
+              y1={p.body.y + Math.sin(p.facing) * PLAYER_R * COS}
+              x2={p.body.x + Math.cos(p.facing) * (PLAYER_R + FACING_LEN)}
+              y2={p.body.y + Math.sin(p.facing) * (PLAYER_R + FACING_LEN) * COS}
+              stroke="white"
+              strokeWidth={0.3}
+              strokeLinecap="round"
+              style={{ pointerEvents: "none" }}
+            />
+          )}
           <PlayerNumber x={p.body.x} y={p.body.y} value={numbers[p.name]} />
         </g>
       ))}

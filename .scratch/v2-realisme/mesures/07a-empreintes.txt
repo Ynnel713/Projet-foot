@@ -1,0 +1,34 @@
+Ticket 07a, 20 matchs (graine 20260923 + k, clubs de Ligue 1 par paires), script 07a-empreinte.py, 4 processus.
+Empreinte « jeu » : positions, vitesses et réserve de chaque joueur, ballon et porteur à chaque pas, puis buts, tirs et décisions (cap exclu).
+Avant (HEAD 1a53bbe, worktree) : 1077,1 s de calcul cumulé ; 40 buts ; 641 tirs.
+Après, exécution 1 : 1078,5 s ; 40 buts ; 641 tirs.
+Après, exécution 2 : 1140,2 s ; 40 buts ; 641 tirs.
+Jeu avant == après (20 matchs sur 20) : True
+Jeu après 1 == après 2 : True
+Cap après 1 == après 2 (empreinte des caps de la trace) : True
+Temps de calcul : + 0,1 % (exécution 1) et + 5,9 % (exécution 2) ; écart entre deux exécutions identiques du même code : 5,7 % (bruit de la machine partagée).
+0 a0f5b9d65cab 2eab1b15bf60 2 28
+1 b22d75a20c5a cb0c54c330eb 0 23
+2 1fd1a4cb2364 c898d7927404 8 34
+3 8027799db01d 54b003af4d1e 4 30
+4 303165b642a3 963fb73daabd 2 32
+5 19329b54655a 7177e6c19bc4 1 26
+6 44be93dd5eb9 f431531a93ca 2 30
+7 ddbf70971a38 338546f6e60b 3 41
+8 a866dad04baa fe4902f5a892 1 30
+9 356ca50f3c4d e5dd8823f4d7 2 32
+10 0631aa564232 9b6d9fad46c4 2 31
+11 1fd2bf256509 2c4536078a41 1 45
+12 2b4dbefa55a0 fea65c8945f4 1 40
+13 2b879a409f65 6775988d0cc7 1 33
+14 fc71f7540322 57c46dcdce52 1 29
+15 837a1c233ccc 9640af0772d7 1 27
+16 79340e899bbc 6ffef11e7b43 4 41
+17 c6fa77842215 868f6c0dc538 1 38
+18 f27fd74dfedb 7d0ded4ef767 2 22
+19 5545edfc02bd d5fd7148f820 1 29
+
+Après correctif A1 (porteur, 12/11/2026) :
+Exécution 3 : 1082,2 s ; 40 buts ; 641 tirs. Exécution 4 : 1108,5 s ; 40 buts ; 641 tirs.
+Jeu avant == après 3 (20/20) : True ; jeu et cap après 3 == après 4 : True ; cap différent du passage 1 sur 20 matchs sur 20 (porteur).
+Temps de calcul : + 0,5 % et + 2,9 % sur la référence.

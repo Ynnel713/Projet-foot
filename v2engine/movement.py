@@ -98,6 +98,7 @@ class PlayerState:
     attributes: dict[str, int] | None = None
     role: str = ""  # rôle du joueur (voir `roles.py`), ticket v2-realisme/02c ; sans effet sur le jeu avant 02d/02e/09
     condition: PlayerCondition = PlayerCondition()  # état qui module l'expression des notes (19a ; réserve, 12e)
+    facing: float = 0.0  # cap du corps en radians, distinct de la vitesse (ticket v2-realisme/07a, `orientation.py`)
 
 
 def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_factor: float = 1.0,
@@ -157,4 +158,5 @@ def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_facto
         role=state.role,
         condition=PlayerCondition(energy=spend_energy(state.condition.energy, state.stamina,
                                                       0.5 * (velocity.length() + new_velocity.length()), dt)),
+        facing=state.facing,  # tourné par l'appelant, qui connaît le ballon (`match._step_player`, ticket 07a)
     )

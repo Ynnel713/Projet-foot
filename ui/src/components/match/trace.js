@@ -36,6 +36,8 @@ export function interpolatedTick(trace, seconds) {
   const half = halfStart(trace);
   const f = a.minute < half && b.minute >= half ? 0 : exact - i;
   const mix = (u, v) => u + (v - u) * f;
+  // cap du corps (ticket v2-realisme/07a) : par le plus court chemin, sans tour complet en passant par ±π
+  const turn = (u, v) => u + Math.atan2(Math.sin(v - u), Math.cos(v - u)) * f;
   const minute = mix(a.minute, b.minute);
   // but entre les deux images : le ballon entre dans le but au lieu de glisser vers le rond central
   const scored = goalBall(a, b, minute, trace.goals, dims.pitch_length_m, dims.pitch_width_m);
@@ -43,7 +45,12 @@ export function interpolatedTick(trace, seconds) {
   const state = { mode: a.ball.mode, dead: a.ball.dead };
   return {
     minute,
-    players: a.players.map((p, k) => ({ ...p, x: mix(p.x, b.players[k].x), y: mix(p.y, b.players[k].y) })),
+    players: a.players.map((p, k) => ({
+      ...p,
+      x: mix(p.x, b.players[k].x),
+      y: mix(p.y, b.players[k].y),
+      ...(p.facing != null && { facing: turn(p.facing, b.players[k].facing) }),
+    })),
     ball: scored
       ? { ...scored, holder: null, ...state }
       : { x: mix(a.ball.x, b.ball.x), y: mix(a.ball.y, b.ball.y), holder: a.ball.holder, ...state },
@@ -53,7 +60,9 @@ export function interpolatedTick(trace, seconds) {
 // Demi-tour de la scène autour du rond central (2e période) : chaque équipe attaque l'autre but.
 export function rotated(tick) {
   const turn = (o) => ({ ...o, x: L - o.x, y: W - o.y });
-  return { ...tick, players: tick.players.map(turn), ball: turn(tick.ball) };
+  // le cap tourne avec la scène (ticket v2-realisme/07a)
+  const turnPlayer = (p) => ({ ...turn(p), ...(p.facing != null && { facing: p.facing + Math.PI }) });
+  return { ...tick, players: tick.players.map(turnPlayer), ball: turn(tick.ball) };
 }
 
 // Situation de jeu d'une équipe à `minute` : dernier changement enregistré avant cet instant (ticket v2-collectif/03).
