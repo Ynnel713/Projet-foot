@@ -31,7 +31,7 @@ import v2engine.match as match
 from v2engine.shooting import NEUTRAL_ATTRIBUTES
 from ligue1sim.lineup import pick_best_formation
 
-from scripts.v2_indicators import CARRY_PREFIX, EXIT_STATES, Collector, shot_decomposition, xg_calibration
+from scripts.v2_indicators import CARRY_PREFIX, EXIT_STATES, PASS_PREFIX, Collector, shot_decomposition, xg_calibration
 from scripts.v2_tranches import minute_report, player_report
 
 AUDIT_SEED = 20260923
@@ -41,11 +41,26 @@ TICK_S = match.TICK_SECONDS  # le pas du produit (ticket v2-collectif/25) : le b
 
 def _hook(collector: Collector, clock: dict[str, float], plans: bool = True) -> Callable[[], None]:
     """Branche le collecteur sur les fonctions publiques du moteur ; retourne la fonction qui les restaure."""
-    real = {name: getattr(match, name) for name in ("pass_velocity", "resolve_tackle", "choose_action", "dribble_lost", "lost_carry_outcome")}
+    real = {name: getattr(match, name) for name in ("pass_velocity", "resolve_tackle", "choose_action", "dribble_lost",
+                                                     "lost_carry_outcome", "attempt_control", "_play_restart")}
+    restarting = {"on": False}  # remise en jeu en cours : sa passe n'entre pas dans la calibration (ticket v2-realisme/18g)
 
     def pass_velocity(passer, target, *args, **kwargs):
-        collector.on_pass(passer, target)
+        opponents = args[0] if args else kwargs.get("opponents", ())
+        collector.on_pass(passer, target, opponents, restart=restarting["on"])
         return real["pass_velocity"](passer, target, *args, **kwargs)
+
+    def play_restart(*args, **kwargs):
+        restarting["on"] = True
+        try:
+            return real["_play_restart"](*args, **kwargs)
+        finally:
+            restarting["on"] = False
+
+    def attempt_control(player, *args, **kwargs):  # premier contact d'une passe en vol (ticket v2-realisme/18g)
+        controlled = real["attempt_control"](player, *args, **kwargs)
+        collector.on_contact(player, controlled)
+        return controlled
 
     def resolve_tackle(*args, **kwargs):
         collector.on_tackle(args[0])  # tacleur (ticket v2-realisme/19d)
@@ -98,6 +113,7 @@ def _hook(collector: Collector, clock: dict[str, float], plans: bool = True) -> 
     match.pass_velocity = pass_velocity
     match.resolve_tackle, match.choose_action, match.dribble_lost = resolve_tackle, choose_action, dribble_lost
     match.lost_carry_outcome = lost_carry_outcome
+    match.attempt_control, match._play_restart = attempt_control, play_restart
     cerveau.stays_behind, match.think = stays_behind, think
     defense.DefensiveRoles.start_team_press = trigger
     return lambda: ([setattr(match, name, fn) for name, fn in real.items()] + [setattr(cerveau, "stays_behind", real_stays), setattr(match, "think", real_think)]
@@ -378,6 +394,15 @@ def report(c: Collector, detail: bool = False) -> dict:
         out[f"{base}écart évalué / tirée (points)"] = 100.0 * (drawn - evaluated)
         out[f"{base}perte avec tacle gagné (part)"] = total
         out[f"{base}écart évalué / avec tacle (points)"] = 100.0 * (total - evaluated)
+    # calibration de la passe (ticket v2-realisme/18g) : chance évaluée contre passe non perdue, par tranche
+    for group in sorted({key[len(PASS_PREFIX):].rsplit(" : ", 1)[0] for key in k if key.startswith(PASS_PREFIX)}):
+        base, n_pass = f"{PASS_PREFIX}{group} : ", k[f"{PASS_PREFIX}{group} : passes"]
+        evaluated, kept = k[base + "chance évaluée (somme)"] / n_pass, k[base + "non perdues"] / n_pass
+        out[f"{base}passes par match"] = n_pass / n
+        out[f"{base}chance évaluée (part)"] = evaluated
+        out[f"{base}non perdue (part)"] = kept
+        out[f"{base}écart évaluée / non perdue (points)"] = 100.0 * (evaluated - kept)
+        out[f"{base}reçue par le receveur visé (part)"] = k[base + "reçues par le receveur visé"] / n_pass
     # structure (ticket v2-realisme/02h)
     out["passages APPEL / TENIR dans une possession par match"] = k["passages APPEL / TENIR dans une possession"] / n
     out["passages APPEL / TENIR dans une possession : état de moins de 1,5 s (part)"] = (

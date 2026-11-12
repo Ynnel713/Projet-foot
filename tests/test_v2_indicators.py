@@ -1177,3 +1177,44 @@ def test_a_forced_profile_leaves_the_neutral_xg_neutral() -> None:  # ticket v2-
             assert neutral_xg(shooter, goal, keeper, [keeper]) == free  # mais pas sa copie neutre
         finally:
             unforce()
+
+
+def test_pass_calibration_closes_on_first_contact_or_without_contact_and_skips_restarts() -> None:
+    # ticket v2-realisme/18g : perdue si un adversaire touche le ballon le premier ; une passe sans contact (morte, sortie)
+    # est close non perdue à la passe suivante ; une remise en jeu n'est pas mesurée
+    c = ind.Collector(geometry_every_s=1e9)
+    passer, target, rival = _p("H", "home", 50.0, 34.0), _p("T", "home", 62.0, 34.0), _p("A", "away", 56.0, 34.2)
+    c.players = [passer, target, rival]
+    c.on_pass(passer, target, [rival])
+    c.on_contact(rival, True)  # coupée
+    c.on_pass(passer, target, [rival])
+    c.on_contact(target, True)  # reçue
+    c.on_pass(passer, target, [rival])  # morte sans contact : close par la remise suivante
+    c.on_pass(passer, target, [rival], restart=True)
+    c.on_contact(rival, True)  # sur la remise : ignoré
+    c.end_match()
+    base = f"{ind.PASS_PREFIX}toutes : "
+    assert c.count[base + "passes"] == 3 and c.count[base + "non perdues"] == 2
+    assert c.count[base + "reçues par le receveur visé"] == 1
+
+
+def test_pass_calibration_curve_is_exact_on_synthetic_contacts() -> None:
+    # même logique qu'au 04c : des passes perdues exactement dans la part évaluée donnent un écart nul ; deux fois plus de
+    # pertes donnent un écart égal au risque évalué
+    from scripts.measure_v2 import report
+    from v2engine.possession import pass_success_probability
+    passer, target, rival = _p("H", "home", 50.0, 34.0), _p("T", "home", 62.0, 34.0), _p("A", "away", 56.0, 35.5)
+    chance = pass_success_probability(passer, target, [rival])
+    tranche = ind.carry_tranche("chance évaluée", chance, ind.PASS_CHANCE_BINS)
+    for factor in (1.0, 2.0):
+        c = ind.Collector(geometry_every_s=1e9)
+        c.players, c.matches = [passer, target, rival], 1
+        for i in range(10000):
+            c.on_pass(passer, target, [rival])
+            c.on_contact(rival if i < round(10000 * (1.0 - chance) * factor) else target, True)
+        c._close_pass_calibration(lost=False, received=False)
+        out = report(c)
+        base = f"{ind.PASS_PREFIX}{tranche} : "
+        assert out[base + "passes par match"] == 10000.0
+        assert abs(out[base + "chance évaluée (part)"] - chance) < 1e-12
+        assert abs(out[base + "écart évaluée / non perdue (points)"] - 100.0 * (1.0 - chance) * (factor - 1.0)) < 0.01 + 1e-9

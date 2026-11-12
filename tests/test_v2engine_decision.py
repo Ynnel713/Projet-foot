@@ -128,7 +128,9 @@ def test_holder_keeps_his_choice_until_next_decision(monkeypatch) -> None:
 
 def test_heavily_pressed_holder_at_15_m_prefers_open_pass_over_shot() -> None:
     holder = _player(position=Vec2(PITCH_LENGTH_M - 15.0, GOAL_CENTER_Y + 10.0))
-    marker = _player("Marqueur", team="away", position=holder.position + Vec2(0.3, 0.0))
+    # ticket v2-realisme/18g : marqueur à 0,8 m (gêne 0,84), et non plus 0,3 m, physiquement impossible (deux joueurs de
+    # 0,3 m de rayon se touchent à 0,6 m) : là, il était sur la ligne de toute passe (coupe mesurée 0,75)
+    marker = _player("Marqueur", team="away", position=holder.position + Vec2(0.8, 0.0))
     open_mate = _player("Demarque", position=Vec2(PITCH_LENGTH_M - 8.0, GOAL_CENTER_Y))
     options = {o.kind: o.value for o in evaluate_options(holder, [holder, marker, open_mate], GOAL, None)}
     assert options["pass"] > options["shot"]

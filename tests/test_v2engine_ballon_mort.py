@@ -119,7 +119,9 @@ def _long_share(pressed: bool) -> float:
     keeper = _p("GK", 5.5, 24.84, poste="GK", Decisions=70)
     short = [_p("DC1", 14, 18), _p("DC2", 14, 32)]
     long_mate = _p("BU", 45, 20)
-    opponents = [_p("Loin", 70, 34, team="away")]
+    # ticket v2-realisme/18g : l'avant-centre visé est marqué (défenseur à 2 m derrière lui) ; seul à 25 m de tout
+    # adversaire, une remise longue n'était presque jamais perdue et valait mieux que la courte, pressing ou non
+    opponents = [_p("Loin", 70, 34, team="away"), _p("DCadv", 47, 20, team="away")]
     if pressed:
         opponents += [_p("Pr1", 14.8, 18.3, team="away"), _p("Pr2", 14.8, 32.3, team="away")]
     players = [keeper, *short, long_mate, *opponents]

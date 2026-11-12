@@ -1,0 +1,34 @@
+Calibration de la passe, 50 matchs (graine d'audit), lots 0-12, 13-25, 26-38, 39-49
+tranche                      passes/match  évaluée non perdue   écart reçue visé
+chance évaluée [0 ; 0.1[              0.2    0.049      0.083    -3.4      0.083
+chance évaluée [0.1 ; 0.2[            2.5    0.168      0.113    +5.5      0.105
+chance évaluée [0.2 ; 0.3[            2.7    0.219      0.182    +3.7      0.182
+chance évaluée [0.3 ; 0.4[            0.2    0.369      0.500   -13.1      0.500
+chance évaluée [0.4 ; 0.5[            2.5    0.464      0.421    +4.4      0.357
+chance évaluée [0.5 ; 0.6[           14.6    0.561      0.528    +3.2      0.465
+chance évaluée [0.6 ; 0.7[           36.8    0.653      0.642    +1.1      0.557
+chance évaluée [0.7 ; 0.8[          137.1    0.756      0.775    -1.9      0.694
+chance évaluée [0.8 ; 0.9[          372.8    0.858      0.881    -2.3      0.771
+chance évaluée [0.9 ; +[            360.9    0.932      0.944    -1.2      0.866
+toutes                              930.5    0.854      0.869    -1.6      0.778
+
+Indicateurs généraux, 50 matchs (mêmes graines, matchs 0 à 49) : 18f livré (18f-det1, avant) -> 18g (moyenne pondérée des 4 lots) ; repère du banc (INDICATEURS_V2, section 29)
+  passes par match                                  945,2 -> 984,6     repère 890 à 940
+  passes par minute de jeu effectif                  12,9 -> 13,4      repère 15 à 17
+  passes réussies (part)                            0,749 -> 0,819     repère 70 à 90 %
+  passes chez l'adversaire (part)                   0,231 -> 0,149     repère 15 à 20 %
+  reçues par le receveur visé (part)                0,729 -> 0,797
+  passes par possession                              2,81 -> 4,35      repère 3 à 5
+  possession d'équipe (s)                            17,2 -> 25,6      repère 11 à 16
+  temps par possession de joueur (s)                 2,78 -> 2,47      repère 2 à 3
+  buts par match                                     2,96 -> 2,50      repère 2 à 3,5
+  conduite : intervalles par match                   2054 -> 1197
+  conduite : pertes par match                        83,5 -> 46,3
+  solutions de passe ouvertes (nombre)               2,11 -> 4,82
+  une-deux par équipe et par match                   2,05 -> 0,97
+  troisième homme par équipe et par match            22,8 -> 28,3
+  passes longues (part)                             0,011 -> 0,022
+  face-à-face : tirs par match                       12,6 -> 8,8
+  tirs de contre par match (récupération camp adverse) 28,6 -> 18,2
+  corners par match                                  4,92 -> 6,76
+  fautes par match                                   14,7 -> 12,2      repère 21 à 26

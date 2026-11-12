@@ -26,12 +26,6 @@ _BASE_DIFFICULTY = 10.0  # passe ou contrôle le plus facile
 _EASY_DISTANCE_M = 10.0
 _DIFFICULTY_PER_M = 1.8  # au-delà de 10 m : 25 m -> 37, 35 m -> 55, 45 m -> 73
 _PRESSURE_DIFFICULTY = 15.0  # adversaire au contact du joueur, nulle à `PRESSURE_RADIUS_M`
-_LANE_DIFFICULTY = 12.0  # par adversaire à moins de `_LANE_WIDTH_M` de la trajectoire
-_LANE_WIDTH_M = 2.0
-# Près du passeur (ticket v2-realisme/18f) : un adversaire ne ferme le couloir que s'il est à moins de son avancée le long
-# de la passe (cône de 45°), et toujours s'il est à portée de jambe tendue : même portée que le contre d'un tir
-# (`shooting.BLOCK_WIDTH_M`, jambe tendue plus ballon, validée), redite ici car `shooting` importe ce module.
-_LANE_REACH_M = 1.0
 _MARKED_DIFFICULTY = 10.0  # receveur avec un adversaire à moins de `_MARKED_RADIUS_M`
 _MARKED_RADIUS_M = 2.0
 _CONTROL_DIFFICULTY_PER_MPS = 1.0  # contrôle : +1 par m/s d'écart à la vitesse d'arrivée idéale
@@ -50,6 +44,22 @@ MISS_SPEED_SHARE = 0.5
 MISS_RETRY_S = 0.5
 # difficulté du contrôle le plus dur : ballon à la vitesse max d'une passe, adversaire au contact, Composure 11
 _HARDEST_CONTROL = _BASE_DIFFICULTY + _CONTROL_DIFFICULTY_PER_MPS * (MAX_PASS_MPS - IDEAL_ARRIVAL_MPS) + _PRESSURE_DIFFICULTY
+
+# --- Coupe en vol dans la chance évaluée (ticket v2-realisme/18g, constantes validées le 12/11/2026) ---------------------
+# La coupe d'une passe n'est pas tirée à part : elle se joue physiquement (adversaires qui touchent le ballon en vol,
+# lecteurs d'`anticipation.pass_readers`). La chance ÉVALUÉE en tient compte avec une table mesurée sur le moteur (26
+# matchs, 23 187 passes ; vérifiée sur 24 autres, pire écart 4,3 points par tranche) : chance qu'un adversaire touche le
+# ballon le premier, selon sa distance à la trajectoire, près du passeur (avancée jusqu'à `_NEAR_PASSER_M`) ou sur le
+# trajet. Données réelles : non trouvé (la table décrit le moteur ; à remesurer si le mouvement change, indicateur de
+# calibration de `scripts/v2_indicators.py`). Remplace le terme de couloir (`_LANE_DIFFICULTY`, + 12 par adversaire),
+# qui sous-comptait la coupe (évaluée 0,96, reçue 0,56 avec un adversaire dans le couloir).
+_NEAR_PASSER_M = 3.0
+_CUT_NEAR_PASSER = ((0.5, 0.75), (1.0, 0.14), (6.0, 0.01))  # (distance max à la trajectoire en m, chance de coupe)
+_CUT_ON_PATH = ((1.0, 0.31), (2.0, 0.16), (3.0, 0.07), (4.0, 0.04), (5.0, 0.02), (6.0, 0.01))
+UNFORESEEN_CUT = 0.05  # passe précise : adversaires qui croisent la trajectoire sans y être au départ
+# passe imprécise (10 à 25 % de sa longueur) non perdue (aucun adversaire ne la touche le premier), hors coupe de la
+# table, selon la longueur de la passe
+_MISS_NOT_LOST = ((10.0, 0.83), (35.0, 0.77), (math.inf, 0.62))  # (longueur max en m, part non perdue)
 
 
 def pressure(player: PlayerState, opponents: Sequence[PlayerState]) -> float:
@@ -71,39 +81,53 @@ def dosage_quality(passer: PlayerState) -> float:
     return success_probability(effective_rating(passer, "Passing"), baseline=0.5, amplitude=0.5, min_prob=0.0, max_prob=1.0)
 
 
-def _lane_opponents(start: Vec2, end: Vec2, opponents: Sequence[PlayerState]) -> int:
-    """Adversaires dans le couloir de la passe : à moins de `_LANE_WIDTH_M` de la trajectoire, et près du passeur à
-    moins de leur avancée le long de celle-ci (cône de 45°) ou à portée de jambe (`_LANE_REACH_M`). Ticket
-    v2-realisme/18f : le presseur au contact compte déjà dans la pression du passeur ; sans le cône, il fermait aussi
-    le couloir de toute passe jouée de son côté, même à côté de lui (pression comptée deux fois)."""
+def _cut_chance(start: Vec2, end: Vec2, opponent: PlayerState) -> float:
+    """Chance (table du 18g) que `opponent` touche le premier une passe de `start` vers `end`."""
     path = end - start
     length = path.length()
     if length < 1e-9:
-        return 0
+        return 0.0
     direction = path * (1.0 / length)
-    count = 0
-    for o in opponents:
-        rel = o.position - start
-        along = rel.x * direction.x + rel.y * direction.y
-        reach = min(_LANE_WIDTH_M, max(_LANE_REACH_M, along))
-        if 0.0 < along < length and o.position.distance_to(start + direction * along) <= reach:
-            count += 1
-    return count
+    rel = opponent.position - start
+    along = rel.x * direction.x + rel.y * direction.y
+    if not 0.0 < along < length:
+        return 0.0
+    gap = opponent.position.distance_to(start + direction * along)
+    table = _CUT_NEAR_PASSER if along <= _NEAR_PASSER_M else _CUT_ON_PATH
+    return next((chance for limit, chance in table if gap < limit), 0.0)
 
 
 def pass_difficulty(passer: PlayerState, receiver: PlayerState, opponents: Sequence[PlayerState]) -> float:
+    """Difficulté de l'EXÉCUTION de la passe (distance, pression sur le passeur, receveur marqué). La coupe en vol par
+    les adversaires n'en fait plus partie (ticket v2-realisme/18g) : elle se joue physiquement et compte dans
+    `pass_success_probability`."""
     distance = passer.position.distance_to(receiver.position)
     difficulty = _BASE_DIFFICULTY + _DIFFICULTY_PER_M * max(0.0, distance - _EASY_DISTANCE_M)
     difficulty += _PRESSURE_DIFFICULTY * pressure(passer, opponents) * composure_factor(passer)
-    difficulty += _LANE_DIFFICULTY * _lane_opponents(passer.position, receiver.position, opponents)
     if any(receiver.position.distance_to(o.position) < _MARKED_RADIUS_M for o in opponents):
         difficulty += _MARKED_DIFFICULTY
     return difficulty
 
 
-def pass_success_probability(passer: PlayerState, receiver: PlayerState, opponents: Sequence[PlayerState]) -> float:
-    """Chance que la passe arrive où le passeur la destine : Passing contre la difficulté de CETTE passe."""
+def pass_accuracy_probability(passer: PlayerState, receiver: PlayerState, opponents: Sequence[PlayerState]) -> float:
+    """Chance que la passe parte où le passeur la destine (sinon déviée, `pass_aim`) : Passing contre la difficulté de
+    CETTE passe."""
     return duel_probability(effective_rating(passer, "Passing"), pass_difficulty(passer, receiver, opponents), **_SUCCESS)
+
+
+def pass_success_probability(passer: PlayerState, receiver: PlayerState, opponents: Sequence[PlayerState]) -> float:
+    """Chance que la passe ne soit pas perdue (ticket v2-realisme/18g) : aucun adversaire ne touche le ballon le premier,
+    même risque que celui que la passe court en jeu. C'est le sens que lui donne la décision (`decision.option_value` :
+    garder, sinon perdre le ballon), comme le risque de perte de la conduite (04a). Coupe par adversaire : table du 18g ;
+    précise, `UNFORESEEN_CUT` en plus ; imprécise, `_MISS_NOT_LOST` selon la longueur. Le contrôle du receveur n'y entre
+    pas : raté, le ballon reste libre près de lui, ce n'est pas une perte."""
+    keep = 1.0
+    for opponent in opponents:
+        keep *= 1.0 - _cut_chance(passer.position, receiver.position, opponent)
+    accurate = pass_accuracy_probability(passer, receiver, opponents)
+    length = passer.position.distance_to(receiver.position)
+    not_lost = next(share for limit, share in _MISS_NOT_LOST if length < limit)
+    return keep * (accurate * (1.0 - UNFORESEEN_CUT) + (1.0 - accurate) * not_lost)
 
 
 def control_difficulty(player: PlayerState, ball_velocity: Vec2, opponents: Sequence[PlayerState]) -> float:
@@ -149,7 +173,7 @@ def pass_aim(passer: PlayerState, target: PlayerState, opponents: Sequence[Playe
     arrival = max(BALL_STOPPED_MPS, speed + distance * log_f)  # < 6 m/s si la vitesse est plafonnée (passe > ~47 m)
     travel_s = math.log(arrival / speed) / log_f
     aim = target.position + target.velocity * (travel_s * dosage_quality(passer))  # dans la course, selon le dosage
-    if PASSE.random() >= pass_success_probability(passer, target, opponents):
+    if PASSE.random() >= pass_accuracy_probability(passer, target, opponents):
         angle = PASSE.uniform(0.0, 2.0 * math.pi)
         miss = PASSE.uniform(*_MISS_SHARE) * distance
         aim = aim + Vec2(miss * math.cos(angle), miss * math.sin(angle))

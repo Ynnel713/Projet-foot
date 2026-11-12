@@ -263,6 +263,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **Origine des buts (11/11/2026, ticket `v2-realisme/19e`)** : livré (11/11/2026), validé expert + QC (améliorations facultatives reportées au 19f). `scripts/v2_chain.py` remonte la chaîne d'un but et classe son origine (section 24 de `docs/INDICATEURS_V2.md`) ; sur 20 matchs, 108 buts : récupération 81 %, erreur adverse 15 %, jeu placé 3 %, coup de pied arrêté 1 % (repère réel : environ 23,5 % hors penalties). Journal : la faute avec avantage est écrite à sa minute (réserve A1 du 19b) ; jeu identique sur 20 matchs.
 
+**Passe : même risque à l'évaluation et en vol (12/11/2026, ticket `v2-realisme/18g`)** : livré (12/11/2026), validé expert + QC (réserves acceptées : possession et passes par match au-dessus des repères, effet de Passing très réduit, « non perdue » plus étroit que « possession gardée » ; 18h à traiter avant 22a). La chance de passe que lit la décision devient la chance que la passe ne soit pas perdue : coupe par adversaire selon sa distance à la trajectoire (table mesurée sur le moteur), coupe imprévue 0,05, passe imprécise non perdue 0,83 / 0,77 / 0,62 selon la longueur ; terme de couloir (+ 12) supprimé. Calibration sur 50 matchs : moins de 2,3 points d'écart sur les tranches qui portent 98 % des passes (section 30 de `docs/INDICATEURS_V2.md`). Effets : passes réussies 74,9 → 81,9 %, passes par possession 2,81 → 4,35, buts 2,96 → 2,50, possession d'équipe 17,2 → 25,6 s (au-dessus du repère), passes par match 945 → 985. Effet de Passing très réduit (scènes A/B) : passe ratée trop bénigne, ticket 18h.
+
 ### Bloquée par
 
 - Phase 4

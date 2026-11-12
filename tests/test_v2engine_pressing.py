@@ -113,10 +113,10 @@ def _options_after(seconds: float, trigger: bool, seed: int) -> int:
                  if p.team == "home" else p for p in players]
         players = moved
     holder = players[0]
-    # seuil 0,5 de l'écriture du test : depuis le ticket 06, l'indicateur compte à 0,7, et les passes de cette scène
-    # (zone plate de la courbe) n'y arrivent presque jamais, pressing ou non (0,3 contre 0,1 solution)
-    return open_options(holder, [p for p in players if p.team == "away"], [p for p in players if p.team == "home"],
-                        threshold=0.5)
+    # seuil de l'indicateur (0,7, `OPTION_PROBABILITY`) : depuis le ticket v2-realisme/18g, la chance évaluée compte la
+    # coupe en vol, et le pressing coordonné y ferme les lignes (0,77 -> 0,51) ; avant, le seuil était abaissé à 0,5
+    # parce que les passes de cette scène n'atteignaient presque jamais 0,7, pressing ou non
+    return open_options(holder, [p for p in players if p.team == "away"], [p for p in players if p.team == "home"])
 
 
 def test_coordinated_press_closes_more_options_than_an_individual_press() -> None:

@@ -95,6 +95,11 @@ SHOT_MATCH_LAG_S = 0.15
 CARRY_PRESSURE_BINS = (0.0, 0.1, 0.3, 0.5, 0.7, 0.9)
 CARRY_DRIBBLING_BINS = (0, 40, 55, 70)
 CARRY_PREFIX = "calibration conduite, "
+# Calibration de la passe (ticket v2-realisme/18g) : chance évaluée au lancement (`possession.pass_success_probability`,
+# celle que lit la décision) contre issue au premier contact : perdue si un adversaire touche le ballon le premier ; reçue
+# par le receveur visé, pour information. Bornes basses des tranches de chance évaluée ; passes de jeu seulement.
+PASS_CHANCE_BINS = (0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)
+PASS_PREFIX = "calibration passe, "
 # Décomposition du tir (ticket v2-realisme/06b, tranches proposées le 09/11/2026, acceptées d'office) : mêmes bornes que
 # Dribbling au 04c ; étalements de l'xG après frappe essayés pour sa calibration (réserve A1 du 06a), en m.
 SHOT_NOTE_BINS = CARRY_DRIBBLING_BINS
@@ -476,12 +481,17 @@ class Collector:
         self.press_open: tuple[str, float] | None = None  # pressing en cours (ticket 08) : (équipe qui presse, début)
         self.now = 0.0  # instant du dernier tick
         self.carry_open: dict[str, tuple[float, tuple[str, ...]]] = {}  # porteur -> (instant du tirage, tranches), ticket 04c
+        self.pass_open: tuple[str, str, str, float] | None = None  # passe en vol mesurée (18g) : équipe, cible, tranche, chance
         self.planned: str | None = None  # suite prévue par la dernière décision (plan de passe, ticket 14)
         # passes du match (ticket 14) : instant, équipe, passeur, cible, gain (m), avance, suite prévue, réussie
         self.pass_log: list[dict] = []
 
     # --- événements du moteur ---
-    def on_pass(self, passer: PlayerState, target: PlayerState) -> None:
+    def on_pass(self, passer: PlayerState, target: PlayerState, opponents=None, restart: bool = False) -> None:
+        self._close_pass_calibration(lost=False, received=False)  # précédente passe sans contact : non perdue
+        if opponents is not None and not restart:  # ticket v2-realisme/18g
+            chance = pass_success_probability(passer, target, opponents)
+            self.pass_open = (passer.team, target.name, carry_tranche("chance évaluée", chance, PASS_CHANCE_BINS), chance)
         length = passer.position.distance_to(target.position)
         self.count["passes"] += 1
         self.count["passes longues"] += length > LONG_PASS_M
@@ -636,6 +646,24 @@ class Collector:
             self.carry_open.pop(holder.name, None)
         else:
             self.carry_open[holder.name] = (self.now, tranches)  # intervalle ouvert : un tacle gagné avant le suivant le ferme
+
+    def on_contact(self, player: PlayerState, controlled: bool) -> None:
+        """Ticket v2-realisme/18g : premier joueur qui touche une passe en vol ; ferme la mesure de calibration ouverte."""
+        if self.pass_open is not None:
+            team, target, _, _ = self.pass_open
+            self._close_pass_calibration(lost=player.team != team, received=player.name == target and controlled)
+
+    def _close_pass_calibration(self, lost: bool, received: bool) -> None:
+        if self.pass_open is None:
+            return
+        _, _, tranche, chance = self.pass_open
+        for group in ("toutes", tranche):
+            base = f"{PASS_PREFIX}{group} : "
+            self.count[base + "passes"] += 1
+            self.count[base + "chance évaluée (somme)"] += chance
+            self.count[base + "non perdues"] += not lost
+            self.count[base + "reçues par le receveur visé"] += received
+        self.pass_open = None
 
     def on_tackle_won(self, holder: PlayerState, tackler: PlayerState | None = None) -> None:
         """Ticket v2-realisme/04c : tacle gagné sur un porteur en conduite, pendant l'intervalle qui suit son tirage (le tacle
@@ -942,6 +970,8 @@ class Collector:
         self.now = now_s
         by_name = {p.name: p for p in players}
         self.players = players
+        if self.pass_open is not None and ball.holder is None and ball.receiver is None:
+            self._close_pass_calibration(lost=False, received=False)  # passe morte, sortie ou sifflée sans contact (18g)
         self._speeds(players, minute, dt)
         if scoring_team is not None:  # but : la possession se clôt, l'engagement n'est pas une perte de balle
             self.goals[scoring_team] += 1
@@ -1321,6 +1351,7 @@ class Collector:
                 self.stats[f"profil {defending} : solutions faciles laissées au porteur adverse (nombre)"].add(easy)
 
     def end_match(self) -> None:
+        self._close_pass_calibration(lost=False, received=False)  # dernière passe sans contact (ticket v2-realisme/18g)
         self.matches += 1
         for name, d in self.dist.items():
             if self.poste.get(name) != "GK":

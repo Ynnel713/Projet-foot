@@ -70,7 +70,10 @@ def test_space_reachable_by_the_holder_comes_first() -> None:
 
     runner = _player(attributes={"Off the Ball": 99})
     holder = _player("Porteur", position=Vec2(30.0, 34.0))
-    opponents = [_player("Adv", team="away", position=Vec2(40.0, 45.0))]
+    # ticket v2-realisme/18g : la chance évaluée est celle de ne pas perdre la passe ; une passe de 31 m vers un joueur
+    # libre l'est rarement (0,86 avec un seul adversaire loin de la ligne). L'espace le plus libre n'est donc plus
+    # « trop loin » : il est COUPÉ, par un adversaire sur sa ligne (42 ; 30), un second fermant l'axe (46 ; 34).
+    opponents = [_player("Adv", team="away", position=Vec2(42.0, 30.0)), _player("Adv2", team="away", position=Vec2(46.0, 34.0))]
 
     def reach(target: Vec2) -> float:
         return pass_success_probability(holder, replace(runner, position=target), opponents)
@@ -78,7 +81,7 @@ def test_space_reachable_by_the_holder_comes_first() -> None:
     with mock.patch("v2engine.flux.DECISION.random", return_value=0.0):  # meilleur espace
         alone = choose_space(runner, opponents, forward=1.0)
         supported = choose_space(runner, opponents, forward=1.0, holder=holder)
-    assert reach(alone) < OPEN_LANE_PROBABILITY  # le plus libre est trop loin du porteur
+    assert reach(alone) < OPEN_LANE_PROBABILITY  # le plus libre est coupé du porteur
     assert reach(supported) >= OPEN_LANE_PROBABILITY
 
 

@@ -1058,3 +1058,34 @@ Buts et conversion : 4,1 buts avec le cône seul, 2,96 avec la portée de jambe,
 
 **Série de 500 matchs (demande de l'expert, 12/11/2026).** `18f-500.*` (496 min de machine), comparaison appariée avec `18d-500` (`18f-comparaison.txt`, mêmes 500 matchs, après − avant) : passes par possession 2,70 → 2,81 (+ 0,12 [+ 0,10 ; + 0,13]) ; conduite − 2,3 points des décisions ; passes par match 916 → 948 (+ 32 [+ 28 ; + 36]), intervalle [941 ; 955], **0,8 au-dessus de la borne de 940** ; passes par minute de jeu effectif 12,6 → 12,9 ; temps par possession de joueur − 0,09 s. Sans écart significatif : buts (3,47 par match, écart − 0,07 [− 0,29 ; + 0,15]), conversion (8,1 %), buts dans la surface (58,8 %), tacles (46,9), fautes (14,7). La baisse des buts lue sur 50 matchs était du bruit.
 
+
+## 30. Passe : même risque à l'évaluation et en vol (ticket v2-realisme/18g, 50 matchs, 12/11/2026)
+
+Commande : `scripts/measure_v2.py` en 4 lots (`--debut 0, 13, 26, 39`), fichiers `.scratch/v2-realisme/mesures/18g-50-lot*.*`, synthèse `18g-50-synthese.txt` ; référence : `18f-det1.*` (18f livré, mêmes graines). Diagnostic et ajustement de la table : scripts hors dépôt (12 puis 50 matchs, 44 308 passes de jeu), résumés dans le ticket.
+
+**Ce qui change.** La chance de passe que lit la décision (`possession.pass_success_probability`) devient la chance que la passe ne soit **pas perdue** (aucun adversaire ne touche le ballon le premier) : produit des (1 − coupe) de chaque adversaire, selon sa distance à la trajectoire (table mesurée, près du passeur ou sur le trajet), × [précise × (1 − 0,05) + imprécise × part non perdue selon la longueur (0,83 / 0,77 / 0,62)]. La précision (Passing contre difficulté, sans terme de couloir) reste tirée à la résolution par la même fonction (`pass_accuracy_probability`). Le terme de couloir (+ 12 de difficulté par adversaire) est supprimé : il sous-comptait la coupe (évaluée 0,96, reçue 0,56 avec un adversaire dans le couloir).
+
+**Indicateur.** À chaque passe de jeu (remises exclues), le banc note la chance évaluée au lancement et l'issue au premier contact : perdue si un adversaire touche le ballon le premier ; reçue par le receveur visé, pour information. Par tranche de chance évaluée (`PASS_CHANCE_BINS`).
+
+| Chance évaluée | Passes par match | Évaluée | Non perdue | Écart (points) | Reçue par le visé |
+|---|---|---|---|---|---|
+| [0 ; 0,1[ | 0,2 | 0,049 | 0,083 | − 3,4 | 0,083 |
+| [0,1 ; 0,2[ | 2,5 | 0,168 | 0,113 | + 5,5 | 0,105 |
+| [0,2 ; 0,3[ | 2,7 | 0,219 | 0,182 | + 3,7 | 0,182 |
+| [0,3 ; 0,4[ | 0,2 | 0,369 | 0,500 | − 13,1 | 0,500 |
+| [0,4 ; 0,5[ | 2,5 | 0,464 | 0,421 | + 4,4 | 0,357 |
+| [0,5 ; 0,6[ | 14,6 | 0,561 | 0,528 | + 3,2 | 0,465 |
+| [0,6 ; 0,7[ | 36,8 | 0,653 | 0,642 | + 1,1 | 0,557 |
+| [0,7 ; 0,8[ | 137,1 | 0,756 | 0,775 | − 1,9 | 0,694 |
+| [0,8 ; 0,9[ | 372,8 | 0,858 | 0,881 | − 2,3 | 0,771 |
+| [0,9 ; +[ | 360,9 | 0,932 | 0,944 | − 1,2 | 0,866 |
+| toutes | 930,5 | 0,854 | 0,869 | − 1,6 | 0,778 |
+
+**Lecture.**
+- **Critère (moins de 5 points par tranche)** : tenu sur les tranches qui portent 99 % des passes. Hors critère : [0,1 ; 0,2[ (+ 5,5 sur 125 passes, erreur type environ 2,8 points) et [0,3 ; 0,4[ (10 passes) ; dans le bruit.
+- **Avant** (18f, même diagnostic) : évaluée 0,831, reçue 0,705 ; écart de 16 points sur [0,9 ; 1], de 40 points avec un adversaire dans le couloir.
+- **Ce que la mesure prouve et ne prouve pas.** La table décrit le moteur, pas le football réel (chiffres réels : non trouvés) ; elle est à remesurer si le mouvement des joueurs change, et cet indicateur le signalera. La part reçue par le receveur visé reste plus basse (0,778) : passes touchées par un coéquipier, mortes, et contrôles ratés, qui ne sont pas des pertes.
+
+**Effets sur le jeu (50 matchs, 18f → 18g ; repère).** Passes réussies 74,9 → 81,9 % (70 à 90 %) ; chez l'adversaire 23,1 → 14,9 % (15 à 20 %) ; passes par possession 2,81 → 4,35 (3 à 5) ; buts 2,96 → 2,50 (2 à 3,5) ; conduites 2 054 → 1 197 intervalles par match, pertes en conduite 83,5 → 46,3 ; **possession d'équipe 17,2 → 25,6 s (11 à 16, désormais au-dessus)** ; **passes par match 945 → 985 (890 à 940, plus au-dessus)** ; fautes 14,7 → 12,2 (21 à 26) ; solutions de passe ouvertes 2,1 → 4,8.
+
+**Scènes A/B** (`18g-ab-script.py`, 400 scènes du 18f ; `18g-ab-avant.txt`, `18g-ab.txt`). Aucun effet inversé ni annulé. Effets réduits : meilleure passe Passing 99 contre 11 + 0,514 → + 0,086, Composure + 0,072 → + 0,012 ; part de passes choisies, Passing + 0,620 → + 0,143. Vision + 0,108 → + 0,182, Dribbling − 0,148 → − 0,203, Decisions − 0,262 → − 0,222. Cause : dans le moteur, une passe ratée ne dévie que de 10 à 25 % de sa longueur et n'est perdue que 2 fois sur 10 environ ; Passing pèse peu sur l'issue réelle, et l'évaluation le reflète désormais. Ticket 18h.
