@@ -13,9 +13,9 @@ Interface : PWA React (`ui/`) + API FastAPI (`api/`) ; Streamlit (`app.py`) hist
 - Tickets de chantier : `.scratch/<chantier>/issues/NN-*.md` (format : `docs/agents/issue-tracker.md`). Domaine : `GLOSSARY.md`, `docs/adr/` (`docs/agents/domain.md`).
 
 ## Commandes
-- API + UI : `simulafoot.bat` (uvicorn :8000, Vite :5173), ou `uv run uvicorn api.main:app --port 8000` et `npm run dev --prefix ui`.
-- Tests : `PYTHONHASHSEED=0 uv run pytest tests -q -p no:cacheprovider` (environ 40 min). Toujours via `uv run` : `pytest` nu échoue (ticket 9). Marqueur `integration` exclu par défaut (`-m integration`, ~30 min).
-- Attendu : **2 754 passés, 14 désélectionnés** (12/11/2026, ticket v2-realisme/18f).
+- API + UI : `uv run uvicorn api.main:app --port 8000` et `npm run dev --prefix ui` (Vite :5173). (`simulafoot.bat` : ancien poste Windows.)
+- Tests : `PYTHONHASHSEED=0 uv run pytest tests -q -p no:cacheprovider` (environ 10 min en session cloud). Toujours via `uv run` : `pytest` nu échoue (ticket 9). Marqueur `integration` exclu par défaut (`-m integration`, ~30 min).
+- Attendu : **2 754 passés, 0 ignoré, 14 désélectionnés** (12/11/2026, session cloud, ticket expert-dispositif/05). Des tests NLG ignorés signalent un venv `simulafoot_nlg/.venv` absent.
 - UI, dans `ui/` : `npm run build` (OK) et `npm run lint` (0 erreur, 5 avertissements).
 - Mesures : `scripts/measure_geometry.py` (V1, graine d'audit 20260923), `scripts/measure_v2.py` et `scripts/v2_indicators.py` (V2).
 
@@ -28,7 +28,7 @@ Interface : PWA React (`ui/`) + API FastAPI (`api/`) ; Streamlit (`app.py`) hist
 - Toute constante produit est proposée au propriétaire avant d'être codée.
 - Modifications ciblées sur le ticket traité. Un test qui échoue se corrige ; il n'est ni supprimé ni désélectionné.
 - Imports entre modules par leur API publique uniquement (ticket 19).
-- Projet sur OneDrive : `link-mode = copy` ; la jonction `ui/node_modules` se retire comme jonction, sans suppression récursive. Fins de ligne : garder celles du fichier modifié (index en LF, arbre souvent en CRLF).
+- Développement en session cloud Linux uniquement, environnement `projet-foot` : son setup script installe PowerShell 7 (liens `powershell` et `powershell.exe`, pour le verrou et `valider-etape`), les venvs Python (racine et `simulafoot_nlg/`) et les dépendances npm de `ui/`. Fins de ligne : garder celles du fichier modifié.
 
 ## Estimer la durée d'un ticket
 - Tout ticket porte une estimation en travail effectif : analyse, développement, tests, intégration et vérifications, total, confiance (élevée, moyenne, faible), hypothèses. Le temps machine (suite complète, séries de matchs) est noté à part, hors total.
@@ -42,7 +42,7 @@ Interface : PWA React (`ui/`) + API FastAPI (`api/`) ; Streamlit (`app.py`) hist
 3. Déterminisme : mêmes empreintes sur deux exécutions (V2 : à graine fixée) ; mesure avant/après sur le pipeline réel si le comportement change.
 4. Rapport séparant tests réussis, échoués, non exécutés, et points à vérifier à l'écran ; il donne aussi la durée estimée et la durée réelle (voir « Estimer la durée d'un ticket »).
 5. Ticket : clôture par `/valider-ticket-simulafoot` (voir ci-dessous).
-6. Commit avec les seuls hunks de la tâche ; push uniquement sur demande. Dans la documentation, un commit se cite par son préfixe, lu dans `git log`, jamais de mémoire.
+6. Commit avec les seuls hunks de la tâche, puis push sur la branche de travail de la session juste après (conteneur éphémère : un commit non poussé se perd) ; jamais sur `main` sans demande. Dans la documentation, un commit se cite par son préfixe, lu dans `git log`, jamais de mémoire.
 
 ## Clôture des tickets et verrou de commit
 - Un ticket devient `livré (JJ/MM/AAAA), validé expert + QC` seulement avec **deux verdicts** : `APPROVED` du sous-agent `expert` (ou `APPROVED_WITH_RESERVATIONS`, chaque réserve acceptée par le propriétaire) **et** `VALIDÉ` du contrôle qualité. Avant : `implémenté (JJ/MM/AAAA) — en attente de /valider-ticket-simulafoot`. Les anciens statuts (« livré, validé QC ») restent tels quels.
