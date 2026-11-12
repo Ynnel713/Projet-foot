@@ -1165,3 +1165,26 @@ Sous 5 points sur toutes les tranches d'au moins 100 passes sauf [0,3 ; 0,4[ (0,
 **Réussite par longueur** (reçue par un coéquipier au premier contact ; 48 367 passes) : 92,0 / 85,3 / 76,6 % (18i) → 90,6 / 84,6 / 75,0 % ; réel indicatif 89,4 / 87,1 / 51,7 %.
 
 **Effets sur le jeu (18i → 18j ; repère).** Passes par match 1 043 → 998 (890 à 940) ; passes réussies 86,2 → 85,2 % ; chez l'adversaire 11,6 → 12,5 % (15 à 20, en dessous) ; passes par possession 5,11 → 4,63 (3 à 5) ; possession d'équipe 28,3 → 26,9 s (11 à 16) ; buts 2,64 → 2,62 ; pertes en conduite 54,6 → 61,5 ; face-à-face 9,0 → 10,3 par match. Scènes A/B (`18j-ab.txt`) : aucun effet inversé ni annulé. Déterminisme : deux exécutions identiques hors temps de calcul.
+
+## 34. Calibration provisoire 2 : tirs, conversion et gardien (ticket v2-realisme/18e, 50 matchs, 12/11/2026)
+
+Commandes : état de départ, série du 18j (`.scratch/v2-realisme/mesures/18j-50-lot*.*`) ; tirs par zone, `18e-zones.py` (50 matchs, mêmes graines ; lecture seule), synthèse `18e-zones-synthese.py`, sortie `18e-zones-avant.txt` ; essai de contre, `18e-variante.py` (`BLOCK_CHANCE` 0,75, `18e-b075-lot*.*`) ; scène du contre, `18e-contre-scene.txt`.
+
+**Aucune constante modifiée.** Les écarts aux repères viennent de mécanismes ; les régler ici les masquerait (règle des calibrations provisoires).
+
+**Tirs par zone** (hors penaltys).
+
+| Zone | Tirs par équipe | Conversion | Contrés | Cadrés | xG neutre moyen | Réel |
+|---|---|---|---|---|---|---|
+| Surface | 3,85 | 17,7 % | 17,4 % | 38,7 % | 0,187 | 14,7 % (penaltys compris) |
+| Hors surface | 14,13 | 4,4 % | 17,6 % | 23,5 % | 0,041 | 4,2 % |
+| [25 ; 30[ m | 6,93 | 2,3 % | 17,3 % | — | 0,021 | — |
+| Ensemble | 17,98 | 7,2 % | 17,6 % | 26,8 % | 0,073 | 10 à 12 % |
+
+Part des tirs dans la surface 21,4 % (réel 68,3 %). Avec le mélange réel, les taux par zone donneraient environ 33,8 % de cadrés et 13,5 % de conversion (0,683 × 17,7 + 0,317 × 4,4) : **l'exécution et le gardien sont dans l'ordre de grandeur, le mélange ne l'est pas.** Une fois le mélange corrigé, la conversion dépasserait le repère R2 (10 à 12 %) : la conversion dans la surface (17,7 % hors penaltys, erreur type environ 1,9 point, contre 14,7 % réel penaltys compris) est à surveiller au 18k et à revoir au `v2-collectif/22c`. Cause : un tir manqué ne coûte rien dans la décision (réserve A2 du `v2-collectif/28a`), le porteur tire de 25 à 30 m à 0,021 d'xG. Ticket `v2-realisme/18k`.
+
+**Contrés.** 17,6 % (repère 22,5 %). `BLOCK_CHANCE` 0,75 donne 22,4 % sur 50 matchs (conversion 7,2 %, buts inchangés), mais l'estimateur de la décision (05e) place mal l'angle couvert par un défenseur en course (le test de cohérence échoue ; écart déjà présent à 0,6). Gardée à 0,6 ; ticket `v2-realisme/05j`.
+
+**Gardien.** Taux d'arrêt des cadrés environ 73 % (repère environ 70 %) : 36 % sous 11 m, 62 % de 11 à 18 m, 77 % de 18 à 25 m, 89 % au-delà. Aucun réglage.
+
+**Penaltys.** 0,04 par match (réel environ 0,34) : fautes dans la surface absentes (`21b`, `21c`).

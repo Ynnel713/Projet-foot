@@ -26,3 +26,9 @@
 ## Reprise du v2-realisme/05g (10/11/2026)
 
 - Poids de la note de tir sur le cadrage presque nul en match : `duel_probability` cubique et exposant 0,5 de l'exécution donnent un coefficient de 0,979 (note 45) à 1,049 (note 80), ± 3,5 % sur l'écart du ballon, soit 2 à 3 points de cadrage entre tranches (50 matchs, `docs/INDICATEURS_V2.md` §22 ; net en scène aux notes extrêmes : 40 % à 69 % à 14 m de 25 à 95). Sensibilité des attributs de tir (forme de la courbe ou exposant) : constante produit, à proposer au propriétaire avec la calibration.
+
+## Repris du ticket v2-realisme/18e (12/11/2026, calibration provisoire 2 sans réglage)
+
+- Faire d'abord `v2-realisme/18k` (le tir manqué coûte le ballon dans la décision) : par zone la conversion est réaliste, le mélange ne l'est pas (21 % des tirs dans la surface contre 68 %).
+- Faire d'abord `v2-realisme/05j` (estimateur du contre pour un défenseur en course) avant de relever `shooting.BLOCK_CHANCE` (0,75 mesuré : contrés 22,4 %, repère 22,5 %).
+- Rapport : section 34 de `docs/INDICATEURS_V2.md`.

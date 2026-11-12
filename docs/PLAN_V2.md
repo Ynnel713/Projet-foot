@@ -271,6 +271,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **Portée du défenseur qui lit la passe (12/11/2026, ticket `v2-realisme/18j`)** : livré (12/11/2026), validé expert + QC (réserves A1 et A2 acceptées par délégation du propriétaire : tranche [0,3 ; 0,4[ et léger pessimisme de l'évaluation, au 22a). Le défenseur qui a lu la passe touche le ballon à 1,0 m (`match.READER_REACH_M`, comme le receveur visé), sans délai ; table de coupe de l'évaluation remesurée (près du passeur 0,82 / 0,21 / 0,02 ; trajet 0,43 à 0,02 ; passe imprécise non perdue 0,85 / 0,69), constantes validées par délégation du propriétaire. Sur 50 matchs : passes chez l'adversaire 11,6 → 12,5 % (repère 15 à 20), passes par match 1 043 → 998, possession d'équipe 28,3 → 26,9 s, buts 2,64 → 2,62 ; calibration de la passe sous 5 points sauf [0,3 ; 0,4[ (− 7,0, 0,3 % des passes) (section 33).
 
+**Calibration provisoire 2, tirs et gardien (12/11/2026, ticket `v2-realisme/18e`)** : livré (12/11/2026), validé expert + QC. Aucune constante modifiée : par zone, conversion réaliste (surface 17,7 %, dehors 4,4 % ; réel 14,7 et 4,2), gardien à environ 73 % d'arrêts ; les écarts (18 tirs par équipe, conversion 7,2 %, buts dans la surface 52 %) viennent du mélange (21 % des tirs dans la surface contre 68 %) : le tir manqué ne coûte rien dans la décision, ticket 18k. Contrés 17,6 % : `BLOCK_CHANCE` 0,75 les amène à 22,4 % mais l'estimateur du contre se trompe pour un défenseur en course, ticket 05j (section 34).
+
 ### Bloquée par
 
 - Phase 4

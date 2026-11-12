@@ -1,0 +1,21 @@
+Ticket 18e, 12/11/2026 : scène du défenseur en course de tests/test_v2engine_chance_tir.py (tireur à 16 m dans l'axe,
+défenseur à 7 m de la ligne, 2 m de l'axe, vitesse (0 ; -4) m/s ; gardien neutre ; 1 500 tirs ; scripts/shot_calibration.py).
+
+BLOCK_CHANCE graine  but évalué  but observé [IC 95 %]     contre évalué  contre observé
+0.60         6       0.158       0.168 [0.150-0.188]       0.249          0.273
+0.60         7       0.158       0.187 [0.168-0.207]       0.249          0.260   (déjà hors intervalle)
+0.60         8       0.158       0.170 [0.152-0.190]       0.249          0.289
+0.60         9       0.158       0.175 [0.156-0.195]       0.249          0.265
+0.75         6       0.146       0.168 [0.150-0.188]       0.312          0.348   (test du dépôt : échoue)
+0.75         7       0.146       0.180 [0.161-0.200]       0.312          0.328
+0.75         8       0.146       0.165 [0.147-0.185]       0.312          0.349
+0.75         9       0.146       0.175 [0.156-0.195]       0.312          0.321
+
+Issues détaillées (premier contact du tir ; aucun but après contre) :
+0.60 g6 : but 252, contré 409, capté 131, repoussé 99, claqué 25, à côté 300, au-dessus 254, dévissé 30
+0.60 g7 : but 280, contré 390, capté 153, repoussé 86, claqué 30, à côté 297, au-dessus 228, dévissé 36
+0.75 g6 : but 252, contré 522, capté 85, repoussé 63, claqué 16, à côté 307, au-dessus 224, dévissé 31
+0.75 g7 : but 270, contré 492, capté 110, repoussé 68, claqué 22, à côté 312, au-dessus 190, dévissé 36
+Lecture : le défenseur en course contre surtout des tirs que le gardien aurait arrêtés ; l'estimateur lui fait couvrir
+des angles qui marquent. Scènes à défenseurs immobiles (14 m axe ; 11,7 m ; 18 m à 1 m) : toutes dans l'intervalle à 0,75.
+Essai écarté : portée élargie de 0,5 x pas x vitesse perpendiculaire (contres surestimés de 2 à 3 points, but inchangé).
