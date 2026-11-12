@@ -271,6 +271,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **Orientation du corps (12/11/2026, ticket `v2-realisme/07a`)** : livré (12/11/2026), validé expert + QC (passage 2 ; réserve A2 acceptée : hystérésis au seuil de course rapide, au 07b). Chaque joueur a un cap (`PlayerState.facing`, `v2engine/orientation.py`), distinct de sa vitesse, qui tourne au plus à 360°/s (valeur réelle non trouvée, validée par le propriétaire) vers le sens de course au-dessus de 19,8 km/h, sinon vers le ballon (le porteur regarde où il va) ; face au but adverse au coup d'envoi. Tracé, transmis par l'API et dessiné à l'écran (trait au bord du rond). Aucun effet sur le jeu : 20 matchs identiques avant / après à graine fixée ; temps de calcul + 0,1 à + 5,9 % (bruit 5,7 %) ; suite 2 768 passés, 14 désélectionnés. Débloque 07b, 07c, 07e, 07f, 08a.
 
+**Passe précise coupée trop souvent (12/11/2026, ticket `v2-realisme/18i`)** : livré (12/11/2026), validé expert + QC (réserves A1 et A2 acceptées, reportées au `v2-collectif/22a`). Cause mécanique : le receveur passait à 0,6 m du ballon sans le toucher (portée du corps seule, 0,41 m) et un adversaire derrière le récupérait (près de la moitié des coupes de passes courtes précises). Le receveur visé et les lecteurs de la passe atteignent désormais le ballon jambe tendue (`match.LEG_REACH_M`, 1,0 m, valeur réelle non trouvée, validée par le propriétaire) ; tables de la chance évaluée remesurées sur 50 matchs. Réussite par longueur 86,1 / 79,5 / 68,3 → 88,7 / 84,0 / 73,2 % (réel 89,4 / 87,1 / 51,7 %) ; calibration de la passe sous 5 points par tranche ; passes par match 933 → 1 006 et possession d'équipe 23,8 → 27,1 s, au 22a.
+
 ### Bloquée par
 
 - Phase 4

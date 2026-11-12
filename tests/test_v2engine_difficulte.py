@@ -40,13 +40,14 @@ def test_difficulty_follows_validated_distance_scale() -> None:
 
 def test_lane_opponent_cuts_instead_of_adding_difficulty_and_marking_adds_validated_points() -> None:
     """Ticket v2-realisme/18g : l'adversaire du couloir n'ajoute plus de difficulté d'exécution ; il compte dans la chance
-    évaluée par sa chance de couper la passe (table mesurée : sur le trajet, de 1 à 2 m de la trajectoire, 0,16)."""
+    évaluée par sa chance de couper la passe (table mesurée : sur le trajet, de 1 à 2 m de la trajectoire, 0,22 depuis le
+    ticket 18i)."""
     passer = _player()
     receiver = _player("R", position=Vec2(45.0, 34.0))  # 15 m : difficulté 19
     in_lane = _player("A", team="away", position=Vec2(37.0, 35.5))  # sur le trajet, à 1,5 m de la ligne, sans pression
     assert math.isclose(pass_difficulty(passer, receiver, [in_lane]), 19.0)
     assert math.isclose(pass_success_probability(passer, receiver, [in_lane]),
-                        pass_success_probability(passer, receiver, []) * (1.0 - 0.16))
+                        pass_success_probability(passer, receiver, []) * (1.0 - 0.22))
     receiver = _player("R", position=Vec2(38.0, 34.0))
     marker = _player("M", team="away", position=Vec2(39.0, 34.5))  # marque le receveur, hors couloir
     assert math.isclose(pass_difficulty(passer, receiver, [marker]), 10.0 + 10.0)
@@ -54,7 +55,8 @@ def test_lane_opponent_cuts_instead_of_adding_difficulty_and_marking_adds_valida
 
 def test_presser_cuts_the_pass_only_when_he_stands_on_its_line() -> None:
     """Ticket v2-realisme/18g (table mesurée, près du passeur) : le presseur gêne l'exécution par la pression, où qu'il
-    soit ; il ne coupe la passe que s'il est sur sa ligne (0,75 à moins de 0,5 m, 0,14 de 0,5 à 1 m, 0,01 au-delà)."""
+    soit ; il ne coupe la passe que s'il est sur sa ligne (0,76 à moins de 0,5 m, 0,21 de 0,5 à 1 m, 0,02 au-delà depuis le
+    ticket 18i)."""
     passer = _player()
     receiver = _player("R", position=Vec2(45.0, 34.0))  # 15 m : difficulté 19
     beside = _player("B", team="away", position=Vec2(30.75, 35.3))  # à 1,5 m du passeur, à 1,3 m de la ligne
@@ -153,21 +155,22 @@ def test_easy_ball_is_easy_to_control_and_fast_ball_is_harder() -> None:
 
 def test_evaluated_chance_combines_the_measured_cut_table_and_the_missed_pass() -> None:
     """Ticket v2-realisme/18g : chance que la passe ne soit pas perdue = produit des (1 - coupe) de chaque adversaire x
-    [précise x (1 - 0,05) + imprécise x part non perdue selon la longueur (0,64 au-delà de 10 m, ticket 18h)]. Ne coupent pas : un
+    [précise x (1 - 0,015) + imprécise x part non perdue selon la longueur (0,76 au-delà de 10 m)] ; valeurs remesurées
+    au ticket 18i. Ne coupent pas : un
     adversaire derrière le passeur, au-delà du receveur, ou à 6 m ou plus de la ligne."""
     passer = _player()
     receiver = _player("R", position=Vec2(45.0, 34.0))  # 15 m
     accurate = pass_accuracy_probability(passer, receiver, [])
     alone = pass_success_probability(passer, receiver, [])
-    assert math.isclose(alone, accurate * 0.95 + (1.0 - accurate) * 0.64)
-    near = _player("N", team="away", position=Vec2(31.5, 34.2))  # près du passeur, à 0,2 m de la ligne : 0,75
-    path = _player("W", team="away", position=Vec2(38.0, 35.5))  # sur le trajet, à 1,5 m : 0,16
+    assert math.isclose(alone, accurate * 0.985 + (1.0 - accurate) * 0.76)
+    near = _player("N", team="away", position=Vec2(31.5, 34.2))  # près du passeur, à 0,2 m de la ligne : 0,76
+    path = _player("W", team="away", position=Vec2(38.0, 35.5))  # sur le trajet, à 1,5 m : 0,22
     for silent in (Vec2(24.0, 34.0), Vec2(48.0, 34.0), Vec2(38.0, 40.5)):  # derrière, au-delà, à 6,5 m (hors pression)
         assert math.isclose(pass_success_probability(passer, receiver, [_player("S", team="away", position=silent)]),
                             alone)
     both = pass_success_probability(passer, receiver, [near, path])
     accurate_both = pass_accuracy_probability(passer, receiver, [near, path])  # la pression de N gêne l'exécution
-    assert math.isclose(both, (1 - 0.75) * (1 - 0.16) * (accurate_both * 0.95 + (1.0 - accurate_both) * 0.64))
+    assert math.isclose(both, (1 - 0.76) * (1 - 0.22) * (accurate_both * 0.985 + (1.0 - accurate_both) * 0.76))
 
 
 def test_the_missed_pass_draw_follows_the_accuracy_chance_lane_or_not() -> None:

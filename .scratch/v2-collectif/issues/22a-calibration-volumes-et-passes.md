@@ -30,3 +30,14 @@
 ## Complément de l'audit de la roadmap (10/11/2026)
 
 Source : `docs/AUDIT_ROADMAP_V2.md`. Calibrer seulement après les effets de la condition (20a à 20d, 20f) et après les fautes hors du tacle (21c) : l'écart de fautes (9,4 contre 21-26 par match) vient d'un mécanisme absent et ne doit pas être comblé par un réglage. La garde probabiliste (19c) est rejouée après chaque lot de calibration.
+
+## Repris de la réserve A1 du ticket v2-realisme/18i (acceptée le 12/11/2026)
+
+Portée de jambe du receveur visé et des lecteurs (`match.LEG_REACH_M`, 1,0 m), correction mécanique sans réglage. Effets mesurés sur 50 matchs appariés (`.scratch/v2-realisme/mesures/18i-bench-synthese.txt`), à traiter ici :
+- [ ] Passes par match 933 → 1 006 (repère 890 à 940, désormais dépassé)
+- [ ] Passes chez l'adversaire 16,6 → 12,8 % (repère 15 à 20 %, désormais en dessous)
+- [ ] Possession d'équipe 23,8 → 27,1 s (repère 11 à 16 s, déjà hors repère, plus loin) ; passes par possession 3,8 → 4,7
+- [ ] Passe longue réussie 68,3 → 73,2 % (réel indicatif 51,7 %), surtout par les passes imprécises rattrapées à 1 m
+- [ ] Réserve A2 du 18i (acceptée le 12/11/2026) : le contrôle jambe tendue réussit aussi souvent qu'un contrôle du corps (`attempt_control` ne reçoit pas la distance de contact) ; levier possible ici ou dans un ticket dédié : difficulté de contrôle croissante avec la distance de contact au-delà de `CONTROL_RADIUS_M` (constante à proposer au propriétaire)
+- [ ] Tables de la chance évaluée (`possession.py`, 18g/18h/18i) à remesurer après tout réglage qui change le mouvement ou le contrôle
+

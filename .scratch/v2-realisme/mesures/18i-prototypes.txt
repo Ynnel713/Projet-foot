@@ -1,0 +1,23 @@
+Prototypes (18i-diagnostic-cause.py, 4 matchs, REACH_M 1,0) : aucun (HEAD), receveur, receveur+lecteurs, tous
+== aucun
+
+receveur : précise|courte: n=1192 reçue visé 0.889 coupée 0.061 (presseur 0.027, marqueur 0.000, lecteur 0.014, autre 0.020)
+receveur : précise|moyenne: n=1692 reçue visé 0.881 coupée 0.059 (presseur 0.015, marqueur 0.000, lecteur 0.018, autre 0.025)
+receveur : précise|longue: n=248 reçue visé 0.815 coupée 0.141 (presseur 0.008, marqueur 0.000, lecteur 0.020, autre 0.113)
+receveur : imprécise|courte: n=102 reçue visé 0.696 coupée 0.216 (presseur 0.069, marqueur 0.000, lecteur 0.000, autre 0.147)
+receveur : imprécise|moyenne: n=572 reçue visé 0.622 coupée 0.248 (presseur 0.056, marqueur 0.000, lecteur 0.021, autre 0.171)
+receveur : imprécise|longue: n=198 reçue visé 0.581 coupée 0.212 (presseur 0.010, marqueur 0.000, lecteur 0.025, autre 0.177)
+tous : précise|courte: n=1810 reçue visé 0.552 coupée 0.388 (presseur 0.328, marqueur 0.002, lecteur 0.014, autre 0.044)
+tous : précise|moyenne: n=1868 reçue visé 0.525 coupée 0.404 (presseur 0.321, marqueur 0.001, lecteur 0.029, autre 0.054)
+tous : précise|longue: n=233 reçue visé 0.438 coupée 0.489 (presseur 0.292, marqueur 0.000, lecteur 0.034, autre 0.163)
+tous : imprécise|courte: n=145 reçue visé 0.372 coupée 0.552 (presseur 0.372, marqueur 0.007, lecteur 0.028, autre 0.145)
+tous : imprécise|moyenne: n=693 reçue visé 0.307 coupée 0.567 (presseur 0.369, marqueur 0.000, lecteur 0.019, autre 0.179)
+tous : imprécise|longue: n=229 reçue visé 0.341 coupée 0.546 (presseur 0.323, marqueur 0.004, lecteur 0.009, autre 0.210)
+receveur+lecteurs : précise|courte: n=1238 reçue visé 0.851 coupée 0.098 (presseur 0.036, marqueur 0.002, lecteur 0.038, autre 0.023)
+receveur+lecteurs : précise|moyenne: n=1665 reçue visé 0.846 coupée 0.097 (presseur 0.026, marqueur 0.000, lecteur 0.049, autre 0.021)
+receveur+lecteurs : précise|longue: n=199 reçue visé 0.769 coupée 0.141 (presseur 0.015, marqueur 0.000, lecteur 0.035, autre 0.090)
+receveur+lecteurs : imprécise|courte: n=87 reçue visé 0.713 coupée 0.172 (presseur 0.034, marqueur 0.000, lecteur 0.046, autre 0.092)
+receveur+lecteurs : imprécise|moyenne: n=628 reçue visé 0.627 coupée 0.218 (presseur 0.037, marqueur 0.000, lecteur 0.032, autre 0.150)
+receveur+lecteurs : imprécise|longue: n=207 reçue visé 0.570 coupée 0.242 (presseur 0.024, marqueur 0.000, lecteur 0.024, autre 0.193)
+aucun (code d'avant, 4 matchs, premier relevé) : précise courte reçue visé 0.809 coupée 0.120 ; moyenne 0.815 / 0.112 ; longue 0.756 / 0.188
+Coupes de passes courtes précises (aucun, 4 matchs) : 150, dont 71 au-delà du point visé ; receveur passé à moins de 1 m du ballon dans 70 de ces 71 (0,60 m en moyenne au relevé de 0,1 s), sans le toucher (portée 0,41 m).

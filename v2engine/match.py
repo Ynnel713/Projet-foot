@@ -71,6 +71,12 @@ PLAYER_RADIUS_M = 0.3
 # Distance de contact ballon-joueur (Phase 2) : somme des deux rayons -- en dessous, un joueur
 # peut tenter de contrôler le ballon (voir `possession.attempt_control`).
 CONTROL_RADIUS_M = BALL_RADIUS_M + PLAYER_RADIUS_M
+# Portée de jambe d'un joueur qui attend le ballon (ticket v2-realisme/18i, validé le 12/11/2026) : le receveur visé d'une
+# passe et les adversaires qui l'ont lue (`ball.readers`) l'atteignent jambe tendue, à 1 m de leur centre ; les autres ne
+# le touchent qu'avec le corps (`CONTROL_RADIUS_M`). Même portée que le contre d'un tir (`shooting.BLOCK_WIDTH_M`, 05c).
+# Valeur réelle non trouvée. Sans elle, le receveur passait à 0,5 m du ballon sans le toucher et un adversaire derrière
+# le récupérait (près de la moitié des coupes de passes courtes précises, diagnostic du 18i).
+LEG_REACH_M = 1.0
 # Distance de contact direct (Phase 3) : en dessous, un adversaire du porteur peut tenter un
 # tacle (voir `duel.should_attempt_tackle`) -- plus large que CONTROL_RADIUS_M (contact entre
 # deux joueurs, pas entre un joueur et le ballon seul).
@@ -782,7 +788,8 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
 
     # Contact sur le trajet (ticket v2-collectif/25) : le ballon touche tout joueur qu'il frôle PENDANT le pas, pas
     # seulement au point d'arrivée ; le premier atteint tente le premier, quelle que soit son équipe.
-    for _, _, player in _contacts(start, ball.position, dt, players, ball.released_by):
+    expecting = frozenset(ball.readers) | ({ball.receiver} if ball.receiver is not None else frozenset())
+    for _, _, player in _contacts(start, ball.position, dt, players, ball.released_by, expecting=expecting):
         if now_s < ball.offside_out_until.get(player.name, 0.0):
             continue  # écarté de l'action après un coup franc : il recule, il ne joue pas ce ballon
         if now_s < ball.control_ban_until_s.get(player.name, 0.0):
@@ -827,13 +834,16 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
 
 
 def _contacts(start: Vec2, end: Vec2, dt: float, players: list[PlayerState],
-              released_by: str | None = None, radius: float = CONTROL_RADIUS_M) -> list[tuple[float, float, PlayerState]]:
+              released_by: str | None = None, radius: float = CONTROL_RADIUS_M,
+              expecting: frozenset[str] = frozenset()) -> list[tuple[float, float, PlayerState]]:
     """Joueurs que le ballon frôle à moins de `radius` (par défaut `CONTROL_RADIUS_M`) pendant le pas, de `start` à `end`, triés par
     instant de contact (0 = début du pas). Mouvement relatif : le joueur a lui aussi bougé pendant ce pas (sa
     position de début est estimée par sa vitesse). `released_by` : passeur du ballon, qui ne touche pas sa passe
-    tant qu'elle s'éloigne de lui."""
+    tant qu'elle s'éloigne de lui. `expecting` : joueurs qui attendent le ballon (receveur visé, lecteurs de la passe),
+    qui l'atteignent à `LEG_REACH_M` au lieu de `radius` (ticket v2-realisme/18i)."""
     hits = []
     for player in players:
+        reach = LEG_REACH_M if player.name in expecting else radius
         r0 = start - (player.position - player.velocity * dt)  # ballon vu du joueur, en début de pas
         r1 = end - player.position  # et en fin de pas
         seg = r1 - r0
@@ -846,13 +856,13 @@ def _contacts(start: Vec2, end: Vec2, dt: float, players: list[PlayerState],
             continue
         s = 0.0 if length2 < 1e-12 else min(1.0, max(0.0, -(r0.x * seg.x + r0.y * seg.y) / length2))
         closest = r0 + seg * s
-        if closest.length() < radius:
+        if closest.length() < reach:
             # instant d'entrée dans le rayon (pas seulement du point le plus proche) : le premier atteint tente
             # le premier
-            if length2 < 1e-12 or r0.length() < radius:
+            if length2 < 1e-12 or r0.length() < reach:
                 entry = 0.0
             else:
-                back = math.sqrt(max(0.0, radius**2 - closest.length() ** 2) / length2)
+                back = math.sqrt(max(0.0, reach**2 - closest.length() ** 2) / length2)
                 entry = max(0.0, s - back)
             hits.append((entry, closest.length(), player))
     hits.sort(key=lambda hit: (hit[0], hit[1]))  # à égalité (déjà au contact), le plus proche d'abord

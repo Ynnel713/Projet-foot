@@ -1,0 +1,37 @@
+Ticket 18i, relevé des passes sur 50 matchs (18i-tables.py), même graines ; avant = commit 1bd896f, après = règle B (LEG_REACH_M 1,0 m) avec les anciennes tables
+== AVANT
+précise courte: n=14857 réussie 0.875 reçue visé 0.856 coupée 0.112 perdue 0.125
+précise moyenne: n=19547 réussie 0.881 reçue visé 0.866 coupée 0.103 perdue 0.119
+précise longue: n=2570 réussie 0.809 reçue visé 0.786 coupée 0.180 perdue 0.191
+imprécise courte: n=1060 réussie 0.674 reçue visé 0.649 coupée 0.267 perdue 0.326
+imprécise moyenne: n=6423 réussie 0.533 reçue visé 0.513 coupée 0.336 perdue 0.467
+imprécise longue: n=2140 réussie 0.531 reçue visé 0.493 coupée 0.307 perdue 0.469
+toutes courte: n=15917 réussie 0.861 reçue visé 0.843 coupée 0.122 perdue 0.139
+toutes moyenne: n=25970 réussie 0.795 reçue visé 0.779 coupée 0.160 perdue 0.205
+toutes longue: n=4710 réussie 0.683 reçue visé 0.653 coupée 0.237 perdue 0.317
+== APRÈS
+précise courte: n=15578 réussie 0.896 reçue visé 0.884 coupée 0.102 perdue 0.104
+précise moyenne: n=21613 réussie 0.898 reçue visé 0.886 coupée 0.101 perdue 0.102
+précise longue: n=2920 réussie 0.811 reçue visé 0.792 coupée 0.185 perdue 0.189
+imprécise courte: n=1095 réussie 0.760 reçue visé 0.740 coupée 0.202 perdue 0.240
+imprécise moyenne: n=7105 réussie 0.664 reçue visé 0.650 coupée 0.241 perdue 0.336
+imprécise longue: n=2467 réussie 0.638 reçue visé 0.609 coupée 0.261 perdue 0.362
+toutes courte: n=16673 réussie 0.887 reçue visé 0.875 coupée 0.109 perdue 0.113
+toutes moyenne: n=28718 réussie 0.840 reçue visé 0.828 coupée 0.136 perdue 0.160
+toutes longue: n=5387 réussie 0.732 reçue visé 0.709 coupée 0.220 perdue 0.268
+
+== Ajustement des tables (18i-ajustement.py) sur le relevé APRÈS
+== ajustement (matchs pairs) : 25403 passes
+  coupe par case : passeur<0.5 0.790 (n 176), passeur<1 0.214 (n 3638), passeur<6 0.020 (n 12948), trajet<1 0.362 (n 911), trajet<2 0.223 (n 1689), trajet<3 0.126 (n 2631), trajet<4 0.079 (n 2939), trajet<5 0.046 (n 3251), trajet<6 0.040 (n 3190)
+  coupe imprévue 0.014 ; imprécise non perdue <10 m 0.831, >=10 m 0.755 ; {'précise|n': 20074, 'imprécise>=10|n': 5059, 'imprécise<10|n': 270}
+== contrôle (matchs impairs) : 25375 passes
+  coupe par case : passeur<0.5 0.725 (n 178), passeur<1 0.214 (n 3847), passeur<6 0.019 (n 13037), trajet<1 0.374 (n 972), trajet<2 0.207 (n 1732), trajet<3 0.127 (n 2658), trajet<4 0.077 (n 2987), trajet<5 0.049 (n 3284), trajet<6 0.035 (n 3318)
+  coupe imprévue 0.017 ; imprécise non perdue <10 m 0.851, >=10 m 0.762 ; {'précise|n': 20037, 'imprécise>=10|n': 5055, 'imprécise<10|n': 283}
+== tout : 50778 passes
+  coupe par case : passeur<0.5 0.757 (n 354), passeur<1 0.214 (n 7485), passeur<6 0.020 (n 25985), trajet<1 0.369 (n 1883), trajet<2 0.215 (n 3421), trajet<3 0.127 (n 5289), trajet<4 0.078 (n 5926), trajet<5 0.048 (n 6535), trajet<6 0.037 (n 6508)
+  coupe imprévue 0.015 ; imprécise non perdue <10 m 0.841, >=10 m 0.759 ; {'précise|n': 40111, 'imprécise>=10|n': 10114, 'imprécise<10|n': 553}
+
+== Contrôle de la méthode : mêmes calculs sur le relevé AVANT (tables du moteur : 0,75/0,14/0,01 ; 0,31/0,16/0,07/0,04/0,02/0,01 ; 0,05 ; 0,78/0,64)
+== tout : 46597 passes
+  coupe par case : passeur<0.5 0.721 (n 315), passeur<1 0.143 (n 6896), passeur<6 0.022 (n 23367), trajet<1 0.287 (n 1785), trajet<2 0.153 (n 2997), trajet<3 0.092 (n 4604), trajet<4 0.061 (n 5165), trajet<5 0.048 (n 5481), trajet<6 0.046 (n 5467)
+  coupe imprévue 0.055 ; imprécise non perdue <10 m 0.772, >=10 m 0.597 ; {'précise|n': 36974, 'imprécise>=10|n': 9045, 'imprécise<10|n': 578}

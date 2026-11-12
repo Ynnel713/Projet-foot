@@ -1,0 +1,44 @@
+Ticket 18i, scripts.bench_series 50 --processus 4 (mêmes graines) ; avant = commit 1bd896f, après = règle B + tables du 18i
+
+Calibration de la passe (définition du 18h)
+  chance évaluée [0 ; 0.1[ : passes par match                                0.38 ->     0.46
+  chance évaluée [0 ; 0.1[ : écart évaluée / non perdue (points)           -10.46 ->     0.78
+  chance évaluée [0.1 ; 0.2[ : passes par match                              3.54 ->     4.04
+  chance évaluée [0.1 ; 0.2[ : écart évaluée / non perdue (points)           3.69 ->     0.41
+  chance évaluée [0.2 ; 0.3[ : passes par match                              1.88 ->     2.32
+  chance évaluée [0.2 ; 0.3[ : écart évaluée / non perdue (points)           2.11 ->     4.30
+  chance évaluée [0.3 ; 0.4[ : passes par match                              0.76 ->     1.80
+  chance évaluée [0.3 ; 0.4[ : écart évaluée / non perdue (points)           5.28 ->     1.72
+  chance évaluée [0.4 ; 0.5[ : passes par match                              4.86 ->     7.78
+  chance évaluée [0.4 ; 0.5[ : écart évaluée / non perdue (points)          -2.13 ->     4.89
+  chance évaluée [0.5 ; 0.6[ : passes par match                             21.24 ->    22.88
+  chance évaluée [0.5 ; 0.6[ : écart évaluée / non perdue (points)          -0.27 ->     1.92
+  chance évaluée [0.6 ; 0.7[ : passes par match                             65.72 ->    59.78
+  chance évaluée [0.6 ; 0.7[ : écart évaluée / non perdue (points)           1.10 ->    -1.50
+  chance évaluée [0.7 ; 0.8[ : passes par match                            180.60 ->   116.24
+  chance évaluée [0.7 ; 0.8[ : écart évaluée / non perdue (points)           3.40 ->     0.01
+  chance évaluée [0.8 ; 0.9[ : passes par match                            260.84 ->   298.22
+  chance évaluée [0.8 ; 0.9[ : écart évaluée / non perdue (points)           2.73 ->    -1.24
+  chance évaluée [0.9 ; +[ : passes par match                              333.90 ->   441.92
+  chance évaluée [0.9 ; +[ : écart évaluée / non perdue (points)             1.48 ->    -1.29
+  toutes : passes par match                                                873.72 ->   955.44
+  toutes : écart évaluée / non perdue (points)                               2.17 ->    -0.97
+
+Indicateurs généraux ; repère (INDICATEURS_V2, 18h)
+  passes par match                                933.440 ->  1005.920   890 à 940
+  passes par minute de jeu effectif                12.965 ->    13.669   15 à 17
+  passes réussies (part)                            0.797 ->     0.848   70 à 90 %
+  passes chez l'adversaire (part)                   0.166 ->     0.128   15 à 20 %
+  receveur visé (part)                              0.776 ->     0.829   
+  passes par possession                             3.836 ->     4.692   3 à 5
+  possession d'équipe (s)                          23.796 ->    27.091   11 à 16
+  temps par possession de joueur (s)                2.562 ->     2.619   2 à 3
+  buts par match                                    2.080 ->     2.480   2 à 3,5
+  tirs par équipe                                  16.520 ->    17.400   
+  conversion des tirs (part)                        0.063 ->     0.071   
+  xG neutre par match                               2.237 ->     2.621   
+  conduite : pertes par match                      56.340 ->    57.480   
+  une-deux par équipe et par match                  1.470 ->     1.310   
+  solutions de passe ouvertes (nombre)              4.249 ->     4.118   
+  corners par match                                 6.540 ->     8.460   
+  fautes par match                                 12.120 ->    12.640   21 à 26
