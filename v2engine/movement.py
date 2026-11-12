@@ -44,6 +44,15 @@ _RECOVERY_POINTS: tuple[tuple[float, float], ...] = ((5.0, 0.06), (55.0, 0.15), 
 FATIGUE_KNEE = 0.8  # au-dessus de 80 % de sa réserve, aucune perte de vitesse ; en dessous, perte progressive
 FATIGUE_FLOOR = 0.6  # réserve vide : 60 % de sa vitesse max
 
+# Orientation du corps (ticket v2-realisme/07a, valeurs recommandées et validées par délégation du propriétaire,
+# 12/11/2026) : le cap (`PlayerState.facing`, direction du corps, distincte de la vitesse) tourne vers la direction
+# voulue d'au plus `TURN_RATE_RAD_S` par seconde, la même pour tous en attendant Agility (07f). Direction voulue : le
+# sens de course au-dessus de `FACING_RUN_SPEED_MPS` (19,8 km/h, seuil de course rapide du banc), le ballon sinon.
+# Demi-tour en 0,5 s : ordre de grandeur, vitesse angulaire réelle du corps d'un footballeur non trouvée. Sans effet sur
+# le jeu avant 07b, 07c et 07e : tracé et affiché seulement.
+TURN_RATE_RAD_S = math.radians(360.0)
+FACING_RUN_SPEED_MPS = 19.8 * KMH_TO_MS
+
 
 @lru_cache(maxsize=None)
 def _lerp(note: float, points: tuple[tuple[float, float], ...]) -> float:
@@ -98,10 +107,31 @@ class PlayerState:
     attributes: dict[str, int] | None = None
     role: str = ""  # rôle du joueur (voir `roles.py`), ticket v2-realisme/02c ; sans effet sur le jeu avant 02d/02e/09
     condition: PlayerCondition = PlayerCondition()  # état qui module l'expression des notes (19a ; réserve, 12e)
+    facing: Vec2 = Vec2(1.0, 0.0)  # cap du corps, vecteur unitaire (ticket v2-realisme/07a) ; sans effet sur le jeu
+
+
+def turn_toward(facing: Vec2, desired: Vec2, max_angle_rad: float) -> Vec2:
+    """Cap `facing` tourné vers la direction `desired` d'au plus `max_angle_rad`, par le plus court côté (ticket
+    v2-realisme/07a). Direction nulle : le cap ne bouge pas."""
+    if desired.length() < 1e-9:
+        return facing
+    current, wanted = math.atan2(facing.y, facing.x), math.atan2(desired.y, desired.x)
+    delta = (wanted - current + math.pi) % (2.0 * math.pi) - math.pi
+    angle = current + max(-max_angle_rad, min(max_angle_rad, delta))
+    return Vec2(math.cos(angle), math.sin(angle))
+
+
+def desired_facing(position: Vec2, velocity: Vec2, look_at: Vec2 | None) -> Vec2:
+    """Direction où le joueur veut tourner le corps (ticket 07a) : sens de course en course rapide, le ballon sinon ;
+    sans ballon à regarder (`look_at` absent ou sur lui), le sens de course, ou aucune."""
+    if velocity.length() >= FACING_RUN_SPEED_MPS or look_at is None:
+        return velocity
+    to_ball = look_at - position
+    return to_ball if to_ball.length() >= 1e-9 else velocity
 
 
 def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_factor: float = 1.0,
-         target_velocity: Vec2 = Vec2(0.0, 0.0)) -> PlayerState:
+         target_velocity: Vec2 = Vec2(0.0, 0.0), look_at: Vec2 | None = None) -> PlayerState:
     """Avance `state` de `dt` secondes, en dirigeant le joueur vers `target` (sa position de
     formation ou le ballon, voir `match.py`) -- vitesse plafonnée par Pace et la fatigue
     (Stamina), montée en vitesse exponentielle pilotée par Acceleration, freinage borné et loi
@@ -109,7 +139,8 @@ def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_facto
     simpliste (D-V08) : `target` est choisi par l'appelant, pas par ce module. `speed_factor` :
     part de la vitesse max (ex. conduite de balle, `decision.dribble_speed_factor`). `target_velocity` : vitesse
     de la cible quand elle bouge (le porteur qu'il presse) -- la loi d'arrivée porte alors sur la vitesse de
-    rapprochement, sans quoi il resterait à sa distance de freinage derrière un porteur en conduite."""
+    rapprochement, sans quoi il resterait à sa distance de freinage derrière un porteur en conduite. `look_at` : le
+    ballon, que son corps regarde hors course rapide (cap, ticket v2-realisme/07a ; sans effet sur le déplacement)."""
     # fatigue : réserve d'énergie (ticket 12e) ; `minute` n'est plus lue ici (gardée pour les appelants)
     effective_max_speed = max_speed_mps(state.pace) * energy_factor(state.condition.energy) * speed_factor
     to_target = target - state.position
@@ -157,4 +188,5 @@ def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_facto
         role=state.role,
         condition=PlayerCondition(energy=spend_energy(state.condition.energy, state.stamina,
                                                       0.5 * (velocity.length() + new_velocity.length()), dt)),
+        facing=turn_toward(state.facing, desired_facing(new_position, new_velocity, look_at), TURN_RATE_RAD_S * dt),
     )

@@ -126,6 +126,7 @@ function GoalEnd({ flip }) {
 
 // Joueurs, buts et ballon sur la caméra inclinée (ticket v2-hauteur-ballon/01).
 const PLAYER_R = 1.3; // rayon du rond d'un joueur (m)
+const FACING_TICK = 1.0; // trait d'orientation : longueur au-delà du rond, dans le sens du corps (m ; ticket v2-realisme/07a)
 // Le rond d'un joueur est dessiné à la hauteur de sa taille : sans cela il recouvrirait son ombre. Valeur validée par
 // le propriétaire le 06/11/2026 ; si l'ombre est trop discrète sur téléphone, jouer sur son opacité, pas sur cette hauteur.
 const PLAYER_LIFT = 1.8;
@@ -207,7 +208,17 @@ export default function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, 
   // du fond (y petit) vers l'avant : le joueur le plus proche de la caméra recouvre le plus lointain
   const players = [...tick.players]
     .sort((a, b) => a.y - b.y)
-    .map((p) => ({ ...p, ground: project(p.x, p.y), body: project(p.x, p.y, PLAYER_LIFT) }));
+    .map((p) => {
+      // cap du corps (ticket v2-realisme/07a) : trait du bord du rond vers l'avant, posé au sol puis projeté
+      const rad = ((p.facing ?? 0) * Math.PI) / 180;
+      const reach = PLAYER_R + FACING_TICK;
+      return {
+        ...p,
+        ground: project(p.x, p.y),
+        body: project(p.x, p.y, PLAYER_LIFT),
+        nose: project(p.x + Math.cos(rad) * reach, p.y + Math.sin(rad) * reach, PLAYER_LIFT),
+      };
+    });
   const holder = players.find((p) => p.name === tick.ball.holder);
   const air = tick.ball.mode === "aérien";
   const ballGround = project(tick.ball.x, tick.ball.y);
@@ -250,9 +261,20 @@ export default function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, 
         />
       )}
 
-      {/* 3. joueurs, triés du fond vers l'avant : vrais cercles */}
+      {/* 3. joueurs, triés du fond vers l'avant : vrais cercles, avec le trait de leur cap (ticket v2-realisme/07a) */}
       {players.map((p) => (
         <g key={p.name} onClick={() => onSelect(p.name === selected ? null : p.name)} style={{ cursor: "pointer" }}>
+          <line
+            x1={p.body.x}
+            y1={p.body.y}
+            x2={p.nose.x}
+            y2={p.nose.y}
+            stroke="white"
+            strokeWidth={0.35}
+            strokeLinecap="round"
+            opacity={0.85}
+            style={{ pointerEvents: "none" }}
+          />
           <circle
             cx={p.body.x}
             cy={p.body.y}

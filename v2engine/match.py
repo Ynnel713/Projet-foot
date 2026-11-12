@@ -122,9 +122,18 @@ def _build_players(lineup: Lineup, team: str, positions: dict[str, Vec2]) -> lis
                 radius_m=PLAYER_RADIUS_M,
                 attributes=player.attributes,
                 role=role_of(player.poste, player.categorie),
+                facing=_facing_at_kickoff(pos, team),
             )
         )
     return states
+
+
+def _facing_at_kickoff(position: Vec2, team: str) -> Vec2:
+    """Cap de départ (ticket v2-realisme/07a) : vers le ballon au rond central ; au point central, vers le but adverse."""
+    to_ball = Vec2(PITCH_LENGTH_M / 2.0, PITCH_WIDTH_M / 2.0) - position
+    if to_ball.length() >= 1e-9:
+        return to_ball.normalized()
+    return Vec2(1.0, 0.0) if team == "home" else Vec2(-1.0, 0.0)
 
 
 def _resolve_player_collisions(players: list[PlayerState]) -> None:
@@ -912,7 +921,7 @@ def _step_player(
     # Temps de jeu (`played_minute`) transmis à `step`, qui ne le lit plus depuis la réserve d'énergie (ticket
     # v2-realisme/12e) ; ponytail: paramètre gardé pour ses appelants, à retirer au premier ticket qui touche `step`.
     return step(player, dt, intention.target, minute if played_minute is None else played_minute, intention.intensity,
-                intention.target_velocity)
+                intention.target_velocity, look_at=ball.position)
 
 
 def simulate_match(
@@ -1032,7 +1041,8 @@ def simulate_match(
             trace.record(
                 minute,
                 [PlayerSnapshot(name=p.name, team=p.team, poste=p.poste, position=p.position,
-                                intention=intentions.get(p.name), role=p.role, energy=p.condition.energy)
+                                intention=intentions.get(p.name), role=p.role, energy=p.condition.energy,
+                                facing=p.facing)
                  for p in players],
                 BallSnapshot(position=ball.position, holder=ball.holder, mode=ball.mode, dead=ball.restart is not None),
             )

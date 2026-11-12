@@ -42,3 +42,7 @@ Temps machine, non compté : suite complète (environ 40 min) ; mesure 20 matchs
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+
+## Comments
+
+**12/11/2026, reprise du 07a (réserve facultative A1 de l'expert).** Le cap vise le sens de course au-dessus de `movement.FACING_RUN_SPEED_MPS` (19,8 km/h) et le ballon en dessous, sans hystérésis : quand ce ticket fera lire le cap au jeu, prévoir une bande de quelques dixièmes de m/s ou une pondération continue entre les deux directions (test : vitesse oscillant de ± 0,1 m/s autour du seuil, variation de cap bornée).

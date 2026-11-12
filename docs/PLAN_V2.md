@@ -273,6 +273,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **Calibration provisoire 2, tirs et gardien (12/11/2026, ticket `v2-realisme/18e`)** : livré (12/11/2026), validé expert + QC. Aucune constante modifiée : par zone, conversion réaliste (surface 17,7 %, dehors 4,4 % ; réel 14,7 et 4,2), gardien à environ 73 % d'arrêts ; les écarts (18 tirs par équipe, conversion 7,2 %, buts dans la surface 52 %) viennent du mélange (21 % des tirs dans la surface contre 68 %) : le tir manqué ne coûte rien dans la décision, ticket 18k. Contrés 17,6 % : `BLOCK_CHANCE` 0,75 les amène à 22,4 % mais l'estimateur du contre se trompe pour un défenseur en course, ticket 05j (section 34).
 
+**Orientation du corps (12/11/2026, ticket `v2-realisme/07a`)** : livré (12/11/2026), validé expert + QC. Chaque joueur a un cap (`PlayerState.facing`) qui tourne d'au plus 360°/s vers le ballon, ou vers le sens de course au-dessus de 19,8 km/h ; tracé, transmis par l'API (degrés) et dessiné à l'écran (trait d'orientation). Aucun effet sur le jeu (mesures identiques au 18j à graine fixée), temps de calcul + 4 %. Constantes validées par délégation.
+
 ### Bloquée par
 
 - Phase 4

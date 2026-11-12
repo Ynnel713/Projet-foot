@@ -6,6 +6,7 @@ d'une route de listing dédiée ici)."""
 
 from __future__ import annotations
 
+import math
 import threading
 import uuid
 from dataclasses import dataclass
@@ -43,6 +44,7 @@ class PlayerSnapshotOut(BaseModel):
     poste: str
     x: float
     y: float
+    facing: float = 0.0  # cap du corps en degrés (atan2(y, x) dans les axes du terrain ; ticket v2-realisme/07a)
 
 
 class BallSnapshotOut(BaseModel):
@@ -243,7 +245,8 @@ def club_lineup(club: str) -> LineupOut:  # nom en paramètre de requête : cert
 def _tick_out(tick) -> TickOut:
     return TickOut(
         minute=tick.minute,
-        players=[PlayerSnapshotOut(name=p.name, team=p.team, poste=p.poste, x=p.position.x, y=p.position.y)
+        players=[PlayerSnapshotOut(name=p.name, team=p.team, poste=p.poste, x=p.position.x, y=p.position.y,
+                                   facing=round(math.degrees(math.atan2(p.facing.y, p.facing.x)), 1))
                  for p in tick.players],
         ball=BallSnapshotOut(x=tick.ball.position.x, y=tick.ball.position.y, holder=tick.ball.holder,
                              mode=tick.ball.mode, dead=tick.ball.dead),
