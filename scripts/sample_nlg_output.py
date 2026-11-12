@@ -33,7 +33,9 @@ import numpy as np  # noqa: E402
 import export_match_to_nlg as export  # noqa: E402
 
 NLG = ROOT / "simulafoot_nlg"
-NLG_PYTHON = NLG / ".venv" / "Scripts" / "python.exe"
+# Interpreteur du venv du NLG : Windows (Scripts/python.exe) ou Linux/macOS (bin/python), meme ordre qu'api/nlg_live.py.
+NLG_PYTHON = next((p for p in (NLG / ".venv" / "Scripts" / "python.exe", NLG / ".venv" / "bin" / "python") if p.exists()),
+                  NLG / ".venv" / "bin" / "python")
 DEFAULT_OUT = ROOT / "data" / "nlg_samples"
 DEFAULT_SEED = 2026_10_01
 

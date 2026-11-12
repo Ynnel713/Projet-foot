@@ -24,7 +24,9 @@ from ligue1sim.simulation import LeagueContext
 
 RACINE = Path(__file__).resolve().parent.parent
 NLG = RACINE / "simulafoot_nlg"
-NLG_PYTHON = NLG / ".venv" / "Scripts" / "python.exe"
+# Interpreteur du venv du NLG : Windows (Scripts/python.exe) ou Linux/macOS (bin/python), meme ordre qu'api/nlg_live.py.
+NLG_PYTHON = next((p for p in (NLG / ".venv" / "Scripts" / "python.exe", NLG / ".venv" / "bin" / "python") if p.exists()),
+                  NLG / ".venv" / "bin" / "python")
 
 pytestmark = pytest.mark.skipif(not NLG_PYTHON.exists(), reason="venv du NLG absent (simulafoot_nlg/.venv)")
 
