@@ -30,7 +30,7 @@ from v2engine.flux import ARBITRAGE, PERCEPTION, TIR, seed_streams
 from v2engine.formation import initial_positions
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch, in_penalty_area
 from v2engine.movement import PlayerState, step
-from v2engine.orientation import desired_facing, kickoff_facing, turn_towards
+from v2engine.orientation import desired_facing, kickoff_facing, turn_rate_rad_s, turn_towards
 from v2engine.cerveau import GOAL_CENTER_Y, OPPONENT_GOAL, Intention, think
 from v2engine.decision import DECISION_INTERVAL_S, choose_action, dribble_lost, lost_carry_outcome
 from v2engine.defense import DefensiveRoles
@@ -897,9 +897,11 @@ def _step_player(
     # v2-realisme/12e) ; ponytail: paramètre gardé pour ses appelants, à retirer au premier ticket qui touche `step`.
     moved = step(player, dt, intention.target, minute if played_minute is None else played_minute, intention.intensity,
                  intention.target_velocity)
-    # Cap du corps (ticket v2-realisme/07a) : tourne vers la course rapide ou le ballon, sans effet sur le jeu.
+    # Cap du corps (ticket v2-realisme/07a) : tourne vers la course rapide ou le ballon, à la vitesse que lui permet
+    # Agility (07f), sans effet sur le jeu.
     moved.facing = turn_towards(player.facing, desired_facing(moved.position, moved.velocity, ball.position,
-                                                              player.facing, ball.holder == player.name), dt)
+                                                              player.facing, ball.holder == player.name), dt,
+                                turn_rate_rad_s(player))
     return moved
 
 

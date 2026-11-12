@@ -1,0 +1,7 @@
+Ticket 07f, 20 matchs (graine 20260923 + k), script 07a-empreinte.py ; avant = commit d860b59 (worktree), après = Agility sur la rotation.
+Avant : 1115.51 s de calcul ; 44 buts ; 694 tirs
+Après 1 : 1116.58 s de calcul ; 44 buts ; 694 tirs
+Après 2 : 1103.94 s de calcul ; 44 buts ; 694 tirs
+Jeu avant == après (20/20) : True ; jeu et cap après 1 == après 2 : True ; cap changé sur 20 matchs sur 20.
+Temps de calcul : + 0,1 % et − 1,0 %.
+Scène A/B (test_agility_ab_scene_half_turn_faster_at_99_than_at_11, graine 13) : demi-tour 0,4 s à Agility 99, 0,5 s à 55, 0,7 s à 11.

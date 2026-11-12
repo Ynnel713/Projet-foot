@@ -1,6 +1,6 @@
 """Orientation du corps d'un joueur (ticket v2-realisme/07a) : un cap, direction vers laquelle il fait face, distinct
-de sa vitesse. Le cap tourne vers une direction voulue à une vitesse angulaire maximale commune à tous ; il ne pèse
-encore sur rien (déplacement selon l'orientation : 07b ; Agility : 07f ; contrôle orienté : 07c ; perception : 08a).
+de sa vitesse. Le cap tourne vers une direction voulue à une vitesse angulaire maximale qui dépend d'Agility (ticket
+07f) ; il ne pèse encore sur rien (déplacement selon l'orientation : 07b ; contrôle orienté : 07c ; perception : 08a).
 
 Angles en radians, dans le repère du terrain : 0 = vers x croissant (le but que `home` attaque), π/2 = vers y
 croissant."""
@@ -9,17 +9,30 @@ from __future__ import annotations
 
 import math
 
+from v2engine.attributes import success_probability
+from v2engine.condition import effective_rating
 from v2engine.geometry import Vec2
 
-# Vitesse de rotation maximale du corps, la même pour tous en attendant Agility (07f) : 360°/s, soit un demi-tour en
-# 0,5 s (environ deux appuis). Valeur réelle non trouvée (vitesse de rotation du bassin ou du tronc sur un demi-tour) ;
-# ordre de grandeur proposé et validé par le propriétaire le 12/11/2026.
+# Vitesse de rotation maximale du corps d'un joueur moyen : 360°/s, soit un demi-tour en 0,5 s (environ deux appuis).
+# Valeur réelle non trouvée (vitesse de rotation du bassin ou du tronc sur un demi-tour) ; ordre de grandeur proposé et
+# validé par le propriétaire le 12/11/2026 (ticket 07a).
 TURN_RATE_RAD_S = math.radians(360.0)
+# Selon Agility (ticket 07f, validé le 12/11/2026), courbe partagée de `attributes` : 99 -> 450°/s (demi-tour en 0,40 s),
+# 55 -> 360°/s, 11 -> 270°/s (0,67 s) ; ± 25 % comme les autres capacités physiques (Acceleration, vitesse balle au pied).
+# Valeur réelle non trouvée.
+_TURN_RATE_DEG_S = (360.0, 90.0, 270.0, 450.0)  # baseline, amplitude, min, max
 # Au-dessus de 19,8 km/h (seuil de course à haute intensité du banc), le joueur regarde où il court ; en dessous, il
 # regarde le ballon (validé par le propriétaire le 12/11/2026).
 FAST_RUN_MPS = 19.8 / 3.6
 # En deçà de cette distance, la direction du ballon n'a pas de sens (ballon dans ses pieds) : il garde son cap.
 BALL_DEADZONE_M = 0.1
+
+
+def turn_rate_rad_s(player) -> float:
+    """Vitesse de rotation maximale du corps de `player` (rad/s), selon Agility (façade `condition.effective_rating`)."""
+    baseline, amplitude, low, high = _TURN_RATE_DEG_S
+    return math.radians(success_probability(effective_rating(player, "Agility"), baseline=baseline, amplitude=amplitude,
+                                            min_prob=low, max_prob=high))
 
 
 def kickoff_facing(team: str) -> float:

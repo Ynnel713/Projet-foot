@@ -55,6 +55,7 @@ ALLOWED = {
     "Teamwork": {"bloc", "defense", "decision"},
     "Work Rate": {"defense"},  # intensité et repos du presseur (ticket v2-collectif/08)
     "Marking": {"defense"},  # distance de marquage d'un attaquant dangereux (ticket v2-collectif/07)
+    "Agility": {"orientation"},  # vitesse de rotation du corps (ticket v2-realisme/07f) ; freinage 12a, virage 12b
 }
 # Mélanges de plusieurs attributs dans un même calcul tolérés (dérogations de la carte).
 TOLERATED_MIXES = {

@@ -8,7 +8,8 @@ from dataclasses import replace
 
 from scenes import Scene, player, run, seed_scene
 from v2engine.geometry import Vec2
-from v2engine.orientation import (FAST_RUN_MPS, TURN_RATE_RAD_S, desired_facing, kickoff_facing, turn_towards,
+from v2engine.orientation import (FAST_RUN_MPS, TURN_RATE_RAD_S, desired_facing, kickoff_facing, turn_rate_rad_s,
+                                  turn_towards,
                                   wrap)
 
 DT = 0.1
@@ -65,7 +66,7 @@ def test_in_play_the_cap_turns_at_most_at_the_turn_rate_and_ends_on_the_ball_or_
         run(scene, DT)
         caps.append(scene.get("A").facing)
     steps = [abs(wrap(b - a)) for a, b in zip([0.0] + caps, caps)]
-    assert max(steps) <= TURN_RATE_RAD_S * DT + 1e-9
+    assert max(steps) <= turn_rate_rad_s(scene.get("A")) * DT + 1e-9  # sa vitesse selon Agility (ticket 07f)
     a = scene.get("A")
     expected = desired_facing(a.position, a.velocity, scene.ball.position, a.facing)
     assert abs(wrap(a.facing - expected)) < math.radians(40.0)  # il a rattrapé sa direction voulue, à un pas près
@@ -92,19 +93,25 @@ def test_the_cap_reaches_the_trace_and_the_api_and_turns_within_the_rate() -> No
     random.seed(20260923)
     caps: list[list[float]] = []  # cap de chaque joueur à chaque pas de simulation (0,1 s)
     times: list[float] = []
-    trace = match.simulate_match(clubs[0], clubs[1], duration_minutes=2.0,
-                                 observer=lambda now, players, ball, scored: (caps.append([p.facing for p in players]),
-                                                                              times.append(now)))
-    limit = TURN_RATE_RAD_S * match.TICK_SECONDS + 1e-9
+    rates: list[float] = []  # vitesse de rotation de chaque joueur, selon Agility (ticket 07f)
+
+    def observer(now, players, ball, scored):
+        if not rates:
+            rates.extend(turn_rate_rad_s(p) for p in players)
+        caps.append([p.facing for p in players])
+        times.append(now)
+
+    trace = match.simulate_match(clubs[0], clubs[1], duration_minutes=2.0, observer=observer)
+    limits = [rate * match.TICK_SECONDS + 1e-9 for rate in rates]
     teams = [p.team for p in trace.ticks[0].players]
     # coup d'envoi : face au but adverse, à un pas de rotation près (le premier pas est déjà joué)
-    assert all(abs(wrap(c - kickoff_facing(t))) <= limit for c, t in zip(caps[0], teams))
+    assert all(abs(wrap(c - kickoff_facing(t))) <= lim for c, t, lim in zip(caps[0], teams, limits))
     assert len({round(c, 6) for row in caps for c in row}) > 50  # le cap vit pendant le match
     # mi-temps : tous replacés d'un coup, face au but adverse (à un pas près) ; ailleurs, rotation bornée à chaque pas
     half = next(k for k, now in enumerate(times) if now >= trace.second_half_start_minute * 60.0 - 1e-9)
-    assert all(abs(wrap(c - kickoff_facing(t))) <= limit for c, t in zip(caps[half], teams))
-    assert all(abs(wrap(b - a)) <= limit for k, (r0, r1) in enumerate(zip(caps, caps[1:]), start=1) if k != half
-               for a, b in zip(r0, r1))
+    assert all(abs(wrap(c - kickoff_facing(t))) <= lim for c, t, lim in zip(caps[half], teams, limits))
+    assert all(abs(wrap(b - a)) <= lim for k, (r0, r1) in enumerate(zip(caps, caps[1:]), start=1) if k != half
+               for a, b, lim in zip(r0, r1, limits))
     out = _tick_out(trace.ticks[-1])
     assert [p.facing for p in out.players] == [p.facing for p in trace.ticks[-1].players] != [0.0] * 22
 
@@ -123,7 +130,7 @@ def test_the_holder_faces_where_he_carries_the_ball_never_backwards() -> None:
         speed = a.velocity.length()
         if scene.ball.holder == "A" and 1.0 < speed < FAST_RUN_MPS:
             course = math.atan2(a.velocity.y, a.velocity.x)
-            assert abs(wrap(a.facing - course)) < TURN_RATE_RAD_S * DT  # à moins d'un pas de rotation de sa course
+            assert abs(wrap(a.facing - course)) < turn_rate_rad_s(a) * DT  # à moins d'un pas de rotation de sa course
             checked += 1
     assert checked >= 10  # la scène contient bien de la conduite entre 1 et 5,5 m/s
 
@@ -132,3 +139,31 @@ def test_a_still_holder_keeps_his_cap() -> None:
     at = Vec2(50.0, 34.0)
     assert desired_facing(at, Vec2(0.0, 0.0), at - Vec2(0.3, 0.0), 1.0, holding=True) == 1.0
     assert math.isclose(desired_facing(at, Vec2(2.0, 0.0), at - Vec2(0.2, 0.0), 1.0, holding=True), 0.0)
+
+
+def test_agility_sets_the_turn_rate_99_turns_half_round_in_040_s_and_11_in_067_s() -> None:
+    """Ticket v2-realisme/07f (validé le 12/11/2026) : 450°/s à Agility 99, 360°/s à 55, 270°/s à 11 ; plate au centre."""
+    rate = {note: math.degrees(turn_rate_rad_s(player("A", Agility=note))) for note in (11, 45, 55, 99)}
+    assert (round(rate[99], 6), round(rate[55], 6), round(rate[11], 6)) == (450.0, 360.0, 270.0)
+    assert abs(rate[45] - 360.0) < 2.0  # effet quasi nul entre 45 et 55 (courbe partagée)
+    assert math.isclose(turn_rate_rad_s(player("A", Agility=55)), TURN_RATE_RAD_S)
+
+
+def test_agility_ab_scene_half_turn_faster_at_99_than_at_11() -> None:
+    """Scène A/B, même graine : ballon derrière le joueur immobile ; demi-tour en 0,40 s à 99 et 0,67 s à 11, à un pas
+    près (critère du ticket 07f)."""
+    durations = {}
+    for note in (99, 11):
+        seed_scene(13)
+        players = [replace(player("A", "home", 50.0, 34.0, poste="MC", Agility=note), facing=0.0),
+                   replace(player("B", "away", 90.0, 60.0, poste="MC"), facing=math.pi)]
+        scene = Scene.full(players, ball_at=Vec2(30.0, 34.0))  # ballon à 20 m derrière lui
+        for step in range(1, 30):
+            run(scene, DT)
+            a = scene.get("A")
+            if abs(wrap(a.facing - desired_facing(a.position, a.velocity, scene.ball.position, a.facing))) < 1e-6:
+                durations[note] = step * DT
+                break
+    assert abs(durations[99] - 0.40) <= DT + 1e-9 and abs(durations[11] - 0.67) <= DT + 1e-9
+    assert durations[99] < durations[11]
+

@@ -273,6 +273,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **Passe précise coupée trop souvent (12/11/2026, ticket `v2-realisme/18i`)** : livré (12/11/2026), validé expert + QC (réserves A1 et A2 acceptées, reportées au `v2-collectif/22a`). Cause mécanique : le receveur passait à 0,6 m du ballon sans le toucher (portée du corps seule, 0,41 m) et un adversaire derrière le récupérait (près de la moitié des coupes de passes courtes précises). Le receveur visé et les lecteurs de la passe atteignent désormais le ballon jambe tendue (`match.LEG_REACH_M`, 1,0 m, valeur réelle non trouvée, validée par le propriétaire) ; tables de la chance évaluée remesurées sur 50 matchs. Réussite par longueur 86,1 / 79,5 / 68,3 → 88,7 / 84,0 / 73,2 % (réel 89,4 / 87,1 / 51,7 %) ; calibration de la passe sous 5 points par tranche ; passes par match 933 → 1 006 et possession d'équipe 23,8 → 27,1 s, au 22a.
 
+**Agility, vitesse de rotation du corps (12/11/2026, ticket `v2-realisme/07f`)** : livré (12/11/2026), validé expert + QC (sans réserve). La vitesse de rotation du cap dépend d'Agility (`orientation.turn_rate_rad_s`, courbe partagée) : 450°/s à 99, 360°/s à 55, 270°/s à 11 (valeur réelle non trouvée, validée par le propriétaire) ; demi-tour en 0,4 / 0,5 / 0,7 s en scène A/B. Agility lue dans `orientation` seulement ; sans effet sur le jeu avant le 07b (20 matchs identiques).
+
 ### Bloquée par
 
 - Phase 4
