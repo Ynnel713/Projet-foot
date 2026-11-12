@@ -1,0 +1,73 @@
+Ajustement (lots 0 et 2) : 24032 passes ; contrôle (lots 1 et 3) : 24488 passes
+  près du passeur : {0.5: '0.809 (n 115)', 1.0: '0.120 (n 2813)', 6.0: '0.008 (n 9933)'}
+  sur le trajet   : {1.0: '0.300 (n 663)', 2.0: '0.149 (n 1263)', 3.0: '0.066 (n 1889)', 4.0: '0.035 (n 2101)', 5.0: '0.020 (n 2127)', 6.0: '0.011 (n 2179)'}
+  coupe imprévue : 0.007 ; imprécise non perdue hors coupe : <10.0 m 0.835, <inf m 0.682
+  (contrôle ajusté seul : près {0.5: 0.772, 1.0: 0.122, 6.0: 0.007} trajet {1.0: 0.324, 2.0: 0.168, 3.0: 0.072, 4.0: 0.039, 5.0: 0.023, 6.0: 0.014} imprévue 0.009 {10.0: 0.896, inf: 0.673} )
+  table actuelle (18g/18h), lots de contrôle
+    précises           n  19141  prévue 0.889  non perdue 0.929  écart -4.0
+    imprécises         n   5347  prévue 0.596  non perdue 0.632  écart -3.5
+    courtes (<13,7 m)  n   7945  prévue 0.884  non perdue 0.918  écart -3.4
+    moyennes           n  14027  prévue 0.806  non perdue 0.851  écart -4.5
+    longues            n   2516  prévue 0.744  non perdue 0.766  écart -2.2
+    toutes             n  24488  prévue 0.825  non perdue 0.864  écart -3.9
+    prévue [0.0 ; 0.1[  n     10  prévue 0.075  non perdue 0.200  écart -12.5
+    prévue [0.1 ; 0.2[  n     87  prévue 0.154  non perdue 0.195  écart -4.1
+    prévue [0.2 ; 0.3[  n     68  prévue 0.229  non perdue 0.235  écart -0.7
+    prévue [0.3 ; 0.4[  n     88  prévue 0.365  non perdue 0.489  écart -12.4
+    prévue [0.4 ; 0.5[  n    308  prévue 0.453  non perdue 0.497  écart -4.4
+    prévue [0.5 ; 0.6[  n   1659  prévue 0.553  non perdue 0.561  écart -0.8
+    prévue [0.6 ; 0.7[  n   3958  prévue 0.635  non perdue 0.668  écart -3.3
+    prévue [0.7 ; 0.8[  n   1823  prévue 0.775  non perdue 0.822  écart -4.7
+    prévue [0.8 ; 0.9[  n   3364  prévue 0.843  non perdue 0.884  écart -4.1
+    prévue [0.9 ; 1.0[  n  13123  prévue 0.939  non perdue 0.982  écart -4.3
+  table ajustée, lots de contrôle
+    précises           n  19141  prévue 0.934  non perdue 0.929  écart +0.5
+    imprécises         n   5347  prévue 0.640  non perdue 0.632  écart +0.8
+    courtes (<13,7 m)  n   7945  prévue 0.929  non perdue 0.918  écart +1.1
+    moyennes           n  14027  prévue 0.851  non perdue 0.851  écart -0.0
+    longues            n   2516  prévue 0.789  non perdue 0.766  écart +2.2
+    toutes             n  24488  prévue 0.870  non perdue 0.864  écart +0.6
+    prévue [0.0 ; 0.1[  n     17  prévue 0.074  non perdue 0.235  écart -16.2
+    prévue [0.1 ; 0.2[  n    144  prévue 0.153  non perdue 0.201  écart -4.9
+    prévue [0.2 ; 0.3[  n      3  prévue 0.290  non perdue 0.667  écart -37.7
+    prévue [0.3 ; 0.4[  n     30  prévue 0.373  non perdue 0.500  écart -12.7
+    prévue [0.4 ; 0.5[  n    220  prévue 0.457  non perdue 0.486  écart -2.9
+    prévue [0.5 ; 0.6[  n    993  prévue 0.571  non perdue 0.540  écart +3.1
+    prévue [0.6 ; 0.7[  n   4487  prévue 0.664  non perdue 0.647  écart +1.7
+    prévue [0.7 ; 0.8[  n    467  prévue 0.752  non perdue 0.756  écart -0.4
+    prévue [0.8 ; 0.9[  n   3512  prévue 0.853  non perdue 0.845  écart +0.7
+    prévue [0.9 ; 1.0[  n  14615  prévue 0.977  non perdue 0.975  écart +0.2
+  proposition (tables 18g, imprévue 0,01, imprécise 0,85 / 0,68), lots 0 et 2
+    précises           n  18689  prévue 0.926  non perdue 0.933  écart -0.8
+    imprécises         n   5343  prévue 0.632  non perdue 0.638  écart -0.5
+    courtes (<13,7 m)  n   7834  prévue 0.921  non perdue 0.922  écart -0.1
+    moyennes           n  13760  prévue 0.842  non perdue 0.855  écart -1.3
+    longues            n   2438  prévue 0.770  non perdue 0.765  écart +0.5
+    toutes             n  24032  prévue 0.860  non perdue 0.868  écart -0.7
+    prévue [0.0 ; 0.1[  n     10  prévue 0.065  non perdue 0.000  écart +6.5
+    prévue [0.1 ; 0.2[  n     84  prévue 0.155  non perdue 0.155  écart +0.1
+    prévue [0.2 ; 0.3[  n     81  prévue 0.238  non perdue 0.210  écart +2.8
+    prévue [0.3 ; 0.4[  n     60  prévue 0.381  non perdue 0.450  écart -6.9
+    prévue [0.4 ; 0.5[  n    305  prévue 0.462  non perdue 0.515  écart -5.3
+    prévue [0.5 ; 0.6[  n   1274  prévue 0.566  non perdue 0.568  écart -0.1
+    prévue [0.6 ; 0.7[  n   4098  prévue 0.665  non perdue 0.667  écart -0.2
+    prévue [0.7 ; 0.8[  n    748  prévue 0.758  non perdue 0.763  écart -0.6
+    prévue [0.8 ; 0.9[  n   3242  prévue 0.841  non perdue 0.861  écart -2.0
+    prévue [0.9 ; 1.0[  n  14130  prévue 0.973  non perdue 0.978  écart -0.5
+  proposition (tables 18g, imprévue 0,01, imprécise 0,85 / 0,68), lots 1 et 3
+    précises           n  19141  prévue 0.927  non perdue 0.929  écart -0.3
+    imprécises         n   5347  prévue 0.635  non perdue 0.632  écart +0.3
+    courtes (<13,7 m)  n   7945  prévue 0.923  non perdue 0.918  écart +0.4
+    moyennes           n  14027  prévue 0.844  non perdue 0.851  écart -0.8
+    longues            n   2516  prévue 0.781  non perdue 0.766  écart +1.5
+    toutes             n  24488  prévue 0.863  non perdue 0.864  écart -0.2
+    prévue [0.0 ; 0.1[  n     10  prévue 0.079  non perdue 0.200  écart -12.1
+    prévue [0.1 ; 0.2[  n     80  prévue 0.158  non perdue 0.188  écart -2.9
+    prévue [0.2 ; 0.3[  n     74  prévue 0.235  non perdue 0.243  écart -0.9
+    prévue [0.3 ; 0.4[  n     58  prévue 0.374  non perdue 0.517  écart -14.4
+    prévue [0.4 ; 0.5[  n    269  prévue 0.462  non perdue 0.476  écart -1.4
+    prévue [0.5 ; 0.6[  n   1232  prévue 0.567  non perdue 0.556  écart +1.1
+    prévue [0.6 ; 0.7[  n   4230  prévue 0.664  non perdue 0.654  écart +1.1
+    prévue [0.7 ; 0.8[  n    718  prévue 0.758  non perdue 0.777  écart -1.9
+    prévue [0.8 ; 0.9[  n   3264  prévue 0.840  non perdue 0.850  écart -1.0
+    prévue [0.9 ; 1.0[  n  14553  prévue 0.973  non perdue 0.975  écart -0.2

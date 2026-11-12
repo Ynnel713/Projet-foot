@@ -30,3 +30,10 @@
 ## Complément de l'audit de la roadmap (10/11/2026)
 
 Source : `docs/AUDIT_ROADMAP_V2.md`. Calibrer seulement après les effets de la condition (20a à 20d, 20f) et après les fautes hors du tacle (21c) : l'écart de fautes (9,4 contre 21-26 par match) vient d'un mécanisme absent et ne doit pas être comblé par un réglage. La garde probabiliste (19c) est rejouée après chaque lot de calibration.
+
+## Repris du ticket v2-realisme/18i (12/11/2026, réserves acceptées par le propriétaire)
+
+- A1 : après la portée du receveur (1,0 m), passes par match 1 043 (repère 890 à 940), passes chez l'adversaire 11,6 % (15 à 20 %), passes par possession 5,11 (3 à 5), possession d'équipe 28,3 s (11 à 16). Les valeurs d'avant étaient en partie dans le repère grâce au défaut corrigé.
+- A2 : passe longue trop réussie, 76,6 % contre 51,7 % dans le réel (passe précise longue : 90 %).
+- Calibration de la passe : chance évaluée trop basse de 5,9 et 6,9 points sur [0,5 ; 0,6[ et [0,4 ; 0,5[ (2,2 % des passes), écart accepté le 12/11/2026.
+- A4 (facultatif) : un contrôle jambe tendue à 1 m du corps a la même difficulté qu'un contrôle dans le corps.

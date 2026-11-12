@@ -74,6 +74,11 @@ CONTROL_RADIUS_M = BALL_RADIUS_M + PLAYER_RADIUS_M
 # tacle (voir `duel.should_attempt_tackle`) -- plus large que CONTROL_RADIUS_M (contact entre
 # deux joueurs, pas entre un joueur et le ballon seul).
 TACKLE_RADIUS_M = 1.5
+# Portée du receveur visé d'une passe (ticket v2-realisme/18i, validé par le propriétaire le 12/11/2026) : il attend le
+# ballon et tend la jambe, comme le défenseur qui contre un tir (`shooting.BLOCK_WIDTH_M`, jambe tendue plus ballon,
+# même valeur reprise). Avec `CONTROL_RADIUS_M`, le ballon lui passait à côté (0,5 à 0,85 m) dans 8,6 % des passes
+# courtes précises. Donnée réelle de la portée : non trouvée.
+RECEIVER_REACH_M = BLOCK_WIDTH_M
 # Un duel par confrontation (v2-socle/03, validé le 25/10/2026) : un défenseur tente au plus un tacle
 # tant qu'il reste à moins de CONFRONTATION_END_M du même porteur ; un tacle raté l'élimine
 # FAILED_TACKLE_RECOVERY_S (temps pour se relever et se replacer). Durée réelle non trouvée : ordre de grandeur.
@@ -779,8 +784,9 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
     ball.mode = SOL
 
     # Contact sur le trajet (ticket v2-collectif/25) : le ballon touche tout joueur qu'il frôle PENDANT le pas, pas
-    # seulement au point d'arrivée ; le premier atteint tente le premier, quelle que soit son équipe.
-    for _, _, player in _contacts(start, ball.position, dt, players, ball.released_by):
+    # seulement au point d'arrivée ; le premier atteint tente le premier, quelle que soit son équipe. Le receveur visé
+    # d'une passe l'attend et tend la jambe : il la touche à `RECEIVER_REACH_M` (ticket v2-realisme/18i).
+    for _, _, player in _ball_contacts(start, ball.position, dt, players, ball):
         if now_s < ball.offside_out_until.get(player.name, 0.0):
             continue  # écarté de l'action après un coup franc : il recule, il ne joue pas ce ballon
         if now_s < ball.control_ban_until_s.get(player.name, 0.0):
@@ -822,6 +828,20 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
             ball.control_ban_until_s[player.name] = now_s + MISS_RETRY_S
         break
     return None
+
+
+def _ball_contacts(start: Vec2, end: Vec2, dt: float, players: list[PlayerState],
+                   ball: BallState) -> list[tuple[float, float, PlayerState]]:
+    """`_contacts` du ballon en jeu : `CONTROL_RADIUS_M` pour tous, sauf le receveur visé de la passe en cours, à
+    `RECEIVER_REACH_M` (ticket v2-realisme/18i)."""
+    if ball.receiver is None:
+        return _contacts(start, end, dt, players, ball.released_by)
+    others = [p for p in players if p.name != ball.receiver]
+    receiver = [p for p in players if p.name == ball.receiver]
+    hits = (_contacts(start, end, dt, others, ball.released_by)
+            + _contacts(start, end, dt, receiver, ball.released_by, RECEIVER_REACH_M))
+    hits.sort(key=lambda hit: (hit[0], hit[1]))  # même ordre que `_contacts`
+    return hits
 
 
 def _contacts(start: Vec2, end: Vec2, dt: float, players: list[PlayerState],

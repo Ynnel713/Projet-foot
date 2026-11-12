@@ -158,8 +158,9 @@ def _scene(minute: float, stamina: int, energy: float = 1.0) -> Scene:
     players = [replace(player("A", x=30.0, y=34.0, Stamina=stamina, Pace=70, Acceleration=70),
                        condition=PlayerCondition(energy=energy)),
                # B en appui latéral (ticket v2-realisme/18g) : à (45 ; 20), libre devant A, sa passe vaut désormais mieux que
-               # la conduite (coupe en vol comptée, passe non perdue 0,93) et A ne conduit plus les 2 s mesurées
-               player("B", x=30.0, y=14.0), player("G", "away", x=104.0, y=34.0, poste="GK")]
+               # la conduite (coupe en vol comptée, passe non perdue 0,93) et A ne conduit plus les 2 s mesurées ; à
+               # (30 ; 14), même chose depuis la table du ticket 18i (coupe imprévue 0,01) : B à 26 m, (30 ; 8)
+               player("B", x=30.0, y=8.0), player("G", "away", x=104.0, y=34.0, poste="GK")]
     return Scene.full(players, holder="A", start_s=minute * 60.0)
 
 

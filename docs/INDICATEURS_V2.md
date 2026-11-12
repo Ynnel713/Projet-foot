@@ -1114,3 +1114,30 @@ Tranches basses (moins de 0,5 ; 11,5 passes par match en tout) : − 10,5 (0,4 p
 **Effets sur le jeu (18f → 18g → 18h ; repère).** Passes par match 945 → 985 → **933** (890 à 940, de nouveau dans le repère) ; passes réussies 74,9 → 81,9 → 79,7 % (70 à 90 %) ; chez l'adversaire 23,1 → 14,9 → 16,6 % (15 à 20 %) ; passes par possession 2,81 → 4,35 → 3,84 (3 à 5) ; **possession d'équipe 17,2 → 25,6 → 23,8 s (11 à 16, toujours au-dessus)** ; buts 2,96 → 2,50 → 2,08 (2 à 3,5) ; pertes en conduite 83,5 → 46,3 → 56,3 ; une-deux par équipe 2,05 → 0,97 → 1,47.
 
 **Scènes A/B** (`18g-ab-script.py`, 400 scènes ; `18g-ab.txt` avant, `18h-ab.txt` après). Aucun effet inversé ni annulé. Passing regagne du poids : meilleure passe + 0,086 → + 0,142, part de passes choisies + 0,143 → + 0,230 ; Composure + 0,012 → + 0,021 ; Dribbling − 0,203 → − 0,182 ; Vision + 0,182 → + 0,165 ; Decisions − 0,222 → − 0,257.
+
+## 32. Passe précise coupée : portée du receveur et table remesurée (ticket v2-realisme/18i, 50 matchs, 12/11/2026)
+
+Commande : `scripts/measure_v2.py` en 4 lots, fichiers `.scratch/v2-realisme/mesures/18i-50-lot*.*` (portée et table) et `18i-portee-50-lot*.*` (portée seule), synthèse `18i-50-synthese.txt` (`18i-synthese.py`) ; référence : 18h (`18h-50-lot*.*`), mêmes graines. Diagnostic : `18i-diag-script.py` (enveloppes de lecture seule ; 12 puis 50 matchs), ajustement de la table : `18i-ajustement.py`, sortie `18i-ajustement.txt`.
+
+**Cause trouvée.** Le contact au ballon se faisait à `CONTROL_RADIUS_M` (0,41 m) pour tout le monde, receveur visé compris : le ballon lui passait à côté (0,5 à 0,85 m) dans 8,6 % des passes courtes précises, puis un défenseur le ramassait plus loin, ballon presque mort (2,6 m/s). 57 % des coupes de passes courtes précises avaient lieu dans les 3 derniers mètres, 82 % d'entre elles au-delà du point visé.
+
+**Ce qui change.** Le receveur visé d'une passe touche le ballon à `match.RECEIVER_REACH_M` = 1,0 m (jambe tendue plus ballon, la valeur de `shooting.BLOCK_WIDTH_M` reprise ; donnée réelle non trouvée) ; tout autre joueur garde 0,41 m. Table de l'évaluation remesurée sur 50 matchs : coupe par adversaire du 18g inchangée (écarts dans le bruit) ; coupe imprévue d'une passe précise 0,05 → 0,01 (mesurée 0,007 à 0,009 : l'ancien terme comptait le ballon passé à côté du receveur) ; passe imprécise non perdue 0,78 / 0,64 → 0,85 / 0,68.
+
+**Réussite par longueur** (réussie = reçue par un coéquipier au premier contact ; diagnostic de 50 matchs avec la portée seule, 48 520 passes) : 82,9 / 76,3 / 71,2 % (18h) → 92,0 / 85,3 / 76,6 % ; réel indicatif 89,4 / 87,1 / 51,7 %. Passe précise : environ 85 % quelle que soit la longueur → 93,2 / 93,5 / 90,0 %. La passe longue reste trop réussie (mécanisme distinct, hors de ce ticket).
+
+**Calibration de la passe** (indicateur du 18g, définition du 18h).
+
+| Chance évaluée | Passes par match | Évaluée | Non perdue | Écart 18i (points) | Écart 18h | Portée seule |
+|---|---|---|---|---|---|---|
+| [0,4 ; 0,5[ | 4,5 | 0,471 | 0,540 | − 6,9 | − 2,1 | − 9,7 |
+| [0,5 ; 0,6[ | 18,3 | 0,564 | 0,623 | − 5,9 | − 0,3 | − 6,6 |
+| [0,6 ; 0,7[ | 49,2 | 0,662 | 0,690 | − 2,8 | + 1,1 | − 5,7 |
+| [0,7 ; 0,8[ | 128,1 | 0,753 | 0,794 | − 4,2 | + 3,4 | − 6,2 |
+| [0,8 ; 0,9[ | 342,2 | 0,847 | 0,874 | − 2,7 | + 2,7 | − 6,0 |
+| [0,9 ; +[ | 443,5 | 0,959 | 0,970 | − 1,1 | + 1,5 | − 4,9 |
+
+Sous 5 points sur les tranches de 0,6 à 1 (97,8 % des passes) ; au-delà sur [0,4 ; 0,5[ et [0,5 ; 0,6[ (2,2 % des passes, chance sous-évaluée) : écart accepté par le propriétaire le 12/11/2026 (option 1), à reprendre à `v2-collectif/22a`. Le contrôle hors ligne de la table (précision tirée, et non chance de précision évaluée) prévoyait moins de 2 points partout : il ne mesurait pas la même chose que le banc.
+
+**Effets sur le jeu (18h → portée seule → 18i ; repère).** Passes par match 933 → 1 001 → **1 043** (890 à 940, au-dessus) ; passes réussies 79,7 → 86,1 → 86,2 % (70 à 90 %) ; chez l'adversaire 16,6 → 11,7 → 11,6 % (15 à 20 %, en dessous) ; passes par possession 3,84 → 4,67 → 5,11 (3 à 5) ; **possession d'équipe 23,8 → 27,0 → 28,3 s (11 à 16, plus loin encore)** ; buts 2,08 → 2,26 → 2,64 (2 à 3,5) ; pertes en conduite 56,3 → 66,2 → 54,6 ; une-deux par équipe 1,47 → 1,78 → 1,44 ; corners 6,5 → 5,6 → 7,2.
+
+**Scènes A/B** (`18g-ab-script.py`, 400 scènes ; `18i-ab.txt`). Aucun effet inversé ni annulé : Passing + 0,139 (meilleure passe), + 0,227 (part de passes choisies) ; Composure + 0,021 ; Dribbling − 0,185 ; Vision + 0,198 ; Decisions − 0,185.

@@ -146,7 +146,9 @@ def test_perception_alone_decides_whether_the_pass_is_read(monkeypatch) -> None:
 def test_perception_alone_decides_whether_the_best_option_is_taken(monkeypatch) -> None:
     # ticket v2-collectif/33 : seule l'erreur de perception choisit -- une par direction de conduite (gardée pendant
     # la possession), puis une par option comparée (la conduite retenue, chaque passe, le tir)
-    holder, mate = _p("H", x=30), _p("M", x=33, y=40)  # pas de passe décisive
+    # pas de passe décisive ; coéquipier à 14 m (y = 48) : conduite et passe séparées de plus de
+    # `BEST_CHOICE_TOLERANCE` (à y = 40, quasi égales depuis le ticket v2-realisme/18i)
+    holder, mate = _p("H", x=30), _p("M", x=33, y=48)
     players = [holder, mate, _p("D", team="away", x=31)]
     goal = Vec2(105.0, 34.0)
     draws: list[float] = []

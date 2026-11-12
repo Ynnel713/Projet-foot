@@ -58,10 +58,13 @@ _HARDEST_CONTROL = _BASE_DIFFICULTY + _CONTROL_DIFFICULTY_PER_MPS * (MAX_PASS_MP
 _NEAR_PASSER_M = 3.0
 _CUT_NEAR_PASSER = ((0.5, 0.75), (1.0, 0.14), (6.0, 0.01))  # (distance max à la trajectoire en m, chance de coupe)
 _CUT_ON_PATH = ((1.0, 0.31), (2.0, 0.16), (3.0, 0.07), (4.0, 0.04), (5.0, 0.02), (6.0, 0.01))
-UNFORESEEN_CUT = 0.05  # passe précise : adversaires qui croisent la trajectoire sans y être au départ
+# passe précise : adversaires qui croisent la trajectoire sans y être au départ (0,05 au 18g, 0,01 au 18i, validé le
+# 12/11/2026 : mesurée 0,007 à 0,009 sur 50 matchs ; l'ancien terme comptait surtout le ballon passé à côté du receveur)
+UNFORESEEN_CUT = 0.01
 # passe imprécise (25 à 50 % de sa longueur) non perdue, hors coupe de la table, selon la longueur de la passe (ticket
-# v2-realisme/18h, remesurée le 12/11/2026 : 50 matchs, sortie ou coup de sifflet pour l'adversaire compté perdu)
-_MISS_NOT_LOST = ((10.0, 0.78), (math.inf, 0.64))  # (longueur max en m, part non perdue)
+# v2-realisme/18h : 50 matchs, sortie ou coup de sifflet pour l'adversaire compté perdu ; remesurée au 18i avec la portée
+# du receveur, 0,78 / 0,64 -> 0,85 / 0,68, validé le 12/11/2026)
+_MISS_NOT_LOST = ((10.0, 0.85), (math.inf, 0.68))  # (longueur max en m, part non perdue)
 
 
 def pressure(player: PlayerState, opponents: Sequence[PlayerState]) -> float:
@@ -169,7 +172,7 @@ def _launch_speed(distance_m: float) -> float:
 
 def pass_aim(passer: PlayerState, target: PlayerState, opponents: Sequence[PlayerState] = ()) -> Vec2:
     """Point visé par une passe de `passer` vers `target`. Réussie (Passing contre difficulté) : là où le receveur
-    VA être, d'autant plus précisément que le dosage est bon. Ratée : déviée de 10 à 25 % de sa longueur."""
+    VA être, d'autant plus précisément que le dosage est bon. Ratée : déviée de 25 à 50 % de sa longueur (18h)."""
     distance = passer.position.distance_to(target.position)
     speed = _launch_speed(distance)
     log_f = math.log(BALL_FRICTION_PER_S)
