@@ -1,7 +1,8 @@
 """Mémoire de perception (ticket v2-realisme/08b) : chaque joueur garde, pour chacun des autres, la dernière position et
 la dernière vitesse VUES (dans son cône, `vision.seen_by`, 08a) avec l'instant ; la position qu'il en perçoit est
 extrapolée de cette observation. Calculée et tracée au 08b, sans effet sur le jeu ; depuis le 08d elle nourrit la
-décision du porteur (`perceived_opponents`) ; les tours de tête (scan, 08c) la rafraîchissent.
+décision du porteur (`perceived_opponents`, 08d) et, au 08e, le marquage et la ligne défensive ; les tours de tête (scan,
+08c) la rafraîchissent.
 
 Constantes validées par le propriétaire (13/11/2026, « ok constantes ») :
 - Extrapolation : dernière position vue + part × dernière vitesse vue × âge. La part est celle de l'Anticipation déjà
@@ -88,6 +89,11 @@ class PerceptionMemory:
             return Vec2(x, y)
         reach = (anticipation_share(observer) if share is None else share) * age
         return clamp_to_pitch(Vec2(x + vx * reach, y + vy * reach))
+
+    def perceived_velocity(self, observer: PlayerState, observed: str) -> Vec2:
+        """Dernière vitesse vue de `observed` par `observer` (ticket v2-realisme/08e) : sa vraie vitesse s'il le voit."""
+        _, _, vx, vy, _ = self._seen[observer.name][observed]
+        return Vec2(vx, vy)
 
     def perceived_opponents(self, observer: PlayerState, opponents: list[PlayerState], now_s: float,
                             real: str | None = None) -> list[PlayerState]:

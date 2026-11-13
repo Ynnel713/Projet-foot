@@ -143,6 +143,7 @@ class ScanEvent:
     team: str
     player: str
     has_ball: bool
+    defending: bool = False  # son équipe n'a pas le ballon (ticket v2-realisme/08e : il ne suit plus le ballon le temps du scan)
 
 
 @dataclass(frozen=True)

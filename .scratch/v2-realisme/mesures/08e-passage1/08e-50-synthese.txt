@@ -1,0 +1,54 @@
+avant : 50 matchs ; après : 50 matchs
+  passes par match                                                                                       1044.000 ->   1060.080
+  passes par minute                                                                                        11.600 ->     11.779
+  passes réussies (part)                                                                                    0.799 ->      0.801
+  passes chez l'adversaire (part)                                                                           0.182 ->      0.179
+  receveur visé (part)                                                                                      0.779 ->      0.782
+  passes par possession                                                                                     3.746 ->      3.802
+  possession d'équipe (s)                                                                                  20.768 ->     20.754
+  temps par possession de joueur (s)                                                                        2.601 ->      2.601
+  buts par match                                                                                            3.040 ->      3.080
+  tirs tracés par équipe                                                                                   17.220 ->     17.060
+  tirs cadrés (part)                                                                                        0.278 ->      0.296
+  conversion des tirs (part)                                                                                0.088 ->      0.090
+  xG neutre par match                                                                                       3.160 ->      3.156
+  conduite : pertes par match                                                                              60.340 ->     59.580
+  passes longues (part)                                                                                     0.021 ->      0.019
+  face-à-face : tirs par match                                                                             13.460 ->     13.520
+  corners par match                                                                                         6.600 ->      5.440
+  fautes par match                                                                                         13.800 ->     13.560
+  pertes de balle par match                                                                               273.660 ->    273.960
+  grosses occasions par match                                                                              32.420 ->     33.840
+  grosses occasions, issue : interception (part)                                                            0.024 ->      0.028
+  choix dribble (part)                                                                                      0.565 ->      0.561
+  choix pass (part)                                                                                         0.421 ->      0.425
+  choix shot (part)                                                                                         0.014 ->      0.014
+  hors-jeu par match                                                                                        0.860 ->      0.800
+  passes en profondeur réussies (part)                                                                      0.448 ->      0.417
+  passes en profondeur (part)                                                                               0.003 ->      0.003
+  hors-jeu par équipe                                                                                       0.430 ->      0.400
+  scans en défense (part des scans ; l'équipe sans le ballon ne suit plus le ballon le temps du scan)         nan ->      0.237
+  scans dans les 10 s avant la réception (moyenne par réception)                                            2.684 ->      2.680
+  scans par minute et par joueur                                                                           17.979 ->     17.962
+  talonnades par match                                                                                      4.740 ->      4.060
+  talonnades : non perdues (part)                                                                           0.755 ->      0.719
+  vision : adversaires non vus par le porteur à la décision (moyenne)                                       4.188 ->      4.228
+  vision : décisions avec un adversaire non vu à 5 m au plus (part)                                         0.737 ->      0.750
+  mémoire : âge de la dernière vue des adversaires non vus, porteur (s)                                     1.431 ->      1.435
+  mémoire : erreur de position perçue des adversaires non vus, porteur (m)                                  2.503 ->      2.514
+  mémoire : erreur maximale, porteur (m)                                                                   43.464 ->     49.806
+  mémoire : fantômes perçus par décision (adversaires perçus avec plus de 4 s de retard et 10 m d'erreur)      0.125 ->      0.131
+  mémoire : décisions avec un fantôme (part)                                                                0.064 ->      0.065
+  temps de calcul par match (s)                                                                            91.951 ->     93.140
+
+Calibration de la passe : tranche de chance évaluée, passes par match, évaluée, non perdue, écart (points) ; avant puis après
+  [0 ; 0.1[          499  0.070  0.066   +0.4   |        471  0.068  0.079   -1.1
+  [0.1 ; 0.2[       2355  0.152  0.148   +0.4   |       2436  0.151  0.139   +1.2
+  [0.2 ; 0.3[         82  0.265  0.305   -4.0   |         82  0.265  0.378  -11.3
+  [0.3 ; 0.4[        338  0.364  0.429   -6.5   |        343  0.365  0.429   -6.3
+  [0.4 ; 0.5[        974  0.461  0.510   -4.9   |        966  0.462  0.473   -1.1
+  [0.5 ; 0.6[       1648  0.550  0.520   +3.0   |       1622  0.551  0.530   +2.1
+  [0.6 ; 0.7[       3588  0.658  0.677   -1.9   |       3668  0.657  0.693   -3.6
+  [0.7 ; 0.8[       6360  0.754  0.728   +2.7   |       6650  0.755  0.728   +2.7
+  [0.8 ; 0.9[      12971  0.853  0.872   -1.9   |      13226  0.853  0.875   -2.2
+  [0.9 ; +[        21057  0.958  0.965   -0.7   |      21232  0.958  0.965   -0.8

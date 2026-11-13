@@ -830,6 +830,7 @@ class Collector:
         for e in scans:
             self.count["scans"] += 1
             self.count["scans : du porteur"] += e.has_ball
+            self.count["scans : en défense"] += e.defending  # gelés un instant, ils ne suivent plus le ballon (ticket 08e)
             by_player[e.player].append(e.minute)
             level = self.levels.get(e.player)
             if level:

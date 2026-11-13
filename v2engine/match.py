@@ -989,6 +989,7 @@ def _step_player(
     defense: DefensiveRoles | None = None,
     transition: TransitionPlay | None = None,
     played_minute: float | None = None,
+    scanning: bool = False,
 ) -> PlayerState:
     """Un tick d'un joueur : son cerveau (`cerveau.think` : perception, interprétation, décision) donne son
     intention, puis l'exécution le déplace vers la cible, à l'intensité voulue (ADR 0001). `runs` : espaces visés
@@ -997,7 +998,7 @@ def _step_player(
     `defense` : rôles défensifs de l'équipe sans ballon (ticket v2-collectif/07)."""
     perceived = situations.perceived(player, minute * 60.0) if situations is not None else None
     previous = intentions.get(player.name) if intentions is not None else None  # réaction à la perte (ticket 10)
-    intention = think(player, ball, players or [], minute, runs, perceived, bloc, defense, transition, previous)
+    intention = think(player, ball, players or [], minute, runs, perceived, bloc, defense, transition, previous, scanning)
     if intentions is not None:
         intentions[player.name] = intention
     # Temps de jeu (`played_minute`) transmis à `step`, qui ne le lit plus depuis la réserve d'énergie (ticket
@@ -1055,8 +1056,9 @@ def simulate_match(
     trace = MatchTrace(home=home_club.name, away=away_club.name, tick_seconds=tick_seconds * record_every)
     ball.log = EventLog(trace.events)  # journal des événements (ticket v2-realisme/19b)
 
-    memory = PerceptionMemory(players, 0.0)  # ce que chacun a vu des autres (ticket v2-realisme/08b), sans effet sur le jeu
-    scans = ScanTracker()  # tours de tête qui rafraîchissent cette mémoire (ticket v2-realisme/08c), sans effet sur le jeu
+    memory = PerceptionMemory(players, 0.0)  # ce que chacun a vu des autres (ticket v2-realisme/08b) : décision du porteur (08d), marquage et ligne (08e)
+    scans = ScanTracker()  # tours de tête qui rafraîchissent cette mémoire (ticket v2-realisme/08c)
+    scanning: set[str] = set()  # qui tourne la tête : en défense, il ne suit plus le ballon (ticket v2-realisme/08e)
     runs: dict[str, tuple[Vec2, float]] = {}  # espace visé par chaque joueur sans ballon (Off the Ball)
     intentions: dict[str, Intention] = {}  # intention de chaque joueur au dernier tick (ADR 0001)
     trace.reaction_delays_s = {p.name: reaction_delay_s(p) for p in players}
@@ -1108,7 +1110,7 @@ def simulate_match(
             ball.restart = kickoff("away" if first == "home" else "home", players, i * tick_seconds, dead_s=0.0)
             situations = SituationTracker(delays_s=dict(trace.reaction_delays_s))
             memory = PerceptionMemory(players, i * tick_seconds)  # tous alignés : chacun connaît la place de tous
-            scans = ScanTracker()
+            scans, scanning = ScanTracker(), set()
             bloc, defense, transition = Bloc.from_players(players), DefensiveRoles(), TransitionPlay()
             runs.clear()
             intentions.clear()
@@ -1120,13 +1122,15 @@ def simulate_match(
                 last_situation[team] = situation
                 trace.situations.append(SituationRecord(minute, team, situation))
         transition.update(situations, ball, players, i * tick_seconds)
-        bloc.update(players, ball, i * tick_seconds)  # hauteur de ligne sans ballon (tickets 05 et 23)
-        defense.update(players, ball, bloc, i * tick_seconds, situations.current)  # contre-pressing (ticket 10)
+        # la ligne et le marquage lisent la mémoire de perception (ticket v2-realisme/08e)
+        bloc.update(players, ball, i * tick_seconds, memory)  # hauteur de ligne sans ballon (tickets 05 et 23)
+        defense.update(players, ball, bloc, i * tick_seconds, situations.current, memory)  # contre-pressing (ticket 10)
         played = played_minute(minute, trace.second_half_start_minute, half_tick * tick_seconds / 60.0)
         players = [_step_player(p, ball, tick_seconds, minute, players, runs, intentions, situations, bloc, defense,
-                                transition, played_minute=played) for p in players]
+                                transition, played_minute=played, scanning=p.name in scanning) for p in players]
         _resolve_player_collisions(players)
-        memory.update(players, i * tick_seconds, scans.update(players, ball.holder, i * tick_seconds, tick_seconds, trace.scans))
+        scanning = scans.update(players, ball.holder, i * tick_seconds, tick_seconds, trace.scans)  # tours de tête (08c)
+        memory.update(players, i * tick_seconds, scanning)
         scoring_team = _step_ball(ball, tick_seconds, players, i * tick_seconds, trace.decisions, trace.offsides,
                                   transition.mode, trace.restarts, trace.fouls,
                                   trace.shots, trace.receptions, memory)

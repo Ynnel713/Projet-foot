@@ -52,6 +52,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from v2engine.attributes import success_probability
 from v2engine.condition import effective_rating
@@ -61,6 +62,9 @@ from v2engine.flux import PLACEMENT
 from v2engine.movement import PlayerState, max_speed_mps
 from v2engine.offside import TRAP_DEPTH_M
 from v2engine.situation import DEFENSE_PLACEE, TRANSITION_DEFENSIVE
+
+if TYPE_CHECKING:
+    from v2engine.perception_memory import PerceptionMemory
 
 BLOCK_SHIFT = (0.5, 0.3)  # part du décalage du ballon suivie par le bloc : longueur, largeur
 SHAPE_WITHOUT_BALL = (32.0, 40.0)  # longueur, largeur visées (m)
@@ -208,8 +212,12 @@ class Bloc:
             shapes_low[team] = _shape_of([without_ball_place(p, deepest) for p in field_players])
         return cls(shapes, shapes_ball, shapes_low)
 
-    def update(self, players: list[PlayerState], ball: BallState, now_s: float = 0.0) -> None:
-        """Hauteur de la dernière ligne de chaque équipe, si elle n'a pas le ballon (une fois par tick)."""
+    def update(self, players: list[PlayerState], ball: BallState, now_s: float = 0.0,
+               memory: PerceptionMemory | None = None) -> None:
+        """Hauteur de la dernière ligne de chaque équipe, si elle n'a pas le ballon (une fois par tick). `memory` :
+        mémoire de perception (ticket v2-realisme/08e) : l'attaquant le plus avancé est celui que le défenseur le plus bas
+        de l'équipe (celui qui cale la ligne) perçoit comme tel, à la place où il le perçoit : une course dans son dos qu'il
+        n'a pas vue ne fait pas redescendre la ligne. Sans mémoire : les vraies positions."""
         holder = next((p for p in players if p.name == ball.holder), None) if ball.holder else None
         for team in self.shapes:
             own = [p for p in players if p.team == team and p.poste != "GK"]
@@ -222,14 +230,21 @@ class Bloc:
                 gap = min(p.position.distance_to(holder.position) for p in own)
                 free = min(max((gap - PRESSED_M) / (FREE_M - PRESSED_M), 0.0), 1.0)  # 0 pressé, 1 libre
                 height += PRESSURE_STEP_M * (1.0 - 2.0 * free)
-            deepest = max(rivals, key=lambda p: -_progress(team, p.position.x))  # attaquant le plus près de notre but
+            if memory is None:
+                deepest = max(rivals, key=lambda p: -_progress(team, p.position.x))  # attaquant le plus près de notre but
+                deepest_x = deepest.position.x
+            else:  # tel que le défenseur le plus bas le perçoit
+                anchor = min(own, key=lambda p: _progress(team, p.position.x))
+                where = {p.name: memory.perceived_position(anchor, p.name, now_s).x for p in rivals}
+                deepest = max(rivals, key=lambda p: -_progress(team, where[p.name]))
+                deepest_x = where[deepest.name]
             back = min(_progress(team, p.home_target.x) for p in own)
             # ligne la plus basse de la forme de départ (bandes espacées d'au moins 10 m : 1 m de tolérance suffit)
             slowest = min(max_speed_mps(effective_rating(p, "Pace")) for p in own if _progress(team, p.home_target.x) <= back + 1.0)
             gain = max(0.0, 1.0 - slowest / max_speed_mps(effective_rating(deepest, "Pace"))) * CUSHION_RUN_M
             # ticket 23 : la ligne peut se tenir jusqu'à TRAP_DEPTH_M au-dessus de l'attaquant le plus avancé ;
             # si elle est plus lente que lui, le gain de vitesse la fait redescendre (critère Pace du ticket 05).
-            height = min(height, _progress(team, deepest.position.x) + TRAP_DEPTH_M - gain)
+            height = min(height, _progress(team, deepest_x) + TRAP_DEPTH_M - gain)
             self.lines[team] = max(height, _DEPTH_MARGIN_M)
             history = self.line_history.setdefault(team, [])
             history.append((now_s, self.lines[team]))

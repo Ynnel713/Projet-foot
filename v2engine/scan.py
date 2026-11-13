@@ -1,7 +1,7 @@
 """Scan visuel (ticket v2-realisme/08c) : un joueur tourne brièvement la tête pour voir hors de son cône (08a) et
 rafraîchir sa mémoire de perception (08b). Calculé et tracé au 08c, sans effet sur le jeu ; depuis le 08d la mémoire qu'il
-rafraîchit nourrit la décision du porteur (le « il ne suit plus le ballon » reste sans consommateur : défenseur et appels
-dans le dos, 08e).
+rafraîchit nourrit la décision du porteur, le marquage et la ligne défensive (08d et 08e), et un défenseur qui scanne ne
+suit plus le ballon le temps du scan (`cerveau.think`, 08e ; le gardien n'est pas concerné).
 
 Constantes validées par le propriétaire (13/11/2026, « fais tout dans le même ticket » après la proposition) :
 - Un scan dure `SCAN_DURATION_S` (0,3 s) ; pendant ce temps il voit tout autour de lui (cône de 100° + environ 80° de
@@ -78,6 +78,7 @@ class ScanTracker:
                sink: list[ScanEvent] | None = None) -> set[str]:
         """Joueurs qui scannent à cet instant ; chaque début de scan est ajouté à `sink` s'il est donné."""
         scanning: set[str] = set()
+        holder_team = next((p.team for p in players if p.name == holder), None) if holder is not None else None
         for p in players:
             name = p.name
             if now_s < self._until.get(name, -1.0) - 1e-9:
@@ -92,5 +93,6 @@ class ScanTracker:
                 self._until[name] = now_s + SCAN_DURATION_S
                 scanning.add(name)
                 if sink is not None:
-                    sink.append(ScanEvent(now_s / 60.0, p.team, name, name == holder))
+                    sink.append(ScanEvent(now_s / 60.0, p.team, name, name == holder,
+                                      holder_team is not None and p.team != holder_team))
         return scanning

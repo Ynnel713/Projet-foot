@@ -418,11 +418,12 @@ def _keeper(player: PlayerState, ball: BallState, seen: Perception, players: lis
 def think(player: PlayerState, ball: BallState, players: list[PlayerState], minute: float,
           runs: dict[str, tuple[Vec2, float] | tuple[Vec2, float, str]] | None, situation: str | None = None, bloc: Bloc | None = None,
           defense: DefensiveRoles | None = None, transition: TransitionPlay | None = None,
-          previous: Intention | None = None) -> Intention:
+          previous: Intention | None = None, scanning: bool = False) -> Intention:
     """Perception, interprétation, décision : l'intention du joueur à cet instant. `situation` : situation de jeu
     perçue (ticket v2-collectif/03) ; avec `bloc`, elle donne la forme du bloc où il se replace (ticket 04) ; avec
     `defense`, les rôles défensifs attribués par son équipe (ticket 07) ; `previous` : son intention au tick
-    précédent (ticket 10)."""
+    précédent (ticket 10). `scanning` : il tourne la tête (scan, ticket v2-realisme/08c) ; en défense d'un ballon tenu, il
+    ne suit plus le ballon le temps du scan et garde son intention précédente (ticket v2-realisme/08e), sauf le gardien."""
     now_s = minute * 60.0
     if ball.restart is not None:
         # Ballon mort (ticket v2-collectif/29) : le preneur va au point de remise, les autres se replacent en trottinant
@@ -440,6 +441,9 @@ def think(player: PlayerState, ball: BallState, players: list[PlayerState], minu
         return Intention(HORS_JEU, "reculer", player.home_target, HESITATION_INTENSITY,
                          reason="hors-jeu sifflé, il recule vers sa place", situation=situation)
     seen = perceive(player, ball, players)
+    if scanning and player.poste != "GK" and previous is not None and seen.holder is not None \
+            and seen.holder.team != player.team:
+        return previous  # tête tournée : le ballon n'est pas suivi pendant ce tour de tête (08e) ; pas le gardien
     # Réaction à la perte (ticket v2-collectif/10) : tant qu'il ne l'a pas perçue (délai de réaction d'Anticipation,
     # `SituationTracker.perceived`), il poursuit son action offensive.
     if previous is not None and previous.role in _OFFENSIVE_ROLES \

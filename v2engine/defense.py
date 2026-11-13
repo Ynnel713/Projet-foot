@@ -68,6 +68,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field, replace
+from typing import TYPE_CHECKING
 
 from v2engine.anticipation import meeting_point, reaction_delay_s
 from v2engine.attributes import success_probability
@@ -79,6 +80,9 @@ from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitc
 from v2engine.movement import PlayerState, accel_tau_s, max_speed_mps
 from v2engine.possession import BALL_FRICTION_PER_S, MISS_RETRY_S
 from v2engine.situation import DEFENSE_PLACEE, TRANSITION_DEFENSIVE
+
+if TYPE_CHECKING:
+    from v2engine.perception_memory import PerceptionMemory
 
 PRESSEUR, COUVERTURE, MARQUAGE, COMPENSATION = "presseur", "couverture", "marquage", "compensation"
 
@@ -310,8 +314,11 @@ class DefensiveRoles:
         return best
 
     def update(self, players: list[PlayerState], ball: BallState, bloc: Bloc | None, now_s: float,
-               situations: dict[str, str] | None = None) -> None:
-        """`situations` : situation de chaque équipe (`SituationTracker.current`), pour le contre-pressing (ticket 10)."""
+               situations: dict[str, str] | None = None, memory: PerceptionMemory | None = None) -> None:
+        """`situations` : situation de chaque équipe (`SituationTracker.current`), pour le contre-pressing (ticket 10).
+        `memory` : mémoire de perception (ticket v2-realisme/08e) : chaque marqueur situe l'attaquant qu'il marque là où
+        il le perçoit, pas là où il est ; le ballon et son porteur restent connus de tous, et le plan de l'équipe (qui
+        est dangereux, qui est le receveur proche) reste sur les vraies positions. Sans mémoire : les vraies positions."""
         self.assignments = {}
         holder = next((p for p in players if p.name == ball.holder), None) if ball.holder else None
         self._watch_triggers(players, ball, holder, now_s, situations)  # le vrai porteur, même pendant une passe
@@ -370,9 +377,10 @@ class DefensiveRoles:
         for attacker in dangerous:
             if not free:
                 break
-            marker = min(free, key=lambda p: p.position.distance_to(attacker.position))
-            spot = _goal_side(attacker.position, goal, marking_distance_m(marker))
-            self.assignments[marker.name] = Assignment(MARQUAGE, spot, attacker.name, attacker.velocity)
+            marker = self._closest_to(free, attacker, memory, now_s)
+            where, moving = self._seen_at(marker, attacker, memory, now_s)
+            spot = _goal_side(where, goal, marking_distance_m(marker))
+            self.assignments[marker.name] = Assignment(MARQUAGE, spot, attacker.name, moving)
             free.remove(marker)
         if bloc is not None:  # niveaux de cascade gardés tant qu'aucun tick ne les recalcule (ballon libre)
             levels, self.levels = self.levels, {}
@@ -390,14 +398,33 @@ class DefensiveRoles:
                 followers = [p for p in free if self.follows.get(p.name)]
                 if not followers:
                     break
-                marker = next((p for p in followers if self.followed.get(p.name) == receiver.name), None) or min(
+                marker = next((p for p in followers if self.followed.get(p.name) == receiver.name), None) or self._closest_to(
                     [p for p in followers if self.followed.get(p.name) not in {r.name for r in near}] or followers,
-                    key=lambda p: p.position.distance_to(receiver.position))
+                    receiver, memory, now_s)
                 self.followed[marker.name] = receiver.name
                 # côté ballon, sur la ligne de passe : il ferme la solution plutôt que de couvrir son but
-                spot = _goal_side(receiver.position, holder.position, marking_distance_m(marker))
-                self.assignments[marker.name] = Assignment(MARQUAGE, spot, receiver.name, receiver.velocity)
+                where, moving = self._seen_at(marker, receiver, memory, now_s)
+                spot = _goal_side(where, holder.position, marking_distance_m(marker))
+                self.assignments[marker.name] = Assignment(MARQUAGE, spot, receiver.name, moving)
                 free.remove(marker)
+
+    @staticmethod
+    def _seen_at(marker: PlayerState, attacker: PlayerState, memory: PerceptionMemory | None,
+                 now_s: float) -> tuple[Vec2, Vec2]:
+        """Où `marker` situe `attacker` et à quelle vitesse (ticket v2-realisme/08e) : sa vraie place et sa vraie vitesse
+        s'il le voit, sinon sa dernière vue extrapolée (08b). Sans mémoire : la réalité."""
+        if memory is None:
+            return attacker.position, attacker.velocity
+        return memory.perceived_position(marker, attacker.name, now_s), memory.perceived_velocity(marker, attacker.name)
+
+    @classmethod
+    def _closest_to(cls, candidates: list[PlayerState], attacker: PlayerState, memory: PerceptionMemory | None,
+                    now_s: float) -> PlayerState:
+        """Celui de `candidates` le plus proche de l'attaquant tel qu'il le perçoit chacun (ticket v2-realisme/08e)."""
+        if memory is None:
+            return min(candidates, key=lambda p: p.position.distance_to(attacker.position))
+        return min(candidates,
+                   key=lambda p: p.position.distance_to(memory.perceived_position(p, attacker.name, now_s)))
 
     def _compensate(self, players: list[PlayerState], ball: BallState, holder: PlayerState, team: str, goal: Vec2,
                     free: list[PlayerState], bloc: Bloc, previous: dict[tuple[str, str], str],

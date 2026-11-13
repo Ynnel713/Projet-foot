@@ -476,6 +476,8 @@ def report(c: Collector, detail: bool = False) -> dict:
     out["scans par match"] = k["scans"] / n
     match_minutes = getattr(c, "minutes_per_match", 90.0)  # absent hors de `run` (tests du rapport)
     out["scans par minute et par joueur"] = k["scans"] / max(1e-9, n * match_minutes * 22)
+    out["scans en défense (part des scans ; l'équipe sans le ballon ne suit plus le ballon le temps du scan)"] = (
+        k["scans : en défense"] / max(1, k["scans"]))
     out["scans du porteur (part des scans)"] = k["scans : du porteur"] / max(1, k["scans"])
     out["scans dans les 10 s avant la réception (moyenne par réception)"] = (
         k["scans : avant la réception (somme, 10 s)"] / max(1, k["scans : réceptions"]))
