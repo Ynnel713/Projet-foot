@@ -12,7 +12,7 @@
 
 **Bloque :** 04h, 07g, `v2-collectif/31`.
 
-**Status:** implémenté (13/11/2026) — en attente de /valider-ticket-simulafoot
+**Status:** livré (13/11/2026), validé expert + QC
 
 ## Estimation
 
@@ -56,3 +56,5 @@ Temps machine, non compté : suite complète (environ 40 min).
 - Suite complète : 2 805 passés, 0 ignoré, 14 désélectionnés (2 802 + 3 ; `07f-suite.txt`) ; `CLAUDE.md` mis à jour. Aucun fichier d'interface touché (UI non reconstruite).
 
 **Durée.** Estimée 1 h 25. Réelle environ 1 h 10, non chronométrée (analyse 20 min, développement 10 min, tests 15 min, intégration et vérifications 25 min) : − 18 %. Temps machine hors total : 2 x 2 matchs (`measure_v2 2`, environ 3 min), suite complète (8 min 34).
+
+**13/11/2026, statut corrigé (ticket v2-realisme/07b).** Le statut était resté « implémenté — en attente de /valider-ticket-simulafoot » alors que la clôture `v2-realisme/07f/cloture` est VALIDÉ au journal et le ticket commité (`c8fa4a7`).

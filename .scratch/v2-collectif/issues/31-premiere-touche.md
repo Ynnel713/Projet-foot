@@ -12,7 +12,7 @@
 
 **Complément (05/11/2026, décision du propriétaire) :** orientation et prise d'information sont avancées avant ce ticket et en forment la base. Le contrôle orienté s'appuie sur le type de réception (`v2-realisme/07c`) et sur le cap du corps (`07a`, `07e`) ; le jeu à une touche suppose que le receveur ait vu la suite (mémoire et scan, `08b`, `08c`). L'effet de l'orientation sur la durée de réception reste au `v2-realisme/07d`, après ce ticket.
 
-**Status:** à faire (constantes à proposer avant le code)
+**Status:** découpé (13/11/2026, validé par le propriétaire) en `31a` (jeu à une touche), `31b` (contrôle orienté), `31c` (durée de réception). Ticket chapeau : ne pas l'implémenter tel quel ; le texte reste la référence de détail. Une référence à ce ticket sans lettre vaut pour tous ses morceaux.
 
 **Origine (03/11/2026) :** audit de réalisme (décision Q11) : écart le plus important trouvé, il limite le rythme et les combinaisons.
 
