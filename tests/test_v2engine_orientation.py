@@ -10,7 +10,8 @@ import pytest
 
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
 from v2engine.match import _build_players, _facing_at_kickoff
-from v2engine.movement import FACING_RUN_SPEED_MPS, TURN_RATE_RAD_S, desired_facing, step, turn_toward
+from v2engine.movement import (FACING_RUN_SPEED_MPS, TURN_RATE_RAD_S, desired_facing, step, turn_rate_rad_s,
+                               turn_toward)
 from tests.scenes import player
 
 DT = 0.1
@@ -34,7 +35,7 @@ def test_half_turn_takes_180_degrees_over_the_turn_rate_to_one_step() -> None:
     while abs(_angle(p.facing)) < 179.9 and steps < 100:
         p = step(p, DT, p.position, 0.0, look_at=ball)
         steps += 1
-    expected = math.pi / TURN_RATE_RAD_S / DT
+    expected = math.pi / turn_rate_rad_s(60) / DT  # Agility par défaut des scènes : 60 (ticket 07f)
     assert abs(steps - expected) <= 1.0
     assert p.velocity.length() < 1e-9  # il n'a pas bougé : le cap ne déplace pas le joueur
 

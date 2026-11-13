@@ -9,7 +9,7 @@ import math
 from dataclasses import dataclass
 from functools import lru_cache
 
-from v2engine.condition import PlayerCondition
+from v2engine.condition import PlayerCondition, effective_rating
 from v2engine.geometry import Vec2, clamp_to_pitch
 
 KMH_TO_MS = 1.0 / 3.6
@@ -46,11 +46,15 @@ FATIGUE_FLOOR = 0.6  # réserve vide : 60 % de sa vitesse max
 
 # Orientation du corps (ticket v2-realisme/07a, valeurs recommandées et validées par délégation du propriétaire,
 # 12/11/2026) : le cap (`PlayerState.facing`, direction du corps, distincte de la vitesse) tourne vers la direction
-# voulue d'au plus `TURN_RATE_RAD_S` par seconde, la même pour tous en attendant Agility (07f). Direction voulue : le
+# voulue d'au plus `turn_rate_rad_s(Agility)` par seconde. Direction voulue : le
 # sens de course au-dessus de `FACING_RUN_SPEED_MPS` (19,8 km/h, seuil de course rapide du banc), le ballon sinon.
 # Demi-tour en 0,5 s : ordre de grandeur, vitesse angulaire réelle du corps d'un footballeur non trouvée. Sans effet sur
 # le jeu avant 07b, 07c et 07e : tracé et affiché seulement.
-TURN_RATE_RAD_S = math.radians(360.0)
+TURN_RATE_RAD_S = math.radians(360.0)  # Agility 55 (note moyenne de la base)
+# Vitesse angulaire selon Agility (ticket v2-realisme/07f, valeurs recommandées et validées par délégation du
+# propriétaire, 13/11/2026), mêmes repères linéaires que Pace et Acceleration : demi-tour en 0,67 s à 11, 0,5 s à 55,
+# 0,4 s à 99 (écart 99/11 de 1,67, proche de celui d'Acceleration, 1,5). Vitesse angulaire réelle : non trouvée.
+_TURN_POINTS: tuple[tuple[float, float], ...] = ((11.0, 270.0), (55.0, 360.0), (99.0, 450.0))  # degrés par seconde
 FACING_RUN_SPEED_MPS = 19.8 * KMH_TO_MS
 
 
@@ -73,6 +77,11 @@ def max_speed_mps(pace: float) -> float:
 def accel_tau_s(acceleration: float) -> float:
     """Constante de temps τ (s) de la montée en vitesse : 63 % de la vitesse visée après τ."""
     return _lerp(acceleration, _TAU_POINTS)
+
+
+def turn_rate_rad_s(agility: float) -> float:
+    """Vitesse angulaire maximale du corps (rad/s) selon Agility (ticket 07f)."""
+    return math.radians(_lerp(agility, _TURN_POINTS))
 
 
 def energy_factor(energy: float) -> float:
@@ -188,5 +197,6 @@ def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_facto
         role=state.role,
         condition=PlayerCondition(energy=spend_energy(state.condition.energy, state.stamina,
                                                       0.5 * (velocity.length() + new_velocity.length()), dt)),
-        facing=turn_toward(state.facing, desired_facing(new_position, new_velocity, look_at), TURN_RATE_RAD_S * dt),
+        facing=turn_toward(state.facing, desired_facing(new_position, new_velocity, look_at),
+                            turn_rate_rad_s(effective_rating(state, "Agility")) * dt),
     )

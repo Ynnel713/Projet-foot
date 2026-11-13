@@ -11,7 +11,7 @@ import pytest
 from v2engine.ball_state import BallState
 from v2engine.geometry import Vec2
 from v2engine.match import _step_ball
-from v2engine.movement import TURN_RATE_RAD_S, step
+from v2engine.movement import step, turn_rate_rad_s
 from v2engine.reception import (BACK_MIN_DEG, DE_FACE, DE_PROFIL, DOS_AU_JEU, FACE_MAX_DEG, OPEN_CONE_DEG,
                                 attacking_goal, open_facing, reception_type)
 from tests.scenes import player
@@ -83,7 +83,7 @@ def test_receiver_with_time_ends_in_profile_without_time_back_to_play() -> None:
             p = step(p, 0.1, p.position, 0.0, look_at=target)
         return reception_type(p.facing, p.position, "home")
     assert after(1) == DOS_AU_JEU  # 36° tournés : encore à plus de 120° du but
-    needed = math.ceil(math.radians(90.0) / (TURN_RATE_RAD_S * 0.1))
+    needed = math.ceil(math.radians(90.0) / (turn_rate_rad_s(60) * 0.1))  # Agility par défaut des scènes (07f)
     assert after(needed) == DE_PROFIL
 
 
