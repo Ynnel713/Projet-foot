@@ -43,3 +43,7 @@ Temps machine, non compté : suite complète (environ 40 min) ; mesure 20 matchs
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+
+## Comments
+
+**13/11/2026, lien avec le 07b (double comptage à éviter).** Depuis `v2-realisme/07b`, la vitesse max dépend de l'angle entre la direction voulue et le cap (`movement.direction_speed_factor` : 100 % jusqu'à 45°, 80 % à 90°, 65 % à 180°), et le cap tourne à `turn_rate_rad_s(Agility)`. Un crochet coûte donc déjà de la vitesse tant que le corps n'a pas tourné, avec Agility par la vitesse de rotation (07f). La limite d'accélération latérale de ce ticket s'ajoute au freinage et au plafond du 07b : vérifier en scène qu'un virage à 90° ne cumule pas les deux pertes au-delà du réel, ou réduire l'une quand l'autre joue.

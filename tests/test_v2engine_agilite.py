@@ -49,8 +49,10 @@ def test_agility_99_turns_faster_than_11_by_the_validated_ratio() -> None:
     assert _half_turn_s(55) == pytest.approx(0.5, abs=DT)
 
 
-def test_agility_changes_the_facing_only_not_the_run() -> None:
-    """Même course, deux Agility : positions et vitesses identiques, seul le cap diffère (sans effet sur le jeu)."""
+def test_higher_agility_turns_sooner_and_so_runs_faster_from_a_turned_back() -> None:
+    """Même course, partie dos à la cible, deux Agility : le plus agile tourne plus vite vers le ballon, donc court plus
+    tôt de face (vitesse max selon l'angle au cap, ticket v2-realisme/07b) et va plus loin (avant le 07b : courses
+    identiques, seul le cap différait)."""
     base = player("A", x=50.0, y=34.0)
     base = base.__class__(**{**base.__dict__, "facing": Vec2(-1.0, 0.0)})
     low, high = with_attribute([base], "Agility", 11)[0], with_attribute([base], "Agility", 99)[0]
@@ -59,6 +61,6 @@ def test_agility_changes_the_facing_only_not_the_run() -> None:
     for _ in range(10):
         low = step(low, DT, target, 0.6, look_at=ball)
         high = step(high, DT, target, 0.6, look_at=ball)
-    assert low.position == high.position and low.velocity == high.velocity
+    assert high.position.distance_to(base.position) > low.position.distance_to(base.position)
     to_ball = _angle(ball - high.position)
     assert abs(_angle(high.facing) - to_ball) < abs(_angle(low.facing) - _angle(ball - low.position))

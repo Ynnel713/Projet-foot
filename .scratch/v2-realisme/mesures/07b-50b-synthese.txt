@@ -1,0 +1,38 @@
+avant : 50 matchs ; après : 50 matchs
+  passes par match                                                                                  1061.920   1053.600    -8.320
+  passes réussies (part)                                                                               0.801      0.798    -0.003
+  tirs par équipe                                                                                     17.400     17.290    -0.110
+  buts par match                                                                                       3.200      3.120    -0.080
+  xG neutre par match                                                                                  3.268      3.213    -0.055
+  pertes de balle par match                                                                          275.860    278.800    +2.940
+  conduite : pertes par dépossession par match                                                        33.880     34.700    +0.820
+  face-à-face : tirs par match                                                                        13.880     15.700    +1.820
+  distance au-dessus de 19,8 km/h (part)                                                               0.095      0.096    +0.002
+  distance au-dessus de 25 km/h (part)                                                                 0.023      0.025    +0.002
+  temps au-dessus de 19,8 km/h (part)                                                                  0.032      0.031    -0.001
+  temps au-dessus de 25 km/h (part)                                                                    0.007      0.007    +0.000
+  vision : adversaires à 5 m au plus non vus à la décision (part des adversaires proches)              0.570      0.575    +0.004
+  temps de calcul par match (s)                                                                      120.463    110.839    -9.624
+
+km par joueur de champ, par poste
+  AD        13.83    13.39    -3.2 %
+  AG        13.72    13.28    -3.3 %
+  BU        15.35    14.95    -2.6 %
+  DC        11.47    11.05    -3.7 %
+  LB        11.14    10.64    -4.4 %
+  MC        12.52    12.08    -3.5 %
+  MDC       12.75    12.32    -3.4 %
+  MOC       14.19    13.71    -3.4 %
+  RB        11.15    10.69    -4.1 %
+  tous      12.67    12.23    -3.5 %
+
+distance au-dessus de 19,8 km/h par joueur (m)
+  AD         2086     2092    +0.3 %
+  AG         2038     1999    -1.9 %
+  BU         2434     2494    +2.5 %
+  DC          422      400    -5.1 %
+  LB          611      582    -4.9 %
+  MC         1057      997    -5.7 %
+  MDC         889      867    -2.5 %
+  MOC        2005     1953    -2.6 %
+  RB          605      587    -3.0 %

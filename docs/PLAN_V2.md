@@ -295,6 +295,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **Le tir manqué coûte le ballon dans la décision (13/11/2026, ticket `v2-realisme/18k`)** : livré (13/11/2026), validé expert + QC. Valeur du tir : chance de but moins le coût d'un tir non marqué (`loss_cost`), sans constante nouvelle. Sur 50 matchs : tirs 18,0 → 16,0 par équipe, de 25 à 30 m 6,9 → 3,7, part dans la surface 21 → 27 % (réel 68), conversion 7,3 → 8,1 % ; conversion par zone inchangée sur 100 matchs. L'écart restant relève de la pénétration dans la surface (section 35).
 
+**Se déplacer de face, de côté ou à reculons (13/11/2026, ticket `v2-realisme/07b`)** : livré (13/11/2026), validé expert + QC (réserve acceptée par le propriétaire : face-à-face + 1,8 par match, cause à isoler au 07g). La vitesse max dépend de l'angle entre la direction voulue et le cap (`movement.direction_speed_factor`) : 100 % jusqu'à 45°, 80 % à 90° (pas chassés), 65 % à reculons (réel : 29 % plus lent sur 20 m, J Sports Sci 2021). Le joueur se retourne et court vers une cible à 8 m ou plus quand le ballon est hors de sa course (à plus de 45°), revient face au ballon sous 6 m ; il se retourne aussi quand sa cible s'éloigne plus vite qu'il ne peut reculer (l'appel dans le dos du marqueur, réserve A1 de l'expert) ; bandes de ± 0,3 m/s autour de 19,8 km/h (réserve A1 du 07a) et de 5° sur le cône du ballon ; choix gardé dans `PlayerState.facing_run`. Conduite : même loi. Sur 50 matchs (graines du 08f) : km par joueur de champ 12,67 → 12,23 (− 3,5 %) ; tirs en face-à-face 13,9 → 15,7 par match (cause du reste non établie, à reprendre au 07g et à la calibration) ; buts 3,20 → 3,12 ; passes 1 062 → 1 054.
+
 ### Bloquée par
 
 - Phase 4

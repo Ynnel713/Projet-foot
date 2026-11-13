@@ -38,3 +38,7 @@ Temps machine, non compté : suite complète (environ 40 min) ; mesure 50 matchs
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+
+## Comments
+
+**13/11/2026, repris du 07b (réserve A1 du passage 2, acceptée par le propriétaire).** Tirs en face-à-face 13,9 → 15,7 par match après le 07b (+ 13 %, environ 2,4 écarts-types ; 16,2 avant la correction du pivot sur l'appel dans le dos), cause non établie. À isoler ici, sur les graines du 08f (`.scratch/v2-realisme/mesures/08f-50-lot*`), avant toute calibration des face-à-face : pas chassés à 90 % au lieu de 80 % ; vitesse de cible (`target_velocity`) des cibles de ligne et de couverture. Aucune constante changée sans validation du propriétaire. Aussi (facultatif A2 du passage 2) : vérifier qu'un marqueur dont l'attaquant court autour de sa vitesse à reculons ne fait pas trembler son cap.

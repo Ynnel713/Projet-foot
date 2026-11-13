@@ -56,6 +56,23 @@ TURN_RATE_RAD_S = math.radians(360.0)  # Agility 55 (note moyenne de la base)
 # 0,4 s à 99 (écart 99/11 de 1,67, proche de celui d'Acceleration, 1,5). Vitesse angulaire réelle : non trouvée.
 _TURN_POINTS: tuple[tuple[float, float], ...] = ((11.0, 270.0), (55.0, 360.0), (99.0, 450.0))  # degrés par seconde
 FACING_RUN_SPEED_MPS = 19.8 * KMH_TO_MS
+# Déplacement selon l'orientation (ticket v2-realisme/07b, valeurs proposées et validées par le propriétaire,
+# 13/11/2026) : la vitesse max dépend de l'angle entre la direction voulue et le cap. Pleine vitesse jusqu'à 45°,
+# 80 % à 90° (pas chassés, chiffre réel non trouvé), 65 % à 180° (à reculons ; réel : 29 % plus lent que vers l'avant
+# sur les 20 premiers mètres, 21 footballeurs universitaires, J Sports Sci 2021 ; vitesse de pointe non trouvée).
+_DIRECTION_SPEED_POINTS: tuple[tuple[float, float], ...] = ((45.0, 1.0), (90.0, 0.80), (180.0, 0.65))  # degrés, part
+# Se retourner ou reculer (07b) : il tourne le corps vers sa course quand sa cible est à `TURN_TO_RUN_DISTANCE_M` ou
+# plus et que le ballon est à plus de `BALL_FREE_ANGLE_DEG` de sa course (en deçà, regarder le ballon ne coûte rien) ;
+# il revient face au ballon sous `BACK_TO_BALL_DISTANCE_M`. Seuil de rentabilité : un demi-tour (0,5 s) contre 35 % de
+# vitesse perdue à reculons, environ 7,7 m à 30 km/h. Bande de `FACING_RUN_BAND_MPS` autour du seuil de course rapide
+# (réserve A1 de l'expert au 07a : pas de flottement du cap autour de 19,8 km/h).
+TURN_TO_RUN_DISTANCE_M = 8.0
+BACK_TO_BALL_DISTANCE_M = 6.0
+BALL_FREE_ANGLE_DEG = 45.0
+# Bande sur le cône du ballon (réserve A2 de l'expert au 07b, validée par le propriétaire le 13/11/2026) : retourné vers
+# sa course, il ne revient face au ballon que quand celui-ci rentre à 40° de sa course (pas de cap qui tremble à 45°).
+BALL_CONE_BAND_DEG = 5.0
+FACING_RUN_BAND_MPS = 0.3
 
 
 @lru_cache(maxsize=None)
@@ -82,6 +99,42 @@ def accel_tau_s(acceleration: float) -> float:
 def turn_rate_rad_s(agility: float) -> float:
     """Vitesse angulaire maximale du corps (rad/s) selon Agility (ticket 07f)."""
     return math.radians(_lerp(agility, _TURN_POINTS))
+
+
+def direction_speed_factor(facing: Vec2, direction: Vec2) -> float:
+    """Part de la vitesse max (0,65-1) selon l'angle entre le cap `facing` et la direction de course `direction`
+    (ticket 07b) : de face, de côté (pas chassés) ou à reculons. Direction nulle : 1."""
+    length = direction.length()
+    if length < 1e-9:
+        return 1.0
+    cos = max(-1.0, min(1.0, (facing.x * direction.x + facing.y * direction.y) / (facing.length() * length)))
+    return _lerp(math.degrees(math.acos(cos)), _DIRECTION_SPEED_POINTS)
+
+
+def faces_run(was_facing_run: bool, speed: float, to_target: Vec2, look_at: Vec2 | None, position: Vec2,
+              target_velocity: Vec2 = Vec2(0.0, 0.0), backpedal_speed: float = math.inf) -> bool:
+    """Le joueur tourne-t-il le corps vers sa course plutôt que vers le ballon (tickets 07a et 07b) ? En course rapide
+    (au-dessus de 19,8 km/h) ; sinon, ballon hors de sa course, et cible lointaine ou qui s'éloigne dans le sens de sa
+    course plus vite que `backpedal_speed` (sa vitesse à reculons : à reculons, il la perdrait ; réserve A1 de l'expert
+    au 07b, l'appel dans le dos du défenseur au marquage). Bandes d'hystérésis sur la vitesse, la distance et le cône du
+    ballon, selon son choix du pas précédent `was_facing_run`."""
+    band = FACING_RUN_BAND_MPS if was_facing_run else -FACING_RUN_BAND_MPS
+    if speed >= FACING_RUN_SPEED_MPS - band:
+        return True
+    distance = to_target.length()
+    if look_at is None or distance < 1e-9:
+        return False
+    to_ball = look_at - position
+    if to_ball.length() < 1e-9:
+        return False
+    cos = (to_ball.x * to_target.x + to_ball.y * to_target.y) / (to_ball.length() * distance)
+    free_cone = BALL_FREE_ANGLE_DEG - (BALL_CONE_BAND_DEG if was_facing_run else 0.0)
+    if cos >= math.cos(math.radians(free_cone)):
+        return False
+    fleeing = (target_velocity.x * to_target.x + target_velocity.y * to_target.y) / distance
+    if fleeing > backpedal_speed:
+        return True
+    return distance >= (BACK_TO_BALL_DISTANCE_M if was_facing_run else TURN_TO_RUN_DISTANCE_M)
 
 
 def energy_factor(energy: float) -> float:
@@ -116,7 +169,8 @@ class PlayerState:
     attributes: dict[str, int] | None = None
     role: str = ""  # rôle du joueur (voir `roles.py`), ticket v2-realisme/02c ; sans effet sur le jeu avant 02d/02e/09
     condition: PlayerCondition = PlayerCondition()  # état qui module l'expression des notes (19a ; réserve, 12e)
-    facing: Vec2 = Vec2(1.0, 0.0)  # cap du corps, vecteur unitaire (ticket v2-realisme/07a) ; sans effet sur le jeu
+    facing: Vec2 = Vec2(1.0, 0.0)  # cap du corps, vecteur unitaire (ticket v2-realisme/07a) ; borne la vitesse (07b)
+    facing_run: bool = False  # corps tourné vers sa course plutôt que vers le ballon (07b, hystérésis du choix)
 
 
 def turn_toward(facing: Vec2, desired: Vec2, max_angle_rad: float) -> Vec2:
@@ -130,11 +184,14 @@ def turn_toward(facing: Vec2, desired: Vec2, max_angle_rad: float) -> Vec2:
     return Vec2(math.cos(angle), math.sin(angle))
 
 
-def desired_facing(position: Vec2, velocity: Vec2, look_at: Vec2 | None, turning: bool = False) -> Vec2:
+def desired_facing(position: Vec2, velocity: Vec2, look_at: Vec2 | None, turning: bool = False,
+                   facing_run: bool | None = None) -> Vec2:
     """Direction où le joueur veut tourner le corps (ticket 07a) : sens de course en course rapide, le ballon sinon ;
     sans ballon à regarder (`look_at` absent ou sur lui), le sens de course, ou aucune. `turning` : il se retourne vers
-    son geste (ticket v2-realisme/07e, réserve A2 de l'expert), `look_at` prime même en course rapide."""
-    if look_at is None or (velocity.length() >= FACING_RUN_SPEED_MPS and not turning):
+    son geste (ticket v2-realisme/07e, réserve A2 de l'expert), `look_at` prime même en course rapide. `facing_run` :
+    choix déjà fait par `faces_run` (ticket 07b) ; absent, le seuil de course rapide seul."""
+    run = velocity.length() >= FACING_RUN_SPEED_MPS if facing_run is None else facing_run
+    if look_at is None or (run and not turning):
         return velocity
     to_ball = look_at - position
     return to_ball if to_ball.length() >= 1e-9 else velocity
@@ -150,7 +207,9 @@ def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_facto
     part de la vitesse max (ex. conduite de balle, `decision.dribble_speed_factor`). `target_velocity` : vitesse
     de la cible quand elle bouge (le porteur qu'il presse) -- la loi d'arrivée porte alors sur la vitesse de
     rapprochement, sans quoi il resterait à sa distance de freinage derrière un porteur en conduite. `look_at` : le
-    ballon, que son corps regarde hors course rapide (cap, ticket v2-realisme/07a ; sans effet sur le déplacement)."""
+    ballon, que son corps regarde hors course rapide (cap, ticket v2-realisme/07a). Vitesse max réduite de côté et à
+    reculons selon l'angle entre le cap et la direction voulue (ticket v2-realisme/07b) ; il se retourne pour courir
+    vers une cible lointaine (`faces_run`)."""
     # fatigue : réserve d'énergie (ticket 12e) ; `minute` n'est plus lue ici (gardée pour les appelants)
     effective_max_speed = max_speed_mps(state.pace) * energy_factor(state.condition.energy) * speed_factor
     to_target = target - state.position
@@ -165,8 +224,10 @@ def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_facto
         room = max(0.0, distance - 0.5 * closing * dt)
         stopping_speed = math.sqrt(half_step * half_step + 2.0 * DECEL_MAX_MPS2 * room) - half_step
         desired_velocity = target_velocity + to_target * (stopping_speed / distance)
-        if desired_velocity.length() > effective_max_speed:
-            desired_velocity = desired_velocity.normalized() * effective_max_speed
+        # de face, de côté ou à reculons (ticket 07b) : selon le cap du début du pas
+        capped_speed = effective_max_speed * direction_speed_factor(state.facing, desired_velocity)
+        if desired_velocity.length() > capped_speed:
+            desired_velocity = desired_velocity.normalized() * capped_speed
     else:
         desired_velocity = Vec2(0.0, 0.0)
 
@@ -183,6 +244,9 @@ def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_facto
 
     # vitesse moyenne du pas (trapèzes) : exacte pour un freinage constant, très proche pour l'exponentielle
     new_position = clamp_to_pitch(state.position + (velocity + new_velocity) * (0.5 * dt))
+    facing_run = faces_run(state.facing_run, new_velocity.length(), target - new_position, look_at, new_position,
+                           target_velocity, effective_max_speed * _DIRECTION_SPEED_POINTS[-1][1])
+    run_direction = new_velocity if new_velocity.length() >= 0.5 or not facing_run else target - new_position
     return PlayerState(
         name=state.name,
         team=state.team,
@@ -198,6 +262,7 @@ def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_facto
         role=state.role,
         condition=PlayerCondition(energy=spend_energy(state.condition.energy, state.stamina,
                                                       0.5 * (velocity.length() + new_velocity.length()), dt)),
-        facing=turn_toward(state.facing, desired_facing(new_position, new_velocity, look_at, turning),
+        facing=turn_toward(state.facing, desired_facing(new_position, run_direction, look_at, turning, facing_run),
                             turn_rate_rad_s(effective_rating(state, "Agility")) * dt),
+        facing_run=facing_run,
     )

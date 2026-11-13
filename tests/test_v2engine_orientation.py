@@ -70,12 +70,13 @@ def test_sprinting_player_turns_his_body_to_his_run() -> None:
     assert abs(_angle(p.facing)) < 1.0
 
 
-def test_facing_does_not_change_the_movement() -> None:
-    """Même joueur, même cible : position et vitesse identiques quel que soit le ballon regardé."""
+def test_facing_does_not_change_the_movement_within_the_free_cone() -> None:
+    """Même joueur, même cible : position et vitesse identiques quel que soit le ballon regardé, tant que le cap reste à
+    45° au plus de la course (au-delà, de côté ou à reculons, la vitesse baisse : ticket v2-realisme/07b)."""
     a = b = player("A", x=30.0, y=20.0)
-    for _ in range(30):
-        a = step(a, DT, Vec2(60.0, 40.0), 0.0, look_at=Vec2(0.0, 0.0))
-        b = step(b, DT, Vec2(60.0, 40.0), 0.0, look_at=Vec2(100.0, 68.0))
+    for _ in range(30):  # course à 33,7° ; ballons lointains à 10° et 55°
+        a = step(a, DT, Vec2(60.0, 40.0), 0.0, 0.6, look_at=Vec2(530.0, 108.2))  # sous 19,8 km/h
+        b = step(b, DT, Vec2(60.0, 40.0), 0.0, 0.6, look_at=Vec2(330.0, 448.4))
     assert (a.position, a.velocity) == (b.position, b.velocity)
     assert a.facing != b.facing
 
