@@ -1,0 +1,42 @@
+avant : 50 matchs ; après : 50 matchs
+  passes par match                                             1007.340 ->    926.200
+  passes réussies (part)                                          0.850 ->      0.857
+  passes chez l'adversaire (part)                                 0.127 ->      0.120
+  receveur visé (part)                                            0.832 ->      0.840
+  passes par possession                                           4.544 ->      4.257
+  possession d'équipe (s)                                        26.102 ->     26.648
+  temps par possession de joueur (s)                              2.677 ->      2.880
+  buts par match                                                  2.580 ->      3.320
+  conduite : pertes par match                                    64.800 ->     76.540
+  passes longues (part)                                           0.021 ->      0.024
+  face-à-face : tirs par match                                   11.900 ->     14.080
+  corners par match                                               6.560 ->      6.500
+  fautes par match                                               13.580 ->     14.340
+  rotation : passes décidés avec rotation (part)                    nan ->      0.519
+  rotation : passes, durée moyenne quand il y en a une (s)          nan ->      0.116
+  rotation : tirs décidés avec rotation (part)                      nan ->      0.213
+  rotation : tirs, durée moyenne quand il y en a une (s)            nan ->      0.055
+  rotation : ballons perdus en se retournant par match              nan ->      2.860
+  talonnades par match                                              nan ->      3.480
+  talonnades : non perdues (part)                                   nan ->      0.890
+  talonnades : reçues par le receveur visé (part)                   nan ->      0.853
+  talonnades : chance évaluée (part)                                nan ->      0.897
+  rotation : passes abandonnées, ligne fermée, par match            nan ->     68.560
+  rotation : passes abandonnées, ligne fermée (part des passes jugées après la rotation)        nan ->      0.141
+  tirs tracés par équipe                                         16.010 ->     18.920
+  tirs cadrés (part)                                              0.279 ->      0.276
+  conversion des tirs (part)                                      0.081 ->      0.088
+  xG neutre par match                                             2.777 ->      3.221
+  temps de calcul par match (s)                                  71.065 ->     78.234
+
+Calibration de la passe (après) : tranche, passes, évaluée, non perdue, écart (points)
+  [0 ; 0.1[           51   0.075   0.137   -6.2
+  [0.1 ; 0.2[        163   0.143   0.153   -1.0
+  [0.2 ; 0.3[         20   0.265   0.150  +11.5
+  [0.3 ; 0.4[         96   0.360   0.490  -12.9
+  [0.4 ; 0.5[        337   0.461   0.519   -5.8
+  [0.5 ; 0.6[        678   0.553   0.566   -1.4
+  [0.6 ; 0.7[       1954   0.657   0.690   -3.3
+  [0.7 ; 0.8[       6192   0.755   0.750   +0.5
+  [0.8 ; 0.9[      13975   0.851   0.878   -2.7
+  [0.9 ; +[        20298   0.958   0.965   -0.8

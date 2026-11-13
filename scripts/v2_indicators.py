@@ -32,7 +32,7 @@ from v2engine.restart import CORNER, GOAL_KICK, KICKOFF
 from v2engine.shooting import (base_chance, keeper_reach_m, neutral_open_chance, shot_pressure, shot_probability,
                                shooting_note)
 from v2engine.situation import POSSESSION_INSTALLEE, TRANSITION_DEFENSIVE, TRANSITION_OFFENSIVE, SituationTracker
-from v2engine.trace import BUT, CONTROLE_RATE, PASSE, REMISE
+from v2engine.trace import BUT, CONTROLE_RATE, PASSE, PERTE, REMISE
 
 from scripts.v2_tranches import MinuteProfile
 
@@ -482,17 +482,20 @@ class Collector:
         self.press_open: tuple[str, float] | None = None  # pressing en cours (ticket 08) : (équipe qui presse, début)
         self.now = 0.0  # instant du dernier tick
         self.carry_open: dict[str, tuple[float, tuple[str, ...]]] = {}  # porteur -> (instant du tirage, tranches), ticket 04c
-        self.pass_open: tuple[str, str, str, float] | None = None  # passe en vol mesurée (18g) : équipe, cible, tranche, chance
+        # passe en vol mesurée (18g) : équipe, cible, tranche, chance, talonnade (07e)
+        self.pass_open: tuple[str, str, str, float, bool] | None = None
         self.planned: str | None = None  # suite prévue par la dernière décision (plan de passe, ticket 14)
         # passes du match (ticket 14) : instant, équipe, passeur, cible, gain (m), avance, suite prévue, réussie
         self.pass_log: list[dict] = []
 
     # --- événements du moteur ---
-    def on_pass(self, passer: PlayerState, target: PlayerState, opponents=None, restart: bool = False) -> None:
+    def on_pass(self, passer: PlayerState, target: PlayerState, opponents=None, restart: bool = False,
+                backheel: bool = False) -> None:
         self._close_pass_calibration(lost=False, received=False)  # précédente passe sans contact : non perdue
-        if opponents is not None and not restart:  # ticket v2-realisme/18g
-            chance = pass_success_probability(passer, target, opponents)
-            self.pass_open = (passer.team, target.name, carry_tranche("chance évaluée", chance, PASS_CHANCE_BINS), chance)
+        if opponents is not None and not restart:  # ticket v2-realisme/18g ; talonnade, 07e
+            chance = pass_success_probability(passer, target, opponents, backheel)
+            self.pass_open = (passer.team, target.name, carry_tranche("chance évaluée", chance, PASS_CHANCE_BINS), chance,
+                              backheel)
         length = passer.position.distance_to(target.position)
         self.count["passes"] += 1
         self.count["passes longues"] += length > LONG_PASS_M
@@ -651,13 +654,18 @@ class Collector:
     def on_contact(self, player: PlayerState, controlled: bool) -> None:
         """Ticket v2-realisme/18g : premier joueur qui touche une passe en vol ; ferme la mesure de calibration ouverte."""
         if self.pass_open is not None:
-            team, target, _, _ = self.pass_open
+            team, target, _, _, _ = self.pass_open
             self._close_pass_calibration(lost=player.team != team, received=player.name == target and controlled)
 
     def _close_pass_calibration(self, lost: bool, received: bool) -> None:
         if self.pass_open is None:
             return
-        _, _, tranche, chance = self.pass_open
+        _, _, tranche, chance, backheel = self.pass_open
+        if backheel:  # talonnades (ticket v2-realisme/07e)
+            self.count["talonnades"] += 1
+            self.count["talonnades : chance évaluée (somme)"] += chance
+            self.count["talonnades : non perdues"] += not lost
+            self.count["talonnades : reçues par le receveur visé"] += received
         for group in ("toutes", tranche):
             base = f"{PASS_PREFIX}{group} : "
             self.count[base + "passes"] += 1
@@ -778,6 +786,16 @@ class Collector:
         self.count["tacles"] += 1
         self.minutes.count(self.now / 60.0, "tacles", actor=tackler.name if tackler else None)  # ticket v2-realisme/19d
 
+    def on_decisions(self, decisions) -> None:
+        """Rotation avant la passe ou le tir (ticket v2-realisme/07e) : décisions avec rotation et sa durée."""
+        for d in decisions:
+            if d.action in ("pass", "shot"):
+                kind = "passes" if d.action == "pass" else "tirs"
+                self.count[f"rotation : {kind} décidés"] += 1
+                if d.rotation_s > 0.0:
+                    self.count[f"rotation : {kind} décidés avec rotation"] += 1
+                    self.count[f"rotation : {kind}, durée (somme, s)"] += d.rotation_s
+
     def on_events(self, events) -> None:
         """Journal du match (`MatchTrace.events`, ticket v2-realisme/19b) : contrôles ratés et buteurs par tranche,
         attribués au joueur (19d). Ticket 19f (réserve A2 de l'expert sur le 19d) : un contrôle raté n'est compté comme
@@ -785,6 +803,8 @@ class Collector:
         ballon libre, passe visant un coéquipier) est compté à part. Un but contre son camp n'est pas un but personnel
         (réserve A3)."""
         for event in events:
+            if event.kind == PERTE and event.detail == "rotation":  # ticket v2-realisme/07e
+                self.count["rotation : ballons perdus en se retournant"] += 1
             if event.kind == CONTROLE_RATE:
                 cause = events[event.cause] if event.cause is not None else None
                 aimed = (cause is not None and cause.kind in (PASSE, REMISE) and cause.team == event.team

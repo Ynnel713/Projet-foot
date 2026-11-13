@@ -241,6 +241,9 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
         if ball.receiving:  # pendant sa réception, il avance au pas de contrôle (v2-socle/06)
             return make(role, "contrôler", OPPONENT_GOAL[player.team], RECEPTION_SPEED_FACTOR,
                              reason="temps de réception, il lève la tête")
+        if ball.pending is not None and ball.pending[0] == player.name:  # ticket v2-realisme/07e
+            return make(role, "se retourner", player.position, RECEPTION_SPEED_FACTOR,
+                        reason="il se retourne avant de passer ou de tirer")
         # vitesse balle au pied : la même fonction et la même gêne qu'à l'évaluation de la conduite (ticket v2-realisme/04d)
         speed = dribble_speed_factor(player, pressure(player, [p for p in players if p.team != player.team]))
         # direction choisie à sa dernière décision (ticket v2-collectif/33), sinon droit au but

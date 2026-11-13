@@ -69,6 +69,13 @@ UNFORESEEN_CUT = 0.01
 # v2-realisme/18h : 50 matchs, sortie ou coup de sifflet pour l'adversaire compté perdu ; remesurée au 18i avec la portée
 # du receveur, 0,78 / 0,64 -> 0,85 / 0,68, validé le 12/11/2026 ; au 18j avec la portée du lecteur, 0,85 / 0,69)
 _MISS_NOT_LOST = ((10.0, 0.85), (math.inf, 0.69))  # (longueur max en m, part non perdue)
+# Talonnade (ticket v2-realisme/07e, constantes recommandées et validées par délégation du propriétaire, 13/11/2026) :
+# passe courte vers un coéquipier dans le dos, sans se retourner. Geste difficile : Technique remplace Passing dans la
+# loi de précision (docs/CARTE_ATTRIBUTS_V2.md : Technique = gestes difficiles), la difficulté du geste s'ajoute à
+# celle de la passe. Portée : au plus `BACKHEEL_MAX_M` (StatsBomb, 80 matchs des cinq grands championnats 2015-16 :
+# passes « Other », ni pied ni tête, borne haute des talonnades, longueur médiane 7,8 m, réussite 83 %).
+BACKHEEL_MAX_M = 10.0
+BACKHEEL_DIFFICULTY = 20.0
 
 
 def pressure(player: PlayerState, opponents: Sequence[PlayerState]) -> float:
@@ -106,25 +113,29 @@ def _cut_chance(start: Vec2, end: Vec2, opponent: PlayerState) -> float:
     return next((chance for limit, chance in table if gap < limit), 0.0)
 
 
-def pass_difficulty(passer: PlayerState, receiver: PlayerState, opponents: Sequence[PlayerState]) -> float:
-    """Difficulté de l'EXÉCUTION de la passe (distance, pression sur le passeur, receveur marqué). La coupe en vol par
-    les adversaires n'en fait plus partie (ticket v2-realisme/18g) : elle se joue physiquement et compte dans
-    `pass_success_probability`."""
+def pass_difficulty(passer: PlayerState, receiver: PlayerState, opponents: Sequence[PlayerState],
+                    backheel: bool = False) -> float:
+    """Difficulté de l'EXÉCUTION de la passe (distance, pression sur le passeur, receveur marqué ; talonnade,
+    `BACKHEEL_DIFFICULTY`, ticket v2-realisme/07e). La coupe en vol par les adversaires n'en fait plus partie (ticket
+    v2-realisme/18g) : elle se joue physiquement et compte dans `pass_success_probability`."""
     distance = passer.position.distance_to(receiver.position)
     difficulty = _BASE_DIFFICULTY + _DIFFICULTY_PER_M * max(0.0, distance - _EASY_DISTANCE_M)
     difficulty += _PRESSURE_DIFFICULTY * pressure(passer, opponents) * composure_factor(passer)
     if any(receiver.position.distance_to(o.position) < _MARKED_RADIUS_M for o in opponents):
         difficulty += _MARKED_DIFFICULTY
-    return difficulty
+    return difficulty + (BACKHEEL_DIFFICULTY if backheel else 0.0)
 
 
-def pass_accuracy_probability(passer: PlayerState, receiver: PlayerState, opponents: Sequence[PlayerState]) -> float:
+def pass_accuracy_probability(passer: PlayerState, receiver: PlayerState, opponents: Sequence[PlayerState],
+                              backheel: bool = False) -> float:
     """Chance que la passe parte où le passeur la destine (sinon déviée, `pass_aim`) : Passing contre la difficulté de
-    CETTE passe."""
-    return duel_probability(effective_rating(passer, "Passing"), pass_difficulty(passer, receiver, opponents), **_SUCCESS)
+    CETTE passe ; Technique pour une talonnade (ticket v2-realisme/07e)."""
+    skill = effective_rating(passer, "Technique") if backheel else effective_rating(passer, "Passing")
+    return duel_probability(skill, pass_difficulty(passer, receiver, opponents, backheel), **_SUCCESS)
 
 
-def pass_success_probability(passer: PlayerState, receiver: PlayerState, opponents: Sequence[PlayerState]) -> float:
+def pass_success_probability(passer: PlayerState, receiver: PlayerState, opponents: Sequence[PlayerState],
+                             backheel: bool = False) -> float:
     """Chance que la passe ne soit pas perdue (tickets v2-realisme/18g et 18h) : aucun adversaire ne touche le ballon le
     premier, et le ballon ne sort pas (ni n'est sifflé) avec remise pour l'adversaire ; même risque que celui que la passe
     court en jeu. C'est le sens que lui donne la décision (`decision.option_value` :
@@ -134,7 +145,7 @@ def pass_success_probability(passer: PlayerState, receiver: PlayerState, opponen
     keep = 1.0
     for opponent in opponents:
         keep *= 1.0 - _cut_chance(passer.position, receiver.position, opponent)
-    accurate = pass_accuracy_probability(passer, receiver, opponents)
+    accurate = pass_accuracy_probability(passer, receiver, opponents, backheel)
     length = passer.position.distance_to(receiver.position)
     not_lost = next(share for limit, share in _MISS_NOT_LOST if length < limit)
     return keep * (accurate * (1.0 - UNFORESEEN_CUT) + (1.0 - accurate) * not_lost)
@@ -174,7 +185,8 @@ def _launch_speed(distance_m: float) -> float:
     return min(MAX_PASS_MPS, IDEAL_ARRIVAL_MPS - distance_m * math.log(BALL_FRICTION_PER_S))
 
 
-def pass_aim(passer: PlayerState, target: PlayerState, opponents: Sequence[PlayerState] = ()) -> Vec2:
+def pass_aim(passer: PlayerState, target: PlayerState, opponents: Sequence[PlayerState] = (),
+             backheel: bool = False) -> Vec2:
     """Point visé par une passe de `passer` vers `target`. Réussie (Passing contre difficulté) : là où le receveur
     VA être, d'autant plus précisément que le dosage est bon. Ratée : déviée de 25 à 50 % de sa longueur (18h)."""
     distance = passer.position.distance_to(target.position)
@@ -183,17 +195,18 @@ def pass_aim(passer: PlayerState, target: PlayerState, opponents: Sequence[Playe
     arrival = max(BALL_STOPPED_MPS, speed + distance * log_f)  # < 6 m/s si la vitesse est plafonnée (passe > ~47 m)
     travel_s = math.log(arrival / speed) / log_f
     aim = target.position + target.velocity * (travel_s * dosage_quality(passer))  # dans la course, selon le dosage
-    if PASSE.random() >= pass_accuracy_probability(passer, target, opponents):
+    if PASSE.random() >= pass_accuracy_probability(passer, target, opponents, backheel):
         angle = PASSE.uniform(0.0, 2.0 * math.pi)
         miss = PASSE.uniform(*_MISS_SHARE) * distance
         aim = aim + Vec2(miss * math.cos(angle), miss * math.sin(angle))
     return aim
 
 
-def pass_velocity(passer: PlayerState, target: PlayerState, opponents: Sequence[PlayerState] = ()) -> Vec2:
+def pass_velocity(passer: PlayerState, target: PlayerState, opponents: Sequence[PlayerState] = (),
+                  backheel: bool = False) -> Vec2:
     """Vitesse du ballon au départ d'une passe vers `pass_aim` : de quoi y arriver à ~6 m/s (plafond 30 m/s),
     avec une erreur de vitesse selon le dosage (+/- 30 % à Passing 11, +/- 5 % à 99)."""
-    aim = pass_aim(passer, target, opponents)
+    aim = pass_aim(passer, target, opponents, backheel)
     quality = dosage_quality(passer)
     error = _DOSAGE_ERROR[0] + (_DOSAGE_ERROR[1] - _DOSAGE_ERROR[0]) * quality
     speed = min(MAX_PASS_MPS, _launch_speed(passer.position.distance_to(aim)) * (1.0 + PASSE.uniform(-error, error)))

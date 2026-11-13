@@ -42,13 +42,21 @@ TICK_S = match.TICK_SECONDS  # le pas du produit (ticket v2-collectif/25) : le b
 def _hook(collector: Collector, clock: dict[str, float], plans: bool = True) -> Callable[[], None]:
     """Branche le collecteur sur les fonctions publiques du moteur ; retourne la fonction qui les restaure."""
     real = {name: getattr(match, name) for name in ("pass_velocity", "resolve_tackle", "choose_action", "dribble_lost",
-                                                     "lost_carry_outcome", "attempt_control", "_play_restart")}
+                                                     "lost_carry_outcome", "attempt_control", "_play_restart",
+                                                     "lane_closed_during_turn")}
     restarting = {"on": False}  # remise en jeu en cours : sa passe n'entre pas dans la calibration (ticket v2-realisme/18g)
 
     def pass_velocity(passer, target, *args, **kwargs):
         opponents = args[0] if args else kwargs.get("opponents", ())
-        collector.on_pass(passer, target, opponents, restart=restarting["on"])
+        backheel = args[1] if len(args) > 1 else kwargs.get("backheel", False)  # talonnade (ticket v2-realisme/07e)
+        collector.on_pass(passer, target, opponents, restart=restarting["on"], backheel=backheel)
         return real["pass_velocity"](passer, target, *args, **kwargs)
+
+    def lane_closed_during_turn(*args, **kwargs):  # passe abandonnée après la rotation (ticket 07e, réserve A1)
+        closed = real["lane_closed_during_turn"](*args, **kwargs)
+        collector.count["rotation : passes abandonnées, ligne fermée"] += closed
+        collector.count["rotation : passes jugées après la rotation"] += 1
+        return closed
 
     def play_restart(*args, **kwargs):
         restarting["on"] = True
@@ -114,6 +122,7 @@ def _hook(collector: Collector, clock: dict[str, float], plans: bool = True) -> 
     match.resolve_tackle, match.choose_action, match.dribble_lost = resolve_tackle, choose_action, dribble_lost
     match.lost_carry_outcome = lost_carry_outcome
     match.attempt_control, match._play_restart = attempt_control, play_restart
+    match.lane_closed_during_turn = lane_closed_during_turn  # ticket v2-realisme/07e
     cerveau.stays_behind, match.think = stays_behind, think
     defense.DefensiveRoles.start_team_press = trigger
     return lambda: ([setattr(match, name, fn) for name, fn in real.items()] + [setattr(cerveau, "stays_behind", real_stays), setattr(match, "think", real_think)]
@@ -203,6 +212,7 @@ def run(n_matches: int, profile: str | None = None, duration_minutes: float = 90
                 for event in trace.chances:  # grosses occasions (ticket v2-collectif/28c)
                     collector.on_chance(event)
                 collector.on_events(trace.events)  # contrôles ratés par tranche (ticket v2-realisme/19d)
+                collector.on_decisions(trace.decisions)  # rotation avant la passe ou le tir (ticket v2-realisme/07e)
             finally:
                 unforce()
             collector.end_match()
@@ -431,6 +441,19 @@ def report(c: Collector, detail: bool = False) -> dict:
         if key.startswith("tirs cadrés jugés, "):
             out["taux d'arrêt, " + key.removeprefix("tirs cadrés jugés, ")] = k[key.replace("jugés", "arrêtés")] / v
             out[key + " (effectif)"] = v  # réserve A2 de l'expert, 05h : effectif de chaque tranche
+    # rotation avant la passe ou le tir, talonnades (ticket v2-realisme/07e)
+    for kind in ("passes", "tirs"):
+        decided, turned = k[f"rotation : {kind} décidés"], k[f"rotation : {kind} décidés avec rotation"]
+        out[f"rotation : {kind} décidés avec rotation (part)"] = turned / max(1, decided)
+        out[f"rotation : {kind}, durée moyenne quand il y en a une (s)"] = k[f"rotation : {kind}, durée (somme, s)"] / max(1, turned)
+    out["rotation : ballons perdus en se retournant par match"] = k["rotation : ballons perdus en se retournant"] / n
+    out["rotation : passes abandonnées, ligne fermée, par match"] = k["rotation : passes abandonnées, ligne fermée"] / n
+    out["rotation : passes abandonnées, ligne fermée (part des passes jugées après la rotation)"] = (
+        k["rotation : passes abandonnées, ligne fermée"] / max(1, k["rotation : passes jugées après la rotation"]))
+    out["talonnades par match"] = k["talonnades"] / n
+    out["talonnades : non perdues (part)"] = k["talonnades : non perdues"] / max(1, k["talonnades"])
+    out["talonnades : reçues par le receveur visé (part)"] = k["talonnades : reçues par le receveur visé"] / max(1, k["talonnades"])
+    out["talonnades : chance évaluée (part)"] = k["talonnades : chance évaluée (somme)"] / max(1, k["talonnades"])
     # xG (ticket v2-realisme/06a) : par match, à comparer aux buts ; xG neutre sur les tirs hors penalty, xG après frappe
     # sur les tirs non contrés
     out["xG neutre par match"] = k["xG neutre (somme)"] / n

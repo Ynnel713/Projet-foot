@@ -130,17 +130,18 @@ def turn_toward(facing: Vec2, desired: Vec2, max_angle_rad: float) -> Vec2:
     return Vec2(math.cos(angle), math.sin(angle))
 
 
-def desired_facing(position: Vec2, velocity: Vec2, look_at: Vec2 | None) -> Vec2:
+def desired_facing(position: Vec2, velocity: Vec2, look_at: Vec2 | None, turning: bool = False) -> Vec2:
     """Direction où le joueur veut tourner le corps (ticket 07a) : sens de course en course rapide, le ballon sinon ;
-    sans ballon à regarder (`look_at` absent ou sur lui), le sens de course, ou aucune."""
-    if velocity.length() >= FACING_RUN_SPEED_MPS or look_at is None:
+    sans ballon à regarder (`look_at` absent ou sur lui), le sens de course, ou aucune. `turning` : il se retourne vers
+    son geste (ticket v2-realisme/07e, réserve A2 de l'expert), `look_at` prime même en course rapide."""
+    if look_at is None or (velocity.length() >= FACING_RUN_SPEED_MPS and not turning):
         return velocity
     to_ball = look_at - position
     return to_ball if to_ball.length() >= 1e-9 else velocity
 
 
 def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_factor: float = 1.0,
-         target_velocity: Vec2 = Vec2(0.0, 0.0), look_at: Vec2 | None = None) -> PlayerState:
+         target_velocity: Vec2 = Vec2(0.0, 0.0), look_at: Vec2 | None = None, turning: bool = False) -> PlayerState:
     """Avance `state` de `dt` secondes, en dirigeant le joueur vers `target` (sa position de
     formation ou le ballon, voir `match.py`) -- vitesse plafonnée par Pace et la fatigue
     (Stamina), montée en vitesse exponentielle pilotée par Acceleration, freinage borné et loi
@@ -197,6 +198,6 @@ def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_facto
         role=state.role,
         condition=PlayerCondition(energy=spend_energy(state.condition.energy, state.stamina,
                                                       0.5 * (velocity.length() + new_velocity.length()), dt)),
-        facing=turn_toward(state.facing, desired_facing(new_position, new_velocity, look_at),
+        facing=turn_toward(state.facing, desired_facing(new_position, new_velocity, look_at, turning),
                             turn_rate_rad_s(effective_rating(state, "Agility")) * dt),
     )

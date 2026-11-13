@@ -18,10 +18,11 @@ from v2engine.condition import effective_rating
 from v2engine.danger import danger, loss_cost
 from v2engine.flux import DECISION, DUEL, PERCEPTION
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
-from v2engine.movement import PlayerState, max_speed_mps
+from v2engine.movement import PlayerState, max_speed_mps, turn_rate_rad_s
 from v2engine.off_ball import OPEN_LANE_PROBABILITY
 from v2engine.offside import is_clearly_offside, pass_margin_m, perceived_defence_line
-from v2engine.possession import BALL_FRICTION_PER_S, BALL_STOPPED_MPS, pass_success_probability, pressure
+from v2engine.possession import (BACKHEEL_MAX_M, BALL_FRICTION_PER_S, BALL_STOPPED_MPS, pass_success_probability,
+                                  pressure)
 from v2engine.shooting import SHOOTING_RANGE_M, shot_outcome_shares
 
 # Constantes produit validées par le propriétaire (24/10/2026).
@@ -65,6 +66,28 @@ FREE_TOUCH_SHARE = 0.1
 # 1 - garde^(intervalle / durée). 1,5 s : la conduite évaluée va jusqu'à 10 m (`DRIBBLE_REACH_M`) à 85 % de la vitesse
 # d'un joueur moyen (environ 7 m/s), soit 1,4 s ; au-delà de 10 m, le porteur réévalue (`DECISION_INTERVAL_S`).
 DRIBBLE_REFERENCE_S = 1.5
+# Se réorienter avant l'action (ticket v2-realisme/07e, constantes recommandées et validées par délégation du
+# propriétaire, 13/11/2026 ; chiffres réels non trouvés). Une passe ou un tir dans une direction éloignée du cap
+# (`PlayerState.facing`, 07a) part après la rotation qui manque : (angle - cône libre) / vitesse de rotation (Agility,
+# 07f). Cône libre : ± 90° pour la passe (intérieur ou extérieur du pied jusqu'à son côté), ± 60° pour le tir (une
+# frappe demande un corps plus face au but). Pendant la rotation, il garde le ballon sous la même loi de perte que la
+# conduite (`keep_ball_probability` rapportée à la durée) : la décision l'applique à la valeur de l'option, l'exécution
+# la tire avec le même délai (`match`). La conduite se réoriente au ticket 07b.
+PASS_FREE_CONE_DEG = 90.0
+SHOT_FREE_CONE_DEG = 60.0
+# Talonnade (même ticket) : vers un coéquipier dans le dos (hors du cône de la passe) à `BACKHEEL_MAX_M` au plus, la
+# passe part sans rotation, plus difficile (`possession.BACKHEEL_DIFFICULTY`, Technique). Flair règle la chance qu'il
+# y pense à cette décision (docs/CARTE_ATTRIBUTS_V2.md : tendance à tenter l'inattendu) ; la valeur de l'option tranche
+# ensuite. Courbe commune : baseline, amplitude, min, max (99 -> 0,12, 55 -> 0,06, 11 -> 0,005). Fréquence visée : 1 à 4
+# talonnades par match (ordre de grandeur, borne haute StatsBomb : 5,2 passes « Other » par match) ; premier essai à
+# 0,30 / 0,15 / 0,01 : 7,9 par match sur 12 matchs, d'où ces valeurs (réglage du 13/11/2026, par délégation).
+_BACKHEEL_IDEA = (0.06, 0.06, 0.005, 0.2)
+# Ligne fermée pendant la rotation (même ticket, réserve A1 de l'expert ; constante recommandée et validée par délégation
+# du propriétaire, 13/11/2026) : il renonce à la passe si sa chance de réussite est passée sous `OPEN_LANE_PROBABILITY`
+# en perdant au moins `LANE_CLOSED_DROP` depuis la décision. Sans cette marge (toute baisse sous 0,7), 65 passes par
+# match étaient abandonnées sur de petites variations (baisse médiane 0,13 ; 8 matchs) ; avec 0,3 : environ 16 par match,
+# les lignes réellement coupées.
+LANE_CLOSED_DROP = 0.3
 # Où va le ballon perdu en conduite (ticket v2-realisme/04b, constantes proposées le 08/11/2026, validées d'office ;
 # chiffres réels : non trouvés). Un adversaire à moins de `DISPOSSESSION_RADIUS_M` (la portée du tacle, `match.TACKLE_RADIUS_M`)
 # prend le ballon avec la probabilité de la gêne (70 % à 1,5 m, 100 % au contact) ; sinon, ou si le ballon lui échappe, c'est
@@ -138,6 +161,53 @@ class Action:
     point: Vec2 | None = None  # cible de conduite, tenue jusqu'à la décision suivante (ticket 33)
     best_kind: str | None = None  # meilleur choix factuel de cette décision (ticket 33)
     gap: float = 0.0  # valeur réelle perdue par rapport au meilleur choix factuel, en part de celui-ci (ticket 33)
+    rotation_s: float = 0.0  # rotation avant que la passe ou le tir parte (ticket v2-realisme/07e)
+    backheel: bool = False  # passe en talonnade (ticket v2-realisme/07e)
+
+
+def turn_angle_deg(facing: Vec2, direction: Vec2) -> float:
+    """Angle (0-180°) entre le cap et la direction du geste ; direction nulle : 0."""
+    if direction.length() < 1e-9:
+        return 0.0
+    d = direction.normalized()
+    return math.degrees(math.acos(max(-1.0, min(1.0, facing.x * d.x + facing.y * d.y))))
+
+
+def rotation_delay_s(holder: PlayerState, direction: Vec2, free_cone_deg: float) -> float:
+    """Rotation qui manque avant que le geste parte (ticket v2-realisme/07e) : l'angle au-delà du cône libre, à la
+    vitesse de rotation du porteur (Agility, 07f). Même valeur à la décision et à l'exécution."""
+    excess = turn_angle_deg(holder.facing, direction) - free_cone_deg
+    return 0.0 if excess <= 0.0 else math.radians(excess) / turn_rate_rad_s(effective_rating(holder, "Agility"))
+
+
+def rotation_keep_probability(holder: PlayerState, gene: float, delay_s: float) -> float:
+    """Chance de garder le ballon pendant la rotation (ticket 07e) : la loi de perte de la conduite sur cette durée."""
+    return 1.0 - dribble_loss_probability(holder, gene, delay_s) if delay_s > 0.0 else 1.0
+
+
+def with_rotation(value: float, holder: PlayerState, mode: str | None, keep: float) -> float:
+    """Valeur d'une option précédée d'une rotation (ticket 07e) : sa valeur s'il garde le ballon pendant la rotation,
+    sinon le ballon perdu à sa place (pondéré par la transition, comme toute perte)."""
+    if keep >= 1.0:
+        return value
+    _, loss_weight = _TRANSITION_WEIGHTS[mode]
+    return keep * value - (1.0 - keep) * loss_weight * loss_cost(holder.position, holder.team)
+
+
+def lane_closed_during_turn(holder: PlayerState, target: PlayerState, opponents: list[PlayerState], backheel: bool,
+                            decided_chance: float) -> bool:
+    """Après sa rotation (ticket v2-realisme/07e, réserve A1 de l'expert), le porteur renonce à la passe si sa ligne
+    s'est fermée pendant la rotation : la chance de réussite est tombée sous `OPEN_LANE_PROBABILITY` en perdant au moins
+    `LANE_CLOSED_DROP` depuis la décision. Une passe déjà risquée à la décision, choisie en connaissance de cause, part."""
+    now = pass_success_probability(holder, target, opponents, backheel)
+    return now < OPEN_LANE_PROBABILITY and decided_chance - now >= LANE_CLOSED_DROP
+
+
+def backheel_idea_probability(holder: PlayerState) -> float:
+    """Chance que le porteur pense à une talonnade à cette décision (Flair, ticket 07e)."""
+    baseline, amplitude, low, high = _BACKHEEL_IDEA
+    return success_probability(effective_rating(holder, "Flair"), baseline=baseline, amplitude=amplitude,
+                               min_prob=low, max_prob=high)
 
 
 def adopt_plan_probability(player: PlayerState) -> float:
@@ -213,29 +283,24 @@ def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2
         # qualité de l'occasion (ticket 28a) : chance de but, contres compris (même loi qu'à la résolution) ; depuis le
         # ticket v2-realisme/18k, un tir non marqué rend le ballon à l'adversaire (`shot_value`)
         goal_chance, blocked = shot_outcome_shares(holder, goal, keeper, opponents)
-        options.append(Action("shot", shot_value(holder, mode, goal_chance, blocked, goal)))
+        turn = rotation_delay_s(holder, goal - holder.position, SHOT_FREE_CONE_DEG)  # ticket 07e
+        value = with_rotation(shot_value(holder, mode, goal_chance, blocked, goal), holder, mode,
+                              rotation_keep_probability(holder, gene, turn))
+        options.append(Action("shot", value, rotation_s=turn))
     # suite du receveur (ticket 13) : meilleure passe suivante vers un coéquipier que le porteur voit lui-même ; le
     # passeur n'en fait pas partie (pas d'aller-retour) ; pas de suite en contre-attaque (on joue vite vers l'avant)
     share = 0.0 if mode == CONTRE_ATTAQUE else _FOLLOW_UP_SHARE
+    # talonnade (ticket 07e) : il y pense ou non à cette décision (Flair), un tirage s'il a un coéquipier à portée
+    backheel_ok = None
     for mate in teammates:
-        success = pass_success_probability(holder, mate, opponents)  # le ballon arrive (v2-socle/04)
-        # temps disponible : il garde le ballon assez longtemps pour jouer (A9 reclassé au ticket 13)
-        keep = success * (1.0 - PRESSURE_KEEP_SHARE * pressure(mate, opponents))
-        now = danger(mate.position, team)
-        future, follow = now, None
-        if share:
-            best_next, nxt = max(((pass_success_probability(mate, n, opponents) * danger(n.position, team), n.name)
-                                  for n in seen_full if n is not mate
-                                  and not is_clearly_offside(team, n.position, mate.position, opponents, margin,
-                                                             seen_line)),
-                                 key=lambda vn: vn[0], default=(0.0, None))
-            if best_next > now:  # la suite vaut au moins la position atteinte (il garde le ballon)
-                future, follow = best_next, nxt
-        reached = (1.0 - share) * now + share * future
-        if mate.name == held and success >= OPEN_LANE_PROBABILITY:  # plan tenu, encore jouable (ticket 14)
-            reached *= 1.0 + PLAN_BONUS
-        midway = Vec2((holder.position.x + mate.position.x) / 2.0, (holder.position.y + mate.position.y) / 2.0)
-        options.append(Action("pass", option_value(holder, mode, keep, reached, midway), mate, follow=follow))
+        turn = rotation_delay_s(holder, mate.position - holder.position, PASS_FREE_CONE_DEG)  # ticket 07e
+        backheel = turn > 0.0 and holder.position.distance_to(mate.position) <= BACKHEEL_MAX_M
+        if backheel and backheel_ok is None:
+            backheel_ok = DECISION.random() < backheel_idea_probability(holder)
+        # passe après rotation, et sa talonnade si le porteur y pense
+        for heel in (False, True) if backheel and backheel_ok else (False,):
+            options.append(_pass_option(holder, mate, opponents, seen_full, team, mode, share, held, margin,
+                                        seen_line, gene, 0.0 if heel else turn, heel))
     if planned is not None and mode != CONTRE_ATTAQUE:  # sort du plan, pour la mesure (ticket 14)
         # abandonné : la cible est vue mais la ligne s'est fermée ; non vu : hors de sa Vision ou hors-jeu évident
         target = next((m for m in teammates if m.name == held), None)
@@ -244,6 +309,33 @@ def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2
             else PLAN_DROPPED
         options = [replace(o, plan=state) for o in options]
     return sorted(options, key=lambda a: a.value, reverse=True)
+
+
+def _pass_option(holder: PlayerState, mate: PlayerState, opponents: list[PlayerState],
+                 seen_full: list[PlayerState], team: str, mode: str | None, share: float, held: str | None,
+                 margin: float, seen_line: float, gene: float, turn: float, backheel: bool) -> Action:
+    """Valeur d'une passe vers `mate` (tickets 13, 14, 33), après `turn` secondes de rotation (07e), en talonnade
+    ou non."""
+    success = pass_success_probability(holder, mate, opponents, backheel)  # le ballon arrive (v2-socle/04)
+    # temps disponible : il garde le ballon assez longtemps pour jouer (A9 reclassé au ticket 13)
+    keep = success * (1.0 - PRESSURE_KEEP_SHARE * pressure(mate, opponents))
+    now = danger(mate.position, team)
+    future, follow = now, None
+    if share:
+        best_next, nxt = max(((pass_success_probability(mate, n, opponents) * danger(n.position, team), n.name)
+                              for n in seen_full if n is not mate
+                              and not is_clearly_offside(team, n.position, mate.position, opponents, margin,
+                                                         seen_line)),
+                             key=lambda vn: vn[0], default=(0.0, None))
+        if best_next > now:  # la suite vaut au moins la position atteinte (il garde le ballon)
+            future, follow = best_next, nxt
+    reached = (1.0 - share) * now + share * future
+    if mate.name == held and success >= OPEN_LANE_PROBABILITY:  # plan tenu, encore jouable (ticket 14)
+        reached *= 1.0 + PLAN_BONUS
+    midway = Vec2((holder.position.x + mate.position.x) / 2.0, (holder.position.y + mate.position.y) / 2.0)
+    value = with_rotation(option_value(holder, mode, keep, reached, midway), holder, mode,
+                          rotation_keep_probability(holder, gene, turn))
+    return Action("pass", value, mate, follow=follow, rotation_s=turn, backheel=backheel)
 
 
 def option_value(holder: PlayerState, mode: str | None, keep: float, reached: float, lost_at: Vec2) -> float:

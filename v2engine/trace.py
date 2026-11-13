@@ -52,6 +52,8 @@ class DecisionRecord:
     best: bool  # meilleure option prise
     best_kind: str | None = None  # meilleur choix factuel (ticket v2-collectif/33)
     gap: float = 0.0  # valeur réelle perdue par rapport au meilleur choix factuel, en part de celui-ci
+    rotation_s: float = 0.0  # rotation avant que la passe ou le tir parte (ticket v2-realisme/07e)
+    backheel: bool = False  # passe en talonnade (ticket v2-realisme/07e)
 
 
 @dataclass(frozen=True)

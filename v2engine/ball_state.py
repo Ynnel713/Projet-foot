@@ -78,6 +78,10 @@ class BallState:
     # Tir « à côté » en route vers la ligne de but, hors du cadre (ticket v2-realisme/03k) : vrai tant que le ballon suit la
     # trajectoire du tir ; effacé dès qu'il change d'état (touché, sorti, ballon mort, nouvelle action).
     shot_wide: bool = False
+    # Geste en attente de la rotation du porteur (ticket v2-realisme/07e) : (porteur, action décidée, instant où elle
+    # part, chance de réussite de la passe à la décision). Oublié dès qu'un autre joueur a le ballon ou que le ballon
+    # est mort.
+    pending: tuple[str, object, float, float] | None = None
     # Tir en vol dont l'issue se lit sur son trajet (tickets v2-realisme/05a et 05b, allumé au 05h).
     shot_flight: ShotFlight | None = None
     # Ballon mort (ticket v2-collectif/29) : dernier joueur à l'avoir touché (il décide de la remise en jeu), remise en

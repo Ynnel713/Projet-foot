@@ -31,12 +31,13 @@ from v2engine.formation import initial_positions
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch, in_penalty_area
 from v2engine.movement import PlayerState, step
 from v2engine.cerveau import GOAL_CENTER_Y, OPPONENT_GOAL, Intention, think
-from v2engine.decision import DECISION_INTERVAL_S, choose_action, dribble_lost, lost_carry_outcome
+from v2engine.decision import (DECISION_INTERVAL_S, choose_action, dribble_lost, lane_closed_during_turn,
+                               lost_carry_outcome)
 from v2engine.defense import DefensiveRoles
 from v2engine.occasion import ChanceTracker
 from v2engine.offside import HESITATION_S, OFFSIDE_OUT_S, offside_at_pass, sees_the_flag_probability
 from v2engine.possession import (BALL_FRICTION_PER_S, BALL_STOPPED_MPS, MAX_PASS_MPS, MISS_RETRY_S, attempt_control, deflect,
-                                 missed_control_velocity, pass_velocity, reception_delay_s)
+                                 missed_control_velocity, pass_success_probability, pass_velocity, reception_delay_s)
 from v2engine.added_time import GRACE_S, HARD_STOP_S, added_minutes, played_minute
 from v2engine.roles import role_of
 from v2engine.restart import (AERIAL_LANDING_M, AERIEN, CORNER, FREE_KICK, KICKOFF, LONG_RESTART_M, PENALTY, PENALTY_CONVERSION, SOL,
@@ -94,6 +95,7 @@ FAILED_TACKLE_RECOVERY_S = 1.5
 # Pas de calcul du produit (validé le 29/10/2026, ticket v2-collectif/25) : le même pour l'écran (`api/routers/v2.py`)
 # et pour le banc (`scripts/measure_v2.py`), pour que les chiffres mesurés décrivent le match regardé.
 TICK_SECONDS = 0.1
+TALONNADE = "talonnade"  # précision d'une passe en talonnade dans le journal (ticket v2-realisme/07e)
 # Avantage (ticket v2-collectif/30, validé le 04/11/2026) : l'arbitre laisse jouer si l'équipe fautée garde le ballon
 # là où il vaut au moins ADVANTAGE_DANGER_MIN sur la carte du danger (`danger.danger`, environ 60 m de son propre but
 # et au-delà) ; il revient à la faute si elle le perd dans les ADVANTAGE_S secondes (« quelques secondes », loi 12 ;
@@ -252,7 +254,7 @@ def _whistle(ball: BallState, event: FoulEvent, players: list[PlayerState], now_
     ball.restart = foul_restart(victim_team, Vec2(event.x, event.y), players, now_s)
     ball.advantage, ball.set_piece = None, None
     ball.holder, ball.velocity, ball.shot_for, ball.dribble = None, Vec2(0.0, 0.0), None, None
-    ball.shot_flight = None
+    ball.shot_flight, ball.pending = None, None
     ball.receiver, ball.readers, ball.released_by, ball.plan = None, {}, None, None
     ball.mode, ball.aerial_left_m = SOL, 0.0
     ball.pass_from, ball.rebound, ball.shot_wide = None, False, False
@@ -558,6 +560,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
 
         if ball.engaged_holder != holder.name:  # nouveau porteur : nouvelles confrontations
             ball.engaged, ball.engaged_holder = set(), holder.name
+            ball.pending = None  # geste d'un ancien porteur (ticket v2-realisme/07e)
         # un défenseur battu resté à moins de 3 m retente une fois relevé (réserve A4 du ticket 25, traitée au ticket 08)
         ball.engaged = {n for n in ball.engaged if ball.tackle_ban_until_s.get(n, 0.0) > now_s
                         and any(p.name == n and p.position.distance_to(holder.position) < CONFRONTATION_END_M for p in players)}
@@ -585,13 +588,26 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
             return None
 
         if now_s < ball.next_decision_s:
-            return None  # conduite en cours : le porteur garde le ballon jusqu'à sa prochaine réévaluation
+            return None  # conduite ou rotation en cours : le porteur garde le ballon jusqu'à sa prochaine réévaluation
         ball.next_decision_s = now_s + DECISION_INTERVAL_S
         ball.receiving = False
 
         opponent_team = "away" if holder.team == "home" else "home"
         goal = _OPPONENT_GOAL[holder.team]
         keeper = _goalkeeper(opponent_team, players)
+        rivals = [p for p in players if p.team != holder.team]
+        pending, ball.pending = ball.pending, None
+        if pending is not None and pending[0] == holder.name and now_s <= pending[2] + DECISION_INTERVAL_S:
+            # Rotation finie (ticket v2-realisme/07e) : le geste décidé part, s'il a gardé le ballon pendant la rotation,
+            # même loi et même délai qu'à la décision (`decision.rotation_keep_probability`).
+            action = pending[1]
+            lost = dribble_lost(holder, rivals, action.rotation_s)
+            if action.kind == "pass":  # le receveur a bougé pendant la rotation : la passe va où il est
+                action = replace(action, target=next((p for p in players if p.name == action.target.name), action.target))
+            # ligne fermée pendant la rotation (réserve A1 de l'expert) : il renonce et redécide, déjà tourné
+            if lost or action.kind != "pass" or not lane_closed_during_turn(
+                    holder, action.target, rivals, getattr(action, "backheel", False), pending[3]):
+                return _execute(ball, holder, action, players, rivals, goal, keeper, now_s, False, fouls, shots, lost=lost)
         # plan de passe (ticket v2-collectif/14) : lu par son receveur à sa première décision, effacé à toute décision
         planned = ball.plan[1] if ball.plan is not None and ball.plan[0] == holder.name else None
         ball.plan = None
@@ -618,112 +634,141 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
             decisions.append(DecisionRecord(now_s / 60.0, holder.name, holder.team, action.kind,
                                             target.name if target is not None else None,
                                             getattr(action, "considered", 1), getattr(action, "best", True),
-                                            getattr(action, "best_kind", None), getattr(action, "gap", 0.0)))
-        point = getattr(action, "point", None)
-        ball.dribble = (holder.name, point) if action.kind == "dribble" and point is not None else None
-        rivals = [p for p in players if p.team != holder.team]
-        if action.kind == "dribble" and dribble_lost(holder, rivals):
-            # Ballon perdu en conduite (ticket v2-realisme/04a), même risque que celui de l'évaluation. Où il va (ticket
-            # 04b) : à l'adversaire au contact, comme un tacle gagné, ou libre devant le porteur (touche trop longue).
+                                            getattr(action, "best_kind", None), getattr(action, "gap", 0.0),
+                                            0.0 if set_piece else getattr(action, "rotation_s", 0.0),
+                                            getattr(action, "backheel", False)))
+        # il se retourne d'abord (ticket v2-realisme/07e) ; le tireur d'un coup franc s'est placé face à son geste
+        turn = 0.0 if set_piece else getattr(action, "rotation_s", 0.0)
+        if turn > 0.0:
             ball.dribble = None
-            heading = (point - holder.position) if point is not None else holder.velocity
-            if heading.length() < 1e-9:
-                heading = goal - holder.position
-            taker, ball.velocity = lost_carry_outcome(holder, rivals, heading)
-            if taker is not None:
-                _log(ball, now_s, PERTE, holder.team, holder.name, "conduite", taker.name)
-                ball.holder = taker.name
-                ball.hesitation.pop(taker.name, None)
-                ball.next_decision_s = now_s + reception_delay_s(taker, [p for p in players if p.team != taker.team])
-                ball.receiving = True
-                ball.velocity = Vec2(0.0, 0.0)
-                _clear_offside(ball)
-                return None
-            _log(ball, now_s, TOUCHE_LONGUE, holder.team, holder.name)
-            ball.holder = None
-            ball.position = clamp_to_pitch(holder.position + ball.velocity.normalized() * CONTROL_RADIUS_M)
-            ball.control_ban_until_s[holder.name] = now_s + MISS_RETRY_S
-            ball.last_toucher, ball.released_by, ball.receiver, ball.readers = holder.name, None, None, {}
+            target = getattr(action, "target", None)
+            chance = pass_success_probability(holder, target, rivals, getattr(action, "backheel", False)) \
+                if action.kind == "pass" else 1.0
+            ball.pending = (holder.name, action, now_s + turn, chance)
+            ball.next_decision_s = now_s + turn
             return None
-        if action.kind == "shot":
-            _settle_advantage(ball, fouls)  # un tir réalise l'avantage (loi 12 ; réserve A1 de l'expert, ticket 30)
-            _clear_offside(ball)  # la passe signalée est morte : le ballon est tiré
-            opponents = [p for p in players if p.team != holder.team]
-            shot_at = holder.position
+        return _execute(ball, holder, action, players, rivals, goal, keeper, now_s, set_piece, fouls, shots,
+                        lost=action.kind == "dribble" and dribble_lost(holder, rivals))
+    return _step_loose_ball(ball, dt, players, now_s, decisions, offsides, modes, restarts, fouls, shots, receptions)
 
-            def record(outcome: str) -> None:  # tir tracé avec son issue (ticket v2-collectif/28b)
-                if shots is not None:
-                    shots.append(ShotEvent(now_s / 60.0, holder.team, holder.name, shot_at.x, shot_at.y,
-                                           occasion_quality(holder, goal, keeper, opponents), outcome,
-                                           _shot_origin(ball, holder, set_piece),
-                                           xg=neutral_xg(holder, goal, keeper, opponents),
-                                           post_shot_xg=0.0 if outcome == SHANKED else None))
-                _log(ball, now_s, TIR_EVENT, holder.team, holder.name, outcome)
-            error = draw_shot_error(holder, goal, opponents)
-            if error is None:
-                record(SHANKED)  # dévissé (ticket v2-collectif/35b)
-                _shank(ball, holder, goal, now_s)
-                return None
-            # Tir en vol (tickets v2-realisme/05a et 05b, allumé au 05h) : aucun tirage du but ni du contre ici, l'issue se
-            # lit sur son trajet : contre si un défenseur le touche (05c), arrêt si le gardien l'atteint, but ou sortie de
-            # but sur la ligne.
-            record(FLYING)
-            axis = (goal - holder.position).normalized()
-            c, s = math.cos(error[0]), math.sin(error[0])
-            heading = Vec2(axis.x * c - axis.y * s, axis.x * s + axis.y * c)
-            ball.holder = None
-            ball.velocity = heading * SHOT_SPEED_MPS
-            flight = ShotFlight(holder.team, shot_at, math.tan(error[1]), len(shots) - 1 if shots is not None else -1,
-                                shot_probability(holder, goal, keeper, opponents))
-            # Point d'arrivée sur la ligne et passage au plus près du gardien (ticket v2-realisme/05b) : il ne va que sur
-            # un tir qui finira dans le cadre.
-            to_line = (goal.x - shot_at.x) / heading.x if abs(heading.x) > 1e-9 else -1.0
-            arrival = shot_at + heading * to_line
-            # tir depuis la ligne même (to_line = 0, rebond sur la ligne) : cadré lui aussi, jugé par le gardien à l'instant
-            # 0 (ticket v2-realisme/18h : avec `> 0`, il n'était pas cadré mais entrait quand même, sans jugement)
-            flight.on_target = (to_line >= 0.0 and abs(arrival.y - GOAL_CENTER_Y) < GOAL_WIDTH_M / 2.0
-                                and SHOT_AIM_HEIGHT_M + to_line * flight.slope < GOAL_HEIGHT_M)
-            if keeper is not None:
-                flight.keeper_from = keeper.position
-            if shots is not None and (not flight.on_target or keeper is None):  # xG après frappe (06a) : hors cadre 0
-                shots[-1] = replace(shots[-1], post_shot_xg=1.0 if flight.on_target else 0.0)
-            if flight.on_target and keeper is not None:
-                along = (keeper.position.x - shot_at.x) * heading.x + (keeper.position.y - shot_at.y) * heading.y
-                flight.keeper_at_m = min(max(along, 0.0), to_line)
-            ball.shot_flight = flight
-            ball.shot_wide = not flight.on_target  # hors du cadre (ticket v2-realisme/03k)
-            ball.last_toucher = ball.released_by = holder.name
-            ball.receiver, ball.readers, ball.last_pass_team = None, {}, holder.team
-            return None
 
-        if action.kind == "pass":
-            _log(ball, now_s, PASSE, holder.team, holder.name, None, action.target.name)
-            ball.velocity = pass_velocity(holder, action.target, [p for p in players if p.team != holder.team])
-            ball.pass_from = holder.position
-            ball.holder = None
-            ball.released_by = holder.name
-            ball.last_pass_team = holder.team
-            ball.receiver = action.target.name
-            follow = getattr(action, "follow", None)
-            ball.plan = (action.target.name, follow, now_s) if follow is not None else None
-            opponents = [p for p in players if p.team != holder.team]
-            ball.readers = pass_readers(holder.position, ball.velocity, action.target.position, opponents)
-            # Hors-jeu (ticket v2-collectif/23) : jugement AU DÉPART, sur les positions réelles. Le signalement ne
-            # vaut coup franc que si l'un de ces joueurs touche ensuite le ballon.
-            mates = [p for p in players if p.team == holder.team and p.name != holder.name]
+def _execute(ball: BallState, holder: PlayerState, action, players: list[PlayerState], rivals: list[PlayerState],
+             goal: Vec2, keeper: PlayerState | None, now_s: float, set_piece: bool, fouls: list[FoulEvent] | None,
+             shots: list[ShotEvent] | None, lost: bool) -> None:
+    """Exécute l'action du porteur : conduite, tir ou passe ; `lost` : ballon perdu en conduite (04a) ou pendant la
+    rotation qui précède la passe ou le tir (ticket v2-realisme/07e), même issue (04b)."""
+    point = getattr(action, "point", None)
+    ball.dribble = (holder.name, point) if action.kind == "dribble" and point is not None else None
+    if lost:
+        # Ballon perdu en conduite (ticket v2-realisme/04a), même risque que celui de l'évaluation. Où il va (ticket
+        # 04b) : à l'adversaire au contact, comme un tacle gagné, ou libre devant le porteur (touche trop longue).
+        ball.dribble = None
+        heading = (point - holder.position) if point is not None else holder.velocity
+        if heading.length() < 1e-9:
+            heading = goal - holder.position
+        taker, ball.velocity = lost_carry_outcome(holder, rivals, heading)
+        if taker is not None:
+            _log(ball, now_s, PERTE, holder.team, holder.name, "conduite" if action.kind == "dribble" else "rotation",
+                 taker.name)
+            ball.holder = taker.name
+            ball.hesitation.pop(taker.name, None)
+            ball.next_decision_s = now_s + reception_delay_s(taker, [p for p in players if p.team != taker.team])
+            ball.receiving = True
+            ball.velocity = Vec2(0.0, 0.0)
             _clear_offside(ball)
-            flagged = offside_at_pass(holder.team, ball.position, mates, opponents)
-            if flagged:
-                ball.offside_watch = set(flagged)
-                # « Play the whistle » : les défenseurs qui voient le drapeau lèvent la main et attendent (ils ne
-                # s'arrêtent pas : le moteur ne siffle qu'au contact du ballon).
-                for opponent in opponents:
-                    if PERCEPTION.random() < sees_the_flag_probability(effective_rating(opponent, "Anticipation")):
-                        ball.hesitation[opponent.name] = now_s + HESITATION_S
-        else:
-            ball.velocity = Vec2(0.0, 0.0)  # conduite : le ballon suit le porteur (voir `simulate_match`)
+            return None
+        _log(ball, now_s, TOUCHE_LONGUE, holder.team, holder.name)
+        ball.holder = None
+        ball.position = clamp_to_pitch(holder.position + ball.velocity.normalized() * CONTROL_RADIUS_M)
+        ball.control_ban_until_s[holder.name] = now_s + MISS_RETRY_S
+        ball.last_toucher, ball.released_by, ball.receiver, ball.readers = holder.name, None, None, {}
+        return None
+    if action.kind == "shot":
+        _settle_advantage(ball, fouls)  # un tir réalise l'avantage (loi 12 ; réserve A1 de l'expert, ticket 30)
+        _clear_offside(ball)  # la passe signalée est morte : le ballon est tiré
+        opponents = [p for p in players if p.team != holder.team]
+        shot_at = holder.position
+
+        def record(outcome: str) -> None:  # tir tracé avec son issue (ticket v2-collectif/28b)
+            if shots is not None:
+                shots.append(ShotEvent(now_s / 60.0, holder.team, holder.name, shot_at.x, shot_at.y,
+                                       occasion_quality(holder, goal, keeper, opponents), outcome,
+                                       _shot_origin(ball, holder, set_piece),
+                                       xg=neutral_xg(holder, goal, keeper, opponents),
+                                       post_shot_xg=0.0 if outcome == SHANKED else None))
+            _log(ball, now_s, TIR_EVENT, holder.team, holder.name, outcome)
+        error = draw_shot_error(holder, goal, opponents)
+        if error is None:
+            record(SHANKED)  # dévissé (ticket v2-collectif/35b)
+            _shank(ball, holder, goal, now_s)
+            return None
+        # Tir en vol (tickets v2-realisme/05a et 05b, allumé au 05h) : aucun tirage du but ni du contre ici, l'issue se
+        # lit sur son trajet : contre si un défenseur le touche (05c), arrêt si le gardien l'atteint, but ou sortie de
+        # but sur la ligne.
+        record(FLYING)
+        axis = (goal - holder.position).normalized()
+        c, s = math.cos(error[0]), math.sin(error[0])
+        heading = Vec2(axis.x * c - axis.y * s, axis.x * s + axis.y * c)
+        ball.holder = None
+        ball.velocity = heading * SHOT_SPEED_MPS
+        flight = ShotFlight(holder.team, shot_at, math.tan(error[1]), len(shots) - 1 if shots is not None else -1,
+                            shot_probability(holder, goal, keeper, opponents))
+        # Point d'arrivée sur la ligne et passage au plus près du gardien (ticket v2-realisme/05b) : il ne va que sur
+        # un tir qui finira dans le cadre.
+        to_line = (goal.x - shot_at.x) / heading.x if abs(heading.x) > 1e-9 else -1.0
+        arrival = shot_at + heading * to_line
+        # tir depuis la ligne même (to_line = 0, rebond sur la ligne) : cadré lui aussi, jugé par le gardien à l'instant
+        # 0 (ticket v2-realisme/18h : avec `> 0`, il n'était pas cadré mais entrait quand même, sans jugement)
+        flight.on_target = (to_line >= 0.0 and abs(arrival.y - GOAL_CENTER_Y) < GOAL_WIDTH_M / 2.0
+                            and SHOT_AIM_HEIGHT_M + to_line * flight.slope < GOAL_HEIGHT_M)
+        if keeper is not None:
+            flight.keeper_from = keeper.position
+        if shots is not None and (not flight.on_target or keeper is None):  # xG après frappe (06a) : hors cadre 0
+            shots[-1] = replace(shots[-1], post_shot_xg=1.0 if flight.on_target else 0.0)
+        if flight.on_target and keeper is not None:
+            along = (keeper.position.x - shot_at.x) * heading.x + (keeper.position.y - shot_at.y) * heading.y
+            flight.keeper_at_m = min(max(along, 0.0), to_line)
+        ball.shot_flight = flight
+        ball.shot_wide = not flight.on_target  # hors du cadre (ticket v2-realisme/03k)
+        ball.last_toucher = ball.released_by = holder.name
+        ball.receiver, ball.readers, ball.last_pass_team = None, {}, holder.team
         return None
 
+    if action.kind == "pass":
+        backheel = getattr(action, "backheel", False)
+        _log(ball, now_s, PASSE, holder.team, holder.name, TALONNADE if backheel else None, action.target.name)
+        ball.velocity = pass_velocity(holder, action.target, [p for p in players if p.team != holder.team], backheel)
+        ball.pass_from = holder.position
+        ball.holder = None
+        ball.released_by = holder.name
+        ball.last_pass_team = holder.team
+        ball.receiver = action.target.name
+        follow = getattr(action, "follow", None)
+        ball.plan = (action.target.name, follow, now_s) if follow is not None else None
+        opponents = [p for p in players if p.team != holder.team]
+        ball.readers = pass_readers(holder.position, ball.velocity, action.target.position, opponents)
+        # Hors-jeu (ticket v2-collectif/23) : jugement AU DÉPART, sur les positions réelles. Le signalement ne
+        # vaut coup franc que si l'un de ces joueurs touche ensuite le ballon.
+        mates = [p for p in players if p.team == holder.team and p.name != holder.name]
+        _clear_offside(ball)
+        flagged = offside_at_pass(holder.team, ball.position, mates, opponents)
+        if flagged:
+            ball.offside_watch = set(flagged)
+            # « Play the whistle » : les défenseurs qui voient le drapeau lèvent la main et attendent (ils ne
+            # s'arrêtent pas : le moteur ne siffle qu'au contact du ballon).
+            for opponent in opponents:
+                if PERCEPTION.random() < sees_the_flag_probability(effective_rating(opponent, "Anticipation")):
+                    ball.hesitation[opponent.name] = now_s + HESITATION_S
+    else:
+        ball.velocity = Vec2(0.0, 0.0)  # conduite : le ballon suit le porteur (voir `simulate_match`)
+    return None
+
+
+def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: float,
+                     decisions: list[DecisionRecord] | None, offsides: list[OffsideEvent] | None,
+                     modes: dict[str, str] | None, restarts: list[RestartEvent] | None, fouls: list[FoulEvent] | None,
+                     shots: list[ShotEvent] | None, receptions: list[ReceptionEvent] | None) -> str | None:
+    """Ballon sans porteur : vol, contacts, sorties, buts (suite de `_step_ball`)."""
     ball.engaged_holder = None  # ballon libre : les confrontations en cours sont finies (v2-socle/03)
     if ball.shot_for is not None:
         # tir cadré en route : personne ne le touche (le gardien est battu d'avance), il avance en ligne droite jusqu'à
@@ -943,10 +988,19 @@ def _step_player(
     # Cap (tickets v2-realisme/07a et 07c) : il regarde le ballon ; receveur visé d'une passe en vol, il s'ouvre vers le
     # but adverse en gardant le ballon devant lui (`reception.open_facing`), le temps que sa rotation le permet.
     look_at = ball.position
-    if ball.receiver == player.name and ball.holder is None:
+    turning = ball.pending is not None and ball.pending[0] == player.name
+    if turning:  # il se retourne vers son geste (ticket 07e)
+        action = ball.pending[1]  # vers la position actuelle du receveur (A4 de l'expert)
+        look_at = next((p.position for p in (players or []) if p.name == action.target.name), action.target.position) \
+            if action.kind == "pass" else _OPPONENT_GOAL[player.team]
+    elif ball.holder == player.name:
+        # porteur : le ballon est à ses pieds (à sa position du tick précédent) ; il s'oriente selon sa course et garde
+        # son cap à l'arrêt (ticket 07e : avant, en course lente, il « regardait » ce point derrière lui)
+        look_at = None
+    elif ball.receiver == player.name and ball.holder is None:
         look_at = player.position + open_facing(player.position, ball.position, player.team, player.facing) * 50.0
     return step(player, dt, intention.target, minute if played_minute is None else played_minute, intention.intensity,
-                intention.target_velocity, look_at=look_at)
+                intention.target_velocity, look_at=look_at, turning=turning)
 
 
 def simulate_match(

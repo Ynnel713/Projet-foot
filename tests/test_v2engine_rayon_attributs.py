@@ -28,7 +28,11 @@ ALLOWED = {
     "Pace": {"match", "anticipation", "bloc", "defense", "decision", "occasion"},
     "Acceleration": {"match", "defense"},
     "Stamina": {"match"},
-    "Agility": {"movement"},  # vitesse de rotation du corps (ticket v2-realisme/07f) ; freinage 12a, virage 12b
+    # vitesse de rotation du corps (ticket v2-realisme/07f) ; + délai de rotation avant la passe ou le tir, même
+    # fonction à la décision et à l'exécution (07e) ; freinage 12a, virage 12b
+    "Agility": {"movement", "decision"},
+    "Technique": {"possession"},  # précision de la talonnade, geste difficile (ticket v2-realisme/07e)
+    "Flair": {"decision"},  # penser à la talonnade (ticket v2-realisme/07e)
     "Strength": {"duel"},
     "Balance": {"duel"},
     "Aggression": {"duel", "match", "defense"},  # fréquence des tentatives et faute ; distance d'arrêt du presseur (08)
