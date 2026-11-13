@@ -54,6 +54,9 @@ class DecisionRecord:
     gap: float = 0.0  # valeur réelle perdue par rapport au meilleur choix factuel, en part de celui-ci
     rotation_s: float = 0.0  # rotation avant que la passe ou le tir parte (ticket v2-realisme/07e)
     backheel: bool = False  # passe en talonnade (ticket v2-realisme/07e)
+    # adversaires hors de son champ de vision à la décision (ticket v2-realisme/08a) : tous, et à 5 m au plus
+    unseen_opponents: int = 0
+    unseen_near: int = 0
 
 
 @dataclass(frozen=True)

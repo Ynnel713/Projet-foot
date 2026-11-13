@@ -31,13 +31,15 @@ from v2engine.formation import initial_positions
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch, in_penalty_area
 from v2engine.movement import PlayerState, step
 from v2engine.cerveau import GOAL_CENTER_Y, OPPONENT_GOAL, Intention, think
+from v2engine.vision import unseen
 from v2engine.decision import (DECISION_INTERVAL_S, choose_action, dribble_lost, lane_closed_during_turn,
                                lost_carry_outcome)
 from v2engine.defense import DefensiveRoles
 from v2engine.occasion import ChanceTracker
 from v2engine.offside import HESITATION_S, OFFSIDE_OUT_S, offside_at_pass, sees_the_flag_probability
 from v2engine.possession import (BALL_FRICTION_PER_S, BALL_STOPPED_MPS, MAX_PASS_MPS, MISS_RETRY_S, attempt_control, deflect,
-                                 missed_control_velocity, pass_success_probability, pass_velocity, reception_delay_s)
+                                 missed_control_velocity, pass_success_probability, pass_velocity, PRESSURE_RADIUS_M,
+                                 reception_delay_s)
 from v2engine.added_time import GRACE_S, HARD_STOP_S, added_minutes, played_minute
 from v2engine.roles import role_of
 from v2engine.restart import (AERIAL_LANDING_M, AERIEN, CORNER, FREE_KICK, KICKOFF, LONG_RESTART_M, PENALTY, PENALTY_CONVERSION, SOL,
@@ -636,7 +638,8 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                                             getattr(action, "considered", 1), getattr(action, "best", True),
                                             getattr(action, "best_kind", None), getattr(action, "gap", 0.0),
                                             0.0 if set_piece else getattr(action, "rotation_s", 0.0),
-                                            getattr(action, "backheel", False)))
+                                            getattr(action, "backheel", False),
+                                            len(unseen(holder, rivals)), len(unseen(holder, rivals, PRESSURE_RADIUS_M))))
         # il se retourne d'abord (ticket v2-realisme/07e) ; le tireur d'un coup franc s'est placé face à son geste
         turn = 0.0 if set_piece else getattr(action, "rotation_s", 0.0)
         if turn > 0.0:

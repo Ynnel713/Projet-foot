@@ -116,7 +116,7 @@ Chaque paire ci-dessous se combine, mais chaque attribut garde son rayon.
 | # | Règle | En simple |
 |---|---|---|
 | R1 | **Un effet, un attribut responsable.** Un effet est un changement mesurable de comportement ou de réussite dans une situation donnée. | Si Anticipation fait déjà démarrer plus tôt, aucun autre attribut ne donne ce même bonus. |
-| R2 | **Les attributs s'enchaînent par les temps du cerveau** (perception, décision, exécution, ADR 0001), chacun avec son propre tirage. Pas de mélange « 0,8 × A + 0,2 × B » dans une même probabilité. | Vision montre la passe, Decisions la choisit, Passing la réussit : trois étapes, pas une moyenne. |
+| R2 | **Les attributs s'enchaînent par les temps du cerveau** (perception, décision, exécution, ADR 0001), chacun avec son propre tirage ; **un même geste ou mouvement peut cumuler plusieurs attributs** quand le réalisme le demande (décision du propriétaire du 13/11/2026 : « Un geste ou un mouvement peut résulter du cumul de plusieurs attributs sans aucun problème, c'est même ce qui fait la richesse du sport »). Chaque cumul est justifié, documenté ici (attributs, part de chacun, source ou « non trouvé ») et listé dans le test de garde ; R1 reste : un même effet n'est jamais compté deux fois. Avant le 13/11/2026, la règle interdisait tout mélange hors dérogation (A3, A8). | Vision montre la passe, Decisions la choisit, Passing la réussit : trois étapes. Garder la tête haute balle au pied cumule Dribbling et Technique (08c) : un cumul documenté. |
 | R3 | **Un attribut modulateur n'agit que dans sa condition**, en réduisant un facteur de difficulté : Composure (pression), Concentration (fatigue, après un but), Determination (score défavorable). | Sans pression, Composure ne change rien. |
 | R4 | **Les effets indirects ne visent que les coéquipiers** : Leadership, Communication. | Leadership aide la coordination, pas la précision de ses propres passes. |
 | R5 | **Le physique est une capacité**, utilisée partout où le joueur se déplace ou doit arriver à temps ; ce n'est pas un bonus supplémentaire. | Pace sert à la course et au test « peut-il couper la passe ? » : c'est la même vitesse. |
@@ -128,7 +128,7 @@ Chaque paire ci-dessous se combine, mais chaque attribut garde son rayon.
 - un attribut est lu hors des modules de son rayon, ou avec un nom non littéral ;
 - une note est lue directement dans `.attributes` hors de `attributes.py` ;
 - une capacité physique (`.pace`, `.acceleration`, `.stamina`) est lue par son champ hors de `movement.py` (R5, R6 : ailleurs, par la façade) ;
-- un calcul combine des notes de plusieurs attributs hors des dérogations listées (A3, A8, temps d'arrivée Pace + Acceleration ; A2 levée au ticket 28a) ;
+- un calcul combine des notes de plusieurs attributs hors des cumuls listés (inventaire, R2 : A3, A8, temps d'arrivée Pace + Acceleration ; A2 levée au ticket 28a) ;
 - une entrée de la liste devient périmée (dérogation levée sans mise à jour).
 
 `tests/test_v2engine_condition.py` échoue si une note est lue hors de la façade (R6).

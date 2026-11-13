@@ -789,6 +789,11 @@ class Collector:
     def on_decisions(self, decisions) -> None:
         """Rotation avant la passe ou le tir (ticket v2-realisme/07e) : décisions avec rotation et sa durée."""
         for d in decisions:
+            # champ de vision du porteur à la décision (ticket v2-realisme/08a)
+            self.count["vision : décisions"] += 1
+            self.count["vision : adversaires non vus (somme)"] += d.unseen_opponents
+            self.count["vision : adversaires non vus à 5 m (somme)"] += d.unseen_near
+            self.count["vision : décisions avec un adversaire non vu à 5 m"] += d.unseen_near > 0
             if d.action in ("pass", "shot"):
                 kind = "passes" if d.action == "pass" else "tirs"
                 self.count[f"rotation : {kind} décidés"] += 1

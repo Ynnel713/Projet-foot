@@ -450,6 +450,11 @@ def report(c: Collector, detail: bool = False) -> dict:
     out["rotation : passes abandonnées, ligne fermée, par match"] = k["rotation : passes abandonnées, ligne fermée"] / n
     out["rotation : passes abandonnées, ligne fermée (part des passes jugées après la rotation)"] = (
         k["rotation : passes abandonnées, ligne fermée"] / max(1, k["rotation : passes jugées après la rotation"]))
+    decided = max(1, k["vision : décisions"])  # champ de vision du porteur (ticket v2-realisme/08a)
+    out["vision : adversaires non vus par le porteur à la décision (moyenne)"] = k["vision : adversaires non vus (somme)"] / decided
+    out["vision : adversaires non vus à 5 m au plus (moyenne)"] = k["vision : adversaires non vus à 5 m (somme)"] / decided
+    out["vision : décisions avec un adversaire non vu à 5 m au plus (part)"] = (
+        k["vision : décisions avec un adversaire non vu à 5 m"] / decided)
     out["talonnades par match"] = k["talonnades"] / n
     out["talonnades : non perdues (part)"] = k["talonnades : non perdues"] / max(1, k["talonnades"])
     out["talonnades : reçues par le receveur visé (part)"] = k["talonnades : reçues par le receveur visé"] / max(1, k["talonnades"])
