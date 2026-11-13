@@ -580,6 +580,8 @@ def report(c: Collector, detail: bool = False) -> dict:
     out["marquage : erreur maximale (m)"] = c.peak["marquage : erreur maximale (m)"]
     out["marquage : marqueur différent de celui des vraies positions (part des choix)"] = (
         k["marquage : marqueur différent de celui des vraies positions"] / max(1, k["marquage : choix du marqueur"]))
+    # contrôle orienté (ticket v2-collectif/31b)
+    out["contrôles orientés (part des contrôles)"] = k["contrôle orienté : orientés"] / max(1, k["contrôle orienté : réceptions"])
     # jeu à une touche (ticket v2-collectif/31a)
     out["passes de première (part des passes décidées)"] = k["une touche : passes décidées"] / max(1, k["rotation : passes décidés"])
     out["passes de première par match"] = k["une touche : passes décidées"] / n

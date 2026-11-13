@@ -1,0 +1,24 @@
+avant : 50 matchs ; après : 50 matchs
+  contrôles orientés (part des contrôles)                             nan      0.587      +nan
+  passes de première (part des passes décidées)                     0.094      0.096    +0.003
+  passes de première par match                                    102.260    107.220    +4.960
+  passes de première : non perdues (part)                           0.897      0.912    +0.014
+  passes de première : chance évaluée (part)                        0.898      0.899    +0.001
+  passes par match                                               1114.620   1134.720   +20.100
+  passes par minute de jeu effectif                                14.880     15.187    +0.307
+  passes réussies (part)                                            0.803      0.809    +0.005
+  passes par possession                                             3.850      4.011    +0.160
+  temps par possession de joueur (s)                                2.418      2.335    -0.083
+  possession d'équipe (s)                                          19.978     20.483    +0.505
+  une-deux par équipe et par match                                  1.580      2.480    +0.900
+  troisième homme par équipe et par match                          37.490     40.320    +2.830
+  retours au passeur en 3 s (part des passes réussies)              0.034      0.059    +0.025
+  talonnades par match                                              4.740      5.120    +0.380
+  pertes de balle par match                                       284.500    277.900    -6.600
+  tirs par équipe                                                  17.680     17.600    -0.080
+  buts par match                                                    3.020      3.100    +0.080
+  xG neutre par match                                               3.376      3.432    +0.056
+  face-à-face : tirs par match                                     16.040     14.980    -1.060
+  rotation : passes décidés avec rotation (part)                    0.486      0.493    +0.007
+  rotation : passes, durée moyenne quand il y en a une (s)          0.113      0.114    +0.001
+  temps de calcul par match (s)                                   118.496    113.878    -4.618

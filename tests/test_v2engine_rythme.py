@@ -21,8 +21,13 @@ def _player(name: str = "P", team: str = "home", poste: str = "MC", position: Ve
 
 
 def test_reception_time_follows_first_touch_validated_points() -> None:
-    for note, expected in ((99, 1.7), (55, 2.3), (11, 2.9)):
+    """Depuis le ticket v2-collectif/31b, First Touch règle la chance d'orienter son contrôle : temps moyen attendu
+    1,84 / 2,3 / 2,76 s (repères d'avant : 1,7 / 2,3 / 2,9 s) ; orienté 1,38 s, non orienté 3,22 s quelle que soit la note."""
+    for note, expected in ((99, 1.84), (55, 2.3), (11, 2.76)):
         assert math.isclose(reception_delay_s(_player(attributes={"First Touch": note})), expected)
+    for note in (11, 99):
+        assert math.isclose(reception_delay_s(_player(attributes={"First Touch": note}), oriented=True), 1.38)
+        assert math.isclose(reception_delay_s(_player(attributes={"First Touch": note}), oriented=False), 3.22)
 
 
 def test_pressure_halves_reception_time_at_contact() -> None:
@@ -39,23 +44,25 @@ def test_receiver_does_not_decide_during_his_reception_time(monkeypatch) -> None
     receiver = _player("R", attributes={"First Touch": 55})
     ball = BallState(position=receiver.position, velocity=Vec2(0.0, 0.0))
     monkeypatch.setattr("v2engine.match.attempt_control", lambda player, *args: True)
+    monkeypatch.setattr("v2engine.match.orients_control", lambda player: True)  # contrôle orienté (31b) : 1,38 s
     _step_ball(ball, 0.1, [receiver], now_s=10.0)
-    assert ball.holder == "R" and math.isclose(ball.next_decision_s, 12.3)
+    assert ball.holder == "R" and math.isclose(ball.next_decision_s, 11.38)
     monkeypatch.setattr("v2engine.match.choose_action",
                         lambda *args: (_ for _ in ()).throw(AssertionError("décision pendant la réception")))
-    _step_ball(ball, 0.1, [receiver], now_s=12.2)  # toujours en réception : pas de décision
+    _step_ball(ball, 0.1, [receiver], now_s=11.3)  # toujours en réception : pas de décision
 
 
 def test_receiver_decides_once_his_reception_time_is_over(monkeypatch) -> None:
     receiver = _player("R", attributes={"First Touch": 55})
     ball = BallState(position=receiver.position, velocity=Vec2(0.0, 0.0))
     monkeypatch.setattr("v2engine.match.attempt_control", lambda player, *args: True)
+    monkeypatch.setattr("v2engine.match.orients_control", lambda player: False)  # non orienté (31b) : 3,22 s
     _step_ball(ball, 0.1, [receiver], now_s=10.0)
-    assert ball.receiving
+    assert ball.receiving and math.isclose(ball.next_decision_s, 13.22)
     monkeypatch.setattr("v2engine.match.choose_action", lambda *args: type("A", (), {"kind": "dribble"})())
     monkeypatch.setattr("v2engine.match.dribble_lost", lambda *args, **kwargs: False)  # ticket 04a : pas de perte tirée ici
-    _step_ball(ball, 0.1, [receiver], now_s=12.3)
-    assert not ball.receiving and math.isclose(ball.next_decision_s, 12.8)
+    _step_ball(ball, 0.1, [receiver], now_s=13.22)
+    assert not ball.receiving and math.isclose(ball.next_decision_s, 13.72)
 
 
 def test_holder_moves_at_control_pace_while_receiving_then_at_dribble_pace() -> None:

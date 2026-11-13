@@ -41,7 +41,7 @@ from v2engine.occasion import ChanceTracker
 from v2engine.offside import HESITATION_S, OFFSIDE_OUT_S, offside_at_pass, sees_the_flag_probability
 from v2engine.possession import (BALL_FRICTION_PER_S, BALL_STOPPED_MPS, MAX_PASS_MPS, MISS_RETRY_S, attempt_control, deflect,
                                  missed_control_velocity, pass_success_probability, pass_velocity, PRESSURE_RADIUS_M,
-                                 reception_delay_s)
+                                 orients_control, reception_delay_s)
 from v2engine.added_time import GRACE_S, HARD_STOP_S, added_minutes, played_minute
 from v2engine.roles import role_of
 from v2engine.restart import (AERIAL_LANDING_M, AERIEN, CORNER, FREE_KICK, KICKOFF, LONG_RESTART_M, PENALTY, PENALTY_CONVERSION, SOL,
@@ -638,7 +638,8 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                 _record_decision(decisions, memory, holder, rivals, action, now_s, False)
                 return _execute(ball, holder, action, players, rivals, goal, keeper, now_s, False, fouls, shots,
                                 lost=False, memory=memory)
-            ball.next_decision_s = now_s + reception_delay_s(holder, rivals)
+            _orient(holder, first[3], first[2])  # il contrôle finalement : orienté ou non, tiré à la réception (31b)
+            ball.next_decision_s = now_s + reception_delay_s(holder, rivals, first[2])
             ball.receiving = True
             return None
         ball.plan = None
@@ -926,6 +927,11 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
         ball.released_by = None  # quelqu'un d'autre a touché le ballon : le passeur peut de nouveau le jouer
         _clear_offside(ball)
         if attempt_control(player, ball.velocity, opponents):
+            # jeu à une touche (ticket v2-collectif/31a) : passe au sol qui lui est destinée, joueur de champ ; il décide
+            # dès le tick suivant, et contrôle comme avant si son choix n'est pas une passe sans rotation
+            first_time = intended and not aerial and player.poste != "GK" and thinks_one_touch(player, opponents)
+            # contrôle orienté (ticket v2-collectif/31b), tiré à la réception ; appliqué s'il contrôle (pas de première)
+            oriented = orients_control(player)
             if receptions is not None:  # type de réception, tracé (ticket v2-realisme/07c)
                 seen_back = memory.reading(player, opponents, now_s) if memory is not None else MemoryReading()  # 08b
                 receptions.append(ReceptionEvent(
@@ -934,18 +940,19 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
                     facing_goal_deg=facing_to_goal_deg(player.facing, player.position, player.team),
                     ball_facing_deg=_ball_facing_deg(player.facing, ball.velocity),
                     origin=received, intended=intended, memory_age_s=seen_back.age_mean_s,
-                    memory_error_mean_m=seen_back.error_mean_m, memory_error_max_m=seen_back.error_max_m))
+                    memory_error_mean_m=seen_back.error_mean_m, memory_error_max_m=seen_back.error_max_m,
+                    oriented=oriented, first_time=first_time))
             ball.holder = player.name
             ball.came_from = (player.name, received, player.position)
             ball.hesitation.pop(player.name, None)  # il a le ballon : il joue, il n'attend plus
             ball.position = player.position
-            ball.next_decision_s = now_s + reception_delay_s(player, opponents)
-            # jeu à une touche (ticket v2-collectif/31a) : passe au sol qui lui est destinée, joueur de champ ; il décide
-            # dès le tick suivant, et contrôle comme avant si son choix n'est pas une passe sans rotation
             ball.one_touch = None
-            if intended and not aerial and player.poste != "GK" and thinks_one_touch(player, opponents):
-                ball.one_touch = (player.name, now_s + 2.0 * DECISION_INTERVAL_S)
+            if first_time:
+                ball.one_touch = (player.name, now_s + 2.0 * DECISION_INTERVAL_S, oriented, ball.velocity)
                 ball.next_decision_s = now_s
+            else:
+                _orient(player, ball.velocity, oriented)
+                ball.next_decision_s = now_s + reception_delay_s(player, opponents, oriented)
             ball.receiving = True
             ball.velocity = Vec2(0.0, 0.0)
         else:
@@ -957,6 +964,13 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
             ball.control_ban_until_s[player.name] = now_s + MISS_RETRY_S
         break
     return None
+
+
+def _orient(player: PlayerState, ball_velocity: Vec2, oriented: bool) -> None:
+    """Contrôle orienté (ticket v2-collectif/31b) : le premier contact tourne aussitôt le corps vers le jeu, côté but,
+    en gardant devant lui le ballon reçu (`reception.open_facing`, règle du 07c). Non orienté : le cap ne bouge pas."""
+    if oriented and ball_velocity.length() > 1e-9:
+        player.facing = open_facing(player.position, player.position - ball_velocity, player.team, player.facing)
 
 
 def _ball_facing_deg(facing: Vec2, ball_velocity: Vec2) -> float:

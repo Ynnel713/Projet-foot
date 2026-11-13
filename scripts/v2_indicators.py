@@ -826,6 +826,9 @@ class Collector:
         """Mémoire du receveur sur les adversaires qu'il ne voit pas à la réception (ticket v2-realisme/08b) ; un joueur
         qui les voit tous ne compte pas (âge nul)."""
         for r in receptions:
+            if not r.first_time:  # contrôle orienté (ticket v2-collectif/31b), hors receveurs qui pensent à jouer de première
+                self.count["contrôle orienté : réceptions"] += 1
+                self.count["contrôle orienté : orientés"] += r.oriented
             self.count["mémoire : réceptions"] += 1
             if r.memory_age_s > 0.0:
                 self.count["mémoire : réceptions avec un adversaire non vu"] += 1

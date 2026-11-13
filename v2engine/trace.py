@@ -135,6 +135,8 @@ class ReceptionEvent:
     memory_age_s: float = 0.0
     memory_error_mean_m: float = 0.0
     memory_error_max_m: float = 0.0
+    oriented: bool = False  # contrôle orienté tiré à la réception (ticket v2-collectif/31b ; sans effet s'il joue de première)
+    first_time: bool = False  # il pense à jouer de première (ticket v2-collectif/31a)
 
 
 @dataclass(frozen=True)

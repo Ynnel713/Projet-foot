@@ -299,6 +299,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **Jeu à une touche (13/11/2026, ticket `v2-collectif/31a`)** : livré (13/11/2026), validé expert + QC (réserves acceptées : volume de passes et une-deux, à la 22a). Ticket 31 découpé en 31a (une touche), 31b (contrôle orienté), 31c (durée de réception). À la réception d'une passe au sol qui lui est destinée, le receveur pense à jouer de première selon First Touch et Technique (14 à 70 %, plus souvent sous pression), décide tout de suite, et sa passe part sans contrôle si c'est une passe sans rotation (précision du geste selon Technique, 0,85 à 0,98) ; sinon il contrôle comme avant. Réel : 7,4 à 9,3 % des passes (données ouvertes StatsBomb, 45 matchs). Sur 50 matchs : 9,4 % des passes de première, non perdues 89,7 % pour 89,8 % évalués ; temps par possession de joueur 2,60 → 2,42 s ; troisième homme + 27 % ; passes par match 1 054 → 1 115 (au-dessus du repère, à la 22a) ; buts 3,12 → 3,02.
 
+**Contrôle orienté (13/11/2026, ticket `v2-collectif/31b`)** : livré (13/11/2026), validé expert + QC. First Touch règle la chance d'orienter son contrôle (25 / 50 / 75 %) au lieu du temps de réception directement ; orienté, 1,38 s avant la première décision et corps tourné vers le jeu ; non orienté, 3,22 s ; moyenne attendue proche des repères d'avant. Sur 50 matchs : 58,7 % de contrôles orientés ; temps par possession de joueur 2,42 → 2,34 s ; une-deux 1,58 → 2,48 ; passes par match 1 115 → 1 135 (à la 22a) ; buts 3,02 → 3,10.
+
 ### Bloquée par
 
 - Phase 4

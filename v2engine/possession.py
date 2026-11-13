@@ -231,21 +231,50 @@ def pass_velocity(passer: PlayerState, target: PlayerState, opponents: Sequence[
 
 
 # --- Rythme : temps entre la réception et la première décision (ticket v2-socle/06, validé le 25/10/2026) -----
-# Réel : 2,49 s en moyenne par possession de joueur, 4,61 s pour un gardien (arXiv 2308.05460). First Touch
-# règle ce temps (contrôle orienté qui fait gagner du temps : 99 -> 1,7 s, 55 -> 2,3 s, 11 -> 2,9 s, niveau
+# Réel : 2,49 s en moyenne par possession de joueur, 4,61 s pour un gardien (arXiv 2308.05460). Jusqu'au ticket
+# v2-collectif/31b, First Touch réglait ce temps directement (99 -> 1,7 s, 55 -> 2,3 s, 11 -> 2,9 s, niveau
 # calé sur 20 matchs le 25/10/2026, fourchette validée 1,7-2,5 s pour 55) ; la pression le réduit jusqu'à moitié
 # au contact ; un gardien sans pression ne joue jamais avant 3,5 s.
-_RECEPTION_S = (2.3, 0.6, 1.7, 2.9)  # baseline, amplitude, min, max (inversé : bonne note = temps court)
+# Contrôle orienté (ticket v2-collectif/31b, valeurs proposées et validées par le propriétaire le 13/11/2026) : First
+# Touch ne règle plus directement ce temps mais la chance d'orienter son contrôle (25 % à 11, 50 % à 55, 75 % à 99,
+# linéaire) ; orienté, le temps de base est x 0,6 (le premier contact place le ballon et le corps vers le jeu), sinon
+# x 1,4. Moyenne attendue : 2,76 s à 11, 2,3 s à 55, 1,84 s à 99, proche des repères d'avant (2,9 / 2,3 / 1,7 s) : le rythme
+# calé reste le même, le temps devient bimodal. Chiffres réels (part des contrôles orientés, durée selon l'orientation) :
+# non trouvés. Technique et vitesse du ballon : ticket 31c ; orientation du corps à la réception : `v2-realisme/07d`.
+RECEPTION_CALM_S = 2.3
+ORIENTED_FACTOR = 0.6
+UNORIENTED_FACTOR = 1.4
+_ORIENTED_POINTS: tuple[tuple[float, float], ...] = ((11.0, 0.25), (55.0, 0.50), (99.0, 0.75))
 _KEEPER_MIN_RECEPTION_S = 3.5
 # Pendant ce temps, il avance à 40 % de sa vitesse max (~3 m/s pour un joueur moyen) : réel ~2,9 m/s à la
 # réception, Ligue 1 (UCLan, eprint 12267) ; validé le 25/10/2026.
 RECEPTION_SPEED_FACTOR = 0.4
 
 
-def reception_delay_s(player: PlayerState, opponents: Sequence[PlayerState] = ()) -> float:
-    baseline, amplitude, low, high = _RECEPTION_S
-    calm = low + high - success_probability(effective_rating(player, "First Touch"), baseline=baseline,
-                                                amplitude=amplitude, min_prob=low, max_prob=high)
+def oriented_control_probability(player: PlayerState) -> float:
+    """Chance que son contrôle soit orienté, selon First Touch (ticket v2-collectif/31b)."""
+    note = min(max(effective_rating(player, "First Touch"), _ORIENTED_POINTS[0][0]), _ORIENTED_POINTS[-1][0])
+    for (n0, v0), (n1, v1) in zip(_ORIENTED_POINTS, _ORIENTED_POINTS[1:]):
+        if note <= n1:
+            return v0 + (note - n0) / (n1 - n0) * (v1 - v0)
+    return _ORIENTED_POINTS[-1][1]
+
+
+def orients_control(player: PlayerState) -> bool:
+    """Tirage (flux passe, contrôle) : son contrôle est-il orienté (ticket v2-collectif/31b) ?"""
+    return PASSE.random() < oriented_control_probability(player)
+
+
+def reception_delay_s(player: PlayerState, opponents: Sequence[PlayerState] = (), oriented: bool | None = None) -> float:
+    """Temps entre la prise du ballon et la première décision (v2-socle/06) : orienté ou non (ticket v2-collectif/31b) ;
+    `None` (ballon gagné au tacle, remise en jeu, gardien...) : sa moyenne attendue, sans tirage. La pression le réduit
+    jusqu'à moitié au contact ; un gardien sans pression ne joue jamais avant 3,5 s."""
+    if oriented is None:
+        share = oriented_control_probability(player)
+        factor = share * ORIENTED_FACTOR + (1.0 - share) * UNORIENTED_FACTOR
+    else:
+        factor = ORIENTED_FACTOR if oriented else UNORIENTED_FACTOR
+    calm = RECEPTION_CALM_S * factor
     if player.poste == "GK":
         calm = max(calm, _KEEPER_MIN_RECEPTION_S)
     return calm * (1.0 - 0.5 * pressure(player, opponents))
