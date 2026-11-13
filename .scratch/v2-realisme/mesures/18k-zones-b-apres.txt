@@ -1,0 +1,10 @@
+50 matchs, 1597 tirs (dont 2 penaltys)
+toutes (hors penaltys)   tirs/équipe 15.95  but   8.7 %  contré 17.1  à côté 36.5  au-dessus 13.5  dévissé  3.2  capté 13.3  repoussé  5.1  claqué  2.5  xG moyen 0.086
+surface                  tirs/équipe  4.62  but  18.4 %  contré 15.4  à côté 27.1  au-dessus 13.6  dévissé  3.2  capté 12.3  repoussé  5.2  claqué  4.8  xG moyen 0.171
+hors surface             tirs/équipe 11.33  but   4.7 %  contré 17.8  à côté 40.3  au-dessus 13.5  dévissé  3.2  capté 13.7  repoussé  5.1  claqué  1.6  xG moyen 0.052
+distance [0 ; 11[        tirs/équipe  0.99  but  35.4 %  contré 18.2  à côté 14.1  au-dessus  7.1  dévissé  3.0  capté  7.1  repoussé  9.1  claqué  6.1  xG moyen 0.354
+distance [11 ; 16.5[     tirs/équipe  1.84  but  20.7 %  contré 13.0  à côté 20.7  au-dessus 19.6  dévissé  1.6  capté 15.2  repoussé  4.9  claqué  4.3  xG moyen 0.165
+distance [16.5 ; 20[     tirs/équipe  2.64  but   9.1 %  contré 17.4  à côté 33.3  au-dessus 11.7  dévissé  4.2  capté 16.7  repoussé  4.5  claqué  3.0  xG moyen 0.095
+distance [20 ; 25[       tirs/équipe  6.80  but   4.9 %  contré 18.4  à côté 40.0  au-dessus 14.3  dévissé  2.8  capté 12.9  repoussé  4.9  claqué  1.9  xG moyen 0.053
+distance [25 ; 30[       tirs/équipe  3.68  but   2.2 %  contré 16.3  à côté 46.2  au-dessus 12.2  dévissé  4.1  capté 12.2  repoussé  5.2  claqué  1.4  xG moyen 0.030
+part des tirs dans la surface : 29.0 % (réel 68,3 %)

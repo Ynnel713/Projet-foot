@@ -22,7 +22,7 @@ from v2engine.movement import PlayerState, max_speed_mps
 from v2engine.off_ball import OPEN_LANE_PROBABILITY
 from v2engine.offside import is_clearly_offside, pass_margin_m, perceived_defence_line
 from v2engine.possession import BALL_FRICTION_PER_S, BALL_STOPPED_MPS, pass_success_probability, pressure
-from v2engine.shooting import SHOOTING_RANGE_M, occasion_quality
+from v2engine.shooting import SHOOTING_RANGE_M, shot_outcome_shares
 
 # Constantes produit validées par le propriétaire (24/10/2026).
 DECISION_INTERVAL_S = 0.5  # le porteur réévalue ses options deux fois par seconde
@@ -210,9 +210,10 @@ def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2
     team = holder.team
     options = dribble_options(holder, opponents, gene, mode, projection=1.0)
     if holder_to_goal <= SHOOTING_RANGE_M:
-        # qualité de l'occasion (ticket 28a) : chance de but, sauf s'il est contré dans le cône de tir (même règle qu'à
-        # la résolution) ; un tir manqué ne coûte rien (sortie de but ou corner) ; les issues viennent au ticket 28b
-        options.append(Action("shot", occasion_quality(holder, goal, keeper, opponents)))
+        # qualité de l'occasion (ticket 28a) : chance de but, contres compris (même loi qu'à la résolution) ; depuis le
+        # ticket v2-realisme/18k, un tir non marqué rend le ballon à l'adversaire (`shot_value`)
+        goal_chance, blocked = shot_outcome_shares(holder, goal, keeper, opponents)
+        options.append(Action("shot", shot_value(holder, mode, goal_chance, blocked, goal)))
     # suite du receveur (ticket 13) : meilleure passe suivante vers un coéquipier que le porteur voit lui-même ; le
     # passeur n'en fait pas partie (pas d'aller-retour) ; pas de suite en contre-attaque (on joue vite vers l'avant)
     share = 0.0 if mode == CONTRE_ATTAQUE else _FOLLOW_UP_SHARE
@@ -251,6 +252,18 @@ def option_value(holder: PlayerState, mode: str | None, keep: float, reached: fl
     here = danger(holder.position, holder.team)
     gain_weight, loss_weight = _TRANSITION_WEIGHTS[mode]
     return keep * (here + gain_weight * (reached - here)) - (1.0 - keep) * loss_weight * loss_cost(lost_at, holder.team)
+
+
+def shot_value(holder: PlayerState, mode: str | None, goal_chance: float, blocked: float, goal: Vec2) -> float:
+    """Valeur du tir dans la monnaie commune (ticket v2-realisme/18k) : la chance de but, moins ce que coûte un tir non
+    marqué, comme la perte d'une passe ou d'une conduite (`loss_cost`, pondérée par la transition) : contré, le ballon est
+    perdu près du tireur ; à côté, au-dessus, dévissé ou arrêté, il revient à l'adversaire à son but (sortie de but,
+    gardien). Aucune constante nouvelle. Approximation : le tir claqué en corner (environ 3 % des tirs) compte comme une
+    perte."""
+    _, loss_weight = _TRANSITION_WEIGHTS[mode]
+    missed = max(0.0, 1.0 - goal_chance - blocked)
+    cost = blocked * loss_cost(holder.position, holder.team) + missed * loss_cost(goal, holder.team)
+    return goal_chance - loss_weight * cost
 
 
 def keep_ball_probability(holder: PlayerState, gene: float) -> float:

@@ -277,6 +277,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **Type de réception (12/11/2026, ticket `v2-realisme/07c`)** : livré (12/11/2026), validé expert + QC (réserve A1 acceptée par délégation : direction d'arrivée du ballon à combiner au type, au 07d). Chaque contrôle est classé de face, de profil ou dos au jeu (angle cap / but adverse : 60° et 120°) et tracé (`trace.receptions`) ; le receveur visé d'une passe en vol s'ouvre vers le but en gardant le ballon devant lui, le temps que sa rotation le permet. Sur 20 matchs, passes reçues 87,4 % de face, 12,1 % de profil, 0,5 % dos au jeu (avant-centres 30 % de profil) ; le dos au jeu réel, dû au marqueur collé, relève de 04i et 08c. Jeu inchangé à graine fixée.
 
+**Le tir manqué coûte le ballon dans la décision (13/11/2026, ticket `v2-realisme/18k`)** : livré (13/11/2026), validé expert + QC. Valeur du tir : chance de but moins le coût d'un tir non marqué (`loss_cost`), sans constante nouvelle. Sur 50 matchs : tirs 18,0 → 16,0 par équipe, de 25 à 30 m 6,9 → 3,7, part dans la surface 21 → 27 % (réel 68), conversion 7,3 → 8,1 % ; conversion par zone inchangée sur 100 matchs. L'écart restant relève de la pénétration dans la surface (section 35).
+
 ### Bloquée par
 
 - Phase 4

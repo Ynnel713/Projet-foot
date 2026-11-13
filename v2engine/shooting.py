@@ -199,6 +199,16 @@ def occasion_quality(player: PlayerState, goal: Vec2, keeper: PlayerState | None
     return (1.0 - _shank_share(player, goal, opponents)) * _flight_shares(player, goal, keeper, opponents)[2]
 
 
+def shot_outcome_shares(player: PlayerState, goal: Vec2, keeper: PlayerState | None,
+                        opponents: list[PlayerState]) -> tuple[float, float]:
+    """(chance de but, chance d'être contré) d'un tir depuis sa position, avec les lois de la résolution physique (un seul
+    calcul de `_flight_shares`) : la chance de but est `occasion_quality`, la chance de contre `physical_block_probability`
+    (ticket v2-realisme/18k, valeur du tir manqué dans la décision)."""
+    kept = 1.0 - _shank_share(player, goal, opponents)
+    _, blocked, goal_unblocked = _flight_shares(player, goal, keeper, opponents)
+    return kept * goal_unblocked, kept * blocked
+
+
 def attempt_shot(shooter: PlayerState, goal: Vec2, keeper: PlayerState | None, opponents: list[PlayerState]) -> bool:
     """`True` si le tir (non contré) devient un but."""
     return TIR.random() < shot_probability(shooter, goal, keeper, opponents)

@@ -1,0 +1,6 @@
+.scratch/v2-realisme/mesures/18e-zones         surface       tirs   385  buts   68  xG   72.0  écart -0.61 σ  conversion  17.7 %
+.scratch/v2-realisme/mesures/18e-zones         hors surface  tirs  1413  buts   62  xG   58.5  écart +0.48 σ  conversion   4.4 %
+.scratch/v2-realisme/mesures/18k-zones         surface       tirs   439  buts   60  xG   76.3  écart -2.31 σ  conversion  13.7 %
+.scratch/v2-realisme/mesures/18k-zones         hors surface  tirs  1162  buts   69  xG   62.5  écart +0.86 σ  conversion   5.9 %
+.scratch/v2-realisme/mesures/18k-zones-b       surface       tirs   462  buts   85  xG   79.0  écart +0.83 σ  conversion  18.4 %
+.scratch/v2-realisme/mesures/18k-zones-b       hors surface  tirs  1133  buts   53  xG   58.8  écart -0.79 σ  conversion   4.7 %

@@ -1188,3 +1188,25 @@ Part des tirs dans la surface 21,4 % (réel 68,3 %). Avec le mélange réel, les
 **Gardien.** Taux d'arrêt des cadrés environ 73 % (repère environ 70 %) : 36 % sous 11 m, 62 % de 11 à 18 m, 77 % de 18 à 25 m, 89 % au-delà. Aucun réglage.
 
 **Penaltys.** 0,04 par match (réel environ 0,34) : fautes dans la surface absentes (`21b`, `21c`).
+
+## 35. Le tir manqué coûte le ballon dans la décision (ticket v2-realisme/18k, 50 + 50 matchs, 13/11/2026)
+
+Commandes : tirs par zone, `.scratch/v2-realisme/mesures/18e-zones.py` (graines 0 à 49 : `18k-zones/`, sortie `18k-zones-apres.txt` ; graines 50 à 99 : `18k-zones-b/`, `18k-zones-b-apres.txt`) ; buts contre xG par zone, `18k-buts-xg.py` (`18k-buts-xg.txt`) ; indicateurs généraux, `scripts/measure_v2.py` en 4 lots (`18k-50-lot*.*`, synthèse `18k-50-synthese.txt`) ; référence : 18e (`18e-zones-avant.txt`) et 18j (`18j-50-lot*.*`), mêmes graines.
+
+**Ce qui change.** Valeur du tir dans la décision (`decision.shot_value`) : chance de but moins le coût d'un tir non marqué, dans la monnaie des autres options (`loss_cost`, pondéré par la transition) : contré, ballon perdu à la place du tireur ; à côté, au-dessus, dévissé ou arrêté, rendu à l'adversaire à son but. Aucune constante nouvelle.
+
+| Mesure (50 matchs) | 18e | 18k | Repère |
+|---|---|---|---|
+| Tirs tracés par équipe | 18,0 | 16,0 | 8 à 15 |
+| dont hors surface | 14,1 | 11,6 | environ 4,2 |
+| dont de 25 à 30 m | 6,9 | 3,7 | — |
+| dont dans la surface | 3,85 | 4,39 | environ 9 |
+| Part des tirs dans la surface | 21,4 % | 27,4 % | 68,3 % |
+| Conversion | 7,3 % | 8,1 % | 10 à 12 % |
+| xG neutre moyen par tir | 0,073 | 0,087 | — |
+| Buts dans la surface | 51,8 % | 48,7 % | 88 à 89 % |
+| Buts par match | 2,62 | 2,58 | 2 à 3,5 |
+
+**Conversion par zone** (100 matchs pour le 18k) : surface 17,7 → 16,1 %, dehors 4,4 → 5,3 %, buts conformes à l'xG neutre (graines 0 à 49 : surface − 2,3 σ ; graines 50 à 99 : + 0,8 σ). La résolution du tir est inchangée.
+
+**Lecture.** Le choix de tirer est corrigé (moitié moins de tirs de 25 à 30 m), mais le mélange reste loin du réel : l'équipe entre peu dans la surface, ce qui relève de la pénétration (occupation, passes en profondeur, surcharges), pas de la décision de tirer.

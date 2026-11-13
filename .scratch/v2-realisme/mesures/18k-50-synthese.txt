@@ -1,0 +1,19 @@
+50 matchs, mêmes graines : 18j (= état du 18e) -> 18k
+  tirs tracés par équipe                      18.000 ->    16.010
+  tirs cadrés (part)                           0.268 ->     0.279
+  tirs contrés (part)                          0.176 ->     0.173
+  conversion des tirs (part)                   0.073 ->     0.081
+  buts dans la surface (part)                  0.518 ->     0.487
+  buts par match                               2.620 ->     2.580
+  xG neutre par match                          2.610 ->     2.777
+  xG neutre moyen par tir                      0.073 ->     0.087
+  tir : distance au but (m)                   22.385 ->    21.200
+  passes par match                           997.680 ->  1007.340
+  passes réussies (part)                       0.852 ->     0.850
+  passes chez l'adversaire (part)              0.125 ->     0.127
+  possession d'équipe (s)                     26.850 ->    26.102
+  passes par possession                        4.630 ->     4.544
+  conduite : pertes par match                 61.460 ->    64.800
+  corners par match                            7.300 ->     6.560
+  fautes par match                            13.020 ->    13.580
+  face-à-face : tirs par match                10.320 ->    11.900

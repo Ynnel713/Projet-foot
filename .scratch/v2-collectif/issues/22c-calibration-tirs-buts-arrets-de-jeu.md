@@ -32,3 +32,9 @@
 - Faire d'abord `v2-realisme/18k` (le tir manqué coûte le ballon dans la décision) : par zone la conversion est réaliste, le mélange ne l'est pas (21 % des tirs dans la surface contre 68 %).
 - Faire d'abord `v2-realisme/05j` (estimateur du contre pour un défenseur en course) avant de relever `shooting.BLOCK_CHANCE` (0,75 mesuré : contrés 22,4 %, repère 22,5 %).
 - Rapport : section 34 de `docs/INDICATEURS_V2.md`.
+
+## Repris du ticket v2-realisme/18k (13/11/2026)
+
+- Le tir paie désormais la perte du ballon dans la décision (`decision.shot_value`) ; tirs 16,0 par équipe, part dans la surface 27 % (réel 68 %), conversion 8,1 % (section 35 de `docs/INDICATEURS_V2.md`).
+- A3 (facultatif) : corners, ballons repoussés et contrés comptés comme perte entière dans la valeur du tir (effet environ 0,002) ; à affiner si la calibration fine l'exige. Pertes en conduite + 5 % à surveiller.
+

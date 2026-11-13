@@ -161,7 +161,15 @@ def test_a_defender_in_the_shot_line_blocks_shots_and_lowers_their_value() -> No
     def shot_value(opponents: list[PlayerState]) -> float:
         random.seed(1)
         return next(o.value for o in evaluate_options(shooter, [shooter, *opponents], GOAL, None) if o.kind == "shot")
-    assert abs(shot_value([in_line]) - shot_value([beside]) * (1 - BLOCK_CHANCE)) < 1e-12
+
+    # chance de but : multipliée par 1 - BLOCK_CHANCE ; valeur du tir (ticket v2-realisme/18k) : chance de but moins le
+    # coût d'un tir non marqué, plus bas encore (le contre perd le ballon près du tireur)
+    from v2engine.shooting import shot_outcome_shares
+    goal_in_line, _ = shot_outcome_shares(shooter, GOAL, None, [in_line])
+    goal_beside, _ = shot_outcome_shares(shooter, GOAL, None, [beside])
+    assert abs(goal_in_line - goal_beside * (1 - BLOCK_CHANCE)) < 1e-12
+    assert shot_value([in_line]) < goal_in_line < goal_beside
+    assert shot_value([in_line]) < shot_value([beside])
 
 
 def test_a_blocked_shot_bounces_off_the_defender_and_is_a_loose_ball(monkeypatch) -> None:
