@@ -21,6 +21,7 @@ de modèle, à recaler au 08c et au 08d.
 
 from __future__ import annotations
 
+from collections.abc import Collection
 from dataclasses import dataclass
 
 from v2engine.decision import anticipation_share
@@ -54,14 +55,16 @@ class PerceptionMemory:
     def _observation(p: PlayerState, now_s: float) -> tuple[float, float, float, float, float]:
         return (p.position.x, p.position.y, p.velocity.x, p.velocity.y, now_s)
 
-    def update(self, players: list[PlayerState], now_s: float) -> None:
-        """Rafraîchit ce que chacun voit à cet instant ; un joueur jamais observé l'est à sa première apparition."""
+    def update(self, players: list[PlayerState], now_s: float, scanning: Collection[str] = ()) -> None:
+        """Rafraîchit ce que chacun voit à cet instant ; un joueur jamais observé l'est à sa première apparition. Un
+        joueur de `scanning` tourne la tête (ticket v2-realisme/08c) : il voit tous les autres, dans son dos aussi."""
         for observer in players:
             memory = self._seen.get(observer.name)
             if memory is None:
                 memory = self._seen[observer.name] = {}
-            for p in seen_by(observer, players):
-                memory[p.name] = self._observation(p, now_s)
+            for p in (players if observer.name in scanning else seen_by(observer, players)):
+                if p is not observer:
+                    memory[p.name] = self._observation(p, now_s)
             if len(memory) < len(players) - 1:
                 for p in players:
                     if p is not observer and p.name not in memory:

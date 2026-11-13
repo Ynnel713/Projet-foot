@@ -25,13 +25,13 @@ READERS = {"player_attribute", "effective_rating", "intrinsic_rating"}
 # decision : course du porteur contre les adversaires vers l'espace libre (ticket v2-collectif/33)
 # occasion (ticket v2-collectif/28c) : temps pour atteindre un ballon libre, la même vitesse de pointe (R5), mesure seule
 ALLOWED = {
-    "Pace": {"match", "anticipation", "bloc", "defense", "decision", "occasion"},
+    "Pace": {"match", "anticipation", "bloc", "defense", "decision", "occasion", "scan"},  # scan : vitesse relative (08c)
     "Acceleration": {"match", "defense"},
     "Stamina": {"match"},
     # vitesse de rotation du corps (ticket v2-realisme/07f) ; + délai de rotation avant la passe ou le tir, même
     # fonction à la décision et à l'exécution (07e) ; freinage 12a, virage 12b
     "Agility": {"movement", "decision"},
-    "Technique": {"possession"},  # précision de la talonnade, geste difficile (ticket v2-realisme/07e)
+    "Technique": {"possession", "scan"},  # précision de la talonnade, geste difficile (07e) ; porteur tête haute avec Dribbling (08c)
     "Flair": {"decision"},  # penser à la talonnade (ticket v2-realisme/07e)
     "Strength": {"duel"},
     "Balance": {"duel"},
@@ -41,11 +41,11 @@ ALLOWED = {
     # adversaires pendant sa conduite (ticket v2-collectif/33)
     "Anticipation": {"anticipation", "match", "defense", "decision"},
     "Decisions": {"decision", "restart"},  # restart : choix du receveur d'une remise en jeu (ticket 29)
-    "Vision": {"decision", "off_ball"},  # + le coureur tente l'appel dans le dos si le porteur le voit (16)
+    "Vision": {"decision", "off_ball", "scan"},  # + le coureur tente l'appel dans le dos si le porteur le voit (16) ; fréquence des scans (08c)
     "Off the Ball": {"off_ball", "offside"},  # + régler l'appel sur la ligne du hors-jeu (ticket 23)
     # tir sous pression par `shooting.shot_composure_factor`, courbe propre (ticket 28a) ; + perception sous pression (33)
     "Composure": {"possession", "decision", "shooting"},
-    "Dribbling": {"decision"},  # chance de garder le ballon en conduisant : valeur factuelle (ticket 33) et perte tirée (04a) ; vitesse balle au pied (04d)
+    "Dribbling": {"decision", "scan"},  # (scan : porteur tête haute, cumul avec Technique, 08c) chance de garder le ballon en conduisant : valeur factuelle (ticket 33) et perte tirée (04a) ; vitesse balle au pied (04d)
     "First Touch": {"possession"},
     "Passing": {"possession", "off_ball"},  # + ... et s'il sait le servir (ticket v2-collectif/16)
     "Finishing": {"shooting"},  # dans la surface ; Long Shots en dehors (ticket 28a)
@@ -69,6 +69,9 @@ TOLERATED_MIXES = {
     # physiques additionnées en secondes (règle R5), pas une pondération de notes ; visible depuis que les champs
     # passent par la façade (ticket v2-realisme/19a)
     frozenset({"Pace", "Acceleration"}),
+    # porteur tête haute (`scan.head_up_share`, ticket v2-realisme/08c) : Dribbling 0,6 + Technique 0,4, cumul voulu par le
+    # propriétaire (règle R2 révisée du 13/11/2026, A15)
+    frozenset({"Dribbling", "Technique"}),
 }
 
 

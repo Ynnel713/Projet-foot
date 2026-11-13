@@ -44,3 +44,5 @@ Temps machine, non compté : suite complète (environ 40 min) ; mesure 50 matchs
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+
+**Repris du 08c (réserves A1 et A2, acceptées le 13/11/2026).** Brancher le coût du scan (un joueur qui scanne ne suit pas le ballon pendant 0,3 s, `scan.SCAN_DURATION_S`), avec un test ; recaler la fréquence des scans (2,65 scans en 10 s avant réception contre environ 3 en réel) sur l'effet observé dans le jeu ; ne pas utiliser une position figée depuis plus de 2 s sans plafond de confiance (08b).

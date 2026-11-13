@@ -135,6 +135,16 @@ class ReceptionEvent:
 
 
 @dataclass(frozen=True)
+class ScanEvent:
+    """Début d'un scan, tour de tête qui rafraîchit la mémoire de perception (ticket v2-realisme/08c) : `has_ball` si le
+    joueur portait le ballon."""
+    minute: float
+    team: str
+    player: str
+    has_ball: bool
+
+
+@dataclass(frozen=True)
 class ShotEvent:
     """Tir (ticket v2-collectif/28b) : `team` et `player` le tireur, `x`/`y` le lieu du tir, `quality` la qualité de
     l'occasion (ticket 28a, chance de but s'il n'est pas contré, contre compris), `outcome` l'issue tirée au départ (but,
@@ -268,6 +278,7 @@ class MatchTrace:
     restarts: list[RestartEvent] = field(default_factory=list)  # remises en jeu (ticket v2-collectif/29)
     fouls: list[FoulEvent] = field(default_factory=list)  # fautes (ticket v2-collectif/30)
     shots: list[ShotEvent] = field(default_factory=list)  # tirs et leur issue (ticket v2-collectif/28b)
+    scans: list[ScanEvent] = field(default_factory=list)  # scans, un événement par début (ticket v2-realisme/08c)
     receptions: list[ReceptionEvent] = field(default_factory=list)  # contrôles et leur type (ticket v2-realisme/07c)
     chances: list[ChanceEvent] = field(default_factory=list)  # grosses occasions, avec ou sans tir (ticket 28c)
     reaction_delays_s: dict[str, float] = field(default_factory=dict)  # par joueur (Anticipation, ticket v2-collectif/03)

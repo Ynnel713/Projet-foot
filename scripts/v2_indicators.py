@@ -820,6 +820,28 @@ class Collector:
                 self.peak["mémoire : erreur maximale du receveur (m)"] = max(
                     self.peak["mémoire : erreur maximale du receveur (m)"], r.memory_error_max_m)
 
+    def on_scans(self, scans, receptions) -> None:
+        """Scans (ticket v2-realisme/08c) : nombre, part du porteur, et scans du receveur dans les 10 s avant chaque
+        réception ; par niveau du profil testé (`levels`) quand il y en a un."""
+        from bisect import bisect_left, bisect_right
+        by_player: dict[str, list[float]] = defaultdict(list)
+        for e in scans:
+            self.count["scans"] += 1
+            self.count["scans : du porteur"] += e.has_ball
+            by_player[e.player].append(e.minute)
+            level = self.levels.get(e.player)
+            if level:
+                self.count[f"profil {level} : scans"] += 1
+        for r in receptions:
+            starts = by_player.get(r.player, [])
+            before = bisect_right(starts, r.minute) - bisect_left(starts, r.minute - 10.0 / 60.0)
+            self.count["scans : réceptions"] += 1
+            self.count["scans : avant la réception (somme, 10 s)"] += before
+            level = self.levels.get(r.player)
+            if level:
+                self.count[f"profil {level} : réceptions"] += 1
+                self.count[f"profil {level} : scans avant la réception (somme, 10 s)"] += before
+
     def on_events(self, events) -> None:
         """Journal du match (`MatchTrace.events`, ticket v2-realisme/19b) : contrôles ratés et buteurs par tranche,
         attribués au joueur (19d). Ticket 19f (réserve A2 de l'expert sur le 19d) : un contrôle raté n'est compté comme

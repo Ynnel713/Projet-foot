@@ -214,6 +214,7 @@ def run(n_matches: int, profile: str | None = None, duration_minutes: float = 90
                 collector.on_events(trace.events)  # contrôles ratés par tranche (ticket v2-realisme/19d)
                 collector.on_decisions(trace.decisions)  # rotation avant la passe ou le tir (ticket v2-realisme/07e)
                 collector.on_receptions(trace.receptions)  # mémoire du receveur (ticket v2-realisme/08b)
+                collector.on_scans(trace.scans, trace.receptions)  # scans (ticket v2-realisme/08c)
             finally:
                 unforce()
             collector.end_match()
@@ -467,6 +468,17 @@ def report(c: Collector, detail: bool = False) -> dict:
     out["mémoire : âge de la dernière vue des adversaires non vus, receveur (s)"] = k["mémoire : âge à la réception (somme, s)"] / received
     out["mémoire : erreur de position perçue des adversaires non vus, receveur (m)"] = k["mémoire : erreur à la réception (somme, m)"] / received
     out["mémoire : erreur maximale, receveur (m)"] = c.peak["mémoire : erreur maximale du receveur (m)"]
+    # scans (ticket v2-realisme/08c)
+    out["scans par match"] = k["scans"] / n
+    match_minutes = getattr(c, "minutes_per_match", 90.0)  # absent hors de `run` (tests du rapport)
+    out["scans par minute et par joueur"] = k["scans"] / max(1e-9, n * match_minutes * 22)
+    out["scans du porteur (part des scans)"] = k["scans : du porteur"] / max(1, k["scans"])
+    out["scans dans les 10 s avant la réception (moyenne par réception)"] = (
+        k["scans : avant la réception (somme, 10 s)"] / max(1, k["scans : réceptions"]))
+    for level in ("haut", "bas"):  # profil testé (--profil Vision, Dribbling, Technique, Pace)
+        out[f"profil {level} : scans par minute et par joueur"] = k[f"profil {level} : scans"] / max(1e-9, n * match_minutes * 11)
+        out[f"profil {level} : scans dans les 10 s avant la réception (moyenne)"] = (
+            k[f"profil {level} : scans avant la réception (somme, 10 s)"] / max(1, k[f"profil {level} : réceptions"]))
     out["talonnades par match"] = k["talonnades"] / n
     out["talonnades : non perdues (part)"] = k["talonnades : non perdues"] / max(1, k["talonnades"])
     out["talonnades : reçues par le receveur visé (part)"] = k["talonnades : reçues par le receveur visé"] / max(1, k["talonnades"])

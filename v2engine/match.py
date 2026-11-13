@@ -32,6 +32,7 @@ from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitc
 from v2engine.movement import PlayerState, step
 from v2engine.cerveau import GOAL_CENTER_Y, OPPONENT_GOAL, Intention, think
 from v2engine.perception_memory import MemoryReading, PerceptionMemory
+from v2engine.scan import ScanTracker
 from v2engine.vision import unseen
 from v2engine.decision import (DECISION_INTERVAL_S, choose_action, dribble_lost, lane_closed_during_turn,
                                lost_carry_outcome)
@@ -1050,6 +1051,7 @@ def simulate_match(
     ball.log = EventLog(trace.events)  # journal des événements (ticket v2-realisme/19b)
 
     memory = PerceptionMemory(players, 0.0)  # ce que chacun a vu des autres (ticket v2-realisme/08b), sans effet sur le jeu
+    scans = ScanTracker()  # tours de tête qui rafraîchissent cette mémoire (ticket v2-realisme/08c), sans effet sur le jeu
     runs: dict[str, tuple[Vec2, float]] = {}  # espace visé par chaque joueur sans ballon (Off the Ball)
     intentions: dict[str, Intention] = {}  # intention de chaque joueur au dernier tick (ADR 0001)
     trace.reaction_delays_s = {p.name: reaction_delay_s(p) for p in players}
@@ -1101,6 +1103,7 @@ def simulate_match(
             ball.restart = kickoff("away" if first == "home" else "home", players, i * tick_seconds, dead_s=0.0)
             situations = SituationTracker(delays_s=dict(trace.reaction_delays_s))
             memory = PerceptionMemory(players, i * tick_seconds)  # tous alignés : chacun connaît la place de tous
+            scans = ScanTracker()
             bloc, defense, transition = Bloc.from_players(players), DefensiveRoles(), TransitionPlay()
             runs.clear()
             intentions.clear()
@@ -1118,7 +1121,7 @@ def simulate_match(
         players = [_step_player(p, ball, tick_seconds, minute, players, runs, intentions, situations, bloc, defense,
                                 transition, played_minute=played) for p in players]
         _resolve_player_collisions(players)
-        memory.update(players, i * tick_seconds)
+        memory.update(players, i * tick_seconds, scans.update(players, ball.holder, i * tick_seconds, tick_seconds, trace.scans))
         scoring_team = _step_ball(ball, tick_seconds, players, i * tick_seconds, trace.decisions, trace.offsides,
                                   transition.mode, trace.restarts, trace.fouls,
                                   trace.shots, trace.receptions, memory)

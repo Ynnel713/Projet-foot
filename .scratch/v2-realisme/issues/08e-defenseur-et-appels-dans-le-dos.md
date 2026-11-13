@@ -40,3 +40,5 @@ Temps machine, non compté : suite complète (environ 40 min) ; mesure 50 matchs
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+
+**Repris du 08c (réserve A1, acceptée le 13/11/2026).** Le défenseur qui scanne ne suit pas le ballon pendant 0,3 s (`scan.SCAN_DURATION_S`) : à brancher ici avec le 08d, avec un test.
