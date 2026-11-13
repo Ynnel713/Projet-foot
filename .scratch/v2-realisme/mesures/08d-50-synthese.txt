@@ -1,0 +1,47 @@
+avant : 50 matchs ; après : 50 matchs
+  passes par match                                                                                        977.140 ->   1044.000
+  passes par minute                                                                                        10.857 ->     11.600
+  passes réussies (part)                                                                                    0.849 ->      0.799
+  passes chez l'adversaire (part)                                                                           0.129 ->      0.182
+  receveur visé (part)                                                                                      0.832 ->      0.779
+  passes par possession                                                                                     4.360 ->      3.746
+  possession d'équipe (s)                                                                                  25.895 ->     20.768
+  temps par possession de joueur (s)                                                                        2.788 ->      2.601
+  buts par match                                                                                            3.460 ->      3.040
+  tirs tracés par équipe                                                                                   17.030 ->     17.220
+  tirs cadrés (part)                                                                                        0.298 ->      0.278
+  conversion des tirs (part)                                                                                0.101 ->      0.088
+  xG neutre par match                                                                                       2.965 ->      3.160
+  conduite : pertes par match                                                                              70.140 ->     60.340
+  passes longues (part)                                                                                     0.022 ->      0.021
+  face-à-face : tirs par match                                                                             12.480 ->     13.460
+  corners par match                                                                                         6.060 ->      6.600
+  fautes par match                                                                                         13.940 ->     13.800
+  pertes de balle par match                                                                               218.780 ->    273.660
+  grosses occasions par match                                                                              30.680 ->     32.420
+  grosses occasions, issue : interception (part)                                                            0.028 ->      0.024
+  choix dribble (part)                                                                                      0.628 ->      0.565
+  choix pass (part)                                                                                         0.359 ->      0.421
+  choix shot (part)                                                                                         0.013 ->      0.014
+  talonnades par match                                                                                      2.660 ->      4.740
+  talonnades : non perdues (part)                                                                           0.946 ->      0.755
+  vision : adversaires non vus par le porteur à la décision (moyenne)                                         nan ->      4.188
+  vision : décisions avec un adversaire non vu à 5 m au plus (part)                                           nan ->      0.737
+  mémoire : âge de la dernière vue des adversaires non vus, porteur (s)                                       nan ->      1.431
+  mémoire : erreur de position perçue des adversaires non vus, porteur (m)                                    nan ->      2.503
+  mémoire : erreur maximale, porteur (m)                                                                      nan ->     43.464
+  mémoire : fantômes perçus par décision (adversaires perçus avec plus de 4 s de retard et 10 m d'erreur)        nan ->      0.125
+  mémoire : décisions avec un fantôme (part)                                                                  nan ->      0.064
+  temps de calcul par match (s)                                                                            79.844 ->     91.951
+
+Calibration de la passe : tranche de chance évaluée, passes par match, évaluée, non perdue, écart (points) ; avant puis après
+  [0 ; 0.1[           80  0.072  0.050   +2.2   |        499  0.070  0.066   +0.4
+  [0.1 ; 0.2[        219  0.143  0.096   +4.7   |       2355  0.152  0.148   +0.4
+  [0.2 ; 0.3[         39  0.262  0.256   +0.5   |         82  0.265  0.305   -4.0
+  [0.3 ; 0.4[        187  0.365  0.497  -13.3   |        338  0.364  0.429   -6.5
+  [0.4 ; 0.5[        582  0.462  0.529   -6.8   |        974  0.461  0.510   -4.9
+  [0.5 ; 0.6[       1045  0.554  0.535   +2.0   |       1648  0.550  0.520   +3.0
+  [0.6 ; 0.7[       3168  0.657  0.713   -5.6   |       3588  0.658  0.677   -1.9
+  [0.7 ; 0.8[       6058  0.755  0.749   +0.6   |       6360  0.754  0.728   +2.7
+  [0.8 ; 0.9[      14085  0.852  0.877   -2.5   |      12971  0.853  0.872   -1.9
+  [0.9 ; +[        21034  0.958  0.965   -0.7   |      21057  0.958  0.965   -0.7

@@ -41,4 +41,6 @@ Temps machine, non compté : suite complète (environ 40 min) ; mesure 50 matchs
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
 
-**Repris du 08c (réserve A1, acceptée le 13/11/2026).** Le défenseur qui scanne ne suit pas le ballon pendant 0,3 s (`scan.SCAN_DURATION_S`) : à brancher ici avec le 08d, avec un test.
+**Repris du 08c (réserves A1 et A2, acceptées le 13/11/2026 ; A1 déplacée du 08d au 08e avec l'accord du propriétaire).** Brancher le coût du scan : un défenseur qui scanne ne suit pas le ballon pendant 0,3 s (`scan.SCAN_DURATION_S`), avec un test ; recaler la fréquence des scans (2,65 scans en 10 s avant réception contre environ 3 en réel) sur l'effet observé dans le jeu.
+
+**Repris du 08d (réserve A2, acceptée le 13/11/2026).** Mesurer la fréquence des scans dans le jeu et vérifier si les passes jugées sûres à tort (talonnades non perdues 75,5 %, passes à moins de 30 % de réussite réelle 5,9 % des passes) baissent ; sinon envisager un plafond de confiance sur la mémoire très vieille (fantômes : 6,4 % des décisions).

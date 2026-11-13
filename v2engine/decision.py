@@ -163,6 +163,9 @@ class Action:
     gap: float = 0.0  # valeur réelle perdue par rapport au meilleur choix factuel, en part de celui-ci (ticket 33)
     rotation_s: float = 0.0  # rotation avant que la passe ou le tir parte (ticket v2-realisme/07e)
     backheel: bool = False  # passe en talonnade (ticket v2-realisme/07e)
+    # valeur telle que le porteur la perçoit (ticket v2-realisme/08d) : évaluée sur les positions perçues des adversaires
+    # (mémoire de perception, 08b) ; `value` reste la valeur RÉELLE (journal du meilleur choix) ; `None` : perçue = réelle
+    seen_value: float | None = None
 
 
 def turn_angle_deg(facing: Vec2, direction: Vec2) -> float:
@@ -249,12 +252,17 @@ def visible_teammates(holder: PlayerState, teammates: list[PlayerState], goal: V
 
 
 def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2, keeper: PlayerState | None,
-                     mode: str | None = None, planned: str | None = None) -> list[Action]:
+                     mode: str | None = None, planned: str | None = None,
+                     seen_opponents: list[PlayerState] | None = None) -> list[Action]:
     """Les options du porteur avec leur valeur FACTUELLE (ticket v2-collectif/33 : danger attendu, vraies capacités),
     de la meilleure à la moins bonne : un tir à portée (`SHOOTING_RANGE_M`), une passe par coéquipier envisagé (Vision),
     une conduite par direction (`DRIBBLE_DIRECTIONS_DEG`). `mode` : choix de
     transition de son équipe, contre-attaque ou conservation (ticket v2-collectif/11), sinon `None`. `planned` :
-    coéquipier que son passeur a prévu pour la suite (plan de passe, ticket v2-collectif/14)."""
+    coéquipier que son passeur a prévu pour la suite (plan de passe, ticket v2-collectif/14). `seen_opponents` : les
+    adversaires tels que le porteur les perçoit (ticket v2-realisme/08d, mémoire de perception) ; les tirs et les passes
+    reçoivent alors aussi leur valeur perçue (`Action.seen_value`), sans tirage de plus (un seul passage pour les deux
+    étages). Les conduites perçues se calculent dans `choose_action`. Seuls les adversaires changent : la gêne du
+    porteur (au contact, il la sent), les coéquipiers et le gardien restent réels."""
     opponents = [p for p in players if p.team != holder.team]
     mates = [p for p in players if p.team == holder.team and p.name != holder.name]
     # Hors-jeu (ticket v2-collectif/23, deuxième passe du 28/10/2026) : le porteur ne sert pas un coéquipier qu'il
@@ -284,9 +292,13 @@ def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2
         # ticket v2-realisme/18k, un tir non marqué rend le ballon à l'adversaire (`shot_value`)
         goal_chance, blocked = shot_outcome_shares(holder, goal, keeper, opponents)
         turn = rotation_delay_s(holder, goal - holder.position, SHOT_FREE_CONE_DEG)  # ticket 07e
-        value = with_rotation(shot_value(holder, mode, goal_chance, blocked, goal), holder, mode,
-                              rotation_keep_probability(holder, gene, turn))
-        options.append(Action("shot", value, rotation_s=turn))
+        keep_turn = rotation_keep_probability(holder, gene, turn)
+        value = with_rotation(shot_value(holder, mode, goal_chance, blocked, goal), holder, mode, keep_turn)
+        seen_value = None
+        if seen_opponents is not None:  # même tir, adversaires perçus (08d)
+            seen_chance, seen_blocked = shot_outcome_shares(holder, goal, keeper, seen_opponents)
+            seen_value = with_rotation(shot_value(holder, mode, seen_chance, seen_blocked, goal), holder, mode, keep_turn)
+        options.append(Action("shot", value, rotation_s=turn, seen_value=seen_value))
     # suite du receveur (ticket 13) : meilleure passe suivante vers un coéquipier que le porteur voit lui-même ; le
     # passeur n'en fait pas partie (pas d'aller-retour) ; pas de suite en contre-attaque (on joue vite vers l'avant)
     share = 0.0 if mode == CONTRE_ATTAQUE else _FOLLOW_UP_SHARE
@@ -299,8 +311,13 @@ def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2
             backheel_ok = DECISION.random() < backheel_idea_probability(holder)
         # passe après rotation, et sa talonnade si le porteur y pense
         for heel in (False, True) if backheel and backheel_ok else (False,):
-            options.append(_pass_option(holder, mate, opponents, seen_full, team, mode, share, held, margin,
-                                        seen_line, gene, 0.0 if heel else turn, heel))
+            option = _pass_option(holder, mate, opponents, seen_full, team, mode, share, held, margin,
+                                  seen_line, gene, 0.0 if heel else turn, heel)
+            if seen_opponents is not None:  # même passe, adversaires perçus (08d)
+                option = replace(option, seen_value=_pass_option(holder, mate, seen_opponents, seen_full, team, mode,
+                                                                 share, held, margin, seen_line, gene,
+                                                                 0.0 if heel else turn, heel).value)
+            options.append(option)
     if planned is not None and mode != CONTRE_ATTAQUE:  # sort du plan, pour la mesure (ticket 14)
         # abandonné : la cible est vue mais la ligne s'est fermée ; non vu : hors de sa Vision ou hors-jeu évident
         target = next((m for m in teammates if m.name == held), None)
@@ -474,14 +491,17 @@ def anticipation_share(holder: PlayerState) -> float:
 
 def choose_action(holder: PlayerState, players: list[PlayerState], goal: Vec2, keeper: PlayerState | None,
                   mode: str | None = None, planned: str | None = None,
-                  felt: dict[int, float] | None = None, set_piece: bool = False) -> Action:
+                  felt: dict[int, float] | None = None, set_piece: bool = False,
+                  seen_opponents: list[PlayerState] | None = None) -> Action:
     """Prend l'option qu'il CROIT la meilleure (ticket 33) : valeur réelle brouillée par sa perception (Decisions,
     Composure sous pression), conduites jugées avec son Anticipation. Deux options proches font hésiter même un très
     bon joueur ; un joueur faible se trompe surtout entre options voisines. `planned` : ticket v2-collectif/14.
     `felt` : son erreur sur chaque direction de conduite (en écarts-types), gardée pendant sa possession ; complétée
     ici si besoin. `set_piece` : coup franc (ticket v2-collectif/30), il frappe ou passe, la conduite n'est pas une
-    option."""
-    options = evaluate_options(holder, players, goal, keeper, mode, planned)
+    option. `seen_opponents` : les adversaires tels qu'il les perçoit (ticket v2-realisme/08d, mémoire de perception, 08b) :
+    les tirs, les passes et les conduites sont jugés sur leurs positions perçues, la valeur RÉELLE (`best`, `gap`)
+    reste calculée sur les vraies positions, et l'exécution aussi. `None` : il perçoit les vraies positions."""
+    options = evaluate_options(holder, players, goal, keeper, mode, planned, seen_opponents)
     if set_piece:
         options = [o for o in options if o.kind != "dribble"] or options
     best = options[0]
@@ -496,8 +516,9 @@ def choose_action(holder: PlayerState, players: list[PlayerState], goal: Vec2, k
     # s'arrête) ; une direction se reconnaît à son point réel, distinct d'une direction à l'autre
     real_dribbles = dribble_options(holder, opponents, gene, mode, 1.0)
     direction = {real.point: i for i, real in enumerate(real_dribbles)}
-    seen_as = {} if share >= 1.0 else {
-        real.point: seen for real, seen in zip(real_dribbles, dribble_options(holder, opponents, gene, mode, share))}
+    seen_world = opponents if seen_opponents is None else seen_opponents
+    seen_as = {} if share >= 1.0 and seen_opponents is None else {
+        real.point: seen for real, seen in zip(real_dribbles, dribble_options(holder, seen_world, gene, mode, share))}
     felt = {} if felt is None else felt
     sigma = perception_error(holder, gene) * max(abs(best.value), 1e-3)
     for index in range(len(real_dribbles)):
@@ -510,7 +531,8 @@ def choose_action(holder: PlayerState, players: list[PlayerState], goal: Vec2, k
     perceived = []
     for option in ([drive] if drive is not None else []) + [o for o in options if o.kind != "dribble"]:
         seen = seen_as.get(option.point, option) if option.kind == "dribble" else option
-        perceived.append((seen.value + PERCEPTION.gauss(0.0, sigma), option, seen.point))
+        seen_value = seen.value if seen.seen_value is None else seen.seen_value  # tir et passe : valeur perçue (08d)
+        perceived.append((seen_value + PERCEPTION.gauss(0.0, sigma), option, seen.point))
     _, chosen, point = max(perceived, key=lambda t: t[0])
     # valeur perdue, en part de la meilleure ; une option presque équivalente compte comme le meilleur choix
     gap = (best.value - chosen.value) / max(abs(best.value), 1e-9)

@@ -62,6 +62,7 @@ class DecisionRecord:
     memory_age_s: float = 0.0
     memory_error_mean_m: float = 0.0
     memory_error_max_m: float = 0.0
+    memory_stale: int = 0  # adversaires perçus avec plus de 4 s de retard et plus de 10 m d'erreur (ticket v2-realisme/08d, mesure)
 
 
 @dataclass(frozen=True)

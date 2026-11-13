@@ -623,8 +623,12 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
         # coup franc (ticket v2-collectif/30) : il frappe ou passe, jamais ne conduit
         set_piece = ball.set_piece is not None and ball.set_piece.taker == holder.name
         ball.pass_from, ball.rebound, ball.shot_wide = None, False, False  # nouvelle action : l'origine d'un tir à venir repart de lui
+        # le porteur juge ses options sur les adversaires tels qu'il les perçoit (ticket v2-realisme/08d) ; le gardien, devant
+        # le tireur, reste à sa vraie place ; la résolution (passe, tir, conduite) reste sur les vraies positions
+        seen_opponents = memory.perceived_opponents(holder, rivals, now_s, keeper.name if keeper else None) \
+            if memory is not None else None
         action = choose_action(holder, players, goal, keeper, (modes or {}).get(holder.team), planned,  # ticket 11
-                               ball.felt[1], set_piece)
+                               ball.felt[1], set_piece, seen_opponents)
         if set_piece:
             r, ball.set_piece = ball.set_piece, None
             if restarts is not None:
@@ -644,7 +648,8 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                                             0.0 if set_piece else getattr(action, "rotation_s", 0.0),
                                             getattr(action, "backheel", False),
                                             len(unseen(holder, rivals)), len(unseen(holder, rivals, PRESSURE_RADIUS_M)),
-                                            seen_back.age_mean_s, seen_back.error_mean_m, seen_back.error_max_m))
+                                            seen_back.age_mean_s, seen_back.error_mean_m, seen_back.error_max_m,
+                                            seen_back.stale))
         # il se retourne d'abord (ticket v2-realisme/07e) ; le tireur d'un coup franc s'est placé face à son geste
         turn = 0.0 if set_piece else getattr(action, "rotation_s", 0.0)
         if turn > 0.0:

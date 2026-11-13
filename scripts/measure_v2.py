@@ -461,6 +461,10 @@ def report(c: Collector, detail: bool = False) -> dict:
     held = max(1, k["mémoire : décisions avec un adversaire non vu"])
     out["mémoire : âge de la dernière vue des adversaires non vus, porteur (s)"] = k["mémoire : âge de la dernière vue (somme, s)"] / held
     out["mémoire : erreur de position perçue des adversaires non vus, porteur (m)"] = k["mémoire : erreur moyenne (somme, m)"] / held
+    out["mémoire : fantômes perçus par décision (adversaires perçus avec plus de 4 s de retard et 10 m d'erreur)"] = (
+        k["mémoire : fantômes (somme)"] / max(1, k["vision : décisions"]))
+    out["mémoire : décisions avec un fantôme (part)"] = (
+        k["mémoire : décisions avec un fantôme (plus de 4 s, plus de 10 m)"] / max(1, k["vision : décisions"]))
     out["mémoire : erreur maximale, porteur (m)"] = c.peak["mémoire : erreur maximale du porteur (m)"]
     received = max(1, k["mémoire : réceptions avec un adversaire non vu"])
     out["mémoire : réceptions avec un adversaire non vu (part)"] = (

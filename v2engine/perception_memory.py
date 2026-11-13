@@ -1,7 +1,7 @@
 """Mémoire de perception (ticket v2-realisme/08b) : chaque joueur garde, pour chacun des autres, la dernière position et
 la dernière vitesse VUES (dans son cône, `vision.seen_by`, 08a) avec l'instant ; la position qu'il en perçoit est
-extrapolée de cette observation. Calculée et tracée, sans effet sur le jeu dans ce ticket (décisions sur le monde perçu :
-08d ; rotations de tête qui rafraîchissent la mémoire : scan, 08c).
+extrapolée de cette observation. Calculée et tracée au 08b, sans effet sur le jeu ; depuis le 08d elle nourrit la
+décision du porteur (`perceived_opponents`) ; les tours de tête (scan, 08c) la rafraîchissent.
 
 Constantes validées par le propriétaire (13/11/2026, « ok constantes ») :
 - Extrapolation : dernière position vue + part × dernière vitesse vue × âge. La part est celle de l'Anticipation déjà
@@ -16,13 +16,13 @@ Constantes validées par le propriétaire (13/11/2026, « ok constantes ») :
   joueur absent de la mémoire (arrivé après) est connu à sa première apparition.
 - Mise à jour à chaque tick, pour les 22 joueurs.
 Chiffres réels (durée de la mémoire visuelle d'un footballeur pour des positions mobiles) : non trouvés ; ce sont des choix
-de modèle, à recaler au 08c et au 08d.
+de modèle, à recaler avec la calibration provisoire (18d).
 """
 
 from __future__ import annotations
 
 from collections.abc import Collection
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from v2engine.decision import anticipation_share
 from v2engine.geometry import Vec2, clamp_to_pitch
@@ -31,6 +31,10 @@ from v2engine.vision import seen_by
 
 EXTRAPOLATION_HORIZON_S = 2.0
 _NOW_S = 1e-9  # une observation de cet instant est une vue : âge nul
+# Seuils de MESURE seulement (ticket v2-realisme/08d), aucun effet : une position perçue vieille et très fausse (le « fantôme »
+# du 08b, réserve A2 de l'expert) ; ni constante produit ni plafond de confiance.
+STALE_AGE_S = 4.0
+STALE_ERROR_M = 10.0
 
 
 @dataclass(frozen=True)
@@ -41,6 +45,7 @@ class MemoryReading:
     age_mean_s: float = 0.0
     error_mean_m: float = 0.0
     error_max_m: float = 0.0
+    stale: int = 0  # parmi eux, ceux perçus avec plus de `STALE_AGE_S` de retard et plus de `STALE_ERROR_M` d'erreur
 
 
 class PerceptionMemory:
@@ -84,6 +89,22 @@ class PerceptionMemory:
         reach = (anticipation_share(observer) if share is None else share) * age
         return clamp_to_pitch(Vec2(x + vx * reach, y + vy * reach))
 
+    def perceived_opponents(self, observer: PlayerState, opponents: list[PlayerState], now_s: float,
+                            real: str | None = None) -> list[PlayerState]:
+        """Les `opponents` tels que `observer` les perçoit (ticket v2-realisme/08d) : ceux qu'il voit à cet instant tels
+        quels, les autres à leur position perçue (`perceived_position`) avec la dernière vitesse vue. `real` : nom d'un
+        joueur gardé à sa vraie place (le gardien, que le tireur a devant lui)."""
+        share = anticipation_share(observer)
+        seen = []
+        for other in opponents:
+            _, _, vx, vy, seen_s = self._seen[observer.name][other.name]
+            if other.name == real or now_s - seen_s <= _NOW_S:
+                seen.append(other)
+            else:
+                seen.append(replace(other, position=self.perceived_position(observer, other.name, now_s, share),
+                                    velocity=Vec2(vx, vy)))
+        return seen
+
     def error_m(self, observer: PlayerState, observed: PlayerState, now_s: float) -> float:
         """Écart entre la position perçue de `observed` et sa position réelle."""
         return self.perceived_position(observer, observed.name, now_s).distance_to(observed.position)
@@ -99,4 +120,5 @@ class PerceptionMemory:
                 errors.append(self.perceived_position(observer, other.name, now_s, share).distance_to(other.position))
         if not ages:
             return MemoryReading()
-        return MemoryReading(len(ages), sum(ages) / len(ages), sum(errors) / len(errors), max(errors))
+        stale = sum(age > STALE_AGE_S and error > STALE_ERROR_M for age, error in zip(ages, errors))
+        return MemoryReading(len(ages), sum(ages) / len(ages), sum(errors) / len(errors), max(errors), stale)

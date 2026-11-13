@@ -1,0 +1,8 @@
+8 matchs de 90 min, 70 s de calcul par match
+Decisions | décisions | meilleur choix suivi | courbe validée | écart médian des erreurs
+  0-40    |       258 |               56.2% |          67.5% | 0.4416
+ 40-55    |      1329 |               65.9% |          69.9% | 0.4057
+ 55-65    |      4376 |               72.8% |          70.1% | 0.4094
+ 65-75    |      9556 |               73.5% |          70.9% | 0.3466
+ 75-100   |      5596 |               79.2% |          73.9% | 0.3054
+Choix faits : dribble 63.1%, pass 35.6%, shot 1.3%

@@ -38,3 +38,5 @@ Temps machine, non compté : suite complète (environ 40 min) ; mesure 50 matchs
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+
+**Repris du 08d (réserve A1, acceptée le 13/11/2026).** Le taux de meilleur choix est passé sous la courbe validée du ticket 33 avec la décision sur le monde perçu (8 matchs : 49,8 % pour 67,5 %, 61,4 % pour 69,9 %, 66,4 % pour 70,1 %, 67,2 % pour 70,9 %, 74,6 % pour 73,9 %) ; le recalage de l'erreur propre de Decisions est prévu avec la calibration provisoire `v2-realisme/18d` : vérifier ici qu'il est fait (écart à la courbe sous environ 2 points par tranche, `scripts/measure_v2_meilleur_choix.py`).

@@ -799,6 +799,8 @@ class Collector:
                 self.count["mémoire : décisions avec un adversaire non vu"] += 1
                 self.count["mémoire : âge de la dernière vue (somme, s)"] += d.memory_age_s
                 self.count["mémoire : erreur moyenne (somme, m)"] += d.memory_error_mean_m
+                self.count["mémoire : décisions avec un fantôme (plus de 4 s, plus de 10 m)"] += d.memory_stale > 0
+                self.count["mémoire : fantômes (somme)"] += d.memory_stale
                 self.peak["mémoire : erreur maximale du porteur (m)"] = max(
                     self.peak["mémoire : erreur maximale du porteur (m)"], d.memory_error_max_m)
             if d.action in ("pass", "shot"):

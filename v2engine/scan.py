@@ -1,6 +1,7 @@
 """Scan visuel (ticket v2-realisme/08c) : un joueur tourne brièvement la tête pour voir hors de son cône (08a) et
-rafraîchir sa mémoire de perception (08b). Calculé et tracé, sans effet sur le jeu dans ce ticket : le « il ne suit plus
-le ballon » n'a pas encore de consommateur (décisions sur le monde perçu : 08d ; défenseur et appels dans le dos : 08e).
+rafraîchir sa mémoire de perception (08b). Calculé et tracé au 08c, sans effet sur le jeu ; depuis le 08d la mémoire qu'il
+rafraîchit nourrit la décision du porteur (le « il ne suit plus le ballon » reste sans consommateur : défenseur et appels
+dans le dos, 08e).
 
 Constantes validées par le propriétaire (13/11/2026, « fais tout dans le même ticket » après la proposition) :
 - Un scan dure `SCAN_DURATION_S` (0,3 s) ; pendant ce temps il voit tout autour de lui (cône de 100° + environ 80° de

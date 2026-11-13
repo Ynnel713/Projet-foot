@@ -126,7 +126,9 @@ def test_same_seed_gives_the_same_scans() -> None:
     assert run() == run() and len(run()) > 0
 
 
-def test_a_simulated_match_traces_scans_without_changing_the_game(monkeypatch) -> None:
+def test_a_simulated_match_traces_scans_and_the_memory_they_refresh_feeds_the_decision(monkeypatch) -> None:
+    """Depuis le ticket 08d, la mémoire que les scans rafraîchissent nourrit la décision du porteur : sans aucun scan,
+    il juge sur des positions plus vieilles et ne joue plus pareil (au 08c, ce test affirmait le contraire)."""
     clubs = load_clubs(CLUBS_PATH, "Ligue 1")
     outcomes = []
     for scanning in (True, False):
@@ -139,5 +141,7 @@ def test_a_simulated_match_traces_scans_without_changing_the_game(monkeypatch) -
     with_scans, without = outcomes
     assert len(with_scans.scans) > 0 and len(without.scans) == 0
     assert {s.team for s in with_scans.scans} == {"home", "away"} and any(s.has_ball for s in with_scans.scans)
-    assert [(d.player, d.action, d.target) for d in with_scans.decisions] == [(d.player, d.action, d.target) for d in without.decisions]
-    assert with_scans.events == without.events
+    assert len(with_scans.decisions) > 0 and len(without.decisions) > 0
+    # sans scan, la mémoire du porteur vieillit davantage
+    unseen_age = lambda t: [d.memory_age_s for d in t.decisions if d.unseen_opponents > 0]
+    assert sum(unseen_age(without)) / len(unseen_age(without)) > sum(unseen_age(with_scans)) / len(unseen_age(with_scans))
