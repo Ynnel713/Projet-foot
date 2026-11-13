@@ -29,7 +29,7 @@ from v2engine.duel import foul_severity, resolve_tackle, should_attempt_tackle
 from v2engine.flux import ARBITRAGE, PERCEPTION, TIR, seed_streams
 from v2engine.formation import initial_positions
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch, in_penalty_area
-from v2engine.movement import PlayerState, step
+from v2engine.movement import FACING_RUN_SPEED_MPS, PlayerState, step
 from v2engine.cerveau import GOAL_CENTER_Y, OPPONENT_GOAL, Intention, think
 from v2engine.perception_memory import MemoryReading, PerceptionMemory
 from v2engine.scan import ScanTracker
@@ -53,7 +53,7 @@ from v2engine.situation import SituationTracker
 from v2engine.transition import TransitionPlay
 from v2engine.trace import (BallSnapshot, DecisionRecord, FoulEvent, MatchTrace, OffsideEvent, PlayerSnapshot, ShotEvent,
                             ReceptionEvent, RestartEvent, SituationRecord)
-from v2engine.reception import facing_to_goal_deg, open_facing, reception_type
+from v2engine.reception import DOS_AU_JEU, blind_reception, facing_to_goal_deg, open_facing, reception_type
 
 # But adverse d'une équipe, par convention de ce moteur (voir `formation.initial_positions`,
 # D-V03 : domicile attaque vers x=PITCH_LENGTH_M, extérieur vers x=0).
@@ -639,7 +639,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                 return _execute(ball, holder, action, players, rivals, goal, keeper, now_s, False, fouls, shots,
                                 lost=False, memory=memory)
             _orient(holder, first[3], first[2])  # il contrôle finalement : orienté ou non, tiré à la réception (31b)
-            ball.next_decision_s = now_s + reception_delay_s(holder, rivals, first[2])
+            ball.next_decision_s = now_s + reception_delay_s(holder, rivals, first[2], first[4])
             ball.receiving = True
             return None
         ball.plan = None
@@ -932,27 +932,31 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
             first_time = intended and not aerial and player.poste != "GK" and thinks_one_touch(player, opponents)
             # contrôle orienté (ticket v2-collectif/31b), tiré à la réception ; appliqué s'il contrôle (pas de première)
             oriented = orients_control(player, ball.velocity)  # ballon dur : moins souvent orienté (31c)
+            kind = reception_type(player.facing, player.position, player.team)  # au contact, avant d'orienter (07d)
+            running = player.velocity.length() >= FACING_RUN_SPEED_MPS  # lancé dans sa course : pas « à l'aveugle »
+            blind = blind_reception(player.facing, ball.velocity, running)  # ballon dans le dos (07d, A1 du 07c)
+            timed_kind = DOS_AU_JEU if blind else kind  # type qui règle la durée du contrôle
             if receptions is not None:  # type de réception, tracé (ticket v2-realisme/07c)
                 seen_back = memory.reading(player, opponents, now_s) if memory is not None else MemoryReading()  # 08b
                 receptions.append(ReceptionEvent(
                     minute=now_s / 60.0, team=player.team, player=player.name, poste=player.poste,
-                    kind=reception_type(player.facing, player.position, player.team),
+                    kind=kind,
                     facing_goal_deg=facing_to_goal_deg(player.facing, player.position, player.team),
                     ball_facing_deg=_ball_facing_deg(player.facing, ball.velocity),
                     origin=received, intended=intended, memory_age_s=seen_back.age_mean_s,
                     memory_error_mean_m=seen_back.error_mean_m, memory_error_max_m=seen_back.error_max_m,
-                    oriented=oriented, first_time=first_time, ball_speed_mps=ball.velocity.length()))
+                    oriented=oriented, first_time=first_time, ball_speed_mps=ball.velocity.length(), blind=blind))
             ball.holder = player.name
             ball.came_from = (player.name, received, player.position)
             ball.hesitation.pop(player.name, None)  # il a le ballon : il joue, il n'attend plus
             ball.position = player.position
             ball.one_touch = None
             if first_time:
-                ball.one_touch = (player.name, now_s + 2.0 * DECISION_INTERVAL_S, oriented, ball.velocity)
+                ball.one_touch = (player.name, now_s + 2.0 * DECISION_INTERVAL_S, oriented, ball.velocity, timed_kind)
                 ball.next_decision_s = now_s
             else:
                 _orient(player, ball.velocity, oriented)
-                ball.next_decision_s = now_s + reception_delay_s(player, opponents, oriented)
+                ball.next_decision_s = now_s + reception_delay_s(player, opponents, oriented, timed_kind)
             ball.receiving = True
             ball.velocity = Vec2(0.0, 0.0)
         else:

@@ -74,6 +74,7 @@ def test_oriented_control_turns_the_body_towards_the_play_keeping_the_ball_in_fr
 
 
 def test_plain_control_keeps_the_body_and_takes_longer(monkeypatch) -> None:
+    """Non orienté, dos au jeu au contact : 3,22 s x 1,35 (ticket v2-realisme/07d)."""
     receiver, ball = _receive(monkeypatch, False)
     assert receiver.facing == WEST
-    assert ball.next_decision_s == pytest.approx(10.0 + 3.22)
+    assert ball.next_decision_s == pytest.approx(10.0 + 3.22 * 1.35)

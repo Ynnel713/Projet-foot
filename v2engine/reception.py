@@ -20,6 +20,10 @@ DE_FACE, DE_PROFIL, DOS_AU_JEU = "de face", "de profil", "dos au jeu"
 FACE_MAX_DEG = 60.0
 BACK_MIN_DEG = 120.0
 OPEN_CONE_DEG = 90.0
+# Contrôle à l'aveugle (ticket v2-realisme/07d, condition A1 de l'expert au 07c, correction validée par le propriétaire le
+# 13/11/2026) : ballon reçu à plus de 90° du cap par un joueur non lancé (sous `movement.FACING_RUN_SPEED_MPS`) : compté
+# dos au jeu pour la durée du contrôle, quel que soit le type de réception (aucune constante nouvelle).
+BLIND_MIN_DEG = 90.0
 
 
 def attacking_goal(team: str) -> Vec2:
@@ -45,6 +49,16 @@ def reception_type(facing: Vec2, position: Vec2, team: str) -> str:
     """De face, de profil ou dos au jeu, selon l'angle entre le cap et le but adverse."""
     angle = facing_to_goal_deg(facing, position, team)
     return DE_FACE if angle <= FACE_MAX_DEG else DOS_AU_JEU if angle > BACK_MIN_DEG else DE_PROFIL
+
+
+def blind_reception(facing: Vec2, ball_velocity: Vec2, running: bool) -> bool:
+    """Contrôle à l'aveugle (ticket v2-realisme/07d, condition A1 du 07c) : le ballon arrive à plus de 90° du cap (dans
+    son dos) d'un joueur qui n'est pas lancé dans sa course ; le receveur lancé (passe en profondeur prise dans la course)
+    n'est pas concerné. Ballon arrêté : jamais."""
+    if running or ball_velocity.length() < 1e-9:
+        return False
+    coming_from = ball_velocity * -1.0
+    return _angle_deg(facing, coming_from) > BLIND_MIN_DEG
 
 
 def open_facing(position: Vec2, ball_position: Vec2, team: str, current: Vec2) -> Vec2:

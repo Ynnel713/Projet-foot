@@ -69,9 +69,9 @@ class BallState:
     # receveur à sa première décision, puis effacé à toute décision d'un porteur.
     plan: tuple[str, str, float] | None = None
     # Jeu à une touche (ticket v2-collectif/31a) : (receveur qui pense à jouer de première, instant limite, contrôle
-    # orienté tiré à la réception (31b), vitesse du ballon reçu). Posé à la réception d'une passe au sol qui lui est
-    # destinée, lu à sa décision du tick suivant, puis effacé.
-    one_touch: tuple[str, float, bool, Vec2] | None = None
+    # orienté tiré à la réception (31b), vitesse du ballon reçu, type de réception au contact (v2-realisme/07d)). Posé à
+    # la réception d'une passe au sol qui lui est destinée, lu à sa décision du tick suivant, puis effacé.
+    one_touch: tuple[str, float, bool, Vec2, str] | None = None
     # Appelants choisis (ticket v2-realisme/02g) : nom -> (instant du choix, dernier instant où il l'était encore). Sert
     # au délai avant l'appel (Off the Ball) et à la stabilité du choix : un appelant garde sa place tant qu'il reste
     # éligible, sans nouveau délai (`cerveau.CALLER_MEMORY_S`).

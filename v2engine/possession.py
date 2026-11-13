@@ -14,6 +14,7 @@ from collections.abc import Sequence
 from v2engine.attributes import duel_probability, success_probability
 from v2engine.condition import effective_rating
 from v2engine.flux import PASSE
+from v2engine.reception import DE_FACE, DE_PROFIL, DOS_AU_JEU
 from v2engine.geometry import Vec2
 from v2engine.movement import PlayerState
 
@@ -250,6 +251,14 @@ _ORIENTED_POINTS: tuple[tuple[float, float], ...] = ((11.0, 0.25), (55.0, 0.50),
 # `MAX_PASS_MPS`) ; Technique (geste difficile, contrôle en pleine course) en compense une part : 0,2 à 11, 0,5 à 55,
 # 0,8 à 99 (linéaire, non trouvée). Ballon à 6 m/s ou moins : rien ne change. Cumul First Touch x Technique (A17).
 _HARD_BALL_TECHNIQUE_POINTS: tuple[tuple[float, float], ...] = ((11.0, 0.2), (55.0, 0.5), (99.0, 0.8))
+# Orientation du corps au contact (ticket v2-realisme/07d, facteurs proposés et validés par le propriétaire le
+# 13/11/2026) : un contrôle NON orienté dure plus ou moins selon le type de réception (07c) ; de profil, corps ouvert,
+# x 0,85 ; de face (corps vers le but adverse, ballon souvent reçu de dos), x 0,95 ; dos au jeu, x 1,35. Facteur moyen
+# pondéré 1,01 sur la répartition mesurée (60 % de face, 19 % de profil, 21 % dos au jeu, 4 matchs) : rythme gardé.
+# Un contrôle orienté (31b) est le geste qui se retourne : il n'en dépend pas (pas de double comptage). Ballon reçu dans
+# le dos d'un joueur non lancé (contrôle à l'aveugle, `reception.blind_reception`) : compté dos au jeu, sans renormaliser
+# (option validée le 13/11/2026 : moyenne attendue d'environ 1,11). Chiffres réels : non trouvés.
+RECEPTION_KIND_FACTORS: dict[str, float] = {DE_PROFIL: 0.85, DE_FACE: 0.95, DOS_AU_JEU: 1.35}
 _KEEPER_MIN_RECEPTION_S = 3.5
 # Pendant ce temps, il avance à 40 % de sa vitesse max (~3 m/s pour un joueur moyen) : réel ~2,9 m/s à la
 # réception, Ligue 1 (UCLan, eprint 12267) ; validé le 25/10/2026.
@@ -286,15 +295,19 @@ def orients_control(player: PlayerState, ball_velocity: Vec2 = Vec2(0.0, 0.0)) -
     return PASSE.random() < oriented_control_probability(player, ball_velocity)
 
 
-def reception_delay_s(player: PlayerState, opponents: Sequence[PlayerState] = (), oriented: bool | None = None) -> float:
+def reception_delay_s(player: PlayerState, opponents: Sequence[PlayerState] = (), oriented: bool | None = None,
+                      kind: str | None = None) -> float:
     """Temps entre la prise du ballon et la première décision (v2-socle/06) : orienté ou non (ticket v2-collectif/31b) ;
-    `None` (ballon gagné au tacle, remise en jeu, gardien...) : sa moyenne attendue, sans tirage. La pression le réduit
-    jusqu'à moitié au contact ; un gardien sans pression ne joue jamais avant 3,5 s."""
+    `None` (ballon gagné au tacle, remise en jeu, gardien...) : sa moyenne attendue, sans tirage. Non orienté, selon le
+    type de réception au contact `kind` (ticket v2-realisme/07d). La pression le réduit jusqu'à moitié au contact ; un
+    gardien sans pression ne joue jamais avant 3,5 s."""
     if oriented is None:
         share = oriented_control_probability(player)
         factor = share * ORIENTED_FACTOR + (1.0 - share) * UNORIENTED_FACTOR
+    elif oriented:
+        factor = ORIENTED_FACTOR
     else:
-        factor = ORIENTED_FACTOR if oriented else UNORIENTED_FACTOR
+        factor = UNORIENTED_FACTOR * (RECEPTION_KIND_FACTORS[kind] if kind is not None else 1.0)
     calm = RECEPTION_CALM_S * factor
     if player.poste == "GK":
         calm = max(calm, _KEEPER_MIN_RECEPTION_S)

@@ -56,13 +56,14 @@ def test_receiver_decides_once_his_reception_time_is_over(monkeypatch) -> None:
     receiver = _player("R", attributes={"First Touch": 55})
     ball = BallState(position=receiver.position, velocity=Vec2(0.0, 0.0))
     monkeypatch.setattr("v2engine.match.attempt_control", lambda player, *args: True)
-    monkeypatch.setattr("v2engine.match.orients_control", lambda player, *args: False)  # non orienté (31b) : 3,22 s
+    # non orienté (31b) : 3,22 s ; reçu de face (cap vers le but adverse par défaut), x 0,95 (ticket v2-realisme/07d)
+    monkeypatch.setattr("v2engine.match.orients_control", lambda player, *args: False)
     _step_ball(ball, 0.1, [receiver], now_s=10.0)
-    assert ball.receiving and math.isclose(ball.next_decision_s, 13.22)
+    assert ball.receiving and math.isclose(ball.next_decision_s, 10.0 + 3.22 * 0.95)
     monkeypatch.setattr("v2engine.match.choose_action", lambda *args: type("A", (), {"kind": "dribble"})())
     monkeypatch.setattr("v2engine.match.dribble_lost", lambda *args, **kwargs: False)  # ticket 04a : pas de perte tirée ici
-    _step_ball(ball, 0.1, [receiver], now_s=13.22)
-    assert not ball.receiving and math.isclose(ball.next_decision_s, 13.72)
+    _step_ball(ball, 0.1, [receiver], now_s=10.0 + 3.22 * 0.95)
+    assert not ball.receiving and math.isclose(ball.next_decision_s, 10.0 + 3.22 * 0.95 + 0.5)
 
 
 def test_holder_moves_at_control_pace_while_receiving_then_at_dribble_pace() -> None:

@@ -445,6 +445,7 @@ class Collector:
         self.hi_first = self.hi_last = 0.0
         self.holder: str | None = None
         self.holder_since = 0.0
+        self.holds: dict[tuple[str, float], float] = {}  # (porteur, début arrondi) -> durée (ticket v2-realisme/07d)
         self.team: str | None = None  # équipe en possession (dernier porteur)
         self.team_since = 0.0
         self.team_passes = 0
@@ -829,8 +830,23 @@ class Collector:
         """Mémoire du receveur sur les adversaires qu'il ne voit pas à la réception (ticket v2-realisme/08b) ; un joueur
         qui les voit tous ne compte pas (âge nul)."""
         for r in receptions:
+            # temps de possession individuelle par type de réception (ticket v2-realisme/07d) : la possession du joueur
+            # qui commence au tick de sa réception ; hors receveurs qui pensent à jouer de première
+            held = self.holds.get((r.player, round(r.minute * 60.0, 2)))
+            if not r.first_time:  # appariement réception / possession (réserve A4 de l'expert, 07d)
+                self.count["possession par réception : contrôles"] += 1
+                self.count["possession par réception : contrôles appariés"] += held is not None
+            if held is not None and not r.first_time:
+                groups = (r.kind, f"{r.kind}, {'orienté' if r.oriented else 'non orienté'}") + (
+                    ("à l'aveugle", f"à l'aveugle, {'orienté' if r.oriented else 'non orienté'}") if r.blind else ())
+                for group in groups:
+                    self.count[f"possession par réception : {group} : réceptions"] += 1
+                    self.count[f"possession par réception : {group} : durée (somme, s)"] += held
             if not r.first_time:  # contrôle orienté (ticket v2-collectif/31b), hors receveurs qui pensent à jouer de première
                 self.count["contrôle orienté : réceptions"] += 1
+                self.count["contrôle à l'aveugle : réceptions"] += r.blind  # ticket v2-realisme/07d
+                self.count["contrôle à l'aveugle : non orientés"] += r.blind and not r.oriented
+                self.count["contrôle : non orientés"] += not r.oriented
                 self.count["contrôle orienté : orientés"] += r.oriented
                 if r.ball_speed_mps > HARD_BALL_MPS:  # ballon dur (ticket v2-collectif/31c)
                     self.count["contrôle orienté : réceptions de ballon dur"] += 1
@@ -1177,6 +1193,7 @@ class Collector:
     def _close_possession(self, now_s):
         if self.holder is not None:
             self.stats["temps par possession de joueur (s)"].add(now_s - self.holder_since)
+            self.holds[(self.holder, round(self.holder_since, 2))] = now_s - self.holder_since
         if self.team is not None:
             self.stats["possession d'équipe (s)"].add(now_s - self.team_since)
             self.stats["passes par possession"].add(self.team_passes)
@@ -1199,6 +1216,7 @@ class Collector:
             return
         if self.holder is not None:
             self.stats["temps par possession de joueur (s)"].add(now_s - self.holder_since)
+            self.holds[(self.holder, round(self.holder_since, 2))] = now_s - self.holder_since
         self.holder, self.holder_since = holder, now_s
         if holder is None:
             return

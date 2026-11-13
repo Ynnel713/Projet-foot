@@ -580,6 +580,20 @@ def report(c: Collector, detail: bool = False) -> dict:
     out["marquage : erreur maximale (m)"] = c.peak["marquage : erreur maximale (m)"]
     out["marquage : marqueur différent de celui des vraies positions (part des choix)"] = (
         k["marquage : marqueur différent de celui des vraies positions"] / max(1, k["marquage : choix du marqueur"]))
+    # temps de possession individuelle par type de réception (ticket v2-realisme/07d)
+    for key in sorted(k):
+        if key.startswith("possession par réception : ") and key.endswith(" : réceptions"):
+            group = key.removeprefix("possession par réception : ").removesuffix(" : réceptions")
+            out[f"temps par possession de joueur, réception {group} (s)"] = (
+                k[f"possession par réception : {group} : durée (somme, s)"] / max(1, k[key]))
+            out[f"réceptions {group} (part des contrôles appariés)"] = k[key] / max(
+                1, sum(k[f"possession par réception : {kind} : réceptions"] for kind in ("de face", "de profil", "dos au jeu")))
+
+    # contrôle à l'aveugle (ticket v2-realisme/07d) ; appariement de l'indicateur par type (réserve A4)
+    out["contrôles à l'aveugle (part des contrôles non orientés)"] = (
+        k["contrôle à l'aveugle : non orientés"] / max(1, k["contrôle : non orientés"]))
+    out["temps par possession par réception : contrôles appariés (part)"] = (
+        k["possession par réception : contrôles appariés"] / max(1, k["possession par réception : contrôles"]))
     # contrôle orienté (ticket v2-collectif/31b)
     out["contrôles orientés (part des contrôles)"] = k["contrôle orienté : orientés"] / max(1, k["contrôle orienté : réceptions"])
     # ballon dur (ticket v2-collectif/31c)

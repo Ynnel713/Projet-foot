@@ -1,0 +1,54 @@
+avant : 50 matchs ; après : 50 matchs
+  contrôles à l'aveugle (part des contrôles non orientés)             nan      0.226      +nan
+  temps par possession par réception : contrôles appariés (part)        nan      1.000      +nan
+  contrôles orientés (part des contrôles)                           0.559      0.562    +0.003
+  contrôles de ballon dur, plus de 12 m/s (part des contrôles)      0.114      0.116    +0.001
+  contrôles orientés, ballon dur (part)                             0.493      0.498    +0.005
+  passes de première (part des passes décidées)                     0.097      0.097    -0.000
+  passes de première par match                                    106.200    104.040    -2.160
+  passes de première : non perdues (part)                           0.898      0.905    +0.007
+  passes de première : chance évaluée (part)                        0.896      0.898    +0.002
+  passes par match                                               1111.980   1091.020   -20.960
+  passes par minute de jeu effectif                                14.996     14.723    -0.273
+  passes réussies (part)                                            0.810      0.810    +0.000
+  passes par possession                                             3.973      4.000    +0.028
+  temps par possession de joueur (s)                                2.371      2.433    +0.062
+  possession d'équipe (s)                                          20.673     21.211    +0.538
+  une-deux par équipe et par match                                  2.280      1.960    -0.320
+  troisième homme par équipe et par match                          39.190     37.960    -1.230
+  retours au passeur en 3 s (part des passes réussies)              0.060      0.058    -0.002
+  talonnades par match                                              4.980      4.860    -0.120
+  pertes de balle par match                                       274.400    267.140    -7.260
+  tirs par équipe                                                  18.320     18.640    +0.320
+  buts par match                                                    3.480      3.620    +0.140
+  xG neutre par match                                               3.634      3.854    +0.219
+  face-à-face : tirs par match                                     15.520     15.980    +0.460
+  rotation : passes décidés avec rotation (part)                    0.497      0.493    -0.004
+  rotation : passes, durée moyenne quand il y en a une (s)          0.114      0.114    -0.000
+  temps de calcul par match (s)                                   102.428    131.493   +29.065
+
+Temps par possession de joueur par type de réception (après seulement : indicateur nouveau)
+  réceptions de face (part des contrôles appariés)                               0.609
+  réceptions de face, non orienté (part des contrôles appariés)                  0.265
+  réceptions de face, orienté (part des contrôles appariés)                      0.344
+  réceptions de profil (part des contrôles appariés)                             0.196
+  réceptions de profil, non orienté (part des contrôles appariés)                0.084
+  réceptions de profil, orienté (part des contrôles appariés)                    0.112
+  réceptions dos au jeu (part des contrôles appariés)                            0.195
+  réceptions dos au jeu, non orienté (part des contrôles appariés)               0.089
+  réceptions dos au jeu, orienté (part des contrôles appariés)                   0.106
+  réceptions à l'aveugle (part des contrôles appariés)                           0.235
+  réceptions à l'aveugle, non orienté (part des contrôles appariés)              0.099
+  réceptions à l'aveugle, orienté (part des contrôles appariés)                  0.135
+  temps par possession de joueur, réception de face (s)                          2.763
+  temps par possession de joueur, réception de face, non orienté (s)             3.746
+  temps par possession de joueur, réception de face, orienté (s)                 2.008
+  temps par possession de joueur, réception de profil (s)                        2.394
+  temps par possession de joueur, réception de profil, non orienté (s)           3.222
+  temps par possession de joueur, réception de profil, orienté (s)               1.773
+  temps par possession de joueur, réception dos au jeu (s)                       2.453
+  temps par possession de joueur, réception dos au jeu, non orienté (s)          3.620
+  temps par possession de joueur, réception dos au jeu, orienté (s)              1.468
+  temps par possession de joueur, réception à l'aveugle (s)                      2.971
+  temps par possession de joueur, réception à l'aveugle, non orienté (s)         4.356
+  temps par possession de joueur, réception à l'aveugle, orienté (s)             1.959

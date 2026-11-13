@@ -1,0 +1,46 @@
+avant : 50 matchs ; après : 50 matchs
+  contrôles orientés (part des contrôles)                           0.559      0.561    +0.002
+  contrôles de ballon dur, plus de 12 m/s (part des contrôles)      0.114      0.113    -0.001
+  contrôles orientés, ballon dur (part)                             0.493      0.499    +0.007
+  passes de première (part des passes décidées)                     0.097      0.096    -0.002
+  passes de première par match                                    106.200    104.940    -1.260
+  passes de première : non perdues (part)                           0.898      0.904    +0.006
+  passes de première : chance évaluée (part)                        0.896      0.898    +0.002
+  passes par match                                               1111.980   1121.500    +9.520
+  passes par minute de jeu effectif                                14.996     15.110    +0.115
+  passes réussies (part)                                            0.810      0.811    +0.001
+  passes par possession                                             3.973      3.988    +0.015
+  temps par possession de joueur (s)                                2.371      2.343    -0.028
+  possession d'équipe (s)                                          20.673     20.628    -0.045
+  une-deux par équipe et par match                                  2.280      2.210    -0.070
+  troisième homme par équipe et par match                          39.190     39.480    +0.290
+  retours au passeur en 3 s (part des passes réussies)              0.060      0.058    -0.002
+  talonnades par match                                              4.980      4.720    -0.260
+  pertes de balle par match                                       274.400    275.120    +0.720
+  tirs par équipe                                                  18.320     18.810    +0.490
+  buts par match                                                    3.480      3.860    +0.380
+  xG neutre par match                                               3.634      3.813    +0.179
+  face-à-face : tirs par match                                     15.520     16.620    +1.100
+  rotation : passes décidés avec rotation (part)                    0.497      0.494    -0.003
+  rotation : passes, durée moyenne quand il y en a une (s)          0.114      0.114    +0.000
+  temps de calcul par match (s)                                   102.428    102.101    -0.327
+
+Temps par possession de joueur par type de réception (après seulement : indicateur nouveau)
+  réceptions de face (part des contrôles appariés)                               0.616
+  réceptions de face, non orienté (part des contrôles appariés)                  0.270
+  réceptions de face, orienté (part des contrôles appariés)                      0.347
+  réceptions de profil (part des contrôles appariés)                             0.195
+  réceptions de profil, non orienté (part des contrôles appariés)                0.084
+  réceptions de profil, orienté (part des contrôles appariés)                    0.111
+  réceptions dos au jeu (part des contrôles appariés)                            0.189
+  réceptions dos au jeu, non orienté (part des contrôles appariés)               0.086
+  réceptions dos au jeu, orienté (part des contrôles appariés)                   0.103
+  temps par possession de joueur, réception de face (s)                          2.662
+  temps par possession de joueur, réception de face, non orienté (s)             3.504
+  temps par possession de joueur, réception de face, orienté (s)                 2.007
+  temps par possession de joueur, réception de profil (s)                        2.205
+  temps par possession de joueur, réception de profil, non orienté (s)           2.816
+  temps par possession de joueur, réception de profil, orienté (s)               1.745
+  temps par possession de joueur, réception dos au jeu (s)                       2.480
+  temps par possession de joueur, réception dos au jeu, non orienté (s)          3.639
+  temps par possession de joueur, réception dos au jeu, orienté (s)              1.513
