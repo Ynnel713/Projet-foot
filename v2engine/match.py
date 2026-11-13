@@ -931,7 +931,7 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
             # dès le tick suivant, et contrôle comme avant si son choix n'est pas une passe sans rotation
             first_time = intended and not aerial and player.poste != "GK" and thinks_one_touch(player, opponents)
             # contrôle orienté (ticket v2-collectif/31b), tiré à la réception ; appliqué s'il contrôle (pas de première)
-            oriented = orients_control(player)
+            oriented = orients_control(player, ball.velocity)  # ballon dur : moins souvent orienté (31c)
             if receptions is not None:  # type de réception, tracé (ticket v2-realisme/07c)
                 seen_back = memory.reading(player, opponents, now_s) if memory is not None else MemoryReading()  # 08b
                 receptions.append(ReceptionEvent(
@@ -941,7 +941,7 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
                     ball_facing_deg=_ball_facing_deg(player.facing, ball.velocity),
                     origin=received, intended=intended, memory_age_s=seen_back.age_mean_s,
                     memory_error_mean_m=seen_back.error_mean_m, memory_error_max_m=seen_back.error_max_m,
-                    oriented=oriented, first_time=first_time))
+                    oriented=oriented, first_time=first_time, ball_speed_mps=ball.velocity.length()))
             ball.holder = player.name
             ball.came_from = (player.name, received, player.position)
             ball.hesitation.pop(player.name, None)  # il a le ballon : il joue, il n'attend plus

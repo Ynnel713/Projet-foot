@@ -245,24 +245,45 @@ RECEPTION_CALM_S = 2.3
 ORIENTED_FACTOR = 0.6
 UNORIENTED_FACTOR = 1.4
 _ORIENTED_POINTS: tuple[tuple[float, float], ...] = ((11.0, 0.25), (55.0, 0.50), (99.0, 0.75))
+# Ballon dur à orienter (ticket v2-collectif/31c, loi proposée et validée par le propriétaire le 13/11/2026) : la chance
+# d'orienter baisse avec la dureté du ballon reçu, (vitesse - 6) / (30 - 6) bornée à [0, 1] (`IDEAL_ARRIVAL_MPS`,
+# `MAX_PASS_MPS`) ; Technique (geste difficile, contrôle en pleine course) en compense une part : 0,2 à 11, 0,5 à 55,
+# 0,8 à 99 (linéaire, non trouvée). Ballon à 6 m/s ou moins : rien ne change. Cumul First Touch x Technique (A17).
+_HARD_BALL_TECHNIQUE_POINTS: tuple[tuple[float, float], ...] = ((11.0, 0.2), (55.0, 0.5), (99.0, 0.8))
 _KEEPER_MIN_RECEPTION_S = 3.5
 # Pendant ce temps, il avance à 40 % de sa vitesse max (~3 m/s pour un joueur moyen) : réel ~2,9 m/s à la
 # réception, Ligue 1 (UCLan, eprint 12267) ; validé le 25/10/2026.
 RECEPTION_SPEED_FACTOR = 0.4
 
 
-def oriented_control_probability(player: PlayerState) -> float:
-    """Chance que son contrôle soit orienté, selon First Touch (ticket v2-collectif/31b)."""
-    note = min(max(effective_rating(player, "First Touch"), _ORIENTED_POINTS[0][0]), _ORIENTED_POINTS[-1][0])
-    for (n0, v0), (n1, v1) in zip(_ORIENTED_POINTS, _ORIENTED_POINTS[1:]):
+def _linear(note: float, points: tuple[tuple[float, float], ...]) -> float:
+    note = min(max(note, points[0][0]), points[-1][0])
+    for (n0, v0), (n1, v1) in zip(points, points[1:]):
         if note <= n1:
             return v0 + (note - n0) / (n1 - n0) * (v1 - v0)
-    return _ORIENTED_POINTS[-1][1]
+    return points[-1][1]
 
 
-def orients_control(player: PlayerState) -> bool:
-    """Tirage (flux passe, contrôle) : son contrôle est-il orienté (ticket v2-collectif/31b) ?"""
-    return PASSE.random() < oriented_control_probability(player)
+def hard_ball_share(ball_velocity: Vec2) -> float:
+    """Dureté du ballon reçu (ticket v2-collectif/31c) : 0 jusqu'à `IDEAL_ARRIVAL_MPS`, 1 à `MAX_PASS_MPS`."""
+    return min(1.0, max(0.0, (ball_velocity.length() - IDEAL_ARRIVAL_MPS) / (MAX_PASS_MPS - IDEAL_ARRIVAL_MPS)))
+
+
+def hard_ball_technique_share(player: PlayerState) -> float:
+    """Part de la gêne d'un ballon dur que Technique compense (ticket v2-collectif/31c)."""
+    return _linear(effective_rating(player, "Technique"), _HARD_BALL_TECHNIQUE_POINTS)
+
+
+def oriented_control_probability(player: PlayerState, ball_velocity: Vec2 = Vec2(0.0, 0.0)) -> float:
+    """Chance que son contrôle soit orienté (ticket v2-collectif/31b) : First Touch, moins la gêne d'un ballon dur que
+    Technique ne compense pas (ticket 31c)."""
+    base = _linear(effective_rating(player, "First Touch"), _ORIENTED_POINTS)
+    return base * (1.0 - hard_ball_share(ball_velocity) * (1.0 - hard_ball_technique_share(player)))
+
+
+def orients_control(player: PlayerState, ball_velocity: Vec2 = Vec2(0.0, 0.0)) -> bool:
+    """Tirage (flux passe, contrôle) : son contrôle est-il orienté (tickets v2-collectif/31b et 31c) ?"""
+    return PASSE.random() < oriented_control_probability(player, ball_velocity)
 
 
 def reception_delay_s(player: PlayerState, opponents: Sequence[PlayerState] = (), oriented: bool | None = None) -> float:

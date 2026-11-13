@@ -44,7 +44,7 @@ def test_receiver_does_not_decide_during_his_reception_time(monkeypatch) -> None
     receiver = _player("R", attributes={"First Touch": 55})
     ball = BallState(position=receiver.position, velocity=Vec2(0.0, 0.0))
     monkeypatch.setattr("v2engine.match.attempt_control", lambda player, *args: True)
-    monkeypatch.setattr("v2engine.match.orients_control", lambda player: True)  # contrôle orienté (31b) : 1,38 s
+    monkeypatch.setattr("v2engine.match.orients_control", lambda player, *args: True)  # contrôle orienté (31b) : 1,38 s
     _step_ball(ball, 0.1, [receiver], now_s=10.0)
     assert ball.holder == "R" and math.isclose(ball.next_decision_s, 11.38)
     monkeypatch.setattr("v2engine.match.choose_action",
@@ -56,7 +56,7 @@ def test_receiver_decides_once_his_reception_time_is_over(monkeypatch) -> None:
     receiver = _player("R", attributes={"First Touch": 55})
     ball = BallState(position=receiver.position, velocity=Vec2(0.0, 0.0))
     monkeypatch.setattr("v2engine.match.attempt_control", lambda player, *args: True)
-    monkeypatch.setattr("v2engine.match.orients_control", lambda player: False)  # non orienté (31b) : 3,22 s
+    monkeypatch.setattr("v2engine.match.orients_control", lambda player, *args: False)  # non orienté (31b) : 3,22 s
     _step_ball(ball, 0.1, [receiver], now_s=10.0)
     assert ball.receiving and math.isclose(ball.next_decision_s, 13.22)
     monkeypatch.setattr("v2engine.match.choose_action", lambda *args: type("A", (), {"kind": "dribble"})())

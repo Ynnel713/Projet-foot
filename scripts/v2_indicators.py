@@ -386,6 +386,9 @@ def open_options(holder: PlayerState, mates: Sequence[PlayerState], opponents: S
     return sum(1 for chance in pass_chances(holder, mates, opponents) if chance >= threshold)
 
 
+HARD_BALL_MPS = 12.0  # ballon dur à la réception, pour la mesure seule (ticket v2-collectif/31c)
+
+
 # --- Accumulation -------------------------------------------------------------------------------------------------
 @dataclass
 class Stat:
@@ -829,6 +832,9 @@ class Collector:
             if not r.first_time:  # contrôle orienté (ticket v2-collectif/31b), hors receveurs qui pensent à jouer de première
                 self.count["contrôle orienté : réceptions"] += 1
                 self.count["contrôle orienté : orientés"] += r.oriented
+                if r.ball_speed_mps > HARD_BALL_MPS:  # ballon dur (ticket v2-collectif/31c)
+                    self.count["contrôle orienté : réceptions de ballon dur"] += 1
+                    self.count["contrôle orienté : ballons durs orientés"] += r.oriented
             self.count["mémoire : réceptions"] += 1
             if r.memory_age_s > 0.0:
                 self.count["mémoire : réceptions avec un adversaire non vu"] += 1

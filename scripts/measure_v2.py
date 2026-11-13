@@ -582,6 +582,11 @@ def report(c: Collector, detail: bool = False) -> dict:
         k["marquage : marqueur différent de celui des vraies positions"] / max(1, k["marquage : choix du marqueur"]))
     # contrôle orienté (ticket v2-collectif/31b)
     out["contrôles orientés (part des contrôles)"] = k["contrôle orienté : orientés"] / max(1, k["contrôle orienté : réceptions"])
+    # ballon dur (ticket v2-collectif/31c)
+    out["contrôles de ballon dur, plus de 12 m/s (part des contrôles)"] = (
+        k["contrôle orienté : réceptions de ballon dur"] / max(1, k["contrôle orienté : réceptions"]))
+    out["contrôles orientés, ballon dur (part)"] = (
+        k["contrôle orienté : ballons durs orientés"] / max(1, k["contrôle orienté : réceptions de ballon dur"]))
     # jeu à une touche (ticket v2-collectif/31a)
     out["passes de première (part des passes décidées)"] = k["une touche : passes décidées"] / max(1, k["rotation : passes décidés"])
     out["passes de première par match"] = k["une touche : passes décidées"] / n

@@ -55,7 +55,7 @@ def test_expected_time_keeps_the_rhythm_and_matches_the_draws() -> None:
 def _receive(monkeypatch, oriented: bool):
     """Receveur au milieu, dos au but adverse (cap vers l'ouest), passe qui arrive de l'ouest (il fait face au ballon)."""
     monkeypatch.setattr("v2engine.match.attempt_control", lambda *args: True)
-    monkeypatch.setattr("v2engine.match.orients_control", lambda p: oriented)
+    monkeypatch.setattr("v2engine.match.orients_control", lambda p, *args: oriented)
     monkeypatch.setattr("v2engine.match.thinks_one_touch", lambda *args: False)
     receiver = replace(_touch(55), facing=WEST)
     ball = BallState(position=Vec2(49.6, 34.0), velocity=Vec2(6.0, 0.0), receiver="R", released_by="Passeur")

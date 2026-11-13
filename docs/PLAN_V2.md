@@ -301,6 +301,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **Contrôle orienté (13/11/2026, ticket `v2-collectif/31b`)** : livré (13/11/2026), validé expert + QC. First Touch règle la chance d'orienter son contrôle (25 / 50 / 75 %) au lieu du temps de réception directement ; orienté, 1,38 s avant la première décision et corps tourné vers le jeu ; non orienté, 3,22 s ; moyenne attendue proche des repères d'avant. Sur 50 matchs : 58,7 % de contrôles orientés ; temps par possession de joueur 2,42 → 2,34 s ; une-deux 1,58 → 2,48 ; passes par match 1 115 → 1 135 (à la 22a) ; buts 3,02 → 3,10.
 
+**Ballon dur et Technique à la réception (13/11/2026, ticket `v2-collectif/31c`)** : livré (13/11/2026), validé expert + QC. Le ticket 31 (première touche) est entièrement livré. Un ballon reçu plus vite que 6 m/s s'oriente moins souvent (dureté jusqu'à 30 m/s) ; Technique compense 0,2 à 0,8 de la gêne ; le temps avant la première décision suit par le contrôle orienté. Sur 50 matchs : 11,4 % de contrôles de ballon dur ; contrôles orientés 58,7 → 55,9 % ; temps par possession de joueur 2,34 → 2,37 s ; passes par match 1 135 → 1 112 ; buts 3,10 → 3,48 (à surveiller).
+
 ### Bloquée par
 
 - Phase 4

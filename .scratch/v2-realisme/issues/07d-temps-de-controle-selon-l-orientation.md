@@ -51,3 +51,5 @@ Temps machine, non compté : suite complète (environ 40 min) ; mesure 50 matchs
 - A3 : hystérésis autour de `movement.FACING_RUN_SPEED_MPS` (réserve A1 du 07a), à faire dès que le cap agit sur le jeu.
 - Mesure : la part de dos au jeu de l'avant-centre (0,4 % au 07c) reste irréaliste tant que le marqueur collé n'empêche pas de se tourner (04i, 08c).
 
+
+**13/11/2026, repris du `v2-collectif/31` (31a à 31c livrés).** Le temps de réception vaut désormais 2,3 s x 0,6 (contrôle orienté) ou x 1,4 (non orienté), la chance d'orienter dépendant de First Touch, de la vitesse du ballon et de Technique (`possession.oriented_control_probability`, `reception_delay_s(..., oriented=)`) ; le contrôle orienté tourne aussitôt le corps vers le jeu (`match._orient`). Ici : ajouter l'effet de l'orientation du corps au moment du contrôle sans repasser par Technique ni par la vitesse du ballon (remarque de l'expert au 31c), et recontrôler les buts par match (3,48 après le 31c, environ 0,9 erreur type au-dessus du 31b).
