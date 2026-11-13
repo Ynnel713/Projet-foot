@@ -54,7 +54,8 @@ def _hook(collector: Collector, clock: dict[str, float], plans: bool = True,
     def pass_velocity(passer, target, *args, **kwargs):
         opponents = args[0] if args else kwargs.get("opponents", ())
         backheel = args[1] if len(args) > 1 else kwargs.get("backheel", False)  # talonnade (ticket v2-realisme/07e)
-        collector.on_pass(passer, target, opponents, restart=restarting["on"], backheel=backheel)
+        one_touch = args[2] if len(args) > 2 else kwargs.get("one_touch", False)  # de première (ticket v2-collectif/31a)
+        collector.on_pass(passer, target, opponents, restart=restarting["on"], backheel=backheel, one_touch=one_touch)
         return real["pass_velocity"](passer, target, *args, **kwargs)
 
     def lane_closed_during_turn(*args, **kwargs):  # passe abandonnée après la rotation (ticket 07e, réserve A1)
@@ -579,6 +580,11 @@ def report(c: Collector, detail: bool = False) -> dict:
     out["marquage : erreur maximale (m)"] = c.peak["marquage : erreur maximale (m)"]
     out["marquage : marqueur différent de celui des vraies positions (part des choix)"] = (
         k["marquage : marqueur différent de celui des vraies positions"] / max(1, k["marquage : choix du marqueur"]))
+    # jeu à une touche (ticket v2-collectif/31a)
+    out["passes de première (part des passes décidées)"] = k["une touche : passes décidées"] / max(1, k["rotation : passes décidés"])
+    out["passes de première par match"] = k["une touche : passes décidées"] / n
+    out["passes de première : non perdues (part)"] = k["une touche : non perdues"] / max(1, k["une touche : passes jouées"])
+    out["passes de première : chance évaluée (part)"] = k["une touche : chance évaluée (somme)"] / max(1, k["une touche : passes jouées"])
     out["talonnades par match"] = k["talonnades"] / n
     out["talonnades : non perdues (part)"] = k["talonnades : non perdues"] / max(1, k["talonnades"])
     out["talonnades : reçues par le receveur visé (part)"] = k["talonnades : reçues par le receveur visé"] / max(1, k["talonnades"])

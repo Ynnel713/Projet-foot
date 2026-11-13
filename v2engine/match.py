@@ -35,7 +35,7 @@ from v2engine.perception_memory import MemoryReading, PerceptionMemory
 from v2engine.scan import ScanTracker
 from v2engine.vision import unseen
 from v2engine.decision import (DECISION_INTERVAL_S, choose_action, dribble_lost, lane_closed_during_turn,
-                               lost_carry_outcome)
+                               lost_carry_outcome, thinks_one_touch)
 from v2engine.defense import DefensiveRoles
 from v2engine.occasion import ChanceTracker
 from v2engine.offside import HESITATION_S, OFFSIDE_OUT_S, offside_at_pass, sees_the_flag_probability
@@ -622,6 +622,25 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                                 memory=memory)
         # plan de passe (ticket v2-collectif/14) : lu par son receveur à sa première décision, effacé à toute décision
         planned = ball.plan[1] if ball.plan is not None and ball.plan[0] == holder.name else None
+        # jeu à une touche (ticket v2-collectif/31a) : il juge ses options tout de suite, ses passes sans rotation comme
+        # jouées de première ; une autre action (conduite, tir, passe après rotation) : il contrôle, comme avant
+        first, ball.one_touch = ball.one_touch, None
+        if first is not None and first[0] == holder.name and now_s <= first[1] and ball.set_piece is None:
+            seen = memory.perceived_opponents(holder, rivals, now_s, keeper.name if keeper else None) \
+                if memory is not None else None
+            if ball.felt is None or ball.felt[0] != holder.name:
+                ball.felt = (holder.name, {})
+            action = choose_action(holder, players, goal, keeper, (modes or {}).get(holder.team), planned,
+                                   ball.felt[1], False, seen, one_touch=True)
+            if action.kind == "pass" and getattr(action, "one_touch", False):
+                ball.plan = None
+                ball.pass_from, ball.rebound, ball.shot_wide = None, False, False
+                _record_decision(decisions, memory, holder, rivals, action, now_s, False)
+                return _execute(ball, holder, action, players, rivals, goal, keeper, now_s, False, fouls, shots,
+                                lost=False, memory=memory)
+            ball.next_decision_s = now_s + reception_delay_s(holder, rivals)
+            ball.receiving = True
+            return None
         ball.plan = None
         # erreur sur les directions de conduite gardée pendant sa possession (ticket 33, A4) ; nouveau porteur, nouvelle
         # idée de l'espace -- ponytail: un joueur qui reperd puis reprend le ballon sans autre porteur entre-temps la garde
@@ -645,19 +664,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                                              and holder.position.distance_to(target.position) > LONG_RESTART_M,
                                              target.name if target is not None else None, action.kind == "shot"))
             _log(ball, now_s, REMISE, r.team, holder.name, r.kind, getattr(getattr(action, "target", None), "name", None))
-        if decisions is not None:
-            target = getattr(action, "target", None)
-            seen_back = memory.reading(holder, rivals, now_s) if memory is not None else MemoryReading()  # 08b, lecture seule
-            decisions.append(DecisionRecord(now_s / 60.0, holder.name, holder.team, action.kind,
-                                            target.name if target is not None else None,
-                                            getattr(action, "considered", 1), getattr(action, "best", True),
-                                            getattr(action, "best_kind", None), getattr(action, "gap", 0.0),
-                                            0.0 if set_piece else getattr(action, "rotation_s", 0.0),
-                                            getattr(action, "backheel", False),
-                                            len(unseen(holder, rivals)), len(unseen(holder, rivals, PRESSURE_RADIUS_M)),
-                                            seen_back.age_mean_s, seen_back.error_mean_m, seen_back.error_max_m,
-                                            seen_back.stale, sum(near.position.distance_to(holder.position) <= PRESSURE_RADIUS_M
-                                                                 for near in rivals)))
+        _record_decision(decisions, memory, holder, rivals, action, now_s, set_piece)
         # il se retourne d'abord (ticket v2-realisme/07e) ; le tireur d'un coup franc s'est placé face à son geste
         turn = 0.0 if set_piece else getattr(action, "rotation_s", 0.0)
         if turn > 0.0:
@@ -672,6 +679,26 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                         lost=action.kind == "dribble" and dribble_lost(holder, rivals), memory=memory)
     return _step_loose_ball(ball, dt, players, now_s, decisions, offsides, modes, restarts, fouls, shots, receptions,
                             memory)
+
+
+def _record_decision(decisions: list[DecisionRecord] | None, memory: PerceptionMemory | None, holder: PlayerState,
+                     rivals: list[PlayerState], action, now_s: float, set_piece: bool) -> None:
+    """Écrit la décision du porteur au journal des décisions (ADR 0001), s'il est tenu."""
+    if decisions is None:
+        return
+    target = getattr(action, "target", None)
+    seen_back = memory.reading(holder, rivals, now_s) if memory is not None else MemoryReading()  # 08b, lecture seule
+    decisions.append(DecisionRecord(now_s / 60.0, holder.name, holder.team, action.kind,
+                                    target.name if target is not None else None,
+                                    getattr(action, "considered", 1), getattr(action, "best", True),
+                                    getattr(action, "best_kind", None), getattr(action, "gap", 0.0),
+                                    0.0 if set_piece else getattr(action, "rotation_s", 0.0),
+                                    getattr(action, "backheel", False),
+                                    len(unseen(holder, rivals)), len(unseen(holder, rivals, PRESSURE_RADIUS_M)),
+                                    seen_back.age_mean_s, seen_back.error_mean_m, seen_back.error_max_m,
+                                    seen_back.stale, sum(near.position.distance_to(holder.position) <= PRESSURE_RADIUS_M
+                                                         for near in rivals),
+                                    getattr(action, "one_touch", False)))
 
 
 def _execute(ball: BallState, holder: PlayerState, action, players: list[PlayerState], rivals: list[PlayerState],
@@ -759,7 +786,8 @@ def _execute(ball: BallState, holder: PlayerState, action, players: list[PlayerS
     if action.kind == "pass":
         backheel = getattr(action, "backheel", False)
         _log(ball, now_s, PASSE, holder.team, holder.name, TALONNADE if backheel else None, action.target.name)
-        ball.velocity = pass_velocity(holder, action.target, [p for p in players if p.team != holder.team], backheel)
+        ball.velocity = pass_velocity(holder, action.target, [p for p in players if p.team != holder.team], backheel,
+                                      getattr(action, "one_touch", False))  # de première (ticket v2-collectif/31a)
         ball.pass_from = holder.position
         ball.holder = None
         ball.released_by = holder.name
@@ -912,6 +940,12 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
             ball.hesitation.pop(player.name, None)  # il a le ballon : il joue, il n'attend plus
             ball.position = player.position
             ball.next_decision_s = now_s + reception_delay_s(player, opponents)
+            # jeu à une touche (ticket v2-collectif/31a) : passe au sol qui lui est destinée, joueur de champ ; il décide
+            # dès le tick suivant, et contrôle comme avant si son choix n'est pas une passe sans rotation
+            ball.one_touch = None
+            if intended and not aerial and player.poste != "GK" and thinks_one_touch(player, opponents):
+                ball.one_touch = (player.name, now_s + 2.0 * DECISION_INTERVAL_S)
+                ball.next_decision_s = now_s
             ball.receiving = True
             ball.velocity = Vec2(0.0, 0.0)
         else:

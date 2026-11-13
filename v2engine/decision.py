@@ -82,6 +82,17 @@ SHOT_FREE_CONE_DEG = 60.0
 # talonnades par match (ordre de grandeur, borne haute StatsBomb : 5,2 passes « Other » par match) ; premier essai à
 # 0,30 / 0,15 / 0,01 : 7,9 par match sur 12 matchs, d'où ces valeurs (réglage du 13/11/2026, par délégation).
 _BACKHEEL_IDEA = (0.06, 0.06, 0.005, 0.2)
+# Jeu à une touche (ticket v2-collectif/31a, valeurs proposées et validées par le propriétaire le 13/11/2026) : à la
+# réception d'une passe au sol qui lui est destinée, le receveur pense à jouer de première selon la moyenne de First
+# Touch et Technique (linéaire ; proposé à 11 -> 8 %, 55 -> 22 %, 99 -> 40 %, niveau calé ensuite comme validé, x 1,75 :
+# 5,2 % puis 9,1 % des passes décidées sur 6 matchs), et plus souvent sous pression (x 1,5 au contact :
+# faute de temps pour contrôler ; la précision baisse, elle, par `possession.pass_difficulty`). Il décide alors tout de
+# suite (Decisions, `choose_action`) ; si son choix est une passe sans rotation (07e), elle part de première, sinon il
+# contrôle comme avant. Réel : 7,4 à 9,3 % des passes au pied du jeu courant partent au moment de la réception (calcul
+# du 13/11/2026 sur les données ouvertes StatsBomb, 45 matchs : Ligue 1 et Premier League 2015-16, Bundesliga 2023-24 ;
+# méthode StatsBomb, écart de 0,0 s entre la réception et la passe) : niveau à caler sur environ 9 %.
+_ONE_TOUCH_IDEA_POINTS: tuple[tuple[float, float], ...] = ((11.0, 0.14), (55.0, 0.385), (99.0, 0.70))
+ONE_TOUCH_PRESSURE_GAIN = 0.5
 # Ligne fermée pendant la rotation (même ticket, réserve A1 de l'expert ; constante recommandée et validée par délégation
 # du propriétaire, 13/11/2026) : il renonce à la passe si sa chance de réussite est passée sous `OPEN_LANE_PROBABILITY`
 # en perdant au moins `LANE_CLOSED_DROP` depuis la décision. Sans cette marge (toute baisse sous 0,7), 65 passes par
@@ -163,6 +174,7 @@ class Action:
     gap: float = 0.0  # valeur réelle perdue par rapport au meilleur choix factuel, en part de celui-ci (ticket 33)
     rotation_s: float = 0.0  # rotation avant que la passe ou le tir parte (ticket v2-realisme/07e)
     backheel: bool = False  # passe en talonnade (ticket v2-realisme/07e)
+    one_touch: bool = False  # passe jouée de première, sans contrôle (ticket v2-collectif/31a)
     # valeur telle que le porteur la perçoit (ticket v2-realisme/08d) : évaluée sur les positions perçues des adversaires
     # (mémoire de perception, 08b) ; `value` reste la valeur RÉELLE (journal du meilleur choix) ; `None` : perçue = réelle
     seen_value: float | None = None
@@ -213,6 +225,24 @@ def backheel_idea_probability(holder: PlayerState) -> float:
                                min_prob=low, max_prob=high)
 
 
+def one_touch_idea_probability(receiver: PlayerState, opponents: list[PlayerState]) -> float:
+    """Chance que le receveur d'une passe pense à jouer de première (ticket v2-collectif/31a) : First Touch et
+    Technique, plus souvent sous pression."""
+    note = 0.5 * (effective_rating(receiver, "First Touch") + effective_rating(receiver, "Technique"))
+    note = min(max(note, _ONE_TOUCH_IDEA_POINTS[0][0]), _ONE_TOUCH_IDEA_POINTS[-1][0])
+    base = _ONE_TOUCH_IDEA_POINTS[-1][1]
+    for (n0, v0), (n1, v1) in zip(_ONE_TOUCH_IDEA_POINTS, _ONE_TOUCH_IDEA_POINTS[1:]):
+        if note <= n1:
+            base = v0 + (note - n0) / (n1 - n0) * (v1 - v0)
+            break
+    return min(1.0, base * (1.0 + ONE_TOUCH_PRESSURE_GAIN * pressure(receiver, opponents)))
+
+
+def thinks_one_touch(receiver: PlayerState, opponents: list[PlayerState]) -> bool:
+    """Tirage (flux décision) : le receveur pense-t-il à jouer de première (ticket v2-collectif/31a) ?"""
+    return DECISION.random() < one_touch_idea_probability(receiver, opponents)
+
+
 def adopt_plan_probability(player: PlayerState) -> float:
     baseline, amplitude, low, high = _ADOPT_PLAN
     return success_probability(effective_rating(player, "Teamwork"), baseline=baseline, amplitude=amplitude,
@@ -253,7 +283,7 @@ def visible_teammates(holder: PlayerState, teammates: list[PlayerState], goal: V
 
 def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2, keeper: PlayerState | None,
                      mode: str | None = None, planned: str | None = None,
-                     seen_opponents: list[PlayerState] | None = None) -> list[Action]:
+                     seen_opponents: list[PlayerState] | None = None, one_touch: bool = False) -> list[Action]:
     """Les options du porteur avec leur valeur FACTUELLE (ticket v2-collectif/33 : danger attendu, vraies capacités),
     de la meilleure à la moins bonne : un tir à portée (`SHOOTING_RANGE_M`), une passe par coéquipier envisagé (Vision),
     une conduite par direction (`DRIBBLE_DIRECTIONS_DEG`). `mode` : choix de
@@ -262,7 +292,8 @@ def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2
     adversaires tels que le porteur les perçoit (ticket v2-realisme/08d, mémoire de perception) ; les tirs et les passes
     reçoivent alors aussi leur valeur perçue (`Action.seen_value`), sans tirage de plus (un seul passage pour les deux
     étages). Les conduites perçues se calculent dans `choose_action`. Seuls les adversaires changent : la gêne du
-    porteur (au contact, il la sent), les coéquipiers et le gardien restent réels."""
+    porteur (au contact, il la sent), les coéquipiers et le gardien restent réels. `one_touch` : le receveur juge ses
+    passes sans rotation comme jouées de première (précision du geste, ticket v2-collectif/31a)."""
     opponents = [p for p in players if p.team != holder.team]
     mates = [p for p in players if p.team == holder.team and p.name != holder.name]
     # Hors-jeu (ticket v2-collectif/23, deuxième passe du 28/10/2026) : le porteur ne sert pas un coéquipier qu'il
@@ -311,12 +342,13 @@ def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2
             backheel_ok = DECISION.random() < backheel_idea_probability(holder)
         # passe après rotation, et sa talonnade si le porteur y pense
         for heel in (False, True) if backheel and backheel_ok else (False,):
+            first = one_touch and (heel or turn == 0.0)  # de première : seulement sans rotation (ticket 31a)
             option = _pass_option(holder, mate, opponents, seen_full, team, mode, share, held, margin,
-                                  seen_line, gene, 0.0 if heel else turn, heel)
+                                  seen_line, gene, 0.0 if heel else turn, heel, first)
             if seen_opponents is not None:  # même passe, adversaires perçus (08d)
                 option = replace(option, seen_value=_pass_option(holder, mate, seen_opponents, seen_full, team, mode,
                                                                  share, held, margin, seen_line, gene,
-                                                                 0.0 if heel else turn, heel).value)
+                                                                 0.0 if heel else turn, heel, first).value)
             options.append(option)
     if planned is not None and mode != CONTRE_ATTAQUE:  # sort du plan, pour la mesure (ticket 14)
         # abandonné : la cible est vue mais la ligne s'est fermée ; non vu : hors de sa Vision ou hors-jeu évident
@@ -330,10 +362,11 @@ def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2
 
 def _pass_option(holder: PlayerState, mate: PlayerState, opponents: list[PlayerState],
                  seen_full: list[PlayerState], team: str, mode: str | None, share: float, held: str | None,
-                 margin: float, seen_line: float, gene: float, turn: float, backheel: bool) -> Action:
+                 margin: float, seen_line: float, gene: float, turn: float, backheel: bool,
+                 one_touch: bool = False) -> Action:
     """Valeur d'une passe vers `mate` (tickets 13, 14, 33), après `turn` secondes de rotation (07e), en talonnade
-    ou non."""
-    success = pass_success_probability(holder, mate, opponents, backheel)  # le ballon arrive (v2-socle/04)
+    ou non, jouée de première ou non (31a)."""
+    success = pass_success_probability(holder, mate, opponents, backheel, one_touch)  # le ballon arrive (v2-socle/04)
     # temps disponible : il garde le ballon assez longtemps pour jouer (A9 reclassé au ticket 13)
     keep = success * (1.0 - PRESSURE_KEEP_SHARE * pressure(mate, opponents))
     now = danger(mate.position, team)
@@ -352,7 +385,7 @@ def _pass_option(holder: PlayerState, mate: PlayerState, opponents: list[PlayerS
     midway = Vec2((holder.position.x + mate.position.x) / 2.0, (holder.position.y + mate.position.y) / 2.0)
     value = with_rotation(option_value(holder, mode, keep, reached, midway), holder, mode,
                           rotation_keep_probability(holder, gene, turn))
-    return Action("pass", value, mate, follow=follow, rotation_s=turn, backheel=backheel)
+    return Action("pass", value, mate, follow=follow, rotation_s=turn, backheel=backheel, one_touch=one_touch)
 
 
 def option_value(holder: PlayerState, mode: str | None, keep: float, reached: float, lost_at: Vec2) -> float:
@@ -492,7 +525,7 @@ def anticipation_share(holder: PlayerState) -> float:
 def choose_action(holder: PlayerState, players: list[PlayerState], goal: Vec2, keeper: PlayerState | None,
                   mode: str | None = None, planned: str | None = None,
                   felt: dict[int, float] | None = None, set_piece: bool = False,
-                  seen_opponents: list[PlayerState] | None = None) -> Action:
+                  seen_opponents: list[PlayerState] | None = None, one_touch: bool = False) -> Action:
     """Prend l'option qu'il CROIT la meilleure (ticket 33) : valeur réelle brouillée par sa perception (Decisions,
     Composure sous pression), conduites jugées avec son Anticipation. Deux options proches font hésiter même un très
     bon joueur ; un joueur faible se trompe surtout entre options voisines. `planned` : ticket v2-collectif/14.
@@ -500,8 +533,9 @@ def choose_action(holder: PlayerState, players: list[PlayerState], goal: Vec2, k
     ici si besoin. `set_piece` : coup franc (ticket v2-collectif/30), il frappe ou passe, la conduite n'est pas une
     option. `seen_opponents` : les adversaires tels qu'il les perçoit (ticket v2-realisme/08d, mémoire de perception, 08b) :
     les tirs, les passes et les conduites sont jugés sur leurs positions perçues, la valeur RÉELLE (`best`, `gap`)
-    reste calculée sur les vraies positions, et l'exécution aussi. `None` : il perçoit les vraies positions."""
-    options = evaluate_options(holder, players, goal, keeper, mode, planned, seen_opponents)
+    reste calculée sur les vraies positions, et l'exécution aussi. `None` : il perçoit les vraies positions.
+    `one_touch` : receveur qui pense à jouer de première (ticket v2-collectif/31a)."""
+    options = evaluate_options(holder, players, goal, keeper, mode, planned, seen_opponents, one_touch)
     if set_piece:
         options = [o for o in options if o.kind != "dribble"] or options
     best = options[0]

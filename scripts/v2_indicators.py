@@ -490,19 +490,19 @@ class Collector:
         self.now = 0.0  # instant du dernier tick
         self.carry_open: dict[str, tuple[float, tuple[str, ...]]] = {}  # porteur -> (instant du tirage, tranches), ticket 04c
         # passe en vol mesurée (18g) : équipe, cible, tranche, chance, talonnade (07e)
-        self.pass_open: tuple[str, str, str, float, bool] | None = None
+        self.pass_open: tuple[str, str, str, float, bool, bool] | None = None
         self.planned: str | None = None  # suite prévue par la dernière décision (plan de passe, ticket 14)
         # passes du match (ticket 14) : instant, équipe, passeur, cible, gain (m), avance, suite prévue, réussie
         self.pass_log: list[dict] = []
 
     # --- événements du moteur ---
     def on_pass(self, passer: PlayerState, target: PlayerState, opponents=None, restart: bool = False,
-                backheel: bool = False) -> None:
+                backheel: bool = False, one_touch: bool = False) -> None:
         self._close_pass_calibration(lost=False, received=False)  # précédente passe sans contact : non perdue
-        if opponents is not None and not restart:  # ticket v2-realisme/18g ; talonnade, 07e
-            chance = pass_success_probability(passer, target, opponents, backheel)
+        if opponents is not None and not restart:  # ticket v2-realisme/18g ; talonnade, 07e ; de première, 31a
+            chance = pass_success_probability(passer, target, opponents, backheel, one_touch)
             self.pass_open = (passer.team, target.name, carry_tranche("chance évaluée", chance, PASS_CHANCE_BINS), chance,
-                              backheel)
+                              backheel, one_touch)
         length = passer.position.distance_to(target.position)
         self.count["passes"] += 1
         self.count["passes longues"] += length > LONG_PASS_M
@@ -661,13 +661,17 @@ class Collector:
     def on_contact(self, player: PlayerState, controlled: bool) -> None:
         """Ticket v2-realisme/18g : premier joueur qui touche une passe en vol ; ferme la mesure de calibration ouverte."""
         if self.pass_open is not None:
-            team, target, _, _, _ = self.pass_open
+            team, target, _, _, _, _ = self.pass_open
             self._close_pass_calibration(lost=player.team != team, received=player.name == target and controlled)
 
     def _close_pass_calibration(self, lost: bool, received: bool) -> None:
         if self.pass_open is None:
             return
-        _, _, tranche, chance, backheel = self.pass_open
+        _, _, tranche, chance, backheel, one_touch = self.pass_open
+        if one_touch:  # passes de première (ticket v2-collectif/31a)
+            self.count["une touche : passes jouées"] += 1
+            self.count["une touche : chance évaluée (somme)"] += chance
+            self.count["une touche : non perdues"] += not lost
         if backheel:  # talonnades (ticket v2-realisme/07e)
             self.count["talonnades"] += 1
             self.count["talonnades : chance évaluée (somme)"] += chance
@@ -810,6 +814,7 @@ class Collector:
                 self.count["mémoire : fantômes (somme)"] += d.memory_stale
                 self.peak["mémoire : erreur maximale du porteur (m)"] = max(
                     self.peak["mémoire : erreur maximale du porteur (m)"], d.memory_error_max_m)
+            self.count["une touche : passes décidées"] += d.action == "pass" and d.one_touch  # ticket v2-collectif/31a
             if d.action in ("pass", "shot"):
                 kind = "passes" if d.action == "pass" else "tirs"
                 self.count[f"rotation : {kind} décidés"] += 1

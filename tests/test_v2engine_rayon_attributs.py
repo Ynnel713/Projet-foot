@@ -31,7 +31,9 @@ ALLOWED = {
     # vitesse de rotation du corps (ticket v2-realisme/07f) ; + délai de rotation avant la passe ou le tir, même
     # fonction à la décision et à l'exécution (07e) ; freinage 12a, virage 12b
     "Agility": {"movement", "decision"},
-    "Technique": {"possession", "scan"},  # précision de la talonnade, geste difficile (07e) ; porteur tête haute avec Dribbling (08c)
+    # précision de la talonnade, geste difficile (07e) ; porteur tête haute avec Dribbling (08c) ; précision de la passe de
+    # première (possession) et idée de jouer de première, avec First Touch (decision, ticket v2-collectif/31a)
+    "Technique": {"possession", "scan", "decision"},
     "Flair": {"decision"},  # penser à la talonnade (ticket v2-realisme/07e)
     "Strength": {"duel"},
     "Balance": {"duel"},
@@ -46,7 +48,7 @@ ALLOWED = {
     # tir sous pression par `shooting.shot_composure_factor`, courbe propre (ticket 28a) ; + perception sous pression (33)
     "Composure": {"possession", "decision", "shooting"},
     "Dribbling": {"decision", "scan"},  # (scan : porteur tête haute, cumul avec Technique, 08c) chance de garder le ballon en conduisant : valeur factuelle (ticket 33) et perte tirée (04a) ; vitesse balle au pied (04d)
-    "First Touch": {"possession"},
+    "First Touch": {"possession", "decision"},  # + idée de jouer de première, avec Technique (ticket v2-collectif/31a)
     "Passing": {"possession", "off_ball"},  # + ... et s'il sait le servir (ticket v2-collectif/16)
     "Finishing": {"shooting"},  # dans la surface ; Long Shots en dehors (ticket 28a)
     "Long Shots": {"shooting"},
@@ -72,6 +74,9 @@ TOLERATED_MIXES = {
     # porteur tête haute (`scan.head_up_share`, ticket v2-realisme/08c) : Dribbling 0,6 + Technique 0,4, cumul voulu par le
     # propriétaire (règle R2 révisée du 13/11/2026, A15)
     frozenset({"Dribbling", "Technique"}),
+    # idée de jouer de première (`decision.one_touch_idea_probability`, ticket v2-collectif/31a) : moyenne de First Touch
+    # et Technique, validée par le propriétaire le 13/11/2026 (A16)
+    frozenset({"First Touch", "Technique"}),
 }
 
 

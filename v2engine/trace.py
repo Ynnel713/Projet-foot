@@ -64,6 +64,7 @@ class DecisionRecord:
     memory_error_max_m: float = 0.0
     memory_stale: int = 0  # adversaires perçus avec plus de 4 s de retard et plus de 10 m d'erreur (ticket v2-realisme/08d, mesure)
     near_opponents: int = 0  # adversaires à 5 m au plus, vus ou non : dénominateur de `unseen_near` (ticket v2-realisme/08f)
+    one_touch: bool = False  # passe jouée de première, sans contrôle (ticket v2-collectif/31a)
 
 
 @dataclass(frozen=True)

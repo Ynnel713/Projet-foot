@@ -15,7 +15,7 @@ Interface : PWA React (`ui/`) + API FastAPI (`api/`) ; Streamlit (`app.py`) hist
 ## Commandes
 - API + UI : `uv run uvicorn api.main:app --port 8000` et `npm run dev --prefix ui` (Vite :5173). (`simulafoot.bat` : ancien poste Windows.)
 - Tests : `PYTHONHASHSEED=0 uv run pytest tests -q -p no:cacheprovider` (environ 10 min en session cloud). Toujours via `uv run` : `pytest` nu échoue (ticket 9). Marqueur `integration` exclu par défaut (`-m integration`, ~30 min).
-- Attendu : **2 901 passés, 0 ignoré, 14 désélectionnés** (13/11/2026, session cloud, ticket v2-realisme/07b). Des tests NLG ignorés signalent un venv `simulafoot_nlg/.venv` absent.
+- Attendu : **2 908 passés, 0 ignoré, 14 désélectionnés** (13/11/2026, session cloud, ticket v2-collectif/31a). Des tests NLG ignorés signalent un venv `simulafoot_nlg/.venv` absent.
 - UI, dans `ui/` : `npm run build` (OK) et `npm run lint` (0 erreur, 5 avertissements).
 - Mesures : `scripts/measure_geometry.py` (V1, graine d'audit 20260923), `scripts/measure_v2.py` et `scripts/v2_indicators.py` (V2).
 

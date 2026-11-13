@@ -1,0 +1,6 @@
+Scène contrôlée du ticket 31a (tests/test_v2engine_one_touch.py::_reception), 300 graines (0 à 299), passe au sol vers un receveur face au jeu, partenaire libre devant.
+part = première / (première + contrôle), contrôle raté exclu
+notes 11, pression faible : première 13, contrôle 139, raté 148 ; part 0.086
+notes 55, pression faible : première 66, contrôle 227, raté 7 ; part 0.225
+notes 99, pression faible : première 119, contrôle 174, raté 7 ; part 0.406
+notes 55, adversaire à 2 m : première 84, contrôle 194, raté 22 ; part 0.302

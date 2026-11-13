@@ -162,7 +162,7 @@ def test_the_match_hands_the_team_choice_to_the_holder_decision(monkeypatch) -> 
     from v2engine import match
     seen = []
     real = match.choose_action
-    monkeypatch.setattr(match, "choose_action", lambda *args: seen.append(args[4]) or real(*args))
+    monkeypatch.setattr(match, "choose_action", lambda *args, **kwargs: seen.append(args[4]) or real(*args, **kwargs))
     clubs = load_clubs(CLUBS_PATH, "Ligue 1")
     # Deux minutes de jeu ne montrent pas toujours les deux choix : le tirage dépend du placement (le test cassait à chaque
     # ticket de placement, réserve A2 du ticket v2-realisme/02a). On joue donc des graines successives, 5 au plus, jusqu'à

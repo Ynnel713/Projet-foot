@@ -128,7 +128,9 @@ def test_same_seed_gives_the_same_scans() -> None:
 
 def test_a_simulated_match_traces_scans_and_the_memory_they_refresh_feeds_the_decision(monkeypatch) -> None:
     """Depuis le ticket 08d, la mémoire que les scans rafraîchissent nourrit la décision du porteur : sans aucun scan,
-    il juge sur des positions plus vieilles et ne joue plus pareil (au 08c, ce test affirmait le contraire)."""
+    il juge sur des positions plus vieilles et ne joue plus pareil (au 08c, ce test affirmait le contraire). 10 minutes
+    (ticket v2-collectif/31a) : sur 3 minutes, une soixantaine de décisions, l'écart tenait au hasard (1,288 contre 1,287 s
+    après le 31a) ; sur 10 minutes, 1,42 contre 1,51 s."""
     clubs = load_clubs(CLUBS_PATH, "Ligue 1")
     outcomes = []
     for scanning in (True, False):
@@ -136,7 +138,7 @@ def test_a_simulated_match_traces_scans_and_the_memory_they_refresh_feeds_the_de
             monkeypatch.setattr("v2engine.flux.REGARD.random", lambda: 1.0)
         import random
         random.seed(20260923)
-        trace = simulate_match(clubs[0], clubs[1], duration_minutes=3.0)
+        trace = simulate_match(clubs[0], clubs[1], duration_minutes=10.0)
         outcomes.append(trace)
     with_scans, without = outcomes
     assert len(with_scans.scans) > 0 and len(without.scans) == 0

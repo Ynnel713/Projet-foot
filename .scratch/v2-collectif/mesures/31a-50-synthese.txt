@@ -1,0 +1,21 @@
+avant : 50 matchs ; après : 50 matchs
+  passes de première (part des passes décidées)                       nan      0.094      +nan
+  passes de première par match                                        nan    102.260      +nan
+  passes de première : non perdues (part)                             nan      0.897      +nan
+  passes de première : chance évaluée (part)                          nan      0.898      +nan
+  passes par match                                               1053.600   1114.620   +61.020
+  passes par minute de jeu effectif                                14.130     14.880    +0.750
+  passes réussies (part)                                            0.798      0.803    +0.006
+  passes par possession                                             3.707      3.850    +0.144
+  temps par possession de joueur (s)                                2.597      2.418    -0.180
+  possession d'équipe (s)                                          20.369     19.978    -0.391
+  une-deux par équipe et par match                                  1.590      1.580    -0.010
+  troisième homme par équipe et par match                          29.460     37.490    +8.030
+  retours au passeur en 3 s (part des passes réussies)              0.024      0.034    +0.010
+  talonnades par match                                              4.740      4.740    +0.000
+  pertes de balle par match                                       278.800    284.500    +5.700
+  tirs par équipe                                                  17.290     17.680    +0.390
+  buts par match                                                    3.120      3.020    -0.100
+  xG neutre par match                                               3.213      3.376    +0.163
+  face-à-face : tirs par match                                     15.700     16.040    +0.340
+  temps de calcul par match (s)                                   110.839    118.496    +7.657
