@@ -80,6 +80,11 @@ class PerceptionMemory:
         """Âge de la dernière vue de `observed` par `observer` (0 : il le voit maintenant)."""
         return max(0.0, now_s - self._seen[observer][observed][4])
 
+    def is_seen(self, observer: str, observed: str, now_s: float) -> bool:
+        """Vrai si `observer` voit `observed` à cet instant (cône ou scan) : sa dernière vue date de cet instant
+        (ticket v2-realisme/08f, mesure)."""
+        return self.age_s(observer, observed, now_s) <= _NOW_S
+
     def perceived_position(self, observer: PlayerState, observed: str, now_s: float, share: float | None = None) -> Vec2:
         """Position de `observed` telle que `observer` la perçoit : dernière vue, prolongée de sa vitesse d'alors pendant
         l'âge de la vue (au plus `EXTRAPOLATION_HORIZON_S`), pour la part que son Anticipation prolonge."""

@@ -1,0 +1,68 @@
+série 1 : 50 matchs
+  vision : adversaires non vus par le porteur à la décision (moyenne)                                                 4.213
+  vision : adversaires à 5 m au plus par décision (moyenne)                                                           1.854
+  vision : adversaires à 5 m au plus non vus à la décision (part des adversaires proches)                             0.570
+  vision : décisions avec un adversaire non vu à 5 m au plus (part)                                                   0.749
+  mémoire : âge de la dernière vue des adversaires non vus, porteur (s)                                               1.443
+  mémoire : erreur de position perçue des adversaires non vus, porteur (m)                                            2.519
+  mémoire : fantômes perçus par décision (adversaires perçus avec plus de 4 s de retard et 10 m d'erreur)             0.126
+  pertes de balle au contact par match (tacle, conduite, rotation)                                                   45.340
+  pertes au contact sur adversaire non vu (part des pertes au contact)                                                0.439
+  pertes au contact : tacle, par match                                                                               11.460
+  pertes au contact : tacle, sur adversaire non vu (part)                                                             0.442
+  pertes au contact : conduite, par match                                                                            31.100
+  pertes au contact : conduite, sur adversaire non vu (part)                                                          0.432
+  pertes au contact : rotation, par match                                                                             2.780
+  pertes au contact : rotation, sur adversaire non vu (part)                                                          0.500
+  pertes de balle par match                                                                                         275.860
+  scans par match                                                                                                 35638.960
+  scans par minute et par joueur                                                                                     17.999
+  scans du porteur (part des scans)                                                                                   0.013
+  scans dans les 10 s avant la réception (moyenne par réception)                                                      2.682
+  ligne perçue : écart absolu à la ligne sur vraies positions (moyenne, m)                                            0.127
+  ligne perçue : écart signé, perçue - réelle (moyenne, m ; positif = ligne plus haute)                              -0.051
+  ligne perçue : ticks avec un écart de plus de 0.1 m (part)                                                          0.215
+  ligne perçue : ticks avec un écart de plus de 0.5 m (part)                                                          0.032
+  ligne perçue : ticks avec un écart de plus de 1 m (part)                                                            0.022
+  ligne perçue : ticks avec un écart de plus de 2 m (part)                                                            0.014
+  ligne perçue : écart absolu, 95e centile (m)                                                                        0.378
+  ligne perçue : écart maximal (m)                                                                                   18.485
+  ligne perçue : variation moyenne d'un tick à l'autre (m)                                                            0.257
+  ligne réelle : variation moyenne d'un tick à l'autre (m)                                                            0.247
+  ligne perçue : variation efficace d'un tick à l'autre (m)                                                           0.447
+  ligne réelle : variation efficace d'un tick à l'autre (m)                                                           0.367
+  ligne perçue : sauts de plus de 0.5 m par match                                                                  3924.580
+  ligne réelle : sauts de plus de 0.5 m par match                                                                  3855.160
+  ligne perçue : changements de sens par match                                                                     1085.000
+  ligne réelle : changements de sens par match                                                                     1042.720
+  marquage : attaquant non vu par son marqueur (part des marqueur-ticks)                                              0.221
+  marquage : erreur de place de l'attaquant (moyenne, m)                                                              0.421
+  marquage : erreur de place quand l'attaquant n'est pas vu (moyenne, m)                                              1.261
+  marquage : erreur de plus de 2 m (part des marqueur-ticks)                                                          0.046
+  marquage : erreur maximale (m)                                                                                     31.644
+  marquage : marqueur différent de celui des vraies positions (part des choix)                                        0.027
+  hors-jeu par match                                                                                                  0.840
+  passes en profondeur réussies (part)                                                                                0.402
+  passes en profondeur (part)                                                                                         0.003
+  passes par match                                                                                                 1061.920
+  passes réussies (part)                                                                                              0.801
+  passes chez l'adversaire (part)                                                                                     0.180
+  buts par match                                                                                                      3.200
+  tirs tracés par équipe                                                                                             17.410
+  conversion des tirs (part)                                                                                          0.092
+  xG neutre par match                                                                                                 3.268
+  grosses occasions par match                                                                                        31.800
+  fautes par match                                                                                                   13.660
+  temps de calcul par match (s)                                                                                     120.463
+
+Scans par minute et par joueur, par poste
+  AD        17.29
+  AG        18.20
+  BU        14.04
+  DC        14.95
+  GK        14.53
+  LB        16.61
+  MC        18.13
+  MDC       18.81
+  MOC       16.99
+  RB        16.23

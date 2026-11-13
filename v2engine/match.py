@@ -238,10 +238,15 @@ def _award_offside_free_kick(ball: BallState, offender: PlayerState, players: li
 
 
 def _log(ball: BallState, now_s: float, kind: str, team: str | None, player: str | None, detail: str | None = None,
-         other: str | None = None, start: bool = False) -> None:
+         other: str | None = None, start: bool = False, seen: bool | None = None) -> None:
     """Écrit un événement dans le journal du match (ticket v2-realisme/19b), s'il y en a un ; aucun effet sur le jeu."""
     if ball.log is not None:
-        ball.log.add(now_s / 60.0, kind, team, player, detail, other, start)
+        ball.log.add(now_s / 60.0, kind, team, player, detail, other, start, seen)
+
+
+def _seen_by(memory: PerceptionMemory | None, observer: PlayerState, observed: PlayerState, now_s: float) -> bool | None:
+    """Le porteur voyait-il l'adversaire qui lui prend le ballon (ticket v2-realisme/08f, mesure) ? None sans mémoire."""
+    return None if memory is None else memory.is_seen(observer.name, observed.name, now_s)
 
 
 # Dernier événement après lequel un toucher adverse est une perte de balle (ticket 19b), et la façon de la nommer.
@@ -579,7 +584,8 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
             if not result.won:
                 ball.tackle_ban_until_s[challenger.name] = now_s + FAILED_TACKLE_RECOVERY_S
             if result.won:
-                _log(ball, now_s, PERTE, holder.team, holder.name, "tacle", challenger.name)
+                _log(ball, now_s, PERTE, holder.team, holder.name, "tacle", challenger.name,
+                     seen=_seen_by(memory, holder, challenger, now_s))
                 ball.holder = challenger.name
                 ball.hesitation.pop(challenger.name, None)  # il a le ballon : il joue, il n'attend plus
                 # nouveau porteur : contrôle et lève la tête avant de décider (v2-socle/06)
@@ -612,7 +618,8 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
             # ligne fermée pendant la rotation (réserve A1 de l'expert) : il renonce et redécide, déjà tourné
             if lost or action.kind != "pass" or not lane_closed_during_turn(
                     holder, action.target, rivals, getattr(action, "backheel", False), pending[3]):
-                return _execute(ball, holder, action, players, rivals, goal, keeper, now_s, False, fouls, shots, lost=lost)
+                return _execute(ball, holder, action, players, rivals, goal, keeper, now_s, False, fouls, shots, lost=lost,
+                                memory=memory)
         # plan de passe (ticket v2-collectif/14) : lu par son receveur à sa première décision, effacé à toute décision
         planned = ball.plan[1] if ball.plan is not None and ball.plan[0] == holder.name else None
         ball.plan = None
@@ -649,7 +656,8 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                                             getattr(action, "backheel", False),
                                             len(unseen(holder, rivals)), len(unseen(holder, rivals, PRESSURE_RADIUS_M)),
                                             seen_back.age_mean_s, seen_back.error_mean_m, seen_back.error_max_m,
-                                            seen_back.stale))
+                                            seen_back.stale, sum(near.position.distance_to(holder.position) <= PRESSURE_RADIUS_M
+                                                                 for near in rivals)))
         # il se retourne d'abord (ticket v2-realisme/07e) ; le tireur d'un coup franc s'est placé face à son geste
         turn = 0.0 if set_piece else getattr(action, "rotation_s", 0.0)
         if turn > 0.0:
@@ -661,14 +669,14 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
             ball.next_decision_s = now_s + turn
             return None
         return _execute(ball, holder, action, players, rivals, goal, keeper, now_s, set_piece, fouls, shots,
-                        lost=action.kind == "dribble" and dribble_lost(holder, rivals))
+                        lost=action.kind == "dribble" and dribble_lost(holder, rivals), memory=memory)
     return _step_loose_ball(ball, dt, players, now_s, decisions, offsides, modes, restarts, fouls, shots, receptions,
                             memory)
 
 
 def _execute(ball: BallState, holder: PlayerState, action, players: list[PlayerState], rivals: list[PlayerState],
              goal: Vec2, keeper: PlayerState | None, now_s: float, set_piece: bool, fouls: list[FoulEvent] | None,
-             shots: list[ShotEvent] | None, lost: bool) -> None:
+             shots: list[ShotEvent] | None, lost: bool, memory: PerceptionMemory | None = None) -> None:
     """Exécute l'action du porteur : conduite, tir ou passe ; `lost` : ballon perdu en conduite (04a) ou pendant la
     rotation qui précède la passe ou le tir (ticket v2-realisme/07e), même issue (04b)."""
     point = getattr(action, "point", None)
@@ -683,7 +691,7 @@ def _execute(ball: BallState, holder: PlayerState, action, players: list[PlayerS
         taker, ball.velocity = lost_carry_outcome(holder, rivals, heading)
         if taker is not None:
             _log(ball, now_s, PERTE, holder.team, holder.name, "conduite" if action.kind == "dribble" else "rotation",
-                 taker.name)
+                 taker.name, seen=_seen_by(memory, holder, taker, now_s))
             ball.holder = taker.name
             ball.hesitation.pop(taker.name, None)
             ball.next_decision_s = now_s + reception_delay_s(taker, [p for p in players if p.team != taker.team])

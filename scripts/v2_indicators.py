@@ -94,6 +94,10 @@ SHOT_MATCH_LAG_S = 0.15
 # des tranches de gêne du porteur (0 : aucun adversaire à 5 m ; 1 : au contact) et de Dribbling. Mesure seule.
 CARRY_PRESSURE_BINS = (0.0, 0.1, 0.3, 0.5, 0.7, 0.9)
 CARRY_DRIBBLING_BINS = (0, 40, 55, 70)
+# Seuils de MESURE seulement (ticket v2-realisme/08f), aucun effet sur le jeu : écarts de hauteur de ligne dus à la
+# perception, saut ou changement de sens de la ligne d'un tick à l'autre, erreur de place d'un marqueur sur son attaquant
+LINE_GAP_LIMITS_M = (0.1, 0.5, 1.0, 2.0)
+LINE_JUMP_M, LINE_FLIP_M, MARKING_GAP_M = 0.5, 0.1, 2.0
 CARRY_PREFIX = "calibration conduite, "
 # Calibration de la passe (ticket v2-realisme/18g) : chance évaluée au lancement (`possession.pass_success_probability`,
 # celle que lit la décision) contre issue au premier contact : perdue si un adversaire touche le ballon le premier, ou si
@@ -429,6 +433,8 @@ class Collector:
         self.hi_by: Counter = Counter()  # course au-dessus de 19,8 km/h par joueur (m)
         self.levels: dict[str, str] = {}  # joueur -> niveau du profil testé ("haut"/"bas"), voir measure_v2
         self.poste: dict[str, str] = {}
+        # dernière hauteur de ligne par équipe : (instant, réelle perçue, sur vraies positions, dernier sens perçu, dernier sens réel)
+        self.line_prev: dict[str, tuple[float, float, float, int, int]] = {}
         self.sprint = self.hi = self.total = 0.0
         self.hi_time = self.sprint_time = self.time = 0.0
         self.sprint_run: Counter = Counter()  # durée de la course en cours au-dessus de SPRINT_MPS, par joueur (s)
@@ -794,6 +800,7 @@ class Collector:
             self.count["vision : décisions"] += 1
             self.count["vision : adversaires non vus (somme)"] += d.unseen_opponents
             self.count["vision : adversaires non vus à 5 m (somme)"] += d.unseen_near
+            self.count["vision : adversaires à 5 m (somme)"] += d.near_opponents  # dénominateur de la part non vue (08f)
             self.count["vision : décisions avec un adversaire non vu à 5 m"] += d.unseen_near > 0
             if d.unseen_opponents > 0:  # mémoire du porteur sur ceux qu'il ne voit pas (ticket v2-realisme/08b)
                 self.count["mémoire : décisions avec un adversaire non vu"] += 1
@@ -829,6 +836,7 @@ class Collector:
         by_player: dict[str, list[float]] = defaultdict(list)
         for e in scans:
             self.count["scans"] += 1
+            self.count[f"scans : {self.poste.get(e.player, '?')}"] += 1  # par poste (ticket v2-realisme/08f)
             self.count["scans : du porteur"] += e.has_ball
             self.count["scans : en défense"] += e.defending  # gelés un instant, ils ne suivent plus le ballon (ticket 08e)
             by_player[e.player].append(e.minute)
@@ -845,6 +853,53 @@ class Collector:
                 self.count[f"profil {level} : réceptions"] += 1
                 self.count[f"profil {level} : scans avant la réception (somme, 10 s)"] += before
 
+    def on_line(self, team: str, now_s: float, perceived: float, real: float, tick_s: float) -> None:
+        """Hauteur de la ligne défensive d'une équipe dont l'adversaire a le ballon, telle que le moteur la calcule (positions perçues, ticket
+        v2-realisme/08e) et recalculée à côté sur les vraies positions (ombre, mesure seulement) : l'écart est l'effet
+        exact de la perception sur la ligne, tick par tick (réserve A1 du 08e). Oscillation (réserve A4) : variation d'un
+        tick à l'autre des deux séries, sauts de plus de `LINE_JUMP_M` et changements de sens d'au moins `LINE_FLIP_M`.
+        Ticket v2-realisme/08f."""
+        diff = perceived - real
+        self.count["ligne : ticks adversaire porteur"] += 1
+        self.count["ligne : écart perçue - réelle (somme, m)"] += diff
+        self.count["ligne : écart absolu (somme, m)"] += abs(diff)
+        for limit in LINE_GAP_LIMITS_M:
+            self.count[f"ligne : ticks avec un écart de plus de {limit:g} m"] += abs(diff) > limit
+        self.peak["ligne : écart maximal (m)"] = max(self.peak["ligne : écart maximal (m)"], abs(diff))
+        self.stats["ligne : écart absolu dû à la perception (m)"].add(abs(diff))
+        before = self.line_prev.get(team)
+        flip_p = flip_r = 0
+        if before is not None and 0.0 <= now_s - before[0] <= 1.5 * tick_s:  # série continue : le tick précédent était sans ballon aussi
+            for tag, new, old, last in (("perçue", perceived, before[1], before[3]), ("réelle", real, before[2], before[4])):
+                delta = new - old
+                self.count[f"ligne {tag} : variations (nombre)"] += 1
+                self.count[f"ligne {tag} : variation absolue (somme, m)"] += abs(delta)
+                self.count[f"ligne {tag} : variation au carré (somme, m²)"] += delta * delta
+                self.count[f"ligne {tag} : sauts de plus de {LINE_JUMP_M:g} m"] += abs(delta) > LINE_JUMP_M
+                sign = 0 if abs(delta) < LINE_FLIP_M else (1 if delta > 0 else -1)
+                if sign and last and sign != last:
+                    self.count[f"ligne {tag} : changements de sens"] += 1
+                if tag == "perçue":
+                    flip_p = sign or last
+                else:
+                    flip_r = sign or last
+        self.line_prev[team] = (now_s, perceived, real, flip_p, flip_r)
+
+    def on_marking(self, seen: bool, error_m: float) -> None:
+        """Un marqueur situe l'attaquant qu'il marque (ticket v2-realisme/08e) : le voit-il, et de combien se trompe-t-il
+        sur sa place (m) ? Un marquage est compté une fois par tick et par marqueur. Ticket v2-realisme/08f."""
+        self.count["marquage : marqueur-ticks"] += 1
+        self.count["marquage : attaquant non vu"] += not seen
+        self.count["marquage : erreur de place (somme, m)"] += error_m
+        self.count["marquage : erreur de place, attaquant non vu (somme, m)"] += 0.0 if seen else error_m
+        self.count[f"marquage : erreur de plus de {MARKING_GAP_M:g} m"] += error_m > MARKING_GAP_M
+        self.peak["marquage : erreur maximale (m)"] = max(self.peak["marquage : erreur maximale (m)"], error_m)
+
+    def on_marker_choice(self, same: bool) -> None:
+        """Le marqueur choisi sur les positions perçues est-il celui que les vraies positions auraient choisi ?"""
+        self.count["marquage : choix du marqueur"] += 1
+        self.count["marquage : marqueur différent de celui des vraies positions"] += not same
+
     def on_events(self, events) -> None:
         """Journal du match (`MatchTrace.events`, ticket v2-realisme/19b) : contrôles ratés et buteurs par tranche,
         attribués au joueur (19d). Ticket 19f (réserve A2 de l'expert sur le 19d) : un contrôle raté n'est compté comme
@@ -854,6 +909,12 @@ class Collector:
         for event in events:
             if event.kind == PERTE and event.detail == "rotation":  # ticket v2-realisme/07e
                 self.count["rotation : ballons perdus en se retournant"] += 1
+            if event.kind == PERTE and event.seen is not None:  # perte au contact : voyait-il l'adversaire ? (08f)
+                self.count["pertes au contact"] += 1
+                self.count[f"pertes au contact : {event.detail}"] += 1
+                if not event.seen:
+                    self.count["pertes au contact sur adversaire non vu"] += 1
+                    self.count[f"pertes au contact sur adversaire non vu : {event.detail}"] += 1
             if event.kind == CONTROLE_RATE:
                 cause = events[event.cause] if event.cause is not None else None
                 aimed = (cause is not None and cause.kind in (PASSE, REMISE) and cause.team == event.team
@@ -1068,6 +1129,7 @@ class Collector:
     def _speeds(self, players, minute, dt):
         for p in players:
             self.poste[p.name] = p.poste
+            self.count[f"temps sur le terrain (s) : {p.poste}"] += dt  # dénominateur des scans par poste (ticket v2-realisme/08f)
             if p.poste == "GK":
                 far = p.position.distance_to(opponent_goal_center("away" if p.team == "home" else "home"))
                 acc = self.keeper_dist.setdefault(p.name, [0.0, 0.0, 0])

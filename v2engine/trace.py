@@ -63,6 +63,7 @@ class DecisionRecord:
     memory_error_mean_m: float = 0.0
     memory_error_max_m: float = 0.0
     memory_stale: int = 0  # adversaires perçus avec plus de 4 s de retard et plus de 10 m d'erreur (ticket v2-realisme/08d, mesure)
+    near_opponents: int = 0  # adversaires à 5 m au plus, vus ou non : dénominateur de `unseen_near` (ticket v2-realisme/08f)
 
 
 @dataclass(frozen=True)
@@ -232,6 +233,9 @@ class TraceEvent:
     cause: int | None
     detail: str | None = None
     other: str | None = None
+    # Perte de balle au contact (tacle, conduite, rotation) : le porteur voyait-il l'adversaire qui l'a pris à cet instant ?
+    # None pour tout autre événement (ticket v2-realisme/08f, mesure)
+    seen: bool | None = None
 
 
 class EventLog:
@@ -242,8 +246,8 @@ class EventLog:
         self.last: int | None = events[-1].id if events else None
 
     def add(self, minute: float, kind: str, team: str | None, player: str | None, detail: str | None = None,
-            other: str | None = None, start: bool = False) -> TraceEvent:
-        event = TraceEvent(len(self.events), minute, kind, team, player, None if start else self.last, detail, other)
+            other: str | None = None, start: bool = False, seen: bool | None = None) -> TraceEvent:
+        event = TraceEvent(len(self.events), minute, kind, team, player, None if start else self.last, detail, other, seen)
         self.events.append(event)
         self.last = event.id
         return event

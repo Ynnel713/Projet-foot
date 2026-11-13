@@ -1210,3 +1210,82 @@ Commandes : tirs par zone, `.scratch/v2-realisme/mesures/18e-zones.py` (graines 
 **Conversion par zone** (100 matchs pour le 18k) : surface 17,7 → 16,1 %, dehors 4,4 → 5,3 %, buts conformes à l'xG neutre (graines 0 à 49 : surface − 2,3 σ ; graines 50 à 99 : + 0,8 σ). La résolution du tir est inchangée.
 
 **Lecture.** Le choix de tirer est corrigé (moitié moins de tirs de 25 à 30 m), mais le mélange reste loin du réel : l'équipe entre peu dans la surface, ce qui relève de la pénétration (occupation, passes en profondeur, surcharges), pas de la décision de tirer.
+
+## 36. Validation de la perception (ticket v2-realisme/08f, 50 + 50 matchs, 13/11/2026)
+
+Commandes : `scripts/measure_v2.py` en 4 lots (13, 13, 12, 12 matchs, graines 0 à 49), avec la perception (`08f-50-lot*.*`, synthèse `08f-50-synthese.txt`) et avec `--sans-perception-defense` (`08f-sans-lot*.*`, comparaison `08f-ab-synthese.txt`, `.scratch/v2-realisme/mesures/08f-synthese.py`) ; courbe du meilleur choix, `scripts/measure_v2_meilleur_choix.py 8` (`08f-choix.txt`). Les branchements du banc ne changent pas le jeu : la série avec perception est identique à celle du 08e sur 852 indicateurs (`08f-identique-au-08e.txt`) ; deux exécutions de 2 matchs donnent 877 indicateurs identiques (`08f-det1.json`, `08f-det2.json`). Seuils de mesure seulement (aucun effet sur le jeu, aucune constante produit) : écarts de ligne de 0,1, 0,5, 1 et 2 m, saut de ligne de 0,5 m, changement de sens de 0,1 m, erreur de marquage de 2 m.
+
+**Ce que le porteur voit (08a, 08b).**
+
+| Indicateur (50 matchs) | Valeur |
+|---|---|
+| Adversaires à 5 m au plus du porteur, par décision | 1,85 |
+| dont non vus à la décision (part) | **57,0 %** (44,4 % si les adversaires étaient répartis au hasard autour de lui : le cône cache 160° sur 360°) |
+| Décisions avec au moins un adversaire proche non vu | 74,9 % |
+| Âge de la dernière vue des adversaires non vus | 1,44 s |
+| Erreur de position perçue de ces adversaires | 2,52 m |
+| Adversaires perçus avec plus de 4 s de retard et plus de 10 m d'erreur (« fantômes ») | 0,126 par décision |
+
+Les adversaires proches sont donc plus souvent hors du cône que le hasard ne le donnerait. Cause non établie (hypothèse : le pressing vient par derrière et le porteur regarde le but) ; à regarder avec les scans du porteur, qui ne font que 1,3 % des scans (le porteur scanne peu).
+
+**Pertes de balle au contact (tacle, conduite, rotation) sur un adversaire que le porteur ne voyait pas.**
+
+| 50 matchs | Par match | Sur adversaire non vu |
+|---|---|---|
+| Toutes les pertes au contact | 45,3 | **43,9 %** |
+| Tacle | 11,5 | 44,2 % |
+| Conduite | 31,1 | 43,2 % |
+| Rotation avant la passe ou le tir | 2,8 | 50,0 % |
+
+**Voir ou ne pas voir l'adversaire n'a aucun effet sur le risque de perdre le ballon, parce que le code des duels ne lit pas la perception** : le tacle (`resolve_tackle`), la perte en conduite (`dribble_lost`, `lost_carry_outcome`) et la rotation ne reçoivent pas la mémoire (08d : seule la décision la lit). Ce n'est pas une conclusion tirée des pourcentages : ils ne sont **pas comparables** à la part des adversaires proches non vus (57,0 %), car les deux « non vu » diffèrent (cône seul à la décision, cône ou scan au tick de la perte) et les deux populations aussi (un adversaire au contact contre tout adversaire à 5 m). C'est un écart au réel (un joueur surpris par-derrière perd plus souvent le ballon), noté ici sans le corriger : hors périmètre, décision du propriétaire. Passes interceptées exclues (le porteur n'est plus au contact).
+
+**Scans par minute et par joueur, par poste** (50 matchs, temps réellement sur le terrain, temps additionnel compris ; durée moyenne d'un match 98,9 min). L'indicateur total hérité du 08c (18,0) divise par 90 minutes nominales ; sur la durée réelle il vaut **16,4**, la même base que les postes (indicateur ajouté, `08f-profondeur.txt`). Par poste : MDC 18,8, AG 18,2, MC 18,1, AD 17,3, MOC 17,0, LB 16,6, RB 16,2, DC 15,0, GK 14,5, BU 14,0. Les milieux scannent le plus ; les attaquants centraux (14,0), le gardien (14,5) et les défenseurs centraux (15,0) le moins. Repère réel : Jordet (2013, 2020), cité au 08c (0,3 à 0,6 scan par seconde avant la réception chez les milieux de haut niveau) ; ce chiffre est avant réception, le nôtre est sur tout le temps de jeu : pas de comparaison directe.
+
+**La ligne perçue contre la ligne sur vraies positions (réserve A1 du 08e).** La hauteur de ligne est recalculée à chaque tick sur les vraies positions (ombre) : l'écart est l'effet exact du 08e sur la ligne, sans A/B bruité.
+
+| 50 matchs, l'adversaire a le ballon | Valeur |
+|---|---|
+| Écart absolu perçue / réelle, moyenne | **0,127 m** |
+| Écart signé (négatif = ligne plus basse) | − 0,051 m |
+| Ticks avec un écart de plus de 0,1 / 0,5 / 1 / 2 m | 21,5 % / 3,2 % / 2,2 % / 1,4 % |
+| 95e centile, maximum | 0,38 m, 18,5 m |
+
+Effet total du 08e sur la ligne : de l'ordre de 13 cm en moyenne, trop petit pour apparaître dans un A/B de matchs. Il comprend aussi l'extrapolation d'un tick de retard (la ligne est calculée avant la mise à jour de la mémoire : même un adversaire vu est perçu avec 0,1 s d'âge) ; l'effet de l'angle mort lui-même se lit dans la queue : 2,2 % des ticks au-dessus d'un mètre, maximum 18,5 m.
+
+**Oscillation de la ligne (réserve A4 du 08e).** Variation d'un tick à l'autre : perçue 0,257 m en moyenne (0,447 m efficace), sur vraies positions 0,247 m (0,367 m). Sauts de plus de 0,5 m par match : 3 925 contre 3 855 (+ 1,8 %). Changements de sens : 1 085 contre 1 043 (+ 4,1 %). La ligne oscille déjà beaucoup avec les vraies positions (elle suit le ballon et la pression) ; la perception y ajoute peu, surtout quelques sauts rares (variation efficace + 22 %).
+
+**Le marquage perçu.**
+
+| 50 matchs | Valeur |
+|---|---|
+| Attaquant non vu par son marqueur (part des marqueur-ticks) | 22,1 % |
+| Erreur de place, tous les marquages | 0,42 m |
+| Erreur de place quand l'attaquant n'est pas vu | 1,26 m |
+| Erreurs de plus de 2 m (part des marqueur-ticks) | 4,6 % |
+| Marqueur choisi différent de celui des vraies positions (part des choix) | 2,7 % |
+
+**A/B de 50 matchs, avec et sans perception de la défense (mêmes graines).** Effectifs cumulés sur les 50 matchs, reconstruits en pleine précision depuis les JSON des lots (`08f-profondeur.py`, sortie `08f-profondeur.txt`) ; la moyenne des parts par lot, rapportée au 08e, donne 40,2 % et 48,0 % (la synthèse arrondit les parts à trois décimales).
+
+| | Avec | Sans | Écart |
+|---|---|---|---|
+| Hors-jeu sifflés (total sur 50 matchs) | 42 (0,84 par match) | 39 (0,78) | 0,3 σ (Poisson) |
+| Passes en profondeur réussies | 70 / 167 = 41,9 % | 91 / 184 = 49,5 % | 1,4 σ |
+| Buts par match | 3,20 | 3,16 | bruit |
+| Passes chez l'adversaire | 18,0 % | 18,1 % | bruit |
+| Tirs par équipe | 17,4 | 17,3 | bruit |
+
+Aucun effet démontrable sur le jeu, en accord avec la mesure exacte de la ligne (13 cm) et du marquage (marqueur différent dans 2,7 % des choix). **Le niveau de hors-jeu est très bas : 0,84 par match, contre 3,2 à 3,5 en réel (Ligue 1)**, avec ou sans perception (0,78 sans) : l'écart ne vient pas du 08e ; il date d'avant (0,86 au 08d) et relève de la calibration (appels dans le dos, ligne, passes en profondeur : 3 par match seulement). Le plafond de confiance sur la mémoire très vieille (réserve A2 du 08d) : les « fantômes » sont 12,6 % par décision, mais l'A/B ne montre aucun effet sur les passes ni les pertes ; pas de plafond proposé.
+
+**Courbe du meilleur choix (réserve A1 du 08d, 8 matchs).** Le recalage de l'erreur propre de Decisions, prévu « avec la calibration provisoire 18d », n'a **pas** été fait : le 18d (11/11) précède le 08d (13/11).
+
+| Decisions | Décisions | Meilleur choix suivi | Courbe validée | Écart (points) |
+|---|---|---|---|---|
+| 0-40 | 223 | 58,3 % | 67,5 % | − 9,2 |
+| 40-55 | 1 324 | 61,0 % | 69,9 % | − 8,9 |
+| 55-65 | 4 196 | 66,6 % | 70,1 % | − 3,5 |
+| 65-75 | 9 048 | 66,3 % | 70,9 % | − 4,6 |
+| 75-100 | 4 925 | 75,1 % | 74,0 % | + 1,1 |
+
+Critère du ticket (écart sous environ 2 points par tranche) : **non tenu** sur quatre tranches sur cinq. Cause probable, non isolée par une mesure : la décision lit maintenant un monde perçu (08d) qui ajoute son erreur à l'erreur propre de Decisions (`decision._ERROR_POINTS`), réglée en 04/11/2026 sur un monde exact ; le ticket de recalage doit le démontrer (dont la corrélation avec les 57 % d'adversaires proches non vus). Suite proposée au propriétaire (constante produit, non codée) : réduire l'erreur propre d'environ 15 à 30 % entre Decisions 11 et 75, inchangée à 99, puis mesurer (8 matchs par essai, environ 12 min). À faire dans un ticket à part ou avec la calibration provisoire suivante.
+
+**Temps de calcul.** 120 s par match avec les mesures de ligne et de marquage (112 s sans perception de la défense ; séries sous charge, non comparables aux 97 s du 08e).

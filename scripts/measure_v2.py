@@ -25,13 +25,15 @@ from dataclasses import replace
 from ligue1sim.clubs import load_clubs
 from ligue1sim.season import CLUBS_PATH
 
+import v2engine.bloc as bloc_module
 import v2engine.cerveau as cerveau
 import v2engine.defense as defense
 import v2engine.match as match
 from v2engine.shooting import NEUTRAL_ATTRIBUTES
 from ligue1sim.lineup import pick_best_formation
 
-from scripts.v2_indicators import CARRY_PREFIX, EXIT_STATES, PASS_PREFIX, Collector, shot_decomposition, xg_calibration
+from scripts.v2_indicators import (CARRY_PREFIX, EXIT_STATES, LINE_GAP_LIMITS_M, LINE_JUMP_M, MARKING_GAP_M, PASS_PREFIX,
+                                   Collector, shot_decomposition, xg_calibration)
 from scripts.v2_tranches import minute_report, player_report
 
 AUDIT_SEED = 20260923
@@ -39,8 +41,11 @@ HIGH, LOW = 99, 11
 TICK_S = match.TICK_SECONDS  # le pas du produit (ticket v2-collectif/25) : le banc mesure le match regardé
 
 
-def _hook(collector: Collector, clock: dict[str, float], plans: bool = True) -> Callable[[], None]:
-    """Branche le collecteur sur les fonctions publiques du moteur ; retourne la fonction qui les restaure."""
+def _hook(collector: Collector, clock: dict[str, float], plans: bool = True,
+          defence_perception: bool = True) -> Callable[[], None]:
+    """Branche le collecteur sur les fonctions publiques du moteur ; retourne la fonction qui les restaure.
+    `defence_perception` faux : la ligne et le marquage lisent les vraies positions, comme avant le ticket 08e (mesure
+    A/B du ticket v2-realisme/08f, seul interrupteur du banc qui change le jeu)."""
     real = {name: getattr(match, name) for name in ("pass_velocity", "resolve_tackle", "choose_action", "dribble_lost",
                                                      "lost_carry_outcome", "attempt_control", "_play_restart",
                                                      "lane_closed_during_turn")}
@@ -118,6 +123,46 @@ def _hook(collector: Collector, clock: dict[str, float], plans: bool = True) -> 
         collector.on_trigger()
         return real_trigger(self, team, players, now_s, *args)
 
+    # ligne et marquage perçus (tickets v2-realisme/08e et 08f) : la ligne est recalculée à côté sur les vraies positions
+    # (ombre, état propre : elle ne lit que les formes de départ) ; le marquage compte ses erreurs de place et de choix
+    real_bloc_update = bloc_module.Bloc.update
+    real_defense_update = defense.DefensiveRoles.update
+    real_seen_at = defense.DefensiveRoles.__dict__["_seen_at"]
+    real_closest_to = defense.DefensiveRoles.__dict__["_closest_to"]
+
+    def bloc_update(self, players, ball, now_s=0.0, memory=None):
+        real_bloc_update(self, players, ball, now_s, memory if defence_perception else None)
+        if memory is None or not defence_perception:
+            return
+        shadow = getattr(self, "_shadow", None)
+        if shadow is None:
+            shadow = self._shadow = bloc_module.Bloc(self.shapes)
+        real_bloc_update(shadow, players, ball, now_s, None)
+        holder_team = next((p.team for p in players if p.name == ball.holder), None) if ball.holder else None
+        for team, line in self.lines.items():  # la ligne ne sert qu'à l'équipe dont l'adversaire a le ballon
+            if holder_team is not None and holder_team != team and team in shadow.lines:
+                collector.on_line(team, now_s, line, shadow.lines[team], clock["dt"])
+
+    def defense_update(self, players, ball, bloc, now_s, situations=None, memory=None):
+        real_defense_update(self, players, ball, bloc, now_s, situations, memory if defence_perception else None)
+
+    def seen_at(marker, attacker, memory, now_s):
+        where, moving = real_seen_at.__func__(marker, attacker, memory, now_s)
+        if memory is not None:  # le marquage précède la mise à jour de la mémoire du tick : « vu » = vu au tick précédent
+            seen = memory.age_s(marker.name, attacker.name, now_s) <= 1.5 * clock["dt"]
+            collector.on_marking(seen, where.distance_to(attacker.position))
+        return where, moving
+
+    def closest_to(cls, candidates, attacker, memory, now_s):
+        chosen = real_closest_to.__func__(cls, candidates, attacker, memory, now_s)
+        if memory is not None:
+            collector.on_marker_choice(chosen is real_closest_to.__func__(cls, candidates, attacker, None, now_s))
+        return chosen
+
+    bloc_module.Bloc.update = bloc_update
+    defense.DefensiveRoles.update = defense_update
+    defense.DefensiveRoles._seen_at = staticmethod(seen_at)
+    defense.DefensiveRoles._closest_to = classmethod(closest_to)
     match.pass_velocity = pass_velocity
     match.resolve_tackle, match.choose_action, match.dribble_lost = resolve_tackle, choose_action, dribble_lost
     match.lost_carry_outcome = lost_carry_outcome
@@ -126,7 +171,11 @@ def _hook(collector: Collector, clock: dict[str, float], plans: bool = True) -> 
     cerveau.stays_behind, match.think = stays_behind, think
     defense.DefensiveRoles.start_team_press = trigger
     return lambda: ([setattr(match, name, fn) for name, fn in real.items()] + [setattr(cerveau, "stays_behind", real_stays), setattr(match, "think", real_think)]
-                    + [setattr(defense.DefensiveRoles, "start_team_press", real_trigger)])
+                    + [setattr(defense.DefensiveRoles, "start_team_press", real_trigger),
+                       setattr(bloc_module.Bloc, "update", real_bloc_update),
+                       setattr(defense.DefensiveRoles, "update", real_defense_update),
+                       setattr(defense.DefensiveRoles, "_seen_at", real_seen_at),
+                       setattr(defense.DefensiveRoles, "_closest_to", real_closest_to)])
 
 
 def _new_shots(collector: Collector, live: dict, now_s: float, players) -> None:
@@ -169,13 +218,13 @@ def _force_attribute(attribute: str, high_team: str, team_of: dict[str, str]) ->
 
 
 def run(n_matches: int, profile: str | None = None, duration_minutes: float = 90.0, tick_s: float = TICK_S,
-        plans: bool = True, start: int = 0) -> Collector:
+        plans: bool = True, start: int = 0, defence_perception: bool = True) -> Collector:
     clubs = load_clubs(CLUBS_PATH, "Ligue 1")
     collector = Collector()
     collector.minutes_per_match = duration_minutes
     clock = {"now": 0.0, "dt": tick_s}
     started = time.perf_counter()
-    restore = _hook(collector, clock, plans)
+    restore = _hook(collector, clock, plans, defence_perception)
     try:
         for i in range(start, start + n_matches):  # `start` : découper un banc en lots parallèles
             # profils : chaque affiche est jouée deux fois, même graine, rôles haut/bas inversés
@@ -457,6 +506,17 @@ def report(c: Collector, detail: bool = False) -> dict:
     out["vision : adversaires non vus à 5 m au plus (moyenne)"] = k["vision : adversaires non vus à 5 m (somme)"] / decided
     out["vision : décisions avec un adversaire non vu à 5 m au plus (part)"] = (
         k["vision : décisions avec un adversaire non vu à 5 m"] / decided)
+    # ticket v2-realisme/08f : part des adversaires proches (5 m au plus) non vus, et pertes au contact sur adversaire non vu
+    out["vision : adversaires à 5 m au plus par décision (moyenne)"] = k["vision : adversaires à 5 m (somme)"] / decided
+    out["vision : adversaires à 5 m au plus non vus à la décision (part des adversaires proches)"] = (
+        k["vision : adversaires non vus à 5 m (somme)"] / max(1, k["vision : adversaires à 5 m (somme)"]))
+    out["pertes de balle au contact par match (tacle, conduite, rotation)"] = k["pertes au contact"] / n
+    out["pertes au contact sur adversaire non vu (part des pertes au contact)"] = (
+        k["pertes au contact sur adversaire non vu"] / max(1, k["pertes au contact"]))
+    for way in ("tacle", "conduite", "rotation"):
+        out[f"pertes au contact : {way}, par match"] = k[f"pertes au contact : {way}"] / n
+        out[f"pertes au contact : {way}, sur adversaire non vu (part)"] = (
+            k[f"pertes au contact sur adversaire non vu : {way}"] / max(1, k[f"pertes au contact : {way}"]))
     # mémoire de perception du porteur et du receveur sur les adversaires non vus (ticket v2-realisme/08b)
     held = max(1, k["mémoire : décisions avec un adversaire non vu"])
     out["mémoire : âge de la dernière vue des adversaires non vus, porteur (s)"] = k["mémoire : âge de la dernière vue (somme, s)"] / held
@@ -476,6 +536,11 @@ def report(c: Collector, detail: bool = False) -> dict:
     out["scans par match"] = k["scans"] / n
     match_minutes = getattr(c, "minutes_per_match", 90.0)  # absent hors de `run` (tests du rapport)
     out["scans par minute et par joueur"] = k["scans"] / max(1e-9, n * match_minutes * 22)
+    on_pitch_s = sum(v for key, v in k.items() if key.startswith("temps sur le terrain (s) : "))
+    out["scans par minute et par joueur (temps réellement sur le terrain, temps additionnel compris)"] = (
+        k["scans"] / max(1e-9, on_pitch_s / 60.0))  # le total ci-dessus suppose 90 min nominales (08c) ; même base que les postes
+    for poste in sorted(key.split(" : ")[1] for key in k if key.startswith("temps sur le terrain (s) : ")):
+        out[f"scans par minute et par joueur : {poste}"] = k[f"scans : {poste}"] / max(1e-9, k[f"temps sur le terrain (s) : {poste}"] / 60.0)
     out["scans en défense (part des scans ; l'équipe sans le ballon ne suit plus le ballon le temps du scan)"] = (
         k["scans : en défense"] / max(1, k["scans"]))
     out["scans du porteur (part des scans)"] = k["scans : du porteur"] / max(1, k["scans"])
@@ -485,6 +550,35 @@ def report(c: Collector, detail: bool = False) -> dict:
         out[f"profil {level} : scans par minute et par joueur"] = k[f"profil {level} : scans"] / max(1e-9, n * match_minutes * 11)
         out[f"profil {level} : scans dans les 10 s avant la réception (moyenne)"] = (
             k[f"profil {level} : scans avant la réception (somme, 10 s)"] / max(1, k[f"profil {level} : réceptions"]))
+    # ligne et marquage perçus (tickets v2-realisme/08e et 08f, réserve A1 du 08e) : effet exact de la perception tick par tick
+    ticks = max(1, k["ligne : ticks adversaire porteur"])
+    out["ligne perçue : ticks avec l'adversaire porteur par match"] = k["ligne : ticks adversaire porteur"] / n
+    out["ligne perçue : écart absolu à la ligne sur vraies positions (moyenne, m)"] = k["ligne : écart absolu (somme, m)"] / ticks
+    out["ligne perçue : écart signé, perçue - réelle (moyenne, m ; positif = ligne plus haute)"] = (
+        k["ligne : écart perçue - réelle (somme, m)"] / ticks)
+    for limit in LINE_GAP_LIMITS_M:
+        out[f"ligne perçue : ticks avec un écart de plus de {limit:g} m (part)"] = (
+            k[f"ligne : ticks avec un écart de plus de {limit:g} m"] / ticks)
+    gaps = c.stats["ligne : écart absolu dû à la perception (m)"].values
+    out["ligne perçue : écart absolu, 95e centile (m)"] = statistics.quantiles(gaps, n=20)[-1] if len(gaps) >= 2 else 0.0
+    out["ligne perçue : écart maximal (m)"] = c.peak["ligne : écart maximal (m)"]
+    for tag in ("perçue", "réelle"):
+        steps = max(1, k[f"ligne {tag} : variations (nombre)"])
+        out[f"ligne {tag} : variation moyenne d'un tick à l'autre (m)"] = k[f"ligne {tag} : variation absolue (somme, m)"] / steps
+        out[f"ligne {tag} : variation efficace d'un tick à l'autre (m)"] = (k[f"ligne {tag} : variation au carré (somme, m²)"] / steps) ** 0.5
+        out[f"ligne {tag} : sauts de plus de {LINE_JUMP_M:g} m par match"] = k[f"ligne {tag} : sauts de plus de {LINE_JUMP_M:g} m"] / n
+        out[f"ligne {tag} : changements de sens par match"] = k[f"ligne {tag} : changements de sens"] / n
+    marked = max(1, k["marquage : marqueur-ticks"])
+    out["marquage : marqueur-ticks par match"] = k["marquage : marqueur-ticks"] / n
+    out["marquage : attaquant non vu par son marqueur (part des marqueur-ticks)"] = k["marquage : attaquant non vu"] / marked
+    out["marquage : erreur de place de l'attaquant (moyenne, m)"] = k["marquage : erreur de place (somme, m)"] / marked
+    out["marquage : erreur de place quand l'attaquant n'est pas vu (moyenne, m)"] = (
+        k["marquage : erreur de place, attaquant non vu (somme, m)"] / max(1, k["marquage : attaquant non vu"]))
+    out[f"marquage : erreur de plus de {MARKING_GAP_M:g} m (part des marqueur-ticks)"] = (
+        k[f"marquage : erreur de plus de {MARKING_GAP_M:g} m"] / marked)
+    out["marquage : erreur maximale (m)"] = c.peak["marquage : erreur maximale (m)"]
+    out["marquage : marqueur différent de celui des vraies positions (part des choix)"] = (
+        k["marquage : marqueur différent de celui des vraies positions"] / max(1, k["marquage : choix du marqueur"]))
     out["talonnades par match"] = k["talonnades"] / n
     out["talonnades : non perdues (part)"] = k["talonnades : non perdues"] / max(1, k["talonnades"])
     out["talonnades : reçues par le receveur visé (part)"] = k["talonnades : reçues par le receveur visé"] / max(1, k["talonnades"])
@@ -538,11 +632,14 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--pas", type=float, default=TICK_S, help="pas de calcul (s), par défaut celui du produit")
     parser.add_argument("--sans-plan", action="store_true", help="ticket v2-collectif/14 désactivé")
     parser.add_argument("--debut", type=int, default=0, help="indice du premier match (lots parallèles)")
+    parser.add_argument("--sans-perception-defense", action="store_true",
+                        help="ticket v2-realisme/08e désactivé : ligne et marquage lisent les vraies positions (A/B du 08f)")
     parser.add_argument("--sans-tenir", action="store_true", help="tickets v2-realisme/02f et 02g désactivés : tous les coéquipiers du porteur appellent")
     args = parser.parse_args(argv)
     if args.sans_tenir:
         cerveau.CALLER_CAP = {}
-    result = report(run(args.matches, args.profil, tick_s=args.pas, plans=not args.sans_plan, start=args.debut),
+    result = report(run(args.matches, args.profil, tick_s=args.pas, plans=not args.sans_plan, start=args.debut,
+                       defence_perception=not args.sans_perception_defense),
                     args.detail)
     for key, value in result.items():
         if isinstance(value, dict):

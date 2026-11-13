@@ -1,0 +1,3 @@
+avec perception : 50 matchs, 53096 passes, passes en profondeur 167.0 (3.34 par match), réussies 70.0 = 41.9% (écart-type binomial 3.8%) ; moyenne des parts par lot : 40.2% ; hors-jeu 42
+sans perception : 50 matchs, 52514 passes, passes en profondeur 184.0 (3.68 par match), réussies 91.0 = 49.5% (écart-type binomial 3.7%) ; moyenne des parts par lot : 48.0% ; hors-jeu 39
+durée réelle moyenne d'un match : 98.9 min ; scans par match 35639 ; par joueur et par minute : 18.00 sur 90 min nominales, 16.38 sur la durée réelle
