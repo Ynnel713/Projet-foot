@@ -213,6 +213,7 @@ def run(n_matches: int, profile: str | None = None, duration_minutes: float = 90
                     collector.on_chance(event)
                 collector.on_events(trace.events)  # contrôles ratés par tranche (ticket v2-realisme/19d)
                 collector.on_decisions(trace.decisions)  # rotation avant la passe ou le tir (ticket v2-realisme/07e)
+                collector.on_receptions(trace.receptions)  # mémoire du receveur (ticket v2-realisme/08b)
             finally:
                 unforce()
             collector.end_match()
@@ -455,6 +456,17 @@ def report(c: Collector, detail: bool = False) -> dict:
     out["vision : adversaires non vus à 5 m au plus (moyenne)"] = k["vision : adversaires non vus à 5 m (somme)"] / decided
     out["vision : décisions avec un adversaire non vu à 5 m au plus (part)"] = (
         k["vision : décisions avec un adversaire non vu à 5 m"] / decided)
+    # mémoire de perception du porteur et du receveur sur les adversaires non vus (ticket v2-realisme/08b)
+    held = max(1, k["mémoire : décisions avec un adversaire non vu"])
+    out["mémoire : âge de la dernière vue des adversaires non vus, porteur (s)"] = k["mémoire : âge de la dernière vue (somme, s)"] / held
+    out["mémoire : erreur de position perçue des adversaires non vus, porteur (m)"] = k["mémoire : erreur moyenne (somme, m)"] / held
+    out["mémoire : erreur maximale, porteur (m)"] = c.peak["mémoire : erreur maximale du porteur (m)"]
+    received = max(1, k["mémoire : réceptions avec un adversaire non vu"])
+    out["mémoire : réceptions avec un adversaire non vu (part)"] = (
+        k["mémoire : réceptions avec un adversaire non vu"] / max(1, k["mémoire : réceptions"]))
+    out["mémoire : âge de la dernière vue des adversaires non vus, receveur (s)"] = k["mémoire : âge à la réception (somme, s)"] / received
+    out["mémoire : erreur de position perçue des adversaires non vus, receveur (m)"] = k["mémoire : erreur à la réception (somme, m)"] / received
+    out["mémoire : erreur maximale, receveur (m)"] = c.peak["mémoire : erreur maximale du receveur (m)"]
     out["talonnades par match"] = k["talonnades"] / n
     out["talonnades : non perdues (part)"] = k["talonnades : non perdues"] / max(1, k["talonnades"])
     out["talonnades : reçues par le receveur visé (part)"] = k["talonnades : reçues par le receveur visé"] / max(1, k["talonnades"])

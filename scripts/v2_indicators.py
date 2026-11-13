@@ -416,6 +416,7 @@ class Collector:
         self.every = geometry_every_s
         self.stats: dict[str, Stat] = defaultdict(Stat)
         self.count: Counter = Counter()
+        self.peak: dict[str, float] = defaultdict(float)  # maxima sur tous les matchs (ticket v2-realisme/08b)
         self.km: dict[str, list[float]] = defaultdict(list)
         self.matches = 0
         self.minutes = MinuteProfile()  # rendement par tranche de 15 minutes (ticket v2-realisme/19d)
@@ -794,12 +795,30 @@ class Collector:
             self.count["vision : adversaires non vus (somme)"] += d.unseen_opponents
             self.count["vision : adversaires non vus à 5 m (somme)"] += d.unseen_near
             self.count["vision : décisions avec un adversaire non vu à 5 m"] += d.unseen_near > 0
+            if d.unseen_opponents > 0:  # mémoire du porteur sur ceux qu'il ne voit pas (ticket v2-realisme/08b)
+                self.count["mémoire : décisions avec un adversaire non vu"] += 1
+                self.count["mémoire : âge de la dernière vue (somme, s)"] += d.memory_age_s
+                self.count["mémoire : erreur moyenne (somme, m)"] += d.memory_error_mean_m
+                self.peak["mémoire : erreur maximale du porteur (m)"] = max(
+                    self.peak["mémoire : erreur maximale du porteur (m)"], d.memory_error_max_m)
             if d.action in ("pass", "shot"):
                 kind = "passes" if d.action == "pass" else "tirs"
                 self.count[f"rotation : {kind} décidés"] += 1
                 if d.rotation_s > 0.0:
                     self.count[f"rotation : {kind} décidés avec rotation"] += 1
                     self.count[f"rotation : {kind}, durée (somme, s)"] += d.rotation_s
+
+    def on_receptions(self, receptions) -> None:
+        """Mémoire du receveur sur les adversaires qu'il ne voit pas à la réception (ticket v2-realisme/08b) ; un joueur
+        qui les voit tous ne compte pas (âge nul)."""
+        for r in receptions:
+            self.count["mémoire : réceptions"] += 1
+            if r.memory_age_s > 0.0:
+                self.count["mémoire : réceptions avec un adversaire non vu"] += 1
+                self.count["mémoire : âge à la réception (somme, s)"] += r.memory_age_s
+                self.count["mémoire : erreur à la réception (somme, m)"] += r.memory_error_mean_m
+                self.peak["mémoire : erreur maximale du receveur (m)"] = max(
+                    self.peak["mémoire : erreur maximale du receveur (m)"], r.memory_error_max_m)
 
     def on_events(self, events) -> None:
         """Journal du match (`MatchTrace.events`, ticket v2-realisme/19b) : contrôles ratés et buteurs par tranche,

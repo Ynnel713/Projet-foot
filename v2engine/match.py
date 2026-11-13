@@ -31,6 +31,7 @@ from v2engine.formation import initial_positions
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch, in_penalty_area
 from v2engine.movement import PlayerState, step
 from v2engine.cerveau import GOAL_CENTER_Y, OPPONENT_GOAL, Intention, think
+from v2engine.perception_memory import MemoryReading, PerceptionMemory
 from v2engine.vision import unseen
 from v2engine.decision import (DECISION_INTERVAL_S, choose_action, dribble_lost, lane_closed_during_turn,
                                lost_carry_outcome)
@@ -533,7 +534,8 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                offsides: list[OffsideEvent] | None = None, modes: dict[str, str] | None = None,
                restarts: list[RestartEvent] | None = None, fouls: list[FoulEvent] | None = None,
                shots: list[ShotEvent] | None = None,
-               receptions: list[ReceptionEvent] | None = None) -> str | None:
+               receptions: list[ReceptionEvent] | None = None,
+               memory: PerceptionMemory | None = None) -> str | None:
     """Avance le ballon d'un tick (mutation en place) : si un joueur le contrôle déjà, un
     adversaire à portée directe peut d'abord tenter un tacle (Phase 3, Tackling/Strength/
     Balance/Aggression ; au plus un par confrontation, v2-socle/03) ; sinon, après son temps de réception (`possession.reception_delay_s`, v2-socle/06)
@@ -633,13 +635,15 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
             _log(ball, now_s, REMISE, r.team, holder.name, r.kind, getattr(getattr(action, "target", None), "name", None))
         if decisions is not None:
             target = getattr(action, "target", None)
+            seen_back = memory.reading(holder, rivals, now_s) if memory is not None else MemoryReading()  # 08b, lecture seule
             decisions.append(DecisionRecord(now_s / 60.0, holder.name, holder.team, action.kind,
                                             target.name if target is not None else None,
                                             getattr(action, "considered", 1), getattr(action, "best", True),
                                             getattr(action, "best_kind", None), getattr(action, "gap", 0.0),
                                             0.0 if set_piece else getattr(action, "rotation_s", 0.0),
                                             getattr(action, "backheel", False),
-                                            len(unseen(holder, rivals)), len(unseen(holder, rivals, PRESSURE_RADIUS_M))))
+                                            len(unseen(holder, rivals)), len(unseen(holder, rivals, PRESSURE_RADIUS_M)),
+                                            seen_back.age_mean_s, seen_back.error_mean_m, seen_back.error_max_m))
         # il se retourne d'abord (ticket v2-realisme/07e) ; le tireur d'un coup franc s'est placé face à son geste
         turn = 0.0 if set_piece else getattr(action, "rotation_s", 0.0)
         if turn > 0.0:
@@ -652,7 +656,8 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
             return None
         return _execute(ball, holder, action, players, rivals, goal, keeper, now_s, set_piece, fouls, shots,
                         lost=action.kind == "dribble" and dribble_lost(holder, rivals))
-    return _step_loose_ball(ball, dt, players, now_s, decisions, offsides, modes, restarts, fouls, shots, receptions)
+    return _step_loose_ball(ball, dt, players, now_s, decisions, offsides, modes, restarts, fouls, shots, receptions,
+                            memory)
 
 
 def _execute(ball: BallState, holder: PlayerState, action, players: list[PlayerState], rivals: list[PlayerState],
@@ -770,7 +775,8 @@ def _execute(ball: BallState, holder: PlayerState, action, players: list[PlayerS
 def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: float,
                      decisions: list[DecisionRecord] | None, offsides: list[OffsideEvent] | None,
                      modes: dict[str, str] | None, restarts: list[RestartEvent] | None, fouls: list[FoulEvent] | None,
-                     shots: list[ShotEvent] | None, receptions: list[ReceptionEvent] | None) -> str | None:
+                     shots: list[ShotEvent] | None, receptions: list[ReceptionEvent] | None,
+                     memory: PerceptionMemory | None = None) -> str | None:
     """Ballon sans porteur : vol, contacts, sorties, buts (suite de `_step_ball`)."""
     ball.engaged_holder = None  # ballon libre : les confrontations en cours sont finies (v2-socle/03)
     if ball.shot_for is not None:
@@ -879,12 +885,14 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
         _clear_offside(ball)
         if attempt_control(player, ball.velocity, opponents):
             if receptions is not None:  # type de réception, tracé (ticket v2-realisme/07c)
+                seen_back = memory.reading(player, opponents, now_s) if memory is not None else MemoryReading()  # 08b
                 receptions.append(ReceptionEvent(
                     minute=now_s / 60.0, team=player.team, player=player.name, poste=player.poste,
                     kind=reception_type(player.facing, player.position, player.team),
                     facing_goal_deg=facing_to_goal_deg(player.facing, player.position, player.team),
                     ball_facing_deg=_ball_facing_deg(player.facing, ball.velocity),
-                    origin=received, intended=intended))
+                    origin=received, intended=intended, memory_age_s=seen_back.age_mean_s,
+                    memory_error_mean_m=seen_back.error_mean_m, memory_error_max_m=seen_back.error_max_m))
             ball.holder = player.name
             ball.came_from = (player.name, received, player.position)
             ball.hesitation.pop(player.name, None)  # il a le ballon : il joue, il n'attend plus
@@ -1041,6 +1049,7 @@ def simulate_match(
     trace = MatchTrace(home=home_club.name, away=away_club.name, tick_seconds=tick_seconds * record_every)
     ball.log = EventLog(trace.events)  # journal des événements (ticket v2-realisme/19b)
 
+    memory = PerceptionMemory(players, 0.0)  # ce que chacun a vu des autres (ticket v2-realisme/08b), sans effet sur le jeu
     runs: dict[str, tuple[Vec2, float]] = {}  # espace visé par chaque joueur sans ballon (Off the Ball)
     intentions: dict[str, Intention] = {}  # intention de chaque joueur au dernier tick (ADR 0001)
     trace.reaction_delays_s = {p.name: reaction_delay_s(p) for p in players}
@@ -1091,6 +1100,7 @@ def simulate_match(
             ball.log = EventLog(trace.events)  # le journal continue en 2e période (ticket v2-realisme/19b)
             ball.restart = kickoff("away" if first == "home" else "home", players, i * tick_seconds, dead_s=0.0)
             situations = SituationTracker(delays_s=dict(trace.reaction_delays_s))
+            memory = PerceptionMemory(players, i * tick_seconds)  # tous alignés : chacun connaît la place de tous
             bloc, defense, transition = Bloc.from_players(players), DefensiveRoles(), TransitionPlay()
             runs.clear()
             intentions.clear()
@@ -1108,9 +1118,10 @@ def simulate_match(
         players = [_step_player(p, ball, tick_seconds, minute, players, runs, intentions, situations, bloc, defense,
                                 transition, played_minute=played) for p in players]
         _resolve_player_collisions(players)
+        memory.update(players, i * tick_seconds)
         scoring_team = _step_ball(ball, tick_seconds, players, i * tick_seconds, trace.decisions, trace.offsides,
                                   transition.mode, trace.restarts, trace.fouls,
-                                  trace.shots, trace.receptions)
+                                  trace.shots, trace.receptions, memory)
         if scoring_team is not None:
             scorer = next((p for p in players if p.name == ball.last_toucher), None)  # l'engagement n'y touche pas
             trace.record_goal(scoring_team, minute, scorer.name if scorer is not None else None,

@@ -283,6 +283,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **Champ de vision (13/11/2026, ticket `v2-realisme/08a`)** : livré (13/11/2026), validé expert + QC. Chaque joueur voit dans un cône de ± 100° autour de son cap (`vision.py` ; réel 200 à 214°) ; à chaque décision, le porteur trace les adversaires qu'il ne voit pas (4,1 en moyenne, au moins un à 5 m dans 74 % des décisions). Aucun effet sur le jeu. Décisions du propriétaire : règle R2 révisée (cumul d'attributs permis, justifié et documenté) ; 08c élargi (porteur, vitesse, gêne) ; ticket 05k créé (tir masqué).
 
+**Mémoire de perception (13/11/2026, ticket `v2-realisme/08b`)** : livré (13/11/2026), validé expert + QC. Chaque joueur garde la dernière position et vitesse vues de chacun des autres (`perception_memory.py`, vue = champ de vision du 08a) ; la position perçue est extrapolée avec la part d'Anticipation du ticket 33 (99 → 100 %, 55 → 65 %, 11 → 30 %), jusqu'à 2 s, puis figée. Trace à la décision du porteur et à la réception (âge moyen de la dernière vue 2,2 s côté porteur, erreur moyenne 3,4 m, maximale 40 m). Aucun effet sur le jeu. Constantes validées (« ok constantes »). À surveiller au 08d : borner la confiance accordée à une position figée après 2 s.
+
 **Le tir manqué coûte le ballon dans la décision (13/11/2026, ticket `v2-realisme/18k`)** : livré (13/11/2026), validé expert + QC. Valeur du tir : chance de but moins le coût d'un tir non marqué (`loss_cost`), sans constante nouvelle. Sur 50 matchs : tirs 18,0 → 16,0 par équipe, de 25 à 30 m 6,9 → 3,7, part dans la surface 21 → 27 % (réel 68), conversion 7,3 → 8,1 % ; conversion par zone inchangée sur 100 matchs. L'écart restant relève de la pénétration dans la surface (section 35).
 
 ### Bloquée par

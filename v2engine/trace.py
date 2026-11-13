@@ -57,6 +57,11 @@ class DecisionRecord:
     # adversaires hors de son champ de vision à la décision (ticket v2-realisme/08a) : tous, et à 5 m au plus
     unseen_opponents: int = 0
     unseen_near: int = 0
+    # mémoire du porteur sur les adversaires qu'il ne voit pas (ticket v2-realisme/08b) : âge moyen de leur dernière vue,
+    # erreur moyenne et maximale de leur position perçue (extrapolée) contre leur position réelle
+    memory_age_s: float = 0.0
+    memory_error_mean_m: float = 0.0
+    memory_error_max_m: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -123,6 +128,10 @@ class ReceptionEvent:
     ball_facing_deg: float
     origin: str
     intended: bool
+    # mémoire du receveur sur les adversaires qu'il ne voit pas à la réception (ticket v2-realisme/08b), comme `DecisionRecord`
+    memory_age_s: float = 0.0
+    memory_error_mean_m: float = 0.0
+    memory_error_max_m: float = 0.0
 
 
 @dataclass(frozen=True)

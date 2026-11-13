@@ -33,3 +33,18 @@ def unseen(observer: PlayerState, players: list[PlayerState], within_m: float | 
     """Joueurs de `players` (lui exclu) hors de son champ de vision ; seulement ceux à `within_m` au plus si donné."""
     return [p for p in players if p.name != observer.name and not sees(observer, p.position)
             and (within_m is None or observer.position.distance_to(p.position) <= within_m)]
+
+
+def seen_by(observer: PlayerState, players: list[PlayerState]) -> list[PlayerState]:
+    """Joueurs de `players` (lui exclu) dans son champ de vision : même test que `sees`, une seule fois par observateur
+    (ticket v2-realisme/08b : la mémoire de perception le lit à chaque pas pour les 22 joueurs, chemin chaud)."""
+    ox, oy, fx, fy, cos_half = observer.position.x, observer.position.y, observer.facing.x, observer.facing.y, _COS_HALF
+    name, hypot, seen = observer.name, math.hypot, []
+    for p in players:
+        if p.name == name:
+            continue
+        dx, dy = p.position.x - ox, p.position.y - oy
+        distance = hypot(dx, dy)
+        if distance < 1e-9 or (fx * dx + fy * dy) / distance >= cos_half:
+            seen.append(p)
+    return seen
