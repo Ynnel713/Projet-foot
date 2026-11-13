@@ -12,7 +12,7 @@
 
 **Bloque :** rien.
 
-**Status:** à faire
+**Status:** à faire, prioritaire (prochaine session, 13/11/2026 : débloqué par 07b, 07c, 07d, 07e, 07f, 01d ; voir les reprises en fin de fichier)
 
 ## Estimation
 
