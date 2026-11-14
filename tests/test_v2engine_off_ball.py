@@ -22,8 +22,9 @@ def _player(name: str = "P", team: str = "home", poste: str = "MC", position: Ve
 
 
 def test_off_the_ball_curves_match_validated_points() -> None:
-    assert [round(search_radius_m(v), 6) for v in (99, 55, 11)] == [15.0, 8.0, 2.0]
-    assert [round(best_space_probability(v), 6) for v in (99, 55, 11)] == [0.95, 0.70, 0.45]
+    # note médiane (62) -> valeur de base de l'action, 55 avant le ticket v2-realisme/24 ; extrêmes inchangés
+    assert [round(search_radius_m(v), 6) for v in (99, 62, 11)] == [15.0, 8.0, 2.0]
+    assert [round(best_space_probability(v), 6) for v in (99, 62, 11)] == [0.95, 0.70, 0.45]
 
 
 def test_space_stays_within_search_radius_mostly_forward() -> None:
@@ -125,9 +126,10 @@ def _depth_share(runner: PlayerState, holder: PlayerState, mates: list[Vec2] | N
 
 
 def test_depth_run_curves_match_validated_points() -> None:
-    exploit_99 = depth_run_probability(_depth_runner(55), _holder()) / 0.35
-    assert [round(depth_run_probability(_depth_runner(v), _holder()) / exploit_99, 3) for v in (99, 55, 11)]         == [0.6, 0.35, 0.1]
-    exploit = [depth_run_probability(_depth_runner(55), _holder(v, v)) / 0.35 for v in (99, 55, 11)]
+    # note médiane (62) -> valeur de base de l'action, 55 avant le ticket v2-realisme/24 ; extrêmes inchangés
+    exploit_99 = depth_run_probability(_depth_runner(62), _holder()) / 0.35
+    assert [round(depth_run_probability(_depth_runner(v), _holder()) / exploit_99, 3) for v in (99, 62, 11)]         == [0.6, 0.35, 0.1]
+    exploit = [depth_run_probability(_depth_runner(62), _holder(v, v)) / 0.35 for v in (99, 62, 11)]
     assert [round(e, 2) for e in exploit] == [0.95, 0.70, 0.47]
 
 

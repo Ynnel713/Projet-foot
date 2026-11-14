@@ -36,8 +36,9 @@ def _kinds(options) -> set[str]:
 
 
 def test_decisions_curve_matches_validated_points() -> None:
+    # note médiane (62) -> valeur de base de l'action, 55 avant le ticket v2-realisme/24 ; extrêmes inchangés
     assert abs(best_choice_probability(99) - 0.95) < 1e-9
-    assert abs(best_choice_probability(55) - 0.70) < 1e-9
+    assert abs(best_choice_probability(62) - 0.70) < 1e-9
     assert abs(best_choice_probability(11) - 0.45) < 1e-9
 
 
@@ -152,8 +153,9 @@ def test_new_holder_decides_after_his_reception_time_when_winning_the_ball(monke
 
 
 def test_vision_curves_match_validated_points() -> None:
-    assert [round(vision_range_m(v), 6) for v in (99, 55, 11)] == [50.0, 30.0, 10.0]
-    assert [round(key_pass_spot_probability(v), 6) for v in (99, 55, 11)] == [0.9, 0.5, 0.1]
+    # note médiane (62) -> valeur de base de l'action, 55 avant le ticket v2-realisme/24 ; extrêmes inchangés
+    assert [round(vision_range_m(v), 6) for v in (99, 62, 11)] == [50.0, 30.0, 10.0]
+    assert [round(key_pass_spot_probability(v), 6) for v in (99, 62, 11)] == [0.9, 0.5, 0.1]
 
 
 def test_teammate_beyond_vision_range_is_not_considered_but_nearest_always_is() -> None:

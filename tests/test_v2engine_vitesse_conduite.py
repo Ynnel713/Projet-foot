@@ -18,8 +18,9 @@ def _p(name: str, team: str = "home", x: float = 50.0, y: float = 34.0, dribblin
                        acceleration=60, stamina=60, home_target=Vec2(x, y), attributes=attributes)
 
 
-def test_free_speed_grows_with_dribbling_and_keeps_the_old_value_at_55() -> None:
-    low, mid, high = (dribble_speed_factor(_p("H", dribbling=d), 0.0) for d in (11, 55, 99))
+def test_free_speed_grows_with_dribbling_and_keeps_the_old_value_at_the_median() -> None:
+    # note médiane (62) -> valeur de base, 55 avant le ticket v2-realisme/24 ; extrêmes inchangés
+    low, mid, high = (dribble_speed_factor(_p("H", dribbling=d), 0.0) for d in (11, 62, 99))
     assert low < mid < high
     assert abs(mid - 0.85) < 1e-12  # valeur d'avant le ticket pour un joueur moyen sans adversaire
     assert abs(high - 0.90) < 1e-9 and abs(low - 0.80) < 1e-9

@@ -3,9 +3,10 @@ fixes, et donne tous les indicateurs de `docs/INDICATEURS_V2.md` (classiques et 
 zone du ballon, score et tranche de 15 minutes.
 
 Usage : uv run python -m scripts.measure_v2 [nombre_de_matchs] [--profil "Work Rate"] [--detail] [--json chemin] [--pas 0.15]
-[--sans-plan] [--sans-tenir]
+[--sans-plan] [--sans-tenir] [--niveaux 80 70]
 
-`--profil <Attribut>` : test de profils. L'attribut est forcé à 99 pour une équipe et à 11 pour l'autre,
+`--profil <Attribut>` : test de profils. L'attribut est forcé à 99 pour une équipe et à 11 pour l'autre (`--niveaux 80 70`
+pour d'autres notes, ticket v2-realisme/24),
 les rôles s'inversant d'un match à l'autre (neutralise l'avantage du terrain) ; le rapport compare les deux
 niveaux. `--detail` : affiche les découpages. Lecture seule : le jeu n'est pas modifié (sauf l'attribut du
 profil testé). `--sans-plan` : le passeur ne transmet aucun plan de passe (ticket v2-collectif/14 désactivé, même
@@ -19,6 +20,7 @@ import random
 import statistics
 import sys
 import time
+from collections import Counter
 from collections.abc import Callable
 from dataclasses import replace
 
@@ -30,6 +32,8 @@ import v2engine.cerveau as cerveau
 import v2engine.defense as defense
 import v2engine.match as match
 from v2engine.shooting import NEUTRAL_ATTRIBUTES
+from v2engine.trace import CONTROLE_RATE, PASSE, PERTE
+from v2engine.cerveau import HORS_JEU
 from ligue1sim.lineup import pick_best_formation
 
 from scripts.v2_indicators import (BACKPEDAL_POSTES, CARRY_PREFIX, FLICKER_S, EXIT_STATES, LINE_GAP_LIMITS_M, LINE_JUMP_M, MARKING_GAP_M, PASS_PREFIX,
@@ -198,8 +202,95 @@ def _new_shots(collector: Collector, live: dict, now_s: float, players) -> None:
     live["shots"] = len(shots)
 
 
-def _force_attribute(attribute: str, high_team: str, team_of: dict[str, str]) -> Callable[[], None]:
-    """Force `attribute` à 99 pour `high_team` et à 11 pour l'autre, dans tous les modules du moteur. `team_of`
+# Ticket v2-realisme/24 : indicateurs cibles par équipe du profil (haute, basse), tirés du journal du match ; chaque
+# match donne un écart haut - bas (même affiche, même graine), d'où un écart moyen et son intervalle de confiance.
+_T95 = {1: 12.71, 2: 4.30, 3: 3.18, 4: 2.78, 5: 2.57, 6: 2.45, 7: 2.36, 8: 2.31, 9: 2.26, 10: 2.23, 12: 2.18, 15: 2.13,
+        19: 2.09, 24: 2.06, 29: 2.05, 39: 2.02, 49: 2.01}
+
+
+def _t95(df: int) -> float:
+    """Quantile 97,5 % de Student (table, valeur de la ligne inférieure la plus proche ; 1,96 au-delà de 49)."""
+    keys = [d for d in _T95 if d <= df]
+    return _T95[max(keys)] if keys and df <= 49 else (1.96 if df > 49 else float("nan"))
+
+
+def profile_tally(trace, high_team: str) -> dict[str, dict[str, float]]:
+    """Indicateurs cibles d'un match pour l'équipe à la note haute et celle à la note basse (ticket v2-realisme/24)."""
+    level = {high_team: "haut", ("away" if high_team == "home" else "home"): "bas"}
+    out = {lv: Counter() for lv in ("haut", "bas")}
+    for e in trace.events:
+        if e.team not in level:
+            continue
+        mine, theirs = out[level[e.team]], out["bas" if level[e.team] == "haut" else "haut"]
+        if e.kind == PASSE:
+            mine["passes"] += 1
+        elif e.kind == CONTROLE_RATE:
+            mine["contrôles ratés"] += 1
+        elif e.kind == HORS_JEU:
+            mine["hors-jeu"] += 1
+        elif e.kind == PERTE:
+            if e.detail == "passe interceptée":
+                mine["passes perdues"] += 1
+                theirs["interceptions"] += 1
+            elif e.detail == "tacle":
+                mine["ballons perdus sur tacle"] += 1
+                theirs["tacles gagnés"] += 1
+            elif e.detail == "conduite":
+                mine["pertes en conduite"] += 1
+    for shot in trace.shots:
+        if shot.team in level:
+            row = out[level[shot.team]]
+            row["tirs"] += 1
+            row["buts (tirs)"] += shot.outcome == "but"
+            row["qualité des tirs (somme)"] += shot.quality
+    for foul in trace.fouls:
+        if foul.team in level:
+            out[level[foul.team]]["fautes"] += 1
+    for d in trace.decisions:
+        if d.team in level:
+            out[level[d.team]]["décisions"] += 1
+            out[level[d.team]]["écart au meilleur choix (somme)"] += d.gap
+    rows = {}
+    for lv, c in out.items():
+        rows[lv] = {
+            "passes": c["passes"],
+            "passes réussies (part)": 1.0 - c["passes perdues"] / max(1, c["passes"]),
+            "contrôles ratés": c["contrôles ratés"],
+            "tacles gagnés": c["tacles gagnés"],
+            "ballons perdus sur tacle": c["ballons perdus sur tacle"],
+            "pertes en conduite": c["pertes en conduite"],
+            "interceptions": c["interceptions"],
+            "tirs": c["tirs"],
+            "buts sur tir": c["buts (tirs)"],
+            "buts moins qualité des tirs": c["buts (tirs)"] - c["qualité des tirs (somme)"],
+            "fautes": c["fautes"],
+            "hors-jeu": c["hors-jeu"],
+            "écart au meilleur choix (moyenne)": c["écart au meilleur choix (somme)"] / max(1, c["décisions"]),
+        }
+    return rows
+
+
+def profile_gaps(tallies: list[dict[str, dict[str, float]]]) -> dict[str, dict[str, float]]:
+    """Écart haut - bas par indicateur, moyenne sur les matchs et intervalle de confiance à 95 % (Student, apparié par
+    match) ; `significatif` : l'intervalle ne contient pas 0."""
+    out = {}
+    if not tallies:
+        return out
+    for key in tallies[0]["haut"]:
+        gaps = [t["haut"][key] - t["bas"][key] for t in tallies]
+        mean = statistics.fmean(gaps)
+        half = _t95(len(gaps) - 1) * statistics.stdev(gaps) / len(gaps) ** 0.5 if len(gaps) > 1 else float("nan")
+        out[key] = {"haut": statistics.fmean(t["haut"][key] for t in tallies),
+                    "bas": statistics.fmean(t["bas"][key] for t in tallies),
+                    "écart": mean, "IC95 bas": mean - half, "IC95 haut": mean + half,
+                    "significatif": bool(half == half and abs(mean) > half)}
+    return out
+
+
+def _force_attribute(attribute: str, high_team: str, team_of: dict[str, str],
+                     levels: tuple[int, int] = (HIGH, LOW)) -> Callable[[], None]:
+    """Force `attribute` à `levels[0]` (99 par défaut) pour `high_team` et à `levels[1]` (11) pour l'autre (ticket
+    v2-realisme/24 : `--niveaux 80 70`), dans tous les modules du moteur. `team_of`
     (nom -> équipe) sert aux joueurs encore sans équipe : Pace, Acceleration et Stamina sont lus à la
     construction des joueurs, sur les fiches de la base."""
     patched = []
@@ -211,7 +302,7 @@ def _force_attribute(attribute: str, high_team: str, team_of: dict[str, str]) ->
                 team = getattr(player, "team", None) or team_of.get(getattr(player, "name", None))
                 # copie neutre de l'xG neutre (ticket v2-realisme/06b) : jamais forcée (réserve A1 de l'expert)
                 if attr == attribute and team in ("home", "away") and getattr(player, "attributes", None) is not NEUTRAL_ATTRIBUTES:
-                    return HIGH if team == high_team else LOW
+                    return levels[0] if team == high_team else levels[1]
                 return _real(player, attr)
             module.player_attribute = forced
             patched.append((module, real))
@@ -219,10 +310,12 @@ def _force_attribute(attribute: str, high_team: str, team_of: dict[str, str]) ->
 
 
 def run(n_matches: int, profile: str | None = None, duration_minutes: float = 90.0, tick_s: float = TICK_S,
-        plans: bool = True, start: int = 0, defence_perception: bool = True) -> Collector:
+        plans: bool = True, start: int = 0, defence_perception: bool = True,
+        levels: tuple[int, int] = (HIGH, LOW)) -> Collector:
     clubs = load_clubs(CLUBS_PATH, "Ligue 1")
     collector = Collector()
     collector.minutes_per_match = duration_minutes
+    collector.profile_tallies = []  # ticket v2-realisme/24, un relevé par match (voir `profile_tally`)
     clock = {"now": 0.0, "dt": tick_s}
     started = time.perf_counter()
     restore = _hook(collector, clock, plans, defence_perception)
@@ -236,7 +329,7 @@ def run(n_matches: int, profile: str | None = None, duration_minutes: float = 90
             high_team = "home" if i % 2 == 0 else "away"
             team_of = {p.name: "home" for p in pick_best_formation(home).players}
             team_of.update({p.name: "away" for p in pick_best_formation(away).players})
-            unforce = _force_attribute(profile, high_team, team_of) if profile else (lambda: None)
+            unforce = _force_attribute(profile, high_team, team_of, levels) if profile else (lambda: None)
 
             live = {"trace": None, "shots": 0}
 
@@ -265,6 +358,8 @@ def run(n_matches: int, profile: str | None = None, duration_minutes: float = 90
                 collector.on_decisions(trace.decisions)  # rotation avant la passe ou le tir (ticket v2-realisme/07e)
                 collector.on_receptions(trace.receptions)  # mémoire du receveur (ticket v2-realisme/08b)
                 collector.on_scans(trace.scans, trace.receptions)  # scans (ticket v2-realisme/08c)
+                if profile:  # indicateurs cibles par équipe (ticket v2-realisme/24)
+                    collector.profile_tallies.append(profile_tally(trace, high_team))
             finally:
                 unforce()
             collector.end_match()
@@ -678,6 +773,10 @@ def report(c: Collector, detail: bool = False) -> dict:
     out["rendement par tranche de 15 min"] = {
         key: (round(v, 4) if isinstance(v, float) else v) for key, v in minute_report(c.minutes, postes).items()}
     out["rendement par joueur (tranches de 15 min)"] = player_report(c.minutes)  # dictionnaire imbriqué : hors « par match"
+    if getattr(c, "profile_tallies", None):  # profils : écart haut - bas par indicateur cible (ticket v2-realisme/24)
+        out["profil : écart haut - bas par match (IC 95 %)"] = {
+            key: {name: (round(v, 4) if isinstance(v, float) else v) for name, v in gap.items()}
+            for key, gap in profile_gaps(c.profile_tallies).items()}
     return out
 
 
@@ -685,6 +784,8 @@ def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("matches", nargs="?", type=int, default=20, help="avec --profil : nombre pair (affiche jouée deux fois)")
     parser.add_argument("--profil", default=None)
+    parser.add_argument("--niveaux", nargs=2, type=int, default=[HIGH, LOW], metavar=("HAUT", "BAS"),
+                        help="avec --profil : notes forcées (défaut 99 11 ; ticket v2-realisme/24 : 80 70)")
     parser.add_argument("--detail", action="store_true")
     parser.add_argument("--json", default=None)
     parser.add_argument("--pas", type=float, default=TICK_S, help="pas de calcul (s), par défaut celui du produit")
@@ -697,7 +798,7 @@ def main(argv: list[str] | None = None) -> None:
     if args.sans_tenir:
         cerveau.CALLER_CAP = {}
     result = report(run(args.matches, args.profil, tick_s=args.pas, plans=not args.sans_plan, start=args.debut,
-                       defence_perception=not args.sans_perception_defense),
+                       defence_perception=not args.sans_perception_defense, levels=tuple(args.niveaux)),
                     args.detail)
     for key, value in result.items():
         if isinstance(value, dict):

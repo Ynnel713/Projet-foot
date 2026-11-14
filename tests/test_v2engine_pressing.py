@@ -28,7 +28,8 @@ def _at(values) -> list[float]:
 
 
 def test_validated_curves() -> None:
-    notes = (99, 55, 11)
+    # note médiane (62) -> valeur de base de l'action, 55 avant le ticket v2-realisme/24 ; extrêmes inchangés
+    notes = (99, 62, 11)
     assert _at(press_intensity(_p("W", Work_Rate=n)) for n in notes) == [1.0, 0.8, 0.55]
     assert _at(press_rest_s(_p("W", Work_Rate=n)) for n in notes) == [5.0, 10.0, 20.0]
     assert _at(good_lane_probability(_p("A", Anticipation=n)) for n in notes) == [0.85, 0.65, 0.4]
@@ -50,7 +51,8 @@ def test_presser_stops_at_his_aggression_distance_on_the_side_of_the_lane() -> N
 
 def test_presser_relieved_after_his_burst_and_rests_by_work_rate() -> None:
     holder = _p("H", team="away", x=40)
-    first, second = _p("Premier", x=43, Work_Rate=55), _p("Second", x=47, Work_Rate=55)
+    # Work Rate médian (62) : repos de base de 10 s (55 avant le ticket v2-realisme/24)
+    first, second = _p("Premier", x=43, Work_Rate=62), _p("Second", x=47, Work_Rate=62)
     ball = BallState(position=holder.position, velocity=Vec2(0.0, 0.0), holder="H")
     defense = DefensiveRoles()
     for k in range(int(PRESS_BURST_S * 10)):

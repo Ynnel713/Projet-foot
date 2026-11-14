@@ -30,7 +30,8 @@ def _ball(holder: str | None, x: float = 50.0) -> BallState:
 
 
 def test_reaction_delay_follows_anticipation_validated_points() -> None:
-    for note, expected in ((99, 0.4), (55, 0.7), (11, 1.0)):
+    # note médiane (62) -> valeur de base, 55 avant le ticket v2-realisme/24 ; extrêmes inchangés
+    for note, expected in ((99, 0.4), (62, 0.7), (11, 1.0)):
         assert math.isclose(reaction_delay_s(_p("X", "home", anticipation=note)), expected)
 
 
@@ -71,7 +72,8 @@ def test_each_player_perceives_the_change_after_his_reaction_delay() -> None:
     t = SituationTracker()
     t.update(0.0, _ball("H"), PLAYERS)
     t.update(10.0, _ball("A"), PLAYERS)  # perte de home
-    sharp, average, slow = (_p(n, "home", anticipation=a) for n, a in (("S", 99), ("M", 55), ("L", 11)))
+    sharp, average, slow = (_p(n, "home", anticipation=a) for n, a in     # note médiane (62) -> valeur de base, 55 avant le ticket v2-realisme/24 ; extrêmes inchangés
+(("S", 99), ("M", 62), ("L", 11)))
     assert t.perceived(sharp, 10.3) == POSSESSION_INSTALLEE and t.perceived(sharp, 10.41) == TRANSITION_DEFENSIVE
     assert t.perceived(average, 10.6) == POSSESSION_INSTALLEE and t.perceived(average, 10.71) == TRANSITION_DEFENSIVE
     assert t.perceived(slow, 10.9) == POSSESSION_INSTALLEE and t.perceived(slow, 11.01) == TRANSITION_DEFENSIVE
