@@ -42,8 +42,11 @@ _FIELDS = {"Pace": "pace", "Acceleration": "acceleration", "Stamina": "stamina"}
 class PlayerCondition:
     """État du joueur qui module l'expression de ses notes. `energy` : part de sa réserve d'énergie restante (0-1),
     vidée par la course rapide et rechargée au repos (`movement.spend_energy`, ticket v2-realisme/12e) ; elle borne la
-    vitesse max et sera lue par les effets de la fatigue (20a, 20b, 20e)."""
+    vitesse max et sera lue par les effets de la fatigue (20a, 20b, 20e). `sprint_energy` : part de sa réserve rapide
+    (anaérobie) restante (0-1), vidée par le sprint et rechargée en quelques dizaines de secondes
+    (`movement.spend_sprint_energy`, ticket v2-realisme/12f) ; vide, il ne peut plus sprinter."""
     energy: float = 1.0
+    sprint_energy: float = 1.0
 
 
 def family(attribute: str) -> str:

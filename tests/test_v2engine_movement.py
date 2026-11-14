@@ -3,6 +3,8 @@ Lecture seule de la V1 (`ligue1sim.clubs`/`ligue1sim.players`) : aucun fichier p
 
 from __future__ import annotations
 
+import pytest
+
 from ligue1sim.clubs import load_clubs
 from ligue1sim.players import Player
 from ligue1sim.season import CLUBS_PATH
@@ -11,7 +13,8 @@ from v2engine.attributes import player_attribute
 from v2engine.ball_state import BallState
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
 from v2engine.match import CONTROL_RADIUS_M, PLAYER_RADIUS_M, _resolve_player_collisions, _step_ball, simulate_match
-from v2engine.movement import PlayerState, accel_tau_s, energy_factor, max_speed_mps, spend_energy, step
+from v2engine.movement import (SPRINT_SPEED_MPS, PlayerState, accel_tau_s, energy_factor, max_speed_mps, spend_energy,
+                               step)
 
 
 def _player_state(name: str = "P", pace: float = 60, acceleration: float = 60, stamina: float = 60,
@@ -49,20 +52,33 @@ def _sprint_then_walk(stamina: float, sprint_s: float = 60.0, walk_s: float = 60
     return after_sprint, speed, state.condition.energy
 
 
-def test_a_sixty_second_sprint_empties_the_reserve_and_walking_refills_it_partly() -> None:
-    """Scène du ticket 12e : 60 s au sprint, vitesse max réduite ; 60 s de marche, remontée partielle."""
+def test_a_sixty_second_sprint_empties_the_reserve_and_walking_refills_it_partly(monkeypatch) -> None:
+    """Scène du ticket 12e : 60 s au sprint, vitesse max réduite ; 60 s de marche, remontée partielle. Réserve rapide
+    (ticket 12f) neutralisée : la scène isole la réserve lente du 12e (l'interaction est testée à part)."""
+    monkeypatch.setattr("v2engine.movement.SPRINT_RESERVE_M", float("inf"))
     after_sprint, speed, after_walk = _sprint_then_walk(55)
     assert after_sprint < 0.8 and speed < max_speed_mps(60) * 0.98  # réserve sous le genou : vitesse max réduite
     assert after_sprint < after_walk < 1.0  # remontée partielle
 
 
-def test_high_stamina_tires_later_and_recovers_faster() -> None:
+def test_high_stamina_tires_later_and_recovers_faster(monkeypatch) -> None:
     """Stamina 99 contre 11 : baisse plus tardive, recharge plus rapide ; le début du match ne dépend plus de la
-    minute (la réserve est pleine)."""
+    minute (la réserve est pleine). Réserve rapide (ticket 12f) neutralisée : la scène isole la réserve lente du 12e."""
+    monkeypatch.setattr("v2engine.movement.SPRINT_RESERVE_M", float("inf"))
     low, high = _sprint_then_walk(11, 40.0), _sprint_then_walk(99, 40.0)
     assert high[0] > low[0] and high[1] > low[1]
     assert high[2] - high[0] > low[2] - low[0]
     assert energy_factor(1.0) == 1.0 and energy_factor(0.0) < energy_factor(0.4) < 1.0
+
+
+def test_a_long_sprint_is_held_at_the_sprint_threshold_and_spares_the_slow_reserve(monkeypatch) -> None:
+    """Interaction des tickets 12e et 12f : 60 s de course à fond, la réserve rapide vidée plafonne la vitesse au seuil
+    de sprint (25 km/h) ; la réserve lente se vide donc moins qu'avec une réserve rapide infinie."""
+    after_sprint, speed, _ = _sprint_then_walk(55)
+    assert speed == pytest.approx(SPRINT_SPEED_MPS, abs=0.1)
+    monkeypatch.setattr("v2engine.movement.SPRINT_RESERVE_M", float("inf"))
+    unbounded, _, _ = _sprint_then_walk(55)
+    assert after_sprint > unbounded
 
 
 def test_a_busy_player_has_less_reserve_than_a_thrifty_one_with_the_same_stamina() -> None:

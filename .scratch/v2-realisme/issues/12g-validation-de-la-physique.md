@@ -37,3 +37,7 @@ Temps machine, non compté : suite complète (environ 40 min) ; mesure 50 matchs
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+
+## Comments
+
+**14/11/2026, repris du 12f (réserve A3 de l'expert).** La réserve rapide du 12f (sprints répétés) existe mais n'agit presque pas en match : sous son genou sur 2,1 % des ticks de sprint, aucun écart significatif sur 30 matchs appariés. L'excès de course intense des attaquants (`docs/INDICATEURS_V2.md`, 18d, environ deux fois le réel) n'est pas résolu par elle : ne pas considérer la répétition des efforts comme réglée en match ; piste : vidange par la puissance métabolique, accélérations comprises.

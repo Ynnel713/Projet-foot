@@ -59,6 +59,24 @@ _RECOVERY_POINTS: tuple[tuple[float, float], ...] = ((5.0, 0.06), (55.0, 0.15), 
 # rapportée à la réserve, la recharge croît aussi avec Stamina (5 : 0,012 % par seconde ; 99 : 0,020 %)
 FATIGUE_KNEE = 0.8  # au-dessus de 80 % de sa réserve, aucune perte de vitesse ; en dessous, perte progressive
 FATIGUE_FLOOR = 0.6  # réserve vide : 60 % de sa vitesse max
+# Sprints répétés (ticket v2-realisme/12f, valeurs recommandées et validées par délégation du propriétaire, 14/11/2026) :
+# une réserve rapide (anaérobie, famille W' de Skiba) se vide de l'excès de vitesse au-dessus de `SPRINT_SPEED_MPS`
+# (25 km/h, seuil de sprint du banc, 01d) et se recharge sous ce seuil vers le plein, exponentiellement, avec une
+# constante de temps selon Stamina (40 s à 5, 30 s à 55, 20 s à 99 ; la phosphocréatine se reconstitue à moitié en
+# 20 à 30 s, Glaister 2005, ordre de grandeur). Taille `SPRINT_RESERVE_M` : un sprint de 30 m départ arrêté en vide
+# environ 22 %. Sous `SPRINT_KNEE` de réserve, la part de sa vitesse max au-dessus du seuil de sprint baisse comme la
+# racine de (réserve / genou) ; vide, il ne dépasse plus 25 km/h. Natural Fitness reste hors du match (D-V10). Réel :
+# baisse de 3 à 8 % sur une série de sprints courts avec 20 à 30 s de récupération (tests de répétition des sprints,
+# ordre de grandeur, mesurée sur le TEMPS de sprint, accélération comprise) ; valeurs du modèle non trouvées telles
+# quelles, calées en scène (Pace 80, Stamina 55, 5 sprints de 30 m) : 1er sprint intact ; 5e sprint −4,9 % de pointe à
+# 10 s d'intervalle, mais −2,3 % à 20 s et −1,0 % à 30 s : SOUS le repère réel (réserve A2 de l'expert au 12f), d'autant
+# que seule la vitesse au-dessus de 25 km/h vide la réserve (l'accélération ne se fatigue pas). Recalage (recharge plus
+# lente, ou vidange par la puissance métabolique, accélérations comprises) laissé à la calibration finale. −0,2 % à
+# 60 s ; sprint de 60 m d'une traite : −5 % entre la pointe et l'arrivée.
+SPRINT_SPEED_MPS = 25.0 * KMH_TO_MS
+SPRINT_RESERVE_M = 20.0  # m d'excès de vitesse au-dessus du seuil de sprint
+SPRINT_KNEE = 0.8
+_SPRINT_RECOVERY_TAU_POINTS: tuple[tuple[float, float], ...] = ((5.0, 40.0), (55.0, 30.0), (99.0, 20.0))  # s
 
 # Orientation du corps (ticket v2-realisme/07a, valeurs recommandées et validées par délégation du propriétaire,
 # 12/11/2026) : le cap (`PlayerState.facing`, direction du corps, distincte de la vitesse) tourne vers la direction
@@ -184,6 +202,24 @@ def energy_factor(energy: float) -> float:
     return FATIGUE_FLOOR + (1.0 - FATIGUE_FLOOR) * min(1.0, energy / FATIGUE_KNEE)
 
 
+def sprint_cap_mps(max_speed: float, sprint_energy: float) -> float:
+    """Vitesse max permise par la réserve rapide (ticket 12f) : entière au-dessus de `SPRINT_KNEE` ; en dessous, la part
+    au-dessus du seuil de sprint réduite comme la racine de (réserve / genou) ; vide, le seuil de sprint. Joueur plus
+    lent que le seuil : inchangée."""
+    if max_speed <= SPRINT_SPEED_MPS:
+        return max_speed
+    return SPRINT_SPEED_MPS + (max_speed - SPRINT_SPEED_MPS) * min(1.0, math.sqrt(max(0.0, sprint_energy) / SPRINT_KNEE))
+
+
+def spend_sprint_energy(sprint_energy: float, stamina: float, speed_mps: float, dt: float) -> float:
+    """Part de réserve rapide après `dt` secondes à `speed_mps` (ticket 12f) : l'excès au-dessus du seuil de sprint la
+    vide ; sous ce seuil, elle revient vers le plein avec une constante de temps selon Stamina ; bornée à [0, 1]."""
+    excess = speed_mps - SPRINT_SPEED_MPS
+    if excess > 0.0:
+        return max(0.0, sprint_energy - excess * dt / SPRINT_RESERVE_M)
+    return min(1.0, 1.0 - (1.0 - sprint_energy) * math.exp(-dt / _lerp(stamina, _SPRINT_RECOVERY_TAU_POINTS)))
+
+
 def spend_energy(energy: float, stamina: float, speed_mps: float, dt: float) -> float:
     """Part de réserve après `dt` secondes à `speed_mps` (ticket 12e) : l'excès au-dessus de 14,4 km/h la vide,
     la course plus lente la recharge, bornée à [0, 1]."""
@@ -253,7 +289,9 @@ def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_facto
     reculons selon l'angle entre le cap et la direction voulue (ticket v2-realisme/07b) ; il se retourne pour courir
     vers une cible lointaine (`faces_run`)."""
     # fatigue : réserve d'énergie (ticket 12e) ; `minute` n'est plus lue ici (gardée pour les appelants)
-    effective_max_speed = max_speed_mps(state.pace) * energy_factor(state.condition.energy) * speed_factor
+    # réserve rapide (12f) : plafond de sprint, appliqué avant la part d'intensité `speed_factor`
+    effective_max_speed = sprint_cap_mps(max_speed_mps(state.pace) * energy_factor(state.condition.energy),
+                                         state.condition.sprint_energy) * speed_factor
     agility = effective_rating(state, "Agility")  # freinage (12a), virage (12b) et rotation du corps (07f)
     decel = decel_max_mps2(agility)
     to_target = target - state.position
@@ -306,7 +344,9 @@ def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_facto
         attributes=state.attributes,
         role=state.role,
         condition=PlayerCondition(energy=spend_energy(state.condition.energy, state.stamina,
-                                                      0.5 * (velocity.length() + new_velocity.length()), dt)),
+                                                      0.5 * (velocity.length() + new_velocity.length()), dt),
+                                  sprint_energy=spend_sprint_energy(state.condition.sprint_energy, state.stamina,
+                                                                    0.5 * (velocity.length() + new_velocity.length()), dt)),
         facing=turn_toward(state.facing, desired_facing(new_position, run_direction, look_at, turning, facing_run),
                             turn_rate_rad_s(agility) * dt),
         facing_run=facing_run,

@@ -1,0 +1,5 @@
+{'ticks': 1.0, '<0.8': 0.0014, '<0.5': 0.0, '<0.2': 0.0}
+part des ticks en sprint avec réserve < 0,8 : 0.0207
+minimum : 0.569
+
+[exited with code 0]
