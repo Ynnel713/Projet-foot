@@ -1341,3 +1341,27 @@ Lecture. L'avant-centre reçoit le plus souvent de profil ou dos au jeu, comme a
 
 **Défaut corrigé au passage** : `bench_series` ne fusionnait pas les maxima (`Collector.peak`) ; ils valaient 0 dans l'agrégé d'une série (vitesse maximale à reculons ici, erreur maximale de mémoire du 08b avant). Fusion par le maximum, testée.
 
+
+## 38. Données de suivi réelles : sources et couverture (ticket v2-realisme/27a, 14/11/2026)
+
+Commandes : `uv run python -m scripts.suivi_reel telecharger` (1,9 Go dans `data/externe/`, ignoré par git ; 11 s quand tout est déjà là), puis `uv run python -m scripts.suivi_reel resume`.
+
+**Sources (choix du propriétaire, 14/11/2026).**
+- **SkillCorner open data**, licence MIT (citer SkillCorner) : **20 matchs** du championnat d'Australie 2024/25 (le README en annonce 10 ; `matches.json` en liste 20, tous téléchargés), suivi tiré de la vidéo de diffusion, 10 images/s, phases de jeu étiquetées (`build_up`, `create`, `finish`, `direct`, `quick_break`, `transition`, `chaotic`, `set_play`). Empreintes sha256 vérifiées sur les pointeurs Git LFS publiés.
+- **Metrica Sports, échantillon**, sans licence formelle (« usage responsable, citer la source ») : matchs 1 et 2, anonymes, terrain entier, 25 images/s, tous les joueurs suivis. Empreintes relevées au premier téléchargement et figées (`METRICA_SHA256`). Le match 3 (format EPTS FIFA) n'est pas lu.
+- Écarté : images « 360 » de StatsBomb (positions au moment des événements seulement : ni vitesses ni sprints).
+
+**Repère.** Celui du moteur : origine dans un coin, y croissant vers le bas de l'écran (la gauche d'une équipe qui attaque vers les x croissants est en y petit, `v2engine/formation.py`), l'équipe à domicile attaque vers les x croissants dans les deux périodes (rotation de 180° à la mi-temps) ; temps compté depuis le début de chaque période. Contrôle des côtés sur données réelles (y médians, matchs 2017461, 1925299, 2006229, deux périodes) : latéral gauche à domicile entre 12,6 et 16,7 m, latéral droit entre 46,5 et 54,7 m ; à l'extérieur, l'inverse (latéral gauche 44,1 à 50,9 m, droit 14,7 à 21,8 m). Contrôle de la profondeur : gardien à domicile en moyenne à x = 12,8 et 14,7 m (périodes 1 et 2), gardien extérieur à 90,5 et 92,5 m (SkillCorner 2017461) ; joueur le plus reculé de chaque équipe à 12,5 / 8,8 m et 94,4 / 92,7 m (Metrica 1, médianes). Mètres réels gardés : **10 terrains SkillCorner sur 20 ne font pas 105 × 68 m** (104 × 68 : 4 ; 106 × 68 : 6), signalés par `Match.standard`.
+
+**Couverture par match** (images en jeu ; « 22 joueurs » : positions des 22 présentes, détectées ou estimées ; « 20 détectés » : au moins 20 joueurs réellement dans le champ de la caméra).
+
+| Source | Matchs | Images par match | 22 joueurs | 20 détectés | Ballon connu | Phase connue | Lecture par match |
+|---|---|---|---|---|---|---|---|
+| SkillCorner | 20 | 56 792 à 61 282 | 65,8 à 81,0 % | 0,7 à 11,2 % | 65,8 à 81,0 % | 45,1 à 63,1 % | 2,0 à 2,9 s |
+| Metrica | 2 | 145 006 et 141 156 | 100 % | 100 % | 60,9 et 59,0 % | — | 6,4 et 5,9 s |
+
+**Limites pour 27b et 27c.**
+- SkillCorner : presque tous les joueurs hors du champ de la caméra ont une position **estimée**. Une mesure de vitesse ou de distance ne s'y fait que sur les joueurs détectés ; une mesure de forme d'équipe (largeur, profondeur, écarts entre lignes) doit être comparée sur les images où les joueurs concernés sont détectés, et l'écart à la forme complète (positions estimées comprises) rapporté.
+- Championnat d'Australie et échantillon Metrica anonyme : repères **indicatifs**, pas des cibles pour la Ligue 1.
+- 20 + 2 matchs : beaucoup d'images, peu d'équipes ; distributions robustes, comparaisons entre équipes fragiles.
+- Metrica : ni équipe en possession ni phase (fichiers d'événements non lus, contrôle des vitesses seulement) ; SkillCorner : phases de jeu lues, événements dynamiques non lus. Une mesure de 27b qui a besoin de la possession sur Metrica devra lire ses fichiers d'événements.

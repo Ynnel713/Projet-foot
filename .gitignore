@@ -56,3 +56,6 @@ scripts/archive/
 
 # Traces de match enregistrées pour le rejeu de développement (scripts/record_v2_trace.py), régénérables
 ui/src/dev/fixtures/
+
+# Données de suivi réelles téléchargées (ticket v2-realisme/27a) : jamais versionnées
+data/externe/
