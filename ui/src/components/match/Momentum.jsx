@@ -38,8 +38,8 @@ function Momentum({ trace, played, goalsShown }) {
   return (
     <svg viewBox={`-2 -6 ${width + 4} ${2 * H + 12}`} className="w-full" style={{ maxHeight: 110 }}>
       <title>Match momentum</title>
-      <rect x={0} y={0} width={width} height={H} fill="rgba(79,142,247,0.12)" />
-      <rect x={0} y={H} width={width} height={H} fill="rgba(224,184,74,0.12)" />
+      <rect x={0} y={0} width={width} height={H} style={{ fill: "var(--team-home-ui)" }} fillOpacity={0.12} />
+      <rect x={0} y={H} width={width} height={H} style={{ fill: "var(--team-away-ui)" }} fillOpacity={0.12} />
       {values.map((v, m) =>
         v == null || m >= played ? null : (
           <rect
@@ -48,7 +48,7 @@ function Momentum({ trace, played, goalsShown }) {
             width={X - 0.8}
             y={v > 0 ? H - v * scale : H}
             height={Math.abs(v) * scale}
-            fill={v > 0 ? "#4f8ef7" : "#e0b84a"}
+            style={{ fill: v > 0 ? "var(--team-home-ui)" : "var(--team-away-ui)" }}
           />
         ),
       )}

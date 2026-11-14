@@ -1,0 +1,1707 @@
+[
+{
+"club": "1.FC Heidenheim 1846",
+"color": "#aa2632",
+"secondary": "#aa2632"
+},
+{
+"club": "1.FC Köln",
+"color": "#e4e4e4",
+"secondary": "#cb232a"
+},
+{
+"club": "1.FC Union Berlin",
+"color": "#dd131c",
+"secondary": "#fafcfc"
+},
+{
+"club": "1.FSV Mainz 05",
+"color": "#eb262b",
+"secondary": "#ebdcd3"
+},
+{
+"club": "AC Milan",
+"color": "#212222",
+"secondary": "#cf1b2c"
+},
+{
+"club": "AC Monza",
+"color": "#d91a21",
+"secondary": "#ffffff"
+},
+{
+"club": "ACF Fiorentina",
+"color": "#5d3a7f",
+"secondary": "#d0cad4"
+},
+{
+"club": "ADO Den Haag",
+"color": "#ffd200",
+"secondary": "#00843d"
+},
+{
+"club": "AEK Athens",
+"color": "#ffe100",
+"secondary": "#000000"
+},
+{
+"club": "AFC Bournemouth",
+"color": "#222222",
+"secondary": "#b1292b"
+},
+{
+"club": "AJ Auxerre",
+"color": "#fdfdfd",
+"secondary": "#8993bd"
+},
+{
+"club": "AS Monaco",
+"color": "#db1d32",
+"secondary": "#fcfcfc"
+},
+{
+"club": "AS Roma",
+"color": "#7e233f",
+"secondary": "#d4a46e"
+},
+{
+"club": "AZ Alkmaar",
+"color": "#a81010",
+"secondary": "#f1f1f1"
+},
+{
+"club": "Académico de Viseu",
+"color": "#00693e",
+"secondary": "#ffffff"
+},
+{
+"club": "Ajax Amsterdam",
+"color": "#ba1525",
+"secondary": "#fcfcfc"
+},
+{
+"club": "Alanyaspor",
+"color": "#fc6716",
+"secondary": "#167939"
+},
+{
+"club": "Angers SCO",
+"color": "#191919",
+"secondary": "#ebebeb"
+},
+{
+"club": "Antalyaspor",
+"color": "#fcfdfd",
+"secondary": "#ad1111"
+},
+{
+"club": "Arsenal FC",
+"color": "#c31414",
+"secondary": "#f9fafa"
+},
+{
+"club": "Aston Villa",
+"color": "#651a2d",
+"secondary": "#a2bad8"
+},
+{
+"club": "Atalanta BC",
+"color": "#22211f",
+"secondary": "#2967bc"
+},
+{
+"club": "Athletic Bilbao",
+"color": "#fe2032",
+"secondary": "#e4e6e6"
+},
+{
+"club": "Atlético de Madrid",
+"color": "#dfdede",
+"secondary": "#bb2020"
+},
+{
+"club": "Basaksehir FK",
+"color": "#f96014",
+"secondary": "#e8cbbe"
+},
+{
+"club": "Bayer 04 Leverkusen",
+"color": "#311515",
+"secondary": "#896c6a"
+},
+{
+"club": "Bayern Munich",
+"color": "#d81814",
+"secondary": "#e8e7e7"
+},
+{
+"club": "Besiktas JK",
+"color": "#fafafa",
+"secondary": "#a07e7e"
+},
+{
+"club": "Birmingham City",
+"color": "#325f99",
+"secondary": "#b99f6f"
+},
+{
+"club": "Blackburn Rovers",
+"color": "#e4e4e4",
+"secondary": "#1858a0"
+},
+{
+"club": "Bologna FC 1909",
+"color": "#272a3a",
+"secondary": "#b51d36"
+},
+{
+"club": "Borussia Dortmund",
+"color": "#dcce0d",
+"secondary": "#262626"
+},
+{
+"club": "Borussia Mönchengladbach",
+"color": "#fafafa",
+"secondary": "#969696"
+},
+{
+"club": "Brentford FC",
+"color": "#f5f5f5",
+"secondary": "#d81626"
+},
+{
+"club": "Brighton & Hove Albion",
+"color": "#1962b0",
+"secondary": "#dfe0e1"
+},
+{
+"club": "Bristol City",
+"color": "#b01414",
+"secondary": "#eae6e6"
+},
+{
+"club": "Burnley FC",
+"color": "#802d4b",
+"secondary": "#afcedf"
+},
+{
+"club": "CA Osasuna",
+"color": "#ca2626",
+"secondary": "#ca2626"
+},
+{
+"club": "CD Nacional",
+"color": "#fafafa",
+"secondary": "#262626"
+},
+{
+"club": "CD Santa Clara",
+"color": "#d12221",
+"secondary": "#e5c0be"
+},
+{
+"club": "CD Tondela",
+"color": "#fddc26",
+"secondary": "#157d76"
+},
+{
+"club": "CF Estrela Amadora",
+"color": "#eae7e7",
+"secondary": "#275450"
+},
+{
+"club": "CS Marítimo",
+"color": "#00693e",
+"secondary": "#c8102e"
+},
+{
+"club": "Cagliari Calcio",
+"color": "#23303f",
+"secondary": "#bd2130"
+},
+{
+"club": "Casa Pia AC",
+"color": "#2c2c2c",
+"secondary": "#94835e"
+},
+{
+"club": "Caykur Rizespor",
+"color": "#152991",
+"secondary": "#194e62"
+},
+{
+"club": "Celta de Vigo",
+"color": "#93afd5",
+"secondary": "#292530"
+},
+{
+"club": "Cercle Brugge",
+"color": "#141414",
+"secondary": "#4dbb49"
+},
+{
+"club": "Charlton Athletic",
+"color": "#dd1b1b",
+"secondary": "#e9e8e8"
+},
+{
+"club": "Chelsea FC",
+"color": "#103a74",
+"secondary": "#a3b5ca"
+},
+{
+"club": "Club Brugge KV",
+"color": "#262626",
+"secondary": "#4065a8"
+},
+{
+"club": "Como 1907",
+"color": "#133c8a",
+"secondary": "#133c8a"
+},
+{
+"club": "Coventry City",
+"color": "#6fb3cf",
+"secondary": "#6fb3cf"
+},
+{
+"club": "Crystal Palace",
+"color": "#cb1919",
+"secondary": "#225895"
+},
+{
+"club": "Deportivo A Coruña",
+"color": "#0055a4",
+"secondary": "#ffffff"
+},
+{
+"club": "Deportivo Alavés",
+"color": "#0f3866",
+"secondary": "#f6f5f4"
+},
+{
+"club": "Derby County",
+"color": "#e5e5e5",
+"secondary": "#5d5b5b"
+},
+{
+"club": "ESTAC Troyes",
+"color": "#002b5c",
+"secondary": "#f7941d"
+},
+{
+"club": "Eintracht Frankfurt",
+"color": "#222222",
+"secondary": "#df1c1c"
+},
+{
+"club": "Elche CF",
+"color": "#f9f8f8",
+"secondary": "#1b5b40"
+},
+{
+"club": "Everton FC",
+"color": "#1e4e94",
+"secondary": "#a1abbc"
+},
+{
+"club": "Excelsior Rotterdam",
+"color": "#1e1e1e",
+"secondary": "#c1c0c0"
+},
+{
+"club": "FC Alverca",
+"color": "#2766cd",
+"secondary": "#eb2b2a"
+},
+{
+"club": "FC Arouca",
+"color": "#f7dd31",
+"secondary": "#1e2c51"
+},
+{
+"club": "FC Augsburg",
+"color": "#e1e1e1",
+"secondary": "#0f6f37"
+},
+{
+"club": "FC Barcelona",
+"color": "#193b74",
+"secondary": "#842131"
+},
+{
+"club": "FC Famalicão",
+"color": "#d8d9d9",
+"secondary": "#d8c05b"
+},
+{
+"club": "FC Groningen",
+"color": "#f6f6f6",
+"secondary": "#2e794f"
+},
+{
+"club": "FC Lorient",
+"color": "#222222",
+"secondary": "#f64312"
+},
+{
+"club": "FC Metz",
+"color": "#942938",
+"secondary": "#c9a1a3"
+},
+{
+"club": "FC Nantes",
+"color": "#eed623",
+"secondary": "#5a8036"
+},
+{
+"club": "FC Porto",
+"color": "#dbdbdd",
+"secondary": "#0f4cb6"
+},
+{
+"club": "FC Schalke 04",
+"color": "#004c9b",
+"secondary": "#ffffff"
+},
+{
+"club": "FC St. Pauli",
+"color": "#6b4743",
+"secondary": "#fbfbfa"
+},
+{
+"club": "FC Toulouse",
+"color": "#3a206a",
+"secondary": "#fcfcfc"
+},
+{
+"club": "FC Twente Enschede",
+"color": "#b21414",
+"secondary": "#b21414"
+},
+{
+"club": "FC Utrecht",
+"color": "#f6f6f6",
+"secondary": "#d41837"
+},
+{
+"club": "FC Volendam",
+"color": "#f8562b",
+"secondary": "#f8562b"
+},
+{
+"club": "FCV Dender EH",
+"color": "#3c6bc2",
+"secondary": "#a7c4c3"
+},
+{
+"club": "FK Bodø/Glimt",
+"color": "#ffe100",
+"secondary": "#000000"
+},
+{
+"club": "Fenerbahce",
+"color": "#121648",
+"secondary": "#eade0f"
+},
+{
+"club": "Feyenoord Rotterdam",
+"color": "#dc1515",
+"secondary": "#f5f5f5"
+},
+{
+"club": "Fortuna Sittard",
+"color": "#eac217",
+"secondary": "#526728"
+},
+{
+"club": "Frosinone Calcio",
+"color": "#ffe100",
+"secondary": "#003da5"
+},
+{
+"club": "Fulham FC",
+"color": "#f1f1f1",
+"secondary": "#919090"
+},
+{
+"club": "GD Estoril Praia",
+"color": "#fbd82e",
+"secondary": "#426578"
+},
+{
+"club": "Galatasaray",
+"color": "#891419",
+"secondary": "#fa7d14"
+},
+{
+"club": "Gaziantep FK",
+"color": "#ac1414",
+"secondary": "#101414"
+},
+{
+"club": "Genclerbirligi Ankara",
+"color": "#af1414",
+"secondary": "#111414"
+},
+{
+"club": "Genoa CFC",
+"color": "#1d323c",
+"secondary": "#cc242e"
+},
+{
+"club": "Getafe CF",
+"color": "#27369a",
+"secondary": "#d5cb75"
+},
+{
+"club": "Gil Vicente FC",
+"color": "#b52524",
+"secondary": "#bfacb6"
+},
+{
+"club": "Girona FC",
+"color": "#dfb9b9",
+"secondary": "#c53435"
+},
+{
+"club": "Go Ahead Eagles",
+"color": "#c41818",
+"secondary": "#d4b213"
+},
+{
+"club": "Göztepe",
+"color": "#a11414",
+"secondary": "#fadd14"
+},
+{
+"club": "Hamburger SV",
+"color": "#e4e4e4",
+"secondary": "#2e508a"
+},
+{
+"club": "Heidenheim",
+"color": "#aa2632",
+"secondary": "#aa2632"
+},
+{
+"club": "Hellas Verona",
+"color": "#243059",
+"secondary": "#817b3d"
+},
+{
+"club": "Heracles Almelo",
+"color": "#fcfcfc",
+"secondary": "#181818"
+},
+{
+"club": "Hull City",
+"color": "#f49b34",
+"secondary": "#322619"
+},
+{
+"club": "Inter Milan",
+"color": "#232221",
+"secondary": "#1e57b9"
+},
+{
+"club": "Ipswich Town",
+"color": "#25569f",
+"secondary": "#dedee3"
+},
+{
+"club": "Juventus FC",
+"color": "#ece9e9",
+"secondary": "#292929"
+},
+{
+"club": "KAA Gent",
+"color": "#3066d7",
+"secondary": "#ced6e4"
+},
+{
+"club": "KRC Genk",
+"color": "#1b84d2",
+"secondary": "#d5e2ed"
+},
+{
+"club": "KV Kortrijk",
+"color": "#ed1c24",
+"secondary": "#ffffff"
+},
+{
+"club": "KV Mechelen",
+"color": "#fb1414",
+"secondary": "#dbb71f"
+},
+{
+"club": "KVC Westerlo",
+"color": "#fad214",
+"secondary": "#7f362a"
+},
+{
+"club": "Kasimpasa",
+"color": "#eaeaea",
+"secondary": "#16234d"
+},
+{
+"club": "Kayserispor",
+"color": "#8c1515",
+"secondary": "#f1c312"
+},
+{
+"club": "Kocaelispor",
+"color": "#113032",
+"secondary": "#6c7d7b"
+},
+{
+"club": "Konyaspor",
+"color": "#126152",
+"secondary": "#fdfdfd"
+},
+{
+"club": "LASK",
+"color": "#000000",
+"secondary": "#ffffff"
+},
+{
+"club": "LOSC Lille",
+"color": "#e21621",
+"secondary": "#e7e1e2"
+},
+{
+"club": "Le Havre AC",
+"color": "#485d76",
+"secondary": "#91c4e6"
+},
+{
+"club": "Le Mans FC",
+"color": "#d91e36",
+"secondary": "#ffd200"
+},
+{
+"club": "Leeds United",
+"color": "#eaeaea",
+"secondary": "#945a86"
+},
+{
+"club": "Leicester City",
+"color": "#205693",
+"secondary": "#667b8b"
+},
+{
+"club": "Levante UD",
+"color": "#9f2240",
+"secondary": "#233559"
+},
+{
+"club": "Liverpool FC",
+"color": "#c31e36",
+"secondary": "#dfb9be"
+},
+{
+"club": "Lommel SK",
+"color": "#00539f",
+"secondary": "#f47920"
+},
+{
+"club": "Manchester City",
+"color": "#7cc7fa",
+"secondary": "#dfe4e8"
+},
+{
+"club": "Manchester United",
+"color": "#c21820",
+"secondary": "#c21820"
+},
+{
+"club": "Middlesbrough FC",
+"color": "#b11b1b",
+"secondary": "#dbdada"
+},
+{
+"club": "Millwall FC",
+"color": "#1f212e",
+"secondary": "#d4d4d5"
+},
+{
+"club": "Moreirense FC",
+"color": "#fafbfc",
+"secondary": "#969882"
+},
+{
+"club": "Málaga CF",
+"color": "#1560bd",
+"secondary": "#ffffff"
+},
+{
+"club": "NEC Nijmegen",
+"color": "#bf1212",
+"secondary": "#111112"
+},
+{
+"club": "Newcastle United",
+"color": "#eaeaea",
+"secondary": "#181818"
+},
+{
+"club": "Norwich City",
+"color": "#f5d626",
+"secondary": "#576f28"
+},
+{
+"club": "Nottingham Forest",
+"color": "#d21628",
+"secondary": "#d21628"
+},
+{
+"club": "OGC Nice",
+"color": "#f12436",
+"secondary": "#232626"
+},
+{
+"club": "Olympique Lyon",
+"color": "#f5f6f5",
+"secondary": "#222e7b"
+},
+{
+"club": "Olympique Marseille",
+"color": "#d5d4d3",
+"secondary": "#53badb"
+},
+{
+"club": "Oud-Heverlee Leuven",
+"color": "#fefdfe",
+"secondary": "#8aa694"
+},
+{
+"club": "Oxford United",
+"color": "#f0c61d",
+"secondary": "#1c2436"
+},
+{
+"club": "PEC Zwolle",
+"color": "#165199",
+"secondary": "#e1e1e1"
+},
+{
+"club": "PSV Eindhoven",
+"color": "#e9e9e9",
+"secondary": "#c71523"
+},
+{
+"club": "Paris FC",
+"color": "#1a3660",
+"secondary": "#d6d5d8"
+},
+{
+"club": "Paris Saint-Germain",
+"color": "#293657",
+"secondary": "#7d2537"
+},
+{
+"club": "Parma Calcio 1913",
+"color": "#f6f6f6",
+"secondary": "#191919"
+},
+{
+"club": "Pisa Sporting Club",
+"color": "#222222",
+"secondary": "#0e3884"
+},
+{
+"club": "Portsmouth FC",
+"color": "#1d5c9d",
+"secondary": "#dbe0e6"
+},
+{
+"club": "Preston North End",
+"color": "#fcfcfc",
+"secondary": "#a63c34"
+},
+{
+"club": "Queens Park Rangers",
+"color": "#9eadbe",
+"secondary": "#17549a"
+},
+{
+"club": "RAAL La Louvière",
+"color": "#c6d4ce",
+"secondary": "#26b77a"
+},
+{
+"club": "RB Leipzig",
+"color": "#f7f7f9",
+"secondary": "#b797a3"
+},
+{
+"club": "RC Lens",
+"color": "#e3bd17",
+"secondary": "#ef1f37"
+},
+{
+"club": "RC Strasbourg Alsace",
+"color": "#2052b0",
+"secondary": "#e6e7ea"
+},
+{
+"club": "RCD Espanyol Barcelona",
+"color": "#eaeaea",
+"secondary": "#24528a"
+},
+{
+"club": "RCD Mallorca",
+"color": "#de2020",
+"secondary": "#181919"
+},
+{
+"club": "RSC Anderlecht",
+"color": "#5f3b81",
+"secondary": "#e3e2e3"
+},
+{
+"club": "Racing Santander",
+"color": "#01884c",
+"secondary": "#ffffff"
+},
+{
+"club": "Rayo Vallecano",
+"color": "#faf9f9",
+"secondary": "#c21717"
+},
+{
+"club": "Real Betis Balompié",
+"color": "#1b9054",
+"secondary": "#d0d6d3"
+},
+{
+"club": "Real Madrid",
+"color": "#d9d9d9",
+"secondary": "#505050"
+},
+{
+"club": "Real Sociedad",
+"color": "#fcfaf9",
+"secondary": "#213f7f"
+},
+{
+"club": "Rio Ave FC",
+"color": "#f9f9f8",
+"secondary": "#118052"
+},
+{
+"club": "Royal Antwerp",
+"color": "#e61414",
+"secondary": "#dedcdc"
+},
+{
+"club": "Royal Charleroi SC",
+"color": "#fdfdfd",
+"secondary": "#1f1f1f"
+},
+{
+"club": "SC Braga",
+"color": "#d01c22",
+"secondary": "#c6b8b9"
+},
+{
+"club": "SC Cambuur",
+"color": "#005bac",
+"secondary": "#ffffff"
+},
+{
+"club": "SC Freiburg",
+"color": "#e6e2e2",
+"secondary": "#eb4b52"
+},
+{
+"club": "SC Heerenveen",
+"color": "#d8d8d8",
+"secondary": "#196ab8"
+},
+{
+"club": "SC Paderborn 07",
+"color": "#003399",
+"secondary": "#000000"
+},
+{
+"club": "SC Telstar",
+"color": "#ebebeb",
+"secondary": "#474e6b"
+},
+{
+"club": "SK Beveren",
+"color": "#ffe100",
+"secondary": "#002f6c"
+},
+{
+"club": "SL Benfica",
+"color": "#e11825",
+"secondary": "#ded1ce"
+},
+{
+"club": "SS Lazio",
+"color": "#84b6f0",
+"secondary": "#84b6f0"
+},
+{
+"club": "SSC Napoli",
+"color": "#2590d2",
+"secondary": "#c2d7e3"
+},
+{
+"club": "SV 07 Elversberg",
+"color": "#000000",
+"secondary": "#ffffff"
+},
+{
+"club": "SV Werder Bremen",
+"color": "#147657",
+"secondary": "#147657"
+},
+{
+"club": "Sabah FK",
+"color": "#00693e",
+"secondary": "#ffffff"
+},
+{
+"club": "Saint Trond",
+"color": "#ead920",
+"secondary": "#347cd5"
+},
+{
+"club": "Samsunspor",
+"color": "#fafbfb",
+"secondary": "#8b0c12"
+},
+{
+"club": "Sevilla FC",
+"color": "#fafafa",
+"secondary": "#9b97a6"
+},
+{
+"club": "Shakhtar Donetsk",
+"color": "#f47920",
+"secondary": "#000000"
+},
+{
+"club": "Sheffield United",
+"color": "#e3e5e5",
+"secondary": "#ba1010"
+},
+{
+"club": "Sheffield Wednesday",
+"color": "#ebebea",
+"secondary": "#20518a"
+},
+{
+"club": "Slavia Prague",
+"color": "#c8102e",
+"secondary": "#ffffff"
+},
+{
+"club": "Slovan Bratislava",
+"color": "#6cace4",
+"secondary": "#ffffff"
+},
+{
+"club": "Southampton FC",
+"color": "#dcdbdb",
+"secondary": "#aa0e0e"
+},
+{
+"club": "Sparta Rotterdam",
+"color": "#e9e8e7",
+"secondary": "#be0d0d"
+},
+{
+"club": "Sporting CP",
+"color": "#14764a",
+"secondary": "#fbfafa"
+},
+{
+"club": "Stade Brestois 29",
+"color": "#e51b33",
+"secondary": "#f0eeee"
+},
+{
+"club": "Stade Rennais FC",
+"color": "#e91a29",
+"secondary": "#292a2a"
+},
+{
+"club": "Standard Liège",
+"color": "#d12121",
+"secondary": "#d12121"
+},
+{
+"club": "Stoke City",
+"color": "#fcfdfd",
+"secondary": "#ac0e0e"
+},
+{
+"club": "Sunderland AFC",
+"color": "#e01f1f",
+"secondary": "#e5e3e3"
+},
+{
+"club": "Swansea City",
+"color": "#fbfbfb",
+"secondary": "#947969"
+},
+{
+"club": "TSG 1899 Hoffenheim",
+"color": "#2a2f3d",
+"secondary": "#a9b2bf"
+},
+{
+"club": "Torino FC",
+"color": "#662836",
+"secondary": "#d8cfd0"
+},
+{
+"club": "Tottenham Hotspur",
+"color": "#fafafa",
+"secondary": "#223048"
+},
+{
+"club": "Trabzonspor",
+"color": "#4f9cd5",
+"secondary": "#491625"
+},
+{
+"club": "US Lecce",
+"color": "#f5d13d",
+"secondary": "#c01c2b"
+},
+{
+"club": "US Sassuolo",
+"color": "#32723a",
+"secondary": "#202a21"
+},
+{
+"club": "Udinese Calcio",
+"color": "#323232",
+"secondary": "#d3d3d4"
+},
+{
+"club": "Union Saint-Gilloise",
+"color": "#fae714",
+"secondary": "#223068"
+},
+{
+"club": "Valencia CF",
+"color": "#f5f4f5",
+"secondary": "#9f9f9b"
+},
+{
+"club": "Venezia FC",
+"color": "#1b5e20",
+"secondary": "#000000"
+},
+{
+"club": "VfB Stuttgart",
+"color": "#f5f5f5",
+"secondary": "#d1252b"
+},
+{
+"club": "VfL Wolfsburg",
+"color": "#204b36",
+"secondary": "#70a04e"
+},
+{
+"club": "Viking Stavanger",
+"color": "#ffffff",
+"secondary": "#002f6c"
+},
+{
+"club": "Villarreal CF",
+"color": "#e6de3e",
+"secondary": "#233b4f"
+},
+{
+"club": "Vitória Guimarães SC",
+"color": "#fafafa",
+"secondary": "#2a2a2a"
+},
+{
+"club": "Watford FC",
+"color": "#dfce3b",
+"secondary": "#940d0d"
+},
+{
+"club": "West Bromwich Albion",
+"color": "#fdfdfd",
+"secondary": "#31395a"
+},
+{
+"club": "West Ham United",
+"color": "#731f28",
+"secondary": "#731f28"
+},
+{
+"club": "Willem II",
+"color": "#ed1c24",
+"secondary": "#ffffff"
+},
+{
+"club": "Wolverhampton Wanderers",
+"color": "#e9b014",
+"secondary": "#14110d"
+},
+{
+"club": "Wrexham AFC",
+"color": "#c91a1a",
+"secondary": "#e4d6d6"
+},
+{
+"club": "Zulte Waregem",
+"color": "#de2424",
+"secondary": "#fcfcfc"
+},
+{
+"club": "🇦🇪 Émirats arabes unis",
+"color": "#e2e2e2",
+"secondary": "#aa273b"
+},
+{
+"club": "🇦🇱 Albanie",
+"color": "#d11923",
+"secondary": "#d11923"
+},
+{
+"club": "🇦🇲 Arménie",
+"color": "#d41b2a",
+"secondary": "#d41b2a"
+},
+{
+"club": "🇦🇴 Angola",
+"color": "#de2020",
+"secondary": "#1c1919"
+},
+{
+"club": "🇦🇷 Argentine",
+"color": "#a6d5e8",
+"secondary": "#4c5964"
+},
+{
+"club": "🇦🇹 Autriche",
+"color": "#cb2424",
+"secondary": "#181818"
+},
+{
+"club": "🇦🇺 Australie",
+"color": "#ecb81f",
+"secondary": "#365037"
+},
+{
+"club": "🇦🇿 Azerbaïdjan",
+"color": "#1956ba",
+"secondary": "#1956ba"
+},
+{
+"club": "🇧🇦 Bosnie-Herzégovine",
+"color": "#1c3c78",
+"secondary": "#5f6b75"
+},
+{
+"club": "🇧🇪 Belgique",
+"color": "#bf2330",
+"secondary": "#c28850"
+},
+{
+"club": "🇧🇫 Burkina Faso",
+"color": "#017860",
+"secondary": "#d91d35"
+},
+{
+"club": "🇧🇬 Bulgarie",
+"color": "#e4e4e4",
+"secondary": "#8b8e83"
+},
+{
+"club": "🇧🇮 Burundi",
+"color": "#317b20",
+"secondary": "#9b1a19"
+},
+{
+"club": "🇧🇯 Bénin",
+"color": "#fad744",
+"secondary": "#6a993e"
+},
+{
+"club": "🇧🇴 Bolivie",
+"color": "#306057",
+"secondary": "#306057"
+},
+{
+"club": "🇧🇷 Brésil",
+"color": "#cec933",
+"secondary": "#365b46"
+},
+{
+"club": "🇧🇾 Biélorussie",
+"color": "#862c38",
+"secondary": "#862c38"
+},
+{
+"club": "🇨🇦 Canada",
+"color": "#901919",
+"secondary": "#901919"
+},
+{
+"club": "🇨🇩 RD Congo",
+"color": "#2996c8",
+"secondary": "#2996c8"
+},
+{
+"club": "🇨🇫 République centrafricaine",
+"color": "#eceff2",
+"secondary": "#55568a"
+},
+{
+"club": "🇨🇬 Congo",
+"color": "#97151b",
+"secondary": "#d8b833"
+},
+{
+"club": "🇨🇭 Suisse",
+"color": "#c81616",
+"secondary": "#c81616"
+},
+{
+"club": "🇨🇮 Côte d'Ivoire",
+"color": "#f08f3d",
+"secondary": "#62a175"
+},
+{
+"club": "🇨🇱 Chili",
+"color": "#dd2617",
+"secondary": "#d5bfc5"
+},
+{
+"club": "🇨🇲 Cameroun",
+"color": "#38804e",
+"secondary": "#b6bf5d"
+},
+{
+"club": "🇨🇳 Chine",
+"color": "#ee302b",
+"secondary": "#ee302b"
+},
+{
+"club": "🇨🇴 Colombie",
+"color": "#f3df1a",
+"secondary": "#9b5b43"
+},
+{
+"club": "🇨🇷 Costa Rica",
+"color": "#a32c50",
+"secondary": "#a32c50"
+},
+{
+"club": "🇨🇻 Cap-Vert",
+"color": "#293d70",
+"secondary": "#293d70"
+},
+{
+"club": "🇨🇼 Curaçao",
+"color": "#1c3764",
+"secondary": "#8f976c"
+},
+{
+"club": "🇨🇾 Chypre",
+"color": "#163d97",
+"secondary": "#aea58a"
+},
+{
+"club": "🇨🇿 République tchèque",
+"color": "#ca1e3d",
+"secondary": "#ca1e3d"
+},
+{
+"club": "🇩🇪 Allemagne",
+"color": "#fafafa",
+"secondary": "#141515"
+},
+{
+"club": "🇩🇰 Danemark",
+"color": "#b21920",
+"secondary": "#b21920"
+},
+{
+"club": "🇩🇴 République dominicaine",
+"color": "#233751",
+"secondary": "#233751"
+},
+{
+"club": "🇩🇿 Algérie",
+"color": "#d5d5d6",
+"secondary": "#716d62"
+},
+{
+"club": "🇪🇨 Équateur",
+"color": "#f8c320",
+"secondary": "#3f2830"
+},
+{
+"club": "🇪🇪 Estonie",
+"color": "#2f5697",
+"secondary": "#2f5697"
+},
+{
+"club": "🇪🇬 Égypte",
+"color": "#cd1919",
+"secondary": "#cd1919"
+},
+{
+"club": "🇪🇷 Érythrée",
+"color": "#fcfcfc",
+"secondary": "#e21240"
+},
+{
+"club": "🇪🇸 Espagne",
+"color": "#b81527",
+"secondary": "#212a59"
+},
+{
+"club": "🇫🇮 Finlande",
+"color": "#dadbdb",
+"secondary": "#25437f"
+},
+{
+"club": "🇫🇷 France",
+"color": "#233a6f",
+"secondary": "#8f9ab9"
+},
+{
+"club": "🇬🇦 Gabon",
+"color": "#e0d60d",
+"secondary": "#e0d60d"
+},
+{
+"club": "🇬🇧 Irlande du Nord",
+"color": "#144d53",
+"secondary": "#95b7ac"
+},
+{
+"club": "🇬🇪 Géorgie",
+"color": "#fcfcfc",
+"secondary": "#ce192e"
+},
+{
+"club": "🇬🇭 Ghana",
+"color": "#e2e2e3",
+"secondary": "#232121"
+},
+{
+"club": "🇬🇲 Gambie",
+"color": "#c3233e",
+"secondary": "#705e5b"
+},
+{
+"club": "🇬🇳 Guinée",
+"color": "#ea2525",
+"secondary": "#dbb624"
+},
+{
+"club": "🇬🇵 Guadeloupe",
+"color": "#d41616",
+"secondary": "#646641"
+},
+{
+"club": "🇬🇶 Guinée équatoriale",
+"color": "#9d1c1c",
+"secondary": "#9d1c1c"
+},
+{
+"club": "🇬🇷 Grèce",
+"color": "#e2e2e2",
+"secondary": "#5171a2"
+},
+{
+"club": "🇬🇼 Guinée-Bissau",
+"color": "#f6253a",
+"secondary": "#8b9552"
+},
+{
+"club": "🇭🇳 Honduras",
+"color": "#f0f0f0",
+"secondary": "#50accc"
+},
+{
+"club": "🇭🇷 Croatie",
+"color": "#dfdede",
+"secondary": "#c41516"
+},
+{
+"club": "🇭🇹 Haïti",
+"color": "#234589",
+"secondary": "#9c1a20"
+},
+{
+"club": "🇭🇺 Hongrie",
+"color": "#bf1c27",
+"secondary": "#bf1c27"
+},
+{
+"club": "🇮🇩 Indonésie",
+"color": "#df1414",
+"secondary": "#df1414"
+},
+{
+"club": "🇮🇪 Irlande",
+"color": "#14633c",
+"secondary": "#14633c"
+},
+{
+"club": "🇮🇱 Israël",
+"color": "#d1d1d2",
+"secondary": "#39516e"
+},
+{
+"club": "🇮🇶 Irak",
+"color": "#e8e7e7",
+"secondary": "#563d3d"
+},
+{
+"club": "🇮🇷 Iran",
+"color": "#fcfcfc",
+"secondary": "#9d918e"
+},
+{
+"club": "🇮🇸 Islande",
+"color": "#1890d4",
+"secondary": "#1890d4"
+},
+{
+"club": "🇮🇹 Italie",
+"color": "#1e4ab4",
+"secondary": "#999682"
+},
+{
+"club": "🇯🇲 Jamaïque",
+"color": "#cfa532",
+"secondary": "#534923"
+},
+{
+"club": "🇯🇴 Jordanie",
+"color": "#dadada",
+"secondary": "#b07e81"
+},
+{
+"club": "🇯🇵 Japon",
+"color": "#142561",
+"secondary": "#a3a2b1"
+},
+{
+"club": "🇰🇪 Kenya",
+"color": "#cd3030",
+"secondary": "#cbb9b0"
+},
+{
+"club": "🇰🇲 Comores",
+"color": "#1c7560",
+"secondary": "#939f62"
+},
+{
+"club": "🇰🇷 Corée du Sud",
+"color": "#d92b38",
+"secondary": "#d92b38"
+},
+{
+"club": "🇰🇿 Kazakhstan",
+"color": "#f8dc2a",
+"secondary": "#425f80"
+},
+{
+"club": "🇱🇧 Liban",
+"color": "#b61418",
+"secondary": "#ddbfbf"
+},
+{
+"club": "🇱🇹 Lituanie",
+"color": "#f2cc1a",
+"secondary": "#3c5b43"
+},
+{
+"club": "🇱🇺 Luxembourg",
+"color": "#c81f24",
+"secondary": "#c81f24"
+},
+{
+"club": "🇱🇾 Libye",
+"color": "#d8142b",
+"secondary": "#d8142b"
+},
+{
+"club": "🇲🇦 Maroc",
+"color": "#da151e",
+"secondary": "#666b4d"
+},
+{
+"club": "🇲🇪 Monténégro",
+"color": "#c81f1f",
+"secondary": "#da8d23"
+},
+{
+"club": "🇲🇬 Madagascar",
+"color": "#247f34",
+"secondary": "#247f34"
+},
+{
+"club": "🇲🇰 Macédoine du Nord",
+"color": "#dd1d16",
+"secondary": "#dea125"
+},
+{
+"club": "🇲🇱 Mali",
+"color": "#dfdfdf",
+"secondary": "#beab75"
+},
+{
+"club": "🇲🇶 Martinique",
+"color": "#281111",
+"secondary": "#281111"
+},
+{
+"club": "🇲🇷 Mauritanie",
+"color": "#3da75c",
+"secondary": "#3da75c"
+},
+{
+"club": "🇲🇽 Mexique",
+"color": "#0f6f59",
+"secondary": "#a7bfb9"
+},
+{
+"club": "🇲🇾 Malaisie",
+"color": "#fcdc26",
+"secondary": "#3c3718"
+},
+{
+"club": "🇲🇿 Mozambique",
+"color": "#e8272d",
+"secondary": "#e8272d"
+},
+{
+"club": "🇳🇪 Niger",
+"color": "#d8833f",
+"secondary": "#fcfaf8"
+},
+{
+"club": "🇳🇬 Nigeria",
+"color": "#f3f2f2",
+"secondary": "#5f8769"
+},
+{
+"club": "🇳🇱 Pays-Bas",
+"color": "#e95836",
+"secondary": "#2f2827"
+},
+{
+"club": "🇳🇴 Norvège",
+"color": "#ae1414",
+"secondary": "#2d3a5d"
+},
+{
+"club": "🇳🇿 Nouvelle-Zélande",
+"color": "#f8f8f8",
+"secondary": "#f8f8f8"
+},
+{
+"club": "🇵🇦 Panama",
+"color": "#d51b22",
+"secondary": "#a28d94"
+},
+{
+"club": "🇵🇪 Pérou",
+"color": "#f4f3f3",
+"secondary": "#b41a1a"
+},
+{
+"club": "🇵🇭 Philippines",
+"color": "#2765de",
+"secondary": "#de1413"
+},
+{
+"club": "🇵🇱 Pologne",
+"color": "#f7f8f8",
+"secondary": "#b62523"
+},
+{
+"club": "🇵🇷 Porto Rico",
+"color": "#153c7e",
+"secondary": "#153c7e"
+},
+{
+"club": "🇵🇹 Portugal",
+"color": "#a8393a",
+"secondary": "#a8393a"
+},
+{
+"club": "🇵🇾 Paraguay",
+"color": "#e1e2e2",
+"secondary": "#b92226"
+},
+{
+"club": "🇶🇦 Qatar",
+"color": "#902233",
+"secondary": "#e6e1e1"
+},
+{
+"club": "🇷🇴 Roumanie",
+"color": "#e0c719",
+"secondary": "#694741"
+},
+{
+"club": "🇷🇸 Serbie",
+"color": "#1a42b6",
+"secondary": "#1a42b6"
+},
+{
+"club": "🇷🇺 Russie",
+"color": "#d51d22",
+"secondary": "#d51d22"
+},
+{
+"club": "🇷🇼 Rwanda",
+"color": "#dcbd14",
+"secondary": "#3d5a8c"
+},
+{
+"club": "🇸🇦 Arabie saoudite",
+"color": "#125848",
+"secondary": "#a2b3b1"
+},
+{
+"club": "🇸🇩 Soudan",
+"color": "#a9292e",
+"secondary": "#e0d4d4"
+},
+{
+"club": "🇸🇪 Suède",
+"color": "#e8ca22",
+"secondary": "#133c82"
+},
+{
+"club": "🇸🇮 Slovénie",
+"color": "#e1e1e1",
+"secondary": "#314e7b"
+},
+{
+"club": "🇸🇰 Slovaquie",
+"color": "#294189",
+"secondary": "#b1b3c6"
+},
+{
+"club": "🇸🇱 Sierra Leone",
+"color": "#2b30b8",
+"secondary": "#b3cccd"
+},
+{
+"club": "🇸🇳 Sénégal",
+"color": "#e4e4e4",
+"secondary": "#3f766e"
+},
+{
+"club": "🇸🇷 Suriname",
+"color": "#e1e0e0",
+"secondary": "#8f5b4f"
+},
+{
+"club": "🇸🇾 Syrie",
+"color": "#38d24e",
+"secondary": "#32674a"
+},
+{
+"club": "🇹🇬 Togo",
+"color": "#d9bf12",
+"secondary": "#d9bf12"
+},
+{
+"club": "🇹🇭 Thaïlande",
+"color": "#12245e",
+"secondary": "#12245e"
+},
+{
+"club": "🇹🇳 Tunisie",
+"color": "#fbfbfb",
+"secondary": "#a4797d"
+},
+{
+"club": "🇹🇷 Turquie",
+"color": "#db202b",
+"secondary": "#db202b"
+},
+{
+"club": "🇹🇹 Trinité-et-Tobago",
+"color": "#b83847",
+"secondary": "#171717"
+},
+{
+"club": "🇹🇿 Tanzanie",
+"color": "#283898",
+"secondary": "#7c8776"
+},
+{
+"club": "🇺🇦 Ukraine",
+"color": "#ede11c",
+"secondary": "#316aa4"
+},
+{
+"club": "🇺🇸 États-Unis",
+"color": "#dbdad9",
+"secondary": "#a12b32"
+},
+{
+"club": "🇺🇾 Uruguay",
+"color": "#acc8ef",
+"secondary": "#627187"
+},
+{
+"club": "🇺🇿 Ouzbékistan",
+"color": "#233f7d",
+"secondary": "#979da5"
+},
+{
+"club": "🇻🇪 Venezuela",
+"color": "#85263f",
+"secondary": "#a1725d"
+},
+{
+"club": "🇽🇰 Kosovo",
+"color": "#193b79",
+"secondary": "#818c9b"
+},
+{
+"club": "🇿🇦 Afrique du Sud",
+"color": "#f6cf34",
+"secondary": "#43773c"
+},
+{
+"club": "🇿🇲 Zambie",
+"color": "#246a44",
+"secondary": "#91865c"
+},
+{
+"club": "🇿🇼 Zimbabwe",
+"color": "#f7ed16",
+"secondary": "#f7ed16"
+},
+{
+"club": "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Angleterre",
+"color": "#f9f9f9",
+"secondary": "#61333b"
+},
+{
+"club": "🏴󠁧󠁢󠁳󠁣󠁴󠁿 Écosse",
+"color": "#2b3349",
+"secondary": "#c1c2bd"
+},
+{
+"club": "🏴󠁧󠁢󠁷󠁬󠁳󠁿 Pays de Galles",
+"color": "#c01717",
+"secondary": "#c6c8c4"
+}
+]

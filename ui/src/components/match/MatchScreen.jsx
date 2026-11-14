@@ -5,6 +5,7 @@ import IntentionPanel from "./IntentionPanel";
 import LineupPanel from "./LineupPanel";
 import Momentum from "./Momentum";
 import V2Pitch from "./V2Pitch";
+import { teamColors, teamColorVars } from "../../utils/teamColors";
 import { clock, halfStart, interpolatedTick, rotated, situationAt } from "./trace";
 
 // Écran de lecture de la V2 (ticket v2-ecran-match/01 : déplacé depuis routes/V2Match.jsx). Le score n'est révélé
@@ -18,6 +19,8 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
       ),
     [lineups],
   );
+  // couleurs d'équipe (ticket v2-ecran-match/03) : variables CSS posées une fois ici, lues par tous les composants
+  const colorVars = useMemo(() => teamColorVars(teamColors(lineups)), [lineups]);
   const tick = interpolatedTick(trace, seconds);
   // Changement de camp à la mi-temps : le moteur garde « domicile attaque vers x croissant » tout le match (terrain
   // symétrique, rien n'y dépend du côté) ; l'écran tourne la scène d'un demi-tour en 2e période.
@@ -39,7 +42,7 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
     .at(-1);
 
   return (
-    <div className="flex flex-col h-full p-2.5 gap-2">
+    <div className="flex flex-col h-full p-2.5 gap-2" style={colorVars}>
       <div className="flex items-center justify-between gap-2">
         <button onClick={onBack} className="flex items-center gap-1 min-h-11 text-data text-gray-400 shrink-0">
           <ArrowLeft size={14} /> Retour
@@ -54,9 +57,9 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
             {!trace.done && ` · calcul ${Math.floor(available / 60)}'${waiting ? " (en attente…)" : ""}`}
           </div>
           <div className="text-caption text-gray-400">
-            <span className="text-[#4f8ef7]">{situationAt(trace, "home", tick.minute)}</span>
+            <span className="text-[var(--team-home-ui)]">{situationAt(trace, "home", tick.minute)}</span>
             {" · "}
-            <span className="text-[#e0b84a]">{situationAt(trace, "away", tick.minute)}</span>
+            <span className="text-[var(--team-away-ui)]">{situationAt(trace, "away", tick.minute)}</span>
           </div>
           <div className="text-caption h-[14px] font-semibold text-gold tabular-nums">
             {recentOffside &&
@@ -93,7 +96,7 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
       </div>
 
       <div className="flex-1 min-h-0 flex items-center justify-center gap-3">
-        <LineupPanel lineup={lineups?.home} color="#4f8ef7" />
+        <LineupPanel lineup={lineups?.home} color="var(--team-home-ui)" />
         <div className="relative flex flex-col items-center gap-1 w-full max-w-4xl">
           <Momentum trace={trace} played={Math.ceil(shownS / 60)} goalsShown={trace.goals.filter((g) => g.minute <= shownS / 60).length} />
           <V2Pitch
@@ -116,7 +119,7 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
             </div>
           )}
         </div>
-        <LineupPanel lineup={lineups?.away} color="#e0b84a" />
+        <LineupPanel lineup={lineups?.away} color="var(--team-away-ui)" />
       </div>
 
       <IntentionPanel trace={trace} tick={selected ? tick : null} selected={selected} />

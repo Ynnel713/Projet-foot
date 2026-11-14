@@ -15,6 +15,7 @@
 6. **Protocole de validation indépendante** : `v2-realisme/18b` implémenté le 14/11/2026 (protocole validé par le propriétaire, `docs/INDICATEURS_V2.md` section 40 : graines réservées à partir de l'indice 100 000 par blocs de 2 000, garde du banc `--validation`, 1 000 à 2 000 matchs, règle conforme / à confirmer / écart) ; prépare le `18c`.
 7. **Test de garde des attributs** : `v2-realisme/17d` implémenté le 14/11/2026 (`tests/test_v2engine_garde_attributs.py` : les 27 attributs que la carte annonce avec effet sont lus par le moteur et font diverger une scène 11 contre 99) ; constat : la note du gardien ne décide plus l'arrêt depuis le 05b, seulement la part captée / repoussée (à reprendre au `v2-attributs-restants/03b`).
 8. **Garde de couverture** : `v2-attributs-restants/08` implémenté le 14/11/2026 (`tests/test_v2engine_rayon_attributs.py` : 52 caractéristiques de la base, 27 lues par le moteur, 25 en exception avec leur ticket, Natural Fitness permanente ; 58 gestes préférés rattachés à leur mécanisme ; contradiction Cambiaghi signalée).
+9. **Écran, couleurs d'équipe** (attente du chantier écran levée par le propriétaire le 14/11/2026, pendant le `v2-realisme/24`) : `v2-ecran-match/03` implémenté le 14/11/2026 (`ui/src/utils/teamColors.js` : couleurs des clubs, toujours distinctes en ΔE2000 ≥ 25, numéro lisible à 4,5:1, variables CSS d'équipe).
 
 Rappel : passes par match 1 091 (repère 890 à 940) et course du passeur après sa passe (une-deux), notés au `v2-collectif/22a`.
 

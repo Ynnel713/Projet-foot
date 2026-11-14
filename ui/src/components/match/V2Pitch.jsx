@@ -1,6 +1,7 @@
 import { memo } from "react";
 import dims from "../../utils/pitchGeometry.json";
 import { COS, GROUND_MATRIX, project } from "../../utils/v2Projection";
+import { PITCH_COLORS, RING_WIDTH_M } from "../../utils/teamColors";
 
 // Terrain simple, réutilise seulement les COTES réelles de la V1 (pitchGeometry.json, dérivé de
 // ligue1sim.pitch_geometry) -- pas le composant PitchField.jsx lui-même, dont l'orientation est
@@ -35,7 +36,7 @@ const BENCH_GAP = 4; // des bancs à la ligne médiane (m)
 const SEAT = 1.6; // largeur d'un siège (m)
 const WARMING_UP = 3; // remplaçants de champ qui s'échauffent en 2e période
 
-function PlayerNumber({ x, y, value, size = 1.4 }) {
+function PlayerNumber({ x, y, value, team, size = 1.4 }) {
   if (value == null) return null;
   return (
     <text
@@ -45,11 +46,10 @@ function PlayerNumber({ x, y, value, size = 1.4 }) {
       dominantBaseline="central"
       fontSize={size}
       fontWeight="bold"
-      fill="white"
-      stroke="rgba(0,0,0,0.6)"
       strokeWidth={0.2}
       paintOrder="stroke"
-      style={{ pointerEvents: "none" }}
+      // encre et liseré de l'équipe (ticket v2-ecran-match/03)
+      style={{ pointerEvents: "none", fill: `var(--team-${team}-ink)`, stroke: `var(--team-${team}-ink-edge)` }}
     >
       {value}
     </text>
@@ -85,8 +85,8 @@ const Bench = memo(function Bench({ lineup, side, color, seconds, warmUpFromS })
         const c = project(seatX(i + 1), BENCH_Y);
         return (
           <g key={p.name}>
-            <circle cx={c.x} cy={c.y} r={0.75} fill={color} opacity={0.85} stroke="rgba(0,0,0,0.4)" strokeWidth={0.08} />
-            <PlayerNumber x={c.x} y={c.y} value={p.number} size={0.9} />
+            <circle cx={c.x} cy={c.y} r={0.75} style={{ fill: color }} opacity={0.85} stroke="rgba(0,0,0,0.4)" strokeWidth={0.08} />
+            <PlayerNumber x={c.x} y={c.y} value={p.number} team={side < 0 ? "home" : "away"} size={0.9} />
             <title>{`${p.number} ${p.name} (${p.poste})`}</title>
           </g>
         );
@@ -97,8 +97,8 @@ const Bench = memo(function Bench({ lineup, side, color, seconds, warmUpFromS })
         const c = project(L / 2 + side * (24 + 6 + 6 * Math.sin(phase)), W + 1.5 + i * 1.4);
         return (
           <g key={p.name}>
-            <circle cx={c.x} cy={c.y} r={0.9} fill={color} opacity={0.75} stroke="rgba(0,0,0,0.4)" strokeWidth={0.08} />
-            <PlayerNumber x={c.x} y={c.y} value={p.number} size={1} />
+            <circle cx={c.x} cy={c.y} r={0.9} style={{ fill: color }} opacity={0.75} stroke="rgba(0,0,0,0.4)" strokeWidth={0.08} />
+            <PlayerNumber x={c.x} y={c.y} value={p.number} team={side < 0 ? "home" : "away"} size={1} />
             <title>{`${p.number} ${p.name} s'échauffe`}</title>
           </g>
         );
@@ -178,9 +178,9 @@ const PitchGround = memo(function PitchGround() {
       <g transform={GROUND_MATRIX}>
         <rect x={-pad} y={-pad} width={L + 2 * pad} height={W + 2 * pad + BENCH_ZONE} fill="#5a5f66" />
         <rect x={-pad} y={-pad} width={L + 2 * pad} height={W + 2 * pad} fill="#9c4a3c" />
-        <rect x={-MARGIN} y={-MARGIN} width={L + 2 * MARGIN} height={W + 2 * MARGIN} fill="#2f7d32" />
+        <rect x={-MARGIN} y={-MARGIN} width={L + 2 * MARGIN} height={W + 2 * MARGIN} fill={PITCH_COLORS[0]} />
         {Array.from({ length: STRIPES }, (_, i) => (
-          <rect key={i} x={i * stripe} y={-MARGIN} width={stripe} height={W + 2 * MARGIN} fill={i % 2 ? "#3a8f3c" : "#2f7d32"} />
+          <rect key={i} x={i * stripe} y={-MARGIN} width={stripe} height={W + 2 * MARGIN} fill={i % 2 ? PITCH_COLORS[1] : PITCH_COLORS[0]} />
         ))}
 
         <rect x={0} y={0} width={L} height={W} {...LINE} />
@@ -233,8 +233,8 @@ export default function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, 
       style={{ aspectRatio: `${L + 2 * pad} / ${height}` }}
     >
       <PitchGround />
-      {lineups && <Bench lineup={lineups.home} side={-1} color="#4f8ef7" seconds={benchSeconds} warmUpFromS={warmUpFromS} />}
-      {lineups && <Bench lineup={lineups.away} side={1} color="#e0b84a" seconds={benchSeconds} warmUpFromS={warmUpFromS} />}
+      {lineups && <Bench lineup={lineups.home} side={-1} color="var(--team-home)" seconds={benchSeconds} warmUpFromS={warmUpFromS} />}
+      {lineups && <Bench lineup={lineups.away} side={1} color="var(--team-away)" seconds={benchSeconds} warmUpFromS={warmUpFromS} />}
 
       {/* 2. ombres au sol */}
       {players.map((p) => (
@@ -279,11 +279,11 @@ export default function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, 
             cx={p.body.x}
             cy={p.body.y}
             r={PLAYER_R}
-            fill={p.team === "home" ? "#4f8ef7" : "#e0b84a"}
-            stroke={p.name === selected ? "white" : "rgba(0,0,0,0.4)"}
-            strokeWidth={p.name === selected ? 0.4 : 0.1}
+            // couleur, anneau clair ou sombre (RING_WIDTH_M) de l'équipe ; joueur sélectionné : anneau blanc épais
+            style={{ fill: `var(--team-${p.team})`, stroke: p.name === selected ? "white" : `var(--team-${p.team}-ring)` }}
+            strokeWidth={p.name === selected ? 0.4 : RING_WIDTH_M}
           />
-          <PlayerNumber x={p.body.x} y={p.body.y} value={numbers[p.name]} />
+          <PlayerNumber x={p.body.x} y={p.body.y} value={numbers[p.name]} team={p.team} />
         </g>
       ))}
 
