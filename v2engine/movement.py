@@ -32,6 +32,16 @@ DECEL_MAX_MPS2 = 7.0
 # jambes, hors Agility). Depuis 7 m/s : arrêt en 4,1 m à 11, 3,5 m à 55, 3,1 m à 99. Chiffres réels par niveau : non
 # trouvés.
 _DECEL_POINTS: tuple[tuple[float, float], ...] = ((11.0, 6.0), (55.0, DECEL_MAX_MPS2), (99.0, 8.0))  # m/s²
+# Virage selon Agility (ticket v2-realisme/12b, valeurs recommandées et validées par délégation du propriétaire,
+# 14/11/2026) : la part de la variation de vitesse perpendiculaire à la course (accélération latérale, v²/R) est bornée,
+# 4,5 m/s² à 11, 5,5 à 55, 6,5 à 99 (linéaire) ; la part le long de la course (accélérer, freiner) reste celle de la
+# montée en vitesse et du freinage (12a). Un virage serré dure donc plus longtemps, et le freinage qui l'accompagne fait
+# perdre plus de vitesse. Ordre de grandeur réel : course en courbe sur le rond central (rayon 9,15 m) vers 7 m/s, soit
+# environ 5,4 m/s² (tests de « curve sprint » ; valeur par niveau non trouvée). Sous `LATERAL_FREE_MPS` (2 m/s), pas de
+# borne : le joueur pivote sur un appui. Pas de double comptage avec le 07b : celui-ci plafonne la vitesse selon le cap
+# (corps pas encore tourné) ; ce ticket borne la courbure de la trajectoire, quel que soit le cap.
+_LATERAL_POINTS: tuple[tuple[float, float], ...] = ((11.0, 4.5), (55.0, 5.5), (99.0, 6.5))  # m/s²
+LATERAL_FREE_MPS = 2.0
 ARRIVAL_DEADZONE_M = 0.1  # en deçà, le joueur est arrivé : il ne vise plus aucune vitesse
 
 # Réserve d'énergie (ticket v2-realisme/12e, constantes recommandées et retenues par délégation du propriétaire,
@@ -105,6 +115,27 @@ def accel_tau_s(acceleration: float) -> float:
 def decel_max_mps2(agility: float) -> float:
     """Freinage maximal (m/s²) selon Agility (ticket v2-realisme/12a)."""
     return _lerp(agility, _DECEL_POINTS)
+
+
+def lateral_max_mps2(agility: float) -> float:
+    """Accélération latérale maximale (m/s²) selon Agility (ticket v2-realisme/12b)."""
+    return _lerp(agility, _LATERAL_POINTS)
+
+
+def limit_turn(velocity: Vec2, new_velocity: Vec2, lateral_max: float, dt: float) -> Vec2:
+    """`new_velocity` dont la part perpendiculaire à `velocity` est bornée à `lateral_max · dt` (ticket 12b) ; la part le
+    long de la course est gardée. Sous `LATERAL_FREE_MPS`, inchangée."""
+    speed = velocity.length()
+    if speed < LATERAL_FREE_MPS:
+        return new_velocity
+    ux, uy = velocity.x / speed, velocity.y / speed
+    change = new_velocity - velocity
+    along = change.x * ux + change.y * uy
+    lateral = Vec2(change.x - along * ux, change.y - along * uy)
+    cap = lateral_max * dt
+    if lateral.length() <= cap:
+        return new_velocity
+    return velocity + Vec2(along * ux, along * uy) + lateral * (cap / lateral.length())
 
 
 def turn_rate_rad_s(agility: float) -> float:
@@ -223,7 +254,7 @@ def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_facto
     vers une cible lointaine (`faces_run`)."""
     # fatigue : réserve d'énergie (ticket 12e) ; `minute` n'est plus lue ici (gardée pour les appelants)
     effective_max_speed = max_speed_mps(state.pace) * energy_factor(state.condition.energy) * speed_factor
-    agility = effective_rating(state, "Agility")  # freinage (12a) et rotation du corps (07f)
+    agility = effective_rating(state, "Agility")  # freinage (12a), virage (12b) et rotation du corps (07f)
     decel = decel_max_mps2(agility)
     to_target = target - state.position
     distance = to_target.length()
@@ -254,6 +285,7 @@ def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_facto
         delta = desired_velocity - velocity
         brake = decel * dt
         new_velocity = desired_velocity if delta.length() <= brake else velocity + delta * (brake / delta.length())
+    new_velocity = limit_turn(velocity, new_velocity, lateral_max_mps2(agility), dt)  # virage (12b)
 
     # vitesse moyenne du pas (trapèzes) : exacte pour un freinage constant, très proche pour l'exponentielle
     new_position = clamp_to_pitch(state.position + (velocity + new_velocity) * (0.5 * dt))
