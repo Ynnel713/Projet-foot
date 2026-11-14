@@ -41,3 +41,9 @@ Temps machine, non compté : suite complète (environ 40 min) ; mesure 50 matchs
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+
+## Comments
+
+**14/11/2026, pistes retenues par le propriétaire pendant le 11b** (recommandation suivie, à chiffrer et à faire valider comme constantes avant le code ; elles élargissent le périmètre : réestimer au démarrage) :
+- **Stabilité sur appuis** : un joueur arrêté et campé résiste mieux qu'un joueur pris en déséquilibre ou en course latérale ; au 11b, sa « masse » de contact ne dépend que de Strength (`duel.contact_share`). Bonus de stabilité selon la vitesse et l'orientation au contact, à répartir avec Balance (12c) sans double comptage.
+- **Taille comme facteur de masse au sol** (« Taille FM (cm) », 152 à 203 cm dans la base) : un 190 cm pèse ~85 kg, un 170 cm ~68 kg (rapport ~1,25), mais Strength contient déjà en partie le gabarit. Petit facteur seulement, plafonné à environ ± 10 % de la part du contact ; étendre d'abord le rayon de Taille dans `docs/CARTE_ATTRIBUTS_V2.md` (aujourd'hui : jeu aérien seul, 15b et 03a), puis le test de rayon.

@@ -25,7 +25,7 @@ from v2engine.anticipation import pass_readers, reaction_delay_s
 from v2engine.ball_state import BallState, ShotFlight
 from v2engine.bloc import Bloc
 from v2engine.danger import danger
-from v2engine.duel import foul_severity, resolve_tackle, should_attempt_tackle
+from v2engine.duel import contact_share, foul_severity, resolve_tackle, should_attempt_tackle
 from v2engine.flux import ARBITRAGE, PERCEPTION, TIR, seed_streams
 from v2engine.formation import initial_positions
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch, in_penalty_area
@@ -145,14 +145,16 @@ def _facing_at_kickoff(position: Vec2, team: str) -> Vec2:
 
 # Collision (ticket v2-realisme/11a, valeur recommandée et validée par délégation du propriétaire, 14/11/2026) : choc
 # mou, coefficient de restitution nul : deux joueurs qui se heurtent perdent la vitesse qui les rapproche (ils ne
-# rebondissent pas, ils ne se traversent pas) ; masses égales en attendant Strength (ticket 11b). Chiffre réel : non
+# rebondissent pas, ils ne se traversent pas) ; masses pondérées par Strength (`duel.contact_share`, ticket 11b). Chiffre réel : non
 # trouvé (un contact d'épaule n'est ni un rebond ni un placage : choc mou, ordre de grandeur).
 COLLISION_RESTITUTION = 0.0
 
 
 def _resolve_player_collisions(players: list[PlayerState]) -> None:
-    """Écarte deux joueurs qui se chevauchent (correction de position, moitié chacun) et retire à leur vitesse la
-    composante qui les rapproche (ticket v2-realisme/11a : choc mou, masses égales). ponytail : boucle O(n²) (22 joueurs
+    """Écarte deux joueurs qui se chevauchent et retire à leur vitesse la composante qui les rapproche (ticket
+    v2-realisme/11a : choc mou), le plus faible au contact (Strength, `duel.contact_share`, ticket 11b) étant le plus
+    déplacé et le plus freiné : position et vitesse partagées selon la même part, quantité de mouvement conservée à
+    masses pondérées. ponytail : boucle O(n²) (22 joueurs
     -> 231 paires/tick) ; à optimiser (grille spatiale) si la performance du mode batch (NFR-V01) le justifie plus tard."""
     for i in range(len(players)):
         for j in range(i + 1, len(players)):
@@ -166,16 +168,17 @@ def _resolve_player_collisions(players: list[PlayerState]) -> None:
             dist = delta.length()
             if 0.0 < dist < min_dist:
                 normal = delta.normalized()
-                push = normal * ((min_dist - dist) / 2.0)
-                a.position = clamp_to_pitch(a.position - push)
-                b.position = clamp_to_pitch(b.position + push)
-                # vitesse de rapprochement le long de la normale (11a) : retirée moitié chacun, rebond selon la restitution
+                share_a = contact_share(a, b)  # part gagnée par A : il subit 1 - share_a, B subit share_a (11b)
+                overlap = min_dist - dist
+                a.position = clamp_to_pitch(a.position - normal * (overlap * (1.0 - share_a)))
+                b.position = clamp_to_pitch(b.position + normal * (overlap * share_a))
+                # vitesse de rapprochement le long de la normale (11a), répartie selon la même part (11b)
                 relative = a.velocity - b.velocity
                 closing = relative.x * normal.x + relative.y * normal.y
                 if closing > 0.0:
-                    impulse = normal * (closing * (1.0 + COLLISION_RESTITUTION) / 2.0)
-                    a.velocity = a.velocity - impulse
-                    b.velocity = b.velocity + impulse
+                    impulse = normal * (closing * (1.0 + COLLISION_RESTITUTION))
+                    a.velocity = a.velocity - impulse * (1.0 - share_a)
+                    b.velocity = b.velocity + impulse * share_a
 
 
 def _nearest_opponent_in_range(holder: PlayerState, players: list[PlayerState], radius_m: float) -> PlayerState | None:

@@ -149,6 +149,9 @@ PLANS = {
     "Finishing": Plan(tir, 3.0, 300),  # dans la surface seulement
     # hors de la surface : rare dans le mini-match depuis la courbe en S du ticket v2-realisme/24 (fusion du 14/11/2026)
     "Long Shots": Plan(tir_de_loin, 3.0, 300),
+    # n'agit que par l'énergie (sprint entamé, réserve) : effet rare en 60 s depuis le partage des collisions selon
+    # Strength (ticket v2-realisme/11b, première divergence à la graine 4 au lieu de 1) ; 10 graines
+    "Stamina": Plan(mini_match, 60.0, 10),
 }
 
 

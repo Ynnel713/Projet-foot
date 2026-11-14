@@ -66,6 +66,24 @@ def tackle_success_probability(tackler: PlayerState, holder: PlayerState) -> flo
     return duel_probability(tackler_rating, holder_resistance)
 
 
+# Collision asymétrique (ticket v2-realisme/11b, valeur recommandée et validée par délégation du propriétaire,
+# 14/11/2026) : part du contact gagnée par chacun, Strength contre Strength sur la courbe de duel partagée. À égalité
+# 50/50 ; 10 points d'écart 58/42 ; 20 points 65/35 ; 40 points ou plus 75/25 (le plus fort trois fois moins déplacé).
+# Chiffre réel : non trouvé (masses de 65 à 95 kg en Ligue 1, rapport ~1,5 ; l'appui, porté par Strength, au-delà).
+_CONTACT_SHARE_AMPLITUDE = 0.25
+_CONTACT_SHARE_MIN = 0.5 - _CONTACT_SHARE_AMPLITUDE
+_CONTACT_SHARE_MAX = 0.5 + _CONTACT_SHARE_AMPLITUDE
+
+
+def contact_share(a: PlayerState, b: PlayerState) -> float:
+    """Part du contact que `a` gagne face à `b` (0,25 à 0,75), Strength seule (duel de contact, docs/CARTE_ATTRIBUTS_V2.md ;
+    Balance joue après le contact, ticket 12c). Le joueur qui gagne la part `s` subit `1 - s` de la correction de
+    position et de vitesse : c'est un rapport de masses `s / (1 - s)`. Symétrique : `contact_share(b, a) = 1 - s`."""
+    return duel_probability(effective_rating(a, "Strength"), effective_rating(b, "Strength"),
+                            amplitude=_CONTACT_SHARE_AMPLITUDE, min_prob=_CONTACT_SHARE_MIN,
+                            max_prob=_CONTACT_SHARE_MAX)
+
+
 def should_attempt_tackle(aggression: float, dt: float) -> bool:
     """Tirage sur un tick de `dt` secondes : indépendant du pas de simulation (taux par seconde)."""
     return DUEL.random() < 1.0 - math.exp(-attempt_tackle_probability(aggression) * dt)
