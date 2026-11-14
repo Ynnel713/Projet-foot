@@ -67,7 +67,7 @@ Temps machine, non compté : banc 70 contre 80 à 20 matchs par attribut, trois 
 - [ ] `--niveaux` ajouté au banc, défaut inchangé (99 / 11), testé
 - [ ] Table des courbes à 50, 60, 70, 80, 90 pour chaque fonction qui lit un attribut, générée par script, avant et après
 - [ ] Mesure de référence 70 contre 80 en match pour chaque attribut retenu, avec intervalle de confiance, rapportée dans `docs/INDICATEURS_V2.md`
-- [ ] Constantes produit (centre, exposant ou pente, objectif chiffré) et chiffres réels (sourcés ou « non trouvé ») validés par le propriétaire avant le code de l'étape 2
+- [ ] Constantes produit (centre, exposant ou pente ; objectif chiffré validé le 14/11/2026) et chiffres réels (sourcés ou « non trouvé ») validés par le propriétaire avant le code de l'étape 2
 - [ ] Variantes A et B mesurées sur la table des courbes et sur le banc 70 contre 80 ; choix argumenté (propriétaire s'ils sont proches)
 - [ ] Variante retenue seule dans le code, objectif chiffré tenu (tests de courbe)
 - [ ] Écart 70 / 80 significatif en match pour plus d'attributs qu'avant, rapporté attribut par attribut
@@ -77,3 +77,7 @@ Temps machine, non compté : banc 70 contre 80 à 20 matchs par attribut, trois 
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+
+## Comments
+
+**14/11/2026, objectif chiffré validé par le propriétaire** (« Je valide ») : pour chaque mécanisme probabiliste, écart de 70 à 80 au moins le tiers de l'écart de 50 à 99, écart de 60 à 70 au moins le quart ; en duel, 10 points d'écart donnent au moins 58 / 42 (50,6 / 49,4 aujourd'hui). Restent à proposer avant le code de l'étape 2 : centre (médiane réelle mesurée), exposant de la variante A, pente de la variante B. Ticket à réaliser dans une autre session.
