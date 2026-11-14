@@ -1365,3 +1365,83 @@ Commandes : `uv run python -m scripts.suivi_reel telecharger` (1,9 Go dans `data
 - Championnat d'Australie et échantillon Metrica anonyme : repères **indicatifs**, pas des cibles pour la Ligue 1.
 - 20 + 2 matchs : beaucoup d'images, peu d'équipes ; distributions robustes, comparaisons entre équipes fragiles.
 - Metrica : ni équipe en possession ni phase (fichiers d'événements non lus, contrôle des vitesses seulement) ; SkillCorner : phases de jeu lues, événements dynamiques non lus. Une mesure de 27b qui a besoin de la possession sur Metrica devra lire ses fichiers d'événements.
+
+## 39. Distributions de référence du suivi réel (ticket v2-realisme/27b, 20 + 2 matchs, 14/11/2026)
+
+Commande : `uv run python -m scripts.suivi_distributions --sortie <fichier.json>` (environ 1 min 10 s sur 4 processus, après `scripts.suivi_reel telecharger`). Deux exécutions : même empreinte sha256 (`95a8e952…`). Chaque case donne **médiane (Q1–Q3)** ; n = nombre d'images d'équipe (forme), d'images avec porteur, de réceptions ou d'échantillons de vitesse. Les images successives sont très corrélées (10 ou 25 images/s) : n mesure le volume, pas un nombre d'observations indépendantes (20 + 2 matchs, 42 équipes).
+
+**Mêmes fonctions que le moteur** (`scripts/v2_indicators.py`) : `length_width`, `line_gaps`, `block_height` pour la forme ; nouvelles fonctions partagées `nearest_distance` (réception, soutien, presseur), `speed_shares` (seuils `HIGH_INTENSITY_MPS` et `SPRINT_MPS`), `quartiles`, et la table `POSTE_FAMILY` (familles de postes du moteur). Le 27c les appellera côté moteur.
+
+**Définitions (validées par le propriétaire le 14/11/2026) et écarts au moteur.**
+- Forme : joueurs de champ (gardien exclu, 10 exigés : une équipe réduite à 9 n'est pas mesurée). Avec ou sans ballon : équipe en possession de SkillCorner ; le moteur dit « avec ballon » pour l'équipe qui a le ballon au sens de son tracker. L'équipe extérieure est mesurée après une rotation de 180° du terrain réel : la hauteur est exacte sur les terrains de 104 et 106 m (`progress` suppose 105 m ; sans la rotation, 1 m d'erreur).
+- Porteur : joueur en possession donné par SkillCorner (`possession.player_id`, ajouté à `Frame.holder`), détecté par la caméra. Soutien : coéquipier le plus proche, gardien compris. Presseur : adversaire de champ le plus proche (comme `Collector._pressing`), part sous `PRESS_RADIUS_M` (3 m).
+- Réception : le porteur change et le nouveau est de la même équipe que le précédent porteur connu, dans la même période (remises en jeu comprises) ; receveur détecté ; adversaire le plus proche, gardien compris, à la première image. Le moteur n'a pas encore cet indicateur (27c).
+- Vitesse : déplacement sur une fenêtre centrée de ±0,2 s (`SPEED_HALF_WINDOW_S`), joueur détecté sur toute la fenêtre, images contiguës, valeurs au-dessus de 12 m/s écartées (`SPEED_MAX_MPS`) ; le moteur lit sa vitesse instantanée. Familles : rôles SkillCorner ramenés aux postes du moteur (`SKILLCORNER_POSTE` ; LM et RM : milieux ; remplaçants entrés en jeu, rôle `SUB`, exclus) ; Metrica sans postes : tous les joueurs de champ, gardien = joueur de position médiane la plus proche de son but.
+
+**Forme des équipes.** SC = SkillCorner ; « toutes positions » : positions estimées hors caméra comprises ; « équipe détectée » : les 10 joueurs de champ dans le champ de la caméra ; Metrica : tous les joueurs suivis, sans possession (temps mort compris).
+
+| Indicateur | SC toutes positions, avec ballon | SC toutes positions, sans ballon | SC équipe détectée, avec ballon | SC équipe détectée, sans ballon | Metrica, toutes images |
+|---|---|---|---|---|---|
+| largeur (m) | 45,3 (36,1–55,0) | 35,6 (31,1–39,7) | 43,4 (32,0–56,6) | 34,4 (29,6–38,5) | 39,0 (32,9–47,1) |
+| longueur (m) | 33,9 (30,1–38,0) | 29,1 (23,4–35,3) | 28,0 (24,0–31,5) | 22,5 (18,9–26,0) | 31,9 (26,1–37,3) |
+| écart défense-milieu (m) | 13,7 (11,1–16,6) | 12,3 (9,7–15,7) | 11,2 (8,9–13,7) | 10,0 (7,9–12,1) | 12,9 (10,0–16,4) |
+| écart milieu-attaque (m) | 14,3 (11,5–17,2) | 11,7 (9,0–15,0) | 11,6 (8,9–14,2) | 9,2 (7,2–11,2) | 13,1 (10,0–16,6) |
+| hauteur de la ligne défensive (m) | 39,7 (26,5–52,1) | 35,8 (23,3–47,4) | 37,6 (28,0–46,2) | 28,3 (19,4–37,8) | 37,5 (23,9–49,9) |
+| n (images d'équipe) | 626 198 | 626 198 | 53 353 | 99 109 | 572 314 |
+
+**Constat : la variante « équipe détectée » est biaisée par sa sélection.** La caméra ne voit les 10 joueurs que quand l'équipe est resserrée (8,5 % et 15,8 % des images d'équipe avec et sans ballon) : longueur médiane 28,0 / 22,5 m contre 33,9 / 29,1 m en toutes positions, et 31,9 m chez Metrica, où tout le monde est suivi. Les positions estimées de SkillCorner donnent une forme plus proche de Metrica (longueur, écarts entre lignes, hauteur) ; la largeur SkillCorner avec ballon (45,3 m) dépasse Metrica toutes phases confondues (39,0 m), cohérent avec un bloc qui s'écarte en possession et se resserre sans ballon (35,6 m). **Repère retenu pour le 27c : « toutes positions »**, la variante détectée restant un contrôle de la sensibilité. Les données de diffusion ne permettent pas de dire si les positions estimées sont justes joueur par joueur.
+
+**Forme par phase de jeu SkillCorner** (toutes positions). Le bloc « respire » : sans ballon, la largeur médiane va de 26,8 m (coup de pied arrêté adverse) à 37,5 m (relance adverse), la hauteur de la ligne défensive de 12,2 m à 50,4 m ; avec ballon, la largeur passe de 52,8 m à la relance à 35,0 m en jeu désordonné.
+
+| avec ballon, phase de l'équipe (SC, toutes positions) | n | largeur (m) | longueur (m) | écart défense-milieu (m) | écart milieu-attaque (m) | hauteur de la ligne défensive (m) |
+|---|---|---|---|---|---|---|
+| build_up | 98 126 | 52,8 (41,3–58,9) | 38,9 (35,1–42,5) | 15,3 (12,6–18,4) | 16,5 (12,8–19,7) | 21,4 (15,6–27,9) |
+| create | 240 921 | 52,2 (42,9–58,0) | 33,3 (30,2–36,4) | 13,6 (11,1–16,1) | 14,2 (11,7–16,7) | 37,9 (31,2–44,5) |
+| finish | 135 193 | 41,9 (35,3–49,1) | 32,8 (29,4–36,9) | 13,2 (10,4–16,1) | 14,1 (11,7–16,7) | 55,1 (49,6–59,7) |
+| direct | 22 287 | 43,8 (30,3–53,3) | 36,3 (28,9–41,0) | 13,9 (10,9–17,7) | 13,9 (10,6–18,0) | 35,3 (24,8–44,4) |
+| quick_break | 9 651 | 37,0 (32,7–42,3) | 35,4 (31,5–39,3) | 14,2 (11,5–17,3) | 14,7 (11,9–17,9) | 51,2 (29,7–56,2) |
+| transition | 21 766 | 36,2 (31,4–40,6) | 35,3 (31,0–40,3) | 14,6 (11,6–18,0) | 14,1 (10,7–18,1) | 38,0 (26,7–49,5) |
+| chaotic | 54 712 | 35,0 (30,1–41,3) | 32,0 (28,0–36,5) | 13,3 (10,7–16,2) | 13,1 (10,3–16,1) | 40,2 (25,9–52,0) |
+| set_play | 22 690 | 35,3 (28,7–39,6) | 29,8 (23,2–34,0) | 11,4 (8,1–15,1) | 12,6 (9,3–15,6) | 64,1 (55,6–70,1) |
+
+| sans ballon, phase de l'adversaire (SC, toutes positions) | n | largeur (m) | longueur (m) | écart défense-milieu (m) | écart milieu-attaque (m) | hauteur de la ligne défensive (m) |
+|---|---|---|---|---|---|---|
+| build_up | 98 126 | 37,5 (34,3–41,0) | 35,1 (30,5–39,9) | 15,1 (12,1–18,6) | 13,9 (11,4–17,0) | 50,4 (45,6–53,9) |
+| create | 240 921 | 37,1 (33,7–40,7) | 26,5 (22,8–31,4) | 11,9 (9,8–14,3) | 10,8 (8,8–13,3) | 37,1 (31,2–43,1) |
+| finish | 135 193 | 33,1 (29,1–37,1) | 26,2 (19,6–34,0) | 10,7 (8,1–14,5) | 10,7 (7,7–14,9) | 20,0 (15,1–24,9) |
+| direct | 22 287 | 35,0 (28,4–39,3) | 35,4 (27,6–41,0) | 14,4 (11,2–18,8) | 13,2 (10,3–16,7) | 41,3 (33,1–49,1) |
+| quick_break | 9 651 | 35,2 (30,1–41,6) | 34,6 (29,8–39,0) | 14,4 (11,3–17,7) | 13,6 (10,3–17,3) | 23,4 (16,0–43,7) |
+| transition | 21 766 | 33,5 (29,2–38,2) | 36,2 (31,1–41,6) | 14,9 (11,8–19,0) | 14,5 (11,1–18,2) | 36,8 (23,5–48,4) |
+| chaotic | 54 712 | 32,3 (27,4–37,9) | 31,1 (26,9–35,8) | 13,0 (10,5–16,1) | 12,6 (9,6–15,6) | 38,2 (23,8–50,5) |
+| set_play | 22 690 | 26,8 (20,3–32,5) | 18,3 (12,3–27,1) | 7,3 (4,8–10,7) | 8,0 (5,0–12,5) | 12,2 (6,8–20,3) |
+
+**Autour du porteur** (SkillCorner, porteur détecté).
+
+| Phase (SC, porteur détecté) | n | Soutien le plus proche (m) | Distance presseur-porteur (m) | Presseur à moins de 3 m |
+|---|---|---|---|---|
+| toutes | 206 656 | 10,9 (8,1–13,7) | 7,1 (4,5–10,4) | 11,6 % |
+| build_up | 39 145 | 12,3 (9,7–14,6) | 8,5 (5,8–11,9) | 6,1 % |
+| create | 97 028 | 11,5 (8,9–14,1) | 8,3 (5,5–11,5) | 7,3 % |
+| finish | 45 554 | 9,3 (7,2–11,9) | 5,3 (3,5–7,6) | 18,9 % |
+| direct | 601 | 10,3 (7,6–13,9) | 4,9 (3,1–7,6) | 23,5 % |
+| quick_break | 2 661 | 9,0 (6,6–11,9) | 4,4 (2,9–6,3) | 26,2 % |
+| transition | 6 768 | 9,7 (6,7–13,0) | 4,9 (3,1–6,8) | 23,2 % |
+| chaotic | 7 609 | 7,5 (5,5–10,1) | 4,3 (2,6–6,3) | 30,0 % |
+| set_play | 3 904 | 9,2 (6,6–12,7) | 5,3 (3,3–7,8) | 20,5 % |
+
+**Réception** (SkillCorner) : adversaire le plus proche du receveur, **8,2 m (5,3–11,7)**, n = 9 834 réceptions (environ 490 par match : les contrôles trop brefs pour l'échantillonnage à 10 images/s et les receveurs hors caméra manquent).
+
+**Vitesses.**
+
+| Famille | Source | n (échantillons de 0,1 s ou 0,04 s) | Vitesse (m/s) | Temps > 19,8 km/h | Temps > 25 km/h |
+|---|---|---|---|---|---|
+| défenseur central | SkillCorner | 1 771 737 | 1,8 (1,1–3,0) | 3,1 % | 0,62 % |
+| latéral | SkillCorner | 1 944 380 | 1,9 (1,1–3,2) | 4,7 % | 1,06 % |
+| milieu | SkillCorner | 2 911 822 | 2,3 (1,3–3,5) | 3,6 % | 0,54 % |
+| ailier | SkillCorner | 1 955 083 | 2,1 (1,2–3,4) | 5,1 % | 1,10 % |
+| attaquant | SkillCorner | 1 711 564 | 2,1 (1,2–3,4) | 4,7 % | 0,94 % |
+| joueurs de champ | Metrica | 5 721 592 | 1,4 (0,9–2,6) | 2,0 % | 0,42 % |
+
+Lecture : les parts SkillCorner (3,1 à 5,1 % du temps au-dessus de 19,8 km/h) dépassent nettement Metrica (2,0 %) : SkillCorner ne mesure que les joueurs détectés, donc près du ballon, là où l'on court le plus ; Metrica couvre tout le terrain et tout le match, temps morts compris. **Repère de vitesse globale pour le 27c : Metrica** ; SkillCorner sert à l'ordre entre postes (latéraux et ailiers devant, défenseurs centraux et milieux derrière au-dessus de 25 km/h).
+
+**Limites.** Championnat d'Australie et échantillon Metrica anonyme : repères indicatifs, pas des cibles Ligue 1 ; peu d'équipes (42) ; positions estimées SkillCorner invérifiables ; phases SkillCorner sans équivalent exact dans le moteur (situations du `SituationTracker`) : le 27c devra rapprocher les deux découpages ou s'en tenir à « avec / sans ballon ».

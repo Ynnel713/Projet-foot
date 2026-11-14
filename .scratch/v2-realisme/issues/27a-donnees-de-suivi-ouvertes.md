@@ -14,7 +14,7 @@
 
 **Bloque :** 27b.
 
-**Status:** implémenté (14/11/2026) — en attente de /valider-ticket-simulafoot
+**Status:** livré (14/11/2026), validé expert + QC
 
 ## Estimation
 

@@ -77,6 +77,7 @@ class Frame:
     players: tuple[Player, ...]
     possession: str | None  # HOME, AWAY ou None (ballon en l'air, mort ou disputé)
     phase: str | None  # phase de jeu de l'équipe en possession (SkillCorner : build_up, create, finish…)
+    holder: str | None = None  # joueur en possession (SkillCorner, ticket v2-realisme/27b) ; None si inconnu
 
 
 @dataclass(frozen=True)
@@ -241,10 +242,12 @@ def read_skillcorner(match_id: str, root: Path = DATA_DIR) -> Iterator[Frame]:
                 x, y = to_engine(p["x"], p["y"], positive, length, width)
                 players.append(Player(str(pid), teams[pid], x, y, bool(p["is_detected"]), roles.get(pid)))
             group = (raw.get("possession") or {}).get("group")
+            holder_id = (raw.get("possession") or {}).get("player_id")
             possession = HOME if group == "home team" else AWAY if group == "away team" else None
             stamp = _timestamp_s(raw["timestamp"])
             start = period_start.setdefault(int(period), stamp)
-            yield Frame("skillcorner", match_id, int(period), stamp - start, ball, tuple(players), possession, phase)
+            yield Frame("skillcorner", match_id, int(period), stamp - start, ball, tuple(players), possession, phase,
+                        None if holder_id is None else str(holder_id))
 
 
 # --- Lecture Metrica ------------------------------------------------------------------------------------------

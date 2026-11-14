@@ -50,17 +50,17 @@ def _skillcorner_fixture(root):
         writer.writerow([1, 2, 1, "build_up"])
         writer.writerow([5, 6, 2, "finish"])
 
-    def frame(no, period, stamp, group, gk_x):
+    def frame(no, period, stamp, group, gk_x, holder=None):
         return {"frame": no, "timestamp": stamp, "period": period,
                 "ball_data": {"x": 1.0, "y": 2.0, "z": 0.1, "is_detected": True},
-                "possession": {"player_id": None, "group": group},
+                "possession": {"player_id": holder, "group": group},
                 "player_data": [{"x": gk_x, "y": 3.0, "player_id": 10, "is_detected": True},
                                 {"x": 5.0, "y": -4.0, "player_id": 20, "is_detected": False}]}
 
     rows = [{"frame": 0, "timestamp": None, "period": None, "ball_data": {"x": None}, "possession": {}, "player_data": []},
             frame(1, 1, "00:00:00.10", "home team", -40.0),
             frame(3, 1, "00:00:00.30", None, -40.0),
-            frame(5, 2, "00:45:00.00", "away team", 40.0)]
+            frame(5, 2, "00:45:00.00", "away team", 40.0, holder=20)]
     (folder / "7_tracking_extrapolated.jsonl").write_text("\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8")
 
 
@@ -78,6 +78,7 @@ def test_read_skillcorner(tmp_path):
     # deuxième période : l'équipe à domicile défend à droite dans la source, rotation -> toujours près de x = 0
     assert (second.players[0].x, second.players[0].y) == (12.5, 37.0)
     assert (second.possession, second.phase) == (sr.AWAY, "finish")
+    assert (first.holder, second.holder) == (None, "20")  # porteur lu (ticket v2-realisme/27b)
     assert second.players[1].detected is False and second.players[1].team == sr.AWAY
     assert first.time_s == 0.0 and second.time_s == 0.0  # temps depuis le début de la période, comme Metrica
     assert sr.skillcorner_match("7", tmp_path).standard

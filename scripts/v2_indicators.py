@@ -386,6 +386,39 @@ def open_options(holder: PlayerState, mates: Sequence[PlayerState], opponents: S
     return sum(1 for chance in pass_chances(holder, mates, opponents) if chance >= threshold)
 
 
+# --- Distributions de référence (ticket v2-realisme/27b) : fonctions partagées par le moteur et le suivi réel -------------
+# Familles de postes du moteur, pour comparer les vitesses par poste à des données réelles aux postes plus fins.
+POSTE_FAMILY = {"GK": "gardien", "DC": "défenseur central", "LB": "latéral", "RB": "latéral", "MDC": "milieu",
+                "MC": "milieu", "MOC": "milieu", "AG": "ailier", "AD": "ailier", "SA": "attaquant", "BU": "attaquant",
+                "ATT": "attaquant"}
+
+
+def nearest_distance(point: Vec2, others: Sequence[Vec2]) -> float | None:
+    """Distance (m) de `point` au plus proche des `others` ; None s'il n'y en a aucun. Sert à la distance au plus proche
+    adversaire du receveur, au soutien le plus proche du porteur et au presseur (adversaire de champ le plus proche)."""
+    return min((point.distance_to(o) for o in others), default=None)
+
+
+def speed_shares(speeds: Sequence[float]) -> tuple[float, float] | None:
+    """Part des échantillons (de temps, à pas régulier) au-dessus de HIGH_INTENSITY_MPS (19,8 km/h) et de SPRINT_MPS
+    (25 km/h) ; None sans échantillon."""
+    if not speeds:
+        return None
+    n = len(speeds)
+    return sum(v > HIGH_INTENSITY_MPS for v in speeds) / n, sum(v > SPRINT_MPS for v in speeds) / n
+
+
+def quartiles(values: Sequence[float]) -> dict[str, float]:
+    """Taille d'échantillon, premier quartile, médiane et troisième quartile (méthode inclusive : quartiles pris entre
+    les valeurs observées)."""
+    if not values:
+        return {"n": 0}
+    if len(values) == 1:
+        return {"n": 1, "q1": values[0], "mediane": values[0], "q3": values[0]}
+    q1, med, q3 = statistics.quantiles(values, n=4, method="inclusive")
+    return {"n": len(values), "q1": q1, "mediane": med, "q3": q3}
+
+
 HARD_BALL_MPS = 12.0  # ballon dur à la réception, pour la mesure seule (ticket v2-collectif/31c)
 # Validation de l'orientation (ticket v2-realisme/07g), mesure seule : défenseurs dont on suit la course à reculons ; un
 # déplacement compte « à reculons » au-delà de 135° entre le cap et la vitesse (milieu entre le côté, 90°, et l'arrière,
