@@ -6,7 +6,7 @@
 
 **Attributs :** Technique (amortit), Passing inchangé.
 
-**Blocked by:** 31, 34b (même calcul de l'angle d'arrivée).
+**Blocked by:** 31, 34b (même calcul de l'angle d'arrivée) ; `v2-realisme/26a` (ajouté le 14/11/2026).
 
 **Bloque :** 36b.
 

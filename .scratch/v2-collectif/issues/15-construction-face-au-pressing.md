@@ -4,7 +4,7 @@
 
 **Attributs :** Decisions, Vision, Passing, Composure ; gardien : Kicking et Throwing (phase 9).
 
-**Blocked by:** 08, 13.
+**Blocked by:** 08, 13 ; `v2-realisme/25b` (placement de construction, ajouté le 14/11/2026 : sans lui, le porteur choisit entre des solutions que personne ne crée).
 
 **Status:** à faire (constantes à proposer avant le code)
 

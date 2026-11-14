@@ -4,7 +4,7 @@
 
 **Attributs :** Flair, Teamwork, Vision, Decisions, Preferred Moves.
 
-**Blocked by:** 13, 18.
+**Blocked by:** 13, 18 ; `v2-realisme/25f` (ajouté le 14/11/2026).
 
 **Status:** à faire (constantes à proposer avant le code)
 

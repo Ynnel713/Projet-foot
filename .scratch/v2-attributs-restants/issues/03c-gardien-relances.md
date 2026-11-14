@@ -6,7 +6,7 @@
 
 **Attributs :** Kicking, Throwing.
 
-**Blocked by:** 01, 02 (a, b) (dépendances d'origine du ticket 03, sans doute levables : les sorties de but existent depuis `v2-collectif/29`).
+**Blocked by:** 01, 02 (a, b) (dépendances d'origine du ticket 03, sans doute levables : les sorties de but existent depuis `v2-collectif/29`) ; `v2-realisme/25b` (placement de construction, ajouté le 14/11/2026).
 
 **Bloque :** `v2-collectif/22a`.
 

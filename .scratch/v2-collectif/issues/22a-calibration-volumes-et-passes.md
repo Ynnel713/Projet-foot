@@ -6,7 +6,7 @@
 
 **Attributs :** tous.
 
-**Blocked by:** liste complète du ticket 22 : tickets 01 à 21 (18 : partie livrée ; ses critères restants sont clos par 22c) et 23 ; 28 (a, b, c) à 33 (32 : a et b) ; `v2-attributs-restants/01`, `02` (a, b), `03` (a, b, c), `07` (a, b) et `11` ; `v2-coach-et-gestion-de-match/03` ; `v2-realisme/20a`, `20b`, `20c`, `20d`, `20f`, `21c`, `19c` (ajouté le 10/11/2026, audit de la roadmap).
+**Blocked by:** liste complète du ticket 22 : tickets 01 à 21 (18 : partie livrée ; ses critères restants sont clos par 22c) et 23 ; 28 (a, b, c) à 33 (32 : a et b) ; `v2-attributs-restants/01`, `02` (a, b), `03` (a, b, c), `07` (a, b) et `11` ; `v2-coach-et-gestion-de-match/03` ; `v2-realisme/20a`, `20b`, `20c`, `20d`, `20f`, `21c`, `19c` (ajouté le 10/11/2026, audit de la roadmap) ; `v2-realisme/26a` (ajouté le 14/11/2026).
 
 **Bloque :** 22b.
 

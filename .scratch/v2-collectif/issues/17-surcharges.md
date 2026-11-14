@@ -4,7 +4,9 @@
 
 **Attributs :** Vision, Decisions, Off the Ball, Flair.
 
-**Blocked by:** 14, 16.
+**Blocked by:** 14, 16 ; `v2-realisme/25e`, `25f` (ajoutés le 14/11/2026).
+
+**Périmètre (14/11/2026) :** surcharges numériques et deux-contre-un ; l'appel leurre qui attire un défenseur relève de `v2-realisme/25e`, la permutation de `v2-realisme/25f`.
 
 **Status:** à faire (constantes à proposer avant le code)
 
