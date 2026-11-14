@@ -10,11 +10,31 @@ Exceptions attendues au départ (à valider par le propriétaire) : Natural Fitn
 
 **Blocked by:** — (posé tout de suite, liste d'exceptions longue au départ).
 
-**Status:** à faire
+**Status:** implémenté (14/11/2026) — en attente de /valider-ticket-simulafoot
+
+## Estimation
+
+| Poste | Durée |
+|---|---|
+| Analyse et compréhension du code | 15 min |
+| Développement | 35 min |
+| Tests unitaires et comportementaux | 20 min |
+| Intégration et vérifications | 15 min |
+| **Total (travail effectif)** | **1 h 25** |
+
+Confiance : élevée (estimation posée le 14/11/2026 au lancement, le ticket n'en avait pas). Hypothèses : test seul, lecture de la base par `openpyxl`, aucune modification du moteur.
+Temps machine, non compté : suite complète (environ 12 min).
 
 **Point de vigilance :** « lu par le moteur » n'est pas « exprimé dans le comportement ». Chaque ticket porteur garde son propre critère mesuré ; cette garde empêche seulement l'oubli.
 
-- [ ] Le test échoue si une caractéristique n'est ni lue par `v2engine/` ni dans la liste d'exceptions
-- [ ] Chaque exception cite le ticket qui la lèvera
-- [ ] Repris du ticket 05 : les 58 valeurs distinctes de `Preferred moves` sont toutes rattachées à un mécanisme et à un ticket porteur (grille du ticket 05) ; le test échoue si une nouvelle valeur apparaît sans rattachement, ou si une paire contradictoire est additionnée au lieu d'être signalée
-- [ ] Suite V2 verte
+- [x] Le test échoue si une caractéristique n'est ni lue par `v2engine/` ni dans la liste d'exceptions (`tests/test_v2engine_rayon_attributs.py`, `COVERAGE_EXCEPTIONS` ; 52 caractéristiques, 27 lues, 25 exceptions ; il échoue aussi sur une exception devenue inutile ; échec démontré sur une caractéristique factice)
+- [x] Chaque exception cite le ticket qui la lèvera (Natural Fitness : exception permanente pour un match isolé, D-V10)
+- [x] Repris du ticket 05 : les 58 valeurs distinctes de `Preferred moves` sont toutes rattachées à un mécanisme et à un ticket porteur (grille du ticket 05) ; le test échoue si une nouvelle valeur apparaît sans rattachement, ou si une paire contradictoire est additionnée au lieu d'être signalée (`PREFERRED_MOVES` : 58 gestes et « (aucun) » ; `CONTRADICTORY_PAIRS` ; une anomalie connue signalée, `KNOWN_CONTRADICTIONS`)
+- [x] Suite V2 verte : suite complète 3 035 passés, 0 ignoré, 14 désélectionnés (3 028 + 7 tests ajoutés), 13 min 14 ; fichier exécuté deux fois, 14 passés à chaque fois ; aucun fichier du moteur, V1 ni protégé touché
+- [x] Durée réelle relevée, comparée à l'estimation : environ 25 min pour 85 estimées (− 71 %), voir `docs/agents/suivi-estimations.md`
+
+## Comments
+
+**14/11/2026, liste d'exceptions et anomalie validées par le propriétaire** (« ok je valide ») : 25 caractéristiques non lues, chacune avec son ticket (Natural Fitness permanente, D-V10) ; contradiction de la base Nicolò Cambiaghi (Cuts Inside From Both Wings et Hugs Line) inscrite comme anomalie connue, signalée et non corrigée.
+
+**14/11/2026, implémentation.** Garde ajoutée à la fin de `tests/test_v2engine_rayon_attributs.py` (7 tests) : lecture d'un attribut FM par les mêmes lecteurs que le test des rayons ; lecture d'une colonne hors FM (Taille FM, Weak foot, Pieds, Preferred moves, Postes FM naturels) par son champ de `ligue1sim.players.Player` chargé dans `v2engine/`. Base lue avec `openpyxl` (onglet « Infos principales », gestes séparés par « ; »). 3 012 joueurs ont des gestes, 59 valeurs distinctes (58 gestes et « (aucun) »).
