@@ -6,7 +6,7 @@
 
 **Attributs :** tous.
 
-**Blocked by:** 22a ; `v2-realisme/20e` (ajouté le 10/11/2026, audit de la roadmap) ; `v2-realisme/25h` (ajouté le 14/11/2026).
+**Blocked by:** 22a ; `v2-realisme/20e` (ajouté le 10/11/2026, audit de la roadmap) ; `v2-realisme/25h`, `27c` (ajoutés le 14/11/2026).
 
 **Bloque :** 22c.
 

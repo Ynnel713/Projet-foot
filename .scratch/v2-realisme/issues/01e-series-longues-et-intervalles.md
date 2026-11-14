@@ -10,7 +10,7 @@
 
 **Blocked by:** 01b (Flux aléatoires : duels, passes, tirs, placement, arbitrage).
 
-**Bloque :** 06c, 13i, 18b, 18d.
+**Bloque :** 06c, 13i, 18b, 18d, 27d (ajouté le 14/11/2026).
 
 **Status:** livré (06/11/2026), validé expert + QC
 

@@ -6,7 +6,7 @@
 
 **Attributs :** tous.
 
-**Blocked by:** 22b.
+**Blocked by:** 22b ; `v2-realisme/27d` (ajouté le 14/11/2026).
 
 **Bloque :** passent après la calibration, avec un simple contrôle de non-régression : `v2-attributs-restants/10a` et `10b`, `05`, `04a`, `04b`, `09a`, `09b`, `09c`.
 

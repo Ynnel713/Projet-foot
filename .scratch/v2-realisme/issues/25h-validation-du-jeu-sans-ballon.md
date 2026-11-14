@@ -10,7 +10,7 @@
 
 **Blocked by:** 25a à 25g, 24.
 
-**Bloque :** `v2-collectif/22b` (calibration tactique).
+**Bloque :** `v2-collectif/22b` (calibration tactique) ; 27c.
 
 **Status:** à faire
 
