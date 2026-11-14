@@ -9,6 +9,7 @@
    - **tirs en face-à-face** (13,9 avant le 07b, 16,0 après le 07d) : pistes du 07b (pas chassés à 80 %, vitesse des cibles de ligne) ;
    - **contrôle à l'aveugle** : part des contrôles à l'aveugle avec `facing_run` vrai (facultatif A1 de l'expert au 07d).
 2. Ensuite, ordre du chantier : `.scratch/v2-realisme/spec.md`, section « Vague 2 ».
+3. **Écarts entre notes proches (demande du propriétaire du 14/11/2026)** : `v2-realisme/24a` (banc 70 contre 80, attribut par attribut) puis `24b` (nouvelle forme de la courbe partagée, deux variantes comparées : cubique recentrée et adoucie, ou logistique), **avant la calibration finale** (`v2-collectif/22a` à `22c`), qui doit partir des nouvelles courbes. Constat : entre 60 et 70, les attributs techniques, mentaux et de duel ne font presque aucune différence (passe précise 50,0 % contre 50,7 %).
 
 Rappel : passes par match 1 091 (repère 890 à 940) et course du passeur après sa passe (une-deux), notés au `v2-collectif/22a`.
 
