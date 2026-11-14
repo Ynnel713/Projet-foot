@@ -1445,3 +1445,27 @@ Commande : `uv run python -m scripts.suivi_distributions --sortie <fichier.json>
 Lecture : les parts SkillCorner (3,1 à 5,1 % du temps au-dessus de 19,8 km/h) dépassent nettement Metrica (2,0 %) : SkillCorner ne mesure que les joueurs détectés, donc près du ballon, là où l'on court le plus ; Metrica couvre tout le terrain et tout le match, temps morts compris. **Repère de vitesse globale pour le 27c : Metrica** ; SkillCorner sert à l'ordre entre postes (latéraux et ailiers devant, défenseurs centraux et milieux derrière au-dessus de 25 km/h).
 
 **Limites.** Championnat d'Australie et échantillon Metrica anonyme : repères indicatifs, pas des cibles Ligue 1 ; peu d'équipes (42) ; positions estimées SkillCorner invérifiables ; phases SkillCorner sans équivalent exact dans le moteur (situations du `SituationTracker`) : le 27c devra rapprocher les deux découpages ou s'en tenir à « avec / sans ballon ».
+
+## 40. Protocole de validation indépendante (ticket v2-realisme/18b, 14/11/2026)
+
+Protocole validé par le propriétaire le 14/11/2026, **figé avant toute série de validation** : il ne se modifie plus qu'en ouvrant un ticket, jamais après avoir vu un résultat. Il s'applique au ticket `18c` (validation après la calibration finale `v2-collectif/22a` à `22c`).
+
+**Pourquoi.** Jusqu'ici, calibration et contrôle jouent les mêmes matchs (graine d'audit 20260923 + indice du match, indices 0 à environ 2 120 déjà utilisés). Un réglage peut donc tomber juste sur ces matchs sans être réaliste en général. La validation se fait sur des matchs que la calibration n'a jamais vus.
+
+**1. Graines réservées.** Indices **100 000 à 199 999** (graines 20 360 923 à 20 460 922), découpés en blocs de **2 000** : un bloc par passage de validation, consommé même en cas d'échec, jamais réutilisé (premier passage : 100 000 à 101 999 ; après correction, 102 000 à 103 999, et ainsi de suite). Garde du banc (`scripts/graines_validation.py`, appelée par `measure_v2.run` et `bench_series.run_series`) : une série qui touche la réserve est refusée sans `--validation` ; avec `--validation`, une série qui en sort est refusée. Avec `--profil`, la garde porte sur les graines réellement jouées (match `i`, graine `i // 2`). Limite : les scripts qui tirent eux-mêmes leurs graines (`shot_calibration`, `measure_v2_decisions`, `measure_v2_meilleur_choix`, `measure_roles_v2`, `v2_chain`) ne passent pas par la garde ; leurs plages par défaut (0 à environ 2 120) sont loin de la réserve, et aucun ne doit être lancé sur elle.
+
+**2. Taille.** **1 000 matchs** (`uv run python -m scripts.bench_series 1000 --debut 100000 --validation --processus 7 --json validation.json`, environ 8 h de machine), portés à **2 000** (même bloc, `--debut 101000` pour les 1 000 suivants, environ 8 h de plus) pour les seuls indicateurs « à confirmer ».
+
+**3. Critères figés.** Les repères de la section 6 dans leur définition corrigée au 01d (section 7) : **bloquants** R1 (tirs tracés par équipe, 8 à 15), R2 (conversion, 10 à 12 %), R3 (buts dans la surface, 80 à 90 %), R6 (part de la distance au-dessus de 19,8 km/h, 6 à 10 %), R7 (passes par match, 890 à 940 ; par minute de jeu effectif, 15 à 17) ; **indicatifs** R4 (km par joueur de champ, 10 à 12, ordre des postes) et R5 (appels par joueur et par 90 min, ordre de grandeur et ordre des postes). Les cibles ajoutées par la calibration finale (22a à 22c) s'inscrivent ici, avec leur plage et leur statut, **avant** le lancement du 18c ; une cible ajoutée après avoir vu la série n'est pas recevable.
+
+**4. Règle de décision.** Pour chaque indicateur, intervalle de confiance à 95 % de la moyenne par match (`bench_series`, approximation normale) comparé à la plage réelle :
+
+| Intervalle | Verdict | Suite |
+|---|---|---|
+| entièrement dans la plage | **conforme** | — |
+| à cheval sur une borne | **à confirmer** | série portée à 2 000 matchs pour cet indicateur ; s'il reste à cheval, il est rapporté « à confirmer » et ne valide pas un repère bloquant |
+| entièrement hors de la plage | **écart** | un ticket, jamais un réglage dans le 18c |
+
+Le moteur est **validé** si tous les repères bloquants sont conformes. Les indicatifs sont rapportés, sans effet sur le verdict.
+
+**5. Conduite de la série.** Moteur figé sur un commit cité avant le lancement (préfixe lu dans `git log`) ; série lancée une seule fois sur le bloc ; résultat publié tel quel, intervalles compris, même défavorable. Toute relance après correction prend le bloc suivant.

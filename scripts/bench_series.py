@@ -27,6 +27,7 @@ import time
 from collections.abc import Sequence
 from concurrent.futures import ProcessPoolExecutor
 
+from scripts.graines_validation import check_series
 from scripts.measure_v2 import TICK_S, report, run
 from scripts.v2_indicators import Collector
 
@@ -51,10 +52,10 @@ def summary(values: Sequence[float]) -> dict[str, float]:
     return {"n": n, "moyenne": mean, "écart-type": sd, "ic95": (mean - half, mean + half)}
 
 
-def _one_match(args: tuple[int, str | None, float, float, bool]) -> dict:
+def _one_match(args: tuple[int, str | None, float, float, bool, bool]) -> dict:
     """Un match (indice `i`, donc sa graine) dans un processus : ses compteurs bruts et ses indicateurs."""
-    i, profile, duration, tick_s, plans = args
-    c = run(1, profile, duration_minutes=duration, tick_s=tick_s, plans=plans, start=i)
+    i, profile, duration, tick_s, plans, validation = args
+    c = run(1, profile, duration_minutes=duration, tick_s=tick_s, plans=plans, start=i, validation=validation)
     return {
         "match": i,
         "count": dict(c.count),
@@ -105,8 +106,9 @@ def _merge_into(merged: Collector, r: dict) -> None:
 
 
 def run_series(n_matches: int, processes: int = 1, profile: str | None = None, duration: float = 90.0,
-               tick_s: float = TICK_S, plans: bool = True, start: int = 0) -> dict:
-    jobs = [(i, profile, duration, tick_s, plans) for i in range(start, start + n_matches)]
+               tick_s: float = TICK_S, plans: bool = True, start: int = 0, validation: bool = False) -> dict:
+    check_series(start, n_matches, bool(profile), validation)  # avant tout lancement (ticket v2-realisme/18b)
+    jobs = [(i, profile, duration, tick_s, plans, validation) for i in range(start, start + n_matches)]
     merged, results = Collector(), []
     merged.minutes_per_match = duration
     # fusion au fil de l'eau, dans l'ordre des matchs : les valeurs brutes d'un match ne sont gardées qu'une fois, dans
@@ -180,6 +182,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--pas", type=float, default=TICK_S)
     parser.add_argument("--sans-plan", action="store_true")
     parser.add_argument("--debut", type=int, default=0)
+    parser.add_argument("--validation", action="store_true", help="graines réservées (ticket v2-realisme/18b)")
     parser.add_argument("--json", default=None)
     parser.add_argument("--comparer", nargs=2, metavar=("AVANT", "APRES"))
     args = parser.parse_args(argv)
@@ -194,7 +197,7 @@ def main(argv: list[str] | None = None) -> None:
     print(f"{args.matches} matchs sur {args.processus} processus : durée machine estimée {eta / 60:.0f} min", flush=True)
     started = time.perf_counter()
     series = run_series(args.matches, args.processus, args.profil, tick_s=args.pas, plans=not args.sans_plan,
-                        start=args.debut)
+                        start=args.debut, validation=args.validation)
     ci = confidence(series)
     for key, value in _numeric(series["agrégé"]).items():
         if key not in ci:

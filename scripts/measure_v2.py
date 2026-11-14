@@ -35,6 +35,7 @@ from ligue1sim.lineup import pick_best_formation
 from scripts.v2_indicators import (BACKPEDAL_POSTES, CARRY_PREFIX, FLICKER_S, EXIT_STATES, LINE_GAP_LIMITS_M, LINE_JUMP_M, MARKING_GAP_M, PASS_PREFIX,
                                    Collector, shot_decomposition, xg_calibration)
 from scripts.v2_tranches import minute_report, player_report
+from scripts.graines_validation import check_series
 
 AUDIT_SEED = 20260923
 HIGH, LOW = 99, 11
@@ -219,7 +220,8 @@ def _force_attribute(attribute: str, high_team: str, team_of: dict[str, str]) ->
 
 
 def run(n_matches: int, profile: str | None = None, duration_minutes: float = 90.0, tick_s: float = TICK_S,
-        plans: bool = True, start: int = 0, defence_perception: bool = True) -> Collector:
+        plans: bool = True, start: int = 0, defence_perception: bool = True, validation: bool = False) -> Collector:
+    check_series(start, n_matches, bool(profile), validation)  # graines réservées à la validation (ticket v2-realisme/18b)
     clubs = load_clubs(CLUBS_PATH, "Ligue 1")
     collector = Collector()
     collector.minutes_per_match = duration_minutes
@@ -693,11 +695,13 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--sans-perception-defense", action="store_true",
                         help="ticket v2-realisme/08e désactivé : ligne et marquage lisent les vraies positions (A/B du 08f)")
     parser.add_argument("--sans-tenir", action="store_true", help="tickets v2-realisme/02f et 02g désactivés : tous les coéquipiers du porteur appellent")
+    parser.add_argument("--validation", action="store_true",
+                        help="série de validation sur graines réservées (ticket v2-realisme/18b, docs/INDICATEURS_V2.md section 40)")
     args = parser.parse_args(argv)
     if args.sans_tenir:
         cerveau.CALLER_CAP = {}
     result = report(run(args.matches, args.profil, tick_s=args.pas, plans=not args.sans_plan, start=args.debut,
-                       defence_perception=not args.sans_perception_defense),
+                       defence_perception=not args.sans_perception_defense, validation=args.validation),
                     args.detail)
     for key, value in result.items():
         if isinstance(value, dict):
