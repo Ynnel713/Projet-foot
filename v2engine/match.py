@@ -143,11 +143,17 @@ def _facing_at_kickoff(position: Vec2, team: str) -> Vec2:
     return Vec2(1.0, 0.0) if team == "home" else Vec2(-1.0, 0.0)
 
 
+# Collision (ticket v2-realisme/11a, valeur recommandée et validée par délégation du propriétaire, 14/11/2026) : choc
+# mou, coefficient de restitution nul : deux joueurs qui se heurtent perdent la vitesse qui les rapproche (ils ne
+# rebondissent pas, ils ne se traversent pas) ; masses égales en attendant Strength (ticket 11b). Chiffre réel : non
+# trouvé (un contact d'épaule n'est ni un rebond ni un placage : choc mou, ordre de grandeur).
+COLLISION_RESTITUTION = 0.0
+
+
 def _resolve_player_collisions(players: list[PlayerState]) -> None:
-    """Écarte deux joueurs qui se chevauchent -- correction de position pure, pas de vitesse
-    (suffisant pour éviter un chevauchement durable, voir critère d'acceptation Phase 1,
-    docs/PLAN_V2.md). ponytail : boucle O(n²) (22 joueurs -> 231 paires/tick) ; à optimiser (grille
-    spatiale) si la performance du mode batch (NFR-V01) le justifie plus tard."""
+    """Écarte deux joueurs qui se chevauchent (correction de position, moitié chacun) et retire à leur vitesse la
+    composante qui les rapproche (ticket v2-realisme/11a : choc mou, masses égales). ponytail : boucle O(n²) (22 joueurs
+    -> 231 paires/tick) ; à optimiser (grille spatiale) si la performance du mode batch (NFR-V01) le justifie plus tard."""
     for i in range(len(players)):
         for j in range(i + 1, len(players)):
             a, b = players[i], players[j]
@@ -159,9 +165,17 @@ def _resolve_player_collisions(players: list[PlayerState]) -> None:
             delta = pb - pa
             dist = delta.length()
             if 0.0 < dist < min_dist:
-                push = delta.normalized() * ((min_dist - dist) / 2.0)
+                normal = delta.normalized()
+                push = normal * ((min_dist - dist) / 2.0)
                 a.position = clamp_to_pitch(a.position - push)
                 b.position = clamp_to_pitch(b.position + push)
+                # vitesse de rapprochement le long de la normale (11a) : retirée moitié chacun, rebond selon la restitution
+                relative = a.velocity - b.velocity
+                closing = relative.x * normal.x + relative.y * normal.y
+                if closing > 0.0:
+                    impulse = normal * (closing * (1.0 + COLLISION_RESTITUTION) / 2.0)
+                    a.velocity = a.velocity - impulse
+                    b.velocity = b.velocity + impulse
 
 
 def _nearest_opponent_in_range(holder: PlayerState, players: list[PlayerState], radius_m: float) -> PlayerState | None:
