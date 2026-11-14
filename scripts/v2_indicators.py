@@ -387,6 +387,13 @@ def open_options(holder: PlayerState, mates: Sequence[PlayerState], opponents: S
 
 
 HARD_BALL_MPS = 12.0  # ballon dur à la réception, pour la mesure seule (ticket v2-collectif/31c)
+# Validation de l'orientation (ticket v2-realisme/07g), mesure seule : défenseurs dont on suit la course à reculons ; un
+# déplacement compte « à reculons » au-delà de 135° entre le cap et la vitesse (milieu entre le côté, 90°, et l'arrière,
+# 180°, des points de `movement._DIRECTION_SPEED_POINTS`), au-dessus de 1 m/s (on ne compte pas le piétinement).
+BACKPEDAL_POSTES = ("DC", "LB", "RB")
+BACKPEDAL_MIN_DEG = 135.0
+BACKPEDAL_MIN_MPS = 1.0
+FLICKER_S = 0.5  # cap qui tremble : choix course / ballon défait moins de 0,5 s après avoir été pris (ticket v2-realisme/07g)
 
 
 # --- Accumulation -------------------------------------------------------------------------------------------------
@@ -442,6 +449,8 @@ class Collector:
         self.hi_time = self.sprint_time = self.time = 0.0
         self.sprint_run: Counter = Counter()  # durée de la course en cours au-dessus de SPRINT_MPS, par joueur (s)
         self.sprints: Counter = Counter()  # sprints d'au moins SPRINT_MIN_S, par joueur (ticket v2-realisme/01d)
+        self.facing_run_prev: dict[str, bool] = {}  # dernier choix course / ballon du cap, par joueur (ticket v2-realisme/07g)
+        self.facing_run_since: dict[str, float] = {}  # instant du dernier changement de ce choix, par joueur (07g)
         self.hi_first = self.hi_last = 0.0
         self.holder: str | None = None
         self.holder_since = 0.0
@@ -844,6 +853,12 @@ class Collector:
                     self.count[f"possession par réception : {group} : durée (somme, s)"] += held
             if not r.first_time:  # contrôle orienté (ticket v2-collectif/31b), hors receveurs qui pensent à jouer de première
                 self.count["contrôle orienté : réceptions"] += 1
+                # validation de l'orientation (ticket v2-realisme/07g) : type de réception par poste ; contrôles à
+                # l'aveugle d'un joueur dont le corps est tourné vers sa course (facultatif A1 de l'expert au 07d)
+                self.count[f"réceptions par poste : {r.poste} : contrôles"] += 1
+                self.count[f"réceptions par poste : {r.poste} : {r.kind}"] += 1
+                self.count["contrôle à l'aveugle : corps vers sa course"] += r.blind and r.facing_run
+                self.count["contrôle : corps vers sa course"] += r.facing_run
                 self.count["contrôle à l'aveugle : réceptions"] += r.blind  # ticket v2-realisme/07d
                 self.count["contrôle à l'aveugle : non orientés"] += r.blind and not r.oriented
                 self.count["contrôle : non orientés"] += not r.oriented
@@ -1166,6 +1181,7 @@ class Collector:
                 acc[0], acc[1], acc[2] = max(acc[0], far), acc[1] + far, acc[2] + 1
                 continue
             v = p.velocity.length()
+            self._orientation(p, v, dt)  # ticket v2-realisme/07g
             depth = progress(p.team, p.position.x) if self.team is not None and self.team != p.team else None
             self.minutes.on_player(minute, p.name, p.poste, p.stamina, v, dt, depth, p.team)  # tickets 19d et 19f
             self.dist[p.name] += v * dt
@@ -1185,6 +1201,29 @@ class Collector:
                     self.hi_first += v * dt
                 elif minute >= 75.0:
                     self.hi_last += v * dt
+
+    def _orientation(self, p: PlayerState, v: float, dt: float) -> None:
+        """Validation de l'orientation (ticket v2-realisme/07g) : course à reculons des défenseurs (temps, distance, vitesse)
+        et changements du choix course / ballon du cap (07b, hystérésis ; facultatif A2 de l'expert au 07b : le cap
+        tremble-t-il ?)."""
+        previous = self.facing_run_prev.get(p.name)
+        if previous is not None and previous != p.facing_run:
+            self.count[f"cap : changements course / ballon : {p.poste}"] += 1
+            if self.now - self.facing_run_since.get(p.name, -math.inf) < FLICKER_S - 1e-9:
+                self.count[f"cap : changements course / ballon défaits en moins de {FLICKER_S:g} s : {p.poste}"] += 1
+            self.facing_run_since[p.name] = self.now
+        self.facing_run_prev[p.name] = p.facing_run
+        if p.poste not in BACKPEDAL_POSTES:
+            return
+        self.count["défenseurs : temps en mouvement (s)"] += dt * (v > BACKPEDAL_MIN_MPS)
+        if v <= BACKPEDAL_MIN_MPS:
+            return
+        cosine = (p.facing.x * p.velocity.x + p.facing.y * p.velocity.y) / (p.facing.length() * v)
+        if math.degrees(math.acos(max(-1.0, min(1.0, cosine)))) > BACKPEDAL_MIN_DEG:
+            self.count["défenseurs : temps à reculons (s)"] += dt
+            self.count["défenseurs : distance à reculons (m)"] += v * dt
+            self.peak["défenseurs : vitesse maximale à reculons (m/s)"] = max(
+                self.peak["défenseurs : vitesse maximale à reculons (m/s)"], v)
 
     def _close_sprint(self, name: str) -> None:
         if self.sprint_run.pop(name, 0.0) >= SPRINT_MIN_S - 1e-9:

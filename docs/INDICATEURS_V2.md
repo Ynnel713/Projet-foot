@@ -85,6 +85,7 @@ Référence du ticket `.scratch/v2-collectif/issues/01-banc-de-mesure-tactique.m
 | 25 | Contrôles orientés (ticket `v2-collectif/31b`) | Part des contrôles réussis tirés orientés, hors receveurs qui pensent à jouer de première (`ReceptionEvent.oriented`) ; avec le temps par possession de joueur, qui doit rester proche de sa valeur d'avant (temps moyen attendu inchangé) | % | Non trouvée |
 | 26 | Contrôle d'un ballon dur (ticket `v2-collectif/31c`) | Part des contrôles d'un ballon reçu à plus de 12 m/s (`ReceptionEvent.ball_speed_mps`, mesure seule), et part de ces contrôles qui sont orientés | % | Non trouvée |
 | 27 | Temps de possession individuelle par type de réception (ticket `v2-realisme/07d`) | Durée de la possession du joueur qui commence au tick de sa réception, par type de réception au contact (de face, de profil, dos au jeu, 07c) et selon que le contrôle est orienté ou non, plus le groupe « à l'aveugle » (ballon reçu dans le dos d'un joueur non lancé, `ReceptionEvent.blind`) ; part des contrôles appariés à une possession ; hors receveurs qui pensent à jouer de première ; part de chaque type parmi les contrôles appariés | s, % | Temps par possession de joueur : 2-3 s (section 1) ; par type : non trouvé |
+| 28 | Validation de l'orientation (ticket `v2-realisme/07g`) | (a) Type de réception par poste : part de face, de profil, dos au jeu des contrôles de chaque poste, hors receveurs qui pensent à jouer de première ; (b) délai moyen de rotation avant la passe ou le tir, rotations nulles comprises (à côté de la durée quand il y en a une, 07e) ; (c) défenseurs (DC, LB, RB) : part du temps en mouvement (plus de 1 m/s) passée à reculons (plus de 135° entre le cap et la vitesse), vitesse moyenne et maximale à reculons, distance à reculons par joueur et par 90 min ; (d) contrôles à l'aveugle d'un joueur dont le corps est tourné vers sa course (`ReceptionEvent.facing_run`, mesure seule), part des contrôles à l'aveugle ; (e) changements du choix course / ballon du cap (07b) par joueur et par minute, et part de ces changements défaits en moins de 0,5 s (cap qui tremble) | %, s, m/s, m, nombre | Non trouvés (vitesse à reculons : 29 % plus lent que vers l'avant sur 20 m, J Sports Sci 2021, déjà cité au 07b) |
 
 **Plus tard, dans les tickets concernés** (ils demandent des mécanismes qui n'existent pas encore) : temps d'arrivée du défenseur (ticket 09), lignes adverses cassées et valeur de l'espace créé (ticket 13 : mesurées hors du banc, dans le ticket ; lignes cassées intégrées au banc au ticket 14, valeur de l'espace créé encore hors du banc), contrôle de la profondeur (ticket 05), indicateurs par phase de jeu (ticket 03), conditionnement par style tactique et qualité relative des équipes (ticket 22).
 
@@ -1293,3 +1294,50 @@ Aucun effet démontrable sur le jeu, en accord avec la mesure exacte de la ligne
 Critère du ticket (écart sous environ 2 points par tranche) : **non tenu** sur quatre tranches sur cinq. Cause probable, non isolée par une mesure : la décision lit maintenant un monde perçu (08d) qui ajoute son erreur à l'erreur propre de Decisions (`decision._ERROR_POINTS`), réglée en 04/11/2026 sur un monde exact ; le ticket de recalage doit le démontrer (dont la corrélation avec les 57 % d'adversaires proches non vus). Suite proposée au propriétaire (constante produit, non codée) : réduire l'erreur propre d'environ 15 à 30 % entre Decisions 11 et 75, inchangée à 99, puis mesurer (8 matchs par essai, environ 12 min). À faire dans un ticket à part ou avec la calibration provisoire suivante.
 
 **Temps de calcul.** 120 s par match avec les mesures de ligne et de marquage (112 s sans perception de la défense ; séries sous charge, non comparables aux 97 s du 08e).
+
+## 37. Validation de l'orientation et dérive des buts (ticket v2-realisme/07g, 3 x 60 matchs, 14/11/2026)
+
+Commandes : `scripts/bench_series.py 60 --debut 50 --processus 4` (graines 50 à 109, jamais utilisées par les tickets 07b à 07d, mesurés sur 0 à 49), à `f3c2b1d` (07b, arbre de travail séparé) et sur l'état du 07d (`b5d3419`) avec les indicateurs du 07g ; comparaisons appariées `--comparer` ; ablation à l'exécution hors dépôt (`.scratch/v2-realisme/mesures/07g-ablation.py`). Sorties : `07g-serie-07b.txt`, `07g-serie-07d.txt`, `07g-comparaison-07b-07d.txt`, `07g-comparaison-07d-sans31b.txt`.
+
+**Dérive des buts (reprise A2 de l'expert au 07d).** Aux graines 0 à 49, buts 3,12 (07b) → 3,62 (07d). Aux graines 50 à 109 :
+
+| 60 matchs appariés | 07b | 07d | Écart apparié (IC 95 %) |
+|---|---|---|---|
+| Buts par match | 3,48 | 3,68 | + 0,20 (− 0,51 ; + 0,91), non significatif |
+| xG neutre par match | 3,31 | 3,84 | **+ 0,53 (+ 0,17 ; + 0,88)** |
+| Tirs par équipe | 17,4 | 18,9 | **+ 1,4 (+ 0,3 ; + 2,6)** |
+| Tirs de près (16 m) par équipe | | | **+ 0,63 (+ 0,23 ; + 1,02)** |
+| Tirs de contre (récupération dans son camp) par match | | | **+ 0,88 (+ 0,19 ; + 1,58)** |
+| Conversion des tirs | | | − 0,3 point, non significatif |
+| Face-à-face : tirs par match | 15,1 | 15,8 | + 0,65 (− 0,88 ; + 2,18), non significatif |
+| Temps par possession de joueur | 2,60 s | 2,43 s | **− 0,16 s (− 0,18 ; − 0,15)** |
+| Passes par match | 1 059 | 1 091 | **+ 32** |
+
+Le 3,12 du 07b aux graines 0 à 49 était bas par hasard (3,48 ici) : la dérive des **buts** n'est pas établie (écart-type par match 2,4 : il faudrait environ 500 matchs pour trancher un écart de 0,3). La dérive des **occasions** l'est : + 16 % d'xG neutre, plus de tirs, surtout de près et en contre, à conversion égale. Elle accompagne un jeu plus rapide (− 0,16 s par possession).
+
+**Cause isolée par ablation.** Sur l'état du 07d, même graines, le temps de contrôle bimodal du contrôle orienté (31b : x 0,6 orienté, x 1,4 sinon) ramené à x 1 / x 1 (types du 07d gardés) : xG neutre **− 0,50 (− 0,83 ; − 0,16)**, tirs de près − 0,69 par équipe (− 1,18 ; − 0,21), qualité moyenne de l'occasion − 0,010, grosses occasions − 2,3, pertes de balle + 8,4 ; buts − 0,10, non significatif ; temps par possession + 0,07 s seulement. Presque toute la hausse d'xG depuis le 07b vient donc de la **forme** de la distribution, pas de sa moyenne : un contrôle orienté rapide (1,4 s au lieu de 2,3 s) près du but donne un tir avant que la défense ne ferme, et le contrôle lent ne le compense pas (effet convexe). Ablation de la part du 07d (facteurs par type de réception) : lancée, perdue au redémarrage du conteneur, non mesurée. Le mécanisme 31b est réaliste (le contrôle orienté existe et fait gagner du temps) ; aucune constante changée ici. Recommandation : ne pas désaccorder le 31b, traiter le volume de tirs (déjà 17 à 19 par équipe avant ces tickets, repère 8 à 15) dans la calibration finale (22c), et voir si la défense de la surface (10f, 10g) ferme plus vite sur un receveur orienté.
+
+**Face-à-face (reprise A1 du passage 2 du 07b).** Aucune hausse significative du 07b au 07d (+ 0,65, ci-dessus). La hausse 13,9 → 15,7 notée au 07b concerne le 07b lui-même (avant / après), non remesurée sur graines nouvelles ici ; les pistes du 07b (pas chassés, vitesse de cible) restent ouvertes, sans constante changée.
+
+**Indicateurs d'orientation (n° 28), 07d, 60 matchs (graines 50 à 109).**
+
+| Indicateur | Valeur |
+|---|---|
+| Réceptions de face / de profil / dos au jeu, avant-centre (BU) | 47 % / 32 % / 21 % |
+| idem, ailiers (AD, AG) | 66 % / 17 % / 17 % |
+| idem, milieux (MC, MDC, MOC) | 60 / 61 / 57 % de face ; 18 à 23 % de profil ; 19 à 22 % dos au jeu |
+| idem, défenseurs (DC, LB, RB) | 66 à 70 % de face ; 14 à 15 % de profil ; 16 à 18 % dos au jeu |
+| idem, gardien | 90 % de face |
+| Délai moyen de rotation avant une passe (rotations nulles comprises) | 0,056 s (0,114 s quand il y en a une, une passe sur deux) |
+| Délai moyen de rotation avant un tir | 0,009 s (0,054 s quand il y en a une, un tir sur six) |
+| Défenseurs (DC, LB, RB) : temps en mouvement passé à reculons | 11,7 % |
+| Vitesse moyenne à reculons ; maximum par match, moyenne des 60 matchs (le maximum fusionné de la série, `bench_series`, est le plus grand des 60) | 2,32 m/s ; 6,0 m/s |
+| Distance à reculons par défenseur et par 90 min | 866 m |
+| Contrôles à l'aveugle d'un joueur dont le corps est tourné vers sa course | 11,9 % des contrôles à l'aveugle (10,3 % de tous les contrôles ont le corps vers la course) |
+| Choix course / ballon du cap : changements par joueur et par minute | 8,7 (DC) à 14,4 (BU) |
+| dont défaits en moins de 0,5 s | 11 % (latéraux) à 16 % (MOC) |
+
+Lecture. L'avant-centre reçoit le plus souvent de profil ou dos au jeu, comme attendu ; les défenseurs reçoivent surtout de face (relances vers l'avant). Contrôle à l'aveugle (facultatif A1 de l'expert au 07d) : la part des contrôles à l'aveugle corps vers la course (11,9 %) est faible, aucune proposition de changer la règle. Cap qui tremble (facultatif A2 au 07b) : environ 1,5 aller-retour du choix course / ballon par joueur et par minute ; la vitesse de rotation du corps (07f) lisse l'effet visible, mais c'est à regarder à l'écran et, si besoin, à traiter par une bande d'hystérésis en temps (ticket à créer sur décision du propriétaire). Vitesse à reculons : 2,3 m/s en moyenne, maximum 6,0 m/s (65 % d'une vitesse de pointe de 9 m/s) ; chiffre réel par match non trouvé.
+
+**Défaut corrigé au passage** : `bench_series` ne fusionnait pas les maxima (`Collector.peak`) ; ils valaient 0 dans l'agrégé d'une série (vitesse maximale à reculons ici, erreur maximale de mémoire du 08b avant). Fusion par le maximum, testée.
+

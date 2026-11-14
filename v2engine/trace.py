@@ -139,6 +139,7 @@ class ReceptionEvent:
     first_time: bool = False  # il pense à jouer de première (ticket v2-collectif/31a)
     ball_speed_mps: float = 0.0  # vitesse du ballon reçu (ticket v2-collectif/31c : ballon dur, moins souvent orienté)
     blind: bool = False  # contrôle à l'aveugle, ballon dans le dos d'un joueur non lancé, compté dos au jeu (v2-realisme/07d)
+    facing_run: bool = False  # corps tourné vers sa course au contact (07b), mesure seule (ticket v2-realisme/07g)
 
 
 @dataclass(frozen=True)

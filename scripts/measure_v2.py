@@ -32,7 +32,7 @@ import v2engine.match as match
 from v2engine.shooting import NEUTRAL_ATTRIBUTES
 from ligue1sim.lineup import pick_best_formation
 
-from scripts.v2_indicators import (CARRY_PREFIX, EXIT_STATES, LINE_GAP_LIMITS_M, LINE_JUMP_M, MARKING_GAP_M, PASS_PREFIX,
+from scripts.v2_indicators import (BACKPEDAL_POSTES, CARRY_PREFIX, FLICKER_S, EXIT_STATES, LINE_GAP_LIMITS_M, LINE_JUMP_M, MARKING_GAP_M, PASS_PREFIX,
                                    Collector, shot_decomposition, xg_calibration)
 from scripts.v2_tranches import minute_report, player_report
 
@@ -498,6 +498,10 @@ def report(c: Collector, detail: bool = False) -> dict:
         decided, turned = k[f"rotation : {kind} décidés"], k[f"rotation : {kind} décidés avec rotation"]
         out[f"rotation : {kind} décidés avec rotation (part)"] = turned / max(1, decided)
         out[f"rotation : {kind}, durée moyenne quand il y en a une (s)"] = k[f"rotation : {kind}, durée (somme, s)"] / max(1, turned)
+    # validation de l'orientation (ticket v2-realisme/07g) : délai moyen de rotation avant l'action, rotations nulles comprises
+    for kind in ("passes", "tirs"):
+        out[f"rotation : {kind}, délai moyen avant l'action (s)"] = (
+            k[f"rotation : {kind}, durée (somme, s)"] / max(1, k[f"rotation : {kind} décidés"]))
     out["rotation : ballons perdus en se retournant par match"] = k["rotation : ballons perdus en se retournant"] / n
     out["rotation : passes abandonnées, ligne fermée, par match"] = k["rotation : passes abandonnées, ligne fermée"] / n
     out["rotation : passes abandonnées, ligne fermée (part des passes jugées après la rotation)"] = (
@@ -589,6 +593,33 @@ def report(c: Collector, detail: bool = False) -> dict:
             out[f"réceptions {group} (part des contrôles appariés)"] = k[key] / max(
                 1, sum(k[f"possession par réception : {kind} : réceptions"] for kind in ("de face", "de profil", "dos au jeu")))
 
+    # validation de l'orientation (ticket v2-realisme/07g) : type de réception par poste, contrôles à l'aveugle corps vers
+    # sa course, course à reculons des défenseurs, changements du choix course / ballon du cap
+    for key in sorted(k):
+        if key.startswith("réceptions par poste : ") and key.endswith(" : contrôles"):
+            poste = key.removeprefix("réceptions par poste : ").removesuffix(" : contrôles")
+            for kind in ("de face", "de profil", "dos au jeu"):
+                out[f"réceptions {kind}, {poste} (part des contrôles du poste)"] = (
+                    k[f"réceptions par poste : {poste} : {kind}"] / max(1, k[key]))
+    out["contrôles à l'aveugle, corps vers sa course (part des contrôles à l'aveugle)"] = (
+        k["contrôle à l'aveugle : corps vers sa course"] / max(1, k["contrôle à l'aveugle : réceptions"]))
+    out["contrôles corps vers sa course (part des contrôles)"] = (
+        k["contrôle : corps vers sa course"] / max(1, k["contrôle orienté : réceptions"]))
+    moving = k["défenseurs : temps en mouvement (s)"]
+    out["défenseurs (DC, LB, RB) : temps à reculons (part du temps en mouvement)"] = k["défenseurs : temps à reculons (s)"] / max(1e-9, moving)
+    out["défenseurs (DC, LB, RB) : vitesse moyenne à reculons (m/s)"] = (
+        k["défenseurs : distance à reculons (m)"] / max(1e-9, k["défenseurs : temps à reculons (s)"]))
+    on_pitch = sum(k[f"temps sur le terrain (s) : {poste}"] for poste in BACKPEDAL_POSTES)
+    out["défenseurs (DC, LB, RB) : distance à reculons par joueur et par 90 min (m)"] = (
+        k["défenseurs : distance à reculons (m)"] / max(1e-9, on_pitch / 5400.0))
+    out["défenseurs (DC, LB, RB) : vitesse maximale à reculons (m/s)"] = c.peak["défenseurs : vitesse maximale à reculons (m/s)"]
+    for key in sorted(k):
+        if key.startswith("cap : changements course / ballon : "):
+            poste = key.removeprefix("cap : changements course / ballon : ")
+            seconds = k[f"temps sur le terrain (s) : {poste}"]
+            out[f"cap : changements course / ballon par joueur et par minute, {poste}"] = k[key] / max(1e-9, seconds / 60.0)
+            out[f"cap : changements course / ballon défaits en moins de {FLICKER_S:g} s (part des changements), {poste}"] = (
+                k[f"cap : changements course / ballon défaits en moins de {FLICKER_S:g} s : {poste}"] / max(1, k[key]))
     # contrôle à l'aveugle (ticket v2-realisme/07d) ; appariement de l'indicateur par type (réserve A4)
     out["contrôles à l'aveugle (part des contrôles non orientés)"] = (
         k["contrôle à l'aveugle : non orientés"] / max(1, k["contrôle : non orientés"]))

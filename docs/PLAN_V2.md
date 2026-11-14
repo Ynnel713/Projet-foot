@@ -4,7 +4,7 @@
 
 ## À faire en priorité (prochaine session, noté le 13/11/2026)
 
-1. **`v2-realisme/07g` — Validation de l'orientation**, avant tout autre ticket qui touche au rythme ou au tir. Ticket : `.scratch/v2-realisme/issues/07g-validation-de-l-orientation.md` (reprises en fin de fichier). Points à traiter :
+1. **`v2-realisme/07g` — Validation de l'orientation** (livré le 14/11/2026, validé expert + QC : dérive des occasions établie, + 0,53 xG du 07b au 07d sur graines nouvelles, cause principale le temps de contrôle bimodal du 31b ; buts non significatifs ; rapport `docs/INDICATEURS_V2.md` section 37), avant tout autre ticket qui touche au rythme ou au tir. Ticket : `.scratch/v2-realisme/issues/07g-validation-de-l-orientation.md` (reprises en fin de fichier). Points à traiter :
    - **dérive des buts** aux mêmes graines : 07b 3,12 ; 31a 3,02 ; 31b 3,10 ; 31c 3,48 ; 07d 3,62 par match, au-dessus du repère réel 2 à 3,5 ; chaque pas est sous une erreur type, la dérive cumulée non : l'isoler sur une série plus longue à graines différentes (01e) ;
    - **tirs en face-à-face** (13,9 avant le 07b, 16,0 après le 07d) : pistes du 07b (pas chassés à 80 %, vitesse des cibles de ligne) ;
    - **contrôle à l'aveugle** : part des contrôles à l'aveugle avec `facing_run` vrai (facultatif A1 de l'expert au 07d).

@@ -945,7 +945,8 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
                     ball_facing_deg=_ball_facing_deg(player.facing, ball.velocity),
                     origin=received, intended=intended, memory_age_s=seen_back.age_mean_s,
                     memory_error_mean_m=seen_back.error_mean_m, memory_error_max_m=seen_back.error_max_m,
-                    oriented=oriented, first_time=first_time, ball_speed_mps=ball.velocity.length(), blind=blind))
+                    oriented=oriented, first_time=first_time, ball_speed_mps=ball.velocity.length(), blind=blind,
+                    facing_run=player.facing_run))  # mesure seule (ticket v2-realisme/07g)
             ball.holder = player.name
             ball.came_from = (player.name, received, player.position)
             ball.hesitation.pop(player.name, None)  # il a le ballon : il joue, il n'attend plus

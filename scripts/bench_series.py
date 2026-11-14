@@ -60,6 +60,7 @@ def _one_match(args: tuple[int, str | None, float, float, bool]) -> dict:
         "count": dict(c.count),
         "stats": {name: s.values for name, s in c.stats.items()},
         "km": dict(c.km),
+        "peak": dict(c.peak),  # maxima (08b, 07g) : fusionnés par le maximum (ticket v2-realisme/07g)
         # tickets v2-realisme/19d et 19f : rendement par tranche de temps joué, hauteur du bloc comprise
         "tranches": (dict(c.minutes.run), dict(c.minutes.events), dict(c.minutes.info)),
         "secondes": c.seconds_per_match,
@@ -99,6 +100,8 @@ def _merge_into(merged: Collector, r: dict) -> None:
     for poste, values in r["km"].items():
         merged.km[poste].extend(values)
     merged.minutes.merge(*r.get("tranches", ({}, {}, {})))  # tickets v2-realisme/19d et 19f
+    for name, value in r.get("peak", {}).items():  # maxima sur tous les matchs (ticket v2-realisme/07g)
+        merged.peak[name] = max(merged.peak[name], value)
 
 
 def run_series(n_matches: int, processes: int = 1, profile: str | None = None, duration: float = 90.0,
