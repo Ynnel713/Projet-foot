@@ -25,7 +25,8 @@ from v2engine.anticipation import pass_readers, reaction_delay_s
 from v2engine.ball_state import BallState, ShotFlight
 from v2engine.bloc import Bloc
 from v2engine.danger import danger
-from v2engine.duel import contact_share, foul_severity, resolve_tackle, should_attempt_tackle
+from v2engine.duel import (CONTACT_MIN_CLOSING_MPS, after_contact_delay_s, after_contact_speed_loss, contact_share,
+                           foul_severity, resolve_tackle, should_attempt_tackle)
 from v2engine.flux import ARBITRAGE, PERCEPTION, TIR, seed_streams
 from v2engine.formation import initial_positions
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch, in_penalty_area
@@ -150,12 +151,14 @@ def _facing_at_kickoff(position: Vec2, team: str) -> Vec2:
 COLLISION_RESTITUTION = 0.0
 
 
-def _resolve_player_collisions(players: list[PlayerState]) -> None:
+def _resolve_player_collisions(players: list[PlayerState]) -> list[PlayerState]:
     """Écarte deux joueurs qui se chevauchent et retire à leur vitesse la composante qui les rapproche (ticket
     v2-realisme/11a : choc mou), le plus faible au contact (Strength, `duel.contact_share`, ticket 11b) étant le plus
     déplacé et le plus freiné : position et vitesse partagées selon la même part, quantité de mouvement conservée à
-    masses pondérées. ponytail : boucle O(n²) (22 joueurs
+    masses pondérées. Rend les joueurs qui ont perdu un contact franc (ticket 12c : plus petite part, à égalité les
+    deux, à plus de `CONTACT_MIN_CLOSING_MPS`), que `_unsettle` déséquilibre. ponytail : boucle O(n²) (22 joueurs
     -> 231 paires/tick) ; à optimiser (grille spatiale) si la performance du mode batch (NFR-V01) le justifie plus tard."""
+    losers: list[PlayerState] = []
     for i in range(len(players)):
         for j in range(i + 1, len(players)):
             a, b = players[i], players[j]
@@ -179,6 +182,21 @@ def _resolve_player_collisions(players: list[PlayerState]) -> None:
                     impulse = normal * (closing * (1.0 + COLLISION_RESTITUTION))
                     a.velocity = a.velocity - impulse * (1.0 - share_a)
                     b.velocity = b.velocity + impulse * share_a
+                    if closing > CONTACT_MIN_CLOSING_MPS:  # contact franc (12c) : le plus faible le perd
+                        losers.extend(p for p, share in ((a, share_a), (b, 1.0 - share_a)) if share <= 0.5)
+    return losers
+
+
+def _unsettle(player: PlayerState, ball: BallState, now_s: float) -> None:
+    """Contact perdu (ticket v2-realisme/12c) : `player` perd une part de sa vitesse et ne peut agir qu'après un délai,
+    les deux réduits par Balance (`duel.after_contact_*`). Porteur : sa prochaine décision est repoussée ; sans
+    ballon : il ne peut ni tacler ni contrôler pendant le délai. Délais non cumulés (le plus long l'emporte)."""
+    player.velocity = player.velocity * (1.0 - after_contact_speed_loss(player))
+    until = now_s + after_contact_delay_s(player)
+    if ball.holder == player.name:
+        ball.next_decision_s = max(ball.next_decision_s, until)
+    else:  # champ propre, pas `control_ban_until_s` que la défense lit comme un contrôle raté (expert, passage 1)
+        ball.unsettled_until_s[player.name] = max(ball.unsettled_until_s.get(player.name, 0.0), until)
 
 
 def _nearest_opponent_in_range(holder: PlayerState, players: list[PlayerState], radius_m: float) -> PlayerState | None:
@@ -593,7 +611,8 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                         and any(p.name == n and p.position.distance_to(holder.position) < CONFRONTATION_END_M for p in players)}
         candidates = [p for p in players
                       if p.name not in ball.engaged and ball.tackle_ban_until_s.get(p.name, 0.0) <= now_s
-                      and ball.offside_out_until.get(p.name, 0.0) <= now_s]  # le fautif recule, il ne défend pas
+                      and ball.offside_out_until.get(p.name, 0.0) <= now_s
+                      and ball.unsettled_until_s.get(p.name, 0.0) <= now_s]  # déséquilibré : pas de tacle (12c)  # le fautif recule, il ne défend pas
         challenger = _nearest_opponent_in_range(holder, candidates, TACKLE_RADIUS_M)
         if challenger is not None and should_attempt_tackle(effective_rating(challenger, "Aggression"), dt):
             ball.engaged.add(challenger.name)
@@ -612,6 +631,8 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                 _clear_offside(ball)  # nouveau porteur : la passe signalée est terminée
             elif getattr(result, "foul", False):  # faute : avantage ou coup de sifflet (ticket v2-collectif/30)
                 _foul(ball, challenger, holder, players, now_s, fouls)
+            if not result.won and not getattr(result, "foul", False):  # tacle subi sans perdre le ballon, sans faute (12c)
+                _unsettle(holder, ball, now_s)
             # Tacle raté sans faute, ou avantage : le porteur garde le ballon ce tick
             return None
 
@@ -922,6 +943,8 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
             continue  # écarté de l'action après un coup franc : il recule, il ne joue pas ce ballon
         if now_s < ball.control_ban_until_s.get(player.name, 0.0):
             continue  # il vient de rater son contrôle : le ballon lui échappe
+        if now_s < ball.unsettled_until_s.get(player.name, 0.0):
+            continue  # déséquilibré après un contact perdu (ticket v2-realisme/12c) : il ne joue pas ce ballon
         if player.name in ball.offside_watch:
             # Il touche le ballon en position de hors-jeu : coup franc indirect, même si le contrôle échoue
             # (« s'il le touche, c'est sifflé, point barre », directive du 28/10/2026).
@@ -1206,7 +1229,8 @@ def simulate_match(
         played = played_minute(minute, trace.second_half_start_minute, half_tick * tick_seconds / 60.0)
         players = [_step_player(p, ball, tick_seconds, minute, players, runs, intentions, situations, bloc, defense,
                                 transition, played_minute=played, scanning=p.name in scanning) for p in players]
-        _resolve_player_collisions(players)
+        for loser in _resolve_player_collisions(players):  # contact perdu : Balance (ticket v2-realisme/12c)
+            _unsettle(loser, ball, i * tick_seconds)
         scanning = scans.update(players, ball.holder, i * tick_seconds, tick_seconds, trace.scans)  # tours de tête (08c)
         memory.update(players, i * tick_seconds, scanning)
         scoring_team = _step_ball(ball, tick_seconds, players, i * tick_seconds, trace.decisions, trace.offsides,

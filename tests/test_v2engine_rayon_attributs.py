@@ -70,7 +70,6 @@ ALLOWED = {
 }
 # Mélanges de plusieurs attributs dans un même calcul tolérés (dérogations de la carte).
 TOLERATED_MIXES = {
-    frozenset({"Strength", "Balance"}),  # A3 : jusqu'à l'étape duels
     frozenset({"Reflexes", "One on Ones", "Handling"}),  # A8 : note du gardien, jusqu'à la phase 9 (confirmée le 26/10/2026)
     # temps d'arrivée (`defense.arrival_time_s`) : course à vitesse de pointe + montée en régime, deux capacités
     # physiques additionnées en secondes (règle R5), pas une pondération de notes ; visible depuis que les champs

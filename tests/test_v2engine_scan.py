@@ -130,20 +130,24 @@ def test_a_simulated_match_traces_scans_and_the_memory_they_refresh_feeds_the_de
     """Depuis le ticket 08d, la mémoire que les scans rafraîchissent nourrit la décision du porteur : sans aucun scan,
     il juge sur des positions plus vieilles et ne joue plus pareil (au 08c, ce test affirmait le contraire). 10 minutes
     (ticket v2-collectif/31a) : sur 3 minutes, une soixantaine de décisions, l'écart tenait au hasard (1,288 contre 1,287 s
-    après le 31a) ; sur 10 minutes, 1,42 contre 1,51 s."""
+    après le 31a) ; sur 10 minutes, 1,42 contre 1,51 s. Quatre graines mises en commun depuis le ticket v2-realisme/12c :
+    une seule graine s'inversait de justesse (1,93 contre 1,90 s, le porteur bousculé décidant plus tard) alors que l'effet
+    tient en moyenne (6 graines : 1,47 contre 1,95 s)."""
+    import random
     clubs = load_clubs(CLUBS_PATH, "Ligue 1")
-    outcomes = []
+    seeds = (20260923, 1, 2, 3)
+    outcomes: dict[bool, list] = {True: [], False: []}
     for scanning in (True, False):
         if not scanning:  # contre-épreuve : plus aucun scan ne démarre
             monkeypatch.setattr("v2engine.flux.REGARD.random", lambda: 1.0)
-        import random
-        random.seed(20260923)
-        trace = simulate_match(clubs[0], clubs[1], duration_minutes=10.0)
-        outcomes.append(trace)
-    with_scans, without = outcomes
+        for seed in seeds:
+            random.seed(seed)
+            outcomes[scanning].append(simulate_match(clubs[0], clubs[1], duration_minutes=10.0))
+    with_scans, without = outcomes[True][0], outcomes[False][0]
     assert len(with_scans.scans) > 0 and len(without.scans) == 0
     assert {s.team for s in with_scans.scans} == {"home", "away"} and any(s.has_ball for s in with_scans.scans)
     assert len(with_scans.decisions) > 0 and len(without.decisions) > 0
-    # sans scan, la mémoire du porteur vieillit davantage
-    unseen_age = lambda t: [d.memory_age_s for d in t.decisions if d.unseen_opponents > 0]
-    assert sum(unseen_age(without)) / len(unseen_age(without)) > sum(unseen_age(with_scans)) / len(unseen_age(with_scans))
+    # sans scan, la mémoire du porteur vieillit davantage (âge moyen, décisions des quatre graines mises en commun)
+    unseen_age = lambda traces: [d.memory_age_s for t in traces for d in t.decisions if d.unseen_opponents > 0]
+    mean_age = lambda traces: sum(unseen_age(traces)) / len(unseen_age(traces))
+    assert mean_age(outcomes[False]) > mean_age(outcomes[True])

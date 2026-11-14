@@ -54,7 +54,7 @@ def test_dribbling_acts_on_the_real_outcome() -> None:
 
 
 def test_strength_and_balance_do_not_enter_the_loss_of_a_carry() -> None:
-    # point de vigilance du ticket : Strength et Balance restent au tacle (règle R1 de la carte des attributs)
+    # point de vigilance du ticket : Strength reste au tacle, Balance après le contact (ticket v2-realisme/12c ; règle R1)
     weak, opponents = _marked(55, Strength=11, Balance=11)
     strong, _ = _marked(55, Strength=99, Balance=99)
     gene = pressure(weak, opponents)

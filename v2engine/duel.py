@@ -60,9 +60,10 @@ def tackle_success_probability(tackler: PlayerState, holder: PlayerState) -> flo
     """Probabilité que `tackler` gagne le ballon face à `holder` -- Tackling seul côté tacleur (qualité du geste ;
     Aggression règle déjà la fréquence des tentatives et le risque de faute : pas de double comptage, règle R1 de
     docs/CARTE_ATTRIBUTS_V2.md, ticket v2-collectif/18), Strength/Balance côté porteur (guide : Strength "gagne les
-    duels, protège le ballon dos au but" ; Balance "conduit le ballon en étant poussé")."""
+    duels, protège le ballon dos au but"). Strength seule côté porteur depuis le ticket v2-realisme/12c (décision du
+    propriétaire du 14/11/2026, levée de la dérogation A3) : Balance joue APRÈS le contact (`after_contact_*`)."""
     tackler_rating = effective_rating(tackler, "Tackling")
-    holder_resistance = (effective_rating(holder, "Strength") + effective_rating(holder, "Balance")) / 2.0
+    holder_resistance = effective_rating(holder, "Strength")
     return duel_probability(tackler_rating, holder_resistance)
 
 
@@ -82,6 +83,36 @@ def contact_share(a: PlayerState, b: PlayerState) -> float:
     return duel_probability(effective_rating(a, "Strength"), effective_rating(b, "Strength"),
                             amplitude=_CONTACT_SHARE_AMPLITUDE, min_prob=_CONTACT_SHARE_MIN,
                             max_prob=_CONTACT_SHARE_MAX)
+
+
+# Après un contact perdu (ticket v2-realisme/12c, valeurs recommandées et validées par le propriétaire le 14/11/2026) :
+# perte de vitesse et délai avant d'agir, réduits par Balance (rester debout et continuer). Contact perdu : collision
+# dont on reçoit la plus petite part (`contact_share`, égalité : les deux) à plus de `CONTACT_MIN_CLOSING_MPS` de
+# vitesse de rapprochement, ou tacle subi sans perdre le ballon. Repères (note médiane 62 de la courbe partagée) :
+# vitesse perdue 99 -> 5 %, 62 -> 20 %, 11 -> 40 % ; délai 99 -> 0,1 s, 62 -> 0,3 s, 11 -> 0,6 s. Chiffre réel :
+# non trouvé (un joueur bousculé met quelques dixièmes de seconde à se rééquilibrer : ordre de grandeur).
+CONTACT_MIN_CLOSING_MPS = 2.0
+_SPEED_LOSS_POINTS = (0.40, 0.20, 0.05)  # note 11, 62, 99
+_DELAY_POINTS_S = (0.6, 0.3, 0.1)
+
+
+def _balance_curve(player: PlayerState, points: tuple[float, float, float]) -> float:
+    """Valeur pour la Balance de `player` : forme en S partagée (`success_probability`, -1 à 1 autour de la médiane),
+    étirée vers `points[0]` en dessous de la médiane et vers `points[2]` au-dessus (repères asymétriques)."""
+    shaped = success_probability(effective_rating(player, "Balance"), baseline=0.0, amplitude=1.0,
+                                 min_prob=-1.0, max_prob=1.0)
+    low, mid, high = points
+    return mid + shaped * ((high - mid) if shaped >= 0.0 else (mid - low))
+
+
+def after_contact_speed_loss(player: PlayerState) -> float:
+    """Part de sa vitesse que `player` perd après un contact perdu (0,05 à 0,40), Balance seule."""
+    return _balance_curve(player, _SPEED_LOSS_POINTS)
+
+
+def after_contact_delay_s(player: PlayerState) -> float:
+    """Délai (s) avant que `player` puisse agir après un contact perdu (0,1 à 0,6 s), Balance seule."""
+    return _balance_curve(player, _DELAY_POINTS_S)
 
 
 def should_attempt_tackle(aggression: float, dt: float) -> bool:

@@ -37,7 +37,7 @@ from v2engine.cerveau import Intention
 from v2engine.defense import DefensiveRoles
 from v2engine.flux import seed_streams
 from v2engine.geometry import Vec2
-from v2engine.match import _resolve_player_collisions, _step_ball, _step_player
+from v2engine.match import _resolve_player_collisions, _step_ball, _step_player, _unsettle
 from v2engine.movement import PlayerState
 from v2engine.situation import SituationTracker
 from v2engine.transition import TransitionPlay
@@ -122,7 +122,8 @@ def run(scene: Scene, seconds: float, until: Callable[[Scene], bool] | None = No
         scene.players = [_step_player(p, scene.ball, dt, now / 60.0, scene.players, scene.runs, scene.intentions,
                                       scene.situations, scene.bloc, scene.defense, scene.transition)
                          for p in scene.players]
-        _resolve_player_collisions(scene.players)
+        for loser in _resolve_player_collisions(scene.players):  # contact perdu : Balance (ticket v2-realisme/12c)
+            _unsettle(loser, scene.ball, now)
         # mode de transition (contre-attaque, conservation) lu par les décisions du porteur, comme dans le match
         scene.scored = _step_ball(scene.ball, dt, scene.players, now, None, None,
                                   scene.transition.mode if scene.transition is not None else None)
