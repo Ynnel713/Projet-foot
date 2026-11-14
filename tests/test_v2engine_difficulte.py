@@ -72,7 +72,8 @@ def test_presser_cuts_the_pass_only_when_he_stands_on_its_line() -> None:
 
 def test_composure_halves_pressure_at_99_and_keeps_it_at_11() -> None:
     assert math.isclose(composure_factor(_player(attributes={"Composure": 99})), 0.5)
-    assert math.isclose(composure_factor(_player(attributes={"Composure": 55})), 0.75)
+    # note médiane (62) -> valeur de base, 55 avant le ticket v2-realisme/24
+    assert math.isclose(composure_factor(_player(attributes={"Composure": 62})), 0.75)
     assert math.isclose(composure_factor(_player(attributes={"Composure": 11})), 1.0)
 
 

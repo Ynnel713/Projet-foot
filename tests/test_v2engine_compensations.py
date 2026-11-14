@@ -23,10 +23,11 @@ def _p(name: str, team: str = "home", x: float = 50.0, y: float = 34.0, poste: s
                        attributes={k.replace("_", " "): v for k, v in attributes.items()} or None)
 
 
-def _scene(mdc_offset: Vec2 = Vec2(9.0, -4.0), with_dcs: bool = True, **mdc_attributes: int):
+def _scene(mdc_offset: Vec2 = Vec2(8.5, -4.0), with_dcs: bool = True, **mdc_attributes: int):
     """Domicile défend x = 0. Le latéral droit (RB) est monté de 35 m ; l'ailier adverse est à 16 m de sa place,
     non marqué (à plus de 25 m du but) ; le porteur adverse est au-delà de la ligne médiane. Retourne
-    (joueurs, bloc, place du latéral, ailier)."""
+    (joueurs, bloc, place du latéral, ailier). Milieu défensif à (8,5 ; -4) de la place (9 avant le ticket v2-realisme/24 :
+    à Anticipation 60, sous la médiane 62, il réagit en 0,72 s au lieu de 0,70 et arrivait 2 centièmes trop tard)."""
     home = [_p("LB", x=20, y=10, poste="LB"), _p("RB", x=20, y=58, poste="RB"), _p("MC", x=45, y=34, poste="MC"),
             _p("MDC", x=32, y=34, poste="MDC", **mdc_attributes)]
     if with_dcs:

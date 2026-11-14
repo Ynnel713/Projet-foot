@@ -30,8 +30,9 @@ def _roles(players: list[PlayerState], holder: str, bloc: Bloc | None = None) ->
 
 
 def test_validated_curves() -> None:
-    assert [round(marking_distance_m(_p("M", Marking=n)), 2) for n in (99, 55, 11)] == [1.0, 2.5, 4.0]
-    assert [round(leave_probability(_p("T", Teamwork=n)), 2) for n in (99, 55, 11)] == [0.0, 0.15, 0.35]
+    # note médiane (62) -> valeur de base de l'action, 55 avant le ticket v2-realisme/24 ; extrêmes inchangés
+    assert [round(marking_distance_m(_p("M", Marking=n)), 2) for n in (99, 62, 11)] == [1.0, 2.5, 4.0]
+    assert [round(leave_probability(_p("T", Teamwork=n)), 2) for n in (99, 62, 11)] == [0.0, 0.15, 0.35]
 
 
 def test_one_presser_the_first_to_arrive_not_the_nearest() -> None:

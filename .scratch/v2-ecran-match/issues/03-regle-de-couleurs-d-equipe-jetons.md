@@ -1,6 +1,6 @@
 # EM-03 — Règle de couleurs d'équipe + jetons (V) — 120 min (moyenne)
 
-**Status:** implémenté (14/11/2026) — en attente de /valider-ticket-simulafoot
+**Status:** livré (14/11/2026), validé expert + QC (commit `9856e48`)
 
 Chantier : `.scratch/v2-ecran-match/spec.md` (audit, direction artistique, décisions).
 
@@ -55,3 +55,5 @@ Temps machine, non compté : deux traces enregistrées (EM-00), suite complète 
 **14/11/2026, décisions du propriétaire.** A1 : variante d'interface au contraste minimal de **4,5:1 pour le texte et les barres** (« 4,5:1 texte et barres »). A2 : **écart accepté** (« J'accepte l'écart ») : l'anneau clair ou sombre de 0,12 m reste la garantie de lisibilité sur le gazon et face au ballon ; à revérifier quand le gazon et le ballon changeront (EM-05, EM-07).
 
 **14/11/2026, correction.** `uiColor` : même teinte, clarté montée par pas de 5 jusqu'à 4,5:1 sur `#0b0f14` (PSG `#293657` → `#737da3`, Angers `#191919` → `#808080`, Brest `#e51b33` → `#f5323e`), variables `--team-home-ui` et `--team-away-ui` lues par le texte et le momentum ; jetons, bancs et anneaux gardent la vraie couleur. A3 : `PITCH_COLORS` devient la source unique des bandes du gazon, lue par `V2Pitch`. A4 : ligne « Composants » corrigée.
+
+**14/11/2026, clôture : expert APPROVED_WITH_RESERVATIONS (passage 2), QC VALIDÉ, clôture VALIDÉ, commit `9856e48`.** Réserve A1 du passage 2 (repli des clubs sans kit connu et des traces d'avant EM-02 sur les couleurs historiques bleu `#4f8ef7` et or `#e0b84a`) **acceptée par le propriétaire** : « Oui, bleu et or ». Facultatifs ouverts : variantes d'interface parfois identiques entre elles (A2, à reprendre avec les cartes de composition) ; gazon à revérifier à EM-05 (A3).

@@ -127,6 +127,12 @@ def tir() -> tuple[list[PlayerState], str]:
             player("Def", "away", 93.2, 35, "DC")], "Tireur"
 
 
+def tir_de_loin() -> tuple[list[PlayerState], str]:
+    """Tireur à 27 m du but, hors de la surface, un défenseur au contact : Long Shots."""
+    return [player("Tireur", "home", 78, 34, "MOC"), player("Gardien", "away", 104, 34, "GK"),
+            player("Def", "away", 79.2, 35, "DC")], "Tireur"
+
+
 @dataclass(frozen=True)
 class Plan:
     build: Callable[[], tuple[list[PlayerState], str]] = mini_match
@@ -140,7 +146,9 @@ class Plan:
 PLANS = {
     "Strength": Plan(duel, 3.0, 300), "Balance": Plan(duel, 3.0, 300), "Tackling": Plan(duel, 3.0, 300),
     "Reflexes": Plan(tir, 3.0, 300), "One on Ones": Plan(tir, 3.0, 300), "Handling": Plan(tir, 3.0, 300),
-    "Finishing": Plan(tir, 3.0, 300),  # dans la surface seulement (Long Shots en dehors, agit dans le mini-match)
+    "Finishing": Plan(tir, 3.0, 300),  # dans la surface seulement
+    # hors de la surface : rare dans le mini-match depuis la courbe en S du ticket v2-realisme/24 (fusion du 14/11/2026)
+    "Long Shots": Plan(tir_de_loin, 3.0, 300),
 }
 
 

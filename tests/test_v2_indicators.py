@@ -374,6 +374,66 @@ def test_profile_forces_physical_attributes_read_on_database_players() -> None:
     assert condition.intrinsic_rating(fiche, "Pace") == 50
 
 
+def test_profile_levels_can_be_chosen_and_default_stays_99_11() -> None:
+    """Ticket v2-realisme/24 : `--niveaux 80 70` force 80 et 70 ; sans l'option, 99 contre 11 comme avant."""
+    import v2engine.condition as condition
+    from scripts.measure_v2 import _force_attribute, main
+    restore = _force_attribute("Passing", "home", {}, (80, 70))
+    try:
+        assert condition.player_attribute(_p("H", "home", 0, 0), "Passing") == 80
+        assert condition.player_attribute(_p("A", "away", 0, 0), "Passing") == 70
+        assert condition.player_attribute(_p("H", "home", 0, 0), "Tackling") == 60  # autre attribut : non forcé
+    finally:
+        restore()
+    restore = _force_attribute("Passing", "home", {})
+    try:
+        assert condition.player_attribute(_p("H", "home", 0, 0), "Passing") == 99
+        assert condition.player_attribute(_p("A", "away", 0, 0), "Passing") == 11
+    finally:
+        restore()
+    import scripts.measure_v2 as bench
+    seen = {}
+    real_run, real_report = bench.run, bench.report
+    bench.run = lambda *a, **k: seen.update(k) or None
+    bench.report = lambda *a, **k: {}
+    try:
+        main(["2", "--profil", "Passing", "--niveaux", "80", "70"])
+        assert seen["levels"] == (80, 70)
+        main(["2", "--profil", "Passing"])
+        assert seen["levels"] == (99, 11)
+    finally:
+        bench.run, bench.report = real_run, real_report
+
+
+def test_profile_tally_splits_target_indicators_by_level_and_gaps_have_a_confidence_interval() -> None:
+    """Ticket v2-realisme/24 : indicateurs cibles par équipe haute / basse, écart apparié par match."""
+    from scripts.measure_v2 import profile_gaps, profile_tally
+    from v2engine.trace import CONTROLE_RATE, PASSE, PERTE
+
+    def ev(kind, team, detail=None):
+        return SimpleNamespace(kind=kind, team=team, detail=detail)
+    events = [ev(PASSE, "home"), ev(PASSE, "home"), ev(PASSE, "away"), ev(PERTE, "away", "passe interceptée"),
+              ev(PERTE, "home", "tacle"), ev(CONTROLE_RATE, "away"), ev(PERTE, "away", "conduite")]
+    shots = [SimpleNamespace(team="home", outcome="but", quality=0.3), SimpleNamespace(team="away", outcome="à côté", quality=0.1)]
+    decisions = [SimpleNamespace(team="home", gap=0.2), SimpleNamespace(team="away", gap=0.4)]
+    trace = SimpleNamespace(events=events, shots=shots, fouls=[SimpleNamespace(team="away")], decisions=decisions)
+    t = profile_tally(trace, "home")
+    assert t["haut"]["passes"] == 2 and t["haut"]["passes réussies (part)"] == 1.0
+    assert t["bas"]["passes réussies (part)"] == 0.0 and t["haut"]["interceptions"] == 1
+    assert t["bas"]["tacles gagnés"] == 1 and t["haut"]["ballons perdus sur tacle"] == 1
+    assert t["bas"]["contrôles ratés"] == 1 and t["bas"]["pertes en conduite"] == 1 and t["bas"]["fautes"] == 1
+    assert t["haut"]["buts sur tir"] == 1 and abs(t["haut"]["buts moins qualité des tirs"] - 0.7) < 1e-12
+    assert t["haut"]["écart au meilleur choix (moyenne)"] == 0.2
+    flipped = profile_tally(trace, "away")  # rôles inversés : mêmes chiffres, niveaux échangés
+    assert flipped["haut"] == t["bas"] and flipped["bas"] == t["haut"]
+    gaps = profile_gaps([t, t, flipped])
+    assert abs(gaps["passes"]["écart"] - 1.0 / 3.0) < 1e-12 and not gaps["passes"]["significatif"]
+    assert gaps["passes"]["IC95 bas"] < 0.0 < gaps["passes"]["IC95 haut"]
+    same = profile_gaps([t, t, t])["passes"]
+    assert same["écart"] == 1.0 and same["IC95 bas"] == same["IC95 haut"] == 1.0  # écart constant : intervalle nul
+    assert profile_gaps([]) == {}
+
+
 def test_hooks_are_restored_and_the_observer_changes_nothing() -> None:
     import random
 

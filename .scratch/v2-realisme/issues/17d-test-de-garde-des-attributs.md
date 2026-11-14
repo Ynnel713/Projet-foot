@@ -12,7 +12,7 @@
 
 **Bloque :** rien.
 
-**Status:** implémenté (14/11/2026) — en attente de /valider-ticket-simulafoot
+**Status:** livré (14/11/2026), validé expert + QC (commit `d465fd1`)
 
 ## Estimation
 
@@ -46,3 +46,5 @@ Temps machine, non compté : suite complète (environ 40 min).
 - **Règle de lecture de la carte** : un attribut est annoncé avec effet sauf si son état commence par « à créer » ou « non branché » : 27 attributs le 14/11/2026. Contrôle inverse ajouté : un attribut annoncé « à créer » ou « non branché » ne doit pas être lu par le moteur (aucun aujourd'hui).
 - **Effet** : même scène, même graine, attribut à 11 puis à 99 sur tous les joueurs ; divergence de l'empreinte exacte (`scenes.fingerprint`). Trois scènes : mini-match (deux onze réels, 60 s, 3 graines), duel au contact (3 s, jusqu'à 300 graines : environ 0,05 tentative de tacle par seconde) et tir dans la surface face au gardien (3 s, jusqu'à 300 graines). Le sens et la taille de l'effet ne sont pas vérifiés : ils relèvent des tests de chaque ticket. Première divergence (graine, pas de 0,1 s) : 19 attributs à la graine 1 dans le mini-match, Flair et Stamina à la graine 2 (pas 288 et 286) ; Tackling (44, 6), Strength et Balance (140, 11), Finishing (1, 5), Reflexes (21, 11), One on Ones et Handling (82, 5). Durée du fichier : environ 48 s.
 - **Constat pour le propriétaire (aucun changement ici)** : depuis l'arrêt par portée (05b, 05h), la note du gardien (0,5 Reflexes + 0,3 One on Ones + 0,2 Handling) ne décide plus si le tir est arrêté (`match._keeper_reaches` ne lit que `keeper_reach_m`, sans attribut) ; elle ne règle que la part captée / repoussée de l'arrêt (`flight.chance` → `save_outcome`). D'où leur effet rare en scène (graines 21 et 82). La carte (« note d'arrêt unique… pour tous les tirs ») surestime donc leur rôle : à reprendre au `v2-attributs-restants/03b` (sorties et arrêts) ou au 24.
+
+**14/11/2026, fusion avec main (ticket v2-realisme/24, courbe en S).** La garde a joué son rôle : sur le mini-match de 60 s (3 graines), Long Shots ne divergeait plus, faute de tir hors de la surface avec la nouvelle courbe (fragilité signalée par l'expert, A2). Scène dédiée ajoutée (`tir_de_loin` : tireur à 27 m, défenseur au contact, jusqu'à 300 graines) : divergence à la graine 1, pas 5. Aucun test supprimé ni affaibli.

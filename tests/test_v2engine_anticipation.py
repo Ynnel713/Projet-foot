@@ -21,8 +21,9 @@ def _player(name: str = "P", team: str = "away", position: Vec2 = Vec2(50.0, 34.
 
 
 def test_anticipation_curves_match_validated_points() -> None:
-    assert [round(read_pass_probability(v), 6) for v in (99, 55, 11)] == [0.8, 0.4, 0.1]
-    assert [round(loose_ball_lead(v), 6) for v in (99, 55, 11)] == [1.0, 0.5, 0.0]
+    # note médiane (62) -> valeur de base de l'action, 55 avant le ticket v2-realisme/24 ; extrêmes inchangés
+    assert [round(read_pass_probability(v), 6) for v in (99, 62, 11)] == [0.8, 0.4, 0.1]
+    assert [round(loose_ball_lead(v), 6) for v in (99, 62, 11)] == [1.0, 0.5, 0.0]
 
 
 def test_only_opponents_in_the_lane_who_can_get_there_first_read_the_pass(monkeypatch) -> None:

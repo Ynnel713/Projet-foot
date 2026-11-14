@@ -1,0 +1,2116 @@
+{
+ "Acceleration": {
+  "matchs": 20,
+  "buts par match": 3.45,
+  "profil haut : fautes par match": 6.85,
+  "profil bas : fautes par match": 6.85,
+  "profil haut : temps de pressing par match (s)": 1042.8299999988494,
+  "profil bas : temps de pressing par match (s)": 1053.159999998699,
+  "temps de calcul par match (s)": 115.14373363615,
+  "profil haut : scans par minute et par joueur": 18.098737373737375,
+  "profil haut : scans dans les 10 s avant la réception (moyenne)": 2.7039791744142803,
+  "profil bas : scans par minute et par joueur": 18.10671717171717,
+  "profil bas : scans dans les 10 s avant la réception (moyenne)": 2.715768206446873,
+  "profil bas : appels dans le dos par joueur": 1.97,
+  "profil bas : appels par joueur": 33.925,
+  "profil bas : course intense par joueur (m)": 1195.1817041990594,
+  "profil bas : distance presseur-porteur (m)": 1.3833268912069034,
+  "profil bas : espace des coéquipiers du porteur (m)": 13.024154254649323,
+  "profil bas : hauteur du bloc sans ballon (m)": 32.417915304329306,
+  "profil bas : km par joueur": 12.163713951212497,
+  "profil bas : longueur (m)": 38.956018160443996,
+  "profil bas : possession installée, 2 joueurs ou plus derrière le ballon (part)": 0.9755355216520265,
+  "profil bas : solutions de passe ouvertes (nombre)": 4.095622992819255,
+  "profil bas : solutions faciles laissées au porteur adverse (nombre)": 2.984710463330118,
+  "profil bas : solutions laissées au porteur adverse (nombre)": 3.985782159825671,
+  "profil bas : stretch index (m)": 17.257463746342726,
+  "profil bas : vitesse de repli à 1,5 s (m/s)": 1.1006584898686014,
+  "profil bas : écart-type distance défense-milieu (m)": 5.979788499894189,
+  "profil bas : équilibre : appels devant le ballon maintenus (part)": 0.125,
+  "profil haut : appels dans le dos par joueur": 2.0,
+  "profil haut : appels par joueur": 35.52,
+  "profil haut : course intense par joueur (m)": 1231.0343424027672,
+  "profil haut : distance presseur-porteur (m)": 1.367946555058305,
+  "profil haut : espace des coéquipiers du porteur (m)": 13.163839771458969,
+  "profil haut : hauteur du bloc sans ballon (m)": 33.69886427734523,
+  "profil haut : km par joueur": 12.235785163072428,
+  "profil haut : longueur (m)": 39.15851757588349,
+  "profil haut : possession installée, 2 joueurs ou plus derrière le ballon (part)": 0.9771975284034283,
+  "profil haut : solutions de passe ouvertes (nombre)": 3.985782159825671,
+  "profil haut : solutions faciles laissées au porteur adverse (nombre)": 3.0795655468552665,
+  "profil haut : solutions laissées au porteur adverse (nombre)": 4.095622992819255,
+  "profil haut : stretch index (m)": 17.304954189548702,
+  "profil haut : vitesse de repli à 1,5 s (m/s)": 1.1525484777814707,
+  "profil haut : écart-type distance défense-milieu (m)": 6.064395310769804,
+  "profil haut : équilibre : appels devant le ballon maintenus (part)": 0.13793103448275862,
+  "profil : écart haut - bas par match (IC 95 %)": {
+   "passes": {
+    "haut": 508.2,
+    "bas": 517.35,
+    "écart": -9.15,
+    "IC95 bas": -60.0663,
+    "IC95 haut": 41.7663,
+    "significatif": false
+   },
+   "passes réussies (part)": {
+    "haut": 0.8243,
+    "bas": 0.8299,
+    "écart": -0.0057,
+    "IC95 bas": -0.0239,
+    "IC95 haut": 0.0126,
+    "significatif": false
+   },
+   "contrôles ratés": {
+    "haut": 31.25,
+    "bas": 31.1,
+    "écart": 0.15,
+    "IC95 bas": -11.0387,
+    "IC95 haut": 11.3387,
+    "significatif": false
+   },
+   "tacles gagnés": {
+    "haut": 6.65,
+    "bas": 5.3,
+    "écart": 1.35,
+    "IC95 bas": -0.4458,
+    "IC95 haut": 3.1458,
+    "significatif": false
+   },
+   "ballons perdus sur tacle": {
+    "haut": 5.3,
+    "bas": 6.65,
+    "écart": -1.35,
+    "IC95 bas": -3.1458,
+    "IC95 haut": 0.4458,
+    "significatif": false
+   },
+   "pertes en conduite": {
+    "haut": 20.45,
+    "bas": 20.3,
+    "écart": 0.15,
+    "IC95 bas": -4.0691,
+    "IC95 haut": 4.3691,
+    "significatif": false
+   },
+   "interceptions": {
+    "haut": 87.2,
+    "bas": 88.05,
+    "écart": -0.85,
+    "IC95 bas": -4.0817,
+    "IC95 haut": 2.3817,
+    "significatif": false
+   },
+   "tirs": {
+    "haut": 21.15,
+    "bas": 17.3,
+    "écart": 3.85,
+    "IC95 bas": -2.0755,
+    "IC95 haut": 9.7755,
+    "significatif": false
+   },
+   "buts sur tir": {
+    "haut": 1.75,
+    "bas": 1.7,
+    "écart": 0.05,
+    "IC95 bas": -0.9612,
+    "IC95 haut": 1.0612,
+    "significatif": false
+   },
+   "buts moins qualité des tirs": {
+    "haut": -0.287,
+    "bas": -0.0586,
+    "écart": -0.2284,
+    "IC95 bas": -1.0581,
+    "IC95 haut": 0.6014,
+    "significatif": false
+   },
+   "fautes": {
+    "haut": 6.85,
+    "bas": 6.85,
+    "écart": 0.0,
+    "IC95 bas": -1.7876,
+    "IC95 haut": 1.7876,
+    "significatif": false
+   },
+   "hors-jeu": {
+    "haut": 0.5,
+    "bas": 0.35,
+    "écart": 0.15,
+    "IC95 bas": -0.336,
+    "IC95 haut": 0.636,
+    "significatif": false
+   },
+   "écart au meilleur choix (moyenne)": {
+    "haut": 0.284,
+    "bas": 0.2408,
+    "écart": 0.0432,
+    "IC95 bas": -0.0702,
+    "IC95 haut": 0.1567,
+    "significatif": false
+   }
+  }
+ },
+ "Agility": {
+  "matchs": 20,
+  "buts par match": 4.05,
+  "profil haut : fautes par match": 7.35,
+  "profil bas : fautes par match": 6.7,
+  "profil haut : temps de pressing par match (s)": 1058.6499999986193,
+  "profil bas : temps de pressing par match (s)": 1054.6299999986777,
+  "temps de calcul par match (s)": 113.23681691659995,
+  "profil haut : scans par minute et par joueur": 18.328434343434342,
+  "profil haut : scans dans les 10 s avant la réception (moyenne)": 2.7345980292844647,
+  "profil bas : scans par minute et par joueur": 18.299444444444443,
+  "profil bas : scans dans les 10 s avant la réception (moyenne)": 2.7168724279835392,
+  "profil bas : appels dans le dos par joueur": 1.775,
+  "profil bas : appels par joueur": 34.225,
+  "profil bas : course intense par joueur (m)": 1177.5758681847117,
+  "profil bas : distance presseur-porteur (m)": 1.3845675017905748,
+  "profil bas : espace des coéquipiers du porteur (m)": 13.219432758476648,
+  "profil bas : hauteur du bloc sans ballon (m)": 33.14338287104977,
+  "profil bas : km par joueur": 12.25876610122782,
+  "profil bas : longueur (m)": 39.04818580597728,
+  "profil bas : possession installée, 2 joueurs ou plus derrière le ballon (part)": 0.9806984603830267,
+  "profil bas : solutions de passe ouvertes (nombre)": 3.999893635880163,
+  "profil bas : solutions faciles laissées au porteur adverse (nombre)": 3.0148819037471144,
+  "profil bas : solutions laissées au porteur adverse (nombre)": 4.026212040490144,
+  "profil bas : stretch index (m)": 17.288098784342534,
+  "profil bas : vitesse de repli à 1,5 s (m/s)": 1.1116415607863743,
+  "profil bas : écart-type distance défense-milieu (m)": 5.9653247654384485,
+  "profil bas : équilibre : appels devant le ballon maintenus (part)": 0.07142857142857142,
+  "profil haut : appels dans le dos par joueur": 2.105,
+  "profil haut : appels par joueur": 34.195,
+  "profil haut : course intense par joueur (m)": 1199.9315046276713,
+  "profil haut : distance presseur-porteur (m)": 1.3709404077509695,
+  "profil haut : espace des coéquipiers du porteur (m)": 13.132214724024456,
+  "profil haut : hauteur du bloc sans ballon (m)": 32.92127153050777,
+  "profil haut : km par joueur": 12.260843010944273,
+  "profil haut : longueur (m)": 38.858476633345745,
+  "profil haut : possession installée, 2 joueurs ou plus derrière le ballon (part)": 0.9804993690972355,
+  "profil haut : solutions de passe ouvertes (nombre)": 4.026212040490144,
+  "profil haut : solutions faciles laissées au porteur adverse (nombre)": 2.999645452933877,
+  "profil haut : solutions laissées au porteur adverse (nombre)": 3.999893635880163,
+  "profil haut : stretch index (m)": 17.241604509253662,
+  "profil haut : vitesse de repli à 1,5 s (m/s)": 1.1546976574233074,
+  "profil haut : écart-type distance défense-milieu (m)": 5.957677820728726,
+  "profil haut : équilibre : appels devant le ballon maintenus (part)": 0.10344827586206896,
+  "profil : écart haut - bas par match (IC 95 %)": {
+   "passes": {
+    "haut": 516.1,
+    "bas": 517.6,
+    "écart": -1.5,
+    "IC95 bas": -49.1025,
+    "IC95 haut": 46.1025,
+    "significatif": false
+   },
+   "passes réussies (part)": {
+    "haut": 0.8348,
+    "bas": 0.8313,
+    "écart": 0.0035,
+    "IC95 bas": -0.013,
+    "IC95 haut": 0.02,
+    "significatif": false
+   },
+   "contrôles ratés": {
+    "haut": 31.7,
+    "bas": 31.05,
+    "écart": 0.65,
+    "IC95 bas": -11.6244,
+    "IC95 haut": 12.9244,
+    "significatif": false
+   },
+   "tacles gagnés": {
+    "haut": 5.4,
+    "bas": 5.0,
+    "écart": 0.4,
+    "IC95 bas": -0.8168,
+    "IC95 haut": 1.6168,
+    "significatif": false
+   },
+   "ballons perdus sur tacle": {
+    "haut": 5.0,
+    "bas": 5.4,
+    "écart": -0.4,
+    "IC95 bas": -1.6168,
+    "IC95 haut": 0.8168,
+    "significatif": false
+   },
+   "pertes en conduite": {
+    "haut": 21.65,
+    "bas": 20.45,
+    "écart": 1.2,
+    "IC95 bas": -2.7294,
+    "IC95 haut": 5.1294,
+    "significatif": false
+   },
+   "interceptions": {
+    "haut": 86.4,
+    "bas": 84.6,
+    "écart": 1.8,
+    "IC95 bas": -2.6143,
+    "IC95 haut": 6.2143,
+    "significatif": false
+   },
+   "tirs": {
+    "haut": 18.05,
+    "bas": 19.3,
+    "écart": -1.25,
+    "IC95 bas": -6.7397,
+    "IC95 haut": 4.2397,
+    "significatif": false
+   },
+   "buts sur tir": {
+    "haut": 2.2,
+    "bas": 1.85,
+    "écart": 0.35,
+    "IC95 bas": -0.8369,
+    "IC95 haut": 1.5369,
+    "significatif": false
+   },
+   "buts moins qualité des tirs": {
+    "haut": 0.3593,
+    "bas": 0.0019,
+    "écart": 0.3574,
+    "IC95 bas": -0.4503,
+    "IC95 haut": 1.165,
+    "significatif": false
+   },
+   "fautes": {
+    "haut": 7.35,
+    "bas": 6.7,
+    "écart": 0.65,
+    "IC95 bas": -1.3285,
+    "IC95 haut": 2.6285,
+    "significatif": false
+   },
+   "hors-jeu": {
+    "haut": 0.45,
+    "bas": 0.55,
+    "écart": -0.1,
+    "IC95 bas": -0.6653,
+    "IC95 haut": 0.4653,
+    "significatif": false
+   },
+   "écart au meilleur choix (moyenne)": {
+    "haut": 0.2657,
+    "bas": 0.2148,
+    "écart": 0.051,
+    "IC95 bas": -0.0708,
+    "IC95 haut": 0.1727,
+    "significatif": false
+   }
+  }
+ },
+ "Anticipation": {
+  "matchs": 20,
+  "buts par match": 3.65,
+  "profil haut : fautes par match": 6.5,
+  "profil bas : fautes par match": 6.8,
+  "profil haut : temps de pressing par match (s)": 1053.8899999986884,
+  "profil bas : temps de pressing par match (s)": 1048.2299999987708,
+  "temps de calcul par match (s)": 116.11304081294998,
+  "profil haut : scans par minute et par joueur": 18.267323232323232,
+  "profil haut : scans dans les 10 s avant la réception (moyenne)": 2.728068575597301,
+  "profil bas : scans par minute et par joueur": 18.232020202020202,
+  "profil bas : scans dans les 10 s avant la réception (moyenne)": 2.6941457586618878,
+  "profil bas : appels dans le dos par joueur": 2.07,
+  "profil bas : appels par joueur": 33.77,
+  "profil bas : course intense par joueur (m)": 1188.1747666304789,
+  "profil bas : distance presseur-porteur (m)": 1.3726396019374545,
+  "profil bas : espace des coéquipiers du porteur (m)": 13.169214625635885,
+  "profil bas : hauteur du bloc sans ballon (m)": 33.377985341915206,
+  "profil bas : km par joueur": 12.235329884889875,
+  "profil bas : longueur (m)": 39.037475409922365,
+  "profil bas : possession installée, 2 joueurs ou plus derrière le ballon (part)": 0.9763603409047087,
+  "profil bas : solutions de passe ouvertes (nombre)": 4.0134567461730155,
+  "profil bas : solutions faciles laissées au porteur adverse (nombre)": 3.062000855675984,
+  "profil bas : solutions laissées au porteur adverse (nombre)": 4.076190815744438,
+  "profil bas : stretch index (m)": 17.290094516283972,
+  "profil bas : vitesse de repli à 1,5 s (m/s)": 1.2066548571594944,
+  "profil bas : écart-type distance défense-milieu (m)": 5.955398615396545,
+  "profil bas : équilibre : appels devant le ballon maintenus (part)": 0.045454545454545456,
+  "profil haut : appels dans le dos par joueur": 2.095,
+  "profil haut : appels par joueur": 34.125,
+  "profil haut : course intense par joueur (m)": 1187.2580545231117,
+  "profil haut : distance presseur-porteur (m)": 1.3708542701166146,
+  "profil haut : espace des coéquipiers du porteur (m)": 13.087451793389977,
+  "profil haut : hauteur du bloc sans ballon (m)": 33.24824055511384,
+  "profil haut : km par joueur": 12.216265710798062,
+  "profil haut : longueur (m)": 39.108797269171156,
+  "profil haut : possession installée, 2 joueurs ou plus derrière le ballon (part)": 0.9740558044959897,
+  "profil haut : solutions de passe ouvertes (nombre)": 4.076190815744438,
+  "profil haut : solutions faciles laissées au porteur adverse (nombre)": 3.008009967960128,
+  "profil haut : solutions laissées au porteur adverse (nombre)": 4.0134567461730155,
+  "profil haut : stretch index (m)": 17.270618515916375,
+  "profil haut : vitesse de repli à 1,5 s (m/s)": 1.1995494879650246,
+  "profil haut : écart-type distance défense-milieu (m)": 5.9736338326364535,
+  "profil haut : équilibre : appels devant le ballon maintenus (part)": 0.14285714285714285,
+  "profil : écart haut - bas par match (IC 95 %)": {
+   "passes": {
+    "haut": 521.0,
+    "bas": 514.55,
+    "écart": 6.45,
+    "IC95 bas": -49.232,
+    "IC95 haut": 62.132,
+    "significatif": false
+   },
+   "passes réussies (part)": {
+    "haut": 0.8343,
+    "bas": 0.8267,
+    "écart": 0.0076,
+    "IC95 bas": -0.01,
+    "IC95 haut": 0.0252,
+    "significatif": false
+   },
+   "contrôles ratés": {
+    "haut": 30.8,
+    "bas": 31.15,
+    "écart": -0.35,
+    "IC95 bas": -12.098,
+    "IC95 haut": 11.398,
+    "significatif": false
+   },
+   "tacles gagnés": {
+    "haut": 5.25,
+    "bas": 5.1,
+    "écart": 0.15,
+    "IC95 bas": -1.7025,
+    "IC95 haut": 2.0025,
+    "significatif": false
+   },
+   "ballons perdus sur tacle": {
+    "haut": 5.1,
+    "bas": 5.25,
+    "écart": -0.15,
+    "IC95 bas": -2.0025,
+    "IC95 haut": 1.7025,
+    "significatif": false
+   },
+   "pertes en conduite": {
+    "haut": 20.3,
+    "bas": 19.25,
+    "écart": 1.05,
+    "IC95 bas": -3.3221,
+    "IC95 haut": 5.4221,
+    "significatif": false
+   },
+   "interceptions": {
+    "haut": 88.45,
+    "bas": 84.9,
+    "écart": 3.55,
+    "IC95 bas": -0.3378,
+    "IC95 haut": 7.4378,
+    "significatif": false
+   },
+   "tirs": {
+    "haut": 18.15,
+    "bas": 19.45,
+    "écart": -1.3,
+    "IC95 bas": -6.8402,
+    "IC95 haut": 4.2402,
+    "significatif": false
+   },
+   "buts sur tir": {
+    "haut": 1.7,
+    "bas": 1.95,
+    "écart": -0.25,
+    "IC95 bas": -1.2657,
+    "IC95 haut": 0.7657,
+    "significatif": false
+   },
+   "buts moins qualité des tirs": {
+    "haut": -0.0405,
+    "bas": -0.1272,
+    "écart": 0.0867,
+    "IC95 bas": -0.64,
+    "IC95 haut": 0.8135,
+    "significatif": false
+   },
+   "fautes": {
+    "haut": 6.5,
+    "bas": 6.8,
+    "écart": -0.3,
+    "IC95 bas": -1.7708,
+    "IC95 haut": 1.1708,
+    "significatif": false
+   },
+   "hors-jeu": {
+    "haut": 0.3,
+    "bas": 0.55,
+    "écart": -0.25,
+    "IC95 bas": -0.6755,
+    "IC95 haut": 0.1755,
+    "significatif": false
+   },
+   "écart au meilleur choix (moyenne)": {
+    "haut": 0.218,
+    "bas": 0.2143,
+    "écart": 0.0038,
+    "IC95 bas": -0.0326,
+    "IC95 haut": 0.0401,
+    "significatif": false
+   }
+  }
+ },
+ "Composure": {
+  "matchs": 20,
+  "buts par match": 4.0,
+  "profil haut : fautes par match": 6.5,
+  "profil bas : fautes par match": 6.8,
+  "profil haut : temps de pressing par match (s)": 1027.7599999990687,
+  "profil bas : temps de pressing par match (s)": 1065.8649999985141,
+  "temps de calcul par match (s)": 111.70361254900001,
+  "profil haut : scans par minute et par joueur": 18.2279797979798,
+  "profil haut : scans dans les 10 s avant la réception (moyenne)": 2.728018971178402,
+  "profil bas : scans par minute et par joueur": 18.254646464646466,
+  "profil bas : scans dans les 10 s avant la réception (moyenne)": 2.747820318423048,
+  "profil bas : appels dans le dos par joueur": 1.98,
+  "profil bas : appels par joueur": 33.0,
+  "profil bas : course intense par joueur (m)": 1164.8163316866091,
+  "profil bas : distance presseur-porteur (m)": 1.3735521273428204,
+  "profil bas : espace des coéquipiers du porteur (m)": 13.12150180082517,
+  "profil bas : hauteur du bloc sans ballon (m)": 33.004145828462185,
+  "profil bas : km par joueur": 12.088110359943817,
+  "profil bas : longueur (m)": 38.9263767826441,
+  "profil bas : possession installée, 2 joueurs ou plus derrière le ballon (part)": 0.9781170280612245,
+  "profil bas : solutions de passe ouvertes (nombre)": 4.006217313389167,
+  "profil bas : solutions faciles laissées au porteur adverse (nombre)": 3.0076494641849973,
+  "profil bas : solutions laissées au porteur adverse (nombre)": 4.020163564579808,
+  "profil bas : stretch index (m)": 17.26403267628509,
+  "profil bas : vitesse de repli à 1,5 s (m/s)": 1.124729747362043,
+  "profil bas : écart-type distance défense-milieu (m)": 5.957032962672744,
+  "profil bas : équilibre : appels devant le ballon maintenus (part)": 0.10256410256410256,
+  "profil haut : appels dans le dos par joueur": 1.935,
+  "profil haut : appels par joueur": 33.32,
+  "profil haut : course intense par joueur (m)": 1160.3760059745828,
+  "profil haut : distance presseur-porteur (m)": 1.379127175056172,
+  "profil haut : espace des coéquipiers du porteur (m)": 13.151921903614118,
+  "profil haut : hauteur du bloc sans ballon (m)": 32.89376185202977,
+  "profil haut : km par joueur": 12.044746284088525,
+  "profil haut : longueur (m)": 39.07992355949659,
+  "profil haut : possession installée, 2 joueurs ou plus derrière le ballon (part)": 0.9763418211908076,
+  "profil haut : solutions de passe ouvertes (nombre)": 4.020163564579808,
+  "profil haut : solutions faciles laissées au porteur adverse (nombre)": 3.022236038474198,
+  "profil haut : solutions laissées au porteur adverse (nombre)": 4.006217313389167,
+  "profil haut : stretch index (m)": 17.32999578747433,
+  "profil haut : vitesse de repli à 1,5 s (m/s)": 1.1629655157643373,
+  "profil haut : écart-type distance défense-milieu (m)": 5.967025512576983,
+  "profil haut : équilibre : appels devant le ballon maintenus (part)": 0.1282051282051282,
+  "profil : écart haut - bas par match (IC 95 %)": {
+   "passes": {
+    "haut": 516.0,
+    "bas": 500.0,
+    "écart": 16.0,
+    "IC95 bas": -29.8819,
+    "IC95 haut": 61.8819,
+    "significatif": false
+   },
+   "passes réussies (part)": {
+    "haut": 0.8397,
+    "bas": 0.8305,
+    "écart": 0.0092,
+    "IC95 bas": -0.0097,
+    "IC95 haut": 0.0281,
+    "significatif": false
+   },
+   "contrôles ratés": {
+    "haut": 31.35,
+    "bas": 31.85,
+    "écart": -0.5,
+    "IC95 bas": -11.4228,
+    "IC95 haut": 10.4228,
+    "significatif": false
+   },
+   "tacles gagnés": {
+    "haut": 5.7,
+    "bas": 5.25,
+    "écart": 0.45,
+    "IC95 bas": -1.3407,
+    "IC95 haut": 2.2407,
+    "significatif": false
+   },
+   "ballons perdus sur tacle": {
+    "haut": 5.25,
+    "bas": 5.7,
+    "écart": -0.45,
+    "IC95 bas": -2.2407,
+    "IC95 haut": 1.3407,
+    "significatif": false
+   },
+   "pertes en conduite": {
+    "haut": 20.95,
+    "bas": 19.5,
+    "écart": 1.45,
+    "IC95 bas": -1.6331,
+    "IC95 haut": 4.5331,
+    "significatif": false
+   },
+   "interceptions": {
+    "haut": 84.05,
+    "bas": 81.95,
+    "écart": 2.1,
+    "IC95 bas": -3.7428,
+    "IC95 haut": 7.9428,
+    "significatif": false
+   },
+   "tirs": {
+    "haut": 20.95,
+    "bas": 20.0,
+    "écart": 0.95,
+    "IC95 bas": -4.3514,
+    "IC95 haut": 6.2514,
+    "significatif": false
+   },
+   "buts sur tir": {
+    "haut": 2.35,
+    "bas": 1.65,
+    "écart": 0.7,
+    "IC95 bas": -0.211,
+    "IC95 haut": 1.611,
+    "significatif": false
+   },
+   "buts moins qualité des tirs": {
+    "haut": 0.1251,
+    "bas": -0.3704,
+    "écart": 0.4955,
+    "IC95 bas": -0.4909,
+    "IC95 haut": 1.4819,
+    "significatif": false
+   },
+   "fautes": {
+    "haut": 6.5,
+    "bas": 6.8,
+    "écart": -0.3,
+    "IC95 bas": -2.1201,
+    "IC95 haut": 1.5201,
+    "significatif": false
+   },
+   "hors-jeu": {
+    "haut": 0.3,
+    "bas": 0.2,
+    "écart": 0.1,
+    "IC95 bas": -0.2683,
+    "IC95 haut": 0.4683,
+    "significatif": false
+   },
+   "écart au meilleur choix (moyenne)": {
+    "haut": 0.2085,
+    "bas": 0.3368,
+    "écart": -0.1283,
+    "IC95 bas": -0.3098,
+    "IC95 haut": 0.0532,
+    "significatif": false
+   }
+  }
+ },
+ "Decisions": {
+  "matchs": 20,
+  "buts par match": 4.7,
+  "profil haut : fautes par match": 6.95,
+  "profil bas : fautes par match": 6.75,
+  "profil haut : temps de pressing par match (s)": 1074.054999998395,
+  "profil bas : temps de pressing par match (s)": 1058.9649999986145,
+  "temps de calcul par match (s)": 111.87288912305,
+  "profil haut : scans par minute et par joueur": 18.367121212121212,
+  "profil haut : scans dans les 10 s avant la réception (moyenne)": 2.6853203568532034,
+  "profil bas : scans par minute et par joueur": 18.34439393939394,
+  "profil bas : scans dans les 10 s avant la réception (moyenne)": 2.7392053701015966,
+  "profil bas : appels dans le dos par joueur": 2.095,
+  "profil bas : appels par joueur": 34.945,
+  "profil bas : course intense par joueur (m)": 1169.4566922853392,
+  "profil bas : distance presseur-porteur (m)": 1.3842280123700064,
+  "profil bas : espace des coéquipiers du porteur (m)": 13.19756028814809,
+  "profil bas : hauteur du bloc sans ballon (m)": 30.239429125271737,
+  "profil bas : km par joueur": 11.9350981278903,
+  "profil bas : longueur (m)": 39.04201993021984,
+  "profil bas : possession installée, 2 joueurs ou plus derrière le ballon (part)": 0.9734839009398564,
+  "profil bas : solutions de passe ouvertes (nombre)": 4.0404779322116555,
+  "profil bas : solutions faciles laissées au porteur adverse (nombre)": 2.7562657999277715,
+  "profil bas : solutions laissées au porteur adverse (nombre)": 3.722788010111954,
+  "profil bas : stretch index (m)": 17.336647289744523,
+  "profil bas : vitesse de repli à 1,5 s (m/s)": 1.074711741606641,
+  "profil bas : écart-type distance défense-milieu (m)": 5.848966395455971,
+  "profil bas : équilibre : appels devant le ballon maintenus (part)": 0.11428571428571428,
+  "profil haut : appels dans le dos par joueur": 1.735,
+  "profil haut : appels par joueur": 30.625,
+  "profil haut : course intense par joueur (m)": 1159.297487827519,
+  "profil haut : distance presseur-porteur (m)": 1.367259839870593,
+  "profil haut : espace des coéquipiers du porteur (m)": 13.379809748643444,
+  "profil haut : hauteur du bloc sans ballon (m)": 34.58684457920668,
+  "profil haut : km par joueur": 12.155321901925578,
+  "profil haut : longueur (m)": 38.98144930854659,
+  "profil haut : possession installée, 2 joueurs ou plus derrière le ballon (part)": 0.9824920517399068,
+  "profil haut : solutions de passe ouvertes (nombre)": 3.722788010111954,
+  "profil haut : solutions faciles laissées au porteur adverse (nombre)": 3.0375518166300903,
+  "profil haut : solutions laissées au porteur adverse (nombre)": 4.0404779322116555,
+  "profil haut : stretch index (m)": 17.267974946451126,
+  "profil haut : vitesse de repli à 1,5 s (m/s)": 1.2175435460780295,
+  "profil haut : écart-type distance défense-milieu (m)": 6.052299043978949,
+  "profil haut : équilibre : appels devant le ballon maintenus (part)": 0.1111111111111111,
+  "profil : écart haut - bas par match (IC 95 %)": {
+   "passes": {
+    "haut": 453.85,
+    "bas": 528.75,
+    "écart": -74.9,
+    "IC95 bas": -123.3084,
+    "IC95 haut": -26.4916,
+    "significatif": true
+   },
+   "passes réussies (part)": {
+    "haut": 0.8314,
+    "bas": 0.8401,
+    "écart": -0.0087,
+    "IC95 bas": -0.0242,
+    "IC95 haut": 0.0069,
+    "significatif": false
+   },
+   "contrôles ratés": {
+    "haut": 29.6,
+    "bas": 30.8,
+    "écart": -1.2,
+    "IC95 bas": -13.1125,
+    "IC95 haut": 10.7125,
+    "significatif": false
+   },
+   "tacles gagnés": {
+    "haut": 5.75,
+    "bas": 5.6,
+    "écart": 0.15,
+    "IC95 bas": -1.4277,
+    "IC95 haut": 1.7277,
+    "significatif": false
+   },
+   "ballons perdus sur tacle": {
+    "haut": 5.6,
+    "bas": 5.75,
+    "écart": -0.15,
+    "IC95 bas": -1.7277,
+    "IC95 haut": 1.4277,
+    "significatif": false
+   },
+   "pertes en conduite": {
+    "haut": 24.5,
+    "bas": 20.05,
+    "écart": 4.45,
+    "IC95 bas": 1.3931,
+    "IC95 haut": 7.5069,
+    "significatif": true
+   },
+   "interceptions": {
+    "haut": 84.05,
+    "bas": 75.3,
+    "écart": 8.75,
+    "IC95 bas": 4.4032,
+    "IC95 haut": 13.0968,
+    "significatif": true
+   },
+   "tirs": {
+    "haut": 26.55,
+    "bas": 17.1,
+    "écart": 9.45,
+    "IC95 bas": 5.07,
+    "IC95 haut": 13.83,
+    "significatif": true
+   },
+   "buts sur tir": {
+    "haut": 3.05,
+    "bas": 1.65,
+    "écart": 1.4,
+    "IC95 bas": 0.2314,
+    "IC95 haut": 2.5686,
+    "significatif": true
+   },
+   "buts moins qualité des tirs": {
+    "haut": 0.3274,
+    "bas": 0.0204,
+    "écart": 0.3071,
+    "IC95 bas": -0.6656,
+    "IC95 haut": 1.2797,
+    "significatif": false
+   },
+   "fautes": {
+    "haut": 6.95,
+    "bas": 6.75,
+    "écart": 0.2,
+    "IC95 bas": -2.0108,
+    "IC95 haut": 2.4108,
+    "significatif": false
+   },
+   "hors-jeu": {
+    "haut": 0.4,
+    "bas": 0.65,
+    "écart": -0.25,
+    "IC95 bas": -0.8348,
+    "IC95 haut": 0.3348,
+    "significatif": false
+   },
+   "écart au meilleur choix (moyenne)": {
+    "haut": 0.1553,
+    "bas": 0.2277,
+    "écart": -0.0724,
+    "IC95 bas": -0.1173,
+    "IC95 haut": -0.0276,
+    "significatif": true
+   }
+  }
+ },
+ "Dribbling": {
+  "matchs": 20,
+  "buts par match": 3.6,
+  "profil haut : fautes par match": 7.15,
+  "profil bas : fautes par match": 6.65,
+  "profil haut : temps de pressing par match (s)": 1055.2099999986692,
+  "profil bas : temps de pressing par match (s)": 1052.4249999987098,
+  "temps de calcul par match (s)": 119.67511710935,
+  "profil haut : scans par minute et par joueur": 18.241717171717173,
+  "profil haut : scans dans les 10 s avant la réception (moyenne)": 2.7255870294446516,
+  "profil bas : scans par minute et par joueur": 18.18747474747475,
+  "profil bas : scans dans les 10 s avant la réception (moyenne)": 2.7253352930369283,
+  "profil bas : appels dans le dos par joueur": 2.09,
+  "profil bas : appels par joueur": 34.57,
+  "profil bas : course intense par joueur (m)": 1183.220962589052,
+  "profil bas : distance presseur-porteur (m)": 1.3738717291726334,
+  "profil bas : espace des coéquipiers du porteur (m)": 13.222582001741909,
+  "profil bas : hauteur du bloc sans ballon (m)": 33.04454327293432,
+  "profil bas : km par joueur": 12.102972747724623,
+  "profil bas : longueur (m)": 39.08252102186619,
+  "profil bas : possession installée, 2 joueurs ou plus derrière le ballon (part)": 0.9757648290822051,
+  "profil bas : solutions de passe ouvertes (nombre)": 3.9869436835177345,
+  "profil bas : solutions faciles laissées au porteur adverse (nombre)": 2.982726623840114,
+  "profil bas : solutions laissées au porteur adverse (nombre)": 3.9782655246252676,
+  "profil bas : stretch index (m)": 17.302596279681744,
+  "profil bas : vitesse de repli à 1,5 s (m/s)": 1.1090514387558705,
+  "profil bas : écart-type distance défense-milieu (m)": 6.0125395502722565,
+  "profil bas : équilibre : appels devant le ballon maintenus (part)": 0.125,
+  "profil haut : appels dans le dos par joueur": 2.045,
+  "profil haut : appels par joueur": 33.315,
+  "profil haut : course intense par joueur (m)": 1169.8831939505305,
+  "profil haut : distance presseur-porteur (m)": 1.3751368198977179,
+  "profil haut : espace des coéquipiers du porteur (m)": 13.209628322472772,
+  "profil haut : hauteur du bloc sans ballon (m)": 33.35060192009531,
+  "profil haut : km par joueur": 12.163404492690605,
+  "profil haut : longueur (m)": 38.94545909824258,
+  "profil haut : possession installée, 2 joueurs ou plus derrière le ballon (part)": 0.9725496159987833,
+  "profil haut : solutions de passe ouvertes (nombre)": 3.9782655246252676,
+  "profil haut : solutions faciles laissées au porteur adverse (nombre)": 2.9954462983386105,
+  "profil haut : solutions laissées au porteur adverse (nombre)": 3.9869436835177345,
+  "profil haut : stretch index (m)": 17.25925512349491,
+  "profil haut : vitesse de repli à 1,5 s (m/s)": 1.192617877505964,
+  "profil haut : écart-type distance défense-milieu (m)": 5.987087949364435,
+  "profil haut : équilibre : appels devant le ballon maintenus (part)": 0.07692307692307693,
+  "profil : écart haut - bas par match (IC 95 %)": {
+   "passes": {
+    "haut": 510.95,
+    "bas": 514.25,
+    "écart": -3.3,
+    "IC95 bas": -43.3682,
+    "IC95 haut": 36.7682,
+    "significatif": false
+   },
+   "passes réussies (part)": {
+    "haut": 0.8361,
+    "bas": 0.836,
+    "écart": 0.0001,
+    "IC95 bas": -0.015,
+    "IC95 haut": 0.0152,
+    "significatif": false
+   },
+   "contrôles ratés": {
+    "haut": 30.45,
+    "bas": 30.35,
+    "écart": 0.1,
+    "IC95 bas": -9.9701,
+    "IC95 haut": 10.1701,
+    "significatif": false
+   },
+   "tacles gagnés": {
+    "haut": 5.6,
+    "bas": 4.65,
+    "écart": 0.95,
+    "IC95 bas": -1.1481,
+    "IC95 haut": 3.0481,
+    "significatif": false
+   },
+   "ballons perdus sur tacle": {
+    "haut": 4.65,
+    "bas": 5.6,
+    "écart": -0.95,
+    "IC95 bas": -3.0481,
+    "IC95 haut": 1.1481,
+    "significatif": false
+   },
+   "pertes en conduite": {
+    "haut": 18.15,
+    "bas": 19.65,
+    "écart": -1.5,
+    "IC95 bas": -4.4577,
+    "IC95 haut": 1.4577,
+    "significatif": false
+   },
+   "interceptions": {
+    "haut": 83.65,
+    "bas": 83.1,
+    "écart": 0.55,
+    "IC95 bas": -3.7425,
+    "IC95 haut": 4.8425,
+    "significatif": false
+   },
+   "tirs": {
+    "haut": 19.7,
+    "bas": 19.0,
+    "écart": 0.7,
+    "IC95 bas": -5.3841,
+    "IC95 haut": 6.7841,
+    "significatif": false
+   },
+   "buts sur tir": {
+    "haut": 2.0,
+    "bas": 1.6,
+    "écart": 0.4,
+    "IC95 bas": -0.4631,
+    "IC95 haut": 1.2631,
+    "significatif": false
+   },
+   "buts moins qualité des tirs": {
+    "haut": 0.034,
+    "bas": -0.3073,
+    "écart": 0.3413,
+    "IC95 bas": -0.3466,
+    "IC95 haut": 1.0292,
+    "significatif": false
+   },
+   "fautes": {
+    "haut": 7.15,
+    "bas": 6.65,
+    "écart": 0.5,
+    "IC95 bas": -0.8604,
+    "IC95 haut": 1.8604,
+    "significatif": false
+   },
+   "hors-jeu": {
+    "haut": 0.45,
+    "bas": 0.4,
+    "écart": 0.05,
+    "IC95 bas": -0.3645,
+    "IC95 haut": 0.4645,
+    "significatif": false
+   },
+   "écart au meilleur choix (moyenne)": {
+    "haut": 0.2271,
+    "bas": 0.2184,
+    "écart": 0.0088,
+    "IC95 bas": -0.0318,
+    "IC95 haut": 0.0494,
+    "significatif": false
+   }
+  }
+ },
+ "Finishing": {
+  "matchs": 20,
+  "buts par match": 3.55,
+  "profil haut : fautes par match": 7.4,
+  "profil bas : fautes par match": 6.5,
+  "profil haut : temps de pressing par match (s)": 1073.0699999984095,
+  "profil bas : temps de pressing par match (s)": 1040.989999998876,
+  "temps de calcul par match (s)": 112.9641660735,
+  "profil haut : scans par minute et par joueur": 18.246464646464645,
+  "profil haut : scans dans les 10 s avant la réception (moyenne)": 2.7164415463437352,
+  "profil bas : scans par minute et par joueur": 18.251464646464648,
+  "profil bas : scans dans les 10 s avant la réception (moyenne)": 2.72618201208674,
+  "profil bas : appels dans le dos par joueur": 1.92,
+  "profil bas : appels par joueur": 34.98,
+  "profil bas : course intense par joueur (m)": 1192.2020107995584,
+  "profil bas : distance presseur-porteur (m)": 1.3835816060469905,
+  "profil bas : espace des coéquipiers du porteur (m)": 13.180182193975586,
+  "profil bas : hauteur du bloc sans ballon (m)": 33.25557945223607,
+  "profil bas : km par joueur": 12.208911306416276,
+  "profil bas : longueur (m)": 39.17993577768116,
+  "profil bas : possession installée, 2 joueurs ou plus derrière le ballon (part)": 0.9792032072162365,
+  "profil bas : solutions de passe ouvertes (nombre)": 4.034326221322066,
+  "profil bas : solutions faciles laissées au porteur adverse (nombre)": 2.995861374023824,
+  "profil bas : solutions laissées au porteur adverse (nombre)": 3.994313887789254,
+  "profil bas : stretch index (m)": 17.340304550188154,
+  "profil bas : vitesse de repli à 1,5 s (m/s)": 1.0846612908190538,
+  "profil bas : écart-type distance défense-milieu (m)": 5.9965981028429365,
+  "profil bas : équilibre : appels devant le ballon maintenus (part)": 0.023809523809523808,
+  "profil haut : appels dans le dos par joueur": 2.065,
+  "profil haut : appels par joueur": 34.525,
+  "profil haut : course intense par joueur (m)": 1180.3546379217403,
+  "profil haut : distance presseur-porteur (m)": 1.3801891031173996,
+  "profil haut : espace des coéquipiers du porteur (m)": 13.12256000740251,
+  "profil haut : hauteur du bloc sans ballon (m)": 33.86983670673643,
+  "profil haut : km par joueur": 12.306160457408897,
+  "profil haut : longueur (m)": 38.81148301800895,
+  "profil haut : possession installée, 2 joueurs ou plus derrière le ballon (part)": 0.9767892432285814,
+  "profil haut : solutions de passe ouvertes (nombre)": 3.994313887789254,
+  "profil haut : solutions faciles laissées au porteur adverse (nombre)": 3.0392499214303172,
+  "profil haut : solutions laissées au porteur adverse (nombre)": 4.034326221322066,
+  "profil haut : stretch index (m)": 17.231058407202987,
+  "profil haut : vitesse de repli à 1,5 s (m/s)": 1.1714611513720783,
+  "profil haut : écart-type distance défense-milieu (m)": 5.979891036679748,
+  "profil haut : équilibre : appels devant le ballon maintenus (part)": 0.14285714285714285,
+  "profil : écart haut - bas par match (IC 95 %)": {
+   "passes": {
+    "haut": 510.0,
+    "bas": 533.4,
+    "écart": -23.4,
+    "IC95 bas": -73.6921,
+    "IC95 haut": 26.8921,
+    "significatif": false
+   },
+   "passes réussies (part)": {
+    "haut": 0.8292,
+    "bas": 0.8365,
+    "écart": -0.0074,
+    "IC95 bas": -0.0234,
+    "IC95 haut": 0.0087,
+    "significatif": false
+   },
+   "contrôles ratés": {
+    "haut": 30.2,
+    "bas": 31.65,
+    "écart": -1.45,
+    "IC95 bas": -11.6647,
+    "IC95 haut": 8.7647,
+    "significatif": false
+   },
+   "tacles gagnés": {
+    "haut": 5.95,
+    "bas": 4.35,
+    "écart": 1.6,
+    "IC95 bas": 0.1425,
+    "IC95 haut": 3.0575,
+    "significatif": true
+   },
+   "ballons perdus sur tacle": {
+    "haut": 4.35,
+    "bas": 5.95,
+    "écart": -1.6,
+    "IC95 bas": -3.0575,
+    "IC95 haut": -0.1425,
+    "significatif": true
+   },
+   "pertes en conduite": {
+    "haut": 20.9,
+    "bas": 19.0,
+    "écart": 1.9,
+    "IC95 bas": -1.8599,
+    "IC95 haut": 5.6599,
+    "significatif": false
+   },
+   "interceptions": {
+    "haut": 86.35,
+    "bas": 86.35,
+    "écart": 0.0,
+    "IC95 bas": -4.2019,
+    "IC95 haut": 4.2019,
+    "significatif": false
+   },
+   "tirs": {
+    "haut": 18.4,
+    "bas": 18.05,
+    "écart": 0.35,
+    "IC95 bas": -3.7418,
+    "IC95 haut": 4.4418,
+    "significatif": false
+   },
+   "buts sur tir": {
+    "haut": 1.85,
+    "bas": 1.7,
+    "écart": 0.15,
+    "IC95 bas": -0.5327,
+    "IC95 haut": 0.8327,
+    "significatif": false
+   },
+   "buts moins qualité des tirs": {
+    "haut": 0.1117,
+    "bas": -0.0805,
+    "écart": 0.1922,
+    "IC95 bas": -0.4687,
+    "IC95 haut": 0.8531,
+    "significatif": false
+   },
+   "fautes": {
+    "haut": 7.4,
+    "bas": 6.5,
+    "écart": 0.9,
+    "IC95 bas": -0.8348,
+    "IC95 haut": 2.6348,
+    "significatif": false
+   },
+   "hors-jeu": {
+    "haut": 0.2,
+    "bas": 0.6,
+    "écart": -0.4,
+    "IC95 bas": -0.7523,
+    "IC95 haut": -0.0477,
+    "significatif": true
+   },
+   "écart au meilleur choix (moyenne)": {
+    "haut": 0.24,
+    "bas": 0.2659,
+    "écart": -0.0259,
+    "IC95 bas": -0.1372,
+    "IC95 haut": 0.0853,
+    "significatif": false
+   }
+  }
+ },
+ "First Touch": {
+  "matchs": 20,
+  "buts par match": 2.85,
+  "profil haut : fautes par match": 7.05,
+  "profil bas : fautes par match": 6.6,
+  "profil haut : temps de pressing par match (s)": 1058.6399999986193,
+  "profil bas : temps de pressing par match (s)": 1056.119999998656,
+  "temps de calcul par match (s)": 119.36603034280002,
+  "profil haut : scans par minute et par joueur": 18.087929292929292,
+  "profil haut : scans dans les 10 s avant la réception (moyenne)": 2.7452550931568864,
+  "profil bas : scans par minute et par joueur": 18.044444444444444,
+  "profil bas : scans dans les 10 s avant la réception (moyenne)": 2.664891629297459,
+  "profil bas : appels dans le dos par joueur": 1.915,
+  "profil bas : appels par joueur": 34.15,
+  "profil bas : course intense par joueur (m)": 1155.2929810453354,
+  "profil bas : distance presseur-porteur (m)": 1.3849384718269817,
+  "profil bas : espace des coéquipiers du porteur (m)": 13.141785123918794,
+  "profil bas : hauteur du bloc sans ballon (m)": 34.287354441274054,
+  "profil bas : km par joueur": 12.27416950659147,
+  "profil bas : longueur (m)": 38.940481071901864,
+  "profil bas : possession installée, 2 joueurs ou plus derrière le ballon (part)": 0.9743539622346457,
+  "profil bas : solutions de passe ouvertes (nombre)": 3.9658900942557356,
+  "profil bas : solutions faciles laissées au porteur adverse (nombre)": 3.068391087369087,
+  "profil bas : solutions laissées au porteur adverse (nombre)": 4.073592465031279,
+  "profil bas : stretch index (m)": 17.247261366808008,
+  "profil bas : vitesse de repli à 1,5 s (m/s)": 1.151883445568751,
+  "profil bas : écart-type distance défense-milieu (m)": 5.991170899643213,
+  "profil bas : équilibre : appels devant le ballon maintenus (part)": 0.10526315789473684,
+  "profil haut : appels dans le dos par joueur": 2.065,
+  "profil haut : appels par joueur": 34.87,
+  "profil haut : course intense par joueur (m)": 1175.2369202972418,
+  "profil haut : distance presseur-porteur (m)": 1.379629211592717,
+  "profil haut : espace des coéquipiers du porteur (m)": 13.145802716563399,
+  "profil haut : hauteur du bloc sans ballon (m)": 32.94461463620445,
+  "profil haut : km par joueur": 12.179311497901129,
+  "profil haut : longueur (m)": 39.112313267088396,
+  "profil haut : possession installée, 2 joueurs ou plus derrière le ballon (part)": 0.9780541060656527,
+  "profil haut : solutions de passe ouvertes (nombre)": 4.073592465031279,
+  "profil haut : solutions faciles laissées au porteur adverse (nombre)": 2.9672772541348036,
+  "profil haut : solutions laissées au porteur adverse (nombre)": 3.9658900942557356,
+  "profil haut : stretch index (m)": 17.308594220758188,
+  "profil haut : vitesse de repli à 1,5 s (m/s)": 1.1311057289018984,
+  "profil haut : écart-type distance défense-milieu (m)": 5.9209532042898605,
+  "profil haut : équilibre : appels devant le ballon maintenus (part)": 0.125,
+  "profil : écart haut - bas par match (IC 95 %)": {
+   "passes": {
+    "haut": 549.3,
+    "bas": 506.75,
+    "écart": 42.55,
+    "IC95 bas": 2.3722,
+    "IC95 haut": 82.7278,
+    "significatif": true
+   },
+   "passes réussies (part)": {
+    "haut": 0.8388,
+    "bas": 0.8325,
+    "écart": 0.0063,
+    "IC95 bas": -0.0064,
+    "IC95 haut": 0.0189,
+    "significatif": false
+   },
+   "contrôles ratés": {
+    "haut": 17.7,
+    "bas": 18.7,
+    "écart": -1.0,
+    "IC95 bas": -4.0888,
+    "IC95 haut": 2.0888,
+    "significatif": false
+   },
+   "tacles gagnés": {
+    "haut": 4.6,
+    "bas": 5.55,
+    "écart": -0.95,
+    "IC95 bas": -2.8223,
+    "IC95 haut": 0.9223,
+    "significatif": false
+   },
+   "ballons perdus sur tacle": {
+    "haut": 5.55,
+    "bas": 4.6,
+    "écart": 0.95,
+    "IC95 bas": -0.9223,
+    "IC95 haut": 2.8223,
+    "significatif": false
+   },
+   "pertes en conduite": {
+    "haut": 18.75,
+    "bas": 19.75,
+    "écart": -1.0,
+    "IC95 bas": -3.3194,
+    "IC95 haut": 1.3194,
+    "significatif": false
+   },
+   "interceptions": {
+    "haut": 84.5,
+    "bas": 88.15,
+    "écart": -3.65,
+    "IC95 bas": -9.5229,
+    "IC95 haut": 2.2229,
+    "significatif": false
+   },
+   "tirs": {
+    "haut": 17.15,
+    "bas": 20.65,
+    "écart": -3.5,
+    "IC95 bas": -8.9785,
+    "IC95 haut": 1.9785,
+    "significatif": false
+   },
+   "buts sur tir": {
+    "haut": 1.2,
+    "bas": 1.65,
+    "écart": -0.45,
+    "IC95 bas": -1.3007,
+    "IC95 haut": 0.4007,
+    "significatif": false
+   },
+   "buts moins qualité des tirs": {
+    "haut": -0.4964,
+    "bas": -0.2391,
+    "écart": -0.2574,
+    "IC95 bas": -0.8329,
+    "IC95 haut": 0.3182,
+    "significatif": false
+   },
+   "fautes": {
+    "haut": 7.05,
+    "bas": 6.6,
+    "écart": 0.45,
+    "IC95 bas": -1.4588,
+    "IC95 haut": 2.3588,
+    "significatif": false
+   },
+   "hors-jeu": {
+    "haut": 0.25,
+    "bas": 0.25,
+    "écart": 0.0,
+    "IC95 bas": -0.3032,
+    "IC95 haut": 0.3032,
+    "significatif": false
+   },
+   "écart au meilleur choix (moyenne)": {
+    "haut": 0.2242,
+    "bas": 0.2258,
+    "écart": -0.0016,
+    "IC95 bas": -0.0456,
+    "IC95 haut": 0.0425,
+    "significatif": false
+   }
+  }
+ },
+ "Pace": {
+  "matchs": 20,
+  "buts par match": 4.4,
+  "profil haut : fautes par match": 6.35,
+  "profil bas : fautes par match": 7.0,
+  "profil haut : temps de pressing par match (s)": 1064.8299999985293,
+  "profil bas : temps de pressing par match (s)": 1063.6599999985463,
+  "temps de calcul par match (s)": 116.61219249124997,
+  "profil haut : scans par minute et par joueur": 18.38651515151515,
+  "profil haut : scans dans les 10 s avant la réception (moyenne)": 2.7412349314438207,
+  "profil bas : scans par minute et par joueur": 18.310555555555556,
+  "profil bas : scans dans les 10 s avant la réception (moyenne)": 2.7235044313146233,
+  "profil bas : appels dans le dos par joueur": 2.07,
+  "profil bas : appels par joueur": 33.49,
+  "profil bas : course intense par joueur (m)": 1216.0186972973838,
+  "profil bas : distance presseur-porteur (m)": 1.3889896029605726,
+  "profil bas : espace des coéquipiers du porteur (m)": 12.913821610507979,
+  "profil bas : hauteur du bloc sans ballon (m)": 32.67645055473411,
+  "profil bas : km par joueur": 12.352249629366368,
+  "profil bas : longueur (m)": 38.93113255850279,
+  "profil bas : possession installée, 2 joueurs ou plus derrière le ballon (part)": 0.9787938267328637,
+  "profil bas : solutions de passe ouvertes (nombre)": 3.996031887891896,
+  "profil bas : solutions faciles laissées au porteur adverse (nombre)": 2.929430859884972,
+  "profil bas : solutions laissées au porteur adverse (nombre)": 3.9284781764934196,
+  "profil bas : stretch index (m)": 17.277396420300718,
+  "profil bas : vitesse de repli à 1,5 s (m/s)": 1.0572406295465202,
+  "profil bas : écart-type distance défense-milieu (m)": 5.911211923147869,
+  "profil bas : équilibre : appels devant le ballon maintenus (part)": 0.12903225806451613,
+  "profil haut : appels dans le dos par joueur": 2.165,
+  "profil haut : appels par joueur": 36.675,
+  "profil haut : course intense par joueur (m)": 1327.0522808419494,
+  "profil haut : distance presseur-porteur (m)": 1.3696949455306893,
+  "profil haut : espace des coéquipiers du porteur (m)": 13.072150272516296,
+  "profil haut : hauteur du bloc sans ballon (m)": 33.58912192193023,
+  "profil haut : km par joueur": 12.559098612483119,
+  "profil haut : longueur (m)": 39.0381466289608,
+  "profil haut : possession installée, 2 joueurs ou plus derrière le ballon (part)": 0.9745455931105438,
+  "profil haut : solutions de passe ouvertes (nombre)": 3.9284781764934196,
+  "profil haut : solutions faciles laissées au porteur adverse (nombre)": 2.9894898652271835,
+  "profil haut : solutions laissées au porteur adverse (nombre)": 3.996031887891896,
+  "profil haut : stretch index (m)": 17.33002471312803,
+  "profil haut : vitesse de repli à 1,5 s (m/s)": 1.0160942822282872,
+  "profil haut : écart-type distance défense-milieu (m)": 5.997990604548765,
+  "profil haut : équilibre : appels devant le ballon maintenus (part)": 0.1,
+  "profil : écart haut - bas par match (IC 95 %)": {
+   "passes": {
+    "haut": 512.75,
+    "bas": 515.1,
+    "écart": -2.35,
+    "IC95 bas": -49.1397,
+    "IC95 haut": 44.4397,
+    "significatif": false
+   },
+   "passes réussies (part)": {
+    "haut": 0.8312,
+    "bas": 0.8284,
+    "écart": 0.0028,
+    "IC95 bas": -0.0174,
+    "IC95 haut": 0.0229,
+    "significatif": false
+   },
+   "contrôles ratés": {
+    "haut": 31.95,
+    "bas": 33.1,
+    "écart": -1.15,
+    "IC95 bas": -11.9007,
+    "IC95 haut": 9.6007,
+    "significatif": false
+   },
+   "tacles gagnés": {
+    "haut": 5.15,
+    "bas": 5.65,
+    "écart": -0.5,
+    "IC95 bas": -1.9895,
+    "IC95 haut": 0.9895,
+    "significatif": false
+   },
+   "ballons perdus sur tacle": {
+    "haut": 5.65,
+    "bas": 5.15,
+    "écart": 0.5,
+    "IC95 bas": -0.9895,
+    "IC95 haut": 1.9895,
+    "significatif": false
+   },
+   "pertes en conduite": {
+    "haut": 21.7,
+    "bas": 19.7,
+    "écart": 2.0,
+    "IC95 bas": -1.8208,
+    "IC95 haut": 5.8208,
+    "significatif": false
+   },
+   "interceptions": {
+    "haut": 87.3,
+    "bas": 86.05,
+    "écart": 1.25,
+    "IC95 bas": -4.75,
+    "IC95 haut": 7.25,
+    "significatif": false
+   },
+   "tirs": {
+    "haut": 20.3,
+    "bas": 17.6,
+    "écart": 2.7,
+    "IC95 bas": -3.418,
+    "IC95 haut": 8.818,
+    "significatif": false
+   },
+   "buts sur tir": {
+    "haut": 2.3,
+    "bas": 2.1,
+    "écart": 0.2,
+    "IC95 bas": -0.9706,
+    "IC95 haut": 1.3706,
+    "significatif": false
+   },
+   "buts moins qualité des tirs": {
+    "haut": 0.4261,
+    "bas": 0.4355,
+    "écart": -0.0094,
+    "IC95 bas": -0.7385,
+    "IC95 haut": 0.7197,
+    "significatif": false
+   },
+   "fautes": {
+    "haut": 6.35,
+    "bas": 7.0,
+    "écart": -0.65,
+    "IC95 bas": -2.2204,
+    "IC95 haut": 0.9204,
+    "significatif": false
+   },
+   "hors-jeu": {
+    "haut": 0.35,
+    "bas": 0.4,
+    "écart": -0.05,
+    "IC95 bas": -0.3707,
+    "IC95 haut": 0.2707,
+    "significatif": false
+   },
+   "écart au meilleur choix (moyenne)": {
+    "haut": 0.2086,
+    "bas": 0.2529,
+    "écart": -0.0443,
+    "IC95 bas": -0.1369,
+    "IC95 haut": 0.0482,
+    "significatif": false
+   }
+  }
+ },
+ "Passing": {
+  "matchs": 20,
+  "buts par match": 4.0,
+  "profil haut : fautes par match": 7.35,
+  "profil bas : fautes par match": 7.05,
+  "profil haut : temps de pressing par match (s)": 1025.3549999991037,
+  "profil bas : temps de pressing par match (s)": 1083.7899999982533,
+  "temps de calcul par match (s)": 120.63003100374999,
+  "profil haut : scans par minute et par joueur": 18.284040404040404,
+  "profil haut : scans dans les 10 s avant la réception (moyenne)": 2.722217631992068,
+  "profil bas : scans par minute et par joueur": 18.30176767676768,
+  "profil bas : scans dans les 10 s avant la réception (moyenne)": 2.7080325744956504,
+  "profil bas : appels dans le dos par joueur": 2.105,
+  "profil bas : appels par joueur": 32.995,
+  "profil bas : course intense par joueur (m)": 1139.6064358712897,
+  "profil bas : distance presseur-porteur (m)": 1.371288646879203,
+  "profil bas : espace des coéquipiers du porteur (m)": 13.1459841625641,
+  "profil bas : hauteur du bloc sans ballon (m)": 34.61804596464329,
+  "profil bas : km par joueur": 12.256250550693979,
+  "profil bas : longueur (m)": 38.84513043277121,
+  "profil bas : possession installée, 2 joueurs ou plus derrière le ballon (part)": 0.9714240730536093,
+  "profil bas : solutions de passe ouvertes (nombre)": 4.059008137795132,
+  "profil bas : solutions faciles laissées au porteur adverse (nombre)": 3.3301800736511367,
+  "profil bas : solutions laissées au porteur adverse (nombre)": 4.356566100206088,
+  "profil bas : stretch index (m)": 17.192126640387254,
+  "profil bas : vitesse de repli à 1,5 s (m/s)": 1.151676078968496,
+  "profil bas : écart-type distance défense-milieu (m)": 5.991008686311888,
+  "profil bas : équilibre : appels devant le ballon maintenus (part)": 0.06896551724137931,
+  "profil haut : appels dans le dos par joueur": 2.405,
+  "profil haut : appels par joueur": 37.785,
+  "profil haut : course intense par joueur (m)": 1144.5647091489511,
+  "profil haut : distance presseur-porteur (m)": 1.3782910295417146,
+  "profil haut : espace des coéquipiers du porteur (m)": 13.132562597922195,
+  "profil haut : hauteur du bloc sans ballon (m)": 32.99644909064648,
+  "profil haut : km par joueur": 12.091856719159132,
+  "profil haut : longueur (m)": 39.165202281033835,
+  "profil haut : possession installée, 2 joueurs ou plus derrière le ballon (part)": 0.9719254413360071,
+  "profil haut : solutions de passe ouvertes (nombre)": 4.356566100206088,
+  "profil haut : solutions faciles laissées au porteur adverse (nombre)": 3.0691165200890413,
+  "profil haut : solutions laissées au porteur adverse (nombre)": 4.059008137795132,
+  "profil haut : stretch index (m)": 17.395739900818615,
+  "profil haut : vitesse de repli à 1,5 s (m/s)": 1.186256339519673,
+  "profil haut : écart-type distance défense-milieu (m)": 6.032566750244601,
+  "profil haut : équilibre : appels devant le ballon maintenus (part)": 0.07692307692307693,
+  "profil : écart haut - bas par match (IC 95 %)": {
+   "passes": {
+    "haut": 582.8,
+    "bas": 508.4,
+    "écart": 74.4,
+    "IC95 bas": 26.7355,
+    "IC95 haut": 122.0645,
+    "significatif": true
+   },
+   "passes réussies (part)": {
+    "haut": 0.8526,
+    "bas": 0.8452,
+    "écart": 0.0074,
+    "IC95 bas": -0.0061,
+    "IC95 haut": 0.021,
+    "significatif": false
+   },
+   "contrôles ratés": {
+    "haut": 35.75,
+    "bas": 32.35,
+    "écart": 3.4,
+    "IC95 bas": -10.6156,
+    "IC95 haut": 17.4156,
+    "significatif": false
+   },
+   "tacles gagnés": {
+    "haut": 5.5,
+    "bas": 4.95,
+    "écart": 0.55,
+    "IC95 bas": -1.0864,
+    "IC95 haut": 2.1864,
+    "significatif": false
+   },
+   "ballons perdus sur tacle": {
+    "haut": 4.95,
+    "bas": 5.5,
+    "écart": -0.55,
+    "IC95 bas": -2.1864,
+    "IC95 haut": 1.0864,
+    "significatif": false
+   },
+   "pertes en conduite": {
+    "haut": 16.8,
+    "bas": 19.85,
+    "écart": -3.05,
+    "IC95 bas": -6.1443,
+    "IC95 haut": 0.0443,
+    "significatif": false
+   },
+   "interceptions": {
+    "haut": 78.05,
+    "bas": 85.5,
+    "écart": -7.45,
+    "IC95 bas": -11.9822,
+    "IC95 haut": -2.9178,
+    "significatif": true
+   },
+   "tirs": {
+    "haut": 17.95,
+    "bas": 20.8,
+    "écart": -2.85,
+    "IC95 bas": -9.7172,
+    "IC95 haut": 4.0172,
+    "significatif": false
+   },
+   "buts sur tir": {
+    "haut": 1.95,
+    "bas": 2.05,
+    "écart": -0.1,
+    "IC95 bas": -1.116,
+    "IC95 haut": 0.916,
+    "significatif": false
+   },
+   "buts moins qualité des tirs": {
+    "haut": -0.0288,
+    "bas": -0.412,
+    "écart": 0.3832,
+    "IC95 bas": -0.2307,
+    "IC95 haut": 0.997,
+    "significatif": false
+   },
+   "fautes": {
+    "haut": 7.35,
+    "bas": 7.05,
+    "écart": 0.3,
+    "IC95 bas": -1.4558,
+    "IC95 haut": 2.0558,
+    "significatif": false
+   },
+   "hors-jeu": {
+    "haut": 0.55,
+    "bas": 0.3,
+    "écart": 0.25,
+    "IC95 bas": -0.0848,
+    "IC95 haut": 0.5848,
+    "significatif": false
+   },
+   "écart au meilleur choix (moyenne)": {
+    "haut": 0.2164,
+    "bas": 0.2166,
+    "écart": -0.0002,
+    "IC95 bas": -0.031,
+    "IC95 haut": 0.0305,
+    "significatif": false
+   }
+  }
+ },
+ "Positioning": {
+  "matchs": 20,
+  "buts par match": 4.25,
+  "profil haut : fautes par match": 6.95,
+  "profil bas : fautes par match": 7.05,
+  "profil haut : temps de pressing par match (s)": 1063.199999998553,
+  "profil bas : temps de pressing par match (s)": 1045.344999998813,
+  "temps de calcul par match (s)": 116.69580276294997,
+  "profil haut : scans par minute et par joueur": 18.27540404040404,
+  "profil haut : scans dans les 10 s avant la réception (moyenne)": 2.695676377806643,
+  "profil bas : scans par minute et par joueur": 18.310656565656565,
+  "profil bas : scans dans les 10 s avant la réception (moyenne)": 2.7321331644653517,
+  "profil bas : appels dans le dos par joueur": 1.95,
+  "profil bas : appels par joueur": 34.88,
+  "profil bas : course intense par joueur (m)": 1189.626657208869,
+  "profil bas : distance presseur-porteur (m)": 1.3735552549319554,
+  "profil bas : espace des coéquipiers du porteur (m)": 13.146367570740713,
+  "profil bas : hauteur du bloc sans ballon (m)": 32.98957685650656,
+  "profil bas : km par joueur": 12.22397863122871,
+  "profil bas : longueur (m)": 38.93512071873598,
+  "profil bas : possession installée, 2 joueurs ou plus derrière le ballon (part)": 0.9793962264150944,
+  "profil bas : solutions de passe ouvertes (nombre)": 4.04900194311959,
+  "profil bas : solutions faciles laissées au porteur adverse (nombre)": 3.0146863442134366,
+  "profil bas : solutions laissées au porteur adverse (nombre)": 4.017451254982226,
+  "profil bas : stretch index (m)": 17.28188535577515,
+  "profil bas : vitesse de repli à 1,5 s (m/s)": 1.1006114761830934,
+  "profil bas : écart-type distance défense-milieu (m)": 5.973013760466997,
+  "profil bas : équilibre : appels devant le ballon maintenus (part)": 0.19047619047619047,
+  "profil haut : appels dans le dos par joueur": 1.74,
+  "profil haut : appels par joueur": 33.86,
+  "profil haut : course intense par joueur (m)": 1190.4663608030232,
+  "profil haut : distance presseur-porteur (m)": 1.3767822367672482,
+  "profil haut : espace des coéquipiers du porteur (m)": 13.120959279140669,
+  "profil haut : hauteur du bloc sans ballon (m)": 33.3145713909281,
+  "profil haut : km par joueur": 12.176238851937791,
+  "profil haut : longueur (m)": 38.7778098250424,
+  "profil haut : possession installée, 2 joueurs ou plus derrière le ballon (part)": 0.9754336942601002,
+  "profil haut : solutions de passe ouvertes (nombre)": 4.017451254982226,
+  "profil haut : solutions faciles laissées au porteur adverse (nombre)": 3.0430312665606785,
+  "profil haut : solutions laissées au porteur adverse (nombre)": 4.04900194311959,
+  "profil haut : stretch index (m)": 17.25749256678326,
+  "profil haut : vitesse de repli à 1,5 s (m/s)": 1.131909987592948,
+  "profil haut : écart-type distance défense-milieu (m)": 5.996035073951234,
+  "profil haut : équilibre : appels devant le ballon maintenus (part)": 0.14634146341463414,
+  "profil : écart haut - bas par match (IC 95 %)": {
+   "passes": {
+    "haut": 509.9,
+    "bas": 525.65,
+    "écart": -15.75,
+    "IC95 bas": -69.6842,
+    "IC95 haut": 38.1842,
+    "significatif": false
+   },
+   "passes réussies (part)": {
+    "haut": 0.8255,
+    "bas": 0.8291,
+    "écart": -0.0037,
+    "IC95 bas": -0.0226,
+    "IC95 haut": 0.0153,
+    "significatif": false
+   },
+   "contrôles ratés": {
+    "haut": 33.95,
+    "bas": 32.9,
+    "écart": 1.05,
+    "IC95 bas": -12.9196,
+    "IC95 haut": 15.0196,
+    "significatif": false
+   },
+   "tacles gagnés": {
+    "haut": 5.45,
+    "bas": 5.15,
+    "écart": 0.3,
+    "IC95 bas": -1.1551,
+    "IC95 haut": 1.7551,
+    "significatif": false
+   },
+   "ballons perdus sur tacle": {
+    "haut": 5.15,
+    "bas": 5.45,
+    "écart": -0.3,
+    "IC95 bas": -1.7551,
+    "IC95 haut": 1.1551,
+    "significatif": false
+   },
+   "pertes en conduite": {
+    "haut": 20.8,
+    "bas": 19.8,
+    "écart": 1.0,
+    "IC95 bas": -2.4376,
+    "IC95 haut": 4.4376,
+    "significatif": false
+   },
+   "interceptions": {
+    "haut": 88.85,
+    "bas": 87.75,
+    "écart": 1.1,
+    "IC95 bas": -3.2627,
+    "IC95 haut": 5.4627,
+    "significatif": false
+   },
+   "tirs": {
+    "haut": 20.1,
+    "bas": 18.8,
+    "écart": 1.3,
+    "IC95 bas": -4.6504,
+    "IC95 haut": 7.2504,
+    "significatif": false
+   },
+   "buts sur tir": {
+    "haut": 2.25,
+    "bas": 2.0,
+    "écart": 0.25,
+    "IC95 bas": -0.5787,
+    "IC95 haut": 1.0787,
+    "significatif": false
+   },
+   "buts moins qualité des tirs": {
+    "haut": 0.1172,
+    "bas": 0.0989,
+    "écart": 0.0183,
+    "IC95 bas": -0.7912,
+    "IC95 haut": 0.8278,
+    "significatif": false
+   },
+   "fautes": {
+    "haut": 6.95,
+    "bas": 7.05,
+    "écart": -0.1,
+    "IC95 bas": -1.8013,
+    "IC95 haut": 1.6013,
+    "significatif": false
+   },
+   "hors-jeu": {
+    "haut": 0.55,
+    "bas": 0.4,
+    "écart": 0.15,
+    "IC95 bas": -0.2298,
+    "IC95 haut": 0.5298,
+    "significatif": false
+   },
+   "écart au meilleur choix (moyenne)": {
+    "haut": 0.2459,
+    "bas": 0.2339,
+    "écart": 0.012,
+    "IC95 bas": -0.0594,
+    "IC95 haut": 0.0834,
+    "significatif": false
+   }
+  }
+ },
+ "Strength": {
+  "matchs": 20,
+  "buts par match": 3.0,
+  "profil haut : fautes par match": 6.6,
+  "profil bas : fautes par match": 7.15,
+  "profil haut : temps de pressing par match (s)": 1040.4849999988835,
+  "profil bas : temps de pressing par match (s)": 1042.0049999988614,
+  "temps de calcul par match (s)": 108.81164205800005,
+  "profil haut : scans par minute et par joueur": 17.988030303030303,
+  "profil haut : scans dans les 10 s avant la réception (moyenne)": 2.7226425539767485,
+  "profil bas : scans par minute et par joueur": 18.001313131313132,
+  "profil bas : scans dans les 10 s avant la réception (moyenne)": 2.741549034175334,
+  "profil bas : appels dans le dos par joueur": 2.095,
+  "profil bas : appels par joueur": 33.86,
+  "profil bas : course intense par joueur (m)": 1168.8056232335011,
+  "profil bas : distance presseur-porteur (m)": 1.373178058749078,
+  "profil bas : espace des coéquipiers du porteur (m)": 13.193223649207749,
+  "profil bas : hauteur du bloc sans ballon (m)": 33.516287884995485,
+  "profil bas : km par joueur": 12.046177690445012,
+  "profil bas : longueur (m)": 38.9722903156829,
+  "profil bas : possession installée, 2 joueurs ou plus derrière le ballon (part)": 0.9739811190421368,
+  "profil bas : solutions de passe ouvertes (nombre)": 4.04129761647584,
+  "profil bas : solutions faciles laissées au porteur adverse (nombre)": 3.0262332888904906,
+  "profil bas : solutions laissées au porteur adverse (nombre)": 4.024755864653526,
+  "profil bas : stretch index (m)": 17.27518499339494,
+  "profil bas : vitesse de repli à 1,5 s (m/s)": 1.189159208257992,
+  "profil bas : écart-type distance défense-milieu (m)": 5.9853595829821185,
+  "profil bas : équilibre : appels devant le ballon maintenus (part)": 0.1724137931034483,
+  "profil haut : appels dans le dos par joueur": 2.04,
+  "profil haut : appels par joueur": 33.74,
+  "profil haut : course intense par joueur (m)": 1169.0233633316248,
+  "profil haut : distance presseur-porteur (m)": 1.3772282655537826,
+  "profil haut : espace des coéquipiers du porteur (m)": 13.154026754173799,
+  "profil haut : hauteur du bloc sans ballon (m)": 33.250824482213716,
+  "profil haut : km par joueur": 12.02821401883928,
+  "profil haut : longueur (m)": 38.902720994896946,
+  "profil haut : possession installée, 2 joueurs ou plus derrière le ballon (part)": 0.9728436911487759,
+  "profil haut : solutions de passe ouvertes (nombre)": 4.024755864653526,
+  "profil haut : solutions faciles laissées au porteur adverse (nombre)": 3.039569381435875,
+  "profil haut : solutions laissées au porteur adverse (nombre)": 4.04129761647584,
+  "profil haut : stretch index (m)": 17.263281871732513,
+  "profil haut : vitesse de repli à 1,5 s (m/s)": 1.181561865054302,
+  "profil haut : écart-type distance défense-milieu (m)": 5.96654914400579,
+  "profil haut : équilibre : appels devant le ballon maintenus (part)": 0.125,
+  "profil : écart haut - bas par match (IC 95 %)": {
+   "passes": {
+    "haut": 514.05,
+    "bas": 510.2,
+    "écart": 3.85,
+    "IC95 bas": -34.952,
+    "IC95 haut": 42.652,
+    "significatif": false
+   },
+   "passes réussies (part)": {
+    "haut": 0.8302,
+    "bas": 0.8321,
+    "écart": -0.0019,
+    "IC95 bas": -0.0181,
+    "IC95 haut": 0.0142,
+    "significatif": false
+   },
+   "contrôles ratés": {
+    "haut": 31.3,
+    "bas": 31.85,
+    "écart": -0.55,
+    "IC95 bas": -12.05,
+    "IC95 haut": 10.95,
+    "significatif": false
+   },
+   "tacles gagnés": {
+    "haut": 4.7,
+    "bas": 4.95,
+    "écart": -0.25,
+    "IC95 bas": -1.6632,
+    "IC95 haut": 1.1632,
+    "significatif": false
+   },
+   "ballons perdus sur tacle": {
+    "haut": 4.95,
+    "bas": 4.7,
+    "écart": 0.25,
+    "IC95 bas": -1.1632,
+    "IC95 haut": 1.6632,
+    "significatif": false
+   },
+   "pertes en conduite": {
+    "haut": 19.15,
+    "bas": 19.65,
+    "écart": -0.5,
+    "IC95 bas": -2.812,
+    "IC95 haut": 1.812,
+    "significatif": false
+   },
+   "interceptions": {
+    "haut": 85.25,
+    "bas": 86.95,
+    "écart": -1.7,
+    "IC95 bas": -6.7904,
+    "IC95 haut": 3.3904,
+    "significatif": false
+   },
+   "tirs": {
+    "haut": 19.0,
+    "bas": 19.4,
+    "écart": -0.4,
+    "IC95 bas": -6.0943,
+    "IC95 haut": 5.2943,
+    "significatif": false
+   },
+   "buts sur tir": {
+    "haut": 1.5,
+    "bas": 1.5,
+    "écart": 0.0,
+    "IC95 bas": -1.0395,
+    "IC95 haut": 1.0395,
+    "significatif": false
+   },
+   "buts moins qualité des tirs": {
+    "haut": -0.2766,
+    "bas": -0.3643,
+    "écart": 0.0876,
+    "IC95 bas": -0.5946,
+    "IC95 haut": 0.7699,
+    "significatif": false
+   },
+   "fautes": {
+    "haut": 6.6,
+    "bas": 7.15,
+    "écart": -0.55,
+    "IC95 bas": -2.2142,
+    "IC95 haut": 1.1142,
+    "significatif": false
+   },
+   "hors-jeu": {
+    "haut": 0.25,
+    "bas": 0.4,
+    "écart": -0.15,
+    "IC95 bas": -0.4982,
+    "IC95 haut": 0.1982,
+    "significatif": false
+   },
+   "écart au meilleur choix (moyenne)": {
+    "haut": 0.2148,
+    "bas": 0.2254,
+    "écart": -0.0106,
+    "IC95 bas": -0.0512,
+    "IC95 haut": 0.0299,
+    "significatif": false
+   }
+  }
+ },
+ "Tackling": {
+  "matchs": 20,
+  "buts par match": 3.7,
+  "profil haut : fautes par match": 7.85,
+  "profil bas : fautes par match": 6.7,
+  "profil haut : temps de pressing par match (s)": 1039.5449999988973,
+  "profil bas : temps de pressing par match (s)": 1045.0399999988172,
+  "temps de calcul par match (s)": 110.14131780394999,
+  "profil haut : scans par minute et par joueur": 18.26212121212121,
+  "profil haut : scans dans les 10 s avant la réception (moyenne)": 2.727189781021898,
+  "profil bas : scans par minute et par joueur": 18.28469696969697,
+  "profil bas : scans dans les 10 s avant la réception (moyenne)": 2.731662535573304,
+  "profil bas : appels dans le dos par joueur": 1.985,
+  "profil bas : appels par joueur": 33.795,
+  "profil bas : course intense par joueur (m)": 1175.0600697607456,
+  "profil bas : distance presseur-porteur (m)": 1.3760199658718482,
+  "profil bas : espace des coéquipiers du porteur (m)": 13.087767104130164,
+  "profil bas : hauteur du bloc sans ballon (m)": 33.401371976403844,
+  "profil bas : km par joueur": 12.146689416985703,
+  "profil bas : longueur (m)": 39.03163215879903,
+  "profil bas : possession installée, 2 joueurs ou plus derrière le ballon (part)": 0.9746965796248621,
+  "profil bas : solutions de passe ouvertes (nombre)": 4.039378573740425,
+  "profil bas : solutions faciles laissées au porteur adverse (nombre)": 3.0149023269175523,
+  "profil bas : solutions laissées au porteur adverse (nombre)": 4.021509623671359,
+  "profil bas : stretch index (m)": 17.304790263679692,
+  "profil bas : vitesse de repli à 1,5 s (m/s)": 1.1743885892444097,
+  "profil bas : écart-type distance défense-milieu (m)": 5.9428450810289295,
+  "profil bas : équilibre : appels devant le ballon maintenus (part)": 0.10204081632653061,
+  "profil haut : appels dans le dos par joueur": 2.02,
+  "profil haut : appels par joueur": 34.845,
+  "profil haut : course intense par joueur (m)": 1179.2036350732712,
+  "profil haut : distance presseur-porteur (m)": 1.3775168630730146,
+  "profil haut : espace des coéquipiers du porteur (m)": 13.08707300572778,
+  "profil haut : hauteur du bloc sans ballon (m)": 33.512778634037744,
+  "profil haut : km par joueur": 12.194816935875128,
+  "profil haut : longueur (m)": 38.93236673383343,
+  "profil haut : possession installée, 2 joueurs ou plus derrière le ballon (part)": 0.9749025248892759,
+  "profil haut : solutions de passe ouvertes (nombre)": 4.021509623671359,
+  "profil haut : solutions faciles laissées au porteur adverse (nombre)": 3.031970367173733,
+  "profil haut : solutions laissées au porteur adverse (nombre)": 4.039378573740425,
+  "profil haut : stretch index (m)": 17.25794528125214,
+  "profil haut : vitesse de repli à 1,5 s (m/s)": 1.187290552783245,
+  "profil haut : écart-type distance défense-milieu (m)": 5.9494553077017525,
+  "profil haut : équilibre : appels devant le ballon maintenus (part)": 0.07272727272727272,
+  "profil : écart haut - bas par match (IC 95 %)": {
+   "passes": {
+    "haut": 518.2,
+    "bas": 517.15,
+    "écart": 1.05,
+    "IC95 bas": -50.6387,
+    "IC95 haut": 52.7387,
+    "significatif": false
+   },
+   "passes réussies (part)": {
+    "haut": 0.8399,
+    "bas": 0.8365,
+    "écart": 0.0033,
+    "IC95 bas": -0.0173,
+    "IC95 haut": 0.0239,
+    "significatif": false
+   },
+   "contrôles ratés": {
+    "haut": 33.75,
+    "bas": 31.7,
+    "écart": 2.05,
+    "IC95 bas": -9.234,
+    "IC95 haut": 13.334,
+    "significatif": false
+   },
+   "tacles gagnés": {
+    "haut": 6.9,
+    "bas": 7.25,
+    "écart": -0.35,
+    "IC95 bas": -1.9638,
+    "IC95 haut": 1.2638,
+    "significatif": false
+   },
+   "ballons perdus sur tacle": {
+    "haut": 7.25,
+    "bas": 6.9,
+    "écart": 0.35,
+    "IC95 bas": -1.2638,
+    "IC95 haut": 1.9638,
+    "significatif": false
+   },
+   "pertes en conduite": {
+    "haut": 19.6,
+    "bas": 18.65,
+    "écart": 0.95,
+    "IC95 bas": -2.8753,
+    "IC95 haut": 4.7753,
+    "significatif": false
+   },
+   "interceptions": {
+    "haut": 83.45,
+    "bas": 82.05,
+    "écart": 1.4,
+    "IC95 bas": -2.748,
+    "IC95 haut": 5.548,
+    "significatif": false
+   },
+   "tirs": {
+    "haut": 20.1,
+    "bas": 19.15,
+    "écart": 0.95,
+    "IC95 bas": -5.0645,
+    "IC95 haut": 6.9645,
+    "significatif": false
+   },
+   "buts sur tir": {
+    "haut": 2.0,
+    "bas": 1.7,
+    "écart": 0.3,
+    "IC95 bas": -0.3451,
+    "IC95 haut": 0.9451,
+    "significatif": false
+   },
+   "buts moins qualité des tirs": {
+    "haut": 0.0403,
+    "bas": -0.0647,
+    "écart": 0.105,
+    "IC95 bas": -0.3752,
+    "IC95 haut": 0.5852,
+    "significatif": false
+   },
+   "fautes": {
+    "haut": 7.85,
+    "bas": 6.7,
+    "écart": 1.15,
+    "IC95 bas": -0.5335,
+    "IC95 haut": 2.8335,
+    "significatif": false
+   },
+   "hors-jeu": {
+    "haut": 0.45,
+    "bas": 0.4,
+    "écart": 0.05,
+    "IC95 bas": -0.3048,
+    "IC95 haut": 0.4048,
+    "significatif": false
+   },
+   "écart au meilleur choix (moyenne)": {
+    "haut": 0.2246,
+    "bas": 0.2323,
+    "écart": -0.0078,
+    "IC95 bas": -0.0472,
+    "IC95 haut": 0.0317,
+    "significatif": false
+   }
+  }
+ },
+ "Technique": {
+  "matchs": 20,
+  "buts par match": 3.7,
+  "profil haut : fautes par match": 6.95,
+  "profil bas : fautes par match": 7.05,
+  "profil haut : temps de pressing par match (s)": 1040.6199999988817,
+  "profil bas : temps de pressing par match (s)": 1061.824999998573,
+  "temps de calcul par match (s)": 118.79430664415001,
+  "profil haut : scans par minute et par joueur": 18.191565656565658,
+  "profil haut : scans dans les 10 s avant la réception (moyenne)": 2.7402363127987734,
+  "profil bas : scans par minute et par joueur": 18.19237373737374,
+  "profil bas : scans dans les 10 s avant la réception (moyenne)": 2.7281140107347768,
+  "profil bas : appels dans le dos par joueur": 2.0,
+  "profil bas : appels par joueur": 33.685,
+  "profil bas : course intense par joueur (m)": 1163.947328396852,
+  "profil bas : distance presseur-porteur (m)": 1.3698445273240165,
+  "profil bas : espace des coéquipiers du porteur (m)": 13.175883891658252,
+  "profil bas : hauteur du bloc sans ballon (m)": 33.54822171287815,
+  "profil bas : km par joueur": 12.190008052619437,
+  "profil bas : longueur (m)": 38.84067757966254,
+  "profil bas : possession installée, 2 joueurs ou plus derrière le ballon (part)": 0.9770343509962178,
+  "profil bas : solutions de passe ouvertes (nombre)": 4.021449650903333,
+  "profil bas : solutions faciles laissées au porteur adverse (nombre)": 3.0376561675171563,
+  "profil bas : solutions laissées au porteur adverse (nombre)": 4.0478972373746265,
+  "profil bas : stretch index (m)": 17.231325032788128,
+  "profil bas : vitesse de repli à 1,5 s (m/s)": 1.1080858466362902,
+  "profil bas : écart-type distance défense-milieu (m)": 5.948359332531199,
+  "profil bas : équilibre : appels devant le ballon maintenus (part)": 0.0,
+  "profil haut : appels dans le dos par joueur": 1.91,
+  "profil haut : appels par joueur": 34.45,
+  "profil haut : course intense par joueur (m)": 1167.5415306791374,
+  "profil haut : distance presseur-porteur (m)": 1.3842846282644021,
+  "profil haut : espace des coéquipiers du porteur (m)": 13.160118094020586,
+  "profil haut : hauteur du bloc sans ballon (m)": 32.85287436129318,
+  "profil haut : km par joueur": 12.108137724920427,
+  "profil haut : longueur (m)": 39.005959791106584,
+  "profil haut : possession installée, 2 joueurs ou plus derrière le ballon (part)": 0.9785268232114815,
+  "profil haut : solutions de passe ouvertes (nombre)": 4.0478972373746265,
+  "profil haut : solutions faciles laissées au porteur adverse (nombre)": 3.0143237601669908,
+  "profil haut : solutions laissées au porteur adverse (nombre)": 4.021449650903333,
+  "profil haut : stretch index (m)": 17.281533230407092,
+  "profil haut : vitesse de repli à 1,5 s (m/s)": 1.1189716689926912,
+  "profil haut : écart-type distance défense-milieu (m)": 5.970353993557894,
+  "profil haut : équilibre : appels devant le ballon maintenus (part)": 0.11904761904761904,
+  "profil : écart haut - bas par match (IC 95 %)": {
+   "passes": {
+    "haut": 527.75,
+    "bas": 510.9,
+    "écart": 16.85,
+    "IC95 bas": -44.5565,
+    "IC95 haut": 78.2565,
+    "significatif": false
+   },
+   "passes réussies (part)": {
+    "haut": 0.8324,
+    "bas": 0.8304,
+    "écart": 0.0021,
+    "IC95 bas": -0.0199,
+    "IC95 haut": 0.0241,
+    "significatif": false
+   },
+   "contrôles ratés": {
+    "haut": 32.35,
+    "bas": 31.9,
+    "écart": 0.45,
+    "IC95 bas": -14.189,
+    "IC95 haut": 15.089,
+    "significatif": false
+   },
+   "tacles gagnés": {
+    "haut": 5.2,
+    "bas": 5.55,
+    "écart": -0.35,
+    "IC95 bas": -1.5369,
+    "IC95 haut": 0.8369,
+    "significatif": false
+   },
+   "ballons perdus sur tacle": {
+    "haut": 5.55,
+    "bas": 5.2,
+    "écart": 0.35,
+    "IC95 bas": -0.8369,
+    "IC95 haut": 1.5369,
+    "significatif": false
+   },
+   "pertes en conduite": {
+    "haut": 18.1,
+    "bas": 19.1,
+    "écart": -1.0,
+    "IC95 bas": -3.6739,
+    "IC95 haut": 1.6739,
+    "significatif": false
+   },
+   "interceptions": {
+    "haut": 85.6,
+    "bas": 86.9,
+    "écart": -1.3,
+    "IC95 bas": -7.8059,
+    "IC95 haut": 5.2059,
+    "significatif": false
+   },
+   "tirs": {
+    "haut": 17.7,
+    "bas": 20.7,
+    "écart": -3.0,
+    "IC95 bas": -8.1172,
+    "IC95 haut": 2.1172,
+    "significatif": false
+   },
+   "buts sur tir": {
+    "haut": 1.45,
+    "bas": 2.25,
+    "écart": -0.8,
+    "IC95 bas": -1.857,
+    "IC95 haut": 0.257,
+    "significatif": false
+   },
+   "buts moins qualité des tirs": {
+    "haut": -0.2243,
+    "bas": -0.0243,
+    "écart": -0.1999,
+    "IC95 bas": -0.8446,
+    "IC95 haut": 0.4448,
+    "significatif": false
+   },
+   "fautes": {
+    "haut": 6.95,
+    "bas": 7.05,
+    "écart": -0.1,
+    "IC95 bas": -1.7741,
+    "IC95 haut": 1.5741,
+    "significatif": false
+   },
+   "hors-jeu": {
+    "haut": 0.4,
+    "bas": 0.6,
+    "écart": -0.2,
+    "IC95 bas": -0.7592,
+    "IC95 haut": 0.3592,
+    "significatif": false
+   },
+   "écart au meilleur choix (moyenne)": {
+    "haut": 0.2102,
+    "bas": 0.2198,
+    "écart": -0.0096,
+    "IC95 bas": -0.0394,
+    "IC95 haut": 0.0203,
+    "significatif": false
+   }
+  }
+ }
+}

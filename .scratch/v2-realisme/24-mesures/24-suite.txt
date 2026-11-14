@@ -1,0 +1,2 @@
+2978 passed, 14 deselected, 4 warnings in 701.18s (0:11:41)
+2998 passed, 14 deselected (état fusionné sur 97746de)

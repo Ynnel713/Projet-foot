@@ -12,7 +12,7 @@
 
 **Bloque :** 18c.
 
-**Status:** implémenté (14/11/2026) — en attente de /valider-ticket-simulafoot
+**Status:** livré (14/11/2026), validé expert + QC (commit `79c944e`)
 
 ## Estimation
 
@@ -33,7 +33,7 @@ Temps machine, non compté : suite complète (environ 40 min).
 
 ## Acceptance criteria
 
-- [x] Protocole documenté et validé par le propriétaire (« Je valide », 14/11/2026 ; `docs/INDICATEURS_V2.md` section 40)
+- [x] Protocole documenté et validé par le propriétaire (« Je valide », 14/11/2026 ; `docs/INDICATEURS_V2.md` section 41)
 - [x] Graines réservées protégées par le banc (`scripts/graines_validation.py`, appelée par `measure_v2.run` et `bench_series.run_series`, option `--validation` ; `tests/test_graines_validation.py`)
 - [x] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`) : 55 min pour 90 estimées (− 39 %), voir le registre
 - [x] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions (match réservé 100 000 joué deux fois en validation, test ; séries existantes inchangées : empreintes `b19f5278` (graines 0-1) et `30f57f1f` (50-51), 2 matchs de 5 min, identiques avant et après)

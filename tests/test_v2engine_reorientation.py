@@ -156,7 +156,8 @@ def test_backheel_needs_a_mate_behind_within_reach_and_the_idea() -> None:
 
 def test_flair_sets_how_often_he_thinks_of_it() -> None:
     assert backheel_idea_probability(player("A", Flair=99)) == pytest.approx(0.12)
-    assert backheel_idea_probability(player("A", Flair=55)) == pytest.approx(0.06)
+    # note médiane (62) -> valeur de base, 55 avant le ticket v2-realisme/24
+    assert backheel_idea_probability(player("A", Flair=62)) == pytest.approx(0.06)
     assert backheel_idea_probability(player("A", Flair=11)) == pytest.approx(0.005)
 
 

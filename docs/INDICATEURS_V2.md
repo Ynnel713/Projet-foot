@@ -1446,7 +1446,68 @@ Lecture : les parts SkillCorner (3,1 à 5,1 % du temps au-dessus de 19,8 km/h) d
 
 **Limites.** Championnat d'Australie et échantillon Metrica anonyme : repères indicatifs, pas des cibles Ligue 1 ; peu d'équipes (42) ; positions estimées SkillCorner invérifiables ; phases SkillCorner sans équivalent exact dans le moteur (situations du `SituationTracker`) : le 27c devra rapprocher les deux découpages ou s'en tenir à « avec / sans ballon ».
 
-## 40. Protocole de validation indépendante (ticket v2-realisme/18b, 14/11/2026)
+## 40. Écarts entre notes proches : banc 80 contre 70 et courbe en S (ticket v2-realisme/24, 14 x 20 + 50 matchs, 14/11/2026)
+
+Commandes : table des courbes `uv run python -m scripts.attribute_curves` (vraies fonctions du moteur, 45 mécanismes) ; banc `scripts/measure_v2.py 20 --profil <Attribut> --niveaux 80 70` pour 14 attributs (`.scratch/v2-realisme/24-mesures/banc.sh`, agrégé par `agreger_bancs.py`) à `fc49ac9` (courbe cubique) puis sur la courbe retenue ; série appariée `scripts/bench_series.py 50 --processus 4` à `fc49ac9` et sur la courbe retenue, `--comparer`. Sorties : `.scratch/v2-realisme/24-mesures/` (`courbes_avant|A|B.md`, `banc_80_70_avant.json`, `banc_80_70_B.json`, `synthese.md`, `serie_comparaison.txt`).
+
+**Courbe retenue : variante B, forme en S** (`attributes._s_curve`, `tanh(k·t) / tanh(k)`), centre 62 (médiane réelle des notes), demi-étendues 37 au-dessus et 51 en dessous (extrêmes 99 et 11 inchangés), pente k = 2 pour une action seule, k = 1 en duel. La variante A (cubique recentrée, exposant 1,5) est écartée sur la table des courbes, sans banc en match (décision du propriétaire du 14/11/2026) : elle rate l'objectif révisé.
+
+**Table des courbes** (médiane des mécanismes probabilistes, part de l'écart 50 → 99) :
+
+| | 60 → 70 | 70 → 80 | Duel, 10 points d'écart |
+|---|---|---|---|
+| Avant (cubique, centre 55) | 4 % | 14 % | 50,6 % |
+| Variante A | 10 % | 21 % | 55 % |
+| **Variante B (retenue)** | **35 %** | **24 %** | **62,9 %** (74,3 % à 20 points) |
+| Objectif révisé (validé le 14/11/2026) | ≥ 25 % | ≥ 20 % | ≥ 58 % |
+
+Exemples (B) : passe précise à 35 m 0,58 / 0,72 / 0,84 à 60 / 70 / 80 (avant 0,50 / 0,53 / 0,62) ; tacle gagné contre un porteur à 60 : 0,50 / 0,63 / 0,74 (avant 0,50 / 0,51 / 0,55) ; meilleur choix (Decisions) 0,68 / 0,81 / 0,89 (avant 0,70 / 0,71 / 0,75). Mécanismes hors objectif, transmis à la calibration `v2-collectif/22a` : les actions déjà au plafond de l'action (contrôle facile, passe courte : 0,97 dès 70, avant comme après), Strength et Balance au tacle subi (22 % / 21 %, jugés au critère du duel), Teamwork « suit son vis-à-vis » (17 % entre 70 et 80) et Work Rate « repos » (8 %), qui butent sur les bornes de l'action. Courbes physiques (Pace, Acceleration, contrôle orienté) : linéaires, gardées (ancrées sur des repères réels ; aucune source trouvée pour les raidir entre 60 et 90).
+
+**Banc 80 contre 70 en match** (20 matchs par attribut, affiche jouée deux fois, rôles inversés ; écart haut - bas par match, IC 95 % Student apparié ; ✔ significatif) :
+
+| Attribut | Indicateur principal | Avant (cubique) | Après (B) |
+|---|---|---|---|
+| Passing | passes réussies (part) | + 0,007 (− 0,006 ; + 0,021) | + 0,008 (− 0,008 ; + 0,024) |
+| First Touch | contrôles ratés | − 1,0 (− 4,1 ; + 2,1) | + 2,2 (− 1,1 ; + 5,4) |
+| Technique | contrôles ratés | + 0,5 (− 14,2 ; + 15,1) | + 2,2 (− 2,1 ; + 6,4) |
+| Dribbling | pertes en conduite | − 1,5 (− 4,5 ; + 1,5) | **− 3,7 (− 5,6 ; − 1,7) ✔** |
+| Tackling | tacles gagnés | − 0,4 (− 2,0 ; + 1,3) | + 1,7 (− 0,8 ; + 4,2) |
+| Finishing | buts sur tir | + 0,2 (− 0,5 ; + 0,8) | − 0,4 (− 1,8 ; + 1,1) |
+| Decisions | écart au meilleur choix | **− 0,072 (− 0,117 ; − 0,028) ✔** | **− 0,068 (− 0,132 ; − 0,005) ✔** |
+| Composure | passes réussies (part) | + 0,009 (− 0,010 ; + 0,028) | − 0,001 (− 0,018 ; + 0,016) |
+| Anticipation | interceptions | + 3,6 (− 0,3 ; + 7,4) | + 2,4 (− 1,4 ; + 6,2) |
+| Positioning | interceptions | + 1,1 (− 3,3 ; + 5,5) | − 0,9 (− 6,0 ; + 4,2) |
+| Pace | course intense par joueur (m) | + 111 (sans IC) | + 194 (sans IC) |
+| Acceleration | course intense par joueur (m) | + 36 (sans IC) | + 35 (sans IC) |
+| Agility | pertes en conduite | + 1,2 (− 2,7 ; + 5,1) | − 1,4 (− 4,3 ; + 1,6) |
+| Strength | ballons perdus sur tacle | + 0,3 (− 1,2 ; + 1,7) | − 0,2 (− 1,2 ; + 0,8) |
+
+Indicateurs secondaires et détail : `.scratch/v2-realisme/24-mesures/synthese.md`. **Significatifs : 2 attributs sur 14 après (Decisions, Dribbling), 1 sur 14 avant (Decisions).** Passing ne change que le volume (+ 58 passes par match, significatif, + 74 avant), pas la réussite.
+
+**Attributs dont l'écart 70 / 80 n'est pas significatif en match** (indicateur principal, 20 matchs) : Passing, First Touch, Technique, Tackling, Finishing, Composure, Anticipation, Positioning, Agility, Strength ; Pace, Acceleration et Agility (course intense) sans intervalle (indicateur agrégé, non apparié). Lecture : la table des courbes montre l'écart voulu action par action, mais 20 matchs n'ont pas la puissance de le voir sur des compteurs bruités (ex. Tackling : + 1,7 tacle gagné par match, IC ± 2,5), et une part des actions courantes est au plafond de l'action (contrôle facile, passe courte : 0,97 dès 70). Pistes pour `22a` : plafonds `max_prob` des actions faciles, banc plus long (100 matchs) sur les 3 ou 4 attributs prioritaires.
+
+**Banc, niveau global des deux équipes à 80 / 70** : buts par match (moyenne des 14 bancs) 3,8 avant → 4,5 après : avec la forme en S, une équipe entière à 70 ou 80 réussit nettement plus qu'avec la cubique (passe à 35 m : 0,72 au lieu de 0,53 à 70).
+
+**Série appariée, 50 matchs, effectifs réels (avant `fc49ac9` / après) :**
+
+| 50 matchs appariés | Avant | Après | Écart apparié (IC 95 %) |
+|---|---|---|---|
+| Buts par match | 3,98 | 4,12 | + 0,14 (− 0,53 ; + 0,81), non significatif |
+| xG neutre par match | | | + 0,20 (− 0,22 ; + 0,62), non significatif |
+| Tirs par équipe | 19,4 | 19,3 | − 0,1 (− 1,2 ; + 1,0), non significatif |
+| Conversion des tirs | 10,2 % | 10,7 % | + 0,8 point (− 0,8 ; + 2,4), non significatif |
+| Passes par match | 1 086 | 1 144 | **+ 58 (+ 42 ; + 74)** |
+| Passes réussies | 81,0 % | 82,7 % | **+ 1,7 point (+ 1,3 ; + 2,2)** |
+| Pertes de balle par match | 268 | 255 | **− 13 (− 19 ; − 7)**, dont au contact − 7,1 (conduite − 5,8, tacle − 1,9) |
+| Tacles par match | 42,0 | 40,5 | **− 1,5 (− 2,9 ; − 0,05)** |
+| Fautes par match | 13,4 | 14,7 | **+ 1,3 (+ 0,4 ; + 2,2)** |
+| Possession d'équipe | 21,2 s | 22,2 s | **+ 1,1 s (+ 0,6 ; + 1,5)** |
+| km par joueur de champ | 12,21 | 12,69 | **+ 0,48** (attaquants + 0,6 à + 0,7, défenseurs centraux + 0,1) |
+| Distance au-dessus de 19,8 km/h (part) | 9,7 % | 9,9 % | **+ 0,2 point** |
+
+Lecture : à effectifs réels (notes centrées vers 60 à 75), la courbe en S rend les joueurs plus sûrs techniquement (passes réussies, conduite gardée) et plus actifs sans ballon (km et course rapide en hausse, surtout en attaque), sans changement significatif des buts, de l'xG ni des tirs. Écarts transmis à la calibration `v2-collectif/22a`, **aucun recalage de niveau ici** (règle du ticket) : passes par match (1 144, repère 890 à 940, déjà haut avant), km par joueur (12,7, dans le repère 9-14 mais au-dessus de 10,2 à 12,0 par poste, avant-centres à 15,5), fautes (+ 1,3), buts (4,1, au-dessus du repère 2-3,5 avant comme après) et leur niveau sur le banc 80 / 70 (4,5). Sortie filtrée : `.scratch/v2-realisme/24-mesures/serie_comparaison.txt`.
+
+## 41. Protocole de validation indépendante (ticket v2-realisme/18b, 14/11/2026)
 
 Protocole validé par le propriétaire le 14/11/2026, **figé avant toute série de validation** : il ne se modifie plus qu'en ouvrant un ticket, jamais après avoir vu un résultat. Il s'applique au ticket `18c` (validation après la calibration finale `v2-collectif/22a` à `22c`).
 

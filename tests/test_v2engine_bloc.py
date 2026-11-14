@@ -65,7 +65,8 @@ def test_the_block_never_goes_behind_its_own_goal_line_and_the_keeper_keeps_his_
 
 
 def test_positioning_and_teamwork_follow_validated_points() -> None:
-    for note, error, tolerance in ((99, 0.5, 2.0), (55, 2.0, 5.0), (11, 4.0, 9.0)):
+    # note médiane (62) -> valeur de base, 55 avant le ticket v2-realisme/24 ; extrêmes inchangés
+    for note, error, tolerance in ((99, 0.5, 2.0), (62, 2.0, 5.0), (11, 4.0, 9.0)):
         player = _p("X", 30, 30, Positioning=note, Teamwork=note)
         assert math.isclose(positioning_error_m(player), error) and math.isclose(teamwork_tolerance_m(player), tolerance)
 
@@ -258,7 +259,8 @@ def test_the_margin_uses_the_slowest_defender_of_the_last_line_only() -> None:
 def test_a_slow_line_follows_the_rise_with_a_delay() -> None:
     """Ticket 23, directive « piège collectif » : la ligne monte en bloc, mais un défenseur au Teamwork faible la
     suit avec du retard -- la faille qui laisse l'attaquant en jeu."""
-    for note, lag in ((99, 0.0), (55, 0.75), (11, 1.5)):
+    # note médiane (62) -> valeur de base, 55 avant le ticket v2-realisme/24 ; extrêmes inchangés
+    for note, lag in ((99, 0.0), (62, 0.75), (11, 1.5)):
         assert math.isclose(line_lag_s(_p("D", 18, 20, Positioning=note, Teamwork=note)), lag, abs_tol=1e-9)
     assert math.isclose(line_lag_s(_p("D", 18, 20, Positioning=99, Teamwork=11)), LINE_LAG_MAX_S)  # le maillon faible
     bloc, team = _line_case(None)

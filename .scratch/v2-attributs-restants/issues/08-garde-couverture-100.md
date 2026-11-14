@@ -10,7 +10,7 @@ Exceptions attendues au départ (à valider par le propriétaire) : Natural Fitn
 
 **Blocked by:** — (posé tout de suite, liste d'exceptions longue au départ).
 
-**Status:** implémenté (14/11/2026) — en attente de /valider-ticket-simulafoot
+**Status:** livré (14/11/2026), validé expert + QC (commit `4c4feeb`)
 
 ## Estimation
 

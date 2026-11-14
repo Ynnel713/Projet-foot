@@ -1,5 +1,5 @@
 """Graines réservées à la validation indépendante (ticket v2-realisme/18b, protocole validé par le propriétaire le
-14/11/2026, `docs/INDICATEURS_V2.md` section 40).
+14/11/2026, `docs/INDICATEURS_V2.md` section 41).
 
 Le banc joue le match d'indice `k` avec la graine `AUDIT_SEED + k` (`scripts/measure_v2.run`). Les indices de
 `RESERVED_START` à `RESERVED_END` (exclu) ne servent jamais à calibrer : ils sont réservés à la série de validation du
