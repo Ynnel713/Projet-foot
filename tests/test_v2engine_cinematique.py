@@ -11,7 +11,7 @@ import pytest
 from v2engine.ball_state import BallState
 from v2engine.geometry import Vec2
 from v2engine.match import CONTROL_RADIUS_M, _step_ball
-from v2engine.movement import DECEL_MAX_MPS2, PlayerState, accel_tau_s, max_speed_mps, step
+from v2engine.movement import PlayerState, accel_tau_s, decel_max_mps2, max_speed_mps, step
 from v2engine.possession import MISS_DEVIATION_MAX_DEG, MISS_RETRY_S, MISS_SPEED_SHARE
 
 STEPS = (0.05, 0.1, 0.15)
@@ -62,7 +62,7 @@ def _max_decel(traj) -> float:
 
 @pytest.mark.parametrize("dt", STEPS)
 def test_deceleration_never_exceeds_cap(dt) -> None:
-    limit = DECEL_MAX_MPS2 * 1.01
+    limit = decel_max_mps2(60) * 1.01  # Agility par défaut (60) : freinage selon Agility depuis le ticket 12a
     # baisse d'intensité d'un coup (sprint puis 40 %), arrivée, demi-tour
     drop = _run(_player(pace=99, acceleration=99), dt, 8.0, Vec2(100.0, 34.0), lambda t: 1.0 if t < 4.0 else 0.4)
     arrival = _run(_player(pace=99, acceleration=99), dt, 12.0, Vec2(40.0, 34.0))

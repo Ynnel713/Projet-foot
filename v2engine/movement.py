@@ -22,10 +22,16 @@ _PACE_POINTS: tuple[tuple[float, float], ...] = ((10.0, 25.0), (50.0, 30.0), (99
 # Accélération au départ v_max/τ : ~7,3 m/s² pour un joueur moyen, 10,1 m/s² au mieux. Réel : footballeurs pros
 # F0 = 5,18 N/kg, V0 = 10,29 m/s, soit τ ≈ 2 s (PMC9819841, premier sprint).
 _TAU_POINTS: tuple[tuple[float, float], ...] = ((11.0, 1.5), (55.0, 1.2), (99.0, 1.0))
-# Freinage borné, le même pour tous en attendant Agility (phase 7) : à l'approche d'une cible et à toute baisse
-# d'intensité. Réel : les freinages au-dessus de 3,5 m/s² sont fréquents en match, plus que les accélérations
-# (Harper, Carling et Kiely 2019, Sports Medicine) ; valeur maximale non trouvée.
+# Freinage borné : à l'approche d'une cible et à toute baisse d'intensité. Réel : les freinages au-dessus de 3,5 m/s²
+# sont fréquents en match, plus que les accélérations (Harper, Carling et Kiely 2019, Sports Medicine) ; valeur
+# maximale non trouvée. `DECEL_MAX_MPS2` : la valeur commune d'avant le ticket v2-realisme/12a, gardée pour Agility 55.
 DECEL_MAX_MPS2 = 7.0
+# Freinage selon Agility (ticket v2-realisme/12a, valeurs recommandées et validées par délégation du propriétaire,
+# 14/11/2026) : 6 m/s² à 11, 7 à 55 (la valeur commune d'avant : rythme de la base inchangé), 8 à 99 (linéaire ; écart
+# 99/11 de 1,33, sous ceux d'Acceleration, 1,5, et de la rotation, 1,67 : le freinage dépend aussi de la force des
+# jambes, hors Agility). Depuis 7 m/s : arrêt en 4,1 m à 11, 3,5 m à 55, 3,1 m à 99. Chiffres réels par niveau : non
+# trouvés.
+_DECEL_POINTS: tuple[tuple[float, float], ...] = ((11.0, 6.0), (55.0, DECEL_MAX_MPS2), (99.0, 8.0))  # m/s²
 ARRIVAL_DEADZONE_M = 0.1  # en deçà, le joueur est arrivé : il ne vise plus aucune vitesse
 
 # Réserve d'énergie (ticket v2-realisme/12e, constantes recommandées et retenues par délégation du propriétaire,
@@ -94,6 +100,11 @@ def max_speed_mps(pace: float) -> float:
 def accel_tau_s(acceleration: float) -> float:
     """Constante de temps τ (s) de la montée en vitesse : 63 % de la vitesse visée après τ."""
     return _lerp(acceleration, _TAU_POINTS)
+
+
+def decel_max_mps2(agility: float) -> float:
+    """Freinage maximal (m/s²) selon Agility (ticket v2-realisme/12a)."""
+    return _lerp(agility, _DECEL_POINTS)
 
 
 def turn_rate_rad_s(agility: float) -> float:
@@ -212,6 +223,8 @@ def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_facto
     vers une cible lointaine (`faces_run`)."""
     # fatigue : réserve d'énergie (ticket 12e) ; `minute` n'est plus lue ici (gardée pour les appelants)
     effective_max_speed = max_speed_mps(state.pace) * energy_factor(state.condition.energy) * speed_factor
+    agility = effective_rating(state, "Agility")  # freinage (12a) et rotation du corps (07f)
+    decel = decel_max_mps2(agility)
     to_target = target - state.position
     distance = to_target.length()
     if distance > ARRIVAL_DEADZONE_M:
@@ -220,9 +233,9 @@ def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_facto
         # ((v + v')/2·dt), pour ne pas dépasser quel que soit `dt`.
         relative = state.velocity - target_velocity
         closing = max(0.0, (relative.x * to_target.x + relative.y * to_target.y) / distance)
-        half_step = 0.5 * DECEL_MAX_MPS2 * dt
+        half_step = 0.5 * decel * dt
         room = max(0.0, distance - 0.5 * closing * dt)
-        stopping_speed = math.sqrt(half_step * half_step + 2.0 * DECEL_MAX_MPS2 * room) - half_step
+        stopping_speed = math.sqrt(half_step * half_step + 2.0 * decel * room) - half_step
         desired_velocity = target_velocity + to_target * (stopping_speed / distance)
         # de face, de côté ou à reculons (ticket 07b) : selon le cap du début du pas
         capped_speed = effective_max_speed * direction_speed_factor(state.facing, desired_velocity)
@@ -232,14 +245,14 @@ def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_facto
         desired_velocity = Vec2(0.0, 0.0)
 
     # Montée en vitesse : forme exacte en pas discret (indépendante de `dt`). Si elle ferait ralentir (baisse
-    # d'intensité, arrivée, changement de direction), le joueur freine à `DECEL_MAX_MPS2` vers la vitesse visée.
+    # d'intensité, arrivée, changement de direction), le joueur freine à `decel` (Agility, 12a) vers la vitesse visée.
     velocity = state.velocity
     candidate = desired_velocity + (velocity - desired_velocity) * math.exp(-dt / accel_tau_s(state.acceleration))
     if candidate.length() >= velocity.length():
         new_velocity = candidate
     else:
         delta = desired_velocity - velocity
-        brake = DECEL_MAX_MPS2 * dt
+        brake = decel * dt
         new_velocity = desired_velocity if delta.length() <= brake else velocity + delta * (brake / delta.length())
 
     # vitesse moyenne du pas (trapèzes) : exacte pour un freinage constant, très proche pour l'exponentielle
@@ -263,6 +276,6 @@ def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_facto
         condition=PlayerCondition(energy=spend_energy(state.condition.energy, state.stamina,
                                                       0.5 * (velocity.length() + new_velocity.length()), dt)),
         facing=turn_toward(state.facing, desired_facing(new_position, run_direction, look_at, turning, facing_run),
-                            turn_rate_rad_s(effective_rating(state, "Agility")) * dt),
+                            turn_rate_rad_s(agility) * dt),
         facing_run=facing_run,
     )
