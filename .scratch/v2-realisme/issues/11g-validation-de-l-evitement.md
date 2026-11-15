@@ -12,7 +12,7 @@
 
 **Bloque :** rien.
 
-**Status:** à faire
+**Status:** à faire (diagnostic du 11f : contacts restants surtout entre coéquipiers qui visent la même place ou pressent le même adversaire ; pistes a, b, c à trancher par le propriétaire, voir 11f ; mesurer aussi les sorties du gardien, les réceptions réussies et les ballons libres récupérés (condition de l'expert, réserve A1 du 11f) ; réestimer au démarrage)
 
 ## Estimation
 

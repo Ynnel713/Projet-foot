@@ -249,6 +249,10 @@ class PlayerState:
     condition: PlayerCondition = PlayerCondition()  # état qui module l'expression des notes (19a ; réserve, 12e)
     facing: Vec2 = Vec2(1.0, 0.0)  # cap du corps, vecteur unitaire (ticket v2-realisme/07a) ; borne la vitesse (07b)
     facing_run: bool = False  # corps tourné vers sa course plutôt que vers le ballon (07b, hystérésis du choix)
+    # évitement des coéquipiers (ticket v2-realisme/11f) : côté retenu (1 gauche, -1 droite, 0 aucun) et sa fin (s) ;
+    # tenus par `match._step_player` (`step` ne les lit pas)
+    avoid_side: int = 0
+    avoid_side_until_s: float = 0.0
 
 
 def turn_toward(facing: Vec2, desired: Vec2, max_angle_rad: float) -> Vec2:

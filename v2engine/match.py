@@ -25,6 +25,7 @@ from v2engine.anticipation import pass_readers, reaction_delay_s
 from v2engine.ball_state import BallState, ShotFlight
 from v2engine.bloc import Bloc
 from v2engine.danger import danger
+from v2engine.evitement import avoid_teammates
 from v2engine.duel import (CONTACT_MIN_CLOSING_MPS, SHOULDER_COOLDOWN_S, SHOULDER_PUSH_M, SHOULDER_PUSH_STEPS,
                            after_contact_delay_s,
                            after_contact_speed_loss, contact_share, foul_severity, resolve_shoulder_duel, resolve_tackle,
@@ -33,7 +34,7 @@ from v2engine.flux import ARBITRAGE, PERCEPTION, TIR, seed_streams
 from v2engine.formation import initial_positions
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch, in_penalty_area
 from v2engine.movement import FACING_RUN_SPEED_MPS, PlayerState, step
-from v2engine.cerveau import GOAL_CENTER_Y, OPPONENT_GOAL, Intention, think
+from v2engine.cerveau import BALLON_LIBRE, GOAL_CENTER_Y, OPPONENT_GOAL, RECEVEUR, Intention, nearest_of_team, think
 from v2engine.perception_memory import MemoryReading, PerceptionMemory
 from v2engine.scan import ScanTracker
 from v2engine.vision import unseen
@@ -1122,6 +1123,9 @@ def _contacts(start: Vec2, end: Vec2, dt: float, players: list[PlayerState],
     return hits
 
 
+KEEPER_TO_BALL_ACTIONS = ("aller au ballon", "venir au ballon")  # sortie et prise de balle du gardien (11f, réserve A1)
+
+
 def _step_player(
     player: PlayerState,
     ball: BallState,
@@ -1163,8 +1167,25 @@ def _step_player(
         look_at = None
     elif ball.receiver == player.name and ball.holder is None:
         look_at = player.position + open_facing(player.position, ball.position, player.team, player.facing) * 50.0
-    return step(player, dt, intention.target, minute if played_minute is None else played_minute, intention.intensity,
-                intention.target_velocity, look_at=look_at, turning=turning)
+    # évitement des coéquipiers (ticket v2-realisme/11f) : cible infléchie ou intensité réduite, côté tenu 0,2 s ; le
+    # receveur visé, le gardien qui va au ballon et le désigné sur ballon libre ont la priorité, comme le porteur
+    # (réserve A1). Le gardien garde toujours le rôle « gardien » (`cerveau._keeper`) : sa sortie ou sa prise de balle se
+    # lit à son action, celle que `decide` donne au ballon libre et au receveur (rejet A1 du passage 2 de l'expert).
+    # Le gardien qui va au ballon passe avant le désigné de champ sur ballon libre (« ballon du gardien »), lu dans les
+    # intentions du pas (ou du précédent pour un gardien pas encore joué).
+    if player.poste == "GK":
+        priority = intention.action in KEEPER_TO_BALL_ACTIONS
+    else:
+        keeper_out = intentions is not None and any(
+            p.poste == "GK" and p.team == player.team and p.name in intentions
+            and intentions[p.name].action in KEEPER_TO_BALL_ACTIONS for p in players or [])
+        priority = intention.role == RECEVEUR or (intention.role == BALLON_LIBRE and not keeper_out
+                                                  and nearest_of_team(player, ball, players or [player]))
+    avoid = avoid_teammates(player, intention.target, intention.intensity, players or [], ball.holder, minute * 60.0,
+                            player.avoid_side, player.avoid_side_until_s, intention.target_velocity, priority)
+    moved = step(player, dt, avoid.target, minute if played_minute is None else played_minute, avoid.intensity,
+                 avoid.target_velocity, look_at=look_at, turning=turning)
+    return replace(moved, avoid_side=avoid.side, avoid_side_until_s=avoid.side_until_s)
 
 
 def simulate_match(

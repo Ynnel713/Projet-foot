@@ -1570,3 +1570,13 @@ Commande : `python -m scripts.bench_series 50 --processus 3` sur le moteur du 11
 **Tacles par angle d'approche (11d).** Tentatives : de face **34 %**, de côté **33 %**, par derrière **33 %**. Gagnés : 20,9 % / 17,4 % / 12,0 % ; fautes : **38,1 % / 48,0 % / 64,8 %**. Faute croissante et réussite décroissante de la face vers l'arrière, comme voulu ; les écarts au repère de scène (30 / 39 / 60 %) viennent de la vitesse de rapprochement et de l'Aggression des tacleurs.
 
 **Constats à traiter (hors 11e).** (1) Contacts francs nombreux : environ 660 entre adversaires et 337 entre coéquipiers par match, soit 1 099 déséquilibres par match ; des coéquipiers qui se percutent à plus de 2 m/s plus de 300 fois par match ne sont pas réalistes (évitement entre coéquipiers à créer). (2) Un tiers des tacles tentés par derrière : le défenseur ne renonce pas (ticket `04j`). (3) Balance sans effet visible sur la conservation du ballon après un contact.
+
+## 45. Évitement entre coéquipiers (ticket v2-realisme/11f, 2 matchs, 15/11/2026)
+
+Commande : `python -m scripts.measure_v2 2` sur le moteur d'avant (`c84f77e`, arbre séparé) puis sur celui du 11f, seuls sur la machine (graine d'audit 20260923). Sorties : `.scratch/v2-realisme/mesures/11f-avant-2matchs.txt`, `11f-det1.txt` (et `11f-det2.txt`, identique hors temps de calcul).
+
+**Mécanisme.** `evitement.avoid_teammates`, avant `movement.step` : regard sur 0,8 s de course ; couloir à la somme des rayons + 0,3 m ; inflexion de 35° au plus, côté opposé au coéquipier (pile en face : à droite), tenue 0,2 s ; sinon ralentir vers la vitesse du coéquipier, 50 % au plus ; le porteur n'évite personne ; adversaires non évités. Constantes validées par le propriétaire le 15/11/2026.
+
+**Effet (2 matchs, indicatif ; série de 50 matchs au 11g).** Avec la priorité au joueur qui va au ballon (receveur visé, désigné sur ballon libre, gardien dont l'action va au ballon et qui passe alors avant le désigné de champ ; réserve A1 de l'expert) : contacts francs entre coéquipiers **356 → 242 par match** (− 32 %) ; tous contacts francs 1 024 → 842 ; contacts perdus (12c) 1 143 → 959. Passes, temps de jeu effectif, buts et fautes dans le bruit de 2 matchs. Sorties du gardien : 1 réussie sur 12 avant, 0 sur 8 après : **non interprétable** sur 2 matchs (3 à 6 sorties par match), à juger sur 50 matchs au 11g. Coût : 119,7 → 121,2 à 121,7 s par match (+ 1 à + 2 %).
+
+**Contacts restants (diagnostic sur 30 min de jeu, 81 cas).** Conflit vu dans 81 cas, course modifiée dans 80 : restent surtout deux coéquipiers qui visent presque la même place (cible à moins de 2 m : 51 cas) ou pressent le même adversaire (41 cas). Pistes au ticket 11g.

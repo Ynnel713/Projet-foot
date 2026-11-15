@@ -23,8 +23,9 @@ def test_half_time_resets_everyone_and_the_other_team_kicks_off() -> None:
     home, away = _clubs()
     # graine sans coup de pied arrêté en attente à la pause (sinon la période se prolonge, ticket coach/03) ; changée
     # au ticket v2-realisme/01a, dont les flux aléatoires modifient les tirages (20260925 donnait un corner à 0,72) ; puis
-    # au ticket v2-realisme/03a, le gardien ne presse plus (20260927 prolongeait la période d'une minute)
-    random.seed(20260928)
+    # au ticket v2-realisme/03a, le gardien ne presse plus (20260927 prolongeait la période d'une minute) ; puis au ticket
+    # v2-realisme/11f, l'évitement entre coéquipiers change les trajectoires (20260928 prolongeait la période à 1,43)
+    random.seed(20260930)
     trace = simulate_match(home, away, duration_minutes=2.0, record_every=1)
     assert trace.second_half_start_minute == 1.0
 
