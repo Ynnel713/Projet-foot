@@ -460,6 +460,7 @@ class _Run:
 
 # Contacts physiques (ticket v2-realisme/11e) : tranches de mesure du banc, sans effet sur le jeu.
 CARRIER_FOLLOW_S = 1.0  # porteur bousculé : ballon encore à son équipe 1 s après ?
+CARRIER_LOSS_WINDOW_S = 3.0  # porteur bousculé : perte de balle sans faute dans les 3 s (ticket v2-realisme/11i, fenêtre fixée par le propriétaire)
 STRENGTH_GAP_BANDS = ("0-9", "10-19", "20-39", "40+")
 BALANCE_BANDS = ("moins de 50", "50-64", "65-79", "80+")
 APPROACH_BANDS = ("de face", "de côté", "par derrière")
@@ -565,6 +566,10 @@ class Collector:
         self.press_open: tuple[str, float] | None = None  # pressing en cours (ticket 08) : (équipe qui presse, début)
         self.now = 0.0  # instant du dernier tick
         self.unsettled_carriers: list[tuple[str, str, float, str]] = []  # porteurs bousculés suivis 1 s (11e)
+        # porteurs bousculés suivis 3 s (11i) : joueur, équipe, instant du contact, tranche de Balance ; et ceux du match,
+        # pour le délai jusqu'à sa prochaine action (lu dans le journal des décisions en fin de match)
+        self.carrier_windows: list[tuple[str, str, float, str]] = []
+        self.carrier_log: list[tuple[str, float, str]] = []
         self.carry_open: dict[str, tuple[float, tuple[str, ...]]] = {}  # porteur -> (instant du tirage, tranches), ticket 04c
         # passe en vol mesurée (18g) : équipe, cible, tranche, chance, talonnade (07e)
         self.pass_open: tuple[str, str, str, float, bool, bool] | None = None
@@ -968,6 +973,8 @@ class Collector:
         if ball.holder == player.name:
             self.count["contacts perdus : porteur"] += 1
             self.unsettled_carriers.append((player.name, player.team, self.now + CARRIER_FOLLOW_S, band))
+            self.carrier_windows.append((player.name, player.team, self.now, band))
+            self.carrier_log.append((player.name, self.now, band))
 
     def _close_unsettled_carriers(self, ball, by_name: dict[str, PlayerState]) -> None:
         """Porteur bousculé, 1 s après : son équipe a-t-elle encore le ballon (porteur ou dernier touché, hors remise
@@ -990,8 +997,43 @@ class Collector:
             self.count[f"porteurs bousculés, Balance {band} : ballon gardé 1 s après"] += kept
         self.unsettled_carriers = still
 
+    def _carrier_next_action(self, decisions) -> None:
+        """Porteur bousculé (11i) : délai jusqu'à sa prochaine action (passe, tir, conduite : sa première décision après le
+        contact), dans `CARRIER_LOSS_WINDOW_S` ; au-delà, compté sans action."""
+        by_player: dict[str, list[float]] = defaultdict(list)
+        for d in decisions:
+            by_player[d.player].append(d.minute * 60.0)
+        for name, start, band in self.carrier_log:
+            self.count[f"porteurs bousculés, Balance {band} : suivis jusqu'à l'action"] += 1
+            after = [t for t in by_player.get(name, ()) if t >= start - 1e-9]
+            delay = min(after) - start if after else None
+            if delay is not None and delay < CARRIER_LOSS_WINDOW_S:
+                self.count[f"porteurs bousculés, Balance {band} : action dans les 3 s"] += 1
+                self.count[f"porteurs bousculés, Balance {band} : délai avant l'action (somme, s)"] += delay
+        self.carrier_log = []
+
+    def _close_carrier_windows(self, ball, by_name: dict[str, PlayerState]) -> None:
+        """Porteur bousculé, suivi `CARRIER_LOSS_WINDOW_S` (11i) : perte de balle sans faute si un adversaire prend le
+        ballon (tacle, interception, conduite perdue) ou si le jeu reprend par une remise adverse ; une remise pour son
+        équipe (faute subie, sortie à son avantage) clôt la fenêtre sans perte. Fenêtre finie sans cela : non perdu."""
+        still = []
+        for name, team, start, band in self.carrier_windows:
+            holder = by_name.get(ball.holder) if ball.holder else None
+            restart = getattr(ball, "restart", None)
+            lost = (holder is not None and holder.team != team) or (restart is not None and restart.team != team)
+            ended = lost or (restart is not None and restart.team == team) or self.now - start >= CARRIER_LOSS_WINDOW_S - 1e-9
+            if not ended:
+                still.append((name, team, start, band))
+                continue
+            self.count[f"porteurs bousculés suivis 3 s, Balance {band}"] += 1
+            self.count[f"porteurs bousculés, Balance {band} : perte sans faute en 3 s"] += lost
+            if lost:
+                self.count[f"porteurs bousculés, Balance {band} : délai avant la perte (somme, s)"] += self.now - start
+        self.carrier_windows = still
+
     def on_decisions(self, decisions) -> None:
         """Rotation avant la passe ou le tir (ticket v2-realisme/07e) : décisions avec rotation et sa durée."""
+        self._carrier_next_action(decisions)
         for d in decisions:
             # champ de vision du porteur à la décision (ticket v2-realisme/08a)
             self.count["vision : décisions"] += 1
@@ -1340,6 +1382,8 @@ class Collector:
         self._speeds(players, minute, dt)
         if self.unsettled_carriers:  # ticket v2-realisme/11e
             self._close_unsettled_carriers(ball, by_name)
+        if self.carrier_windows:  # ticket v2-realisme/11i
+            self._close_carrier_windows(ball, by_name)
         if scoring_team is not None:  # but : la possession se clôt, l'engagement n'est pas une perte de balle
             self.goals[scoring_team] += 1
             self.count["buts"] += 1

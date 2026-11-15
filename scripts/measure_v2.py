@@ -461,6 +461,15 @@ def contact_report(k, n: int, out: dict) -> None:
         out[f"{carriers} : ballon gardé 1 s après (part)"] = (
             k[f"{carriers} : ballon gardé 1 s après"] / max(1, k[carriers]))
         out[f"{carriers}, par match"] = k[carriers] / n
+        followed = f"porteurs bousculés suivis 3 s, Balance {band}"  # ticket v2-realisme/11i
+        lost = k[f"{carriers} : perte sans faute en 3 s"]
+        out[f"{carriers} : perte sans faute en 3 s (part)"] = lost / max(1, k[followed])
+        out[f"{carriers} : délai avant la perte (moyenne, s)"] = (
+            k[f"{carriers} : délai avant la perte (somme, s)"] / max(1, lost))
+        acted = k[f"{carriers} : action dans les 3 s"]
+        out[f"{carriers} : action dans les 3 s (part)"] = acted / max(1, k[f"{carriers} : suivis jusqu'à l'action"])
+        out[f"{carriers} : délai avant l'action (moyenne, s)"] = (
+            k[f"{carriers} : délai avant l'action (somme, s)"] / max(1, acted))
     for band in APPROACH_BANDS:
         name = f"tacles {band}"
         out[f"{name} (part des tacles tentés)"] = k[name] / max(1, k["tacles"])

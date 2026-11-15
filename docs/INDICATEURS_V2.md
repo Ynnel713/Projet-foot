@@ -1604,3 +1604,13 @@ Commande : `python -m scripts.bench_series 50 --processus 2` sur le moteur d'ava
 **Stabilité du chasseur (après, 50 matchs).** 618 désignations et 139 changements de chasseur par match ; **21 % des désignations changent de joueur en moins de 1 s** ; aucun pas avec deux chasseurs dans une équipe. Notable : ticket 11l (désignation par le temps d'arrivée avec maintien, plan accepté au 11g), à mesurer contre la série « après » du 11k.
 
 **Décisions du propriétaire (15/11/2026).** « Clore, suite en ticket » : cible de 30 non atteinte, contacts restants confiés au 11m (diagnostic d'abord). « Ticket chasseur stable » : 11l ; recul du pressing et des km documenté comme effet attendu du 11g, à suivre.
+
+## 48. Conservation du ballon après un contact perdu (ticket v2-realisme/11i, 50 matchs, 15/11/2026)
+
+Commande : `python -m scripts.bench_series 50 --processus 3` sur le moteur du 11g (banc du 11i), graine d'audit 20260923, matchs 0 à 49. Sortie : `.scratch/v2-realisme/mesures/11i-serie.txt|json`. Hors lignes nouvelles et temps de calcul, identique à `11k-apres-serie.txt` (le banc observe sans changer le jeu).
+
+**Indicateurs (banc seul).** Porteur bousculé (contact perdu, 12c) suivi 3 s : perte de balle sans faute (un adversaire prend le ballon, ou remise en jeu adverse) ; une remise pour son équipe (faute subie) clôt sans perte ; délai avant la perte ; délai jusqu'à sa prochaine décision (passe, tir, conduite) si moins de 3 s. Indicateur à 1 s du 11e conservé. L'instant du contact est celui du pas précédent du banc : délais majorés de 0,1 s au plus.
+
+**Résultat (valeurs groupées, intervalle à 95 % d'une proportion).** Porteurs bousculés par match : 8,1 (Balance moins de 50), 31,7 (50-64), 70,6 (65-79), 8,4 (80+). Perte sans faute en 3 s : **16,6 % ± 3,6** (moins de 50), **14,4 % ± 1,7**, **12,4 % ± 1,1**, **17,1 % ± 3,6** (80+) : **aucun effet de Balance** sur la conservation (extrêmes égaux). Délai avant la perte 1,55 à 1,9 s. Action dans les 3 s : 93 à 94 % dans toutes les tranches ; délai avant l'action 1,15 s (moins de 50), 1,12, 1,02, 0,80 s (80+) : l'effet de Balance du 12c (vitesse et délai) est visible, mais ne se traduit pas en ballons gardés. Ballon gardé à 1 s : 94 à 97 % (plat, comme au 11e).
+
+**Lecture du code.** `match._unsettle` ne touche jamais au ballon du porteur : un contact perdu le ralentit et repousse sa décision, il ne peut pas lui faire perdre le ballon. **Décision du propriétaire (15/11/2026)** : « Créer un ticket moteur » : ticket 11n (ballon échappé au contact perdu, probabilité selon Balance, constantes à proposer avant le code).
