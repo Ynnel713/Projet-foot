@@ -8,7 +8,7 @@
 
 **Attributs :** aucun
 
-**Blocked by:** 11f (Évitement entre coéquipiers, livré) ; 11g (Une seule décision par ballon) ; 11j (Cibles de placement écartées).
+**Blocked by:** 11f (Évitement entre coéquipiers, livré) ; 11g (Une seule décision par ballon) ; 11j (Cibles de placement écartées, sans objet le 15/11/2026 : abandonné, le 11g ayant déjà supprimé les cibles confondues).
 
 **Bloque :** rien.
 
