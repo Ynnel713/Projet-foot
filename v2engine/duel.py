@@ -126,12 +126,79 @@ class TackleResult:
     foul: bool  # faute commise (ticket v2-collectif/30) : le ballon reste à l'équipe du porteur
 
 
+# Angle d'approche et vitesse de rapprochement du tacle (ticket v2-realisme/11d, constantes validées par le propriétaire
+# le 15/11/2026). Angle : entre le cap du corps du porteur (`facing`, 07a) et la direction d'où vient le tacleur ; 0° de
+# face, 90° de côté, 180° par derrière, interpolé linéairement entre ces repères. Vitesse de rapprochement : composante
+# de la vitesse relative du tacleur vers le porteur ; au-delà de 2 m/s, faute + 10 % par m/s (au plus x 1,5) et
+# réussite - 3 % par m/s (au plus x 0,85 : lancé trop vite, il se fait éviter). Aucun attribut : Tackling, Strength et
+# Aggression gardent leur seul rôle (règle R1). Chiffre réel : non trouvé (loi 12 IFAB : le tacle qui met en danger
+# l'intégrité de l'adversaire, typiquement par derrière, est une faute grossière ; qualitatif seulement).
+TACKLE_ANGLE_POINTS_DEG = (0.0, 90.0, 180.0)
+TACKLE_ANGLE_SUCCESS = (1.0, 0.9, 0.6)
+TACKLE_ANGLE_FOUL = (1.0, 1.3, 2.0)
+TACKLE_CLOSING_FREE_MPS = 2.0
+TACKLE_CLOSING_FOUL_PER_MPS = 0.10
+TACKLE_CLOSING_FOUL_MAX = 1.5
+TACKLE_CLOSING_SUCCESS_PER_MPS = 0.03
+TACKLE_CLOSING_SUCCESS_MIN = 0.85
+TACKLE_FOUL_MAX = 0.90  # plafond de la probabilité de faute d'un tacle, tous facteurs compris
+
+
+def tackle_approach_angle_deg(tackler: PlayerState, holder: PlayerState) -> float:
+    """Angle (0-180°) entre le cap du porteur et la direction d'où vient le tacleur. Positions confondues : de face."""
+    toward_tackler = tackler.position - holder.position
+    if toward_tackler.length() < 1e-9 or holder.facing.length() < 1e-9:
+        return 0.0
+    return _angle_deg(holder.facing, toward_tackler)
+
+
+def tackle_closing_speed_mps(tackler: PlayerState, holder: PlayerState) -> float:
+    """Vitesse (m/s) à laquelle le tacleur se rapproche du porteur (négative s'il s'éloigne)."""
+    toward_holder = holder.position - tackler.position
+    if toward_holder.length() < 1e-9:
+        return 0.0
+    u = toward_holder.normalized()
+    relative = tackler.velocity - holder.velocity
+    return relative.x * u.x + relative.y * u.y
+
+
+def _interpolate(x: float, xs: tuple[float, ...], ys: tuple[float, ...]) -> float:
+    if x <= xs[0]:
+        return ys[0]
+    for (x0, y0), (x1, y1) in zip(zip(xs, ys), zip(xs[1:], ys[1:])):
+        if x <= x1:
+            return y0 + (y1 - y0) * (x - x0) / (x1 - x0)
+    return ys[-1]
+
+
+def tackle_approach_factors(tackler: PlayerState, holder: PlayerState) -> tuple[float, float]:
+    """(facteur de réussite, facteur de faute) du tacle selon l'angle d'approche et la vitesse de rapprochement
+    (voir `TACKLE_ANGLE_POINTS_DEG`). Multiplient `tackle_success_probability` et `foul_probability`."""
+    angle = tackle_approach_angle_deg(tackler, holder)
+    excess = max(0.0, tackle_closing_speed_mps(tackler, holder) - TACKLE_CLOSING_FREE_MPS)
+    success = (_interpolate(angle, TACKLE_ANGLE_POINTS_DEG, TACKLE_ANGLE_SUCCESS)
+               * max(TACKLE_CLOSING_SUCCESS_MIN, 1.0 - TACKLE_CLOSING_SUCCESS_PER_MPS * excess))
+    foul = (_interpolate(angle, TACKLE_ANGLE_POINTS_DEG, TACKLE_ANGLE_FOUL)
+            * min(TACKLE_CLOSING_FOUL_MAX, 1.0 + TACKLE_CLOSING_FOUL_PER_MPS * excess))
+    return success, foul
+
+
+def tackle_probabilities(tackler: PlayerState, holder: PlayerState) -> tuple[float, float]:
+    """(réussite, faute) d'un tacle tenté : attributs (`tackle_success_probability`, `foul_probability`) modulés par
+    l'approche (`tackle_approach_factors`, ticket 11d) ; faute plafonnée à `TACKLE_FOUL_MAX`."""
+    success_factor, foul_factor = tackle_approach_factors(tackler, holder)
+    success = tackle_success_probability(tackler, holder) * success_factor
+    foul = min(TACKLE_FOUL_MAX, foul_probability(effective_rating(tackler, "Aggression")) * foul_factor)
+    return success, foul
+
+
 def resolve_tackle(tackler: PlayerState, holder: PlayerState) -> TackleResult:
     """Résout un tacle déjà tenté (voir `should_attempt_tackle`) : jamais une issue garantie,
     même à écart d'attributs extrême (règle "jamais binaire" du guide, voir `duel_probability`). Une faute annule le
-    gain du ballon."""
-    won = DUEL.random() < tackle_success_probability(tackler, holder)
-    foul = DUEL.random() < foul_probability(effective_rating(tackler, "Aggression"))
+    gain du ballon. Réussite et faute dépendent aussi de l'angle d'approche et de la vitesse (ticket 11d)."""
+    success, foul_p = tackle_probabilities(tackler, holder)
+    won = DUEL.random() < success
+    foul = DUEL.random() < foul_p
     return TackleResult(won=won and not foul, foul=foul)
 
 

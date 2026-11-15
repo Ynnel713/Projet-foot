@@ -12,7 +12,7 @@
 
 **Bloque :** 04i, 11c, 12c, 15b, 16c.
 
-**Status:** implémenté (14/11/2026) — en attente de /valider-ticket-simulafoot
+**Status:** livré (14/11/2026), validé expert + QC
 
 ## Estimation
 
@@ -52,3 +52,5 @@ Temps machine, non compté : suite complète (environ 40 min).
 **14/11/2026, mesure, déterminisme.** Série appariée de 30 matchs (graines 50 à 79, `bench_series`, `.scratch/v2-realisme/mesures/11b-serie.txt`), contre l'état du ticket 24 rejoué depuis un worktree de HEAD (`11b-avant-serie.txt`, comparaison `11b-comparaison-24.txt`) : aucun écart significatif sur les indicateurs principaux (passes − 7, IC − 23,9 ; + 9,6 ; passes réussies − 0,4 point ; tacles − 1,5, IC − 3,0 ; + 0,0 ; pertes de balle au contact − 1,8 ; fautes − 0,8 ; buts − 0,4 ; km par joueur − 0,06 ; temps par possession + 0,01 s). 139 indicateurs significatifs sur 2 660 (5,2 %, 5 % attendus par le hasard) : effet global au niveau du bruit, attendu (Strength autour de 55 à 70 dans la base, la plupart des contacts restent proches de 50/50). `11b-det1` et `11b-det2` identiques hors temps de calcul. V1 inchangée.
 
 **14/11/2026, durée.** Estimation 1 h 25 ; durée réelle environ 1 h 10 (analyse 15, développement 10, tests 15, intégration 30), − 18 % : partage en une fonction et quatre lignes ; intégration allongée par la garde Stamina et par la série de référence à reconstruire (aucune série enregistrée à l'état du ticket 24 ; un premier lancement via `uv run` dans le worktree avait réinstallé le paquet du venv sur le worktree, corrigé par `uv sync` avant toute mesure retenue). Durée estimée à l'horloge de la session hors attentes machine et échanges avec le propriétaire, non chronométrée. Temps machine hors total : deux séries de 30 matchs, suite complète deux fois, déterminisme 2 x 2 matchs.
+
+**14/11/2026, clôture /valider-ticket-simulafoot.** Expert APPROVED, QC VALIDÉ ; clôture VALIDÉ (journal, 14/11/2026 17:48, empreinte 64332bac) ; commit `17a9687`. Statut mis à jour le 15/11/2026 (oublié au commit), avec le commit du 11d.

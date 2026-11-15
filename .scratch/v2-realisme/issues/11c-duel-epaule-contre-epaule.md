@@ -12,7 +12,7 @@
 
 **Bloque :** 11e, 21c (ajouté le 10/11/2026, audit de la roadmap).
 
-**Status:** implémenté (15/11/2026) — en attente de /valider-ticket-simulafoot
+**Status:** livré (15/11/2026), validé expert + QC
 
 ## Estimation
 
@@ -55,3 +55,5 @@ Temps machine, non compté : suite complète (environ 40 min) ; mesure 50 matchs
 **15/11/2026, implémentation.** `duel.py` : `shoulder_contact`, `shoulder_win_probability`, `shoulder_foul_probability`, `resolve_shoulder_duel` (flux DUEL) ; `match._shoulder_duels` après la résolution des collisions, ballon libre en jeu seulement (ni porteur, ni remise, ni tir en vol) ; événement `duel d'épaule` du journal ; fabrique de scènes alignée (`tests/scenes.py`) ; compteurs du banc (`v2_indicators.on_events`, `measure_v2.report`). Mesure (`docs/INDICATEURS_V2.md` section 42) : 35,6 duels par match, 68 % gagnés par le plus fort, 1,76 faute de charge par match ; fautes + 1,72, buts, tirs, passes et tacles sans écart significatif. Première suite complète : 2 échecs (part « gagnés par le plus fort » à NaN sans duel entre notes différentes, NaN ≠ NaN dans deux tests d'égalité du banc), corrigés par la convention du banc (division par `max(1, …)`).
 
 **15/11/2026, passage 1 de l'expert : APPROVED_WITH_RESERVATIONS.** A1 [réserve] : une charge fautive sifflée pendant un avantage effaçait la première faute de `trace.fouls`. A2 [réserve] : décalage de 0,5 m appliqué en un seul pas. A3 [facultatif] : deux pertes de contact possibles dans le même pas (non traité). **Décisions du propriétaire** : A1 « Corriger maintenant », A2 « Lisser maintenant ». **Corrections** : `_settle_advantage` avant le sifflet de la charge (test : les deux fautes tracées) ; décalage réparti sur `SHOULDER_PUSH_STEPS` = 3 pas (0,3 s), au plus 0,17 m par pas (test). Nouvelle série de 50 matchs (décalage lissé) : 36,4 duels par match, 69 % au plus fort, 1,42 faute de charge ; fautes + 1,24, buts, tirs, passes sans écart significatif.
+
+**15/11/2026, clôture /valider-ticket-simulafoot.** Expert APPROVED, passage 2 ; QC `26b54b8a` VALIDÉ ; clôture `bc035329` VALIDÉ (empreinte a49f5c55) ; commit `4c1cdcb`. Statut mis à jour le 15/11/2026 (oublié au commit), avec le commit du 11d.

@@ -1544,3 +1544,15 @@ Commandes : `uv run python -m scripts.bench_series 50 --processus 3 --json avant
 **Effet de Strength (scène du ticket, `tests/test_v2engine_duel_epaule.py`).** Deux joueurs lancés côte à côte vers un ballon arrêté à 12 m, côtés alternés, 60 graines, un duel par course : à force égale (65 contre 65) le joueur « Rouge » atteint le ballon 27 fois sur 60 ; à 90 contre 40, le plus fort l'atteint 54 fois sur 60.
 
 **Limites.** Le ballon libre comprend la passe en vol (le receveur et son marqueur peuvent se disputer l'épaule avant le contrôle) ; le duel du porteur qui protège son ballon est au ticket 04i, le duel aérien au 15b. Les fautes restent sous le repère réel (21 à 26 par match, réserve renvoyée au 22a).
+
+## 43. Tacle selon l'angle d'approche et la vitesse (ticket v2-realisme/11d, 50 matchs appariés, 15/11/2026)
+
+Commandes : `python -m scripts.bench_series 50 --processus 3 --json avant.json` sur le moteur d'avant (`4c1cdcb`, arbre séparé), même commande sur le moteur du 11d, puis `--comparer avant.json apres.json` (graine d'audit 20260923, matchs 0 à 49). Sorties : `.scratch/v2-realisme/mesures/11d-avant.txt` (identique à `11c-apres.txt` hors durée machine : série reproductible), `11d-apres.txt`, `11d-comparaison.txt`.
+
+**Mécanisme.** Réussite et faute d'un tacle tenté multipliées par deux facteurs sans attribut (`duel.tackle_approach_factors`) : angle entre le cap du corps du porteur et la direction d'où vient le tacleur (de face 0° : x 1,00 et x 1,0 ; de côté 90° : x 0,90 et x 1,3 ; par derrière 180° : x 0,60 et x 2,0 ; linéaire entre ces repères) ; vitesse de rapprochement au-delà de 2 m/s (faute + 10 % par m/s, au plus x 1,5 ; réussite − 3 % par m/s, au plus x 0,85). Faute plafonnée à 0,90. Constantes validées par le propriétaire le 15/11/2026 ; chiffre réel : non trouvé.
+
+**Scène (`tests/test_v2engine_tacle_approche.py`).** Tacleur et porteur moyens (62), porteur arrêté : faute 30 % de face, 39 % de côté, 60 % par derrière ; 4 000 tacles tirés de chaque côté : écart conforme.
+
+**Avant / après (écart moyen par match, IC 95 %).** Fautes **15,8 → 20,9** (+ 5,1 [+ 3,9 ; + 6,3]), au bas du repère réel (21 à 26) ; coups francs + 3,1 [+ 2,1 ; + 4,1] ; tacles gagnés − 1,6 [− 2,8 ; − 0,3] ; pertes de balle au contact − 5,5 [− 7,5 ; − 3,5]. Conséquence des arrêts de jeu : temps de jeu effectif − 1,8 point [− 2,6 ; − 1,0], passes − 18 [− 32 ; − 5], km par joueur de champ − 0,20 [− 0,31 ; − 0,09]. Sans écart significatif : buts + 0,32 [− 0,33 ; + 0,97], tirs par équipe − 0,4, passes réussies − 0,1 point, part des fautes inconsidérées. 336 lignes significatives sur 2 682 (12,5 %, 5 % attendus par le hasard) : surtout des volumes liés au temps de jeu effectif (tranches de 15 min, km par poste).
+
+**Limites.** La gravité de la faute ne dépend pas de l'angle (cartons : ticket 09a). Les tentatives de tacle ne tiennent pas encore compte de l'angle (le défenseur ne renonce pas à un tacle par derrière) : timing au ticket `04j`.
