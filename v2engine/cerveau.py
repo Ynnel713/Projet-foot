@@ -17,12 +17,12 @@ from v2engine.ball_state import BallState
 from v2engine.bloc import Bloc
 from v2engine.decision import CONTRE_ATTAQUE, dribble_speed_factor
 from v2engine.defense import (COMPENSATION, COUVERTURE, MARQUAGE, PRESSEUR, REST_DEFENDERS, DefensiveRoles,
-                              replacement_intensity, follow_intensity,
+                              own_goal, replacement_intensity, follow_intensity,
                               leave_probability, press_intensity)
 from v2engine.flux import DEFENSE
 from v2engine.gardien import FACE_A_FACE, GARDIEN, INTERVENTION, PLACEMENT, RELANCE, SORTIE
 from v2engine import gardien
-from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
+from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch
 from v2engine.movement import PlayerState
 from v2engine.off_ball import (COUNTER_RUN_DEPTH_M, RUN_INTERVAL_S, SPACE_HOLD_MAX_S, SPACE_REACHED_M,
                                choose_space, depth_run, player_call_delay_s, run_intensity)
@@ -39,6 +39,10 @@ OPPONENT_GOAL = {"home": Vec2(PITCH_LENGTH_M, GOAL_CENTER_Y), "away": Vec2(0.0, 
 # Distance en dessous de laquelle un joueur va vers le ballon plutôt que vers sa position de
 # formation -- IA placeholder (D-V08), pas une vraie prise de décision.
 CHASE_RADIUS_M = 15.0
+# Joueur sorti du bloc (Teamwork) quand un presseur est déjà affecté au porteur : il couvre derrière lui, à cette distance
+# du porteur sur l'axe porteur -> son propre but, au lieu de viser le porteur (ticket v2-realisme/11g, valeur validée par
+# le propriétaire le 15/11/2026 ; chiffre réel : non trouvé).
+COVER_BEHIND_PRESSER_M = 3.0
 
 # Rôles (GLOSSARY.md) et actions.
 # Rôles défensifs (presseur, couverture, marquage) : `defense.py` (ticket v2-collectif/07).
@@ -113,6 +117,16 @@ def nearest_of_team(player: PlayerState, ball: BallState, players: list[PlayerSt
     Calculé seulement quand le rôle en dépend (coût : une boucle sur l'équipe)."""
     return ball.holder is None and player is min(
         (p for p in players or [player] if p.team == player.team), key=lambda p: p.position.distance_to(ball.position))
+
+
+def nearest_field_player(player: PlayerState, ball: BallState, players: list[PlayerState]) -> bool:
+    """Sur un ballon libre, le joueur de champ le plus proche de son équipe : le chasseur désigné (ticket 11g). Le
+    gardien n'en fait pas partie : il ne sort que s'il arrive avant l'attaquant (`gardien.race`) ; s'il comptait, un
+    gardien proche qui ne sort pas laisserait le ballon sans défenseur (rejet A1 de l'expert)."""
+    if player.poste == "GK":
+        return False
+    field = [p for p in players or [player] if p.team == player.team and p.poste != "GK"]
+    return ball.holder is None and player is min(field, key=lambda p: p.position.distance_to(ball.position))
 
 
 def _call_rank(p: PlayerState, ball: BallState, runs: dict, now_s: float, forward: float) -> tuple | None:
@@ -208,10 +222,10 @@ def interpret(player: PlayerState, ball: BallState, seen: Perception, runs_enabl
                 and defense.leaves_the_bloc(player, now_s)):
             return PRESSEUR
         return REPLACEMENT
-    if seen.ball_distance >= CHASE_RADIUS_M and not nearest_of_team(player, ball, players):
+    if seen.ball_distance >= CHASE_RADIUS_M and not nearest_field_player(player, ball, players):
         return REPLACEMENT
-    if ball.holder is None:
-        return BALLON_LIBRE
+    if ball.holder is None:  # un seul chasseur de champ par équipe : le plus proche ; les autres se replacent (11g)
+        return BALLON_LIBRE if nearest_field_player(player, ball, players) else REPLACEMENT
     # porteur proche : un adversaire le presse ; un coéquipier sans appel (le gardien, par exemple) vient en soutien
     return SOUTIEN if seen.holder is not None and seen.holder.team == player.team else PRESSEUR
 
@@ -359,6 +373,14 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
                     reason="presse le porteur adverse", distance_m=seen.ball_distance,
                     target_velocity=assigned.target_velocity)
     if defense is not None and seen.holder is not None and assigned is None and player.poste != "GK":
+        pressed = any(a.role == PRESSEUR and a.mate == seen.holder.name for a in defense.assignments.values())
+        if pressed:  # un seul presseur sur le porteur (ticket 11g) : il couvre derrière le presseur affecté
+            behind = own_goal(player.team) - seen.holder.position  # borné au but et au terrain (réserve A3)
+            cover = seen.holder.position if behind.length() < 1e-9 else clamp_to_pitch(
+                seen.holder.position + behind.normalized() * min(COVER_BEHIND_PRESSER_M, behind.length()))
+            return make(role, "couvrir", cover, mate=seen.holder.name,
+                        reason="quitte le bloc, couvre derrière le presseur", distance_m=seen.ball_distance,
+                        target_velocity=seen.holder.velocity)
         why = "quitte le bloc pour aller au ballon"  # indiscipline (Teamwork, ticket v2-collectif/07)
     else:
         why = "presse le porteur adverse" if seen.holder is not None else "va au porteur"

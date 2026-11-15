@@ -196,7 +196,7 @@ def test_match_gives_priority_to_the_player_going_to_the_ball(monkeypatch, role,
 
     monkeypatch.setattr(match, "think", lambda p, *a, **k: SimpleNamespace(
         role=role, action=action, target=Vec2(70.0, 34.0), intensity=1.0, target_velocity=Vec2(0.0, 0.0)))
-    monkeypatch.setattr(match, "nearest_of_team", lambda *a: nearest)
+    monkeypatch.setattr(match, "nearest_field_player", lambda *a: nearest)
     monkeypatch.setattr(match, "avoid_teammates", spy)
     p = replace(_runner("P", "home", 50.0, 34.0, 5.0), poste=poste)
     ball = BallState(position=Vec2(60.0, 34.0), velocity=Vec2(0.0, 0.0), holder=None)

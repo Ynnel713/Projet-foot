@@ -1,4 +1,4 @@
-# 11g: Validation de l'évitement entre coéquipiers en match
+# 11k: Validation de l'évitement entre coéquipiers en match
 
 **Chantier :** `v2-realisme` (constat du ticket 11e, 15/11/2026). **Priorité :** P0 (suite du 11f, priorité absolue du propriétaire). **Catégorie :** validation.
 
@@ -8,7 +8,7 @@
 
 **Attributs :** aucun
 
-**Blocked by:** 11f (Évitement entre coéquipiers).
+**Blocked by:** 11f (Évitement entre coéquipiers, livré) ; 11g (Une seule décision par ballon) ; 11j (Cibles de placement écartées).
 
 **Bloque :** rien.
 
@@ -40,3 +40,10 @@ Temps machine, non compté : deux séries de 50 matchs (environ 35 min chacune s
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+
+## Comments
+
+**15/11/2026, réserve A1 du 11g acceptée par le propriétaire** : mesurer ici les changements de chasseur désigné sur ballon libre en moins de 1 s ; si le taux est notable, désigner par le temps d'arrivée au point du ballon avec une marge de maintien.
+
+**15/11/2026, découpage décidé par le propriétaire.** Après le diagnostic du 11f (contacts restants : deux coéquipiers sur le même ballon libre, deux presseurs sur le même porteur, cibles de placement quasi confondues), le propriétaire choisit d'agir sur la décision (« On ne corrige pas une erreur de décision par un patch physique ») : ancien 11g découpé en 11g (une seule décision par ballon), 11j (cibles écartées) et ce ticket, renuméroté 11k (validation sur 50 matchs). À mesurer en plus : sorties du gardien, réceptions réussies, ballons libres récupérés (condition de l'expert, 11f), et récupération sur ballon libre (risque du 11g).
+

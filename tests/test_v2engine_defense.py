@@ -6,6 +6,8 @@ from __future__ import annotations
 import math
 import random
 
+import pytest
+
 from v2engine import cerveau
 from v2engine.ball_state import BallState
 from v2engine.bloc import Bloc
@@ -119,7 +121,26 @@ def test_unassigned_player_holds_the_bloc_unless_he_leaves_it() -> None:
     assert cerveau.think(disciplined, ball, players, 1.0, None, defense=defense).role == cerveau.REPLACEMENT
     defense.leaving["D"] = (True, 1e9)  # tirage d'indiscipline forcé
     leaving = cerveau.think(disciplined, ball, players, 1.0, None, defense=defense)
-    assert leaving.role == PRESSEUR and leaving.reason == "quitte le bloc pour aller au ballon"
+    # un presseur est déjà affecté au porteur : il sort du bloc (Teamwork) mais couvre derrière lui, à 3 m du porteur
+    # côté de son but, au lieu de viser le porteur (ticket v2-realisme/11g)
+    assert any(a.role == PRESSEUR and a.mate == "H" for a in defense.assignments.values())
+    assert leaving.role == PRESSEUR and leaving.reason == "quitte le bloc, couvre derrière le presseur"
+    assert leaving.target.distance_to(holder.position) == pytest.approx(cerveau.COVER_BEHIND_PRESSER_M)
+    assert leaving.target.x < holder.position.x  # côté de son but (domicile défend x = 0)
+
+
+def test_player_leaving_the_bloc_goes_to_the_holder_when_nobody_presses_him() -> None:
+    """Sans presseur affecté au porteur, le joueur sorti du bloc va au porteur comme avant le ticket 11g."""
+    holder = _p("H", team="away", x=40)
+    leaver = _p("D", x=45, y=40, Teamwork=11)
+    players = [holder, leaver]
+    defense = DefensiveRoles()
+    defense.leaving["D"] = (True, 1e9)  # tirage d'indiscipline forcé
+    ball = BallState(position=holder.position, velocity=Vec2(0.0, 0.0), holder="H")
+    assert not any(a.role == PRESSEUR and a.mate == "H" for a in defense.assignments.values())
+    intention = cerveau.think(leaver, ball, players, 1.0, None, defense=defense)
+    assert intention.role == PRESSEUR and intention.reason == "quitte le bloc pour aller au ballon"
+    assert intention.target == ball.position
 
 
 def test_low_teamwork_leaves_the_bloc_more_often() -> None:

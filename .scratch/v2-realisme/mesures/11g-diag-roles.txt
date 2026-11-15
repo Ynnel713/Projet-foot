@@ -1,0 +1,14 @@
+total 39
+5 ('couverture', 'presseur')
+5 ('replacement', 'replacement')
+5 ('gardien', 'tenir sa place')
+4 ('presseur', 'replacement')
+4 ('marquage', 'presseur')
+3 ('marquage', 'replacement')
+3 ('porteur', 'tenir sa place')
+2 ('couverture', 'replacement')
+2 ('appel', 'appel')
+1 ('presseur', 'presseur')
+1 ('gardien', 'replacement')
+1 ('presseur', 'repli')
+même joueur visé (mate) 8

@@ -34,7 +34,8 @@ from v2engine.flux import ARBITRAGE, PERCEPTION, TIR, seed_streams
 from v2engine.formation import initial_positions
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch, in_penalty_area
 from v2engine.movement import FACING_RUN_SPEED_MPS, PlayerState, step
-from v2engine.cerveau import BALLON_LIBRE, GOAL_CENTER_Y, OPPONENT_GOAL, RECEVEUR, Intention, nearest_of_team, think
+from v2engine.cerveau import (BALLON_LIBRE, GOAL_CENTER_Y, OPPONENT_GOAL, RECEVEUR, Intention, nearest_field_player,
+                              think)
 from v2engine.perception_memory import MemoryReading, PerceptionMemory
 from v2engine.scan import ScanTracker
 from v2engine.vision import unseen
@@ -1180,7 +1181,7 @@ def _step_player(
             p.poste == "GK" and p.team == player.team and p.name in intentions
             and intentions[p.name].action in KEEPER_TO_BALL_ACTIONS for p in players or [])
         priority = intention.role == RECEVEUR or (intention.role == BALLON_LIBRE and not keeper_out
-                                                  and nearest_of_team(player, ball, players or [player]))
+                                                  and nearest_field_player(player, ball, players or [player]))
     avoid = avoid_teammates(player, intention.target, intention.intensity, players or [], ball.holder, minute * 60.0,
                             player.avoid_side, player.avoid_side_until_s, intention.target_velocity, priority)
     moved = step(player, dt, avoid.target, minute if played_minute is None else played_minute, avoid.intensity,
