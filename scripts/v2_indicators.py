@@ -45,6 +45,7 @@ OPTION_RANGE_M = 40.0
 OPTION_PROBABILITY = 0.7  # même seuil que le jeu (`off_ball.OPEN_LANE_PROBABILITY`, ticket 06)
 EASY_OPTION_PROBABILITY = 0.8  # solution « facile » (ticket 08, validé le 31/10/2026) : le seuil de 0,5 ne voit pas la pression
 PRESS_RADIUS_M = 3.0
+CHASER_SWITCH_S = 1.0  # changement de chasseur désigné « rapide » (réserve A1 du 11g, mesure du ticket 11k) ; seuil de mesure
 COVER_BEHIND_M, COVER_AHEAD_M, COVER_HALF_WIDTH_M = 3.0, 9.0, 4.0
 LOCAL_RADIUS_M = 10.0
 LOCAL_DEFENDERS = 5
@@ -496,6 +497,10 @@ class Collector:
 
     def _reset_match(self) -> None:
         self.goals: Counter = Counter()
+        self.chasers_now: dict[str, list[str]] = defaultdict(list)  # ballon libre (ticket 11k)
+        self.chaser: dict[str, tuple[str, float]] = {}  # chasseur désigné de chaque équipe et instant de sa désignation
+        self.chase_open: tuple[float, str | None] | None = None  # épisode disputé : début, équipe qui avait le ballon
+        self.team_of: dict[str, str] = {}
         self.situations = SituationTracker()  # même lecture que le moteur (ticket v2-collectif/03)
         self.dist: Counter = Counter()
         self.hi_by: Counter = Counter()  # course au-dessus de 19,8 km/h par joueur (m)
@@ -769,6 +774,47 @@ class Collector:
     def on_lost_carry(self, dispossessed: bool) -> None:
         """Ticket v2-realisme/04b : issue d'un ballon perdu en conduite, dépossession par l'adversaire ou touche trop longue."""
         self.count["conduite : dépossessions" if dispossessed else "conduite : touches trop longues"] += 1
+
+    # --- ballon libre : chasseur désigné et récupération (ticket v2-realisme/11k, réserve A1 du 11g) ---
+    def on_free_ball_role(self, player: PlayerState, intention) -> None:
+        """Joueur de champ en rôle `BALLON_LIBRE` à ce pas (le chasseur désigné de son équipe depuis le 11g)."""
+        if intention.role == BALLON_LIBRE:
+            self.chasers_now[player.team].append(player.name)
+
+    def _free_ball_chase(self, ball) -> None:
+        """Fin de pas : chasseurs de chaque équipe (plus d'un : compté), changement de chasseur au cours d'une même chasse
+        (et en moins de `CHASER_SWITCH_S` après la désignation du précédent) ; épisode de ballon libre disputé, de la
+        première désignation à la prise du ballon (par l'équipe qui l'avait, ou par l'adversaire) ou à l'arrêt du jeu."""
+        now, chasers = self.now, self.chasers_now
+        for team in ("home", "away"):
+            names = chasers.get(team, [])
+            self.count["ballon libre : pas avec plus d'un chasseur par équipe"] += len(names) > 1
+            current = min(names) if names else None
+            previous = self.chaser.get(team)
+            if current is not None and previous is None:
+                self.count["ballon libre : désignations"] += 1
+                self.chaser[team] = (current, now)
+            elif current is not None and current != previous[0]:
+                self.count["ballon libre : changements de chasseur"] += 1
+                self.count["ballon libre : changements de chasseur en moins de 1 s"] += now - previous[1] < CHASER_SWITCH_S
+                self.chaser[team] = (current, now)
+            elif current is None:
+                self.chaser.pop(team, None)
+        if self.chase_open is None and any(chasers.get(t) for t in ("home", "away")):
+            self.chase_open = (now, self.team)  # équipe qui avait le ballon (dernière possession), None au début
+            self.count["ballon libre : épisodes disputés"] += 1
+        elif self.chase_open is not None and (ball.holder is not None or ball.restart is not None):
+            start, owner = self.chase_open
+            if ball.holder is not None:
+                won = self.team_of.get(ball.holder)
+                kind = "repris par l'équipe qui l'avait" if won == owner else "pris par l'adversaire"
+                self.count[f"ballon libre : {kind}"] += 1
+                self.count["ballon libre : délai avant la prise (somme, s)"] += now - start
+                self.count["ballon libre : pris"] += 1
+            else:
+                self.count["ballon libre : arrêt de jeu"] += 1
+            self.chase_open = None
+        self.chasers_now = defaultdict(list)
 
     def on_shot_chaser(self, player: PlayerState, intention, ball) -> None:
         """Ticket v2-realisme/03k : joueurs de champ en rôle `BALLON_LIBRE` (ils courent vers le ballon) pendant un tir en vol,
@@ -1285,6 +1331,8 @@ class Collector:
         self.now = now_s
         by_name = {p.name: p for p in players}
         self.players = players
+        self.team_of = {p.name: p.team for p in players}
+        self._free_ball_chase(ball)  # avant `_possession` : `self.team` est encore l'équipe qui avait le ballon
         if self.pass_open is not None and ball.holder is None and ball.receiver is None:
             # sans contact : sortie ou sifflée avec remise adverse, perdue (18h) ; morte ou remise pour soi, non perdue (18g)
             restart = getattr(ball, "restart", None)

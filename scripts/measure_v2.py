@@ -131,6 +131,7 @@ def _hook(collector: Collector, clock: dict[str, float], plans: bool = True,
             collector.on_keeper(player, intention, *args[:2])  # ticket v2-realisme/03d ; ballon et joueurs : 03g
         else:
             collector.on_shot_chaser(player, intention, args[0])  # ticket v2-realisme/03k
+            collector.on_free_ball_role(player, intention)  # chasseur désigné (ticket v2-realisme/11k)
         return intention
 
     real_stays = cerveau.stays_behind
@@ -412,6 +413,24 @@ def _share(k, held: str) -> float:
     return k["gardien : ballons avec sortie, ballon à 3 s : " + held] / max(1, k["gardien : ballons avec sortie"])
 
 
+def free_ball_report(k, n: int, out: dict) -> None:
+    """Ballon libre (ticket v2-realisme/11k, réserve A1 du 11g) : stabilité du chasseur désigné et issue des ballons
+    libres disputés. Parts divisées par `max(1, …)` (0 sans cas)."""
+    out["ballon libre : épisodes disputés par match"] = k["ballon libre : épisodes disputés"] / n
+    out["ballon libre : désignations de chasseur par match"] = k["ballon libre : désignations"] / n
+    out["ballon libre : changements de chasseur par match"] = k["ballon libre : changements de chasseur"] / n
+    out["ballon libre : changements de chasseur en moins de 1 s (part des désignations)"] = (
+        k["ballon libre : changements de chasseur en moins de 1 s"] / max(1, k["ballon libre : désignations"]))
+    out["ballon libre : pas avec plus d'un chasseur par équipe, par match"] = (
+        k["ballon libre : pas avec plus d'un chasseur par équipe"] / n)
+    done = max(1, k["ballon libre : pris"] + k["ballon libre : arrêt de jeu"])
+    out["ballon libre : repris par l'équipe qui l'avait (part)"] = k["ballon libre : repris par l'équipe qui l'avait"] / done
+    out["ballon libre : pris par l'adversaire (part)"] = k["ballon libre : pris par l'adversaire"] / done
+    out["ballon libre : arrêt de jeu (part)"] = k["ballon libre : arrêt de jeu"] / done
+    out["ballon libre : délai avant la prise (moyenne, s)"] = (
+        k["ballon libre : délai avant la prise (somme, s)"] / max(1, k["ballon libre : pris"]))
+
+
 def contact_report(k, n: int, out: dict) -> None:
     """Contacts physiques (ticket v2-realisme/11e) : collisions, duels d'épaule par écart de Strength, contact perdu
     par Balance (12c), tacles par angle d'approche (11d). Parts et moyennes divisées par `max(1, …)` (convention du
@@ -663,6 +682,7 @@ def report(c: Collector, detail: bool = False) -> dict:
         k["duels d'épaule gagnés : plus fort"] / max(1, unequal))
     out["duels d'épaule : fautes de charge par match"] = k["duels d'épaule : fautes de charge"] / n
     contact_report(k, n, out)  # ticket v2-realisme/11e
+    free_ball_report(k, n, out)  # ticket v2-realisme/11k
     out["rotation : passes abandonnées, ligne fermée, par match"] = k["rotation : passes abandonnées, ligne fermée"] / n
     out["rotation : passes abandonnées, ligne fermée (part des passes jugées après la rotation)"] = (
         k["rotation : passes abandonnées, ligne fermée"] / max(1, k["rotation : passes jugées après la rotation"]))
