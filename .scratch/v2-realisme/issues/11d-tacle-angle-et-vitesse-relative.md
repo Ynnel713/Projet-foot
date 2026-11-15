@@ -12,7 +12,7 @@
 
 **Bloque :** 11e, 21b (ajouté le 10/11/2026, audit de la roadmap).
 
-**Status:** implémenté (15/11/2026) — en attente de /valider-ticket-simulafoot
+**Status:** livré (15/11/2026), validé expert + QC
 
 ## Estimation
 
@@ -47,9 +47,11 @@ Temps machine, non compté : suite complète (environ 40 min) ; mesure 50 matchs
 
 **15/11/2026, implémentation.** `duel.py` : constantes `TACKLE_*`, `tackle_approach_angle_deg`, `tackle_closing_speed_mps`, `tackle_approach_factors`, `tackle_probabilities` ; `resolve_tackle` tire réussite et faute sur ces probabilités (mêmes deux tirages du flux DUEL, signature inchangée) ; `tackle_success_probability` et `foul_probability` restent les fonctions d'attributs. Tests : `tests/test_v2engine_tacle_approche.py` (lecture de l'angle et de la vitesse, facteurs aux repères et entre eux, même duel de face, de côté, par derrière, plafonds, facteurs indépendants des attributs, 4 000 tacles tirés de face et par derrière : faute ~30 % contre ~60 %).
 
-**15/11/2026, mesure, déterminisme.** 50 matchs appariés (`bench_series`, graine d'audit, matchs 0 à 49) contre l'état du 11c (`4c1cdcb`, worktree) : `11d-avant.txt` (identique à `11c-apres.txt` hors durée machine), `11d-apres.txt`, `11d-comparaison.txt` ; `docs/INDICATEURS_V2.md` section 43. Fautes **15,8 → 20,9 par match** (+ 5,1 [+ 3,9 ; + 6,3]), au bas du repère réel 21-26 ; coups francs + 3,1 ; tacles gagnés − 1,6 ; pertes au contact − 5,5 ; temps de jeu effectif − 1,8 point, d'où passes − 18 et km par joueur − 0,20 (plus d'arrêts de jeu) ; buts, tirs, passes réussies sans écart significatif. `11d-det1` et `11d-det2` identiques hors temps de calcul. V1 inchangée.
+**15/11/2026, mesure, déterminisme.** 50 matchs appariés (`bench_series`, graine d'audit, matchs 0 à 49) contre l'état du 11c (`4c1cdcb`, worktree) : `11d-avant.txt` (identique à `11c-apres.txt` hors durée machine), `11d-apres.txt`, `11d-comparaison.txt` ; `docs/INDICATEURS_V2.md` section 43. Fautes **15,8 → 20,9 par match** (+ 5,1 [+ 3,9 ; + 6,3]), au bas du repère réel 21-26 ; coups francs + 3,1 ; tacles tentés − 1,6 (part des tacles gagnés : − 8 à − 20 points selon le quart d'heure) ; pertes au contact − 5,5 ; temps de jeu effectif − 1,8 point, d'où passes − 18 et km par joueur − 0,20 (plus d'arrêts de jeu) ; buts, tirs, passes réussies sans écart significatif. `11d-det1` et `11d-det2` identiques hors temps de calcul. V1 inchangée.
 
 **15/11/2026, suite complète.** 3 105 passés, 0 ignoré, 14 désélectionnés (3 088 + 17 ; `11d-suite.txt`) ; `CLAUDE.md` mis à jour.
 
 **15/11/2026, durée.** Estimation 1 h 55 ; durée réelle environ 1 h 20 (analyse 15, développement 15, tests 15, intégration 35), − 30 % (à la limite du seuil) : deux facteurs purs appliqués dans `resolve_tackle` sans toucher à `match.py` ; intégration allongée par la série « avant » à relancer (processus tué en fin de série, comme au 11c) et par la documentation. Durée estimée à l'horloge de la session hors attentes machine et échanges avec le propriétaire, non chronométrée. Temps machine hors total : trois séries de 50 matchs (dont la relance), suite complète (12 min), déterminisme 2 x 2 matchs.
+
+**15/11/2026, passage 1 de l'expert : APPROVED ; QC VALIDÉ ; clôture VALIDÉ** (journal, ticket `v2-realisme/11d/cloture`), commit `9c59a2e`. Remarques facultatives : A1 libellé « tacles gagnés » au lieu de « tacles tentés » (section 43 et ce ticket) ; A2 ordre des entrées dans `docs/PLAN_V2.md`. Toutes deux corrigées au ticket 11e (le statut aussi : la fiche faisait partie des fichiers revus). Points à surveiller : renoncement au tacle par derrière (04j), gravité selon l'angle (09a), total des fautes (22a).
 

@@ -37,7 +37,8 @@ from v2engine.cerveau import HORS_JEU
 from ligue1sim.lineup import pick_best_formation
 
 from scripts.v2_indicators import (BACKPEDAL_POSTES, CARRY_PREFIX, FLICKER_S, EXIT_STATES, LINE_GAP_LIMITS_M, LINE_JUMP_M, MARKING_GAP_M, PASS_PREFIX,
-                                   Collector, shot_decomposition, xg_calibration)
+                                   APPROACH_BANDS, BALANCE_BANDS, STRENGTH_GAP_BANDS, Collector, shot_decomposition,
+                                   xg_calibration)
 from scripts.v2_tranches import minute_report, player_report
 from scripts.graines_validation import check_series
 
@@ -53,7 +54,8 @@ def _hook(collector: Collector, clock: dict[str, float], plans: bool = True,
     A/B du ticket v2-realisme/08f, seul interrupteur du banc qui change le jeu)."""
     real = {name: getattr(match, name) for name in ("pass_velocity", "resolve_tackle", "choose_action", "dribble_lost",
                                                      "lost_carry_outcome", "attempt_control", "_play_restart",
-                                                     "lane_closed_during_turn")}
+                                                     "lane_closed_during_turn", "contact_share", "_unsettle",
+                                                     "resolve_shoulder_duel")}
     restarting = {"on": False}  # remise en jeu en cours : sa passe n'entre pas dans la calibration (ticket v2-realisme/18g)
 
     def pass_velocity(passer, target, *args, **kwargs):
@@ -84,8 +86,23 @@ def _hook(collector: Collector, clock: dict[str, float], plans: bool = True,
     def resolve_tackle(*args, **kwargs):
         collector.on_tackle(args[0])  # tacleur (ticket v2-realisme/19d)
         result = real["resolve_tackle"](*args, **kwargs)
+        collector.on_tackle_approach(args[0], args[1], result.won, result.foul)  # angle d'approche (11d, 11e)
         if result.won:
             collector.on_tackle_won(args[1], args[0])  # (tacleur, porteur), tickets v2-realisme/04c et 19d
+        return result
+
+    def contact_share(a, b, *args, **kwargs):  # chevauchement corrigé (11a, 11b), mesuré avant correction (11e)
+        share = real["contact_share"](a, b, *args, **kwargs)
+        collector.on_collision(a, b, share)
+        return share
+
+    def unsettle(player, ball, *args, **kwargs):  # contact perdu (12c), mesuré avant son effet (11e)
+        collector.on_unsettle(player, ball)
+        return real["_unsettle"](player, ball, *args, **kwargs)
+
+    def resolve_shoulder_duel(a, b, *args, **kwargs):  # duel d'épaule (11c), par écart de Strength (11e)
+        result = real["resolve_shoulder_duel"](a, b, *args, **kwargs)
+        collector.on_shoulder_duel(a, b, result.winner)
         return result
 
     def dribble_lost(holder, opponents, *args, **kwargs):  # ticket v2-realisme/04a : un tirage de perte par intervalle de conduite
@@ -174,6 +191,8 @@ def _hook(collector: Collector, clock: dict[str, float], plans: bool = True,
     match.lost_carry_outcome = lost_carry_outcome
     match.attempt_control, match._play_restart = attempt_control, play_restart
     match.lane_closed_during_turn = lane_closed_during_turn  # ticket v2-realisme/07e
+    match.contact_share, match._unsettle = contact_share, unsettle  # ticket v2-realisme/11e
+    match.resolve_shoulder_duel = resolve_shoulder_duel
     cerveau.stays_behind, match.think = stays_behind, think
     defense.DefensiveRoles.start_team_press = trigger
     return lambda: ([setattr(match, name, fn) for name, fn in real.items()] + [setattr(cerveau, "stays_behind", real_stays), setattr(match, "think", real_think)]
@@ -393,6 +412,43 @@ def _share(k, held: str) -> float:
     return k["gardien : ballons avec sortie, ballon à 3 s : " + held] / max(1, k["gardien : ballons avec sortie"])
 
 
+def contact_report(k, n: int, out: dict) -> None:
+    """Contacts physiques (ticket v2-realisme/11e) : collisions, duels d'épaule par écart de Strength, contact perdu
+    par Balance (12c), tacles par angle d'approche (11d). Parts et moyennes divisées par `max(1, …)` (convention du
+    banc : 0 sans cas)."""
+    out["contacts : chevauchements corrigés par match (pas)"] = k["contacts : chevauchements (pas)"] / n
+    out["contacts francs par match"] = k["contacts francs"] / n
+    out["contacts francs entre coéquipiers par match"] = k["contacts francs entre coéquipiers"] / n
+    for band in STRENGTH_GAP_BANDS:
+        name = f"contacts francs, écart de Strength {band}"
+        out[f"{name} : part du contact du plus fort (moyenne)"] = (
+            k[f"{name} : part du plus fort (somme)"] / max(1, k[name]))
+        out[f"{name}, par match"] = k[name] / n
+    for band in STRENGTH_GAP_BANDS:
+        name = f"duels d'épaule, écart de Strength {band}"
+        out[f"{name} : gagnés par le plus fort (part)"] = k[f"{name} : gagnés par le plus fort"] / max(1, k[name])
+        out[f"{name}, par match"] = k[name] / n
+    name = "duels d'épaule à Strength quasi égale, Balance différente"
+    out[f"{name} : gagnés par le meilleur en Balance (part)"] = (
+        k["duels d'épaule à Strength quasi égale : gagnés par le meilleur en Balance"] / max(1, k[name]))
+    out[f"{name}, par match"] = k[name] / n
+    out["contacts perdus par match"] = k["contacts perdus"] / n
+    out["contacts perdus par le porteur par match"] = k["contacts perdus : porteur"] / n
+    for band in BALANCE_BANDS:
+        name = f"contacts perdus, Balance {band}"
+        out[f"{name} : vitesse perdue (moyenne)"] = k[f"{name} : vitesse perdue (somme)"] / max(1, k[name])
+        out[f"{name} : délai avant d'agir (moyenne, s)"] = k[f"{name} : délai (somme, s)"] / max(1, k[name])
+        carriers = f"porteurs bousculés, Balance {band}"
+        out[f"{carriers} : ballon gardé 1 s après (part)"] = (
+            k[f"{carriers} : ballon gardé 1 s après"] / max(1, k[carriers]))
+        out[f"{carriers}, par match"] = k[carriers] / n
+    for band in APPROACH_BANDS:
+        name = f"tacles {band}"
+        out[f"{name} (part des tacles tentés)"] = k[name] / max(1, k["tacles"])
+        out[f"{name} : gagnés (part)"] = k[f"{name} : gagnés"] / max(1, k[name])
+        out[f"{name} : fautes (part)"] = k[f"{name} : fautes"] / max(1, k[name])
+
+
 def report(c: Collector, detail: bool = False) -> dict:
     n = max(1, c.matches)
     k = c.count
@@ -606,6 +662,7 @@ def report(c: Collector, detail: bool = False) -> dict:
     out["duels d'épaule gagnés par le plus fort (part, notes différentes)"] = (
         k["duels d'épaule gagnés : plus fort"] / max(1, unequal))
     out["duels d'épaule : fautes de charge par match"] = k["duels d'épaule : fautes de charge"] / n
+    contact_report(k, n, out)  # ticket v2-realisme/11e
     out["rotation : passes abandonnées, ligne fermée, par match"] = k["rotation : passes abandonnées, ligne fermée"] / n
     out["rotation : passes abandonnées, ligne fermée (part des passes jugées après la rotation)"] = (
         k["rotation : passes abandonnées, ligne fermée"] / max(1, k["rotation : passes jugées après la rotation"]))

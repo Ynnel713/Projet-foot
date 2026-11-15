@@ -20,6 +20,9 @@ from dataclasses import dataclass, field, replace
 import v2engine.cerveau as cerveau
 from v2engine.cerveau import APPEL, BALLON_LIBRE, CHASE_RADIUS_M, OPPONENT_GOAL, TENIR, nearest_of_team
 from v2engine.attributes import player_attribute
+from v2engine.condition import effective_rating
+from v2engine.duel import (CONTACT_MIN_CLOSING_MPS, after_contact_delay_s, after_contact_speed_loss,
+                           tackle_approach_angle_deg)
 from v2engine.decision import DECISION_INTERVAL_S, dribble_loss_probability
 from v2engine.defense import arrival_time_s
 from v2engine.gardien import (BALL_DISTANCE_M, BISECTOR_TOLERANCE_M, FACE_A_FACE, FACE_RANGE_M, FACE_STOPPED_MPS, PLACEMENT,
@@ -454,6 +457,28 @@ class _Run:
     role: str = ""  # rôle du joueur au départ de la course (ticket v2-realisme/02h)
 
 
+# Contacts physiques (ticket v2-realisme/11e) : tranches de mesure du banc, sans effet sur le jeu.
+CARRIER_FOLLOW_S = 1.0  # porteur bousculé : ballon encore à son équipe 1 s après ?
+STRENGTH_GAP_BANDS = ("0-9", "10-19", "20-39", "40+")
+BALANCE_BANDS = ("moins de 50", "50-64", "65-79", "80+")
+APPROACH_BANDS = ("de face", "de côté", "par derrière")
+
+
+def strength_gap_band(gap: float) -> str:
+    """Tranche d'un écart (positif) de Strength."""
+    return "0-9" if gap < 10 else "10-19" if gap < 20 else "20-39" if gap < 40 else "40+"
+
+
+def balance_band(rating: float) -> str:
+    """Tranche d'une note de Balance."""
+    return "moins de 50" if rating < 50 else "50-64" if rating < 65 else "65-79" if rating < 80 else "80+"
+
+
+def approach_band(angle_deg: float) -> str:
+    """Approche du tacleur : de face (moins de 60°), de côté (60 à 120°), par derrière (plus de 120°)."""
+    return "de face" if angle_deg < 60.0 else "de côté" if angle_deg <= 120.0 else "par derrière"
+
+
 class Collector:
     """Accumule les indicateurs d'un ou plusieurs matchs. Brancher `on_tick` sur `simulate_match(observer=...)`
     et les `on_*` sur les fonctions du moteur (voir `scripts/measure_v2.py`). Appeler `end_match()` après
@@ -534,6 +559,7 @@ class Collector:
         self.profile_gaps: dict[str, list[float]] = defaultdict(list)  # niveau -> distances défense-milieu
         self.press_open: tuple[str, float] | None = None  # pressing en cours (ticket 08) : (équipe qui presse, début)
         self.now = 0.0  # instant du dernier tick
+        self.unsettled_carriers: list[tuple[str, str, float, str]] = []  # porteurs bousculés suivis 1 s (11e)
         self.carry_open: dict[str, tuple[float, tuple[str, ...]]] = {}  # porteur -> (instant du tirage, tranches), ticket 04c
         # passe en vol mesurée (18g) : équipe, cible, tranche, chance, talonnade (07e)
         self.pass_open: tuple[str, str, str, float, bool, bool] | None = None
@@ -842,6 +868,81 @@ class Collector:
     def on_tackle(self, tackler: PlayerState | None = None) -> None:
         self.count["tacles"] += 1
         self.minutes.count(self.now / 60.0, "tacles", actor=tackler.name if tackler else None)  # ticket v2-realisme/19d
+
+    # --- contacts physiques (ticket v2-realisme/11e) ---
+    def on_tackle_approach(self, tackler: PlayerState, holder: PlayerState, won: bool, foul: bool) -> None:
+        """Tacle tenté selon l'angle d'approche (ticket 11d) : de face, de côté, par derrière."""
+        band = approach_band(tackle_approach_angle_deg(tackler, holder))
+        self.count[f"tacles {band}"] += 1
+        self.count[f"tacles {band} : gagnés"] += won
+        self.count[f"tacles {band} : fautes"] += foul
+
+    def on_collision(self, a: PlayerState, b: PlayerState, share_a: float) -> None:
+        """Chevauchement de deux joueurs sur un pas, avant sa correction (11a, 11b) : contact franc au-delà de
+        `CONTACT_MIN_CLOSING_MPS` de rapprochement ; part du plus fort par écart de Strength."""
+        self.count["contacts : chevauchements (pas)"] += 1
+        delta = b.position - a.position
+        if delta.length() <= 0.0:
+            return
+        normal = delta.normalized()
+        relative = a.velocity - b.velocity
+        if relative.x * normal.x + relative.y * normal.y <= CONTACT_MIN_CLOSING_MPS:
+            return
+        self.count["contacts francs"] += 1
+        self.count["contacts francs entre coéquipiers"] += a.team == b.team
+        gap = effective_rating(a, "Strength") - effective_rating(b, "Strength")
+        band = strength_gap_band(abs(gap))
+        self.count[f"contacts francs, écart de Strength {band}"] += 1
+        self.count[f"contacts francs, écart de Strength {band} : part du plus fort (somme)"] += (
+            share_a if gap >= 0 else 1.0 - share_a)
+
+    def on_shoulder_duel(self, a: PlayerState, b: PlayerState, winner: PlayerState) -> None:
+        """Duel d'épaule (11c) : gagné par le plus fort selon l'écart de Strength ; à Strength quasi égale (écart
+        inférieur à 5), gagné par le meilleur en Balance (règle R1 : attendu proche de 50 %)."""
+        gap = effective_rating(a, "Strength") - effective_rating(b, "Strength")
+        if gap != 0:
+            band = strength_gap_band(abs(gap))
+            stronger = a if gap > 0 else b
+            self.count[f"duels d'épaule, écart de Strength {band}"] += 1
+            self.count[f"duels d'épaule, écart de Strength {band} : gagnés par le plus fort"] += winner is stronger
+        balance_gap = effective_rating(a, "Balance") - effective_rating(b, "Balance")
+        if abs(gap) < 5 and balance_gap != 0:
+            steadier = a if balance_gap > 0 else b
+            self.count["duels d'épaule à Strength quasi égale, Balance différente"] += 1
+            self.count["duels d'épaule à Strength quasi égale : gagnés par le meilleur en Balance"] += winner is steadier
+
+    def on_unsettle(self, player: PlayerState, ball) -> None:
+        """Contact perdu (12c), avant son effet : perte de vitesse et délai par tranche de Balance ; un porteur est suivi
+        1 s pour savoir si son équipe a encore le ballon."""
+        band = balance_band(effective_rating(player, "Balance"))
+        self.count["contacts perdus"] += 1
+        self.count[f"contacts perdus, Balance {band}"] += 1
+        self.count[f"contacts perdus, Balance {band} : vitesse perdue (somme)"] += after_contact_speed_loss(player)
+        self.count[f"contacts perdus, Balance {band} : délai (somme, s)"] += after_contact_delay_s(player)
+        if ball.holder == player.name:
+            self.count["contacts perdus : porteur"] += 1
+            self.unsettled_carriers.append((player.name, player.team, self.now + CARRIER_FOLLOW_S, band))
+
+    def _close_unsettled_carriers(self, ball, by_name: dict[str, PlayerState]) -> None:
+        """Porteur bousculé, 1 s après : son équipe a-t-elle encore le ballon (porteur ou dernier touché, hors remise
+        en jeu adverse) ?"""
+        still = []
+        for name, team, deadline, band in self.unsettled_carriers:
+            if self.now < deadline:
+                still.append((name, team, deadline, band))
+                continue
+            holder = by_name.get(ball.holder) if ball.holder else None
+            toucher = by_name.get(ball.last_toucher) if getattr(ball, "last_toucher", None) else None
+            restart = getattr(ball, "restart", None)
+            if holder is not None:
+                kept = holder.team == team
+            elif restart is not None:
+                kept = restart.team == team
+            else:
+                kept = toucher is not None and toucher.team == team
+            self.count[f"porteurs bousculés, Balance {band}"] += 1
+            self.count[f"porteurs bousculés, Balance {band} : ballon gardé 1 s après"] += kept
+        self.unsettled_carriers = still
 
     def on_decisions(self, decisions) -> None:
         """Rotation avant la passe ou le tir (ticket v2-realisme/07e) : décisions avec rotation et sa durée."""
@@ -1189,6 +1290,8 @@ class Collector:
             restart = getattr(ball, "restart", None)
             self._close_pass_calibration(lost=restart is not None and restart.team != self.pass_open[0], received=False)
         self._speeds(players, minute, dt)
+        if self.unsettled_carriers:  # ticket v2-realisme/11e
+            self._close_unsettled_carriers(ball, by_name)
         if scoring_team is not None:  # but : la possession se clôt, l'engagement n'est pas une perte de balle
             self.goals[scoring_team] += 1
             self.count["buts"] += 1
