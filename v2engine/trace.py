@@ -223,6 +223,7 @@ class FoulEvent:
 PASSE, CONTROLE_RATE, PERTE, TOUCHE_LONGUE = "passe", "contrôle raté", "perte", "touche longue"
 TIR, CONTRE, ARRET, BUT = "tir", "contre", "arrêt", "but"
 REMISE, FAUTE, HORS_JEU = "remise", "faute", "hors-jeu"
+DUEL_EPAULE = "duel d'épaule"  # ticket v2-realisme/11c : `player` le gagnant, `other` le perdant
 
 
 @dataclass(frozen=True)

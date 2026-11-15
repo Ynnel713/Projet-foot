@@ -32,7 +32,7 @@ from v2engine.restart import CORNER, GOAL_KICK, KICKOFF
 from v2engine.shooting import (base_chance, keeper_reach_m, neutral_open_chance, shot_pressure, shot_probability,
                                shooting_note)
 from v2engine.situation import POSSESSION_INSTALLEE, TRANSITION_DEFENSIVE, TRANSITION_OFFENSIVE, SituationTracker
-from v2engine.trace import BUT, CONTROLE_RATE, PASSE, PERTE, REMISE
+from v2engine.trace import BUT, CONTROLE_RATE, DUEL_EPAULE, PASSE, PERTE, REMISE
 
 from scripts.v2_tranches import MinuteProfile
 
@@ -985,6 +985,11 @@ class Collector:
         ballon libre, passe visant un coéquipier) est compté à part. Un but contre son camp n'est pas un but personnel
         (réserve A3)."""
         for event in events:
+            if event.kind == DUEL_EPAULE:  # duel d'épaule à la course (ticket v2-realisme/11c)
+                self.count["duels d'épaule"] += 1
+                issue, _, foul = (event.detail or "").partition(", ")
+                self.count[f"duels d'épaule gagnés : {issue}"] += 1
+                self.count["duels d'épaule : fautes de charge"] += foul == "faute"
             if event.kind == PERTE and event.detail == "rotation":  # ticket v2-realisme/07e
                 self.count["rotation : ballons perdus en se retournant"] += 1
             if event.kind == PERTE and event.seen is not None:  # perte au contact : voyait-il l'adversaire ? (08f)

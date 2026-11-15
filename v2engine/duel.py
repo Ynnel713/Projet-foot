@@ -133,3 +133,77 @@ def resolve_tackle(tackler: PlayerState, holder: PlayerState) -> TackleResult:
     won = DUEL.random() < tackle_success_probability(tackler, holder)
     foul = DUEL.random() < foul_probability(effective_rating(tackler, "Aggression"))
     return TackleResult(won=won and not foul, foul=foul)
+
+
+# Duel d'épaule à la course (ticket v2-realisme/11c, constantes validées par le propriétaire le 15/11/2026) : deux
+# adversaires au contact, côte à côte, courant vers le même ballon libre. Strength décide le gagnant (courbe partagée) ;
+# le perdant est décalé de sa course puis subit le contact perdu du 12c (Balance : vitesse et délai), sans double
+# comptage. Faute de charge possible, selon l'Aggression du gagnant. Fréquence réelle des duels d'épaule : non trouvée.
+SHOULDER_MIN_SPEED_MPS = 3.0  # les deux courent
+SHOULDER_CONTACT_MARGIN_M = 0.3  # distance au plus égale à la somme des rayons + cette marge
+SHOULDER_MAX_HEADING_GAP_DEG = 45.0  # courses dans le même sens
+SHOULDER_MIN_SIDE_ANGLE_DEG = 60.0  # contact par le côté : axe des deux joueurs à au moins 60° de la course
+SHOULDER_BALL_MAX_M = 20.0  # ballon libre à moins de 20 m devant les deux
+SHOULDER_BALL_MAX_ANGLE_DEG = 30.0  # « devant » : au plus 30° de la course de chacun
+SHOULDER_COOLDOWN_S = 1.0  # au plus un duel par paire toutes les 1,0 s
+SHOULDER_PUSH_M = 0.5  # décalage latéral du perdant, à l'opposé du gagnant
+SHOULDER_PUSH_STEPS = 3  # réparti sur 3 pas (0,3 s au pas du produit), pas en un saut (réserve A2 de l'expert, propriétaire)
+SHOULDER_FOUL_FACTOR = 0.15  # part de la probabilité de faute d'un tacle (même Aggression)
+
+
+def _angle_deg(u, v) -> float:
+    lu, lv = math.hypot(u.x, u.y), math.hypot(v.x, v.y)
+    if lu < 1e-9 or lv < 1e-9:
+        return 180.0
+    cos = max(-1.0, min(1.0, (u.x * v.x + u.y * v.y) / (lu * lv)))
+    return math.degrees(math.acos(cos))
+
+
+def shoulder_contact(a: PlayerState, b: PlayerState, ball_position) -> bool:
+    """Vrai si `a` et `b` (adversaires) sont au contact, côte à côte, et courent tous deux vers `ball_position`."""
+    if a.team == b.team:
+        return False
+    if math.hypot(a.velocity.x, a.velocity.y) < SHOULDER_MIN_SPEED_MPS or \
+            math.hypot(b.velocity.x, b.velocity.y) < SHOULDER_MIN_SPEED_MPS:
+        return False
+    axis = b.position - a.position
+    if math.hypot(axis.x, axis.y) > a.radius_m + b.radius_m + SHOULDER_CONTACT_MARGIN_M:
+        return False
+    if _angle_deg(a.velocity, b.velocity) > SHOULDER_MAX_HEADING_GAP_DEG:
+        return False
+    run = a.velocity + b.velocity
+    side = _angle_deg(axis, run)
+    if min(side, 180.0 - side) < SHOULDER_MIN_SIDE_ANGLE_DEG:
+        return False
+    for p in (a, b):
+        to_ball = ball_position - p.position
+        if math.hypot(to_ball.x, to_ball.y) > SHOULDER_BALL_MAX_M or _angle_deg(to_ball, p.velocity) > SHOULDER_BALL_MAX_ANGLE_DEG:
+            return False
+    return True
+
+
+def shoulder_win_probability(a: PlayerState, b: PlayerState) -> float:
+    """Chance que `a` gagne le duel d'épaule face à `b` : Strength seule, courbe partagée (`duel_probability`)."""
+    return duel_probability(effective_rating(a, "Strength"), effective_rating(b, "Strength"))
+
+
+def shoulder_foul_probability(charger: PlayerState) -> float:
+    """Chance que la charge du gagnant soit une faute : `SHOULDER_FOUL_FACTOR` x celle d'un tacle (Aggression)."""
+    return SHOULDER_FOUL_FACTOR * foul_probability(effective_rating(charger, "Aggression"))
+
+
+@dataclass(frozen=True)
+class ShoulderResult:
+    winner: PlayerState
+    loser: PlayerState
+    foul: bool
+    issue: str  # « plus fort », « plus faible » ou « égalité » : Strength du gagnant face au perdant (mesure du banc)
+
+
+def resolve_shoulder_duel(a: PlayerState, b: PlayerState) -> ShoulderResult:
+    """Tire le gagnant (flux DUEL) puis la faute de charge du gagnant."""
+    a_wins = DUEL.random() < shoulder_win_probability(a, b)
+    winner, loser = (a, b) if a_wins else (b, a)
+    gap = effective_rating(winner, "Strength") - effective_rating(loser, "Strength")
+    issue = "plus fort" if gap > 0 else "plus faible" if gap < 0 else "égalité"
+    return ShoulderResult(winner, loser, DUEL.random() < shoulder_foul_probability(winner), issue)

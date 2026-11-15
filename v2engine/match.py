@@ -18,15 +18,17 @@ from ligue1sim.lineup import Lineup, pick_best_formation
 from ligue1sim.pitch_geometry import GOAL_HEIGHT_M, GOAL_WIDTH_M
 
 from v2engine.condition import effective_rating, intrinsic_rating
-from v2engine.trace import (ARRET, BUT, CONTRE, CONTROLE_RATE, FAUTE, HORS_JEU, PASSE, PERTE, REMISE,
+from v2engine.trace import (ARRET, BUT, CONTRE, CONTROLE_RATE, DUEL_EPAULE, FAUTE, HORS_JEU, PASSE, PERTE, REMISE,
                             TOUCHE_LONGUE, EventLog)
 from v2engine.trace import TIR as TIR_EVENT  # `TIR` est le flux aléatoire des tirs (v2engine.flux)
 from v2engine.anticipation import pass_readers, reaction_delay_s
 from v2engine.ball_state import BallState, ShotFlight
 from v2engine.bloc import Bloc
 from v2engine.danger import danger
-from v2engine.duel import (CONTACT_MIN_CLOSING_MPS, after_contact_delay_s, after_contact_speed_loss, contact_share,
-                           foul_severity, resolve_tackle, should_attempt_tackle)
+from v2engine.duel import (CONTACT_MIN_CLOSING_MPS, SHOULDER_COOLDOWN_S, SHOULDER_PUSH_M, SHOULDER_PUSH_STEPS,
+                           after_contact_delay_s,
+                           after_contact_speed_loss, contact_share, foul_severity, resolve_shoulder_duel, resolve_tackle,
+                           shoulder_contact, should_attempt_tackle)
 from v2engine.flux import ARBITRAGE, PERCEPTION, TIR, seed_streams
 from v2engine.formation import initial_positions
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch, in_penalty_area
@@ -197,6 +199,49 @@ def _unsettle(player: PlayerState, ball: BallState, now_s: float) -> None:
         ball.next_decision_s = max(ball.next_decision_s, until)
     else:  # champ propre, pas `control_ban_until_s` que la défense lit comme un contrôle raté (expert, passage 1)
         ball.unsettled_until_s[player.name] = max(ball.unsettled_until_s.get(player.name, 0.0), until)
+
+
+def _shoulder_duels(players: list[PlayerState], ball: BallState, now_s: float, fouls: list[FoulEvent] | None) -> None:
+    """Duels d'épaule à la course (ticket v2-realisme/11c) : sur un ballon libre en jeu, deux adversaires au contact,
+    côte à côte, courant vers lui (`duel.shoulder_contact`) se disputent la position. Le perdant est décalé de
+    `SHOULDER_PUSH_M` à l'opposé du gagnant puis perd le contact (12c, Balance) ; une charge fautive est sifflée tout de
+    suite (ballon libre : pas d'avantage), coup franc pour l'équipe du perdant au lieu du contact. Le décalage est
+    réparti sur `SHOULDER_PUSH_STEPS` pas (réserve A2 de l'expert) : il continue même si le ballon est repris."""
+    if ball.shoulder_push:
+        by_name = {p.name: p for p in players}
+        for name, (step, left) in list(ball.shoulder_push.items()):
+            if name in by_name:
+                by_name[name].position = clamp_to_pitch(by_name[name].position + step)
+            if left <= 1 or name not in by_name:
+                del ball.shoulder_push[name]
+            else:
+                ball.shoulder_push[name] = (step, left - 1)
+    if ball.holder is not None or ball.restart is not None or ball.shot_flight is not None:
+        return
+    for i in range(len(players)):
+        for j in range(i + 1, len(players)):
+            a, b = players[i], players[j]
+            if a.team == b.team or abs(a.position.x - b.position.x) > 2.0 or abs(a.position.y - b.position.y) > 2.0:
+                continue
+            pair = (a.name, b.name) if a.name < b.name else (b.name, a.name)
+            if ball.shoulder_until_s.get(pair, 0.0) > now_s or not shoulder_contact(a, b, ball.position):
+                continue
+            ball.shoulder_until_s[pair] = now_s + SHOULDER_COOLDOWN_S
+            duel = resolve_shoulder_duel(a, b)
+            winner, loser = duel.winner, duel.loser
+            _log(ball, now_s, DUEL_EPAULE, winner.team, winner.name, duel.issue + (", faute" if duel.foul else ""),
+                 loser.name)
+            if duel.foul:
+                event = FoulEvent(now_s / 60.0, winner.team, winner.name, loser.name, loser.position.x,
+                                  loser.position.y, foul_severity(), "coup franc")
+                _settle_advantage(ball, fouls)  # avantage en cours : acquis et tracé, comme `_foul` (réserve A1)
+                _whistle(ball, event, players, now_s, fouls)
+                return
+            gap = loser.position - winner.position
+            if gap.length() > 1e-9:
+                ball.shoulder_push[loser.name] = (gap.normalized() * (SHOULDER_PUSH_M / SHOULDER_PUSH_STEPS),
+                                                  SHOULDER_PUSH_STEPS)
+            _unsettle(loser, ball, now_s)
 
 
 def _nearest_opponent_in_range(holder: PlayerState, players: list[PlayerState], radius_m: float) -> PlayerState | None:
@@ -1231,6 +1276,7 @@ def simulate_match(
                                 transition, played_minute=played, scanning=p.name in scanning) for p in players]
         for loser in _resolve_player_collisions(players):  # contact perdu : Balance (ticket v2-realisme/12c)
             _unsettle(loser, ball, i * tick_seconds)
+        _shoulder_duels(players, ball, i * tick_seconds, trace.fouls)  # duel d'épaule à la course (11c)
         scanning = scans.update(players, ball.holder, i * tick_seconds, tick_seconds, trace.scans)  # tours de tête (08c)
         memory.update(players, i * tick_seconds, scanning)
         scoring_team = _step_ball(ball, tick_seconds, players, i * tick_seconds, trace.decisions, trace.offsides,

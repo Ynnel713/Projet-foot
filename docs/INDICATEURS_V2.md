@@ -1530,3 +1530,17 @@ Protocole validé par le propriétaire le 14/11/2026, **figé avant toute série
 Le moteur est **validé** si tous les repères bloquants sont conformes. Les indicatifs sont rapportés, sans effet sur le verdict.
 
 **5. Conduite de la série.** Moteur figé sur un commit cité avant le lancement (préfixe lu dans `git log`) ; série lancée une seule fois sur le bloc ; résultat publié tel quel, intervalles compris, même défavorable. Toute relance après correction prend le bloc suivant.
+
+## 42. Duel d'épaule à la course (ticket v2-realisme/11c, 50 matchs appariés, 15/11/2026)
+
+Commandes : `uv run python -m scripts.bench_series 50 --processus 3 --json avant.json` sur le moteur d'avant (`83cba91`, arbre séparé), même commande sur le moteur du 11c, puis `--comparer avant.json apres.json` (graine d'audit 20260923, matchs 0 à 49). Sorties : `.scratch/v2-realisme/mesures/11c-avant.txt`, `11c-apres.txt`, `11c-comparaison.txt`.
+
+**Mécanisme.** Deux adversaires au contact (somme des rayons + 0,3 m), côte à côte (axe à au moins 60° de la course), tous deux à 3 m/s ou plus, courses à moins de 45° l'une de l'autre, vers le même ballon libre à moins de 20 m devant eux (30° au plus) : duel d'épaule, au plus un par paire toutes les 1,0 s. Gagnant tiré sur la courbe de duel partagée, Strength seule ; perdant décalé de 0,5 m à l'opposé du gagnant, réparti sur 3 pas (0,3 s ; réserve A2 de l'expert, décision du propriétaire), puis contact perdu (12c : Balance) ; faute de charge du gagnant avec 0,15 fois la probabilité de faute d'un tacle (Aggression), sifflée tout de suite, coup franc pour l'équipe du perdant. Constantes validées par le propriétaire le 15/11/2026 ; fréquence réelle des duels d'épaule : non trouvée.
+
+**Nouveaux indicateurs (après, décalage lissé).** Duels d'épaule : **36,4 par match** [34,5 ; 38,2] ; gagnés par le plus fort quand les notes diffèrent : **69 %** [67 ; 71] ; fautes de charge : **1,42 par match** [1,10 ; 1,74]. Premier passage, décalage en un pas : 35,6 duels, 68 %, 1,76 faute de charge (mêmes conclusions).
+
+**Avant / après (écart moyen par match, IC 95 %).** Fautes **+ 1,24** [+ 0,30 ; + 2,18] et coups francs **+ 1,3** [+ 0,35 ; + 2,25] : ce sont les fautes de charge. Sans écart significatif : buts − 0,30 [− 1,16 ; + 0,56], tirs tracés par équipe − 0,62 [− 1,73 ; + 0,49], passes − 3,4 [− 19,2 ; + 12,4], passes réussies + 0,3 point, tacles + 0,5, pertes de balle − 1,8, temps de jeu effectif − 0,1 point. Les autres indicateurs marqués significatifs (160 sur environ 2 670 lignes comparées) sont de l'ordre de ce que le hasard donne à 95 % ; aucun volume principal n'en fait partie.
+
+**Effet de Strength (scène du ticket, `tests/test_v2engine_duel_epaule.py`).** Deux joueurs lancés côte à côte vers un ballon arrêté à 12 m, côtés alternés, 60 graines, un duel par course : à force égale (65 contre 65) le joueur « Rouge » atteint le ballon 27 fois sur 60 ; à 90 contre 40, le plus fort l'atteint 54 fois sur 60.
+
+**Limites.** Le ballon libre comprend la passe en vol (le receveur et son marqueur peuvent se disputer l'épaule avant le contrôle) ; le duel du porteur qui protège son ballon est au ticket 04i, le duel aérien au 15b. Les fautes restent sous le repère réel (21 à 26 par match, réserve renvoyée au 22a).

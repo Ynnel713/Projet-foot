@@ -600,6 +600,12 @@ def report(c: Collector, detail: bool = False) -> dict:
         out[f"rotation : {kind}, délai moyen avant l'action (s)"] = (
             k[f"rotation : {kind}, durée (somme, s)"] / max(1, k[f"rotation : {kind} décidés"]))
     out["rotation : ballons perdus en se retournant par match"] = k["rotation : ballons perdus en se retournant"] / n
+    # duel d'épaule à la course (ticket v2-realisme/11c) : nombre, part gagnée par le plus fort (Strength), fautes de charge
+    out["duels d'épaule par match"] = k["duels d'épaule"] / n
+    unequal = k["duels d'épaule gagnés : plus fort"] + k["duels d'épaule gagnés : plus faible"]
+    out["duels d'épaule gagnés par le plus fort (part, notes différentes)"] = (
+        k["duels d'épaule gagnés : plus fort"] / max(1, unequal))
+    out["duels d'épaule : fautes de charge par match"] = k["duels d'épaule : fautes de charge"] / n
     out["rotation : passes abandonnées, ligne fermée, par match"] = k["rotation : passes abandonnées, ligne fermée"] / n
     out["rotation : passes abandonnées, ligne fermée (part des passes jugées après la rotation)"] = (
         k["rotation : passes abandonnées, ligne fermée"] / max(1, k["rotation : passes jugées après la rotation"]))
