@@ -44,3 +44,7 @@ Temps machine, non compté : suite complète (environ 40 min) ; mesure 50 matchs
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+
+## Comments
+
+**15/11/2026, lien.** La décision de tenter un tacle par derrière (dernier recours, urgence défensive ; piste du propriétaire du 15/11/2026) est au ticket `11h`, distinct de ce geste ; le tacle glissé, souvent tenté de côté ou par derrière sur un porteur qui s'échappe, devra respecter la même urgence (à reprendre ici une fois le 11h livré).
