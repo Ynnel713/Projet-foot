@@ -10,8 +10,8 @@ import random
 
 from v2engine.ball_state import BallState
 from v2engine.bloc import (
-    BLOCK_SHIFT, LINE_HEIGHT_M, LINE_LAG_MAX_S, POSSESSION_ADVANCE_M, PRESSURE_STEP_M, SHAPE_WITH_BALL, SHAPE_WITHOUT_BALL,
-    Bloc, line_lag_s, positioning_error_m, teamwork_tolerance_m,
+    BLOCK_SHIFT, LINE_HEIGHT_M, LINE_LAG_MAX_S, LINE_MAX_WITH_BALL_M, LINE_MIN_WITH_BALL_M, PRESSURE_STEP_M,
+    SHAPE_WITH_BALL, SHAPE_WITHOUT_BALL, Bloc, line_lag_s, positioning_error_m, teamwork_tolerance_m, with_ball_line,
 )
 from v2engine.cerveau import REPLACEMENT, think
 from v2engine.geometry import Vec2
@@ -106,7 +106,7 @@ def test_the_block_moves_up_when_the_team_has_the_ball() -> None:
     bloc = Bloc.from_players(TEAM)
     _, _, without = _dims(bloc, CENTER_BALL, DEFENSE_PLACEE)
     _, _, with_ball = _dims(bloc, CENTER_BALL, POSSESSION_INSTALLEE)
-    assert math.isclose(with_ball.x - without.x, POSSESSION_ADVANCE_M)
+    assert with_ball.x > without.x
     away = _p("B", 80, 30, team="away")
     away_bloc = Bloc.from_players([away, _p("B2", 70, 40, team="away")])
     assert away_bloc.reference(away, CENTER_BALL, POSSESSION_INSTALLEE).x < away_bloc.reference(away, CENTER_BALL, DEFENSE_PLACEE).x
@@ -304,7 +304,10 @@ def test_roles_redistribute_inside_the_block_without_moving_or_resizing_it() -> 
     bloc = Bloc.from_players(team)
     pts = [bloc.reference(p, CENTER_BALL, POSSESSION_INSTALLEE) for p in team if p.poste != "GK"]
     ref = [plain.reference(p, CENTER_BALL, POSSESSION_INSTALLEE) for p in TEAM if p.poste != "GK"]
-    assert math.isclose(sum(p.x for p in pts), sum(p.x for p in ref), abs_tol=1e-6)
+    # depuis le ticket v2-realisme/09j, le bloc avec ballon se cale sur sa dernière ligne (et non plus sur son centre) :
+    # les rôles ne déplacent pas cette ligne
+    assert math.isclose(min(p.x for p in pts), min(p.x for p in ref), abs_tol=1e-6)
+    assert math.isclose(min(p.x for p in pts), with_ball_line("home", CENTER_BALL.x), abs_tol=1e-6)
     assert math.isclose(max(p.x for p in pts) - min(p.x for p in pts), SHAPE_WITH_BALL[0], abs_tol=1e-6)
     assert math.isclose(max(p.y for p in pts) - min(p.y for p in pts), SHAPE_WITH_BALL[1], abs_tol=1e-6)
 
@@ -385,3 +388,54 @@ def test_the_away_team_is_mirrored() -> None:
     plain = Bloc.from_players([dataclasses.replace(p, role="") for p in away])
     roleless = dataclasses.replace(piston, role="")
     assert bloc.reference(piston, CENTER_BALL, POSSESSION_INSTALLEE).x < plain.reference(roleless, CENTER_BALL, POSSESSION_INSTALLEE).x
+
+
+def _last_line(bloc: Bloc, team: list[PlayerState], ball: Vec2, situation: str, now_s: float = 0.0) -> float:
+    """Dernière ligne de référence (joueur de champ le plus bas), depuis le but de l'équipe."""
+    xs = [bloc.reference(p, ball, situation, now_s).x for p in team if p.poste != "GK"]
+    return min(xs) if team[0].team == "home" else 105.0 - max(xs)
+
+
+def test_with_the_ball_the_block_sits_on_a_line_that_follows_the_ball() -> None:
+    # Ticket v2-realisme/09j : H = 40 + 0,5 x (ballon - 52,5), depuis son but ; valeurs du ticket à 0,5 m près.
+    away_team = [_p(p.name + "x", 105.0 - p.position.x, p.position.y, poste=p.poste, team="away") for p in TEAM]
+    for ball_m, expected in ((17.0, 22.25), (47.0, 37.25), (76.0, 51.75), (92.0, 55.0)):
+        for team, ball_x in ((TEAM, ball_m), (away_team, 105.0 - ball_m)):
+            bloc = Bloc.from_players(team)
+            holder = team[6]  # un milieu porteur, pas le gardien
+            ball = BallState(position=Vec2(ball_x, 30.0), velocity=Vec2(0.0, 0.0), holder=holder.name)
+            bloc.update(team, ball, 0.0)  # pas d'adversaire : la ligne sans ballon n'est pas calculée, celle avec ballon oui
+            assert abs(_last_line(bloc, team, ball.position, POSSESSION_INSTALLEE) - expected) <= 0.5, (ball_m, team[0].team)
+
+
+def test_the_line_with_the_ball_keeps_its_floor_and_ceiling() -> None:
+    assert with_ball_line("home", 0.0) == LINE_MIN_WITH_BALL_M == 15.0  # ballon sur sa ligne de but : 13,75 -> 15
+    assert with_ball_line("home", 105.0) == LINE_MAX_WITH_BALL_M == 55.0
+    assert with_ball_line("away", 105.0) == 15.0 and with_ball_line("away", 0.0) == 55.0
+    assert math.isclose(with_ball_line("home", 82.5), 55.0) and with_ball_line("home", 82.0) < 55.0
+    bloc = Bloc.from_players(TEAM)
+    assert abs(_last_line(bloc, TEAM, Vec2(2.0, 34.0), POSSESSION_INSTALLEE) - 15.0) <= 1e-9
+    assert abs(_last_line(bloc, TEAM, Vec2(103.0, 34.0), POSSESSION_INSTALLEE) - 55.0) <= 1e-9
+
+
+def test_with_the_ball_the_line_ignores_pressure_and_the_deepest_rival() -> None:
+    # 09j : ni pression sur le porteur ni attaquant adverse le plus avancé ; la ligne sans ballon, elle, les lit encore
+    rival = _p("R", 30.0, 34.0, poste="BU", team="away")  # attaquant adverse bas : il tirerait la ligne sans ballon vers lui
+    players = TEAM + [rival]
+    bloc = Bloc.from_players(players)
+    ball = BallState(position=Vec2(60.0, 34.0), velocity=Vec2(0.0, 0.0), holder="M1")
+    bloc.update(players, ball, 0.0)
+    assert math.isclose(bloc.lines_ball["home"], 40.0 + 7.5 * 0.5)
+    assert bloc.lines["home"] < bloc.lines_ball["home"]
+
+
+def test_a_low_teamwork_player_follows_the_line_with_the_ball_late() -> None:
+    bloc = Bloc.from_players(TEAM)
+    slow = dataclasses.replace(TEAM[1], attributes={"Teamwork": 11})  # retard 1,5 s
+    quick = dataclasses.replace(TEAM[1], attributes={"Teamwork": 99})
+    for k in range(16):  # le ballon avance de 2 m par dixième de seconde pendant 1,5 s
+        ball = BallState(position=Vec2(40.0 + 2.0 * k, 34.0), velocity=Vec2(0.0, 0.0), holder="M1")
+        bloc.update(TEAM, ball, 0.1 * k)
+    now, where = 1.5, ball.position
+    assert math.isclose(bloc.reference(quick, where, POSSESSION_INSTALLEE, now).x, with_ball_line("home", where.x))
+    assert bloc.reference(slow, where, POSSESSION_INSTALLEE, now).x < bloc.reference(quick, where, POSSESSION_INSTALLEE, now).x - 10.0

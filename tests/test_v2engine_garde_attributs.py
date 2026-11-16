@@ -150,8 +150,10 @@ PLANS = {
     # hors de la surface : rare dans le mini-match depuis la courbe en S du ticket v2-realisme/24 (fusion du 14/11/2026)
     "Long Shots": Plan(tir_de_loin, 3.0, 300),
     # n'agit que par l'énergie (sprint entamé, réserve) : effet rare en 60 s depuis le partage des collisions selon
-    # Strength (ticket v2-realisme/11b, première divergence à la graine 4 au lieu de 1) ; 10 graines
-    "Stamina": Plan(mini_match, 60.0, 10),
+    # Strength (ticket v2-realisme/11b, première divergence à la graine 4 au lieu de 1) ; 10 graines. Depuis la ligne
+    # avec ballon (ticket v2-realisme/09j), première divergence à la graine 21 en 60 s, à la graine 2 (67 s de jeu) en
+    # 120 s : scène de 120 s
+    "Stamina": Plan(mini_match, 120.0, 10),
 }
 
 

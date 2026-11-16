@@ -344,6 +344,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **`v2-correctifs-ecran/04b` livré (16/11/2026), validé expert (réserve A1 acceptée) + QC** : à l'écran, joueurs et ballon suivent une courbe de Catmull-Rom centripète (alpha 0,5) par les points du moteur (`ui/src/utils/v2Spline.js`) ; coupures sur changement de porteur, ballon mort (champ `dead` ajouté à la piste du ballon), remise en jeu et mi-temps ; ballon tenu dessiné sur son porteur. Match réel, 1re période à 10 im/s : virages du ballon libre sans joueur à 2 m 69 → 6, sauts de vitesse x1,6 278 → 191 (dont loin d'un joueur 198 → 34), 8 µs par image. Réserve A1 : à une remise en jeu, les joueurs passent en ligne droite sur 0,5 s (un preneur posé au point peut glisser) ; à vérifier à l'écran sur les coups francs, ticket de suivi si cela se voit.
 
+**`v2-realisme/09j` livré (16/11/2026), validé expert (réserves A1 à A3 acceptées) + QC** : avec ballon, le bloc se cale sur une dernière ligne `H = 40 + 0,5 x (ballon - 52,5)`, bornée entre 15 et 55 m (`bloc.with_ball_line`), au lieu de l'avance fixe de 8 m (`POSSESSION_ADVANCE_M` supprimé) ; retard au Teamwork conservé ; ligne sans ballon inchangée. Centraux à 37,3 m de leur but avec le ballon entre 40 et 55 m (19,3 avant). Série de 20 matchs : buts 4,35 → 6,8, hors-jeu 0,7 → 4,1, passes 1 089 → 1 280 ; recalibration et analyse des buts au ticket `18l` (après 09e, 25b ; 09g, défense préventive, avant ou pendant). Critère « centraux plus hauts avec ballon que sans » partiel (tranche 10-25 m) : renvoyé au 25b et au 18l. Débloque 09e, 09h, 25b.
+
 ### Bloquée par
 
 - Phase 4
