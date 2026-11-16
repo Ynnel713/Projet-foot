@@ -195,7 +195,7 @@ def test_product_and_bench_use_the_same_step() -> None:
     from scripts import measure_v2
 
     assert api_v2._TICK_SECONDS == measure_v2.TICK_S == 0.1
-    assert api_v2._TICK_SECONDS * api_v2._RECORD_EVERY == pytest.approx(1.0)  # une image par seconde
+    assert api_v2._TICK_SECONDS * api_v2._RECORD_EVERY == pytest.approx(0.5)  # deux images par seconde (ticket v2-correctifs-ecran/04a)
 
 
 def test_passer_does_not_touch_his_own_pass_as_it_leaves(monkeypatch) -> None:

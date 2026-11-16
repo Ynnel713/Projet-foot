@@ -33,6 +33,16 @@ class BallSnapshot:
     dead: bool = False  # ballon mort, en attente d'une remise en jeu (ticket v2-collectif/29)
 
 
+@dataclass(frozen=True, slots=True)
+class BallPoint:
+    """Point de la piste du ballon (ticket v2-correctifs-ecran/04a), relevé à chaque pas du moteur : l'écran suit le
+    ballon plus finement que les joueurs, sans voir un virage ou un ralentissement coupé entre deux images."""
+    minute: float
+    position: Vec2
+    mode: str = "sol"
+    holder: str | None = None
+
+
 @dataclass(frozen=True)
 class Tick:
     minute: float  # minute de match simulée
@@ -301,6 +311,8 @@ class MatchTrace:
     # Minutes de temps additionnel annoncées à la fin de chaque période (ticket v2-coach-et-gestion-de-match/03).
     added_minutes: list[int] = field(default_factory=list)
     events: list[TraceEvent] = field(default_factory=list)  # journal ordonné, avec les causes (ticket v2-realisme/19b)
+    # Piste du ballon à chaque pas du moteur, quel que soit le sous-échantillonnage des ticks (ticket v2-correctifs-ecran/04a).
+    ball_track: list[BallPoint] = field(default_factory=list)
 
     def display_minute(self, minute: float) -> str:
         """Minute affichée (`12'`, `45+2'`, `90+4'`) d'un instant de la trace, pour le rendu et la narration."""
@@ -308,6 +320,9 @@ class MatchTrace:
 
     def record(self, minute: float, players: list[PlayerSnapshot], ball: BallSnapshot) -> None:
         self.ticks.append(Tick(minute=minute, players=tuple(players), ball=ball))
+
+    def record_ball(self, minute: float, position: Vec2, mode: str, holder: str | None) -> None:
+        self.ball_track.append(BallPoint(minute=minute, position=position, mode=mode, holder=holder))
 
     def record_goal(self, team: str, minute: float, scorer: str | None = None, own_goal: bool = False) -> None:
         if team == "home":

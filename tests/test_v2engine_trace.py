@@ -169,3 +169,107 @@ def test_tick_out_serialises_ball_mode_and_dead_for_every_image() -> None:
         out = _tick_out(Tick(minute=1.0, players=players, ball=ball)).ball
         assert (out.mode, out.dead) == expected
         assert (out.x, out.y) == (10.0, 20.0)
+
+
+def test_ball_track_has_one_point_per_engine_step_matching_the_images() -> None:
+    # Ticket v2-correctifs-ecran/04a : la piste du ballon suit chaque pas du moteur (0,1 s), les images des joueurs une
+    # sur `record_every` ; un point de la piste et l'image du même pas portent le même ballon.
+    import random
+
+    from ligue1sim.clubs import load_clubs
+    from ligue1sim.season import CLUBS_PATH
+    from v2engine.match import TICK_SECONDS, simulate_match
+
+    clubs = load_clubs(CLUBS_PATH, "Ligue 1")
+    random.seed(20260923)
+    trace = simulate_match(clubs[0], clubs[1], duration_minutes=2.0, record_every=5)
+    track = trace.ball_track
+    assert trace.tick_seconds == pytest.approx(0.5)
+    assert len(track) > 2 * 60 / TICK_SECONDS - 1  # la 2e période, temps additionnel compris, va au bout
+    steps_s = [(b.minute - a.minute) * 60.0 for a, b in zip(track, track[1:])]
+    assert max(steps_s) == pytest.approx(TICK_SECONDS) and min(steps_s) == pytest.approx(TICK_SECONDS)
+    assert len(trace.ticks) == (len(track) + 4) // 5
+    for k, tick in enumerate(trace.ticks):
+        point = track[5 * k]
+        assert (point.minute, point.position, point.mode, point.holder) == (
+            tick.minute, tick.ball.position, tick.ball.mode, tick.ball.holder)
+
+
+def test_live_match_sends_the_ball_track_in_slices_without_gap_or_duplicate(monkeypatch) -> None:
+    # Ticket v2-correctifs-ecran/04a : l'écran relit la piste du ballon avec son propre curseur (`from_ball`) ; mises bout
+    # à bout, les tranches redonnent la piste entière, quel que soit le moment où le calcul en est.
+    import threading
+
+    from api.routers import v2
+    from v2engine.geometry import Vec2
+    from v2engine.trace import BallSnapshot, PlayerSnapshot
+
+    step, may_go = threading.Event(), threading.Event()
+
+    def fake_simulate(home, away, **kwargs):
+        trace = MatchTrace(home=home.name, away=away.name, tick_seconds=0.5)
+        kwargs["on_start"](trace)
+        for i in range(23):
+            minute = i * 0.1 / 60.0
+            trace.record_ball(minute, Vec2(float(i), 1.0), "sol", None)
+            if i % 5 == 0:
+                trace.record(minute, [PlayerSnapshot("A", "home", "BU", Vec2(1.0, 2.0))], BallSnapshot(Vec2(float(i), 1.0)))
+            if i in (3, 11):  # le calcul s'arrête entre deux images, au milieu d'une tranche de ballon
+                step.set()
+                may_go.wait(5)
+                may_go.clear()
+        return trace
+
+    class _Club:
+        def __init__(self, name):
+            self.name = name
+
+    monkeypatch.setattr(v2, "simulate_match", fake_simulate)
+    monkeypatch.setattr(v2, "_find_club", lambda name: _Club(name))
+    job_id = v2.start_match(SimulateV2Request(home="X", away="Y")).id
+    ticks, track = [], []
+    for _ in range(200):
+        if step.is_set():
+            step.clear()
+            progress = v2.match_progress(job_id, len(ticks), len(track))
+            assert progress.first_ball == len(track)
+            ticks += progress.ticks
+            track += progress.ball_track
+            may_go.set()
+        else:
+            progress = v2.match_progress(job_id, len(ticks), len(track))
+            ticks += progress.ticks
+            track += progress.ball_track
+            if progress.done:
+                break
+        threading.Event().wait(0.02)
+    assert progress.done and progress.tick_seconds == 0.5
+    assert [b.x for b in track] == [float(i) for i in range(23)]
+    assert [t.minute for t in ticks] == [i * 0.1 / 60.0 for i in range(0, 23, 5)]
+
+
+def test_ball_track_out_rounds_for_a_lighter_response() -> None:
+    from api.routers.v2 import _ball_track_out
+    from v2engine.geometry import Vec2
+    from v2engine.trace import BallPoint
+
+    out = _ball_track_out([BallPoint(minute=1 / 600, position=Vec2(52.123456, 3.987654), mode="aérien", holder="A")])
+    assert out[0].model_dump() == {"minute": 0.00167, "x": 52.12, "y": 3.99, "mode": "aérien", "holder": "A"}
+
+
+def test_api_records_two_images_per_second() -> None:
+    from api.routers import v2
+
+    assert v2._RECORD_EVERY == 5 and v2._TICK_SECONDS * v2._RECORD_EVERY == pytest.approx(0.5)
+
+
+def test_tick_out_rounds_positions_to_the_centimetre() -> None:
+    # Ticket v2-correctifs-ecran/04a : à 2 images par seconde, la réponse d'un match reste sous 40 Mo brut.
+    from api.routers.v2 import _tick_out
+    from v2engine.geometry import Vec2
+    from v2engine.trace import BallSnapshot, PlayerSnapshot, Tick
+
+    tick = Tick(minute=1.0, players=(PlayerSnapshot("A", "home", "GK", Vec2(1.23456, 2.34567)),),
+                ball=BallSnapshot(Vec2(10.987654, 20.0)))
+    out = _tick_out(tick)
+    assert (out.players[0].x, out.players[0].y, out.ball.x, out.ball.y) == (1.23, 2.35, 10.99, 20.0)

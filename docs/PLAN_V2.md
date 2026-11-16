@@ -340,6 +340,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **Audit à l'écran (16/11/2026, retours du propriétaire)** : trois tickets créés, constantes validées par le propriétaire le 16/11/2026. `v2-correctifs-ecran/04a` (trace du ballon à chaque pas de 0,1 s, joueurs à 2 images par seconde : `_RECORD_EVERY` 10 → 5) puis `04b` (interpolation Catmull-Rom centripète à l'écran) : le ballon semblait tourner ou ralentir sans contact parce que l'écran n'avait qu'une image par seconde, tracée en ligne droite (virages sans joueur proche : 16 % des images à l'écran contre 0,2 % des pas du moteur). `v2-realisme/09j` (hauteur de la dernière ligne avec ballon, P0) : avec ballon, le bloc ne se cale sur aucune ligne et reste derrière le ballon (centraux à 18,5 à 21 m de leur but, ballon à 47 m) ; l'écart défense-milieu de 10 à 15 m voulu par le propriétaire est reporté au `09e`, après 09j.
 
+**`v2-correctifs-ecran/04a` livré (16/11/2026)** : piste du ballon à chaque pas de 0,1 s (`MatchTrace.ball_track`, `ball_track` de l'API, curseur `from_ball` du rejeu en direct), joueurs à 2 images par seconde (`_RECORD_EVERY` = 5), positions envoyées au centimètre ; moteur inchangé (mêmes empreintes à graine fixée) ; réponse d'un match : 33,9 Mo brut, 3,0 Mo gzip. Livré le 16/11/2026, validé expert (APPROVED) + QC ; débloque le `04b` (à y prévoir : champ `dead` dans la piste du ballon si l'écran doit l'atténuer entre deux images).
+
 ### Bloquée par
 
 - Phase 4

@@ -5,8 +5,9 @@ import MatchScreen from "../components/match/MatchScreen";
 import MatchSetup from "../components/match/MatchSetup";
 import useMatchPlayback, { SPEED_OPTIONS } from "../hooks/useMatchPlayback";
 
-// Le rejeu démarre quand ce nombre d'images (~1 s de match chacune) est calculé ; le reste arrive pendant qu'on regarde.
-const START_BUFFER_TICKS = 60;
+// Le rejeu démarre quand une minute de match est calculée (120 images de 0,5 s depuis le ticket v2-correctifs-ecran/04a,
+// 60 images de 1 s avant) ; le reste arrive pendant qu'on regarde.
+const START_BUFFER_TICKS = 120;
 const POLL_MS = 1000;
 
 // Écran V2 (docs/PRD_PRODUIT.md US-27 à 29, docs/PLAN_V2.md Phase 4) : lance un match isolé, puis
@@ -85,13 +86,15 @@ export default function V2Match() {
       ]);
       setLineups({ home: homeLineup, away: awayLineup });
       let ticks = [];
+      let ballTrack = []; // piste du ballon à chaque pas du moteur (ticket v2-correctifs-ecran/04a), lue par l'écran au 04b
       let started = false;
       for (;;) {
-        const res = await getV2Match(id, ticks.length);
+        const res = await getV2Match(id, ticks.length, ballTrack.length);
         if (run !== runRef.current) return;
         if (res.error) throw new Error(res.error);
         ticks = ticks.concat(res.ticks);
-        const live = { ...res, ticks };
+        ballTrack = ballTrack.concat(res.ball_track ?? []);
+        const live = { ...res, ticks, ball_track: ballTrack };
         receive(live, started);
         setComputed(ticks.length);
         if (!started && (ticks.length >= START_BUFFER_TICKS || (res.done && ticks.length > 1))) {

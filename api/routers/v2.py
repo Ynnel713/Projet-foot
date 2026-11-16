@@ -27,10 +27,12 @@ from v2engine.trace import MatchTrace
 router = APIRouter(prefix="/v2", tags=["v2"])
 
 # Granularité du calcul physique et sous-échantillonnage de la trace enregistrée : le pas du produit, le même que
-# celui du banc de mesure (ticket v2-collectif/25, validé le 29/10/2026), et une image par seconde.
+# celui du banc de mesure (ticket v2-collectif/25, validé le 29/10/2026), et deux images par seconde pour les joueurs
+# (ticket v2-correctifs-ecran/04a, validé le 16/11/2026 ; 5 im/s pèserait 86 Mo brut par match). Le ballon, lui, est
+# envoyé à chaque pas (`ball_track`).
 # ponytail : pas optimisé (collision O(n²), voir v2engine/match.py) -- à revoir si ça devient gênant à l'usage.
 _TICK_SECONDS = TICK_SECONDS
-_RECORD_EVERY = 10
+_RECORD_EVERY = 5
 
 
 class SimulateV2Request(BaseModel):
@@ -53,6 +55,16 @@ class BallSnapshotOut(BaseModel):
     holder: str | None = None  # porteur du ballon : son nom s'affiche sous son rond
     mode: str = "sol"  # "sol" ou "aérien" (ticket v2-collectif/29) : l'écran dessine un ballon aérien plus gros, avec son ombre
     dead: bool = False  # ballon mort, en attente d'une remise en jeu : l'écran l'atténue
+
+
+class BallPointOut(BaseModel):
+    """Point de la piste du ballon, un par pas du moteur (0,1 s ; ticket v2-correctifs-ecran/04a). Arrondis pour le poids
+    de la réponse : minute à 1e-5 (moins d'un millième de seconde), position au centimètre."""
+    minute: float
+    x: float
+    y: float
+    mode: str = "sol"
+    holder: str | None = None
 
 
 class TickOut(BaseModel):
@@ -143,11 +155,13 @@ class MatchTraceOut(BaseModel):
     second_half_start_minute: float | None = None  # coup d'envoi de la 2e période (ticket v2-coach-et-gestion-de-match/07)
     added_minutes: list[int] = []  # temps additionnel annoncé par période (ticket v2-coach-et-gestion-de-match/03)
     events: list[TraceEventOut] = []  # journal des événements avec leurs causes (ticket v2-realisme/19b)
+    ball_track: list[BallPointOut] = []  # ballon à chaque pas du moteur (ticket v2-correctifs-ecran/04a)
 
 
 class MatchProgressOut(BaseModel):
-    """État d'un match en cours de calcul (rejeu en direct) : seulement les images à partir de `first_tick`, pour que
-    chaque lecture reste légère. Intentions et décisions, lourdes, n'arrivent qu'une fois le match fini."""
+    """État d'un match en cours de calcul (rejeu en direct) : seulement les images à partir de `first_tick`, et les
+    points du ballon à partir de `first_ball` (curseur distinct : un point par pas du moteur), pour que chaque lecture
+    reste légère. Intentions et décisions, lourdes, n'arrivent qu'une fois le match fini."""
     done: bool
     error: str | None = None
     home: str
@@ -165,6 +179,8 @@ class MatchProgressOut(BaseModel):
     intentions: list[PlayerIntentionsOut] = []
     decisions: list[DecisionOut] = []
     events: list[TraceEventOut] = []  # en fin de match seulement, comme les décisions (ticket v2-realisme/19b)
+    first_ball: int = 0
+    ball_track: list[BallPointOut] = []  # piste du ballon (ticket v2-correctifs-ecran/04a)
 
 
 def intention_segments(trace: MatchTrace) -> list[PlayerIntentionsOut]:
@@ -243,14 +259,22 @@ def club_lineup(club: str) -> LineupOut:  # nom en paramètre de requête : cert
 
 
 def _tick_out(tick) -> TickOut:
+    # positions au centimètre : invisible à l'écran, et la réponse d'un match à 2 images par seconde reste sous 40 Mo
+    # (ticket v2-correctifs-ecran/04a)
     return TickOut(
         minute=tick.minute,
-        players=[PlayerSnapshotOut(name=p.name, team=p.team, poste=p.poste, x=p.position.x, y=p.position.y,
+        players=[PlayerSnapshotOut(name=p.name, team=p.team, poste=p.poste, x=round(p.position.x, 2),
+                                   y=round(p.position.y, 2),
                                    facing=round(math.degrees(math.atan2(p.facing.y, p.facing.x)), 1))
                  for p in tick.players],
-        ball=BallSnapshotOut(x=tick.ball.position.x, y=tick.ball.position.y, holder=tick.ball.holder,
+        ball=BallSnapshotOut(x=round(tick.ball.position.x, 2), y=round(tick.ball.position.y, 2), holder=tick.ball.holder,
                              mode=tick.ball.mode, dead=tick.ball.dead),
     )
+
+
+def _ball_track_out(points) -> list[BallPointOut]:
+    return [BallPointOut(minute=round(b.minute, 5), x=round(b.position.x, 2), y=round(b.position.y, 2), mode=b.mode,
+                         holder=b.holder) for b in points]
 
 
 def _events_out(trace: MatchTrace) -> list[TraceEventOut]:
@@ -298,6 +322,7 @@ def create_match(payload: SimulateV2Request) -> MatchTraceOut:
         second_half_start_minute=trace.second_half_start_minute,
         added_minutes=list(trace.added_minutes),
         events=_events_out(trace),
+        ball_track=_ball_track_out(trace.ball_track),
     )
 
 
@@ -360,7 +385,7 @@ def start_match(payload: SimulateV2Request) -> MatchStartedOut:
 
 
 @router.get("/matches/{job_id}", response_model=MatchProgressOut)
-def match_progress(job_id: str, from_tick: int = 0) -> MatchProgressOut:
+def match_progress(job_id: str, from_tick: int = 0, from_ball: int = 0) -> MatchProgressOut:
     job = _jobs.get(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="Match introuvable (API redémarrée ?)")
@@ -369,8 +394,10 @@ def match_progress(job_id: str, from_tick: int = 0) -> MatchProgressOut:
     if trace is None:
         return MatchProgressOut(done=done, error=job.error, home=job.home, away=job.away,
                                 tick_seconds=_TICK_SECONDS * _RECORD_EVERY, home_goals=0, away_goals=0,
-                                goals=[], situations=[], offsides=[], first_tick=from_tick, ticks=[])
+                                goals=[], situations=[], offsides=[], first_tick=from_tick, ticks=[],
+                                first_ball=from_ball)
     first = max(0, from_tick)
+    first_ball = max(0, from_ball)
     return MatchProgressOut(
         done=done,
         error=job.error,
@@ -389,6 +416,8 @@ def match_progress(job_id: str, from_tick: int = 0) -> MatchProgressOut:
         intentions=intention_segments(trace) if done else [],
         decisions=_decisions_out(trace) if done else [],
         events=_events_out(trace) if done else [],
+        first_ball=first_ball,
+        ball_track=_ball_track_out(trace.ball_track[first_ball:]),  # copie de la liste : le calcul peut continuer d'écrire
     )
 
 

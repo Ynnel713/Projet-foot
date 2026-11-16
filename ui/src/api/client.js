@@ -29,9 +29,11 @@ export const getNations = () => request("/api/nations");
 // (positions + buts horodatés) -- rien à passer ici sauf les deux clubs, le résultat n'est
 // jamais connu avant que la réponse n'arrive.
 export const createV2Match = (body) => request("/api/v2/matches", { method: "POST", body: JSON.stringify(body) });
-// Rejeu en direct : le calcul démarre en tâche de fond, puis on lit les images au fur et à mesure (à partir de `fromTick`).
+// Rejeu en direct : le calcul démarre en tâche de fond, puis on lit les images au fur et à mesure (à partir de `fromTick`),
+// et la piste du ballon, un point par pas du moteur, à partir de `fromBall` (ticket v2-correctifs-ecran/04a).
 export const startV2Match = (body) => request("/api/v2/matches/start", { method: "POST", body: JSON.stringify(body) });
-export const getV2Match = (id, fromTick) => request(`/api/v2/matches/${id}?from_tick=${fromTick}`);
+export const getV2Match = (id, fromTick, fromBall = 0) =>
+  request(`/api/v2/matches/${id}?from_tick=${fromTick}&from_ball=${fromBall}`);
 // Feuille de match V2 : titulaires et remplaçants numérotés, entraîneur.
 export const getV2Lineup = (club) => request(`/api/v2/lineup?club=${encodeURIComponent(club)}`);
 

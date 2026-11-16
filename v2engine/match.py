@@ -1312,6 +1312,7 @@ def simulate_match(
         if observer is not None:
             observer(i * tick_seconds, players, ball, scoring_team)
 
+        trace.record_ball(minute, ball.position, ball.mode, ball.holder)  # piste fine du ballon (v2-correctifs-ecran/04a)
         if i % record_every == 0:
             trace.record(
                 minute,
