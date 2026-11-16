@@ -7,6 +7,7 @@ deux profils) : écart moyen par match et son intervalle de confiance.
 Usage :
   uv run python -m scripts.bench_series 500 --processus 6 --json serie.json [--profil "Work Rate"] [--pas 0.1]
   uv run python -m scripts.bench_series --comparer avant.json apres.json
+  uv run python -m scripts.bench_series 50 --neutraliser 11h --json avant.json   (essai A/B, ticket v2-realisme/11q)
 
 La durée machine est estimée et affichée avant le lancement (`SECONDS_PER_MATCH`, mesuré au ticket 01d).
 Intervalle de confiance : approximation normale (1,96 écart-type de la moyenne), valable pour les séries longues
@@ -24,8 +25,9 @@ import os
 import statistics
 import sys
 import time
-from collections.abc import Sequence
+from collections.abc import Callable, Iterator, Sequence
 from concurrent.futures import ProcessPoolExecutor
+from contextlib import contextmanager
 
 from scripts.graines_validation import check_series
 from scripts.measure_v2 import TICK_S, report, run
@@ -52,10 +54,47 @@ def summary(values: Sequence[float]) -> dict[str, float]:
     return {"n": n, "moyenne": mean, "écart-type": sd, "ic95": (mean - half, mean + half)}
 
 
-def _one_match(args: tuple[int, str | None, float, float, bool, bool]) -> dict:
+def _neutral_11h() -> Callable[[], None]:
+    """Ticket 11h neutralisé : facteur de tentative de tacle à 1,0 (aucun tirage consommé, séries appariées)."""
+    from v2engine import match
+    real = match.tackle_attempt_factor
+    match.tackle_attempt_factor = lambda tackler, holder, urgent, in_own_box=False: 1.0
+
+    def restore() -> None:
+        match.tackle_attempt_factor = real
+    return restore
+
+
+# Neutralisations pour les essais A/B (ticket v2-realisme/11q) : ticket -> remplacement d'une fonction du moteur, appliqué
+# dans le processus du match avant l'instrumentation du banc, puis retiré. Chaque entrée renvoie sa restauration.
+NEUTRALISATIONS: dict[str, Callable[[], Callable[[], None]]] = {"11h": _neutral_11h}
+
+
+def parse_neutralised(text: str | None) -> tuple[str, ...]:
+    """« 11h,11p » -> ("11h", "11p") ; un ticket inconnu est refusé (ValueError, avec la liste des tickets connus)."""
+    names = tuple(dict.fromkeys(n.strip() for n in (text or "").split(",") if n.strip()))
+    unknown = [n for n in names if n not in NEUTRALISATIONS]
+    if unknown:
+        raise ValueError(f"neutralisation inconnue : {', '.join(unknown)} (connues : {', '.join(sorted(NEUTRALISATIONS))})")
+    return names
+
+
+@contextmanager
+def neutralised(names: Sequence[str]) -> Iterator[None]:
+    """Applique les neutralisations le temps d'un match, puis rétablit le moteur (même en cas d'erreur)."""
+    restores = [NEUTRALISATIONS[name]() for name in names]
+    try:
+        yield
+    finally:
+        for restore in reversed(restores):
+            restore()
+
+
+def _one_match(args: tuple[int, str | None, float, float, bool, bool, tuple[str, ...]]) -> dict:
     """Un match (indice `i`, donc sa graine) dans un processus : ses compteurs bruts et ses indicateurs."""
-    i, profile, duration, tick_s, plans, validation = args
-    c = run(1, profile, duration_minutes=duration, tick_s=tick_s, plans=plans, start=i, validation=validation)
+    i, profile, duration, tick_s, plans, validation, neutral = args
+    with neutralised(neutral):
+        c = run(1, profile, duration_minutes=duration, tick_s=tick_s, plans=plans, start=i, validation=validation)
     return {
         "match": i,
         "count": dict(c.count),
@@ -106,9 +145,11 @@ def _merge_into(merged: Collector, r: dict) -> None:
 
 
 def run_series(n_matches: int, processes: int = 1, profile: str | None = None, duration: float = 90.0,
-               tick_s: float = TICK_S, plans: bool = True, start: int = 0, validation: bool = False) -> dict:
+               tick_s: float = TICK_S, plans: bool = True, start: int = 0, validation: bool = False,
+               neutral: Sequence[str] = ()) -> dict:
     check_series(start, n_matches, bool(profile), validation)  # avant tout lancement (ticket v2-realisme/18b)
-    jobs = [(i, profile, duration, tick_s, plans, validation) for i in range(start, start + n_matches)]
+    neutral = parse_neutralised(",".join(neutral))  # ticket inconnu refusé avant tout lancement (11q)
+    jobs = [(i, profile, duration, tick_s, plans, validation, neutral) for i in range(start, start + n_matches)]
     merged, results = Collector(), []
     merged.minutes_per_match = duration
     # fusion au fil de l'eau, dans l'ordre des matchs : les valeurs brutes d'un match ne sont gardées qu'une fois, dans
@@ -124,8 +165,11 @@ def run_series(n_matches: int, processes: int = 1, profile: str | None = None, d
             pool.shutdown()
     per_match = _per_match(results)
     per_match.pop("temps de calcul par match (s)", None)
+    parameters = {"durée (min)": duration, "profil": profile, "pas (s)": tick_s, "plans": plans}
+    if neutral:
+        parameters["neutralisés"] = list(neutral)  # ticket v2-realisme/11q
     return {
-        "paramètres": {"durée (min)": duration, "profil": profile, "pas (s)": tick_s, "plans": plans},
+        "paramètres": parameters,
         "matchs": [r["match"] for r in results],
         "agrégé": {k: v for k, v in report(merged).items() if k != "temps de calcul par match (s)"},
         "par match": per_match,
@@ -185,7 +229,14 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--validation", action="store_true", help="graines réservées (ticket v2-realisme/18b)")
     parser.add_argument("--json", default=None)
     parser.add_argument("--comparer", nargs=2, metavar=("AVANT", "APRES"))
+    parser.add_argument("--neutraliser", default=None, metavar="TICKETS",
+                        help=f"essai A/B (ticket v2-realisme/11q) : tickets séparés par des virgules, parmi "
+                             f"{', '.join(sorted(NEUTRALISATIONS))}")
     args = parser.parse_args(argv)
+    try:
+        neutral = parse_neutralised(args.neutraliser)
+    except ValueError as error:
+        parser.error(str(error))
     if args.comparer:
         before, after = (json.load(open(p, encoding="utf-8")) for p in args.comparer)
         for key, s in sorted(compare(before, after).items()):
@@ -195,9 +246,11 @@ def main(argv: list[str] | None = None) -> None:
         return
     eta = estimate_seconds(args.matches, args.processus)
     print(f"{args.matches} matchs sur {args.processus} processus : durée machine estimée {eta / 60:.0f} min", flush=True)
+    if neutral:
+        print(f"tickets neutralisés : {', '.join(neutral)}", flush=True)
     started = time.perf_counter()
     series = run_series(args.matches, args.processus, args.profil, tick_s=args.pas, plans=not args.sans_plan,
-                        start=args.debut, validation=args.validation)
+                        start=args.debut, validation=args.validation, neutral=neutral)
     ci = confidence(series)
     for key, value in _numeric(series["agrégé"]).items():
         if key not in ci:

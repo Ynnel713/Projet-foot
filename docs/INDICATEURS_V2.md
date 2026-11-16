@@ -1617,7 +1617,7 @@ Commande : `python -m scripts.bench_series 50 --processus 3` sur le moteur du 11
 
 ## 49. Tacle par derrière en dernier recours (ticket v2-realisme/11h, 50 matchs appariés, 16/11/2026)
 
-Commande : `python -m scripts.bench_series 50 --processus 2` (après) ; la série « avant » applique le même banc avec le facteur de tentative forcé à 1,0 (le facteur ne consomme aucun tirage : séries appariées), comparaison `--comparer`. Sorties : `.scratch/v2-realisme/mesures/11h-avant-serie.txt|json`, `11h-apres-serie.txt|json`, `11h-comparaison.txt`.
+Commande : `python -m scripts.bench_series 50 --processus 2` (après) ; la série « avant » applique le même banc avec le facteur de tentative forcé à 1,0 (le facteur ne consomme aucun tirage : séries appariées) ; reproductible depuis le 11q par `--neutraliser 11h` (vérifié sur les matchs 0 et 1 : 2 523 indicateurs identiques), comparaison `--comparer`. Sorties : `.scratch/v2-realisme/mesures/11h-avant-serie.txt|json`, `11h-apres-serie.txt|json`, `11h-comparaison.txt`.
 
 **Indicateurs ajoutés au banc.** Contexte de chaque tirage de tentative (urgence, porteur dans la surface du tacleur) ; tacles en urgence ou hors urgence, par angle ; tacles et fautes dans sa surface ; **renoncement** : tacle que le défenseur aurait tenté au taux de base, sur le même nombre aléatoire (flux DUEL relu puis restauré), et que le facteur 11h a évité, un épisode par couple (tacleur, porteur) clos après 2 s ; buts encaissés dans les 15 s qui suivent un renoncement.
 
