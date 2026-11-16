@@ -41,6 +41,7 @@ class BallPoint:
     position: Vec2
     mode: str = "sol"
     holder: str | None = None
+    dead: bool = False  # ballon mort : l'écran ne lisse pas la piste, le moteur le pose au point de remise (ticket 04b)
 
 
 @dataclass(frozen=True)
@@ -321,8 +322,8 @@ class MatchTrace:
     def record(self, minute: float, players: list[PlayerSnapshot], ball: BallSnapshot) -> None:
         self.ticks.append(Tick(minute=minute, players=tuple(players), ball=ball))
 
-    def record_ball(self, minute: float, position: Vec2, mode: str, holder: str | None) -> None:
-        self.ball_track.append(BallPoint(minute=minute, position=position, mode=mode, holder=holder))
+    def record_ball(self, minute: float, position: Vec2, mode: str, holder: str | None, dead: bool = False) -> None:
+        self.ball_track.append(BallPoint(minute=minute, position=position, mode=mode, holder=holder, dead=dead))
 
     def record_goal(self, team: str, minute: float, scorer: str | None = None, own_goal: bool = False) -> None:
         if team == "home":

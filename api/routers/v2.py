@@ -65,6 +65,7 @@ class BallPointOut(BaseModel):
     y: float
     mode: str = "sol"
     holder: str | None = None
+    dead: bool = False  # ballon mort : l'écran ne lisse pas la piste à travers une remise en jeu (ticket v2-correctifs-ecran/04b)
 
 
 class TickOut(BaseModel):
@@ -274,7 +275,7 @@ def _tick_out(tick) -> TickOut:
 
 def _ball_track_out(points) -> list[BallPointOut]:
     return [BallPointOut(minute=round(b.minute, 5), x=round(b.position.x, 2), y=round(b.position.y, 2), mode=b.mode,
-                         holder=b.holder) for b in points]
+                         holder=b.holder, dead=b.dead) for b in points]
 
 
 def _events_out(trace: MatchTrace) -> list[TraceEventOut]:

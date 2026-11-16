@@ -191,8 +191,8 @@ def test_ball_track_has_one_point_per_engine_step_matching_the_images() -> None:
     assert len(trace.ticks) == (len(track) + 4) // 5
     for k, tick in enumerate(trace.ticks):
         point = track[5 * k]
-        assert (point.minute, point.position, point.mode, point.holder) == (
-            tick.minute, tick.ball.position, tick.ball.mode, tick.ball.holder)
+        assert (point.minute, point.position, point.mode, point.holder, point.dead) == (
+            tick.minute, tick.ball.position, tick.ball.mode, tick.ball.holder, tick.ball.dead)
 
 
 def test_live_match_sends_the_ball_track_in_slices_without_gap_or_duplicate(monkeypatch) -> None:
@@ -253,8 +253,9 @@ def test_ball_track_out_rounds_for_a_lighter_response() -> None:
     from v2engine.geometry import Vec2
     from v2engine.trace import BallPoint
 
-    out = _ball_track_out([BallPoint(minute=1 / 600, position=Vec2(52.123456, 3.987654), mode="aérien", holder="A")])
-    assert out[0].model_dump() == {"minute": 0.00167, "x": 52.12, "y": 3.99, "mode": "aérien", "holder": "A"}
+    out = _ball_track_out([BallPoint(minute=1 / 600, position=Vec2(52.123456, 3.987654), mode="aérien", holder="A",
+                                     dead=True)])
+    assert out[0].model_dump() == {"minute": 0.00167, "x": 52.12, "y": 3.99, "mode": "aérien", "holder": "A", "dead": True}
 
 
 def test_api_records_two_images_per_second() -> None:

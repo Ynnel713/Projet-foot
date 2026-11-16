@@ -1,5 +1,6 @@
 import dims from "../../utils/pitchGeometry.json";
 import { goalBall } from "../../utils/v2GoalBall";
+import { displayBall, playersBetween } from "../../utils/v2Spline";
 
 // Lecture d'une trace V2 à un instant donné (ticket v2-ecran-match/01 : déplacé depuis routes/V2Match.jsx).
 export const L = dims.pitch_length_m;
@@ -24,7 +25,9 @@ export function clock(trace, minute) {
 }
 
 // Position à `seconds` de match, interpolée entre les deux ticks enregistrés qui l'encadrent. Les joueurs gardent
-// le même ordre d'un tick à l'autre (liste construite une fois côté moteur).
+// le même ordre d'un tick à l'autre (liste construite une fois côté moteur). Ticket v2-correctifs-ecran/04b : courbe
+// de Catmull-Rom centripète pour les joueurs (images à 0,5 s) et pour le ballon libre (piste `ball_track`, un point
+// toutes les 0,1 s) ; le ballon tenu suit la position affichée de son porteur. Coupures : `utils/v2Spline.js`.
 export function interpolatedTick(trace, seconds) {
   const last = trace.ticks.length - 1;
   const exact = Math.min(last, Math.max(0, seconds / trace.tick_seconds));
@@ -39,22 +42,21 @@ export function interpolatedTick(trace, seconds) {
   // cap du corps en degrés (ticket v2-realisme/07a) : par le plus court côté, jamais un tour complet entre deux images
   const mixAngle = (u = 0, v = 0) => u + ((((v - u + 180) % 360) + 360) % 360 - 180) * f;
   const minute = mix(a.minute, b.minute);
+  const positions = playersBetween(trace.ticks, i, f, half);
+  const players = a.players.map((p, k) => ({
+    ...p,
+    x: positions[k].x,
+    y: positions[k].y,
+    facing: mixAngle(p.facing, b.players[k].facing),
+  }));
   // but entre les deux images : le ballon entre dans le but au lieu de glisser vers le rond central
   const scored = goalBall(a, b, minute, trace.goals, dims.pitch_length_m, dims.pitch_width_m);
   // mode (« sol » / « aérien ») et ballon mort : ceux de l'image de départ (ticket v2-hauteur-ballon/01)
   const state = { mode: a.ball.mode, dead: a.ball.dead };
-  return {
-    minute,
-    players: a.players.map((p, k) => ({
-      ...p,
-      x: mix(p.x, b.players[k].x),
-      y: mix(p.y, b.players[k].y),
-      facing: mixAngle(p.facing, b.players[k].facing),
-    })),
-    ball: scored
-      ? { ...scored, holder: null, ...state }
-      : { x: mix(a.ball.x, b.ball.x), y: mix(a.ball.y, b.ball.y), holder: a.ball.holder, ...state },
-  };
+  if (scored) return { minute, players, ball: { ...scored, holder: null, ...state } };
+  const linear = { x: mix(a.ball.x, b.ball.x), y: mix(a.ball.y, b.ball.y) };
+  const ball = displayBall(trace.ball_track, minute, half, players, linear, a.ball.holder);
+  return { minute, players, ball: { ...ball, ...state } };
 }
 
 // Demi-tour de la scène autour du rond central (2e période) : chaque équipe attaque l'autre but.

@@ -342,6 +342,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **`v2-correctifs-ecran/04a` livré (16/11/2026)** : piste du ballon à chaque pas de 0,1 s (`MatchTrace.ball_track`, `ball_track` de l'API, curseur `from_ball` du rejeu en direct), joueurs à 2 images par seconde (`_RECORD_EVERY` = 5), positions envoyées au centimètre ; moteur inchangé (mêmes empreintes à graine fixée) ; réponse d'un match : 33,9 Mo brut, 3,0 Mo gzip. Livré le 16/11/2026, validé expert (APPROVED) + QC ; débloque le `04b` (à y prévoir : champ `dead` dans la piste du ballon si l'écran doit l'atténuer entre deux images).
 
+**`v2-correctifs-ecran/04b` livré (16/11/2026), validé expert (réserve A1 acceptée) + QC** : à l'écran, joueurs et ballon suivent une courbe de Catmull-Rom centripète (alpha 0,5) par les points du moteur (`ui/src/utils/v2Spline.js`) ; coupures sur changement de porteur, ballon mort (champ `dead` ajouté à la piste du ballon), remise en jeu et mi-temps ; ballon tenu dessiné sur son porteur. Match réel, 1re période à 10 im/s : virages du ballon libre sans joueur à 2 m 69 → 6, sauts de vitesse x1,6 278 → 191 (dont loin d'un joueur 198 → 34), 8 µs par image. Réserve A1 : à une remise en jeu, les joueurs passent en ligne droite sur 0,5 s (un preneur posé au point peut glisser) ; à vérifier à l'écran sur les coups francs, ticket de suivi si cela se voit.
+
 ### Bloquée par
 
 - Phase 4
