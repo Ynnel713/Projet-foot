@@ -18,7 +18,23 @@
 
 **Bloque :** `v2-collectif/22a` (volume des fautes).
 
-**Status:** à faire (constantes à proposer avant le code)
+**Status:** découpé (16/11/2026, validé par le propriétaire) en 21c1 à 21c7 ; clos quand tous ses sous-tickets sont livrés et la mesure du volume de fautes faite (critères ci-dessous).
+
+## Découpage (16/11/2026)
+
+Note : le constat est en partie dépassé, puisque le duel d'épaule du 11c produit déjà des fautes de charge (`duel.shoulder_foul_probability`).
+
+| Sous-ticket | Contenu | Bloqué par |
+|---|---|---|
+| 21c1 | Prudence de surface commune (courbe du 11h, extraite), appliquée d'abord à la charge du 11c | aucun |
+| 21c2 | Faute du gardien en sortie sur un ballon libre | 21c1 |
+| 21c3 | Charge dans le dos du porteur (au sol) | 21c1 |
+| 21c4 | Tenir un adversaire (maillot, bras) : marquage ; défenseur battu | 21c1 ; volet défenseur battu : 04g |
+| 21c5 | Contact irrégulier à la protection du ballon | 21c1, 04i |
+| 21c6 | Faute tactique pour casser une transition | 21c1, 21b |
+| 21c7 | Fautes aériennes (charge au saut, sortie aérienne du gardien) | 21c1, 15b |
+
+Total des sous-tickets : 9 h 20 de travail effectif, à comparer aux 2 h de l'estimation initiale, qui ne comptait pas le complément du 16/11.
 
 ## Estimation
 
