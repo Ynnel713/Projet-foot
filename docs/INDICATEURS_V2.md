@@ -1634,3 +1634,15 @@ Commande : `python -m scripts.bench_series 50 --processus 2 --neutraliser 11p --
 **Résultat (avant → après ; écart apparié, intervalle à 95 %).** Tacles par match 22,08 → 22,52 (+ 0,44 ± 0,46, **non significatif** ; repère réel 30-40). Parts des tacles tentés : de face 52,4 → 55,4 % (+ 3,0 points ± 2,5, significatif), par derrière 15,6 → 13,4 % (− 2,2 ± 2,1, significatif), de côté 31,3 → 31,2 % ; part des tacles par derrière hors urgence 15,2 → 12,7 % (− 2,5 ± 2,1). Fautes par match 10,88 → 10,38 (− 0,5 ± 0,49, significatif). Buts par match 4,92 → 4,76 (− 0,16 ± 0,41) et tirs par équipe 20,70 → 20,65 (− 0,05 ± 0,48) : non significatifs. Penalties − 0,02 ± 0,04. Réussite et faute par angle inchangées.
 
 **Lecture.** L'hypothèse du ticket est réfutée : le tirage réservé au plus proche ne bridait pas le volume des tacles ; la règle déplace des tentatives du dos vers la face (qualité), pas leur nombre. **Décision du propriétaire (16/11/2026)** : règle gardée pour ce gain, volume des tacles confié au ticket `11r` (diagnostic d'abord).
+
+## 51. Diagnostic du volume de tacles (ticket v2-realisme/11r, 50 matchs, 16/11/2026)
+
+Commande : `python -m scripts.diagnostic_tacles 50 --processus 4 --json 11r-diagnostic.json` (graines et affiches du banc, indices 0 à 49 ; lecture seule, moteur non modifié). Sorties : `.scratch/v2-realisme/mesures/11r-diagnostic.txt|json`. Tacles tentés 22,52 par match : le chiffre de la série « après » du 11p, mêmes matchs.
+
+**Exposition.** Ballon tenu 2 847 s par match ; au moins un adversaire à moins de 3 m : 2 050 s ; à portée de tacle (1,5 m) : 1 234 s (43 % du ballon tenu), dont à deux défenseurs 5,8 % et à trois ou plus 0,2 %. Temps-défenseur à portée : tirage 90,5 % ; non retenu par le 11p (un autre au meilleur angle) 6,3 % ; déséquilibré (12c) 2,5 % ; relève après tacle raté 0,7 % ; déjà engagé et hors jeu : nuls.
+
+**Confrontations** (défenseur à portée du même porteur sans interruption). 1 239 par match ; durée médiane 0,8 s, moyenne 1,05 s (moins de 0,3 s : 12,9 % ; 0,3 à 1 s : 47,3 % ; 1 à 3 s : 35,8 % ; 3 s et plus : 4,1 %). Issue : tacle tenté 1,7 %, porteur qui joue ou perd le ballon 50,6 %, séparation 47,6 %, arrêt de jeu 0,1 %.
+
+**Taux.** 0,018 tacle par seconde d'exposition = taux de base des tireurs 0,031/s (Aggression) × facteur 11h moyen 0,61. Par contexte (part du temps de tirage, facteur moyen, tacles par match, attendus au taux de base) : hors urgence de face 37,4 %, 0,87, 12,4 (13,6) ; de côté 32,9 %, 0,58, 6,7 (12,5) ; par derrière 27,1 %, 0,29, 2,7 (11,3) ; dans sa surface 1,5 %, 0,23, 0,14 (0,71) ; en urgence 1,1 %, 1,0, 0,58 (0,51).
+
+**Lecture.** Le volume ne se perd ni par l'exposition (fréquente, rarement multiple) ni par les règles de blocage (3,4 % du temps à portée) : au taux de base, 38,6 tacles seraient attendus, dans le repère 30-40. Le taux de base (0,03/s) a été calibré sur ce repère avant le 11h, dont le facteur retire 16,1 tacles par match (par derrière 8,6, voulu ; de côté 5,8 ; de face 1,2 ; surface 0,6). **Décision du propriétaire (16/11/2026)** : recalibrer la base, 0,03 → 0,047/s (amplitude 0,021 → 0,033), ticket `11s`.
