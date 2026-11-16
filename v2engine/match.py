@@ -29,7 +29,8 @@ from v2engine.evitement import avoid_teammates
 from v2engine.duel import (CONTACT_MIN_CLOSING_MPS, SHOULDER_COOLDOWN_S, SHOULDER_PUSH_M, SHOULDER_PUSH_STEPS,
                            after_contact_delay_s,
                            after_contact_speed_loss, contact_share, foul_severity, resolve_shoulder_duel, resolve_tackle,
-                           shoulder_contact, should_attempt_tackle, defensive_urgency, tackle_attempt_factor)
+                           shoulder_contact, should_attempt_tackle, defensive_urgency, tackle_attempt_factor,
+                           best_placed_tackler)
 from v2engine.flux import ARBITRAGE, PERCEPTION, TIR, seed_streams
 from v2engine.formation import initial_positions
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch, in_penalty_area
@@ -244,15 +245,6 @@ def _shoulder_duels(players: list[PlayerState], ball: BallState, now_s: float, f
                 ball.shoulder_push[loser.name] = (gap.normalized() * (SHOULDER_PUSH_M / SHOULDER_PUSH_STEPS),
                                                   SHOULDER_PUSH_STEPS)
             _unsettle(loser, ball, now_s)
-
-
-def _nearest_opponent_in_range(holder: PlayerState, players: list[PlayerState], radius_m: float) -> PlayerState | None:
-    opponents_in_range = [
-        p for p in players if p.team != holder.team and holder.position.distance_to(p.position) < radius_m
-    ]
-    if not opponents_in_range:
-        return None
-    return min(opponents_in_range, key=lambda p: holder.position.distance_to(p.position))
 
 
 def _goalkeeper(team: str, players: list[PlayerState]) -> PlayerState | None:
@@ -660,7 +652,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                       if p.name not in ball.engaged and ball.tackle_ban_until_s.get(p.name, 0.0) <= now_s
                       and ball.offside_out_until.get(p.name, 0.0) <= now_s
                       and ball.unsettled_until_s.get(p.name, 0.0) <= now_s]  # déséquilibré : pas de tacle (12c)  # le fautif recule, il ne défend pas
-        challenger = _nearest_opponent_in_range(holder, candidates, TACKLE_RADIUS_M)
+        challenger = best_placed_tackler(holder, candidates, TACKLE_RADIUS_M)  # le mieux placé tente (11p)
         # tacle par derrière en dernier recours (ticket v2-realisme/11h) : hors urgence, l'angle et Decisions modèrent le
         # taux, passé par le temps d'exposition (même loi exponentielle que `should_attempt_tackle`)
         attempt_factor = 1.0 if challenger is None else tackle_attempt_factor(

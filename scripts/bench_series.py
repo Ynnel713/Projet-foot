@@ -65,9 +65,20 @@ def _neutral_11h() -> Callable[[], None]:
     return restore
 
 
+def _neutral_11p() -> Callable[[], None]:
+    """Ticket 11p neutralisé : le plus proche à portée tente le tacle, quel que soit son angle (règle d'avant)."""
+    from v2engine import match
+    real = match.best_placed_tackler
+    match.best_placed_tackler = lambda holder, players, radius_m: real(holder, players, radius_m, math.inf)
+
+    def restore() -> None:
+        match.best_placed_tackler = real
+    return restore
+
+
 # Neutralisations pour les essais A/B (ticket v2-realisme/11q) : ticket -> remplacement d'une fonction du moteur, appliqué
 # dans le processus du match avant l'instrumentation du banc, puis retiré. Chaque entrée renvoie sa restauration.
-NEUTRALISATIONS: dict[str, Callable[[], Callable[[], None]]] = {"11h": _neutral_11h}
+NEUTRALISATIONS: dict[str, Callable[[], Callable[[], None]]] = {"11h": _neutral_11h, "11p": _neutral_11p}
 
 
 def parse_neutralised(text: str | None) -> tuple[str, ...]:

@@ -18,7 +18,7 @@
 
 **Bloque :** rien.
 
-**Status:** à faire (option et constante validées le 16/11/2026)
+**Status:** implémenté (16/11/2026) — en attente de /valider-ticket-simulafoot
 
 ## Estimation
 
@@ -38,10 +38,16 @@ Temps machine, non compté : série appariée de 50 matchs ; suite complète.
 - **Unitaires (scène contrôlée) :** un défenseur dans le dos et un défenseur de face, tous deux à portée : celui de face peut tenter ; un seul tacle par pas.
 - **Statistiques :** 50 matchs appariés (`--neutraliser 11p` pour la série « avant ») : tacles par match, part par angle, fautes, buts et tirs.
 
+## Résultat (50 matchs appariés, 16/11/2026)
+
+`docs/INDICATEURS_V2.md` section 50. Règle : `duel.best_placed_tackler` (constante `TACKLER_ANGLE_TIE_DEG` = 10°), appelée par `match._step_ball` à la place de l'ancien `_nearest_opponent_in_range` (supprimé) ; neutralisation `11p` du banc : tolérance infinie, donc le plus proche. Tacles par match 22,08 → 22,52 (+ 0,44 ± 0,46, non significatif ; repère réel 30-40, **non atteint**) ; tacles de face 52,4 → 55,4 % et par derrière 15,6 → 13,4 % des tentatives (significatifs) ; fautes 10,88 → 10,38 (− 0,5 ± 0,49) ; buts − 0,16 ± 0,41 et tirs par équipe − 0,05 ± 0,48 (non significatifs). L'hypothèse du constat (le tirage du plus proche amplifie la baisse) est réfutée. **Décision du propriétaire (16/11/2026)** : « Garder + ticket volume (Recommandé) » : règle gardée pour le gain de qualité, volume confié au ticket `11r`.
+
+Tests : 6 tests dans `tests/test_v2engine_tacleur_mieux_place.py` (scène dos/face, tolérance de 10°, coéquipiers et hors portée ignorés, un seul tacle par pas dans `_step_ball`, neutralisation du banc). Suite complète : 3 207 passés, 14 désélectionnés (attendu 3 201 + 6). Déterminisme : deux exécutions à graine fixée (match de 10 min), même empreinte `8efbc7feb978e98c`.
+
 ## Acceptance criteria
 
 - [x] Option et règle validées par le propriétaire avant le code
-- [ ] Scène : le défenseur de face à portée tente malgré un défenseur plus proche dans le dos
-- [ ] Tacles par match rapportés, comparés au repère réel 30 à 40 ; fautes, buts et tirs rapportés
-- [ ] Déterminisme à graine fixée ; suite complète comparée à l'attendu de `CLAUDE.md`
-- [ ] Durée réelle relevée et comparée à l'estimation (`docs/agents/suivi-estimations.md`)
+- [x] Scène : le défenseur de face à portée tente malgré un défenseur plus proche dans le dos
+- [x] Tacles par match rapportés, comparés au repère réel 30 à 40 ; fautes, buts et tirs rapportés — 22,5, sous le repère ; volume confié au `11r` (décision du propriétaire)
+- [x] Déterminisme à graine fixée ; suite complète comparée à l'attendu de `CLAUDE.md`
+- [x] Durée réelle relevée et comparée à l'estimation (`docs/agents/suivi-estimations.md`) — 100 min pour 105 estimées (− 5 %)

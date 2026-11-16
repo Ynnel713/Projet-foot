@@ -202,6 +202,28 @@ def tackle_approach_angle_deg(tackler: PlayerState, holder: PlayerState) -> floa
     return _angle_deg(holder.facing, toward_tackler)
 
 
+# Choix du tacleur (ticket v2-realisme/11p, option et constante validées par le propriétaire le 16/11/2026) : parmi les
+# défenseurs à portée, seul le mieux placé tente (meilleur angle d'approche, 0° = de face) ; deux angles à moins de 10°
+# l'un de l'autre : le plus proche du porteur l'emporte. Un seul tirage par pas : deux défenseurs ne taclent jamais
+# ensemble. Chiffre réel : non trouvé (repère d'effet : 30 à 40 tacles par match, ticket 22).
+TACKLER_ANGLE_TIE_DEG = 10.0
+
+
+def best_placed_tackler(holder: PlayerState, players: list[PlayerState], radius_m: float,
+                        angle_tie_deg: float = TACKLER_ANGLE_TIE_DEG) -> PlayerState | None:
+    """Adversaire du porteur à moins de `radius_m` qui tente le tacle : le meilleur angle d'approche
+    (`tackle_approach_angle_deg`) ; parmi ceux à moins de `angle_tie_deg` de ce meilleur angle, le plus proche (à
+    distance égale, le premier de `players`). `angle_tie_deg` infini : le plus proche, règle d'avant le ticket 11p."""
+    in_range = [p for p in players
+                if p.team != holder.team and holder.position.distance_to(p.position) < radius_m]
+    if not in_range:
+        return None
+    angles = {p.name: tackle_approach_angle_deg(p, holder) for p in in_range}
+    best = min(angles.values())
+    contenders = [p for p in in_range if angles[p.name] - best < angle_tie_deg]
+    return min(contenders, key=lambda p: holder.position.distance_to(p.position))
+
+
 def tackle_closing_speed_mps(tackler: PlayerState, holder: PlayerState) -> float:
     """Vitesse (m/s) à laquelle le tacleur se rapproche du porteur (négative s'il s'éloigne)."""
     toward_holder = holder.position - tackler.position
