@@ -338,6 +338,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **Temps de contrôle selon l'orientation (13/11/2026, ticket `v2-realisme/07d`)** : livré (13/11/2026), validé expert + QC (passage 1 de l'expert rejeté : contrôle à l'aveugle, condition du 07c, corrigé au passage 2). Un contrôle non orienté dure x 0,85 de profil, x 0,95 de face, x 1,35 dos au jeu (type au contact) ; un ballon reçu dans le dos d'un joueur non lancé compte dos au jeu ; un contrôle orienté n'en dépend pas. Sur 50 matchs : 22,6 % de contrôles non orientés à l'aveugle ; temps par possession de joueur 2,37 → 2,43 s ; buts 3,48 → 3,62 (dérive depuis le 31b rattachée au 07g).
 
+**Audit à l'écran (16/11/2026, retours du propriétaire)** : trois tickets créés, constantes validées par le propriétaire le 16/11/2026. `v2-correctifs-ecran/04a` (trace du ballon à chaque pas de 0,1 s, joueurs à 2 images par seconde : `_RECORD_EVERY` 10 → 5) puis `04b` (interpolation Catmull-Rom centripète à l'écran) : le ballon semblait tourner ou ralentir sans contact parce que l'écran n'avait qu'une image par seconde, tracée en ligne droite (virages sans joueur proche : 16 % des images à l'écran contre 0,2 % des pas du moteur). `v2-realisme/09j` (hauteur de la dernière ligne avec ballon, P0) : avec ballon, le bloc ne se cale sur aucune ligne et reste derrière le ballon (centraux à 18,5 à 21 m de leur but, ballon à 47 m) ; l'écart défense-milieu de 10 à 15 m voulu par le propriétaire est reporté au `09e`, après 09j.
+
 ### Bloquée par
 
 - Phase 4
