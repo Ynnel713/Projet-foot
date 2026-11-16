@@ -16,7 +16,7 @@
 
 **Bloque :** rien.
 
-**Status:** à faire
+**Status:** implémenté (16/11/2026) — en attente de /valider-ticket-simulafoot
 
 ## Estimation
 
@@ -31,10 +31,18 @@
 Confiance : moyenne. Hypothèses : quelques tests figent 0,03 ; la série « avant » est celle du 11r/11p (mêmes graines).
 Temps machine, non compté : série de 50 matchs ; suite complète.
 
+## Résultat (50 matchs appariés, 16/11/2026)
+
+`docs/INDICATEURS_V2.md` section 52. `duel._ATTEMPT_BASELINE` 0,047, `_ATTEMPT_AMPLITUDE` 0,033 ; série « avant » : `11p-apres-serie.json` (moteur inchangé depuis, mêmes matchs). Tacles par match 22,52 → 34,32 (+ 11,8 ± 1,3, dans le repère 30-40) ; part des tacles par derrière hors urgence 12,5 → 13,3 % (+ 0,7 ± 2,4 points, non significatif) ; de face 55,9 → 51,2 % et de côté 30,9 → 34,7 % des tentatives (significatifs) ; fautes 10,38 → 16,68 (+ 6,3 ± 0,9), coups francs + 4,8 ± 0,9, penaltys + 0,06 ± 0,10 ; buts − 0,04 ± 0,78 et tirs par équipe − 0,02 ± 0,98 (non significatifs). Aggression : rapport des taux 99 / 11 de 5,67 à 5,71 (calcul sur la courbe, pas de série de profil : les deux constantes sont multipliées par le même facteur).
+
+Tests : 1 test ajouté dans `tests/test_v2engine_duel.py` (taux 0,047 à la note médiane, bornes de l'amplitude) ; aucun test existant ne figeait 0,03. Suite complète : 3 213 passés, 14 désélectionnés (3 212 + 1). Déterminisme : deux exécutions à graine fixée (match de 10 min), même empreinte `f4d4bb80ab482f36`.
+
+**Durée réelle : 65 min** (analyse 10, développement 10, tests 10, intégration 35) pour 80 estimées (− 19 %). Temps machine hors total : série de 50 matchs (38 min, 3 processus), suite complète 14 min.
+
 ## Acceptance criteria
 
-- [ ] Tacles par match dans 30 à 40 sur 50 matchs appariés
-- [ ] Part des tacles par derrière hors urgence sans hausse significative (proportions du 11h gardées)
-- [ ] Fautes, buts, tirs rapportés (écart apparié) ; profil Aggression 99/11 : écart de fréquence gardé
-- [ ] Déterminisme à graine fixée ; suite complète comparée à l'attendu
-- [ ] Durée réelle relevée et comparée à l'estimation (`docs/agents/suivi-estimations.md`)
+- [x] Tacles par match dans 30 à 40 sur 50 matchs appariés — 34,3
+- [x] Part des tacles par derrière hors urgence sans hausse significative (proportions du 11h gardées) — + 0,7 ± 2,4 points
+- [x] Fautes, buts, tirs rapportés (écart apparié) ; profil Aggression 99/11 : écart de fréquence gardé — fautes + 6,3, buts et tirs non significatifs ; rapport 5,67 → 5,71 (calcul)
+- [x] Déterminisme à graine fixée ; suite complète comparée à l'attendu — 3 213 passés
+- [x] Durée réelle relevée et comparée à l'estimation (`docs/agents/suivi-estimations.md`) — 65 min pour 80 (− 19 %)

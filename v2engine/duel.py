@@ -18,9 +18,11 @@ from v2engine.movement import PlayerState
 # plutôt que d'éviter le contact (guide, Aggression : "NOTE HAUTE : tacles plus tôt... NOTE BASSE :
 # évite le contact"). Taux par seconde, pas par tick (v2-socle/06, validé le 25/10/2026) : cible
 # 30-40 tacles tentés par match, réel Premier League ~33 (premierleague.com) ; écart Aggression
-# conservé (~x2 entre notes extrêmes, comme l'ancien 0,5 ± 0,35).
-_ATTEMPT_BASELINE = 0.03
-_ATTEMPT_AMPLITUDE = 0.021
+# conservé (~x2 entre notes extrêmes, comme l'ancien 0,5 ± 0,35). Recalibré après le facteur de tentative du 11h
+# (ticket v2-realisme/11s, valeurs validées par le propriétaire le 16/11/2026) : 0,03 ± 0,021 donnait 38,6 tacles au
+# taux de base mais 22,5 avec le facteur (moyenne 0,61, diagnostic 11r) ; les deux multipliés par 1,567.
+_ATTEMPT_BASELINE = 0.047
+_ATTEMPT_AMPLITUDE = 0.033
 
 # Probabilité de BASE qu'un tacle (gagné ou raté : un tacle qui touche le ballon peut aussi faucher) soit une faute,
 # modulée par Aggression seule -- contrepartie du guide (plus de duels tentés, plus de fautes), indépendante de
