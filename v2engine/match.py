@@ -29,7 +29,7 @@ from v2engine.evitement import avoid_teammates
 from v2engine.duel import (CONTACT_MIN_CLOSING_MPS, SHOULDER_COOLDOWN_S, SHOULDER_PUSH_M, SHOULDER_PUSH_STEPS,
                            after_contact_delay_s,
                            after_contact_speed_loss, contact_share, foul_severity, resolve_shoulder_duel, resolve_tackle,
-                           shoulder_contact, should_attempt_tackle)
+                           shoulder_contact, should_attempt_tackle, defensive_urgency, tackle_attempt_factor)
 from v2engine.flux import ARBITRAGE, PERCEPTION, TIR, seed_streams
 from v2engine.formation import initial_positions
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch, in_penalty_area
@@ -661,7 +661,13 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                       and ball.offside_out_until.get(p.name, 0.0) <= now_s
                       and ball.unsettled_until_s.get(p.name, 0.0) <= now_s]  # déséquilibré : pas de tacle (12c)  # le fautif recule, il ne défend pas
         challenger = _nearest_opponent_in_range(holder, candidates, TACKLE_RADIUS_M)
-        if challenger is not None and should_attempt_tackle(effective_rating(challenger, "Aggression"), dt):
+        # tacle par derrière en dernier recours (ticket v2-realisme/11h) : hors urgence, l'angle et Decisions modèrent le
+        # taux, passé par le temps d'exposition (même loi exponentielle que `should_attempt_tackle`)
+        attempt_factor = 1.0 if challenger is None else tackle_attempt_factor(
+            challenger, holder, defensive_urgency(holder, _OPPONENT_GOAL[holder.team], players, challenger),
+            in_penalty_area(holder.team, holder.position))  # surface que défend le tacleur : penalty en cas de faute
+        if challenger is not None and should_attempt_tackle(effective_rating(challenger, "Aggression"),
+                                                            dt * attempt_factor):
             ball.engaged.add(challenger.name)
             result = resolve_tackle(challenger, holder)
             if not result.won:

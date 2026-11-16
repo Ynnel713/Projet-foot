@@ -6,9 +6,15 @@
 
 **What to build:** Trois sources nouvelles : contact irrégulier au duel d'épaule (11c) ou à la protection du ballon (04i) ; tirage de maillot du défenseur battu (après un contournement 04g ou un appel dans son dos) ; faute tactique volontaire pour casser une transition (choix du joueur, Decisions ; gravité 21b).
 
-**Attributs :** Decisions (choisir la faute tactique) ; Aggression inchangée (fréquence des contacts).
+**Complément du propriétaire (16/11/2026, validé) :**
+- **Tenir un adversaire** (loi 12) : tirage de maillot **ou bras retenu**, par le défenseur battu ou au marquage (dans la surface, notamment sur coup de pied arrêté).
+- **Charge dans le dos** du porteur (défenseur qui arrive derrière lui) ou au **duel aérien** (sauter dans le dos de l'adversaire). Le volet aérien attend le jeu aérien (`v2-attributs-restants/01`).
+- **Faute du gardien dans ses sorties** : sur un ballon libre (course au ballon, `gardien.race`) ou aérien (poing ou sortie qui percute l'attaquant). Penalty dans la surface ; le volet face-à-face (gardien qui fauche le dribbleur) reste au `v2-attributs-restants/10b`.
+- **Prudence dans sa surface pour toutes ces fautes**, comme pour le tacle (ticket 11h : prudence de surface réglée par Decisions, 99 -> 0,35, 55 -> 0,5, 11 -> 0,75) : la faute y coûte un penalty, donc le joueur retient son geste (moins de maillots tirés, de charges, de fautes tactiques ; la faute tactique n'y a presque aucun sens). **Moins rare ne veut pas dire jamais** : des fautes et des penalties restent possibles. Valeurs par source à proposer avant le code ; réutiliser le facteur du 11h si le propriétaire le valide (pas de seconde courbe Decisions pour le même discernement, règle R1).
 
-**Blocked by:** 11c, 04g, 04i, 21b.
+**Attributs :** Decisions (choisir la faute tactique ; prudence dans sa surface, même discernement que le 11h) ; Aggression inchangée (fréquence des contacts) ; gardien : Rushing Out et One on Ones (sorties), à trancher pour la faute.
+
+**Blocked by:** 11c, 04g, 04i, 21b ; 11h (prudence de surface, ajouté le 16/11/2026) ; volet aérien : `v2-attributs-restants/01` (jeu aérien).
 
 **Bloque :** `v2-collectif/22a` (volume des fautes).
 
@@ -25,18 +31,21 @@
 | **Total (travail effectif)** | **2 h** |
 
 Confiance : moyenne. Hypothèses : chaque source réutilise une situation déjà détectée par le moteur.
+
+**À découper avant le code (16/11/2026) :** le complément du propriétaire ajoute trois sources (tenir le bras, charge dans le dos, faute du gardien en sortie) et la prudence de surface ; le total dépasse nettement le seuil de 2 h (estimation à refaire par sous-ticket, par exemple : tenir un adversaire ; charges ; faute tactique ; faute du gardien en sortie ; prudence de surface commune).
 Temps machine, non compté : suite complète (environ 40 min) ; mesure 50 matchs.
 
 ## Tests
 
-- **Unitaires (scène contrôlée) :** défenseur battu sur un contournement : tirage de maillot possible, plus fréquent si la transition est dangereuse
+- **Unitaires (scène contrôlée) :** défenseur battu sur un contournement : tirage de maillot possible, plus fréquent si la transition est dangereuse ; même scène dans sa surface : faute plus rare, mais possible ; gardien en sortie qui percute l'attaquant : penalty
 - **Statistiques (séries de matchs) :** 50 matchs : fautes par match par source
 
 ## Acceptance criteria
 
 - [ ] Constantes produit et chiffres réels (sourcés ou « non trouvé ») validés par le propriétaire avant le code
-- [ ] Trois sources tracées
-- [ ] Fautes par match rapportées (aucun réglage pour viser 21-26)
+- [ ] Sources tracées : contact irrégulier, tenir un adversaire (maillot, bras), charge dans le dos, faute tactique, faute du gardien en sortie
+- [ ] Dans sa surface : chaque source plus rare qu'ailleurs à situation égale, jamais nulle ; penalties par match rapportés (repère réel à chercher, ou « non trouvé »)
+- [ ] Fautes par match ramenées vers le repère réel 21-26, écart restant rapporté (décision du propriétaire du 16/11/2026 : le 11h fait passer les fautes de 19,8 à 10,9 par match sur 50 matchs appariés, en évitant les tacles par derrière et de côté ; le 21c compense par les fautes hors tacle, sans revenir sur les constantes du 11h)
 - [ ] Rayon des attributs conforme à `docs/CARTE_ATTRIBUTS_V2.md`, sans double comptage ; test de rayon à jour
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions

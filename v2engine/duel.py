@@ -116,8 +116,58 @@ def after_contact_delay_s(player: PlayerState) -> float:
 
 
 def should_attempt_tackle(aggression: float, dt: float) -> bool:
-    """Tirage sur un tick de `dt` secondes : indépendant du pas de simulation (taux par seconde)."""
+    """Tirage sur un tick de `dt` secondes : indépendant du pas de simulation (taux par seconde). Un taux modulé
+    (`tackle_attempt_factor`, ticket v2-realisme/11h) se passe par `dt` multiplié par le facteur : même loi."""
     return DUEL.random() < 1.0 - math.exp(-attempt_tackle_probability(aggression) * dt)
+
+
+# Tacle par derrière en dernier recours (ticket v2-realisme/11h, constantes validées par le propriétaire le 16/11/2026).
+# Hors urgence, le taux de tentative est multiplié selon l'angle d'approche (mêmes repères que le 11d : 0° de face, 90°
+# de côté, 180° par derrière, interpolé) : 1,0 / 0,6 / 0,15 pour Decisions 55. Decisions règle le discernement (carte
+# des attributs : « choisir... tacler, attendre ») : par derrière 99 -> 0,05, 55 -> 0,15, 11 -> 0,40, interpolé
+# linéairement entre ces notes ; la réduction de côté suit le même coefficient (99 -> 0,55, 11 -> 0,72), de face
+# inchangé. Aggression garde seule la fréquence de base, Decisions ne fait que la moduler selon le risque (R1).
+# Urgence défensive (facteur 1,0) : porteur à moins de 20 m du but défendu avec un angle de tir (à moins de 45° de
+# l'axe du but, vu du centre du but), ou dernier rempart (aucun coéquipier de champ du défenseur plus près de son but
+# que le porteur ; décision du propriétaire du 16/11/2026 : il ne laisse pas l'attaquant marcher vers le but ; la
+# prudence liée aux cartons est un ticket à part, bloqué par v2-attributs-restants/09a). Dans la surface que défend le
+# tacleur, pas d'urgence (une faute y donne un penalty) : facteur hors urgence multiplié par la prudence de surface,
+# réglée par Decisions 99 -> 0,35, 55 -> 0,5, 11 -> 0,75. Chiffre réel : non trouvé (loi 12 IFAB : le tacle
+# par derrière dangereux est une faute grossière ; faute dans la surface : penalty).
+TACKLE_ATTEMPT_ANGLE_FACTOR = (1.0, 0.6, 0.15)  # de face, de côté, par derrière (Decisions 55)
+TACKLE_DISCERNMENT_NOTES = (11.0, 55.0, 99.0)
+TACKLE_BEHIND_FACTOR_BY_DECISIONS = (0.40, 0.15, 0.05)
+TACKLE_BOX_FACTOR_BY_DECISIONS = (0.75, 0.50, 0.35)
+URGENCY_DISTANCE_M = 20.0
+URGENCY_SHOT_ANGLE_DEG = 45.0
+
+
+def defensive_urgency(holder: PlayerState, defended_goal, players: list[PlayerState], defender: PlayerState) -> bool:
+    """Urgence défensive de `defender` face à `holder` (voir `URGENCY_DISTANCE_M`) : porteur à moins de 20 m de
+    `defended_goal` avec un angle de tir, ou `defender` dernier rempart parmi les joueurs de champ de son équipe."""
+    to_goal = defended_goal - holder.position
+    distance = to_goal.length()
+    if distance < URGENCY_DISTANCE_M and (
+            distance < 1e-9 or math.degrees(math.atan2(abs(to_goal.y), abs(to_goal.x))) < URGENCY_SHOT_ANGLE_DEG):
+        return True
+    return not any(p.team == defender.team and p.name != defender.name and p.poste != "GK"
+                   and p.position.distance_to(defended_goal) < distance for p in players)
+
+
+def tackle_attempt_factor(tackler: PlayerState, holder: PlayerState, urgent: bool, in_own_box: bool = False) -> float:
+    """Multiplicateur du taux de tentative de tacle (voir `TACKLE_ATTEMPT_ANGLE_FACTOR`) : selon l'angle d'approche et
+    le discernement (Decisions) du tacleur ; 1,0 en urgence ; porteur dans la surface du tacleur (`in_own_box`) : pas
+    d'urgence, facteur multiplié par la prudence de surface."""
+    decisions = effective_rating(tackler, "Decisions")
+    if urgent and not in_own_box:
+        return 1.0
+    behind = _interpolate(decisions, TACKLE_DISCERNMENT_NOTES, TACKLE_BEHIND_FACTOR_BY_DECISIONS)
+    discernment = (1.0 - behind) / (1.0 - TACKLE_ATTEMPT_ANGLE_FACTOR[2])
+    factors = tuple(1.0 - discernment * (1.0 - f) for f in TACKLE_ATTEMPT_ANGLE_FACTOR)
+    factor = _interpolate(tackle_approach_angle_deg(tackler, holder), TACKLE_ANGLE_POINTS_DEG, factors)
+    if in_own_box:
+        factor *= _interpolate(decisions, TACKLE_DISCERNMENT_NOTES, TACKLE_BOX_FACTOR_BY_DECISIONS)
+    return factor
 
 
 @dataclass(frozen=True)

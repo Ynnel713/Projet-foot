@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import random
 import statistics
 import sys
@@ -31,6 +32,8 @@ import v2engine.bloc as bloc_module
 import v2engine.cerveau as cerveau
 import v2engine.defense as defense
 import v2engine.match as match
+from v2engine.duel import attempt_tackle_probability
+from v2engine.flux import DUEL
 from v2engine.shooting import NEUTRAL_ATTRIBUTES
 from v2engine.trace import CONTROLE_RATE, PASSE, PERTE
 from v2engine.cerveau import HORS_JEU
@@ -55,7 +58,8 @@ def _hook(collector: Collector, clock: dict[str, float], plans: bool = True,
     real = {name: getattr(match, name) for name in ("pass_velocity", "resolve_tackle", "choose_action", "dribble_lost",
                                                      "lost_carry_outcome", "attempt_control", "_play_restart",
                                                      "lane_closed_during_turn", "contact_share", "_unsettle",
-                                                     "resolve_shoulder_duel")}
+                                                     "resolve_shoulder_duel", "tackle_attempt_factor",
+                                                     "should_attempt_tackle")}
     restarting = {"on": False}  # remise en jeu en cours : sa passe n'entre pas dans la calibration (ticket v2-realisme/18g)
 
     def pass_velocity(passer, target, *args, **kwargs):
@@ -99,6 +103,22 @@ def _hook(collector: Collector, clock: dict[str, float], plans: bool = True,
     def unsettle(player, ball, *args, **kwargs):  # contact perdu (12c), mesuré avant son effet (11e)
         collector.on_unsettle(player, ball)
         return real["_unsettle"](player, ball, *args, **kwargs)
+
+    def tackle_attempt_factor(tackler, holder, urgent, in_own_box=False):  # tacle en dernier recours (11h)
+        factor = real["tackle_attempt_factor"](tackler, holder, urgent, in_own_box)
+        collector.on_tackle_context(tackler, holder, urgent, in_own_box, factor)
+        return factor
+
+    def should_attempt_tackle(aggression, dt):
+        # tirage contrefactuel au taux de base (sans le facteur 11h), sur le même nombre aléatoire : l'état du flux
+        # DUEL est relu puis restauré, le match n'est pas perturbé
+        state = DUEL.getstate()
+        draw = DUEL.random()
+        DUEL.setstate(state)
+        attempted = real["should_attempt_tackle"](aggression, dt)
+        base_dt = dt / collector.tackle_factor()
+        collector.on_tackle_draw(attempted, draw < 1.0 - math.exp(-attempt_tackle_probability(aggression) * base_dt))
+        return attempted
 
     def resolve_shoulder_duel(a, b, *args, **kwargs):  # duel d'épaule (11c), par écart de Strength (11e)
         result = real["resolve_shoulder_duel"](a, b, *args, **kwargs)
@@ -194,6 +214,8 @@ def _hook(collector: Collector, clock: dict[str, float], plans: bool = True,
     match.lane_closed_during_turn = lane_closed_during_turn  # ticket v2-realisme/07e
     match.contact_share, match._unsettle = contact_share, unsettle  # ticket v2-realisme/11e
     match.resolve_shoulder_duel = resolve_shoulder_duel
+    match.tackle_attempt_factor = tackle_attempt_factor  # ticket v2-realisme/11h
+    match.should_attempt_tackle = should_attempt_tackle
     cerveau.stays_behind, match.think = stays_behind, think
     defense.DefensiveRoles.start_team_press = trigger
     return lambda: ([setattr(match, name, fn) for name, fn in real.items()] + [setattr(cerveau, "stays_behind", real_stays), setattr(match, "think", real_think)]
@@ -470,6 +492,17 @@ def contact_report(k, n: int, out: dict) -> None:
         out[f"{carriers} : action dans les 3 s (part)"] = acted / max(1, k[f"{carriers} : suivis jusqu'à l'action"])
         out[f"{carriers} : délai avant l'action (moyenne, s)"] = (
             k[f"{carriers} : délai avant l'action (somme, s)"] / max(1, acted))
+    # tacle en dernier recours (ticket v2-realisme/11h)
+    out["tacles par derrière hors urgence (part des tacles hors urgence)"] = (
+        k["tacles par derrière hors urgence"] / max(1, k["tacles hors urgence"]))
+    out["tacles en urgence (part des tacles tentés)"] = k["tacles en urgence"] / max(1, k["tacles"])
+    out["tacles dans sa surface, par match"] = k["tacles dans sa surface"] / n
+    out["tacles dans sa surface : fautes (penalties), par match"] = k["tacles dans sa surface : fautes"] / n
+    out["renoncements au tacle (tacle évité par 11h), par match"] = k["renoncements au tacle (épisodes)"] / n
+    out["renoncements au tacle par derrière (tacle évité par 11h), par match"] = (
+        k["renoncements au tacle par derrière (épisodes)"] / n)
+    out["buts encaissés dans les 15 s après un renoncement, par match"] = (
+        k["buts encaissés dans les 15 s après un renoncement"] / n)
     for band in APPROACH_BANDS:
         name = f"tacles {band}"
         out[f"{name} (part des tacles tentés)"] = k[name] / max(1, k["tacles"])

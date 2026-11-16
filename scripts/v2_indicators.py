@@ -498,6 +498,10 @@ class Collector:
 
     def _reset_match(self) -> None:
         self.goals: Counter = Counter()
+        # tacle en dernier recours (ticket v2-realisme/11h) : contexte du dernier tirage, renoncements par équipe du porteur
+        self.tackle_ctx: tuple[PlayerState, PlayerState, bool, bool, float] | None = None
+        self.renounced_pair: dict[tuple[str, str], float] = {}  # (tacleur, porteur) -> dernier renoncement (s)
+        self.renounced_by: dict[str, float] = {}  # équipe du porteur -> dernier renoncement subi par son adversaire (s)
         self.chasers_now: dict[str, list[str]] = defaultdict(list)  # ballon libre (ticket 11k)
         self.chaser: dict[str, tuple[str, float]] = {}  # chasseur désigné de chaque équipe et instant de sa désignation
         self.chase_open: tuple[float, str | None] | None = None  # épisode disputé : début, équipe qui avait le ballon
@@ -922,11 +926,45 @@ class Collector:
 
     # --- contacts physiques (ticket v2-realisme/11e) ---
     def on_tackle_approach(self, tackler: PlayerState, holder: PlayerState, won: bool, foul: bool) -> None:
-        """Tacle tenté selon l'angle d'approche (ticket 11d) : de face, de côté, par derrière."""
+        """Tacle tenté selon l'angle d'approche (ticket 11d) : de face, de côté, par derrière ; en urgence défensive
+        ou non (ticket 11h, contexte du tirage noté par `on_tackle_context`)."""
         band = approach_band(tackle_approach_angle_deg(tackler, holder))
         self.count[f"tacles {band}"] += 1
         self.count[f"tacles {band} : gagnés"] += won
         self.count[f"tacles {band} : fautes"] += foul
+        ctx = self.tackle_ctx
+        if ctx is not None and ctx[0].name == tackler.name and ctx[1].name == holder.name:
+            urgency = "en urgence" if ctx[2] and not ctx[3] else "hors urgence"  # dans sa surface : jamais d'urgence
+            self.count["tacles dans sa surface"] += ctx[3]
+            self.count["tacles dans sa surface : fautes"] += ctx[3] and foul
+            self.count[f"tacles {urgency}"] += 1
+            self.count[f"tacles {band} {urgency}"] += 1
+
+    def on_tackle_context(self, tackler: PlayerState, holder: PlayerState, urgent: bool, in_own_box: bool = False,
+                          factor: float = 1.0) -> None:
+        """Défenseur à portée du porteur, avant le tirage de la tentative (ticket 11h) ; porteur dans sa surface ;
+        facteur de tentative appliqué."""
+        self.tackle_ctx = (tackler, holder, urgent, in_own_box, factor)
+
+    def tackle_factor(self) -> float:
+        """Facteur de tentative du tirage en cours (1,0 sans contexte)."""
+        return self.tackle_ctx[4] if self.tackle_ctx is not None else 1.0
+
+    def on_tackle_draw(self, attempted: bool, base_attempt: bool | None = None) -> None:
+        """Issue du tirage (ticket 11h). Renoncement : tacle que le défenseur aurait tenté au taux de base, sur le même
+        nombre aléatoire, et que le facteur 11h a évité. Un épisode par couple (tacleur, porteur), clos après 2 s
+        sans renoncement. Le contexte est gardé pour `on_tackle_approach` quand le tacle est tenté."""
+        ctx = self.tackle_ctx
+        self.tackle_ctx = ctx if attempted else None
+        if attempted or ctx is None or not base_attempt:
+            return
+        tackler, holder = ctx[0], ctx[1]
+        pair = (tackler.name, holder.name)
+        if self.now - self.renounced_pair.get(pair, -1e9) > 2.0:
+            self.count["renoncements au tacle (épisodes)"] += 1
+            self.count["renoncements au tacle par derrière (épisodes)"] += (
+                approach_band(tackle_approach_angle_deg(tackler, holder)) == "par derrière")
+        self.renounced_pair[pair] = self.renounced_by[holder.team] = self.now
 
     def on_collision(self, a: PlayerState, b: PlayerState, share_a: float) -> None:
         """Chevauchement de deux joueurs sur un pas, avant sa correction (11a, 11b) : contact franc au-delà de
@@ -1387,6 +1425,9 @@ class Collector:
         if scoring_team is not None:  # but : la possession se clôt, l'engagement n'est pas une perte de balle
             self.goals[scoring_team] += 1
             self.count["buts"] += 1
+            # but marqué moins de 15 s après un renoncement au tacle (tacle évité par 11h) subi par l'équipe qui marque (11h)
+            self.count["buts encaissés dans les 15 s après un renoncement"] += (
+                now_s - self.renounced_by.get(scoring_team, -1e9) <= 15.0)
             self.minutes.on_goal(minute, scoring_team,  # ticket v2-realisme/19d
                                  [(p.name, p.team) for p in players if p.poste != "GK"])
             self._close_possession(now_s)
