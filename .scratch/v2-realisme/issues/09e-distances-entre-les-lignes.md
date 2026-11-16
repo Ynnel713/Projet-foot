@@ -8,7 +8,7 @@
 
 **Attributs :** aucun
 
-**Blocked by:** 02d (Place de référence avec ballon selon le rôle).
+**Blocked by:** 02d (Place de référence avec ballon selon le rôle), 09j (hauteur de la dernière ligne avec ballon, ajouté le 16/11/2026).
 
 **Bloque :** 09h.
 
@@ -39,3 +39,7 @@ Temps machine, non compté : suite complète (environ 40 min) ; mesure 50 matchs
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+
+## Comments
+
+- 16/11/2026 : **directive du propriétaire** (audit des centraux trop bas avec ballon, ticket 09j) : écart défense-milieu avec ballon tenu entre **10 et 15 m, cible 12 m**. Bornes validées par le propriétaire le 16/11/2026 (« je valide ») ; écart milieu-attaque toujours à proposer. Mesuré le 16/11/2026 (deux 1res périodes, graines 20260923 et 20260924) : défense-milieu 15 à 19 m avec ballon, au-dessus de la borne haute. À traiter après 09j : la contrainte s'applique au bloc remonté (09j ajouté au `Blocked by`).

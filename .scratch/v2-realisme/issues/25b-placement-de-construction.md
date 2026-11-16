@@ -10,7 +10,7 @@
 
 **Attributs :** aucun (structure collective ; Teamwork garde son rayon de tolérance).
 
-**Blocked by:** 02d (livré), 02e (livré). Indépendant du 25a.
+**Blocked by:** 02d (livré), 02e (livré), 09j (hauteur de la dernière ligne avec ballon, ajouté le 16/11/2026 : la construction ajuste cette hauteur). Indépendant du 25a.
 
 **Bloque :** `v2-collectif/15`, `v2-attributs-restants/03c`, 25d, 25h.
 
