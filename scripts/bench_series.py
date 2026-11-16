@@ -76,9 +76,21 @@ def _neutral_11p() -> Callable[[], None]:
     return restore
 
 
+def _neutral_21c1() -> Callable[[], None]:
+    """Ticket 21c1 neutralisé : la charge du duel d'épaule ignore la prudence de surface (même tirage, séries appariées)."""
+    from v2engine import duel
+    real = duel.shoulder_foul_probability
+    duel.shoulder_foul_probability = lambda charger, in_own_box=False: real(charger)
+
+    def restore() -> None:
+        duel.shoulder_foul_probability = real
+    return restore
+
+
 # Neutralisations pour les essais A/B (ticket v2-realisme/11q) : ticket -> remplacement d'une fonction du moteur, appliqué
 # dans le processus du match avant l'instrumentation du banc, puis retiré. Chaque entrée renvoie sa restauration.
-NEUTRALISATIONS: dict[str, Callable[[], Callable[[], None]]] = {"11h": _neutral_11h, "11p": _neutral_11p}
+NEUTRALISATIONS: dict[str, Callable[[], Callable[[], None]]] = {"11h": _neutral_11h, "11p": _neutral_11p,
+                                                                 "21c1": _neutral_21c1}
 
 
 def parse_neutralised(text: str | None) -> tuple[str, ...]:

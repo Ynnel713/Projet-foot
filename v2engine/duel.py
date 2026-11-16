@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from v2engine.attributes import duel_probability, success_probability
 from v2engine.condition import effective_rating
 from v2engine.flux import ARBITRAGE, DUEL
+from v2engine.geometry import in_penalty_area
 from v2engine.movement import PlayerState
 
 # Taux de BASE (tentatives par seconde de contact) auquel un adversaire à portée tente un tacle
@@ -139,7 +140,7 @@ def should_attempt_tackle(aggression: float, dt: float) -> bool:
 TACKLE_ATTEMPT_ANGLE_FACTOR = (1.0, 0.6, 0.15)  # de face, de côté, par derrière (Decisions 55)
 TACKLE_DISCERNMENT_NOTES = (11.0, 55.0, 99.0)
 TACKLE_BEHIND_FACTOR_BY_DECISIONS = (0.40, 0.15, 0.05)
-TACKLE_BOX_FACTOR_BY_DECISIONS = (0.75, 0.50, 0.35)
+TACKLE_BOX_FACTOR_BY_DECISIONS = (0.75, 0.50, 0.35)  # prudence de surface, commune à toutes les fautes (21c1)
 URGENCY_DISTANCE_M = 20.0
 URGENCY_SHOT_ANGLE_DEG = 45.0
 
@@ -156,6 +157,13 @@ def defensive_urgency(holder: PlayerState, defended_goal, players: list[PlayerSt
                    and p.position.distance_to(defended_goal) < distance for p in players)
 
 
+def box_prudence(player: PlayerState) -> float:
+    """Prudence de surface (tickets v2-realisme/11h et 21c1) : multiplicateur d'une faute que `player` commettrait dans
+    la surface qu'il défend (faute = penalty), réglé par Decisions 99 -> 0,35, 55 -> 0,5, 11 -> 0,75. Une seule courbe
+    pour le tacle et toutes les fautes hors tacle (règle R1) ; jamais nulle : des penalties restent possibles."""
+    return _interpolate(effective_rating(player, "Decisions"), TACKLE_DISCERNMENT_NOTES, TACKLE_BOX_FACTOR_BY_DECISIONS)
+
+
 def tackle_attempt_factor(tackler: PlayerState, holder: PlayerState, urgent: bool, in_own_box: bool = False) -> float:
     """Multiplicateur du taux de tentative de tacle (voir `TACKLE_ATTEMPT_ANGLE_FACTOR`) : selon l'angle d'approche et
     le discernement (Decisions) du tacleur ; 1,0 en urgence ; porteur dans la surface du tacleur (`in_own_box`) : pas
@@ -168,7 +176,7 @@ def tackle_attempt_factor(tackler: PlayerState, holder: PlayerState, urgent: boo
     factors = tuple(1.0 - discernment * (1.0 - f) for f in TACKLE_ATTEMPT_ANGLE_FACTOR)
     factor = _interpolate(tackle_approach_angle_deg(tackler, holder), TACKLE_ANGLE_POINTS_DEG, factors)
     if in_own_box:
-        factor *= _interpolate(decisions, TACKLE_DISCERNMENT_NOTES, TACKLE_BOX_FACTOR_BY_DECISIONS)
+        factor *= box_prudence(tackler)
     return factor
 
 
@@ -328,9 +336,11 @@ def shoulder_win_probability(a: PlayerState, b: PlayerState) -> float:
     return duel_probability(effective_rating(a, "Strength"), effective_rating(b, "Strength"))
 
 
-def shoulder_foul_probability(charger: PlayerState) -> float:
-    """Chance que la charge du gagnant soit une faute : `SHOULDER_FOUL_FACTOR` x celle d'un tacle (Aggression)."""
-    return SHOULDER_FOUL_FACTOR * foul_probability(effective_rating(charger, "Aggression"))
+def shoulder_foul_probability(charger: PlayerState, in_own_box: bool = False) -> float:
+    """Chance que la charge du gagnant soit une faute : `SHOULDER_FOUL_FACTOR` x celle d'un tacle (Aggression) ; dans
+    la surface que défend le chargeur (`in_own_box`), multipliée par sa prudence de surface (ticket v2-realisme/21c1)."""
+    probability = SHOULDER_FOUL_FACTOR * foul_probability(effective_rating(charger, "Aggression"))
+    return probability * box_prudence(charger) if in_own_box else probability
 
 
 @dataclass(frozen=True)
@@ -342,9 +352,11 @@ class ShoulderResult:
 
 
 def resolve_shoulder_duel(a: PlayerState, b: PlayerState) -> ShoulderResult:
-    """Tire le gagnant (flux DUEL) puis la faute de charge du gagnant."""
+    """Tire le gagnant (flux DUEL) puis la faute de charge du gagnant ; la surface est jugée au lieu de la faute, la
+    position du perdant (comme le coup de pied de réparation de `restart.foul_restart`, ticket v2-realisme/21c1)."""
     a_wins = DUEL.random() < shoulder_win_probability(a, b)
     winner, loser = (a, b) if a_wins else (b, a)
     gap = effective_rating(winner, "Strength") - effective_rating(loser, "Strength")
     issue = "plus fort" if gap > 0 else "plus faible" if gap < 0 else "égalité"
-    return ShoulderResult(winner, loser, DUEL.random() < shoulder_foul_probability(winner), issue)
+    in_own_box = in_penalty_area(loser.team, loser.position)  # surface que défend le chargeur
+    return ShoulderResult(winner, loser, DUEL.random() < shoulder_foul_probability(winner, in_own_box), issue)
