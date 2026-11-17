@@ -23,6 +23,14 @@ Tout le bloc monte avec elle, les décalages des rôles (02d) à l'intérieur. L
 (pression sur le porteur, attaquant adverse le plus avancé) ne s'appliquent pas : se protéger du contre relève de la
 défense préventive (09g). Le retard de réaction au Teamwork faible (`line_lag_s`) s'applique.
 
+Distances entre les lignes avec ballon (ticket v2-realisme/09e, constantes validées par le propriétaire le 16/11/2026 ;
+réel avec ballon, SkillCorner, `docs/INDICATEURS_V2.md` : défense-milieu 13,7 m (11,1-16,6), milieu-attaque 14,3 m
+(11,5-17,2), longueur 33,9 m) : lignes = moyenne des centraux (DC), des milieux axiaux (MDC, MC, MOC), des avant-centres
+(BU), dans la forme avec ballon mise à l'échelle. Un écart défense-milieu hors de 10-15 m, ou milieu-attaque hors de
+10-20 m, est ramené à la borne la plus proche : la ligne et tout ce qui est devant elle se déplacent, les joueurs entre
+deux lignes sont étirés en proportion (décalages des rôles du 02d conservés). La dernière ligne reste sur `H` ; le bloc
+avec ballon raccourcit en conséquence (il n'est pas remis à 42 m).
+
 Hauteur de la ligne défensive sans ballon (ticket v2-collectif/05, revue par le ticket v2-collectif/23 le
 28/10/2026) : le bloc se place pour que sa dernière ligne soit à la plus basse de deux hauteurs, jamais à moins
 de 5 m de son but :
@@ -119,6 +127,10 @@ ROLE_PLACE_WITHOUT_BALL: dict[str, tuple[float, float]] = {
     "ailier de couloir": (-8.0, -2.0), "ailier intérieur": (-2.0, -5.0), "meneur excentré": (-3.0, -4.0),
     "second attaquant": (-2.0, 0.0), "avant-centre": (3.0, 0.0), "buteur axial": (5.0, 0.0), "pivot": (2.0, 0.0),
 }
+# Bornes des écarts entre lignes avec ballon (ticket v2-realisme/09e) et postes de chaque ligne
+GAP_DEF_MID_M = (10.0, 15.0)
+GAP_MID_ATT_M = (10.0, 20.0)
+_LINE_POSTES = ({"DC"}, {"MDC", "MC", "MOC"}, {"BU"})
 _ON_AXIS_M = 1.0  # à moins de 1 m de l'axe, pas de côté : seule l'avance s'applique
 _WITHOUT_BALL = (DEFENSE_PLACEE, TRANSITION_DEFENSIVE)
 
@@ -201,6 +213,49 @@ def _role_place(player: PlayerState, table: dict[str, tuple[float, float]]) -> V
     return Vec2(start.x + forward * ahead, start.y)
 
 
+def _depth(shape: _Shape, team: str, place: Vec2, sx: float) -> float:
+    """Distance, mise à l'échelle, d'une place de la forme à sa dernière ligne, vers le but adverse."""
+    return ((place.x - (shape.center.x + shape.back)) if team == "home" else (shape.center.x + shape.front - place.x)) * sx
+
+
+def line_gap_knots(players: list[PlayerState], shape: _Shape, team: str) -> tuple[tuple[float, float, int], ...]:
+    """Ticket v2-realisme/09e : un point de passage par ligne présente (profondeur de la ligne avant, après, indice de la
+    ligne dans `_LINE_POSTES`) qui ramène les écarts entre les lignes de la forme avec ballon dans leurs bornes. Une
+    ligne absente (pas de BU, par exemple) n'est pas contrainte."""
+    sx = SHAPE_WITH_BALL[0] / shape.length if shape.length > 0 else 1.0
+    levels = []
+    for postes in _LINE_POSTES:
+        depths = [_depth(shape, team, with_ball_place(p), sx) for p in players if p.poste in postes]
+        levels.append(sum(depths) / len(depths) if depths else None)
+    knots: list[tuple[float, float, int]] = []
+    for index, (level, bounds) in enumerate(zip(levels, (None, GAP_DEF_MID_M, GAP_MID_ATT_M))):
+        if level is None:
+            continue
+        if not knots:
+            moved = level
+        elif bounds is None or level <= knots[-1][0]:
+            moved = knots[-1][1] + (level - knots[-1][0])
+        else:
+            moved = knots[-1][1] + min(max(level - knots[-1][0], bounds[0]), bounds[1])
+        knots.append((level, moved, index))
+    return tuple(knots)
+
+
+def remap_depth(knots: tuple[tuple[float, float, int], ...], depth: float, poste: str = "") -> float:
+    """Profondeur après correction des écarts. Un joueur d'une ligne suit sa ligne d'un bloc (la moyenne de la ligne
+    tombe sur sa cible) ; les autres : identité avant la première ligne, linéaire entre deux lignes, décalage de la
+    dernière ligne au-delà."""
+    for level, moved, index in knots:
+        if poste in _LINE_POSTES[index]:
+            return depth + (moved - level)
+    if not knots or depth <= knots[0][0]:
+        return depth if not knots else depth + (knots[0][1] - knots[0][0])
+    for (a, a2, _), (b, b2, _) in zip(knots, knots[1:]):
+        if depth <= b:
+            return a2 + (depth - a) * (b2 - a2) / (b - a) if b > a else b2
+    return depth + (knots[-1][1] - knots[-1][0])
+
+
 def _shape_of(pts: list[Vec2]) -> _Shape:
     xs, ys = [p.x for p in pts], [p.y for p in pts]
     cx, cy = sum(xs) / len(xs), sum(ys) / len(ys)
@@ -224,6 +279,7 @@ class Bloc:
     # même chose avec ballon (ticket v2-realisme/09j) : hauteur de la dernière ligne et sa courte mémoire
     lines_ball: dict[str, float] = field(default_factory=dict)
     line_history_ball: dict[str, list[tuple[float, float]]] = field(default_factory=dict)
+    gap_knots: dict[str, tuple[tuple[float, float, int], ...]] = field(default_factory=dict)  # écarts entre lignes (09e)
 
     @classmethod
     def from_players(cls, players: list[PlayerState]) -> Bloc:
@@ -236,7 +292,9 @@ class Bloc:
             shapes_ball[team] = _shape_of([with_ball_place(p) for p in field_players])
             deepest = deepest_x(shapes[team], team)
             shapes_low[team] = _shape_of([without_ball_place(p, deepest) for p in field_players])
-        return cls(shapes, shapes_ball, shapes_low)
+        knots = {team: line_gap_knots([p for p in players if p.team == team], shape, team)
+                 for team, shape in shapes_ball.items()}
+        return cls(shapes, shapes_ball, shapes_low, gap_knots=knots)
 
     def update(self, players: list[PlayerState], ball: BallState, now_s: float = 0.0,
                memory: PerceptionMemory | None = None) -> None:
@@ -323,7 +381,12 @@ class Bloc:
         # la forme entière reste sur le terrain, ses lignes extrêmes à 5 m au moins de chaque ligne de but
         cx = min(max(cx, _DEPTH_MARGIN_M - shape.back * sx), PITCH_LENGTH_M - _DEPTH_MARGIN_M - shape.front * sx)
         offset = start - shape.center
-        return clamp_to_pitch(Vec2(cx + offset.x * sx, cy + offset.y * sy))
+        x = cx + offset.x * sx
+        knots = self.gap_knots.get(player.team) if with_ball else None
+        if knots:  # écarts entre les lignes ramenés dans leurs bornes (ticket 09e)
+            depth = _depth(shape, player.team, start, sx)
+            x += (remap_depth(knots, depth, player.poste) - depth) * (1.0 if player.team == "home" else -1.0)
+        return clamp_to_pitch(Vec2(x, cy + offset.y * sy))
 
     def target(self, player: PlayerState, ball: Vec2, situation: str, now_s: float) -> Vec2:
         """Place visée : la référence, décalée sans ballon de l'erreur de Positioning du moment (placement défensif de

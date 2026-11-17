@@ -11,7 +11,8 @@ import random
 from v2engine.ball_state import BallState
 from v2engine.bloc import (
     BLOCK_SHIFT, LINE_HEIGHT_M, LINE_LAG_MAX_S, LINE_MAX_WITH_BALL_M, LINE_MIN_WITH_BALL_M, PRESSURE_STEP_M,
-    SHAPE_WITH_BALL, SHAPE_WITHOUT_BALL, Bloc, line_lag_s, positioning_error_m, teamwork_tolerance_m, with_ball_line,
+    GAP_DEF_MID_M, GAP_MID_ATT_M, SHAPE_WITH_BALL, SHAPE_WITHOUT_BALL, Bloc, line_lag_s, positioning_error_m,
+    teamwork_tolerance_m, with_ball_line,
 )
 from v2engine.cerveau import REPLACEMENT, think
 from v2engine.geometry import Vec2
@@ -42,7 +43,11 @@ def test_the_shape_follows_the_situation() -> None:
     length, width, _ = _dims(bloc, CENTER_BALL, DEFENSE_PLACEE)
     assert math.isclose(length, SHAPE_WITHOUT_BALL[0]) and math.isclose(width, SHAPE_WITHOUT_BALL[1])
     length, width, _ = _dims(bloc, CENTER_BALL, POSSESSION_INSTALLEE)
-    assert math.isclose(length, SHAPE_WITH_BALL[0]) and math.isclose(width, SHAPE_WITH_BALL[1])
+    # avec ballon, 42 m avant le resserrement des écarts entre lignes (ticket v2-realisme/09e) : 14 m puis 13 m de départ,
+    # x 42/27, soit 21,8 m ramenés à 15 m et 20,2 m ramenés à 20 m
+    scale = SHAPE_WITH_BALL[0] / 27.0
+    expected = SHAPE_WITH_BALL[0] - (14.0 * scale - GAP_DEF_MID_M[1]) - (13.0 * scale - GAP_MID_ATT_M[1])
+    assert math.isclose(length, expected) and math.isclose(width, SHAPE_WITH_BALL[1])
 
 
 def test_the_block_slides_with_the_ball_more_in_length_than_in_width() -> None:
@@ -439,3 +444,56 @@ def test_a_low_teamwork_player_follows_the_line_with_the_ball_late() -> None:
     now, where = 1.5, ball.position
     assert math.isclose(bloc.reference(quick, where, POSSESSION_INSTALLEE, now).x, with_ball_line("home", where.x))
     assert bloc.reference(slow, where, POSSESSION_INSTALLEE, now).x < bloc.reference(quick, where, POSSESSION_INSTALLEE, now).x - 10.0
+
+
+def _line_levels(team: list[PlayerState], ball: Vec2 = CENTER_BALL) -> tuple[float, float, float, float]:
+    """Hauteurs des lignes avec ballon (centraux, milieux axiaux, avant-centres) et longueur du bloc (ticket 09e)."""
+    bloc = Bloc.from_players(team)
+    ref = {p.name: bloc.reference(p, ball, POSSESSION_INSTALLEE).x for p in team if p.poste != "GK"}
+    mean = lambda postes: sum(ref[p.name] for p in team if p.poste in postes) / sum(1 for p in team if p.poste in postes)  # noqa: E731
+    return mean({"DC"}), mean({"MDC", "MC", "MOC"}), mean({"BU"}), max(ref.values()) - min(ref.values())
+
+
+def test_a_stretched_shape_brings_its_line_gaps_back_to_the_nearest_bound() -> None:
+    # Ticket v2-realisme/09e : forme très étirée (30 m entre chaque ligne, 21 m après mise à l'échelle) : défense-milieu
+    # ramené à 15 m, milieu-attaque à 20 m ; la dernière ligne reste sur H, le bloc raccourcit.
+    team = ([_p("GK", 5, 34, poste="GK")] + [_p(f"D{i}", 10, y, poste="DC") for i, y in enumerate((16, 28, 40, 52))]
+            + [_p(f"M{i}", 40, y) for i, y in enumerate((16, 28, 40, 52))] + [_p(f"A{i}", 70, y, poste="BU") for i, y in enumerate((28, 40))])
+    d, m, a, length = _line_levels(team)
+    assert math.isclose(d, with_ball_line("home", CENTER_BALL.x))
+    assert math.isclose(m - d, GAP_DEF_MID_M[1]) and math.isclose(a - m, GAP_MID_ATT_M[1])
+    assert math.isclose(length, 35.0)
+
+
+def test_a_compact_shape_opens_its_gaps_to_the_lower_bound_and_a_gap_inside_the_bounds_does_not_move() -> None:
+    team = ([_p("GK", 5, 34, poste="GK")] + [_p(f"D{i}", 18, y, poste="DC") for i, y in enumerate((16, 28, 40, 52))]
+            + [_p(f"M{i}", 22, y) for i, y in enumerate((16, 28, 40, 52))] + [_p(f"A{i}", 45, y, poste="BU") for i, y in enumerate((28, 40))])
+    d, m, a, _ = _line_levels(team)  # 4 m puis 23 m de départ, x 42/27 : 6,2 puis 35,8 m
+    assert math.isclose(m - d, GAP_DEF_MID_M[0]) and math.isclose(a - m, GAP_MID_ATT_M[1])
+    inside = ([_p("GK", 5, 34, poste="GK")] + [_p(f"D{i}", 18, y, poste="DC") for i, y in enumerate((16, 28, 40, 52))]
+              + [_p(f"M{i}", 26, y) for i, y in enumerate((16, 28, 40, 52))] + [_p(f"A{i}", 45, y, poste="BU") for i, y in enumerate((28, 40))])
+    d, m, a, length = _line_levels(inside)  # 8 m puis 19 m, x 42/27 : 12,4 m (dans 10-15) puis 29,6 m (ramené à 20)
+    assert math.isclose(m - d, 8.0 * 42.0 / 27.0) and math.isclose(a - m, GAP_MID_ATT_M[1])
+
+
+def test_players_between_two_lines_keep_their_order_and_the_away_team_is_mirrored() -> None:
+    team = ([_p("GK", 5, 34, poste="GK")] + [_p(f"D{i}", 10, y, poste="DC") for i, y in enumerate((28, 40))]
+            + [_p("LB", 25, 10, poste="LB"), _p("RB", 25, 58, poste="RB")]
+            + [_p(f"M{i}", 40, y) for i, y in enumerate((16, 28, 40, 52))] + [_p(f"A{i}", 70, y, poste="BU") for i, y in enumerate((28, 40))])
+    bloc = Bloc.from_players(team)
+    x = {p.name: bloc.reference(p, CENTER_BALL, POSSESSION_INSTALLEE).x for p in team if p.poste != "GK"}
+    assert x["D0"] < x["LB"] < x["M0"]  # latéral à mi-chemin des deux lignes : il y reste
+    assert math.isclose(x["LB"] - x["D0"], (x["M0"] - x["D0"]) / 2.0)
+    away = [_p(p.name, 105.0 - p.position.x, p.position.y, poste=p.poste, team="away") for p in team]
+    away_bloc = Bloc.from_players(away)
+    mirrored = {p.name: away_bloc.reference(p, Vec2(105.0 - CENTER_BALL.x, 34.0), POSSESSION_INSTALLEE).x for p in away if p.poste != "GK"}
+    assert all(math.isclose(mirrored[n], 105.0 - x[n]) for n in x)
+
+
+def test_a_team_without_a_centre_forward_only_constrains_defence_to_midfield() -> None:
+    team = ([_p("GK", 5, 34, poste="GK")] + [_p(f"D{i}", 10, y, poste="DC") for i, y in enumerate((16, 28, 40, 52))]
+            + [_p(f"M{i}", 40, y) for i, y in enumerate((16, 28, 40, 52))] + [_p(f"A{i}", 70, y, poste="AG") for i, y in enumerate((28, 40))])
+    bloc = Bloc.from_players(team)
+    x = {p.name: bloc.reference(p, CENTER_BALL, POSSESSION_INSTALLEE).x for p in team if p.poste != "GK"}
+    assert math.isclose(x["M0"] - x["D0"], GAP_DEF_MID_M[1])
+    assert math.isclose(x["A0"] - x["M0"], 30.0 * 42.0 / 60.0)  # pas d'avant-centre : l'attaque garde son écart

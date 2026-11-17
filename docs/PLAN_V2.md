@@ -346,6 +346,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **`v2-realisme/09j` livré (16/11/2026), validé expert (réserves A1 à A3 acceptées) + QC** : avec ballon, le bloc se cale sur une dernière ligne `H = 40 + 0,5 x (ballon - 52,5)`, bornée entre 15 et 55 m (`bloc.with_ball_line`), au lieu de l'avance fixe de 8 m (`POSSESSION_ADVANCE_M` supprimé) ; retard au Teamwork conservé ; ligne sans ballon inchangée. Centraux à 37,3 m de leur but avec le ballon entre 40 et 55 m (19,3 avant). Série de 20 matchs : buts 4,35 → 6,8, hors-jeu 0,7 → 4,1, passes 1 089 → 1 280 ; recalibration et analyse des buts au ticket `18l` (après 09e, 25b ; 09g, défense préventive, avant ou pendant). Critère « centraux plus hauts avec ballon que sans » partiel (tranche 10-25 m) : renvoyé au 25b et au 18l. Débloque 09e, 09h, 25b.
 
+**`v2-realisme/09e` livré (17/11/2026), validé expert (réserves A1 et A2 acceptées) + QC** : avec ballon, les écarts entre lignes (centraux, milieux axiaux, avant-centres) sont ramenés à la borne la plus proche, 10-15 m défense-milieu et 10-20 m milieu-attaque, la dernière ligne restant sur `H` ; le bloc avec ballon raccourcit (médiane 35 m, 42 avant). Banc de 50 matchs : défense-milieu 14,63 m, milieu-attaque 14,79 m avec ballon (réel SkillCorner 13,7 et 14,3 m, `docs/INDICATEURS_V2.md`). 20 matchs appariés : buts 6,8 → 4,85 par match, tirs de près 7,25 → 4,45, hors-jeu inchangés (4,1) ; à reprendre au 18l. Débloque 09h (encore bloqué par 09b, 09c, 09d, 09g).
+
 ### Bloquée par
 
 - Phase 4

@@ -113,10 +113,16 @@ def test_in_a_match_every_framed_shot_was_judged_by_the_keeper() -> None:
     from ligue1sim.season import CLUBS_PATH
     from v2engine.match import simulate_match
 
+    # depuis la ligne avec ballon (ticket v2-realisme/09j) et les écarts entre lignes (09e), une graine peut ne donner
+    # aucun tir cadré en 30 min : graines suivantes jusqu'à en trouver (au plus 4)
     clubs = load_clubs(CLUBS_PATH, "Ligue 1")
-    random.seed(20260923)
-    shots = simulate_match(clubs[0], clubs[1], duration_minutes=30).shots
-    framed = [s for s in shots if s.outcome in {"but", HELD, PARRIED, TIPPED} and s.origin != "penalty"]
+    framed = []
+    for seed in range(20260923, 20260927):
+        random.seed(seed)
+        shots = simulate_match(clubs[0], clubs[1], duration_minutes=30).shots
+        framed = [s for s in shots if s.outcome in {"but", HELD, PARRIED, TIPPED} and s.origin != "penalty"]
+        if framed:
+            break
     assert framed and all(s.keeper_time_s is not None for s in framed)
 
 
