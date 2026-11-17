@@ -131,8 +131,13 @@ def _reads() -> dict[str, set[str]]:
 
 # --- 1. Chaque contexte est documenté dans la carte -----------------------------------------------------------------
 
-def _weight_text(weight: float) -> str:
-    return f"{weight:g}".replace(".", ",")
+WEIGHT_DECIMALS = 3  # la carte écrit un poids à trois décimales au plus (1/3 -> « 0,333 ») ; réserve A3, ticket 02b
+
+
+def _documented_weight(row: str, attribute: str) -> float | None:
+    """Poids écrit dans la ligne de carte après « Attribut » (« Dribbling 0,6 »), ou None."""
+    found = re.search(rf"(?<!\w){re.escape(attribute)} (\d+(?:,\d+)?)", row)
+    return float(found.group(1).replace(",", ".")) if found else None
 
 
 def carte_contexts_section(text: str) -> str:
@@ -141,11 +146,13 @@ def carte_contexts_section(text: str) -> str:
 
 
 def undocumented_contexts(contexts, section: str) -> set[str]:
-    """Contextes sans ligne de table qui porte leur nom, leur effet et chaque « Attribut poids »."""
+    """Contextes sans ligne de table qui porte leur nom, leur effet et chaque « Attribut poids », le poids écrit étant
+    celui du registre arrondi à `WEIGHT_DECIMALS` décimales (comparaison numérique, pas textuelle)."""
     rows = [line for line in section.splitlines() if line.startswith("|")]
     return {c.nom for c in contexts
             if not any(c.nom in row and f"`{c.effet}`" in row
-                       and all(f"{a} {_weight_text(w)}" in row for a, w in c.poids) for row in rows)}
+                       and all(_documented_weight(row, a) == round(w, WEIGHT_DECIMALS) for a, w in c.poids)
+                       for row in rows)}
 
 
 def test_every_context_is_documented_in_the_map() -> None:
@@ -160,6 +167,15 @@ def test_the_documentation_check_fails_on_a_fake_or_changed_context() -> None:
     changed = SimpleNamespace(nom="porteur tête haute", effet="scan.head_up_share",
                               poids=(("Dribbling", 0.5), ("Technique", 0.5)))  # poids différents de la carte
     assert undocumented_contexts([fake, changed], section) == {"bidon", "porteur tête haute"}
+
+
+def test_the_documentation_check_compares_weights_as_numbers() -> None:
+    # réserve A3 (ticket 02b) : un poids comme 1/3 s'écrit « 0,333 » dans la carte, pas « 0,333333 »
+    third = SimpleNamespace(nom="tiers", effet="scan.f", poids=(("Vision", 1 / 3), ("Decisions", 2 / 3)))
+    row = "| tiers | perception | Vision {} ; Decisions {} | `scan.f` | non trouvé | v2-x/1 |"
+    assert not undocumented_contexts([third], row.format("0,333", "0,667"))
+    assert undocumented_contexts([third], row.format("0,33", "0,67")) == {"tiers"}  # arrondi insuffisant
+    assert undocumented_contexts([third], row.format("0,333", "0,6")) == {"tiers"}  # poids faux
 
 
 # --- 2. Poids sommant à 1 -------------------------------------------------------------------------------------------
@@ -263,8 +279,10 @@ def _context_uses(modules) -> dict[str, set[str]]:
     for module, tree in modules:
         owner = _enclosing(tree)
         for node in ast.walk(tree):
-            if isinstance(node, ast.Call) and _called(node) == CONTEXT_READER and len(node.args) > 1:
-                arg = node.args[1]
+            if isinstance(node, ast.Call) and _called(node) == CONTEXT_READER:
+                # positionnel ou nommé (`contexte=`, réserve A2, ticket 02b) ; absent : contexte inconnu, refusé
+                arg = node.args[1] if len(node.args) > 1 else next(
+                    (k.value for k in node.keywords if k.arg == "contexte"), None)
                 key = (by_constant.get(getattr(arg, "id", getattr(arg, "attr", None)))
                        or (arg.value if isinstance(arg, ast.Constant) else "<contexte non littéral>"))
                 uses.setdefault(key, set()).add(f"{module}.{owner.get(id(node), '<module>')}")
@@ -298,6 +316,14 @@ def test_the_effect_check_fails_on_fake_contexts() -> None:
     assert effect_conflicts([a, b], uses) == {"effet scan.f : a et b",
                                              "b lu par ['decision.g', 'scan.f'] au lieu de scan.f"}
     assert effect_conflicts([a], {"a": {"scan.f"}, "c": {"x.y"}}) == {"contexte inconnu c lu par ['x.y']"}
+
+
+def test_a_context_passed_by_keyword_is_counted() -> None:
+    # réserve A2 (ticket 02b) : un appel `contextual_rating(p, contexte=X)` est vu comme une lecture de X
+    source = "def g(p):\n    return contextual_rating(p, contexte=PORTEUR_TETE_HAUTE)"
+    assert _context_uses(_parse(source, "decision")) == {"porteur tête haute": {"decision.g"}}
+    assert _context_uses(_parse("def g(p, c):\n    return contextual_rating(p, contexte=c)", "decision")) == {
+        "<contexte non littéral>": {"decision.g"}}
 
 
 # --- 5. Chaque attribut non spécialiste dans au moins deux contextes ------------------------------------------------
