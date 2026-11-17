@@ -67,13 +67,12 @@ TRANSITION = {
     # Work Rate : premier contexte « repli après la perte » au ticket v2-attributs-contextes/03 (réduit) ; le second,
     # sans effet sur les buts, au ticket 08 (décision du propriétaire du 17/11/2026, ticket 03m)
     "Work Rate": ("17/11/2026", _REST),
-    # Vision, Anticipation et Decisions : premier contexte « lecture du pressing » au ticket v2-collectif/15b1
-    "Decisions": ("17/11/2026", "v2-attributs-contextes/04a"),
+    # Vision : premier contexte « lecture du pressing » au ticket v2-collectif/15b1 ; Decisions et Anticipation en
+    # sont sortis au ticket v2-attributs-contextes/04a (second contexte : « choix défensif »)
     "Positioning": ("17/11/2026", "v2-attributs-contextes/04b"),
     "Flair": ("17/11/2026", "v2-attributs-contextes/05"),
     "Balance": ("17/11/2026", "v2-attributs-contextes/06"),
     "Vision": ("17/11/2026", _REST),
-    "Anticipation": ("17/11/2026", _REST),
     "Reflexes": ("17/11/2026", "v2-attributs-restants/03b"),
     "One on Ones": ("17/11/2026", "v2-attributs-restants/03b"),
     "Handling": ("17/11/2026", "v2-attributs-restants/03b"),

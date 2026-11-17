@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 from v2engine.attributes import duel_probability, success_probability
 from v2engine.condition import effective_rating
+from v2engine.contextes import CHOIX_DEFENSIF, contextual_rating
 from v2engine.flux import ARBITRAGE, DUEL
 from v2engine.geometry import in_penalty_area
 from v2engine.movement import PlayerState
@@ -141,6 +142,13 @@ TACKLE_ATTEMPT_ANGLE_FACTOR = (1.0, 0.6, 0.15)  # de face, de côté, par derri�
 TACKLE_DISCERNMENT_NOTES = (11.0, 55.0, 99.0)
 TACKLE_BEHIND_FACTOR_BY_DECISIONS = (0.40, 0.15, 0.05)
 TACKLE_BOX_FACTOR_BY_DECISIONS = (0.75, 0.50, 0.35)  # prudence de surface, commune à toutes les fautes (21c1)
+# Tacle plongé (ticket v2-attributs-contextes/04a, constantes validées par le propriétaire le 17/11/2026) : hors urgence,
+# lancé à plus de `TACKLE_CLOSING_FREE_MPS` vers le porteur, le taux de tentative est multiplié selon la note du
+# contexte « choix défensif » : 11 -> 1,3, 55 -> 1,0, 99 -> 0,5, interpolé (le bon défenseur temporise et tacle arrêté,
+# le mauvais plonge). Neutre à 55 : le volume moyen de tacles et de fautes ne baisse pas. Constat (4 matchs) : 6
+# tacles plongés par match, 2 sur 3 en faute ; un tacle raté n'est presque jamais suivi d'un tir. Chiffre réel : non
+# trouvé.
+TACKLE_DIVE_FACTOR_BY_CHOICE = (1.3, 1.0, 0.5)
 URGENCY_DISTANCE_M = 20.0
 URGENCY_SHOT_ANGLE_DEG = 45.0
 
@@ -166,15 +174,18 @@ def box_prudence(player: PlayerState) -> float:
 
 def tackle_attempt_factor(tackler: PlayerState, holder: PlayerState, urgent: bool, in_own_box: bool = False) -> float:
     """Multiplicateur du taux de tentative de tacle (voir `TACKLE_ATTEMPT_ANGLE_FACTOR`) : selon l'angle d'approche et
-    le discernement (Decisions) du tacleur ; 1,0 en urgence ; porteur dans la surface du tacleur (`in_own_box`) : pas
-    d'urgence, facteur multiplié par la prudence de surface."""
-    decisions = effective_rating(tackler, "Decisions")
+    le discernement du tacleur, lu dans le contexte « choix défensif » (ticket v2-attributs-contextes/04a, Decisions
+    seul avant) ; tacle plongé selon le même contexte (`TACKLE_DIVE_FACTOR_BY_CHOICE`) ; 1,0 en urgence ; porteur dans
+    la surface du tacleur (`in_own_box`) : pas d'urgence, facteur multiplié par la prudence de surface (Decisions)."""
     if urgent and not in_own_box:
         return 1.0
-    behind = _interpolate(decisions, TACKLE_DISCERNMENT_NOTES, TACKLE_BEHIND_FACTOR_BY_DECISIONS)
+    choice = contextual_rating(tackler, CHOIX_DEFENSIF)
+    behind = _interpolate(choice, TACKLE_DISCERNMENT_NOTES, TACKLE_BEHIND_FACTOR_BY_DECISIONS)
     discernment = (1.0 - behind) / (1.0 - TACKLE_ATTEMPT_ANGLE_FACTOR[2])
     factors = tuple(1.0 - discernment * (1.0 - f) for f in TACKLE_ATTEMPT_ANGLE_FACTOR)
     factor = _interpolate(tackle_approach_angle_deg(tackler, holder), TACKLE_ANGLE_POINTS_DEG, factors)
+    if tackle_closing_speed_mps(tackler, holder) > TACKLE_CLOSING_FREE_MPS:
+        factor *= _interpolate(choice, TACKLE_DISCERNMENT_NOTES, TACKLE_DIVE_FACTOR_BY_CHOICE)
     if in_own_box:
         factor *= box_prudence(tackler)
     return factor

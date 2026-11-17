@@ -16,7 +16,7 @@ from v2engine.geometry import Vec2, in_penalty_area
 
 
 def _charger(decisions: int = 55, aggression: int = 80):
-    return player("Def", "away", 100.0, 34.0, "DC", Decisions=decisions, Aggression=aggression, Strength=99)
+    return player("Def", "away", 100.0, 34.0, "DC", Decisions=decisions, Anticipation=decisions, Aggression=aggression, Strength=99)
 
 
 def _attacker(x: float):

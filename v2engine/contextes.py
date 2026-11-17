@@ -73,9 +73,16 @@ LECTURE_DU_PRESSING = Contexte("lecture du pressing", PERCEPTION,
 REPLI_APRES_LA_PERTE = Contexte("repli après la perte", DECISION, (("Work Rate", 0.7), ("Teamwork", 0.3)),
                                 "v2-attributs-contextes/03", "defense.retreat_intensity")
 
+# Choix défensif (ticket v2-attributs-contextes/04a, réduit le 17/11/2026) : le défenseur au contact choisit quand
+# tacler ; le discernement du ticket v2-realisme/11h (renoncer au tacle par derrière ou de côté hors urgence) et le
+# tacle plongé, lancé à plus de 2 m/s (`duel.tackle_attempt_factor`). Decisions choisit, Anticipation lit l'action qui
+# vient. Poids validés le 17/11/2026 ; source : non trouvé.
+CHOIX_DEFENSIF = Contexte("choix défensif", DECISION, (("Decisions", 0.7), ("Anticipation", 0.3)),
+                          "v2-attributs-contextes/04a", "duel.tackle_attempt_factor")
+
 # Lecture seule : un contexte ne s'ajoute qu'ici, par une déclaration revue (réserve A1 de l'expert, ticket 01).
 CONTEXTES = MappingProxyType({c.nom: c for c in (PORTEUR_TETE_HAUTE, IDEE_DE_PREMIERE, LECTURE_DU_PRESSING,
-                                                  REPLI_APRES_LA_PERTE)})
+                                                  REPLI_APRES_LA_PERTE, CHOIX_DEFENSIF)})
 
 
 def contextual_rating(player, contexte: Contexte | str) -> float:

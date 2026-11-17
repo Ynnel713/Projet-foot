@@ -23,7 +23,7 @@ def _holder(x: float, y: float = 34.0):
 
 
 def _tackler(x: float, y: float = 34.0, decisions: int = 55):
-    return player("Def", "away", x, y, "DC", Decisions=decisions, Aggression=60)
+    return player("Def", "away", x, y, "DC", Decisions=decisions, Anticipation=decisions, Aggression=60)
 
 
 def _cover(x: float, y: float = 34.0):
