@@ -1,0 +1,60 @@
+matchs : 50
+tacles tentés par match : 22.52
+tacles attendus au taux de base (sans 11h), par match : 38.5821
+ballon tenu par match (s) : 2847.214
+pression à moins de 3 m par match (s) : 2050.406
+exposition par match (s) : 1234.208
+exposition (part du ballon tenu) : 0.4335
+exposition, 1 à portée (part) : 0.9405
+exposition, 2 à portée (part) : 0.0577
+exposition, 3+ à portée (part) : 0.0018
+exposition multiple (part) : 0.0595
+temps-défenseur à portée, tirage, par match (s) : 1185.14
+temps-défenseur à portée, tirage (part) : 0.9048
+temps-défenseur à portée, à portée, non retenu (11p), par match (s) : 82.704
+temps-défenseur à portée, à portée, non retenu (11p) (part) : 0.0631
+temps-défenseur à portée, déjà engagé, par match (s) : 0.008
+temps-défenseur à portée, déjà engagé (part) : 0.0
+temps-défenseur à portée, relève après tacle raté, par match (s) : 8.78
+temps-défenseur à portée, relève après tacle raté (part) : 0.0067
+temps-défenseur à portée, déséquilibré (12c), par match (s) : 32.974
+temps-défenseur à portée, déséquilibré (12c) (part) : 0.0252
+temps-défenseur à portée, hors jeu, par match (s) : 0.302
+temps-défenseur à portée, hors jeu (part) : 0.0002
+tirages par match (s) : 1246.566
+taux effectif par seconde d'exposition : 0.0182
+taux effectif par seconde de tirage : 0.0181
+taux de base moyen des tireurs (par s) : 0.031
+facteur 11h moyen (pondéré par le temps de tirage) : 0.6102
+tirages, en urgence (part du temps de tirage) : 0.0109
+tirages, en urgence : facteur 11h moyen : 1.0
+tirages, en urgence : tacles tentés par match : 0.58
+tirages, en urgence : tacles attendus au taux de base, par match : 0.5129
+tirages, dans sa surface (part du temps de tirage) : 0.0153
+tirages, dans sa surface : facteur 11h moyen : 0.2296
+tirages, dans sa surface : tacles tentés par match : 0.14
+tirages, dans sa surface : tacles attendus au taux de base, par match : 0.7091
+tirages, hors urgence, de face (part du temps de tirage) : 0.3744
+tirages, hors urgence, de face : facteur 11h moyen : 0.8703
+tirages, hors urgence, de face : tacles tentés par match : 12.42
+tirages, hors urgence, de face : tacles attendus au taux de base, par match : 13.5719
+tirages, hors urgence, de côté (part du temps de tirage) : 0.329
+tirages, hors urgence, de côté : facteur 11h moyen : 0.5847
+tirages, hors urgence, de côté : tacles tentés par match : 6.68
+tirages, hors urgence, de côté : tacles attendus au taux de base, par match : 12.5154
+tirages, hors urgence, par derrière (part du temps de tirage) : 0.2705
+tirages, hors urgence, par derrière : facteur 11h moyen : 0.287
+tirages, hors urgence, par derrière : tacles tentés par match : 2.7
+tirages, hors urgence, par derrière : tacles attendus au taux de base, par match : 11.2727
+confrontations par match : 1239.1
+confrontations : durée moyenne (s) : 1.0486
+confrontations : durée médiane (s) : 0.8
+confrontations, durée moins de 0,3 s (part) : 0.129
+confrontations, durée 0,3 à 1 s (part) : 0.4727
+confrontations, durée 1 à 3 s (part) : 0.3575
+confrontations, durée 3 s et plus (part) : 0.0408
+confrontations, issue : tacle tenté (part) : 0.0168
+confrontations, issue : porteur joue ou perd le ballon (part) : 0.5064
+confrontations, issue : séparation (part) : 0.4762
+confrontations, issue : arrêt de jeu (part) : 0.0007
+durée machine : 23.9 min

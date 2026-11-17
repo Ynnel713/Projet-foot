@@ -2,9 +2,9 @@
 
 **Chantier :** `v2-attributs-contextes` (ADR 0002). **Priorité :** P2. **Catégorie :** attributs.
 
-**Constat (audit du 17/11/2026) :** Decisions n'est lu que par le choix du porteur (`decision.py`) et des remises (`restart.py`) ; aucun choix défensif ne dépend de lui.
+**Constat (audit du 17/11/2026) :** Decisions est lu par le choix du porteur (`decision.py`), des remises (`restart.py`) et, depuis le ticket `v2-realisme/11h` (livré le 16/11/2026, fusionné le 17/11/2026), par le renoncement au tacle hors urgence selon l'angle d'approche (`duel.tackle_attempt_factor`). Le choix du presseur (engager ou attendre le soutien) et le tacle de face (tacler ou temporiser) n'en dépendent pas.
 
-**What to build:** contexte « choix défensif » : le défenseur au contact choisit entre tacler et temporiser, et le presseur entre engager et attendre le soutien, selon Decisions (bon choix plus probable), avec Aggression qui garde la fréquence de base des tentatives (pas de double comptage). À articuler avec les tickets `v2-realisme/11h` (tacle de dernier recours, piste Decisions) et `21c` (faute tactique).
+**What to build:** contexte « choix défensif » : le défenseur au contact choisit entre tacler et temporiser, et le presseur entre engager et attendre le soutien, selon Decisions (bon choix plus probable), avec Aggression qui garde la fréquence de base des tentatives (pas de double comptage). Le facteur du 11h (tacle par derrière ou de côté hors urgence) reste tel quel ; ce ticket l'étend au tacle de face et au presseur dans le même contexte « choix défensif », sans compter deux fois le renoncement du 11h. À articuler avec `21c` (faute tactique, découpé en 21c1 à 21c7).
 
 **Attributs :** Decisions, Aggression (fréquence, inchangée), Anticipation (poids à proposer).
 

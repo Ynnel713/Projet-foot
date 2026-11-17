@@ -4,7 +4,7 @@
 
 **But :** qu'un attribut serve dans plusieurs contextes de jeu, par des poids déclarés dans un registre central, au lieu d'être enfermé dans un seul effet ; sans double comptage (R1 réécrite : « un effet, un calcul »).
 
-**Constat de départ (audit du 17/11/2026) :** 11 attributs sur 27 n'ont qu'un effet : Work Rate (pressing), Positioning (erreur de placement dans le bloc), Decisions (porteur et remises, jamais en défense), Flair (idée de talonnade), Marking, Balance, Strength (duels), Tackling, note agrégée du gardien (Reflexes, One on Ones, Handling). Cause principale : la liste blanche par module et l'interdiction par défaut des mélanges dans `tests/test_v2engine_rayon_attributs.py`.
+**Constat de départ (audit du 17/11/2026) :** 11 attributs sur 27 n'ont qu'un effet : Work Rate (pressing), Positioning (erreur de placement dans le bloc), Decisions (porteur et remises ; en défense, seulement le renoncement au tacle hors urgence, ticket `v2-realisme/11h`), Flair (idée de talonnade), Marking, Balance, Strength (duels), Tackling, note agrégée du gardien (Reflexes, One on Ones, Handling). Cause principale : la liste blanche par module et l'interdiction par défaut des mélanges dans `tests/test_v2engine_rayon_attributs.py`.
 
 ## Ordre validé
 

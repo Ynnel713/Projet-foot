@@ -3,6 +3,8 @@ Lecture seule de la V1 : aucun fichier protégé importé."""
 
 from __future__ import annotations
 
+import math
+
 from scenes import player, with_attribute
 from v2engine.ball_state import BallState
 from v2engine.duel import attempt_tackle_probability, foul_probability, tackle_success_probability
@@ -49,6 +51,15 @@ def test_higher_aggression_increases_foul_risk_independently_of_tackling() -> No
 
 def test_higher_aggression_increases_tackle_attempt_rate() -> None:
     assert attempt_tackle_probability(aggression=90) > attempt_tackle_probability(aggression=15)
+
+
+def test_tackle_attempt_rate_is_recalibrated_after_ticket_11h() -> None:
+    # ticket v2-realisme/11s : 0,047/s à la note médiane, écart Aggression x2 gardé (0,047 ± 0,033 sur la courbe partagée)
+    from v2engine.attributes import success_probability
+    assert math.isclose(success_probability(62.0, baseline=0.047, amplitude=0.033, min_prob=0.0, max_prob=1.0),
+                        attempt_tackle_probability(62.0))
+    low, high = attempt_tackle_probability(11.0), attempt_tackle_probability(99.0)
+    assert 0.0 < low < 0.047 < high <= 0.047 + 0.033
 
 
 def test_won_tackle_transfers_possession(monkeypatch) -> None:

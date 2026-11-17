@@ -1,0 +1,21 @@
+total 39
+5 ('couverture', 'presseur')
+5 ('replacement', 'replacement')
+5 ('gardien', 'tenir sa place')
+4 ('presseur', 'replacement')
+4 ('marquage', 'presseur')
+3 ('marquage', 'replacement')
+3 ('porteur', 'tenir sa place')
+2 ('couverture', 'replacement')
+2 ('appel', 'appel')
+1 ('presseur', 'presseur')
+1 ('gardien', 'replacement')
+1 ('presseur', 'repli')
+1 ('lecture de passe', 'presseur')
+1 ('tenir sa place', 'tenir sa place')
+1 ('appel', 'porteur')
+cibles d'intention à moins de 1 m 0
+cibles données à l'évitement à moins de 1 m 0
+écart des cibles d'intention : {'< 2 m': 7, '< 3 m': 1, '< 5 m': 9, '< 10 m': 10, '< 1000 m': 12}
+l'un des deux à moins de 2 m de sa cible 23
+au moins une cible mobile 19

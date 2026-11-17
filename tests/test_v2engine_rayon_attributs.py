@@ -47,7 +47,8 @@ ALLOWED = {
     # + drapeau du hors-jeu (23) ; ligne fermée au pressing (08) ; perception du porteur : prolonger la course des
     # adversaires pendant sa conduite (ticket v2-collectif/33)
     "Anticipation": {"anticipation", "match", "defense", "decision"},
-    "Decisions": {"decision", "restart"},  # restart : choix du receveur d'une remise en jeu (ticket 29)
+    # restart : choix du receveur d'une remise en jeu (ticket 29) ; duel : renoncer au tacle par derrière hors urgence (11h)
+    "Decisions": {"decision", "restart", "duel"},
     "Vision": {"decision", "off_ball", "scan"},  # + le coureur tente l'appel dans le dos si le porteur le voit (16) ; fréquence des scans (08c)
     "Off the Ball": {"off_ball", "offside"},  # + régler l'appel sur la ligne du hors-jeu (ticket 23)
     # tir sous pression par `shooting.shot_composure_factor`, courbe propre (ticket 28a) ; + perception sous pression (33)

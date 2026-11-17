@@ -122,7 +122,7 @@ def test_one_duel_per_pair_per_cooldown_and_none_on_a_held_ball() -> None:
 
 
 def test_a_foul_charge_is_whistled_for_the_loser_team(monkeypatch) -> None:
-    monkeypatch.setattr(duel, "shoulder_foul_probability", lambda charger: 1.0)
+    monkeypatch.setattr(duel, "shoulder_foul_probability", lambda charger, in_own_box=False: 1.0)
     a, b = _runners(65, 65)
     ball, fouls = _ball(), []
     seed_scene(3)
@@ -158,7 +158,7 @@ def test_the_stronger_runner_reaches_the_ball_more_often() -> None:
 def test_a_foul_charge_during_an_advantage_keeps_both_fouls(monkeypatch) -> None:
     """Réserve A1 de l'expert : une faute laissée en avantage reste tracée quand une charge fautive est sifflée."""
     from v2engine.trace import FoulEvent
-    monkeypatch.setattr(duel, "shoulder_foul_probability", lambda charger: 1.0)
+    monkeypatch.setattr(duel, "shoulder_foul_probability", lambda charger, in_own_box=False: 1.0)
     a, b = _runners(65, 65)
     ball, fouls = _ball(), []
     first = FoulEvent(0.15, "away", "Autre", "Rouge", 50.0, 34.0, "imprudente", "avantage")

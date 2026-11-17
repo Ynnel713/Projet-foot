@@ -45,6 +45,7 @@ OPTION_RANGE_M = 40.0
 OPTION_PROBABILITY = 0.7  # même seuil que le jeu (`off_ball.OPEN_LANE_PROBABILITY`, ticket 06)
 EASY_OPTION_PROBABILITY = 0.8  # solution « facile » (ticket 08, validé le 31/10/2026) : le seuil de 0,5 ne voit pas la pression
 PRESS_RADIUS_M = 3.0
+CHASER_SWITCH_S = 1.0  # changement de chasseur désigné « rapide » (réserve A1 du 11g, mesure du ticket 11k) ; seuil de mesure
 COVER_BEHIND_M, COVER_AHEAD_M, COVER_HALF_WIDTH_M = 3.0, 9.0, 4.0
 LOCAL_RADIUS_M = 10.0
 LOCAL_DEFENDERS = 5
@@ -459,6 +460,7 @@ class _Run:
 
 # Contacts physiques (ticket v2-realisme/11e) : tranches de mesure du banc, sans effet sur le jeu.
 CARRIER_FOLLOW_S = 1.0  # porteur bousculé : ballon encore à son équipe 1 s après ?
+CARRIER_LOSS_WINDOW_S = 3.0  # porteur bousculé : perte de balle sans faute dans les 3 s (ticket v2-realisme/11i, fenêtre fixée par le propriétaire)
 STRENGTH_GAP_BANDS = ("0-9", "10-19", "20-39", "40+")
 BALANCE_BANDS = ("moins de 50", "50-64", "65-79", "80+")
 APPROACH_BANDS = ("de face", "de côté", "par derrière")
@@ -496,6 +498,14 @@ class Collector:
 
     def _reset_match(self) -> None:
         self.goals: Counter = Counter()
+        # tacle en dernier recours (ticket v2-realisme/11h) : contexte du dernier tirage, renoncements par équipe du porteur
+        self.tackle_ctx: tuple[PlayerState, PlayerState, bool, bool, float] | None = None
+        self.renounced_pair: dict[tuple[str, str], float] = {}  # (tacleur, porteur) -> dernier renoncement (s)
+        self.renounced_by: dict[str, float] = {}  # équipe du porteur -> dernier renoncement subi par son adversaire (s)
+        self.chasers_now: dict[str, list[str]] = defaultdict(list)  # ballon libre (ticket 11k)
+        self.chaser: dict[str, tuple[str, float]] = {}  # chasseur désigné de chaque équipe et instant de sa désignation
+        self.chase_open: tuple[float, str | None] | None = None  # épisode disputé : début, équipe qui avait le ballon
+        self.team_of: dict[str, str] = {}
         self.situations = SituationTracker()  # même lecture que le moteur (ticket v2-collectif/03)
         self.dist: Counter = Counter()
         self.hi_by: Counter = Counter()  # course au-dessus de 19,8 km/h par joueur (m)
@@ -560,6 +570,10 @@ class Collector:
         self.press_open: tuple[str, float] | None = None  # pressing en cours (ticket 08) : (équipe qui presse, début)
         self.now = 0.0  # instant du dernier tick
         self.unsettled_carriers: list[tuple[str, str, float, str]] = []  # porteurs bousculés suivis 1 s (11e)
+        # porteurs bousculés suivis 3 s (11i) : joueur, équipe, instant du contact, tranche de Balance ; et ceux du match,
+        # pour le délai jusqu'à sa prochaine action (lu dans le journal des décisions en fin de match)
+        self.carrier_windows: list[tuple[str, str, float, str]] = []
+        self.carrier_log: list[tuple[str, float, str]] = []
         self.carry_open: dict[str, tuple[float, tuple[str, ...]]] = {}  # porteur -> (instant du tirage, tranches), ticket 04c
         # passe en vol mesurée (18g) : équipe, cible, tranche, chance, talonnade (07e)
         self.pass_open: tuple[str, str, str, float, bool, bool] | None = None
@@ -770,6 +784,47 @@ class Collector:
         """Ticket v2-realisme/04b : issue d'un ballon perdu en conduite, dépossession par l'adversaire ou touche trop longue."""
         self.count["conduite : dépossessions" if dispossessed else "conduite : touches trop longues"] += 1
 
+    # --- ballon libre : chasseur désigné et récupération (ticket v2-realisme/11k, réserve A1 du 11g) ---
+    def on_free_ball_role(self, player: PlayerState, intention) -> None:
+        """Joueur de champ en rôle `BALLON_LIBRE` à ce pas (le chasseur désigné de son équipe depuis le 11g)."""
+        if intention.role == BALLON_LIBRE:
+            self.chasers_now[player.team].append(player.name)
+
+    def _free_ball_chase(self, ball) -> None:
+        """Fin de pas : chasseurs de chaque équipe (plus d'un : compté), changement de chasseur au cours d'une même chasse
+        (et en moins de `CHASER_SWITCH_S` après la désignation du précédent) ; épisode de ballon libre disputé, de la
+        première désignation à la prise du ballon (par l'équipe qui l'avait, ou par l'adversaire) ou à l'arrêt du jeu."""
+        now, chasers = self.now, self.chasers_now
+        for team in ("home", "away"):
+            names = chasers.get(team, [])
+            self.count["ballon libre : pas avec plus d'un chasseur par équipe"] += len(names) > 1
+            current = min(names) if names else None
+            previous = self.chaser.get(team)
+            if current is not None and previous is None:
+                self.count["ballon libre : désignations"] += 1
+                self.chaser[team] = (current, now)
+            elif current is not None and current != previous[0]:
+                self.count["ballon libre : changements de chasseur"] += 1
+                self.count["ballon libre : changements de chasseur en moins de 1 s"] += now - previous[1] < CHASER_SWITCH_S
+                self.chaser[team] = (current, now)
+            elif current is None:
+                self.chaser.pop(team, None)
+        if self.chase_open is None and any(chasers.get(t) for t in ("home", "away")):
+            self.chase_open = (now, self.team)  # équipe qui avait le ballon (dernière possession), None au début
+            self.count["ballon libre : épisodes disputés"] += 1
+        elif self.chase_open is not None and (ball.holder is not None or ball.restart is not None):
+            start, owner = self.chase_open
+            if ball.holder is not None:
+                won = self.team_of.get(ball.holder)
+                kind = "repris par l'équipe qui l'avait" if won == owner else "pris par l'adversaire"
+                self.count[f"ballon libre : {kind}"] += 1
+                self.count["ballon libre : délai avant la prise (somme, s)"] += now - start
+                self.count["ballon libre : pris"] += 1
+            else:
+                self.count["ballon libre : arrêt de jeu"] += 1
+            self.chase_open = None
+        self.chasers_now = defaultdict(list)
+
     def on_shot_chaser(self, player: PlayerState, intention, ball) -> None:
         """Ticket v2-realisme/03k : joueurs de champ en rôle `BALLON_LIBRE` (ils courent vers le ballon) pendant un tir en vol,
         en épisodes par joueur et par tir. Mesure seule : le ticket ne les modifie pas."""
@@ -871,11 +926,45 @@ class Collector:
 
     # --- contacts physiques (ticket v2-realisme/11e) ---
     def on_tackle_approach(self, tackler: PlayerState, holder: PlayerState, won: bool, foul: bool) -> None:
-        """Tacle tenté selon l'angle d'approche (ticket 11d) : de face, de côté, par derrière."""
+        """Tacle tenté selon l'angle d'approche (ticket 11d) : de face, de côté, par derrière ; en urgence défensive
+        ou non (ticket 11h, contexte du tirage noté par `on_tackle_context`)."""
         band = approach_band(tackle_approach_angle_deg(tackler, holder))
         self.count[f"tacles {band}"] += 1
         self.count[f"tacles {band} : gagnés"] += won
         self.count[f"tacles {band} : fautes"] += foul
+        ctx = self.tackle_ctx
+        if ctx is not None and ctx[0].name == tackler.name and ctx[1].name == holder.name:
+            urgency = "en urgence" if ctx[2] and not ctx[3] else "hors urgence"  # dans sa surface : jamais d'urgence
+            self.count["tacles dans sa surface"] += ctx[3]
+            self.count["tacles dans sa surface : fautes"] += ctx[3] and foul
+            self.count[f"tacles {urgency}"] += 1
+            self.count[f"tacles {band} {urgency}"] += 1
+
+    def on_tackle_context(self, tackler: PlayerState, holder: PlayerState, urgent: bool, in_own_box: bool = False,
+                          factor: float = 1.0) -> None:
+        """Défenseur à portée du porteur, avant le tirage de la tentative (ticket 11h) ; porteur dans sa surface ;
+        facteur de tentative appliqué."""
+        self.tackle_ctx = (tackler, holder, urgent, in_own_box, factor)
+
+    def tackle_factor(self) -> float:
+        """Facteur de tentative du tirage en cours (1,0 sans contexte)."""
+        return self.tackle_ctx[4] if self.tackle_ctx is not None else 1.0
+
+    def on_tackle_draw(self, attempted: bool, base_attempt: bool | None = None) -> None:
+        """Issue du tirage (ticket 11h). Renoncement : tacle que le défenseur aurait tenté au taux de base, sur le même
+        nombre aléatoire, et que le facteur 11h a évité. Un épisode par couple (tacleur, porteur), clos après 2 s
+        sans renoncement. Le contexte est gardé pour `on_tackle_approach` quand le tacle est tenté."""
+        ctx = self.tackle_ctx
+        self.tackle_ctx = ctx if attempted else None
+        if attempted or ctx is None or not base_attempt:
+            return
+        tackler, holder = ctx[0], ctx[1]
+        pair = (tackler.name, holder.name)
+        if self.now - self.renounced_pair.get(pair, -1e9) > 2.0:
+            self.count["renoncements au tacle (épisodes)"] += 1
+            self.count["renoncements au tacle par derrière (épisodes)"] += (
+                approach_band(tackle_approach_angle_deg(tackler, holder)) == "par derrière")
+        self.renounced_pair[pair] = self.renounced_by[holder.team] = self.now
 
     def on_collision(self, a: PlayerState, b: PlayerState, share_a: float) -> None:
         """Chevauchement de deux joueurs sur un pas, avant sa correction (11a, 11b) : contact franc au-delà de
@@ -922,6 +1011,8 @@ class Collector:
         if ball.holder == player.name:
             self.count["contacts perdus : porteur"] += 1
             self.unsettled_carriers.append((player.name, player.team, self.now + CARRIER_FOLLOW_S, band))
+            self.carrier_windows.append((player.name, player.team, self.now, band))
+            self.carrier_log.append((player.name, self.now, band))
 
     def _close_unsettled_carriers(self, ball, by_name: dict[str, PlayerState]) -> None:
         """Porteur bousculé, 1 s après : son équipe a-t-elle encore le ballon (porteur ou dernier touché, hors remise
@@ -944,8 +1035,43 @@ class Collector:
             self.count[f"porteurs bousculés, Balance {band} : ballon gardé 1 s après"] += kept
         self.unsettled_carriers = still
 
+    def _carrier_next_action(self, decisions) -> None:
+        """Porteur bousculé (11i) : délai jusqu'à sa prochaine action (passe, tir, conduite : sa première décision après le
+        contact), dans `CARRIER_LOSS_WINDOW_S` ; au-delà, compté sans action."""
+        by_player: dict[str, list[float]] = defaultdict(list)
+        for d in decisions:
+            by_player[d.player].append(d.minute * 60.0)
+        for name, start, band in self.carrier_log:
+            self.count[f"porteurs bousculés, Balance {band} : suivis jusqu'à l'action"] += 1
+            after = [t for t in by_player.get(name, ()) if t >= start - 1e-9]
+            delay = min(after) - start if after else None
+            if delay is not None and delay < CARRIER_LOSS_WINDOW_S:
+                self.count[f"porteurs bousculés, Balance {band} : action dans les 3 s"] += 1
+                self.count[f"porteurs bousculés, Balance {band} : délai avant l'action (somme, s)"] += delay
+        self.carrier_log = []
+
+    def _close_carrier_windows(self, ball, by_name: dict[str, PlayerState]) -> None:
+        """Porteur bousculé, suivi `CARRIER_LOSS_WINDOW_S` (11i) : perte de balle sans faute si un adversaire prend le
+        ballon (tacle, interception, conduite perdue) ou si le jeu reprend par une remise adverse ; une remise pour son
+        équipe (faute subie, sortie à son avantage) clôt la fenêtre sans perte. Fenêtre finie sans cela : non perdu."""
+        still = []
+        for name, team, start, band in self.carrier_windows:
+            holder = by_name.get(ball.holder) if ball.holder else None
+            restart = getattr(ball, "restart", None)
+            lost = (holder is not None and holder.team != team) or (restart is not None and restart.team != team)
+            ended = lost or (restart is not None and restart.team == team) or self.now - start >= CARRIER_LOSS_WINDOW_S - 1e-9
+            if not ended:
+                still.append((name, team, start, band))
+                continue
+            self.count[f"porteurs bousculés suivis 3 s, Balance {band}"] += 1
+            self.count[f"porteurs bousculés, Balance {band} : perte sans faute en 3 s"] += lost
+            if lost:
+                self.count[f"porteurs bousculés, Balance {band} : délai avant la perte (somme, s)"] += self.now - start
+        self.carrier_windows = still
+
     def on_decisions(self, decisions) -> None:
         """Rotation avant la passe ou le tir (ticket v2-realisme/07e) : décisions avec rotation et sa durée."""
+        self._carrier_next_action(decisions)
         for d in decisions:
             # champ de vision du porteur à la décision (ticket v2-realisme/08a)
             self.count["vision : décisions"] += 1
@@ -1285,6 +1411,8 @@ class Collector:
         self.now = now_s
         by_name = {p.name: p for p in players}
         self.players = players
+        self.team_of = {p.name: p.team for p in players}
+        self._free_ball_chase(ball)  # avant `_possession` : `self.team` est encore l'équipe qui avait le ballon
         if self.pass_open is not None and ball.holder is None and ball.receiver is None:
             # sans contact : sortie ou sifflée avec remise adverse, perdue (18h) ; morte ou remise pour soi, non perdue (18g)
             restart = getattr(ball, "restart", None)
@@ -1292,9 +1420,14 @@ class Collector:
         self._speeds(players, minute, dt)
         if self.unsettled_carriers:  # ticket v2-realisme/11e
             self._close_unsettled_carriers(ball, by_name)
+        if self.carrier_windows:  # ticket v2-realisme/11i
+            self._close_carrier_windows(ball, by_name)
         if scoring_team is not None:  # but : la possession se clôt, l'engagement n'est pas une perte de balle
             self.goals[scoring_team] += 1
             self.count["buts"] += 1
+            # but marqué moins de 15 s après un renoncement au tacle (tacle évité par 11h) subi par l'équipe qui marque (11h)
+            self.count["buts encaissés dans les 15 s après un renoncement"] += (
+                now_s - self.renounced_by.get(scoring_team, -1e9) <= 15.0)
             self.minutes.on_goal(minute, scoring_team,  # ticket v2-realisme/19d
                                  [(p.name, p.team) for p in players if p.poste != "GK"])
             self._close_possession(now_s)

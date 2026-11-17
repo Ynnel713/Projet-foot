@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import random
 import statistics
 import sys
@@ -31,6 +32,8 @@ import v2engine.bloc as bloc_module
 import v2engine.cerveau as cerveau
 import v2engine.defense as defense
 import v2engine.match as match
+from v2engine.duel import attempt_tackle_probability
+from v2engine.flux import DUEL
 from v2engine.shooting import NEUTRAL_ATTRIBUTES
 from v2engine.trace import CONTROLE_RATE, PASSE, PERTE
 from v2engine.cerveau import HORS_JEU
@@ -55,7 +58,8 @@ def _hook(collector: Collector, clock: dict[str, float], plans: bool = True,
     real = {name: getattr(match, name) for name in ("pass_velocity", "resolve_tackle", "choose_action", "dribble_lost",
                                                      "lost_carry_outcome", "attempt_control", "_play_restart",
                                                      "lane_closed_during_turn", "contact_share", "_unsettle",
-                                                     "resolve_shoulder_duel")}
+                                                     "resolve_shoulder_duel", "tackle_attempt_factor",
+                                                     "should_attempt_tackle")}
     restarting = {"on": False}  # remise en jeu en cours : sa passe n'entre pas dans la calibration (ticket v2-realisme/18g)
 
     def pass_velocity(passer, target, *args, **kwargs):
@@ -100,6 +104,22 @@ def _hook(collector: Collector, clock: dict[str, float], plans: bool = True,
         collector.on_unsettle(player, ball)
         return real["_unsettle"](player, ball, *args, **kwargs)
 
+    def tackle_attempt_factor(tackler, holder, urgent, in_own_box=False):  # tacle en dernier recours (11h)
+        factor = real["tackle_attempt_factor"](tackler, holder, urgent, in_own_box)
+        collector.on_tackle_context(tackler, holder, urgent, in_own_box, factor)
+        return factor
+
+    def should_attempt_tackle(aggression, dt):
+        # tirage contrefactuel au taux de base (sans le facteur 11h), sur le même nombre aléatoire : l'état du flux
+        # DUEL est relu puis restauré, le match n'est pas perturbé
+        state = DUEL.getstate()
+        draw = DUEL.random()
+        DUEL.setstate(state)
+        attempted = real["should_attempt_tackle"](aggression, dt)
+        base_dt = dt / collector.tackle_factor()
+        collector.on_tackle_draw(attempted, draw < 1.0 - math.exp(-attempt_tackle_probability(aggression) * base_dt))
+        return attempted
+
     def resolve_shoulder_duel(a, b, *args, **kwargs):  # duel d'épaule (11c), par écart de Strength (11e)
         result = real["resolve_shoulder_duel"](a, b, *args, **kwargs)
         collector.on_shoulder_duel(a, b, result.winner)
@@ -131,6 +151,7 @@ def _hook(collector: Collector, clock: dict[str, float], plans: bool = True,
             collector.on_keeper(player, intention, *args[:2])  # ticket v2-realisme/03d ; ballon et joueurs : 03g
         else:
             collector.on_shot_chaser(player, intention, args[0])  # ticket v2-realisme/03k
+            collector.on_free_ball_role(player, intention)  # chasseur désigné (ticket v2-realisme/11k)
         return intention
 
     real_stays = cerveau.stays_behind
@@ -193,6 +214,8 @@ def _hook(collector: Collector, clock: dict[str, float], plans: bool = True,
     match.lane_closed_during_turn = lane_closed_during_turn  # ticket v2-realisme/07e
     match.contact_share, match._unsettle = contact_share, unsettle  # ticket v2-realisme/11e
     match.resolve_shoulder_duel = resolve_shoulder_duel
+    match.tackle_attempt_factor = tackle_attempt_factor  # ticket v2-realisme/11h
+    match.should_attempt_tackle = should_attempt_tackle
     cerveau.stays_behind, match.think = stays_behind, think
     defense.DefensiveRoles.start_team_press = trigger
     return lambda: ([setattr(match, name, fn) for name, fn in real.items()] + [setattr(cerveau, "stays_behind", real_stays), setattr(match, "think", real_think)]
@@ -412,6 +435,24 @@ def _share(k, held: str) -> float:
     return k["gardien : ballons avec sortie, ballon à 3 s : " + held] / max(1, k["gardien : ballons avec sortie"])
 
 
+def free_ball_report(k, n: int, out: dict) -> None:
+    """Ballon libre (ticket v2-realisme/11k, réserve A1 du 11g) : stabilité du chasseur désigné et issue des ballons
+    libres disputés. Parts divisées par `max(1, …)` (0 sans cas)."""
+    out["ballon libre : épisodes disputés par match"] = k["ballon libre : épisodes disputés"] / n
+    out["ballon libre : désignations de chasseur par match"] = k["ballon libre : désignations"] / n
+    out["ballon libre : changements de chasseur par match"] = k["ballon libre : changements de chasseur"] / n
+    out["ballon libre : changements de chasseur en moins de 1 s (part des désignations)"] = (
+        k["ballon libre : changements de chasseur en moins de 1 s"] / max(1, k["ballon libre : désignations"]))
+    out["ballon libre : pas avec plus d'un chasseur par équipe, par match"] = (
+        k["ballon libre : pas avec plus d'un chasseur par équipe"] / n)
+    done = max(1, k["ballon libre : pris"] + k["ballon libre : arrêt de jeu"])
+    out["ballon libre : repris par l'équipe qui l'avait (part)"] = k["ballon libre : repris par l'équipe qui l'avait"] / done
+    out["ballon libre : pris par l'adversaire (part)"] = k["ballon libre : pris par l'adversaire"] / done
+    out["ballon libre : arrêt de jeu (part)"] = k["ballon libre : arrêt de jeu"] / done
+    out["ballon libre : délai avant la prise (moyenne, s)"] = (
+        k["ballon libre : délai avant la prise (somme, s)"] / max(1, k["ballon libre : pris"]))
+
+
 def contact_report(k, n: int, out: dict) -> None:
     """Contacts physiques (ticket v2-realisme/11e) : collisions, duels d'épaule par écart de Strength, contact perdu
     par Balance (12c), tacles par angle d'approche (11d). Parts et moyennes divisées par `max(1, …)` (convention du
@@ -442,6 +483,26 @@ def contact_report(k, n: int, out: dict) -> None:
         out[f"{carriers} : ballon gardé 1 s après (part)"] = (
             k[f"{carriers} : ballon gardé 1 s après"] / max(1, k[carriers]))
         out[f"{carriers}, par match"] = k[carriers] / n
+        followed = f"porteurs bousculés suivis 3 s, Balance {band}"  # ticket v2-realisme/11i
+        lost = k[f"{carriers} : perte sans faute en 3 s"]
+        out[f"{carriers} : perte sans faute en 3 s (part)"] = lost / max(1, k[followed])
+        out[f"{carriers} : délai avant la perte (moyenne, s)"] = (
+            k[f"{carriers} : délai avant la perte (somme, s)"] / max(1, lost))
+        acted = k[f"{carriers} : action dans les 3 s"]
+        out[f"{carriers} : action dans les 3 s (part)"] = acted / max(1, k[f"{carriers} : suivis jusqu'à l'action"])
+        out[f"{carriers} : délai avant l'action (moyenne, s)"] = (
+            k[f"{carriers} : délai avant l'action (somme, s)"] / max(1, acted))
+    # tacle en dernier recours (ticket v2-realisme/11h)
+    out["tacles par derrière hors urgence (part des tacles hors urgence)"] = (
+        k["tacles par derrière hors urgence"] / max(1, k["tacles hors urgence"]))
+    out["tacles en urgence (part des tacles tentés)"] = k["tacles en urgence"] / max(1, k["tacles"])
+    out["tacles dans sa surface, par match"] = k["tacles dans sa surface"] / n
+    out["tacles dans sa surface : fautes (penalties), par match"] = k["tacles dans sa surface : fautes"] / n
+    out["renoncements au tacle (tacle évité par 11h), par match"] = k["renoncements au tacle (épisodes)"] / n
+    out["renoncements au tacle par derrière (tacle évité par 11h), par match"] = (
+        k["renoncements au tacle par derrière (épisodes)"] / n)
+    out["buts encaissés dans les 15 s après un renoncement, par match"] = (
+        k["buts encaissés dans les 15 s après un renoncement"] / n)
     for band in APPROACH_BANDS:
         name = f"tacles {band}"
         out[f"{name} (part des tacles tentés)"] = k[name] / max(1, k["tacles"])
@@ -663,6 +724,7 @@ def report(c: Collector, detail: bool = False) -> dict:
         k["duels d'épaule gagnés : plus fort"] / max(1, unequal))
     out["duels d'épaule : fautes de charge par match"] = k["duels d'épaule : fautes de charge"] / n
     contact_report(k, n, out)  # ticket v2-realisme/11e
+    free_ball_report(k, n, out)  # ticket v2-realisme/11k
     out["rotation : passes abandonnées, ligne fermée, par match"] = k["rotation : passes abandonnées, ligne fermée"] / n
     out["rotation : passes abandonnées, ligne fermée (part des passes jugées après la rotation)"] = (
         k["rotation : passes abandonnées, ligne fermée"] / max(1, k["rotation : passes jugées après la rotation"]))

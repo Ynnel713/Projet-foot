@@ -6,7 +6,7 @@
 
 ## Contexte
 
-Le moteur V2 lit 27 attributs. L'audit du 17/11/2026 montre que 11 d'entre eux ne servent qu'à un seul effet : Work Rate (pressing seulement), Positioning (erreur de placement dans le bloc), Decisions (choix du porteur et des remises, jamais en défense), Flair (idée de talonnade), Marking, Balance, Strength (duels seulement), Tackling, et la note du gardien qui agrège Reflexes, One on Ones et Handling. Seuls Anticipation, Off the Ball, Teamwork, Technique et Composure ont un rayon systémique.
+Le moteur V2 lit 27 attributs. L'audit du 17/11/2026 montre que 11 d'entre eux ne servent qu'à un seul effet : Work Rate (pressing seulement), Positioning (erreur de placement dans le bloc), Decisions (choix du porteur et des remises ; en défense, seulement le renoncement au tacle hors urgence depuis le ticket `v2-realisme/11h`, livré sur `main` en parallèle de l'audit), Flair (idée de talonnade), Marking, Balance, Strength (duels seulement), Tackling, et la note du gardien qui agrège Reflexes, One on Ones et Handling. Seuls Anticipation, Off the Ball, Teamwork, Technique et Composure ont un rayon systémique.
 
 Ce cloisonnement vient de l'outillage plus que d'un choix de jeu :
 - la règle R1 de `docs/CARTE_ATTRIBUTS_V2.md` (« un effet, un attribut responsable ») et le point 3 de l'ADR 0001 rattachent chaque attribut à un seul temps du cerveau ;

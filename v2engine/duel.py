@@ -12,15 +12,18 @@ from dataclasses import dataclass
 from v2engine.attributes import duel_probability, success_probability
 from v2engine.condition import effective_rating
 from v2engine.flux import ARBITRAGE, DUEL
+from v2engine.geometry import in_penalty_area
 from v2engine.movement import PlayerState
 
 # Taux de BASE (tentatives par seconde de contact) auquel un adversaire à portée tente un tacle
 # plutôt que d'éviter le contact (guide, Aggression : "NOTE HAUTE : tacles plus tôt... NOTE BASSE :
 # évite le contact"). Taux par seconde, pas par tick (v2-socle/06, validé le 25/10/2026) : cible
 # 30-40 tacles tentés par match, réel Premier League ~33 (premierleague.com) ; écart Aggression
-# conservé (~x2 entre notes extrêmes, comme l'ancien 0,5 ± 0,35).
-_ATTEMPT_BASELINE = 0.03
-_ATTEMPT_AMPLITUDE = 0.021
+# conservé (~x2 entre notes extrêmes, comme l'ancien 0,5 ± 0,35). Recalibré après le facteur de tentative du 11h
+# (ticket v2-realisme/11s, valeurs validées par le propriétaire le 16/11/2026) : 0,03 ± 0,021 donnait 38,6 tacles au
+# taux de base mais 22,5 avec le facteur (moyenne 0,61, diagnostic 11r) ; les deux multipliés par 1,567.
+_ATTEMPT_BASELINE = 0.047
+_ATTEMPT_AMPLITUDE = 0.033
 
 # Probabilité de BASE qu'un tacle (gagné ou raté : un tacle qui touche le ballon peut aussi faucher) soit une faute,
 # modulée par Aggression seule -- contrepartie du guide (plus de duels tentés, plus de fautes), indépendante de
@@ -116,8 +119,65 @@ def after_contact_delay_s(player: PlayerState) -> float:
 
 
 def should_attempt_tackle(aggression: float, dt: float) -> bool:
-    """Tirage sur un tick de `dt` secondes : indépendant du pas de simulation (taux par seconde)."""
+    """Tirage sur un tick de `dt` secondes : indépendant du pas de simulation (taux par seconde). Un taux modulé
+    (`tackle_attempt_factor`, ticket v2-realisme/11h) se passe par `dt` multiplié par le facteur : même loi."""
     return DUEL.random() < 1.0 - math.exp(-attempt_tackle_probability(aggression) * dt)
+
+
+# Tacle par derrière en dernier recours (ticket v2-realisme/11h, constantes validées par le propriétaire le 16/11/2026).
+# Hors urgence, le taux de tentative est multiplié selon l'angle d'approche (mêmes repères que le 11d : 0° de face, 90°
+# de côté, 180° par derrière, interpolé) : 1,0 / 0,6 / 0,15 pour Decisions 55. Decisions règle le discernement (carte
+# des attributs : « choisir... tacler, attendre ») : par derrière 99 -> 0,05, 55 -> 0,15, 11 -> 0,40, interpolé
+# linéairement entre ces notes ; la réduction de côté suit le même coefficient (99 -> 0,55, 11 -> 0,72), de face
+# inchangé. Aggression garde seule la fréquence de base, Decisions ne fait que la moduler selon le risque (R1).
+# Urgence défensive (facteur 1,0) : porteur à moins de 20 m du but défendu avec un angle de tir (à moins de 45° de
+# l'axe du but, vu du centre du but), ou dernier rempart (aucun coéquipier de champ du défenseur plus près de son but
+# que le porteur ; décision du propriétaire du 16/11/2026 : il ne laisse pas l'attaquant marcher vers le but ; la
+# prudence liée aux cartons est un ticket à part, bloqué par v2-attributs-restants/09a). Dans la surface que défend le
+# tacleur, pas d'urgence (une faute y donne un penalty) : facteur hors urgence multiplié par la prudence de surface,
+# réglée par Decisions 99 -> 0,35, 55 -> 0,5, 11 -> 0,75. Chiffre réel : non trouvé (loi 12 IFAB : le tacle
+# par derrière dangereux est une faute grossière ; faute dans la surface : penalty).
+TACKLE_ATTEMPT_ANGLE_FACTOR = (1.0, 0.6, 0.15)  # de face, de côté, par derrière (Decisions 55)
+TACKLE_DISCERNMENT_NOTES = (11.0, 55.0, 99.0)
+TACKLE_BEHIND_FACTOR_BY_DECISIONS = (0.40, 0.15, 0.05)
+TACKLE_BOX_FACTOR_BY_DECISIONS = (0.75, 0.50, 0.35)  # prudence de surface, commune à toutes les fautes (21c1)
+URGENCY_DISTANCE_M = 20.0
+URGENCY_SHOT_ANGLE_DEG = 45.0
+
+
+def defensive_urgency(holder: PlayerState, defended_goal, players: list[PlayerState], defender: PlayerState) -> bool:
+    """Urgence défensive de `defender` face à `holder` (voir `URGENCY_DISTANCE_M`) : porteur à moins de 20 m de
+    `defended_goal` avec un angle de tir, ou `defender` dernier rempart parmi les joueurs de champ de son équipe."""
+    to_goal = defended_goal - holder.position
+    distance = to_goal.length()
+    if distance < URGENCY_DISTANCE_M and (
+            distance < 1e-9 or math.degrees(math.atan2(abs(to_goal.y), abs(to_goal.x))) < URGENCY_SHOT_ANGLE_DEG):
+        return True
+    return not any(p.team == defender.team and p.name != defender.name and p.poste != "GK"
+                   and p.position.distance_to(defended_goal) < distance for p in players)
+
+
+def box_prudence(player: PlayerState) -> float:
+    """Prudence de surface (tickets v2-realisme/11h et 21c1) : multiplicateur d'une faute que `player` commettrait dans
+    la surface qu'il défend (faute = penalty), réglé par Decisions 99 -> 0,35, 55 -> 0,5, 11 -> 0,75. Une seule courbe
+    pour le tacle et toutes les fautes hors tacle (règle R1) ; jamais nulle : des penalties restent possibles."""
+    return _interpolate(effective_rating(player, "Decisions"), TACKLE_DISCERNMENT_NOTES, TACKLE_BOX_FACTOR_BY_DECISIONS)
+
+
+def tackle_attempt_factor(tackler: PlayerState, holder: PlayerState, urgent: bool, in_own_box: bool = False) -> float:
+    """Multiplicateur du taux de tentative de tacle (voir `TACKLE_ATTEMPT_ANGLE_FACTOR`) : selon l'angle d'approche et
+    le discernement (Decisions) du tacleur ; 1,0 en urgence ; porteur dans la surface du tacleur (`in_own_box`) : pas
+    d'urgence, facteur multiplié par la prudence de surface."""
+    decisions = effective_rating(tackler, "Decisions")
+    if urgent and not in_own_box:
+        return 1.0
+    behind = _interpolate(decisions, TACKLE_DISCERNMENT_NOTES, TACKLE_BEHIND_FACTOR_BY_DECISIONS)
+    discernment = (1.0 - behind) / (1.0 - TACKLE_ATTEMPT_ANGLE_FACTOR[2])
+    factors = tuple(1.0 - discernment * (1.0 - f) for f in TACKLE_ATTEMPT_ANGLE_FACTOR)
+    factor = _interpolate(tackle_approach_angle_deg(tackler, holder), TACKLE_ANGLE_POINTS_DEG, factors)
+    if in_own_box:
+        factor *= box_prudence(tackler)
+    return factor
 
 
 @dataclass(frozen=True)
@@ -150,6 +210,28 @@ def tackle_approach_angle_deg(tackler: PlayerState, holder: PlayerState) -> floa
     if toward_tackler.length() < 1e-9 or holder.facing.length() < 1e-9:
         return 0.0
     return _angle_deg(holder.facing, toward_tackler)
+
+
+# Choix du tacleur (ticket v2-realisme/11p, option et constante validées par le propriétaire le 16/11/2026) : parmi les
+# défenseurs à portée, seul le mieux placé tente (meilleur angle d'approche, 0° = de face) ; deux angles à moins de 10°
+# l'un de l'autre : le plus proche du porteur l'emporte. Un seul tirage par pas : deux défenseurs ne taclent jamais
+# ensemble. Chiffre réel : non trouvé (repère d'effet : 30 à 40 tacles par match, ticket 22).
+TACKLER_ANGLE_TIE_DEG = 10.0
+
+
+def best_placed_tackler(holder: PlayerState, players: list[PlayerState], radius_m: float,
+                        angle_tie_deg: float = TACKLER_ANGLE_TIE_DEG) -> PlayerState | None:
+    """Adversaire du porteur à moins de `radius_m` qui tente le tacle : le meilleur angle d'approche
+    (`tackle_approach_angle_deg`) ; parmi ceux à moins de `angle_tie_deg` de ce meilleur angle, le plus proche (à
+    distance égale, le premier de `players`). `angle_tie_deg` infini : le plus proche, règle d'avant le ticket 11p."""
+    in_range = [p for p in players
+                if p.team != holder.team and holder.position.distance_to(p.position) < radius_m]
+    if not in_range:
+        return None
+    angles = {p.name: tackle_approach_angle_deg(p, holder) for p in in_range}
+    best = min(angles.values())
+    contenders = [p for p in in_range if angles[p.name] - best < angle_tie_deg]
+    return min(contenders, key=lambda p: holder.position.distance_to(p.position))
 
 
 def tackle_closing_speed_mps(tackler: PlayerState, holder: PlayerState) -> float:
@@ -254,9 +336,11 @@ def shoulder_win_probability(a: PlayerState, b: PlayerState) -> float:
     return duel_probability(effective_rating(a, "Strength"), effective_rating(b, "Strength"))
 
 
-def shoulder_foul_probability(charger: PlayerState) -> float:
-    """Chance que la charge du gagnant soit une faute : `SHOULDER_FOUL_FACTOR` x celle d'un tacle (Aggression)."""
-    return SHOULDER_FOUL_FACTOR * foul_probability(effective_rating(charger, "Aggression"))
+def shoulder_foul_probability(charger: PlayerState, in_own_box: bool = False) -> float:
+    """Chance que la charge du gagnant soit une faute : `SHOULDER_FOUL_FACTOR` x celle d'un tacle (Aggression) ; dans
+    la surface que défend le chargeur (`in_own_box`), multipliée par sa prudence de surface (ticket v2-realisme/21c1)."""
+    probability = SHOULDER_FOUL_FACTOR * foul_probability(effective_rating(charger, "Aggression"))
+    return probability * box_prudence(charger) if in_own_box else probability
 
 
 @dataclass(frozen=True)
@@ -268,9 +352,11 @@ class ShoulderResult:
 
 
 def resolve_shoulder_duel(a: PlayerState, b: PlayerState) -> ShoulderResult:
-    """Tire le gagnant (flux DUEL) puis la faute de charge du gagnant."""
+    """Tire le gagnant (flux DUEL) puis la faute de charge du gagnant ; la surface est jugée au lieu de la faute, la
+    position du perdant (comme le coup de pied de réparation de `restart.foul_restart`, ticket v2-realisme/21c1)."""
     a_wins = DUEL.random() < shoulder_win_probability(a, b)
     winner, loser = (a, b) if a_wins else (b, a)
     gap = effective_rating(winner, "Strength") - effective_rating(loser, "Strength")
     issue = "plus fort" if gap > 0 else "plus faible" if gap < 0 else "égalité"
-    return ShoulderResult(winner, loser, DUEL.random() < shoulder_foul_probability(winner), issue)
+    in_own_box = in_penalty_area(loser.team, loser.position)  # surface que défend le chargeur
+    return ShoulderResult(winner, loser, DUEL.random() < shoulder_foul_probability(winner, in_own_box), issue)

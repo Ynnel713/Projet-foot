@@ -1,0 +1,18 @@
+total 44
+8 ('replacement', 'replacement')
+8 ('gardien', 'tenir sa place')
+6 ('presseur', 'replacement')
+5 ('marquage', 'presseur')
+3 ('gardien', 'replacement')
+3 ('couverture', 'replacement')
+2 ('marquage', 'replacement')
+2 ('couverture', 'presseur')
+1 ('couverture', 'marquage')
+1 ('appel', 'porteur')
+1 ('repli', 'repli')
+1 ('porteur', 'tenir sa place')
+1 ('receveur visé', 'tenir sa place')
+1 ('couverture', 'gardien')
+1 ('ballon libre', 'replacement')
+cibles d'intention à moins de 1 m 1
+cibles données à l'évitement à moins de 1 m 1
