@@ -497,3 +497,115 @@ def test_a_team_without_a_centre_forward_only_constrains_defence_to_midfield() -
     x = {p.name: bloc.reference(p, CENTER_BALL, POSSESSION_INSTALLEE).x for p in team if p.poste != "GK"}
     assert math.isclose(x["M0"] - x["D0"], GAP_DEF_MID_M[1])
     assert math.isclose(x["A0"] - x["M0"], 30.0 * 42.0 / 60.0)  # pas d'avant-centre : l'attaque garde son écart
+
+
+# --- Placement de construction (ticket v2-realisme/25b) -------------------------------------------------------------
+# 4-3-3 avec rôles : centraux à 25 et 43 m (18 m d'écart, comme mesuré en match avant 25b), latéraux à 12 et 56 m, sentinelle dans l'axe, deux relayeurs.
+def _r(name: str, x: float, y: float, poste: str, role: str, team: str = "home") -> PlayerState:
+    return dataclasses.replace(_p(name, x, y, poste=poste, team=team), role=role)
+
+
+BUILD_TEAM = [_r("GK", 5, 34, "GK", "gardien"), _r("CB1", 18, 25, "DC", "défenseur central"),
+              _r("CB2", 18, 43, "DC", "défenseur central"), _r("LB", 20, 12, "LB", "latéral"),
+              _r("RB", 20, 56, "RB", "latéral"), _r("DM", 28, 34, "MDC", "sentinelle"),
+              _r("CM1", 34, 24, "MC", "milieu relayeur"), _r("CM2", 34, 44, "MC", "mezzala"),
+              _r("LW", 46, 12, "AG", "ailier de couloir"), _r("RW", 46, 56, "AD", "ailier intérieur"),
+              _r("ST", 50, 34, "BU", "avant-centre")]
+_SPOT = Vec2(5.5, 34.0)
+
+
+def _goal_kick(rivals: list[PlayerState] = ()) -> tuple[Bloc, list[PlayerState], BallState]:
+    from v2engine.restart import GOAL_KICK, Restart
+    players = BUILD_TEAM + list(rivals)
+    bloc = Bloc.from_players(players)
+    ball = BallState(position=_SPOT, velocity=Vec2(0.0, 0.0),
+                     restart=Restart(GOAL_KICK, "home", _SPOT, "GK", 25.0, 0.0))
+    bloc.update(players, ball, 0.0)
+    return bloc, players, ball
+
+
+def _ref(bloc: Bloc, name: str, ball: Vec2 = _SPOT, team: list[PlayerState] = BUILD_TEAM) -> Vec2:
+    player = next(p for p in team if p.name == name)
+    return bloc.reference(player, ball, POSSESSION_INSTALLEE)
+
+
+def _cb_gap(bloc: Bloc) -> float:
+    return abs(_ref(bloc, "CB2").y - _ref(bloc, "CB1").y)
+
+
+def test_every_build_up_role_is_a_known_role() -> None:
+    from v2engine.bloc import ROLE_PLACE_BUILD_UP
+    from v2engine.roles import ROLES
+    assert set(ROLE_PLACE_BUILD_UP) <= set(ROLES)
+
+
+def test_on_a_goal_kick_without_pressing_the_centre_backs_split_and_the_holding_midfielder_drops() -> None:
+    bloc, _, _ = _goal_kick()
+    assert bloc.build_up == {"home": 1.0}
+    plain = Bloc.from_players(BUILD_TEAM)  # même scène, sans phase de construction
+    assert _cb_gap(bloc) >= 32.0 and math.isclose(_cb_gap(bloc), _cb_gap(plain) + 16.0)
+    assert _ref(bloc, "DM").distance_to(BUILD_TEAM[0].position) <= 18.0
+    assert math.isclose(_ref(bloc, "DM").x, _ref(plain, "DM").x - 6.0)
+    for name in ("LB", "RB"):  # les latéraux montent de 6 m et s'ouvrent, jamais à moins de 2 m de la touche
+        assert math.isclose(_ref(bloc, name).x, _ref(plain, name).x + 6.0)
+        assert 2.0 - 1e-9 <= _ref(bloc, name).y <= 66.0 + 1e-9
+        assert abs(_ref(bloc, name).y - 34.0) > abs(_ref(plain, name).y - 34.0)
+    for name in ("CM1", "CM2"):  # demi-espaces : 4 m plus loin de l'axe
+        assert math.isclose(abs(_ref(bloc, name).y - 34.0), abs(_ref(plain, name).y - 34.0) + 4.0)
+    for name in ("LW", "RW", "ST"):  # rôles hors de la table : rien ne change
+        assert _ref(bloc, name) == _ref(plain, name)
+
+
+def test_under_a_high_press_the_same_players_stay_closer_to_the_holder() -> None:
+    free, _, _ = _goal_kick()
+    rivals = [_p(f"R{i}", 25.0, y, poste="BU", team="away") for i, y in enumerate((20, 30, 40, 50))]
+    pressed, _, _ = _goal_kick(rivals)
+    assert pressed.build_up == {"home": 0.5}
+    assert _cb_gap(pressed) <= _cb_gap(free) - 6.0
+    three, _, _ = _goal_kick(rivals[:3])  # entre 2 et 4 adversaires : écartement intermédiaire
+    assert three.build_up == {"home": 0.75} and _cb_gap(pressed) < _cb_gap(three) < _cb_gap(free)
+
+
+def test_the_build_up_phase_follows_the_holder_and_lasts_through_the_pass() -> None:
+    bloc = Bloc.from_players(BUILD_TEAM)
+    def tick(holder: str | None, x: float) -> None:  # le porteur est placé sur le ballon
+        players = [dataclasses.replace(p, position=Vec2(x, 30.0)) if p.name == holder else p for p in BUILD_TEAM]
+        bloc.update(players, BallState(position=Vec2(x, 30.0), velocity=Vec2(0.0, 0.0), holder=holder), 0.0)
+    tick("CB1", 18.0)
+    assert bloc.in_build_up("home")
+    tick(None, 25.0)  # passe en vol : la phase continue jusqu'au contrôle suivant
+    assert bloc.in_build_up("home")
+    tick("CM1", 34.0)  # un milieu contrôle : fin de la construction
+    assert not bloc.in_build_up("home")
+    tick(None, 40.0)
+    assert not bloc.in_build_up("home")
+    tick("CB1", 36.0)  # défenseur au-delà de 35 m de son but : pas de construction
+    assert not bloc.in_build_up("home")
+    tick("GK", 5.0)
+    assert bloc.in_build_up("home") and not bloc.in_build_up("away")
+
+
+def test_the_build_up_place_only_applies_with_the_ball_and_is_mirrored_for_the_away_team() -> None:
+    bloc, _, _ = _goal_kick()
+    plain = Bloc.from_players(BUILD_TEAM)
+    cb = BUILD_TEAM[1]
+    assert bloc.reference(cb, _SPOT, DEFENSE_PLACEE) == plain.reference(cb, _SPOT, DEFENSE_PLACEE)
+    from v2engine.restart import GOAL_KICK, Restart
+    away = [dataclasses.replace(p, team="away", position=Vec2(105.0 - p.position.x, p.position.y),
+                                home_target=Vec2(105.0 - p.home_target.x, p.home_target.y)) for p in BUILD_TEAM]
+    spot = Vec2(105.0 - _SPOT.x, _SPOT.y)
+    mirrored = Bloc.from_players(away)
+    mirrored.update(away, BallState(position=spot, velocity=Vec2(0.0, 0.0),
+                                    restart=Restart(GOAL_KICK, "away", spot, "GK", 25.0, 0.0)), 0.0)
+    for name in ("CB1", "CB2", "LB", "DM", "CM2"):
+        home_ref, away_ref = _ref(bloc, name), _ref(mirrored, name, spot, away)
+        assert math.isclose(away_ref.x, 105.0 - home_ref.x) and math.isclose(away_ref.y, home_ref.y)
+
+
+def test_the_build_up_phase_is_written_in_the_traced_reason() -> None:
+    bloc, players, ball = _goal_kick()
+    intention = think(BUILD_TEAM[1], ball, players, 0.0, {}, POSSESSION_INSTALLEE, bloc)
+    assert intention.reason.endswith("(construction)") and intention.target == bloc.target(
+        BUILD_TEAM[1], _SPOT, POSSESSION_INSTALLEE, 0.0)
+    plain = Bloc.from_players(BUILD_TEAM)
+    assert "construction" not in think(BUILD_TEAM[1], ball, players, 0.0, {}, POSSESSION_INSTALLEE, plain).reason

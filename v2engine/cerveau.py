@@ -322,10 +322,12 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
             return make(role, "se replacer", player.home_target, replacement_intensity(player, True),
                         reason="en possession, il rejoint sa place")
         place = bloc.replacement(player, ball.position, situation, minute * 60.0)
+        phase = _build_up_note(bloc, player)  # phase de construction tracée (ticket v2-realisme/25b)
         if place is None:
-            return make(role, "tenir sa place", player.position, reason="en possession, il tient sa place dans le bloc")
+            return make(role, "tenir sa place", player.position,
+                        reason=f"en possession, il tient sa place dans le bloc{phase}")
         return make(role, "se replacer", place, replacement_intensity(player, True),
-                    reason="en possession, il rejoint sa place dans le bloc",
+                    reason=f"en possession, il rejoint sa place dans le bloc{phase}",
                     distance_m=player.position.distance_to(place))
     if role == RECEVEUR:
         point = meeting_point(player, ball.position, ball.velocity, BALL_FRICTION_PER_S)
@@ -345,10 +347,12 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
             return make(role, "se replacer", player.home_target, replacement_intensity(player, False),
                         reason="loin du ballon, il rejoint sa place")
         place = bloc.replacement(player, ball.position, situation, minute * 60.0)  # ticket v2-collectif/04
+        phase = _build_up_note(bloc, player)  # ticket v2-realisme/25b
         if place is None:
-            return make(role, "tenir sa place", player.position, reason="loin du ballon, il tient sa place dans le bloc")
+            return make(role, "tenir sa place", player.position,
+                        reason=f"loin du ballon, il tient sa place dans le bloc{phase}")
         return make(role, "se replacer", place, replacement_intensity(player, False),
-                    reason="loin du ballon, il rejoint sa place dans le bloc",
+                    reason=f"loin du ballon, il rejoint sa place dans le bloc{phase}",
                     distance_m=player.position.distance_to(place))
     if role == BALLON_LIBRE:
         point = loose_ball_target(player, ball.position, ball.velocity, BALL_FRICTION_PER_S)
@@ -437,6 +441,11 @@ def _keeper(player: PlayerState, ball: BallState, seen: Perception, players: lis
     return replace(moved, role=GARDIEN, reason=f"{state} : {moved.reason}")
 
 
+def _build_up_note(bloc: Bloc | None, player: PlayerState) -> str:
+    """Mention de la phase de construction dans la raison (ticket v2-realisme/25b) : sa place de référence en dépend."""
+    return " (construction)" if bloc is not None and bloc.in_build_up(player.team) else ""
+
+
 def think(player: PlayerState, ball: BallState, players: list[PlayerState], minute: float,
           runs: dict[str, tuple[Vec2, float] | tuple[Vec2, float, str]] | None, situation: str | None = None, bloc: Bloc | None = None,
           defense: DefensiveRoles | None = None, transition: TransitionPlay | None = None,
@@ -456,8 +465,9 @@ def think(player: PlayerState, ball: BallState, players: list[PlayerState], minu
                              reason=f"{restart.kind} pour son équipe, il la joue", situation=situation)
         wanted = player.home_target if restart.kind == KICKOFF or bloc is None or situation is None \
             else bloc.target(player, restart.spot, situation, now_s)
+        phase = _build_up_note(bloc, player) if restart.kind != KICKOFF else ""  # ticket v2-realisme/25b
         return Intention(REPLACEMENT, "se replacer", place(player, restart, wanted), REPLACING_INTENSITY,
-                         reason=f"ballon mort ({restart.kind}), il se replace", situation=situation)
+                         reason=f"ballon mort ({restart.kind}), il se replace{phase}", situation=situation)
     if now_s < ball.offside_out_until.get(player.name, 0.0):
         # Hors-jeu sifflé (ticket v2-collectif/23) : l'attaquant fautif recule le temps que la défense se replace.
         return Intention(HORS_JEU, "reculer", player.home_target, HESITATION_INTENSITY,

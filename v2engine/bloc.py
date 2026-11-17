@@ -60,7 +60,18 @@ Place sans ballon propre au rôle (ticket v2-realisme/02e, mêmes principes, tab
 sans ballon reste 32 x 40 m, calé sur la hauteur de sa dernière ligne. Les rôles redistribuent les joueurs dans ce
 bloc ; personne ne passe derrière la dernière ligne de la forme de départ (`without_ball_place`), la ligne reste donc
 celle des défenseurs. Le repli défensif propre à chaque rôle (qui suit son latéral, qui reste prêt à ressortir) en
-découle ; la couverture et les zones arrivent au ticket 10."""
+découle ; la couverture et les zones arrivent au ticket 10.
+
+Placement de construction (ticket v2-realisme/25b, constantes proposées par Claude et validées par le propriétaire le
+17/11/2026 ; chiffres réels non trouvés, ordres de grandeur tactiques) : quand le ballon est au gardien, à un défenseur
+dans ses 35 m (`BUILD_UP_ZONE_M`) ou que l'équipe a une sortie de but (pendant la passe qui en part aussi, jusqu'au
+contrôle suivant), la place avec ballon reçoit en plus `ROLE_PLACE_BUILD_UP[rôle]` (avance, écart vers la touche), en
+mètres sur le terrain, après la mise à l'échelle du bloc : les centraux s'ouvrent vers les angles de la surface, la
+sentinelle ou le regista décroche dans l'axe, les latéraux montent et s'ouvrent, les relayeurs vont dans les
+demi-espaces. Sous pressing haut (adversaires de champ dans nos 35 m : 2 ou moins, écartement complet ; 4 ou plus,
+moitié ; linéaire entre), l'écart vers la touche est réduit : les joueurs restent plus près du porteur. Personne ne
+s'ouvre à moins de 2 m de la touche. La hauteur de la dernière ligne (09j) n'est pas changée ; la place reste ensuite
+tenue avec la tolérance du Teamwork (`replacement`)."""
 
 from __future__ import annotations
 
@@ -75,6 +86,7 @@ from v2engine.ball_state import BallState
 from v2engine.flux import PLACEMENT
 from v2engine.movement import PlayerState, max_speed_mps
 from v2engine.offside import TRAP_DEPTH_M
+from v2engine.restart import GOAL_KICK
 from v2engine.situation import DEFENSE_PLACEE, TRANSITION_DEFENSIVE
 
 if TYPE_CHECKING:
@@ -127,6 +139,18 @@ ROLE_PLACE_WITHOUT_BALL: dict[str, tuple[float, float]] = {
     "ailier de couloir": (-8.0, -2.0), "ailier intérieur": (-2.0, -5.0), "meneur excentré": (-3.0, -4.0),
     "second attaquant": (-2.0, 0.0), "avant-centre": (3.0, 0.0), "buteur axial": (5.0, 0.0), "pivot": (2.0, 0.0),
 }
+# Placement de construction (ticket v2-realisme/25b, validées le 17/11/2026) : rôle -> (avance, écart vers la touche) en
+# mètres sur le terrain, ajoutés à la place avec ballon. Un rôle absent ne bouge pas.
+ROLE_PLACE_BUILD_UP: dict[str, tuple[float, float]] = {
+    "défenseur central": (0.0, 8.0), "sentinelle": (-6.0, 0.0), "regista": (-8.0, 0.0), "récupérateur": (-3.0, 0.0),
+    "latéral": (6.0, 10.0), "latéral défensif": (3.0, 8.0), "piston": (0.0, 6.0),
+    "milieu relayeur": (0.0, 4.0), "mezzala": (0.0, 4.0), "box to box": (0.0, 4.0),
+}
+BUILD_UP_ZONE_M = 35.0  # porteur défenseur dans ses 35 m ; pressing haut compté dans la même zone
+BUILD_UP_BUILDERS = frozenset({"GK", "DC", "LB", "RB", "LWB", "RWB"})
+BUILD_UP_PRESS_COUNT = (2, 4)  # adversaires de champ dans la zone : écartement complet jusqu'au 1er, réduit dès le 2nd
+BUILD_UP_PRESS_SPREAD = 0.5  # part de l'écart vers la touche gardée sous pressing haut
+BUILD_UP_TOUCHLINE_M = 2.0  # personne ne s'ouvre plus près de la touche
 # Bornes des écarts entre lignes avec ballon (ticket v2-realisme/09e) et postes de chaque ligne
 GAP_DEF_MID_M = (10.0, 15.0)
 GAP_MID_ATT_M = (10.0, 20.0)
@@ -256,6 +280,19 @@ def remap_depth(knots: tuple[tuple[float, float, int], ...], depth: float, poste
     return depth + (knots[-1][1] - knots[-1][0])
 
 
+def _build_up_place(player: PlayerState, x: float, y: float, spread: float) -> tuple[float, float]:
+    """Place avec ballon (x, y) décalée pour la construction (ticket 25b) : avance vers le but adverse, écart vers la
+    touche de son côté (réduit par `spread`, jamais à moins de BUILD_UP_TOUCHLINE_M de la touche). Un joueur dans l'axe
+    (à moins de 1 m) ne s'écarte pas."""
+    ahead, wide = ROLE_PLACE_BUILD_UP.get(player.role, (0.0, 0.0))
+    x += ahead * (1.0 if player.team == "home" else -1.0)
+    side = y - _CENTER.y
+    if abs(side) > _ON_AXIS_M and wide:
+        limit = max(abs(side), _CENTER.y - BUILD_UP_TOUCHLINE_M)
+        y = _CENTER.y + math.copysign(min(abs(side) + wide * spread, limit), side)
+    return x, y
+
+
 def _shape_of(pts: list[Vec2]) -> _Shape:
     xs, ys = [p.x for p in pts], [p.y for p in pts]
     cx, cy = sum(xs) / len(xs), sum(ys) / len(ys)
@@ -280,6 +317,8 @@ class Bloc:
     lines_ball: dict[str, float] = field(default_factory=dict)
     line_history_ball: dict[str, list[tuple[float, float]]] = field(default_factory=dict)
     gap_knots: dict[str, tuple[tuple[float, float, int], ...]] = field(default_factory=dict)  # écarts entre lignes (09e)
+    # équipe en construction -> part de l'écartement gardée (1 sans pressing, 0,5 sous pressing haut), ticket 25b
+    build_up: dict[str, float] = field(default_factory=dict)
 
     @classmethod
     def from_players(cls, players: list[PlayerState]) -> Bloc:
@@ -303,6 +342,7 @@ class Bloc:
         de l'équipe (celui qui cale la ligne) perçoit comme tel, à la place où il le perçoit : une course dans son dos qu'il
         n'a pas vue ne fait pas redescendre la ligne. Sans mémoire : les vraies positions."""
         holder = next((p for p in players if p.name == ball.holder), None) if ball.holder else None
+        self._update_build_up(players, ball, holder)
         for team in self.shapes:
             self.lines_ball[team] = with_ball_line(team, ball.position.x)  # ticket v2-realisme/09j
             _remember(self.line_history_ball.setdefault(team, []), now_s, self.lines_ball[team])
@@ -333,6 +373,29 @@ class Bloc:
             height = min(height, _progress(team, deepest_x) + TRAP_DEPTH_M - gain)
             self.lines[team] = max(height, _DEPTH_MARGIN_M)
             _remember(self.line_history.setdefault(team, []), now_s, self.lines[team])
+
+    def _update_build_up(self, players: list[PlayerState], ball: BallState, holder: PlayerState | None) -> None:
+        """Phase de construction de chaque équipe (ticket 25b) et écartement gardé selon le pressing adverse. Ballon en vol
+        ou libre, hors remise : la phase continue jusqu'au contrôle suivant."""
+        if ball.restart is not None:
+            building = ball.restart.team if ball.restart.kind == GOAL_KICK else None
+        elif holder is not None:
+            building = holder.team if holder.poste in BUILD_UP_BUILDERS \
+                and _progress(holder.team, holder.position.x) < BUILD_UP_ZONE_M else None
+        else:
+            building = next(iter(self.build_up), None)
+        self.build_up.clear()
+        if building is None:
+            return
+        rivals = sum(1 for p in players if p.team != building and p.poste != "GK"
+                     and _progress(building, p.position.x) < BUILD_UP_ZONE_M)
+        low, high = BUILD_UP_PRESS_COUNT
+        pressed = min(max((rivals - low) / (high - low), 0.0), 1.0)
+        self.build_up[building] = 1.0 - pressed * (1.0 - BUILD_UP_PRESS_SPREAD)
+
+    def in_build_up(self, team: str) -> bool:
+        """L'équipe est-elle en phase de construction (ticket 25b) ?"""
+        return team in self.build_up
 
     def _line_for(self, player: PlayerState, now_s: float, with_ball: bool = False) -> float | None:
         """Hauteur de ligne telle que `player` la perçoit : la ligne d'il y a `line_lag_s(player)` secondes. `with_ball` :
@@ -386,7 +449,11 @@ class Bloc:
         if knots:  # écarts entre les lignes ramenés dans leurs bornes (ticket 09e)
             depth = _depth(shape, player.team, start, sx)
             x += (remap_depth(knots, depth, player.poste) - depth) * (1.0 if player.team == "home" else -1.0)
-        return clamp_to_pitch(Vec2(x, cy + offset.y * sy))
+        y = cy + offset.y * sy
+        spread = self.build_up.get(player.team) if with_ball else None
+        if spread is not None:  # placement de construction (ticket 25b)
+            x, y = _build_up_place(player, x, y, spread)
+        return clamp_to_pitch(Vec2(x, y))
 
     def target(self, player: PlayerState, ball: Vec2, situation: str, now_s: float) -> Vec2:
         """Place visée : la référence, décalée sans ballon de l'erreur de Positioning du moment (placement défensif de

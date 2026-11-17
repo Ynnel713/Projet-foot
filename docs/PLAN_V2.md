@@ -348,6 +348,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **`v2-realisme/09e` livré (17/11/2026), validé expert (réserves A1 et A2 acceptées) + QC** : avec ballon, les écarts entre lignes (centraux, milieux axiaux, avant-centres) sont ramenés à la borne la plus proche, 10-15 m défense-milieu et 10-20 m milieu-attaque, la dernière ligne restant sur `H` ; le bloc avec ballon raccourcit (médiane 35 m, 42 avant). Banc de 50 matchs : défense-milieu 14,63 m, milieu-attaque 14,79 m avec ballon (réel SkillCorner 13,7 et 14,3 m, `docs/INDICATEURS_V2.md`). 20 matchs appariés : buts 6,8 → 4,85 par match, tirs de près 7,25 → 4,45, hors-jeu inchangés (4,1) ; à reprendre au 18l. Débloque 09h (encore bloqué par 09b, 09c, 09d, 09g).
 
+**`v2-realisme/25b` livré (17/11/2026), validé expert + QC** : phase « construction » (ballon au gardien, à un défenseur dans ses 35 m, ou sortie de but ; jusqu'au contrôle suivant pendant la passe) avec sa table `bloc.ROLE_PLACE_BUILD_UP` ajoutée à la place avec ballon : centraux + 8 m vers la touche, sentinelle − 6 m, regista − 8 m, latéraux + 6 m et + 10 m vers la touche, relayeurs + 4 m vers les demi-espaces ; sous pressing haut (4 adversaires de champ ou plus dans nos 35 m), écartement réduit de moitié. Phase tracée dans la raison (« (construction) »). 50 matchs : écart des centraux sur sortie de but 16,9 → 27,1 m, sentinelle-gardien 19,3 → 15,0 m, solutions ouvertes du gardien 3,25 → 3,57, pertes dans son tiers 14,8 → 14,6, buts 5,40 → 4,98. Débloque `v2-collectif/15`, `v2-attributs-restants/03c`, 25d (avec 25c), 25h.
+
 ### Bloquée par
 
 - Phase 4
