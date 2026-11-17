@@ -12,7 +12,7 @@
 
 **Blocked by:** aucun.
 
-**Status:** en cours (17/11/2026 : banc de 30 matchs lancé)
+**Status:** terminé (17/11/2026) — décision du propriétaire : « Accepter, 03 réduit »
 
 ## Estimation
 
@@ -28,8 +28,29 @@ Temps machine, non compté : banc de profils de 30 matchs (environ 45 min).
 
 ## Acceptance criteria
 
-- [ ] Écart de buts et de tirs entre 99 et 11 sur 30 matchs, avec IC 95 %
-- [ ] Décomposition de l'écart par les indicateurs existants
-- [ ] Repères réels sourcés ou « non trouvé »
-- [ ] Proposition chiffrée soumise au propriétaire : reprise du 03 ou ticket de réduction
-- [ ] Aucun fichier du moteur modifié
+- [x] Écart de buts et de tirs entre 99 et 11 sur 30 matchs, avec IC 95 %
+- [x] Décomposition de l'écart par les indicateurs existants
+- [x] Repères réels sourcés ou « non trouvé »
+- [x] Proposition chiffrée soumise au propriétaire : reprise du 03 ou ticket de réduction
+- [x] Aucun fichier du moteur modifié
+
+## Résultats (17/11/2026, `scripts/measure_v2.py 30 --profil "Work Rate"`, 90 min 43 de calcul)
+
+| Indicateur | 99 | 11 | Écart (IC 95 %) |
+|---|---|---|---|
+| Buts par match | 3,90 | 2,17 | + 1,73 (0,68 à 2,78), significatif |
+| Tirs par match | 28,0 | 17,2 | + 10,8 (5,1 à 16,5), significatif |
+| Buts moins qualité des tirs | 0,11 | 0,27 | − 0,16 (− 0,76 à 0,44), non significatif |
+| Interceptions par match | 90,1 | 81,9 | + 8,2 (3,3 à 13,1), significatif |
+| Passes réussies (part) | 0,864 | 0,849 | + 0,015, significatif |
+| Temps de pressing par match | 1 020 s | 925 s | + 10 % |
+| Course intense par joueur | 1 277 m | 718 m | + 78 % |
+| km par joueur | 12,76 | 11,47 | + 11 % |
+| Vitesse de repli à 1,5 s | 2,19 m/s | 1,50 m/s | + 46 % |
+| Appels par joueur | 45,2 | 35,0 | + 29 % |
+
+Décomposition : qualité de tir égale (buts moins qualité des tirs non significatif) ; l'écart de buts vient du volume de tirs, nourri par les récupérations (interceptions, pressing), cohérent avec le rayon de Work Rate (pressing, repli, couverture). Repère réel liant volume d'effort et écart de buts : non trouvé. Banc extrême (onze joueurs à 99 contre onze à 11) ; niveau de buts élevé dans ce mode (6,1 par match, 4,4 à 4,7 en série normale), sujet de calibration distinct.
+
+Décision du propriétaire (17/11/2026, « Accepter, 03 réduit ») : écart accepté ; le ticket 03 ne garde que le repli après la perte mis au registre (Work Rate + Teamwork) ; le soutien offensif est abandonné (il ajouterait des tirs) ; Work Rate reste dans la liste de transition jusqu'à un second contexte sans effet sur les buts.
+
+Durée : estimée 55 min ; réelle environ 30 min (− 45 %) : la sortie du banc suffisait, aucune recherche supplémentaire. Temps machine : banc de 30 matchs (90 min 43, plus long que prévu : un seul processus).

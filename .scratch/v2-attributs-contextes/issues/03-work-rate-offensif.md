@@ -4,13 +4,15 @@
 
 **Constat (audit du 17/11/2026, corrigé le 17/11/2026 au lancement du ticket) :** Work Rate n'a aucun contexte du registre, mais il n'est pas lu que par le pressing : il règle aussi le replacement sans ballon et le trot en possession (`defense.replacement_intensity`, ticket `v2-realisme/12d`) et le repli après la perte (`cerveau`, rôle REPLI, à `press_intensity`, ticket `v2-collectif/10`). Le ticket `v2-realisme/12d` l'a écarté des appels (« seul Off the Ball »).
 
-**What to build:** Work Rate entre dans deux contextes nouveaux : « soutien offensif » (volume des courses pour se proposer au porteur, avec Off the Ball pour le moment et le choix de l'espace) et « repli après la perte » (intensité et délai du retour derrière le ballon, avec Teamwork). L'intensité de l'appel lui-même reste à Off the Ball (pas de double comptage avec 12d).
+**What to build (réduit le 17/11/2026) :** le repli après la perte (rôle REPLI de `cerveau.py`, aujourd'hui à `defense.press_intensity`, Work Rate seul) devient le contexte « repli après la perte » du registre, Work Rate + Teamwork. Le soutien offensif est abandonné : il ajouterait des tirs à un écart de buts déjà fort (ticket `03m`).
+
+**What to build (d'origine, avant réduction) :** Work Rate entre dans deux contextes nouveaux : « soutien offensif » (volume des courses pour se proposer au porteur, avec Off the Ball pour le moment et le choix de l'espace) et « repli après la perte » (intensité et délai du retour derrière le ballon, avec Teamwork). L'intensité de l'appel lui-même reste à Off the Ball (pas de double comptage avec 12d).
 
 **Attributs :** Work Rate, Off the Ball, Teamwork (poids à proposer).
 
 **Blocked by:** 01, 02.
 
-**Status:** en attente (17/11/2026, décision du propriétaire : « Mesurer le plafond d'abord ») — mesure au ticket `03m-plafond-ecart-work-rate.md`
+**Status:** à faire, périmètre réduit le 17/11/2026 (décision du propriétaire : « Accepter, 03 réduit », après le ticket `03m`) : seul le repli après la perte, mis au registre ; constantes à valider avant le code
 
 ## Estimation
 
