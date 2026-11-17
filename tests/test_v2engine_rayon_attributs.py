@@ -15,6 +15,7 @@ import re
 import openpyxl
 
 from ligue1sim.players import FM_ATTRIBUTE_COLUMNS
+from v2engine.contextes import CONTEXTES
 
 ENGINE = pathlib.Path(__file__).resolve().parents[1] / "v2engine"
 PHYSICAL_FIELDS = {"pace": "Pace", "acceleration": "Acceleration", "stamina": "Stamina"}
@@ -22,6 +23,10 @@ PHYSICAL_FIELDS = {"pace": "Pace", "acceleration": "Acceleration", "stamina": "S
 # Lecture d'une note : la façade `condition.effective_rating` (jeu), `condition.intrinsic_rating` (chargement), ou
 # `attributes.player_attribute` (réservé à la façade depuis le ticket v2-realisme/19a).
 READERS = {"player_attribute", "effective_rating", "intrinsic_rating"}
+# Registre des contextes (ADR 0002, ticket v2-attributs-contextes/01) : `contextes.contextual_rating` lit par la façade
+# des noms venus du registre, non littéraux ; chaque attribut d'un contexte compte comme lu dans le module « contextes ».
+# Adaptation minimale : la garde est refondue autour du registre au ticket v2-attributs-contextes/02.
+REGISTRY = "contextes"
 
 # Attribut -> modules où il peut être lu (rayon de docs/CARTE_ATTRIBUTS_V2.md). « match » : construction des joueurs
 # (Pace, Acceleration, Stamina recopiés dans PlayerState) et déclenchement du tacle (Aggression). Les physiques lus
@@ -36,9 +41,9 @@ ALLOWED = {
     # vitesse de rotation du corps (ticket v2-realisme/07f) ; + délai de rotation avant la passe ou le tir, même
     # fonction à la décision et à l'exécution (07e) ; freinage 12a, virage 12b
     "Agility": {"movement", "decision"},
-    # précision de la talonnade, geste difficile (07e) ; porteur tête haute avec Dribbling (08c) ; précision de la passe de
-    # première (possession) et idée de jouer de première, avec First Touch (decision, ticket v2-collectif/31a)
-    "Technique": {"possession", "scan", "decision"},
+    # précision de la talonnade, geste difficile (07e) ; précision de la passe de première (possession, ticket
+    # v2-collectif/31a) ; registre : porteur tête haute avec Dribbling (08c), idée de jouer de première avec First Touch (31a)
+    "Technique": {"possession", REGISTRY},
     "Flair": {"decision"},  # penser à la talonnade (ticket v2-realisme/07e)
     "Strength": {"duel"},
     "Balance": {"duel"},
@@ -53,8 +58,8 @@ ALLOWED = {
     "Off the Ball": {"off_ball", "offside"},  # + régler l'appel sur la ligne du hors-jeu (ticket 23)
     # tir sous pression par `shooting.shot_composure_factor`, courbe propre (ticket 28a) ; + perception sous pression (33)
     "Composure": {"possession", "decision", "shooting"},
-    "Dribbling": {"decision", "scan"},  # (scan : porteur tête haute, cumul avec Technique, 08c) chance de garder le ballon en conduisant : valeur factuelle (ticket 33) et perte tirée (04a) ; vitesse balle au pied (04d)
-    "First Touch": {"possession", "decision"},  # + idée de jouer de première, avec Technique (ticket v2-collectif/31a)
+    "Dribbling": {"decision", REGISTRY},  # (registre : porteur tête haute, cumul avec Technique, 08c) chance de garder le ballon en conduisant : valeur factuelle (ticket 33) et perte tirée (04a) ; vitesse balle au pied (04d)
+    "First Touch": {"possession", REGISTRY},  # + registre : idée de jouer de première, avec Technique (ticket v2-collectif/31a)
     "Passing": {"possession", "off_ball"},  # + ... et s'il sait le servir (ticket v2-collectif/16)
     "Finishing": {"shooting"},  # dans la surface ; Long Shots en dehors (ticket 28a)
     "Long Shots": {"shooting"},
@@ -76,12 +81,8 @@ TOLERATED_MIXES = {
     # physiques additionnées en secondes (règle R5), pas une pondération de notes ; visible depuis que les champs
     # passent par la façade (ticket v2-realisme/19a)
     frozenset({"Pace", "Acceleration"}),
-    # porteur tête haute (`scan.head_up_share`, ticket v2-realisme/08c) : Dribbling 0,6 + Technique 0,4, cumul voulu par le
-    # propriétaire (règle R2 révisée du 13/11/2026, A15)
-    frozenset({"Dribbling", "Technique"}),
-    # idée de jouer de première (`decision.one_touch_idea_probability`, ticket v2-collectif/31a) : moyenne de First Touch
-    # et Technique, validée par le propriétaire le 13/11/2026 (A16)
-    frozenset({"First Touch", "Technique"}),
+    # porteur tête haute (08c, A15) et idée de jouer de première (31a, A16) : passés au registre des contextes
+    # (ticket v2-attributs-contextes/01), hors de cette liste
 }
 
 
@@ -106,12 +107,15 @@ def _reads() -> dict[str, set[str]]:
     for module, tree in _modules():
         for call in _attribute_calls(tree):
             found.setdefault(_name(call) or "<nom non littéral>", set()).add(module)
+    for contexte in CONTEXTES.values():
+        for attribute in contexte.attributs:
+            found.setdefault(attribute, set()).add(REGISTRY)
     return found
 
 
 def test_each_attribute_is_read_only_within_its_reach() -> None:
     reads = _reads()
-    assert "<nom non littéral>" not in reads or reads["<nom non littéral>"] <= {"attributes", "condition"}, \
+    assert "<nom non littéral>" not in reads or reads["<nom non littéral>"] <= {"attributes", "condition", REGISTRY}, \
         f"player_attribute appelé avec un nom non littéral (rayon invérifiable) : {reads.get('<nom non littéral>')}"
     reads.pop("<nom non littéral>", None)
     outside = {attr: mods - ALLOWED.get(attr, set()) for attr, mods in reads.items() if mods - ALLOWED.get(attr, set())}

@@ -13,8 +13,9 @@ from v2engine.flux import seed_streams
 from v2engine.geometry import Vec2
 from v2engine.match import simulate_match
 from v2engine.perception_memory import PerceptionMemory
-from v2engine.scan import (DRIBBLING_PART, PRESSURE_PENALTY, SCAN_DURATION_S, SPEED_PENALTY, TECHNIQUE_PART, ScanTracker,
-                           head_up_share, scan_rate_per_s)
+from v2engine.contextes import PORTEUR_TETE_HAUTE
+from v2engine.scan import (PRESSURE_PENALTY, SCAN_DURATION_S, SPEED_PENALTY, ScanTracker, head_up_share,
+                           scan_rate_per_s)
 from v2engine.trace import ScanEvent
 from ligue1sim.clubs import load_clubs
 from ligue1sim.season import CLUBS_PATH
@@ -55,7 +56,7 @@ def test_speed_lowers_the_rate() -> None:
 
 
 def test_the_carrier_keeps_his_head_up_by_dribbling_and_technique() -> None:
-    assert (DRIBBLING_PART, TECHNIQUE_PART) == (0.6, 0.4)
+    assert PORTEUR_TETE_HAUTE.poids == (("Dribbling", 0.6), ("Technique", 0.4))  # registre des contextes (contextes/01)
     assert head_up_share(player("P", Dribbling=99, Technique=99)) == pytest.approx(1.0)
     assert head_up_share(player("P", Dribbling=55, Technique=55)) == pytest.approx(0.6)
     assert head_up_share(player("P", Dribbling=11, Technique=11)) == pytest.approx(0.25)

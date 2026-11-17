@@ -14,7 +14,8 @@ Constantes validées par le propriétaire (13/11/2026, « fais tout dans le mêm
   ampleur non retrouvée.
 - Vitesse : fréquence × (1 − 0,5 × vitesse / vitesse de pointe) ; effet de la vitesse : non trouvé, choix de modèle.
 - Porteur : fréquence × part de temps tête haute selon une note composée 0,6 × Dribbling + 0,4 × Technique (cumul permis
-  par la règle R2 révisée) : 99 -> 100 %, 55 -> 60 %, 11 -> 25 % ; non trouvé.
+  par la règle R2 révisée ; contexte « porteur tête haute » du registre `contextes.py` depuis le ticket
+  v2-attributs-contextes/01) : 99 -> 100 %, 55 -> 60 %, 11 -> 25 % ; non trouvé.
 Vision règle déjà la portée des passes envisagées (`decision.visible_teammates`) : le scan ne la touche pas, il rafraîchit
 seulement la mémoire (règle R1). Le poste n'est pas un paramètre : l'écart entre milieux et attaquants (Jordet) émerge de
 Vision. Tirage : flux `regard`, indépendant des autres (`flux.py`).
@@ -26,6 +27,7 @@ import math
 from collections.abc import Iterable, Sequence
 
 from v2engine.condition import effective_rating
+from v2engine.contextes import PORTEUR_TETE_HAUTE, contextual_rating
 from v2engine.flux import REGARD
 from v2engine.movement import PlayerState, max_speed_mps
 from v2engine.possession import pressure
@@ -35,7 +37,6 @@ SCAN_DURATION_S = 0.3
 _RATE_BY_VISION = ((11.0, 0.1), (55.0, 0.3), (99.0, 0.6))  # (Vision, scans par seconde)
 PRESSURE_PENALTY = 0.5  # part de la fréquence perdue à pression maximale
 SPEED_PENALTY = 0.5  # part de la fréquence perdue à vitesse de pointe
-DRIBBLING_PART, TECHNIQUE_PART = 0.6, 0.4  # note de conduite tête haute du porteur
 _HEAD_UP_BY_TOUCH = ((11.0, 0.25), (55.0, 0.6), (99.0, 1.0))  # (note composée, part du temps tête haute)
 RATE_REFRESH_S = 0.5  # la fréquence suit la gêne et la vitesse, recalculée à ce pas (coût), décalée d'un joueur à l'autre
 
@@ -49,9 +50,8 @@ def _interpolate(points: Sequence[tuple[float, float]], note: float) -> float:
 
 def head_up_share(player: PlayerState) -> float:
     """Part du temps où le porteur garde la tête haute : plus il est à l'aise balle au pied (Dribbling et Technique
-    cumulés), moins il a besoin de regarder le ballon (08c)."""
-    note = (DRIBBLING_PART * effective_rating(player, "Dribbling") + TECHNIQUE_PART * effective_rating(player, "Technique"))
-    return _interpolate(_HEAD_UP_BY_TOUCH, note)
+    cumulés, contexte « porteur tête haute »), moins il a besoin de regarder le ballon (08c)."""
+    return _interpolate(_HEAD_UP_BY_TOUCH, contextual_rating(player, PORTEUR_TETE_HAUTE))
 
 
 def scan_rate_per_s(player: PlayerState, opponents: Sequence[PlayerState], has_ball: bool) -> float:

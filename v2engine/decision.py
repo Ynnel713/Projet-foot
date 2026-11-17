@@ -15,6 +15,7 @@ from dataclasses import dataclass, replace
 
 from v2engine.attributes import success_probability
 from v2engine.condition import effective_rating
+from v2engine.contextes import IDEE_DE_PREMIERE, contextual_rating
 from v2engine.danger import danger, loss_cost
 from v2engine.flux import DECISION, DUEL, PERCEPTION
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
@@ -243,8 +244,8 @@ def backheel_idea_probability(holder: PlayerState) -> float:
 
 def one_touch_idea_probability(receiver: PlayerState, opponents: list[PlayerState]) -> float:
     """Chance que le receveur d'une passe pense à jouer de première (ticket v2-collectif/31a) : First Touch et
-    Technique, plus souvent sous pression."""
-    note = 0.5 * (effective_rating(receiver, "First Touch") + effective_rating(receiver, "Technique"))
+    Technique (contexte « idée de jouer de première » du registre), plus souvent sous pression."""
+    note = contextual_rating(receiver, IDEE_DE_PREMIERE)
     note = min(max(note, _ONE_TOUCH_IDEA_POINTS[0][0]), _ONE_TOUCH_IDEA_POINTS[-1][0])
     base = _ONE_TOUCH_IDEA_POINTS[-1][1]
     for (n0, v0), (n1, v1) in zip(_ONE_TOUCH_IDEA_POINTS, _ONE_TOUCH_IDEA_POINTS[1:]):
