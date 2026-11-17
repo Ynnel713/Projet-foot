@@ -11,7 +11,7 @@
 1. `01` registre des contextes, sans changement de jeu ;
 2. `02` test de rayon transformé ;
 3. contexte « lecture du pressing » au ticket `v2-collectif/15b` (Vision, Anticipation, Decisions) ;
-4. lots de branchement : `03` Work Rate offensif, `04a` Decisions en défense, `04b` Positioning en défense, `05` Flair et goût du risque, `06` Balance après contact ;
+4. lots de branchement : `03` Work Rate offensif (en attente le 17/11/2026 : Work Rate a déjà un effet fort, + 2,4 buts par match entre 99 et 11 sur 10 matchs ; mesure du plafond au `03m`), `04a` Decisions en défense, `04b` Positioning en défense, `05` Flair et goût du risque, `06` Balance après contact ;
 5. séparation de la note du gardien : ticket existant `v2-attributs-restants/03b` ;
 6. `07` mise aux normes des tickets à venir (lignes « Attributs » avec contexte et poids) ;
 7. `08` solde de la liste de transition de la garde (ajouté au ticket 02 le 17/11/2026, choix du propriétaire : seuls les contextes du registre comptent) : second contexte pour les attributs encore cloisonnés sans autre ticket, à découper en lots.
