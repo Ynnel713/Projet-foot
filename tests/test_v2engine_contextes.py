@@ -34,7 +34,8 @@ def test_the_registry_is_read_only() -> None:
 
 
 def test_the_registry_holds_its_contexts_with_their_weights() -> None:
-    assert set(CONTEXTES) == {"porteur tête haute", "idée de jouer de première", "lecture du pressing"}
+    assert set(CONTEXTES) == {"porteur tête haute", "idée de jouer de première", "lecture du pressing",
+                              "repli après la perte"}
     assert PORTEUR_TETE_HAUTE.poids == (("Dribbling", 0.6), ("Technique", 0.4))
     assert PORTEUR_TETE_HAUTE.temps == contextes.PERCEPTION
     assert IDEE_DE_PREMIERE.poids == (("First Touch", 0.5), ("Technique", 0.5))
@@ -42,6 +43,9 @@ def test_the_registry_holds_its_contexts_with_their_weights() -> None:
     # ticket v2-collectif/15b1, poids validés par le propriétaire le 17/11/2026
     assert contextes.LECTURE_DU_PRESSING.poids == (("Vision", 0.5), ("Anticipation", 0.3), ("Decisions", 0.2))
     assert contextes.LECTURE_DU_PRESSING.temps == contextes.PERCEPTION
+    # ticket v2-attributs-contextes/03, poids validés par le propriétaire le 17/11/2026
+    assert contextes.REPLI_APRES_LA_PERTE.poids == (("Work Rate", 0.7), ("Teamwork", 0.3))
+    assert contextes.REPLI_APRES_LA_PERTE.temps == contextes.DECISION
 
 
 @pytest.mark.parametrize("poids, temps", [

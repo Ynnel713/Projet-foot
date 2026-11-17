@@ -10,7 +10,7 @@ from v2engine import cerveau
 from v2engine.ball_state import BallState
 from v2engine.bloc import Bloc
 from v2engine.cerveau import APPEL, REPLI, Intention, think
-from v2engine.defense import FOLLOW_M, DefensiveRoles, press_intensity
+from v2engine.defense import FOLLOW_M, DefensiveRoles, retreat_intensity
 from v2engine.geometry import Vec2
 from v2engine.movement import PlayerState
 from v2engine.situation import POSSESSION_INSTALLEE, TRANSITION_DEFENSIVE, TRANSITION_OFFENSIVE
@@ -75,7 +75,8 @@ def test_player_ahead_of_the_ball_retreats_at_his_work_rate_intensity() -> None:
         assert intention.role == REPLI and intention.action == "se replier"
         assert intention.target.x < ahead.position.x  # il revient vers son but
         intensities[note] = intention.intensity
-        assert intention.intensity == press_intensity(ahead)
+        # contexte « repli après la perte » depuis le ticket v2-attributs-contextes/03 (Work Rate 0,7, Teamwork 0,3)
+        assert intention.intensity == retreat_intensity(ahead)
     assert intensities[99] > intensities[11]
 
 

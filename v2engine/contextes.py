@@ -66,8 +66,16 @@ LECTURE_DU_PRESSING = Contexte("lecture du pressing", PERCEPTION,
                                (("Vision", 0.5), ("Anticipation", 0.3), ("Decisions", 0.2)), "v2-collectif/15b1",
                                "decision.reads_third_man_probability")
 
+# Repli après la perte (ticket v2-attributs-contextes/03, réduit le 17/11/2026) : devant le ballon à la perte, le
+# joueur revient dans le bloc d'autant plus vite qu'il a l'envie de l'effort (Work Rate) et la discipline de reprendre
+# sa place (Teamwork) (`defense.retreat_intensity`, courbe du presseur inchangée). Poids validés le 17/11/2026 ;
+# source : non trouvé.
+REPLI_APRES_LA_PERTE = Contexte("repli après la perte", DECISION, (("Work Rate", 0.7), ("Teamwork", 0.3)),
+                                "v2-attributs-contextes/03", "defense.retreat_intensity")
+
 # Lecture seule : un contexte ne s'ajoute qu'ici, par une déclaration revue (réserve A1 de l'expert, ticket 01).
-CONTEXTES = MappingProxyType({c.nom: c for c in (PORTEUR_TETE_HAUTE, IDEE_DE_PREMIERE, LECTURE_DU_PRESSING)})
+CONTEXTES = MappingProxyType({c.nom: c for c in (PORTEUR_TETE_HAUTE, IDEE_DE_PREMIERE, LECTURE_DU_PRESSING,
+                                                  REPLI_APRES_LA_PERTE)})
 
 
 def contextual_rating(player, contexte: Contexte | str) -> float:

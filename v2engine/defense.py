@@ -62,7 +62,7 @@ Contre-pressing (ticket v2-collectif/10, constantes validées par le propriétai
 (ni ballon pris par le gardien, ni coup franc de hors-jeu, ni engagement) déclenche le pressing d'équipe ci-dessus
 pour l'équipe qui a perdu, pendant `TRIGGER_S` = 5 s. Ne suivent que les joueurs à `FOLLOW_M` = 15 m ou moins du
 ballon (Teamwork, même tirage), sauf les `REST_DEFENDERS` = 2 joueurs de champ les plus reculés, qui protègent
-l'axe. Les autres se replient (`cerveau`, intensité de Work Rate, `press_intensity`)."""
+l'axe. Les autres se replient (`cerveau`, intensité du contexte « repli après la perte », `retreat_intensity`)."""
 
 from __future__ import annotations
 
@@ -73,6 +73,7 @@ from typing import TYPE_CHECKING
 from v2engine.anticipation import meeting_point, reaction_delay_s
 from v2engine.attributes import success_probability
 from v2engine.condition import effective_rating
+from v2engine.contextes import REPLI_APRES_LA_PERTE, contextual_rating
 from v2engine.ball_state import BallState
 from v2engine.bloc import POSITIONING_REDRAW_S, Bloc
 from v2engine.flux import DEFENSE
@@ -157,6 +158,13 @@ def _curve(note: float, curve: tuple[float, float, float, float]) -> float:
 
 def press_intensity(player: PlayerState) -> float:
     return _curve(effective_rating(player, "Work Rate"), _PRESS_INTENSITY)
+
+
+def retreat_intensity(player: PlayerState) -> float:
+    """Part de sa vitesse max pour se replier après la perte (ticket v2-collectif/10) : courbe du presseur, appliquée
+    depuis le ticket v2-attributs-contextes/03 au contexte « repli après la perte » (Work Rate 0,7, Teamwork 0,3)
+    au lieu de Work Rate seul."""
+    return _curve(contextual_rating(player, REPLI_APRES_LA_PERTE), _PRESS_INTENSITY)
 
 
 def replacement_intensity(player: PlayerState, in_possession: bool) -> float:

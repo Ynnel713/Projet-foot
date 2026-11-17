@@ -12,7 +12,7 @@
 
 **Blocked by:** 01, 02.
 
-**Status:** à faire, périmètre réduit le 17/11/2026 (décision du propriétaire : « Accepter, 03 réduit », après le ticket `03m`) : seul le repli après la perte, mis au registre ; constantes à valider avant le code
+**Status:** livré (17/11/2026), validé expert + QC (périmètre réduit le 17/11/2026, décision du propriétaire : « Accepter, 03 réduit », après le ticket `03m`)
 
 ## Estimation
 
@@ -29,12 +29,12 @@ Temps machine, non compté : suite complète ; séries de 50 matchs avant et apr
 
 ## Acceptance criteria
 
-- [ ] Contexte, poids et chiffres réels (sourcés ou « non trouvé ») validés par le propriétaire avant le code
-- [ ] Contexte déclaré dans le registre et documenté dans la carte ; entrée retirée de la liste de transition du test de rayon
-- [ ] Scène reproductible : 99 contre 11 sur l'attribut, effet probabiliste, jamais binaire
-- [ ] 50 matchs avant/après sur l'indicateur visé ; profils 99 / 11 dans le plafond d'écart de la carte ; pas de double comptage (R1)
-- [ ] Déterminisme à graine fixée ; suite complète passée, compte comparé à l'attendu de `CLAUDE.md`
-- [ ] Durée réelle relevée et comparée à l'estimation
+- [x] Contexte, poids et chiffres réels (sourcés ou « non trouvé ») validés par le propriétaire avant le code (« je valide », 17/11/2026)
+- [x] Contexte déclaré dans le registre et documenté dans la carte ; entrée de la liste de transition : Work Rate n'a qu'un contexte (soutien abandonné), il y reste, rattaché au ticket 08 (second contexte sans effet sur les buts, décision du 03m)
+- [x] Scène reproductible : Teamwork 99 contre 11 à Work Rate égal (`tests/test_v2engine_repli_contexte.py`) ; effet continu (intensité), jamais binaire
+- [x] 50 matchs avant/après sur l'indicateur visé ; profils 99 / 11 dans le plafond d'écart de la carte ; pas de double comptage (R1)
+- [x] Déterminisme à graine fixée ; suite complète passée, compte comparé à l'attendu de `CLAUDE.md`
+- [x] Durée réelle relevée et comparée à l'estimation
 
 ## Constat au lancement (17/11/2026, avant tout code)
 
@@ -43,3 +43,42 @@ Banc de profils `scripts/measure_v2.py 10 --profil "Work Rate"` (équipe à 99 c
 Conclusion : Work Rate a déjà un rayon large (par lectures directes) et un effet fort sur le résultat. Brancher le soutien offensif et un repli plus intense augmenterait l'écart de buts. Décision du propriétaire : ne rien brancher, mesurer d'abord le plafond d'écart (ticket `03m`) ; Work Rate reste dans la liste de transition.
 
 Durée passée sur ce ticket avant mise en attente : environ 30 min (analyse et constat). Temps machine : banc de profils de 10 matchs.
+
+## Constantes validées (17/11/2026, « je valide »)
+
+Contexte « repli après la perte » (`REPLI_APRES_LA_PERTE`, temps décision) : Work Rate 0,7 ; Teamwork 0,3. Effet `defense.retreat_intensity` : la courbe du presseur (`_PRESS_INTENSITY`, 11 → 55 %, 55 → 80 %, 99 → 100 % de la vitesse max) appliquée à la note du contexte. Chiffre réel : non trouvé. Le presseur garde Work Rate seul (`press_intensity`), le replacement (`replacement_intensity`, 12d) aussi : pas de double comptage.
+
+## Réalisation (17/11/2026)
+
+- `v2engine/contextes.py` : contexte déclaré ; `v2engine/defense.py` : `retreat_intensity` ; `v2engine/cerveau.py` : le rôle REPLI lit `retreat_intensity` au lieu de `press_intensity`.
+- `docs/CARTE_ATTRIBUTS_V2.md` : ligne du contexte, cellules Work Rate et Teamwork.
+- Tests : `tests/test_v2engine_repli_contexte.py` (3 tests : notes égales = courbe d'avant, profil mêlé 99 / 11 = note 72,6 ; Teamwork accélère le repli à Work Rate égal, pressing inchangé ; scène du cerveau, intensité REPLI plus haute à Teamwork 99 qu'à 11) ; `test_v2engine_contextes.py`, `test_v2engine_transition_defensive.py` adaptés ; `test_v2engine_rayon_attributs.py` : entrée Work Rate rattachée au ticket 08.
+
+## Mesures (17/11/2026)
+
+Série de 50 matchs (`scripts/measure_v2.py 25 --debut 0` et `--debut 25`), avant (`654f590`) puis après :
+
+| Indicateur | Avant | Après | Écart |
+|---|---|---|---|
+| repli : vitesse des joueurs devant le ballon à 1,5 s (m/s) | 2,051 | 2,058 | + 0,007 |
+| repli : temps pour reformer le bloc (s) | 3,10 | 3,04 | − 0,06 |
+| buts par match | 4,54 | 5,06 | + 0,52 |
+| tirs par équipe | 19,63 | 20,00 | + 0,37 |
+| xG neutre par match | 4,62 | 4,67 | + 0,05 |
+| xG après frappe par match | 4,64 | 5,14 | + 0,51 |
+| pertes de balle par match | 256,6 | 258,0 | + 1,4 |
+| pertes en transition par match | 40,4 | 38,7 | − 1,7 |
+
+Lecture : en moyenne, la note du repli bouge peu (Teamwork − Work Rate dans la base : moyenne − 1,5, écart-type 9,6, soit 2,9 points de note), d'où une vitesse de repli inchangée. L'écart de buts (+ 0,52) est dans le bruit : les deux lots « avant » diffèrent eux-mêmes de 0,52 (4,80 et 4,28), environ 1,2 erreur type sur 50 matchs ; les occasions créées sont inchangées (xG neutre + 0,05), l'écart vient de l'exécution des frappes (xG après frappe), tirage indépendant du repli.
+
+Banc de profils Teamwork (`--profil Teamwork`, 10 matchs) : vitesse de repli à 1,5 s, haut contre bas, 1,99 contre 2,38 m/s avant, 2,07 contre 2,08 après (Teamwork par ses autres effets garde des joueurs placés et moins pressés de revenir ; le contexte rattrape 0,38 m/s de l'écart) ; tirs, buts et interceptions sans écart significatif avant comme après (buts sur tir : − 0,3 avant, + 0,3 après, IC 95 % de − 1,4 à 2,0). Plafond d'écart respecté. Work Rate : son poids passe de 1 à 0,7 dans le seul repli, ce qui ne peut que réduire l'écart 99 / 11 mesuré au 03m (+ 1,73 but).
+
+Déterminisme : deux exécutions de deux matchs de 20 min à graine fixée, empreintes complètes identiques (`11555eaad3e01c9d`, `140cad85bbe297b5`).
+
+## Durée réelle
+
+Environ 1 h 50 de travail effectif (30 min de constat avant la mise en attente, puis 1 h 20 : code 25 min, tests 20 min, mesures et documentation 35 min), contre 2 h 30 estimées pour le périmètre d'origine : − 27 %, sous le seuil de 30 % ; le soutien offensif abandonné explique l'écart. Temps machine non compté : séries de 50 matchs avant et après, bancs de profils Teamwork, suite complète.
+
+## Comments
+
+- 17/11/2026, passage 1 : expert APPROVED ; QC VALIDÉ ; clôture VALIDÉ. Aucune anomalie bloquante. Amélioration facultative A1 de l'expert (documentaire) : la cellule Work Rate de la carte cite encore le repli du ticket 10 « même courbe d'intensité » avant la mention du contexte, à préciser. Réserves QC non bloquantes : écart de buts + 0,52 attribué au bruit ; fichier du ticket à indexer au commit. À surveiller (expert) : niveau de buts (environ 5 par match) au-dessus de la fourchette réelle, hors de ce ticket.

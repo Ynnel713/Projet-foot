@@ -18,7 +18,7 @@ from v2engine.bloc import Bloc
 from v2engine.decision import CONTRE_ATTAQUE, dribble_speed_factor
 from v2engine.defense import (COMPENSATION, COUVERTURE, MARQUAGE, PRESSEUR, REST_DEFENDERS, DefensiveRoles,
                               own_goal, replacement_intensity, follow_intensity,
-                              leave_probability, press_intensity)
+                              leave_probability, retreat_intensity)
 from v2engine.flux import DEFENSE
 from v2engine.gardien import FACE_A_FACE, GARDIEN, INTERVENTION, PLACEMENT, RELANCE, SORTIE
 from v2engine import gardien
@@ -338,9 +338,10 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
     if role == REPLACEMENT and situation == TRANSITION_DEFENSIVE and bloc is not None \
             and (1.0 if player.team == "home" else -1.0) * (player.position.x - ball.position.x) > 0.0:
         # Repli (ticket v2-collectif/10) : devant le ballon à la perte, il rejoint sa place dans le bloc sans attendre
-        # l'écart toléré (Teamwork), à l'intensité de ses efforts sans ballon (Work Rate, courbe du presseur).
+        # l'écart toléré (Teamwork), à l'intensité du contexte « repli après la perte » (Work Rate et Teamwork, courbe
+        # du presseur ; ticket v2-attributs-contextes/03).
         place = bloc.target(player, ball.position, situation, minute * 60.0)
-        return make(REPLI, "se replier", place, press_intensity(player), reason="ballon perdu, il revient dans le bloc",
+        return make(REPLI, "se replier", place, retreat_intensity(player), reason="ballon perdu, il revient dans le bloc",
                     distance_m=player.position.distance_to(place))
     if role == REPLACEMENT:
         if bloc is None or situation is None:  # sans bloc (tests unitaires) : sa place de départ
