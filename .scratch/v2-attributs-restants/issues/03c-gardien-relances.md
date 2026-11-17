@@ -4,7 +4,7 @@
 
 **What to build:** relance au pied (Kicking : sortie de but, dégagement) et à la main (Throwing), dont le geste préféré « Uses Long Throw To Start Counter Attacks » (relance longue à la main, ticket 05).
 
-**Attributs :** Kicking, Throwing.
+**Attributs :** Kicking, Throwing (exécution). ADR 0002 (17/11/2026) : le choix de la relance (cible, court ou long) passe par un contexte de décision avec Vision et Decisions (poids à proposer) ; Kicking et Throwing ne règlent que la qualité du geste.
 
 **Blocked by:** 01, 02 (a, b) (dépendances d'origine du ticket 03, sans doute levables : les sorties de but existent depuis `v2-collectif/29`) ; `v2-realisme/25b` (placement de construction, ajouté le 14/11/2026).
 

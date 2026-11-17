@@ -4,7 +4,7 @@
 
 **What to build:** placement et sorties hors de la surface (Rushing Out, tendance), goût du risque (Eccentricity, tendance), et levée de la dérogation A8 sur les tirs : Reflexes pour les tirs proches, One on Ones pour les face-à-face, Handling pour capter ou relâcher, y compris sur centre (la part neutre du ticket `v2-collectif/28b` est remplacée).
 
-**Attributs :** Rushing Out, Eccentricity, Reflexes, One on Ones, Handling.
+**Attributs :** Rushing Out, Eccentricity, Reflexes, One on Ones, Handling. ADR 0002 (17/11/2026) : la note agrégée du gardien (dérogation A8, Reflexes + One on Ones + Handling) est séparée ici, chaque attribut dans ses contextes (réflexe sur tir proche, face-à-face, captation), poids déclarés dans le registre `v2engine/contextes.py`.
 
 **Blocked by:** 01, 02 (a, b) (dépendances d'origine du ticket 03, sans doute levables) ; `v2-collectif/28b` ; `v2-realisme/18e` (calibration provisoire du gardien neutre) (ajouté le 10/11/2026, audit de la roadmap).
 

@@ -8,9 +8,9 @@
 
 **Hors de ce ticket :** court ou long (15a) ; qualité du geste du gardien (`v2-attributs-restants/03c`).
 
-**Attributs :** Decisions, Vision, Composure (attirer sans perdre le ballon) ; Passing pour l'exécution, déjà lue. Rayons à vérifier dans `docs/CARTE_ATTRIBUTS_V2.md`, sans double comptage avec les tickets 13, 14 et 31a.
+**Attributs (ADR 0002, mis à jour le 17/11/2026) :** contexte « lecture du pressing » (perception : voir le joueur libre derrière la première ligne et le presseur à fixer) : Vision, Anticipation, Decisions, poids proposés 0,5 / 0,3 / 0,2 (à valider avant le code) ; Composure (attirer sans perdre le ballon, modulateur sous pression, R3) ; Teamwork pour celui qui remet en une touche (servir le troisième homme) ; Passing pour l'exécution, déjà lue. Sans double comptage avec les tickets 13, 14 et 31a (un effet, un calcul).
 
-**Blocked by:** 15a.
+**Blocked by:** 15a (livré), `v2-attributs-contextes/01` et `02` (registre des contextes et test de rayon, ordre validé le 17/11/2026).
 
 **Status:** à faire (constantes à proposer avant le code)
 

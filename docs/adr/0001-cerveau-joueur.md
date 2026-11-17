@@ -1,6 +1,7 @@
 # 0001 — Cerveau du joueur : perception, interprétation, décision, exécution
 
 - **Statut** : accepté (26/10/2026, propriétaire)
+- **Amendé** : point 3 par l'ADR 0002 (17/11/2026) : un attribut peut servir dans plusieurs temps, par des contextes pondérés distincts ; un même effet reste calculé une seule fois.
 - **Ticket** : `.scratch/v2-collectif/issues/02-intentions-perception-decision.md`
 
 ## Contexte

@@ -13,9 +13,11 @@ Sous « pressing haut » (4 adversaires et plus), 81 % des décisions d'un défe
 2. le jeu long en contre-attaque après une récupération dans son tiers (la valeur de la relance longue en mode contre-attaque, ticket 11) ;
 3. si nécessaire, la place de la relance longue en mode conservation.
 
+**Attributs (ADR 0002, 17/11/2026) :** réintroduire la Vision dans la relance longue, écartée au 15a (« schéma d'équipe connu ») : contexte « repérer la cible longue sous pression » (Vision, Decisions, poids à proposer) ; Passing reste l'exécution.
+
 **Hors de ce ticket :** duel aérien à la retombée (`v2-realisme/15b`) ; attirer le pressing, troisième homme (`15b`).
 
-**Blocked by:** 15a.
+**Blocked by:** 15a, `v2-attributs-contextes/01` et `02`.
 
 **Status:** à faire (périmètre et constantes à valider par le propriétaire avant le code)
 
