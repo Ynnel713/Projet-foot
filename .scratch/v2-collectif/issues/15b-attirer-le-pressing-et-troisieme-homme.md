@@ -12,7 +12,7 @@
 
 **Blocked by:** 15a (livré), `v2-attributs-contextes/01` et `02` (registre des contextes et test de rayon, ordre validé le 17/11/2026).
 
-**Status:** à faire (constantes à proposer avant le code)
+**Status:** découpé le 17/11/2026 (décision du propriétaire : « je valide ») en `15b1-chercher-le-troisieme-homme.md` puis `15b2-attirer-le-pressing.md`, après le constat (troisième homme déjà présent sans être cherché : 8,3 par match, 9,6 % des passes courtes de construction ; aucune fixation du presseur)
 
 ## Estimation
 
