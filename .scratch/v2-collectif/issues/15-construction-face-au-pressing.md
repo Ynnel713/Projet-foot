@@ -6,7 +6,7 @@
 
 **Blocked by:** 08, 13 ; `v2-realisme/25b` (placement de construction, ajouté le 14/11/2026 : sans lui, le porteur choisit entre des solutions que personne ne crée).
 
-**Status:** à faire (constantes à proposer avant le code)
+**Status:** découpé (17/11/2026, décision du propriétaire « Je valide le découpage ») en `15a` (court ou long selon le pressing, depuis la zone de construction) et `15b` (attirer le pressing et troisième homme). Ticket chapeau : ne pas l'implémenter tel quel ; ses critères sont repris dans 15a et 15b.
 
 - [ ] Part de jeu long mesurablement plus forte face à un pressing haut, à situation égale
 - [ ] Pertes de balle dans son propre tiers dans une fourchette réelle (à sourcer)
