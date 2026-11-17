@@ -21,7 +21,8 @@ from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
 from v2engine.movement import PlayerState, max_speed_mps, turn_rate_rad_s
 from v2engine.off_ball import OPEN_LANE_PROBABILITY
 from v2engine.offside import is_clearly_offside, pass_margin_m, perceived_defence_line
-from v2engine.possession import (BACKHEEL_MAX_M, BALL_FRICTION_PER_S, BALL_STOPPED_MPS, pass_success_probability,
+from v2engine.possession import (BACKHEEL_MAX_M, BALL_FRICTION_PER_S, BALL_STOPPED_MPS, LONG_PASS_M, max_pass_reach_m,
+                                  pass_success_probability,
                                   pressure)
 from v2engine.shooting import SHOOTING_RANGE_M, shot_outcome_shares
 
@@ -120,6 +121,17 @@ PLAN_BONUS = 0.3
 _ADOPT_PLAN = (0.85, 0.2, 0.65, 1.0)  # baseline, amplitude, min, max
 PLAN_HELD, PLAN_DROPPED, PLAN_UNSEEN, PLAN_REFUSED = "tenu", "abandonné", "non vu", "refusé"
 
+# Relance longue (ticket v2-collectif/15a, validé par le propriétaire le 17/11/2026). Dans sa zone de construction
+# (`bloc.builds_up` : gardien ou défenseur dans ses 35 m), le porteur envisage en plus une passe longue EN L'AIR vers
+# chaque coéquipier haut (`LONG_BALL_POSTES`) situé à plus de `possession.LONG_PASS_M` et à portée de frappe
+# (`possession.max_pass_reach_m`), même hors de la portée de sa Vision : c'est un schéma d'équipe connu, pas une passe à
+# repérer. Personne ne la coupe en vol (vol aérien des remises) ; sa réussite est la précision (Passing, difficulté de
+# la passe en l'air), multipliée par `LONG_BALL_WON`, la part des retombées que le porteur pense voir gagnées par son
+# coéquipier (estimation d'un joueur : le duel aérien n'existe pas encore, ticket v2-realisme/15b). Perdue, elle l'est
+# là où elle retombe. Decisions et Composure jouent par la perception, comme pour toute option.
+LONG_BALL_WON = 0.5
+LONG_BALL_POSTES = frozenset({"BU", "ATT", "SA", "AG", "AD", "MOC"})
+
 # Vision (ticket v2-cerveau-joueurs/02, constantes validées par le propriétaire le 24/10/2026) : QUELS coéquipiers le
 # porteur envisage. Portée 99 -> 50 m, 55 -> 30 m, 11 -> 10 m ; une passe qui fait gagner au moins
 # `_KEY_PASS_GAIN_M` vers le but n'est repérée qu'avec la probabilité 99 -> 90 %, 55 -> 50 %, 11 -> 10 %. Le
@@ -178,6 +190,10 @@ class Action:
     # valeur telle que le porteur la perçoit (ticket v2-realisme/08d) : évaluée sur les positions perçues des adversaires
     # (mémoire de perception, 08b) ; `value` reste la valeur RÉELLE (journal du meilleur choix) ; `None` : perçue = réelle
     seen_value: float | None = None
+    lofted: bool = False  # relance longue en l'air (ticket v2-collectif/15a)
+    # meilleures valeurs réelles d'une passe courte (au sol) et d'une relance longue, quand une relance longue était
+    # envisagée : le « pourquoi » du choix court ou long au journal des décisions (ticket v2-collectif/15a)
+    short_long: tuple[float | None, float] | None = None
 
 
 def turn_angle_deg(facing: Vec2, direction: Vec2) -> float:
@@ -283,7 +299,8 @@ def visible_teammates(holder: PlayerState, teammates: list[PlayerState], goal: V
 
 def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2, keeper: PlayerState | None,
                      mode: str | None = None, planned: str | None = None,
-                     seen_opponents: list[PlayerState] | None = None, one_touch: bool = False) -> list[Action]:
+                     seen_opponents: list[PlayerState] | None = None, one_touch: bool = False,
+                     build_up: bool = False) -> list[Action]:
     """Les options du porteur avec leur valeur FACTUELLE (ticket v2-collectif/33 : danger attendu, vraies capacités),
     de la meilleure à la moins bonne : un tir à portée (`SHOOTING_RANGE_M`), une passe par coéquipier envisagé (Vision),
     une conduite par direction (`DRIBBLE_DIRECTIONS_DEG`). `mode` : choix de
@@ -293,7 +310,8 @@ def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2
     reçoivent alors aussi leur valeur perçue (`Action.seen_value`), sans tirage de plus (un seul passage pour les deux
     étages). Les conduites perçues se calculent dans `choose_action`. Seuls les adversaires changent : la gêne du
     porteur (au contact, il la sent), les coéquipiers et le gardien restent réels. `one_touch` : le receveur juge ses
-    passes sans rotation comme jouées de première (précision du geste, ticket v2-collectif/31a)."""
+    passes sans rotation comme jouées de première (précision du geste, ticket v2-collectif/31a). `build_up` : porteur
+    dans sa zone de construction, relances longues en l'air envisagées en plus (ticket v2-collectif/15a)."""
     opponents = [p for p in players if p.team != holder.team]
     mates = [p for p in players if p.team == holder.team and p.name != holder.name]
     # Hors-jeu (ticket v2-collectif/23, deuxième passe du 28/10/2026) : le porteur ne sert pas un coéquipier qu'il
@@ -350,6 +368,21 @@ def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2
                                                                  share, held, margin, seen_line, gene,
                                                                  0.0 if heel else turn, heel, first).value)
             options.append(option)
+    if build_up and not one_touch:  # relance longue en l'air (ticket v2-collectif/15a)
+        reach = max_pass_reach_m()
+        for mate in mates:
+            length = holder.position.distance_to(mate.position)
+            if mate.poste not in LONG_BALL_POSTES or not LONG_PASS_M < length <= reach \
+                    or is_clearly_offside(team, mate.position, holder.position, opponents, margin, seen_line):
+                continue
+            turn = rotation_delay_s(holder, mate.position - holder.position, PASS_FREE_CONE_DEG)
+            option = _pass_option(holder, mate, opponents, seen_full, team, mode, share, held, margin, seen_line, gene,
+                                  turn, False, lofted=True)
+            if seen_opponents is not None:
+                option = replace(option, seen_value=_pass_option(holder, mate, seen_opponents, seen_full, team, mode,
+                                                                 share, held, margin, seen_line, gene, turn, False,
+                                                                 lofted=True).value)
+            options.append(option)
     if planned is not None and mode != CONTRE_ATTAQUE:  # sort du plan, pour la mesure (ticket 14)
         # abandonné : la cible est vue mais la ligne s'est fermée ; non vu : hors de sa Vision ou hors-jeu évident
         target = next((m for m in teammates if m.name == held), None)
@@ -363,10 +396,12 @@ def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2
 def _pass_option(holder: PlayerState, mate: PlayerState, opponents: list[PlayerState],
                  seen_full: list[PlayerState], team: str, mode: str | None, share: float, held: str | None,
                  margin: float, seen_line: float, gene: float, turn: float, backheel: bool,
-                 one_touch: bool = False) -> Action:
+                 one_touch: bool = False, lofted: bool = False) -> Action:
     """Valeur d'une passe vers `mate` (tickets 13, 14, 33), après `turn` secondes de rotation (07e), en talonnade
-    ou non, jouée de première ou non (31a)."""
-    success = pass_success_probability(holder, mate, opponents, backheel, one_touch)  # le ballon arrive (v2-socle/04)
+    ou non, jouée de première ou non (31a), au sol ou en relance longue en l'air (15a)."""
+    # le ballon arrive (v2-socle/04) ; en l'air, rien ne la coupe en vol et la retombée se dispute (ticket 15a)
+    success = pass_success_probability(holder, mate, opponents, lofted=True) * LONG_BALL_WON if lofted \
+        else pass_success_probability(holder, mate, opponents, backheel, one_touch)
     # temps disponible : il garde le ballon assez longtemps pour jouer (A9 reclassé au ticket 13)
     keep = success * (1.0 - PRESSURE_KEEP_SHARE * pressure(mate, opponents))
     now = danger(mate.position, team)
@@ -382,10 +417,13 @@ def _pass_option(holder: PlayerState, mate: PlayerState, opponents: list[PlayerS
     reached = (1.0 - share) * now + share * future
     if mate.name == held and success >= OPEN_LANE_PROBABILITY:  # plan tenu, encore jouable (ticket 14)
         reached *= 1.0 + PLAN_BONUS
-    midway = Vec2((holder.position.x + mate.position.x) / 2.0, (holder.position.y + mate.position.y) / 2.0)
-    value = with_rotation(option_value(holder, mode, keep, reached, midway), holder, mode,
+    # perdue : à mi-chemin au sol, là où elle retombe en l'air
+    lost_at = mate.position if lofted else Vec2((holder.position.x + mate.position.x) / 2.0,
+                                                (holder.position.y + mate.position.y) / 2.0)
+    value = with_rotation(option_value(holder, mode, keep, reached, lost_at), holder, mode,
                           rotation_keep_probability(holder, gene, turn))
-    return Action("pass", value, mate, follow=follow, rotation_s=turn, backheel=backheel, one_touch=one_touch)
+    return Action("pass", value, mate, follow=follow, rotation_s=turn, backheel=backheel, one_touch=one_touch,
+                  lofted=lofted)
 
 
 def option_value(holder: PlayerState, mode: str | None, keep: float, reached: float, lost_at: Vec2) -> float:
@@ -525,7 +563,8 @@ def anticipation_share(holder: PlayerState) -> float:
 def choose_action(holder: PlayerState, players: list[PlayerState], goal: Vec2, keeper: PlayerState | None,
                   mode: str | None = None, planned: str | None = None,
                   felt: dict[int, float] | None = None, set_piece: bool = False,
-                  seen_opponents: list[PlayerState] | None = None, one_touch: bool = False) -> Action:
+                  seen_opponents: list[PlayerState] | None = None, one_touch: bool = False,
+                  build_up: bool = False) -> Action:
     """Prend l'option qu'il CROIT la meilleure (ticket 33) : valeur réelle brouillée par sa perception (Decisions,
     Composure sous pression), conduites jugées avec son Anticipation. Deux options proches font hésiter même un très
     bon joueur ; un joueur faible se trompe surtout entre options voisines. `planned` : ticket v2-collectif/14.
@@ -534,12 +573,16 @@ def choose_action(holder: PlayerState, players: list[PlayerState], goal: Vec2, k
     option. `seen_opponents` : les adversaires tels qu'il les perçoit (ticket v2-realisme/08d, mémoire de perception, 08b) :
     les tirs, les passes et les conduites sont jugés sur leurs positions perçues, la valeur RÉELLE (`best`, `gap`)
     reste calculée sur les vraies positions, et l'exécution aussi. `None` : il perçoit les vraies positions.
-    `one_touch` : receveur qui pense à jouer de première (ticket v2-collectif/31a)."""
-    options = evaluate_options(holder, players, goal, keeper, mode, planned, seen_opponents, one_touch)
+    `one_touch` : receveur qui pense à jouer de première (ticket v2-collectif/31a). `build_up` : zone de construction,
+    relances longues envisagées (ticket v2-collectif/15a)."""
+    options = evaluate_options(holder, players, goal, keeper, mode, planned, seen_opponents, one_touch, build_up)
     if set_piece:
         options = [o for o in options if o.kind != "dribble"] or options
     best = options[0]
-    tagged = dict(considered=len(options), best_kind=best.kind)
+    longs = [o.value for o in options if o.lofted]
+    shorts = [o.value for o in options if o.kind == "pass" and not o.lofted]
+    tagged = dict(considered=len(options), best_kind=best.kind,
+                  short_long=(max(shorts) if shorts else None, max(longs)) if longs else None)
     if len(options) == 1:
         return replace(best, best=True, **tagged)
     opponents = [p for p in players if p.team != holder.team]

@@ -125,7 +125,8 @@ def test_the_match_gives_the_holder_his_perceived_world(monkeypatch) -> None:
     seen = {}
 
     def spy(*args, **kwargs):
-        seen["opponents"] = args[-1] if len(args) > 7 else kwargs.get("seen_opponents")
+        # `seen_opponents` : 9e argument de `choose_action` (suivi de `one_touch` et `build_up` depuis le ticket 15a)
+        seen["opponents"] = args[8] if len(args) > 8 else kwargs.get("seen_opponents")
         return Action("dribble", 1.0)
     monkeypatch.setattr(match, "choose_action", spy)
     monkeypatch.setattr(match, "dribble_lost", lambda *a, **k: False)
@@ -136,7 +137,7 @@ def test_the_match_gives_the_holder_his_perceived_world(monkeypatch) -> None:
     assert by_name["R"].position != Vec2(50.0, 40.0) and by_name["R"].position.y < 40.0  # il le croit encore là où il l'a vu
     assert by_name["GK"] is keeper
     plain: dict = {}
-    monkeypatch.setattr(match, "choose_action", lambda *a, **k: plain.setdefault("seen", k.get("seen_opponents", a[-1] if len(a) > 7 else None)) or Action("dribble", 1.0))
+    monkeypatch.setattr(match, "choose_action", lambda *a, **k: plain.setdefault("seen", k.get("seen_opponents", a[8] if len(a) > 8 else None)) or Action("dribble", 1.0))
     _step_ball(BallState(position=holder.position, velocity=Vec2(0.0, 0.0), holder="H"), 0.1, moved, 2.0, decisions=[])
     assert plain["seen"] is None  # sans mémoire : il perçoit les vraies positions
 

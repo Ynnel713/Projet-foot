@@ -164,6 +164,12 @@ def _progress(team: str, x: float) -> float:
     return x if team == "home" else PITCH_LENGTH_M - x
 
 
+def builds_up(holder: PlayerState) -> bool:
+    """Le porteur est-il dans sa zone de construction (ticket 25b) : gardien ou défenseur (`BUILD_UP_BUILDERS`) dans
+    ses `BUILD_UP_ZONE_M` ? Lu aussi par la décision (relance courte ou longue, ticket v2-collectif/15a)."""
+    return holder.poste in BUILD_UP_BUILDERS and _progress(holder.team, holder.position.x) < BUILD_UP_ZONE_M
+
+
 def _remember(history: list[tuple[float, float]], now_s: float, height: float) -> None:
     """Ajoute la hauteur de ligne du tick et oublie ce qui dépasse le plus long retard possible (`LINE_LAG_MAX_S`)."""
     history.append((now_s, height))
@@ -380,8 +386,7 @@ class Bloc:
         if ball.restart is not None:
             building = ball.restart.team if ball.restart.kind == GOAL_KICK else None
         elif holder is not None:
-            building = holder.team if holder.poste in BUILD_UP_BUILDERS \
-                and _progress(holder.team, holder.position.x) < BUILD_UP_ZONE_M else None
+            building = holder.team if builds_up(holder) else None
         else:
             building = next(iter(self.build_up), None)
         self.build_up.clear()

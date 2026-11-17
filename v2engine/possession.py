@@ -26,6 +26,12 @@ BALL_STOPPED_MPS = 0.5  # en dessous, une passe est considérée morte (ballon q
 _BASE_DIFFICULTY = 10.0  # passe ou contrôle le plus facile
 _EASY_DISTANCE_M = 10.0
 _DIFFICULTY_PER_M = 1.8  # au-delà de 10 m : 25 m -> 37, 35 m -> 55, 45 m -> 73
+# Passe longue en l'air (ticket v2-collectif/15a, validé par le propriétaire le 17/11/2026) : visée sur un point de
+# chute, sa difficulté croît de `LONG_BALL_DIFFICULTY_PER_M` par mètre au-delà de 10 m (contre 1,8 au sol) : à 50 m,
+# 47 % de passes précises à Passing 40, 69 % à 55, 87 % à 70. Au-delà de `LONG_PASS_M`, une passe peut partir en l'air
+# (même seuil que les remises jouées long, `restart.LONG_RESTART_M`).
+LONG_BALL_DIFFICULTY_PER_M = 0.8
+LONG_PASS_M = 25.0
 _PRESSURE_DIFFICULTY = 15.0  # adversaire au contact du joueur, nulle à `PRESSURE_RADIUS_M`
 _MARKED_DIFFICULTY = 10.0  # receveur avec un adversaire à moins de `_MARKED_RADIUS_M`
 _MARKED_RADIUS_M = 2.0
@@ -120,12 +126,14 @@ def _cut_chance(start: Vec2, end: Vec2, opponent: PlayerState) -> float:
 
 
 def pass_difficulty(passer: PlayerState, receiver: PlayerState, opponents: Sequence[PlayerState],
-                    backheel: bool = False) -> float:
+                    backheel: bool = False, lofted: bool = False) -> float:
     """Difficulté de l'EXÉCUTION de la passe (distance, pression sur le passeur, receveur marqué ; talonnade,
     `BACKHEEL_DIFFICULTY`, ticket v2-realisme/07e). La coupe en vol par les adversaires n'en fait plus partie (ticket
-    v2-realisme/18g) : elle se joue physiquement et compte dans `pass_success_probability`."""
+    v2-realisme/18g) : elle se joue physiquement et compte dans `pass_success_probability`. `lofted` : passe longue en
+    l'air (ticket v2-collectif/15a), `LONG_BALL_DIFFICULTY_PER_M` par mètre."""
     distance = passer.position.distance_to(receiver.position)
-    difficulty = _BASE_DIFFICULTY + _DIFFICULTY_PER_M * max(0.0, distance - _EASY_DISTANCE_M)
+    per_m = LONG_BALL_DIFFICULTY_PER_M if lofted else _DIFFICULTY_PER_M
+    difficulty = _BASE_DIFFICULTY + per_m * max(0.0, distance - _EASY_DISTANCE_M)
     difficulty += _PRESSURE_DIFFICULTY * pressure(passer, opponents) * composure_factor(passer)
     if any(receiver.position.distance_to(o.position) < _MARKED_RADIUS_M for o in opponents):
         difficulty += _MARKED_DIFFICULTY
@@ -143,29 +151,34 @@ def one_touch_precision(passer: PlayerState) -> float:
 
 
 def pass_accuracy_probability(passer: PlayerState, receiver: PlayerState, opponents: Sequence[PlayerState],
-                              backheel: bool = False, one_touch: bool = False) -> float:
+                              backheel: bool = False, one_touch: bool = False, lofted: bool = False) -> float:
     """Chance que la passe parte où le passeur la destine (sinon déviée, `pass_aim`) : Passing contre la difficulté de
     CETTE passe ; Technique pour une talonnade (ticket v2-realisme/07e) ; jouée de première, précision du geste en plus
     (`one_touch_precision`, ticket v2-collectif/31a)."""
     skill = effective_rating(passer, "Technique") if backheel else effective_rating(passer, "Passing")
-    accurate = duel_probability(skill, pass_difficulty(passer, receiver, opponents, backheel), **_SUCCESS)
+    accurate = duel_probability(skill, pass_difficulty(passer, receiver, opponents, backheel, lofted), **_SUCCESS)
     return accurate * one_touch_precision(passer) if one_touch else accurate
 
 
 def pass_success_probability(passer: PlayerState, receiver: PlayerState, opponents: Sequence[PlayerState],
-                             backheel: bool = False, one_touch: bool = False) -> float:
+                             backheel: bool = False, one_touch: bool = False, lofted: bool = False) -> float:
     """Chance que la passe ne soit pas perdue (tickets v2-realisme/18g et 18h) : aucun adversaire ne touche le ballon le
     premier, et le ballon ne sort pas (ni n'est sifflé) avec remise pour l'adversaire ; même risque que celui que la passe
     court en jeu. C'est le sens que lui donne la décision (`decision.option_value` :
     garder, sinon perdre le ballon), comme le risque de perte de la conduite (04a). Coupe par adversaire : table du 18g ;
     précise, `UNFORESEEN_CUT` en plus ; imprécise, `_MISS_NOT_LOST` selon la longueur. Le contrôle du receveur n'y entre
-    pas : raté, le ballon reste libre près de lui, ce n'est pas une perte."""
+    pas : raté, le ballon reste libre près de lui, ce n'est pas une perte. `lofted` : passe longue en l'air (ticket
+    v2-collectif/15a), que personne ne touche en vol : ni coupe ni coupe imprévue, seule la précision compte ; la
+    retombée disputée n'y entre pas (`decision.LONG_BALL_WON`)."""
+    length = passer.position.distance_to(receiver.position)
+    not_lost = next(share for limit, share in _MISS_NOT_LOST if length < limit)
+    if lofted:
+        accurate = pass_accuracy_probability(passer, receiver, opponents, lofted=True)
+        return accurate + (1.0 - accurate) * not_lost
     keep = 1.0
     for opponent in opponents:
         keep *= 1.0 - _cut_chance(passer.position, receiver.position, opponent)
     accurate = pass_accuracy_probability(passer, receiver, opponents, backheel, one_touch)
-    length = passer.position.distance_to(receiver.position)
-    not_lost = next(share for limit, share in _MISS_NOT_LOST if length < limit)
     return keep * (accurate * (1.0 - UNFORESEEN_CUT) + (1.0 - accurate) * not_lost)
 
 
@@ -203,8 +216,14 @@ def _launch_speed(distance_m: float) -> float:
     return min(MAX_PASS_MPS, IDEAL_ARRIVAL_MPS - distance_m * math.log(BALL_FRICTION_PER_S))
 
 
+def max_pass_reach_m() -> float:
+    """Distance la plus longue qu'une passe frappée au plafond (`MAX_PASS_MPS`) parcourt avant d'être morte
+    (`BALL_STOPPED_MPS`) : environ 58 m."""
+    return (MAX_PASS_MPS - BALL_STOPPED_MPS) / -math.log(BALL_FRICTION_PER_S)
+
+
 def pass_aim(passer: PlayerState, target: PlayerState, opponents: Sequence[PlayerState] = (),
-             backheel: bool = False, one_touch: bool = False) -> Vec2:
+             backheel: bool = False, one_touch: bool = False, lofted: bool = False) -> Vec2:
     """Point visé par une passe de `passer` vers `target`. Réussie (Passing contre difficulté) : là où le receveur
     VA être, d'autant plus précisément que le dosage est bon. Ratée : déviée de 25 à 50 % de sa longueur (18h)."""
     distance = passer.position.distance_to(target.position)
@@ -213,7 +232,7 @@ def pass_aim(passer: PlayerState, target: PlayerState, opponents: Sequence[Playe
     arrival = max(BALL_STOPPED_MPS, speed + distance * log_f)  # < 6 m/s si la vitesse est plafonnée (passe > ~47 m)
     travel_s = math.log(arrival / speed) / log_f
     aim = target.position + target.velocity * (travel_s * dosage_quality(passer))  # dans la course, selon le dosage
-    if PASSE.random() >= pass_accuracy_probability(passer, target, opponents, backheel, one_touch):
+    if PASSE.random() >= pass_accuracy_probability(passer, target, opponents, backheel, one_touch, lofted):
         angle = PASSE.uniform(0.0, 2.0 * math.pi)
         miss = PASSE.uniform(*_MISS_SHARE) * distance
         aim = aim + Vec2(miss * math.cos(angle), miss * math.sin(angle))
@@ -221,10 +240,10 @@ def pass_aim(passer: PlayerState, target: PlayerState, opponents: Sequence[Playe
 
 
 def pass_velocity(passer: PlayerState, target: PlayerState, opponents: Sequence[PlayerState] = (),
-                  backheel: bool = False, one_touch: bool = False) -> Vec2:
+                  backheel: bool = False, one_touch: bool = False, lofted: bool = False) -> Vec2:
     """Vitesse du ballon au départ d'une passe vers `pass_aim` : de quoi y arriver à ~6 m/s (plafond 30 m/s),
     avec une erreur de vitesse selon le dosage (+/- 30 % à Passing 11, +/- 5 % à 99)."""
-    aim = pass_aim(passer, target, opponents, backheel, one_touch)
+    aim = pass_aim(passer, target, opponents, backheel, one_touch, lofted)
     quality = dosage_quality(passer)
     error = _DOSAGE_ERROR[0] + (_DOSAGE_ERROR[1] - _DOSAGE_ERROR[0]) * quality
     speed = min(MAX_PASS_MPS, _launch_speed(passer.position.distance_to(aim)) * (1.0 + PASSE.uniform(-error, error)))

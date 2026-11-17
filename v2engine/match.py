@@ -23,7 +23,7 @@ from v2engine.trace import (ARRET, BUT, CONTRE, CONTROLE_RATE, DUEL_EPAULE, FAUT
 from v2engine.trace import TIR as TIR_EVENT  # `TIR` est le flux aléatoire des tirs (v2engine.flux)
 from v2engine.anticipation import pass_readers, reaction_delay_s
 from v2engine.ball_state import BallState, ShotFlight
-from v2engine.bloc import Bloc
+from v2engine.bloc import Bloc, builds_up
 from v2engine.danger import danger
 from v2engine.evitement import avoid_teammates
 from v2engine.duel import (CONTACT_MIN_CLOSING_MPS, SHOULDER_COOLDOWN_S, SHOULDER_PUSH_M, SHOULDER_PUSH_STEPS,
@@ -105,6 +105,7 @@ FAILED_TACKLE_RECOVERY_S = 1.5
 # et pour le banc (`scripts/measure_v2.py`), pour que les chiffres mesurés décrivent le match regardé.
 TICK_SECONDS = 0.1
 TALONNADE = "talonnade"  # précision d'une passe en talonnade dans le journal (ticket v2-realisme/07e)
+RELANCE_LONGUE = "relance longue"  # précision d'une relance longue en l'air (ticket v2-collectif/15a)
 # Avantage (ticket v2-collectif/30, validé le 04/11/2026) : l'arbitre laisse jouer si l'équipe fautée garde le ballon
 # là où il vaut au moins ADVANTAGE_DANGER_MIN sur la carte du danger (`danger.danger`, environ 60 m de son propre but
 # et au-delà) ; il revient à la faute si elle le perd dans les ADVANTAGE_S secondes (« quelques secondes », loi 12 ;
@@ -701,7 +702,8 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
             if action.kind == "pass":  # le receveur a bougé pendant la rotation : la passe va où il est
                 action = replace(action, target=next((p for p in players if p.name == action.target.name), action.target))
             # ligne fermée pendant la rotation (réserve A1 de l'expert) : il renonce et redécide, déjà tourné
-            if lost or action.kind != "pass" or not lane_closed_during_turn(
+            # relance longue en l'air (ticket v2-collectif/15a) : pas de ligne à fermer, elle part
+            if lost or action.kind != "pass" or getattr(action, "lofted", False) or not lane_closed_during_turn(
                     holder, action.target, rivals, getattr(action, "backheel", False), pending[3]):
                 return _execute(ball, holder, action, players, rivals, goal, keeper, now_s, False, fouls, shots, lost=lost,
                                 memory=memory)
@@ -740,7 +742,8 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
         seen_opponents = memory.perceived_opponents(holder, rivals, now_s, keeper.name if keeper else None) \
             if memory is not None else None
         action = choose_action(holder, players, goal, keeper, (modes or {}).get(holder.team), planned,  # ticket 11
-                               ball.felt[1], set_piece, seen_opponents)
+                               ball.felt[1], set_piece, seen_opponents, False,
+                               builds_up(holder))  # zone de construction : relance longue envisagée (15a)
         if set_piece:
             r, ball.set_piece = ball.set_piece, None
             if restarts is not None:
@@ -756,8 +759,8 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
         if turn > 0.0:
             ball.dribble = None
             target = getattr(action, "target", None)
-            chance = pass_success_probability(holder, target, rivals, getattr(action, "backheel", False)) \
-                if action.kind == "pass" else 1.0
+            chance = pass_success_probability(holder, target, rivals, getattr(action, "backheel", False),
+                                              lofted=getattr(action, "lofted", False)) if action.kind == "pass" else 1.0
             ball.pending = (holder.name, action, now_s + turn, chance)
             ball.next_decision_s = now_s + turn
             return None
@@ -784,7 +787,8 @@ def _record_decision(decisions: list[DecisionRecord] | None, memory: PerceptionM
                                     seen_back.age_mean_s, seen_back.error_mean_m, seen_back.error_max_m,
                                     seen_back.stale, sum(near.position.distance_to(holder.position) <= PRESSURE_RADIUS_M
                                                          for near in rivals),
-                                    getattr(action, "one_touch", False)))
+                                    getattr(action, "one_touch", False), getattr(action, "lofted", False),
+                                    *(getattr(action, "short_long", None) or (None, None))))
 
 
 def _execute(ball: BallState, holder: PlayerState, action, players: list[PlayerState], rivals: list[PlayerState],
@@ -871,9 +875,11 @@ def _execute(ball: BallState, holder: PlayerState, action, players: list[PlayerS
 
     if action.kind == "pass":
         backheel = getattr(action, "backheel", False)
-        _log(ball, now_s, PASSE, holder.team, holder.name, TALONNADE if backheel else None, action.target.name)
+        lofted = getattr(action, "lofted", False)  # relance longue en l'air (ticket v2-collectif/15a)
+        _log(ball, now_s, PASSE, holder.team, holder.name,
+             TALONNADE if backheel else RELANCE_LONGUE if lofted else None, action.target.name)
         ball.velocity = pass_velocity(holder, action.target, [p for p in players if p.team != holder.team], backheel,
-                                      getattr(action, "one_touch", False))  # de première (ticket v2-collectif/31a)
+                                      getattr(action, "one_touch", False), lofted)  # de première (ticket v2-collectif/31a)
         ball.pass_from = holder.position
         ball.holder = None
         ball.released_by = holder.name
@@ -882,7 +888,11 @@ def _execute(ball: BallState, holder: PlayerState, action, players: list[PlayerS
         follow = getattr(action, "follow", None)
         ball.plan = (action.target.name, follow, now_s) if follow is not None else None
         opponents = [p for p in players if p.team != holder.team]
-        ball.readers = pass_readers(holder.position, ball.velocity, action.target.position, opponents)
+        if lofted:  # vol aérien des remises (ticket v2-collectif/29) : personne ne la touche avant son point de chute
+            ball.mode, ball.readers = AERIEN, {}
+            ball.aerial_left_m = holder.position.distance_to(action.target.position) - AERIAL_LANDING_M
+        else:
+            ball.readers = pass_readers(holder.position, ball.velocity, action.target.position, opponents)
         # Hors-jeu (ticket v2-collectif/23) : jugement AU DÉPART, sur les positions réelles. Le signalement ne
         # vaut coup franc que si l'un de ces joueurs touche ensuite le ballon.
         mates = [p for p in players if p.team == holder.team and p.name != holder.name]

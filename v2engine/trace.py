@@ -76,6 +76,11 @@ class DecisionRecord:
     memory_stale: int = 0  # adversaires perçus avec plus de 4 s de retard et plus de 10 m d'erreur (ticket v2-realisme/08d, mesure)
     near_opponents: int = 0  # adversaires à 5 m au plus, vus ou non : dénominateur de `unseen_near` (ticket v2-realisme/08f)
     one_touch: bool = False  # passe jouée de première, sans contrôle (ticket v2-collectif/31a)
+    # relance longue en l'air (ticket v2-collectif/15a) et pourquoi : meilleures valeurs réelles d'une passe au sol et
+    # d'une relance longue quand une relance longue était envisagée (zone de construction), sinon None
+    lofted: bool = False
+    best_short_value: float | None = None
+    best_long_value: float | None = None
 
 
 @dataclass(frozen=True)

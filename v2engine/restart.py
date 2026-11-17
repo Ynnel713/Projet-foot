@@ -26,7 +26,7 @@ from v2engine.decision import best_choice_probability
 from v2engine.flux import DECISION
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, in_penalty_area
 from v2engine.movement import PlayerState
-from v2engine.possession import pass_success_probability, pressure
+from v2engine.possession import LONG_PASS_M, pass_success_probability, pressure
 
 THROW_IN, GOAL_KICK, CORNER, KICKOFF = "touche", "sortie de but", "corner", "engagement"
 FREE_KICK, PENALTY = "coup franc", "penalty"  # ticket v2-collectif/30
@@ -40,7 +40,7 @@ PENALTY_CONVERSION = 0.78
 GOAL_AREA_DEPTH_M = 5.5
 GOAL_AREA_HALF_WIDTH_M = 9.16
 THROW_MAX_M = 25.0
-LONG_RESTART_M = 25.0
+LONG_RESTART_M = LONG_PASS_M  # seuil partagé avec la passe longue en jeu (ticket v2-collectif/15a)
 AERIAL_LANDING_M = 3.0
 REPLACING_INTENSITY = 0.5
 SOL, AERIEN = "sol", "aérien"
