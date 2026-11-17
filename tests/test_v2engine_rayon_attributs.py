@@ -1,89 +1,85 @@
-"""Rayon des attributs (ticket v2-collectif/18, règle anti double comptage de docs/CARTE_ATTRIBUTS_V2.md) : chaque
-attribut n'est lu que dans les modules du moteur qui portent son rayon, et deux attributs ne se mélangent pas dans
-un même calcul hors des dérogations listées. Ajouter un attribut ailleurs, c'est ajouter un effet : mettre d'abord à
-jour la carte, puis cette liste. Analyse de l'arbre syntaxique (ast), pas du texte.
+"""Rayon des attributs, garde du registre des contextes (ADR 0002, ticket v2-attributs-contextes/02 ; avant : liste
+blanche de modules et refus des mélanges, ticket v2-collectif/18). Analyse de l'arbre syntaxique (ast), pas du texte.
 
-Limite connue : un mélange qui passe par des variables intermédiaires (a = A ; b = B ; a + b) n'est pas détecté ; la
-grille de relecture de la carte le couvre."""
+Cinq vérifications, chacune avec un cas négatif synthétique :
+1. chaque contexte du registre est documenté dans la section « Contextes » de docs/CARTE_ATTRIBUTS_V2.md (nom, effet,
+   attributs et poids) ;
+2. ses poids somment à 1 ;
+3. aucune note n'est lue hors du registre et de la façade : `player_attribute` réservé à la façade, `intrinsic_rating`
+   au chargement, nom non littéral seulement dans `contextes.contextual_rating`, et aucun calcul ne combine plusieurs
+   attributs hors du registre, sauf les cumuls d'une autre forme listés (`CUMULS_HORS_REGISTRE` : A8, R5, A17) ;
+4. un effet n'a qu'un contexte : identifiants d'effet distincts, et chaque contexte est lu par la seule fonction qui
+   porte son effet (R1, « un effet, un calcul ») ;
+5. chaque attribut non spécialiste lu par le moteur figure dans au moins deux contextes, sauf liste de transition datée
+   (`TRANSITION`, chaque entrée liée à son ticket de branchement), qui se vide au fil des tickets.
+
+Une lecture directe d'un seul attribut par la façade (`effective_rating(joueur, "Nom")`) reste permise partout : ce
+n'est pas un mélange. Limite connue : un mélange qui passe par des variables intermédiaires (a = A ; b = B ; a + b) ou
+par des fonctions séparées n'est pas détecté ; la grille de relecture de la carte le couvre."""
 
 from __future__ import annotations
 
 import ast
+import math
 import pathlib
 import re
+from types import SimpleNamespace
 
 import openpyxl
 
+import v2engine.contextes as contextes
 from ligue1sim.players import FM_ATTRIBUTE_COLUMNS
 from v2engine.contextes import CONTEXTES
 
 ENGINE = pathlib.Path(__file__).resolve().parents[1] / "v2engine"
+CARTE = ENGINE.parent / "docs" / "CARTE_ATTRIBUTS_V2.md"
 PHYSICAL_FIELDS = {"pace": "Pace", "acceleration": "Acceleration", "stamina": "Stamina"}
 
 # Lecture d'une note : la façade `condition.effective_rating` (jeu), `condition.intrinsic_rating` (chargement), ou
 # `attributes.player_attribute` (réservé à la façade depuis le ticket v2-realisme/19a).
 READERS = {"player_attribute", "effective_rating", "intrinsic_rating"}
-# Registre des contextes (ADR 0002, ticket v2-attributs-contextes/01) : `contextes.contextual_rating` lit par la façade
-# des noms venus du registre, non littéraux ; chaque attribut d'un contexte compte comme lu dans le module « contextes ».
-# Adaptation minimale : la garde est refondue autour du registre au ticket v2-attributs-contextes/02.
-REGISTRY = "contextes"
+REGISTRY = "contextes"  # module du registre : ses lectures sont celles de `contextual_rating`
+CONTEXT_READER = "contextual_rating"
+# Lecteur -> modules où il peut être appelé (R6)
+READER_MODULES = {"player_attribute": {"attributes", "condition"}, "intrinsic_rating": {"condition", "match"}}
 
-# Attribut -> modules où il peut être lu (rayon de docs/CARTE_ATTRIBUTS_V2.md). « match » : construction des joueurs
-# (Pace, Acceleration, Stamina recopiés dans PlayerState) et déclenchement du tacle (Aggression). Les physiques lus
-# en jeu sont des capacités (règle R5), lues par la façade depuis le 19a :
-# defense : temps d'arrivée qui désigne le presseur et la couverture (ticket v2-collectif/07)
-# decision : course du porteur contre les adversaires vers l'espace libre (ticket v2-collectif/33)
-# occasion (ticket v2-collectif/28c) : temps pour atteindre un ballon libre, la même vitesse de pointe (R5), mesure seule
-ALLOWED = {
-    "Pace": {"match", "anticipation", "bloc", "defense", "decision", "occasion", "scan"},  # scan : vitesse relative (08c)
-    "Acceleration": {"match", "defense"},
-    "Stamina": {"match"},
-    # vitesse de rotation du corps (ticket v2-realisme/07f) ; + délai de rotation avant la passe ou le tir, même
-    # fonction à la décision et à l'exécution (07e) ; freinage 12a, virage 12b
-    "Agility": {"movement", "decision"},
-    # précision de la talonnade, geste difficile (07e) ; précision de la passe de première (possession, ticket
-    # v2-collectif/31a) ; registre : porteur tête haute avec Dribbling (08c), idée de jouer de première avec First Touch (31a)
-    "Technique": {"possession", REGISTRY},
-    "Flair": {"decision"},  # penser à la talonnade (ticket v2-realisme/07e)
-    "Strength": {"duel"},
-    "Balance": {"duel"},
-    "Aggression": {"duel", "match", "defense"},  # fréquence des tentatives et faute ; distance d'arrêt du presseur (08)
-    "Tackling": {"duel"},
-    # + drapeau du hors-jeu (23) ; ligne fermée au pressing (08) ; perception du porteur : prolonger la course des
-    # adversaires pendant sa conduite (ticket v2-collectif/33)
-    "Anticipation": {"anticipation", "match", "defense", "decision"},
-    # restart : choix du receveur d'une remise en jeu (ticket 29) ; duel : renoncer au tacle par derrière hors urgence (11h)
-    "Decisions": {"decision", "restart", "duel"},
-    "Vision": {"decision", "off_ball", "scan"},  # + le coureur tente l'appel dans le dos si le porteur le voit (16) ; fréquence des scans (08c)
-    "Off the Ball": {"off_ball", "offside"},  # + régler l'appel sur la ligne du hors-jeu (ticket 23)
-    # tir sous pression par `shooting.shot_composure_factor`, courbe propre (ticket 28a) ; + perception sous pression (33)
-    "Composure": {"possession", "decision", "shooting"},
-    "Dribbling": {"decision", REGISTRY},  # (registre : porteur tête haute, cumul avec Technique, 08c) chance de garder le ballon en conduisant : valeur factuelle (ticket 33) et perte tirée (04a) ; vitesse balle au pied (04d)
-    "First Touch": {"possession", REGISTRY},  # + registre : idée de jouer de première, avec Technique (ticket v2-collectif/31a)
-    "Passing": {"possession", "off_ball"},  # + ... et s'il sait le servir (ticket v2-collectif/16)
-    "Finishing": {"shooting"},  # dans la surface ; Long Shots en dehors (ticket 28a)
-    "Long Shots": {"shooting"},
-    "Reflexes": {"shooting"},
-    "One on Ones": {"shooting"},
-    "Handling": {"shooting"},
-    # erreur de placement dans le bloc, reprise par la couverture et la compensation (tickets v2-collectif/04, 07 et 09)
-    "Positioning": {"bloc"},
-    # écart toléré avant de se replacer (04) ; quitter le bloc pour le ballon (07) ; accepter de compenser (09) ;
-    # adopter le plan de passe de son passeur (14)
-    "Teamwork": {"bloc", "defense", "decision"},
-    "Work Rate": {"defense"},  # intensité et repos du presseur (ticket v2-collectif/08)
-    "Marking": {"defense"},  # distance de marquage d'un attaquant dangereux (ticket v2-collectif/07)
+# Cumuls d'une autre forme qu'une somme pondérée de notes, hors du registre (carte, section « Contextes ») :
+# attributs -> fonctions qui les lisent ensemble. Un mélange de ces attributs est toléré dans ces fonctions seulement.
+CUMULS_HORS_REGISTRE = {
+    # A8 : note du gardien, 0,5 Reflexes + 0,3 One on Ones + 0,2 Handling, jusqu'au ticket v2-attributs-restants/03b
+    frozenset({"Reflexes", "One on Ones", "Handling"}): {"shooting._keeper_rating"},
+    # R5 : temps d'arrivée, course à vitesse de pointe + montée en régime, deux capacités en secondes
+    frozenset({"Pace", "Acceleration"}): {"defense.arrival_time_s"},
+    # A17 : ballon dur à orienter, part First Touch x (1 - dureté x (1 - part Technique)), un produit par fonctions
+    # séparées (invisible au détecteur de mélange, déclaré ici pour la traçabilité)
+    frozenset({"First Touch", "Technique"}): {"possession.oriented_control_probability",
+                                               "possession.hard_ball_technique_share"},
 }
-# Mélanges de plusieurs attributs dans un même calcul tolérés (dérogations de la carte).
-TOLERATED_MIXES = {
-    frozenset({"Reflexes", "One on Ones", "Handling"}),  # A8 : note du gardien, jusqu'à la phase 9 (confirmée le 26/10/2026)
-    # temps d'arrivée (`defense.arrival_time_s`) : course à vitesse de pointe + montée en régime, deux capacités
-    # physiques additionnées en secondes (règle R5), pas une pondération de notes ; visible depuis que les champs
-    # passent par la façade (ticket v2-realisme/19a)
-    frozenset({"Pace", "Acceleration"}),
-    # porteur tête haute (08c, A15) et idée de jouer de première (31a, A16) : passés au registre des contextes
-    # (ticket v2-attributs-contextes/01), hors de cette liste
+
+# Spécialités (ADR 0002, point 1) : peuvent rester dans un seul contexte.
+SPECIALITES = {"Finishing", "Long Shots", "Penalty Taking", "Corners", "Free Kick Taking", "Long Throws", "Kicking",
+               "Throwing"}
+# Liste de transition (17/11/2026, ticket v2-attributs-contextes/02, choix du propriétaire : seuls les contextes du
+# registre comptent) : attribut lu par le moteur, non spécialiste, dans moins de deux contextes -> (date, ticket qui
+# le branchera). Une entrée devenue inutile fait échouer : la liste se vide au fil des tickets.
+_REST = "v2-attributs-contextes/08"
+TRANSITION = {
+    "Work Rate": ("17/11/2026", "v2-attributs-contextes/03"),
+    "Decisions": ("17/11/2026", "v2-attributs-contextes/04a ; v2-collectif/15b"),
+    "Positioning": ("17/11/2026", "v2-attributs-contextes/04b"),
+    "Flair": ("17/11/2026", "v2-attributs-contextes/05"),
+    "Balance": ("17/11/2026", "v2-attributs-contextes/06"),
+    "Vision": ("17/11/2026", "v2-collectif/15b ; " + _REST),
+    "Anticipation": ("17/11/2026", "v2-collectif/15b ; " + _REST),
+    "Reflexes": ("17/11/2026", "v2-attributs-restants/03b"),
+    "One on Ones": ("17/11/2026", "v2-attributs-restants/03b"),
+    "Handling": ("17/11/2026", "v2-attributs-restants/03b"),
+    **{attribute: ("17/11/2026", _REST) for attribute in (
+        "Pace", "Acceleration", "Stamina", "Agility", "Strength", "Aggression", "Tackling", "Marking", "Teamwork",
+        "Off the Ball", "Composure", "Passing", "Dribbling", "First Touch")},
 }
+TICKET = re.compile(r"(v2-[a-z-]+/\d+[a-z]?\d?|D-V\d+)")
+DATE = re.compile(r"^\d{2}/\d{2}/\d{4}$")
 
 
 def _modules():
@@ -91,9 +87,13 @@ def _modules():
         yield path.relative_to(ENGINE).with_suffix("").as_posix().replace("/", "."), ast.parse(path.read_text(encoding="utf-8"))
 
 
+def _called(node: ast.Call) -> str | None:
+    return getattr(node.func, "id", getattr(node.func, "attr", None))
+
+
 def _attribute_calls(tree: ast.AST):
     for node in ast.walk(tree):
-        if isinstance(node, ast.Call) and getattr(node.func, "id", getattr(node.func, "attr", None)) in READERS:
+        if isinstance(node, ast.Call) and _called(node) in READERS:
             yield node
 
 
@@ -102,31 +102,241 @@ def _name(call: ast.Call) -> str | None:
     return arg.value if isinstance(arg, ast.Constant) and isinstance(arg.value, str) else None
 
 
+def _enclosing(tree: ast.AST) -> dict[int, str]:
+    """id(nœud) -> nom de la fonction la plus interne qui le contient (« <module> » au niveau du module)."""
+    owner: dict[int, str] = {}
+
+    def visit(node: ast.AST, current: str) -> None:
+        for child in ast.iter_child_nodes(node):
+            name = child.name if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)) else current
+            owner[id(child)] = name
+            visit(child, name)
+    visit(tree, "<module>")
+    return owner
+
+
 def _reads() -> dict[str, set[str]]:
+    """Attribut -> modules qui le lisent (nom littéral ; chaque attribut d'un contexte compte comme lu par le
+    registre). Sert à la garde de couverture."""
     found: dict[str, set[str]] = {}
     for module, tree in _modules():
         for call in _attribute_calls(tree):
-            found.setdefault(_name(call) or "<nom non littéral>", set()).add(module)
+            if (name := _name(call)) is not None:
+                found.setdefault(name, set()).add(module)
     for contexte in CONTEXTES.values():
         for attribute in contexte.attributs:
             found.setdefault(attribute, set()).add(REGISTRY)
     return found
 
 
-def test_each_attribute_is_read_only_within_its_reach() -> None:
-    reads = _reads()
-    assert "<nom non littéral>" not in reads or reads["<nom non littéral>"] <= {"attributes", "condition", REGISTRY}, \
-        f"player_attribute appelé avec un nom non littéral (rayon invérifiable) : {reads.get('<nom non littéral>')}"
-    reads.pop("<nom non littéral>", None)
-    outside = {attr: mods - ALLOWED.get(attr, set()) for attr, mods in reads.items() if mods - ALLOWED.get(attr, set())}
-    assert not outside, f"attribut lu hors de son rayon (mettre à jour la carte puis ALLOWED) : {outside}"
+# --- 1. Chaque contexte est documenté dans la carte -----------------------------------------------------------------
+
+def _weight_text(weight: float) -> str:
+    return f"{weight:g}".replace(".", ",")
 
 
-def test_the_allowed_list_has_no_stale_entry() -> None:
-    reads = _reads()
-    stale = {attr: mods - reads.get(attr, set()) for attr, mods in ALLOWED.items() if mods - reads.get(attr, set())}
-    assert not stale, f"entrée périmée dans ALLOWED (dérogation levée ou attribut retiré ?) : {stale}"
+def carte_contexts_section(text: str) -> str:
+    start = text.index("## Contextes")
+    return text[start:text.index("\n---", start)]
 
+
+def undocumented_contexts(contexts, section: str) -> set[str]:
+    """Contextes sans ligne de table qui porte leur nom, leur effet et chaque « Attribut poids »."""
+    rows = [line for line in section.splitlines() if line.startswith("|")]
+    return {c.nom for c in contexts
+            if not any(c.nom in row and f"`{c.effet}`" in row
+                       and all(f"{a} {_weight_text(w)}" in row for a, w in c.poids) for row in rows)}
+
+
+def test_every_context_is_documented_in_the_map() -> None:
+    section = carte_contexts_section(CARTE.read_text(encoding="utf-8"))
+    assert not undocumented_contexts(CONTEXTES.values(), section), \
+        f"contexte absent de la section « Contextes » de la carte : {undocumented_contexts(CONTEXTES.values(), section)}"
+
+
+def test_the_documentation_check_fails_on_a_fake_or_changed_context() -> None:
+    section = carte_contexts_section(CARTE.read_text(encoding="utf-8"))
+    fake = SimpleNamespace(nom="bidon", effet="scan.bidon", poids=(("Vision", 0.5), ("Decisions", 0.5)))
+    changed = SimpleNamespace(nom="porteur tête haute", effet="scan.head_up_share",
+                              poids=(("Dribbling", 0.5), ("Technique", 0.5)))  # poids différents de la carte
+    assert undocumented_contexts([fake, changed], section) == {"bidon", "porteur tête haute"}
+
+
+# --- 2. Poids sommant à 1 -------------------------------------------------------------------------------------------
+
+def bad_weight_sums(contexts) -> set[str]:
+    return {c.nom for c in contexts if not math.isclose(sum(w for _, w in c.poids), 1.0, abs_tol=1e-12)}
+
+
+def test_every_context_has_weights_summing_to_one() -> None:
+    assert not bad_weight_sums(CONTEXTES.values())
+
+
+def test_the_weight_check_fails_on_a_fake_context() -> None:
+    # objet brut : le constructeur `Contexte` refuserait déjà ce cas (test_v2engine_contextes)
+    fake = SimpleNamespace(nom="bidon", poids=(("Vision", 0.6), ("Decisions", 0.3)))
+    assert bad_weight_sums([fake]) == {"bidon"}
+
+
+# --- 3. Aucune lecture hors du registre et de la façade ------------------------------------------------------------
+
+def reads_outside_facade(modules) -> set[tuple[str, str, str]]:
+    """(module, fonction, motif) des lectures interdites : lecteur réservé appelé ailleurs, ou nom non littéral hors
+    de `contextes.contextual_rating` (réserve A2 de l'expert, ticket 01)."""
+    bad = set()
+    for module, tree in modules:
+        owner = _enclosing(tree)
+        for call in _attribute_calls(tree):
+            reader, where = _called(call), owner.get(id(call), "<module>")
+            if module not in READER_MODULES.get(reader, {module}):
+                bad.add((module, where, f"{reader} réservé"))
+            if (_name(call) is None and module not in READER_MODULES["player_attribute"]
+                    and (module, where) != (REGISTRY, CONTEXT_READER)):
+                bad.add((module, where, "nom non littéral"))
+    return bad
+
+
+def _attrs_in(node: ast.AST) -> set[str]:
+    return {name for call in _attribute_calls(node) if (name := _name(call))}
+
+
+def mixes_outside_registry(modules, tolerated: dict[frozenset, set[str]]) -> set[tuple[str, frozenset]]:
+    """(module.fonction, attributs) des calculs (+, -, *, /) qui combinent plusieurs notes hors du registre et hors
+    des cumuls tolérés dans leur fonction."""
+    bad = set()
+    for module, tree in modules:
+        owner = _enclosing(tree)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Add, ast.Sub, ast.Mult, ast.Div)):
+                attrs, where = frozenset(_attrs_in(node)), f"{module}.{owner.get(id(node), '<module>')}"
+                if len(attrs) > 1 and not any(attrs <= cumul and where in places
+                                              for cumul, places in tolerated.items()):
+                    bad.add((where, attrs))
+    return bad
+
+
+def test_no_note_is_read_outside_the_registry_and_the_facade() -> None:
+    assert not reads_outside_facade(_modules()), f"lecture hors façade et registre : {reads_outside_facade(_modules())}"
+    mixes = mixes_outside_registry(_modules(), CUMULS_HORS_REGISTRE)
+    assert not mixes, f"calcul qui combine des attributs hors du registre (déclarer un contexte) : {mixes}"
+
+
+def _parse(source: str, module: str = "faux"):
+    return [(module, ast.parse(source))]
+
+
+def test_the_read_check_fails_on_fake_modules() -> None:
+    old_tackle = 'def f(t):\n    return 0.8 * effective_rating(t, "Tackling") + 0.2 * effective_rating(t, "Aggression")'
+    assert mixes_outside_registry(_parse(old_tackle, "duel"), CUMULS_HORS_REGISTRE) == {
+        ("duel.f", frozenset({"Tackling", "Aggression"}))}
+    # un cumul toléré ne l'est que dans sa fonction
+    keeper = 'def g(k):\n    return effective_rating(k, "Reflexes") + effective_rating(k, "Handling")'
+    assert mixes_outside_registry(_parse(keeper, "shooting"), CUMULS_HORS_REGISTRE)
+    assert not mixes_outside_registry(_parse(keeper.replace("def g", "def _keeper_rating"), "shooting"),
+                                      CUMULS_HORS_REGISTRE)
+    sneaky = 'def h(p, name):\n    return effective_rating(p, name)'
+    assert reads_outside_facade(_parse(sneaky, "decision")) == {("decision", "h", "nom non littéral")}
+    assert reads_outside_facade(_parse(sneaky.replace("def h", "def autre"), REGISTRY)) == {
+        (REGISTRY, "autre", "nom non littéral")}
+    raw = 'def r(p):\n    return player_attribute(p, "Vision")'
+    assert reads_outside_facade(_parse(raw, "decision")) == {("decision", "r", "player_attribute réservé")}
+
+
+def test_every_out_of_registry_cumul_still_exists() -> None:
+    owner_reads: dict[str, set[str]] = {}
+    for module, tree in _modules():
+        owner = _enclosing(tree)
+        for call in _attribute_calls(tree):
+            if (name := _name(call)) is not None:
+                owner_reads.setdefault(f"{module}.{owner.get(id(call), '<module>')}", set()).add(name)
+    stale = {cumul for cumul, places in CUMULS_HORS_REGISTRE.items()
+             if not cumul <= set().union(*(owner_reads.get(p, set()) for p in places))}
+    assert not stale, f"cumul hors registre levé : le retirer de CUMULS_HORS_REGISTRE et de la carte : {stale}"
+
+
+# --- 4. Un effet, un contexte, un calcul ----------------------------------------------------------------------------
+
+def _context_uses(modules) -> dict[str, set[str]]:
+    """Nom de contexte -> fonctions (module.fonction) qui appellent `contextual_rating` avec lui."""
+    by_constant = {name: value.nom for name, value in vars(contextes).items() if isinstance(value, contextes.Contexte)}
+    uses: dict[str, set[str]] = {}
+    for module, tree in modules:
+        owner = _enclosing(tree)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call) and _called(node) == CONTEXT_READER and len(node.args) > 1:
+                arg = node.args[1]
+                key = (by_constant.get(getattr(arg, "id", getattr(arg, "attr", None)))
+                       or (arg.value if isinstance(arg, ast.Constant) else "<contexte non littéral>"))
+                uses.setdefault(key, set()).add(f"{module}.{owner.get(id(node), '<module>')}")
+    return uses
+
+
+def effect_conflicts(contexts, uses: dict[str, set[str]]) -> set[str]:
+    """Effets déclarés par deux contextes, et contextes lus ailleurs que par la seule fonction de leur effet."""
+    seen: dict[str, str] = {}
+    bad = set()
+    for c in contexts:
+        if c.effet in seen:
+            bad.add(f"effet {c.effet} : {seen[c.effet]} et {c.nom}")
+        seen[c.effet] = c.nom
+        if uses.get(c.nom, set()) != {c.effet}:
+            bad.add(f"{c.nom} lu par {sorted(uses.get(c.nom, set()))} au lieu de {c.effet}")
+    bad |= {f"contexte inconnu {name} lu par {sorted(where)}" for name, where in uses.items()
+            if name not in {c.nom for c in contexts}}
+    return bad
+
+
+def test_each_effect_has_one_context_and_one_calculation() -> None:
+    conflicts = effect_conflicts(CONTEXTES.values(), _context_uses(_modules()))
+    assert not conflicts, f"règle R1 (un effet, un calcul) : {conflicts}"
+
+
+def test_the_effect_check_fails_on_fake_contexts() -> None:
+    a = SimpleNamespace(nom="a", effet="scan.f")
+    b = SimpleNamespace(nom="b", effet="scan.f")  # même effet que a
+    uses = {"a": {"scan.f"}, "b": {"scan.f", "decision.g"}}  # b relu dans une autre fonction
+    assert effect_conflicts([a, b], uses) == {"effet scan.f : a et b",
+                                             "b lu par ['decision.g', 'scan.f'] au lieu de scan.f"}
+    assert effect_conflicts([a], {"a": {"scan.f"}, "c": {"x.y"}}) == {"contexte inconnu c lu par ['x.y']"}
+
+
+# --- 5. Chaque attribut non spécialiste dans au moins deux contextes ------------------------------------------------
+
+def contexts_per_attribute(contexts) -> dict[str, int]:
+    count: dict[str, int] = {}
+    for c in contexts:
+        for attribute in c.attributs:
+            count[attribute] = count.get(attribute, 0) + 1
+    return count
+
+
+def reach_gaps(read: set[str], contexts, specialities: set[str], transition: dict) -> tuple[set[str], set[str]]:
+    """(attributs non spécialistes lus dans moins de deux contextes et absents de la transition, entrées de transition
+    devenues inutiles)."""
+    count = contexts_per_attribute(contexts)
+    short = {a for a in read - specialities if count.get(a, 0) < 2}
+    return short - set(transition), set(transition) - short
+
+
+def test_every_non_specialist_attribute_is_in_two_contexts_or_in_transition() -> None:
+    missing, stale = reach_gaps(set(_reads()) & set(FM_ATTRIBUTE_COLUMNS), CONTEXTES.values(), SPECIALITES, TRANSITION)
+    assert not missing, f"attribut dans moins de deux contextes, hors liste de transition : {sorted(missing)}"
+    assert not stale, f"entrée de transition devenue inutile (ou attribut plus lu) : la retirer : {sorted(stale)}"
+
+
+def test_every_transition_entry_is_dated_and_cites_its_ticket() -> None:
+    assert all(DATE.match(date) and TICKET.search(ticket) for date, ticket in TRANSITION.values())
+    assert not set(TRANSITION) & SPECIALITES
+
+
+def test_the_reach_check_fails_on_fake_attributes() -> None:
+    two = [SimpleNamespace(attributs=("Vision", "Decisions")), SimpleNamespace(attributs=("Vision", "Passing"))]
+    assert reach_gaps({"Vision", "Decisions", "Finishing"}, two, {"Finishing"}, {}) == ({"Decisions"}, set())
+    assert reach_gaps({"Vision", "Decisions"}, two, set(), {"Decisions": ("17/11/2026", "v2-x/1"),
+                                                             "Vision": ("17/11/2026", "v2-x/2")}) == (set(), {"Vision"})
+
+
+# --- Gardes conservées : dictionnaire brut, champs physiques ------------------------------------------------------
 
 def test_raw_attribute_dicts_are_read_only_through_player_attribute() -> None:
     # Lire une note, c'est indexer `.attributes[...]` ou appeler `.attributes.get(...)` ; la recopie du dictionnaire
@@ -143,8 +353,8 @@ def test_raw_attribute_dicts_are_read_only_through_player_attribute() -> None:
 
 
 def test_physical_fields_are_read_only_by_movement() -> None:
-    # Depuis le ticket v2-realisme/19a, une capacité physique se lit par la façade (rayon vérifié par ALLOWED) ;
-    # le champ (`.pace`…) ne se lit que dans le chemin chaud de `movement.step`.
+    # Depuis le ticket v2-realisme/19a, une capacité physique se lit par la façade ; le champ (`.pace`…) ne se lit que
+    # dans le chemin chaud de `movement.step`.
     found: dict[str, set[str]] = {}
     for module, tree in _modules():
         for node in ast.walk(tree):
@@ -152,34 +362,6 @@ def test_physical_fields_are_read_only_by_movement() -> None:
                 found.setdefault(PHYSICAL_FIELDS[node.attr], set()).add(module)
     outside = {attr: mods - {"movement"} for attr, mods in found.items() if mods - {"movement"}}
     assert not outside, f"capacité physique lue par son champ hors de movement (passer par la façade) : {outside}"
-
-
-def _attrs_in(node: ast.AST) -> set[str]:
-    return {name for call in _attribute_calls(node) if (name := _name(call))}
-
-
-def test_no_weighted_mix_of_attributes_outside_listed_exceptions() -> None:
-    # Règle R2 : un calcul arithmétique (+, -, *, /) qui combine des notes de plusieurs attributs est un mélange.
-    offenders = {}
-    for module, tree in _modules():
-        for node in ast.walk(tree):
-            if isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Add, ast.Sub, ast.Mult, ast.Div)):
-                attrs = _attrs_in(node)
-                if len(attrs) > 1 and not any(attrs <= allowed for allowed in TOLERATED_MIXES):  # sous-calcul compris
-                    offenders.setdefault(module, set()).add(frozenset(attrs))
-    assert not offenders, f"mélange d'attributs hors dérogations (règle R2) : {offenders}"
-
-
-def test_the_mix_detector_catches_the_old_tackle_formula() -> None:
-    old = ast.parse('r = 0.8 * player_attribute(t, "Tackling") + 0.2 * player_attribute(t, "Aggression")')
-    mixes = {frozenset(_attrs_in(n)) for n in ast.walk(old) if isinstance(n, ast.BinOp) and len(_attrs_in(n)) > 1}
-    assert frozenset({"Tackling", "Aggression"}) in mixes and frozenset({"Tackling", "Aggression"}) not in TOLERATED_MIXES
-
-
-def test_every_tolerated_mix_still_exists() -> None:
-    present = {frozenset(_attrs_in(n)) for _, tree in _modules() for n in ast.walk(tree)
-               if isinstance(n, ast.BinOp) and len(_attrs_in(n)) > 1}
-    assert TOLERATED_MIXES <= present, f"dérogation levée : la retirer de TOLERATED_MIXES et de la carte : {TOLERATED_MIXES - present}"
 
 
 # --- Garde de couverture (ticket v2-attributs-restants/08, liste d'exceptions validée par le propriétaire le
@@ -218,7 +400,6 @@ COVERAGE_EXCEPTIONS = {
     "Postes FM naturels": "v2-attributs-restants/04b",
     "Preferred moves": "v2-attributs-restants/05",
 }
-TICKET = re.compile(r"(v2-[a-z-]+/\d+[a-z]?|D-V\d+)")
 
 
 def _base_columns_and_rows() -> tuple[tuple[str, ...], list[tuple]]:

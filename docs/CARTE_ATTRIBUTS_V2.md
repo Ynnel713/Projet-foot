@@ -113,7 +113,7 @@ Chaque paire ci-dessous se combine, mais chaque attribut garde son rayon.
 
 Un **contexte** est une situation de jeu qui combine plusieurs attributs avec des poids sommant à 1 ; il appartient à un temps du cerveau (ADR 0001). Ses poids ne s'écrivent que dans le registre ; un module du moteur obtient la note composée par `contextes.contextual_rating(joueur, CONTEXTE)`, qui lit chaque note par la façade `condition.effective_rating` (R6). Chaque poids est une constante produit validée par le propriétaire.
 
-| Contexte (constante) | Temps | Attributs et poids | Effet (module lecteur) | Source | Ticket |
+| Contexte (constante) | Temps | Attributs et poids | Effet (identifiant `module.fonction`, seul lecteur du contexte) | Source | Ticket |
 |---|---|---|---|---|---|
 | porteur tête haute (`PORTEUR_TETE_HAUTE`) | perception | Dribbling 0,6 ; Technique 0,4 | part du temps tête haute du porteur, qui multiplie sa fréquence de scans : 99 → 100 %, 55 → 60 %, 11 → 25 % (`scan.head_up_share`) | non trouvé (poids validés le 13/11/2026) | `v2-realisme/08c` (A15) ; registre au `v2-attributs-contextes/01` |
 | idée de jouer de première (`IDEE_DE_PREMIERE`) | décision | First Touch 0,5 ; Technique 0,5 | chance que le receveur pense à jouer de première (`decision.one_touch_idea_probability`) | non trouvé (moyenne validée le 13/11/2026) | `v2-collectif/31a` (A16) ; registre au `v2-attributs-contextes/01` |
@@ -142,18 +142,16 @@ Reprise à l'identique au ticket 01 : mêmes poids, mêmes valeurs (écart nul, 
 
 **Plafond d'écart.** Entre 99 et 11, l'écart mesuré sur un indicateur reste dans la fourchette réelle quand elle est connue (test de profils, `scripts/measure_v2.py --profil`).
 
-**Garde automatique.** À transformer au ticket `v2-attributs-contextes/02` (ADR 0002) : vérifier le registre des contextes au lieu de refuser les mélanges. En attendant, `tests/test_v2engine_rayon_attributs.py` analyse l'arbre syntaxique du moteur (depuis le ticket `v2-attributs-contextes/01`, chaque attribut d'un contexte du registre compte comme lu dans le module `contextes`). Il échoue si :
-- un attribut est lu hors des modules de son rayon, ou avec un nom non littéral ;
-- une note est lue directement dans `.attributes` hors de `attributes.py` ;
-- une capacité physique (`.pace`, `.acceleration`, `.stamina`) est lue par son champ hors de `movement.py` (R5, R6 : ailleurs, par la façade) ;
-- un calcul combine des notes de plusieurs attributs hors des cumuls listés (inventaire, R2 : A8, temps d'arrivée Pace + Acceleration, ballon dur à orienter First Touch x Technique (A17) ; A2 levée au ticket 28a) ;
-- une entrée de la liste devient périmée (dérogation levée sans mise à jour).
+**Garde automatique** (réécrite au ticket `v2-attributs-contextes/02`, 17/11/2026, ADR 0002 point 6). `tests/test_v2engine_rayon_attributs.py` analyse l'arbre syntaxique du moteur et vérifie le registre des contextes ; la liste blanche de modules par attribut (`ALLOWED`) et la liste des mélanges tolérés (`TOLERATED_MIXES`) sont supprimées. Une lecture directe d'un seul attribut par la façade (`effective_rating(joueur, "Nom")`) reste permise partout. Le test échoue si :
+1. un contexte du registre n'a pas sa ligne dans la section « Contextes » ci-dessus (nom, effet, chaque attribut et son poids) ;
+2. les poids d'un contexte ne somment pas à 1 ;
+3. une note est lue hors du registre et de la façade : `player_attribute` hors de `attributes.py` et `condition.py`, `intrinsic_rating` hors du chargement (`match.py`), nom d'attribut non littéral hors de `contextes.contextual_rating`, ou calcul (+, -, ×, /) qui combine plusieurs attributs hors du registre et hors des cumuls d'une autre forme listés dans leur fonction (`CUMULS_HORS_REGISTRE` : A8 dans `shooting._keeper_rating`, R5 dans `defense.arrival_time_s`, A17 dans `possession`) ; un cumul levé fait aussi échouer ;
+4. deux contextes déclarent le même effet (identifiant `module.fonction`), ou un contexte est lu par une autre fonction que celle de son effet (R1 : un effet, un calcul) ;
+5. un attribut non spécialiste lu par le moteur figure dans moins de deux contextes du registre sans être dans la liste de transition datée (`TRANSITION`), ou une entrée de cette liste devient inutile. Spécialités : Finishing, Long Shots, Penalty Taking, Corners, Free Kick Taking, Long Throws, Kicking, Throwing. Seuls les contextes du registre comptent (choix du propriétaire, 17/11/2026) : la liste compte 24 attributs au 17/11/2026, chacun lié à son ticket de branchement (Work Rate `03`, Decisions `04a` et `v2-collectif/15b`, Positioning `04b`, Flair `05`, Balance `06`, gardien `v2-attributs-restants/03b`, Vision et Anticipation `v2-collectif/15b` puis `08`, les autres `v2-attributs-contextes/08`). Technique, dans deux contextes, en est déjà sorti.
 
-Porteur tête haute (A15) et idée de jouer de première (A16) ne sont plus des dérogations : ce sont des contextes du registre. `tests/test_v2engine_contextes.py` vérifie que les poids de chaque contexte somment à 1 et que le registre rend les mêmes valeurs qu'avant.
+Chaque vérification a son cas négatif synthétique (dont l'ancienne formule du tacle 0,8 Tackling + 0,2 Aggression). Le test garde aussi : note lue directement dans `.attributes` hors de `attributes.py` ; capacité physique (`.pace`, `.acceleration`, `.stamina`) lue par son champ hors de `movement.py` (R5, R6) ; couverture des 52 caractéristiques de la base ; gestes préférés. `tests/test_v2engine_contextes.py` vérifie la construction des contextes et que le registre est en lecture seule ; `tests/test_v2engine_condition.py` échoue si une note est lue hors de la façade (R6).
 
-`tests/test_v2engine_condition.py` échoue si une note est lue hors de la façade (R6).
-
-Limite connue : un mélange qui passe par des variables intermédiaires n'est pas détecté ; la grille de relecture le couvre.
+Limite connue : un mélange qui passe par des variables intermédiaires ou par des fonctions séparées (cas de A17) n'est pas détecté ; la grille de relecture le couvre.
 
 ### Les interactions du guide
 
@@ -195,8 +193,8 @@ Limite connue : un mélange qui passe par des variables intermédiaires n'est pa
 
 ### Grille de relecture (à cocher dans chaque ticket, vérifiée par `simulafoot-reviewer`)
 
-1. Chaque effet ajouté a-t-il un seul attribut responsable, conforme à son rayon dans cette carte ? (R1)
-2. Les attributs qui se combinent passent-ils par des tirages distincts (perception, décision, exécution), sans mélange pondéré ? (R2)
+1. Chaque effet ajouté n'est-il calculé qu'une fois, par un seul contexte ou une seule lecture ? (R1, réécrite le 17/11/2026)
+2. Les attributs qui se combinent dans un même calcul le font-ils par un contexte du registre (poids validés, documenté ci-dessus), sinon par des tirages distincts (perception, décision, exécution) ? (R2, garde automatique depuis le ticket `v2-attributs-contextes/02`)
 3. Un attribut modulateur n'agit-il que dans sa condition, en réduisant une difficulté ? (R3)
 4. Un effet indirect ne vise-t-il que les coéquipiers ? (R4)
 5. L'écart entre 99 et 11 reste-t-il dans la fourchette réelle connue, mesuré avec `--profil` ? (plafond d'écart)

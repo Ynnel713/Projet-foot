@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from types import MappingProxyType
 
 from v2engine.condition import effective_rating
 
@@ -26,12 +27,14 @@ TEMPS = (PERCEPTION, DECISION, EXECUTION)
 
 @dataclass(frozen=True)
 class Contexte:
-    """Situation de jeu : nom, temps du cerveau, (attribut, poids) dans l'ordre de calcul, ticket qui l'a branchée."""
+    """Situation de jeu : nom, temps du cerveau, (attribut, poids) dans l'ordre de calcul, ticket qui l'a branchée, et
+    effet calculé, identifié par la fonction qui le porte (« module.fonction ») : un effet n'a qu'un contexte (R1)."""
 
     nom: str
     temps: str
     poids: tuple[tuple[str, float], ...]
     ticket: str
+    effet: str
 
     def __post_init__(self) -> None:
         if self.temps not in TEMPS:
@@ -50,13 +53,14 @@ class Contexte:
 # Porteur tête haute (ticket v2-realisme/08c, A15) : plus il est à l'aise balle au pied, moins il regarde le ballon,
 # donc plus il peut scanner (`scan.head_up_share`). Poids validés le 13/11/2026 ; source : non trouvé.
 PORTEUR_TETE_HAUTE = Contexte("porteur tête haute", PERCEPTION, (("Dribbling", 0.6), ("Technique", 0.4)),
-                              "v2-realisme/08c")
+                              "v2-realisme/08c", "scan.head_up_share")
 # Idée de jouer de première (ticket v2-collectif/31a, A16) : le receveur y pense d'autant plus qu'il a le contrôle et la
 # technique du geste (`decision.one_touch_idea_probability`). Moyenne validée le 13/11/2026 ; source : non trouvé.
 IDEE_DE_PREMIERE = Contexte("idée de jouer de première", DECISION, (("First Touch", 0.5), ("Technique", 0.5)),
-                            "v2-collectif/31a")
+                            "v2-collectif/31a", "decision.one_touch_idea_probability")
 
-CONTEXTES: dict[str, Contexte] = {c.nom: c for c in (PORTEUR_TETE_HAUTE, IDEE_DE_PREMIERE)}
+# Lecture seule : un contexte ne s'ajoute qu'ici, par une déclaration revue (réserve A1 de l'expert, ticket 01).
+CONTEXTES = MappingProxyType({c.nom: c for c in (PORTEUR_TETE_HAUTE, IDEE_DE_PREMIERE)})
 
 
 def contextual_rating(player, contexte: Contexte | str) -> float:

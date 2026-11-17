@@ -24,6 +24,13 @@ def test_every_context_has_weights_summing_to_one_and_a_brain_time(contexte: Con
     assert all(weight > 0.0 for _, weight in contexte.poids)
     assert contexte.temps in TEMPS and len(contexte.attributs) == len(set(contexte.attributs)) >= 2
     assert contexte.ticket and CONTEXTES[contexte.nom] is contexte
+    module, function = contexte.effet.split(".")
+    assert callable(getattr(__import__(f"v2engine.{module}", fromlist=[function]), function))  # effet = fonction réelle
+
+
+def test_the_registry_is_read_only() -> None:
+    with pytest.raises(TypeError):
+        CONTEXTES["bidon"] = PORTEUR_TETE_HAUTE  # type: ignore[index]
 
 
 def test_the_registry_holds_the_two_existing_cumuls_with_their_weights() -> None:
@@ -43,7 +50,7 @@ def test_the_registry_holds_the_two_existing_cumuls_with_their_weights() -> None
 ])
 def test_an_ill_formed_context_is_refused(poids, temps) -> None:
     with pytest.raises(ValueError):
-        Contexte("bidon", temps, poids, "v2-x/1")
+        Contexte("bidon", temps, poids, "v2-x/1", "bidon.effet")
 
 
 def test_contextual_rating_reads_each_note_through_the_facade(monkeypatch) -> None:
