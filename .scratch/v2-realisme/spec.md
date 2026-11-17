@@ -230,6 +230,10 @@ Tailles d'échantillon : 50 matchs pour l'exploration (tickets de mécanisme), a
 | 04h | Duel un contre un : le crochet | P1 | exécution | 2 h | moyenne | 04g, 07a, 07f |
 | 04i | Duel : protection du ballon dos au défenseur | P1 | exécution | 2 h | moyenne | 04a, 07c, 11b |
 | 04j | Le tacle glissé | P1 | exécution | 2 h | moyenne | 04g |
+| 04k | Duel : la feinte de frappe ou de passe (ajouté le 17/11/2026) | P2 | exécution et perception | 2 h 20 | faible | 04g, 04h, v2-attributs-contextes/01-02 |
+| 04l | Duel : le changement de rythme, démarrage-arrêt (ajouté le 17/11/2026) | P2 | exécution | 2 h | moyenne | 04g, 12a, v2-attributs-contextes/01-02 |
+| 04m | Duel : les gestes techniques, passement, petit pont, roulette, double contact (ajouté le 17/11/2026) | P2 | exécution | 2 h 40 | faible | 04f, 04g, 04h, 04i, v2-attributs-contextes/01-02 |
+| 04n | Choix du geste de dribble et validation de la variété (ajouté le 17/11/2026) | P2 | décision et validation | 2 h 30 | faible | 04g à 04m, v2-attributs-contextes/05, v2-attributs-restants/05 |
 | 05a | Tir : le ballon part vers son point d'arrivée, le but n'est plus tiré au départ | P0 | exécution | 2 h 15 | moyenne | v2-collectif/35b |
 | 05b | Arrêt : le gardien atteint ou non le ballon | P0 | exécution | 2 h 20 | moyenne | 05a, 03b |
 | 05c | Contre : le défenseur touche réellement le tir | P0 | exécution | 2 h 10 | moyenne | 05a |

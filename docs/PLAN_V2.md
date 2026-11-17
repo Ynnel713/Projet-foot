@@ -23,6 +23,8 @@
 
 14. **Attributs multidimensionnels (décision du propriétaire du 17/11/2026, ADR 0002)** : un attribut sert dans plusieurs contextes pondérés, déclarés dans un registre central ; R1 réécrite (« un effet, un calcul »). Chantier `.scratch/v2-attributs-contextes/` : `01` registre (sans changement de jeu, 2 h 05) → `02` test de rayon transformé (1 h 40) → contexte « lecture du pressing » au `v2-collectif/15b` → lots `03` Work Rate offensif, `04a` Decisions en défense, `04b` Positioning en défense, `05` Flair et goût du risque, `06` Balance après contact → note du gardien séparée au `v2-attributs-restants/03b` → `07` mise aux normes des tickets à venir.
 
+15. **Variété du dribble (demande du propriétaire du 17/11/2026)** : après les duels `v2-realisme/04g` à `04j`, quatre tickets ajoutés au chantier `v2-realisme` : `04k` feinte de frappe ou de passe (2 h 20), `04l` changement de rythme (2 h), `04m` gestes techniques (passement, petit pont, roulette, double contact ; 2 h 40, découpage à examiner), `04n` choix du geste selon la situation et validation de la variété (2 h 30, avant la calibration `v2-collectif/22a`). Contextes d'attributs selon l'ADR 0002.
+
 Rappel : passes par match 1 091 (repère 890 à 940) et course du passeur après sa passe (une-deux), notés au `v2-collectif/22a`.
 
 ## Décisions architecturales
