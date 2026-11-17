@@ -23,7 +23,7 @@ from v2engine.trace import (ARRET, BUT, CONTRE, CONTROLE_RATE, DUEL_EPAULE, FAUT
 from v2engine.trace import TIR as TIR_EVENT  # `TIR` est le flux aléatoire des tirs (v2engine.flux)
 from v2engine.anticipation import pass_readers, reaction_delay_s
 from v2engine.ball_state import BallState, ShotFlight
-from v2engine.bloc import Bloc, builds_up
+from v2engine.bloc import Bloc, build_up_pressed, builds_up
 from v2engine.danger import danger
 from v2engine.evitement import avoid_teammates
 from v2engine.duel import (CONTACT_MIN_CLOSING_MPS, SHOULDER_COOLDOWN_S, SHOULDER_PUSH_M, SHOULDER_PUSH_STEPS,
@@ -741,7 +741,8 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
             if memory is not None else None
         action = choose_action(holder, players, goal, keeper, (modes or {}).get(holder.team), planned,  # ticket 11
                                ball.felt[1], set_piece, seen_opponents, False,
-                               builds_up(holder))  # zone de construction : relance longue envisagée (15a)
+                               builds_up(holder),  # zone de construction : relance longue envisagée (15a)
+                               build_up_pressed(holder, players))  # sous pressing : troisième homme (15b1)
         if set_piece:
             r, ball.set_piece = ball.set_piece, None
             if restarts is not None:

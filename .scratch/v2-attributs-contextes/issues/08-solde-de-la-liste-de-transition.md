@@ -4,13 +4,13 @@
 
 **Origine :** ticket 02 (17/11/2026). Choix du propriétaire : pour la règle « chaque attribut non spécialiste figure dans au moins deux contextes », seuls les contextes du registre `v2engine/contextes.py` comptent ; une lecture directe d'un seul attribut par la façade n'en est pas un. Les attributs sans ticket de branchement sont rattachés ici dans la liste de transition (`TRANSITION`, `tests/test_v2engine_rayon_attributs.py`).
 
-**What to build:** faire entrer dans au moins deux contextes du registre chaque attribut que la liste de transition rattache à ce ticket, et l'en retirer : Pace, Acceleration, Stamina, Agility, Strength, Aggression, Tackling, Marking, Teamwork, Off the Ball, Composure, Passing, Dribbling, First Touch ; Vision et Anticipation pour leur second contexte, après `v2-collectif/15b`. Pour chacun : choisir les situations de jeu (en priorité celles déjà prévues par les tickets que le ticket 07 met aux normes, pour ne pas les compter deux fois), proposer contextes et poids au propriétaire, migrer ou brancher, mesurer.
+**What to build:** faire entrer dans au moins deux contextes du registre chaque attribut que la liste de transition rattache à ce ticket, et l'en retirer : Pace, Acceleration, Stamina, Agility, Strength, Aggression, Tackling, Marking, Teamwork, Off the Ball, Composure, Passing, Dribbling, First Touch ; Vision et Anticipation pour leur second contexte (le premier, « lecture du pressing », vient du ticket `v2-collectif/15b1`). Pour chacun : choisir les situations de jeu (en priorité celles déjà prévues par les tickets que le ticket 07 met aux normes, pour ne pas les compter deux fois), proposer contextes et poids au propriétaire, migrer ou brancher, mesurer.
 
 **Hors de ce ticket :** les attributs déjà rattachés à un autre ticket (Work Rate `03`, Decisions `04a`, Positioning `04b`, Flair `05`, Balance `06`, gardien `v2-attributs-restants/03b`) ; les spécialités.
 
 **Attributs :** les 16 ci-dessus ; contextes et poids à proposer au propriétaire, attribut par attribut (constantes produit).
 
-**Blocked by:** 02 ; `v2-collectif/15b` pour Vision et Anticipation ; ticket 07 (pour repérer les contextes déjà prévus ailleurs).
+**Blocked by:** 02 ; `v2-collectif/15b1` (premier contexte de Vision et Anticipation) ; ticket 07 (pour repérer les contextes déjà prévus ailleurs).
 
 **Status:** à faire — à découper en lots avant le code
 

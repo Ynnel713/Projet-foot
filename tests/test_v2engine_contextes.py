@@ -33,12 +33,15 @@ def test_the_registry_is_read_only() -> None:
         CONTEXTES["bidon"] = PORTEUR_TETE_HAUTE  # type: ignore[index]
 
 
-def test_the_registry_holds_the_two_existing_cumuls_with_their_weights() -> None:
-    assert set(CONTEXTES) == {"porteur tête haute", "idée de jouer de première"}
+def test_the_registry_holds_its_contexts_with_their_weights() -> None:
+    assert set(CONTEXTES) == {"porteur tête haute", "idée de jouer de première", "lecture du pressing"}
     assert PORTEUR_TETE_HAUTE.poids == (("Dribbling", 0.6), ("Technique", 0.4))
     assert PORTEUR_TETE_HAUTE.temps == contextes.PERCEPTION
     assert IDEE_DE_PREMIERE.poids == (("First Touch", 0.5), ("Technique", 0.5))
     assert IDEE_DE_PREMIERE.temps == contextes.DECISION
+    # ticket v2-collectif/15b1, poids validés par le propriétaire le 17/11/2026
+    assert contextes.LECTURE_DU_PRESSING.poids == (("Vision", 0.5), ("Anticipation", 0.3), ("Decisions", 0.2))
+    assert contextes.LECTURE_DU_PRESSING.temps == contextes.PERCEPTION
 
 
 @pytest.mark.parametrize("poids, temps", [

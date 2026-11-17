@@ -170,6 +170,18 @@ def builds_up(holder: PlayerState) -> bool:
     return holder.poste in BUILD_UP_BUILDERS and _progress(holder.team, holder.position.x) < BUILD_UP_ZONE_M
 
 
+def build_up_rivals(team: str, players: list[PlayerState]) -> int:
+    """Adversaires de champ dans la zone de construction de `team` (ses `BUILD_UP_ZONE_M`), ticket 25b."""
+    return sum(1 for p in players if p.team != team and p.poste != "GK"
+               and _progress(team, p.position.x) < BUILD_UP_ZONE_M)
+
+
+def build_up_pressed(holder: PlayerState, players: list[PlayerState]) -> bool:
+    """Le porteur construit-il sous pressing (ticket v2-collectif/15b1) : dans sa zone de construction, avec au moins
+    `BUILD_UP_PRESS_COUNT[0]` adversaires de champ dans cette zone (même seuil que le placement du ticket 25b) ?"""
+    return builds_up(holder) and build_up_rivals(holder.team, players) >= BUILD_UP_PRESS_COUNT[0]
+
+
 def _remember(history: list[tuple[float, float]], now_s: float, height: float) -> None:
     """Ajoute la hauteur de ligne du tick et oublie ce qui dépasse le plus long retard possible (`LINE_LAG_MAX_S`)."""
     history.append((now_s, height))
@@ -392,8 +404,7 @@ class Bloc:
         self.build_up.clear()
         if building is None:
             return
-        rivals = sum(1 for p in players if p.team != building and p.poste != "GK"
-                     and _progress(building, p.position.x) < BUILD_UP_ZONE_M)
+        rivals = build_up_rivals(building, players)
         low, high = BUILD_UP_PRESS_COUNT
         pressed = min(max((rivals - low) / (high - low), 0.0), 1.0)
         self.build_up[building] = 1.0 - pressed * (1.0 - BUILD_UP_PRESS_SPREAD)

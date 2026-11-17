@@ -15,7 +15,7 @@ from dataclasses import dataclass, replace
 
 from v2engine.attributes import success_probability
 from v2engine.condition import effective_rating
-from v2engine.contextes import IDEE_DE_PREMIERE, contextual_rating
+from v2engine.contextes import IDEE_DE_PREMIERE, LECTURE_DU_PRESSING, contextual_rating
 from v2engine.danger import danger, loss_cost
 from v2engine.flux import DECISION, DUEL, PERCEPTION
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
@@ -121,6 +121,18 @@ _FOLLOW_UP_SHARE = 0.4
 PLAN_BONUS = 0.3
 _ADOPT_PLAN = (0.85, 0.2, 0.65, 1.0)  # baseline, amplitude, min, max
 PLAN_HELD, PLAN_DROPPED, PLAN_UNSEEN, PLAN_REFUSED = "tenu", "abandonné", "non vu", "refusé"
+
+# Troisième homme en construction (ticket v2-collectif/15b1, constantes validées par le propriétaire le 17/11/2026,
+# constat avant le code : 8,3 troisièmes hommes par match, 9,6 % des passes courtes de construction, sans être cherchés).
+# Sous pressing (`bloc.build_up_pressed`), le porteur lit la structure du pressing, une fois par décision (flux
+# décision), avec la chance `reads_third_man_probability` (contexte « lecture du pressing ») : 11 -> 15 %, 55 -> 45 %,
+# 99 -> 80 %. S'il la lit, la suite du receveur (ticket 13) vers un coéquipier libre DERRIÈRE la première ligne, quand
+# le receveur est devant elle ou sur elle, vaut `1 + THIRD_MAN_BONUS` fois plus : le pressing cassé vaut plus que la
+# position atteinte, encore basse dans son camp. Première ligne : le `FIRST_LINE_RANK`-ième adversaire de champ le plus
+# proche de son but. Valeurs non trouvées (choix de modèle) ; repère réel : non trouvé.
+_READS_THIRD_MAN = ((11.0, 0.15), (55.0, 0.45), (99.0, 0.80))  # (note du contexte, chance de lire)
+FIRST_LINE_RANK = 3
+THIRD_MAN_BONUS = 0.5
 
 # Relance longue (ticket v2-collectif/15a, validé par le propriétaire le 17/11/2026). Dans sa zone de construction
 # (`bloc.builds_up` : gardien ou défenseur dans ses 35 m), le porteur envisage en plus une passe longue EN L'AIR vers
@@ -260,6 +272,28 @@ def thinks_one_touch(receiver: PlayerState, opponents: list[PlayerState]) -> boo
     return DECISION.random() < one_touch_idea_probability(receiver, opponents)
 
 
+def reads_third_man_probability(holder: PlayerState) -> float:
+    """Chance que le porteur, en construction sous pressing, lise un troisième homme à cette décision (ticket 15b1) :
+    contexte « lecture du pressing » (Vision, Anticipation, Decisions), interpolé entre les repères, borné."""
+    note = contextual_rating(holder, LECTURE_DU_PRESSING)
+    points = _READS_THIRD_MAN
+    note = min(max(note, points[0][0]), points[-1][0])
+    (n0, v0), (n1, v1) = next(pair for pair in zip(points, points[1:]) if note <= pair[1][0])
+    return v0 + (note - n0) / (n1 - n0) * (v1 - v0)
+
+
+def _from_own_goal(team: str, x: float) -> float:
+    """Distance à son propre but dans l'axe du terrain (domicile défend x = 0)."""
+    return x if team == "home" else PITCH_LENGTH_M - x
+
+
+def first_pressing_line(team: str, opponents: list[PlayerState]) -> float | None:
+    """Hauteur de la première ligne de pressing adverse, en distance au but de `team` : le `FIRST_LINE_RANK`-ième
+    adversaire de champ le plus proche de ce but (ticket 15b1). None s'il y a moins d'adversaires de champ."""
+    heights = sorted(_from_own_goal(team, p.position.x) for p in opponents if p.poste != "GK")
+    return heights[FIRST_LINE_RANK - 1] if len(heights) >= FIRST_LINE_RANK else None
+
+
 def adopt_plan_probability(player: PlayerState) -> float:
     baseline, amplitude, low, high = _ADOPT_PLAN
     return success_probability(effective_rating(player, "Teamwork"), baseline=baseline, amplitude=amplitude,
@@ -301,7 +335,7 @@ def visible_teammates(holder: PlayerState, teammates: list[PlayerState], goal: V
 def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2, keeper: PlayerState | None,
                      mode: str | None = None, planned: str | None = None,
                      seen_opponents: list[PlayerState] | None = None, one_touch: bool = False,
-                     build_up: bool = False) -> list[Action]:
+                     build_up: bool = False, pressed: bool = False) -> list[Action]:
     """Les options du porteur avec leur valeur FACTUELLE (ticket v2-collectif/33 : danger attendu, vraies capacités),
     de la meilleure à la moins bonne : un tir à portée (`SHOOTING_RANGE_M`), une passe par coéquipier envisagé (Vision),
     une conduite par direction (`DRIBBLE_DIRECTIONS_DEG`). `mode` : choix de
@@ -312,7 +346,8 @@ def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2
     étages). Les conduites perçues se calculent dans `choose_action`. Seuls les adversaires changent : la gêne du
     porteur (au contact, il la sent), les coéquipiers et le gardien restent réels. `one_touch` : le receveur juge ses
     passes sans rotation comme jouées de première (précision du geste, ticket v2-collectif/31a). `build_up` : porteur
-    dans sa zone de construction, relances longues en l'air envisagées en plus (ticket v2-collectif/15a)."""
+    dans sa zone de construction, relances longues en l'air envisagées en plus (ticket v2-collectif/15a). `pressed` :
+    construction sous pressing, le porteur peut y lire un troisième homme (ticket v2-collectif/15b1)."""
     opponents = [p for p in players if p.team != holder.team]
     mates = [p for p in players if p.team == holder.team and p.name != holder.name]
     # Hors-jeu (ticket v2-collectif/23, deuxième passe du 28/10/2026) : le porteur ne sert pas un coéquipier qu'il
@@ -352,6 +387,8 @@ def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2
     # suite du receveur (ticket 13) : meilleure passe suivante vers un coéquipier que le porteur voit lui-même ; le
     # passeur n'en fait pas partie (pas d'aller-retour) ; pas de suite en contre-attaque (on joue vite vers l'avant)
     share = 0.0 if mode == CONTRE_ATTAQUE else _FOLLOW_UP_SHARE
+    # troisième homme (ticket 15b1) : lu ou non à cette décision, un tirage, seulement s'il y a une suite à valoriser
+    third_man = pressed and share > 0.0 and DECISION.random() < reads_third_man_probability(holder)
     # talonnade (ticket 07e) : il y pense ou non à cette décision (Flair), un tirage s'il a un coéquipier à portée
     backheel_ok = None
     for mate in teammates:
@@ -363,11 +400,12 @@ def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2
         for heel in (False, True) if backheel and backheel_ok else (False,):
             first = one_touch and (heel or turn == 0.0)  # de première : seulement sans rotation (ticket 31a)
             option = _pass_option(holder, mate, opponents, seen_full, team, mode, share, held, margin,
-                                  seen_line, gene, 0.0 if heel else turn, heel, first)
+                                  seen_line, gene, 0.0 if heel else turn, heel, first, third_man=third_man)
             if seen_opponents is not None:  # même passe, adversaires perçus (08d)
                 option = replace(option, seen_value=_pass_option(holder, mate, seen_opponents, seen_full, team, mode,
                                                                  share, held, margin, seen_line, gene,
-                                                                 0.0 if heel else turn, heel, first).value)
+                                                                 0.0 if heel else turn, heel, first,
+                                                                 third_man=third_man).value)
             options.append(option)
     if build_up and not one_touch:  # relance longue en l'air (ticket v2-collectif/15a)
         reach = max_pass_reach_m()
@@ -397,9 +435,11 @@ def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2
 def _pass_option(holder: PlayerState, mate: PlayerState, opponents: list[PlayerState],
                  seen_full: list[PlayerState], team: str, mode: str | None, share: float, held: str | None,
                  margin: float, seen_line: float, gene: float, turn: float, backheel: bool,
-                 one_touch: bool = False, lofted: bool = False) -> Action:
+                 one_touch: bool = False, lofted: bool = False, third_man: bool = False) -> Action:
     """Valeur d'une passe vers `mate` (tickets 13, 14, 33), après `turn` secondes de rotation (07e), en talonnade
-    ou non, jouée de première ou non (31a), au sol ou en relance longue en l'air (15a)."""
+    ou non, jouée de première ou non (31a), au sol ou en relance longue en l'air (15a). `third_man` : le porteur lit
+    le pressing (ticket 15b1) ; la suite vers un coéquipier derrière la première ligne, quand `mate` est devant elle
+    ou sur elle, est majorée de `THIRD_MAN_BONUS`."""
     # le ballon arrive (v2-socle/04) ; en l'air, rien ne la coupe en vol et la retombée se dispute (ticket 15a)
     success = pass_success_probability(holder, mate, opponents, lofted=True) * LONG_BALL_WON if lofted \
         else pass_success_probability(holder, mate, opponents, backheel, one_touch)
@@ -408,7 +448,14 @@ def _pass_option(holder: PlayerState, mate: PlayerState, opponents: list[PlayerS
     now = danger(mate.position, team)
     future, follow = now, None
     if share:
-        best_next, nxt = max(((pass_success_probability(mate, n, opponents) * danger(n.position, team), n.name)
+        line = first_pressing_line(team, opponents) if third_man else None
+        if line is not None and _from_own_goal(team, mate.position.x) > line:
+            line = None  # le receveur est déjà derrière la ligne : pas de troisième homme
+
+        def broken(n: PlayerState) -> float:  # suite qui casse la première ligne (ticket 15b1)
+            return 1.0 + THIRD_MAN_BONUS if line is not None and _from_own_goal(team, n.position.x) > line else 1.0
+        best_next, nxt = max(((pass_success_probability(mate, n, opponents) * danger(n.position, team) * broken(n),
+                               n.name)
                               for n in seen_full if n is not mate
                               and not is_clearly_offside(team, n.position, mate.position, opponents, margin,
                                                          seen_line)),
@@ -565,7 +612,7 @@ def choose_action(holder: PlayerState, players: list[PlayerState], goal: Vec2, k
                   mode: str | None = None, planned: str | None = None,
                   felt: dict[int, float] | None = None, set_piece: bool = False,
                   seen_opponents: list[PlayerState] | None = None, one_touch: bool = False,
-                  build_up: bool = False) -> Action:
+                  build_up: bool = False, pressed: bool = False) -> Action:
     """Prend l'option qu'il CROIT la meilleure (ticket 33) : valeur réelle brouillée par sa perception (Decisions,
     Composure sous pression), conduites jugées avec son Anticipation. Deux options proches font hésiter même un très
     bon joueur ; un joueur faible se trompe surtout entre options voisines. `planned` : ticket v2-collectif/14.
@@ -575,8 +622,9 @@ def choose_action(holder: PlayerState, players: list[PlayerState], goal: Vec2, k
     les tirs, les passes et les conduites sont jugés sur leurs positions perçues, la valeur RÉELLE (`best`, `gap`)
     reste calculée sur les vraies positions, et l'exécution aussi. `None` : il perçoit les vraies positions.
     `one_touch` : receveur qui pense à jouer de première (ticket v2-collectif/31a). `build_up` : zone de construction,
-    relances longues envisagées (ticket v2-collectif/15a)."""
-    options = evaluate_options(holder, players, goal, keeper, mode, planned, seen_opponents, one_touch, build_up)
+    relances longues envisagées (ticket v2-collectif/15a). `pressed` : sous pressing, troisième homme (15b1)."""
+    options = evaluate_options(holder, players, goal, keeper, mode, planned, seen_opponents, one_touch, build_up,
+                               pressed)
     if set_piece:
         options = [o for o in options if o.kind != "dribble"] or options
     best = options[0]

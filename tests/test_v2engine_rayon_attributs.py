@@ -65,12 +65,13 @@ SPECIALITES = {"Finishing", "Long Shots", "Penalty Taking", "Corners", "Free Kic
 _REST = "v2-attributs-contextes/08"
 TRANSITION = {
     "Work Rate": ("17/11/2026", "v2-attributs-contextes/03"),
-    "Decisions": ("17/11/2026", "v2-attributs-contextes/04a ; v2-collectif/15b"),
+    # Vision, Anticipation et Decisions : premier contexte « lecture du pressing » au ticket v2-collectif/15b1
+    "Decisions": ("17/11/2026", "v2-attributs-contextes/04a"),
     "Positioning": ("17/11/2026", "v2-attributs-contextes/04b"),
     "Flair": ("17/11/2026", "v2-attributs-contextes/05"),
     "Balance": ("17/11/2026", "v2-attributs-contextes/06"),
-    "Vision": ("17/11/2026", "v2-collectif/15b ; " + _REST),
-    "Anticipation": ("17/11/2026", "v2-collectif/15b ; " + _REST),
+    "Vision": ("17/11/2026", _REST),
+    "Anticipation": ("17/11/2026", _REST),
     "Reflexes": ("17/11/2026", "v2-attributs-restants/03b"),
     "One on Ones": ("17/11/2026", "v2-attributs-restants/03b"),
     "Handling": ("17/11/2026", "v2-attributs-restants/03b"),

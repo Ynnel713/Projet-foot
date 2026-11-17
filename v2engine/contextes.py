@@ -59,8 +59,15 @@ PORTEUR_TETE_HAUTE = Contexte("porteur tête haute", PERCEPTION, (("Dribbling", 
 IDEE_DE_PREMIERE = Contexte("idée de jouer de première", DECISION, (("First Touch", 0.5), ("Technique", 0.5)),
                             "v2-collectif/31a", "decision.one_touch_idea_probability")
 
+# Lecture du pressing (ticket v2-collectif/15b1) : en construction sous pressing, le porteur lit la structure du
+# pressing et repère un coéquipier libre derrière la première ligne, accessible par une remise (troisième homme)
+# (`decision.reads_third_man_probability`). Poids validés le 17/11/2026 ; source : non trouvé.
+LECTURE_DU_PRESSING = Contexte("lecture du pressing", PERCEPTION,
+                               (("Vision", 0.5), ("Anticipation", 0.3), ("Decisions", 0.2)), "v2-collectif/15b1",
+                               "decision.reads_third_man_probability")
+
 # Lecture seule : un contexte ne s'ajoute qu'ici, par une déclaration revue (réserve A1 de l'expert, ticket 01).
-CONTEXTES = MappingProxyType({c.nom: c for c in (PORTEUR_TETE_HAUTE, IDEE_DE_PREMIERE)})
+CONTEXTES = MappingProxyType({c.nom: c for c in (PORTEUR_TETE_HAUTE, IDEE_DE_PREMIERE, LECTURE_DU_PRESSING)})
 
 
 def contextual_rating(player, contexte: Contexte | str) -> float:
