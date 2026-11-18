@@ -455,6 +455,14 @@ convertis en `NN-slug.md` après validation.
   seconde ≥ mesure d'avant ; contraste ≥ 4,5:1 sur tout texte utile ; `npm run build` et `npm run lint` sans régression.
 - **Dépendances** : tous. **Risques** : accumulation de petits écarts : recette à faire avec vos yeux (points à vérifier à l'écran).
 
+### EM-21 — Ballon dessiné et filet animé sur un but (V) — 135 min (moyenne) → 21a (75 min) et 21b (60 min) — ajouté le 18/11/2026
+- **Statut** : à faire, créé à la demande du propriétaire le 18/11/2026 ; constantes à proposer avant le code.
+- **Résultat** : 21a, ballon dessiné (panneaux, reflet) dont le motif défile selon la distance parcourue, figé au-delà
+  d'une vitesse (crénelage), traînée courte au-delà d'un seuil de vitesse, jamais à travers une coupure ; 21b, filet du
+  but de la vue qui ondule au but lu dans la trace, sur le temps de match, 2 s au plus (décoratif ; le creusement au point
+  d'entrée selon la vitesse reste au ticket `v2-mise-en-scene/05`). Rendu seulement, aucune donnée d'API nouvelle.
+- **Dépendances** : EM-07 (livré) ; indépendant d'EM-20. Détail : `issues/21-ballon-dessine-et-filet-anime.md`.
+
 ### EM-19 — Sélecteur « Match complet / Temps forts » (E/V) — 90 min (moyenne) — ajouté le 07/11/2026
 - Demande du propriétaire. Bouton segmenté du HUD ; le lecteur et les modes eux-mêmes sont ceux du chantier
   `v2-mise-en-scene` (tickets `01`, `02`, `03`). « Temps forts » = Résumé (recommandé) ou Moments clés, à confirmer ; la
@@ -499,6 +507,7 @@ QC), commit des seuls hunks du ticket, puis ticket suivant.
 | 6 | EM-05 terrain | héros de l'écran | 120 min |
 | 7 | EM-07 marqueurs joueurs | lisibilité de l'action | 120 min |
 | 7b | EM-20 lisibilité hauteur et inclinaison (proposé, feu vert du propriétaire requis) | après EM-05 et EM-07 : s'appuie sur leurs couleurs et leur échelle | 120 min |
+| 7c | EM-21a ballon dessiné, 21b filet animé (ajoutés le 18/11/2026, demande du propriétaire) | après EM-07 ; indépendants d'EM-20 ; place à confirmer par le propriétaire | 75 + 60 min |
 | 8 | EM-08 HUD identité | repère immédiat du score | 120 min |
 | 9 | EM-10a, 10b compositions | accès aux équipes | 90 + 75 min |
 | 10 | EM-11a, 11b momentum | élément fort de l'expérience | 90 + 60 min |

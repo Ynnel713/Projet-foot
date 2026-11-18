@@ -41,3 +41,7 @@ Temps machine, non compté : aucun ; vérification dans le navigateur.
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+
+## Comments
+
+- 18/11/2026 : le ticket `v2-ecran-match/21` (ballon dessiné et filet animé) donne dès maintenant une ondulation décorative du filet, déclenchée par le but lu dans la trace. Ce ticket-ci la remplacera par le creusement au point d'entrée réel du ballon, selon sa vitesse.
