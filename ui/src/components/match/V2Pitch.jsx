@@ -38,9 +38,14 @@ const DEPTH_SHADE = 0.06; // côté lointain (y = 0) plus sombre que le côté p
 // 0,45 px sur un téléphone en paysage.
 const LINE = { fill: "none", stroke: "rgba(255,255,255,0.85)", strokeWidth: 1.5, vectorEffect: "non-scaling-stroke" };
 
-// Bancs : place d'avant EM-05 gardée telle quelle (leur dessin et leur zone sont le ticket EM-06).
-const BENCH_Y = W + 11; // axe des bancs (m)
-const FLOOR_BOTTOM = W + 15; // bas de la zone des bancs, bas du dessin (m)
+// Bancs (ticket v2-ecran-match/06, constantes validées par le propriétaire le 18/11/2026) : zone de 4,5 m sous la pelouse
+// (12 m de sol avant), bancs au milieu de cette zone, contour à la couleur de l'équipe.
+const BENCH_ZONE = 4.5; // zone des bancs sous la pelouse (m)
+const BENCH_Y = W + MARGIN + BENCH_ZONE / 2; // axe des bancs (m ; W + 11 avant EM-06)
+const FLOOR_BOTTOM = W + MARGIN + BENCH_ZONE; // bas du dessin (m ; W + 15 avant EM-06)
+// Remplaçants qui s'échauffent : sur l'herbe, entre la ligne de touche et le bas de la pelouse (W + 3 m).
+const WARM_LANES = [0.7, 1.4, 2.1]; // couloirs au-delà de la ligne de touche (m ; 1,5 / 2,9 / 4,3 avant EM-06)
+const SUB_R = 0.75; // rond d'un remplaçant, assis ou à l'échauffement (m ; 0,9 à l'échauffement avant EM-06)
 const BENCH_GAP = 4; // des bancs à la ligne médiane (m)
 const SEAT = 1.6; // largeur d'un siège (m)
 const WARMING_UP = 3; // remplaçants de champ qui s'échauffent en 2e période
@@ -81,7 +86,7 @@ const Bench = memo(function Bench({ lineup, side, color, seconds, warmUpFromS })
   return (
     <g>
       <g transform={GROUND_MATRIX}>
-        <rect x={x0} y={BENCH_Y - 1.6} width={length} height={3.2} rx={0.6} fill="rgba(20,24,30,0.85)" stroke="rgba(255,255,255,0.5)" strokeWidth={0.12} />
+        <rect x={x0} y={BENCH_Y - 1.6} width={length} height={3.2} rx={0.6} fill="rgba(20,24,30,0.85)" style={{ stroke: color }} strokeWidth={0.12} />
       </g>
       <g>
         <rect x={seat.x - 0.8} y={seat.y - 0.8} width={1.6} height={1.6} rx={0.3} fill="#222" stroke="white" strokeWidth={0.12} />
@@ -94,19 +99,19 @@ const Bench = memo(function Bench({ lineup, side, color, seconds, warmUpFromS })
         const c = project(seatX(i + 1), BENCH_Y);
         return (
           <g key={p.name}>
-            <circle cx={c.x} cy={c.y} r={0.75} style={{ fill: color }} opacity={0.85} stroke="rgba(0,0,0,0.4)" strokeWidth={0.08} />
+            <circle cx={c.x} cy={c.y} r={SUB_R} style={{ fill: color }} opacity={0.85} stroke="rgba(0,0,0,0.4)" strokeWidth={0.08} />
             <PlayerNumber x={c.x} y={c.y} value={p.number} team={side < 0 ? "home" : "away"} size={0.9} />
             <title>{`${p.number} ${p.name} (${p.poste})`}</title>
           </g>
         );
       })}
       {warmers.map((p, i) => {
-        // va-et-vient sur 12 m, chacun décalé, entre la ligne de touche et la piste
+        // va-et-vient sur 12 m, chacun décalé, sur l'herbe entre la ligne de touche et le bas de la pelouse
         const phase = seconds * 0.35 + i * 2.1;
-        const c = project(L / 2 + side * (24 + 6 + 6 * Math.sin(phase)), W + 1.5 + i * 1.4);
+        const c = project(L / 2 + side * (24 + 6 + 6 * Math.sin(phase)), W + WARM_LANES[i]);
         return (
           <g key={p.name}>
-            <circle cx={c.x} cy={c.y} r={0.9} style={{ fill: color }} opacity={0.75} stroke="rgba(0,0,0,0.4)" strokeWidth={0.08} />
+            <circle cx={c.x} cy={c.y} r={SUB_R} style={{ fill: color }} opacity={0.75} stroke="rgba(0,0,0,0.4)" strokeWidth={0.08} />
             <PlayerNumber x={c.x} y={c.y} value={p.number} team={side < 0 ? "home" : "away"} size={1} />
             <title>{`${p.number} ${p.name} s'échauffe`}</title>
           </g>
