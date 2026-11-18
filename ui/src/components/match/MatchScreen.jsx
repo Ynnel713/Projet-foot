@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { ArrowLeft, Pause, Play } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
 import { SPEED_OPTIONS } from "../../hooks/useMatchPlayback";
 import IntentionPanel from "./IntentionPanel";
 import LineupPanel from "./LineupPanel";
@@ -10,6 +10,60 @@ import { clock, halfStart, interpolatedTick, rotated, situationAt } from "./trac
 
 // Écran de lecture de la V2 (ticket v2-ecran-match/01 : déplacé depuis routes/V2Match.jsx). Le score n'est révélé
 // qu'au fil des buts horodatés dans la trace, jamais avant que la lecture ne les atteigne (US-29).
+//
+// Mise en page en trois zones (ticket v2-ecran-match/04, constantes validées par le propriétaire le 18/11/2026) :
+// HUD en haut, centre (compositions + terrain), zone basse (momentum + intention, 110 px au plus, frise de 72 px ;
+// sous 500 px de haut, repliée sur la ligne d'intention, sans la frise : décisions du 18/11/2026 ; un panneau d'intention
+// plus haut que la zone y défile, la page jamais, en attendant son tiroir d'EM-15). Compositions en
+// colonnes de 220 px dès 1280 px de large, 200 px de 960 à 1279 px ; sous 960 px, tiroirs de 260 px ouverts par une
+// languette de 28 px, fermés par défaut, terrain pleine largeur. Le contenu des zones est inchangé (cartes : EM-10).
+const DRAWER_PX = 260;
+const TAB_PX = 28;
+
+// Composition d'un côté : colonne à partir de 960 px, tiroir en dessous (les deux sont dans le DOM, un seul s'affiche).
+function LineupSide({ side, lineup, color }) {
+  const [open, setOpen] = useState(false);
+  if (!lineup) return null;
+  const left = side === "home";
+  const label = `Composition ${left ? "domicile" : "extérieur"} : ${lineup.club}`;
+  const Icon = left === open ? ChevronLeft : ChevronRight;
+  return (
+    <>
+      <aside
+        data-zone={`composition-${side}`}
+        aria-label={label}
+        className={`hidden min-[960px]:block min-h-0 overflow-y-auto bg-surface p-2 ${left ? "border-r" : "border-l"} border-line`}
+      >
+        <LineupPanel lineup={lineup} color={color} />
+      </aside>
+      <div
+        className={`min-[960px]:hidden absolute inset-y-0 z-20 flex items-center transition-transform duration-200 ease-out motion-reduce:transition-none ${left ? "left-0" : "right-0 flex-row-reverse"}`}
+        style={{ transform: open ? "none" : `translateX(${left ? -DRAWER_PX : DRAWER_PX}px)` }}
+      >
+        <aside
+          data-zone={`tiroir-${side}`}
+          aria-label={label}
+          aria-hidden={!open}
+          inert={!open}
+          className={`h-full overflow-y-auto bg-surface p-2 ${left ? "border-r" : "border-l"} border-line`}
+          style={{ width: DRAWER_PX }}
+        >
+          <LineupPanel lineup={lineup} color={color} />
+        </aside>
+        <button
+          data-zone={`languette-${side}`}
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          aria-label={`${open ? "Fermer" : "Ouvrir"} la composition ${left ? "domicile" : "extérieur"}`}
+          className={`h-16 flex items-center justify-center bg-surface border-line text-gray-300 ${left ? "rounded-r-md border-y border-r" : "rounded-l-md border-y border-l"}`}
+          style={{ width: TAB_PX, boxShadow: `inset ${left ? 3 : -3}px 0 0 ${color}` }}
+        >
+          <Icon size={16} />
+        </button>
+      </div>
+    </>
+  );
+}
 export default function MatchScreen({ playback, lineups, selected, onSelect, onBack }) {
   const { trace, seconds, seen, playing, setPlaying, speed, setSpeed, replaying, halfBanner, skipReplay } = playback;
   const numbers = useMemo(
@@ -42,8 +96,8 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
     .at(-1);
 
   return (
-    <div className="flex flex-col h-full p-2.5 gap-2" style={colorVars}>
-      <div className="flex items-center justify-between gap-2">
+    <div className="grid h-full grid-rows-[auto_minmax(0,1fr)_auto]" style={colorVars}>
+      <div data-zone="hud" className="flex items-center justify-between gap-2 px-2.5 py-1.5 bg-surface border-b border-line">
         <button onClick={onBack} className="flex items-center gap-1 min-h-11 text-data text-gray-400 shrink-0">
           <ArrowLeft size={14} /> Retour
         </button>
@@ -95,10 +149,12 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 flex items-center justify-center gap-3">
-        <LineupPanel lineup={lineups?.home} color="var(--team-home-ui)" />
-        <div className="relative flex flex-col items-center gap-1 w-full max-w-4xl">
-          <Momentum trace={trace} played={Math.ceil(shownS / 60)} goalsShown={trace.goals.filter((g) => g.minute <= shownS / 60).length} />
+      <div
+        data-zone="centre"
+        className="relative min-h-0 grid grid-cols-[minmax(0,1fr)] min-[960px]:grid-cols-[200px_minmax(0,1fr)_200px] min-[1280px]:grid-cols-[220px_minmax(0,1fr)_220px]"
+      >
+        <LineupSide side="home" lineup={lineups?.home} color="var(--team-home-ui)" />
+        <div data-zone="terrain" className="relative min-h-0 min-w-0 flex items-center justify-center p-2">
           <V2Pitch
             tick={view}
             seconds={seconds}
@@ -107,9 +163,10 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
             lineups={lineups}
             selected={selected}
             onSelect={onSelect}
+            className="w-full h-full"
           />
           {halfBanner && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg pointer-events-none">
+            <div className="absolute inset-0 flex items-center justify-center bg-black/60 pointer-events-none">
               <div className="text-center">
                 <div className="text-3xl font-extrabold text-white tracking-widest">MI-TEMPS</div>
                 <div className="text-lg text-gray-200 tabular-nums">
@@ -119,16 +176,20 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
             </div>
           )}
         </div>
-        <LineupPanel lineup={lineups?.away} color="var(--team-away-ui)" />
+        <LineupSide side="away" lineup={lineups?.away} color="var(--team-away-ui)" />
       </div>
 
-      <IntentionPanel trace={trace} tick={selected ? tick : null} selected={selected} />
-
-      {finished && (
-        <p className="text-center text-sm text-gold font-semibold">
-          Match terminé : {trace.home} {homeGoals} - {awayGoals} {trace.away}
-        </p>
-      )}
+      <div data-zone="bas" className="flex flex-col gap-1 max-h-[110px] min-h-0 overflow-y-auto px-2.5 py-1.5 bg-surface border-t border-line">
+        <div className="min-h-0 flex-1 flex justify-center [@media(max-height:499.98px)]:hidden">
+          <Momentum trace={trace} played={Math.ceil(shownS / 60)} goalsShown={trace.goals.filter((g) => g.minute <= shownS / 60).length} />
+        </div>
+        <IntentionPanel trace={trace} tick={selected ? tick : null} selected={selected} />
+        {finished && (
+          <p className="text-center text-sm text-gold font-semibold">
+            Match terminé : {trace.home} {homeGoals} - {awayGoals} {trace.away}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

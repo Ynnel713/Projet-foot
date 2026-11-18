@@ -202,7 +202,9 @@ const PitchGround = memo(function PitchGround() {
   );
 });
 
-export default function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, selected, onSelect }) {
+// `className` : taille de l'élément (l'écran de match lui donne toute sa case, ticket v2-ecran-match/04) ; le dessin garde
+// ses proportions et se centre dans la boîte (preserveAspectRatio par défaut).
+export default function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, selected, onSelect, className = "w-full max-w-4xl rounded-lg" }) {
   const pad = MARGIN + TRACK;
   const height = (W + 2 * pad + BENCH_ZONE) * COS;
   // du fond (y petit) vers l'avant : le joueur le plus proche de la caméra recouvre le plus lointain
@@ -229,7 +231,7 @@ export default function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, 
   return (
     <svg
       viewBox={`${-pad} ${-pad * COS} ${L + 2 * pad} ${height}`}
-      className="w-full max-w-4xl rounded-lg"
+      className={className}
       style={{ aspectRatio: `${L + 2 * pad} / ${height}` }}
     >
       <PitchGround />

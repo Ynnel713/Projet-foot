@@ -1,0 +1,65 @@
+{
+ "844x390": {
+  "pitch": [
+   824,
+   508
+  ],
+  "aire": 418278,
+  "header": true,
+  "docScroll": false,
+  "scrollers": [
+   "main:149"
+  ],
+  "cols": []
+ },
+ "1024x768": {
+  "pitch": [
+   564,
+   347
+  ],
+  "aire": 195962,
+  "header": true,
+  "docScroll": false,
+  "scrollers": [],
+  "cols": []
+ },
+ "1280x720": {
+  "pitch": [
+   820,
+   505
+  ],
+  "aire": 414220,
+  "header": true,
+  "docScroll": false,
+  "scrollers": [],
+  "cols": []
+ },
+ "1366x768": {
+  "pitch": [
+   896,
+   552
+  ],
+  "aire": 494576,
+  "header": true,
+  "docScroll": false,
+  "scrollers": [],
+  "cols": []
+ },
+ "1920x1080": {
+  "pitch": [
+   896,
+   552
+  ],
+  "aire": 494576,
+  "header": true,
+  "docScroll": false,
+  "scrollers": [],
+  "cols": []
+ },
+ "route /": {
+  "header": true
+ },
+ "route /v2": {
+  "header": true
+ }
+}

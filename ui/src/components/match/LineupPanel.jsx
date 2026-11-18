@@ -1,6 +1,7 @@
 import { memo } from "react";
 
-// Composition d'une équipe, à côté du terrain : numéro, poste, nom ; banc et entraîneur dessous.
+// Composition d'une équipe, à côté du terrain : numéro, poste, nom ; banc et entraîneur dessous. La place (colonne ou
+// tiroir) est donnée par l'écran (ticket v2-ecran-match/04) : le panneau occupe toute la largeur qu'on lui laisse.
 function LineupPanel({ lineup, color }) {
   if (!lineup) return null;
   const row = (p) => (
@@ -13,7 +14,7 @@ function LineupPanel({ lineup, color }) {
     </li>
   );
   return (
-    <div className="hidden lg:flex flex-col gap-1 w-52 shrink-0 text-caption self-stretch overflow-y-auto">
+    <div className="flex flex-col gap-1 w-full text-caption">
       <div className="font-bold text-sm truncate" style={{ color }}>
         {lineup.club}
       </div>

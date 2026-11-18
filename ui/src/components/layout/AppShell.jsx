@@ -7,8 +7,11 @@ export default function AppShell({ children }) {
   // affiche déjà son propre mini-en-tête (retour + score) -- l'en-tête global
   // n'y apporte rien. En V1, `/pitch` est la feuille de match, dans l'espace de
   // la compétition : l'en-tête reste (refonte UI, lot 4).
-  const onPitch = useLocation().pathname.endsWith("/pitch");
-  const hideHeader = LIVE_AND_ANIMATION_ENABLED && onPitch;
+  // L'écran de match V2 (`/v2`, réglage compris) a son propre HUD et son bouton Retour : il prend toute la hauteur
+  // (ticket v2-ecran-match/04, décision du propriétaire du 18/11/2026).
+  const { pathname } = useLocation();
+  const onPitch = pathname.endsWith("/pitch");
+  const hideHeader = (LIVE_AND_ANIMATION_ENABLED && onPitch) || pathname === "/v2";
 
   return (
     // h-dvh/w-dvw (dynamic viewport) plutôt que h-screen/100vh : évite le

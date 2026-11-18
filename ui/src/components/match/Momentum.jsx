@@ -36,7 +36,9 @@ function Momentum({ trace, played, goalsShown }) {
   const goals = trace.goals.slice(0, goalsShown);
   const width = values.length * X;
   return (
-    <svg viewBox={`-2 -6 ${width + 4} ${2 * H + 12}`} className="w-full" style={{ maxHeight: 110 }}>
+    // h-full : la frise se contracte avec la zone basse de l'écran ; 72 px au plus (ticket v2-ecran-match/04, décision du
+    // propriétaire du 18/11/2026 : zone basse compacte, le terrain ne doit rien perdre à 1280 et 1366 px)
+    <svg viewBox={`-2 -6 ${width + 4} ${2 * H + 12}`} className="w-full h-full" style={{ maxHeight: 72 }}>
       <title>Match momentum</title>
       <rect x={0} y={0} width={width} height={H} style={{ fill: "var(--team-home-ui)" }} fillOpacity={0.12} />
       <rect x={0} y={H} width={width} height={H} style={{ fill: "var(--team-away-ui)" }} fillOpacity={0.12} />
