@@ -6,7 +6,8 @@ import LineupPanel from "./LineupPanel";
 import Momentum from "./Momentum";
 import V2Pitch from "./V2Pitch";
 import { teamColors, teamColorVars } from "../../utils/teamColors";
-import { clock, halfStart, interpolatedTick, rotated, situationAt } from "./trace";
+import { L, clock, halfStart, interpolatedTick, rotated, situationAt } from "./trace";
+import { netWave } from "../../utils/v2NetWave";
 import { ballMotion, ballSpeed, trailLength } from "../../utils/v2BallLook";
 
 // Écran de lecture de la V2 (ticket v2-ecran-match/01 : déplacé depuis routes/V2Match.jsx). Le score n'est révélé
@@ -65,7 +66,11 @@ function LineupSide({ side, lineup, color }) {
     </>
   );
 }
+// Préférence « moins d'animations » du système, lue une fois (ticket v2-ecran-match/21b : pas d'ondulation du filet).
+const reducedMotion = () => typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
 export default function MatchScreen({ playback, lineups, selected, onSelect, onBack }) {
+  const [reduceMotion] = useState(reducedMotion);
   const { trace, seconds, seen, playing, setPlaying, speed, setSpeed, replaying, halfBanner, skipReplay } = playback;
   const numbers = useMemo(
     () =>
@@ -92,6 +97,10 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
     playbackSpeed: speed,
     trail: trailLength(motion),
   };
+  // filet qui ondule sur un but (ticket v2-ecran-match/21b) : temps de match lu, filet de la vue. Période décidée comme
+  // la rotation de la scène (`clock`) : début de 2e période donné par le moteur, sans repli sur 45 (en direct, le champ
+  // reste vide jusqu'au coup d'envoi de la 2e période ; réserve A1 de l'expert, 18/11/2026)
+  const wave = reduceMotion ? null : netWave(trace.goals, tick.minute, trace.second_half_start_minute ?? Infinity, L);
   // score : jusqu'à l'instant le plus avancé déjà vu, pour qu'il ne recule pas pendant un ralenti
   const shownS = Math.max(seen, seconds);
   const revealedGoals = trace.goals.filter((g) => g.minute * 60 <= shownS);
@@ -175,6 +184,7 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
             selected={selected}
             onSelect={onSelect}
             ballLook={ballLook}
+            wave={wave}
             className="w-full h-full"
           />
           {halfBanner && (

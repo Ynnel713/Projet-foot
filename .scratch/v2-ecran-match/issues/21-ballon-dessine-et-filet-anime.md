@@ -110,3 +110,4 @@ enveloppe amortie, sans bibliothèque d'animation. Temps machine hors total : su
   corrigé (0,1 s, et non 0,5 s). A6 (facultatif) : fichier réel cité (`V2Pitch.jsx`), mémo de `GoalFrame` préservé,
   compte des tickets du chantier corrigé dans `docs/PLAN_V2.md`. Découpage en 21a et 21b dès la création, sur sa
   recommandation.
+- 18/11/2026 : 21a livré (`6de4140`), 21b livré (ce commit) ; ticket chapeau soldé.

@@ -4,6 +4,7 @@ import { COS, GROUND_MATRIX, project } from "../../utils/v2Projection";
 import { PITCH_COLORS } from "../../utils/teamColors";
 import PlayerMarker, { PLAYER_R, PlayerNumber, ReliefDefs } from "./PlayerMarker";
 import BallMarker from "./BallMarker";
+import { WAVE_AMPLITUDE_M, WAVE_CORNER_M } from "../../utils/v2NetWave";
 
 // Terrain simple, réutilise seulement les COTES réelles de la V1 (pitchGeometry.json, dérivé de
 // ligue1sim.pitch_geometry) -- pas le composant PitchField.jsx lui-même, dont l'orientation est
@@ -136,9 +137,13 @@ const BALL_AIR_Z = 1; // hauteur fixe d'un ballon aérien, jusqu'au ticket 02b (
 // La caméra ne tourne qu'autour de l'axe x : le plan du cadre (x constant) est vu par la tranche, poteaux et barre
 // tombent sur la ligne de but. Ce qui rend la hauteur lisible, c'est la cage : toit du filet à 2,44 m et filets
 // latéraux, qui s'étendent en x sur la profondeur du filet (rouverture du 09/11/2026).
-const GoalFrame = memo(function GoalFrame({ x, out }) {
+// `mid`, `corner` : recul du fond du filet (m) au milieu et aux coins, pendant l'ondulation d'un but (ticket
+// v2-ecran-match/21b) ; 0 le reste du temps (valeurs simples : la mémoïsation tient tant que le filet est immobile).
+// Le toit devient un pentagone dont le milieu du fond recule davantage ; filets latéraux et toit suivent le fond.
+const GoalFrame = memo(function GoalFrame({ x, out, mid = 0, corner = 0 }) {
   const ys = [W / 2 - GOAL_WIDTH / 2, W / 2 + GOAL_WIDTH / 2];
-  const back = x + out * NET;
+  const back = x + out * (NET + corner);
+  const backMid = x + out * (NET + mid);
   const pts = (...p) => p.map(([px, py, pz]) => project(px, py, pz)).map((q) => `${q.x},${q.y}`).join(" ");
   const net = { fill: "url(#v2-net)", stroke: "rgba(255,255,255,0.7)", strokeWidth: 0.1, strokeLinejoin: "round" };
   const [foot0, foot1] = ys.map((y) => project(x, y));
@@ -148,7 +153,7 @@ const GoalFrame = memo(function GoalFrame({ x, out }) {
     <g style={{ pointerEvents: "none" }}>
       {/* filet latéral du fond, toit, filet latéral de devant (vers la caméra), du plus lointain au plus proche */}
       <polygon points={pts([x, ys[0], 0], [back, ys[0], 0], [back, ys[0], CROSSBAR], [x, ys[0], CROSSBAR])} {...net} />
-      <polygon points={pts([x, ys[0], CROSSBAR], [back, ys[0], CROSSBAR], [back, ys[1], CROSSBAR], [x, ys[1], CROSSBAR])} {...net} />
+      <polygon points={pts([x, ys[0], CROSSBAR], [back, ys[0], CROSSBAR], [backMid, W / 2, CROSSBAR], [back, ys[1], CROSSBAR], [x, ys[1], CROSSBAR])} {...net} />
       <polygon points={pts([x, ys[1], 0], [back, ys[1], 0], [back, ys[1], CROSSBAR], [x, ys[1], CROSSBAR])} {...net} />
       <line x1={foot0.x} y1={foot0.y} x2={top0.x} y2={top0.y} {...stroke} />
       <line x1={foot1.x} y1={foot1.y} x2={top1.x} y2={top1.y} {...stroke} />
@@ -156,6 +161,9 @@ const GoalFrame = memo(function GoalFrame({ x, out }) {
     </g>
   );
 });
+
+// Recul du fond du filet en `x` pendant l'ondulation (0 pour l'autre filet et hors ondulation).
+const bulge = (wave, x) => (wave && wave.x === x ? { mid: WAVE_AMPLITUDE_M * wave.k, corner: WAVE_CORNER_M * wave.k } : {});
 
 // Filet des buts, pelouse et lignes : immobiles, dessinés une seule fois.
 const PitchGround = memo(function PitchGround() {
@@ -210,7 +218,9 @@ const PitchGround = memo(function PitchGround() {
 // ses proportions et se centre dans la boîte (preserveAspectRatio par défaut).
 // `ballLook` : aspect du ballon (ticket v2-ecran-match/21a) : `dir` (direction du déplacement dans le repère de la vue),
 // `speed` (m/s) et `playbackSpeed` (figement du motif), `trail` (longueur de la traînée, m) ; absent = motif figé, sans traînée.
-export default function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, selected, onSelect, ballLook = null, className = "w-full max-w-4xl rounded-lg" }) {
+// `wave` : ondulation du filet sur un but (ticket v2-ecran-match/21b, `utils/v2NetWave.js`) : `{ x, k }`, x = ligne de
+// but du filet concerné dans le repère de la vue ; null le reste du temps.
+export default function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, selected, onSelect, ballLook = null, wave = null, className = "w-full max-w-4xl rounded-lg" }) {
   const height = (FLOOR_BOTTOM + MARGIN) * COS;
   // du fond (y petit) vers l'avant : le joueur le plus proche de la caméra recouvre le plus lointain
   const players = [...tick.players]
@@ -273,8 +283,8 @@ export default function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, 
       ))}
 
       {/* 4. buts en hauteur */}
-      <GoalFrame x={0} out={-1} />
-      <GoalFrame x={L} out={1} />
+      <GoalFrame x={0} out={-1} {...bulge(wave, 0)} />
+      <GoalFrame x={L} out={1} {...bulge(wave, L)} />
 
       {/* 5. ballon : plus gros et remonté s'il est aérien (hauteur fixe d'un mètre, provisoire) ; atténué s'il est mort ;
           motif qui roule et traînée de vitesse (ticket v2-ecran-match/21a) */}

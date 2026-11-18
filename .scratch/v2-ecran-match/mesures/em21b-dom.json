@@ -1,0 +1,56 @@
+{
+ "but-1re-periode": {
+  "cote": "droite",
+  "justeApres": [
+   {
+    "ligne": 0,
+    "fondMilieu": -2,
+    "fondCoin": -2
+   },
+   {
+    "ligne": 105,
+    "fondMilieu": 107.586,
+    "fondCoin": 107.22
+   }
+  ],
+  "auRepos": [
+   {
+    "ligne": 0,
+    "fondMilieu": -2,
+    "fondCoin": -2
+   },
+   {
+    "ligne": 105,
+    "fondMilieu": 107,
+    "fondCoin": 107
+   }
+  ]
+ },
+ "but-2e-periode": {
+  "cote": "gauche",
+  "justeApres": [
+   {
+    "ligne": 0,
+    "fondMilieu": -2.586,
+    "fondCoin": -2.22
+   },
+   {
+    "ligne": 105,
+    "fondMilieu": 107,
+    "fondCoin": 107
+   }
+  ],
+  "auRepos": [
+   {
+    "ligne": 0,
+    "fondMilieu": -2,
+    "fondCoin": -2
+   },
+   {
+    "ligne": 105,
+    "fondMilieu": 107,
+    "fondCoin": 107
+   }
+  ]
+ }
+}
