@@ -14,7 +14,7 @@
 
 **Bloque :** 10b, 10j.
 
-**Status:** implémenté (18/11/2026) — en attente de /valider-ticket-simulafoot
+**Status:** livré (18/11/2026), validé expert + QC
 
 ## Estimation
 
@@ -90,3 +90,5 @@ a dépassé (va-et-vient découvert à la mesure, corrigé et remesuré). Durée
 attentes machine. Temps machine hors total : 50 matchs « avant » (deux lots, dont un relancé après interruption),
 50 matchs « après » (relancés après le correctif), deux mesures de va-et-vient de 30 min, deux paires d'empreintes,
 suite complète (18 min 38).
+
+**18/11/2026, statut corrigé.** Clôture journalisée `VALIDÉ` le 18/11/2026 (sous-étape `v2-realisme/10a/cloture`), code commité en `ef46bb4` ; la ligne de statut était restée « implémenté » (mise à jour oubliée après la clôture). Garde-fou : ticket `expert-dispositif/07`.

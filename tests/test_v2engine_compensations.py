@@ -11,6 +11,7 @@ from v2engine.anticipation import reaction_delay_s
 from v2engine.ball_state import BallState
 from v2engine.bloc import Bloc
 from v2engine.defense import COMPENSATION, COUVERTURE, PRESSEUR, DefensiveRoles, arrival_time_s
+from v2engine.flux import seed_streams
 from v2engine.geometry import Vec2
 from v2engine.movement import PlayerState, accel_tau_s, max_speed_mps, step
 from v2engine.situation import DEFENSE_PLACEE
@@ -272,7 +273,11 @@ def test_the_compensator_holds_the_place_after_the_winger_arrives() -> None:
     # vérification V1 de l'expert (passage 1) : le latéral reste absent ; les joueurs sans rôle regagnent leur place
     kept = 0
     for seed in range(300):
+        # flux ressemés à chaque graine, comme au coup d'envoi d'un match : sans cela, le taux dépendait du nombre de
+        # tirages faits avant (tests précédents, autres sous-systèmes), à la limite du seuil (15 échecs sur 300 au 10a ;
+        # 20 après le 10b, pour un même comportement : 37 échecs sur 1 000 graines ressemées avant comme après)
         random.seed(seed)
+        seed_streams(seed)
         players, bloc, place, _ = _scene()
         holder = next(p for p in players if p.name == "H").position
         defense, arrived_at = DefensiveRoles(), None

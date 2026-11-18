@@ -12,7 +12,7 @@
 
 **Bloque :** 27c.
 
-**Status:** implémenté (14/11/2026) — en attente de /valider-ticket-simulafoot
+**Status:** livré (14/11/2026), validé expert + QC
 
 ## Estimation
 
@@ -50,3 +50,5 @@ Temps machine, non compté : calcul sur l'ensemble des matchs du jeu de données
 **Mesures :** `docs/INDICATEURS_V2.md`, section 39. Constats : la variante « équipe détectée » est biaisée par sa sélection (bloc resserré quand la caméra voit tout le monde : longueur 28,0 / 22,5 m contre 33,9 / 29,1 m en toutes positions, 31,9 m chez Metrica) : repère de forme pour le 27c = « toutes positions » ; vitesses SkillCorner (joueurs détectés, près du ballon) au-dessus de Metrica (2,0 % du temps au-dessus de 19,8 km/h) : repère de vitesse globale = Metrica, SkillCorner pour l'ordre entre postes. Deux exécutions : sha256 `95a8e952…` identique, 1 min 10 s chacune sur 4 processus.
 
 **Durée :** estimée 2 h 05 (20/60/25/20 ; 1 h 50 au ticket), réelle environ 1 h 35 (20/35/20/20), − 24 %, sous 30 % ; durée estimée à l'horloge de la session hors attentes machine, non chronométrée ; les fonctions de forme du moteur s'appliquaient telles quelles à des `Vec2`, d'où un développement plus court. Temps machine, hors total : deux calculs complets (1 min 10 s chacun), suite complète (10 min 37).
+
+**18/11/2026, statut corrigé.** Clôture journalisée `VALIDÉ` le 14/11/2026 (`.claude/qc/journal.jsonl`, sous-étape `v2-realisme/27b/cloture`), code commité en `97746de` ; la ligne de statut était restée « implémenté » (mise à jour oubliée après la clôture, comme au 10a). Garde-fou : ticket `expert-dispositif/07`.

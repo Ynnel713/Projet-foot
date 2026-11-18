@@ -42,7 +42,8 @@ from v2engine.scan import ScanTracker
 from v2engine.vision import unseen
 from v2engine.decision import (DECISION_INTERVAL_S, choose_action, dribble_lost, lane_closed_during_turn,
                                lost_carry_outcome, thinks_one_touch)
-from v2engine.defense import PRESSEUR, DefensiveRoles
+from v2engine.defense import (COUVERTURE, HOLE_DANGER_M, HOLE_FILLED_M, MARQUAGE, PRESSEUR, DefensiveRoles, line_exit,
+                              own_goal)
 from v2engine.occasion import ChanceTracker
 from v2engine.offside import HESITATION_S, OFFSIDE_OUT_S, offside_at_pass, sees_the_flag_probability
 from v2engine.possession import (BALL_FRICTION_PER_S, BALL_STOPPED_MPS, MAX_PASS_MPS, MISS_RETRY_S, attempt_control, deflect,
@@ -58,7 +59,7 @@ from v2engine.shooting import (BLOCK_CHANCE, BLOCK_WIDTH_M, FLYING, HELD, OVER, 
 from v2engine.situation import SituationTracker
 from v2engine.transition import TransitionPlay
 from v2engine.trace import (BallSnapshot, DecisionRecord, FoulEvent, MatchTrace, OffsideEvent, PlayerSnapshot, ShotEvent,
-                            PressRecord, ReceptionEvent, RestartEvent, SituationRecord)
+                            LineExitRecord, PressRecord, ReceptionEvent, RestartEvent, SituationRecord)
 from v2engine.reception import DOS_AU_JEU, blind_reception, facing_to_goal_deg, open_facing, reception_type
 
 # But adverse d'une équipe, par convention de ce moteur (voir `formation.initial_positions`,
@@ -1214,6 +1215,28 @@ def _record_pressers(defense: DefensiveRoles, players: list[PlayerState], minute
                                    assigned.target.distance_to(reference) if reference is not None else None))
 
 
+def _record_line_exits(defense: DefensiveRoles, players: list[PlayerState], minute: float,
+                       last: dict[str, tuple[str, bool, bool, bool]], records: list[LineExitRecord]) -> None:
+    """Trace les changements d'état des défenseurs centraux (ticket v2-realisme/10b), lecture seule : sorti de sa ligne
+    pour presser, marquer ou couvrir, place couverte par un partenaire, place menacée par un adversaire."""
+    for p in players:
+        if p.poste != "DC":
+            continue
+        assigned = defense.assignments.get(p.name)
+        state = ("", False, False, False)
+        if assigned is not None and assigned.role in (PRESSEUR, MARQUAGE, COUVERTURE) and assigned.reference is not None:
+            place = assigned.reference
+            if line_exit(p.position, place, own_goal(p.team)):
+                covered = any(m.team == p.team and m.poste != "GK" and m.name != p.name
+                              and m.position.distance_to(place) <= HOLE_FILLED_M for m in players)
+                threatened = any(m.team != p.team and m.poste != "GK" and m.position.distance_to(place) <= HOLE_DANGER_M
+                                 for m in players)
+                state = (assigned.role, True, covered, threatened)
+        if last.get(p.name, ("", False, False, False)) != state:
+            last[p.name] = state
+            records.append(LineExitRecord(minute, p.team, p.name, state[0], *state[1:]))
+
+
 def simulate_match(
     home_club: Club,
     away_club: Club,
@@ -1271,6 +1294,7 @@ def simulate_match(
     end_tick: int | None = None
     last_situation: dict[str, str] = {}  # dernière situation tracée par équipe
     last_presser: dict[str, str] = {}  # dernier presseur tracé par équipe (ticket v2-realisme/10a)
+    last_exit: dict[str, tuple[str, bool, bool, bool]] = {}  # dernier état tracé de chaque central (ticket v2-realisme/10b)
     late = LateSetPiece()
     i = 0
     while True:
@@ -1320,6 +1344,7 @@ def simulate_match(
         bloc.update(players, ball, i * tick_seconds, memory)  # hauteur de ligne sans ballon (tickets 05 et 23)
         defense.update(players, ball, bloc, i * tick_seconds, situations.current, memory)  # contre-pressing (ticket 10)
         _record_pressers(defense, players, minute, last_presser, trace.pressers)
+        _record_line_exits(defense, players, minute, last_exit, trace.line_exits)
         played = played_minute(minute, trace.second_half_start_minute, half_tick * tick_seconds / 60.0)
         players = [_step_player(p, ball, tick_seconds, minute, players, runs, intentions, situations, bloc, defense,
                                 transition, played_minute=played, scanning=p.name in scanning) for p in players]

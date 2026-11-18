@@ -18,7 +18,7 @@
 
 **Bloque :** rien.
 
-**Status:** implémenté (16/11/2026) — en attente de /valider-ticket-simulafoot
+**Status:** livré (16/11/2026), validé expert + QC
 
 ## Estimation
 
@@ -51,3 +51,5 @@ Tests : 6 tests dans `tests/test_v2engine_tacleur_mieux_place.py` (scène dos/fa
 - [x] Tacles par match rapportés, comparés au repère réel 30 à 40 ; fautes, buts et tirs rapportés — 22,5, sous le repère ; volume confié au `11r` (décision du propriétaire)
 - [x] Déterminisme à graine fixée ; suite complète comparée à l'attendu de `CLAUDE.md`
 - [x] Durée réelle relevée et comparée à l'estimation (`docs/agents/suivi-estimations.md`) — 100 min pour 105 estimées (− 5 %)
+
+**18/11/2026, statut corrigé.** Clôture journalisée `VALIDÉ` le 16/11/2026 (`.claude/qc/journal.jsonl`, sous-étape `v2-realisme/11p/cloture`), code commité en `6166acc` ; la ligne de statut était restée « implémenté » (mise à jour oubliée après la clôture, comme au 10a). Garde-fou : ticket `expert-dispositif/07`.

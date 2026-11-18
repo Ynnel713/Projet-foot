@@ -1,0 +1,8 @@
+warning: The `UV_NATIVE_TLS` environment variable is deprecated and will be removed in a future release. Use `UV_SYSTEM_CERTS` instead.
+50 [4, 2]
+51 [0, 7]
+52 [1, 1]
+53 [3, 4]
+54 [0, 1]
+55 [4, 0]
+56 [1, 1]

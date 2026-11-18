@@ -105,6 +105,21 @@ class PressRecord:
 
 
 @dataclass(frozen=True)
+class LineExitRecord:
+    """Changement d'état d'un défenseur central (ticket v2-realisme/10b), trace seulement : `exit` vrai quand il presse,
+    marque ou couvre (`role`) à plus de 10 m de sa place de référence sans ballon sans être plus près de son but
+    qu'elle ; `covered` : un partenaire est à 5 m ou moins de cette place ; `threatened` : un adversaire de champ en est
+    à 20 m ou moins. Un état court jusqu'au changement suivant du même joueur."""
+    minute: float
+    team: str
+    player: str
+    role: str  # vide hors sortie
+    exit: bool
+    covered: bool
+    threatened: bool
+
+
+@dataclass(frozen=True)
 class GoalEvent:
     minute: float
     team: str  # "home" / "away"
@@ -317,6 +332,7 @@ class MatchTrace:
     decisions: list[DecisionRecord] = field(default_factory=list)
     situations: list[SituationRecord] = field(default_factory=list)
     pressers: list[PressRecord] = field(default_factory=list)  # changements de presseur (ticket v2-realisme/10a)
+    line_exits: list[LineExitRecord] = field(default_factory=list)  # sorties des centraux (ticket v2-realisme/10b)
     offsides: list[OffsideEvent] = field(default_factory=list)  # hors-jeu sifflés (ticket v2-collectif/23)
     restarts: list[RestartEvent] = field(default_factory=list)  # remises en jeu (ticket v2-collectif/29)
     fouls: list[FoulEvent] = field(default_factory=list)  # fautes (ticket v2-collectif/30)

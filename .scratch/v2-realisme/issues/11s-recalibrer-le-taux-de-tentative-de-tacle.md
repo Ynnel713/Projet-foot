@@ -16,7 +16,7 @@
 
 **Bloque :** rien.
 
-**Status:** implémenté (16/11/2026) — en attente de /valider-ticket-simulafoot
+**Status:** livré (16/11/2026), validé expert + QC
 
 ## Estimation
 
@@ -46,3 +46,5 @@ Tests : 1 test ajouté dans `tests/test_v2engine_duel.py` (taux 0,047 à la note
 - [x] Fautes, buts, tirs rapportés (écart apparié) ; profil Aggression 99/11 : écart de fréquence gardé — fautes + 6,3, buts et tirs non significatifs ; rapport 5,67 → 5,71 (calcul)
 - [x] Déterminisme à graine fixée ; suite complète comparée à l'attendu — 3 213 passés
 - [x] Durée réelle relevée et comparée à l'estimation (`docs/agents/suivi-estimations.md`) — 65 min pour 80 (− 19 %)
+
+**18/11/2026, statut corrigé.** Clôture journalisée `VALIDÉ` le 16/11/2026 (`.claude/qc/journal.jsonl`, sous-étape `v2-realisme/11s/cloture`), code commité en `de9c794` ; la ligne de statut était restée « implémenté » (mise à jour oubliée après la clôture, comme au 10a). Garde-fou : ticket `expert-dispositif/07`.

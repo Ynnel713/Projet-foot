@@ -75,7 +75,21 @@ arrivent au plus `PRESS_ZONE_MARGIN_S` = 1 s après le plus rapide de tous, le p
 a aucun, le plus rapide de tous, comme avant. La mémoire du titulaire (`HOLD_MARGIN_S`) s'applique contre ce choix,
 même si le porteur a quitté la zone du titulaire : sans elle, le porteur qui longe le bord d'une zone faisait changer
 le presseur puis revenir dans la seconde (21,6 % des relais contre 1,9 % avant, 30 minutes mesurées le 18/11/2026).
-L'effort et le relais du ticket 08 s'appliquent aux mêmes candidats. Sans bloc (scènes de test) : le premier arrivé, comme avant."""
+L'effort et le relais du ticket 08 s'appliquent aux mêmes candidats. Sans bloc (scènes de test) : le premier arrivé, comme avant.
+
+Le central ne quitte sa ligne que couvert (ticket v2-realisme/10b, règle validée par le propriétaire le 18/11/2026,
+sans constante nouvelle ; chiffres réels non trouvés) : un défenseur central (DC) sort de sa ligne quand le point visé
+par son rôle (presser, marquer, suivre un receveur du pressing d'équipe) est à plus de `HOLE_AWAY_M` = 10 m de sa place
+de référence sans ballon, sans être plus près de son but qu'elle. Il ne sort que couvert : un partenaire est déjà à
+`HOLE_FILLED_M` = 5 m ou moins de sa place ; ou un compensateur (même ordre que les compensations : milieu défensif,
+autre central, latéral) libre y arrive, délai de réaction compris, avant l'attaquant le plus proche de cette place et
+l'accepte (Teamwork : un tirage par partenaire visé tant que le porteur ne change pas, comme la ligne de passe lue
+par le presseur ; l'accord qui autorise la sortie devient le tirage du trou, repris par la compensation qui suivra
+quel que soit le porteur, tant que la sortie dure ; un trou encore ouvert impose son tirage) ; ou aucun attaquant
+(hors celui qu'il presse ou marque) n'est à `HOLE_DANGER_M` = 20 m ou moins de sa place. Sinon il garde sa ligne et
+cède le rôle : le presseur est choisi parmi les autres (règle du 10a), le marquage revient au défenseur libre le plus
+proche après lui ; seul joueur libre, il presse quand même, mais ne marque pas. La vérification se fait quand le rôle
+devient une sortie : sorti couvert, il garde son rôle pour le même partenaire."""
 
 from __future__ import annotations
 
@@ -264,7 +278,8 @@ class Assignment:
     mate: str  # porteur pressé ou couvert, attaquant marqué
     target_velocity: Vec2
     intensity: float = 1.0  # part de la vitesse max (presseur : Work Rate, ticket 08)
-    # presseur (ticket v2-realisme/10a) : le porteur est-il dans sa zone (None : pas de bloc), sa place de référence
+    # presseur (ticket v2-realisme/10a) : le porteur est-il dans sa zone (None : pas de bloc) ; place de référence sans
+    # ballon du presseur, et depuis le ticket v2-realisme/10b de la couverture et des marqueurs (trace des sorties)
     zone: bool | None = None
     reference: Vec2 | None = None
 
@@ -289,6 +304,17 @@ class DefensiveRoles:
     # compensations (ticket 09)
     willing: dict[tuple[str, str], bool] = field(default_factory=dict)  # (absent, candidat) -> accepte (Teamwork)
     levels: dict[str, int] = field(default_factory=dict)  # compensateur -> niveau de cascade de sa compensation
+    # central qui ne sort que couvert (ticket v2-realisme/10b)
+    exits: dict[str, str] = field(default_factory=dict)  # central sorti de sa ligne à ce tick -> partenaire visé
+    exits_before: dict[str, str] = field(default_factory=dict)  # même chose au tick précédent (lu par la vérification)
+    # (central, couvreur, partenaire visé) -> accepte : tirage Teamwork du central encore à sa place, gardé tant que le
+    # porteur ne change pas
+    cover_draws: dict[tuple[str, str, str], bool] = field(default_factory=dict)
+    # (central, partenaire visé) -> couvreur dont l'accord autorise la sortie, à ce tick
+    cover_found: dict[tuple[str, str], str] = field(default_factory=dict)
+    # central sorti couvert -> (couvreur, partenaire visé) : l'accord devient le tirage du trou (`willing`), repris par
+    # la compensation quel que soit le porteur, tant que la sortie dure (expert, passage 2)
+    exit_cover: dict[str, tuple[str, str]] = field(default_factory=dict)
 
     def resting(self, player: PlayerState, now_s: float) -> bool:
         return self.rest_until.get(player.name, 0.0) > now_s
@@ -380,7 +406,10 @@ class DefensiveRoles:
         il le perçoit, pas là où il est ; le ballon et son porteur restent connus de tous, et le plan de l'équipe (qui
         est dangereux, qui est le receveur proche) reste sur les vraies positions. Sans mémoire : les vraies positions."""
         self.assignments = {}
+        self.exits_before, self.exits = self.exits, {}  # aucun rôle à ce tick (ballon libre) : aucune sortie gardée
+        self.cover_found = {}
         holder = next((p for p in players if p.name == ball.holder), None) if ball.holder else None
+        previous_holder = self.last_holder  # avant `_watch_triggers`, qui le remplace
         self._watch_triggers(players, ball, holder, now_s, situations)  # le vrai porteur, même pendant une passe
         previous = self.holders
         if holder is None:  # passe en vol (réserve A2) : le receveur, à son point de réception
@@ -399,6 +428,8 @@ class DefensiveRoles:
             # effort quasi nul)
             self.burst = {k: v for k, v in self.burst.items() if v[0] == holder.name}
             self.lanes = {k: v for k, v in self.lanes.items() if k[1] == holder.name}
+            if previous_holder is not None and previous_holder[0] != holder.name:
+                self.cover_draws = {}  # tirages des couvreurs (10b) : un par porteur, comme la ligne lue
         team = "away" if holder.team == "home" else "home"
         goal = own_goal(team)
         # le lecteur de passe court la couper (priorité dans `cerveau`) : pas d'autre rôle pour lui
@@ -409,11 +440,15 @@ class DefensiveRoles:
         # zones de responsabilité (ticket v2-realisme/10a) : places de référence sans ballon, ballon au porteur
         places = {} if bloc is None else {p.name: bloc.reference(p, holder.position, DEFENSE_PLACEE, now_s)
                                           for p in players if p.team == team and p.poste != "GK"}
-        pool = self._press_pool(fresh, holder, places, goal)
+        # le central ne sort pas sans couverture (ticket v2-realisme/10b) ; seul joueur libre, il presse quand même
+        uncovered = {p.name for p in fresh
+                     if self._leaves_uncovered(p, holder.position, holder.name, players, free, places, goal, ball, now_s)}
+        pool = self._press_pool([p for p in fresh if p.name not in uncovered] or fresh, holder, places, goal)
         best = min(pool, key=lambda p: arrival_time_s(p, holder.position))
         # le titulaire reste candidat hors de sa zone (`HOLD_MARGIN_S`) : sans cela, le porteur qui longe le bord
         # d'une zone faisait changer le presseur puis revenir dans la seconde (21,6 % des relais, 1,9 % avant 10a)
-        incumbent = [p for p in fresh if p.name == previous.get((PRESSEUR, holder.name)) and p not in pool]
+        incumbent = [p for p in fresh if p.name == previous.get((PRESSEUR, holder.name)) and p not in pool
+                     and p.name not in uncovered]
         presser = self._keep(previous, PRESSEUR, holder.name, pool + incumbent, holder.position, best)
         start = self.burst.get(presser.name)
         if start is None or start[0] != holder.name:
@@ -422,7 +457,8 @@ class DefensiveRoles:
             self.rest_until[presser.name] = now_s + press_rest_s(presser)
             del self.burst[presser.name]  # reposé, il repartira pour un nouvel effort
             fresh.remove(presser)
-            presser = min(self._press_pool(fresh, holder, places, goal), key=lambda p: arrival_time_s(p, holder.position))
+            presser = min(self._press_pool([p for p in fresh if p.name not in uncovered] or fresh, holder, places, goal),
+                          key=lambda p: arrival_time_s(p, holder.position))
             self.holders[(PRESSEUR, holder.name)] = presser.name
             self.burst[presser.name] = (holder.name, now_s)
         target = press_point(presser, holder, self._lane(presser, holder, players, goal))
@@ -437,7 +473,8 @@ class DefensiveRoles:
             cover = self._keep(previous, COUVERTURE, holder.name, free, spot, min(free, key=lambda p: arrival_time_s(p, spot)))
             if bloc is not None:  # Positioning : précision du placement, comme dans le bloc
                 spot = clamp_to_pitch(spot + bloc.placement_error(cover, now_s))
-            self.assignments[cover.name] = Assignment(COUVERTURE, spot, holder.name, holder.velocity)
+            self.assignments[cover.name] = Assignment(COUVERTURE, spot, holder.name, holder.velocity,
+                                                      reference=places.get(cover.name))
             free.remove(cover)
         # l'attaquant qui recule après un hors-jeu sifflé (ticket 23) n'est pas marqué
         dangerous = sorted((p for p in players if p.team == holder.team and p.name != holder.name and p.poste != "GK"
@@ -446,10 +483,17 @@ class DefensiveRoles:
         for attacker in dangerous:
             if not free:
                 break
-            marker = self._closest_to(free, attacker, memory, now_s)
+            # le central qui sortirait sans couverture garde sa ligne (ticket v2-realisme/10b) : le suivant marque
+            candidates = [p for p in free if not self._leaves_uncovered(
+                p, _goal_side(attacker.position, goal, marking_distance_m(p)), attacker.name, players, free, places,
+                goal, ball, now_s)]
+            if not candidates:
+                continue
+            marker = self._closest_to(candidates, attacker, memory, now_s)
             where, moving = self._seen_at(marker, attacker, memory, now_s)
             spot = _goal_side(where, goal, marking_distance_m(marker))
-            self.assignments[marker.name] = Assignment(MARQUAGE, spot, attacker.name, moving)
+            self.assignments[marker.name] = Assignment(MARQUAGE, spot, attacker.name, moving,
+                                                       reference=places.get(marker.name))
             free.remove(marker)
         if bloc is not None:  # niveaux de cascade gardés tant qu'aucun tick ne les recalcule (ballon libre)
             levels, self.levels = self.levels, {}
@@ -467,6 +511,12 @@ class DefensiveRoles:
                 followers = [p for p in free if self.follows.get(p.name)]
                 if not followers:
                     break
+                # le central qui sortirait sans couverture ne suit pas (ticket v2-realisme/10b)
+                followers = [p for p in followers if not self._leaves_uncovered(
+                    p, _goal_side(receiver.position, holder.position, marking_distance_m(p)), receiver.name, players,
+                    free, places, goal, ball, now_s)]
+                if not followers:
+                    continue
                 marker = next((p for p in followers if self.followed.get(p.name) == receiver.name), None) or self._closest_to(
                     [p for p in followers if self.followed.get(p.name) not in {r.name for r in near}] or followers,
                     receiver, memory, now_s)
@@ -474,8 +524,71 @@ class DefensiveRoles:
                 # côté ballon, sur la ligne de passe : il ferme la solution plutôt que de couvrir son but
                 where, moving = self._seen_at(marker, receiver, memory, now_s)
                 spot = _goal_side(where, holder.position, marking_distance_m(marker))
-                self.assignments[marker.name] = Assignment(MARQUAGE, spot, receiver.name, moving)
+                self.assignments[marker.name] = Assignment(MARQUAGE, spot, receiver.name, moving,
+                                                           reference=places.get(marker.name))
                 free.remove(marker)
+        self._remember_exits(players, goal)
+
+    def _remember_exits(self, players: list[PlayerState], goal: Vec2) -> None:
+        """Centraux sortis de leur ligne à ce tick, avec le partenaire visé (ticket v2-realisme/10b) : ils gardent leur
+        rôle pour lui sans nouvelle vérification."""
+        postes = {p.name: p.poste for p in players}
+        self.exits = {n: a.mate for n, a in self.assignments.items()
+                      if postes.get(n) == "DC" and a.role in (PRESSEUR, MARQUAGE) and a.reference is not None
+                      and line_exit(a.target, a.reference, goal)}
+        # le couvreur qui a autorisé la sortie (nouvelle) ou celui de la sortie en cours (même partenaire) : son accord
+        # est le tirage du trou, réécrit à chaque tick tant que la sortie dure (l'effacement des trous refermés, dans
+        # `_compensate`, passe avant)
+        covers = {}
+        for name, mate in self.exits.items():
+            if (name, mate) in self.cover_found:
+                covers[name] = (self.cover_found[(name, mate)], mate)
+            elif self.exit_cover.get(name, ("", ""))[1] == mate:
+                covers[name] = self.exit_cover[name]
+        self.exit_cover = covers
+        for name, (coverer, _) in covers.items():
+            self.willing[(name, coverer)] = True
+
+    def _leaves_uncovered(self, player: PlayerState, target: Vec2, mate: str, players: list[PlayerState],
+                          free: list[PlayerState], places: dict[str, Vec2], goal: Vec2, ball: BallState,
+                          now_s: float) -> bool:
+        """Le central `player`, en visant `target` pour `mate`, quitterait-il sa ligne sans couverture (ticket
+        v2-realisme/10b) ? Non s'il n'est pas central, s'il est déjà sorti couvert pour ce partenaire, si `target` n'est
+        pas une sortie, si un partenaire tient sa place, si aucun attaquant ne la menace ou si un compensateur libre y
+        arrive avant l'attaquant et l'accepte (Teamwork)."""
+        if player.poste != "DC" or player.name not in places or self.exits_before.get(player.name) == mate:
+            return False
+        place = places[player.name]
+        if not line_exit(target, place, goal):
+            return False
+        if any(m.team == player.team and m.poste != "GK" and m.name != player.name
+               and m.position.distance_to(place) <= HOLE_FILLED_M for m in players):
+            return False
+        threats = [p for p in players if p.team != player.team and p.poste != "GK" and p.name != mate
+                   and ball.offside_out_until.get(p.name, 0.0) <= now_s]
+        attacker = min(threats, key=lambda p: p.position.distance_to(place), default=None)
+        if attacker is None or attacker.position.distance_to(place) > HOLE_DANGER_M:
+            return False
+        deadline = arrival_time_s(attacker, place)
+        ranked = sorted((p for p in free if p.name != player.name and _rank(p, player) is not None),
+                        key=lambda p: (_rank(p, player), p.position.distance_to(place)))
+        for p in ranked:
+            if arrival_time_s(p, place) + reaction_delay_s(p) <= deadline and self._covers(player, p, mate):
+                self.cover_found[(player.name, mate)] = p.name
+                return False
+        return True
+
+    def _covers(self, owner: PlayerState, candidate: PlayerState, mate: str) -> bool:
+        """Le couvreur accepte-t-il de quitter sa place pour celle du central (Teamwork, courbe des compensations) ? Trou
+        encore ouvert : son tirage (`willing`), celui que la compensation appliquera. Sinon un tirage par partenaire visé
+        par le central, gardé tant que le porteur ne change pas ; s'il autorise la sortie, il devient le tirage du trou
+        (`_remember_exits`)."""
+        if (owner.name, candidate.name) in self.willing:
+            return self.willing[(owner.name, candidate.name)]
+        key = (owner.name, candidate.name, mate)
+        if key not in self.cover_draws:
+            self.cover_draws[key] = DEFENSE.random() < follow_probability(candidate)
+        return self.cover_draws[key]
 
     @staticmethod
     def _seen_at(marker: PlayerState, attacker: PlayerState, memory: PerceptionMemory | None,
@@ -552,7 +665,7 @@ class DefensiveRoles:
 
     def _willing(self, owner: PlayerState, candidate: PlayerState) -> bool:
         """Accepte-t-il de quitter sa place pour combler celle de `owner` ? Teamwork, un tirage par trou."""
-        key = (owner.name, candidate.name)
+        key = (owner.name, candidate.name)  # central sorti couvert (10b) : l'accord du couvreur y est déjà
         if key not in self.willing:
             self.willing[key] = DEFENSE.random() < follow_probability(candidate)
         return self.willing[key]
@@ -564,6 +677,12 @@ class DefensiveRoles:
             leaves = DEFENSE.random() < leave_probability(player)
             self.leaving[player.name] = (leaves, now_s + LEAVE_REDRAW_S)
         return leaves
+
+
+def line_exit(point: Vec2, place: Vec2, goal: Vec2) -> bool:
+    """`point` sort-il de la ligne d'un joueur dont la place de référence sans ballon est `place` (ticket
+    v2-realisme/10b) ? À plus de `HOLE_AWAY_M` de sa place, sans être plus près de son but `goal` qu'elle."""
+    return point.distance_to(place) > HOLE_AWAY_M and abs(point.x - goal.x) >= abs(place.x - goal.x)
 
 
 def _rank(candidate: PlayerState, owner: PlayerState) -> int | None:

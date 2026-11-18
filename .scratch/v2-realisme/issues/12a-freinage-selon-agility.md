@@ -14,7 +14,7 @@
 
 **Bloque :** 12b, 12g.
 
-**Status:** implémenté (14/11/2026) — en attente de /valider-ticket-simulafoot
+**Status:** livré (14/11/2026), validé expert + QC
 
 ## Estimation
 
@@ -52,3 +52,4 @@ Temps machine, non compté : suite complète (environ 40 min).
 
 **14/11/2026, durée.** Estimation 1 h 25 ; durée réelle environ 1 h 05 (analyse 10, développement 15, tests 15, intégration 25), − 24 %, sous 30 %. Durée estimée à l'horloge de la session hors attentes machine, non chronométrée. Temps machine hors total : série de 30 matchs (environ 30 min), suite complète, déterminisme 2 x 2 matchs.
 
+**18/11/2026, statut corrigé.** Clôture journalisée `VALIDÉ` le 14/11/2026 (`.claude/qc/journal.jsonl`, sous-étape `v2-realisme/12a/cloture`), code commité en `c0e7321` ; la ligne de statut était restée « implémenté » (mise à jour oubliée après la clôture, comme au 10a). Garde-fou : ticket `expert-dispositif/07`. Réserves de l'expert (`APPROVED_WITH_RESERVATIONS`) acceptées par le propriétaire d'après la clôture (`reserves_acceptees: true`) ; leur contenu n'a pas été reporté ici et le rapport, écrit dans le dossier temporaire d'une session précédente, n'existe plus : contenu non retrouvé.
