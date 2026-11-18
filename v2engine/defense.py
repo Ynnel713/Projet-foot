@@ -62,7 +62,20 @@ Contre-pressing (ticket v2-collectif/10, constantes validées par le propriétai
 (ni ballon pris par le gardien, ni coup franc de hors-jeu, ni engagement) déclenche le pressing d'équipe ci-dessus
 pour l'équipe qui a perdu, pendant `TRIGGER_S` = 5 s. Ne suivent que les joueurs à `FOLLOW_M` = 15 m ou moins du
 ballon (Teamwork, même tirage), sauf les `REST_DEFENDERS` = 2 joueurs de champ les plus reculés, qui protègent
-l'axe. Les autres se replient (`cerveau`, intensité du contexte « repli après la perte », `retreat_intensity`)."""
+l'axe. Les autres se replient (`cerveau`, intensité du contexte « repli après la perte », `retreat_intensity`).
+
+Presseur selon la zone (ticket v2-realisme/10a, constantes validées par le propriétaire le 18/11/2026 ; chiffres réels
+non trouvés, ordres de grandeur calés sur le bloc sans ballon de 32 x 40 m) : la zone de responsabilité d'un joueur est
+un rectangle centré sur sa place de référence sans ballon (`Bloc.reference`, ballon au porteur), de `ZONE_DEPTH_M` = 8 m
+en profondeur et `ZONE_WIDTH_M` = 10 m en largeur de chaque côté (environ 11 m entre les lignes et 13 m entre deux
+défenseurs d'une ligne à quatre : les zones voisines se recouvrent). Bords ouverts : la zone de la dernière ligne
+s'étend jusqu'à son but, celle de la ligne la plus avancée vers l'avant, celle du joueur le plus excentré jusqu'à sa
+touche (personne n'a de zone au-delà). Le presseur est choisi parmi ceux dont la zone contient le porteur et qui
+arrivent au plus `PRESS_ZONE_MARGIN_S` = 1 s après le plus rapide de tous, le premier arrivé d'entre eux ; s'il n'y en
+a aucun, le plus rapide de tous, comme avant. La mémoire du titulaire (`HOLD_MARGIN_S`) s'applique contre ce choix,
+même si le porteur a quitté la zone du titulaire : sans elle, le porteur qui longe le bord d'une zone faisait changer
+le presseur puis revenir dans la seconde (21,6 % des relais contre 1,9 % avant, 30 minutes mesurées le 18/11/2026).
+L'effort et le relais du ticket 08 s'appliquent aux mêmes candidats. Sans bloc (scènes de test) : le premier arrivé, comme avant."""
 
 from __future__ import annotations
 
@@ -124,6 +137,9 @@ HOLE_FILLED_M = 5.0
 HOLE_DANGER_M = 20.0
 CASCADE_LEVELS = 2
 _HOLE_POSTES = ("DC", "LB", "RB")
+ZONE_DEPTH_M = 8.0  # presseur selon la zone (ticket v2-realisme/10a)
+ZONE_WIDTH_M = 10.0
+PRESS_ZONE_MARGIN_S = 1.0
 # Joueurs de champ qui restent derrière le ballon en possession installée (validé le 30/10/2026, ticket v2-collectif/06),
 # et qui ne contre-pressent pas à la perte (ticket v2-collectif/10)
 REST_DEFENDERS = 2
@@ -219,6 +235,28 @@ def _goal_side(point: Vec2, goal: Vec2, distance: float) -> Vec2:
     return point if to_goal.length() < 1e-9 else clamp_to_pitch(point + to_goal.normalized() * min(distance, to_goal.length()))
 
 
+def in_zone(name: str, places: dict[str, Vec2], point: Vec2, goal: Vec2) -> bool:
+    """`point` est-il dans la zone de responsabilité du joueur `name` (ticket v2-realisme/10a) ? `places` : place de
+    référence sans ballon de chaque joueur de champ de son équipe ; `goal` : son but. Rectangle de `ZONE_DEPTH_M` en
+    profondeur et `ZONE_WIDTH_M` en largeur de chaque côté de sa place, ouvert vers son but s'il est dans la dernière
+    ligne, vers l'avant s'il est dans la ligne la plus avancée, vers la touche si aucun partenaire de sa bande de
+    profondeur n'est plus excentré que lui de ce côté."""
+    place = places[name]
+    depths = {n: abs(v.x - goal.x) for n, v in places.items()}
+    ahead = abs(point.x - goal.x) - depths[name]
+    if ahead < -ZONE_DEPTH_M and depths[name] - min(depths.values()) > ZONE_DEPTH_M:
+        return False  # derrière sa zone, et une ligne derrière lui
+    if ahead > ZONE_DEPTH_M and max(depths.values()) - depths[name] > ZONE_DEPTH_M:
+        return False  # devant sa zone, et une ligne devant lui
+    aside = point.y - place.y
+    if abs(aside) <= ZONE_WIDTH_M:
+        return True
+    side = 1.0 if aside > 0.0 else -1.0
+    # un partenaire dont la zone recouvre la sienne en profondeur est plus excentré de ce côté : sa zone n'y va pas
+    return not any(n != name and (v.y - place.y) * side > ZONE_WIDTH_M
+                   and abs(depths[n] - depths[name]) < 2.0 * ZONE_DEPTH_M for n, v in places.items())
+
+
 @dataclass(frozen=True)
 class Assignment:
     role: str
@@ -226,6 +264,9 @@ class Assignment:
     mate: str  # porteur pressé ou couvert, attaquant marqué
     target_velocity: Vec2
     intensity: float = 1.0  # part de la vitesse max (presseur : Work Rate, ticket 08)
+    # presseur (ticket v2-realisme/10a) : le porteur est-il dans sa zone (None : pas de bloc), sa place de référence
+    zone: bool | None = None
+    reference: Vec2 | None = None
 
 
 @dataclass
@@ -312,6 +353,17 @@ class DefensiveRoles:
                 self.lanes[key] = DEFENSE.choice(options[1:]).name
         return next((p for p in players if p.name == self.lanes[key]), None)
 
+    @staticmethod
+    def _press_pool(fresh: list[PlayerState], holder: PlayerState, places: dict[str, Vec2],
+                    goal: Vec2) -> list[PlayerState]:
+        """Candidats au pressing (ticket v2-realisme/10a) : ceux dont la zone contient le porteur et qui arrivent au
+        plus `PRESS_ZONE_MARGIN_S` après le plus rapide de tous ; aucun : tous (le premier arrivé presse)."""
+        if not places:
+            return fresh
+        limit = min(arrival_time_s(p, holder.position) for p in fresh) + PRESS_ZONE_MARGIN_S
+        return [p for p in fresh if p.name in places and in_zone(p.name, places, holder.position, goal)
+                and arrival_time_s(p, holder.position) <= limit] or fresh
+
     def _keep(self, previous: dict[tuple[str, str], str], role: str, mate: str, free: list[PlayerState], point: Vec2,
               best: PlayerState) -> PlayerState:
         """`best`, sauf si le titulaire du rôle pour `mate` est encore libre et n'arrive pas 0,3 s plus tard que lui."""
@@ -354,8 +406,15 @@ class DefensiveRoles:
         if not free:
             return
         fresh = [p for p in free if not self.resting(p, now_s)] or free  # celui qui souffle ne presse pas
-        presser = self._keep(previous, PRESSEUR, holder.name, fresh, holder.position,
-                             min(fresh, key=lambda p: arrival_time_s(p, holder.position)))
+        # zones de responsabilité (ticket v2-realisme/10a) : places de référence sans ballon, ballon au porteur
+        places = {} if bloc is None else {p.name: bloc.reference(p, holder.position, DEFENSE_PLACEE, now_s)
+                                          for p in players if p.team == team and p.poste != "GK"}
+        pool = self._press_pool(fresh, holder, places, goal)
+        best = min(pool, key=lambda p: arrival_time_s(p, holder.position))
+        # le titulaire reste candidat hors de sa zone (`HOLD_MARGIN_S`) : sans cela, le porteur qui longe le bord
+        # d'une zone faisait changer le presseur puis revenir dans la seconde (21,6 % des relais, 1,9 % avant 10a)
+        incumbent = [p for p in fresh if p.name == previous.get((PRESSEUR, holder.name)) and p not in pool]
+        presser = self._keep(previous, PRESSEUR, holder.name, pool + incumbent, holder.position, best)
         start = self.burst.get(presser.name)
         if start is None or start[0] != holder.name:
             self.burst[presser.name] = (holder.name, now_s)
@@ -363,12 +422,14 @@ class DefensiveRoles:
             self.rest_until[presser.name] = now_s + press_rest_s(presser)
             del self.burst[presser.name]  # reposé, il repartira pour un nouvel effort
             fresh.remove(presser)
-            presser = min(fresh, key=lambda p: arrival_time_s(p, holder.position))
+            presser = min(self._press_pool(fresh, holder, places, goal), key=lambda p: arrival_time_s(p, holder.position))
             self.holders[(PRESSEUR, holder.name)] = presser.name
             self.burst[presser.name] = (holder.name, now_s)
         target = press_point(presser, holder, self._lane(presser, holder, players, goal))
-        self.assignments[presser.name] = Assignment(PRESSEUR, target, holder.name, holder.velocity,
-                                                    press_intensity(presser))
+        self.assignments[presser.name] = Assignment(
+            PRESSEUR, target, holder.name, holder.velocity, press_intensity(presser),
+            in_zone(presser.name, places, holder.position, goal) if presser.name in places else None,
+            places.get(presser.name))
         free.remove(presser)
         own_half = holder.position.distance_to(Vec2(goal.x, holder.position.y)) <= PITCH_LENGTH_M / 2.0
         if own_half and free and holder.position.distance_to(goal) > 1e-9:  # porteur dans le but : rien à couvrir

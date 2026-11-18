@@ -1,0 +1,134 @@
+{
+ "avant": {
+  "matchs": 50,
+  "shots": 40.4,
+  "offsides": 4.2,
+  "fouls": 19.9,
+  "tackles": 40.96,
+  "changes": 1544.84,
+  "buts": 5.16,
+  "postes": {
+   "AD": {
+    "min_par_match": 6.437866666666653,
+    "hors_zone_min_par_match": 4.497799999999985,
+    "part_hors_zone": 0.6986475851213644,
+    "distance_ref_m": 13.97009061222582
+   },
+   "AG": {
+    "min_par_match": 6.371533333333341,
+    "hors_zone_min_par_match": 4.490300000000007,
+    "part_hors_zone": 0.7047440176618921,
+    "distance_ref_m": 14.112158684869874
+   },
+   "BU": {
+    "min_par_match": 15.038166666666655,
+    "hors_zone_min_par_match": 4.86593333333333,
+    "part_hors_zone": 0.32357224395704265,
+    "distance_ref_m": 10.58774678869035
+   },
+   "DC": {
+    "min_par_match": 9.396766666666649,
+    "hors_zone_min_par_match": 5.300966666666662,
+    "part_hors_zone": 0.5641266676835656,
+    "distance_ref_m": 10.865267914756055
+   },
+   "LB": {
+    "min_par_match": 5.201766666666673,
+    "hors_zone_min_par_match": 3.4088333333333365,
+    "part_hors_zone": 0.6553222302679217,
+    "distance_ref_m": 12.943647445663416
+   },
+   "MC": {
+    "min_par_match": 11.879333333333348,
+    "hors_zone_min_par_match": 6.452633333333339,
+    "part_hors_zone": 0.5431814355463268,
+    "distance_ref_m": 10.756293986711352
+   },
+   "MDC": {
+    "min_par_match": 5.195866666666664,
+    "hors_zone_min_par_match": 2.6128666666666636,
+    "part_hors_zone": 0.502874079396443,
+    "distance_ref_m": 10.158306796990972
+   },
+   "MOC": {
+    "min_par_match": 6.905533333333341,
+    "hors_zone_min_par_match": 3.6554333333333364,
+    "part_hors_zone": 0.5293484452081904,
+    "distance_ref_m": 10.957031443047333
+   },
+   "RB": {
+    "min_par_match": 5.944566666666671,
+    "hors_zone_min_par_match": 3.9933333333333296,
+    "part_hors_zone": 0.6717618890078884,
+    "distance_ref_m": 13.063107150874467
+   }
+  },
+  "part_hors_zone_tous": 0.5427295865493826
+ },
+ "apres": {
+  "matchs": 50,
+  "shots": 40.06,
+  "offsides": 3.82,
+  "fouls": 19.24,
+  "tackles": 38.76,
+  "changes": 1618.9,
+  "buts": 5.16,
+  "postes": {
+   "AD": {
+    "min_par_match": 5.8042999999999845,
+    "hors_zone_min_par_match": 2.8914999999999895,
+    "part_hors_zone": 0.4981651534207393,
+    "distance_ref_m": 11.937998418870643
+   },
+   "AG": {
+    "min_par_match": 5.62936666666668,
+    "hors_zone_min_par_match": 3.021133333333334,
+    "part_hors_zone": 0.5366737525239654,
+    "distance_ref_m": 12.423148166122479
+   },
+   "BU": {
+    "min_par_match": 16.766666666666648,
+    "hors_zone_min_par_match": 3.349899999999993,
+    "part_hors_zone": 0.19979522862823046,
+    "distance_ref_m": 9.885262644465397
+   },
+   "DC": {
+    "min_par_match": 8.16493333333332,
+    "hors_zone_min_par_match": 1.955033333333331,
+    "part_hors_zone": 0.2394426572170421,
+    "distance_ref_m": 8.710662939499933
+   },
+   "LB": {
+    "min_par_match": 4.357866666666673,
+    "hors_zone_min_par_match": 1.6843666666666675,
+    "part_hors_zone": 0.38651174886794726,
+    "distance_ref_m": 10.760907879814056
+   },
+   "MC": {
+    "min_par_match": 12.61876666666668,
+    "hors_zone_min_par_match": 3.563466666666681,
+    "part_hors_zone": 0.2823942117956597,
+    "distance_ref_m": 8.63260497072148
+   },
+   "MDC": {
+    "min_par_match": 5.9007666666666685,
+    "hors_zone_min_par_match": 1.5546333333333318,
+    "part_hors_zone": 0.26346293984397473,
+    "distance_ref_m": 8.370452254388638
+   },
+   "MOC": {
+    "min_par_match": 8.52443333333333,
+    "hors_zone_min_par_match": 1.784666666666665,
+    "part_hors_zone": 0.20935897987353982,
+    "distance_ref_m": 8.182749080080047
+   },
+   "RB": {
+    "min_par_match": 4.696033333333329,
+    "hors_zone_min_par_match": 1.9671666666666576,
+    "part_hors_zone": 0.4188996387021655,
+    "distance_ref_m": 11.124746978021767
+   }
+  },
+  "part_hors_zone_tous": 0.3004543919804736
+ }
+}

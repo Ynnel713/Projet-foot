@@ -42,7 +42,7 @@ from v2engine.scan import ScanTracker
 from v2engine.vision import unseen
 from v2engine.decision import (DECISION_INTERVAL_S, choose_action, dribble_lost, lane_closed_during_turn,
                                lost_carry_outcome, thinks_one_touch)
-from v2engine.defense import DefensiveRoles
+from v2engine.defense import PRESSEUR, DefensiveRoles
 from v2engine.occasion import ChanceTracker
 from v2engine.offside import HESITATION_S, OFFSIDE_OUT_S, offside_at_pass, sees_the_flag_probability
 from v2engine.possession import (BALL_FRICTION_PER_S, BALL_STOPPED_MPS, MAX_PASS_MPS, MISS_RETRY_S, attempt_control, deflect,
@@ -58,7 +58,7 @@ from v2engine.shooting import (BLOCK_CHANCE, BLOCK_WIDTH_M, FLYING, HELD, OVER, 
 from v2engine.situation import SituationTracker
 from v2engine.transition import TransitionPlay
 from v2engine.trace import (BallSnapshot, DecisionRecord, FoulEvent, MatchTrace, OffsideEvent, PlayerSnapshot, ShotEvent,
-                            ReceptionEvent, RestartEvent, SituationRecord)
+                            PressRecord, ReceptionEvent, RestartEvent, SituationRecord)
 from v2engine.reception import DOS_AU_JEU, blind_reception, facing_to_goal_deg, open_facing, reception_type
 
 # But adverse d'une équipe, par convention de ce moteur (voir `formation.initial_positions`,
@@ -1198,6 +1198,22 @@ def _step_player(
     return replace(moved, avoid_side=avoid.side, avoid_side_until_s=avoid.side_until_s)
 
 
+def _record_pressers(defense: DefensiveRoles, players: list[PlayerState], minute: float, last: dict[str, str],
+                     records: list[PressRecord]) -> None:
+    """Trace les changements de presseur de chaque équipe (ticket v2-realisme/10a), lecture seule."""
+    by_name = {p.name: p for p in players}
+    current = {by_name[n].team: (n, a) for n, a in defense.assignments.items() if a.role == PRESSEUR}
+    for team in ("home", "away"):
+        name, assigned = current.get(team, ("", None))
+        if name == last.get(team, ""):
+            continue
+        last[team] = name
+        reference = assigned.reference if assigned is not None else None
+        records.append(PressRecord(minute, team, name, by_name[name].poste if name else "",
+                                   assigned.zone if assigned is not None else None,
+                                   assigned.target.distance_to(reference) if reference is not None else None))
+
+
 def simulate_match(
     home_club: Club,
     away_club: Club,
@@ -1254,6 +1270,7 @@ def simulate_match(
     period, period_start_tick, regular_end_tick = 1, 0, half_tick
     end_tick: int | None = None
     last_situation: dict[str, str] = {}  # dernière situation tracée par équipe
+    last_presser: dict[str, str] = {}  # dernier presseur tracé par équipe (ticket v2-realisme/10a)
     late = LateSetPiece()
     i = 0
     while True:
@@ -1302,6 +1319,7 @@ def simulate_match(
         # la ligne et le marquage lisent la mémoire de perception (ticket v2-realisme/08e)
         bloc.update(players, ball, i * tick_seconds, memory)  # hauteur de ligne sans ballon (tickets 05 et 23)
         defense.update(players, ball, bloc, i * tick_seconds, situations.current, memory)  # contre-pressing (ticket 10)
+        _record_pressers(defense, players, minute, last_presser, trace.pressers)
         played = played_minute(minute, trace.second_half_start_minute, half_tick * tick_seconds / 60.0)
         players = [_step_player(p, ball, tick_seconds, minute, players, runs, intentions, situations, bloc, defense,
                                 transition, played_minute=played, scanning=p.name in scanning) for p in players]

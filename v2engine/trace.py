@@ -92,6 +92,19 @@ class SituationRecord:
 
 
 @dataclass(frozen=True)
+class PressRecord:
+    """Changement de presseur d'une équipe (ticket v2-realisme/10a), trace seulement : qui presse (vide : plus personne),
+    si le porteur est dans sa zone de responsabilité (None : pas de bloc ou pas de presseur) et la distance du point
+    où il presse à sa place de référence sans ballon. Un presseur court jusqu'au changement suivant de son équipe."""
+    minute: float
+    team: str
+    player: str
+    poste: str
+    in_zone: bool | None
+    reference_distance_m: float | None
+
+
+@dataclass(frozen=True)
 class GoalEvent:
     minute: float
     team: str  # "home" / "away"
@@ -303,6 +316,7 @@ class MatchTrace:
     goals: list[GoalEvent] = field(default_factory=list)
     decisions: list[DecisionRecord] = field(default_factory=list)
     situations: list[SituationRecord] = field(default_factory=list)
+    pressers: list[PressRecord] = field(default_factory=list)  # changements de presseur (ticket v2-realisme/10a)
     offsides: list[OffsideEvent] = field(default_factory=list)  # hors-jeu sifflés (ticket v2-collectif/23)
     restarts: list[RestartEvent] = field(default_factory=list)  # remises en jeu (ticket v2-collectif/29)
     fouls: list[FoulEvent] = field(default_factory=list)  # fautes (ticket v2-collectif/30)
