@@ -8,7 +8,8 @@
                                         `<ID>/cloture` dans .claude/qc/journal.jsonl) ; code 0 si VALIDÉ. Le verdict
                                         QC est lu dans le journal (dernière entrée `<ID>`), --qc doit lui correspondre.
   verrou                                appelé par .claude/qc/verrou-commit.ps1 : code 0 seulement si la dernière
-                                        entrée du journal est une clôture VALIDÉ encore vraie (voir `verrou`).
+                                        entrée du journal est une clôture VALIDÉ encore vraie et si le fichier ticket
+                                        indexé porte le statut « livré » (voir `verrou` et `raison_statut`).
   --selftest                            vérifie la table de décision.
 
 Seule écriture : l'ajout d'une ligne au journal par `decision`."""
@@ -36,6 +37,8 @@ CHAMPS_CLOTURE = ("ticket", "base", "fichiers", "empreinte", "rapport", "rapport
 HORS_REVUE = ("docs/", ".scratch/", "Plan architecte Simulafoot.md", "PROJET_SIMULAFOOT.md", ".claude/qc/journal.jsonl")
 VERDICTS_EXPERT = ("APPROVED", "APPROVED_WITH_RESERVATIONS", "REJECTED", "INCONCLUSIVE")
 SECTIONS = ("Identification", "Analyse du réalisme", "Vérifications", "Anomalies", "Recommandation finale")
+# Ligne de statut exigée au commit d'un ticket clôturé (la suite de la ligne, réserves ou précisions, est libre).
+STATUT_LIVRE = re.compile(r"\*\*Status:\*\* livré \(\d{2}/\d{2}/\d{4}\), validé expert \+ QC")
 _QC = {"VALIDÉ": "VALIDÉ", "VALIDE": "VALIDÉ", "REFUSÉ": "REFUSÉ", "REFUSE": "REFUSÉ", "BLOQUÉ": "BLOQUÉ", "BLOQUE": "BLOQUÉ"}
 
 
@@ -145,6 +148,32 @@ def _non_indexes(fichiers: list[str]) -> list[str]:
     return sortie
 
 
+def raison_statut(ticket: str, chemins_index: list[str], lire, dossier_sur_disque: bool = False) -> str | None:
+    """Raison de refuser le commit si le fichier du ticket clôturé ne porte pas le statut « livré » (None sinon).
+
+    `ticket` = `<chantier>/<id>` ; `chemins_index` = fichiers de l'index ; `lire(chemin)` = contenu indexé ;
+    `dossier_sur_disque` = `.scratch/<chantier>/issues/` existe dans l'arbre de travail.
+    Chantier sans ce dossier, ni sur le disque ni dans l'index (fusion, projet...) : pas de fichier ticket, rien à
+    vérifier (retirer le fichier ticket de l'index ne fait donc pas sortir du chantier).
+    Sinon un seul fichier `<id>-*.md`, dont la première ligne `**Status:**` commence par la ligne de STATUT_LIVRE."""
+    chantier, _, ident = ticket.partition("/")
+    dossier = f".scratch/{chantier}/issues/"
+    du_chantier = [c for c in chemins_index if c.startswith(dossier)]
+    if not ident or not (du_chantier or dossier_sur_disque):
+        return None
+    candidats = [c for c in du_chantier if "/" not in c[len(dossier):] and c[len(dossier):].startswith(f"{ident}-")
+                 and c.endswith(".md")]
+    attendu = "**Status:** livré (JJ/MM/AAAA), validé expert + QC"
+    if len(candidats) != 1:
+        return (f"fichier ticket de {ticket} introuvable ou ambigu dans l'index ({len(candidats)} fichier(s)"
+                f" {dossier}{ident}-*.md) ; une clôture hors ticket prend un préfixe hors chantier (projet/...)")
+    ligne = next((l for l in lire(candidats[0]).splitlines() if l.startswith("**Status:**")), None)
+    if ligne is None or not STATUT_LIVRE.match(ligne):
+        return (f"statut du ticket non passé à « livré » dans l'index ({candidats[0]} : "
+                f"« {(ligne or 'aucune ligne **Status:**')[:80]} ») ; ligne attendue : « {attendu} »")
+    return None
+
+
 def verrou() -> list[str]:
     """Raisons de refuser un commit (vide = autorisé). Ne fait confiance à aucun champ de l'entrée : tout est recalculé."""
     try:
@@ -200,6 +229,14 @@ def verrou() -> list[str]:
     non_indexes = _non_indexes(fichiers)
     if non_indexes:
         raisons.append(f"fichiers revus dont la version indexée n'est pas celle revue : {', '.join(non_indexes)}")
+    try:
+        index = [f for f in _git("ls-files", "-z").split("\0") if f]
+        statut = raison_statut(ticket, index, lambda chemin: _git("show", f":{chemin}"),
+                               Path(".scratch", ticket.partition("/")[0], "issues").is_dir())
+    except (subprocess.CalledProcessError, OSError, UnicodeDecodeError):
+        statut = f"statut du ticket {ticket} illisible dans l'index"
+    if statut:
+        raisons.append(statut)
     return raisons
 
 
@@ -222,6 +259,17 @@ def _selftest() -> None:
     assert lire_rapport(bon.replace("## Anomalies", "## Autre"), "c/01", "ab12")[1]  # incomplet
     assert lire_rapport(bon + "Verdict : REJECTED\n", "c/01", "ab12")[0] is None  # deux verdicts
     assert lire_rapport("Ticket : c/01\nDEMANDE DE VÉRIFICATIONS\nV1 — ...", "c/01", "ab12")[0] is None
+    t = ".scratch/c/issues/01-essai.md"
+    index = [t, ".scratch/c/issues/012-autre.md", "docs/a.md"]
+    livre = "# 01\n**Status:** livré (18/11/2026), validé expert + QC (réserve A1 acceptée)\n"
+    assert raison_statut("c/01", index, lambda _: livre) is None  # livré, suite de ligne libre
+    assert raison_statut("c/01", index, lambda _: livre.replace("livré (18/11/2026), validé expert + QC",
+                         "implémenté (18/11/2026) — en attente de /valider-ticket-simulafoot"))  # implémenté
+    assert raison_statut("c/01", index, lambda _: "# 01\nsans statut\n")  # aucune ligne de statut
+    assert raison_statut("c/02", index, lambda _: livre)  # ticket introuvable dans un chantier existant
+    assert raison_statut("c/01", index + [".scratch/c/issues/01-doublon.md"], lambda _: livre)  # ambigu
+    assert raison_statut("fusion/2026-11-17-main", index, lambda _: "") is None  # hors chantier : rien à vérifier
+    assert raison_statut("c/01", [], lambda _: livre, dossier_sur_disque=True)  # fichier retiré de l'index
     print("selftest OK")
 
 

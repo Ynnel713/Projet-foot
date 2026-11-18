@@ -17,9 +17,10 @@ Estimation : règle dans `CLAUDE.md` (« Estimer la durée d'un ticket ») ; reg
 - elle ne cite pas la dernière entrée QC du ticket, ou celle-ci n'est pas VALIDÉ ; un identifiant est dupliqué ;
 - l'empreinte recalculée diffère (code modifié depuis la revue) ;
 - le rapport est absent ou modifié (sha256), ou, relu, ne donne plus VALIDÉ avec la table de décision ;
-- un fichier indexé n'est ni revu ni du suivi documentaire (`docs/`, `.scratch/`, `Plan architecte Simulafoot.md`, `PROJET_SIMULAFOOT.md`, journal), ou un fichier revu diffère entre index et arbre de travail.
+- un fichier indexé n'est ni revu ni du suivi documentaire (`docs/`, `.scratch/`, `Plan architecte Simulafoot.md`, `PROJET_SIMULAFOOT.md`, journal), ou un fichier revu diffère entre index et arbre de travail ;
+- (depuis le 18/11/2026, ticket `expert-dispositif/07`) le fichier du ticket clôturé, **lu dans l'index** (`git show :<chemin>`), ne porte pas le statut livré : pour une clôture `<chantier>/<id>`, le fichier `.scratch/<chantier>/issues/<id>-*.md` doit être unique et sa ligne `**Status:**` commencer par `**Status:** livré (JJ/MM/AAAA), validé expert + QC` (suite libre : réserves, précisions ; date non comparée à celle de la clôture). Fichier absent ou en double : refus. Chantier sans dossier `.scratch/<chantier>/issues/`, ni sur le disque ni dans l'index (`fusion/...`, `projet/...`, `backlog-v2/...`) : pas de fichier ticket, rien à vérifier. Une clôture qui ne correspond à aucun ticket (lot de tickets, suivi transverse) prend donc un préfixe hors chantier, par exemple `projet/...`, et non `v2-realisme/25-26`. Corriger le statut ne rouvre pas la revue (`.scratch/` est du suivi documentaire).
 
-`integrite.ps1` surveille aussi `cloture.py`, `expert.md`, `controle-qualite.md` et `valider-etape/SKILL.md`, repérés par leur chemin relatif à la racine du dépôt (mêmes clés sous Windows et Linux) ; les exemplaires globaux `~/.claude/...` de ces deux derniers, s'ils existent, doivent être identiques à ceux du dépôt (anomalie DIVERGENT). Banc : `bash .scratch/expert-dispositif/tests/test-verrou.sh <dossier temporaire vide>` (39 scénarios, dépôt jetable, scripts réels ; I37-I38 non exécutés sous Windows). Session cloud Linux : environnement `projet-foot` (PowerShell 7, liens `powershell` et `powershell.exe` vers `pwsh`).
+`integrite.ps1` surveille aussi `cloture.py`, `expert.md`, `controle-qualite.md` et `valider-etape/SKILL.md`, repérés par leur chemin relatif à la racine du dépôt (mêmes clés sous Windows et Linux) ; les exemplaires globaux `~/.claude/...` de ces deux derniers, s'ils existent, doivent être identiques à ceux du dépôt (anomalie DIVERGENT). Banc : `bash .scratch/expert-dispositif/tests/test-verrou.sh <dossier temporaire vide>` (45 scénarios, dépôt jetable, scripts réels ; I37-I38 non exécutés sous Windows ; I39-I44 : statut du ticket). Session cloud Linux : environnement `projet-foot` (PowerShell 7, liens `powershell` et `powershell.exe` vers `pwsh`).
 
 Conséquence : un commit sans ticket clôturé est désormais refusé (avant, un QC `VALIDÉ` suffisait).
 
@@ -51,13 +52,15 @@ python -I .claude/skills/valider-ticket-simulafoot/cloture.py decision --ticket 
 | INCONCLUSIVE, réserves non acceptées, rapport absent/incomplet/autre ticket/code modifié depuis | VALIDÉ ou BLOQUÉ | BLOQUÉ |
 | quelconque | BLOQUÉ ou absent | BLOQUÉ (sauf REFUSÉ ci-dessus) |
 
+Au commit, une clôture VALIDÉ ne suffit pas encore : le fichier ticket indexé doit porter `**Status:** livré (JJ/MM/AAAA), validé expert + QC` (voir « Verrou de commit » ; hors chantier, pas de vérification).
+
 ## Calculs de l'expert
 
 Aucun MCP d'exécution Python n'est installé (vérifié le 29/10/2026). L'expert n'exécute donc rien : il rend une `DEMANDE DE VÉRIFICATIONS` (hypothèse, formulation, commande d'un script existant ou spécification d'un script, résultat attendu) ; le skill l'exécute, avec une empreinte de tout le dépôt avant et après pour prouver que rien n'a été modifié, et lui renvoie sortie et empreintes. Un script nouveau est écrit par le développeur hors du dépôt. C'est une détection a posteriori, pas un bac à sable : une commande qui écrit dans le dépôt est repérée, pas empêchée.
 
 ## Limites
 
-- Le statut écrit dans le fichier ticket n'est protégé par aucun mécanisme : seul le commit l'est (verrou).
+- Depuis le 18/11/2026 (`expert-dispositif/07`), le verrou refuse le commit d'un ticket clôturé dont le fichier indexé n'est pas passé « livré ». Il ne vérifie que la forme de la ligne : une ligne « livré » écrite sans clôture n'est détectée que si la dernière clôture du journal porte sur ce ticket, et rien n'empêche de rouvrir à la main un statut après le commit.
 - Corrigé le 29/10/2026 : une interruption entre l'entrée QC `VALIDÉ` et la clôture laissait passer un commit ; le verrou exige maintenant la clôture liée (banc, scénarios I1 à I3).
 - `FICHIERS` est déclaré par le développeur : un fichier de code omis mais indexé est refusé ; un fichier omis et non indexé échappe toujours à la revue.
 - `git commit -a` ou `git commit <chemin>` commitent l'arbre de travail : les fichiers revus restent couverts par l'empreinte, mais d'autres fichiers modifiés peuvent partir dans le commit sans contrôle. Indexer explicitement puis `git commit -m`.
