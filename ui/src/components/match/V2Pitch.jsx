@@ -3,6 +3,7 @@ import dims from "../../utils/pitchGeometry.json";
 import { COS, GROUND_MATRIX, project } from "../../utils/v2Projection";
 import { PITCH_COLORS } from "../../utils/teamColors";
 import PlayerMarker, { PLAYER_R, PlayerNumber, ReliefDefs } from "./PlayerMarker";
+import BallMarker from "./BallMarker";
 
 // Terrain simple, réutilise seulement les COTES réelles de la V1 (pitchGeometry.json, dérivé de
 // ligue1sim.pitch_geometry) -- pas le composant PitchField.jsx lui-même, dont l'orientation est
@@ -207,7 +208,9 @@ const PitchGround = memo(function PitchGround() {
 
 // `className` : taille de l'élément (l'écran de match lui donne toute sa case, ticket v2-ecran-match/04) ; le dessin garde
 // ses proportions et se centre dans la boîte (preserveAspectRatio par défaut).
-export default function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, selected, onSelect, className = "w-full max-w-4xl rounded-lg" }) {
+// `ballLook` : aspect du ballon (ticket v2-ecran-match/21a) : `dir` (direction du déplacement dans le repère de la vue),
+// `speed` (m/s) et `playbackSpeed` (figement du motif), `trail` (longueur de la traînée, m) ; absent = motif figé, sans traînée.
+export default function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, selected, onSelect, ballLook = null, className = "w-full max-w-4xl rounded-lg" }) {
   const height = (FLOOR_BOTTOM + MARGIN) * COS;
   // du fond (y petit) vers l'avant : le joueur le plus proche de la caméra recouvre le plus lointain
   const players = [...tick.players]
@@ -226,7 +229,6 @@ export default function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, 
   const holder = players.find((p) => p.name === tick.ball.holder);
   const air = tick.ball.mode === "aérien";
   const ballGround = project(tick.ball.x, tick.ball.y);
-  const ball = project(tick.ball.x, tick.ball.y, air ? BALL_AIR_Z : 0);
   const ballR = air ? BALL_AIR_R : BALL_R;
   // bancs : immobiles avant l'échauffement, inutile de leur passer le temps qui court
   const benchSeconds = seconds >= warmUpFromS ? seconds : 0;
@@ -274,16 +276,17 @@ export default function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, 
       <GoalFrame x={0} out={-1} />
       <GoalFrame x={L} out={1} />
 
-      {/* 5. ballon : plus gros et remonté s'il est aérien (hauteur fixe d'un mètre, provisoire) ; atténué s'il est mort */}
-      <circle
-        cx={ball.x}
-        cy={ball.y}
+      {/* 5. ballon : plus gros et remonté s'il est aérien (hauteur fixe d'un mètre, provisoire) ; atténué s'il est mort ;
+          motif qui roule et traînée de vitesse (ticket v2-ecran-match/21a) */}
+      <BallMarker
+        ground={tick.ball}
+        z={air ? BALL_AIR_Z : 0}
         r={ballR}
-        fill="white"
-        stroke="black"
-        strokeWidth={0.1}
-        opacity={tick.ball.dead ? 0.6 : 1}
-        style={{ pointerEvents: "none" }}
+        dead={tick.ball.dead}
+        dir={ballLook?.dir ?? null}
+        speed={ballLook?.speed ?? Infinity}
+        playbackSpeed={ballLook?.playbackSpeed ?? 1}
+        trail={ballLook?.trail ?? 0}
       />
 
       {/* 6. nom du porteur, sous son rond ; le contour sombre le garde lisible sur la pelouse comme sur les lignes */}

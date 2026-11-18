@@ -1,6 +1,6 @@
 # EM-21 — Ballon dessiné et filet animé sur un but (V) — 135 min (moyenne) → découpé en 21a et 21b — ajouté le 18/11/2026
 
-**Status:** à faire (créé le 18/11/2026 à la demande du propriétaire ; découpé dès la création en 21a et 21b ; constantes à proposer avant le code)
+**Status:** découpé (18/11/2026, dès la création) en 21a (`21a-ballon-dessine-roulement-et-trainee.md`) et 21b (`21b-filet-qui-ondule-sur-un-but.md`). Ticket chapeau : ne pas l'implémenter tel quel ; le détail de chaque partie est dans son fichier (copie ci-dessous, pour l'historique de la création).
 
 Chantier : `.scratch/v2-ecran-match/spec.md` (audit, direction artistique, décisions).
 

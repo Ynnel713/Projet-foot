@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "test": "node --test src/utils/teamColors.test.js src/utils/v2Spline.test.js",
+    "test": "node --test src/utils/teamColors.test.js src/utils/v2Spline.test.js src/utils/v2BallLook.test.js",
     "preview": "vite preview"
   },
   "dependencies": {

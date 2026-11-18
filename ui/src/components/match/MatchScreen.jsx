@@ -7,6 +7,7 @@ import Momentum from "./Momentum";
 import V2Pitch from "./V2Pitch";
 import { teamColors, teamColorVars } from "../../utils/teamColors";
 import { clock, halfStart, interpolatedTick, rotated, situationAt } from "./trace";
+import { ballMotion, ballSpeed, trailLength } from "../../utils/v2BallLook";
 
 // Écran de lecture de la V2 (ticket v2-ecran-match/01 : déplacé depuis routes/V2Match.jsx). Le score n'est révélé
 // qu'au fil des buts horodatés dans la trace, jamais avant que la lecture ne les atteigne (US-29).
@@ -81,6 +82,16 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
   const time = clock(trace, tick.minute);
   const secondHalf = time.second;
   const view = secondHalf ? rotated(tick) : tick;
+  // aspect du ballon (ticket v2-ecran-match/21a) : mouvement lu dans la piste (repère du moteur), direction retournée
+  // avec la scène en 2e période ; traînée seulement pour un ballon libre ; vitesse aussi pour un ballon tenu (figement
+  // du motif, qui roule avec le dribble)
+  const motion = tick.ball.dead ? null : ballMotion(trace.ball_track, tick.minute, halfStart(trace));
+  const ballLook = {
+    dir: motion && (secondHalf ? { x: -motion.dir.x, y: -motion.dir.y } : motion.dir),
+    speed: tick.ball.dead ? 0 : ballSpeed(trace.ball_track, tick.minute, halfStart(trace)),
+    playbackSpeed: speed,
+    trail: trailLength(motion),
+  };
   // score : jusqu'à l'instant le plus avancé déjà vu, pour qu'il ne recule pas pendant un ralenti
   const shownS = Math.max(seen, seconds);
   const revealedGoals = trace.goals.filter((g) => g.minute * 60 <= shownS);
@@ -163,6 +174,7 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
             lineups={lineups}
             selected={selected}
             onSelect={onSelect}
+            ballLook={ballLook}
             className="w-full h-full"
           />
           {halfBanner && (
