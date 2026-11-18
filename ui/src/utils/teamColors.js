@@ -10,7 +10,9 @@ export const INK_LIGHT = "#ffffff";
 export const INK_DARK = "#000000"; // noir pur (et non #0b0f14) : numéro à 4,5:1 au moins sur toute couleur (propriétaire, 14/11/2026)
 export const OFF_WHITE = "#f2efe6"; // dernier recours, avec INK_DARK
 // Gazon de l'écran (bandes de tonte, source unique lue par V2Pitch) : la secondaire n'est prise que si elle s'en détache.
-export const PITCH_COLORS = ["#2f7d32", "#3a8f3c"];
+// Teintes sobres de la spec du chantier écran (§2.2), ticket v2-ecran-match/05, validées par le propriétaire le 18/11/2026
+// avec leur effet sur cette règle (avant : #2f7d32 / #3a8f3c ; 15 kits sur 341 changent, liste dans le ticket).
+export const PITCH_COLORS = ["#24603a", "#2a6b3f"];
 // Repli quand la feuille de match n'a pas de couleur (traces enregistrées avant EM-02) ou que le club n'a pas de kit
 // connu (`known_kit` faux, gris par défaut pour 656 clubs sur 816) : les couleurs historiques de l'écran.
 export const FALLBACK = { home: "#4f8ef7", away: "#e0b84a" };

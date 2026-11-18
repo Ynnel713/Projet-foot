@@ -25,13 +25,22 @@ const CORNER_R = dims.corner_arc_radius_m;
 // Habillage inspiré d'une vue aérienne de stade (retour du propriétaire, 24/10/2026) : pelouse tondue en bandes,
 // marquages complets, buts avec filets, bord de terrain et piste. Dessiné en SVG plutôt qu'en photo : la photo est
 // prise en légère perspective, les joueurs (positions en mètres) ne tomberaient pas sur ses lignes.
-const MARGIN = 6; // bord de pelouse autour des lignes (m)
-const TRACK = 2; // piste autour du bord (m)
+// Ticket v2-ecran-match/05 (constantes validées par le propriétaire le 18/11/2026, spec du chantier §2.2) : plus de piste
+// rouge ni de cadre ; pelouse de 3 m autour des lignes sur un sol sombre qui prolonge le fond de l'écran ; gazon sobre
+// (PITCH_COLORS) ; vignette légère et un seul dégradé de profondeur. Coordonnées et projection inchangées : seul le
+// viewBox est recadré.
+const MARGIN = 3; // bord de pelouse autour des lignes (m ; 6 m avant EM-05)
 const STRIPES = 18; // bandes de tonte sur la longueur
-const LINE = { fill: "none", stroke: "rgba(255,255,255,0.9)", strokeWidth: 0.15 };
+const FLOOR = "#0E141B"; // sol sombre autour de la pelouse
+const VIGNETTE = 0.08; // assombrissement maximal des bords du gazon
+const DEPTH_SHADE = 0.06; // côté lointain (y = 0) plus sombre que le côté proche
+// Lignes : 1,5 px à l'écran quelle que soit la taille (trait non mis à l'échelle) ; en mètres, 0,12 m ne ferait que
+// 0,45 px sur un téléphone en paysage.
+const LINE = { fill: "none", stroke: "rgba(255,255,255,0.85)", strokeWidth: 1.5, vectorEffect: "non-scaling-stroke" };
 
-const BENCH_ZONE = 7; // bande sous la piste, côté tribune principale, où sont les bancs (m)
-const BENCH_Y = W + MARGIN + TRACK + 3; // axe des bancs
+// Bancs : place d'avant EM-05 gardée telle quelle (leur dessin et leur zone sont le ticket EM-06).
+const BENCH_Y = W + 11; // axe des bancs (m)
+const FLOOR_BOTTOM = W + 15; // bas de la zone des bancs, bas du dessin (m)
 const BENCH_GAP = 4; // des bancs à la ligne médiane (m)
 const SEAT = 1.6; // largeur d'un siège (m)
 const WARMING_UP = 3; // remplaçants de champ qui s'échauffent en 2e période
@@ -164,11 +173,18 @@ const GoalFrame = memo(function GoalFrame({ x, out }) {
 
 // Filet des buts, pelouse et lignes : immobiles, dessinés une seule fois.
 const PitchGround = memo(function PitchGround() {
-  const pad = MARGIN + TRACK;
   const stripe = L / STRIPES;
   return (
     <>
       <defs>
+        <radialGradient id="v2-vignette" cx="0.5" cy="0.5" r="0.5">
+          <stop offset="0.6" stopColor="#000" stopOpacity={0} />
+          <stop offset="1" stopColor="#000" stopOpacity={VIGNETTE} />
+        </radialGradient>
+        <linearGradient id="v2-depth" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#000" stopOpacity={DEPTH_SHADE} />
+          <stop offset="1" stopColor="#000" stopOpacity={0} />
+        </linearGradient>
         <pattern id="v2-net" width={0.5} height={0.5} patternUnits="userSpaceOnUse">
           <rect width={0.5} height={0.5} fill="rgba(255,255,255,0.15)" />
           <path d="M 0 0 L 0.5 0 M 0 0 L 0 0.5" stroke="rgba(255,255,255,0.6)" strokeWidth={0.05} />
@@ -176,12 +192,13 @@ const PitchGround = memo(function PitchGround() {
       </defs>
       {/* 1. pelouse et lignes : à plat, écrasées par la même projection (z = 0) */}
       <g transform={GROUND_MATRIX}>
-        <rect x={-pad} y={-pad} width={L + 2 * pad} height={W + 2 * pad + BENCH_ZONE} fill="#5a5f66" />
-        <rect x={-pad} y={-pad} width={L + 2 * pad} height={W + 2 * pad} fill="#9c4a3c" />
+        <rect x={-MARGIN} y={-MARGIN} width={L + 2 * MARGIN} height={FLOOR_BOTTOM + MARGIN} fill={FLOOR} />
         <rect x={-MARGIN} y={-MARGIN} width={L + 2 * MARGIN} height={W + 2 * MARGIN} fill={PITCH_COLORS[0]} />
         {Array.from({ length: STRIPES }, (_, i) => (
           <rect key={i} x={i * stripe} y={-MARGIN} width={stripe} height={W + 2 * MARGIN} fill={i % 2 ? PITCH_COLORS[1] : PITCH_COLORS[0]} />
         ))}
+        <rect x={-MARGIN} y={-MARGIN} width={L + 2 * MARGIN} height={W + 2 * MARGIN} fill="url(#v2-depth)" />
+        <rect x={-MARGIN} y={-MARGIN} width={L + 2 * MARGIN} height={W + 2 * MARGIN} fill="url(#v2-vignette)" />
 
         <rect x={0} y={0} width={L} height={W} {...LINE} />
         <line x1={L / 2} y1={0} x2={L / 2} y2={W} {...LINE} />
@@ -205,8 +222,7 @@ const PitchGround = memo(function PitchGround() {
 // `className` : taille de l'élément (l'écran de match lui donne toute sa case, ticket v2-ecran-match/04) ; le dessin garde
 // ses proportions et se centre dans la boîte (preserveAspectRatio par défaut).
 export default function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, selected, onSelect, className = "w-full max-w-4xl rounded-lg" }) {
-  const pad = MARGIN + TRACK;
-  const height = (W + 2 * pad + BENCH_ZONE) * COS;
+  const height = (FLOOR_BOTTOM + MARGIN) * COS;
   // du fond (y petit) vers l'avant : le joueur le plus proche de la caméra recouvre le plus lointain
   const players = [...tick.players]
     .sort((a, b) => a.y - b.y)
@@ -230,9 +246,9 @@ export default function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, 
   const benchSeconds = seconds >= warmUpFromS ? seconds : 0;
   return (
     <svg
-      viewBox={`${-pad} ${-pad * COS} ${L + 2 * pad} ${height}`}
+      viewBox={`${-MARGIN} ${-MARGIN * COS} ${L + 2 * MARGIN} ${height}`}
       className={className}
-      style={{ aspectRatio: `${L + 2 * pad} / ${height}` }}
+      style={{ aspectRatio: `${L + 2 * MARGIN} / ${height}` }}
     >
       <PitchGround />
       {lineups && <Bench lineup={lineups.home} side={-1} color="var(--team-home)" seconds={benchSeconds} warmUpFromS={warmUpFromS} />}
