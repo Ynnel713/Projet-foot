@@ -1,7 +1,8 @@
 import { memo } from "react";
 import dims from "../../utils/pitchGeometry.json";
 import { COS, GROUND_MATRIX, project } from "../../utils/v2Projection";
-import { PITCH_COLORS, RING_WIDTH_M } from "../../utils/teamColors";
+import { PITCH_COLORS } from "../../utils/teamColors";
+import PlayerMarker, { PLAYER_R, PlayerNumber, ReliefDefs } from "./PlayerMarker";
 
 // Terrain simple, réutilise seulement les COTES réelles de la V1 (pitchGeometry.json, dérivé de
 // ligue1sim.pitch_geometry) -- pas le composant PitchField.jsx lui-même, dont l'orientation est
@@ -49,26 +50,6 @@ const SUB_R = 0.75; // rond d'un remplaçant, assis ou à l'échauffement (m ; 0
 const BENCH_GAP = 4; // des bancs à la ligne médiane (m)
 const SEAT = 1.6; // largeur d'un siège (m)
 const WARMING_UP = 3; // remplaçants de champ qui s'échauffent en 2e période
-
-function PlayerNumber({ x, y, value, team, size = 1.4 }) {
-  if (value == null) return null;
-  return (
-    <text
-      x={x}
-      y={y}
-      textAnchor="middle"
-      dominantBaseline="central"
-      fontSize={size}
-      fontWeight="bold"
-      strokeWidth={0.2}
-      paintOrder="stroke"
-      // encre et liseré de l'équipe (ticket v2-ecran-match/03)
-      style={{ pointerEvents: "none", fill: `var(--team-${team}-ink)`, stroke: `var(--team-${team}-ink-edge)` }}
-    >
-      {value}
-    </text>
-  );
-}
 
 // Banc d'une équipe sous le terrain (`side` -1 : à gauche de la ligne médiane, 1 : à droite) : entraîneur et
 // remplaçants assis ; en 2e période, quelques remplaçants de champ trottinent le long de la ligne de touche, de leur
@@ -139,7 +120,6 @@ function GoalEnd({ flip }) {
 }
 
 // Joueurs, buts et ballon sur la caméra inclinée (ticket v2-hauteur-ballon/01).
-const PLAYER_R = 1.3; // rayon du rond d'un joueur (m)
 const FACING_TICK = 1.0; // trait d'orientation : longueur au-delà du rond, dans le sens du corps (m ; ticket v2-realisme/07a)
 // Le rond d'un joueur est dessiné à la hauteur de sa taille : sans cela il recouvrirait son ombre. Valeur validée par
 // le propriétaire le 06/11/2026 ; si l'ombre est trop discrète sur téléphone, jouer sur son opacité, pas sur cette hauteur.
@@ -147,7 +127,7 @@ const PLAYER_LIFT = 1.8;
 const SHADOW_K = 0.8; // ombre d'un joueur : ovale de rayon 0,8 × celui du rond (validé le 04/11/2026)
 const SHADOW_OPACITY = 0.25;
 const CROSSBAR = 2.44; // hauteur de la barre transversale (m)
-const BALL_R = 0.4;
+const BALL_R = 0.5; // ballon au sol (m ; 0,4 avant le ticket v2-ecran-match/07, validé par le propriétaire le 18/11/2026)
 const BALL_AIR_R = 0.6;
 const BALL_AIR_Z = 1; // hauteur fixe d'un ballon aérien, jusqu'au ticket 02b (vraie hauteur à l'écran)
 
@@ -190,6 +170,7 @@ const PitchGround = memo(function PitchGround() {
           <stop offset="0" stopColor="#000" stopOpacity={DEPTH_SHADE} />
           <stop offset="1" stopColor="#000" stopOpacity={0} />
         </linearGradient>
+        <ReliefDefs />
         <pattern id="v2-net" width={0.5} height={0.5} patternUnits="userSpaceOnUse">
           <rect width={0.5} height={0.5} fill="rgba(255,255,255,0.15)" />
           <path d="M 0 0 L 0.5 0 M 0 0 L 0 0.5" stroke="rgba(255,255,255,0.6)" strokeWidth={0.05} />
@@ -286,28 +267,7 @@ export default function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, 
 
       {/* 3. joueurs, triés du fond vers l'avant : vrais cercles, avec le trait de leur cap (ticket v2-realisme/07a) */}
       {players.map((p) => (
-        <g key={p.name} onClick={() => onSelect(p.name === selected ? null : p.name)} style={{ cursor: "pointer" }}>
-          <line
-            x1={p.body.x}
-            y1={p.body.y}
-            x2={p.nose.x}
-            y2={p.nose.y}
-            stroke="white"
-            strokeWidth={0.35}
-            strokeLinecap="round"
-            opacity={0.85}
-            style={{ pointerEvents: "none" }}
-          />
-          <circle
-            cx={p.body.x}
-            cy={p.body.y}
-            r={PLAYER_R}
-            // couleur, anneau clair ou sombre (RING_WIDTH_M) de l'équipe ; joueur sélectionné : anneau blanc épais
-            style={{ fill: `var(--team-${p.team})`, stroke: p.name === selected ? "white" : `var(--team-${p.team}-ring)` }}
-            strokeWidth={p.name === selected ? 0.4 : RING_WIDTH_M}
-          />
-          <PlayerNumber x={p.body.x} y={p.body.y} value={numbers[p.name]} team={p.team} />
-        </g>
+        <PlayerMarker key={p.name} player={p} number={numbers[p.name]} selected={p.name === selected} onSelect={onSelect} />
       ))}
 
       {/* 4. buts en hauteur */}
