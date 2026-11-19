@@ -15,3 +15,11 @@ Chantier : `.scratch/v2-ecran-match/spec.md` (audit, direction artistique, déci
 - **Risques** : amplitude trop faible → visuel plat (alors ticket de données EM-D2).
 
 ## Comments
+
+### 19/11/2026 — 11a livré
+
+- 11a livré (19/11/2026), validé expert + QC : voir `11a-frise-de-momentum-rendu.md`. Frise de 72 px (et non 150 px :
+  décision EM-04), pleine largeur, domaine fixe de 105 minutes ; constantes de 11b validées le même jour (échelle fixe
+  0,6, seuil de 1 px, minutes terminées seulement, libellé « Pression territoriale »). Reporté en 11b : réserve A1 de
+  11a (barre de la minute en cours au-delà du curseur, critère du banc sur la fin de barre).
+

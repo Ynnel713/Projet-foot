@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import IntentionPanel from "./IntentionPanel";
 import LineupPanel from "./LineupPanel";
 import MatchHud from "./MatchHud";
-import Momentum from "./Momentum";
+import MomentumTimeline from "./MomentumTimeline";
 import V2Pitch from "./V2Pitch";
 import { teamColors, teamColorVars } from "../../utils/teamColors";
 import { lineupDensity } from "../../utils/lineupCards";
@@ -188,8 +188,13 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
       </div>
 
       <div data-zone="bas" className="flex flex-col gap-1 max-h-[110px] min-h-0 overflow-y-auto px-2.5 py-1.5 bg-surface border-t border-line">
-        <div className="min-h-0 flex-1 flex justify-center [@media(max-height:499.98px)]:hidden">
-          <Momentum trace={trace} played={Math.ceil(shownS / 60)} goalsShown={trace.goals.filter((g) => g.minute <= shownS / 60).length} />
+        <div className="shrink-0 [@media(max-height:499.98px)]:hidden">
+          <MomentumTimeline
+            trace={trace}
+            shownMin={shownS / 60}
+            played={Math.ceil(shownS / 60)}
+            goalsShown={trace.goals.filter((g) => g.minute <= shownS / 60).length}
+          />
         </div>
         <IntentionPanel trace={trace} tick={selected ? tick : null} selected={selected} />
         {finished && (
