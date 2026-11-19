@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, BarChart3 } from "lucide-react";
 import ScoreBlock from "./ScoreBlock";
 import SpeedControls from "./SpeedControls";
 
@@ -33,7 +33,7 @@ function useSideWidth() {
   return [left, right, width];
 }
 
-export default function MatchHud({ trace, score, scorers, time, badge, offside, onBack, playback, finished }) {
+export default function MatchHud({ trace, score, scorers, time, badge, offside, onBack, playback, finished, statsOpen, onStats }) {
   const [leftRef, rightRef, sideWidth] = useSideWidth();
   const columns = sideWidth == null ? "auto minmax(0,1fr) auto" : `${sideWidth}px minmax(0,1fr) ${sideWidth}px`;
   return (
@@ -43,9 +43,23 @@ export default function MatchHud({ trace, score, scorers, time, badge, offside, 
       style={{ gridTemplateColumns: columns }}
     >
       <div className="flex justify-start">
-        <button ref={leftRef} onClick={onBack} className="flex items-center gap-1 min-h-11 text-data text-gray-400 shrink-0">
-          <ArrowLeft size={14} /> Retour
-        </button>
+        <div ref={leftRef} className="flex items-center gap-2 shrink-0">
+          <button onClick={onBack} className="flex items-center gap-1 min-h-11 text-data text-gray-400 shrink-0">
+            <ArrowLeft size={14} /> Retour
+          </button>
+          {/* panneau de statistiques (ticket v2-ecran-match/14b) : à gauche, la colonne des vitesses étant la plus large
+              (décision du propriétaire du 19/11/2026) */}
+          <button
+            data-zone="bouton-stats"
+            onClick={onStats}
+            aria-pressed={statsOpen}
+            className={`h-10 max-[959.98px]:h-9 [@media(max-height:499.98px)]:h-9 flex items-center gap-1 rounded-lg px-2.5 text-data font-semibold ring-1 ring-inset ring-line ${
+              statsOpen ? "bg-accent text-white" : "bg-surface-2 text-gray-200 hover:text-white"
+            }`}
+          >
+            <BarChart3 size={16} /> Stats
+          </button>
+        </div>
       </div>
       <div className="min-w-0 flex flex-col items-stretch">
         <ScoreBlock home={trace.home} away={trace.away} score={score} scorers={scorers} />

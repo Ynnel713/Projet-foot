@@ -37,8 +37,8 @@ export function HalfTimeBanner({ home, away, score }) {
 }
 
 // Fin : carte centrée sur le terrain (TERMINÉ, score, buteurs, Retour), refermable pour revoir la position finale.
-// Bouton Statistiques : ticket EM-14.
-export function FullTimeCard({ home, away, score, scorers, onBack, onClose }) {
+// Bouton Statistiques : ticket EM-14b (ouvre le panneau et referme la carte).
+export function FullTimeCard({ home, away, score, scorers, onBack, onClose, onStats }) {
   const list = (side) => (
     <ul className={`min-w-0 text-data leading-5 text-gray-300 ${side === "home" ? "text-right" : "text-left"}`}>
       {scorers[side].all.map((row) => (
@@ -77,7 +77,11 @@ export function FullTimeCard({ home, away, score, scorers, onBack, onClose }) {
           <div />
           {list("away")}
         </div>
-        <div className="mt-3 flex justify-center">
+        <div className="mt-3 flex justify-center gap-2">
+          {/* Statistiques : ticket v2-ecran-match/14b */}
+          <button onClick={onStats} className="min-h-11 rounded bg-surface-3 px-5 text-data font-semibold text-white ring-1 ring-inset ring-line">
+            Statistiques
+          </button>
           <button onClick={onBack} className="min-h-11 rounded bg-accent px-5 text-data font-semibold text-white">
             Retour
           </button>

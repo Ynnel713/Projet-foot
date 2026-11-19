@@ -1,0 +1,9 @@
+Fluidité EM-14b (19/11/2026) : banc d'EM-01 (harnais avec « ×8 »), builds de production avant (f6d455f, 13b) et après, trace em11-psg-havre, ×8, 3 passes alternées de 15 s, panneau fermé ; suite Python en parallèle (valeurs absolues bruitées).
+4185 {"frames":849,"median":16.7,"p95":16.8,"max":650,"nodes":323,"cpu":{"taskMsPerFrame":7.73,"scriptMsPerFrame":1.69,"layoutMsPerFrame":2.13,"styleMsPerFrame":0.61}}
+4186 {"frames":901,"median":16.7,"p95":16.7,"max":16.8,"nodes":327,"cpu":{"taskMsPerFrame":7.87,"scriptMsPerFrame":1.66,"layoutMsPerFrame":2.22,"styleMsPerFrame":0.62}}
+4185 {"frames":901,"median":16.7,"p95":16.8,"max":16.8,"nodes":323,"cpu":{"taskMsPerFrame":7.19,"scriptMsPerFrame":1.75,"layoutMsPerFrame":1.96,"styleMsPerFrame":0.56}}
+4186 {"frames":900,"median":16.7,"p95":16.7,"max":50.1,"nodes":327,"cpu":{"taskMsPerFrame":8.08,"scriptMsPerFrame":1.77,"layoutMsPerFrame":2.19,"styleMsPerFrame":0.6}}
+4185 {"frames":895,"median":16.7,"p95":16.8,"max":66.7,"nodes":323,"cpu":{"taskMsPerFrame":7.97,"scriptMsPerFrame":1.71,"layoutMsPerFrame":2.22,"styleMsPerFrame":0.63}}
+4186 {"frames":900,"median":16.7,"p95":16.7,"max":33.3,"nodes":327,"cpu":{"taskMsPerFrame":8.41,"scriptMsPerFrame":1.85,"layoutMsPerFrame":2.29,"styleMsPerFrame":0.64}}
+Moyennes : script 1,717 -> 1,760 ms/image (+2,5 %, dans le bruit des passes) ; médiane 16,7 ms des deux côtés ; 323 -> 327 nœuds SVG (icône du bouton Stats).
+Panneau ouvert (em14b-ouvert.cjs, build après, même page, ×8, 8 s chacun) : fermé médiane 16,7 / p95 16,8 / max 33,4 ms ; ouvert médiane 16,7 / p95 16,8 / max 16,8 ms (em14b-ouvert.json).

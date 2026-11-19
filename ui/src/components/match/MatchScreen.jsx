@@ -1,8 +1,9 @@
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import IntentionPanel from "./IntentionPanel";
 import LineupPanel from "./LineupPanel";
 import MatchHud from "./MatchHud";
+import StatsDrawer from "./StatsDrawer";
 import { FullTimeCard, HalfTimeBanner, TopBanner } from "./MatchBanner";
 import MomentumTimeline from "./MomentumTimeline";
 import V2Pitch from "./V2Pitch";
@@ -102,6 +103,8 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
   const [reduceMotion] = useState(reducedMotion);
   const { trace, seconds, seen, speed, halfBanner, goalBanner, kickoffBanner, replaying } = playback;
   const [endClosed, setEndClosed] = useState(false); // carte de fin refermée (ticket v2-ecran-match/13)
+  const [statsOpen, setStatsOpen] = useState(false); // panneau de statistiques (ticket v2-ecran-match/14b)
+  const closeStats = useCallback(() => setStatsOpen(false), []);
   const numbers = useMemo(
     () =>
       Object.fromEntries(
@@ -163,6 +166,8 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
         badge={matchBadge({ finished, halfBanner, replaying, waiting })}
         offside={recentOffside}
         onBack={onBack}
+        statsOpen={statsOpen}
+        onStats={() => setStatsOpen((o) => !o)}
         playback={playback}
         finished={finished}
       />
@@ -205,10 +210,15 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
               scorers={scorers}
               onBack={onBack}
               onClose={() => setEndClosed(true)}
+              onStats={() => {
+                setEndClosed(true);
+                setStatsOpen(true);
+              }}
             />
           )}
         </div>
         <LineupSide side="away" lineup={lineups?.away} color="var(--team-away-ui)" stats={playerGoals} />
+        {statsOpen && <StatsDrawer trace={trace} shownS={shownS} onClose={closeStats} />}
       </div>
 
       <div data-zone="bas" className="flex flex-col gap-1 max-h-[110px] min-h-0 overflow-y-auto px-2.5 py-1.5 bg-surface border-t border-line">
