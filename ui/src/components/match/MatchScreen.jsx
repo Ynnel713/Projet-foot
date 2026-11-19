@@ -19,7 +19,7 @@ import { ballMotion, ballSpeed, trailLength } from "../../utils/v2BallLook";
 // sous 500 px de haut, repliée sur la ligne d'intention, sans la frise : décisions du 18/11/2026 ; un panneau d'intention
 // plus haut que la zone y défile, la page jamais, en attendant son tiroir d'EM-15). Compositions en
 // colonnes de 220 px dès 1280 px de large, 200 px de 960 à 1279 px ; sous 960 px, tiroirs de 260 px ouverts par une
-// languette de 28 px, fermés par défaut, terrain pleine largeur. Le contenu des zones est inchangé (cartes : EM-10).
+// languette de 28 px, fermés par défaut, terrain pleine largeur. Compositions en cartes : EM-10a (`LineupPanel`).
 const DRAWER_PX = 260;
 const TAB_PX = 28;
 
@@ -35,9 +35,9 @@ function LineupSide({ side, lineup, color }) {
       <aside
         data-zone={`composition-${side}`}
         aria-label={label}
-        className={`hidden min-[960px]:block min-h-0 overflow-y-auto bg-surface p-2 ${left ? "border-r" : "border-l"} border-line`}
+        className={`hidden min-[960px]:block min-h-0 overflow-y-auto bg-surface px-2 py-1.5 ${left ? "border-r" : "border-l"} border-line`}
       >
-        <LineupPanel lineup={lineup} color={color} />
+        <LineupPanel lineup={lineup} side={side} />
       </aside>
       <div
         className={`min-[960px]:hidden absolute inset-y-0 z-20 flex items-center transition-transform duration-200 ease-out motion-reduce:transition-none ${left ? "left-0" : "right-0 flex-row-reverse"}`}
@@ -48,10 +48,10 @@ function LineupSide({ side, lineup, color }) {
           aria-label={label}
           aria-hidden={!open}
           inert={!open}
-          className={`h-full overflow-y-auto bg-surface p-2 ${left ? "border-r" : "border-l"} border-line`}
+          className={`h-full overflow-y-auto bg-surface px-2 py-1.5 ${left ? "border-r" : "border-l"} border-line`}
           style={{ width: DRAWER_PX }}
         >
-          <LineupPanel lineup={lineup} color={color} />
+          <LineupPanel lineup={lineup} side={side} />
         </aside>
         <button
           data-zone={`languette-${side}`}

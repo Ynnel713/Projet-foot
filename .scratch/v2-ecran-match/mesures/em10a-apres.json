@@ -1,0 +1,357 @@
+{
+ "844x390": {
+  "cols": {
+   "home": "masquée",
+   "away": "masquée"
+  },
+  "docScroll": false
+ },
+ "1024x768": {
+  "cols": {
+   "home": {
+    "box": "200x570",
+    "scroll": 0,
+    "hScroll": 0,
+    "titulaires": 11,
+    "remplacants": 9,
+    "visibles": 20,
+    "hauteurs": [
+     "titulaire:26",
+     "remplacant:20"
+    ],
+    "offsets": [
+     70,
+     96,
+     122,
+     148,
+     174,
+     200,
+     226,
+     252,
+     278,
+     304,
+     330,
+     376,
+     396,
+     416,
+     436,
+     456,
+     476,
+     496,
+     516,
+     536
+    ],
+    "plusLong": {
+     "nom": "Ayoube Amaimouni-Echghouyab",
+     "tronque": true,
+     "title": true
+    },
+    "liseré": "3px/0px",
+    "numeroX": 17
+   },
+   "away": {
+    "box": "200x570",
+    "scroll": 0,
+    "hScroll": 0,
+    "titulaires": 11,
+    "remplacants": 9,
+    "visibles": 20,
+    "hauteurs": [
+     "titulaire:26",
+     "remplacant:20"
+    ],
+    "offsets": [
+     70,
+     96,
+     122,
+     148,
+     174,
+     200,
+     226,
+     252,
+     278,
+     304,
+     330,
+     376,
+     396,
+     416,
+     436,
+     456,
+     476,
+     496,
+     516,
+     536
+    ],
+    "plusLong": {
+     "nom": "Tim Kleindienst",
+     "tronque": false,
+     "title": true
+    },
+    "liseré": "0px/3px",
+    "numeroX": 163
+   }
+  },
+  "docScroll": false
+ },
+ "1280x720": {
+  "cols": {
+   "home": {
+    "box": "220x522",
+    "scroll": 40,
+    "hScroll": 0,
+    "titulaires": 11,
+    "remplacants": 9,
+    "visibles": 18,
+    "hauteurs": [
+     "titulaire:26",
+     "remplacant:20"
+    ],
+    "offsets": [
+     70,
+     96,
+     122,
+     148,
+     174,
+     200,
+     226,
+     252,
+     278,
+     304,
+     330,
+     376,
+     396,
+     416,
+     436,
+     456,
+     476,
+     496,
+     516,
+     536
+    ],
+    "plusLong": {
+     "nom": "Ayoube Amaimouni-Echghouyab",
+     "tronque": true,
+     "title": true
+    },
+    "liseré": "3px/0px",
+    "numeroX": 17
+   },
+   "away": {
+    "box": "220x522",
+    "scroll": 40,
+    "hScroll": 0,
+    "titulaires": 11,
+    "remplacants": 9,
+    "visibles": 18,
+    "hauteurs": [
+     "titulaire:26",
+     "remplacant:20"
+    ],
+    "offsets": [
+     70,
+     96,
+     122,
+     148,
+     174,
+     200,
+     226,
+     252,
+     278,
+     304,
+     330,
+     376,
+     396,
+     416,
+     436,
+     456,
+     476,
+     496,
+     516,
+     536
+    ],
+    "plusLong": {
+     "nom": "Tim Kleindienst",
+     "tronque": false,
+     "title": true
+    },
+    "liseré": "0px/3px",
+    "numeroX": 183
+   }
+  },
+  "docScroll": false
+ },
+ "1366x768": {
+  "cols": {
+   "home": {
+    "box": "220x570",
+    "scroll": 0,
+    "hScroll": 0,
+    "titulaires": 11,
+    "remplacants": 9,
+    "visibles": 20,
+    "hauteurs": [
+     "titulaire:26",
+     "remplacant:20"
+    ],
+    "offsets": [
+     70,
+     96,
+     122,
+     148,
+     174,
+     200,
+     226,
+     252,
+     278,
+     304,
+     330,
+     376,
+     396,
+     416,
+     436,
+     456,
+     476,
+     496,
+     516,
+     536
+    ],
+    "plusLong": {
+     "nom": "Ayoube Amaimouni-Echghouyab",
+     "tronque": true,
+     "title": true
+    },
+    "liseré": "3px/0px",
+    "numeroX": 17
+   },
+   "away": {
+    "box": "220x570",
+    "scroll": 0,
+    "hScroll": 0,
+    "titulaires": 11,
+    "remplacants": 9,
+    "visibles": 20,
+    "hauteurs": [
+     "titulaire:26",
+     "remplacant:20"
+    ],
+    "offsets": [
+     70,
+     96,
+     122,
+     148,
+     174,
+     200,
+     226,
+     252,
+     278,
+     304,
+     330,
+     376,
+     396,
+     416,
+     436,
+     456,
+     476,
+     496,
+     516,
+     536
+    ],
+    "plusLong": {
+     "nom": "Tim Kleindienst",
+     "tronque": false,
+     "title": true
+    },
+    "liseré": "0px/3px",
+    "numeroX": 183
+   }
+  },
+  "docScroll": false
+ },
+ "1920x1080": {
+  "cols": {
+   "home": {
+    "box": "220x882",
+    "scroll": 0,
+    "hScroll": 0,
+    "titulaires": 11,
+    "remplacants": 9,
+    "visibles": 20,
+    "hauteurs": [
+     "titulaire:26",
+     "remplacant:20"
+    ],
+    "offsets": [
+     70,
+     96,
+     122,
+     148,
+     174,
+     200,
+     226,
+     252,
+     278,
+     304,
+     330,
+     376,
+     396,
+     416,
+     436,
+     456,
+     476,
+     496,
+     516,
+     536
+    ],
+    "plusLong": {
+     "nom": "Ayoube Amaimouni-Echghouyab",
+     "tronque": true,
+     "title": true
+    },
+    "liseré": "3px/0px",
+    "numeroX": 17
+   },
+   "away": {
+    "box": "220x882",
+    "scroll": 0,
+    "hScroll": 0,
+    "titulaires": 11,
+    "remplacants": 9,
+    "visibles": 20,
+    "hauteurs": [
+     "titulaire:26",
+     "remplacant:20"
+    ],
+    "offsets": [
+     70,
+     96,
+     122,
+     148,
+     174,
+     200,
+     226,
+     252,
+     278,
+     304,
+     330,
+     376,
+     396,
+     416,
+     436,
+     456,
+     476,
+     496,
+     516,
+     536
+    ],
+    "plusLong": {
+     "nom": "Tim Kleindienst",
+     "tronque": false,
+     "title": true
+    },
+    "liseré": "0px/3px",
+    "numeroX": 183
+   }
+  },
+  "docScroll": false
+ }
+}

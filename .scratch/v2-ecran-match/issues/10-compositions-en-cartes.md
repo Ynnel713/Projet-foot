@@ -13,3 +13,10 @@ Chantier : `.scratch/v2-ecran-match/spec.md` (audit, direction artistique, déci
 - **Dépendances** : EM-03, EM-04. **Risques** : entraîneur (conservé, discret) ; numéros des entrants (ticket coach/05).
 
 ## Comments
+
+### 19/11/2026 — 10a livré
+
+- 10a livré (19/11/2026), validé expert + QC : voir `10a-compositions-en-cartes-grands-ecrans.md`. Cartes de 26 et
+  20 px (et non 36 px, incompatible avec 11 + 9 cartes à 1366×768), sans palier grand écran. Reste 10b ; y reporter
+  les points facultatifs A2 à A4 de la revue de 10a.
+
