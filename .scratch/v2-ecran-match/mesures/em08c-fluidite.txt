@@ -1,0 +1,11 @@
+Fluidité EM-08c (19/11/2026) : banc d'EM-01 (harnais avec le bouton « ×8 »), build de production, trace em11-psg-havre, ×8, 3 passes alternées de 15 s, suite Python en parallèle (valeurs absolues bruitées, comparaison alternée seule valable).
+4185 = avant (e104812, 11b) ; 4186 = après (08c, buteurs mémoïsés).
+Limite : le banc lance le match au coup d'envoi ; 15 s à ×8 couvrent 2 minutes de match, avant le premier but (5,8') : il mesure le coût sans buteur (calcul mémoïsé, liste vide), pas le rendu des lignes.
+1er essai sans mémoïsation (non retenu) : script 1,66 -> 1,84 ms/image (+11 %), médiane 16,7 ms des deux côtés.
+4185 {"frames":899,"median":16.7,"p95":16.7,"max":33.4,"nodes":323,"cpu":{"taskMsPerFrame":7.35,"scriptMsPerFrame":1.95,"layoutMsPerFrame":1.95,"styleMsPerFrame":0.54}}
+4186 {"frames":901,"median":16.7,"p95":16.7,"max":16.8,"nodes":323,"cpu":{"taskMsPerFrame":7.27,"scriptMsPerFrame":1.74,"layoutMsPerFrame":2.01,"styleMsPerFrame":0.55}}
+4185 {"frames":897,"median":16.7,"p95":16.8,"max":33.3,"nodes":323,"cpu":{"taskMsPerFrame":8.13,"scriptMsPerFrame":2.02,"layoutMsPerFrame":2.17,"styleMsPerFrame":0.59}}
+4186 {"frames":900,"median":16.7,"p95":16.7,"max":33.4,"nodes":323,"cpu":{"taskMsPerFrame":7.01,"scriptMsPerFrame":1.61,"layoutMsPerFrame":1.89,"styleMsPerFrame":0.53}}
+4185 {"frames":900,"median":16.7,"p95":16.8,"max":33.4,"nodes":323,"cpu":{"taskMsPerFrame":7.54,"scriptMsPerFrame":1.68,"layoutMsPerFrame":2.08,"styleMsPerFrame":0.58}}
+4186 {"frames":899,"median":16.7,"p95":16.7,"max":33.3,"nodes":323,"cpu":{"taskMsPerFrame":7.23,"scriptMsPerFrame":1.8,"layoutMsPerFrame":1.93,"styleMsPerFrame":0.55}}
+Moyennes : script 1,883 -> 1,717 ms/image (dans le bruit des passes, ± 0,2 ms) ; médiane 16,7 ms des deux côtés ; 323 nœuds des deux côtés.

@@ -248,6 +248,65 @@ def test_live_match_sends_the_ball_track_in_slices_without_gap_or_duplicate(monk
     assert [t.minute for t in ticks] == [i * 0.1 / 60.0 for i in range(0, 23, 5)]
 
 
+def test_live_match_sends_the_events_in_slices_without_gap_or_duplicate(monkeypatch) -> None:
+    # Ticket v2-ecran-match/18 : le journal des événements (tirs, arrêts, fautes, corners…) part pendant le calcul, avec
+    # son propre curseur (`from_event`), pour les statistiques de l'écran en direct ; mises bout à bout, les tranches
+    # redonnent le journal entier, causes comprises.
+    import threading
+
+    from api.routers import v2
+    from v2engine.geometry import Vec2
+    from v2engine.trace import BallSnapshot, EventLog, PlayerSnapshot
+
+    step, may_go = threading.Event(), threading.Event()
+    kinds = ["remise", "passe", "tir", "arrêt", "remise", "faute", "remise", "passe", "tir", "but", "hors-jeu"]
+
+    def fake_simulate(home, away, **kwargs):
+        trace = MatchTrace(home=home.name, away=away.name, tick_seconds=0.5)
+        kwargs["on_start"](trace)
+        log = EventLog(trace.events)
+        for i, kind in enumerate(kinds):
+            minute = i * 0.5
+            log.add(minute, kind, "home" if i % 2 else "away", f"J{i}", detail="corner" if i == 6 else None,
+                    start=(i == 0))
+            trace.record(minute, [PlayerSnapshot("A", "home", "BU", Vec2(1.0, 2.0))], BallSnapshot(Vec2(1.0, 2.0)))
+            if i in (2, 7):  # le calcul s'arrête au milieu du journal
+                step.set()
+                may_go.wait(5)
+                may_go.clear()
+        return trace
+
+    class _Club:
+        def __init__(self, name):
+            self.name = name
+
+    monkeypatch.setattr(v2, "simulate_match", fake_simulate)
+    monkeypatch.setattr(v2, "_find_club", lambda name: _Club(name))
+    job_id = v2.start_match(SimulateV2Request(home="X", away="Y")).id
+    events, partial_seen = [], False
+    for _ in range(200):
+        paused = step.is_set()
+        progress = v2.match_progress(job_id, 0, 0, len(events))
+        assert progress.first_event == len(events)
+        if paused and not progress.done:
+            partial_seen = partial_seen or bool(progress.events)
+        events += progress.events
+        if paused:
+            step.clear()
+            may_go.set()
+        if progress.done:
+            break
+        threading.Event().wait(0.02)
+    assert progress.done and partial_seen  # des événements sont bien partis avant la fin du calcul
+    assert [e.id for e in events] == list(range(len(kinds)))
+    assert [e.kind for e in events] == kinds
+    assert [e.minute for e in events] == [i * 0.5 for i in range(len(kinds))]
+    assert events[0].cause is None and all(e.cause == e.id - 1 for e in events[1:])
+    assert events[6].detail == "corner"
+    # dernière lecture, une fois tout reçu : plus rien de neuf
+    assert v2.match_progress(job_id, 0, 0, len(events)).events == []
+
+
 def test_ball_track_out_rounds_for_a_lighter_response() -> None:
     from api.routers.v2 import _ball_track_out
     from v2engine.geometry import Vec2

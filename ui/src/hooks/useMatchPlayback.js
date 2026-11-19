@@ -13,6 +13,9 @@ const REPLAY_BEFORE_S = 8;
 const REPLAY_AFTER_S = 2;
 const REPLAY_SPEED = 0.4;
 const HALF_TIME_BANNER_MS = 3000; // bandeau « MI-TEMPS », en temps réel quelle que soit la vitesse (ticket 07)
+// Bandeaux de but et de coup d'envoi (ticket v2-ecran-match/13, décision du propriétaire du 19/11/2026) : 2 s réelles
+// quelle que soit la vitesse ; ils ne bloquent pas la lecture (contrairement au bandeau de mi-temps).
+const EVENT_BANNER_MS = 2000;
 
 export default function useMatchPlayback() {
   const [trace, setTrace] = useState(null);
@@ -26,6 +29,9 @@ export default function useMatchPlayback() {
   const replayedRef = useRef(0); // buts déjà rejoués au ralenti
   const [halfBanner, setHalfBanner] = useState(false);
   const halfRef = useRef({ shown: false, until: 0 }); // bandeau de mi-temps : déjà montré, fin (horloge réelle)
+  const [goalBanner, setGoalBanner] = useState(null); // indice du but annoncé (bandeau de but), ou null
+  const [kickoffBanner, setKickoffBanner] = useState(false);
+  const bannersRef = useRef({ announced: 0, goalUntil: 0, kickoffUntil: 0 }); // buts déjà annoncés, fins (horloge réelle)
   const traceRef = useRef(null); // dernière trace reçue, lue par la boucle de lecture sans la relancer à chaque lecture
 
   useEffect(() => {
@@ -64,6 +70,22 @@ export default function useMatchPlayback() {
           next = Math.max(0, goal.minute * 60 - REPLAY_BEFORE_S);
         }
       }
+      // bandeaux de but et de coup d'envoi : n'influent pas sur `next` (lecture inchangée)
+      const banners = bannersRef.current;
+      if (banners.kickoffUntil === -1) banners.kickoffUntil = now + EVENT_BANNER_MS; // compté dès la 1re image jouée
+      if (banners.kickoffUntil > 0 && now >= banners.kickoffUntil) {
+        banners.kickoffUntil = 0;
+        setKickoffBanner(false);
+      }
+      const announce = live.goals[banners.announced];
+      if (announce && next >= announce.minute * 60) {
+        setGoalBanner(banners.announced);
+        banners.announced += 1;
+        banners.goalUntil = now + EVENT_BANNER_MS;
+      } else if (banners.goalUntil && now >= banners.goalUntil) {
+        banners.goalUntil = 0;
+        setGoalBanner(null);
+      }
       secondsRef.current = next;
       setSeen((s) => Math.max(s, next));
       setSeconds(next);
@@ -94,6 +116,14 @@ export default function useMatchPlayback() {
     replayedRef.current = live.goals.filter((g) => g.minute * 60 + REPLAY_AFTER_S <= start).length;
     halfRef.current = { shown: halfS != null && start >= halfS, until: 0 };
     setHalfBanner(false);
+    // buts d'avant `start` réputés annoncés ; coup d'envoi seulement pour une lecture qui part du début
+    bannersRef.current = {
+      announced: live.goals.filter((g) => g.minute * 60 <= start).length,
+      goalUntil: 0,
+      kickoffUntil: start === 0 ? -1 : 0,
+    };
+    setGoalBanner(null);
+    setKickoffBanner(start === 0);
     setReplaying(false);
     setPlaying(play);
   }, []);
@@ -105,5 +135,20 @@ export default function useMatchPlayback() {
     setReplaying(false);
   }, []);
 
-  return { trace, seconds, seen, playing, setPlaying, speed, setSpeed, replaying, halfBanner, receive, begin, skipReplay };
+  return {
+    trace,
+    seconds,
+    seen,
+    playing,
+    setPlaying,
+    speed,
+    setSpeed,
+    replaying,
+    halfBanner,
+    goalBanner,
+    kickoffBanner,
+    receive,
+    begin,
+    skipReplay,
+  };
 }

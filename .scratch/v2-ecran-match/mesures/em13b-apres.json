@@ -1,0 +1,44 @@
+{
+ "1366x768@1": {
+  "hud": 89,
+  "ecart": 0,
+  "badge": "EN DIRECT",
+  "pastilleCommandes": 0,
+  "passer": false
+ },
+ "1366x768@104": {
+  "hud": 131,
+  "ecart": 0,
+  "badge": "TERMINÉ",
+  "pastilleCommandes": 0,
+  "passer": false
+ },
+ "1024x768@104": {
+  "hud": 131,
+  "ecart": 0,
+  "badge": "TERMINÉ",
+  "pastilleCommandes": 0,
+  "passer": false
+ },
+ "1920x1080@104": {
+  "hud": 131,
+  "ecart": 0,
+  "badge": "TERMINÉ",
+  "pastilleCommandes": 0,
+  "passer": false
+ },
+ "844x390@104": {
+  "hud": 69,
+  "ecart": 0,
+  "badge": "TERMINÉ",
+  "pastilleCommandes": 0,
+  "passer": false
+ },
+ "ralenti 1366x768": {
+  "hud": 103,
+  "ecart": 0,
+  "badge": "RALENTI",
+  "pastilleCommandes": 0,
+  "passer": true
+ }
+}

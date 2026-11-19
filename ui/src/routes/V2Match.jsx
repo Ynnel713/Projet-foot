@@ -87,14 +87,16 @@ export default function V2Match() {
       setLineups({ home: homeLineup, away: awayLineup });
       let ticks = [];
       let ballTrack = []; // piste du ballon à chaque pas du moteur (ticket v2-correctifs-ecran/04a), lue par l'écran au 04b
+      let events = []; // journal des événements, reçu par tranches pendant le calcul (ticket v2-ecran-match/18)
       let started = false;
       for (;;) {
-        const res = await getV2Match(id, ticks.length, ballTrack.length);
+        const res = await getV2Match(id, ticks.length, ballTrack.length, events.length);
         if (run !== runRef.current) return;
         if (res.error) throw new Error(res.error);
         ticks = ticks.concat(res.ticks);
         ballTrack = ballTrack.concat(res.ball_track ?? []);
-        const live = { ...res, ticks, ball_track: ballTrack };
+        events = events.concat(res.events ?? []);
+        const live = { ...res, ticks, ball_track: ballTrack, events };
         receive(live, started);
         setComputed(ticks.length);
         if (!started && (ticks.length >= START_BUFFER_TICKS || (res.done && ticks.length > 1))) {

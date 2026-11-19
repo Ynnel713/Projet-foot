@@ -32,8 +32,9 @@ export const createV2Match = (body) => request("/api/v2/matches", { method: "POS
 // Rejeu en direct : le calcul démarre en tâche de fond, puis on lit les images au fur et à mesure (à partir de `fromTick`),
 // et la piste du ballon, un point par pas du moteur, à partir de `fromBall` (ticket v2-correctifs-ecran/04a).
 export const startV2Match = (body) => request("/api/v2/matches/start", { method: "POST", body: JSON.stringify(body) });
-export const getV2Match = (id, fromTick, fromBall = 0) =>
-  request(`/api/v2/matches/${id}?from_tick=${fromTick}&from_ball=${fromBall}`);
+// Curseurs distincts pour les images, la piste du ballon et le journal des événements (ticket v2-ecran-match/18).
+export const getV2Match = (id, fromTick, fromBall = 0, fromEvent = 0) =>
+  request(`/api/v2/matches/${id}?from_tick=${fromTick}&from_ball=${fromBall}&from_event=${fromEvent}`);
 // Feuille de match V2 : titulaires et remplaçants numérotés, entraîneur.
 export const getV2Lineup = (club) => request(`/api/v2/lineup?club=${encodeURIComponent(club)}`);
 

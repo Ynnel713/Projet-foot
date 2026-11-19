@@ -1,6 +1,6 @@
 # EM-14 — Panneau de statistiques (V/E) — 150 min (moyenne) → 14a calculs, 14b panneau
 
-**Status:** à faire (chantier validé par le propriétaire le 07/11/2026 ; constantes à proposer avant le code)
+**Status:** livré (19/11/2026) : 14a et 14b validés expert + QC
 
 Chantier : `.scratch/v2-ecran-match/spec.md` (audit, direction artistique, décisions).
 
@@ -14,3 +14,9 @@ Chantier : `.scratch/v2-ecran-match/spec.md` (audit, direction artistique, déci
 - **Risques** : définitions discutables (c'est un calcul nouveau, donc soumis à votre accord, d'où la contrainte).
 
 ## Comments
+
+### 19/11/2026 — 14a et 14b livrés
+
+- Préalable EM-18 (journal des événements en direct). 14a : `utils/matchStats.js` (définitions validées, réserve
+  penalty acceptée, correctif en 02a). 14b : `StatsDrawer`, bouton Stats à gauche du HUD, bouton Statistiques de la
+  carte de fin, tiroir latéral (feuille du bas en portrait étroit).

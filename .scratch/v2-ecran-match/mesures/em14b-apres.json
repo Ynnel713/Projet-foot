@@ -1,0 +1,276 @@
+{
+ "1366x768@10": {
+  "rows": {
+   "possession": [
+    "51 %",
+    "49 %"
+   ],
+   "shots": [
+    "4",
+    "3"
+   ],
+   "onTarget": [
+    "2",
+    "2"
+   ],
+   "corners": [
+    "0",
+    "0"
+   ],
+   "fouls": [
+    "1",
+    "2"
+   ],
+   "offsides": [
+    "0",
+    "0"
+   ],
+   "cards": [
+    "—",
+    "—"
+   ]
+  },
+  "tiroir": "340x556 @ (1026,103)",
+  "hudVisible": true,
+  "terrainVisible": true,
+  "friseVisible": true,
+  "ecartScore": 0,
+  "page": false,
+  "minute": "10'",
+  "ecarts": [],
+  "fermeEchap": true
+ },
+ "1366x768@45": {
+  "rows": {
+   "possession": [
+    "59 %",
+    "41 %"
+   ],
+   "shots": [
+    "13",
+    "9"
+   ],
+   "onTarget": [
+    "4",
+    "5"
+   ],
+   "corners": [
+    "2",
+    "0"
+   ],
+   "fouls": [
+    "2",
+    "14"
+   ],
+   "offsides": [
+    "0",
+    "1"
+   ],
+   "cards": [
+    "—",
+    "—"
+   ]
+  },
+  "tiroir": "340x556 @ (1026,103)",
+  "hudVisible": true,
+  "terrainVisible": true,
+  "friseVisible": true,
+  "ecartScore": 0,
+  "page": false,
+  "minute": "45+1'",
+  "ecarts": [],
+  "fermeEchap": true
+ },
+ "1024x768@103.9": {
+  "rows": {
+   "possession": [
+    "56 %",
+    "44 %"
+   ],
+   "shots": [
+    "31",
+    "19"
+   ],
+   "onTarget": [
+    "11",
+    "7"
+   ],
+   "corners": [
+    "3",
+    "3"
+   ],
+   "fouls": [
+    "12",
+    "23"
+   ],
+   "offsides": [
+    "2",
+    "2"
+   ],
+   "cards": [
+    "—",
+    "—"
+   ]
+  },
+  "tiroir": "340x528 @ (684,131)",
+  "hudVisible": true,
+  "terrainVisible": true,
+  "friseVisible": true,
+  "ecartScore": 0,
+  "page": false,
+  "minute": "90+7'",
+  "ecarts": [],
+  "fermeEchap": true
+ },
+ "1920x1080@45": {
+  "rows": {
+   "possession": [
+    "59 %",
+    "41 %"
+   ],
+   "shots": [
+    "13",
+    "9"
+   ],
+   "onTarget": [
+    "4",
+    "5"
+   ],
+   "corners": [
+    "2",
+    "0"
+   ],
+   "fouls": [
+    "2",
+    "14"
+   ],
+   "offsides": [
+    "0",
+    "1"
+   ],
+   "cards": [
+    "—",
+    "—"
+   ]
+  },
+  "tiroir": "340x868 @ (1580,103)",
+  "hudVisible": true,
+  "terrainVisible": true,
+  "friseVisible": true,
+  "ecartScore": 0,
+  "page": false,
+  "minute": "45+1'",
+  "ecarts": [],
+  "fermeEchap": true
+ },
+ "844x390@45": {
+  "rows": {
+   "possession": [
+    "59 %",
+    "41 %"
+   ],
+   "shots": [
+    "13",
+    "9"
+   ],
+   "onTarget": [
+    "4",
+    "5"
+   ],
+   "corners": [
+    "2",
+    "0"
+   ],
+   "fouls": [
+    "2",
+    "14"
+   ],
+   "offsides": [
+    "0",
+    "1"
+   ],
+   "cards": [
+    "—",
+    "—"
+   ]
+  },
+  "tiroir": "340x288 @ (504,69)",
+  "hudVisible": true,
+  "terrainVisible": true,
+  "friseVisible": false,
+  "ecartScore": 0,
+  "page": false,
+  "minute": "45+1'",
+  "ecarts": [],
+  "fermeEchap": true
+ },
+ "390x844@45": {
+  "rows": {
+   "possession": [
+    "59 %",
+    "41 %"
+   ],
+   "shots": [
+    "13",
+    "9"
+   ],
+   "onTarget": [
+    "4",
+    "5"
+   ],
+   "corners": [
+    "2",
+    "0"
+   ],
+   "fouls": [
+    "2",
+    "14"
+   ],
+   "offsides": [
+    "0",
+    "1"
+   ],
+   "cards": [
+    "—",
+    "—"
+   ]
+  },
+  "tiroir": "390x359 @ (0,485)",
+  "hudVisible": true,
+  "terrainVisible": true,
+  "friseVisible": false,
+  "ecartScore": 92.9,
+  "page": false,
+  "minute": "45+1'",
+  "ecarts": [],
+  "fermeEchap": true
+ },
+ "lectureX8": {
+  "avant": [
+   "20'",
+   [
+    "6",
+    "4"
+   ],
+   [
+    "57 %",
+    "43 %"
+   ]
+  ],
+  "apres6s": [
+   "20'",
+   [
+    "7",
+    "4"
+   ],
+   [
+    "59 %",
+    "41 %"
+   ]
+  ]
+ },
+ "carteDeFin": {
+  "panneauOuvert": true,
+  "carteFermee": true
+ }
+}

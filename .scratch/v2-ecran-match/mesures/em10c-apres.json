@@ -1,0 +1,175 @@
+{
+ "em11-om-ol 1366x768@1": {
+  "hud": 89,
+  "score": "0-0",
+  "domicile": {
+   "hauteur": 570,
+   "densite": "complet",
+   "defile": 0,
+   "marques": []
+  },
+  "exterieur": {
+   "hauteur": 570,
+   "densite": "complet",
+   "defile": 0,
+   "marques": []
+  }
+ },
+ "em11-om-ol 1366x768@2.05": {
+  "hud": 103,
+  "score": "0-1",
+  "domicile": {
+   "hauteur": 556,
+   "densite": "compact",
+   "defile": 0,
+   "marques": []
+  },
+  "exterieur": {
+   "hauteur": 556,
+   "densite": "compact",
+   "defile": 0,
+   "marques": [
+    "Loïs Openda:but:but"
+   ]
+  }
+ },
+ "em11-om-ol 1366x768@10": {
+  "hud": 103,
+  "score": "1-2",
+  "domicile": {
+   "hauteur": 556,
+   "densite": "compact",
+   "defile": 0,
+   "marques": [
+    "Amine Gouiri:but:but"
+   ]
+  },
+  "exterieur": {
+   "hauteur": 556,
+   "densite": "compact",
+   "defile": 0,
+   "marques": [
+    "Loïs Openda:but:×2\n2 buts"
+   ]
+  }
+ },
+ "em11-om-ol 1366x768@104": {
+  "hud": 131,
+  "score": "6-3",
+  "domicile": {
+   "hauteur": 527,
+   "densite": "compact",
+   "defile": 0,
+   "marques": [
+    "Himad Abdelli:but:but",
+    "Igor Paixão:but:but",
+    "Amine Gouiri:but:×4\n4 buts"
+   ]
+  },
+  "exterieur": {
+   "hauteur": 527,
+   "densite": "compact",
+   "defile": 0,
+   "marques": [
+    "Loïs Openda:but:×3\n3 buts"
+   ]
+  }
+ },
+ "em11-om-ol 1280x720@1": {
+  "hud": 89,
+  "score": "0-0",
+  "domicile": {
+   "hauteur": 522,
+   "densite": "compact",
+   "defile": 0,
+   "marques": []
+  },
+  "exterieur": {
+   "hauteur": 522,
+   "densite": "compact",
+   "defile": 0,
+   "marques": []
+  }
+ },
+ "em11-om-ol 1280x720@104": {
+  "hud": 131,
+  "score": "6-3",
+  "domicile": {
+   "hauteur": 479,
+   "densite": "serre",
+   "defile": 0,
+   "marques": [
+    "Himad Abdelli:but:but",
+    "Igor Paixão:but:but",
+    "Amine Gouiri:but:×4\n4 buts"
+   ]
+  },
+  "exterieur": {
+   "hauteur": 479,
+   "densite": "serre",
+   "defile": 0,
+   "marques": [
+    "Loïs Openda:but:×3\n3 buts"
+   ]
+  }
+ },
+ "em11-om-ol 1920x1080@1": {
+  "hud": 89,
+  "score": "0-0",
+  "domicile": {
+   "hauteur": 882,
+   "densite": "complet",
+   "defile": 0,
+   "marques": []
+  },
+  "exterieur": {
+   "hauteur": 882,
+   "densite": "complet",
+   "defile": 0,
+   "marques": []
+  }
+ },
+ "em11-om-ol 1920x1080@104": {
+  "hud": 131,
+  "score": "6-3",
+  "domicile": {
+   "hauteur": 839,
+   "densite": "complet",
+   "defile": 0,
+   "marques": [
+    "Himad Abdelli:but:but",
+    "Igor Paixão:but:but",
+    "Amine Gouiri:but:×4\n4 buts"
+   ]
+  },
+  "exterieur": {
+   "hauteur": 839,
+   "densite": "complet",
+   "defile": 0,
+   "marques": [
+    "Loïs Openda:but:×3\n3 buts"
+   ]
+  }
+ },
+ "em11-psg-havre 1366x768@104": {
+  "hud": 131,
+  "score": "10-0",
+  "domicile": {
+   "hauteur": 528,
+   "densite": "compact",
+   "defile": 0,
+   "marques": [
+    "João Neves:but:but",
+    "Ousmane Dembélé:but:×3\n3 buts:tronqué",
+    "Khvicha Kvaratskhelia:but:×5\n5 buts:tronqué",
+    "Désiré Doué:but:but"
+   ]
+  },
+  "exterieur": {
+   "hauteur": 528,
+   "densite": "compact",
+   "defile": 0,
+   "marques": []
+  }
+ }
+}

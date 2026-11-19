@@ -160,9 +160,10 @@ class MatchTraceOut(BaseModel):
 
 
 class MatchProgressOut(BaseModel):
-    """État d'un match en cours de calcul (rejeu en direct) : seulement les images à partir de `first_tick`, et les
-    points du ballon à partir de `first_ball` (curseur distinct : un point par pas du moteur), pour que chaque lecture
-    reste légère. Intentions et décisions, lourdes, n'arrivent qu'une fois le match fini."""
+    """État d'un match en cours de calcul (rejeu en direct) : seulement les images à partir de `first_tick`, les
+    points du ballon à partir de `first_ball` (curseur distinct : un point par pas du moteur) et les événements du
+    journal à partir de `first_event` (ticket v2-ecran-match/18), pour que chaque lecture reste légère. Intentions et
+    décisions, lourdes, n'arrivent qu'une fois le match fini."""
     done: bool
     error: str | None = None
     home: str
@@ -179,7 +180,10 @@ class MatchProgressOut(BaseModel):
     ticks: list[TickOut]
     intentions: list[PlayerIntentionsOut] = []
     decisions: list[DecisionOut] = []
-    events: list[TraceEventOut] = []  # en fin de match seulement, comme les décisions (ticket v2-realisme/19b)
+    # journal des événements (ticket v2-realisme/19b), par tranches pendant le calcul à partir de `first_event` (ticket
+    # v2-ecran-match/18 : tirs, fautes, corners pour les statistiques de l'écran en direct)
+    first_event: int = 0
+    events: list[TraceEventOut] = []
     first_ball: int = 0
     ball_track: list[BallPointOut] = []  # piste du ballon (ticket v2-correctifs-ecran/04a)
 
@@ -278,9 +282,10 @@ def _ball_track_out(points) -> list[BallPointOut]:
                          holder=b.holder, dead=b.dead) for b in points]
 
 
-def _events_out(trace: MatchTrace) -> list[TraceEventOut]:
+def _events_out(trace: MatchTrace, first: int = 0) -> list[TraceEventOut]:
+    # copie de la liste avant la tranche : le calcul peut continuer d'écrire
     return [TraceEventOut(id=e.id, minute=e.minute, kind=e.kind, team=e.team, player=e.player, cause=e.cause,
-                          detail=e.detail, other=e.other) for e in list(trace.events)]
+                          detail=e.detail, other=e.other) for e in list(trace.events)[first:]]
 
 
 def _decisions_out(trace: MatchTrace) -> list[DecisionOut]:
@@ -386,7 +391,7 @@ def start_match(payload: SimulateV2Request) -> MatchStartedOut:
 
 
 @router.get("/matches/{job_id}", response_model=MatchProgressOut)
-def match_progress(job_id: str, from_tick: int = 0, from_ball: int = 0) -> MatchProgressOut:
+def match_progress(job_id: str, from_tick: int = 0, from_ball: int = 0, from_event: int = 0) -> MatchProgressOut:
     job = _jobs.get(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="Match introuvable (API redémarrée ?)")
@@ -396,9 +401,10 @@ def match_progress(job_id: str, from_tick: int = 0, from_ball: int = 0) -> Match
         return MatchProgressOut(done=done, error=job.error, home=job.home, away=job.away,
                                 tick_seconds=_TICK_SECONDS * _RECORD_EVERY, home_goals=0, away_goals=0,
                                 goals=[], situations=[], offsides=[], first_tick=from_tick, ticks=[],
-                                first_ball=from_ball)
+                                first_ball=from_ball, first_event=max(0, from_event))
     first = max(0, from_tick)
     first_ball = max(0, from_ball)
+    first_event = max(0, from_event)
     return MatchProgressOut(
         done=done,
         error=job.error,
@@ -416,7 +422,8 @@ def match_progress(job_id: str, from_tick: int = 0, from_ball: int = 0) -> Match
         ticks=[_tick_out(tick) for tick in trace.ticks[first:]],
         intentions=intention_segments(trace) if done else [],
         decisions=_decisions_out(trace) if done else [],
-        events=_events_out(trace) if done else [],
+        first_event=first_event,
+        events=_events_out(trace, first_event),
         first_ball=first_ball,
         ball_track=_ball_track_out(trace.ball_track[first_ball:]),  # copie de la liste : le calcul peut continuer d'écrire
     )

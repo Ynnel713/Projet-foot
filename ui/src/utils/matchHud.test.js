@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { clock } from "./matchClock.js";
-import { BADGES, matchBadge, revealedScore } from "./matchHud.js";
+import { BADGES, matchBadge, revealedScore, revealedScorers, scorerText, hudName, goalBannerText } from "./matchHud.js";
 
 // Trace réduite : 2e période donnée par le moteur à la minute 48, 3 et 4 minutes annoncées.
 const trace = { second_half_start_minute: 48, added_minutes: [3, 4] };
@@ -49,6 +49,64 @@ test("badge d'état : fin, puis mi-temps, puis chargement, sinon en direct", () 
   assert.equal(matchBadge({ finished: false, halfBanner: false, waiting: false }), BADGES.live);
   assert.deepEqual(
     Object.values(BADGES).map((b) => b.label),
-    ["TERMINÉ", "MI-TEMPS", "CHARGEMENT…", "EN DIRECT"],
+    ["TERMINÉ", "MI-TEMPS", "RALENTI", "CHARGEMENT…", "EN DIRECT"], // RALENTI : ticket v2-ecran-match/13
   );
+});
+
+test("buteurs révélés (08c) : seulement les buts lus, groupés par buteur, dans l'ordre du premier but", () => {
+  const label = (m) => `${Math.floor(m)}'`;
+  const goals = [
+    { minute: 2.04, team: "away", scorer: "Openda", own_goal: false },
+    { minute: 7.2, team: "away", scorer: "Openda", own_goal: false },
+    { minute: 9.66, team: "home", scorer: "Gouiri", own_goal: false },
+    { minute: 16.7, team: "away", scorer: "Mata", own_goal: true },
+  ];
+  const at10 = revealedScorers(goals, 10 * 60, label);
+  assert.deepEqual(at10.away.shown, [{ name: "Openda", ownGoal: false, minutes: ["2'", "7'"] }]);
+  assert.deepEqual(at10.home.shown, [{ name: "Gouiri", ownGoal: false, minutes: ["9'"] }]);
+  assert.equal(at10.away.hidden, 0);
+  const at17 = revealedScorers(goals, 17 * 60, label);
+  assert.equal(scorerText(at17.away.shown[1]), "Mata (csc) 16'");
+  assert.deepEqual(revealedScorers(goals, 0, label).home.shown, []);
+  // but lu à la seconde près, comme le score
+  assert.equal(revealedScorers(goals, 2.04 * 60, label).away.shown.length, 1);
+});
+
+test("buteurs révélés (08c) : 3 lignes au plus, les 2 premiers puis « +n autres »", () => {
+  const label = (m) => `${m}'`;
+  const goals = ["A", "B", "C", "D", "E"].map((s, i) => ({ minute: i + 1, team: "home", scorer: s }));
+  const three = revealedScorers(goals.slice(0, 3), 99 * 60, label).home;
+  assert.equal(three.shown.length, 3);
+  assert.equal(three.hidden, 0);
+  const five = revealedScorers(goals, 99 * 60, label).home;
+  assert.deepEqual(five.shown.map((r) => r.name), ["A", "B"]);
+  assert.equal(five.hidden, 3);
+  assert.equal(five.all.length, 5);
+});
+
+test("buteur inconnu : « But »", () => {
+  const r = revealedScorers([{ minute: 5, team: "home", scorer: null }], 600, () => "5'");
+  assert.equal(scorerText(r.home.shown[0]), "But 5'");
+});
+
+test("nom du HUD sans le prénom (08c)", () => {
+  assert.equal(hudName("Khvicha Kvaratskhelia"), "Kvaratskhelia");
+  assert.equal(hudName("Jelle Van Neck"), "Van Neck");
+  assert.equal(hudName("CJ Egan-Riley"), "Egan-Riley");
+  assert.equal(hudName("Abner"), "Abner");
+  assert.equal(hudName("But"), "But");
+});
+
+test("badge RALENTI (13) : après TERMINÉ et MI-TEMPS, avant CHARGEMENT et EN DIRECT", () => {
+  assert.equal(matchBadge({ finished: false, halfBanner: false, replaying: true, waiting: true }), BADGES.replay);
+  assert.equal(matchBadge({ finished: false, halfBanner: true, replaying: true }), BADGES.halftime);
+  assert.equal(matchBadge({ finished: true, replaying: true }), BADGES.finished);
+  assert.equal(BADGES.replay.label, "RALENTI");
+});
+
+test("texte du bandeau de but (13)", () => {
+  const g = { minute: 22.2, team: "home", scorer: "Khvicha Kvaratskhelia", own_goal: false };
+  assert.equal(goalBannerText(g, "22'", "Paris Saint-Germain"), "BUT · 22' · Kvaratskhelia · Paris Saint-Germain");
+  assert.equal(goalBannerText({ ...g, scorer: "Clinton Mata", own_goal: true }, "52'", "OM"), "BUT · 52' · Mata (csc) · OM");
+  assert.equal(goalBannerText({ ...g, scorer: null }, "5'", "OM"), "BUT · 5' · OM");
 });

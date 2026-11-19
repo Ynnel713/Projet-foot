@@ -1,0 +1,9 @@
+Fluidité EM-11b (19/11/2026) : banc d'EM-01 (harnais avec le bouton « ×8 » depuis EM-09), build de production, trace em11-om-ol, ×8, 3 passes alternées de 15 s.
+4185 = avant (c8ba3e3, 11a) ; 4186 = après (11b). Suite Python en cours en parallèle : valeurs absolues plus hautes qu'en 11a, comparaison alternée seule valable.
+4185 {"frames":900,"median":16.7,"p95":16.7,"max":33.3,"nodes":324,"cpu":{"taskMsPerFrame":7.01,"scriptMsPerFrame":1.79,"layoutMsPerFrame":1.89,"styleMsPerFrame":0.48}}
+4186 {"frames":897,"median":16.7,"p95":16.8,"max":50,"nodes":324,"cpu":{"taskMsPerFrame":7.03,"scriptMsPerFrame":1.55,"layoutMsPerFrame":1.93,"styleMsPerFrame":0.49}}
+4185 {"frames":901,"median":16.7,"p95":16.7,"max":16.8,"nodes":324,"cpu":{"taskMsPerFrame":7.34,"scriptMsPerFrame":1.9,"layoutMsPerFrame":1.99,"styleMsPerFrame":0.53}}
+4186 {"frames":901,"median":16.7,"p95":16.7,"max":16.8,"nodes":324,"cpu":{"taskMsPerFrame":6.92,"scriptMsPerFrame":1.62,"layoutMsPerFrame":1.93,"styleMsPerFrame":0.49}}
+4185 {"frames":899,"median":16.7,"p95":16.8,"max":50,"nodes":324,"cpu":{"taskMsPerFrame":7.01,"scriptMsPerFrame":1.8,"layoutMsPerFrame":1.87,"styleMsPerFrame":0.48}}
+4186 {"frames":900,"median":16.7,"p95":16.8,"max":33.3,"nodes":324,"cpu":{"taskMsPerFrame":6.51,"scriptMsPerFrame":1.47,"layoutMsPerFrame":1.79,"styleMsPerFrame":0.47}}
+Moyennes : script 1,830 -> 1,547 ms/image (-15,5 %) ; tâche 7,12 -> 6,82 ms/image ; médiane 16,7 ms des deux côtés ; image maximale 33 à 50 ms dans 2 passes sur 3 des deux côtés ; 324 nœuds SVG des deux côtés.

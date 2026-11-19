@@ -7,9 +7,9 @@ import { playbackKey, speedLabel } from "../../utils/playbackKeys";
 // Groupe segmenté des vitesses : segments de 40 px de haut (36 px sous 960 px de large ou 500 px de haut), filet
 // `line` dessiné sans prendre de place, vitesse active pleine en `accent`. Bouton lecture/pause rond de 44 px (40 px).
 // Pendant le ralenti d'un but, le bouton rond devient « Passer le ralenti » (décision du propriétaire du 19/11/2026,
-// réserve A2 de l'expert : cible de 44 px au lieu d'un badge de 20 px) et la barre d'espace aussi ; le badge RALENTI,
-// au-dessus du groupe sur une ligne réservée, n'est qu'une information. La largeur des commandes ne change pas (score
-// centré, EM-08b). Clavier : espace = lecture/pause (ou passer le ralenti), 1 à 5 = vitesses.
+// réserve A2 de l'expert : cible de 44 px au lieu d'un badge de 20 px) et la barre d'espace aussi ; le ralenti est signalé
+// par le badge d'état du HUD (EM-13), plus par une pastille ici (EM-13b, décision du propriétaire du 19/11/2026). La
+// largeur des commandes ne change pas (score centré, EM-08b). Clavier : espace = lecture/pause (ou passer le ralenti), 1 à 5 = vitesses.
 // Le comportement de la lecture est celui du hook, inchangé.
 const SMALL_H = "max-[959.98px]:h-9 [@media(max-height:499.98px)]:h-9";
 
@@ -44,13 +44,6 @@ export default function SpeedControls({ playing, setPlaying, speed, setSpeed, re
 
   return (
     <div className="flex flex-col items-end gap-1">
-      <div className="h-5 [@media(max-height:499.98px)]:h-4 flex items-center">
-        {replaying && (
-          <span className="h-full flex items-center rounded px-1.5 bg-red-600 text-white text-caption font-bold tracking-wider">
-            RALENTI
-          </span>
-        )}
-      </div>
       <div className="flex items-center gap-2">
         <div
           role="radiogroup"

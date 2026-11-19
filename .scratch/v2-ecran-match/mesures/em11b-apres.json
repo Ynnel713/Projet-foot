@@ -1,0 +1,196 @@
+{
+ "em11-om-ol 1366x768@10": {
+  "frise": "1346x72",
+  "barres": 10,
+  "derniere": 9,
+  "curseur": 128.2,
+  "finDerniereBarre": 127.2,
+  "barresAuDelaDuCurseur": 0,
+  "ecartMaxHauteurPx": 0,
+  "barre5": {
+   "m": 5,
+   "x": 65.0952380952381,
+   "w": 10.81904761904762,
+   "h": 1.0766574623330827
+  },
+  "a1px": 1,
+  "a22px": 0,
+  "libelle": "Pression territoriale",
+  "titre": "Pression territoriale"
+ },
+ "em11-om-ol 1366x768@30": {
+  "frise": "1346x72",
+  "barres": 30,
+  "derniere": 29,
+  "curseur": 384.6,
+  "finDerniereBarre": 383.6,
+  "barresAuDelaDuCurseur": 0,
+  "ecartMaxHauteurPx": 0,
+  "barre5": {
+   "m": 5,
+   "x": 65.0952380952381,
+   "w": 10.81904761904762,
+   "h": 1.0766574623330827
+  },
+  "barre20": {
+   "m": 20,
+   "x": 257.3809523809524,
+   "w": 10.81904761904762,
+   "h": 22
+  },
+  "a1px": 4,
+  "a22px": 2,
+  "libelle": "Pression territoriale",
+  "titre": "Pression territoriale"
+ },
+ "em11-om-ol 1366x768@51.5": {
+  "frise": "1346x72",
+  "barres": 51,
+  "derniere": 50,
+  "curseur": 660.2,
+  "finDerniereBarre": 652.8,
+  "barresAuDelaDuCurseur": 0,
+  "ecartMaxHauteurPx": 0,
+  "barre5": {
+   "m": 5,
+   "x": 65.0952380952381,
+   "w": 10.81904761904762,
+   "h": 1.0766574623330827
+  },
+  "barre20": {
+   "m": 20,
+   "x": 257.3809523809524,
+   "w": 10.81904761904762,
+   "h": 22
+  },
+  "a1px": 8,
+  "a22px": 2,
+  "libelle": "Pression territoriale",
+  "titre": "Pression territoriale"
+ },
+ "em11-om-ol 1366x768@60": {
+  "frise": "1346x72",
+  "barres": 60,
+  "derniere": 59,
+  "curseur": 769.1,
+  "finDerniereBarre": 768.1,
+  "barresAuDelaDuCurseur": 0,
+  "ecartMaxHauteurPx": 0,
+  "barre5": {
+   "m": 5,
+   "x": 65.0952380952381,
+   "w": 10.81904761904762,
+   "h": 1.0766574623330827
+  },
+  "barre20": {
+   "m": 20,
+   "x": 257.3809523809524,
+   "w": 10.81904761904762,
+   "h": 22
+  },
+  "a1px": 9,
+  "a22px": 2,
+  "libelle": "Pression territoriale",
+  "titre": "Pression territoriale"
+ },
+ "em11-om-ol 1366x768@103.9": {
+  "frise": "1346x72",
+  "barres": 103,
+  "derniere": 102,
+  "curseur": 1331.9,
+  "finDerniereBarre": 1319.4,
+  "barresAuDelaDuCurseur": 0,
+  "ecartMaxHauteurPx": 0,
+  "barre5": {
+   "m": 5,
+   "x": 65.0952380952381,
+   "w": 10.81904761904762,
+   "h": 1.0766574623330827
+  },
+  "barre20": {
+   "m": 20,
+   "x": 257.3809523809524,
+   "w": 10.81904761904762,
+   "h": 22
+  },
+  "a1px": 17,
+  "a22px": 5,
+  "libelle": "Pression territoriale",
+  "titre": "Pression territoriale"
+ },
+ "em11-om-ol 1366x768@104": {
+  "frise": "1346x72",
+  "barres": 104,
+  "derniere": 103,
+  "curseur": 1333.1,
+  "finDerniereBarre": 1332.2,
+  "barresAuDelaDuCurseur": 0,
+  "ecartMaxHauteurPx": 0,
+  "barre5": {
+   "m": 5,
+   "x": 65.0952380952381,
+   "w": 10.81904761904762,
+   "h": 1.0766574623330827
+  },
+  "barre20": {
+   "m": 20,
+   "x": 257.3809523809524,
+   "w": 10.81904761904762,
+   "h": 22
+  },
+  "a1px": 17,
+  "a22px": 5,
+  "libelle": "Pression territoriale",
+  "titre": "Pression territoriale"
+ },
+ "em11-om-ol 1024x768@60": {
+  "frise": "1004x72",
+  "barres": 60,
+  "derniere": 59,
+  "curseur": 573.7,
+  "finDerniereBarre": 572.7,
+  "barresAuDelaDuCurseur": 0,
+  "ecartMaxHauteurPx": 0,
+  "barre5": {
+   "m": 5,
+   "x": 48.80952380952381,
+   "w": 7.561904761904762,
+   "h": 1.0766574623330827
+  },
+  "barre20": {
+   "m": 20,
+   "x": 192.23809523809524,
+   "w": 7.561904761904762,
+   "h": 22
+  },
+  "a1px": 9,
+  "a22px": 2,
+  "libelle": "Pression territoriale",
+  "titre": "Pression territoriale"
+ },
+ "em11-om-ol 1920x1080@60": {
+  "frise": "1900x72",
+  "barres": 60,
+  "derniere": 59,
+  "curseur": 1085.7,
+  "finDerniereBarre": 1084.7,
+  "barresAuDelaDuCurseur": 0,
+  "ecartMaxHauteurPx": 0,
+  "barre5": {
+   "m": 5,
+   "x": 91.47619047619048,
+   "w": 16.095238095238095,
+   "h": 1.0766574623330827
+  },
+  "barre20": {
+   "m": 20,
+   "x": 362.9047619047619,
+   "w": 16.095238095238095,
+   "h": 22
+  },
+  "a1px": 9,
+  "a22px": 2,
+  "libelle": "Pression territoriale",
+  "titre": "Pression territoriale"
+ }
+}

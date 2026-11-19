@@ -1,6 +1,6 @@
 # EM-D1 — Buteur dans les buts (D) — 75 min (moyenne)
 
-**Status:** à faire (chantier validé par le propriétaire le 07/11/2026 ; constantes à proposer avant le code)
+**Status:** couvert (19/11/2026) : le buteur est déjà dans la trace (`v2-realisme/19b`), rien à faire
 
 Chantier : `.scratch/v2-ecran-match/spec.md` (audit, direction artistique, décisions).
 
@@ -15,3 +15,11 @@ Chantier : `.scratch/v2-ecran-match/spec.md` (audit, direction artistique, déci
 - **Dépendances** : aucune. **Risques** : but contre son camp (aucun mécanisme dans la V2 à ce jour : à confirmer).
 
 ## Comments
+
+### 19/11/2026 — couvert ailleurs
+
+- Constaté pendant EM-08c : `GoalEvent` porte `scorer` (dernier joueur à avoir touché le ballon), `last_toucher` et
+  `own_goal` depuis le ticket `v2-realisme/19b` (`v2engine/trace.py:131-139`), et l'API les sérialise
+  (`api/routers/v2.py:301`). Les buteurs sont affichés par EM-08c (HUD), EM-10c (composition) et EM-12 (frise). Le
+  passeur reste à faire dans `v2-mise-en-scene/01`. Statut passé à « couvert » avec l'accord du propriétaire
+  (« Ça marche », 19/11/2026).

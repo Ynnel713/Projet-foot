@@ -26,3 +26,11 @@
 Source : `docs/AUDIT_ROADMAP_V2.md` §12. Le tireur vient de la table des tireurs désignés (`v2-realisme/16j`), qui lit Penalty Taking et le geste « Demands to Take Penalties » ; ce ticket garde la qualité de la frappe et la pression. Loi 14 à couvrir ici : empiètement d'un attaquant (entré dans la surface avant la frappe) : but à refaire, tir manqué ou arrêté : coup franc indirect pour la défense ; empiètement d'un défenseur ou gardien qui quitte sa ligne trop tôt : but accordé, tir manqué ou arrêté : à refaire ; la VAR peut le revoir (`v2-realisme/21g`).
 
 - [ ] Empiètement et gardien avancé : issue selon la loi 14, penalty à refaire ou coup franc indirect pour la défense (scènes)
+
+### 19/11/2026 — à intégrer (réserve A1 d'EM-14a, acceptée par le propriétaire)
+
+- Le penalty provisoire (`v2engine/match.py:546-557`) n'écrit au journal que l'événement « tir » : un penalty arrêté n'a
+  pas d'événement « arrêt », et les statistiques de l'écran (`ui/src/utils/matchStats.js`, EM-14a) le comptent comme
+  tir non cadré. À faire dans ce ticket : écrire l'événement « arrêt » (gardien, issue) quand le penalty est arrêté, avec
+  un test moteur « un penalty arrêté produit un arrêt dont la cause est le tir ». Décision du propriétaire du 19/11/2026 :
+  « J'accepte, correctif en 02a ».

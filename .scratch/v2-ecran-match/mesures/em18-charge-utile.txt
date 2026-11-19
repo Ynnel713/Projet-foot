@@ -1,0 +1,3 @@
+em11-om-ol : images 25.43 Mo, ballon 5.19 Mo, journal 235 Ko (1622 événements), listes fixes 80.7 Ko par réponse ; flux total en direct (hors listes fixes) +0.77 %
+em11-psg-havre : images 25.18 Mo, ballon 5.17 Mo, journal 220 Ko (1542 événements), listes fixes 78.4 Ko par réponse ; flux total en direct (hors listes fixes) +0.72 %
+em11-lens-brest : images 24.15 Mo, ballon 4.99 Mo, journal 250 Ko (1730 événements), listes fixes 82.3 Ko par réponse ; flux total en direct (hors listes fixes) +0.86 %
