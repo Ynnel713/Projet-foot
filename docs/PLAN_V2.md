@@ -366,6 +366,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **`v2-realisme/10d` livré (19/11/2026), validé expert + QC** (périmètre réduit par le propriétaire) : l'écran du milieu devant la défense (droite ballon-but, 8 m devant la ligne, ballon à plus de 6 m de l'axe) n'a eu aucun effet sur 100 matchs appariés (passes reçues en zone 14 − 0,1 %, IC ± 5,6 % ; buts, tirs, hors-jeu sans écart significatif) ; diagnostic : le ballon est reçu derrière l'écran, dans la poche avant la ligne (écran entre receveur et but dans 20 % des cas) : écran retiré, suite au ticket `10d2` (en attente d'une référence réelle). Livré : indicateur des passes reçues en zone 14 (29,5 par match, 2,84 % des passes reçues), place du receveur dans la trace ; jeu inchangé.
 
+**`v2-realisme/28` implémenté (19/11/2026), en attente de clôture** (diagnostic demandé par le propriétaire avant le 10i ; aucun changement de jeu) : `scripts/diag_passes_v2.py`, 50 matchs, `docs/INDICATEURS_V2.md` section 55. Passes réussies 84,1 % (repère 80-85 %) ; 49 passes au sol par match frôlent à moins de 1 m, sur leur trajet, un défenseur qui ne les a pas lues et réussissent à 94 % (portée du non-lecteur 0,4 m contre 1 m pour le lecteur) ; passes ratées au tirage reprises par le receveur visé à 67,5 % ; écran fidèle au moteur (médiane + 0,04 m). Ordre recommandé : correction de l'interception, 23a, 26a, `v2-hauteur-ballon/03` (décision du propriétaire attendue). Le 10i suit.
+
 ### Bloquée par
 
 - Phase 4

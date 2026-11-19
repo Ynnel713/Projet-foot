@@ -1676,3 +1676,36 @@ Commandes : `uv run python .scratch/v2-realisme/mesures/10d-ecran.py MODE DEBUT 
 **Essai (retiré).** Un milieu axial se plaçait, sans ballon, sur la droite ballon-centre du but, 8 m devant sa dernière ligne, quand le ballon était à plus de 6 m de l'axe. Résultat (avant → après ; écart apparié, IC à 95 %) : zone 14 29,57 → 29,53 (− 0,1 % [− 5,7 ; + 5,5]) ; buts 5,04 → 4,96 (− 1,6 %) ; tirs 41,02 → 41,42 (+ 1,0 %) ; passes en profondeur réussies 9,84 → 10,22 (+ 3,9 %) ; hors-jeu 3,70 → 4,10 (+ 10,8 % [− 2,8 ; + 24,5]) : aucun écart significatif.
 
 **Lecture (diagnostic de 20 matchs, 582 passes reçues en zone 14).** 89 % arrivent en défense placée ; l'écran était à 5,8 m de l'axe (médiane) mais entre le receveur et son but dans 20 % des cas seulement : le ballon est reçu derrière lui (9 m en médiane), dans la poche entre le milieu et la dernière ligne ou au niveau de la ligne (passes en profondeur, 23 %). Il tenait un rôle défensif (marquage, presseur, couverture) dans 47 % des cas. Fermer l'axe demande un rôle qui prend en charge l'adversaire qui décroche : ticket `10d2`, en attente d'une référence réelle.
+
+## 55. Diagnostic des passes et des interceptions, comparé au réel (ticket v2-realisme/28, 50 matchs, 19/11/2026)
+
+Commande : `uv run python -m scripts.diag_passes_v2 50 --processus 4 --json diag28.json` (graines du banc 0 à 49, lecture seule : moteur inchangé, garde `tests/test_diag_passes_v2.py`). Valeurs par match, les deux équipes, IC à 95 %. Passe « dans le jeu » : hors remises en jeu ; réussie si le premier joueur qui prend le ballon est de l'équipe du passeur (ballon mort, tir ou adversaire : ratée).
+
+**1. Passes réussies.** 84,1 % ± 0,3 (au sol 84,1 %, en l'air 82,4 % ± 5,4 sur 5,2 passes par match ; remises 87,3 %), dans le repère Ligue 1 de 80 à 85 % (repère du propriétaire ; moyenne de ligue sourcée non trouvée, record d'équipe PSG 90,9 % en 2023-24, The Analyst). Volume toujours trop haut : 1 227 passes dans le jeu par match (environ 490 par équipe au réel, Lorient 2026-27 sur 6 matchs, statz.ai ; 683 pour le PSG 2025-26), écart déjà noté au `v2-collectif/22a`.
+
+**2. Interceptions et pertes.** Passes prises par l'adversaire : 183,2 par match (91,6 par équipe), dont journal « passe interceptée » 170,7 ; passes sans preneur (sortie, tir) 12,0. Pertes au journal : 217,6 par match (passe interceptée 170,7, conduite 18,5, contrôle 18,4, tacle 7,5, rotation 2,7). Réel : interceptions au sens Opta (passe coupée par une lecture du défenseur) 10 à 11 par match pour les équipes en tête de la Ligue 1 2025-26 (OddsCalendar, FotMob), moyenne de ligue estimée à 8 à 9 par équipe, non sourcée. Le moteur ne distingue pas l'interception lue du ballon ramassé : sa « passe interceptée » englobe interceptions et récupérations, non comparable aux 8 à 9 ; rapportée au volume de passes, la part des passes perdues (15,9 %) reste dans le repère.
+
+**3. Passes frôlées** (adversaire de champ le plus proche du ballon, qui ne le touche pas ; extrémités à 2 m du départ ou de l'arrivée, `ENDS_M`, ajoutée en cours de ticket) :
+
+| Par match | < 1 m | 1 à 2 m |
+|---|---|---|
+| toutes | 413,6 (33,7 % des passes) | 530,1 (43,2 %) |
+| au sol, au départ (presseur du passeur) | 309,6 | 434,1 |
+| au sol, à l'arrivée (marqueur du receveur) | 45,6 | 36,6 |
+| **au sol, sur le trajet** | **54,1 (4,4 %)** | 59,1 (4,8 %) |
+| …dont l'adversaire avait lu la passe | 5,0 | 19,5 |
+| …dont il pouvait y arriver avant le ballon (`arrival_time_s`) | 4,1 | 1,4 |
+| …dont la passe réussit quand même | 50,7 (93,7 %) | 54,2 |
+| en l'air | 4,3 | 0,3 |
+
+Lecture : un adversaire qui n'a pas lu la passe ne touche le ballon qu'à `CONTROL_RADIUS_M` (environ 0,4 m, rayon du ballon plus celui du joueur), contre 1 m (`RECEIVER_REACH_M`, `READER_REACH_M`) pour le receveur et le lecteur : environ 49 passes par match traversent la portée d'1 m d'un défenseur non lecteur, 25 par équipe, plus de deux fois les interceptions réelles. Le critère « il pouvait y arriver » compte la montée en vitesse (`accel_tau_s`) : il exclut le défenseur déjà sur la trajectoire qui tend la jambe sans courir, d'où ses petits comptes. Au départ, 310 passes par match partent à moins de 1 m d'un presseur sans être contrées (aucun contre de passe dans le moteur) : constat noté, hors des quatre pistes.
+
+**4. Passes imprécises.** Ratées au tirage (`pass_aim`) : 10,7 % des passes ; le receveur visé les prend quand même dans 67,5 % ± 1,2 des cas, son équipe dans 70,8 %, et la garde 3 s (`KEEP_S`) dans 63,9 %. Passes précises : son équipe prend le ballon dans 85,7 %. Une passe ratée ne coûte que 15 points de réussite : la déviation de 25 à 50 % de la longueur reste souvent dans la course du receveur (portée 1 m, ballon lent à l'arrivée). Chiffre réel : non trouvé.
+
+**5. Écart moteur / écran.** 1 775 cas suivis par match (adversaire à moins de 3 m du ballon au moteur, passes au sol) ; sur les 64 893 cas à moins de 2 m : écart entre distance affichée (piste du ballon, joueurs à 2 images par seconde, Catmull-Rom centripète recopiée de `v2Spline.js`, identique à 1e-8 près) et distance du moteur, médiane + 0,04 m, 5 % − 0,31 m, 95 % + 0,39 m ; au-delà de 0,5 m (`DISPLAY_GAP_M`) : 1,6 %. À moins de 1 m au moteur, affiché à moins de 1 m dans 82 % des cas ; entre 1 et 2 m, affiché à moins de 1 m dans 10,5 %. Le rendu n'explique pas l'impression de passes qui traversent les joueurs : elles les traversent dans le moteur.
+
+**Ordre recommandé (décision du propriétaire attendue).**
+1. **Correction de l'interception** : portée des adversaires non lecteurs sur la trajectoire d'une passe au sol (49 passes par match à moins de 1 m, 94 % réussies). Constat le plus net et le plus localisé (`match._ball_contacts`). Effet attendu : réussite des passes sous 84 %, à recaler au `22a`.
+2. **23a** (erreur continue de la passe) : la précision ne pèse que 15 points de réussite ; à faire après la correction de l'interception, qui change la sanction physique d'une passe déviée.
+3. **26a** (contrôle continu) : pertes au contrôle 18,4 par match, sans écart évident ; repère réel à trouver (Opta « miscontrol », payant).
+4. **`v2-hauteur-ballon/03`** : 5,2 passes en l'air par match dans le jeu et 4,3 frôlées en l'air : enjeu négligeable aujourd'hui.
