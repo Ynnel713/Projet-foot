@@ -46,3 +46,17 @@ def test_le_diagnostic_ne_change_pas_le_match():
     count = probed["count"]
     assert count["passes (jeu)"] > 0
     assert count["passes réussies (jeu)"] <= count["passes (jeu)"]
+
+
+def test_distance_du_defenseur_comme_le_moteur():
+    """Ticket 29a : la distance du défenseur frôlé est celle que juge `match._contacts` (mouvement relatif)."""
+    from scripts.diag_passes_v2 import _relative_closest
+    from v2engine.geometry import Vec2
+    from v2engine.movement import PlayerState
+
+    defender = PlayerState(name="d", team="away", poste="DC", position=Vec2(10.0, 0.7), velocity=Vec2(3.0, 0.0),
+                           pace=60, acceleration=60, stamina=60, home_target=Vec2(10.0, 0.7))
+    start, end = Vec2(8.0, 0.0), Vec2(11.0, 0.0)
+    hits = match._contacts(start, end, TICK_S, [defender], None, radius=5.0)
+    distance, _ = _relative_closest(start, end, defender, TICK_S)
+    assert distance == pytest.approx(hits[0][1], abs=1e-9)

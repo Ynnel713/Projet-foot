@@ -19,6 +19,10 @@ Constantes validées par le propriétaire le 19/11/2026 (ticket 28).
 
 Usage :
   uv run python -m scripts.diag_passes_v2 50 --processus 4 --json diag28.json
+  uv run python -m scripts.diag_passes_v2 --relire diag28.json   (rapport refait depuis la série, sans rejouer)
+
+Défenseur frôlé (comptes et quantiles) : par passe, l'adversaire le plus proche du ballon. Règles candidates du 29b :
+tous les adversaires non lecteurs de la passe (réserve A1 de l'expert au 29a).
 """
 
 from __future__ import annotations
@@ -38,6 +42,7 @@ from ligue1sim.season import CLUBS_PATH
 
 import v2engine.match as match
 import v2engine.possession as possession
+from v2engine.condition import effective_rating
 from v2engine.defense import arrival_time_s
 from v2engine.flux import PASSE
 from v2engine.geometry import Vec2
@@ -53,6 +58,13 @@ DISPLAY_GAP_M = 0.5  # écart d'affichage significatif
 # extrémités de la passe (départ, arrivée) : en deçà, l'adversaire presse le passeur ou marque le receveur (mesure
 # ajoutée en cours de ticket, à faire valider par le propriétaire)
 ENDS_M = 2.0
+# Ticket 29a (tranches et seuils candidats validés par le propriétaire le 19/11/2026) : tranches de distance du
+# défenseur frôlé (sous `CONTROL_RADIUS_M`, 0,41 m, il aurait dû toucher : contrôle interdit ou déséquilibre), règles
+# candidates du 29b comptées sans être appliquées
+BANDS_M = ((0.0, 0.41), (0.41, 0.6), (0.6, 0.8), (0.8, 1.0))
+REACH_CANDIDATES_M = (0.8, 1.0)
+REACTION_CANDIDATES_S = (0.2, 0.25, 0.3)
+FACING_MAX_DEG = 90.0
 RECORD_EVERY = 5  # cadence des images envoyées à l'écran (`api/routers/v2._RECORD_EVERY`)
 SUBSTEPS = 5  # échantillons par pas du moteur pour les distances continues
 Z_95 = 1.96
@@ -128,6 +140,17 @@ def display_player(frames, k, name, half):
 
 
 # --- Géométrie -------------------------------------------------------------------------------------------------------
+def _relative_closest(a: Vec2, b: Vec2, player, dt: float) -> tuple[float, float]:
+    """Distance minimale du ballon (de `a` à `b` pendant le pas) au joueur, en mouvement relatif comme
+    `match._contacts` : position de début de pas estimée par sa vitesse. Rend la distance et la fraction du pas."""
+    r0 = a - (player.position - player.velocity * dt)
+    r1 = b - player.position
+    seg = r1 - r0
+    length2 = seg.x * seg.x + seg.y * seg.y
+    u = 0.0 if length2 < 1e-12 else min(1.0, max(0.0, -(r0.x * seg.x + r0.y * seg.y) / length2))
+    return (r0 + seg * u).length(), u
+
+
 def _segment_closest(a: Vec2, b: Vec2, p: Vec2) -> tuple[float, float]:
     """Distance de `p` au segment [a, b] et fraction du point le plus proche."""
     ab = b - a
@@ -210,12 +233,22 @@ def play(k: int, minutes: float = 90.0, keep_trace: bool = False) -> dict:
                 for p in players:
                     if p.team == current["team"] or p.poste == "GK":
                         continue
-                    d, u = _segment_closest(prev_ball, ball.position, p.position)
+                    # distance du moteur (`match._contacts`) : mouvement relatif, position de début de pas
+                    # estimée par la vitesse (ticket 29a) ; la distance au point de fin de pas reste celle de l'écran
+                    d, u = _relative_closest(prev_ball, ball.position, p, TICK_S)
                     if d < current["near"].get(p.name, (math.inf,))[0]:
                         reach_t = (k_now - 1 + u) * TICK_S - start_s
                         closest = prev_ball + (ball.position - prev_ball) * u
+                        to_ball = closest - p.position
+                        angle = (math.degrees(math.acos(max(-1.0, min(1.0, (p.facing.x * to_ball.x + p.facing.y
+                                                                           * to_ball.y) / to_ball.length()))))
+                                 if to_ball.length() > 1e-9 else 0.0)
                         current["near"][p.name] = (d, k_now - 1 + u, reach_t, closest, ball.mode == AERIEN,
-                                                   p.name in ball.readers)
+                                                   p.name in ball.readers, p.velocity.length(), angle,
+                                                   effective_rating(p, "Anticipation"))
+                    world = _segment_closest(prev_ball, ball.position, p.position)[0]  # celle de l'écran (ticket 28)
+                    if world < current["world"].get(p.name, (math.inf, False))[0]:
+                        current["world"][p.name] = (world, ball.mode == AERIEN)
             if ended is not None:
                 close(current, ended[0], ended[1], k_now, ball.position)
                 state["pass"] = current = None
@@ -223,6 +256,7 @@ def play(k: int, minutes: float = 90.0, keep_trace: bool = False) -> dict:
             new["opened"] = k_now * TICK_S
             new["k0"] = k_now
             new["near"] = {}
+            new["world"] = {}
             new["touched"] = set()
             new["origin"] = prev_ball if prev_ball is not None else ball.position
             new["lofted"] = ball.mode == AERIEN
@@ -245,6 +279,7 @@ def play(k: int, minutes: float = 90.0, keep_trace: bool = False) -> dict:
     frames, track = trace.ticks, trace.ball_track
     by_step = {k: team for k, _, team in holders}
     suspects = []
+    cases = []  # passes au sol frôlées à moins de 1 m par un non-lecteur (ticket 29a)
     for ps in passes:
         kind = "remises" if ps["restart"] else "jeu"
         air = "en l'air" if ps["lofted"] else "au sol"
@@ -276,13 +311,25 @@ def play(k: int, minutes: float = 90.0, keep_trace: bool = False) -> dict:
             n in ps["touched"] for n in ps["near"] if n != ps["taker"])
         if not near:
             continue
-        name, (d, k_at, reach_t, closest, aerial, reader) = min(near, key=lambda item: item[1][0])
+        # règles candidates du 29b sur tous les défenseurs non lecteurs frôlés de la passe (réserve A1 de l'expert
+        # au 29a) : une passe compte touchable dès qu'un d'eux remplit la règle, par partie de la passe
+        for reach in REACH_CANDIDATES_M:
+            for react in REACTION_CANDIDATES_S:
+                for facing in (False, True):
+                    parts = {_part(ps, v[3]) for _, v in near
+                             if not v[4] and not v[5] and v[0] < reach and v[2] >= react
+                             and (not facing or v[7] < FACING_MAX_DEG)}
+                    tag = _rule_tag(reach, react, facing)
+                    count[f"{tag} : passes"] += bool(parts)
+                    for part in parts:
+                        count[f"{tag} : {part}"] += 1
+        name, (d, k_at, reach_t, closest, aerial, reader, speed, angle, anticipation) = min(
+            near, key=lambda item: item[1][0])
         band = "< 1 m" if d < NEAR_M[0] else "1 à 2 m" if d < NEAR_M[1] else None
         if band is not None:
             where = "en l'air" if aerial else "au sol"
             # où sur la passe : presseur du passeur (départ), marqueur du receveur (arrivée) ou sur le trajet
-            part = ("départ" if closest.distance_to(ps["origin"]) < ENDS_M
-                    else "arrivée" if closest.distance_to(ps["end_pos"]) < ENDS_M else "trajet")
+            part = _part(ps, closest)
             count[f"frôlées {band}, {where}, {part}"] += 1
             snapshot = next(o for o in ps["start"] if o.name == name)
             in_time = arrival_time_s(snapshot, closest) <= reach_t
@@ -292,13 +339,16 @@ def play(k: int, minutes: float = 90.0, keep_trace: bool = False) -> dict:
                 count[f"frôlées {band}, au sol, lecteur"] += reader
                 count[f"frôlées {band}, au sol, en situation de jouer le ballon"] += in_time
                 count[f"frôlées {band}, au sol, passe réussie quand même"] += ps["won"]
+                if band == "< 1 m" and not reader:  # défenseur frôlé non lecteur (ticket 29a)
+                    cases.append({"partie": part, "d": round(d, 3), "t": round(reach_t, 3), "v": round(speed, 2),
+                                  "angle": round(angle, 1), "anticipation": anticipation})
                 if part == "trajet":
                     count[f"frôlées {band}, au sol, trajet, lecteur"] += reader
                     count[f"frôlées {band}, au sol, trajet, en situation de jouer le ballon"] += in_time
                     count[f"frôlées {band}, au sol, trajet, passe réussie quand même"] += ps["won"]
         # écart d'affichage : tout adversaire suivi à moins de WATCH_M, sur la durée de la passe
-        for name2, (d2, *_rest) in near:
-            if d2 >= WATCH_M:
+        for name2, (d2, aerial2) in ps["world"].items():
+            if name2 == ps["taker"] or name2 in ps["touched"] or d2 >= WATCH_M:
                 continue
             shown = math.inf
             for step in range(ps["k0"], ps["end"]):
@@ -307,7 +357,7 @@ def play(k: int, minutes: float = 90.0, keep_trace: bool = False) -> dict:
                     bx, by = display_ball(track, step, f, half)
                     px, py = display_player(frames, step + f, name2, half)
                     shown = min(shown, math.hypot(bx - px, by - py))
-            suspects.append({"moteur": d2, "écran": shown, "sol": not ps["near"][name2][4]})
+            suspects.append({"moteur": d2, "écran": shown, "sol": not aerial2})
     for event in trace.events:
         if event.kind == PERTE:
             count["pertes (journal)"] += 1
@@ -320,7 +370,8 @@ def play(k: int, minutes: float = 90.0, keep_trace: bool = False) -> dict:
         count[f"écran : moteur {engine_band}, écart > {DISPLAY_GAP_M} m"] += abs(s["écran"] - s["moteur"]) > DISPLAY_GAP_M
         count[f"écran : moteur {engine_band}, affiché < 1 m"] += s["écran"] < 1.0
     result = {"k": k, "count": dict(count), "home": trace.home, "away": trace.away,
-              "ecarts": [round(s["écran"] - s["moteur"], 3) for s in shown_close if s["moteur"] < 2.0]}
+              "ecarts": [round(s["écran"] - s["moteur"], 3) for s in shown_close if s["moteur"] < 2.0],
+              "frolees": cases}
     if keep_trace:
         result["trace"] = trace
     return result
@@ -331,6 +382,56 @@ def _summary(values):
     mean = statistics.fmean(values)
     half = Z_95 * (statistics.stdev(values) if n > 1 else 0.0) / math.sqrt(n)
     return mean, half
+
+
+def _part(ps: dict, closest: Vec2) -> str:
+    """Où sur la passe : presseur du passeur (départ), marqueur du receveur (arrivée) ou sur le trajet."""
+    if closest.distance_to(ps["origin"]) < ENDS_M:
+        return "départ"
+    return "arrivée" if closest.distance_to(ps["end_pos"]) < ENDS_M else "trajet"
+
+
+def _rule_tag(reach: float, react: float, facing: bool) -> str:
+    orientation = f"cap < {FACING_MAX_DEG:.0f}°" if facing else "toute orientation"
+    return f"règle {reach:.1f} m, {react:.2f} s, {orientation}"
+
+
+def _quantiles(values, qs=(0.1, 0.25, 0.5, 0.75, 0.9)):
+    values = sorted(values)
+    return [values[min(len(values) - 1, int(q * len(values)))] for q in qs] if values else []
+
+
+def _frolees_report(results: list[dict]) -> list[str]:
+    """Ticket 29a : défenseurs non lecteurs frôlés à moins de 1 m par une passe au sol (distance du moteur), par
+    partie de la passe et par tranche ; règles candidates du 29b comptées sans être appliquées."""
+    n = len(results)
+    cases = [c for r in results for c in r.get("frolees", [])]
+    lines = [f"Défenseurs non lecteurs frôlés à moins de 1 m, passes au sol ({len(cases)} cas, {n} matchs) :"]
+    for part in ("départ", "trajet", "arrivée"):
+        sub = [c for c in cases if c["partie"] == part]
+        if not sub:
+            continue
+        lines.append(f"  {part} : {len(sub) / n:.2f} par match")
+        for low, high in ((0.0, 1.0),) + BANDS_M:  # toutes distances, puis par tranche (critère 3 du 29a)
+            band = [c for c in sub if low <= c["d"] < high]
+            lines.append(f"    {low:.2f}-{high:.2f} m : {len(band) / n:6.2f} par match")
+            for key, label in (("t", "temps depuis le départ (s)"), ("v", "vitesse (m/s)"),
+                               ("angle", "angle cap / ballon (°)"), ("anticipation", "Anticipation")):
+                q = _quantiles([c[key] for c in band])
+                if q:
+                    lines.append(f"      {label:28s} 10/25/50/75/90 % : " + " / ".join(f"{v:.2f}" for v in q))
+    lines.append("Règles candidates du 29b, tous les défenseurs non lecteurs de la passe (passes touchables par match ;"
+                 " une passe compte dans chaque partie où un défenseur remplit la règle) :")
+    for reach in REACH_CANDIDATES_M:
+        for react in REACTION_CANDIDATES_S:
+            for facing in (False, True):
+                tag = _rule_tag(reach, react, facing)
+                cells = []
+                for part in ("passes", "départ", "trajet", "arrivée"):
+                    mean, half = _summary([r["count"].get(f"{tag} : {part}", 0) for r in results])
+                    cells.append(f"{part} {mean:6.2f} ± {half:.2f}")
+                lines.append(f"  {tag:40s} " + " | ".join(cells))
+    return lines
 
 
 def report(results: list[dict]) -> str:
@@ -362,6 +463,7 @@ def report(results: list[dict]) -> str:
                      ("frôlées < 1 m, au sol, trajet, passe réussie quand même", "frôlées < 1 m, au sol, trajet")):
         if any(r["count"].get(den) for r in results):
             lines.append(f"  {num} / {den} : {rate(num, den)}")
+    lines.extend(_frolees_report(results))
     gaps = [g for r in results for g in r["ecarts"]]
     if gaps:
         gaps.sort()
@@ -374,11 +476,16 @@ def report(results: list[dict]) -> str:
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("matchs", type=int)
+    parser.add_argument("matchs", type=int, nargs="?", default=0)
     parser.add_argument("--debut", type=int, default=0)
     parser.add_argument("--processus", type=int, default=1)
     parser.add_argument("--json")
+    parser.add_argument("--relire", help="refaire le rapport depuis la sortie --json d'une série, sans rejouer")
     args = parser.parse_args(argv)
+    if args.relire:
+        with open(args.relire, encoding="utf-8") as handle:
+            print(report(json.load(handle)))
+        return 0
     seeds = list(range(args.debut, args.debut + args.matchs))
     if args.processus > 1:
         with ProcessPoolExecutor(args.processus) as pool:

@@ -10,7 +10,7 @@ La chance de passe (`pass_success_probability`) doit rester alignée sur la nouv
 
 **Attributs :** Passing, Composure (déjà lus ; aucun attribut nouveau).
 
-**Blocked by:** 19a (façade des notes), 19c (garde probabiliste : chiffre l'écart actuel de la passe).
+**Blocked by:** 19a (façade des notes), 19c (garde probabiliste : chiffre l'écart actuel de la passe) ; 29b (interception par le défenseur non lecteur, ordre du propriétaire du 19/11/2026).
 
 **Bloque :** 23b ; `v2-collectif/32a`. Le `20a` branchera la fatigue sur cette loi d'écart s'il est livré après ; sinon, ce ticket la lit par la façade (aucune dépendance bloquante).
 

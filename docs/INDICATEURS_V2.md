@@ -1709,3 +1709,43 @@ Lecture : un adversaire qui n'a pas lu la passe ne touche le ballon qu'à `CONTR
 2. **23a** (erreur continue de la passe) : la précision ne pèse que 15 points de réussite ; à faire après la correction de l'interception, qui change la sanction physique d'une passe déviée.
 3. **26a** (contrôle continu) : pertes au contrôle 18,4 par match, sans écart évident ; repère réel à trouver (Opta « miscontrol », payant).
 4. **`v2-hauteur-ballon/03`** : 5,2 passes en l'air par match dans le jeu et 4,3 frôlées en l'air : enjeu négligeable aujourd'hui.
+
+## 56. Défenseur frôlé par une passe : temps, vitesse, orientation (ticket v2-realisme/29a, 50 matchs, 19/11/2026)
+
+Commandes : `uv run python -m scripts.diag_passes_v2 50 --processus 4 --json diag29a.json`, puis `--relire diag29a.json` pour refaire le rapport sans rejouer (graines du banc 0 à 49, lecture seule). Changement de mesure : la distance du défenseur frôlé est celle que juge le moteur (`match._contacts` : mouvement relatif, position de début de pas estimée par la vitesse) ; la comparaison écran garde la distance au point de fin de pas. Indicateurs non touchés identiques au ticket 28 (passes 1 226,7, réussies 84,1 %, ratées reprises 67,5 %, écart écran médian + 0,04 m sur 64 893 cas).
+
+**Correction du 28.** Avec la distance du moteur, les lecteurs frôlés à moins de 1 m sans contact tombent de 5,0 à 0,04 par match sur le trajet (0,42 sur toute la passe, artefact du point de fin de pas ; le reste, sous 0,41 m, s'explique comme pour les non-lecteurs : contrôle interdit, déséquilibre, écarté après un hors-jeu ; non vérifié cas par cas) ; les passes au sol frôlées sur le trajet à moins de 1 m par un non-lecteur passent de 49 à **36,0 par match** (2,9 % des passes).
+
+**Défenseur frôlé** (par passe, l'adversaire non lecteur le plus proche du ballon, à moins de 1 m ; passes au sol, par match ; quantiles 10 / 25 / 50 / 75 / 90 %, tableau produit depuis la série par `_quantiles` du script) :
+
+| Partie, tranche | Par match | Temps depuis le départ (s) | Vitesse (m/s) | Angle cap / ballon (°) | Anticipation |
+|---|---|---|---|---|---|
+| départ, toutes | 333,4 | 0,00 / 0,00 / 0,00 / 0,02 / 0,07 | 1,1 / 1,8 / 2,5 / 3,4 / 4,2 | 0 / 0 / 18 / 45 / 72 | 55 / 65 / 73 / 79 / 83 |
+| départ, 0,41-0,6 m | 41,4 | 0,00 / 0,00 / 0,03 / 0,06 / 0,10 | 1,3 / 2,0 / 2,7 / 3,6 / 4,2 | 1 / 15 / 37 / 61 / 84 | 55 / 63 / 73 / 79 / 83 |
+| départ, 0,6-0,8 m | 161,8 | 0,00 / 0,00 / 0,00 / 0,01 / 0,06 | 1,1 / 1,7 / 2,5 / 3,3 / 4,1 | 0 / 0 / 14 / 44 / 68 | 56 / 65 / 73 / 78 / 83 |
+| départ, 0,8-1 m | 129,1 | 0,00 / 0,00 / 0,00 / 0,02 / 0,07 | 1,1 / 1,8 / 2,6 / 3,4 / 4,2 | 0 / 0 / 10 / 42 / 65 | 56 / 65 / 73 / 79 / 83 |
+| **trajet, toutes** | **35,9** | 0,15 / 0,24 / 0,63 / 1,09 / 1,58 | 1,2 / 1,9 / 2,8 / 3,7 / 4,7 | 12 / 26 / 43 / 63 / 98 | 45 / 58 / 68 / 75 / 80 |
+| trajet, 0,41-0,6 m | 13,3 | 0,16 / 0,28 / 0,74 / 1,20 / 1,76 | 1,2 / 2,0 / 2,8 / 3,7 / 4,7 | 14 / 31 / 52 / 72 / 105 | 46 / 58 / 68 / 75 / 80 |
+| trajet, 0,6-0,8 m | 12,3 | 0,16 / 0,25 / 0,63 / 1,06 / 1,54 | 1,1 / 1,9 / 2,8 / 3,7 / 4,6 | 12 / 28 / 43 / 58 / 92 | 45 / 57 / 68 / 76 / 80 |
+| trajet, 0,8-1 m | 10,3 | 0,14 / 0,20 / 0,50 / 0,98 / 1,42 | 1,3 / 1,9 / 2,9 / 3,8 / 4,7 | 10 / 21 / 35 / 53 / 86 | 46 / 58 / 70 / 76 / 80 |
+| arrivée, toutes | 41,6 | 0,68 / 1,00 / 1,70 / 3,80 / 4,70 | 0,7 / 1,6 / 2,7 / 3,9 / 5,0 | 1 / 13 / 36 / 56 / 79 | 56 / 64 / 72 / 77 / 83 |
+| arrivée, 0,41-0,6 m | 9,5 | 0,78 / 1,11 / 2,69 / 4,03 / 4,96 | 0,7 / 1,5 / 2,6 / 3,8 / 4,8 | 0 / 9 / 42 / 62 / 81 | 56 / 64 / 73 / 80 / 83 |
+| arrivée, 0,6-0,8 m | 17,4 | 0,61 / 1,00 / 2,06 / 4,10 / 5,10 | 0,3 / 1,3 / 2,5 / 3,8 / 5,2 | 3 / 14 / 34 / 51 / 68 | 56 / 65 / 73 / 77 / 83 |
+| arrivée, 0,8-1 m | 11,3 | 0,60 / 0,97 / 1,40 / 3,40 / 4,29 | 1,2 / 2,1 / 3,0 / 4,1 / 5,2 | 0 / 13 / 32 / 45 / 60 | 56 / 64 / 72 / 78 / 83 |
+
+Sous 0,41 m (il aurait dû toucher) : 1,1 / 0,1 / 3,4 par match (départ / trajet / arrivée).
+
+**Règles candidates du 29b, comptées sans être appliquées, sur tous les défenseurs non lecteurs de la passe** (réserve A1 de l'expert au premier passage : compter le seul plus proche donnait un minimum) ; passes touchables par match, IC 95 % ; une passe compte dans chaque partie où un défenseur remplit la règle ; « touchable » n'est pas « interceptée » : le premier joueur atteint tente le premier, le contact passe par le contrôle :
+
+| Portée, réaction, orientation | passes | départ | trajet | arrivée |
+|---|---|---|---|---|
+| 0,8 m, 0,20 s, toute | 56,1 ± 2,4 | 0,7 | 23,5 | 32,7 |
+| 0,8 m, 0,25 s, toute | 53,7 ± 2,3 | 0,1 | 21,7 | 32,5 |
+| **0,8 m, 0,25 s, cap < 90°** | **49,2 ± 2,3** | 0,1 | 19,7 | 29,9 |
+| 0,8 m, 0,30 s, cap < 90° | 47,8 ± 2,2 | 0,0 | 18,6 | 29,7 |
+| 1,0 m, 0,25 s, cap < 90° | 72,4 ± 3,0 | 0,2 | 28,5 | 44,8 |
+| 1,0 m, 0,20 s, toute | 81,5 ± 3,1 | 1,0 | 34,0 | 48,1 |
+
+Lecture : le temps de réaction neutralise le presseur au départ (frôlé à 0 s en médiane) ; entre 0,20 et 0,30 s, le trajet ne varie que de 21 à 19 passes par match (cap < 90°) ; l'orientation retire environ 9 % des passes ; la portée pèse le plus (0,8 → 1 m : + 47 %). Une règle physique unique touche plus l'arrivée (marqueur du receveur, déjà au contact, 30 par match) que le trajet (20) : c'est le choix principal du 29b. Sur le trajet, plus le défenseur est près, plus il est de travers (angle médian 52° à 0,41-0,6 m contre 35° à 0,8-1 m).
+
+**Proposition pour le 29b** : portée 0,8 m, réaction 0,25 s, cap à moins de 90° du ballon, sur toute la passe au sol (une seule loi physique) ; au moins 49 passes par match deviennent touchables (20 sur le trajet, 30 à l'arrivée). Cibles proposées, à mesurer sur 100 matchs appariés : passes au sol frôlées sur le trajet à moins de 1 m par un non-lecteur, 36 → 25 au plus (une partie des passes touchées est contrôlée, une autre seulement déviée ou reprise par un autre défenseur frôlé) ; réussite des passes dans le jeu au-dessus de 80 %.
