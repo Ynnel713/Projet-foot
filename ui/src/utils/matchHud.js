@@ -16,13 +16,15 @@ export function revealedScore(goals, shownS) {
 export const BADGES = {
   finished: { label: "TERMINÉ", tone: "gold" },
   halftime: { label: "MI-TEMPS", tone: "neutral" },
+  replay: { label: "RALENTI", tone: "accent" }, // ticket v2-ecran-match/13
   loading: { label: "CHARGEMENT…", tone: "muted" },
   live: { label: "EN DIRECT", tone: "live" },
 };
 
-export function matchBadge({ finished, halfBanner, waiting }) {
+export function matchBadge({ finished, halfBanner, replaying, waiting }) {
   if (finished) return BADGES.finished;
   if (halfBanner) return BADGES.halftime;
+  if (replaying) return BADGES.replay;
   if (waiting) return BADGES.loading;
   return BADGES.live;
 }
@@ -61,3 +63,10 @@ export const hudName = (name) => {
 
 // Texte d'une ligne (info-bulle, nom complet) : « Loïs Openda 3', 8' », « Clinton Mata (csc) 52' ».
 export const scorerText = (row) => `${row.name}${row.ownGoal ? " (csc)" : ""} ${row.minutes.join(", ")}`;
+
+// Texte du bandeau de but (ticket v2-ecran-match/13) : « BUT · 23' · Kvaratskhelia · Paris Saint-Germain » ; csc
+// indiqué ; buteur inconnu : sans nom.
+export function goalBannerText(goal, minuteLabel, club) {
+  const name = goal.scorer ? `${hudName(goal.scorer)}${goal.own_goal ? " (csc)" : ""}` : null;
+  return ["BUT", minuteLabel, name, club].filter(Boolean).join(" · ");
+}

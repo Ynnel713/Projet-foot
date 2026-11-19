@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { clock } from "./matchClock.js";
-import { BADGES, matchBadge, revealedScore, revealedScorers, scorerText, hudName } from "./matchHud.js";
+import { BADGES, matchBadge, revealedScore, revealedScorers, scorerText, hudName, goalBannerText } from "./matchHud.js";
 
 // Trace réduite : 2e période donnée par le moteur à la minute 48, 3 et 4 minutes annoncées.
 const trace = { second_half_start_minute: 48, added_minutes: [3, 4] };
@@ -49,7 +49,7 @@ test("badge d'état : fin, puis mi-temps, puis chargement, sinon en direct", () 
   assert.equal(matchBadge({ finished: false, halfBanner: false, waiting: false }), BADGES.live);
   assert.deepEqual(
     Object.values(BADGES).map((b) => b.label),
-    ["TERMINÉ", "MI-TEMPS", "CHARGEMENT…", "EN DIRECT"],
+    ["TERMINÉ", "MI-TEMPS", "RALENTI", "CHARGEMENT…", "EN DIRECT"], // RALENTI : ticket v2-ecran-match/13
   );
 });
 
@@ -95,4 +95,18 @@ test("nom du HUD sans le prénom (08c)", () => {
   assert.equal(hudName("CJ Egan-Riley"), "Egan-Riley");
   assert.equal(hudName("Abner"), "Abner");
   assert.equal(hudName("But"), "But");
+});
+
+test("badge RALENTI (13) : après TERMINÉ et MI-TEMPS, avant CHARGEMENT et EN DIRECT", () => {
+  assert.equal(matchBadge({ finished: false, halfBanner: false, replaying: true, waiting: true }), BADGES.replay);
+  assert.equal(matchBadge({ finished: false, halfBanner: true, replaying: true }), BADGES.halftime);
+  assert.equal(matchBadge({ finished: true, replaying: true }), BADGES.finished);
+  assert.equal(BADGES.replay.label, "RALENTI");
+});
+
+test("texte du bandeau de but (13)", () => {
+  const g = { minute: 22.2, team: "home", scorer: "Khvicha Kvaratskhelia", own_goal: false };
+  assert.equal(goalBannerText(g, "22'", "Paris Saint-Germain"), "BUT · 22' · Kvaratskhelia · Paris Saint-Germain");
+  assert.equal(goalBannerText({ ...g, scorer: "Clinton Mata", own_goal: true }, "52'", "OM"), "BUT · 52' · Mata (csc) · OM");
+  assert.equal(goalBannerText({ ...g, scorer: null }, "5'", "OM"), "BUT · 5' · OM");
 });

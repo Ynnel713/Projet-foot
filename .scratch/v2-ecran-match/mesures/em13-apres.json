@@ -1,0 +1,168 @@
+{
+ "coup-envoi-x1": {
+  "but": [],
+  "texteBut": null,
+  "envoi": [
+   1.81
+  ],
+  "mi": [],
+  "fin": [],
+  "ralenti": [],
+  "ecartScoreBandeau_ms": null,
+  "scores": [
+   "0-0"
+  ],
+  "badges": [
+   "EN DIRECT"
+  ],
+  "minutes": [
+   "0'",
+   "0'"
+  ]
+ },
+ "but-x1": {
+  "but": [
+   2
+  ],
+  "texteBut": "BUT · 2' · OPENDA · OLYMPIQUE LYON",
+  "envoi": [],
+  "mi": [],
+  "fin": [],
+  "ralenti": [
+   25.05
+  ],
+  "ecartScoreBandeau_ms": 0,
+  "scores": [
+   "0-0",
+   "0-1"
+  ],
+  "badges": [
+   "EN DIRECT",
+   "RALENTI"
+  ],
+  "minutes": [
+   "1'",
+   "2'"
+  ]
+ },
+ "but-x8": {
+  "but": [
+   1.95
+  ],
+  "texteBut": "BUT · 2' · OPENDA · OLYMPIQUE LYON",
+  "envoi": [],
+  "mi": [],
+  "fin": [],
+  "ralenti": [
+   "4.83+"
+  ],
+  "ecartScoreBandeau_ms": 0,
+  "scores": [
+   "0-0",
+   "0-1"
+  ],
+  "badges": [
+   "EN DIRECT",
+   "RALENTI"
+  ],
+  "minutes": [
+   "1'",
+   "1'"
+  ]
+ },
+ "depart-apres-but": {
+  "but": [],
+  "texteBut": null,
+  "envoi": [],
+  "mi": [],
+  "fin": [],
+  "ralenti": [],
+  "ecartScoreBandeau_ms": null,
+  "scores": [
+   "0-1"
+  ],
+  "badges": [
+   "EN DIRECT"
+  ],
+  "minutes": [
+   "2'",
+   "2'"
+  ]
+ },
+ "mi-temps-x8": {
+  "but": [],
+  "texteBut": null,
+  "envoi": [],
+  "mi": [
+   3.03
+  ],
+  "fin": [],
+  "ralenti": [],
+  "ecartScoreBandeau_ms": null,
+  "scores": [
+   "2-3"
+  ],
+  "badges": [
+   "EN DIRECT",
+   "MI-TEMPS"
+  ],
+  "minutes": [
+   "45+7'",
+   "45'"
+  ]
+ },
+ "en-cours": {
+  "but": [],
+  "texteBut": null,
+  "envoi": [],
+  "mi": [],
+  "fin": [],
+  "ralenti": [],
+  "ecartScoreBandeau_ms": null,
+  "scores": [
+   "2-3"
+  ],
+  "badges": [
+   "EN DIRECT"
+  ],
+  "minutes": [
+   "30'",
+   "30'"
+  ]
+ },
+ "fin-x1": {
+  "but": [],
+  "texteBut": null,
+  "envoi": [],
+  "mi": [],
+  "fin": [
+   "3.67+"
+  ],
+  "ralenti": [],
+  "ecartScoreBandeau_ms": null,
+  "scores": [
+   "6-3"
+  ],
+  "badges": [
+   "EN DIRECT",
+   "TERMINÉ"
+  ],
+  "minutes": [
+   "90+7'",
+   "90+7'"
+  ]
+ },
+ "finInteractions": {
+  "texte": "TERMINÉ | OLYMPIQUE MARSEILLE | 6-3 | OLYMPIQUE LYON | Gouiri 9', 29', 71', 90+5' | Abdelli 74' | Paixão 83' | Openda 2', 7', 16' | Retour",
+  "boutons": [
+   "Fermer",
+   "Retour"
+  ],
+  "ligneZoneBasse": false,
+  "apresFermeture": false
+ },
+ "pointeur": {
+  "pointerEvents": "none",
+  "cibleSousLeBandeau": "rect"
+ }
+}

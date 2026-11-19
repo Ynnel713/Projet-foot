@@ -3,12 +3,13 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import IntentionPanel from "./IntentionPanel";
 import LineupPanel from "./LineupPanel";
 import MatchHud from "./MatchHud";
+import { FullTimeCard, HalfTimeBanner, TopBanner } from "./MatchBanner";
 import MomentumTimeline from "./MomentumTimeline";
 import V2Pitch from "./V2Pitch";
 import { teamColors, teamColorVars } from "../../utils/teamColors";
 import { goalsByPlayer, lineupDensity } from "../../utils/lineupCards";
 import { L, clock, halfStart, interpolatedTick, rotated } from "./trace";
-import { matchBadge, revealedScore, revealedScorers } from "../../utils/matchHud";
+import { goalBannerText, matchBadge, revealedScore, revealedScorers } from "../../utils/matchHud";
 import { netWave } from "../../utils/v2NetWave";
 import { ballMotion, ballSpeed, trailLength } from "../../utils/v2BallLook";
 
@@ -99,7 +100,8 @@ const reducedMotion = () => typeof window !== "undefined" && !!window.matchMedia
 
 export default function MatchScreen({ playback, lineups, selected, onSelect, onBack }) {
   const [reduceMotion] = useState(reducedMotion);
-  const { trace, seconds, seen, speed, halfBanner } = playback;
+  const { trace, seconds, seen, speed, halfBanner, goalBanner, kickoffBanner, replaying } = playback;
+  const [endClosed, setEndClosed] = useState(false); // carte de fin refermée (ticket v2-ecran-match/13)
   const numbers = useMemo(
     () =>
       Object.fromEntries(
@@ -158,7 +160,7 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
         score={score}
         scorers={scorers}
         time={time}
-        badge={matchBadge({ finished, halfBanner, waiting })}
+        badge={matchBadge({ finished, halfBanner, replaying, waiting })}
         offside={recentOffside}
         onBack={onBack}
         playback={playback}
@@ -183,15 +185,27 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
             wave={wave}
             className="w-full h-full"
           />
-          {halfBanner && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/60 pointer-events-none">
-              <div className="text-center">
-                <div className="text-3xl font-extrabold text-white tracking-widest">MI-TEMPS</div>
-                <div className="text-lg text-gray-200 tabular-nums">
-                  {trace.home} {homeGoals} - {awayGoals} {trace.away}
-                </div>
-              </div>
-            </div>
+          {/* états du match (ticket v2-ecran-match/13) : bandeaux sans pointeur, carte de fin refermable */}
+          {kickoffBanner && !halfBanner && <TopBanner kind="coup-envoi">COUP D'ENVOI</TopBanner>}
+          {goalBanner != null && trace.goals[goalBanner] && (
+            <TopBanner kind="but" side={trace.goals[goalBanner].team}>
+              {goalBannerText(
+                trace.goals[goalBanner],
+                clock(trace, trace.goals[goalBanner].minute).label,
+                trace.goals[goalBanner].team === "home" ? trace.home : trace.away,
+              )}
+            </TopBanner>
+          )}
+          {halfBanner && <HalfTimeBanner home={trace.home} away={trace.away} score={score} />}
+          {finished && !endClosed && (
+            <FullTimeCard
+              home={trace.home}
+              away={trace.away}
+              score={score}
+              scorers={scorers}
+              onBack={onBack}
+              onClose={() => setEndClosed(true)}
+            />
           )}
         </div>
         <LineupSide side="away" lineup={lineups?.away} color="var(--team-away-ui)" stats={playerGoals} />
@@ -206,11 +220,6 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
           />
         </div>
         <IntentionPanel trace={trace} tick={selected ? tick : null} selected={selected} />
-        {finished && (
-          <p className="text-center text-sm text-gold font-semibold">
-            Match terminé : {trace.home} {homeGoals} - {awayGoals} {trace.away}
-          </p>
-        )}
       </div>
     </div>
   );

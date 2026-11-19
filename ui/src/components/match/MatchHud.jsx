@@ -10,6 +10,7 @@ import SpeedControls from "./SpeedControls";
 const BADGE_TONE = {
   live: "text-live border-live/40",
   gold: "text-gold border-gold/40",
+  accent: "text-link border-accent/60",
   neutral: "text-gray-200 border-gray-500",
   muted: "text-gray-400 border-line",
 };
