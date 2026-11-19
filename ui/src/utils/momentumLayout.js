@@ -17,9 +17,15 @@ export const domainMinutes = (lastMinute) => Math.max(DOMAIN_MIN, Math.ceil(last
 export const minuteX = (minute, width, domain) => (minute / domain) * width;
 
 // Barre de la minute m : abscisse et largeur, avec l'écart entre barres (1 px de chaque côté), 1 px au moins.
-export function barBox(m, width, domain) {
+// `endMinute` (facultatif) : fin du match ; la barre d'une dernière minute incomplète s'arrête à cet instant, donc au
+// curseur de fin, au lieu d'occuper tout son créneau (ticket 11b, réserve A1 de l'expert). Sans effet sur les autres.
+export function barBox(m, width, domain, endMinute = Infinity) {
   const w = width / domain;
-  return { x: m * w + BAR_GAP_PX / 2, width: Math.max(1, w - BAR_GAP_PX) };
+  const box = { x: m * w + BAR_GAP_PX / 2, width: Math.max(1, w - BAR_GAP_PX) };
+  const end = minuteX(endMinute, width, domain);
+  if (box.x + box.width <= end) return box;
+  const clipped = Math.max(1, end - box.x);
+  return { x: Math.min(box.x, end - clipped), width: clipped };
 }
 
 // Repères : 0', 15', 30', 45' en 1re période ; trait de mi-temps au début de la 2e période, puis 60', 75', 90' comptés

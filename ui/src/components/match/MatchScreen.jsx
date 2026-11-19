@@ -192,7 +192,6 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
           <MomentumTimeline
             trace={trace}
             shownMin={shownS / 60}
-            played={Math.ceil(shownS / 60)}
             goalsShown={trace.goals.filter((g) => g.minute <= shownS / 60).length}
           />
         </div>

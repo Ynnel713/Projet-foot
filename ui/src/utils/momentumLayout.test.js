@@ -46,3 +46,17 @@ test("repères : 2e période placée sur son début réel seulement une fois att
 test("début de 2e période inconnu : repères à 45'", () => {
   assert.equal(ticks(null, true).labels.at(-1).minute, 90);
 });
+
+test("fin de match en milieu de minute : la dernière barre s'arrête au curseur (réserve A1 de 11b)", () => {
+  const W = 1346, D = 105;
+  for (const end of [96.3, 96.95, 96.02, 103.99]) {
+    const m = Math.floor(end);
+    const b = barBox(m, W, D, end);
+    assert.ok(b.x + b.width <= minuteX(end, W, D) + 1e-9, `fin ${end}`);
+    assert.ok(b.width >= 1);
+    // les barres précédentes ne bougent pas
+    assert.deepEqual(barBox(m - 1, W, D, end), barBox(m - 1, W, D));
+  }
+  // 96,3' sur 1346 px : créneau de 12,82 px, barre bornée à 0,3 × 12,82 − 1 ≈ 2,85 px
+  assert.ok(Math.abs(barBox(96, W, D, 96.3).width - (0.3 * W / D - 1)) < 1e-9);
+});

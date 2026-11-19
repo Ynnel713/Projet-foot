@@ -11,55 +11,39 @@ import {
   minuteX,
   ticks,
 } from "../../utils/momentumLayout";
+import { LABEL, barHeight, completedMinutes, momentumByMinute } from "../../utils/momentum";
 
-// Frise de momentum (ticket v2-ecran-match/11a, remplace `Momentum.jsx`) : histogramme symétrique, une barre par minute,
-// domicile au-dessus de l'axe, extérieur en dessous, pleine largeur de la zone basse, 72 px de haut. Domaine fixe de
-// 105 minutes (les barres ne bougent pas quand le temps additionnel arrive). Zone future vide : la ligne de base seule.
-// Curseur de lecture à l'instant lu. La formule et l'échelle verticale sont celles d'avant (inchangées en 11a ; échelle
-// fixe et minute en cours : ticket 11b).
-//
-// Poussée d'un instant = position du ballon dans la longueur (repère moteur : domicile attaque vers x croissant tout le
-// match), accentuée près des buts, plus un bonus à l'équipe qui a le ballon ; moyenne sur la minute.
-const POSSESSION_BONUS = 0.15;
-
-function momentumByMinute(trace, n) {
-  const sums = new Array(n).fill(0);
-  const counts = new Array(n).fill(0);
-  for (const t of trace.ticks) {
-    const m = Math.min(n - 1, Math.floor(t.minute));
-    const dx = (t.ball.x - L / 2) / (L / 2);
-    const holderTeam = t.ball.holder && t.players.find((p) => p.name === t.ball.holder)?.team;
-    sums[m] += dx * Math.abs(dx) + (holderTeam === "home" ? POSSESSION_BONUS : holderTeam === "away" ? -POSSESSION_BONUS : 0);
-    counts[m] += 1;
-  }
-  return sums.map((v, m) => (counts[m] ? v / counts[m] : null));
-}
+// Frise de pression territoriale (tickets v2-ecran-match/11a rendu, 11b données ; remplace `Momentum.jsx`) :
+// histogramme symétrique, une barre par minute terminée, domicile au-dessus de l'axe, extérieur en dessous, pleine
+// largeur de la zone basse, 72 px de haut. Domaine fixe de 105 minutes (les barres ne bougent pas quand le temps
+// additionnel arrive). Échelle fixe (0,6 = pleine hauteur) : une barre affichée ne change plus jamais de hauteur. Zone
+// future vide : la ligne de base seule. Curseur de lecture à l'instant lu. Calcul : `utils/momentum.js`.
 
 // Partie fixe (barres, axe, repères, buts) : redessinée au changement de minute, de but, de largeur ou à la mi-temps,
 // jamais à chaque image (ticket v2-ecran-match/01).
-const Bars = memo(function Bars({ trace, played, goalsShown, width, domain, halfReached }) {
-  // recalculé quand de nouvelles images arrivent (une fois par seconde), pas à chaque image affichée
-  const values = useMemo(() => momentumByMinute(trace, domain), [trace, domain]);
-  // échelle sur les minutes déjà jouées seulement : la courbe ne trahit rien de la suite (inchangé, échelle fixe en 11b)
-  const scale = BAR_HALF_PX / Math.max(0.2, ...values.map((v, m) => (m < played ? Math.abs(v ?? 0) : 0)));
+const Bars = memo(function Bars({ trace, complete, goalsShown, width, domain, halfReached }) {
+  const lastMinute = trace.ticks.at(-1)?.minute;
+  // minutes terminées seulement (images toutes vues) ; recalculé au changement de minute ou à l'arrivée de nouvelles
+  // images (une fois par seconde au plus), jamais à chaque image affichée
+  const values = useMemo(() => momentumByMinute(trace.ticks, complete, L), [trace.ticks, complete]);
   const { labels, halfLine } = ticks(trace.second_half_start_minute, halfReached);
   const goals = trace.goals.slice(0, goalsShown);
   if (!width) return null;
   return (
     <g>
       {values.map((v, m) => {
-        if (v == null || m >= played) return null;
-        const { x, width: w } = barBox(m, width, domain);
-        const h = Math.min(BAR_HALF_PX, Math.abs(v) * scale);
+        if (v == null) return null;
+        const { x, width: w } = barBox(m, width, domain, lastMinute);
+        const h = barHeight(v, BAR_HALF_PX);
         return (
           <rect
             key={m}
             data-bar={m}
             x={x}
             width={w}
-            y={v > 0 ? AXIS_Y - h : AXIS_Y}
+            y={v >= 0 ? AXIS_Y - h : AXIS_Y}
             height={h}
-            style={{ fill: v > 0 ? "var(--team-home-ui)" : "var(--team-away-ui)" }}
+            style={{ fill: v >= 0 ? "var(--team-home-ui)" : "var(--team-away-ui)" }}
           />
         );
       })}
@@ -104,8 +88,8 @@ const Bars = memo(function Bars({ trace, played, goalsShown, width, domain, half
 });
 
 // `shownMin` : instant lu (minutes, fractionnaire) pour le curseur, seule partie redessinée à chaque image ;
-// `played` : minutes entamées (barres affichées : m < played) ; `goalsShown` : buts déjà vus.
-function MomentumTimeline({ trace, shownMin, played, goalsShown }) {
+// `goalsShown` : buts déjà vus.
+function MomentumTimeline({ trace, shownMin, goalsShown }) {
   const ref = useRef(null);
   const [width, setWidth] = useState(0);
   useLayoutEffect(() => {
@@ -118,14 +102,16 @@ function MomentumTimeline({ trace, shownMin, played, goalsShown }) {
     return () => observer.disconnect();
   }, []);
   const domain = domainMinutes(trace.ticks.at(-1)?.minute);
+  const complete = completedMinutes(shownMin, trace.ticks.at(-1)?.minute, trace.done);
   const halfReached = trace.second_half_start_minute != null && shownMin >= trace.second_half_start_minute;
   const cursorX = Math.min(width, minuteX(shownMin, width, domain));
   return (
     <div ref={ref} data-zone="momentum" className="w-full" style={{ height: FRISE_PX }}>
-      <svg width={width} height={FRISE_PX} className="block overflow-visible" role="img" aria-label="Match momentum">
+      <svg width={width} height={FRISE_PX} className="block overflow-visible" role="img" aria-label={LABEL}>
+        <title>{LABEL}</title>
         <Bars
           trace={trace}
-          played={played}
+          complete={complete}
           goalsShown={goalsShown}
           width={width}
           domain={domain}

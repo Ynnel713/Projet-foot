@@ -1,0 +1,102 @@
+{
+ "em11b-fin-96 1366x768@96.3": {
+  "frise": "1346x72",
+  "barres": 97,
+  "derniere": 96,
+  "curseur": 1234.5,
+  "finDerniereBarre": 1234.5,
+  "barresAuDelaDuCurseur": 0,
+  "ecartMaxHauteurPx": 0,
+  "barre5": {
+   "m": 5,
+   "x": 65.0952380952381,
+   "w": 10.81904761904762,
+   "h": 1.0766574623330827
+  },
+  "barre20": {
+   "m": 20,
+   "x": 257.3809523809524,
+   "w": 10.81904761904762,
+   "h": 22
+  },
+  "a1px": 15,
+  "a22px": 5,
+  "libelle": "Pression territoriale",
+  "titre": "Pression territoriale"
+ },
+ "em11b-fin-96 1366x768@97": {
+  "frise": "1346x72",
+  "barres": 97,
+  "derniere": 96,
+  "curseur": 1234.5,
+  "finDerniereBarre": 1234.5,
+  "barresAuDelaDuCurseur": 0,
+  "ecartMaxHauteurPx": 0,
+  "barre5": {
+   "m": 5,
+   "x": 65.0952380952381,
+   "w": 10.81904761904762,
+   "h": 1.0766574623330827
+  },
+  "barre20": {
+   "m": 20,
+   "x": 257.3809523809524,
+   "w": 10.81904761904762,
+   "h": 22
+  },
+  "a1px": 15,
+  "a22px": 5,
+  "libelle": "Pression territoriale",
+  "titre": "Pression territoriale"
+ },
+ "em11b-fin-96 1024x768@96.3": {
+  "frise": "1004x72",
+  "barres": 97,
+  "derniere": 96,
+  "curseur": 920.8,
+  "finDerniereBarre": 920.8,
+  "barresAuDelaDuCurseur": 0,
+  "ecartMaxHauteurPx": 0,
+  "barre5": {
+   "m": 5,
+   "x": 48.80952380952381,
+   "w": 7.561904761904762,
+   "h": 1.0766574623330827
+  },
+  "barre20": {
+   "m": 20,
+   "x": 192.23809523809524,
+   "w": 7.561904761904762,
+   "h": 22
+  },
+  "a1px": 15,
+  "a22px": 5,
+  "libelle": "Pression territoriale",
+  "titre": "Pression territoriale"
+ },
+ "em11b-fin-96 1920x1080@96.3": {
+  "frise": "1900x72",
+  "barres": 97,
+  "derniere": 96,
+  "curseur": 1742.6,
+  "finDerniereBarre": 1742.6,
+  "barresAuDelaDuCurseur": 0,
+  "ecartMaxHauteurPx": 0,
+  "barre5": {
+   "m": 5,
+   "x": 91.47619047619048,
+   "w": 16.095238095238095,
+   "h": 1.0766574623330827
+  },
+  "barre20": {
+   "m": 20,
+   "x": 362.9047619047619,
+   "w": 16.095238095238095,
+   "h": 22
+  },
+  "a1px": 15,
+  "a22px": 5,
+  "libelle": "Pression territoriale",
+  "titre": "Pression territoriale"
+ }
+}

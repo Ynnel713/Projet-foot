@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "test": "node --test src/utils/teamColors.test.js src/utils/v2Spline.test.js src/utils/v2BallLook.test.js src/utils/v2NetWave.test.js src/utils/matchHud.test.js src/utils/playbackKeys.test.js src/utils/lineupCards.test.js src/utils/momentumLayout.test.js",
+    "test": "node --test src/utils/teamColors.test.js src/utils/v2Spline.test.js src/utils/v2BallLook.test.js src/utils/v2NetWave.test.js src/utils/matchHud.test.js src/utils/playbackKeys.test.js src/utils/lineupCards.test.js src/utils/momentumLayout.test.js src/utils/momentum.test.js",
     "preview": "vite preview"
   },
   "dependencies": {

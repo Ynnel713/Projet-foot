@@ -1,6 +1,6 @@
 # EM-11 — Momentum : histogramme symétrique (V) — 150 min (moyenne) → 11a rendu, 11b données
 
-**Status:** à faire (chantier validé par le propriétaire le 07/11/2026 ; constantes à proposer avant le code)
+**Status:** livré (19/11/2026) : 11a et 11b validés expert + QC
 
 Chantier : `.scratch/v2-ecran-match/spec.md` (audit, direction artistique, décisions).
 
@@ -23,3 +23,9 @@ Chantier : `.scratch/v2-ecran-match/spec.md` (audit, direction artistique, déci
   0,6, seuil de 1 px, minutes terminées seulement, libellé « Pression territoriale »). Reporté en 11b : réserve A1 de
   11a (barre de la minute en cours au-delà du curseur, critère du banc sur la fin de barre).
 
+
+### 19/11/2026 — 11b livré, EM-11 terminé
+
+- 11b livré (19/11/2026), validé expert + QC : voir `11b-frise-de-momentum-donnees.md`. `utils/momentum.js` extrait,
+  échelle fixe 0,6, minutes terminées seulement (réserve A1 de 11a corrigée), dernière minute bornée à la fin du match,
+  libellé « Pression territoriale » (info-bulle et `aria-label`).
