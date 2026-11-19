@@ -32,7 +32,7 @@ function useSideWidth() {
   return [left, right, width];
 }
 
-export default function MatchHud({ trace, score, time, badge, offside, onBack, playback, finished }) {
+export default function MatchHud({ trace, score, scorers, time, badge, offside, onBack, playback, finished }) {
   const [leftRef, rightRef, sideWidth] = useSideWidth();
   const columns = sideWidth == null ? "auto minmax(0,1fr) auto" : `${sideWidth}px minmax(0,1fr) ${sideWidth}px`;
   return (
@@ -47,7 +47,7 @@ export default function MatchHud({ trace, score, time, badge, offside, onBack, p
         </button>
       </div>
       <div className="min-w-0 flex flex-col items-stretch">
-        <ScoreBlock home={trace.home} away={trace.away} score={score} />
+        <ScoreBlock home={trace.home} away={trace.away} score={score} scorers={scorers} />
         <div className="flex items-center justify-center gap-2 h-6 min-w-0 whitespace-nowrap">
           <span
             data-zone="minute"

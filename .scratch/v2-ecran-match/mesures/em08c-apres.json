@@ -1,0 +1,314 @@
+{
+ "em11-om-ol 1366x768@1": {
+  "score": "0-0",
+  "hud": 89,
+  "ecartCentreScore": 0,
+  "domicile": null,
+  "exterieur": null,
+  "pageDefile": false
+ },
+ "em11-om-ol 1366x768@2.03": {
+  "score": "0-0",
+  "hud": 89,
+  "ecartCentreScore": 0,
+  "domicile": null,
+  "exterieur": null,
+  "pageDefile": false
+ },
+ "em11-om-ol 1366x768@2.05": {
+  "score": "0-1",
+  "hud": 103,
+  "ecartCentreScore": 0,
+  "domicile": {
+   "lignes": 0,
+   "textes": [],
+   "debordements": [],
+   "minutesTronquees": 0,
+   "hauteur": 0,
+   "visible": false,
+   "survol": null
+  },
+  "exterieur": {
+   "lignes": 1,
+   "textes": [
+    "Openda 2'"
+   ],
+   "debordements": [],
+   "minutesTronquees": 0,
+   "hauteur": 14,
+   "visible": true,
+   "survol": "Loïs Openda 2'"
+  },
+  "pageDefile": false
+ },
+ "em11-om-ol 1366x768@10": {
+  "score": "1-2",
+  "hud": 103,
+  "ecartCentreScore": 0,
+  "domicile": {
+   "lignes": 1,
+   "textes": [
+    "Gouiri 9'"
+   ],
+   "debordements": [],
+   "minutesTronquees": 0,
+   "hauteur": 14,
+   "visible": true,
+   "survol": "Amine Gouiri 9'"
+  },
+  "exterieur": {
+   "lignes": 1,
+   "textes": [
+    "Openda 2', 7'"
+   ],
+   "debordements": [],
+   "minutesTronquees": 0,
+   "hauteur": 14,
+   "visible": true,
+   "survol": "Loïs Openda 2', 7'"
+  },
+  "pageDefile": false
+ },
+ "em11-om-ol 1366x768@104": {
+  "score": "6-3",
+  "hud": 131,
+  "ecartCentreScore": 0,
+  "domicile": {
+   "lignes": 3,
+   "textes": [
+    "Gouiri 9', 29', 71', 90+5'",
+    "Abdelli 74'",
+    "Paixão 83'"
+   ],
+   "debordements": [],
+   "minutesTronquees": 0,
+   "hauteur": 42,
+   "visible": true,
+   "survol": "Amine Gouiri 9', 29', 71', 90+5'\nHimad Abdelli 74'\nIgor Paixão 83'"
+  },
+  "exterieur": {
+   "lignes": 1,
+   "textes": [
+    "Openda 2', 7', 16'"
+   ],
+   "debordements": [],
+   "minutesTronquees": 0,
+   "hauteur": 14,
+   "visible": true,
+   "survol": "Loïs Openda 2', 7', 16'"
+  },
+  "pageDefile": false
+ },
+ "em11-om-ol 1024x768@104": {
+  "score": "6-3",
+  "hud": 131,
+  "ecartCentreScore": 0,
+  "domicile": {
+   "lignes": 3,
+   "textes": [
+    "Gouiri 9', 29', 71', 90+5'",
+    "Abdelli 74'",
+    "Paixão 83'"
+   ],
+   "debordements": [],
+   "minutesTronquees": 0,
+   "hauteur": 42,
+   "visible": true,
+   "survol": "Amine Gouiri 9', 29', 71', 90+5'\nHimad Abdelli 74'\nIgor Paixão 83'"
+  },
+  "exterieur": {
+   "lignes": 1,
+   "textes": [
+    "Openda 2', 7', 16'"
+   ],
+   "debordements": [],
+   "minutesTronquees": 0,
+   "hauteur": 14,
+   "visible": true,
+   "survol": "Loïs Openda 2', 7', 16'"
+  },
+  "pageDefile": false
+ },
+ "em11-om-ol 1920x1080@104": {
+  "score": "6-3",
+  "hud": 131,
+  "ecartCentreScore": 0,
+  "domicile": {
+   "lignes": 3,
+   "textes": [
+    "Gouiri 9', 29', 71', 90+5'",
+    "Abdelli 74'",
+    "Paixão 83'"
+   ],
+   "debordements": [],
+   "minutesTronquees": 0,
+   "hauteur": 42,
+   "visible": true,
+   "survol": "Amine Gouiri 9', 29', 71', 90+5'\nHimad Abdelli 74'\nIgor Paixão 83'"
+  },
+  "exterieur": {
+   "lignes": 1,
+   "textes": [
+    "Openda 2', 7', 16'"
+   ],
+   "debordements": [],
+   "minutesTronquees": 0,
+   "hauteur": 14,
+   "visible": true,
+   "survol": "Loïs Openda 2', 7', 16'"
+  },
+  "pageDefile": false
+ },
+ "em11-om-ol 844x390@104": {
+  "score": "6-3",
+  "hud": 69,
+  "ecartCentreScore": 0,
+  "domicile": {
+   "lignes": 3,
+   "textes": [
+    "Gouiri9', 29', 71', 90+5'",
+    "Abdelli74'",
+    "Paixão83'"
+   ],
+   "debordements": [],
+   "minutesTronquees": 0,
+   "hauteur": 0,
+   "visible": false,
+   "survol": "Amine Gouiri 9', 29', 71', 90+5'\nHimad Abdelli 74'\nIgor Paixão 83'"
+  },
+  "exterieur": {
+   "lignes": 1,
+   "textes": [
+    "Openda2', 7', 16'"
+   ],
+   "debordements": [],
+   "minutesTronquees": 0,
+   "hauteur": 0,
+   "visible": false,
+   "survol": "Loïs Openda 2', 7', 16'"
+  },
+  "pageDefile": false
+ },
+ "em11-psg-havre 1366x768@1": {
+  "score": "0-0",
+  "hud": 89,
+  "ecartCentreScore": 0,
+  "domicile": null,
+  "exterieur": null,
+  "pageDefile": false
+ },
+ "em11-psg-havre 1366x768@30": {
+  "score": "5-0",
+  "hud": 117,
+  "ecartCentreScore": 0,
+  "domicile": {
+   "lignes": 2,
+   "textes": [
+    "Kvaratskhelia 5', 22'",
+    "Dembélé 18', 20', 23'"
+   ],
+   "debordements": [],
+   "minutesTronquees": 0,
+   "hauteur": 28,
+   "visible": true,
+   "survol": "Khvicha Kvaratskhelia 5', 22'\nOusmane Dembélé 18', 20', 23'"
+  },
+  "exterieur": {
+   "lignes": 0,
+   "textes": [],
+   "debordements": [],
+   "minutesTronquees": 0,
+   "hauteur": 0,
+   "visible": false,
+   "survol": null
+  },
+  "pageDefile": false
+ },
+ "em11-psg-havre 1366x768@104": {
+  "score": "10-0",
+  "hud": 131,
+  "ecartCentreScore": 0,
+  "domicile": {
+   "lignes": 3,
+   "textes": [
+    "Kvaratskhelia 5', 22', 45+1', 59', 90+4'",
+    "Dembélé 18', 20', 23'",
+    "+2 autres"
+   ],
+   "debordements": [],
+   "minutesTronquees": 0,
+   "hauteur": 42,
+   "visible": true,
+   "survol": "Khvicha Kvaratskhelia 5', 22', 45+1', 59', 90+4'\nOusmane Dembélé 18', 20', 23'\nDésiré Doué 38'\nJoão Neves 90+2'"
+  },
+  "exterieur": {
+   "lignes": 0,
+   "textes": [],
+   "debordements": [],
+   "minutesTronquees": 0,
+   "hauteur": 0,
+   "visible": false,
+   "survol": null
+  },
+  "pageDefile": false
+ },
+ "em11-psg-havre 1024x768@104": {
+  "score": "10-0",
+  "hud": 131,
+  "ecartCentreScore": 0,
+  "domicile": {
+   "lignes": 3,
+   "textes": [
+    "Kvaratskhelia 5', 22', 45+1', 59', 90+4'",
+    "Dembélé 18', 20', 23'",
+    "+2 autres"
+   ],
+   "debordements": [
+    "Kvaratskhelia",
+    "5', 22', 45+1', 59', 90+4'"
+   ],
+   "minutesTronquees": 1,
+   "hauteur": 42,
+   "visible": true,
+   "survol": "Khvicha Kvaratskhelia 5', 22', 45+1', 59', 90+4'\nOusmane Dembélé 18', 20', 23'\nDésiré Doué 38'\nJoão Neves 90+2'"
+  },
+  "exterieur": {
+   "lignes": 0,
+   "textes": [],
+   "debordements": [],
+   "minutesTronquees": 0,
+   "hauteur": 0,
+   "visible": false,
+   "survol": null
+  },
+  "pageDefile": false
+ },
+ "em11-psg-havre 1920x1080@104": {
+  "score": "10-0",
+  "hud": 131,
+  "ecartCentreScore": 0,
+  "domicile": {
+   "lignes": 3,
+   "textes": [
+    "Kvaratskhelia 5', 22', 45+1', 59', 90+4'",
+    "Dembélé 18', 20', 23'",
+    "+2 autres"
+   ],
+   "debordements": [],
+   "minutesTronquees": 0,
+   "hauteur": 42,
+   "visible": true,
+   "survol": "Khvicha Kvaratskhelia 5', 22', 45+1', 59', 90+4'\nOusmane Dembélé 18', 20', 23'\nDésiré Doué 38'\nJoão Neves 90+2'"
+  },
+  "exterieur": {
+   "lignes": 0,
+   "textes": [],
+   "debordements": [],
+   "minutesTronquees": 0,
+   "hauteur": 0,
+   "visible": false,
+   "survol": null
+  },
+  "pageDefile": false
+ }
+}

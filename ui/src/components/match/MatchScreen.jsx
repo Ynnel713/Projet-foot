@@ -8,7 +8,7 @@ import V2Pitch from "./V2Pitch";
 import { teamColors, teamColorVars } from "../../utils/teamColors";
 import { lineupDensity } from "../../utils/lineupCards";
 import { L, clock, halfStart, interpolatedTick, rotated } from "./trace";
-import { matchBadge, revealedScore } from "../../utils/matchHud";
+import { matchBadge, revealedScore, revealedScorers } from "../../utils/matchHud";
 import { netWave } from "../../utils/v2NetWave";
 import { ballMotion, ballSpeed, trailLength } from "../../utils/v2BallLook";
 
@@ -133,6 +133,13 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
   const shownS = Math.max(seen, seconds);
   const score = revealedScore(trace.goals, shownS);
   const { home: homeGoals, away: awayGoals } = score;
+  // buteurs du HUD (ticket v2-ecran-match/08c) : mêmes buts révélés que le score (buts rangés dans l'ordre du match),
+  // minute au libellé de l'horloge ; recalculés à chaque but révélé seulement, pas à chaque image
+  const revealedGoals = homeGoals + awayGoals;
+  const scorers = useMemo(
+    () => revealedScorers(trace.goals.slice(0, revealedGoals), Infinity, (minute) => clock(trace, minute).label),
+    [trace, revealedGoals],
+  );
   const available = (trace.ticks.length - 1) * trace.tick_seconds; // images déjà calculées
   const finished = trace.done && seconds >= available;
   const waiting = !trace.done && seconds >= available; // le rejeu a rattrapé le calcul
@@ -147,6 +154,7 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
       <MatchHud
         trace={trace}
         score={score}
+        scorers={scorers}
         time={time}
         badge={matchBadge({ finished, halfBanner, waiting })}
         offside={recentOffside}
