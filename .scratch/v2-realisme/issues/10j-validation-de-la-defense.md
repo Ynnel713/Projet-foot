@@ -8,7 +8,7 @@
 
 **Attributs :** aucun
 
-**Blocked by:** 10a (Choix du presseur selon la zone et la responsabilité); 10b (Le défenseur central ne quitte sa ligne que couvert); 10c (Couverture de la profondeur derrière la ligne); 10d (Protection de l'axe : le milieu récupérateur fait écran); 10e (Coulissement : côté ballon serré, côté opposé resserré vers l'axe); 10g (Marquage dans la surface : homme ou zone); 10h (Défendre le centre en retrait); 10i (Compensation d'un trou au milieu).
+**Blocked by:** 10a (Choix du presseur selon la zone et la responsabilité); 10b (Le défenseur central ne quitte sa ligne que couvert); 10b2 (couverture du central sans trou) ; 10b3 (sauts de la place de référence ; mesure de stabilité de la couverture à refaire, repère 13,8 allers-retours par match) ; 10c (Couverture de la profondeur derrière la ligne); 10d (Protection de l'axe : le milieu récupérateur fait écran); 10e (Coulissement : côté ballon serré, côté opposé resserré vers l'axe); 10g (Marquage dans la surface : homme ou zone); 10h (Défendre le centre en retrait); 10i (Compensation d'un trou au milieu).
 
 **Bloque :** rien.
 

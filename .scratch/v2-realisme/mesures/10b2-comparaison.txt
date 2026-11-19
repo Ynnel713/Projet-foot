@@ -1,0 +1,28 @@
+(minutes par match sauf compteurs)         avant     après    écart
+matchs                                   100.000   100.000    +0.0%
+buts                                       5.220     4.970    -4.8%
+shots                                     41.630    41.960    +0.8%
+tackles                                   39.970    39.810    -0.4%
+fouls                                     19.070    19.150    +0.4%
+offsides                                   3.800     3.760    -1.1%
+non couvert (presse+marque)                1.923     1.986    +3.3%
+non couvert menacé (presse+marque)         1.854     1.915    +3.3%
+presseur sortie                            0.968     0.886    -8.4%
+presseur non couvert                       0.833     0.760    -8.8%
+marquage sortie                            1.428     1.562    +9.4%
+marquage non couvert                       1.090     1.226   +12.4%
+couverture sortie                          3.601     1.464   -59.3%
+couverture non couvert                     3.288     1.232   -62.5%
+couverture non couvert menacé              3.226     1.168   -63.8%
+DC presse (min)                            6.452     6.199    -3.9%
+DC hors zone (min)                         0.815     0.770    -5.5%
+attaquant dangereux non marqué (min)       0.000     0.000    +0.0%
+
+contrôle : scores du mode avant identiques au 10b livré : 100/100
+
+écarts appariés (après - avant), IC 95 % :
+  buts      -0.25 (-4.8 %), IC [-16.2 % ; +6.6 %], n = 100
+  tirs      +0.33 (+0.8 %), IC [-2.8 % ; +4.4 %], n = 100
+  tacles    -0.16 (-0.4 %), IC [-3.0 % ; +2.1 %], n = 100
+  hors-jeu  -0.04 (-1.1 %), IC [-14.4 % ; +12.3 %], n = 100
+  fautes    +0.08 (+0.4 %), IC [-3.5 % ; +4.3 %], n = 100

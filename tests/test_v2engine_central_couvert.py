@@ -14,7 +14,7 @@ from v2engine.ball_state import BallState
 from v2engine.defense import (COMPENSATION, HOLE_AWAY_M, HOLE_DANGER_M, HOLE_FILLED_M, MARQUAGE, PRESSEUR, DefensiveRoles,
                               arrival_time_s, line_exit, own_goal)
 from v2engine.geometry import Vec2
-from v2engine.movement import PlayerState
+from v2engine.movement import PlayerState, max_speed_mps
 
 GOAL = own_goal("home")  # domicile défend x = 0
 PLACE = Vec2(10.0, 34.0)  # place de référence du central
@@ -229,3 +229,144 @@ def test_an_open_hole_imposes_its_draw_on_the_cover(monkeypatch: pytest.MonkeyPa
     defense = _update(_marking_scene() + [mdc], "H", _Bloc(), defense)
     assert (_role(defense, "DC") == (MARQUAGE, "BU1")) is hole
     assert ("DC", "MDC", "BU1") not in defense.cover_draws  # aucun tirage de couverture
+
+
+# --- ticket v2-realisme/10b2 : la couverture suit la même règle ; le couvreur retenu est réservé ---
+
+def _cover_scene() -> list[PlayerState]:
+    """Porteur adverse dans la moitié défendue, à 20 m devant la place du central (point de couverture à 14 m de cette
+    place : une sortie), pressé par le milieu ; le central arrive le premier sur le point de couverture ; BU2, à 18,9 m
+    de sa place, la menace."""
+    return [_p("H", 30.0, team="away", poste="MC"), _p("MC", 32.0, poste="MC", place=Vec2(32.0, 34.0)),
+            _p("DC", 22.0, place=PLACE), _p("BU2", 20.0, y=50.0, team="away", poste="BU")]
+
+
+def test_uncovered_centre_back_leaves_the_cover_to_another() -> None:
+    # le milieu défensif, trop loin pour combler la place avant BU2, prend la couverture ; le central garde sa ligne
+    mdc = _p("MDC", 30.0, y=40.0, poste="MDC", place=Vec2(30.0, 40.0))
+    defense = _update(_cover_scene() + [mdc], "H", _Bloc())
+    assert _role(defense, "MC") == (PRESSEUR, "H")
+    assert _role(defense, "MDC") == ("couverture", "H") and _role(defense, "DC") is None
+
+
+def test_nobody_else_free_nobody_covers() -> None:
+    defense = _update(_cover_scene(), "H", _Bloc())
+    assert _role(defense, "MC") == (PRESSEUR, "H") and _role(defense, "DC") is None
+    assert not any(a.role == "couverture" for a in defense.assignments.values())
+
+
+def test_a_partner_on_his_place_the_centre_back_covers() -> None:
+    # le milieu défensif tient la place du central (à 5 m ou moins) : le central couvre, sortie retenue pour H
+    mdc = _p("MDC", 13.0, y=36.0, poste="MDC", place=Vec2(13.0, 36.0))
+    defense = _update(_cover_scene() + [mdc], "H", _Bloc())
+    assert _role(defense, "DC") == ("couverture", "H") and defense.exits == {"DC": "H"}
+
+
+def test_the_coverer_of_an_exit_is_reserved(monkeypatch: pytest.MonkeyPatch) -> None:
+    # réserve A2 de l'expert au 10b : le central sort marquer BU1 sur l'accord du milieu défensif ; BU3, dangereux et
+    # plus près du milieu que de tout autre, n'est pas marqué par lui : le milieu reste libre pour combler la place
+    _draws(monkeypatch, [0.0] * 5)
+    mdc = _p("MDC", 12.0, y=27.0, poste="MDC", place=Vec2(25.0, 34.0))
+    bu3 = _p("BU3", 22.0, y=22.5, team="away", poste="BU")  # à 24,8 m du but, après BU1 (24,5 m) dans l'ordre
+    defense = _update(_marking_scene() + [mdc, bu3], "H", _Bloc())
+    assert _role(defense, "DC") == (MARQUAGE, "BU1") and defense.reserved == {"MDC"}
+    assert _role(defense, "MDC") is None  # sans la réserve : marquage de BU3
+
+
+def test_the_covering_centre_back_is_rechecked_every_tick() -> None:
+    # 10b2, décision du propriétaire : pas d'exemption « sorti couvert » pour la couverture. Le central couvre tant que
+    # le milieu défensif tient sa place ; le milieu remonte (trop loin pour la combler avant BU2) : la couverture lui
+    # revient au tick suivant (avec l'exemption, le central la garderait)
+    mdc = _p("MDC", 13.0, y=36.0, poste="MDC", place=Vec2(13.0, 36.0))
+    defense = _update(_cover_scene() + [mdc], "H", _Bloc())
+    assert _role(defense, "DC") == ("couverture", "H") and defense.exits == {"DC": "H"}
+    mdc = _p("MDC", 30.0, y=40.0, poste="MDC", place=Vec2(30.0, 40.0))
+    defense = _update(_cover_scene() + [mdc], "H", _Bloc(), defense)
+    assert _role(defense, "MDC") == ("couverture", "H") and _role(defense, "DC") is None
+
+
+def _delay_for(monkeypatch: pytest.MonkeyPatch, late_s: float) -> None:
+    """Délai de réaction du milieu défensif tel qu'il arrive sur la place du central `late_s` après BU2 (négatif : avant)."""
+    bu2, mdc = _p("BU2", 20.0, y=50.0, team="away", poste="BU"), _p("MDC", 30.0, y=40.0, poste="MDC")
+    gap = arrival_time_s(bu2, PLACE) - arrival_time_s(mdc, PLACE)
+    real = defense_module.reaction_delay_s
+    monkeypatch.setattr(defense_module, "reaction_delay_s",
+                        lambda p, *a, **k: gap + late_s if p.name == "MDC" else real(p, *a, **k))
+
+
+@pytest.mark.parametrize(("late_s", "keeps"), [(0.1, True), (0.5, False)])
+def test_the_covering_centre_back_keeps_the_holder_margin(monkeypatch: pytest.MonkeyPatch, late_s: float,
+                                                          keeps: bool) -> None:
+    # réserve A1 de l'expert au 10b2 : le central qui couvre déjà garde le rôle tant que son couvreur arrive au plus
+    # `HOLD_MARGIN_S` (0,3 s) après l'attaquant, comme le titulaire d'une compensation ; au-delà, il le perd
+    _draws(monkeypatch, [0.0] * 10)
+    mdc = _p("MDC", 30.0, y=40.0, poste="MDC", place=Vec2(30.0, 40.0))
+    _delay_for(monkeypatch, -0.1)  # tick 1 : le milieu arrive à temps, le central couvre
+    defense = _update(_cover_scene() + [mdc], "H", _Bloc())
+    assert _role(defense, "DC") == ("couverture", "H")
+    _delay_for(monkeypatch, late_s)
+    defense = _update(_cover_scene() + [mdc], "H", _Bloc(), defense)
+    assert (_role(defense, "DC") == ("couverture", "H")) is keeps
+
+
+def test_the_coverer_of_an_ongoing_exit_does_not_cover(monkeypatch: pytest.MonkeyPatch) -> None:
+    # réserve A2 de l'expert au 10b2 : le central marque BU1 en sortie gardée sur l'accord du milieu défensif ; la
+    # couverture, choisie avant le marquage, ne revient pas au milieu, réservé dès le début du tick
+    _draws(monkeypatch, [0.0] * 10)
+    mdc = _p("MDC", 30.0, y=40.0, poste="MDC", place=Vec2(30.0, 40.0))
+    defense = DefensiveRoles()
+    defense.exits = {"DC": "BU1"}
+    defense.exit_cover = {"DC": ("MDC", "BU1")}
+    defense = _update(_cover_scene() + [mdc], "H", _Bloc(), defense)
+    assert "MDC" in defense.reserved and _role(defense, "MDC") != ("couverture", "H")
+
+
+def _cover_at(x_holder: float) -> list[PlayerState]:
+    """Scène de couverture, porteur en `x_holder` (point de couverture 6 m derrière lui), pressé par le milieu."""
+    return [_p("H", x_holder, team="away", poste="MC"), _p("MC", x_holder + 2.0, poste="MC", place=Vec2(32.0, 34.0)),
+            _p("DC", 22.0, place=PLACE), _p("BU2", 20.0, y=50.0, team="away", poste="BU")]
+
+
+@pytest.mark.parametrize(("spot_m", "keeps"), [(9.9, True), (11.0, False)])
+def test_the_covering_centre_back_loses_the_cover_at_the_exit_threshold(spot_m: float, keeps: bool) -> None:
+    # réserve A1 de l'expert au 10b2 : le central qui couvre (point à 7 m de sa place) garde le rôle jusqu'à
+    # `HOLE_AWAY_M` ; au-delà, place non tenue et menacée, personne d'autre de libre : personne ne couvre
+    defense = _update(_cover_at(PLACE.x + 7.0 + 6.0), "H", _Bloc())
+    assert _role(defense, "DC") == ("couverture", "H")
+    defense = _update(_cover_at(PLACE.x + spot_m + 6.0), "H", _Bloc(), defense)
+    assert (_role(defense, "DC") == ("couverture", "H")) is keeps
+
+
+@pytest.mark.parametrize(("spot_m", "takes"), [(7.0, True), (9.0, False)])
+def test_a_new_centre_back_takes_the_cover_only_inside_the_band(spot_m: float, takes: bool) -> None:
+    # hystérésis : un central qui ne couvrait pas ne prend sans couverture qu'un point à moins de `HOLE_AWAY_M` moins
+    # la distance qu'il parcourt en `HOLD_MARGIN_S` (2,6 m à Pace 60, soit 7,4 m) ; entre 7,4 et 10 m, il ne le prend
+    # pas, le titulaire le garde (test précédent) : le rôle ne va et vient plus au seuil
+    band = defense_module.HOLD_MARGIN_S * max_speed_mps(60)
+    assert 7.0 < HOLE_AWAY_M - band < 9.0
+    defense = _update(_cover_at(PLACE.x + spot_m + 6.0), "H", _Bloc())
+    assert (_role(defense, "DC") == ("couverture", "H")) is takes
+
+
+def test_a_centre_back_who_lost_the_cover_is_no_longer_its_holder() -> None:
+    # réserve A1 de l'expert au 10b2 : le central perd la couverture à 11 m, personne ne couvre ; le point revient à
+    # 9 m (au-delà de 7,4 m) : il ne la reprend pas sans couverture (hystérésis : il n'en est plus titulaire)
+    defense = _update(_cover_at(PLACE.x + 7.0 + 6.0), "H", _Bloc())
+    assert _role(defense, "DC") == ("couverture", "H")
+    defense = _update(_cover_at(PLACE.x + 11.0 + 6.0), "H", _Bloc(), defense)
+    assert _role(defense, "DC") is None
+    defense = _update(_cover_at(PLACE.x + 9.0 + 6.0), "H", _Bloc(), defense)
+    assert _role(defense, "DC") is None
+
+
+@pytest.mark.parametrize(("behind_m", "leaves"), [(1.0, True), (4.0, False)])
+def test_the_band_also_applies_behind_the_place(behind_m: float, leaves: bool) -> None:
+    # hystérésis du 10b2 sur le second seuil de `line_exit` : un point à 12 m de la place, à 1 m en deçà vers le but
+    # (pas une sortie pour `line_exit`), reste une sortie pour un central qui ne couvrait pas (bande de 2,6 m à Pace
+    # 60) ; à 4 m en deçà, non. Place menacée par BU2, personne pour la combler
+    target = Vec2(PLACE.x - behind_m, PLACE.y + (12.0 ** 2 - behind_m ** 2) ** 0.5)
+    assert not line_exit(target, PLACE, GOAL)
+    dc, bu2 = _p("DC", 22.0, place=PLACE), _p("BU2", 20.0, y=50.0, team="away", poste="BU")
+    ball = BallState(position=Vec2(30.0, 34.0), velocity=Vec2(0.0, 0.0), holder="H")
+    assert DefensiveRoles()._leaves_uncovered(dc, target, "H", [dc, bu2], [dc], {"DC": PLACE}, GOAL, ball, 0.0,
+                                              recheck=True) is leaves

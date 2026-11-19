@@ -1,0 +1,8 @@
+warning: The `UV_NATIVE_TLS` environment variable is deprecated and will be removed in a future release. Use `UV_SYSTEM_CERTS` instead.
+moteur : /tmp/claude-0/-home-user-Projet-foot/5589354d-17f7-47da-bc97-e6d4098a2be0/scratchpad/wt10b/v2engine/defense.py
+44 [0, 5]
+45 [2, 2]
+46 [3, 4]
+47 [2, 2]
+48 [7, 2]
+49 [1, 8]
