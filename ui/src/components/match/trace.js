@@ -1,28 +1,14 @@
 import dims from "../../utils/pitchGeometry.json";
+import { clock, halfStart } from "../../utils/matchClock";
 import { goalBall } from "../../utils/v2GoalBall";
 import { displayBall, playersBetween } from "../../utils/v2Spline";
 
 // Lecture d'une trace V2 à un instant donné (ticket v2-ecran-match/01 : déplacé depuis routes/V2Match.jsx).
 export const L = dims.pitch_length_m;
 export const W = dims.pitch_width_m;
-const HALF_TIME_MIN = 45; // repli tant que le moteur n'a pas encore donné le début de la 2e période
-
-// Début de la 2e période selon le moteur (ticket v2-coach-et-gestion-de-match/07).
-export const halfStart = (trace) => trace.second_half_start_minute ?? HALF_TIME_MIN;
-// Minute affichée, temps additionnel compris (ticket v2-coach-et-gestion-de-match/03, même règle que
-// `v2engine.added_time.display_minute`) : 12', 45+2', 67', 90+4'. Renvoie aussi la période et, en temps additionnel,
-// les minutes annoncées.
-export function clock(trace, minute) {
-  const second = trace.second_half_start_minute != null && minute >= trace.second_half_start_minute;
-  const elapsed = second ? minute - trace.second_half_start_minute : minute;
-  const base = second ? HALF_TIME_MIN : 0;
-  const added = elapsed >= HALF_TIME_MIN;
-  return {
-    second,
-    label: added ? `${base + HALF_TIME_MIN}+${Math.floor(elapsed - HALF_TIME_MIN) + 1}'` : `${Math.floor(base + elapsed)}'`,
-    announced: added ? trace.added_minutes?.[second ? 1 : 0] : null,
-  };
-}
+// Début de la 2e période et minute affichée : `utils/matchClock.js` (déplacés tels quels par le ticket
+// v2-ecran-match/08, pour être testés sous node), ré-exportés ici pour les composants.
+export { clock, halfStart };
 
 // Position à `seconds` de match, interpolée entre les deux ticks enregistrés qui l'encadrent. Les joueurs gardent
 // le même ordre d'un tick à l'autre (liste construite une fois côté moteur). Ticket v2-correctifs-ecran/04b : courbe

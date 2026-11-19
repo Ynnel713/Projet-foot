@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
-import { ArrowLeft, ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
-import { SPEED_OPTIONS } from "../../hooks/useMatchPlayback";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import IntentionPanel from "./IntentionPanel";
 import LineupPanel from "./LineupPanel";
+import MatchHud from "./MatchHud";
 import Momentum from "./Momentum";
 import V2Pitch from "./V2Pitch";
 import { teamColors, teamColorVars } from "../../utils/teamColors";
-import { L, clock, halfStart, interpolatedTick, rotated, situationAt } from "./trace";
+import { L, clock, halfStart, interpolatedTick, rotated } from "./trace";
+import { matchBadge, revealedScore } from "../../utils/matchHud";
 import { netWave } from "../../utils/v2NetWave";
 import { ballMotion, ballSpeed, trailLength } from "../../utils/v2BallLook";
 
@@ -71,7 +72,7 @@ const reducedMotion = () => typeof window !== "undefined" && !!window.matchMedia
 
 export default function MatchScreen({ playback, lineups, selected, onSelect, onBack }) {
   const [reduceMotion] = useState(reducedMotion);
-  const { trace, seconds, seen, playing, setPlaying, speed, setSpeed, replaying, halfBanner, skipReplay } = playback;
+  const { trace, seconds, seen, speed, halfBanner } = playback;
   const numbers = useMemo(
     () =>
       Object.fromEntries(
@@ -103,9 +104,8 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
   const wave = reduceMotion ? null : netWave(trace.goals, tick.minute, trace.second_half_start_minute ?? Infinity, L);
   // score : jusqu'à l'instant le plus avancé déjà vu, pour qu'il ne recule pas pendant un ralenti
   const shownS = Math.max(seen, seconds);
-  const revealedGoals = trace.goals.filter((g) => g.minute * 60 <= shownS);
-  const homeGoals = revealedGoals.filter((g) => g.team === "home").length;
-  const awayGoals = revealedGoals.filter((g) => g.team === "away").length;
+  const score = revealedScore(trace.goals, shownS);
+  const { home: homeGoals, away: awayGoals } = score;
   const available = (trace.ticks.length - 1) * trace.tick_seconds; // images déjà calculées
   const finished = trace.done && seconds >= available;
   const waiting = !trace.done && seconds >= available; // le rejeu a rattrapé le calcul
@@ -116,58 +116,17 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
     .at(-1);
 
   return (
-    <div className="grid h-full grid-rows-[auto_minmax(0,1fr)_auto]" style={colorVars}>
-      <div data-zone="hud" className="flex items-center justify-between gap-2 px-2.5 py-1.5 bg-surface border-b border-line">
-        <button onClick={onBack} className="flex items-center gap-1 min-h-11 text-data text-gray-400 shrink-0">
-          <ArrowLeft size={14} /> Retour
-        </button>
-        <div className="text-center">
-          <div className="font-bold text-white tabular-nums">
-            {trace.home} {homeGoals} - {awayGoals} {trace.away}
-          </div>
-          <div className="text-caption text-gray-500 tabular-nums">
-            {time.label}
-            {time.announced != null && ` (+${time.announced})`} · {secondHalf ? "2e" : "1re"} période
-            {!trace.done && ` · calcul ${Math.floor(available / 60)}'${waiting ? " (en attente…)" : ""}`}
-          </div>
-          <div className="text-caption text-gray-400">
-            <span className="text-[var(--team-home-ui)]">{situationAt(trace, "home", tick.minute)}</span>
-            {" · "}
-            <span className="text-[var(--team-away-ui)]">{situationAt(trace, "away", tick.minute)}</span>
-          </div>
-          <div className="text-caption h-[14px] font-semibold text-gold tabular-nums">
-            {recentOffside &&
-              `⚑ Hors-jeu — ${recentOffside.player} (${recentOffside.team === "home" ? trace.home : trace.away})`}
-          </div>
-        </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          {replaying && (
-            <button
-              onClick={skipReplay}
-              className="text-data px-2 py-1 rounded bg-red-600 text-white font-semibold"
-              title="Passer le ralenti"
-            >
-              RALENTI ⏭
-            </button>
-          )}
-          {SPEED_OPTIONS.map((s) => (
-            <button
-              key={s}
-              onClick={() => setSpeed(s)}
-              className={`text-data px-2 py-1 rounded ${speed === s ? "bg-accent text-white" : "bg-surface text-gray-400"}`}
-            >
-              x{s}
-            </button>
-          ))}
-          <button
-            onClick={() => setPlaying((p) => !p)}
-            disabled={finished}
-            className="h-9 w-9 rounded-full bg-accent text-white flex items-center justify-center disabled:opacity-40"
-          >
-            {playing ? <Pause size={16} /> : <Play size={16} />}
-          </button>
-        </div>
-      </div>
+    <div className="grid h-full grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto]" style={colorVars}>
+      <MatchHud
+        trace={trace}
+        score={score}
+        time={time}
+        badge={matchBadge({ finished, halfBanner, waiting })}
+        offside={recentOffside}
+        onBack={onBack}
+        playback={playback}
+        finished={finished}
+      />
 
       <div
         data-zone="centre"
