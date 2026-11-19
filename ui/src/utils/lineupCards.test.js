@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { BENCH_CARD_PX, STARTER_CARD_PX, lineupColumnHeight, lineupDensity, lineupSubtitle } from "./lineupCards.js";
+import { BENCH_CARD_PX, STARTER_CARD_PX, lineupColumnHeight, lineupDensity, lineupSubtitle, goalsByPlayer } from "./lineupCards.js";
 
 // Hauteurs de colonne mesurées (tickets v2-ecran-match/10a et 10b, trace em10a) : 1366×768 570 px (HUD de 89 px),
 // 1280×720 522, 1100×700 502, 960×600 402 ; tiroirs 844×390 288, 915×412 310.
@@ -42,4 +42,19 @@ test("banc vide : le niveau complet tient plus tôt", () => {
 test("sous-titre : formation, puis entraîneur s'il est connu", () => {
   assert.equal(lineupSubtitle({ formation: "4-3-3", coach: "Dino Toppmöller" }), "4-3-3 · Dino Toppmöller");
   assert.equal(lineupSubtitle({ formation: "4-4-2", coach: null }), "4-4-2");
+});
+
+test("buts par joueur (10c) : buts et csc comptés à part, buteur inconnu ignoré", () => {
+  const goals = [
+    { minute: 2, team: "away", scorer: "Loïs Openda", own_goal: false },
+    { minute: 7, team: "away", scorer: "Loïs Openda", own_goal: false },
+    { minute: 9, team: "home", scorer: "Amine Gouiri", own_goal: false },
+    { minute: 30, team: "away", scorer: "Amine Gouiri", own_goal: true },
+    { minute: 40, team: "home", scorer: null, own_goal: false },
+  ];
+  assert.deepEqual(goalsByPlayer(goals), {
+    "Loïs Openda": { goals: 2, ownGoals: 0 },
+    "Amine Gouiri": { goals: 1, ownGoals: 1 },
+  });
+  assert.deepEqual(goalsByPlayer([]), {});
 });

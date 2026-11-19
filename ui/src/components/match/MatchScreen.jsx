@@ -6,7 +6,7 @@ import MatchHud from "./MatchHud";
 import MomentumTimeline from "./MomentumTimeline";
 import V2Pitch from "./V2Pitch";
 import { teamColors, teamColorVars } from "../../utils/teamColors";
-import { lineupDensity } from "../../utils/lineupCards";
+import { goalsByPlayer, lineupDensity } from "../../utils/lineupCards";
 import { L, clock, halfStart, interpolatedTick, rotated } from "./trace";
 import { matchBadge, revealedScore, revealedScorers } from "../../utils/matchHud";
 import { netWave } from "../../utils/v2NetWave";
@@ -47,7 +47,7 @@ function useColumnDensity(lineup) {
 // Composition d'un côté : colonne à partir de 960 px, tiroir en dessous (les deux sont dans le DOM, un seul s'affiche).
 // `color` (couleur d'équipe pour l'interface) ne sert plus qu'au liseré de la languette : les cartes lisent les jetons
 // `--team-<side>` elles-mêmes (ticket v2-ecran-match/10a).
-function LineupSide({ side, lineup, color }) {
+function LineupSide({ side, lineup, color, stats }) {
   const [open, setOpen] = useState(false);
   const [columnRef, columnDensity] = useColumnDensity(lineup);
   const [drawerRef, drawerDensity] = useColumnDensity(lineup);
@@ -63,7 +63,7 @@ function LineupSide({ side, lineup, color }) {
         aria-label={label}
         className={`hidden min-[960px]:block min-h-0 overflow-y-auto bg-surface px-2 py-1.5 ${left ? "border-r" : "border-l"} border-line`}
       >
-        <LineupPanel lineup={lineup} side={side} density={columnDensity} />
+        <LineupPanel lineup={lineup} side={side} density={columnDensity} stats={stats} />
       </aside>
       <div
         className={`min-[960px]:hidden absolute inset-y-0 z-20 flex items-center transition-transform duration-200 ease-out motion-reduce:transition-none ${left ? "left-0" : "right-0 flex-row-reverse"}`}
@@ -78,7 +78,7 @@ function LineupSide({ side, lineup, color }) {
           className={`h-full overflow-y-auto bg-surface px-2 py-1.5 ${left ? "border-r" : "border-l"} border-line`}
           style={{ width: DRAWER_PX }}
         >
-          <LineupPanel lineup={lineup} side={side} density={drawerDensity} />
+          <LineupPanel lineup={lineup} side={side} density={drawerDensity} stats={stats} />
         </aside>
         <button
           data-zone={`languette-${side}`}
@@ -140,6 +140,8 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
     () => revealedScorers(trace.goals.slice(0, revealedGoals), Infinity, (minute) => clock(trace, minute).label),
     [trace, revealedGoals],
   );
+  // buts par joueur dans la composition (ticket v2-ecran-match/10c) : mêmes buts révélés, recalculés à chaque but
+  const playerGoals = useMemo(() => goalsByPlayer(trace.goals.slice(0, revealedGoals)), [trace.goals, revealedGoals]);
   const available = (trace.ticks.length - 1) * trace.tick_seconds; // images déjà calculées
   const finished = trace.done && seconds >= available;
   const waiting = !trace.done && seconds >= available; // le rejeu a rattrapé le calcul
@@ -167,7 +169,7 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
         data-zone="centre"
         className="relative min-h-0 grid grid-cols-[minmax(0,1fr)] min-[960px]:grid-cols-[200px_minmax(0,1fr)_200px] min-[1280px]:grid-cols-[220px_minmax(0,1fr)_220px]"
       >
-        <LineupSide side="home" lineup={lineups?.home} color="var(--team-home-ui)" />
+        <LineupSide side="home" lineup={lineups?.home} color="var(--team-home-ui)" stats={playerGoals} />
         <div data-zone="terrain" className="relative min-h-0 min-w-0 flex items-center justify-center p-2">
           <V2Pitch
             tick={view}
@@ -192,7 +194,7 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
             </div>
           )}
         </div>
-        <LineupSide side="away" lineup={lineups?.away} color="var(--team-away-ui)" />
+        <LineupSide side="away" lineup={lineups?.away} color="var(--team-away-ui)" stats={playerGoals} />
       </div>
 
       <div data-zone="bas" className="flex flex-col gap-1 max-h-[110px] min-h-0 overflow-y-auto px-2.5 py-1.5 bg-surface border-t border-line">

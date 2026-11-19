@@ -45,3 +45,17 @@ export function lineupDensity(available, starters, bench) {
 export function lineupSubtitle(lineup) {
   return [lineup.formation, lineup.coach].filter(Boolean).join(" · ");
 }
+
+// Buts d'un joueur dans la composition (ticket v2-ecran-match/10c, décisions du propriétaire du 19/11/2026) : à partir
+// des buts déjà révélés (mêmes buts que le score), nombre de buts et de buts contre son camp par nom de joueur. Passe
+// décisive, cartons et remplacements : seulement quand le moteur les produira.
+export function goalsByPlayer(goals) {
+  const out = {};
+  for (const g of goals) {
+    if (!g.scorer) continue;
+    const row = (out[g.scorer] ??= { goals: 0, ownGoals: 0 });
+    if (g.own_goal) row.ownGoals += 1;
+    else row.goals += 1;
+  }
+  return out;
+}
