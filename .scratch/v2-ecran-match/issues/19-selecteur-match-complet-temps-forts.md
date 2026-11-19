@@ -32,3 +32,13 @@ Chantier : `.scratch/v2-ecran-match/spec.md`.
   l'adapte ; ne pas écrire deux sélecteurs.
 
 ## Comments
+
+### 19/11/2026 — décisions du propriétaire
+
+- Le sélecteur porte **quatre positions** : « Match complet », « Temps forts » (le mode Résumé de `v2-mise-en-scene/03`),
+  « Moments clés » (`v2-mise-en-scene/02`) et « Buts » (`v2-mise-en-scene/01`). La correspondance à confirmer est donc
+  tranchée : Temps forts = Résumé, et Moments clés figure aussi. À reporter dans la forme du composant (quatre positions
+  au lieu de deux).
+- Ordre : EM-08b (alignement du score), EM-09 (commandes de vitesse), puis lecteur et modes (`v2-mise-en-scene` 01 à 03)
+  avec ce sélecteur.
+

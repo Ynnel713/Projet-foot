@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from "react";
 import { ArrowLeft, Pause, Play } from "lucide-react";
 import { SPEED_OPTIONS } from "../../hooks/useMatchPlayback";
 import ScoreBlock from "./ScoreBlock";
@@ -13,14 +14,40 @@ const BADGE_TONE = {
   muted: "text-gray-400 border-line",
 };
 
+// Score centré sur l'écran, donc sur la ligne médiane du terrain (ticket v2-ecran-match/08b) : trois colonnes, les deux
+// latérales de la largeur du plus large de leurs contenus (retour à gauche, commandes à droite), mesurée par un
+// `ResizeObserver` (premier relevé avant l'affichage, puis à chaque changement de taille, ralenti compris).
+function useSideWidth() {
+  const left = useRef(null);
+  const right = useRef(null);
+  const [width, setWidth] = useState(null);
+  useLayoutEffect(() => {
+    const observer = new ResizeObserver(() =>
+      setWidth(Math.ceil(Math.max(left.current.offsetWidth, right.current.offsetWidth))),
+    );
+    observer.observe(left.current);
+    observer.observe(right.current);
+    return () => observer.disconnect();
+  }, []);
+  return [left, right, width];
+}
+
 export default function MatchHud({ trace, score, time, badge, offside, onBack, playback, finished }) {
   const { playing, setPlaying, speed, setSpeed, replaying, skipReplay } = playback;
+  const [leftRef, rightRef, sideWidth] = useSideWidth();
+  const columns = sideWidth == null ? "auto minmax(0,1fr) auto" : `${sideWidth}px minmax(0,1fr) ${sideWidth}px`;
   return (
-    <div data-zone="hud" className="flex items-center justify-between gap-2 px-2.5 py-1 bg-surface border-b border-line">
-      <button onClick={onBack} className="flex items-center gap-1 min-h-11 text-data text-gray-400 shrink-0">
-        <ArrowLeft size={14} /> Retour
-      </button>
-      <div className="min-w-0 flex-1 flex flex-col items-stretch">
+    <div
+      data-zone="hud"
+      className="grid items-center gap-2 px-2.5 py-1 bg-surface border-b border-line"
+      style={{ gridTemplateColumns: columns }}
+    >
+      <div className="flex justify-start">
+        <button ref={leftRef} onClick={onBack} className="flex items-center gap-1 min-h-11 text-data text-gray-400 shrink-0">
+          <ArrowLeft size={14} /> Retour
+        </button>
+      </div>
+      <div className="min-w-0 flex flex-col items-stretch">
         <ScoreBlock home={trace.home} away={trace.away} score={score} />
         <div className="flex items-center justify-center gap-2 h-6 min-w-0 whitespace-nowrap">
           <span
@@ -44,32 +71,34 @@ export default function MatchHud({ trace, score, time, badge, offside, onBack, p
           )}
         </div>
       </div>
-      <div className="flex items-center gap-1.5 shrink-0">
-        {replaying && (
+      <div className="flex justify-end">
+        <div ref={rightRef} className="flex items-center gap-1.5 shrink-0">
+          {replaying && (
+            <button
+              onClick={skipReplay}
+              className="text-data px-2 py-1 rounded bg-red-600 text-white font-semibold"
+              title="Passer le ralenti"
+            >
+              RALENTI ⏭
+            </button>
+          )}
+          {SPEED_OPTIONS.map((s) => (
+            <button
+              key={s}
+              onClick={() => setSpeed(s)}
+              className={`text-data px-2 py-1 rounded ${speed === s ? "bg-accent text-white" : "bg-surface text-gray-400"}`}
+            >
+              x{s}
+            </button>
+          ))}
           <button
-            onClick={skipReplay}
-            className="text-data px-2 py-1 rounded bg-red-600 text-white font-semibold"
-            title="Passer le ralenti"
+            onClick={() => setPlaying((p) => !p)}
+            disabled={finished}
+            className="h-9 w-9 rounded-full bg-accent text-white flex items-center justify-center disabled:opacity-40"
           >
-            RALENTI ⏭
+            {playing ? <Pause size={16} /> : <Play size={16} />}
           </button>
-        )}
-        {SPEED_OPTIONS.map((s) => (
-          <button
-            key={s}
-            onClick={() => setSpeed(s)}
-            className={`text-data px-2 py-1 rounded ${speed === s ? "bg-accent text-white" : "bg-surface text-gray-400"}`}
-          >
-            x{s}
-          </button>
-        ))}
-        <button
-          onClick={() => setPlaying((p) => !p)}
-          disabled={finished}
-          className="h-9 w-9 rounded-full bg-accent text-white flex items-center justify-center disabled:opacity-40"
-        >
-          {playing ? <Pause size={16} /> : <Play size={16} />}
-        </button>
+        </div>
       </div>
     </div>
   );
