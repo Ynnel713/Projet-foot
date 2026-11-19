@@ -1,0 +1,17 @@
+(par match)                                  avant     après    écart
+matchs appariés                                100
+buts                                         5.040     4.960    -1.6%   IC 95 % [-13.4 % ; +10.3 %]
+tirs                                        41.020    41.420    +1.0%   IC 95 % [-2.9 % ; +4.8 %]
+tacles                                      40.060    39.390    -1.7%   IC 95 % [-4.3 % ; +0.9 %]
+fautes                                      19.640    19.320    -1.6%   IC 95 % [-6.2 % ; +2.9 %]
+hors-jeu                                     3.700     4.100   +10.8%   IC 95 % [-2.8 % ; +24.5 %]
+passes                                    1271.810  1271.220    -0.0%   IC 95 % [-1.1 % ; +1.0 %]
+passes reçues                             1042.760  1040.290    -0.2%   IC 95 % [-1.3 % ; +0.8 %]
+passes reçues en zone 14                    29.570    29.530    -0.1%   IC 95 % [-5.7 % ; +5.5 %]
+passes en profondeur                        16.830    17.500    +4.0%   IC 95 % [-2.9 % ; +10.8 %]
+passes en profondeur réussies                9.840    10.220    +3.9%   IC 95 % [-5.4 % ; +13.1 %]
+appels dans le dos                         151.360   149.100    -1.5%   IC 95 % [-4.0 % ; +1.0 %]
+part des passes reçues en zone 14, avant : 2.84 %
+taux de réussite des passes en profondeur, avant : 58.5 %
+part des passes reçues en zone 14, après : 2.84 %
+taux de réussite des passes en profondeur, après : 58.4 %

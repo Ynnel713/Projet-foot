@@ -193,6 +193,8 @@ class ReceptionEvent:
     ball_speed_mps: float = 0.0  # vitesse du ballon reçu (ticket v2-collectif/31c : ballon dur, moins souvent orienté)
     blind: bool = False  # contrôle à l'aveugle, ballon dans le dos d'un joueur non lancé, compté dos au jeu (v2-realisme/07d)
     facing_run: bool = False  # corps tourné vers sa course au contact (07b), mesure seule (ticket v2-realisme/07g)
+    x: float = 0.0  # place du receveur au contrôle (ticket v2-realisme/10d : passes reçues dans l'axe devant la surface)
+    y: float = 0.0
 
 
 @dataclass(frozen=True)

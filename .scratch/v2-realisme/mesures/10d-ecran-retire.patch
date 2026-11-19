@@ -1,0 +1,118 @@
+diff --git a/tests/test_v2engine_bloc.py b/tests/test_v2engine_bloc.py
+index 82d9ddc..0820fcc 100644
+--- a/tests/test_v2engine_bloc.py
++++ b/tests/test_v2engine_bloc.py
+@@ -52,6 +52,7 @@ def test_the_shape_follows_the_situation() -> None:
+ 
+ def test_the_block_slides_with_the_ball_more_in_length_than_in_width() -> None:
+     bloc = Bloc.from_players(TEAM)
++    bloc.screens = {}  # le milieu qui fait l'écran (ticket v2-realisme/10d) quitte le bloc ballon sur un côté, à dessein
+     _, _, center = _dims(bloc, CENTER_BALL, DEFENSE_PLACEE)
+     _, _, moved = _dims(bloc, CENTER_BALL + Vec2(10.0, 10.0), DEFENSE_PLACEE)
+     assert math.isclose(moved.x - center.x, 10.0 * BLOCK_SHIFT[0]) and math.isclose(moved.y - center.y, 10.0 * BLOCK_SHIFT[1])
+diff --git a/tests/test_v2engine_garde_attributs.py b/tests/test_v2engine_garde_attributs.py
+index 03d883b..f9828b8 100644
+--- a/tests/test_v2engine_garde_attributs.py
++++ b/tests/test_v2engine_garde_attributs.py
+@@ -154,6 +154,9 @@ PLANS = {
+     # avec ballon (ticket v2-realisme/09j), première divergence à la graine 21 en 60 s, à la graine 2 (67 s de jeu) en
+     # 120 s : scène de 120 s
+     "Stamina": Plan(mini_match, 120.0, 10),
++    # n'agit que sur une option risquée choisie : depuis l'écran du milieu devant la défense (ticket v2-realisme/10d),
++    # première divergence à la graine 4 en 60 s (57 s de jeu), à la graine 1 (106 s de jeu) en 120 s : scène de 120 s
++    "Flair": Plan(mini_match, 120.0, 10),
+ }
+ 
+ 
+diff --git a/v2engine/bloc.py b/v2engine/bloc.py
+index 5b234e3..0aba182 100644
+--- a/v2engine/bloc.py
++++ b/v2engine/bloc.py
+@@ -123,6 +123,17 @@ CUSHION_RUN_M = 30.0  # rabaissement de la ligne quand elle est plus lente que l
+ LINE_LAG_MAX_S = 1.5
+ DEPTH_SPACE_M = 25.0  # couverture de la profondeur (ticket v2-realisme/10c) : espace minimal derrière la ligne
+ DEPTH_DROP_M = 3.0  # recul du défenseur couvreur sous la ligne
++# Écran devant la défense (ticket v2-realisme/10d, constantes validées par le propriétaire le 19/11/2026 ; chiffres réels
++# non trouvés, ordres de grandeur calés sur le bloc sans ballon de 32 m de long, environ 11 m entre les lignes) : sans
++# ballon, un milieu axial par équipe se place sur la ligne ballon-centre de son but, `SCREEN_GAP_M` devant sa dernière
++# ligne, quand le ballon est sur un côté. Sa place glisse de sa place habituelle à celle d'écran quand le ballon passe
++# de `SCREEN_SIDE_M[0]` à `SCREEN_SIDE_M[1]` de l'axe (pas de bascule d'un tick à l'autre, pas d'hystérésis à régler).
++SCREEN_GAP_M = 8.0
++SCREEN_SIDE_M = (6.0, 12.0)
++# qui fait l'écran : milieu axial (MDC ou MC), d'abord selon le rôle, puis le plus bas au départ, puis le plus près de l'axe
++SCREEN_ROLE_ORDER = ("sentinelle", "regista", "récupérateur")
++SCREEN_POSTES = frozenset({"MDC", "MC"})
++SCREEN_EXCLUDED_ROLES = frozenset({"mezzala", "box to box", "meneur"})
+ _DEPTH_MARGIN_M = 5.0  # le bloc garde sa dernière ligne à 5 m de son but (marge de `formation`), pas une constante produit
+ _CENTER = Vec2(PITCH_LENGTH_M / 2.0, PITCH_WIDTH_M / 2.0)
+ # rôle -> (avance, écart à l'axe) en mètres sur la forme de départ, avec ballon. Les 20 rôles de `roles.ROLES` y
+@@ -321,6 +332,37 @@ def _build_up_place(player: PlayerState, x: float, y: float, spread: float) -> t
+     return x, y
+ 
+ 
++def screen_player(players: list[PlayerState], team: str) -> PlayerState | None:
++    """Milieu qui fait l'écran devant la défense (ticket v2-realisme/10d) : parmi les MDC et MC de `team` hors mezzala, box
++    to box et meneur, le premier selon le rôle (`SCREEN_ROLE_ORDER`), puis le plus près de son but au départ, puis le plus
++    près de l'axe ; à égalité, l'ordre de la composition. Aucun candidat : pas d'écran."""
++    candidates = [p for p in players if p.team == team and p.poste in SCREEN_POSTES
++                  and p.role not in SCREEN_EXCLUDED_ROLES]
++    if not candidates:
++        return None
++    rank = {role: i for i, role in enumerate(SCREEN_ROLE_ORDER)}
++    return min(candidates, key=lambda p: (rank.get(p.role, len(rank)), round(_progress(team, p.home_target.x), 6),
++                                          round(abs(p.home_target.y - _CENTER.y), 6)))
++
++
++def screen_place(team: str, ball: Vec2, line_x: float) -> Vec2 | None:
++    """Place d'écran (ticket 10d) : sur la ligne ballon-centre de son but, `SCREEN_GAP_M` devant la dernière ligne
++    (`line_x`, abscisse). None si le ballon est déjà plus près du but que ce point (défense de la surface, ticket 10f)."""
++    height = _progress(team, line_x) + SCREEN_GAP_M
++    ball_depth = _progress(team, ball.x)
++    if ball_depth <= height:
++        return None
++    goal = Vec2(0.0 if team == "home" else PITCH_LENGTH_M, _CENTER.y)
++    return goal + (ball - goal) * (height / ball_depth)
++
++
++def screen_weight(ball: Vec2) -> float:
++    """Part de la place d'écran (ticket 10d) : 0 ballon à `SCREEN_SIDE_M[0]` de l'axe ou moins, 1 à `SCREEN_SIDE_M[1]` ou
++    plus, linéaire entre les deux."""
++    low, high = SCREEN_SIDE_M
++    return min(max((abs(ball.y - _CENTER.y) - low) / (high - low), 0.0), 1.0)
++
++
+ def _shape_of(pts: list[Vec2]) -> _Shape:
+     xs, ys = [p.x for p in pts], [p.y for p in pts]
+     cx, cy = sum(xs) / len(xs), sum(ys) / len(ys)
+@@ -348,6 +390,7 @@ class Bloc:
+     # équipe en construction -> part de l'écartement gardée (1 sans pressing, 0,5 sous pressing haut), ticket 25b
+     build_up: dict[str, float] = field(default_factory=dict)
+     depth_cover: dict[str, str] = field(default_factory=dict)  # équipe -> défenseur qui couvre la profondeur (10c)
++    screens: dict[str, str] = field(default_factory=dict)  # équipe -> milieu qui fait l'écran sans ballon (10d)
+ 
+     @classmethod
+     def from_players(cls, players: list[PlayerState]) -> Bloc:
+@@ -362,7 +405,9 @@ class Bloc:
+             shapes_low[team] = _shape_of([without_ball_place(p, deepest) for p in field_players])
+         knots = {team: line_gap_knots([p for p in players if p.team == team], shape, team)
+                  for team, shape in shapes_ball.items()}
+-        return cls(shapes, shapes_ball, shapes_low, gap_knots=knots)
++        screens = {team: screen.name for team in shapes
++                   if (screen := screen_player([p for p in players if p.poste != "GK"], team)) is not None}
++        return cls(shapes, shapes_ball, shapes_low, gap_knots=knots, screens=screens)
+ 
+     def update(self, players: list[PlayerState], ball: BallState, now_s: float = 0.0,
+                memory: PerceptionMemory | None = None) -> None:
+@@ -487,6 +532,12 @@ class Bloc:
+             depth = _depth(shape, player.team, start, sx)
+             x += (remap_depth(knots, depth, player.poste) - depth) * (1.0 if player.team == "home" else -1.0)
+         y = cy + offset.y * sy
++        if not with_ball and self.screens.get(player.team) == player.name:  # écran devant la défense (ticket 10d)
++            line_x = cx + (shape.back if player.team == "home" else shape.front) * sx
++            screen = screen_place(player.team, ball, line_x)
++            weight = screen_weight(ball)
++            if screen is not None and weight > 0.0:
++                x, y = x + (screen.x - x) * weight, y + (screen.y - y) * weight
+         spread = self.build_up.get(player.team) if with_ball else None
+         if spread is not None:  # placement de construction (ticket 25b)
+             x, y = _build_up_place(player, x, y, spread)

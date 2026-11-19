@@ -364,6 +364,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **`v2-realisme/10c` livré (19/11/2026), validé expert + QC** (réserves A1 à A3 acceptées ; suivi : ticket `10c2`) : couverture de la profondeur : porteur adverse non pressé, dernière ligne sans ballon à 25 m au moins de son but (`DEPTH_SPACE_M`) et personne au-delà de la ligne : le défenseur de la dernière ligne le plus éloigné du ballon dans la largeur se place 3 m plus bas (`DEPTH_DROP_M`) ; constantes proposées par Claude, validées par délégation du propriétaire le 19/11/2026. Trace `MatchTrace.depth_covers`. 100 matchs appariés : couverture 4,52 min par match, buts + 1,4 %, tirs − 2,2 %, hors-jeu − 1,6 %, passes en profondeur réussies − 0,9 % (baisse non démontrée : conditions réunies 9,6 % du temps, piège du hors-jeu).
 
+**`v2-realisme/10d` livré (19/11/2026), validé expert + QC** (périmètre réduit par le propriétaire) : l'écran du milieu devant la défense (droite ballon-but, 8 m devant la ligne, ballon à plus de 6 m de l'axe) n'a eu aucun effet sur 100 matchs appariés (passes reçues en zone 14 − 0,1 %, IC ± 5,6 % ; buts, tirs, hors-jeu sans écart significatif) ; diagnostic : le ballon est reçu derrière l'écran, dans la poche avant la ligne (écran entre receveur et but dans 20 % des cas) : écran retiré, suite au ticket `10d2` (en attente d'une référence réelle). Livré : indicateur des passes reçues en zone 14 (29,5 par match, 2,84 % des passes reçues), place du receveur dans la trace ; jeu inchangé.
+
 ### Bloquée par
 
 - Phase 4

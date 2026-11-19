@@ -639,6 +639,8 @@ def report(c: Collector, detail: bool = False) -> dict:
         "face-à-face : tirs par match": k["face-à-face : tirs"] / n,
         "appels par match": k["appels"] / n,
         "appels dans le dos par match": k["appels dans le dos"] / n,  # ticket v2-collectif/16
+        "passes reçues en zone 14 par match": k["passes reçues en zone 14"] / n,  # ticket v2-realisme/10d
+        "passes reçues en zone 14 (part des passes reçues)": k["passes reçues en zone 14"] / max(1, k["passes reçues"]),
         "pressings par match": k["pressings"] / n,
         "pressings suivis d'une récupération en 5 s (part)": k["pressings suivis d'une récupération en 5 s"] / max(1, k["pressings"]),
         "profil haut : temps de pressing par match (s)": k["profil haut : temps de pressing (s)"] / n,

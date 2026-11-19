@@ -47,6 +47,20 @@ EASY_OPTION_PROBABILITY = 0.8  # solution « facile » (ticket 08, validé le 31
 PRESS_RADIUS_M = 3.0
 CHASER_SWITCH_S = 1.0  # changement de chasseur désigné « rapide » (réserve A1 du 11g, mesure du ticket 11k) ; seuil de mesure
 COVER_BEHIND_M, COVER_AHEAD_M, COVER_HALF_WIDTH_M = 3.0, 9.0, 4.0
+# Zone 14 (ticket v2-realisme/10d, validée par le propriétaire le 19/11/2026) : l'axe devant la surface adverse, de 16,5 à
+# 30 m du but adverse, à 11 m ou moins de l'axe. Passes reçues : réceptions d'une passe d'un coéquipier (`RECEIVED_PASSES`).
+ZONE14_DEPTH_M = (16.5, 30.0)
+ZONE14_HALF_WIDTH_M = 11.0
+RECEIVED_PASSES = frozenset({"passe au sol", "passe en profondeur", "passe en retrait", "centre"})
+
+
+def in_zone_14(team: str, x: float, y: float) -> bool:
+    """Le point (x, y) est-il dans la zone 14 face au but adverse de `team` (domicile attaque vers x = 105, le moteur
+    garde son sens de jeu en 2e période) ?"""
+    to_goal = PITCH_LENGTH_M - x if team == "home" else x
+    return ZONE14_DEPTH_M[0] <= to_goal <= ZONE14_DEPTH_M[1] and abs(y - PITCH_WIDTH_M / 2.0) <= ZONE14_HALF_WIDTH_M
+
+
 LOCAL_RADIUS_M = 10.0
 LOCAL_DEFENDERS = 5
 RUN_SPEED_MPS, RUN_MIN_S, RUN_SAME_ZONE_M = 15.0 * KMH, 0.7, 5.0
@@ -1099,6 +1113,9 @@ class Collector:
         """Mémoire du receveur sur les adversaires qu'il ne voit pas à la réception (ticket v2-realisme/08b) ; un joueur
         qui les voit tous ne compte pas (âge nul)."""
         for r in receptions:
+            if r.origin in RECEIVED_PASSES:  # passes reçues dans l'axe devant la surface (ticket v2-realisme/10d)
+                self.count["passes reçues"] += 1
+                self.count["passes reçues en zone 14"] += in_zone_14(r.team, r.x, r.y)
             # temps de possession individuelle par type de réception (ticket v2-realisme/07d) : la possession du joueur
             # qui commence au tick de sa réception ; hors receveurs qui pensent à jouer de première
             held = self.holds.get((r.player, round(r.minute * 60.0, 2)))
