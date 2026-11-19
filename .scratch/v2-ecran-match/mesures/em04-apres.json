@@ -1,0 +1,81 @@
+{
+ "844x390": {
+  "pitch": [
+   419,
+   258
+  ],
+  "aire": 108049,
+  "header": false,
+  "docScroll": false,
+  "scrollers": [
+   "tiroir-home:157",
+   "tiroir-away:157"
+  ],
+  "cols": [
+   "composition-home:0x0@0",
+   "composition-away:0x0@0"
+  ]
+ },
+ "1024x768": {
+  "pitch": [
+   608,
+   375
+  ],
+  "aire": 227734,
+  "header": false,
+  "docScroll": false,
+  "scrollers": [],
+  "cols": [
+   "composition-home:200x576@0",
+   "composition-away:200x576@824"
+  ]
+ },
+ "1280x720": {
+  "pitch": [
+   824,
+   508
+  ],
+  "aire": 418288,
+  "header": false,
+  "docScroll": false,
+  "scrollers": [],
+  "cols": [
+   "composition-home:220x528@0",
+   "composition-away:220x528@1060"
+  ]
+ },
+ "1366x768": {
+  "pitch": [
+   909,
+   560
+  ],
+  "aire": 509044,
+  "header": false,
+  "docScroll": false,
+  "scrollers": [],
+  "cols": [
+   "composition-home:220x576@0",
+   "composition-away:220x576@1146"
+  ]
+ },
+ "1920x1080": {
+  "pitch": [
+   1415,
+   872
+  ],
+  "aire": 1234276,
+  "header": false,
+  "docScroll": false,
+  "scrollers": [],
+  "cols": [
+   "composition-home:220x888@0",
+   "composition-away:220x888@1700"
+  ]
+ },
+ "route /": {
+  "header": true
+ },
+ "route /v2": {
+  "header": false
+ }
+}

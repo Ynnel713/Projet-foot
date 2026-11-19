@@ -5,7 +5,7 @@
 set -u
 SRC="$(cd "$(dirname "$0")/../../.." && pwd)"
 R="$1/depot"
-rm -rf "$R"; mkdir -p "$R/.claude/qc" "$R/.claude/skills/valider-ticket-simulafoot" "$R/.claude/skills/valider-etape" "$R/.claude/agents" "$R/v2engine" "$R/docs"
+rm -rf "$R"; mkdir -p "$R/.claude/qc" "$R/.claude/skills/valider-ticket-simulafoot" "$R/.claude/skills/valider-etape" "$R/.claude/agents" "$R/v2engine" "$R/docs" "$R/.scratch/t/issues"
 cp "$SRC"/.claude/qc/*.ps1 "$R/.claude/qc/"
 cp "$SRC/.claude/skills/valider-ticket-simulafoot/cloture.py" "$R/.claude/skills/valider-ticket-simulafoot/"
 cp "$SRC/.claude/agents/expert.md" "$R/.claude/agents/"
@@ -14,6 +14,8 @@ cp "$SRC/.claude/skills/valider-etape/SKILL.md" "$R/.claude/skills/valider-etape
 cd "$R" || exit 1
 G() { git -c user.name=t -c user.email=t@t -c core.autocrlf=false "$@"; }
 G init -q; echo "v = 1" > v2engine/x.py; echo "w = 1" > v2engine/y.py; echo doc > docs/a.md
+TK=".scratch/t/issues/01-essai.md"  # fichier du ticket t/01, statut vérifié au commit (ticket expert-dispositif/07)
+printf '# 01\n\n**Status:** implémenté (18/11/2026) — en attente de /valider-ticket-simulafoot\n' > "$TK"
 G add -A; G commit -qm base; BASE=$(git rev-parse HEAD)
 powershell -NoProfile -ExecutionPolicy Bypass -File .claude/qc/integrite.ps1 -Action MettreAJour > /dev/null
 CL=".claude/skills/valider-ticket-simulafoot/cloture.py"
@@ -38,7 +40,10 @@ reset() {  # état de départ : x.py modifié et indexé, journal avec une entr�
   qc "autre/09" "VALIDÉ" "historique"
   echo "v = 2" > v2engine/x.py; G add v2engine/x.py
 }
-nominal() { reset; qc t/01 VALIDÉ ok; rapport APPROVED; decision; }
+livre() {  # statut « livré » écrit et indexé (suite de ligne facultative en $1)
+  printf '# 01\n\n**Status:** livré (18/11/2026), validé expert + QC%s\n' "${1:-}" > "$TK"; G add "$TK"
+}
+nominal() { reset; qc t/01 VALIDÉ ok; rapport APPROVED; decision; livre; }
 check() {  # check <nom> <code attendu> <code obtenu>
   if [ "$2" = "$3" ]; then PASS=$((PASS+1)); echo "OK    $1 (code $3)"; else FAIL=$((FAIL+1)); echo "ÉCHEC $1 : attendu $2, obtenu $3"; sed 's/^/      /' "$R.out"; fi
 }
@@ -58,7 +63,7 @@ reset; qc t/01 VALIDÉ ok; qc t/01/cloture VALIDÉ "ancienne forme";      check 
 reset; qc t/01 VALIDÉ ok; rapport REJECTED; decision;                   check "I11 expert REJECTED (clôture REFUSÉ journalisée)" 2 "$(lock)"
 reset; qc t/01 VALIDÉ ok; rapport INCONCLUSIVE; decision;               check "I12 expert INCONCLUSIVE" 2 "$(lock)"
 reset; qc t/01 VALIDÉ ok; rapport APPROVED_WITH_RESERVATIONS; decision; check "I13 réserves non acceptées" 2 "$(lock)"
-reset; qc t/01 VALIDÉ ok; rapport APPROVED_WITH_RESERVATIONS; decision --reserves-acceptees
+reset; qc t/01 VALIDÉ ok; rapport APPROVED_WITH_RESERVATIONS; decision --reserves-acceptees; livre
                                                                         check "I14 réserves acceptées par le propriétaire" 0 "$(lock)"
 reset; qc t/01 REFUSÉ ko; rapport APPROVED; decision --qc VALIDÉ;       check "I15 --qc VALIDÉ annoncé mais QC journalisé REFUSÉ" 2 "$(lock)"
 reset; rapport APPROVED; decision;                                      check "I16 aucun QC pour le ticket" 2 "$(lock)"
@@ -118,6 +123,17 @@ if [ "$(HOME="$FH" powershell -NoProfile -Command '$HOME' | tr -d '\r')" = "$FH"
 else
   echo "NON EXÉCUTÉS I37-I38 : PowerShell ne lit pas \$HOME dans HOME (Windows) ; vérifier à la main avec les exemplaires réels."
 fi
+
+# Statut du fichier ticket lu dans l'index (ticket expert-dispositif/07).
+reset; qc t/01 VALIDÉ ok; rapport APPROVED; decision;                   check "I39 clôture VALIDÉ, ticket encore « implémenté »" 2 "$(lock)"
+nominal; G reset -q -- "$TK";                                          check "I40 statut « livré » dans l'arbre mais pas dans l'index" 2 "$(lock)"
+nominal; G rm -q --cached "$TK";                                        check "I41 fichier ticket absent de l'index" 2 "$(lock)"
+nominal; cp "$TK" .scratch/t/issues/01-doublon.md; G add .scratch/t/issues/01-doublon.md
+                                                                        check "I42 deux fichiers pour le même ticket" 2 "$(lock)"
+nominal; livre " (réserve A1 acceptée par le propriétaire)";            check "I43 « livré » suivi de précisions" 0 "$(lock)"
+reset; qc fusion/x VALIDÉ ok; rapport APPROVED fusion/x
+python -I "$CL" decision --ticket fusion/x --rapport "$RAP" --base "$BASE" v2engine/x.py > /dev/null
+                                                                        check "I44 clôture hors chantier (aucun .scratch/fusion/issues)" 0 "$(lock)"
 
 echo "---- $PASS réussis, $FAIL échoués"
 [ "$FAIL" = 0 ]

@@ -1,0 +1,92 @@
+{
+ "844x390": {
+  "jeu": [
+   385,
+   204
+  ],
+  "aireJeu": 78447,
+  "pxParMetre": 3.66,
+  "traitPx": 1.5,
+  "ecartsPx": {
+   "coinHG": 0,
+   "coinBD": 0,
+   "centre": 0,
+   "penG": 0,
+   "penD": 0
+  },
+  "rouge": false,
+  "defilement": false
+ },
+ "1024x768": {
+  "jeu": [
+   575,
+   305
+  ],
+  "aireJeu": 175479,
+  "pxParMetre": 5.48,
+  "traitPx": 1.5,
+  "ecartsPx": {
+   "coinHG": 0,
+   "coinBD": 0,
+   "centre": 0,
+   "penG": 0,
+   "penD": 0
+  },
+  "rouge": false,
+  "defilement": false
+ },
+ "1280x720": {
+  "jeu": [
+   763,
+   405
+  ],
+  "aireJeu": 308942,
+  "pxParMetre": 7.27,
+  "traitPx": 1.5,
+  "ecartsPx": {
+   "coinHG": 0,
+   "coinBD": 0,
+   "centre": 0,
+   "penG": 0,
+   "penD": 0
+  },
+  "rouge": false,
+  "defilement": false
+ },
+ "1366x768": {
+  "jeu": [
+   835,
+   443
+  ],
+  "aireJeu": 369584,
+  "pxParMetre": 7.95,
+  "traitPx": 1.5,
+  "ecartsPx": {
+   "coinHG": 0,
+   "coinBD": 0,
+   "centre": 0,
+   "penG": 0,
+   "penD": 0
+  },
+  "rouge": false,
+  "defilement": false
+ },
+ "1920x1080": {
+  "jeu": [
+   1300,
+   689
+  ],
+  "aireJeu": 896128,
+  "pxParMetre": 12.38,
+  "traitPx": 1.5,
+  "ecartsPx": {
+   "coinHG": 0,
+   "coinBD": 0,
+   "centre": 0,
+   "penG": 0,
+   "penD": 0
+  },
+  "rouge": false,
+  "defilement": false
+ }
+}

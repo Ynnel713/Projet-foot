@@ -1,0 +1,9 @@
+Fluidité EM-07 (18/11/2026) : banc d'EM-01 (harness-prod.js + em07-run-bench-linux.mjs, Chromium de la session, headless,
+1024x768), build de production, trace em04, x8, 15 s par passe, passes alternées avant (4180, HEAD 00dca4c) / après (4181).
+4180 {"frames":902,"median":16.7,"p95":16.8,"nodes":277,"cpu":{"taskMsPerFrame":3.47,"scriptMsPerFrame":0.9,"layoutMsPerFrame":0.87,"styleMsPerFrame":0.3}}
+4181 {"frames":901,"median":16.7,"p95":16.7,"nodes":305,"cpu":{"taskMsPerFrame":3.89,"scriptMsPerFrame":0.96,"layoutMsPerFrame":0.89,"styleMsPerFrame":0.44}}
+4180 {"frames":901,"median":16.7,"p95":16.7,"nodes":277,"cpu":{"taskMsPerFrame":3.56,"scriptMsPerFrame":0.94,"layoutMsPerFrame":0.88,"styleMsPerFrame":0.31}}
+4181 {"frames":901,"median":16.7,"p95":16.7,"nodes":305,"cpu":{"taskMsPerFrame":3.79,"scriptMsPerFrame":0.94,"layoutMsPerFrame":0.89,"styleMsPerFrame":0.43}}
+4180 {"frames":901,"median":16.7,"p95":16.7,"nodes":277,"cpu":{"taskMsPerFrame":3.28,"scriptMsPerFrame":0.86,"layoutMsPerFrame":0.81,"styleMsPerFrame":0.28}}
+4181 {"frames":901,"median":16.7,"p95":16.7,"nodes":305,"cpu":{"taskMsPerFrame":3.69,"scriptMsPerFrame":0.9,"layoutMsPerFrame":0.85,"styleMsPerFrame":0.4}}
+Moyennes : script 0,90 -> 0,93 ms/image (+3,7 %) ; tâche totale 3,44 -> 3,79 ms (+10 %) ; style 0,30 -> 0,42 ms ; médiane d'image 16,7 ms des deux côtés.

@@ -1,7 +1,10 @@
 import { memo } from "react";
 import dims from "../../utils/pitchGeometry.json";
 import { COS, GROUND_MATRIX, project } from "../../utils/v2Projection";
-import { PITCH_COLORS, RING_WIDTH_M } from "../../utils/teamColors";
+import { PITCH_COLORS } from "../../utils/teamColors";
+import PlayerMarker, { PLAYER_R, PlayerNumber, ReliefDefs } from "./PlayerMarker";
+import BallMarker from "./BallMarker";
+import { WAVE_AMPLITUDE_M, WAVE_CORNER_M } from "../../utils/v2NetWave";
 
 // Terrain simple, réutilise seulement les COTES réelles de la V1 (pitchGeometry.json, dérivé de
 // ligue1sim.pitch_geometry) -- pas le composant PitchField.jsx lui-même, dont l'orientation est
@@ -25,36 +28,30 @@ const CORNER_R = dims.corner_arc_radius_m;
 // Habillage inspiré d'une vue aérienne de stade (retour du propriétaire, 24/10/2026) : pelouse tondue en bandes,
 // marquages complets, buts avec filets, bord de terrain et piste. Dessiné en SVG plutôt qu'en photo : la photo est
 // prise en légère perspective, les joueurs (positions en mètres) ne tomberaient pas sur ses lignes.
-const MARGIN = 6; // bord de pelouse autour des lignes (m)
-const TRACK = 2; // piste autour du bord (m)
+// Ticket v2-ecran-match/05 (constantes validées par le propriétaire le 18/11/2026, spec du chantier §2.2) : plus de piste
+// rouge ni de cadre ; pelouse de 3 m autour des lignes sur un sol sombre qui prolonge le fond de l'écran ; gazon sobre
+// (PITCH_COLORS) ; vignette légère et un seul dégradé de profondeur. Coordonnées et projection inchangées : seul le
+// viewBox est recadré.
+const MARGIN = 3; // bord de pelouse autour des lignes (m ; 6 m avant EM-05)
 const STRIPES = 18; // bandes de tonte sur la longueur
-const LINE = { fill: "none", stroke: "rgba(255,255,255,0.9)", strokeWidth: 0.15 };
+const FLOOR = "#0E141B"; // sol sombre autour de la pelouse
+const VIGNETTE = 0.08; // assombrissement maximal des bords du gazon
+const DEPTH_SHADE = 0.06; // côté lointain (y = 0) plus sombre que le côté proche
+// Lignes : 1,5 px à l'écran quelle que soit la taille (trait non mis à l'échelle) ; en mètres, 0,12 m ne ferait que
+// 0,45 px sur un téléphone en paysage.
+const LINE = { fill: "none", stroke: "rgba(255,255,255,0.85)", strokeWidth: 1.5, vectorEffect: "non-scaling-stroke" };
 
-const BENCH_ZONE = 7; // bande sous la piste, côté tribune principale, où sont les bancs (m)
-const BENCH_Y = W + MARGIN + TRACK + 3; // axe des bancs
+// Bancs (ticket v2-ecran-match/06, constantes validées par le propriétaire le 18/11/2026) : zone de 4,5 m sous la pelouse
+// (12 m de sol avant), bancs au milieu de cette zone, contour à la couleur de l'équipe.
+const BENCH_ZONE = 4.5; // zone des bancs sous la pelouse (m)
+const BENCH_Y = W + MARGIN + BENCH_ZONE / 2; // axe des bancs (m ; W + 11 avant EM-06)
+const FLOOR_BOTTOM = W + MARGIN + BENCH_ZONE; // bas du dessin (m ; W + 15 avant EM-06)
+// Remplaçants qui s'échauffent : sur l'herbe, entre la ligne de touche et le bas de la pelouse (W + 3 m).
+const WARM_LANES = [0.7, 1.4, 2.1]; // couloirs au-delà de la ligne de touche (m ; 1,5 / 2,9 / 4,3 avant EM-06)
+const SUB_R = 0.75; // rond d'un remplaçant, assis ou à l'échauffement (m ; 0,9 à l'échauffement avant EM-06)
 const BENCH_GAP = 4; // des bancs à la ligne médiane (m)
 const SEAT = 1.6; // largeur d'un siège (m)
 const WARMING_UP = 3; // remplaçants de champ qui s'échauffent en 2e période
-
-function PlayerNumber({ x, y, value, team, size = 1.4 }) {
-  if (value == null) return null;
-  return (
-    <text
-      x={x}
-      y={y}
-      textAnchor="middle"
-      dominantBaseline="central"
-      fontSize={size}
-      fontWeight="bold"
-      strokeWidth={0.2}
-      paintOrder="stroke"
-      // encre et liseré de l'équipe (ticket v2-ecran-match/03)
-      style={{ pointerEvents: "none", fill: `var(--team-${team}-ink)`, stroke: `var(--team-${team}-ink-edge)` }}
-    >
-      {value}
-    </text>
-  );
-}
 
 // Banc d'une équipe sous le terrain (`side` -1 : à gauche de la ligne médiane, 1 : à droite) : entraîneur et
 // remplaçants assis ; en 2e période, quelques remplaçants de champ trottinent le long de la ligne de touche, de leur
@@ -72,7 +69,7 @@ const Bench = memo(function Bench({ lineup, side, color, seconds, warmUpFromS })
   return (
     <g>
       <g transform={GROUND_MATRIX}>
-        <rect x={x0} y={BENCH_Y - 1.6} width={length} height={3.2} rx={0.6} fill="rgba(20,24,30,0.85)" stroke="rgba(255,255,255,0.5)" strokeWidth={0.12} />
+        <rect x={x0} y={BENCH_Y - 1.6} width={length} height={3.2} rx={0.6} fill="rgba(20,24,30,0.85)" style={{ stroke: color }} strokeWidth={0.12} />
       </g>
       <g>
         <rect x={seat.x - 0.8} y={seat.y - 0.8} width={1.6} height={1.6} rx={0.3} fill="#222" stroke="white" strokeWidth={0.12} />
@@ -85,19 +82,19 @@ const Bench = memo(function Bench({ lineup, side, color, seconds, warmUpFromS })
         const c = project(seatX(i + 1), BENCH_Y);
         return (
           <g key={p.name}>
-            <circle cx={c.x} cy={c.y} r={0.75} style={{ fill: color }} opacity={0.85} stroke="rgba(0,0,0,0.4)" strokeWidth={0.08} />
+            <circle cx={c.x} cy={c.y} r={SUB_R} style={{ fill: color }} opacity={0.85} stroke="rgba(0,0,0,0.4)" strokeWidth={0.08} />
             <PlayerNumber x={c.x} y={c.y} value={p.number} team={side < 0 ? "home" : "away"} size={0.9} />
             <title>{`${p.number} ${p.name} (${p.poste})`}</title>
           </g>
         );
       })}
       {warmers.map((p, i) => {
-        // va-et-vient sur 12 m, chacun décalé, entre la ligne de touche et la piste
+        // va-et-vient sur 12 m, chacun décalé, sur l'herbe entre la ligne de touche et le bas de la pelouse
         const phase = seconds * 0.35 + i * 2.1;
-        const c = project(L / 2 + side * (24 + 6 + 6 * Math.sin(phase)), W + 1.5 + i * 1.4);
+        const c = project(L / 2 + side * (24 + 6 + 6 * Math.sin(phase)), W + WARM_LANES[i]);
         return (
           <g key={p.name}>
-            <circle cx={c.x} cy={c.y} r={0.9} style={{ fill: color }} opacity={0.75} stroke="rgba(0,0,0,0.4)" strokeWidth={0.08} />
+            <circle cx={c.x} cy={c.y} r={SUB_R} style={{ fill: color }} opacity={0.75} stroke="rgba(0,0,0,0.4)" strokeWidth={0.08} />
             <PlayerNumber x={c.x} y={c.y} value={p.number} team={side < 0 ? "home" : "away"} size={1} />
             <title>{`${p.number} ${p.name} s'échauffe`}</title>
           </g>
@@ -125,7 +122,6 @@ function GoalEnd({ flip }) {
 }
 
 // Joueurs, buts et ballon sur la caméra inclinée (ticket v2-hauteur-ballon/01).
-const PLAYER_R = 1.3; // rayon du rond d'un joueur (m)
 const FACING_TICK = 1.0; // trait d'orientation : longueur au-delà du rond, dans le sens du corps (m ; ticket v2-realisme/07a)
 // Le rond d'un joueur est dessiné à la hauteur de sa taille : sans cela il recouvrirait son ombre. Valeur validée par
 // le propriétaire le 06/11/2026 ; si l'ombre est trop discrète sur téléphone, jouer sur son opacité, pas sur cette hauteur.
@@ -133,7 +129,7 @@ const PLAYER_LIFT = 1.8;
 const SHADOW_K = 0.8; // ombre d'un joueur : ovale de rayon 0,8 × celui du rond (validé le 04/11/2026)
 const SHADOW_OPACITY = 0.25;
 const CROSSBAR = 2.44; // hauteur de la barre transversale (m)
-const BALL_R = 0.4;
+const BALL_R = 0.5; // ballon au sol (m ; 0,4 avant le ticket v2-ecran-match/07, validé par le propriétaire le 18/11/2026)
 const BALL_AIR_R = 0.6;
 const BALL_AIR_Z = 1; // hauteur fixe d'un ballon aérien, jusqu'au ticket 02b (vraie hauteur à l'écran)
 
@@ -141,9 +137,13 @@ const BALL_AIR_Z = 1; // hauteur fixe d'un ballon aérien, jusqu'au ticket 02b (
 // La caméra ne tourne qu'autour de l'axe x : le plan du cadre (x constant) est vu par la tranche, poteaux et barre
 // tombent sur la ligne de but. Ce qui rend la hauteur lisible, c'est la cage : toit du filet à 2,44 m et filets
 // latéraux, qui s'étendent en x sur la profondeur du filet (rouverture du 09/11/2026).
-const GoalFrame = memo(function GoalFrame({ x, out }) {
+// `mid`, `corner` : recul du fond du filet (m) au milieu et aux coins, pendant l'ondulation d'un but (ticket
+// v2-ecran-match/21b) ; 0 le reste du temps (valeurs simples : la mémoïsation tient tant que le filet est immobile).
+// Le toit devient un pentagone dont le milieu du fond recule davantage ; filets latéraux et toit suivent le fond.
+const GoalFrame = memo(function GoalFrame({ x, out, mid = 0, corner = 0 }) {
   const ys = [W / 2 - GOAL_WIDTH / 2, W / 2 + GOAL_WIDTH / 2];
-  const back = x + out * NET;
+  const back = x + out * (NET + corner);
+  const backMid = x + out * (NET + mid);
   const pts = (...p) => p.map(([px, py, pz]) => project(px, py, pz)).map((q) => `${q.x},${q.y}`).join(" ");
   const net = { fill: "url(#v2-net)", stroke: "rgba(255,255,255,0.7)", strokeWidth: 0.1, strokeLinejoin: "round" };
   const [foot0, foot1] = ys.map((y) => project(x, y));
@@ -153,7 +153,7 @@ const GoalFrame = memo(function GoalFrame({ x, out }) {
     <g style={{ pointerEvents: "none" }}>
       {/* filet latéral du fond, toit, filet latéral de devant (vers la caméra), du plus lointain au plus proche */}
       <polygon points={pts([x, ys[0], 0], [back, ys[0], 0], [back, ys[0], CROSSBAR], [x, ys[0], CROSSBAR])} {...net} />
-      <polygon points={pts([x, ys[0], CROSSBAR], [back, ys[0], CROSSBAR], [back, ys[1], CROSSBAR], [x, ys[1], CROSSBAR])} {...net} />
+      <polygon points={pts([x, ys[0], CROSSBAR], [back, ys[0], CROSSBAR], [backMid, W / 2, CROSSBAR], [back, ys[1], CROSSBAR], [x, ys[1], CROSSBAR])} {...net} />
       <polygon points={pts([x, ys[1], 0], [back, ys[1], 0], [back, ys[1], CROSSBAR], [x, ys[1], CROSSBAR])} {...net} />
       <line x1={foot0.x} y1={foot0.y} x2={top0.x} y2={top0.y} {...stroke} />
       <line x1={foot1.x} y1={foot1.y} x2={top1.x} y2={top1.y} {...stroke} />
@@ -162,13 +162,24 @@ const GoalFrame = memo(function GoalFrame({ x, out }) {
   );
 });
 
+// Recul du fond du filet en `x` pendant l'ondulation (0 pour l'autre filet et hors ondulation).
+const bulge = (wave, x) => (wave && wave.x === x ? { mid: WAVE_AMPLITUDE_M * wave.k, corner: WAVE_CORNER_M * wave.k } : {});
+
 // Filet des buts, pelouse et lignes : immobiles, dessinés une seule fois.
 const PitchGround = memo(function PitchGround() {
-  const pad = MARGIN + TRACK;
   const stripe = L / STRIPES;
   return (
     <>
       <defs>
+        <radialGradient id="v2-vignette" cx="0.5" cy="0.5" r="0.5">
+          <stop offset="0.6" stopColor="#000" stopOpacity={0} />
+          <stop offset="1" stopColor="#000" stopOpacity={VIGNETTE} />
+        </radialGradient>
+        <linearGradient id="v2-depth" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#000" stopOpacity={DEPTH_SHADE} />
+          <stop offset="1" stopColor="#000" stopOpacity={0} />
+        </linearGradient>
+        <ReliefDefs />
         <pattern id="v2-net" width={0.5} height={0.5} patternUnits="userSpaceOnUse">
           <rect width={0.5} height={0.5} fill="rgba(255,255,255,0.15)" />
           <path d="M 0 0 L 0.5 0 M 0 0 L 0 0.5" stroke="rgba(255,255,255,0.6)" strokeWidth={0.05} />
@@ -176,12 +187,13 @@ const PitchGround = memo(function PitchGround() {
       </defs>
       {/* 1. pelouse et lignes : à plat, écrasées par la même projection (z = 0) */}
       <g transform={GROUND_MATRIX}>
-        <rect x={-pad} y={-pad} width={L + 2 * pad} height={W + 2 * pad + BENCH_ZONE} fill="#5a5f66" />
-        <rect x={-pad} y={-pad} width={L + 2 * pad} height={W + 2 * pad} fill="#9c4a3c" />
+        <rect x={-MARGIN} y={-MARGIN} width={L + 2 * MARGIN} height={FLOOR_BOTTOM + MARGIN} fill={FLOOR} />
         <rect x={-MARGIN} y={-MARGIN} width={L + 2 * MARGIN} height={W + 2 * MARGIN} fill={PITCH_COLORS[0]} />
         {Array.from({ length: STRIPES }, (_, i) => (
           <rect key={i} x={i * stripe} y={-MARGIN} width={stripe} height={W + 2 * MARGIN} fill={i % 2 ? PITCH_COLORS[1] : PITCH_COLORS[0]} />
         ))}
+        <rect x={-MARGIN} y={-MARGIN} width={L + 2 * MARGIN} height={W + 2 * MARGIN} fill="url(#v2-depth)" />
+        <rect x={-MARGIN} y={-MARGIN} width={L + 2 * MARGIN} height={W + 2 * MARGIN} fill="url(#v2-vignette)" />
 
         <rect x={0} y={0} width={L} height={W} {...LINE} />
         <line x1={L / 2} y1={0} x2={L / 2} y2={W} {...LINE} />
@@ -202,9 +214,14 @@ const PitchGround = memo(function PitchGround() {
   );
 });
 
-export default function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, selected, onSelect }) {
-  const pad = MARGIN + TRACK;
-  const height = (W + 2 * pad + BENCH_ZONE) * COS;
+// `className` : taille de l'élément (l'écran de match lui donne toute sa case, ticket v2-ecran-match/04) ; le dessin garde
+// ses proportions et se centre dans la boîte (preserveAspectRatio par défaut).
+// `ballLook` : aspect du ballon (ticket v2-ecran-match/21a) : `dir` (direction du déplacement dans le repère de la vue),
+// `speed` (m/s) et `playbackSpeed` (figement du motif), `trail` (longueur de la traînée, m) ; absent = motif figé, sans traînée.
+// `wave` : ondulation du filet sur un but (ticket v2-ecran-match/21b, `utils/v2NetWave.js`) : `{ x, k }`, x = ligne de
+// but du filet concerné dans le repère de la vue ; null le reste du temps.
+export default function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, selected, onSelect, ballLook = null, wave = null, className = "w-full max-w-4xl rounded-lg" }) {
+  const height = (FLOOR_BOTTOM + MARGIN) * COS;
   // du fond (y petit) vers l'avant : le joueur le plus proche de la caméra recouvre le plus lointain
   const players = [...tick.players]
     .sort((a, b) => a.y - b.y)
@@ -222,15 +239,14 @@ export default function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, 
   const holder = players.find((p) => p.name === tick.ball.holder);
   const air = tick.ball.mode === "aérien";
   const ballGround = project(tick.ball.x, tick.ball.y);
-  const ball = project(tick.ball.x, tick.ball.y, air ? BALL_AIR_Z : 0);
   const ballR = air ? BALL_AIR_R : BALL_R;
   // bancs : immobiles avant l'échauffement, inutile de leur passer le temps qui court
   const benchSeconds = seconds >= warmUpFromS ? seconds : 0;
   return (
     <svg
-      viewBox={`${-pad} ${-pad * COS} ${L + 2 * pad} ${height}`}
-      className="w-full max-w-4xl rounded-lg"
-      style={{ aspectRatio: `${L + 2 * pad} / ${height}` }}
+      viewBox={`${-MARGIN} ${-MARGIN * COS} ${L + 2 * MARGIN} ${height}`}
+      className={className}
+      style={{ aspectRatio: `${L + 2 * MARGIN} / ${height}` }}
     >
       <PitchGround />
       {lineups && <Bench lineup={lineups.home} side={-1} color="var(--team-home)" seconds={benchSeconds} warmUpFromS={warmUpFromS} />}
@@ -263,44 +279,24 @@ export default function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, 
 
       {/* 3. joueurs, triés du fond vers l'avant : vrais cercles, avec le trait de leur cap (ticket v2-realisme/07a) */}
       {players.map((p) => (
-        <g key={p.name} onClick={() => onSelect(p.name === selected ? null : p.name)} style={{ cursor: "pointer" }}>
-          <line
-            x1={p.body.x}
-            y1={p.body.y}
-            x2={p.nose.x}
-            y2={p.nose.y}
-            stroke="white"
-            strokeWidth={0.35}
-            strokeLinecap="round"
-            opacity={0.85}
-            style={{ pointerEvents: "none" }}
-          />
-          <circle
-            cx={p.body.x}
-            cy={p.body.y}
-            r={PLAYER_R}
-            // couleur, anneau clair ou sombre (RING_WIDTH_M) de l'équipe ; joueur sélectionné : anneau blanc épais
-            style={{ fill: `var(--team-${p.team})`, stroke: p.name === selected ? "white" : `var(--team-${p.team}-ring)` }}
-            strokeWidth={p.name === selected ? 0.4 : RING_WIDTH_M}
-          />
-          <PlayerNumber x={p.body.x} y={p.body.y} value={numbers[p.name]} team={p.team} />
-        </g>
+        <PlayerMarker key={p.name} player={p} number={numbers[p.name]} selected={p.name === selected} onSelect={onSelect} />
       ))}
 
       {/* 4. buts en hauteur */}
-      <GoalFrame x={0} out={-1} />
-      <GoalFrame x={L} out={1} />
+      <GoalFrame x={0} out={-1} {...bulge(wave, 0)} />
+      <GoalFrame x={L} out={1} {...bulge(wave, L)} />
 
-      {/* 5. ballon : plus gros et remonté s'il est aérien (hauteur fixe d'un mètre, provisoire) ; atténué s'il est mort */}
-      <circle
-        cx={ball.x}
-        cy={ball.y}
+      {/* 5. ballon : plus gros et remonté s'il est aérien (hauteur fixe d'un mètre, provisoire) ; atténué s'il est mort ;
+          motif qui roule et traînée de vitesse (ticket v2-ecran-match/21a) */}
+      <BallMarker
+        ground={tick.ball}
+        z={air ? BALL_AIR_Z : 0}
         r={ballR}
-        fill="white"
-        stroke="black"
-        strokeWidth={0.1}
-        opacity={tick.ball.dead ? 0.6 : 1}
-        style={{ pointerEvents: "none" }}
+        dead={tick.ball.dead}
+        dir={ballLook?.dir ?? null}
+        speed={ballLook?.speed ?? Infinity}
+        playbackSpeed={ballLook?.playbackSpeed ?? 1}
+        trail={ballLook?.trail ?? 0}
       />
 
       {/* 6. nom du porteur, sous son rond ; le contour sombre le garde lisible sur la pelouse comme sur les lignes */}

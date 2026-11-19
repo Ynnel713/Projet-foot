@@ -5,7 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
-  DELTA_E_MIN, FALLBACK, INK_DARK, INK_LIGHT, UI_BACKGROUND, UI_CONTRAST_MIN, awayColor, contrast, deltaE2000,
+  DELTA_E_MIN, FALLBACK, INK_DARK, INK_LIGHT, PITCH_COLORS, UI_BACKGROUND, UI_CONTRAST_MIN, awayColor, contrast, deltaE2000,
   deltaE2000Lab, labToHex, hexToLab, teamColors, teamColorVars, uiColor,
 } from "./teamColors.js";
 
@@ -74,8 +74,11 @@ test("paires pathologiques : blanc contre blanc, rouge contre rouge, même club"
 });
 
 test("la secondaire n'est pas prise si elle se confond avec le gazon", () => {
-  const r = awayColor("#e51b33", "#dd131c", "#2f7d32");
-  assert.notEqual(r.color, "#2f7d32");
+  // le vert du gazon dessiné (ticket v2-ecran-match/05 : la constante, plus une teinte écrite en dur)
+  for (const grass of PITCH_COLORS) {
+    const r = awayColor("#e51b33", "#dd131c", grass);
+    assert.notEqual(r.color, grass);
+  }
 });
 
 test("repli sans couleur ou sans kit connu : couleurs historiques de l'écran", () => {

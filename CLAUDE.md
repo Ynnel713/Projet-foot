@@ -47,7 +47,7 @@ Interface : PWA React (`ui/`) + API FastAPI (`api/`) ; Streamlit (`app.py`) hist
 ## Clôture des tickets et verrou de commit
 - Un ticket devient `livré (JJ/MM/AAAA), validé expert + QC` seulement avec **deux verdicts** : `APPROVED` du sous-agent `expert` (ou `APPROVED_WITH_RESERVATIONS`, chaque réserve acceptée par le propriétaire) **et** `VALIDÉ` du contrôle qualité. Avant : `implémenté (JJ/MM/AAAA) — en attente de /valider-ticket-simulafoot`. Les anciens statuts (« livré, validé QC ») restent tels quels.
 - Le verdict de l'expert fait foi ; `REJECTED`, `INCONCLUSIVE`, rapport absent ou désaccord laissent le ticket non validé. Les améliorations facultatives ne bloquent pas.
-- **Verrou** (`.claude/qc/verrou-commit.ps1`) : tout commit, même purement documentaire, exige que la dernière entrée de `.claude/qc/journal.jsonl` soit une clôture `VALIDÉ` dont l'empreinte correspond aux fichiers indexés. Commiter juste après la clôture ; toute modification d'un fichier revu rouvre la revue.
+- **Verrou** (`.claude/qc/verrou-commit.ps1`) : tout commit, même purement documentaire, exige que la dernière entrée de `.claude/qc/journal.jsonl` soit une clôture `VALIDÉ` dont l'empreinte correspond aux fichiers indexés, et que le fichier ticket indexé porte `livré (JJ/MM/AAAA), validé expert + QC` (clôture hors chantier, `fusion/…` ou `projet/…` : pas de fichier ticket). Commiter juste après la clôture ; toute modification d'un fichier revu rouvre la revue.
 - Détails et table de décision : `docs/agents/validation-tickets.md`.
 
 ## Sous-agents (`.claude/agents/`)

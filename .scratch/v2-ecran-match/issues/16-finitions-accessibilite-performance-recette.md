@@ -20,3 +20,4 @@ Chantier : `.scratch/v2-ecran-match/spec.md` (audit, direction artistique, déci
 ---
 
 ## Comments
+- 18/11/2026, reporté d'EM-07 (réserve mineure du QC et remarque A1 de l'expert) : corriger le commentaire de `RELIEF_INNER` dans `ui/src/components/match/PlayerMarker.jsx` (« un numéro à deux chiffres tient sous 0,93 m du centre » : non mesuré, ≈ 1,0 m au coin d'un « 77 » ; formuler « zone du numéro (≤ 0,7 R) mesurée sans relief », ou mesurer par `getBBox`).

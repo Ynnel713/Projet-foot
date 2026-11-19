@@ -1,0 +1,9 @@
+Fluidité EM-21b (18/11/2026) : banc d'EM-01, build de production, trace em04, x8, 3 passes alternées de 15 s (aucun but dans la fenêtre : coût de l'ondulation non chronométré ; seul le cadre du but concerné est recalculé pendant 2 s de match).
+4183 = avant (build final d'EM-21a) ; 4184 = après.
+4183 {"frames":901,"median":16.7,"p95":16.7,"max":16.8,"nodes":318,"cpu":{"frames":901,"taskMsPerFrame":3.92,"scriptMsPerFrame":0.97,"layoutMsPerFrame":0.87,"styleMsPerFrame":0.45}} 
+4184 {"frames":901,"median":16.7,"p95":16.7,"max":16.8,"nodes":318,"cpu":{"frames":901,"taskMsPerFrame":4.2,"scriptMsPerFrame":1.05,"layoutMsPerFrame":0.94,"styleMsPerFrame":0.48}} 
+4183 {"frames":900,"median":16.7,"p95":16.7,"max":33.3,"nodes":318,"cpu":{"frames":901,"taskMsPerFrame":3.92,"scriptMsPerFrame":0.98,"layoutMsPerFrame":0.87,"styleMsPerFrame":0.44}} 
+4184 {"frames":901,"median":16.7,"p95":16.7,"max":16.8,"nodes":318,"cpu":{"frames":901,"taskMsPerFrame":3.79,"scriptMsPerFrame":0.94,"layoutMsPerFrame":0.84,"styleMsPerFrame":0.43}} 
+4183 {"frames":901,"median":16.7,"p95":16.7,"max":16.8,"nodes":318,"cpu":{"frames":901,"taskMsPerFrame":3.88,"scriptMsPerFrame":0.98,"layoutMsPerFrame":0.86,"styleMsPerFrame":0.44}} 
+4184 {"frames":902,"median":16.7,"p95":16.8,"max":16.8,"nodes":318,"cpu":{"frames":901,"taskMsPerFrame":3.89,"scriptMsPerFrame":0.96,"layoutMsPerFrame":0.87,"styleMsPerFrame":0.44}} 
+Moyennes : script 0,977 -> 0,983 ms/image (+0,7 %) ; médiane 16,7 ms des deux côtés ; 318 nœuds des deux côtés.

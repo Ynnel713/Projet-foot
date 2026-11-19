@@ -92,6 +92,8 @@
 .live-blink { animation: live-blink 1.1s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) {
   .live-btn-pulse, .live-blink { animation: none; }
+  /* traînée du ballon de l'écran V2 (ticket v2-ecran-match/21a) : retirée si l'utilisateur demande moins d'animations */
+  [data-ball-trail] { display: none; }
 }
 
 html,

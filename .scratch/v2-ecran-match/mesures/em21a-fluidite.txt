@@ -1,0 +1,17 @@
+Fluidité EM-21a, passage 2 (après correctif du roulement), 18/11/2026 : banc d'EM-01, build de production, trace em04, x8, 3 passes alternées de 15 s.
+4181 = avant (build d'EM-07, code de 7e9cff0) ; 4183 = après.
+4181 {"frames":901,"median":16.7,"p95":16.7,"max":16.8,"nodes":305,"cpu":{"frames":896,"taskMsPerFrame":4.29,"scriptMsPerFrame":1.06,"layoutMsPerFrame":1,"styleMsPerFrame":0.48}} 
+4183 {"frames":901,"median":16.7,"p95":16.8,"max":16.8,"nodes":318,"cpu":{"frames":901,"taskMsPerFrame":4.09,"scriptMsPerFrame":1,"layoutMsPerFrame":0.92,"styleMsPerFrame":0.46}} 
+4181 {"frames":901,"median":16.7,"p95":16.7,"max":16.8,"nodes":305,"cpu":{"frames":901,"taskMsPerFrame":4.18,"scriptMsPerFrame":1.04,"layoutMsPerFrame":0.94,"styleMsPerFrame":0.46}} 
+4183 {"frames":901,"median":16.7,"p95":16.7,"max":16.8,"nodes":318,"cpu":{"frames":899,"taskMsPerFrame":4.14,"scriptMsPerFrame":1.04,"layoutMsPerFrame":0.93,"styleMsPerFrame":0.47}} 
+4181 {"frames":901,"median":16.7,"p95":16.7,"max":16.8,"nodes":305,"cpu":{"frames":901,"taskMsPerFrame":4.18,"scriptMsPerFrame":1.03,"layoutMsPerFrame":0.98,"styleMsPerFrame":0.47}} 
+4183 {"frames":901,"median":16.7,"p95":16.7,"max":16.8,"nodes":318,"cpu":{"frames":901,"taskMsPerFrame":4.03,"scriptMsPerFrame":1,"layoutMsPerFrame":0.91,"styleMsPerFrame":0.46}} 
+Moyennes : script 1,04 -> 1,01 ms/image (-2,9 %) ; tâche totale 4,22 -> 4,09 ms ; médiane 16,7 ms des deux côtés ; 305 -> 318 nœuds.
+
+Passage 1 (avant correctif), pour mémoire :
+4181 {"frames":899,"median":16.7,"p95":16.7,"max":50,"nodes":305,"cpu":{"frames":899,"taskMsPerFrame":3.76,"scriptMsPerFrame":0.93,"layoutMsPerFrame":0.86,"styleMsPerFrame":0.41}} 
+4182 {"frames":901,"median":16.7,"p95":16.7,"max":16.8,"nodes":318,"cpu":{"frames":899,"taskMsPerFrame":3.91,"scriptMsPerFrame":0.99,"layoutMsPerFrame":0.86,"styleMsPerFrame":0.44}} 
+4181 {"frames":901,"median":16.7,"p95":16.7,"max":16.8,"nodes":305,"cpu":{"frames":901,"taskMsPerFrame":3.52,"scriptMsPerFrame":0.86,"layoutMsPerFrame":0.8,"styleMsPerFrame":0.39}} 
+4182 {"frames":901,"median":16.7,"p95":16.8,"max":16.8,"nodes":318,"cpu":{"frames":898,"taskMsPerFrame":3.63,"scriptMsPerFrame":0.92,"layoutMsPerFrame":0.8,"styleMsPerFrame":0.4}} 
+4181 {"frames":902,"median":16.7,"p95":16.7,"max":16.8,"nodes":305,"cpu":{"frames":898,"taskMsPerFrame":3.72,"scriptMsPerFrame":0.93,"layoutMsPerFrame":0.83,"styleMsPerFrame":0.41}} 
+4182 {"frames":900,"median":16.7,"p95":16.7,"max":33.4,"nodes":318,"cpu":{"frames":901,"taskMsPerFrame":3.88,"scriptMsPerFrame":0.97,"layoutMsPerFrame":0.87,"styleMsPerFrame":0.44}} 
