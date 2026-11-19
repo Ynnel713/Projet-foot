@@ -120,6 +120,15 @@ class LineExitRecord:
 
 
 @dataclass(frozen=True)
+class DepthCoverRecord:
+    """Changement du défenseur qui couvre la profondeur d'une équipe (ticket v2-realisme/10c), trace seulement :
+    `player` vide quand personne ne couvre. Un état court jusqu'au changement suivant de la même équipe."""
+    minute: float
+    team: str
+    player: str
+
+
+@dataclass(frozen=True)
 class GoalEvent:
     minute: float
     team: str  # "home" / "away"
@@ -333,6 +342,7 @@ class MatchTrace:
     situations: list[SituationRecord] = field(default_factory=list)
     pressers: list[PressRecord] = field(default_factory=list)  # changements de presseur (ticket v2-realisme/10a)
     line_exits: list[LineExitRecord] = field(default_factory=list)  # sorties des centraux (ticket v2-realisme/10b)
+    depth_covers: list[DepthCoverRecord] = field(default_factory=list)  # couverture de la profondeur (v2-realisme/10c)
     offsides: list[OffsideEvent] = field(default_factory=list)  # hors-jeu sifflés (ticket v2-collectif/23)
     restarts: list[RestartEvent] = field(default_factory=list)  # remises en jeu (ticket v2-collectif/29)
     fouls: list[FoulEvent] = field(default_factory=list)  # fautes (ticket v2-collectif/30)

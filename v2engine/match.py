@@ -59,7 +59,7 @@ from v2engine.shooting import (BLOCK_CHANCE, BLOCK_WIDTH_M, FLYING, HELD, OVER, 
 from v2engine.situation import SituationTracker
 from v2engine.transition import TransitionPlay
 from v2engine.trace import (BallSnapshot, DecisionRecord, FoulEvent, MatchTrace, OffsideEvent, PlayerSnapshot, ShotEvent,
-                            LineExitRecord, PressRecord, ReceptionEvent, RestartEvent, SituationRecord)
+                            DepthCoverRecord, LineExitRecord, PressRecord, ReceptionEvent, RestartEvent, SituationRecord)
 from v2engine.reception import DOS_AU_JEU, blind_reception, facing_to_goal_deg, open_facing, reception_type
 
 # But adverse d'une équipe, par convention de ce moteur (voir `formation.initial_positions`,
@@ -1295,6 +1295,7 @@ def simulate_match(
     last_situation: dict[str, str] = {}  # dernière situation tracée par équipe
     last_presser: dict[str, str] = {}  # dernier presseur tracé par équipe (ticket v2-realisme/10a)
     last_exit: dict[str, tuple[str, bool, bool, bool]] = {}  # dernier état tracé de chaque central (ticket v2-realisme/10b)
+    last_depth: dict[str, str] = {}  # dernier couvreur de la profondeur tracé, par équipe (ticket v2-realisme/10c)
     late = LateSetPiece()
     i = 0
     while True:
@@ -1345,6 +1346,11 @@ def simulate_match(
         defense.update(players, ball, bloc, i * tick_seconds, situations.current, memory)  # contre-pressing (ticket 10)
         _record_pressers(defense, players, minute, last_presser, trace.pressers)
         _record_line_exits(defense, players, minute, last_exit, trace.line_exits)
+        for team in ("home", "away"):  # couverture de la profondeur (ticket v2-realisme/10c), lecture seule
+            cover = bloc.depth_cover.get(team, "")
+            if last_depth.get(team, "") != cover:
+                last_depth[team] = cover
+                trace.depth_covers.append(DepthCoverRecord(minute, team, cover))
         played = played_minute(minute, trace.second_half_start_minute, half_tick * tick_seconds / 60.0)
         players = [_step_player(p, ball, tick_seconds, minute, players, runs, intentions, situations, bloc, defense,
                                 transition, played_minute=played, scanning=p.name in scanning) for p in players]

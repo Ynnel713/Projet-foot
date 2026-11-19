@@ -1,0 +1,3 @@
+warning: The `UV_NATIVE_TLS` environment variable is deprecated and will be removed in a future release. Use `UV_SYSTEM_CERTS` instead.
+moteur : /tmp/claude-0/-home-user-Projet-foot/19a9bd38-239d-5e9a-ba45-5ff1774699e7/scratchpad/wt10b2/v2engine/bloc.py
+28 [1, 4]

@@ -71,7 +71,15 @@ sentinelle ou le regista décroche dans l'axe, les latéraux montent et s'ouvren
 demi-espaces. Sous pressing haut (adversaires de champ dans nos 35 m : 2 ou moins, écartement complet ; 4 ou plus,
 moitié ; linéaire entre), l'écart vers la touche est réduit : les joueurs restent plus près du porteur. Personne ne
 s'ouvre à moins de 2 m de la touche. La hauteur de la dernière ligne (09j) n'est pas changée ; la place reste ensuite
-tenue avec la tolérance du Teamwork (`replacement`)."""
+tenue avec la tolérance du Teamwork (`replacement`).
+
+Couverture de la profondeur (ticket v2-realisme/10c, constantes proposées par Claude et validées par délégation du
+propriétaire le 19/11/2026 ; chiffres réels non trouvés, ordres de grandeur tactiques) : quand une passe en profondeur
+est possible -- porteur adverse non pressé (aucun défenseur à `PRESSED_M` ou moins) et dernière ligne sans ballon à
+`DEPTH_SPACE_M` = 25 m au moins de son but --, le défenseur de la dernière ligne de la forme de départ le plus éloigné
+du ballon dans la largeur se place `DEPTH_DROP_M` = 3 m plus bas que la ligne, vers son but. Pas si un attaquant est
+déjà au-delà de la ligne : le décalage ne remet jamais en jeu, à cet instant, un attaquant hors jeu (piège du ticket
+23). Le défenseur retenu est lu dans `Bloc.depth_cover` (tracé, `MatchTrace.depth_covers`)."""
 
 from __future__ import annotations
 
@@ -113,6 +121,8 @@ CUSHION_RUN_M = 30.0  # rabaissement de la ligne quand elle est plus lente que l
 # bloc, mais un défenseur au Teamwork faible suit avec un retard -- c'est la faille qui laisse
 # l'attaquant en jeu (le classique appel dans le dos d'une ligne qui monte). 99 -> 0 s, 55 -> 0,75 s, 11 -> 1,5 s.
 LINE_LAG_MAX_S = 1.5
+DEPTH_SPACE_M = 25.0  # couverture de la profondeur (ticket v2-realisme/10c) : espace minimal derrière la ligne
+DEPTH_DROP_M = 3.0  # recul du défenseur couvreur sous la ligne
 _DEPTH_MARGIN_M = 5.0  # le bloc garde sa dernière ligne à 5 m de son but (marge de `formation`), pas une constante produit
 _CENTER = Vec2(PITCH_LENGTH_M / 2.0, PITCH_WIDTH_M / 2.0)
 # rôle -> (avance, écart à l'axe) en mètres sur la forme de départ, avec ballon. Les 20 rôles de `roles.ROLES` y
@@ -337,6 +347,7 @@ class Bloc:
     gap_knots: dict[str, tuple[tuple[float, float, int], ...]] = field(default_factory=dict)  # écarts entre lignes (09e)
     # équipe en construction -> part de l'écartement gardée (1 sans pressing, 0,5 sous pressing haut), ticket 25b
     build_up: dict[str, float] = field(default_factory=dict)
+    depth_cover: dict[str, str] = field(default_factory=dict)  # équipe -> défenseur qui couvre la profondeur (10c)
 
     @classmethod
     def from_players(cls, players: list[PlayerState]) -> Bloc:
@@ -391,6 +402,14 @@ class Bloc:
             height = min(height, _progress(team, deepest_x) + TRAP_DEPTH_M - gain)
             self.lines[team] = max(height, _DEPTH_MARGIN_M)
             _remember(self.line_history.setdefault(team, []), now_s, self.lines[team])
+            # couverture de la profondeur (ticket v2-realisme/10c) : porteur adverse non pressé, espace dans le dos,
+            # personne au-delà de la ligne ; le défenseur de la dernière ligne le plus éloigné du ballon dans la largeur
+            self.depth_cover.pop(team, None)
+            if holder is not None and holder.team != team and gap > PRESSED_M \
+                    and self.lines[team] >= DEPTH_SPACE_M and _progress(team, deepest_x) >= self.lines[team]:
+                last = [p for p in own if _progress(team, p.home_target.x) <= back + 1.0]
+                far = max(last, key=lambda p: abs(p.position.y - ball.position.y))
+                self.depth_cover[team] = far.name
 
     def _update_build_up(self, players: list[PlayerState], ball: BallState, holder: PlayerState | None) -> None:
         """Phase de construction de chaque équipe (ticket 25b) et écartement gardé selon le pressing adverse. Ballon en vol
@@ -461,6 +480,8 @@ class Bloc:
         cx = min(max(cx, _DEPTH_MARGIN_M - shape.back * sx), PITCH_LENGTH_M - _DEPTH_MARGIN_M - shape.front * sx)
         offset = start - shape.center
         x = cx + offset.x * sx
+        if not with_ball and self.depth_cover.get(player.team) == player.name:  # couverture de la profondeur (10c)
+            x += -DEPTH_DROP_M if player.team == "home" else DEPTH_DROP_M
         knots = self.gap_knots.get(player.team) if with_ball else None
         if knots:  # écarts entre les lignes ramenés dans leurs bornes (ticket 09e)
             depth = _depth(shape, player.team, start, sx)
