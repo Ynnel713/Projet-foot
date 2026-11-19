@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 // Boucle de lecture de l'écran V2 (ticket v2-ecran-match/01 : déplacée telle quelle depuis routes/V2Match.jsx).
-// Vitesses en multiples du TEMPS RÉEL (demande du propriétaire, 03/11/2026) : x1 par défaut, jusqu'à x8. Entre
-// deux positions enregistrées (~1 s de match d'écart, voir api/routers/v2.py), joueurs et ballon glissent en ligne
-// droite au lieu de sauter (voir `interpolatedTick`).
-export const SPEED_OPTIONS = [1, 1.5, 2, 4, 8];
+// Vitesses en multiples du TEMPS RÉEL (demande du propriétaire, 03/11/2026) : x1 par défaut ; liste x1, x1,5, x2,
+// x8, x32 (décision du propriétaire du 19/11/2026, ticket v2-ecran-match/09 : x4 retiré, x32 ajouté). Entre deux
+// positions enregistrées (~1 s de match d'écart, voir api/routers/v2.py), joueurs et ballon glissent en ligne droite
+// au lieu de sauter (voir `interpolatedTick`).
+export const SPEED_OPTIONS = [1, 1.5, 2, 8, 32];
 const DEFAULT_SPEED = 1;
 // Ralenti de chaque but : une fois le but vu (et REPLAY_AFTER_S de plus), on revient REPLAY_BEFORE_S avant et on
 // rejoue l'action à REPLAY_SPEED, puis la lecture reprend là où elle était.

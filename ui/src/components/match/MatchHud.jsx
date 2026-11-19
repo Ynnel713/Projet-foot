@@ -1,12 +1,12 @@
 import { useLayoutEffect, useRef, useState } from "react";
-import { ArrowLeft, Pause, Play } from "lucide-react";
-import { SPEED_OPTIONS } from "../../hooks/useMatchPlayback";
+import { ArrowLeft } from "lucide-react";
 import ScoreBlock from "./ScoreBlock";
+import SpeedControls from "./SpeedControls";
 
 // HUD supérieur de l'écran Match (ticket v2-ecran-match/08, constantes et décisions du propriétaire du 19/11/2026) :
 // identité du match (`ScoreBlock`), puis minute (Barlow Condensed 600, 24 px ; 18 px sous 960 px de large ou 500 px de
 // haut), période et badge d'état. Lignes techniques retirées (situation tactique, minute de calcul) ; la ligne de
-// hors-jeu reste jusqu'à la frise (EM-12). Commandes de vitesse inchangées (EM-09).
+// hors-jeu reste jusqu'à la frise (EM-12). Commandes de lecture : `SpeedControls` (EM-09).
 const BADGE_TONE = {
   live: "text-live border-live/40",
   gold: "text-gold border-gold/40",
@@ -33,7 +33,6 @@ function useSideWidth() {
 }
 
 export default function MatchHud({ trace, score, time, badge, offside, onBack, playback, finished }) {
-  const { playing, setPlaying, speed, setSpeed, replaying, skipReplay } = playback;
   const [leftRef, rightRef, sideWidth] = useSideWidth();
   const columns = sideWidth == null ? "auto minmax(0,1fr) auto" : `${sideWidth}px minmax(0,1fr) ${sideWidth}px`;
   return (
@@ -72,32 +71,16 @@ export default function MatchHud({ trace, score, time, badge, offside, onBack, p
         </div>
       </div>
       <div className="flex justify-end">
-        <div ref={rightRef} className="flex items-center gap-1.5 shrink-0">
-          {replaying && (
-            <button
-              onClick={skipReplay}
-              className="text-data px-2 py-1 rounded bg-red-600 text-white font-semibold"
-              title="Passer le ralenti"
-            >
-              RALENTI ⏭
-            </button>
-          )}
-          {SPEED_OPTIONS.map((s) => (
-            <button
-              key={s}
-              onClick={() => setSpeed(s)}
-              className={`text-data px-2 py-1 rounded ${speed === s ? "bg-accent text-white" : "bg-surface text-gray-400"}`}
-            >
-              x{s}
-            </button>
-          ))}
-          <button
-            onClick={() => setPlaying((p) => !p)}
-            disabled={finished}
-            className="h-9 w-9 rounded-full bg-accent text-white flex items-center justify-center disabled:opacity-40"
-          >
-            {playing ? <Pause size={16} /> : <Play size={16} />}
-          </button>
+        <div ref={rightRef} className="shrink-0">
+          <SpeedControls
+            playing={playback.playing}
+            setPlaying={playback.setPlaying}
+            speed={playback.speed}
+            setSpeed={playback.setSpeed}
+            replaying={playback.replaying}
+            skipReplay={playback.skipReplay}
+            finished={finished}
+          />
         </div>
       </div>
     </div>
