@@ -1,6 +1,6 @@
 # EM-10 — Compositions en cartes (V) — 165 min (moyenne) → découpé en 10a et 10b
 
-**Status:** à faire (chantier validé par le propriétaire le 07/11/2026 ; constantes à proposer avant le code)
+**Status:** livré (19/11/2026), validé expert + QC (via 10a et 10b)
 
 Chantier : `.scratch/v2-ecran-match/spec.md` (audit, direction artistique, décisions).
 
@@ -19,4 +19,10 @@ Chantier : `.scratch/v2-ecran-match/spec.md` (audit, direction artistique, déci
 - 10a livré (19/11/2026), validé expert + QC : voir `10a-compositions-en-cartes-grands-ecrans.md`. Cartes de 26 et
   20 px (et non 36 px, incompatible avec 11 + 9 cartes à 1366×768), sans palier grand écran. Reste 10b ; y reporter
   les points facultatifs A2 à A4 de la revue de 10a.
+
+### 19/11/2026 — 10b livré, ticket terminé
+
+- 10b livré (19/11/2026), validé expert + QC : voir `10b-compositions-compactes-et-tiroirs.md`. Densité choisie selon
+  la hauteur de la colonne (complet, compact, serré) au lieu de la largeur prévue par la spec ; points A2 à A4 de 10a
+  traités. Reste pour EM-15 : sélection d'un joueur et tiroir sous 500 px de haut (A2 de la revue de 10b).
 

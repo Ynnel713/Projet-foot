@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import IntentionPanel from "./IntentionPanel";
 import LineupPanel from "./LineupPanel";
@@ -6,6 +6,7 @@ import MatchHud from "./MatchHud";
 import Momentum from "./Momentum";
 import V2Pitch from "./V2Pitch";
 import { teamColors, teamColorVars } from "../../utils/teamColors";
+import { lineupDensity } from "../../utils/lineupCards";
 import { L, clock, halfStart, interpolatedTick, rotated } from "./trace";
 import { matchBadge, revealedScore } from "../../utils/matchHud";
 import { netWave } from "../../utils/v2NetWave";
@@ -19,13 +20,37 @@ import { ballMotion, ballSpeed, trailLength } from "../../utils/v2BallLook";
 // sous 500 px de haut, repliée sur la ligne d'intention, sans la frise : décisions du 18/11/2026 ; un panneau d'intention
 // plus haut que la zone y défile, la page jamais, en attendant son tiroir d'EM-15). Compositions en
 // colonnes de 220 px dès 1280 px de large, 200 px de 960 à 1279 px ; sous 960 px, tiroirs de 260 px ouverts par une
-// languette de 28 px, fermés par défaut, terrain pleine largeur. Compositions en cartes : EM-10a (`LineupPanel`).
+// languette de 28 px, fermés par défaut, terrain pleine largeur. Compositions en cartes : EM-10a (`LineupPanel`), densité choisie selon la hauteur : EM-10b.
 const DRAWER_PX = 260;
 const TAB_PX = 28;
 
+// Densité des cartes d'après la hauteur réelle de la colonne ou du tiroir (ticket v2-ecran-match/10b). Elle ne dépend
+// que de la taille du conteneur (défilant, de hauteur fixée par la grille) : changer de densité ne la modifie pas, donc
+// pas d'aller-retour. Mesure avant affichage (pas de clignotement au premier rendu).
+function useColumnDensity(lineup) {
+  const ref = useRef(null);
+  const [density, setDensity] = useState("complet");
+  const starters = lineup?.starters.length ?? 0;
+  const bench = lineup?.bench.length ?? 0;
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    const update = () => setDensity(lineupDensity(el.clientHeight, starters, bench));
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [starters, bench]);
+  return [ref, density];
+}
+
 // Composition d'un côté : colonne à partir de 960 px, tiroir en dessous (les deux sont dans le DOM, un seul s'affiche).
+// `color` (couleur d'équipe pour l'interface) ne sert plus qu'au liseré de la languette : les cartes lisent les jetons
+// `--team-<side>` elles-mêmes (ticket v2-ecran-match/10a).
 function LineupSide({ side, lineup, color }) {
   const [open, setOpen] = useState(false);
+  const [columnRef, columnDensity] = useColumnDensity(lineup);
+  const [drawerRef, drawerDensity] = useColumnDensity(lineup);
   if (!lineup) return null;
   const left = side === "home";
   const label = `Composition ${left ? "domicile" : "extérieur"} : ${lineup.club}`;
@@ -33,17 +58,19 @@ function LineupSide({ side, lineup, color }) {
   return (
     <>
       <aside
+        ref={columnRef}
         data-zone={`composition-${side}`}
         aria-label={label}
         className={`hidden min-[960px]:block min-h-0 overflow-y-auto bg-surface px-2 py-1.5 ${left ? "border-r" : "border-l"} border-line`}
       >
-        <LineupPanel lineup={lineup} side={side} />
+        <LineupPanel lineup={lineup} side={side} density={columnDensity} />
       </aside>
       <div
         className={`min-[960px]:hidden absolute inset-y-0 z-20 flex items-center transition-transform duration-200 ease-out motion-reduce:transition-none ${left ? "left-0" : "right-0 flex-row-reverse"}`}
         style={{ transform: open ? "none" : `translateX(${left ? -DRAWER_PX : DRAWER_PX}px)` }}
       >
         <aside
+          ref={drawerRef}
           data-zone={`tiroir-${side}`}
           aria-label={label}
           aria-hidden={!open}
@@ -51,7 +78,7 @@ function LineupSide({ side, lineup, color }) {
           className={`h-full overflow-y-auto bg-surface px-2 py-1.5 ${left ? "border-r" : "border-l"} border-line`}
           style={{ width: DRAWER_PX }}
         >
-          <LineupPanel lineup={lineup} side={side} />
+          <LineupPanel lineup={lineup} side={side} density={drawerDensity} />
         </aside>
         <button
           data-zone={`languette-${side}`}

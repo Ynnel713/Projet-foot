@@ -1,0 +1,821 @@
+{
+ "844x390": {
+  "cols": {
+   "home": {
+    "box": "260x288",
+    "scroll": 174,
+    "hScroll": 0,
+    "titulaires": 11,
+    "remplacants": 9,
+    "visibles": 11,
+    "titulairesVisibles": 11,
+    "densite": "serre",
+    "hauteurs": [
+     "titulaire:20",
+     "remplacant:18"
+    ],
+    "offsets": [
+     54,
+     74,
+     94,
+     114,
+     134,
+     154,
+     174,
+     194,
+     214,
+     234,
+     254,
+     294,
+     312,
+     330,
+     348,
+     366,
+     384,
+     402,
+     420,
+     438
+    ],
+    "plusLong": {
+     "nom": "Ayoube Amaimouni-Echghouyab",
+     "tronque": true,
+     "title": true
+    },
+    "liseré": "3px/0px",
+    "numeroX": 17
+   },
+   "away": {
+    "box": "260x288",
+    "scroll": 174,
+    "hScroll": 0,
+    "titulaires": 11,
+    "remplacants": 9,
+    "visibles": 11,
+    "titulairesVisibles": 11,
+    "densite": "serre",
+    "hauteurs": [
+     "titulaire:20",
+     "remplacant:18"
+    ],
+    "offsets": [
+     54,
+     74,
+     94,
+     114,
+     134,
+     154,
+     174,
+     194,
+     214,
+     234,
+     254,
+     294,
+     312,
+     330,
+     348,
+     366,
+     384,
+     402,
+     420,
+     438
+    ],
+    "plusLong": {
+     "nom": "Tim Kleindienst",
+     "tronque": false,
+     "title": true
+    },
+    "liseré": "0px/3px",
+    "numeroX": 227
+   }
+  },
+  "docScroll": false
+ },
+ "915x412": {
+  "cols": {
+   "home": {
+    "box": "260x310",
+    "scroll": 152,
+    "hScroll": 0,
+    "titulaires": 11,
+    "remplacants": 9,
+    "visibles": 11,
+    "titulairesVisibles": 11,
+    "densite": "serre",
+    "hauteurs": [
+     "titulaire:20",
+     "remplacant:18"
+    ],
+    "offsets": [
+     54,
+     74,
+     94,
+     114,
+     134,
+     154,
+     174,
+     194,
+     214,
+     234,
+     254,
+     294,
+     312,
+     330,
+     348,
+     366,
+     384,
+     402,
+     420,
+     438
+    ],
+    "plusLong": {
+     "nom": "Ayoube Amaimouni-Echghouyab",
+     "tronque": true,
+     "title": true
+    },
+    "liseré": "3px/0px",
+    "numeroX": 17
+   },
+   "away": {
+    "box": "260x310",
+    "scroll": 152,
+    "hScroll": 0,
+    "titulaires": 11,
+    "remplacants": 9,
+    "visibles": 11,
+    "titulairesVisibles": 11,
+    "densite": "serre",
+    "hauteurs": [
+     "titulaire:20",
+     "remplacant:18"
+    ],
+    "offsets": [
+     54,
+     74,
+     94,
+     114,
+     134,
+     154,
+     174,
+     194,
+     214,
+     234,
+     254,
+     294,
+     312,
+     330,
+     348,
+     366,
+     384,
+     402,
+     420,
+     438
+    ],
+    "plusLong": {
+     "nom": "Tim Kleindienst",
+     "tronque": false,
+     "title": true
+    },
+    "liseré": "0px/3px",
+    "numeroX": 227
+   }
+  },
+  "docScroll": false
+ },
+ "960x600": {
+  "cols": {
+   "home": {
+    "box": "200x402",
+    "scroll": 60,
+    "hScroll": 0,
+    "titulaires": 11,
+    "remplacants": 9,
+    "visibles": 17,
+    "titulairesVisibles": 11,
+    "densite": "serre",
+    "hauteurs": [
+     "titulaire:20",
+     "remplacant:18"
+    ],
+    "offsets": [
+     54,
+     74,
+     94,
+     114,
+     134,
+     154,
+     174,
+     194,
+     214,
+     234,
+     254,
+     294,
+     312,
+     330,
+     348,
+     366,
+     384,
+     402,
+     420,
+     438
+    ],
+    "plusLong": {
+     "nom": "Ayoube Amaimouni-Echghouyab",
+     "tronque": true,
+     "title": true
+    },
+    "liseré": "3px/0px",
+    "numeroX": 17
+   },
+   "away": {
+    "box": "200x402",
+    "scroll": 60,
+    "hScroll": 0,
+    "titulaires": 11,
+    "remplacants": 9,
+    "visibles": 17,
+    "titulairesVisibles": 11,
+    "densite": "serre",
+    "hauteurs": [
+     "titulaire:20",
+     "remplacant:18"
+    ],
+    "offsets": [
+     54,
+     74,
+     94,
+     114,
+     134,
+     154,
+     174,
+     194,
+     214,
+     234,
+     254,
+     294,
+     312,
+     330,
+     348,
+     366,
+     384,
+     402,
+     420,
+     438
+    ],
+    "plusLong": {
+     "nom": "Tim Kleindienst",
+     "tronque": false,
+     "title": true
+    },
+    "liseré": "0px/3px",
+    "numeroX": 167
+   }
+  },
+  "docScroll": false
+ },
+ "1024x768": {
+  "cols": {
+   "home": {
+    "box": "200x570",
+    "scroll": 0,
+    "hScroll": 0,
+    "titulaires": 11,
+    "remplacants": 9,
+    "visibles": 20,
+    "titulairesVisibles": 11,
+    "densite": "complet",
+    "hauteurs": [
+     "titulaire:26",
+     "remplacant:20"
+    ],
+    "offsets": [
+     70,
+     96,
+     122,
+     148,
+     174,
+     200,
+     226,
+     252,
+     278,
+     304,
+     330,
+     376,
+     396,
+     416,
+     436,
+     456,
+     476,
+     496,
+     516,
+     536
+    ],
+    "plusLong": {
+     "nom": "Ayoube Amaimouni-Echghouyab",
+     "tronque": true,
+     "title": true
+    },
+    "liseré": "3px/0px",
+    "numeroX": 17
+   },
+   "away": {
+    "box": "200x570",
+    "scroll": 0,
+    "hScroll": 0,
+    "titulaires": 11,
+    "remplacants": 9,
+    "visibles": 20,
+    "titulairesVisibles": 11,
+    "densite": "complet",
+    "hauteurs": [
+     "titulaire:26",
+     "remplacant:20"
+    ],
+    "offsets": [
+     70,
+     96,
+     122,
+     148,
+     174,
+     200,
+     226,
+     252,
+     278,
+     304,
+     330,
+     376,
+     396,
+     416,
+     436,
+     456,
+     476,
+     496,
+     516,
+     536
+    ],
+    "plusLong": {
+     "nom": "Tim Kleindienst",
+     "tronque": false,
+     "title": true
+    },
+    "liseré": "0px/3px",
+    "numeroX": 163
+   }
+  },
+  "docScroll": false
+ },
+ "1100x700": {
+  "cols": {
+   "home": {
+    "box": "200x502",
+    "scroll": 0,
+    "hScroll": 0,
+    "titulaires": 11,
+    "remplacants": 9,
+    "visibles": 20,
+    "titulairesVisibles": 11,
+    "densite": "compact",
+    "hauteurs": [
+     "titulaire:22",
+     "remplacant:18"
+    ],
+    "offsets": [
+     70,
+     92,
+     114,
+     136,
+     158,
+     180,
+     202,
+     224,
+     246,
+     268,
+     290,
+     332,
+     350,
+     368,
+     386,
+     404,
+     422,
+     440,
+     458,
+     476
+    ],
+    "plusLong": {
+     "nom": "Ayoube Amaimouni-Echghouyab",
+     "tronque": true,
+     "title": true
+    },
+    "liseré": "3px/0px",
+    "numeroX": 17
+   },
+   "away": {
+    "box": "200x502",
+    "scroll": 0,
+    "hScroll": 0,
+    "titulaires": 11,
+    "remplacants": 9,
+    "visibles": 20,
+    "titulairesVisibles": 11,
+    "densite": "compact",
+    "hauteurs": [
+     "titulaire:22",
+     "remplacant:18"
+    ],
+    "offsets": [
+     70,
+     92,
+     114,
+     136,
+     158,
+     180,
+     202,
+     224,
+     246,
+     268,
+     290,
+     332,
+     350,
+     368,
+     386,
+     404,
+     422,
+     440,
+     458,
+     476
+    ],
+    "plusLong": {
+     "nom": "Tim Kleindienst",
+     "tronque": false,
+     "title": true
+    },
+    "liseré": "0px/3px",
+    "numeroX": 165
+   }
+  },
+  "docScroll": false
+ },
+ "1280x720": {
+  "cols": {
+   "home": {
+    "box": "220x522",
+    "scroll": 0,
+    "hScroll": 0,
+    "titulaires": 11,
+    "remplacants": 9,
+    "visibles": 20,
+    "titulairesVisibles": 11,
+    "densite": "compact",
+    "hauteurs": [
+     "titulaire:22",
+     "remplacant:18"
+    ],
+    "offsets": [
+     70,
+     92,
+     114,
+     136,
+     158,
+     180,
+     202,
+     224,
+     246,
+     268,
+     290,
+     332,
+     350,
+     368,
+     386,
+     404,
+     422,
+     440,
+     458,
+     476
+    ],
+    "plusLong": {
+     "nom": "Ayoube Amaimouni-Echghouyab",
+     "tronque": true,
+     "title": true
+    },
+    "liseré": "3px/0px",
+    "numeroX": 17
+   },
+   "away": {
+    "box": "220x522",
+    "scroll": 0,
+    "hScroll": 0,
+    "titulaires": 11,
+    "remplacants": 9,
+    "visibles": 20,
+    "titulairesVisibles": 11,
+    "densite": "compact",
+    "hauteurs": [
+     "titulaire:22",
+     "remplacant:18"
+    ],
+    "offsets": [
+     70,
+     92,
+     114,
+     136,
+     158,
+     180,
+     202,
+     224,
+     246,
+     268,
+     290,
+     332,
+     350,
+     368,
+     386,
+     404,
+     422,
+     440,
+     458,
+     476
+    ],
+    "plusLong": {
+     "nom": "Tim Kleindienst",
+     "tronque": false,
+     "title": true
+    },
+    "liseré": "0px/3px",
+    "numeroX": 185
+   }
+  },
+  "docScroll": false
+ },
+ "1280x800": {
+  "cols": {
+   "home": {
+    "box": "220x602",
+    "scroll": 0,
+    "hScroll": 0,
+    "titulaires": 11,
+    "remplacants": 9,
+    "visibles": 20,
+    "titulairesVisibles": 11,
+    "densite": "complet",
+    "hauteurs": [
+     "titulaire:26",
+     "remplacant:20"
+    ],
+    "offsets": [
+     70,
+     96,
+     122,
+     148,
+     174,
+     200,
+     226,
+     252,
+     278,
+     304,
+     330,
+     376,
+     396,
+     416,
+     436,
+     456,
+     476,
+     496,
+     516,
+     536
+    ],
+    "plusLong": {
+     "nom": "Ayoube Amaimouni-Echghouyab",
+     "tronque": true,
+     "title": true
+    },
+    "liseré": "3px/0px",
+    "numeroX": 17
+   },
+   "away": {
+    "box": "220x602",
+    "scroll": 0,
+    "hScroll": 0,
+    "titulaires": 11,
+    "remplacants": 9,
+    "visibles": 20,
+    "titulairesVisibles": 11,
+    "densite": "complet",
+    "hauteurs": [
+     "titulaire:26",
+     "remplacant:20"
+    ],
+    "offsets": [
+     70,
+     96,
+     122,
+     148,
+     174,
+     200,
+     226,
+     252,
+     278,
+     304,
+     330,
+     376,
+     396,
+     416,
+     436,
+     456,
+     476,
+     496,
+     516,
+     536
+    ],
+    "plusLong": {
+     "nom": "Tim Kleindienst",
+     "tronque": false,
+     "title": true
+    },
+    "liseré": "0px/3px",
+    "numeroX": 183
+   }
+  },
+  "docScroll": false
+ },
+ "1366x768": {
+  "cols": {
+   "home": {
+    "box": "220x570",
+    "scroll": 0,
+    "hScroll": 0,
+    "titulaires": 11,
+    "remplacants": 9,
+    "visibles": 20,
+    "titulairesVisibles": 11,
+    "densite": "complet",
+    "hauteurs": [
+     "titulaire:26",
+     "remplacant:20"
+    ],
+    "offsets": [
+     70,
+     96,
+     122,
+     148,
+     174,
+     200,
+     226,
+     252,
+     278,
+     304,
+     330,
+     376,
+     396,
+     416,
+     436,
+     456,
+     476,
+     496,
+     516,
+     536
+    ],
+    "plusLong": {
+     "nom": "Ayoube Amaimouni-Echghouyab",
+     "tronque": true,
+     "title": true
+    },
+    "liseré": "3px/0px",
+    "numeroX": 17
+   },
+   "away": {
+    "box": "220x570",
+    "scroll": 0,
+    "hScroll": 0,
+    "titulaires": 11,
+    "remplacants": 9,
+    "visibles": 20,
+    "titulairesVisibles": 11,
+    "densite": "complet",
+    "hauteurs": [
+     "titulaire:26",
+     "remplacant:20"
+    ],
+    "offsets": [
+     70,
+     96,
+     122,
+     148,
+     174,
+     200,
+     226,
+     252,
+     278,
+     304,
+     330,
+     376,
+     396,
+     416,
+     436,
+     456,
+     476,
+     496,
+     516,
+     536
+    ],
+    "plusLong": {
+     "nom": "Tim Kleindienst",
+     "tronque": false,
+     "title": true
+    },
+    "liseré": "0px/3px",
+    "numeroX": 183
+   }
+  },
+  "docScroll": false
+ },
+ "1920x1080": {
+  "cols": {
+   "home": {
+    "box": "220x882",
+    "scroll": 0,
+    "hScroll": 0,
+    "titulaires": 11,
+    "remplacants": 9,
+    "visibles": 20,
+    "titulairesVisibles": 11,
+    "densite": "complet",
+    "hauteurs": [
+     "titulaire:26",
+     "remplacant:20"
+    ],
+    "offsets": [
+     70,
+     96,
+     122,
+     148,
+     174,
+     200,
+     226,
+     252,
+     278,
+     304,
+     330,
+     376,
+     396,
+     416,
+     436,
+     456,
+     476,
+     496,
+     516,
+     536
+    ],
+    "plusLong": {
+     "nom": "Ayoube Amaimouni-Echghouyab",
+     "tronque": true,
+     "title": true
+    },
+    "liseré": "3px/0px",
+    "numeroX": 17
+   },
+   "away": {
+    "box": "220x882",
+    "scroll": 0,
+    "hScroll": 0,
+    "titulaires": 11,
+    "remplacants": 9,
+    "visibles": 20,
+    "titulairesVisibles": 11,
+    "densite": "complet",
+    "hauteurs": [
+     "titulaire:26",
+     "remplacant:20"
+    ],
+    "offsets": [
+     70,
+     96,
+     122,
+     148,
+     174,
+     200,
+     226,
+     252,
+     278,
+     304,
+     330,
+     376,
+     396,
+     416,
+     436,
+     456,
+     476,
+     496,
+     516,
+     536
+    ],
+    "plusLong": {
+     "nom": "Tim Kleindienst",
+     "tronque": false,
+     "title": true
+    },
+    "liseré": "0px/3px",
+    "numeroX": 183
+   }
+  },
+  "docScroll": false
+ }
+}
