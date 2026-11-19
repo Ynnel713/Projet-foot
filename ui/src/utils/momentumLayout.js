@@ -46,3 +46,19 @@ export function ticks(secondHalfStart, halfReached) {
     halfLine: halfReached ? start : null,
   };
 }
+
+// Marqueurs de but (ticket v2-ecran-match/12, décisions du propriétaire du 19/11/2026) : pastille de 8 px dans la rangée
+// des buts du côté de l'équipe qui marque, à la minute du but ; deux pastilles du même côté gardent au moins
+// `GOAL_GAP_PX` entre leurs centres (la seconde est poussée vers la droite, sans sortir de la frise).
+export const GOAL_DOT_PX = 8;
+export const GOAL_GAP_PX = 9;
+
+export function goalMarkers(goals, width, domain) {
+  const last = { home: -Infinity, away: -Infinity };
+  return goals.map((g, i) => {
+    const ideal = minuteX(g.minute, width, domain);
+    const x = Math.min(width - GOAL_DOT_PX / 2, Math.max(GOAL_DOT_PX / 2, ideal, last[g.team] + GOAL_GAP_PX));
+    last[g.team] = x;
+    return { i, team: g.team, x, y: g.team === "home" ? GOAL_ROW_PX / 2 : BARS_BOTTOM_Y + GOAL_ROW_PX / 2 };
+  });
+}

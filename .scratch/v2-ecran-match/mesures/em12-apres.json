@@ -1,0 +1,143 @@
+{
+ "em11-om-ol 1366x768@1": {
+  "frise": 72,
+  "marqueurs": 0,
+  "emoji": false,
+  "ecartMin": {
+   "home": null,
+   "away": null
+  },
+  "score": "0-0",
+  "marks": [],
+  "couleurs": []
+ },
+ "em11-om-ol 1366x768@2.05": {
+  "frise": 72,
+  "marqueurs": 1,
+  "emoji": false,
+  "ecartMin": {
+   "home": null,
+   "away": null
+  },
+  "score": "0-1",
+  "marks": [
+   "0:away:26.1:56:4:2' · Openda"
+  ],
+  "couleurs": [
+   "away=rgb(119, 116, 204)"
+  ],
+  "survol": "2' · Openda",
+  "apresSortie": null
+ },
+ "em11-om-ol 1366x768@104": {
+  "frise": 72,
+  "marqueurs": 9,
+  "emoji": false,
+  "ecartMin": {
+   "home": 42.97,
+   "away": 66.3
+  },
+  "score": "6-3",
+  "marks": [
+   "0:away:26.1:56:4:2' · Openda",
+   "1:away:92.4:56:4:7' · Openda",
+   "2:home:123.8:4:4:9' · Gouiri",
+   "3:away:213.7:56:4:16' · Openda",
+   "4:home:373.5:4:4:29' · Gouiri",
+   "5:home:1002.6:4:4:71' · Gouiri",
+   "6:home:1045.6:4:4:74' · Abdelli",
+   "7:home:1155.0:4:4:83' · Paixão",
+   "8:home:1305.7:4:4:90+5' · Gouiri"
+  ],
+  "couleurs": [
+   "away=rgb(119, 116, 204)",
+   "home=rgb(213, 212, 211)"
+  ],
+  "survol": "2' · Openda",
+  "apresSortie": null
+ },
+ "em11-psg-havre 1024x768@104": {
+  "frise": 72,
+  "marqueurs": 10,
+  "emoji": false,
+  "ecartMin": {
+   "home": 9,
+   "away": null
+  },
+  "score": "10-0",
+  "marks": [
+   "0:home:55.1:4:4:5' · Kvaratskhelia",
+   "1:home:172.3:4:4:18' · Dembélé",
+   "2:home:196.1:4:4:20' · Dembélé",
+   "3:home:212.0:4:4:22' · Kvaratskhelia",
+   "4:home:221.0:4:4:23' · Dembélé",
+   "5:home:368.6:4:4:38' · Doué",
+   "6:home:433.4:4:4:45+1' · Kvaratskhelia",
+   "7:home:642.2:4:4:59' · Kvaratskhelia",
+   "8:home:949.5:4:4:90+2' · Neves",
+   "9:home:969.7:4:4:90+4' · Kvaratskhelia"
+  ],
+  "couleurs": [
+   "home=rgb(115, 125, 163)"
+  ],
+  "survol": "5' · Kvaratskhelia",
+  "apresSortie": null
+ },
+ "em11-psg-havre 1366x768@30": {
+  "frise": 72,
+  "marqueurs": 5,
+  "emoji": false,
+  "ecartMin": {
+   "home": 12.03,
+   "away": null
+  },
+  "score": "5-0",
+  "marks": [
+   "0:home:73.9:4:4:5' · Kvaratskhelia",
+   "1:home:231.0:4:4:18' · Dembélé",
+   "2:home:262.9:4:4:20' · Dembélé",
+   "3:home:284.2:4:4:22' · Kvaratskhelia",
+   "4:home:296.2:4:4:23' · Dembélé"
+  ],
+  "couleurs": [
+   "home=rgb(115, 125, 163)"
+  ],
+  "survol": "5' · Kvaratskhelia",
+  "apresSortie": null
+ },
+ "em11-psg-havre 1920x1080@104": {
+  "frise": 72,
+  "marqueurs": 10,
+  "emoji": false,
+  "ecartMin": {
+   "home": 16.98,
+   "away": null
+  },
+  "score": "10-0",
+  "marks": [
+   "0:home:104.3:4:4:5' · Kvaratskhelia",
+   "1:home:326.0:4:4:18' · Dembélé",
+   "2:home:371.1:4:4:20' · Dembélé",
+   "3:home:401.1:4:4:22' · Kvaratskhelia",
+   "4:home:418.1:4:4:23' · Dembélé",
+   "5:home:697.6:4:4:38' · Doué",
+   "6:home:820.2:4:4:45+1' · Kvaratskhelia",
+   "7:home:1215.3:4:4:59' · Kvaratskhelia",
+   "8:home:1796.9:4:4:90+2' · Neves",
+   "9:home:1835.0:4:4:90+4' · Kvaratskhelia"
+  ],
+  "couleurs": [
+   "home=rgb(115, 125, 163)"
+  ],
+  "survol": "5' · Kvaratskhelia",
+  "apresSortie": null
+ },
+ "toucher": {
+  "premier": {
+   "texte": "90+4' · Kvaratskhelia",
+   "dansZone": true,
+   "defileX": false
+  },
+  "apresSecond": null
+ }
+}
