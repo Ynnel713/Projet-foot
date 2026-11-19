@@ -18,6 +18,16 @@ function ClubName({ club, align }) {
   );
 }
 
+// Largeur (px) d'un texte de buteur à 12 px dans la police de l'écran (ticket v2-ecran-match/08d), arrondie au pixel
+// inférieur pour ne jamais dépasser le texte ; 0 hors navigateur.
+let measureCtx;
+function textWidth(text) {
+  if (typeof document === "undefined") return 0;
+  measureCtx ??= document.createElement("canvas").getContext("2d");
+  measureCtx.font = `12px ${getComputedStyle(document.body).fontFamily}`;
+  return Math.floor(measureCtx.measureText(text).width);
+}
+
 // Buteurs d'une équipe (ticket v2-ecran-match/08c, décisions du propriétaire du 19/11/2026) : un par ligne, 12 px, sous
 // le nom du club et aligné sur lui (côté score), 3 lignes au plus (« +n autres », liste complète au survol) ; le nom se
 // présente sans prénom et se tronque en premier (4,5 rem au moins), les minutes ensuite seulement ; rien sans
@@ -34,7 +44,15 @@ const Scorers = memo(function Scorers({ side, list }) {
     >
       {list.shown.map((row) => (
         <li key={`${row.name}-${row.ownGoal}`} className={`flex min-w-0 gap-1 ${side === "home" ? "justify-end" : "justify-start"}`}>
-          <span className="min-w-[4.5rem] shrink-[1000] truncate">{hudName(row.name)}{row.ownGoal ? " (csc)" : ""}</span>
+          {/* largeur minimale : 4,5 rem, ou la largeur du nom s'il est plus court (sinon blanc avant les minutes,
+              EM-08d) */}
+          <span
+            className="shrink-[1000] truncate"
+            style={{ minWidth: `min(4.5rem, ${textWidth(`${hudName(row.name)}${row.ownGoal ? " (csc)" : ""}`)}px)` }}
+          >
+            {hudName(row.name)}
+            {row.ownGoal ? " (csc)" : ""}
+          </span>
           <span className="min-w-0 truncate text-white">{row.minutes.join(", ")}</span>
         </li>
       ))}

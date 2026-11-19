@@ -1,0 +1,28 @@
+{
+ "em11-om-ol 1366x768": [
+  "Gouiri|écart 4.0|blanc 0.7|nom 33.0",
+  "Abdelli|écart 4.0|blanc 0.3|nom 38.0",
+  "Paixão|écart 4.0|blanc 1.2|nom 37.0",
+  "Openda|écart 4.0|blanc 1.8|nom 44.0"
+ ],
+ "em11-om-ol 1024x768": [
+  "Gouiri|écart 4.0|blanc 0.3|nom 32.3",
+  "Abdelli|écart 4.0|blanc 0.0|nom 37.7",
+  "Paixão|écart 4.0|blanc 0.0|nom 35.8",
+  "Openda|écart 4.0|blanc 0.2|nom 42.2"
+ ],
+ "em11-om-ol 1920x1080": [
+  "Gouiri|écart 4.0|blanc 0.3|nom 32.3",
+  "Abdelli|écart 4.0|blanc 0.0|nom 37.7",
+  "Paixão|écart 4.0|blanc 0.0|nom 35.8",
+  "Openda|écart 4.0|blanc 0.2|nom 42.2"
+ ],
+ "em11-psg-havre 1024x768": [
+  "Kvaratskhelia|écart 4.0|blanc -0.9|nom 72.0|tronqué|minutes tronquées",
+  "Dembélé|écart 4.0|blanc 1.5|nom 50.0"
+ ],
+ "em11-psg-havre 1366x768": [
+  "Kvaratskhelia|écart 4.0|blanc 0.0|nom 72.9",
+  "Dembélé|écart 4.0|blanc 0.0|nom 48.5"
+ ]
+}
