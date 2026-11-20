@@ -28,7 +28,7 @@ from v2engine.defense import arrival_time_s
 from v2engine.gardien import (BALL_DISTANCE_M, BISECTOR_TOLERANCE_M, FACE_A_FACE, FACE_RANGE_M, FACE_STOPPED_MPS, PLACEMENT,
                               RELANCE, SORTIE, bisector_direction, bisector_point, face_depth, face_to_face, own_goal, race)
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, in_penalty_area
-from v2engine.movement import PlayerState
+from v2engine.movement import PlayerState, max_speed_mps
 from v2engine.offside import offside_line
 from v2engine.possession import BALL_FRICTION_PER_S, MAX_PASS_MPS as SHOT_SPEED_MPS, pass_success_probability, pressure
 from v2engine.restart import CORNER, GOAL_KICK, KICKOFF
@@ -737,6 +737,17 @@ class Collector:
         if ball is not None and players is not None:
             self._masked_race(keeper, ball, players, state)
 
+    def _carry_speed(self, ball, by_name: dict[str, PlayerState]) -> None:
+        """Ticket v2-realisme/04e (reprise A2 du 04d) : en conduite, vitesse du porteur rapportée à sa vitesse maximale
+        (Pace neutralisé) et avance du ballon devant lui, par tranche de Dribbling (bornes du 04c)."""
+        holder = by_name.get(ball.holder) if ball is not None and ball.holder is not None else None
+        if holder is None or getattr(ball, "dribble", None) is None:
+            return
+        tranche = carry_tranche("Dribbling", player_attribute(holder, "Dribbling"), CARRY_DRIBBLING_BINS)
+        self.stats[f"conduite, {tranche} : vitesse balle au pied (part de la vitesse max)"].add(
+            holder.velocity.length() / max_speed_mps(holder.pace))
+        self.stats[f"conduite, {tranche} : avance du ballon (m)"].add(ball.position.distance_to(holder.position))
+
     def on_dribble(self, holder: PlayerState, opponents, lost: bool) -> None:
         """Ticket v2-realisme/04a : un tirage de perte de conduite (un par intervalle de décision), selon la gêne du porteur
         (0 : aucun adversaire à 5 m ; 1 : au contact)."""
@@ -1435,6 +1446,7 @@ class Collector:
             restart = getattr(ball, "restart", None)
             self._close_pass_calibration(lost=restart is not None and restart.team != self.pass_open[0], received=False)
         self._speeds(players, minute, dt)
+        self._carry_speed(ball, by_name)
         if self.unsettled_carriers:  # ticket v2-realisme/11e
             self._close_unsettled_carriers(ball, by_name)
         if self.carrier_windows:  # ticket v2-realisme/11i

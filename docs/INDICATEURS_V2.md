@@ -1769,3 +1769,22 @@ Commande : `uv run python -m scripts.diag_passes_v2 10 --debut D --processus 2 -
 | passes ratées au tirage reprises par le receveur visé | 67,3 % | 59,9 % | − 7,4 ± 1,1 points |
 
 Lecture : les deux cibles du ticket sont tenues (frôlées sur le trajet 17 par match, cible 25 au plus ; réussite 81,4 %, cible au-dessus de 80 %). Les 40 interceptions de plus par match raccourcissent les possessions (plus de passes, moins de tirs et de buts) ; le volume de buts, trop haut avant (5,0 par match, réel environ 2,7), baisse dans le bon sens, sans recalage ici (`v2-collectif/22a`). La hausse au départ (+ 8) vient de passes plus nombreuses, pas de la règle (le temps de réaction neutralise le presseur). Déterminisme : deux exécutions du match 3 sur 15 min, même empreinte des comptes.
+
+## 58. Ballon devant le porteur (ticket v2-realisme/04e, 50 matchs appariés, 20/11/2026)
+
+Commande : `uv run python -m scripts.measure_v2 1 --debut K --json ba_K.json` pour K = 0 à 49, sur l'arbre d'avant (`c3bc860` plus l'indicateur de conduite du ticket) et sur l'arbre du ticket ; écart apparié match par match, IC à 95 %. Règle : en conduite, le ballon a sa position propre, devant le porteur dans la direction de sa course, par touches (une toutes les 0,6 s, avance maximale 2,0 m à Dribbling 11, 1,4 m à 55, 0,8 m à 99 à 7 m/s, proportionnelle à la vitesse en dessous) ; au pied quand il s'arrête ou reçoit ; ramené au pied quand il frappe ou passe.
+
+| Par match | Avant | Après | Écart |
+|---|---|---|---|
+| avance moyenne du ballon en conduite, Dribbling 40-55 / 55-70 / 70 et plus (m) | 0 | 0,77 / 0,73 / 0,68 | — |
+| vitesse balle au pied, part de la vitesse maximale, même tranches (reprise A2 du 04d) | 0,329 / 0,333 / 0,337 | 0,326 / 0,329 / 0,336 | non significatif |
+| buts | 4,20 | 4,34 | + 0,14 ± 0,85 |
+| tirs de près (16 m) par équipe (reprise A1 du 04d) | 3,89 | 3,93 | + 0,04 ± 0,52 |
+| part des tirs de près | 20,7 % | 21,3 % | + 0,5 ± 2,6 points |
+| pertes en conduite | 30,7 | 31,0 | + 0,2 ± 2,2 |
+| pertes au contact sur tacle | 8,50 | 8,44 | − 0,06 ± 0,81 |
+| passes réussies | 81,3 % | 81,4 % | + 0,1 ± 0,4 point |
+| tirs décidés avec rotation | 11,2 % | 8,3 % | − 2,9 ± 2,2 points |
+| xG après frappe moins buts, tirs cadrés jugés (étalement 0,15 m) | + 0,20 | − 0,01 | − 0,21 ± 0,18 |
+
+Lecture : le ballon a une position propre sans changer l'issue du jeu : aucun indicateur de résultat ne bouge au-delà du bruit (les pertes physiques entre deux touches sont au 04f). La vitesse balle au pied croît à peine avec Dribbling (0,326 → 0,336 de la vitesse maximale entre les tranches extrêmes) : la reprise A2 du 04d est mesurée, l'effet de Dribbling sur la vitesse en match est d'environ 3 %. Reprise A1 du 04d : tirs de près 3,9 par équipe sur 50 matchs (4,3 au 04d sur 20 matchs, avant les tickets 29b et 10) ; le 04e n'y change rien ; aucun recalage de `CONTACT_SLOWDOWN` proposé ici (volume de tirs traité au `v2-collectif/22a`). Déterminisme : deux exécutions d'un match de 10 min (graine 20260926), même empreinte de la piste du ballon (`bb7be3f8eb53abe6`).

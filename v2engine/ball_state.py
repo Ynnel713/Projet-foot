@@ -52,6 +52,9 @@ class BallState:
     # `engaged_holder`, et instant jusqu'auquel un défenseur au tacle raté ne peut plus tacler.
     engaged: set[str] = field(default_factory=set)
     engaged_holder: str | None = None
+    # Conduite (ticket v2-realisme/04e) : instant où le porteur actuel a pris le ballon ; la touche de balle
+    # (`match.carried_ball_position`) en part, une touche toutes les `match.TOUCH_PERIOD_S`.
+    carry_start_s: float = 0.0
     tackle_ban_until_s: dict[str, float] = field(default_factory=dict)
     # Contrôle raté (ticket v2-collectif/25) : instant jusqu'auquel le joueur qui l'a raté ne peut pas retenter.
     control_ban_until_s: dict[str, float] = field(default_factory=dict)

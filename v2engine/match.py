@@ -106,6 +106,17 @@ READER_REACH_M = RECEIVER_REACH_M
 # `CONTROL_RADIUS_M`, comme avant. Toute la passe au sol, arrivée comprise (marqueur du receveur), une seule loi.
 NON_READER_REACH_M = 0.8
 NON_READER_REACTION_S = 0.25
+# Ballon devant le porteur (ticket v2-realisme/04e, constantes proposées et validées par délégation du propriétaire le
+# 19/11/2026) : en conduite, le ballon a sa position propre. À chaque touche il part devant le porteur, dans la
+# direction de sa course, puis le porteur le rejoint : son avance suit une demi-onde, de `CONTROL_RADIUS_M` (au pied) à
+# l'avance maximale de la touche, et revient au pied pour la touche suivante, toutes les `TOUCH_PERIOD_S`. L'avance
+# maximale croît avec la vitesse (proportionnelle jusqu'à `TOUCH_REFERENCE_MPS`) et se raccourcit quand Dribbling monte
+# (`TOUCH_LEAD_M` : 2,0 m à 11, 1,4 m à 55, 0,8 m à 99, linéaire). Ordre de grandeur : une touche toutes les trois ou
+# quatre foulées en conduite rapide, ballon à 1 à 2 m ; donnée réelle chiffrée : non trouvée. Porteur à l'arrêt ou en
+# réception : ballon au pied, devant lui (cap `facing`). Aucun tirage ; l'interception entre deux touches est au 04f.
+TOUCH_PERIOD_S = 0.6
+TOUCH_REFERENCE_MPS = 7.0
+TOUCH_LEAD_M: tuple[tuple[float, float], ...] = ((11.0, 2.0), (55.0, 1.4), (99.0, 0.8))
 # Un duel par confrontation (v2-socle/03, validé le 25/10/2026) : un défenseur tente au plus un tacle
 # tant qu'il reste à moins de CONFRONTATION_END_M du même porteur ; un tacle raté l'élimine
 # FAILED_TACKLE_RECOVERY_S (temps pour se relever et se replacer). Durée réelle non trouvée : ordre de grandeur.
@@ -649,13 +660,14 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
         if holder is None:
             ball.holder = None  # détenteur introuvable (ne devrait pas arriver hors test) -- ballon relâché
             return None
-        ball.position = holder.position
         ball.last_toucher = holder.name
         ball.released_by = None  # ballon tenu : plus de passe en cours (sa passe, s'il en fait une, le redéfinit)
 
         if ball.engaged_holder != holder.name:  # nouveau porteur : nouvelles confrontations
             ball.engaged, ball.engaged_holder = set(), holder.name
             ball.pending = None  # geste d'un ancien porteur (ticket v2-realisme/07e)
+            ball.carry_start_s = now_s  # première touche du nouveau porteur (ticket v2-realisme/04e)
+        ball.position = carried_ball_position(holder, now_s - ball.carry_start_s, ball.receiving)
         # un défenseur battu resté à moins de 3 m retente une fois relevé (réserve A4 du ticket 25, traitée au ticket 08)
         ball.engaged = {n for n in ball.engaged if ball.tackle_ban_until_s.get(n, 0.0) > now_s
                         and any(p.name == n and p.position.distance_to(holder.position) < CONFRONTATION_END_M for p in players)}
@@ -831,6 +843,10 @@ def _execute(ball: BallState, holder: PlayerState, action, players: list[PlayerS
         ball.control_ban_until_s[holder.name] = now_s + MISS_RETRY_S
         ball.last_toucher, ball.released_by, ball.receiver, ball.readers = holder.name, None, None, {}
         return None
+    if action.kind in ("shot", "pass"):
+        # le joueur frappe ou passe le ballon à son pied : il l'a rejoint entre deux touches (ticket v2-realisme/04e ; tir,
+        # contre et passe se jugent depuis sa position, comme avant)
+        ball.position = holder.position
     if action.kind == "shot":
         _settle_advantage(ball, fouls)  # un tir réalise l'avantage (loi 12 ; réserve A1 de l'expert, ticket 30)
         _clear_offside(ball)  # la passe signalée est morte : le ballon est tiré
@@ -1083,6 +1099,27 @@ def _orient(player: PlayerState, ball_velocity: Vec2, oriented: bool) -> None:
     en gardant devant lui le ballon reçu (`reception.open_facing`, règle du 07c). Non orienté : le cap ne bouge pas."""
     if oriented and ball_velocity.length() > 1e-9:
         player.facing = open_facing(player.position, player.position - ball_velocity, player.team, player.facing)
+
+
+def touch_lead_m(holder: PlayerState) -> float:
+    """Avance maximale d'une touche en conduite à pleine vitesse de référence, selon Dribbling (ticket v2-realisme/04e)."""
+    note = min(max(effective_rating(holder, "Dribbling"), TOUCH_LEAD_M[0][0]), TOUCH_LEAD_M[-1][0])
+    for (n0, v0), (n1, v1) in zip(TOUCH_LEAD_M, TOUCH_LEAD_M[1:]):
+        if note <= n1:
+            return v0 + (note - n0) / (n1 - n0) * (v1 - v0)
+    return TOUCH_LEAD_M[-1][1]
+
+
+def carried_ball_position(holder: PlayerState, carried_s: float, receiving: bool = False) -> Vec2:
+    """Position du ballon tenu par `holder`, `carried_s` secondes après qu'il l'a pris (ticket v2-realisme/04e) : devant lui
+    dans la direction de sa course, à une avance qui suit une demi-onde par touche (`TOUCH_PERIOD_S`), de
+    `CONTROL_RADIUS_M` à `CONTROL_RADIUS_M` + l'avance de la touche ; au pied (cap `facing`) s'il ne court pas ou reçoit."""
+    speed = holder.velocity.length()
+    if receiving or speed < 1e-6:
+        return clamp_to_pitch(holder.position + holder.facing.normalized() * CONTROL_RADIUS_M)
+    phase = (carried_s / TOUCH_PERIOD_S) % 1.0
+    lead = touch_lead_m(holder) * min(1.0, speed / TOUCH_REFERENCE_MPS) * math.sin(math.pi * phase)
+    return clamp_to_pitch(holder.position + holder.velocity * ((CONTROL_RADIUS_M + lead) / speed))
 
 
 def _ball_facing_deg(facing: Vec2, ball_velocity: Vec2) -> float:

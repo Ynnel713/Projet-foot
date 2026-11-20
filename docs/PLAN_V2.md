@@ -372,6 +372,10 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **`v2-realisme/29b` livré (20/11/2026), validé expert + QC** : sur une passe au sol, l'adversaire non lecteur touche le ballon à 0,8 m s'il l'a vue partir depuis 0,25 s et lui fait face (`match.NON_READER_REACH_M`, `NON_READER_REACTION_S`). 100 matchs appariés : passes frôlées sur le trajet 35,8 → 17,0 par match, réussite des passes 84,1 % → 81,4 %, passes prises par l'adversaire + 40, buts 5,04 → 4,29, tirs 41,0 → 37,7. `docs/INDICATEURS_V2.md` section 57. Suite : 23a (erreur continue de la passe), puis 04e (ballon devant le porteur, premier pas vers le 26a, bloqué par 04e et 04f).
 
+**`v2-realisme/23a` implémenté (20/11/2026), validation refusée** (expert REJECTED, QC REFUSÉ : calibration de la chance évaluée, part non perdue constante, régression du 15a) ; travail conservé hors commit, arbitrage du propriétaire attendu (voir le ticket).
+
+**`v2-realisme/04e` livré (20/11/2026), validé expert (réserves A1, A2 acceptées, à corriger au début du 04f) + QC** : en conduite, le ballon a sa position propre devant le porteur, par touches (`match.carried_ball_position`, avance selon la vitesse et Dribbling) ; ramené au pied à la frappe et à la passe. 50 matchs appariés : aucun indicateur de résultat ne bouge ; avance moyenne 0,68 à 0,77 m. `docs/INDICATEURS_V2.md` section 58. Suite : 04f (ballon jouable entre deux touches), puis 26a.
+
 ### Bloquée par
 
 - Phase 4

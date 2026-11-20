@@ -154,7 +154,9 @@ def test_line_exits_are_traced_and_deterministic() -> None:
     traces = []
     for _ in range(2):
         random.seed(20261118)
-        traces.append(simulate_match(clubs[4], clubs[5], duration_minutes=3.0))
+        # 5 minutes (3 avant le ticket v2-realisme/04e : le ballon devant le porteur décale les phases de jeu, plus
+        # aucune sortie de ligne dans les 3 premières minutes de cette graine ; 2 en 5 minutes)
+        traces.append(simulate_match(clubs[4], clubs[5], duration_minutes=5.0))
     records = traces[0].line_exits
     assert records and records == traces[1].line_exits
     assert all(r.exit == bool(r.role) and (r.exit or (not r.covered and not r.threatened)) for r in records)
