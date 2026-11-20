@@ -48,12 +48,14 @@ def _long_share(pressed: bool, draws: int = 1000) -> float:
 
 
 def test_lofted_accuracy_matches_validated_points() -> None:
-    # constante validée le 17/11/2026 : 0,8 par mètre au-delà de 10 m ; à 50 m, 47 / 69 / 87 % (Passing 40 / 55 / 70)
+    # constante validée le 17/11/2026 (0,8 point de difficulté par mètre au-delà de 10 m : à 50 m, 47 / 69 / 87 % à Passing
+    # 40 / 55 / 70) ; loi d'écart continue depuis le ticket v2-realisme/23a : même écart angulaire qu'au sol, tolérance
+    # d'arrivée `LOFTED_ON_TARGET_M` (2,5 m) réglée sur les 69 % de Passing 55 : 52 / 66 / 75 %
     target = _player("Cible", position=Vec2(60.0, 34.0))
-    for passing, expected in ((40, 0.47), (55, 0.69), (70, 0.87)):
+    for passing, expected in ((40, 0.52), (55, 0.66), (70, 0.75)):
         passer = _player("Passeur", position=Vec2(10.0, 34.0), attributes={"Passing": passing})
         assert pass_accuracy_probability(passer, target, [], lofted=True) == pytest.approx(expected, abs=0.01)
-        assert pass_accuracy_probability(passer, target, []) < expected - 0.3  # au sol, bien plus dure
+        assert pass_accuracy_probability(passer, target, []) < expected - 0.15  # au sol, bien plus dure (0,3 avant le 23a)
 
 
 def test_lofted_pass_is_not_cut_in_flight() -> None:
@@ -138,10 +140,16 @@ def _defender_passes(pressed: bool, draws: int = 1000) -> tuple[float, float]:
 def test_defender_plays_long_more_often_under_high_pressing() -> None:
     # mesuré le 17/11/2026 : parmi ses passes, 0,9 % de relances longues sans pressing, 45,5 % sous pressing ; parmi toutes
     # ses décisions, 0,6 % et 10,1 % (sous pressing, il conduit surtout : risque de conduite du ticket v2-realisme/04a)
+    # Ticket v2-realisme/23a (erreur d'exécution continue) : 0,4 % et 6,2 % parmi ses passes, 0,3 % et 3,2 % parmi ses
+    # décisions ; remesuré après le réajustement de la clôture (20/11/2026) : 0,3 % et 5,7 % parmi ses passes, 0,2 % et
+    # 3,7 % parmi ses décisions. Une passe au sol imprécise reste presque toujours chez son équipe : la passe courte sous
+    # pressing est plus sûre qu'avec l'ancienne passe ratée (25 à 50 % de sa longueur), le 45 % du 15a en dépendait.
+    # Nouvelle référence décidée par le propriétaire le 20/11/2026 (réserve A3 de l'expert, option 1) ; valeur de la passe
+    # longue sous pressing renvoyée au duel aérien (v2-realisme/15b). Le gardien sous pressing joue toujours long.
     free_passes, free_all = _defender_passes(False)
     pressed_passes, pressed_all = _defender_passes(True)
-    assert free_passes <= 0.05 and pressed_passes >= 0.35
-    assert pressed_all >= free_all + 0.05
+    assert free_passes <= 0.05 and pressed_passes >= 0.04 and pressed_passes >= 10 * free_passes
+    assert pressed_all >= free_all + 0.02
 
 
 def test_lofted_pass_flies_like_a_long_restart_and_is_traced() -> None:

@@ -1,9 +1,9 @@
-"""Contrôle et passe (Phase 2, docs/PLAN_V2.md ; refonte ticket v2-socle/04) : chaque passe et chaque
-contrôle ont une DIFFICULTÉ, calculée sur la situation réelle, sur la même échelle que les attributs ; la
-réussite compare la note (Passing, First Touch) à cette difficulté -- quasi certaine sur une action facile
-pour tout le monde, décidée par la note sur une action difficile (docs/REVUE_ATTRIBUTS_V2.md). Le DOSAGE
-d'une passe réussie (vitesse d'arrivée, passe dans la course) dépend de Passing et rend le contrôle du
-receveur plus ou moins difficile. Composure réduit la part de difficulté due à la pression, et elle seule."""
+"""Contrôle et passe (Phase 2, docs/PLAN_V2.md ; refonte ticket v2-socle/04). Le contrôle a une DIFFICULTÉ, calculée
+sur la situation réelle, sur la même échelle que les attributs ; la réussite compare First Touch à cette difficulté. La
+passe (ticket v2-realisme/23a) n'est plus réussie ou ratée au tirage : le ballon part avec une erreur d'exécution
+continue (angle et vitesse gaussiens, plus larges quand Passing est bas et sous pression, Composure comprise) et la
+passe réussit ou non par la physique. Le DOSAGE (vitesse d'arrivée, passe dans la course) dépend de Passing et rend le
+contrôle du receveur plus ou moins difficile."""
 
 from __future__ import annotations
 
@@ -23,27 +23,39 @@ BALL_FRICTION_PER_S = 0.6  # freinage du ballon par seconde (partagé avec `matc
 BALL_STOPPED_MPS = 0.5  # en dessous, une passe est considérée morte (ballon quasi arrêté)
 
 # --- Constantes validées par le propriétaire (25/10/2026, ticket v2-socle/04) ---------------------------------
-_BASE_DIFFICULTY = 10.0  # passe ou contrôle le plus facile
-_EASY_DISTANCE_M = 10.0
-_DIFFICULTY_PER_M = 1.8  # au-delà de 10 m : 25 m -> 37, 35 m -> 55, 45 m -> 73
-# Passe longue en l'air (ticket v2-collectif/15a, validé par le propriétaire le 17/11/2026) : visée sur un point de
-# chute, sa difficulté croît de `LONG_BALL_DIFFICULTY_PER_M` par mètre au-delà de 10 m (contre 1,8 au sol) : à 50 m,
-# 47 % de passes précises à Passing 40, 69 % à 55, 87 % à 70. Au-delà de `LONG_PASS_M`, une passe peut partir en l'air
-# (même seuil que les remises jouées long, `restart.LONG_RESTART_M`).
-LONG_BALL_DIFFICULTY_PER_M = 0.8
+_BASE_DIFFICULTY = 10.0  # contrôle le plus facile
+# Au-delà de `LONG_PASS_M`, une passe peut partir en l'air (ticket v2-collectif/15a ; même seuil que les remises jouées
+# long, `restart.LONG_RESTART_M`).
 LONG_PASS_M = 25.0
 _PRESSURE_DIFFICULTY = 15.0  # adversaire au contact du joueur, nulle à `PRESSURE_RADIUS_M`
-_MARKED_DIFFICULTY = 10.0  # receveur avec un adversaire à moins de `_MARKED_RADIUS_M`
-_MARKED_RADIUS_M = 2.0
 _CONTROL_DIFFICULTY_PER_MPS = 1.0  # contrôle : +1 par m/s d'écart à la vitesse d'arrivée idéale
 # Réussite = note contre difficulté (courbe partagée) : à égalité 50 %, 40 points d'avance ou plus ~97 %.
 _SUCCESS = dict(baseline=0.5, amplitude=0.47, min_prob=0.05, max_prob=0.98)
-# passe ratée : déviation de 25 à 50 % de la longueur de la passe (ticket v2-realisme/18h, validé le 12/11/2026 ; 10 à 25 %
-# auparavant : la passe ratée restait chez son équipe presque 2 fois sur 3 et Passing pesait peu sur l'issue réelle)
-_MISS_SHARE = (0.25, 0.50)
 IDEAL_ARRIVAL_MPS = 6.0  # dosage : vitesse du ballon en arrivant au receveur
 MAX_PASS_MPS = 30.0
-_DOSAGE_ERROR = (0.30, 0.05)  # erreur de vitesse : +/- 30 % à Passing 11, +/- 5 % à 99
+# --- Erreur d'exécution continue de la passe (ticket v2-realisme/23a, constantes proposées et validées par délégation du
+# propriétaire le 19/11/2026) --------------------------------------------------------------------------------------------
+# Plus de passe réussie ou ratée en tout ou rien : la direction du ballon s'écarte de la passe idéale d'un angle gaussien,
+# sa vitesse de départ d'une part gaussienne ; la passe réussit ou non par la physique (le ballon arrive, ou non, dans la
+# portée du receveur avant un adversaire). Écart-type de l'angle sans pression selon Passing (Technique pour une
+# talonnade), linéaire entre les points ; donnée réelle : non trouvée (ordre de grandeur : à 20 m, 1 m d'écart latéral
+# vaut 2,9°). Un écart angulaire fixe fait déjà croître l'erreur latérale avec la longueur : la longueur n'élargit pas
+# l'angle. Ni l'adversaire dans la ligne ni le receveur marqué n'élargissent l'écart : ils agissent par la physique
+# (interception, receveur devancé ; réserve A2 de l'expert, 10/11/2026).
+PASS_SIGMA_DEG_POINTS: tuple[tuple[float, float], ...] = ((11.0, 6.0), (55.0, 3.0), (99.0, 1.5))
+# Pression sur le passeur : écart multiplié par 1 + gain x pression x part laissée par Composure (même forme que le tir,
+# `shooting.SHOT_ERROR_PRESSURE_GAIN`) ; au contact, Composure moyenne : x 1,75.
+PASS_PRESSURE_SIGMA_GAIN = 1.0
+# Écart de la vitesse de départ (part de la vitesse idéale) : écart-type de l'erreur uniforme d'avant (+/- 30 % à
+# Passing 11, +/- 5 % à 99, divisé par racine de 3), selon le dosage ; bornée à [0 ; `MAX_PASS_MPS`].
+PASS_SPEED_SIGMA = (0.30 / math.sqrt(3.0), 0.05 / math.sqrt(3.0))
+# Passe « précise » pour la chance évaluée (`pass_accuracy_probability`) : écart latéral à l'arrivée sous
+# `ON_TARGET_M`, la portée du receveur (`match.RECEIVER_REACH_M`, 1 m ; grille de 1 à 2,5 m, ajustement ci-dessous) ;
+# passe longue en l'air (ticket v2-collectif/15a) : sous
+# `LOFTED_ON_TARGET_M`, le receveur attaque un ballon qui retombe (à 50 m, Passing 55 : 66 % de passes précises, 69 % au
+# 15a). Au sol, la part non perdue dépend de l'ampleur de l'écart (`_LATERAL_NOT_LOST`).
+ON_TARGET_M = 1.0
+LOFTED_ON_TARGET_M = 2.5
 # Contrôle raté (ticket v2-collectif/25, validé le 29/10/2026 ; données réelles : non trouvé) : le ballon s'échappe
 # dans sa direction, dévié de +/- 20° (contrôle facile) à +/- 60° (le plus difficile), à la moitié de sa vitesse, et
 # le même joueur ne peut retenter qu'après `MISS_RETRY_S`.
@@ -66,27 +78,37 @@ _HARDEST_CONTROL = _BASE_DIFFICULTY + _CONTROL_DIFFICULTY_PER_MPS * (MAX_PASS_MP
 # 24 945 (écart prévu / non perdue + 0,1 point au total ; `.scratch/v2-realisme/mesures/18j-ajustement.txt`), validé par
 # délégation du propriétaire le 12/11/2026.
 _NEAR_PASSER_M = 3.0
-_CUT_NEAR_PASSER = ((0.5, 0.82), (1.0, 0.21), (6.0, 0.02))  # (distance max à la trajectoire en m, chance de coupe)
-_CUT_ON_PATH = ((1.0, 0.43), (2.0, 0.25), (3.0, 0.12), (4.0, 0.07), (5.0, 0.03), (6.0, 0.02))
-# passe précise : adversaires qui croisent la trajectoire sans y être au départ (0,05 au 18g, 0,01 au 18i, validé le
-# 12/11/2026 : mesurée 0,007 à 0,009 sur 50 matchs ; l'ancien terme comptait surtout le ballon passé à côté du receveur ;
-# 0,014 au 18j, gardée)
-UNFORESEEN_CUT = 0.01
-# passe imprécise (25 à 50 % de sa longueur) non perdue, hors coupe de la table, selon la longueur de la passe (ticket
-# v2-realisme/18h : 50 matchs, sortie ou coup de sifflet pour l'adversaire compté perdu ; remesurée au 18i avec la portée
-# du receveur, 0,78 / 0,64 -> 0,85 / 0,68, validé le 12/11/2026 ; au 18j avec la portée du lecteur, 0,85 / 0,69)
-_MISS_NOT_LOST = ((10.0, 0.85), (math.inf, 0.69))  # (longueur max en m, part non perdue)
+# Remesurée au ticket v2-realisme/23a, après la revue de l'expert (méthode du 18g : part des adversaires d'une tranche de
+# distance à la trajectoire qui touchent le ballon le premier ; après le 29b, l'adversaire non lecteur touche le ballon à
+# 0,8 m) : 24 matchs sur le moteur après le 04e (graines 300 à 323, 29 600 passes au sol), contrôle hors échantillon
+# sur 48 (graines 400 à 447, 61 958 passes ; `docs/INDICATEURS_V2.md` section 59). 18j : 0,82 / 0,21 / 0,02 près du
+# passeur, 0,43 / 0,25 / 0,12 / 0,07 / 0,03 / 0,02 sur le trajet.
+_CUT_NEAR_PASSER = ((0.5, 0.81), (1.0, 0.20), (6.0, 0.023))  # (distance max à la trajectoire en m, chance de coupe)
+_CUT_ON_PATH = ((1.0, 0.45), (2.0, 0.32), (3.0, 0.15), (4.0, 0.083), (5.0, 0.057), (6.0, 0.031))
+# Passe au sol (ticket v2-realisme/23a, réserve A2 de l'expert à la clôture) : part non perdue hors coupe de la table,
+# selon l'écart latéral à l'arrivée tiré par la loi d'écart (`pass_error_sigma_rad`) ; la chance de chaque bande sort de
+# la même gaussienne, donc de Passing, de la pression et de la longueur. Bande sous `ON_TARGET_M` : passe précise
+# (adversaires imprévus qui croisent la trajectoire compris, l'ancien `UNFORESEEN_CUT`). Ajustée par moindres carrés sur
+# les tranches de chance évaluée (mêmes 24 matchs ; parts brutes par bande d'écart réalisé 0,992 / 0,984 / 0,970 / 0,922),
+# parts plafonnées à 0,99 (garde du 19c : une passe facile garde au moins 1 % d'échec ; 1,0 / 1,0 / 0,94 / 0,70 sans
+# plafond). Contrôle hors échantillon sur 48 matchs (graines 400 à 447, joués avec les parts non plafonnées, chance
+# recalculée hors ligne) : moyenne − 0,2 point, pire écart 3,3 points en 7 tranches. Critère du propriétaire (20/11/2026) :
+# au plus 4 points par tranche d'au moins 500 passes, moyenne à 0,5 point près.
+_LATERAL_NOT_LOST = ((ON_TARGET_M, 0.99), (2.0, 0.98), (4.0, 0.98), (math.inf, 0.70))  # (écart max en m, part)
+# passe longue en l'air imprécise (au-delà de `LOFTED_ON_TARGET_M`) non perdue : la valeur du 18j, gardée (249 passes en
+# l'air sur 50 matchs au 23a, trop peu pour l'ajuster ; mesurées 0,54 imprécises contre 0,65 précises)
+LOFTED_MISS_NOT_LOST = 0.69
 # Talonnade (ticket v2-realisme/07e, constantes recommandées et validées par délégation du propriétaire, 13/11/2026) :
 # passe courte vers un coéquipier dans le dos, sans se retourner. Geste difficile : Technique remplace Passing dans la
-# loi de précision (docs/CARTE_ATTRIBUTS_V2.md : Technique = gestes difficiles), la difficulté du geste s'ajoute à
-# celle de la passe. Portée : au plus `BACKHEEL_MAX_M` (StatsBomb, 80 matchs des cinq grands championnats 2015-16 :
+# loi d'écart (docs/CARTE_ATTRIBUTS_V2.md : Technique = gestes difficiles) ; le geste multiplie l'écart par
+# `BACKHEEL_SIGMA_FACTOR` (ticket v2-realisme/23a ; il ajoutait 20 points de difficulté auparavant). Portée : au plus `BACKHEEL_MAX_M` (StatsBomb, 80 matchs des cinq grands championnats 2015-16 :
 # passes « Other », ni pied ni tête, borne haute des talonnades, longueur médiane 7,8 m, réussite 83 %).
 BACKHEEL_MAX_M = 10.0
-BACKHEEL_DIFFICULTY = 20.0
+BACKHEEL_SIGMA_FACTOR = 2.0
 # Passe de première (ticket v2-collectif/31a, valeurs proposées et validées par le propriétaire le 13/11/2026) : sans
-# contrôle, la chance que la passe parte juste est multipliée par une précision du geste selon Technique (0,85 à 11,
-# 0,93 à 55, 0,98 à 99 ; chiffre réel non trouvé). La pression gêne déjà toute passe (`pass_difficulty`) : rien de plus
-# ici. La difficulté selon l'arrivée du ballon (fort, de côté, de dos) est au ticket 36a.
+# contrôle, l'écart de la passe est divisé par une précision du geste selon Technique (0,85 à 11, 0,93 à 55, 0,98 à 99 ;
+# chiffre réel non trouvé ; elle multipliait la chance de passe précise avant le ticket v2-realisme/23a). La pression
+# gêne déjà toute passe (`pass_error_sigma_rad`) : rien de plus ici. La difficulté selon l'arrivée du ballon (fort, de côté, de dos) est au ticket 36a.
 _ONE_TOUCH_PRECISION_POINTS: tuple[tuple[float, float], ...] = ((11.0, 0.85), (55.0, 0.93), (99.0, 0.98))
 
 
@@ -125,39 +147,84 @@ def _cut_chance(start: Vec2, end: Vec2, opponent: PlayerState) -> float:
     return next((chance for limit, chance in table if gap < limit), 0.0)
 
 
-def pass_difficulty(passer: PlayerState, receiver: PlayerState, opponents: Sequence[PlayerState],
-                    backheel: bool = False, lofted: bool = False) -> float:
-    """Difficulté de l'EXÉCUTION de la passe (distance, pression sur le passeur, receveur marqué ; talonnade,
-    `BACKHEEL_DIFFICULTY`, ticket v2-realisme/07e). La coupe en vol par les adversaires n'en fait plus partie (ticket
-    v2-realisme/18g) : elle se joue physiquement et compte dans `pass_success_probability`. `lofted` : passe longue en
-    l'air (ticket v2-collectif/15a), `LONG_BALL_DIFFICULTY_PER_M` par mètre."""
-    distance = passer.position.distance_to(receiver.position)
-    per_m = LONG_BALL_DIFFICULTY_PER_M if lofted else _DIFFICULTY_PER_M
-    difficulty = _BASE_DIFFICULTY + per_m * max(0.0, distance - _EASY_DISTANCE_M)
-    difficulty += _PRESSURE_DIFFICULTY * pressure(passer, opponents) * composure_factor(passer)
-    if any(receiver.position.distance_to(o.position) < _MARKED_RADIUS_M for o in opponents):
-        difficulty += _MARKED_DIFFICULTY
-    return difficulty + (BACKHEEL_DIFFICULTY if backheel else 0.0)
-
-
 def one_touch_precision(passer: PlayerState) -> float:
     """Part de la précision gardée par une passe jouée de première, selon Technique (ticket v2-collectif/31a)."""
-    note = min(max(effective_rating(passer, "Technique"), _ONE_TOUCH_PRECISION_POINTS[0][0]),
-               _ONE_TOUCH_PRECISION_POINTS[-1][0])
-    for (n0, v0), (n1, v1) in zip(_ONE_TOUCH_PRECISION_POINTS, _ONE_TOUCH_PRECISION_POINTS[1:]):
-        if note <= n1:
-            return v0 + (note - n0) / (n1 - n0) * (v1 - v0)
-    return _ONE_TOUCH_PRECISION_POINTS[-1][1]
+    return _linear(effective_rating(passer, "Technique"), _ONE_TOUCH_PRECISION_POINTS)
+
+
+def pass_error_sigma_rad(passer: PlayerState, opponents: Sequence[PlayerState], backheel: bool = False,
+                         one_touch: bool = False) -> float:
+    """Écart-type (rad) de l'angle entre la passe jouée et la passe idéale (ticket v2-realisme/23a) : Passing (Technique
+    pour une talonnade), élargi par la pression sur le passeur (Composure comprise), par la talonnade et par la passe de
+    première. Ni la longueur, ni l'adversaire dans la ligne, ni le receveur marqué n'y entrent (réserve A2)."""
+    skill = effective_rating(passer, "Technique") if backheel else effective_rating(passer, "Passing")
+    sigma = math.radians(_linear(skill, PASS_SIGMA_DEG_POINTS))
+    sigma *= 1.0 + PASS_PRESSURE_SIGMA_GAIN * pressure(passer, opponents) * composure_factor(passer)
+    if backheel:
+        sigma *= BACKHEEL_SIGMA_FACTOR
+    return sigma / one_touch_precision(passer) if one_touch else sigma
+
+
+def pass_speed_sigma(passer: PlayerState) -> float:
+    """Écart-type de l'erreur de vitesse de départ, en part de la vitesse idéale, selon le dosage (ticket 23a)."""
+    return PASS_SPEED_SIGMA[0] + (PASS_SPEED_SIGMA[1] - PASS_SPEED_SIGMA[0]) * dosage_quality(passer)
+
+
+def _receiver_travel_s(passer: PlayerState, target: PlayerState) -> float:
+    """Temps de vol (s) d'une passe dosée pour arriver à `IDEAL_ARRIVAL_MPS` au receveur (plafond `MAX_PASS_MPS`)."""
+    distance = passer.position.distance_to(target.position)
+    speed = _launch_speed(distance)
+    log_f = math.log(BALL_FRICTION_PER_S)
+    arrival = max(BALL_STOPPED_MPS, speed + distance * log_f)  # < 6 m/s si la vitesse est plafonnée (passe > ~47 m)
+    return math.log(arrival / speed) / log_f
+
+
+def dosage_gap(passer: PlayerState, receiver: PlayerState) -> tuple[float, float]:
+    """Écart (m) entre le point visé par la passe idéale (`pass_aim`) et la position future du receveur, qui court à sa
+    vitesse pendant le vol : la part de sa course que le dosage ne joue pas (ticket v2-realisme/23a, piste b de la
+    clôture : un passeur faible joue dans les pieds d'un receveur lancé). Rendu en (composante dans l'axe de la passe,
+    composante en travers), dans le repère passeur -> point visé."""
+    gap = receiver.velocity * (_receiver_travel_s(passer, receiver) * (1.0 - dosage_quality(passer)))
+    axis = pass_aim(passer, receiver) - passer.position
+    if axis.length() < 1e-9:
+        return gap.length(), 0.0
+    axis = axis.normalized()
+    return gap.x * axis.x + gap.y * axis.y, axis.x * gap.y - axis.y * gap.x
+
+
+def _aim_distance(passer: PlayerState, receiver: PlayerState) -> float:
+    """Distance (m) du passeur au point visé par la passe idéale : là où l'écart d'angle se lit en mètres (au moins
+    `ON_TARGET_M`)."""
+    return max(passer.position.distance_to(pass_aim(passer, receiver)), ON_TARGET_M)
+
+
+def _within(limit: float, along: float, across: float, length: float, sigma: float) -> float:
+    """Chance que le ballon passe à moins de `limit` de la position future du receveur : écart du dosage (`along`,
+    `across`) plus l'écart latéral de la loi d'angle (gaussienne d'écart-type `sigma` rad, lu à `length`, la distance du
+    point visé)."""
+    if math.isinf(limit):
+        return 1.0
+    if abs(along) >= limit:
+        return 0.0
+    half = math.sqrt(limit * limit - along * along)  # demi-largeur de la tranche de passage autour du receveur
+    scale = sigma * math.sqrt(2.0)
+    return 0.5 * (math.erf(math.atan((half - across) / length) / scale)
+                  + math.erf(math.atan((half + across) / length) / scale))
 
 
 def pass_accuracy_probability(passer: PlayerState, receiver: PlayerState, opponents: Sequence[PlayerState],
                               backheel: bool = False, one_touch: bool = False, lofted: bool = False) -> float:
-    """Chance que la passe parte où le passeur la destine (sinon déviée, `pass_aim`) : Passing contre la difficulté de
-    CETTE passe ; Technique pour une talonnade (ticket v2-realisme/07e) ; jouée de première, précision du geste en plus
-    (`one_touch_precision`, ticket v2-collectif/31a)."""
-    skill = effective_rating(passer, "Technique") if backheel else effective_rating(passer, "Passing")
-    accurate = duel_probability(skill, pass_difficulty(passer, receiver, opponents, backheel, lofted), **_SUCCESS)
-    return accurate * one_touch_precision(passer) if one_touch else accurate
+    """Chance que la passe arrive précise (ticket v2-realisme/23a) : au sol, le ballon passe à moins de `ON_TARGET_M` de
+    la position future du receveur (écart du dosage, `dosage_gap`, plus l'écart latéral tiré par la loi d'angle,
+    `pass_error_sigma_rad`) ; en l'air, son écart latéral reste sous `LOFTED_ON_TARGET_M`. Une seule loi, lue par la
+    décision et par la résolution."""
+    tolerance = LOFTED_ON_TARGET_M if lofted else ON_TARGET_M
+    sigma = pass_error_sigma_rad(passer, opponents, backheel, one_touch)
+    if lofted:
+        length = max(passer.position.distance_to(receiver.position), tolerance)
+        return math.erf(math.atan(tolerance / length) / (sigma * math.sqrt(2.0)))
+    along, across = dosage_gap(passer, receiver)
+    return _within(tolerance, along, across, _aim_distance(passer, receiver), sigma)
 
 
 def pass_success_probability(passer: PlayerState, receiver: PlayerState, opponents: Sequence[PlayerState],
@@ -166,20 +233,26 @@ def pass_success_probability(passer: PlayerState, receiver: PlayerState, opponen
     premier, et le ballon ne sort pas (ni n'est sifflé) avec remise pour l'adversaire ; même risque que celui que la passe
     court en jeu. C'est le sens que lui donne la décision (`decision.option_value` :
     garder, sinon perdre le ballon), comme le risque de perte de la conduite (04a). Coupe par adversaire : table du 18g ;
-    précise, `UNFORESEEN_CUT` en plus ; imprécise, `_MISS_NOT_LOST` selon la longueur. Le contrôle du receveur n'y entre
+    au sol, part non perdue selon l'écart à l'arrivée à la position future du receveur (`_LATERAL_NOT_LOST`, bandes de la
+    loi d'écart et du dosage, ticket v2-realisme/23a). Le contrôle du receveur n'y entre
     pas : raté, le ballon reste libre près de lui, ce n'est pas une perte. `lofted` : passe longue en l'air (ticket
     v2-collectif/15a), que personne ne touche en vol : ni coupe ni coupe imprévue, seule la précision compte ; la
     retombée disputée n'y entre pas (`decision.LONG_BALL_WON`)."""
-    length = passer.position.distance_to(receiver.position)
-    not_lost = next(share for limit, share in _MISS_NOT_LOST if length < limit)
     if lofted:
         accurate = pass_accuracy_probability(passer, receiver, opponents, lofted=True)
-        return accurate + (1.0 - accurate) * not_lost
+        return accurate + (1.0 - accurate) * LOFTED_MISS_NOT_LOST
+    length = _aim_distance(passer, receiver)
     keep = 1.0
     for opponent in opponents:
         keep *= 1.0 - _cut_chance(passer.position, receiver.position, opponent)
-    accurate = pass_accuracy_probability(passer, receiver, opponents, backheel, one_touch)
-    return keep * (accurate * (1.0 - UNFORESEEN_CUT) + (1.0 - accurate) * not_lost)
+    sigma = pass_error_sigma_rad(passer, opponents, backheel, one_touch)
+    along, across = dosage_gap(passer, receiver)
+    not_lost, below = 0.0, 0.0
+    for limit, share in _LATERAL_NOT_LOST:
+        within = _within(limit, along, across, length, sigma)
+        not_lost += (within - below) * share
+        below = within
+    return keep * not_lost
 
 
 def control_difficulty(player: PlayerState, ball_velocity: Vec2, opponents: Sequence[PlayerState]) -> float:
@@ -222,32 +295,30 @@ def max_pass_reach_m() -> float:
     return (MAX_PASS_MPS - BALL_STOPPED_MPS) / -math.log(BALL_FRICTION_PER_S)
 
 
-def pass_aim(passer: PlayerState, target: PlayerState, opponents: Sequence[PlayerState] = (),
-             backheel: bool = False, one_touch: bool = False, lofted: bool = False) -> Vec2:
-    """Point visé par une passe de `passer` vers `target`. Réussie (Passing contre difficulté) : là où le receveur
-    VA être, d'autant plus précisément que le dosage est bon. Ratée : déviée de 25 à 50 % de sa longueur (18h)."""
-    distance = passer.position.distance_to(target.position)
-    speed = _launch_speed(distance)
-    log_f = math.log(BALL_FRICTION_PER_S)
-    arrival = max(BALL_STOPPED_MPS, speed + distance * log_f)  # < 6 m/s si la vitesse est plafonnée (passe > ~47 m)
-    travel_s = math.log(arrival / speed) / log_f
-    aim = target.position + target.velocity * (travel_s * dosage_quality(passer))  # dans la course, selon le dosage
-    if PASSE.random() >= pass_accuracy_probability(passer, target, opponents, backheel, one_touch, lofted):
-        angle = PASSE.uniform(0.0, 2.0 * math.pi)
-        miss = PASSE.uniform(*_MISS_SHARE) * distance
-        aim = aim + Vec2(miss * math.cos(angle), miss * math.sin(angle))
-    return aim
+def pass_aim(passer: PlayerState, target: PlayerState) -> Vec2:
+    """Point visé par la passe IDÉALE de `passer` vers `target` : là où le receveur VA être, d'autant plus précisément que
+    le dosage est bon (lecture du jeu, pas une erreur d'exécution ; ticket v2-realisme/23a). L'erreur d'exécution est
+    tirée par `pass_velocity`."""
+    lead_s = _receiver_travel_s(passer, target) * dosage_quality(passer)
+    return target.position + target.velocity * lead_s  # dans la course, selon le dosage
 
 
 def pass_velocity(passer: PlayerState, target: PlayerState, opponents: Sequence[PlayerState] = (),
                   backheel: bool = False, one_touch: bool = False, lofted: bool = False) -> Vec2:
-    """Vitesse du ballon au départ d'une passe vers `pass_aim` : de quoi y arriver à ~6 m/s (plafond 30 m/s),
-    avec une erreur de vitesse selon le dosage (+/- 30 % à Passing 11, +/- 5 % à 99)."""
-    aim = pass_aim(passer, target, opponents, backheel, one_touch, lofted)
-    quality = dosage_quality(passer)
-    error = _DOSAGE_ERROR[0] + (_DOSAGE_ERROR[1] - _DOSAGE_ERROR[0]) * quality
-    speed = min(MAX_PASS_MPS, _launch_speed(passer.position.distance_to(aim)) * (1.0 + PASSE.uniform(-error, error)))
-    return (aim - passer.position).normalized() * speed
+    """Vitesse du ballon au départ d'une passe (ticket v2-realisme/23a) : vers la passe idéale (`pass_aim`), de quoi y
+    arriver à ~6 m/s (plafond 30 m/s), écartée d'un angle gaussien (`pass_error_sigma_rad`) et d'une erreur de vitesse
+    gaussienne (`pass_speed_sigma`), vitesse bornée à [0 ; `MAX_PASS_MPS`]. `lofted` ne change pas l'écart : la passe
+    longue en l'air n'a de propre que sa tolérance d'arrivée (`LOFTED_ON_TARGET_M`)."""
+    aim = pass_aim(passer, target)
+    direction = (aim - passer.position).normalized()
+    if direction.length() < 1e-9:
+        direction = Vec2(1.0, 0.0)  # receveur sur le passeur : direction fixe
+    angle = PASSE.gauss(0.0, pass_error_sigma_rad(passer, opponents, backheel, one_touch))
+    cos_a, sin_a = math.cos(angle), math.sin(angle)
+    heading = Vec2(direction.x * cos_a - direction.y * sin_a, direction.x * sin_a + direction.y * cos_a)
+    ideal = _launch_speed(passer.position.distance_to(aim))
+    speed = min(MAX_PASS_MPS, max(0.0, ideal * (1.0 + PASSE.gauss(0.0, pass_speed_sigma(passer)))))
+    return heading * speed
 
 
 # --- Rythme : temps entre la réception et la première décision (ticket v2-socle/06, validé le 25/10/2026) -----

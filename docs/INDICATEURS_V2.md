@@ -1788,3 +1788,56 @@ Commande : `uv run python -m scripts.measure_v2 1 --debut K --json ba_K.json` po
 | xG après frappe moins buts, tirs cadrés jugés (étalement 0,15 m) | + 0,20 | − 0,01 | − 0,21 ± 0,18 |
 
 Lecture : le ballon a une position propre sans changer l'issue du jeu : aucun indicateur de résultat ne bouge au-delà du bruit (les pertes physiques entre deux touches sont au 04f). La vitesse balle au pied croît à peine avec Dribbling (0,326 → 0,336 de la vitesse maximale entre les tranches extrêmes) : la reprise A2 du 04d est mesurée, l'effet de Dribbling sur la vitesse en match est d'environ 3 %. Reprise A1 du 04d : tirs de près 3,9 par équipe sur 50 matchs (4,3 au 04d sur 20 matchs, avant les tickets 29b et 10) ; le 04e n'y change rien ; aucun recalage de `CONTACT_SLOWDOWN` proposé ici (volume de tirs traité au `v2-collectif/22a`). Déterminisme : deux exécutions d'un match de 10 min (graine 20260926), même empreinte de la piste du ballon (`bb7be3f8eb53abe6`).
+
+## 59. Erreur d'exécution continue de la passe (ticket v2-realisme/23a, 20/11/2026)
+
+Loi : la passe part vers la passe idéale (dosage inchangé), écartée d'un angle gaussien (écart-type 6° à Passing 11, 3° à 55, 1,5° à 99, x (1 + pression x part de Composure)) et d'une erreur de vitesse gaussienne (écart-type 17 % à 11, 2,9 % à 99) ; plus de passe ratée au tirage. Chance évaluée (lue par la décision) : même loi ; au sol, produit des (1 − coupe) de la table par adversaire, fois la part non perdue par bande d'écart latéral à l'arrivée (0,99 sous 1 m, 0,98 de 1 à 4 m, 0,70 au-delà), chaque bande tirée de la même gaussienne ; en l'air, précise sous 2,5 m.
+
+**Premier passage (refusé à la clôture).** Ajusté sur le moteur après le 29b (tolérance, parts 0,70 / 0,95 selon la longueur, coupe imprévue 0,02, exposant 1,2 de la table) ; contrôle hors échantillon sur 50 matchs (graines 62 à 111, 63 203 passes) : moyenne exacte, 3 tranches sur 7 hors de l'intervalle, + 4,5 points sur la plus basse ; chance d'une passe au sol de 35 m presque insensible à Passing (+ 1,1 point de 30 à 90).
+
+**Diagnostic de la reprise** (24 matchs neufs, graines 300 à 323, moteur après le 04e, 29 723 passes) : chance pessimiste de 2,4 points en moyenne (le 04e a réduit les pertes après l'ajustement) ; à écart latéral réel égal, les passes des passeurs faibles sont plus souvent perdues :
+
+| Écart latéral réel | Passing < 50 | 50 à 70 | 70 et plus |
+|---|---|---|---|
+| sous 1 m | 0,758 (207) | 0,847 (4 506) | 0,879 (6 950) |
+| 1 à 2 m | 0,809 (204) | 0,839 (4 990) | 0,864 (3 942) |
+| 2 à 3 m | 0,777 (193) | 0,831 (3 340) | 0,848 (1 351) |
+
+Toutes ces pertes viennent d'un adversaire qui touche avant le receveur visé ; l'écart tient à chaque tranche de vitesse et de dosage : contexte de la passe (adversaires autour du receveur, absents de la chance depuis le 18g), pas exécution ; ticket `v2-realisme/18m`. Erreur de vitesse : les passes lentes (au moins 15 % sous la vitesse idéale) des passeurs faibles sont 7 points sous la chance, environ 1 point au total.
+
+**Réajustement.** Table de coupe remesurée par adversaire (méthode du 18g) : 0,81 / 0,20 / 0,023 près du passeur, 0,45 / 0,32 / 0,15 / 0,083 / 0,057 / 0,031 sur le trajet. Parts par bande : brutes 0,992 / 0,984 / 0,970 / 0,922 (passes non coupées par la table, par bande d'écart réalisé) ; ajustées par moindres carrés sur les tranches, plafonnées à 0,99 (garde du 19c).
+
+**Contrôle hors échantillon** (48 matchs, graines 400 à 447, 61 958 passes de jeu ; matchs joués avec les parts non plafonnées 1,0 / 1,0 / 0,94 / 0,70, chance recalculée hors ligne avec les parts retenues ; perdue : un adversaire touche le premier, ou sortie avec remise adverse) :
+
+| Chance évaluée (7 tranches) | Passes | Évaluée | Observée (IC 95 %) |
+|---|---|---|---|
+| 0 à 0,14 | 494 | 0,102 | 0,095 ± 0,026 |
+| 0,14 à 0,29 | 1 600 | 0,178 | 0,154 ± 0,018 (hors) |
+| 0,29 à 0,43 | 507 | 0,373 | 0,379 ± 0,042 |
+| 0,43 à 0,57 | 2 782 | 0,516 | 0,483 ± 0,019 (hors) |
+| 0,57 à 0,71 | 4 523 | 0,656 | 0,668 ± 0,014 |
+| 0,71 à 0,86 | 11 962 | 0,792 | 0,779 ± 0,007 (hors) |
+| 0,86 et plus | 40 090 | 0,950 | 0,952 ± 0,002 (hors) |
+| toutes | 61 958 | 0,847 | 0,845 |
+
+Critère révisé par le propriétaire le 20/11/2026 (au plus 4 points par tranche d'au moins 500 passes, moyenne à 0,5 point) : **tenu**, pire écart 3,3 points, moyenne − 0,2 point. L'ancien critère (au plus une tranche hors de l'intervalle) est hors d'atteinte à 60 000 passes : l'intervalle des tranches pleines fait ± 0,2 à 2 points. Passeurs à Passing < 50 : − 1,9 ± 1,9 points (1 882 passes). Passes en l'air de jeu (123 sur 24 matchs) : 0,63 observées contre 0,87 évaluées, retombée disputée hors de la chance (15a), renvoyée au 15b.
+
+Poids de Passing dans la chance d'une passe au sol, de 30 à 90 : 15 m, + 0,4 point sans pression, + 1,7 au contact ; 35 m, + 5,0 et + 10,4 (environ 22 avant le 23a).
+
+**Match** (50 matchs appariés, graines 0 à 49, contre l'état après le 04e, `137b9f4` ; `scripts/diag_passes_v2.py`) :
+
+| Par match | Avant | Après | Écart |
+|---|---|---|---|
+| passes réussies (jeu) | 81,41 % | 82,95 % | + 1,54 ± 0,39 point |
+| passes (jeu) | 1 275,4 | 1 288,7 | + 13,3 ± 18,5 (non significatif) |
+| passes prises par l'adversaire | 225,8 | 213,9 | − 11,9 ± 5,8 |
+| pertes au journal | 265,0 | 255,7 | − 9,3 ± 6,4 |
+| pertes au contrôle | 19,4 | 21,5 | + 2,1 ± 1,8 |
+| pertes en conduite | 19,7 | 21,2 | + 1,5 ± 1,9 (non significatif) |
+| remises réussies | 81,5 % | 76,1 % | − 5,4 ± 2,4 points |
+| … au sol | 91,5 % | 91,5 % | − 0,1 ± 2,9 |
+| … en l'air | 67,2 % | 59,0 % | − 8,2 ± 4,7 |
+| buts | 4,34 | 4,66 | + 0,32 ± 0,65 (non significatif) |
+| tirs | 36,8 | 37,4 | + 0,6 ± 1,9 (non significatif) |
+
+Lecture : réussite des passes dans la marge de 3 points du ticket ; buts et tirs sans écart au-delà du bruit. Les passes imprécises sont bien plus nombreuses (401 par match, écart au-delà de 1 m) mais presque toutes jouables : le receveur visé en reprend 77 %. Remises en l'air − 8 points : cause non établie. Les remises n'utilisent pas le modèle de la passe en l'air (`match.py`, `restart.py` : ni tolérance de 2,5 m, ni difficulté du 15a) ; leur exécution est plus précise qu'avant (fini le décalage de 25 à 50 % de la longueur). Piste non vérifiée (réserve A1 de l'expert) : effet de sélection, la passe longue mieux évaluée fait choisir plus souvent des cibles lointaines disputées ; nombre et longueur des remises en l'air à mesurer avant / après au 15b. Sous pressing, le défenseur central joue long dans 5,7 % de ses passes (45,5 % au 15a), nouvelle référence décidée par le propriétaire le 20/11/2026. Déterminisme : deux exécutions d'un match complet (graine 3), même empreinte des comptes (`a0a00fc70e436018`).

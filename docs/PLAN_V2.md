@@ -376,6 +376,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **`v2-realisme/04e` livré (20/11/2026), validé expert (réserves A1, A2 acceptées, à corriger au début du 04f) + QC** : en conduite, le ballon a sa position propre devant le porteur, par touches (`match.carried_ball_position`, avance selon la vitesse et Dribbling) ; ramené au pied à la frappe et à la passe. 50 matchs appariés : aucun indicateur de résultat ne bouge ; avance moyenne 0,68 à 0,77 m. `docs/INDICATEURS_V2.md` section 58. Suite : 04f (ballon jouable entre deux touches), puis 26a.
 
+**`v2-realisme/23a` livré (20/11/2026), validé expert (réserves A1 à A4 acceptées : remises en l'air − 8 points cause non établie, Passing peu pesant à 15 m, pertes au contrôle + 2, contrôle à refaire avec le moteur livré) + QC** : la passe part avec un écart d'angle et de vitesse gaussien (Passing, pression, Composure) ; plus de passe ratée au tirage ; la chance évaluée suit la même loi (bandes d'écart latéral, table de coupe remesurée sur le moteur après le 04e). Premier passage refusé (expert, QC) ; reprise sur décisions du propriétaire : critère de calibration révisé (au plus 4 points par tranche d'au moins 500 passes, moyenne à 0,5 point ; tenu hors échantillon : 3,3 points, − 0,2), défenseur sous pressing 5,7 % de passes longues comme nouvelle référence (45,5 % au 15a, renvoi au 15b). 50 matchs appariés : passes réussies 81,4 % → 83,0 %, remises en l'air − 8 points, buts et tirs dans le bruit. `docs/INDICATEURS_V2.md` section 59. Suite : `18m` (adversaires autour du receveur dans la chance évaluée, créé à la reprise), 23b, `v2-collectif/32a`.
+
 ### Bloquée par
 
 - Phase 4

@@ -176,9 +176,11 @@ def test_known_gap_the_block_reads_no_defender_rating() -> None:
     assert len(blocks) == 1
 
 
-def test_known_gap_pass_dosage_and_miss_size_are_all_or_nothing() -> None:
-    # Dosage de 0 (dans les pieds) à 1 (dans la course) ; ampleur d'une passe ratée indépendante de la note
-    # (`possession._MISS_SHARE`). Renvoyé à `v2-realisme/23a` (erreur d'exécution continue).
-    assert possession.dosage_quality(_p("A", "home", 50, 34, 11)) == 0.0
-    assert possession.dosage_quality(_p("A", "home", 50, 34, 99)) == 1.0
-    assert possession._MISS_SHARE == (0.25, 0.50)  # ticket v2-realisme/18h (10 à 25 % auparavant)
+def test_pass_error_is_continuous_and_narrows_with_the_rating() -> None:
+    # Ticket v2-realisme/23a (écart connu du 19c retiré) : plus de passe ratée d'une ampleur indépendante de la note ;
+    # l'écart d'angle et de vitesse de la passe se resserre quand Passing monte. Le dosage reste la lecture du jeu.
+    sigmas = [possession.pass_error_sigma_rad(_p("A", "home", 50, 34, note), []) for note in (11, 55, 99)]
+    speeds = [possession.pass_speed_sigma(_p("A", "home", 50, 34, note)) for note in (11, 55, 99)]
+    assert sigmas[0] > sigmas[1] > sigmas[2] > 0.0
+    assert speeds[0] > speeds[1] > speeds[2] > 0.0
+    assert not hasattr(possession, "_MISS_SHARE")

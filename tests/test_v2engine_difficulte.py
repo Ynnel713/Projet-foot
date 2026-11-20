@@ -1,5 +1,5 @@
-"""Tests du moteur V2, ticket v2-socle/04 (difficulté et dosage des passes, contrôle). Voir
-.scratch/v2-socle/issues/04-fonction-de-difficulte.md et docs/REVUE_ATTRIBUTS_V2.md."""
+"""Tests du moteur V2, ticket v2-socle/04 (difficulté et dosage des passes, contrôle) ; erreur d'exécution continue de la
+passe, ticket v2-realisme/23a. Voir .scratch/v2-socle/issues/04-fonction-de-difficulte.md et docs/REVUE_ATTRIBUTS_V2.md."""
 
 from __future__ import annotations
 
@@ -12,12 +12,15 @@ from v2engine.possession import (
     BALL_FRICTION_PER_S,
     IDEAL_ARRIVAL_MPS,
     MAX_PASS_MPS,
+    ON_TARGET_M,
     composure_factor,
     control_difficulty,
+    dosage_gap,
     dosage_quality,
     pass_accuracy_probability,
-    pass_difficulty,
     pass_aim,
+    pass_error_sigma_rad,
+    pass_speed_sigma,
     pass_success_probability,
     pass_velocity,
 )
@@ -31,39 +34,43 @@ def _player(name: str = "P", team: str = "home", position: Vec2 = Vec2(30.0, 34.
     )
 
 
-def test_difficulty_follows_validated_distance_scale() -> None:
-    passer = _player()
-    for distance, expected in [(8.0, 10.0), (25.0, 37.0), (35.0, 55.0), (45.0, 73.0)]:
-        receiver = _player("R", position=Vec2(30.0 + distance, 34.0))
-        assert math.isclose(pass_difficulty(passer, receiver, []), expected)
+def test_pass_error_follows_the_validated_points_and_pressure() -> None:
+    """Ticket v2-realisme/23a : écart-type de l'angle 6° à Passing 11, 3° à 55, 1,5° à 99, sans pression ; adversaire au
+    contact, Composure moyenne (0,75) : x 1,75. La longueur n'y entre pas."""
+    for note, degrees in ((11, 6.0), (55, 3.0), (99, 1.5)):
+        assert math.isclose(math.degrees(pass_error_sigma_rad(_player(attributes={"Passing": note}), [])), degrees)
+    passer = _player(attributes={"Passing": 55, "Composure": 62})
+    contact = _player("O", team="away", position=Vec2(30.0, 34.0))
+    assert math.isclose(pass_error_sigma_rad(passer, [contact]), pass_error_sigma_rad(passer, []) * 1.75)
 
 
-def test_lane_opponent_cuts_instead_of_adding_difficulty_and_marking_adds_validated_points() -> None:
-    """Ticket v2-realisme/18g : l'adversaire du couloir n'ajoute plus de difficulté d'exécution ; il compte dans la chance
-    évaluée par sa chance de couper la passe (table mesurée : sur le trajet, de 1 à 2 m de la trajectoire, 0,25 depuis le
-    ticket 18j)."""
+def test_lane_opponent_and_marker_cut_physically_without_widening_the_error() -> None:
+    """Tickets v2-realisme/18g et 23a (réserve A2) : l'adversaire du couloir et le marqueur du receveur n'élargissent pas
+    l'écart de la passe ; l'adversaire du couloir compte dans la chance évaluée par sa chance de couper la passe (table
+    mesurée : sur le trajet, de 1 à 2 m de la trajectoire, 0,25 au ticket 18j, 0,32 depuis le 23a)."""
     passer = _player()
-    receiver = _player("R", position=Vec2(45.0, 34.0))  # 15 m : difficulté 19
+    receiver = _player("R", position=Vec2(45.0, 34.0))  # 15 m
     in_lane = _player("A", team="away", position=Vec2(37.0, 35.5))  # sur le trajet, à 1,5 m de la ligne, sans pression
-    assert math.isclose(pass_difficulty(passer, receiver, [in_lane]), 19.0)
+    assert math.isclose(pass_accuracy_probability(passer, receiver, [in_lane]), pass_accuracy_probability(passer, receiver, []))
     assert math.isclose(pass_success_probability(passer, receiver, [in_lane]),
-                        pass_success_probability(passer, receiver, []) * (1.0 - 0.25))
+                        pass_success_probability(passer, receiver, []) * (1.0 - 0.32))
     receiver = _player("R", position=Vec2(38.0, 34.0))
     marker = _player("M", team="away", position=Vec2(39.0, 34.5))  # marque le receveur, hors couloir
-    assert math.isclose(pass_difficulty(passer, receiver, [marker]), 10.0 + 10.0)
+    assert math.isclose(pass_accuracy_probability(passer, receiver, [marker]), pass_accuracy_probability(passer, receiver, []))
 
 
 def test_presser_cuts_the_pass_only_when_he_stands_on_its_line() -> None:
     """Ticket v2-realisme/18g (table mesurée, près du passeur) : le presseur gêne l'exécution par la pression, où qu'il
-    soit ; il ne coupe la passe que s'il est sur sa ligne (0,82 à moins de 0,5 m, 0,21 de 0,5 à 1 m, 0,02 au-delà ; valeurs du ticket 18j)."""
+    soit ; il ne coupe la passe que s'il est sur sa ligne (0,81 à moins de 0,5 m, 0,20 de 0,5 à 1 m, 0,023 au-delà ; valeurs
+    du ticket 23a)."""
     passer = _player()
-    receiver = _player("R", position=Vec2(45.0, 34.0))  # 15 m : difficulté 19
+    receiver = _player("R", position=Vec2(45.0, 34.0))  # 15 m
     beside = _player("B", team="away", position=Vec2(30.75, 35.3))  # à 1,5 m du passeur, à 1,3 m de la ligne
     in_front = _player("F", team="away", position=Vec2(31.3, 34.75))  # à 1,5 m du passeur, à 0,75 m de la ligne
     on_line = _player("L", team="away", position=Vec2(31.5, 34.2))  # à 1,5 m du passeur, à 0,2 m de la ligne
-    for presser in (beside, in_front, on_line):  # même pression : même difficulté d'exécution
-        assert math.isclose(pass_difficulty(passer, receiver, [presser]), pass_difficulty(passer, receiver, [on_line]),
-                            abs_tol=0.5)
+    for presser in (beside, in_front, on_line):  # même pression : même écart d'exécution
+        assert math.isclose(pass_error_sigma_rad(passer, [presser]), pass_error_sigma_rad(passer, [on_line]), rel_tol=0.05)
+        assert pass_error_sigma_rad(passer, [presser]) > pass_error_sigma_rad(passer, [])
     chances = {name: pass_success_probability(passer, receiver, [p]) for name, p in
                (("beside", beside), ("in_front", in_front), ("on_line", on_line))}
     assert chances["beside"] > chances["in_front"] > chances["on_line"]
@@ -80,12 +87,13 @@ def test_composure_halves_pressure_at_99_and_keeps_it_at_11() -> None:
 def test_easy_pass_succeeds_for_everyone_and_hard_pass_separates_notes() -> None:
     receiver_near = _player("R", position=Vec2(38.0, 34.0))
     receiver_far = _player("R", position=Vec2(65.0, 34.0))  # 35 m : difficulté 55
-    # Avec les constantes validées, « au moins 90 % » vaut à partir de 50 en Passing (40 points d'avance sur la
-    # difficulté 10) ; en dessous, un joueur faible rate aussi des passes faciles (guide : « ballons ratés à 10 m »).
-    # Précision de l'exécution (ticket v2-realisme/18g : la chance évaluée y ajoute coupe, contrôle et passe rattrapée).
+    # Précision de l'exécution (ticket v2-realisme/23a : écart latéral sous 1 m à l'arrivée, loi d'écart gaussienne ; la
+    # chance évaluée y ajoute coupe et passe rattrapée) : au moins 90 % à 8 m à partir de 50 en Passing ; un joueur
+    # faible rate aussi des passes faciles (guide : « ballons ratés à 10 m »).
     for note in (50, 55, 90, 99):
         assert pass_accuracy_probability(_player(attributes={"Passing": note}), receiver_near, []) >= 0.90
-    assert math.isclose(pass_accuracy_probability(_player(attributes={"Passing": 55}), receiver_far, []), 0.5)
+    assert pass_accuracy_probability(_player(attributes={"Passing": 11}), receiver_near, []) < 0.80
+    assert math.isclose(pass_accuracy_probability(_player(attributes={"Passing": 55}), receiver_far, []), 0.415, abs_tol=0.01)
     gap = (pass_accuracy_probability(_player(attributes={"Passing": 90}), receiver_far, [])
            - pass_accuracy_probability(_player(attributes={"Passing": 30}), receiver_far, []))
     assert gap >= 0.25
@@ -105,8 +113,7 @@ def _arrival_speed(launch: float, distance: float) -> float:
 
 
 def test_well_dosed_pass_arrives_at_ideal_speed_and_in_the_run(monkeypatch) -> None:
-    monkeypatch.setattr("v2engine.flux.PASSE.random", lambda: 0.0)  # passe réussie
-    monkeypatch.setattr("v2engine.flux.PASSE.uniform", lambda a, b: 0.0)  # pas d'erreur de dosage
+    monkeypatch.setattr("v2engine.flux.PASSE.gauss", lambda mu, sigma: 0.0)  # ni écart d'angle, ni erreur de vitesse
     passer = _player(attributes={"Passing": 99})
     runner = _player("R", position=Vec2(55.0, 34.0), velocity=Vec2(0.0, 5.0))
     aim = pass_aim(passer, runner)
@@ -115,36 +122,129 @@ def test_well_dosed_pass_arrives_at_ideal_speed_and_in_the_run(monkeypatch) -> N
     assert math.isclose(_arrival_speed(v.length(), passer.position.distance_to(aim)), IDEAL_ARRIVAL_MPS, abs_tol=1e-9)
 
 
-def test_pass_speed_is_capped_at_30_mps(monkeypatch) -> None:
-    monkeypatch.setattr("v2engine.flux.PASSE.random", lambda: 0.0)
+def test_pass_speed_is_capped_at_30_mps_and_never_negative(monkeypatch) -> None:
+    monkeypatch.setattr("v2engine.flux.PASSE.gauss", lambda mu, sigma: 10.0)  # erreur de vitesse extrême
     passer = _player(attributes={"Passing": 99})
     far = _player("R", position=Vec2(95.0, 34.0))  # 65 m
     assert pass_velocity(passer, far).length() <= MAX_PASS_MPS + 1e-9
+    monkeypatch.setattr("v2engine.flux.PASSE.gauss", lambda mu, sigma: -10.0)
+    assert pass_velocity(_player(attributes={"Passing": 11}), far).length() >= 0.0
 
 
 def test_poor_dosage_spreads_the_arrival_speed(monkeypatch) -> None:
-    monkeypatch.setattr("v2engine.flux.PASSE.random", lambda: 0.0)
+    """Ticket v2-realisme/23a : écart-type de la vitesse de départ = erreur uniforme d'avant (+/- 30 % à 11, +/- 5 % à 99)
+    divisée par racine de 3."""
     receiver = _player("R", position=Vec2(50.0, 34.0))
-    for note, error in ((11, 0.30), (99, 0.05)):
-        monkeypatch.setattr("v2engine.flux.PASSE.uniform", lambda a, b: b)  # erreur maximale
+    for note, error in ((11, 0.30 / math.sqrt(3.0)), (99, 0.05 / math.sqrt(3.0))):
+        assert math.isclose(pass_speed_sigma(_player(attributes={"Passing": note})), error)
+        draws = iter([0.0, 1.0])  # angle nul, puis un écart-type de vitesse
+        monkeypatch.setattr("v2engine.flux.PASSE.gauss", lambda mu, sigma: next(draws) * sigma)
         launch = pass_velocity(_player(attributes={"Passing": note}), receiver).length()
         ideal = IDEAL_ARRIVAL_MPS - 20.0 * math.log(BALL_FRICTION_PER_S)
         assert math.isclose(launch, ideal * (1.0 + error))
 
 
-def test_missed_pass_deviates_by_25_to_50_percent_of_its_length(monkeypatch) -> None:
-    # ticket v2-realisme/18h : 25 à 50 % (10 à 25 % auparavant)
-    monkeypatch.setattr("v2engine.flux.PASSE.random", lambda: 0.999)  # passe ratée
-    passer = _player(attributes={"Passing": 60})
-    receiver = _player("R", position=Vec2(70.0, 34.0))  # 40 m
-    random.seed(3)
-    deviations = []
-    real_uniform = random.Random(5).uniform
-    monkeypatch.setattr("v2engine.flux.PASSE.uniform", real_uniform)
-    for _ in range(300):
-        deviations.append(pass_aim(passer, receiver).distance_to(receiver.position) / 40.0)
-    assert min(deviations) >= 0.25 - 1e-9 and max(deviations) <= 0.50 + 1e-9
-    assert max(deviations) - min(deviations) > 0.15  # la déviation varie bien dans la fourchette
+def _lateral_errors(passer, receiver, opponents=(), draws: int = 5000) -> list[float]:
+    """Écart latéral (m) du ballon à la distance du receveur, par rapport à la passe idéale, sur `draws` tirages."""
+    random.seed(20260923)
+    from v2engine.flux import PASSE
+    PASSE.seed(20260923)
+    ideal = pass_aim(passer, receiver) - passer.position
+    length = passer.position.distance_to(receiver.position)
+    errors = []
+    for _ in range(draws):
+        v = pass_velocity(passer, receiver, list(opponents))
+        angle = math.atan2(ideal.x * v.y - ideal.y * v.x, ideal.x * v.x + ideal.y * v.y)
+        errors.append(length * abs(math.tan(angle)))
+    return errors
+
+
+def test_lateral_error_grows_when_passing_drops_and_with_difficulty() -> None:
+    """Ticket v2-realisme/23a (scène, 5 000 tirages) : passe de 10 et de 35 m, Passing 11 / 55 / 99, avec et sans
+    pression : écart moyen au point idéal croissant quand la note baisse, avec la longueur et sous la pression ; continu
+    (pas deux valeurs)."""
+    passer_at = Vec2(30.0, 34.0)
+    presser = _player("O", team="away", position=Vec2(30.8, 34.0))
+    for length in (10.0, 35.0):
+        receiver = _player("R", position=Vec2(30.0 + length, 34.0))
+        means = []
+        for note in (11, 55, 99):
+            passer = _player(position=passer_at, attributes={"Passing": note})
+            errors = _lateral_errors(passer, receiver)
+            pressed = _lateral_errors(passer, receiver, [presser])
+            assert sum(pressed) > sum(errors)
+            assert len({round(e, 6) for e in errors}) > 4000  # continu
+            means.append(sum(errors) / len(errors))
+        assert means[0] > means[1] > means[2]
+        if length == 35.0:
+            assert means[1] > 2.5 * short_mean_55
+        else:
+            short_mean_55 = means[1]
+
+
+def test_the_imprecise_share_follows_the_accuracy_chance_lane_or_not() -> None:
+    """Tickets v2-realisme/18g et 23a : la part de passes dont l'écart latéral à l'arrivée dépasse `ON_TARGET_M` suit la
+    chance de précision (même loi qu'à l'évaluation) ; avec ou sans adversaire dans la ligne, l'écart est le même
+    (réserve A2), seule la réussite évaluée baisse."""
+    passer = _player(attributes={"Passing": 40})
+    receiver = _player("R", position=Vec2(60.0, 34.0))  # 30 m
+    in_lane = [_player("A", team="away", position=Vec2(45.0, 35.0))]
+    shares = []
+    for opponents in ([], in_lane):
+        errors = _lateral_errors(passer, receiver, opponents)
+        share = sum(e > ON_TARGET_M for e in errors) / len(errors)
+        assert abs(share - (1.0 - pass_accuracy_probability(passer, receiver, opponents))) < 0.02
+        shares.append((share, sum(errors) / len(errors)))
+    assert shares[0] == shares[1]
+    assert pass_success_probability(passer, receiver, in_lane) < pass_success_probability(passer, receiver, [])
+
+
+def test_static_receiver_has_no_dosage_gap_and_keeps_the_angle_law() -> None:
+    """Ticket v2-realisme/23a (piste b de la clôture) : receveur arrêté, aucun écart de dosage ; la chance de précision est
+    celle de la seule loi d'angle (écart latéral sous `ON_TARGET_M` à la distance du receveur)."""
+    passer = _player(attributes={"Passing": 40})
+    receiver = _player("R", position=Vec2(55.0, 34.0))  # 25 m
+    assert dosage_gap(passer, receiver) == (0.0, 0.0)
+    sigma = pass_error_sigma_rad(passer, [])
+    assert math.isclose(pass_accuracy_probability(passer, receiver, []),
+                        math.erf(math.atan(ON_TARGET_M / 25.0) / (sigma * math.sqrt(2.0))))
+
+
+def test_the_part_of_the_run_left_out_by_the_dosage_lowers_a_poor_passer_s_chance_only() -> None:
+    """Ticket v2-realisme/23a (piste b) : un passeur faible joue dans les pieds d'un receveur lancé ; la part de la course
+    que le dosage ne joue pas éloigne le ballon du receveur et compte dans la chance évaluée. Passing 99 (dosage parfait) :
+    aucun écart, chance à peine changée (la passe dans la course est un peu plus longue) ; Passing 30 : la chance baisse
+    nettement."""
+    still = _player("R", position=Vec2(55.0, 34.0))
+    running = _player("R", position=Vec2(55.0, 34.0), velocity=Vec2(0.0, 5.0))  # 5 m/s en travers, à 25 m
+    strong, poor = _player(attributes={"Passing": 99}), _player(attributes={"Passing": 30})
+    assert dosage_gap(strong, running) == (0.0, 0.0)
+    assert math.isclose(pass_success_probability(strong, running, []), pass_success_probability(strong, still, []),
+                        abs_tol=0.01)
+    along, across = dosage_gap(poor, running)
+    assert across > 8.0 and abs(along) < 1.0  # environ 10 m en travers : presque toute la course manquée
+    assert pass_success_probability(poor, running, []) < pass_success_probability(poor, still, []) - 0.15
+    assert pass_accuracy_probability(poor, running, []) < pass_accuracy_probability(poor, still, [])
+
+
+def test_arrival_distance_to_the_running_receiver_follows_the_accuracy_chance() -> None:
+    """Ticket v2-realisme/23a (piste b, une seule loi) : on tire la passe (5 000 tirages) et on mesure où passe le ballon par
+    rapport à la position future du receveur (sa position plus sa course pendant le vol) ; la part sous `ON_TARGET_M`
+    suit la chance de précision évaluée, à 2 points près, pour un receveur qui court en travers ou vers le passeur."""
+    from v2engine.flux import PASSE
+    for note, velocity in ((55, Vec2(0.0, 0.4)), (70, Vec2(0.0, 1.0)), (80, Vec2(-1.0, 0.0))):
+        passer = _player(attributes={"Passing": note})
+        receiver = _player("R", position=Vec2(50.0, 34.0), velocity=velocity)  # 20 m
+        aim = pass_aim(passer, receiver)
+        lead = (aim - receiver.position) * (1.0 / dosage_quality(passer))  # course entière pendant le vol
+        future = receiver.position + lead
+        reach = passer.position.distance_to(aim)  # le ballon arrive à hauteur du point visé, le long du cap tiré
+        PASSE.seed(20260923)
+        close = 0
+        for _ in range(5000):
+            arrival = passer.position + pass_velocity(passer, receiver).normalized() * reach
+            close += future.distance_to(arrival) < ON_TARGET_M
+        assert abs(close / 5000 - pass_accuracy_probability(passer, receiver, [])) < 0.02
 
 
 def test_easy_ball_is_easy_to_control_and_fast_ball_is_harder() -> None:
@@ -155,31 +255,23 @@ def test_easy_ball_is_easy_to_control_and_fast_ball_is_harder() -> None:
 
 def test_evaluated_chance_combines_the_measured_cut_table_and_the_missed_pass() -> None:
     """Ticket v2-realisme/18g : chance que la passe ne soit pas perdue = produit des (1 - coupe) de chaque adversaire x
-    [précise x (1 - 0,01) + imprécise x part non perdue selon la longueur (0,69 au-delà de 10 m)] (valeurs du ticket 18j). Ne coupent pas : un
-    adversaire derrière le passeur, au-delà du receveur, ou à 6 m ou plus de la ligne."""
+    part non perdue par bande d'écart latéral à l'arrivée, tirée de la loi d'écart (ticket 23a, réajusté à la clôture le
+    20/11/2026 : 0,99 sous 1 m, 0,98 de 1 à 4 m, 0,70 au-delà). Ne coupent pas : un adversaire derrière le
+    passeur, au-delà du receveur, ou à 6 m ou plus de la ligne."""
     passer = _player()
-    receiver = _player("R", position=Vec2(45.0, 34.0))  # 15 m
-    accurate = pass_accuracy_probability(passer, receiver, [])
+    receiver = _player("R", position=Vec2(45.0, 34.0))  # 15 m, à l'arrêt : aucun écart de dosage
+
+    def bands(opponents):
+        scale = pass_error_sigma_rad(passer, opponents) * math.sqrt(2.0)
+        w1, w2, w4 = (math.erf(math.atan(limit / 15.0) / scale) for limit in (1.0, 2.0, 4.0))
+        return w1 * 0.99 + (w4 - w1) * 0.98 + (1.0 - w4) * 0.70
+
     alone = pass_success_probability(passer, receiver, [])
-    assert math.isclose(alone, accurate * 0.99 + (1.0 - accurate) * 0.69)
-    near = _player("N", team="away", position=Vec2(31.5, 34.2))  # près du passeur, à 0,2 m de la ligne : 0,82
-    path = _player("W", team="away", position=Vec2(38.0, 35.5))  # sur le trajet, à 1,5 m : 0,25
+    assert math.isclose(alone, bands([]))
+    near = _player("N", team="away", position=Vec2(31.5, 34.2))  # près du passeur, à 0,2 m de la ligne : 0,81
+    path = _player("W", team="away", position=Vec2(38.0, 35.5))  # sur le trajet, à 1,5 m : 0,32
     for silent in (Vec2(24.0, 34.0), Vec2(48.0, 34.0), Vec2(38.0, 40.5)):  # derrière, au-delà, à 6,5 m (hors pression)
         assert math.isclose(pass_success_probability(passer, receiver, [_player("S", team="away", position=silent)]),
                             alone)
-    both = pass_success_probability(passer, receiver, [near, path])
-    accurate_both = pass_accuracy_probability(passer, receiver, [near, path])  # la pression de N gêne l'exécution
-    assert math.isclose(both, (1 - 0.82) * (1 - 0.25) * (accurate_both * 0.99 + (1.0 - accurate_both) * 0.69))
-
-
-def test_the_missed_pass_draw_follows_the_accuracy_chance_lane_or_not() -> None:
-    """Ticket v2-realisme/18g : la résolution tire la passe imprécise avec la chance de précision (même fonction qu'à
-    l'évaluation) ; l'adversaire du couloir ne la rend plus imprécise, il la coupe physiquement."""
-    passer = _player(attributes={"Passing": 40})
-    receiver = _player("R", position=Vec2(60.0, 34.0))  # 30 m
-    in_lane = [_player("A", team="away", position=Vec2(45.0, 35.0))]
-    for opponents in ([], in_lane):
-        random.seed(20260923)
-        accurate = pass_accuracy_probability(passer, receiver, opponents)
-        misses = sum(pass_aim(passer, receiver, opponents).distance_to(receiver.position) > 1e-9 for _ in range(4000))
-        assert abs(misses / 4000 - (1.0 - accurate)) < 0.025
+    both = pass_success_probability(passer, receiver, [near, path])  # la pression de N élargit l'écart du passeur
+    assert math.isclose(both, (1 - 0.81) * (1 - 0.32) * bands([near, path]))

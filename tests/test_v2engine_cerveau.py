@@ -166,10 +166,10 @@ def test_perception_alone_decides_whether_the_best_option_is_taken(monkeypatch) 
 
 def test_execution_alone_decides_the_quality_of_the_pass(monkeypatch) -> None:
     passer, target = _p("P", x=40, attributes={"Passing": 60}), _p("T", x=60)
-    monkeypatch.setattr("v2engine.flux.PASSE.random", lambda: 0.0)  # passe précise
-    monkeypatch.setattr("v2engine.flux.PASSE.uniform", lambda a, b: a)
+    # ticket v2-realisme/23a : premier tirage, l'angle (nul) ; second, l'erreur de vitesse (un écart-type de chaque côté)
+    draws = iter([0.0, -1.0, 0.0, 1.0])
+    monkeypatch.setattr("v2engine.flux.PASSE.gauss", lambda mu, sigma: next(draws) * sigma)
     slow = pass_velocity(passer, target, [])
-    monkeypatch.setattr("v2engine.flux.PASSE.uniform", lambda a, b: b)
     fast = pass_velocity(passer, target, [])
     assert fast.length() > slow.length()  # même intention, même choix : seul le dosage (exécution) change
 

@@ -16,7 +16,8 @@ from v2engine.decision import (_ONE_TOUCH_IDEA_POINTS, ONE_TOUCH_PRESSURE_GAIN, 
 from v2engine.flux import seed_streams
 from v2engine.geometry import Vec2
 from v2engine.match import _step_ball, simulate_match
-from v2engine.possession import one_touch_precision, pass_accuracy_probability, pass_success_probability
+from v2engine.possession import (one_touch_precision, pass_accuracy_probability, pass_error_sigma_rad,
+                                 pass_success_probability)
 from tests.scenes import player
 
 GOAL = Vec2(105.0, 34.0)
@@ -49,7 +50,9 @@ def test_one_touch_precision_follows_technique_and_pressure_still_hurts() -> Non
     passer, mate = _skilled("P", 55, x=50.0, y=34.0), player("M", x=62.0, y=34.0)
     controlled = pass_accuracy_probability(passer, mate, [])
     first = pass_accuracy_probability(passer, mate, [], one_touch=True)
-    assert first == pytest.approx(controlled * 0.93)
+    # ticket v2-realisme/23a : l'écart de la passe est divisé par la précision du geste (0,93 à Technique 55)
+    assert pass_error_sigma_rad(passer, [], one_touch=True) == pytest.approx(pass_error_sigma_rad(passer, []) / 0.93)
+    assert first < controlled
     pressed = pass_accuracy_probability(passer, mate, [player("O", team="away", x=50.5, y=34.0)], one_touch=True)
     assert pressed < first
     assert pass_success_probability(passer, mate, [], one_touch=True) < pass_success_probability(passer, mate, [])

@@ -160,8 +160,10 @@ def _scene(minute: float, stamina: int, energy: float = 1.0) -> Scene:
                # B en appui latéral (ticket v2-realisme/18g) : à (45 ; 20), libre devant A, sa passe vaut désormais mieux que
                # la conduite (coupe en vol comptée, passe non perdue 0,93) et A ne conduit plus les 2 s mesurées ; à
                # (30 ; 14), même chose depuis la table du ticket 18i (coupe imprévue 0,01) : B à 26 m, (30 ; 8) ; courbe en S du
-               # ticket v2-realisme/24 (Dribbling 60 sous la médiane 62, conduite un peu moins sûre) : B à 30 m, (30 ; 4)
-               player("B", x=30.0, y=4.0), player("G", "away", x=104.0, y=34.0, poste="GK")]
+               # ticket v2-realisme/24 (Dribbling 60 sous la médiane 62, conduite un peu moins sûre) : B à 30 m, (30 ; 4) ;
+               # erreur continue de la passe (ticket v2-realisme/23a : une passe imprécise de 1 à 4 m reste chez son équipe
+               # 98 fois sur 100, hors coupe) : même à (30 ; 1), A passe ; B en retrait, à (15 ; 4)
+               player("B", x=15.0, y=4.0), player("G", "away", x=104.0, y=34.0, poste="GK")]
     return Scene.full(players, holder="A", start_s=minute * 60.0)
 
 

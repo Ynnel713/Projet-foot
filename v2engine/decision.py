@@ -78,7 +78,7 @@ DRIBBLE_REFERENCE_S = 1.5
 PASS_FREE_CONE_DEG = 90.0
 SHOT_FREE_CONE_DEG = 60.0
 # Talonnade (même ticket) : vers un coéquipier dans le dos (hors du cône de la passe) à `BACKHEEL_MAX_M` au plus, la
-# passe part sans rotation, plus difficile (`possession.BACKHEEL_DIFFICULTY`, Technique). Flair règle la chance qu'il
+# passe part sans rotation, plus imprécise (`possession.BACKHEEL_SIGMA_FACTOR`, Technique). Flair règle la chance qu'il
 # y pense à cette décision (docs/CARTE_ATTRIBUTS_V2.md : tendance à tenter l'inattendu) ; la valeur de l'option tranche
 # ensuite. Courbe commune : baseline, amplitude, min, max (99 -> 0,12, 55 -> 0,06, 11 -> 0,005). Fréquence visée : 1 à 4
 # talonnades par match (ordre de grandeur, borne haute StatsBomb : 5,2 passes « Other » par match) ; premier essai à
@@ -88,7 +88,7 @@ _BACKHEEL_IDEA = (0.06, 0.06, 0.005, 0.2)
 # réception d'une passe au sol qui lui est destinée, le receveur pense à jouer de première selon la moyenne de First
 # Touch et Technique (linéaire ; proposé à 11 -> 8 %, 55 -> 22 %, 99 -> 40 %, niveau calé ensuite comme validé, x 1,75 :
 # 5,2 % puis 9,1 % des passes décidées sur 6 matchs), et plus souvent sous pression (x 1,5 au contact :
-# faute de temps pour contrôler ; la précision baisse, elle, par `possession.pass_difficulty`). Il décide alors tout de
+# faute de temps pour contrôler ; la précision baisse, elle, par `possession.pass_error_sigma_rad`). Il décide alors tout de
 # suite (Decisions, `choose_action`) ; si son choix est une passe sans rotation (07e), elle part de première, sinon il
 # contrôle comme avant. Réel : 7,4 à 9,3 % des passes au pied du jeu courant partent au moment de la réception (calcul
 # du 13/11/2026 sur les données ouvertes StatsBomb, 45 matchs : Ligue 1 et Premier League 2015-16, Bundesliga 2023-24 ;

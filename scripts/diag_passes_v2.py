@@ -1,5 +1,5 @@
 """Diagnostic des passes et des interceptions, comparé au réel (ticket v2-realisme/28). Lecture seule : le moteur n'est
-pas modifié, les crochets ne consomment aucun tirage (l'état du flux `PASSE` est copié, jamais avancé).
+pas modifié, les crochets ne consomment aucun tirage.
 
 Pour chaque match (graines du banc, `scripts/measure_v2.run`) :
 1. passes réussies (le premier joueur qui prend le ballon après la passe est de l'équipe du passeur ; ballon mort ou
@@ -9,8 +9,9 @@ Pour chaque match (graines du banc, `scripts/measure_v2.run`) :
    segment parcouru par le ballon pendant un pas et la position du joueur à la fin du pas), sans qu'il soit le premier
    à le prendre ; lecteur de la passe ou non (`ball.readers`) ; « en situation de jouer le ballon » s'il atteint, depuis
    sa position au départ de la passe, le point le plus proche de la trajectoire avant le ballon (`arrival_time_s`) ;
-4. passes ratées au tirage (`possession.pass_aim`) que le receveur visé prend quand même, puis que son équipe garde
-   3 s (`KEEP_S`) ;
+4. passes imprécises (écart latéral à l'arrivée au-delà de `possession.ON_TARGET_M`, `LOFTED_ON_TARGET_M` en l'air ;
+   « ratées au tirage » jusqu'au ticket v2-realisme/23a) que le receveur visé prend quand même, puis que son équipe
+   garde 3 s (`KEEP_S`) ;
 5. écart moteur / écran sur les passes frôlées : distance minimale du ballon au joueur telle qu'affichée (piste du
    ballon et joueurs à 2 images par seconde, courbe de Catmull-Rom centripète de `ui/src/utils/v2Spline.js`, recopiée
    ici) contre la distance du moteur ; écart significatif au-delà de `DISPLAY_GAP_M`.
@@ -44,7 +45,6 @@ import v2engine.match as match
 import v2engine.possession as possession
 from v2engine.condition import effective_rating
 from v2engine.defense import arrival_time_s
-from v2engine.flux import PASSE
 from v2engine.geometry import Vec2
 from v2engine.restart import AERIEN
 from v2engine.trace import PERTE
@@ -167,25 +167,24 @@ def play(k: int, minutes: float = 90.0, keep_trace: bool = False) -> dict:
     random.seed(AUDIT_SEED + k)
     home, away = clubs[(2 * k) % len(clubs)], clubs[(2 * k + 1) % len(clubs)]
     count: Counter = Counter()
-    pending: list = []  # passes lancées, en attente de leur premier pas
     state = {"pass": None, "restart": False, "k": -1, "prev_ball": None}
     passes: list[dict] = []
     keep_checks: list[dict] = []  # passes ratées récupérées : l'équipe garde-t-elle 3 s ?
     holders: list[tuple[int, str | None, str | None]] = []  # (pas, porteur, équipe)
 
-    real_aim, real_velocity, real_restart = possession.pass_aim, match.pass_velocity, match._play_restart
+    real_velocity, real_restart = match.pass_velocity, match._play_restart
 
-    def pass_aim(passer, target, opponents=(), backheel=False, one_touch=False, lofted=False):
-        probe = random.Random()
-        probe.setstate(PASSE.getstate())  # même premier tirage que `pass_aim`, sans avancer le flux du match
-        missed = probe.random() >= possession.pass_accuracy_probability(passer, target, opponents, backheel, one_touch,
-                                                                         lofted)
-        pending.append({"missed": missed})
-        return real_aim(passer, target, opponents, backheel, one_touch, lofted)
-
-    def pass_velocity(passer, target, opponents=(), *args, **kwargs):
-        velocity = real_velocity(passer, target, opponents, *args, **kwargs)
-        info = pending.pop() if pending else {"missed": False}
+    def pass_velocity(passer, target, opponents=(), backheel=False, one_touch=False, lofted=False):
+        velocity = real_velocity(passer, target, opponents, backheel, one_touch, lofted)
+        # passe imprécise (ticket v2-realisme/23a) : écart latéral, à la distance du receveur, entre le ballon parti et la
+        # passe idéale, au-delà de la tolérance de la chance évaluée ; lu sur la vitesse, sans tirage
+        ideal = possession.pass_aim(passer, target) - passer.position
+        tolerance = possession.LOFTED_ON_TARGET_M if lofted else possession.ON_TARGET_M
+        dot = ideal.x * velocity.x + ideal.y * velocity.y
+        cross = ideal.x * velocity.y - ideal.y * velocity.x
+        lateral = (passer.position.distance_to(target.position) * abs(math.tan(math.atan2(cross, dot)))
+                   if dot > 0.0 else math.inf)
+        info = {"missed": lateral > tolerance}
         info.update(passer=passer.name, team=passer.team, target=target.name, restart=state["restart"],
                     start=[replace(o) for o in opponents if o.poste != "GK"], opened=None)
         state["new"] = info
@@ -263,12 +262,12 @@ def play(k: int, minutes: float = 90.0, keep_trace: bool = False) -> dict:
             state["pass"] = new
         state["prev_ball"] = ball.position
 
-    possession.pass_aim, match.pass_velocity, match._play_restart = pass_aim, pass_velocity, play_restart
+    match.pass_velocity, match._play_restart = pass_velocity, play_restart
     try:
         trace = match.simulate_match(home, away, duration_minutes=minutes, tick_seconds=TICK_S, record_every=RECORD_EVERY,
                                      observer=observer)
     finally:
-        possession.pass_aim, match.pass_velocity, match._play_restart = real_aim, real_velocity, real_restart
+        match.pass_velocity, match._play_restart = real_velocity, real_restart
     if state["pass"] is not None:
         close(state["pass"], None, None, state["k"], state["prev_ball"])
     if len(trace.ball_track) != state["k"] + 1 or len(trace.ticks) != state["k"] // RECORD_EVERY + 1:
@@ -293,7 +292,7 @@ def play(k: int, minutes: float = 90.0, keep_trace: bool = False) -> dict:
             count[f"passes prises par l'adversaire ({kind})"] += 1
         if ps["restart"]:
             continue
-        # passes ratées au tirage
+        # passes imprécises (« ratées au tirage » avant le ticket 23a ; mêmes clés, pour comparer les séries)
         if ps["missed"]:
             count["passes ratées au tirage"] += 1
             count["ratées : receveur visé prend le ballon"] += ps["taker"] == ps["target"]

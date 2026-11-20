@@ -44,7 +44,9 @@ def test_lateral_pass_that_opens_a_next_pass_is_chosen_far_more_often() -> None:
     # et les conduites valent ici presque la passe vers A (2 % d'écart) ; avant : A >= 65 %, B à 0. La suite garde son
     # effet, lisible à Decisions 99 : A, qui l'ouvre, bien plus souvent que B, symétrique sans elle (mesuré le
     # 04/11/2026 : A 25 %, B 6 % ; à Decisions 55, A 16 %, B 13 %, l'erreur calée sur la courbe validée l'estompe).
-    assert to["A"] >= to["B"] + 0.15 and to["A"] >= 3 * to["B"]
+    # Ticket v2-realisme/23a (erreur d'exécution continue, chance de passe sur la loi d'écart) : A 36 %, B 13 % ; le
+    # rapport passe de plus de 3 à 2,75 (la passe courte vers A ou B perd un peu de sa précision évaluée)
+    assert to["A"] >= to["B"] + 0.15 and to["A"] >= 2.5 * to["B"]
 
 
 def test_without_a_better_next_pass_the_value_is_the_one_before_the_ticket(monkeypatch) -> None:

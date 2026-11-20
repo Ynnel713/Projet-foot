@@ -106,7 +106,10 @@ def test_no_change_without_pressing_or_when_the_receiver_is_already_behind(monke
 
 
 def _share_to_b(note: int, pressed: bool, draws: int = 1000) -> float:
-    holder, players = _scene(note)
+    # B à 14 m du but (16 m avant le ticket v2-realisme/23a) : la chance de la passe vers B, recalée sur l'erreur
+    # continue, passe de 0,952 à 0,940 ; le risque de perte devant son but (+ 25 %) la mettait juste sous la conduite
+    # à Decisions 99, et la scène ne mesurait plus la lecture. Rapprochée de 2 m, la passe redevient une option disputée.
+    holder, players = _scene(note, b_x=14.0)
     random.seed(20261117)
     return sum(getattr(choose_action(holder, players, GOAL, None, build_up=True, pressed=pressed).target, "name", None)
                == "B" for _ in range(draws)) / draws
@@ -117,5 +120,6 @@ def test_a_good_reader_finds_the_third_man_more_often_than_a_poor_one() -> None:
     # une lecture à 99 (80 % de chance de lire), faible à 11 (15 %), probabiliste dans les deux cas
     gain_99 = _share_to_b(99, True) - _share_to_b(99, False)
     gain_11 = _share_to_b(11, True) - _share_to_b(11, False)
-    assert gain_99 > 0.08
+    # ticket v2-realisme/23a : gain mesuré 0,077 à 99, 0,002 à 11 (0,13 et 0,005 avant, B à 16 m)
+    assert gain_99 > 0.05
     assert gain_99 > gain_11 + 0.05
