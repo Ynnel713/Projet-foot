@@ -1749,3 +1749,23 @@ Sous 0,41 m (il aurait dû toucher) : 1,1 / 0,1 / 3,4 par match (départ / traje
 Lecture : le temps de réaction neutralise le presseur au départ (frôlé à 0 s en médiane) ; entre 0,20 et 0,30 s, le trajet ne varie que de 21 à 19 passes par match (cap < 90°) ; l'orientation retire environ 9 % des passes ; la portée pèse le plus (0,8 → 1 m : + 47 %). Une règle physique unique touche plus l'arrivée (marqueur du receveur, déjà au contact, 30 par match) que le trajet (20) : c'est le choix principal du 29b. Sur le trajet, plus le défenseur est près, plus il est de travers (angle médian 52° à 0,41-0,6 m contre 35° à 0,8-1 m).
 
 **Proposition pour le 29b** : portée 0,8 m, réaction 0,25 s, cap à moins de 90° du ballon, sur toute la passe au sol (une seule loi physique) ; au moins 49 passes par match deviennent touchables (20 sur le trajet, 30 à l'arrivée). Cibles proposées, à mesurer sur 100 matchs appariés : passes au sol frôlées sur le trajet à moins de 1 m par un non-lecteur, 36 → 25 au plus (une partie des passes touchées est contrôlée, une autre seulement déviée ou reprise par un autre défenseur frôlé) ; réussite des passes dans le jeu au-dessus de 80 %.
+
+## 57. Interception par le défenseur non lecteur (ticket v2-realisme/29b, 100 matchs appariés, 20/11/2026)
+
+Commande : `uv run python -m scripts.diag_passes_v2 10 --debut D --processus 2 --json lot.json` pour D = 0, 10, …, 90, sur l'arbre d'avant (`fd26c44` plus le script du ticket) et sur l'arbre du ticket ; lots fusionnés, écart apparié match par match, IC à 95 %. Règle : sur une passe au sol, l'adversaire de champ non lecteur touche le ballon à 0,8 m (au lieu de 0,41 m) s'il l'a vue partir depuis 0,25 s et lui fait face (cap à moins de 90°).
+
+| Par match | Avant | Après | Écart |
+|---|---|---|---|
+| passes au sol frôlées à moins de 1 m sur le trajet (non lecteur, sans contact) | 35,8 | 17,0 | − 18,8 ± 1,4 |
+| … à l'arrivée (marqueur du receveur) | 41,4 | 30,8 | − 10,7 ± 1,8 |
+| … au départ (presseur) | 335,5 | 343,7 | + 8,2 ± 5,4 |
+| passes dans le jeu | 1 228,5 | 1 259,8 | + 31 ± 13 |
+| passes réussies (jeu) | 84,07 % | 81,40 % | − 2,67 ± 0,26 point |
+| passes prises par l'adversaire | 183,6 | 223,4 | + 39,8 ± 3,8 |
+| pertes au journal (dont passe interceptée) | 218,8 (170,5) | 261,6 (213,5) | + 42,8 ± 4,2 |
+| pertes au contrôle | 18,7 | 17,7 | − 1,1 ± 1,2 (non significatif) |
+| tirs | 41,0 | 37,7 | − 3,3 ± 1,4 |
+| buts | 5,04 | 4,29 | − 0,75 ± 0,57 |
+| passes ratées au tirage reprises par le receveur visé | 67,3 % | 59,9 % | − 7,4 ± 1,1 points |
+
+Lecture : les deux cibles du ticket sont tenues (frôlées sur le trajet 17 par match, cible 25 au plus ; réussite 81,4 %, cible au-dessus de 80 %). Les 40 interceptions de plus par match raccourcissent les possessions (plus de passes, moins de tirs et de buts) ; le volume de buts, trop haut avant (5,0 par match, réel environ 2,7), baisse dans le bon sens, sans recalage ici (`v2-collectif/22a`). La hausse au départ (+ 8) vient de passes plus nombreuses, pas de la règle (le temps de réaction neutralise le presseur). Déterminisme : deux exécutions du match 3 sur 15 min, même empreinte des comptes.

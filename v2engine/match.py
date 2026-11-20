@@ -98,6 +98,14 @@ RECEIVER_REACH_M = BLOCK_WIDTH_M
 # Essai sur 12 matchs : passes chez l'adversaire 11,7 % (0,41 m) ; 13,3 % (0,7 m) ; 14,9 % (1,0 m), repère 15 à 20 %.
 # Donnée réelle de la portée : non trouvée.
 READER_REACH_M = RECEIVER_REACH_M
+# Adversaire qui n'a pas lu la passe (ticket v2-realisme/29b, constantes proposées sur les mesures du 29a et validées
+# par le propriétaire le 19/11/2026, `docs/INDICATEURS_V2.md` section 56) : sur une passe au sol, il touche le ballon
+# à `NON_READER_REACH_M` (jambe tendue sans préparation, sous le mètre du joueur qui attend le ballon ; donnée réelle
+# non trouvée) s'il a eu le temps de voir partir la passe (`NON_READER_REACTION_S`, réaction visuelle simple d'un
+# athlète, environ 0,2 à 0,25 s) et s'il est tourné vers le ballon (cap à moins de 90° de sa direction) ; sinon à
+# `CONTROL_RADIUS_M`, comme avant. Toute la passe au sol, arrivée comprise (marqueur du receveur), une seule loi.
+NON_READER_REACH_M = 0.8
+NON_READER_REACTION_S = 0.25
 # Un duel par confrontation (v2-socle/03, validé le 25/10/2026) : un défenseur tente au plus un tacle
 # tant qu'il reste à moins de CONFRONTATION_END_M du même porteur ; un tacle raté l'élimine
 # FAILED_TACKLE_RECOVERY_S (temps pour se relever et se replacer). Durée réelle non trouvée : ordre de grandeur.
@@ -602,6 +610,7 @@ def _play_restart(ball: BallState, players: list[PlayerState], now_s: float,
     ball.last_toucher = ball.released_by = taker.name
     ball.last_pass_team = taker.team
     ball.receiver = target.name
+    ball.pass_started_s = now_s  # ticket v2-realisme/29b : l'adversaire non lecteur réagit après NON_READER_REACTION_S
     ball.plan = None
     _clear_offside(ball)
     if is_aerial(r.kind, taker, target):  # ballon en l'air : on ne le touche qu'à son point de chute
@@ -885,6 +894,7 @@ def _execute(ball: BallState, holder: PlayerState, action, players: list[PlayerS
         ball.released_by = holder.name
         ball.last_pass_team = holder.team
         ball.receiver = action.target.name
+        ball.pass_started_s = now_s  # ticket v2-realisme/29b
         follow = getattr(action, "follow", None)
         ball.plan = (action.target.name, follow, now_s) if follow is not None else None
         opponents = [p for p in players if p.team != holder.team]
@@ -995,7 +1005,7 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
     # Contact sur le trajet (ticket v2-collectif/25) : le ballon touche tout joueur qu'il frôle PENDANT le pas, pas
     # seulement au point d'arrivée ; le premier atteint tente le premier, quelle que soit son équipe. Le receveur visé
     # d'une passe l'attend et tend la jambe : il la touche à `RECEIVER_REACH_M` (ticket v2-realisme/18i).
-    for _, _, player in _ball_contacts(start, ball.position, dt, players, ball):
+    for _, _, player in _ball_contacts(start, ball.position, dt, players, ball, now_s, ground=not aerial):
         if now_s < ball.offside_out_until.get(player.name, 0.0):
             continue  # écarté de l'action après un coup franc : il recule, il ne joue pas ce ballon
         if now_s < ball.control_ban_until_s.get(player.name, 0.0):
@@ -1086,19 +1096,41 @@ def _ball_facing_deg(facing: Vec2, ball_velocity: Vec2) -> float:
 
 
 def _ball_contacts(start: Vec2, end: Vec2, dt: float, players: list[PlayerState],
-                   ball: BallState) -> list[tuple[float, float, PlayerState]]:
+                   ball: BallState, now_s: float = 0.0, ground: bool = True) -> list[tuple[float, float, PlayerState]]:
     """`_contacts` du ballon en jeu : `CONTROL_RADIUS_M` pour tous, sauf le receveur visé de la passe en cours, à
-    `RECEIVER_REACH_M` (ticket v2-realisme/18i), et les défenseurs qui l'ont lue, à `READER_REACH_M` (ticket 18j)."""
+    `RECEIVER_REACH_M` (ticket v2-realisme/18i), les défenseurs qui l'ont lue, à `READER_REACH_M` (ticket 18j), et,
+    sur une passe au sol (`ground`), les adversaires de champ qui l'ont vue partir et font face au ballon, à
+    `NON_READER_REACH_M` (ticket 29b)."""
     if ball.receiver is None and not ball.readers:
         return _contacts(start, end, dt, players, ball.released_by)
     others = [p for p in players if p.name != ball.receiver and p.name not in ball.readers]
     receiver = [p for p in players if p.name == ball.receiver]
     readers = [p for p in players if p.name in ball.readers and p.name != ball.receiver]
+    seen = (ground and ball.receiver is not None and ball.pass_started_s is not None
+            and now_s - ball.pass_started_s >= NON_READER_REACTION_S)
+    reaching = [p for p in others if seen and _faces_pass(p, start, end, ball.last_pass_team)]
+    reach_names = {p.name for p in reaching}
+    others = [p for p in others if p.name not in reach_names]
     hits = (_contacts(start, end, dt, others, ball.released_by)
             + _contacts(start, end, dt, receiver, ball.released_by, RECEIVER_REACH_M)
-            + _contacts(start, end, dt, readers, ball.released_by, READER_REACH_M))
+            + _contacts(start, end, dt, readers, ball.released_by, READER_REACH_M)
+            + _contacts(start, end, dt, reaching, ball.released_by, NON_READER_REACH_M))
     hits.sort(key=lambda hit: (hit[0], hit[1]))  # même ordre que `_contacts`
     return hits
+
+
+def _faces_pass(player: PlayerState, start: Vec2, end: Vec2, passing_team: str | None) -> bool:
+    """Adversaire de champ de l'équipe qui passe, tourné vers le ballon : cap à moins de 90° de la direction du point
+    du pas où le ballon passe au plus près de lui (ticket v2-realisme/29b, même angle que la mesure du 29a). Le ballon
+    déjà passé dans son dos ne compte pas comme vu parce qu'il ressort devant lui."""
+    if player.team == passing_team or player.poste == "GK":
+        return False
+    seg = end - start
+    length2 = seg.x * seg.x + seg.y * seg.y
+    u = 0.0 if length2 < 1e-12 else min(1.0, max(0.0, ((player.position.x - start.x) * seg.x
+                                                         + (player.position.y - start.y) * seg.y) / length2))
+    to_ball = start + seg * u - player.position
+    return player.facing.x * to_ball.x + player.facing.y * to_ball.y > 0.0
 
 
 def _contacts(start: Vec2, end: Vec2, dt: float, players: list[PlayerState],

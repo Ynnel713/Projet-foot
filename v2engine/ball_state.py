@@ -93,6 +93,9 @@ class BallState:
     # part, chance de réussite de la passe à la décision). Oublié dès qu'un autre joueur a le ballon ou que le ballon
     # est mort.
     pending: tuple[str, object, float, float] | None = None
+    # Départ de la passe en cours (ticket v2-realisme/29b) : instant où le passeur l'a lâchée ; l'adversaire qui ne l'a
+    # pas lue la touche à sa portée de jambe tendue une fois `match.NON_READER_REACTION_S` écoulé.
+    pass_started_s: float | None = None
     # Tir en vol dont l'issue se lit sur son trajet (tickets v2-realisme/05a et 05b, allumé au 05h).
     shot_flight: ShotFlight | None = None
     # Ballon mort (ticket v2-collectif/29) : dernier joueur à l'avoir touché (il décide de la remise en jeu), remise en

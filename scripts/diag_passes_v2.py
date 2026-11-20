@@ -358,6 +358,8 @@ def play(k: int, minutes: float = 90.0, keep_trace: bool = False) -> dict:
                     px, py = display_player(frames, step + f, name2, half)
                     shown = min(shown, math.hypot(bx - px, by - py))
             suspects.append({"moteur": d2, "écran": shown, "sol": not aerial2})
+    count["buts"] += trace.home_goals + trace.away_goals  # garde-fous des essais appariés (ticket 29b)
+    count["tirs"] += len(trace.shots)
     for event in trace.events:
         if event.kind == PERTE:
             count["pertes (journal)"] += 1
@@ -488,7 +490,9 @@ def main(argv=None) -> int:
         return 0
     seeds = list(range(args.debut, args.debut + args.matchs))
     if args.processus > 1:
-        with ProcessPoolExecutor(args.processus) as pool:
+        # un processus neuf par match : la mémoire d'un processus réutilisé grossit de match en match (3,4 Go après une
+        # vingtaine, série de 100 matchs interrompue le 19/11/2026)
+        with ProcessPoolExecutor(args.processus, max_tasks_per_child=1) as pool:
             results = list(pool.map(play, seeds))
     else:
         results = [play(k) for k in seeds]
