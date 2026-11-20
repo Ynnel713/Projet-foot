@@ -1902,3 +1902,40 @@ Sur les matchs joués (`18n-controle.py`, sortie `18n-controle.txt`) les tranche
 | Buts | 4,66 | 4,86 | + 0,20 ± 0,97 |
 
 Lecture : la passe courte près d'un presseur, surévaluée avant, est moins choisie ; les joueurs perdent 27 passes de moins par match (− 13 %) et jouent un peu plus de passes moyennes, moins précises mais rarement perdues. Réussite 84,7 %, au-dessus de la cible de 80 % du 29b ; tirs et buts dans le bruit. Recalage du volume global : `v2-collectif/22a`. Déterminisme : deux exécutions du match 3 du banc, même empreinte des comptes (`4121454b8e0184da`).
+
+## 62. Chance évaluée : le receveur dispute le ballon (ticket v2-realisme/18o, 20/11/2026)
+
+**Diagnostic** (48 matchs du contrôle du 18n rejoués à l'identique avec un enregistrement enrichi, graines 2400 à 2447, moteur `0651cf3`, 60 231 passes de jeu au sol ; `.scratch/v2-realisme/mesures/18o-diag-script.py`, `18o-diagnostic.py` à `18o-diagnostic-4.py`). La table de coupe ignore que le receveur dispute le ballon : un adversaire à moins de 2 m du bout du trajet coupe bien moins que prévu (reste sous 0,5 m : 6 % observé contre 18 % prévu ; à côté du receveur, de 1 à 2 m : 6 % contre 32 %). Mêlés à l'ajustement du 18n, ces cas faisaient sous-estimer les adversaires de 3 à 5 m du bout (rapport 1,13). Passes avec un adversaire à moins de 1,5 m du receveur, entre le passeur et lui : − 12,5 ± 4,9 points (385 passes).
+
+Passing < 50 (+ 3,6 ± 1,9) : pas de cause unique. Écartés : erreur de vitesse de la passe (+ 3,4 avec la vitesse réalisée), écart latéral réalisé (surplus de coupe même passe droite), pression, dosage, poste (gardiens calibrés). Piste : la table est statique ; un adversaire qui va vers la ligne à plus de 3 m/s coupe 1,3 à 2 fois la chance prévue pour tous les passeurs (0,40 contre 0,20 chez les passeurs faibles). Sorti du ticket par le propriétaire : `18p`.
+
+**Correction** (`v2engine/possession.py`, constantes validées par le propriétaire le 20/11/2026) : table réestimée sur les seuls adversaires à au moins 2 m du bout du trajet (`CUT_REST_FULL_M`) ; plus près, coupe multipliée par `_CUT_REST_FACTOR` selon le reste du trajet (0,5 / 1 / 1,5 / 2 m) et l'écart à la ligne (`CUT_REST_GAP_M`, 1 m) : 0,50 / 0,66 / 0,81 / 0,90 sur la ligne, 0,26 / 0,36 / 0,46 / 0,65 à côté. Premier jeu ajusté sur les seules graines 2400 à 2447 (0,32 / 0,64 / 0,73 / 1,0 et 0,35 / 0,39 / 0,53 / 0,58) : surcorrection hors échantillon (+ 5,0 ± 4,3 points, 497 passes, graines 2500 à 2547 : les passes mieux notées sont davantage jouées, et les cases sur la ligne ne comptaient que 64 à 137 adversaires). Réajusté sur les 96 matchs (`18o-ajustement.py`, sortie `18o-ajustement-96.txt`).
+
+**Contrôle** sur 52 matchs joués avec le moteur livré (graines 2600 à 2651, 64 887 passes ; `18o-controle.py`) :
+
+| Groupe | Avant (18n, graines 2400 à 2447) | Après (graines 2600 à 2651) |
+|---|---|---|
+| Adversaire à moins de 1,5 m du receveur | − 12,5 ± 4,9 (385) | − 0,6 ± 4,2 (528) |
+| dont sur la ligne (moins de 0,5 m) | − 12,7 ± 8,0 (149) | + 0,5 ± 7,5 (169) |
+| Pire tranche (7 tranches, n ≥ 500) | 3,2 | 1,5 |
+| Moyenne | − 0,3 | − 0,1 |
+| Moins de 15 m | + 0,3 | + 0,9 |
+| 15 à 30 m | − 0,9 | − 1,1 |
+| Passing < 50 | + 3,6 ± 1,9 | + 3,8 ± 1,8 (ticket `18p`) |
+
+Passes de 15 à 30 m : − 1,1, au-delà du critère du 18n (1 point) ; − 1,3 sans le facteur du 18o sur l'échantillon d'ajustement, biais antérieur au ticket (réserve).
+
+**50 matchs appariés** (banc, graines 0 à 49, `scripts/diag_passes_v2.py` ; avant : série du 18n, rejouée à l'identique sur le match 3 ; `18o-apparies.py`) :
+
+| Indicateur (par match) | Avant | Après | Écart |
+|---|---|---|---|
+| Passes de jeu | 1 272,6 | 1 264,8 | − 7,8 ± 17,2 |
+| Réussite des passes de jeu | 84,7 % | 85,2 % | + 0,5 ± 0,4 point |
+| Passes prises par l'adversaire (jeu) | 187,4 | 180,7 | − 6,7 ± 5,6 |
+| Pertes au journal | 225,3 | 216,4 | − 8,9 ± 6,4 |
+| dont passe interceptée | 174,3 | 168,3 | − 6,0 ± 5,8 |
+| Passes ratées au tirage | 415,9 | 413,4 | − 2,5 ± 8,0 |
+| Tirs | 38,9 | 39,5 | + 0,7 ± 1,9 |
+| Buts | 4,86 | 4,60 | − 0,26 ± 0,86 |
+
+Lecture : la passe vers un receveur avec un adversaire à son contact, sous-évaluée avant, est un peu plus jouée et rarement perdue ; réussite 85,2 %, au-dessus de la cible de 80 % du 29b ; tirs et buts dans le bruit. Cas statique (adversaire immobile 0,5 m devant le receveur, passe de 12 m) : chance 0,72, fidèle au moteur mais sans doute irréaliste : ticket de physique `29c`.

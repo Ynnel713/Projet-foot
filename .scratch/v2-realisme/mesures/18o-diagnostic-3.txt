@@ -1,0 +1,7 @@
+toutes                     n  60231 obs 0.864 ± 0.003 | écart : enregistrée  -0.3  recalculée  -0.2  vitesse réalisée  -0.3  facteur reste  +0.2  les deux  +0.1
+Passing < 50               n   1830 obs 0.785 ± 0.019 | écart : enregistrée  +3.6  recalculée  +3.6  vitesse réalisée  +3.4  facteur reste  +4.2  les deux  +3.9
+Passing 50-70              n  32781 obs 0.852 ± 0.004 | écart : enregistrée  -0.7  recalculée  -0.6  vitesse réalisée  -0.8  facteur reste  -0.2  les deux  -0.3
+Passing >= 70              n  25620 obs 0.883 ± 0.004 | écart : enregistrée  -0.0  recalculée  +0.0  vitesse réalisée  -0.0  facteur reste  +0.3  les deux  +0.3
+longueur < 15 m            n  25678 obs 0.877 ± 0.004 | écart : enregistrée  +0.3  recalculée  +0.3  vitesse réalisée  +0.2  facteur reste  +1.0  les deux  +0.9
+longueur 15-30 m           n  31174 obs 0.859 ± 0.004 | écart : enregistrée  -0.9  recalculée  -0.8  vitesse réalisée  -0.9  facteur reste  -0.6  les deux  -0.7
+adv. < 1,5 m du receveur   n    385 obs 0.610 ± 0.049 | écart : enregistrée -12.5  recalculée -12.6  vitesse réalisée -13.5  facteur reste  +4.2  les deux  +3.5

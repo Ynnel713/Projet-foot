@@ -1,0 +1,75 @@
+60231 passes de jeu au sol
+
+(1a) par poste du passeur, Passing < 50 puis tous
+  BU, Passing < 50             n    181  év 0.726 obs 0.691  écart  +3.5 ± 6.7 | coupe prév 21.8 obs 24.9 | hors coupe prév  5.6 obs  6.1
+  DC, Passing < 50             n    299  év 0.869 obs 0.813  écart  +5.6 ± 4.4 | coupe prév  7.1 obs 10.4 | hors coupe prév  6.0 obs  8.4
+  GK, Passing < 50             n    223  év 0.931 obs 0.942  écart  -1.1 ± 3.1 | coupe prév  4.4 obs  4.9 | hors coupe prév  2.5 obs  0.9
+  MDC, Passing < 50            n    392  év 0.854 obs 0.786  écart  +6.8 ± 4.1 | coupe prév 10.2 obs 13.3 | hors coupe prév  4.4 obs  8.2
+  MOC, Passing < 50            n    363  év 0.772 obs 0.738  écart  +3.4 ± 4.5 | coupe prév 17.3 obs 18.7 | hors coupe prév  5.5 obs  7.4
+  RB, Passing < 50             n    372  év 0.775 obs 0.761  écart  +1.4 ± 4.3 | coupe prév 18.1 obs 19.4 | hors coupe prév  4.4 obs  4.6
+  AD, tous                     n   4604  év 0.798 obs 0.818  écart  -2.0 ± 1.1 | coupe prév 17.6 obs 16.4 | hors coupe prév  2.6 obs  1.8
+  AG, tous                     n   4445  év 0.791 obs 0.797  écart  -0.6 ± 1.2 | coupe prév 18.5 obs 18.3 | hors coupe prév  2.4 obs  2.0
+  BU, tous                     n   4725  év 0.781 obs 0.779  écart  +0.2 ± 1.2 | coupe prév 18.7 obs 19.3 | hors coupe prév  3.2 obs  2.8
+  DC, tous                     n  10969  év 0.899 obs 0.903  écart  -0.3 ± 0.6 | coupe prév  7.8 obs  8.0 | hors coupe prév  2.3 obs  1.7
+  GK, tous                     n   1128  év 0.939 obs 0.941  écart  -0.3 ± 1.4 | coupe prév  4.0 obs  5.1 | hors coupe prév  2.1 obs  0.8
+  LB, tous                     n   5214  év 0.867 obs 0.880  écart  -1.3 ± 0.9 | coupe prév 10.5 obs  9.9 | hors coupe prév  2.8 obs  2.1
+  MC, tous                     n  13169  év 0.884 obs 0.881  écart  +0.3 ± 0.6 | coupe prév 10.0 obs 10.2 | hors coupe prév  1.5 obs  1.6
+  MDC, tous                    n   5894  év 0.894 obs 0.886  écart  +0.8 ± 0.8 | coupe prév  8.9 obs  9.0 | hors coupe prév  1.7 obs  2.4
+  MOC, tous                    n   4855  év 0.834 obs 0.834  écart  +0.0 ± 1.0 | coupe prév 14.9 obs 14.4 | hors coupe prév  1.7 obs  2.2
+  RB, tous                     n   5228  év 0.872 obs 0.878  écart  -0.5 ± 0.9 | coupe prév 10.4 obs 10.0 | hors coupe prév  2.4 obs  2.2
+
+(1b) erreurs réalisées par tranche de Passing (hors première et talonnade)
+  Passing 0-50  n   1686  vitesse réalisée/idéale : moy 1.000 é-t 0.154 | angle/sigma é-t 1.003 | sigma moy 6.20°
+  Passing 50-60  n   7165  vitesse réalisée/idéale : moy 1.002 é-t 0.125 | angle/sigma é-t 1.016 | sigma moy 4.68°
+  Passing 60-70  n  21344  vitesse réalisée/idéale : moy 1.000 é-t 0.097 | angle/sigma é-t 1.014 | sigma moy 4.08°
+  Passing 70-80  n  14932  vitesse réalisée/idéale : moy 0.999 é-t 0.061 | angle/sigma é-t 1.002 | sigma moy 3.44°
+  Passing 80-100  n   6477  vitesse réalisée/idéale : moy 1.000 é-t 0.041 | angle/sigma é-t 0.994 | sigma moy 2.86°
+
+(1c) perte selon l'erreur de vitesse (tous Passing), coupe et hors coupe
+  vitesse 0-0.8                n   1147  év 0.833 obs 0.802  écart  +3.1 ± 2.3 | coupe prév 13.4 obs 17.3 | hors coupe prév  3.3 obs  2.5
+  vitesse 0.8-0.9              n   5650  év 0.851 obs 0.841  écart  +1.0 ± 1.0 | coupe prév 12.2 obs 13.9 | hors coupe prév  2.6 obs  2.0
+  vitesse 0.9-0.97             n  13883  év 0.860 obs 0.859  écart  +0.1 ± 0.6 | coupe prév 11.9 obs 12.4 | hors coupe prév  2.1 obs  1.8
+  vitesse 0.97-1.03            n  19024  év 0.868 obs 0.870  écart  -0.2 ± 0.5 | coupe prév 11.3 obs 11.3 | hors coupe prév  1.9 obs  1.8
+  vitesse 1.03-1.1             n  13739  év 0.865 obs 0.875  écart  -1.1 ± 0.6 | coupe prév 11.4 obs 10.5 | hors coupe prév  2.1 obs  2.0
+  vitesse 1.1-1.2              n   5655  év 0.851 obs 0.865  écart  -1.4 ± 0.9 | coupe prév 12.2 obs 11.0 | hors coupe prév  2.7 obs  2.5
+  vitesse 1.2-9                n   1133  év 0.835 obs 0.840  écart  -0.6 ± 2.1 | coupe prév 13.2 obs 11.9 | hors coupe prév  3.3 obs  4.1
+ Passing < 50
+    vitesse 0-0.9              n    448  év 0.821 obs 0.819  écart  +0.2 ± 3.6 | coupe prév 13.0 obs 15.6 | hors coupe prév  4.9 obs  2.5
+    vitesse 0.9-1.1            n    912  év 0.822 obs 0.779  écart  +4.3 ± 2.7 | coupe prév 13.0 obs 15.5 | hors coupe prév  4.8 obs  6.7
+    vitesse 1.1-9              n    470  év 0.819 obs 0.766  écart  +5.3 ± 3.8 | coupe prév 13.6 obs 14.5 | hors coupe prév  4.5 obs  8.9
+ Passing >= 70
+    vitesse 0-0.9              n    965  év 0.891 obs 0.870  écart  +2.1 ± 2.1 | coupe prév  9.4 obs 11.2 | hors coupe prév  1.4 obs  1.8
+    vitesse 0.9-1.1            n  23736  év 0.883 obs 0.883  écart  -0.1 ± 0.4 | coupe prév 10.4 obs 10.0 | hors coupe prév  1.3 obs  1.6
+    vitesse 1.1-9              n    919  év 0.886 obs 0.896  écart  -0.9 ± 2.0 | coupe prév  9.9 obs  8.6 | hors coupe prév  1.5 obs  1.8
+
+(2) adversaires de la table (coupe > 0) : coupe prévue / observée, par adversaire, selon la distance au receveur
+  receveur à 0-1 m (devant) n     62  coupe prévue 0.485 observée 0.323  écart +16.3
+  receveur à 0-1 m (à côté) n     65  coupe prévue 0.416 observée 0.138  écart +27.7
+  receveur à 1-2 m (devant) n    402  coupe prévue 0.384 observée 0.353  écart  +3.0
+  receveur à 1-2 m (à côté) n     78  coupe prévue 0.319 observée 0.064  écart +25.5
+  receveur à 2-3 m (devant) n    900  coupe prévue 0.330 observée 0.321  écart  +0.9
+  receveur à 2-3 m (à côté) n    107  coupe prévue 0.212 observée 0.084  écart +12.8
+  receveur à 3-4 m (devant) n   1565  coupe prévue 0.252 observée 0.253  écart  -0.1
+  receveur à 3-4 m (à côté) n    124  coupe prévue 0.153 observée 0.048  écart +10.4
+  receveur à 4-5 m (devant) n  42100  coupe prévue 0.145 observée 0.146  écart  -0.1
+  receveur à 4-5 m (à côté) n    336  coupe prévue 0.090 observée 0.048  écart  +4.3
+
+(2b) adversaire à moins de 2 m du receveur, de la table : selon la course du receveur vers le ballon (rv_back)
+  rv_back classe -1  n   102  coupe prévue 0.347 observée 0.314  écart  +3.4
+  rv_back classe +0  n   302  coupe prévue 0.373 observée 0.255  écart +11.8
+  rv_back classe +1  n   261  coupe prévue 0.409 observée 0.188  écart +22.2
+  rv_back classe +2  n    66  coupe prévue 0.406 observée 0.273  écart +13.3
+
+(2c) adversaire à moins de 2 m du receveur, de la table : selon l'écart à la ligne et le temps du ballon
+  écart cl 0 temps cl 0  n    53  coupe prévue 0.768 observée 0.679  écart  +8.9
+  écart cl 0 temps cl 1  n    20  coupe prévue 0.710 observée 0.650  écart  +6.0
+  écart cl 0 temps cl 2  n    32  coupe prévue 0.560 observée 0.344  écart +21.6
+  écart cl 0 temps cl 3  n   120  coupe prévue 0.290 observée 0.142  écart +14.8
+  écart cl 1 temps cl 0  n    70  coupe prévue 0.381 observée 0.271  écart +10.9
+  écart cl 1 temps cl 1  n    17  coupe prévue 0.640 observée 0.529  écart +11.1
+  écart cl 1 temps cl 2  n    30  coupe prévue 0.510 observée 0.200  écart +31.0
+  écart cl 1 temps cl 3  n   135  coupe prévue 0.310 observée 0.170  écart +13.9
+  écart cl 2 temps cl 0  n    57  coupe prévue 0.235 observée 0.175  écart  +6.0
+  écart cl 2 temps cl 1  n    25  coupe prévue 0.440 observée 0.280  écart +16.0
+  écart cl 2 temps cl 2  n    37  coupe prévue 0.390 observée 0.270  écart +12.0
+  écart cl 2 temps cl 3  n   135  coupe prévue 0.300 observée 0.111  écart +18.9

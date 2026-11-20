@@ -1,0 +1,22 @@
+64887 passes de jeu au sol
+  [0.00 ; 0.14[                      n   1573  évaluée 0.093  non perdue 0.104 ± 0.015  écart -1.1
+  [0.14 ; 0.29[                      n   1209  évaluée 0.211  non perdue 0.225 ± 0.024  écart -1.4
+  [0.29 ; 0.43[                      n   1275  évaluée 0.361  non perdue 0.376 ± 0.027  écart -1.5
+  [0.43 ; 0.57[                      n   1859  évaluée 0.510  non perdue 0.503 ± 0.023  écart +0.6
+  [0.57 ; 0.71[                      n   4051  évaluée 0.652  non perdue 0.657 ± 0.015  écart -0.5
+  [0.71 ; 0.86[                      n   8016  évaluée 0.786  non perdue 0.790 ± 0.009  écart -0.4
+  [0.86 ; 1.00[                      n  46904  évaluée 0.962  non perdue 0.962 ± 0.002  écart +0.0
+  toutes                             n  64887  évaluée 0.861  non perdue 0.862 ± 0.003  écart -0.1
+  pire tranche (n >= 500) : 1.5 points
+  longueur 0 à 8 m                   n   8920  évaluée 0.899  non perdue 0.883 ± 0.007  écart +1.6
+  longueur 0 à 15 m                  n  28232  évaluée 0.880  non perdue 0.870 ± 0.004  écart +0.9
+  longueur 8 à 15 m                  n  19312  évaluée 0.871  non perdue 0.864 ± 0.005  écart +0.6
+  longueur 15 à 30 m                 n  33130  évaluée 0.850  non perdue 0.861 ± 0.004  écart -1.1
+  longueur 30 à 99 m                 n   3525  évaluée 0.811  non perdue 0.808 ± 0.013  écart +0.4
+  Passing < 50                       n   2002  évaluée 0.816  non perdue 0.778 ± 0.018  écart +3.8
+  Passing 50 à 70                    n  36190  évaluée 0.846  non perdue 0.852 ± 0.004  écart -0.6
+  Passing >= 70                      n  26695  évaluée 0.884  non perdue 0.882 ± 0.004  écart +0.2
+Critère 1 : adversaire près du receveur, entre le passeur et lui
+  à moins de 1,5 m                   n    528  évaluée 0.608  non perdue 0.614 ± 0.042  écart -0.6
+  à moins de 1,5 m, sur la ligne (< 0,5 m) n    169  évaluée 0.496  non perdue 0.491 ± 0.075  écart +0.5
+  à moins de 2,5 m                   n   1604  évaluée 0.637  non perdue 0.633 ± 0.024  écart +0.4

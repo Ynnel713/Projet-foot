@@ -1,0 +1,70 @@
+Passing 0-50
+  écart latéral 0-0.5 m          n    604  écart  +1.8 ± 3.0 | coupe prév 11.8 obs 13.6 | hors coupe prév  3.8 obs  3.8
+  écart latéral 0.5-1.0 m        n    434  écart  +3.3 ± 3.9 | coupe prév 14.6 obs 17.5 | hors coupe prév  4.5 obs  4.8
+  écart latéral 1.0-2.0 m        n    480  écart  +4.4 ± 3.7 | coupe prév 12.8 obs 15.6 | hors coupe prév  5.3 obs  6.9
+  écart latéral 2.0-4.0 m        n    280  écart  +4.0 ± 5.0 | coupe prév 13.4 obs 13.9 | hors coupe prév  6.2 obs  9.6
+  écart latéral 4.0-99 m         n     32  écart +24.7 ± 17.3 | coupe prév 21.9 obs 21.9 | hors coupe prév  6.6 obs 31.2
+Passing 50-70
+  écart latéral 0-0.5 m          n  13557  écart  -1.4 ± 0.5 | coupe prév 11.2 obs 11.3 | hors coupe prév  2.2 obs  0.7
+  écart latéral 0.5-1.0 m        n   8280  écart  -1.3 ± 0.7 | coupe prév 12.6 obs 12.7 | hors coupe prév  2.7 obs  1.2
+  écart latéral 1.0-2.0 m        n   7411  écart  -0.7 ± 0.9 | coupe prév 14.4 obs 14.1 | hors coupe prév  3.1 obs  2.7
+  écart latéral 2.0-4.0 m        n   3223  écart  +3.1 ± 1.4 | coupe prév 15.0 obs 15.5 | hors coupe prév  3.8 obs  6.4
+  écart latéral 4.0-99 m         n    310  écart +10.9 ± 5.2 | coupe prév 17.6 obs 17.7 | hors coupe prév  4.1 obs 14.8
+Passing 70-100
+  écart latéral 0-0.5 m          n  11214  écart  +0.0 ± 0.6 | coupe prév  9.3 obs  9.4 | hors coupe prév  1.1 obs  1.1
+  écart latéral 0.5-1.0 m        n   6475  écart  -0.7 ± 0.8 | coupe prév 10.4 obs  9.6 | hors coupe prév  1.3 obs  1.4
+  écart latéral 1.0-2.0 m        n   5683  écart  +0.1 ± 0.9 | coupe prév 11.4 obs 11.0 | hors coupe prév  1.5 obs  2.0
+  écart latéral 2.0-4.0 m        n   2088  écart  +0.6 ± 1.5 | coupe prév 12.8 obs 11.4 | hors coupe prév  1.8 obs  3.8
+  écart latéral 4.0-99 m         n    160  écart  +9.5 ± 6.9 | coupe prév 14.7 obs 18.1 | hors coupe prév  2.7 obs  8.8
+Passing < 50, écart-type d'angle (pression comprise)
+  sigma 0-5°                     n    204  écart  +1.7 ± 4.7 | coupe prév  7.7 obs  8.3 | hors coupe prév  4.3 obs  5.4
+  sigma 5-6.5°                   n   1114  écart  +2.1 ± 2.4 | coupe prév 14.3 obs 15.7 | hors coupe prév  4.8 obs  5.5
+  sigma 6.5-8°                   n    508  écart  +7.4 ± 3.8 | coupe prév 12.9 obs 16.9 | hors coupe prév  4.9 obs  8.3
+Pression sur le passeur (sigma / sigma sans pression), hors première et talonnade
+ Passing 0-50
+  gêne x1.00-1.00                n     32  écart  +1.3 ± 8.4 | coupe prév  2.7 obs  6.2 | hors coupe prév  2.2 obs  0.0
+  gêne x1.00-1.25                n     53  écart  +6.5 ± 10.9 | coupe prév  9.8 obs 13.2 | hors coupe prév  4.5 obs  7.5
+  gêne x1.25-1.50                n    416  écart  +5.9 ± 4.2 | coupe prév 15.5 obs 19.2 | hors coupe prév  5.1 obs  7.2
+  gêne x1.50-9.00                n   1160  écart  +3.1 ± 2.4 | coupe prév 13.9 obs 15.8 | hors coupe prév  4.7 obs  5.9
+ Passing 50-70
+  gêne x1.00-1.00                n    280  écart  -0.5 ± 2.8 | coupe prév  4.3 obs  4.3 | hors coupe prév  2.3 obs  1.8
+  gêne x1.00-1.25                n   1794  écart  -1.6 ± 1.3 | coupe prév  8.2 obs  7.4 | hors coupe prév  2.6 obs  1.7
+  gêne x1.25-1.50                n   8731  écart  -1.0 ± 0.8 | coupe prév 13.3 obs 13.2 | hors coupe prév  2.8 obs  1.9
+  gêne x1.50-9.00                n  17315  écart  -0.2 ± 0.6 | coupe prév 14.8 obs 15.1 | hors coupe prév  2.6 obs  2.1
+ Passing 70-100
+  gêne x1.00-1.00                n     55  écart  +0.9 ± 6.0 | coupe prév  3.5 obs  3.6 | hors coupe prév  1.1 obs  1.8
+  gêne x1.00-1.25                n   1893  écart  +0.2 ± 1.2 | coupe prév  6.6 obs  6.6 | hors coupe prév  1.2 obs  1.5
+  gêne x1.25-1.50                n  10827  écart  +0.0 ± 0.6 | coupe prév 10.8 obs 10.7 | hors coupe prév  1.2 obs  1.5
+  gêne x1.50-9.00                n   8283  écart  -0.7 ± 0.7 | coupe prév 12.9 obs 12.1 | hors coupe prév  1.4 obs  1.5
+Vitesse du receveur au départ (dosage : le passeur faible joue où il est, pas où il va)
+ Passing 0-50
+  receveur 0-1 m/s               n    624  écart  +2.5 ± 3.0 | coupe prév 13.1 obs 15.2 | hors coupe prév  1.6 obs  1.9
+  receveur 1-3 m/s               n    680  écart  +4.1 ± 3.1 | coupe prév 12.4 obs 14.1 | hors coupe prév  4.5 obs  6.8
+  receveur 3-5 m/s               n    468  écart  +4.3 ± 4.0 | coupe prév 14.7 obs 16.9 | hors coupe prév  8.3 obs 10.5
+  receveur 5-99 m/s              n     58  écart  +2.9 ± 11.5 | coupe prév 10.6 obs 15.5 | hors coupe prév 14.1 obs 12.1
+ Passing 50-70
+  receveur 0-1 m/s               n   9358  écart  +0.2 ± 0.7 | coupe prév 13.9 obs 14.4 | hors coupe prév  1.2 obs  0.9
+  receveur 1-3 m/s               n  12613  écart  -0.7 ± 0.6 | coupe prév 11.9 obs 11.7 | hors coupe prév  2.0 obs  1.5
+  receveur 3-5 m/s               n   9206  écart  -1.4 ± 0.7 | coupe prév 13.2 obs 12.9 | hors coupe prév  4.0 obs  2.9
+  receveur 5-99 m/s              n   1604  écart  -1.5 ± 1.9 | coupe prév  9.3 obs 10.7 | hors coupe prév  9.5 obs  6.7
+ Passing 70-100
+  receveur 0-1 m/s               n   6887  écart  -0.7 ± 0.8 | coupe prév 11.6 obs 11.5 | hors coupe prév  1.1 obs  0.6
+  receveur 1-3 m/s               n   8937  écart  -1.2 ± 0.6 | coupe prév  9.9 obs  8.9 | hors coupe prév  1.2 obs  1.0
+  receveur 3-5 m/s               n   7804  écart  +0.8 ± 0.7 | coupe prév 10.5 obs 10.3 | hors coupe prév  1.4 obs  2.4
+  receveur 5-99 m/s              n   1992  écart  +4.4 ± 1.5 | coupe prév  7.7 obs  8.8 | hors coupe prév  2.2 obs  5.5
+Adversaires de la table : coupe prévue / observée selon leur vitesse vers la ligne de passe (close, m/s)
+ Passing 0-50
+  vers la ligne < -1    part 0.25 n    334  coupe prévue 0.173 observée 0.096
+  vers la ligne -1 à 1  part 0.29 n    384  coupe prévue 0.160 observée 0.156
+  vers la ligne 1 à 3   part 0.26 n    348  coupe prévue 0.203 observée 0.244
+  vers la ligne > 3     part 0.19 n    257  coupe prévue 0.197 observée 0.397
+ Passing 50-70
+  vers la ligne < -1    part 0.28 n   6989  coupe prévue 0.157 observée 0.093
+  vers la ligne -1 à 1  part 0.28 n   7042  coupe prévue 0.152 observée 0.126
+  vers la ligne 1 à 3   part 0.25 n   6313  coupe prévue 0.178 observée 0.206
+  vers la ligne > 3     part 0.19 n   4702  coupe prévue 0.192 observée 0.289
+ Passing 70-100
+  vers la ligne < -1    part 0.27 n   5293  coupe prévue 0.130 observée 0.085
+  vers la ligne -1 à 1  part 0.29 n   5665  coupe prévue 0.128 observée 0.110
+  vers la ligne 1 à 3   part 0.25 n   4849  coupe prévue 0.141 observée 0.153
+  vers la ligne > 3     part 0.18 n   3562  coupe prévue 0.161 observée 0.213

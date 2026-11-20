@@ -1,0 +1,22 @@
+61221 passes de jeu au sol
+  [0.00 ; 0.14[                      n   1431  évaluée 0.102  non perdue 0.085 ± 0.014  écart +1.7
+  [0.14 ; 0.29[                      n   1138  évaluée 0.208  non perdue 0.213 ± 0.024  écart -0.5
+  [0.29 ; 0.43[                      n   1203  évaluée 0.370  non perdue 0.364 ± 0.027  écart +0.6
+  [0.43 ; 0.57[                      n   1528  évaluée 0.508  non perdue 0.486 ± 0.025  écart +2.3
+  [0.57 ; 0.71[                      n   3278  évaluée 0.647  non perdue 0.649 ± 0.016  écart -0.2
+  [0.71 ; 0.86[                      n   8395  évaluée 0.786  non perdue 0.780 ± 0.009  écart +0.6
+  [0.86 ; 1.00[                      n  44248  évaluée 0.962  non perdue 0.963 ± 0.002  écart -0.1
+  toutes                             n  61221  évaluée 0.864  non perdue 0.863 ± 0.003  écart +0.1
+  pire tranche (n >= 500) : 2.3 points
+  longueur 0 à 8 m                   n   8346  évaluée 0.901  non perdue 0.886 ± 0.007  écart +1.5
+  longueur 0 à 15 m                  n  26523  évaluée 0.883  non perdue 0.872 ± 0.004  écart +1.1
+  longueur 8 à 15 m                  n  18177  évaluée 0.875  non perdue 0.866 ± 0.005  écart +1.0
+  longueur 15 à 30 m                 n  31419  évaluée 0.852  non perdue 0.862 ± 0.004  écart -0.9
+  longueur 30 à 99 m                 n   3279  évaluée 0.818  non perdue 0.808 ± 0.013  écart +1.0
+  Passing < 50                       n   1926  évaluée 0.810  non perdue 0.774 ± 0.019  écart +3.7
+  Passing 50 à 70                    n  33356  évaluée 0.849  non perdue 0.850 ± 0.004  écart -0.1
+  Passing >= 70                      n  25939  évaluée 0.887  non perdue 0.887 ± 0.004  écart -0.0
+Critère 1 : adversaire près du receveur, entre le passeur et lui
+  à moins de 1,5 m                   n    497  évaluée 0.658  non perdue 0.608 ± 0.043  écart +5.0
+  à moins de 1,5 m, sur la ligne (< 0,5 m) n    148  évaluée 0.521  non perdue 0.466 ± 0.080  écart +5.5
+  à moins de 2,5 m                   n   1506  évaluée 0.649  non perdue 0.637 ± 0.024  écart +1.1

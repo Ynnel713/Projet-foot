@@ -1,0 +1,32 @@
+Table réestimée (reste >= 2.0 m) : nouvelle (ancienne) [n] ; cases de moins de 40 adversaires gardées
+  < 0.5 m : 0.77(0.78)[1269] 0.90(0.88)[1447] 0.87(0.87)[851] 0.85(0.83)[379] 0.76(0.76)[319] 0.77(0.74)[214] 0.64(0.63)[299] 0.55(0.52)[377] 0.41(0.41)[581]
+  < 1.0 m : 0.02(0.02)[12866] 0.26(0.26)[3239] 0.60(0.57)[760] 0.62(0.60)[315] 0.66(0.63)[242] 0.66(0.65)[267] 0.63(0.65)[303] 0.53(0.54)[355] 0.38(0.35)[496]
+  < 2.0 m : 0.00(0.00)[11762] 0.01(0.01)[6303] 0.08(0.08)[2776] 0.20(0.20)[1391] 0.28(0.26)[1397] 0.40(0.37)[834] 0.47(0.48)[814] 0.43(0.43)[775] 0.34(0.35)[1048]
+  < 3.0 m : 0.00(0.00)[3793] 0.00(0.00)[3126] 0.00(0.00)[2410] 0.01(0.01)[1883] 0.03(0.02)[2900] 0.10(0.10)[2851] 0.21(0.21)[2132] 0.34(0.33)[1085] 0.27(0.26)[1434]
+  < 4.0 m : 0.00(0.00)[2266] 0.00(0.00)[2131] 0.00(0.00)[1822] 0.00(0.00)[1720] 0.00(0.00)[2901] 0.02(0.02)[3378] 0.10(0.10)[3159] 0.19(0.17)[1805] 0.21(0.19)[2006]
+  < 6.0 m : 0.00(0.00)[3490] 0.00(0.00)[3333] 0.00(0.00)[2936] 0.00(0.00)[2858] 0.00(0.00)[4799] 0.00(0.00)[6418] 0.02(0.02)[7760] 0.08(0.08)[5025] 0.12(0.12)[5785]
+Facteur par bande de reste du trajet et classe d'écart (observée / prévue par la nouvelle table)
+  écart < 1 m  reste < 0.5 m : n   168  prévue 0.468 observée 0.232  facteur 0.50
+  écart < 1 m  reste < 1.0 m : n   237  prévue 0.493 observée 0.325  facteur 0.66
+  écart < 1 m  reste < 1.5 m : n   212  prévue 0.462 observée 0.373  facteur 0.81
+  écart < 1 m  reste < 2.0 m : n   282  prévue 0.480 observée 0.433  facteur 0.90
+  écart >= 1 m reste < 0.5 m : n  1524  prévue 0.172 observée 0.045  facteur 0.26
+  écart >= 1 m reste < 1.0 m : n  1752  prévue 0.163 observée 0.059  facteur 0.36
+  écart >= 1 m reste < 1.5 m : n  1770  prévue 0.159 observée 0.073  facteur 0.46
+  écart >= 1 m reste < 2.0 m : n  1850  prévue 0.158 observée 0.103  facteur 0.65
+Contrôle en échantillon : écart évaluée - non perdue (points), ancienne table / nouvelle table + facteur
+  toutes                     n 121452   -0.6 ->  -0.2
+  Passing < 50               n   3756   +3.0 ->  +3.6
+  Passing >= 70              n  51559   -0.4 ->  -0.2
+  longueur < 15 m            n  52201   +0.1 ->  +0.9
+  longueur 15-30 m           n  62593   -1.3 ->  -1.1
+  longueur >= 30 m           n   6658   +0.6 ->  +0.6
+  adv. < 1,5 m du receveur   n    882  -14.2 ->  +0.5
+  tranche 0  n   2862  écart  -0.1
+  tranche 1  n   2232  écart  -1.0
+  tranche 2  n   2376  écart  -1.6
+  tranche 3  n   3438  écart  +0.5
+  tranche 4  n   7674  écart  -0.5
+  tranche 5  n  15099  écart  -0.7
+  tranche 6  n  87771  écart  -0.0
+  pire tranche (n >= 500) : 1.6 points

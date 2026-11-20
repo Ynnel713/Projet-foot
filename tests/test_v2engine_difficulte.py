@@ -49,13 +49,13 @@ def test_lane_opponent_and_marker_cut_physically_without_widening_the_error() ->
     """Tickets v2-realisme/18g et 23a (réserve A2) : l'adversaire du couloir et le marqueur du receveur n'élargissent pas
     l'écart de la passe ; l'adversaire du couloir compte dans la chance évaluée par sa chance de couper la passe (table
     mesurée : sur le trajet, de 1 à 2 m de la trajectoire, 0,25 au ticket 18j, 0,32 au 23a ; depuis le 18n, selon le temps
-    du ballon jusqu'à lui : 0,59 s ici, colonne 0,45 à 0,7 s, 0,44)."""
+    du ballon jusqu'à lui : 0,59 s ici, colonne 0,45 à 0,7 s, 0,44 ; 0,47 depuis le 18o)."""
     passer = _player()
     receiver = _player("R", position=Vec2(45.0, 34.0))  # 15 m
     in_lane = _player("A", team="away", position=Vec2(37.0, 35.5))  # sur le trajet, à 1,5 m de la ligne, sans pression
     assert math.isclose(pass_accuracy_probability(passer, receiver, [in_lane]), pass_accuracy_probability(passer, receiver, []))
     assert math.isclose(pass_success_probability(passer, receiver, [in_lane]),
-                        pass_success_probability(passer, receiver, []) * (1.0 - 0.44))
+                        pass_success_probability(passer, receiver, []) * (1.0 - 0.47))
     receiver = _player("R", position=Vec2(38.0, 34.0))
     marker = _player("M", team="away", position=Vec2(39.0, 34.5))  # marque le receveur, hors couloir
     assert math.isclose(pass_accuracy_probability(passer, receiver, [marker]), pass_accuracy_probability(passer, receiver, []))
@@ -63,8 +63,8 @@ def test_lane_opponent_and_marker_cut_physically_without_widening_the_error() ->
 
 def test_presser_cuts_the_pass_only_when_he_stands_on_its_line() -> None:
     """Ticket v2-realisme/18g (table mesurée, près du passeur) : le presseur gêne l'exécution par la pression, où qu'il
-    soit ; il ne coupe la passe que s'il est sur sa ligne (table du 18n, ballon à son niveau en 0,05 à 0,15 s : 0,90 à
-    moins de 0,5 m, 0,27 de 0,5 à 1 m, 0,01 de 1 à 2 m)."""
+    soit ; il ne coupe la passe que s'il est sur sa ligne (table du 18o, ballon à son niveau en 0,1 à 0,15 s : 0,87 à
+    moins de 0,5 m, 0,60 de 0,5 à 1 m, 0,08 de 1 à 2 m)."""
     passer = _player()
     receiver = _player("R", position=Vec2(45.0, 34.0))  # 15 m
     beside = _player("B", team="away", position=Vec2(30.75, 35.3))  # à 1,5 m du passeur, à 1,3 m de la ligne
@@ -258,8 +258,8 @@ def test_easy_ball_is_easy_to_control_and_fast_ball_is_harder() -> None:
 def test_evaluated_chance_combines_the_measured_cut_table_and_the_missed_pass() -> None:
     """Ticket v2-realisme/18g : chance que la passe ne soit pas perdue = produit des (1 - coupe) de chaque adversaire x
     part non perdue par bande d'écart latéral à l'arrivée, tirée de la loi d'écart (ticket 23a ; réajustée au ticket 18n :
-    0,99 sous 2 m, 0,98 de 2 à 4 m, 0,80 au-delà). Coupe : table du 18n, selon la distance à la trajectoire et le temps du
-    ballon jusqu'à l'adversaire. Ne coupent pas : un adversaire derrière le passeur, au-delà du receveur, ou à 6 m ou plus
+    0,99 sous 2 m, 0,98 de 2 à 4 m, 0,80 au-delà). Coupe : table du 18n (réestimée au 18o), selon la distance à la
+    trajectoire et le temps du ballon jusqu'à l'adversaire. Ne coupent pas : un adversaire derrière le passeur, au-delà du receveur, ou à 6 m ou plus
     de la ligne."""
     passer = _player()
     receiver = _player("R", position=Vec2(45.0, 34.0))  # 15 m, à l'arrêt : aucun écart de dosage
@@ -271,28 +271,64 @@ def test_evaluated_chance_combines_the_measured_cut_table_and_the_missed_pass() 
 
     alone = pass_success_probability(passer, receiver, [])
     assert math.isclose(alone, bands([]))
-    near = _player("N", team="away", position=Vec2(31.5, 34.2))  # à 0,2 m de la ligne, ballon à 0,11 s : 0,90
-    path = _player("W", team="away", position=Vec2(38.0, 35.5))  # à 1,5 m de la ligne, ballon à 0,70 s : 0,44
+    near = _player("N", team="away", position=Vec2(31.5, 34.2))  # à 0,2 m de la ligne, ballon à 0,11 s : 0,87
+    path = _player("W", team="away", position=Vec2(38.0, 35.5))  # à 1,5 m de la ligne, ballon à 0,70 s : 0,47
     for silent in (Vec2(24.0, 34.0), Vec2(48.0, 34.0), Vec2(38.0, 40.5)):  # derrière, au-delà, à 6,5 m (hors pression)
         assert math.isclose(pass_success_probability(passer, receiver, [_player("S", team="away", position=silent)]),
                             alone)
     both = pass_success_probability(passer, receiver, [near, path])  # la pression de N élargit l'écart du passeur
-    assert math.isclose(both, (1 - 0.90) * (1 - 0.44) * bands([near, path]))
+    assert math.isclose(both, (1 - 0.87) * (1 - 0.47) * bands([near, path]))
 
 
 def test_cut_chance_follows_the_ball_travel_time_not_the_pass_length() -> None:
     """Ticket v2-realisme/18n : à la même place par rapport au passeur (1,5 m devant lui, 0,75 m de la ligne), l'adversaire
-    coupe plus souvent une passe courte, qui part lentement (ballon à son niveau en 0,17 s pour 5 m : 0,65), qu'une passe
-    longue (0,07 s pour 30 m : 0,27). À temps du ballon égal, la longueur n'y est pour rien."""
+    coupe plus souvent une passe courte, qui part lentement (ballon à son niveau en 0,17 s pour 5 m : 0,62 depuis le 18o),
+    qu'une passe longue (0,07 s pour 30 m : 0,26). À temps du ballon égal, la longueur n'y est pour rien."""
     passer = _player()
     presser = _player("O", team="away", position=Vec2(31.5, 34.75))
     short = _player("R", position=Vec2(35.0, 34.0))
     long_ = _player("R", position=Vec2(60.0, 34.0))
-    assert math.isclose(possession._cut_chance(passer.position, short.position, presser), 0.65)
-    assert math.isclose(possession._cut_chance(passer.position, long_.position, presser), 0.27)
+    assert math.isclose(possession._cut_chance(passer.position, short.position, presser), 0.62)
+    assert math.isclose(possession._cut_chance(passer.position, long_.position, presser), 0.26)
     log_f = math.log(possession.BALL_FRICTION_PER_S)
-    for length in (8.0, 20.0, 40.0):  # même temps du ballon (0,25 s) jusqu'à l'adversaire : même chance (0,74)
+    for length in (8.0, 20.0, 40.0):  # même temps du ballon (0,25 s) jusqu'à l'adversaire : même chance (0,66)
         speed = possession._launch_speed(length)
         along = speed * (math.exp(0.25 * log_f) - 1.0) / log_f
         rival = _player("O", team="away", position=Vec2(30.0 + along, 34.75))
-        assert math.isclose(possession._cut_chance(passer.position, Vec2(30.0 + length, 34.0), rival), 0.74)
+        assert math.isclose(possession._cut_chance(passer.position, Vec2(30.0 + length, 34.0), rival), 0.66)
+
+
+def test_receiver_contests_the_ball_near_the_end_of_the_pass() -> None:
+    """Ticket v2-realisme/18o : à moins de 2 m du bout du trajet, le receveur dispute le ballon ; la coupe de la table est
+    multipliée par un facteur selon le reste du trajet et l'écart à la ligne (moins de 1 m : 0,50 / 0,66 / 0,81 / 0,90 ;
+    1 m et plus : 0,26 / 0,36 / 0,46 / 0,65, par tranche de 0,5 m). Passe de 12 m, ballon à plus de 1 s au bout : sur la
+    ligne 0,41, à 1,5 m de la ligne 0,34."""
+    passer = _player()
+    end = Vec2(42.0, 34.0)
+
+    def cut(x: float, y: float = 34.0) -> float:
+        return possession._cut_chance(passer.position, end, _player("O", team="away", position=Vec2(x, y)))
+
+    assert math.isclose(cut(41.8), 0.41 * 0.50)  # sur la ligne, 0,2 m avant le receveur
+    assert math.isclose(cut(41.3), 0.41 * 0.66)  # 0,7 m avant
+    assert math.isclose(cut(40.8), 0.41 * 0.81)  # 1,2 m avant
+    assert math.isclose(cut(40.3), 0.41 * 0.90)  # 1,7 m avant
+    assert math.isclose(cut(39.5), 0.41)  # 2,5 m avant : la table entière
+    assert math.isclose(cut(41.8, 35.5), 0.34 * 0.26)  # à 1,5 m de la ligne, 0,2 m avant
+    assert math.isclose(cut(40.3, 35.5), 0.34 * 0.65)  # à 1,5 m de la ligne, 1,7 m avant
+    assert math.isclose(cut(39.5, 35.5), 0.34)  # 2,5 m avant : la table entière (ballon encore à plus de 1 s)
+
+
+def test_marked_receiver_at_contact_keeps_the_measured_engine_chance() -> None:
+    """Ticket v2-realisme/18o (réserve A2 du 18n) : receveur marqué de face au contact, adversaire immobile 0,5 m devant
+    lui sur la ligne, passe de 12 m. La chance évaluée suit le moteur : en match, ces passes sont gardées deux fois sur
+    trois (96 matchs, adversaire à moins de 1,5 m du receveur entre le passeur et lui : environ 0,61 non perdues), d'où 0,72
+    ici (coupe 0,41 x 0,66). Physiquement, un défenseur collé devant le receveur devrait gagner presque toujours : écart du
+    moteur, ticket de physique à part (décision du propriétaire, 20/11/2026) ; ce test fige la valeur actuelle."""
+    passer = _player()
+    receiver = _player("R", position=Vec2(42.0, 34.0))
+    marker = _player("M", team="away", position=Vec2(41.5, 34.0))
+    chance = pass_success_probability(passer, receiver, [marker])
+    assert math.isclose(chance, pass_success_probability(passer, receiver, []) * (1.0 - 0.41 * 0.66))
+    assert 0.6 < chance < 0.8
+    assert chance < pass_success_probability(passer, receiver, [])

@@ -89,13 +89,30 @@ _HARDEST_CONTROL = _BASE_DIFFICULTY + _CONTROL_DIFFICULTY_PER_MPS * (MAX_PASS_MP
 # à 2347) : pire tranche 4,2 -> 1,4 points, longueur sous 8 m + 0,5. Données réelles : non trouvé (la table décrit le
 # moteur, à remesurer si le mouvement change). Mesures : `.scratch/v2-realisme/mesures/18n-*`.
 _CUT_TIME_S = (0.05, 0.1, 0.15, 0.2, 0.3, 0.45, 0.7, 1.0, math.inf)  # bornes hautes des colonnes (s)
+# Réestimée au ticket v2-realisme/18o (constantes validées par le propriétaire le 20/11/2026) : la table ignorait que le
+# receveur dispute le ballon. Un adversaire à moins de `CUT_REST_FULL_M` du bout du trajet (le receveur) coupe bien moins
+# que la table ne le dit (reste sous 0,5 m : 6 % observé contre 18 % prévu) ; mêlés à l'ajustement, ces cas faisaient
+# sous-estimer ceux de 3 à 5 m du bout (rapport 1,13). Table réestimée sur les seuls adversaires à au moins
+# `CUT_REST_FULL_M` du bout ; plus près, la coupe est multipliée par `_CUT_REST_FACTOR` selon le reste du trajet et
+# l'écart à la ligne. Ajustement sur 96 matchs (graines 2400 à 2447, moteur du commit 0651cf3, et 2500 à 2547, joués avec
+# un premier jeu de facteurs ajusté sur les seules graines 2400 à 2447, qui surcorrigeait hors échantillon : + 5,0 points ;
+# 121 452 passes au sol). En échantillon : adversaire à moins de 1,5 m du receveur − 14,2 -> + 0,5 point, pire tranche
+# 1,6. Données réelles : non trouvé (la table décrit le moteur). Mesures : `.scratch/v2-realisme/mesures/18o-*`.
 _CUT_TABLE = (  # (distance max à la trajectoire en m, chance de coupe par colonne de temps)
-    (0.5, (0.77, 0.91, 0.90, 0.80, 0.63, 0.77, 0.71, 0.56, 0.29)),
-    (1.0, (0.03, 0.27, 0.59, 0.65, 0.74, 0.55, 0.64, 0.51, 0.31)),
-    (2.0, (0.0, 0.01, 0.09, 0.18, 0.26, 0.42, 0.44, 0.39, 0.30)),
-    (3.0, (0.0, 0.0, 0.0, 0.01, 0.02, 0.07, 0.19, 0.29, 0.24)),
-    (4.0, (0.0, 0.0, 0.0, 0.0, 0.01, 0.03, 0.08, 0.19, 0.18)),
-    (6.0, (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.02, 0.07, 0.10)),
+    (0.5, (0.77, 0.90, 0.87, 0.85, 0.76, 0.77, 0.64, 0.55, 0.41)),
+    (1.0, (0.02, 0.26, 0.60, 0.62, 0.66, 0.66, 0.63, 0.53, 0.38)),
+    (2.0, (0.0, 0.01, 0.08, 0.20, 0.28, 0.40, 0.47, 0.43, 0.34)),
+    (3.0, (0.0, 0.0, 0.0, 0.01, 0.03, 0.10, 0.21, 0.34, 0.27)),
+    (4.0, (0.0, 0.0, 0.0, 0.0, 0.0, 0.02, 0.10, 0.19, 0.21)),
+    (6.0, (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.02, 0.08, 0.12)),
+)
+CUT_REST_FULL_M = 2.0  # reste du trajet (m) au-delà duquel la table s'applique pleinement
+CUT_REST_GAP_M = 1.0  # écart à la ligne séparant les deux lignes de `_CUT_REST_FACTOR`
+_CUT_REST_FACTOR = (  # (reste du trajet max en m, facteur si écart < `CUT_REST_GAP_M`, facteur sinon)
+    (0.5, 0.50, 0.26),
+    (1.0, 0.66, 0.36),
+    (1.5, 0.81, 0.46),
+    (CUT_REST_FULL_M, 0.90, 0.65),
 )
 # Passe au sol (ticket v2-realisme/23a, réserve A2 de l'expert à la clôture) : part non perdue hors coupe de la table,
 # selon l'écart latéral à l'arrivée tiré par la loi d'écart (`pass_error_sigma_rad`) ; la chance de chaque bande sort de
@@ -146,8 +163,9 @@ def dosage_quality(passer: PlayerState) -> float:
 
 
 def _cut_chance(start: Vec2, end: Vec2, opponent: PlayerState) -> float:
-    """Chance (table du 18n) que `opponent` touche le premier une passe de `start` vers `end`, s'il est atteint par le
-    ballon : selon sa distance à la trajectoire et le temps que met le ballon à arriver à son niveau."""
+    """Chance (table du 18n, réestimée au 18o) que `opponent` touche le premier une passe de `start` vers `end`, s'il est
+    atteint par le ballon : selon sa distance à la trajectoire et le temps que met le ballon à arriver à son niveau ; près
+    du bout (le receveur, qui dispute le ballon), réduite selon le reste du trajet (`_CUT_REST_FACTOR`)."""
     path = end - start
     length = path.length()
     if length < 1e-9:
@@ -165,7 +183,12 @@ def _cut_chance(start: Vec2, end: Vec2, opponent: PlayerState) -> float:
     speed = _launch_speed(length)
     at = max(BALL_STOPPED_MPS, speed + along * log_f)  # vitesse au niveau de l'adversaire (freinage linéaire en distance)
     travel = math.log(at / speed) / log_f
-    return next(chance for limit, chance in zip(_CUT_TIME_S, row) if travel < limit)
+    chance = next(chance for limit, chance in zip(_CUT_TIME_S, row) if travel < limit)
+    rest = length - along
+    for limit, on_line, off_line in _CUT_REST_FACTOR:
+        if rest < limit:
+            return chance * (on_line if gap < CUT_REST_GAP_M else off_line)
+    return chance
 
 
 def one_touch_precision(passer: PlayerState) -> float:
