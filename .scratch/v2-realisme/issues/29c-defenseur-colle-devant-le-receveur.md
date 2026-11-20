@@ -6,6 +6,8 @@
 
 **What to build :** mesurer d'abord, sur des situations construites (receveur et défenseur immobiles ou en mouvement, défenseur devant, à côté, derrière), qui touche le ballon le premier et pourquoi (portée de contrôle du receveur, `match.RECEIVER_REACH_M`, portée du défenseur, ordre de résolution des contacts, receveur qui vient au ballon). Chercher un ordre de grandeur réel (part des passes vers un joueur marqué de face interceptées). Corriger le seul facteur en cause ; puis remesurer la table de coupe et les facteurs du `18o` (la chance évaluée décrit le moteur). Toute constante nouvelle est proposée au propriétaire avant d'être codée.
 
+**À la remesure de la table (clôture du `18p`, 20/11/2026) :** vérifier aussi les biais laissés en l'état par le `18p` : Passing < 50 (+ 3,8 ± 1,8), passes de moins de 8 m (+ 1,6, réserve A2 du `18o`), de 15 à 30 m (− 1,1, réserve A1 du `18o`) ; causes écartées au `18p` (`docs/INDICATEURS_V2.md` section 63).
+
 **Critères d'acceptation (proposés) :** à fixer avec le propriétaire après la mesure (part des ballons gagnés par le défenseur collé devant, cas statique) ; réussite des passes de jeu au-dessus de 80 % (29b) ; critères du `18n` et du `18o` toujours tenus après remesure.
 
 **Attributs :** à établir (portées, Anticipation, Positioning ; voir `docs/CARTE_ATTRIBUTS_V2.md`).

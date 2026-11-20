@@ -1,0 +1,11 @@
+59976 passes, 48 matchs (24 pour l'ajustement, les autres en contrôle)
+Contrôle : écart prévision - non perdue (points) ; ligne idéale | ligne jouée (prévision avec l'angle réellement tiré)
+  toutes                     n  29885 (± 0.4)   +0.2 |  +0.2
+  Passing < 50               n    962 (± 2.7)   +5.0 |  +4.8
+  Passing 50-70              n  16502 (± 0.5)   -0.2 |  -0.2
+  Passing >= 70              n  12421 (± 0.6)   +0.4 |  +0.3
+  longueur < 8 m             n   4118 (± 1.0)   +1.9 |  +1.8
+  longueur 8-15 m            n   8948 (± 0.7)   +0.9 |  +1.1
+  longueur 15-30 m           n  15211 (± 0.6)   -0.6 |  -0.7
+  longueur >= 30 m           n   1608 (± 1.9)   +0.3 |  -0.2
+  écart réalisé > 2 sigma    n   1285 (± 2.2)   +7.4 |  +5.2

@@ -384,6 +384,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **`v2-realisme/18o` livré (20/11/2026), validé expert (réserves A1 passes de 15 à 30 m, A2 passes de moins de 8 m, acceptées, renvoyées au `18p`) + QC** : la table de coupe ignorait que le receveur dispute le ballon ; réestimée sur les adversaires à au moins 2 m du bout du trajet, et facteur sous 2 m selon le reste du trajet et l'écart à la ligne (0,50 / 0,66 / 0,81 / 0,90 sur la ligne, 0,26 / 0,36 / 0,46 / 0,65 à côté ; validés par le propriétaire, ajustés sur 96 matchs après une surcorrection du premier jeu). Contrôle sur 52 matchs joués : adversaire à moins de 1,5 m du receveur − 12,5 -> − 0,6 ± 4,2 point (528 passes), pire tranche 1,5, moyenne − 0,1 ; 15 à 30 m − 1,1 (réserve, biais antérieur). 50 matchs appariés : réussite des passes 84,7 % → 85,2 %, tirs et buts dans le bruit. Passing < 50 sorti du ticket (`18p`) ; receveur marqué de face au contact jugé ouvert (0,72), fidèle au moteur : ticket de physique `29c`. `docs/INDICATEURS_V2.md` section 62.
 
+**`v2-realisme/18p` livré (20/11/2026), validé expert + QC** (diagnostic seul, aucun changement moteur, décision du propriétaire) : aucune cause unique corrigible aux biais de la chance évaluée laissés par le 18o. Écartés : correctif A2 de l'expert (moins de 8 m + 1,7 -> + 1,6), vitesse des adversaires vers la ligne (effet réel, 0,56 à 1,66 fois la coupe prévue, sans effet sur Passing < 50 en facteur simple), attributs des adversaires (au plus 0,2 point), ligne jouée (+ 5,0 -> + 4,8), dosage. Biais laissés en l'état : Passing < 50 + 3,8, moins de 8 m + 1,6, 15 à 30 m − 1,1 ; à remesurer au `29c`. `docs/INDICATEURS_V2.md` section 63.
+
 ### Bloquée par
 
 - Phase 4

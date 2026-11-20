@@ -1,0 +1,17 @@
+64887 passes ; adversaires sans attributs trouvés : 0
+Coupe observée / prévue selon l'Anticipation de l'adversaire
+  <  45  n   2948  prévue 0.096 observée 0.082  rapport 0.86
+  <  55  n   3868  prévue 0.102 observée 0.091  rapport 0.90
+  <  65  n  14342  prévue 0.095 observée 0.089  rapport 0.93
+  <  75  n  25105  prévue 0.098 observée 0.101  rapport 1.02
+  < 101  n  30789  prévue 0.099 observée 0.106  rapport 1.06
+Coupe observée / prévue selon l'Pace de l'adversaire
+  <  55  n   3197  prévue 0.098 observée 0.092  rapport 0.95
+  <  65  n  23965  prévue 0.099 observée 0.097  rapport 0.98
+  <  75  n  29984  prévue 0.099 observée 0.101  rapport 1.02
+  <  85  n  13943  prévue 0.098 observée 0.102  rapport 1.04
+  < 101  n   5963  prévue 0.092 observée 0.098  rapport 1.06
+Adversaires de la table (atteints) : attributs moyens selon le Passing du passeur
+  Passing 0-50  n   2078  Anticipation 72.3  Pace 68.0  (pondérés par la coupe : 72.5 / 67.4)
+  Passing 50-70  n  42372  Anticipation 70.2  Pace 68.0  (pondérés par la coupe : 70.1 / 67.8)
+  Passing 70-100  n  32602  Anticipation 69.1  Pace 67.6  (pondérés par la coupe : 69.1 / 67.6)

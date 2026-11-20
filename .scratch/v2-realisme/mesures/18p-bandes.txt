@@ -1,0 +1,26 @@
+Part non perdue (hors coupe par un adversaire de la table) selon l'écart latéral réalisé au receveur
+ Passing 0-50
+  écart  0-1  m  n    893  non perdue 0.946 ± 0.015
+  écart  1-2  m  n    380  non perdue 0.916 ± 0.028
+  écart  2-4  m  n    226  non perdue 0.881 ± 0.042
+  écart  4-6  m  n     31  non perdue 0.742 ± 0.154
+ Passing 50-70
+  écart  0-1  m  n  19591  non perdue 0.990 ± 0.001
+  écart  1-2  m  n   6578  non perdue 0.968 ± 0.004
+  écart  2-4  m  n   2681  non perdue 0.916 ± 0.010
+  écart  4-6  m  n    202  non perdue 0.802 ± 0.055
+ Passing 70-100
+  écart  0-1  m  n  15596  non perdue 0.987 ± 0.002
+  écart  1-2  m  n   4882  non perdue 0.976 ± 0.004
+  écart  2-4  m  n   1692  non perdue 0.959 ± 0.009
+  écart  4-6  m  n    136  non perdue 0.875 ± 0.056
+ Passing 0-100
+  écart  0-1  m  n  36080  non perdue 0.988 ± 0.001
+  écart  1-2  m  n  11840  non perdue 0.970 ± 0.003
+  écart  2-4  m  n   4599  non perdue 0.930 ± 0.007
+  écart  4-6  m  n    369  non perdue 0.824 ± 0.039
+  écart  6-8  m  n     31  non perdue 0.774 ± 0.147
+Masse prévue par la loi d'écart (moyenne des poids de bande enregistrés) et réalisée, au-delà de 4 m
+  Passing 0-50  prévue 0.222  réalisée 0.026  au-delà de 8 m réalisée 0.000
+  Passing 50-70  prévue 0.093  réalisée 0.008  au-delà de 8 m réalisée 0.000
+  Passing 70-100  prévue 0.016  réalisée 0.007  au-delà de 8 m réalisée 0.000

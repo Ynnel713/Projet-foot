@@ -1939,3 +1939,17 @@ Passes de 15 à 30 m : − 1,1, au-delà du critère du 18n (1 point) ; − 1,3 
 | Buts | 4,86 | 4,60 | − 0,26 ± 0,86 |
 
 Lecture : la passe vers un receveur avec un adversaire à son contact, sous-évaluée avant, est un peu plus jouée et rarement perdue ; réussite 85,2 %, au-dessus de la cible de 80 % du 29b ; tirs et buts dans le bruit. Cas statique (adversaire immobile 0,5 m devant le receveur, passe de 12 m) : chance 0,72, fidèle au moteur mais sans doute irréaliste : ticket de physique `29c`.
+
+## 63. Passeurs faibles et réserves du 18o : causes écartées (ticket v2-realisme/18p, 20/11/2026)
+
+Diagnostic seul, sans changement moteur (décision du propriétaire). Données : 52 matchs du contrôle du 18o (graines 2600 à 2651, moteur `4c9e470`, 64 887 passes de jeu au sol), et les graines 2600 à 2647 réenregistrées avec le côté signé de chaque adversaire (`.scratch/v2-realisme/mesures/18p-diag-script.py`, mêmes matchs, 59 976 passes). Écarts évaluée - non perdue, en points.
+
+| Hypothèse testée | Mesure | Conclusion |
+|---|---|---|
+| Correctif A2 de l'expert du 18o (facteur du reste du trajet seulement si l'adversaire est plus près du receveur que du passeur) | moins de 8 m : + 1,7 -> + 1,6 | écartée |
+| Vitesse de l'adversaire vers la ligne de passe | coupe observée / prévue : 0,56 (s'éloigne à plus de 3 m/s) à 1,66 (fonce à plus de 5 m/s) ; en facteur simple, Passing < 50 + 3,7, pire tranche 7,9 | effet réel, ne règle pas Passing < 50 ; demanderait une table réestimée à trois entrées |
+| Anticipation et Pace de l'adversaire | coupe observée / prévue 0,86 à 1,06 selon l'Anticipation ; adversaires des passeurs faibles : Anticipation 72,3 contre 69 à 70 | au plus 0,2 point |
+| Ligne jouée (angle tiré) au lieu de la ligne idéale, table réestimée sur 24 matchs, contrôlée sur 24 | Passing < 50 : + 5,0 -> + 4,8 | écartée |
+| Écart de dosage (receveur qui court) | pertes hors coupe à 2-4 m d'écart : 6,7 % / 1,3 % / 4,0 % (Passing < 50 / 50-70 / 70 et plus) pour 3,9 / 3,4 / 3,2 prévues | sans ordre selon Passing, écartée |
+
+Constat : chez les passeurs faibles, le surplus de pertes est diffus (coupe + 2 points, hors coupe + 1,4) ; une passe jouée droit (écart latéral réalisé sous 1 m) est perdue hors coupe à 5,4 % contre 1,0 à 1,3 % pour les autres, sans explication géométrique (probable effet de contexte non mesuré : poste, zone, moment). Biais laissés en l'état : Passing < 50 + 3,8 ± 1,8 (3 % des passes), moins de 8 m + 1,6 ± 0,7, 15 à 30 m − 1,1 ± 0,4 ; calibration globale : pire tranche 1,5, moyenne − 0,1. À remesurer au ticket `29c` (physique du défenseur collé devant le receveur), qui imposera de réestimer la table. Scripts et sorties : `18p-diagnostic*`, `18p-ligne-jouee`, `18p-bandes`, `18p-dosage`.

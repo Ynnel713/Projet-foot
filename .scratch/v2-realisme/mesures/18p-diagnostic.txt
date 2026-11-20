@@ -1,0 +1,26 @@
+64887 passes ; chance recalculée - enregistrée : moyenne 0.0008, max 0.742
+Facteur vitesse vers la ligne (observée / prévue, A2 compris)
+  classe < -3.0 m/s  n   6693  prévue 0.120 observée 0.068  facteur 0.56
+  classe < -1.0 m/s  n  15514  prévue 0.078 observée 0.050  facteur 0.64
+  classe <  1.0 m/s  n  20686  prévue 0.094 observée 0.079  facteur 0.84
+  classe <  3.0 m/s  n  18551  prévue 0.107 observée 0.125  facteur 1.17
+  classe <  5.0 m/s  n  12844  prévue 0.111 observée 0.166  facteur 1.49
+  classe <  inf m/s  n   2764  prévue 0.073 observée 0.121  facteur 1.66
+  par Passing (observée / prévue)
+   Passing 0-50 : 0.44[143]  0.63[402]  0.94[575]  1.55[501]  1.62[390]  2.01[67]
+   Passing 50-70 : 0.54[3805]  0.61[8498]  0.83[11120]  1.14[10204]  1.53[7210]  1.68[1535]
+   Passing 70-100 : 0.60[2745]  0.70[6614]  0.85[8991]  1.17[7846]  1.39[5244]  1.59[1162]
+
+Écart évaluée - non perdue (points) : moteur | A2 | A2 + vitesse
+  toutes                     n  64887 (± 0.3)   -0.1   -0.1   +0.0
+  Passing < 50               n   2002 (± 1.8)   +3.9   +3.8   +3.7
+  Passing 50-70              n  36190 (± 0.4)   -0.5   -0.6   -0.5
+  Passing >= 70              n  26695 (± 0.4)   +0.3   +0.3   +0.5
+  longueur < 8 m             n   8920 (± 0.7)   +1.7   +1.6   +1.3
+  longueur < 15 m            n  28232 (± 0.4)   +1.0   +1.0   +0.6
+  longueur 15-30 m           n  33130 (± 0.4)   -1.0   -1.0   -0.6
+  longueur >= 30 m           n   3525 (± 1.3)   +0.4   +0.4   +1.4
+  adv. < 1,5 m du receveur   n    528 (± 4.2)   -0.6   -1.2   -0.1
+  pire tranche (moteur) : 1.0
+  pire tranche (A2) : 1.0
+  pire tranche (A2 + vitesse) : 7.9
