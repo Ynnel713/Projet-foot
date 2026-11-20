@@ -1,0 +1,125 @@
+Ajustement : 30703 passes au sol ; contrôle : 61503 passes
+
+1. Chance évaluée actuelle (ajustement)
+  par tranche de chance
+    [0.00 ; 0.10[  n     91  évaluée 0.070  non perdue 0.044  écart +2.6 ± 4.2
+    [0.10 ; 0.20[  n    963  évaluée 0.167  non perdue 0.137  écart +2.9 ± 2.2
+    [0.20 ; 0.30[  n     64  évaluée 0.273  non perdue 0.344  écart -7.1 ± 11.6
+    [0.30 ; 0.40[  n    134  évaluée 0.363  non perdue 0.306  écart +5.8 ± 7.8
+    [0.40 ; 0.50[  n    460  évaluée 0.454  non perdue 0.428  écart +2.5 ± 4.5
+    [0.50 ; 0.60[  n   1162  évaluée 0.542  non perdue 0.490  écart +5.2 ± 2.9
+    [0.60 ; 0.70[  n   1870  évaluée 0.654  non perdue 0.636  écart +1.8 ± 2.2
+    [0.70 ; 0.80[  n   3733  évaluée 0.762  non perdue 0.766  écart -0.4 ± 1.4
+    [0.80 ; 0.90[  n   4769  évaluée 0.856  non perdue 0.853  écart +0.3 ± 1.0
+    [0.90 ; 1.00[  n  17457  évaluée 0.959  non perdue 0.963  écart -0.4 ± 0.3
+    toutes n 30703  évaluée 0.846  non perdue 0.843  écart +0.24 ; pire tranche (n >= 500) 5.2 points
+  par groupe
+    Passing < 50                       n    984  évaluée 0.795  non perdue 0.753  écart +4.2 ± 2.7
+    Passing 50-70                      n  16623  évaluée 0.831  non perdue 0.830  écart +0.2 ± 0.6
+    Passing >= 70                      n  13096  évaluée 0.868  non perdue 0.867  écart +0.0 ± 0.6
+    receveur libre (rien < 4 m hors coupe) n  28380  évaluée 0.845  non perdue 0.845  écart +0.0 ± 0.4
+    adversaire hors coupe < 2 m        n    504  évaluée 0.821  non perdue 0.736  écart +8.5 ± 3.8
+    adversaire hors coupe 2-4 m        n   1819  évaluée 0.860  non perdue 0.844  écart +1.6 ± 1.7
+    hors coupe < 2 m, arrive avant     n    101  évaluée 0.848  non perdue 0.713  écart +13.5 ± 8.8
+    passes < 15 m                      n  14096  évaluée 0.870  non perdue 0.848  écart +2.2 ± 0.6
+    passes 15-30 m                     n  15167  évaluée 0.829  non perdue 0.842  écart -1.3 ± 0.6
+    passes >= 30 m                     n   1440  évaluée 0.779  non perdue 0.805  écart -2.6 ± 2.0
+  pertes, par premier toucheur adverse (tous / Passing < 50)
+    toutes : 4814 pertes sur 30703 passes ; compté par la coupe 4306 (89 %), hors coupe, loin du receveur 308 (6 %), hors coupe, < 6 m du receveur (derrière) 103 (2 %), sortie / sifflée 94 (2 %), hors coupe, < 6 m du receveur (devant) 2 (0 %), gardien loin (non suivi) 1 (0 %)
+    Passing < 50 : 243 pertes sur 984 passes ; compté par la coupe 188 (77 %), hors coupe, loin du receveur 30 (12 %), hors coupe, < 6 m du receveur (derrière) 15 (6 %), sortie / sifflée 9 (4 %), hors coupe, < 6 m du receveur (devant) 1 (0 %)
+
+2. Adversaires hors coupe près du receveur : part qui touche le ballon le premier (méthode du 18g)
+    < 1 m, arrive avant : n     35  touche le premier 0.143
+    < 1 m, arrive après : n     82  touche le premier 0.061
+    < 2 m, arrive avant : n     67  touche le premier 0.090
+    < 2 m, arrive après : n    332  touche le premier 0.039
+    < 3 m, arrive avant : n     85  touche le premier 0.059
+    < 3 m, arrive après : n    673  touche le premier 0.018
+    < 4 m, arrive avant : n    102  touche le premier 0.049
+    < 4 m, arrive après : n   1184  touche le premier 0.010
+    < 6 m, arrive avant : n    314  touche le premier 0.022
+    < 6 m, arrive après : n   4321  touche le premier 0.008
+    position (< 3 m) : derrière 0.039 (n 1167), devant 0.000 (n 65), à côté 0.000 (n 42)
+    facteur moyen de la table sur l'ajustement : 0.997
+
+3. Chance avec la table (parts par bande renormalisées par le facteur moyen), ajustement
+  par tranche
+    [0.00 ; 0.10[  n     94  évaluée 0.071  non perdue 0.043  écart +2.8 ± 4.1
+    [0.10 ; 0.20[  n    960  évaluée 0.167  non perdue 0.138  écart +2.9 ± 2.2
+    [0.20 ; 0.30[  n     64  évaluée 0.273  non perdue 0.344  écart -7.1 ± 11.6
+    [0.30 ; 0.40[  n    134  évaluée 0.363  non perdue 0.306  écart +5.7 ± 7.8
+    [0.40 ; 0.50[  n    458  évaluée 0.453  non perdue 0.430  écart +2.3 ± 4.5
+    [0.50 ; 0.60[  n   1162  évaluée 0.542  non perdue 0.490  écart +5.2 ± 2.9
+    [0.60 ; 0.70[  n   1890  évaluée 0.655  non perdue 0.637  écart +1.8 ± 2.2
+    [0.70 ; 0.80[  n   3718  évaluée 0.762  non perdue 0.766  écart -0.3 ± 1.4
+    [0.80 ; 0.90[  n   4743  évaluée 0.856  non perdue 0.852  écart +0.3 ± 1.0
+    [0.90 ; 1.00[  n  17480  évaluée 0.959  non perdue 0.963  écart -0.4 ± 0.3
+    toutes n 30703  évaluée 0.846  non perdue 0.843  écart +0.24 ; pire tranche (n >= 500) 5.2 points
+  par groupe
+    Passing < 50                       n    984  évaluée 0.794  non perdue 0.753  écart +4.1 ± 2.7
+    Passing 50-70                      n  16623  évaluée 0.831  non perdue 0.830  écart +0.2 ± 0.6
+    Passing >= 70                      n  13096  évaluée 0.868  non perdue 0.867  écart +0.0 ± 0.6
+    receveur libre (rien < 4 m hors coupe) n  28380  évaluée 0.847  non perdue 0.845  écart +0.2 ± 0.4
+    adversaire hors coupe < 2 m        n    504  évaluée 0.772  non perdue 0.736  écart +3.6 ± 3.8
+    adversaire hors coupe 2-4 m        n   1819  évaluée 0.845  non perdue 0.844  écart +0.1 ± 1.7
+    hors coupe < 2 m, arrive avant     n    101  évaluée 0.757  non perdue 0.713  écart +4.4 ± 8.8
+    passes < 15 m                      n  14096  évaluée 0.869  non perdue 0.848  écart +2.1 ± 0.6
+    passes 15-30 m                     n  15167  évaluée 0.830  non perdue 0.842  écart -1.2 ± 0.6
+    passes >= 30 m                     n   1440  évaluée 0.780  non perdue 0.805  écart -2.5 ± 2.0
+
+4. Contrôle hors échantillon
+  chance actuelle
+    [0.00 ; 0.10[  n    203  évaluée 0.074  non perdue 0.064  écart +1.0 ± 3.4
+    [0.10 ; 0.20[  n   1882  évaluée 0.165  non perdue 0.126  écart +3.9 ± 1.5
+    [0.20 ; 0.30[  n    104  évaluée 0.269  non perdue 0.240  écart +2.9 ± 8.2
+    [0.30 ; 0.40[  n    295  évaluée 0.360  non perdue 0.400  écart -4.0 ± 5.6
+    [0.40 ; 0.50[  n    953  évaluée 0.455  non perdue 0.442  écart +1.3 ± 3.2
+    [0.50 ; 0.60[  n   2293  évaluée 0.540  non perdue 0.498  écart +4.3 ± 2.0
+    [0.60 ; 0.70[  n   3666  évaluée 0.654  non perdue 0.639  écart +1.5 ± 1.6
+    [0.70 ; 0.80[  n   7637  évaluée 0.762  non perdue 0.751  écart +1.1 ± 1.0
+    [0.80 ; 0.90[  n   9507  évaluée 0.856  non perdue 0.851  écart +0.4 ± 0.7
+    [0.90 ; 1.00[  n  34963  évaluée 0.959  non perdue 0.963  écart -0.4 ± 0.2
+    toutes n 61503  évaluée 0.846  non perdue 0.842  écart +0.33 ; pire tranche (n >= 500) 4.3 points
+  chance actuelle, 7 tranches (découpage du contrôle du 23a)
+    [0.00 ; 0.14[  n    533  évaluée 0.103  non perdue 0.084  écart +1.8 ± 2.4
+    [0.14 ; 0.29[  n   1608  évaluée 0.177  non perdue 0.136  écart +4.2 ± 1.7
+    [0.29 ; 0.43[  n    542  évaluée 0.376  non perdue 0.391  écart -1.6 ± 4.1
+    [0.43 ; 0.57[  n   2750  évaluée 0.515  non perdue 0.473  écart +4.1 ± 1.9
+    [0.57 ; 0.71[  n   4517  évaluée 0.656  non perdue 0.648  écart +0.8 ± 1.4
+    [0.71 ; 0.86[  n  11868  évaluée 0.792  non perdue 0.780  écart +1.2 ± 0.7
+    [0.86 ; 1.00[  n  39685  évaluée 0.950  non perdue 0.954  écart -0.4 ± 0.2
+    toutes n 61503  évaluée 0.846  non perdue 0.842  écart +0.33 ; pire tranche (n >= 500) 4.2 points
+  chance actuelle, par groupe
+    Passing < 50                       n   1991  évaluée 0.795  non perdue 0.774  écart +2.0 ± 1.8
+    Passing 50-70                      n  33396  évaluée 0.831  non perdue 0.830  écart +0.1 ± 0.4
+    Passing >= 70                      n  26116  évaluée 0.869  non perdue 0.863  écart +0.6 ± 0.4
+    receveur libre (rien < 4 m hors coupe) n  56922  évaluée 0.845  non perdue 0.845  écart +0.1 ± 0.3
+    adversaire hors coupe < 2 m        n   1044  évaluée 0.837  non perdue 0.771  écart +6.6 ± 2.5
+    adversaire hors coupe 2-4 m        n   3537  évaluée 0.859  non perdue 0.831  écart +2.8 ± 1.2
+    hors coupe < 2 m, arrive avant     n    209  évaluée 0.847  non perdue 0.746  écart +10.1 ± 5.9
+    passes < 15 m                      n  27996  évaluée 0.869  non perdue 0.849  écart +2.0 ± 0.4
+    passes 15-30 m                     n  30662  évaluée 0.832  non perdue 0.842  écart -1.0 ± 0.4
+    passes >= 30 m                     n   2845  évaluée 0.764  non perdue 0.776  écart -1.2 ± 1.5
+  chance avec la table
+    [0.00 ; 0.10[  n    208  évaluée 0.074  non perdue 0.062  écart +1.2 ± 3.3
+    [0.10 ; 0.20[  n   1877  évaluée 0.165  non perdue 0.127  écart +3.8 ± 1.5
+    [0.20 ; 0.30[  n     99  évaluée 0.268  non perdue 0.242  écart +2.6 ± 8.4
+    [0.30 ; 0.40[  n    299  évaluée 0.360  non perdue 0.395  écart -3.5 ± 5.5
+    [0.40 ; 0.50[  n    952  évaluée 0.455  non perdue 0.444  écart +1.1 ± 3.2
+    [0.50 ; 0.60[  n   2288  évaluée 0.540  non perdue 0.497  écart +4.4 ± 2.0
+    [0.60 ; 0.70[  n   3695  évaluée 0.655  non perdue 0.639  écart +1.6 ± 1.5
+    [0.70 ; 0.80[  n   7639  évaluée 0.762  non perdue 0.752  écart +1.0 ± 1.0
+    [0.80 ; 0.90[  n   9401  évaluée 0.855  non perdue 0.850  écart +0.5 ± 0.7
+    [0.90 ; 1.00[  n  35045  évaluée 0.959  non perdue 0.963  écart -0.5 ± 0.2
+    toutes n 61503  évaluée 0.846  non perdue 0.842  écart +0.33 ; pire tranche (n >= 500) 4.4 points
+  chance avec la table, par groupe
+    Passing < 50                       n   1991  évaluée 0.794  non perdue 0.774  écart +2.0 ± 1.8
+    Passing 50-70                      n  33396  évaluée 0.830  non perdue 0.830  écart +0.0 ± 0.4
+    Passing >= 70                      n  26116  évaluée 0.869  non perdue 0.863  écart +0.6 ± 0.4
+    receveur libre (rien < 4 m hors coupe) n  56922  évaluée 0.847  non perdue 0.845  écart +0.2 ± 0.3
+    adversaire hors coupe < 2 m        n   1044  évaluée 0.786  non perdue 0.771  écart +1.5 ± 2.5
+    adversaire hors coupe 2-4 m        n   3537  évaluée 0.844  non perdue 0.831  écart +1.3 ± 1.2
+    hors coupe < 2 m, arrive avant     n    209  évaluée 0.750  non perdue 0.746  écart +0.4 ± 5.9
+    passes < 15 m                      n  27996  évaluée 0.868  non perdue 0.849  écart +1.8 ± 0.4
+    passes 15-30 m                     n  30662  évaluée 0.833  non perdue 0.842  écart -0.9 ± 0.4
+    passes >= 30 m                     n   2845  évaluée 0.766  non perdue 0.776  écart -1.1 ± 1.5

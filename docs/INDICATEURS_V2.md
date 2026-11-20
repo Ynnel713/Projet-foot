@@ -1841,3 +1841,33 @@ Poids de Passing dans la chance d'une passe au sol, de 30 à 90 : 15 m, + 0,4 po
 | tirs | 36,8 | 37,4 | + 0,6 ± 1,9 (non significatif) |
 
 Lecture : réussite des passes dans la marge de 3 points du ticket ; buts et tirs sans écart au-delà du bruit. Les passes imprécises sont bien plus nombreuses (401 par match, écart au-delà de 1 m) mais presque toutes jouables : le receveur visé en reprend 77 %. Remises en l'air − 8 points : cause non établie. Les remises n'utilisent pas le modèle de la passe en l'air (`match.py`, `restart.py` : ni tolérance de 2,5 m, ni difficulté du 15a) ; leur exécution est plus précise qu'avant (fini le décalage de 25 à 50 % de la longueur). Piste non vérifiée (réserve A1 de l'expert) : effet de sélection, la passe longue mieux évaluée fait choisir plus souvent des cibles lointaines disputées ; nombre et longueur des remises en l'air à mesurer avant / après au 15b. Sous pressing, le défenseur central joue long dans 5,7 % de ses passes (45,5 % au 15a), nouvelle référence décidée par le propriétaire le 20/11/2026. Déterminisme : deux exécutions d'un match complet (graine 3), même empreinte des comptes (`a0a00fc70e436018`).
+
+## 60. Adversaires proches du receveur dans la chance évaluée (ticket v2-realisme/18m, 20/11/2026)
+
+Diagnostic seul, moteur inchangé (commit `a048268`). 72 matchs neufs : ajustement 24 (graines 2200 à 2223, 30 703 passes de jeu au sol), contrôle 48 (graines 2300 à 2347, 61 503) ; `.scratch/v2-realisme/mesures/18m-diag-script.py`, `18m-analyse.py`, sortie `18m-rapport.txt`. Perdue : un adversaire touche le ballon le premier, ou sortie / sifflet avec remise adverse.
+
+| Contrôle (48 matchs) | Passes | Chance actuelle, écart | Avec la table « près du receveur » |
+|---|---|---|---|
+| adversaire hors coupe à moins de 2 m du receveur | 1 044 | + 6,6 ± 2,5 | + 1,5 |
+| adversaire hors coupe à 2 à 4 m | 3 537 | + 2,8 ± 1,2 | + 1,3 |
+| receveur libre (rien à moins de 4 m hors coupe) | 56 922 | + 0,1 ± 0,3 | + 0,2 |
+| Passing < 50 | 1 991 | + 2,0 ± 1,8 | + 2,0 |
+| passes de moins de 15 m | 27 996 | + 2,0 ± 0,4 | + 1,8 |
+| passes de 15 à 30 m | 30 662 | − 1,0 ± 0,4 | − 0,9 |
+| toutes | 61 503 | + 0,33 | + 0,33 |
+
+Pertes (ajustement) selon le premier adversaire à toucher : compté par la coupe 89 %, hors coupe loin du receveur 6 %, hors coupe à moins de 6 m du receveur (derrière lui) 2 %, sortie 2 % ; chez Passing < 50 : 77 / 12 / 6 / 4 %. Aucune tranche de chance ne bouge de plus de 0,5 point avec la table : non branchée.
+
+Contrôle du 23a refait avec le moteur livré (réserve A4 du 23a), 7 tranches de chance :
+
+| Chance évaluée | Passes | Évaluée | Observée (IC 95 %) | Écart |
+|---|---|---|---|---|
+| 0 à 0,14 | 533 | 0,103 | 0,084 ± 0,024 | + 1,8 |
+| 0,14 à 0,29 | 1 608 | 0,177 | 0,136 ± 0,017 | + 4,2 |
+| 0,29 à 0,43 | 542 | 0,376 | 0,391 ± 0,041 | − 1,6 |
+| 0,43 à 0,57 | 2 750 | 0,515 | 0,473 ± 0,019 | + 4,1 |
+| 0,57 à 0,71 | 4 517 | 0,656 | 0,648 ± 0,014 | + 0,8 |
+| 0,71 à 0,86 | 11 868 | 0,792 | 0,780 ± 0,007 | + 1,2 |
+| 0,86 et plus | 39 685 | 0,950 | 0,954 ± 0,002 | − 0,4 |
+
+Critère du propriétaire (au plus 4 points par tranche d'au moins 500 passes, moyenne à 0,5 point) : moyenne tenue (+ 0,3), deux tranches légèrement au-delà (+ 4,2, + 4,1). Suite : ticket `v2-realisme/18n` (biais selon la longueur).

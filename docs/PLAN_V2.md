@@ -378,6 +378,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **`v2-realisme/23a` livré (20/11/2026), validé expert (réserves A1 à A4 acceptées : remises en l'air − 8 points cause non établie, Passing peu pesant à 15 m, pertes au contrôle + 2, contrôle à refaire avec le moteur livré) + QC** : la passe part avec un écart d'angle et de vitesse gaussien (Passing, pression, Composure) ; plus de passe ratée au tirage ; la chance évaluée suit la même loi (bandes d'écart latéral, table de coupe remesurée sur le moteur après le 04e). Premier passage refusé (expert, QC) ; reprise sur décisions du propriétaire : critère de calibration révisé (au plus 4 points par tranche d'au moins 500 passes, moyenne à 0,5 point ; tenu hors échantillon : 3,3 points, − 0,2), défenseur sous pressing 5,7 % de passes longues comme nouvelle référence (45,5 % au 15a, renvoi au 15b). 50 matchs appariés : passes réussies 81,4 % → 83,0 %, remises en l'air − 8 points, buts et tirs dans le bruit. `docs/INDICATEURS_V2.md` section 59. Suite : `18m` (adversaires autour du receveur dans la chance évaluée, créé à la reprise), 23b, `v2-collectif/32a`.
 
+**`v2-realisme/18m` livré (20/11/2026), validé expert + QC** (diagnostic, aucun changement moteur) : adversaires non comptés par la coupe à moins de 2 m du receveur sur 1,7 % des passes (+ 6,6 points d'optimisme sur ces passes, 2 % des pertes) ; table ajustée sans effet sur la calibration (moins de 0,5 point par tranche, Passing < 50 inchangé) : clôture sans changement décidée par le propriétaire. Contrôle du 23a refait avec le moteur livré : pire tranche + 4,2 points (critère 4 légèrement dépassé), passes courtes + 2,0, moyennes − 1,0 : ticket `18n`. `docs/INDICATEURS_V2.md` section 60.
+
 ### Bloquée par
 
 - Phase 4
