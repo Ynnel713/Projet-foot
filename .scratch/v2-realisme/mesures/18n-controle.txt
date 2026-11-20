@@ -1,0 +1,18 @@
+60231 passes de jeu au sol
+  [0.00 ; 0.14[          n   1383  évaluée 0.080  non perdue 0.102 ± 0.016  écart -2.2
+  [0.14 ; 0.29[          n   1204  évaluée 0.216  non perdue 0.248 ± 0.024  écart -3.2
+  [0.29 ; 0.43[          n   1084  évaluée 0.361  non perdue 0.376 ± 0.029  écart -1.6
+  [0.43 ; 0.57[          n   1586  évaluée 0.511  non perdue 0.509 ± 0.025  écart +0.2
+  [0.57 ; 0.71[          n   3926  évaluée 0.661  non perdue 0.655 ± 0.015  écart +0.5
+  [0.71 ; 0.86[          n   7680  évaluée 0.785  non perdue 0.796 ± 0.009  écart -1.1
+  [0.86 ; 1.00[          n  43368  évaluée 0.961  non perdue 0.961 ± 0.002  écart -0.0
+  toutes                 n  60231  évaluée 0.861  non perdue 0.864 ± 0.003  écart -0.3
+  pire tranche (n >= 500) : 3.2 points
+  longueur 0 à 8 m       n   8048  évaluée 0.899  non perdue 0.895 ± 0.007  écart +0.4
+  longueur 0 à 15 m      n  25678  évaluée 0.879  non perdue 0.877 ± 0.004  écart +0.3
+  longueur 8 à 15 m      n  17630  évaluée 0.871  non perdue 0.868 ± 0.005  écart +0.2
+  longueur 15 à 30 m     n  31174  évaluée 0.851  non perdue 0.859 ± 0.004  écart -0.9
+  longueur 30 à 99 m     n   3379  évaluée 0.814  non perdue 0.803 ± 0.013  écart +1.2
+  Passing < 50           n   1830  évaluée 0.821  non perdue 0.785 ± 0.019  écart +3.6
+  Passing 50 à 70        n  32781  évaluée 0.846  non perdue 0.852 ± 0.004  écart -0.7
+  Passing >= 70          n  25620  évaluée 0.883  non perdue 0.883 ± 0.004  écart -0.0

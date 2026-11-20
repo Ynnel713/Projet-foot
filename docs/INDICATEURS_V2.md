@@ -1871,3 +1871,34 @@ Contrôle du 23a refait avec le moteur livré (réserve A4 du 23a), 7 tranches d
 | 0,86 et plus | 39 685 | 0,950 | 0,954 ± 0,002 | − 0,4 |
 
 Critère du propriétaire (au plus 4 points par tranche d'au moins 500 passes, moyenne à 0,5 point) : moyenne tenue (+ 0,3), deux tranches légèrement au-delà (+ 4,2, + 4,1). Suite : ticket `v2-realisme/18n` (biais selon la longueur).
+
+## 61. Chance évaluée de la passe selon le temps du ballon (ticket v2-realisme/18n, 20/11/2026)
+
+**Diagnostic** (données du 18m, moteur `a048268`, 92 206 passes de jeu au sol ; `.scratch/v2-realisme/mesures/18n-diagnostic-longueur.py`, `18n-diagnostic-temps.py`, sorties `.txt`). Le biais selon la longueur (+ 3,3 points sous 8 m, − 1,2 de 15 à 20 m) vient presque entièrement de la coupe : à moins de 1 m de la trajectoire et près du passeur, la part des adversaires qui touchent le ballon le premier passe de 0,35 (passes de moins de 8 m) à 0,08 (plus de 30 m) pour une table fixe de 0,20. À temps du ballon égal jusqu'à l'adversaire, passes courtes et longues ont le même taux (par exemple 0,58 contre 0,58 entre 0,10 et 0,15 s, à moins de 1 m) : la coupe dépend du temps, pas de la longueur (la passe longue part plus vite, `_launch_speed`). Second défaut : la méthode du 18g compte chaque adversaire comme s'il était seul et sous-compte ceux du fond, que d'autres devancent ; l'ajustement range désormais les adversaires par avancée et ne compte un adversaire que si aucun autre avant lui n'a touché.
+
+**Correction** (`v2engine/possession.py`, constantes validées par le propriétaire le 20/11/2026) : table de coupe distance à la trajectoire (0,5 / 1 / 2 / 3 / 4 / 6 m) × temps du ballon jusqu'à l'avancée de l'adversaire (0,05 à 1 s, 9 colonnes), temps calculé avec la vitesse de départ et le frottement du moteur ; parts non perdues par bande d'écart 0,99 / 0,99 / 0,98 / 0,80 (moindres carrés 0,996 / 0,988 / 0,984 / 0,797). `_NEAR_PASSER_M`, `_CUT_NEAR_PASSER` et `_CUT_ON_PATH` supprimés. Ajustement : 24 matchs (graines 2200 à 2223) ; `18n-ajustement.py`, sortie `18n-ajustement.txt`.
+
+**Contrôles** (critère du propriétaire : au plus 4 points par tranche d'au moins 500 passes, 7 tranches, moyenne à 0,5 point) :
+
+| Contrôle | Passes | Pire tranche | Moyenne | < 8 m | 8-15 m | 15-30 m | > 30 m | Passing < 50 |
+|---|---|---|---|---|---|---|---|---|
+| Hors ligne, chance actuelle (graines 2300 à 2347) | 61 503 | 4,2 | + 0,3 | + 3,3 | + 1,4 | − 1,0 | − 1,2 | + 2,0 ± 1,8 |
+| Hors ligne, nouvelle table (mêmes passes) | 61 503 | 1,4 | − 0,1 | + 0,5 | + 0,1 | − 0,4 | + 0,4 | + 1,7 ± 1,8 |
+| Matchs joués avec le moteur modifié (graines 2400 à 2447) | 60 231 | 3,2 | − 0,3 | + 0,4 | + 0,2 | − 0,9 | + 1,2 | + 3,6 ± 1,9 |
+
+Sur les matchs joués (`18n-controle.py`, sortie `18n-controle.txt`) les tranches basses deviennent pessimistes (− 2,2 de 0 à 0,14, − 3,2 de 0,14 à 0,29) : les choix de passe ont changé avec l'évaluation, les passes risquées jouées ne sont plus les mêmes. Critère tenu. Passing < 50 : + 3,6 ± 1,9 point (+ 2,0 avant), seul groupe en recul ; cause non établie, à suivre avec la réserve A2 du 23a (poids de Passing sur la passe courte).
+
+**50 matchs appariés** (banc, graines 0 à 49, `scripts/diag_passes_v2.py`, avant `52bd2ec`, écarts appariés, IC 95 %) :
+
+| Indicateur (par match) | Avant | Après | Écart |
+|---|---|---|---|
+| Passes de jeu | 1 288,7 | 1 272,6 | − 16,1 ± 20,6 |
+| Réussite des passes de jeu | 82,9 % | 84,7 % | + 1,8 ± 0,4 point |
+| Passes prises par l'adversaire (jeu) | 213,9 | 187,4 | − 26,5 ± 6,8 |
+| Pertes au journal | 255,7 | 225,3 | − 30,4 ± 8,0 |
+| dont passe interceptée | 201,5 | 174,3 | − 27,2 ± 6,3 |
+| Passes ratées au tirage (écart au-delà de 1 m) | 401,3 | 415,9 | + 14,5 ± 7,6 |
+| Tirs | 37,4 | 38,9 | + 1,5 ± 2,3 |
+| Buts | 4,66 | 4,86 | + 0,20 ± 0,97 |
+
+Lecture : la passe courte près d'un presseur, surévaluée avant, est moins choisie ; les joueurs perdent 27 passes de moins par match (− 13 %) et jouent un peu plus de passes moyennes, moins précises mais rarement perdues. Réussite 84,7 %, au-dessus de la cible de 80 % du 29b ; tirs et buts dans le bruit. Recalage du volume global : `v2-collectif/22a`. Déterminisme : deux exécutions du match 3 du banc, même empreinte des comptes (`4121454b8e0184da`).

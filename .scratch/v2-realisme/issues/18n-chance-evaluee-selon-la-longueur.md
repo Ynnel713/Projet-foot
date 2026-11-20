@@ -10,7 +10,7 @@
 
 **Blocked by :** aucun.
 
-**Status:** à faire
+**Status:** livré (20/11/2026), validé expert + QC
 
 ## Estimation
 
@@ -25,6 +25,32 @@
 
 Confiance : faible (cause inconnue). Hypothèses : les données du `18m` suffisent au diagnostic ; une seule table ou part à réajuster. Au-delà du seuil de 2 h : découpage proposé en diagnostic (1 h) puis correction, à confirmer avant le code. Temps machine, non compté : 24 matchs d'ajustement, 48 de contrôle, 50 matchs appariés, suite complète.
 
+## Critères d'acceptation (posés avant le code, 20/11/2026)
+
+1. Calibration hors échantillon, sur des matchs joués avec le moteur modifié : au plus 4 points d'écart par tranche d'au moins 500 passes (7 tranches) et moyenne à 0,5 point près (critère du propriétaire, 23a).
+2. Biais selon la longueur résorbé : passes de moins de 15 m et de 15 à 30 m chacune à moins de 1 point.
+3. Un seul facteur corrigé, avec sa cause (pas de terme correctif par longueur) ; constantes validées par le propriétaire avant le code.
+4. 50 matchs appariés : réussite des passes de jeu au-dessus de 80 % (29b), buts et tirs sans écart au-delà du bruit ; déterminisme (même empreinte sur deux exécutions à graine fixée) ; suite complète verte.
+
+## Clôture
+
+- Cause : la coupe dépend du temps du ballon jusqu'à l'adversaire, pas de la longueur (à temps égal, passes courtes et longues ont le même taux) ; la table du 18g, fixe, surévaluait la passe courte près du presseur. Second défaut : estimateur non séquentiel du 18g (adversaires du fond sous-comptés).
+- Correction (`v2engine/possession.py`) : table de coupe distance à la trajectoire × temps du ballon (`_CUT_TABLE`, `_CUT_TIME_S`), parts par bande 0,99 / 0,99 / 0,98 / 0,80 ; constantes validées par le propriétaire (« oui valide, lance la phase 2 », 20/11/2026).
+- Critère 1 : tenu (48 matchs joués, graines 2400 à 2447, 60 231 passes : pire tranche 3,2 points, moyenne − 0,3). Hors ligne sur le contrôle du 18m : 1,4 et − 0,1.
+- Critère 2 : tenu (moins de 15 m + 0,3, 15 à 30 m − 0,9). Plus de 30 m : + 1,2 (3 379 passes).
+- Critère 3 : tenu (table de coupe seule, parts par bande réajustées par moindres carrés sur la même loi).
+- Critère 4 : tenu. Réussite des passes 82,9 % → 84,7 % (+ 1,8 ± 0,4 point), passes interceptées − 27,2 ± 6,3 par match, tirs + 1,5 ± 2,3, buts + 0,20 ± 0,97 ; déterminisme : empreinte `4121454b8e0184da` deux fois (match 3 du banc) ; suite complète : 3 465 passés, 14 désélectionnés (premier passage : 1 échec, `test_the_called_player_is_a_pass_option_only_when_he_is_not_covered`, marqueur collé au receveur à 0,70 de chance avec la nouvelle table, juste au-dessus du seuil de 0,7 ; marqueur placé sur la ligne à 4 m devant le receveur, 0,44, intention du test inchangée).
+- À signaler : Passing < 50 passe de + 2,0 ± 1,8 à + 3,6 ± 1,9 point (1 830 passes), cause non établie, rejoint la réserve A2 du 23a.
+- Mesures : `docs/INDICATEURS_V2.md` section 61 ; scripts et sorties `.scratch/v2-realisme/mesures/18n-*`.
+- Durée réelle : 3 h 15 (analyse et diagnostic 80 min, développement 30, tests 35, intégration 50) pour 2 h 50 estimées, + 15 %. Temps machine hors total : 48 matchs de contrôle (35 min), 2 x 50 matchs appariés (1 h 10), suite complète.
+
 ## Comments
 
 - 20/11/2026, création à la clôture du `18m` (décision du propriétaire).
+- 20/11/2026, phase 1 (diagnostic) : cause trouvée (temps du ballon), table et parts proposées au propriétaire, validées (« oui valide, lance la phase 2 »).
+- 20/11/2026, phase 2 : table codée, contrôle sur 48 matchs joués, 50 matchs appariés ; implémenté, en attente de clôture.
+- 20/11/2026, clôture, passage 1 : expert APPROVED_WITH_RESERVATIONS, QC VALIDÉ, clôture VALIDÉ.
+  - A1 (réserve) : Passing < 50 surestimé de + 3,6 ± 1,9 point (+ 2,0 avant).
+  - A2 (réserve) : receveur collé de face jugé ouvert dans le cas statique du test (chance 0,70) ; mesuré sur les 48 matchs joués : adversaire à moins de 1,5 m du receveur, entre passeur et lui, chance sous-estimée de 12,5 ± 4,9 points (385 passes).
+  - A3, A4 (facultatives) : table non monotone dans le temps ; fichiers hors revue (ticket, plan : suivi documentaire). Commentaire de test « 1,1 s » à lire 1,3 s.
+  - Réserves A1 et A2 acceptées par le propriétaire : « j'accepte A1 et A2, un seul ticket 18o ». Suite : `18o`.

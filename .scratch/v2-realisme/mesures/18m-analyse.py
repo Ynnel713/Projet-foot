@@ -4,9 +4,12 @@ touche le ballon le premier, ou le ballon sort / est sifflé avec remise pour l'
 2. méthode du 18g : part des adversaires NON comptés par la coupe (`cut` = 0) qui touchent le ballon le premier, par
    tranche de distance au receveur, selon qu'ils arrivent au point visé avant lui ou non, et selon leur position
    (devant le receveur, sur le trajet ; à côté ; derrière lui) ;
-3. si demandé (--ajuste FIT --controle CTRL) : table ajustée sur FIT, calibration avant / après sur CTRL.
+3. table ajustée sur les lots d'ajustement (fichiers positionnels) ; si --controle CTRL : calibration avant / après sur CTRL.
 Usage : uv run python .scratch/v2-realisme/mesures/18m-analyse.py lot1.json [lot2.json ...] [--controle c1.json ...]
-(rapport du ticket : fit-2200 à fit-2218 en ajustement, ctrl-2300 à ctrl-2336 en contrôle, sortie `18m-rapport.txt`)"""
+Données du rapport du ticket (`18m-rapport.txt`), dans un dossier D :
+  uv run python .scratch/v2-realisme/mesures/18m-diag-script.py 6 2200 > D/fit-2200.json   (puis 2206, 2212, 2218 : 24 matchs)
+  uv run python .scratch/v2-realisme/mesures/18m-diag-script.py 12 2300 > D/ctrl-2300.json (puis 2312, 2324, 2336 : 48 matchs)
+  uv run python .scratch/v2-realisme/mesures/18m-analyse.py D/fit-*.json --controle D/ctrl-*.json > 18m-rapport.txt"""
 import json
 import math
 import sys

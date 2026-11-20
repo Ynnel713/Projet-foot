@@ -380,6 +380,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **`v2-realisme/18m` livré (20/11/2026), validé expert + QC** (diagnostic, aucun changement moteur) : adversaires non comptés par la coupe à moins de 2 m du receveur sur 1,7 % des passes (+ 6,6 points d'optimisme sur ces passes, 2 % des pertes) ; table ajustée sans effet sur la calibration (moins de 0,5 point par tranche, Passing < 50 inchangé) : clôture sans changement décidée par le propriétaire. Contrôle du 23a refait avec le moteur livré : pire tranche + 4,2 points (critère 4 légèrement dépassé), passes courtes + 2,0, moyennes − 1,0 : ticket `18n`. `docs/INDICATEURS_V2.md` section 60.
 
+**`v2-realisme/18n` livré (20/11/2026), validé expert (réserves A1 passeurs faibles, A2 receveur marqué de face, acceptées) + QC** : la coupe d'une passe dépend du temps du ballon jusqu'à l'adversaire, pas de la longueur ; table de coupe distance à la trajectoire × temps et parts par bande 0,99 / 0,99 / 0,98 / 0,80 (validées par le propriétaire). Contrôle sur 48 matchs joués : pire tranche 3,2 points (critère 4), moyenne − 0,3, passes courtes + 0,3, moyennes − 0,9 ; Passing < 50 + 3,6 ± 1,9 (+ 2,0 avant), à suivre. 50 matchs appariés : réussite des passes 82,9 % → 84,7 %, passes interceptées − 27 par match, buts et tirs dans le bruit. `docs/INDICATEURS_V2.md` section 61. Suite : `18o`.
+
 ### Bloquée par
 
 - Phase 4

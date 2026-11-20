@@ -70,21 +70,33 @@ _HARDEST_CONTROL = _BASE_DIFFICULTY + _CONTROL_DIFFICULTY_PER_MPS * (MAX_PASS_MP
 # La coupe d'une passe n'est pas tirée à part : elle se joue physiquement (adversaires qui touchent le ballon en vol,
 # lecteurs d'`anticipation.pass_readers`). La chance ÉVALUÉE en tient compte avec une table mesurée sur le moteur (26
 # matchs, 23 187 passes ; vérifiée sur 24 autres, pire écart 4,3 points par tranche) : chance qu'un adversaire touche le
-# ballon le premier, selon sa distance à la trajectoire, près du passeur (avancée jusqu'à `_NEAR_PASSER_M`) ou sur le
+# ballon le premier, selon sa distance à la trajectoire, près du passeur (avancée jusqu'à 3 m) ou sur le
 # trajet. Données réelles : non trouvé (la table décrit le moteur ; à remesurer si le mouvement change, indicateur de
 # calibration de `scripts/v2_indicators.py`). Remplace le terme de couloir (`_LANE_DIFFICULTY`, + 12 par adversaire),
 # qui sous-comptait la coupe (évaluée 0,96, reçue 0,56 avec un adversaire dans le couloir). Remesurée au ticket 18j
 # (portée du défenseur qui lit la passe, `match.READER_REACH_M`) : 50 matchs, ajustement sur 27 220 passes, contrôle sur
 # 24 945 (écart prévu / non perdue + 0,1 point au total ; `.scratch/v2-realisme/mesures/18j-ajustement.txt`), validé par
 # délégation du propriétaire le 12/11/2026.
-_NEAR_PASSER_M = 3.0
-# Remesurée au ticket v2-realisme/23a, après la revue de l'expert (méthode du 18g : part des adversaires d'une tranche de
-# distance à la trajectoire qui touchent le ballon le premier ; après le 29b, l'adversaire non lecteur touche le ballon à
-# 0,8 m) : 24 matchs sur le moteur après le 04e (graines 300 à 323, 29 600 passes au sol), contrôle hors échantillon
-# sur 48 (graines 400 à 447, 61 958 passes ; `docs/INDICATEURS_V2.md` section 59). 18j : 0,82 / 0,21 / 0,02 près du
-# passeur, 0,43 / 0,25 / 0,12 / 0,07 / 0,03 / 0,02 sur le trajet.
-_CUT_NEAR_PASSER = ((0.5, 0.81), (1.0, 0.20), (6.0, 0.023))  # (distance max à la trajectoire en m, chance de coupe)
-_CUT_ON_PATH = ((1.0, 0.45), (2.0, 0.32), (3.0, 0.15), (4.0, 0.083), (5.0, 0.057), (6.0, 0.031))
+# Remplacée au ticket v2-realisme/18n (constantes validées par le propriétaire le 20/11/2026) : la table du 18g ne
+# dépendait que de la distance à la trajectoire (près du passeur, puis sur le trajet). Or, à distance égale, la coupe
+# dépend du TEMPS que met le ballon à arriver au niveau de l'adversaire (une passe courte part lentement : 8,6 m/s à
+# 5 m, 21 m/s à 30 m) ; à temps égal, passes courtes et longues sont coupées au même taux. D'où un biais selon la
+# longueur (+ 3,3 points sous 8 m, − 1,0 de 15 à 30 m, 48 matchs). Table à deux entrées : distance à la trajectoire, temps
+# du ballon (parti à la vitesse de la passe idéale, `_launch_speed`, freiné) jusqu'au point le plus proche de
+# l'adversaire. Part des adversaires ATTEINTS par le ballon (aucun adversaire plus près du passeur ne l'a touché avant)
+# qui le touchent les premiers : estimateur séquentiel, le 18g sous-comptait les adversaires du fond. Mesurée sur 24
+# matchs (graines 2200 à 2223, moteur du commit 52bd2ec, 30 703 passes au sol) ; contrôle hors ligne sur 48 (graines 2300
+# à 2347) : pire tranche 4,2 -> 1,4 points, longueur sous 8 m + 0,5. Données réelles : non trouvé (la table décrit le
+# moteur, à remesurer si le mouvement change). Mesures : `.scratch/v2-realisme/mesures/18n-*`.
+_CUT_TIME_S = (0.05, 0.1, 0.15, 0.2, 0.3, 0.45, 0.7, 1.0, math.inf)  # bornes hautes des colonnes (s)
+_CUT_TABLE = (  # (distance max à la trajectoire en m, chance de coupe par colonne de temps)
+    (0.5, (0.77, 0.91, 0.90, 0.80, 0.63, 0.77, 0.71, 0.56, 0.29)),
+    (1.0, (0.03, 0.27, 0.59, 0.65, 0.74, 0.55, 0.64, 0.51, 0.31)),
+    (2.0, (0.0, 0.01, 0.09, 0.18, 0.26, 0.42, 0.44, 0.39, 0.30)),
+    (3.0, (0.0, 0.0, 0.0, 0.01, 0.02, 0.07, 0.19, 0.29, 0.24)),
+    (4.0, (0.0, 0.0, 0.0, 0.0, 0.01, 0.03, 0.08, 0.19, 0.18)),
+    (6.0, (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.02, 0.07, 0.10)),
+)
 # Passe au sol (ticket v2-realisme/23a, réserve A2 de l'expert à la clôture) : part non perdue hors coupe de la table,
 # selon l'écart latéral à l'arrivée tiré par la loi d'écart (`pass_error_sigma_rad`) ; la chance de chaque bande sort de
 # la même gaussienne, donc de Passing, de la pression et de la longueur. Bande sous `ON_TARGET_M` : passe précise
@@ -93,8 +105,10 @@ _CUT_ON_PATH = ((1.0, 0.45), (2.0, 0.32), (3.0, 0.15), (4.0, 0.083), (5.0, 0.057
 # parts plafonnées à 0,99 (garde du 19c : une passe facile garde au moins 1 % d'échec ; 1,0 / 1,0 / 0,94 / 0,70 sans
 # plafond). Contrôle hors échantillon sur 48 matchs (graines 400 à 447, joués avec les parts non plafonnées, chance
 # recalculée hors ligne) : moyenne − 0,2 point, pire écart 3,3 points en 7 tranches. Critère du propriétaire (20/11/2026) :
-# au plus 4 points par tranche d'au moins 500 passes, moyenne à 0,5 point près.
-_LATERAL_NOT_LOST = ((ON_TARGET_M, 0.99), (2.0, 0.98), (4.0, 0.98), (math.inf, 0.70))  # (écart max en m, part)
+# au plus 4 points par tranche d'au moins 500 passes, moyenne à 0,5 point près. Réajustées au ticket v2-realisme/18n avec
+# la table de coupe à deux entrées (moindres carrés, mêmes 24 matchs : 0,996 / 0,988 / 0,984 / 0,797 bruts, plafonnés à
+# 0,99, arrondis ; 23a : 0,99 / 0,98 / 0,98 / 0,70 ; validées par le propriétaire le 20/11/2026).
+_LATERAL_NOT_LOST = ((ON_TARGET_M, 0.99), (2.0, 0.99), (4.0, 0.98), (math.inf, 0.80))  # (écart max en m, part)
 # passe longue en l'air imprécise (au-delà de `LOFTED_ON_TARGET_M`) non perdue : la valeur du 18j, gardée (249 passes en
 # l'air sur 50 matchs au 23a, trop peu pour l'ajuster ; mesurées 0,54 imprécises contre 0,65 précises)
 LOFTED_MISS_NOT_LOST = 0.69
@@ -132,7 +146,8 @@ def dosage_quality(passer: PlayerState) -> float:
 
 
 def _cut_chance(start: Vec2, end: Vec2, opponent: PlayerState) -> float:
-    """Chance (table du 18g) que `opponent` touche le premier une passe de `start` vers `end`."""
+    """Chance (table du 18n) que `opponent` touche le premier une passe de `start` vers `end`, s'il est atteint par le
+    ballon : selon sa distance à la trajectoire et le temps que met le ballon à arriver à son niveau."""
     path = end - start
     length = path.length()
     if length < 1e-9:
@@ -143,8 +158,14 @@ def _cut_chance(start: Vec2, end: Vec2, opponent: PlayerState) -> float:
     if not 0.0 < along < length:
         return 0.0
     gap = opponent.position.distance_to(start + direction * along)
-    table = _CUT_NEAR_PASSER if along <= _NEAR_PASSER_M else _CUT_ON_PATH
-    return next((chance for limit, chance in table if gap < limit), 0.0)
+    row = next((chances for limit, chances in _CUT_TABLE if gap < limit), None)
+    if row is None:
+        return 0.0
+    log_f = math.log(BALL_FRICTION_PER_S)
+    speed = _launch_speed(length)
+    at = max(BALL_STOPPED_MPS, speed + along * log_f)  # vitesse au niveau de l'adversaire (freinage linéaire en distance)
+    travel = math.log(at / speed) / log_f
+    return next(chance for limit, chance in zip(_CUT_TIME_S, row) if travel < limit)
 
 
 def one_touch_precision(passer: PlayerState) -> float:
@@ -232,7 +253,7 @@ def pass_success_probability(passer: PlayerState, receiver: PlayerState, opponen
     """Chance que la passe ne soit pas perdue (tickets v2-realisme/18g et 18h) : aucun adversaire ne touche le ballon le
     premier, et le ballon ne sort pas (ni n'est sifflé) avec remise pour l'adversaire ; même risque que celui que la passe
     court en jeu. C'est le sens que lui donne la décision (`decision.option_value` :
-    garder, sinon perdre le ballon), comme le risque de perte de la conduite (04a). Coupe par adversaire : table du 18g ;
+    garder, sinon perdre le ballon), comme le risque de perte de la conduite (04a). Coupe par adversaire : table du 18n (distance, temps du ballon) ;
     au sol, part non perdue selon l'écart à l'arrivée à la position future du receveur (`_LATERAL_NOT_LOST`, bandes de la
     loi d'écart et du dosage, ticket v2-realisme/23a). Le contrôle du receveur n'y entre
     pas : raté, le ballon reste libre près de lui, ce n'est pas une perte. `lofted` : passe longue en l'air (ticket

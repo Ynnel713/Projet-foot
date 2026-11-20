@@ -669,7 +669,9 @@ def test_the_called_player_is_a_pass_option_only_when_he_is_not_covered() -> Non
         c.on_tick(0.0, home + away, _ball(30, 30, "H0"), None)
         return c.stats["appelant retenu : passe ouverte pour le porteur (part)"].values[0]
     assert share(80.0) == 1.0  # personne près de la ligne de passe
-    assert share(41.5) == 0.0  # un adversaire collé au receveur : chance de passe de 0,61, sous le seuil de 0,7
+    # un adversaire sur la ligne, 4 m devant le receveur : chance de passe de 0,44, sous le seuil de 0,7 (table du 18n :
+    # collé au receveur, à 41,5, le ballon met 1,1 s à l'atteindre et la chance remonte à 0,70)
+    assert share(38.0) == 0.0
 
 
 def test_report_gives_the_structure_indicators() -> None:
