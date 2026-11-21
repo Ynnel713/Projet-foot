@@ -10,7 +10,7 @@
 
 **Blocked by:** 08d (Le porteur décide sur ce qu'il perçoit); 08e (Le défenseur ne voit pas toujours l'appel dans son dos); 01d (Banc : distance par poste, temps et distance à haute intensité, appels selon la définition sourcée).
 
-**Bloque :** rien.
+**Bloque :** 30a (ajouté le 21/11/2026, audit de réalisme).
 
 **Status:** livré (13/11/2026), validé expert + QC
 

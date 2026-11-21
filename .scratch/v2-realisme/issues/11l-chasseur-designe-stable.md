@@ -12,7 +12,7 @@
 
 **Blocked by:** 11k (livré).
 
-**Bloque :** rien.
+**Bloque :** `v2-realisme/28b` (ajouté le 21/11/2026, audit de réalisme).
 
 **Status:** à faire
 

@@ -8,7 +8,7 @@
 
 **Blocked by:** 32a (même cadre de choix), `v2-hauteur-ballon/03`.
 
-**Bloque :** 22a.
+**Bloque :** 22a ; 15d (ajouté le 21/11/2026, audit de réalisme).
 
 **Status:** à faire (constantes à proposer avant le code)
 

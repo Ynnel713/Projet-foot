@@ -20,6 +20,8 @@ sinon) et à proposer avant le code.
 
 **Blocked by:** 02a (physique de la hauteur).
 
+**Bloque :** `v2-collectif/32b` (et son chapeau `32`, découpé), `v2-attributs-restants/01`, `v2-attributs-restants/03a`, `v2-realisme/15a` ; `v2-collectif/15d` par le 32b (ligne ajoutée le 21/11/2026, audit de réalisme : réciproque des tickets qui citent ce ticket).
+
 **Status:** à faire (constantes à proposer avant le code)
 
 ## Acceptance criteria

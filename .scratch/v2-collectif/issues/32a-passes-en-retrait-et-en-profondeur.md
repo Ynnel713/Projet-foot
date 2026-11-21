@@ -7,7 +7,7 @@
 1. **Passe en retrait** : vers un défenseur ou le gardien, pour relâcher la pression ou changer de côté. Elle existe comme simple passe vers un partenaire plus proche de son but (`defense.py:102`), reconnue seulement comme déclencheur de pressing ; elle devient un choix reconnu, avec son risque.
 2. **Passe en profondeur** : visée vers l'espace derrière la ligne adverse pour un joueur qui appelle (ticket 16), distincte d'une passe au sol ordinaire. Le hors-jeu la rend risquée.
 
-Le changement de jeu en diagonale et le jeu long face au pressing restent au ticket 15.
+Le changement de jeu en diagonale et le jeu long face au pressing restent au ticket 15 (correction du 21/11/2026 : le changement de jeu est repris au `15d`).
 
 **Attributs :** Passing (exécution), Vision (voir l'espace), Decisions (choisir), Flair (options risquées). Rayons à fixer dans `docs/CARTE_ATTRIBUTS_V2.md`, sans double comptage.
 

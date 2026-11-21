@@ -10,7 +10,7 @@
 
 **Blocked by:** 01d (Banc : distance par poste, temps et distance à haute intensité, appels selon la définition sourcée).
 
-**Bloque :** 09b.
+**Bloque :** 09b ; `v2-collectif/15d` (ajouté le 21/11/2026, audit de réalisme).
 
 **Status:** à faire (constantes à proposer avant le code)
 

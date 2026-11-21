@@ -10,7 +10,7 @@
 
 **Blocked by:** 27a.
 
-**Bloque :** 27c.
+**Bloque :** 27c ; 28a, 29a (ajouté le 21/11/2026, audit de réalisme).
 
 **Status:** livré (14/11/2026), validé expert + QC
 

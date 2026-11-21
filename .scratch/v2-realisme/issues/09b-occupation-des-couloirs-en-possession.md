@@ -10,7 +10,7 @@
 
 **Blocked by:** 02d (Place de référence avec ballon selon le rôle); 09a (Couloirs et demi-espaces : définition et mesure).
 
-**Bloque :** 09c, 09h, 13g.
+**Bloque :** 09c, 09h, 13g ; `v2-collectif/15d` (ajouté le 21/11/2026, audit de réalisme).
 
 **Status:** à faire (constantes à proposer avant le code)
 

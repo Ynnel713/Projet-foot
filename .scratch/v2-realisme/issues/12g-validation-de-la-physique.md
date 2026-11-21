@@ -8,7 +8,7 @@
 
 **Attributs :** aucun
 
-**Blocked by:** 12a (Freinage individualisé : Agility); 12b (Perte de vitesse en virage); 12c (Balance : rester debout et continuer après un contact); 12d (Intensité de course selon le rôle); 12e (Réserve d'énergie qui dépend de l'effort); 12f (Répéter les sprints et récupérer); 01d (Banc : distance par poste, temps et distance à haute intensité, appels selon la définition sourcée).
+**Blocked by:** 12a (Freinage individualisé : Agility); 12b (Perte de vitesse en virage); 12c (Balance : rester debout et continuer après un contact); 12d (Intensité de course selon le rôle); 12e (Réserve d'énergie qui dépend de l'effort); 12f (Répéter les sprints et récupérer); 01d (Banc : distance par poste, temps et distance à haute intensité, appels selon la définition sourcée) ; `v2-realisme/29a` (ajouté le 21/11/2026, audit de réalisme du propriétaire).
 
 **Bloque :** rien.
 
