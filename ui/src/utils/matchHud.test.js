@@ -1,27 +1,59 @@
 // HUD de l'écran Match (ticket v2-ecran-match/08) : `node --test` (script `npm test`).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { clock } from "./matchClock.js";
+import { SECONDS_MAX_SPEED, clock, hudClockText } from "./matchClock.js";
 import { BADGES, matchBadge, revealedScore, revealedScorers, scorerText, hudName, goalBannerText } from "./matchHud.js";
 
 // Trace réduite : 2e période donnée par le moteur à la minute 48, 3 et 4 minutes annoncées.
 const trace = { second_half_start_minute: 48, added_minutes: [3, 4] };
 
+// Champs d'avant EM-08e (la minute à la seconde, `precise`, est testée à part).
+const minuteOnly = (t, m) => {
+  const { second, label, announced } = clock(t, m);
+  return { second, label, announced };
+};
+
 test("minute affichée : libellés de clock() inchangés (déplacement seul)", () => {
-  assert.deepEqual(clock(trace, 0), { second: false, label: "0'", announced: null });
-  assert.deepEqual(clock(trace, 12.7), { second: false, label: "12'", announced: null });
-  assert.deepEqual(clock(trace, 44.99), { second: false, label: "44'", announced: null });
-  assert.deepEqual(clock(trace, 45), { second: false, label: "45+1'", announced: 3 });
-  assert.deepEqual(clock(trace, 46.5), { second: false, label: "45+2'", announced: 3 });
-  assert.deepEqual(clock(trace, 48), { second: true, label: "45'", announced: null });
-  assert.deepEqual(clock(trace, 67.2), { second: true, label: "64'", announced: null });
-  assert.deepEqual(clock(trace, 93), { second: true, label: "90+1'", announced: 4 });
-  assert.deepEqual(clock(trace, 96.9), { second: true, label: "90+4'", announced: 4 });
+  assert.deepEqual(minuteOnly(trace, 0), { second: false, label: "0'", announced: null });
+  assert.deepEqual(minuteOnly(trace, 12.7), { second: false, label: "12'", announced: null });
+  assert.deepEqual(minuteOnly(trace, 44.99), { second: false, label: "44'", announced: null });
+  assert.deepEqual(minuteOnly(trace, 45), { second: false, label: "45+1'", announced: 3 });
+  assert.deepEqual(minuteOnly(trace, 46.5), { second: false, label: "45+2'", announced: 3 });
+  assert.deepEqual(minuteOnly(trace, 48), { second: true, label: "45'", announced: null });
+  assert.deepEqual(minuteOnly(trace, 67.2), { second: true, label: "64'", announced: null });
+  assert.deepEqual(minuteOnly(trace, 93), { second: true, label: "90+1'", announced: 4 });
+  assert.deepEqual(minuteOnly(trace, 96.9), { second: true, label: "90+4'", announced: 4 });
 });
 
 test("en direct, 2e période encore inconnue : on reste en 1re période, temps additionnel compris", () => {
   const live = { second_half_start_minute: null, added_minutes: [2] };
-  assert.deepEqual(clock(live, 46), { second: false, label: "45+2'", announced: 2 });
+  assert.deepEqual(minuteOnly(live, 46), { second: false, label: "45+2'", announced: 2 });
+});
+
+test("minute à la seconde (EM-08e) : chronomètre de la période, temps additionnel compté au-delà de 45'", () => {
+  const cases = [
+    [0, "00:00"],
+    [5.12, "05:07"],
+    [12.7, "12:42"],
+    [44.99, "44:59"],
+    [45, "45+0:00"],
+    [46.5, "45+1:30"],
+    [46.384, "45+1:23"],
+    [48, "45:00"],
+    [67.2, "64:12"],
+    [92.99, "89:59"],
+    [93, "90+0:00"],
+    [96.9, "90+3:54"],
+  ];
+  for (const [minute, text] of cases) assert.equal(clock(trace, minute).precise, text, `minute ${minute}`);
+  assert.equal(clock({ second_half_start_minute: null, added_minutes: [2] }, 46).precise, "45+1:00");
+});
+
+test("secondes affichées jusqu'à x2, masquées à x8 et x32 (EM-08e)", () => {
+  assert.equal(SECONDS_MAX_SPEED, 2);
+  const t = clock(trace, 46.5);
+  for (const speed of [1, 1.5, 2]) assert.equal(hudClockText(t, speed), "45+1:30");
+  for (const speed of [8, 32]) assert.equal(hudClockText(t, speed), "45+2'");
 });
 
 const goals = [

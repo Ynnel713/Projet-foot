@@ -2,11 +2,12 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { ArrowLeft, BarChart3 } from "lucide-react";
 import ScoreBlock from "./ScoreBlock";
 import SpeedControls from "./SpeedControls";
+import { hudClockText } from "../../utils/matchClock";
 
 // HUD supérieur de l'écran Match (ticket v2-ecran-match/08, constantes et décisions du propriétaire du 19/11/2026) :
 // identité du match (`ScoreBlock`), puis minute (Barlow Condensed 600, 24 px ; 18 px sous 960 px de large ou 500 px de
-// haut), période et badge d'état. Lignes techniques retirées (situation tactique, minute de calcul) ; la ligne de
-// hors-jeu reste jusqu'à la frise (EM-12). Commandes de lecture : `SpeedControls` (EM-09).
+// haut ; à la seconde jusqu'à x2, EM-08e), période et badge d'état. Lignes techniques retirées (situation tactique,
+// minute de calcul) ; la ligne de hors-jeu reste jusqu'à la frise (EM-12). Commandes de lecture : `SpeedControls` (EM-09).
 const BADGE_TONE = {
   live: "text-live border-live/40",
   gold: "text-gold border-gold/40",
@@ -68,7 +69,7 @@ export default function MatchHud({ trace, score, scorers, time, badge, offside, 
             data-zone="minute"
             className="font-display font-semibold tabular-nums text-white text-[24px] leading-none max-[959.98px]:text-[18px] [@media(max-height:499.98px)]:text-[18px]"
           >
-            {time.label}
+            {hudClockText(time, playback.speed)}
           </span>
           {time.announced != null && <span className="text-data text-gray-400 tabular-nums">(+{time.announced})</span>}
           <span className="text-caption text-gray-400">{time.second ? "2e" : "1re"} période</span>
