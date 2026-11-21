@@ -1,0 +1,22 @@
+65907 passes de jeu au sol
+  [0.00 ; 0.14[                      n   1625  évaluée 0.093  non perdue 0.096 ± 0.014  écart -0.3
+  [0.14 ; 0.29[                      n   1249  évaluée 0.209  non perdue 0.226 ± 0.023  écart -1.7
+  [0.29 ; 0.43[                      n   1241  évaluée 0.361  non perdue 0.362 ± 0.027  écart -0.1
+  [0.43 ; 0.57[                      n   1918  évaluée 0.510  non perdue 0.497 ± 0.022  écart +1.2
+  [0.57 ; 0.71[                      n   3911  évaluée 0.653  non perdue 0.657 ± 0.015  écart -0.4
+  [0.71 ; 0.86[                      n   8076  évaluée 0.787  non perdue 0.801 ± 0.009  écart -1.4
+  [0.86 ; 1.00[                      n  47887  évaluée 0.961  non perdue 0.962 ± 0.002  écart -0.1
+  toutes                             n  65907  évaluée 0.862  non perdue 0.864 ± 0.003  écart -0.3
+  pire tranche (n >= 500) : 1.7 points
+  longueur 0 à 8 m                   n   9070  évaluée 0.899  non perdue 0.880 ± 0.007  écart +1.8
+  longueur 0 à 15 m                  n  28535  évaluée 0.880  non perdue 0.872 ± 0.004  écart +0.8
+  longueur 8 à 15 m                  n  19465  évaluée 0.871  non perdue 0.868 ± 0.005  écart +0.3
+  longueur 15 à 30 m                 n  33764  évaluée 0.852  non perdue 0.864 ± 0.004  écart -1.1
+  longueur 30 à 99 m                 n   3608  évaluée 0.804  non perdue 0.805 ± 0.013  écart -0.1
+  Passing < 50                       n   2014  évaluée 0.812  non perdue 0.781 ± 0.018  écart +3.1
+  Passing 50 à 70                    n  36952  évaluée 0.847  non perdue 0.854 ± 0.004  écart -0.7
+  Passing >= 70                      n  26941  évaluée 0.886  non perdue 0.885 ± 0.004  écart +0.1
+Critère 1 : adversaire près du receveur, entre le passeur et lui
+  à moins de 1,5 m                   n    508  évaluée 0.601  non perdue 0.569 ± 0.043  écart +3.2
+  à moins de 1,5 m, sur la ligne (< 0,5 m) n    180  évaluée 0.475  non perdue 0.422 ± 0.072  écart +5.3
+  à moins de 2,5 m                   n   1627  évaluée 0.627  non perdue 0.607 ± 0.024  écart +2.0

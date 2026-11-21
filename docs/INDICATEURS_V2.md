@@ -1953,3 +1953,42 @@ Diagnostic seul, sans changement moteur (décision du propriétaire). Données :
 | Écart de dosage (receveur qui court) | pertes hors coupe à 2-4 m d'écart : 6,7 % / 1,3 % / 4,0 % (Passing < 50 / 50-70 / 70 et plus) pour 3,9 / 3,4 / 3,2 prévues | sans ordre selon Passing, écartée |
 
 Constat : chez les passeurs faibles, le surplus de pertes est diffus (coupe + 2 points, hors coupe + 1,4) ; une passe jouée droit (écart latéral réalisé sous 1 m) est perdue hors coupe à 5,4 % contre 1,0 à 1,3 % pour les autres, sans explication géométrique (probable effet de contexte non mesuré : poste, zone, moment). Biais laissés en l'état : Passing < 50 + 3,8 ± 1,8 (3 % des passes), moins de 8 m + 1,6 ± 0,7, 15 à 30 m − 1,1 ± 0,4 ; calibration globale : pire tranche 1,5, moyenne − 0,1. À remesurer au ticket `29c` (physique du défenseur collé devant le receveur), qui imposera de réestimer la table. Scripts et sorties : `18p-diagnostic*`, `18p-ligne-jouee`, `18p-bandes`, `18p-dosage`.
+
+## 64. Défenseur collé devant le receveur ; instant d'entrée du ballon dans la portée (ticket v2-realisme/29c, 21/11/2026)
+
+**Situations construites** (`.scratch/v2-realisme/mesures/29c-scenes.py`, sortie après correction `29c-scenes.txt` ; passe au sol de 12 m, receveur immobile, adversaire immobile, moteur réel, 400 tirages du contrôle) : adversaire 0,5 m devant le receveur sur la ligne, tourné vers le ballon : il touche le premier et garde le ballon 97 fois sur 100 ; 1 m devant : 95 à 98 %, quel que soit son cap ; à côté (0,7 m, à hauteur du receveur) ou derrière : le receveur. Deux cas faux avant correction : adversaire 0,5 m devant et 0,5 m à côté de la ligne, tourné vers le ballon : **0 %** (receveur d'abord) ; adversaire 0,5 m devant sur la ligne, de profil ou dos au ballon (portée de contact 0,41 m) : 0 % ; le receveur (portée 1 m) touche le ballon à x = 41,0, avant qu'il n'entre dans la portée du défenseur (x = 41,09) : il le joue à travers le corps du défenseur (défaut antérieur, cas presque absent en match, voir plus bas : laissé en l'état ; correctif possible, réserve facultative A1 de l'expert : la portée du receveur ne vaut pas pour un ballon qui n'a pas encore franchi un adversaire placé sur la ligne entre lui et le ballon).
+
+**Matchs joués** (48, graines 2400 à 2447, moteur `18990de`, 60 811 passes ; `29c-diag-script.py`, `29c-analyse.py`, sortie `29c-analyse.txt`) : 474 adversaires à moins de 1,5 m du receveur, entre le passeur et lui, au départ de la passe, suivis pendant le vol.
+
+| Cas | Adversaires | Touche le premier | Passe perdue |
+|---|---|---|---|
+| Ballon jamais à moins de 1 m de lui (receveur démarqué, passe à côté) | 277 (58 %) | — | 25 % |
+| Ballon à moins de 1 m | 197 | 61 % | 64 % |
+| dont devant le receveur, à moins de 0,5 m de son axe | 104 | **77 %** | 81 % |
+| — lecteur de la passe | 52 | 92 % | |
+| — non lecteur, passe vue, tourné vers le ballon | 31 | 81 % | |
+| — non lecteur, passe pas encore vue (moins de 0,25 s, `NON_READER_REACTION_S`) | 20 | 35 % | |
+| — non lecteur, pas tourné vers le ballon | 1 | 0 % | |
+
+Lecture : les « 23 % » du constat (adversaire placé au départ de la passe) mêlent deux cas ; le défenseur encore devant le receveur à l'arrivée du ballon le touche le premier trois fois sur quatre. L'orientation (`_faces_pass`) ne pèse pas (1 % des cas). Reste, outre le temps de réaction sur les passes très courtes (constante du 29b, validée), un défaut géométrique.
+
+**Cause corrigée** : `match._contacts` calculait l'instant d'entrée dans la portée par `s - sqrt(r² - d²) / L`, avec `d` la distance au point le plus proche **rabattu sur le pas** ; quand ce point est la fin du pas (le joueur est plus loin que le ballon en fin de pas), `d` n'est plus la distance à la droite et l'entrée est avancée, d'autant plus que la portée est grande. Exemple : pas de 40,47 à 41,16 m, receveur en 42 m (portée 1 m) : 0,21 calculé, 0,77 exact ; défenseur en (41,5 ; 34,5) (0,8 m) : 0,24 calculé, 0,59 exact. Correction : entrée calculée depuis le pied de la perpendiculaire sur la droite du pas ; distance au plus près inchangée ; aucune constante. Même loi pour l'ordre des contres de tir (`_blocked`) ; le point d'impact du contre (lieu de reprise, `block_x`, `block_y`) garde l'ancienne construction, placé un peu tôt quand le défenseur est au-delà du bout du pas (défaut antérieur, réserve facultative A2 de l'expert, non traité). Sur 24 matchs (`29c-ordre-script.py`, `29c-ordre.txt`) : le premier joueur au contact change dans 68 pas sur 34 260 (0,2 %), 62 fois d'équipe ; receveur visé remplacé par un adversaire 41 fois, l'inverse 17 fois. Après correction, scène décalée : 96 % pour le défenseur (premier au contact 100 %).
+
+**50 matchs appariés** (banc, graines 0 à 49 ; avant : moteur `18990de`, qui reproduit à l'identique la série « après » du 18o ; `29c-apparies.txt`) :
+
+| Indicateur (par match) | Avant | Après | Écart |
+|---|---|---|---|
+| Passes de jeu | 1 264,8 | 1 275,8 | + 11,0 ± 15,9 |
+| Réussite des passes de jeu | 85,22 % | 84,90 % | − 0,32 ± 0,25 point |
+| Passes prises par l'adversaire (jeu) | 180,7 | 185,8 | + 5,1 ± 4,1 |
+| Pertes au journal | 216,4 | 223,3 | + 6,9 ± 5,2 |
+| dont passe interceptée | 168,3 | 172,5 | + 4,2 ± 4,1 |
+| Passes ratées au tirage | 413,4 | 414,6 | + 1,3 ± 7,4 |
+| Tirs | 39,5 | 38,5 | − 1,1 ± 1,9 |
+| Buts | 4,60 | 5,02 | + 0,42 ± 0,70 |
+
+Écart significatif : passes prises par l'adversaire + 5,1 ± 4,1 par match, de même sens que le compte direct des pas (solde de 1 adversaire de plus au premier contact par match, 24 matchs) mais plus grand : la borne basse de l'IC (1,0) rejoint ce compte, le reste relève de la divergence des matchs après le premier contact changé. Réussite au-dessus de 80 % ; tirs et buts dans le bruit.
+
+**Contrôle de la chance évaluée** (52 matchs joués avec le moteur corrigé, graines 2600 à 2651, 65 907 passes ; script du 18o, `29c-controle.txt`) : pire tranche 1,7 point (1,5 avant ; critère 4), moyenne − 0,3 (− 0,1), moins de 15 m + 0,8 (+ 0,9 ; critère 1), 15 à 30 m − 1,1 (− 1,1, réserve du 18o), adversaire à moins de 1,5 m du receveur + 3,2 ± 4,3 (− 0,6 ; critère 4), dont sur la ligne + 5,3 ± 7,2 (180 passes, non critère, dans le bruit). Critères du 18n et du 18o tenus : table de coupe non réestimée. Biais du 18p : Passing < 50 + 3,1 (+ 3,8), moins de 8 m + 1,8 (+ 1,6), 15 à 30 m − 1,1. Le cas « adversaire sur la ligne » est à surveiller au `v2-collectif/22a` (direction attendue : plus de passes perdues).
+
+**Chiffre réel** : non trouvé (les modèles publiés traitent la réussite de la passe ou la disponibilité du receveur, pas la passe vers un joueur marqué de face : Dick et al., *Data Mining and Knowledge Discovery*, 2021 ; arXiv 2109.08051).

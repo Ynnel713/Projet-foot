@@ -1188,16 +1188,20 @@ def _contacts(start: Vec2, end: Vec2, dt: float, players: list[PlayerState],
         if (player.name == released_by and length2 >= 1e-12 and r0.length() < CONTROL_RADIUS_M
                 and r1.length() >= r0.length()):
             continue
-        s = 0.0 if length2 < 1e-12 else min(1.0, max(0.0, -(r0.x * seg.x + r0.y * seg.y) / length2))
+        foot = 0.0 if length2 < 1e-12 else -(r0.x * seg.x + r0.y * seg.y) / length2  # pied de la perpendiculaire
+        s = min(1.0, max(0.0, foot))
         closest = r0 + seg * s
         if closest.length() < radius:
             # instant d'entrée dans le rayon (pas seulement du point le plus proche) : le premier atteint tente
-            # le premier
+            # le premier. Calculé sur la droite du pas, depuis le pied de la perpendiculaire : quand le point le plus
+            # proche est rabattu sur la fin du pas, sa distance n'est pas la distance à la droite (ticket v2-realisme/29c :
+            # l'ancien calcul avançait l'entrée, d'autant plus que la portée est grande, et le receveur à 1 m passait
+            # devant le défenseur qui le précédait)
             if length2 < 1e-12 or r0.length() < radius:
                 entry = 0.0
             else:
-                back = math.sqrt(max(0.0, radius**2 - closest.length() ** 2) / length2)
-                entry = max(0.0, s - back)
+                perp = (r0 + seg * foot).length()
+                entry = max(0.0, foot - math.sqrt(max(0.0, radius**2 - perp**2) / length2))
             hits.append((entry, closest.length(), player))
     hits.sort(key=lambda hit: (hit[0], hit[1]))  # à égalité (déjà au contact), le plus proche d'abord
     return hits

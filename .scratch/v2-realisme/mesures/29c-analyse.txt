@@ -1,0 +1,27 @@
+passes 60811, adversaires collés suivis 474
+ballon venu à moins de 1 m : 0.42 (474)
+parmi eux, devant le receveur (vers le ballon) et à moins de 0,5 m de son axe : 104
+
+== tous à moins de 1 m : touche le premier 0.61 (197), passe perdue 0.64 (197)
+  lecteur                                                    part 0.53  touche le premier 0.77 (104)
+  non lecteur, faces_pass vrai, vue                          part 0.28  touche le premier 0.62 (55)
+  non lecteur, faces_pass faux, cap < 90 du ballon qui vient part 0.01  touche le premier 0.00 (2)
+  non lecteur, faces_pass faux, cap >= 90                    part 0.01  touche le premier 0.00 (1)
+  non lecteur, faces_pass vrai, pas encore vue               part 0.18  touche le premier 0.20 (35)
+  dmin quartiles [0.448, 0.644, 0.811]
+  dmin [0 ; 0.41[ : touche le premier 0.79 (39)
+  dmin [0.41 ; 0.8[ : touche le premier 0.67 (103)
+  dmin [0.8 ; 1.0[ : touche le premier 0.38 (55)
+
+== devant, axe < 0,5 m : touche le premier 0.77 (104), passe perdue 0.81 (104)
+  lecteur                                                    part 0.50  touche le premier 0.92 (52)
+  non lecteur, faces_pass vrai, vue                          part 0.30  touche le premier 0.81 (31)
+  non lecteur, faces_pass faux, cap < 90 du ballon qui vient part 0.01  touche le premier 0.00 (1)
+  non lecteur, faces_pass faux, cap >= 90                    part 0.00  touche le premier - (0)
+  non lecteur, faces_pass vrai, pas encore vue               part 0.19  touche le premier 0.35 (20)
+  dmin quartiles [0.317, 0.575, 0.718]
+  dmin [0 ; 0.41[ : touche le premier 0.75 (32)
+  dmin [0.41 ; 0.8[ : touche le premier 0.82 (60)
+  dmin [0.8 ; 1.0[ : touche le premier 0.58 (12)
+
+ballon resté à 1 m et plus (receveur parti, passe à côté) : passe perdue 0.25 (277)

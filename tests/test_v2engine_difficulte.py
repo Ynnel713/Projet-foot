@@ -323,8 +323,10 @@ def test_marked_receiver_at_contact_keeps_the_measured_engine_chance() -> None:
     """Ticket v2-realisme/18o (réserve A2 du 18n) : receveur marqué de face au contact, adversaire immobile 0,5 m devant
     lui sur la ligne, passe de 12 m. La chance évaluée suit le moteur : en match, ces passes sont gardées deux fois sur
     trois (96 matchs, adversaire à moins de 1,5 m du receveur entre le passeur et lui : environ 0,61 non perdues), d'où 0,72
-    ici (coupe 0,41 x 0,66). Physiquement, un défenseur collé devant le receveur devrait gagner presque toujours : écart du
-    moteur, ticket de physique à part (décision du propriétaire, 20/11/2026) ; ce test fige la valeur actuelle."""
+    ici (coupe 0,41 x 0,66). Ticket v2-realisme/29c : la chance évaluée est une moyenne sur les adversaires collés au
+    départ de la passe, dont 58 % ne sont plus sur le trajet à l'arrivée (receveur démarqué) ; le défenseur encore devant
+    le receveur, tourné vers le ballon, le gagne presque toujours dans le moteur (scène 97 %, matchs 77 %). Ce test fige la
+    valeur de la table."""
     passer = _player()
     receiver = _player("R", position=Vec2(42.0, 34.0))
     marker = _player("M", team="away", position=Vec2(41.5, 34.0))

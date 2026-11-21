@@ -1,0 +1,15 @@
+devant 0,5               face ballon    premier touché : M | tirages : M premier 1.00, M garde 0.97
+devant 0,5               face receveur  premier touché : R | tirages : M premier 0.00, M garde 0.00
+devant 0,5               profil         premier touché : R | tirages : M premier 0.00, M garde 0.00
+devant 1,0               face ballon    premier touché : M | tirages : M premier 1.00, M garde 0.95
+devant 1,0               face receveur  premier touché : M | tirages : M premier 1.00, M garde 0.96
+devant 1,0               profil         premier touché : M | tirages : M premier 1.00, M garde 0.98
+devant 0,5 décalé 0,5    face ballon    premier touché : M | tirages : M premier 1.00, M garde 0.96
+devant 0,5 décalé 0,5    face receveur  premier touché : R | tirages : M premier 0.00, M garde 0.00
+devant 0,5 décalé 0,5    profil         premier touché : R | tirages : M premier 0.00, M garde 0.00
+à côté 0,7               face ballon    premier touché : R | tirages : M premier 0.00, M garde 0.00
+à côté 0,7               face receveur  premier touché : R | tirages : M premier 0.00, M garde 0.00
+à côté 0,7               profil         premier touché : R | tirages : M premier 0.00, M garde 0.00
+derrière 0,5             face ballon    premier touché : R | tirages : M premier 0.00, M garde 0.04
+derrière 0,5             face receveur  premier touché : R | tirages : M premier 0.00, M garde 0.02
+derrière 0,5             profil         premier touché : R | tirages : M premier 0.00, M garde 0.02

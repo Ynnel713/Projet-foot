@@ -386,6 +386,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **`v2-realisme/18p` livré (20/11/2026), validé expert + QC** (diagnostic seul, aucun changement moteur, décision du propriétaire) : aucune cause unique corrigible aux biais de la chance évaluée laissés par le 18o. Écartés : correctif A2 de l'expert (moins de 8 m + 1,7 -> + 1,6), vitesse des adversaires vers la ligne (effet réel, 0,56 à 1,66 fois la coupe prévue, sans effet sur Passing < 50 en facteur simple), attributs des adversaires (au plus 0,2 point), ligne jouée (+ 5,0 -> + 4,8), dosage. Biais laissés en l'état : Passing < 50 + 3,8, moins de 8 m + 1,6, 15 à 30 m − 1,1 ; à remesurer au `29c`. `docs/INDICATEURS_V2.md` section 63.
 
+**`v2-realisme/29c` livré (21/11/2026), validé expert (améliorations facultatives A1, A2 non faites) + QC** : le défenseur encore devant le receveur à l'arrivée du ballon le touche déjà le premier 77 % des fois en match (48 matchs ; les « 23 % » du constat mêlaient les adversaires collés au départ, dont 58 % ne sont plus sur le trajet) ; cause corrigée : instant d'entrée du ballon dans la portée faux dans `match._contacts` quand le point le plus proche est la fin du pas (avantage au receveur, portée 1 m), calcul exact sans constante. Scène décalée 0 % → 96 % ; 50 matchs appariés : passes prises par l'adversaire + 5,1 ± 4,1, réussite 84,90 % ; chance évaluée contrôlée sur 52 matchs, critères du 18n et du 18o tenus, table non réestimée (`docs/INDICATEURS_V2.md` section 64). Suite : `04f` (réserve A1 du 04e), puis `26a` (ordre choisi par délégation du propriétaire du 20/11/2026 ; `v2-hauteur-ballon/03` attend `02a`).
+
 ### Bloquée par
 
 - Phase 4
