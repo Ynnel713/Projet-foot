@@ -13,7 +13,8 @@ La valeur d'une passe est le danger de la case du receveur (grille xT, `danger.d
 2. À chaque décision du porteur où une telle option existe et n'est pas jouée, sa cause : hors portée de Vision ; relance longue en l'air envisagée (zone de construction, 15a) mais moins bien notée ; passe clé non repérée au tirage ; hors du champ de vision ou oubliée (08) ; envisagée mais moins bien notée (écart de valeur rapporté) ; choix perturbé par l'erreur de Decisions.
 3. Ce qui est joué à la place : passe en retrait, passe latérale, conduite dans la zone fermée, tir ; et ce qu'il en advient (perte dans les 5 s).
 4. Saturation de la zone visée par le choix joué : distribution du nombre d'adversaires perçus à moins de R m du point visé (R de 6 à 15 m), pour les actions perdues dans les 5 s et les autres ; elle fonde la constante de saturation du 30b, partagée avec le seuil de saturation du `v2-collectif/15d`.
-5. Rapport par note de Vision et par zone, sur 50 matchs ; recommandation chiffrée pour le `30b`.
+5. **Signature de Vision** (demande du propriétaire du 21/11/2026 : « on doit sentir une réelle différence dans les choix entre un joueur créatif qui a une bonne vision (15+) et un autre qui a une vision médiocre ») : par tranche de Vision du porteur (notes du moteur sur 99 ; 15/20 ≈ 75, 8/20 ≈ 40 ; tranches ≤ 45, 46 à 64, ≥ 65 ; en match normal, chaque tranche est aussi découpée par poste et par zone du ballon, Vision étant corrélée au rôle : c'est le banc de profils qui isole l'effet de Vision), par décision de passe : part des passes de plus de 30 m, des passes progressives (au moins 10 m gagnés vers le but), des changements de côté (receveur de l'autre côté de l'axe, plus de 25 m en largeur), des passes entre les lignes (receveur entre milieux et défenseurs adverses, `09e`), et des options évidentes ignorées (point 2). Deux séries : match normal (notes réelles) et banc de profils `scripts/measure_v2.py --profil Vision --niveaux 75 40` (niveaux réalistes, pas 99 contre 11), les indicateurs ci-dessus ajoutés au relevé par équipe du banc (`profile_tally`). Croisement Vision × Flair rapporté à titre d'information (Flair ne règle aujourd'hui que l'idée de talonnade, `decision.backheel_idea_probability` ; le goût du risque est au `v2-attributs-contextes/05`, à faire).
+6. Rapport par note de Vision et par zone, sur 50 matchs ; recommandation chiffrée pour le `30b`, dont l'écart cible entre Vision 75 et Vision 40 à soumettre au propriétaire (chiffre réel par note de Vision : non trouvé).
 
 **Hors de ce ticket :** toute modification du jeu.
 
@@ -21,7 +22,7 @@ La valeur d'une passe est le danger de la case du receveur (grille xT, `danger.d
 
 **Constantes à proposer avant le code :** aucune nouvelle pour « libre » (`bloc.FREE_M`, 9 m, existant) ; rayons de lecture de la saturation (mesure seulement). Chiffre réel : passes de plus de 30 m et changements de jeu par match, à sourcer (non trouvé à ce jour).
 
-**Lien avec l'existant :** relit la monnaie commune et le meilleur choix factuel du `v2-collectif/33` (livré, non modifié).
+**Lien avec l'existant :** relit la monnaie commune et le meilleur choix factuel du `v2-collectif/33` (livré, non modifié) ; le joueur « créatif » combine Vision (voir) et Flair (oser, `v2-attributs-contextes/05`, à faire) : la signature mesurée ici est celle de Vision seule.
 
 **Blocked by:** 08f (livré).
 
@@ -34,13 +35,13 @@ La valeur d'une passe est le danger de la case du receveur (grille xT, `danger.d
 | Poste | Durée |
 |---|---|
 | Analyse et compréhension du code | 20 min |
-| Développement (détection, causes, rapport) | 50 min |
+| Développement (détection, causes, signature de Vision, rapport) | 1 h 10 |
 | Tests unitaires et comportementaux | 25 min |
-| Intégration et vérifications (50 matchs) | 25 min |
-| **Total (travail effectif)** | **2 h** |
+| Intégration et vérifications (50 matchs, banc de profils 75 / 40) | 35 min |
+| **Total (travail effectif)** | **2 h 30** |
 
-Confiance : moyenne. Hypothèses : les options envisagées et leurs valeurs sont lisibles au point de décision (`decision.choose_action`, `trace.decisions`) sans changer le jeu ; la détection relit les fonctions de passe existantes.
-Temps machine, non compté : suite complète ; banc de 50 matchs.
+Confiance : moyenne. Estimation portée de 2 h à 2 h 30 le 21/11/2026 (signature de Vision ajoutée) ; au-delà de 2 h : découpage à examiner avant le code (diagnostic des options ignorées, puis signature de Vision). Hypothèses : les options envisagées et leurs valeurs sont lisibles au point de décision (`decision.choose_action`, `trace.decisions`) sans changer le jeu ; la détection relit les fonctions de passe existantes.
+Temps machine, non compté : suite complète ; banc de 50 matchs ; banc de profils Vision 75 / 40.
 
 ## Acceptance criteria
 
@@ -48,7 +49,9 @@ Temps machine, non compté : suite complète ; banc de 50 matchs.
 - [ ] Scène en zone de construction : un ailier hors de portée de Vision envisagé en relance longue n'est pas classé « hors portée de Vision »
 - [ ] Scène fixe : ailier seul à 35 m, porteur à Vision 55 : l'option est détectée « évidente » et la cause « hors portée de Vision » est rapportée
 - [ ] Rapport sur 50 matchs : nombre d'options évidentes ignorées par match, part de chaque cause, choix joué à la place, pertes dans les 5 s, par note de Vision
-- [ ] Recommandation pour le 30b, chiffrée, soumise au propriétaire
+- [ ] Découpage examiné avant le code
+- [ ] Signature de Vision : par tranche de Vision, parts de passes de plus de 30 m, progressives, changements de côté, entre les lignes et options évidentes ignorées, en match normal et au banc de profils 75 / 40 (écarts avec intervalle) ; croisement Vision × Flair rapporté
+- [ ] Recommandation pour le 30b, chiffrée (dont l'écart cible entre Vision 75 et 40), soumise au propriétaire
 - [ ] Jeu inchangé : mêmes empreintes à graine fixée avant / après
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 %
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`

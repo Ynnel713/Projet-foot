@@ -30,13 +30,14 @@
 | **Total (travail effectif)** | **2 h 15** |
 
 Confiance : faible (dépend du diagnostic du 30a ; découpage à examiner avant le code : portée et repérage, puis valeur de l'espace). Hypothèses : changements limités à `decision.visible_teammates` et `decision._pass_option` ; le banc de profils (`--profil Vision`) reste valable.
-Temps machine, non compté : suite complète ; série appariée de 50 matchs ; profils Vision 99 contre 11.
+Temps machine, non compté : suite complète ; série appariée de 50 matchs ; profils Vision 99 contre 11 et 75 contre 40.
 
 ## Acceptance criteria
 
 - [ ] Constantes et chiffres réels validés par le propriétaire avant le code ; découpage examiné
 - [ ] Scène : ailier seul à 35 m, ligne ouverte, zone du ballon saturée : le porteur à Vision 70 le joue nettement plus souvent qu'aujourd'hui ; Vision 30 moins souvent que Vision 70
 - [ ] Options évidentes ignorées par match (indicateur du 30a) : baisse chiffrée, cible fixée sur le rapport du 30a
+- [ ] Signature de Vision (30a, banc de profils 75 / 40) : l'écart entre Vision 75 et Vision 40 sur les passes de plus de 30 m, les passes progressives et les changements de côté atteint la cible validée par le propriétaire ; à Vision 40, le joueur joue simple sans choix absurde (passes perdues et pertes dans les 5 s pas plus élevées qu'avant)
 - [ ] Passes de plus de 30 m et passes en retrait par match rapportées, dans le repère réel retenu
 - [ ] Pas de régression mesurée (50 matchs appariés) : passes réussies, pertes, buts, tirs avec intervalle ; profil Vision toujours dans le bon sens
 - [ ] Déterminisme à graine fixée ; durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 %
