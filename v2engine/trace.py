@@ -276,6 +276,7 @@ class FoulEvent:
 
 # Journal des événements (ticket v2-realisme/19b) : types d'événements.
 PASSE, CONTROLE_RATE, PERTE, TOUCHE_LONGUE = "passe", "contrôle raté", "perte", "touche longue"
+CONTROLE_LONG = "contrôle long"  # ticket v2-realisme/26a : contrôle réussi, ballon parti à 1 à 2 m
 TIR, CONTRE, ARRET, BUT = "tir", "contre", "arrêt", "but"
 REMISE, FAUTE, HORS_JEU = "remise", "faute", "hors-jeu"
 DUEL_EPAULE = "duel d'épaule"  # ticket v2-realisme/11c : `player` le gagnant, `other` le perdant

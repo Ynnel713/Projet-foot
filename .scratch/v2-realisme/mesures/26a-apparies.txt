@@ -1,0 +1,13 @@
+50 matchs appariés, par match
+  contrôles ratés (journal)                       0.00 ->     51.82  écart   +51.82 ± 3.32
+  contrôles longs (journal)                       0.00 ->     73.30  écart   +73.30 ± 2.18
+  pertes (journal) : contrôle                    20.78 ->     25.16  écart    +4.38 ± 1.92
+  pertes (journal) : contrôle, après un contrôle long      0.00 ->      6.04  écart    +6.04 ± 0.64
+  passes (jeu)                                 1267.74 ->   1249.34  écart   -18.40 ± 21.75
+  passes prises par l'adversaire (jeu)          182.76 ->    182.34  écart    -0.42 ± 6.40
+  pertes (journal)                              222.32 ->    224.20  écart    +1.88 ± 7.01
+  pertes (journal) : passe interceptée          170.72 ->    168.84  écart    -1.88 ± 5.71
+  passes ratées au tirage                       411.88 ->    410.14  écart    -1.74 ± 7.90
+  tirs                                           39.44 ->     40.12  écart    +0.68 ± 2.29
+  buts                                            4.94 ->      4.58  écart    -0.36 ± 0.90
+  réussite des passes de jeu (%)                 85.03 ->     84.87  écart    -0.16 ± 0.41

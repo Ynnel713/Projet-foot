@@ -10,13 +10,15 @@ from __future__ import annotations
 import math
 import random
 from collections.abc import Sequence
+from dataclasses import dataclass
+from statistics import NormalDist
 
 from v2engine.attributes import duel_probability, success_probability
 from v2engine.condition import effective_rating
 from v2engine.flux import PASSE
 from v2engine.reception import DE_FACE, DE_PROFIL, DOS_AU_JEU
 from v2engine.geometry import Vec2
-from v2engine.movement import PlayerState
+from v2engine.movement import PlayerState, max_speed_mps
 
 PRESSURE_RADIUS_M = 5.0  # gêne maximale au contact, nulle à 5 m (validé, ticket v2-cerveau-joueurs/01)
 BALL_FRICTION_PER_S = 0.6  # freinage du ballon par seconde (partagé avec `match.py`)
@@ -304,12 +306,73 @@ def control_difficulty(player: PlayerState, ball_velocity: Vec2, opponents: Sequ
     return difficulty + _PRESSURE_DIFFICULTY * pressure(player, opponents) * composure_factor(player)
 
 
+# --- Contrôle imparfait continu (ticket v2-realisme/26a, constantes proposées et validées par délégation du propriétaire
+# le 20/11/2026) ---------------------------------------------------------------------------------------------------------
+# L'issue du contrôle n'est plus en tout ou rien : le tirage unique du contrôle (même chance de réussite qu'avant, First
+# Touch contre la difficulté) donne aussi la distance du ballon après le contact. Le tirage u est lu comme le quantile
+# d'un écart demi-normal |z| ; l'échelle est fixée pour que le contrôle échoue exactement quand u dépasse la chance de
+# réussite p (z au-delà de z_p, quantile de p) : le ballon s'échappe comme avant (`missed_control_velocity`, la queue).
+# En deçà, un écart au-dessus de `LONG_CONTROL_START` x z_p donne un contrôle long : le ballon file dans sa direction
+# et s'arrête à `LONG_CONTROL_M` (bornes, linéaire en z) du joueur ; s'il est le plus près de ce point, il le garde et
+# décide plus tard du temps d'aller le chercher (`long_chase_s`), sinon le ballon est libre (`match._step_loose_ball`) ;
+# au-dessous, le ballon est au pied. Part des contrôles longs parmi les contrôles réussis : 4 % pour un ballon facile
+# (p = 0,98), 7 % à p = 0,95, 13 % à p = 0,8, 17 % à p = 0,6 ; elle croît avec la difficulté et décroît avec First Touch,
+# sans attribut de plus (pas de double comptage). Réglage sur 50 matchs appariés (0,7 et 1 à 2,5 m d'abord : trop de
+# pertes après un contrôle). Gardien et ballon quasi arrêté : jamais de contrôle long. Données réelles : non trouvées.
+LONG_CONTROL_START = 0.8
+LONG_CONTROL_M = (1.0, 2.0)
+CONTROL_REACH_M = 0.41  # le ballon au pied, au bord du joueur (`match.CONTROL_RADIUS_M`, même valeur ; test)
+_HALF_NORMAL = NormalDist()
+
+
+@dataclass(frozen=True)
+class ControlTouch:
+    """Issue du contrôle (ticket v2-realisme/26a) : vraie si le joueur garde le ballon ; `long_m` > 0 pour un contrôle
+    long (distance du ballon au joueur une fois arrêté)."""
+    controlled: bool
+    long_m: float = 0.0
+
+    def __bool__(self) -> bool:
+        return self.controlled
+
+
+def control_touch(u: float, p: float) -> ControlTouch:
+    """Issue du contrôle pour le tirage `u` (uniforme sur [0 ; 1[) et la chance de réussite `p` (ticket 26a)."""
+    if u >= p:
+        return ControlTouch(False)
+    z_p = _HALF_NORMAL.inv_cdf((1.0 + p) / 2.0)
+    z = _HALF_NORMAL.inv_cdf((1.0 + u) / 2.0)
+    start = LONG_CONTROL_START * z_p
+    if z < start:
+        return ControlTouch(True)
+    low, high = LONG_CONTROL_M
+    return ControlTouch(True, low + (high - low) * min(1.0, (z - start) / (z_p - start)))
+
+
+def long_chase_s(player: PlayerState, long_m: float) -> float:
+    """Temps pour aller rechercher un contrôle long gardé (ticket v2-realisme/26a) : du bord du joueur au ballon arrêté à
+    `long_m`, à sa vitesse de réception (`RECEPTION_SPEED_FACTOR` de sa vitesse max, comme pendant le contrôle)."""
+    return max(0.0, long_m - CONTROL_REACH_M) / (RECEPTION_SPEED_FACTOR * max_speed_mps(effective_rating(player, "Pace")))
+
+
+def control_probability(player: PlayerState, ball_velocity: Vec2 = Vec2(0.0, 0.0),
+                        opponents: Sequence[PlayerState] = ()) -> float:
+    """Chance de garder le ballon au contact : First Touch contre la difficulté du ballon reçu."""
+    return duel_probability(effective_rating(player, "First Touch"), control_difficulty(player, ball_velocity, opponents),
+                            **_SUCCESS)
+
+
 def attempt_control(player: PlayerState, ball_velocity: Vec2 = Vec2(0.0, 0.0),
-                    opponents: Sequence[PlayerState] = ()) -> bool:
+                    opponents: Sequence[PlayerState] = ()) -> ControlTouch:
     """Un joueur au contact du ballon tente de le contrôler : First Touch contre la difficulté du ballon reçu
-    (vitesse par rapport au ballon idéal, pression). Jamais garanti (règle « jamais binaire » du guide)."""
-    difficulty = control_difficulty(player, ball_velocity, opponents)
-    return PASSE.random() < duel_probability(effective_rating(player, "First Touch"), difficulty, **_SUCCESS)
+    (vitesse par rapport au ballon idéal, pression). Jamais garanti (règle « jamais binaire » du guide). Un seul tirage,
+    qui donne aussi la distance du ballon après le contact (ticket v2-realisme/26a, `control_touch`) : au pied, contrôle
+    long, ou raté (faux)."""
+    p = control_probability(player, ball_velocity, opponents)
+    touch = control_touch(PASSE.random(), p)
+    if touch.long_m > 0.0 and (player.poste == "GK" or ball_velocity.length() < BALL_STOPPED_MPS):
+        return ControlTouch(True)  # le gardien capte ; un ballon quasi arrêté reste au pied
+    return touch
 
 
 def missed_control_velocity(player: PlayerState, ball_velocity: Vec2, opponents: Sequence[PlayerState] = ()) -> Vec2:

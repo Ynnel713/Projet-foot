@@ -19,7 +19,7 @@ from ligue1sim.pitch_geometry import GOAL_HEIGHT_M, GOAL_WIDTH_M
 
 from v2engine.condition import effective_rating, intrinsic_rating
 from v2engine.trace import (ARRET, BUT, CONTRE, CONTROLE_RATE, DUEL_EPAULE, FAUTE, HORS_JEU, PASSE, PERTE, REMISE,
-                            TOUCHE_LONGUE, EventLog)
+                            TOUCHE_LONGUE, CONTROLE_LONG, EventLog)
 from v2engine.trace import TIR as TIR_EVENT  # `TIR` est le flux aléatoire des tirs (v2engine.flux)
 from v2engine.anticipation import pass_readers, reaction_delay_s
 from v2engine.ball_state import BallState, ShotFlight
@@ -47,8 +47,8 @@ from v2engine.defense import (COUVERTURE, HOLE_DANGER_M, HOLE_FILLED_M, MARQUAGE
 from v2engine.occasion import ChanceTracker
 from v2engine.offside import HESITATION_S, OFFSIDE_OUT_S, offside_at_pass, sees_the_flag_probability
 from v2engine.possession import (BALL_FRICTION_PER_S, BALL_STOPPED_MPS, MAX_PASS_MPS, MISS_RETRY_S, attempt_control, deflect,
-                                 missed_control_velocity, pass_success_probability, pass_velocity, PRESSURE_RADIUS_M,
-                                 orients_control, reception_delay_s)
+                                 long_chase_s, missed_control_velocity, pass_success_probability, pass_velocity,
+                                 PRESSURE_RADIUS_M, orients_control, reception_delay_s)
 from v2engine.added_time import GRACE_S, HARD_STOP_S, added_minutes, played_minute
 from v2engine.roles import role_of
 from v2engine.restart import (AERIAL_LANDING_M, AERIEN, CORNER, FREE_KICK, KICKOFF, LONG_RESTART_M, PENALTY, PENALTY_CONVERSION, SOL,
@@ -354,7 +354,7 @@ def _seen_by(memory: PerceptionMemory | None, observer: PlayerState, observed: P
 
 # Dernier événement après lequel un toucher adverse est une perte de balle (ticket 19b), et la façon de la nommer.
 _LOST_BY = {PASSE: "passe interceptée", REMISE: "passe interceptée", CONTROLE_RATE: "contrôle",
-            TOUCHE_LONGUE: "conduite"}
+            TOUCHE_LONGUE: "conduite", CONTROLE_LONG: "contrôle"}
 
 
 def _whistle(ball: BallState, event: FoulEvent, players: list[PlayerState], now_s: float,
@@ -1057,10 +1057,25 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
         ball.receiver = None
         ball.released_by = None  # quelqu'un d'autre a touché le ballon : le passeur peut de nouveau le jouer
         _clear_offside(ball)
-        if attempt_control(player, ball.velocity, opponents):
+        touch = attempt_control(player, ball.velocity, opponents)
+        long_m = getattr(touch, "long_m", 0.0) if touch else 0.0
+        stop = clamp_to_pitch(player.position + ball.velocity.normalized() * long_m) if long_m > 0.0 else None
+        if stop is not None:
+            _log(ball, now_s, CONTROLE_LONG, player.team, player.name)
+        if stop is not None and any(o.position.distance_to(stop) < long_m for o in opponents):
+            # Contrôle long (ticket v2-realisme/26a) et un adversaire plus près du point d'arrêt que lui : le ballon est
+            # libre. Il part dans sa direction et s'arrête à `long_m` du joueur (freinage exponentiel : course totale
+            # v0 / -ln f) ; le joueur ne peut le reprendre qu'après `MISS_RETRY_S`, comme la touche trop longue.
+            direction = ball.velocity.normalized()
+            travel = max(0.0, long_m - CONTROL_RADIUS_M)
+            ball.velocity = direction * (-travel * math.log(BALL_FRICTION_PER_S))
+            ball.position = clamp_to_pitch(player.position + direction * CONTROL_RADIUS_M)
+            ball.control_ban_until_s[player.name] = now_s + MISS_RETRY_S
+        elif touch:
             # jeu à une touche (ticket v2-collectif/31a) : passe au sol qui lui est destinée, joueur de champ ; il décide
             # dès le tick suivant, et contrôle comme avant si son choix n'est pas une passe sans rotation
-            first_time = intended and not aerial and player.poste != "GK" and thinks_one_touch(player, opponents)
+            first_time = (intended and not aerial and player.poste != "GK" and stop is None
+                          and thinks_one_touch(player, opponents))
             # contrôle orienté (ticket v2-collectif/31b), tiré à la réception ; appliqué s'il contrôle (pas de première)
             oriented = orients_control(player, ball.velocity)  # ballon dur : moins souvent orienté (31c)
             kind = reception_type(player.facing, player.position, player.team)  # au contact, avant d'orienter (07d)
@@ -1089,6 +1104,11 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
             else:
                 _orient(player, ball.velocity, oriented)
                 ball.next_decision_s = now_s + reception_delay_s(player, opponents, oriented, timed_kind)
+            if stop is not None:
+                # contrôle long gardé (ticket 26a) : personne n'est plus près ; il va rechercher le ballon, à sa vitesse
+                # de réception (`RECEPTION_SPEED_FACTOR`), avant de pouvoir décider
+                ball.one_touch = None
+                ball.next_decision_s = max(ball.next_decision_s, now_s) + long_chase_s(player, long_m)
             ball.receiving = True
             ball.velocity = Vec2(0.0, 0.0)
         else:

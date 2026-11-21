@@ -777,7 +777,8 @@ class Collector:
         """Ticket v2-realisme/18g : premier joueur qui touche une passe en vol ; ferme la mesure de calibration ouverte."""
         if self.pass_open is not None:
             team, target, _, _, _, _ = self.pass_open
-            self._close_pass_calibration(lost=player.team != team, received=player.name == target and controlled)
+            # `controlled` : booléen ou `possession.ControlTouch` (vrai s'il garde le ballon, contrôle long compris ; 26a)
+            self._close_pass_calibration(lost=player.team != team, received=player.name == target and bool(controlled))
 
     def _close_pass_calibration(self, lost: bool, received: bool) -> None:
         if self.pass_open is None:

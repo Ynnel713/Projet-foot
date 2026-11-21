@@ -2019,3 +2019,26 @@ Lecture : les « 23 % » du constat (adversaire placé au départ de la passe) m
 Critère du 04c tenu (sous 3 points), sauf la tranche de gêne 0,9 et plus : 5 tirages sur 50 matchs (une perte), dans le bruit. Volume de conduite : 711 intervalles par match (2 241 au 04c, moteur changé depuis).
 
 **50 matchs appariés** (banc, graines 0 à 49 ; avant : moteur du 29c `bc42698`, `04f-apparies.txt`) : passes − 8,1 ± 18,5, passes prises par l'adversaire − 3,0 ± 5,6, pertes au journal − 1,0 ± 6,7, tirs + 1,0 ± 2,3, buts − 0,08 ± 0,74, réussite des passes 85,03 % (+ 0,13 ± 0,40) : tout dans le bruit (le profil ne change que la position du ballon tenu).
+
+## 66. Contrôle imparfait continu (ticket v2-realisme/26a, 21/11/2026)
+
+**Loi** (`possession.control_touch`, constantes validées par délégation) : le tirage unique du contrôle, à la même chance de réussite p (First Touch contre la difficulté), est lu comme le quantile d'un écart demi-normal |z| ; raté au-delà de z_p (la queue, inchangée) ; contrôle long entre `LONG_CONTROL_START` x z_p (0,8) et z_p, ballon arrêté à 1 à 2 m du joueur (`LONG_CONTROL_M`, linéaire en z) ; au pied en deçà. Contrôle long : si un adversaire est plus près que le joueur du point d'arrêt, le ballon est libre (le joueur écarté `MISS_RETRY_S`) ; sinon il le garde et décide plus tard du temps d'aller le chercher (`possession.long_chase_s`, vitesse de réception). Part des contrôles longs parmi les réussis : 4 / 7 / 13 / 17 % à p = 0,98 / 0,95 / 0,8 / 0,6. Gardien et ballon quasi arrêté : jamais. Données réelles : non trouvées.
+
+**50 matchs appariés** (banc, graines 0 à 49 ; avant : moteur du 04f `fb79186` ; `.scratch/v2-realisme/mesures/26a-apparies.txt`). Les compteurs « contrôles ratés » et « contrôles longs » sont nouveaux au banc (avant : non comptés, 0 affiché).
+
+| Indicateur (par match) | Avant | Après | Écart |
+|---|---|---|---|
+| Contrôles longs (journal) | — | 73,3 | |
+| Contrôles ratés (journal) | non compté | 51,8 | chance inchangée par construction |
+| Pertes après un contrôle (raté ou long) | 20,8 | 25,2 | + 4,4 ± 1,9 |
+| dont après un contrôle long | — | 6,0 | 8 % des contrôles longs |
+| Passes de jeu | 1 267,7 | 1 249,3 | − 18,4 ± 21,8 |
+| Réussite des passes de jeu | 85,03 % | 84,87 % | − 0,16 ± 0,41 point |
+| Passes prises par l'adversaire (jeu) | 182,8 | 182,3 | − 0,4 ± 6,4 |
+| Pertes au journal | 222,3 | 224,2 | + 1,9 ± 7,0 |
+| Tirs | 39,4 | 40,1 | + 0,7 ± 2,3 |
+| Buts | 4,94 | 4,58 | − 0,36 ± 0,90 |
+
+Critère (pertes après un contrôle : + 5 au plus par match) tenu en moyenne (+ 4,4), borne haute de l'IC à 6,3. Le reste dans le bruit.
+
+**Réglage** (deux jeux écartés, mêmes 50 matchs) : premier jeu (0,7 ; 1 à 2,5 m ; ballon toujours libre après un contrôle long) : 139 contrôles longs, 48 perdus, pertes après un contrôle + 49,0 ± 3,4, réussite − 2,2 points, buts − 0,96 ± 0,67 (`26a-apparies-premier-jeu.txt`) ; second jeu (ballon gardé sans adversaire plus près, 0,7 ; 1 à 2,5 m) : + 6,7 ± 2,1, passes − 28,6 ± 20,5 (`26a-apparies-second-jeu.txt`). Portée seule ramenée à 1 à 2 m (12 matchs) : sans effet sur les pertes après un contrôle long (8,3 contre 8,8) ; le levier est la part de contrôles longs (seuil 0,8).

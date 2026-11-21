@@ -47,7 +47,7 @@ from v2engine.condition import effective_rating
 from v2engine.defense import arrival_time_s
 from v2engine.geometry import Vec2
 from v2engine.restart import AERIEN
-from v2engine.trace import PERTE
+from v2engine.trace import CONTROLE_LONG, CONTROLE_RATE, PERTE
 
 from scripts.measure_v2 import AUDIT_SEED, TICK_S
 
@@ -363,6 +363,10 @@ def play(k: int, minutes: float = 90.0, keep_trace: bool = False) -> dict:
         if event.kind == PERTE:
             count["pertes (journal)"] += 1
             count[f"pertes (journal) : {event.detail}"] += 1
+            if event.cause is not None and trace.events[event.cause].kind == CONTROLE_LONG:  # ticket v2-realisme/26a
+                count["pertes (journal) : contrôle, après un contrôle long"] += 1
+        elif event.kind in (CONTROLE_RATE, CONTROLE_LONG):  # issue du contrôle (ticket v2-realisme/26a)
+            count["contrôles longs (journal)" if event.kind == CONTROLE_LONG else "contrôles ratés (journal)"] += 1
     shown_close = [s for s in suspects if s["sol"]]
     count["écran : cas suivis (au sol, < 3 m au moteur)"] += len(shown_close)
     for s in shown_close:
