@@ -1,0 +1,31 @@
+24 matchs, pas 0.1 s, 404643 ticks-latéral (porteur adverse dans l'axe, tiers médian)
+distance du latéral à l'axe : moyenne 15.4 m, p10 8.3, médiane 16.2, p90 21.0
+place de bloc (référence) : moyenne 17.0 m ; écart réf - réel moyen 1.6 m
+part du temps à moins de 8 m de l'axe : 9%
+centraux : distance à l'axe moyenne 8.1 m
+adversaire large de son côté : 99% ; libre (>10 m de tout défenseur) : 65%
+ailier le plus large : 22.5 m de l'axe ; écart latéral-ailier 14.7 m (en largeur 7.1 m, p90 15.6)
+  marquage/danger25            93
+  marquage/danger25/receveur_central 36
+  marquage/dc_libre            61929
+  marquage/dc_tous_occupes     4501
+  marquage/suivi               66337
+  marquage/suivi/receveur_central 44278
+  marque/AD                    2231
+  marque/AG                    2482
+  marque/BU                    9785
+  marque/DC                    9392
+  marque/LB                    2652
+  marque/MC                    22305
+  marque/MDC                   6597
+  marque/MOC                   8372
+  marque/RB                    2614
+  suivi/changements            31456
+  suivi/va_et_vient            2229
+  bloc            77%  axe moyen  16.7 m  cible/marqué à   nan m de l'axe  ailier libre 62%
+  marquage        16%  axe moyen  12.5 m  cible/marqué à   6.4 m de l'axe  ailier libre 69%
+  couverture       3%  axe moyen   6.9 m  cible/marqué à   3.9 m de l'axe  ailier libre 80%
+  compensation     2%  axe moyen  10.9 m  cible/marqué à   2.7 m de l'axe  ailier libre 84%
+  presseur         2%  axe moyen   6.4 m  cible/marqué à   5.6 m de l'axe  ailier libre 67%
+par match : {'buts': 4.92, 'evenements': 1676.5, 'evt:arrêt': 8.67, 'evt:but': 4.92, 'evt:contre': 5.5, 'evt:contrôle raté': 50.92, "evt:duel d'épaule": 22.25, 'evt:faute': 19.5, 'evt:hors-jeu': 3.58, 'evt:passe': 1232.46, 'evt:perte': 216.92, 'evt:remise': 57.71, 'evt:tir': 40.5, 'evt:touche longue': 13.58, 'fautes': 18.12, 'hors-jeu': 3.58, 'passes': 1232.46, 'pertes': 216.92, 'tirs': 40.5}
+empreintes : [[1, 1, 1801, 24], [5, 0, 1719, 38], [1, 5, 1655, 38], [2, 3, 1765, 42], [0, 3, 1527, 39], [2, 6, 1565, 53], [1, 5, 1610, 50], [1, 2, 1705, 31], [2, 3, 1823, 35], [2, 2, 1828, 24], [1, 1, 1685, 37], [5, 0, 1624, 46], [2, 2, 1531, 48], [0, 5, 1551, 48], [7, 0, 1649, 44], [1, 9, 1681, 49], [5, 5, 1757, 41], [2, 2, 1654, 44], [1, 1, 1825, 27], [2, 2, 1744, 41], [2, 2, 1604, 47], [4, 0, 1673, 38], [1, 2, 1648, 33], [3, 4, 1612, 55]]

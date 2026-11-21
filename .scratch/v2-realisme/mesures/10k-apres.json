@@ -1,0 +1,220 @@
+{
+ "roles": {
+  "bloc": 412487,
+  "compensation": 3587,
+  "marquage": 12330,
+  "marquage/suivi": 12284,
+  "marque/AD": 1623,
+  "marquage/dc_libre": 11492,
+  "suivi/changements": 11078,
+  "marque/MC": 5577,
+  "marquage/suivi/receveur_central": 5137,
+  "marque/AG": 1942,
+  "presseur": 4082,
+  "suivi/va_et_vient": 969,
+  "marque/BU": 2098,
+  "couverture": 4453,
+  "marque/MOC": 706,
+  "marque/RB": 107,
+  "marque/DC": 131,
+  "marquage/dc_tous_occupes": 838,
+  "marquage/danger25": 46,
+  "marquage/danger25/receveur_central": 12,
+  "marque/MDC": 62,
+  "marque/LB": 84
+ },
+ "n": 24,
+ "glob": {
+  "buts": 113,
+  "tirs": 886,
+  "fautes": 435,
+  "hors-jeu": 87,
+  "passes": 30857,
+  "pertes": 4568,
+  "evenements": 40576,
+  "evt:remise": 1296,
+  "evt:passe": 30857,
+  "evt:touche longue": 265,
+  "evt:perte": 4568,
+  "evt:contr\u00f4le rat\u00e9": 1261,
+  "evt:duel d'\u00e9paule": 438,
+  "evt:faute": 464,
+  "evt:tir": 886,
+  "evt:arr\u00eat": 217,
+  "evt:but": 113,
+  "evt:contre": 124,
+  "evt:hors-jeu": 87
+ },
+ "empreintes": [
+  [
+   1,
+   3,
+   1844,
+   31
+  ],
+  [
+   4,
+   1,
+   1718,
+   32
+  ],
+  [
+   1,
+   6,
+   1682,
+   36
+  ],
+  [
+   3,
+   3,
+   1756,
+   38
+  ],
+  [
+   0,
+   2,
+   1570,
+   45
+  ],
+  [
+   1,
+   5,
+   1607,
+   43
+  ],
+  [
+   1,
+   4,
+   1691,
+   33
+  ],
+  [
+   4,
+   3,
+   1813,
+   33
+  ],
+  [
+   3,
+   1,
+   1732,
+   40
+  ],
+  [
+   2,
+   1,
+   1747,
+   25
+  ],
+  [
+   3,
+   1,
+   1727,
+   37
+  ],
+  [
+   0,
+   1,
+   1695,
+   32
+  ],
+  [
+   1,
+   1,
+   1616,
+   40
+  ],
+  [
+   1,
+   4,
+   1546,
+   35
+  ],
+  [
+   2,
+   5,
+   1662,
+   44
+  ],
+  [
+   0,
+   4,
+   1673,
+   50
+  ],
+  [
+   3,
+   2,
+   1732,
+   31
+  ],
+  [
+   1,
+   5,
+   1757,
+   34
+  ],
+  [
+   1,
+   2,
+   1772,
+   26
+  ],
+  [
+   4,
+   2,
+   1813,
+   39
+  ],
+  [
+   6,
+   3,
+   1653,
+   41
+  ],
+  [
+   6,
+   1,
+   1630,
+   40
+  ],
+  [
+   1,
+   1,
+   1593,
+   39
+  ],
+  [
+   2,
+   1,
+   1547,
+   42
+  ]
+ ],
+ "moyennes": {
+  "lat_bloc": 17.13925480658492,
+  "lat": 16.85626240466396,
+  "ref": 17.10078583830366,
+  "ecart_ref": 0.24452343363970339,
+  "ailier_cote": 0.9989723966045604,
+  "ailier_axe": 22.79203621787833,
+  "ecart_lat_ailier": 13.61557950727389,
+  "ecart_lat_ailier_y": 5.935235515273311,
+  "ailier_libre": 0.6618864418145325,
+  "libre_bloc": 0.6591165297330582,
+  "dc_lat": 8.17768732232097,
+  "lat_compensation": 12.123885778145953,
+  "mate_lat_compensation": 4.80739722221705,
+  "libre_compensation": 0.815444661276833,
+  "lat_marquage": 14.811236043990359,
+  "mate_lat_marquage": 11.679727790215473,
+  "libre_marquage": 0.6793998377939984,
+  "lat_presseur": 7.565088035373646,
+  "mate_lat_presseur": 6.30975291853728,
+  "libre_presseur": 0.6548260656540912,
+  "lat_couverture": 8.633962128602212,
+  "mate_lat_couverture": 4.925466095855585,
+  "libre_couverture": 0.7527509544127554
+ },
+ "sous8": 0.02403768031693211
+}

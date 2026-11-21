@@ -366,6 +366,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **`v2-realisme/10d` livré (19/11/2026), validé expert + QC** (périmètre réduit par le propriétaire) : l'écran du milieu devant la défense (droite ballon-but, 8 m devant la ligne, ballon à plus de 6 m de l'axe) n'a eu aucun effet sur 100 matchs appariés (passes reçues en zone 14 − 0,1 %, IC ± 5,6 % ; buts, tirs, hors-jeu sans écart significatif) ; diagnostic : le ballon est reçu derrière l'écran, dans la poche avant la ligne (écran entre receveur et but dans 20 % des cas) : écran retiré, suite au ticket `10d2` (en attente d'une référence réelle). Livré : indicateur des passes reçues en zone 14 (29,5 par match, 2,84 % des passes reçues), place du receveur dans la trace ; jeu inchangé.
 
+**`v2-realisme/10k` (21/11/2026)** : constat du propriétaire à l'écran (latéral qui rentre dans l'axe, ailier laissé libre, centraux en place). Le suiveur du pressing d'équipe et le couvreur étaient choisis au plus proche sans zone : le latéral suivait un joueur central adverse (73 % de son suivi) alors qu'un central était libre (93 %). Suivi désormais réservé aux joueurs dont la zone contient le receveur, sans repli (règle stricte choisie par le propriétaire), lâché quand le receveur sort de la zone ; couverture par la zone avec la marge du 10a. 24 matchs appariés, porteur adverse dans l'axe du tiers médian : latéral suivant un receveur central − 88 %, latéral à moins de 8 m de l'axe 9,5 → 2,4 %, couverture par le latéral − 68 %, va-et-vient des suiveurs − 57 % ; buts 4,92 → 4,71, tirs − 9 %, pertes − 12 % (accepté, à recaler à la calibration).
+
 ### Bloquée par
 
 - Phase 4

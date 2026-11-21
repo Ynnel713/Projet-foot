@@ -300,7 +300,9 @@ def test_the_covering_centre_back_keeps_the_holder_margin(monkeypatch: pytest.Mo
     # réserve A1 de l'expert au 10b2 : le central qui couvre déjà garde le rôle tant que son couvreur arrive au plus
     # `HOLD_MARGIN_S` (0,3 s) après l'attaquant, comme le titulaire d'une compensation ; au-delà, il le perd
     _draws(monkeypatch, [0.0] * 10)
-    mdc = _p("MDC", 30.0, y=40.0, poste="MDC", place=Vec2(30.0, 40.0))
+    # place du milieu hors de la zone du point de couverture (ticket 10k : sinon la couverture lui revient) : personne
+    # n'a ce point dans sa zone, le premier arrivé, le central, couvre
+    mdc = _p("MDC", 30.0, y=40.0, poste="MDC", place=Vec2(40.0, 40.0))
     _delay_for(monkeypatch, -0.1)  # tick 1 : le milieu arrive à temps, le central couvre
     defense = _update(_cover_scene() + [mdc], "H", _Bloc())
     assert _role(defense, "DC") == ("couverture", "H")

@@ -103,7 +103,17 @@ autre central ne prend sans couverture un point de couverture qu'à moins de `HO
 parcourt à pleine vitesse en `HOLD_MARGIN_S`, ou à plus de cette distance en deçà de sa place vers son but
 (hystérésis : le titulaire, lui, perd le rôle aux seuils de `line_exit`) (réserve
 A1 de l'expert au 10b2 : sans elle, le rôle allait et venait au seuil). Le couvreur d'une sortie en cours est réservé
-dès avant le choix de la couverture (réserve A2 du 10b2)."""
+dès avant le choix de la couverture (réserve A2 du 10b2).
+
+Suiveur et couvreur selon la zone (ticket v2-realisme/10k, sans constante nouvelle : zone et marge du 10a). Suivi du
+pressing d'équipe, règle stricte choisie par le propriétaire le 21/11/2026 : seuls les suiveurs dont la zone contient le
+receveur le suivent, le plus proche d'entre eux comme avant ; personne de sa zone : il n'est pas suivi. Le suiveur en
+place garde son receveur tant qu'il reste dans sa zone, le lâche sinon et retourne à sa place. Couverture : le premier
+arrivé parmi ceux dont la zone contient le point de couverture et qui y arrivent au plus `PRESS_ZONE_MARGIN_S` après le
+plus rapide ; aucun : tous, comme avant ; le titulaire garde sa marge `HOLD_MARGIN_S`. Mesure du 21/11/2026 (porteur
+adverse dans l'axe du tiers médian) : le latéral suivait un joueur central adverse alors qu'un central était libre
+(93 % des cas), son couloir laissé libre ; un repli « personne de la zone : le plus proche » ne réduisait ce suivi que
+de 18 % (dans 89 % des cas restants, personne de la zone n'était disponible). Sans bloc (scènes de test) : comme avant."""
 
 from __future__ import annotations
 
@@ -399,11 +409,19 @@ class DefensiveRoles:
                     goal: Vec2) -> list[PlayerState]:
         """Candidats au pressing (ticket v2-realisme/10a) : ceux dont la zone contient le porteur et qui arrivent au
         plus `PRESS_ZONE_MARGIN_S` après le plus rapide de tous ; aucun : tous (le premier arrivé presse)."""
-        if not places:
-            return fresh
-        limit = min(arrival_time_s(p, holder.position) for p in fresh) + PRESS_ZONE_MARGIN_S
-        return [p for p in fresh if p.name in places and in_zone(p.name, places, holder.position, goal)
-                and arrival_time_s(p, holder.position) <= limit] or fresh
+        return DefensiveRoles._zone_pool(fresh, holder.position, places, goal)
+
+    @staticmethod
+    def _zone_pool(candidates: list[PlayerState], point: Vec2, places: dict[str, Vec2],
+                   goal: Vec2) -> list[PlayerState]:
+        """Ceux de `candidates` dont la zone contient `point` et qui y arrivent au plus `PRESS_ZONE_MARGIN_S` après le
+        plus rapide de tous ; aucun, ou pas de bloc : tous. Presseur (10a), suiveur du pressing d'équipe et couvreur
+        (ticket v2-realisme/10k)."""
+        if not places or not candidates:
+            return candidates
+        limit = min(arrival_time_s(p, point) for p in candidates) + PRESS_ZONE_MARGIN_S
+        return [p for p in candidates if p.name in places and in_zone(p.name, places, point, goal)
+                and arrival_time_s(p, point) <= limit] or candidates
 
     def _keep(self, previous: dict[tuple[str, str], str], role: str, mate: str, free: list[PlayerState], point: Vec2,
               best: PlayerState) -> PlayerState:
@@ -495,8 +513,9 @@ class DefensiveRoles:
                 p, spot, holder.name, players, free, places, goal, ball, now_s, recheck=True,
                 margin_s=HOLD_MARGIN_S if previous.get((COUVERTURE, holder.name)) == p.name else 0.0)]
             if covers:
+                # le premier arrivé parmi ceux dont la zone contient le point de couverture (ticket v2-realisme/10k)
                 cover = self._keep(previous, COUVERTURE, holder.name, covers, spot,
-                                   min(covers, key=lambda p: arrival_time_s(p, spot)))
+                                   min(self._zone_pool(covers, spot, places, goal), key=lambda p: arrival_time_s(p, spot)))
                 self._reserve_coverer(cover, spot, holder.name, places, goal)
                 if bloc is not None:  # Positioning : précision du placement, comme dans le bloc
                     spot = clamp_to_pitch(spot + bloc.placement_error(cover, now_s))
@@ -545,9 +564,22 @@ class DefensiveRoles:
                     free, places, goal, ball, now_s)]
                 if not followers:
                     continue
-                marker = next((p for p in followers if self.followed.get(p.name) == receiver.name), None) or self._closest_to(
-                    [p for p in followers if self.followed.get(p.name) not in {r.name for r in near}] or followers,
-                    receiver, memory, now_s)
+                # seuls ceux dont la zone contient le receveur le suivent, le plus proche d'entre eux ; personne : il
+                # n'est pas suivi (ticket v2-realisme/10k, règle stricte choisie par le propriétaire le 21/11/2026) ; le
+                # suiveur en place le lâche dès qu'il sort de sa zone et retourne à sa place
+                kept = next((p for p in followers if self.followed.get(p.name) == receiver.name), None)
+                candidates = [p for p in followers if self.followed.get(p.name) not in {r.name for r in near}] or followers
+                if kept is not None and kept not in candidates:
+                    candidates = candidates + [kept]
+                if places:
+                    candidates = [p for p in candidates
+                                  if p.name in places and in_zone(p.name, places, receiver.position, goal)]
+                if kept is not None and kept not in candidates:
+                    del self.followed[kept.name]  # libre pour un autre receveur de sa zone
+                    kept = None
+                if not candidates:
+                    continue
+                marker = kept or self._closest_to(candidates, receiver, memory, now_s)
                 self.followed[marker.name] = receiver.name
                 # côté ballon, sur la ligne de passe : il ferme la solution plutôt que de couvrir son but
                 where, moving = self._seen_at(marker, receiver, memory, now_s)
