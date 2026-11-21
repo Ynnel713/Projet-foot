@@ -14,7 +14,7 @@
 
 **Blocked by:** 09b (même fonction `choose_space`, contrainte de couloir à garder).
 
-**Bloque :** 25c, 25d, 25e, 25f, 25g.
+**Bloque :** 25c, 25d, 25e, 25f, 25g ; 25i (ajouté le 21/11/2026).
 
 **Status:** à faire (constantes à proposer avant le code)
 

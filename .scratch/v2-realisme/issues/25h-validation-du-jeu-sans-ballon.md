@@ -8,7 +8,7 @@
 
 **Attributs :** aucun.
 
-**Blocked by:** 25a à 25g, 24 ; `v2-realisme/28b` (ajouté le 21/11/2026, audit de réalisme du propriétaire).
+**Blocked by:** 25a à 25g, 24 ; `v2-realisme/28b` (ajouté le 21/11/2026, audit de réalisme du propriétaire) ; 25i (ajouté le 21/11/2026).
 
 **Bloque :** `v2-collectif/22b` (calibration tactique) ; 27c.
 

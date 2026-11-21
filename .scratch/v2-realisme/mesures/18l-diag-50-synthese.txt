@@ -1,0 +1,28 @@
+matchs 50 ; tirs par équipe 20.55 ; buts par match 5.06
+surface : tirs par équipe 7.69, part 37.4 %, conversion 20.4 %, buts par match 3.14, xG neutre moyen 0.190
+hors surface : tirs par équipe 12.86, part 62.6 %, conversion 7.5 %, buts par match 1.92, xG neutre moyen 0.076
+distance 0-11 m : tirs par équipe 1.46, conversion 28.8 %, buts par match 0.84
+distance 11-16.5 m : tirs par équipe 3.79, conversion 22.7 %, buts par match 1.72
+distance 16.5-25 m : tirs par équipe 13.23, conversion 8.9 %, buts par match 2.36
+distance 25-99 m : tirs par équipe 2.07, conversion 3.4 %, buts par match 0.14
+origine du ballon du tireur, dribble : tirs par équipe 12.82, conversion 11.5 %, buts par match 2.96
+origine du ballon du tireur, passe au sol : tirs par équipe 2.80, conversion 11.8 %, buts par match 0.66
+origine du ballon du tireur, récupération : tirs par équipe 1.48, conversion 24.3 %, buts par match 0.72
+origine du ballon du tireur, passe en retrait : tirs par équipe 1.48, conversion 11.5 %, buts par match 0.34
+origine du ballon du tireur, passe en profondeur : tirs par équipe 1.41, conversion 10.6 %, buts par match 0.30
+origine du ballon du tireur, rebond : tirs par équipe 0.31, conversion 9.7 %, buts par match 0.06
+origine du ballon du tireur, coup franc : tirs par équipe 0.21, conversion 4.8 %, buts par match 0.02
+origine du ballon du tireur, centre : tirs par équipe 0.04, conversion 0.0 %, buts par match 0.00
+origine des buts (19e), récupération : 63.6 %, 3.22 par match
+origine des buts (19e), jeu placé : 15.4 %, 0.78 par match
+origine des buts (19e), erreur adverse : 10.3 %, 0.52 par match
+origine des buts (19e), coup de pied arrêté : 5.9 %, 0.30 par match
+origine des buts (19e), inclassable : 3.6 %, 0.18 par match
+origine des buts (19e), touche : 1.2 %, 0.06 par match
+   récupération : interception : 54.2 %
+   erreur adverse : contrôle raté : 9.9 %
+   récupération : conduite : 5.5 %
+   jeu placé : après touche : 4.7 %
+   jeu placé : après coup franc : 4.0 %
+   coup de pied arrêté : coup franc : 3.2 %
+délai origine -> but : médiane 20.1 s, moins de 15 s 33.6 %
