@@ -748,9 +748,13 @@ class Collector:
             holder.velocity.length() / max_speed_mps(holder.pace))
         self.stats[f"conduite, {tranche} : avance du ballon (m)"].add(ball.position.distance_to(holder.position))
 
-    def on_dribble(self, holder: PlayerState, opponents, lost: bool) -> None:
+    def on_dribble(self, holder: PlayerState, opponents, lost: bool, duration_s: float = DECISION_INTERVAL_S) -> None:
         """Ticket v2-realisme/04a : un tirage de perte de conduite (un par intervalle de décision), selon la gêne du porteur
-        (0 : aucun adversaire à 5 m ; 1 : au contact)."""
+        (0 : aucun adversaire à 5 m ; 1 : au contact). `duration_s` : durée du tirage ; un tirage plus court que
+        l'intervalle (rotation avant la passe ou le tir, ticket 07e) n'est pas un intervalle de conduite et n'entre pas dans
+        la calibration (ticket v2-realisme/04f : il y gonflait le risque évalué, calculé sur l'intervalle entier)."""
+        if duration_s < DECISION_INTERVAL_S - 1e-9:
+            return
         gene = pressure(holder, opponents)
         classes = ["conduite"] + (["conduite libre"] if gene < 0.1 else []) + (["conduite serrée"] if gene >= 0.5 else [])
         for name in classes:

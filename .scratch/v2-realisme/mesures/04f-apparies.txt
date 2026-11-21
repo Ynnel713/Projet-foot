@@ -1,0 +1,9 @@
+50 matchs appariés, par match
+  passes (jeu)                                 1275.84 ->   1267.74  écart    -8.10 ± 18.47
+  passes prises par l'adversaire (jeu)          185.76 ->    182.76  écart    -3.00 ± 5.60
+  pertes (journal)                              223.28 ->    222.32  écart    -0.96 ± 6.71
+  pertes (journal) : passe interceptée          172.46 ->    170.72  écart    -1.74 ± 5.72
+  passes ratées au tirage                       414.64 ->    411.88  écart    -2.76 ± 8.31
+  tirs                                           38.46 ->     39.44  écart    +0.98 ± 2.26
+  buts                                            5.02 ->      4.94  écart    -0.08 ± 0.74
+  réussite des passes de jeu (%)                 84.90 ->     85.03  écart    +0.13 ± 0.40

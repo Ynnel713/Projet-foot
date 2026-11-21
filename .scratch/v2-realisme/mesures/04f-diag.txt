@@ -1,0 +1,31 @@
+12 matchs (graines 0 à 11), moteur avec le profil de touche du 04f, sans interception ; par match
+  contacts, adversaire à 0.0 m du porteur                   0.08
+  contacts, adversaire à 0.5 m du porteur                 182.92
+  contacts, adversaire à 1.0 m du porteur                  38.92
+  gêne 0.0 : intervalles                                   29.50
+  gêne 0.0 : pertes tirées                                  0.25
+  gêne 0.1 : intervalles                                   28.33
+  gêne 0.1 : pertes tirées                                  0.50
+  gêne 0.3 : intervalles                                   62.92
+  gêne 0.3 : pertes tirées                                  1.92
+  gêne 0.5 : intervalles                                  183.42
+  gêne 0.5 : pertes tirées                                  6.33
+  gêne 0.7 : intervalles                                  421.92
+  gêne 0.7 : pertes tirées                                 18.17
+  gêne 0.7 : touches interceptables                        96.33
+  gêne 0.9 : intervalles                                    0.17
+  gêne 0.9 : pertes tirées                                  0.08
+  gêne 0.9 : touches interceptables                         0.17
+  interceptables, avance 0.0 m                              3.00
+  interceptables, avance 0.5 m                             88.00
+  interceptables, avance 1.0 m                              5.50
+  interceptables, gardien                                   0.33
+  ticks ballon loin du pied                              2662.67
+  ticks de conduite                                      3144.58
+  touches interceptables                                   96.50
+  gêne 0.0 : perte tirée par intervalle 0.85%, touches interceptables par intervalle 0.00%
+  gêne 0.1 : perte tirée par intervalle 1.76%, touches interceptables par intervalle 0.00%
+  gêne 0.3 : perte tirée par intervalle 3.05%, touches interceptables par intervalle 0.00%
+  gêne 0.5 : perte tirée par intervalle 3.45%, touches interceptables par intervalle 0.00%
+  gêne 0.7 : perte tirée par intervalle 4.31%, touches interceptables par intervalle 22.83%
+  gêne 0.9 : perte tirée par intervalle 50.00%, touches interceptables par intervalle 100.00%

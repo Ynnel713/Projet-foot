@@ -11,8 +11,8 @@ import pytest
 from tests.scenes import player
 from v2engine.ball_state import BallState
 from v2engine.geometry import Vec2
-from v2engine.match import (CONTROL_RADIUS_M, TOUCH_PERIOD_S, TOUCH_REFERENCE_MPS, _step_ball, carried_ball_position,
-                            touch_lead_m)
+from v2engine.match import (CONTROL_RADIUS_M, TOUCH_PERIOD_S, TOUCH_PUSH_SHARE, TOUCH_REFERENCE_MPS, _step_ball,
+                            carried_ball_position, touch_lead_m)
 
 
 def _runner(dribbling: int = 55, speed: float = 6.0):
@@ -57,9 +57,33 @@ def test_the_engine_moves_the_held_ball_ahead_of_its_carrier() -> None:
     holder = _runner(55, 6.0)
     ball = BallState(position=holder.position, velocity=Vec2(0.0, 0.0), holder="P", next_decision_s=99.0)
     _step_ball(ball, 0.1, [holder], now_s=0.0)  # nouveau porteur : première touche
-    _step_ball(ball, 0.1, [holder], now_s=TOUCH_PERIOD_S / 2.0)  # avance maximale
+    _step_ball(ball, 0.1, [holder], now_s=TOUCH_PUSH_SHARE * TOUCH_PERIOD_S)  # avance maximale (04f)
     assert ball.holder == "P"
     assert ball.position.x - holder.position.x == pytest.approx(CONTROL_RADIUS_M + 1.4 * 6.0 / TOUCH_REFERENCE_MPS)
+
+
+@pytest.mark.parametrize("dribbling,speed", [(11, 7.0), (11, 9.0), (11, 3.0), (55, 7.0), (99, 5.0)])
+def test_the_ball_never_rolls_back_towards_its_carrier(dribbling: int, speed: float) -> None:
+    """Ticket v2-realisme/04f (réserve A1 de l'expert au 04e) : sur le sol, le ballon avance toujours ; au retour, au moins
+    à 1 - L / (7 x 0,6 x 0,6) de la vitesse du porteur (0,21 à Dribbling 11, avance maximale 2 m)."""
+    holder = _runner(dribbling, speed)
+    dt = 0.001
+    ground = [holder.position.x + speed * i * dt + carried_ball_position(holder, i * dt).x - holder.position.x
+              for i in range(int(TOUCH_PERIOD_S / dt) - 1)]
+    steps = [(b - a) / dt for a, b in zip(ground, ground[1:])]
+    assert min(steps) >= 0.2 * speed
+
+
+def test_touch_profile_pushes_fast_then_returns_linearly() -> None:
+    """Poussée pendant `TOUCH_PUSH_SHARE` de la période, avance maximale à sa fin, puis retour linéaire au pied."""
+    holder = _runner(55, TOUCH_REFERENCE_MPS)
+    lead = lambda t: carried_ball_position(holder, t).x - holder.position.x - CONTROL_RADIUS_M
+    top = TOUCH_PUSH_SHARE * TOUCH_PERIOD_S
+    assert lead(top) == pytest.approx(1.4)
+    assert lead(top / 2.0) == pytest.approx(1.4 * 0.75)  # fin en douceur : trois quarts de l'avance à mi-poussée
+    middle = (top + TOUCH_PERIOD_S) / 2.0
+    assert lead(middle) == pytest.approx(0.7)  # retour linéaire
+    assert lead(TOUCH_PERIOD_S - 1e-9) == pytest.approx(0.0, abs=1e-6)
 
 
 def test_the_bench_measures_carry_speed_and_ball_lead_by_dribbling_band() -> None:

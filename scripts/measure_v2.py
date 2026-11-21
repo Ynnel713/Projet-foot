@@ -32,6 +32,7 @@ import v2engine.bloc as bloc_module
 import v2engine.cerveau as cerveau
 import v2engine.defense as defense
 import v2engine.match as match
+from v2engine.decision import DECISION_INTERVAL_S
 from v2engine.duel import attempt_tackle_probability
 from v2engine.flux import DUEL
 from v2engine.shooting import NEUTRAL_ATTRIBUTES
@@ -125,9 +126,9 @@ def _hook(collector: Collector, clock: dict[str, float], plans: bool = True,
         collector.on_shoulder_duel(a, b, result.winner)
         return result
 
-    def dribble_lost(holder, opponents, *args, **kwargs):  # ticket v2-realisme/04a : un tirage de perte par intervalle de conduite
-        lost = real["dribble_lost"](holder, opponents, *args, **kwargs)
-        collector.on_dribble(holder, opponents, lost)
+    def dribble_lost(holder, opponents, duration_s=DECISION_INTERVAL_S):  # ticket v2-realisme/04a : un tirage par intervalle
+        lost = real["dribble_lost"](holder, opponents, duration_s)
+        collector.on_dribble(holder, opponents, lost, duration_s)  # rotation (07e) écartée de la calibration (04f)
         return lost
 
     def lost_carry_outcome(*args, **kwargs):  # ticket v2-realisme/04b : où va le ballon perdu en conduite

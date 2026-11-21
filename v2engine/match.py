@@ -108,7 +108,8 @@ NON_READER_REACH_M = 0.8
 NON_READER_REACTION_S = 0.25
 # Ballon devant le porteur (ticket v2-realisme/04e, constantes proposées et validées par délégation du propriétaire le
 # 19/11/2026) : en conduite, le ballon a sa position propre. À chaque touche il part devant le porteur, dans la
-# direction de sa course, puis le porteur le rejoint : son avance suit une demi-onde, de `CONTROL_RADIUS_M` (au pied) à
+# direction de sa course, puis le porteur le rejoint : son avance suit une demi-onde (profil changé au 04f, voir
+# `TOUCH_PUSH_SHARE`), de `CONTROL_RADIUS_M` (au pied) à
 # l'avance maximale de la touche, et revient au pied pour la touche suivante, toutes les `TOUCH_PERIOD_S`. L'avance
 # maximale croît avec la vitesse (proportionnelle jusqu'à `TOUCH_REFERENCE_MPS`) et se raccourcit quand Dribbling monte
 # (`TOUCH_LEAD_M` : 2,0 m à 11, 1,4 m à 55, 0,8 m à 99, linéaire). Ordre de grandeur : une touche toutes les trois ou
@@ -116,6 +117,13 @@ NON_READER_REACTION_S = 0.25
 # réception : ballon au pied, devant lui (cap `facing`). Aucun tirage ; l'interception entre deux touches est au 04f.
 TOUCH_PERIOD_S = 0.6
 TOUCH_REFERENCE_MPS = 7.0
+# Profil d'une touche (ticket v2-realisme/04f, réserve A1 de l'expert au 04e ; constante proposée et validée par délégation
+# du propriétaire le 20/11/2026) : la demi-onde du 04e faisait reculer le ballon vers le porteur dans la seconde moitié de
+# la touche (jusqu'à - 3,5 m/s à Dribbling 11 et 7 m/s). Le ballon est poussé pendant `TOUCH_PUSH_SHARE` de la période
+# (fin en douceur, vitesse relative qui décroît jusqu'à 0 à l'avance maximale), puis le porteur le rejoint à vitesse
+# relative constante : le ballon avance toujours, au moins à 1 - L / (7 x 0,6 x 0,6) de la vitesse du porteur (0,21 à
+# Dribbling 11, L = 2 m ; 0,44 à Dribbling 55). Donnée réelle chiffrée : non trouvée.
+TOUCH_PUSH_SHARE = 0.4
 TOUCH_LEAD_M: tuple[tuple[float, float], ...] = ((11.0, 2.0), (55.0, 1.4), (99.0, 0.8))
 # Un duel par confrontation (v2-socle/03, validé le 25/10/2026) : un défenseur tente au plus un tacle
 # tant qu'il reste à moins de CONFRONTATION_END_M du même porteur ; un tacle raté l'élimine
@@ -1112,13 +1120,16 @@ def touch_lead_m(holder: PlayerState) -> float:
 
 def carried_ball_position(holder: PlayerState, carried_s: float, receiving: bool = False) -> Vec2:
     """Position du ballon tenu par `holder`, `carried_s` secondes après qu'il l'a pris (ticket v2-realisme/04e) : devant lui
-    dans la direction de sa course, à une avance qui suit une demi-onde par touche (`TOUCH_PERIOD_S`), de
-    `CONTROL_RADIUS_M` à `CONTROL_RADIUS_M` + l'avance de la touche ; au pied (cap `facing`) s'il ne court pas ou reçoit."""
+    dans la direction de sa course, à une avance qui suit, par touche (`TOUCH_PERIOD_S`), une poussée puis un retour
+    linéaire (`TOUCH_PUSH_SHARE`, ticket 04f), de `CONTROL_RADIUS_M` à `CONTROL_RADIUS_M` + l'avance de la touche ; au pied
+    (cap `facing`) s'il ne court pas ou reçoit."""
     speed = holder.velocity.length()
     if receiving or speed < 1e-6:
         return clamp_to_pitch(holder.position + holder.facing.normalized() * CONTROL_RADIUS_M)
     phase = (carried_s / TOUCH_PERIOD_S) % 1.0
-    lead = touch_lead_m(holder) * min(1.0, speed / TOUCH_REFERENCE_MPS) * math.sin(math.pi * phase)
+    shape = (1.0 - (1.0 - phase / TOUCH_PUSH_SHARE) ** 2 if phase < TOUCH_PUSH_SHARE
+             else (1.0 - phase) / (1.0 - TOUCH_PUSH_SHARE))  # poussée, puis le porteur rejoint le ballon (04f)
+    lead = touch_lead_m(holder) * min(1.0, speed / TOUCH_REFERENCE_MPS) * shape
     return clamp_to_pitch(holder.position + holder.velocity * ((CONTROL_RADIUS_M + lead) / speed))
 
 

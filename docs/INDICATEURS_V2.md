@@ -1992,3 +1992,30 @@ Lecture : les « 23 % » du constat (adversaire placé au départ de la passe) m
 **Contrôle de la chance évaluée** (52 matchs joués avec le moteur corrigé, graines 2600 à 2651, 65 907 passes ; script du 18o, `29c-controle.txt`) : pire tranche 1,7 point (1,5 avant ; critère 4), moyenne − 0,3 (− 0,1), moins de 15 m + 0,8 (+ 0,9 ; critère 1), 15 à 30 m − 1,1 (− 1,1, réserve du 18o), adversaire à moins de 1,5 m du receveur + 3,2 ± 4,3 (− 0,6 ; critère 4), dont sur la ligne + 5,3 ± 7,2 (180 passes, non critère, dans le bruit). Critères du 18n et du 18o tenus : table de coupe non réestimée. Biais du 18p : Passing < 50 + 3,1 (+ 3,8), moins de 8 m + 1,8 (+ 1,6), 15 à 30 m − 1,1. Le cas « adversaire sur la ligne » est à surveiller au `v2-collectif/22a` (direction attendue : plus de passes perdues).
 
 **Chiffre réel** : non trouvé (les modèles publiés traitent la réussite de la passe ou la disponibilité du receveur, pas la passe vers un joueur marqué de face : Dick et al., *Data Mining and Knowledge Discovery*, 2021 ; arXiv 2109.08051).
+
+## 65. Ballon jouable entre deux touches : mesure, profil de touche, calibration de la conduite (ticket v2-realisme/04f, 21/11/2026)
+
+**Profil de touche** (réserve A1 de l'expert au 04e, `match.TOUCH_PUSH_SHARE` = 0,4, validé par délégation) : poussée avec fin en douceur sur 40 % de la période (avance maximale à 0,24 s), puis retour linéaire au pied. Le ballon n'avance jamais moins vite que 0,21 fois le porteur (Dribbling 11, avance 2 m) ; la demi-onde du 04e le faisait reculer jusqu'à − 3,5 m/s.
+
+**Mesure avant l'interception** (`.scratch/v2-realisme/mesures/04f-diag-script.py`, sortie `04f-diag.txt` ; 12 matchs, graines 0 à 11 ; profil du 04f, aucune interception appliquée). En conduite, le ballon est loin du pied (plus de 0,41 m) 2 663 ticks par match sur 3 145. Touches où un adversaire frôlerait le ballon à moins de 0,41 m (`match._contacts`, adversaires écartés exclus) : **96,5 par match**, pour 27,3 pertes de conduite tirées (04a). Distance porteur - adversaire à chaque contact : 0,5 à 1 m, 183 par match ; 1 à 1,5 m, 39 ; au-delà de 1,5 m (`TACKLE_RADIUS_M`), **0**. Ballon à 0,5 à 1 m devant le porteur dans 91 % des cas.
+
+**Décision** (par délégation du propriétaire) : interception physique entre deux touches sans objet dans le moteur actuel. Tous les contacts possibles sont dans la zone du duel, où le tacle (11p) et la dépossession tirée (04a) résolvent déjà le ballon ; les ajouter doublerait la perte au contact (3,5 fois le volume des pertes tirées), ce que le ticket interdit (« ne pas cumuler »). Hors duel, aucun cas. À reprendre quand la perte au contact deviendra physique (`04i`, protection du ballon).
+
+**Calibration de la conduite** (04c, 50 matchs, `scripts.measure_v2` en 4 lots, `04f-calibration.py`, sortie `04f-calibration.txt`). Défaut du banc corrigé : depuis le 07e, le tirage de perte pendant la rotation avant une passe ou un tir (durée plus courte que l'intervalle) était compté comme un intervalle de conduite, avec un risque évalué sur l'intervalle entier ; l'évalué en était gonflé (écarts de − 0,2 à − 2,8 points par tranche, Dribbling 40-55 le pire). Ces tirages sont écartés de la calibration (`Collector.on_dribble`, paramètre `duration_s`).
+
+| Tranche | Intervalles par match | Risque évalué | Perte tirée | Écart | Avec tacle | Écart |
+|---|---|---|---|---|---|---|
+| gêne [0 ; 0,1[ | 33,1 | 0,56 % | 0,48 % | − 0,08 | 0,48 % | − 0,08 |
+| gêne [0,1 ; 0,3[ | 29,1 | 1,42 % | 1,17 % | − 0,25 | 1,17 % | − 0,25 |
+| gêne [0,3 ; 0,5[ | 61,6 | 2,35 % | 2,40 % | + 0,05 | 2,40 % | + 0,05 |
+| gêne [0,5 ; 0,7[ | 181,8 | 3,41 % | 3,42 % | + 0,01 | 3,48 % | + 0,06 |
+| gêne [0,7 ; 0,9[ | 405,4 | 4,35 % | 4,42 % | + 0,06 | 4,60 % | + 0,25 |
+| gêne [0,9 ; +[ | 0,1 | 4,90 % | 20,0 % | + 15,1 | 20,0 % | + 15,1 |
+| Dribbling [0 ; 40[ | 16,2 | 7,19 % | 8,27 % | + 1,08 | 8,27 % | + 1,08 |
+| Dribbling [40 ; 55[ | 88,8 | 5,86 % | 5,57 % | − 0,29 | 5,68 % | − 0,18 |
+| Dribbling [55 ; 70[ | 334,2 | 4,18 % | 4,17 % | − 0,01 | 4,27 % | + 0,09 |
+| Dribbling [70 ; +[ | 272,0 | 2,05 % | 2,17 % | + 0,12 | 2,32 % | + 0,28 |
+
+Critère du 04c tenu (sous 3 points), sauf la tranche de gêne 0,9 et plus : 5 tirages sur 50 matchs (une perte), dans le bruit. Volume de conduite : 711 intervalles par match (2 241 au 04c, moteur changé depuis).
+
+**50 matchs appariés** (banc, graines 0 à 49 ; avant : moteur du 29c `bc42698`, `04f-apparies.txt`) : passes − 8,1 ± 18,5, passes prises par l'adversaire − 3,0 ± 5,6, pertes au journal − 1,0 ± 6,7, tirs + 1,0 ± 2,3, buts − 0,08 ± 0,74, réussite des passes 85,03 % (+ 0,13 ± 0,40) : tout dans le bruit (le profil ne change que la position du ballon tenu).

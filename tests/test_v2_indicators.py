@@ -1099,6 +1099,19 @@ def test_carry_loss_draws_are_counted_by_the_pressure_on_the_holder() -> None:
     assert c.count["conduite libre : intervalles"] == 1 and c.count["conduite libre : pertes"] == 0
 
 
+def test_rotation_loss_draws_stay_out_of_the_carry_calibration() -> None:
+    """Ticket v2-realisme/04f : le tirage de perte pendant la rotation avant une passe ou un tir (07e, plus court que
+    l'intervalle) n'est pas un intervalle de conduite ; il gonflait le risque évalué de la calibration du 04c."""
+    c = ind.Collector(geometry_every_s=1e9)
+    holder = _p("H", "home", 50.0, 34.0)
+    close = [_p("A", "away", 50.5, 34.0)]
+    c.on_dribble(holder, close, False, 0.2)
+    assert c.count["conduite : intervalles"] == 0
+    assert not any(key.startswith(ind.CARRY_PREFIX) and c.count[key] for key in list(c.count))
+    c.on_dribble(holder, close, False, ind.DECISION_INTERVAL_S)
+    assert c.count["conduite : intervalles"] == 1
+
+
 def _carry_holder(dribbling: int) -> PlayerState:
     return replace(_p("H", "home", 50.0, 34.0), attributes={"Dribbling": dribbling})
 

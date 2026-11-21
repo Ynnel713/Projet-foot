@@ -388,6 +388,8 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **`v2-realisme/29c` livré (21/11/2026), validé expert (améliorations facultatives A1, A2 non faites) + QC** : le défenseur encore devant le receveur à l'arrivée du ballon le touche déjà le premier 77 % des fois en match (48 matchs ; les « 23 % » du constat mêlaient les adversaires collés au départ, dont 58 % ne sont plus sur le trajet) ; cause corrigée : instant d'entrée du ballon dans la portée faux dans `match._contacts` quand le point le plus proche est la fin du pas (avantage au receveur, portée 1 m), calcul exact sans constante. Scène décalée 0 % → 96 % ; 50 matchs appariés : passes prises par l'adversaire + 5,1 ± 4,1, réussite 84,90 % ; chance évaluée contrôlée sur 52 matchs, critères du 18n et du 18o tenus, table non réestimée (`docs/INDICATEURS_V2.md` section 64). Suite : `04f` (réserve A1 du 04e), puis `26a` (ordre choisi par délégation du propriétaire du 20/11/2026 ; `v2-hauteur-ballon/03` attend `02a`).
 
+**`v2-realisme/04f` livré (21/11/2026), validé expert (améliorations facultatives A1 à A3 non faites) + QC** (périmètre revu par délégation) : profil de touche asymétrique (`match.TOUCH_PUSH_SHARE` 0,4, réserve A1 du 04e : le ballon ne recule plus vers le porteur) ; interception physique entre deux touches sans objet après mesure (96,5 contacts par match, tous à moins de 1,5 m du porteur, dans la zone du duel déjà résolue par le tacle et le 04a ; à reprendre au `04i`) ; banc : tirages de rotation du 07e écartés de la calibration de la conduite, qui revient sous 1,1 point (`docs/INDICATEURS_V2.md` section 65). Suite : `26a`.
+
 ### Bloquée par
 
 - Phase 4
