@@ -1,0 +1,21 @@
+matchs 50 (mêmes graines et affiches avant / après)
+instants de possession sur l'aile du dernier tiers, par match avant   121.00   après   111.08   écart   -9.92 ± 8.92
+[avant] défenseurs de champ dans la surface à ces instants : 0.504   [après] défenseurs de champ dans la surface à ces instants : 1.430   
+[avant] profondeur de l'avant-dernier défenseur à ces instants (m) : 21.173   [après] profondeur de l'avant-dernier défenseur à ces instants (m) : 16.537   
+[avant] zone premier poteau tenue (part des instants où la règle la demande) : 0.042   [après] zone premier poteau tenue (part des instants où la règle la demande) : 0.438   
+[avant] zone point de penalty tenue (part des instants où la règle la demande) : 0.028   [après] zone point de penalty tenue (part des instants où la règle la demande) : 0.330   
+[avant] zone second poteau tenue (part des instants où la règle la demande) : 0.049   [après] zone second poteau tenue (part des instants où la règle la demande) : 0.192   
+[avant] zone retrait tenue (part des instants où la règle la demande) : 0.053   [après] zone retrait tenue (part des instants où la règle la demande) : 0.260   
+tirs dans les 10 s après un passage sur l'aile, par match  avant     0.28   après     0.34   écart   +0.06 ± 0.16
+buts dans les 10 s après un passage sur l'aile, par match  avant     0.04   après     0.04   écart   +0.00 ± 0.08
+tirs par équipe                                            avant    15.87   après    16.59   écart   +0.72 ± 0.97
+tirs dans la surface par équipe                            avant    11.28   après    12.05   écart   +0.77 ± 0.89
+tirs hors surface par équipe                               avant     4.59   après     4.54   écart   -0.05 ± 0.57
+buts par match                                             avant     4.86   après     5.42   écart   +0.56 ± 0.89
+buts dans la surface par match                             avant     3.64   après     4.24   écart   +0.60 ± 0.76
+xG neutre par match                                        avant     5.17   après     5.46   écart   +0.29 ± 0.44
+hors-jeu par match                                         avant     4.42   après     3.82   écart   -0.60 ± 0.77
+passes par match                                           avant  1296.90   après  1293.06   écart   -3.84 ± 15.89
+pertes de balle par match                                  avant   229.68   après   232.14   écart   +2.46 ± 5.56
+[avant] conversion dans la surface : 0.161   [après] conversion dans la surface : 0.176   
+[avant] conversion hors surface : 0.133   [après] conversion hors surface : 0.130   

@@ -103,7 +103,22 @@ autre central ne prend sans couverture un point de couverture qu'à moins de `HO
 parcourt à pleine vitesse en `HOLD_MARGIN_S`, ou à plus de cette distance en deçà de sa place vers son but
 (hystérésis : le titulaire, lui, perd le rôle aux seuils de `line_exit`) (réserve
 A1 de l'expert au 10b2 : sans elle, le rôle allait et venait au seuil). Le couvreur d'une sortie en cours est réservé
-dès avant le choix de la couverture (réserve A2 du 10b2)."""
+dès avant le choix de la couverture (réserve A2 du 10b2).
+
+Zones de la surface (ticket v2-realisme/10f, constantes validées par le propriétaire le 21/11/2026 ; chiffres réels non
+trouvés, ordres de grandeur des guides d'entraînement) : quand le ballon (ou le point de réception d'une passe) est
+dans un couloir extérieur du dernier tiers défendu, à `WIDE_LAST_THIRD_M` = 35 m ou moins de sa ligne de but et hors de
+la largeur de la surface, les défenseurs encore libres après le presseur, la couverture, les marqueurs et les
+compensations (boucher le couloir d'un latéral monté passe avant la surface, décision du propriétaire du 21/11/2026)
+tiennent, dans cet ordre, le premier poteau (4 m de la ligne, 3 m côté ballon), le point de penalty
+(11 m, dans l'axe), le second poteau (5 m, 4 m côté opposé) et la zone de retrait (13 m, 6 m côté ballon) :
+`BOX_ZONES`. Chaque zone revient au premier arrivé parmi les libres de son propre camp, avec la mémoire du titulaire
+(`HOLD_MARGIN_S`) ; Positioning règle la précision du placement, comme pour la couverture. Aucun attribut nouveau.
+Réserves A1 et A2 de l'expert, corrigées avec des constantes validées par le propriétaire le 21/11/2026 (« Ok corrige
+les ») : les poteaux ne sont tenus que ballon à `POST_ZONES_MAX_M` = 20 m ou moins de la ligne (plus loin, descendre
+aux poteaux faisait tomber la ligne de hors-jeu à 4 m ; restent le penalty et le retrait) ; une zone active le reste
+tant que le ballon ne dépasse pas ses seuils de plus de `ZONE_HOLD_MARGIN_M` = 2 m (sinon un porteur qui longe un seuil
+allumait et éteignait les zones d'un pas à l'autre)."""
 
 from __future__ import annotations
 
@@ -118,7 +133,7 @@ from v2engine.contextes import REPLI_APRES_LA_PERTE, contextual_rating
 from v2engine.ball_state import BallState
 from v2engine.bloc import POSITIONING_REDRAW_S, Bloc
 from v2engine.flux import DEFENSE
-from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch
+from v2engine.geometry import PENALTY_AREA_WIDTH_M, PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch
 from v2engine.movement import PlayerState, accel_tau_s, max_speed_mps
 from v2engine.possession import BALL_FRICTION_PER_S, MISS_RETRY_S
 from v2engine.situation import DEFENSE_PLACEE, TRANSITION_DEFENSIVE
@@ -127,6 +142,7 @@ if TYPE_CHECKING:
     from v2engine.perception_memory import PerceptionMemory
 
 PRESSEUR, COUVERTURE, MARQUAGE, COMPENSATION = "presseur", "couverture", "marquage", "compensation"
+ZONE_SURFACE = "zone de surface"  # ticket v2-realisme/10f
 
 COVER_DEPTH_M = 6.0
 DANGER_M = 25.0
@@ -171,11 +187,34 @@ PRESS_ZONE_MARGIN_S = 1.0
 # Joueurs de champ qui restent derrière le ballon en possession installée (validé le 30/10/2026, ticket v2-collectif/06),
 # et qui ne contre-pressent pas à la perte (ticket v2-collectif/10)
 REST_DEFENDERS = 2
+# zones de la surface (ticket v2-realisme/10f) : (nom, distance à la ligne de but, décalage côté ballon), par priorité
+WIDE_LAST_THIRD_M = 35.0
+BOX_ZONES = (("premier poteau", 4.0, 3.0), ("point de penalty", 11.0, 0.0), ("second poteau", 5.0, -4.0),
+             ("retrait", 13.0, 6.0))
+POST_ZONES = ("premier poteau", "second poteau")  # réserve A1 de l'expert : seulement ballon proche
+POST_ZONES_MAX_M = 20.0
+ZONE_HOLD_MARGIN_M = 2.0  # réserve A2 de l'expert : marge de maintien d'une zone active
 
 
 def own_goal(team: str) -> Vec2:
     """Centre du but défendu (domicile défend x = 0)."""
     return Vec2(0.0 if team == "home" else PITCH_LENGTH_M, PITCH_WIDTH_M / 2.0)
+
+
+def box_zone_spots(ball: Vec2, goal: Vec2, held: frozenset[str] = frozenset()) -> list[tuple[str, Vec2]]:
+    """Zones de la surface à tenir (ticket v2-realisme/10f), par priorité, quand `ball` est dans un couloir extérieur
+    du dernier tiers défendu (but `goal`) ; les poteaux seulement à `POST_ZONES_MAX_M` ou moins de la ligne. `held` :
+    zones actives au tick précédent, gardées jusqu'à `ZONE_HOLD_MARGIN_M` au-delà de leurs seuils."""
+    depth, aside = abs(ball.x - goal.x), ball.y - goal.y
+    inward = 1.0 if goal.x < PITCH_LENGTH_M / 2.0 else -1.0
+    side = 1.0 if aside > 0.0 else -1.0
+    spots = []
+    for name, zone_depth, offset in BOX_ZONES:
+        margin = ZONE_HOLD_MARGIN_M if name in held else 0.0
+        reach = (POST_ZONES_MAX_M if name in POST_ZONES else WIDE_LAST_THIRD_M) + margin
+        if depth <= reach and abs(aside) > PENALTY_AREA_WIDTH_M / 2.0 - margin:
+            spots.append((name, Vec2(goal.x + inward * zone_depth, goal.y + side * offset)))
+    return spots
 
 
 def arrival_time_s(player: PlayerState, point: Vec2) -> float:
@@ -289,7 +328,7 @@ def in_zone(name: str, places: dict[str, Vec2], point: Vec2, goal: Vec2) -> bool
 class Assignment:
     role: str
     target: Vec2
-    mate: str  # porteur pressé ou couvert, attaquant marqué
+    mate: str  # porteur pressé ou couvert, attaquant marqué ; zone tenue (`BOX_ZONES`, ticket v2-realisme/10f)
     target_velocity: Vec2
     intensity: float = 1.0  # part de la vitesse max (presseur : Work Rate, ticket 08)
     # presseur (ticket v2-realisme/10a) : le porteur est-il dans sa zone (None : pas de bloc) ; place de référence sans
@@ -330,6 +369,7 @@ class DefensiveRoles:
     # la compensation quel que soit le porteur, tant que la sortie dure (expert, passage 2)
     exit_cover: dict[str, tuple[str, str]] = field(default_factory=dict)
     reserved: set[str] = field(default_factory=set)  # couvreurs retenus à ce tick (10b2) : seule la compensation
+    zones_held: dict[str, frozenset[str]] = field(default_factory=dict)  # équipe -> zones actives (10f, réserve A2)
 
     def resting(self, player: PlayerState, now_s: float) -> bool:
         return self.rest_until.get(player.name, 0.0) > now_s
@@ -430,6 +470,7 @@ class DefensiveRoles:
         if holder is None:  # passe en vol (réserve A2) : le receveur, à son point de réception
             receiver = next((p for p in players if p.name == ball.receiver), None) if ball.receiver else None
             if receiver is None or ball.last_pass_team != receiver.team:
+                self.zones_held = {}  # ballon libre : plus de zone active à garder (10f, réserve A2)
                 return
             point = clamp_to_pitch(meeting_point(receiver, ball.position, ball.velocity, BALL_FRICTION_PER_S))
             holder = replace(receiver, position=point, velocity=Vec2(0.0, 0.0))
@@ -526,6 +567,22 @@ class DefensiveRoles:
         if bloc is not None:  # niveaux de cascade gardés tant qu'aucun tick ne les recalcule (ballon libre)
             levels, self.levels = self.levels, {}
             self._compensate(players, ball, holder, team, goal, free, bloc, previous, levels, now_s)
+        # zones de la surface (ticket v2-realisme/10f), après les compensations (décision du propriétaire, 21/11/2026)
+        spots = box_zone_spots(holder.position, goal, self.zones_held.get(team, frozenset()))
+        self.zones_held[team] = frozenset(zone for zone, _ in spots)
+        for zone, spot in spots:
+            # libres de son propre camp ; les points sont plus près du but que toute place : aucune sortie de ligne
+            candidates = [p for p in free if p.name not in self.reserved
+                          and abs(p.position.x - goal.x) <= PITCH_LENGTH_M / 2.0]
+            if not candidates:
+                break
+            keeper = self._keep(previous, ZONE_SURFACE, zone, candidates, spot,
+                                min(candidates, key=lambda p: arrival_time_s(p, spot)))
+            if bloc is not None:  # Positioning : précision du placement, comme la couverture
+                spot = clamp_to_pitch(spot + bloc.placement_error(keeper, now_s))
+            self.assignments[keeper.name] = Assignment(ZONE_SURFACE, spot, zone, Vec2(0.0, 0.0),
+                                                       reference=places.get(keeper.name))
+            free.remove(keeper)
         if self.trigger_until.get(team, 0.0) > now_s:  # pressing d'équipe : les partenaires proches suivent (Teamwork)
             marked = {a.mate for a in self.assignments.values()}
             defenders = [p for p in players if p.team == team]

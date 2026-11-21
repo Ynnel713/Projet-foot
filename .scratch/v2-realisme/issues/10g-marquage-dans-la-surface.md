@@ -43,3 +43,6 @@ Temps machine, non compté : suite complète (environ 40 min) ; mesure 50 matchs
 ## Comments
 
 **Entrée du 18m (21/11/2026, réserve A1 acceptée par le propriétaire).** Après la sélection des frappes de loin (`docs/INDICATEURS_V2.md` section 57, 50 matchs) : conversion dans la surface 16,1 % (réel 14,7 %), hors surface 13,3 % (réel 4,2 %), part des buts hors surface 25,1 % (réel 11,7 %), 4,86 buts par match. Les frappes de loin gardées partent ligne de tir libre, tireur peu gêné à 20 m : la défense de la surface et de ses abords doit fermer ces lignes. Mesurer avant / après sur ces chiffres.
+
+**Entrée du 10f (21/11/2026).** Zones de la surface livrées (`docs/INDICATEURS_V2.md` section 58) : rôle `zone de surface`, poteaux tenus seulement ballon à 20 m ou moins. À mesurer ici, avant / après, sur la même série (`.scratch/v2-realisme/mesures/10f-serie.py`) : buts par match (+ 0,56 ± 0,89 au 10f, même sens sur trois versions), profondeur de l'avant-dernier défenseur et hors-jeu aux instants sur l'aile, répartition par poste des joueurs en zone (facultatif A2 de l'expert).
+

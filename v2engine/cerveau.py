@@ -16,8 +16,8 @@ from v2engine.anticipation import loose_ball_target, meeting_point
 from v2engine.ball_state import BallState
 from v2engine.bloc import Bloc
 from v2engine.decision import CONTRE_ATTAQUE, dribble_speed_factor
-from v2engine.defense import (COMPENSATION, COUVERTURE, MARQUAGE, PRESSEUR, REST_DEFENDERS, DefensiveRoles,
-                              own_goal, replacement_intensity, follow_intensity,
+from v2engine.defense import (COMPENSATION, COUVERTURE, MARQUAGE, PRESSEUR, REST_DEFENDERS, ZONE_SURFACE,
+                              DefensiveRoles, own_goal, replacement_intensity, follow_intensity,
                               leave_probability, retreat_intensity)
 from v2engine.flux import DEFENSE
 from v2engine.gardien import FACE_A_FACE, GARDIEN, INTERVENTION, PLACEMENT, RELANCE, SORTIE
@@ -372,6 +372,10 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
     if role == COMPENSATION:  # ticket v2-collectif/09
         return make(role, "compenser", assigned.target, mate=assigned.mate,
                     reason="comble la place laissée par un coéquipier",
+                    distance_m=player.position.distance_to(assigned.target))
+    if role == ZONE_SURFACE:  # ticket v2-realisme/10f
+        return make(role, "tenir sa zone", assigned.target, mate=assigned.mate,
+                    reason=f"ballon sur l'aile, il tient la zone du {assigned.mate}",
                     distance_m=player.position.distance_to(assigned.target))
     if role == PRESSEUR and assigned is not None:  # course orientée, à l'intensité de son Work Rate (ticket 08)
         return make(role, "presser", assigned.target, assigned.intensity, mate=assigned.mate,

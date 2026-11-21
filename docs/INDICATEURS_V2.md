@@ -1778,3 +1778,35 @@ Profil Long Shots (part des tirs hors surface ; conversion), avant → 0,05 : 70
 - **Les buts ne baissent pas** (− 0,20 ± 0,96) : les frappes perdues deviennent des tirs dans la surface (+ 3,6 par équipe), toujours convertis au-dessus du réel (16,1 % contre 14,7 %). L'excès de buts (environ + 2 par match) relève maintenant de la défense de la surface (`10f`, `10g`) et de la défense préventive (`09g`).
 - **Un peu plus de passes et de pertes** (+ 70 et + 12 par match) : le jeu continue au lieu de finir sur une frappe ; buts sur récupération rapide stables (1,00 contre 0,90, dans le bruit). Réserve de l'expert au 18l (transitions) : pas de hausse mesurable ici, `09g` toujours à faire.
 - **Profil Long Shots dans le bon sens** : les meilleurs frappeurs prennent une plus grande part des frappes de loin (22 % → 36 %).
+
+## 58. Zones de la surface (ticket v2-realisme/10f, 50 matchs appariés, 21/11/2026)
+
+Règle : ballon (ou point de réception) dans un couloir extérieur du dernier tiers défendu (35 m ou moins de la ligne, hors largeur de surface) : les défenseurs libres de leur camp, après presseur, couverture, marqueurs et compensations, tiennent premier poteau (4 m, 3 m côté ballon), point de penalty (11 m), second poteau (5 m, 4 m côté opposé), retrait (13 m, 6 m côté ballon), dans cet ordre (`defense.BOX_ZONES`, rôle `zone de surface`) ; les poteaux seulement ballon à 20 m ou moins (`POST_ZONES_MAX_M`, réserve A1 de l'expert) ; une zone active le reste jusqu'à 2 m au-delà de ses seuils (`ZONE_HOLD_MARGIN_M`, réserve A2). Diagnostic préalable (4 matchs, avant le code) : ballon dans cette situation 3,0 % du temps de possession, 1 tir sur 116 dans les 10 s qui suivent, 0,49 défenseur de champ dans la surface. Série : `PYTHONPATH=. PYTHONHASHSEED=0 uv run python .scratch/v2-realisme/mesures/10f-serie.py 50 4 <avant|après> <sortie.json>` (« avant » : `BOX_ZONES` vide, identique au moteur du 18m : 15,87 tirs par équipe, 4,86 buts, comme la section 57), synthèse `10f-synthese.py` → `10f-serie-50-synthese.txt`. Zone tenue : défenseur de champ à 3 m ou moins de son point, aux instants où la règle la demande. Historique : premier essai, zones avant les compensations (retirait le milieu défensif du couloir d'un latéral monté, test `test_a_pressed_holder_still_threatens_the_empty_place`) ; second, zones après les compensations, poteaux jusqu'à 35 m (ligne de hors-jeu tirée à 4 m, réserve A1) ; version livrée ci-dessous.
+
+| Ballon sur l'aile du dernier tiers | Avant | Après |
+|---|---|---|
+| Défenseurs de champ dans la surface | 0,50 | **1,43** |
+| Profondeur de l'avant-dernier défenseur (ligne de hors-jeu) | 21,2 m | 16,5 m |
+| Premier poteau tenu (ballon à 20 m ou moins) | 4,2 % | 43,8 % |
+| Point de penalty tenu | 2,8 % | 33,0 % |
+| Second poteau tenu (ballon à 20 m ou moins) | 4,9 % | 19,2 % |
+| Retrait tenu | 5,3 % | 26,0 % |
+
+| Par match (tirs : par équipe) | Avant | Après | Écart apparié |
+|---|---|---|---|
+| Instants de possession sur l'aile du dernier tiers | 121 | 111 | − 10 ± 9 |
+| Tirs / buts dans les 10 s après un passage sur l'aile | 0,28 / 0,04 | 0,34 / 0,04 | + 0,06 ± 0,16 / 0,00 ± 0,08 |
+| Tirs | 15,87 | 16,59 | + 0,72 ± 0,97 |
+| Tirs dans / hors surface | 11,28 / 4,59 | 12,05 / 4,54 | + 0,77 ± 0,89 / − 0,05 ± 0,57 |
+| Buts | 4,86 | 5,42 | + 0,56 ± 0,89 |
+| Buts dans la surface | 3,64 | 4,24 | + 0,60 ± 0,76 |
+| Buts moins xG neutre | | | + 0,27 ± 0,77 |
+| xG neutre | 5,17 | 5,46 | + 0,29 ± 0,44 |
+| Hors-jeu | 4,42 | 3,82 | − 0,60 ± 0,77 |
+| Passes / pertes | 1 297 / 230 | 1 293 / 232 | − 4 ± 16 / + 2 ± 6 |
+| Conversion dans / hors surface | 16,1 % / 13,3 % | 17,6 % / 13,0 % | |
+
+**Lecture.**
+- **Les zones sont tenues** : la surface passe de 0,5 à 1,43 défenseur quand le ballon est sur l'aile ; chaque zone l'est 19 à 44 % des instants où la règle la demande (les passages sur l'aile sont brefs, les défenseurs y arrivent en courant). La ligne de hors-jeu à ces instants descend de 21,2 à 16,5 m, dans l'ordre de grandeur d'une ligne réelle avant un centre (12 à 18 m, estimation de l'expert), et non plus aux poteaux.
+- **Aucun effet significatif sur les buts, les tirs ni les hors-jeu** : la situation reste rare (3 % du temps de possession ; 0,04 but par match dans les 10 s après un passage, avant comme après). Les buts montent dans les trois versions essayées (+ 0,54, + 0,82, + 0,56, intervalles qui touchent zéro ; versions non indépendantes, mêmes graines), avec des tirs dans la surface en légère hausse et une qualité moyenne de tir dans la surface inchangée (0,186 → 0,183) : à surveiller. Cause possible non démontrée : défenseurs aspirés dans la surface, hors de leur place quand le ballon revient dans l'axe. À mesurer au `10g` et au `10k`.
+- L'effet attendu viendra avec le jeu sur les côtés (`25i`, dédoublement ; centres `v2-attributs-restants/01`) et le marquage dans la surface (`10g`).
