@@ -24,7 +24,7 @@ from v2engine.condition import effective_rating
 from v2engine.duel import (CONTACT_MIN_CLOSING_MPS, after_contact_delay_s, after_contact_speed_loss,
                            tackle_approach_angle_deg)
 from v2engine.decision import DECISION_INTERVAL_S, dribble_loss_probability
-from v2engine.defense import arrival_time_s
+from v2engine.defense import PRESSEUR, arrival_time_s
 from v2engine.gardien import (BALL_DISTANCE_M, BISECTOR_TOLERANCE_M, FACE_A_FACE, FACE_RANGE_M, FACE_STOPPED_MPS, PLACEMENT,
                               RELANCE, SORTIE, bisector_direction, bisector_point, face_depth, face_to_face, own_goal, race)
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, in_penalty_area
@@ -426,6 +426,43 @@ def speed_shares(speeds: Sequence[float]) -> tuple[float, float] | None:
     return sum(v > HIGH_INTENSITY_MPS for v in speeds) / n, sum(v > SPRINT_MPS for v in speeds) / n
 
 
+# Engagement autour du ballon (ticket v2-realisme/28a), mesure seule : joueurs de champ des deux équipes à moins de
+# chaque rayon du ballon, et rayon du diagnostic par rôle (qui converge). Mêmes fonctions pour le moteur et le suivi réel.
+NEAR_BALL_RADII_M = (10.0, 15.0, 20.0)
+ENGAGEMENT_RADIUS_M = 15.0
+
+
+def engagement_role(role: str, action: str = "", reason: str = "") -> str:
+    """Rôle du diagnostic d'engagement (ticket v2-realisme/28a, réserve A3 de l'expert) : le rôle « presseur » du moteur
+    réunit trois populations, séparées par l'action de l'intention (`cerveau.decide`) : le presseur attribué par la
+    défense (« presser »), le joueur sorti du bloc qui couvre derrière le presseur attribué (« couvrir », ticket 11g) et
+    celui qui sort du bloc vers le ballon sans presseur attribué (« aller au ballon », raison « quitte le bloc… »,
+    Teamwork) ; le reste (« aller au ballon » hors sortie de bloc) va au porteur sans attribution. La couverture
+    attribuée (rôle « couverture », `defense.COVER_DEPTH_M`) garde son nom."""
+    if role != PRESSEUR or not action:
+        return role
+    if action == "presser":
+        return "presseur attribué"
+    if action == "couvrir":
+        return "presseur : couvre derrière le presseur attribué (11g)"
+    if reason.startswith("quitte le bloc"):
+        return "presseur : quitte le bloc vers le ballon"
+    return "presseur : va au porteur sans attribution"
+
+
+def players_within(center: Vec2, points: Sequence[Vec2], radius_m: float) -> int:
+    """Nombre de `points` à strictement moins de `radius_m` de `center`."""
+    return sum(1 for p in points if center.distance_to(p) < radius_m)
+
+
+def mean_nearest_teammate(points: Sequence[Vec2]) -> float | None:
+    """Moyenne, sur les joueurs d'une équipe, de la distance (m) au coéquipier le plus proche ; None à moins de deux."""
+    if len(points) < 2:
+        return None
+    return statistics.fmean(nearest_distance(p, [q for j, q in enumerate(points) if j != i])
+                            for i, p in enumerate(points))
+
+
 def quartiles(values: Sequence[float]) -> dict[str, float]:
     """Taille d'échantillon, premier quartile, médiane et troisième quartile (méthode inclusive : quartiles pris entre
     les valeurs observées)."""
@@ -554,6 +591,8 @@ class Collector:
         self.role_switches: Counter = Counter()  # passages APPEL <-> TENIR, par joueur
         # structure (ticket v2-realisme/02h)
         self.roles: dict[str, str] = {}  # dernier rôle de chaque joueur (Intention.role)
+        self.targets: dict[str, Vec2] = {}  # dernière cible de chaque joueur (Intention.target, ticket v2-realisme/28a)
+        self.actions: dict[str, tuple[str, str]] = {}  # dernière action et raison (Intention.action, .reason ; 28a)
         self.keeper_state: dict[str, str] = {}  # dernier état de chaque gardien (ticket v2-realisme/03d)
         self.shot_chasers: dict[str, bool] = {}  # joueur de champ en course vers un tir en vol (ticket v2-realisme/03k)
         self.call_episodes: Counter = Counter()  # épisodes APPEL (rôle APPEL après un autre rôle), par joueur
@@ -1745,7 +1784,53 @@ class Collector:
                      else f"{mid:.0f} à {high:.0f} m" if far < high else f"{high:.0f} m et plus")
         self.stats[f"gardien, ballon à {zone_name} : distance à sa ligne (m)"].add(progress(team, keeper.position.x))
 
+    def on_target(self, name: str, target: Vec2, action: str = "", reason: str = "") -> None:
+        """Cible, action et raison du joueur à ce tick (Intention.target, .action, .reason), lues par le diagnostic
+        d'engagement (ticket v2-realisme/28a)."""
+        self.targets[name] = target
+        self.actions[name] = (action, reason)
+
+    def _engagement(self, players, ball) -> None:
+        """Engagement autour du ballon (ticket v2-realisme/28a), ballon en jeu seulement : joueurs de champ des deux
+        équipes à moins de chaque rayon (`NEAR_BALL_RADII_M`), au total et par équipe (avec / sans ballon) ; distance
+        moyenne au coéquipier le plus proche ; diagnostic : rôle (`engagement_role`) de chaque joueur à moins de
+        `ENGAGEMENT_RADIUS_M`, et si sa cible est elle aussi à moins de ce rayon du ballon (il y va) ou non (il passe).
+        Zones : vues de chaque équipe (`zone(team, …)`) ; pour l'équipe qui défend, « tiers défensif » = près de son but."""
+        if getattr(ball, "restart", None) is not None:
+            return
+        seen = zone(self.team, ball.position.x) if self.team else "sans possession"
+        self.count["engagement : échantillons"] += 1
+        field = {team: outfield(players, team) for team in ("home", "away")}
+        everyone = [p.position for team in field.values() for p in team]
+        for r in NEAR_BALL_RADII_M:
+            self.stats[f"engagement : joueurs de champ à moins de {r:g} m du ballon"].add(
+                players_within(ball.position, everyone, r), zone=seen)
+        for team, own in field.items():
+            phase = "sans possession" if self.team is None else ("avec ballon" if team == self.team else "sans ballon")
+            pts = [p.position for p in own]
+            own_zone = zone(team, ball.position.x)  # vue de cette équipe
+            self.count[f"engagement : échantillons, équipe {phase}, {own_zone}"] += 1
+            for r in NEAR_BALL_RADII_M:
+                near = players_within(ball.position, pts, r)
+                self.stats[f"engagement : joueurs de champ à moins de {r:g} m du ballon, équipe {phase}"].add(near, zone=seen)
+                if phase != "sans possession":
+                    self.stats[f"engagement par zone : joueurs de champ à moins de {r:g} m du ballon, équipe {phase}, "
+                               f"{own_zone} de cette équipe"].add(near)
+            nearest = mean_nearest_teammate(pts)
+            if nearest is not None:
+                self.stats[f"engagement : distance au coéquipier le plus proche, équipe {phase} (m)"].add(nearest, zone=seen)
+            for p in own:
+                if p.position.distance_to(ball.position) >= ENGAGEMENT_RADIUS_M:
+                    continue
+                role = engagement_role(self.roles.get(p.name, "inconnu"), *self.actions.get(p.name, ("", "")))
+                target = self.targets.get(p.name)
+                self.count[f"engagement par rôle : {phase} : {role}"] += 1
+                self.count[f"engagement par rôle, équipe {phase}, {own_zone} : {role}"] += 1
+                if target is not None and target.distance_to(ball.position) < ENGAGEMENT_RADIUS_M:
+                    self.count[f"engagement par rôle, cible près du ballon : {phase} : {role}"] += 1
+
     def _geometry(self, now_s, players, ball, by_name):
+        self._engagement(players, ball)  # ticket v2-realisme/28a
         minute = now_s / 60.0
         sl = f"{int(minute // 15) * 15}-{int(minute // 15) * 15 + 15} min"
         for team in ("home", "away"):

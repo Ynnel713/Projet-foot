@@ -1,0 +1,1914 @@
+{
+ "distributions": {
+  "metrica | engagement | distance au coéquipier le plus proche, équipe sans possession (m)": {
+   "mediane": 10.414,
+   "moyenne": 10.324,
+   "n": 6865,
+   "q1": 9.372,
+   "q3": 11.424
+  },
+  "metrica | engagement | joueurs de champ à moins de 10 m du ballon": {
+   "mediane": 3.0,
+   "moyenne": 3.536,
+   "n": 6865,
+   "q1": 2.0,
+   "q3": 5.0
+  },
+  "metrica | engagement | joueurs de champ à moins de 10 m du ballon, équipe sans possession": {
+   "mediane": 1.5,
+   "moyenne": 1.768,
+   "n": 6865,
+   "q1": 1.0,
+   "q3": 2.5
+  },
+  "metrica | engagement | joueurs de champ à moins de 15 m du ballon": {
+   "mediane": 6.0,
+   "moyenne": 6.189,
+   "n": 6865,
+   "q1": 4.0,
+   "q3": 8.0
+  },
+  "metrica | engagement | joueurs de champ à moins de 15 m du ballon, équipe sans possession": {
+   "mediane": 3.0,
+   "moyenne": 3.095,
+   "n": 6865,
+   "q1": 2.0,
+   "q3": 4.0
+  },
+  "metrica | engagement | joueurs de champ à moins de 20 m du ballon": {
+   "mediane": 9.0,
+   "moyenne": 8.978,
+   "n": 6865,
+   "q1": 6.0,
+   "q3": 12.0
+  },
+  "metrica | engagement | joueurs de champ à moins de 20 m du ballon, équipe sans possession": {
+   "mediane": 4.5,
+   "moyenne": 4.489,
+   "n": 6865,
+   "q1": 3.0,
+   "q3": 6.0
+  },
+  "metrica | engagement | moyenne par match | distance au coéquipier le plus proche, équipe sans possession (m)": {
+   "mediane": 10.323,
+   "moyenne": 10.323,
+   "n": 2,
+   "q1": 10.318,
+   "q3": 10.329
+  },
+  "metrica | engagement | moyenne par match | joueurs de champ à moins de 10 m du ballon": {
+   "mediane": 3.54,
+   "moyenne": 3.54,
+   "n": 2,
+   "q1": 3.474,
+   "q3": 3.605
+  },
+  "metrica | engagement | moyenne par match | joueurs de champ à moins de 10 m du ballon, équipe sans possession": {
+   "mediane": 1.77,
+   "moyenne": 1.77,
+   "n": 2,
+   "q1": 1.737,
+   "q3": 1.803
+  },
+  "metrica | engagement | moyenne par match | joueurs de champ à moins de 15 m du ballon": {
+   "mediane": 6.193,
+   "moyenne": 6.193,
+   "n": 2,
+   "q1": 6.132,
+   "q3": 6.254
+  },
+  "metrica | engagement | moyenne par match | joueurs de champ à moins de 15 m du ballon, équipe sans possession": {
+   "mediane": 3.096,
+   "moyenne": 3.096,
+   "n": 2,
+   "q1": 3.066,
+   "q3": 3.127
+  },
+  "metrica | engagement | moyenne par match | joueurs de champ à moins de 20 m du ballon": {
+   "mediane": 8.984,
+   "moyenne": 8.984,
+   "n": 2,
+   "q1": 8.888,
+   "q3": 9.079
+  },
+  "metrica | engagement | moyenne par match | joueurs de champ à moins de 20 m du ballon, équipe sans possession": {
+   "mediane": 4.492,
+   "moyenne": 4.492,
+   "n": 2,
+   "q1": 4.444,
+   "q3": 4.54
+  },
+  "metrica | forme | toutes positions | possession inconnue | hauteur de la ligne défensive (m)": {
+   "mediane": 37.541,
+   "n": 572314,
+   "q1": 23.947,
+   "q3": 49.931
+  },
+  "metrica | forme | toutes positions | possession inconnue | largeur (m)": {
+   "mediane": 39.017,
+   "n": 572314,
+   "q1": 32.866,
+   "q3": 47.119
+  },
+  "metrica | forme | toutes positions | possession inconnue | longueur (m)": {
+   "mediane": 31.886,
+   "n": 572314,
+   "q1": 26.107,
+   "q3": 37.332
+  },
+  "metrica | forme | toutes positions | possession inconnue | écart défense-milieu (m)": {
+   "mediane": 12.938,
+   "n": 572314,
+   "q1": 10.005,
+   "q3": 16.401
+  },
+  "metrica | forme | toutes positions | possession inconnue | écart milieu-attaque (m)": {
+   "mediane": 13.13,
+   "n": 572314,
+   "q1": 9.981,
+   "q3": 16.593
+  },
+  "metrica | forme | équipe détectée | possession inconnue | hauteur de la ligne défensive (m)": {
+   "mediane": 37.541,
+   "n": 572314,
+   "q1": 23.947,
+   "q3": 49.931
+  },
+  "metrica | forme | équipe détectée | possession inconnue | largeur (m)": {
+   "mediane": 39.017,
+   "n": 572314,
+   "q1": 32.866,
+   "q3": 47.119
+  },
+  "metrica | forme | équipe détectée | possession inconnue | longueur (m)": {
+   "mediane": 31.886,
+   "n": 572314,
+   "q1": 26.107,
+   "q3": 37.332
+  },
+  "metrica | forme | équipe détectée | possession inconnue | écart défense-milieu (m)": {
+   "mediane": 12.938,
+   "n": 572314,
+   "q1": 10.005,
+   "q3": 16.401
+  },
+  "metrica | forme | équipe détectée | possession inconnue | écart milieu-attaque (m)": {
+   "mediane": 13.13,
+   "n": 572314,
+   "q1": 9.981,
+   "q3": 16.593
+  },
+  "metrica | vitesse | joueurs de champ | vitesse (m/s)": {
+   "mediane": 1.438,
+   "n": 5721592,
+   "part > 19,8 km/h": 0.02,
+   "part > 25 km/h": 0.0042,
+   "q1": 0.872,
+   "q3": 2.574
+  },
+  "skillcorner | engagement | distance au coéquipier le plus proche, équipe avec ballon (m)": {
+   "mediane": 10.906,
+   "moyenne": 10.86,
+   "n": 62628,
+   "q1": 9.049,
+   "q3": 12.738
+  },
+  "skillcorner | engagement | distance au coéquipier le plus proche, équipe sans ballon (m)": {
+   "mediane": 9.218,
+   "moyenne": 9.12,
+   "n": 62628,
+   "q1": 7.817,
+   "q3": 10.495
+  },
+  "skillcorner | engagement | joueurs de champ à moins de 10 m du ballon": {
+   "mediane": 3.0,
+   "moyenne": 3.832,
+   "n": 62628,
+   "q1": 2.0,
+   "q3": 5.0
+  },
+  "skillcorner | engagement | joueurs de champ à moins de 10 m du ballon, équipe avec ballon": {
+   "mediane": 2.0,
+   "moyenne": 1.905,
+   "n": 62628,
+   "q1": 1.0,
+   "q3": 3.0
+  },
+  "skillcorner | engagement | joueurs de champ à moins de 10 m du ballon, équipe sans ballon": {
+   "mediane": 2.0,
+   "moyenne": 1.927,
+   "n": 62628,
+   "q1": 1.0,
+   "q3": 3.0
+  },
+  "skillcorner | engagement | joueurs de champ à moins de 15 m du ballon": {
+   "mediane": 6.0,
+   "moyenne": 6.538,
+   "n": 62628,
+   "q1": 4.0,
+   "q3": 9.0
+  },
+  "skillcorner | engagement | joueurs de champ à moins de 15 m du ballon, équipe avec ballon": {
+   "mediane": 3.0,
+   "moyenne": 3.22,
+   "n": 62628,
+   "q1": 2.0,
+   "q3": 4.0
+  },
+  "skillcorner | engagement | joueurs de champ à moins de 15 m du ballon, équipe sans ballon": {
+   "mediane": 3.0,
+   "moyenne": 3.319,
+   "n": 62628,
+   "q1": 2.0,
+   "q3": 4.0
+  },
+  "skillcorner | engagement | joueurs de champ à moins de 20 m du ballon": {
+   "mediane": 9.0,
+   "moyenne": 9.357,
+   "n": 62628,
+   "q1": 7.0,
+   "q3": 12.0
+  },
+  "skillcorner | engagement | joueurs de champ à moins de 20 m du ballon, équipe avec ballon": {
+   "mediane": 4.0,
+   "moyenne": 4.604,
+   "n": 62628,
+   "q1": 3.0,
+   "q3": 6.0
+  },
+  "skillcorner | engagement | joueurs de champ à moins de 20 m du ballon, équipe sans ballon": {
+   "mediane": 4.0,
+   "moyenne": 4.753,
+   "n": 62628,
+   "q1": 3.0,
+   "q3": 6.0
+  },
+  "skillcorner | engagement | moyenne par match | distance au coéquipier le plus proche, équipe avec ballon (m)": {
+   "mediane": 10.847,
+   "moyenne": 10.834,
+   "n": 20,
+   "q1": 10.599,
+   "q3": 10.97
+  },
+  "skillcorner | engagement | moyenne par match | distance au coéquipier le plus proche, équipe sans ballon (m)": {
+   "mediane": 9.112,
+   "moyenne": 9.109,
+   "n": 20,
+   "q1": 8.955,
+   "q3": 9.239
+  },
+  "skillcorner | engagement | moyenne par match | joueurs de champ à moins de 10 m du ballon": {
+   "mediane": 3.812,
+   "moyenne": 3.848,
+   "n": 20,
+   "q1": 3.76,
+   "q3": 3.989
+  },
+  "skillcorner | engagement | moyenne par match | joueurs de champ à moins de 10 m du ballon, équipe avec ballon": {
+   "mediane": 1.893,
+   "moyenne": 1.911,
+   "n": 20,
+   "q1": 1.846,
+   "q3": 1.967
+  },
+  "skillcorner | engagement | moyenne par match | joueurs de champ à moins de 10 m du ballon, équipe sans ballon": {
+   "mediane": 1.925,
+   "moyenne": 1.936,
+   "n": 20,
+   "q1": 1.896,
+   "q3": 2.017
+  },
+  "skillcorner | engagement | moyenne par match | joueurs de champ à moins de 15 m du ballon": {
+   "mediane": 6.515,
+   "moyenne": 6.558,
+   "n": 20,
+   "q1": 6.417,
+   "q3": 6.761
+  },
+  "skillcorner | engagement | moyenne par match | joueurs de champ à moins de 15 m du ballon, équipe avec ballon": {
+   "mediane": 3.202,
+   "moyenne": 3.228,
+   "n": 20,
+   "q1": 3.138,
+   "q3": 3.339
+  },
+  "skillcorner | engagement | moyenne par match | joueurs de champ à moins de 15 m du ballon, équipe sans ballon": {
+   "mediane": 3.314,
+   "moyenne": 3.33,
+   "n": 20,
+   "q1": 3.279,
+   "q3": 3.425
+  },
+  "skillcorner | engagement | moyenne par match | joueurs de champ à moins de 20 m du ballon": {
+   "mediane": 9.34,
+   "moyenne": 9.376,
+   "n": 20,
+   "q1": 9.221,
+   "q3": 9.59
+  },
+  "skillcorner | engagement | moyenne par match | joueurs de champ à moins de 20 m du ballon, équipe avec ballon": {
+   "mediane": 4.592,
+   "moyenne": 4.612,
+   "n": 20,
+   "q1": 4.533,
+   "q3": 4.718
+  },
+  "skillcorner | engagement | moyenne par match | joueurs de champ à moins de 20 m du ballon, équipe sans ballon": {
+   "mediane": 4.755,
+   "moyenne": 4.764,
+   "n": 20,
+   "q1": 4.719,
+   "q3": 4.853
+  },
+  "skillcorner | engagement | moyenne par match | par zone : joueurs de champ à moins de 10 m du ballon, équipe avec ballon, tiers défensif de cette équipe": {
+   "mediane": 1.755,
+   "moyenne": 1.728,
+   "n": 20,
+   "q1": 1.643,
+   "q3": 1.814
+  },
+  "skillcorner | engagement | moyenne par match | par zone : joueurs de champ à moins de 10 m du ballon, équipe avec ballon, tiers médian de cette équipe": {
+   "mediane": 1.865,
+   "moyenne": 1.915,
+   "n": 20,
+   "q1": 1.809,
+   "q3": 1.983
+  },
+  "skillcorner | engagement | moyenne par match | par zone : joueurs de champ à moins de 10 m du ballon, équipe avec ballon, tiers offensif de cette équipe": {
+   "mediane": 2.089,
+   "moyenne": 2.114,
+   "n": 20,
+   "q1": 2.056,
+   "q3": 2.176
+  },
+  "skillcorner | engagement | moyenne par match | par zone : joueurs de champ à moins de 10 m du ballon, équipe sans ballon, tiers défensif de cette équipe": {
+   "mediane": 2.759,
+   "moyenne": 2.767,
+   "n": 20,
+   "q1": 2.667,
+   "q3": 2.847
+  },
+  "skillcorner | engagement | moyenne par match | par zone : joueurs de champ à moins de 10 m du ballon, équipe sans ballon, tiers médian de cette équipe": {
+   "mediane": 1.785,
+   "moyenne": 1.847,
+   "n": 20,
+   "q1": 1.751,
+   "q3": 1.947
+  },
+  "skillcorner | engagement | moyenne par match | par zone : joueurs de champ à moins de 10 m du ballon, équipe sans ballon, tiers offensif de cette équipe": {
+   "mediane": 1.31,
+   "moyenne": 1.312,
+   "n": 20,
+   "q1": 1.22,
+   "q3": 1.438
+  },
+  "skillcorner | engagement | moyenne par match | par zone : joueurs de champ à moins de 15 m du ballon, équipe avec ballon, tiers défensif de cette équipe": {
+   "mediane": 2.972,
+   "moyenne": 2.938,
+   "n": 20,
+   "q1": 2.835,
+   "q3": 3.06
+  },
+  "skillcorner | engagement | moyenne par match | par zone : joueurs de champ à moins de 15 m du ballon, équipe avec ballon, tiers médian de cette équipe": {
+   "mediane": 3.277,
+   "moyenne": 3.331,
+   "n": 20,
+   "q1": 3.16,
+   "q3": 3.512
+  },
+  "skillcorner | engagement | moyenne par match | par zone : joueurs de champ à moins de 15 m du ballon, équipe avec ballon, tiers offensif de cette équipe": {
+   "mediane": 3.321,
+   "moyenne": 3.374,
+   "n": 20,
+   "q1": 3.28,
+   "q3": 3.445
+  },
+  "skillcorner | engagement | moyenne par match | par zone : joueurs de champ à moins de 15 m du ballon, équipe sans ballon, tiers défensif de cette équipe": {
+   "mediane": 4.373,
+   "moyenne": 4.409,
+   "n": 20,
+   "q1": 4.275,
+   "q3": 4.555
+  },
+  "skillcorner | engagement | moyenne par match | par zone : joueurs de champ à moins de 15 m du ballon, équipe sans ballon, tiers médian de cette équipe": {
+   "mediane": 3.254,
+   "moyenne": 3.306,
+   "n": 20,
+   "q1": 3.135,
+   "q3": 3.44
+  },
+  "skillcorner | engagement | moyenne par match | par zone : joueurs de champ à moins de 15 m du ballon, équipe sans ballon, tiers offensif de cette équipe": {
+   "mediane": 2.363,
+   "moyenne": 2.369,
+   "n": 20,
+   "q1": 2.236,
+   "q3": 2.495
+  },
+  "skillcorner | engagement | moyenne par match | par zone : joueurs de champ à moins de 20 m du ballon, équipe avec ballon, tiers défensif de cette équipe": {
+   "mediane": 4.277,
+   "moyenne": 4.256,
+   "n": 20,
+   "q1": 4.175,
+   "q3": 4.387
+  },
+  "skillcorner | engagement | moyenne par match | par zone : joueurs de champ à moins de 20 m du ballon, équipe avec ballon, tiers médian de cette équipe": {
+   "mediane": 4.811,
+   "moyenne": 4.847,
+   "n": 20,
+   "q1": 4.655,
+   "q3": 5.025
+  },
+  "skillcorner | engagement | moyenne par match | par zone : joueurs de champ à moins de 20 m du ballon, équipe avec ballon, tiers offensif de cette équipe": {
+   "mediane": 4.588,
+   "moyenne": 4.603,
+   "n": 20,
+   "q1": 4.451,
+   "q3": 4.702
+  },
+  "skillcorner | engagement | moyenne par match | par zone : joueurs de champ à moins de 20 m du ballon, équipe sans ballon, tiers défensif de cette équipe": {
+   "mediane": 5.813,
+   "moyenne": 5.868,
+   "n": 20,
+   "q1": 5.735,
+   "q3": 6.029
+  },
+  "skillcorner | engagement | moyenne par match | par zone : joueurs de champ à moins de 20 m du ballon, équipe sans ballon, tiers médian de cette équipe": {
+   "mediane": 4.884,
+   "moyenne": 4.911,
+   "n": 20,
+   "q1": 4.73,
+   "q3": 5.039
+  },
+  "skillcorner | engagement | moyenne par match | par zone : joueurs de champ à moins de 20 m du ballon, équipe sans ballon, tiers offensif de cette équipe": {
+   "mediane": 3.536,
+   "moyenne": 3.504,
+   "n": 20,
+   "q1": 3.382,
+   "q3": 3.637
+  },
+  "skillcorner | engagement | par zone : joueurs de champ à moins de 10 m du ballon, équipe avec ballon, tiers défensif de cette équipe": {
+   "mediane": 1.0,
+   "moyenne": 1.714,
+   "n": 17735,
+   "q1": 1.0,
+   "q3": 2.0
+  },
+  "skillcorner | engagement | par zone : joueurs de champ à moins de 10 m du ballon, équipe avec ballon, tiers médian de cette équipe": {
+   "mediane": 2.0,
+   "moyenne": 1.903,
+   "n": 28439,
+   "q1": 1.0,
+   "q3": 2.0
+  },
+  "skillcorner | engagement | par zone : joueurs de champ à moins de 10 m du ballon, équipe avec ballon, tiers offensif de cette équipe": {
+   "mediane": 2.0,
+   "moyenne": 2.114,
+   "n": 16454,
+   "q1": 1.0,
+   "q3": 3.0
+  },
+  "skillcorner | engagement | par zone : joueurs de champ à moins de 10 m du ballon, équipe sans ballon, tiers défensif de cette équipe": {
+   "mediane": 2.0,
+   "moyenne": 2.766,
+   "n": 16447,
+   "q1": 2.0,
+   "q3": 4.0
+  },
+  "skillcorner | engagement | par zone : joueurs de champ à moins de 10 m du ballon, équipe sans ballon, tiers médian de cette équipe": {
+   "mediane": 2.0,
+   "moyenne": 1.831,
+   "n": 28440,
+   "q1": 1.0,
+   "q3": 3.0
+  },
+  "skillcorner | engagement | par zone : joueurs de champ à moins de 10 m du ballon, équipe sans ballon, tiers offensif de cette équipe": {
+   "mediane": 1.0,
+   "moyenne": 1.303,
+   "n": 17741,
+   "q1": 0.0,
+   "q3": 2.0
+  },
+  "skillcorner | engagement | par zone : joueurs de champ à moins de 15 m du ballon, équipe avec ballon, tiers défensif de cette équipe": {
+   "mediane": 3.0,
+   "moyenne": 2.925,
+   "n": 17735,
+   "q1": 2.0,
+   "q3": 4.0
+  },
+  "skillcorner | engagement | par zone : joueurs de champ à moins de 15 m du ballon, équipe avec ballon, tiers médian de cette équipe": {
+   "mediane": 3.0,
+   "moyenne": 3.314,
+   "n": 28439,
+   "q1": 2.0,
+   "q3": 4.0
+  },
+  "skillcorner | engagement | par zone : joueurs de champ à moins de 15 m du ballon, équipe avec ballon, tiers offensif de cette équipe": {
+   "mediane": 3.0,
+   "moyenne": 3.374,
+   "n": 16454,
+   "q1": 2.0,
+   "q3": 4.0
+  },
+  "skillcorner | engagement | par zone : joueurs de champ à moins de 15 m du ballon, équipe sans ballon, tiers défensif de cette équipe": {
+   "mediane": 4.0,
+   "moyenne": 4.409,
+   "n": 16447,
+   "q1": 3.0,
+   "q3": 6.0
+  },
+  "skillcorner | engagement | par zone : joueurs de champ à moins de 15 m du ballon, équipe sans ballon, tiers médian de cette équipe": {
+   "mediane": 3.0,
+   "moyenne": 3.286,
+   "n": 28440,
+   "q1": 2.0,
+   "q3": 4.0
+  },
+  "skillcorner | engagement | par zone : joueurs de champ à moins de 15 m du ballon, équipe sans ballon, tiers offensif de cette équipe": {
+   "mediane": 2.0,
+   "moyenne": 2.361,
+   "n": 17741,
+   "q1": 1.0,
+   "q3": 3.0
+  },
+  "skillcorner | engagement | par zone : joueurs de champ à moins de 20 m du ballon, équipe avec ballon, tiers défensif de cette équipe": {
+   "mediane": 4.0,
+   "moyenne": 4.245,
+   "n": 17735,
+   "q1": 3.0,
+   "q3": 5.0
+  },
+  "skillcorner | engagement | par zone : joueurs de champ à moins de 20 m du ballon, équipe avec ballon, tiers médian de cette équipe": {
+   "mediane": 5.0,
+   "moyenne": 4.829,
+   "n": 28439,
+   "q1": 4.0,
+   "q3": 6.0
+  },
+  "skillcorner | engagement | par zone : joueurs de champ à moins de 20 m du ballon, équipe avec ballon, tiers offensif de cette équipe": {
+   "mediane": 4.0,
+   "moyenne": 4.603,
+   "n": 16454,
+   "q1": 3.0,
+   "q3": 6.0
+  },
+  "skillcorner | engagement | par zone : joueurs de champ à moins de 20 m du ballon, équipe sans ballon, tiers défensif de cette équipe": {
+   "mediane": 6.0,
+   "moyenne": 5.869,
+   "n": 16447,
+   "q1": 4.0,
+   "q3": 8.0
+  },
+  "skillcorner | engagement | par zone : joueurs de champ à moins de 20 m du ballon, équipe sans ballon, tiers médian de cette équipe": {
+   "mediane": 5.0,
+   "moyenne": 4.889,
+   "n": 28440,
+   "q1": 3.0,
+   "q3": 6.0
+  },
+  "skillcorner | engagement | par zone : joueurs de champ à moins de 20 m du ballon, équipe sans ballon, tiers offensif de cette équipe": {
+   "mediane": 3.0,
+   "moyenne": 3.498,
+   "n": 17741,
+   "q1": 2.0,
+   "q3": 5.0
+  },
+  "skillcorner | forme | toutes positions | avec ballon | hauteur de la ligne défensive (m)": {
+   "mediane": 39.66,
+   "n": 626198,
+   "q1": 26.455,
+   "q3": 52.09
+  },
+  "skillcorner | forme | toutes positions | avec ballon | largeur (m)": {
+   "mediane": 45.34,
+   "n": 626198,
+   "q1": 36.13,
+   "q3": 54.99
+  },
+  "skillcorner | forme | toutes positions | avec ballon | longueur (m)": {
+   "mediane": 33.9,
+   "n": 626198,
+   "q1": 30.1,
+   "q3": 38.05
+  },
+  "skillcorner | forme | toutes positions | avec ballon | écart défense-milieu (m)": {
+   "mediane": 13.727,
+   "n": 626198,
+   "q1": 11.057,
+   "q3": 16.592
+  },
+  "skillcorner | forme | toutes positions | avec ballon | écart milieu-attaque (m)": {
+   "mediane": 14.317,
+   "n": 626198,
+   "q1": 11.513,
+   "q3": 17.17
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase build_up | hauteur de la ligne défensive (m)": {
+   "mediane": 21.395,
+   "n": 98126,
+   "q1": 15.59,
+   "q3": 27.86
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase build_up | largeur (m)": {
+   "mediane": 52.75,
+   "n": 98126,
+   "q1": 41.31,
+   "q3": 58.86
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase build_up | longueur (m)": {
+   "mediane": 38.86,
+   "n": 98126,
+   "q1": 35.07,
+   "q3": 42.51
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase build_up | écart défense-milieu (m)": {
+   "mediane": 15.282,
+   "n": 98126,
+   "q1": 12.558,
+   "q3": 18.387
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase build_up | écart milieu-attaque (m)": {
+   "mediane": 16.476,
+   "n": 98126,
+   "q1": 12.849,
+   "q3": 19.7
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase chaotic | hauteur de la ligne défensive (m)": {
+   "mediane": 40.172,
+   "n": 54712,
+   "q1": 25.945,
+   "q3": 52.035
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase chaotic | largeur (m)": {
+   "mediane": 35.0,
+   "n": 54712,
+   "q1": 30.05,
+   "q3": 41.31
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase chaotic | longueur (m)": {
+   "mediane": 32.04,
+   "n": 54712,
+   "q1": 27.99,
+   "q3": 36.45
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase chaotic | écart défense-milieu (m)": {
+   "mediane": 13.347,
+   "n": 54712,
+   "q1": 10.713,
+   "q3": 16.25
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase chaotic | écart milieu-attaque (m)": {
+   "mediane": 13.12,
+   "n": 54712,
+   "q1": 10.3,
+   "q3": 16.137
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase create | hauteur de la ligne défensive (m)": {
+   "mediane": 37.866,
+   "n": 240921,
+   "q1": 31.222,
+   "q3": 44.465
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase create | largeur (m)": {
+   "mediane": 52.19,
+   "n": 240921,
+   "q1": 42.87,
+   "q3": 58.01
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase create | longueur (m)": {
+   "mediane": 33.32,
+   "n": 240921,
+   "q1": 30.22,
+   "q3": 36.38
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase create | écart défense-milieu (m)": {
+   "mediane": 13.562,
+   "n": 240921,
+   "q1": 11.138,
+   "q3": 16.06
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase create | écart milieu-attaque (m)": {
+   "mediane": 14.24,
+   "n": 240921,
+   "q1": 11.663,
+   "q3": 16.665
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase direct | hauteur de la ligne défensive (m)": {
+   "mediane": 35.34,
+   "n": 22287,
+   "q1": 24.841,
+   "q3": 44.365
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase direct | largeur (m)": {
+   "mediane": 43.76,
+   "n": 22287,
+   "q1": 30.27,
+   "q3": 53.28
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase direct | longueur (m)": {
+   "mediane": 36.28,
+   "n": 22287,
+   "q1": 28.85,
+   "q3": 40.99
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase direct | écart défense-milieu (m)": {
+   "mediane": 13.911,
+   "n": 22287,
+   "q1": 10.897,
+   "q3": 17.661
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase direct | écart milieu-attaque (m)": {
+   "mediane": 13.905,
+   "n": 22287,
+   "q1": 10.625,
+   "q3": 17.952
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase finish | hauteur de la ligne défensive (m)": {
+   "mediane": 55.127,
+   "n": 135193,
+   "q1": 49.555,
+   "q3": 59.73
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase finish | largeur (m)": {
+   "mediane": 41.89,
+   "n": 135193,
+   "q1": 35.33,
+   "q3": 49.09
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase finish | longueur (m)": {
+   "mediane": 32.82,
+   "n": 135193,
+   "q1": 29.37,
+   "q3": 36.85
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase finish | écart défense-milieu (m)": {
+   "mediane": 13.18,
+   "n": 135193,
+   "q1": 10.448,
+   "q3": 16.142
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase finish | écart milieu-attaque (m)": {
+   "mediane": 14.106,
+   "n": 135193,
+   "q1": 11.73,
+   "q3": 16.676
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase quick_break | hauteur de la ligne défensive (m)": {
+   "mediane": 51.2,
+   "n": 9651,
+   "q1": 29.681,
+   "q3": 56.228
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase quick_break | largeur (m)": {
+   "mediane": 36.96,
+   "n": 9651,
+   "q1": 32.685,
+   "q3": 42.3
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase quick_break | longueur (m)": {
+   "mediane": 35.43,
+   "n": 9651,
+   "q1": 31.515,
+   "q3": 39.3
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase quick_break | écart défense-milieu (m)": {
+   "mediane": 14.22,
+   "n": 9651,
+   "q1": 11.47,
+   "q3": 17.331
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase quick_break | écart milieu-attaque (m)": {
+   "mediane": 14.7,
+   "n": 9651,
+   "q1": 11.907,
+   "q3": 17.862
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase set_play | hauteur de la ligne défensive (m)": {
+   "mediane": 64.097,
+   "n": 22690,
+   "q1": 55.6,
+   "q3": 70.089
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase set_play | largeur (m)": {
+   "mediane": 35.34,
+   "n": 22690,
+   "q1": 28.69,
+   "q3": 39.608
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase set_play | longueur (m)": {
+   "mediane": 29.84,
+   "n": 22690,
+   "q1": 23.24,
+   "q3": 33.99
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase set_play | écart défense-milieu (m)": {
+   "mediane": 11.421,
+   "n": 22690,
+   "q1": 8.12,
+   "q3": 15.06
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase set_play | écart milieu-attaque (m)": {
+   "mediane": 12.623,
+   "n": 22690,
+   "q1": 9.31,
+   "q3": 15.555
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase transition | hauteur de la ligne défensive (m)": {
+   "mediane": 37.951,
+   "n": 21766,
+   "q1": 26.707,
+   "q3": 49.499
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase transition | largeur (m)": {
+   "mediane": 36.215,
+   "n": 21766,
+   "q1": 31.44,
+   "q3": 40.64
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase transition | longueur (m)": {
+   "mediane": 35.32,
+   "n": 21766,
+   "q1": 30.99,
+   "q3": 40.317
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase transition | écart défense-milieu (m)": {
+   "mediane": 14.573,
+   "n": 21766,
+   "q1": 11.597,
+   "q3": 17.971
+  },
+  "skillcorner | forme | toutes positions | avec ballon, phase transition | écart milieu-attaque (m)": {
+   "mediane": 14.072,
+   "n": 21766,
+   "q1": 10.694,
+   "q3": 18.127
+  },
+  "skillcorner | forme | toutes positions | possession inconnue | hauteur de la ligne défensive (m)": {
+   "mediane": 38.265,
+   "n": 505330,
+   "q1": 17.753,
+   "q3": 55.192
+  },
+  "skillcorner | forme | toutes positions | possession inconnue | largeur (m)": {
+   "mediane": 34.96,
+   "n": 505330,
+   "q1": 28.86,
+   "q3": 41.42
+  },
+  "skillcorner | forme | toutes positions | possession inconnue | longueur (m)": {
+   "mediane": 31.76,
+   "n": 505330,
+   "q1": 25.19,
+   "q3": 37.24
+  },
+  "skillcorner | forme | toutes positions | possession inconnue | écart défense-milieu (m)": {
+   "mediane": 13.035,
+   "n": 505330,
+   "q1": 9.608,
+   "q3": 16.412
+  },
+  "skillcorner | forme | toutes positions | possession inconnue | écart milieu-attaque (m)": {
+   "mediane": 12.695,
+   "n": 505330,
+   "q1": 9.175,
+   "q3": 16.188
+  },
+  "skillcorner | forme | toutes positions | sans ballon | hauteur de la ligne défensive (m)": {
+   "mediane": 35.844,
+   "n": 626198,
+   "q1": 23.275,
+   "q3": 47.416
+  },
+  "skillcorner | forme | toutes positions | sans ballon | largeur (m)": {
+   "mediane": 35.6,
+   "n": 626198,
+   "q1": 31.15,
+   "q3": 39.67
+  },
+  "skillcorner | forme | toutes positions | sans ballon | longueur (m)": {
+   "mediane": 29.14,
+   "n": 626198,
+   "q1": 23.38,
+   "q3": 35.26
+  },
+  "skillcorner | forme | toutes positions | sans ballon | écart défense-milieu (m)": {
+   "mediane": 12.347,
+   "n": 626198,
+   "q1": 9.668,
+   "q3": 15.657
+  },
+  "skillcorner | forme | toutes positions | sans ballon | écart milieu-attaque (m)": {
+   "mediane": 11.657,
+   "n": 626198,
+   "q1": 8.969,
+   "q3": 15.01
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase build_up | hauteur de la ligne défensive (m)": {
+   "mediane": 50.36,
+   "n": 98126,
+   "q1": 45.61,
+   "q3": 53.92
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase build_up | largeur (m)": {
+   "mediane": 37.53,
+   "n": 98126,
+   "q1": 34.28,
+   "q3": 40.95
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase build_up | longueur (m)": {
+   "mediane": 35.08,
+   "n": 98126,
+   "q1": 30.5,
+   "q3": 39.88
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase build_up | écart défense-milieu (m)": {
+   "mediane": 15.13,
+   "n": 98126,
+   "q1": 12.105,
+   "q3": 18.622
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase build_up | écart milieu-attaque (m)": {
+   "mediane": 13.925,
+   "n": 98126,
+   "q1": 11.43,
+   "q3": 16.957
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase chaotic | hauteur de la ligne défensive (m)": {
+   "mediane": 38.245,
+   "n": 54712,
+   "q1": 23.83,
+   "q3": 50.455
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase chaotic | largeur (m)": {
+   "mediane": 32.33,
+   "n": 54712,
+   "q1": 27.35,
+   "q3": 37.94
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase chaotic | longueur (m)": {
+   "mediane": 31.15,
+   "n": 54712,
+   "q1": 26.887,
+   "q3": 35.8
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase chaotic | écart défense-milieu (m)": {
+   "mediane": 13.021,
+   "n": 54712,
+   "q1": 10.513,
+   "q3": 16.05
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase chaotic | écart milieu-attaque (m)": {
+   "mediane": 12.558,
+   "n": 54712,
+   "q1": 9.616,
+   "q3": 15.64
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase create | hauteur de la ligne défensive (m)": {
+   "mediane": 37.14,
+   "n": 240921,
+   "q1": 31.23,
+   "q3": 43.12
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase create | largeur (m)": {
+   "mediane": 37.11,
+   "n": 240921,
+   "q1": 33.66,
+   "q3": 40.66
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase create | longueur (m)": {
+   "mediane": 26.52,
+   "n": 240921,
+   "q1": 22.81,
+   "q3": 31.45
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase create | écart défense-milieu (m)": {
+   "mediane": 11.938,
+   "n": 240921,
+   "q1": 9.847,
+   "q3": 14.273
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase create | écart milieu-attaque (m)": {
+   "mediane": 10.795,
+   "n": 240921,
+   "q1": 8.822,
+   "q3": 13.343
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase direct | hauteur de la ligne défensive (m)": {
+   "mediane": 41.316,
+   "n": 22287,
+   "q1": 33.118,
+   "q3": 49.14
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase direct | largeur (m)": {
+   "mediane": 35.01,
+   "n": 22287,
+   "q1": 28.42,
+   "q3": 39.33
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase direct | longueur (m)": {
+   "mediane": 35.41,
+   "n": 22287,
+   "q1": 27.55,
+   "q3": 40.96
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase direct | écart défense-milieu (m)": {
+   "mediane": 14.398,
+   "n": 22287,
+   "q1": 11.226,
+   "q3": 18.75
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase direct | écart milieu-attaque (m)": {
+   "mediane": 13.182,
+   "n": 22287,
+   "q1": 10.306,
+   "q3": 16.68
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase finish | hauteur de la ligne défensive (m)": {
+   "mediane": 19.952,
+   "n": 135193,
+   "q1": 15.117,
+   "q3": 24.906
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase finish | largeur (m)": {
+   "mediane": 33.15,
+   "n": 135193,
+   "q1": 29.06,
+   "q3": 37.06
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase finish | longueur (m)": {
+   "mediane": 26.24,
+   "n": 135193,
+   "q1": 19.57,
+   "q3": 33.98
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase finish | écart défense-milieu (m)": {
+   "mediane": 10.737,
+   "n": 135193,
+   "q1": 8.112,
+   "q3": 14.535
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase finish | écart milieu-attaque (m)": {
+   "mediane": 10.74,
+   "n": 135193,
+   "q1": 7.675,
+   "q3": 14.9
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase quick_break | hauteur de la ligne défensive (m)": {
+   "mediane": 23.357,
+   "n": 9651,
+   "q1": 16.035,
+   "q3": 43.718
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase quick_break | largeur (m)": {
+   "mediane": 35.16,
+   "n": 9651,
+   "q1": 30.08,
+   "q3": 41.645
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase quick_break | longueur (m)": {
+   "mediane": 34.61,
+   "n": 9651,
+   "q1": 29.835,
+   "q3": 38.98
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase quick_break | écart défense-milieu (m)": {
+   "mediane": 14.446,
+   "n": 9651,
+   "q1": 11.306,
+   "q3": 17.725
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase quick_break | écart milieu-attaque (m)": {
+   "mediane": 13.563,
+   "n": 9651,
+   "q1": 10.286,
+   "q3": 17.257
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase set_play | hauteur de la ligne défensive (m)": {
+   "mediane": 12.227,
+   "n": 22690,
+   "q1": 6.772,
+   "q3": 20.31
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase set_play | largeur (m)": {
+   "mediane": 26.84,
+   "n": 22690,
+   "q1": 20.26,
+   "q3": 32.51
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase set_play | longueur (m)": {
+   "mediane": 18.32,
+   "n": 22690,
+   "q1": 12.35,
+   "q3": 27.06
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase set_play | écart défense-milieu (m)": {
+   "mediane": 7.319,
+   "n": 22690,
+   "q1": 4.849,
+   "q3": 10.694
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase set_play | écart milieu-attaque (m)": {
+   "mediane": 8.024,
+   "n": 22690,
+   "q1": 4.97,
+   "q3": 12.476
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase transition | hauteur de la ligne défensive (m)": {
+   "mediane": 36.761,
+   "n": 21766,
+   "q1": 23.483,
+   "q3": 48.445
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase transition | largeur (m)": {
+   "mediane": 33.52,
+   "n": 21766,
+   "q1": 29.19,
+   "q3": 38.23
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase transition | longueur (m)": {
+   "mediane": 36.165,
+   "n": 21766,
+   "q1": 31.07,
+   "q3": 41.6
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase transition | écart défense-milieu (m)": {
+   "mediane": 14.852,
+   "n": 21766,
+   "q1": 11.756,
+   "q3": 18.977
+  },
+  "skillcorner | forme | toutes positions | sans ballon, phase transition | écart milieu-attaque (m)": {
+   "mediane": 14.508,
+   "n": 21766,
+   "q1": 11.115,
+   "q3": 18.215
+  },
+  "skillcorner | forme | équipe détectée | avec ballon | hauteur de la ligne défensive (m)": {
+   "mediane": 37.62,
+   "n": 53353,
+   "q1": 28.01,
+   "q3": 46.18
+  },
+  "skillcorner | forme | équipe détectée | avec ballon | largeur (m)": {
+   "mediane": 43.37,
+   "n": 53353,
+   "q1": 32.04,
+   "q3": 56.57
+  },
+  "skillcorner | forme | équipe détectée | avec ballon | longueur (m)": {
+   "mediane": 28.02,
+   "n": 53353,
+   "q1": 24.0,
+   "q3": 31.52
+  },
+  "skillcorner | forme | équipe détectée | avec ballon | écart défense-milieu (m)": {
+   "mediane": 11.237,
+   "n": 53353,
+   "q1": 8.933,
+   "q3": 13.728
+  },
+  "skillcorner | forme | équipe détectée | avec ballon | écart milieu-attaque (m)": {
+   "mediane": 11.588,
+   "n": 53353,
+   "q1": 8.894,
+   "q3": 14.166
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase build_up | hauteur de la ligne défensive (m)": {
+   "mediane": 22.76,
+   "n": 3563,
+   "q1": 16.926,
+   "q3": 27.546
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase build_up | largeur (m)": {
+   "mediane": 50.39,
+   "n": 3563,
+   "q1": 34.89,
+   "q3": 58.5
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase build_up | longueur (m)": {
+   "mediane": 30.88,
+   "n": 3563,
+   "q1": 24.045,
+   "q3": 34.86
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase build_up | écart défense-milieu (m)": {
+   "mediane": 12.259,
+   "n": 3563,
+   "q1": 9.072,
+   "q3": 14.643
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase build_up | écart milieu-attaque (m)": {
+   "mediane": 12.487,
+   "n": 3563,
+   "q1": 8.63,
+   "q3": 15.465
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase chaotic | hauteur de la ligne défensive (m)": {
+   "mediane": 36.14,
+   "n": 5307,
+   "q1": 24.632,
+   "q3": 44.126
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase chaotic | largeur (m)": {
+   "mediane": 32.32,
+   "n": 5307,
+   "q1": 27.59,
+   "q3": 39.005
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase chaotic | longueur (m)": {
+   "mediane": 26.59,
+   "n": 5307,
+   "q1": 23.33,
+   "q3": 29.3
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase chaotic | écart défense-milieu (m)": {
+   "mediane": 11.263,
+   "n": 5307,
+   "q1": 9.181,
+   "q3": 13.882
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase chaotic | écart milieu-attaque (m)": {
+   "mediane": 10.31,
+   "n": 5307,
+   "q1": 8.017,
+   "q3": 12.797
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase create | hauteur de la ligne défensive (m)": {
+   "mediane": 38.981,
+   "n": 29008,
+   "q1": 33.724,
+   "q3": 45.23
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase create | largeur (m)": {
+   "mediane": 53.155,
+   "n": 29008,
+   "q1": 39.08,
+   "q3": 59.3
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase create | longueur (m)": {
+   "mediane": 29.52,
+   "n": 29008,
+   "q1": 26.48,
+   "q3": 32.373
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase create | écart défense-milieu (m)": {
+   "mediane": 11.85,
+   "n": 29008,
+   "q1": 9.666,
+   "q3": 14.265
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase create | écart milieu-attaque (m)": {
+   "mediane": 12.531,
+   "n": 29008,
+   "q1": 10.06,
+   "q3": 14.725
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase direct | hauteur de la ligne défensive (m)": {
+   "mediane": 43.367,
+   "n": 3315,
+   "q1": 36.315,
+   "q3": 46.889
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase direct | largeur (m)": {
+   "mediane": 27.19,
+   "n": 3315,
+   "q1": 23.46,
+   "q3": 36.225
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase direct | longueur (m)": {
+   "mediane": 25.62,
+   "n": 3315,
+   "q1": 22.515,
+   "q3": 28.8
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase direct | écart défense-milieu (m)": {
+   "mediane": 10.676,
+   "n": 3315,
+   "q1": 8.777,
+   "q3": 12.72
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase direct | écart milieu-attaque (m)": {
+   "mediane": 10.64,
+   "n": 3315,
+   "q1": 8.464,
+   "q3": 12.929
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase finish | hauteur de la ligne défensive (m)": {
+   "mediane": 26.693,
+   "n": 7387,
+   "q1": 17.474,
+   "q3": 56.034
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase finish | largeur (m)": {
+   "mediane": 38.07,
+   "n": 7387,
+   "q1": 31.035,
+   "q3": 50.34
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase finish | longueur (m)": {
+   "mediane": 24.69,
+   "n": 7387,
+   "q1": 20.17,
+   "q3": 28.465
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase finish | écart défense-milieu (m)": {
+   "mediane": 9.713,
+   "n": 7387,
+   "q1": 7.529,
+   "q3": 12.161
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase finish | écart milieu-attaque (m)": {
+   "mediane": 10.212,
+   "n": 7387,
+   "q1": 7.611,
+   "q3": 12.963
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase quick_break | hauteur de la ligne défensive (m)": {
+   "mediane": 38.876,
+   "n": 311,
+   "q1": 28.575,
+   "q3": 43.798
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase quick_break | largeur (m)": {
+   "mediane": 36.96,
+   "n": 311,
+   "q1": 33.405,
+   "q3": 41.06
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase quick_break | longueur (m)": {
+   "mediane": 27.88,
+   "n": 311,
+   "q1": 23.95,
+   "q3": 32.13
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase quick_break | écart défense-milieu (m)": {
+   "mediane": 10.887,
+   "n": 311,
+   "q1": 9.654,
+   "q3": 13.308
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase quick_break | écart milieu-attaque (m)": {
+   "mediane": 11.502,
+   "n": 311,
+   "q1": 9.174,
+   "q3": 13.662
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase set_play | hauteur de la ligne défensive (m)": {
+   "mediane": 15.62,
+   "n": 1834,
+   "q1": 8.486,
+   "q3": 58.745
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase set_play | largeur (m)": {
+   "mediane": 25.32,
+   "n": 1834,
+   "q1": 20.543,
+   "q3": 34.26
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase set_play | longueur (m)": {
+   "mediane": 17.68,
+   "n": 1834,
+   "q1": 13.005,
+   "q3": 23.155
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase set_play | écart défense-milieu (m)": {
+   "mediane": 6.698,
+   "n": 1834,
+   "q1": 5.01,
+   "q3": 9.417
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase set_play | écart milieu-attaque (m)": {
+   "mediane": 7.142,
+   "n": 1834,
+   "q1": 4.99,
+   "q3": 10.06
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase transition | hauteur de la ligne défensive (m)": {
+   "mediane": 29.295,
+   "n": 1010,
+   "q1": 20.102,
+   "q3": 40.911
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase transition | largeur (m)": {
+   "mediane": 33.67,
+   "n": 1010,
+   "q1": 27.532,
+   "q3": 38.6
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase transition | longueur (m)": {
+   "mediane": 25.67,
+   "n": 1010,
+   "q1": 20.937,
+   "q3": 28.48
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase transition | écart défense-milieu (m)": {
+   "mediane": 10.914,
+   "n": 1010,
+   "q1": 8.48,
+   "q3": 12.939
+  },
+  "skillcorner | forme | équipe détectée | avec ballon, phase transition | écart milieu-attaque (m)": {
+   "mediane": 9.625,
+   "n": 1010,
+   "q1": 7.931,
+   "q3": 11.609
+  },
+  "skillcorner | forme | équipe détectée | possession inconnue | hauteur de la ligne défensive (m)": {
+   "mediane": 28.833,
+   "n": 34443,
+   "q1": 16.038,
+   "q3": 40.675
+  },
+  "skillcorner | forme | équipe détectée | possession inconnue | largeur (m)": {
+   "mediane": 32.68,
+   "n": 34443,
+   "q1": 27.61,
+   "q3": 39.165
+  },
+  "skillcorner | forme | équipe détectée | possession inconnue | longueur (m)": {
+   "mediane": 22.84,
+   "n": 34443,
+   "q1": 17.495,
+   "q3": 27.75
+  },
+  "skillcorner | forme | équipe détectée | possession inconnue | écart défense-milieu (m)": {
+   "mediane": 9.56,
+   "n": 34443,
+   "q1": 6.815,
+   "q3": 12.484
+  },
+  "skillcorner | forme | équipe détectée | possession inconnue | écart milieu-attaque (m)": {
+   "mediane": 9.025,
+   "n": 34443,
+   "q1": 6.548,
+   "q3": 11.74
+  },
+  "skillcorner | forme | équipe détectée | sans ballon | hauteur de la ligne défensive (m)": {
+   "mediane": 28.348,
+   "n": 99109,
+   "q1": 19.37,
+   "q3": 37.83
+  },
+  "skillcorner | forme | équipe détectée | sans ballon | largeur (m)": {
+   "mediane": 34.43,
+   "n": 99109,
+   "q1": 29.55,
+   "q3": 38.47
+  },
+  "skillcorner | forme | équipe détectée | sans ballon | longueur (m)": {
+   "mediane": 22.47,
+   "n": 99109,
+   "q1": 18.88,
+   "q3": 25.99
+  },
+  "skillcorner | forme | équipe détectée | sans ballon | écart défense-milieu (m)": {
+   "mediane": 9.958,
+   "n": 99109,
+   "q1": 7.88,
+   "q3": 12.128
+  },
+  "skillcorner | forme | équipe détectée | sans ballon | écart milieu-attaque (m)": {
+   "mediane": 9.177,
+   "n": 99109,
+   "q1": 7.2,
+   "q3": 11.21
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase build_up | hauteur de la ligne défensive (m)": {
+   "mediane": 47.552,
+   "n": 2989,
+   "q1": 29.329,
+   "q3": 50.715
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase build_up | largeur (m)": {
+   "mediane": 37.2,
+   "n": 2989,
+   "q1": 33.11,
+   "q3": 40.59
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase build_up | longueur (m)": {
+   "mediane": 26.99,
+   "n": 2989,
+   "q1": 23.15,
+   "q3": 31.32
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase build_up | écart défense-milieu (m)": {
+   "mediane": 11.385,
+   "n": 2989,
+   "q1": 9.194,
+   "q3": 14.71
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase build_up | écart milieu-attaque (m)": {
+   "mediane": 10.887,
+   "n": 2989,
+   "q1": 8.935,
+   "q3": 12.863
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase chaotic | hauteur de la ligne défensive (m)": {
+   "mediane": 31.22,
+   "n": 7230,
+   "q1": 20.414,
+   "q3": 41.88
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase chaotic | largeur (m)": {
+   "mediane": 30.16,
+   "n": 7230,
+   "q1": 25.43,
+   "q3": 36.2
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase chaotic | longueur (m)": {
+   "mediane": 24.715,
+   "n": 7230,
+   "q1": 21.562,
+   "q3": 28.14
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase chaotic | écart défense-milieu (m)": {
+   "mediane": 10.683,
+   "n": 7230,
+   "q1": 8.548,
+   "q3": 12.749
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase chaotic | écart milieu-attaque (m)": {
+   "mediane": 9.92,
+   "n": 7230,
+   "q1": 7.624,
+   "q3": 12.528
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase create | hauteur de la ligne défensive (m)": {
+   "mediane": 35.15,
+   "n": 43687,
+   "q1": 30.108,
+   "q3": 40.433
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase create | largeur (m)": {
+   "mediane": 37.1,
+   "n": 43687,
+   "q1": 33.49,
+   "q3": 40.39
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase create | longueur (m)": {
+   "mediane": 23.83,
+   "n": 43687,
+   "q1": 21.37,
+   "q3": 26.9
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase create | écart défense-milieu (m)": {
+   "mediane": 10.973,
+   "n": 43687,
+   "q1": 9.215,
+   "q3": 12.842
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase create | écart milieu-attaque (m)": {
+   "mediane": 9.712,
+   "n": 43687,
+   "q1": 8.165,
+   "q3": 11.495
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase direct | hauteur de la ligne défensive (m)": {
+   "mediane": 38.23,
+   "n": 3875,
+   "q1": 33.199,
+   "q3": 44.565
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase direct | largeur (m)": {
+   "mediane": 27.49,
+   "n": 3875,
+   "q1": 23.095,
+   "q3": 34.31
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase direct | longueur (m)": {
+   "mediane": 25.86,
+   "n": 3875,
+   "q1": 22.895,
+   "q3": 29.82
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase direct | écart défense-milieu (m)": {
+   "mediane": 11.232,
+   "n": 3875,
+   "q1": 9.55,
+   "q3": 13.369
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase direct | écart milieu-attaque (m)": {
+   "mediane": 10.52,
+   "n": 3875,
+   "q1": 8.719,
+   "q3": 12.646
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase finish | hauteur de la ligne défensive (m)": {
+   "mediane": 19.112,
+   "n": 31062,
+   "q1": 15.356,
+   "q3": 22.91
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase finish | largeur (m)": {
+   "mediane": 32.88,
+   "n": 31062,
+   "q1": 29.1,
+   "q3": 36.227
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase finish | longueur (m)": {
+   "mediane": 19.34,
+   "n": 31062,
+   "q1": 16.52,
+   "q3": 22.51
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase finish | écart défense-milieu (m)": {
+   "mediane": 8.516,
+   "n": 31062,
+   "q1": 6.847,
+   "q3": 10.329
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase finish | écart milieu-attaque (m)": {
+   "mediane": 8.086,
+   "n": 31062,
+   "q1": 6.125,
+   "q3": 10.125
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase quick_break | hauteur de la ligne défensive (m)": {
+   "mediane": 24.122,
+   "n": 753,
+   "q1": 16.387,
+   "q3": 35.958
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase quick_break | largeur (m)": {
+   "mediane": 35.31,
+   "n": 753,
+   "q1": 31.32,
+   "q3": 40.2
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase quick_break | longueur (m)": {
+   "mediane": 23.83,
+   "n": 753,
+   "q1": 19.4,
+   "q3": 27.18
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase quick_break | écart défense-milieu (m)": {
+   "mediane": 10.787,
+   "n": 753,
+   "q1": 8.23,
+   "q3": 13.247
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase quick_break | écart milieu-attaque (m)": {
+   "mediane": 9.603,
+   "n": 753,
+   "q1": 7.442,
+   "q3": 11.552
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase set_play | hauteur de la ligne défensive (m)": {
+   "mediane": 11.822,
+   "n": 5859,
+   "q1": 7.243,
+   "q3": 16.417
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase set_play | largeur (m)": {
+   "mediane": 24.41,
+   "n": 5859,
+   "q1": 19.51,
+   "q3": 30.65
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase set_play | longueur (m)": {
+   "mediane": 14.39,
+   "n": 5859,
+   "q1": 11.42,
+   "q3": 18.54
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase set_play | écart défense-milieu (m)": {
+   "mediane": 6.192,
+   "n": 5859,
+   "q1": 4.426,
+   "q3": 8.18
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase set_play | écart milieu-attaque (m)": {
+   "mediane": 5.976,
+   "n": 5859,
+   "q1": 4.075,
+   "q3": 8.665
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase transition | hauteur de la ligne défensive (m)": {
+   "mediane": 35.494,
+   "n": 1270,
+   "q1": 22.561,
+   "q3": 46.942
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase transition | largeur (m)": {
+   "mediane": 33.26,
+   "n": 1270,
+   "q1": 28.863,
+   "q3": 37.29
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase transition | longueur (m)": {
+   "mediane": 26.395,
+   "n": 1270,
+   "q1": 22.12,
+   "q3": 28.977
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase transition | écart défense-milieu (m)": {
+   "mediane": 11.224,
+   "n": 1270,
+   "q1": 8.703,
+   "q3": 13.944
+  },
+  "skillcorner | forme | équipe détectée | sans ballon, phase transition | écart milieu-attaque (m)": {
+   "mediane": 9.751,
+   "n": 1270,
+   "q1": 7.254,
+   "q3": 12.248
+  },
+  "skillcorner | porteur | phase build_up | distance presseur-porteur (m)": {
+   "mediane": 8.5,
+   "n": 39145,
+   "q1": 5.838,
+   "q3": 11.856
+  },
+  "skillcorner | porteur | phase build_up | presseur à moins de 3 m (part)": {
+   "n": 39145,
+   "part": 0.0606
+  },
+  "skillcorner | porteur | phase build_up | soutien le plus proche (m)": {
+   "mediane": 12.269,
+   "n": 39145,
+   "q1": 9.725,
+   "q3": 14.632
+  },
+  "skillcorner | porteur | phase chaotic | distance presseur-porteur (m)": {
+   "mediane": 4.279,
+   "n": 7609,
+   "q1": 2.638,
+   "q3": 6.315
+  },
+  "skillcorner | porteur | phase chaotic | presseur à moins de 3 m (part)": {
+   "n": 7609,
+   "part": 0.3004
+  },
+  "skillcorner | porteur | phase chaotic | soutien le plus proche (m)": {
+   "mediane": 7.492,
+   "n": 7609,
+   "q1": 5.54,
+   "q3": 10.072
+  },
+  "skillcorner | porteur | phase create | distance presseur-porteur (m)": {
+   "mediane": 8.306,
+   "n": 97028,
+   "q1": 5.457,
+   "q3": 11.5
+  },
+  "skillcorner | porteur | phase create | presseur à moins de 3 m (part)": {
+   "n": 97028,
+   "part": 0.0727
+  },
+  "skillcorner | porteur | phase create | soutien le plus proche (m)": {
+   "mediane": 11.528,
+   "n": 97028,
+   "q1": 8.906,
+   "q3": 14.101
+  },
+  "skillcorner | porteur | phase direct | distance presseur-porteur (m)": {
+   "mediane": 4.893,
+   "n": 601,
+   "q1": 3.12,
+   "q3": 7.621
+  },
+  "skillcorner | porteur | phase direct | presseur à moins de 3 m (part)": {
+   "n": 601,
+   "part": 0.2346
+  },
+  "skillcorner | porteur | phase direct | soutien le plus proche (m)": {
+   "mediane": 10.265,
+   "n": 601,
+   "q1": 7.575,
+   "q3": 13.871
+  },
+  "skillcorner | porteur | phase finish | distance presseur-porteur (m)": {
+   "mediane": 5.312,
+   "n": 45554,
+   "q1": 3.472,
+   "q3": 7.581
+  },
+  "skillcorner | porteur | phase finish | presseur à moins de 3 m (part)": {
+   "n": 45554,
+   "part": 0.189
+  },
+  "skillcorner | porteur | phase finish | soutien le plus proche (m)": {
+   "mediane": 9.318,
+   "n": 45554,
+   "q1": 7.169,
+   "q3": 11.938
+  },
+  "skillcorner | porteur | phase quick_break | distance presseur-porteur (m)": {
+   "mediane": 4.371,
+   "n": 2661,
+   "q1": 2.905,
+   "q3": 6.343
+  },
+  "skillcorner | porteur | phase quick_break | presseur à moins de 3 m (part)": {
+   "n": 2661,
+   "part": 0.2623
+  },
+  "skillcorner | porteur | phase quick_break | soutien le plus proche (m)": {
+   "mediane": 9.045,
+   "n": 2661,
+   "q1": 6.624,
+   "q3": 11.941
+  },
+  "skillcorner | porteur | phase set_play | distance presseur-porteur (m)": {
+   "mediane": 5.287,
+   "n": 3904,
+   "q1": 3.32,
+   "q3": 7.788
+  },
+  "skillcorner | porteur | phase set_play | presseur à moins de 3 m (part)": {
+   "n": 3904,
+   "part": 0.2047
+  },
+  "skillcorner | porteur | phase set_play | soutien le plus proche (m)": {
+   "mediane": 9.204,
+   "n": 3904,
+   "q1": 6.596,
+   "q3": 12.661
+  },
+  "skillcorner | porteur | phase transition | distance presseur-porteur (m)": {
+   "mediane": 4.865,
+   "n": 6768,
+   "q1": 3.111,
+   "q3": 6.795
+  },
+  "skillcorner | porteur | phase transition | presseur à moins de 3 m (part)": {
+   "n": 6768,
+   "part": 0.2321
+  },
+  "skillcorner | porteur | phase transition | soutien le plus proche (m)": {
+   "mediane": 9.656,
+   "n": 6768,
+   "q1": 6.708,
+   "q3": 12.996
+  },
+  "skillcorner | porteur | toutes | distance presseur-porteur (m)": {
+   "mediane": 7.099,
+   "n": 206656,
+   "q1": 4.518,
+   "q3": 10.398
+  },
+  "skillcorner | porteur | toutes | presseur à moins de 3 m (part)": {
+   "n": 206656,
+   "part": 0.1162
+  },
+  "skillcorner | porteur | toutes | soutien le plus proche (m)": {
+   "mediane": 10.874,
+   "n": 206656,
+   "q1": 8.126,
+   "q3": 13.727
+  },
+  "skillcorner | réception | distance au plus proche adversaire (m)": {
+   "mediane": 8.185,
+   "n": 9834,
+   "q1": 5.299,
+   "q3": 11.672
+  },
+  "skillcorner | vitesse | ailier | vitesse (m/s)": {
+   "mediane": 2.071,
+   "n": 1955083,
+   "part > 19,8 km/h": 0.0506,
+   "part > 25 km/h": 0.011,
+   "q1": 1.227,
+   "q3": 3.366
+  },
+  "skillcorner | vitesse | attaquant | vitesse (m/s)": {
+   "mediane": 2.081,
+   "n": 1711564,
+   "part > 19,8 km/h": 0.047,
+   "part > 25 km/h": 0.0094,
+   "q1": 1.186,
+   "q3": 3.4
+  },
+  "skillcorner | vitesse | défenseur central | vitesse (m/s)": {
+   "mediane": 1.817,
+   "n": 1771737,
+   "part > 19,8 km/h": 0.0315,
+   "part > 25 km/h": 0.0062,
+   "q1": 1.055,
+   "q3": 3.015
+  },
+  "skillcorner | vitesse | latéral | vitesse (m/s)": {
+   "mediane": 1.852,
+   "n": 1944380,
+   "part > 19,8 km/h": 0.0465,
+   "part > 25 km/h": 0.0106,
+   "q1": 1.098,
+   "q3": 3.162
+  },
+  "skillcorner | vitesse | milieu | vitesse (m/s)": {
+   "mediane": 2.314,
+   "n": 2911822,
+   "part > 19,8 km/h": 0.0361,
+   "part > 25 km/h": 0.0054,
+   "q1": 1.309,
+   "q3": 3.471
+  }
+ },
+ "volumes": {
+  "metrica | engagement | images": 6865,
+  "metrica | images": 286162,
+  "metrica | matchs": 2,
+  "skillcorner | engagement | images": 62628,
+  "skillcorner | images": 1182244,
+  "skillcorner | matchs": 20
+ }
+}

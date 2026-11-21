@@ -1676,3 +1676,52 @@ Commandes : `uv run python .scratch/v2-realisme/mesures/10d-ecran.py MODE DEBUT 
 **Essai (retiré).** Un milieu axial se plaçait, sans ballon, sur la droite ballon-centre du but, 8 m devant sa dernière ligne, quand le ballon était à plus de 6 m de l'axe. Résultat (avant → après ; écart apparié, IC à 95 %) : zone 14 29,57 → 29,53 (− 0,1 % [− 5,7 ; + 5,5]) ; buts 5,04 → 4,96 (− 1,6 %) ; tirs 41,02 → 41,42 (+ 1,0 %) ; passes en profondeur réussies 9,84 → 10,22 (+ 3,9 %) ; hors-jeu 3,70 → 4,10 (+ 10,8 % [− 2,8 ; + 24,5]) : aucun écart significatif.
 
 **Lecture (diagnostic de 20 matchs, 582 passes reçues en zone 14).** 89 % arrivent en défense placée ; l'écran était à 5,8 m de l'axe (médiane) mais entre le receveur et son but dans 20 % des cas seulement : le ballon est reçu derrière lui (9 m en médiane), dans la poche entre le milieu et la dernière ligne ou au niveau de la ligne (passes en profondeur, 23 %). Il tenait un rôle défensif (marquage, presseur, couverture) dans 47 % des cas. Fermer l'axe demande un rôle qui prend en charge l'adversaire qui décroche : ticket `10d2`, en attente d'une référence réelle.
+
+## 55. Engagement autour du ballon : référence réelle et diagnostic par rôle (ticket v2-realisme/28a, 50 matchs + 20 + 2 matchs réels, 21/11/2026)
+
+Commandes : `uv run python -m scripts.bench_series 50 --processus 4 --json <fichier>` (moteur, graines 0 à 49, environ 30 min sur 4 processus) et `uv run python -m scripts.suivi_distributions --sortie <fichier>` (suivi réel, 49 s). Fichiers : `.scratch/v2-realisme/mesures/28a-moteur-50.json`, `28a-reel.json`. Mêmes fonctions des deux côtés (`scripts/v2_indicators.py` : `players_within`, `mean_nearest_teammate`, `NEAR_BALL_RADII_M`, `zone`). Une image par seconde. Ballon en jeu : côté moteur, hors ballon mort (`ball.restart`) ; SkillCorner, ballon et possession connus ; Metrica, ballon suivi (arrêts de jeu où le ballon reste suivi comptés). Avec / sans ballon : équipe en possession au sens du tracker du banc (moteur) ou de SkillCorner ; le moteur garde l'équipe qui avait le ballon pendant un ballon libre, SkillCorner écarte ces images (possession inconnue). Joueurs de champ seulement. **Zones vues de chaque équipe** : pour l'équipe qui défend, « tiers défensif » = ballon près de son propre but, « tiers offensif » = ballon chez l'adversaire (son pressing haut). Moteur : moyenne regroupée des images ; réel : moyenne regroupée aussi (colonne « moyenne » du rapport), dispersion = quartiles des moyennes par match.
+
+Déterminisme : moteur, 82 indicateurs d'engagement identiques sur deux exécutions des matchs 0 et 1 (empreinte `c0fbfdda…`) ; réel, empreinte `e8122f3f…` identique sur deux exécutions. Jeu inchangé : 2 519 indicateurs sur 2 519 identiques sur les matchs 0 et 1, code d'avant contre code d'après (buts 2 et 5, passes 1 399 et 1 327).
+
+| Indicateur | Moteur, 50 matchs (Q1–Q3 des matchs) | SkillCorner, 20 matchs (Q1–Q3 des matchs) | Metrica, 2 matchs |
+|---|---|---|---|
+| joueurs de champ à moins de 10 m du ballon | **4,50** (4,43–4,57) | 3,83 (3,76–3,99) | 3,54 |
+| à moins de 15 m | **7,31** (7,17–7,44) | 6,54 (6,42–6,76) | 6,19 |
+| à moins de 20 m | 10,38 | 9,36 | 8,98 |
+| équipe avec ballon, à moins de 10 m | 1,99 | 1,91 | — |
+| équipe sans ballon, à moins de 10 m | **2,52** | 1,93 | — |
+| équipe sans ballon, à moins de 15 m | **4,01** | 3,32 | — |
+| distance au coéquipier le plus proche, avec / sans ballon (m) | 10,60 / 8,87 | 10,85 / 9,11 (médianes des matchs) | — |
+
+**Par zone, à moins de 10 m du ballon (zone vue de l'équipe).**
+
+| Équipe, zone vue de cette équipe | Moteur (Q1–Q3 des matchs) | SkillCorner (Q1–Q3 des matchs) | Écart |
+|---|---|---|---|
+| sans ballon, tiers défensif (près de son but) | 2,83 (2,73–2,94) | 2,77 (2,67–2,85) | + 2 %, conforme |
+| sans ballon, tiers médian | **2,58** (2,51–2,65) | 1,85 (1,75–1,95) | **+ 40 %** |
+| sans ballon, tiers offensif (pressing haut) | **1,68** (1,61–1,74) | 1,31 (1,22–1,44) | **+ 28 %** |
+| avec ballon, tiers défensif (relance) | 2,25 (2,17–2,34) | 1,73 (1,64–1,81) | + 30 % |
+| avec ballon, tiers médian | 2,07 (2,04–2,11) | 1,92 (1,81–1,98) | + 8 % |
+| avec ballon, tiers offensif | **1,57** (1,48–1,64) | 2,11 (2,06–2,18) | **− 26 %** |
+
+À 15 m, même lecture : sans ballon, tiers défensif 4,28 contre 4,41, tiers médian 4,20 contre 3,29, tiers offensif 2,48 contre 2,36 ; avec ballon, tiers offensif 2,37 contre 3,37.
+
+**Lecture.** L'excès global (+ 18 % à 10 m, + 12 % à 15 m contre SkillCorner ; l'audit sur Metrica annonçait + 35 %) vient de **l'équipe qui défend au milieu du terrain** (+ 40 %) et, moins, de son pressing haut (+ 28 %). Près de son propre but, la densité défensive est conforme : ni la couverture ni le marquage n'y sont en excès. À l'inverse, **l'équipe qui attaque manque de monde près du ballon dans le dernier tiers** (1,57 contre 2,11 à 10 m, − 26 % ; 2,37 contre 3,37 à 15 m), et en a trop à la relance (+ 30 %).
+
+**Diagnostic par rôle, équipe sans ballon, joueurs à moins de 15 m par échantillon** (le rôle « presseur » du moteur est ventilé par l'action de l'intention, `engagement_role`) :
+
+| Rôle | Tous tiers | Tiers défensif | Tiers médian | Tiers offensif (pressing haut) |
+|---|---|---|---|---|
+| marquage | 1,04 | 0,71 | **1,19** | 0,75 |
+| replacement (cible ailleurs dans 36 % des cas) | 1,01 | 1,31 | **1,02** | 0,47 |
+| presseur attribué | 0,87 | 0,82 | 0,90 | 0,82 |
+| couverture attribuée (`defense.COVER_DEPTH_M`, 6 m, moitié défensive seulement) | 0,47 | 0,80 | 0,46 | — |
+| couverture derrière le presseur attribué (11g, `cerveau.COVER_BEHIND_PRESSER_M`) | 0,07 | 0,08 | 0,07 | — |
+| sortie de bloc vers le ballon sans presseur attribué | < 0,01 | | | |
+| repli | 0,16 | 0,13 | 0,19 | 0,08 |
+| lecture de passe | 0,13 | 0,13 | 0,14 | 0,05 |
+| ballon libre | 0,09 | 0,12 | 0,08 | 0,08 |
+
+**Recommandation pour le 28b (à valider par le propriétaire).** Viser l'équipe qui défend **au tiers médian** (à 10 m, de 2,58 vers 1,85 ; à 15 m, de 4,20 vers 3,29) et, en second, son pressing haut (1,68 vers 1,31). Ne rien plafonner près de son propre but (conforme). Leviers au tiers médian, par ordre : (1) le **marquage** qui suit son homme jusque dans la zone du ballon (1,19) ; (2) le **replacement** qui traverse la zone du ballon (1,02, cible ailleurs dans 36 % des cas) ; (3) la **couverture attribuée** (0,46). La couverture du 11g (0,07) et la sortie de bloc par Teamwork (< 0,01) pèsent peu ; le chasseur de ballon libre aussi (0,09) : la dépendance du 28b au `11l` peut être levée (à trancher). L'équipe en possession n'a pas à être plafonnée ; son manque de monde près du ballon dans le dernier tiers (− 26 %) relève du jeu sans ballon (`25c` soutien, `25e`, `09f`) et du dernier tiers, pas du 28b.
+
+Limites : SkillCorner écarte les images sans possession (duels, ballons en l'air), le moteur les compte avec l'équipe qui avait le ballon ; les rôles du moteur n'ont pas d'équivalent réel (le diagnostic dit qui est près du ballon dans le moteur, pas qui devrait y être) ; les zones réelles sont lues sur 105 m (terrains réels de 104 à 106 m).

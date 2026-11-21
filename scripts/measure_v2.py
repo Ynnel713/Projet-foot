@@ -40,8 +40,8 @@ from v2engine.cerveau import HORS_JEU
 from ligue1sim.lineup import pick_best_formation
 
 from scripts.v2_indicators import (BACKPEDAL_POSTES, CARRY_PREFIX, FLICKER_S, EXIT_STATES, LINE_GAP_LIMITS_M, LINE_JUMP_M, MARKING_GAP_M, PASS_PREFIX,
-                                   APPROACH_BANDS, BALANCE_BANDS, STRENGTH_GAP_BANDS, Collector, shot_decomposition,
-                                   xg_calibration)
+                                   APPROACH_BANDS, BALANCE_BANDS, ENGAGEMENT_RADIUS_M, STRENGTH_GAP_BANDS, Collector,
+                                   quartiles, shot_decomposition, xg_calibration)
 from scripts.v2_tranches import minute_report, player_report
 from scripts.graines_validation import check_series
 
@@ -147,6 +147,7 @@ def _hook(collector: Collector, clock: dict[str, float], plans: bool = True,
     def think(player, *args, **kwargs):
         intention = real_think(player, *args, **kwargs)
         collector.on_role(player.name, intention.role)
+        collector.on_target(player.name, intention.target, intention.action, intention.reason)  # diagnostic (28a)
         if player.poste == "GK":
             collector.on_keeper(player, intention, *args[:2])  # ticket v2-realisme/03d ; ballon et joueurs : 03g
         else:
@@ -453,6 +454,37 @@ def free_ball_report(k, n: int, out: dict) -> None:
         k["ballon libre : délai avant la prise (somme, s)"] / max(1, k["ballon libre : pris"]))
 
 
+def engagement_report(c: Collector, out: dict) -> None:
+    """Engagement autour du ballon (ticket v2-realisme/28a) : quartiles des joueurs de champ à moins de 10, 15 et 20 m
+    du ballon (ballon en jeu, une image par seconde) ; diagnostic : par rôle, nombre moyen de joueurs à moins de
+    ENGAGEMENT_RADIUS_M par échantillon, part de l'engagement et part dont la cible est elle aussi près du ballon ; même
+    chose par équipe (avec / sans ballon) et par zone du ballon vue de cette équipe (pour l'équipe qui défend, « tiers
+    défensif » = près de son propre but)."""
+    k = c.count
+    for name, stat in sorted(c.stats.items()):
+        if name.startswith("engagement : joueurs de champ") and stat.values:
+            out[name + " (quartiles)"] = {key: (round(v, 3) if isinstance(v, float) else v)
+                                          for key, v in quartiles(stat.values).items()}
+    samples = max(1, k["engagement : échantillons"])
+    prefix = "engagement par rôle : "
+    total = sum(v for key, v in k.items() if key.startswith(prefix))
+    rows = {}
+    for key, v in sorted(k.items()):
+        if key.startswith(prefix):
+            label = key.removeprefix(prefix)
+            near = k["engagement par rôle, cible près du ballon : " + label]
+            rows[label] = {"joueurs par échantillon": round(v / samples, 3), "part de l'engagement": round(v / max(1, total), 4),
+                           "cible près du ballon (part)": round(near / v, 4)}
+    out[f"engagement : diagnostic par rôle à moins de {ENGAGEMENT_RADIUS_M:g} m (équipe : rôle)"] = rows
+    by_zone: dict[str, dict[str, float]] = {}
+    for key, v in sorted(k.items()):
+        if key.startswith("engagement par rôle, équipe "):
+            where, label = key.removeprefix("engagement par rôle, ").split(" : ", 1)
+            by_zone.setdefault(where, {})[label] = round(v / max(1, k[f"engagement : échantillons, {where}"]), 3)
+    out[f"engagement : joueurs par échantillon à moins de {ENGAGEMENT_RADIUS_M:g} m, par équipe, zone vue de cette "
+        "équipe, et rôle"] = by_zone
+
+
 def contact_report(k, n: int, out: dict) -> None:
     """Contacts physiques (ticket v2-realisme/11e) : collisions, duels d'épaule par écart de Strength, contact perdu
     par Balance (12c), tacles par angle d'approche (11d). Parts et moyennes divisées par `max(1, …)` (convention du
@@ -727,6 +759,7 @@ def report(c: Collector, detail: bool = False) -> dict:
     out["duels d'épaule : fautes de charge par match"] = k["duels d'épaule : fautes de charge"] / n
     contact_report(k, n, out)  # ticket v2-realisme/11e
     free_ball_report(k, n, out)  # ticket v2-realisme/11k
+    engagement_report(c, out)  # ticket v2-realisme/28a
     out["rotation : passes abandonnées, ligne fermée, par match"] = k["rotation : passes abandonnées, ligne fermée"] / n
     out["rotation : passes abandonnées, ligne fermée (part des passes jugées après la rotation)"] = (
         k["rotation : passes abandonnées, ligne fermée"] / max(1, k["rotation : passes jugées après la rotation"]))

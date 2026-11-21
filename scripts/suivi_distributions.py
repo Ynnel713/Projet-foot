@@ -18,7 +18,12 @@ Indicateurs (définitions validées par le propriétaire le 14/11/2026, `docs/IN
 - vitesse : déplacement entre l'image SPEED_HALF_WINDOW_S avant et l'image SPEED_HALF_WINDOW_S après, le joueur détecté
   sur toute la fenêtre, valeurs au-dessus de SPEED_MAX_MPS écartées (bruit) ; par famille de postes (SkillCorner,
   remplaçants sans poste exclus) et pour tous les joueurs de champ (Metrica, gardien = joueur dont la position médiane
-  est la plus proche de son but). Le moteur, lui, lit sa vitesse instantanée.
+  est la plus proche de son but). Le moteur, lui, lit sa vitesse instantanée ;
+- engagement autour du ballon (ticket v2-realisme/28a), une image par seconde, ballon en jeu (SkillCorner : ballon
+  et possession connus ; Metrica : ballon suivi, les arrêts de jeu où le ballon reste suivi sont comptés) : joueurs de
+  champ des deux équipes à moins de 10, 15 et 20 m du ballon (`players_within`), au total et par équipe (avec / sans
+  ballon, SkillCorner), distance moyenne au coéquipier le plus proche (`mean_nearest_teammate`) ; moyenne de chaque
+  match, pour la dispersion entre matchs.
 
 Usage : `uv run python -m scripts.suivi_distributions [--sortie fichier.json] [--matchs N]`.
 """
@@ -36,14 +41,18 @@ from concurrent.futures import ProcessPoolExecutor
 
 from scripts import suivi_reel as sr
 from scripts.v2_indicators import (
+    NEAR_BALL_RADII_M,
     POSTE_FAMILY,
     PRESS_RADIUS_M,
     block_height,
     length_width,
     line_gaps,
+    mean_nearest_teammate,
     nearest_distance,
+    players_within,
     quartiles,
     speed_shares,
+    zone,
 )
 from v2engine.geometry import Vec2
 
@@ -138,6 +147,35 @@ def _around_holder(acc: Accumulator, frame: sr.Frame, goalkeepers: set[str], las
                     1.0 if presser < PRESS_RADIUS_M else 0.0)
 
 
+def near_ball(frame: sr.Frame, goalkeepers: set[str]) -> dict[str, float] | None:
+    """Engagement autour du ballon sur une image (ticket v2-realisme/28a) ; None si le ballon n'est pas en jeu au sens
+    de la source (SkillCorner : ballon ou possession inconnus ; Metrica : ballon non suivi)."""
+    if frame.ball is None or (frame.source == "skillcorner" and frame.possession is None):
+        return None
+    ball = Vec2(*frame.ball)
+    out: dict[str, float] = {}
+    field = {team: [Vec2(p.x, p.y) for p in frame.players if p.team == team and p.id not in goalkeepers]
+             for team in (sr.HOME, sr.AWAY)}
+    everyone = field[sr.HOME] + field[sr.AWAY]
+    for r in NEAR_BALL_RADII_M:
+        out[f"joueurs de champ à moins de {r:g} m du ballon"] = players_within(ball, everyone, r)
+    for team, pts in field.items():
+        phase = ("sans possession" if frame.possession is None
+                 else "avec ballon" if frame.possession == team else "sans ballon")
+        own_zone = zone("home" if team == sr.HOME else "away", ball.x)  # vue de cette équipe (repère du moteur)
+        for r in NEAR_BALL_RADII_M:
+            key = f"joueurs de champ à moins de {r:g} m du ballon, équipe {phase}"
+            out[key] = out.get(key, 0.0) + players_within(ball, pts, r) / (2.0 if phase == "sans possession" else 1.0)
+            if phase != "sans possession":
+                out[f"par zone : joueurs de champ à moins de {r:g} m du ballon, équipe {phase}, {own_zone} de cette "
+                    "équipe"] = players_within(ball, pts, r)
+        nearest = mean_nearest_teammate(pts)
+        if nearest is not None:  # sans possession : moyenne des deux équipes
+            key = f"distance au coéquipier le plus proche, équipe {phase} (m)"
+            out[key] = out.get(key, 0.0) + nearest / (2.0 if phase == "sans possession" else 1.0)
+    return out
+
+
 def track_speeds(track: Sequence[tuple[float, float, float, bool]], fps: float) -> list[float]:
     """Vitesses (m/s) d'un joueur sur une période : (temps, x, y, détecté) par image, dans l'ordre. Fenêtre centrée de
     ±SPEED_HALF_WINDOW_S, joueur détecté sur toute la fenêtre, images contiguës ; au-dessus de SPEED_MAX_MPS, écarté."""
@@ -201,8 +239,17 @@ def measure_match(source: str, match_id: str, root=sr.DATA_DIR) -> Accumulator:
         family = None
         frames = sr.read_metrica(int(match_id), root)
     last: dict[int, sr.Player] = {}
-    for frame in frames:
+    step = round(FPS[source])  # engagement : une image par seconde (ticket v2-realisme/28a)
+    per_match: dict[str, list[float]] = defaultdict(list)
+    for i, frame in enumerate(frames):
         acc.counts[f"{source} | images"] += 1
+        if i % step == 0:
+            sample = near_ball(frame, goalkeepers)
+            if sample is not None:
+                acc.counts[f"{source} | engagement | images"] += 1
+                for name, value in sample.items():
+                    acc.add(f"{source} | engagement | {name}", value)
+                    per_match[name].append(value)
         _shapes(acc, frame, match, goalkeepers)
         if source == "skillcorner":
             _around_holder(acc, frame, goalkeepers, last)
@@ -211,6 +258,8 @@ def measure_match(source: str, match_id: str, root=sr.DATA_DIR) -> Accumulator:
     if family is None:
         family = {pid: ("gardien" if pid in goalkeepers else "joueurs de champ") for pid, _ in tracks}
     _speeds(acc, tracks, family, source)
+    for name, values in sorted(per_match.items()):  # dispersion entre matchs (ticket v2-realisme/28a)
+        acc.add(f"{source} | engagement | moyenne par match | {name}", statistics.fmean(values))
     acc.counts[f"{source} | matchs"] += 1
     return acc
 
@@ -227,6 +276,8 @@ def report(acc: Accumulator) -> dict:
         row = {k: (round(v, 3) if isinstance(v, float) else v) for k, v in quartiles(values).items()}
         if label.endswith("(part)"):
             row = {"n": len(values), "part": round(statistics.fmean(values), 4)}
+        if "| engagement |" in label:  # moyenne regroupée, comparable à celle du moteur (ticket 28a, réserve A4)
+            row["moyenne"] = round(statistics.fmean(values), 3)
         if "| vitesse |" in label:
             high, sprint = speed_shares(values)
             row["part > 19,8 km/h"], row["part > 25 km/h"] = round(high, 4), round(sprint, 4)

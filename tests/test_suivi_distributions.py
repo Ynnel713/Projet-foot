@@ -159,4 +159,5 @@ def test_metrica_goalkeepers_and_determinism(tmp_path):
     speed = first["distributions"]["metrica | vitesse | joueurs de champ | vitesse (m/s)"]
     assert speed["mediane"] == pytest.approx(0.001 * 105.0 * 25.0)  # 0,001 de la longueur par image à 25 images/s
     assert speed["part > 19,8 km/h"] == 0.0
-    assert first["volumes"] == {"metrica | images": 60, "metrica | matchs": 1}
+    # engagement (ticket v2-realisme/28a) : une image par seconde, 60 images à 25 images/s -> images 0, 25 et 50
+    assert first["volumes"] == {"metrica | images": 60, "metrica | matchs": 1, "metrica | engagement | images": 3}

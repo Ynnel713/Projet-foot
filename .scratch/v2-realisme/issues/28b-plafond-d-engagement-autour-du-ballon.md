@@ -4,6 +4,8 @@
 
 **Constat vérifié :** voir `28a` (4,6 joueurs de champ à moins de 10 m du ballon contre 3,4 dans le suivi réel Metrica, 7,5 contre 5,9 à 15 m ; largeur et décalage du bloc conformes).
 
+**Résultat du 28a (21/11/2026, `docs/INDICATEURS_V2.md` section 55, référence SkillCorner) :** excès de + 18 % à 10 m du ballon (4,50 contre 3,83), venu de l'équipe qui défend au tiers médian (2,58 contre 1,85, + 40 %) et, moins, de son pressing haut (1,68 contre 1,31) ; près de son propre but, conforme (2,83 contre 2,77) : ni couverture ni marquage à plafonner là. Leviers recommandés au tiers médian : marquage qui suit son homme dans la zone du ballon, replacement qui la traverse, couverture attribuée (`defense.COVER_DEPTH_M`). Recommandation à valider par le propriétaire avant le code ; elle recentre ce ticket sur l'équipe qui défend hors de son dernier tiers.
+
 **What to build:** Selon le diagnostic du 28a, limiter par équipe le nombre de joueurs qui s'engagent vers le ballon (chasseur, presseur, suiveurs, soutien) : au-delà du plafond validé, un joueur garde ou rejoint sa place de référence ou un espace libre (`off_ball.choose_space`), avec une durée minimale d'engagement pour éviter les allers-retours. Le choix de qui reste engagé suit le temps d'arrivée (comme le chasseur du `11l`).
 
 **Attributs :** Teamwork (rayon existant : tenir sa place plutôt que suivre le ballon), Positioning et Work Rate seulement si la carte (`docs/CARTE_ATTRIBUTS_V2.md`, ADR 0002) le permet sans double comptage.
