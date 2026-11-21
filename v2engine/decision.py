@@ -18,7 +18,7 @@ from v2engine.condition import effective_rating
 from v2engine.contextes import IDEE_DE_PREMIERE, LECTURE_DU_PRESSING, contextual_rating
 from v2engine.danger import danger, loss_cost
 from v2engine.flux import DECISION, DUEL, PERCEPTION
-from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
+from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, in_penalty_area
 from v2engine.movement import PlayerState, max_speed_mps, turn_rate_rad_s
 from v2engine.off_ball import OPEN_LANE_PROBABILITY
 from v2engine.offside import is_clearly_offside, pass_margin_m, perceived_defence_line
@@ -77,6 +77,14 @@ DRIBBLE_REFERENCE_S = 1.5
 # la tire avec le même délai (`match`). La conduite se réoriente au ticket 07b.
 PASS_FREE_CONE_DEG = 90.0
 SHOT_FREE_CONE_DEG = 60.0
+# Sélection des frappes de loin (ticket v2-realisme/18m, valeur validée par le propriétaire le 21/11/2026). Hors de la
+# surface, le porteur ne frappe que si la frappe vaut, à ses yeux, au moins `LONG_SHOT_MARGIN` de plus que la meilleure
+# option pour continuer (même monnaie que `shot_value` et `option_value` : points de chance de but). Elle entre dans la
+# règle de choix de `choose_action` : sur la valeur perçue (le choix reste brouillé par Decisions) et sur le meilleur
+# choix factuel (`best`, `gap`), jugé avec la même règle ; la valeur des options (`evaluate_options`) et l'exécution
+# (Long Shots) ne changent pas. Pas sur coup de pied arrêté (frappe directe). Premier essai à 0,03 (50 matchs appariés) :
+# tirs hors surface de 12,86 à 7,04 par équipe, cible non atteinte (environ 4,1, Opta) ; 0,05 retenu par le propriétaire.
+LONG_SHOT_MARGIN = 0.05
 # Talonnade (même ticket) : vers un coéquipier dans le dos (hors du cône de la passe) à `BACKHEEL_MAX_M` au plus, la
 # passe part sans rotation, plus difficile (`possession.BACKHEEL_DIFFICULTY`, Technique). Flair règle la chance qu'il
 # y pense à cette décision (docs/CARTE_ATTRIBUTS_V2.md : tendance à tenter l'inattendu) ; la valeur de l'option tranche
@@ -627,7 +635,13 @@ def choose_action(holder: PlayerState, players: list[PlayerState], goal: Vec2, k
                                pressed)
     if set_piece:
         options = [o for o in options if o.kind != "dribble"] or options
-    best = options[0]
+    # frappe de loin (ticket v2-realisme/18m) : la marge fait partie de la règle de choix, perçue comme réelle ; le
+    # meilleur choix factuel (`best`, `gap`, courbe de Decisions) se juge avec la même règle
+    margin = 0.0 if set_piece or in_penalty_area(holder.team, holder.position) else LONG_SHOT_MARGIN
+
+    def choice_value(option: Action) -> float:
+        return option.value - margin if option.kind == "shot" else option.value
+    best = max(options, key=choice_value)
     longs = [o.value for o in options if o.lofted]
     shorts = [o.value for o in options if o.kind == "pass" and not o.lofted]
     tagged = dict(considered=len(options), best_kind=best.kind,
@@ -646,7 +660,7 @@ def choose_action(holder: PlayerState, players: list[PlayerState], goal: Vec2, k
     seen_as = {} if share >= 1.0 and seen_opponents is None else {
         real.point: seen for real, seen in zip(real_dribbles, dribble_options(holder, seen_world, gene, mode, share))}
     felt = {} if felt is None else felt
-    sigma = perception_error(holder, gene) * max(abs(best.value), 1e-3)
+    sigma = perception_error(holder, gene) * max(abs(choice_value(best)), 1e-3)
     for index in range(len(real_dribbles)):
         if index not in felt:
             felt[index] = PERCEPTION.gauss(0.0, 1.0)
@@ -658,10 +672,12 @@ def choose_action(holder: PlayerState, players: list[PlayerState], goal: Vec2, k
     for option in ([drive] if drive is not None else []) + [o for o in options if o.kind != "dribble"]:
         seen = seen_as.get(option.point, option) if option.kind == "dribble" else option
         seen_value = seen.value if seen.seen_value is None else seen.seen_value  # tir et passe : valeur perçue (08d)
+        if option.kind == "shot":
+            seen_value -= margin  # frappe de loin : nettement meilleure ou rien (ticket v2-realisme/18m)
         perceived.append((seen_value + PERCEPTION.gauss(0.0, sigma), option, seen.point))
     _, chosen, point = max(perceived, key=lambda t: t[0])
     # valeur perdue, en part de la meilleure ; une option presque équivalente compte comme le meilleur choix
-    gap = (best.value - chosen.value) / max(abs(best.value), 1e-9)
+    gap = (choice_value(best) - choice_value(chosen)) / max(abs(choice_value(best)), 1e-9)
     return replace(chosen, point=point, best=gap < BEST_CHOICE_TOLERANCE, gap=gap, **tagged)
 
 

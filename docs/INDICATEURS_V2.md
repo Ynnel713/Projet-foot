@@ -1750,3 +1750,31 @@ Par distance (tirs par équipe ; conversion) : moins de 11 m 1,46 ; 28,8 % · 11
 - **Datation** : l'excès de frappes de loin était déjà relevé avant le 09j (repère R3, ticket 18e : 390 des 656 tirs cadrés jugés partaient de plus de 18 m) ; le saut principal du nombre de buts vient du `09j` (ligne haute avec ballon : 4,35 → 6,8 buts sur 20 matchs, section du ticket) ; 3,62 au 07d (13/11), 4,72 au 21c1 (16/11), 5,06 au 28a (21/11).
 
 **Correction validée par le propriétaire le 21/11/2026 (« ok avec tes propositions »)** : (1) nouveau ticket `v2-realisme/18m`, sélection des frappes de loin (cibles indicatives : au plus 5 tirs hors surface par équipe, au plus 15 % des buts hors surface) ; (2) `10f` et `10g` avancés (défense de la surface) plutôt qu'une baisse du modèle de chance ; (3) ce ticket clos comme diagnostic, aucune constante changée. S'y ajoute, à la suite de la remarque du propriétaire sur le jeu axial, le ticket `v2-realisme/25i` (dédoublement du latéral), orphelin depuis le `v2-collectif/14`.
+
+## 57. Sélection des frappes de loin (ticket v2-realisme/18m, 50 matchs appariés, 21/11/2026)
+
+Règle : hors de la surface et hors coup de pied arrêté, la frappe doit valoir, aux yeux du porteur, au moins `decision.LONG_SHOT_MARGIN` de plus que la meilleure option pour continuer (monnaie commune, points de chance de but) ; le meilleur choix factuel (`best`, `gap`) se juge avec la même règle. Mesure préalable (`.scratch/v2-realisme/mesures/18m-marges.py`, 8 matchs, `18m-marges-8.json`) : frappe hors surface choisie à une valeur médiane de 0,059 contre 0,040 pour la meilleure autre option, 27 % des frappes choisies alors qu'une autre option valait plus (perception). Série : `PYTHONPATH=. PYTHONHASHSEED=0 uv run python .scratch/v2-realisme/mesures/18m-serie.py 50 4 <avant|après> <sortie.json>` (mêmes graines et affiches que le banc ; « avant » = marge nulle, identique au moteur d'avant le ticket : 20,55 tirs par équipe, 5,06 buts, 12,86 tirs hors surface, comme la section 56), synthèse `18m-synthese.py` → `18m-serie-50-synthese-003.txt` (premier essai à 0,03) et `-005.txt` (valeur retenue, 0,05, choix du propriétaire). Écarts appariés : moyenne ± demi-intervalle à 95 %.
+
+| Par équipe (tirs) ou par match | Avant | 0,03 | **0,05** | Écart à 0,05 | Réel (R1 à R3) |
+|---|---|---|---|---|---|
+| Tirs hors surface | 12,86 | 7,04 | **4,59** | − 8,27 ± 0,87 | environ 4,1 |
+| Part des tirs hors surface | 62,6 % | 40,6 % | **28,9 %** | | 31,7 % |
+| Tirs dans la surface | 7,69 | 10,31 | 11,28 | + 3,59 ± 0,91 | environ 8,9 |
+| Tirs | 20,55 | 17,35 | 15,87 | − 4,68 ± 1,15 | environ 13,1 |
+| Conversion hors surface | 7,5 % | 9,7 % | **13,3 %** | | 4,2 % |
+| Conversion dans la surface | 20,4 % | 18,5 % | 16,1 % | | 14,7 % |
+| Buts hors surface, par match (part) | 1,92 (37,9 %) | 1,36 (26,3 %) | **1,22 (25,1 %)** | − 0,70 ± 0,61 | environ 0,3 (11,7 %) |
+| Buts, par match | 5,06 | 5,18 | **4,86** | − 0,20 ± 0,96 | environ 2,7 |
+| xG neutre, par match (hors surface) | 4,88 (1,95) | 5,07 (1,52) | 5,17 (1,22) | + 0,29 ± 0,40 | |
+| Passes, par match | 1 227 | 1 277 | 1 297 | + 70 ± 22 | |
+| Pertes de balle, par match | 218 | 229 | 230 | + 12 ± 7 | |
+| Buts sur récupération en 15 s au plus, par match | 0,90 | 1,04 | 1,00 | | |
+
+Profil Long Shots (part des tirs hors surface ; conversion), avant → 0,05 : 70 et plus 22,2 % ; 7,0 % → 35,5 % ; 11,0 % · 55-69 63,1 % ; 7,9 % → 55,8 % ; 13,7 % · 40-54 13,5 % ; 6,9 % → 8,3 % ; 21,1 % (0,38 tir par équipe, effectif faible) · moins de 40 1,2 % → 0,4 %. Origine des buts à 0,05 : récupération 66,3 %, erreur adverse 11,5 %, coup de pied arrêté 8,6 %, jeu placé 8,2 %.
+
+**Lecture.**
+- **Volume et part des frappes de loin au niveau réel** (4,59 par équipe, 28,9 %) : cible du ticket atteinte (au plus 5).
+- **Part des buts hors surface encore haute (25 %, cible 15 %)** : les frappes gardées sont les meilleures (ligne libre, peu de gêne) et convertissent à 13,3 %, plus de trois fois le réel (4,2 %). La décision n'est plus en cause ; ce sont les situations de frappe trop faciles hors surface (personne ne ferme la ligne de tir ni ne presse le tireur à 20 m) : relève de la défense de la surface et de ses abords (`10f`, `10g`).
+- **Les buts ne baissent pas** (− 0,20 ± 0,96) : les frappes perdues deviennent des tirs dans la surface (+ 3,6 par équipe), toujours convertis au-dessus du réel (16,1 % contre 14,7 %). L'excès de buts (environ + 2 par match) relève maintenant de la défense de la surface (`10f`, `10g`) et de la défense préventive (`09g`).
+- **Un peu plus de passes et de pertes** (+ 70 et + 12 par match) : le jeu continue au lieu de finir sur une frappe ; buts sur récupération rapide stables (1,00 contre 0,90, dans le bruit). Réserve de l'expert au 18l (transitions) : pas de hausse mesurable ici, `09g` toujours à faire.
+- **Profil Long Shots dans le bon sens** : les meilleurs frappeurs prennent une plus grande part des frappes de loin (22 % → 36 %).

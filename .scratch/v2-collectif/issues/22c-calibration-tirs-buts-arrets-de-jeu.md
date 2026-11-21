@@ -38,3 +38,6 @@
 - Le tir paie désormais la perte du ballon dans la décision (`decision.shot_value`) ; tirs 16,0 par équipe, part dans la surface 27 % (réel 68 %), conversion 8,1 % (section 35 de `docs/INDICATEURS_V2.md`).
 - A3 (facultatif) : corners, ballons repoussés et contrés comptés comme perte entière dans la valeur du tir (effet environ 0,002) ; à affiner si la calibration fine l'exige. Pertes en conduite + 5 % à surveiller.
 
+## Comments
+
+**Entrée du 18m (21/11/2026, réserve A1 acceptée par le propriétaire).** Après la sélection des frappes de loin (`docs/INDICATEURS_V2.md` section 57, 50 matchs) : conversion dans la surface 16,1 % (réel 14,7 %), hors surface 13,3 % (réel 4,2 %), part des buts hors surface 25,1 % (réel 11,7 %), 4,86 buts par match. Les frappes de loin gardées partent ligne de tir libre, tireur peu gêné à 20 m : la défense de la surface et de ses abords doit fermer ces lignes. Point de départ de la calibration des tirs et des buts ; à surveiller aussi (expert du 18m) : la conversion hors surface ne croît pas avec Long Shots (70-100 : 11,0 %, 55-69 : 13,7 %, effectifs faibles) ; après `30b`, remesurer la part des tirs hors surface pour ne pas descendre nettement sous 31,7 %.

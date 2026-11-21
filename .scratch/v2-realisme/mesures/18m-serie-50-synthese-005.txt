@@ -1,0 +1,30 @@
+matchs 50 (mêmes graines et affiches avant / après)
+tirs par équipe                                  avant   20.55   après   15.87   écart   -4.68 ± 1.15
+tirs dans la surface par équipe                  avant    7.69   après   11.28   écart   +3.59 ± 0.91
+tirs hors surface par équipe                     avant   12.86   après    4.59   écart   -8.27 ± 0.87
+tirs 16,5-25 m dans l'axe hors surface, par équipe avant   10.79   après    4.31   écart   -6.48 ± 0.80
+buts par match                                   avant    5.06   après    4.86   écart   -0.20 ± 0.96
+buts dans la surface par match                   avant    3.14   après    3.64   écart   +0.50 ± 0.71
+buts hors surface par match                      avant    1.92   après    1.22   écart   -0.70 ± 0.61
+xG neutre par match                              avant    4.88   après    5.17   écart   +0.29 ± 0.40
+xG neutre hors surface par match                 avant    1.95   après    1.22   écart   -0.72 ± 0.18
+passes par match                                 avant 1226.70   après 1296.90   écart  +70.20 ± 22.34
+pertes de balle par match                        avant  217.62   après  229.68   écart  +12.06 ± 6.90
+
+[avant] part des tirs hors surface 62.6 % ; conversion hors surface 7.5 %, dans la surface 20.4 % ; part des buts marqués sur tir hors surface 37.9 %
+[avant] origine des buts : récupération 63.6 %, jeu placé 15.4 %, erreur adverse 10.3 %, coup de pied arrêté 5.9 %, inclassable 3.6 %, touche 1.2 %
+[avant] buts sur récupération en 15 s au plus : 0.90 par match
+[avant] profil Long Shots (tirs hors surface) :
+   Long Shots 0-39 :  0.16 tirs par équipe, part   1.2 %, conversion   0.0 %
+   Long Shots 40-54 :  1.73 tirs par équipe, part  13.5 %, conversion   6.9 %
+   Long Shots 55-69 :  8.11 tirs par équipe, part  63.1 %, conversion   7.9 %
+   Long Shots 70-100 :  2.86 tirs par équipe, part  22.2 %, conversion   7.0 %
+
+[après] part des tirs hors surface 28.9 % ; conversion hors surface 13.3 %, dans la surface 16.1 % ; part des buts marqués sur tir hors surface 25.1 %
+[après] origine des buts : récupération 66.3 %, erreur adverse 11.5 %, coup de pied arrêté 8.6 %, jeu placé 8.2 %, inclassable 4.1 %, touche 1.2 %
+[après] buts sur récupération en 15 s au plus : 1.00 par match
+[après] profil Long Shots (tirs hors surface) :
+   Long Shots 0-39 :  0.02 tirs par équipe, part   0.4 %, conversion   0.0 %
+   Long Shots 40-54 :  0.38 tirs par équipe, part   8.3 %, conversion  21.1 %
+   Long Shots 55-69 :  2.56 tirs par équipe, part  55.8 %, conversion  13.7 %
+   Long Shots 70-100 :  1.63 tirs par équipe, part  35.5 %, conversion  11.0 %

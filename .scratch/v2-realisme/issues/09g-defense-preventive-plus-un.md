@@ -43,3 +43,7 @@ Temps machine, non compté : suite complète (environ 40 min) ; mesure 50 matchs
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+
+## Comments
+
+**Entrée du 18m (21/11/2026, réserves de l'expert).** Avec moins de frappes de loin, le jeu continue : passes + 70 ± 22 et pertes + 12 ± 7 par match (taux de perte par passe inchangé, 17,7 %), buts sur récupération en 15 s au plus 0,90 → 1,00 par match, sans intervalle (réserve facultative A3 : à mesurer en différence appariée ici). Données : `.scratch/v2-realisme/mesures/18m-*-50.json`, `docs/INDICATEURS_V2.md` section 57.

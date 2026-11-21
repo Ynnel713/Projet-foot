@@ -39,3 +39,7 @@ Temps machine, non compté : suite complète (environ 40 min) ; mesure 50 matchs
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+
+## Comments
+
+**Entrée du 18m (21/11/2026, réserve A1 acceptée par le propriétaire).** Après la sélection des frappes de loin (`docs/INDICATEURS_V2.md` section 57, 50 matchs) : conversion dans la surface 16,1 % (réel 14,7 %), hors surface 13,3 % (réel 4,2 %), part des buts hors surface 25,1 % (réel 11,7 %), 4,86 buts par match. Les frappes de loin gardées partent ligne de tir libre, tireur peu gêné à 20 m : la défense de la surface et de ses abords doit fermer ces lignes. Mesurer avant / après sur ces chiffres.
