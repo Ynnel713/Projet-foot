@@ -1,0 +1,7 @@
+8 matchs, 143 passes de jeu vers un receveur dans la surface (8.9 par équipe), tirs dans la surface 12.1 par équipe
+receveur marqué (rôle marquage) : 99%
+plus proche défenseur du receveur : médiane 2.98 m ; <=2 m 29% ; >4 m 29%
+rôle du plus proche : {'marquage': 120, 'couverture': 17, 'presseur': 4, 'aucun': 2}
+attaquants dans la surface : 1.45 par passe ; marqués 100% ; à 2 m d'un défenseur 31%
+défenseurs de champ dans la surface : 4.00 par passe
+rôles des défenseurs dans la surface : {'marquage': 1.42, 'aucun': 0.96, 'couverture': 0.59, 'zone de surface': 0.57, 'presseur': 0.41, 'compensation': 0.06}

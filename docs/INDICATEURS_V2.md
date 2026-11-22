@@ -1877,3 +1877,17 @@ Scènes neutres (`05l-scenes-finales.txt`) : 16 m 0,095 (table 0,088), 20 m 0,06
 
 **Lecture.** Hors surface, la conversion baisse de 12,3 à 7,6 % et les buts de loin de moitié (− 0,42, significatif) ; cadrage par zone au niveau réel. Les buts au total ne baissent pas significativement (4,20, réel environ 2,7) : l'excès est désormais **dans la surface**, par le volume (11,8 tirs par équipe, réel environ 8,5) plus que par la conversion (15,9 %, réel environ 13 % hors penaltys). Pistes : volume de tirs dans la surface (défense de surface `10g`, `22c`), gardien de près (`03l`, `03f`).
 
+## 62. Marquage dans la surface : homme ou zone (ticket v2-realisme/10g, 8 matchs, 22/11/2026)
+
+Commande : `PYTHONPATH=. PYTHONHASHSEED=0 uv run python .scratch/v2-realisme/mesures/10g-diag.py 8 4 10g-diag-8.json` (à chaque passe de jeu décidée vers un receveur dans la surface adverse, état de la défense lu sur la pile d'appel ; rien ne change au jeu), synthèse `10g-diag-8-synthese.txt`. Moteur du 05l.
+
+| À la passe vers la surface (143 passes, 8,9 par équipe et par match) | Valeur |
+|---|---|
+| Receveur marqué (rôle `marquage` sur lui) | 99 % |
+| Attaquants dans la surface / dont marqués | 1,45 / 100 % |
+| Attaquants à 2 m ou moins d'un défenseur | 31 % |
+| Plus proche défenseur du receveur | médiane 2,98 m ; 2 m ou moins 29 % ; plus de 4 m 29 % |
+| Défenseurs de champ dans la surface | 4,00 (marquage 1,42 ; aucun rôle 0,96 ; couverture 0,59 ; zone 0,57 ; presseur 0,41) |
+
+**Lecture.** Aucun attaquant n'est laissé libre : le marqueur est choisi à chaque pas, le libre le plus proche de l'attaquant, avant les zones de la surface (10f) ; un défenseur de zone prend donc déjà l'attaquant qui entre dans sa zone et le rend quand il en sort (comportement figé par `tests/test_v2engine_marquage_surface.py`). Rien à construire au 10g. L'écart à regarder n'est pas l'attribution mais la distance : le marqueur se tient à sa distance de marquage (Marking : 99 → 1 m, 55 → 2,5 m, 11 → 4 m, courbe validée au `v2-collectif/07`), à 3 m en médiane au moment de la passe ; l'excès de tirs dans la surface (12,1 par équipe sur ces matchs, réel environ 8,5) est à chercher au `v2-collectif/22c` (volume de passes dans la surface, distance de marquage près du but), sans toucher la courbe ici.
+
