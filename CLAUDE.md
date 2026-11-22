@@ -36,6 +36,11 @@ Interface : PWA React (`ui/`) + API FastAPI (`api/`) ; Streamlit (`app.py`) hist
 - À la clôture : temps réellement passé, comparé à l'estimation ; cause expliquée si l'écart dépasse 30 %. Intégré au rapport de clôture et ajouté au registre `docs/agents/suivi-estimations.md`.
 - Un ticket estimé au-delà d'environ 2 h est examiné pour découpage avant le code (seuil indicatif).
 
+## Informer le propriétaire (décision du 22/11/2026)
+- Avant d'attaquer un ticket : expliquer simplement en quoi il consiste et ce qu'il va changer concrètement dans le moteur (ce que fera le joueur ou le ballon autrement, quels calculs sont touchés), sans jargon de code.
+- Pendant le ticket : annoncer la durée d'attente prévue de chaque travail machine (suite de tests, série de matchs, mesure, revue d'un sous-agent) au lancement, et signaler un dépassement notable.
+- À la fin d'un ticket : expliquer ce qui a été fait, dire si c'est concluant (chiffres à l'appui, ce qui reste incertain) et suggérer le ticket logique suivant, avec la raison.
+
 ## Terminer une tâche
 1. Critères d'acceptation chiffrés posés avant le code.
 2. Tests ajoutés ou adaptés ; suite complète passée, compte comparé à l'attendu ci-dessus.
