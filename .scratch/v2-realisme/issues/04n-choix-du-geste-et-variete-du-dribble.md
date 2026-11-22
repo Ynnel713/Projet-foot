@@ -10,7 +10,7 @@
 
 **Lien avec l'existant :** remplace le « choix du geste » de `v2-attributs-restants/07a` ; à livrer avant la calibration (`v2-collectif/22a`), comme le prévoyait 07a.
 
-**Blocked by:** 04g, 04h, 04i, 04k, 04l, 04m ; `v2-attributs-contextes/05` (Flair) ; `v2-attributs-restants/05` pour les penchants.
+**Blocked by:** 04g, 04h, 04i, 04k, 04l, 04m ; `v2-attributs-contextes/05` (Flair) ; `v2-attributs-restants/05a` pour les penchants (05 découpé le 22/11/2026 : la ligne « Conduite et dribble » passe avant la calibration, levée de l'incohérence avec le 05 qui passait après).
 
 **Bloque :** `v2-collectif/22a` (calibration des volumes).
 

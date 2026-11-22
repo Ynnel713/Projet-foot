@@ -8,7 +8,7 @@
 
 **Blocked by:** 22b ; `v2-realisme/27d` (ajouté le 14/11/2026) ; `v2-realisme/18m` (ajouté le 21/11/2026).
 
-**Bloque :** passent après la calibration, avec un simple contrôle de non-régression : `v2-attributs-restants/10a` et `10b`, `05`, `04a`, `04b`, `09a`, `09b`, `09c`.
+**Bloque :** passent après la calibration, avec un simple contrôle de non-régression : `v2-attributs-restants/10a` et `10b`, `05b` (05 découpé le 22/11/2026, `05a` passe avant la calibration), `04a`, `04b`, `09a`, `09b`, `09c`.
 
 **Status:** à faire (constantes à proposer avant le code)
 

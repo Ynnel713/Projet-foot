@@ -8,7 +8,7 @@
 
 **Blocked by:** `v2-collectif/19` ; passe après `v2-collectif/22c` (contrôle de non-régression).
 
-**Bloque :** 10a (côté ouvert ou fermé selon le pied fort, sans bloquer) ; lignes « Pied » du catalogue 05.
+**Bloque :** 10a (côté ouvert ou fermé selon le pied fort, sans bloquer) ; lignes « Pied » du catalogue, ticket 05b (05 découpé le 22/11/2026).
 
 **Status:** à faire (constantes à proposer avant le code)
 
