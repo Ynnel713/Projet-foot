@@ -171,6 +171,8 @@ def _scene(x_from_line, offset, n, seed, defenders, attributes=None):
                     break
             outcomes["but" if scored == "home" else shots[0].outcome] += 1
         shooter, keeper, rivals = players()
+        for r in rivals:  # évaluée à l'instant de la frappe : la boucle avance les défenseurs d'un pas avant le tir
+            r.position = r.position + r.velocity * dt  # (ticket v2-realisme/05j ; sans effet sur un défenseur immobile)
         evaluated = (shooting.physical_shot_chance(shooter, goal, keeper, [keeper, *rivals]) if not rivals else
                      shooting.occasion_quality(shooter, goal, keeper, [keeper, *rivals]),
                      shooting.physical_block_probability(shooter, goal, [keeper, *rivals]))

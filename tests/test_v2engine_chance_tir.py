@@ -81,3 +81,34 @@ def test_without_a_keeper_the_neutral_fallback_is_a_well_placed_keeper() -> None
     placed = player("Gardien", "away", x=PITCH_LENGTH_M - shooting.KEEPER_REFERENCE_M, y=GOAL_CENTER_Y, poste="GK")
     assert shooting.physical_shot_chance(shooter, GOAL, None, []) == pytest.approx(
         shooting.physical_shot_chance(shooter, GOAL, placed, [placed]))
+
+
+# Défenseur en course (ticket v2-realisme/05j) : la scène évalue le tir à l'instant de la frappe, après le pas où la
+# boucle avance les défenseurs (avant le ticket, à leur place de départ : écart attribué à tort à l'estimateur).
+# Graines 5 à 9, `BLOCK_CHANCE` validée (0,6) et relevée (0,75, valeur mesurée au 18e).
+RUNNING = (16.0, 0.0, ((7.0, 2.0, 0.0, -4.0),))
+
+
+@pytest.mark.parametrize("block_chance", [0.6, 0.75])
+@pytest.mark.parametrize("seed", [5, 6, 7, 8, 9])
+def test_a_running_defender_is_judged_like_the_real_trajectory(monkeypatch, seed: int, block_chance: float) -> None:
+    monkeypatch.setattr(shooting, "BLOCK_CHANCE", block_chance)
+    monkeypatch.setattr(match, "BLOCK_CHANCE", block_chance)
+    from_line, offset, defenders = RUNNING
+    for evaluated, rate in (block_scene(from_line, offset, SHOTS, seed, defenders),
+                            scene_rate(from_line, offset, SHOTS, seed, defenders)):
+        low, high = wilson(round(rate * SHOTS), SHOTS)
+        assert low <= evaluated <= high, (evaluated, rate)
+
+
+def test_the_scene_judges_the_shot_where_the_defenders_are_when_it_is_struck() -> None:
+    # même défenseur, évalué à sa place de départ : hors de l'intervalle du contre observé (graine 5), ce que le ticket
+    # 05j avait pris pour une erreur de l'estimateur
+    from_line, offset, defenders = RUNNING
+    shooter = player("Buteur", x=PITCH_LENGTH_M - from_line, y=GOAL_CENTER_Y + offset, poste="BU")
+    d, y, vx, vy = defenders[0]
+    at_start = player("D0", "away", x=PITCH_LENGTH_M - d, y=GOAL_CENTER_Y + y, poste="DC")
+    at_start.velocity = Vec2(vx, vy)
+    stale = shooting.physical_block_probability(shooter, GOAL, [at_start])
+    evaluated, rate = block_scene(from_line, offset, SHOTS, 5, defenders)
+    assert abs(evaluated - stale) > 0.01 and evaluated > stale

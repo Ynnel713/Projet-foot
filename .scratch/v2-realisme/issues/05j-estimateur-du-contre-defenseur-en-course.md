@@ -14,7 +14,7 @@
 
 **Bloque :** `v2-collectif/22c` (relèvement de `BLOCK_CHANCE`).
 
-**Status :** à faire (constantes à proposer avant le code)
+**Status:** livré (22/11/2026), validé expert + QC
 
 ## Estimation
 
@@ -30,10 +30,17 @@ Confiance : faible (géométrie d'interception par angle, coût de calcul). À e
 
 ## Acceptance criteria
 
-- [ ] Scène du défenseur en course (16 m ; 7 m, 2 m, 4 m/s) : chance de but et de contre évaluées dans l'intervalle à 95 % de l'observé sur 1 500 tirs, graines 5 à 9, avec `BLOCK_CHANCE` 0,6 et 0,75
-- [ ] Scènes à défenseurs immobiles de `test_v2engine_chance_tir.py` inchangées (toutes dans l'intervalle)
-- [ ] Temps de calcul par match rapporté avant/après
-- [ ] Si `BLOCK_CHANCE` est relevée : tirs contrés, conversion et buts sur 50 matchs, valeur proposée et validée avant le code
-- [ ] Déterminisme à graine fixée ; suite complète comparée à l'attendu de `CLAUDE.md`
+- [x] Scène du défenseur en course (16 m ; 7 m, 2 m, 4 m/s) : chance de but et de contre évaluées dans l'intervalle à 95 % de l'observé sur 1 500 tirs, graines 5 à 9, avec `BLOCK_CHANCE` 0,6 et 0,75 (test `test_a_running_defender_is_judged_like_the_real_trajectory`, 10 cas)
+- [x] Scènes à défenseurs immobiles de `test_v2engine_chance_tir.py` inchangées (toutes dans l'intervalle)
+- [x] Temps de calcul par match rapporté avant/après : moteur inchangé, temps identique
+- [x] Si `BLOCK_CHANCE` est relevée : non relevée (recommandation retenue par délégation du propriétaire, 22/11/2026 : 24,2 % de contrés après le `10k`, dans le repère)
+- [x] Déterminisme à graine fixée ; suite complète comparée à l'attendu de `CLAUDE.md` : moteur inchangé, scènes à graine fixée ; 3 481 passés, 0 ignoré, 14 désélectionnés (3 470 au `10k` + 11 cas)
+
+## Résultat (22/11/2026, `docs/INDICATEURS_V2.md` section 60)
+
+L'écart venait du banc de scènes (`scripts/shot_calibration._scene`), qui avance les défenseurs d'un pas avant de résoudre le tir mais évaluait la chance avec leur place de départ (0,4 m d'écart pour un défenseur à 4 m/s). Corrigé : la chance est évaluée à l'instant de la frappe. L'estimateur existant est alors juste, graines 5 à 9, contre et but, à `BLOCK_CHANCE` 0,6 et 0,75. Une couverture en mouvement relatif (bords par dichotomie dans le repère du défenseur) a été essayée : sur cinq scènes plus dures, aucune différence mesurable (0,007 au plus) ; écartée (coût à chaque décision). Moteur inchangé. 2 tests ajoutés (11 cas).
+
+Durée : estimée 2 h 20, réelle environ 1 h 05 (analyse 30 min, développement et essai écarté 15 min, tests 10 min, intégration et documentation 10 min), écart − 54 % : la cause s'est révélée hors de l'estimateur (banc de scènes), sans code moteur à écrire. Découvert pendant le `05l` (la visée du tireur exposait l'écart). Temps machine hors total : scènes (environ 5 min), suite complète.
 
 ## Comments
+- 22/11/2026, passage 1 : expert APPROVED ; QC VALIDÉ ; clôture VALIDÉ. Réserves facultatives : A1 assertion du test de régression plus faible que son commentaire (écart > 0,01 au lieu de « hors de l'intervalle »), non reprise pour ne pas rouvrir la revue ; A2 critère 5 à cocher (fait). À surveiller : relancer `05j-durs.py` avec des défenseurs plus rapides et plus proches si `v2-collectif/22c` en dépend.

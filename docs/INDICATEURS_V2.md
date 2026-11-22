@@ -1838,3 +1838,13 @@ Déterminisme : matchs 0 et 1 rejoués, mêmes scores, mêmes tirs, mêmes passe
 - **La conversion d'un tir non contré reste trop haute** : 11,7 % hors surface (réel 4,2 %), 15,1 % dans la surface (réel 14,7 % penaltys compris). Cause hors placement : tireur et gardien neutres, gardien bien placé, sans défenseur, la résolution physique donne 0,336 à 11 m, 0,204 à 16 m, 0,118 à 20 m, 0,059 à 25 m face au but contre 0,155, 0,088, 0,059, 0,035 dans la table cible (`shooting._XG_LOGIT`) ; cadrage plausible (44 % à 20 m), gardien trop court (52 % des cadrés arrêtés à 11 m, 73 % à 20 m). Ticket `v2-realisme/05l`.
 - Buts encore au-dessus du réel (4,34 contre environ 2,7).
 
+## 60. Estimateur du contre pour un défenseur en course (ticket v2-realisme/05j, scènes, 22/11/2026)
+
+Scène du ticket (`scripts/shot_calibration.py`, tir à 16 m dans l'axe, défenseur à 7 m de la ligne, 2 m de l'axe, 4 m/s en travers ; 1 500 tirs par graine, intervalle de Wilson à 95 %).
+
+**Cause de l'écart relevé au 18e : le banc, pas l'estimateur.** La scène avance les défenseurs d'un pas (0,1 s) avant de résoudre le tir, mais évaluait la chance avec leur place de départ : le défenseur était jugé 0,4 m plus haut qu'au moment de la frappe. Évalué à l'instant de la frappe, l'estimateur existant (`shooting._block_covers`, place à l'arrivée du ballon, portée prise sur la ligne joueur-tireur) tombe dans l'intervalle de l'observé pour les graines 5 à 9, contre et but, à `BLOCK_CHANCE` 0,6 (contre évalué 0,268, observé 0,260 à 0,289) et 0,75 (0,335, observé 0,321 à 0,349).
+
+**Couverture en mouvement relatif essayée puis écartée.** Bords de l'angle couvert calculés dans le repère du défenseur (vitesse relative du ballon V·u(θ) − v, dichotomie) : sur cinq scènes plus dures (défenseur à 3 à 10 m du tireur, 4 à 7 m/s, trois graines), elle et l'estimateur existant sont tous deux dans l'intervalle, à 0,007 au plus l'un de l'autre. Gain non mesurable, calcul en plus à chaque décision : non retenue.
+
+**Moteur inchangé** (seul le banc de scènes change) : aucun effet sur les matchs ni sur le temps de calcul. `BLOCK_CHANCE` gardée à 0,6 : après le `10k`, 24,2 % des tirs sont contrés, dans le repère (20 à 28 %) ; le déséquilibre restant (28,4 % dans la surface, 9,6 % hors surface, contre environ 36 % hors surface dans le réel, échantillon de 372 tirs de Premier League relevé par ESPN) est une question de placement, qu'une hausse uniforme de `BLOCK_CHANCE` aggraverait dans la surface.
+
