@@ -478,6 +478,11 @@ def score_candidate(p: ExcelPlayer, c: Candidate) -> Candidate:
 
 
 # --- Client HTTP ------------------------------------------------------------------------------
+class ProfileUnreadable(RuntimeError):
+    """Fiche téléchargée mais sans attributs. Bloquante ici (RuntimeError, comme avant) ; le mode
+    découverte (fminside_new_players.py) passe simplement au joueur suivant."""
+
+
 class FMInside:
     def __init__(self, delay: float, cache_path: Path, use_cache: bool = True, cookie: str = ""):
         self.delay = delay
@@ -543,13 +548,15 @@ class FMInside:
             self._req("GET", BASE + "/players")
             self._warm = True
 
-    def search(self, name="", nationality="", min_age=None, max_age=None) -> list[Candidate]:
-        key = json.dumps([name, nationality, min_age, max_age], ensure_ascii=False)
+    def search(self, name="", nationality="", min_age=None, max_age=None, club="") -> list[Candidate]:
+        # `club` : filtre par club (mode découverte, scripts/fminside_new_players.py). Absent de la
+        # clé quand il est vide, pour garder valides les recherches déjà en cache.
+        key = json.dumps([name, nationality, min_age, max_age] + ([club] if club else []), ensure_ascii=False)
         if key in self.cache["search"]:
             return [Candidate.from_json(d) for d in self.cache["search"][key]]
         self.warmup()
         form = {"page": "players", "database_version": DB_VERSION, "gender": "1",  # 1 = hommes
-                "name": name, "uid": "", "club": "", "nationality": nationality, "league": "",
+                "name": name, "uid": "", "club": club, "nationality": nationality, "league": "",
                 "league_id": "", "min_age": "" if min_age is None else str(min_age),
                 "max_age": "" if max_age is None else str(max_age), "max_value": "", "max_wage": "",
                 "min_ability": "", "max_ability": "", "min_potential": "", "max_potential": "", "clause": ""}
@@ -588,7 +595,7 @@ class FMInside:
         html = self._req("GET", url).text
         attrs = parse_attributes(html)
         if not attrs:
-            raise RuntimeError(f"Aucun attribut trouvé sur {url} (structure du site modifiée ?)")
+            raise ProfileUnreadable(f"Aucun attribut trouvé sur {url} (structure du site modifiée ?)")
         self.cache["profile"][url] = attrs
         ex = parse_extras(html)
         if self.logged_in and ex["locked"]:
