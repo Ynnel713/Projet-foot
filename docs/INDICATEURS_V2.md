@@ -1848,3 +1848,32 @@ Scène du ticket (`scripts/shot_calibration.py`, tir à 16 m dans l'axe, défens
 
 **Moteur inchangé** (seul le banc de scènes change) : aucun effet sur les matchs ni sur le temps de calcul. `BLOCK_CHANCE` gardée à 0,6 : après le `10k`, 24,2 % des tirs sont contrés, dans le repère (20 à 28 %) ; le déséquilibre restant (28,4 % dans la surface, 9,6 % hors surface, contre environ 36 % hors surface dans le réel, échantillon de 372 tirs de Premier League relevé par ESPN) est une question de placement, qu'une hausse uniforme de `BLOCK_CHANCE` aggraverait dans la surface.
 
+## 61. Chance d'un tir propre, plongeon du gardien et visée (ticket v2-realisme/05l, 20 matchs capturés, scènes et 5 séries de 50 matchs appariés, 22/11/2026)
+
+Repères réels : part des cadrés arrêtés environ 60 % dans la surface et 85 % hors surface (soccerment, indicatif) ; hors surface, environ 28 % de cadrés et 36 % de contrés (ESPN, 372 tirs de Premier League) ; conversion 14,7 % dans la surface (penaltys compris), 4,2 % hors surface (Opta, 2024-25).
+
+**Diagnostic.** Tireur et gardien neutres, gardien bien placé, sans défenseur : 0,336 à 11 m, 0,204 à 16 m, 0,118 à 20 m face au but, contre 0,155, 0,088, 0,059 dans la table cible (`shooting._XG_LOGIT`). Rejeu des 596 tirs de 20 matchs du banc (état complet capturé à chaque tir, `.scratch/v2-realisme/mesures/05l-capture.py`, lois de la résolution, `05l-rejeu.py`) : cadrage juste (43,5 % des tirs non contrés cadrés hors surface, réel environ 44 %), gardien juste dans la surface (57 % d'arrêts), trop faible de loin (64 %, repère 85 %). Seule la vitesse du plongeon joue ; ni la portée maximale (2,8 m) ni la réaction (0,30 s).
+
+**Mécanisme manquant révélé : la visée.** Plongeon seul à 6 m/s : le tireur visant toujours le centre, un tireur précis tirait davantage sur le gardien (Finishing 95 < 60 face au but). Trois versions mesurées :
+- visée choisie parmi centre et intérieur des poteaux selon la place du gardien (information parfaite) : sur 50 matchs, 5,02 buts (+ 0,54), gardien à 49 % d'arrêts dans la surface et 33 % hors surface : le porteur ne frappe que lorsqu'il exploite un gardien mal placé (effet de sélection invisible au rejeu hors ligne). Écartée ;
+- **retenue** : un côté du but tiré à pile ou face, `AIM_INSIDE_POST_M` = 2,5 m à l'intérieur du poteau (1,16 m du centre), le tireur ne lit pas le gardien (lecture réservée au 03l) ; décision et xG prennent l'espérance des deux côtés. Grille (distance au poteau 1 à 2,5 m x plongeon 3 à 6 m/s, `05l-grille-cote.py`) : note toujours croissante (6 positions), 2,5 m et 6 m/s donnent 61,6 % et 82,6 % d'arrêts hors ligne.
+
+**Marge des frappes de loin (18m).** Avec une frappe à sa vraie valeur, la marge de 0,05 étouffe les frappes de loin. Séries de 50 matchs appariés avec le moteur final : marge 0,05 → 0,55 tir hors surface par équipe ; 0,02 → 1,17 ; **0 → 2,64** (repère environ 4,1). Marge ramenée à 0.
+
+**Série appariée retenue** (`PYTHONPATH=. PYTHONHASHSEED=0 uv run python .scratch/v2-realisme/mesures/05l-serie.py 50 4 <avant|après> <sortie.json> [marge]` ; avant : plongeon 3 m/s, visée au centre, marge 0,05 = moteur du 05j ; après : moteur final ; synthèse `05l-serie-50-synthese.txt`).
+
+| Par match (tirs : par équipe) | Avant | Après | Écart apparié |
+|---|---|---|---|
+| Buts | 4,48 | 4,20 | − 0,28 [− 1,09 ; + 0,53] |
+| Buts hors / dans la surface | 0,82 / 3,64 | **0,40** / 3,74 | − 0,42 [− 0,71 ; − 0,13] / + 0,10 [− 0,65 ; + 0,85] |
+| Tirs / hors surface | 15,33 / 3,32 | 14,63 / 2,64 | − 0,70 [− 1,58 ; + 0,18] / − 0,68 [− 1,15 ; − 0,22] |
+| Conversion hors / dans la surface (poolé) | 12,3 % / 15,4 % | **7,6 %** / 15,9 % | |
+| Cadrés hors / dans la surface | 36,7 % / 34,4 % | 28,4 % / 37,8 % | (réel 28 % / environ 38 %) |
+| Cadrés arrêtés hors / dans la surface | 66,4 % / 55,3 % | 73,3 % / 58,1 % | (repères 85 % / 60 %) |
+| Contrés hors / dans la surface (poolé) | 9,9 % / 28,6 % | 15,9 % / 25,5 % | |
+| Passes / pertes | 1 302 / 229 | 1 305 / 232 | + 3 [− 18 ; + 25] / + 3 [− 3 ; + 9] |
+
+Scènes neutres (`05l-scenes-finales.txt`) : 16 m 0,095 (table 0,088), 20 m 0,061 (0,059) face au but ; 11 m 0,311 (0,155) et 25-30 m 0,05 (0,02 à 0,035) restent au-dessus (portée plafonnée à 2,8 m de loin ; de près, gardien à 1 m de sa ligne dans la scène). Estimateur contre trajectoire : à 5 % près (tolérance des tests, `tests/test_v2engine_chance_tir.py`). Déterminisme : matchs 0 et 1 rejoués, mêmes empreintes.
+
+**Lecture.** Hors surface, la conversion baisse de 12,3 à 7,6 % et les buts de loin de moitié (− 0,42, significatif) ; cadrage par zone au niveau réel. Les buts au total ne baissent pas significativement (4,20, réel environ 2,7) : l'excès est désormais **dans la surface**, par le volume (11,8 tirs par équipe, réel environ 8,5) plus que par la conversion (15,9 %, réel environ 13 % hors penaltys). Pistes : volume de tirs dans la surface (défense de surface `10g`, `22c`), gardien de près (`03l`, `03f`).
+

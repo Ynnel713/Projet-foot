@@ -37,7 +37,9 @@ def test_base_chance_stays_in_the_owner_target_table() -> None:
 def test_a_defender_in_the_shooting_cone_lowers_the_occasion_and_one_beside_it_does_not() -> None:
     shooter, keeper = _p("A", 89.0), _keeper()
     alone = occasion_quality(shooter, GOAL, keeper, [])
-    in_cone = occasion_quality(shooter, GOAL, keeper, [_p("D", 97.0, 35.0, team="away")])
+    # à 4 m du tireur, il ferme une part du but hors de portée du gardien ; plus loin (8 m), le tireur le contourne en
+    # visant à l'intérieur d'un poteau (visée, ticket v2-realisme/05l) et il ne cache presque plus que l'angle du gardien
+    in_cone = occasion_quality(shooter, GOAL, keeper, [_p("D", 93.0, 34.0, team="away")])
     beside = occasion_quality(shooter, GOAL, keeper, [_p("D", 97.0, 41.0, team="away")])
     assert in_cone < 0.85 * alone and beside == alone
     # plus il est près du tireur, plus il cache de but ; au contact du cône entier : `BLOCK_CHANCE`

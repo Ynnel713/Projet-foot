@@ -41,33 +41,38 @@ def _best(holder, players, keeper) -> dict[str, float]:
     return values
 
 
-def test_margin_is_the_validated_value() -> None:
-    assert LONG_SHOT_MARGIN == 0.05
-
-
-def test_at_20_m_with_a_free_teammate_in_the_box_he_passes_instead_of_shooting(monkeypatch) -> None:
-    _exact(monkeypatch)
-    holder, players, keeper = _scene(20.0, free_mate=True)
-    values = _best(holder, players, keeper)
-    # la frappe vaut un peu plus que la passe (avant le ticket, il frappait), mais pas nettement plus
-    assert 0.0 < values["shot"] - max(values["pass"], values["dribble"]) < LONG_SHOT_MARGIN
-    monkeypatch.setattr("v2engine.decision.LONG_SHOT_MARGIN", 0.0)
-    assert choose_action(holder, players, GOAL, keeper).kind == "shot"
-    monkeypatch.setattr("v2engine.decision.LONG_SHOT_MARGIN", 0.05)
-    action = choose_action(holder, players, GOAL, keeper)
-    assert action.kind == "pass" and action.target.name == "Libre"
-    assert action.best and action.best_kind == "pass"  # le meilleur choix se juge avec la même règle
-
-
-def test_at_20_m_without_a_better_option_he_still_shoots(monkeypatch) -> None:
-    _exact(monkeypatch)
-    # porteur entouré à 3 m (dans son dos, sur les côtés, en biais devant), sans coéquipier : la conduite ne mène à rien,
-    # la ligne de tir reste libre
+def _ring(mate: bool) -> tuple[PlayerState, list[PlayerState], PlayerState]:
+    """Porteur dans l'axe à 20 m, entouré à 3 m (dans son dos, sur les côtés, en biais devant) : la conduite ne mène à
+    rien, la ligne de tir reste libre ; avec ou sans un coéquipier démarqué loin (passe qui vaut moins que la frappe)."""
     holder = _player("Porteur", position=Vec2(PITCH_LENGTH_M - 20.0, GOAL_CENTER_Y))
     keeper = _player("Gardien", "away", "GK", Vec2(PITCH_LENGTH_M - 1.0, GOAL_CENTER_Y))
     ring = [_player(f"R{i}", "away", position=holder.position + Vec2(dx, dy))
             for i, (dx, dy) in enumerate(((-3.0, 0.0), (0.0, 3.0), (0.0, -3.0), (2.1, 2.1), (2.1, -2.1)))]
-    players = [holder, keeper, *ring]
+    mates = [_player("Libre", position=Vec2(PITCH_LENGTH_M - 18.0, GOAL_CENTER_Y - 14.0))] if mate else []
+    return holder, [holder, keeper, *ring, *mates], keeper
+
+
+def test_margin_is_the_validated_value() -> None:
+    # 0,05 au 18m, ramenée à 0 au 05l : elle compensait une frappe surévaluée (chance d'un tir propre deux fois la table)
+    assert LONG_SHOT_MARGIN == 0.0
+
+
+def test_a_long_shot_slightly_better_than_continuing_is_taken_only_without_margin(monkeypatch) -> None:
+    _exact(monkeypatch)
+    holder, players, keeper = _ring(mate=True)
+    values = _best(holder, players, keeper)
+    gap = values["shot"] - max(values["pass"], values["dribble"])
+    assert 0.0 < gap < 0.01  # la frappe vaut un peu plus que la passe et la conduite, pas nettement plus
+    assert choose_action(holder, players, GOAL, keeper).kind == "shot"
+    monkeypatch.setattr("v2engine.decision.LONG_SHOT_MARGIN", 0.01)
+    action = choose_action(holder, players, GOAL, keeper)
+    assert action.kind != "shot"
+    assert action.best and action.best_kind == action.kind  # le meilleur choix se juge avec la même règle
+
+
+def test_at_20_m_without_a_better_option_he_still_shoots(monkeypatch) -> None:
+    _exact(monkeypatch)
+    holder, players, keeper = _ring(mate=False)
     values = _best(holder, players, keeper)
     assert values["shot"] - values["dribble"] > LONG_SHOT_MARGIN
     action = choose_action(holder, players, GOAL, keeper)
@@ -83,13 +88,14 @@ def test_margin_does_not_apply_inside_the_box(monkeypatch) -> None:
 
 def test_margin_does_not_apply_to_a_direct_free_kick(monkeypatch) -> None:
     _exact(monkeypatch)
-    holder, players, keeper = _scene(20.0, free_mate=True)
+    holder, players, keeper = _ring(mate=True)
+    monkeypatch.setattr("v2engine.decision.LONG_SHOT_MARGIN", 0.01)
     assert choose_action(holder, players, GOAL, keeper, set_piece=True).kind == "shot"
 
 
-def test_long_shots_are_rarer_with_the_margin_under_noisy_perception(monkeypatch) -> None:
-    # perception brouillée (Decisions 62) : la marge baisse nettement la part des frappes, sans les supprimer
-    holder, players, keeper = _scene(20.0, free_mate=True)
+def test_long_shots_are_rarer_with_a_margin_under_noisy_perception(monkeypatch) -> None:
+    # perception brouillée (Decisions 62) : une marge positive baisse la part des frappes, sans les supprimer
+    holder, players, keeper = _ring(mate=True)
     holder.attributes["Decisions"] = 62
 
     def shot_rate(margin: float) -> float:
@@ -97,6 +103,5 @@ def test_long_shots_are_rarer_with_the_margin_under_noisy_perception(monkeypatch
         random.seed(20260923)
         return sum(choose_action(holder, players, GOAL, keeper).kind == "shot" for _ in range(1000)) / 1000
 
-    before, after = shot_rate(0.0), shot_rate(LONG_SHOT_MARGIN)
-    # mesuré le 21/11/2026 sur cette scène : 54 % sans marge, 19 % à 0,05 (36 % au premier essai à 0,03)
-    assert after < before - 0.15 and after > 0.0
+    without, with_margin = shot_rate(0.0), shot_rate(0.02)
+    assert with_margin < without - 0.15 and with_margin > 0.0

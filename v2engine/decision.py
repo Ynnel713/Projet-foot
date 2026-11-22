@@ -84,7 +84,11 @@ SHOT_FREE_CONE_DEG = 60.0
 # choix factuel (`best`, `gap`), jugé avec la même règle ; la valeur des options (`evaluate_options`) et l'exécution
 # (Long Shots) ne changent pas. Pas sur coup de pied arrêté (frappe directe). Premier essai à 0,03 (50 matchs appariés) :
 # tirs hors surface de 12,86 à 7,04 par équipe, cible non atteinte (environ 4,1, Opta) ; 0,05 retenu par le propriétaire.
-LONG_SHOT_MARGIN = 0.05
+# Ramenée à 0 au ticket v2-realisme/05l (22/11/2026, recommandation retenue par délégation du propriétaire) : elle
+# compensait une frappe de loin surévaluée (chance d'un tir propre environ deux fois la table cible). Gardien et visée
+# recalés, 50 matchs appariés : 0,05 -> 0,55 tir hors surface par équipe, 0,02 -> 1,17, 0 -> 2,64 (repère environ 4,1),
+# conversion hors surface 7,6 % (réel 4,2 %). Règle gardée (constante réglable).
+LONG_SHOT_MARGIN = 0.0
 # Talonnade (même ticket) : vers un coéquipier dans le dos (hors du cône de la passe) à `BACKHEEL_MAX_M` au plus, la
 # passe part sans rotation, plus difficile (`possession.BACKHEEL_DIFFICULTY`, Technique). Flair règle la chance qu'il
 # y pense à cette décision (docs/CARTE_ATTRIBUTS_V2.md : tendance à tenter l'inattendu) ; la valeur de l'option tranche

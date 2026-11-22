@@ -196,7 +196,8 @@ def occasion_quality(player: PlayerState, goal: Vec2, keeper: PlayerState | None
     formule analytique et le cône."""
     # but et contre se jugent ensemble, écart par écart : un défenseur dans l'axe contre surtout des tirs qui allaient au
     # but, un défenseur devant le gardien surtout des tirs que le gardien aurait arrêtés
-    return (1.0 - _shank_share(player, goal, opponents)) * _flight_shares(player, goal, keeper, opponents)[2]
+    kept, (_, _, goal_unblocked), _ = _aimed(player, goal, keeper, opponents)
+    return kept * goal_unblocked
 
 
 def shot_outcome_shares(player: PlayerState, goal: Vec2, keeper: PlayerState | None,
@@ -204,8 +205,7 @@ def shot_outcome_shares(player: PlayerState, goal: Vec2, keeper: PlayerState | N
     """(chance de but, chance d'être contré) d'un tir depuis sa position, avec les lois de la résolution physique (un seul
     calcul de `_flight_shares`) : la chance de but est `occasion_quality`, la chance de contre `physical_block_probability`
     (ticket v2-realisme/18k, valeur du tir manqué dans la décision)."""
-    kept = 1.0 - _shank_share(player, goal, opponents)
-    _, blocked, goal_unblocked = _flight_shares(player, goal, keeper, opponents)
+    kept, (_, blocked, goal_unblocked), _ = _aimed(player, goal, keeper, opponents)
     return kept * goal_unblocked, kept * blocked
 
 
@@ -261,6 +261,15 @@ SHOT_ERROR_SIGMA_RAD = 0.18
 SHOT_AIM_HEIGHT_M = 1.0  # visée à 1 m du sol (coins bas, ballon rasant ; hauteur de visée réelle non trouvée)
 SHOT_ERROR_PRESSURE_GAIN = 1.0
 SHANK_SHARE = 0.04
+# Visée (ticket v2-realisme/05l, recommandation retenue par délégation du propriétaire, 22/11/2026) : le tireur vise le
+# centre du but ou un point à `AIM_INSIDE_POST_M` à l'intérieur d'un poteau (1,16 m du centre), celui qui lui donne la
+# meilleure chance (`_aimed`). Sans elle, un tireur précis tirait sur le gardien : avec le plongeon du 05l, Finishing 95
+# valait moins que 60 face au but. Grille sur 596 tirs de 20 matchs (distance au poteau 1 ; 1,5 ; 2 ; 2,5 ; 3,66 m x
+# plongeon 3 à 6 m/s) : visée au ras du poteau (1 m), le tireur choisit parfaitement son côté et le gardien n'arrête que
+# 51 % des cadrés dans la surface même à 6 m/s (repère environ 60 %) ; centre seul, la note cesse de compter dans 2 à 3
+# positions sur 6. 2,5 m : 58,5 % et 81 % d'arrêts dans et hors de la surface, la note compte partout. Lecture : un tir
+# de match vise à côté du gardien, pas au ras du poteau (placement parfait réservé au penalty) ; mesure directe non trouvée.
+AIM_INSIDE_POST_M = 2.5
 SHANK_SPEED_SHARE = 0.4
 SHANK_ANGLE_DEG = (40.0, 90.0)
 
@@ -317,7 +326,13 @@ FLYING = "en vol"  # issue provisoire d'un tir en vol dans la trace, remplacée 
 KEEPER_REACTION_S = 0.30
 KEEPER_STANDING_REACH_M = 1.0
 KEEPER_DIVE_REACH_M = 2.8
-KEEPER_DIVE_MPS = 3.0
+# Plongeon recalé au ticket v2-realisme/05l (22/11/2026, recommandation retenue par délégation du propriétaire) :
+# 3,0 -> 6,0 m/s, avec la visée (`AIM_INSIDE_POST_M`). Rejeu de 596 tirs de 20 matchs du banc avec les lois de la
+# résolution (`_aimed`) : part des cadrés arrêtés 45 -> 58,5 % dans la surface, 61 -> 81 % hors surface (repères environ
+# 60 et 85 %, soccerment) ; seule la vitesse du plongeon joue sur ces tirs, ni la portée maximale ni la réaction.
+# Vitesse moyenne de la main du gardien, ordre de grandeur (mesure directe non trouvée). Le 05h l'avait baissée de 4 à
+# 3 m/s quand les tirs partaient surtout de 25 à 30 m (section 22).
+KEEPER_DIVE_MPS = 6.0
 
 
 def keeper_reach_m(elapsed_s: float) -> float:
@@ -379,10 +394,41 @@ def _keeper_cover(origin: Vec2, goal: Vec2, axis: Vec2, keeper_at: Vec2) -> tupl
     return (min(angles), max(angles)) if angles else ()
 
 
-def _shank_share(shooter: PlayerState, goal: Vec2, opponents: list[PlayerState]) -> float:
-    """Part des tirs dévissés (`draw_shot_error`) : ils ne partent pas en vol, ni contrés ni cadrés."""
-    wide, under = on_target_axes(shooter, goal, opponents)
-    return SHANK_SHARE * (shot_error_sigma(shooter, goal, opponents) / SHOT_ERROR_SIGMA_RAD) ** 2 * (1.0 - wide * under)
+def _shank_share(shooter: PlayerState, goal: Vec2, opponents: list[PlayerState], aim: float = 0.0) -> float:
+    """Part des tirs dévissés (`draw_shot_error`) : ils ne partent pas en vol, ni contrés ni cadrés. `aim` : visée en
+    largeur (rad, relative à l'axe vers le centre du but, ticket v2-realisme/05l)."""
+    _, under = on_target_axes(shooter, goal, opponents)
+    sigma = shot_error_sigma(shooter, goal, opponents)
+    return SHANK_SHARE * (sigma / SHOT_ERROR_SIGMA_RAD) ** 2 * (1.0 - _wide_share(shooter, goal, sigma, aim) * under)
+
+
+def _wide_share(shooter: PlayerState, goal: Vec2, sigma: float, aim: float) -> float:
+    """Chance de rester entre les poteaux en visant `aim` (rad, relative à l'axe vers le centre du but)."""
+    low, high, _ = _goal_angle(shooter.position, goal)
+    return 0.5 * (math.erf((high - aim) / (sigma * math.sqrt(2.0))) - math.erf((low - aim) / (sigma * math.sqrt(2.0))))
+
+
+def aim_angles(shooter: PlayerState, goal: Vec2) -> tuple[float, float]:
+    """Les deux visées en largeur (rad, relatives à l'axe vers le centre du but ; ticket v2-realisme/05l) :
+    `AIM_INSIDE_POST_M` à l'intérieur de chaque poteau."""
+    axis = (goal - shooter.position).normalized()
+    inner = GOAL_WIDTH_M / 2.0 - AIM_INSIDE_POST_M
+    return tuple(_relative(shooter.position, axis, Vec2(goal.x, goal.y + side * inner)) for side in (-1.0, 1.0))
+
+
+def _aimed(shooter: PlayerState, goal: Vec2, keeper: PlayerState | None,
+           opponents: list[PlayerState]) -> tuple[float, tuple[float, float, float], tuple[float, float]]:
+    """Visée (ticket v2-realisme/05l) : un côté du but tiré à pile ou face au départ du tir (`draw_shot_error`), le
+    tireur ne lit pas le gardien (la lecture du tireur par le gardien vient au 03l). Rend l'espérance sur les deux côtés,
+    dévissés compris, avec les lois de la résolution : (1, parts de `_flight_shares` pondérées par la part non dévissée,
+    les deux visées). Même loi à l'évaluation (décision, xG) et au départ du tir."""
+    aims = aim_angles(shooter, goal)
+    mean = [0.0, 0.0, 0.0]
+    for aim, shares in zip(aims, _flight_shares(shooter, goal, keeper, opponents, aims)):
+        kept = 1.0 - _shank_share(shooter, goal, opponents, aim)
+        for i in range(3):
+            mean[i] += 0.5 * kept * shares[i]
+    return 1.0, (mean[0], mean[1], mean[2]), aims
 
 
 def _block_covers(shooter: PlayerState, goal: Vec2, opponents: list[PlayerState]) -> list[tuple[float, float]]:
@@ -438,28 +484,37 @@ def _goal_angles(shooter: PlayerState, goal: Vec2, keeper: PlayerState | None) -
 
 
 def _flight_shares(shooter: PlayerState, goal: Vec2, keeper: PlayerState | None,
-                   opponents: list[PlayerState]) -> tuple[float, float, float]:
+                   opponents: list[PlayerState], aims: tuple[float, ...] | None = None):
     """Tir en vol (non dévissé), écart en largeur gaussien (`shot_error_sigma`) : (chance de but sans les contres, chance
     d'être contré, chance de but et de ne pas être contré). Les écarts sont découpés aux bords du but, de la portée du
     gardien et de celle de chaque défenseur ; sur chaque tranche, un ballon contré par l'un n'atteint pas les suivants
-    (`BLOCK_CHANCE` par défenseur touché). La hauteur (sous la barre) ne joue que sur le but."""
+    (`BLOCK_CHANCE` par défenseur touché). La hauteur (sous la barre) ne joue que sur le but. Visée au centre du but ;
+    avec `aims` (rad, ticket v2-realisme/05l), la liste des trois parts pour chaque visée, découpes calculées une fois."""
     sigma = shot_error_sigma(shooter, goal, opponents)
     _, under = on_target_axes(shooter, goal, opponents)
     scoring, covers = _goal_angles(shooter, goal, keeper), _block_covers(shooter, goal, opponents)
-
-    def below(angle: float) -> float:
-        return 0.5 * (1.0 + math.erf(angle / (sigma * math.sqrt(2.0))))
-
     cuts = sorted({-math.inf, math.inf, *(c for span in scoring + covers for c in span)})
-    goal_share = blocked = goal_unblocked = 0.0
+    slices = []
     for lo, hi in zip(cuts, cuts[1:]):
-        mass = below(hi) - below(lo)
         through = (1.0 - BLOCK_CHANCE) ** sum(1 for c_lo, c_hi in covers if c_lo <= lo and hi <= c_hi)
-        blocked += mass * (1.0 - through)
-        if any(g_lo <= lo and hi <= g_hi for g_lo, g_hi in scoring):
-            goal_share += mass * under
-            goal_unblocked += mass * under * through
-    return goal_share, blocked, goal_unblocked
+        slices.append((lo, hi, through, any(g_lo <= lo and hi <= g_hi for g_lo, g_hi in scoring)))
+
+    def shares(aim: float) -> tuple[float, float, float]:
+        def below(angle: float) -> float:
+            return 0.5 * (1.0 + math.erf((angle - aim) / (sigma * math.sqrt(2.0))))
+
+        goal_share = blocked = goal_unblocked = 0.0
+        for lo, hi, through, scores in slices:
+            mass = below(hi) - below(lo)
+            blocked += mass * (1.0 - through)
+            if scores:
+                goal_share += mass * under
+                goal_unblocked += mass * under * through
+        return goal_share, blocked, goal_unblocked
+
+    if aims is None:
+        return shares(0.0)
+    return [shares(aim) for aim in aims]
 
 
 def physical_shot_chance(shooter: PlayerState, goal: Vec2, keeper: PlayerState | None,
@@ -470,13 +525,15 @@ def physical_shot_chance(shooter: PlayerState, goal: Vec2, keeper: PlayerState |
     vol jusqu'à lui ; gardien immobile pendant le vol (réserve A1 du 05h). Quelques `erf`, aucune constante nouvelle.
     Approximation : largeur et hauteur supposées indépendantes, comme au 35b. Toute modification de la résolution
     (gardien, cadrage, contre, vitesse du tir) se reporte ici ; contrôle : `scripts/shot_calibration.py`."""
-    return (1.0 - _shank_share(shooter, goal, opponents)) * _flight_shares(shooter, goal, keeper, opponents)[0]
+    kept, (goal_share, _, _), _ = _aimed(shooter, goal, keeper, opponents)
+    return kept * goal_share
 
 
 def physical_block_probability(shooter: PlayerState, goal: Vec2, opponents: list[PlayerState]) -> float:
     """Chance que le tir soit contré, avec les lois du contre physique (ticket v2-realisme/05e, `_flight_shares`). Le
     cône `block_probability` (tir visant un point du but au hasard) reste la règle du gardien (`gardien.py`)."""
-    return (1.0 - _shank_share(shooter, goal, opponents)) * _flight_shares(shooter, goal, None, opponents)[1]
+    kept, (_, blocked, _), _ = _aimed(shooter, goal, None, opponents)
+    return kept * blocked
 
 
 # xG (ticket v2-realisme/06a, proposé le 09/11/2026, validé par délégation du propriétaire ; décision D-V12). xG neutre :
@@ -520,16 +577,19 @@ def post_shot_xg(gap_m: float, elapsed_s: float) -> float:
     return 1.0 / (1.0 + math.exp(-(gap_m - keeper_reach_m(elapsed_s)) / PSXG_SPREAD_M))
 
 
-def draw_shot_error(shooter: PlayerState, goal: Vec2, opponents: list[PlayerState]) -> tuple[float, float] | None:
+def draw_shot_error(shooter: PlayerState, goal: Vec2, opponents: list[PlayerState],
+                    keeper: PlayerState | None = None) -> tuple[float, float] | None:
     """Tir en vol (ticket v2-realisme/05a) : écarts d'angle tirés au départ, en largeur (rad, autour de l'axe vers le centre
     du but) et en hauteur (rad, autour de la visée à `SHOT_AIM_HEIGHT_M`) ; `None` pour un tir dévissé. Mêmes lois que
     `classify_unscored` (35b), sans tirage du but : l'issue se lit sur la ligne. Dévissé : `SHANK_SHARE` x (écart
-    relatif)² des tirs hors du cadre, soit la même part des tirs ratés qu'au 35b."""
+    relatif)² des tirs hors du cadre, soit la même part des tirs ratés qu'au 35b. Depuis le ticket v2-realisme/05l,
+    l'écart en largeur se tire autour d'un côté du but tiré au sort (`aim_angles`), plus autour du centre du but ;
+    `keeper` est gardé pour la signature (le tireur ne lit pas le gardien)."""
     sigma = shot_error_sigma(shooter, goal, opponents)
-    wide, high = on_target_axes(shooter, goal, opponents)
-    if TIR.random() < SHANK_SHARE * (sigma / SHOT_ERROR_SIGMA_RAD) ** 2 * (1.0 - wide * high):
+    aim = aim_angles(shooter, goal)[0 if TIR.random() < 0.5 else 1]  # côté tiré au sort (ticket v2-realisme/05l)
+    if TIR.random() < _shank_share(shooter, goal, opponents, aim):
         return None
-    return TIR.gauss(0.0, sigma), TIR.gauss(0.0, sigma)
+    return aim + TIR.gauss(0.0, sigma), TIR.gauss(0.0, sigma)
 
 
 def shank_velocity(shooter: PlayerState, goal: Vec2, shot_speed: float) -> Vec2:

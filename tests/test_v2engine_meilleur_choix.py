@@ -58,9 +58,12 @@ def test_at_the_box_edge_a_good_finisher_shoots_and_a_poor_one_looks_for_somethi
     # ticket v2-realisme/05e : la chance du tir est celle de la résolution physique, plus généreuse que le réel jusqu'au
     # réglage du 22c (un tir de 15 m vaut 0,18 même à 25) ; la scène recule à 21 m, hors de la surface (Long Shots) :
     # tir 0,111 à 99 contre 0,073 à 25, pour une passe excentrée à 0,091
+    # ticket v2-realisme/05l : la chance d'un tir propre est ramenée sur la table cible (0,06 à 21 m) ; de si loin, la
+    # conduite vaut mieux pour tous ; la scène revient au bord de la surface, à 14 m (Finishing) : tir 0,167 à 99
+    # contre 0,094 à 25, conduite 0,133, passe excentrée 0,093
     def scene(finishing: int) -> list[PlayerState]:
-        return [_p("A", 84, Long_Shots=finishing), _p("Wide", 94, 42), _p("Back", 82, 30),
-                _p("D1", 97, 30, team="away"), _p("D2", 98, 42, team="away"), _p("D3", 85.5, 30.5, team="away")]
+        return [_p("A", 91, Finishing=finishing), _p("Wide", 94, 42), _p("Back", 82, 30),
+                _p("D1", 97, 30, team="away"), _p("D2", 98, 42, team="away"), _p("D3", 92.5, 30.5, team="away")]
     # ticket 04a : la conduite n'est plus pénalisée par la pression ;
     # « bon finisseur » se lit à 99, le mauvais finisseur ne tire toujours pas
     assert _best(scene(99)).kind == "shot"

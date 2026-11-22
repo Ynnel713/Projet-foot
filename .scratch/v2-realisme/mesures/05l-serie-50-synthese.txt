@@ -1,0 +1,18 @@
+buts par match : avant 4.48, après 4.2, écart -0.28 [-1.092 ; +0.5316] (n=50)
+tirs par équipe : avant 15.33, après 14.63, écart -0.7 [-1.583 ; +0.1828] (n=50)
+tirs hors surface par équipe : avant 3.32, après 2.64, écart -0.68 [-1.145 ; -0.215] (n=50)  <- significatif
+tirs dans la surface par équipe : avant 11.82, après 11.79, écart -0.03 [-0.7805 ; +0.7205] (n=50)
+buts hors surface par match : avant 0.82, après 0.4, écart -0.42 [-0.706 ; -0.134] (n=50)  <- significatif
+buts dans la surface par match : avant 3.64, après 3.74, écart +0.1 [-0.6539 ; +0.8539] (n=50)
+conversion hors surface : avant 0.1189, après 0.08557, écart -0.03336 [-0.08504 ; +0.01831] (n=50)
+conversion dans la surface : avant 0.1529, après 0.1563, écart +0.003342 [-0.02357 ; +0.03025] (n=50)
+contrés hors surface (part) : avant 0.1121, après 0.1511, écart +0.03897 [-0.02746 ; +0.1054] (n=50)
+contrés dans la surface (part) : avant 0.287, après 0.2589, écart -0.02809 [-0.06514 ; +0.008968] (n=50)
+16-25 m : ligne de tir couverte : avant 0.3018, après 0.349, écart +0.04721 [-0.04748 ; +0.1419] (n=50)
+16-25 m : cône vide : avant 0.8982, après 0.8416, écart -0.05658 [-0.1319 ; +0.01879] (n=50)
+16-25 m : xG neutre moyen : avant 0.1277, après 0.07601, écart -0.05169 [-0.06364 ; -0.03974] (n=50)  <- significatif
+surface : ligne de tir couverte : avant 0.6332, après 0.6065, écart -0.02671 [-0.06831 ; +0.01489] (n=50)
+passes par match : avant 1302, après 1305, écart +3.06 [-18.42 ; +24.54] (n=50)
+pertes par match : avant 228.5, après 231.7, écart +3.22 [-3.014 ; +9.454] (n=50)
+avant poolé : hors surface 332 tirs, conv 12.3%, contrés 9.9% ; surface 1182 tirs, conv 15.4%, contrés 28.6%
+après poolé : hors surface 264 tirs, conv 7.6%, contrés 15.9% ; surface 1179 tirs, conv 15.9%, contrés 25.5%

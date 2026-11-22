@@ -58,7 +58,9 @@ def test_a_defender_close_in_the_line_blocks_more_often_than_a_far_one_and_never
     far = _blocked_share(monkeypatch, SHOOTER_AT + Vec2(8.0, 0.0))
     off = _blocked_share(monkeypatch, SHOOTER_AT + Vec2(5.0, 5.0))
     assert close > far + 0.1 and far > 0.1  # attendu : environ 0,55 contre 0,3
-    assert off == 0.0
+    # à 45° de l'axe : seul un tir très raté l'atteint (queue de l'écart gaussien ; depuis la visée d'un côté du but,
+    # ticket v2-realisme/05l, 1 tir sur 300 avec ces graines, 0 avant)
+    assert off <= 0.01
 
 
 def test_the_block_happens_in_flight_and_is_traced_where_the_ball_touched_him(monkeypatch) -> None:

@@ -14,7 +14,7 @@
 
 **Bloque :** `v2-collectif/22c`.
 
-**Status:** à faire (diagnostic, puis constantes recommandées avant le code)
+**Status:** livré (22/11/2026), validé expert + QC (réserves A1 à A3 acceptées, renvoyées au `v2-collectif/22c`)
 
 ## Estimation
 
@@ -28,10 +28,31 @@
 
 Confiance : faible (mécanisme à choisir après le diagnostic). Temps machine, hors total : scènes (environ 10 min), série appariée de 50 matchs (environ 50 min), suite complète.
 
+## Périmètre élargi (22/11/2026, annoncé en cours de route)
+
+Le plongeon recalé seul (3 → 6 m/s) rendait un tireur précis moins dangereux (il visait le centre, donc le gardien) : visée ajoutée (`shooting.aim_angles`, `_aimed`, `AIM_INSIDE_POST_M`), puis marge des frappes de loin du `18m` revue (elle compensait la frappe surévaluée). Le contre d'un défenseur en course, exposé par la visée, a été traité à part au `05j` (livré). Estimation révisée 2 h 20 → 3 h 30 → 5 h.
+
+## Résultat (22/11/2026, `docs/INDICATEURS_V2.md` section 61)
+
+- `shooting.KEEPER_DIVE_MPS` 3 → 6 m/s ; visée d'un côté tiré au sort à `AIM_INSIDE_POST_M` = 2,5 m à l'intérieur du poteau, même loi à l'évaluation (espérance des deux côtés) et au départ du tir ; `decision.LONG_SHOT_MARGIN` 0,05 → 0. Recommandations retenues par délégation du propriétaire (22/11/2026).
+- Version écartée : visée choisie selon la place du gardien (5,02 buts, gardien exploité ; la lecture du gardien relève du `03l`).
+- 50 matchs appariés : conversion hors surface 12,3 → 7,6 % (réel 4,2 %), buts de loin 0,82 → 0,40 (significatif), cadrés par zone au niveau réel (28,4 % hors surface, 37,8 % dans la surface), arrêts 73 % / 58 % (repères 85 / 60 %) ; 2,64 tirs hors surface par équipe (repère 4,1) ; buts au total 4,48 → 4,20, dans le bruit. L'excès restant est dans le volume de tirs dans la surface (11,8 par équipe, réel environ 8,5).
+- Tests : `tests/test_v2engine_visee_tir.py` (5), scènes adaptées (`test_v2engine_meilleur_choix.py` : bon finisseur ramené à 14 m, de 21 m la conduite vaut mieux pour tous ; `test_v2engine_contre.py` : défenseur à 45° touché au plus 1 fois sur 100, queue de l'écart) (`test_v2engine_occasion.py` : défenseur à 4 m, à 8 m il ne couvrait plus que l'angle du gardien), frappes de loin réécrites autour d'une scène où la frappe vaut à peine plus que la suite (`test_v2engine_frappes_de_loin.py`), tolérance de 5 % mesurée de l'estimateur (`test_v2engine_chance_tir.py`).
+
+Durée : estimée 2 h 20 (révisée 5 h), réelle environ 5 h 15 (analyse et diagnostic 1 h 30, développement 1 h 15, tests 1 h, intégration, séries et documentation 1 h 30), écart + 125 % sur l'estimation initiale, + 5 % sur la révisée : mécanisme manquant (visée) découvert par un test de monotonie, première visée écartée après une série (effet de sélection invisible hors ligne), marge du `18m` à revoir, `05j` sorti en préalable. Temps machine hors total : capture de 20 matchs, scènes, six séries de 50 matchs (une interrompue par manque de mémoire), suites complètes.
+
 ## Acceptance criteria
 
-- [ ] Diagnostic chiffré par distance ; mécanisme et constantes recommandés avant le code (délégation du propriétaire)
-- [ ] Scènes neutres : chance évaluée et taux observé dans l'intervalle l'un de l'autre (`scripts.shot_calibration scenes`), et rapport à la table cible ramené dans une fourchette fixée au diagnostic
-- [ ] 50 matchs appariés : buts, conversion dans et hors surface, cadrés, part des cadrés arrêtés, avant / après, avec intervalles
-- [ ] Déterminisme à graine fixée ; durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 %
-- [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+- [x] Diagnostic chiffré par distance ; mécanisme et constantes recommandés avant le code (délégation du propriétaire)
+- [x] Scènes neutres : chance évaluée et taux observé dans l'intervalle l'un de l'autre (`tests/test_v2engine_chance_tir.py`, à 5 % près, tolérance mesurée et documentée), rapport à la table cible ramené entre 0,8 et 1,3 à 16 et 20 m face au but (fourchette fixée au diagnostic ; test `test_a_clean_shot_from_16_to_20_m_follows_the_target_table`)
+- [x] 50 matchs appariés : buts, conversion dans et hors surface, cadrés, part des cadrés arrêtés, avant / après, avec intervalles (`docs/INDICATEURS_V2.md` section 61)
+- [x] Déterminisme à graine fixée ; durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 %
+- [x] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md` : 3 486 passés, 0 ignoré, 14 désélectionnés (3 481 au `05j` + 5 tests)
+
+## Comments
+- 22/11/2026, passage 1 : expert APPROVED_WITH_RESERVATIONS ; QC VALIDÉ ; clôture VALIDÉ (réserves acceptées).
+  - A1 [réserve] surévaluation de loin (25 à 30 m : 1,6 à 2,7 fois la table) alors que la marge est à 0 : le 22c ou le 35a traite le plafond de portée et la vitesse de frappe ; revoir la marge si les tirs de loin dépassent environ 4 par équipe avant.
+  - A2 [réserve] distorsion spatiale (11 m axe 2,01 ; excentrés 16 m / 10 m 0,39) : reprendre 11 m et les tirs excentrés au 22c, dans son critère.
+  - A3 [réserve] biais de l'estimateur d'environ + 4,5 % à 6 m : cause à identifier au 22c, tolérance à ne plus élargir sans mesure.
+  - A4 [facultatif] commentaire `match.py:839` « visée selon le gardien » trompeur, retour constant de `_aimed` : non repris pour ne pas rouvrir la revue ; à corriger au prochain ticket qui touche ce code.
+  - Réserves acceptées par délégation générale du propriétaire, mots cités : « Je suis ok avec ta recommandation. Je valide automatiquement toutes tes recommandations et les conseils d'expert. Je vous fait confiance pour obtenir un réalisme optimal, soyez exigeants et rigoureux. [...] Ne me sollicite donc pas pendant ce processus » (21/11/2026). Acceptation globale, donnée avant ces réserves : à confirmer ou révoquer par le propriétaire au bilan.

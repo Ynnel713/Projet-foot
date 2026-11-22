@@ -836,7 +836,7 @@ def _execute(ball: BallState, holder: PlayerState, action, players: list[PlayerS
                                        xg=neutral_xg(holder, goal, keeper, opponents),
                                        post_shot_xg=0.0 if outcome == SHANKED else None))
             _log(ball, now_s, TIR_EVENT, holder.team, holder.name, outcome)
-        error = draw_shot_error(holder, goal, opponents)
+        error = draw_shot_error(holder, goal, opponents, keeper)  # visée selon le gardien (ticket v2-realisme/05l)
         if error is None:
             record(SHANKED)  # dévissé (ticket v2-collectif/35b)
             _shank(ball, holder, goal, now_s)
