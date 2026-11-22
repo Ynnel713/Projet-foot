@@ -69,6 +69,27 @@ def rank_rescale(raw: dict[int, float], reference: list[float]) -> dict[int, flo
     return out
 
 
+def curve_note(x: float, curve: list[tuple[float, float]]) -> float | None:
+    """Note d'une moyenne brute `x` sur la courbe (moyenne brute, note) des joueurs existants :
+    interpolation linéaire entre les deux voisins (ex aequo moyennés), bornée aux notes
+    extrêmes de la courbe, au pas de 0,5. Courbe vide : None."""
+    if not curve:
+        return None
+    by_raw: dict[float, list[float]] = {}
+    for k, v in curve:
+        by_raw.setdefault(k, []).append(v)
+    pts = sorted((k, sum(v) / len(v)) for k, v in by_raw.items())
+    if x <= pts[0][0]:
+        value = pts[0][1]
+    elif x >= pts[-1][0]:
+        value = pts[-1][1]
+    else:
+        i = next(i for i, (k, _) in enumerate(pts) if k >= x)
+        (x0, y0), (x1, y1) = pts[i - 1], pts[i]
+        value = y0 + (y1 - y0) * (x - x0) / (x1 - x0)
+    return round(value * 2) / 2
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--path", default="data/joueurs.xlsx")
@@ -101,9 +122,10 @@ def main() -> int:
     source, raw, families = {}, {}, {}
     for r in range(2, ws.max_row + 1):
         note = ws.cell(r, h[SOURCE_COLUMN]).value
-        if note is None:
-            continue
-        source[r] = float(note)
+        if note is not None:
+            source[r] = float(note)
+        elif ws.cell(r, h["ID"]).value is None:
+            continue  # ligne vide
         postes = [p.strip() for p in str(ws.cell(r, h["Poste"]).value).split("/")]
         group = position_group(postes[0])  # groupe du poste principal ("BU / AG" -> ATT)
         attrs = {a: v for a in FM_ATTRIBUTE_COLUMNS if isinstance(v := ws.cell(r, h[a]).value, (int, float))}
@@ -117,15 +139,41 @@ def main() -> int:
     # Recalage par famille de table (DC, Latéral, MDC...), pas par groupe : les tables DC et
     # Latéral ne donnent pas des notes brutes de même niveau, les classer ensemble descendait
     # les latéraux de ~3,7 points (revue expert du 31/10/2026, réserve A1).
+    # Seules les lignes avec une Moyenne joueur entrent dans ce recalage : leurs notes sont
+    # identiques à ce qu'elles étaient avant l'arrivée des joueurs sans Moyenne joueur.
     result = dict(source)
     for fam in set(families.values()):
-        rows = [r for r in raw if families[r] == fam]
+        rows = [r for r in raw if families[r] == fam and r in source]
         reference = [source[r] for r in rows if source[r] >= PLACEHOLDER_BELOW]
         result.update(rank_rescale({r: raw[r] for r in rows}, reference))
 
-    moved = sorted(((result[r] - source[r], r) for r in raw), reverse=True)
+    # Joueurs sans Moyenne joueur (nouveaux joueurs fminside, décision du propriétaire du
+    # 22/11/2026) : placés sur la courbe moyenne brute -> note des joueurs existants de leur
+    # famille, sans modifier ces derniers.
+    curves: dict = {}
+    for k in raw:
+        if k in source:
+            curves.setdefault(families[k], []).append((raw[k], result[k]))
+    unrated = []
+    for r in sorted(raw.keys() - source.keys()):
+        note = curve_note(raw[r], curves.get(families[r], []))
+        if note is None:
+            unrated.append(r)
+        else:
+            result[r] = note
+    unrated += [r for r in range(2, ws.max_row + 1) if r not in source and r not in raw
+                and ws.cell(r, h["ID"]).value is not None]
+
+    moved = sorted(((result[r] - source[r], r) for r in raw if r in source), reverse=True)
     name = lambda r: f"{ws.cell(r, h['Prénom']).value or ''} {ws.cell(r, h['Nom']).value or ''}".strip()
-    print(f"{len(raw)} joueurs notés depuis FM, {len(source) - len(raw)} sans attributs (Moyenne joueur reprise)")
+    from_fm = [r for r in raw if r in source]
+    print(f"{len(from_fm)} joueurs notés depuis FM, {len(source) - len(from_fm)} sans attributs (Moyenne joueur reprise)")
+    if len(raw) > len(from_fm):
+        print(f"{len(raw) - len(from_fm) - len([r for r in unrated if r in raw])} joueurs sans Moyenne joueur "
+              "placés sur la courbe de leur famille")
+    if unrated:
+        print(f"! {len(unrated)} joueurs sans Moyenne joueur ni note calculable (laissés vides) : "
+              + ", ".join(f"ligne {r}" for r in sorted(unrated)[:10]))
     print("plus fortes hausses :", ", ".join(f"{name(r)} {source[r]:g}->{result[r]:g}" for _, r in moved[:5]))
     print("plus fortes baisses :", ", ".join(f"{name(r)} {source[r]:g}->{result[r]:g}" for _, r in moved[-5:]))
     if args.dry_run:

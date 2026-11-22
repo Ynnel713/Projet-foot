@@ -278,3 +278,22 @@ def test_rank_rescale_keeps_reference_scale_and_fm_order():
     assert out["a"] == 40 and out["d"] == 90  # bornes de l'échelle de référence
     assert out["b"] == out["c"] == 55  # ex aequo : même note
     assert rank_rescale({"a": 60.0}, []) == {}  # famille sans référence : note d'origine gardée
+
+
+def test_curve_note_places_new_players_on_existing_curve():
+    """Joueurs sans Moyenne joueur (ticket donnees-nouveaux-joueurs/02) : interpolés sur la
+    courbe moyenne brute -> note des joueurs existants, bornés, au pas de 0,5."""
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+    from compute_moyenne_fm import curve_note
+
+    curve = [(10.0, 40.0), (12.0, 60.0), (12.0, 62.0), (14.0, 80.0)]
+    assert curve_note(11.0, curve) == 50.5  # entre 40 et la moyenne des ex aequo (61)
+    assert curve_note(5.0, curve) == 40 and curve_note(20.0, curve) == 80  # bornes de la famille
+    assert curve_note(12.0, curve) == 61
+    notes = [curve_note(x / 10, curve) for x in range(90, 160)]
+    assert notes == sorted(notes)  # monotone
+    assert all((n * 2).is_integer() for n in notes)  # pas de 0,5
+    assert curve_note(12.0, []) is None  # famille sans joueur existant : non notée
