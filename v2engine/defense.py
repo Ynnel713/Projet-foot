@@ -33,6 +33,8 @@ décalage et parts non trouvés, ordres de grandeur ajustables) :
 - course orientée : il vise, à sa distance d'arrêt, le côté de la ligne de passe vers le receveur le plus dangereux
   (le plus proche du but défendu), décalé d'au plus `SHADOW_M` = 1,5 m de son approche directe ; Anticipation règle
   la part des bonnes lectures (99 -> 85 %, 55 -> 65 %, 11 -> 40 %, sinon un autre receveur), un tirage par porteur ;
+  porteur à `SHOT_LANE_RANGE_M` = 25 m ou moins du but défendu : la bonne lecture, même courbe, est la ligne de tir
+  (ticket v2-realisme/10k), sinon il garde sa lecture de passe ;
 - distance d'arrêt face au porteur, Aggression (engagement au contact) : 99 -> 0,8 m, 55 -> 1,2 m, 11 -> 1,6 m, au-delà
   du rayon de tacle (1,5 m) : il laisse le porteur se retourner ;
 - déclencheurs collectifs (passe en retrait d'au moins `BACKWARD_PASS_M` = 3 m, réserve A2 de l'expert ; porteur qui
@@ -172,6 +174,12 @@ PRESS_BURST_S = 5.0
 SHADOW_M = 1.5
 TRIGGER_S = 5.0
 FOLLOW_M = 15.0
+# Ligne de tir (ticket v2-realisme/10k, recommandation retenue par délégation du propriétaire, 21/11/2026) : porteur à
+# `SHOT_LANE_RANGE_M` ou moins du centre du but défendu, le presseur qui lit bien (même courbe Anticipation que la ligne
+# de passe, `_GOOD_LANE`, un tirage par presseur et porteur) tourne vers la ligne de tir au lieu de la ligne de passe,
+# sur le même arc (`SHADOW_M`). Diagnostic (20 matchs) : presseur à 1,5 m en médiane mais ligne de tir couverte dans
+# 21 % des tirs de 16 à 25 m, 9 % contrés. 25 m : portée des frappes de loin retenues au 18m (8 tirs sur 167 au-delà).
+SHOT_LANE_RANGE_M = 25.0
 OPTION_RANGE_M = 40.0  # receveurs considérés par le presseur (même portée que l'indicateur des solutions de passe)
 BACKWARD_MPS = 0.5  # porteur qui reçoit en reculant vers son but : vitesse vers son but au-delà de 0,5 m/s
 BACKWARD_PASS_M = 3.0  # passe en retrait : le receveur est au moins 3 m plus près de son but (réserve A2 de l'expert)
@@ -279,17 +287,20 @@ def follow_probability(player: PlayerState) -> float:
     return _curve(effective_rating(player, "Teamwork"), _FOLLOWS)
 
 
-def press_point(presser: PlayerState, holder: PlayerState, receiver: PlayerState | None) -> Vec2:
+def press_point(presser: PlayerState, holder: PlayerState, receiver: PlayerState | None,
+                aim: Vec2 | None = None) -> Vec2:
     """Où le presseur se présente : à sa distance d'arrêt (Aggression) du porteur, du côté de la ligne de passe vers
-    `receiver`, à au plus `SHADOW_M` de son approche directe."""
+    `receiver` (ou de la ligne vers `aim`, le but défendu pour la ligne de tir, ticket v2-realisme/10k), à au plus
+    `SHADOW_M` de son approche directe."""
     distance = stop_distance_m(presser)
     approach = presser.position - holder.position
-    if approach.length() < 1e-9 or receiver is None or receiver.position.distance_to(holder.position) < 1e-9:
+    toward = aim if aim is not None else (receiver.position if receiver is not None else None)
+    if approach.length() < 1e-9 or toward is None or toward.distance_to(holder.position) < 1e-9:
         return clamp_to_pitch(holder.position + approach.normalized() * distance if approach.length() > 1e-9
                               else holder.position)
-    # il tourne autour du porteur, de son approche directe vers la ligne de passe, d'un arc de corde SHADOW_M au plus
+    # il tourne autour du porteur, de son approche directe vers la ligne fermée, d'un arc de corde SHADOW_M au plus
     start = math.atan2(approach.y, approach.x)
-    lane = receiver.position - holder.position
+    lane = toward - holder.position
     turn = (math.atan2(lane.y, lane.x) - start + math.pi) % (2.0 * math.pi) - math.pi
     limit = 2.0 * math.asin(min(1.0, SHADOW_M / (2.0 * distance)))
     angle = start + max(-limit, min(limit, turn))
@@ -349,6 +360,7 @@ class DefensiveRoles:
     burst: dict[str, tuple[str, float]] = field(default_factory=dict)
     rest_until: dict[str, float] = field(default_factory=dict)  # presseur qui souffle -> fin du repos
     lanes: dict[tuple[str, str], str | None] = field(default_factory=dict)  # (presseur, porteur) -> receveur fermé
+    shot_lanes: dict[tuple[str, str], bool] = field(default_factory=dict)  # (presseur, porteur) -> lit le tir (10k)
     trigger_until: dict[str, float] = field(default_factory=dict)  # équipe -> fin du pressing d'équipe
     follows: dict[str, bool] = field(default_factory=dict)  # partenaire -> suit le pressing d'équipe en cours
     followed: dict[str, str] = field(default_factory=dict)  # partenaire qui suit -> receveur qu'il ferme
@@ -434,6 +446,13 @@ class DefensiveRoles:
                 self.lanes[key] = DEFENSE.choice(options[1:]).name
         return next((p for p in players if p.name == self.lanes[key]), None)
 
+    def _reads_shot(self, presser: PlayerState, holder: PlayerState) -> bool:
+        """Le presseur ferme la ligne de tir (ticket v2-realisme/10k) : Anticipation, un tirage par presseur et porteur."""
+        key = (presser.name, holder.name)
+        if key not in self.shot_lanes:
+            self.shot_lanes[key] = DEFENSE.random() < good_lane_probability(presser)
+        return self.shot_lanes[key]
+
     @staticmethod
     def _press_pool(fresh: list[PlayerState], holder: PlayerState, places: dict[str, Vec2],
                     goal: Vec2) -> list[PlayerState]:
@@ -484,6 +503,7 @@ class DefensiveRoles:
             # effort quasi nul)
             self.burst = {k: v for k, v in self.burst.items() if v[0] == holder.name}
             self.lanes = {k: v for k, v in self.lanes.items() if k[1] == holder.name}
+            self.shot_lanes = {k: v for k, v in self.shot_lanes.items() if k[1] == holder.name}
             if previous_holder is not None and previous_holder[0] != holder.name:
                 self.cover_draws = {}  # tirages des couvreurs (10b) : un par porteur, comme la ligne lue
         team = "away" if holder.team == "home" else "home"
@@ -517,7 +537,10 @@ class DefensiveRoles:
                           key=lambda p: arrival_time_s(p, holder.position))
             self.holders[(PRESSEUR, holder.name)] = presser.name
             self.burst[presser.name] = (holder.name, now_s)
-        target = press_point(presser, holder, self._lane(presser, holder, players, goal))
+        if holder.position.distance_to(goal) <= SHOT_LANE_RANGE_M and self._reads_shot(presser, holder):
+            target = press_point(presser, holder, None, aim=goal)  # ligne de tir (ticket v2-realisme/10k)
+        else:
+            target = press_point(presser, holder, self._lane(presser, holder, players, goal))
         self.assignments[presser.name] = Assignment(
             PRESSEUR, target, holder.name, holder.velocity, press_intensity(presser),
             in_zone(presser.name, places, holder.position, goal) if presser.name in places else None,

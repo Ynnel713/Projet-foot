@@ -1810,3 +1810,31 @@ Règle : ballon (ou point de réception) dans un couloir extérieur du dernier t
 - **Les zones sont tenues** : la surface passe de 0,5 à 1,43 défenseur quand le ballon est sur l'aile ; chaque zone l'est 19 à 44 % des instants où la règle la demande (les passages sur l'aile sont brefs, les défenseurs y arrivent en courant). La ligne de hors-jeu à ces instants descend de 21,2 à 16,5 m, dans l'ordre de grandeur d'une ligne réelle avant un centre (12 à 18 m, estimation de l'expert), et non plus aux poteaux.
 - **Aucun effet significatif sur les buts, les tirs ni les hors-jeu** : la situation reste rare (3 % du temps de possession ; 0,04 but par match dans les 10 s après un passage, avant comme après). Les buts montent dans les trois versions essayées (+ 0,54, + 0,82, + 0,56, intervalles qui touchent zéro ; versions non indépendantes, mêmes graines), avec des tirs dans la surface en légère hausse et une qualité moyenne de tir dans la surface inchangée (0,186 → 0,183) : à surveiller. Cause possible non démontrée : défenseurs aspirés dans la surface, hors de leur place quand le ballon revient dans l'axe. À mesurer au `10g` et au `10k`.
 - L'effet attendu viendra avec le jeu sur les côtés (`25i`, dédoublement ; centres `v2-attributs-restants/01`) et le marquage dans la surface (`10g`).
+
+## 59. Ligne de tir fermée par le presseur (ticket v2-realisme/10k, 20 matchs de diagnostic et 50 matchs appariés, 22/11/2026)
+
+Règle : porteur à `defense.SHOT_LANE_RANGE_M` = 25 m ou moins du centre du but défendu, le presseur qui lit bien (Anticipation, courbe existante de la ligne de passe : 99 → 85 %, 55 → 65 %, 11 → 40 % ; un tirage par presseur et porteur, oublié à chaque changement de porteur) tourne vers la ligne de tir au lieu de la ligne de passe, sur le même arc (`SHADOW_M` = 1,5 m de corde au plus depuis son approche directe), à sa distance d'arrêt (Aggression). Sinon il garde sa lecture de passe. Aucune courbe nouvelle (pas de double comptage) ; une constante, 25 m (portée des frappes de loin gardées au 18m).
+
+**Diagnostic avant le code** (`PYTHONPATH=. PYTHONHASHSEED=0 uv run python .scratch/v2-realisme/mesures/10k-diag.py 20 4 10k-diag-20.json`, état exact du moteur à chaque tir lu sur la pile d'appel, rien ne change au jeu ; synthèse `10k-diag-synthese.py` → `10k-diag-20-synthese.txt`). Tirs de jeu à 16-25 m hors surface : 3,98 par équipe, 97 % dans l'axe, conversion 11,9 %, xG neutre 0,128. Presseur à 5 m ou moins dans 90 % des tirs (médiane 1,53 m) : **le tireur n'est pas libre**. Mais la ligne tireur-centre du but n'est couverte (défenseur à 1 m ou moins) que dans 21 % des tirs, le triangle tireur-poteaux est vide dans 89 %, 9 % de contrés : `press_point` tournait toujours vers une ligne de passe.
+
+**Série appariée** (`PYTHONPATH=. PYTHONHASHSEED=0 uv run python .scratch/v2-realisme/mesures/10k-serie.py 50 4 <avant|après> <sortie.json>` ; « avant » : `SHOT_LANE_RANGE_M` négatif, aucun tirage, identique au moteur du 10f : 5,42 buts, 16,59 tirs par équipe, comme la section 58 ; synthèse `10k-synthese.py` → `10k-serie-50-synthese.txt`). Écart apparié : moyenne [intervalle à 95 %].
+
+| Par match (tirs : par équipe) | Avant | Après | Écart apparié |
+|---|---|---|---|
+| Buts | 5,42 | **4,34** | − 1,08 [− 1,81 ; − 0,35] |
+| Buts dans / hors surface | 4,24 / 1,10 | 3,54 / 0,78 | − 0,70 [− 1,36 ; − 0,04] / − 0,32 [− 0,67 ; + 0,03] |
+| Tirs | 16,59 | 15,20 | − 1,39 [− 2,23 ; − 0,55] |
+| Tirs dans / hors surface | 12,05 / 4,28 | 11,69 / 3,32 | − 0,36 [− 1,18 ; + 0,46] / − 0,96 [− 1,43 ; − 0,49] |
+| Contrés, dans / hors surface (poolé) | 16,9 % / 6,3 % | **28,4 % / 9,6 %** | + 11,6 [+ 8,1 ; + 15,1] / + 5,4 [+ 0,8 ; + 10,0] points (moyenne par match) |
+| Ligne de tir couverte, tirs à 16-25 m / dans la surface | 20,9 % / 42,5 % | 30,6 % / 63,4 % | + 9,7 [+ 3,4 ; + 16,0] / + 20,8 [+ 16,5 ; + 25,2] points |
+| Conversion dans / hors surface (poolé) | 17,6 % / 12,9 % | 15,1 % / 11,7 % | dans le bruit par match |
+| xG neutre moyen des tirs à 16-25 m | 0,128 | 0,126 | − 0,002 [− 0,011 ; + 0,008] |
+| Passes / pertes | 1 293 / 232 | 1 301 / 228 | + 8 [− 7 ; + 24] / − 4 [− 10 ; + 3] |
+
+Déterminisme : matchs 0 et 1 rejoués, mêmes scores, mêmes tirs, mêmes passes.
+
+**Lecture.**
+- **Les buts baissent nettement** (− 1,08) par les contres : 14,0 % des tirs contrés au total → 24,2 %, dans le repère réel (20 à 28 %, section 22). Moins de tirs hors surface (3,32 par équipe, repère environ 4,1 : désormais un peu en dessous) : un tir dont la ligne est fermée vaut moins pour le porteur, qui joue autrement (passes stables).
+- **La conversion d'un tir non contré reste trop haute** : 11,7 % hors surface (réel 4,2 %), 15,1 % dans la surface (réel 14,7 % penaltys compris). Cause hors placement : tireur et gardien neutres, gardien bien placé, sans défenseur, la résolution physique donne 0,336 à 11 m, 0,204 à 16 m, 0,118 à 20 m, 0,059 à 25 m face au but contre 0,155, 0,088, 0,059, 0,035 dans la table cible (`shooting._XG_LOGIT`) ; cadrage plausible (44 % à 20 m), gardien trop court (52 % des cadrés arrêtés à 11 m, 73 % à 20 m). Ticket `v2-realisme/05l`.
+- Buts encore au-dessus du réel (4,34 contre environ 2,7).
+

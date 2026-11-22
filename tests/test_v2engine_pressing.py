@@ -209,3 +209,57 @@ def test_presser_reads_the_lane_again_at_each_possession() -> None:
     ball.holder, ball.position = "H2", h2.position
     defense.update([h, h2, near, p, q], ball, None, 1.0)
     assert ("P", "H") not in defense.lanes  # oubliée : elle sera lue de nouveau quand H aura le ballon
+
+
+# Ligne de tir (ticket v2-realisme/10k). L'extérieur attaque vers x = 0 : le but défendu par « home » est en (0, 34).
+def test_presser_turns_to_the_shot_line_within_his_arc() -> None:
+    holder = _p("H", team="away", x=20, y=34)
+    goal = Vec2(0.0, 34.0)
+    presser = _p("P", x=20, y=38, Aggression=62)  # il arrive par le côté du porteur
+    spot = press_point(presser, holder, None, aim=goal)
+    direct = Vec2(20, 34 + stop_distance_m(presser))
+    assert abs(spot.distance_to(holder.position) - stop_distance_m(presser)) < 1e-9
+    assert 0.0 < spot.distance_to(direct) <= SHADOW_M + 1e-9
+    assert spot.x < 20  # côté but : il tourne vers la ligne de tir
+    # face au but déjà : il est sur la ligne
+    behind = _p("B", x=17, y=34)
+    on_line = press_point(behind, holder, None, aim=goal)
+    assert abs(on_line.y - 34.0) < 1e-9 and on_line.x < 20
+
+
+def _shot_scene(x: float, anticipation: int) -> tuple[list[PlayerState], BallState]:
+    holder = _p("H", team="away", x=x, y=34)
+    players = [holder, _p("R", team="away", x=x + 5, y=20), _p("P", x=x + 1, y=38, Anticipation=anticipation)]
+    return players, BallState(position=holder.position, velocity=Vec2(0.0, 0.0), holder="H")
+
+
+def test_shot_line_read_by_anticipation_within_25_m() -> None:
+    from v2engine.defense import SHOT_LANE_RANGE_M
+    from v2engine.flux import seed_streams
+    assert SHOT_LANE_RANGE_M == 25.0
+    seed_streams(10)
+    for note, expected in ((99, 0.85), (11, 0.40)):
+        reads = 0
+        for _ in range(2000):
+            players, ball = _shot_scene(20.0, note)
+            defense = DefensiveRoles()
+            defense.update(players, ball, None, 0.0)
+            read = defense.shot_lanes[("P", "H")]
+            reads += read
+            target = defense.assignments["P"].target
+            expected_spot = press_point(players[2], players[0], None, aim=Vec2(0.0, 34.0))
+            assert (target.distance_to(expected_spot) < 1e-9) == read
+        assert abs(reads / 2000 - expected) < 0.04
+
+
+def test_no_shot_line_beyond_25_m_and_forgotten_at_each_possession() -> None:
+    players, ball = _shot_scene(30.0, 99)
+    defense = DefensiveRoles()
+    defense.update(players, ball, None, 0.0)
+    assert defense.assignments["P"].role == PRESSEUR and not defense.shot_lanes
+    players, ball = _shot_scene(20.0, 99)
+    defense.update(players, ball, None, 1.0)
+    assert ("P", "H") in defense.shot_lanes
+    ball.holder, ball.position = "R", players[1].position
+    defense.update(players, ball, None, 2.0)
+    assert ("P", "H") not in defense.shot_lanes

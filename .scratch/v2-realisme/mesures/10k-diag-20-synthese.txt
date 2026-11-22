@@ -1,0 +1,41 @@
+20 matchs, 5.00 buts/match, 15.70 tirs de jeu/équipe
+Surface: 461 tirs (11.53/équipe/match), conv 17.1%, xG moy 0.171, qualité moy 0.177
+   plus proche défenseur : médiane 1.39 m, <=1,5 m 56%, <=3 m 91%, >5 m 1%
+   ligne de tir couverte : 41% (conv 11.0%) ; non couverte conv 21.5%
+   cône tireur-poteaux vide : 69% (conv 18.5%) ; cône occupé conv 14.1%
+   défenseurs dans le cône : moyenne 0.32
+   presseur à 5 m ou moins : 88% ; distance médiane du presseur 1.55 m
+   intention du plus proche : presseur/presser 66%, couverture/couvrir 23%, replacement/se replacer 6%, marquage/marquer 3%, replacement/tenir sa place 1%
+   issues : à côté 21%, but 17%, capté 17%, au-dessus 16%, contré 16%, repoussé 8%, claqué 3%, dévissé 2%
+Hors surface: 167 tirs (4.17/équipe/match), conv 12.0%, xG moy 0.134, qualité moy 0.135
+   plus proche défenseur : médiane 1.50 m, <=1,5 m 50%, <=3 m 87%, >5 m 3%
+   ligne de tir couverte : 20% (conv 14.7%) ; non couverte conv 11.3%
+   cône tireur-poteaux vide : 89% (conv 11.4%) ; cône occupé conv 16.7%
+   défenseurs dans le cône : moyenne 0.11
+   presseur à 5 m ou moins : 89% ; distance médiane du presseur 1.56 m
+   intention du plus proche : presseur/presser 72%, couverture/couvrir 23%, replacement/se replacer 2%, marquage/marquer 2%, repli/se replier 1%
+   issues : à côté 32%, au-dessus 19%, capté 16%, but 12%, contré 9%, repoussé 8%, claqué 2%, dévissé 1%
+Hors surface 16-25 m: 159 tirs (3.98/équipe/match), conv 11.9%, xG moy 0.128, qualité moy 0.129
+   plus proche défenseur : médiane 1.45 m, <=1,5 m 52%, <=3 m 89%, >5 m 3%
+   ligne de tir couverte : 21% (conv 14.7%) ; non couverte conv 11.2%
+   cône tireur-poteaux vide : 89% (conv 11.3%) ; cône occupé conv 16.7%
+   défenseurs dans le cône : moyenne 0.11
+   presseur à 5 m ou moins : 90% ; distance médiane du presseur 1.53 m
+   intention du plus proche : presseur/presser 72%, couverture/couvrir 23%, replacement/se replacer 3%, marquage/marquer 2%, repli/se replier 1%
+   issues : à côté 30%, au-dessus 19%, capté 16%, but 12%, contré 9%, repoussé 9%, claqué 3%, dévissé 1%
+Hors surface 16-25 m, axe (|y|<=9,16 m): 154 tirs (3.85/équipe/match), conv 12.3%, xG moy 0.128, qualité moy 0.130
+   plus proche défenseur : médiane 1.45 m, <=1,5 m 52%, <=3 m 88%, >5 m 3%
+   ligne de tir couverte : 21% (conv 15.6%) ; non couverte conv 11.5%
+   cône tireur-poteaux vide : 88% (conv 11.8%) ; cône occupé conv 16.7%
+   défenseurs dans le cône : moyenne 0.12
+   presseur à 5 m ou moins : 90% ; distance médiane du presseur 1.55 m
+   intention du plus proche : presseur/presser 73%, couverture/couvrir 22%, replacement/se replacer 3%, marquage/marquer 1%, repli/se replier 1%
+   issues : à côté 30%, au-dessus 19%, capté 16%, but 12%, contré 10%, repoussé 9%, claqué 2%, dévissé 1%
+Hors surface >25 m: 8 tirs (0.20/équipe/match), conv 12.5%, xG moy 0.260, qualité moy 0.267
+   plus proche défenseur : médiane 3.14 m, <=1,5 m 12%, <=3 m 50%, >5 m 12%
+   ligne de tir couverte : 0% (conv nan%) ; non couverte conv 12.5%
+   cône tireur-poteaux vide : 100% (conv 12.5%) ; cône occupé conv nan%
+   défenseurs dans le cône : moyenne 0.00
+   presseur à 5 m ou moins : 62% ; distance médiane du presseur 2.20 m
+   intention du plus proche : presseur/presser 75%, couverture/couvrir 25%
+   issues : à côté 75%, but 12%, au-dessus 12%
