@@ -10,7 +10,7 @@
 
 **Bloque :** `10b` (lob et dribble du gardien) ; `v2-coach-et-gestion-de-match/04` ; `v2-collectif/22a`.
 
-**Status:** à faire (constantes à proposer avant le code)
+**Status:** découpé (22/11/2026, recommandation de Claude sous la délégation du propriétaire) en `03b3a` (Rushing Out : hauteur de placement et sorties) et `03b3b` (Eccentricity : sorties inattendues, mécanisme à créer) : Eccentricity n'a aucun mécanisme existant (mémoire d'un « coup de tête » par action), l'ensemble dépassait le seuil de 2 h en confiance faible. Constat : Rushing Out est bien dans la base (50 gardiens notés de Ligue 1 : médiane 55, de 25 à 90 ; titulaires : de 30 à 90), contrairement à la phrase ci-dessus.
 
 ## Estimation
 

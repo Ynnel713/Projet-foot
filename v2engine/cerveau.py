@@ -433,7 +433,7 @@ def _keeper(player: PlayerState, ball: BallState, seen: Perception, players: lis
         if ball.shot_in_flight:
             why = "tir en vol : il garde sa place pour l'arrêt, le ballon ne peut pas être pris"
         if course is not None:  # ballon libre à sa portée, mais il ne sort pas : trop loin de son but, ou l'adversaire arrive avant
-            if course.point.distance_to(gardien.own_goal(player.team)) > gardien.RUSH_MAX_FROM_GOAL_M:
+            if course.point.distance_to(gardien.own_goal(player.team)) > gardien.rush_max_from_goal_m(gardien.rushing_out(player)):
                 why = "le ballon est trop loin de son but, il garde sa place"
             else:
                 why = f"l'adversaire arrive avant lui ({course.rival_s:.1f} s contre {course.keeper_s:.1f} s), il garde sa place"

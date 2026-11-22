@@ -30,7 +30,7 @@ FAMILIES: dict[str, str] = {
                      "Heading", "Tackling", "Marking", "Corners", "Free Kick Taking", "Long Throws",
                      "Penalty Taking"), TECHNIQUE),
     **dict.fromkeys(("Reflexes", "One on Ones", "Handling", "Aerial Reach", "Command of Area", "Communication",
-                     "Kicking", "Throwing", "Rushing Out", "Punching", "Eccentricity"), GARDIEN),
+                     "Kicking", "Throwing", "Rushing Out (Tendency)", "Punching", "Eccentricity"), GARDIEN),
 }
 
 # Physiques recopiés dans `PlayerState` à la construction (chemin chaud de `movement.step`) : lus par leur champ,

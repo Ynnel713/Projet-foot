@@ -4,7 +4,8 @@ et ses états sont tracés dans la raison de son intention.
 
 États : `placement` (il se tient sur la bissectrice de l'angle ballon-poteaux, ticket 03b), `sortie` (ballon libre à
 sa portée : il va le chercher, comme avant), `intervention` (passe pour lui, ou passe qu'il a lue), `relance` (il a le
-ballon). Aucun attribut de gardien ici (`v2-attributs-restants/03b`)."""
+ballon). Seul attribut lu ici : Rushing Out (tendance, ticket v2-attributs-restants/03b3a), qui règle la hauteur quand le
+ballon est loin et les sorties sur ballon libre ; les notes de l'arrêt sont lues dans `shooting`."""
 
 from __future__ import annotations
 
@@ -15,6 +16,7 @@ from ligue1sim.pitch_geometry import GOAL_WIDTH_M
 
 from v2engine.anticipation import loose_ball_target
 from v2engine.ball_state import BallState
+from v2engine.condition import effective_rating
 from v2engine.defense import arrival_time_s
 from v2engine.geometry import PENALTY_AREA_DEPTH_M, PENALTY_AREA_WIDTH_M, PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
 from v2engine.movement import PlayerState
@@ -47,6 +49,23 @@ DEPTH_LINE_MAX_M = 16.0
 RUSH_MARGIN_S = 0.5
 RUSH_MAX_FROM_GOAL_M = 35.0
 
+# Style du gardien : Rushing Out (ticket v2-attributs-restants/03b3a ; chiffres réels non trouvés, ordres de grandeur,
+# constantes proposées par Claude et validées par délégation du propriétaire le 22/11/2026). Tendance : elle change le
+# style, jamais le niveau. Référence `RUSHING_OUT_REFERENCE_NOTE` : médiane des 50 gardiens notés de Ligue 1 de la base
+# (de 25 à 90) ; à la référence (et sans note), tout reste comme avant. Quand le ballon est loin, la hauteur au-delà de
+# `DEPTH_M[0]` est multipliée par 1 + `RUSH_DEPTH_PER_POINT` par point (bornes `RUSH_DEPTH_BOUNDS` ; ballon loin, sans
+# ligne : 6,1 m à 25, 10,3 m à 90), toujours dans la surface ; près du ballon (`BALL_DISTANCE_M[0]`), rien ne change.
+# Sur ballon libre, la marge de sortie baisse de `RUSH_MARGIN_PER_POINT_S` par point (bornes `RUSH_MARGIN_BOUNDS_S` :
+# 0,80 s à 25, 0,15 s à 90) et la distance maximale de sortie croît de `RUSH_MAX_PER_POINT_M` par point (bornes
+# `RUSH_MAX_BOUNDS_M` : 26 m à 25, 45 m à 90). Le risque d'être lobé est mesuré au ticket 10b.
+RUSHING_OUT_REFERENCE_NOTE = 55.0
+RUSH_DEPTH_PER_POINT = 0.01
+RUSH_DEPTH_BOUNDS = (0.6, 1.4)
+RUSH_MARGIN_PER_POINT_S = 0.01
+RUSH_MARGIN_BOUNDS_S = (0.15, 0.85)
+RUSH_MAX_PER_POINT_M = 0.3
+RUSH_MAX_BOUNDS_M = (25.0, 45.0)
+
 # Face-à-face (ticket v2-realisme/03e ; chiffres réels non trouvés, seul repère : une consigne d'entraîneur de 1 à 6 m de
 # sa ligne, sans étude ; ordres de grandeur, constantes proposées par Claude et validées par délégation du propriétaire le
 # 07/11/2026) : un adversaire de champ porte le ballon à `FACE_RANGE_M` ou moins de son but, sans coéquipier du gardien
@@ -65,6 +84,33 @@ FACE_CREEP_INTENSITY = 0.12
 FACE_STOPPED_MPS = 1.5
 
 GARDIEN = "gardien"
+
+
+def _clamp(value: float, bounds: tuple[float, float]) -> float:
+    return min(bounds[1], max(bounds[0], value))
+
+
+def rushing_out(keeper: PlayerState | None) -> float:
+    """Note de Rushing Out du gardien (ticket 03b3a) ; la référence s'il n'a pas de notes (`None`, effectif synthétique,
+    dictionnaire vide : copie neutre de l'xG) ou pas cette colonne (et non le défaut générique 60 de `player_attribute`)."""
+    if keeper is None or not keeper.attributes or "Rushing Out (Tendency)" not in keeper.attributes:
+        return RUSHING_OUT_REFERENCE_NOTE
+    return float(effective_rating(keeper, "Rushing Out (Tendency)"))
+
+
+def depth_factor(note: float = RUSHING_OUT_REFERENCE_NOTE) -> float:
+    """Facteur de la hauteur du gardien au-delà de `DEPTH_M[0]` selon son Rushing Out `note` (1 à la référence)."""
+    return _clamp(1.0 + RUSH_DEPTH_PER_POINT * (note - RUSHING_OUT_REFERENCE_NOTE), RUSH_DEPTH_BOUNDS)
+
+
+def rush_margin_s(note: float = RUSHING_OUT_REFERENCE_NOTE) -> float:
+    """Avance (s) que le gardien demande sur l'adversaire pour sortir sur un ballon libre (`RUSH_MARGIN_S` à la référence)."""
+    return _clamp(RUSH_MARGIN_S - RUSH_MARGIN_PER_POINT_S * (note - RUSHING_OUT_REFERENCE_NOTE), RUSH_MARGIN_BOUNDS_S)
+
+
+def rush_max_from_goal_m(note: float = RUSHING_OUT_REFERENCE_NOTE) -> float:
+    """Distance maximale (m) de son but où le gardien sort sur un ballon libre (`RUSH_MAX_FROM_GOAL_M` à la référence)."""
+    return _clamp(RUSH_MAX_FROM_GOAL_M + RUSH_MAX_PER_POINT_M * (note - RUSHING_OUT_REFERENCE_NOTE), RUSH_MAX_BOUNDS_M)
 PLACEMENT, SORTIE, INTERVENTION, RELANCE, FACE_A_FACE = "placement", "sortie", "intervention", "relance", "face-à-face"
 
 
@@ -112,13 +158,15 @@ class Race:
 
 
 def race(player: PlayerState, ball: BallState, players: list[PlayerState]) -> Race:
-    """Course du gardien `player` sur le ballon libre `ball` contre les adversaires de champ de `players`."""
+    """Course du gardien `player` sur le ballon libre `ball` contre les adversaires de champ de `players` ; marge et
+    distance maximale selon son Rushing Out (ticket 03b3a)."""
     point = loose_ball_target(player, ball.position, ball.velocity, BALL_FRICTION_PER_S)
     keeper_s = arrival_time_s(player, point)
     rival_s = min((arrival_time_s(p, point) for p in players if p.team != player.team and p.poste != "GK"),
                   default=math.inf)
-    close_enough = point.distance_to(own_goal(player.team)) <= RUSH_MAX_FROM_GOAL_M
-    return Race(close_enough and keeper_s + RUSH_MARGIN_S <= rival_s, keeper_s, rival_s, point)
+    note = rushing_out(player)  # ticket 03b3a : le libéro sort avec moins d'avance, et plus loin
+    close_enough = point.distance_to(own_goal(player.team)) <= rush_max_from_goal_m(note)
+    return Race(close_enough and keeper_s + rush_margin_s(note) <= rival_s, keeper_s, rival_s, point)
 
 
 def own_goal(team: str) -> Vec2:
@@ -136,16 +184,17 @@ def bisector_direction(ball: Vec2, goal: Vec2) -> Vec2:
     return bisector.normalized() if bisector.length() > 1e-6 else (goal - ball).normalized()
 
 
-def depth_for_ball(distance_m: float, line_m: float | None = None) -> float:
+def depth_for_ball(distance_m: float, line_m: float | None = None, factor: float = 1.0) -> float:
     """Distance à sa ligne de but (m) du gardien, selon la distance du ballon à son but : `DEPTH_M` (ticket 03b). Avec la
     hauteur de la ligne défensive `line_m` (ticket 03c), il avance au-delà de `DEPTH_M[1]` vers `LINE_RATIO x line_m`
-    (plafond `DEPTH_LINE_MAX_M`), au prorata de l'éloignement du ballon : près du ballon, rien ne change."""
+    (plafond `DEPTH_LINE_MAX_M`), au prorata de l'éloignement du ballon : près du ballon, rien ne change. `factor`
+    (`depth_factor`, Rushing Out, ticket 03b3a) étire ou réduit la hauteur au-delà de `DEPTH_M[0]`."""
     near, far = BALL_DISTANCE_M
     share = min(1.0, max(0.0, (distance_m - near) / (far - near)))
     depth = DEPTH_M[0] + (DEPTH_M[1] - DEPTH_M[0]) * share
     if line_m is not None:
         depth += share * max(0.0, min(DEPTH_LINE_MAX_M, LINE_RATIO * line_m) - DEPTH_M[1])
-    return depth
+    return DEPTH_M[0] + (depth - DEPTH_M[0]) * factor
 
 
 def bisector_point(player: PlayerState, ball: Vec2, line_m: float | None = None, depth_m: float | None = None) -> Vec2:
@@ -159,7 +208,7 @@ def bisector_point(player: PlayerState, ball: Vec2, line_m: float | None = None,
     direction = bisector_direction(ball, goal)
     reach = ball.distance_to(goal)
     if abs(direction.x) > 1e-6:
-        depth = depth_for_ball(reach, line_m)
+        depth = depth_for_ball(reach, line_m, depth_factor(rushing_out(player)))
         if depth_m is not None:
             depth = max(depth_m, depth)
         along = (goal.x + inward * depth - ball.x) / direction.x  # distance, sur la bissectrice, jusqu'à cette profondeur

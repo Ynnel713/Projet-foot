@@ -1990,3 +1990,20 @@ Repères réels : part captée d'un arrêt et ballons relâchés selon le niveau
 | Corners issus d'un arrêt | 25,6 % | 24,0 % | |
 
 **Lecture.** Prises relâchées par Handling (relâchées / prises) : sous 55, 2 / 21 ; 55 à 65, 4 / 65 ; 65 et plus, 2 / 59, décroissant mais sur de faibles effectifs (l'effet est établi par les tests). La répartition des arrêts reste proche de celle du `03b1` hors prises relâchées, et la part des corners issus d'arrêts (24-26 %) reste proche du repère du `28b` : `SAVE_HELD_SHARE` n'est pas recalé (réserve A1 du `03b1` levée). La hausse des buts reste dans le bruit (tous les tirages sont redistribués) ; à surveiller sur une série plus longue. Déterminisme : matchs 0 et 1 rejoués deux fois, mêmes empreintes (`85ca80a8…`, `4823e004…`).
+
+## 67. Style du gardien : hauteur et sorties selon Rushing Out (ticket v2-attributs-restants/03b3a, 50 matchs appariés et deux séries forcées de 30 matchs, 22/11/2026)
+
+Repères réels : hauteur moyenne et nombre de sorties d'un gardien selon son style, non trouvés (ordres de grandeur).
+
+**Mécanisme.** Rushing Out (tendance), référence 55 (médiane des gardiens de Ligue 1 de la base). La hauteur au-delà de `DEPTH_M[0]` est multipliée par 1 + 0,01 par point autour de 55 (bornes 0,6-1,4 ; ballon loin, sans ligne : 6,05 m à 25, 10,3 m à 90, toujours dans la surface ; ballon à 12 m ou moins : même place pour tous). Marge de sortie sur ballon libre : 0,50 s − 0,01 s par point (0,80 s à 25, 0,15 s à 90). Distance maximale de sortie : 35 m + 0,3 m par point (26 m à 25, 45 m à 90). Un gardien sans note ou sans cette colonne vaut la référence.
+
+**Séries** (`PYTHONPATH=. PYTHONHASHSEED=0 <python> .scratch/v2-attributs-restants/mesures/03b3a-serie.py <n> 4 <sortie.json> [--force <note>]`, synthèse `03b3a-synthese.py` ; avant : `2bf4e22`).
+
+| Rushing Out | Buts/match | Hauteur, ballon à plus de 40 m | Sorties/gardien/match | Prises hors surface/gardien/match |
+|---|---|---|---|---|
+| forcé 25 (30 matchs) | 4,73 | 10,22 m | 5,38 | 5,20 |
+| forcé 55 (30 matchs) | 4,30 | 13,95 m | 5,78 | 7,05 |
+| forcé 90 (30 matchs) | 4,30 | 15,81 m | 7,85 | 10,33 |
+| réel (50 matchs) | 4,12 | 14,33 m | 6,53 | 7,61 |
+
+**Lecture.** Déterminisme : matchs 0 et 1 rejoués deux fois, mêmes empreintes (`51f3b07e…`, `d9b18549…`). Forcé à 55, les 30 scores sont identiques à ceux d'avant. De 25 à 90, le gardien se tient 5,6 m plus haut quand le ballon est loin, sort 46 % plus souvent et prend deux fois plus de ballons hors de sa surface ; les buts ne bougent pas au-delà du bruit (90 contre 25 : − 0,43 [− 1,39 ; + 0,53]). Série réelle contre `03b2` : buts 4,48 → 4,12, − 0,36 [− 1,03 ; + 0,31]. Par tranche réelle, la hauteur croît avec la note (11,97 / 14,22 / 15,16 m sous 50, 50-64, 65 et plus) ; les sorties ne sont pas monotones (7,44 / 5,74 / 6,78), l'adversaire pesant plus que la note sur une série réelle. Le risque d'être lobé quand il est haut est l'objet du `10b`.

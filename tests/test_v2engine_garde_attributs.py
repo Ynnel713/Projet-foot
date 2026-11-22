@@ -81,9 +81,10 @@ ANNOUNCED = sorted(announced_with_effect(STATES))
 def test_the_carte_is_read_with_its_announced_attributes() -> None:
     # 52 lignes d'attributs le 14/11/2026, dont 27 annoncées avec effet (23 « branché », Dribbling, Finishing,
     # Balance et Handling) ; Reflexes et One on Ones « branché » au ticket v2-attributs-restants/03b1, Handling (prise de
-    # balle) au ticket 03b2
+    # balle) au ticket 03b2, Rushing Out (Tendency) (style) au ticket 03b3a
     assert len(STATES) >= 50
-    assert {"Pace", "Dribbling", "Finishing", "Balance", "Reflexes", "One on Ones", "Handling"} <= set(ANNOUNCED)
+    assert {"Pace", "Dribbling", "Finishing", "Balance", "Reflexes", "One on Ones", "Handling",
+            "Rushing Out (Tendency)"} <= set(ANNOUNCED)
     assert {"Natural Fitness", "Heading", "Jumping Reach"}.isdisjoint(ANNOUNCED)
 
 

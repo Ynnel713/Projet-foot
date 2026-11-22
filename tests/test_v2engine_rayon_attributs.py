@@ -73,11 +73,12 @@ TRANSITION = {
     "Balance": ("17/11/2026", "v2-attributs-contextes/06"),
     "Vision": ("17/11/2026", _REST),
     # gardien : Reflexes (réaction) et One on Ones (portée en face-à-face) lus seuls sur l'arrêt depuis le ticket
-    # v2-attributs-restants/03b1 (dérogation A8 levée), Handling seul sur la prise de balle depuis le ticket 03b2, un
-    # contexte chacun
+    # v2-attributs-restants/03b1 (dérogation A8 levée), Handling seul sur la prise de balle depuis le ticket 03b2,
+    # Rushing Out (tendance) seul sur la hauteur et les sorties depuis le ticket 03b3a, un contexte chacun
     "Reflexes": ("22/11/2026", _REST),
     "One on Ones": ("22/11/2026", _REST),
     "Handling": ("22/11/2026", _REST),
+    "Rushing Out (Tendency)": ("22/11/2026", _REST),
     **{attribute: ("17/11/2026", _REST) for attribute in (
         "Pace", "Acceleration", "Stamina", "Agility", "Strength", "Aggression", "Tackling", "Marking", "Teamwork",
         "Off the Ball", "Composure", "Passing", "Dribbling", "First Touch")},
@@ -421,8 +422,7 @@ COVERAGE_EXCEPTIONS = {
     "Command of Area": "v2-attributs-restants/03a",
     "Communication": "v2-attributs-restants/03a",
     "Punching (Tendency)": "v2-attributs-restants/03a",
-    "Rushing Out (Tendency)": "v2-attributs-restants/03b",
-    "Eccentricity": "v2-attributs-restants/03b",
+    "Eccentricity": "v2-attributs-restants/03b3b",
     "Kicking": "v2-attributs-restants/03c",
     "Throwing": "v2-attributs-restants/03c",
     "Weak foot (/5)": "v2-attributs-restants/04a",

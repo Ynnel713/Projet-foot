@@ -74,9 +74,9 @@
 | **Communication** | Organiser la défense : effet sur le placement des défenseurs, moins de collisions | ses propres arrêts | Défense mieux placée devant un gardien qui parle | Positioning des défenseurs | à créer (`v2-attributs-restants/03a`) |
 | **Kicking** | Dégagements longs : distance, précision | la relance à la main | Lance une contre-attaque directement sur l'attaquant | Passing | à créer (`v2-attributs-restants/03c`) |
 | **Throwing** | Relance à la main : distance, précision | le jeu au pied | Relance rapide qui lance une contre-attaque | Decisions | à créer (`v2-attributs-restants/03c`) |
-| **Rushing Out** (tendance) | Hauteur de placement et sorties hors de la surface (libéro) | la qualité du face-à-face | Le haut balaie derrière sa défense et permet une ligne haute, avec le risque d'être lobé | One on Ones ; Positioning de la ligne | à créer (`v2-attributs-restants/03b`) |
+| **Rushing Out (Tendency)** (tendance) | Hauteur de placement et sorties hors de la surface (libéro) | la qualité du face-à-face | Le haut balaie derrière sa défense et permet une ligne haute, avec le risque d'être lobé | One on Ones ; Positioning de la ligne | branché : hauteur quand le ballon est loin (au-delà de 1,5 m, × 1 + 0,01 par point autour de 55, borné à 0,6-1,4 : ballon loin sans ligne 6,1 m à 25, 10,3 m à 90, toujours dans la surface ; rien ne change à 12 m du but ou moins), marge de sortie sur ballon libre (0,50 s − 0,01 s par point, 0,15-0,85 s) et distance maximale de sortie (35 m + 0,3 m par point, 25-45 m) (`gardien.rushing_out`, ticket `v2-attributs-restants/03b3a`) ; risque d'être lobé : `10b` |
 | **Punching** (tendance) | Boxer plutôt que capter sur les centres | la réussite de la sortie | Le haut éloigne le danger mais rend la possession | Handling | à créer (`v2-attributs-restants/03a`) |
-| **Eccentricity** (tendance) | Goût du risque : dribbles dans sa surface, sorties inattendues | la qualité des gestes | Imprévisible : peut sauver ou couler son équipe | Rushing Out ; Flair | à créer (`v2-attributs-restants/03b`) |
+| **Eccentricity** (tendance) | Goût du risque : dribbles dans sa surface, sorties inattendues | la qualité des gestes | Imprévisible : peut sauver ou couler son équipe | Rushing Out ; Flair | à créer (`v2-attributs-restants/03b3b`) |
 
 ## E. Autres colonnes de la base
 
