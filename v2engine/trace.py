@@ -237,6 +237,7 @@ class ShotEvent:
     # contré (`shooting.post_shot_xg`, 0 hors du cadre) ; `None` si non défini (tir contré, penalty).
     xg: float | None = None
     post_shot_xg: float | None = None
+    fumbled: bool = False  # arrêt « repoussé » qui était une prise relâchée par le gardien (ticket v2-attributs-restants/03b2)
 
 
 @dataclass(frozen=True)

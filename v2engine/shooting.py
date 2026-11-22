@@ -673,8 +673,8 @@ def shank_velocity(shooter: PlayerState, goal: Vec2, shot_speed: float) -> Vec2:
 # Issue d'un tir cadré arrêté (ticket v2-collectif/28b, constantes proposées le 05/11/2026, validées par délégation du
 # propriétaire). Opta classe les arrêts (capté, repoussé, du bout des gants...) sans publier de répartition ; aucune
 # étude publique sur les seconds ballons : ordres de grandeur. Repère : environ 20 % des corners viennent d'un arrêt
-# (relevé de 200 matchs PL et Championship, sans méthode publiée). Gardien neutre jusqu'au ticket
-# v2-attributs-restants/03b2 : Handling n'agit pas encore ici. Ni la force ni la hauteur du tir n'existent encore
+# (relevé de 200 matchs PL et Championship, sans méthode publiée). Depuis le ticket v2-attributs-restants/03b2,
+# Handling règle la part captée et les ballons relâchés (plus bas). Ni la force ni la hauteur du tir n'existent encore
 # (v2-hauteur-ballon/02a, v2-attributs-restants/10a) : la difficulté passe par la chance de but et l'excentrement.
 HELD, PARRIED, TIPPED = "capté", "repoussé", "claqué"
 SAVE_DIFFICULTY_REF = 0.30  # chance de but au-delà de laquelle l'arrêt est le plus difficile possible
@@ -686,26 +686,73 @@ PARRY_ANGLE_DEG = (25.0, 80.0)  # repoussé : angle avec la ligne de but, du cô
 TIP_WIDE_M = (0.5, 3.0)  # claqué : point de sortie derrière la ligne, au-delà du poteau (ordre de grandeur)
 _CENTRAL_SHOT = 0.1  # excentrement en dessous duquel le côté de la repoussée est tiré au hasard
 
+# Prise de balle du gardien (ticket v2-attributs-restants/03b2, constantes proposées et validées par délégation du
+# propriétaire le 22/11/2026). Repères réels (part captée et ballons relâchés selon le niveau du gardien) : non trouvés,
+# ordres de grandeur. Gardien moyen : Handling 60, médiane des gardiens de Ligue 1 de la base ; un gardien sans note
+# (effectif synthétique, copie neutre de l'xG) vaut le gardien moyen. Handling déplace la part captée (99 : + 0,195 ;
+# 40 : − 0,10) ; une prise peut être relâchée (`FUMBLED`), ballon lent tombé devant le gardien, compté « repoussé » dans
+# les statistiques et marqué dans la trace : 4 % des prises à 60, 1,1 % à 99, 5,5 % à 40.
+HANDLING_REFERENCE_NOTE = 60.0
+HANDLING_HELD_PER_POINT = 0.005  # part captée en plus par point de Handling au-dessus de la référence
+SAVE_HELD_BOUNDS = (0.10, 0.90)  # part captée jamais nulle (parade d'exception d'un gardien faible), jamais sûre
+FUMBLE_SHARE = 0.04  # part des prises relâchées, gardien moyen
+FUMBLE_PER_POINT = 0.00075  # part relâchée en moins par point de Handling au-dessus de la référence
+FUMBLE_BOUNDS = (0.005, 0.10)  # boulette jamais exclue, même pour un très bon gardien
+FUMBLE_SPEED_MPS = (1.0, 2.0)  # ballon relâché : vitesse au départ du gardien (s'arrête à 1 à 3 m de lui)
+FUMBLE_ANGLE_DEG = 60.0  # ballon relâché : écart maximal avec la perpendiculaire à la ligne de but, vers le terrain
+FUMBLED = "relâché"  # issue interne : une prise manquée, rangée avec `PARRIED` dans la trace
+
 
 def excentricity(origin: Vec2, goal: Vec2) -> float:
     """0 pour un tir face au but, 1 pour un tir parti à `SAVE_EXCENTRIC_REF_M` ou plus de l'axe."""
     return min(1.0, abs(origin.y - goal.y) / SAVE_EXCENTRIC_REF_M)
 
 
-def save_shares(chance: float, origin: Vec2, goal: Vec2) -> tuple[float, float, float]:
-    """Parts (capté, repoussé, claqué) d'un arrêt, selon la chance de but du tir (`shot_probability`) et son
-    excentrement : un tir dangereux est moins souvent capté, un tir excentré plus souvent claqué en corner."""
+def keeper_handling(keeper: PlayerState | None) -> float:
+    """Note de Handling du gardien (ticket 03b2) ; gardien moyen s'il n'a pas de notes (`None`, effectif synthétique)
+    ou s'il est la copie neutre de l'xG (`NEUTRAL_ATTRIBUTES`)."""
+    if keeper is None or keeper.attributes is None or keeper.attributes is NEUTRAL_ATTRIBUTES:
+        return HANDLING_REFERENCE_NOTE
+    return effective_rating(keeper, "Handling")
+
+
+def save_shares(chance: float, origin: Vec2, goal: Vec2,
+                handling: float = HANDLING_REFERENCE_NOTE) -> tuple[float, float, float]:
+    """Parts (capté, repoussé, claqué) d'un arrêt, selon la chance de but du tir (`shot_probability`), son
+    excentrement et la prise de balle du gardien (Handling, ticket 03b2) : un tir dangereux est moins souvent capté, un
+    tir excentré plus souvent claqué en corner, un gardien sûr de ses mains capte plus."""
     difficulty = min(1.0, chance / SAVE_DIFFICULTY_REF)
     held = SAVE_HELD_SHARE[0] + (SAVE_HELD_SHARE[1] - SAVE_HELD_SHARE[0]) * difficulty
+    held += HANDLING_HELD_PER_POINT * (handling - HANDLING_REFERENCE_NOTE)
+    held = min(SAVE_HELD_BOUNDS[1], max(SAVE_HELD_BOUNDS[0], held))
     out = SAVE_OUT_SHARE[0] + (SAVE_OUT_SHARE[1] - SAVE_OUT_SHARE[0]) * excentricity(origin, goal)
     return held, (1.0 - held) * (1.0 - out), (1.0 - held) * out
 
 
-def save_outcome(chance: float, origin: Vec2, goal: Vec2) -> str:
+def save_outcome(chance: float, origin: Vec2, goal: Vec2, handling: float = HANDLING_REFERENCE_NOTE) -> str:
     """Tire l'issue d'un arrêt : `HELD`, `PARRIED` ou `TIPPED` (un tirage)."""
-    held, parried, _ = save_shares(chance, origin, goal)
+    held, parried, _ = save_shares(chance, origin, goal, handling)
     r = TIR.random()
     return HELD if r < held else PARRIED if r < held + parried else TIPPED
+
+
+def fumble_share(handling: float = HANDLING_REFERENCE_NOTE) -> float:
+    """Part des prises que le gardien relâche (ticket 03b2) : rare, jamais nulle, plus fréquente pour un gardien faible."""
+    share = FUMBLE_SHARE - FUMBLE_PER_POINT * (handling - HANDLING_REFERENCE_NOTE)
+    return min(FUMBLE_BOUNDS[1], max(FUMBLE_BOUNDS[0], share))
+
+
+def fumbles(handling: float = HANDLING_REFERENCE_NOTE) -> bool:
+    """Tire si une prise est relâchée (un tirage, seulement sur une prise)."""
+    return TIR.random() < fumble_share(handling)
+
+
+def fumble_velocity(goal: Vec2, origin: Vec2) -> Vec2:
+    """Vitesse du ballon relâché (ticket 03b2) : lent, vers le terrain, à au plus `FUMBLE_ANGLE_DEG` de la
+    perpendiculaire à la ligne de but ; il s'arrête devant le gardien, dans sa surface (seconde occasion)."""
+    into_pitch = 1.0 if origin.x > goal.x else -1.0
+    angle = math.radians(TIR.uniform(-FUMBLE_ANGLE_DEG, FUMBLE_ANGLE_DEG))
+    return Vec2(into_pitch * math.cos(angle), math.sin(angle)) * TIR.uniform(*FUMBLE_SPEED_MPS)
 
 
 def _shot_side(origin: Vec2, goal: Vec2) -> float:

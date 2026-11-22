@@ -53,10 +53,10 @@ from v2engine.added_time import GRACE_S, HARD_STOP_S, added_minutes, played_minu
 from v2engine.roles import role_of
 from v2engine.restart import (AERIAL_LANDING_M, AERIEN, CORNER, FREE_KICK, KICKOFF, LONG_RESTART_M, PENALTY, PENALTY_CONVERSION, SOL,
                               award, exit_point, foul_restart, is_aerial, kickoff, restart_target)
-from v2engine.shooting import (BLOCK_CHANCE, BLOCK_WIDTH_M, FLYING, HELD, OVER, PARRIED, SHANKED, SHOT_AIM_HEIGHT_M, WIDE,
-                               block_reach_m, draw_shot_error, keeper_profile, keeper_reach_m, keeper_toward_mps,
-                               neutral_xg, occasion_quality, one_on_one, parry_velocity, post_shot_xg, save_outcome,
-                               shank_velocity, shot_probability)
+from v2engine.shooting import (BLOCK_CHANCE, BLOCK_WIDTH_M, FLYING, FUMBLED, HELD, OVER, PARRIED, SHANKED, SHOT_AIM_HEIGHT_M,
+                               WIDE, block_reach_m, draw_shot_error, fumble_velocity, fumbles, keeper_handling,
+                               keeper_profile, keeper_reach_m, keeper_toward_mps, neutral_xg, occasion_quality, one_on_one,
+                               parry_velocity, post_shot_xg, save_outcome, shank_velocity, shot_probability)
 from v2engine.situation import SituationTracker
 from v2engine.transition import TransitionPlay
 from v2engine.trace import (BallSnapshot, DecisionRecord, FoulEvent, MatchTrace, OffsideEvent, PlayerSnapshot, ShotEvent,
@@ -474,14 +474,18 @@ def _keeper_reaches(ball: BallState, flight: ShotFlight, start: Vec2, end: Vec2,
     if gap > keeper_reach_m(elapsed, toward, *profile):
         return False
     goal = _OPPONENT_GOAL[flight.team]
-    outcome = save_outcome(flight.chance, flight.origin, goal)
+    handling = keeper_handling(keeper)
+    outcome = save_outcome(flight.chance, flight.origin, goal, handling)
+    fumbled = False
     if outcome == HELD and not in_penalty_area(flight.team, keeper.position):
         outcome = PARRIED  # hors de sa surface, jamais à la main (ticket v2-realisme/03d)
+    elif outcome == HELD and fumbles(handling):
+        outcome, fumbled = PARRIED, True  # prise relâchée (ticket v2-attributs-restants/03b2)
     if rank >= 0:
-        shots[rank] = replace(shots[rank], outcome=outcome)
+        shots[rank] = replace(shots[rank], outcome=outcome, fumbled=fumbled)
     ball.shot_flight = None
     _log(ball, now_s, ARRET, keeper.team, keeper.name, outcome)
-    _keeper_save(ball, keeper, outcome, flight.origin, goal, flight.team, players, now_s, point)
+    _keeper_save(ball, keeper, FUMBLED if fumbled else outcome, flight.origin, goal, flight.team, players, now_s, point)
     return True
 
 
@@ -527,7 +531,8 @@ def _blocked(ball: BallState, flight: ShotFlight, start: Vec2, end: Vec2, dt: fl
 def _keeper_save(ball: BallState, keeper: PlayerState, outcome: str, origin: Vec2, goal: Vec2, shooter_team: str,
                  players: list[PlayerState], now_s: float, at: Vec2) -> None:
     """Suite d'un arrêt (ticket v2-collectif/28b) au point de contact `at` (réserve A2 du 05b) : capté, le gardien a le
-    ballon, amené à ce point (ponytail : pas de plongeon animé) ; repoussé ou claqué, le ballon repart de ce point, libre."""
+    ballon, amené à ce point (ponytail : pas de plongeon animé) ; repoussé, claqué ou relâché (`FUMBLED`, ticket 03b2),
+    le ballon repart de ce point, libre."""
     if outcome == HELD:
         keeper.position = clamp_to_pitch(at)
         ball.holder = keeper.name
@@ -537,7 +542,10 @@ def _keeper_save(ball: BallState, keeper: PlayerState, outcome: str, origin: Vec
         ball.velocity = Vec2(0.0, 0.0)
         return
     ball.holder = None
-    ball.velocity = parry_velocity(origin, goal, at, outcome, SHOT_SPEED_MPS)
+    if outcome == FUMBLED:  # relâché : ballon lent devant lui (ticket 03b2)
+        ball.velocity = fumble_velocity(goal, origin)
+    else:
+        ball.velocity = parry_velocity(origin, goal, at, outcome, SHOT_SPEED_MPS)
     ball.position = clamp_to_pitch(at + ball.velocity.normalized() * CONTROL_RADIUS_M)
     ball.last_toucher = keeper.name
     ball.control_ban_until_s[keeper.name] = now_s + MISS_RETRY_S

@@ -80,11 +80,11 @@ ANNOUNCED = sorted(announced_with_effect(STATES))
 
 def test_the_carte_is_read_with_its_announced_attributes() -> None:
     # 52 lignes d'attributs le 14/11/2026, dont 27 annoncées avec effet (23 « branché », Dribbling, Finishing,
-    # Balance et Handling) ; Handling « à créer » depuis la levée de A8 (ticket v2-attributs-restants/03b1), Reflexes et
-    # One on Ones « branché »
+    # Balance et Handling) ; Reflexes et One on Ones « branché » au ticket v2-attributs-restants/03b1, Handling (prise de
+    # balle) au ticket 03b2
     assert len(STATES) >= 50
-    assert {"Pace", "Dribbling", "Finishing", "Balance", "Reflexes", "One on Ones"} <= set(ANNOUNCED)
-    assert {"Natural Fitness", "Heading", "Jumping Reach", "Handling"}.isdisjoint(ANNOUNCED)
+    assert {"Pace", "Dribbling", "Finishing", "Balance", "Reflexes", "One on Ones", "Handling"} <= set(ANNOUNCED)
+    assert {"Natural Fitness", "Heading", "Jumping Reach"}.isdisjoint(ANNOUNCED)
 
 
 def test_every_attribute_announced_with_effect_is_read_by_the_engine() -> None:
@@ -146,7 +146,7 @@ class Plan:
 # nombreuses ; Finishing ne joue que sur un tir dans la surface, rare en 60 s de mini-match.
 PLANS = {
     "Strength": Plan(duel, 3.0, 300), "Balance": Plan(duel, 3.0, 300), "Tackling": Plan(duel, 3.0, 300),
-    "Reflexes": Plan(tir, 3.0, 300), "One on Ones": Plan(tir, 3.0, 300),
+    "Reflexes": Plan(tir, 3.0, 300), "One on Ones": Plan(tir, 3.0, 300), "Handling": Plan(tir, 3.0, 300),
     "Finishing": Plan(tir, 3.0, 300),  # dans la surface seulement
     # hors de la surface : rare dans le mini-match depuis la courbe en S du ticket v2-realisme/24 (fusion du 14/11/2026)
     "Long Shots": Plan(tir_de_loin, 3.0, 300),

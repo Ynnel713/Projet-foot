@@ -83,6 +83,13 @@ def _save(note: int, hard: bool) -> float:
     return 1.0 - shooting.physical_shot_chance(shooter, GOAL, _keeper(note), [])
 
 
+def _catch(note: int, hard: bool) -> float:
+    # arrêt gardé en main par le gardien de Handling `note` (ticket v2-attributs-restants/03b2) : capté sans le relâcher ;
+    # tir face au but, facile (chance de but 0,03) ou le plus difficile (0,30)
+    held, _, _ = shooting.save_shares(0.30 if hard else 0.03, Vec2(91.0, 34.0), GOAL, note)
+    return held * (1.0 - shooting.fumble_share(note))
+
+
 def _foul_free(note: int, hard: bool) -> float:  # réussite du tacle « propre » : Aggression haute = plus de fautes
     return 1.0 - duel.foul_probability(note)
 
@@ -103,6 +110,7 @@ RESOLUTIONS = {
     "tir cadré": _on_target,
     "but": _goal,
     "arrêt": _save,
+    "prise de balle": _catch,
     "tacle sans faute": _foul_free,
     "appel réglé sur la ligne": _keeps_onside,
     "drapeau du hors-jeu vu": _sees_flag,

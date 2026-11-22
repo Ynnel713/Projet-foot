@@ -1972,3 +1972,21 @@ Repères réels : temps de réaction d'un gardien sur tir selon son niveau, port
 | Arrêts captés / repoussés / claqués | 53,7 / 30,7 / 15,7 % | 53,0 / 32,1 / 14,9 % | |
 
 **Lecture.** À moins de 10 m, l'écart (environ 1,3 écart-type) reste dans le bruit. La difficulté de l'arrêt (chance du tir, qui ne lit plus les notes du gardien) bouge peu la répartition des arrêts ; elle est recontrôlée au `03b2` (réserve A1 de l'expert). Rejeu des 499 tirs jugés, notes réelles contre gardien moyen : 7 arrêts gagnés, 15 perdus (les gardiens affrontés ont une médiane de 75 mais une moyenne de 71,6). Sur 50 matchs, les taux bruts par niveau de gardien restent dominés par le bruit et la sélection des tirs ; l'effet est établi tir par tir (scènes et rejeu). Déterminisme : matchs 0 et 1 rejoués deux fois, mêmes empreintes (`a58b8243…`, `371a48b7…`). Handling (capter ou repousser) vient au `03b2`, Rushing Out et Eccentricity au `03b3`.
+
+## 66. Prise de balle du gardien : Handling et ballons relâchés (ticket v2-attributs-restants/03b2, 50 matchs appariés, 22/11/2026)
+
+Repères réels : part captée d'un arrêt et ballons relâchés selon le niveau du gardien, non trouvés (ordres de grandeur).
+
+**Mécanisme.** Handling règle la part captée d'un arrêt : + 0,005 par point autour de 60 (gardien moyen, médiane des gardiens de Ligue 1 de la base), bornée à 10-90 %, le reste réparti entre repoussé et claqué comme avant. Une prise dans la surface est relâchée 4 % des fois à 60 (1,1 % à 99, 5,5 % à 40, bornes 0,5-10 %) : ballon à 1-2 m/s devant le gardien, compté « repoussé », marqué `fumbled` dans la trace. Un gardien sans note vaut le gardien moyen ; tout gardien peut relâcher (choix du propriétaire).
+
+**Série appariée** (`PYTHONPATH=. PYTHONHASHSEED=0 <python> .scratch/v2-attributs-restants/mesures/03b2-serie.py 50 4 <sortie.json>`, depuis l'arbre à mesurer ; avant : `8dbe679`).
+
+| Par match | Avant | Après | Écart apparié |
+|---|---|---|---|
+| Buts | 4,02 | 4,48 | + 0,46 [− 0,07 ; + 0,99] |
+| Arrêts | 5,92 | 5,58 | |
+| Captés / repoussés (dont relâchés) / claqués | 53,0 / 32,1 (0) / 14,9 % | 49,1 / 32,6 (8) / 18,3 % | |
+| Corners | 3,52 | 4,42 | |
+| Corners issus d'un arrêt | 25,6 % | 24,0 % | |
+
+**Lecture.** Prises relâchées par Handling (relâchées / prises) : sous 55, 2 / 21 ; 55 à 65, 4 / 65 ; 65 et plus, 2 / 59, décroissant mais sur de faibles effectifs (l'effet est établi par les tests). La répartition des arrêts reste proche de celle du `03b1` hors prises relâchées, et la part des corners issus d'arrêts (24-26 %) reste proche du repère du `28b` : `SAVE_HELD_SHARE` n'est pas recalé (réserve A1 du `03b1` levée). La hausse des buts reste dans le bruit (tous les tirages sont redistribués) ; à surveiller sur une série plus longue. Déterminisme : matchs 0 et 1 rejoués deux fois, mêmes empreintes (`85ca80a8…`, `4823e004…`).

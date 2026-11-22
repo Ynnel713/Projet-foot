@@ -73,10 +73,11 @@ TRANSITION = {
     "Balance": ("17/11/2026", "v2-attributs-contextes/06"),
     "Vision": ("17/11/2026", _REST),
     # gardien : Reflexes (réaction) et One on Ones (portée en face-à-face) lus seuls sur l'arrêt depuis le ticket
-    # v2-attributs-restants/03b1 (dérogation A8 levée), un contexte chacun ; Handling n'est plus lu (exception de
-    # couverture jusqu'à la prise de balle, 03b2)
+    # v2-attributs-restants/03b1 (dérogation A8 levée), Handling seul sur la prise de balle depuis le ticket 03b2, un
+    # contexte chacun
     "Reflexes": ("22/11/2026", _REST),
     "One on Ones": ("22/11/2026", _REST),
+    "Handling": ("22/11/2026", _REST),
     **{attribute: ("17/11/2026", _REST) for attribute in (
         "Pace", "Acceleration", "Stamina", "Agility", "Strength", "Aggression", "Tackling", "Marking", "Teamwork",
         "Off the Ball", "Composure", "Passing", "Dribbling", "First Touch")},
@@ -417,7 +418,6 @@ COVERAGE_EXCEPTIONS = {
     "Long Throws": "v2-realisme/16f",
     "Penalty Taking": "v2-attributs-restants/02a",
     "Aerial Reach": "v2-attributs-restants/03a",
-    "Handling": "v2-attributs-restants/03b2 (plus lu depuis la levée de A8 au 03b1)",
     "Command of Area": "v2-attributs-restants/03a",
     "Communication": "v2-attributs-restants/03a",
     "Punching (Tendency)": "v2-attributs-restants/03a",
