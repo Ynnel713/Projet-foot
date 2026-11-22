@@ -1891,3 +1891,43 @@ Commande : `PYTHONPATH=. PYTHONHASHSEED=0 uv run python .scratch/v2-realisme/mes
 
 **Lecture.** Aucun attaquant n'est laissé libre : le marqueur est choisi à chaque pas, le libre le plus proche de l'attaquant, avant les zones de la surface (10f) ; un défenseur de zone prend donc déjà l'attaquant qui entre dans sa zone et le rend quand il en sort (comportement figé par `tests/test_v2engine_marquage_surface.py`). Rien à construire au 10g. L'écart à regarder n'est pas l'attribution mais la distance : le marqueur se tient à sa distance de marquage (Marking : 99 → 1 m, 55 → 2,5 m, 11 → 4 m, courbe validée au `v2-collectif/07`), à 3 m en médiane au moment de la passe ; l'excès de tirs dans la surface (12,1 par équipe sur ces matchs, réel environ 8,5) est à chercher au `v2-collectif/22c` (volume de passes dans la surface, distance de marquage près du but), sans toucher la courbe ici.
 
+
+## 63. Distribution des résultats selon l'écart de niveau (ticket v2-realisme/27d, 3 × 100 matchs, 22/11/2026)
+
+Commande : `PYTHONHASHSEED=0 uv run python -m scripts.v2_resultats 100 --niveaux egal --processus 4 --json .scratch/v2-realisme/mesures/27d-egal.json` (puis `moyen`, `gros`) ; repères du marché : `uv run python -m scripts.v2_resultats --cotes .scratch/v2-realisme/mesures/27d-cotes-F1-2627.csv`. Moteur du 10g (`335e8a3`), aucun code moteur modifié. **Mesure seulement, aucun réglage : les écarts vont au `v2-collectif/22c`.**
+
+**Plan d'expérience (validé par le propriétaire le 22/11/2026).** Note d'équipe : moyenne de la note du joueur (« Moyenne FM ») sur le onze de `pick_best_formation` ; hypothèse du propriétaire : ces notes reflètent la valeur réelle des équipes. Clubs de Ligue 1 (84,0 pour Paris SG à 58,8 pour Le Mans). Niveaux d'écart : égal (moins de 1,5 ; 23 affiches), moyen (4 à 7 ; 29), gros (10 et plus ; 38). Le match k d'un niveau joue l'affiche k // 2, camps inversés quand k est impair ; graine `20260923 + 30 000 / 31 000 / 32 000 + k` (hors de la réserve de validation du 18b). Le V2 ne modélise pas d'avantage du terrain (« home » ne fixe que le camp défendu, coup d'envoi tiré au sort) : les repères l'excluent. Intervalles de Wilson à 95 % (± 8 à 10 points sur 100 matchs).
+
+**Repères réels (indicateurs, pas objectifs).** Marché : cotes de clôture moyennes (AvgC) de la Ligue 1 2026/27 (football-data.co.uk, 90 matchs du 21/08 au 08/11/2026, mêmes 18 clubs), marge retirée par normalisation, moyennes calculées à part favori à domicile et favori à l'extérieur puis à poids égaux (avantage du terrain neutralisé). Nuls à terrain neutre, équipes égales : 27,1 % (modèle Glicko calé sur la Premier League, arXiv 2611.15378, table 10) ; tous matchs : 25 à 27 % (10 saisons, 10 ligues). Équipe menée d'un but à la 70e qui ne perd pas : **non trouvé** (le plus proche : 17 % des équipes ayant mené d'un but, à n'importe quel moment, perdent ; Premier League, Sky Sports).
+
+| Niveau (écart moyen de note : moteur / marché) | Favori gagne | Nul | Outsider gagne | Buts par match (favori / outsider) | Nuls attendus par Poisson au nombre de buts mesuré |
+|---|---|---|---|---|---|
+| Égal (0,7 / 0,7), moteur | 41 % [32 ; 51] | 21 % [14 ; 30] | 38 % [29 ; 48] | 3,94 (2,04 / 1,90) | 20,8 % |
+| Égal, marché (13 matchs) | 35 % | 27 % | 39 % | — | — |
+| Moyen (5,3 / 5,4), moteur | 58 % [48 ; 67] | 17 % [11 ; 26] | 25 % [18 ; 34] | 4,15 (2,57 / 1,58) | 18,3 % |
+| Moyen, marché (17 matchs) | 50 % | 25 % | 26 % | — | — |
+| Gros (13,8 / 14,9), moteur | **81 % [72 ; 88]** | **7 % [3 ; 14]** | 12 % [7 ; 20] | 5,34 (4,17 / 1,17) | 7,8 % |
+| Gros, marché (20 matchs) | 62 % | 20 % | 17 % | — | — |
+
+Résultats réels de ces 50 matchs (indicatifs, échantillon court ; favori, nul, outsider) : égal 7 / 2 / 4, moyen 11 / 3 / 3, gros 13 / 7 / 0.
+
+| Équipe menée d'un but à la 70e qui ne perd pas | Moteur |
+|---|---|
+| Égal | 21 % (7 sur 33) [11 ; 38] |
+| Moyen | 22 % (7 sur 32) [11 ; 39] |
+| Gros | 15 % (4 sur 26) [6 ; 34] |
+
+Écart de buts favori moins outsider, gros écart : 3 buts ou plus dans 56 matchs sur 100 (dont 6 buts ou plus dans 21). Équipes égales : 3 buts ou plus d'écart, dans un sens ou l'autre, dans 25 matchs sur 100.
+
+**Lecture.**
+- Le niveau compte, dans le bon ordre : le favori passe de 41 % à 58 % puis 81 %, l'outsider de 38 % à 25 % puis 12 %. Pas de défaut « les écarts de niveau ne comptent pas ».
+- Équipes égales et écart moyen : aucun écart significatif au marché (ses parts tombent dans les intervalles du moteur).
+- **Gros écart : trop peu d'incertitude.** Le favori gagne 81 % des matchs contre 62 % au marché et les nuls tombent à 7 % contre 20 %, deux écarts hors de l'intervalle. Le marché porte pourtant sur un écart de note plus grand (14,9 contre 13,8) : l'écart n'est pas un effet de composition. Le favori marque 4,17 buts par match.
+- Les nuls suivent partout le tirage de Poisson au nombre de buts mesuré (20,8 / 18,3 / 7,8 % attendus, 21 / 17 / 7 % mesurés) : le déficit de nuls vient du volume de buts (3,9 à 5,3 par match, réel environ 2,7, où Poisson donne 25,8 %), pas d'un défaut propre à l'issue. Au gros écart s'ajoute l'écrasement de l'outsider (buts du favori 3,6 fois ceux de l'outsider).
+- Retour d'une équipe menée d'un but à la 70e : 15 à 22 %, sans repère réel ; à remesurer au 22c.
+
+**Pour le `v2-collectif/22c`.** Ramener les buts vers 2-3,5 par match devrait relever les nuls d'eux-mêmes ; vérifier ensuite que le favori du gros écart redescend vers 62 % (marché) sans que l'écart moyen perde son gradient. Relancer cette série (3 × 100 matchs, environ 3 h machine sur 4 processus) juste avant et après la calibration : les chiffres ci-dessus ne servent pas de base au 22c.
+
+**Mémoire.** Un processus neuf par match (`max_tasks_per_child=1`) : le cache sans borne de `v2engine.movement._lerp` grossit d'environ 200 Mo par match dans un même processus (336 836 entrées en 30 min de jeu ; 449, 599 puis 872 Mo de pic après 1, 2, 3 matchs). Une première série de 25 matchs par processus a été tuée par manque de mémoire (3,5 Go). Correction du moteur hors de ce ticket (tâche proposée au propriétaire). `scripts/bench_series.py` enchaîne les matchs dans les mêmes processus : à surveiller sur les longues séries.
+
+Temps machine : 114 s par match sur 4 processus, environ 55 min par niveau. Déterminisme : deux matchs rejoués identiques à la série (empreintes égal `cd181bad…`, moyen `b56ce8e7…`, gros `3923929f…`).

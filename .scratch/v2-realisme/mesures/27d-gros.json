@@ -1,0 +1,1999 @@
+{
+  "paramètres": {
+    "matchs par niveau": 100,
+    "niveaux": {
+      "gros": [
+        10.0,
+        Infinity
+      ]
+    },
+    "durée (min)": 90.0,
+    "graine d'audit": 20260923
+  },
+  "repères réels": {
+    "nuls, équipes égales, terrain neutre": "27,1 % (36,5 / 27,1 / 36,5) : modèle Glicko calé sur la Premier League, arXiv 2611.15378, table 10",
+    "nuls, tous matchs": "25 à 27 % : 10 saisons, 10 ligues, avec et sans public (Wunderlich, Scientific American)",
+    "victoire du favori, tous écarts": "environ 6 sur 10 : Premier League, favori des cotes (Goal), source faible",
+    "victoire du favori, gros écart": "non trouvé",
+    "menée d'un but à la 70e qui ne perd pas": "non trouvé (le plus proche : 17 % des équipes ayant mené d'un but, à n'importe quel moment, perdent ; Premier League, Sky Sports)"
+  },
+  "niveaux": {
+    "gros": {
+      "matchs": 100,
+      "affiches distinctes": 38,
+      "écart moyen de note": 13.753620000000002,
+      "victoires du favori": {
+        "n": 81,
+        "part": 0.81,
+        "ic95": [
+          0.7222097592919214,
+          0.8748534600729574
+        ]
+      },
+      "nuls": {
+        "n": 7,
+        "part": 0.07,
+        "ic95": [
+          0.034318824364064096,
+          0.13749671006529757
+        ]
+      },
+      "victoires de l'outsider": {
+        "n": 12,
+        "part": 0.12,
+        "ic95": [
+          0.06999337365267776,
+          0.19812268002908368
+        ]
+      },
+      "buts par match": 5.34,
+      "buts du favori par match": 4.17,
+      "buts de l'outsider par match": 1.17,
+      "nuls attendus (Poisson au nombre de buts mesuré)": 0.07798233430823373,
+      "menée d'un but à la 70e": {
+        "matchs": 26,
+        "ne perd pas": 4,
+        "part": 0.15384615384615385,
+        "ic95": [
+          0.06149933998929477,
+          0.33531584418313565
+        ],
+        "dont favori mené": 6
+      },
+      "écart de buts (favori - outsider)": {
+        "-2": 5,
+        "-1": 7,
+        "0": 7,
+        "1": 17,
+        "2": 8,
+        "3": 20,
+        "4": 7,
+        "5": 8,
+        "6": 9,
+        "7": 4,
+        "8": 3,
+        "9": 3,
+        "11": 1,
+        "12": 1
+      },
+      "scores (favori-outsider), les plus fréquents": {
+        "4-1": 11,
+        "1-0": 7,
+        "7-1": 6,
+        "3-0": 6,
+        "2-1": 5,
+        "5-0": 4,
+        "6-1": 4,
+        "3-3": 4,
+        "1-2": 4,
+        "3-1": 3,
+        "5-2": 3,
+        "7-0": 3
+      }
+    }
+  },
+  "empreinte": "3923929f298834d6e9f39879370e41675c48876e967bb3655567c57471d1d313",
+  "secondes par match": 117.87214967597998,
+  "matchs": [
+    {
+      "favori": 4,
+      "outsider": 3,
+      "70e": [
+        4,
+        3
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": false,
+      "niveau": "gros",
+      "k": 0,
+      "graine": 32000,
+      "domicile": "AS Monaco",
+      "extérieur": "Le Havre AC",
+      "favori nom": "AS Monaco",
+      "outsider nom": "Le Havre AC",
+      "écart": 10.136,
+      "secondes": 132.75169024500065
+    },
+    {
+      "favori": 4,
+      "outsider": 1,
+      "70e": [
+        3,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 1,
+      "graine": 32001,
+      "domicile": "Le Havre AC",
+      "extérieur": "AS Monaco",
+      "favori nom": "AS Monaco",
+      "outsider nom": "Le Havre AC",
+      "écart": 10.136,
+      "secondes": 122.87611325899888
+    },
+    {
+      "favori": 5,
+      "outsider": 3,
+      "70e": [
+        4,
+        2
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 2,
+      "graine": 32002,
+      "domicile": "RC Strasbourg Alsace",
+      "extérieur": "ESTAC Troyes",
+      "favori nom": "RC Strasbourg Alsace",
+      "outsider nom": "ESTAC Troyes",
+      "écart": 10.364,
+      "secondes": 124.51359434699953
+    },
+    {
+      "favori": 5,
+      "outsider": 0,
+      "70e": [
+        4,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 3,
+      "graine": 32003,
+      "domicile": "ESTAC Troyes",
+      "extérieur": "RC Strasbourg Alsace",
+      "favori nom": "RC Strasbourg Alsace",
+      "outsider nom": "ESTAC Troyes",
+      "écart": 10.364,
+      "secondes": 125.86783889500111
+    },
+    {
+      "favori": 7,
+      "outsider": 3,
+      "70e": [
+        4,
+        2
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 4,
+      "graine": 32004,
+      "domicile": "Paris Saint-Germain",
+      "extérieur": "Stade Rennais FC",
+      "favori nom": "Paris Saint-Germain",
+      "outsider nom": "Stade Rennais FC",
+      "écart": 10.5,
+      "secondes": 127.66645246799999
+    },
+    {
+      "favori": 7,
+      "outsider": 1,
+      "70e": [
+        5,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 5,
+      "graine": 32005,
+      "domicile": "Stade Rennais FC",
+      "extérieur": "Paris Saint-Germain",
+      "favori nom": "Paris Saint-Germain",
+      "outsider nom": "Stade Rennais FC",
+      "écart": 10.5,
+      "secondes": 130.61377449700012
+    },
+    {
+      "favori": 1,
+      "outsider": 3,
+      "70e": [
+        1,
+        3
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 6,
+      "graine": 32006,
+      "domicile": "Angers SCO",
+      "extérieur": "Le Mans FC",
+      "favori nom": "Angers SCO",
+      "outsider nom": "Le Mans FC",
+      "écart": 10.545,
+      "secondes": 117.4889453479991
+    },
+    {
+      "favori": 2,
+      "outsider": 2,
+      "70e": [
+        2,
+        2
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 7,
+      "graine": 32007,
+      "domicile": "Le Mans FC",
+      "extérieur": "Angers SCO",
+      "favori nom": "Angers SCO",
+      "outsider nom": "Le Mans FC",
+      "écart": 10.545,
+      "secondes": 123.09280406800099
+    },
+    {
+      "favori": 3,
+      "outsider": 1,
+      "70e": [
+        2,
+        1
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": false,
+      "niveau": "gros",
+      "k": 8,
+      "graine": 32008,
+      "domicile": "Stade Brestois 29",
+      "extérieur": "ESTAC Troyes",
+      "favori nom": "Stade Brestois 29",
+      "outsider nom": "ESTAC Troyes",
+      "écart": 10.545,
+      "secondes": 127.46119691599961
+    },
+    {
+      "favori": 3,
+      "outsider": 2,
+      "70e": [
+        2,
+        1
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": false,
+      "niveau": "gros",
+      "k": 9,
+      "graine": 32009,
+      "domicile": "ESTAC Troyes",
+      "extérieur": "Stade Brestois 29",
+      "favori nom": "Stade Brestois 29",
+      "outsider nom": "ESTAC Troyes",
+      "écart": 10.545,
+      "secondes": 133.83845249300066
+    },
+    {
+      "favori": 1,
+      "outsider": 0,
+      "70e": [
+        1,
+        0
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": false,
+      "niveau": "gros",
+      "k": 10,
+      "graine": 32010,
+      "domicile": "Paris FC",
+      "extérieur": "Le Havre AC",
+      "favori nom": "Paris FC",
+      "outsider nom": "Le Havre AC",
+      "écart": 10.773,
+      "secondes": 127.27895213699958
+    },
+    {
+      "favori": 3,
+      "outsider": 0,
+      "70e": [
+        3,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 11,
+      "graine": 32011,
+      "domicile": "Le Havre AC",
+      "extérieur": "Paris FC",
+      "favori nom": "Paris FC",
+      "outsider nom": "Le Havre AC",
+      "écart": 10.773,
+      "secondes": 129.45822070099894
+    },
+    {
+      "favori": 4,
+      "outsider": 2,
+      "70e": [
+        2,
+        2
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 12,
+      "graine": 32012,
+      "domicile": "Olympique Lyon",
+      "extérieur": "Le Havre AC",
+      "favori nom": "Olympique Lyon",
+      "outsider nom": "Le Havre AC",
+      "écart": 11.182,
+      "secondes": 125.42590089500118
+    },
+    {
+      "favori": 4,
+      "outsider": 1,
+      "70e": [
+        2,
+        1
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": false,
+      "niveau": "gros",
+      "k": 13,
+      "graine": 32013,
+      "domicile": "Le Havre AC",
+      "extérieur": "Olympique Lyon",
+      "favori nom": "Olympique Lyon",
+      "outsider nom": "Le Havre AC",
+      "écart": 11.182,
+      "secondes": 116.61021756799892
+    },
+    {
+      "favori": 4,
+      "outsider": 1,
+      "70e": [
+        2,
+        1
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": false,
+      "niveau": "gros",
+      "k": 14,
+      "graine": 32014,
+      "domicile": "Olympique Marseille",
+      "extérieur": "Le Havre AC",
+      "favori nom": "Olympique Marseille",
+      "outsider nom": "Le Havre AC",
+      "écart": 11.182,
+      "secondes": 116.49007746499956
+    },
+    {
+      "favori": 4,
+      "outsider": 5,
+      "70e": [
+        4,
+        5
+      ],
+      "menée à la 70e": "favori",
+      "menée ne perd pas": false,
+      "niveau": "gros",
+      "k": 15,
+      "graine": 32015,
+      "domicile": "Le Havre AC",
+      "extérieur": "Olympique Marseille",
+      "favori nom": "Olympique Marseille",
+      "outsider nom": "Le Havre AC",
+      "écart": 11.182,
+      "secondes": 117.43418542899963
+    },
+    {
+      "favori": 5,
+      "outsider": 2,
+      "70e": [
+        4,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 16,
+      "graine": 32016,
+      "domicile": "RC Lens",
+      "extérieur": "Le Havre AC",
+      "favori nom": "RC Lens",
+      "outsider nom": "Le Havre AC",
+      "écart": 11.409,
+      "secondes": 120.32270442499976
+    },
+    {
+      "favori": 3,
+      "outsider": 4,
+      "70e": [
+        1,
+        3
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 17,
+      "graine": 32017,
+      "domicile": "Le Havre AC",
+      "extérieur": "RC Lens",
+      "favori nom": "RC Lens",
+      "outsider nom": "Le Havre AC",
+      "écart": 11.409,
+      "secondes": 123.69483669200054
+    },
+    {
+      "favori": 7,
+      "outsider": 0,
+      "70e": [
+        6,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 18,
+      "graine": 32018,
+      "domicile": "RC Strasbourg Alsace",
+      "extérieur": "Le Mans FC",
+      "favori nom": "RC Strasbourg Alsace",
+      "outsider nom": "Le Mans FC",
+      "écart": 12.0,
+      "secondes": 124.33023026500086
+    },
+    {
+      "favori": 4,
+      "outsider": 1,
+      "70e": [
+        3,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 19,
+      "graine": 32019,
+      "domicile": "Le Mans FC",
+      "extérieur": "RC Strasbourg Alsace",
+      "favori nom": "RC Strasbourg Alsace",
+      "outsider nom": "Le Mans FC",
+      "écart": 12.0,
+      "secondes": 112.68128644700118
+    },
+    {
+      "favori": 6,
+      "outsider": 1,
+      "70e": [
+        6,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 20,
+      "graine": 32020,
+      "domicile": "Stade Brestois 29",
+      "extérieur": "Le Mans FC",
+      "favori nom": "Stade Brestois 29",
+      "outsider nom": "Le Mans FC",
+      "écart": 12.182,
+      "secondes": 122.28389195899945
+    },
+    {
+      "favori": 6,
+      "outsider": 1,
+      "70e": [
+        6,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 21,
+      "graine": 32021,
+      "domicile": "Le Mans FC",
+      "extérieur": "Stade Brestois 29",
+      "favori nom": "Stade Brestois 29",
+      "outsider nom": "Le Mans FC",
+      "écart": 12.182,
+      "secondes": 118.2638702230015
+    },
+    {
+      "favori": 2,
+      "outsider": 2,
+      "70e": [
+        2,
+        2
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 22,
+      "graine": 32022,
+      "domicile": "LOSC Lille",
+      "extérieur": "Le Havre AC",
+      "favori nom": "LOSC Lille",
+      "outsider nom": "Le Havre AC",
+      "écart": 12.5,
+      "secondes": 120.19684139899982
+    },
+    {
+      "favori": 2,
+      "outsider": 3,
+      "70e": [
+        2,
+        1
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": true,
+      "niveau": "gros",
+      "k": 23,
+      "graine": 32023,
+      "domicile": "Le Havre AC",
+      "extérieur": "LOSC Lille",
+      "favori nom": "LOSC Lille",
+      "outsider nom": "Le Havre AC",
+      "écart": 12.5,
+      "secondes": 120.83866864099946
+    },
+    {
+      "favori": 1,
+      "outsider": 0,
+      "70e": [
+        1,
+        0
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": false,
+      "niveau": "gros",
+      "k": 24,
+      "graine": 32024,
+      "domicile": "OGC Nice",
+      "extérieur": "Le Havre AC",
+      "favori nom": "OGC Nice",
+      "outsider nom": "Le Havre AC",
+      "écart": 12.727,
+      "secondes": 116.06307491000007
+    },
+    {
+      "favori": 3,
+      "outsider": 3,
+      "70e": [
+        3,
+        2
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": true,
+      "niveau": "gros",
+      "k": 25,
+      "graine": 32025,
+      "domicile": "Le Havre AC",
+      "extérieur": "OGC Nice",
+      "favori nom": "OGC Nice",
+      "outsider nom": "Le Havre AC",
+      "écart": 12.727,
+      "secondes": 110.72790289300065
+    },
+    {
+      "favori": 5,
+      "outsider": 2,
+      "70e": [
+        5,
+        2
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 26,
+      "graine": 32026,
+      "domicile": "Paris Saint-Germain",
+      "extérieur": "Stade Brestois 29",
+      "favori nom": "Paris Saint-Germain",
+      "outsider nom": "Stade Brestois 29",
+      "écart": 13.0,
+      "secondes": 123.41905841900007
+    },
+    {
+      "favori": 6,
+      "outsider": 1,
+      "70e": [
+        4,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 27,
+      "graine": 32027,
+      "domicile": "Stade Brestois 29",
+      "extérieur": "Paris Saint-Germain",
+      "favori nom": "Paris Saint-Germain",
+      "outsider nom": "Stade Brestois 29",
+      "écart": 13.0,
+      "secondes": 114.72989828299978
+    },
+    {
+      "favori": 5,
+      "outsider": 1,
+      "70e": [
+        4,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 28,
+      "graine": 32028,
+      "domicile": "Stade Rennais FC",
+      "extérieur": "ESTAC Troyes",
+      "favori nom": "Stade Rennais FC",
+      "outsider nom": "ESTAC Troyes",
+      "écart": 13.045,
+      "secondes": 117.72262038000008
+    },
+    {
+      "favori": 9,
+      "outsider": 0,
+      "70e": [
+        6,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 29,
+      "graine": 32029,
+      "domicile": "ESTAC Troyes",
+      "extérieur": "Stade Rennais FC",
+      "favori nom": "Stade Rennais FC",
+      "outsider nom": "ESTAC Troyes",
+      "écart": 13.045,
+      "secondes": 118.21998069199981
+    },
+    {
+      "favori": 3,
+      "outsider": 3,
+      "70e": [
+        1,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 30,
+      "graine": 32030,
+      "domicile": "Paris Saint-Germain",
+      "extérieur": "RC Strasbourg Alsace",
+      "favori nom": "Paris Saint-Germain",
+      "outsider nom": "RC Strasbourg Alsace",
+      "écart": 13.182,
+      "secondes": 116.50464309200106
+    },
+    {
+      "favori": 4,
+      "outsider": 1,
+      "70e": [
+        2,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 31,
+      "graine": 32031,
+      "domicile": "RC Strasbourg Alsace",
+      "extérieur": "Paris Saint-Germain",
+      "favori nom": "Paris Saint-Germain",
+      "outsider nom": "RC Strasbourg Alsace",
+      "écart": 13.182,
+      "secondes": 114.05197546300042
+    },
+    {
+      "favori": 1,
+      "outsider": 0,
+      "70e": [
+        1,
+        0
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": false,
+      "niveau": "gros",
+      "k": 32,
+      "graine": 32032,
+      "domicile": "AS Monaco",
+      "extérieur": "ESTAC Troyes",
+      "favori nom": "AS Monaco",
+      "outsider nom": "ESTAC Troyes",
+      "écart": 13.818,
+      "secondes": 121.60941560799984
+    },
+    {
+      "favori": 2,
+      "outsider": 1,
+      "70e": [
+        2,
+        1
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": false,
+      "niveau": "gros",
+      "k": 33,
+      "graine": 32033,
+      "domicile": "ESTAC Troyes",
+      "extérieur": "AS Monaco",
+      "favori nom": "AS Monaco",
+      "outsider nom": "ESTAC Troyes",
+      "écart": 13.818,
+      "secondes": 121.9560460879984
+    },
+    {
+      "favori": 2,
+      "outsider": 1,
+      "70e": [
+        2,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 34,
+      "graine": 32034,
+      "domicile": "Paris FC",
+      "extérieur": "ESTAC Troyes",
+      "favori nom": "Paris FC",
+      "outsider nom": "ESTAC Troyes",
+      "écart": 14.455,
+      "secondes": 123.55484381600036
+    },
+    {
+      "favori": 3,
+      "outsider": 0,
+      "70e": [
+        2,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 35,
+      "graine": 32035,
+      "domicile": "ESTAC Troyes",
+      "extérieur": "Paris FC",
+      "favori nom": "Paris FC",
+      "outsider nom": "ESTAC Troyes",
+      "écart": 14.455,
+      "secondes": 119.64486850200046
+    },
+    {
+      "favori": 3,
+      "outsider": 0,
+      "70e": [
+        2,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 36,
+      "graine": 32036,
+      "domicile": "Paris Saint-Germain",
+      "extérieur": "Angers SCO",
+      "favori nom": "Paris Saint-Germain",
+      "outsider nom": "Angers SCO",
+      "écart": 14.636,
+      "secondes": 120.09024686500015
+    },
+    {
+      "favori": 7,
+      "outsider": 0,
+      "70e": [
+        5,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 37,
+      "graine": 32037,
+      "domicile": "Angers SCO",
+      "extérieur": "Paris Saint-Germain",
+      "favori nom": "Paris Saint-Germain",
+      "outsider nom": "Angers SCO",
+      "écart": 14.636,
+      "secondes": 130.23446643199895
+    },
+    {
+      "favori": 7,
+      "outsider": 0,
+      "70e": [
+        5,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 38,
+      "graine": 32038,
+      "domicile": "Stade Rennais FC",
+      "extérieur": "Le Mans FC",
+      "favori nom": "Stade Rennais FC",
+      "outsider nom": "Le Mans FC",
+      "écart": 14.682,
+      "secondes": 120.65189632399961
+    },
+    {
+      "favori": 3,
+      "outsider": 0,
+      "70e": [
+        3,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 39,
+      "graine": 32039,
+      "domicile": "Le Mans FC",
+      "extérieur": "Stade Rennais FC",
+      "favori nom": "Stade Rennais FC",
+      "outsider nom": "Le Mans FC",
+      "écart": 14.682,
+      "secondes": 118.72796922299858
+    },
+    {
+      "favori": 1,
+      "outsider": 2,
+      "70e": [
+        1,
+        2
+      ],
+      "menée à la 70e": "favori",
+      "menée ne perd pas": false,
+      "niveau": "gros",
+      "k": 40,
+      "graine": 32040,
+      "domicile": "Olympique Lyon",
+      "extérieur": "ESTAC Troyes",
+      "favori nom": "Olympique Lyon",
+      "outsider nom": "ESTAC Troyes",
+      "écart": 14.864,
+      "secondes": 121.45500559500033
+    },
+    {
+      "favori": 1,
+      "outsider": 0,
+      "70e": [
+        0,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 41,
+      "graine": 32041,
+      "domicile": "ESTAC Troyes",
+      "extérieur": "Olympique Lyon",
+      "favori nom": "Olympique Lyon",
+      "outsider nom": "ESTAC Troyes",
+      "écart": 14.864,
+      "secondes": 116.8011771929996
+    },
+    {
+      "favori": 8,
+      "outsider": 1,
+      "70e": [
+        8,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 42,
+      "graine": 32042,
+      "domicile": "Olympique Marseille",
+      "extérieur": "ESTAC Troyes",
+      "favori nom": "Olympique Marseille",
+      "outsider nom": "ESTAC Troyes",
+      "écart": 14.864,
+      "secondes": 120.20252319700012
+    },
+    {
+      "favori": 7,
+      "outsider": 1,
+      "70e": [
+        5,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 43,
+      "graine": 32043,
+      "domicile": "ESTAC Troyes",
+      "extérieur": "Olympique Marseille",
+      "favori nom": "Olympique Marseille",
+      "outsider nom": "ESTAC Troyes",
+      "écart": 14.864,
+      "secondes": 123.88346467799965
+    },
+    {
+      "favori": 2,
+      "outsider": 1,
+      "70e": [
+        2,
+        1
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": false,
+      "niveau": "gros",
+      "k": 44,
+      "graine": 32044,
+      "domicile": "RC Lens",
+      "extérieur": "ESTAC Troyes",
+      "favori nom": "RC Lens",
+      "outsider nom": "ESTAC Troyes",
+      "écart": 15.091,
+      "secondes": 110.83245251500011
+    },
+    {
+      "favori": 1,
+      "outsider": 2,
+      "70e": [
+        1,
+        2
+      ],
+      "menée à la 70e": "favori",
+      "menée ne perd pas": false,
+      "niveau": "gros",
+      "k": 45,
+      "graine": 32045,
+      "domicile": "ESTAC Troyes",
+      "extérieur": "RC Lens",
+      "favori nom": "RC Lens",
+      "outsider nom": "ESTAC Troyes",
+      "écart": 15.091,
+      "secondes": 114.02768440300133
+    },
+    {
+      "favori": 2,
+      "outsider": 1,
+      "70e": [
+        2,
+        1
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": false,
+      "niveau": "gros",
+      "k": 46,
+      "graine": 32046,
+      "domicile": "AS Monaco",
+      "extérieur": "Le Mans FC",
+      "favori nom": "AS Monaco",
+      "outsider nom": "Le Mans FC",
+      "écart": 15.455,
+      "secondes": 109.22203587699914
+    },
+    {
+      "favori": 4,
+      "outsider": 1,
+      "70e": [
+        2,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 47,
+      "graine": 32047,
+      "domicile": "Le Mans FC",
+      "extérieur": "AS Monaco",
+      "favori nom": "AS Monaco",
+      "outsider nom": "Le Mans FC",
+      "écart": 15.455,
+      "secondes": 112.17019503699885
+    },
+    {
+      "favori": 7,
+      "outsider": 1,
+      "70e": [
+        5,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 48,
+      "graine": 32048,
+      "domicile": "Paris Saint-Germain",
+      "extérieur": "AJ Auxerre",
+      "favori nom": "Paris Saint-Germain",
+      "outsider nom": "AJ Auxerre",
+      "écart": 15.727,
+      "secondes": 119.86552429400035
+    },
+    {
+      "favori": 11,
+      "outsider": 0,
+      "70e": [
+        8,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 49,
+      "graine": 32049,
+      "domicile": "AJ Auxerre",
+      "extérieur": "Paris Saint-Germain",
+      "favori nom": "Paris Saint-Germain",
+      "outsider nom": "AJ Auxerre",
+      "écart": 15.727,
+      "secondes": 122.07843929699993
+    },
+    {
+      "favori": 6,
+      "outsider": 0,
+      "70e": [
+        4,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 50,
+      "graine": 32050,
+      "domicile": "Paris FC",
+      "extérieur": "Le Mans FC",
+      "favori nom": "Paris FC",
+      "outsider nom": "Le Mans FC",
+      "écart": 16.091,
+      "secondes": 110.38734709100027
+    },
+    {
+      "favori": 1,
+      "outsider": 1,
+      "70e": [
+        1,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 51,
+      "graine": 32051,
+      "domicile": "Le Mans FC",
+      "extérieur": "Paris FC",
+      "favori nom": "Paris FC",
+      "outsider nom": "Le Mans FC",
+      "écart": 16.091,
+      "secondes": 111.50041529599912
+    },
+    {
+      "favori": 6,
+      "outsider": 2,
+      "70e": [
+        6,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 52,
+      "graine": 32052,
+      "domicile": "Paris Saint-Germain",
+      "extérieur": "FC Lorient",
+      "favori nom": "Paris Saint-Germain",
+      "outsider nom": "FC Lorient",
+      "écart": 16.136,
+      "secondes": 118.20310697700006
+    },
+    {
+      "favori": 6,
+      "outsider": 0,
+      "70e": [
+        5,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 53,
+      "graine": 32053,
+      "domicile": "FC Lorient",
+      "extérieur": "Paris Saint-Germain",
+      "favori nom": "Paris Saint-Germain",
+      "outsider nom": "FC Lorient",
+      "écart": 16.136,
+      "secondes": 112.48703154000032
+    },
+    {
+      "favori": 5,
+      "outsider": 0,
+      "70e": [
+        4,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 54,
+      "graine": 32054,
+      "domicile": "LOSC Lille",
+      "extérieur": "ESTAC Troyes",
+      "favori nom": "LOSC Lille",
+      "outsider nom": "ESTAC Troyes",
+      "écart": 16.182,
+      "secondes": 114.18022040700089
+    },
+    {
+      "favori": 7,
+      "outsider": 1,
+      "70e": [
+        5,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 55,
+      "graine": 32055,
+      "domicile": "ESTAC Troyes",
+      "extérieur": "LOSC Lille",
+      "favori nom": "LOSC Lille",
+      "outsider nom": "ESTAC Troyes",
+      "écart": 16.182,
+      "secondes": 108.16070220899928
+    },
+    {
+      "favori": 2,
+      "outsider": 0,
+      "70e": [
+        0,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 56,
+      "graine": 32056,
+      "domicile": "OGC Nice",
+      "extérieur": "ESTAC Troyes",
+      "favori nom": "OGC Nice",
+      "outsider nom": "ESTAC Troyes",
+      "écart": 16.409,
+      "secondes": 109.33559271800004
+    },
+    {
+      "favori": 2,
+      "outsider": 1,
+      "70e": [
+        1,
+        0
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": false,
+      "niveau": "gros",
+      "k": 57,
+      "graine": 32057,
+      "domicile": "ESTAC Troyes",
+      "extérieur": "OGC Nice",
+      "favori nom": "OGC Nice",
+      "outsider nom": "ESTAC Troyes",
+      "écart": 16.409,
+      "secondes": 105.89618968800096
+    },
+    {
+      "favori": 4,
+      "outsider": 0,
+      "70e": [
+        3,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 58,
+      "graine": 32058,
+      "domicile": "Olympique Lyon",
+      "extérieur": "Le Mans FC",
+      "favori nom": "Olympique Lyon",
+      "outsider nom": "Le Mans FC",
+      "écart": 16.5,
+      "secondes": 107.79077610099921
+    },
+    {
+      "favori": 4,
+      "outsider": 0,
+      "70e": [
+        1,
+        0
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": false,
+      "niveau": "gros",
+      "k": 59,
+      "graine": 32059,
+      "domicile": "Le Mans FC",
+      "extérieur": "Olympique Lyon",
+      "favori nom": "Olympique Lyon",
+      "outsider nom": "Le Mans FC",
+      "écart": 16.5,
+      "secondes": 103.62681360100032
+    },
+    {
+      "favori": 5,
+      "outsider": 0,
+      "70e": [
+        3,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 60,
+      "graine": 32060,
+      "domicile": "Olympique Marseille",
+      "extérieur": "Le Mans FC",
+      "favori nom": "Olympique Marseille",
+      "outsider nom": "Le Mans FC",
+      "écart": 16.5,
+      "secondes": 109.22133544600001
+    },
+    {
+      "favori": 3,
+      "outsider": 0,
+      "70e": [
+        3,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 61,
+      "graine": 32061,
+      "domicile": "Le Mans FC",
+      "extérieur": "Olympique Marseille",
+      "favori nom": "Olympique Marseille",
+      "outsider nom": "Le Mans FC",
+      "écart": 16.5,
+      "secondes": 113.5145560609999
+    },
+    {
+      "favori": 4,
+      "outsider": 1,
+      "70e": [
+        4,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 62,
+      "graine": 32062,
+      "domicile": "Paris Saint-Germain",
+      "extérieur": "FC Toulouse",
+      "favori nom": "Paris Saint-Germain",
+      "outsider nom": "FC Toulouse",
+      "écart": 16.5,
+      "secondes": 111.79512663899914
+    },
+    {
+      "favori": 4,
+      "outsider": 1,
+      "70e": [
+        2,
+        1
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": false,
+      "niveau": "gros",
+      "k": 63,
+      "graine": 32063,
+      "domicile": "FC Toulouse",
+      "extérieur": "Paris Saint-Germain",
+      "favori nom": "Paris Saint-Germain",
+      "outsider nom": "FC Toulouse",
+      "écart": 16.5,
+      "secondes": 111.28990818100101
+    },
+    {
+      "favori": 6,
+      "outsider": 0,
+      "70e": [
+        6,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 64,
+      "graine": 32064,
+      "domicile": "RC Lens",
+      "extérieur": "Le Mans FC",
+      "favori nom": "RC Lens",
+      "outsider nom": "Le Mans FC",
+      "écart": 16.727,
+      "secondes": 115.90092114400068
+    },
+    {
+      "favori": 7,
+      "outsider": 1,
+      "70e": [
+        5,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 65,
+      "graine": 32065,
+      "domicile": "Le Mans FC",
+      "extérieur": "RC Lens",
+      "favori nom": "RC Lens",
+      "outsider nom": "Le Mans FC",
+      "écart": 16.727,
+      "secondes": 118.2666707770004
+    },
+    {
+      "favori": 5,
+      "outsider": 1,
+      "70e": [
+        3,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 66,
+      "graine": 32066,
+      "domicile": "LOSC Lille",
+      "extérieur": "Le Mans FC",
+      "favori nom": "LOSC Lille",
+      "outsider nom": "Le Mans FC",
+      "écart": 17.818,
+      "secondes": 110.60540805799974
+    },
+    {
+      "favori": 2,
+      "outsider": 0,
+      "70e": [
+        2,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 67,
+      "graine": 32067,
+      "domicile": "Le Mans FC",
+      "extérieur": "LOSC Lille",
+      "favori nom": "LOSC Lille",
+      "outsider nom": "Le Mans FC",
+      "écart": 17.818,
+      "secondes": 110.1020022470002
+    },
+    {
+      "favori": 4,
+      "outsider": 2,
+      "70e": [
+        3,
+        2
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": false,
+      "niveau": "gros",
+      "k": 68,
+      "graine": 32068,
+      "domicile": "OGC Nice",
+      "extérieur": "Le Mans FC",
+      "favori nom": "OGC Nice",
+      "outsider nom": "Le Mans FC",
+      "écart": 18.045,
+      "secondes": 115.91704353599926
+    },
+    {
+      "favori": 4,
+      "outsider": 1,
+      "70e": [
+        3,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 69,
+      "graine": 32069,
+      "domicile": "Le Mans FC",
+      "extérieur": "OGC Nice",
+      "favori nom": "OGC Nice",
+      "outsider nom": "Le Mans FC",
+      "écart": 18.045,
+      "secondes": 112.92537776999961
+    },
+    {
+      "favori": 10,
+      "outsider": 1,
+      "70e": [
+        8,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 70,
+      "graine": 32070,
+      "domicile": "Paris Saint-Germain",
+      "extérieur": "Le Havre AC",
+      "favori nom": "Paris Saint-Germain",
+      "outsider nom": "Le Havre AC",
+      "écart": 19.864,
+      "secondes": 119.02146337200065
+    },
+    {
+      "favori": 8,
+      "outsider": 0,
+      "70e": [
+        6,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 71,
+      "graine": 32071,
+      "domicile": "Le Havre AC",
+      "extérieur": "Paris Saint-Germain",
+      "favori nom": "Paris Saint-Germain",
+      "outsider nom": "Le Havre AC",
+      "écart": 19.864,
+      "secondes": 115.92312782399858
+    },
+    {
+      "favori": 8,
+      "outsider": 0,
+      "70e": [
+        8,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 72,
+      "graine": 32072,
+      "domicile": "Paris Saint-Germain",
+      "extérieur": "ESTAC Troyes",
+      "favori nom": "Paris Saint-Germain",
+      "outsider nom": "ESTAC Troyes",
+      "écart": 23.545,
+      "secondes": 122.36933695300104
+    },
+    {
+      "favori": 9,
+      "outsider": 0,
+      "70e": [
+        6,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 73,
+      "graine": 32073,
+      "domicile": "ESTAC Troyes",
+      "extérieur": "Paris Saint-Germain",
+      "favori nom": "Paris Saint-Germain",
+      "outsider nom": "ESTAC Troyes",
+      "écart": 23.545,
+      "secondes": 116.55946653200044
+    },
+    {
+      "favori": 12,
+      "outsider": 0,
+      "70e": [
+        8,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 74,
+      "graine": 32074,
+      "domicile": "Paris Saint-Germain",
+      "extérieur": "Le Mans FC",
+      "favori nom": "Paris Saint-Germain",
+      "outsider nom": "Le Mans FC",
+      "écart": 25.182,
+      "secondes": 111.59420231799959
+    },
+    {
+      "favori": 5,
+      "outsider": 0,
+      "70e": [
+        4,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 75,
+      "graine": 32075,
+      "domicile": "Le Mans FC",
+      "extérieur": "Paris Saint-Germain",
+      "favori nom": "Paris Saint-Germain",
+      "outsider nom": "Le Mans FC",
+      "écart": 25.182,
+      "secondes": 109.21236949299964
+    },
+    {
+      "favori": 2,
+      "outsider": 4,
+      "70e": [
+        1,
+        3
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 76,
+      "graine": 32076,
+      "domicile": "AS Monaco",
+      "extérieur": "Le Havre AC",
+      "favori nom": "AS Monaco",
+      "outsider nom": "Le Havre AC",
+      "écart": 10.136,
+      "secondes": 112.50571856900024
+    },
+    {
+      "favori": 3,
+      "outsider": 0,
+      "70e": [
+        1,
+        0
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": false,
+      "niveau": "gros",
+      "k": 77,
+      "graine": 32077,
+      "domicile": "Le Havre AC",
+      "extérieur": "AS Monaco",
+      "favori nom": "AS Monaco",
+      "outsider nom": "Le Havre AC",
+      "écart": 10.136,
+      "secondes": 115.33911243399962
+    },
+    {
+      "favori": 4,
+      "outsider": 1,
+      "70e": [
+        3,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 78,
+      "graine": 32078,
+      "domicile": "RC Strasbourg Alsace",
+      "extérieur": "ESTAC Troyes",
+      "favori nom": "RC Strasbourg Alsace",
+      "outsider nom": "ESTAC Troyes",
+      "écart": 10.364,
+      "secondes": 119.44748549799988
+    },
+    {
+      "favori": 1,
+      "outsider": 0,
+      "70e": [
+        1,
+        0
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": false,
+      "niveau": "gros",
+      "k": 79,
+      "graine": 32079,
+      "domicile": "ESTAC Troyes",
+      "extérieur": "RC Strasbourg Alsace",
+      "favori nom": "RC Strasbourg Alsace",
+      "outsider nom": "ESTAC Troyes",
+      "écart": 10.364,
+      "secondes": 111.3515960700006
+    },
+    {
+      "favori": 4,
+      "outsider": 1,
+      "70e": [
+        4,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 80,
+      "graine": 32080,
+      "domicile": "Paris Saint-Germain",
+      "extérieur": "Stade Rennais FC",
+      "favori nom": "Paris Saint-Germain",
+      "outsider nom": "Stade Rennais FC",
+      "écart": 10.5,
+      "secondes": 117.09129673200005
+    },
+    {
+      "favori": 3,
+      "outsider": 2,
+      "70e": [
+        2,
+        2
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 81,
+      "graine": 32081,
+      "domicile": "Stade Rennais FC",
+      "extérieur": "Paris Saint-Germain",
+      "favori nom": "Paris Saint-Germain",
+      "outsider nom": "Stade Rennais FC",
+      "écart": 10.5,
+      "secondes": 117.38292224500037
+    },
+    {
+      "favori": 1,
+      "outsider": 0,
+      "70e": [
+        0,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 82,
+      "graine": 32082,
+      "domicile": "Angers SCO",
+      "extérieur": "Le Mans FC",
+      "favori nom": "Angers SCO",
+      "outsider nom": "Le Mans FC",
+      "écart": 10.545,
+      "secondes": 113.0761615950014
+    },
+    {
+      "favori": 1,
+      "outsider": 3,
+      "70e": [
+        0,
+        2
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 83,
+      "graine": 32083,
+      "domicile": "Le Mans FC",
+      "extérieur": "Angers SCO",
+      "favori nom": "Angers SCO",
+      "outsider nom": "Le Mans FC",
+      "écart": 10.545,
+      "secondes": 109.50836399599939
+    },
+    {
+      "favori": 5,
+      "outsider": 2,
+      "70e": [
+        4,
+        2
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 84,
+      "graine": 32084,
+      "domicile": "Stade Brestois 29",
+      "extérieur": "ESTAC Troyes",
+      "favori nom": "Stade Brestois 29",
+      "outsider nom": "ESTAC Troyes",
+      "écart": 10.545,
+      "secondes": 112.92544133899719
+    },
+    {
+      "favori": 1,
+      "outsider": 2,
+      "70e": [
+        1,
+        2
+      ],
+      "menée à la 70e": "favori",
+      "menée ne perd pas": false,
+      "niveau": "gros",
+      "k": 85,
+      "graine": 32085,
+      "domicile": "ESTAC Troyes",
+      "extérieur": "Stade Brestois 29",
+      "favori nom": "Stade Brestois 29",
+      "outsider nom": "ESTAC Troyes",
+      "écart": 10.545,
+      "secondes": 112.92175635100284
+    },
+    {
+      "favori": 3,
+      "outsider": 3,
+      "70e": [
+        2,
+        3
+      ],
+      "menée à la 70e": "favori",
+      "menée ne perd pas": true,
+      "niveau": "gros",
+      "k": 86,
+      "graine": 32086,
+      "domicile": "Paris FC",
+      "extérieur": "Le Havre AC",
+      "favori nom": "Paris FC",
+      "outsider nom": "Le Havre AC",
+      "écart": 10.773,
+      "secondes": 112.05480330900173
+    },
+    {
+      "favori": 6,
+      "outsider": 1,
+      "70e": [
+        4,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 87,
+      "graine": 32087,
+      "domicile": "Le Havre AC",
+      "extérieur": "Paris FC",
+      "favori nom": "Paris FC",
+      "outsider nom": "Le Havre AC",
+      "écart": 10.773,
+      "secondes": 120.28425483500178
+    },
+    {
+      "favori": 4,
+      "outsider": 0,
+      "70e": [
+        4,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 88,
+      "graine": 32088,
+      "domicile": "Olympique Lyon",
+      "extérieur": "Le Havre AC",
+      "favori nom": "Olympique Lyon",
+      "outsider nom": "Le Havre AC",
+      "écart": 11.182,
+      "secondes": 120.65158268899904
+    },
+    {
+      "favori": 8,
+      "outsider": 0,
+      "70e": [
+        6,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 89,
+      "graine": 32089,
+      "domicile": "Le Havre AC",
+      "extérieur": "Olympique Lyon",
+      "favori nom": "Olympique Lyon",
+      "outsider nom": "Le Havre AC",
+      "écart": 11.182,
+      "secondes": 124.15330597699722
+    },
+    {
+      "favori": 4,
+      "outsider": 3,
+      "70e": [
+        2,
+        2
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 90,
+      "graine": 32090,
+      "domicile": "Olympique Marseille",
+      "extérieur": "Le Havre AC",
+      "favori nom": "Olympique Marseille",
+      "outsider nom": "Le Havre AC",
+      "écart": 11.182,
+      "secondes": 125.66537882699777
+    },
+    {
+      "favori": 6,
+      "outsider": 5,
+      "70e": [
+        6,
+        4
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 91,
+      "graine": 32091,
+      "domicile": "Le Havre AC",
+      "extérieur": "Olympique Marseille",
+      "favori nom": "Olympique Marseille",
+      "outsider nom": "Le Havre AC",
+      "écart": 11.182,
+      "secondes": 129.4829787460003
+    },
+    {
+      "favori": 0,
+      "outsider": 2,
+      "70e": [
+        0,
+        2
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 92,
+      "graine": 32092,
+      "domicile": "RC Lens",
+      "extérieur": "Le Havre AC",
+      "favori nom": "RC Lens",
+      "outsider nom": "Le Havre AC",
+      "écart": 11.409,
+      "secondes": 113.88654854800188
+    },
+    {
+      "favori": 0,
+      "outsider": 2,
+      "70e": [
+        0,
+        2
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 93,
+      "graine": 32093,
+      "domicile": "Le Havre AC",
+      "extérieur": "RC Lens",
+      "favori nom": "RC Lens",
+      "outsider nom": "Le Havre AC",
+      "écart": 11.409,
+      "secondes": 119.98694565500045
+    },
+    {
+      "favori": 7,
+      "outsider": 1,
+      "70e": [
+        6,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 94,
+      "graine": 32094,
+      "domicile": "RC Strasbourg Alsace",
+      "extérieur": "Le Mans FC",
+      "favori nom": "RC Strasbourg Alsace",
+      "outsider nom": "Le Mans FC",
+      "écart": 12.0,
+      "secondes": 127.7663241400005
+    },
+    {
+      "favori": 3,
+      "outsider": 3,
+      "70e": [
+        1,
+        2
+      ],
+      "menée à la 70e": "favori",
+      "menée ne perd pas": true,
+      "niveau": "gros",
+      "k": 95,
+      "graine": 32095,
+      "domicile": "Le Mans FC",
+      "extérieur": "RC Strasbourg Alsace",
+      "favori nom": "RC Strasbourg Alsace",
+      "outsider nom": "Le Mans FC",
+      "écart": 12.0,
+      "secondes": 115.16478577200178
+    },
+    {
+      "favori": 1,
+      "outsider": 0,
+      "70e": [
+        1,
+        0
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": false,
+      "niveau": "gros",
+      "k": 96,
+      "graine": 32096,
+      "domicile": "Stade Brestois 29",
+      "extérieur": "Le Mans FC",
+      "favori nom": "Stade Brestois 29",
+      "outsider nom": "Le Mans FC",
+      "écart": 12.182,
+      "secondes": 120.8776666349986
+    },
+    {
+      "favori": 3,
+      "outsider": 1,
+      "70e": [
+        1,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 97,
+      "graine": 32097,
+      "domicile": "Le Mans FC",
+      "extérieur": "Stade Brestois 29",
+      "favori nom": "Stade Brestois 29",
+      "outsider nom": "Le Mans FC",
+      "écart": 12.182,
+      "secondes": 111.3420860139995
+    },
+    {
+      "favori": 1,
+      "outsider": 2,
+      "70e": [
+        0,
+        2
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 98,
+      "graine": 32098,
+      "domicile": "LOSC Lille",
+      "extérieur": "Le Havre AC",
+      "favori nom": "LOSC Lille",
+      "outsider nom": "Le Havre AC",
+      "écart": 12.5,
+      "secondes": 122.48753530899921
+    },
+    {
+      "favori": 3,
+      "outsider": 1,
+      "70e": [
+        3,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "gros",
+      "k": 99,
+      "graine": 32099,
+      "domicile": "Le Havre AC",
+      "extérieur": "LOSC Lille",
+      "favori nom": "LOSC Lille",
+      "outsider nom": "Le Havre AC",
+      "écart": 12.5,
+      "secondes": 116.14624847599771
+    }
+  ]
+}

@@ -1,0 +1,1996 @@
+{
+  "paramètres": {
+    "matchs par niveau": 100,
+    "niveaux": {
+      "egal": [
+        0.0,
+        1.5
+      ]
+    },
+    "durée (min)": 90.0,
+    "graine d'audit": 20260923
+  },
+  "repères réels": {
+    "nuls, équipes égales, terrain neutre": "27,1 % (36,5 / 27,1 / 36,5) : modèle Glicko calé sur la Premier League, arXiv 2611.15378, table 10",
+    "nuls, tous matchs": "25 à 27 % : 10 saisons, 10 ligues, avec et sans public (Wunderlich, Scientific American)",
+    "victoire du favori, tous écarts": "environ 6 sur 10 : Premier League, favori des cotes (Goal), source faible",
+    "victoire du favori, gros écart": "non trouvé",
+    "menée d'un but à la 70e qui ne perd pas": "non trouvé (le plus proche : 17 % des équipes ayant mené d'un but, à n'importe quel moment, perdent ; Premier League, Sky Sports)"
+  },
+  "niveaux": {
+    "egal": {
+      "matchs": 100,
+      "affiches distinctes": 23,
+      "écart moyen de note": 0.71812,
+      "victoires du favori": {
+        "n": 41,
+        "part": 0.41,
+        "ic95": [
+          0.31867157095664655,
+          0.5079874943890338
+        ]
+      },
+      "nuls": {
+        "n": 21,
+        "part": 0.21,
+        "ic95": [
+          0.14165549531645788,
+          0.2998014930196232
+        ]
+      },
+      "victoires de l'outsider": {
+        "n": 38,
+        "part": 0.38,
+        "ic95": [
+          0.2909744920013438,
+          0.47790426179289663
+        ]
+      },
+      "buts par match": 3.94,
+      "buts du favori par match": 2.04,
+      "buts de l'outsider par match": 1.9,
+      "nuls attendus (Poisson au nombre de buts mesuré)": 0.2082718432009357,
+      "menée d'un but à la 70e": {
+        "matchs": 33,
+        "ne perd pas": 7,
+        "part": 0.21212121212121213,
+        "ic95": [
+          0.1067588656643618,
+          0.3775197758712936
+        ],
+        "dont favori mené": 14
+      },
+      "écart de buts (favori - outsider)": {
+        "-5": 2,
+        "-4": 1,
+        "-3": 7,
+        "-2": 9,
+        "-1": 19,
+        "0": 21,
+        "1": 18,
+        "2": 8,
+        "3": 10,
+        "4": 3,
+        "5": 2
+      },
+      "scores (favori-outsider), les plus fréquents": {
+        "1-1": 9,
+        "1-2": 6,
+        "0-1": 6,
+        "3-0": 6,
+        "2-1": 6,
+        "2-3": 5,
+        "1-3": 5,
+        "2-2": 5,
+        "3-2": 5,
+        "2-0": 5,
+        "3-3": 3,
+        "1-0": 3
+      }
+    }
+  },
+  "empreinte": "cd181bada49929ae45eb6b31446ce6dc6f859b8d3f6b0ab017987482e182d6fe",
+  "secondes par match": 113.69482098143003,
+  "matchs": [
+    {
+      "favori": 4,
+      "outsider": 3,
+      "70e": [
+        4,
+        3
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": false,
+      "niveau": "egal",
+      "k": 0,
+      "graine": 30000,
+      "domicile": "Olympique Lyon",
+      "extérieur": "Olympique Marseille",
+      "favori nom": "Olympique Lyon",
+      "outsider nom": "Olympique Marseille",
+      "écart": 0.0,
+      "secondes": 117.76256867899974
+    },
+    {
+      "favori": 1,
+      "outsider": 2,
+      "70e": [
+        1,
+        0
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": true,
+      "niveau": "egal",
+      "k": 1,
+      "graine": 30001,
+      "domicile": "Olympique Marseille",
+      "extérieur": "Olympique Lyon",
+      "favori nom": "Olympique Lyon",
+      "outsider nom": "Olympique Marseille",
+      "écart": 0.0,
+      "secondes": 113.84254969199992
+    },
+    {
+      "favori": 5,
+      "outsider": 2,
+      "70e": [
+        3,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 2,
+      "graine": 30002,
+      "domicile": "Stade Brestois 29",
+      "extérieur": "RC Strasbourg Alsace",
+      "favori nom": "Stade Brestois 29",
+      "outsider nom": "RC Strasbourg Alsace",
+      "écart": 0.182,
+      "secondes": 116.02494360400033
+    },
+    {
+      "favori": 3,
+      "outsider": 3,
+      "70e": [
+        2,
+        2
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 3,
+      "graine": 30003,
+      "domicile": "RC Strasbourg Alsace",
+      "extérieur": "Stade Brestois 29",
+      "favori nom": "Stade Brestois 29",
+      "outsider nom": "RC Strasbourg Alsace",
+      "écart": 0.182,
+      "secondes": 109.82849021600032
+    },
+    {
+      "favori": 3,
+      "outsider": 3,
+      "70e": [
+        2,
+        2
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 4,
+      "graine": 30004,
+      "domicile": "OGC Nice",
+      "extérieur": "LOSC Lille",
+      "favori nom": "OGC Nice",
+      "outsider nom": "LOSC Lille",
+      "écart": 0.227,
+      "secondes": 124.7958912969998
+    },
+    {
+      "favori": 0,
+      "outsider": 1,
+      "70e": [
+        0,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 5,
+      "graine": 30005,
+      "domicile": "LOSC Lille",
+      "extérieur": "OGC Nice",
+      "favori nom": "OGC Nice",
+      "outsider nom": "LOSC Lille",
+      "écart": 0.227,
+      "secondes": 119.01530449199981
+    },
+    {
+      "favori": 1,
+      "outsider": 0,
+      "70e": [
+        1,
+        0
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": false,
+      "niveau": "egal",
+      "k": 6,
+      "graine": 30006,
+      "domicile": "RC Lens",
+      "extérieur": "Olympique Lyon",
+      "favori nom": "RC Lens",
+      "outsider nom": "Olympique Lyon",
+      "écart": 0.227,
+      "secondes": 119.72521519499878
+    },
+    {
+      "favori": 2,
+      "outsider": 3,
+      "70e": [
+        2,
+        2
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 7,
+      "graine": 30007,
+      "domicile": "Olympique Lyon",
+      "extérieur": "RC Lens",
+      "favori nom": "RC Lens",
+      "outsider nom": "Olympique Lyon",
+      "écart": 0.227,
+      "secondes": 125.61605051400056
+    },
+    {
+      "favori": 3,
+      "outsider": 0,
+      "70e": [
+        3,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 8,
+      "graine": 30008,
+      "domicile": "RC Lens",
+      "extérieur": "Olympique Marseille",
+      "favori nom": "RC Lens",
+      "outsider nom": "Olympique Marseille",
+      "écart": 0.227,
+      "secondes": 120.00321663500108
+    },
+    {
+      "favori": 0,
+      "outsider": 3,
+      "70e": [
+        0,
+        2
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 9,
+      "graine": 30009,
+      "domicile": "Olympique Marseille",
+      "extérieur": "RC Lens",
+      "favori nom": "RC Lens",
+      "outsider nom": "Olympique Marseille",
+      "écart": 0.227,
+      "secondes": 123.15292381600011
+    },
+    {
+      "favori": 0,
+      "outsider": 0,
+      "70e": [
+        0,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 10,
+      "graine": 30010,
+      "domicile": "FC Lorient",
+      "extérieur": "FC Toulouse",
+      "favori nom": "FC Lorient",
+      "outsider nom": "FC Toulouse",
+      "écart": 0.364,
+      "secondes": 115.06759071799934
+    },
+    {
+      "favori": 4,
+      "outsider": 3,
+      "70e": [
+        3,
+        2
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": false,
+      "niveau": "egal",
+      "k": 11,
+      "graine": 30011,
+      "domicile": "FC Toulouse",
+      "extérieur": "FC Lorient",
+      "favori nom": "FC Lorient",
+      "outsider nom": "FC Toulouse",
+      "écart": 0.364,
+      "secondes": 112.01086091199977
+    },
+    {
+      "favori": 2,
+      "outsider": 1,
+      "70e": [
+        2,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 12,
+      "graine": 30012,
+      "domicile": "AJ Auxerre",
+      "extérieur": "FC Lorient",
+      "favori nom": "AJ Auxerre",
+      "outsider nom": "FC Lorient",
+      "écart": 0.409,
+      "secondes": 115.57983443199919
+    },
+    {
+      "favori": 1,
+      "outsider": 3,
+      "70e": [
+        1,
+        3
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 13,
+      "graine": 30013,
+      "domicile": "FC Lorient",
+      "extérieur": "AJ Auxerre",
+      "favori nom": "AJ Auxerre",
+      "outsider nom": "FC Lorient",
+      "écart": 0.409,
+      "secondes": 115.99064838999948
+    },
+    {
+      "favori": 3,
+      "outsider": 0,
+      "70e": [
+        2,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 14,
+      "graine": 30014,
+      "domicile": "Olympique Lyon",
+      "extérieur": "Paris FC",
+      "favori nom": "Olympique Lyon",
+      "outsider nom": "Paris FC",
+      "écart": 0.409,
+      "secondes": 118.80939541099906
+    },
+    {
+      "favori": 2,
+      "outsider": 1,
+      "70e": [
+        1,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 15,
+      "graine": 30015,
+      "domicile": "Paris FC",
+      "extérieur": "Olympique Lyon",
+      "favori nom": "Olympique Lyon",
+      "outsider nom": "Paris FC",
+      "écart": 0.409,
+      "secondes": 119.25361563500155
+    },
+    {
+      "favori": 3,
+      "outsider": 1,
+      "70e": [
+        2,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 16,
+      "graine": 30016,
+      "domicile": "Olympique Marseille",
+      "extérieur": "Paris FC",
+      "favori nom": "Olympique Marseille",
+      "outsider nom": "Paris FC",
+      "écart": 0.409,
+      "secondes": 112.15981141300108
+    },
+    {
+      "favori": 0,
+      "outsider": 2,
+      "70e": [
+        0,
+        2
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 17,
+      "graine": 30017,
+      "domicile": "Paris FC",
+      "extérieur": "Olympique Marseille",
+      "favori nom": "Olympique Marseille",
+      "outsider nom": "Paris FC",
+      "écart": 0.409,
+      "secondes": 114.24752178900053
+    },
+    {
+      "favori": 1,
+      "outsider": 2,
+      "70e": [
+        1,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 18,
+      "graine": 30018,
+      "domicile": "Paris FC",
+      "extérieur": "AS Monaco",
+      "favori nom": "Paris FC",
+      "outsider nom": "AS Monaco",
+      "écart": 0.636,
+      "secondes": 112.8144461690008
+    },
+    {
+      "favori": 2,
+      "outsider": 2,
+      "70e": [
+        2,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 19,
+      "graine": 30019,
+      "domicile": "AS Monaco",
+      "extérieur": "Paris FC",
+      "favori nom": "Paris FC",
+      "outsider nom": "AS Monaco",
+      "écart": 0.636,
+      "secondes": 112.94192796700008
+    },
+    {
+      "favori": 1,
+      "outsider": 1,
+      "70e": [
+        1,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 20,
+      "graine": 30020,
+      "domicile": "RC Lens",
+      "extérieur": "Paris FC",
+      "favori nom": "RC Lens",
+      "outsider nom": "Paris FC",
+      "écart": 0.636,
+      "secondes": 117.83390516000145
+    },
+    {
+      "favori": 1,
+      "outsider": 1,
+      "70e": [
+        0,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 21,
+      "graine": 30021,
+      "domicile": "Paris FC",
+      "extérieur": "RC Lens",
+      "favori nom": "RC Lens",
+      "outsider nom": "Paris FC",
+      "écart": 0.636,
+      "secondes": 117.41608321000058
+    },
+    {
+      "favori": 0,
+      "outsider": 1,
+      "70e": [
+        0,
+        1
+      ],
+      "menée à la 70e": "favori",
+      "menée ne perd pas": false,
+      "niveau": "egal",
+      "k": 22,
+      "graine": 30022,
+      "domicile": "AJ Auxerre",
+      "extérieur": "FC Toulouse",
+      "favori nom": "AJ Auxerre",
+      "outsider nom": "FC Toulouse",
+      "écart": 0.773,
+      "secondes": 114.54934629200034
+    },
+    {
+      "favori": 2,
+      "outsider": 1,
+      "70e": [
+        2,
+        1
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": false,
+      "niveau": "egal",
+      "k": 23,
+      "graine": 30023,
+      "domicile": "FC Toulouse",
+      "extérieur": "AJ Auxerre",
+      "favori nom": "AJ Auxerre",
+      "outsider nom": "FC Toulouse",
+      "écart": 0.773,
+      "secondes": 117.16095791399857
+    },
+    {
+      "favori": 2,
+      "outsider": 5,
+      "70e": [
+        2,
+        4
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 24,
+      "graine": 30024,
+      "domicile": "AS Monaco",
+      "extérieur": "Stade Rennais FC",
+      "favori nom": "AS Monaco",
+      "outsider nom": "Stade Rennais FC",
+      "écart": 0.773,
+      "secondes": 119.35705002000032
+    },
+    {
+      "favori": 0,
+      "outsider": 4,
+      "70e": [
+        0,
+        1
+      ],
+      "menée à la 70e": "favori",
+      "menée ne perd pas": false,
+      "niveau": "egal",
+      "k": 25,
+      "graine": 30025,
+      "domicile": "Stade Rennais FC",
+      "extérieur": "AS Monaco",
+      "favori nom": "AS Monaco",
+      "outsider nom": "Stade Rennais FC",
+      "écart": 0.773,
+      "secondes": 123.25758707800014
+    },
+    {
+      "favori": 2,
+      "outsider": 4,
+      "70e": [
+        2,
+        2
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 26,
+      "graine": 30026,
+      "domicile": "Olympique Lyon",
+      "extérieur": "AS Monaco",
+      "favori nom": "Olympique Lyon",
+      "outsider nom": "AS Monaco",
+      "écart": 1.045,
+      "secondes": 119.57702589600012
+    },
+    {
+      "favori": 3,
+      "outsider": 2,
+      "70e": [
+        2,
+        2
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 27,
+      "graine": 30027,
+      "domicile": "AS Monaco",
+      "extérieur": "Olympique Lyon",
+      "favori nom": "Olympique Lyon",
+      "outsider nom": "AS Monaco",
+      "écart": 1.045,
+      "secondes": 116.16662010100117
+    },
+    {
+      "favori": 3,
+      "outsider": 3,
+      "70e": [
+        2,
+        3
+      ],
+      "menée à la 70e": "favori",
+      "menée ne perd pas": true,
+      "niveau": "egal",
+      "k": 28,
+      "graine": 30028,
+      "domicile": "Olympique Marseille",
+      "extérieur": "AS Monaco",
+      "favori nom": "Olympique Marseille",
+      "outsider nom": "AS Monaco",
+      "écart": 1.045,
+      "secondes": 115.27270772799966
+    },
+    {
+      "favori": 2,
+      "outsider": 1,
+      "70e": [
+        2,
+        1
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": false,
+      "niveau": "egal",
+      "k": 29,
+      "graine": 30029,
+      "domicile": "AS Monaco",
+      "extérieur": "Olympique Marseille",
+      "favori nom": "Olympique Marseille",
+      "outsider nom": "AS Monaco",
+      "écart": 1.045,
+      "secondes": 116.4714909710001
+    },
+    {
+      "favori": 1,
+      "outsider": 2,
+      "70e": [
+        1,
+        0
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": true,
+      "niveau": "egal",
+      "k": 30,
+      "graine": 30030,
+      "domicile": "Angers SCO",
+      "extérieur": "AJ Auxerre",
+      "favori nom": "Angers SCO",
+      "outsider nom": "AJ Auxerre",
+      "écart": 1.091,
+      "secondes": 114.47883077799997
+    },
+    {
+      "favori": 1,
+      "outsider": 1,
+      "70e": [
+        1,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 31,
+      "graine": 30031,
+      "domicile": "AJ Auxerre",
+      "extérieur": "Angers SCO",
+      "favori nom": "Angers SCO",
+      "outsider nom": "AJ Auxerre",
+      "écart": 1.091,
+      "secondes": 116.30748219100133
+    },
+    {
+      "favori": 1,
+      "outsider": 4,
+      "70e": [
+        1,
+        4
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 32,
+      "graine": 30032,
+      "domicile": "LOSC Lille",
+      "extérieur": "RC Lens",
+      "favori nom": "LOSC Lille",
+      "outsider nom": "RC Lens",
+      "écart": 1.091,
+      "secondes": 111.79529884600015
+    },
+    {
+      "favori": 3,
+      "outsider": 2,
+      "70e": [
+        2,
+        2
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 33,
+      "graine": 30033,
+      "domicile": "RC Lens",
+      "extérieur": "LOSC Lille",
+      "favori nom": "LOSC Lille",
+      "outsider nom": "RC Lens",
+      "écart": 1.091,
+      "secondes": 114.95813150200047
+    },
+    {
+      "favori": 1,
+      "outsider": 3,
+      "70e": [
+        1,
+        3
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 34,
+      "graine": 30034,
+      "domicile": "RC Lens",
+      "extérieur": "AS Monaco",
+      "favori nom": "RC Lens",
+      "outsider nom": "AS Monaco",
+      "écart": 1.273,
+      "secondes": 113.86126423300084
+    },
+    {
+      "favori": 1,
+      "outsider": 0,
+      "70e": [
+        1,
+        0
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": false,
+      "niveau": "egal",
+      "k": 35,
+      "graine": 30035,
+      "domicile": "AS Monaco",
+      "extérieur": "RC Lens",
+      "favori nom": "RC Lens",
+      "outsider nom": "AS Monaco",
+      "écart": 1.273,
+      "secondes": 112.13172980200034
+    },
+    {
+      "favori": 2,
+      "outsider": 3,
+      "70e": [
+        2,
+        3
+      ],
+      "menée à la 70e": "favori",
+      "menée ne perd pas": false,
+      "niveau": "egal",
+      "k": 36,
+      "graine": 30036,
+      "domicile": "LOSC Lille",
+      "extérieur": "Olympique Lyon",
+      "favori nom": "LOSC Lille",
+      "outsider nom": "Olympique Lyon",
+      "écart": 1.318,
+      "secondes": 109.18099959699975
+    },
+    {
+      "favori": 4,
+      "outsider": 1,
+      "70e": [
+        1,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 37,
+      "graine": 30037,
+      "domicile": "Olympique Lyon",
+      "extérieur": "LOSC Lille",
+      "favori nom": "LOSC Lille",
+      "outsider nom": "Olympique Lyon",
+      "écart": 1.318,
+      "secondes": 107.87837626299915
+    },
+    {
+      "favori": 1,
+      "outsider": 4,
+      "70e": [
+        1,
+        3
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 38,
+      "graine": 30038,
+      "domicile": "LOSC Lille",
+      "extérieur": "Olympique Marseille",
+      "favori nom": "LOSC Lille",
+      "outsider nom": "Olympique Marseille",
+      "écart": 1.318,
+      "secondes": 112.12722158399993
+    },
+    {
+      "favori": 2,
+      "outsider": 2,
+      "70e": [
+        2,
+        2
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 39,
+      "graine": 30039,
+      "domicile": "Olympique Marseille",
+      "extérieur": "LOSC Lille",
+      "favori nom": "LOSC Lille",
+      "outsider nom": "Olympique Marseille",
+      "écart": 1.318,
+      "secondes": 116.59135203200094
+    },
+    {
+      "favori": 2,
+      "outsider": 0,
+      "70e": [
+        2,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 40,
+      "graine": 30040,
+      "domicile": "OGC Nice",
+      "extérieur": "RC Lens",
+      "favori nom": "OGC Nice",
+      "outsider nom": "RC Lens",
+      "écart": 1.318,
+      "secondes": 116.92633065900009
+    },
+    {
+      "favori": 3,
+      "outsider": 2,
+      "70e": [
+        2,
+        1
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": false,
+      "niveau": "egal",
+      "k": 41,
+      "graine": 30041,
+      "domicile": "RC Lens",
+      "extérieur": "OGC Nice",
+      "favori nom": "OGC Nice",
+      "outsider nom": "RC Lens",
+      "écart": 1.318,
+      "secondes": 121.37667560599948
+    },
+    {
+      "favori": 1,
+      "outsider": 1,
+      "70e": [
+        1,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 42,
+      "graine": 30042,
+      "domicile": "Paris FC",
+      "extérieur": "Stade Rennais FC",
+      "favori nom": "Paris FC",
+      "outsider nom": "Stade Rennais FC",
+      "écart": 1.409,
+      "secondes": 115.58602235099897
+    },
+    {
+      "favori": 0,
+      "outsider": 1,
+      "70e": [
+        0,
+        1
+      ],
+      "menée à la 70e": "favori",
+      "menée ne perd pas": false,
+      "niveau": "egal",
+      "k": 43,
+      "graine": 30043,
+      "domicile": "Stade Rennais FC",
+      "extérieur": "Paris FC",
+      "favori nom": "Paris FC",
+      "outsider nom": "Stade Rennais FC",
+      "écart": 1.409,
+      "secondes": 112.53381091800111
+    },
+    {
+      "favori": 2,
+      "outsider": 1,
+      "70e": [
+        1,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 44,
+      "graine": 30044,
+      "domicile": "RC Strasbourg Alsace",
+      "extérieur": "Angers SCO",
+      "favori nom": "RC Strasbourg Alsace",
+      "outsider nom": "Angers SCO",
+      "écart": 1.455,
+      "secondes": 105.53394066100009
+    },
+    {
+      "favori": 6,
+      "outsider": 1,
+      "70e": [
+        3,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 45,
+      "graine": 30045,
+      "domicile": "Angers SCO",
+      "extérieur": "RC Strasbourg Alsace",
+      "favori nom": "RC Strasbourg Alsace",
+      "outsider nom": "Angers SCO",
+      "écart": 1.455,
+      "secondes": 112.28910012799861
+    },
+    {
+      "favori": 4,
+      "outsider": 5,
+      "70e": [
+        4,
+        2
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 46,
+      "graine": 30046,
+      "domicile": "Olympique Lyon",
+      "extérieur": "Olympique Marseille",
+      "favori nom": "Olympique Lyon",
+      "outsider nom": "Olympique Marseille",
+      "écart": 0.0,
+      "secondes": 114.47303636200013
+    },
+    {
+      "favori": 2,
+      "outsider": 2,
+      "70e": [
+        1,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 47,
+      "graine": 30047,
+      "domicile": "Olympique Marseille",
+      "extérieur": "Olympique Lyon",
+      "favori nom": "Olympique Lyon",
+      "outsider nom": "Olympique Marseille",
+      "écart": 0.0,
+      "secondes": 106.81519917200058
+    },
+    {
+      "favori": 4,
+      "outsider": 1,
+      "70e": [
+        4,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 48,
+      "graine": 30048,
+      "domicile": "Stade Brestois 29",
+      "extérieur": "RC Strasbourg Alsace",
+      "favori nom": "Stade Brestois 29",
+      "outsider nom": "RC Strasbourg Alsace",
+      "écart": 0.182,
+      "secondes": 113.57633240399991
+    },
+    {
+      "favori": 5,
+      "outsider": 5,
+      "70e": [
+        4,
+        4
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 49,
+      "graine": 30049,
+      "domicile": "RC Strasbourg Alsace",
+      "extérieur": "Stade Brestois 29",
+      "favori nom": "Stade Brestois 29",
+      "outsider nom": "RC Strasbourg Alsace",
+      "écart": 0.182,
+      "secondes": 117.09942537499956
+    },
+    {
+      "favori": 3,
+      "outsider": 0,
+      "70e": [
+        3,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 50,
+      "graine": 30050,
+      "domicile": "OGC Nice",
+      "extérieur": "LOSC Lille",
+      "favori nom": "OGC Nice",
+      "outsider nom": "LOSC Lille",
+      "écart": 0.227,
+      "secondes": 105.34922682999968
+    },
+    {
+      "favori": 2,
+      "outsider": 1,
+      "70e": [
+        2,
+        1
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": false,
+      "niveau": "egal",
+      "k": 51,
+      "graine": 30051,
+      "domicile": "LOSC Lille",
+      "extérieur": "OGC Nice",
+      "favori nom": "OGC Nice",
+      "outsider nom": "LOSC Lille",
+      "écart": 0.227,
+      "secondes": 109.37589738799943
+    },
+    {
+      "favori": 4,
+      "outsider": 6,
+      "70e": [
+        4,
+        6
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 52,
+      "graine": 30052,
+      "domicile": "RC Lens",
+      "extérieur": "Olympique Lyon",
+      "favori nom": "RC Lens",
+      "outsider nom": "Olympique Lyon",
+      "écart": 0.227,
+      "secondes": 121.97209329199904
+    },
+    {
+      "favori": 2,
+      "outsider": 0,
+      "70e": [
+        1,
+        0
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": false,
+      "niveau": "egal",
+      "k": 53,
+      "graine": 30053,
+      "domicile": "Olympique Lyon",
+      "extérieur": "RC Lens",
+      "favori nom": "RC Lens",
+      "outsider nom": "Olympique Lyon",
+      "écart": 0.227,
+      "secondes": 116.16864747599902
+    },
+    {
+      "favori": 2,
+      "outsider": 0,
+      "70e": [
+        1,
+        0
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": false,
+      "niveau": "egal",
+      "k": 54,
+      "graine": 30054,
+      "domicile": "RC Lens",
+      "extérieur": "Olympique Marseille",
+      "favori nom": "RC Lens",
+      "outsider nom": "Olympique Marseille",
+      "écart": 0.227,
+      "secondes": 107.96780496199972
+    },
+    {
+      "favori": 2,
+      "outsider": 3,
+      "70e": [
+        2,
+        3
+      ],
+      "menée à la 70e": "favori",
+      "menée ne perd pas": false,
+      "niveau": "egal",
+      "k": 55,
+      "graine": 30055,
+      "domicile": "Olympique Marseille",
+      "extérieur": "RC Lens",
+      "favori nom": "RC Lens",
+      "outsider nom": "Olympique Marseille",
+      "écart": 0.227,
+      "secondes": 122.18299250400014
+    },
+    {
+      "favori": 0,
+      "outsider": 0,
+      "70e": [
+        0,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 56,
+      "graine": 30056,
+      "domicile": "FC Lorient",
+      "extérieur": "FC Toulouse",
+      "favori nom": "FC Lorient",
+      "outsider nom": "FC Toulouse",
+      "écart": 0.364,
+      "secondes": 109.84166128200013
+    },
+    {
+      "favori": 1,
+      "outsider": 3,
+      "70e": [
+        1,
+        3
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 57,
+      "graine": 30057,
+      "domicile": "FC Toulouse",
+      "extérieur": "FC Lorient",
+      "favori nom": "FC Lorient",
+      "outsider nom": "FC Toulouse",
+      "écart": 0.364,
+      "secondes": 112.53790714799834
+    },
+    {
+      "favori": 4,
+      "outsider": 0,
+      "70e": [
+        1,
+        0
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": false,
+      "niveau": "egal",
+      "k": 58,
+      "graine": 30058,
+      "domicile": "AJ Auxerre",
+      "extérieur": "FC Lorient",
+      "favori nom": "AJ Auxerre",
+      "outsider nom": "FC Lorient",
+      "écart": 0.409,
+      "secondes": 115.65323908999926
+    },
+    {
+      "favori": 6,
+      "outsider": 5,
+      "70e": [
+        4,
+        3
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": false,
+      "niveau": "egal",
+      "k": 59,
+      "graine": 30059,
+      "domicile": "FC Lorient",
+      "extérieur": "AJ Auxerre",
+      "favori nom": "AJ Auxerre",
+      "outsider nom": "FC Lorient",
+      "écart": 0.409,
+      "secondes": 119.72903864199907
+    },
+    {
+      "favori": 3,
+      "outsider": 1,
+      "70e": [
+        3,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 60,
+      "graine": 30060,
+      "domicile": "Olympique Lyon",
+      "extérieur": "Paris FC",
+      "favori nom": "Olympique Lyon",
+      "outsider nom": "Paris FC",
+      "écart": 0.409,
+      "secondes": 115.21414248099973
+    },
+    {
+      "favori": 3,
+      "outsider": 0,
+      "70e": [
+        2,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 61,
+      "graine": 30061,
+      "domicile": "Paris FC",
+      "extérieur": "Olympique Lyon",
+      "favori nom": "Olympique Lyon",
+      "outsider nom": "Paris FC",
+      "écart": 0.409,
+      "secondes": 109.70345400699989
+    },
+    {
+      "favori": 3,
+      "outsider": 4,
+      "70e": [
+        3,
+        2
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": true,
+      "niveau": "egal",
+      "k": 62,
+      "graine": 30062,
+      "domicile": "Olympique Marseille",
+      "extérieur": "Paris FC",
+      "favori nom": "Olympique Marseille",
+      "outsider nom": "Paris FC",
+      "écart": 0.409,
+      "secondes": 114.74605407300078
+    },
+    {
+      "favori": 4,
+      "outsider": 0,
+      "70e": [
+        2,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 63,
+      "graine": 30063,
+      "domicile": "Paris FC",
+      "extérieur": "Olympique Marseille",
+      "favori nom": "Olympique Marseille",
+      "outsider nom": "Paris FC",
+      "écart": 0.409,
+      "secondes": 112.0079072410008
+    },
+    {
+      "favori": 2,
+      "outsider": 3,
+      "70e": [
+        1,
+        3
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 64,
+      "graine": 30064,
+      "domicile": "Paris FC",
+      "extérieur": "AS Monaco",
+      "favori nom": "Paris FC",
+      "outsider nom": "AS Monaco",
+      "écart": 0.636,
+      "secondes": 112.28733430400098
+    },
+    {
+      "favori": 1,
+      "outsider": 3,
+      "70e": [
+        1,
+        0
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": true,
+      "niveau": "egal",
+      "k": 65,
+      "graine": 30065,
+      "domicile": "AS Monaco",
+      "extérieur": "Paris FC",
+      "favori nom": "Paris FC",
+      "outsider nom": "AS Monaco",
+      "écart": 0.636,
+      "secondes": 112.49513767600001
+    },
+    {
+      "favori": 0,
+      "outsider": 2,
+      "70e": [
+        0,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 66,
+      "graine": 30066,
+      "domicile": "RC Lens",
+      "extérieur": "Paris FC",
+      "favori nom": "RC Lens",
+      "outsider nom": "Paris FC",
+      "écart": 0.636,
+      "secondes": 110.71531488999972
+    },
+    {
+      "favori": 5,
+      "outsider": 0,
+      "70e": [
+        5,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 67,
+      "graine": 30067,
+      "domicile": "Paris FC",
+      "extérieur": "RC Lens",
+      "favori nom": "RC Lens",
+      "outsider nom": "Paris FC",
+      "écart": 0.636,
+      "secondes": 111.11292941200008
+    },
+    {
+      "favori": 1,
+      "outsider": 2,
+      "70e": [
+        1,
+        2
+      ],
+      "menée à la 70e": "favori",
+      "menée ne perd pas": false,
+      "niveau": "egal",
+      "k": 68,
+      "graine": 30068,
+      "domicile": "AJ Auxerre",
+      "extérieur": "FC Toulouse",
+      "favori nom": "AJ Auxerre",
+      "outsider nom": "FC Toulouse",
+      "écart": 0.773,
+      "secondes": 108.95610298300016
+    },
+    {
+      "favori": 1,
+      "outsider": 2,
+      "70e": [
+        1,
+        2
+      ],
+      "menée à la 70e": "favori",
+      "menée ne perd pas": false,
+      "niveau": "egal",
+      "k": 69,
+      "graine": 30069,
+      "domicile": "FC Toulouse",
+      "extérieur": "AJ Auxerre",
+      "favori nom": "AJ Auxerre",
+      "outsider nom": "FC Toulouse",
+      "écart": 0.773,
+      "secondes": 109.90560214200013
+    },
+    {
+      "favori": 1,
+      "outsider": 1,
+      "70e": [
+        1,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 70,
+      "graine": 30070,
+      "domicile": "AS Monaco",
+      "extérieur": "Stade Rennais FC",
+      "favori nom": "AS Monaco",
+      "outsider nom": "Stade Rennais FC",
+      "écart": 0.773,
+      "secondes": 109.20388528999865
+    },
+    {
+      "favori": 1,
+      "outsider": 6,
+      "70e": [
+        1,
+        6
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 71,
+      "graine": 30071,
+      "domicile": "Stade Rennais FC",
+      "extérieur": "AS Monaco",
+      "favori nom": "AS Monaco",
+      "outsider nom": "Stade Rennais FC",
+      "écart": 0.773,
+      "secondes": 113.87913296700026
+    },
+    {
+      "favori": 3,
+      "outsider": 2,
+      "70e": [
+        2,
+        2
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 72,
+      "graine": 30072,
+      "domicile": "Olympique Lyon",
+      "extérieur": "AS Monaco",
+      "favori nom": "Olympique Lyon",
+      "outsider nom": "AS Monaco",
+      "écart": 1.045,
+      "secondes": 109.87504694000017
+    },
+    {
+      "favori": 1,
+      "outsider": 2,
+      "70e": [
+        0,
+        2
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 73,
+      "graine": 30073,
+      "domicile": "AS Monaco",
+      "extérieur": "Olympique Lyon",
+      "favori nom": "Olympique Lyon",
+      "outsider nom": "AS Monaco",
+      "écart": 1.045,
+      "secondes": 108.66340408199903
+    },
+    {
+      "favori": 4,
+      "outsider": 1,
+      "70e": [
+        3,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 74,
+      "graine": 30074,
+      "domicile": "Olympique Marseille",
+      "extérieur": "AS Monaco",
+      "favori nom": "Olympique Marseille",
+      "outsider nom": "AS Monaco",
+      "écart": 1.045,
+      "secondes": 115.01149416599947
+    },
+    {
+      "favori": 1,
+      "outsider": 1,
+      "70e": [
+        1,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 75,
+      "graine": 30075,
+      "domicile": "AS Monaco",
+      "extérieur": "Olympique Marseille",
+      "favori nom": "Olympique Marseille",
+      "outsider nom": "AS Monaco",
+      "écart": 1.045,
+      "secondes": 113.43602958999872
+    },
+    {
+      "favori": 1,
+      "outsider": 1,
+      "70e": [
+        1,
+        0
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": true,
+      "niveau": "egal",
+      "k": 76,
+      "graine": 30076,
+      "domicile": "Angers SCO",
+      "extérieur": "AJ Auxerre",
+      "favori nom": "Angers SCO",
+      "outsider nom": "AJ Auxerre",
+      "écart": 1.091,
+      "secondes": 109.7042735089999
+    },
+    {
+      "favori": 2,
+      "outsider": 0,
+      "70e": [
+        1,
+        0
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": false,
+      "niveau": "egal",
+      "k": 77,
+      "graine": 30077,
+      "domicile": "AJ Auxerre",
+      "extérieur": "Angers SCO",
+      "favori nom": "Angers SCO",
+      "outsider nom": "AJ Auxerre",
+      "écart": 1.091,
+      "secondes": 110.78079657099988
+    },
+    {
+      "favori": 3,
+      "outsider": 0,
+      "70e": [
+        2,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 78,
+      "graine": 30078,
+      "domicile": "LOSC Lille",
+      "extérieur": "RC Lens",
+      "favori nom": "LOSC Lille",
+      "outsider nom": "RC Lens",
+      "écart": 1.091,
+      "secondes": 115.35551692800072
+    },
+    {
+      "favori": 0,
+      "outsider": 3,
+      "70e": [
+        0,
+        2
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 79,
+      "graine": 30079,
+      "domicile": "RC Lens",
+      "extérieur": "LOSC Lille",
+      "favori nom": "LOSC Lille",
+      "outsider nom": "RC Lens",
+      "écart": 1.091,
+      "secondes": 114.26446461399973
+    },
+    {
+      "favori": 0,
+      "outsider": 1,
+      "70e": [
+        0,
+        1
+      ],
+      "menée à la 70e": "favori",
+      "menée ne perd pas": false,
+      "niveau": "egal",
+      "k": 80,
+      "graine": 30080,
+      "domicile": "RC Lens",
+      "extérieur": "AS Monaco",
+      "favori nom": "RC Lens",
+      "outsider nom": "AS Monaco",
+      "écart": 1.273,
+      "secondes": 112.80008139500023
+    },
+    {
+      "favori": 1,
+      "outsider": 1,
+      "70e": [
+        1,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 81,
+      "graine": 30081,
+      "domicile": "AS Monaco",
+      "extérieur": "RC Lens",
+      "favori nom": "RC Lens",
+      "outsider nom": "AS Monaco",
+      "écart": 1.273,
+      "secondes": 111.96061877899956
+    },
+    {
+      "favori": 0,
+      "outsider": 1,
+      "70e": [
+        0,
+        1
+      ],
+      "menée à la 70e": "favori",
+      "menée ne perd pas": false,
+      "niveau": "egal",
+      "k": 82,
+      "graine": 30082,
+      "domicile": "LOSC Lille",
+      "extérieur": "Olympique Lyon",
+      "favori nom": "LOSC Lille",
+      "outsider nom": "Olympique Lyon",
+      "écart": 1.318,
+      "secondes": 107.34283459400103
+    },
+    {
+      "favori": 3,
+      "outsider": 1,
+      "70e": [
+        2,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 83,
+      "graine": 30083,
+      "domicile": "Olympique Lyon",
+      "extérieur": "LOSC Lille",
+      "favori nom": "LOSC Lille",
+      "outsider nom": "Olympique Lyon",
+      "écart": 1.318,
+      "secondes": 108.219507582
+    },
+    {
+      "favori": 1,
+      "outsider": 1,
+      "70e": [
+        1,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 84,
+      "graine": 30084,
+      "domicile": "LOSC Lille",
+      "extérieur": "Olympique Marseille",
+      "favori nom": "LOSC Lille",
+      "outsider nom": "Olympique Marseille",
+      "écart": 1.318,
+      "secondes": 110.33198447699942
+    },
+    {
+      "favori": 0,
+      "outsider": 5,
+      "70e": [
+        0,
+        4
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 85,
+      "graine": 30085,
+      "domicile": "Olympique Marseille",
+      "extérieur": "LOSC Lille",
+      "favori nom": "LOSC Lille",
+      "outsider nom": "Olympique Marseille",
+      "écart": 1.318,
+      "secondes": 108.00982287700026
+    },
+    {
+      "favori": 0,
+      "outsider": 3,
+      "70e": [
+        0,
+        2
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 86,
+      "graine": 30086,
+      "domicile": "OGC Nice",
+      "extérieur": "RC Lens",
+      "favori nom": "OGC Nice",
+      "outsider nom": "RC Lens",
+      "écart": 1.318,
+      "secondes": 114.09228018100112
+    },
+    {
+      "favori": 3,
+      "outsider": 2,
+      "70e": [
+        1,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 87,
+      "graine": 30087,
+      "domicile": "RC Lens",
+      "extérieur": "OGC Nice",
+      "favori nom": "OGC Nice",
+      "outsider nom": "RC Lens",
+      "écart": 1.318,
+      "secondes": 113.84038604000125
+    },
+    {
+      "favori": 0,
+      "outsider": 1,
+      "70e": [
+        0,
+        1
+      ],
+      "menée à la 70e": "favori",
+      "menée ne perd pas": false,
+      "niveau": "egal",
+      "k": 88,
+      "graine": 30088,
+      "domicile": "Paris FC",
+      "extérieur": "Stade Rennais FC",
+      "favori nom": "Paris FC",
+      "outsider nom": "Stade Rennais FC",
+      "écart": 1.409,
+      "secondes": 108.63121949200104
+    },
+    {
+      "favori": 0,
+      "outsider": 0,
+      "70e": [
+        0,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 89,
+      "graine": 30089,
+      "domicile": "Stade Rennais FC",
+      "extérieur": "Paris FC",
+      "favori nom": "Paris FC",
+      "outsider nom": "Stade Rennais FC",
+      "écart": 1.409,
+      "secondes": 110.18329853899922
+    },
+    {
+      "favori": 5,
+      "outsider": 4,
+      "70e": [
+        4,
+        2
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 90,
+      "graine": 30090,
+      "domicile": "RC Strasbourg Alsace",
+      "extérieur": "Angers SCO",
+      "favori nom": "RC Strasbourg Alsace",
+      "outsider nom": "Angers SCO",
+      "écart": 1.455,
+      "secondes": 107.88688371399985
+    },
+    {
+      "favori": 2,
+      "outsider": 2,
+      "70e": [
+        1,
+        1
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 91,
+      "graine": 30091,
+      "domicile": "Angers SCO",
+      "extérieur": "RC Strasbourg Alsace",
+      "favori nom": "RC Strasbourg Alsace",
+      "outsider nom": "Angers SCO",
+      "écart": 1.455,
+      "secondes": 109.56698383000003
+    },
+    {
+      "favori": 2,
+      "outsider": 0,
+      "70e": [
+        2,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 92,
+      "graine": 30092,
+      "domicile": "Olympique Lyon",
+      "extérieur": "Olympique Marseille",
+      "favori nom": "Olympique Lyon",
+      "outsider nom": "Olympique Marseille",
+      "écart": 0.0,
+      "secondes": 110.6413291079989
+    },
+    {
+      "favori": 3,
+      "outsider": 6,
+      "70e": [
+        2,
+        4
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 93,
+      "graine": 30093,
+      "domicile": "Olympique Marseille",
+      "extérieur": "Olympique Lyon",
+      "favori nom": "Olympique Lyon",
+      "outsider nom": "Olympique Marseille",
+      "écart": 0.0,
+      "secondes": 113.38437349000014
+    },
+    {
+      "favori": 2,
+      "outsider": 3,
+      "70e": [
+        2,
+        3
+      ],
+      "menée à la 70e": "favori",
+      "menée ne perd pas": false,
+      "niveau": "egal",
+      "k": 94,
+      "graine": 30094,
+      "domicile": "Stade Brestois 29",
+      "extérieur": "RC Strasbourg Alsace",
+      "favori nom": "Stade Brestois 29",
+      "outsider nom": "RC Strasbourg Alsace",
+      "écart": 0.182,
+      "secondes": 107.81436092699914
+    },
+    {
+      "favori": 7,
+      "outsider": 3,
+      "70e": [
+        6,
+        2
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 95,
+      "graine": 30095,
+      "domicile": "RC Strasbourg Alsace",
+      "extérieur": "Stade Brestois 29",
+      "favori nom": "Stade Brestois 29",
+      "outsider nom": "RC Strasbourg Alsace",
+      "écart": 0.182,
+      "secondes": 111.60836513200047
+    },
+    {
+      "favori": 3,
+      "outsider": 0,
+      "70e": [
+        3,
+        0
+      ],
+      "menée à la 70e": null,
+      "menée ne perd pas": null,
+      "niveau": "egal",
+      "k": 96,
+      "graine": 30096,
+      "domicile": "OGC Nice",
+      "extérieur": "LOSC Lille",
+      "favori nom": "OGC Nice",
+      "outsider nom": "LOSC Lille",
+      "écart": 0.227,
+      "secondes": 110.60460931300076
+    },
+    {
+      "favori": 1,
+      "outsider": 0,
+      "70e": [
+        1,
+        0
+      ],
+      "menée à la 70e": "outsider",
+      "menée ne perd pas": false,
+      "niveau": "egal",
+      "k": 97,
+      "graine": 30097,
+      "domicile": "LOSC Lille",
+      "extérieur": "OGC Nice",
+      "favori nom": "OGC Nice",
+      "outsider nom": "LOSC Lille",
+      "écart": 0.227,
+      "secondes": 107.57150362399989
+    },
+    {
+      "favori": 2,
+      "outsider": 2,
+      "70e": [
+        1,
+        2
+      ],
+      "menée à la 70e": "favori",
+      "menée ne perd pas": true,
+      "niveau": "egal",
+      "k": 98,
+      "graine": 30098,
+      "domicile": "RC Lens",
+      "extérieur": "Olympique Lyon",
+      "favori nom": "RC Lens",
+      "outsider nom": "Olympique Lyon",
+      "écart": 0.227,
+      "secondes": 112.15040390700051
+    },
+    {
+      "favori": 1,
+      "outsider": 3,
+      "70e": [
+        1,
+        2
+      ],
+      "menée à la 70e": "favori",
+      "menée ne perd pas": false,
+      "niveau": "egal",
+      "k": 99,
+      "graine": 30099,
+      "domicile": "Olympique Lyon",
+      "extérieur": "RC Lens",
+      "favori nom": "RC Lens",
+      "outsider nom": "Olympique Lyon",
+      "écart": 0.227,
+      "secondes": 113.51857685200048
+    }
+  ]
+}
