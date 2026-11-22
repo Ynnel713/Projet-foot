@@ -109,7 +109,10 @@ BALL_CONE_BAND_DEG = 5.0
 FACING_RUN_BAND_MPS = 0.3
 
 
-@lru_cache(maxsize=None)
+# Cache borné (ticket v2-realisme/27e) : la note est un réel continu (fatigue), un cache illimité grossissait sans fin
+# (872 Mo de pic après trois matchs dans un même processus). La réutilisation se fait dans un même pas : 256 entrées
+# donnent déjà 94,4 % de réussite, contre 94,5 % sans borne, sur la séquence réelle d'appels de 10 min de jeu.
+@lru_cache(maxsize=4096)
 def _lerp(note: float, points: tuple[tuple[float, float], ...]) -> float:
     """Interpolation linéaire par repères, bornée aux extrémités (jamais d'extrapolation hors de
     la plage connue)."""
