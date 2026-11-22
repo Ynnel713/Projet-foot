@@ -1,0 +1,5 @@
+501 cadrés jugés ; issue conforme à la portée avec élan : 501
+arrêts gagnés par l'élan : 7 ; perdus (contre-pied) : 6
+  contre-pied: 46 tirs, écart médian 1.37 m, écart - portée immobile médian -0.52 m
+  quasi immobile: 359 tirs, écart médian 0.98 m, écart - portée immobile médian -0.34 m
+  lancé vers le ballon: 96 tirs, écart médian 1.42 m, écart - portée immobile médian +0.16 m

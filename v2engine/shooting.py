@@ -335,10 +335,29 @@ KEEPER_DIVE_REACH_M = 2.8
 KEEPER_DIVE_MPS = 6.0
 
 
-def keeper_reach_m(elapsed_s: float) -> float:
-    """Portée latérale du gardien (m) `elapsed_s` après la frappe."""
+# Appuis au moment du tir (ticket v2-realisme/03f, proposé le 22/11/2026, validé par délégation permanente du
+# propriétaire du 05/11/2026) : pendant sa réaction, le gardien garde son élan de la frappe (comme l'adversaire de
+# `decision.REACTION_S`) ; déjà lancé vers le ballon, sa portée de ce côté grandit de sa vitesse vers lui fois le temps
+# d'élan, `min(temps de vol, KEEPER_REACTION_S)` ; à contre-pied, elle baisse d'autant (jamais sous 0). Aucune constante
+# nouvelle ; part de la vitesse gardée pendant la réaction : non trouvée (toute, comme au `decision`).
+
+
+def keeper_reach_m(elapsed_s: float, toward_mps: float = 0.0) -> float:
+    """Portée latérale du gardien (m) `elapsed_s` après la frappe ; `toward_mps` : sa vitesse à la frappe vers le point
+    de passage du ballon (négative à contre-pied, ticket v2-realisme/03f)."""
     dive = KEEPER_DIVE_MPS * max(0.0, elapsed_s - KEEPER_REACTION_S)
-    return min(KEEPER_DIVE_REACH_M, KEEPER_STANDING_REACH_M + dive)
+    carry = toward_mps * min(max(0.0, elapsed_s), KEEPER_REACTION_S)
+    return max(0.0, min(KEEPER_DIVE_REACH_M, KEEPER_STANDING_REACH_M + dive) + carry)
+
+
+def keeper_toward_mps(keeper_velocity: Vec2, keeper_at: Vec2, point: Vec2) -> float:
+    """Vitesse du gardien (m/s) vers `point`, où le ballon passe au plus près de lui (ticket v2-realisme/03f) ; 0 si le
+    ballon passe sur lui."""
+    offset = point - keeper_at
+    gap = offset.length()
+    if gap < 1e-9:
+        return 0.0
+    return (keeper_velocity.x * offset.x + keeper_velocity.y * offset.y) / gap
 
 
 _ENGINE_TICK_S = 0.1  # pas de la boucle de match (`match.TICK_SECONDS`, égalité gardée par un test)
@@ -359,11 +378,14 @@ def _flight_distance_m(elapsed_s: float) -> float:
     return MAX_PASS_MPS * _ENGINE_TICK_S * (1.0 - q ** (elapsed_s / _ENGINE_TICK_S)) / (1.0 - q)
 
 
-def _keeper_cover(origin: Vec2, goal: Vec2, axis: Vec2, keeper_at: Vec2) -> tuple[float, float] | tuple[()] | None:
+def _keeper_cover(origin: Vec2, goal: Vec2, axis: Vec2, keeper_at: Vec2,
+                  keeper_velocity: Vec2 = Vec2(0.0, 0.0)) -> tuple[float, float] | tuple[()] | None:
     """Angles (relatifs à `axis`) des tirs que le gardien atteint : ceux qui traversent sa portée avant la ligne de but,
     soit le disque de portée coupé par la ligne, vu du tireur (`match._keeper_reaches` mesure l'écart au plus près du
     gardien, ou sur la ligne si le ballon la franchit avant). Chaque bord a sa portée, au temps de vol jusqu'au point
-    de passage (tangence ou ligne de but). `()` : aucun ; `None` : tous (tireur dans sa portée)."""
+    de passage (tangence ou ligne de but). `()` : aucun ; `None` : tous (tireur dans sa portée). Ticket 03f : chaque
+    bord a aussi l'élan du gardien vers lui (`keeper_velocity`, sa vitesse à la frappe), pris en travers de l'axe du tir
+    pour la tangence et le long de la ligne pour le bord sur la ligne."""
     offset = keeper_at - origin
     distance, along = offset.length(), offset.x * axis.x + offset.y * axis.y
     if distance <= keeper_reach_m(0.0):
@@ -373,22 +395,25 @@ def _keeper_cover(origin: Vec2, goal: Vec2, axis: Vec2, keeper_at: Vec2) -> tupl
     side = 1.0 if origin.x > goal.x else -1.0  # côté terrain de la ligne de but
     centre, depth = _relative(origin, axis, keeper_at), keeper_at.x - goal.x
     angles = []
+    across = keeper_velocity.y * axis.x - keeper_velocity.x * axis.y  # vers la gauche de l'axe (angles croissants)
     for sign in (-1.0, 1.0):
-        reach = keeper_reach_m(_flight_time_s(distance))
+        toward = sign * across
+        reach = keeper_reach_m(_flight_time_s(distance), toward)
         for _ in range(3):  # portée au temps de vol jusqu'au point de tangence (point fixe, converge vite)
-            reach = keeper_reach_m(_flight_time_s(math.sqrt(max(0.0, distance * distance - reach * reach))))
+            reach = keeper_reach_m(_flight_time_s(math.sqrt(max(0.0, distance * distance - reach * reach))), toward)
         if reach >= distance:
             return None
         turn = centre + sign * math.asin(reach / distance)
         heading = Vec2(axis.x * math.cos(turn) - axis.y * math.sin(turn), axis.x * math.sin(turn) + axis.y * math.cos(turn))
         if (origin.x + heading.x * math.sqrt(distance * distance - reach * reach) - goal.x) * side >= 0.0:
             angles.append(turn)  # tangence encore devant la ligne
-        reach = keeper_reach_m(_flight_time_s(distance))
+        toward = sign * keeper_velocity.y  # bord sur la ligne : de ce côté en y
+        reach = keeper_reach_m(_flight_time_s(distance), toward)
         for _ in range(3):  # bord de la portée sur la ligne de but, au temps de vol jusqu'à lui
             if abs(depth) >= reach:
                 break
             point = Vec2(goal.x, keeper_at.y + sign * math.sqrt(reach * reach - depth * depth))
-            reach = keeper_reach_m(_flight_time_s(origin.distance_to(point)))
+            reach = keeper_reach_m(_flight_time_s(origin.distance_to(point)), toward)
         if abs(depth) < reach:
             angles.append(_relative(origin, axis, Vec2(goal.x, keeper_at.y + sign * math.sqrt(reach * reach - depth * depth))))
     return (min(angles), max(angles)) if angles else ()
@@ -475,7 +500,8 @@ def _goal_angles(shooter: PlayerState, goal: Vec2, keeper: PlayerState | None) -
     gardien bien placé, à `KEEPER_REFERENCE_M` de sa ligne sur l'axe du tir."""
     low, high, axis = _goal_angle(shooter.position, goal)
     keeper_at = keeper.position if keeper is not None else goal + (shooter.position - goal).normalized() * KEEPER_REFERENCE_M
-    covered = _keeper_cover(shooter.position, goal, axis, keeper_at)
+    velocity = keeper.velocity if keeper is not None else Vec2(0.0, 0.0)  # élan à la frappe (ticket 03f)
+    covered = _keeper_cover(shooter.position, goal, axis, keeper_at, velocity)
     if covered is None:
         return []  # le ballon passe forcément à sa portée
     if not covered or covered[1] <= low or covered[0] >= high:
@@ -522,7 +548,7 @@ def physical_shot_chance(shooter: PlayerState, goal: Vec2, keeper: PlayerState |
     """Chance de but d'un tir non contré, calculée avec les lois de sa résolution (ticket v2-realisme/05e) : écart du
     ballon gaussien (`shot_error_sigma`, note, pression et Composure comprises), dévissé (`draw_shot_error`), cadre
     (entre les poteaux, sous la barre), arrêt si le ballon passe à la portée du gardien (`keeper_reach_m`) au temps de
-    vol jusqu'à lui ; gardien immobile pendant le vol (réserve A1 du 05h). Quelques `erf`, aucune constante nouvelle.
+    vol jusqu'à lui ; gardien immobile pendant le vol (réserve A1 du 05h), avec son élan de la frappe pendant sa réaction (ticket 03f). Quelques `erf`, aucune constante nouvelle.
     Approximation : largeur et hauteur supposées indépendantes, comme au 35b. Toute modification de la résolution
     (gardien, cadrage, contre, vitesse du tir) se reporte ici ; contrôle : `scripts/shot_calibration.py`."""
     kept, (goal_share, _, _), _ = _aimed(shooter, goal, keeper, opponents)
@@ -572,9 +598,10 @@ def neutral_open_chance(shooter: PlayerState, goal: Vec2, keeper: PlayerState | 
     return physical_shot_chance(neutral, goal, neutral_keeper, rivals)
 
 
-def post_shot_xg(gap_m: float, elapsed_s: float) -> float:
-    """xG après frappe d'un tir cadré qui passe à `gap_m` du gardien `elapsed_s` après la frappe."""
-    return 1.0 / (1.0 + math.exp(-(gap_m - keeper_reach_m(elapsed_s)) / PSXG_SPREAD_M))
+def post_shot_xg(gap_m: float, elapsed_s: float, toward_mps: float = 0.0) -> float:
+    """xG après frappe d'un tir cadré qui passe à `gap_m` du gardien `elapsed_s` après la frappe ; `toward_mps` : son
+    élan à la frappe vers le ballon (ticket 03f)."""
+    return 1.0 / (1.0 + math.exp(-(gap_m - keeper_reach_m(elapsed_s, toward_mps)) / PSXG_SPREAD_M))
 
 
 def draw_shot_error(shooter: PlayerState, goal: Vec2, opponents: list[PlayerState],

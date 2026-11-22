@@ -1,0 +1,6 @@
+avant: buts/match 4.20 ; tirs/match 29.3 ; cadrés jugés 531 ; arrêtés 61.0% ; xG après frappe - buts (cadrés jugés) +0.038/match
+après: buts/match 4.06 ; tirs/match 27.1 ; cadrés jugés 501 ; arrêtés 59.9% ; xG après frappe - buts (cadrés jugés) +0.029/match
+écart apparié buts/match -0.14 [-0.77 ; +0.49]
+  contre-pied (< -0,5 m/s): 46 tirs, arrêtés 60.9%
+  quasi immobile: 359 tirs, arrêtés 63.8%
+  lancé du bon côté (> 0,5): 96 tirs, arrêtés 44.8%

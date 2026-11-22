@@ -1434,12 +1434,13 @@ class Collector:
         self.count[calibration + " : buts"] += goal
         self.count[calibration + " : xG après frappe"] += psxg
         gap, elapsed = getattr(event, "keeper_gap_m", None), getattr(event, "keeper_time_s", None)
+        toward = getattr(event, "keeper_toward_mps", None) or 0.0  # élan du gardien (ticket 03f) ; absent : immobile
         for spread in PSXG_SPREADS_M:  # même formule que `shooting.post_shot_xg`, à un autre étalement
-            z = 0.0 if gap is None else max(-50.0, min(50.0, (gap - keeper_reach_m(elapsed)) / spread))
+            z = 0.0 if gap is None else max(-50.0, min(50.0, (gap - keeper_reach_m(elapsed, toward)) / spread))
             value = psxg if gap is None else 1.0 / (1.0 + math.exp(-z))
             self.count[f"{calibration} : xG après frappe à l'étalement {spread:g} m"] += value
         if gap is not None:  # réserve A2 du 06b : le gain du gardien par écart à sa portée
-            key = KEEPER_GAP_PREFIX + carry_tranche("écart (m)", gap - keeper_reach_m(elapsed), REACH_GAP_BINS)
+            key = KEEPER_GAP_PREFIX + carry_tranche("écart (m)", gap - keeper_reach_m(elapsed, toward), REACH_GAP_BINS)
             self.count[key + " : tirs"] += 1
             self.count[key + " : xG après frappe"] += psxg
             self.count[key + " : buts"] += goal

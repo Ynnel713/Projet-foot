@@ -228,6 +228,7 @@ class ShotEvent:
     keeper_time_s: float | None = None
     keeper_gap_m: float | None = None
     keeper_speed_mps: float | None = None  # vitesse du ballon quand il passe au gardien (réserve A4 du 05h)
+    keeper_toward_mps: float | None = None  # élan du gardien à la frappe vers le ballon, négatif à contre-pied (ticket 03f)
     # Contre physique (ticket v2-realisme/05c) : point de contact du tir contré.
     block_x: float | None = None
     block_y: float | None = None

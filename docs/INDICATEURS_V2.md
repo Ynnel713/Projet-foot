@@ -1931,3 +1931,24 @@ Résultats réels de ces 50 matchs (indicatifs, échantillon court ; favori, nul
 **Mémoire.** Un processus neuf par match (`max_tasks_per_child=1`) : le cache sans borne de `v2engine.movement._lerp` grossit d'environ 200 Mo par match dans un même processus (336 836 entrées en 30 min de jeu ; 449, 599 puis 872 Mo de pic après 1, 2, 3 matchs). Une première série de 25 matchs par processus a été tuée par manque de mémoire (3,5 Go). Correction du moteur hors de ce ticket (tâche proposée au propriétaire). `scripts/bench_series.py` enchaîne les matchs dans les mêmes processus : à surveiller sur les longues séries.
 
 Temps machine : 114 s par match sur 4 processus, environ 55 min par niveau. Déterminisme : deux matchs rejoués identiques à la série (empreintes égal `cd181bad…`, moyen `b56ce8e7…`, gros `3923929f…`).
+
+## 64. Appuis du gardien au moment du tir (ticket v2-realisme/03f, 6 matchs relevés et 50 matchs appariés, 22/11/2026)
+
+Repères réels : part de la vitesse gardée par un gardien pendant sa réaction et vitesse latérale d'un gardien au moment d'un tir, non trouvées.
+
+**Mécanisme.** Pendant sa réaction (`KEEPER_REACTION_S` = 0,30 s), le gardien garde son élan de la frappe : sa portée vers le point de passage du ballon est décalée de sa vitesse vers ce point fois `min(temps de vol, 0,30 s)`, en plus ou à contre-pied en moins (jamais sous 0). Même loi à la résolution, à l'évaluation du tir (chaque bord de la couverture a l'élan vers lui), à l'xG après frappe et au banc. À la résolution, l'écart se prend depuis ses appuis de la frappe, comme à l'évaluation : la dérive de son inertie pendant le vol n'est pas comptée en plus (réserve A1 de l'expert). Aucune constante nouvelle.
+
+**Vitesse des gardiens au tir** (moteur du 05l, 170 tirs de 6 matchs) : vitesse médiane 0,72 m/s, en travers de l'axe du tir médiane 0,24 m/s, 90e centile 0,93 m/s, maximum 6,7 m/s. Décalage de portée au 90e centile : ± 0,28 m.
+
+**Série appariée** (`PYTHONPATH=. PYTHONHASHSEED=0 uv run python .scratch/v2-realisme/mesures/03f-serie.py 50 4 <avant|après> <sortie.json>` ; avant : élan ignoré = moteur du 05l ; synthèse `03f-serie-50-synthese.txt`, rejeu `03f-bascules.py`).
+
+| Par match | Avant | Après | Écart apparié |
+|---|---|---|---|
+| Buts | 4,20 | 4,06 | − 0,14 [− 0,77 ; + 0,49] |
+| Cadrés jugés par le gardien (50 matchs) | 531 | 501 | |
+| Part arrêtée | 61,0 % | 59,9 % | |
+| xG après frappe − buts (cadrés jugés) | + 0,038 | + 0,029 | |
+
+Sur les 501 cadrés jugés de la série après, rejoués sans élan (même écart, même temps de vol) : 7 arrêts gagnés par l'élan, 6 perdus à contre-pied ; issue conforme à la portée avec élan sur les 501. Par élan : contre-pied (< − 0,5 m/s) 46 tirs, 60,9 % arrêtés ; quasi immobile 359 tirs, 63,8 % ; lancé vers le ballon (> 0,5 m/s) 96 tirs, 44,8 %, écart médian 1,42 m contre 0,98 m : **effet de sélection**, le gardien lancé vers le ballon rattrape une place perdue (ballon déplacé juste avant le tir), son élan réduit l'écart sans le combler.
+
+**Lecture.** Effet faible en match (2,6 % des cadrés changent d'issue ; avant la correction A1, 13 sur 519 avec la dérive comptée en plus), dans le sens attendu sur les mêmes tirs ; le reste des écarts de la série est le bruit des matchs qui divergent. Déterminisme : matchs 0 et 1 rejoués deux fois, mêmes empreintes (`e8b807f5…`, `e1cb5601…`), scores identiques à la série. La lecture du tireur (anticipation, contre-pied décidé) vient au `03l`.

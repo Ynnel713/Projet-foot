@@ -31,6 +31,7 @@ class ShotFlight:
     keeper_at_m: float | None = None
     elapsed_s: float = 0.0
     keeper_from: Vec2 | None = None  # position du gardien adverse à la frappe : il y reste pendant le vol (réserve A1, 05h)
+    keeper_velocity: Vec2 | None = None  # sa vitesse à la frappe : son élan pendant la réaction (ticket v2-realisme/03f)
     tried: set[str] = field(default_factory=set)  # défenseurs qui ont déjà tenté de contrer ce tir (ticket 05c)
 
 

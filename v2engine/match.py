@@ -54,8 +54,8 @@ from v2engine.roles import role_of
 from v2engine.restart import (AERIAL_LANDING_M, AERIEN, CORNER, FREE_KICK, KICKOFF, LONG_RESTART_M, PENALTY, PENALTY_CONVERSION, SOL,
                               award, exit_point, foul_restart, is_aerial, kickoff, restart_target)
 from v2engine.shooting import (BLOCK_CHANCE, BLOCK_WIDTH_M, FLYING, HELD, OVER, PARRIED, SHANKED, SHOT_AIM_HEIGHT_M, WIDE,
-                               block_reach_m, draw_shot_error, keeper_reach_m, neutral_xg, occasion_quality, parry_velocity,
-                               post_shot_xg, save_outcome, shank_velocity, shot_probability)
+                               block_reach_m, draw_shot_error, keeper_reach_m, keeper_toward_mps, neutral_xg,
+                               occasion_quality, parry_velocity, post_shot_xg, save_outcome, shank_velocity, shot_probability)
 from v2engine.situation import SituationTracker
 from v2engine.transition import TransitionPlay
 from v2engine.trace import (BallSnapshot, DecisionRecord, FoulEvent, MatchTrace, OffsideEvent, PlayerSnapshot, ShotEvent,
@@ -443,8 +443,8 @@ def _shank(ball: BallState, shooter: PlayerState, goal: Vec2, now_s: float) -> N
 def _keeper_reaches(ball: BallState, flight: ShotFlight, start: Vec2, end: Vec2, dt: float, players: list[PlayerState],
                     now_s: float, shots: list[ShotEvent] | None) -> bool:
     """Arrêt par portée (ticket v2-realisme/05b) : quand le ballon passe au plus près du gardien pendant ce pas, il
-    l'atteint si l'écart tient dans sa portée à cet instant (`shooting.keeper_reach_m`). Jugé une fois par tir ; le temps
-    de vol et l'écart sont tracés. Atteint : arrêt avec l'issue du ticket 28b. Retourne vrai si le gardien a touché."""
+    l'atteint si l'écart tient dans sa portée à cet instant (`shooting.keeper_reach_m`), élan de la frappe compris
+    (ticket 03f). Jugé une fois par tir ; le temps de vol, l'écart et l'élan sont tracés. Atteint : arrêt avec l'issue du ticket 28b. Retourne vrai si le gardien a touché."""
     done = flight.origin.distance_to(start)
     step = start.distance_to(end)
     if done + step < flight.keeper_at_m:
@@ -456,13 +456,20 @@ def _keeper_reaches(ball: BallState, flight: ShotFlight, start: Vec2, end: Vec2,
     keeper = _goalkeeper("away" if flight.team == "home" else "home", players)
     if keeper is None:
         return False
-    gap = keeper.position.distance_to(point)
+    # ticket 03f (réserve A1 de l'expert) : écart pris depuis ses appuis de la frappe, comme à l'évaluation
+    # (`shooting._keeper_cover`) ; son élan de la frappe vers le point de passage (lancé du bon côté ou à contre-pied)
+    # remplace la dérive de son inertie pendant le vol, qui n'est pas comptée en plus
+    at = flight.keeper_from if flight.keeper_from is not None else keeper.position
+    gap = at.distance_to(point)
+    moving = flight.keeper_velocity
+    toward = keeper_toward_mps(moving, at, point) if moving is not None else 0.0
     rank = flight.rank if shots is not None else -1
     if rank >= 0:
         shots[rank] = replace(shots[rank], keeper_time_s=elapsed, keeper_gap_m=gap,
                               keeper_speed_mps=ball.velocity.length(),  # vitesse au début du pas (réserve A4, 05h)
-                              post_shot_xg=post_shot_xg(gap, elapsed))  # ticket 06a
-    if gap > keeper_reach_m(elapsed):
+                              keeper_toward_mps=toward,
+                              post_shot_xg=post_shot_xg(gap, elapsed, toward))  # ticket 06a
+    if gap > keeper_reach_m(elapsed, toward):
         return False
     goal = _OPPONENT_GOAL[flight.team]
     outcome = save_outcome(flight.chance, flight.origin, goal)
@@ -836,7 +843,7 @@ def _execute(ball: BallState, holder: PlayerState, action, players: list[PlayerS
                                        xg=neutral_xg(holder, goal, keeper, opponents),
                                        post_shot_xg=0.0 if outcome == SHANKED else None))
             _log(ball, now_s, TIR_EVENT, holder.team, holder.name, outcome)
-        error = draw_shot_error(holder, goal, opponents, keeper)  # visée selon le gardien (ticket v2-realisme/05l)
+        error = draw_shot_error(holder, goal, opponents, keeper)  # côté visé au sort, sans lire le gardien (ticket 05l)
         if error is None:
             record(SHANKED)  # dévissé (ticket v2-collectif/35b)
             _shank(ball, holder, goal, now_s)
@@ -861,7 +868,7 @@ def _execute(ball: BallState, holder: PlayerState, action, players: list[PlayerS
         flight.on_target = (to_line >= 0.0 and abs(arrival.y - GOAL_CENTER_Y) < GOAL_WIDTH_M / 2.0
                             and SHOT_AIM_HEIGHT_M + to_line * flight.slope < GOAL_HEIGHT_M)
         if keeper is not None:
-            flight.keeper_from = keeper.position
+            flight.keeper_from, flight.keeper_velocity = keeper.position, keeper.velocity  # appuis à la frappe (03f)
         if shots is not None and (not flight.on_target or keeper is None):  # xG après frappe (06a) : hors cadre 0
             shots[-1] = replace(shots[-1], post_shot_xg=1.0 if flight.on_target else 0.0)
         if flight.on_target and keeper is not None:
