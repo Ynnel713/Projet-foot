@@ -19,7 +19,7 @@ from v2engine.defense import arrival_time_s
 from v2engine.geometry import PENALTY_AREA_DEPTH_M, PENALTY_AREA_WIDTH_M, PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
 from v2engine.movement import PlayerState
 from v2engine.possession import BALL_FRICTION_PER_S
-from v2engine.shooting import block_probability
+from v2engine.shooting import ONE_ON_ONE_RANGE_M, one_on_one
 
 # Placement sur la bissectrice (ticket v2-realisme/03b ; chiffres réels non trouvés, ordres de grandeur, constantes
 # proposées par Claude et validées par délégation du propriétaire le 06/11/2026) : le gardien se tient sur la bissectrice
@@ -56,7 +56,7 @@ RUSH_MAX_FROM_GOAL_M = 35.0
 # ne fait plus que de petits pas (`FACE_CREEP_INTENSITY` de sa vitesse max, environ 1 m/s), prêt à s'arrêter : un tir part de 12 à 17 m du but, à 7 à 12 m du
 # gardien (scène du 07/11/2026), donc une distance d'arrêt de 8 m arriverait après le tir. Seuil de contrôle du banc :
 # arrêté = sous `FACE_STOPPED_MPS` au moment du tir.
-FACE_RANGE_M = 25.0
+FACE_RANGE_M = ONE_ON_ONE_RANGE_M  # défini dans `shooting` depuis le ticket v2-attributs-restants/03b1 (arrêt)
 FACE_ADVANCE_SHARE = 0.25
 FACE_DEPTH_MAX_M = 6.0
 FACE_INTENSITY = 0.6
@@ -73,10 +73,7 @@ def face_to_face(keeper: PlayerState, holder: PlayerState | None, players: list[
     moins du but du gardien, sans coéquipier du gardien sur sa ligne de tir. Un défenseur resté derrière lui ne compte pas."""
     if holder is None or holder.team == keeper.team or holder.poste == "GK":
         return False
-    goal = own_goal(keeper.team)
-    if holder.position.distance_to(goal) > FACE_RANGE_M:
-        return False
-    return block_probability(holder, goal, [p for p in players if p.team == keeper.team]) == 0.0
+    return one_on_one(holder, own_goal(keeper.team), [p for p in players if p.team == keeper.team])
 
 
 def face_depth(holder_distance_m: float) -> float:

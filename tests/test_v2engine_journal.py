@@ -40,7 +40,7 @@ def test_reference_scene_back_pass_missed_control_loss_shot_goal(monkeypatch) ->
                         if holder.name == "Arriere" else Action("shot", 1.0))
     monkeypatch.setattr(match, "attempt_control", lambda player, *args: player.name == "Buteur")
     monkeypatch.setattr(match, "draw_shot_error", lambda *args: (0.0, 0.0))
-    monkeypatch.setattr(match, "keeper_reach_m", lambda elapsed, toward=0.0: 0.0)  # le gardien battu ne touche pas le tir
+    monkeypatch.setattr(match, "keeper_reach_m", lambda elapsed, toward=0.0, *profile: 0.0)  # le gardien battu ne touche pas le tir
     ball = BallState(position=back.position, velocity=Vec2(0.0, 0.0), holder="Arriere")
     ball.log = EventLog([])
     scored = None

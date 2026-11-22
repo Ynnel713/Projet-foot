@@ -75,6 +75,14 @@ def _goal(note: int, hard: bool) -> float:
     return shooting.physical_shot_chance(shooter, GOAL, _keeper(), opponents)
 
 
+def _save(note: int, hard: bool) -> float:
+    # but évité par le gardien noté `note` (ticket v2-attributs-restants/03b1 : Reflexes, One on Ones en face-à-face),
+    # tireur moyen face au but, seul : facile à 16 m, difficile à 8 m. Au-delà d'environ 20 m le vol laisse à tout gardien
+    # le temps de plonger au plus loin : Reflexes ne joue que de près (sa place dans la carte)
+    shooter = _p("A", "home", 97 if hard else 89, 34)
+    return 1.0 - shooting.physical_shot_chance(shooter, GOAL, _keeper(note), [])
+
+
 def _foul_free(note: int, hard: bool) -> float:  # réussite du tacle « propre » : Aggression haute = plus de fautes
     return 1.0 - duel.foul_probability(note)
 
@@ -94,6 +102,7 @@ RESOLUTIONS = {
     "tacle": _tackle,
     "tir cadré": _on_target,
     "but": _goal,
+    "arrêt": _save,
     "tacle sans faute": _foul_free,
     "appel réglé sur la ligne": _keeps_onside,
     "drapeau du hors-jeu vu": _sees_flag,
@@ -158,16 +167,6 @@ def test_the_engine_draw_matches_the_guarded_probability() -> None:
 
 
 # --- Hors garde : écarts connus, renvoyés à leur ticket (ce ticket ne les corrige pas) ---------------------------------
-def test_known_gap_keeper_ratings_do_not_change_the_save() -> None:
-    # L'arrêt est physique (portée du gardien, `shooting.keeper_reach_m`) et ne lit aucune note du gardien : 11 et 99
-    # arrêtent pareil. Renvoyé à `v2-attributs-restants/03b`. Ce test échouera quand les notes compteront : le retirer
-    # et ajouter l'arrêt à RESOLUTIONS.
-    shooter, opponents = _shooter(60, False)
-    low = shooting.physical_shot_chance(shooter, GOAL, _keeper(11), opponents)
-    high = shooting.physical_shot_chance(shooter, GOAL, _keeper(99), opponents)
-    assert low == high
-
-
 def test_known_gap_the_block_reads_no_defender_rating() -> None:
     # Le contre dépend de la place du défenseur et de la précision du tireur, d'aucune note du défenseur
     # (`shooting.BLOCK_CHANCE`). Renvoyé à `v2-realisme/17b` (Bravery).

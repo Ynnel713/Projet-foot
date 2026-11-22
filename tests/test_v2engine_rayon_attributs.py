@@ -7,7 +7,8 @@ Cinq vérifications, chacune avec un cas négatif synthétique :
 2. ses poids somment à 1 ;
 3. aucune note n'est lue hors du registre et de la façade : `player_attribute` réservé à la façade, `intrinsic_rating`
    au chargement, nom non littéral seulement dans `contextes.contextual_rating`, et aucun calcul ne combine plusieurs
-   attributs hors du registre, sauf les cumuls d'une autre forme listés (`CUMULS_HORS_REGISTRE` : A8, R5, A17) ;
+   attributs hors du registre, sauf les cumuls d'une autre forme listés (`CUMULS_HORS_REGISTRE` : R5, A17 ; A8 levée au
+   ticket v2-attributs-restants/03b1) ;
 4. un effet n'a qu'un contexte : identifiants d'effet distincts, et chaque contexte est lu par la seule fonction qui
    porte son effet (R1, « un effet, un calcul ») ;
 5. chaque attribut non spécialiste lu par le moteur figure dans au moins deux contextes, sauf liste de transition datée
@@ -46,8 +47,6 @@ READER_MODULES = {"player_attribute": {"attributes", "condition"}, "intrinsic_ra
 # Cumuls d'une autre forme qu'une somme pondérée de notes, hors du registre (carte, section « Contextes ») :
 # attributs -> fonctions qui les lisent ensemble. Un mélange de ces attributs est toléré dans ces fonctions seulement.
 CUMULS_HORS_REGISTRE = {
-    # A8 : note du gardien, 0,5 Reflexes + 0,3 One on Ones + 0,2 Handling, jusqu'au ticket v2-attributs-restants/03b
-    frozenset({"Reflexes", "One on Ones", "Handling"}): {"shooting._keeper_rating"},
     # R5 : temps d'arrivée, course à vitesse de pointe + montée en régime, deux capacités en secondes
     frozenset({"Pace", "Acceleration"}): {"defense.arrival_time_s"},
     # A17 : ballon dur à orienter, part First Touch x (1 - dureté x (1 - part Technique)), un produit par fonctions
@@ -73,9 +72,11 @@ TRANSITION = {
     "Flair": ("17/11/2026", "v2-attributs-contextes/05"),
     "Balance": ("17/11/2026", "v2-attributs-contextes/06"),
     "Vision": ("17/11/2026", _REST),
-    "Reflexes": ("17/11/2026", "v2-attributs-restants/03b"),
-    "One on Ones": ("17/11/2026", "v2-attributs-restants/03b"),
-    "Handling": ("17/11/2026", "v2-attributs-restants/03b"),
+    # gardien : Reflexes (réaction) et One on Ones (portée en face-à-face) lus seuls sur l'arrêt depuis le ticket
+    # v2-attributs-restants/03b1 (dérogation A8 levée), un contexte chacun ; Handling n'est plus lu (exception de
+    # couverture jusqu'à la prise de balle, 03b2)
+    "Reflexes": ("22/11/2026", _REST),
+    "One on Ones": ("22/11/2026", _REST),
     **{attribute: ("17/11/2026", _REST) for attribute in (
         "Pace", "Acceleration", "Stamina", "Agility", "Strength", "Aggression", "Tackling", "Marking", "Teamwork",
         "Off the Ball", "Composure", "Passing", "Dribbling", "First Touch")},
@@ -248,9 +249,9 @@ def test_the_read_check_fails_on_fake_modules() -> None:
     assert mixes_outside_registry(_parse(old_tackle, "duel"), CUMULS_HORS_REGISTRE) == {
         ("duel.f", frozenset({"Tackling", "Aggression"}))}
     # un cumul toléré ne l'est que dans sa fonction
-    keeper = 'def g(k):\n    return effective_rating(k, "Reflexes") + effective_rating(k, "Handling")'
-    assert mixes_outside_registry(_parse(keeper, "shooting"), CUMULS_HORS_REGISTRE)
-    assert not mixes_outside_registry(_parse(keeper.replace("def g", "def _keeper_rating"), "shooting"),
+    arrival = 'def g(p):\n    return effective_rating(p, "Pace") + effective_rating(p, "Acceleration")'
+    assert mixes_outside_registry(_parse(arrival, "defense"), CUMULS_HORS_REGISTRE)
+    assert not mixes_outside_registry(_parse(arrival.replace("def g", "def arrival_time_s"), "defense"),
                                       CUMULS_HORS_REGISTRE)
     sneaky = 'def h(p, name):\n    return effective_rating(p, name)'
     assert reads_outside_facade(_parse(sneaky, "decision")) == {("decision", "h", "nom non littéral")}
@@ -416,6 +417,7 @@ COVERAGE_EXCEPTIONS = {
     "Long Throws": "v2-realisme/16f",
     "Penalty Taking": "v2-attributs-restants/02a",
     "Aerial Reach": "v2-attributs-restants/03a",
+    "Handling": "v2-attributs-restants/03b2 (plus lu depuis la levée de A8 au 03b1)",
     "Command of Area": "v2-attributs-restants/03a",
     "Communication": "v2-attributs-restants/03a",
     "Punching (Tendency)": "v2-attributs-restants/03a",

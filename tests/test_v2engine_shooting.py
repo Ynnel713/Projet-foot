@@ -14,7 +14,7 @@ from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
 from v2engine.decision import Action
 from v2engine.match import GOAL_CENTER_Y, _step_ball, simulate_match
 from v2engine.movement import PlayerState
-from v2engine.shooting import shot_probability
+from v2engine.shooting import physical_shot_chance, shot_probability
 
 GOAL = Vec2(PITCH_LENGTH_M, GOAL_CENTER_Y)
 SPOT_8M, SPOT_10M = Vec2(PITCH_LENGTH_M - 8.0, GOAL_CENTER_Y), Vec2(PITCH_LENGTH_M - 10.0, GOAL_CENTER_Y)
@@ -47,10 +47,16 @@ def test_higher_finishing_increases_conversion_at_equal_distance() -> None:
 
 def test_higher_keeper_reflexes_and_one_on_ones_reduce_conversion_at_equal_shot() -> None:
     shooter = _player(position=SPOT_10M, attributes={"Finishing": 70, "Composure": 65})
-    great_keeper = _player("Costaud", poste="GK", team="away", attributes={"Reflexes": 90, "One on Ones": 90, "Handling": 85})
-    poor_keeper = _player("Fragile", poste="GK", team="away", attributes={"Reflexes": 20, "One on Ones": 20, "Handling": 25})
+    # depuis la levée de A8 (ticket v2-attributs-restants/03b1), les notes jouent par la portée du gardien dans
+    # l'évaluation physique (plus dans `shot_probability`) : il doit être dans son but, face au tireur
+    in_goal = Vec2(PITCH_LENGTH_M - 1.0, GOAL_CENTER_Y)
+    great_keeper = _player("Costaud", poste="GK", team="away", position=in_goal,
+                           attributes={"Reflexes": 90, "One on Ones": 90, "Handling": 85})
+    poor_keeper = _player("Fragile", poste="GK", team="away", position=in_goal,
+                          attributes={"Reflexes": 20, "One on Ones": 20, "Handling": 25})
 
-    assert shot_probability(shooter, GOAL, great_keeper, []) < shot_probability(shooter, GOAL, poor_keeper, [])
+    assert (physical_shot_chance(shooter, GOAL, great_keeper, [great_keeper])
+            < physical_shot_chance(shooter, GOAL, poor_keeper, [poor_keeper]))
 
 
 def test_scored_shot_counts_only_when_the_ball_reaches_the_goal_line(monkeypatch) -> None:

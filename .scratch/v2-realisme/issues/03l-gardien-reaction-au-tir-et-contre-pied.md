@@ -10,7 +10,7 @@
 
 **Lien avec l'existant :** 05b (arrêt par portée, livré) ; 03f (appuis au moment du tir) ; 15c (tête : la tête croisée à bout portant est le cas typique) ; `v2-attributs-restants/02a` (le penalty réutilise la même anticipation).
 
-**Blocked by:** 03f, 07a ; `v2-attributs-restants/03b`.
+**Blocked by:** 03f, 07a ; `v2-attributs-restants/03b1` (03b découpé le 22/11/2026 : seul l'arrêt, 03b1, est un prérequis).
 
 **Bloque :** `v2-mise-en-scene/05` ; `v2-attributs-restants/10b` (piqué sur un gardien parti tôt).
 

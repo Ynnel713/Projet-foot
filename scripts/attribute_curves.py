@@ -68,13 +68,14 @@ def _shot_factor(attr: str, x: float) -> Callable[[float], float]:
 
 
 def _keeper_factor(note: float) -> float:
-    """Chance de but face à un gardien noté `note` (Reflexes, One on Ones, Handling) rapportée à un gardien à 60."""
+    """Chance de but face à un gardien noté `note` (Reflexes, One on Ones) rapportée à un gardien à 60, tir de 14 m seul
+    face au but. Depuis le ticket v2-attributs-restants/03b1, lois de la résolution (`physical_shot_chance` : temps de
+    réaction et portée en face-à-face) ; avant, note mélangée A8 de `shot_probability`."""
     def keeper(n: float) -> PlayerState:
-        return player({"Reflexes": n, "One on Ones": n, "Handling": n}, x=PITCH_LENGTH_M - 1.0, team="away",
-                      poste="GB")
+        return player({"Reflexes": n, "One on Ones": n}, x=PITCH_LENGTH_M - 1.0, team="away", poste="GB")
     shooter = player(x=PITCH_LENGTH_M - 14.0)
-    return (shooting.shot_probability(shooter, _GOAL_HOME, keeper(note), [])
-            / shooting.shot_probability(shooter, _GOAL_HOME, keeper(NEUTRAL), []))
+    return (shooting.physical_shot_chance(shooter, _GOAL_HOME, keeper(note), [keeper(note)])
+            / shooting.physical_shot_chance(shooter, _GOAL_HOME, keeper(NEUTRAL), [keeper(NEUTRAL)]))
 
 
 def _with(attr: str, fn: Callable[[PlayerState], float]) -> Callable[[float], float]:
@@ -104,7 +105,7 @@ MECHANISMS: list[tuple[str, str, str, Callable[[float], float]]] = [
      _shot_factor("Finishing", PITCH_LENGTH_M - 14.0)),
     ("Long Shots", "exécution du tir hors surface (facteur, gardien neutre)", "courbe",
      _shot_factor("Long Shots", PITCH_LENGTH_M - 25.0)),
-    ("Gardien", "chance de but encaissée (facteur, Reflexes, One on Ones, Handling)", "courbe", _keeper_factor),
+    ("Gardien", "chance de but encaissée (facteur, Reflexes, One on Ones), tir de 14 m", "linéaire", _keeper_factor),
     ("Decisions", "meilleur choix", "courbe", decision.best_choice_probability),
     ("Vision", "portée de vision (m)", "courbe", decision.vision_range_m),
     ("Vision", "repère la passe clé", "courbe", decision.key_pass_spot_probability),

@@ -54,8 +54,9 @@ from v2engine.roles import role_of
 from v2engine.restart import (AERIAL_LANDING_M, AERIEN, CORNER, FREE_KICK, KICKOFF, LONG_RESTART_M, PENALTY, PENALTY_CONVERSION, SOL,
                               award, exit_point, foul_restart, is_aerial, kickoff, restart_target)
 from v2engine.shooting import (BLOCK_CHANCE, BLOCK_WIDTH_M, FLYING, HELD, OVER, PARRIED, SHANKED, SHOT_AIM_HEIGHT_M, WIDE,
-                               block_reach_m, draw_shot_error, keeper_reach_m, keeper_toward_mps, neutral_xg,
-                               occasion_quality, parry_velocity, post_shot_xg, save_outcome, shank_velocity, shot_probability)
+                               block_reach_m, draw_shot_error, keeper_profile, keeper_reach_m, keeper_toward_mps,
+                               neutral_xg, occasion_quality, one_on_one, parry_velocity, post_shot_xg, save_outcome,
+                               shank_velocity, shot_probability)
 from v2engine.situation import SituationTracker
 from v2engine.transition import TransitionPlay
 from v2engine.trace import (BallSnapshot, DecisionRecord, FoulEvent, MatchTrace, OffsideEvent, PlayerSnapshot, ShotEvent,
@@ -469,7 +470,8 @@ def _keeper_reaches(ball: BallState, flight: ShotFlight, start: Vec2, end: Vec2,
                               keeper_speed_mps=ball.velocity.length(),  # vitesse au début du pas (réserve A4, 05h)
                               keeper_toward_mps=toward,
                               post_shot_xg=post_shot_xg(gap, elapsed, toward))  # ticket 06a
-    if gap > keeper_reach_m(elapsed, toward):
+    profile = flight.keeper_profile or keeper_profile(None, False)
+    if gap > keeper_reach_m(elapsed, toward, *profile):
         return False
     goal = _OPPONENT_GOAL[flight.team]
     outcome = save_outcome(flight.chance, flight.origin, goal)
@@ -869,6 +871,8 @@ def _execute(ball: BallState, holder: PlayerState, action, players: list[PlayerS
                             and SHOT_AIM_HEIGHT_M + to_line * flight.slope < GOAL_HEIGHT_M)
         if keeper is not None:
             flight.keeper_from, flight.keeper_velocity = keeper.position, keeper.velocity  # appuis à la frappe (03f)
+            # ses notes sur l'arrêt (ticket v2-attributs-restants/03b1) : Reflexes, One on Ones en face-à-face
+            flight.keeper_profile = keeper_profile(keeper, one_on_one(holder, goal, opponents))
         if shots is not None and (not flight.on_target or keeper is None):  # xG après frappe (06a) : hors cadre 0
             shots[-1] = replace(shots[-1], post_shot_xg=1.0 if flight.on_target else 0.0)
         if flight.on_target and keeper is not None:

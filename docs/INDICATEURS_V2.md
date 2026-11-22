@@ -1952,3 +1952,23 @@ Repères réels : part de la vitesse gardée par un gardien pendant sa réaction
 Sur les 501 cadrés jugés de la série après, rejoués sans élan (même écart, même temps de vol) : 7 arrêts gagnés par l'élan, 6 perdus à contre-pied ; issue conforme à la portée avec élan sur les 501. Par élan : contre-pied (< − 0,5 m/s) 46 tirs, 60,9 % arrêtés ; quasi immobile 359 tirs, 63,8 % ; lancé vers le ballon (> 0,5 m/s) 96 tirs, 44,8 %, écart médian 1,42 m contre 0,98 m : **effet de sélection**, le gardien lancé vers le ballon rattrape une place perdue (ballon déplacé juste avant le tir), son élan réduit l'écart sans le combler.
 
 **Lecture.** Effet faible en match (2,6 % des cadrés changent d'issue ; avant la correction A1, 13 sur 519 avec la dérive comptée en plus), dans le sens attendu sur les mêmes tirs ; le reste des écarts de la série est le bruit des matchs qui divergent. Déterminisme : matchs 0 et 1 rejoués deux fois, mêmes empreintes (`e8b807f5…`, `e1cb5601…`), scores identiques à la série. La lecture du tireur (anticipation, contre-pied décidé) vient au `03l`.
+
+## 65. Notes du gardien sur l'arrêt : Reflexes et One on Ones (ticket v2-attributs-restants/03b1, 50 matchs appariés, 22/11/2026)
+
+Repères réels : temps de réaction d'un gardien sur tir selon son niveau, portée debout en face-à-face, non trouvés.
+
+**Mécanisme.** Reflexes règle le temps de réaction sur tir : 0,30 s à 75 (gardien moyen, médiane des gardiens de Ligue 1 de la base), 0,004 s par point, bornes 0,18 à 0,45 s. One on Ones règle la portée debout en face-à-face (tireur à 25 m au plus, personne sur la ligne de tir) : 1,0 m à 75, 0,0085 m par point, bornes 0,6 à 1,25 m. Même loi à la résolution, à l'évaluation du tir et à la décision ; xG neutre et xG après frappe gardent le gardien moyen. La note mélangée A8 (`_keeper_rating` dans `shot_probability`) est supprimée. Un gardien sans note vaut le gardien moyen : matchs sans notes identiques avant et après (mêmes empreintes).
+
+**Effet par distance** (tireur seul, face au but) : maximal de 10 à 16 m ; à 8 m, seul un gardien à 99 plonge encore ; nul à 6 m (le ballon arrive avant tout plongeon) et au-delà d'environ 25 m (tout gardien a le temps de plonger au plus loin).
+
+**Série appariée** (`PYTHONPATH=. PYTHONHASHSEED=0 <python> .scratch/v2-attributs-restants/mesures/03b1-serie.py 50 4 <sortie.json>`, depuis l'arbre à mesurer ; avant : `e323d41`).
+
+| Par match | Avant | Après | Écart apparié |
+|---|---|---|---|
+| Buts | 4,06 | 4,02 | − 0,04 [− 0,68 ; + 0,60] |
+| Tirs | 27,1 | 27,5 | |
+| Part des cadrés arrêtés | 59,9 % | 59,6 % | |
+| dont à moins de 10 m | 47,6 % | 39,0 % | |
+| Arrêts captés / repoussés / claqués | 53,7 / 30,7 / 15,7 % | 53,0 / 32,1 / 14,9 % | |
+
+**Lecture.** À moins de 10 m, l'écart (environ 1,3 écart-type) reste dans le bruit. La difficulté de l'arrêt (chance du tir, qui ne lit plus les notes du gardien) bouge peu la répartition des arrêts ; elle est recontrôlée au `03b2` (réserve A1 de l'expert). Rejeu des 499 tirs jugés, notes réelles contre gardien moyen : 7 arrêts gagnés, 15 perdus (les gardiens affrontés ont une médiane de 75 mais une moyenne de 71,6). Sur 50 matchs, les taux bruts par niveau de gardien restent dominés par le bruit et la sélection des tirs ; l'effet est établi tir par tir (scènes et rejeu). Déterminisme : matchs 0 et 1 rejoués deux fois, mêmes empreintes (`a58b8243…`, `371a48b7…`). Handling (capter ou repousser) vient au `03b2`, Rushing Out et Eccentricity au `03b3`.

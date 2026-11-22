@@ -10,7 +10,7 @@
 
 **Bloque :** 10b (lob et dribble du gardien) ; `v2-coach-et-gestion-de-match/04` (Eccentricity alimente la montée du gardien) ; `v2-collectif/22a` ; `v2-realisme/03l` (ajouté le 10/11/2026, audit de la roadmap).
 
-**Status:** à faire (constantes à proposer avant le code)
+**Status:** découpé (22/11/2026, décision du propriétaire) en `03b1` (arrêt : Reflexes, One on Ones, levée de A8), `03b2` (prise de balle : Handling, boulettes) et `03b3` (style : Rushing Out, Eccentricity) ; estimation d'ensemble environ 5 h 30, au-delà du seuil de 2 h. Gardien moyen calé sur la médiane des gardiens de Ligue 1 de la base (Reflexes 75, One on Ones 75, Handling 60), choix du propriétaire du 22/11/2026 : un gardien typique garde les taux d'arrêt calibrés.
 
 **Point de vigilance :** Rushing Out et Eccentricity sont des **tendances** : elles changent le style, jamais le niveau.
 

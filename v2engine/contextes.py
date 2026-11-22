@@ -9,8 +9,8 @@ condition du joueur s'applique une fois, partout). Chaque contexte est document�
 
 Au ticket 01, le registre reprend à l'identique les deux cumuls existants (mêmes poids, mêmes valeurs, mêmes empreintes
 à graine fixée). Les cumuls d'une autre forme restent hors du registre, listés dans la carte : ballon dur à orienter
-(First Touch x Technique, un produit, A17), temps d'arrivée Pace + Acceleration (capacités en secondes, R5), note du
-gardien (A8, jusqu'au ticket v2-attributs-restants/03b).
+(First Touch x Technique, un produit, A17), temps d'arrivée Pace + Acceleration (capacités en secondes, R5) ; la note
+mélangée du gardien (A8) est levée au ticket v2-attributs-restants/03b1.
 """
 
 from __future__ import annotations

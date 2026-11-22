@@ -1,7 +1,7 @@
 """Tirs et gardien (Phase 4, docs/PLAN_V2.md) : un porteur du ballon proche du but adverse tente
 sa chance -- qualité de l'occasion (angle entre les poteaux, distance, défenseurs dans le cône, position du
-gardien, pression, ticket v2-collectif/28a), exécution par Finishing (surface) ou Long Shots (dehors) contre
-Reflexes/One on Ones/Handling (gardien), voir `shot_probability`. Jalon
+gardien, pression, ticket v2-collectif/28a), exécution par Finishing (surface) ou Long Shots (dehors), voir `shot_probability` ; gardien : portée
+physique selon Reflexes et One on Ones (`keeper_profile`, ticket v2-attributs-restants/03b1). Jalon
 du premier plan (US-29) : à la fin de cette phase, un score émerge entièrement du moteur, plus
 aucun résultat décidé à l'avance (IA de décision placeholder, D-V08 : un porteur à portée tente
 toujours sa chance, pas de lecture tactique de quand tirer)."""
@@ -87,16 +87,6 @@ BLOCK_REACTION_S = 0.10
 _NEUTRAL_KEEPER_RATING = 60.0
 
 
-def _keeper_rating(keeper: PlayerState | None) -> float:
-    if keeper is None:
-        return _NEUTRAL_KEEPER_RATING
-    return (
-        0.5 * effective_rating(keeper, "Reflexes")
-        + 0.3 * effective_rating(keeper, "One on Ones")
-        + 0.2 * effective_rating(keeper, "Handling")
-    )
-
-
 def _relative(origin: Vec2, axis: Vec2, point: Vec2) -> float:
     """Angle (rad) de `point` vu depuis `origin`, relatif à la direction `axis`."""
     offset = point - origin
@@ -179,10 +169,11 @@ def shooting_note(shooter: PlayerState) -> int:
 def shot_probability(shooter: PlayerState, goal: Vec2, keeper: PlayerState | None,
                      opponents: list[PlayerState]) -> float:
     """Chance qu'un tir de `shooter` vers `goal` (centre du but) devienne un but s'il n'est pas contré (ticket 28a) :
-    chance de l'endroit, exécution du tireur (Finishing ou Long Shots) contre le gardien (A8), position du gardien,
+    chance de l'endroit, exécution du tireur (Finishing ou Long Shots), position du gardien,
     pression subie (amortie par Composure seulement). Jamais garantie, jamais nulle."""
+    # dérogation A8 levée au ticket v2-attributs-restants/03b1 : les notes du gardien jouent sur sa portée physique
+    # (`keeper_profile`), plus sur cette chance
     skill = (duel_probability(shooting_note(shooter), _NEUTRAL_KEEPER_RATING) / 0.5) ** SHOOTER_SKILL_EXPONENT
-    skill *= duel_probability(_NEUTRAL_KEEPER_RATING, _keeper_rating(keeper)) / 0.5
     pressed = 1.0 - shot_pressure(shooter, goal, opponents) * shot_composure_factor(shooter)
     chance = base_chance(shooter.position, goal) * skill * keeper_position_factor(shooter.position, goal, keeper)
     return max(_MIN_SHOT_PROBABILITY, min(_MAX_SHOT_PROBABILITY, chance * pressed))
@@ -342,12 +333,55 @@ KEEPER_DIVE_MPS = 6.0
 # nouvelle ; part de la vitesse gardée pendant la réaction : non trouvée (toute, comme au `decision`).
 
 
-def keeper_reach_m(elapsed_s: float, toward_mps: float = 0.0) -> float:
+def keeper_reach_m(elapsed_s: float, toward_mps: float = 0.0, reaction_s: float = KEEPER_REACTION_S,
+                   standing_m: float = KEEPER_STANDING_REACH_M) -> float:
     """Portée latérale du gardien (m) `elapsed_s` après la frappe ; `toward_mps` : sa vitesse à la frappe vers le point
-    de passage du ballon (négative à contre-pied, ticket v2-realisme/03f)."""
-    dive = KEEPER_DIVE_MPS * max(0.0, elapsed_s - KEEPER_REACTION_S)
-    carry = toward_mps * min(max(0.0, elapsed_s), KEEPER_REACTION_S)
-    return max(0.0, min(KEEPER_DIVE_REACH_M, KEEPER_STANDING_REACH_M + dive) + carry)
+    de passage du ballon (négative à contre-pied, ticket v2-realisme/03f) ; `reaction_s` et `standing_m` : son temps de
+    réaction et sa portée debout (`keeper_profile`, ticket v2-attributs-restants/03b1), gardien moyen par défaut."""
+    dive = KEEPER_DIVE_MPS * max(0.0, elapsed_s - reaction_s)
+    carry = toward_mps * min(max(0.0, elapsed_s), reaction_s)
+    return max(0.0, min(KEEPER_DIVE_REACH_M, standing_m + dive) + carry)
+
+
+# Notes du gardien sur l'arrêt (ticket v2-attributs-restants/03b1, proposé le 22/11/2026, retenu par délégation du
+# propriétaire ; gardien moyen calé sur la médiane des gardiens de Ligue 1 de la base, choix du propriétaire du
+# 22/11/2026). Reflexes règle son temps de réaction sur tir : `KEEPER_REACTION_S` à `KEEPER_REFERENCE_NOTE`, moins
+# `KEEPER_REFLEX_S_PER_POINT` par point au-dessus (99 : 0,20 s ; 40 : 0,44 s ; gardiens de Ligue 1, 55 à 85 : 0,38 à
+# 0,26 s), borné par `KEEPER_REACTION_BOUNDS_S`. Pente choisie pour qu'un 99 plonge encore sur une frappe de 8 m
+# (0,24 s de vol jusqu'à lui) : Reflexes sort la frappe à bout portant (carte).
+# One on Ones règle sa portée debout en face-à-face (`one_on_one`) : couvrir, rester debout ; `KEEPER_STANDING_REACH_M`
+# à la référence, plus `KEEPER_ONE_ON_ONE_M_PER_POINT` par point (99 : 1,20 m ; 40 : 0,70 m), borné par
+# `KEEPER_STANDING_BOUNDS_M` ; hors face-à-face, portée debout du gardien moyen. Chiffres réels (temps de réaction d'un
+# gardien selon son niveau, portée debout en face-à-face) : non trouvés, ordres de grandeur.
+KEEPER_REFERENCE_NOTE = 75.0
+KEEPER_REFLEX_S_PER_POINT = 0.004
+KEEPER_REACTION_BOUNDS_S = (0.18, 0.45)
+KEEPER_ONE_ON_ONE_M_PER_POINT = 0.0085
+KEEPER_STANDING_BOUNDS_M = (0.6, 1.25)
+# Face-à-face (ticket v2-realisme/03e, déplacé ici au 03b1 pour servir aussi à l'arrêt) : un adversaire de champ à
+# `ONE_ON_ONE_RANGE_M` ou moins du but, sans défenseur de champ sur sa ligne de tir.
+ONE_ON_ONE_RANGE_M = 25.0
+
+
+def one_on_one(shooter: PlayerState, goal: Vec2, defenders: list[PlayerState]) -> bool:
+    """Vrai si `shooter` est seul face au gardien : à `ONE_ON_ONE_RANGE_M` ou moins de `goal`, aucun défenseur de champ
+    de `defenders` sur sa ligne de tir (`gardien.face_to_face`)."""
+    return shooter.position.distance_to(goal) <= ONE_ON_ONE_RANGE_M and block_probability(shooter, goal, defenders) == 0.0
+
+
+def keeper_profile(keeper: PlayerState | None, face_to_face: bool) -> tuple[float, float]:
+    """(temps de réaction en s, portée debout en m) du gardien sur un tir (ticket 03b1) ; gardien moyen s'il n'a pas de
+    notes (`None`, effectif synthétique) ou s'il est la copie neutre de l'xG (`NEUTRAL_ATTRIBUTES`)."""
+    if keeper is None or keeper.attributes is None or keeper.attributes is NEUTRAL_ATTRIBUTES:
+        return KEEPER_REACTION_S, KEEPER_STANDING_REACH_M
+    low, high = KEEPER_REACTION_BOUNDS_S
+    reflexes = effective_rating(keeper, "Reflexes") - KEEPER_REFERENCE_NOTE
+    reaction = min(high, max(low, KEEPER_REACTION_S - KEEPER_REFLEX_S_PER_POINT * reflexes))
+    if not face_to_face:
+        return reaction, KEEPER_STANDING_REACH_M
+    low, high = KEEPER_STANDING_BOUNDS_M
+    duel = effective_rating(keeper, "One on Ones") - KEEPER_REFERENCE_NOTE
+    return reaction, min(high, max(low, KEEPER_STANDING_REACH_M + KEEPER_ONE_ON_ONE_M_PER_POINT * duel))
 
 
 def keeper_toward_mps(keeper_velocity: Vec2, keeper_at: Vec2, point: Vec2) -> float:
@@ -378,17 +412,24 @@ def _flight_distance_m(elapsed_s: float) -> float:
     return MAX_PASS_MPS * _ENGINE_TICK_S * (1.0 - q ** (elapsed_s / _ENGINE_TICK_S)) / (1.0 - q)
 
 
-def _keeper_cover(origin: Vec2, goal: Vec2, axis: Vec2, keeper_at: Vec2,
-                  keeper_velocity: Vec2 = Vec2(0.0, 0.0)) -> tuple[float, float] | tuple[()] | None:
+def _keeper_cover(origin: Vec2, goal: Vec2, axis: Vec2, keeper_at: Vec2, keeper_velocity: Vec2 = Vec2(0.0, 0.0),
+                  profile: tuple[float, float] = (KEEPER_REACTION_S, KEEPER_STANDING_REACH_M)
+                  ) -> tuple[float, float] | tuple[()] | None:
     """Angles (relatifs à `axis`) des tirs que le gardien atteint : ceux qui traversent sa portée avant la ligne de but,
     soit le disque de portée coupé par la ligne, vu du tireur (`match._keeper_reaches` mesure l'écart au plus près du
     gardien, ou sur la ligne si le ballon la franchit avant). Chaque bord a sa portée, au temps de vol jusqu'au point
     de passage (tangence ou ligne de but). `()` : aucun ; `None` : tous (tireur dans sa portée). Ticket 03f : chaque
     bord a aussi l'élan du gardien vers lui (`keeper_velocity`, sa vitesse à la frappe), pris en travers de l'axe du tir
-    pour la tangence et le long de la ligne pour le bord sur la ligne."""
+    pour la tangence et le long de la ligne pour le bord sur la ligne. Ticket 03b1 : `profile`, temps de réaction et
+    portée debout du gardien (`keeper_profile`)."""
+    reaction, standing = profile
+
+    def reach_at(elapsed: float, toward: float) -> float:
+        return keeper_reach_m(elapsed, toward, reaction, standing)
+
     offset = keeper_at - origin
     distance, along = offset.length(), offset.x * axis.x + offset.y * axis.y
-    if distance <= keeper_reach_m(0.0):
+    if distance <= reach_at(0.0, 0.0):
         return None
     if along <= 0.0:
         return ()  # gardien derrière le tireur, hors de portée : le ballon s'éloigne de lui
@@ -398,9 +439,9 @@ def _keeper_cover(origin: Vec2, goal: Vec2, axis: Vec2, keeper_at: Vec2,
     across = keeper_velocity.y * axis.x - keeper_velocity.x * axis.y  # vers la gauche de l'axe (angles croissants)
     for sign in (-1.0, 1.0):
         toward = sign * across
-        reach = keeper_reach_m(_flight_time_s(distance), toward)
+        reach = reach_at(_flight_time_s(distance), toward)
         for _ in range(3):  # portée au temps de vol jusqu'au point de tangence (point fixe, converge vite)
-            reach = keeper_reach_m(_flight_time_s(math.sqrt(max(0.0, distance * distance - reach * reach))), toward)
+            reach = reach_at(_flight_time_s(math.sqrt(max(0.0, distance * distance - reach * reach))), toward)
         if reach >= distance:
             return None
         turn = centre + sign * math.asin(reach / distance)
@@ -408,12 +449,12 @@ def _keeper_cover(origin: Vec2, goal: Vec2, axis: Vec2, keeper_at: Vec2,
         if (origin.x + heading.x * math.sqrt(distance * distance - reach * reach) - goal.x) * side >= 0.0:
             angles.append(turn)  # tangence encore devant la ligne
         toward = sign * keeper_velocity.y  # bord sur la ligne : de ce côté en y
-        reach = keeper_reach_m(_flight_time_s(distance), toward)
+        reach = reach_at(_flight_time_s(distance), toward)
         for _ in range(3):  # bord de la portée sur la ligne de but, au temps de vol jusqu'à lui
             if abs(depth) >= reach:
                 break
             point = Vec2(goal.x, keeper_at.y + sign * math.sqrt(reach * reach - depth * depth))
-            reach = keeper_reach_m(_flight_time_s(origin.distance_to(point)), toward)
+            reach = reach_at(_flight_time_s(origin.distance_to(point)), toward)
         if abs(depth) < reach:
             angles.append(_relative(origin, axis, Vec2(goal.x, keeper_at.y + sign * math.sqrt(reach * reach - depth * depth))))
     return (min(angles), max(angles)) if angles else ()
@@ -494,14 +535,16 @@ def _block_covers(shooter: PlayerState, goal: Vec2, opponents: list[PlayerState]
     return covers
 
 
-def _goal_angles(shooter: PlayerState, goal: Vec2, keeper: PlayerState | None) -> list[tuple[float, float]]:
+def _goal_angles(shooter: PlayerState, goal: Vec2, keeper: PlayerState | None,
+                 opponents: list[PlayerState] = ()) -> list[tuple[float, float]]:
     """Écarts de tir qui donnent un but en largeur : l'angle du but privé de l'angle que couvre le gardien
     (`_keeper_cover`). Sans gardien identifiable (effectif synthétique), repli neutre comme `keeper_position_factor` :
     gardien bien placé, à `KEEPER_REFERENCE_M` de sa ligne sur l'axe du tir."""
     low, high, axis = _goal_angle(shooter.position, goal)
     keeper_at = keeper.position if keeper is not None else goal + (shooter.position - goal).normalized() * KEEPER_REFERENCE_M
     velocity = keeper.velocity if keeper is not None else Vec2(0.0, 0.0)  # élan à la frappe (ticket 03f)
-    covered = _keeper_cover(shooter.position, goal, axis, keeper_at, velocity)
+    profile = keeper_profile(keeper, one_on_one(shooter, goal, list(opponents)))  # notes du gardien (ticket 03b1)
+    covered = _keeper_cover(shooter.position, goal, axis, keeper_at, velocity, profile)
     if covered is None:
         return []  # le ballon passe forcément à sa portée
     if not covered or covered[1] <= low or covered[0] >= high:
@@ -518,7 +561,7 @@ def _flight_shares(shooter: PlayerState, goal: Vec2, keeper: PlayerState | None,
     avec `aims` (rad, ticket v2-realisme/05l), la liste des trois parts pour chaque visée, découpes calculées une fois."""
     sigma = shot_error_sigma(shooter, goal, opponents)
     _, under = on_target_axes(shooter, goal, opponents)
-    scoring, covers = _goal_angles(shooter, goal, keeper), _block_covers(shooter, goal, opponents)
+    scoring, covers = _goal_angles(shooter, goal, keeper, opponents), _block_covers(shooter, goal, opponents)
     cuts = sorted({-math.inf, math.inf, *(c for span in scoring + covers for c in span)})
     slices = []
     for lo, hi in zip(cuts, cuts[1:]):
@@ -630,8 +673,8 @@ def shank_velocity(shooter: PlayerState, goal: Vec2, shot_speed: float) -> Vec2:
 # Issue d'un tir cadré arrêté (ticket v2-collectif/28b, constantes proposées le 05/11/2026, validées par délégation du
 # propriétaire). Opta classe les arrêts (capté, repoussé, du bout des gants...) sans publier de répartition ; aucune
 # étude publique sur les seconds ballons : ordres de grandeur. Repère : environ 20 % des corners viennent d'un arrêt
-# (relevé de 200 matchs PL et Championship, sans méthode publiée). Gardien neutre (A8) jusqu'au ticket
-# v2-attributs-restants/03b : ni Handling ni Reflexes ici. Ni la force ni la hauteur du tir n'existent encore
+# (relevé de 200 matchs PL et Championship, sans méthode publiée). Gardien neutre jusqu'au ticket
+# v2-attributs-restants/03b2 : Handling n'agit pas encore ici. Ni la force ni la hauteur du tir n'existent encore
 # (v2-hauteur-ballon/02a, v2-attributs-restants/10a) : la difficulté passe par la chance de but et l'excentrement.
 HELD, PARRIED, TIPPED = "capté", "repoussé", "claqué"
 SAVE_DIFFICULTY_REF = 0.30  # chance de but au-delà de laquelle l'arrêt est le plus difficile possible
