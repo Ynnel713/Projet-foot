@@ -31,7 +31,7 @@ def main(n_matches: int) -> None:
     real_choose = match.choose_action
     shots: Counter[str] = Counter()
     pass_lengths: list[float] = []
-    real_pass_velocity = match.pass_velocity
+    real_pass_launch = match.pass_launch
 
     spaces: list[float] = []  # distance à l'adversaire le plus proche des coéquipiers du porteur (Off the Ball)
     real_step_ball = match._step_ball
@@ -56,7 +56,7 @@ def main(n_matches: int) -> None:
 
     def counting_pass(passer, target, *args):
         pass_lengths.append(passer.position.distance_to(target.position))
-        return real_pass_velocity(passer, target, *args)
+        return real_pass_launch(passer, target, *args)
 
     def counting_shot(shooter, *args):
         shots[shooter.team] += 1
@@ -69,7 +69,7 @@ def main(n_matches: int) -> None:
 
     match.attempt_shot = counting_shot
     match.choose_action = counting_choose
-    match.pass_velocity = counting_pass
+    match.pass_launch = counting_pass
     match._step_ball = sampling_step_ball
     shots_per_team, goals_per_match = [], []
     for i in range(n_matches):

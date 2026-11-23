@@ -71,16 +71,16 @@ def test_a_long_goal_kick_flies_and_its_accuracy_follows_kicking(monkeypatch) ->
     from v2engine.ball_state import BallState
     from v2engine.restart import Restart
     seen = []
-    original = match.pass_velocity
+    original = match.pass_launch
 
     def spy(passer, target, opponents=(), backheel=False, one_touch=False, lofted=False):
         seen.append(lofted)
         return original(passer, target, opponents, backheel, one_touch, lofted)
-    monkeypatch.setattr(match, "pass_velocity", spy)
+    monkeypatch.setattr(match, "pass_launch", spy)
     keeper, mate = _keeper(80), player("A", "home", 55.0, 34.0, "BU")
     ball = BallState(position=keeper.position, velocity=Vec2(0.0, 0.0))
     ball.restart = Restart(GOAL_KICK, "home", keeper.position, keeper.name, 0.0, 0.0)
     flux.seed_streams(3)
     match._play_restart(ball, [keeper, mate], 1.0, None)
-    assert seen == [True] and ball.mode == match.AERIEN and ball.receiver == "A"
+    assert seen == [True] and ball.vz > 0.0 and ball.receiver == "A"  # part en l'air (ticket v2-hauteur-ballon/02a1)
     assert restart_target(keeper, GOAL_KICK, [keeper, mate]).name == "A"

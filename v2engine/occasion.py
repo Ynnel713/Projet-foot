@@ -26,6 +26,7 @@ from v2engine.offside import offside_at_pass
 from v2engine.possession import BALL_FRICTION_PER_S, BALL_STOPPED_MPS, pass_success_probability
 from v2engine.shooting import FLYING, SHOOTING_RANGE_M, occasion_quality
 from v2engine.trace import ChanceEvent, ShotEvent
+from v2engine.vol import height_at, is_aerial_height
 
 # Seuil de grosse occasion (ticket 28c, proposé le 08/11/2026, validé par délégation du propriétaire) : voir le ticket
 # pour le nombre par match. Plancher de séquence : moitié du seuil (une séquence ne se coupe pas au moindre creux).
@@ -64,9 +65,10 @@ def reach_probability(player: PlayerState, ball: BallState, opponents: list[Play
     """Chance que `player` touche le ballon libre avant un adversaire, et le point de contact. 1 s'il peut être sur sa
     trajectoire à temps avant le premier adversaire qui le peut (premier point atteint) ; sinon exp(-retard /
     `REACH_LATE_S`), au point de plus petit retard sur la portion de trajectoire que le ballon parcourt avant ce premier
-    adversaire. Ballon en l'air : seulement après son point de chute. Ballon arrêté : course au ballon, l'adversaire le
-    plus rapide fixe l'échéance."""
-    path = [(t, point) for t, travelled, point in _ball_path(ball) if travelled >= ball.aerial_left_m]
+    adversaire. Ballon en l'air : seulement là où il passe sous `vol.AERIAL_HEIGHT_M`. Ballon arrêté : course au
+    ballon, l'adversaire le plus rapide fixe l'échéance."""
+    # ballon en l'air (ticket v2-hauteur-ballon/02a1) : seulement là où il est sous `vol.AERIAL_HEIGHT_M`
+    path = [(t, point) for t, _, point in _ball_path(ball) if not is_aerial_height(height_at(ball.z, ball.vz, t))]
     if not path:
         return 0.0, None
     if len(path) == 1:

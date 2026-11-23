@@ -314,12 +314,19 @@ def pass_velocity(passer: PlayerState, target: PlayerState, opponents: Sequence[
                   backheel: bool = False, one_touch: bool = False, lofted: bool = False) -> Vec2:
     """Vitesse du ballon au départ d'une passe vers `pass_aim` : de quoi y arriver à ~6 m/s (plafond 30 m/s),
     avec une erreur de vitesse selon le dosage (+/- 30 % à Passing 11, +/- 5 % à 99)."""
+    return pass_launch(passer, target, opponents, backheel, one_touch, lofted)[0]
+
+
+def pass_launch(passer: PlayerState, target: PlayerState, opponents: Sequence[PlayerState] = (),
+                backheel: bool = False, one_touch: bool = False, lofted: bool = False) -> tuple[Vec2, Vec2]:
+    """`pass_velocity` et le point visé (`pass_aim`) : une passe en l'air retombe sur ce point (ticket
+    v2-hauteur-ballon/02a1). Mêmes tirages, dans le même ordre."""
     aim = pass_aim(passer, target, opponents, backheel, one_touch, lofted)
     quality = dosage_quality(passer)
     error = _DOSAGE_ERROR[0] + (_DOSAGE_ERROR[1] - _DOSAGE_ERROR[0]) * quality
     cap = _speed_cap_mps(passer, lofted)  # long ballon du gardien : plafond selon Kicking (ticket 03c1)
     speed = min(cap, _launch_speed(passer.position.distance_to(aim), cap) * (1.0 + PASSE.uniform(-error, error)))
-    return (aim - passer.position).normalized() * speed
+    return (aim - passer.position).normalized() * speed, aim
 
 
 # --- Rythme : temps entre la réception et la première décision (ticket v2-socle/06, validé le 25/10/2026) -----

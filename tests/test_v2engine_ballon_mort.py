@@ -12,9 +12,10 @@ from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
 from v2engine.match import _step_ball
 from v2engine.movement import PlayerState
 from v2engine.possession import BALL_FRICTION_PER_S
-from v2engine.restart import (AERIEN, CORNER, DEAD_S, GOAL_KICK, KICKOFF, LONG_RESTART_M, RESTART_DISTANCE_M,
+from v2engine.restart import (CORNER, DEAD_S, GOAL_KICK, KICKOFF, LONG_RESTART_M, RESTART_DISTANCE_M,
                               THROW_IN, Restart, award, exit_point, kickoff, place, restart_target)
 from v2engine.trace import RestartEvent
+from v2engine.vol import launch_vz
 
 DT = 0.1
 
@@ -99,7 +100,8 @@ def test_opponents_stand_at_the_regulation_distance() -> None:
 
 def test_ground_player_does_not_touch_an_aerial_ball_except_at_its_landing_point() -> None:
     under, catcher = _p("Sous", 20, 34.0, team="away"), _p("Cible", 40, 34.0)
-    ball = BallState(position=Vec2(10, 34), velocity=Vec2(25, 0), mode=AERIEN, aerial_left_m=27.0)
+    # passe en l'air qui retombe 30 m plus loin, sur la cible (ticket v2-hauteur-ballon/02a1) : « Sous » est à mi-vol
+    ball = BallState(position=Vec2(10, 34), velocity=Vec2(25, 0), vz=launch_vz(30.0, 25.0, DT))
     for i in range(30):
         _step_ball(ball, DT, [under, catcher], i * DT)
         if ball.holder is not None:

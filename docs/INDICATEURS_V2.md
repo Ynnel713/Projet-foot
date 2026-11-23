@@ -2058,3 +2058,27 @@ Repères réels : lancer d'un gardien de haut niveau, 30 à 40 m (ordre de grand
 
 **Lecture.** La précision suit la note (lancers gardés + 5 points de 30 à 80), le nombre et la longueur aussi. Buts : réelle + 0,20 [− 0,22 ; + 0,62], 80 contre 30 − 0,57 [− 1,41 ; + 0,27], dans le bruit. Les lancers restent courts : la décision choisit le partenaire proche et libre ; le lancer long qui lance une contre-attaque relève du `05a` et du `v2-collectif/15e`.
 
+## 71. Hauteur du ballon : vol des passes et remises aériennes (ticket v2-hauteur-ballon/02a1, 50 matchs appariés, 23/11/2026)
+
+Repères réels (temps de vol et sommet d'un dégagement, d'un centre, d'une passe lobée) : non trouvés.
+
+**Mécanisme.** Le ballon a une hauteur `z` et une vitesse verticale `vz` (`v2engine/vol.py`). Une passe ou remise en l'air part avec la vitesse verticale qui la fait retomber sur son point visé (durée de vol calée sur le freinage horizontal pas à pas du moteur, plafonnée à 4 s, sommet 19,6 m) ; chute libre exacte, rebond (restitution 0,70, vitesse horizontale × 0,85), le ballon roule sous 15 cm de rebond. Au-dessus de 2,5 m, il est « aérien » et personne ne le touche, rebonds compris (le mode tracé suit la hauteur).
+
+**Séries** (`scripts.bench_series 50 --processus 4`, comparaison `--comparer` ; vols : `.scratch/v2-hauteur-ballon/mesures/02a1-serie.py`, synthèse `02a1-synthese.py` ; avant : code de `3e0cdec`).
+
+| Indicateur | Avant | Après | Écart apparié (IC 95 %) |
+|---|---|---|---|
+| Buts par match | 4,62 | 5,14 | + 0,52 [− 0,29 ; + 1,33] |
+| Tirs par équipe | 14,4 | 14,7 | + 0,32 [− 0,56 ; + 1,21] |
+| Passes réussies | 84,2 % | 84,2 % | + 0,0 point |
+| Passes longues réussies | 73,1 % | 70,1 % | − 2,9 points [− 5,7 ; − 0,2] |
+| Tirs nés d'un centre | 0,1 % | 1,2 % | + 1,1 point [+ 0,4 ; + 1,8] |
+| Tirs cadrés | 36,0 % | 40,8 % | + 5,3 points [+ 2,1 ; + 8,6] |
+| Tirs contrés | 24,6 % | 21,4 % | − 3,7 points [− 6,3 ; − 1,0] |
+| Arrêts par match | 5,84 | 6,90 | + 1,06 [+ 0,17 ; + 1,96] |
+| Corners par match | 4,60 | 3,92 | − 0,68 [− 1,32 ; − 0,04] |
+
+Vols (après, 50 matchs) : 17,3 par match ; 25 à 40 m : 10,7 par match, durée médiane 2,5 s, sommet médian 7,4 m ; 40 m et plus : 4,8 par match, 3,5 s, 14,6 m (plafond 19,6 m atteint, jamais dépassé). Hauteur jamais négative, mode tracé cohérent avec la hauteur sur tous les pas.
+
+**Lecture.** Volumes (buts, tirs, passes) dans le bruit. Attendus : les ballons longs rebondissent au-dessus des joueurs (passes longues réussies − 2,9 points) et un ballon touché en l'air ou sur un rebond compte comme un centre pour l'origine du tir. Inattendu : tirs cadrés plus nombreux, moins contrés (aucun lien direct dans le code du tir, qui ne lit pas la hauteur ; effet indirect des situations de tir, ou hasard parmi 2 808 indicateurs dont 166 significatifs, environ 140 attendus) ; à revoir au `02a2` (courbe des tirs) et à la calibration des tirs (`v2-collectif/22c`).
+

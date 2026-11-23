@@ -55,19 +55,19 @@ def _hook(collector: Collector, clock: dict[str, float], plans: bool = True,
     """Branche le collecteur sur les fonctions publiques du moteur ; retourne la fonction qui les restaure.
     `defence_perception` faux : la ligne et le marquage lisent les vraies positions, comme avant le ticket 08e (mesure
     A/B du ticket v2-realisme/08f, seul interrupteur du banc qui change le jeu)."""
-    real = {name: getattr(match, name) for name in ("pass_velocity", "resolve_tackle", "choose_action", "dribble_lost",
+    real = {name: getattr(match, name) for name in ("pass_launch", "resolve_tackle", "choose_action", "dribble_lost",
                                                      "lost_carry_outcome", "attempt_control", "_play_restart",
                                                      "lane_closed_during_turn", "contact_share", "_unsettle",
                                                      "resolve_shoulder_duel", "tackle_attempt_factor",
                                                      "should_attempt_tackle")}
     restarting = {"on": False}  # remise en jeu en cours : sa passe n'entre pas dans la calibration (ticket v2-realisme/18g)
 
-    def pass_velocity(passer, target, *args, **kwargs):
+    def pass_launch(passer, target, *args, **kwargs):  # départ d'une passe (vitesse et point visé, ticket 02a1)
         opponents = args[0] if args else kwargs.get("opponents", ())
         backheel = args[1] if len(args) > 1 else kwargs.get("backheel", False)  # talonnade (ticket v2-realisme/07e)
         one_touch = args[2] if len(args) > 2 else kwargs.get("one_touch", False)  # de première (ticket v2-collectif/31a)
         collector.on_pass(passer, target, opponents, restart=restarting["on"], backheel=backheel, one_touch=one_touch)
-        return real["pass_velocity"](passer, target, *args, **kwargs)
+        return real["pass_launch"](passer, target, *args, **kwargs)
 
     def lane_closed_during_turn(*args, **kwargs):  # passe abandonnée après la rotation (ticket 07e, réserve A1)
         closed = real["lane_closed_during_turn"](*args, **kwargs)
@@ -208,7 +208,7 @@ def _hook(collector: Collector, clock: dict[str, float], plans: bool = True,
     defense.DefensiveRoles.update = defense_update
     defense.DefensiveRoles._seen_at = staticmethod(seen_at)
     defense.DefensiveRoles._closest_to = classmethod(closest_to)
-    match.pass_velocity = pass_velocity
+    match.pass_launch = pass_launch
     match.resolve_tackle, match.choose_action, match.dribble_lost = resolve_tackle, choose_action, dribble_lost
     match.lost_carry_outcome = lost_carry_outcome
     match.attempt_control, match._play_restart = attempt_control, play_restart
