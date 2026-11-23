@@ -14,8 +14,8 @@ Interface : PWA React (`ui/`) + API FastAPI (`api/`) ; Streamlit (`app.py`) hist
 
 ## Commandes
 - API + UI : `uv run uvicorn api.main:app --port 8000` et `npm run dev --prefix ui` (Vite :5173). (`simulafoot.bat` : ancien poste Windows.)
-- Tests : `PYTHONHASHSEED=0 uv run pytest tests -q -p no:cacheprovider` (environ 10 min en session cloud). Toujours via `uv run` : `pytest` nu échoue (ticket 9). Marqueur `integration` exclu par défaut (`-m integration`, ~30 min).
-- Attendu : **3 452 passés, 0 ignoré, 14 désélectionnés** (21/11/2026, session cloud, après le `v2-realisme/28a`). Des tests NLG ignorés signalent un venv `simulafoot_nlg/.venv` absent.
+- Tests : `PYTHONHASHSEED=0 uv run pytest tests -q -p no:cacheprovider` (environ 17 min en session cloud, voir « Travail machine »). Toujours via `uv run` : `pytest` nu échoue (ticket 9). Marqueur `integration` exclu par défaut (`-m integration`, ~30 min).
+- Attendu : **3 580 passés, 0 ignoré, 14 désélectionnés** (23/11/2026, session cloud, après le `v2-hauteur-ballon/02a1`). Des tests NLG ignorés signalent un venv `simulafoot_nlg/.venv` absent.
 - UI, dans `ui/` : `npm run build` (OK) et `npm run lint` (0 erreur, 5 avertissements).
 - Mesures : `scripts/measure_geometry.py` (V1, graine d'audit 20260923), `scripts/measure_v2.py` et `scripts/v2_indicators.py` (V2).
 
@@ -40,6 +40,13 @@ Interface : PWA React (`ui/`) + API FastAPI (`api/`) ; Streamlit (`app.py`) hist
 - Avant d'attaquer un ticket : expliquer simplement en quoi il consiste et ce qu'il va changer concrètement dans le moteur (ce que fera le joueur ou le ballon autrement, quels calculs sont touchés), sans jargon de code.
 - Pendant le ticket : annoncer la durée d'attente prévue de chaque travail machine (suite de tests, série de matchs, mesure, revue d'un sous-agent) au lancement, et signaler un dépassement notable.
 - À la fin d'un ticket : expliquer ce qui a été fait, dire si c'est concluant (chiffres à l'appui, ce qui reste incertain) et suggérer le ticket logique suivant, avec la raison.
+
+## Travail machine (décision du 23/11/2026, après les séries perdues du `v2-hauteur-ballon/02a1`)
+- Avant de lancer : calculer la durée, l'annoncer, et fixer le `timeout` de la tâche de fond à environ deux fois cette durée (2 h au plus) ; sans `timeout`, la limite par défaut (30 min) arrête la tâche sans résultat. Au-delà d'environ 1 h, découper en tranches successives avec `--debut` (une tâche par tranche, chacune sous 1 h). Repères en session cloud (4 cœurs) : un match de 90 min ≈ 75 s sur un processus ; `bench_series` à 4 processus ≈ 0,8 min par match (50 matchs : 38 à 39 min mesurées, 48 min affichées au lancement) ; suite complète ≈ 17 min.
+- Séries de matchs : `scripts.bench_series --processus 4` (comparaison `--comparer avant.json apres.json`) ; série « avant » dans un worktree de la révision de base ; jamais `measure_v2` seul au-delà de 10 matchs (un seul processus).
+- Un seul travail lourd à la fois (suite complète, série) : en parallèle, ils se ralentissent et dépassent leur délai.
+- Code figé pendant un travail machine : relire le diff avant de lancer ; une modification pendant une suite ou une série invalide son résultat, à relancer.
+- Une tâche arrêtée par son délai est signalée au propriétaire avec sa cause, puis relancée avec un délai corrigé.
 
 ## Terminer une tâche
 1. Critères d'acceptation chiffrés posés avant le code.
