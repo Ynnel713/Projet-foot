@@ -536,6 +536,7 @@ def _keeper_save(ball: BallState, keeper: PlayerState, outcome: str, origin: Vec
     if outcome == HELD:
         keeper.position = clamp_to_pitch(at)
         ball.holder = keeper.name
+        keeper.in_hands = True  # capté : ballon en main (ticket v2-attributs-restants/03c2)
         ball.next_decision_s = now_s + reception_delay_s(keeper, [p for p in players if p.team == shooter_team])
         ball.receiving = True
         ball.position = keeper.position
@@ -571,6 +572,7 @@ def _play_penalty(ball: BallState, taker: PlayerState, players: list[PlayerState
     keeper = _goalkeeper("away" if taker.team == "home" else "home", players)
     if keeper is not None:
         ball.holder, ball.position = keeper.name, keeper.position
+        keeper.in_hands = True  # penalty arrêté : ballon en main (ticket 03c2)
         ball.receiving = True
 
 
@@ -1065,6 +1067,10 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
                     memory_error_mean_m=seen_back.error_mean_m, memory_error_max_m=seen_back.error_max_m,
                     oriented=oriented, first_time=first_time, ball_speed_mps=ball.velocity.length(), blind=blind,
                     facing_run=player.facing_run, x=player.position.x, y=player.position.y))  # 07g, 10d
+            # ballon en main (ticket 03c2) : le gardien le prend dans sa surface, et il ne vient pas de son équipe
+            # (règle de la passe en retrait ; ponytail : un ballon de son équipe touché par un adversaire compte de son équipe)
+            player.in_hands = player.poste == "GK" and ball.last_pass_team != player.team \
+                and in_penalty_area("away" if player.team == "home" else "home", player.position)
             ball.holder = player.name
             ball.came_from = (player.name, received, player.position)
             ball.hesitation.pop(player.name, None)  # il a le ballon : il joue, il n'attend plus
@@ -1383,6 +1389,9 @@ def simulate_match(
         scoring_team = _step_ball(ball, tick_seconds, players, i * tick_seconds, trace.decisions, trace.offsides,
                                   transition.mode, trace.restarts, trace.fouls,
                                   trace.shots, trace.receptions, memory)
+        for p in players:  # il n'a plus le ballon : plus en main (ticket v2-attributs-restants/03c2)
+            if p.in_hands and ball.holder != p.name:
+                p.in_hands = False
         if scoring_team is not None:
             scorer = next((p for p in players if p.name == ball.last_toucher), None)  # l'engagement n'y touche pas
             trace.record_goal(scoring_team, minute, scorer.name if scorer is not None else None,

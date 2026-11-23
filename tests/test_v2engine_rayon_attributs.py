@@ -424,7 +424,6 @@ COVERAGE_EXCEPTIONS = {
     "Command of Area": "v2-attributs-restants/03a",
     "Communication": "v2-attributs-restants/03a",
     "Punching (Tendency)": "v2-attributs-restants/03a",
-    "Throwing": "v2-attributs-restants/03c2",
     "Weak foot (/5)": "v2-attributs-restants/04a",
     "Pieds": "v2-attributs-restants/04a",
     "Postes FM naturels": "v2-attributs-restants/04b",

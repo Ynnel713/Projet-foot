@@ -83,10 +83,10 @@ def test_the_carte_is_read_with_its_announced_attributes() -> None:
     # 52 lignes d'attributs le 14/11/2026, dont 27 annoncées avec effet (23 « branché », Dribbling, Finishing,
     # Balance et Handling) ; Reflexes et One on Ones « branché » au ticket v2-attributs-restants/03b1, Handling (prise de
     # balle) au ticket 03b2, Rushing Out (Tendency) (style) au ticket 03b3a, Eccentricity (sorties inattendues) au 03b3b,
-    # Kicking (long ballon du gardien) au 03c1
+    # Kicking (long ballon du gardien) au 03c1, Throwing (relance à la main) au 03c2
     assert len(STATES) >= 50
     assert {"Pace", "Dribbling", "Finishing", "Balance", "Reflexes", "One on Ones", "Handling",
-            "Rushing Out (Tendency)", "Eccentricity", "Kicking"} <= set(ANNOUNCED)
+            "Rushing Out (Tendency)", "Eccentricity", "Kicking", "Throwing"} <= set(ANNOUNCED)
     assert {"Natural Fitness", "Heading", "Jumping Reach"}.isdisjoint(ANNOUNCED)
 
 
@@ -151,6 +151,14 @@ def relance_longue() -> tuple[list[PlayerState], str]:
             player("Presseur", "away", 9.0, 34.0, "BU")], "Gardien"
 
 
+def relance_a_la_main() -> tuple[list[PlayerState], str]:
+    """Gardien ballon en main, un défenseur libre à 20 m, un adversaire qui presse : relance à la main, dont Throwing
+    règle la précision (ticket v2-attributs-restants/03c2)."""
+    keeper = player("Gardien", "home", 5.0, 34.0, "GK")
+    keeper.in_hands = True
+    return [keeper, player("Def", "home", 25.0, 20.0, "DC"), player("Presseur", "away", 9.0, 34.0, "BU")], "Gardien"
+
+
 @dataclass(frozen=True)
 class Plan:
     build: Callable[[], tuple[list[PlayerState], str | None]] = mini_match
@@ -168,6 +176,7 @@ PLANS = {
     "Finishing": Plan(tir, 3.0, 300),  # dans la surface seulement
     "Eccentricity": Plan(ballon_dispute, 1.0, 300, Vec2(25.0, 34.0)),  # sortie inattendue, un tirage sur 0,3
     "Kicking": Plan(relance_longue, 6.0, 100),  # long ballon du gardien : précision tirée au départ
+    "Throwing": Plan(relance_a_la_main, 6.0, 100),  # relance à la main : précision tirée au départ
     # hors de la surface : rare dans le mini-match depuis la courbe en S du ticket v2-realisme/24 (fusion du 14/11/2026)
     "Long Shots": Plan(tir_de_loin, 3.0, 300),
     # n'agit que par l'énergie (sprint entamé, réserve) : effet rare en 60 s depuis le partage des collisions selon

@@ -2041,3 +2041,20 @@ Repères réels : dégagement et sortie de but d'un gardien de haut niveau, 50 �
 
 **Lecture.** La portée suit la note (90e centile + 5,7 m de 40 à 80). La part gardée ne dépend pas de la précision : sans duel aérien (`v2-realisme/15b`), le moteur garde 85 % des longs ballons du gardien, contre environ la moitié dans le réel ; la précision est prouvée en scène. Buts : réelle + 0,20 [− 0,47 ; + 0,87] ; 80 contre 40 : − 1,03 [− 1,71 ; − 0,35]. Juger le choix du receveur comme une passe en l'air (essais abandonnés) faisait passer la part longue des sorties de but à 81 % (sans retombée disputée) ou à 30 % avec des buts + 1,04 [+ 0,28 ; + 1,80] (retombée à 0,5) : ticket `v2-collectif/15e`.
 
+## 70. Relance à la main du gardien : Throwing (ticket v2-attributs-restants/03c2, 50 matchs appariés et deux séries forcées de 30 matchs, 23/11/2026)
+
+Repères réels : lancer d'un gardien de haut niveau, 30 à 40 m (ordre de grandeur) ; nombre de lancers par match et relation note-distance : non trouvés.
+
+**Mécanisme.** Ballon en main (`PlayerState.in_hands`) : capté sur un arrêt ou un penalty, ou contrôlé dans sa surface quand la dernière passe n'est pas de son équipe ; plus en main dès qu'il n'a plus le ballon. Une passe au sol vers un partenaire à portée de bras est un lancer : Throwing (référence 55) remplace Passing dans sa précision ; portée 30 m + 0,3 m par point autour de 55 (20 à 40 m). Choix du receveur inchangé.
+
+**Séries** (`03c-serie.py <n> 4 <sortie.json> [--attr Throwing --force <note>]`, synthèse `03c-synthese.py` ; avant : code de `1659620`).
+
+| Série | Buts/match | Lancers/gardien/match | Longueur des lancers (90e centile) | Lancers gardés |
+|---|---|---|---|---|
+| avant (50 matchs) | 4,42 | — | — | — |
+| réelle (50 matchs) | 4,62 | 1,22 | 10,5 m (17,0) | 97,5 % |
+| forcé à 30 (30 matchs) | 4,73 | 1,08 | 9,2 m (19,0) | 93,8 % |
+| forcé à 80 (30 matchs) | 4,17 | 1,45 | 11,4 m (18,4) | 98,9 % |
+
+**Lecture.** La précision suit la note (lancers gardés + 5 points de 30 à 80), le nombre et la longueur aussi. Buts : réelle + 0,20 [− 0,22 ; + 0,62], 80 contre 30 − 0,57 [− 1,41 ; + 0,27], dans le bruit. Les lancers restent courts : la décision choisit le partenaire proche et libre ; le lancer long qui lance une contre-attaque relève du `05a` et du `v2-collectif/15e`.
+

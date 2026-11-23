@@ -34,14 +34,26 @@ LONG_BALL_DIFFICULTY_PER_M = 0.8
 LONG_PASS_M = 25.0
 # Relance au pied du gardien (ticket v2-attributs-restants/03c1 ; chiffres réels non trouvés pour la relation note-distance,
 # ordres de grandeur : dégagement et sortie de but d'un gardien de haut niveau, 50 à 65 m ; constantes proposées par Claude
-# et validées par délégation du propriétaire le 22/11/2026). Kicking (exécution) remplace Passing dans la précision d'un
+# et validées par délégation du propriétaire le 23/11/2026). Kicking (exécution) remplace Passing dans la précision d'un
 # long ballon du gardien en l'air (relance longue en jeu, sortie de but jouée long) et règle sa vitesse de frappe
 # plafond : `MAX_PASS_MPS` à la référence `KICKING_REFERENCE_NOTE` (médiane des 50 gardiens notés de Ligue 1 de la base,
-# de 35 à 80), + `KICK_SPEED_PER_POINT_MPS` par point, bornée à `KICK_SPEED_BOUNDS_MPS` : portée 51 m à 35, 58 m à 60,
-# 62 m à 80, 66 m à 99. Un gardien sans note ou sans cette colonne vaut la référence.
+# de 35 à 80), + `KICK_SPEED_PER_POINT_MPS` par point, bornée à `KICK_SPEED_BOUNDS_MPS` : portée 52,9 m à 35, 57,8 m à
+# 60, 61,7 m à 80, 65,4 m à 99 (réserve A3 de l'expert au 03c1, corrigé au 03c2). Un gardien sans note ou sans cette colonne vaut la référence.
 KICKING_REFERENCE_NOTE = 60.0
 KICK_SPEED_PER_POINT_MPS = 0.1
 KICK_SPEED_BOUNDS_MPS = (26.5, 34.0)
+# Relance à la main (ticket v2-attributs-restants/03c2 ; ordres de grandeur : lancer à la main d'un gardien de haut niveau,
+# 30 à 40 m, relation note-distance non trouvée ; constantes proposées par Claude et validées par délégation du
+# propriétaire le 23/11/2026). Ballon en main (`PlayerState.in_hands`), une passe au sol vers un coéquipier à portée de
+# bras se joue à la main : Throwing (exécution) remplace Passing dans sa précision. Portée : `THROW_RANGE_M` à la
+# référence `THROWING_REFERENCE_NOTE` (médiane des 50 gardiens notés de Ligue 1 de la base, de 25 à 80), +
+# `THROW_RANGE_PER_POINT_M` par point, bornée à `THROW_RANGE_BOUNDS_M` (21 m à 25, 37,5 m à 80). Au-delà, il dégage au pied
+# (long ballon en l'air, Kicking) ou pose le ballon et passe au pied (Passing). Le choix du receveur ne change pas (ADR
+# 0002) : la valeur d'une passe lit la même précision que l'exécution.
+THROWING_REFERENCE_NOTE = 55.0
+THROW_RANGE_M = 30.0
+THROW_RANGE_PER_POINT_M = 0.3
+THROW_RANGE_BOUNDS_M = (20.0, 40.0)
 _PRESSURE_DIFFICULTY = 15.0  # adversaire au contact du joueur, nulle à `PRESSURE_RADIUS_M`
 _MARKED_DIFFICULTY = 10.0  # receveur avec un adversaire à moins de `_MARKED_RADIUS_M`
 _MARKED_RADIUS_M = 2.0
@@ -173,6 +185,25 @@ def keeper_kick(passer: PlayerState, lofted: bool) -> bool:
     return lofted and passer.poste == "GK"
 
 
+def throwing(keeper: PlayerState) -> float:
+    """Note de Throwing du gardien (ticket 03c2) ; la référence s'il n'a pas de notes ou pas cette colonne."""
+    if not keeper.attributes or "Throwing" not in keeper.attributes:
+        return THROWING_REFERENCE_NOTE
+    return float(effective_rating(keeper, "Throwing"))
+
+
+def throw_range_m(note: float = THROWING_REFERENCE_NOTE) -> float:
+    """Portée (m) d'une relance à la main du gardien de Throwing `note` (`THROW_RANGE_M` à la référence)."""
+    reach = THROW_RANGE_M + THROW_RANGE_PER_POINT_M * (note - THROWING_REFERENCE_NOTE)
+    return min(THROW_RANGE_BOUNDS_M[1], max(THROW_RANGE_BOUNDS_M[0], reach))
+
+
+def keeper_throw(passer: PlayerState, receiver: PlayerState, lofted: bool) -> bool:
+    """Vrai pour une relance à la main (ticket 03c2) : gardien ballon en main, passe au sol, receveur à portée de bras."""
+    return passer.in_hands and not lofted and passer.poste == "GK" \
+        and passer.position.distance_to(receiver.position) <= throw_range_m(throwing(passer))
+
+
 def kick_speed_cap_mps(note: float = KICKING_REFERENCE_NOTE) -> float:
     """Vitesse de frappe plafond (m/s) d'un long ballon du gardien de Kicking `note` (`MAX_PASS_MPS` à la référence)."""
     speed = MAX_PASS_MPS + KICK_SPEED_PER_POINT_MPS * (note - KICKING_REFERENCE_NOTE)
@@ -187,10 +218,10 @@ def pass_accuracy_probability(passer: PlayerState, receiver: PlayerState, oppone
                               backheel: bool = False, one_touch: bool = False, lofted: bool = False) -> float:
     """Chance que la passe parte où le passeur la destine (sinon déviée, `pass_aim`) : Passing contre la difficulté de
     CETTE passe ; Technique pour une talonnade (ticket v2-realisme/07e) ; Kicking pour un long ballon du gardien en l'air
-    (ticket v2-attributs-restants/03c1) ; jouée de première, précision du geste en plus (`one_touch_precision`, ticket
+    (ticket v2-attributs-restants/03c1), Throwing pour sa relance à la main (03c2) ; jouée de première, précision du geste en plus (`one_touch_precision`, ticket
     v2-collectif/31a)."""
     skill = effective_rating(passer, "Technique") if backheel else kicking(passer) if keeper_kick(passer, lofted) \
-        else effective_rating(passer, "Passing")
+        else throwing(passer) if keeper_throw(passer, receiver, lofted) else effective_rating(passer, "Passing")
     accurate = duel_probability(skill, pass_difficulty(passer, receiver, opponents, backheel, lofted), **_SUCCESS)
     return accurate * one_touch_precision(passer) if one_touch else accurate
 
