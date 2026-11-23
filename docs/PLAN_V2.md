@@ -395,3 +395,6 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 ### Bloquée par
 
 - Phase 4
+
+**Le centre (23/11/2026, ticket `v2-attributs-restants/01`, périmètre réduit au centre)** : livré (23/11/2026), validé expert (réserves A1 à A3 acceptées : critère de la tête reporté au 15a, baisse des tirs bornée, un centreur voit toujours la surface) + QC. Le porteur dans les 35 derniers mètres, hors de la largeur de la surface, peut centrer vers un coéquipier dans la surface : passe en l'air, Crossing à la place de Passing (précision, dosage), retombée au premier qui l'atteint (atteinte du `v2-hauteur-ballon/03a`). Constantes validées le 23/11/2026. 50 matchs appariés : 1,5 centre par équipe (réel 15 à 20 : les attaquants n'attaquent pas la surface, ticket `v2-realisme/15a`, décision du propriétaire : livrer tel quel), 47 % gardés ; grosses occasions nées d'un centre + 0,8 point ; tirs − 1 par équipe et buts − 0,86 (à la limite), non séparables d'un effet de chaîne (`docs/INDICATEURS_V2.md` § 75). Suite : `v2-realisme/15a`.
+

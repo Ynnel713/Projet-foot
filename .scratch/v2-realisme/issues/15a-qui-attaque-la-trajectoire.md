@@ -33,6 +33,8 @@ Temps machine, non compté : suite complète (environ 40 min).
 
 - **Unitaires (scène contrôlée) :** dégagement long : les deux plus aptes de chaque équipe attaquent le ballon, les autres non
 
+**Repris du ticket `v2-attributs-restants/01` (23/11/2026, décisions du propriétaire sur les réserves de l'expert)** : indicateur « partie du corps au premier contact après un centre » (pied, corps, tête) et part des contrôles de la tête avant/après (réserve A1) ; rapport entre le nombre de centres et la variation des tirs et des buts, série de contrôle si l'écart persiste (A2) ; cibles du centre hors du filtre de Vision, actées (« un centreur voit toujours la surface ») et à revoir ici si besoin (A3).
+
 ## Acceptance criteria
 
 - [ ] Constantes produit et chiffres réels (sourcés ou « non trouvé ») validés par le propriétaire avant le code

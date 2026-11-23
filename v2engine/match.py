@@ -111,6 +111,7 @@ FAILED_TACKLE_RECOVERY_S = 1.5
 TICK_SECONDS = 0.1
 TALONNADE = "talonnade"  # précision d'une passe en talonnade dans le journal (ticket v2-realisme/07e)
 RELANCE_LONGUE = "relance longue"  # précision d'une relance longue en l'air (ticket v2-collectif/15a)
+CENTRE = "centre"  # précision d'un centre dans le journal (ticket v2-attributs-restants/01)
 # Avantage (ticket v2-collectif/30, validé le 04/11/2026) : l'arbitre laisse jouer si l'équipe fautée garde le ballon
 # là où il vaut au moins ADVANTAGE_DANGER_MIN sur la carte du danger (`danger.danger`, environ 60 m de son propre but
 # et au-delà) ; il revient à la faute si elle le perd dans les ADVANTAGE_S secondes (« quelques secondes », loi 12 ;
@@ -945,10 +946,12 @@ def _execute(ball: BallState, holder: PlayerState, action, players: list[PlayerS
     if action.kind == "pass":
         backheel = getattr(action, "backheel", False)
         lofted = getattr(action, "lofted", False)  # relance longue en l'air (ticket v2-collectif/15a)
+        cross = getattr(action, "cross", False)  # centre, en l'air aussi (ticket v2-attributs-restants/01)
         _log(ball, now_s, PASSE, holder.team, holder.name,
-             TALONNADE if backheel else RELANCE_LONGUE if lofted else None, action.target.name)
+             TALONNADE if backheel else CENTRE if cross else RELANCE_LONGUE if lofted else None, action.target.name)
         ball.velocity, aim = pass_launch(holder, action.target, [p for p in players if p.team != holder.team], backheel,
-                                         getattr(action, "one_touch", False), lofted)  # de première (ticket v2-collectif/31a)
+                                         getattr(action, "one_touch", False), lofted,  # de première (ticket 31a)
+                                         cross=cross)
         ball.pass_from = holder.position
         ball.holder = None
         ball.released_by = holder.name

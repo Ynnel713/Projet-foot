@@ -18,6 +18,7 @@ from v2engine.condition import effective_rating
 from v2engine.contextes import IDEE_DE_PREMIERE, LECTURE_DU_PRESSING, contextual_rating
 from v2engine.danger import danger, loss_cost
 from v2engine.flux import DECISION, DUEL, PERCEPTION
+from ligue1sim.pitch_geometry import PENALTY_AREA_WIDTH_M
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, in_penalty_area
 from v2engine.movement import PlayerState, max_speed_mps, turn_rate_rad_s
 from v2engine.off_ball import OPEN_LANE_PROBABILITY
@@ -158,6 +159,23 @@ THIRD_MAN_BONUS = 0.5
 LONG_BALL_WON = 0.5
 LONG_BALL_POSTES = frozenset({"BU", "ATT", "SA", "AG", "AD", "MOC"})
 
+# Centre (ticket v2-attributs-restants/01, constantes validées par le propriétaire le 23/11/2026) : le porteur dans les
+# `CROSS_ZONE_DEPTH_M` derniers mètres, hors de la largeur de la surface (plus de `PENALTY_AREA_WIDTH_M` / 2 de l'axe),
+# envisage un centre vers chaque coéquipier de champ dans la surface adverse (hors-jeu évident exclu) : passe en l'air
+# (vol du ticket v2-hauteur-ballon/02a1), que personne ne coupe en vol, dont Crossing règle la précision et le dosage à la
+# place de Passing (`possession.pass_accuracy_probability`, `dosage_quality`), avec la difficulté au mètre des passes en
+# l'air (`possession.LONG_BALL_DIFFICULTY_PER_M`) ; la retombée se joue au premier qui l'atteint (atteinte en hauteur,
+# ticket v2-hauteur-ballon/03a) ; le porteur l'estime gagnée avec `LONG_BALL_WON`, comme une relance longue, jusqu'au duel
+# aérien (`v2-realisme/15b`). Repères réels (cités de mémoire, à confirmer) : 20 à 25 % de centres réussis, 15 à 20
+# centres par équipe et par match. Centres variés (tendu, en retrait) : ticket 11.
+CROSS_ZONE_DEPTH_M = 35.0
+
+
+def in_cross_zone(position: Vec2, goal: Vec2) -> bool:
+    """Le porteur peut-il centrer : dans les `CROSS_ZONE_DEPTH_M` derniers mètres avant la ligne du but `goal`, hors
+    de la largeur de la surface ?"""
+    return abs(goal.x - position.x) <= CROSS_ZONE_DEPTH_M and abs(position.y - PITCH_WIDTH_M / 2.0) > PENALTY_AREA_WIDTH_M / 2.0
+
 # Vision (ticket v2-cerveau-joueurs/02, constantes validées par le propriétaire le 24/10/2026) : QUELS coéquipiers le
 # porteur envisage. Portée 99 -> 50 m, 55 -> 30 m, 11 -> 10 m ; une passe qui fait gagner au moins
 # `_KEY_PASS_GAIN_M` vers le but n'est repérée qu'avec la probabilité 99 -> 90 %, 55 -> 50 %, 11 -> 10 %. Le
@@ -217,6 +235,7 @@ class Action:
     # (mémoire de perception, 08b) ; `value` reste la valeur RÉELLE (journal du meilleur choix) ; `None` : perçue = réelle
     seen_value: float | None = None
     lofted: bool = False  # relance longue en l'air (ticket v2-collectif/15a)
+    cross: bool = False  # centre, passe en l'air réglée par Crossing (ticket v2-attributs-restants/01)
     # meilleures valeurs réelles d'une passe courte (au sol) et d'une relance longue, quand une relance longue était
     # envisagée : le « pourquoi » du choix court ou long au journal des décisions (ticket v2-collectif/15a)
     short_long: tuple[float | None, float] | None = None
@@ -435,6 +454,19 @@ def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2
                                                                  share, held, margin, seen_line, gene, turn, False,
                                                                  lofted=True).value)
             options.append(option)
+    if not one_touch and in_cross_zone(holder.position, goal):  # centre (ticket v2-attributs-restants/01)
+        for mate in mates:
+            if mate.poste == "GK" or not in_penalty_area(team, mate.position) \
+                    or is_clearly_offside(team, mate.position, holder.position, opponents, margin, seen_line):
+                continue
+            turn = rotation_delay_s(holder, mate.position - holder.position, PASS_FREE_CONE_DEG)
+            option = _pass_option(holder, mate, opponents, seen_full, team, mode, share, held, margin, seen_line, gene,
+                                  turn, False, lofted=True, cross=True)
+            if seen_opponents is not None:
+                option = replace(option, seen_value=_pass_option(holder, mate, seen_opponents, seen_full, team, mode,
+                                                                 share, held, margin, seen_line, gene, turn, False,
+                                                                 lofted=True, cross=True).value)
+            options.append(option)
     if planned is not None and mode != CONTRE_ATTAQUE:  # sort du plan, pour la mesure (ticket 14)
         # abandonné : la cible est vue mais la ligne s'est fermée ; non vu : hors de sa Vision ou hors-jeu évident
         target = next((m for m in teammates if m.name == held), None)
@@ -448,13 +480,13 @@ def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2
 def _pass_option(holder: PlayerState, mate: PlayerState, opponents: list[PlayerState],
                  seen_full: list[PlayerState], team: str, mode: str | None, share: float, held: str | None,
                  margin: float, seen_line: float, gene: float, turn: float, backheel: bool,
-                 one_touch: bool = False, lofted: bool = False, third_man: bool = False) -> Action:
+                 one_touch: bool = False, lofted: bool = False, third_man: bool = False, cross: bool = False) -> Action:
     """Valeur d'une passe vers `mate` (tickets 13, 14, 33), après `turn` secondes de rotation (07e), en talonnade
     ou non, jouée de première ou non (31a), au sol ou en relance longue en l'air (15a). `third_man` : le porteur lit
     le pressing (ticket 15b1) ; la suite vers un coéquipier derrière la première ligne, quand `mate` est devant elle
     ou sur elle, est majorée de `THIRD_MAN_BONUS`."""
     # le ballon arrive (v2-socle/04) ; en l'air, rien ne la coupe en vol et la retombée se dispute (ticket 15a)
-    success = pass_success_probability(holder, mate, opponents, lofted=True) * LONG_BALL_WON if lofted \
+    success = pass_success_probability(holder, mate, opponents, lofted=True, cross=cross) * LONG_BALL_WON if lofted \
         else pass_success_probability(holder, mate, opponents, backheel, one_touch)
     # temps disponible : il garde le ballon assez longtemps pour jouer (A9 reclassé au ticket 13)
     keep = success * (1.0 - PRESSURE_KEEP_SHARE * pressure(mate, opponents))
@@ -484,7 +516,7 @@ def _pass_option(holder: PlayerState, mate: PlayerState, opponents: list[PlayerS
     value = with_rotation(option_value(holder, mode, keep, reached, lost_at), holder, mode,
                           rotation_keep_probability(holder, gene, turn))
     return Action("pass", value, mate, follow=follow, rotation_s=turn, backheel=backheel, one_touch=one_touch,
-                  lofted=lofted)
+                  lofted=lofted, cross=cross)
 
 
 def option_value(holder: PlayerState, mode: str | None, keep: float, reached: float, lost_at: Vec2) -> float:

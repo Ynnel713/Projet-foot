@@ -66,7 +66,9 @@ def _hook(collector: Collector, clock: dict[str, float], plans: bool = True,
         opponents = args[0] if args else kwargs.get("opponents", ())
         backheel = args[1] if len(args) > 1 else kwargs.get("backheel", False)  # talonnade (ticket v2-realisme/07e)
         one_touch = args[2] if len(args) > 2 else kwargs.get("one_touch", False)  # de première (ticket v2-collectif/31a)
-        collector.on_pass(passer, target, opponents, restart=restarting["on"], backheel=backheel, one_touch=one_touch)
+        cross = kwargs.get("cross", False)  # centre (ticket v2-attributs-restants/01)
+        collector.on_pass(passer, target, opponents, restart=restarting["on"], backheel=backheel, one_touch=one_touch,
+                          cross=cross)
         return real["pass_launch"](passer, target, *args, **kwargs)
 
     def lane_closed_during_turn(*args, **kwargs):  # passe abandonnée après la rotation (ticket 07e, réserve A1)
@@ -561,6 +563,9 @@ def report(c: Collector, detail: bool = False) -> dict:
         "receveur visé (part)": k["receveur visé"] / passes,
         "passes longues (part)": k["passes longues"] / passes,
         "passes longues réussies (part)": k["passes longues réussies"] / max(1, k["passes longues"]),
+        # centres (ticket v2-attributs-restants/01) : par équipe et par match, part gardée par l'équipe du centreur
+        "centres par équipe": k["centres"] / (2 * n),
+        "centres réussis (part)": k["centres réussis"] / max(1, k["centres"]),
         "passes en profondeur (part)": k["passes en profondeur"] / passes,
         "passes en profondeur réussies (part)": k["passes en profondeur réussies"] / max(1, k["passes en profondeur"]),
         "tirs par équipe": k["tirs"] / (2 * n),

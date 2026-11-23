@@ -578,7 +578,8 @@ class Collector:
         self.team_since = 0.0
         self.team_passes = 0
         self.last_sample = -math.inf
-        self.pending_pass: tuple[str, str, float, bool] | None = None  # (équipe, receveur visé, longueur, en profondeur)
+        # (équipe, receveur visé, longueur, en profondeur, centre : ticket v2-attributs-restants/01)
+        self.pending_pass: tuple[str, str, float, bool, bool] | None = None
         self.players: list[PlayerState] = []  # joueurs au dernier tick (lecture des passes en profondeur)
         self.recoveries: list[tuple[float, str, str, Vec2, bool]] = []  # (instant, équipe, zone, lieu, close)
         self.relost: list[tuple[str, bool]] = []  # par récupération : (zone, reperdu en moins de 5 s)
@@ -636,7 +637,7 @@ class Collector:
 
     # --- événements du moteur ---
     def on_pass(self, passer: PlayerState, target: PlayerState, opponents=None, restart: bool = False,
-                backheel: bool = False, one_touch: bool = False) -> None:
+                backheel: bool = False, one_touch: bool = False, cross: bool = False) -> None:
         self._close_pass_calibration(lost=False, received=False)  # précédente passe sans contact : non perdue
         if opponents is not None and not restart:  # ticket v2-realisme/18g ; talonnade, 07e ; de première, 31a
             chance = pass_success_probability(passer, target, opponents, backheel, one_touch)
@@ -647,7 +648,8 @@ class Collector:
         self.count["passes longues"] += length > LONG_PASS_M
         deep = is_deep_pass(passer.team, target.position, self.players)
         self.count["passes en profondeur"] += deep
-        self.pending_pass = (passer.team, target.name, length, deep)
+        self.count["centres"] += cross  # ticket v2-attributs-restants/01
+        self.pending_pass = (passer.team, target.name, length, deep, cross)
         self._line_at_pass(passer)
         self.team_passes += 1
         goal = opponent_goal_center(passer.team)
@@ -1592,7 +1594,8 @@ class Collector:
             return
         team = by_name[holder].team
         if self.pending_pass is not None:
-            pass_team, target, length, deep = self.pending_pass
+            pass_team, target, length, deep, cross = self.pending_pass
+            self.count["centres réussis"] += team == pass_team and cross  # gardé par l'équipe du centreur (ticket 01)
             self.count["passes en profondeur réussies"] += team == pass_team and deep
             self.count["passes réussies"] += team == pass_team
             self.count["passes longues réussies"] += team == pass_team and length > LONG_PASS_M

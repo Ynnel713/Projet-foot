@@ -100,7 +100,8 @@ def test_the_carte_is_read_with_its_announced_attributes() -> None:
     # (atteinte du ballon en l'air) au ticket v2-hauteur-ballon/03a
     assert len(STATES) >= 50
     assert {"Pace", "Dribbling", "Finishing", "Balance", "Reflexes", "One on Ones", "Handling",
-            "Rushing Out (Tendency)", "Eccentricity", "Kicking", "Throwing", "Jumping Reach", "Taille"} <= set(ANNOUNCED)
+            "Rushing Out (Tendency)", "Eccentricity", "Kicking", "Throwing", "Jumping Reach", "Taille",
+            "Crossing"} <= set(ANNOUNCED)  # Crossing : centre (ticket v2-attributs-restants/01)
     assert {"Natural Fitness", "Heading"}.isdisjoint(ANNOUNCED)
 
 
@@ -165,6 +166,14 @@ def relance_longue() -> tuple[list[PlayerState], str]:
             player("Presseur", "away", 9.0, 34.0, "BU")], "Gardien"
 
 
+def centre() -> tuple[list[PlayerState], str]:
+    """Ailier dans la zone de centre, buteur libre dans la surface, passe au sol fermée par deux défenseurs : il centre,
+    Crossing règle la précision et le dosage (ticket v2-attributs-restants/01)."""
+    return [player("Ailier", "home", 96.0, 7.0, "AD"), player("Buteur", "home", 94.0, 33.0, "BU"),
+            player("Gardien", "away", 103.5, 34.0, "GK"), player("DC", "away", 99.0, 38.0, "DC"),
+            player("C1", "away", 95.0, 15.0, "DC"), player("C2", "away", 94.5, 24.0, "DC")], "Ailier"
+
+
 def relance_a_la_main() -> tuple[list[PlayerState], str]:
     """Gardien ballon en main, un défenseur libre à 20 m, un adversaire qui presse : relance à la main, dont Throwing
     règle la précision (ticket v2-attributs-restants/03c2)."""
@@ -200,6 +209,7 @@ PLANS = {
     "Stamina": Plan(mini_match, 120.0, 10),
     # atteinte du ballon en l'air (ticket v2-hauteur-ballon/03a) : le long ballon du gardien retombe sur l'attaquant
     "Jumping Reach": Plan(relance_longue, 6.0, 100), "Taille": Plan(relance_longue, 6.0, 100),
+    "Crossing": Plan(centre, 4.0, 100),  # centre : précision tirée au départ (ticket v2-attributs-restants/01)
 }
 
 

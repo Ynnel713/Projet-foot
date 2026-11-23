@@ -126,9 +126,11 @@ def composure_factor(player: PlayerState) -> float:
                                      min_prob=0.5, max_prob=1.0)
 
 
-def dosage_quality(passer: PlayerState) -> float:
-    """Qualité du dosage (0 à 1) selon Passing : 99 -> 1 (passe dans la course), 11 -> 0 (dans les pieds)."""
-    return success_probability(effective_rating(passer, "Passing"), baseline=0.5, amplitude=0.5, min_prob=0.0, max_prob=1.0)
+def dosage_quality(passer: PlayerState, cross: bool = False) -> float:
+    """Qualité du dosage (0 à 1) selon Passing : 99 -> 1 (passe dans la course), 11 -> 0 (dans les pieds). Centre
+    (`cross`, ticket v2-attributs-restants/01) : selon Crossing, à la place de Passing (même loi)."""
+    note = effective_rating(passer, "Crossing") if cross else effective_rating(passer, "Passing")
+    return success_probability(note, baseline=0.5, amplitude=0.5, min_prob=0.0, max_prob=1.0)
 
 
 def _cut_chance(start: Vec2, end: Vec2, opponent: PlayerState) -> float:
@@ -215,19 +217,22 @@ def _speed_cap_mps(passer: PlayerState, lofted: bool) -> float:
 
 
 def pass_accuracy_probability(passer: PlayerState, receiver: PlayerState, opponents: Sequence[PlayerState],
-                              backheel: bool = False, one_touch: bool = False, lofted: bool = False) -> float:
+                              backheel: bool = False, one_touch: bool = False, lofted: bool = False,
+                              cross: bool = False) -> float:
     """Chance que la passe parte où le passeur la destine (sinon déviée, `pass_aim`) : Passing contre la difficulté de
     CETTE passe ; Technique pour une talonnade (ticket v2-realisme/07e) ; Kicking pour un long ballon du gardien en l'air
     (ticket v2-attributs-restants/03c1), Throwing pour sa relance à la main (03c2) ; jouée de première, précision du geste en plus (`one_touch_precision`, ticket
-    v2-collectif/31a)."""
+    v2-collectif/31a). Centre (`cross`, ticket v2-attributs-restants/01) : Crossing à la place de Passing, passe en l'air."""
     skill = effective_rating(passer, "Technique") if backheel else kicking(passer) if keeper_kick(passer, lofted) \
-        else throwing(passer) if keeper_throw(passer, receiver, lofted) else effective_rating(passer, "Passing")
+        else throwing(passer) if keeper_throw(passer, receiver, lofted) \
+        else effective_rating(passer, "Crossing") if cross else effective_rating(passer, "Passing")
     accurate = duel_probability(skill, pass_difficulty(passer, receiver, opponents, backheel, lofted), **_SUCCESS)
     return accurate * one_touch_precision(passer) if one_touch else accurate
 
 
 def pass_success_probability(passer: PlayerState, receiver: PlayerState, opponents: Sequence[PlayerState],
-                             backheel: bool = False, one_touch: bool = False, lofted: bool = False) -> float:
+                             backheel: bool = False, one_touch: bool = False, lofted: bool = False,
+                             cross: bool = False) -> float:
     """Chance que la passe ne soit pas perdue (tickets v2-realisme/18g et 18h) : aucun adversaire ne touche le ballon le
     premier, et le ballon ne sort pas (ni n'est sifflé) avec remise pour l'adversaire ; même risque que celui que la passe
     court en jeu. C'est le sens que lui donne la décision (`decision.option_value` :
@@ -238,8 +243,8 @@ def pass_success_probability(passer: PlayerState, receiver: PlayerState, opponen
     retombée disputée n'y entre pas (`decision.LONG_BALL_WON`)."""
     length = passer.position.distance_to(receiver.position)
     not_lost = next(share for limit, share in _MISS_NOT_LOST if length < limit)
-    if lofted:
-        accurate = pass_accuracy_probability(passer, receiver, opponents, lofted=True)
+    if lofted:  # centre compris (`cross`, Crossing ; ticket v2-attributs-restants/01)
+        accurate = pass_accuracy_probability(passer, receiver, opponents, lofted=True, cross=cross)
         return accurate + (1.0 - accurate) * not_lost
     keep = 1.0
     for opponent in opponents:
@@ -294,7 +299,7 @@ def keeper_kick_reach_m(keeper: PlayerState) -> float:
 
 
 def pass_aim(passer: PlayerState, target: PlayerState, opponents: Sequence[PlayerState] = (),
-             backheel: bool = False, one_touch: bool = False, lofted: bool = False) -> Vec2:
+             backheel: bool = False, one_touch: bool = False, lofted: bool = False, cross: bool = False) -> Vec2:
     """Point visé par une passe de `passer` vers `target`. Réussie (Passing contre difficulté) : là où le receveur
     VA être, d'autant plus précisément que le dosage est bon. Ratée : déviée de 25 à 50 % de sa longueur (18h)."""
     distance = passer.position.distance_to(target.position)
@@ -302,8 +307,8 @@ def pass_aim(passer: PlayerState, target: PlayerState, opponents: Sequence[Playe
     log_f = math.log(BALL_FRICTION_PER_S)
     arrival = max(BALL_STOPPED_MPS, speed + distance * log_f)  # < 6 m/s si la vitesse est plafonnée (passe > ~47 m)
     travel_s = math.log(arrival / speed) / log_f
-    aim = target.position + target.velocity * (travel_s * dosage_quality(passer))  # dans la course, selon le dosage
-    if PASSE.random() >= pass_accuracy_probability(passer, target, opponents, backheel, one_touch, lofted):
+    aim = target.position + target.velocity * (travel_s * dosage_quality(passer, cross))  # dans la course, selon le dosage
+    if PASSE.random() >= pass_accuracy_probability(passer, target, opponents, backheel, one_touch, lofted, cross):
         angle = PASSE.uniform(0.0, 2.0 * math.pi)
         miss = PASSE.uniform(*_MISS_SHARE) * distance
         aim = aim + Vec2(miss * math.cos(angle), miss * math.sin(angle))
@@ -318,11 +323,13 @@ def pass_velocity(passer: PlayerState, target: PlayerState, opponents: Sequence[
 
 
 def pass_launch(passer: PlayerState, target: PlayerState, opponents: Sequence[PlayerState] = (),
-                backheel: bool = False, one_touch: bool = False, lofted: bool = False) -> tuple[Vec2, Vec2]:
+                backheel: bool = False, one_touch: bool = False, lofted: bool = False,
+                cross: bool = False) -> tuple[Vec2, Vec2]:
     """`pass_velocity` et le point visé (`pass_aim`) : une passe en l'air retombe sur ce point (ticket
-    v2-hauteur-ballon/02a1). Mêmes tirages, dans le même ordre."""
-    aim = pass_aim(passer, target, opponents, backheel, one_touch, lofted)
-    quality = dosage_quality(passer)
+    v2-hauteur-ballon/02a1). Mêmes tirages, dans le même ordre. `cross` : centre (ticket v2-attributs-restants/01),
+    passe en l'air dont Crossing règle la précision et le dosage."""
+    aim = pass_aim(passer, target, opponents, backheel, one_touch, lofted or cross, cross)
+    quality = dosage_quality(passer, cross)
     error = _DOSAGE_ERROR[0] + (_DOSAGE_ERROR[1] - _DOSAGE_ERROR[0]) * quality
     cap = _speed_cap_mps(passer, lofted)  # long ballon du gardien : plafond selon Kicking (ticket 03c1)
     speed = min(cap, _launch_speed(passer.position.distance_to(aim), cap) * (1.0 + PASSE.uniform(-error, error)))

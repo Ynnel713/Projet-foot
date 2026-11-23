@@ -2140,3 +2140,25 @@ Interceptions : pas d'indicateur direct dans le banc ; pertes de balle et grosse
 | Au-dessus par match | 4,42 | 4,58 | + 0,16 [− 0,11 ; + 0,43] |
 
 **Lecture.** Le défaut visé était rare (1,4 % des contres) ; il disparaît. Volumes dans le bruit. Sans l'estimateur corrigé (première série), les tirs montaient de + 0,50 par match à la limite de la significativité : le tireur surestimait le risque de contre. Aucun arrêt n'était au-dessus des mains : un tir cadré passe sous 2,44 m à la ligne, et le gardien atteint environ 3 m dans sa surface.
+
+## 75. Le centre : Crossing (ticket v2-attributs-restants/01, 50 matchs appariés, 23/11/2026)
+
+**Mécanisme.** Le porteur dans les 35 derniers mètres, hors de la largeur de la surface, envisage un centre vers chaque coéquipier de champ dans la surface adverse : passe en l'air (vol du `v2-hauteur-ballon/02a1`), que personne ne coupe en vol, dont Crossing règle la précision et le dosage à la place de Passing ; la retombée se joue au premier qui l'atteint (atteinte du `03a`). Repères réels (cités de mémoire, à confirmer) : 15 à 20 centres par équipe et par match, 20 à 25 % réussis.
+
+**Série** (`scripts.bench_series 50 --processus 4`, avant : `5976b01` ; comparaison `.scratch/v2-attributs-restants/mesures/01-comparaison.txt`).
+
+| Indicateur | Avant | Après | Écart apparié (IC 95 %) |
+|---|---|---|---|
+| Centres par équipe et par match | 0 | 1,54 | |
+| Centres gardés par l'équipe du centreur | | 46,8 % | |
+| Tirs nés d'un centre | 1,3 % | 2,0 % | + 0,7 point [− 0,2 ; + 1,6] |
+| Grosses occasions nées d'un centre | 2,4 % | 3,6 % | + 0,8 point [+ 0,1 ; + 1,4] |
+| Buts par match | 5,18 | 4,32 | − 0,86 [− 1,78 ; + 0,06] |
+| Tirs par équipe | 15,6 | 14,6 | − 1,0 [− 1,8 ; − 0,2] |
+| Passes réussies | 84,0 % | 83,8 % | − 0,3 point [− 0,6 ; + 0,1] |
+| Possession d'équipe (s) | 21,9 | 21,5 | − 0,42 [− 0,86 ; + 0,02] |
+
+233 indicateurs significatifs sur 2 826 (environ 141 attendus par hasard).
+
+**Lecture.** Les centres restent rares (1,5 par équipe contre 15 à 20 en réalité) : sur un match complet, la zone de centre est atteinte 84 fois, avec un coéquipier dans la surface 7 fois seulement ; les attaquants n'attaquent pas la surface quand l'ailier peut centrer (ticket `v2-realisme/15a`, décision du propriétaire : livrer tel quel). Le centre est gardé une fois sur deux (repère réel 20 à 25 % de centres réussis, définition plus stricte : le receveur visé). Effet de chaîne : chaque option envisagée tire une erreur de perception (`decision.choose_action`), l'option « centre » décale donc les tirages dès sa première apparition et les matchs appariés divergent ; d'où des écarts significatifs sans lien avec le centre (caps, duels d'épaule, place du gardien) et un nombre d'écarts au-dessus du hasard. La baisse des tirs (− 1 par équipe) et des buts (− 0,86, à la limite) n'est expliquée par les centres que pour une petite part : borne de l'expert, 0,2 à 0,4 tir par équipe au plus (1,54 centre, environ 0,19 tir par centre, l'option remplacée ne finissant en tir que 30 % du temps au plus) ; le reste est du hasard (p ≈ 0,01 sur un indicateur déclaré d'avance) ou un mécanisme non identifié, aucun chemin indirect n'ayant été trouvé dans le code. À vérifier au `15a` (rapport entre nombre de centres et variation des tirs) ; si l'écart persiste, série de contrôle avec l'option centre évaluée mais jamais choisie. Part des contrôles de la tête : non mesurée (reportée au `15a`).
+
