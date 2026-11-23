@@ -409,9 +409,13 @@ def _keeper(player: PlayerState, ball: BallState, seen: Perception, players: lis
     reach = ball.holder is None and not own_pass and not ball.shot_in_flight \
         and (seen.ball_distance < CHASE_RADIUS_M or nearest_of_team(player, ball, players))
     course = gardien.race(player, ball, players) if reach else None  # ticket v2-realisme/03d : sort-il avant l'attaquant ?
+    # ticket v2-attributs-restants/03b3b : sur un ballon que la course lui refuse, l'excentrique tente parfois sa chance
+    whim = course is not None and not course.rush and gardien.whim(player, course, ball)
+    if course is None:
+        ball.keeper_whims.pop(player.name, None)  # fin de l'action : le prochain ballon libre aura son propre tirage
     one_on_one = gardien.face_to_face(player, seen.holder, players)  # ticket v2-realisme/03e : un attaquant seul face à lui
-    state = gardien.state(player, ball, seen.is_receiver, seen.read_point is not None, course is not None and course.rush,
-                          one_on_one)
+    state = gardien.state(player, ball, seen.is_receiver, seen.read_point is not None,
+                          course is not None and (course.rush or whim), one_on_one)
     inner = {RELANCE: PORTEUR, INTERVENTION: RECEVEUR if seen.is_receiver else LECTURE, SORTIE: BALLON_LIBRE}.get(state)
     line = bloc.lines.get(player.team) if bloc else None  # ligne du bloc à l'instant même, sans retard (ticket 03c)
     flight = ball.shot_flight
@@ -442,7 +446,7 @@ def _keeper(player: PlayerState, ball: BallState, seen: Perception, players: lis
     moved = decide(player, inner, ball, seen, players, minute, runs, situation, bloc, defense, transition)
     if state == SORTIE:  # la décision est fondée sur les temps d'arrivée, tracée
         moved = replace(moved, reason=f"{moved.reason} (il arrive en {course.keeper_s:.1f} s, l'adversaire en "
-                                      f"{course.rival_s:.1f} s)")
+                                      f"{course.rival_s:.1f} s{', sortie inattendue : il tente sa chance' if whim else ''})")
     return replace(moved, role=GARDIEN, reason=f"{state} : {moved.reason}")
 
 

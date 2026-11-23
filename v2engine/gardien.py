@@ -4,8 +4,9 @@ et ses états sont tracés dans la raison de son intention.
 
 États : `placement` (il se tient sur la bissectrice de l'angle ballon-poteaux, ticket 03b), `sortie` (ballon libre à
 sa portée : il va le chercher, comme avant), `intervention` (passe pour lui, ou passe qu'il a lue), `relance` (il a le
-ballon). Seul attribut lu ici : Rushing Out (tendance, ticket v2-attributs-restants/03b3a), qui règle la hauteur quand le
-ballon est loin et les sorties sur ballon libre ; les notes de l'arrêt sont lues dans `shooting`."""
+ballon). Attributs lus ici : Rushing Out (tendance, ticket v2-attributs-restants/03b3a), qui règle la hauteur quand le
+ballon est loin et les sorties sur ballon libre, et Eccentricity (tendance, ticket 03b3b), qui lui fait tenter parfois
+une sortie qu'il ne devrait pas disputer ; les notes de l'arrêt sont lues dans `shooting`."""
 
 from __future__ import annotations
 
@@ -18,6 +19,7 @@ from v2engine.anticipation import loose_ball_target
 from v2engine.ball_state import BallState
 from v2engine.condition import effective_rating
 from v2engine.defense import arrival_time_s
+from v2engine.flux import CAPRICE
 from v2engine.geometry import PENALTY_AREA_DEPTH_M, PENALTY_AREA_WIDTH_M, PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
 from v2engine.movement import PlayerState
 from v2engine.possession import BALL_FRICTION_PER_S
@@ -66,6 +68,23 @@ RUSH_MARGIN_BOUNDS_S = (0.15, 0.85)
 RUSH_MAX_PER_POINT_M = 0.3
 RUSH_MAX_BOUNDS_M = (25.0, 45.0)
 
+# Sorties inattendues : Eccentricity (ticket v2-attributs-restants/03b3b ; chiffres réels non trouvés, ordres de
+# grandeur, constantes proposées par Claude et validées par délégation du propriétaire le 22/11/2026). Tendance : goût du
+# risque, jamais le niveau. Référence `ECCENTRICITY_REFERENCE_NOTE` : médiane des 50 gardiens notés de Ligue 1 de la
+# base (de 25 à 85) ; à la référence, en dessous et sans note, rien ne change (aucun tirage). Sur un ballon libre que la
+# course (`race`) lui refuse, mais encore disputé (il n'arrive pas plus de `WHIM_LATE_S` après l'adversaire : un 50/50,
+# et le point est à moins de `WHIM_EXTRA_M` au-delà de sa distance maximale de sortie), le gardien tente sa chance avec
+# la probabilité `WHIM_PER_POINT` par point au-dessus de la référence (plafond `WHIM_MAX` : 0,08 à 50, 0,32 à 80). Réglage
+# du 22/11/2026 après une première série (0,3 s de retard toléré, 0,006 par point) : 11 sorties sur 19 partaient en
+# retard sur l'attaquant, à 4-18 m du but, 4 ballons gagnés sur 45 à Eccentricity 80 : un suicide, pas un pari. Un seul
+# tirage par action (`BallState.keeper_whims`, vidé quand le ballon n'est plus libre à sa portée) : il ne change pas
+# d'avis en route. Imprévisible : il arrive parfois à temps, parfois laisse son but vide.
+ECCENTRICITY_REFERENCE_NOTE = 40.0
+WHIM_PER_POINT = 0.008
+WHIM_MAX = 0.4
+WHIM_LATE_S = 0.1
+WHIM_EXTRA_M = 8.0
+
 # Face-à-face (ticket v2-realisme/03e ; chiffres réels non trouvés, seul repère : une consigne d'entraîneur de 1 à 6 m de
 # sa ligne, sans étude ; ordres de grandeur, constantes proposées par Claude et validées par délégation du propriétaire le
 # 07/11/2026) : un adversaire de champ porte le ballon à `FACE_RANGE_M` ou moins de son but, sans coéquipier du gardien
@@ -111,6 +130,43 @@ def rush_margin_s(note: float = RUSHING_OUT_REFERENCE_NOTE) -> float:
 def rush_max_from_goal_m(note: float = RUSHING_OUT_REFERENCE_NOTE) -> float:
     """Distance maximale (m) de son but où le gardien sort sur un ballon libre (`RUSH_MAX_FROM_GOAL_M` à la référence)."""
     return _clamp(RUSH_MAX_FROM_GOAL_M + RUSH_MAX_PER_POINT_M * (note - RUSHING_OUT_REFERENCE_NOTE), RUSH_MAX_BOUNDS_M)
+
+
+def eccentricity(keeper: PlayerState | None) -> float:
+    """Note d'Eccentricity du gardien (ticket 03b3b) ; la référence s'il n'a pas de notes ou pas cette colonne."""
+    if keeper is None or not keeper.attributes or "Eccentricity" not in keeper.attributes:
+        return ECCENTRICITY_REFERENCE_NOTE
+    return float(effective_rating(keeper, "Eccentricity"))
+
+
+def whim_probability(note: float = ECCENTRICITY_REFERENCE_NOTE) -> float:
+    """Probabilité qu'un gardien d'Eccentricity `note` tente une sortie que la course lui refuse (nulle à la référence
+    et en dessous)."""
+    return min(WHIM_MAX, max(0.0, WHIM_PER_POINT * (note - ECCENTRICITY_REFERENCE_NOTE)))
+
+
+def whim_window(player: PlayerState, course: "Race") -> bool:
+    """Vrai si le ballon libre que la course `course` refuse au gardien `player` reste jouable pour un coup de tête : il
+    n'arrive pas plus de `WHIM_LATE_S` après l'adversaire, à moins de `WHIM_EXTRA_M` au-delà de sa distance maximale."""
+    if course.rush:
+        return False
+    reach_m = rush_max_from_goal_m(rushing_out(player)) + WHIM_EXTRA_M
+    return course.keeper_s <= course.rival_s + WHIM_LATE_S and course.point.distance_to(own_goal(player.team)) <= reach_m
+
+
+def whim(player: PlayerState, course: "Race", ball: BallState) -> bool:
+    """Sortie inattendue du gardien `player` (ticket 03b3b) sur le ballon libre `ball` que la course `course` lui refuse :
+    un tirage (flux `caprice`, à part : un tirage sans effet ne décale aucun autre flux) la première fois que ce ballon entre dans sa fenêtre (`whim_window`), puis la même réponse
+    jusqu'à la fin de l'action (`BallState.keeper_whims`). Aucun tirage si sa probabilité est nulle."""
+    if player.name in ball.keeper_whims:
+        return ball.keeper_whims[player.name]
+    chance = whim_probability(eccentricity(player))
+    if chance <= 0.0 or not whim_window(player, course):
+        return False
+    ball.keeper_whims[player.name] = CAPRICE.random() < chance
+    return ball.keeper_whims[player.name]
+
+
 PLACEMENT, SORTIE, INTERVENTION, RELANCE, FACE_A_FACE = "placement", "sortie", "intervention", "relance", "face-à-face"
 
 

@@ -85,6 +85,9 @@ class BallState:
     # au délai avant l'appel (Off the Ball) et à la stabilité du choix : un appelant garde sa place tant qu'il reste
     # éligible, sans nouveau délai (`cerveau.CALLER_MEMORY_S`).
     callers: dict[str, tuple[float, float]] = field(default_factory=dict)
+    # Sortie inattendue (ticket v2-attributs-restants/03b3b, Eccentricity) : gardien -> réponse du tirage sur le ballon
+    # libre en cours ; un tirage par action, retiré quand le ballon n'est plus libre à sa portée.
+    keeper_whims: dict[str, bool] = field(default_factory=dict)
     # Tir qui finira au fond (tirage déjà fait au départ) : équipe du tireur tant que le ballon est en route vers le but.
     # Le but ne compte qu'à l'arrivée du ballon sur la ligne, jamais au départ du tir.
     shot_for: str | None = None

@@ -2007,3 +2007,20 @@ Repères réels : hauteur moyenne et nombre de sorties d'un gardien selon son st
 | réel (50 matchs) | 4,12 | 14,33 m | 6,53 | 7,61 |
 
 **Lecture.** Déterminisme : matchs 0 et 1 rejoués deux fois, mêmes empreintes (`51f3b07e…`, `d9b18549…`). Forcé à 55, les 30 scores sont identiques à ceux d'avant. De 25 à 90, le gardien se tient 5,6 m plus haut quand le ballon est loin, sort 46 % plus souvent et prend deux fois plus de ballons hors de sa surface ; les buts ne bougent pas au-delà du bruit (90 contre 25 : − 0,43 [− 1,39 ; + 0,53]). Série réelle contre `03b2` : buts 4,48 → 4,12, − 0,36 [− 1,03 ; + 0,31]. Par tranche réelle, la hauteur croît avec la note (11,97 / 14,22 / 15,16 m sous 50, 50-64, 65 et plus) ; les sorties ne sont pas monotones (7,44 / 5,74 / 6,78), l'adversaire pesant plus que la note sur une série réelle. Le risque d'être lobé quand il est haut est l'objet du `10b`.
+
+## 68. Sorties inattendues du gardien : Eccentricity (ticket v2-attributs-restants/03b3b, 50 matchs appariés et une série forcée de 30 matchs, 23/11/2026)
+
+Repères réels : fréquence et issue des sorties « hasardeuses » d'un gardien selon son goût du risque, non trouvés (ordres de grandeur).
+
+**Mécanisme.** Eccentricity (tendance), référence 40 (médiane des gardiens de Ligue 1 de la base) ; à 40, en dessous ou sans note : aucun tirage. Sur un ballon libre que la course (`gardien.race`) refuse au gardien mais encore disputé (il n'arrive pas plus de 0,1 s après l'adversaire, point à 8 m au plus au-delà de sa distance maximale de sortie), il tente sa chance avec la probabilité 0,008 par point au-dessus de 40 (plafond 0,4 : 0,08 à 50, 0,32 à 80). Un tirage par action, dans le flux `caprice`, à part : un tirage refusé ne change pas le match.
+
+**Séries** (`PYTHONPATH=. PYTHONHASHSEED=0 <python> .scratch/v2-attributs-restants/mesures/03b3b-serie.py <n> 4 <sortie.json> [--force <note>]`, synthèse `03b3b-synthese.py`, sonde `03b3b-sonde.py` ; avant : `03b3a-reel`, code de `e924fb1`).
+
+| Série | Buts/match | Sorties/gardien/match | Inattendues/gardien/match | Ballon au gardien | Buts encaissés dans les 15 s |
+|---|---|---|---|---|---|
+| avant (50 matchs) | 4,12 | 6,53 | — | — | — |
+| réelle (50 matchs) | 4,22 | 6,71 | 0,18 | 1 / 18 | 2 |
+| forcée à 80 (30 matchs) | 4,27 | 7,10 | 0,83 | 12 / 50 | 7 |
+
+**Lecture.** Buts : + 0,10 [− 0,29 ; + 0,49] en série réelle, + 0,03 [− 0,92 ; + 0,98] forcée à 80 : le niveau moyen ne bouge pas. Forcés à 25, 4 matchs sur 4 identiques à avant ; en série réelle, 30 des 38 matchs sans sortie inattendue repérée ont le même score qu'avant. Déterminisme : matchs 0 et 4 rejoués deux fois, mêmes empreintes. Avec le flux de décision partagé (première série, abandonnée), chaque tirage refusé décalait les autres décisions : + 0,98 but par match, + 0,94 même sans aucune sortie inattendue, écart sans cause attribuable. La sortie inattendue coûte souvent : sur 18 sorties de la sonde, l'adversaire a le ballon 10 fois et 5 buts suivent dans les 15 s, même quand le gardien est estimé en avance ; cause antérieure au ticket (course jugée sur le point visé par le gardien, non sur celui où l'attaquant touche le ballon), ticket `v2-realisme/03m`.
+

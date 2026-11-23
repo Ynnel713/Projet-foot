@@ -11,7 +11,9 @@ Flux (01a puis 01b) : perception (ce que le joueur voit ou lit, drapeau de hors-
 choisit, dont l'espace d'un appel et le partenaire d'une remise en jeu) ; duel (tentative, issue et faute du tacle, perte de balle en conduite) ;
 passe (contrôle, précision et dosage) ; tir (déclenchement, contre, arrêt, déviation, non cadré, penalty) ; placement
 (erreur de Positioning, appel en profondeur) ; défense (rôles défensifs, suivi, compensation, défenseur d'équilibre) ;
-arbitrage (gravité d'une faute, tirage au sort du coup d'envoi) ; regard (déclenchement des scans, ticket v2-realisme/08c). Plus aucun tirage du moteur dans le module `random`
+arbitrage (gravité d'une faute, tirage au sort du coup d'envoi) ; regard (déclenchement des scans, ticket v2-realisme/08c) ;
+caprice (sortie inattendue du gardien, Eccentricity, ticket v2-attributs-restants/03b3b : un flux à part pour qu'un tirage
+sans effet ne décale aucun autre flux, et qu'un match sans sortie inattendue reste identique). Plus aucun tirage du moteur dans le module `random`
 hors la base du match (test de garde : `tests/test_v2engine_flux.py`).
 
 Les objets ne sont jamais remplacés (`seed_streams` les ressème) : `from v2engine.flux import PERCEPTION` reste
@@ -32,8 +34,9 @@ PLACEMENT = random.Random()
 DEFENSE = random.Random()
 ARBITRAGE = random.Random()
 REGARD = random.Random()
+CAPRICE = random.Random()
 STREAMS = {"perception": PERCEPTION, "decision": DECISION, "duel": DUEL, "passe": PASSE, "tir": TIR,
-           "placement": PLACEMENT, "defense": DEFENSE, "arbitrage": ARBITRAGE, "regard": REGARD}
+           "placement": PLACEMENT, "defense": DEFENSE, "arbitrage": ARBITRAGE, "regard": REGARD, "caprice": CAPRICE}
 
 
 def stream_seed(base: int, name: str) -> int:

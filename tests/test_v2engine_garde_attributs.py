@@ -26,7 +26,8 @@ from ligue1sim.season import CLUBS_PATH
 from tests.scenes import Scene, player, run, seed_scene, with_attribute
 from v2engine.formation import initial_positions
 from v2engine.match import _build_players
-from v2engine.movement import PlayerState
+from v2engine.geometry import Vec2
+from v2engine.movement import PlayerState, max_speed_mps
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 CARTE = ROOT / "docs" / "CARTE_ATTRIBUTS_V2.md"
@@ -81,10 +82,10 @@ ANNOUNCED = sorted(announced_with_effect(STATES))
 def test_the_carte_is_read_with_its_announced_attributes() -> None:
     # 52 lignes d'attributs le 14/11/2026, dont 27 annoncées avec effet (23 « branché », Dribbling, Finishing,
     # Balance et Handling) ; Reflexes et One on Ones « branché » au ticket v2-attributs-restants/03b1, Handling (prise de
-    # balle) au ticket 03b2, Rushing Out (Tendency) (style) au ticket 03b3a
+    # balle) au ticket 03b2, Rushing Out (Tendency) (style) au ticket 03b3a, Eccentricity (sorties inattendues) au 03b3b
     assert len(STATES) >= 50
     assert {"Pace", "Dribbling", "Finishing", "Balance", "Reflexes", "One on Ones", "Handling",
-            "Rushing Out (Tendency)"} <= set(ANNOUNCED)
+            "Rushing Out (Tendency)", "Eccentricity"} <= set(ANNOUNCED)
     assert {"Natural Fitness", "Heading", "Jumping Reach"}.isdisjoint(ANNOUNCED)
 
 
@@ -135,11 +136,19 @@ def tir_de_loin() -> tuple[list[PlayerState], str]:
             player("Def", "away", 79.2, 35, "DC")], "Tireur"
 
 
+def ballon_dispute() -> tuple[list[PlayerState], None]:
+    """Ballon libre arrêté à 25 m du but du gardien, un attaquant qui arrive 0,1 s après lui : la course lui refuse la
+    sortie (marge de 0,5 s), l'excentrique la tente parfois (Eccentricity, ticket v2-attributs-restants/03b3b)."""
+    return [player("Gardien", "home", 5.0, 34.0, "GK"),
+            player("Att", "away", 45.0 + 0.1 * max_speed_mps(60), 34.0, "BU")], None
+
+
 @dataclass(frozen=True)
 class Plan:
-    build: Callable[[], tuple[list[PlayerState], str]] = mini_match
+    build: Callable[[], tuple[list[PlayerState], str | None]] = mini_match
     seconds: float = 60.0
     max_seeds: int = 3
+    ball_at: Vec2 | None = None  # ballon libre en ce point quand la scène n'a pas de porteur
 
 
 # Attribut -> scène où il agit. Par défaut le mini-match de 60 s. Les attributs de duel n'agissent qu'au tacle (environ
@@ -149,6 +158,7 @@ PLANS = {
     "Strength": Plan(duel, 3.0, 300), "Balance": Plan(duel, 3.0, 300), "Tackling": Plan(duel, 3.0, 300),
     "Reflexes": Plan(tir, 3.0, 300), "One on Ones": Plan(tir, 3.0, 300), "Handling": Plan(tir, 3.0, 300),
     "Finishing": Plan(tir, 3.0, 300),  # dans la surface seulement
+    "Eccentricity": Plan(ballon_dispute, 1.0, 300, Vec2(25.0, 34.0)),  # sortie inattendue, un tirage sur 0,3
     # hors de la surface : rare dans le mini-match depuis la courbe en S du ticket v2-realisme/24 (fusion du 14/11/2026)
     "Long Shots": Plan(tir_de_loin, 3.0, 300),
     # n'agit que par l'énergie (sprint entamé, réserve) : effet rare en 60 s depuis le partage des collisions selon
@@ -159,10 +169,10 @@ PLANS = {
 }
 
 
-def _play(players: list[PlayerState], holder: str, seconds: float, seed: int,
-          reference: list[str] | None = None) -> list[str]:
+def _play(players: list[PlayerState], holder: str | None, seconds: float, seed: int,
+          reference: list[str] | None = None, ball_at: Vec2 | None = None) -> list[str]:
     """Empreintes de chaque pas ; avec `reference`, s'arrête au premier pas qui en diffère."""
-    scene = Scene.full(players, holder=holder)
+    scene = Scene.full(players, holder=holder, ball_at=ball_at)
     seed_scene(seed)
     until = None if reference is None else (lambda s: s.log[-1] != reference[len(s.log) - 1])
     run(scene, seconds, until=until)
@@ -174,8 +184,8 @@ def first_divergence(attribute: str, plan: Plan) -> tuple[int, int] | None:
     players, holder = plan.build()
     low, high = with_attribute(players, attribute, LOW), with_attribute(players, attribute, HIGH)
     for seed in range(1, plan.max_seeds + 1):
-        reference = _play(low, holder, plan.seconds, seed)
-        other = _play(high, holder, plan.seconds, seed, reference)
+        reference = _play(low, holder, plan.seconds, seed, ball_at=plan.ball_at)
+        other = _play(high, holder, plan.seconds, seed, reference, plan.ball_at)
         step = next((i for i, (a, b) in enumerate(zip(reference, other)) if a != b), None)
         if step is not None:
             return seed, step
@@ -194,7 +204,8 @@ def test_every_attribute_announced_with_effect_changes_a_scene(attribute: str) -
     seconds = (step + 1) * Scene.dt
     for value in (LOW, HIGH):
         profile = with_attribute(players, attribute, value)
-        assert _play(profile, holder, seconds, seed) == _play(profile, holder, seconds, seed)
+        assert _play(profile, holder, seconds, seed, ball_at=plan.ball_at) == _play(profile, holder, seconds, seed,
+                                                                                 ball_at=plan.ball_at)
 
 
 def test_the_effect_guard_fails_on_a_fake_attribute() -> None:
