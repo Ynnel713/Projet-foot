@@ -2024,3 +2024,20 @@ Repères réels : fréquence et issue des sorties « hasardeuses » d'un gardien
 
 **Lecture.** Buts : + 0,10 [− 0,29 ; + 0,49] en série réelle, + 0,03 [− 0,92 ; + 0,98] forcée à 80 : le niveau moyen ne bouge pas. Forcés à 25, 4 matchs sur 4 identiques à avant ; en série réelle, 30 des 38 matchs sans sortie inattendue repérée ont le même score qu'avant. Déterminisme : matchs 0 et 4 rejoués deux fois, mêmes empreintes. Avec le flux de décision partagé (première série, abandonnée), chaque tirage refusé décalait les autres décisions : + 0,98 but par match, + 0,94 même sans aucune sortie inattendue, écart sans cause attribuable. La sortie inattendue coûte souvent : sur 18 sorties de la sonde, l'adversaire a le ballon 10 fois et 5 buts suivent dans les 15 s, même quand le gardien est estimé en avance ; cause antérieure au ticket (course jugée sur le point visé par le gardien, non sur celui où l'attaquant touche le ballon), ticket `v2-realisme/03m`.
 
+## 69. Relance au pied du gardien : Kicking (ticket v2-attributs-restants/03c1, 50 matchs appariés et deux séries forcées de 30 matchs, 23/11/2026)
+
+Repères réels : dégagement et sortie de but d'un gardien de haut niveau, 50 à 65 m (ordre de grandeur) ; relation note-distance et part des sorties de but jouées long en Ligue 1 : non trouvées.
+
+**Mécanisme.** Kicking (exécution), référence 60. Un long ballon du gardien en l'air (relance longue en jeu, remise jouée à plus de 25 m) prend Kicking à la place de Passing dans sa précision ; vitesse de frappe plafond 30 m/s + 0,1 m/s par point autour de 60 (26,5 à 34 m/s), portée 52,9 m à 35, 57,8 m à 60, 61,7 m à 80. Choix du receveur d'une remise inchangé.
+
+**Séries** (`PYTHONPATH=. PYTHONHASHSEED=0 <python> .scratch/v2-attributs-restants/mesures/03c-serie.py <n> 4 <sortie.json> [--attr Kicking --force <note>]`, synthèse `03c-synthese.py` ; avant : code de `b90ea8c`).
+
+| Série | Buts/match | Longs ballons/gardien/match | Longueur moyenne (90e centile) | Gardés par son équipe | Sorties de but jouées long |
+|---|---|---|---|---|---|
+| avant (30 matchs) | 4,33 | 4,20 | 40,5 m (54,0) | 84,0 % | 62,3 % |
+| réelle (50 matchs) | 4,42 | 4,36 | 41,4 m (53,9) | 85,8 % | 57,7 % |
+| forcé à 40 (30 matchs) | 4,67 | 4,03 | 40,4 m (51,6) | 85,3 % | 60,8 % |
+| forcé à 80 (30 matchs) | 3,63 | 4,27 | 42,0 m (57,3) | 84,5 % | 53,2 % |
+
+**Lecture.** La portée suit la note (90e centile + 5,7 m de 40 à 80). La part gardée ne dépend pas de la précision : sans duel aérien (`v2-realisme/15b`), le moteur garde 85 % des longs ballons du gardien, contre environ la moitié dans le réel ; la précision est prouvée en scène. Buts : réelle + 0,20 [− 0,47 ; + 0,87] ; 80 contre 40 : − 1,03 [− 1,71 ; − 0,35]. Juger le choix du receveur comme une passe en l'air (essais abandonnés) faisait passer la part longue des sorties de but à 81 % (sans retombée disputée) ou à 30 % avec des buts + 1,04 [+ 0,28 ; + 1,80] (retombée à 0,5) : ticket `v2-collectif/15e`.
+

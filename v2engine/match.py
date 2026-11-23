@@ -614,14 +614,16 @@ def _play_restart(ball: BallState, players: list[PlayerState], now_s: float,
         ball.receiving = True
         ball.next_decision_s = now_s + reception_delay_s(taker, opponents)
         return
-    ball.velocity = pass_velocity(taker, target, opponents)
+    aerial = is_aerial(r.kind, taker, target)
+    # sortie de but ou coup franc du gardien joué long : un long ballon en l'air, Kicking (ticket v2-attributs-restants/03c1)
+    ball.velocity = pass_velocity(taker, target, opponents, lofted=aerial and taker.poste == "GK")
     ball.pass_from, ball.rebound, ball.shot_wide = taker.position, False, False
     ball.last_toucher = ball.released_by = taker.name
     ball.last_pass_team = taker.team
     ball.receiver = target.name
     ball.plan = None
     _clear_offside(ball)
-    if is_aerial(r.kind, taker, target):  # ballon en l'air : on ne le touche qu'à son point de chute
+    if aerial:  # ballon en l'air : on ne le touche qu'à son point de chute
         ball.mode, ball.readers = AERIEN, {}
         ball.aerial_left_m = taker.position.distance_to(target.position) - AERIAL_LANDING_M
     else:

@@ -42,3 +42,7 @@ Temps machine, non compté : suite complète (environ 40 min).
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+
+## Comments
+
+- 23/11/2026 (réserve A1 du `v2-attributs-restants/03c1`) : une fois le duel aérien livré, refaire la mesure de la part des longs ballons du gardien gardés par son équipe selon Kicking (séries forcées à 40 et 80, `.scratch/v2-attributs-restants/mesures/03c-serie.py`) ; sans duel, 85 % quelle que soit la précision.

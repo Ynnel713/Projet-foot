@@ -32,6 +32,16 @@ _DIFFICULTY_PER_M = 1.8  # au-delà de 10 m : 25 m -> 37, 35 m -> 55, 45 m -> 73
 # (même seuil que les remises jouées long, `restart.LONG_RESTART_M`).
 LONG_BALL_DIFFICULTY_PER_M = 0.8
 LONG_PASS_M = 25.0
+# Relance au pied du gardien (ticket v2-attributs-restants/03c1 ; chiffres réels non trouvés pour la relation note-distance,
+# ordres de grandeur : dégagement et sortie de but d'un gardien de haut niveau, 50 à 65 m ; constantes proposées par Claude
+# et validées par délégation du propriétaire le 22/11/2026). Kicking (exécution) remplace Passing dans la précision d'un
+# long ballon du gardien en l'air (relance longue en jeu, sortie de but jouée long) et règle sa vitesse de frappe
+# plafond : `MAX_PASS_MPS` à la référence `KICKING_REFERENCE_NOTE` (médiane des 50 gardiens notés de Ligue 1 de la base,
+# de 35 à 80), + `KICK_SPEED_PER_POINT_MPS` par point, bornée à `KICK_SPEED_BOUNDS_MPS` : portée 51 m à 35, 58 m à 60,
+# 62 m à 80, 66 m à 99. Un gardien sans note ou sans cette colonne vaut la référence.
+KICKING_REFERENCE_NOTE = 60.0
+KICK_SPEED_PER_POINT_MPS = 0.1
+KICK_SPEED_BOUNDS_MPS = (26.5, 34.0)
 _PRESSURE_DIFFICULTY = 15.0  # adversaire au contact du joueur, nulle à `PRESSURE_RADIUS_M`
 _MARKED_DIFFICULTY = 10.0  # receveur avec un adversaire à moins de `_MARKED_RADIUS_M`
 _MARKED_RADIUS_M = 2.0
@@ -150,12 +160,37 @@ def one_touch_precision(passer: PlayerState) -> float:
     return _ONE_TOUCH_PRECISION_POINTS[-1][1]
 
 
+def kicking(keeper: PlayerState) -> float:
+    """Note de Kicking du gardien (ticket v2-attributs-restants/03c1) ; la référence s'il n'a pas de notes ou pas cette
+    colonne."""
+    if not keeper.attributes or "Kicking" not in keeper.attributes:
+        return KICKING_REFERENCE_NOTE
+    return float(effective_rating(keeper, "Kicking"))
+
+
+def keeper_kick(passer: PlayerState, lofted: bool) -> bool:
+    """Vrai pour un long ballon du gardien au pied, en l'air (ticket 03c1) : Kicking règle sa précision et sa portée."""
+    return lofted and passer.poste == "GK"
+
+
+def kick_speed_cap_mps(note: float = KICKING_REFERENCE_NOTE) -> float:
+    """Vitesse de frappe plafond (m/s) d'un long ballon du gardien de Kicking `note` (`MAX_PASS_MPS` à la référence)."""
+    speed = MAX_PASS_MPS + KICK_SPEED_PER_POINT_MPS * (note - KICKING_REFERENCE_NOTE)
+    return min(KICK_SPEED_BOUNDS_MPS[1], max(KICK_SPEED_BOUNDS_MPS[0], speed))
+
+
+def _speed_cap_mps(passer: PlayerState, lofted: bool) -> float:
+    return kick_speed_cap_mps(kicking(passer)) if keeper_kick(passer, lofted) else MAX_PASS_MPS
+
+
 def pass_accuracy_probability(passer: PlayerState, receiver: PlayerState, opponents: Sequence[PlayerState],
                               backheel: bool = False, one_touch: bool = False, lofted: bool = False) -> float:
     """Chance que la passe parte où le passeur la destine (sinon déviée, `pass_aim`) : Passing contre la difficulté de
-    CETTE passe ; Technique pour une talonnade (ticket v2-realisme/07e) ; jouée de première, précision du geste en plus
-    (`one_touch_precision`, ticket v2-collectif/31a)."""
-    skill = effective_rating(passer, "Technique") if backheel else effective_rating(passer, "Passing")
+    CETTE passe ; Technique pour une talonnade (ticket v2-realisme/07e) ; Kicking pour un long ballon du gardien en l'air
+    (ticket v2-attributs-restants/03c1) ; jouée de première, précision du geste en plus (`one_touch_precision`, ticket
+    v2-collectif/31a)."""
+    skill = effective_rating(passer, "Technique") if backheel else kicking(passer) if keeper_kick(passer, lofted) \
+        else effective_rating(passer, "Passing")
     accurate = duel_probability(skill, pass_difficulty(passer, receiver, opponents, backheel, lofted), **_SUCCESS)
     return accurate * one_touch_precision(passer) if one_touch else accurate
 
@@ -211,15 +246,20 @@ def missed_control_velocity(player: PlayerState, ball_velocity: Vec2, opponents:
     return Vec2(direction.x * cos_a - direction.y * sin_a, direction.x * sin_a + direction.y * cos_a) * speed
 
 
-def _launch_speed(distance_m: float) -> float:
-    """Vitesse de départ pour que le ballon, freiné, arrive à `IDEAL_ARRIVAL_MPS` après `distance_m`."""
-    return min(MAX_PASS_MPS, IDEAL_ARRIVAL_MPS - distance_m * math.log(BALL_FRICTION_PER_S))
+def _launch_speed(distance_m: float, cap_mps: float = MAX_PASS_MPS) -> float:
+    """Vitesse de départ pour que le ballon, freiné, arrive à `IDEAL_ARRIVAL_MPS` après `distance_m` (plafond `cap_mps`)."""
+    return min(cap_mps, IDEAL_ARRIVAL_MPS - distance_m * math.log(BALL_FRICTION_PER_S))
 
 
-def max_pass_reach_m() -> float:
-    """Distance la plus longue qu'une passe frappée au plafond (`MAX_PASS_MPS`) parcourt avant d'être morte
-    (`BALL_STOPPED_MPS`) : environ 58 m."""
-    return (MAX_PASS_MPS - BALL_STOPPED_MPS) / -math.log(BALL_FRICTION_PER_S)
+def max_pass_reach_m(cap_mps: float = MAX_PASS_MPS) -> float:
+    """Distance la plus longue qu'une passe frappée au plafond (`MAX_PASS_MPS`, ou `cap_mps`) parcourt avant d'être
+    morte (`BALL_STOPPED_MPS`) : environ 58 m."""
+    return (cap_mps - BALL_STOPPED_MPS) / -math.log(BALL_FRICTION_PER_S)
+
+
+def keeper_kick_reach_m(keeper: PlayerState) -> float:
+    """Portée (m) d'un long ballon du gardien `keeper` selon son Kicking (ticket 03c1) : 58 m à la référence."""
+    return max_pass_reach_m(kick_speed_cap_mps(kicking(keeper)))
 
 
 def pass_aim(passer: PlayerState, target: PlayerState, opponents: Sequence[PlayerState] = (),
@@ -227,7 +267,7 @@ def pass_aim(passer: PlayerState, target: PlayerState, opponents: Sequence[Playe
     """Point visé par une passe de `passer` vers `target`. Réussie (Passing contre difficulté) : là où le receveur
     VA être, d'autant plus précisément que le dosage est bon. Ratée : déviée de 25 à 50 % de sa longueur (18h)."""
     distance = passer.position.distance_to(target.position)
-    speed = _launch_speed(distance)
+    speed = _launch_speed(distance, _speed_cap_mps(passer, lofted))
     log_f = math.log(BALL_FRICTION_PER_S)
     arrival = max(BALL_STOPPED_MPS, speed + distance * log_f)  # < 6 m/s si la vitesse est plafonnée (passe > ~47 m)
     travel_s = math.log(arrival / speed) / log_f
@@ -246,7 +286,8 @@ def pass_velocity(passer: PlayerState, target: PlayerState, opponents: Sequence[
     aim = pass_aim(passer, target, opponents, backheel, one_touch, lofted)
     quality = dosage_quality(passer)
     error = _DOSAGE_ERROR[0] + (_DOSAGE_ERROR[1] - _DOSAGE_ERROR[0]) * quality
-    speed = min(MAX_PASS_MPS, _launch_speed(passer.position.distance_to(aim)) * (1.0 + PASSE.uniform(-error, error)))
+    cap = _speed_cap_mps(passer, lofted)  # long ballon du gardien : plafond selon Kicking (ticket 03c1)
+    speed = min(cap, _launch_speed(passer.position.distance_to(aim), cap) * (1.0 + PASSE.uniform(-error, error)))
     return (aim - passer.position).normalized() * speed
 
 

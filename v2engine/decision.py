@@ -23,6 +23,7 @@ from v2engine.movement import PlayerState, max_speed_mps, turn_rate_rad_s
 from v2engine.off_ball import OPEN_LANE_PROBABILITY
 from v2engine.offside import is_clearly_offside, pass_margin_m, perceived_defence_line
 from v2engine.possession import (BACKHEEL_MAX_M, BALL_FRICTION_PER_S, BALL_STOPPED_MPS, LONG_PASS_M, max_pass_reach_m,
+                                  keeper_kick_reach_m,
                                   pass_success_probability,
                                   pressure)
 from v2engine.shooting import SHOOTING_RANGE_M, shot_outcome_shares
@@ -420,7 +421,7 @@ def evaluate_options(holder: PlayerState, players: list[PlayerState], goal: Vec2
                                                                  third_man=third_man).value)
             options.append(option)
     if build_up and not one_touch:  # relance longue en l'air (ticket v2-collectif/15a)
-        reach = max_pass_reach_m()
+        reach = keeper_kick_reach_m(holder) if holder.poste == "GK" else max_pass_reach_m()  # Kicking (ticket 03c1)
         for mate in mates:
             length = holder.position.distance_to(mate.position)
             if mate.poste not in LONG_BALL_POSTES or not LONG_PASS_M < length <= reach \

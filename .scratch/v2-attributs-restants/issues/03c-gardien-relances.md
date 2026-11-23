@@ -10,7 +10,7 @@
 
 **Bloque :** `v2-collectif/22a`.
 
-**Status:** à faire (constantes à proposer avant le code)
+**Status:** découpé (23/11/2026, recommandation de Claude sous la délégation du propriétaire) en `03c1` (relance au pied, Kicking) et `03c2` (relance à la main, Throwing, avec l'état « ballon en main » à créer) : estimé à 2 h 40 en confiance faible, au-delà du seuil de 2 h. Le geste préféré « Uses Long Throw To Start Counter Attacks » est branché au `05a` (ligne « Gardien »). Clos quand les deux sont livrés.
 
 ## Acceptance criteria
 

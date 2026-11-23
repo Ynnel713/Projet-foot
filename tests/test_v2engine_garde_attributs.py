@@ -82,10 +82,11 @@ ANNOUNCED = sorted(announced_with_effect(STATES))
 def test_the_carte_is_read_with_its_announced_attributes() -> None:
     # 52 lignes d'attributs le 14/11/2026, dont 27 annoncées avec effet (23 « branché », Dribbling, Finishing,
     # Balance et Handling) ; Reflexes et One on Ones « branché » au ticket v2-attributs-restants/03b1, Handling (prise de
-    # balle) au ticket 03b2, Rushing Out (Tendency) (style) au ticket 03b3a, Eccentricity (sorties inattendues) au 03b3b
+    # balle) au ticket 03b2, Rushing Out (Tendency) (style) au ticket 03b3a, Eccentricity (sorties inattendues) au 03b3b,
+    # Kicking (long ballon du gardien) au 03c1
     assert len(STATES) >= 50
     assert {"Pace", "Dribbling", "Finishing", "Balance", "Reflexes", "One on Ones", "Handling",
-            "Rushing Out (Tendency)", "Eccentricity"} <= set(ANNOUNCED)
+            "Rushing Out (Tendency)", "Eccentricity", "Kicking"} <= set(ANNOUNCED)
     assert {"Natural Fitness", "Heading", "Jumping Reach"}.isdisjoint(ANNOUNCED)
 
 
@@ -143,6 +144,13 @@ def ballon_dispute() -> tuple[list[PlayerState], None]:
             player("Att", "away", 45.0 + 0.1 * max_speed_mps(60), 34.0, "BU")], None
 
 
+def relance_longue() -> tuple[list[PlayerState], str]:
+    """Gardien ballon au pied, un attaquant seul à 50 m, un adversaire qui presse : relance longue en l'air, dont Kicking
+    règle la précision et la portée (ticket v2-attributs-restants/03c1)."""
+    return [player("Gardien", "home", 5.0, 34.0, "GK"), player("Att", "home", 55.0, 34.0, "BU"),
+            player("Presseur", "away", 9.0, 34.0, "BU")], "Gardien"
+
+
 @dataclass(frozen=True)
 class Plan:
     build: Callable[[], tuple[list[PlayerState], str | None]] = mini_match
@@ -159,6 +167,7 @@ PLANS = {
     "Reflexes": Plan(tir, 3.0, 300), "One on Ones": Plan(tir, 3.0, 300), "Handling": Plan(tir, 3.0, 300),
     "Finishing": Plan(tir, 3.0, 300),  # dans la surface seulement
     "Eccentricity": Plan(ballon_dispute, 1.0, 300, Vec2(25.0, 34.0)),  # sortie inattendue, un tirage sur 0,3
+    "Kicking": Plan(relance_longue, 6.0, 100),  # long ballon du gardien : précision tirée au départ
     # hors de la surface : rare dans le mini-match depuis la courbe en S du ticket v2-realisme/24 (fusion du 14/11/2026)
     "Long Shots": Plan(tir_de_loin, 3.0, 300),
     # n'agit que par l'énergie (sprint entamé, réserve) : effet rare en 60 s depuis le partage des collisions selon
