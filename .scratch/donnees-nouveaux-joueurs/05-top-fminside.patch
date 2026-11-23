@@ -1,0 +1,498 @@
+diff --git a/scripts/fminside_new_players.py b/scripts/fminside_new_players.py
+index f9e200a..7365fa5 100644
+--- a/scripts/fminside_new_players.py
++++ b/scripts/fminside_new_players.py
+@@ -39,6 +39,14 @@ Exemples
+     # collecte réelle (environ 2 400 requêtes, ~1 h à 1 s d'intervalle)
+     uv run python scripts/fminside_new_players.py
+ 
++    # mode « top N » (ticket 05) : les 4 000 premiers joueurs de fminside, dans l'ordre par défaut
++    # du site ; rangés dans leur club du classeur, ou dans un club créé en "Autres clubs" (sous son
++    # nom FM). Même plafond de 40, mêmes exclusions. Rapports fminside_top_*_report.csv : chaque
++    # club "Autres clubs" touché y est dit complet (jouable en Compétition Perso, voir
++    # clubs.is_playable_squad) ou incomplet (sélections nationales seulement).
++    uv run python scripts/fminside_new_players.py --top 4000 --dry-run
++    uv run python scripts/fminside_new_players.py --top 4000
++
+ Puis : uv run python scripts/compute_moyenne_fm.py. Fermer joueurs.xlsx dans Excel avant.
+ """
+ from __future__ import annotations
+@@ -74,10 +82,12 @@ from scrape_fminside_attributes import (
+     load_players,
+     name_similarity,
+     norm,
++    norm_club,
+     write_extras,
+ )
+ 
+-from ligue1sim.clubs import EXCLUDED_CHAMPIONNATS
++from ligue1sim.clubs import EXCLUDED_CHAMPIONNATS, is_playable_squad
++from ligue1sim.players import position_group
+ 
+ # --- Réglages (décisions du propriétaire du 22/11/2026, voir le ticket) ----------------------
+ TARGET_TOTAL = 2000   # nouveaux joueurs au total
+@@ -324,6 +334,59 @@ class Outcome:
+     error: str = ""  # erreur bloquante (Cloudflare, cookie...) : la collecte s'est arrêtée là
+ 
+ 
++class RowWriter:
++    """Ajout d'un candidat retenu : contrôle de doublon d'URL, fiche, poste, écriture de la ligne
++    (ou simple prévision en dry-run). Commun aux modes « par club » et « top N »."""
++
++    def __init__(self, ws, headers: dict, api, index: BaseIndex, next_id: int, out: Outcome, dry_run: bool):
++        self.ws, self.headers, self.api, self.index, self.out, self.dry_run = ws, headers, api, index, out, dry_run
++        self.ids = iter(range(next_id, next_id + 10**6))
++
++    def report(self, status: str, club: str, c: Candidate, why: str = ""):
++        self.out.players_report.append([status, club, c.name, c.club, c.age, c.ability, c.url, why])
++
++    def add(self, tc: TargetClub, c: Candidate) -> bool:
++        club, out = tc.name, self.out
++        if c.url in self.index.urls:  # même fiche dans la réserve de deux clubs : une seule ligne
++            self.report("REFUSÉ", club, c, "fiche déjà retenue pour un autre club")
++            return False
++        if self.dry_run:
++            if not fm_poste(None, c.positions):
++                self.report("REFUSÉ", club, c, "poste inconnu")
++                return False
++            self.report("PRÉVU", club, c)
++            out.added.append((0, club, c))
++            self.index.urls.add(c.url)
++            return True
++        try:
++            attrs = self.api.attributes(c.url)
++            extras = self.api.extras(c.url)
++        except ProfileUnreadable as e:  # fiche sans attributs : on passe au suivant
++            self.report("REFUSÉ", club, c, str(e))
++            return False
++        except RuntimeError:  # Cloudflare, cookie expiré... : bloquant, comme le script de base
++            raise
++        except Exception as e:  # noqa: BLE001 -- fiche illisible : on passe au suivant
++            self.report("REFUSÉ", club, c, repr(e))
++            return False
++        if not fm_poste((extras or {}).get("natural"), c.positions):
++            self.report("REFUSÉ", club, c, "poste inconnu")
++            return False
++        values = row_values(next(self.ids), tc, c, attrs, extras)
++        self.index.urls.add(c.url)
++        r = append_row(self.ws, self.headers, values)
++        write_extras(self.ws, r, self.headers, extras)
++        nat, known = fr_nationality(c.nat)
++        if not known:
++            out.unknown_nat[nat] += 1
++        out.added.append((r, club, c))
++        self.report("AJOUTÉ", club, c, f"ID {values['ID']}")
++        if len(out.added) % 25 == 0:
++            self.api.save_cache()
++            print(f"  {len(out.added)} joueurs ajoutés")
++        return True
++
++
+ def discover(ws, api, target: int = TARGET_TOTAL, max_squad: int = MAX_SQUAD, dry_run: bool = False,
+              only_clubs: set[str] | None = None, club_overrides: dict[str, str] | None = None,
+              stop: Callable[[], bool] = lambda: False) -> Outcome:
+@@ -364,51 +427,10 @@ def discover(ws, api, target: int = TARGET_TOTAL, max_squad: int = MAX_SQUAD, dr
+         print(f"{name} ({tc.championnat}) : {status}, {len(cands)} joueurs du club, {len(fresh)} nouveaux")
+         api.save_cache()
+ 
+-    ids = iter(range(next_id, next_id + 10**6))
++    writer = RowWriter(ws, headers, api, index, next_id, out, dry_run)
+ 
+     def accept(club: str, c: Candidate) -> bool:
+-        if stop():
+-            return False
+-        tc = clubs[club]
+-        if c.url in index.urls:  # même fiche dans la réserve de deux clubs : une seule ligne
+-            out.players_report.append(["REFUSÉ", club, c.name, c.club, c.age, c.ability, c.url,
+-                                       "fiche déjà retenue pour un autre club"])
+-            return False
+-        if dry_run:
+-            if not fm_poste(None, c.positions):
+-                out.players_report.append(["REFUSÉ", club, c.name, c.club, c.age, c.ability, c.url, "poste inconnu"])
+-                return False
+-            out.players_report.append(["PRÉVU", club, c.name, c.club, c.age, c.ability, c.url, ""])
+-            out.added.append((0, club, c))
+-            index.urls.add(c.url)
+-            return True
+-        try:
+-            attrs = api.attributes(c.url)
+-            extras = api.extras(c.url)
+-        except ProfileUnreadable as e:  # fiche sans attributs : on passe au suivant du club
+-            out.players_report.append(["REFUSÉ", club, c.name, c.club, c.age, c.ability, c.url, str(e)])
+-            return False
+-        except RuntimeError:  # Cloudflare, cookie expiré... : bloquant, comme le script de base
+-            raise
+-        except Exception as e:  # noqa: BLE001 -- fiche illisible : on passe au suivant du club
+-            out.players_report.append(["REFUSÉ", club, c.name, c.club, c.age, c.ability, c.url, repr(e)])
+-            return False
+-        if not fm_poste((extras or {}).get("natural"), c.positions):
+-            out.players_report.append(["REFUSÉ", club, c.name, c.club, c.age, c.ability, c.url, "poste inconnu"])
+-            return False
+-        values = row_values(next(ids), tc, c, attrs, extras)
+-        index.urls.add(c.url)
+-        r = append_row(ws, headers, values)
+-        write_extras(ws, r, headers, extras)
+-        nat, known = fr_nationality(c.nat)
+-        if not known:
+-            out.unknown_nat[nat] += 1
+-        out.added.append((r, club, c))
+-        out.players_report.append(["AJOUTÉ", club, c.name, c.club, c.age, c.ability, c.url, f"ID {values['ID']}"])
+-        if len(out.added) % 25 == 0:
+-            api.save_cache()
+-            print(f"  {len(out.added)} joueurs ajoutés")
+-        return True
++        return not stop() and writer.add(clubs[club], c)
+ 
+     sizes = {k: v.size for k, v in clubs.items()}
+     try:
+@@ -422,16 +444,148 @@ def discover(ws, api, target: int = TARGET_TOTAL, max_squad: int = MAX_SQUAD, dr
+     return out
+ 
+ 
+-def write_reports(folder: Path, out: Outcome):
++# --- Mode « top N » (ticket donnees-nouveaux-joueurs/05) -------------------------------------
++OTHER_CLUBS = "Autres clubs"
++FREE_AGENTS = "Sans club"
++
++
++def read_all_clubs(ws, headers) -> dict[str, TargetClub]:
++    """Tous les clubs du classeur, Autres clubs compris. Un nom porté par deux championnats (ligne
++    isolée en Autres clubs + vrai club d'un championnat) désigne le club du championnat."""
++    counts: Counter = Counter()
++    for r in range(2, ws.max_row + 1):
++        if ws.cell(r, headers["ID"]).value is None:
++            continue
++        counts[(ws.cell(r, headers["Club"]).value, ws.cell(r, headers["Championnat"]).value)] += 1
++    clubs: dict[str, TargetClub] = {}
++    for (name, champ), n in sorted(counts.items(), key=lambda kv: (kv[0][1] == OTHER_CLUBS, -kv[1], kv[0])):
++        if name and name not in clubs:
++            clubs[name] = TargetClub(name, champ, n)
++    return clubs
++
++
++class ClubResolver:
++    """Club fminside -> club du classeur. Ordre : nom identique (normalisé), nom fminside appris du
++    cache, puis meilleure club_similarity >= CLUB_MATCH ; à égalité, club d'un championnat avant
++    Autres clubs, puis plus grand effectif. Aucun -> None (nouveau club en Autres clubs).
++    Seuls les clubs déjà dans le classeur sont comparés de façon approchée (leurs noms diffèrent de
++    ceux de FM) ; un club créé pendant l'exécution porte son nom FM exact et n'est retrouvé que
++    par lui (`memo`), pour ne pas fusionner deux clubs FM aux noms voisins (Al Ahli / Al Ahly).
++    """
++
++    def __init__(self, clubs: dict[str, TargetClub], fm_names: dict[str, str] | None = None):
++        self.clubs = clubs
++        self.base_names = sorted(clubs)  # instantané : les clubs créés ensuite n'y entrent pas
++        self.by_norm: dict[str, str] = {}
++        for name in sorted(clubs, key=self._rank):
++            self.by_norm.setdefault(norm_club(name), name)
++        for name, fm in sorted((fm_names or {}).items()):
++            if name in clubs:
++                self.by_norm.setdefault(norm_club(fm), name)
++        self.memo: dict[str, str | None] = {}
++
++    def _rank(self, name: str):
++        tc = self.clubs[name]
++        return (tc.championnat == OTHER_CLUBS, -tc.size, name)
++
++    def resolve(self, fm_club: str) -> str | None:
++        if fm_club in self.memo:
++            return self.memo[fm_club]
++        hit = self.by_norm.get(norm_club(fm_club))
++        if hit is None:
++            scored = [(club_similarity(fm_club, name), name) for name in self.base_names]
++            best = max((sc for sc, _ in scored), default=0.0)
++            if best >= CLUB_MATCH:
++                hit = min((name for sc, name in scored if sc == best), key=self._rank)
++        self.memo[fm_club] = hit
++        return hit
++
++
++def squad_groups(ws, headers) -> dict[str, list[str]]:
++    """Groupe (GK/DEF/MID/ATT) du poste principal de chaque joueur, par club."""
++    out: dict[str, list[str]] = defaultdict(list)
++    for r in range(2, ws.max_row + 1):
++        if ws.cell(r, headers["ID"]).value is None:
++            continue
++        poste = str(ws.cell(r, headers["Poste"]).value or "").split("/")[0].strip()
++        out[ws.cell(r, headers["Club"]).value].append(position_group(poste))
++    return out
++
++
++def discover_top(ws, api, n: int, max_squad: int = MAX_SQUAD, dry_run: bool = False,
++                 stop: Callable[[], bool] = lambda: False) -> Outcome:
++    """Les `n` premiers joueurs de fminside (ordre par défaut du site) absents du classeur, rangés
++    dans leur club s'il existe, sinon dans un club créé en Autres clubs ; effectif plafonné."""
++    headers = {str(c.value).strip(): c.column for c in ws[1] if c.value is not None}
++    headers = ensure_columns(ws, headers)
++    index, _, next_id = read_base(ws, headers)
++    clubs = read_all_clubs(ws, headers)
++    url_to_club = {ws.cell(p.row, headers[URL_COL]).value: p.club
++                   for ps in index.by_club.values() for p in ps if ws.cell(p.row, headers[URL_COL]).value}
++    resolver = ClubResolver(clubs, fm_names_from_cache(getattr(api, "cache", {}), url_to_club))
++    before = {name: tc.championnat for name, tc in clubs.items()}
++    playable_before = {name for name, groups in squad_groups(ws, headers).items()
++                       if before.get(name) == OTHER_CLUBS and is_playable_squad(groups)}
++
++    out = Outcome()
++    writer = RowWriter(ws, headers, api, index, next_id, out, dry_run)
++    try:
++        rows = api.top(n)
++        print(f"{len(rows)} lignes lues sur fminside (demandées : {n})")
++        for c in rows:
++            if stop():
++                break
++            name = resolver.resolve(c.club) if c.club else FREE_AGENTS
++            if name is None:  # club inconnu du classeur : créé en Autres clubs sous son nom FM
++                name = c.club.strip()
++                clubs[name] = TargetClub(name, OTHER_CLUBS, 0)
++                resolver.memo[c.club] = name
++            tc = clubs.setdefault(name, TargetClub(name, OTHER_CLUBS, 0))
++            why = index.known_reason(name, c)
++            if why:
++                writer.report("DÉJÀ_PRÉSENT", name, c, why)
++                continue
++            if tc.size >= max_squad:
++                writer.report("CLUB_PLEIN", name, c, f"effectif à {tc.size}")
++                continue
++            if writer.add(tc, c):
++                tc.size += 1
++    except RuntimeError as e:  # les lignes déjà ajoutées restent, le cache permet de reprendre
++        out.error = str(e)
++    finally:
++        api.save_cache()
++
++    added = Counter(club for _, club, _ in out.added)
++    groups = squad_groups(ws, headers)
++    if dry_run:  # rien d'écrit : composition prévue = existants + postes de la recherche
++        for _, club, c in out.added:
++            groups[club].append(position_group(fm_poste(None, c.positions).split(" / ")[0]))
++    for name in sorted(n for n, tc in clubs.items() if tc.championnat == OTHER_CLUBS and (n in added or n in playable_before)):
++        if name == FREE_AGENTS:
++            continue
++        g = Counter(groups.get(name, []))
++        status = "complet" if is_playable_squad(groups.get(name, [])) else "incomplet"
++        out.clubs_report.append([name, OTHER_CLUBS, clubs[name].size - added.get(name, 0), status,
++                                 "nouveau club" if name not in before else "", g["GK"], g["DEF"], g["MID"],
++                                 g["ATT"], added.get(name, 0)])
++    return out
++
++
++CLUBS_HEADER = ["club", "championnat", "effectif_avant", "statut", "détail", "lignes_renvoyées",
++                "joueurs_du_club", "nouveaux_candidats", "ajoutés"]
++TOP_CLUBS_HEADER = ["club", "championnat", "effectif_avant", "statut", "détail", "GK", "DEF", "MID", "ATT",
++                    "ajoutés"]
++
++
++def write_reports(folder: Path, out: Outcome, prefix: str = "fminside_new", clubs_header=CLUBS_HEADER):
+     now = datetime.now().strftime("%Y-%m-%d %H:%M")  # noqa: DTZ005 -- horodatage local du rapport
+-    with (folder / "fminside_new_players_report.csv").open("w", newline="", encoding="utf-8-sig") as f:
++    with (folder / f"{prefix}_players_report.csv").open("w", newline="", encoding="utf-8-sig") as f:
+         w = csv.writer(f, delimiter=";")
+         w.writerow(["date", "statut", "club", "fm_nom", "fm_club", "fm_age", "note_fm", "url", "raison"])
+         w.writerows([now] + row for row in out.players_report)
+-    with (folder / "fminside_new_clubs_report.csv").open("w", newline="", encoding="utf-8-sig") as f:
++    with (folder / f"{prefix}_clubs_report.csv").open("w", newline="", encoding="utf-8-sig") as f:
+         w = csv.writer(f, delimiter=";")
+-        w.writerow(["date", "club", "championnat", "effectif_avant", "statut", "détail", "lignes_renvoyées",
+-                    "joueurs_du_club", "nouveaux_candidats", "ajoutés"])
++        w.writerow(["date"] + clubs_header)
+         w.writerows([now] + row for row in out.clubs_report)
+ 
+ 
+@@ -442,6 +596,9 @@ def main():
+     ap.add_argument("--target", type=int, default=TARGET_TOTAL, help=f"nouveaux joueurs (défaut {TARGET_TOTAL})")
+     ap.add_argument("--max-squad", type=int, default=MAX_SQUAD, help=f"effectif maximal (défaut {MAX_SQUAD})")
+     ap.add_argument("--clubs", default="", help="clubs Simulafoot à traiter, séparés par des virgules")
++    ap.add_argument("--top", type=int, default=0,
++                    help="mode « top N » : les N premiers joueurs de fminside (ordre du site), "
++                    "rangés dans leur club ou en Autres clubs (ex. --top 4000)")
+     ap.add_argument("--delay", type=float, default=1.0, help="secondes entre 2 requêtes (défaut 1)")
+     ap.add_argument("--dry-run", action="store_true", help="recherches seulement : ni fiches, ni écriture")
+     ap.add_argument("--no-cache", action="store_true", help="ignore le cache existant")
+@@ -459,14 +616,24 @@ def main():
+     signal.signal(signal.SIGINT, lambda *_: flag.update(stop=True) or print("\nArrêt demandé, on sauvegarde…"))
+     only = {c.strip() for c in args.clubs.split(",") if c.strip()} or None
+     try:
+-        out = discover(ws, api, args.target, args.max_squad, args.dry_run, only,
+-                       read_club_overrides(folder / "fminside_clubs.csv"), stop=lambda: flag["stop"])
++        if args.top:
++            out = discover_top(ws, api, args.top, args.max_squad, args.dry_run, stop=lambda: flag["stop"])
++        else:
++            out = discover(ws, api, args.target, args.max_squad, args.dry_run, only,
++                           read_club_overrides(folder / "fminside_clubs.csv"), stop=lambda: flag["stop"])
+     except FilterIgnored as e:  # cache des recherches par club déjà purgé ; rien d'écrit
+         sys.exit(f"ARRÊT : {e}")
+     except RuntimeError as e:  # Cloudflare pendant les recherches : rien d'écrit
+         api.save_cache()
+         sys.exit(f"ARRÊT : {e}")
+-    write_reports(folder, out)
++    if args.top:
++        write_reports(folder, out, "fminside_top", TOP_CLUBS_HEADER)
++        status = Counter(row[3] for row in out.clubs_report)
++        print(f"Autres clubs touchés : {status.get('complet', 0)} complets (jouables), "
++              f"{status.get('incomplet', 0)} incomplets (sélections nationales) -- détail dans "
++              "fminside_top_clubs_report.csv")
++    else:
++        write_reports(folder, out)
+     if out.error:
+         print(f"ERREUR bloquante : {out.error}\nLes joueurs déjà ajoutés sont enregistrés ; relancer "
+               "plus tard reprend grâce au cache et ne réajoute pas les mêmes (URL déjà dans la base).")
+diff --git a/scripts/scrape_fminside_attributes.py b/scripts/scrape_fminside_attributes.py
+index 3fbe3b6..b5528a3 100644
+--- a/scripts/scrape_fminside_attributes.py
++++ b/scripts/scrape_fminside_attributes.py
+@@ -578,6 +578,39 @@ class FMInside:
+         self.cache["search"][key] = [c.to_json() for c in uniq]
+         return uniq
+ 
++    def top(self, n: int) -> list[Candidate]:
++        """Les `n` premières lignes de la base joueurs hommes, dans l'ordre par défaut du site
++        (aucun filtre), par pages de 50 (mode « top N » de fminside_new_players.py)."""
++        key = json.dumps(["__top__", n])
++        if key in self.cache["search"]:
++            return [Candidate.from_json(d) for d in self.cache["search"][key]]
++        self.warmup()
++        form = {"page": "players", "database_version": DB_VERSION, "gender": "1", "name": "", "uid": "",
++                "club": "", "nationality": "", "league": "", "league_id": "", "min_age": "", "max_age": "",
++                "max_value": "", "max_wage": "", "min_ability": "", "max_ability": "", "min_potential": "",
++                "max_potential": "", "clause": ""}
++        hdr = {"X-Requested-With": "XMLHttpRequest"}
++        self._req("POST", FILTER_URL, data=form, headers=hdr)
++        rows = parse_player_rows(self._req("GET", TABLE_URL, params={"ajax_request": "1"}, headers=hdr).text)
++        seen = {c.url for c in rows}
++        while rows and len(seen) < n:
++            more = parse_player_rows(self._req("GET", TABLE_URL, params={"ajax_request": "1", "loadmore": "true"},
++                                               headers=hdr).text)
++            fresh = [c for c in more if c.url not in seen]
++            if not fresh:  # fin de liste, ou le site renvoie toujours la même page
++                break
++            rows += fresh
++            seen.update(c.url for c in fresh)
++            if len(rows) % 500 == 0:
++                print(f"  {len(rows)} lignes lues")
++        uniq, done = [], set()
++        for c in rows:
++            if c.url not in done:
++                done.add(c.url); uniq.append(c)
++        uniq = uniq[:n]
++        self.cache["search"][key] = [c.to_json() for c in uniq]
++        return uniq
++
+     def attributes(self, url: str) -> dict:
+         self.profile(url)
+         return self.cache["profile"][url]
+diff --git a/tests/test_fminside_new_players.py b/tests/test_fminside_new_players.py
+index 4193741..041fca6 100644
+--- a/tests/test_fminside_new_players.py
++++ b/tests/test_fminside_new_players.py
+@@ -7,6 +7,7 @@ from __future__ import annotations
+ 
+ import json
+ import sys
++from collections import Counter
+ from pathlib import Path
+ 
+ import openpyxl
+@@ -269,3 +270,102 @@ def test_meme_fiche_dans_deux_clubs_une_seule_ligne():
+     assert len(urls) == len(set(urls)) and len(urls) == 5
+     dry = fnp.discover(_base()[1], api, target=10, max_squad=40, dry_run=True)
+     assert len({c.url for _, _, c in dry.added}) == len(dry.added) == 5
++
++
++# --- Mode « top N » (ticket 05) ---------------------------------------------------------------
++class TopAPI(FakeAPI):
++    """Faux client du mode top : liste du site dans l'ordre, postes naturels pris de la recherche."""
++
++    def __init__(self, rows, bad_profiles=()):
++        super().__init__({}, bad_profiles)
++        self.rows = rows
++        self.asked = None
++
++    def top(self, n):
++        self.asked = n
++        return list(self.rows[:n])
++
++    def extras(self, url):
++        pos = next(min(c.positions) for c in self.rows if c.url == url)
++        return {"natural": [pos], "height": 180, "weak_foot": 3.0, "locked": True, "moves": []}
++
++
++def squad(club, n, prefix, pos):
++    return [cand(f"{prefix} {i}", club, 70, pos=(pos,)) for i in range(n)]
++
++
++def test_resolver_club_existant_variante_et_club_inconnu():
++    clubs = {"Rennes": fnp.TargetClub("Rennes", "Ligue 1", 25),
++             "Atalanta BC": fnp.TargetClub("Atalanta BC", "Serie A", 28),
++             "Coventry City": fnp.TargetClub("Coventry City", "Autres clubs", 1)}
++    r = fnp.ClubResolver(clubs, {"Rennes": "Stade Rennais FC"})
++    assert r.resolve("Rennes FC") == "Rennes"  # FC ignoré : même nom normalisé
++    assert r.resolve("Stade Rennais FC") == "Rennes"  # nom fminside appris du cache
++    assert r.resolve("Coventry") == "Coventry City"  # mots génériques en plus
++    assert r.resolve("Al Nassr") is None  # inconnu : nouveau club en Autres clubs
++
++
++def test_resolver_prefere_le_club_du_championnat_a_la_ligne_isolee():
++    clubs = fnp.read_all_clubs(*_sheet([player(1, "A", "B", "Atalanta BC", champ="Autres clubs"),
++                                        player(2, "C", "D", "Atalanta BC", champ="Serie A"),
++                                        player(3, "E", "F", "Atalanta BC", champ="Serie A")]))
++    assert clubs["Atalanta BC"].championnat == "Serie A" and clubs["Atalanta BC"].size == 2
++
++
++def _sheet(rows):
++    _, ws = workbook(rows)
++    return ws, {c.value: c.column for c in ws[1]}
++
++
++def test_top_range_les_joueurs_plafonne_et_classe_les_autres_clubs():
++    _, ws = _base()  # Rennes (Ligue 1), Lyon (Ligue 1), Club Exotique (Autres clubs), 1 joueur chacun
++    complete = (squad("Al Nassr", 2, "G", "GK") + squad("Al Nassr", 5, "D", "DC")
++                + squad("Al Nassr", 7, "M", "MC") + squad("Al Nassr", 4, "A", "ST"))  # 18, complet
++    rows = ([cand("Jean Dupont", "Rennes", 80)]  # déjà dans la base
++            + [cand(f"Rennais {i}", "Rennes FC", 75) for i in range(3)]  # plafond 3 : 2 places
++            + complete
++            + squad("Al Hilal", 3, "H", "ST")  # nouveau club, vedettes seules : incomplet
++            + [cand("Libre Un", "", 60)])
++    api = TopAPI(rows)
++    out = fnp.discover_top(ws, api, n=4000, max_squad=3)
++    assert api.asked == 4000
++    h = {c.value: c.column for c in ws[1]}
++    by_club = {}
++    for r in range(5, ws.max_row + 1):
++        by_club.setdefault(ws.cell(r, h["Club"]).value, []).append(ws.cell(r, h["Championnat"]).value)
++    assert by_club["Rennes"] == ["Ligue 1", "Ligue 1"]  # 1 + 2 = plafond de 3
++    assert set(by_club["Al Hilal"]) == {"Autres clubs"} and len(by_club["Al Hilal"]) == 3
++    assert by_club["Sans club"] == ["Autres clubs"]
++    statuts = {row[0] for row in out.players_report}
++    assert {"DÉJÀ_PRÉSENT", "CLUB_PLEIN", "AJOUTÉ"} <= statuts
++
++
++def test_top_rapport_complet_ou_incomplet():
++    _, ws = _base()
++    complete = (squad("Al Nassr", 2, "G", "GK") + squad("Al Nassr", 5, "D", "DC")
++                + squad("Al Nassr", 7, "M", "MC") + squad("Al Nassr", 4, "A", "ST"))
++    out = fnp.discover_top(ws, TopAPI(complete + squad("Al Hilal", 20, "H", "ST")), n=100, max_squad=40)
++    report = {row[0]: row for row in out.clubs_report}
++    assert report["Al Nassr"][3] == "complet" and report["Al Nassr"][5:9] == [2, 5, 7, 4]
++    assert report["Al Hilal"][3] == "incomplet" and report["Al Hilal"][4] == "nouveau club"
++    assert "Rennes" not in report  # seuls les clubs Autres clubs sont classés
++
++
++def test_top_dry_run_ni_fiche_ni_ecriture_mais_composition_prevue():
++    _, ws = _base()
++    complete = (squad("Al Nassr", 2, "G", "GK") + squad("Al Nassr", 5, "D", "DC")
++                + squad("Al Nassr", 7, "M", "MC") + squad("Al Nassr", 4, "A", "ST"))
++    api = TopAPI(complete)
++    before = ws.max_row
++    out = fnp.discover_top(ws, api, n=100, max_squad=40, dry_run=True)
++    assert ws.max_row == before and api.profiles == [] and len(out.added) == 18
++    assert {row[0]: row[3] for row in out.clubs_report}["Al Nassr"] == "complet"
++
++
++def test_top_deux_clubs_inconnus_aux_noms_voisins_restent_distincts():
++    """Un club créé pendant l'exécution n'est retrouvé que sous son nom FM exact."""
++    _, ws = _base()
++    rows = squad("Al Ahli", 2, "X", "ST") + squad("Al Ahly", 2, "Y", "ST") + squad("Al Ahli", 1, "Z", "GK")
++    out = fnp.discover_top(ws, TopAPI(rows), n=100, max_squad=40)
++    added = Counter(club for _, club, _ in out.added)
++    assert added == {"Al Ahli": 3, "Al Ahly": 2}
