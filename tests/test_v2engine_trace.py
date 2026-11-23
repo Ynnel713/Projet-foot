@@ -169,6 +169,21 @@ def test_tick_out_serialises_ball_mode_and_dead_for_every_image() -> None:
         out = _tick_out(Tick(minute=1.0, players=players, ball=ball)).ball
         assert (out.mode, out.dead) == expected
         assert (out.x, out.y) == (10.0, 20.0)
+    # hauteur du ballon, au centimètre (ticket v2-hauteur-ballon/02b)
+    lifted = _tick_out(Tick(minute=1.0, players=players, ball=BallSnapshot(Vec2(10.0, 20.0), mode="aérien", z=7.4567))).ball
+    assert lifted.z == 7.46
+
+
+def test_ball_track_out_serialises_the_height_of_every_point() -> None:
+    # Ticket v2-hauteur-ballon/02b : chaque point de la piste porte la hauteur du ballon, que l'écran interpole
+    from api.routers.v2 import _ball_track_out
+    from v2engine.geometry import Vec2
+    from v2engine.trace import BallPoint
+
+    points = [BallPoint(0.0, Vec2(1.0, 2.0), "sol", None, z=0.0), BallPoint(0.1 / 60, Vec2(3.0, 2.0), "aérien", None, z=3.333)]
+    out = _ball_track_out(points)
+    assert [p.z for p in out] == [0.0, 3.33] and [p.mode for p in out] == ["sol", "aérien"]
+    assert "z" in out[1].model_dump()
 
 
 def test_ball_track_has_one_point_per_engine_step_matching_the_images() -> None:
@@ -191,8 +206,8 @@ def test_ball_track_has_one_point_per_engine_step_matching_the_images() -> None:
     assert len(trace.ticks) == (len(track) + 4) // 5
     for k, tick in enumerate(trace.ticks):
         point = track[5 * k]
-        assert (point.minute, point.position, point.mode, point.holder, point.dead) == (
-            tick.minute, tick.ball.position, tick.ball.mode, tick.ball.holder, tick.ball.dead)
+        assert (point.minute, point.position, point.mode, point.holder, point.dead, point.z) == (
+            tick.minute, tick.ball.position, tick.ball.mode, tick.ball.holder, tick.ball.dead, tick.ball.z)
 
 
 def test_live_match_sends_the_ball_track_in_slices_without_gap_or_duplicate(monkeypatch) -> None:
@@ -313,8 +328,9 @@ def test_ball_track_out_rounds_for_a_lighter_response() -> None:
     from v2engine.trace import BallPoint
 
     out = _ball_track_out([BallPoint(minute=1 / 600, position=Vec2(52.123456, 3.987654), mode="aérien", holder="A",
-                                     dead=True)])
-    assert out[0].model_dump() == {"minute": 0.00167, "x": 52.12, "y": 3.99, "mode": "aérien", "holder": "A", "dead": True}
+                                     dead=True, z=4.56789)])
+    assert out[0].model_dump() == {"minute": 0.00167, "x": 52.12, "y": 3.99, "mode": "aérien", "holder": "A", "dead": True,
+                                   "z": 4.57}  # hauteur au centimètre (ticket v2-hauteur-ballon/02b)
 
 
 def test_api_records_two_images_per_second() -> None:

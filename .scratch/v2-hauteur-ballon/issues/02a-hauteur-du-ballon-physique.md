@@ -14,7 +14,7 @@
 
 **Bloque :** 02b, 03 ; `v2-attributs-restants/10b` (ajouté le 10/11/2026, audit de la roadmap).
 
-**Status:** découpé (23/11/2026, décision du propriétaire) en `02a1` (vol des passes et remises aériennes : hauteur, rebonds, mode calculé, hauteur tracée) et `02a2` (courbe des tirs cohérente avec leur issue) : estimé à 3 h, au-delà du seuil de 2 h. Constantes validées le 23/11/2026 : g 9,81 m/s², restitution 0,70, freinage par rebond 15 %, fin des rebonds sous 15 cm (V1), durée de vol plafonnée à 4 s, seuil « aérien » 2,5 m avec rebonds réels. Ticket chapeau : ne pas l'implémenter tel quel ; clos quand les deux sont livrés.
+**Status:** découpé (23/11/2026, décision du propriétaire) en `02a1` (vol des passes et remises aériennes : hauteur, rebonds, mode calculé, hauteur tracée) et `02a2` (courbe des tirs cohérente avec leur issue) : estimé à 3 h, au-delà du seuil de 2 h. Constantes validées le 23/11/2026 : g 9,81 m/s², restitution 0,70, freinage par rebond 15 %, fin des rebonds sous 15 cm (V1), durée de vol plafonnée à 4 s, seuil « aérien » 2,5 m avec rebonds réels. Ticket chapeau : ne pas l'implémenter tel quel. **Clos le 23/11/2026** : `02a1` et `02a2` livrés, validés expert + QC.
 
 ## Acceptance criteria
 

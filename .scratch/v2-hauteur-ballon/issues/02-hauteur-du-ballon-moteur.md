@@ -27,7 +27,7 @@ seuil « aérien » et seuil d'arrêt du rebond à proposer ; affichage ci-dessu
 **Blocked by:** 01 (projection à l'écran), `v2-collectif/28` (issue du tir), `v2-collectif/29` (mode de ballon,
 ballon mort).
 
-**Status:** découpé (04/11/2026, audit de granularité) en 02a (physique dans le moteur) et 02b (points de vol dans la trace et rendu à l'écran). Ticket chapeau : ne pas l'implémenter tel quel ; le texte ci-dessous reste la référence de détail. Une référence à ce ticket sans lettre vaut pour tous ses morceaux.
+**Status:** découpé (04/11/2026, audit de granularité) en 02a (physique dans le moteur) et 02b (points de vol dans la trace et rendu à l'écran). **Clos le 23/11/2026** : 02a (02a1, 02a2) et 02b livrés, validés expert + QC. Ticket chapeau : ne pas l'implémenter tel quel ; le texte ci-dessous reste la référence de détail. Une référence à ce ticket sans lettre vaut pour tous ses morceaux.
 
 ## Acceptance criteria
 

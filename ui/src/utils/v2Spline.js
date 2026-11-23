@@ -65,22 +65,26 @@ export function trackIndex(track, minute) {
 
 // Position du ballon libre à `minute`, lue dans la piste (un point par pas du moteur). `null` si la piste ne couvre pas
 // l'instant (trace sans piste, ou rejeu en direct en avance sur elle) : l'appelant garde l'interpolation des images.
+// Hauteur `z` (ticket v2-hauteur-ballon/02b) : en ligne droite entre deux points (0,1 s), sans calcul physique ; la
+// courbe du vol est celle des points du moteur. Une piste sans hauteur (trace ancienne) donne 0.
+const zOf = (p) => p.z ?? 0;
 export function ballFromTrack(track, minute, half) {
   if (!track || track.length < 2 || minute < track[0].minute || minute > track[track.length - 1].minute) return null;
   const i = trackIndex(track, minute);
   const p1 = track[i];
   const p2 = track[Math.min(track.length - 1, i + 1)];
-  if (p2 === p1 || p2.minute <= p1.minute) return { point: p1, x: p1.x, y: p1.y };
+  if (p2 === p1 || p2.minute <= p1.minute) return { point: p1, x: p1.x, y: p1.y, z: zOf(p1) };
   const f = Math.min(1, Math.max(0, (minute - p1.minute) / (p2.minute - p1.minute)));
+  const z = zOf(p1) + (zOf(p2) - zOf(p1)) * f;
   if (ballCut(p1, p2, half)) {
     // saut net pour un ballon mort ou la mi-temps ; changement de porteur : ligne droite sur un pas (0,1 s)
-    if (p1.dead || p2.dead || crossesHalf(p1.minute, p2.minute, half)) return { point: p1, x: p1.x, y: p1.y };
-    return { point: p1, x: p1.x + (p2.x - p1.x) * f, y: p1.y + (p2.y - p1.y) * f };
+    if (p1.dead || p2.dead || crossesHalf(p1.minute, p2.minute, half)) return { point: p1, x: p1.x, y: p1.y, z: zOf(p1) };
+    return { point: p1, x: p1.x + (p2.x - p1.x) * f, y: p1.y + (p2.y - p1.y) * f, z };
   }
   const p0 = i > 0 && !ballCut(track[i - 1], p1, half) ? track[i - 1] : null;
   const p3 = i + 2 < track.length && !ballCut(p2, track[i + 2], half) ? track[i + 2] : null;
   const c = catmullRom(p0, p1, p2, p3, f);
-  return { point: p1, x: c.x, y: c.y };
+  return { point: p1, x: c.x, y: c.y, z };
 }
 
 // Ballon affiché à `minute` (hors but entre deux images, réglé par `v2GoalBall.js`) : tenu, il suit la position
@@ -91,7 +95,9 @@ export function displayBall(track, minute, half, players, fallback, fallbackHold
   const holder = fine ? fine.point.holder : fallbackHolder;
   const carrier = holder ? players.find((p) => p.name === holder) : null;
   const at = carrier ?? fine ?? fallback;
-  return { x: at.x, y: at.y, holder: holder ?? null };
+  // tenu : au pied de son porteur ; libre : la hauteur de la piste, sinon celle des images (`fallback.z`)
+  const z = carrier ? 0 : (fine ? fine.z : fallback.z ?? 0);
+  return { x: at.x, y: at.y, z, holder: holder ?? null };
 }
 
 // Positions des joueurs entre les images `a` (index i) et `b`, lissées avec les images voisines. `f` : fraction de

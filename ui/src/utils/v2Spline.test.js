@@ -79,11 +79,11 @@ test("ballon tenu : il est dessiné sur son porteur affiché", () => {
   const track = [pt(0, 5, 5, { holder: "A" }), pt(1, 6, 5, { holder: "A" })];
   const players = [{ name: "B", x: 0, y: 0 }, { name: "A", x: 5.4, y: 5.1 }];
   const ball = displayBall(track, track[0].minute + 0.5 * STEP_MIN, HALF, players, { x: 0, y: 0 }, null);
-  assert.deepEqual(ball, { x: 5.4, y: 5.1, holder: "A" });
+  assert.deepEqual(ball, { x: 5.4, y: 5.1, z: 0, holder: "A" }); // tenu : au pied (ticket v2-hauteur-ballon/02b)
   const free = displayBall([pt(0, 5, 5), pt(1, 6, 5)], track[0].minute + 0.5 * STEP_MIN, HALF, players, { x: 0, y: 0 }, "A");
   assert.ok(close(free.x, 5.5) && close(free.y, 5) && free.holder === null);
   const old = displayBall(undefined, 10, HALF, players, { x: 9, y: 9 }, "A");
-  assert.deepEqual(old, { x: 5.4, y: 5.1, holder: "A" });
+  assert.deepEqual(old, { x: 5.4, y: 5.1, z: 0, holder: "A" });
 });
 
 test("joueurs : courbe par les images, coupure nette à la mi-temps et sur une remise en jeu", () => {
@@ -101,4 +101,17 @@ test("joueurs : courbe par les images, coupure nette à la mi-temps et sur une r
   const half = [tick(44.99, 0), tick(44.995, 1), tick(45.0, 2), tick(45.01, 3)];
   const cut = playersBetween(half, 1, 0.5, HALF)[0];
   assert.ok(close(cut.x, 1.5) && close(cut.y, 2.5));
+});
+
+// Hauteur du ballon (ticket v2-hauteur-ballon/02b)
+test("la hauteur du ballon est interpolée en ligne droite entre deux pas, nulle au pied du porteur", () => {
+  const track = [pt(0, 0, 0, { z: 0 }), pt(1, 2, 0, { z: 2 }), pt(2, 4, 0, { z: 3 }), pt(3, 6, 0, { z: 3.5 })];
+  assert.ok(close(ballFromTrack(track, track[1].minute, HALF).z, 2));
+  assert.ok(close(ballFromTrack(track, track[1].minute + 0.25 * STEP_MIN, HALF).z, 2.25, 1e-6));
+  const free = displayBall(track, track[2].minute, HALF, [], { x: 0, y: 0 }, null);
+  assert.ok(close(free.z, 3));
+  const held = [pt(0, 5, 5, { holder: "A", z: 0 }), pt(1, 5, 5, { holder: "A", z: 0 })];
+  assert.equal(displayBall(held, held[0].minute, HALF, [{ name: "A", x: 5, y: 5 }], { x: 0, y: 0 }, null).z, 0);
+  // piste ancienne, sans hauteur : au sol
+  assert.equal(ballFromTrack([pt(0, 0, 0), pt(1, 1, 0)], 10, HALF).z, 0);
 });
