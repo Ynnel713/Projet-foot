@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import sys
+from collections import Counter
 from pathlib import Path
 
 import openpyxl
@@ -269,3 +270,215 @@ def test_meme_fiche_dans_deux_clubs_une_seule_ligne():
     assert len(urls) == len(set(urls)) and len(urls) == 5
     dry = fnp.discover(_base()[1], api, target=10, max_squad=40, dry_run=True)
     assert len({c.url for _, _, c in dry.added}) == len(dry.added) == 5
+
+
+# --- Mode « top N » (ticket 05) ---------------------------------------------------------------
+class TopAPI(FakeAPI):
+    """Faux client du mode top : liste du site dans l'ordre, postes naturels pris de la recherche."""
+
+    def __init__(self, rows, bad_profiles=()):
+        super().__init__({}, bad_profiles)
+        self.rows = rows
+        self.asked = None
+
+    def top(self, n):
+        self.asked = n
+        return list(self.rows[:n])
+
+    def extras(self, url):
+        pos = next(min(c.positions) for c in self.rows if c.url == url)
+        return {"natural": [pos], "height": 180, "weak_foot": 3.0, "locked": True, "moves": []}
+
+
+def squad(club, n, prefix, pos):
+    return [cand(f"{prefix} {i}", club, 70, pos=(pos,)) for i in range(n)]
+
+
+def test_resolver_club_existant_variante_et_club_inconnu():
+    clubs = {"Rennes": fnp.TargetClub("Rennes", "Ligue 1", 25),
+             "Atalanta BC": fnp.TargetClub("Atalanta BC", "Serie A", 28),
+             "Coventry City": fnp.TargetClub("Coventry City", "Autres clubs", 1)}
+    r = fnp.ClubResolver(clubs, {"Rennes": "Stade Rennais FC"})
+    assert r.resolve("Rennes FC") == "Rennes"  # FC ignoré : même nom normalisé
+    assert r.resolve("Stade Rennais FC") == "Rennes"  # nom fminside appris du cache
+    assert r.resolve("Coventry") == "Coventry City"  # mots génériques en plus
+    assert r.resolve("Al Nassr") is None  # inconnu : nouveau club en Autres clubs
+
+
+def test_resolver_prefere_le_club_du_championnat_a_la_ligne_isolee():
+    clubs = fnp.read_all_clubs(*_sheet([player(1, "A", "B", "Atalanta BC", champ="Autres clubs"),
+                                        player(2, "C", "D", "Atalanta BC", champ="Serie A"),
+                                        player(3, "E", "F", "Atalanta BC", champ="Serie A")]))
+    # club du championnat ; effectif compté sur toutes les lignes du nom (réserve A3 du 05)
+    assert clubs["Atalanta BC"].championnat == "Serie A" and clubs["Atalanta BC"].size == 3
+
+
+def _sheet(rows):
+    _, ws = workbook(rows)
+    return ws, {c.value: c.column for c in ws[1]}
+
+
+def test_top_range_les_joueurs_plafonne_et_classe_les_autres_clubs():
+    _, ws = _base()  # Rennes (Ligue 1), Lyon (Ligue 1), Club Exotique (Autres clubs), 1 joueur chacun
+    complete = (squad("Al Nassr", 2, "G", "GK") + squad("Al Nassr", 5, "D", "DC")
+                + squad("Al Nassr", 7, "M", "MC") + squad("Al Nassr", 4, "A", "ST"))  # 18, complet
+    rows = ([cand("Jean Dupont", "Rennes", 80)]  # déjà dans la base
+            + [cand(f"Rennais {i}", "Rennes FC", 75) for i in range(3)]  # plafond 3 : 2 places
+            + complete
+            + squad("Al Hilal", 3, "H", "ST")  # nouveau club, vedettes seules : incomplet
+            + [cand("Libre Un", "", 60)])
+    api = TopAPI(rows)
+    out = fnp.discover_top(ws, api, n=4000, max_squad=3)
+    assert api.asked == 4000
+    h = {c.value: c.column for c in ws[1]}
+    by_club = {}
+    for r in range(5, ws.max_row + 1):
+        by_club.setdefault(ws.cell(r, h["Club"]).value, []).append(ws.cell(r, h["Championnat"]).value)
+    assert by_club["Rennes"] == ["Ligue 1", "Ligue 1"]  # 1 + 2 = plafond de 3
+    assert set(by_club["Al Hilal"]) == {"Autres clubs"} and len(by_club["Al Hilal"]) == 3
+    assert by_club["Sans club"] == ["Autres clubs"]
+    statuts = {row[0] for row in out.players_report}
+    assert {"DÉJÀ_PRÉSENT", "CLUB_PLEIN", "AJOUTÉ"} <= statuts
+
+
+def test_top_rapport_complet_ou_incomplet():
+    _, ws = _base()
+    complete = (squad("Al Nassr", 2, "G", "GK") + squad("Al Nassr", 5, "D", "DC")
+                + squad("Al Nassr", 7, "M", "MC") + squad("Al Nassr", 4, "A", "ST"))
+    out = fnp.discover_top(ws, TopAPI(complete + squad("Al Hilal", 20, "H", "ST")), n=100, max_squad=40)
+    report = {row[0]: row for row in out.clubs_report}
+    assert report["Al Nassr"][3] == "complet" and report["Al Nassr"][5:9] == [2, 5, 7, 4]
+    assert report["Al Hilal"][3] == "incomplet" and report["Al Hilal"][4] == "nouveau club"
+    assert "Rennes" not in report  # seuls les clubs Autres clubs sont classés
+
+
+def test_top_dry_run_ni_fiche_ni_ecriture_mais_composition_prevue():
+    _, ws = _base()
+    complete = (squad("Al Nassr", 2, "G", "GK") + squad("Al Nassr", 5, "D", "DC")
+                + squad("Al Nassr", 7, "M", "MC") + squad("Al Nassr", 4, "A", "ST"))
+    api = TopAPI(complete)
+    before = ws.max_row
+    out = fnp.discover_top(ws, api, n=100, max_squad=40, dry_run=True)
+    assert ws.max_row == before and api.profiles == [] and len(out.added) == 18
+    assert {row[0]: row[3] for row in out.clubs_report}["Al Nassr"] == "complet"
+
+
+def test_top_deux_clubs_inconnus_aux_noms_voisins_restent_distincts():
+    """Un club créé pendant l'exécution n'est retrouvé que sous son nom FM exact."""
+    _, ws = _base()
+    rows = squad("Al Ahli", 2, "X", "ST") + squad("Al Ahly", 2, "Y", "ST") + squad("Al Ahli", 1, "Z", "GK")
+    out = fnp.discover_top(ws, TopAPI(rows), n=100, max_squad=40)
+    added = Counter(club for _, club, _ in out.added)
+    assert added == {"Al Ahli": 3, "Al Ahly": 2}
+
+
+# --- Extraction seule (--top N --extract-only) -------------------------------------------------
+def _top_rows():
+    return [cand("Kylian Mbappe", "Real Madrid", 91, nat="France", pos=("ST",)),
+            cand("Luc Petit", "Rennes", 70, nat="Ivory Coast", pos=("AMR",)),
+            cand("Bruno", "Rennes", 65, pos=("GK",))]
+
+
+def test_extraction_garde_l_ordre_du_site_et_toutes_les_colonnes():
+    api = TopAPI(_top_rows(), bad_profiles={"https://fminside.net/players/7-fm-26/bruno"})
+    rows, error, listed = fnp.extract_top(api, 4000)
+    assert error == "" and api.asked == 4000 and listed == 3
+    assert [r[0] for r in rows] == [1, 2, 3] and [r[3] for r in rows] == ["Kylian Mbappe", "Luc Petit", "Bruno"]
+    head = fnp.EXTRACT_COLUMNS
+    luc = dict(zip(head, rows[1]))
+    assert len(rows[1]) == len(head) == 16 + len(ATTRIBUTES)
+    assert luc["statut_fiche"] == "ok" and luc["nationalite_fr"] == "Côte d'Ivoire" and luc["age_fm"] == 24
+    assert luc["poste_classeur"] == "AD" and luc["taille_cm"] == 180 and luc["preferred_moves"] == ""
+    assert all(luc[a] == 12 for a in ATTRIBUTES)
+    bruno = dict(zip(head, rows[2]))
+    assert bruno["statut_fiche"].startswith("fiche illisible") and all(bruno[a] is None for a in ATTRIBUTES)
+
+
+def test_extraction_erreur_bloquante_rend_les_lignes_deja_lues():
+    api = TopAPI(_top_rows())
+    real, calls = api.attributes, {"n": 0}
+
+    def flaky(url):
+        calls["n"] += 1
+        if calls["n"] > 1:
+            raise RuntimeError("Bloqué par Cloudflare")
+        return real(url)
+
+    api.attributes = flaky
+    rows, error, _ = fnp.extract_top(api, 10)
+    assert len(rows) == 1 and "Cloudflare" in error
+
+
+def test_commande_extract_only_ecrit_un_excel_separe_sans_toucher_joueurs(tmp_path, monkeypatch):
+    wb, _ = _base()
+    joueurs = tmp_path / "joueurs.xlsx"
+    wb.save(joueurs)
+    before = joueurs.read_bytes()
+    monkeypatch.setattr(fnp, "FMInside", lambda *a, **k: TopAPI(_top_rows()))
+    monkeypatch.setattr(sys, "argv", ["x", "--excel", str(joueurs), "--top", "4000", "--extract-only"])
+    fnp.main()
+    assert joueurs.read_bytes() == before  # joueurs.xlsx intact
+    ws = openpyxl.load_workbook(tmp_path / "fminside_top4000.xlsx")[fnp.EXTRACT_SHEET]
+    assert [c.value for c in ws[1]] == fnp.EXTRACT_COLUMNS and ws.max_row == 4
+    assert ws.cell(2, 4).value == "Kylian Mbappe"
+
+
+def test_extract_only_exige_top(tmp_path, monkeypatch):
+    monkeypatch.setattr(fnp, "FMInside", lambda *a, **k: TopAPI([]))
+    monkeypatch.setattr(sys, "argv", ["x", "--excel", str(tmp_path / "joueurs.xlsx"), "--extract-only"])
+    with pytest.raises(SystemExit):
+        fnp.main()
+
+
+def test_extraction_fiche_en_erreur_inattendue_ne_fait_rien_perdre():
+    """Réserve A1 (expert, ticket 05) : une HTTPError (fiche en 404...) donne une ligne sans
+    attributs, comme le mode par club, au lieu d'interrompre l'extraction sans Excel."""
+    api = TopAPI(_top_rows())
+    real = api.attributes
+
+    def http_404(url):
+        if url.endswith("luc-petit"):
+            raise ValueError("404 Client Error")
+        return real(url)
+
+    api.attributes = http_404
+    rows, error, _ = fnp.extract_top(api, 10)
+    assert error == "" and len(rows) == 3
+    assert rows[1][1].startswith("fiche illisible") and all(v is None for v in rows[1][16:])
+
+
+def test_liste_du_site_tronquee_signalee_et_non_mise_en_cache(tmp_path, monkeypatch, capsys):
+    """Réserve A2 : liste plus courte que demandé = message dédié, pas « relance »."""
+    wb, _ = _base()
+    joueurs = tmp_path / "joueurs.xlsx"
+    wb.save(joueurs)
+    monkeypatch.setattr(fnp, "FMInside", lambda *a, **k: TopAPI(_top_rows()))
+    monkeypatch.setattr(sys, "argv", ["x", "--excel", str(joueurs), "--top", "4000", "--extract-only"])
+    fnp.main()
+    out = capsys.readouterr().out
+    assert "s'arrête à 3 joueurs" in out and "relance la même commande" not in out
+
+
+def test_fminside_top_ne_met_pas_en_cache_une_liste_tronquee(tmp_path):
+    """Réserve A2, côté client : FMInside.top garde la liste seulement si elle est complète."""
+    from scrape_fminside_attributes import FMInside
+
+    api = FMInside(0, tmp_path / "cache.json", use_cache=False)
+    page = ('<ul class="player database-table-row"><span class="name">'
+            '<a href="/players/7-fm-26/p1">P1</a></span></ul>')
+
+    class R:
+        status_code, text = 200, page
+
+    api._req = lambda *a, **k: R()
+    api.warmup = lambda: None
+    assert len(api.top(10)) == 1 and api.cache["search"] == {}  # tronquée : pas en cache
+    assert len(api.top(1)) == 1 and list(api.cache["search"]) == ['["__top__", 1]']
+
+
+def test_extraction_caracteres_interdits_par_excel_retires(tmp_path):
+    """Réserve A4 : un caractère de contrôle dans un nom n'empêche pas d'écrire le fichier."""
+    row = fnp.extract_row(1, cand("Nom\x07Bizarre", "Club", 60), None, None, "ok")
+    path = tmp_path / "x.xlsx"
+    fnp.write_extract(path, [row])
+    assert openpyxl.load_workbook(path)[fnp.EXTRACT_SHEET].cell(2, 4).value == "NomBizarre"

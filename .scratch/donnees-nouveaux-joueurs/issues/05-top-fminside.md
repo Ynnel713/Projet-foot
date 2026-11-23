@@ -1,6 +1,6 @@
-# 05: Mode « top N » : les 4 000 premiers joueurs de fminside
+# 05: Mode « top N » : les 4 000 premiers joueurs de fminside (extraction vers un Excel séparé)
 
-**Status:** en pause (23/11/2026) — le propriétaire extrait lui-même les données dans un Excel ; code conservé dans `../05-top-fminside.patch` (non validé, non commité)
+**Status:** livré (23/11/2026), validé expert + QC
 
 **Blocked by:** 04 (règle « club jouable » réutilisée pour le rapport)
 
@@ -17,7 +17,8 @@
 - [x] Rapport des clubs « Autres clubs » : complet / incomplet selon la règle du ticket 04, composition, nouveau club ou non ; en dry-run, composition prévue d'après les postes de la liste.
 - [x] Dry-run : ni fiche téléchargée, ni classeur écrit.
 - [x] Mode « par club » (ticket 01) inchangé : ses 16 tests passent sans modification, ajout de ligne factorisé dans `RowWriter`.
-- [ ] Tests hors ligne ; suite complète passée.
+- [x] `--top N --extract-only` (option B du propriétaire, 23/11/2026) : écrit `data/fminside_top<N>.xlsx` (feuille « Top fminside » : rang, statut de la fiche, URL, nom, club, nationalité FM et française, âge FM, postes, poste au format du classeur, note FM, taille, weak foot, preferred moves, 47 attributs), dans l'ordre du site ; `joueurs.xlsx` n'est ni lu pour écriture ni modifié ; fiche illisible -> ligne sans attributs ; erreur bloquante -> lignes déjà lues écrites, message de relance (reprise par le cache) ; cinq premiers noms affichés pour contrôler l'ordre.
+- [x] Tests hors ligne ; suite complète passée (3532 passés après correction des réserves = 3 518 après le 04 + 14 du 05, 14 désélectionnés).
 
 ## Journal
 
@@ -29,3 +30,21 @@
 - Tests : 6 ajoutés (22 dans `tests/test_fminside_new_players.py`).
 
 23/11/2026 — mis en pause sur décision du propriétaire (« sinon j'extrais les données dans un excel et on fera la fusion proprement ensuite »). Le code (mode `--top`, `RowWriter`, `ClubResolver`, rapport complet/incomplet, 6 tests ; suite complète passée à 3 524 sur l'arbre 04 + 05) est conservé dans `.scratch/donnees-nouveaux-joueurs/05-top-fminside.patch` (`git apply` depuis la racine, vérifié sur `873a305`). Suite prévue : réorienter vers une fusion depuis l'Excel du propriétaire (source = fichier au lieu de `FMInside.top`), en réutilisant rattachement au club, exclusions, plafond et rapport ; à réestimer quand un extrait du fichier est disponible.
+
+23/11/2026 — repris sur décision du propriétaire (« option B, prépare le script ») : le patch est réappliqué (fichier d'archive supprimé), et l'extraction seule est ajoutée : `extract_row`, `extract_top`, `write_extract`, options `--extract-only` et `--out`. La fusion depuis ce fichier fera l'objet du ticket 06.
+- Estimation de la reprise : analyse 10 min, développement 40 min, tests 25 min, vérifications 20 min ; total 1 h 35 ; confiance moyenne (ordre et pagination du site non vérifiables hors ligne).
+- Tests : 4 ajoutés (26 dans `tests/test_fminside_new_players.py`), dont un essai de bout en bout de la commande qui vérifie que `joueurs.xlsx` reste identique octet pour octet.
+
+## Comments
+
+23/11/2026 — passage 1 de l'expert : APPROVED_WITH_RESERVATIONS (empreinte 487b4857). Réserves corrigées plutôt que soumises à acceptation :
+- A1 (erreur de fiche inattendue, HTTPError en 404 : extraction perdue) : `extract_top` traite toute exception autre que `RuntimeError` comme une fiche illisible (ligne sans attributs), comme `RowWriter.add`.
+- A2 (liste tronquée gardée en cache, message « relance » en boucle) : `FMInside.top` ne met en cache qu'une liste complète ; la commande distingue « la liste du site s'arrête à X joueurs » d'une extraction interrompue (`extract_top` renvoie aussi le nombre listé).
+- A3 (facultatif, plafond sous-compté) : effectif d'un club compté sur toutes ses lignes, tous championnats confondus.
+- A4 (facultatif, caractères de contrôle) : retirés avant l'écriture de l'Excel.
+4 tests ajoutés (30 au total), 2 adaptés (signature d'`extract_top`, effectif du club en double).
+
+23/11/2026 — passage 2 de l'expert : APPROVED (empreinte beefc4f4). QC : VALIDÉ. Clôture journalisée : VALIDÉ.
+- Remarque facultative non traitée : une erreur HTTP non bloquante pendant la lecture de la liste (avant toute fiche) sort avec une trace Python au lieu d'un message « ARRÊT » ; rien n'est perdu.
+- À contrôler à la première collecte chez le propriétaire : les 5 premiers noms affichés (ordre du site), une liste qui dépasse 500 lignes, essai `--top 50 --extract-only` avant 4 000.
+- Durée (code initial du 23/11 + reprise en extraction) : estimée 115 + 95 = 210 min, réelle environ 205 min (− 2 %) : analyse 25, développement 85, tests 50, vérifications 45 (dont la correction des réserves A1-A4 et la mise en pause). Temps machine hors total : trois suites complètes (14 min chacune).

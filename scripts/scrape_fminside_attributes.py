@@ -578,6 +578,40 @@ class FMInside:
         self.cache["search"][key] = [c.to_json() for c in uniq]
         return uniq
 
+    def top(self, n: int) -> list[Candidate]:
+        """Les `n` premières lignes de la base joueurs hommes, dans l'ordre par défaut du site
+        (aucun filtre), par pages de 50 (mode « top N » de fminside_new_players.py)."""
+        key = json.dumps(["__top__", n])
+        if key in self.cache["search"]:
+            return [Candidate.from_json(d) for d in self.cache["search"][key]]
+        self.warmup()
+        form = {"page": "players", "database_version": DB_VERSION, "gender": "1", "name": "", "uid": "",
+                "club": "", "nationality": "", "league": "", "league_id": "", "min_age": "", "max_age": "",
+                "max_value": "", "max_wage": "", "min_ability": "", "max_ability": "", "min_potential": "",
+                "max_potential": "", "clause": ""}
+        hdr = {"X-Requested-With": "XMLHttpRequest"}
+        self._req("POST", FILTER_URL, data=form, headers=hdr)
+        rows = parse_player_rows(self._req("GET", TABLE_URL, params={"ajax_request": "1"}, headers=hdr).text)
+        seen = {c.url for c in rows}
+        while rows and len(seen) < n:
+            more = parse_player_rows(self._req("GET", TABLE_URL, params={"ajax_request": "1", "loadmore": "true"},
+                                               headers=hdr).text)
+            fresh = [c for c in more if c.url not in seen]
+            if not fresh:  # fin de liste, ou le site renvoie toujours la même page
+                break
+            rows += fresh
+            seen.update(c.url for c in fresh)
+            if len(rows) % 500 == 0:
+                print(f"  {len(rows)} lignes lues")
+        uniq, done = [], set()
+        for c in rows:
+            if c.url not in done:
+                done.add(c.url); uniq.append(c)
+        uniq = uniq[:n]
+        if len(uniq) >= n:  # une liste tronquée par le site n'est pas gardée : une relance la relit
+            self.cache["search"][key] = [c.to_json() for c in uniq]
+        return uniq
+
     def attributes(self, url: str) -> dict:
         self.profile(url)
         return self.cache["profile"][url]
