@@ -2100,3 +2100,26 @@ Hauteur jamais négative, mode tracé « aérien » si et seulement si la hauteu
 
 **Lecture.** Le moteur ne change pas : la hauteur habille l'issue déjà tirée. Cohérence (pente linéaire de l'issue contre courbe réelle) : 7 contres sur 348 (2 %) et 2 arrêts sur 324 touchent un ballon que la courbe place au-dessus de 2,5 m, ou de la barre ; le contre et le gardien ne lisent pas encore la hauteur (ticket `03`). Les tirs les plus hauts (au-dessus jusqu'à 13,8 m, à côté jusqu'à 18 m) viennent de la loi d'écart d'angle du `35b`, gaussienne et sans borne (à revoir à la calibration des tirs, `v2-collectif/22c`). La réserve A1 du `02a1` (tirs cadrés + 5,3 points) n'est pas expliquée ici : ce ticket ne touche pas les issues.
 
+## 73. Interception selon la hauteur : ballons en jeu (ticket v2-hauteur-ballon/03a, 50 matchs appariés et relevé de 20 matchs, 23/11/2026)
+
+**Mécanisme.** Chaque joueur a une atteinte : taille (fiche, sinon médiane du poste) + détente (Jumping Reach, 0,35 à 0,65 m) ; gardien dans sa surface, 1,30 × taille + détente (`v2engine/atteinte.py`). Un ballon en jeu n'est touché que s'il passe sous l'atteinte du joueur ; la partie du corps (pied jusqu'à 0,53 × taille, corps jusqu'à 0,82, tête, mains) est tracée sur le contrôle. La lecture « qui atteint le ballon en premier » (`occasion.reach_probability`) suit la même atteinte. Remplace le seuil commun de 2,5 m du `02a1`. Défaut corrigé au passage : `vol.height_at(z, vz, 0)` valait 0, un ballon déjà au contact en début de pas était lu au sol (touchable à toute hauteur depuis le `02a1`, et hauteurs au contre et au gardien du `02a2` sous-estimées, sans effet sur les issues).
+
+**Série** (`scripts.bench_series 50 --processus 4`, avant : `55d2b3e` ; comparaison `.scratch/v2-hauteur-ballon/mesures/03a-comparaison.txt`).
+
+| Indicateur | Avant | Après | Écart apparié (IC 95 %) |
+|---|---|---|---|
+| Buts par match | 5,16 | 5,20 | + 0,04 [− 0,87 ; + 0,95] |
+| Tirs par équipe | 15,1 | 15,4 | + 0,37 [− 0,71 ; + 1,45] |
+| Passes réussies | 84,2 % | 84,1 % | − 0,1 point [− 0,4 ; + 0,3] |
+| Passes longues réussies | 70,4 % | 69,8 % | − 0,7 point [− 3,6 ; + 2,1] |
+| Possession d'équipe (s) | 21,8 | 21,9 | + 0,09 [− 0,40 ; + 0,59] |
+| Pertes de balle par match | 258,4 | 258,2 | − 0,22 [− 6,5 ; + 6,0] |
+| Duels d'épaule par match | 22,7 | 24,8 | + 2,08 [+ 0,23 ; + 3,94] |
+| Sorties du gardien sur passe ou centre, par match | 1,84 | 2,42 | + 0,58 [+ 0,05 ; + 1,11] |
+
+Interceptions : pas d'indicateur direct dans le banc ; pertes de balle et grosses occasions finies par une interception dans le bruit. 159 indicateurs significatifs sur 2 826 (environ 141 attendus par hasard).
+
+**Contacts** (`.scratch/v2-hauteur-ballon/mesures/03a-contacts.py`, 20 matchs, contrôles réussis) : 27 180 ; pied 26 969 (99,2 %, hauteur max 0,93 m), corps 104 (médiane 1,32 m), tête 106 (médiane 1,87 m, max 2,55 m), mains 1 (2,55 m) ; **0 contact au-dessus de l'atteinte du joueur**.
+
+**Lecture.** Volumes dans le bruit : le seuil commun de 2,5 m était déjà proche de l'atteinte moyenne (1,82 m + 0,52 m ≈ 2,34 m). Significatifs plausibles : plus de duels d'épaule (un ballon au-dessus d'un petit joueur file vers d'autres, courses partagées) ; plus de sorties du gardien sur passe ou centre (ses mains vont au-delà de 2,5 m), avec plus de ballons à l'adversaire 3 s après (n = 33, fragile). Le jeu de tête reste rare (0,4 % des contrôles), faute de centres (ticket `v2-attributs-restants/01`).
+

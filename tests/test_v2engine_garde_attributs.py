@@ -16,7 +16,7 @@ import ast
 import pathlib
 import re
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import pytest
 
@@ -34,6 +34,9 @@ CARTE = ROOT / "docs" / "CARTE_ATTRIBUTS_V2.md"
 ENGINE = ROOT / "v2engine"
 # Lecture d'une note par le moteur (mêmes lecteurs que tests/test_v2engine_rayon_attributs.py)
 READERS = {"player_attribute", "effective_rating", "intrinsic_rating"}
+# Caractéristiques de la fiche portées par un champ de `PlayerState` plutôt que par une note (ticket
+# v2-hauteur-ballon/03a) : nom dans la carte -> (champ lu par le moteur, valeur du champ pour une note de 11 à 99)
+FIELDS = {"Taille": ("height_m", lambda note: 1.60 + 0.45 * (note - 11) / 88)}  # 11 : 1,60 m ; 99 : 2,05 m
 WITHOUT_EFFECT = ("à créer", "non branché")
 LOW, HIGH = 11, 99
 
@@ -64,7 +67,17 @@ def engine_reads(engine: pathlib.Path = ENGINE) -> set[str]:
                 arg = node.args[1] if len(node.args) > 1 else next((k.value for k in node.keywords if k.arg == "name"), None)
                 if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
                     names.add(arg.value)
+            if isinstance(node, ast.Attribute) and isinstance(node.ctx, ast.Load):
+                names.update(name for name, (field, _) in FIELDS.items() if node.attr == field)
     return names
+
+
+def _profile(players: list[PlayerState], attribute: str, value: int) -> list[PlayerState]:
+    """Joueurs avec l'attribut à `value` ; champ de la fiche (`FIELDS`) réglé à sa valeur pour cette note."""
+    if attribute in FIELDS:
+        field, scale = FIELDS[attribute]
+        return [replace(p, **{field: scale(value)}) for p in with_attribute(players, "Bidon", 0)]
+    return with_attribute(players, attribute, value)
 
 
 def unread(announced: set[str], reads: set[str]) -> set[str]:
@@ -83,11 +96,12 @@ def test_the_carte_is_read_with_its_announced_attributes() -> None:
     # 52 lignes d'attributs le 14/11/2026, dont 27 annoncées avec effet (23 « branché », Dribbling, Finishing,
     # Balance et Handling) ; Reflexes et One on Ones « branché » au ticket v2-attributs-restants/03b1, Handling (prise de
     # balle) au ticket 03b2, Rushing Out (Tendency) (style) au ticket 03b3a, Eccentricity (sorties inattendues) au 03b3b,
-    # Kicking (long ballon du gardien) au 03c1, Throwing (relance à la main) au 03c2
+    # Kicking (long ballon du gardien) au 03c1, Throwing (relance à la main) au 03c2 ; Jumping Reach et Taille
+    # (atteinte du ballon en l'air) au ticket v2-hauteur-ballon/03a
     assert len(STATES) >= 50
     assert {"Pace", "Dribbling", "Finishing", "Balance", "Reflexes", "One on Ones", "Handling",
-            "Rushing Out (Tendency)", "Eccentricity", "Kicking", "Throwing"} <= set(ANNOUNCED)
-    assert {"Natural Fitness", "Heading", "Jumping Reach"}.isdisjoint(ANNOUNCED)
+            "Rushing Out (Tendency)", "Eccentricity", "Kicking", "Throwing", "Jumping Reach", "Taille"} <= set(ANNOUNCED)
+    assert {"Natural Fitness", "Heading"}.isdisjoint(ANNOUNCED)
 
 
 def test_every_attribute_announced_with_effect_is_read_by_the_engine() -> None:
@@ -184,6 +198,8 @@ PLANS = {
     # avec ballon (ticket v2-realisme/09j), première divergence à la graine 21 en 60 s, à la graine 2 (67 s de jeu) en
     # 120 s : scène de 120 s
     "Stamina": Plan(mini_match, 120.0, 10),
+    # atteinte du ballon en l'air (ticket v2-hauteur-ballon/03a) : le long ballon du gardien retombe sur l'attaquant
+    "Jumping Reach": Plan(relance_longue, 6.0, 100), "Taille": Plan(relance_longue, 6.0, 100),
 }
 
 
@@ -200,7 +216,7 @@ def _play(players: list[PlayerState], holder: str | None, seconds: float, seed: 
 def first_divergence(attribute: str, plan: Plan) -> tuple[int, int] | None:
     """(graine, pas) de la première divergence entre l'attribut à 11 et à 99, ou None sur toutes les graines."""
     players, holder = plan.build()
-    low, high = with_attribute(players, attribute, LOW), with_attribute(players, attribute, HIGH)
+    low, high = _profile(players, attribute, LOW), _profile(players, attribute, HIGH)
     for seed in range(1, plan.max_seeds + 1):
         reference = _play(low, holder, plan.seconds, seed, ball_at=plan.ball_at)
         other = _play(high, holder, plan.seconds, seed, reference, plan.ball_at)
@@ -221,7 +237,7 @@ def test_every_attribute_announced_with_effect_changes_a_scene(attribute: str) -
     players, holder = plan.build()
     seconds = (step + 1) * Scene.dt
     for value in (LOW, HIGH):
-        profile = with_attribute(players, attribute, value)
+        profile = _profile(players, attribute, value)
         assert _play(profile, holder, seconds, seed, ball_at=plan.ball_at) == _play(profile, holder, seconds, seed,
                                                                                  ball_at=plan.ball_at)
 

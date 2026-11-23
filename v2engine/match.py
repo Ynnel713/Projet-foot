@@ -40,6 +40,7 @@ from v2engine.cerveau import (BALLON_LIBRE, GOAL_CENTER_Y, OPPONENT_GOAL, RECEVE
 from v2engine.perception_memory import MemoryReading, PerceptionMemory
 from v2engine.scan import ScanTracker
 from v2engine.vision import unseen
+from v2engine.atteinte import body_part, height_of
 from v2engine.vol import BOUNCE_HORIZONTAL_KEEP, height_at, is_aerial_height, launch_vz, shot_launch_vz, step_height
 from v2engine.decision import (DECISION_INTERVAL_S, choose_action, dribble_lost, lane_closed_during_turn,
                                lost_carry_outcome, thinks_one_touch)
@@ -140,6 +141,7 @@ def _build_players(lineup: Lineup, team: str, positions: dict[str, Vec2]) -> lis
                 attributes=player.attributes,
                 role=role_of(player.poste, player.categorie),
                 facing=_facing_at_kickoff(pos, team),
+                height_m=height_of(player.taille_fm, player.poste),  # atteinte du ballon (ticket v2-hauteur-ballon/03a)
             )
         )
     return states
@@ -1046,8 +1048,6 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
         ball.receiver = None  # passe morte : ballon libre pour tous, plus de receveur désigné
         ball.readers = {}  # plus de passe à couper (ticket v2-collectif/25)
         _clear_offside(ball)  # plus de passe en cours : plus de hors-jeu à siffler
-    if is_aerial_height(z_start) and is_aerial_height(ball.z):
-        return None  # en l'air pendant tout le pas : personne ne le touche sur son trajet
     if ball.shot_flight is not None:
         if ball.velocity.length() >= BALL_STOPPED_MPS:
             return None  # tir en vol : personne ne le touche avant la ligne (05b et 05c)
@@ -1060,8 +1060,9 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
     # seulement au point d'arrivée ; le premier atteint tente le premier, quelle que soit son équipe. Le receveur visé
     # d'une passe l'attend et tend la jambe : il la touche à `RECEIVER_REACH_M` (ticket v2-realisme/18i).
     for entry, _, player in _ball_contacts(start, ball.position, dt, players, ball):
-        if is_aerial_height(height_at(z_start, vz_start, entry * dt)) and ball.mode == AERIEN:
-            continue  # ballon au-dessus de lui à son passage, encore en l'air en fin de pas : il passe (ticket 02a1)
+        part = body_part(player, height_at(z_start, vz_start, entry * dt))
+        if part is None:
+            continue  # au-dessus de son atteinte à son passage (taille, détente ; ticket v2-hauteur-ballon/03a) : il passe
         if now_s < ball.offside_out_until.get(player.name, 0.0):
             continue  # écarté de l'action après un coup franc : il recule, il ne joue pas ce ballon
         if now_s < ball.control_ban_until_s.get(player.name, 0.0):
@@ -1109,7 +1110,8 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
                     origin=received, intended=intended, memory_age_s=seen_back.age_mean_s,
                     memory_error_mean_m=seen_back.error_mean_m, memory_error_max_m=seen_back.error_max_m,
                     oriented=oriented, first_time=first_time, ball_speed_mps=ball.velocity.length(), blind=blind,
-                    facing_run=player.facing_run, x=player.position.x, y=player.position.y))  # 07g, 10d
+                    facing_run=player.facing_run, x=player.position.x, y=player.position.y,  # 07g, 10d
+                    ball_z_m=height_at(z_start, vz_start, entry * dt), body_part=part))  # 03a
             # ballon en main (ticket 03c2) : le gardien le prend dans sa surface, et il ne vient pas de son équipe
             # (règle de la passe en retrait ; ponytail : un ballon de son équipe touché par un adversaire compte de son équipe)
             player.in_hands = player.poste == "GK" and ball.last_pass_team != player.team \

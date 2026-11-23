@@ -10,8 +10,8 @@ Constantes validées par le propriétaire le 23/11/2026 :
 - `BOUNCE_STOP_M` : un rebond dont le sommet serait sous 15 cm est supprimé, le ballon roule (V1, réglage B1) ;
 - `MAX_FLIGHT_S` : la durée de vol est plafonnée à 4 s (sommet de 19,6 m) ; sans plafond, le freinage horizontal du
   moteur ferait monter un ballon de 55 m à 36 m. Plafonné, le ballon retombe avant sa cible ;
-- `AERIAL_HEIGHT_M` : au-dessus de 2,5 m, le ballon est « aérien » et personne ne le touche (règle du ticket
-  v2-collectif/29 lue sur la hauteur, rebonds compris, jusqu'au ticket v2-hauteur-ballon/03).
+- `AERIAL_HEIGHT_M` : au-dessus de 2,5 m, le ballon est « aérien » (mode tracé, affichage). Depuis le ticket
+  v2-hauteur-ballon/03a, qui touche le ballon dépend de l'atteinte de chaque joueur (`atteinte.reach_m`).
 Repères réels (temps de vol et sommet d'un dégagement, d'un centre, d'une passe lobée) : non trouvés."""
 
 from __future__ import annotations
@@ -97,6 +97,8 @@ def step_height(z: float, vz: float, dt: float) -> tuple[float, float, int]:
         z = 0.0
         if vz * vz / (2.0 * GRAVITY_MPS2) < BOUNCE_STOP_M:
             vz = 0.0
+    if left <= 0.0 and (z > 0.0 or vz > 0.0):
+        return z, vz, impacts  # durée nulle : le ballon reste où il est (ticket v2-hauteur-ballon/03a)
     return 0.0, 0.0, impacts
 
 
@@ -106,5 +108,5 @@ def height_at(z: float, vz: float, t: float) -> float:
 
 
 def is_aerial_height(z: float) -> bool:
-    """Ballon « aérien » : au-dessus de `AERIAL_HEIGHT_M`, personne ne le touche."""
+    """Ballon « aérien » : au-dessus de `AERIAL_HEIGHT_M` (mode tracé ; le contact suit `atteinte.reach_m`)."""
     return z > AERIAL_HEIGHT_M

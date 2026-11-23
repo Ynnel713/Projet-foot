@@ -1,0 +1,5 @@
+ok 20 contacts 27180 {'pied': 26969, 'tête': 106, 'corps': 104, 'mains': 1} au-dessus de l'atteinte 0
+pied z médiane 0.0 max 0.932
+tête z médiane 1.874 max 2.551
+corps z médiane 1.324 max 1.524
+mains z médiane 2.551 max 2.551

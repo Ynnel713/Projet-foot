@@ -26,7 +26,8 @@ from v2engine.offside import offside_at_pass
 from v2engine.possession import BALL_FRICTION_PER_S, BALL_STOPPED_MPS, pass_success_probability
 from v2engine.shooting import FLYING, SHOOTING_RANGE_M, occasion_quality
 from v2engine.trace import ChanceEvent, ShotEvent
-from v2engine.vol import height_at, is_aerial_height
+from v2engine.atteinte import reach_m
+from v2engine.vol import height_at
 
 # Seuil de grosse occasion (ticket 28c, proposé le 08/11/2026, validé par délégation du propriétaire) : voir le ticket
 # pour le nombre par match. Plancher de séquence : moitié du seuil (une séquence ne se coupe pas au moindre creux).
@@ -65,17 +66,20 @@ def reach_probability(player: PlayerState, ball: BallState, opponents: list[Play
     """Chance que `player` touche le ballon libre avant un adversaire, et le point de contact. 1 s'il peut être sur sa
     trajectoire à temps avant le premier adversaire qui le peut (premier point atteint) ; sinon exp(-retard /
     `REACH_LATE_S`), au point de plus petit retard sur la portion de trajectoire que le ballon parcourt avant ce premier
-    adversaire. Ballon en l'air : seulement là où il passe sous `vol.AERIAL_HEIGHT_M`. Ballon arrêté : course au
-    ballon, l'adversaire le plus rapide fixe l'échéance."""
-    # ballon en l'air (ticket v2-hauteur-ballon/02a1) : seulement là où il est sous `vol.AERIAL_HEIGHT_M`
-    path = [(t, point) for t, _, point in _ball_path(ball) if not is_aerial_height(height_at(ball.z, ball.vz, t))]
+    adversaire. Ballon en l'air : seulement là où il passe à portée de chacun (`atteinte.reach_m`, taille et détente ;
+    ticket v2-hauteur-ballon/03a). Ballon arrêté : course au ballon, l'adversaire le plus rapide fixe l'échéance."""
+    heights = [(t, point, height_at(ball.z, ball.vz, t)) for t, _, point in _ball_path(ball)]
+    mine = reach_m(player)
+    path = [(t, point) for t, point, z in heights if z <= mine]
     if not path:
         return 0.0, None
     if len(path) == 1:
         point = path[0][1]
         late = _arrival_s(player, point) - min((_arrival_s(o, point) for o in opponents), default=math.inf)
     else:
-        cut = next((t for t, point in path if any(_arrival_s(o, point) <= t for o in opponents)), path[-1][0])
+        reach = {o.name: reach_m(o) for o in opponents}
+        cut = next((t for t, point, z in heights if z <= mine
+                    and any(z <= reach[o.name] and _arrival_s(o, point) <= t for o in opponents)), path[-1][0])
         lates = [(_arrival_s(player, point) - t, point) for t, point in path if t <= cut]
         late, point = next(((lt, pt) for lt, pt in lates if lt <= 0.0), min(lates, key=lambda e: e[0]))
     return (1.0 if late <= 0.0 else math.exp(-late / REACH_LATE_S)), point

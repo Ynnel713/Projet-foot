@@ -256,6 +256,7 @@ class PlayerState:
     # gardien qui a le ballon en main (ticket v2-attributs-restants/03c2) : il l'a capté, ou pris dans sa surface sur un
     # ballon qui ne vient pas de son équipe ; retombe à faux dès qu'il ne l'a plus (`match.simulate_match`)
     in_hands: bool = False
+    height_m: float = 1.82  # taille (m), fiche ou médiane du poste (`atteinte.height_of`, ticket v2-hauteur-ballon/03a)
 
 
 def turn_toward(facing: Vec2, desired: Vec2, max_angle_rad: float) -> Vec2:
@@ -358,4 +359,5 @@ def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_facto
                             turn_rate_rad_s(agility) * dt),
         facing_run=facing_run,
         in_hands=state.in_hands,  # ballon en main, tenu d'un pas à l'autre (ticket v2-attributs-restants/03c2)
+        height_m=state.height_m,  # taille (ticket v2-hauteur-ballon/03a)
     )

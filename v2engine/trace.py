@@ -197,6 +197,9 @@ class ReceptionEvent:
     facing_run: bool = False  # corps tourné vers sa course au contact (07b), mesure seule (ticket v2-realisme/07g)
     x: float = 0.0  # place du receveur au contrôle (ticket v2-realisme/10d : passes reçues dans l'axe devant la surface)
     y: float = 0.0
+    # hauteur du ballon au contact (m) et partie du corps qui le joue : pied, corps, tête, mains (v2-hauteur-ballon/03a)
+    ball_z_m: float = 0.0
+    body_part: str = "pied"
 
 
 @dataclass(frozen=True)

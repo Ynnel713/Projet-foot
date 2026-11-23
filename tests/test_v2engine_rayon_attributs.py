@@ -81,6 +81,9 @@ TRANSITION = {
     "Handling": ("22/11/2026", _REST),
     "Rushing Out (Tendency)": ("22/11/2026", _REST),
     "Eccentricity": ("22/11/2026", _REST),
+    # Jumping Reach : détente, atteinte du ballon en l'air (ticket v2-hauteur-ballon/03a) ; second contexte, le duel
+    # aérien du ticket v2-realisme/15b (même hauteur atteinte, sans bonus en plus)
+    "Jumping Reach": ("23/11/2026", "v2-realisme/15b"),
     **{attribute: ("17/11/2026", _REST) for attribute in (
         "Pace", "Acceleration", "Stamina", "Agility", "Strength", "Aggression", "Tackling", "Marking", "Teamwork",
         "Off the Ball", "Composure", "Passing", "Dribbling", "First Touch")},
@@ -412,8 +415,6 @@ COVERAGE_EXCEPTIONS = {
     "Determination": "v2-collectif/21 ; v2-coach-et-gestion-de-match/02 et 04",
     "Bravery": "v2-realisme/17b",
     "Leadership": "v2-realisme/17c",
-    "Jumping Reach": "v2-realisme/15b",
-    "Taille FM (cm)": "v2-realisme/15b",
     "Heading": "v2-realisme/15c",
     "Crossing": "v2-attributs-restants/01 et 11",
     "Corners": "v2-realisme/16d",
