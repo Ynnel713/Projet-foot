@@ -22,7 +22,7 @@ sinon) et à proposer avant le code.
 
 **Bloque :** `v2-collectif/32b` (et son chapeau `32`, découpé), `v2-attributs-restants/01`, `v2-attributs-restants/03a`, `v2-realisme/15a` ; `v2-collectif/15d` par le 32b (ligne ajoutée le 21/11/2026, audit de réalisme : réciproque des tickets qui citent ce ticket).
 
-**Status:** découpé (23/11/2026, décision du propriétaire, 2 h 40 estimées) en `03a` (ballons en jeu : atteinte par joueur, contact sur le trajet, mains du gardien, lecture d'occasion) et `03b` (tirs : contre et gardien selon la hauteur réelle). Constantes validées le 23/11/2026 (voir `03a`). Ticket chapeau : ne pas l'implémenter tel quel ; clos quand les deux sont livrés.
+**Status:** découpé (23/11/2026, décision du propriétaire, 2 h 40 estimées) en `03a` (ballons en jeu : atteinte par joueur, contact sur le trajet, mains du gardien, lecture d'occasion) et `03b` (tirs : contre et gardien selon la hauteur réelle). Constantes validées le 23/11/2026 (voir `03a`). Ticket chapeau : ne pas l'implémenter tel quel. **Clos le 23/11/2026** : `03a` et `03b` livrés, validés expert + QC.
 
 ## Acceptance criteria
 

@@ -2123,3 +2123,20 @@ Interceptions : pas d'indicateur direct dans le banc ; pertes de balle et grosse
 
 **Lecture.** Volumes dans le bruit : le seuil commun de 2,5 m était déjà proche de l'atteinte moyenne (1,82 m + 0,52 m ≈ 2,34 m). Significatifs plausibles : plus de duels d'épaule (un ballon au-dessus d'un petit joueur file vers d'autres, courses partagées) ; plus de sorties du gardien sur passe ou centre (ses mains vont au-delà de 2,5 m), avec plus de ballons à l'adversaire 3 s après (n = 33, fragile). Le jeu de tête reste rare (0,4 % des contrôles), faute de centres (ticket `v2-attributs-restants/01`).
 
+## 74. Interception selon la hauteur : tirs (ticket v2-hauteur-ballon/03b, 50 matchs mêmes graines, 23/11/2026)
+
+**Mécanisme.** Le contre et l'arrêt par portée lisent la hauteur réelle du tir au contact : un défenseur ne contre que sous son atteinte (taille + détente, `atteinte.reach_m`), le gardien n'arrête que sous ses mains (dans sa surface) ou sa tête (hors de sa surface). Au-dessus, le tir continue. L'estimateur du tir (`shooting._flight_shares`) suit la même courbe : chaque défenseur ne contre que les tirs assez bas pour lui, et le contre et la barre se jugent sur le même écart vertical.
+
+**Série** (`.scratch/v2-hauteur-ballon/mesures/03b-serie.py` et `03b-synthese.py` ; avant : `4631752` ; atteinte recalculée depuis la base pour le contreur et le gardien du journal).
+
+| Mesure | Avant | Après | Écart apparié par match (IC 95 %) |
+|---|---|---|---|
+| Contres au-dessus de l'atteinte | 5 sur 351 (max 3,56 m) | 0 sur 363 (max 2,33 m) | |
+| Arrêts au-dessus des mains | 0 sur 340 | 0 sur 338 | |
+| Buts par match | 5,20 | 5,18 | − 0,02 [− 0,29 ; + 0,25] |
+| Tirs par match | 30,96 | 31,28 | + 0,32 [− 0,40 ; + 1,04] |
+| Contrés par match | 7,02 | 7,26 | + 0,24 [− 0,21 ; + 0,69] |
+| Arrêts par match | 6,84 | 6,80 | − 0,04 [− 0,24 ; + 0,16] |
+| Au-dessus par match | 4,42 | 4,58 | + 0,16 [− 0,11 ; + 0,43] |
+
+**Lecture.** Le défaut visé était rare (1,4 % des contres) ; il disparaît. Volumes dans le bruit. Sans l'estimateur corrigé (première série), les tirs montaient de + 0,50 par match à la limite de la significativité : le tireur surestimait le risque de contre. Aucun arrêt n'était au-dessus des mains : un tir cadré passe sous 2,44 m à la ligne, et le gardien atteint environ 3 m dans sa surface.

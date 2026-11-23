@@ -40,7 +40,7 @@ from v2engine.cerveau import (BALLON_LIBRE, GOAL_CENTER_Y, OPPONENT_GOAL, RECEVE
 from v2engine.perception_memory import MemoryReading, PerceptionMemory
 from v2engine.scan import ScanTracker
 from v2engine.vision import unseen
-from v2engine.atteinte import body_part, height_of
+from v2engine.atteinte import body_part, height_of, reach_m
 from v2engine.vol import BOUNCE_HORIZONTAL_KEEP, height_at, is_aerial_height, launch_vz, shot_launch_vz, step_height
 from v2engine.decision import (DECISION_INTERVAL_S, choose_action, dribble_lost, lane_closed_during_turn,
                                lost_carry_outcome, thinks_one_touch)
@@ -454,7 +454,9 @@ def _keeper_reaches(ball: BallState, flight: ShotFlight, start: Vec2, end: Vec2,
                     now_s: float, shots: list[ShotEvent] | None) -> bool:
     """Arrêt par portée (ticket v2-realisme/05b) : quand le ballon passe au plus près du gardien pendant ce pas, il
     l'atteint si l'écart tient dans sa portée à cet instant (`shooting.keeper_reach_m`), élan de la frappe compris
-    (ticket 03f). Jugé une fois par tir ; le temps de vol, l'écart et l'élan sont tracés. Atteint : arrêt avec l'issue du ticket 28b. Retourne vrai si le gardien a touché."""
+    (ticket 03f), et si le ballon y passe sous ses mains (`atteinte.reach_m`, ticket v2-hauteur-ballon/03b). Jugé une
+    fois par tir ; le temps de vol, l'écart, l'élan et la hauteur sont tracés. Atteint : arrêt avec l'issue du ticket
+    28b. Retourne vrai si le gardien a touché."""
     done = flight.origin.distance_to(start)
     step = start.distance_to(end)
     if done + step < flight.keeper_at_m:
@@ -483,6 +485,8 @@ def _keeper_reaches(ball: BallState, flight: ShotFlight, start: Vec2, end: Vec2,
     profile = flight.keeper_profile or keeper_profile(None, False)
     if gap > keeper_reach_m(elapsed, toward, *profile):
         return False
+    if height_at(ball.z, ball.vz, share * dt) > reach_m(keeper):
+        return False  # tir au-dessus de ses mains (ou de sa tête hors de sa surface ; ticket v2-hauteur-ballon/03b)
     goal = _OPPONENT_GOAL[flight.team]
     handling = keeper_handling(keeper)
     outcome = save_outcome(flight.chance, flight.origin, goal, handling)
@@ -502,7 +506,8 @@ def _keeper_reaches(ball: BallState, flight: ShotFlight, start: Vec2, end: Vec2,
 def _blocked(ball: BallState, flight: ShotFlight, start: Vec2, end: Vec2, dt: float, players: list[PlayerState],
              now_s: float, shots: list[ShotEvent] | None) -> bool:
     """Contre physique (ticket v2-realisme/05c) : le tir en vol touche le premier défenseur de champ adverse qu'il frôle à
-    sa portée (`shooting.block_reach_m`, selon le temps écoulé depuis la frappe) ; chacun tente une fois par tir et contre
+    sa portée (`shooting.block_reach_m`, selon le temps écoulé depuis la frappe), sous son atteinte en hauteur
+    (`atteinte.reach_m`, ticket v2-hauteur-ballon/03b : au-dessus, le tir passe) ; chacun tente une fois par tir et contre
     avec la chance `BLOCK_CHANCE`. Contré : le ballon touche sa portée au point où il y entre (réserve A1 de l'expert, 05c)
     et repart de ce point, libre, dévié selon l'endroit de l'impact (`possession.deflect`, ticket 05d) ; point de contact
     et angle de sortie tracés. Retourne vrai si contré."""
@@ -510,6 +515,8 @@ def _blocked(ball: BallState, flight: ShotFlight, start: Vec2, end: Vec2, dt: fl
     for entry, gap, player in _contacts(start, end, dt, defenders, radius=BLOCK_WIDTH_M):
         if gap > block_reach_m(flight.elapsed_s + entry * dt):
             continue  # pas encore à sa portée : il peut encore le toucher plus loin
+        if height_at(ball.z, ball.vz, entry * dt) > reach_m(player):
+            continue  # tir au-dessus de son atteinte (taille, détente ; ticket v2-hauteur-ballon/03b) : il passe
         flight.tried.add(player.name)
         if TIR.random() >= BLOCK_CHANCE:
             continue  # au contact, le ballon passe quand même
@@ -1037,7 +1044,7 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
     if flight is not None:
         flight.elapsed_s += dt
     # Hauteur (ticket v2-hauteur-ballon/02a1) : chute libre, rebonds (la vitesse horizontale perd 15 % à chacun) ; au-dessus
-    # de `AERIAL_HEIGHT_M`, le ballon est aérien et personne ne le touche (règle du ticket 29 lue sur la hauteur).
+    # de `AERIAL_HEIGHT_M`, le ballon est tracé « aérien » ; qui le touche dépend de l'atteinte de chacun (ticket 03a).
     z_start, vz_start = ball.z, ball.vz
     ball.z, ball.vz, impacts = step_height(ball.z, ball.vz, dt)
     if impacts:

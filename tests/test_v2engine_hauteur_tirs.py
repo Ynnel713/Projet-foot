@@ -18,6 +18,7 @@ from v2engine.movement import PlayerState
 from v2engine.possession import BALL_FRICTION_PER_S
 from v2engine.restart import AERIEN, SOL
 from v2engine.shooting import OVER, PARRIED, SHOT_AIM_HEIGHT_M
+from v2engine.atteinte import reach_m
 from v2engine.vol import GRAVITY_MPS2, height_at, line_crossing_s, shot_launch_vz
 
 DT = 0.1
@@ -123,3 +124,60 @@ def test_a_blocked_shot_leaves_the_defender_on_the_ground(monkeypatch) -> None:
     shot, _, ball, _ = _shoot(monkeypatch, 20.0, 2.0, extra=[defender])
     assert shot.outcome == "contré" and shot.block_z_m is not None and shot.block_z_m > 0.0
     assert (ball.z, ball.vz, ball.mode) == (0.0, 0.0, SOL)
+
+
+# --- Atteinte sur les tirs (ticket v2-hauteur-ballon/03b) ---------------------------------------------------------------
+
+def test_a_shot_over_the_defender_reach_is_not_blocked(monkeypatch) -> None:
+    monkeypatch.setattr(match, "BLOCK_CHANCE", 1.0)
+    defender = _player("Défenseur", "away", "DC", Vec2(PITCH_LENGTH_M - 4.0, GOAL_CENTER_Y))
+    shot, _, ball, steps = _shoot(monkeypatch, 20.0, 6.0, extra=[defender])
+    assert shot.outcome == OVER and shot.block_z_m is None  # passé au-dessus de lui, jusqu'à la ligne
+    assert max(z for _, z, _ in steps) > reach_m(defender)
+
+
+def test_a_shot_within_the_defender_reach_is_still_blocked(monkeypatch) -> None:
+    monkeypatch.setattr(match, "BLOCK_CHANCE", 1.0)
+    defender = _player("Défenseur", "away", "DC", Vec2(PITCH_LENGTH_M - 4.0, GOAL_CENTER_Y))
+    shot, _, _, _ = _shoot(monkeypatch, 20.0, 1.0, extra=[defender])
+    assert shot.outcome == "contré" and shot.block_z_m <= reach_m(defender)
+
+
+def _keeper_out(monkeypatch, height: float):
+    """Gardien sorti hors de sa surface (17 m de sa ligne), sans mains, portée au sol illimitée : seule la hauteur juge."""
+    monkeypatch.setattr(match, "save_outcome", lambda *args: PARRIED)
+    monkeypatch.setattr(match, "keeper_reach_m", lambda *args: 99.0)
+    keeper = _player("Gardien", "away", "GK", Vec2(PITCH_LENGTH_M - 17.0, GOAL_CENTER_Y + 0.5))
+    shot, scored, _, _ = _shoot(monkeypatch, 30.0, height, extra=[keeper])
+    return shot, scored, keeper
+
+
+def test_the_keeper_does_not_save_a_shot_above_his_reach(monkeypatch) -> None:
+    shot, scored, keeper = _keeper_out(monkeypatch, 2.4)
+    assert shot.keeper_z_m > reach_m(keeper)  # 1,82 m + 0,53 m de détente, hors de sa surface
+    assert shot.outcome == "but" and scored == "home"
+
+
+def test_the_keeper_saves_a_shot_within_his_reach(monkeypatch) -> None:
+    shot, _, keeper = _keeper_out(monkeypatch, 0.5)
+    assert shot.keeper_z_m <= reach_m(keeper) and shot.outcome == PARRIED
+
+
+def test_the_estimator_reads_the_same_curve_as_the_shot() -> None:
+    # écart vertical seuil d'un défenseur (ticket 03b) : un tir lancé avec cet écart passe exactement à son atteinte
+    from v2engine import shooting
+    to_goal, elapsed, reach = 20.0, 0.4, 2.3
+    angle = shooting._under_reach_angle(to_goal, elapsed, reach)
+    line = SHOT_AIM_HEIGHT_M + to_goal * math.tan(angle)
+    total = shooting._flight_time_s(to_goal)
+    assert line * elapsed / total + GRAVITY_MPS2 * elapsed * (total - elapsed) / 2.0 == pytest.approx(reach)
+    assert shooting._under_reach_angle(to_goal, total + 0.1, reach) == math.inf  # après la ligne : sans objet
+
+
+def test_the_estimator_keeps_the_old_block_rule_when_every_shot_is_within_reach() -> None:
+    from v2engine import shooting
+    sigma = 0.2
+    assert shooting._height_pass([math.inf, math.inf], math.inf, sigma) == pytest.approx((1 - shooting.BLOCK_CHANCE) ** 2)
+    assert shooting._height_pass([], 0.1, sigma) == pytest.approx(0.5 * (1 + math.erf(0.1 / (sigma * math.sqrt(2)))))
+    # un seul défenseur, seuil à 0 : la moitié basse des tirs peut être contrée
+    assert shooting._height_pass([0.0], math.inf, sigma) == pytest.approx(0.5 * (1 - shooting.BLOCK_CHANCE) + 0.5)

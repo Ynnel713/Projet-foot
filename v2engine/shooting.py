@@ -14,12 +14,14 @@ from types import MappingProxyType
 
 from ligue1sim.pitch_geometry import GOAL_HEIGHT_M, GOAL_WIDTH_M
 
+from v2engine.atteinte import reach_m
 from v2engine.attributes import duel_probability, success_probability
 from v2engine.condition import effective_rating
 from v2engine.flux import TIR
 from v2engine.geometry import Vec2, in_penalty_area
 from v2engine.movement import PlayerState
 from v2engine.possession import BALL_FRICTION_PER_S, MAX_PASS_MPS
+from v2engine.vol import GRAVITY_MPS2
 
 # Distance de tir maximale (m) : au-delà, l'option « tirer » n'existe pas pour le porteur (voir
 # `decision.py`, qui choisit QUAND tirer). Constante validée par le propriétaire (24/10/2026,
@@ -497,11 +499,39 @@ def _aimed(shooter: PlayerState, goal: Vec2, keeper: PlayerState | None,
     return 1.0, (mean[0], mean[1], mean[2]), aims
 
 
-def _block_covers(shooter: PlayerState, goal: Vec2, opponents: list[PlayerState]) -> list[tuple[float, float]]:
+def _under_reach_angle(to_goal: float, elapsed: float, reach: float) -> float:
+    """Écart vertical (rad, autour de la visée `SHOT_AIM_HEIGHT_M`) au-dessous duquel le tir passe sous `reach` mètres
+    `elapsed` secondes après la frappe (ticket v2-hauteur-ballon/03b), avec la courbe du tir (`match._lift_shot`) : hauteur
+    `h` à la ligne, `z(t) = h·t/T + g·t·(T − t)/2` (`T` : temps jusqu'à la ligne), tir rasant si `h ≤ 0`. L'infini si
+    tout tir y passe (ligne déjà passée, ou ballon arrêté avant). Approximation : la ligne prise dans l'axe du but."""
+    total = _flight_time_s(to_goal)
+    if math.isinf(total) or elapsed <= 0.0 or elapsed >= total:
+        return math.inf
+    highest = max(0.0, (reach - GRAVITY_MPS2 * elapsed * (total - elapsed) / 2.0) * total / elapsed)  # hauteur à la ligne
+    return math.atan((highest - SHOT_AIM_HEIGHT_M) / to_goal)
+
+
+def _height_pass(thresholds: list[float], cap: float, sigma: float) -> float:
+    """Chance, sur l'écart vertical gaussien (`sigma`) pris sous `cap` (rad ; l'infini : tous), que le tir ne soit contré
+    par aucun défenseur : chacun contre avec `BLOCK_CHANCE` si l'écart est sous son seuil (`_under_reach_angle`)."""
+    def below(angle: float) -> float:
+        return 0.5 * (1.0 + math.erf(angle / (sigma * math.sqrt(2.0)))) if math.isfinite(angle) else float(angle > 0)
+
+    marks = sorted({*(a for a in thresholds if a < cap), cap})
+    total, previous = 0.0, -math.inf
+    for mark in marks:
+        total += (below(mark) - below(previous)) * math.prod(1.0 - BLOCK_CHANCE for a in thresholds if a >= mark)
+        previous = mark
+    return total
+
+
+def _block_covers(shooter: PlayerState, goal: Vec2, opponents: list[PlayerState],
+                  sigma: float | None = None) -> list[tuple[float, float, float]]:
     """Écarts de tir (angles relatifs à l'axe vers le centre du but) qui passent à la portée de chaque défenseur de champ
     devant le tireur (contre physique, `match._blocked`) : à sa place quand le ballon arrive à lui (il garde sa vitesse),
     portée `block_reach_m` au temps de vol ; tout l'angle s'il est déjà au contact du tireur. Approximation : la portée
-    est prise sur la ligne joueur-tireur."""
+    est prise sur la ligne joueur-tireur. Troisième terme : écart vertical sous lequel le tir passe sous son atteinte
+    (`_under_reach_angle`, ticket v2-hauteur-ballon/03b ; l'infini sans `sigma`)."""
     axis = (goal - shooter.position).normalized()
     to_goal = shooter.position.distance_to(goal)
     covers = []
@@ -520,8 +550,9 @@ def _block_covers(shooter: PlayerState, goal: Vec2, opponents: list[PlayerState]
         offset = at - shooter.position
         along, gap = offset.x * axis.x + offset.y * axis.y, offset.length()
         reach = block_reach_m(elapsed)
+        under = math.inf if sigma is None else _under_reach_angle(to_goal, elapsed, reach_m(opponent))
         if gap <= reach:
-            covers.append((-math.inf, math.inf))
+            covers.append((-math.inf, math.inf, under))
         elif 0.0 < along <= to_goal:  # devant le tireur, avant le but
             centre, half = _relative(shooter.position, axis, at), math.asin(reach / gap)
             if elapsed < BLOCK_REACTION_S:
@@ -531,7 +562,7 @@ def _block_covers(shooter: PlayerState, goal: Vec2, opponents: list[PlayerState]
                 cosine = (ready * ready + gap * gap - BLOCK_WIDTH_M * BLOCK_WIDTH_M) / (2.0 * ready * gap)
                 if cosine < 1.0:
                     half = max(half, math.acos(max(-1.0, cosine)))
-            covers.append((centre - half, centre + half))
+            covers.append((centre - half, centre + half, under))
     return covers
 
 
@@ -557,28 +588,34 @@ def _flight_shares(shooter: PlayerState, goal: Vec2, keeper: PlayerState | None,
     """Tir en vol (non dévissé), écart en largeur gaussien (`shot_error_sigma`) : (chance de but sans les contres, chance
     d'être contré, chance de but et de ne pas être contré). Les écarts sont découpés aux bords du but, de la portée du
     gardien et de celle de chaque défenseur ; sur chaque tranche, un ballon contré par l'un n'atteint pas les suivants
-    (`BLOCK_CHANCE` par défenseur touché). La hauteur (sous la barre) ne joue que sur le but. Visée au centre du but ;
+    (`BLOCK_CHANCE` par défenseur touché, s'il passe sous son atteinte : ticket v2-hauteur-ballon/03b). La hauteur (sous
+    la barre) joue aussi sur le but, indépendante de la largeur (35b). Visée au centre du but ;
     avec `aims` (rad, ticket v2-realisme/05l), la liste des trois parts pour chaque visée, découpes calculées une fois."""
     sigma = shot_error_sigma(shooter, goal, opponents)
     _, under = on_target_axes(shooter, goal, opponents)
-    scoring, covers = _goal_angles(shooter, goal, keeper, opponents), _block_covers(shooter, goal, opponents)
-    cuts = sorted({-math.inf, math.inf, *(c for span in scoring + covers for c in span)})
+    bar = math.atan2(GOAL_HEIGHT_M - SHOT_AIM_HEIGHT_M, shooter.position.distance_to(goal))  # écart sous la barre (35b)
+    scoring, covers = _goal_angles(shooter, goal, keeper, opponents), _block_covers(shooter, goal, opponents, sigma)
+    cuts = sorted({-math.inf, math.inf, *(c for span in scoring for c in span), *(c for c_lo, c_hi, _ in covers
+                                                                                  for c in (c_lo, c_hi))})
     slices = []
     for lo, hi in zip(cuts, cuts[1:]):
-        through = (1.0 - BLOCK_CHANCE) ** sum(1 for c_lo, c_hi in covers if c_lo <= lo and hi <= c_hi)
-        slices.append((lo, hi, through, any(g_lo <= lo and hi <= g_hi for g_lo, g_hi in scoring)))
+        # écart vertical commun au contre et à la barre (ticket v2-hauteur-ballon/03b) : un tir qui passe au-dessus d'un
+        # défenseur est un tir haut, souvent au-dessus de la barre
+        heights = [a for c_lo, c_hi, a in covers if c_lo <= lo and hi <= c_hi]
+        through, through_under = _height_pass(heights, math.inf, sigma), _height_pass(heights, bar, sigma)
+        slices.append((lo, hi, through, through_under, any(g_lo <= lo and hi <= g_hi for g_lo, g_hi in scoring)))
 
     def shares(aim: float) -> tuple[float, float, float]:
         def below(angle: float) -> float:
             return 0.5 * (1.0 + math.erf((angle - aim) / (sigma * math.sqrt(2.0))))
 
         goal_share = blocked = goal_unblocked = 0.0
-        for lo, hi, through, scores in slices:
+        for lo, hi, through, through_under, scores in slices:
             mass = below(hi) - below(lo)
             blocked += mass * (1.0 - through)
             if scores:
                 goal_share += mass * under
-                goal_unblocked += mass * under * through
+                goal_unblocked += mass * through_under
         return goal_share, blocked, goal_unblocked
 
     if aims is None:

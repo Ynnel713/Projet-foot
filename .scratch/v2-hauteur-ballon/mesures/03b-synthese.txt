@@ -1,0 +1,12 @@
+avant : contres au-dessus de l'atteinte : 5/351 ; arrêts au-dessus des mains : 0/340 (journal aligné sur les contres : True)
+après : contres au-dessus de l'atteinte : 0/363 ; arrêts au-dessus des mains : 0/338 (journal aligné sur les contres : True)
+buts : 5.20 -> 5.18 par match, écart -0.02 [-0.29 ; +0.25]
+tirs : 30.96 -> 31.28 par match, écart +0.32 [-0.40 ; +1.04]
+contrés : 7.02 -> 7.26 par match, écart +0.24 [-0.21 ; +0.69]
+arrêts : 6.84 -> 6.80 par match, écart -0.04 [-0.24 ; +0.16]
+au-dessus : 4.42 -> 4.58 par match, écart +0.16 [-0.11 ; +0.43]
+à côté : 6.80 -> 6.74 par match, écart -0.06 [-0.29 ; +0.17]
+buts (score) : 5.20 -> 5.18 par match, écart -0.02 [-0.29 ; +0.25]
+hauteur au contre : max 3.56 m avant, 2.33 m après
+hauteur au passage du gardien : max 2.35 m avant, 2.38 m après
+z min après : 0.0000 ; modes incohérents : 0
