@@ -9,6 +9,8 @@ lineup.club_strength), jamais stockée ici.
 
 from __future__ import annotations
 
+from collections import Counter
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
@@ -139,17 +141,32 @@ def list_championnats(path: str | Path) -> list[str]:
 # club" (57 joueurs libres) passe ce seuil mais n'est pas une équipe.
 MIN_PERSO_SQUAD_SIZE = 18
 PERSO_EXCLUDED_CLUB_NAMES = frozenset({"Sans club"})
+# Composition minimale d'un club jouable, par groupe du poste principal (décision du
+# propriétaire du 23/11/2026, ticket donnees-nouveaux-joueurs/04) : les plus petites valeurs
+# observées dans les 174 clubs des 9 championnats. Un club "Autres clubs" gonflé par les seules
+# vedettes d'un top fminside (souvent sans gardien) n'est pas un effectif complet ; il reste
+# dans le classeur pour les sélections nationales.
+MIN_PERSO_GROUP_COUNTS = {"GK": 2, "DEF": 5, "MID": 3, "ATT": 4}
+
+
+def is_playable_squad(groups: Iterable[str]) -> bool:
+    """Effectif complet, donc jouable : `groups` donne le groupe (GK/DEF/MID/ATT, voir
+    `players.position_group`) du poste principal de chaque joueur."""
+    counts = Counter(groups)
+    return sum(counts.values()) >= MIN_PERSO_SQUAD_SIZE and all(
+        counts[g] >= n for g, n in MIN_PERSO_GROUP_COUNTS.items()
+    )
 
 
 def list_perso_clubs(path: str | Path) -> list[ClubOption]:
     """Vivier de la Compétition Perso : `load_all_clubs` filtré aux clubs
-    réellement jouables (voir MIN_PERSO_SQUAD_SIZE/PERSO_EXCLUDED_CLUB_NAMES
+    réellement jouables (voir is_playable_squad/PERSO_EXCLUDED_CLUB_NAMES
     ci-dessus). Utilisé par l'écran Streamlit ET par l'API -- un seul
     endroit pour ce filtre, pour ne pas le laisser diverger entre les deux."""
     return [
         c
         for c in load_all_clubs(path)
-        if len(c.players) >= MIN_PERSO_SQUAD_SIZE and c.name not in PERSO_EXCLUDED_CLUB_NAMES
+        if is_playable_squad(p.group for p in c.players) and c.name not in PERSO_EXCLUDED_CLUB_NAMES
     ]
 
 

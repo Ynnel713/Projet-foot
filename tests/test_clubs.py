@@ -4,7 +4,9 @@ import pytest
 from ligue1sim.clubs import (
     ClubDataError,
     _parse_valeur_marchande,
+    is_playable_squad,
     list_championnats,
+    list_perso_clubs,
     load_all_clubs,
     load_clubs,
 )
@@ -410,3 +412,24 @@ def test_load_clubs_real_data_valeur_marchande_and_pied_are_populated():
     assert len(with_pied) / len(players) > 0.9
     assert all(v.valeur_marchande >= 0 for v in with_value)
     assert all(p.pied in ("D", "G") for p in with_pied)
+
+
+def test_is_playable_squad_requires_size_and_minimum_composition():
+    """Club jouable (ticket donnees-nouveaux-joueurs/04, décision du 23/11/2026) : 18 joueurs ET
+    au moins 2 GK, 5 DEF, 3 MID, 4 ATT (groupe du poste principal)."""
+    base = ["GK"] * 2 + ["DEF"] * 5 + ["MID"] * 3 + ["ATT"] * 4  # 14 : composition minimale
+    assert is_playable_squad(base + ["MID"] * 4)  # 18, à égalité sur chaque seuil
+    assert not is_playable_squad(base + ["MID"] * 3)  # 17 joueurs
+    for group in ("GK", "DEF", "MID", "ATT"):
+        short = list(base)
+        short.remove(group)
+        filler = "DEF" if group == "MID" else "MID"
+        assert not is_playable_squad(short + [filler] * 5), group  # 18 mais un groupe sous le seuil
+    assert not is_playable_squad(["ATT"] * 30)  # vedettes seules, sans gardien
+
+
+def test_perso_pool_keeps_every_league_club():
+    """Les 174 clubs des 9 championnats satisfont la règle (seuils = minima observés)."""
+    pool = list_perso_clubs(DATA_PATH)
+    assert sum(1 for c in pool if c.championnat != "Autres clubs") == 174
+    assert all(is_playable_squad(p.group for p in c.players) for c in pool)
