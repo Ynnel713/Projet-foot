@@ -54,6 +54,33 @@ def launch_vz(distance_m: float, speed_mps: float, tick_s: float = 0.0) -> float
     return GRAVITY_MPS2 * flight_time_s(distance_m, speed_mps, tick_s) / 2.0
 
 
+def line_crossing_s(distance_m: float, speed_mps: float, tick_s: float) -> float | None:
+    """Instant (s) où le ballon, parti à `speed_mps` et avancé pas à pas comme dans le moteur (`v·dt`, puis freinage
+    `BALL_FRICTION_PER_S`), a parcouru `distance_m`, interpolé dans le pas comme le point de sortie
+    (`restart.exit_point`) ; `None` s'il s'arrête avant (ticket v2-hauteur-ballon/02a2)."""
+    if distance_m <= 0.0:
+        return 0.0
+    q = BALL_FRICTION_PER_S ** tick_s
+    travelled, step, k = 0.0, speed_mps * tick_s, 0
+    while step > 1e-9 and k * tick_s <= MAX_FLIGHT_S:
+        if travelled + step >= distance_m:
+            return (k + (distance_m - travelled) / step) * tick_s
+        travelled, step, k = travelled + step, step * q, k + 1
+    return None
+
+
+def shot_launch_vz(distance_m: float, speed_mps: float, line_height_m: float, tick_s: float) -> float:
+    """Vitesse verticale de départ d'un tir (ticket v2-hauteur-ballon/02a2) : le ballon, frappé du sol, passe la ligne
+    (à `distance_m` sur sa trajectoire) à `line_height_m`, la hauteur qui fixe déjà son issue (visée + pente,
+    `shooting.SHOT_AIM_HEIGHT_M`) : `vz0 = (h + g·t²/2) / t`. Le ballon reste au-dessus du sol jusqu'à la ligne, sans
+    rebond (sa vitesse horizontale, donc l'issue du tir, est inchangée). Hauteur nulle ou négative à la ligne, ou ligne
+    jamais atteinte : tir rasant (`0`), le ballon roule."""
+    t = line_crossing_s(distance_m, speed_mps, tick_s)
+    if t is None or t <= 0.0 or line_height_m <= 0.0:
+        return 0.0
+    return (line_height_m + GRAVITY_MPS2 * t * t / 2.0) / t
+
+
 def step_height(z: float, vz: float, dt: float) -> tuple[float, float, int]:
     """Avance la hauteur de `dt` secondes : chute libre exacte, impact au sol coupé à l'instant exact, rebond
     (`GROUND_RESTITUTION`), puis le ballon roule quand le rebond serait sous `BOUNCE_STOP_M`. Retourne `(z, vz, n)`,

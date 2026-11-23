@@ -40,7 +40,7 @@ from v2engine.cerveau import (BALLON_LIBRE, GOAL_CENTER_Y, OPPONENT_GOAL, RECEVE
 from v2engine.perception_memory import MemoryReading, PerceptionMemory
 from v2engine.scan import ScanTracker
 from v2engine.vision import unseen
-from v2engine.vol import BOUNCE_HORIZONTAL_KEEP, height_at, is_aerial_height, launch_vz, step_height
+from v2engine.vol import BOUNCE_HORIZONTAL_KEEP, height_at, is_aerial_height, launch_vz, shot_launch_vz, step_height
 from v2engine.decision import (DECISION_INTERVAL_S, choose_action, dribble_lost, lane_closed_during_turn,
                                lost_carry_outcome, thinks_one_touch)
 from v2engine.defense import (COUVERTURE, HOLE_DANGER_M, HOLE_FILLED_M, MARQUAGE, PRESSEUR, DefensiveRoles, line_exit,
@@ -442,6 +442,12 @@ def _shank(ball: BallState, shooter: PlayerState, goal: Vec2, now_s: float) -> N
     ball.released_by, ball.receiver, ball.readers, ball.last_pass_team = None, None, {}, shooter.team
 
 
+def _share(start: Vec2, end: Vec2, point: Vec2) -> float:
+    """Part du pas `start` → `end` parcourue en `point` (0 pour un pas nul)."""
+    step = start.distance_to(end)
+    return min(1.0, start.distance_to(point) / step) if step > 1e-9 else 0.0
+
+
 def _keeper_reaches(ball: BallState, flight: ShotFlight, start: Vec2, end: Vec2, dt: float, players: list[PlayerState],
                     now_s: float, shots: list[ShotEvent] | None) -> bool:
     """Arrêt par portée (ticket v2-realisme/05b) : quand le ballon passe au plus près du gardien pendant ce pas, il
@@ -470,7 +476,8 @@ def _keeper_reaches(ball: BallState, flight: ShotFlight, start: Vec2, end: Vec2,
         shots[rank] = replace(shots[rank], keeper_time_s=elapsed, keeper_gap_m=gap,
                               keeper_speed_mps=ball.velocity.length(),  # vitesse au début du pas (réserve A4, 05h)
                               keeper_toward_mps=toward,
-                              post_shot_xg=post_shot_xg(gap, elapsed, toward))  # ticket 06a
+                              post_shot_xg=post_shot_xg(gap, elapsed, toward),  # ticket 06a
+                              keeper_z_m=height_at(ball.z, ball.vz, share * dt))  # hauteur du ballon (02a2)
     profile = flight.keeper_profile or keeper_profile(None, False)
     if gap > keeper_reach_m(elapsed, toward, *profile):
         return False
@@ -517,9 +524,11 @@ def _blocked(ball: BallState, flight: ShotFlight, start: Vec2, end: Vec2, dt: fl
         exit_deg = math.degrees(math.acos(max(-1.0, min(1.0, out.normalized().x * shot.x + out.normalized().y * shot.y))))
         if shots is not None and flight.rank >= 0:
             shots[flight.rank] = replace(shots[flight.rank], outcome="contré", block_x=point.x, block_y=point.y,
-                                         block_exit_deg=exit_deg, post_shot_xg=None)
+                                         block_exit_deg=exit_deg, post_shot_xg=None,
+                                         block_z_m=height_at(ball.z, ball.vz, _share(start, end, point) * dt))  # 02a2
         ball.velocity = out
         ball.position = clamp_to_pitch(point + out.normalized() * CONTROL_RADIUS_M)
+        ball.z, ball.vz, ball.mode = 0.0, 0.0, SOL  # contré : au sol (ticket v2-hauteur-ballon/02a1, point 6)
         ball.shot_flight, ball.shot_wide, ball.rebound = None, False, True
         ball.last_toucher = player.name
         ball.control_ban_until_s[player.name] = now_s + MISS_RETRY_S
@@ -533,7 +542,8 @@ def _keeper_save(ball: BallState, keeper: PlayerState, outcome: str, origin: Vec
                  players: list[PlayerState], now_s: float, at: Vec2) -> None:
     """Suite d'un arrêt (ticket v2-collectif/28b) au point de contact `at` (réserve A2 du 05b) : capté, le gardien a le
     ballon, amené à ce point (ponytail : pas de plongeon animé) ; repoussé, claqué ou relâché (`FUMBLED`, ticket 03b2),
-    le ballon repart de ce point, libre."""
+    le ballon repart de ce point, libre. Le ballon est au sol ensuite (ticket v2-hauteur-ballon/02a1, point 6)."""
+    ball.z, ball.vz, ball.mode = 0.0, 0.0, SOL
     if outcome == HELD:
         keeper.position = clamp_to_pitch(at)
         ball.holder = keeper.name
@@ -632,6 +642,20 @@ def _play_restart(ball: BallState, players: list[PlayerState], now_s: float,
         _loft(ball, taker.position.distance_to(aim), dt)
     else:
         ball.readers = pass_readers(taker.position, ball.velocity, target.position, opponents)
+
+
+def _lift_shot(ball: BallState, flight: ShotFlight, heading: Vec2, goal: Vec2, dt: float) -> None:
+    """Hauteur d'un tir (ticket v2-hauteur-ballon/02a2) : le ballon part du sol avec la vitesse verticale qui lui fait
+    passer la ligne de but à la hauteur qui fixe son issue (visée + pente, lue sur la ligne par `_step_loose_ball`),
+    sans toucher le sol avant ; rasant si cette hauteur est nulle ou négative. Ni l'issue ni la vitesse horizontale ne
+    changent."""
+    to_line = (goal.x - ball.position.x) / heading.x if abs(heading.x) > 1e-9 else -1.0
+    ball.z, ball.vz, ball.mode = 0.0, 0.0, SOL
+    if to_line <= 0.0:
+        return
+    crossing = ball.position + heading * to_line
+    height = SHOT_AIM_HEIGHT_M + flight.origin.distance_to(crossing) * flight.slope
+    ball.vz = shot_launch_vz(to_line, ball.velocity.length(), height, dt)
 
 
 def _loft(ball: BallState, distance_m: float, dt: float) -> None:
@@ -904,6 +928,7 @@ def _execute(ball: BallState, holder: PlayerState, action, players: list[PlayerS
             flight.keeper_at_m = min(max(along, 0.0), to_line)
         ball.shot_flight = flight
         ball.shot_wide = not flight.on_target  # hors du cadre (ticket v2-realisme/03k)
+        _lift_shot(ball, flight, heading, goal, dt)
         ball.last_toucher = ball.released_by = holder.name
         ball.receiver, ball.readers, ball.last_pass_team = None, {}, holder.team
         return None
@@ -982,8 +1007,9 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
         height = SHOT_AIM_HEIGHT_M + origin.distance_to(point) * slope
         between = line == "but" and abs(point.y - GOAL_CENTER_Y) < GOAL_WIDTH_M / 2.0
         scored = between and height < GOAL_HEIGHT_M
-        if shots is not None and rank >= 0:
-            shots[rank] = replace(shots[rank], outcome="but" if scored else OVER if between else WIDE)
+        if shots is not None and rank >= 0:  # hauteur réelle du ballon sur la ligne (ticket v2-hauteur-ballon/02a2)
+            line_z = height_at(ball.z, ball.vz, _share(start, end, point) * dt)
+            shots[rank] = replace(shots[rank], outcome="but" if scored else OVER if between else WIDE, line_z_m=line_z)
         if scored:
             _log(ball, now_s, BUT, team, ball.last_toucher)
             _settle_advantage(ball, fouls)

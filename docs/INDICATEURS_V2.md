@@ -2082,3 +2082,21 @@ Vols (après, 50 matchs) : 17,3 par match ; 25 à 40 m : 10,7 par match, durée 
 
 **Lecture.** Volumes (buts, tirs, passes) dans le bruit. Attendus : les ballons longs rebondissent au-dessus des joueurs (passes longues réussies − 2,9 points) et un ballon touché en l'air ou sur un rebond compte comme un centre pour l'origine du tir. Inattendu : tirs cadrés plus nombreux, moins contrés (aucun lien direct dans le code du tir, qui ne lit pas la hauteur ; effet indirect des situations de tir, ou hasard parmi 2 808 indicateurs dont 166 significatifs, environ 140 attendus) ; à revoir au `02a2` (courbe des tirs) et à la calibration des tirs (`v2-collectif/22c`).
 
+## 72. Hauteur du ballon : courbe des tirs (ticket v2-hauteur-ballon/02a2, 50 matchs appariés, 23/11/2026)
+
+**Mécanisme.** Un tir part du sol avec la vitesse verticale qui lui fait passer la ligne de but à la hauteur qui fixe déjà son issue (visée à 1 m + pente tirée au départ, tickets `v2-collectif/28b` et `v2-realisme/05a`) : `vz0 = (h + g·t²/2) / t`, `t` l'instant de passage sur la ligne avec l'avance pas à pas du moteur (`vol.line_crossing_s`). Le ballon reste au-dessus du sol jusqu'à la ligne, sans rebond : vitesse horizontale et issue inchangées. Hauteur nulle ou négative à la ligne : tir rasant. Arrêté ou contré : ballon au sol. Hauteur tracée sur le tir à la ligne, au passage au gardien et au contre (`ShotEvent.line_z_m`, `keeper_z_m`, `block_z_m`).
+
+**Série** (`.scratch/v2-hauteur-ballon/mesures/02a2-serie.py`, synthèse `02a2-synthese.py` ; avant : code de `90cbbc9`). Scores, tirs (minute, tireur, issue, origine) et piste du ballon en 2D identiques sur 50 matchs sur 50 (258 buts de part et d'autre).
+
+| Hauteur réelle (après, 50 matchs) | Nombre | Médiane | q10 – q90 | Extrêmes | Contrôle |
+|---|---|---|---|---|---|
+| Buts, à la ligne | 256 (+ 2 penalties au sol) | 0,22 m | 0 – 1,90 m | 0 – 2,43 m | 100 % sous 2,44 m ; 115 rasants |
+| Au-dessus, à la ligne | 223 | 3,81 m | 2,66 – 7,13 m | 2,45 – 13,8 m | 100 % au-dessus de 2,44 m |
+| À côté, à la ligne | 316 | 0,91 m | 0 – 5,90 m | 0 – 18,2 m | 115 rasants |
+| Arrêts, au gardien | 324 | 0,15 m | 0 – 1,65 m | max 3,08 m | 2 au-dessus de 2,44 m |
+| Contres | 348 | 0,05 m | 0 – 1,18 m | max 3,90 m | 7 au-dessus de 2,5 m, 16 au-dessus de 1,8 m |
+
+Hauteur jamais négative, mode tracé « aérien » si et seulement si la hauteur dépasse 2,5 m, sur tous les pas.
+
+**Lecture.** Le moteur ne change pas : la hauteur habille l'issue déjà tirée. Cohérence (pente linéaire de l'issue contre courbe réelle) : 7 contres sur 348 (2 %) et 2 arrêts sur 324 touchent un ballon que la courbe place au-dessus de 2,5 m, ou de la barre ; le contre et le gardien ne lisent pas encore la hauteur (ticket `03`). Les tirs les plus hauts (au-dessus jusqu'à 13,8 m, à côté jusqu'à 18 m) viennent de la loi d'écart d'angle du `35b`, gaussienne et sans borne (à revoir à la calibration des tirs, `v2-collectif/22c`). La réserve A1 du `02a1` (tirs cadrés + 5,3 points) n'est pas expliquée ici : ce ticket ne touche pas les issues.
+

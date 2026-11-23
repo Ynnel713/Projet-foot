@@ -1,0 +1,12 @@
+matchs : 50 ; scores identiques 50 ; tirs identiques (minute, tireur, issue, origine) 50 ; piste 2D identique 50
+buts : 258 avant, 258 après
+issues : {'à côté': 316, 'contré': 348, 'capté': 181, 'claqué': 52, 'but': 258, 'au-dessus': 223, 'repoussé': 92, 'dévissé': 39}
+z min sur la piste : 0.0000 ; modes incohérents : 0
+buts, hauteur à la ligne : n=256, min 0.00, q10 0.00, médiane 0.22, q90 1.90, max 2.43 ; sous la barre : 256/256
+au-dessus, hauteur à la ligne : n=223, min 2.45, q10 2.66, médiane 3.81, q90 7.13, max 13.76 ; au-dessus de la barre : 223/223
+à côté, hauteur à la ligne : n=316, min 0.00, q10 0.00, médiane 0.91, q90 5.90, max 18.16 ; rasants : 115
+tirs rasants (hauteur 0 à la ligne) parmi les buts : 115
+tirs sur la ligne sans hauteur relevée : 2 ({'but': 2})
+passage au gardien (tous tirs jugés) : n=588, min 0.00, q10 0.00, médiane 0.00, q90 1.62, max 3.08 ; au-dessus de 2,44 m : 2
+arrêts : n=324, min 0.00, q10 0.00, médiane 0.15, q90 1.65, max 3.08 ; au-dessus de 2,44 m : 2
+contres : n=348, min 0.00, q10 0.00, médiane 0.05, q90 1.18, max 3.90 ; au-dessus de 2,5 m : 7 ; au-dessus de 1,8 m : 16

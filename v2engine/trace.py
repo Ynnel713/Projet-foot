@@ -240,6 +240,11 @@ class ShotEvent:
     xg: float | None = None
     post_shot_xg: float | None = None
     fumbled: bool = False  # arrêt « repoussé » qui était une prise relâchée par le gardien (ticket v2-attributs-restants/03b2)
+    # Hauteur réelle du ballon (m, ticket v2-hauteur-ballon/02a2) sur la ligne (tir non contré ni arrêté), au passage au
+    # gardien et au contre ; `None` si le tir n'y est pas passé.
+    line_z_m: float | None = None
+    keeper_z_m: float | None = None
+    block_z_m: float | None = None
 
 
 @dataclass(frozen=True)
