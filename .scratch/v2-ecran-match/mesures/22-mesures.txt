@@ -1,0 +1,32 @@
+Ticket v2-ecran-match/22 (23/11/2026) : Chromium sans affichage, processeur ralenti 6 fois, build de production, API simulée
+(22-fluidite.js), trace Auxerre - Monaco graine 20261123, lecture x1. ms_par_image : temps par image (TaskDuration, ScriptDuration,
+LayoutDuration, RecalcStyleDuration de Performance.getMetrics).
+
+Répartition par version (10 s) :
+443e8c9 : 59,3 im/s ; tâche 14,4 ms, script 4,9, mise en page 1,9, styles 1,2
+618c78c (EM-04) : 54,9 ; 17,6 ; 5,0 ; 4,4 ; 1,2
+c057086 (EM-07) : 52,3 ; 18,7 ; 4,7 ; 4,5 ; 1,4
+6de4140 (EM-21a) : 51,0 ; 19,2 ; 4,9 ; 4,4 ; 1,4
+2e8f447 (avant ce ticket) : 49,4 ; 20,2 ; 5,4 ; 4,5 ; 1,4
+
+Cause (trace Chromium, invalidationTracking) : depuis l'EM-04 le dessin du terrain a une hauteur en pourcentage (h-full) : chaque
+image, la mise en page repart de la racine du document et tout le SVG est invalidé (« SVG changed » sur environ 100 groupes, 60
+rectangles, 60 textes par mise en page, contre seuls les éléments qui bougent avant). Masquer la zone du terrain : mise en page 0,1 ms.
+Essais : contain: strict sur la case : sans effet ; unités de conteneur (cqw, cqh) : pire (styles 2,6 ms) ; taille fixe ou hauteur
+automatique : mise en page 2,4 ms -> retenu (taille en pixels relue par ResizeObserver).
+Essais écartés après mesure : couronne du relief tracée sans masque (path evenodd) : 51-53 contre 53-56 im/s ; ballon sans <pattern>
+(réseau de panneaux découpé par clipPath, traînée tournée à dégradé fixe) : 50-53 contre 55-56 ; contain: layout paint sur le bandeau,
+le bas et les compositions : sans gain.
+
+Mesure finale (30 s, trois lectures alternées) :
+dist:"dist-avant","fps":49.87,"frames":1496,"p95_ms":33.4,"clock":"en lecture","ms_par_image":{"task":19.69,"script":4.96,"layout":4.17,"style":1.36}}
+dist:"dist-final","fps":54.28,"frames":1629,"p95_ms":33.3,"clock":"en lecture","ms_par_image":{"task":17.98,"script":5.33,"layout":2.19,"style":1.56}}
+dist:"dist-avant","fps":50.06,"frames":1503,"p95_ms":33.4,"clock":"en lecture","ms_par_image":{"task":19.6,"script":5.04,"layout":4.24,"style":1.4}}
+dist:"dist-final","fps":54.2,"frames":1627,"p95_ms":33.3,"clock":"en lecture","ms_par_image":{"task":17.98,"script":5.35,"layout":2.17,"style":1.56}}
+dist:"dist-avant","fps":46.17,"frames":1386,"p95_ms":33.4,"clock":"en lecture","ms_par_image":{"task":21.29,"script":5.47,"layout":4.65,"style":1.49}}
+dist:"dist-final","fps":53.61,"frames":1609,"p95_ms":33.3,"clock":"en lecture","ms_par_image":{"task":18.08,"script":5.33,"layout":2.15,"style":1.6}}
+Moyennes : avant 48,7 (49,87 ; 50,06 ; 46,17) ; après 54,0 (54,28 ; 54,20 ; 53,61).
+
+Captures comparées (22-captures-comparees.js, rejeu de développement, avant = HEAD 2e8f447, après = ce ticket) : 1280x800 et
+375x812, t = 4,632 (corner, départ), 4,6483 (corner, sommet à 5,5 m), 6,5055 (ballon à 26 m/s, traînée) : 0 pixel différent sur 6.
+Redimensionnement : 1280x800 -> 1000x700 -> 375x812 -> 1600x900 : le terrain suit sa case (case moins 16 px de marge).

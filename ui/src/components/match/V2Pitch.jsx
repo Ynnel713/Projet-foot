@@ -221,7 +221,7 @@ const PitchGround = memo(function PitchGround() {
 // `speed` (m/s) et `playbackSpeed` (figement du motif), `trail` (longueur de la traînée, m) ; absent = motif figé, sans traînée.
 // `wave` : ondulation du filet sur un but (ticket v2-ecran-match/21b, `utils/v2NetWave.js`) : `{ x, k }`, x = ligne de
 // but du filet concerné dans le repère de la vue ; null le reste du temps.
-export default function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, selected, onSelect, ballLook = null, wave = null, className = "w-full max-w-4xl rounded-lg" }) {
+export default function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, selected, onSelect, ballLook = null, wave = null, className = "w-full max-w-4xl rounded-lg", size = null }) {
   const height = (FLOOR_BOTTOM + MARGIN) * COS;
   // du fond (y petit) vers l'avant : le joueur le plus proche de la caméra recouvre le plus lointain
   const players = [...tick.players]
@@ -247,7 +247,9 @@ export default function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, 
     <svg
       viewBox={`${-MARGIN} ${-MARGIN * COS} ${L + 2 * MARGIN} ${height}`}
       className={className}
-      style={{ aspectRatio: `${L + 2 * MARGIN} / ${height}` }}
+      // `size` (px) : taille fixe donnée par l'écran de match, plutôt que la hauteur en pourcentage de `className`, pour
+      // que la mise en page du dessin ne reparte pas de la racine du document à chaque image (ticket v2-ecran-match/22)
+      style={size ? { width: size.width, height: size.height } : { aspectRatio: `${L + 2 * MARGIN} / ${height}` }}
     >
       <PitchGround />
       {lineups && <Bench lineup={lineups.home} side={-1} color="var(--team-home)" seconds={benchSeconds} warmUpFromS={warmUpFromS} />}

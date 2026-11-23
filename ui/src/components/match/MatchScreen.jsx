@@ -46,6 +46,30 @@ function useColumnDensity(lineup) {
   return [ref, density];
 }
 
+// Taille en pixels de la case du terrain, sans ses marges intérieures (ticket v2-ecran-match/22) : le terrain la reçoit en
+// largeur et hauteur fixes. Avec une hauteur en pourcentage (« h-full »), Chromium ne peut pas isoler la mise en page du
+// dessin : chaque image la refaisait depuis la racine du document (4,5 ms par image, processeur ralenti 6 fois, contre
+// 2,4 ms en taille fixe). Relue quand la case change de taille (fenêtre, tiroir), jamais à chaque image.
+function useBoxSize() {
+  const ref = useRef(null);
+  const [size, setSize] = useState(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    const update = () => {
+      const css = getComputedStyle(el);
+      const width = el.clientWidth - parseFloat(css.paddingLeft) - parseFloat(css.paddingRight);
+      const height = el.clientHeight - parseFloat(css.paddingTop) - parseFloat(css.paddingBottom);
+      setSize((old) => (old && old.width === width && old.height === height ? old : { width, height }));
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  return [ref, size];
+}
+
 // Composition d'un côté : colonne à partir de 960 px, tiroir en dessous (les deux sont dans le DOM, un seul s'affiche).
 // `color` (couleur d'équipe pour l'interface) ne sert plus qu'au liseré de la languette : les cartes lisent les jetons
 // `--team-<side>` elles-mêmes (ticket v2-ecran-match/10a).
@@ -103,6 +127,7 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
   const [reduceMotion] = useState(reducedMotion);
   const { trace, seconds, seen, speed, halfBanner, goalBanner, kickoffBanner, replaying } = playback;
   const [endClosed, setEndClosed] = useState(false); // carte de fin refermée (ticket v2-ecran-match/13)
+  const [terrainRef, terrainSize] = useBoxSize(); // taille fixe du terrain (ticket v2-ecran-match/22)
   const [statsOpen, setStatsOpen] = useState(false); // panneau de statistiques (ticket v2-ecran-match/14b)
   const closeStats = useCallback(() => setStatsOpen(false), []);
   const numbers = useMemo(
@@ -177,7 +202,7 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
         className="relative min-h-0 grid grid-cols-[minmax(0,1fr)] min-[960px]:grid-cols-[200px_minmax(0,1fr)_200px] min-[1280px]:grid-cols-[220px_minmax(0,1fr)_220px]"
       >
         <LineupSide side="home" lineup={lineups?.home} color="var(--team-home-ui)" stats={playerGoals} />
-        <div data-zone="terrain" className="relative min-h-0 min-w-0 flex items-center justify-center p-2">
+        <div ref={terrainRef} data-zone="terrain" className="relative min-h-0 min-w-0 flex items-center justify-center p-2">
           <V2Pitch
             tick={view}
             seconds={seconds}
@@ -189,6 +214,7 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
             ballLook={ballLook}
             wave={wave}
             className="w-full h-full"
+            size={terrainSize}
           />
           {/* états du match (ticket v2-ecran-match/13) : bandeaux sans pointeur, carte de fin refermable */}
           {kickoffBanner && !halfBanner && <TopBanner kind="coup-envoi">COUP D'ENVOI</TopBanner>}
