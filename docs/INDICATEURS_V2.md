@@ -2215,3 +2215,11 @@ Interceptions : pas d'indicateur direct dans le banc ; pertes de balle et grosse
 158 indicateurs significatifs sur 2 834 (environ 142 attendus par hasard).
 
 **Lecture.** Le premier désigné change rapidement dans 7,4 % des désignations au lieu de 11,9 % (repère du ballon libre au 11k : 21 %). Les changements restants relevés sur 2 matchs viennent d'un premier qui n'est plus à temps ou d'un coéquipier nettement plus tôt (0,8 à 2,8 s) : remplacements voulus. Désignations, part à deux et premier à temps sont comptés à chaque changement (`trace.AerialRecord`) : les échanges supprimés étaient des relevés à deux joueurs, tous deux à temps ; leur disparition baisse ces parts sans que l'équipe envoie moins de joueurs. Le jeu aérien (têtes, centres, longs ballons, ballon libre) et le résultat (buts, tirs, possession) restent dans le bruit ; la hausse du premier contrôle du corps après un centre (+ 4 points, sur environ 130 centres par série) est à la limite et isolée.
+
+## 78. Sélection transitive des désignés sur un ballon aérien (ticket v2-realisme/15a3, 50 matchs appariés, 24/11/2026)
+
+**Mécanisme.** Les places de premier puis de second sont attribuées une par une (`jeu_aerien.fill_places`) : le titulaire (plus ancien désigné encore candidat) garde la place sauf si un coéquipier le déplace selon la règle double du `15a2` ; le mieux classé hors maintien parmi ceux qui le déplacent la prend. Avant : tri par comparaison deux à deux, non transitif avec un désigné et deux nouveaux (réserve A1 du `15a2`), choix dépendant de l'ordre de la liste des joueurs. Aucune constante.
+
+**Série** (`scripts.bench_series 50 --processus 4`, avant : série retenue du `15a2`, code identique à `a4cfe9a` ; comparaison `.scratch/v2-realisme/mesures/15a3-comparaison.txt`) : aucun écart significatif sur 2 884 indicateurs. Désignations par équipe 31,64 → 31,61 (− 0,03 [− 0,06 ; + 0,003], environ 3 relevés sur la série) ; changements rapides du premier 7,4 → 7,2 % (− 0,2 point [− 0,4 ; + 0,01]) ; buts, tirs, centres, têtes, ballon libre, contacts : identiques.
+
+**Lecture.** Les configurations en cycle existent en match mais sont rares et brèves : la correction supprime la dépendance à l'ordre des joueurs sans effet mesurable sur le jeu.

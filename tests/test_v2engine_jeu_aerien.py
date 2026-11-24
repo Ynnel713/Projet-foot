@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from itertools import permutations
 
 import v2engine.match as match
 import v2engine.occasion as occasion
@@ -11,7 +12,8 @@ from v2engine.ball_state import BallState
 from v2engine.cerveau import BALLON_LIBRE, RECEVEUR, decide, interpret, perceive
 from v2engine.geometry import Vec2
 from v2engine.jeu_aerien import (AERIAL_ATTACKERS, ATTACKER_HOLD_S, BALLON_AERIEN, HORIZON_S, SECOND_ATTACKER_GAP_S,
-                                 STEP_S, TOUCH_M, ball_path, contact_point, is_aerial_ball, select_attackers)
+                                 STEP_S, TOUCH_M, AerialAttacker, ball_path, contact_point, fill_places,
+                                 is_aerial_ball, select_attackers)
 from v2engine.movement import PlayerState
 from v2engine.trace import AerialRecord
 from v2engine.vol import height_at, launch_vz
@@ -141,6 +143,20 @@ def test_the_first_keeps_his_priority_over_the_second_unless_the_second_is_clear
         chosen = select_attackers(ball, [held, second], previous)
         assert set(chosen) == {"h1", "h2"}
         assert (chosen["h1"].rank == 0) is kept
+
+
+def test_places_do_not_depend_on_the_order_of_the_players() -> None:
+    # ticket 15a3 (réserve A1 du 15a2) : S premier désigné (contact 1,0 s, arrivée 1,0 s) ; J1 nouveau touche 0,1 s plus
+    # tôt mais n'arrive que 0,2 s avant : il ne déplace pas S ; J2 nouveau touche au même instant et arrive 0,5 s avant :
+    # il déplace S. Classés deux à deux, J1 avant J2, S avant J1, J2 avant S : le choix dépendait de l'ordre des joueurs.
+    def entry(name: str, contact_s: float, arrival_s: float) -> tuple[str, AerialAttacker]:
+        return name, AerialAttacker("home", Vec2(60.0, 34.0), contact_s, True, 0, arrival_s)
+
+    entries = [entry("S", 1.0, 1.0), entry("J1", 0.9, 0.8), entry("J2", 1.0, 0.5)]
+    results = {tuple(n for n, _ in fill_places(list(order), {"S": 0}, None)) for order in permutations(entries)}
+    assert results == {("J2", "S")}  # J2 prend la première place, S garde la seconde face à J1
+    # sans désigné, le classement hors maintien : J1 (contact le plus tôt), puis J2
+    assert {tuple(n for n, _ in fill_places(list(order), {}, None)) for order in permutations(entries)} == {("J1", "J2")}
 
 
 def test_the_intended_receiver_is_always_one_of_his_team() -> None:

@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, replace
-from functools import cmp_to_key
 
 from v2engine.atteinte import reach_m
 from v2engine.ball_state import BallState
@@ -98,27 +97,48 @@ def contact_point(player: PlayerState,
     return None if late is None else (late[1], late[2], False, late[1])
 
 
-def _compare(x: tuple[str, AerialAttacker], y: tuple[str, AerialAttacker], seniority: dict[str, int],
-             receiver: str | None) -> int:
-    """Ordre de deux coéquipiers (négatif : `x` d'abord). Receveur visé d'abord, puis à temps avant en retard ; entre deux
-    joueurs de même seniorité, instant du contact (arrondi : celui d'un joueur à temps ne dépend que de sa portée), puis
-    arrivée, puis nom. Règle double du maintien (ticket 15a2, choisie par le propriétaire le 24/11/2026) : le plus
-    ancien (premier désigné, puis second déjà désigné) garde la priorité sauf si l'autre touche le ballon plus de
-    `ATTACKER_HOLD_S` avant lui, ou le touche au plus tard au même instant et arrive plus de `ATTACKER_HOLD_S` avant lui.
-    Sans elle, un coéquipier qui touche un pas de 0,1 s plus tôt passait devant, et le premier et le second qui
-    touchent au même instant permutaient au gré de petites variations des temps d'arrivée."""
-    (nx, ax), (ny, ay) = x, y
-    head_x, head_y = (nx != receiver, not ax.on_time), (ny != receiver, not ay.on_time)
-    if head_x != head_y:
-        return -1 if head_x < head_y else 1
-    if seniority[nx] == seniority[ny]:
-        kx, ky = (round(ax.contact_s, 6), ax.arrival_s, nx), (round(ay.contact_s, 6), ay.arrival_s, ny)
-        return -1 if kx < ky else (1 if kx > ky else 0)
-    senior, junior, sign = (ax, ay, -1) if seniority[nx] > seniority[ny] else (ay, ax, 1)
-    junior_c, senior_c = round(junior.contact_s, 6), round(senior.contact_s, 6)
-    displaced = (junior_c < round(senior.contact_s - ATTACKER_HOLD_S, 6)
-                 or (junior_c <= senior_c and junior.arrival_s < senior.arrival_s - ATTACKER_HOLD_S))
-    return -sign if displaced else sign
+def _neutral_key(entry: tuple[str, AerialAttacker], receiver: str | None) -> tuple:
+    """Clé hors maintien : receveur visé d'abord, puis à temps avant en retard, instant du contact (arrondi : celui d'un
+    joueur à temps ne dépend que de sa portée), arrivée, nom."""
+    name, a = entry
+    return name != receiver, not a.on_time, round(a.contact_s, 6), a.arrival_s, name
+
+
+def _displaces(challenger: tuple[str, AerialAttacker], holder: tuple[str, AerialAttacker],
+               receiver: str | None) -> bool:
+    """Règle double du maintien (ticket 15a2, choisie par le propriétaire le 24/11/2026) : `challenger` prend la place
+    de `holder` s'il passe avant lui sur le receveur visé ou le fait d'être à temps ; à égalité sur ces deux points, s'il
+    touche le ballon plus de `ATTACKER_HOLD_S` avant lui, ou le touche au plus tard au même instant et arrive plus de
+    `ATTACKER_HOLD_S` avant lui."""
+    head_c, head_h = _neutral_key(challenger, receiver)[:2], _neutral_key(holder, receiver)[:2]
+    if head_c != head_h:
+        return head_c < head_h
+    c, h = challenger[1], holder[1]
+    c_contact, h_contact = round(c.contact_s, 6), round(h.contact_s, 6)
+    return (c_contact < round(h.contact_s - ATTACKER_HOLD_S, 6)
+            or (c_contact <= h_contact and c.arrival_s < h.arrival_s - ATTACKER_HOLD_S))
+
+
+def fill_places(candidates: list[tuple[str, AerialAttacker]], previous_rank: dict[str, int],
+                receiver: str | None) -> list[tuple[str, AerialAttacker]]:
+    """Joueurs d'une équipe pour les places de premier puis de second (au plus `AERIAL_ATTACKERS`), place par place
+    (ticket 15a3) : le titulaire, plus ancien désigné encore candidat (premier du pas précédent, puis second, de rang
+    `previous_rank`), garde la place sauf si un coéquipier le déplace (`_displaces`) ; le mieux classé hors maintien
+    (`_neutral_key`) parmi ceux qui le déplacent la prend alors. Sans titulaire, le mieux classé hors maintien. Le
+    résultat ne dépend pas de l'ordre de `candidates` (un classement deux à deux n'était pas transitif à trois joueurs,
+    réserve A1 du 15a2)."""
+    remaining = sorted(candidates, key=lambda e: _neutral_key(e, receiver))
+    places: list[tuple[str, AerialAttacker]] = []
+    while remaining and len(places) < AERIAL_ATTACKERS:
+        seniors = sorted((e for e in remaining if e[0] in previous_rank), key=lambda e: previous_rank[e[0]])
+        if seniors:
+            holder = seniors[0]
+            winner = next((e for e in remaining if e is not holder and _displaces(e, holder, receiver)), holder)
+        else:
+            winner = remaining[0]
+        places.append(winner)
+        remaining = [e for e in remaining if e is not winner]
+    return places
 
 
 def select_attackers(ball: BallState, players: list[PlayerState],
@@ -126,7 +146,7 @@ def select_attackers(ball: BallState, players: list[PlayerState],
     """Joueurs désignés de chaque équipe sur un ballon aérien (vide sinon), par nom. Classement : à temps avant en
     retard, puis instant du contact (le plus grand ou le meilleur sauteur touche plus tôt un ballon qui descend), puis
     arrivée au point ; un désigné du pas précédent (`previous`) garde sa place, et le premier sa priorité sur le second,
-    selon la règle double du maintien (`_compare`, ticket 15a2). Le receveur visé est toujours retenu ; le second n'y va
+    selon la règle double du maintien (`fill_places`, tickets 15a2 et 15a3). Le receveur visé est toujours retenu ; le second n'y va
     que s'il arrive au plus `SECOND_ATTACKER_GAP_S` après le premier de son équipe."""
     if not is_aerial_ball(ball):
         return {}
@@ -145,15 +165,9 @@ def select_attackers(ball: BallState, players: list[PlayerState],
                 continue
             contact_s, point, on_time, arrival_s = found if found is not None else (math.inf, p.position, False, math.inf)
             candidates.append((p.name, AerialAttacker(team, point, contact_s, on_time, 0, arrival_s)))
-        # seniorité : premier désigné du pas précédent, puis second, puis les autres
-        seniority = {name: (2 - previous[name].rank if name in previous else 0) for name, _ in candidates}
-
-        def order(x: tuple[str, AerialAttacker], y: tuple[str, AerialAttacker]) -> int:
-            return _compare(x, y, seniority, ball.receiver)
-
-        options = sorted(candidates, key=cmp_to_key(order))
-        first_arrival_s = min((a.arrival_s for _, a in options), default=math.inf)
-        for name, attacker in options[:AERIAL_ATTACKERS]:
+        previous_rank = {name: previous[name].rank for name, _ in candidates if name in previous}
+        first_arrival_s = min((a.arrival_s for _, a in candidates), default=math.inf)
+        for name, attacker in fill_places(candidates, previous_rank, ball.receiver):
             rank = sum(1 for a in chosen.values() if a.team == team)
             # le second déjà en route garde aussi l'avantage du maintien : sans lui, il partirait et s'arrêterait au gré
             # des petites variations des temps d'arrivée
