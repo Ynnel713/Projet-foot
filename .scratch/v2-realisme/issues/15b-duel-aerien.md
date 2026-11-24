@@ -14,7 +14,7 @@
 
 **Bloque :** 15c, 15f.
 
-**Status:** à faire (constantes à proposer avant le code)
+**Status:** découpé (chapeau, 24/11/2026) en `15b1` (duel loyal et retombée), `15b2` (fautes du duel aérien), `15b3` (jeu dangereux, pied haut) ; découpe et constantes validées par le propriétaire le 24/11/2026 (« oui je valide »)
 
 ## Estimation
 
@@ -46,3 +46,4 @@ Temps machine, non compté : suite complète (environ 40 min).
 ## Comments
 
 - 23/11/2026 (réserve A1 du `v2-attributs-restants/03c1`) : une fois le duel aérien livré, refaire la mesure de la part des longs ballons du gardien gardés par son équipe selon Kicking (séries forcées à 40 et 80, `.scratch/v2-attributs-restants/mesures/03c-serie.py`) ; sans duel, 85 % quelle que soit la précision.
+- 24/11/2026 : périmètre élargi par le propriétaire (faute de celui qui ne saute pas et fait la bascule, charge sans jouer le ballon, jeu à l'épaule, déséquilibre à la retombée, toute situation de ces duels). Découpe validée le même jour : `15b1`, `15b2`, `15b3`. Renvoyés : ne pas sauter par crainte du contact (Bravery, `17b`) ; tête contre tête (blessures, `v2-attributs-restants/09b`) ; charge sur le gardien (`v2-attributs-restants/03a`) ; tirage de maillot sur corner (`16b`) ; ballon dévié par le duel (`15e`, `05d`) ; main dans le duel (aucun système de main : ticket à créer si voulu). Chiffres trouvés : StatsBomb HOPS (la taille explique 22 % de la variation de la capacité aérienne) ; Kim et Kim 2025 (taux brut trompeur sans la taille de l'adversaire) ; Stats Perform (114 063 duels : 31 % aériens loyaux, 19,9 % de fautes, tous duels confondus).

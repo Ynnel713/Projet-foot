@@ -41,7 +41,9 @@ from v2engine.cerveau import (BALLON_LIBRE, GOAL_CENTER_Y, OPPONENT_GOAL, RECEVE
 from v2engine.perception_memory import MemoryReading, PerceptionMemory
 from v2engine.scan import ScanTracker
 from v2engine.vision import unseen
-from v2engine.atteinte import body_part, height_of, reach_m
+from v2engine.atteinte import TETE, body_part, height_of, reach_m
+from v2engine.duel_aerien import AerialDuelResult, LANDING_S, jumped
+from v2engine.duel_aerien import resolve as resolve_aerial_duel, rival as aerial_rival
 from v2engine.vol import BOUNCE_HORIZONTAL_KEEP, height_at, is_aerial_height, launch_vz, shot_launch_vz, step_height
 from v2engine.decision import (DECISION_INTERVAL_S, choose_action, dribble_lost, lane_closed_during_turn,
                                lost_carry_outcome, thinks_one_touch)
@@ -63,7 +65,7 @@ from v2engine.shooting import (BLOCK_CHANCE, BLOCK_WIDTH_M, FLYING, FUMBLED, HEL
 from v2engine.situation import SituationTracker
 from v2engine.transition import TransitionPlay
 from v2engine.trace import (BallSnapshot, DecisionRecord, FoulEvent, MatchTrace, OffsideEvent, PlayerSnapshot, ShotEvent,
-                            AerialRecord, DepthCoverRecord, LineExitRecord, PressRecord, ReceptionEvent, RestartEvent, SituationRecord)
+                            AerialDuelRecord, AerialRecord, DepthCoverRecord, LineExitRecord, PressRecord, ReceptionEvent, RestartEvent, SituationRecord)
 from v2engine.reception import DOS_AU_JEU, blind_reception, facing_to_goal_deg, open_facing, reception_type
 
 # But adverse d'une équipe, par convention de ce moteur (voir `formation.initial_positions`,
@@ -683,7 +685,8 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                restarts: list[RestartEvent] | None = None, fouls: list[FoulEvent] | None = None,
                shots: list[ShotEvent] | None = None,
                receptions: list[ReceptionEvent] | None = None,
-               memory: PerceptionMemory | None = None) -> str | None:
+               memory: PerceptionMemory | None = None,
+               aerial_duels: list[AerialDuelRecord] | None = None) -> str | None:
     """Avance le ballon d'un tick (mutation en place) : si un joueur le contrôle déjà, un
     adversaire à portée directe peut d'abord tenter un tacle (Phase 3, Tackling/Strength/
     Balance/Aggression ; au plus un par confrontation, v2-socle/03) ; sinon, après son temps de réception (`possession.reception_delay_s`, v2-socle/06)
@@ -834,7 +837,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
         return _execute(ball, holder, action, players, rivals, goal, keeper, now_s, set_piece, fouls, shots,
                         lost=action.kind == "dribble" and dribble_lost(holder, rivals), memory=memory, dt=dt)
     return _step_loose_ball(ball, dt, players, now_s, decisions, offsides, modes, restarts, fouls, shots, receptions,
-                            memory)
+                            memory, aerial_duels)
 
 
 def _record_decision(decisions: list[DecisionRecord] | None, memory: PerceptionMemory | None, holder: PlayerState,
@@ -986,7 +989,8 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
                      decisions: list[DecisionRecord] | None, offsides: list[OffsideEvent] | None,
                      modes: dict[str, str] | None, restarts: list[RestartEvent] | None, fouls: list[FoulEvent] | None,
                      shots: list[ShotEvent] | None, receptions: list[ReceptionEvent] | None,
-                     memory: PerceptionMemory | None = None) -> str | None:
+                     memory: PerceptionMemory | None = None,
+                     aerial_duels: list[AerialDuelRecord] | None = None) -> str | None:
     """Ballon sans porteur : vol, contacts, sorties, buts (suite de `_step_ball`)."""
     ball.engaged_holder = None  # ballon libre : les confrontations en cours sont finies (v2-socle/03)
     if ball.shot_for is not None:
@@ -1089,6 +1093,20 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
             _log(ball, now_s, HORS_JEU, player.team, player.name)
             _award_offside_free_kick(ball, player, players, now_s)
             return None
+        z_contact = height_at(z_start, vz_start, entry * dt)
+        duel = None
+        if aerial and part == TETE:  # duel aérien loyal (ticket v2-realisme/15b1)
+            contester = aerial_rival(player, players, z_contact, lambda p: _cannot_contest(p, ball, now_s))
+            if contester is not None:
+                duel = resolve_aerial_duel(player, contester)
+                if aerial_duels is not None:
+                    aerial_duels.append(AerialDuelRecord(
+                        minute=now_s / 60.0, winner=duel.winner.name, loser=duel.loser.name, team=duel.winner.team,
+                        winner_height_m=duel.winner.height_m, loser_height_m=duel.loser.height_m,
+                        probability=duel.probability, ball_z_m=z_contact, first=player.name, x=player.position.x,
+                        y=player.position.y))
+                player = duel.winner
+                part = body_part(player, z_contact)
         last = ball.log.last_event() if ball.log is not None else None
         if last is not None and last.kind in _LOST_BY and last.team != player.team:  # perte de balle (ticket 19b)
             _log(ball, now_s, PERTE, last.team, last.player, _LOST_BY[last.kind], player.name)
@@ -1122,7 +1140,7 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
                     memory_error_mean_m=seen_back.error_mean_m, memory_error_max_m=seen_back.error_max_m,
                     oriented=oriented, first_time=first_time, ball_speed_mps=ball.velocity.length(), blind=blind,
                     facing_run=player.facing_run, x=player.position.x, y=player.position.y,  # 07g, 10d
-                    ball_z_m=height_at(z_start, vz_start, entry * dt), body_part=part))  # 03a
+                    ball_z_m=z_contact, body_part=part))  # 03a
             # ballon en main (ticket 03c2) : le gardien le prend dans sa surface, et il ne vient pas de son équipe
             # (règle de la passe en retrait ; ponytail : un ballon de son équipe touché par un adversaire compte de son équipe)
             player.in_hands = player.poste == "GK" and ball.last_pass_team != player.team \
@@ -1153,8 +1171,35 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
             ball.z, ball.vz = z_touch, min(0.0, vz_touch)
             ball.mode = AERIEN if is_aerial_height(ball.z) else SOL
             ball.control_ban_until_s[player.name] = now_s + MISS_RETRY_S
+        if duel is not None:
+            _land(ball, duel, z_contact, now_s)
         break
     return None
+
+
+def _cannot_contest(player: PlayerState, ball: BallState, now_s: float) -> bool:
+    """Adversaire qui ne peut pas disputer le ballon aérien (ticket v2-realisme/15b1), pour les mêmes raisons qu'il ne
+    le toucherait pas : passeur du ballon, écarté de l'action, contrôle raté, déséquilibré, signalé hors-jeu à la passe
+    (il ne joue pas ce ballon, ticket 15a)."""
+    return (player.name == ball.released_by or player.name in ball.offside_watch
+            or now_s < ball.offside_out_until.get(player.name, 0.0)
+            or now_s < ball.control_ban_until_s.get(player.name, 0.0)
+            or now_s < ball.unsettled_until_s.get(player.name, 0.0))
+
+
+def _land(ball: BallState, duel: AerialDuelResult, z: float, now_s: float) -> None:
+    """Après un duel aérien (ticket v2-realisme/15b1) : le perdant, et tout joueur qui a sauté (ballon au-dessus de sa
+    taille), ne peut pas agir pendant `LANDING_S` (porteur : sa décision est repoussée d'autant) ; le perdant du
+    contact (Strength, à égalité les deux) perd en plus le contact (12c, Balance : vitesse et délai)."""
+    until = now_s + LANDING_S
+    for p in (duel.winner, duel.loser):
+        if p is duel.loser or jumped(p, z):
+            if ball.holder == p.name:
+                ball.next_decision_s = max(ball.next_decision_s, until)
+            else:
+                ball.unsettled_until_s[p.name] = max(ball.unsettled_until_s.get(p.name, 0.0), until)
+    for p in duel.contact_loser:
+        _unsettle(p, ball, now_s)
 
 
 def _orient(player: PlayerState, ball_velocity: Vec2, oriented: bool) -> None:
@@ -1470,7 +1515,7 @@ def simulate_match(
         memory.update(players, i * tick_seconds, scanning)
         scoring_team = _step_ball(ball, tick_seconds, players, i * tick_seconds, trace.decisions, trace.offsides,
                                   transition.mode, trace.restarts, trace.fouls,
-                                  trace.shots, trace.receptions, memory)
+                                  trace.shots, trace.receptions, memory, trace.aerial_duels)
         for p in players:  # il n'a plus le ballon : plus en main (ticket v2-attributs-restants/03c2)
             if p.in_hands and ball.holder != p.name:
                 p.in_hands = False

@@ -81,9 +81,10 @@ TRANSITION = {
     "Handling": ("22/11/2026", _REST),
     "Rushing Out (Tendency)": ("22/11/2026", _REST),
     "Eccentricity": ("22/11/2026", _REST),
-    # Jumping Reach : détente, atteinte du ballon en l'air (ticket v2-hauteur-ballon/03a) ; second contexte, le duel
-    # aérien du ticket v2-realisme/15b (même hauteur atteinte, sans bonus en plus)
-    "Jumping Reach": ("23/11/2026", "v2-realisme/15b"),
+    # Jumping Reach : détente, atteinte du ballon en l'air (ticket v2-hauteur-ballon/03a), réutilisée telle quelle par le
+    # duel aérien (ticket v2-realisme/15b1, capacité physique R5, pas un contexte du registre) ; second contexte du
+    # registre à trouver (24/11/2026)
+    "Jumping Reach": ("23/11/2026", _REST),
     # Crossing : précision et dosage du centre (ticket v2-attributs-restants/01) ; second contexte, centres variés (11)
     "Crossing": ("23/11/2026", "v2-attributs-restants/11"),
     **{attribute: ("17/11/2026", _REST) for attribute in (

@@ -1,0 +1,100 @@
+"""Duel aérien loyal et retombée (ticket v2-realisme/15b1) : quand le ballon arrive à la tête d'un joueur et qu'un
+adversaire tout proche peut aussi l'atteindre, les deux se disputent le ballon. Chacun a une hauteur effective : sa
+taille plus sa détente (Jumping Reach, `atteinte.jump_m`, entière avec élan, réduite sans), plus ou moins son placement
+au contact (Strength, part du contact du ticket 11b, `duel.contact_share`). Le gagnant est tiré sur une courbe en S de
+l'écart des hauteurs effectives, jamais sûr. Les fautes du duel sont le ticket 15b2, le jeu dangereux le 15b3.
+
+Constantes validées par le propriétaire le 24/11/2026 (« oui je valide ») :
+- `DUEL_RADIUS_M` : un adversaire à moins de 1,0 m (centre à centre) du joueur que le ballon atteint ;
+- `RUN_UP_MPS`, `STANDING_JUMP_SHARE` : détente entière avec élan (3 m/s ou plus), 85 % sans (non trouvé : ordre de
+  grandeur) ;
+- `PLACEMENT_M` : placement au contact, de - 6 cm (part du contact 0,25) à + 6 cm (0,75), linéaire ;
+- `DUEL_SCALE_M`, `DUEL_MIN`, `DUEL_MAX` : courbe en S d'échelle 0,18 m, bornée de 10 à 90 % ; repères : 1,95 m
+  contre 1,70 m, autres notes égales, 80 % ; 10 cm d'écart, 64 % ; 1,70 m (Jumping Reach 99) contre 1,95 m (50), 36 % ;
+- `LANDING_S` : un joueur qui a sauté (ballon au-dessus de sa taille) ne peut pas agir pendant 0,2 s (non trouvé).
+Chiffres réels : StatsBomb (HOPS) : la taille explique 22 % de la variation de la capacité aérienne ; avantage chiffré
+en pourcentage de duels gagnés : non trouvé.
+
+Pas de double comptage (`docs/CARTE_ATTRIBUTS_V2.md`) : la hauteur atteinte est celle de l'atteinte (ticket
+v2-hauteur-ballon/03a), sans bonus ; Strength n'entre que par la part du contact du 11b ; Balance joue après le contact
+(12c, dans `match`)."""
+
+from __future__ import annotations
+
+import math
+from dataclasses import dataclass
+
+from v2engine.atteinte import jump_m, reach_m, uses_hands
+from v2engine.duel import contact_share
+from v2engine.flux import DUEL
+from v2engine.movement import PlayerState
+
+DUEL_RADIUS_M = 1.0
+RUN_UP_MPS = 3.0
+STANDING_JUMP_SHARE = 0.85
+PLACEMENT_M = 0.06
+DUEL_SCALE_M = 0.18
+DUEL_MIN, DUEL_MAX = 0.10, 0.90
+LANDING_S = 0.2
+
+_SHARE_SPAN = 0.25  # part du contact de 0,25 à 0,75 (`duel._CONTACT_SHARE_AMPLITUDE`)
+
+
+def has_run_up(player: PlayerState) -> bool:
+    """Il saute avec élan : il court à `RUN_UP_MPS` ou plus."""
+    return math.hypot(player.velocity.x, player.velocity.y) >= RUN_UP_MPS
+
+
+def effective_height_m(player: PlayerState, share: float) -> float:
+    """Hauteur effective dans le duel : taille + détente (réduite sans élan) + placement au contact, `share` étant la
+    part du contact que `player` gagne (0,25 à 0,75)."""
+    jump = jump_m(player) * (1.0 if has_run_up(player) else STANDING_JUMP_SHARE)
+    placement = PLACEMENT_M * max(-1.0, min(1.0, (share - 0.5) / _SHARE_SPAN))
+    return player.height_m + jump + placement
+
+
+def win_probability(a: PlayerState, b: PlayerState) -> float:
+    """Chance que `a` gagne le duel aérien face à `b` : courbe en S de l'écart des hauteurs effectives, bornée à
+    [`DUEL_MIN`, `DUEL_MAX`]. Symétrique : `win_probability(b, a) = 1 - win_probability(a, b)`."""
+    share = contact_share(a, b)
+    gap = effective_height_m(a, share) - effective_height_m(b, 1.0 - share)
+    return min(DUEL_MAX, max(DUEL_MIN, 1.0 / (1.0 + math.exp(-gap / DUEL_SCALE_M))))
+
+
+def rival(player: PlayerState, players: list[PlayerState], z: float, excluded) -> PlayerState | None:
+    """Adversaire qui dispute à `player` le ballon à `z` mètres : joueur de champ adverse à moins de `DUEL_RADIUS_M`,
+    qui atteint lui aussi cette hauteur (`atteinte.reach_m`) et que `excluded(p)` n'écarte pas (déséquilibré, écarté
+    de l'action, hors-jeu à la passe) ; le plus proche, puis par nom. Aucun duel pour un gardien dans sa surface
+    (ballon à la main) : sa sortie aérienne est le ticket v2-attributs-restants/03a."""
+    if uses_hands(player):
+        return None
+    candidates = [p for p in players
+                  if p.team != player.team and p.poste != "GK"
+                  and p.position.distance_to(player.position) <= DUEL_RADIUS_M
+                  and reach_m(p) >= z and not excluded(p)]
+    if not candidates:
+        return None
+    return min(candidates, key=lambda p: (p.position.distance_to(player.position), p.name))
+
+
+@dataclass(frozen=True)
+class AerialDuelResult:
+    winner: PlayerState
+    loser: PlayerState
+    probability: float  # chance qu'avait le gagnant
+    contact_loser: tuple[PlayerState, ...]  # perdant(s) du contact (Strength ; égalité : les deux), pour le 12c
+
+
+def resolve(a: PlayerState, b: PlayerState) -> AerialDuelResult:
+    """Tire le gagnant (flux DUEL) ; rend aussi le ou les perdants du contact au sens du 12c (part au plus 0,5)."""
+    p_a = win_probability(a, b)
+    a_wins = DUEL.random() < p_a
+    share = contact_share(a, b)
+    contact_loser = tuple(p for p, s in ((a, share), (b, 1.0 - share)) if s <= 0.5)
+    return (AerialDuelResult(a, b, p_a, contact_loser) if a_wins
+            else AerialDuelResult(b, a, 1.0 - p_a, contact_loser))
+
+
+def jumped(player: PlayerState, z: float) -> bool:
+    """Il a sauté pour jouer un ballon à `z` mètres : ballon au-dessus de sa taille."""
+    return z > player.height_m

@@ -1209,6 +1209,16 @@ class Collector:
                 self.count["ballon aérien : changements rapides"] += 1
                 self.count["ballon aérien : changements rapides du premier"] += r.players[0] != before[1][0]
 
+    def on_aerial_duels(self, records) -> None:
+        """Duels aériens loyaux (ticket v2-realisme/15b1), `trace.AerialDuelRecord` : nombre, gagnés par le plus grand,
+        le plus petit ou à taille égale (à 1 cm près), gagnés par le joueur que le ballon atteignait le premier."""
+        for r in records:
+            self.count["duels aériens"] += 1
+            gap = round(r.winner_height_m - r.loser_height_m, 2)
+            issue = "plus grand" if gap > 0 else "plus petit" if gap < 0 else "même taille"
+            self.count[f"duels aériens gagnés : {issue}"] += 1
+            self.count["duels aériens gagnés par le premier au ballon"] += r.winner == r.first
+
     def _body_parts(self, receptions) -> None:
         """Partie du corps des contrôles réussis, et du premier contrôle réussi après un centre, avant la passe suivante
         (réserve A1 du ticket v2-attributs-restants/01, mesurée au v2-realisme/15a). Les contacts ratés ne sont pas

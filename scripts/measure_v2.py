@@ -408,6 +408,7 @@ def run(n_matches: int, profile: str | None = None, duration_minutes: float = 90
                 collector.on_decisions(trace.decisions)  # rotation avant la passe ou le tir (ticket v2-realisme/07e)
                 collector.on_receptions(trace.receptions)  # mémoire du receveur (ticket v2-realisme/08b)
                 collector.on_aerial(getattr(trace, "aerial", []))  # désignés sur ballon aérien (ticket v2-realisme/15a)
+                collector.on_aerial_duels(getattr(trace, "aerial_duels", []))  # duels aériens (ticket v2-realisme/15b1)
                 collector.on_scans(trace.scans, trace.receptions)  # scans (ticket v2-realisme/08c)
                 if profile:  # indicateurs cibles par équipe (ticket v2-realisme/24)
                     collector.profile_tallies.append(profile_tally(trace, high_team))
@@ -580,6 +581,13 @@ def report(c: Collector, detail: bool = False) -> dict:
         / max(1, k["ballon aérien : désignations"]),
         "ballon aérien : changements du premier en moins de 1 s (part)":
         k["ballon aérien : changements rapides du premier"] / max(1, k["ballon aérien : désignations"]),
+        # duels aériens loyaux (ticket v2-realisme/15b1) : par match, gagnés par le plus grand (tailles différentes à
+        # 1 cm près), par le joueur que le ballon atteignait le premier
+        "duels aériens par match": k["duels aériens"] / n,
+        "duels aériens gagnés par le plus grand (part, tailles différentes)": k["duels aériens gagnés : plus grand"]
+        / max(1, k["duels aériens gagnés : plus grand"] + k["duels aériens gagnés : plus petit"]),
+        "duels aériens gagnés par le premier au ballon (part)": k["duels aériens gagnés par le premier au ballon"]
+        / max(1, k["duels aériens"]),
         # partie du corps (réserve A1 du ticket v2-attributs-restants/01, mesurée au v2-realisme/15a)
         **{f"contrôles : {part} (part)":
            k[f"contrôles par partie du corps : {part}"]
