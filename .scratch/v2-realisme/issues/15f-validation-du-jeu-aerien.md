@@ -8,7 +8,7 @@
 
 **Attributs :** aucun
 
-**Blocked by:** 15b (Duel aérien : taille, Jumping Reach, Strength au contact); 15c (Qualité de la tête : Heading); 15d (Dégagement défensif de la tête); 15e (Seconds ballons après un duel aérien).
+**Blocked by:** 15b (Duel aérien : taille, Jumping Reach, Strength au contact); 15c (Qualité de la tête : Heading); 15d (Dégagement défensif de la tête); 15e (Seconds ballons après un duel aérien) ; depuis le 24/11/2026 : `31` (attaquer la surface sur centre : sans centres, peu de jeu aérien à valider).
 
 **Bloque :** rien.
 
