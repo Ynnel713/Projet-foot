@@ -408,3 +408,5 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **Fautes du duel aérien (24/11/2026, ticket `v2-realisme/15b2`)** : livré (24/11/2026), validé expert + QC. Le contact d'un duel aérien peut être sifflé : épaule contre épaule (fautif possible : gagnant du contact), par derrière (à plus de 120° du cap de la victime), bascule (adversaire collé qui n'atteint pas le ballon ; sans faute, le sauteur joue) ; chance = 0,10 / 0,50 / 0,80 × faute d'un tacle (Aggression), × prudence de surface ; coup franc immédiat, gravité 20 % jaune, 1 % rouge. 50 matchs appariés : 0,78 faute aérienne par match, fautes 21,02 → 21,06, buts et tirs dans le bruit (`docs/INDICATEURS_V2.md` § 80). Suite : `15b3` (jeu dangereux, pied haut).
 
+**Jeu dangereux, pied haut (24/11/2026, ticket `v2-realisme/15b3`)** : clos sans objet (décision du propriétaire du 24/11/2026). Le pied ne joue pas au-dessus de la hanche et personne ne fait de tête plongeante : sur 2 matchs, aucun ballon joué au pied ou au corps à hauteur de tête d'un adversaire tout proche. À rouvrir avec un futur ticket de volées hautes ou de têtes plongeantes.
+
