@@ -6,6 +6,8 @@
 
 **What to build:** dans l'évaluation des passes, le porteur prolonge l'élan des adversaires qu'il perçoit, avec la même part que pour la conduite (`anticipation_share`, Anticipation, sans courbe nouvelle) : un défenseur lancé vers la ligne la ferme, un défenseur qui sort sur le porteur libère celui qu'il marquait (sa ligne s'ouvre). Le porteur décide sur ce qu'il perçoit et prolonge, jamais sur le futur exact ni sur les tirages à venir (pas de « surhomme omniscient ») ; l'exécution reste physique (`pass_readers`). Lien : troisième homme (`v2-collectif/15b1`, livré), lecture du pressing (`v2-collectif/15b3`), renversement quand un pressing s'emballe d'un côté (`v2-collectif/15d`).
 
+**Ajout du 24/11/2026 (demande du propriétaire du 24/11/2026, éléments sur la technique, point 6 « exploitation par les coéquipiers »).** Cas à couvrir par les scènes : après une élimination par un dribble ou un contrôle orienté (`04g`, `36`), le défenseur suivant sort sur le porteur ; la ligne vers le coéquipier qu'il couvrait s'ouvre, et le porteur qui le prolonge la voit. La mesure en match (passes au joueur libéré après un décalage) est au `39`.
+
 **Attributs :** Anticipation (rôle existant : prolonger l'élan des adversaires, carte) ; Decisions garde l'erreur de perception (existante).
 
 **Blocked by:** rien (dépendances livrées : `v2-collectif/33`, `v2-realisme/08d`). **Bloque :** `v2-realisme/35` (volet de la validation, souple).

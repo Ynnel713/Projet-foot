@@ -6,7 +6,9 @@
 
 **What to build:** l'issue du contrôle devient continue, sur le principe de l'écart gaussien du tir (`v2-collectif/35b`) : distance et direction du ballon après le contact tirées autour de l'intention (pied, ou direction orientée du 31b), avec une dispersion qui croît avec la difficulté (vitesse et angle d'arrivée du ballon, hauteur, type de réception, pression) et décroît avec First Touch (Technique pour les ballons difficiles, rayons de la carte). Le joueur va chercher le ballon là où il est (physique de course existante) ; s'il est trop loin ou qu'un adversaire est plus près, le ballon est libre. Le contrôle raté actuel devient la queue de la distribution, pas un cas à part.
 
-**Hors de ce ticket :** passe à une touche (`v2-collectif/36a`), pied faible (`v2-attributs-restants/04a`), amorti de la poitrine ou de la cuisse (après la hauteur des joueurs, hors périmètre de D-V03).
+**Ajout du 24/11/2026 (demande du propriétaire du 24/11/2026, éléments sur la technique, point 1 « qualité de l'amorti selon le ballon »).** Ballon au sol fort ou tendu : le bon joueur le garde près du pied, le moins bon le voit gicler ; scène ajoutée : à 20 m/s, distance du ballon après contact à First Touch et Technique 99 nettement plus courte qu'à 11 (seuils proposés avec les constantes). Ce ticket règle la **dispersion** autour de l'intention ; la **direction** de la touche orientée (espace, presseur, suite) est au `36`, l'amorti aérien (pied, cuisse, poitrine) au `37`, la prise de balle en course au `38`.
+
+**Hors de ce ticket :** passe à une touche (`v2-collectif/36a`), pied faible (`v2-attributs-restants/04a`), amorti de la poitrine ou de la cuisse (ticket `37` depuis le 24/11/2026 : la hauteur de contact y devient un terme de la difficulté calculée ici, avec la même et unique compensation par Technique).
 
 **Attributs :** First Touch, Technique (rayons existants : la carte doit dire lequel règle la dispersion de quel ballon).
 
@@ -14,7 +16,7 @@
 
 **Blocked by:** 07c, 07d, `v2-collectif/31b` (livrés) ; 04e, 04f (ballon devant le porteur, ballon jouable entre deux touches : à faire, ils posent la notion de ballon à distance du pied que ce ticket réutilise).
 
-**Bloque :** `v2-collectif/36a` (même calcul de l'arrivée du ballon), `v2-collectif/22a`.
+**Bloque :** `v2-collectif/36a` (même calcul de l'arrivée du ballon), `36`, `37`, `38` (ajoutés le 24/11/2026), `v2-collectif/22a`.
 
 **Status:** à faire (constantes à proposer avant le code)
 

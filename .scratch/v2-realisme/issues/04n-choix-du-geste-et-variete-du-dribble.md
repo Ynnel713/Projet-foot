@@ -6,13 +6,15 @@
 
 **What to build:** un seul endroit où le porteur face à un défenseur choisit son geste, dans la monnaie commune de la décision (`decision.py`, ticket 33) : chaque geste ouvert par la situation (distance et orientation du défenseur, espace latéral, vitesse relative, pression, position sur le terrain) reçoit sa valeur (chance de réussite, gain, coût de la perte) ; le porteur prend celui qu'il croit le meilleur, avec l'erreur de perception de Decisions, le goût du risque de Flair (`v2-attributs-contextes/05`) et les gestes préférés en penchants de fréquence (« Knocks Ball Past Opponent », « Tries Tricks », « Cuts Inside », « Likes To Beat Opponent Repeatedly », « Moves Ball To Left/Right Foot Before Dribble Attempt », ticket 05). Puis la **validation de la variété** : répartition des gestes par match, réussite et issue par geste, profils 99 / 11 de Dribbling, Flair et Technique, comparés aux repères réels s'ils sont trouvés (dribbles tentés et réussis par match).
 
+**Ajout du 24/11/2026 (demande du propriétaire du 24/11/2026, éléments sur la technique, point 3 « espace derrière l'adversaire » et « gestion du risque »).** Le gain d'un geste est la valeur de la situation **après** l'élimination, sur ce que le porteur perçoit : couloir ouvert, passe clé, zone de tir, nombre de défenseurs qui couvrent derrière (dribbler vers trois adversaires vaut peu, même réussi). Le geste est toujours comparé à l'option simple (passe, conduite sans duel) dans la même monnaie : le porteur lucide joue simple quand le coût de la perte (`danger.loss_cost`) dépasse le gain. La vulnérabilité du défenseur (`04o`) entre dans la chance de chaque geste. Composure ne joue que la part due à la pression (R3) ; la validation par situation est au `39`.
+
 **Attributs (ADR 0002) :** aucun effet nouveau dans ce ticket : il assemble les contextes des tickets 04g à 04m ; Decisions (perception), Flair (goût du risque), gestes préférés (fréquence).
 
 **Lien avec l'existant :** remplace le « choix du geste » de `v2-attributs-restants/07a` ; à livrer avant la calibration (`v2-collectif/22a`), comme le prévoyait 07a.
 
-**Blocked by:** 04g, 04h, 04i, 04k, 04l, 04m ; `v2-attributs-contextes/05` (Flair) ; `v2-attributs-restants/05a` pour les penchants (05 découpé le 22/11/2026 : la ligne « Conduite et dribble » passe avant la calibration, levée de l'incohérence avec le 05 qui passait après).
+**Blocked by:** 04g, 04h, 04i, 04k, 04l, 04m, 04o (ajouté le 24/11/2026) ; `v2-attributs-contextes/05` (Flair) ; `v2-attributs-restants/05a` pour les penchants (05 découpé le 22/11/2026 : la ligne « Conduite et dribble » passe avant la calibration, levée de l'incohérence avec le 05 qui passait après).
 
-**Bloque :** `v2-collectif/22a` (calibration des volumes).
+**Bloque :** `v2-collectif/22a` (calibration des volumes) ; `39` (ajouté le 24/11/2026).
 
 **Status:** à faire (constantes et chiffres réels à proposer avant le code)
 

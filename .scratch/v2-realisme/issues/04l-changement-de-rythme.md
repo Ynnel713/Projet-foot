@@ -12,7 +12,7 @@
 
 **Lien avec l'existant :** complète le découpage de `v2-attributs-restants/07a`.
 
-**Blocked by:** 04g (contournement), `12a` (freinage selon Agility), `v2-attributs-contextes/01` et `02`.
+**Blocked by:** 04g (contournement), 04o (état du défenseur, ajouté le 24/11/2026), `12a` (freinage selon Agility), `v2-attributs-contextes/01` et `02`.
 
 **Bloque :** 04n.
 

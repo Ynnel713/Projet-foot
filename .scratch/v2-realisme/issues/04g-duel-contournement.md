@@ -6,13 +6,15 @@
 
 **What to build:** Face à un défenseur à portée, le porteur peut tenter de le contourner (passer à côté en accélérant) : réussite par Dribbling contre Tackling du défenseur, avec la vitesse relative et l'espace latéral disponible ; réussi, le défenseur est éliminé pour un temps ; raté, le ballon est perdu selon 04b.
 
+**Ajout du 24/11/2026 (demande du propriétaire du 24/11/2026, éléments sur la technique, point 2 « débordement en un contre un » et point 3 « lecture du défenseur »).** Le contournement se prépare : le porteur peut attaquer le défenseur (conduite droit sur lui) pour le fixer, puis le passer sur l'accélération ; la chance dépend de l'état du défenseur au moment du geste (distance, élan, appuis). Ce ticket pose une version simple de l'état « défenseur éliminé » ; sa lecture (vulnérabilité selon l'élan et la distance) et son état unique de déséquilibre, partagés par tous les gestes, sont généralisés au `04o`. L'intérêt du geste (espace derrière le défenseur, couverture) est au `04n`.
+
 **Attributs :** Dribbling (porteur), Tackling (défenseur)
 
 **Lien avec l'existant :** découpe (validée le 05/11/2026) du ticket `v2-attributs-restants/07a` : contournement.
 
 **Blocked by:** 04a (Conduite : même risque de perte à l'évaluation et à la résolution).
 
-**Bloque :** 04h, 04j, 21c (ajouté le 10/11/2026, audit de la roadmap).
+**Bloque :** 04h, 04j, 04o (ajouté le 24/11/2026), 21c (ajouté le 10/11/2026, audit de la roadmap).
 
 **Status:** à faire (constantes à proposer avant le code)
 

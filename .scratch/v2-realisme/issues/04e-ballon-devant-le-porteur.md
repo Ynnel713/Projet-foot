@@ -6,13 +6,15 @@
 
 **What to build:** Pendant une conduite, le ballon avance devant le porteur par touches : à chaque touche il part à une distance qui dépend de la vitesse et de Dribbling (touche plus courte pour un bon dribbleur), puis le porteur le rejoint. Le ballon a une position propre, visible à l'écran.
 
+**Ajout du 24/11/2026 (demande du propriétaire du 24/11/2026, éléments sur la technique, point 2 « conduite balle au pied à vitesse variable »).** La distance du ballon au pied est une grandeur suivie, pas seulement une longueur de touche : plus longue à pleine vitesse, plus courte quand le porteur ralentit, slalome ou change de direction (le virage lui-même reste à la physique du `12b`, Agility, sans bonus ici). Cette distance est lue ensuite par le ballon jouable entre deux touches (`04f` : la touche trop longue se perd), la protection (`04i` : ballon gardé près du pied), le contrôle orienté (`36` : la touche du contrôle pousse le ballon) et la prise de balle en course (`38`). Scène ajoutée : conduite en slalom entre deux plots à 5 m/s, distance moyenne du ballon au pied plus courte qu'en ligne droite à la même vitesse, et plus courte à Dribbling 99 qu'à 11.
+
 **Hors de ce ticket :** interception entre deux touches (04f).
 
 **Attributs :** Dribbling (longueur de touche)
 
 **Blocked by:** 04d (Vitesse de conduite selon Dribbling et la pression).
 
-**Bloque :** 04f.
+**Bloque :** 04f ; `04i`, `26a`, `36`, `38` (ajoutés le 24/11/2026).
 
 **Status:** à faire (constantes à proposer avant le code)
 

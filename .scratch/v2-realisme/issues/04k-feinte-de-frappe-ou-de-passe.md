@@ -6,15 +6,17 @@
 
 **What to build:** face à un défenseur proche qui couvre l'axe de tir ou une ligne de passe, le porteur peut esquisser une frappe ou une passe. Le défenseur y croit ou non : s'il mord, il se fige ou se décale (contre, jambe tendue) pendant un court instant, que le porteur exploite en conduite (04g, 04h) ; s'il n'y croit pas, le porteur a perdu un temps et le défenseur se rapproche. Le défenseur juge la feinte sur ce qu'il perçoit (mémoire de perception, `08b`). Geste tracé et affiché.
 
+**Ajout du 24/11/2026 (demande du propriétaire du 24/11/2026, éléments sur la technique, point 2 « feinte de corps, de frappe ou de passe »).** Le défenseur qui mord entre dans l'état unique de déséquilibre du `04o` (pas d'état « figé » propre à ce ticket). La feinte de corps sans toucher le ballon (épaule, faire croire à un côté) est rattachée au passement du `04m` ; le gardien trompé par une feinte de frappe est au `03l` (faux appel).
+
 **Attributs (ADR 0002, poids à proposer) :**
 - porteur, contexte « tenter la feinte » (décision) : Flair, Decisions ;
 - porteur, contexte « feinte crédible » (exécution) : Technique, Composure (sous pression, R3) ;
-- défenseur, contexte « ne pas mordre » (perception) : Anticipation, Decisions, Concentration (à venir, `v2-collectif/21`).
+- défenseur, contexte « ne pas mordre » (perception) : Anticipation, Decisions, Concentration (à venir, `v2-collectif/21`) ; depuis le 24/11/2026, c'est le contexte unique « lire le geste du porteur » du `04o`, partagé par tous les gestes (pas de second contexte ici).
 Sans double comptage avec la lecture de passe (`anticipation.pass_readers`) : la feinte est un effet distinct (réagir à un geste simulé, pas à une passe partie).
 
 **Lien avec l'existant :** complète le découpage de `v2-attributs-restants/07a` (« Flair ajoute les gestes risqués »).
 
-**Blocked by:** 04g (contournement), 04h (crochet), `v2-attributs-contextes/01` et `02` (registre des contextes).
+**Blocked by:** 04g (contournement), 04h (crochet), 04o (état du défenseur, ajouté le 24/11/2026), `v2-attributs-contextes/01` et `02` (registre des contextes).
 
 **Bloque :** 04n.
 

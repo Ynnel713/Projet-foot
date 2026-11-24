@@ -6,11 +6,13 @@
 
 **What to build:** Changement de direction brusque face à un défenseur proche : réussite par Dribbling contre le temps de rotation du défenseur (orientation 07a, Agility 07f) ; un crochet réussi crée un écart temporaire.
 
+**Ajout du 24/11/2026 (demande du propriétaire du 24/11/2026, éléments sur la technique, point 2 « crochet » et point 3).** Crochet intérieur ou extérieur, choisi pour faire passer le défenseur dans le vide **et** ouvrir une ligne de passe ou de tir (la valeur du côté vient de ce qu'il ouvre, `04n`). Sa réussite lit la vulnérabilité du défenseur (`04o` : lancé, appuis du mauvais côté, trop près) et le déséquilibre qu'il crée est l'état unique du `04o`, dont la suite passe par la physique (freinage, virage, rotation).
+
 **Attributs :** Dribbling (porteur) ; Agility du défenseur via 07f (pas de nouvel effet)
 
 **Lien avec l'existant :** découpe (validée le 05/11/2026) de `v2-attributs-restants/07a` : crochet.
 
-**Blocked by:** 04g (Duel un contre un : le contournement); 07a (Orientation du corps : état propre et rotation bornée); 07f (Agility : vitesse de rotation du corps).
+**Blocked by:** 04g (Duel un contre un : le contournement); 04o (état du défenseur face au dribble, ajouté le 24/11/2026); 07a (Orientation du corps : état propre et rotation bornée); 07f (Agility : vitesse de rotation du corps).
 
 **Bloque :** rien.
 

@@ -11,6 +11,8 @@
 - **double contact** : déplacement latéral court du ballon qui sort de la portée du tacle.
 Gain plus grand qu'un dribble simple s'il réussit, perte plus probable s'il rate (geste difficile). Gestes tracés et affichés.
 
+**Ajout du 24/11/2026 (demande du propriétaire du 24/11/2026, éléments sur la technique, point 2).** Le passement couvre aussi la feinte de corps sans toucher le ballon (épaule, faire croire à un côté) ; le défenseur trompé entre dans l'état unique de déséquilibre du `04o`.
+
 **Attributs (ADR 0002, poids à proposer) :**
 - contexte « réussir un geste technique » (exécution) : Technique (geste difficile), Dribbling (conduite serrée), Balance (au contact, roulette) ;
 - contexte « tenter un geste technique » (décision) : Flair, Decisions ; « Tries Tricks » en penchant de fréquence (ticket 05), jamais de réussite ;
@@ -18,7 +20,7 @@ Gain plus grand qu'un dribble simple s'il réussit, perte plus probable s'il rat
 
 **Lien avec l'existant :** complète le découpage de `v2-attributs-restants/07a` ; branche le geste préféré « Tries Tricks » (`v2-attributs-restants/05`).
 
-**Blocked by:** 04f (ballon jouable entre deux touches), 04g (contournement), 04h (crochet), 04i (protection), `v2-attributs-contextes/01` et `02`.
+**Blocked by:** 04f (ballon jouable entre deux touches), 04g (contournement), 04h (crochet), 04i (protection), 04o (état du défenseur, ajouté le 24/11/2026), `v2-attributs-contextes/01` et `02`.
 
 **Bloque :** 04n.
 

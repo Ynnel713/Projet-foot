@@ -10,7 +10,7 @@
 
 **Blocked by:** 04e (Le ballon n'est plus collé au porteur).
 
-**Bloque :** rien.
+**Bloque :** `26a`, `38` (ajoutés le 24/11/2026).
 
 **Status:** à faire (constantes à proposer avant le code)
 
