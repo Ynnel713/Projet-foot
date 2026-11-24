@@ -10,7 +10,7 @@
 
 **Lien avec l'existant :** découpe (validée le 05/11/2026) de `v2-coach-et-gestion-de-match/01` : Possession.
 
-**Blocked by:** 13a (Consignes d'équipe : lecture des styles et structure neutre).
+**Blocked by:** 13a (Consignes d'équipe : lecture des styles et structure neutre) ; `v2-realisme/34` (tempo du porteur, mécanisme individuel que la consigne module ; ajouté le 24/11/2026).
 
 **Bloque :** 13i.
 

@@ -10,7 +10,7 @@
 
 **Attributs :** contexte « lecture du pressing » (15b1), sans nouveau poids ; First Touch garde le délai de base (31b, non relu). Constantes à proposer avant le code : part du délai qu'un lecteur peut retrancher, seuil pour jouer tôt, critère pour attendre.
 
-**Blocked by:** 15b1 (livré).
+**Blocked by:** 15b1 (livré). **Bloque :** `v2-realisme/34` (tempo du porteur, qui généralise ce délai hors de la construction sous pressing ; ajouté le 24/11/2026).
 
 **Status:** à faire (constantes à proposer avant le code)
 
