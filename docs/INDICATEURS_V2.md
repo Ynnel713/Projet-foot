@@ -2162,3 +2162,31 @@ Interceptions : pas d'indicateur direct dans le banc ; pertes de balle et grosse
 
 **Lecture.** Les centres restent rares (1,5 par équipe contre 15 à 20 en réalité) : sur un match complet, la zone de centre est atteinte 84 fois, avec un coéquipier dans la surface 7 fois seulement ; les attaquants n'attaquent pas la surface quand l'ailier peut centrer (ticket `v2-realisme/15a`, décision du propriétaire : livrer tel quel). Le centre est gardé une fois sur deux (repère réel 20 à 25 % de centres réussis, définition plus stricte : le receveur visé). Effet de chaîne : chaque option envisagée tire une erreur de perception (`decision.choose_action`), l'option « centre » décale donc les tirages dès sa première apparition et les matchs appariés divergent ; d'où des écarts significatifs sans lien avec le centre (caps, duels d'épaule, place du gardien) et un nombre d'écarts au-dessus du hasard. La baisse des tirs (− 1 par équipe) et des buts (− 0,86, à la limite) n'est expliquée par les centres que pour une petite part : borne de l'expert, 0,2 à 0,4 tir par équipe au plus (1,54 centre, environ 0,19 tir par centre, l'option remplacée ne finissant en tir que 30 % du temps au plus) ; le reste est du hasard (p ≈ 0,01 sur un indicateur déclaré d'avance) ou un mécanisme non identifié, aucun chemin indirect n'ayant été trouvé dans le code. À vérifier au `15a` (rapport entre nombre de centres et variation des tirs) ; si l'écart persiste, série de contrôle avec l'option centre évaluée mais jamais choisie. Part des contrôles de la tête : non mesurée (reportée au `15a`).
 
+## 76. Qui attaque un ballon aérien (ticket v2-realisme/15a, 50 matchs appariés, 23/11/2026)
+
+**Mécanisme.** Tant que le ballon est en l'air (de la frappe jusqu'à ce qu'il roule), chaque équipe envoie au plus deux joueurs de champ au premier point de la trajectoire où chacun est à temps et où le ballon passe à sa portée (taille et détente, `atteinte.reach_m`) ; le receveur visé est toujours l'un des deux de son équipe ; le second n'y va que s'il arrive au plus 1,0 s après le premier ; maintien de 0,3 s. Avant : seul le receveur visé allait au ballon (vers un point calculé au sol), l'équipe adverse gardait ses rôles défensifs, et le plus proche de chaque équipe chassait un ballon aérien sans receveur. Repères réels : non trouvés.
+
+**Série** (`scripts.bench_series 50 --processus 4`, avant : `994d996` ; comparaison `.scratch/v2-realisme/mesures/15a-comparaison.txt`).
+
+| Indicateur | Avant | Après | Écart apparié (IC 95 %) |
+|---|---|---|---|
+| Désignations par équipe et par match | | 34,9 | |
+| Désignations à deux / premier à temps | | 69 % / 92 % | |
+| Changements en moins de 1 s (dont le premier) | | 25 % (12 %) | |
+| Contrôles de la tête (part des contrôles) | 0,47 % | 1,11 % | + 0,65 point [+ 0,53 ; + 0,77] |
+| Premier contrôle après un centre : tête | 30 % | 52 % | + 10,5 points [− 3,0 ; + 24,1] |
+| Premier contrôle après un centre : pied | 62 % | 44 % | − 17,0 points [− 30,4 ; − 3,7] |
+| Centres gardés par l'équipe du centreur | 46,8 % | 34,4 % | − 12,6 points [− 24,5 ; − 0,6] |
+| Centres par équipe | 1,54 | 1,31 | − 0,23 [− 0,55 ; + 0,09] |
+| Passes longues réussies | 69,4 % | 67,6 % | − 2,0 points [− 4,5 ; + 0,5] |
+| Ballon libre : épisodes disputés par match | 537 | 521 | − 16,5 [− 25,8 ; − 7,2] |
+| Ballon libre : pris par l'adversaire | 16,2 % | 14,5 % | − 1,7 point [− 2,4 ; − 1,0] |
+| Contacts francs par match | 968 | 987 | + 19 [+ 4 ; + 34] |
+| Buts par match | 4,32 | 4,66 | + 0,34 [− 0,59 ; + 1,27] |
+| Tirs par équipe | 14,6 | 14,6 | − 0,02 [− 1,09 ; + 1,05] |
+| Tirs nés d'un centre | 2,05 % | 2,19 % | + 0,0 point [− 0,9 ; + 1,0] |
+
+165 indicateurs significatifs sur 2 834 (environ 142 attendus par hasard).
+
+**Lecture.** Les défenseurs attaquent désormais les centres et les longs ballons : plus de contrôles de la tête, un centre gardé une fois sur trois au lieu d'une sur deux (repère réel cité de mémoire au § 75 : 20 à 25 %). Les épisodes de ballon libre baissent : un ballon en l'air n'a plus de chasseur unique (11g) mais deux désignés par équipe, et le ballon libre n'est compté qu'une fois retombé. Les contacts francs augmentent (deux joueurs de chaque équipe au même point de chute). Les changements rapides de désignation viennent surtout du second, qui entre et sort quand les temps d'arrivée bougent ; le premier change dans 12 % des désignations (repère du ballon libre au 11k : 21 %). Réserve A2 du ticket `v2-attributs-restants/01` : la baisse des centres (− 0,23) ne s'accompagne d'aucune variation des tirs ni des buts : pas de série de contrôle. La partie du corps ne compte que les contrôles réussis (les contacts ratés ne sont pas tracés).
+

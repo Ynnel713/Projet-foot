@@ -23,6 +23,7 @@ from v2engine.flux import DEFENSE
 from v2engine.gardien import FACE_A_FACE, GARDIEN, INTERVENTION, PLACEMENT, RELANCE, SORTIE
 from v2engine import gardien
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch
+from v2engine.jeu_aerien import BALLON_AERIEN
 from v2engine.movement import PlayerState
 from v2engine.off_ball import (COUNTER_RUN_DEPTH_M, RUN_INTERVAL_S, SPACE_HOLD_MAX_S, SPACE_REACHED_M,
                                choose_space, depth_run, player_call_delay_s, run_intensity)
@@ -199,6 +200,11 @@ def interpret(player: PlayerState, ball: BallState, seen: Perception, runs_enabl
         return GARDIEN
     if player.name == ball.holder:
         return PORTEUR
+    if ball.aerial_attackers and ball.holder is None:  # ballon aérien (ticket v2-realisme/15a)
+        if seen.is_receiver:
+            return RECEVEUR
+        if player.name in ball.aerial_attackers:
+            return BALLON_AERIEN
     if runs_enabled and seen.holder is not None and seen.holder.team == player.team and player.poste != "GK":
         return _runs_or_holds(player, ball, players, situation, runs, now_s)
     if seen.is_receiver:
@@ -225,7 +231,9 @@ def interpret(player: PlayerState, ball: BallState, seen: Perception, runs_enabl
     if seen.ball_distance >= CHASE_RADIUS_M and not nearest_field_player(player, ball, players):
         return REPLACEMENT
     if ball.holder is None:  # un seul chasseur de champ par équipe : le plus proche ; les autres se replacent (11g)
-        return BALLON_LIBRE if nearest_field_player(player, ball, players) else REPLACEMENT
+        # ballon aérien : seuls les désignés y vont (ticket v2-realisme/15a)
+        aerial = bool(ball.aerial_attackers)
+        return BALLON_LIBRE if not aerial and nearest_field_player(player, ball, players) else REPLACEMENT
     # porteur proche : un adversaire le presse ; un coéquipier sans appel (le gardien, par exemple) vient en soutien
     return SOUTIEN if seen.holder is not None and seen.holder.team == player.team else PRESSEUR
 
@@ -329,9 +337,16 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
         return make(role, "se replacer", place, replacement_intensity(player, True),
                     reason=f"en possession, il rejoint sa place dans le bloc{phase}",
                     distance_m=player.position.distance_to(place))
+    attacker = ball.aerial_attackers.get(player.name) if ball.holder is None else None
+    if role == RECEVEUR and attacker is not None:  # ballon aérien : au point où il le touche (ticket v2-realisme/15a)
+        return make(role, "venir au ballon", attacker.point, reason="passe en l'air pour lui, il va au point de contact",
+                    distance_m=player.position.distance_to(attacker.point))
     if role == RECEVEUR:
         point = meeting_point(player, ball.position, ball.velocity, BALL_FRICTION_PER_S)
         return make(role, "venir au ballon", point, reason="passe pour lui, il va à sa rencontre")
+    if role == BALLON_AERIEN:
+        return make(role, "attaquer le ballon", attacker.point, reason="ballon aérien, il va au point de contact",
+                    distance_m=player.position.distance_to(attacker.point))
     if role == LECTURE:
         return make(role, "couper la passe", seen.read_point, reason="passe lue, il court l'intercepter",
                          distance_m=player.position.distance_to(seen.read_point))

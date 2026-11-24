@@ -34,6 +34,7 @@ from v2engine.duel import (CONTACT_MIN_CLOSING_MPS, SHOULDER_COOLDOWN_S, SHOULDE
 from v2engine.flux import ARBITRAGE, PERCEPTION, TIR, seed_streams
 from v2engine.formation import initial_positions
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch, in_penalty_area
+from v2engine.jeu_aerien import BALLON_AERIEN, AerialAttacker, select_attackers
 from v2engine.movement import FACING_RUN_SPEED_MPS, PlayerState, step
 from v2engine.cerveau import (BALLON_LIBRE, GOAL_CENTER_Y, OPPONENT_GOAL, RECEVEUR, Intention, nearest_field_player,
                               think)
@@ -62,7 +63,7 @@ from v2engine.shooting import (BLOCK_CHANCE, BLOCK_WIDTH_M, FLYING, FUMBLED, HEL
 from v2engine.situation import SituationTracker
 from v2engine.transition import TransitionPlay
 from v2engine.trace import (BallSnapshot, DecisionRecord, FoulEvent, MatchTrace, OffsideEvent, PlayerSnapshot, ShotEvent,
-                            DepthCoverRecord, LineExitRecord, PressRecord, ReceptionEvent, RestartEvent, SituationRecord)
+                            AerialRecord, DepthCoverRecord, LineExitRecord, PressRecord, ReceptionEvent, RestartEvent, SituationRecord)
 from v2engine.reception import DOS_AU_JEU, blind_reception, facing_to_goal_deg, open_facing, reception_type
 
 # But adverse d'une équipe, par convention de ce moteur (voir `formation.initial_positions`,
@@ -1278,13 +1279,29 @@ def _step_player(
         keeper_out = intentions is not None and any(
             p.poste == "GK" and p.team == player.team and p.name in intentions
             and intentions[p.name].action in KEEPER_TO_BALL_ACTIONS for p in players or [])
-        priority = intention.role == RECEVEUR or (intention.role == BALLON_LIBRE and not keeper_out
-                                                  and nearest_field_player(player, ball, players or [player]))
+        # ballon aérien : le premier désigné de son équipe a la priorité, comme le receveur (ticket v2-realisme/15a)
+        aerial = ball.aerial_attackers.get(player.name)
+        first_aerial = intention.role == BALLON_AERIEN and aerial is not None and aerial.rank == 0
+        priority = intention.role == RECEVEUR or first_aerial or (
+            intention.role == BALLON_LIBRE and not keeper_out and nearest_field_player(player, ball, players or [player]))
     avoid = avoid_teammates(player, intention.target, intention.intensity, players or [], ball.holder, minute * 60.0,
                             player.avoid_side, player.avoid_side_until_s, intention.target_velocity, priority)
     moved = step(player, dt, avoid.target, minute if played_minute is None else played_minute, avoid.intensity,
                  avoid.target_velocity, look_at=look_at, turning=turning)
     return replace(moved, avoid_side=avoid.side, avoid_side_until_s=avoid.side_until_s)
+
+
+def _record_aerial(attackers: dict[str, AerialAttacker], minute: float, last: dict[str, tuple[str, ...]],
+                   records: list[AerialRecord]) -> None:
+    """Trace les changements de joueurs désignés de chaque équipe sur un ballon aérien (ticket v2-realisme/15a)."""
+    for team in ("home", "away"):
+        mine = sorted(((n, a) for n, a in attackers.items() if a.team == team), key=lambda e: e[1].rank)
+        names = tuple(n for n, _ in mine)
+        if names == last.get(team, ()):
+            continue
+        last[team] = names
+        records.append(AerialRecord(minute, team, names, tuple((a.point.x, a.point.y) for _, a in mine),
+                                    tuple(a.contact_s for _, a in mine), tuple(a.on_time for _, a in mine)))
 
 
 def _record_pressers(defense: DefensiveRoles, players: list[PlayerState], minute: float, last: dict[str, str],
@@ -1382,6 +1399,7 @@ def simulate_match(
     end_tick: int | None = None
     last_situation: dict[str, str] = {}  # dernière situation tracée par équipe
     last_presser: dict[str, str] = {}  # dernier presseur tracé par équipe (ticket v2-realisme/10a)
+    last_aerial: dict[str, tuple[str, ...]] = {}  # derniers désignés tracés par équipe (ticket v2-realisme/15a)
     last_exit: dict[str, tuple[str, bool, bool, bool]] = {}  # dernier état tracé de chaque central (ticket v2-realisme/10b)
     last_depth: dict[str, str] = {}  # dernier couvreur de la profondeur tracé, par équipe (ticket v2-realisme/10c)
     late = LateSetPiece()
@@ -1439,6 +1457,9 @@ def simulate_match(
             if last_depth.get(team, "") != cover:
                 last_depth[team] = cover
                 trace.depth_covers.append(DepthCoverRecord(minute, team, cover))
+        # ballon aérien : joueurs désignés de chaque équipe (ticket v2-realisme/15a)
+        ball.aerial_attackers = select_attackers(ball, players, ball.aerial_attackers)
+        _record_aerial(ball.aerial_attackers, minute, last_aerial, trace.aerial)
         played = played_minute(minute, trace.second_half_start_minute, half_tick * tick_seconds / 60.0)
         players = [_step_player(p, ball, tick_seconds, minute, players, runs, intentions, situations, bloc, defense,
                                 transition, played_minute=played, scanning=p.name in scanning) for p in players]

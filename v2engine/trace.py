@@ -107,6 +107,19 @@ class PressRecord:
 
 
 @dataclass(frozen=True)
+class AerialRecord:
+    """Changement des joueurs désignés d'une équipe sur un ballon aérien (ticket v2-realisme/15a), trace seulement :
+    joueurs (vide : plus personne, le ballon n'est plus en l'air), point visé, instant du contact depuis ce pas (s) et
+    s'ils y arrivent à temps, dans l'ordre de leur rang. Une désignation court jusqu'au changement suivant de l'équipe."""
+    minute: float
+    team: str
+    players: tuple[str, ...]
+    points: tuple[tuple[float, float], ...]
+    contact_s: tuple[float, ...]
+    on_time: tuple[bool, ...]
+
+
+@dataclass(frozen=True)
 class LineExitRecord:
     """Changement d'état d'un défenseur central (ticket v2-realisme/10b), trace seulement : `exit` vrai quand il presse,
     marque ou couvre (`role`) à plus de 10 m de sa place de référence sans ballon sans être plus près de son but
@@ -354,6 +367,7 @@ class MatchTrace:
     goals: list[GoalEvent] = field(default_factory=list)
     decisions: list[DecisionRecord] = field(default_factory=list)
     situations: list[SituationRecord] = field(default_factory=list)
+    aerial: list[AerialRecord] = field(default_factory=list)  # désignés sur ballon aérien (ticket v2-realisme/15a)
     pressers: list[PressRecord] = field(default_factory=list)  # changements de presseur (ticket v2-realisme/10a)
     line_exits: list[LineExitRecord] = field(default_factory=list)  # sorties des centraux (ticket v2-realisme/10b)
     depth_covers: list[DepthCoverRecord] = field(default_factory=list)  # couverture de la profondeur (v2-realisme/10c)

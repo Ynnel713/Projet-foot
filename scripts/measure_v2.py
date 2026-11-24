@@ -32,6 +32,7 @@ import v2engine.bloc as bloc_module
 import v2engine.cerveau as cerveau
 import v2engine.defense as defense
 import v2engine.match as match
+from v2engine.atteinte import CORPS, MAINS, PIED, TETE
 from v2engine.duel import attempt_tackle_probability
 from v2engine.flux import DUEL
 from v2engine.shooting import NEUTRAL_ATTRIBUTES
@@ -44,6 +45,8 @@ from scripts.v2_indicators import (BACKPEDAL_POSTES, CARRY_PREFIX, FLICKER_S, EX
                                    quartiles, shot_decomposition, xg_calibration)
 from scripts.v2_tranches import minute_report, player_report
 from scripts.graines_validation import check_series
+
+BODY_PARTS = (PIED, CORPS, TETE, MAINS)  # partie du corps des contrôles (v2-realisme/15a)
 
 AUDIT_SEED = 20260923
 HIGH, LOW = 99, 11
@@ -404,6 +407,7 @@ def run(n_matches: int, profile: str | None = None, duration_minutes: float = 90
                 collector.on_events(trace.events)  # contrôles ratés par tranche (ticket v2-realisme/19d)
                 collector.on_decisions(trace.decisions)  # rotation avant la passe ou le tir (ticket v2-realisme/07e)
                 collector.on_receptions(trace.receptions)  # mémoire du receveur (ticket v2-realisme/08b)
+                collector.on_aerial(getattr(trace, "aerial", []))  # désignés sur ballon aérien (ticket v2-realisme/15a)
                 collector.on_scans(trace.scans, trace.receptions)  # scans (ticket v2-realisme/08c)
                 if profile:  # indicateurs cibles par équipe (ticket v2-realisme/24)
                     collector.profile_tallies.append(profile_tally(trace, high_team))
@@ -566,6 +570,22 @@ def report(c: Collector, detail: bool = False) -> dict:
         # centres (ticket v2-attributs-restants/01) : par équipe et par match, part gardée par l'équipe du centreur
         "centres par équipe": k["centres"] / (2 * n),
         "centres réussis (part)": k["centres réussis"] / max(1, k["centres"]),
+        # désignés sur ballon aérien (ticket v2-realisme/15a)
+        "ballon aérien : désignations par équipe": k["ballon aérien : désignations"] / (2 * n),
+        "ballon aérien : deux désignés (part)": k["ballon aérien : deux désignés"]
+        / max(1, k["ballon aérien : désignations"]),
+        "ballon aérien : premier à temps (part)": k["ballon aérien : premier à temps"]
+        / max(1, k["ballon aérien : désignations"]),
+        "ballon aérien : changements en moins de 1 s (part)": k["ballon aérien : changements rapides"]
+        / max(1, k["ballon aérien : désignations"]),
+        "ballon aérien : changements du premier en moins de 1 s (part)":
+        k["ballon aérien : changements rapides du premier"] / max(1, k["ballon aérien : désignations"]),
+        # partie du corps (réserve A1 du ticket v2-attributs-restants/01, mesurée au v2-realisme/15a)
+        **{f"contrôles : {part} (part)":
+           k[f"contrôles par partie du corps : {part}"]
+           / max(1, sum(k[f"contrôles par partie du corps : {q}"] for q in BODY_PARTS)) for part in BODY_PARTS},
+        **{f"premier contrôle après un centre : {part} (part)": k[f"premier contrôle après un centre : {part}"]
+           / max(1, sum(k[f"premier contrôle après un centre : {q}"] for q in BODY_PARTS)) for part in BODY_PARTS},
         "passes en profondeur (part)": k["passes en profondeur"] / passes,
         "passes en profondeur réussies (part)": k["passes en profondeur réussies"] / max(1, k["passes en profondeur"]),
         "tirs par équipe": k["tirs"] / (2 * n),

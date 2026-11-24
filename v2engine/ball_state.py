@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 from v2engine.geometry import Vec2
 
 if TYPE_CHECKING:
+    from v2engine.jeu_aerien import AerialAttacker
     from v2engine.restart import Restart
     from v2engine.trace import EventLog, FoulEvent
 
@@ -121,6 +122,9 @@ class BallState:
     pass_from: Vec2 | None = None
     rebound: bool = False
     came_from: tuple[str, str, Vec2] | None = None
+    # Ballon aérien (ticket v2-realisme/15a) : joueurs désignés de chaque équipe qui vont au point de contact, par nom,
+    # posés à chaque pas par `jeu_aerien.select_attackers` (vide quand le ballon n'est pas en l'air).
+    aerial_attackers: dict[str, AerialAttacker] = field(default_factory=dict)
     # Journal des événements du match (ticket v2-realisme/19b) : None hors match tracé (scènes de test qui n'en ont pas besoin).
     log: EventLog | None = None
 

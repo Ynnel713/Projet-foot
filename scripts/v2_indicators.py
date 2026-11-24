@@ -658,7 +658,7 @@ class Collector:
                               "gain": gain, "start": passer.position, "end": target.position,
                               "progressive": gain >= PROGRESSIVE_GAIN_M
                               or breaks_a_line(passer.team, passer.position, target.position, self.players),
-                              "follow": self.planned, "done": False})
+                              "follow": self.planned, "done": False, "cross": cross})
 
     def _line_at_pass(self, passer: PlayerState) -> None:
         """Jeu sur la ligne (ticket 16) : distance de l'attaquant le plus avancé à la ligne du hors-jeu, à la passe."""
@@ -1153,6 +1153,7 @@ class Collector:
     def on_receptions(self, receptions) -> None:
         """Mémoire du receveur sur les adversaires qu'il ne voit pas à la réception (ticket v2-realisme/08b) ; un joueur
         qui les voit tous ne compte pas (âge nul)."""
+        self._body_parts(receptions)
         for r in receptions:
             if r.origin in RECEIVED_PASSES:  # passes reçues dans l'axe devant la surface (ticket v2-realisme/10d)
                 self.count["passes reçues"] += 1
@@ -1191,6 +1192,36 @@ class Collector:
                 self.count["mémoire : erreur à la réception (somme, m)"] += r.memory_error_mean_m
                 self.peak["mémoire : erreur maximale du receveur (m)"] = max(
                     self.peak["mémoire : erreur maximale du receveur (m)"], r.memory_error_max_m)
+
+    def on_aerial(self, records) -> None:
+        """Joueurs désignés sur ballon aérien (ticket v2-realisme/15a), `trace.AerialRecord` : désignations, part à deux,
+        part du premier à temps, et changements de joueurs en moins de 1 s (seuil du ticket 11l) dans un même ballon."""
+        last: dict[str, tuple[float, tuple[str, ...]]] = {}
+        for r in records:
+            before = last.get(r.team)
+            last[r.team] = (r.minute, r.players)
+            if not r.players:
+                continue
+            self.count["ballon aérien : désignations"] += 1
+            self.count["ballon aérien : deux désignés"] += len(r.players) >= 2
+            self.count["ballon aérien : premier à temps"] += r.on_time[0]
+            if before is not None and before[1] and (r.minute - before[0]) * 60.0 < 1.0:
+                self.count["ballon aérien : changements rapides"] += 1
+                self.count["ballon aérien : changements rapides du premier"] += r.players[0] != before[1][0]
+
+    def _body_parts(self, receptions) -> None:
+        """Partie du corps des contrôles réussis, et du premier contrôle réussi après un centre, avant la passe suivante
+        (réserve A1 du ticket v2-attributs-restants/01, mesurée au v2-realisme/15a). Les contacts ratés ne sont pas
+        tracés (`ReceptionEvent` : contrôles réussis seulement)."""
+        crosses = [(e["t"], nxt["t"] if nxt is not None else math.inf)
+                   for e, nxt in zip(self.pass_log, self.pass_log[1:] + [None]) if e.get("cross")]
+        for r in receptions:
+            self.count[f"contrôles par partie du corps : {getattr(r, 'body_part', 'pied')}"] += 1
+        times = sorted((r.minute * 60.0, getattr(r, "body_part", "pied")) for r in receptions)
+        for start, end in crosses:
+            first = next((part for t, part in times if start < t <= end), None)
+            if first is not None:
+                self.count[f"premier contrôle après un centre : {first}"] += 1
 
     def on_scans(self, scans, receptions) -> None:
         """Scans (ticket v2-realisme/08c) : nombre, part du porteur, et scans du receveur dans les 10 s avant chaque
