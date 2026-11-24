@@ -6,6 +6,8 @@
 
 **What to build:** Le tir reçoit une hauteur de départ et un angle d'élévation issus de l'exécution (35b) ; avec la gravité de 02a, il passe sous ou au-dessus de la barre ; l'arrêt du 05b tient compte de la hauteur atteignable par le gardien.
 
+**Ajout du 24/11/2026 (demande du propriétaire du 24/11/2026, éléments sur la frappe et la finition, point 4) : hauteur et trajectoire.** Trois hauteurs à distinguer, avec leurs conséquences pour le gardien : au ras du sol (long à aller chercher près du poteau, plongeon au sol), à mi-hauteur (plus facile à capter ou repousser pour un gardien bien placé), haute sous la barre ou en lucarne (détente, plus souvent repoussée). La portée du gardien selon la hauteur (05b, plongeon du `v2-attributs-restants/03d`) et le choix capter ou repousser (`v2-attributs-restants/03b2`, livré) lisent cette hauteur. Les tirs sur les montants sont au `v2-collectif/35c`.
+
 **Attributs :** aucun
 
 **Blocked by:** 05b (Arrêt : le gardien atteint ou non le ballon); `v2-hauteur-ballon/02a`; `v2-collectif/35b`.

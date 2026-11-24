@@ -4,6 +4,8 @@
 
 **What to build:** **Pieds** et **Weak foot (/5)** : une passe, un tir, un centre ou un dribble joué du côté faible est plus difficile (fonction de difficulté partagée, v2-socle/04) et moins souvent choisi. Le côté est déduit de la position du porteur, de sa direction et du but.
 
+**Ajout du 24/11/2026 (demande du propriétaire du 24/11/2026, éléments sur la frappe et la finition, point 2) :** sur le mauvais pied, le tireur perd en précision ou en puissance, sans devenir incapable de marquer sur un ballon facile (jamais nul, règle « jamais binaire »).
+
 **Attributs :** Weak foot, Pieds.
 
 **Blocked by:** `v2-collectif/19` ; passe après `v2-collectif/22c` (contrôle de non-régression).

@@ -4,6 +4,8 @@
 
 **What to build:** Aujourd'hui tout tir part à 30 m/s, quel que soit le tireur. Ce ticket donne à chaque tir une **vitesse** qui dépend de **Long Shots** (capacité de frappe : un joueur à 18/20 frappe très fort, un joueur à 7-8 ne peut pas frapper très fort ; la carte des attributs définit déjà Long Shots comme « précision et puissance ») et, après 34c, de l'élan. La vitesse compte : moins de temps de réaction pour le gardien (arrêts du 28b, notes au `v2-attributs-restants/03b`) et ballon contré ou repoussé qui part plus loin. **Point à trancher avant le code** (recommandation du porteur) : la puissance vient de Long Shots pour tous les tirs, y compris dans la surface, où Finishing garde la précision ; ce sont deux effets distincts (vitesse et précision), pas un mélange de notes dans un même calcul, donc pas de double comptage. À inscrire dans la carte.
 
+**Ajout du 24/11/2026 (demande du propriétaire du 24/11/2026, éléments sur la frappe et la finition, point 3) :** la puissance a un prix : frapper plus fort que sa capacité élargit la dispersion (frapper fort sans perdre tout contrôle) ; la tenue de la vitesse à distance découle de la vitesse de départ (Long Shots) et du freinage du ballon (`v2-realisme/14a`) : aucun attribut n'agit sur le vol après la frappe (correction de la réserve A1 de l'expert, 24/11/2026) ; Technique n'entre que si un contexte du registre le justifie (ADR 0002), à trancher avec la question Long Shots ou Finishing ci-dessus.
+
 **Attributs :** Long Shots (puissance, partout), Finishing inchangé (précision dans la surface).
 
 **Blocked by:** 28b.

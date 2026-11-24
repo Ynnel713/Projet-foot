@@ -4,6 +4,8 @@
 
 **What to build:** Un joueur **lancé** vers le ballon frappe plus fort (l'élan s'ajoute à la puissance du 35a) mais doit ajuster son pas : le timing est plus risqué si le ballon arrive vite ou de côté. Un joueur **arrêté** face au ballon qui vient vers lui frappe moins fort mais plus juste. La vitesse et la direction du tireur au moment de la frappe sont lues dans le moteur (pas de nouvelle donnée). Effets : puissance (35a), difficulté (34b) et part de tirs non cadrés (35b).
 
+**Ajout du 24/11/2026 (demande du propriétaire du 24/11/2026, éléments sur la frappe et la finition, point 2) : posture et coordination du frappeur.** En plus de l'élan, la qualité de la frappe dépend de la posture au moment de frapper, pour tous les tirs (ballon contrôlé ou non) : ouvert vers le but, en course oblique, de profil, dos au but ; une posture fermée réduit la précision et le transfert de poids (puissance du `35a`). Le pied d'appui (distance et angle au ballon, stabilité) se lit dans la course d'approche : un pas mal ajusté (ballon rapide, de côté, joueur à haute vitesse) élargit la dispersion en hauteur et en direction ; un joueur posé, avec un temps d'avance, frappe plus juste. Le déséquilibre après un contact reste au `v2-attributs-contextes/06` (Balance), le pied faible au `v2-attributs-restants/04a`, la fatigue au `v2-realisme/20a` : pas de double comptage. **Périmètre élargi : à réestimer au lancement, découpage probable** (élan et timing / posture et pied d'appui).
+
 **Attributs :** Aucun nouvel attribut (Pace et Acceleration règlent déjà la course, sans effet direct ici) ; Technique amortit le risque de timing comme au 34b.
 
 **Blocked by:** 34b, 35a.

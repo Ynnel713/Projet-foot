@@ -6,6 +6,8 @@
 
 **What to build:** Un ballon libre (dévié, repoussé, dégagé) qui franchit la ligne de but entre les poteaux et sous la barre compte comme but de l'équipe qui attaque ce but. Il faut une hauteur pour le ballon dévié (`v2-hauteur-ballon/02a` si livré, sinon règle provisoire à proposer). Le buteur est le dernier toucheur ; si son équipe n'est pas celle qui marque, c'est un but contre son camp (`GoalEvent.own_goal`, champ créé au 19b).
 
+**Ajout du 24/11/2026 (demande du propriétaire du 24/11/2026, éléments sur la frappe et la finition, point 5) : tir dévié qui surprend le gardien.** Un tir dévié par un contreur (`05c`, `05d`) change de direction : le gardien, parti vers la trajectoire d'origine (`03f`, appuis), doit réagir à la nouvelle (délai de réaction relancé, appuis déjà engagés) ; le ballon dévié vers le but peut donc entrer alors que le tir d'origine était arrêtable. Mesure : buts sur tir dévié, part des tirs déviés qui entrent.
+
 **Attributs :** aucun
 
 **Blocked by:** 19b ; `v2-hauteur-ballon/02a` (hauteur du ballon dévié, ou règle provisoire validée).
