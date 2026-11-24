@@ -6,9 +6,13 @@
 
 **What to build:** Tirage de maillot ou bras retenu : (a) au marquage, quand l'attaquant marqué démarre ou fait un appel dans le dos de son défenseur (y compris dans la surface sur coup de pied arrêté) ; (b) par le défenseur battu sur un contournement. Prudence de surface du 21c1. Volet (a) faisable dès le 21c1 ; volet (b) attend le 04g.
 
+**Ajout du 24/11/2026 (demande du propriétaire du 24/11/2026, éléments sur la défense, point 5 « tirage de maillot et obstruction »).** L'obstruction (couper la route sans jouer le ballon) et le contact léger toléré (seule une part des maintiens devient faute) sont un ticket à part, `21c8`, qui passe après celui-ci (réserve A1 de l'expert : périmètre trop large pour cette estimation). Le défenseur en retard (battu, mal placé) tient plus souvent que le défenseur bien placé : ici aussi, la fréquence suit la situation, pas un attribut de plus.
+
 **Attributs :** Aggression (fréquence) ; Decisions (prudence de surface, 21c1).
 
 **Blocked by:** 21c1 ; volet (b) : 04g.
+
+**Bloque :** `21c8` (ajouté le 24/11/2026).
 
 **Status:** à faire (constantes à proposer avant le code)
 
@@ -22,7 +26,7 @@
 | Intégration et vérifications | 15 min |
 | **Total (travail effectif)** | **1 h 35** |
 
-Confiance : moyenne. Hypothèses : le marquage et l'appel dans le dos sont déjà détectables ; le volet (b) se branche ensuite sur le contournement du 04g.
+Confiance : moyenne. Hypothèses : le marquage et l'appel dans le dos sont déjà détectables ; la précision du 24/11/2026 (le défenseur en retard tient plus souvent) module la fréquence du volet existant, sans périmètre nouveau (obstruction et contact toléré au `21c8`) ; le volet (b) se branche ensuite sur le contournement du 04g.
 Temps machine, non compté : suite complète (environ 10 min) ; mesure 50 matchs.
 
 ## Tests

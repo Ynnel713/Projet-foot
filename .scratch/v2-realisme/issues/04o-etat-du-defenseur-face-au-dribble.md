@@ -8,13 +8,15 @@
 - **vulnérabilité du défenseur au moment du geste** : distance au porteur (trop près : il se fait passer ; bonne distance : il voit venir), vitesse et direction de son élan par rapport à la direction du geste (lancé à pleine vitesse, ou ses appuis portés du mauvais côté, il est plus exposé au crochet et au changement de rythme ; campé à bonne distance, il l'est moins), orientation du corps (`07a`). Cette vulnérabilité entre dans la chance de réussite de chaque geste (`04g` à `04m`) et dans sa valeur au choix (`04n`), lue sur ce que le porteur perçoit (`08b`) ;
 - **défenseur battu** : un état unique « déséquilibré » (durée, direction) qui coupe un instant sa capacité de tacler et de repartir ; la suite **vient de la physique existante** (freinage, virage, rotation selon Agility), pas d'un délai fixe : un défenseur lancé met plus de temps à revenir qu'un défenseur arrêté. Les gestes ne fixent que le déséquilibre initial ; aucun pivot instantané.
 
+**Ajout du 24/11/2026 (demande du propriétaire du 24/11/2026, éléments sur la défense, point 3 « cadrage »).** Le choix du défenseur avant le geste (fermer l'intérieur, reculer, attendre le soutien) est au `10l` ; ce ticket règle ce qui se passe au moment du geste et après.
+
 **Attributs (ADR 0002, poids à proposer) :** la distance du défenseur au porteur reste celle d'Aggression (`defense.stop_distance_m`, existant), sans second attribut ; la vulnérabilité se lit sur l'état physique réel (distance, élan, orientation), pas sur une note. Lecture du geste : **un seul contexte** « lire le geste du porteur » (Anticipation, Decisions, Concentration quand livrée), déclaré une fois au registre et partagé avec le `04k` (« ne pas mordre ») et les autres gestes, jamais recompté. Agility seulement par la physique (`12a`, `12b`, `07f`), sans bonus. Pas de nouvel effet de Dribbling (il reste dans chaque geste, R1). Positioning : non (son rayon est le placement de zone, carte).
 
 **Lien avec l'existant :** remplace les états « éliminé », « écart temporaire », « figé » prévus séparément aux `04g`, `04h`, `04k`, `04m` ; `04g` pose le premier geste avec une version simple de cet état, ce ticket la généralise avant les autres gestes.
 
 **Blocked by:** `04g` (premier geste), `12a`, `12b`, `07f` (livrés) ; `v2-attributs-contextes/01` et `02` (livrés).
 
-**Bloque :** `04h`, `04k`, `04l`, `04m`, `04n`, `39`, `v2-collectif/22a`.
+**Bloque :** `04h`, `04k`, `04l`, `04m`, `04n`, `39`, `v2-collectif/22a` ; `10l`, `21c6` (volet « défenseur battu »), ajoutés le 24/11/2026.
 
 **Status:** à faire (constantes à proposer avant le code)
 

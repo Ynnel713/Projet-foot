@@ -2,15 +2,17 @@
 
 **Chantier :** `v2-realisme` (audit de la roadmap du 10/11/2026, `docs/AUDIT_ROADMAP_V2.md`). **Priorité :** P1 (fondation de l'arbitrage et de la VAR : la VAR corrige un écart entre le fait et la décision ; sans écart, elle n'a rien à faire). **Catégorie :** arbitrage.
 
-**Constat vérifié :** le moteur siffle ce qui s'est réellement passé : une faute tirée est toujours sifflée (`duel.attempt_tackle`, `match._foul`), le hors-jeu est jugé sur les positions réelles à 0,3 m près (`offside.py`) ; aucun arbitre ni assistant n'a de position ni d'angle de vue.
+**Constat vérifié :** le moteur siffle ce qui s'est réellement passé : une faute tirée est toujours sifflée (`duel.should_attempt_tackle`, `duel.tackle_probabilities`, `match._foul`), le hors-jeu est jugé sur les positions réelles à 0,3 m près (`offside.py`) ; aucun arbitre ni assistant n'a de position ni d'angle de vue.
 
 **What to build:** Un arbitre et deux assistants placés sur le terrain (l'arbitre suit l'action en diagonale, les assistants restent à hauteur de l'avant-dernier défenseur). Chaque fait arbitrable (faute, hors-jeu, sortie) devient une décision : vu ou non, jugé juste ou non, selon la distance, l'angle et les joueurs qui masquent la vue. La trace garde le fait réel et la décision ; c'est la décision qui s'applique au jeu, comme dans un vrai match.
+
+**Ajout du 24/11/2026 (demande du propriétaire du 24/11/2026, éléments sur la défense, point 5 « parfois ça passe inaperçu »).** Les petits contacts (maintien bref `21c4`, obstruction et contact toléré `21c8`) sont les premiers concernés : un contact léger hors de la vue de l'arbitre ou masqué n'est pas sifflé ; la trace garde le contact réel.
 
 **Attributs :** aucun
 
 **Blocked by:** 19b.
 
-**Bloque :** 21d, 21f, 21g, 21i, 21j (ajouté le 14/11/2026) ; `v2-mise-en-scene/06` ; recommandé avant `v2-attributs-restants/09a`.
+**Bloque :** 21d, 21f, 21g, 21i, 21j (ajouté le 14/11/2026) ; `v2-mise-en-scene/06` ; recommandé avant `v2-attributs-restants/09a` ; `21c8` (volet arbitre, ajouté le 24/11/2026).
 
 **Status:** à faire (constantes à proposer avant le code)
 
@@ -20,11 +22,11 @@
 |---|---|
 | Analyse et compréhension du code | 30 min |
 | Développement | 50 min |
-| Tests unitaires et comportementaux | 25 min |
-| Intégration et vérifications | 20 min |
-| **Total (travail effectif)** | **2 h 05** |
+| Tests unitaires et comportementaux | 35 min |
+| Intégration et vérifications | 25 min |
+| **Total (travail effectif)** | **2 h 20** (2 h 05 avant le volet « petits contacts » du 24/11/2026) |
 
-Confiance : moyenne. Hypothèses : arbitre placé par une règle simple ; taux d'erreur sourcés (études sur les décisions arbitrales) ou « non trouvé ».
+Confiance : moyenne. Hypothèses : arbitre placé par une règle simple ; taux d'erreur sourcés (études sur les décisions arbitrales) ou « non trouvé » ; le volet « petits contacts » ne s'applique qu'aux contacts tracés par `21c4` et `21c8`, livrés ou non. Au-dessus de 2 h : découpage à examiner au lancement (arbitre et assistants / petits contacts).
 Temps machine, non compté : suite complète (environ 40 min) ; mesure 50 matchs.
 
 ## Tests

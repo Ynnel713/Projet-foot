@@ -18,7 +18,7 @@
 
 **Bloque :** `v2-collectif/22a` (volume des fautes).
 
-**Status:** découpé (16/11/2026, validé par le propriétaire) en 21c1 à 21c7 ; clos quand tous ses sous-tickets sont livrés et la mesure du volume de fautes faite (critères ci-dessous).
+**Status:** découpé (16/11/2026, validé par le propriétaire) en 21c1 à 21c7, plus 21c8 ajouté le 24/11/2026 ; clos quand tous ses sous-tickets sont livrés et la mesure du volume de fautes faite (critères ci-dessous).
 
 ## Découpage (16/11/2026)
 
@@ -31,10 +31,11 @@ Note : le constat est en partie dépassé, puisque le duel d'épaule du 11c prod
 | 21c3 | Charge dans le dos du porteur (au sol) | 21c1 |
 | 21c4 | Tenir un adversaire (maillot, bras) : marquage ; défenseur battu | 21c1 ; volet défenseur battu : 04g |
 | 21c5 | Contact irrégulier à la protection du ballon | 21c1, 04i |
-| 21c6 | Faute tactique pour casser une transition | 21c1, 21b |
+| 21c6 | Faute tactique pour casser une transition | 21c1, 21b ; volet défenseur battu : 04o (24/11/2026) |
 | 21c7 | Fautes aériennes (charge au saut, sortie aérienne du gardien) | 21c1, 15b |
+| 21c8 | Obstruction et contact léger toléré (ajouté le 24/11/2026, découpé du 21c4) | 21c4, 21b ; volet arbitre : 21a |
 
-Total des sous-tickets : 9 h 20 de travail effectif, à comparer aux 2 h de l'estimation initiale, qui ne comptait pas le complément du 16/11.
+Total des sous-tickets : 11 h 25 de travail effectif (9 h 20 avant le 24/11/2026, plus 1 h 50 du 21c8 et 15 min ajoutées au 21c6), à comparer aux 2 h de l'estimation initiale, qui ne comptait pas le complément du 16/11.
 
 ## Estimation
 

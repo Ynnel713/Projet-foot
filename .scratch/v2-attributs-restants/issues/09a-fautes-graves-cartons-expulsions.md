@@ -6,11 +6,13 @@
 - **Aggression** : plus de duels engagés mais aussi plus de fautes et de cartons ;
 - gestes **Dives Into Tackles** (plus de tacles glissés, ballons gagnés et fautes), **Does Not Dive Into Tackles**, **Argues With Officials** (plus de cartons pour soi).
 
+**Ajout du 24/11/2026 (demande du propriétaire du 24/11/2026, éléments sur la défense, point 5 « répétition »).** Loi 12 : le joueur qui commet des fautes répétées reçoit un avertissement même si aucune n'est grave seule ; à inclure (compte des fautes du joueur dans le match, seuil validé, décision de l'arbitre du `21a` si livré). Ce ticket n'a pas de table d'estimation (antérieure à la règle) : à établir au lancement, en comptant environ 25 min de travail effectif pour ce volet (compte par joueur, seuil, scène « trois fautes légères du même joueur : avertissement », critère ajouté ci-dessous). Dans la surface ou en dernier recours, penalty et sanction selon la gravité du `21b` (occasion manifeste).
+
 **Attributs :** Aggression, Tackling (réussite, pour séparer faute et réussite) ; gestes ci-dessus.
 
 **Blocked by:** 02a (penalty), 07a (duels), `v2-collectif/29` (livré), `v2-collectif/30` ; passe après `v2-collectif/22c` (contrôle de non-régression) ; `v2-realisme/21b` (gravité selon l'action) ; `v2-realisme/21a` recommandé (décision de l'arbitre) (ajouté le 10/11/2026, audit de la roadmap).
 
-**Bloque :** 09b, 09c ; `v2-realisme/11o` (prudence au tacle selon le risque de carton, ajouté le 16/11/2026) ; `v2-realisme/21f`, `21g`, `21h` (ajouté le 10/11/2026, audit de la roadmap) ; `v2-coach-et-gestion-de-match/05b` (remplacement après un carton). Alimente `v2-mise-en-scene/02` (cartons rouges, ajoutés à leur livraison) sans le bloquer.
+**Bloque :** 09b, 09c ; `v2-realisme/11o` (prudence au tacle selon le risque de carton, ajouté le 16/11/2026) ; `v2-realisme/21f`, `21g`, `21h` (ajouté le 10/11/2026, audit de la roadmap) ; `v2-coach-et-gestion-de-match/05b` (remplacement après un carton). `v2-realisme/41` (volet cartons, ajouté le 24/11/2026). Alimente `v2-mise-en-scene/02` (cartons rouges, ajoutés à leur livraison) sans le bloquer.
 
 **Status:** à faire (constantes à proposer avant le code)
 
@@ -18,6 +20,7 @@
 
 ## Acceptance criteria
 
+- [ ] Volet du 24/11/2026 : fautes répétées du même joueur avertissables selon un seuil validé par le propriétaire ; scène et compte par match rapportés
 - [ ] Cartons jaunes et rouges par match dans des fourchettes réelles sourcées (ou « non trouvé »)
 - [ ] Aggression élevée : plus de duels engagés **et** plus de cartons, à Tackling égal
 - [ ] Dives Into Tackles : plus de tacles glissés et plus de fautes qu'un joueur aux mêmes attributs sans ce geste ; Does Not Dive Into Tackles : moins de tacles glissés et moins de fautes ; réussite du tacle inchangée dans les deux cas (repris du ticket 05)

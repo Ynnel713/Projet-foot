@@ -13,6 +13,8 @@ Sous « pressing haut » (4 adversaires et plus), 81 % des décisions d'un défe
 2. le jeu long en contre-attaque après une récupération dans son tiers (la valeur de la relance longue en mode contre-attaque, ticket 11) ;
 3. si nécessaire, la place de la relance longue en mode conservation.
 
+**Ajout du 24/11/2026 (demande du propriétaire du 24/11/2026, éléments sur la défense, point 6 « relance et sortie de balle »).** La relance d'un défenseur est un choix entre la passe au sol qui casse une ligne, le décalage simple, le jeu long et le dégagement (`decision.py`, `CLEARANCE_DISTANCE_M`) ; ce ticket fixe aussi quand le dégagement l'emporte : sous forte pression dans sa zone, le coût d'une perte devant sa surface (`danger.loss_cost`, existant) doit rendre la relance risquée dans l'axe moins attractive que le dégagement. Les profils (central relanceur contre défenseur sobre) viennent des notes existantes (Passing, Vision, Composure, Decisions), sans étiquette ; mesure aux `v2-realisme/40` et `41`. Contrôle orienté à la récupération : `v2-realisme/36`.
+
 **Attributs (ADR 0002, 17/11/2026) :** réintroduire la Vision dans la relance longue, écartée au 15a (« schéma d'équipe connu ») : contexte « repérer la cible longue sous pression » (Vision, Decisions, poids à proposer) ; Passing reste l'exécution.
 
 **Hors de ce ticket :** duel aérien à la retombée (`v2-realisme/15b`) ; attirer le pressing, troisième homme (`15b`).
@@ -26,17 +28,18 @@ Sous « pressing haut » (4 adversaires et plus), 81 % des décisions d'un défe
 | Poste | Durée |
 |---|---|
 | Analyse et compréhension du code | 40 min |
-| Développement | 45 min |
-| Tests unitaires et comportementaux | 35 min |
+| Développement | 55 min |
+| Tests unitaires et comportementaux | 45 min |
 | Intégration et vérifications | 30 min |
-| **Total (travail effectif)** | **2 h 30** |
+| **Total (travail effectif)** | **2 h 50** (2 h 30 avant le volet dégagement du 24/11/2026) |
 
-Confiance : faible. Hypothèses : la mesure du pressing par les solutions couvertes réutilise `possession.pass_success_probability` ; aucun changement des transitions du ticket 11 hors de la valeur de la relance longue. Au-dessus du seuil de 2 h : découpage à examiner avant le code (mesure, puis décision).
+Confiance : faible. Hypothèses : la mesure du pressing par les solutions couvertes réutilise `possession.pass_success_probability` ; aucun changement des transitions du ticket 11 hors de la valeur de la relance longue. Au-dessus du seuil de 2 h : découpage à examiner avant le code (mesure, puis décision ; le volet dégagement du 24/11/2026 peut former un troisième morceau).
 Temps machine, non compté : séries de 50 matchs avant et après ; suite complète.
 
 ## Acceptance criteria
 
 - [ ] Périmètre et constantes validés par le propriétaire avant le code
 - [ ] Part longue des défenseurs plus forte sous pressing mesuré par les solutions couvertes, en match (50 matchs), au-delà de deux erreurs types
+- [ ] Volet du 24/11/2026 : part des dégagements et des passes dans l'axe perdues sous forte pression dans son tiers, avant / après (50 matchs) ; scène : défenseur pressé de près devant sa surface, axe couvert : dégagement plus fréquent que la passe dans l'axe, jamais 100 %
 - [ ] Effet des attributs probabiliste ; rayon conforme à `docs/CARTE_ATTRIBUTS_V2.md`
 - [ ] Déterminisme à graine fixée ; suite V2 verte ; V1 inchangée
