@@ -194,14 +194,30 @@ def _canonical_nationality(token: str, registry: dict[str, tuple[str, str]]) -> 
     return None
 
 
+# Retraite internationale (ticket donnees-nouveaux-joueurs/08, demande du propriétaire du
+# 23/11/2026) : colonne optionnelle de "Infos principales", « oui » pour les joueurs qui ne
+# jouent plus en sélection (scripts/set_international_retirement.py). Ils restent en club.
+RETIREMENT_COLUMN = "Retraite internationale"
+
+
+def _retired_ids(path: str) -> set[int]:
+    """ID des joueurs en retraite internationale (colonne absente : aucun)."""
+    df = pd.read_excel(path, sheet_name="Infos principales")
+    if RETIREMENT_COLUMN not in df.columns:
+        return set()
+    flagged = df[df[RETIREMENT_COLUMN].astype(str).str.strip().str.lower() == "oui"]
+    return {int(i) for i in flagged["ID"].dropna()}
+
+
 def _players_by_nationality(
     path: str, registry: dict[str, tuple[str, str]]
 ) -> tuple[dict[str, list[Player]], set[str]]:
     by_nat: dict[str, list[Player]] = {name: [] for name in registry}
     unmatched: set[str] = set()
+    retired = _retired_ids(path)
     for option in load_all_clubs(path):
         for player in option.players:
-            if not player.nationalite or player.id is None:
+            if not player.nationalite or player.id is None or player.id in retired:
                 continue
             for token in str(player.nationalite).split(" / "):
                 token = token.strip()
