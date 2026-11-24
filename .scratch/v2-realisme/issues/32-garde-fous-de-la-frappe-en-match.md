@@ -1,4 +1,4 @@
-# 32: Garde-fous de la frappe en match
+# 32: Garde-fous de la frappe et du gardien en match
 
 **Chantier :** `v2-realisme` (demande du propriétaire du 24/11/2026, éléments sur la frappe et la finition, point 6 : « Mesures et garde-fous de réalisme sur match »). **Priorité :** P1. **Catégorie :** validation.
 
@@ -10,6 +10,8 @@
   - « tir-passe » : tirs au-delà de 25 m (et de 30 m) alors qu'un partenaire non hors-jeu avait une occasion nettement meilleure et une passe sûre ; suites de tirs lointains de la même équipe dans une même possession ;
   - occasions franches refusées : porteur à 10 m ou moins du but, angle ouvert, sans défenseur au contact ni entre lui et le but, qui ne tire pas (et ce qu'il fait à la place) ;
   - frappes dans de mauvaises conditions : tir en déséquilibre, dos au but, sur le mauvais pied (quand les tickets correspondants sont livrés).
+- **Gardien** (ajout du 24/11/2026, demande du propriétaire du 24/11/2026, éléments sur le gardien, point 6) : buts par tir cadré et par occasion franche (ni « mur infranchissable » ni gardien passif), répartition des arrêts (captés, repoussés en jeu avec la suite de l'action et le second ballon, claqués en corner, relâchés, buts encaissés), buts sur second ballon, arrêts par hauteur du tir quand le `05f` est livré.
+- **Cohérence frappe et gardien** : comparer la chance de but estimée par le tireur (`shooting.shot_outcome_shares`, même loi que la résolution depuis `05e` et `05l`) aux buts réellement marqués, par zone et par type de tir : un tir ne doit être ni puni deux fois (exécution et gardien) ni récompensé deux fois ; écart rapporté à chaque ticket du chantier.
 - **Stabilité globale** : passes réussies, possession, attaques placées et contres, arrêts, ballons repoussés et seconds ballons, rapportés à côté.
 - **Scènes de garde** (tests permanents) : seul à 8 m face au but, il tire presque toujours ; à 35 m avec un partenaire démarqué dans la surface et une passe sûre, il ne tire presque jamais ; une frappe facile réussit parfois même pour un mauvais tireur, une frappe difficile échoue parfois même pour un très bon (règle « jamais binaire »).
 
@@ -29,7 +31,7 @@
 | Développement (indicateurs du banc) | 40 min |
 | Tests (scènes de garde) | 25 min |
 | Intégration et vérifications | 20 min |
-| **Total (travail effectif)** | **1 h 45** |
+| **Total (travail effectif)** | **1 h 45** (frappe) ; **2 h 15** avec le volet gardien ajouté le 24/11/2026 : découpage possible au lancement (frappe / gardien) |
 
 Confiance : moyenne. Temps machine, non compté : série de 50 matchs (environ 45 min), suite complète (environ 23 min).
 
@@ -39,6 +41,7 @@ Confiance : moyenne. Temps machine, non compté : série de 50 matchs (environ 4
 - [ ] Moteur inchangé (mêmes empreintes à graine fixée)
 - [ ] Indicateurs ajoutés au banc et rapportés sur 50 matchs (point de départ du chantier de la frappe) ; repères réels sourcés ou « non trouvé »
 - [ ] Scènes de garde ajoutées à la suite et vertes sur le moteur actuel, ou écart signalé au propriétaire
+- [ ] Volet gardien : buts par tir cadré et par occasion franche, répartition des arrêts (captés, repoussés avec leur suite, claqués, relâchés) et écart entre chance estimée et buts réels rapportés sur 50 matchs
 - [ ] Durée réelle relevée
 
 ## Comments

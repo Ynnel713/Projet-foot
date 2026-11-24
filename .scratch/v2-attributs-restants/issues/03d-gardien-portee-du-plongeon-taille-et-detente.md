@@ -10,9 +10,11 @@
 - Gardien de référence : médianes des 50 gardiens notés de Ligue 1 de la base, **189 cm** (de 181 à 204) et **Agility 65** (de 25 à 85). À la référence, ou sans note, portée et vitesse du plongeon inchangées : les taux d'arrêt calibrés au `05l` sont gardés (cadrés arrêtés environ 58 % dans la surface, 81 % hors surface).
 - Lecture : Agility par la façade (`condition.effective_rating`, lecture d'un seul attribut) ; la taille n'existe pas dans le moteur : nouveau champ de `PlayerState` rempli au départ du match depuis `Player.taille_fm`, avec un repli (colonne « Taille (cm) », puis la référence) si elle manque, champ partagé avec `03a` et `v2-realisme/15b` ; le profil du gardien au moment du tir passe par `shooting.keeper_profile` (porté par `ShotFlight.keeper_profile`), comme Reflexes et One on Ones.
 
-**Hors périmètre :** hauteur du tir (le moteur n'en a pas encore : tir au-dessus ou en lucarne tiré au sort, `v2-hauteur-ballon/02a`) ; quand elle existera, la taille et Jumping Reach pourront régler la portée en hauteur (ticket à ouvrir à ce moment). Sorties sur centres : `03a`.
+**Hors périmètre :** hauteur du tir (le moteur n'en a pas encore : tir au-dessus ou en lucarne tiré au sort, `v2-hauteur-ballon/02a`) ; la portée en hauteur (taille, sans Jumping Reach, réservée au duel aérien) est au `v2-realisme/05f` (décision du 24/11/2026). Sorties sur centres : `03a`.
 
 **Attributs :** Agility ; Taille (colonne de la base).
+
+**Ajout du 24/11/2026 (demande du propriétaire du 24/11/2026, éléments sur le gardien, point 3) : temps au sol après un plongeon.** Aujourd'hui, le gardien qui vient de plonger est aussitôt disponible pour le second ballon (aucun temps au sol dans `match` ni `gardien`). Après un plongeon, il reste au sol un court instant, puis se relève, d'autant plus vite que son Agility est haute (carte : « gardien qui plonge et se relève vite ») : le second ballon devient une vraie occasion, le double arrêt reste possible pour un gardien explosif. Constantes à proposer avant le code (temps au sol, effet d'Agility). La portée en hauteur est au `v2-realisme/05f`. **Périmètre élargi : découpage possible** (portée et vitesse du plongeon / temps au sol).
 
 **Blocked by:** `03b1` (livré).
 
@@ -28,7 +30,7 @@
 | Développement | 30 min |
 | Tests | 35 min |
 | Intégration et vérifications | 30 min |
-| **Total (travail effectif)** | **1 h 55** |
+| **Total (travail effectif)** | **1 h 55** (portée et vitesse du plongeon) ; **2 h 40** avec le temps au sol ajouté le 24/11/2026 : découpage à faire au lancement (portée et vitesse / temps au sol) |
 
 Confiance : moyenne (même chemin que Reflexes et One on Ones au `03b1`). Temps machine, non compté : série réelle de 50 matchs appariés, séries forcées (taille 181 contre 204, Agility 25 contre 85 ; 30 matchs chacune), environ 2 h ; suite complète (environ 16 min).
 
@@ -43,6 +45,7 @@ Confiance : moyenne (même chemin que Reflexes et One on Ones au `03b1`). Temps 
 - [ ] Part des tirs cadrés dans la bande 2,72-2,95 m mesurée avant le code ; choix (a), (b) ou (c) pour la taille soumis au propriétaire si elle est négligeable
 - [ ] Scènes séparées par attribut : Agility seule, tir dont le temps de vol tombe dans la phase de plongeon (plus arrêté à 85 qu'à 25) ; taille seule, tir vers 2,8-2,9 m du gardien (atteint à 204 cm, pas à 181 cm) ; écart borné (plafond de la carte entre extrêmes)
 - [ ] Séries forcées (mêmes graines) : part des tirs cadrés arrêtés plus haute à Agility 85 qu'à 25, avec intervalle ; pour la taille, critère selon le choix retenu (intervalle de confiance ou scènes seules) ; série réelle : part des cadrés arrêtés et buts par match avec intervalle, comparés aux repères du `05l`
+- [ ] Temps au sol après un plongeon (ajout du 24/11/2026) : constantes validées avant le code ; scène : après un arrêt repoussé, le gardien ne peut pas intervenir pendant son temps au sol, plus court à Agility 85 qu'à 25 ; série : buts sur second ballon après un arrêt rapportés avant et après
 - [ ] Carte des attributs (Agility, Taille) et test de rayon à jour ; aucune lecture de Jumping Reach
 - [ ] Durée réelle relevée ; déterminisme ; suite V2 verte ; V1 inchangée
 

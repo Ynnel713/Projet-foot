@@ -6,6 +6,8 @@
 
 **What to build:** Un ballon frappé avec effet garde une accélération latérale proportionnelle à sa vitesse, décroissante dans le temps ; la frappe choisit l'effet (tickets de geste : `v2-attributs-restants/10a`, `11`).
 
+**Ajout du 24/11/2026 (demande du propriétaire du 24/11/2026, éléments sur le gardien, points 2 et 4) :** une trajectoire qui tourne en fin de course surprend le gardien : sa lecture (`03l`) part de la trajectoire perçue au départ ; l'écart dû à l'effet se rattrape avec le temps de réaction restant. Effet de lecture seulement, sans constante de « surprise » à part.
+
 **Attributs :** aucun
 
 **Blocked by:** 14a (Freinage du ballon au sol : roulement et air); `v2-hauteur-ballon/02a`.

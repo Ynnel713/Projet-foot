@@ -8,6 +8,8 @@
 
 **Ajout du 24/11/2026 (demande du propriétaire du 24/11/2026, éléments sur la frappe et la finition, point 4) : hauteur et trajectoire.** Trois hauteurs à distinguer, avec leurs conséquences pour le gardien : au ras du sol (long à aller chercher près du poteau, plongeon au sol), à mi-hauteur (plus facile à capter ou repousser pour un gardien bien placé), haute sous la barre ou en lucarne (détente, plus souvent repoussée). La portée du gardien selon la hauteur (05b, plongeon du `v2-attributs-restants/03d`) et le choix capter ou repousser (`v2-attributs-restants/03b2`, livré) lisent cette hauteur. Les tirs sur les montants sont au `v2-collectif/35c`.
 
+**Ajout du 24/11/2026 (demande du propriétaire du 24/11/2026, éléments sur le gardien, point 3) : zones fortes et faibles du gardien.** Ballon à portée de main, au buste ou à la poitrine : le plus facile à capter ou repousser ; à mi-hauteur sur le côté (hanche), entre la portée debout et le plongeon, plus délicat à bloquer proprement qu'il n'y paraît ; au ras du sol près du poteau : plongeon bas et explosif ; sous la barre ou en lucarne : détente et allonge. La portée en hauteur se calcule ici, avec la taille du gardien (champ partagé du `v2-attributs-restants/03d`) ; Jumping Reach n'y entre pas (duel aérien, `v2-realisme/15b1`).
+
 **Attributs :** aucun
 
 **Blocked by:** 05b (Arrêt : le gardien atteint ou non le ballon); `v2-hauteur-ballon/02a`; `v2-collectif/35b`.

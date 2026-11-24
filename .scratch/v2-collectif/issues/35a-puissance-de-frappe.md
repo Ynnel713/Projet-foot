@@ -6,6 +6,8 @@
 
 **Ajout du 24/11/2026 (demande du propriétaire du 24/11/2026, éléments sur la frappe et la finition, point 3) :** la puissance a un prix : frapper plus fort que sa capacité élargit la dispersion (frapper fort sans perdre tout contrôle) ; la tenue de la vitesse à distance découle de la vitesse de départ (Long Shots) et du freinage du ballon (`v2-realisme/14a`) : aucun attribut n'agit sur le vol après la frappe (correction de la réserve A1 de l'expert, 24/11/2026) ; Technique n'entre que si un contexte du registre le justifie (ADR 0002), à trancher avec la question Long Shots ou Finishing ci-dessus.
 
+**Ajout du 24/11/2026 (demande du propriétaire du 24/11/2026, éléments sur le gardien, point 4) :** la vitesse du tir entre aussi dans l'issue de l'arrêt (`shooting.save_shares`, `v2-attributs-restants/03b2`, livré, qui ne connaît aujourd'hui ni la force ni la hauteur du tir) : une frappe très puissante est moins souvent captée, plus souvent repoussée, et le ballon repoussé part plus loin ; la prise de balle (Handling) garde son rôle. **Sans double comptage** (réserve A1 de l'expert, 24/11/2026) : dans `save_shares`, la vitesse **remplace** la part de la chance qui vient de l'exécution du tireur (le terme `skill` de `shot_probability`) : la difficulté de l'arrêt se lit sur la chance du lieu et de la position du gardien, plus la vitesse. Test : même lieu, même vitesse, Long Shots 11 contre 99 : même part captée.
+
 **Attributs :** Long Shots (puissance, partout), Finishing inchangé (précision dans la surface).
 
 **Blocked by:** 28b.
