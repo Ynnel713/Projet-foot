@@ -9,8 +9,9 @@ ne compte pas. Aucun tirage : la sélection est la même à chaque exécution. Q
 Constantes validées par le propriétaire le 23/11/2026 (« Validées telles quelles », chiffres réels non trouvés) :
 - `AERIAL_ATTACKERS` : au plus deux joueurs par équipe (fixé par le ticket) ;
 - `SECOND_ATTACKER_GAP_S` : le second n'y va que s'il touche le ballon au plus 1,0 s après le premier de son équipe ;
-- `ATTACKER_HOLD_S` : un joueur désigné le reste tant qu'un coéquipier n'arrive pas 0,3 s plus tôt que lui ; le même
-  maintien s'ajoute à l'écart du second déjà en route (1,3 s).
+- `ATTACKER_HOLD_S` : un joueur désigné garde sa place (et le premier sa priorité sur le second) tant qu'un coéquipier
+  ne touche pas le ballon plus de 0,3 s avant lui, ni ne le touche au plus tard au même instant en arrivant plus de
+  0,3 s avant lui (règle double, ticket 15a2, choisie par le propriétaire le 24/11/2026) ; le même maintien s'ajoute à l'écart du second déjà en route (1,3 s).
 Recherche du point de contact : `STEP_S` et `HORIZON_S`, les valeurs de la lecture d'occasion
 (`occasion.REACH_STEP_S`, `occasion.REACH_HORIZON_S`), horizon prolongé jusqu'à la retombée du ballon, au plus
 `vol.MAX_FLIGHT_S` (un long ballon vole plus de 3 s : sans cela, personne n'attendrait sous sa chute) ; contact à
@@ -20,6 +21,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, replace
+from functools import cmp_to_key
 
 from v2engine.atteinte import reach_m
 from v2engine.ball_state import BallState
@@ -96,20 +98,43 @@ def contact_point(player: PlayerState,
     return None if late is None else (late[1], late[2], False, late[1])
 
 
+def _compare(x: tuple[str, AerialAttacker], y: tuple[str, AerialAttacker], seniority: dict[str, int],
+             receiver: str | None) -> int:
+    """Ordre de deux coéquipiers (négatif : `x` d'abord). Receveur visé d'abord, puis à temps avant en retard ; entre deux
+    joueurs de même seniorité, instant du contact (arrondi : celui d'un joueur à temps ne dépend que de sa portée), puis
+    arrivée, puis nom. Règle double du maintien (ticket 15a2, choisie par le propriétaire le 24/11/2026) : le plus
+    ancien (premier désigné, puis second déjà désigné) garde la priorité sauf si l'autre touche le ballon plus de
+    `ATTACKER_HOLD_S` avant lui, ou le touche au plus tard au même instant et arrive plus de `ATTACKER_HOLD_S` avant lui.
+    Sans elle, un coéquipier qui touche un pas de 0,1 s plus tôt passait devant, et le premier et le second qui
+    touchent au même instant permutaient au gré de petites variations des temps d'arrivée."""
+    (nx, ax), (ny, ay) = x, y
+    head_x, head_y = (nx != receiver, not ax.on_time), (ny != receiver, not ay.on_time)
+    if head_x != head_y:
+        return -1 if head_x < head_y else 1
+    if seniority[nx] == seniority[ny]:
+        kx, ky = (round(ax.contact_s, 6), ax.arrival_s, nx), (round(ay.contact_s, 6), ay.arrival_s, ny)
+        return -1 if kx < ky else (1 if kx > ky else 0)
+    senior, junior, sign = (ax, ay, -1) if seniority[nx] > seniority[ny] else (ay, ax, 1)
+    junior_c, senior_c = round(junior.contact_s, 6), round(senior.contact_s, 6)
+    displaced = (junior_c < round(senior.contact_s - ATTACKER_HOLD_S, 6)
+                 or (junior_c <= senior_c and junior.arrival_s < senior.arrival_s - ATTACKER_HOLD_S))
+    return -sign if displaced else sign
+
+
 def select_attackers(ball: BallState, players: list[PlayerState],
                      previous: dict[str, AerialAttacker] | None = None) -> dict[str, AerialAttacker]:
     """Joueurs désignés de chaque équipe sur un ballon aérien (vide sinon), par nom. Classement : à temps avant en
     retard, puis instant du contact (le plus grand ou le meilleur sauteur touche plus tôt un ballon qui descend), puis
-    arrivée au point, où un désigné du pas précédent (`previous`) garde l'avantage de `ATTACKER_HOLD_S`. Le
-    receveur visé est toujours retenu ; le second n'y va que s'il arrive au plus `SECOND_ATTACKER_GAP_S` après le
-    premier de son équipe."""
+    arrivée au point ; un désigné du pas précédent (`previous`) garde sa place, et le premier sa priorité sur le second,
+    selon la règle double du maintien (`_compare`, ticket 15a2). Le receveur visé est toujours retenu ; le second n'y va
+    que s'il arrive au plus `SECOND_ATTACKER_GAP_S` après le premier de son équipe."""
     if not is_aerial_ball(ball):
         return {}
     previous = previous or {}
     path = ball_path(ball)
     chosen: dict[str, AerialAttacker] = {}
     for team in ("home", "away"):
-        options = []
+        candidates = []
         for p in players:
             if p.team != team or p.poste == "GK" or p.name == ball.released_by \
                     or (p.name in ball.offside_watch and p.name != ball.receiver):
@@ -119,13 +144,16 @@ def select_attackers(ball: BallState, players: list[PlayerState],
             if found is None and p.name != ball.receiver:
                 continue
             contact_s, point, on_time, arrival_s = found if found is not None else (math.inf, p.position, False, math.inf)
-            hold = ATTACKER_HOLD_S if p.name in previous else 0.0
-            # instant du contact arrondi au pas : celui d'un joueur à temps ne dépend que de sa portée (stable)
-            key = (p.name != ball.receiver, not on_time, round(contact_s, 6), arrival_s - hold, p.name)
-            options.append((key, AerialAttacker(team, point, contact_s, on_time, 0, arrival_s), p.name))
-        options.sort(key=lambda o: o[0])
-        first_arrival_s = min((o[1].arrival_s for o in options), default=math.inf)
-        for _, attacker, name in options[:AERIAL_ATTACKERS]:
+            candidates.append((p.name, AerialAttacker(team, point, contact_s, on_time, 0, arrival_s)))
+        # seniorité : premier désigné du pas précédent, puis second, puis les autres
+        seniority = {name: (2 - previous[name].rank if name in previous else 0) for name, _ in candidates}
+
+        def order(x: tuple[str, AerialAttacker], y: tuple[str, AerialAttacker]) -> int:
+            return _compare(x, y, seniority, ball.receiver)
+
+        options = sorted(candidates, key=cmp_to_key(order))
+        first_arrival_s = min((a.arrival_s for _, a in options), default=math.inf)
+        for name, attacker in options[:AERIAL_ATTACKERS]:
             rank = sum(1 for a in chosen.values() if a.team == team)
             # le second déjà en route garde aussi l'avantage du maintien : sans lui, il partirait et s'arrêterait au gré
             # des petites variations des temps d'arrivée

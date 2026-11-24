@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import v2engine.match as match
 import v2engine.occasion as occasion
 from v2engine.atteinte import reach_m
@@ -98,6 +100,47 @@ def test_a_designated_player_keeps_his_place_unless_a_mate_is_clearly_earlier() 
         first = next(n for n, a in chosen.items() if a.rank == 0)
         assert (first == "h1") is kept
         assert first in select_attackers(ball, [held, other], chosen)  # stable au pas suivant
+
+
+def test_the_hold_also_applies_to_a_mate_who_touches_the_ball_a_step_earlier() -> None:
+    # ticket 15a2 : centre tendu qui redescend ; le désigné touche le ballon à 0,7 s. Un coéquipier qui le touche un pas
+    # de 0,1 s plus tôt et arrive 0,05 s avant lui passait devant ; le maintien de 0,3 s le garde désormais premier.
+    # Un coéquipier (grand sauteur) qui le touche 0,4 s plus tôt et arrive 0,4 s avant lui le remplace toujours.
+    ball = BallState(position=Vec2(55.0, 34.0), velocity=Vec2(15.0, 0.0), z=2.8, vz=0.0)
+    path = ball_path(ball)
+    held = _p("h1", 63.0, 39.8, "home")
+    contact_s, _, _, held_arrival_s = contact_point(held, path)
+    step_ahead = _p("h2", 63.0, 39.4, "home")
+    well_ahead = _p("h2", 59.2, 36.4, "home", height=1.95, jumping=90)
+    for other, contact_lead_s, arrival_lead_s, kept in ((step_ahead, STEP_S, 0.05, True), (well_ahead, 0.4, 0.4, False)):
+        other_contact_s, _, on_time, other_arrival_s = contact_point(other, path)
+        assert on_time and abs(contact_s - other_contact_s - contact_lead_s) < 1e-6
+        assert abs(held_arrival_s - other_arrival_s - arrival_lead_s) < 0.01
+        assert select_attackers(ball, [held, other])["h2"].rank == 0  # sans maintien, le coéquipier passe devant
+        previous = select_attackers(ball, [held])
+        chosen = select_attackers(ball, [held, other], previous)
+        first = next(n for n, a in chosen.items() if a.rank == 0)
+        assert (first == "h1") is kept
+        assert first in select_attackers(ball, [held, other], chosen)  # stable au pas suivant
+
+
+def test_the_first_keeps_his_priority_over_the_second_unless_the_second_is_clearly_earlier() -> None:
+    # ticket 15a2 : premier et second déjà désignés, qui touchent le ballon au même instant ; le second qui arrive 0,2 s
+    # avant le premier ne lui prend plus la première place (ils permutaient à chaque petite variation) ; 0,4 s : il la prend
+    ball = _clearance()
+    path = ball_path(ball)
+    held = _p("h1", 60.0, 40.0, "home")
+    contact_s, _, _, held_arrival_s = contact_point(held, path)
+    for lead_s, kept in ((0.2, True), (0.4, False)):
+        second = next(o for o in (_p("h2", 60.0 + d * 0.05, 36.5, "home") for d in range(200))
+                      if contact_point(o, path)[0] == contact_s
+                      and abs(held_arrival_s - contact_point(o, path)[3] - lead_s) < 0.02)
+        both = select_attackers(ball, [held, second])
+        assert both["h2"].rank == 0  # sans maintien, le second arrivé plus tôt passe premier
+        previous = {"h1": replace(both["h1"], rank=0), "h2": replace(both["h2"], rank=1)}
+        chosen = select_attackers(ball, [held, second], previous)
+        assert set(chosen) == {"h1", "h2"}
+        assert (chosen["h1"].rank == 0) is kept
 
 
 def test_the_intended_receiver_is_always_one_of_his_team() -> None:

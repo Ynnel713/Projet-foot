@@ -2190,3 +2190,28 @@ Interceptions : pas d'indicateur direct dans le banc ; pertes de balle et grosse
 
 **Lecture.** Les défenseurs attaquent désormais les centres et les longs ballons : plus de contrôles de la tête, un centre gardé une fois sur trois au lieu d'une sur deux (repère réel cité de mémoire au § 75 : 20 à 25 %). Les épisodes de ballon libre baissent : un ballon en l'air n'a plus de chasseur unique (11g) mais deux désignés par équipe, et le ballon libre n'est compté qu'une fois retombé. Les contacts francs augmentent (deux joueurs de chaque équipe au même point de chute). Les changements rapides de désignation viennent surtout du second, qui entre et sort quand les temps d'arrivée bougent ; le premier change dans 12 % des désignations (repère du ballon libre au 11k : 21 %). Réserve A2 du ticket `v2-attributs-restants/01` : la baisse des centres (− 0,23) ne s'accompagne d'aucune variation des tirs ni des buts : pas de série de contrôle. La partie du corps ne compte que les contrôles réussis (les contacts ratés ne sont pas tracés).
 
+
+## 77. Maintien du premier désigné sur un ballon aérien (ticket v2-realisme/15a2, 50 matchs appariés, 24/11/2026)
+
+**Mécanisme.** Règle double du maintien (décision du propriétaire du 24/11/2026) : un joueur désigné garde sa place, et le premier sa priorité sur le second, sauf si un coéquipier touche le ballon plus de 0,3 s avant lui, ou le touche au plus tard au même instant et arrive plus de 0,3 s avant lui. Avant : le maintien ne jouait que sur l'arrivée, entre joueurs touchant le ballon au même pas de 0,1 s, et s'annulait entre le premier et le second (tous deux désignés). Aucune constante nouvelle.
+
+**Série** (`scripts.bench_series 50 --processus 4`, avant : `eb16120` ; comparaison `.scratch/v2-realisme/mesures/15a2-comparaison.txt`). Une première série « après » (règle double sans la priorité du premier sur le second) donnait 11,9 → 10,7 % (− 1,4 point [− 2,75 ; + 0,01], non significatif) ; relevé de 2 matchs : 9 changements rapides du premier sur 15 étaient des échanges entre premier et second, dont 7 au même instant de contact.
+
+| Indicateur | Avant | Après | Écart apparié (IC 95 %) |
+|---|---|---|---|
+| Changements du premier en moins de 1 s | 11,9 % | 7,4 % | − 4,8 points [− 6,6 ; − 3,0] |
+| Changements en moins de 1 s (premier ou second) | 24,9 % | 20,8 % | − 4,3 points [− 6,6 ; − 2,1] |
+| Désignations par équipe et par match | 34,9 | 31,6 | − 3,2 [− 5,7 ; − 0,7] |
+| Désignations à deux | 68,7 % | 64,5 % | − 4,4 points [− 6,5 ; − 2,2] |
+| Premier à temps | 92,5 % | 91,1 % | − 1,8 point [− 3,5 ; − 0,1] |
+| Contrôles de la tête (part des contrôles) | 1,11 % | 1,15 % | + 0,04 point [− 0,07 ; + 0,15] |
+| Premier contrôle après un centre : tête / pied / corps | 52 / 44 / 4 % | 53 / 39 / 8 % | + 1,0 / − 7,1 / + 4,1 points (corps [+ 0,5 ; + 7,8]) |
+| Centres par équipe / gardés | 1,31 / 34,4 % | 1,44 / 41,0 % | + 0,13 [− 0,15 ; + 0,41] / + 2,5 points [− 9,3 ; + 14,2] |
+| Passes longues réussies | 67,6 % | 67,3 % | − 0,2 point [− 2,8 ; + 2,5] |
+| Ballon libre : épisodes disputés / pris par l'adversaire | 521 / 14,5 % | 522 / 14,6 % | + 1,4 [− 6,8 ; + 9,6] / + 0,1 point [− 0,4 ; + 0,7] |
+| Contacts francs par match | 987 | 994 | + 7 [− 7 ; + 22] |
+| Buts par match / tirs par équipe | 4,66 / 14,6 | 5,18 / 15,3 | + 0,52 [− 0,32 ; + 1,36] / + 0,77 [− 0,39 ; + 1,94] |
+
+158 indicateurs significatifs sur 2 834 (environ 142 attendus par hasard).
+
+**Lecture.** Le premier désigné change rapidement dans 7,4 % des désignations au lieu de 11,9 % (repère du ballon libre au 11k : 21 %). Les changements restants relevés sur 2 matchs viennent d'un premier qui n'est plus à temps ou d'un coéquipier nettement plus tôt (0,8 à 2,8 s) : remplacements voulus. Désignations, part à deux et premier à temps sont comptés à chaque changement (`trace.AerialRecord`) : les échanges supprimés étaient des relevés à deux joueurs, tous deux à temps ; leur disparition baisse ces parts sans que l'équipe envoie moins de joueurs. Le jeu aérien (têtes, centres, longs ballons, ballon libre) et le résultat (buts, tirs, possession) restent dans le bruit ; la hausse du premier contrôle du corps après un centre (+ 4 points, sur environ 130 centres par série) est à la limite et isolée.
