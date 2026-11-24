@@ -33,7 +33,8 @@ import v2engine.cerveau as cerveau
 import v2engine.defense as defense
 import v2engine.match as match
 from v2engine.atteinte import CORPS, MAINS, PIED, TETE
-from v2engine.duel import attempt_tackle_probability
+from v2engine.duel import CARELESS, EXCESSIVE, RECKLESS, attempt_tackle_probability
+from v2engine.duel_aerien import BASCULE, BEHIND, SIDE
 from v2engine.flux import DUEL
 from v2engine.shooting import NEUTRAL_ATTRIBUTES
 from v2engine.trace import CONTROLE_RATE, PASSE, PERTE
@@ -47,6 +48,8 @@ from scripts.v2_tranches import minute_report, player_report
 from scripts.graines_validation import check_series
 
 BODY_PARTS = (PIED, CORPS, TETE, MAINS)  # partie du corps des contrôles (v2-realisme/15a)
+AERIAL_SITUATIONS = (SIDE, BEHIND, BASCULE)  # situations du duel aérien (v2-realisme/15b2)
+FOUL_SEVERITIES = (CARELESS, RECKLESS, EXCESSIVE)
 
 AUDIT_SEED = 20260923
 HIGH, LOW = 99, 11
@@ -409,6 +412,7 @@ def run(n_matches: int, profile: str | None = None, duration_minutes: float = 90
                 collector.on_receptions(trace.receptions)  # mémoire du receveur (ticket v2-realisme/08b)
                 collector.on_aerial(getattr(trace, "aerial", []))  # désignés sur ballon aérien (ticket v2-realisme/15a)
                 collector.on_aerial_duels(getattr(trace, "aerial_duels", []))  # duels aériens (ticket v2-realisme/15b1)
+                collector.on_aerial_challenges(getattr(trace, "aerial_challenges", []))  # fautes aériennes (15b2)
                 collector.on_scans(trace.scans, trace.receptions)  # scans (ticket v2-realisme/08c)
                 if profile:  # indicateurs cibles par équipe (ticket v2-realisme/24)
                     collector.profile_tallies.append(profile_tally(trace, high_team))
@@ -588,6 +592,13 @@ def report(c: Collector, detail: bool = False) -> dict:
         / max(1, k["duels aériens gagnés : plus grand"] + k["duels aériens gagnés : plus petit"]),
         "duels aériens gagnés par le premier au ballon (part)": k["duels aériens gagnés par le premier au ballon"]
         / max(1, k["duels aériens"]),
+        # fautes du duel aérien (ticket v2-realisme/15b2) : par match, contacts et part sifflée par situation, gravité
+        "fautes aériennes par match": k["fautes aériennes"] / n,
+        **{f"duels aériens : contacts {s} par match": k[f"duels aériens : contacts {s}"] / n for s in AERIAL_SITUATIONS},
+        **{f"fautes aériennes : {s} (part des contacts)": k[f"fautes aériennes : {s}"]
+           / max(1, k[f"duels aériens : contacts {s}"]) for s in AERIAL_SITUATIONS},
+        **{f"fautes aériennes : gravité {g} (part)": k[f"fautes aériennes : gravité {g}"]
+           / max(1, k["fautes aériennes"]) for g in FOUL_SEVERITIES},
         # partie du corps (réserve A1 du ticket v2-attributs-restants/01, mesurée au v2-realisme/15a)
         **{f"contrôles : {part} (part)":
            k[f"contrôles par partie du corps : {part}"]

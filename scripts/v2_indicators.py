@@ -1219,6 +1219,16 @@ class Collector:
             self.count[f"duels aériens gagnés : {issue}"] += 1
             self.count["duels aériens gagnés par le premier au ballon"] += r.winner == r.first
 
+    def on_aerial_challenges(self, records) -> None:
+        """Contacts des duels aériens jugés par l'arbitre (ticket v2-realisme/15b2), `trace.AerialChallengeRecord` :
+        par situation (épaule contre épaule, par derrière, bascule), contacts, fautes sifflées et leur gravité."""
+        for r in records:
+            self.count[f"duels aériens : contacts {r.situation}"] += 1
+            if r.foul:
+                self.count["fautes aériennes"] += 1
+                self.count[f"fautes aériennes : {r.situation}"] += 1
+                self.count[f"fautes aériennes : gravité {r.severity}"] += 1
+
     def _body_parts(self, receptions) -> None:
         """Partie du corps des contrôles réussis, et du premier contrôle réussi après un centre, avant la passe suivante
         (réserve A1 du ticket v2-attributs-restants/01, mesurée au v2-realisme/15a). Les contacts ratés ne sont pas

@@ -7,6 +7,7 @@ from dataclasses import replace
 
 import pytest
 
+from v2engine import duel_aerien
 from v2engine.atteinte import jump_m, reach_m
 from v2engine.ball_state import BallState
 from v2engine.duel import after_contact_delay_s, contact_share
@@ -19,6 +20,14 @@ from v2engine.trace import AerialDuelRecord
 from tests.scenes import seed_scene
 
 RUN = Vec2(5.0, 0.0)
+
+
+@pytest.fixture(autouse=True)
+def _no_aerial_fouls(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Duel loyal seul (15b1) : les fautes du duel aérien (15b2, `tests/test_v2engine_fautes_aeriennes.py`) sont
+    neutralisées, sinon une faute sifflée arrête certains duels de la scène."""
+    for situation in duel_aerien.FOUL_FACTOR:
+        monkeypatch.setitem(duel_aerien.FOUL_FACTOR, situation, 0.0)
 
 
 def _p(name: str, team: str, height: float, jumping: int = 50, strength: int = 50, y: float = 34.0,

@@ -138,6 +138,23 @@ class AerialDuelRecord:
 
 
 @dataclass(frozen=True)
+class AerialChallengeRecord:
+    """Contact d'un duel aérien jugé par l'arbitre (ticket v2-realisme/15b2), trace seulement : situation (épaule
+    contre épaule, par derrière, bascule), fautif possible (`fouler`, de l'équipe `team`) et sa victime, la chance de
+    faute, `foul` si elle est sifflée, sa gravité (vide sans faute) et le lieu (la victime)."""
+    minute: float
+    situation: str
+    fouler: str
+    victim: str
+    team: str
+    probability: float
+    foul: bool
+    severity: str
+    x: float
+    y: float
+
+
+@dataclass(frozen=True)
 class LineExitRecord:
     """Changement d'état d'un défenseur central (ticket v2-realisme/10b), trace seulement : `exit` vrai quand il presse,
     marque ou couvre (`role`) à plus de 10 m de sa place de référence sans ballon sans être plus près de son but
@@ -387,6 +404,7 @@ class MatchTrace:
     situations: list[SituationRecord] = field(default_factory=list)
     aerial: list[AerialRecord] = field(default_factory=list)  # désignés sur ballon aérien (ticket v2-realisme/15a)
     aerial_duels: list[AerialDuelRecord] = field(default_factory=list)  # duels aériens (ticket v2-realisme/15b1)
+    aerial_challenges: list[AerialChallengeRecord] = field(default_factory=list)  # fautes aériennes (v2-realisme/15b2)
     pressers: list[PressRecord] = field(default_factory=list)  # changements de presseur (ticket v2-realisme/10a)
     line_exits: list[LineExitRecord] = field(default_factory=list)  # sorties des centraux (ticket v2-realisme/10b)
     depth_covers: list[DepthCoverRecord] = field(default_factory=list)  # couverture de la profondeur (v2-realisme/10c)

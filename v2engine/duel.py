@@ -47,10 +47,10 @@ def attempt_tackle_probability(aggression: float) -> float:
                                min_prob=0.0, max_prob=1.0)
 
 
-def foul_severity() -> str:
-    """Gravité d'une faute (voir `_RECKLESS_SHARE`)."""
+def foul_severity(reckless_share: float = _RECKLESS_SHARE, excessive_share: float = _EXCESSIVE_SHARE) -> str:
+    """Gravité d'une faute (voir `_RECKLESS_SHARE`) ; parts propres à une faute en paramètre (duel aérien, 15b2)."""
     r = ARBITRAGE.random()
-    return EXCESSIVE if r < _EXCESSIVE_SHARE else RECKLESS if r < _EXCESSIVE_SHARE + _RECKLESS_SHARE else CARELESS
+    return EXCESSIVE if r < excessive_share else RECKLESS if r < excessive_share + reckless_share else CARELESS
 
 
 def foul_probability(aggression: float) -> float:
