@@ -37,7 +37,7 @@ from v2engine.duel import CARELESS, EXCESSIVE, RECKLESS, attempt_tackle_probabil
 from v2engine.duel_aerien import BASCULE, BEHIND, SIDE
 from v2engine.flux import DUEL
 from v2engine.shooting import NEUTRAL_ATTRIBUTES
-from v2engine.trace import CONTROLE_RATE, PASSE, PERTE
+from v2engine.trace import CONTROLE_RATE, PASSE, PERTE, TETE_AMORTI, TETE_DEGAGEMENT, TETE_REMISE, TETE_TIR
 from v2engine.cerveau import HORS_JEU
 from ligue1sim.lineup import pick_best_formation
 
@@ -50,6 +50,7 @@ from scripts.graines_validation import check_series
 BODY_PARTS = (PIED, CORPS, TETE, MAINS)  # partie du corps des contrôles (v2-realisme/15a)
 AERIAL_SITUATIONS = (SIDE, BEHIND, BASCULE)  # situations du duel aérien (v2-realisme/15b2)
 FOUL_SEVERITIES = (CARELESS, RECKLESS, EXCESSIVE)
+HEADER_GESTURES = (TETE_REMISE, TETE_TIR, TETE_DEGAGEMENT, TETE_AMORTI)  # gestes de la tête (v2-realisme/15c1)
 
 AUDIT_SEED = 20260923
 HIGH, LOW = 99, 11
@@ -413,6 +414,7 @@ def run(n_matches: int, profile: str | None = None, duration_minutes: float = 90
                 collector.on_aerial(getattr(trace, "aerial", []))  # désignés sur ballon aérien (ticket v2-realisme/15a)
                 collector.on_aerial_duels(getattr(trace, "aerial_duels", []))  # duels aériens (ticket v2-realisme/15b1)
                 collector.on_aerial_challenges(getattr(trace, "aerial_challenges", []))  # fautes aériennes (15b2)
+                collector.on_headers(getattr(trace, "headers", []))  # gestes de la tête (ticket v2-realisme/15c1)
                 collector.on_scans(trace.scans, trace.receptions)  # scans (ticket v2-realisme/08c)
                 if profile:  # indicateurs cibles par équipe (ticket v2-realisme/24)
                     collector.profile_tallies.append(profile_tally(trace, high_team))
@@ -594,6 +596,9 @@ def report(c: Collector, detail: bool = False) -> dict:
         / max(1, k["duels aériens"]),
         # fautes du duel aérien (ticket v2-realisme/15b2) : par match, contacts et part sifflée par situation, gravité
         "fautes aériennes par match": k["fautes aériennes"] / n,
+        # gestes de la tête (ticket v2-realisme/15c1) : contacts de la tête des joueurs de champ, part de chaque geste
+        "têtes par match": k["têtes"] / n,
+        **{f"têtes : {g} (part)": k[f"têtes : {g}"] / max(1, k["têtes"]) for g in HEADER_GESTURES},
         **{f"duels aériens : contacts {s} par match": k[f"duels aériens : contacts {s}"] / n for s in AERIAL_SITUATIONS},
         **{f"fautes aériennes : {s} (part des contacts)": k[f"fautes aériennes : {s}"]
            / max(1, k[f"duels aériens : contacts {s}"]) for s in AERIAL_SITUATIONS},

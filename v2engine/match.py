@@ -18,8 +18,8 @@ from ligue1sim.lineup import Lineup, pick_best_formation
 from ligue1sim.pitch_geometry import GOAL_HEIGHT_M, GOAL_WIDTH_M
 
 from v2engine.condition import effective_rating, intrinsic_rating
-from v2engine.trace import (ARRET, BUT, CONTRE, CONTROLE_RATE, DUEL_EPAULE, FAUTE, HORS_JEU, PASSE, PERTE, REMISE,
-                            TOUCHE_LONGUE, EventLog)
+from v2engine.trace import (ARRET, BUT, CONTRE, CONTROLE_RATE, DEGAGEMENT, DUEL_EPAULE, FAUTE, HORS_JEU, PASSE, PERTE,
+                            REMISE, TETE_AMORTI, TETE_DEGAGEMENT, TETE_REMISE, TETE_TIR, TOUCHE_LONGUE, EventLog)
 from v2engine.trace import TIR as TIR_EVENT  # `TIR` est le flux aléatoire des tirs (v2engine.flux)
 from v2engine.anticipation import pass_readers, reaction_delay_s
 from v2engine.ball_state import BallState, ShotFlight
@@ -47,13 +47,14 @@ from v2engine.duel_aerien import EXCESSIVE_SHARE as AERIAL_EXCESSIVE_SHARE, RECK
 from v2engine.duel_aerien import challenge as aerial_challenge, foul_chance as aerial_foul_chance
 from v2engine.duel_aerien import resolve as resolve_aerial_duel, rival as aerial_rival, under as aerial_under
 from v2engine.vol import BOUNCE_HORIZONTAL_KEEP, height_at, is_aerial_height, launch_vz, shot_launch_vz, step_height
-from v2engine.decision import (DECISION_INTERVAL_S, choose_action, dribble_lost, lane_closed_during_turn,
-                               lost_carry_outcome, thinks_one_touch)
+from v2engine.decision import (DECISION_INTERVAL_S, choose_action, dribble_lost, header_gesture, header_twin,
+                               lane_closed_during_turn, lost_carry_outcome, thinks_one_touch)
 from v2engine.defense import (COUVERTURE, HOLE_DANGER_M, HOLE_FILLED_M, MARQUAGE, PRESSEUR, DefensiveRoles, line_exit,
                               own_goal)
 from v2engine.occasion import ChanceTracker
 from v2engine.offside import HESITATION_S, OFFSIDE_OUT_S, offside_at_pass, sees_the_flag_probability
 from v2engine.possession import (BALL_FRICTION_PER_S, BALL_STOPPED_MPS, MAX_PASS_MPS, MISS_RETRY_S, attempt_control, deflect,
+                                 launch_speed_mps,
                                  missed_control_velocity, pass_launch, pass_success_probability, PRESSURE_RADIUS_M,
                                  orients_control, reception_delay_s)
 from v2engine.added_time import GRACE_S, HARD_STOP_S, added_minutes, played_minute
@@ -67,7 +68,7 @@ from v2engine.shooting import (BLOCK_CHANCE, BLOCK_WIDTH_M, FLYING, FUMBLED, HEL
 from v2engine.situation import SituationTracker
 from v2engine.transition import TransitionPlay
 from v2engine.trace import (BallSnapshot, DecisionRecord, FoulEvent, MatchTrace, OffsideEvent, PlayerSnapshot, ShotEvent,
-                            AerialChallengeRecord, AerialDuelRecord, AerialRecord, DepthCoverRecord, LineExitRecord, PressRecord, ReceptionEvent, RestartEvent, SituationRecord)
+                            AerialChallengeRecord, AerialDuelRecord, AerialRecord, HeaderRecord, DepthCoverRecord, LineExitRecord, PressRecord, ReceptionEvent, RestartEvent, SituationRecord)
 from v2engine.reception import DOS_AU_JEU, blind_reception, facing_to_goal_deg, open_facing, reception_type
 
 # But adverse d'une équipe, par convention de ce moteur (voir `formation.initial_positions`,
@@ -337,7 +338,7 @@ def _seen_by(memory: PerceptionMemory | None, observer: PlayerState, observed: P
 
 # Dernier événement après lequel un toucher adverse est une perte de balle (ticket 19b), et la façon de la nommer.
 _LOST_BY = {PASSE: "passe interceptée", REMISE: "passe interceptée", CONTROLE_RATE: "contrôle",
-            TOUCHE_LONGUE: "conduite"}
+            TOUCHE_LONGUE: "conduite", DEGAGEMENT: "dégagement"}
 
 
 def _whistle(ball: BallState, event: FoulEvent, players: list[PlayerState], now_s: float,
@@ -689,7 +690,8 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
                receptions: list[ReceptionEvent] | None = None,
                memory: PerceptionMemory | None = None,
                aerial_duels: list[AerialDuelRecord] | None = None,
-               aerial_challenges: list[AerialChallengeRecord] | None = None) -> str | None:
+               aerial_challenges: list[AerialChallengeRecord] | None = None,
+               headers: list[HeaderRecord] | None = None) -> str | None:
     """Avance le ballon d'un tick (mutation en place) : si un joueur le contrôle déjà, un
     adversaire à portée directe peut d'abord tenter un tacle (Phase 3, Tackling/Strength/
     Balance/Aggression ; au plus un par confrontation, v2-socle/03) ; sinon, après son temps de réception (`possession.reception_delay_s`, v2-socle/06)
@@ -840,7 +842,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
         return _execute(ball, holder, action, players, rivals, goal, keeper, now_s, set_piece, fouls, shots,
                         lost=action.kind == "dribble" and dribble_lost(holder, rivals), memory=memory, dt=dt)
     return _step_loose_ball(ball, dt, players, now_s, decisions, offsides, modes, restarts, fouls, shots, receptions,
-                            memory, aerial_duels, aerial_challenges)
+                            memory, aerial_duels, aerial_challenges, headers)
 
 
 def _record_decision(decisions: list[DecisionRecord] | None, memory: PerceptionMemory | None, holder: PlayerState,
@@ -994,7 +996,8 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
                      shots: list[ShotEvent] | None, receptions: list[ReceptionEvent] | None,
                      memory: PerceptionMemory | None = None,
                      aerial_duels: list[AerialDuelRecord] | None = None,
-                     aerial_challenges: list[AerialChallengeRecord] | None = None) -> str | None:
+                     aerial_challenges: list[AerialChallengeRecord] | None = None,
+                     headers: list[HeaderRecord] | None = None) -> str | None:
     """Ballon sans porteur : vol, contacts, sorties, buts (suite de `_step_ball`)."""
     ball.engaged_holder = None  # ballon libre : les confrontations en cours sont finies (v2-socle/03)
     if ball.shot_for is not None:
@@ -1130,7 +1133,19 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
         ball.receiver = None
         ball.released_by = None  # quelqu'un d'autre a touché le ballon : le passeur peut de nouveau le jouer
         _clear_offside(ball)
-        if attempt_control(player, ball.velocity, opponents):
+        # geste de la tête (ticket v2-realisme/15c1) : joueur de champ, ballon en l'air à hauteur de tête ; un geste
+        # en une touche part tout de suite, sinon il amortit (contrôle, comme avant)
+        headed = aerial and part == TETE and player.poste != "GK"
+        gesture = _header_choice(player, players, now_s, modes, memory, ball.velocity) if headed else None
+        if headed and headers is not None:
+            headers.append(HeaderRecord(
+                minute=now_s / 60.0, team=player.team, player=player.name,
+                gesture=_HEADER_GESTURE[gesture.kind] if gesture is not None else TETE_AMORTI,
+                target=gesture.target.name if gesture is not None and gesture.target is not None else None,
+                ball_z_m=z_contact, x=player.position.x, y=player.position.y))
+        if gesture is not None:
+            _head(ball, player, gesture, players, now_s, fouls, shots, memory, dt, received)
+        elif attempt_control(player, ball.velocity, opponents):
             # jeu à une touche (ticket v2-collectif/31a) : passe au sol qui lui est destinée, joueur de champ ; il décide
             # dès le tick suivant, et contrôle comme avant si son choix n'est pas une passe sans rotation
             first_time = intended and not aerial and player.poste != "GK" and thinks_one_touch(player, opponents)
@@ -1207,6 +1222,58 @@ def _aerial_foul(ball: BallState, contact: AerialChallenge, players: list[Player
         _settle_advantage(ball, fouls)
         _whistle(ball, event, players, now_s, fouls)
     return foul
+
+
+_HEADER_GESTURE = {"pass": TETE_REMISE, "shot": TETE_TIR, "clearance": TETE_DEGAGEMENT}
+
+
+def _header_choice(player: PlayerState, players: list[PlayerState], now_s: float, modes: dict[str, str] | None,
+                   memory: PerceptionMemory | None, ball_velocity: Vec2):
+    """Geste choisi au contact de la tête (ticket v2-realisme/15c1) : options jugées en une touche par son double aux
+    notes du geste neutres (`decision.header_twin`, provisoire), sur les adversaires qu'il perçoit (08d) ; rend
+    l'action si elle se joue de la tête (tir, passe de première, dégagement), `None` pour l'amorti."""
+    twin = header_twin(player)
+    opponent_team = "away" if player.team == "home" else "home"
+    keeper = _goalkeeper(opponent_team, players)
+    rivals = [p for p in players if p.team != player.team]
+    seen = memory.perceived_opponents(player, rivals, now_s, keeper.name if keeper else None) \
+        if memory is not None else None
+    action = choose_action(twin, players, _OPPONENT_GOAL[player.team], keeper, (modes or {}).get(player.team), None,
+                           {}, False, seen, one_touch=True, header=True, ball_velocity=ball_velocity)
+    return action if header_gesture(action) else None
+
+
+def _head(ball: BallState, player: PlayerState, action, players: list[PlayerState], now_s: float,
+          fouls: list[FoulEvent] | None, shots: list[ShotEvent] | None, memory: PerceptionMemory | None,
+          dt: float, received: str) -> None:
+    """Joue le geste de la tête (ticket v2-realisme/15c1), exécution provisoire : le ballon repart de la tête du
+    joueur avec la trajectoire actuelle d'une passe ou d'un tir (`_execute`, son double aux notes du geste neutres), ou,
+    pour un dégagement, en l'air vers `action.point` à la vitesse d'une passe de cette longueur. `received` : origine du
+    ballon reçu, pour l'origine d'un tir de la tête (`_shot_origin`)."""
+    twin = header_twin(player)
+    ball.came_from = (player.name, received, player.position)  # origine d'un tir de la tête (réserve A2 de l'expert)
+    ball.position, ball.velocity = player.position, Vec2(0.0, 0.0)
+    ball.z, ball.vz, ball.mode = 0.0, 0.0, SOL
+    ball.holder = None
+    if action.kind == "clearance":
+        _settle_advantage(ball, fouls)
+        _log(ball, now_s, DEGAGEMENT, player.team, player.name, "tête")
+        distance = player.position.distance_to(action.point)
+        ball.velocity = (action.point - player.position).normalized() * launch_speed_mps(distance)
+        _loft(ball, distance, dt)
+        ball.last_toucher = ball.released_by = player.name
+        ball.receiver, ball.last_pass_team = None, player.team
+        # hors-jeu au départ, comme une passe (ticket v2-collectif/23) : sifflé si l'un d'eux touche ensuite le ballon
+        flagged = offside_at_pass(player.team, ball.position,
+                                  [p for p in players if p.team == player.team and p.name != player.name],
+                                  [p for p in players if p.team != player.team])
+        if flagged:
+            ball.offside_watch = set(flagged)
+        return
+    rivals = [p for p in players if p.team != player.team]
+    opponent_team = "away" if player.team == "home" else "home"
+    _execute(ball, twin, action, players, rivals, _OPPONENT_GOAL[player.team], _goalkeeper(opponent_team, players),
+             now_s, False, fouls, shots, lost=False, memory=memory, dt=dt)
 
 
 def _cannot_contest(player: PlayerState, ball: BallState, now_s: float) -> bool:
@@ -1547,7 +1614,8 @@ def simulate_match(
         memory.update(players, i * tick_seconds, scanning)
         scoring_team = _step_ball(ball, tick_seconds, players, i * tick_seconds, trace.decisions, trace.offsides,
                                   transition.mode, trace.restarts, trace.fouls,
-                                  trace.shots, trace.receptions, memory, trace.aerial_duels, trace.aerial_challenges)
+                                  trace.shots, trace.receptions, memory, trace.aerial_duels, trace.aerial_challenges,
+                                  trace.headers)
         for p in players:  # il n'a plus le ballon : plus en main (ticket v2-attributs-restants/03c2)
             if p.in_hands and ball.holder != p.name:
                 p.in_hands = False

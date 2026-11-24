@@ -1229,6 +1229,12 @@ class Collector:
                 self.count[f"fautes aériennes : {r.situation}"] += 1
                 self.count[f"fautes aériennes : gravité {r.severity}"] += 1
 
+    def on_headers(self, records) -> None:
+        """Contacts de la tête des joueurs de champ (ticket v2-realisme/15c1), `trace.HeaderRecord` : geste choisi."""
+        for r in records:
+            self.count["têtes"] += 1
+            self.count[f"têtes : {r.gesture}"] += 1
+
     def _body_parts(self, receptions) -> None:
         """Partie du corps des contrôles réussis, et du premier contrôle réussi après un centre, avant la passe suivante
         (réserve A1 du ticket v2-attributs-restants/01, mesurée au v2-realisme/15a). Les contacts ratés ne sont pas

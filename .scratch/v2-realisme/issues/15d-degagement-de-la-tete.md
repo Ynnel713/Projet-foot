@@ -8,7 +8,7 @@
 
 **Attributs :** Heading (exécution), Decisions (choix)
 
-**Blocked by:** 15c (Qualité de la tête : Heading).
+**Blocked by:** 15c (Qualité de la tête : Heading) ; depuis la découpe du 24/11/2026 : `15c1` (le dégagement devient une option du choix, provisoire) et `15c2` (physique de la tête).
 
 **Bloque :** 15f.
 

@@ -24,7 +24,7 @@ from v2engine.movement import PlayerState, max_speed_mps, turn_rate_rad_s
 from v2engine.off_ball import OPEN_LANE_PROBABILITY
 from v2engine.offside import is_clearly_offside, pass_margin_m, perceived_defence_line
 from v2engine.possession import (BACKHEEL_MAX_M, BALL_FRICTION_PER_S, BALL_STOPPED_MPS, LONG_PASS_M, max_pass_reach_m,
-                                  keeper_kick_reach_m,
+                                  control_probability, keeper_kick_reach_m,
                                   pass_success_probability,
                                   pressure)
 from v2engine.shooting import SHOOTING_RANGE_M, shot_outcome_shares
@@ -206,6 +206,22 @@ _ERROR_POINTS = ((11.0, 1.1), (40.0, 0.42), (55.0, 0.36), (75.0, 0.26), (99.0, 0
 # Meilleur choix suivi : choix qui perd moins de 10 % de la valeur du meilleur (« erreur légère » du panneau) ; entre
 # deux options presque équivalentes, prendre l'une ou l'autre n'est pas une erreur (validé le 04/11/2026).
 BEST_CHOICE_TOLERANCE = 0.1
+
+# Choix du geste de la tête (ticket v2-realisme/15c1, constantes validées par le propriétaire le 24/11/2026 ; aucune
+# source trouvée, ordres de grandeur). Au contact de la tête, un joueur de champ juge ses options en une touche, sans
+# tirage « pense-t-il à jouer de première » (en l'air, on ne peut pas attendre) : passe de la tête (de première, à
+# `HEADER_PASS_RANGE_M` au plus), tir de la tête (à `HEADER_SHOT_RANGE_M` au plus du but), dégagement (dans sa moitié,
+# ballon envoyé à `CLEARANCE_DISTANCE_M` droit devant, loin de son but ; provisoire, vers l'extérieur au ticket 15d ;
+# valeur : son équipe le récupère à l'arrivée avec `CLEARANCE_KEEP_SHARE`), ou amorti (contrôle, comme avant) quand
+# la meilleure option à ses yeux se joue au pied (conduite, passe après rotation, tir plus loin). Choix : Decisions et
+# Vision, rôles existants. Exécution provisoire neutre : les notes du geste (`HEADER_NEUTRAL_ATTRIBUTES`) valent
+# `HEADER_NEUTRAL_NOTE` dans l'évaluation et l'exécution des gestes de la tête, jusqu'aux tickets 15c2 à 15c4.
+HEADER_PASS_RANGE_M = 20.0
+HEADER_SHOT_RANGE_M = 16.0
+CLEARANCE_DISTANCE_M = 30.0
+CLEARANCE_KEEP_SHARE = 0.4
+HEADER_NEUTRAL_ATTRIBUTES = ("Passing", "Technique", "Crossing", "Finishing", "Long Shots")
+HEADER_NEUTRAL_NOTE = 50
 # Choix en deux temps (revue de l'expert, A4, 04/11/2026). 1) La direction de conduite : son erreur sur chaque
 # direction est tirée une fois pendant sa possession et gardée (il se fait une idée de l'espace et s'y tient ; tirée
 # toutes les 0,5 s, elle le faisait zigzaguer entre directions de valeur égale, 80 % des directions étant bloquées :
@@ -218,7 +234,7 @@ _ANTICIPATION_SHARE = (0.65, 0.35)
 
 @dataclass(frozen=True)
 class Action:
-    kind: str  # "shot" | "pass" | "dribble"
+    kind: str  # "shot" | "pass" | "dribble" | "clearance" (dégagement de la tête, ticket v2-realisme/15c1)
     value: float
     target: PlayerState | None = None  # coéquipier visé, pour une passe
     considered: int = 1  # options envisagées à cette décision (journal des décisions, ADR 0001)
@@ -657,7 +673,8 @@ def choose_action(holder: PlayerState, players: list[PlayerState], goal: Vec2, k
                   mode: str | None = None, planned: str | None = None,
                   felt: dict[int, float] | None = None, set_piece: bool = False,
                   seen_opponents: list[PlayerState] | None = None, one_touch: bool = False,
-                  build_up: bool = False, pressed: bool = False) -> Action:
+                  build_up: bool = False, pressed: bool = False, header: bool = False,
+                  ball_velocity: Vec2 | None = None) -> Action:
     """Prend l'option qu'il CROIT la meilleure (ticket 33) : valeur réelle brouillée par sa perception (Decisions,
     Composure sous pression), conduites jugées avec son Anticipation. Deux options proches font hésiter même un très
     bon joueur ; un joueur faible se trompe surtout entre options voisines. `planned` : ticket v2-collectif/14.
@@ -667,9 +684,15 @@ def choose_action(holder: PlayerState, players: list[PlayerState], goal: Vec2, k
     les tirs, les passes et les conduites sont jugés sur leurs positions perçues, la valeur RÉELLE (`best`, `gap`)
     reste calculée sur les vraies positions, et l'exécution aussi. `None` : il perçoit les vraies positions.
     `one_touch` : receveur qui pense à jouer de première (ticket v2-collectif/31a). `build_up` : zone de construction,
-    relances longues envisagées (ticket v2-collectif/15a). `pressed` : sous pressing, troisième homme (15b1)."""
+    relances longues envisagées (ticket v2-collectif/15a). `pressed` : sous pressing, troisième homme (15b1).
+    `header` : contact de la tête (ticket v2-realisme/15c1), options restreintes et dégagement (`header_options`) ;
+    `holder` est alors son double aux notes du geste neutres (`header_twin`) et `one_touch` vrai ; `ball_velocity` :
+    vitesse du ballon qui arrive, pour la chance de l'amortir."""
     options = evaluate_options(holder, players, goal, keeper, mode, planned, seen_opponents, one_touch, build_up,
                                pressed)
+    incoming = ball_velocity if ball_velocity is not None else Vec2(0.0, 0.0)
+    if header:
+        options = header_options(holder, options, goal, mode, players, incoming)
     if set_piece:
         options = [o for o in options if o.kind != "dribble"] or options
     # frappe de loin (ticket v2-realisme/18m) : la marge fait partie de la règle de choix, perçue comme réelle ; le
@@ -696,6 +719,9 @@ def choose_action(holder: PlayerState, players: list[PlayerState], goal: Vec2, k
     seen_world = opponents if seen_opponents is None else seen_opponents
     seen_as = {} if share >= 1.0 and seen_opponents is None else {
         real.point: seen for real, seen in zip(real_dribbles, dribble_options(holder, seen_world, gene, mode, share))}
+    if header and seen_as:  # amorti : conduites perçues pondérées comme les réelles (réserve A1 de l'expert, 15c1)
+        cushioned = header_cushion(holder, players, mode, incoming)
+        seen_as = {point: replace(seen, value=cushioned(seen.value)) for point, seen in seen_as.items()}
     felt = {} if felt is None else felt
     sigma = perception_error(holder, gene) * max(abs(choice_value(best)), 1e-3)
     for index in range(len(real_dribbles)):
@@ -716,6 +742,75 @@ def choose_action(holder: PlayerState, players: list[PlayerState], goal: Vec2, k
     # valeur perdue, en part de la meilleure ; une option presque équivalente compte comme le meilleur choix
     gap = (choice_value(best) - choice_value(chosen)) / max(abs(choice_value(best)), 1e-9)
     return replace(chosen, point=point, best=gap < BEST_CHOICE_TOLERANCE, gap=gap, **tagged)
+
+
+def header_twin(player: PlayerState) -> PlayerState:
+    """Double de `player` pour un geste de la tête (ticket v2-realisme/15c1) : notes du geste neutres
+    (`HEADER_NEUTRAL_ATTRIBUTES` à `HEADER_NEUTRAL_NOTE`), le reste identique (joueur sans fiche : notes par défaut) ;
+    provisoire, jusqu'aux tickets 15c2-15c4."""
+    return replace(player, attributes={**(player.attributes or {}),
+                                       **{a: HEADER_NEUTRAL_NOTE for a in HEADER_NEUTRAL_ATTRIBUTES}})
+
+
+def clearance_point(holder: PlayerState) -> Vec2:
+    """Point visé d'un dégagement de la tête : `CLEARANCE_DISTANCE_M` droit devant, vers le but adverse, dans le
+    terrain (provisoire, ticket 15d : vers l'extérieur)."""
+    forward = 1.0 if holder.team == "home" else -1.0
+    x = min(max(holder.position.x + forward * CLEARANCE_DISTANCE_M, 0.0), PITCH_LENGTH_M)
+    return Vec2(x, holder.position.y)
+
+
+def in_own_half(player: PlayerState) -> bool:
+    """`player` est dans sa moitié de terrain (`home` défend x = 0)."""
+    return player.position.x < PITCH_LENGTH_M / 2.0 if player.team == "home" else player.position.x > PITCH_LENGTH_M / 2.0
+
+
+def header_options(holder: PlayerState, options: list[Action], goal: Vec2, mode: str | None,
+                   players: list[PlayerState], ball_velocity: Vec2) -> list[Action]:
+    """Options au contact de la tête (ticket v2-realisme/15c1) : le tir à `HEADER_SHOT_RANGE_M` au plus, les passes
+    de première à `HEADER_PASS_RANGE_M` au plus deviennent des gestes de la tête ; conduites et passes après rotation
+    restent, elles valent l'amorti (contrôle puis jeu au pied) ; un tir plus loin, une passe de première plus longue
+    sont écartés (ni de la tête ni de première). Dans sa moitié, un dégagement en plus, valeur dans la monnaie
+    commune : son équipe le récupère à l'arrivée avec `CLEARANCE_KEEP_SHARE`, sinon l'adversaire l'a là. Amorti : les
+    options au pied supposent le ballon contrôlé ; leur valeur est pondérée par la chance de réussir le contrôle
+    (`possession.control_probability`, même loi que la réception), le contrôle raté perdant le ballon sur place."""
+    cushioned = header_cushion(holder, players, mode, ball_velocity)
+    kept = []
+    for o in options:
+        if o.kind == "shot" and holder.position.distance_to(goal) > HEADER_SHOT_RANGE_M:
+            continue
+        if o.kind == "pass" and o.one_touch and holder.position.distance_to(o.target.position) > HEADER_PASS_RANGE_M:
+            continue
+        if o.backheel:  # pas de talonnade de la tête (réserve A3 de l'expert) ; déviation vers l'arrière : 15c2
+            continue
+        if not header_gesture(o):  # amorti, puis jeu au pied
+            o = replace(o, value=cushioned(o.value),
+                        seen_value=None if o.seen_value is None else cushioned(o.seen_value))
+        kept.append(o)
+    if in_own_half(holder):
+        point = clearance_point(holder)
+        value = option_value(holder, mode, CLEARANCE_KEEP_SHARE, danger(point, holder.team), point)
+        kept.append(Action("clearance", value, point=point))
+    return sorted(kept, key=lambda a: a.value, reverse=True)
+
+
+def header_cushion(holder: PlayerState, players: list[PlayerState], mode: str | None, ball_velocity: Vec2):
+    """Pondération de l'amorti (ticket v2-realisme/15c1) : une option au pied, de valeur `v` ballon contrôlé, vaut
+    `c x v - (1 - c) x perte sur place`, `c` la chance de réussir le contrôle (`possession.control_probability`).
+    Appliquée aux valeurs réelles et perçues (`header_options`) et aux conduites perçues (`choose_action`, A1)."""
+    opponents = [p for p in players if p.team != holder.team]
+    control = control_probability(holder, ball_velocity, opponents)
+    _, loss_weight = _TRANSITION_WEIGHTS[mode]
+    missed = loss_weight * loss_cost(holder.position, holder.team)
+
+    def cushioned(value: float) -> float:
+        return control * value - (1.0 - control) * missed
+    return cushioned
+
+
+def header_gesture(action: Action) -> bool:
+    """L'action choisie au contact de la tête se joue de la tête (tir, passe de première, dégagement) ; sinon amorti."""
+    return action.kind in ("shot", "clearance") or (action.kind == "pass" and action.one_touch)
 
 
 def counter_is_favorable(holder: PlayerState, players: list[PlayerState]) -> bool:

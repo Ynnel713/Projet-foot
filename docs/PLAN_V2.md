@@ -410,3 +410,5 @@ Natural Fitness agit entre les matchs : hors de ces phases, avec le branchement 
 
 **Jeu dangereux, pied haut (24/11/2026, ticket `v2-realisme/15b3`)** : clos sans objet (décision du propriétaire du 24/11/2026). Le pied ne joue pas au-dessus de la hanche et personne ne fait de tête plongeante : sur 2 matchs, aucun ballon joué au pied ou au corps à hauteur de tête d'un adversaire tout proche. À rouvrir avec un futur ticket de volées hautes ou de têtes plongeantes.
 
+**Jeu de tête (24/11/2026, ticket `v2-realisme/15c`, périmètre élargi par le propriétaire, découpé le même jour : `15c1` choix du geste, `15c2` physique de la tête, `15c3` tête au but, `15c4` remise et passe de la tête ; dégagement au `15d`)**. `15c1` : livré (24/11/2026), validé expert + QC. Au contact de la tête, choix en une touche entre remise, tir, dégagement et amorti par l'évaluation tactique existante ; exécution provisoire neutre. 50 matchs : 15,7 têtes par match, 77 % amorties (contrôle à 97 % même à hauteur de tête : `15c2`), résultat dans le bruit (`docs/INDICATEURS_V2.md` § 81). Suite : `15c2`.
+

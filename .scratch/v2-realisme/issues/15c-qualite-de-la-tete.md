@@ -14,7 +14,7 @@
 
 **Bloque :** 15d, 15f.
 
-**Status:** à faire (constantes à proposer avant le code)
+**Status:** découpé (chapeau, 24/11/2026) en `15c1` (choix du geste de la tête), `15c2` (physique de la tête), `15c3` (tête au but), `15c4` (remise et passe de la tête) ; dégagement : `15d` (existant). Découpe validée par le propriétaire le 24/11/2026 (« Oui, dans cet ordre ») ; fatigue : prise via les notes (tickets 20), pas de lecture propre (choix du propriétaire du 24/11/2026)
 
 ## Estimation
 
@@ -41,3 +41,5 @@ Temps machine, non compté : suite complète (environ 40 min).
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)
 - [ ] Déterminisme à graine fixée : mêmes empreintes sur deux exécutions
 - [ ] Suite V2 verte ; V1 inchangée ; compte de la suite complète comparé à l'attendu de `CLAUDE.md`
+- 24/11/2026 : périmètre élargi par le propriétaire (« la qualité doit dépendre de l'état du joueur au contact (en l'air vs pied au sol, équilibre, bousculade, fatigue, élan), de son orientation/posture, de la hauteur d'impact et des caractéristiques du ballon entrant (vitesse, angle) [...] coupler les notes pertinentes (tête, décision, finition, passe, sang-froid, vision) aux quatre gestes possibles : remise/passe, tir, dégagement défensif et amorti/contrôle [...] trajectoire, vitesse et dispersion (angle et dosage) cohérentes avec l'évaluation tactique [...] cas limites (hors-jeu, ligne de but, dégagements courts dans l'axe) »), environ 8 h : découpé.
+- Constat vérifié (24/11/2026) : un ballon joué de la tête est aujourd'hui un contrôle (`possession.attempt_control`, First Touch), posé au pied (`match._step_loose_ball`), puis une décision au sol ; Heading n'est lu nulle part ; pas de dégagement.

@@ -155,6 +155,20 @@ class AerialChallengeRecord:
 
 
 @dataclass(frozen=True)
+class HeaderRecord:
+    """Contact de la tête d'un joueur de champ (ticket v2-realisme/15c1), trace seulement : le geste choisi (`gesture` :
+    remise, tir, dégagement ou amorti), le coéquipier visé d'une remise, la hauteur du ballon au contact et le lieu."""
+    minute: float
+    team: str
+    player: str
+    gesture: str
+    target: str | None
+    ball_z_m: float
+    x: float
+    y: float
+
+
+@dataclass(frozen=True)
 class LineExitRecord:
     """Changement d'état d'un défenseur central (ticket v2-realisme/10b), trace seulement : `exit` vrai quand il presse,
     marque ou couvre (`role`) à plus de 10 m de sa place de référence sans ballon sans être plus près de son but
@@ -336,6 +350,9 @@ class FoulEvent:
 
 # Journal des événements (ticket v2-realisme/19b) : types d'événements.
 PASSE, CONTROLE_RATE, PERTE, TOUCHE_LONGUE = "passe", "contrôle raté", "perte", "touche longue"
+DEGAGEMENT = "dégagement"  # dégagement de la tête (ticket v2-realisme/15c1)
+# gestes de la tête (ticket v2-realisme/15c1), `HeaderRecord.gesture`
+TETE_REMISE, TETE_TIR, TETE_DEGAGEMENT, TETE_AMORTI = "remise", "tir", "dégagement", "amorti"
 TIR, CONTRE, ARRET, BUT = "tir", "contre", "arrêt", "but"
 REMISE, FAUTE, HORS_JEU = "remise", "faute", "hors-jeu"
 DUEL_EPAULE = "duel d'épaule"  # ticket v2-realisme/11c : `player` le gagnant, `other` le perdant
@@ -405,6 +422,7 @@ class MatchTrace:
     aerial: list[AerialRecord] = field(default_factory=list)  # désignés sur ballon aérien (ticket v2-realisme/15a)
     aerial_duels: list[AerialDuelRecord] = field(default_factory=list)  # duels aériens (ticket v2-realisme/15b1)
     aerial_challenges: list[AerialChallengeRecord] = field(default_factory=list)  # fautes aériennes (v2-realisme/15b2)
+    headers: list[HeaderRecord] = field(default_factory=list)  # gestes de la tête (ticket v2-realisme/15c1)
     pressers: list[PressRecord] = field(default_factory=list)  # changements de presseur (ticket v2-realisme/10a)
     line_exits: list[LineExitRecord] = field(default_factory=list)  # sorties des centraux (ticket v2-realisme/10b)
     depth_covers: list[DepthCoverRecord] = field(default_factory=list)  # couverture de la profondeur (v2-realisme/10c)

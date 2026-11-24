@@ -216,6 +216,12 @@ def _speed_cap_mps(passer: PlayerState, lofted: bool) -> float:
     return kick_speed_cap_mps(kicking(passer)) if keeper_kick(passer, lofted) else MAX_PASS_MPS
 
 
+def launch_speed_mps(distance_m: float) -> float:
+    """Vitesse de départ d'une passe de champ de `distance_m` (`_launch_speed`, plafond `MAX_PASS_MPS`) ; dégagement de
+    la tête (ticket v2-realisme/15c1)."""
+    return _launch_speed(distance_m, MAX_PASS_MPS)
+
+
 def pass_accuracy_probability(passer: PlayerState, receiver: PlayerState, opponents: Sequence[PlayerState],
                               backheel: bool = False, one_touch: bool = False, lofted: bool = False,
                               cross: bool = False) -> float:
@@ -262,8 +268,14 @@ def attempt_control(player: PlayerState, ball_velocity: Vec2 = Vec2(0.0, 0.0),
                     opponents: Sequence[PlayerState] = ()) -> bool:
     """Un joueur au contact du ballon tente de le contrôler : First Touch contre la difficulté du ballon reçu
     (vitesse par rapport au ballon idéal, pression). Jamais garanti (règle « jamais binaire » du guide)."""
+    return PASSE.random() < control_probability(player, ball_velocity, opponents)
+
+
+def control_probability(player: PlayerState, ball_velocity: Vec2 = Vec2(0.0, 0.0),
+                        opponents: Sequence[PlayerState] = ()) -> float:
+    """Chance que `attempt_control` réussisse (même loi) ; lue aussi par le choix du geste de la tête (15c1)."""
     difficulty = control_difficulty(player, ball_velocity, opponents)
-    return PASSE.random() < duel_probability(effective_rating(player, "First Touch"), difficulty, **_SUCCESS)
+    return duel_probability(effective_rating(player, "First Touch"), difficulty, **_SUCCESS)
 
 
 def missed_control_velocity(player: PlayerState, ball_velocity: Vec2, opponents: Sequence[PlayerState] = ()) -> Vec2:
