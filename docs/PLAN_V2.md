@@ -39,6 +39,8 @@
 
 17. **Audit duels, protection de balle, jeu dos au but (26/11/2026, à valider par le propriétaire)** : grille du propriétaire confrontée aux tickets ouverts et livrés (détail : `.scratch/v2-realisme/spec.md`, section 13). Manques confirmés dans le code : aucun marqueur collé au receveur (dos au jeu de l'avant-centre 0,4 %, constat du `07c`), retournement au contact au même risque qu'à 3 m, gêne limitée à l'adversaire le plus proche (`possession.pressure`), ballon disputé à deux non résolu (premier entré dans le rayon), tacle gagné toujours en possession propre. Six tickets ajoutés au chantier `v2-realisme` : `10l` (2 h 05), `04o` (2 h 10), `04p` (1 h 55), `11t` (2 h 20), `11u` (1 h 40), `04q` validation par profil et pièges (1 h 55) ; `04i` complété (protection dès la réception, micro-ajustements, temporiser), à réestimer.
 
+18. **Transitions et styles (26/11/2026, décision du propriétaire)** : base des transitions livrée (`v2-collectif/10`, `11`), comportement en attente. Ordre : `v2-realisme/13a` puis `09f` → `10m1` → `13j` et `09g` → `13b` à `13f` ; `10e` → `10m2` → `10n`. `10m1` ne passe pas en code avant sa mesure préalable sur 20 matchs (durée du duel presseur-porteur, constante de 1 s confirmée ou ajustée). Seuil de `10n` : part des buts issus d'un ballon gagné à 85 % ou moins, choix produit non sourcé. Détail : `.scratch/v2-realisme/spec.md` §15.
+
 Rappel : passes par match 1 091 (repère 890 à 940) et course du passeur après sa passe (une-deux), notés au `v2-collectif/22a`.
 
 ## Décisions architecturales

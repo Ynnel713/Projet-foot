@@ -12,7 +12,7 @@
 
 **Blocked by:** 01f (Fabrique de scènes de test partagée).
 
-**Bloque :** 13j, 13b, 13c, 13d, 13e, 13f, 13g, 13h, 16b.
+**Bloque :** 13j, 13b, 13c, 13d, 13e, 13f, 13g, 13h, 16b ; 10m1 (ordre décidé par le propriétaire le 26/11/2026).
 
 **Status:** à faire (constantes à proposer avant le code)
 

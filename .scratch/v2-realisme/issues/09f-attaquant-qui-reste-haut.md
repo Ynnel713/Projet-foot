@@ -10,7 +10,7 @@
 
 **Blocked by:** 02e (Place de référence sans ballon selon le rôle).
 
-**Bloque :** 09g, 13e.
+**Bloque :** 09g, 13e ; 10m1 (ordre décidé par le propriétaire le 26/11/2026).
 
 **Status:** à faire (constantes à proposer avant le code)
 
