@@ -8,7 +8,7 @@
 
 **Blocked by:** 31, 34b (même calcul de l'angle d'arrivée) ; `v2-realisme/26a` (ajouté le 14/11/2026).
 
-**Bloque :** 36b.
+**Bloque :** 36b ; `v2-realisme/31b` (ajouté le 26/11/2026, audit des combinaisons).
 
 **Status:** à faire (constantes à proposer avant le code)
 

@@ -446,3 +446,14 @@ Ces quatre tickets avaient été ajoutés le 17/11/2026 dans le tableau du §10 
 | 04n | Choix du geste de dribble et validation de la variété | P2 | décision et validation | 2 h 30 | faible | 04g à 04m, v2-attributs-contextes/05, v2-attributs-restants/05 |
 
 Total : 4 tickets, 9 h 30 (P2).
+
+## 17. Complément : combinaisons (26/11/2026)
+
+Audit des combinaisons contre cinq tickets proposés par le propriétaire (C1 à C5). Déjà couverts, laissés tels quels : remise en une touche, pivot ou faux 9 (C3 : `v2-collectif/31a` livré, `36a` pour la difficulté selon l'arrivée du ballon, `26a` pour le contrôle imparfait, `04q` pour la mesure dos au jeu) ; déviation (C4 : passe de première sans rotation, talonnade comprise, `v2-collectif/31a` et `07e` livrés ; ballon fort ou de côté au `v2-collectif/36a` ; de la tête au `15c` ; amorti de la poitrine hors D-V03) ; reconnaissance de l'une-deux et du troisième homme (`v2-collectif/14`, livré). Complété : `25c` (C2, critère « deux solutions courtes autour du porteur pressé » ; bloque `31b` ; réestimé 2 h → 2 h 10) ; `v2-collectif/22a` (dépend de `31a`) et `22b` (dépend de `31b`). Réciprocité : `25a` bloque `31a` ; `15c` et `v2-collectif/36a` bloquent `31b` (ligne « Bloque » seule, contenu inchangé).
+
+| Ticket | Titre | Prio | Catégorie | Estimation | Confiance | Dépend de |
+|---|---|---|---|---|---|---|
+| 31a | Passe et va : le passeur repart dans l'espace libéré (une-deux) | P1 | décision | 2 h 45 | moyenne | 25a |
+| 31b | Validation des combinaisons : une-deux, triangles, remises, déviations et progression | P1 | validation | 1 h 45 | moyenne | 31a, 25c, 15c, v2-collectif/36a |
+
+Total : 2 tickets, 4 h 30 (P1). `31a` réestimé de 2 h 15 à 2 h 45 après la réserve A1 de l'expert (le passeur doit entrer dans les suites de `decision`), à examiner pour découpage avant le code. Ordre proposé : `25a` → `25c` et `31a` ; `31b` après `15c` et `v2-collectif/36a`, avant `v2-collectif/22b`.

@@ -12,7 +12,7 @@
 
 **Blocked by:** 15b (Duel aérien : taille, Jumping Reach, Strength au contact); 05a (Tir : le ballon part vers son point d'arrivée, le but n'est plus tiré au départ).
 
-**Bloque :** 15d, 15f.
+**Bloque :** 15d, 15f ; 31b (ajouté le 26/11/2026, audit des combinaisons).
 
 **Status:** à faire (constantes à proposer avant le code)
 

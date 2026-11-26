@@ -10,7 +10,7 @@
 
 **Blocked by:** 25a.
 
-**Bloque :** 25d, 25h.
+**Bloque :** 25d, 25h ; 31b (ajouté le 26/11/2026, audit des combinaisons).
 
 **Ticket 24 en cours :** toute courbe d'attribut de ce ticket passe par `success_probability` / `duel_probability`, dont la forme change au 24 ; les constantes de niveau sont proposées après la livraison du 24.
 
@@ -22,11 +22,11 @@
 |---|---|
 | Analyse et compréhension du code | 20 min |
 | Développement | 50 min |
-| Tests unitaires et comportementaux | 35 min |
+| Tests unitaires et comportementaux | 45 min |
 | Intégration et vérifications | 15 min |
-| **Total (travail effectif)** | **2 h** |
+| **Total (travail effectif)** | **2 h 10** |
 
-Confiance : faible. Hypothèses : sélection ajoutée dans `_runs_or_holds` sans toucher au classement des appelants du 02g ; un soutien à la fois ; triangle jugé sur trois joueurs, pas plus ; tests unitaires de la branche `SOUTIEN` à adapter.
+Confiance : faible. Hypothèses : sélection ajoutée dans `_runs_or_holds` sans toucher au classement des appelants du 02g ; un soutien à la fois ; triangle jugé sur trois joueurs, pas plus ; tests unitaires de la branche `SOUTIEN` à adapter ; + 10 min de tests le 26/11/2026 (audit des combinaisons) pour le critère des deux solutions courtes : scène du choix du porteur, indicateur 15 restreint au porteur pressé, calculé par le banc existant.
 Temps machine, non compté : suite complète ; mesure 50 matchs.
 
 ## Tests
@@ -38,6 +38,7 @@ Temps machine, non compté : suite complète ; mesure 50 matchs.
 
 - [ ] Constantes produit et chiffres réels (sourcés ou « non trouvé ») validés par le propriétaire avant le code
 - [ ] Porteur pressé : solution courte ouverte plus souvent qu'avant (même graine)
+- [ ] Porteur pressé : part des décisions avec au moins deux solutions courtes ouvertes (triangle autour du porteur, indicateur 15 restreint au porteur pressé), rapportée avant et après aux mêmes graines ; le porteur joue la plus ouverte des deux plus souvent que l'autre (scène contrôlée). Ajouté le 26/11/2026, audit des combinaisons (« C2 »)
 - [ ] En match (dictionnaire `runs` fourni), un coéquipier prend le rôle de soutien quand le porteur est pressé (test)
 - [ ] Le soutien n'entre pas dans le rayon de regroupement du porteur hors duel ; jamais plus de soutiens que le plafond validé
 - [ ] Rayon des attributs conforme à `docs/CARTE_ATTRIBUTS_V2.md`, sans double comptage ; test de rayon à jour

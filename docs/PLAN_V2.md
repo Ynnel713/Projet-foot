@@ -41,7 +41,9 @@
 
 18. **Transitions et styles (26/11/2026, décision du propriétaire)** : base des transitions livrée (`v2-collectif/10`, `11`), comportement en attente. Ordre : `v2-realisme/13a` puis `09f` → `10m1` → `13j` et `09g` → `13b` à `13f` ; `10e` → `10m2` → `10n`. `10m1` ne passe pas en code avant sa mesure préalable sur 20 matchs (durée du duel presseur-porteur, constante de 1 s confirmée ou ajustée). Seuil de `10n` : part des buts issus d'un ballon gagné à 85 % ou moins, choix produit non sourcé. Détail : `.scratch/v2-realisme/spec.md` §15.
 
-Rappel : passes par match 1 091 (repère 890 à 940) et course du passeur après sa passe (une-deux), notés au `v2-collectif/22a`.
+19. **Audit des combinaisons (26/11/2026, à valider par le propriétaire)** : grille C1 à C5 du propriétaire confrontée aux tickets (détail : `.scratch/v2-realisme/spec.md`, section 17). Remise (C3) et déviation (C4) déjà couvertes (`v2-collectif/31a`, `36a`, `v2-realisme/07e`, `15c`, `26a`, `04q`). Manque confirmé dans le code : le passeur ne repart pas après sa passe (`cerveau._call_rank` n'appelle que devant le ballon), une-deux 1,58 par équipe et par match → `v2-realisme/31a` (passe et va, 2 h 45 ; le passeur doit entrer dans les suites de `decision`, porteur exclu aujourd'hui). Validation d'ensemble absente → `31b` (1 h 45). `25c` complété (deux solutions courtes autour du porteur pressé, C2).
+
+Rappel : passes par match 1 091 (repère 890 à 940), notées au `v2-collectif/22a` ; course du passeur après sa passe (une-deux) : `v2-realisme/31a`.
 
 ## Décisions architecturales
 

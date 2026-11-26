@@ -6,7 +6,7 @@
 
 **Attributs :** tous.
 
-**Blocked by:** 22a ; `v2-realisme/20e` (ajouté le 10/11/2026, audit de la roadmap) ; `v2-realisme/25h`, `27c` (ajoutés le 14/11/2026) ; `v2-collectif/15d` (ajouté le 21/11/2026, audit de réalisme du propriétaire) ; `v2-realisme/10m` (morceaux `10m1`, `10m2`), `10n` (ajoutés le 26/11/2026, audit des transitions).
+**Blocked by:** 22a ; `v2-realisme/20e` (ajouté le 10/11/2026, audit de la roadmap) ; `v2-realisme/25h`, `27c` (ajoutés le 14/11/2026) ; `v2-collectif/15d` (ajouté le 21/11/2026, audit de réalisme du propriétaire) ; `v2-realisme/10m` (morceaux `10m1`, `10m2`), `10n` (ajoutés le 26/11/2026, audit des transitions) ; `v2-realisme/31b` (ajouté le 26/11/2026, audit des combinaisons).
 
 **Bloque :** 22c.
 
