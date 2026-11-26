@@ -35,3 +35,21 @@ Revue expert du 02/11/2026 : REJECTED (A1 à A11), tickets corrigés le jour mê
 - Chaque effet de style passe par un mécanisme déjà existant (hauteur du bloc, déclencheurs du pressing, valeur de la passe, etc.), jamais par une seconde mécanique parallèle (règle anti double comptage, v2-collectif/18).
 - Déterminisme : toute variabilité dérive de sha256 d'une clé stable.
 - Constantes produit proposées au propriétaire avant le code.
+
+## Complément : audit des remplacements (26/11/2026)
+
+Audit des remplacements contre cinq tickets proposés par le propriétaire (S1 à S5). Constat vérifié : aucun banc ni remplacement dans `v2engine/` ; le fond du temps additionnel (`added_time.BACKGROUND_S`) compte encore les remplacements.
+
+- **S1, fenêtres et règle** : couvert par 05a (5 remplacements, 3 fenêtres hors mi-temps) ; complété par un critère qui teste la règle (Loi 3) et trace les fenêtres.
+- **S2, décision de remplacer** : 05a (fatigue seule) et 05b (entrant selon le score, expulsion, blessure) ne combinent pas les raisons ; ni l'averti ni le joueur en difficulté ne sont traités, et le moteur n'a aucune mesure de la performance pendant le match → **05c**.
+- **S3, choix du remplaçant** : couvert par 05b (poste, D-V07, profil selon le score) ; la fraîcheur ne départage pas les remplaçants (tous entrent frais) ; complété par le rôle de l'entrant (02c, 13h).
+- **S4, effet du remplaçant** : fraîcheur couverte (05a, réserve pleine ; `v2-realisme/20d`). Rien ne modélise l'adaptation de l'entrant (la mémoire de perception du 08b le voit exactement dès son entrée, sur 2 s seulement). Complété au 05a : malus de cohésion temporaire, borné et décroissant, par la façade des notes (`v2-realisme/19a`), **soumis à la décision du propriétaire** (chiffre réel non trouvé, à chercher) ; mesure des 5 premières minutes de l'entrant.
+- **S5, validation** : mesures éparpillées (05a, 05b, 20d) → **05d**.
+
+| # | Titre | Estimation | Confiance | Bloqué par |
+|---|---|---|---|---|
+| 05c | Décision de remplacer : qui sort, selon la fatigue, le carton, la performance et la consigne | 2 h 10 | faible | 05a, 05b, 02 ; 09a et `v2-realisme/20b` pour leurs termes |
+| 05d | Validation des remplacements : volume, minute, raisons, effet et cohérence avec le score | 1 h 40 | moyenne | 05a, 05b, 05c |
+
+Total : 2 tickets, 3 h 50. Dépendances réciproques ajoutées : 02, 05a, 05b, `v2-attributs-restants/09a`, `v2-realisme/20b`. Ordre : 05a avant la calibration ; 05b, 05c puis 05d après `v2-collectif/22c` (contrôle de non-régression).
+

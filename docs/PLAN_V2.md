@@ -43,6 +43,8 @@
 
 19. **Audit des combinaisons (26/11/2026, à valider par le propriétaire)** : grille C1 à C5 du propriétaire confrontée aux tickets (détail : `.scratch/v2-realisme/spec.md`, section 17). Remise (C3) et déviation (C4) déjà couvertes (`v2-collectif/31a`, `36a`, `v2-realisme/07e`, `15c`, `26a`, `04q`). Manque confirmé dans le code : le passeur ne repart pas après sa passe (`cerveau._call_rank` n'appelle que devant le ballon), une-deux 1,58 par équipe et par match → `v2-realisme/31a` (passe et va, 2 h 45 ; le passeur doit entrer dans les suites de `decision`, porteur exclu aujourd'hui). Validation d'ensemble absente → `31b` (1 h 45). `25c` complété (deux solutions courtes autour du porteur pressé, C2).
 
+20. **Audit des remplacements (26/11/2026, à valider par le propriétaire)** : grille S1 à S5 du propriétaire confrontée aux tickets (détail : `.scratch/v2-coach-et-gestion-de-match/spec.md`, dernière section). Aucun remplacement dans le moteur V2 aujourd'hui. Fenêtres (S1) et choix de l'entrant (S3) couverts par `v2-coach-et-gestion-de-match/05a` et `05b`, complétés (règle testée, rôle de l'entrant) ; effet de l'entrant (S4) complété au `05a` : malus de cohésion temporaire et borné par la façade des notes (`v2-realisme/19a`), à décider par le propriétaire (chiffre réel non trouvé). Nouveaux : `05c` (décision multicritère du sortant : fatigue, carton, performance mesurée pendant le match, consigne ; 2 h 10) et `05d` (validation, 1 h 40).
+
 Rappel : passes par match 1 091 (repère 890 à 940), notées au `v2-collectif/22a` ; course du passeur après sa passe (une-deux) : `v2-realisme/31a`.
 
 ## Décisions architecturales

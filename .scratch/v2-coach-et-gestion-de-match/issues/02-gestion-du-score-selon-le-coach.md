@@ -15,6 +15,8 @@
 
 **Blocked by:** 01 ; v2-collectif/21 (qui doit exposer l'adaptation au score comme des paramètres modulables).
 
+**Bloque :** 05b ; 05c (ajouté le 26/11/2026, audit des remplacements).
+
 **Status:** à faire (constantes à proposer avant le code)
 
 **Point de vigilance :** effet réel du score sur la possession à sourcer (Lago-Peñas et Dellal 2010 ; Bloomfield et al. 2005 : l'équipe qui mène a en moyenne moins le ballon).

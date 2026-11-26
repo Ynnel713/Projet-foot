@@ -10,7 +10,7 @@
 
 **Blocked by:** 07 (livré), 03 ; `v2-collectif/12` ; `v2-attributs-restants/02a`, `02b` (arrêts de jeu, dépendance d'origine, sans doute levable : les tickets `v2-collectif/29` et `30` les fournissent) et `04b` ; `v2-realisme/12e`, `20c` (ajouté le 10/11/2026, audit de la roadmap).
 
-**Bloque :** 05b ; `v2-attributs-restants/09b` (remplacement forcé).
+**Bloque :** 05b ; `v2-attributs-restants/09b` (remplacement forcé) ; 05c, 05d (ajoutés le 26/11/2026, audit des remplacements).
 
 **Status:** à faire (constantes à proposer avant le code)
 
@@ -31,3 +31,19 @@ Source : `docs/AUDIT_ROADMAP_V2.md`. La fatigue dont dépend le choix du sortant
 
 - [ ] Titulaire fatigué contre remplaçant frais moins bien noté : l'entrant gagne plus souvent le duel de vitesse face au titulaire fatigué que face au même titulaire frais (mesurable avec la réserve de `v2-realisme/12e`) ; le volet « sans devenir meilleur sur les gestes techniques » est vérifié au `v2-realisme/20d`, après `20a`
 - [ ] Dynamique mesurée : occasions créées par l'équipe dans les 15 minutes qui suivent ses remplacements, comparées aux 15 minutes précédentes
+
+## Complément de l'audit des remplacements (26/11/2026)
+
+Audit des remplacements contre cinq tickets proposés par le propriétaire (S1 à S5). Constat vérifié : aucun banc ni remplacement dans `v2engine/` ; le fond de 2e période de `added_time.BACKGROUND_S` compte encore les remplacements. Deux points manquaient à ce ticket :
+
+- **Règle (« S1 »).** Le « What to build » pose 5 remplacements en 3 fenêtres, mais aucun critère ne teste la règle. Loi 3 (IFAB) : plusieurs changements faits au même arrêt de jeu comptent pour une seule fenêtre ; ceux faits à la mi-temps n'en consomment pas. La prolongation (sixième remplacement, fenêtre supplémentaire) n'existe pas en V2 : hors de ce ticket.
+- **Entrée en jeu (« S4 »).** La fraîcheur est couverte (réserve pleine, ci-dessus). Rien ne modélise aujourd'hui un temps d'adaptation de l'entrant : la mémoire de perception (`v2-realisme/08b`) initialise un joueur jamais vu à sa position réelle dès sa première apparition (`perception_memory.update`), donc l'entrant voit et est vu exactement, et elle ne porte que 2 s, pas des minutes. Proposition : un **malus de cohésion temporaire**, seulement s'il est validé par le propriétaire, porté par la façade des notes (`v2-realisme/19a`, `condition.effective_rating`, état `PlayerCondition`) : baisse de Teamwork et de Decisions de l'entrant, décroissante jusqu'à zéro en quelques minutes, bornée. Un seul calcul, dans la façade, aucun mécanisme parallèle. Constantes à proposer : ampleur (points de note), durée, forme de la décroissance. Chiffre réel d'un temps d'adaptation des entrants : non trouvé à ce jour, recherche à faire avant la proposition (rendement des remplaçants dans leurs premières minutes) ; sans chiffre, le propriétaire choisit entre un malus non sourcé, borné, et aucun malus.
+
+Critères ajoutés :
+
+- [ ] Règle testée : jamais plus de 5 remplacements ni plus de 3 fenêtres hors mi-temps par équipe ; deux changements au même arrêt de jeu comptent pour une fenêtre ; changements de la mi-temps hors fenêtres ; le moteur refuse un sixième remplacement et une quatrième fenêtre ; fenêtres utilisées tracées (`5 remplacements, 3 fenêtres` : Loi 3, IFAB 2022-23)
+- [ ] Malus de cohésion : décision du propriétaire avant le code (constantes, ou aucun malus) ; s'il est retenu, il passe par `condition.effective_rating` seul, décroît jusqu'à zéro dans la durée validée et ne dépasse jamais l'ampleur validée (tests) ; l'entrant n'hérite d'aucun plan de passe ni appel du sortant (test)
+- [ ] Effet de l'entrant borné : actions réussies de l'entrant dans ses 5 premières minutes comparées à ses minutes suivantes, rapportées (indicateur), sans réglage
+
+Réestimation demandée au lancement : la règle testée et, si le malus est retenu, son passage par la façade ajoutent environ 30 min (ticket d'origine sans estimation chiffrée).
+

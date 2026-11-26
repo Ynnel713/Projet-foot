@@ -12,7 +12,7 @@
 
 **Blocked by:** 19a, 12e.
 
-**Bloque :** 20d ; `v2-collectif/21` ; `v2-collectif/22a`.
+**Bloque :** 20d ; `v2-collectif/21` ; `v2-collectif/22a` ; `v2-coach-et-gestion-de-match/05c` (terme « lucidité », ajouté le 26/11/2026, audit des remplacements).
 
 **Status:** à faire (constantes à proposer avant le code)
 
