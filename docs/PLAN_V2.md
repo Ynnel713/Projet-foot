@@ -37,6 +37,8 @@
     6. dernier tiers : `v2-collectif/34a`, `v2-attributs-restants/01` → `11`, `15a`, `v2-attributs-restants/10a`.
     Déjà couverts par la roadmap : physique du ballon (`02a`, `02b`, `14a` à `14d`, `v2-ecran-match/20`), dernier tiers (`32a`, `34a`, centres `01` et `11`, `15a`, `10a`, `10f`, `10h`), courses et coulissement (`25e`, `25g`, `09i`, `09f`, `10e`, `10i`, `27`, `13b`), erreur selon le contexte (`23a`, `23b`, `26a`, `36a`, `36b`, `04a`, `20a`), gardien (`03f`, `03l`, `v2-attributs-restants/03a` à `03c`, `15e`). À vérifier à l'écran : trace de l'écran à un point toutes les 0,5 s (`api/routers/v2.py`, `_RECORD_EVERY = 5`).
 
+17. **Audit duels, protection de balle, jeu dos au but (26/11/2026, à valider par le propriétaire)** : grille du propriétaire confrontée aux tickets ouverts et livrés (détail : `.scratch/v2-realisme/spec.md`, section 13). Manques confirmés dans le code : aucun marqueur collé au receveur (dos au jeu de l'avant-centre 0,4 %, constat du `07c`), retournement au contact au même risque qu'à 3 m, gêne limitée à l'adversaire le plus proche (`possession.pressure`), ballon disputé à deux non résolu (premier entré dans le rayon), tacle gagné toujours en possession propre. Six tickets ajoutés au chantier `v2-realisme` : `10l` (2 h 05), `04o` (2 h 10), `04p` (1 h 55), `11t` (2 h 20), `11u` (1 h 40), `04q` validation par profil et pièges (1 h 55) ; `04i` complété (protection dès la réception, micro-ajustements, temporiser), à réestimer.
+
 Rappel : passes par match 1 091 (repère 890 à 940) et course du passeur après sa passe (une-deux), notés au `v2-collectif/22a`.
 
 ## Décisions architecturales

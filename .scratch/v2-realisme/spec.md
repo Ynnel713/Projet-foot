@@ -383,3 +383,18 @@ Rapport : `docs/AUDIT_ROADMAP_V2.md` §12. 5 tickets, 9 h 25.
 | 03l | Gardien : anticiper le côté, être pris à contre-pied, rester figé sur un tir imparable | P1 | décision | 2 h | moyenne | 03f, 07a, v2-attributs-restants/03b |
 
 03l vient du §13 de l'audit (complément gardien). Total des compléments du 10/11/2026 : 28 tickets, 52 h 35 (P0 7 h 40 ; P1 24 h 05 ; P2 16 h 50 ; P3 4 h).
+
+## 13. Complément : duels, protection de balle, jeu dos au but (26/11/2026)
+
+Audit des tickets existants contre la grille du propriétaire (jeu dos au but, protection, duels, profils, pièges). Aucun ticket livré modifié ; déjà couverts, laissés tels quels : préparation de la réception (`25a`, `25c`, `25d`, `25g`), orientation et scan (`07a` à `07f`, `08a` à `08c`), remise et jeu à une touche (`v2-collectif/31a`, `36a`), ouverture et renversement (`v2-collectif/15c`, `15d`, `30b`), contacts et équilibre (`11a` à `11c`, `12c`, `11n`, `v2-attributs-contextes/06`), gestes de duel (`04g`, `04h`, `04j` à `04n`), seconds ballons aériens (`15e`), fautes (`11d`, `11h`, `21b`, `21c3` à `21c5`), garde « jamais infaillible » (`19c`), touche de balle physique (`04e`, `04f`). Complété : `04i` (protection dès la réception, micro-ajustements, temporiser ; réestimation demandée). Obstruction sans contact (coup franc indirect, loi 12) : non retenue, rare en match ; à rouvrir si le volume de fautes du `22a` le demande.
+
+| Ticket | Titre | Prio | Catégorie | Estimation | Confiance | Dépend de |
+|---|---|---|---|---|---|---|
+| 10l | Marqueur au contact du receveur dos au but : coller, gêner le retournement ou passer devant | P1 | décision | 2 h 05 | moyenne | 07c, 08b, v2-attributs-contextes/04a |
+| 04o | Se retourner au contact : selon le côté, l'engagement du défenseur et le contact | P1 | exécution et décision | 2 h 10 | moyenne | 04i, 10l |
+| 04p | Pression cumulée : un deuxième adversaire au contact (seconde composante, `pressure` inchangée) | P1 | exécution | 1 h 55 | moyenne | 04a, 04i |
+| 11t | Ballon disputé au sol : deux adversaires arrivent ensemble | P1 | exécution | 2 h 20 | faible | 05d, 11c, 12c, 21c1, 11l |
+| 11u | Tacle gagné : possession propre ou ballon dévié | P1 | exécution | 1 h 40 | moyenne | 05d, 11d, 04j |
+| 04q | Validation : jeu dos au but, protection et duels selon le profil | P1 | validation | 1 h 55 | moyenne | 04i, 04o, 04p, 10l, 11t, 11u |
+
+Total : 6 tickets, 12 h 05 (P1), plus la réestimation du `04i`. Ordre proposé : `10l` → `04i` → `04o`, `04p` ; `11u` ; `11t` après `11l` ; `04q` en dernier, avant `v2-collectif/22a`.
