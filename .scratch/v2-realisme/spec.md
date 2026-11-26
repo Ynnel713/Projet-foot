@@ -289,15 +289,18 @@ Tailles d'échantillon : 50 matchs pour l'exploration (tickets de mécanisme), a
 | 12e | Réserve d'énergie qui dépend de l'effort | P1 | physique | 2 h | moyenne | 12d |
 | 12f | Répéter les sprints et récupérer | P1 | physique | 1 h 55 | moyenne | 12e |
 | 12g | Validation de la physique des déplacements | P1 | validation | 1 h 15 | élevée | 12a, 12b, 12c, 12d, 12e, 12f, 01d |
-| 13a | Consignes d'équipe : lecture des styles et structure neutre | P1 | données | 1 h 50 | élevée | 01f |
-| 13b | Style Pressing | P1 | décision | 1 h 50 | moyenne | 13a, 12e |
-| 13c | Style Défensif | P1 | décision | 1 h 35 | moyenne | 13a, 02g, 09g |
-| 13d | Style Offensif | P1 | décision | 1 h 35 | moyenne | 13a, 02g, 09g |
-| 13e | Style Contre-attaque | P1 | décision | 1 h 35 | moyenne | 13a, 09f |
-| 13f | Style Possession et tempo | P1 | décision | 1 h 40 | moyenne | 13a |
+| 13a | Consignes d'équipe : lecture des styles et structure neutre | P1 | données | 1 h 55 | élevée | 01f |
+| 13b | Style Pressing | P1 | décision | 2 h | moyenne | 13a, 13j, 12e |
+| 13c | Style Défensif | P1 | décision | 2 h 05 | moyenne | 13a, 13j, 02g, 09g |
+| 13d | Style Offensif | P1 | décision | 2 h | moyenne | 13a, 13j, 02g, 09g |
+| 13e | Style Contre-attaque | P1 | décision | 2 h | moyenne | 13a, 13j, 09f |
+| 13f | Style Possession et tempo | P1 | décision | 2 h 05 | moyenne | 13a, 13j |
 | 13g | Consigne de largeur | P1 | placement | 1 h 25 | élevée | 13a, 09b |
 | 13h | Rôles cohérents avec la formation | P1 | données | 1 h 40 | moyenne | 02c, 13a |
-| 13i | Validation des styles : des équipes différentes, pas meilleures | P1 | validation | 1 h 40 | moyenne | 13b, 13c, 13d, 13e, 13f, 13g, 13h, 01e |
+| 13i | Validation des styles : des équipes différentes, pas meilleures | P1 | validation | 1 h 55 | moyenne | 13b, 13c, 13d, 13e, 13f, 13g, 13h, 13j, 13k, 13l, 01e |
+| 13j | Arbitrage des styles par phase, budget tactique et couples contradictoires (ajouté le 26/11/2026) | P1 | données | 2 h | moyenne | 13a |
+| 13k | Note du coach : qualité d'exécution collective du plan (ajouté le 26/11/2026) | P1 | décision | 2 h 05 | faible | 13j, 13b, 13c, 13e, 13f, 20e |
+| 13l | Validation : le plan du coach bute sur l'effectif (ajouté le 26/11/2026) | P1 | validation | 1 h 30 | moyenne | 13b, 13c, 13e, 13f, 13k, 20e, 01e |
 | 14a | Freinage du ballon au sol : roulement et air | P2 | physique | 2 h 05 | moyenne | 01c |
 | 14b | Effet latéral du ballon (enroulé) | P2 | physique | 2 h | faible | 14a, v2-hauteur-ballon/02a |
 | 14c | Rotation et rebond | P2 | physique | 1 h 45 | faible | 14b |
