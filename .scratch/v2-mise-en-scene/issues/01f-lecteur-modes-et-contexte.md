@@ -6,13 +6,13 @@
 
 **What to build:**
 1. **Modes** branchés sur le sélecteur d'EM-19 : Match complet (existant), Buts, Moments clés, Résumé. Modes autres que Match complet grisés tant que le calcul n'est pas fini (01e).
-2. **Enchaînement** : le lecteur joue la fenêtre de chaque moment puis saute au suivant ; boutons précédent et suivant ; la vitesse choisie est conservée ; changer de mode en cours de lecture reprend au premier moment qui suit la minute lue (ou à la minute lue en Match complet).
+2. **Enchaînement** : le lecteur joue la fenêtre de chaque moment puis saute au suivant ; boutons précédent et suivant ; la vitesse choisie est conservée ; **aucun compteur « moment n sur N »**, et le bouton suivant garde le même aspect jusqu'au dernier moment, qui enchaîne sur la carte de fin (suspense, décision du propriétaire du 26/11/2026 : la durée du mode et le nombre de moments ne se devinent pas) ; changer de mode en cours de lecture reprend au premier moment qui suit la minute lue (ou à la minute lue en Match complet).
 3. **Carton de contexte** avant chaque moment (contre « contexte manquant ») : minute, score avant le moment, équipe qui attaque, durée courte ; jamais d'information future (issue, score après).
 4. **Sans spoiler** : le score affiché est celui d'avant le moment jusqu'à l'instant du but ; le ralenti et le bandeau de but d'EM-13 jouent normalement.
 
 **Attributs :** aucun.
 
-**Constantes à proposer avant le code :** durée du carton de contexte ; transition entre deux moments (coupure franche ou fondu court).
+**Constantes à proposer avant le code :** durée du carton de contexte ; transition entre deux moments (coupure franche ou fondu court). **À trancher par le propriétaire :** le mode Buts sur un match sans but (passer directement à la carte de fin révèle le 0-0).
 
 **Blocked by:** 01e ; `v2-ecran-match/19` (composant du sélecteur, livré d'abord avec les modes grisés : ordre décidé le 19/11/2026).
 
@@ -36,7 +36,7 @@ Temps machine, non compté : suite complète (environ 10 min) ; captures sur les
 ## Tests
 
 - Séquenceur testé sous node : ordre, précédent, suivant, reprise après changement de mode, fin de liste.
-- Banc EM-00 (`buts-nombreux`, `sans-but`) : mode Buts sur le 0-0 annonce qu'il n'y a aucun but ; sur 3-3, six moments dans l'ordre.
+- Banc EM-00 (`buts-nombreux`, `sans-but`) : mode Buts sur le 0-0 : comportement tranché par le propriétaire ; sur 3-3, six moments dans l'ordre.
 - Contrôle visuel : carton de contexte sans score futur ; vitesse conservée.
 
 ## Acceptance criteria
@@ -45,6 +45,7 @@ Temps machine, non compté : suite complète (environ 10 min) ; captures sur les
 - [ ] Les quatre modes lisibles, modes autres que Match complet grisés pendant le calcul
 - [ ] Précédent, suivant, changement de mode testés ; vitesse conservée
 - [ ] Carton de contexte avant chaque moment, sans information future (vérifié sur les 3 traces)
+- [ ] Aucun compteur de moments, durée totale ni temps restant visible ; bouton suivant identique au dernier moment (tests et captures)
 - [ ] Rejeu Match complet identique image par image à avant (non-régression, comme EM-13)
 - [ ] `npm run build` OK, `npm run lint` sans erreur nouvelle
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)

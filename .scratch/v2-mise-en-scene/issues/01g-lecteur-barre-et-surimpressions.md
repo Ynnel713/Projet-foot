@@ -5,7 +5,7 @@
 **Constat vérifié (26/11/2026) :** score, minute et badge d'état sont au HUD (EM-08, EM-13) ; la possession est calculée au temps lu par `ui/src/utils/matchStats.js` (EM-14a) ; la frise de momentum (EM-11) couvre tout le match.
 
 **What to build:**
-1. **Barre de progression du mode** : durée totale du mode, un segment par moment ; les repères d'un moment n'apparaissent qu'une fois ce moment joué (sans spoiler) ; clic sur un repère déjà vu pour y revenir.
+1. **Barre de progression du mode, sans durée totale** (décision du propriétaire, 26/11/2026, cruciale : la durée du mode reste inconnue pendant le visionnage) : ni durée totale, ni temps restant, ni nombre de moments, ni segments à venir. La barre ne montre que les moments déjà joués, un repère par moment vu (clic pour y revenir), et s'allonge au fil de la lecture. Seule la minute de match (HUD) situe le spectateur.
 2. **Surimpressions pendant un moment** : score et minute (existants, inchangés) ; possession au temps lu (`matchStats`) ; xG neutre du tir quand l'ancre est un tir, affiché après le départ du tir seulement.
 3. **Tier 3** (fautes, corners, hors-jeu, dès qu'ils tombent dans la fenêtre lue) : courte étiquette en surimpression, jamais un moment à part.
 
@@ -34,14 +34,14 @@ Temps machine, non compté : suite complète (environ 10 min).
 
 ## Tests
 
-- Repères révélés au fil de la lecture (test du calcul sous node) ; aucun repère au-delà du moment en cours.
+- Repères révélés au fil de la lecture (test du calcul sous node) ; aucun repère au-delà du moment en cours ; le composant ne reçoit que les moments déjà joués, jamais le nombre total ni la durée du mode (test sur ses entrées).
 - xG absent avant le départ du tir, présent après.
 - Captures à 4 tailles ; fluidité mesurée comme EM-07 (médiane par image).
 
 ## Acceptance criteria
 
 - [ ] Constantes validées par le propriétaire avant le code
-- [ ] Aucun repère ni xG futur visible (tests et captures)
+- [ ] Aucun repère ni xG futur visible ; aucune durée totale, temps restant ni nombre de moments affiché (tests et captures)
 - [ ] Étiquettes du Tier 3 uniquement dans la fenêtre lue, jamais comme moment
 - [ ] Fluidité inchangée (médiane par image comparée à avant)
 - [ ] `npm run build` OK, `npm run lint` sans erreur nouvelle

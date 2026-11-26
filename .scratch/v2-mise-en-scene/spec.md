@@ -37,6 +37,7 @@ Le chantier n'a pas à précéder la calibration (`v2-collectif/22`) : il ne cha
 - **Trois tiers** : Tier 1 toujours (buts, penalties, grosses occasions ; cartons rouges et VAR à la livraison de `v2-attributs-restants/09a`, `v2-realisme/21g`, `21h`) ; Tier 2 sous budget (tirs dangereux, arrêts décisifs, coups francs directs cadrés, belles constructions, poteaux ; la contre-attaque est un modificateur du score, pas un type) ; Tier 3 en surimpression seulement (fautes, corners, hors-jeu, puis cartons jaunes et remplacements).
 - **Calcul côté serveur**, en fin de calcul du match ; l'écran ne fait que lire. Vitesses existantes (×1, ×1,5, ×2, ×8, ×32) conservées.
 - **Validation en deux passages** : `07a`, puis `07b` après la calibration (`v2-collectif/22c`).
+- **Suspense (crucial)** : la durée du mode et le nombre de moments ne sont jamais visibles pendant le visionnage (ni durée totale, ni temps restant, ni compteur, ni segments à venir) ; seule la minute de match situe le spectateur.
 
 | # | Titre | Bloqué par | Estimation |
 |---|---|---|---|
@@ -53,4 +54,4 @@ Le chantier n'a pas à précéder la calibration (`v2-collectif/22`) : il ne cha
 | 07a | Validation des modes | 02, 03 | 1 h 30 |
 | 07b | Validation après la calibration | 07a, `v2-collectif/22c` | 50 min |
 
-Total : 16 h 05 de travail effectif ; temps machine à part (séries de 50 matchs, environ 2 h 30 chacune).
+Total : 16 h 05 de travail effectif ; temps machine à part (séries de 50 matchs, environ 2 h 30 chacune). Les 12 h 30 de la proposition d'audit couvraient 01a à 01g et 07a ; les 3 h 35 en plus sont du périmètre ajouté (`02`, `03`, `07b`), pas une dérive d'estimation.

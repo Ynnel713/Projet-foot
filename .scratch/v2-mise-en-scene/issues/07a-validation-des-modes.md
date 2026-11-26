@@ -9,6 +9,8 @@
 4. **Pas de magie** : chaque ancre est un événement réel de la trace (identifiant du journal ou entrée de `shots`, `chances`, `goals`) ; chaque début de moment est un changement de possession, une remise en jeu, la borne de construction ou une coupure entre deux moments (règle du point 4 du `01c`) ; aucune fenêtre hors de la trace ni à cheval sur deux périodes.
 5. **Contexte** : chaque moment précédé de son carton de contexte, construction au moins égale au minimum du `01c`.
 6. **Déterminisme** : empreintes des listes de moments identiques sur deux exécutions à graine fixée.
+7. **Suspense** : aucun élément affiché pendant la lecture ne donne la durée totale du mode, le temps restant ou le nombre de moments (entrées des composants des `01f` et `01g`, captures).
+8. **Résumés courts** : chaque match dont le Résumé fait moins de 10 minutes est listé (« ce match n'a produit que X moments, résumé à Y min »).
 
 **Second passage obligatoire après la calibration** (décision du propriétaire, 26/11/2026) : les poids du `01b` et les budgets de `02` et `03` sont fixés sur le moteur d'avant `v2-collectif/22a` à `22c` et bougeront. Le même script est relancé au ticket `07b`, bloqué par `22c`. Ce ticket ne se clôt pas sans que `07b` existe dans la roadmap.
 
@@ -39,6 +41,7 @@ Temps machine, non compté : 50 matchs (environ 2 h 30), deux fois pour le déte
 
 - [ ] Rapport par mode : durée, couverture du Tier 1, doublons, ancres réelles, contexte, déterminisme
 - [ ] Couverture du Tier 1 : 100 % ; doublons : 0 ; ancres hors trace : 0
+- [ ] Suspense : 0 affichage de durée totale, temps restant ou nombre de moments ; Résumés de moins de 10 minutes listés avec leur nombre de moments
 - [ ] Durées comparées aux cibles ; tout écart renvoyé à un ticket, jamais réglé ici
 - [ ] `07b` présent dans la roadmap, bloqué par `v2-collectif/22c`
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)

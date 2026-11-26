@@ -17,6 +17,7 @@
 5. Vitesses existantes (×1, ×1,5, ×2, ×8, ×32, EM-09) : rien à ajouter, le lecteur saute d'un moment à l'autre.
 6. Calcul côté serveur (Python, testé) ; l'écran ne fait que lire.
 7. Validation en deux passages : `07a` maintenant, `07b` après la calibration (`v2-collectif/22a` à `22c`), parce que les poids bougeront.
+8. **Suspense (crucial)** : pendant le visionnage, rien ne laisse connaître ni deviner la durée du mode ni le nombre de moments restants : pas de durée totale, de temps restant, de compteur « n sur N », ni de segments à venir (01f, 01g, 03, 07a).
 
 **Trois tiers :**
 - **Tier 1, toujours montré** : buts, penalties, grosses occasions (`ChanceEvent`) ; plus tard cartons rouges et décisions VAR.
@@ -38,6 +39,8 @@
 | 01g | Lecteur : barre de progression et surimpressions | 01f | 1 h 45 |
 
 Suite : `02` (mode Moments clés, 1 h), `03` (mode Résumé, 1 h 45), `07a` (validation, 1 h 30), `07b` (second passage après la calibration, 50 min). Total du chantier révisé : **16 h 05** de travail effectif.
+
+**Écart avec les 12 h 30 de la proposition d'audit : + 3 h 35 de périmètre, pas une dérive d'estimation.** La proposition (H-00 à H-05, devenus 01a à 01g et 07a) ne comptait ni les tickets de mode `02` (1 h) et `03` (1 h 45), ni le second passage `07b` (50 min, décision 7). Les huit tickets proposés gardent leurs durées (12 h 30). La durée de l'audit lui-même (135 min réelles pour 100 estimées) est un autre sujet, qui ne concerne pas ces tickets : registre `docs/agents/suivi-estimations.md`, ligne `projet/audit-moments-cles`.
 
 **Passeur :** les tickets qui attendaient « le passeur dans la trace » de ce ticket (`v2-ecran-match/08c`, `10c`, `17`, `04`) le trouvent dans la réponse de l'API au `01e`, déduit du journal, sans modification du moteur.
 
