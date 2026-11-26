@@ -19,7 +19,6 @@ from v2engine.decision import Action
 from v2engine.geometry import PITCH_LENGTH_M, Vec2
 from v2engine.match import BALL_RADIUS_M, GOAL_CENTER_Y, SHOT_SPEED_MPS, TICK_SECONDS, _step_ball
 from v2engine.movement import PlayerState
-from v2engine.freinage import BALL_FRICTION_PER_S
 from v2engine.shooting import FLYING, OVER, SHOT_AIM_HEIGHT_M, ground_strike_m, line_height_m
 
 DIAMETER_M = 2.0 * BALL_RADIUS_M
@@ -95,7 +94,7 @@ def test_the_travel_time_is_that_of_the_engine_steps(distance) -> None:
     t = freinage.stepped_travel_time_s(distance, SHOT_SPEED_MPS, TICK_SECONDS)
     done, speed, elapsed = 0.0, SHOT_SPEED_MPS, 0.0
     while done + speed * TICK_SECONDS < distance:
-        done, speed, elapsed = done + speed * TICK_SECONDS, speed * BALL_FRICTION_PER_S**TICK_SECONDS, elapsed + TICK_SECONDS
+        done, speed, elapsed = done + speed * TICK_SECONDS, freinage.speed_after(speed, TICK_SECONDS), elapsed + TICK_SECONDS
     assert t == pytest.approx(elapsed + (distance - done) / speed)
 
 
@@ -181,7 +180,7 @@ def test_a_blocked_shot_restarts_from_the_ground_and_gets_no_line_height(monkeyp
 
 def test_a_blocked_shot_is_a_loose_ball_that_rolls_on_with_the_engine(monkeypatch) -> None:
     # le ballon contré n'est pas figé : libre, sans porteur, il roule et freine comme tout ballon libre (pas du ballon du
-    # 02a1, `BALL_FRICTION_PER_S`), au mode « sol »
+    # 02a1, `freinage`), au mode « sol »
     monkeypatch.setattr(match, "BLOCK_CHANCE", 1.0)
     defender = _player("Defenseur", "away", "DC", Vec2(PITCH_LENGTH_M - 12.0, GOAL_CENTER_Y + 0.6))
     shots, ball, heights, _ = _shoot(monkeypatch, 2.2, defender=defender, until_touched=True)
@@ -202,7 +201,7 @@ def test_a_blocked_shot_is_a_loose_ball_that_rolls_on_with_the_engine(monkeypatc
         assert ball.holder is None and ball.z == 0.0 and ball.vz == 0.0 and ball.mode == match.SOL
     assert len(positions) >= 3 and all(a.distance_to(b) > 0.05 for a, b in zip(positions, positions[1:]))  # il roule
     for before, after in zip(speeds, speeds[1:]):
-        assert after == pytest.approx(before * BALL_FRICTION_PER_S**TICK_SECONDS)  # il freine comme un ballon libre
+        assert after == pytest.approx(freinage.speed_after(before, TICK_SECONDS))  # il freine comme un ballon libre
 
 
 def test_a_parried_shot_restarts_from_the_ground(monkeypatch) -> None:

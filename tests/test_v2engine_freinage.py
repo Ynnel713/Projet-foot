@@ -1,5 +1,5 @@
-"""Loi de freinage du ballon regroupée (ticket v2-realisme/14a1) : cohérence des fonctions entre elles (indépendante de la
-loi, elle doit tenir après le 14a2), loi actuelle, et un seul module qui la connaît."""
+"""Loi de freinage du ballon : cohérence des fonctions entre elles (ticket v2-realisme/14a1, indépendante de la loi), un
+seul module qui la connaît, et valeurs de la loi roulement + traînée (ticket v2-realisme/14a2a)."""
 
 from __future__ import annotations
 
@@ -16,16 +16,12 @@ DT = 0.1
 SPEEDS = (3.0, 8.0, 15.0, 22.5, 30.0)
 
 
-def test_current_law_is_the_exponential_braking() -> None:
-    """Loi inchangée au 14a1 : vitesse × 0,6 par seconde (sera remplacée au 14a2)."""
-    assert freinage.speed_after(10.0, 1.0) == pytest.approx(6.0)
-    assert freinage.distance_to_slow(30.0, 0.5) == pytest.approx(57.8, abs=0.1)  # portée max d'une passe
-
-
 @pytest.mark.parametrize("speed", SPEEDS)
 @pytest.mark.parametrize("dt", (0.0, DT))
 def test_travel_time_inverts_distance_after(speed: float, dt: float) -> None:
     for t in (0.3, 1.0, 2.5):
+        if t >= freinage.time_to_slow(speed, 0.0) - dt:
+            continue  # arrêt en temps fini (14a2a) : l'inverse n'existe qu'avant l'arrêt
         distance = freinage.distance_after(speed, t, dt)
         assert freinage.travel_time_s(distance, speed, dt) == pytest.approx(t, rel=1e-9)
 
@@ -84,8 +80,77 @@ def test_only_the_braking_module_knows_the_law() -> None:
     assert offenders == []
 
 
-def test_shot_travel_time_is_the_stepped_travel_time() -> None:
-    """Forme gardée pour les tirs (`shooting`) : même valeur que `travel_time_s` au pas du moteur, à l'arrondi près."""
+# --- loi roulement + traînée (ticket v2-realisme/14a2a) -------------------------------------------------------------
+
+def test_drag_coefficients_follow_the_validated_constants() -> None:
+    from v2engine.match import BALL_RADIUS_M
+    assert freinage.BALL_RADIUS_M == BALL_RADIUS_M
+    assert freinage.K_LOW == pytest.approx(0.0244, abs=1e-4)  # Cd 0,45
+    assert freinage.K_HIGH == pytest.approx(0.01354, abs=1e-4)  # Cd 0,25
+
+
+def test_deceleration_values_and_drag_crisis() -> None:
+    assert freinage.deceleration(25.0) == pytest.approx(9.66, abs=0.01)
+    assert freinage.deceleration(10.0) == pytest.approx(3.64, abs=0.01)
+    assert freinage.deceleration(0.0) == 0.0
+    # crise en palier : juste sous 15 m/s, le ballon freine plus fort que juste au-dessus
+    assert freinage.deceleration(14.99) > freinage.deceleration(15.0)
+
+
+def test_reference_distances_and_speeds() -> None:
+    assert freinage.distance_to_slow(15.0, 0.0) == pytest.approx(35.2, abs=0.2)  # passe au sol à 15 m/s (29 m avant)
+    assert freinage.distance_to_slow(30.0, 0.5) == pytest.approx(77.6, abs=0.3)  # portée max d'une passe (57,8 avant)
+    assert freinage.launch_speed(20.0, 6.0) == pytest.approx(13.3, abs=0.1)  # passe de 20 m arrivant à 6 m/s (16,2 avant)
+
+
+@pytest.mark.parametrize("speed", SPEEDS)
+def test_the_ball_stops_in_finite_time_and_never_goes_backwards(speed: float) -> None:
+    stop_t = freinage.time_to_slow(speed, 0.0)
+    assert math.isfinite(stop_t)
+    assert freinage.speed_after(speed, stop_t + 0.01) == 0.0
+    velocity, steps = Vec2(speed, 0.0), 0
+    while velocity.x > 0.0:
+        velocity = freinage.step_velocity(velocity, DT)
+        steps += 1
+        assert velocity.x >= 0.0
+    assert steps == pytest.approx(stop_t / DT, abs=1.0)
+
+
+@pytest.mark.parametrize("speed, distance", [(25.0, 10.0), (20.0, 30.0), (12.0, 5.0)])
+def test_piecewise_solution_matches_a_fine_integration(speed: float, distance: float) -> None:
+    """Solution exacte par morceaux contre une intégration fine (pas de 0,1 ms) de dv/dt = −(a + k(v)·v²)."""
+    v, x, t, h = speed, 0.0, 0.0, 1e-4
+    while x < distance:
+        v -= freinage.deceleration(v) * h
+        x += v * h
+        t += h
+    assert freinage.arrival_speed(speed, distance) == pytest.approx(v, abs=2e-3)
+    assert freinage.travel_time_s(distance, speed) == pytest.approx(t, abs=2e-3)
+
+
+def _with_rolling(monkeypatch, value: float) -> None:
+    monkeypatch.setattr(freinage, "_A", value)
+
+
+def test_a_20_m_pass_lies_inside_the_sourced_rolling_band(monkeypatch) -> None:
+    """Encadrement par la source du roulement (FIFA, 0,6 à 1,5 m/s² ; fourchette du propriétaire 1,0 à 1,5) : passe de
+    20 m partie à 14 m/s, temps de trajet et vitesse d'arrivée entre ceux d'un roulement à 1,0 et à 1,5 m/s²."""
+    def pass_20m() -> tuple[float, float]:
+        return freinage.travel_time_s(20.0, 14.0), freinage.arrival_speed(14.0, 20.0)
+    time_ref, arrival_ref = pass_20m()
+    _with_rolling(monkeypatch, 1.0)
+    time_fast, arrival_fast = pass_20m()
+    _with_rolling(monkeypatch, 1.5)
+    time_slow, arrival_slow = pass_20m()
+    assert time_fast < time_ref < time_slow
+    assert arrival_slow < arrival_ref < arrival_fast
+    assert time_ref == pytest.approx(2.06, abs=0.01) and arrival_ref == pytest.approx(6.58, abs=0.01)  # calcul analytique
+
+
+def test_shots_use_the_engine_step_travel_time() -> None:
+    """Fusion du temps de vol des tirs (recommandation de l'expert du 14a1) : `shooting` lit `travel_time_s` au pas."""
+    from v2engine.shooting import _ENGINE_TICK_S, _flight_distance_m, _flight_time_s
     for distance in (5.0, 16.0, 30.0):
-        assert freinage.shot_travel_time_s(distance, 30.0, DT) == pytest.approx(freinage.travel_time_s(distance, 30.0, DT))
-    assert freinage.shot_travel_time_s(1000.0, 30.0, DT) == math.inf
+        assert _flight_time_s(distance) == freinage.travel_time_s(distance, 30.0, _ENGINE_TICK_S)
+        assert _flight_distance_m(_flight_time_s(distance)) == pytest.approx(distance, abs=1e-9)
+    assert _flight_time_s(1000.0) == math.inf

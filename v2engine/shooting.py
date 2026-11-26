@@ -348,8 +348,9 @@ _ENGINE_TICK_S = 0.1  # pas de la boucle de match (`match.TICK_SECONDS`, égalit
 
 def _flight_time_s(distance_m: float) -> float:
     """Temps (s) que met un tir à parcourir `distance_m` dans la boucle de match : le ballon avance de sa vitesse à
-    chaque pas, puis freine (`freinage.shot_travel_time_s`) ; l'infini s'il s'arrête avant."""
-    return freinage.shot_travel_time_s(distance_m, MAX_PASS_MPS, _ENGINE_TICK_S)
+    chaque pas, puis freine (`freinage.travel_time_s` au pas du moteur) ; l'infini s'il s'arrête avant."""
+    flight = freinage.travel_time_s(distance_m, MAX_PASS_MPS, _ENGINE_TICK_S)
+    return math.inf if flight is None else flight
 
 
 def _flight_distance_m(elapsed_s: float) -> float:

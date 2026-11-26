@@ -17,7 +17,7 @@ from v2engine.flux import DUEL, PASSE
 from v2engine.geometry import PITCH_LENGTH_M, Vec2
 from v2engine.match import GOAL_CENTER_Y, TACKLE_RADIUS_M, _step_ball
 from v2engine.movement import PlayerState
-from v2engine.freinage import BALL_FRICTION_PER_S
+from v2engine import freinage
 from v2engine.possession import BALL_STOPPED_MPS, pressure
 
 GOAL = Vec2(PITCH_LENGTH_M, GOAL_CENTER_Y)
@@ -122,7 +122,7 @@ def _outcomes(holder: PlayerState, opponents: list[PlayerState], trials: int = 2
 
 def _rest_distance(velocity: Vec2) -> float:
     """Distance à laquelle un ballon lancé à `velocity` s'arrête (freinage du moteur, arrêt sous `BALL_STOPPED_MPS`)."""
-    return (velocity.length() - BALL_STOPPED_MPS) / -math.log(BALL_FRICTION_PER_S)
+    return freinage.distance_to_slow(velocity.length(), BALL_STOPPED_MPS)
 
 
 def test_the_dispossession_reach_is_the_tackle_reach() -> None:

@@ -8,7 +8,7 @@ import random
 
 from v2engine.geometry import Vec2
 from v2engine.movement import PlayerState
-from v2engine.freinage import BALL_FRICTION_PER_S
+from v2engine import freinage
 from v2engine.possession import (
     IDEAL_ARRIVAL_MPS,
     MAX_PASS_MPS,
@@ -100,8 +100,8 @@ def test_dosage_lead_follows_passing() -> None:
 
 
 def _arrival_speed(launch: float, distance: float) -> float:
-    """Vitesse du ballon après `distance` m, freiné de BALL_FRICTION_PER_S par seconde (v = v0 + s.ln f)."""
-    return launch + distance * math.log(BALL_FRICTION_PER_S)
+    """Vitesse du ballon après `distance` m (loi de `freinage`)."""
+    return freinage.arrival_speed(launch, distance)
 
 
 def test_well_dosed_pass_arrives_at_ideal_speed_and_in_the_run(monkeypatch) -> None:
@@ -128,7 +128,7 @@ def test_poor_dosage_spreads_the_arrival_speed(monkeypatch) -> None:
     for note, error in ((11, 0.30), (99, 0.05)):
         monkeypatch.setattr("v2engine.flux.PASSE.uniform", lambda a, b: b)  # erreur maximale
         launch = pass_velocity(_player(attributes={"Passing": note}), receiver).length()
-        ideal = IDEAL_ARRIVAL_MPS - 20.0 * math.log(BALL_FRICTION_PER_S)
+        ideal = freinage.launch_speed(20.0, IDEAL_ARRIVAL_MPS)
         assert math.isclose(launch, ideal * (1.0 + error))
 
 

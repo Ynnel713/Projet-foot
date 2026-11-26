@@ -67,9 +67,9 @@ def test_lofted_pass_is_not_cut_in_flight() -> None:
         pytest.approx(pass_success_probability(passer, target, [], lofted=True))
 
 
-def test_long_pass_threshold_is_shared_with_restarts_and_reach_is_about_58_m() -> None:
+def test_long_pass_threshold_is_shared_with_restarts_and_reach_is_about_78_m() -> None:
     assert LONG_RESTART_M == LONG_PASS_M == 25.0
-    assert max_pass_reach_m() == pytest.approx(57.8, abs=0.1)
+    assert max_pass_reach_m() == pytest.approx(77.5, abs=0.1)  # roulement + traînée (v2-realisme/14a2a ; 57,8 avant)
 
 
 def test_builds_up_matches_the_build_up_phase() -> None:

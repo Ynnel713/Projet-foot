@@ -218,7 +218,7 @@ def _launch_speed(distance_m: float) -> float:
 
 def max_pass_reach_m() -> float:
     """Distance la plus longue qu'une passe frappée au plafond (`MAX_PASS_MPS`) parcourt avant d'être morte
-    (`BALL_STOPPED_MPS`) : environ 58 m."""
+    (`BALL_STOPPED_MPS`) : environ 77,5 m (`freinage`, ticket v2-realisme/14a2a)."""
     return freinage.distance_to_slow(MAX_PASS_MPS, BALL_STOPPED_MPS)
 
 
@@ -228,7 +228,7 @@ def pass_aim(passer: PlayerState, target: PlayerState, opponents: Sequence[Playe
     VA être, d'autant plus précisément que le dosage est bon. Ratée : déviée de 25 à 50 % de sa longueur (18h)."""
     distance = passer.position.distance_to(target.position)
     speed = _launch_speed(distance)
-    arrival = max(BALL_STOPPED_MPS, freinage.arrival_speed(speed, distance))  # < 6 m/s si plafonnée (passe > ~47 m)
+    arrival = max(BALL_STOPPED_MPS, freinage.arrival_speed(speed, distance))  # < 6 m/s si plafonnée (passe > ~66 m)
     travel_s = freinage.time_to_slow(speed, arrival)
     aim = target.position + target.velocity * (travel_s * dosage_quality(passer))  # dans la course, selon le dosage
     if PASSE.random() >= pass_accuracy_probability(passer, target, opponents, backheel, one_touch, lofted):

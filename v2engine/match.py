@@ -116,8 +116,6 @@ RELANCE_LONGUE = "relance longue"  # précision d'une relance longue en l'air (t
 # part réelle des avantages non trouvée).
 ADVANTAGE_DANGER_MIN = 0.02
 ADVANTAGE_S = 3.0
-# ponytail : décroissance exponentielle simple (par seconde), pas un vrai coefficient de
-# frottement calibré -- à affiner si le rendu le justifie.
 
 
 def _build_players(lineup: Lineup, team: str, positions: dict[str, Vec2]) -> list[PlayerState]:

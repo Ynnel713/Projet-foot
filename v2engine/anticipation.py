@@ -82,8 +82,9 @@ def meeting_point(player: PlayerState, ball_position: Vec2, ball_velocity: Vec2)
     atteindre le plus tôt, à sa vitesse de pointe -- là où un receveur vient couper le ballon (ticket
     v2-socle/01). S'il ne peut l'atteindre nulle part en route, son point d'arrêt."""
     speed = max_speed_mps(effective_rating(player, "Pace"))
+    horizon = freinage.time_to_slow(ball_velocity.length(), 0.0)  # jusqu'à l'arrêt réel (ticket v2-realisme/14a2a)
     t = 0.0
-    while t < 4.0:  # au-delà, le ballon est quasiment arrêté (il a parcouru 87 % de sa course à 0,6/s)
+    while t < horizon:
         point = freinage.position_after(ball_position, ball_velocity, t)
         if player.position.distance_to(point) <= speed * t:
             return clamp_to_pitch(point)  # borné au terrain (ticket v2-collectif/29)

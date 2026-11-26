@@ -26,7 +26,7 @@ Ordres de grandeur : `k` = 0,0244 (Cd 0,45) et 0,0135 (Cd 0,25) ; passe au sol �
 
 **Blocked by:** 14a1. **Bloque :** 14b, 14d ; `v2-collectif/22a`.
 
-**Status:** à faire
+**Status:** découpé (26/11/2026, décision du propriétaire) en `14a2a-roulement-et-trainee-au-sol.md` (nouvelle loi, même loi partout, prédicteurs alignés) et `14a2b-vol-sans-roulement-et-plafonds.md` (loi en l'air, `MAX_FLIGHT_S`, borne de vitesse). Ticket chapeau.
 
 ## Estimation
 

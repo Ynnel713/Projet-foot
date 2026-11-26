@@ -3,13 +3,11 @@ pas, rebond (rapport 0,49), arrêt des rebonds, ballon qui n'arrive pas, mode «
 
 from __future__ import annotations
 
-import math
-
 import pytest
 
 from v2engine.hauteur import (AERIAL_THRESHOLD_M, GRAVITY_M_S2, GROUND_HORIZONTAL_KEEP, MAX_FLIGHT_S, REBOUND_MIN_APEX_M, apex_m,
                               is_aerial, launch_vz, step_height, time_to_ground)
-from v2engine.freinage import BALL_FRICTION_PER_S
+from v2engine.freinage import distance_after, distance_to_slow
 from v2engine.freinage import travel_time_s as flight_time_s
 
 TICK = 0.1  # pas du moteur (`match.TICK_SECONDS`)
@@ -98,22 +96,20 @@ def test_ballon_au_repos_inchange() -> None:
 
 
 def test_point_de_chute_a_la_cible() -> None:
-    """Passe aérienne de 35 m à 20 m/s : durée de vol tirée du freinage exponentiel, point de chute à ± 1 m de la cible."""
+    """Passe aérienne de 35 m à 20 m/s : durée de vol tirée du freinage (`freinage`), point de chute à ± 1 m de la cible."""
     distance, v0 = 35.0, 20.0
     flight = flight_time_s(distance, v0)
     assert flight is not None
-    lam = -math.log(BALL_FRICTION_PER_S)
     vz0 = launch_vz(flight)
-    landing_t = time_to_ground(0.0, vz0)
-    travelled = v0 * (1.0 - math.exp(-lam * landing_t)) / lam
+    travelled = distance_after(v0, time_to_ground(0.0, vz0))
     assert abs(travelled - distance) < 1.0
 
 
 def test_ballon_qui_n_arrive_pas() -> None:
     """Freinage plus fort que la vitesse : pas de durée de vol (ni division par zéro, ni logarithme d'un négatif)."""
-    lam = -math.log(BALL_FRICTION_PER_S)
-    assert flight_time_s(10.0 * 1.01, 10.0 * lam) is None
-    assert flight_time_s(10.0, 10.0 * lam) is None  # limite exacte
+    stop = distance_to_slow(10.0, 0.0)  # le ballon parti à 10 m/s s'arrête là
+    assert flight_time_s(stop * 1.01, 10.0) is None
+    assert flight_time_s(stop, 10.0) is None  # limite exacte
     assert flight_time_s(10.0, 0.0) is None
     assert flight_time_s(0.0, 5.0) == 0.0
     assert launch_vz(0.0) == 0.0
@@ -127,15 +123,14 @@ def test_mode_aerien_au_dessus_du_genou() -> None:
 
 
 def test_vol_plafonne() -> None:
-    """Ballon long freiné (56 m à 30 m/s : 6,2 s de vol sans plafond) : vol plafonné à `MAX_FLIGHT_S`, sommet sous 25 m,
-    il retombe avant sa cible et à moins de 5 m d'elle."""
-    distance, v0 = 56.3, 30.0
+    """Ballon long freiné (70 m à 30 m/s : 5,2 s de vol sans plafond, loi du 14a2a) : vol plafonné à `MAX_FLIGHT_S`,
+    sommet sous 25 m, il retombe avant sa cible et à moins de 5 m d'elle."""
+    distance, v0 = 70.0, 30.0
     flight = flight_time_s(distance, v0)
     assert flight is not None and flight > MAX_FLIGHT_S
     vz0 = launch_vz(flight)
     assert apex_m(0.0, vz0) < 25.0
-    lam = -math.log(BALL_FRICTION_PER_S)
-    landing = v0 * (1.0 - math.exp(-lam * time_to_ground(0.0, vz0))) / lam
+    landing = distance_after(v0, time_to_ground(0.0, vz0))
     assert distance - 5.0 < landing < distance
 
 
