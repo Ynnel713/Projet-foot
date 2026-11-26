@@ -27,7 +27,7 @@ from v2engine.movement import PlayerState
 from v2engine.off_ball import (COUNTER_RUN_DEPTH_M, RUN_INTERVAL_S, SPACE_HOLD_MAX_S, SPACE_REACHED_M,
                                choose_space, depth_run, player_call_delay_s, run_intensity)
 from v2engine.offside import HESITATION_INTENSITY, clamp_to_onside, offside_line, respects_the_line
-from v2engine.possession import BALL_FRICTION_PER_S, RECEPTION_SPEED_FACTOR, pressure
+from v2engine.possession import RECEPTION_SPEED_FACTOR, pressure
 from v2engine.restart import KICKOFF, REPLACING_INTENSITY, place
 from v2engine.roles import DEFAULT_ROLE
 from v2engine.situation import (DEFENSE_PLACEE, DERNIER_TIERS, POSSESSION_INSTALLEE, TRANSITION_DEFENSIVE,
@@ -330,7 +330,7 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
                     reason=f"en possession, il rejoint sa place dans le bloc{phase}",
                     distance_m=player.position.distance_to(place))
     if role == RECEVEUR:
-        point = meeting_point(player, ball.position, ball.velocity, BALL_FRICTION_PER_S)
+        point = meeting_point(player, ball.position, ball.velocity)
         return make(role, "venir au ballon", point, reason="passe pour lui, il va à sa rencontre")
     if role == LECTURE:
         return make(role, "couper la passe", seen.read_point, reason="passe lue, il court l'intercepter",
@@ -356,7 +356,7 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
                     reason=f"loin du ballon, il rejoint sa place dans le bloc{phase}",
                     distance_m=player.position.distance_to(place))
     if role == BALLON_LIBRE:
-        point = loose_ball_target(player, ball.position, ball.velocity, BALL_FRICTION_PER_S)
+        point = loose_ball_target(player, ball.position, ball.velocity)
         return make(role, "aller au ballon", point, reason="ballon libre, il va le chercher",
                          distance_m=seen.ball_distance)
     if role == SOUTIEN:

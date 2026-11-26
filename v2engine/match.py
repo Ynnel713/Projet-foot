@@ -46,12 +46,12 @@ from v2engine.defense import (COUVERTURE, HOLE_DANGER_M, HOLE_FILLED_M, MARQUAGE
                               own_goal)
 from v2engine.occasion import ChanceTracker
 from v2engine.offside import HESITATION_S, OFFSIDE_OUT_S, offside_at_pass, sees_the_flag_probability
-from v2engine.possession import (BALL_FRICTION_PER_S, BALL_STOPPED_MPS, MAX_PASS_MPS, MISS_RETRY_S, attempt_control, deflect,
+from v2engine.possession import (BALL_STOPPED_MPS, MAX_PASS_MPS, MISS_RETRY_S, attempt_control, deflect,
                                  missed_control_velocity, pass_success_probability, pass_velocity, PRESSURE_RADIUS_M,
                                  orients_control, reception_delay_s)
 from v2engine.added_time import GRACE_S, HARD_STOP_S, added_minutes, played_minute
 from v2engine.roles import role_of
-from v2engine import hauteur
+from v2engine import freinage, hauteur
 from v2engine.restart import (AERIEN, CORNER, FREE_KICK, KICKOFF, LONG_RESTART_M, PENALTY, PENALTY_CONVERSION, SOL,
                               award, exit_point, foul_restart, is_aerial, kickoff, restart_target)
 from v2engine.shooting import (BLOCK_CHANCE, BLOCK_WIDTH_M, FLYING, HELD, OVER, PARRIED, SHANKED, SHOT_AIM_HEIGHT_M, WIDE,
@@ -622,10 +622,10 @@ def _ground(ball: BallState) -> None:
 
 def _launch_aerial(ball: BallState, distance_m: float) -> None:
     """Ballon frappé en l'air vers un point à `distance_m` (ticket v2-hauteur-ballon/02a1) : durée de vol tirée du freinage
-    horizontal (`hauteur.flight_time_s`), vitesse verticale `g·T / 2`, il retombe sur le point visé. Vol plus long que
+    horizontal (`freinage.travel_time_s`), vitesse verticale `g·T / 2`, il retombe sur le point visé. Vol plus long que
     `hauteur.MAX_FLIGHT_S`, ou ballon trop lent pour arriver : vol plafonné, il retombe avant le point visé."""
     # pas du produit : les remises et les passes ne connaissent pas le pas de la simulation (`--pas` d'un banc le change)
-    flight = hauteur.flight_time_s(distance_m, ball.velocity.length(), BALL_FRICTION_PER_S, TICK_SECONDS)
+    flight = freinage.travel_time_s(distance_m, ball.velocity.length(), TICK_SECONDS)
     ball.mode, ball.z, ball.vz = SOL, 0.0, hauteur.launch_vz(flight)
 
 
@@ -895,8 +895,8 @@ def _execute(ball: BallState, holder: PlayerState, action, players: list[PlayerS
         if to_line > 0.0:
             at_line = line_height_m(flight.slope, shot_error_sigma(holder, goal, opponents), to_line, 2.0 * BALL_RADIUS_M)
             landing = ground_strike_m(at_line, to_line)
-            ball.vz = hauteur.launch_vz_to(max(0.0, at_line), hauteur.stepped_travel_time_s(
-                landing, SHOT_SPEED_MPS, BALL_FRICTION_PER_S, TICK_SECONDS))
+            ball.vz = hauteur.launch_vz_to(max(0.0, at_line), freinage.stepped_travel_time_s(
+                landing, SHOT_SPEED_MPS, TICK_SECONDS))
         ball.shot_flight = flight
         ball.shot_wide = not flight.on_target  # hors du cadre (ticket v2-realisme/03k)
         ball.last_toucher = ball.released_by = holder.name
@@ -1006,7 +1006,7 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
         _clear_offside(ball)
         return None
     ball.position = end
-    ball.velocity = ball.velocity * (BALL_FRICTION_PER_S**dt)
+    ball.velocity = freinage.step_velocity(ball.velocity, dt)
     if flight is not None:
         flight.elapsed_s += dt
     # Hauteur (ticket v2-hauteur-ballon/02a1) : chute exacte sur le pas, rebonds (vitesse horizontale × 0,85 chacun)

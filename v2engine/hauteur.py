@@ -1,5 +1,5 @@
 """Hauteur du ballon (ticket v2-hauteur-ballon/02a1, révision de D-V03) : physique verticale pure, sans état global ni
-hasard. Le moteur garde sa loi horizontale (freinage exponentiel `BALL_FRICTION_PER_S`) ; ce module ne calcule que la
+hasard. La loi horizontale (freinage) est dans `freinage` (ticket v2-realisme/14a1) ; ce module ne calcule que la
 hauteur et les rebonds.
 
 Convention (décision du propriétaire du 26/11/2026) : `z` est la hauteur du **bas** du ballon, en mètres. Ballon au
@@ -67,30 +67,9 @@ def height_at(z: float, vz: float, t: float) -> tuple[float, float]:
     return z + vz * t - 0.5 * GRAVITY_M_S2 * t * t, vz - GRAVITY_M_S2 * t
 
 
-def flight_time_s(distance_m: float, speed_mps: float, friction_per_s: float, dt: float = 0.0) -> float | None:
-    """Durée pour parcourir `distance_m` à l'horizontale, partant à `speed_mps` avec un freinage exponentiel (la vitesse
-    est multipliée par `friction_per_s` chaque seconde) : `T = −ln(1 − d·λ / v0) / λ`, λ = −ln `friction_per_s`.
-    `dt` > 0 : distance du moteur, qui avance le ballon par pas de `dt` (Euler explicite : `x += v·dt`, puis
-    `v ← v·f^dt`) ; `d·λ / v0` devient `d·(1 − f^dt) / (v0·dt)` (réserve A1 de l'expert, 02a1 : sans cela, le ballon
-    retombe 2,6 % au-delà de sa cible au pas de 0,1 s). `None` si le ballon s'arrête avant ou si la vitesse est nulle.
-    Distance nulle : 0."""
-    if distance_m <= 0.0:
-        return 0.0
-    if speed_mps <= 0.0:
-        return None
-    lam = -math.log(friction_per_s)
-    if lam <= 0.0:
-        return distance_m / speed_mps  # pas de freinage
-    reach = (distance_m * (1.0 - friction_per_s**dt) / (speed_mps * dt) if dt > 0.0
-             else distance_m * lam / speed_mps)
-    if reach >= 1.0:
-        return None
-    return -math.log1p(-reach) / lam
-
-
 def launch_vz(flight_s: float | None) -> float:
     """Vitesse verticale de départ d'un ballon frappé au sol qui retombe au sol après `flight_s` secondes :
-    `vz0 = g·T / 2`, durée plafonnée à `MAX_FLIGHT_S`. `None` (ballon qui n'arrive pas, `flight_time_s`) : vol plafonné,
+    `vz0 = g·T / 2`, durée plafonnée à `MAX_FLIGHT_S`. `None` (ballon qui n'arrive pas, `freinage.travel_time_s`) : vol plafonné,
     il retombe avant sa cible."""
     flight = MAX_FLIGHT_S if flight_s is None else min(MAX_FLIGHT_S, max(0.0, flight_s))
     return 0.5 * GRAVITY_M_S2 * flight
@@ -122,25 +101,6 @@ def step_height(z: float, vz: float, dt: float) -> HeightStep:
         keep *= GROUND_HORIZONTAL_KEEP
         bounces += 1
     return HeightStep(z, vz, keep, bounces, first)
-
-
-def stepped_travel_time_s(distance_m: float, speed_mps: float, friction_per_s: float, dt: float) -> float | None:
-    """Temps exact que met le moteur à amener le ballon à `distance_m` (ticket v2-hauteur-ballon/02a2) : il avance par pas
-    de `dt` (`x += v·dt`, puis `v ← v·f^dt`) et franchit le point en ligne droite à l'intérieur d'un pas, comme
-    `restart.exit_point` le coupe. `None` si le ballon s'arrête avant ; distance nulle : 0."""
-    if distance_m <= 0.0:
-        return 0.0
-    if speed_mps <= 0.0 or dt <= 0.0:
-        return None
-    keep = friction_per_s**dt
-    done, speed, steps = 0.0, speed_mps, 0
-    while done + speed * dt < distance_m:
-        done += speed * dt
-        speed *= keep
-        steps += 1
-        if speed * dt < 1e-9:
-            return None  # arrêté avant
-    return (steps + (distance_m - done) / (speed * dt)) * dt
 
 
 def launch_vz_to(z_target_m: float, flight_s: float | None) -> float:

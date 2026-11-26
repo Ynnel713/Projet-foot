@@ -8,7 +8,7 @@ import random
 from v2engine.anticipation import loose_ball_lead, loose_ball_target, pass_readers, read_pass_probability
 from v2engine.ball_state import BallState
 from v2engine.geometry import Vec2
-from v2engine.match import BALL_FRICTION_PER_S, _step_ball, _step_player
+from v2engine.match import _step_ball, _step_player
 from v2engine.movement import PlayerState
 
 
@@ -51,8 +51,8 @@ def test_reader_runs_to_cut_the_pass_and_reading_is_cleared_on_control(monkeypat
 
 def test_loose_ball_target_moves_toward_stop_point_with_anticipation() -> None:
     ball_pos, ball_vel = Vec2(50.0, 34.0), Vec2(10.0, 0.0)
-    low = loose_ball_target(_player(attributes={"Anticipation": 11}), ball_pos, ball_vel, BALL_FRICTION_PER_S)
-    high = loose_ball_target(_player(attributes={"Anticipation": 99}), ball_pos, ball_vel, BALL_FRICTION_PER_S)
+    low = loose_ball_target(_player(attributes={"Anticipation": 11}), ball_pos, ball_vel)
+    high = loose_ball_target(_player(attributes={"Anticipation": 99}), ball_pos, ball_vel)
     assert low == ball_pos  # 11 : comportement d'avant, il court après le ballon
     assert high.x > ball_pos.x + 15.0  # 99 : file vers le point d'arrêt (~19,6 m plus loin)
 

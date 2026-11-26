@@ -6,7 +6,7 @@ from __future__ import annotations
 from v2engine.anticipation import meeting_point
 from v2engine.ball_state import BallState
 from v2engine.geometry import Vec2
-from v2engine.match import BALL_FRICTION_PER_S, _step_ball, _step_player
+from v2engine.match import _step_ball, _step_player
 from v2engine.movement import PlayerState
 
 
@@ -19,7 +19,7 @@ def _player(name: str, team: str = "home", position: Vec2 = Vec2(50.0, 34.0)) ->
 
 def test_meeting_point_is_on_the_ball_path_and_reachable_in_time() -> None:
     receiver = _player("Receveur", position=Vec2(45.0, 40.0))
-    point = meeting_point(receiver, Vec2(30.0, 34.0), Vec2(15.0, 0.0), BALL_FRICTION_PER_S)
+    point = meeting_point(receiver, Vec2(30.0, 34.0), Vec2(15.0, 0.0))
     assert abs(point.y - 34.0) < 1e-9  # sur la trajectoire réelle du ballon
     assert 30.0 < point.x < 45.0  # il coupe le ballon avant qu'il n'arrive à sa hauteur
 

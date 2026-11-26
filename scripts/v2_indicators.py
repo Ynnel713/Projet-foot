@@ -30,7 +30,8 @@ from v2engine.gardien import (BALL_DISTANCE_M, BISECTOR_TOLERANCE_M, FACE_A_FACE
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, in_penalty_area
 from v2engine.movement import PlayerState
 from v2engine.offside import offside_line
-from v2engine.possession import BALL_FRICTION_PER_S, MAX_PASS_MPS as SHOT_SPEED_MPS, pass_success_probability, pressure
+from v2engine import freinage
+from v2engine.possession import MAX_PASS_MPS as SHOT_SPEED_MPS, pass_success_probability, pressure
 from v2engine.restart import CORNER, GOAL_KICK, KICKOFF
 from v2engine.shooting import (base_chance, keeper_reach_m, neutral_open_chance, shot_pressure, shot_probability,
                                shooting_note)
@@ -73,7 +74,7 @@ CHOICE_AFTER_S = 1.5
 RECOVERY_CLASSES = ((5.0, "0-5 s"), (12.0, "5-12 s"), (15.0, "12-15 s"), (math.inf, "plus de 15 s"))
 LONG_PASS_M = 32.0
 # Taux d'arrêt des tirs cadrés par tranche (ticket v2-realisme/05h) : distance du tir au but, vitesse du ballon quand il
-# passe au gardien (vitesse du tir freinée, `possession.BALL_FRICTION_PER_S`). Tranches de lecture, sans effet sur le jeu.
+# passe au gardien (vitesse du tir freinée, `freinage.speed_after`). Tranches de lecture, sans effet sur le jeu.
 SAVE_DISTANCE_BANDS = ((11.0, "moins de 11 m"), (18.0, "11-18 m"), (25.0, "18-25 m"), (math.inf, "25 m et plus"))
 SAVE_SPEED_BANDS = ((18.0, "moins de 18 m/s"), (24.0, "18-24 m/s"), (math.inf, "24 m/s et plus"))
 # Sortie d'un tir contré par rapport à la direction du tir (ticket v2-realisme/05d) : effleuré (il continue), dévié,
@@ -1376,7 +1377,7 @@ class Collector:
             distance = Vec2(event.x, event.y).distance_to(OPPONENT_GOAL[event.team])
             speed = getattr(event, "keeper_speed_mps", None)  # tracée depuis le 05c (réserve A4 du 05h)
             if speed is None:
-                speed = SHOT_SPEED_MPS * BALL_FRICTION_PER_S ** keeper_s
+                speed = freinage.speed_after(SHOT_SPEED_MPS, keeper_s)
             for kind, value, bands in (("distance", distance, SAVE_DISTANCE_BANDS), ("vitesse", speed, SAVE_SPEED_BANDS)):
                 band = next(label for limit, label in bands if value < limit)
                 self.count[f"tirs cadrés jugés, {kind} {band}"] += 1

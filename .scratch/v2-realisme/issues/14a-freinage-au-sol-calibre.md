@@ -14,7 +14,7 @@
 
 **Bloque :** 14b, 14d.
 
-**Status:** à faire (constantes à proposer avant le code)
+**Status:** découpé (26/11/2026, décision du propriétaire) en `14a1-loi-de-freinage-regroupee.md` (interface, sans changement de jeu) et `14a2-roulement-et-trainee.md` (nouvelle loi, constantes validées le 26/11/2026). Ticket chapeau : ne pas l'implémenter tel quel.
 
 ## Estimation
 

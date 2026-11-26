@@ -11,7 +11,7 @@ from v2engine.ball_state import BallState
 from v2engine.geometry import Vec2
 from v2engine.movement import PlayerState
 from v2engine.occasion import BIG_CHANCE_DANGER, ChanceTracker, reach_probability, situation_danger
-from v2engine.possession import BALL_FRICTION_PER_S
+from v2engine.freinage import BALL_FRICTION_PER_S
 from v2engine.trace import ShotEvent
 
 DT = 0.1

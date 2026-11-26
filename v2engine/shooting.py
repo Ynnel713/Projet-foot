@@ -17,10 +17,11 @@ from ligue1sim.pitch_geometry import GOAL_HEIGHT_M, GOAL_WIDTH_M
 
 from v2engine.attributes import duel_probability, success_probability
 from v2engine.condition import effective_rating
+from v2engine import freinage
 from v2engine.flux import TIR
 from v2engine.geometry import Vec2, in_penalty_area
 from v2engine.movement import PlayerState
-from v2engine.possession import BALL_FRICTION_PER_S, MAX_PASS_MPS
+from v2engine.possession import MAX_PASS_MPS
 
 # Distance de tir maximale (m) : au-delà, l'option « tirer » n'existe pas pour le porteur (voir
 # `decision.py`, qui choisit QUAND tirer). Constante validée par le propriétaire (24/10/2026,
@@ -347,17 +348,14 @@ _ENGINE_TICK_S = 0.1  # pas de la boucle de match (`match.TICK_SECONDS`, égalit
 
 def _flight_time_s(distance_m: float) -> float:
     """Temps (s) que met un tir à parcourir `distance_m` dans la boucle de match : le ballon avance de sa vitesse à
-    chaque pas, puis freine (`BALL_FRICTION_PER_S`) ; l'infini s'il s'arrête avant."""
-    q = BALL_FRICTION_PER_S ** _ENGINE_TICK_S
-    rest = 1.0 - distance_m * (1.0 - q) / (MAX_PASS_MPS * _ENGINE_TICK_S)
-    return math.inf if rest <= 0.0 else _ENGINE_TICK_S * math.log(rest) / math.log(q)
+    chaque pas, puis freine (`freinage.shot_travel_time_s`) ; l'infini s'il s'arrête avant."""
+    return freinage.shot_travel_time_s(distance_m, MAX_PASS_MPS, _ENGINE_TICK_S)
 
 
 def _flight_distance_m(elapsed_s: float) -> float:
     """Distance (m) parcourue par un tir au bout de `elapsed_s`, pas entiers de la boucle de match (inverse de
     `_flight_time_s`)."""
-    q = BALL_FRICTION_PER_S ** _ENGINE_TICK_S
-    return MAX_PASS_MPS * _ENGINE_TICK_S * (1.0 - q ** (elapsed_s / _ENGINE_TICK_S)) / (1.0 - q)
+    return freinage.distance_after(MAX_PASS_MPS, elapsed_s, _ENGINE_TICK_S)
 
 
 def _keeper_cover(origin: Vec2, goal: Vec2, axis: Vec2, keeper_at: Vec2) -> tuple[float, float] | tuple[()] | None:

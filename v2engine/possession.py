@@ -13,13 +13,13 @@ from collections.abc import Sequence
 
 from v2engine.attributes import duel_probability, success_probability
 from v2engine.condition import effective_rating
+from v2engine import freinage
 from v2engine.flux import PASSE
 from v2engine.reception import DE_FACE, DE_PROFIL, DOS_AU_JEU
 from v2engine.geometry import Vec2
 from v2engine.movement import PlayerState
 
 PRESSURE_RADIUS_M = 5.0  # gêne maximale au contact, nulle à 5 m (validé, ticket v2-cerveau-joueurs/01)
-BALL_FRICTION_PER_S = 0.6  # freinage du ballon par seconde (partagé avec `match.py`)
 BALL_STOPPED_MPS = 0.5  # en dessous, une passe est considérée morte (ballon quasi arrêté)
 
 # --- Constantes validées par le propriétaire (25/10/2026, ticket v2-socle/04) ---------------------------------
@@ -213,13 +213,13 @@ def missed_control_velocity(player: PlayerState, ball_velocity: Vec2, opponents:
 
 def _launch_speed(distance_m: float) -> float:
     """Vitesse de départ pour que le ballon, freiné, arrive à `IDEAL_ARRIVAL_MPS` après `distance_m`."""
-    return min(MAX_PASS_MPS, IDEAL_ARRIVAL_MPS - distance_m * math.log(BALL_FRICTION_PER_S))
+    return min(MAX_PASS_MPS, freinage.launch_speed(distance_m, IDEAL_ARRIVAL_MPS))
 
 
 def max_pass_reach_m() -> float:
     """Distance la plus longue qu'une passe frappée au plafond (`MAX_PASS_MPS`) parcourt avant d'être morte
     (`BALL_STOPPED_MPS`) : environ 58 m."""
-    return (MAX_PASS_MPS - BALL_STOPPED_MPS) / -math.log(BALL_FRICTION_PER_S)
+    return freinage.distance_to_slow(MAX_PASS_MPS, BALL_STOPPED_MPS)
 
 
 def pass_aim(passer: PlayerState, target: PlayerState, opponents: Sequence[PlayerState] = (),
@@ -228,9 +228,8 @@ def pass_aim(passer: PlayerState, target: PlayerState, opponents: Sequence[Playe
     VA être, d'autant plus précisément que le dosage est bon. Ratée : déviée de 25 à 50 % de sa longueur (18h)."""
     distance = passer.position.distance_to(target.position)
     speed = _launch_speed(distance)
-    log_f = math.log(BALL_FRICTION_PER_S)
-    arrival = max(BALL_STOPPED_MPS, speed + distance * log_f)  # < 6 m/s si la vitesse est plafonnée (passe > ~47 m)
-    travel_s = math.log(arrival / speed) / log_f
+    arrival = max(BALL_STOPPED_MPS, freinage.arrival_speed(speed, distance))  # < 6 m/s si plafonnée (passe > ~47 m)
+    travel_s = freinage.time_to_slow(speed, arrival)
     aim = target.position + target.velocity * (travel_s * dosage_quality(passer))  # dans la course, selon le dosage
     if PASSE.random() >= pass_accuracy_probability(passer, target, opponents, backheel, one_touch, lofted):
         angle = PASSE.uniform(0.0, 2.0 * math.pi)

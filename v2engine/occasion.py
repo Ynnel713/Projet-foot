@@ -17,14 +17,14 @@ import math
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 
-from v2engine import hauteur
+from v2engine import freinage, hauteur
 from v2engine.condition import effective_rating
 from v2engine.ball_state import BallState
 from v2engine.cerveau import OPPONENT_GOAL
 from v2engine.geometry import Vec2
 from v2engine.movement import PlayerState, max_speed_mps
 from v2engine.offside import offside_at_pass
-from v2engine.possession import BALL_FRICTION_PER_S, BALL_STOPPED_MPS, pass_success_probability
+from v2engine.possession import BALL_STOPPED_MPS, pass_success_probability
 from v2engine.shooting import FLYING, SHOOTING_RANGE_M, occasion_quality
 from v2engine.trace import ChanceEvent, ShotEvent
 
@@ -45,13 +45,12 @@ _TEAMS = ("home", "away")
 
 def _ball_path(ball: BallState) -> list[tuple[float, float, Vec2]]:
     """Points (instant, distance parcourue, position) de la trajectoire freinée du ballon ; arrêté : sa position."""
-    log_f = math.log(BALL_FRICTION_PER_S)
     if ball.velocity.length() < BALL_STOPPED_MPS:
         return [(0.0, 0.0, ball.position)]
     path, t = [], 0.0
     while t <= REACH_HORIZON_S + 1e-9:
-        travelled = (BALL_FRICTION_PER_S ** t - 1.0) / log_f
-        path.append((t, travelled * ball.velocity.length(), ball.position + ball.velocity * travelled))
+        path.append((t, freinage.distance_after(ball.velocity.length(), t),
+                     freinage.position_after(ball.position, ball.velocity, t)))
         t += REACH_STEP_S
     return path
 

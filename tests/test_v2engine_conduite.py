@@ -17,7 +17,8 @@ from v2engine.flux import DUEL, PASSE
 from v2engine.geometry import PITCH_LENGTH_M, Vec2
 from v2engine.match import GOAL_CENTER_Y, TACKLE_RADIUS_M, _step_ball
 from v2engine.movement import PlayerState
-from v2engine.possession import BALL_FRICTION_PER_S, BALL_STOPPED_MPS, pressure
+from v2engine.freinage import BALL_FRICTION_PER_S
+from v2engine.possession import BALL_STOPPED_MPS, pressure
 
 GOAL = Vec2(PITCH_LENGTH_M, GOAL_CENTER_Y)
 

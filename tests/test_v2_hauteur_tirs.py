@@ -13,13 +13,13 @@ import pytest
 
 from ligue1sim.pitch_geometry import GOAL_HEIGHT_M
 
-from v2engine import hauteur, match
+from v2engine import freinage, hauteur, match
 from v2engine.ball_state import BallState
 from v2engine.decision import Action
 from v2engine.geometry import PITCH_LENGTH_M, Vec2
 from v2engine.match import BALL_RADIUS_M, GOAL_CENTER_Y, SHOT_SPEED_MPS, TICK_SECONDS, _step_ball
 from v2engine.movement import PlayerState
-from v2engine.possession import BALL_FRICTION_PER_S
+from v2engine.freinage import BALL_FRICTION_PER_S
 from v2engine.shooting import FLYING, OVER, SHOT_AIM_HEIGHT_M, ground_strike_m, line_height_m
 
 DIAMETER_M = 2.0 * BALL_RADIUS_M
@@ -88,11 +88,11 @@ def test_a_shot_aimed_into_the_ground_strikes_it_where_the_aimed_line_meets_it()
     assert line_height_m(0.3, SIGMA, 0.0, DIAMETER_M) == 0.0  # tir depuis la ligne
 
 
-# --- trajectoire (`hauteur.stepped_travel_time_s`, `hauteur.launch_vz_to`) ---
+# --- trajectoire (`freinage.stepped_travel_time_s`, `hauteur.launch_vz_to`) ---
 
 @pytest.mark.parametrize("distance", [0.5, 6.0, 16.0, 29.7])
 def test_the_travel_time_is_that_of_the_engine_steps(distance) -> None:
-    t = hauteur.stepped_travel_time_s(distance, SHOT_SPEED_MPS, BALL_FRICTION_PER_S, TICK_SECONDS)
+    t = freinage.stepped_travel_time_s(distance, SHOT_SPEED_MPS, TICK_SECONDS)
     done, speed, elapsed = 0.0, SHOT_SPEED_MPS, 0.0
     while done + speed * TICK_SECONDS < distance:
         done, speed, elapsed = done + speed * TICK_SECONDS, speed * BALL_FRICTION_PER_S**TICK_SECONDS, elapsed + TICK_SECONDS
@@ -100,8 +100,8 @@ def test_the_travel_time_is_that_of_the_engine_steps(distance) -> None:
 
 
 def test_a_ball_that_stops_before_the_point_has_no_travel_time() -> None:
-    assert hauteur.stepped_travel_time_s(1000.0, 5.0, BALL_FRICTION_PER_S, TICK_SECONDS) is None
-    assert hauteur.stepped_travel_time_s(0.0, 5.0, BALL_FRICTION_PER_S, TICK_SECONDS) == 0.0
+    assert freinage.stepped_travel_time_s(1000.0, 5.0, TICK_SECONDS) is None
+    assert freinage.stepped_travel_time_s(0.0, 5.0, TICK_SECONDS) == 0.0
     assert hauteur.launch_vz_to(1.0, None) == 0.0 and hauteur.launch_vz_to(1.0, 0.0) == 0.0
 
 

@@ -18,7 +18,6 @@ from v2engine.ball_state import BallState
 from v2engine.defense import arrival_time_s
 from v2engine.geometry import PENALTY_AREA_DEPTH_M, PENALTY_AREA_WIDTH_M, PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
 from v2engine.movement import PlayerState
-from v2engine.possession import BALL_FRICTION_PER_S
 from v2engine.shooting import block_probability
 
 # Placement sur la bissectrice (ticket v2-realisme/03b ; chiffres réels non trouvés, ordres de grandeur, constantes
@@ -116,7 +115,7 @@ class Race:
 
 def race(player: PlayerState, ball: BallState, players: list[PlayerState]) -> Race:
     """Course du gardien `player` sur le ballon libre `ball` contre les adversaires de champ de `players`."""
-    point = loose_ball_target(player, ball.position, ball.velocity, BALL_FRICTION_PER_S)
+    point = loose_ball_target(player, ball.position, ball.velocity)
     keeper_s = arrival_time_s(player, point)
     rival_s = min((arrival_time_s(p, point) for p in players if p.team != player.team and p.poste != "GK"),
                   default=math.inf)

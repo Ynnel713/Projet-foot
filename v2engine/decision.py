@@ -17,12 +17,13 @@ from v2engine.attributes import success_probability
 from v2engine.condition import effective_rating
 from v2engine.contextes import IDEE_DE_PREMIERE, LECTURE_DU_PRESSING, contextual_rating
 from v2engine.danger import danger, loss_cost
+from v2engine import freinage
 from v2engine.flux import DECISION, DUEL, PERCEPTION
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, in_penalty_area
 from v2engine.movement import PlayerState, max_speed_mps, turn_rate_rad_s
 from v2engine.off_ball import OPEN_LANE_PROBABILITY
 from v2engine.offside import is_clearly_offside, pass_margin_m, perceived_defence_line
-from v2engine.possession import (BACKHEEL_MAX_M, BALL_FRICTION_PER_S, BALL_STOPPED_MPS, LONG_PASS_M, max_pass_reach_m,
+from v2engine.possession import (BACKHEEL_MAX_M, BALL_STOPPED_MPS, LONG_PASS_M, max_pass_reach_m,
                                   pass_success_probability,
                                   pressure)
 from v2engine.shooting import SHOOTING_RANGE_M, shot_outcome_shares
@@ -547,7 +548,7 @@ def lost_carry_outcome(holder: PlayerState, opponents: list[PlayerState],
     angle = math.radians(DUEL.uniform(-LONG_TOUCH_DEG, LONG_TOUCH_DEG))
     d = heading.normalized()
     direction = Vec2(d.x * math.cos(angle) - d.y * math.sin(angle), d.x * math.sin(angle) + d.y * math.cos(angle))
-    return None, direction * (BALL_STOPPED_MPS - distance * math.log(BALL_FRICTION_PER_S))
+    return None, direction * freinage.launch_speed(distance, BALL_STOPPED_MPS)
 
 
 def arrival_s(opponent: PlayerState, point: Vec2, projection: float = 1.0) -> float:
