@@ -18,7 +18,7 @@ intouchable en l'air, touchable au point de chute). Étude : `docs/ETUDE_HAUTEUR
 **Constantes proposées** : seuils des tranches en fraction de la taille et portée du gardien, à sourcer (« non trouvé »
 sinon) et à proposer avant le code.
 
-**Blocked by:** 02a (physique de la hauteur).
+**Blocked by:** 02a (physique de la hauteur) ; 02c (ballon reçu en l'air, ajouté le 26/11/2026).
 
 **Bloque :** `v2-collectif/32b` (et son chapeau `32`, découpé), `v2-attributs-restants/01`, `v2-attributs-restants/03a`, `v2-realisme/15a` ; `v2-collectif/15d` par le 32b (ligne ajoutée le 21/11/2026, audit de réalisme : réciproque des tickets qui citent ce ticket).
 
