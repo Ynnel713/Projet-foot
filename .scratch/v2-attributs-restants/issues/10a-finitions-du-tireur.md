@@ -6,7 +6,7 @@
 
 **Attributs :** Decisions, Flair, Technique, Finishing ; gestes préférés en penchants.
 
-**Blocked by:** `v2-collectif/28a` et `28b`, `v2-collectif/19` (principe des penchants), `v2-collectif/22c` (passe après la calibration).
+**Blocked by:** `v2-collectif/28a` et `28b`, `v2-collectif/19` (principe des penchants), `v2-collectif/22c` (passe après la calibration) ; `v2-realisme/14b4` (frappe enroulée : trajectoire courbe et visée inverse, ajouté le 26/11/2026, audit Magnus).
 
 **Bloque :** 10b.
 

@@ -12,6 +12,8 @@
 
 **Point de vigilance :** le ticket v2-socle/05 est absorbé ici.
 
+**Physique du ballon avant la calibration (audit Magnus du 26/11/2026, `docs/AUDIT_MAGNUS_V2.md`) :** la loi de freinage `v2-realisme/14a` passe **avant** l'effet Magnus (`14b1` à `14b4`, découpage du 14b) : même modèle aérodynamique, même solveur de trajectoire, que 14a livre. Les deux changent les passes, les interceptions, les centres et les tirs : la calibration se fait après les deux (22a déjà bloqué par `14a` à `14d`). Si Magnus devait être reporté après la calibration, le documenter ici et prévoir un contrôle de non-régression : sans lui, coups francs, corners et centres enroulés restent des lignes droites (trou de réalisme assumé).
+
 **Reporté du ticket 09 (réserve A2 de l'expert, acceptée par le propriétaire le 02/11/2026 : « J'accepte ») :** les tacles passent de 44,75 à 51,15 par match (+14 %, 20 matchs, graine d'audit, `7a94d64` puis ticket 09), au-dessus de la fourchette réelle de 30 à 40. Cause probable : le presseur envoyé au point de réception pendant une passe adverse en vol (passe en vol seule : 55,6). À reprendre dans la calibration des tacles.
 
 - [ ] Reprise du ticket socle 05 : tirs 8-15 par équipe, buts 2-3,5 par match, receveur visé au moins 50 %, passes de plus de 32 m (environ 47 % réussies, 10-19 % des passes), passes réussies 70-90 %, au plus 25 % chez l'adversaire

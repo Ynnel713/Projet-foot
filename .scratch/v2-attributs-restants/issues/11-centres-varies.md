@@ -8,7 +8,7 @@
 
 **Attributs :** Crossing, Decisions, Flair, Vision ; gestes préférés en penchants (ticket 05).
 
-**Blocked by:** 01 (centres et jeu aérien), `v2-collectif/28b` (issue du tir), `v2-collectif/29` (mode de ballon, livré) ; `v2-realisme/23b` (erreur d'exécution continue du centre, ajouté le 10/11/2026).
+**Blocked by:** 01 (centres et jeu aérien), `v2-collectif/28b` (issue du tir), `v2-collectif/29` (mode de ballon, livré) ; `v2-realisme/23b` (erreur d'exécution continue du centre, ajouté le 10/11/2026) ; `v2-realisme/14b4` (effet du ballon par type de frappe : un centre enroulé sans Magnus reste une ligne droite, ajouté le 26/11/2026, audit Magnus).
 
 **Status:** à faire (constantes à proposer avant le code)
 
