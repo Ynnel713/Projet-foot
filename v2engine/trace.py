@@ -238,6 +238,9 @@ class ShotEvent:
     # contré (`shooting.post_shot_xg`, 0 hors du cadre) ; `None` si non défini (tir contré, penalty).
     xg: float | None = None
     post_shot_xg: float | None = None
+    # Hauteur (ticket v2-hauteur-ballon/02a2) : bas du ballon (m) quand le tir en vol franchit la ligne de but ; `None` s'il
+    # ne l'a pas franchie (arrêté, contré, dévissé, penalty).
+    line_z_m: float | None = None
 
 
 @dataclass(frozen=True)

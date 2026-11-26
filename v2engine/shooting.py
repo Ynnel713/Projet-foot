@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import replace
+from statistics import NormalDist
 from types import MappingProxyType
 
 from ligue1sim.pitch_geometry import GOAL_HEIGHT_M, GOAL_WIDTH_M
@@ -254,8 +255,8 @@ def block_reach_m(elapsed_s: float) -> float:
 # pression : écart augmenté de `SHOT_ERROR_PRESSURE_GAIN` x la pénalité de pression (0 à 0,4, Composure comprise) ;
 # dévissé : `SHANK_SHARE` des tirs ratés pour un tireur moyen sans pression, proportionnel au carré de l'écart (donc
 # plus fréquent à note basse et sous pression, jamais nul), ballon à `SHANK_SPEED_SHARE` de la vitesse du tir, parti
-# à `SHANK_ANGLE_DEG` de l'axe du but d'un côté tiré au hasard (parfois en touche). Les tirs au-dessus ne prennent leur
-# vraie trajectoire qu'avec `v2-hauteur-ballon/02a` : l'issue est tracée, rejouée à plat comme un tir à côté.
+# à `SHANK_ANGLE_DEG` de l'axe du but d'un côté tiré au hasard (parfois en touche). Depuis `v2-hauteur-ballon/02a2`, le
+# tir en vol a sa vraie trajectoire en hauteur (`line_height_m`) : il ne se rejoue plus à plat comme un tir à côté.
 CADRE, WIDE, OVER, SHANKED = "cadré", "à côté", "au-dessus", "dévissé"
 SHOT_ERROR_SIGMA_RAD = 0.18
 SHOT_AIM_HEIGHT_M = 1.0  # visée à 1 m du sol (coins bas, ballon rasant ; hauteur de visée réelle non trouvée)
@@ -307,8 +308,8 @@ def classify_unscored(shooter: PlayerState, goal: Vec2, keeper: PlayerState | No
     sigma_ratio = shot_error_sigma(shooter, goal, opponents) / SHOT_ERROR_SIGMA_RAD
     if TIR.random() < SHANK_SHARE * sigma_ratio ** 2:
         return SHANKED
-    # ponytail: ballon raté en largeur ou en hauteur, part des deux axes supposée indépendante ; vraie hauteur avec
-    # v2-hauteur-ballon/02a
+    # ponytail: ballon raté en largeur ou en hauteur, part des deux axes supposée indépendante (le tir en vol du moteur
+    # suit, lui, sa hauteur réelle : `line_height_m`, ticket v2-hauteur-ballon/02a2)
     over_share = (1.0 - high) / max(1e-9, (1.0 - wide) + (1.0 - high))
     return OVER if TIR.random() < over_share else WIDE
 
@@ -592,6 +593,44 @@ def draw_shot_error(shooter: PlayerState, goal: Vec2, opponents: list[PlayerStat
     return aim + TIR.gauss(0.0, sigma), TIR.gauss(0.0, sigma)
 
 
+_STANDARD_NORMAL = NormalDist()
+
+
+def line_height_m(slope: float, sigma: float, distance_m: float, ball_diameter_m: float) -> float:
+    """Hauteur du bas du ballon quand il passe la ligne de but (ticket v2-hauteur-ballon/02a2), tirée de l'écart en hauteur
+    déjà tiré au départ (`draw_shot_error`, pente `slope`, écart-type `sigma`), sans nouveau tirage ni constante.
+    La hauteur de la loi du 35b (`SHOT_AIM_HEIGHT_M` + distance × pente) se lit comme celle du bas du ballon :
+    - au-dessus de la barre (`GOAL_HEIGHT_M`) : telle quelle, le tir passe au-dessus, bas du ballon au-dessus de la barre ;
+    - sous la barre : la même loi conditionnée à « haut du ballon sous la barre », par transport de quantile (le quantile
+      de l'écart dans « sous la barre » devient le même quantile dans « sous la barre moins un diamètre »). L'issue (but
+      ou au-dessus) et la suite des tirages restent celles du 35b ; aucun ballon ne touche la barre (règle absente).
+    Valeur négative : la droite visée touche le sol avant la ligne (`ground_strike_m`) ; le moteur fait retomber le ballon
+    à ce point, puis le rebond du 02a1 l'amène à la ligne (sa hauteur réelle à la ligne est alors celle du rebond, ou 0
+    s'il roule). Distance nulle : 0 (tir depuis la ligne)."""
+    height = SHOT_AIM_HEIGHT_M + distance_m * slope
+    if distance_m <= 0.0:
+        return 0.0
+    if height >= GOAL_HEIGHT_M:
+        return height
+    error = math.atan(slope)
+    under_bar = _STANDARD_NORMAL.cdf(math.atan2(GOAL_HEIGHT_M - SHOT_AIM_HEIGHT_M, distance_m) / sigma)
+    under_top = _STANDARD_NORMAL.cdf(math.atan2(GOAL_HEIGHT_M - ball_diameter_m - SHOT_AIM_HEIGHT_M, distance_m) / sigma)
+    quantile = _STANDARD_NORMAL.cdf(error / sigma) * under_top / under_bar
+    if quantile <= 0.0:
+        return height  # écart extrême vers le sol : il touche le sol tout près du tireur
+    mapped = sigma * _STANDARD_NORMAL.inv_cdf(min(quantile, under_top))
+    return min(SHOT_AIM_HEIGHT_M + distance_m * math.tan(mapped), GOAL_HEIGHT_M - ball_diameter_m)
+
+
+def ground_strike_m(line_height: float, distance_m: float) -> float:
+    """Distance du tireur où la droite visée (`SHOT_AIM_HEIGHT_M` au départ, `line_height` à la ligne, à `distance_m`)
+    touche le sol, pour une hauteur à la ligne négative (tir parti trop bas, ticket v2-hauteur-ballon/02a2) ; la distance
+    de la ligne sinon."""
+    if line_height >= 0.0:
+        return distance_m
+    return distance_m * SHOT_AIM_HEIGHT_M / (SHOT_AIM_HEIGHT_M - line_height)
+
+
 def shank_velocity(shooter: PlayerState, goal: Vec2, shot_speed: float) -> Vec2:
     """Vitesse d'un tir dévissé : lente, tournée de `SHANK_ANGLE_DEG` de l'axe du but, d'un côté tiré au hasard."""
     turn = math.radians(TIR.uniform(*SHANK_ANGLE_DEG)) * (1.0 if TIR.random() < 0.5 else -1.0)
@@ -650,8 +689,9 @@ def parry_velocity(origin: Vec2, goal: Vec2, keeper_at: Vec2, outcome: str, shot
     terrain, du côté où file le tir, à `PARRY_ANGLE_DEG` de la ligne de but (tir central : jusqu'à l'axe). Claqué : vers
     un point derrière la ligne de but, au-delà du poteau de ce côté (corner : le gardien touche en dernier). Le gardien
     étant devant sa ligne, le ballon claqué la franchit parfois entre les poteaux : vu de dessus, sans hauteur, c'est un
-    ballon claqué au-dessus de la barre, corner aussi (réserve A2 de l'expert, 05/11/2026 ; vraie hauteur avec
-    `v2-hauteur-ballon/02a`)."""
+    ballon claqué au-dessus de la barre, corner aussi (réserve A2 de l'expert, 05/11/2026). Le tir a sa hauteur depuis
+    `v2-hauteur-ballon/02a2`, pas la parade : le ballon repoussé ou claqué repart du sol (parade en hauteur non reprise au
+    02a2, renvoyée à `v2-realisme/03f`)."""
     side = _shot_side(origin, goal)
     speed = shot_speed * TIR.uniform(*PARRY_SPEED_SHARE)
     into_pitch = 1.0 if origin.x > goal.x else -1.0

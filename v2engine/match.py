@@ -55,8 +55,9 @@ from v2engine import hauteur
 from v2engine.restart import (AERIEN, CORNER, FREE_KICK, KICKOFF, LONG_RESTART_M, PENALTY, PENALTY_CONVERSION, SOL,
                               award, exit_point, foul_restart, is_aerial, kickoff, restart_target)
 from v2engine.shooting import (BLOCK_CHANCE, BLOCK_WIDTH_M, FLYING, HELD, OVER, PARRIED, SHANKED, SHOT_AIM_HEIGHT_M, WIDE,
-                               block_reach_m, draw_shot_error, keeper_reach_m, neutral_xg, occasion_quality, parry_velocity,
-                               post_shot_xg, save_outcome, shank_velocity, shot_probability)
+                               block_reach_m, draw_shot_error, ground_strike_m, keeper_reach_m, line_height_m, neutral_xg,
+                               occasion_quality, parry_velocity, post_shot_xg, save_outcome, shank_velocity, shot_error_sigma,
+                               shot_probability)
 from v2engine.situation import SituationTracker
 from v2engine.transition import TransitionPlay
 from v2engine.trace import (BallSnapshot, DecisionRecord, FoulEvent, MatchTrace, OffsideEvent, PlayerSnapshot, ShotEvent,
@@ -507,6 +508,7 @@ def _blocked(ball: BallState, flight: ShotFlight, start: Vec2, end: Vec2, dt: fl
                                          block_exit_deg=exit_deg, post_shot_xg=None)
         ball.velocity = out
         ball.position = clamp_to_pitch(point + out.normalized() * CONTROL_RADIUS_M)
+        _ground(ball)  # touché : repart du sol, comme tout ballon touché (02a1, repris au 02a2 ; selon la hauteur : ticket 03)
         ball.shot_flight, ball.shot_wide, ball.rebound = None, False, True
         ball.last_toucher = player.name
         ball.control_ban_until_s[player.name] = now_s + MISS_RETRY_S
@@ -529,6 +531,7 @@ def _keeper_save(ball: BallState, keeper: PlayerState, outcome: str, origin: Vec
         ball.velocity = Vec2(0.0, 0.0)
         return
     ball.holder = None
+    _ground(ball)  # touché : repart du sol, comme tout ballon touché (02a1, repris au 02a2 ; vraie parade : ticket 03)
     ball.velocity = parry_velocity(origin, goal, at, outcome, SHOT_SPEED_MPS)
     ball.position = clamp_to_pitch(at + ball.velocity.normalized() * CONTROL_RADIUS_M)
     ball.last_toucher = keeper.name
@@ -883,6 +886,17 @@ def _execute(ball: BallState, holder: PlayerState, action, players: list[PlayerS
         if flight.on_target and keeper is not None:
             along = (keeper.position.x - shot_at.x) * heading.x + (keeper.position.y - shot_at.y) * heading.y
             flight.keeper_at_m = min(max(along, 0.0), to_line)
+        # Hauteur (ticket v2-hauteur-ballon/02a2) : frappé du sol, le ballon passe la ligne avec le bas à la hauteur tirée
+        # (`line_height_m`, cohérente avec l'issue) ; vitesse verticale au temps de trajet exact du moteur (ponytail :
+        # `TICK_SECONDS`, comme `_launch_aerial`). Tir parti trop bas (hauteur négative) : il retombe où la droite visée
+        # touche le sol (`ground_strike_m`), puis rebondit ou roule jusqu'à la ligne (02a1). Tir qui ne va pas vers la
+        # ligne : à plat.
+        _ground(ball)
+        if to_line > 0.0:
+            at_line = line_height_m(flight.slope, shot_error_sigma(holder, goal, opponents), to_line, 2.0 * BALL_RADIUS_M)
+            landing = ground_strike_m(at_line, to_line)
+            ball.vz = hauteur.launch_vz_to(max(0.0, at_line), hauteur.stepped_travel_time_s(
+                landing, SHOT_SPEED_MPS, BALL_FRICTION_PER_S, TICK_SECONDS))
         ball.shot_flight = flight
         ball.shot_wide = not flight.on_target  # hors du cadre (ticket v2-realisme/03k)
         ball.last_toucher = ball.released_by = holder.name
@@ -956,20 +970,25 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
                                                                                      now_s, shots):
         return None
     if flight is not None and out is not None:
-        # Tir en vol sur la ligne (ticket v2-realisme/05a) : but s'il passe entre les poteaux et sous la barre, à la
-        # hauteur prise depuis le départ (visée + pente) ; sinon il sort comme tout ballon (sortie de but).
-        team, origin, slope, rank = flight.team, flight.origin, flight.slope, flight.rank
+        # Tir en vol sur la ligne (ticket v2-realisme/05a) : but s'il passe entre les poteaux et sous la barre ; sinon il
+        # sort comme tout ballon (sortie de but).
+        team, rank = flight.team, flight.rank
         ball.shot_flight = None
         line, point = out
-        height = SHOT_AIM_HEIGHT_M + origin.distance_to(point) * slope
+        # bas du ballon à l'instant où il franchit la ligne, sur sa trajectoire (ticket v2-hauteur-ballon/02a2 ; avant :
+        # droite visée + pente) ; but si le haut du ballon passe sous la barre
+        step = start.distance_to(end)
+        share = start.distance_to(point) / step if step > 1e-9 else 0.0
+        line_z = hauteur.step_height(ball.z, ball.vz, share * dt).z
         between = line == "but" and abs(point.y - GOAL_CENTER_Y) < GOAL_WIDTH_M / 2.0
-        scored = between and height < GOAL_HEIGHT_M
+        scored = between and line_z + 2.0 * BALL_RADIUS_M < GOAL_HEIGHT_M
         if shots is not None and rank >= 0:
-            shots[rank] = replace(shots[rank], outcome="but" if scored else OVER if between else WIDE)
+            shots[rank] = replace(shots[rank], outcome="but" if scored else OVER if between else WIDE, line_z_m=line_z)
         if scored:
             _log(ball, now_s, BUT, team, ball.last_toucher)
             _settle_advantage(ball, fouls)
             ball.position, ball.velocity = point, Vec2(0.0, 0.0)
+            _ground(ball)  # ballon mort, posé pour l'engagement (02a2)
             ball.restart = kickoff("away" if team == "home" else "home", players, now_s)
             return team
     if out is not None:  # ballon sorti (ticket v2-collectif/29) : mort, remise en jeu pour l'adversaire du dernier toucheur

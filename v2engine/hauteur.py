@@ -122,3 +122,30 @@ def step_height(z: float, vz: float, dt: float) -> HeightStep:
         keep *= GROUND_HORIZONTAL_KEEP
         bounces += 1
     return HeightStep(z, vz, keep, bounces, first)
+
+
+def stepped_travel_time_s(distance_m: float, speed_mps: float, friction_per_s: float, dt: float) -> float | None:
+    """Temps exact que met le moteur à amener le ballon à `distance_m` (ticket v2-hauteur-ballon/02a2) : il avance par pas
+    de `dt` (`x += v·dt`, puis `v ← v·f^dt`) et franchit le point en ligne droite à l'intérieur d'un pas, comme
+    `restart.exit_point` le coupe. `None` si le ballon s'arrête avant ; distance nulle : 0."""
+    if distance_m <= 0.0:
+        return 0.0
+    if speed_mps <= 0.0 or dt <= 0.0:
+        return None
+    keep = friction_per_s**dt
+    done, speed, steps = 0.0, speed_mps, 0
+    while done + speed * dt < distance_m:
+        done += speed * dt
+        speed *= keep
+        steps += 1
+        if speed * dt < 1e-9:
+            return None  # arrêté avant
+    return (steps + (distance_m - done) / (speed * dt)) * dt
+
+
+def launch_vz_to(z_target_m: float, flight_s: float | None) -> float:
+    """Vitesse verticale de départ d'un ballon frappé au sol pour que son bas soit à `z_target_m` après `flight_s`
+    secondes de chute libre (ticket 02a2) : `vz0 = (z + ½·g·T²) / T`. Durée nulle ou inconnue : 0 (frappe à plat)."""
+    if flight_s is None or flight_s <= 0.0:
+        return 0.0
+    return (max(0.0, z_target_m) + 0.5 * GRAVITY_M_S2 * flight_s * flight_s) / flight_s

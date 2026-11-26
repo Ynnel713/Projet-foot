@@ -8,6 +8,8 @@
 
 **Blocked by:** 35b ; `v2-hauteur-ballon/02a` pour la barre.
 
+**Note du 26/11/2026 (`v2-hauteur-ballon/02a2`)** : la hauteur du tir à la ligne existe (`shooting.line_height_m`, bas du ballon). La bande **2,22–2,44 m** (bas du ballon entre la barre moins un diamètre et la barre : le ballon toucherait la barre) n'est **jamais produite** : un tir tiré sous la barre est ramené, par transport de quantile dans la même loi, sous 2,22 m (haut du ballon sous la barre) ; un tir tiré au-dessus garde sa hauteur (bas au-dessus de 2,44 m). Les cas « barre » sont renvoyés ici : ce ticket remplacera le transport de quantile par le contact réel avec la barre (et la part des tirs sur la barre redeviendra mesurable).
+
 **Bloque :** —
 
 **Status:** à faire (constantes à proposer avant le code)
