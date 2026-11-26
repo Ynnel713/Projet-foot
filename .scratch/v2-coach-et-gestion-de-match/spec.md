@@ -53,3 +53,20 @@ Audit des remplacements contre cinq tickets proposés par le propriétaire (S1 �
 
 Total : 2 tickets, 3 h 50. Dépendances réciproques ajoutées : 02, 05a, 05b, `v2-attributs-restants/09a`, `v2-realisme/20b`. Ordre : 05a avant la calibration ; 05b, 05c puis 05d après `v2-collectif/22c` (contrôle de non-régression).
 
+## Complément : audit de la gestion de match (26/11/2026)
+
+Audit contre quatre tickets proposés par le propriétaire (G1 à G4).
+
+- **G1, bascule tactique en cours de match** : couverte (`v2-collectif/21` pour le score et la minute, 02 pour le dosage par le style, progressif, jamais à minute fixe ; `v2-realisme/20e` pour la fatigue ; les joueurs rejoignent physiquement la nouvelle référence du bloc). Complété au 02 : trace des consignes effectives à chaque changement, pas de saut de la référence du bloc.
+- **G2, infériorité numérique** : `v2-attributs-restants/09a` ne prévoit que la réorganisation sans téléportation, aucun changement de jeu à dix (aucun carton dans `v2engine/` aujourd'hui) → **08**.
+- **G3, temps additionnel** : livré (03 : buts, penalties, fond par période, appliqué en fin de chaque période). Les causes ont leurs tickets, mais les cartons (09a) et la VAR sur rouge (`v2-realisme/21h`) ne comptaient pas leur temps (complétés), et seul 05a retire sa part du fond : sans règle commune, chaque cause livrée serait comptée deux fois → **09**.
+- **G4, changement de plan à la mi-temps** : la mi-temps existe (07), aucune révision des consignes à la pause → **10**.
+
+| # | Titre | Estimation | Confiance | Bloqué par |
+|---|---|---|---|---|
+| 08 | Jouer à dix : resserrer, protéger l'axe, couvrir avant d'attaquer (expulsion, ou blessure sans remplaçant) | 2 h 05 | moyenne | `v2-attributs-restants/09a`, `v2-realisme/13a`, `13j`, `13h`, 02 ; `09b` en partie |
+| 09 | Temps additionnel : chaque cause jouée remplace sa part du fond | 1 h 30 | élevée | 03 (livré) |
+| 10 | Révision du plan à la mi-temps selon la première période | 2 h | moyenne | 07, `v2-realisme/06c` (livrés), 02, `v2-realisme/13a`, `13j`, `13k` |
+
+Total : 3 tickets, 5 h 35. Dépendances réciproques ajoutées : 02, 05a, `v2-attributs-restants/09a`, `09b`, `09c`, `v2-realisme/13a`, `13h`, `13j`, `13k`, `20g`, `21g`, `21h`. Ordre : 09 tôt (démarrable, sans effet sur le jeu), avant 05a et chaque cause ; 10 après les styles ; 08 après 09a, donc après `v2-collectif/22c`.
+

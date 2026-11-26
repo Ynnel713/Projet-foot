@@ -15,7 +15,7 @@
 
 **Blocked by:** 01 ; v2-collectif/21 (qui doit exposer l'adaptation au score comme des paramètres modulables).
 
-**Bloque :** 05b ; 05c (ajouté le 26/11/2026, audit des remplacements).
+**Bloque :** 05b ; 05c (ajouté le 26/11/2026, audit des remplacements) ; 08, 10 (ajouté le 26/11/2026, audit de la gestion de match).
 
 **Status:** à faire (constantes à proposer avant le code)
 
@@ -30,3 +30,10 @@
 - [ ] Mesure par scénarios forcés (score et minute imposés, N graines, N et intervalle fixés avant la mesure)
 - [ ] Constantes produit et critères chiffrés (données réelles sourcées, ou « non trouvé ») validés par le propriétaire avant le code
 - [ ] Suite V2 verte ; V1 inchangée
+
+## Complément de l'audit de la gestion de match (26/11/2026)
+
+La bascule tactique en cours de match (« G1 ») est couverte : dosage continu selon le score, la minute et le style (ce ticket, sur les paramètres du `v2-collectif/21`), fatigue par `v2-realisme/20e`, joueurs qui rejoignent physiquement la nouvelle référence du bloc. Manquait la trace de la bascule : les consignes effectives changent pendant le match sans être lisibles.
+
+- [ ] Consignes effectives de chaque équipe (après score, minute et style) tracées à chaque changement, avec la minute et la cause ; la hauteur de référence du bloc ne saute pas d'un tick à l'autre au-delà de la vitesse de course des joueurs (test)
+

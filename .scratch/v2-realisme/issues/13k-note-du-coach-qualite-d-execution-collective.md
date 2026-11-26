@@ -21,7 +21,7 @@ Effet borné selon le principe d'amplitude ci-dessous, centré sur la moyenne de
 
 **Dépendance non réciproque :** 20e n'est pas modifié par l'audit des styles du 26/11/2026 (ticket déjà couvert, laissé intact) ; sa ligne « Bloque » est à compléter de 13k et 13l à sa prochaine mise à jour.
 
-**Bloque :** 13i, 13l.
+**Bloque :** 13i, 13l ; `v2-coach-et-gestion-de-match/10` (ajouté le 26/11/2026, audit de la gestion de match).
 
 **Status:** à faire (constantes à proposer avant le code ; estimation au-delà de 2 h : à examiner pour découpage avant le code, par exemple coordination d'un côté, gestion de l'effort de l'autre)
 

@@ -22,7 +22,7 @@
 
 **Blocked by:** 13a (Consignes d'équipe : lecture des styles et structure neutre).
 
-**Bloque :** 13b, 13c, 13d, 13e, 13f, 13k, 13i.
+**Bloque :** 13b, 13c, 13d, 13e, 13f, 13k, 13i ; `v2-coach-et-gestion-de-match/08`, `10` (ajouté le 26/11/2026, audit de la gestion de match).
 
 **Status:** à faire (constantes à proposer avant le code)
 

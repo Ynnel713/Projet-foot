@@ -6,9 +6,9 @@
 
 **Attributs :** Bravery.
 
-**Blocked by:** 07a (contacts du duel), 09a (gravité de la faute), `v2-coach-et-gestion-de-match/05a` (remplacement forcé) ; passe après `v2-collectif/22c`.
+**Blocked by:** 07a (contacts du duel), 09a (gravité de la faute), `v2-coach-et-gestion-de-match/05a` (remplacement forcé), `v2-coach-et-gestion-de-match/09` (règle commune du fond du temps additionnel, ajouté le 26/11/2026, audit de la gestion de match) ; passe après `v2-collectif/22c`.
 
-**Bloque :** `v2-coach-et-gestion-de-match/05b` (cas « blessure ») ; `v2-realisme/20g` (blessures sans contact et crampes) (ajouté le 10/11/2026, audit de la roadmap).
+**Bloque :** `v2-coach-et-gestion-de-match/05b` (cas « blessure ») ; `v2-realisme/20g` (blessures sans contact et crampes) (ajouté le 10/11/2026, audit de la roadmap) ; `v2-coach-et-gestion-de-match/08` (jouer à dix sans remplaçant, ajouté le 26/11/2026, audit de la gestion de match).
 
 **Status:** à faire (constantes à proposer avant le code)
 

@@ -8,9 +8,13 @@
 
 **Attributs :** aucun
 
-**Blocked by:** 21g, 21b, `v2-attributs-restants/09a`.
+**Blocked by:** 21g, 21b, `v2-attributs-restants/09a`, `v2-coach-et-gestion-de-match/09` (règle commune du fond du temps additionnel, ajouté le 26/11/2026, audit de la gestion de match).
 
 **Bloque :** rien.
+
+**Complément de l'audit de la gestion de match (26/11/2026) :** le temps perdu par la revue VAR d'un rouge (séquence tracée) est compté dans le temps additionnel et retire la part « VAR » du fond selon la règle commune (`v2-coach-et-gestion-de-match/09`), comme au 21g.
+
+- [ ] Temps perdu par la revue compté dans le temps additionnel, part « VAR » du fond retirée sans double comptage (test)
 
 **Status:** à faire (constantes à proposer avant le code)
 

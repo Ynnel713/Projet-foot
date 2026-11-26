@@ -8,7 +8,7 @@
 
 **Attributs :** Stamina (via la fatigue) ; attributs seuls (table poste/attributs, D-V07) pour l'entrant ; Postes naturels (via 04b).
 
-**Blocked by:** 07 (livré), 03 ; `v2-collectif/12` ; `v2-attributs-restants/02a`, `02b` (arrêts de jeu, dépendance d'origine, sans doute levable : les tickets `v2-collectif/29` et `30` les fournissent) et `04b` ; `v2-realisme/12e`, `20c` (ajouté le 10/11/2026, audit de la roadmap).
+**Blocked by:** 07 (livré), 03 ; `v2-collectif/12` ; `v2-attributs-restants/02a`, `02b` (arrêts de jeu, dépendance d'origine, sans doute levable : les tickets `v2-collectif/29` et `30` les fournissent) et `04b` ; `v2-realisme/12e`, `20c` (ajouté le 10/11/2026, audit de la roadmap) ; 09 (règle commune du fond du temps additionnel, ajouté le 26/11/2026, audit de la gestion de match).
 
 **Bloque :** 05b ; `v2-attributs-restants/09b` (remplacement forcé) ; 05c, 05d (ajoutés le 26/11/2026, audit des remplacements).
 

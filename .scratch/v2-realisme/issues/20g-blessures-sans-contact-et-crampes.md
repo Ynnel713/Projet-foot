@@ -8,7 +8,7 @@
 
 **Attributs :** aucun nouveau (Natural Fitness reste hors du match, D-V10).
 
-**Blocked by:** 12f, 19a ; `v2-attributs-restants/09b`.
+**Blocked by:** 12f, 19a ; `v2-attributs-restants/09b` ; `v2-coach-et-gestion-de-match/09` (règle commune du fond du temps additionnel, ajouté le 26/11/2026, audit de la gestion de match).
 
 **Bloque :** rien.
 

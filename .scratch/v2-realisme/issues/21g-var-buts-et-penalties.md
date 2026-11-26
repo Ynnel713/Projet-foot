@@ -8,7 +8,7 @@
 
 **Attributs :** aucun
 
-**Blocked by:** 21a, 21d, 21f, 21i, 19b ; `v2-attributs-restants/09a`.
+**Blocked by:** 21a, 21d, 21f, 21i, 19b ; `v2-attributs-restants/09a` ; `v2-coach-et-gestion-de-match/09` (règle commune du fond du temps additionnel, ajouté le 26/11/2026, audit de la gestion de match).
 
 **Bloque :** 21h. Alimente `v2-mise-en-scene/02` (moments VAR) sans le bloquer.
 

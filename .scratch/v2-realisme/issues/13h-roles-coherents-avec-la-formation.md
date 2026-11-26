@@ -10,7 +10,7 @@
 
 **Blocked by:** 02c (Rôle de poste par défaut, porté par le joueur et tracé); 13a (Consignes d'équipe : lecture des styles et structure neutre).
 
-**Bloque :** 13i.
+**Bloque :** 13i ; `v2-coach-et-gestion-de-match/08` (ajouté le 26/11/2026, audit de la gestion de match).
 
 **Status:** à faire (constantes à proposer avant le code)
 

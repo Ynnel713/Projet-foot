@@ -45,6 +45,8 @@
 
 20. **Audit des remplacements (26/11/2026, à valider par le propriétaire)** : grille S1 à S5 du propriétaire confrontée aux tickets (détail : `.scratch/v2-coach-et-gestion-de-match/spec.md`, dernière section). Aucun remplacement dans le moteur V2 aujourd'hui. Fenêtres (S1) et choix de l'entrant (S3) couverts par `v2-coach-et-gestion-de-match/05a` et `05b`, complétés (règle testée, rôle de l'entrant) ; effet de l'entrant (S4) complété au `05a` : malus de cohésion temporaire et borné par la façade des notes (`v2-realisme/19a`), à décider par le propriétaire (chiffre réel non trouvé). Nouveaux : `05c` (décision multicritère du sortant : fatigue, carton, performance mesurée pendant le match, consigne ; 2 h 10) et `05d` (validation, 1 h 40).
 
+21. **Audit de la gestion de match (26/11/2026, à valider par le propriétaire)** : grille G1 à G4 du propriétaire confrontée aux tickets (détail : `.scratch/v2-coach-et-gestion-de-match/spec.md`, dernière section). Bascule tactique (G1) couverte (`v2-collectif/21`, coach `02`, `v2-realisme/20e`), complétée par sa trace. Nouveaux : coach `08` (jouer à dix, 2 h 05), `09` (temps additionnel : chaque cause jouée remplace sa part du fond, sinon double comptage ; 1 h 30, à faire tôt), `10` (révision du plan à la mi-temps, 2 h). Cartons (`v2-attributs-restants/09a`) et VAR sur rouge (`v2-realisme/21h`) comptent désormais leur temps perdu.
+
 Rappel : passes par match 1 091 (repère 890 à 940), notées au `v2-collectif/22a` ; course du passeur après sa passe (une-deux) : `v2-realisme/31a`.
 
 ## Décisions architecturales

@@ -6,7 +6,7 @@
 
 **Attributs :** Aggression ; geste « Winds Up Opponents ».
 
-**Blocked by:** 09a, `v2-collectif/30` ; passe après `v2-collectif/22c`.
+**Blocked by:** 09a, `v2-collectif/30`, `v2-coach-et-gestion-de-match/09` (règle commune du fond du temps additionnel, ajouté le 26/11/2026, audit de la gestion de match) ; passe après `v2-collectif/22c`.
 
 **Bloque :** aucun. Alimente `v2-mise-en-scene/03` (les échauffourées s'ajoutent au résumé à leur livraison) sans le bloquer.
 
