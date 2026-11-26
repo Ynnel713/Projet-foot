@@ -289,18 +289,15 @@ Tailles d'échantillon : 50 matchs pour l'exploration (tickets de mécanisme), a
 | 12e | Réserve d'énergie qui dépend de l'effort | P1 | physique | 2 h | moyenne | 12d |
 | 12f | Répéter les sprints et récupérer | P1 | physique | 1 h 55 | moyenne | 12e |
 | 12g | Validation de la physique des déplacements | P1 | validation | 1 h 15 | élevée | 12a, 12b, 12c, 12d, 12e, 12f, 01d |
-| 13a | Consignes d'équipe : lecture des styles et structure neutre | P1 | données | 1 h 55 | élevée | 01f |
-| 13b | Style Pressing | P1 | décision | 2 h | moyenne | 13a, 13j, 12e |
-| 13c | Style Défensif | P1 | décision | 2 h 05 | moyenne | 13a, 13j, 02g, 09g |
-| 13d | Style Offensif | P1 | décision | 2 h | moyenne | 13a, 13j, 02g, 09g |
-| 13e | Style Contre-attaque | P1 | décision | 2 h | moyenne | 13a, 13j, 09f |
-| 13f | Style Possession et tempo | P1 | décision | 2 h 05 | moyenne | 13a, 13j |
+| 13a | Consignes d'équipe : lecture des styles et structure neutre | P1 | données | 1 h 50 | élevée | 01f |
+| 13b | Style Pressing | P1 | décision | 1 h 50 | moyenne | 13a, 12e |
+| 13c | Style Défensif | P1 | décision | 1 h 35 | moyenne | 13a, 02g, 09g |
+| 13d | Style Offensif | P1 | décision | 1 h 35 | moyenne | 13a, 02g, 09g |
+| 13e | Style Contre-attaque | P1 | décision | 1 h 35 | moyenne | 13a, 09f |
+| 13f | Style Possession et tempo | P1 | décision | 1 h 40 | moyenne | 13a |
 | 13g | Consigne de largeur | P1 | placement | 1 h 25 | élevée | 13a, 09b |
 | 13h | Rôles cohérents avec la formation | P1 | données | 1 h 40 | moyenne | 02c, 13a |
-| 13i | Validation des styles : des équipes différentes, pas meilleures | P1 | validation | 1 h 55 | moyenne | 13b, 13c, 13d, 13e, 13f, 13g, 13h, 13j, 13k, 13l, 01e |
-| 13j | Arbitrage des styles par phase, budget tactique et couples contradictoires (ajouté le 26/11/2026) | P1 | données | 2 h | moyenne | 13a |
-| 13k | Note du coach : qualité d'exécution collective du plan (ajouté le 26/11/2026) | P1 | décision | 2 h 05 | faible | 13j, 13b, 13c, 13e, 13f, 20e |
-| 13l | Validation : le plan du coach bute sur l'effectif (ajouté le 26/11/2026) | P1 | validation | 1 h 30 | moyenne | 13b, 13c, 13e, 13f, 13k, 20e, 01e |
+| 13i | Validation des styles : des équipes différentes, pas meilleures | P1 | validation | 1 h 40 | moyenne | 13b, 13c, 13d, 13e, 13f, 13g, 13h, 01e |
 | 14a | Freinage du ballon au sol : roulement et air | P2 | physique | 2 h 05 | moyenne | 01c |
 | 14b | Effet latéral du ballon (enroulé) | P2 | physique | 2 h | faible | 14a, v2-hauteur-ballon/02a |
 | 14c | Rotation et rebond | P2 | physique | 1 h 45 | faible | 14b |
@@ -401,3 +398,38 @@ Audit des tickets existants contre la grille du propriétaire (jeu dos au but, p
 | 04q | Validation : jeu dos au but, protection et duels selon le profil | P1 | validation | 1 h 55 | moyenne | 04i, 04o, 04p, 10l, 11t, 11u |
 
 Total : 6 tickets, 12 h 05 (P1), plus la réestimation du `04i`. Ordre proposé : `10l` → `04i` → `04o`, `04p` ; `11u` ; `11t` après `11l` ; `04q` en dernier, avant `v2-collectif/22a`.
+
+## 14. Complément : styles du coach (26/11/2026)
+
+Audit des styles insufflés par les coachs (phases de jeu, budget tactique, couples contradictoires, note du coach, leviers des 5 styles, banc de validation, amplitude modérée). Déjà couverts, laissés tels quels : adaptation au score (`v2-coach-et-gestion-de-match/02`, `v2-collectif/21`), fatigue (`20e`). Complétés, avec leur nouvelle estimation et leurs dépendances (le §10 garde les valeurs d'origine) :
+
+| Ticket | Estimation d'origine | Nouvelle estimation | Dépendance ajoutée |
+|---|---|---|---|
+| 13a | 1 h 50 | 1 h 55 | — |
+| 13b | 1 h 50 | 2 h | 13j |
+| 13c | 1 h 35 | 2 h 05 | 13j |
+| 13d | 1 h 35 | 2 h | 13j |
+| 13e | 1 h 35 | 2 h | 13j |
+| 13f | 1 h 40 | 2 h 05 | 13j |
+| 13i | 1 h 40 | 1 h 55 | 13j, 13k, 13l |
+
+Nouveaux tickets :
+
+| Ticket | Titre | Prio | Catégorie | Estimation | Confiance | Dépend de |
+|---|---|---|---|---|---|---|
+| 13j | Arbitrage des styles par phase, budget tactique et couples contradictoires | P1 | données | 2 h | moyenne | 13a |
+| 13k | Note du coach : qualité d'exécution collective du plan | P1 | décision | 2 h 05 | faible | 13j, 13b, 13c, 13e, 13f, 20e |
+| 13l | Validation : le plan du coach bute sur l'effectif | P1 | validation | 1 h 30 | moyenne | 13b, 13c, 13e, 13f, 13k, 20e, 01e |
+
+Total : 3 nouveaux tickets, 5 h 35 (P1), plus 2 h 15 de réestimations, soit 7 h 50.
+
+## 15. Complément : transitions (26/11/2026)
+
+Audit des transitions contre cinq tickets proposés par le propriétaire. Déjà couverts, laissés tels quels : réorganisation de chaque joueur à la perte et fenêtre de contre-pressing (`v2-collectif/10`, livré ; durée par style en `13b`, `13f`, `13j`), projection à la récupération (`v2-collectif/11`, livré ; `02g`, `09g`, `13d`, `13e`, `v2-collectif/21`). Complétés : `10e` (bloque aussi `10m`), `v2-collectif/22b` (dépend de `10m` et `10n` ; le recul du bloc y reste un contrôle chiffré).
+
+| Ticket | Titre | Prio | Catégorie | Estimation | Confiance | Dépend de |
+|---|---|---|---|---|---|---|
+| 10m | Repli du bloc à la perte : le centre recule et le bloc se resserre | P1 | placement | 2 h 05 | moyenne | 10e, 01f |
+| 10n | Validation des transitions offensives et défensives | P1 | validation | 1 h 40 | élevée | 10m, 01e |
+
+Total : 2 tickets, 3 h 45 (P1). Ordre proposé : `10e` → `10m` → `10n`, avant `v2-collectif/22b`.
