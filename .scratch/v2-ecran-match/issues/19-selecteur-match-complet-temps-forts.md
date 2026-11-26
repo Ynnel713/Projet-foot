@@ -42,3 +42,8 @@ Chantier : `.scratch/v2-ecran-match/spec.md`.
 - Ordre : EM-08b (alignement du score), EM-09 (commandes de vitesse), puis lecteur et modes (`v2-mise-en-scene` 01 à 03)
   avec ce sélecteur.
 
+
+### 26/11/2026 — audit du mode « moments clés »
+
+- « Temps forts » = Résumé, désormais **10 à 15 minutes à ×1** (`v2-mise-en-scene/03` réécrit) ; « Moments clés » = Tier 1 seulement, environ 5 à 7 minutes (`02`).
+- `v2-mise-en-scene/01` est découpé (01a à 01g). Ordre : ce ticket livre le composant à quatre positions, modes autres que Match complet grisés ; `v2-mise-en-scene/01f` le branche (bloqué par EM-19). Les modes restent grisés tant que le calcul du match n'est pas fini (moments servis en fin de calcul, `01e`).

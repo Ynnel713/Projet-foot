@@ -10,7 +10,7 @@
 
 **Blocked by:** 21g, 21b, `v2-attributs-restants/09a`, `v2-coach-et-gestion-de-match/09` (règle commune du fond du temps additionnel, ajouté le 26/11/2026, audit de la gestion de match).
 
-**Bloque :** rien.
+**Bloque :** rien. Alimente `v2-mise-en-scene/01b` et `02` (rouge après révision VAR en Tier 1, ajouté à sa livraison ; 26/11/2026) sans les bloquer.
 
 **Complément de l'audit de la gestion de match (26/11/2026) :** le temps perdu par la revue VAR d'un rouge (séquence tracée) est compté dans le temps additionnel et retire la part « VAR » du fond selon la règle commune (`v2-coach-et-gestion-de-match/09`), comme au 21g.
 

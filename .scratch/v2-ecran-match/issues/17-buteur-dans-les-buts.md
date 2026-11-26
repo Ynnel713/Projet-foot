@@ -23,3 +23,4 @@ Chantier : `.scratch/v2-ecran-match/spec.md` (audit, direction artistique, déci
   (`api/routers/v2.py:301`). Les buteurs sont affichés par EM-08c (HUD), EM-10c (composition) et EM-12 (frise). Le
   passeur reste à faire dans `v2-mise-en-scene/01`. Statut passé à « couvert » avec l'accord du propriétaire
   (« Ça marche », 19/11/2026).
+- 26/11/2026 (audit du mode « moments clés ») : `v2-mise-en-scene/01` est découpé et le moteur n'écrit plus le passeur dans la trace. Le passeur est déduit du journal côté serveur et servi par l'API au ticket `v2-mise-en-scene/01e` ; c'est là qu'il faut le lire. Le point « trace enrichie » de l'ancien 01 n'existe plus : la moitié « passeur » de ce ticket est couverte par 01e, sans modification du moteur.

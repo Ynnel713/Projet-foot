@@ -27,7 +27,7 @@ Le rapport, sur cette série, reprend aussi les indicateurs existants (repli, pe
 
 **Blocked by:** 10m1 (Repli en hauteur et remontée de la ligne) ; 10m2 (Resserrement en largeur) ; 01e (séries longues et intervalles).
 
-**Bloque :** `v2-collectif/22b`.
+**Bloque :** `v2-collectif/22b`. Partage avec `v2-mise-en-scene/01b` la définition de l'action de contre-attaque (récupération sur l'adversaire, conclusion dans les 15 s) : une seule fonction publique dans `scripts/v2_indicators.py`, écrite par le premier livré (26/11/2026).
 
 **Dépendance non réciproque :** 01e (livré) n'est pas modifié ; sa ligne « Bloque » ne cite pas 10n.
 

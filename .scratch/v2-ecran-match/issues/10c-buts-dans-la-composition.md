@@ -55,3 +55,4 @@ nom doit dire s'il a marqué, passe décisive, carton jaune, rouge, ou remplacé
 - **Décision de clôture** : VALIDÉ.
 - **Durée** : estimée 50 min ; réelle environ 45 min de travail effectif (analyse 10, développement 15, tests et mesures
   15, clôture 5), écart − 10 %. Temps machine hors total : mesures navigateur, suite complète (14 min 52).
+- 26/11/2026 (audit du mode « moments clés ») : `v2-mise-en-scene/01` est découpé et le moteur n'écrit plus le passeur dans la trace. Le passeur est déduit du journal côté serveur et servi par l'API au ticket `v2-mise-en-scene/01e` ; c'est là qu'il faut le lire. La passe décisive dans la composition reste à afficher après 01e.

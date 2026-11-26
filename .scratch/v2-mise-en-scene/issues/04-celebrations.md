@@ -10,7 +10,7 @@
 
 **Attributs :** aucun attribut de réussite ; geste préféré « Gets Crowd Going » en penchant (fréquence seulement).
 
-**Blocked by:** `v2-collectif/29`, `v2-mise-en-scene/01` (buteur et passeur dans la trace).
+**Blocked by:** `v2-collectif/29`, `v2-mise-en-scene/01e` (règle de déduction du passeur depuis le journal, à reprendre telle quelle ; le ticket 01 a été découpé le 26/11/2026 et le moteur n'écrit plus le passeur).
 
 **Status:** à faire (constantes à proposer avant le code)
 

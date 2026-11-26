@@ -26,6 +26,31 @@
 | 01 | Buts et lecteur | — |
 | 02 | Moments clés | v2-collectif/28 (cartons rouges : v2-attributs-restants/09, ajoutés à leur livraison) |
 | 03 | Résumé | v2-collectif/28, 29, 30, 31 ; 04 en option |
-| 04 | Célébrations | v2-collectif/29 ; 01 (buteur dans la trace) |
+| 04 | Célébrations | v2-collectif/29 ; 01 (buteur dans la trace ; depuis le 26/11/2026 : 01e, voir la révision ci-dessous) |
 
 Le chantier n'a pas à précéder la calibration (`v2-collectif/22`) : il ne change pas le nombre ni la forme des actions, sauf le temps mort des célébrations, compté dans le temps additionnel. Il peut avancer en parallèle d'une autre session.
+
+## Révision du 26/11/2026 (audit du mode « moments clés », décisions du propriétaire)
+
+- **Filtre de lecture** : les modes lisent la trace déjà produite ; aucune seconde simulation, aucun snapshot ni rejeu (la trace contient toutes les images et la piste du ballon). Moteur inchangé, sauf l'exception accordée au `01a` (instrumentation en lecture seule de `occasion.py`, jeu inchangé, seule la trace change).
+- **Modes et durées à ×1** : Résumé (« Temps forts ») 10 à 15 minutes, remplace 8 à 12 ; Moments clés : Tier 1 seulement, environ 5 à 7 minutes ; Buts.
+- **Trois tiers** : Tier 1 toujours (buts, penalties, grosses occasions ; cartons rouges et VAR à la livraison de `v2-attributs-restants/09a`, `v2-realisme/21g`, `21h`) ; Tier 2 sous budget (tirs dangereux, arrêts décisifs, coups francs directs cadrés, belles constructions, poteaux ; la contre-attaque est un modificateur du score, pas un type) ; Tier 3 en surimpression seulement (fautes, corners, hors-jeu, puis cartons jaunes et remplacements).
+- **Calcul côté serveur**, en fin de calcul du match ; l'écran ne fait que lire. Vitesses existantes (×1, ×1,5, ×2, ×8, ×32) conservées.
+- **Validation en deux passages** : `07a`, puis `07b` après la calibration (`v2-collectif/22c`).
+
+| # | Titre | Bloqué par | Estimation |
+|---|---|---|---|
+| 01 | Buts et lecteur | découpé en 01a à 01g | — |
+| 01a | Séquences d'occasion fiables (réserves 28c A1, A2) | — | 1 h 30 |
+| 01b | Taxonomie et score d'intérêt | 01a | 1 h 45 |
+| 01c | Fenêtres des moments | 01b | 1 h 45 |
+| 01d | Sélection sous budget, mode Buts | 01c | 1 h 15 |
+| 01e | Moments dans l'API (passeur déduit) | 01d | 1 h |
+| 01f | Lecteur : modes, enchaînement, contexte | 01e, `v2-ecran-match/19` | 2 h |
+| 01g | Lecteur : barre et surimpressions | 01f | 1 h 45 |
+| 02 | Moments clés | 01d, 01f | 1 h |
+| 03 | Résumé | 01d, 01g, 02 | 1 h 45 |
+| 07a | Validation des modes | 02, 03 | 1 h 30 |
+| 07b | Validation après la calibration | 07a, `v2-collectif/22c` | 50 min |
+
+Total : 16 h 05 de travail effectif ; temps machine à part (séries de 50 matchs, environ 2 h 30 chacune).

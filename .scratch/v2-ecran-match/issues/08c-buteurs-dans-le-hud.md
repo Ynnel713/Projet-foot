@@ -90,3 +90,4 @@ affichés dans le hud avec la minute du but ». Suite d'EM-08 / EM-08b (HUD, sco
   25, clôture 10), écart + 7 % : deux reprises d'affichage après la 1re mesure (troncature à 1024 px, mémoïsation).
   Temps machine hors total : trois séries de mesures navigateur, deux builds et douze passes de fluidité, suite complète
   (14 min 39).
+- 26/11/2026 (audit du mode « moments clés ») : `v2-mise-en-scene/01` est découpé et le moteur n'écrit plus le passeur dans la trace. Le passeur est déduit du journal côté serveur et servi par l'API au ticket `v2-mise-en-scene/01e` ; c'est là qu'il faut le lire. La passe décisive dans le HUD reste à afficher après 01e.

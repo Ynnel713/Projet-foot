@@ -10,7 +10,7 @@
 
 **Blocked by:** 02a (penalty), 07a (duels), `v2-collectif/29` (livré), `v2-collectif/30` ; passe après `v2-collectif/22c` (contrôle de non-régression) ; `v2-realisme/21b` (gravité selon l'action) ; `v2-realisme/21a` recommandé (décision de l'arbitre) (ajouté le 10/11/2026, audit de la roadmap) ; `v2-coach-et-gestion-de-match/09` (règle commune du fond du temps additionnel, ajouté le 26/11/2026, audit de la gestion de match).
 
-**Bloque :** 09b, 09c ; `v2-realisme/11o` (prudence au tacle selon le risque de carton, ajouté le 16/11/2026) ; `v2-realisme/21f`, `21g`, `21h` (ajouté le 10/11/2026, audit de la roadmap) ; `v2-coach-et-gestion-de-match/05b` (remplacement après un carton) ; `v2-coach-et-gestion-de-match/05c` (sortie d'un averti, terme « carton », ajouté le 26/11/2026, audit des remplacements) ; `v2-coach-et-gestion-de-match/08` (jouer à dix, ajouté le 26/11/2026, audit de la gestion de match). Alimente `v2-mise-en-scene/02` (cartons rouges, ajoutés à leur livraison) sans le bloquer.
+**Bloque :** 09b, 09c ; `v2-realisme/11o` (prudence au tacle selon le risque de carton, ajouté le 16/11/2026) ; `v2-realisme/21f`, `21g`, `21h` (ajouté le 10/11/2026, audit de la roadmap) ; `v2-coach-et-gestion-de-match/05b` (remplacement après un carton) ; `v2-coach-et-gestion-de-match/05c` (sortie d'un averti, terme « carton », ajouté le 26/11/2026, audit des remplacements) ; `v2-coach-et-gestion-de-match/08` (jouer à dix, ajouté le 26/11/2026, audit de la gestion de match). Alimente `v2-mise-en-scene/01b` et `02` (carton rouge en Tier 1, carton jaune en surimpression Tier 3, ajoutés à sa livraison ; 26/11/2026) sans les bloquer.
 
 **Status:** à faire (constantes à proposer avant le code)
 

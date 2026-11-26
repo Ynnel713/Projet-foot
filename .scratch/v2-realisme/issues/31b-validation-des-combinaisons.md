@@ -20,7 +20,7 @@ Le rapport, sur 50 matchs, reprend aussi les indicateurs existants (13, 14, 15, 
 
 **Blocked by:** 31a, 25c, 15c, `v2-collectif/36a` ; 01e (livré : séries longues et intervalles).
 
-**Bloque :** `v2-collectif/22b`.
+**Bloque :** `v2-collectif/22b`. Alimente `v2-mise-en-scene/01b` et `03` (bonus « belle construction » du Tier 2, ajouté à sa livraison ; 26/11/2026) sans les bloquer.
 
 **Status:** à faire (définitions et repères réels à proposer au propriétaire avant le code)
 
