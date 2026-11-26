@@ -7,7 +7,9 @@
 2. **Écran** : le ballon est projeté avec sa vraie hauteur (projection du ticket 01) ; rayon × `1 + min(0,40 ; 0,05·z)` ; ombre au point `(x, y, 0)`, rayon × `max(0,5 ; 1 − 0,05·z)`, opacité de 0,30 au sol à 0,10 à 10 m. L'écran interpole entre les points de vol, sans calcul physique. Remplace l'affichage provisoire à hauteur fixe d'un mètre du ticket 01.
 3. **Documentation** : `docs/PLAN_V2.md`, `docs/INDICATEURS_V2.md` si un indicateur change.
 
-**Blocked by:** 01, 02a.
+**Blocked by:** 01, 02a (découpé en 02a1, 02a2).
+
+**Clôture conditionnée au `v2-realisme/14a`** (décision du propriétaire du 26/11/2026, réserve de l'expert au 02a1) : le 02b peut être développé avant, mais il n'est clôturé qu'une fois le 14a livré, pour que les vols vus à l'écran soient ceux de la loi de freinage définitive, sans le plafond provisoire `MAX_FLIGHT_S`.
 
 **Bloque :** aucun.
 
@@ -21,6 +23,13 @@
 - [ ] À l'écran, centres et dégagements montent et retombent ; ombre au sol cohérente avec la hauteur
 - [ ] Sur un vrai corner centré et une vraie sortie de but longue : ballon aérien et son ombre visibles, ballon au sol inchangé (**inclut le critère reporté du ticket 01**, décision du propriétaire du 06/11/2026) ; ordre de dessin du ballon réellement en hauteur revu (réserve A3 de l'expert) ; opacité de l'ombre des joueurs revue à 375 px si elle est trop discrète
 - [ ] Mêmes empreintes de trace sur deux exécutions à graine fixée
+- [ ] **À vérifier à l'écran, hérité du 02a1** (26/11/2026, demande du propriétaire), sur des actions repérées dans la trace :
+  - chandelles plafonnées : au 02a1, 17 % des vols partent au vol maximal (4,5 s, 24,8 m de sommet), dont des ballons lents qui n'arrivent pas à leur cible ; après le 14a, aucun ballon lent ne doit monter à cette hauteur ;
+  - point de chute d'une passe aérienne sur sa cible (à ± 1 m au moteur) ;
+  - rebonds : chaque rebond visiblement plus bas que le précédent (rapport 0,49), puis le ballon roule ; vitesse horizontale réduite à chaque rebond ;
+  - aucun joueur, gardien compris, ne touche un ballon dont le bas est au-dessus de 0,5 m (règle provisoire jusqu'au ticket 03) ; le ballon redevient touchable en redescendant ;
+  - réceptions classées « centre » : au 02a1, 20 sur 20 relues sont des ballons en fin de petits rebonds (moins de 0,5 m, 0,1 à 1,5 m/s, 4,7 à 10 s après la frappe) ; vérifier à l'écran ce que le spectateur voit (point à investiguer au 02c) ;
+  - simplifications acceptées au 02a1 (réserve facultative A4) : ballon touchable pendant ses 0,02 à 0,05 premières secondes de vol, un tick de porteur avec un ballon encore en hauteur après un coup franc pour hors-jeu ; signaler si elles se voient.
 - [ ] `npm run build` OK, `npm run lint` sans nouvelle erreur ; suite complète au compte attendu ; V1 inchangée
 
 **Point de vigilance (reporté de la réouverture du ticket 01, 09/11/2026, demande du propriétaire)** : quand le ballon aura

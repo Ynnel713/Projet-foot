@@ -1152,6 +1152,7 @@ class Collector:
         """Mémoire du receveur sur les adversaires qu'il ne voit pas à la réception (ticket v2-realisme/08b) ; un joueur
         qui les voit tous ne compte pas (âge nul)."""
         for r in receptions:
+            self.count["réceptions contrôlées, origine : " + r.origin] += 1  # ballons aériens (v2-hauteur-ballon/02a1)
             if r.origin in RECEIVED_PASSES:  # passes reçues dans l'axe devant la surface (ticket v2-realisme/10d)
                 self.count["passes reçues"] += 1
                 self.count["passes reçues en zone 14"] += in_zone_14(r.team, r.x, r.y)
@@ -1419,6 +1420,10 @@ class Collector:
         stages = ({"contre": goal - xg} if psxg is None else
                   {"contre": open_xg - xg, "exécution": psxg - open_xg, "gardien": goal - psxg})
         band = carry_tranche("xG", xg, XG_BINS)
+        # ventilation des tirs et des buts par tranche d'xG et origine (réserve A3 de l'expert, v2-hauteur-ballon/02a1)
+        origin = getattr(event, "origin", "inconnue")
+        self.count[f"tirs par tranche d'xG : {band} : origine {origin} : tirs"] += 1
+        self.count[f"tirs par tranche d'xG : {band} : origine {origin} : buts"] += goal
         for group in ("tous les tireurs", "tireurs moyens") if average else ("tous les tireurs",):
             for tranche in (band, "toutes tranches"):
                 key = f"{CALIBRATION_PREFIX}{group}, {tranche}"
@@ -1468,6 +1473,12 @@ class Collector:
         by_name = {p.name: p for p in players}
         self.players = players
         self.team_of = {p.name: p.team for p in players}
+        z = getattr(ball, "z", 0.0)  # hauteur du ballon (v2-hauteur-ballon/02a1)
+        self.count["hauteur : ticks"] += 1
+        self.count["hauteur : ticks z négatif"] += z < 0.0
+        self.count["hauteur : ticks mode incohérent"] += (getattr(ball, "mode", "sol") == "aérien") != (z > 0.5)
+        self.count["hauteur : ticks en l'air"] += z > 0.0
+        self.count["hauteur : ticks au-dessus du plafond de vol (24,9 m)"] += z > 24.9
         self._free_ball_chase(ball)  # avant `_possession` : `self.team` est encore l'équipe qui avait le ballon
         if self.pass_open is not None and ball.holder is None and ball.receiver is None:
             # sans contact : sortie ou sifflée avec remise adverse, perdue (18h) ; morte ou remise pour soi, non perdue (18g)

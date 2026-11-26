@@ -17,6 +17,7 @@ import math
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 
+from v2engine import hauteur
 from v2engine.condition import effective_rating
 from v2engine.ball_state import BallState
 from v2engine.cerveau import OPPONENT_GOAL
@@ -64,9 +65,10 @@ def reach_probability(player: PlayerState, ball: BallState, opponents: list[Play
     """Chance que `player` touche le ballon libre avant un adversaire, et le point de contact. 1 s'il peut être sur sa
     trajectoire à temps avant le premier adversaire qui le peut (premier point atteint) ; sinon exp(-retard /
     `REACH_LATE_S`), au point de plus petit retard sur la portion de trajectoire que le ballon parcourt avant ce premier
-    adversaire. Ballon en l'air : seulement après son point de chute. Ballon arrêté : course au ballon, l'adversaire le
+    adversaire. Ballon en l'air : seulement aux instants où il passe sous le seuil « aérien ». Ballon arrêté : course au ballon, l'adversaire le
     plus rapide fixe l'échéance."""
-    path = [(t, point) for t, travelled, point in _ball_path(ball) if travelled >= ball.aerial_left_m]
+    path = [(t, point) for t, _, point in _ball_path(ball)  # sous le seuil « aérien » (v2-hauteur-ballon/02a1)
+            if not hauteur.is_aerial(hauteur.step_height(ball.z, ball.vz, t).z)]
     if not path:
         return 0.0, None
     if len(path) == 1:

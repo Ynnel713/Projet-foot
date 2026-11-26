@@ -9,6 +9,7 @@ from v2engine.anticipation import loose_ball_target, meeting_point
 from v2engine.ball_state import BallState
 from v2engine.cerveau import think
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
+from v2engine.hauteur import flight_time_s, launch_vz
 from v2engine.match import _step_ball
 from v2engine.movement import PlayerState
 from v2engine.possession import BALL_FRICTION_PER_S
@@ -99,7 +100,8 @@ def test_opponents_stand_at_the_regulation_distance() -> None:
 
 def test_ground_player_does_not_touch_an_aerial_ball_except_at_its_landing_point() -> None:
     under, catcher = _p("Sous", 20, 34.0, team="away"), _p("Cible", 40, 34.0)
-    ball = BallState(position=Vec2(10, 34), velocity=Vec2(25, 0), mode=AERIEN, aerial_left_m=27.0)
+    flight = flight_time_s(30.0, 25.0, BALL_FRICTION_PER_S)  # retombe sur la cible, 30 m plus loin (02a1)
+    ball = BallState(position=Vec2(10, 34), velocity=Vec2(25, 0), mode=AERIEN, vz=launch_vz(flight))
     for i in range(30):
         _step_ball(ball, DT, [under, catcher], i * DT)
         if ball.holder is not None:

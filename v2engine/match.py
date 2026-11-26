@@ -51,7 +51,8 @@ from v2engine.possession import (BALL_FRICTION_PER_S, BALL_STOPPED_MPS, MAX_PASS
                                  orients_control, reception_delay_s)
 from v2engine.added_time import GRACE_S, HARD_STOP_S, added_minutes, played_minute
 from v2engine.roles import role_of
-from v2engine.restart import (AERIAL_LANDING_M, AERIEN, CORNER, FREE_KICK, KICKOFF, LONG_RESTART_M, PENALTY, PENALTY_CONVERSION, SOL,
+from v2engine import hauteur
+from v2engine.restart import (AERIEN, CORNER, FREE_KICK, KICKOFF, LONG_RESTART_M, PENALTY, PENALTY_CONVERSION, SOL,
                               award, exit_point, foul_restart, is_aerial, kickoff, restart_target)
 from v2engine.shooting import (BLOCK_CHANCE, BLOCK_WIDTH_M, FLYING, HELD, OVER, PARRIED, SHANKED, SHOT_AIM_HEIGHT_M, WIDE,
                                block_reach_m, draw_shot_error, keeper_reach_m, neutral_xg, occasion_quality, parry_velocity,
@@ -341,7 +342,7 @@ def _whistle(ball: BallState, event: FoulEvent, players: list[PlayerState], now_
     ball.holder, ball.velocity, ball.shot_for, ball.dribble = None, Vec2(0.0, 0.0), None, None
     ball.shot_flight, ball.pending = None, None
     ball.receiver, ball.readers, ball.released_by, ball.plan = None, {}, None, None
-    ball.mode, ball.aerial_left_m = SOL, 0.0
+    _ground(ball)
     ball.pass_from, ball.rebound, ball.shot_wide = None, False, False
     ball.hesitation = {}
     _clear_offside(ball)
@@ -415,7 +416,7 @@ def _danger_origin(ball: BallState, player: PlayerState) -> str:
         return _shot_origin(ball, player, ball.set_piece is not None and ball.set_piece.taker == player.name)
     if ball.holder is not None:
         return _pass_kind(ball.position, player)
-    return _received_as(ball, player, ball.mode == AERIEN)
+    return _received_as(ball, player, ball.z > 0.0 or ball.vz != 0.0)
 
 
 def _shot_origin(ball: BallState, shooter: PlayerState, set_piece: bool) -> str:
@@ -604,11 +605,25 @@ def _play_restart(ball: BallState, players: list[PlayerState], now_s: float,
     ball.receiver = target.name
     ball.plan = None
     _clear_offside(ball)
-    if is_aerial(r.kind, taker, target):  # ballon en l'air : on ne le touche qu'à son point de chute
-        ball.mode, ball.readers = AERIEN, {}
-        ball.aerial_left_m = taker.position.distance_to(target.position) - AERIAL_LANDING_M
+    if is_aerial(r.kind, taker, target):  # ballon en l'air : touchable seulement sous le seuil « aérien » (02a1)
+        ball.readers = {}
+        _launch_aerial(ball, taker.position.distance_to(target.position))
     else:
         ball.readers = pass_readers(taker.position, ball.velocity, target.position, opponents)
+
+
+def _ground(ball: BallState) -> None:
+    """Ballon posé au sol (ticket v2-hauteur-ballon/02a1) : hauteur et vitesse verticale nulles, mode « sol »."""
+    ball.mode, ball.z, ball.vz = SOL, 0.0, 0.0
+
+
+def _launch_aerial(ball: BallState, distance_m: float) -> None:
+    """Ballon frappé en l'air vers un point à `distance_m` (ticket v2-hauteur-ballon/02a1) : durée de vol tirée du freinage
+    horizontal (`hauteur.flight_time_s`), vitesse verticale `g·T / 2`, il retombe sur le point visé. Vol plus long que
+    `hauteur.MAX_FLIGHT_S`, ou ballon trop lent pour arriver : vol plafonné, il retombe avant le point visé."""
+    # pas du produit : les remises et les passes ne connaissent pas le pas de la simulation (`--pas` d'un banc le change)
+    flight = hauteur.flight_time_s(distance_m, ball.velocity.length(), BALL_FRICTION_PER_S, TICK_SECONDS)
+    ball.mode, ball.z, ball.vz = SOL, 0.0, hauteur.launch_vz(flight)
 
 
 def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: float = 0.0,
@@ -641,6 +656,7 @@ def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: fl
             ball.holder = None  # détenteur introuvable (ne devrait pas arriver hors test) -- ballon relâché
             return None
         ball.position = holder.position
+        _ground(ball)  # ballon tenu : au sol (ticket v2-hauteur-ballon/02a1)
         ball.last_toucher = holder.name
         ball.released_by = None  # ballon tenu : plus de passe en cours (sa passe, s'il en fait une, le redéfinit)
 
@@ -888,9 +904,9 @@ def _execute(ball: BallState, holder: PlayerState, action, players: list[PlayerS
         follow = getattr(action, "follow", None)
         ball.plan = (action.target.name, follow, now_s) if follow is not None else None
         opponents = [p for p in players if p.team != holder.team]
-        if lofted:  # vol aérien des remises (ticket v2-collectif/29) : personne ne la touche avant son point de chute
-            ball.mode, ball.readers = AERIEN, {}
-            ball.aerial_left_m = holder.position.distance_to(action.target.position) - AERIAL_LANDING_M
+        if lofted:  # vol aérien (ticket v2-collectif/29) : touchable seulement sous le seuil « aérien » (02a1)
+            ball.readers = {}
+            _launch_aerial(ball, holder.position.distance_to(action.target.position))
         else:
             ball.readers = pass_readers(holder.position, ball.velocity, action.target.position, opponents)
         # Hors-jeu (ticket v2-collectif/23) : jugement AU DÉPART, sur les positions réelles. Le signalement ne
@@ -966,7 +982,7 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
         ball.restart = award(line, point, toucher, players, now_s)
         ball.position, ball.velocity = point, Vec2(0.0, 0.0)
         ball.receiver, ball.readers, ball.released_by, ball.plan = None, {}, None, None
-        ball.mode, ball.aerial_left_m = SOL, 0.0
+        _ground(ball)
         ball.pass_from, ball.rebound, ball.shot_wide = None, False, False
         _clear_offside(ball)
         return None
@@ -974,30 +990,34 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
     ball.velocity = ball.velocity * (BALL_FRICTION_PER_S**dt)
     if flight is not None:
         flight.elapsed_s += dt
-    if ball.aerial_left_m > 0.0:  # ballon en l'air (ticket v2-collectif/29) : il retombe à son point de chute
-        ball.aerial_left_m -= start.distance_to(end)
+    # Hauteur (ticket v2-hauteur-ballon/02a1) : chute exacte sur le pas, rebonds (vitesse horizontale × 0,85 chacun)
+    z0, vz0 = ball.z, ball.vz
+    airborne = z0 > 0.0 or vz0 != 0.0  # ballon en vol ou qui rebondit : reçu comme un centre (origine d'un tir)
+    height = hauteur.step_height(z0, vz0, dt)
+    ball.z, ball.vz = height.z, height.vz
+    ball.velocity = ball.velocity * height.horizontal_keep
+    ball.mode = AERIEN if hauteur.is_aerial(ball.z) else SOL
     if ball.velocity.length() < BALL_STOPPED_MPS:
         ball.receiver = None  # passe morte : ballon libre pour tous, plus de receveur désigné
         ball.readers = {}  # plus de passe à couper (ticket v2-collectif/25)
         _clear_offside(ball)  # plus de passe en cours : plus de hors-jeu à siffler
-        ball.aerial_left_m = 0.0
-    if ball.aerial_left_m > 0.0:
-        return None  # en l'air : personne ne le touche sur son trajet
+    if height.first_contact_s is None and hauteur.is_aerial(min(z0, ball.z)):
+        return None  # au-dessus du seuil pendant tout le pas : personne ne le touche sur son trajet
     if ball.shot_flight is not None:
         if ball.velocity.length() >= BALL_STOPPED_MPS:
             return None  # tir en vol : personne ne le touche avant la ligne (05b et 05c)
         # ponytail : tir mort avant la ligne (60 m de course à 30 m/s), rendu au jeu, issue « en vol » ; plus un tir à côté
         # en vol non plus (réserve A5 de l'expert, 05h)
         ball.shot_flight, ball.shot_wide = None, False
-    aerial = ball.mode == AERIEN  # ballon qui retombe d'une passe en l'air : un centre, pour l'origine d'un tir
-    ball.mode = SOL
 
     # Contact sur le trajet (ticket v2-collectif/25) : le ballon touche tout joueur qu'il frôle PENDANT le pas, pas
     # seulement au point d'arrivée ; le premier atteint tente le premier, quelle que soit son équipe. Le receveur visé
     # d'une passe l'attend et tend la jambe : il la touche à `RECEIVER_REACH_M` (ticket v2-realisme/18i).
-    for _, _, player in _ball_contacts(start, ball.position, dt, players, ball):
+    for entry, _, player in _ball_contacts(start, ball.position, dt, players, ball):
         if now_s < ball.offside_out_until.get(player.name, 0.0):
             continue  # écarté de l'action après un coup franc : il recule, il ne joue pas ce ballon
+        if airborne and hauteur.is_aerial(hauteur.step_height(z0, vz0, entry * dt).z):
+            continue  # ballon au-dessus du seuil « aérien » quand il entre à sa portée (ponytail : instant d'entrée seul)
         if now_s < ball.control_ban_until_s.get(player.name, 0.0):
             continue  # il vient de rater son contrôle : le ballon lui échappe
         if now_s < ball.unsettled_until_s.get(player.name, 0.0):
@@ -1015,7 +1035,8 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
         if last is not None and last.kind in _LOST_BY and last.team != player.team:  # perte de balle (ticket 19b)
             _log(ball, now_s, PERTE, last.team, last.player, _LOST_BY[last.kind], player.name)
         ball.last_toucher = player.name  # contrôlé ou non, il l'a touché (ticket v2-collectif/29)
-        received = _received_as(ball, player, aerial)
+        received = _received_as(ball, player, airborne)
+        _ground(ball)  # touché : le ballon repart du sol (02a1)
         intended = ball.receiver == player.name
         ball.pass_from, ball.rebound, ball.shot_wide = None, False, False
         opponents = [p for p in players if p.team != player.team]
@@ -1026,7 +1047,7 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
         if attempt_control(player, ball.velocity, opponents):
             # jeu à une touche (ticket v2-collectif/31a) : passe au sol qui lui est destinée, joueur de champ ; il décide
             # dès le tick suivant, et contrôle comme avant si son choix n'est pas une passe sans rotation
-            first_time = intended and not aerial and player.poste != "GK" and thinks_one_touch(player, opponents)
+            first_time = intended and not airborne and player.poste != "GK" and thinks_one_touch(player, opponents)
             # contrôle orienté (ticket v2-collectif/31b), tiré à la réception ; appliqué s'il contrôle (pas de première)
             oriented = orients_control(player, ball.velocity)  # ballon dur : moins souvent orienté (31c)
             kind = reception_type(player.facing, player.position, player.team)  # au contact, avant d'orienter (07d)
@@ -1371,7 +1392,7 @@ def simulate_match(
             observer(i * tick_seconds, players, ball, scoring_team)
 
         trace.record_ball(minute, ball.position, ball.mode, ball.holder,  # piste fine du ballon (v2-correctifs-ecran/04a)
-                          dead=ball.restart is not None)  # ballon mort, pour les coupures de l'écran (04b)
+                          dead=ball.restart is not None, z=ball.z)  # ballon mort, pour les coupures de l'écran (04b)
         if i % record_every == 0:
             trace.record(
                 minute,
@@ -1379,7 +1400,8 @@ def simulate_match(
                                 intention=intentions.get(p.name), role=p.role, energy=p.condition.energy,
                                 facing=p.facing)
                  for p in players],
-                BallSnapshot(position=ball.position, holder=ball.holder, mode=ball.mode, dead=ball.restart is not None),
+                BallSnapshot(position=ball.position, holder=ball.holder, mode=ball.mode, dead=ball.restart is not None,
+                             z=ball.z),
             )
         i += 1
 

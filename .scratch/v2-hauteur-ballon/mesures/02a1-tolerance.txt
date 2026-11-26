@@ -1,0 +1,59 @@
+indicateurs comparés : 2475
+référence A contre B hors bruit (attendu environ 5 % par hasard) : 64 (2.6%)
+après contre A hors bruit : 72 (2.9%)
+Plus gros écarts (en multiples du bruit) :
+  réceptions contrôlées, origine : centre par match : A 2.9 | B 3.32 | après 10.68 | écart +7.78 | bruit ±0.817 | 9.5× le bruit
+  calibration xG neutre, tireurs moyens, xG [0 ; 0.03[ : buts moins xG, par match : A -0.01116 | B -0.01648 | après 0.02586 | écart +0.03702 | bruit ±0.00656 | 5.6× le bruit
+  rendement par tranche de 15 min : AD : 15-30 : buts personnels pour 90 min : A 0.04 | B 0.06 | après 0.5 | écart +0.46 | bruit ±0.141 | 3.3× le bruit
+  calibration xG neutre, tireurs moyens, xG [0 ; 0.03[ : étage exécution, par match : A 0.001215 | B -0.009391 | après 0.03863 | écart +0.03742 | bruit ±0.0175 | 2.1× le bruit
+  rendement par tranche de 15 min : BU : 15-30 : autres contacts ratés pour 90 min : A 0.22 | B 0.48 | après 1.08 | écart +0.86 | bruit ±0.41 | 2.1× le bruit
+  tirs, origine : récupération (part) : A 0.05662 | B 0.06913 | après 0.09293 | écart +0.03631 | bruit ±0.0185 | 2.0× le bruit
+  face-à-face : gardien au tir, écart à la profondeur visée (m) : A 1.258 | B 1.412 | après 1.783 | écart +0.5249 | bruit ±0.3 | 1.8× le bruit
+  rendement par tranche de 15 min : RB : 60-75 : contrôles ratés pour 100 passes visées : A 1.942 | B 2.937 | après 4.285 | écart +2.344 | bruit ±1.37 | 1.7× le bruit
+  passes longues réussies (part) : A 0.732 | B 0.7189 | après 0.6852 | écart -0.04676 | bruit ±0.0276 | 1.7× le bruit
+  calibration passe, chance évaluée [0.1 ; 0.2[ : non perdue (part) : A 0.19 | B 0.1736 | après 0.1545 | écart -0.03545 | bruit ±0.022 | 1.6× le bruit
+  rendement par tranche de 15 min : BU : 60-75 : tirs cadrés (part des non contrés) : A 0.3844 | B 0.5151 | après 0.6283 | écart +0.2439 | bruit ±0.154 | 1.6× le bruit
+  calibration passe, chance évaluée [0.1 ; 0.2[ : écart évaluée / non perdue (points) : A -3.225 | B -1.591 | après 0.2508 | écart +3.476 | bruit ±2.2 | 1.6× le bruit
+  rendement par tranche de 15 min : RB : 45-60 : tirs pour 90 min : A 0 | B 0.06 | après 0.18 | écart +0.18 | bruit ±0.118 | 1.5× le bruit
+  calibration xG neutre, tireurs moyens, xG [0.1 ; 0.2[ : taux de buts : A 0.1264 | B 0.1284 | après 0.2388 | écart +0.1123 | bruit ±0.0755 | 1.5× le bruit
+  grosses occasions, origine : récupération (part) : A 0.02849 | B 0.03076 | après 0.03779 | écart +0.009297 | bruit ±0.00657 | 1.4× le bruit
+  rendement par tranche de 15 min : AD : 60-75 : tirs pour 90 min : A 1.62 | B 0.46 | après 0.44 | écart -1.18 | bruit ±0.857 | 1.4× le bruit
+  gardien au tir : écart à son point visé réel (m) : A 1.255 | B 1.245 | après 1.535 | écart +0.2803 | bruit ±0.204 | 1.4× le bruit
+  rendement par tranche de 15 min : MDC : 45 et plus : sprints par 15 min : A 0.7187 | B 1.689 | après 1.989 | écart +1.27 | bruit ±0.927 | 1.4× le bruit
+  rendement par tranche de 15 min : BU : 75-90 : autres contacts ratés pour 90 min : A 0.12 | B 0.46 | après 0.58 | écart +0.46 | bruit ±0.34 | 1.4× le bruit
+  face-à-face : gardien au tir, distance à sa ligne (m) : A 4.712 | B 4.877 | après 5.188 | écart +0.4768 | bruit ±0.356 | 1.3× le bruit
+  rendement par tranche de 15 min : AG : 45-60 : tirs pour 90 min : A 0.96 | B 1.26 | après 2.16 | écart +1.2 | bruit ±0.897 | 1.3× le bruit
+  calibration passe, chance évaluée [0 ; 0.1[ : reçue par le receveur visé (part) : A 0.2004 | B 0.1903 | après 0.07413 | écart -0.1263 | bruit ±0.0947 | 1.3× le bruit
+  calibration passe, chance évaluée [0 ; 0.1[ : écart évaluée / non perdue (points) : A -14.82 | B -14 | après -2.562 | écart +12.26 | bruit ±9.38 | 1.3× le bruit
+  rendement par tranche de 15 min : MOC : 75-90 : contrôles ratés pour 100 passes visées : A 2.156 | B 2.011 | après 3.721 | écart +1.565 | bruit ±1.2 | 1.3× le bruit
+  calibration passe, chance évaluée [0 ; 0.1[ : non perdue (part) : A 0.2232 | B 0.2112 | après 0.09967 | écart -0.1236 | bruit ±0.0949 | 1.3× le bruit
+  rendement par tranche de 15 min : MC : passes réussies (part), 75-90 - 0-15 : A -0.01539 | B 0.005322 | après 0.02748 | écart +0.04287 | bruit ±0.033 | 1.3× le bruit
+  calibration passe, chance évaluée [0.1 ; 0.2[ : reçue par le receveur visé (part) : A 0.1758 | B 0.1591 | après 0.1463 | écart -0.02955 | bruit ±0.0228 | 1.3× le bruit
+  calibration xG neutre, tireurs moyens, xG [0.1 ; 0.2[ : taux de buts, IC95 haut : A 0.6137 | B 0.6329 | après 0.6923 | écart +0.07853 | bruit ±0.0608 | 1.3× le bruit
+  calibration passe, chance évaluée [0.5 ; 0.6[ : écart évaluée / non perdue (points) : A 0.7822 | B 2.13 | après -2.855 | écart -3.637 | bruit ±2.82 | 1.3× le bruit
+  calibration passe, chance évaluée [0.5 ; 0.6[ : non perdue (part) : A 0.539 | B 0.5266 | après 0.5756 | écart +0.03665 | bruit ±0.0284 | 1.3× le bruit
+  calibration xG neutre, tireurs moyens, xG [0.1 ; 0.2[ : taux de buts, IC95 bas : A 0.02671 | B 0.03094 | après 0.05054 | écart +0.02383 | bruit ±0.0185 | 1.3× le bruit
+  rendement par tranche de 15 min : 60-75 : tirs cadrés (part des non contrés) : A 0.406 | B 0.4844 | après 0.5718 | écart +0.1657 | bruit ±0.13 | 1.3× le bruit
+  rendement par tranche de 15 min : AD : 45-60 : passes réussies (part) : A 0.7986 | B 0.7698 | après 0.7374 | écart -0.06114 | bruit ±0.0484 | 1.3× le bruit
+  rendement par tranche de 15 min : AG : 75-90 : buts marqués par l'équipe pour 90 min : A 2.64 | B 1.86 | après 1.26 | écart -1.38 | bruit ±1.11 | 1.2× le bruit
+  pertes au contact : conduite, sur adversaire non vu (part) : A 0.3078 | B 0.3156 | après 0.3605 | écart +0.05265 | bruit ±0.0425 | 1.2× le bruit
+  rendement par tranche de 15 min : AG : 45 et plus : buts personnels pour 90 min : A 0 | B 0.15 | après 0.36 | écart +0.36 | bruit ±0.294 | 1.2× le bruit
+  calibration xG neutre, tireurs moyens, xG [0.06 ; 0.1[ : xG neutre moyen : A 0.08017 | B 0.07766 | après 0.08429 | écart +0.004123 | bruit ±0.00348 | 1.2× le bruit
+  rendement par tranche de 15 min : MDC : 45 et plus : au-dessus de 25 km/h (m/min) : A 0.9027 | B 2.006 | après 1.975 | écart +1.072 | bruit ±0.907 | 1.2× le bruit
+  gardien au tir : écart au point visé (m) : A 1.744 | B 1.744 | après 2.005 | écart +0.2609 | bruit ±0.223 | 1.2× le bruit
+  décomposition du tir, Reflexes du gardien [70 ; +[ : occasion, xG neutre moyen par tir : A 0.1372 | B 0.143 | après 0.1525 | écart +0.01529 | bruit ±0.0131 | 1.2× le bruit
+Indicateurs suivis :
+  buts par match : A 4.2 | B 4.82 | après 4.16 | écart -0.04 | bruit ±0.88 | 0.0× le bruit
+  contacts perdus par match : A 1039 | B 1050 | après 1052 | écart +13.08 | bruit ±38.5 | 0.3× le bruit
+  corners par match : A 4.08 | B 4.46 | après 3.82 | écart -0.26 | bruit ±0.88 | 0.3× le bruit
+  passes longues réussies (part) : A 0.732 | B 0.7189 | après 0.6852 | écart -0.04676 | bruit ±0.0276 | 1.7× le bruit
+  passes par match : A 1339 | B 1342 | après 1346 | écart +7.1 | bruit ±26.9 | 0.3× le bruit
+  passes réussies (part) : A 0.8424 | B 0.8411 | après 0.84 | écart -0.002399 | bruit ±0.0044 | 0.5× le bruit
+  réceptions contrôlées, origine : centre par match : A 2.9 | B 3.32 | après 10.68 | écart +7.78 | bruit ±0.817 | 9.5× le bruit
+  réceptions contrôlées, origine : passe au sol par match : A 350.3 | B 350.5 | après 351.4 | écart +1.06 | bruit ±11.8 | 0.1× le bruit
+  réceptions contrôlées, origine : passe en profondeur par match : A 173.1 | B 171.9 | après 167.2 | écart -5.88 | bruit ±10.2 | 0.6× le bruit
+  réceptions contrôlées, origine : passe en retrait par match : A 572.3 | B 574.4 | après 571 | écart -1.28 | bruit ±17.3 | 0.1× le bruit
+  réceptions contrôlées, origine : rebond par match : A 5.7 | B 5.66 | après 5.82 | écart +0.12 | bruit ±0.948 | 0.1× le bruit
+  réceptions contrôlées, origine : récupération par match : A 235.1 | B 237.3 | après 241.3 | écart +6.24 | bruit ±7.53 | 0.8× le bruit
+  sorties de but par match : A 11.1 | B 10.04 | après 10.36 | écart -0.74 | bruit ±1.33 | 0.6× le bruit
+  tirs par équipe : A 14.63 | B 14.32 | après 14.35 | écart -0.28 | bruit ±1.23 | 0.2× le bruit

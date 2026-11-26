@@ -31,6 +31,7 @@ class BallSnapshot:
     holder: str | None = None  # porteur du ballon à cet instant (None = ballon en l'air ou libre), pour afficher son nom
     mode: str = "sol"  # "sol" ou "aérien" (ticket v2-collectif/29), pour le rendu
     dead: bool = False  # ballon mort, en attente d'une remise en jeu (ticket v2-collectif/29)
+    z: float = 0.0  # hauteur du bas du ballon, m (ticket v2-hauteur-ballon/02a1 ; affichée par le 02b)
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,6 +43,7 @@ class BallPoint:
     mode: str = "sol"
     holder: str | None = None
     dead: bool = False  # ballon mort : l'écran ne lisse pas la piste, le moteur le pose au point de remise (ticket 04b)
+    z: float = 0.0  # hauteur du bas du ballon, m (ticket v2-hauteur-ballon/02a1)
 
 
 @dataclass(frozen=True)
@@ -369,8 +371,9 @@ class MatchTrace:
     def record(self, minute: float, players: list[PlayerSnapshot], ball: BallSnapshot) -> None:
         self.ticks.append(Tick(minute=minute, players=tuple(players), ball=ball))
 
-    def record_ball(self, minute: float, position: Vec2, mode: str, holder: str | None, dead: bool = False) -> None:
-        self.ball_track.append(BallPoint(minute=minute, position=position, mode=mode, holder=holder, dead=dead))
+    def record_ball(self, minute: float, position: Vec2, mode: str, holder: str | None, dead: bool = False,
+                    z: float = 0.0) -> None:
+        self.ball_track.append(BallPoint(minute=minute, position=position, mode=mode, holder=holder, dead=dead, z=z))
 
     def record_goal(self, team: str, minute: float, scorer: str | None = None, own_goal: bool = False) -> None:
         if team == "home":

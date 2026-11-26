@@ -11,10 +11,12 @@ from v2engine.ball_state import BallState
 from v2engine.bloc import builds_up
 from v2engine.decision import LONG_BALL_WON, choose_action, evaluate_options
 from v2engine.geometry import PITCH_LENGTH_M, Vec2
-from v2engine.match import GOAL_CENTER_Y, RELANCE_LONGUE, _execute, _record_decision
+from v2engine.match import GOAL_CENTER_Y, RELANCE_LONGUE, TICK_SECONDS, _execute, _record_decision
 from v2engine.movement import PlayerState
 from v2engine.possession import (LONG_PASS_M, max_pass_reach_m, pass_accuracy_probability, pass_success_probability)
-from v2engine.restart import AERIAL_LANDING_M, AERIEN, LONG_RESTART_M
+from v2engine.hauteur import flight_time_s, launch_vz
+from v2engine.possession import BALL_FRICTION_PER_S
+from v2engine.restart import LONG_RESTART_M
 from v2engine.trace import PASSE, EventLog
 
 GOAL = Vec2(PITCH_LENGTH_M, GOAL_CENTER_Y)
@@ -154,8 +156,10 @@ def test_lofted_pass_flies_like_a_long_restart_and_is_traced() -> None:
     ball.log = EventLog(events)
     rivals = [p for p in players if p.team != keeper.team]
     _execute(ball, keeper, action, players, rivals, GOAL, None, 0.0, False, None, None, lost=False)
-    assert ball.mode == AERIEN and ball.readers == {} and ball.receiver == "BU"
-    assert ball.aerial_left_m == pytest.approx(keeper.position.distance_to(action.target.position) - AERIAL_LANDING_M)
+    assert ball.readers == {} and ball.receiver == "BU"
+    flight = flight_time_s(keeper.position.distance_to(action.target.position), ball.velocity.length(), BALL_FRICTION_PER_S,
+                           TICK_SECONDS)
+    assert ball.z == 0.0 and ball.vz == pytest.approx(launch_vz(flight))  # vol vers la cible (v2-hauteur-ballon/02a1)
     event = events[-1]
     assert event.kind == PASSE and event.detail == RELANCE_LONGUE
     decisions: list = []
