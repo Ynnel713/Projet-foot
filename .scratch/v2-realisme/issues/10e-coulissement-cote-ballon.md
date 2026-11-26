@@ -10,7 +10,7 @@
 
 **Blocked by:** 01f (Fabrique de scènes de test partagée).
 
-**Bloque :** 10j, 10m (ajouté le 26/11/2026, audit des transitions).
+**Bloque :** 10j, 10m2 (ajouté le 26/11/2026, audit des transitions ; morceau de 10m).
 
 **Status:** à faire (constantes à proposer avant le code)
 

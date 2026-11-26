@@ -13,7 +13,7 @@
 - hauteur : en retrait du ballon d'une profondeur à proposer ;
 - largeur : resserrée vers l'axe, avec la même part que le coulissement de 10e.
 
-Le bloc y revient progressivement, jusqu'à la défense placée. La ligne garde sa règle de hors-jeu : elle remonte dès que le ballon est contenu (porteur pressé, passe en retrait), et le hors-jeu ne doit pas retomber sous 2 par match.
+Le bloc y revient progressivement, jusqu'à la défense placée. La ligne garde sa règle de hors-jeu : elle remonte dès que le ballon est contenu (porteur pressé, passe en retrait), et le hors-jeu ne doit pas retomber sous 1,5 par match.
 
 Hauteur et largeur cibles sont des paramètres d'équipe, sans seconde mécanique. Ils sont modulés plus tard par :
 - le style (13c repli immédiat, 13b contre-pressing, arbitrage 13j) ;
@@ -26,11 +26,11 @@ Hauteur et largeur cibles sont des paramètres d'équipe, sans seconde mécaniqu
 
 **Blocked by:** 10e (Coulissement) ; 01f (Fabrique de scènes de test).
 
-**Bloque :** 10n ; `v2-collectif/22b`.
+**Bloque :** 10n ; `v2-collectif/22b` (par ses morceaux 10m1 et 10m2).
 
 **Dépendance non réciproque :** 01f (livré) n'est pas modifié ; sa ligne « Bloque » ne cite pas 10m.
 
-**Status:** à faire (constantes à proposer avant le code)
+**Status:** découpé (26/11/2026, demande du propriétaire) en `10m1` (repli en hauteur et remontée de la ligne dès que le ballon est contenu, hors-jeu au moins 1,5 par match) et `10m2` (resserrement en largeur). Ticket chapeau : ne pas l'implémenter tel quel ; le texte ci-dessous reste la référence de détail. Une référence à ce ticket sans chiffre vaut pour ses deux morceaux.
 
 ## Estimation
 
@@ -56,7 +56,7 @@ Au-delà de 2 h : à examiner pour découpage avant le code (par exemple hauteur
 - [ ] Constantes produit (profondeur de repli, resserrement, condition de remontée) et chiffres réels (sourcés ou « non trouvé ») validés par le propriétaire avant le code
 - [ ] Vitesse de recul du centre de l'équipe (convention du banc : positive = vers son but) positive, ou au minimum nettement plus élevée qu'avant (−0,25 m/s à la dernière mesure), et bloc reformé plus vite (seuils proposés avant la mesure)
 - [ ] Largeur du bloc 3 s après la perte inférieure à celle du moment de la perte
-- [ ] Hors-jeu non dégradé : valeur actuelle relevée avant le code (1,6 par match à la clôture du 10), puis au moins 2 par match (seuil de la réserve A3 du 10) ou, à défaut, pas de baisse par rapport à la valeur relevée
+- [ ] Hors-jeu non dégradé : valeur actuelle relevée avant le code (1,6 par match à la clôture du 10), puis au moins 1,5 par match (seuil du propriétaire, 26/11/2026, qui remplace les 2 par match de la réserve A3 du 10)
 - [ ] Tirs de contre après récupération et part des buts issus d'une récupération en baisse ou stables (sens mesuré, intervalle de confiance)
 - [ ] Hauteur et largeur cibles exposées comme paramètres d'équipe, lisibles par 13j, 21 et 20e
 - [ ] Durée réelle relevée, comparée à l'estimation et expliquée si l'écart dépasse 30 % (rapport de clôture et `docs/agents/suivi-estimations.md`)

@@ -232,10 +232,6 @@ Tailles d'échantillon : 50 matchs pour l'exploration (tickets de mécanisme), a
 | 04h | Duel un contre un : le crochet | P1 | exécution | 2 h | moyenne | 04g, 07a, 07f |
 | 04i | Duel : protection du ballon dos au défenseur | P1 | exécution | 2 h | moyenne | 04a, 07c, 11b |
 | 04j | Le tacle glissé | P1 | exécution | 2 h | moyenne | 04g |
-| 04k | Duel : la feinte de frappe ou de passe (ajouté le 17/11/2026) | P2 | exécution et perception | 2 h 20 | faible | 04g, 04h, v2-attributs-contextes/01-02 |
-| 04l | Duel : le changement de rythme, démarrage-arrêt (ajouté le 17/11/2026) | P2 | exécution | 2 h | moyenne | 04g, 12a, v2-attributs-contextes/01-02 |
-| 04m | Duel : les gestes techniques, passement, petit pont, roulette, double contact (ajouté le 17/11/2026) | P2 | exécution | 2 h 40 | faible | 04f, 04g, 04h, 04i, v2-attributs-contextes/01-02 |
-| 04n | Choix du geste de dribble et validation de la variété (ajouté le 17/11/2026) | P2 | décision et validation | 2 h 30 | faible | 04g à 04m, v2-attributs-contextes/05, v2-attributs-restants/05 |
 | 05a | Tir : le ballon part vers son point d'arrivée, le but n'est plus tiré au départ | P0 | exécution | 2 h 15 | moyenne | v2-collectif/35b |
 | 05b | Arrêt : le gardien atteint ou non le ballon | P0 | exécution | 2 h 20 | moyenne | 05a, 03b |
 | 05c | Contre : le défenseur touche réellement le tir | P0 | exécution | 2 h 10 | moyenne | 05a |
@@ -425,11 +421,27 @@ Total : 3 nouveaux tickets, 5 h 35 (P1), plus 2 h 15 de réestimations, soit 7 h
 
 ## 15. Complément : transitions (26/11/2026)
 
-Audit des transitions contre cinq tickets proposés par le propriétaire. Déjà couverts, laissés tels quels : réorganisation de chaque joueur à la perte et fenêtre de contre-pressing (`v2-collectif/10`, livré ; durée par style en `13b`, `13f`, `13j`), projection à la récupération (`v2-collectif/11`, livré ; `02g`, `09g`, `13d`, `13e`, `v2-collectif/21`). Complétés : `10e` (bloque aussi `10m`), `v2-collectif/22b` (dépend de `10m` et `10n` ; le recul du bloc y reste un contrôle chiffré).
+Audit des transitions contre cinq tickets proposés par le propriétaire. Déjà couverts, laissés tels quels : réorganisation de chaque joueur à la perte et fenêtre de contre-pressing (`v2-collectif/10`, livré ; durée par style en `13b`, `13f`, `13j`), projection à la récupération (`v2-collectif/11`, livré ; `02g`, `09g`, `13d`, `13e`, `v2-collectif/21`). Complétés : `10e` (bloque aussi `10m2`), `v2-collectif/22b` (dépend de `10m` et `10n` ; le recul du bloc y reste un contrôle chiffré).
 
 | Ticket | Titre | Prio | Catégorie | Estimation | Confiance | Dépend de |
 |---|---|---|---|---|---|---|
-| 10m | Repli du bloc à la perte : le centre recule et le bloc se resserre | P1 | placement | 2 h 05 | moyenne | 10e, 01f |
-| 10n | Validation des transitions offensives et défensives | P1 | validation | 1 h 40 | élevée | 10m, 01e |
+| 10m1 | Repli en hauteur à la perte, et remontée de la ligne dès que le ballon est contenu | P1 | placement | 1 h 45 | moyenne | 01f |
+| 10m2 | Resserrement du bloc en largeur à la perte | P1 | placement | 1 h 05 | élevée | 10e, 10m1 |
+| 10n | Validation des transitions offensives et défensives | P1 | validation | 1 h 40 | élevée | 10m1, 10m2, 01e |
 
-Total : 2 tickets, 3 h 45 (P1). Ordre proposé : `10e` → `10m` → `10n`, avant `v2-collectif/22b`.
+`10m` (2 h 05) est découpé le 26/11/2026 en `10m1` et `10m2` (2 h 50 au total : le découpage ajoute une analyse et une intégration). Hors-jeu : au moins 1,5 par match (propriétaire, 26/11/2026).
+
+Total : 3 tickets, 4 h 30 (P1). Ordre proposé : `10m1` ; `10e` → `10m2` ; `10n`, avant `v2-collectif/22b`.
+
+## 16. Complément : variété du dribble (17/11/2026, rangé le 26/11/2026)
+
+Ces quatre tickets avaient été ajoutés le 17/11/2026 dans le tableau du §10 sans mise à jour des totaux du §7 (124 lignes pour 120 tickets annoncés). Ils sont rangés ici avec leur propre total ; le §10 compte de nouveau 120 lignes.
+
+| Ticket | Titre | Prio | Catégorie | Estimation | Confiance | Dépend de |
+|---|---|---|---|---|---|---|
+| 04k | Duel : la feinte de frappe ou de passe | P2 | exécution et perception | 2 h 20 | faible | 04g, 04h, v2-attributs-contextes/01-02 |
+| 04l | Duel : le changement de rythme, démarrage-arrêt | P2 | exécution | 2 h | moyenne | 04g, 12a, v2-attributs-contextes/01-02 |
+| 04m | Duel : les gestes techniques, passement, petit pont, roulette, double contact | P2 | exécution | 2 h 40 | faible | 04f, 04g, 04h, 04i, v2-attributs-contextes/01-02 |
+| 04n | Choix du geste de dribble et validation de la variété | P2 | décision et validation | 2 h 30 | faible | 04g à 04m, v2-attributs-contextes/05, v2-attributs-restants/05 |
+
+Total : 4 tickets, 9 h 30 (P2).

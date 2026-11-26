@@ -23,7 +23,7 @@ Le rapport sur 50 matchs reprend aussi les indicateurs existants (repli, pertes 
 
 **Lien avec l'existant :** ne duplique pas 13i, qui mesure les signatures de style. Ce ticket mesure les transitions à style neutre ; ses indicateurs sont disponibles pour 13i, sans dépendance formelle.
 
-**Blocked by:** 10m (Repli du bloc à la perte) ; 01e (séries longues et intervalles).
+**Blocked by:** 10m1 (Repli en hauteur et remontée de la ligne) ; 10m2 (Resserrement en largeur) ; 01e (séries longues et intervalles).
 
 **Bloque :** `v2-collectif/22b`.
 
@@ -51,6 +51,7 @@ Temps machine, non compté : suite complète (environ 40 min) ; série de 50 mat
 
 ## Acceptance criteria
 
+- [ ] Re-mesure, après la livraison de 10m1 et 10m2, de la part des buts issus d'un ballon gagné à l'adversaire, catégories « récupération » et « erreur adverse » du 19e rapportées séparément avec leur intervalle de confiance (avant : 95,4 % = 80,6 + 14,8, sur 108 buts en 20 matchs ; délai médian origine-but 3,3 s), valeur « avant » recalculée avec la même définition ; si la part reste proche de 95 % au lieu de baisser nettement (seuil proposé avant la mesure), un ticket est ouvert sur la cause suivante, choisie sur la mesure : sortie de pressing adverse trop facile, force du contre-pressing, ou délai de réorganisation
 - [ ] Définitions des trois nouvelles mesures et repères réels (sourcés ou « non trouvé ») validés par le propriétaire avant le code
 - [ ] Indicateurs reproductibles à graine fixée, testés
 - [ ] Rapport : repli, durée du contre-pressing, joueurs projetés après récupération, pertes en transition, occasions et buts concédés en transition, origine des buts ; chaque écart au réel renvoyé à un ticket, jamais réglé ici

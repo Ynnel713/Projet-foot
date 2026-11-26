@@ -6,7 +6,7 @@
 
 **Attributs :** tous.
 
-**Blocked by:** 22a ; `v2-realisme/20e` (ajouté le 10/11/2026, audit de la roadmap) ; `v2-realisme/25h`, `27c` (ajoutés le 14/11/2026) ; `v2-collectif/15d` (ajouté le 21/11/2026, audit de réalisme du propriétaire) ; `v2-realisme/10m`, `10n` (ajoutés le 26/11/2026, audit des transitions).
+**Blocked by:** 22a ; `v2-realisme/20e` (ajouté le 10/11/2026, audit de la roadmap) ; `v2-realisme/25h`, `27c` (ajoutés le 14/11/2026) ; `v2-collectif/15d` (ajouté le 21/11/2026, audit de réalisme du propriétaire) ; `v2-realisme/10m` (morceaux `10m1`, `10m2`), `10n` (ajoutés le 26/11/2026, audit des transitions).
 
 **Bloque :** 22c.
 
@@ -16,7 +16,7 @@
 
 - [ ] Indicateurs tactiques du ticket 01 dans leurs fourchettes
 - [ ] C2 du ticket 14 (une passe sans gain suivie d'une passe qui fait avancer, 39 % visé contre 30 à 32 % mesurés) ; échelle de progression de la deuxième passe au-delà de 20 m (A2 du ticket 13)
-- [ ] Réserves du ticket 10 : latence du repli, tirs de contre après récupération, hors-jeu (rouvrir si moins de 2 par match) et recul du bloc (mécanisme traité au `v2-realisme/10m` ; contrôle chiffré ici)
+- [ ] Réserves du ticket 10 : latence du repli, tirs de contre après récupération, hors-jeu (rouvrir si moins de 1,5 par match, seuil du propriétaire du 26/11/2026 qui remplace les 2 de la réserve A3 du ticket 10) et recul du bloc (mécanisme traité au `v2-realisme/10m` ; contrôle chiffré ici)
 - [ ] Les volumes du 22a restent dans leurs fourchettes (contrôle de non-régression)
 - [ ] Leviers et critères validés par le propriétaire avant le code
 - [ ] Repris du ticket 22 : courbes partagées de `attributes` ; chiffres réels sourcés, ou « non trouvé »
