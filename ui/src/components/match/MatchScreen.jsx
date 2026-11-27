@@ -177,6 +177,9 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
         className="relative min-h-0 grid grid-cols-[minmax(0,1fr)] min-[960px]:grid-cols-[200px_minmax(0,1fr)_200px] min-[1280px]:grid-cols-[220px_minmax(0,1fr)_220px]"
       >
         <LineupSide side="home" lineup={lineups?.home} color="var(--team-home-ui)" stats={playerGoals} />
+        {/* terrain en position absolue, à la place et à la taille qu'il avait en élément flex (zone moins 0,5 rem de
+            marge) : plus mesuré par la mise en page flex, il redevient la racine de sa propre mise en page à chaque image
+            (ticket v2-ecran-match/22b : 9,2 → 2,6 ms par mise en page au ralenti × 6) */}
         <div data-zone="terrain" className="relative min-h-0 min-w-0 flex items-center justify-center p-2">
           <V2Pitch
             tick={view}
@@ -188,7 +191,7 @@ export default function MatchScreen({ playback, lineups, selected, onSelect, onB
             onSelect={onSelect}
             ballLook={ballLook}
             wave={wave}
-            className="w-full h-full"
+            className="absolute left-2 top-2 w-[calc(100%-1rem)] h-[calc(100%-1rem)]"
           />
           {/* états du match (ticket v2-ecran-match/13) : bandeaux sans pointeur, carte de fin refermable */}
           {kickoffBanner && !halfBanner && <TopBanner kind="coup-envoi">COUP D'ENVOI</TopBanner>}

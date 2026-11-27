@@ -1,0 +1,141 @@
+{
+ "ticket": "v2-ecran-match/22b",
+ "methode": "image figée (lecture arrêtée vers 1 min de match, 85 s après le lancement), même trace (22-trace-figee.json), avant = 145a292, après = SVG du terrain en position absolue ; placement du SVG (getBoundingClientRect) et comparaison pixel par pixel des captures pleine page",
+ "placement_svg": [
+  {
+   "taille": "1280x800",
+   "avant": [
+    228,
+    111,
+    824,
+    572
+   ],
+   "apres": [
+    228,
+    111,
+    824,
+    572
+   ],
+   "identique": true
+  },
+  {
+   "taille": "1920x1080",
+   "avant": [
+    228,
+    111,
+    1464,
+    852
+   ],
+   "apres": [
+    228,
+    111,
+    1464,
+    852
+   ],
+   "identique": true
+  },
+  {
+   "taille": "1366x768",
+   "avant": [
+    228,
+    111,
+    910,
+    540
+   ],
+   "apres": [
+    228,
+    111,
+    910,
+    540
+   ],
+   "identique": true
+  },
+  {
+   "taille": "1024x768",
+   "avant": [
+    208,
+    111,
+    608,
+    540
+   ],
+   "apres": [
+    208,
+    111,
+    608,
+    540
+   ],
+   "identique": true
+  },
+  {
+   "taille": "390x844",
+   "avant": [
+    8,
+    91,
+    374,
+    636
+   ],
+   "apres": [
+    8,
+    91,
+    374,
+    636
+   ],
+   "identique": true
+  },
+  {
+   "taille": "1280x801",
+   "avant": [
+    228,
+    111,
+    824,
+    573
+   ],
+   "apres": [
+    228,
+    111,
+    824,
+    573
+   ],
+   "identique": true
+  }
+ ],
+ "pixels": [
+  {
+   "taille": "1280x800",
+   "differents": 750,
+   "ecart_max": 48,
+   "zone": "première capture, lecture tout juste figée"
+  },
+  {
+   "taille": "1920x1080",
+   "differents": 120,
+   "ecart_max": 4,
+   "zone": "curseur de la frise"
+  },
+  {
+   "taille": "1366x768",
+   "differents": 120,
+   "ecart_max": 3,
+   "zone": "curseur de la frise"
+  },
+  {
+   "taille": "1024x768",
+   "differents": 122,
+   "ecart_max": 2,
+   "zone": "curseur de la frise"
+  },
+  {
+   "taille": "390x844",
+   "differents": 120,
+   "ecart_max": 1,
+   "zone": "curseur de la frise"
+  },
+  {
+   "taille": "1280x801",
+   "differents": 120,
+   "ecart_max": 6,
+   "zone": "curseur de la frise (capture de fin de série)"
+  }
+ ],
+ "conclusion": "placement identique à toutes les tailles ; seuls diffèrent les pixels du curseur de la frise de momentum (bande de 2 px, instant de figement), et, sur la première capture, l'affichage pas encore stabilisé"
+}

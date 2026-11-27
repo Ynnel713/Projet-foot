@@ -1,6 +1,7 @@
 // Fluidité de l'écran V2 (tickets v2-hauteur-ballon/02b2, v2-ecran-match/22) : node 22-fps.js <url de base> <dossier des réponses figées> <étiquette> [répétitions]
 // Copie de `.scratch/v2-hauteur-ballon/mesures/02b2-fps.js`, changements : ralenti processeur réglable (FPS_RATE, 6 par défaut) ;
-// attente du terrain identique pour tous les états, sans `[data-ball]` (voir plus bas : biais du banc du 02b2).
+// attente du terrain identique pour tous les états, sans `[data-ball]` (voir plus bas : biais du banc du 02b2) ;
+// ticket 22b : compteurs Chrome de la fenêtre et contrôle d'animation archivés avec chaque passage.
 // Même match pour tous les états (réponses d'API figées, interceptées), vitesse de lecture par défaut (×1), processeur
 // ralenti 6 fois (CDP), images comptées par requestAnimationFrame pendant 30 s, à partir de 10 s de lecture.
 const fs = require("fs");
@@ -37,12 +38,27 @@ const { chromium } = require("playwright");
     const cdp = await page.context().newCDPSession(page);
     await cdp.send("Emulation.setCPUThrottlingRate", { rate: Number(process.env.FPS_RATE || 6) });
     await page.waitForTimeout(10000);
+    // compteurs Chrome sur la fenêtre de mesure (ticket 22b, réserve A2 du 22)
+    await cdp.send("Performance.enable");
+    const metrics = async () => Object.fromEntries((await cdp.send("Performance.getMetrics")).metrics.map((m) => [m.name, m.value]));
+    const m0 = await metrics();
     const frames = await page.evaluate(() => new Promise((resolve) => {
       let n = 0; const t0 = performance.now(); const gaps = []; let last = t0;
       const step = (t) => { n += 1; gaps.push(t - last); last = t; if (t - t0 < 30000) requestAnimationFrame(step); else resolve({ n, ms: t - t0, worst: Math.max(...gaps), long: gaps.filter((g) => g > 50).length }); };
       requestAnimationFrame(step);
     }));
-    results.push({ fps: (frames.n * 1000) / frames.ms, worst_ms: frames.worst, frames_over_50ms: frames.long });
+    const m1 = await metrics();
+    const dm = {};
+    for (const k of ["TaskDuration", "ScriptDuration", "LayoutDuration", "RecalcStyleDuration", "LayoutCount"]) dm[k] = +(m1[k] - m0[k]).toFixed(3);
+    // contrôle d'animation juste après la fenêtre : mutations du terrain (le SVG qui a le plus de cercles) en 1 s ; 0 = page
+    // immobile, mesure à rejeter (biais du banc du 02b2)
+    const mutations = await page.evaluate(() => new Promise((ok) => {
+      const svg = [...document.querySelectorAll("svg")].sort((a, b) => b.querySelectorAll("circle").length - a.querySelectorAll("circle").length)[0];
+      let n = 0; const mo = new MutationObserver((ms) => { n += ms.length; });
+      mo.observe(svg, { subtree: true, attributes: true, childList: true });
+      setTimeout(() => { mo.disconnect(); ok(n); }, 1000);
+    }));
+    results.push({ metrics: dm, mutations_1s: mutations, fps: (frames.n * 1000) / frames.ms, worst_ms: frames.worst, frames_over_50ms: frames.long });
     await page.close();
   }
   await browser.close();
