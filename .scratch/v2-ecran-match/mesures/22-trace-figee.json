@@ -1,0 +1,19 @@
+{
+ "ticket": "v2-ecran-match/22",
+ "generee_le": "27/11/2026",
+ "etat_du_code": "145a292",
+ "commande": "PYTHONPATH=. uv run python .scratch/v2-hauteur-ballon/mesures/02b2-fixture-fps.py <dossier>",
+ "graine": 20260923,
+ "match": "AEK Athens - Al-Ahli SFC",
+ "images": 12293,
+ "score": "6-3",
+ "reproductible": "régénérée deux fois sur 145a292 : empreintes identiques",
+ "sha256": {
+  "clubs.json": "3638373e47fba04acee2d4523ddc082c7416efdde2b6265b04dc2a30ed0e2f30",
+  "lineup-away.json": "c7632d6aaaa0f8f28248677cdf6f0fc5a7dee54eb9a856a86edd03ce1fc599af",
+  "lineup-home.json": "ee3b3298d1926347ceabfe887fb00ab82e736469384b389593aca3abafd5b9ef",
+  "names.json": "c717d3826db28b040ac2af1418dee8748fecb5158d578ca18612923f78aceb7e",
+  "trace.json": "0a7d68e12925bc07dfecc1a6b9fd7caa90cd8bf80e2945aa610dd76cda307c9c"
+ },
+ "note": "La trace dépend du moteur : toute modification du moteur V2 change l'empreinte. Pour comparer des états de l'interface, régénérer la trace une fois et la garder pour toute la série ; noter son empreinte avec les résultats."
+}
