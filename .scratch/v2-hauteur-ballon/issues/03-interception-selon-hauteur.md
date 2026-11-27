@@ -34,3 +34,7 @@ sinon) et à proposer avant le code.
 - [ ] Mesure sur 50 matchs avant/après : interceptions, possession, passes réussies, buts ; chaque écart expliqué
 - [ ] Déterminisme : mêmes empreintes à graine fixée
 - [ ] Suite complète au compte attendu ; V1 inchangée
+
+## Comments
+
+**27/11/2026 (repris du 02c)** : le gardien capte déjà un tir en vol au-dessus de 0,5 m (cas du 02b2 : tir montant capté à 1,01 m, minute 37,135, graine 20260923) par le chemin des tirs (`_keeper_reaches` → `_keeper_save`, portée du 05b et hauteur du 02a2), distinct du contact sur ballon libre où s'applique le filtre de 0,5 m. Exception légitime (mains du gardien), documentée au 02c. À l'implémentation de la tranche « mains » : un seul modèle de portée du gardien pour les deux chemins (tir en vol et ballon libre), et réutiliser `ball.first_drop` / `ball.landed` du 02c pour classer les réceptions, sans revenir à `z > 0 or vz != 0`.

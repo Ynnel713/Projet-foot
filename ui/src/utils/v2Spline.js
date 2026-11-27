@@ -50,6 +50,9 @@ export function playersCut(a, b, half) {
   return !!a.ball.dead !== !!b.ball.dead || crossesHalf(a.minute, b.minute, half);
 }
 
+// Hauteur d'un point de piste ou d'une image : 0 si la trace n'en porte pas (trace d'avant le ticket 02b1).
+const heightOf = (p) => Math.max(0, p?.z ?? 0);
+
 // Index du point de `track` qui ouvre l'intervalle contenant `minute` (points régulièrement espacés, minutes arrondies
 // au 1e-5 près par l'API : l'estimation est corrigée par les voisins).
 export function trackIndex(track, minute) {
@@ -65,33 +68,38 @@ export function trackIndex(track, minute) {
 
 // Position du ballon libre à `minute`, lue dans la piste (un point par pas du moteur). `null` si la piste ne couvre pas
 // l'instant (trace sans piste, ou rejeu en direct en avance sur elle) : l'appelant garde l'interpolation des images.
+// Hauteur `z` (bas du ballon, m ; ticket v2-hauteur-ballon/02b1) : linéaire entre les deux points, jamais par la courbe
+// (qui pourrait passer sous le sol) ; au pas de 0,1 s, l'écart à la vraie parabole reste sous g·dt²/8 ≈ 1,2 cm.
 export function ballFromTrack(track, minute, half) {
   if (!track || track.length < 2 || minute < track[0].minute || minute > track[track.length - 1].minute) return null;
   const i = trackIndex(track, minute);
   const p1 = track[i];
   const p2 = track[Math.min(track.length - 1, i + 1)];
-  if (p2 === p1 || p2.minute <= p1.minute) return { point: p1, x: p1.x, y: p1.y };
+  const z1 = heightOf(p1);
+  if (p2 === p1 || p2.minute <= p1.minute) return { point: p1, x: p1.x, y: p1.y, z: z1 };
   const f = Math.min(1, Math.max(0, (minute - p1.minute) / (p2.minute - p1.minute)));
+  const z = Math.max(0, z1 + (heightOf(p2) - z1) * f);
   if (ballCut(p1, p2, half)) {
     // saut net pour un ballon mort ou la mi-temps ; changement de porteur : ligne droite sur un pas (0,1 s)
-    if (p1.dead || p2.dead || crossesHalf(p1.minute, p2.minute, half)) return { point: p1, x: p1.x, y: p1.y };
-    return { point: p1, x: p1.x + (p2.x - p1.x) * f, y: p1.y + (p2.y - p1.y) * f };
+    if (p1.dead || p2.dead || crossesHalf(p1.minute, p2.minute, half)) return { point: p1, x: p1.x, y: p1.y, z: z1 };
+    return { point: p1, x: p1.x + (p2.x - p1.x) * f, y: p1.y + (p2.y - p1.y) * f, z };
   }
   const p0 = i > 0 && !ballCut(track[i - 1], p1, half) ? track[i - 1] : null;
   const p3 = i + 2 < track.length && !ballCut(p2, track[i + 2], half) ? track[i + 2] : null;
   const c = catmullRom(p0, p1, p2, p3, f);
-  return { point: p1, x: c.x, y: c.y };
+  return { point: p1, x: c.x, y: c.y, z };
 }
 
 // Ballon affiché à `minute` (hors but entre deux images, réglé par `v2GoalBall.js`) : tenu, il suit la position
 // affichée de son porteur (pas de décalage entre le joueur et son ballon) ; libre, la piste fine ; sans piste qui couvre
-// l'instant, `fallback` (interpolation des images, comme avant le 04b) et le porteur `fallbackHolder`.
+// l'instant, `fallback` (interpolation des images, comme avant le 04b) et le porteur `fallbackHolder`. Hauteur `z` :
+// nulle pour un ballon tenu, sinon celle de la piste ou de `fallback` (ticket v2-hauteur-ballon/02b1).
 export function displayBall(track, minute, half, players, fallback, fallbackHolder) {
   const fine = ballFromTrack(track, minute, half);
   const holder = fine ? fine.point.holder : fallbackHolder;
   const carrier = holder ? players.find((p) => p.name === holder) : null;
   const at = carrier ?? fine ?? fallback;
-  return { x: at.x, y: at.y, holder: holder ?? null };
+  return { x: at.x, y: at.y, z: carrier ? 0 : heightOf(at), holder: holder ?? null };
 }
 
 // Positions des joueurs entre les images `a` (index i) et `b`, lissées avec les images voisines. `f` : fraction de

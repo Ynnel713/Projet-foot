@@ -1,7 +1,7 @@
 import dims from "../../utils/pitchGeometry.json";
 import { clock, halfStart } from "../../utils/matchClock";
 import { goalBall } from "../../utils/v2GoalBall";
-import { displayBall, playersBetween } from "../../utils/v2Spline";
+import { ballFromTrack, displayBall, playersBetween } from "../../utils/v2Spline";
 
 // Lecture d'une trace V2 à un instant donné (ticket v2-ecran-match/01 : déplacé depuis routes/V2Match.jsx).
 export const L = dims.pitch_length_m;
@@ -39,8 +39,15 @@ export function interpolatedTick(trace, seconds) {
   const scored = goalBall(a, b, minute, trace.goals, dims.pitch_length_m, dims.pitch_width_m);
   // mode (« sol » / « aérien ») et ballon mort : ceux de l'image de départ (ticket v2-hauteur-ballon/01)
   const state = { mode: a.ball.mode, dead: a.ball.dead };
-  if (scored) return { minute, players, ball: { ...scored, holder: null, ...state } };
-  const linear = { x: mix(a.ball.x, b.ball.x), y: mix(a.ball.y, b.ball.y) };
+  // hauteur entre deux images (ticket v2-hauteur-ballon/02b1) : linéaire, 0 pour une trace qui n'en porte pas
+  const z = Math.max(0, mix(a.ball.z ?? 0, b.ball.z ?? 0));
+  if (scored) {
+    // ballon qui entre dans le but : hauteur lue dans la piste (0,1 s) plutôt qu'entre les images (0,5 s), pour qu'il
+    // passe sous la barre à sa vraie hauteur (ticket v2-hauteur-ballon/02b2, remarque A1 de l'expert au 02b1)
+    const fine = ballFromTrack(trace.ball_track, minute, half);
+    return { minute, players, ball: { ...scored, z: fine ? fine.z : z, holder: null, ...state } };
+  }
+  const linear = { x: mix(a.ball.x, b.ball.x), y: mix(a.ball.y, b.ball.y), z };
   const ball = displayBall(trace.ball_track, minute, half, players, linear, a.ball.holder);
   return { minute, players, ball: { ...ball, ...state } };
 }

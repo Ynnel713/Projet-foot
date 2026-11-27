@@ -1,0 +1,12 @@
+{"label":"base-41e573e","mean_fps":59.937567193604195,"runs":[{"fps":59.947483471955714,"worst_ms":50,"frames_over_50ms":0},{"fps":59.85768801346462,"worst_ms":33.40000000000873,"frames_over_50ms":0},{"fps":60.00753009539227,"worst_ms":16.80000000000291,"frames_over_50ms":0}]}
+{"label":"ticket01-f42dc68","mean_fps":59.91036351866567,"runs":[{"fps":59.798405375856696,"worst_ms":33.39999999999418,"frames_over_50ms":0},{"fps":59.967417703047914,"worst_ms":50,"frames_over_50ms":0},{"fps":59.96526747709238,"worst_ms":33.39999999999418,"frames_over_50ms":0}]}
+{"label":"final-02b2","mean_fps":46.447027706425224,"runs":[{"fps":46.497830101261904,"worst_ms":83.30000000000291,"frames_over_50ms":8},{"fps":46.15928118167759,"worst_ms":133.29999999999927,"frames_over_50ms":2},{"fps":46.683971836336184,"worst_ms":166.6999999999989,"frames_over_50ms":7}]}
+{"label":"avant02b-1923ec0","mean_fps":48.49925716462565,"runs":[{"fps":53.246610443399774,"worst_ms":133.29999999999927,"frames_over_50ms":2},{"fps":46.262811432380566,"worst_ms":66.60000000000036,"frames_over_50ms":3},{"fps":45.988349618096606,"worst_ms":133.29999999999927,"frames_over_50ms":3}]}
+{"label":"avant02b-1923ec0","mean_fps":45.99877336604336,"runs":[{"fps":45.99877336604336,"worst_ms":83.30000000000291,"frames_over_50ms":4}]}
+{"label":"final-02b2","mean_fps":46.20299336768877,"runs":[{"fps":46.20299336768877,"worst_ms":149.89999999999782,"frames_over_50ms":6}]}
+{"label":"avant02b-1923ec0","mean_fps":46.18207123426344,"runs":[{"fps":46.18207123426344,"worst_ms":66.70000000000073,"frames_over_50ms":5}]}
+{"label":"final-02b2","mean_fps":49.21873177623956,"runs":[{"fps":49.21873177623956,"worst_ms":66.79999999999927,"frames_over_50ms":5}]}
+{"label":"avant02b-1923ec0","mean_fps":43.899823135006876,"runs":[{"fps":43.899823135006876,"worst_ms":83.29999999999927,"frames_over_50ms":5}]}
+{"label":"final-02b2","mean_fps":46.82521696239311,"runs":[{"fps":46.82521696239311,"worst_ms":83.40000000000146,"frames_over_50ms":7}]}
+{"label":"avant02b-1923ec0","mean_fps":47.61159070691036,"runs":[{"fps":47.61159070691036,"worst_ms":66.70000000000073,"frames_over_50ms":4}]}
+{"label":"final-02b2","mean_fps":47.11546785826091,"runs":[{"fps":47.11546785826091,"worst_ms":100.09999999999854,"frames_over_50ms":3}]}

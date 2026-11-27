@@ -41,7 +41,7 @@ def test_stepped_quantities_follow_the_engine_step(speed: float) -> None:
         position += velocity.x * DT
         velocity = freinage.step_velocity(velocity, DT)
         elapsed += DT
-        assert freinage.distance_after(speed, elapsed, DT) == pytest.approx(position, rel=1e-9)
+        assert freinage.distance_after(speed, elapsed, DT) == pytest.approx(position, abs=1e-9)  # réserve A3 du 14a2a
         assert velocity.x == pytest.approx(freinage.speed_after(speed, elapsed), rel=1e-9)
     target = 0.5 * position
     t = freinage.stepped_travel_time_s(target, speed, DT)
@@ -151,6 +151,73 @@ def test_shots_use_the_engine_step_travel_time() -> None:
     """Fusion du temps de vol des tirs (recommandation de l'expert du 14a1) : `shooting` lit `travel_time_s` au pas."""
     from v2engine.shooting import _ENGINE_TICK_S, _flight_distance_m, _flight_time_s
     for distance in (5.0, 16.0, 30.0):
-        assert _flight_time_s(distance) == freinage.travel_time_s(distance, 30.0, _ENGINE_TICK_S)
+        assert _flight_time_s(distance) == freinage.travel_time_s(distance, 30.0, _ENGINE_TICK_S, airborne=True)
         assert _flight_distance_m(_flight_time_s(distance)) == pytest.approx(distance, abs=1e-9)
     assert _flight_time_s(1000.0) == math.inf
+
+
+# --- en vol : traînée seule (ticket v2-realisme/14a2b) ---
+
+def test_in_flight_drag_only_without_rolling() -> None:
+    """En vol, pas de roulement : décélération `k·v²` seule (8,46 m/s² à 25 m/s, 2,44 à 10 m/s, calcul analytique),
+    soit exactement celle du sol moins le roulement."""
+    assert freinage.deceleration(25.0, airborne=True) == pytest.approx(8.46, abs=0.01)
+    assert freinage.deceleration(10.0, airborne=True) == pytest.approx(2.44, abs=0.01)
+    for speed in (3.0, 14.9, 15.0, 30.0):
+        assert freinage.deceleration(speed) - freinage.deceleration(speed, airborne=True) == pytest.approx(
+            freinage.ROLLING_DECEL_M_S2)
+
+
+def test_in_flight_values() -> None:
+    """Calcul analytique : de 30 à 15 m/s en vol, 51,2 m ; passe aérienne de 50 m à 23,4 m/s, 3,19 s de vol continu ;
+    le ballon ne s'arrête pas en l'air."""
+    t_half = freinage.travel_time_s(51.2, 30.0, airborne=True)
+    assert freinage.speed_after(30.0, t_half, airborne=True) == pytest.approx(15.0, abs=0.05)
+    assert freinage.travel_time_s(50.0, 23.4, airborne=True) == pytest.approx(3.19, abs=0.02)
+    assert freinage.speed_after(30.0, 60.0, airborne=True) > 0.0
+    for speed in (5.0, 20.0, 30.0):  # distance et temps continus inverses l'un de l'autre
+        t = freinage.travel_time_s(40.0, speed, airborne=True)
+        assert freinage.distance_after(speed, t, airborne=True) == pytest.approx(40.0, abs=1e-9)
+
+
+def test_in_flight_finer_integration_agrees() -> None:
+    """Solution exacte en vol contre une intégration fine (pas de 0,1 ms) de `dv/dt = −k(v)·v²`."""
+    speed, x, h = 28.0, 0.0, 1e-4
+    for _ in range(int(2.0 / h)):
+        x += speed * h
+        speed -= freinage.deceleration(speed, airborne=True) * h
+    assert freinage.speed_after(28.0, 2.0, airborne=True) == pytest.approx(speed, abs=0.01)
+    assert freinage.distance_after(28.0, 2.0, airborne=True) == pytest.approx(x, abs=0.01)
+
+
+@pytest.mark.parametrize("speed", [6.0, 15.0, 23.4, 30.0])
+def test_in_flight_stepped_quantities_follow_the_engine(speed: float) -> None:
+    """Moteur réel (`match._step_ball`, ballon haut, sans joueur) : en vol, la vitesse suit `step_velocity` en vol et la
+    distance au pas `distance_after(..., dt, airborne=True)` (écart absolu < 1e-9 m) ; le temps de trajet au pas en vol la
+    retrouve."""
+    from v2engine.ball_state import BallState
+    from v2engine.match import TICK_SECONDS, _step_ball
+
+    ball = BallState(position=Vec2(0.0, 34.0), velocity=Vec2(speed, 0.0), z=60.0, vz=0.0)  # haut : en vol tout du long
+    elapsed = 0.0
+    for i in range(25):
+        _step_ball(ball, TICK_SECONDS, [], i * TICK_SECONDS)
+        elapsed += TICK_SECONDS
+        assert ball.z > 0.0
+        assert ball.position.x == pytest.approx(freinage.distance_after(speed, elapsed, TICK_SECONDS, airborne=True),
+                                                abs=1e-9)
+        assert ball.velocity.x == pytest.approx(freinage.speed_after(speed, elapsed, airborne=True), rel=1e-12)
+    target = 0.6 * ball.position.x
+    t = freinage.travel_time_s(target, speed, TICK_SECONDS, airborne=True)
+    assert freinage.distance_after(speed, t, TICK_SECONDS, airborne=True) == pytest.approx(target, abs=1e-9)
+
+
+def test_ground_ball_keeps_the_rolling_law_in_the_engine() -> None:
+    """Ballon au sol (`z = 0`, `vz = 0`) : le moteur garde la loi du 14a2a (roulement compris)."""
+    from v2engine.ball_state import BallState
+    from v2engine.match import TICK_SECONDS, _step_ball
+
+    ball = BallState(position=Vec2(0.0, 34.0), velocity=Vec2(20.0, 0.0))
+    _step_ball(ball, TICK_SECONDS, [], 0.0)
+    assert ball.velocity.x == pytest.approx(freinage.speed_after(20.0, TICK_SECONDS))
+    assert ball.velocity.x < freinage.speed_after(20.0, TICK_SECONDS, airborne=True)

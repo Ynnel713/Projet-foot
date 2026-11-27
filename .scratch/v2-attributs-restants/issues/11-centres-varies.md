@@ -27,3 +27,7 @@
 - [ ] En match (50 matchs, graine d'audit) : répartition des types, diversité des buts sur centre mesurée (zone, type, issue)
 - [ ] Rayon des attributs conforme à la carte, sans double comptage
 - [ ] Déterminisme à graine fixée ; suite V2 verte ; V1 inchangée
+
+## Limite d'angle du 14a2b (27/11/2026)
+
+**Limite d'angle de départ héritée du `v2-realisme/14a2b` (note du propriétaire, 27/11/2026)** : La limite de 45° (vz <= vh * tan(45°)) imposée au 14a2b est un garde-fou moteur contre les trajectoires aberrantes. Elle interdit les lobs verticaux. Lors de l'implémentation des gestes spécifiques (Lob au 10a, centres au 11), cette limite devra être contournée. Un geste explicitement identifié comme 'Lob' ou 'Chandelle' devra avoir l'autorisation de dépasser cette limite d'angle pour reproduire la réalité du terrain. Ici : un centre explicitement identifié comme 'Chandelle' (ballon haut dans la surface) doit pouvoir partir au-delà de 45° ; les autres types de centres restent bornés.

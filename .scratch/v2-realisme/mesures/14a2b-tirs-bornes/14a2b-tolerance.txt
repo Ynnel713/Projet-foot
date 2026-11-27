@@ -1,0 +1,39 @@
+indicateurs comparés : 2819
+A contre B hors bruit : 89 (3.2%)
+14a2b contre avant hors bruit : 197 (7.0%)
+secondes par match avant : 156.04474986852003
+secondes par match apres : 162.79153893298005
+
+-- indicateurs choisis --
+
+-- 30 plus gros écarts --
+inf× rendement par tranche de 15 min : Stamina 40-55 : 75-90 : buts personnels pour 90 min : 0 -> 0.1714 (±0)
+inf× rendement par tranche de 15 min : Stamina 40-55 : 45 et plus : tirs pour 90 min : 2.571 -> 0 (±0)
+inf× rendement par tranche de 15 min : Stamina 40-55 : 45 et plus : buts marqués par l'équipe pour 90 min : 0 -> 0.6429 (±0)
+inf× rendement par tranche de 15 min : Stamina 0-40 : 90 et plus : buts encaissés par l'équipe pour 90 min : 9.75 -> 5.143 (±0)
+inf× rendement par tranche de 15 min : Stamina 0-40 : 60-75 : tirs pour 90 min : 1 -> 0 (±0)
+inf× rendement par tranche de 15 min : Stamina 0-40 : 45-60 : buts marqués par l'équipe pour 90 min : 0 -> 1 (±0)
+inf× rendement par tranche de 15 min : Stamina 0-40 : 45 et plus : passes réussies (part) : 0.25 -> 1 (±0)
+inf× rendement par tranche de 15 min : Stamina 0-40 : 45 et plus : contrôles ratés pour 100 passes visées : 0 -> 25 (±0)
+inf× rendement par tranche de 15 min : RB : 90 et plus : tirs pour 90 min : 0.18 -> 0.09 (±0)
+inf× rendement par tranche de 15 min : RB : 60-75 : buts personnels pour 90 min : 0.06 -> 0 (±0)
+inf× rendement par tranche de 15 min : RB : 45 et plus : autres contacts ratés pour 90 min : 0.855 -> 0.225 (±0)
+inf× rendement par tranche de 15 min : RB : 30-45 : buts personnels pour 90 min : 0 -> 0.06 (±0)
+inf× rendement par tranche de 15 min : MC : 45 et plus : tirs pour 90 min : 0 -> 0.1125 (±0)
+inf× rendement par tranche de 15 min : MC : 15-30 : buts personnels pour 90 min : 0 -> 0.06 (±0)
+inf× rendement par tranche de 15 min : LB : 90 et plus : tirs pour 90 min : 0 -> 0.1047 (±0)
+inf× rendement par tranche de 15 min : LB : 75-90 : tirs pour 90 min : 0 -> 0.12 (±0)
+inf× rendement par tranche de 15 min : LB : 60-75 : tirs pour 90 min : 0 -> 0.12 (±0)
+inf× rendement par tranche de 15 min : AD : 90 et plus : buts personnels pour 90 min : 0 -> 0.3086 (±0)
+inf× gardien : ballons avec sortie, état : tir : dévissé (par match) : 0 -> 0.04 (±0)
+inf× gardien : ballons avec sortie, état : tir : contré, ballon à 3 s, sortie de but (part) : 0 -> 0.05556 (±0)
+inf× gardien : ballons avec sortie, état : tir : contré, ballon à 3 s, au gardien (part) : 0 -> 0.05556 (±0)
+inf× gardien : ballons avec sortie, ballon à 3 s, autre arrêt de jeu (part) : 0.005 -> 0 (±0)
+inf× engagement : joueurs de champ à moins de 20 m du ballon, équipe avec ballon (quartiles) : q3 : 6.02 -> 6 (±0)
+inf× engagement : joueurs de champ à moins de 15 m du ballon (quartiles) : q1 : 6.14 -> 6.02 (±0)
+inf× engagement : joueurs de champ à moins de 10 m du ballon, équipe avec ballon (quartiles) : q1 : 1.08 -> 1.12 (±0)
+inf× calibration xG neutre, tireurs moyens, xG [0.5 ; +[ : tirs (effectif) : 1.25 -> 1.1 (±0)
+inf× calibration xG neutre, tireurs moyens, xG [0 ; 0.03[ : taux de buts, IC95 bas : 0 -> 0.003962 (±0)
+inf× calibration xG neutre, tireurs moyens, xG [0 ; 0.03[ : taux de buts : 0 -> 0.02121 (±0)
+5.8× calibration xG neutre, tireurs moyens, xG [0 ; 0.03[ : buts moins xG, par match : -0.01332 -> 0.02451 (±0.00656)
+4.8× réceptions contrôlées, origine : centre par match : 10.3 -> 6.36 (±0.817)

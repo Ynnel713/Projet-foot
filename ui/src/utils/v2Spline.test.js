@@ -79,11 +79,11 @@ test("ballon tenu : il est dessiné sur son porteur affiché", () => {
   const track = [pt(0, 5, 5, { holder: "A" }), pt(1, 6, 5, { holder: "A" })];
   const players = [{ name: "B", x: 0, y: 0 }, { name: "A", x: 5.4, y: 5.1 }];
   const ball = displayBall(track, track[0].minute + 0.5 * STEP_MIN, HALF, players, { x: 0, y: 0 }, null);
-  assert.deepEqual(ball, { x: 5.4, y: 5.1, holder: "A" });
+  assert.deepEqual(ball, { x: 5.4, y: 5.1, z: 0, holder: "A" });
   const free = displayBall([pt(0, 5, 5), pt(1, 6, 5)], track[0].minute + 0.5 * STEP_MIN, HALF, players, { x: 0, y: 0 }, "A");
   assert.ok(close(free.x, 5.5) && close(free.y, 5) && free.holder === null);
   const old = displayBall(undefined, 10, HALF, players, { x: 9, y: 9 }, "A");
-  assert.deepEqual(old, { x: 5.4, y: 5.1, holder: "A" });
+  assert.deepEqual(old, { x: 5.4, y: 5.1, z: 0, holder: "A" });
 });
 
 test("joueurs : courbe par les images, coupure nette à la mi-temps et sur une remise en jeu", () => {
@@ -101,4 +101,31 @@ test("joueurs : courbe par les images, coupure nette à la mi-temps et sur une r
   const half = [tick(44.99, 0), tick(44.995, 1), tick(45.0, 2), tick(45.01, 3)];
   const cut = playersBetween(half, 1, 0.5, HALF)[0];
   assert.ok(close(cut.x, 1.5) && close(cut.y, 2.5));
+});
+
+// Ticket v2-hauteur-ballon/02b1 : hauteur du ballon lue dans la piste.
+test("hauteur : linéaire entre deux points de piste, jamais par la courbe ni sous le sol", () => {
+  const track = [pt(0, 0, 0, { z: 0 }), pt(1, 1, 0, { z: 4 }), pt(2, 2, 0, { z: 6 }), pt(3, 3, 0, { z: 6.5 })];
+  assert.equal(ballFromTrack(track, track[1].minute, HALF).z, 4);
+  assert.ok(close(ballFromTrack(track, track[1].minute + 0.5 * STEP_MIN, HALF).z, 5));
+  assert.ok(close(ballFromTrack(track, track[1].minute + 0.25 * STEP_MIN, HALF).z, 4.5));
+  const landing = [pt(0, 0, 0, { z: 0.4 }), pt(1, 1, 0, { z: 0 })];
+  for (let f = 0; f <= 1; f += 0.125) assert.ok(ballFromTrack(landing, landing[0].minute + f * STEP_MIN, HALF).z >= 0);
+});
+
+test("hauteur : coupure nette sur un ballon mort, ligne droite sur un changement de porteur", () => {
+  const dead = [pt(0, 0, 0, { z: 3 }), pt(1, 30, 0, { z: 0, dead: true })];
+  assert.equal(ballFromTrack(dead, dead[0].minute + 0.5 * STEP_MIN, HALF).z, 3);
+  const kick = [pt(0, 0, 0, { holder: "A", z: 0 }), pt(1, 1, 0, { z: 1 })];
+  assert.ok(close(ballFromTrack(kick, kick[0].minute + 0.5 * STEP_MIN, HALF).z, 0.5));
+});
+
+test("hauteur : nulle pour un ballon tenu, celle de la piste sinon, 0 si la trace n'en porte pas", () => {
+  const players = [{ name: "A", x: 5, y: 5 }];
+  const held = [pt(0, 5, 5, { holder: "A", z: 2 }), pt(1, 5, 5, { holder: "A", z: 2 })];
+  assert.equal(displayBall(held, held[0].minute + 0.5 * STEP_MIN, HALF, players, { x: 0, y: 0 }, null).z, 0);
+  const free = [pt(0, 5, 5, { z: 2 }), pt(1, 6, 5, { z: 3 })];
+  assert.ok(close(displayBall(free, free[0].minute + 0.5 * STEP_MIN, HALF, players, { x: 0, y: 0 }, null).z, 2.5));
+  assert.equal(displayBall([pt(0, 5, 5), pt(1, 6, 5)], 10 + 0.5 * STEP_MIN, HALF, players, { x: 0, y: 0 }, null).z, 0);
+  assert.equal(displayBall(undefined, 10, HALF, players, { x: 9, y: 9, z: 1.5 }, null).z, 1.5);
 });

@@ -91,10 +91,12 @@ def test_a_shot_aimed_into_the_ground_strikes_it_where_the_aimed_line_meets_it()
 
 @pytest.mark.parametrize("distance", [0.5, 6.0, 16.0, 29.7])
 def test_the_travel_time_is_that_of_the_engine_steps(distance) -> None:
-    t = freinage.stepped_travel_time_s(distance, SHOT_SPEED_MPS, TICK_SECONDS)
+    # un tir part vers le haut : en vol, traînée seule (ticket v2-realisme/14a2b)
+    t = freinage.stepped_travel_time_s(distance, SHOT_SPEED_MPS, TICK_SECONDS, airborne=True)
     done, speed, elapsed = 0.0, SHOT_SPEED_MPS, 0.0
     while done + speed * TICK_SECONDS < distance:
-        done, speed, elapsed = done + speed * TICK_SECONDS, freinage.speed_after(speed, TICK_SECONDS), elapsed + TICK_SECONDS
+        done, speed, elapsed = (done + speed * TICK_SECONDS, freinage.speed_after(speed, TICK_SECONDS, airborne=True),
+                                elapsed + TICK_SECONDS)
     assert t == pytest.approx(elapsed + (distance - done) / speed)
 
 
@@ -154,6 +156,16 @@ def test_a_shot_over_the_bar_crosses_with_the_bottom_of_the_ball_above_the_bar(m
     assert scored is None and shots[0].outcome == OVER
     assert shots[0].line_z_m == pytest.approx(GOAL_HEIGHT_M + 0.3, abs=1e-9)
     assert ball.z == 0.0 and ball.vz == 0.0  # sortie de but : ballon posé
+
+
+def test_a_close_shot_over_the_bar_stays_over_without_strike_speed_cap(monkeypatch) -> None:
+    """Vérification V2 de l'expert (14a2b) : tir de 3 m tiré à 3,0 m à la ligne. Les tirs échappent à la borne de vitesse
+    de frappe (décision du propriétaire du 27/11/2026) : bornée à 35 m/s, `vz` passait de 30,5 à 18,0 m/s et le ballon
+    entrait à 1,75 m (but)."""
+    shots, _, heights, scored = _shoot(monkeypatch, 3.0, distance=3.0)
+    assert heights[0][1] > hauteur.max_launch_vz(SHOT_SPEED_MPS)  # au-delà de la borne des passes
+    assert scored is None and shots[0].outcome == OVER
+    assert shots[0].line_z_m == pytest.approx(3.0, abs=1e-9)
 
 
 def test_the_line_height_of_the_engine_is_the_drawn_one(monkeypatch) -> None:
