@@ -6,8 +6,7 @@ ballon va s'arrêter plutôt que sa position actuelle. L'interception elle-même
 
 from __future__ import annotations
 
-import math
-
+from v2engine import freinage
 from v2engine.attributes import success_probability
 from v2engine.condition import effective_rating
 from v2engine.flux import PERCEPTION
@@ -70,24 +69,24 @@ def pass_readers(start: Vec2, velocity: Vec2, aim: Vec2, opponents: list[PlayerS
     return readers
 
 
-def loose_ball_target(player: PlayerState, ball_position: Vec2, ball_velocity: Vec2, friction_per_s: float) -> Vec2:
-    """Point visé sur un ballon libre : entre sa position actuelle et son point d'arrêt (ballon freiné de
-    `friction_per_s` par seconde : il parcourt encore v / -ln(f)), selon Anticipation."""
-    stop = ball_position + ball_velocity * (1.0 / -math.log(friction_per_s))
+def loose_ball_target(player: PlayerState, ball_position: Vec2, ball_velocity: Vec2) -> Vec2:
+    """Point visé sur un ballon libre : entre sa position actuelle et son point d'arrêt (`freinage.stop_position`),
+    selon Anticipation."""
+    stop = freinage.stop_position(ball_position, ball_velocity)
     # borné au terrain : au-delà de la ligne, le ballon est sorti (ticket v2-collectif/29)
     return clamp_to_pitch(ball_position + (stop - ball_position) * loose_ball_lead(effective_rating(player, "Anticipation")))
 
 
-def meeting_point(player: PlayerState, ball_position: Vec2, ball_velocity: Vec2, friction_per_s: float) -> Vec2:
-    """Point de la trajectoire RÉELLE du ballon (freiné de `friction_per_s` par seconde) que `player` peut
+def meeting_point(player: PlayerState, ball_position: Vec2, ball_velocity: Vec2) -> Vec2:
+    """Point de la trajectoire RÉELLE du ballon (freinée, `freinage.position_after`) que `player` peut
     atteindre le plus tôt, à sa vitesse de pointe -- là où un receveur vient couper le ballon (ticket
     v2-socle/01). S'il ne peut l'atteindre nulle part en route, son point d'arrêt."""
-    log_f = math.log(friction_per_s)
     speed = max_speed_mps(effective_rating(player, "Pace"))
+    horizon = freinage.time_to_slow(ball_velocity.length(), 0.0)  # jusqu'à l'arrêt réel (ticket v2-realisme/14a2a)
     t = 0.0
-    while t < 4.0:  # au-delà, le ballon est quasiment arrêté (il a parcouru 87 % de sa course à 0,6/s)
-        point = ball_position + ball_velocity * ((friction_per_s**t - 1.0) / log_f)
+    while t < horizon:
+        point = freinage.position_after(ball_position, ball_velocity, t)
         if player.position.distance_to(point) <= speed * t:
             return clamp_to_pitch(point)  # borné au terrain (ticket v2-collectif/29)
         t += 0.1
-    return clamp_to_pitch(ball_position + ball_velocity * (1.0 / -log_f))
+    return clamp_to_pitch(freinage.stop_position(ball_position, ball_velocity))

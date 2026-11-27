@@ -30,7 +30,8 @@ from v2engine.gardien import (BALL_DISTANCE_M, BISECTOR_TOLERANCE_M, FACE_A_FACE
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, in_penalty_area
 from v2engine.movement import PlayerState
 from v2engine.offside import offside_line
-from v2engine.possession import BALL_FRICTION_PER_S, MAX_PASS_MPS as SHOT_SPEED_MPS, pass_success_probability, pressure
+from v2engine import freinage
+from v2engine.possession import MAX_PASS_MPS as SHOT_SPEED_MPS, pass_success_probability, pressure
 from v2engine.restart import CORNER, GOAL_KICK, KICKOFF
 from v2engine.shooting import (base_chance, keeper_reach_m, neutral_open_chance, shot_pressure, shot_probability,
                                shooting_note)
@@ -73,7 +74,7 @@ CHOICE_AFTER_S = 1.5
 RECOVERY_CLASSES = ((5.0, "0-5 s"), (12.0, "5-12 s"), (15.0, "12-15 s"), (math.inf, "plus de 15 s"))
 LONG_PASS_M = 32.0
 # Taux d'arrêt des tirs cadrés par tranche (ticket v2-realisme/05h) : distance du tir au but, vitesse du ballon quand il
-# passe au gardien (vitesse du tir freinée, `possession.BALL_FRICTION_PER_S`). Tranches de lecture, sans effet sur le jeu.
+# passe au gardien (vitesse du tir freinée, `freinage.speed_after`). Tranches de lecture, sans effet sur le jeu.
 SAVE_DISTANCE_BANDS = ((11.0, "moins de 11 m"), (18.0, "11-18 m"), (25.0, "18-25 m"), (math.inf, "25 m et plus"))
 SAVE_SPEED_BANDS = ((18.0, "moins de 18 m/s"), (24.0, "18-24 m/s"), (math.inf, "24 m/s et plus"))
 # Sortie d'un tir contré par rapport à la direction du tir (ticket v2-realisme/05d) : effleuré (il continue), dévié,
@@ -1152,6 +1153,7 @@ class Collector:
         """Mémoire du receveur sur les adversaires qu'il ne voit pas à la réception (ticket v2-realisme/08b) ; un joueur
         qui les voit tous ne compte pas (âge nul)."""
         for r in receptions:
+            self.count["réceptions contrôlées, origine : " + r.origin] += 1  # ballons aériens (v2-hauteur-ballon/02a1)
             if r.origin in RECEIVED_PASSES:  # passes reçues dans l'axe devant la surface (ticket v2-realisme/10d)
                 self.count["passes reçues"] += 1
                 self.count["passes reçues en zone 14"] += in_zone_14(r.team, r.x, r.y)
@@ -1375,7 +1377,7 @@ class Collector:
             distance = Vec2(event.x, event.y).distance_to(OPPONENT_GOAL[event.team])
             speed = getattr(event, "keeper_speed_mps", None)  # tracée depuis le 05c (réserve A4 du 05h)
             if speed is None:
-                speed = SHOT_SPEED_MPS * BALL_FRICTION_PER_S ** keeper_s
+                speed = freinage.speed_after(SHOT_SPEED_MPS, keeper_s)
             for kind, value, bands in (("distance", distance, SAVE_DISTANCE_BANDS), ("vitesse", speed, SAVE_SPEED_BANDS)):
                 band = next(label for limit, label in bands if value < limit)
                 self.count[f"tirs cadrés jugés, {kind} {band}"] += 1
@@ -1419,6 +1421,10 @@ class Collector:
         stages = ({"contre": goal - xg} if psxg is None else
                   {"contre": open_xg - xg, "exécution": psxg - open_xg, "gardien": goal - psxg})
         band = carry_tranche("xG", xg, XG_BINS)
+        # ventilation des tirs et des buts par tranche d'xG et origine (réserve A3 de l'expert, v2-hauteur-ballon/02a1)
+        origin = getattr(event, "origin", "inconnue")
+        self.count[f"tirs par tranche d'xG : {band} : origine {origin} : tirs"] += 1
+        self.count[f"tirs par tranche d'xG : {band} : origine {origin} : buts"] += goal
         for group in ("tous les tireurs", "tireurs moyens") if average else ("tous les tireurs",):
             for tranche in (band, "toutes tranches"):
                 key = f"{CALIBRATION_PREFIX}{group}, {tranche}"
@@ -1468,6 +1474,12 @@ class Collector:
         by_name = {p.name: p for p in players}
         self.players = players
         self.team_of = {p.name: p.team for p in players}
+        z = getattr(ball, "z", 0.0)  # hauteur du ballon (v2-hauteur-ballon/02a1)
+        self.count["hauteur : ticks"] += 1
+        self.count["hauteur : ticks z négatif"] += z < 0.0
+        self.count["hauteur : ticks mode incohérent"] += (getattr(ball, "mode", "sol") == "aérien") != (z > 0.5)
+        self.count["hauteur : ticks en l'air"] += z > 0.0
+        self.count["hauteur : ticks au-dessus du plafond de vol (24,9 m)"] += z > 24.9
         self._free_ball_chase(ball)  # avant `_possession` : `self.team` est encore l'équipe qui avait le ballon
         if self.pass_open is not None and ball.holder is None and ball.receiver is None:
             # sans contact : sortie ou sifflée avec remise adverse, perdue (18h) ; morte ou remise pour soi, non perdue (18g)

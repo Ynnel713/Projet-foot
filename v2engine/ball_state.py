@@ -96,15 +96,17 @@ class BallState:
     # Tir en vol dont l'issue se lit sur son trajet (tickets v2-realisme/05a et 05b, allumé au 05h).
     shot_flight: ShotFlight | None = None
     # Ballon mort (ticket v2-collectif/29) : dernier joueur à l'avoir touché (il décide de la remise en jeu), remise en
-    # attente tant que le ballon est mort, mode du ballon et distance qu'il doit encore parcourir en l'air avant de
-    # pouvoir être touché (point de chute).
+    # attente tant que le ballon est mort, mode du ballon (« aérien » au-dessus du seuil de hauteur, ticket
+    # v2-hauteur-ballon/02a1).
     last_toucher: str | None = None
     restart: Restart | None = None
     mode: str = "sol"
     # Conduite en cours (ticket v2-collectif/33) : (porteur, point visé), tenue jusqu'à sa décision suivante.
     dribble: tuple[str, Vec2] | None = None
     felt: tuple[str, dict[int, float]] | None = None  # erreur du porteur par direction de conduite (ticket 33)
-    aerial_left_m: float = 0.0
+    # Hauteur du bas du ballon (m) et vitesse verticale (m/s), ticket v2-hauteur-ballon/02a1 (`v2engine/hauteur.py`).
+    z: float = 0.0
+    vz: float = 0.0
     # Faute (ticket v2-collectif/30) : avantage en cours (faute, instant où il est acquis) ; coup franc dont le preneur
     # a le ballon et n'a pas encore joué (il frappe ou passe, jamais ne conduit).
     advantage: tuple[FoulEvent, float] | None = None

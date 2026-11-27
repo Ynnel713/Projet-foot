@@ -11,7 +11,7 @@ from v2engine.ball_state import BallState
 from v2engine.geometry import Vec2
 from v2engine.movement import PlayerState
 from v2engine.occasion import BIG_CHANCE_DANGER, ChanceTracker, reach_probability, situation_danger
-from v2engine.possession import BALL_FRICTION_PER_S
+from v2engine import freinage
 from v2engine.trace import ShotEvent
 
 DT = 0.1
@@ -43,7 +43,7 @@ def test_a_cross_that_beats_everyone_past_an_attacker_at_the_empty_goal_is_a_big
     for i in range(60):
         tracker.update(i * DT / 60.0, ball, players, [], _origin)
         ball.position = ball.position + ball.velocity * DT
-        ball.velocity = ball.velocity * BALL_FRICTION_PER_S ** DT
+        ball.velocity = freinage.step_velocity(ball.velocity, DT)
     tracker.close_all(1.0)
     assert len(chances) == 1
     chance = chances[0]

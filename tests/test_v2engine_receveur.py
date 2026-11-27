@@ -6,7 +6,7 @@ from __future__ import annotations
 from v2engine.anticipation import meeting_point
 from v2engine.ball_state import BallState
 from v2engine.geometry import Vec2
-from v2engine.match import BALL_FRICTION_PER_S, _step_ball, _step_player
+from v2engine.match import _step_ball, _step_player
 from v2engine.movement import PlayerState
 
 
@@ -19,9 +19,23 @@ def _player(name: str, team: str = "home", position: Vec2 = Vec2(50.0, 34.0)) ->
 
 def test_meeting_point_is_on_the_ball_path_and_reachable_in_time() -> None:
     receiver = _player("Receveur", position=Vec2(45.0, 40.0))
-    point = meeting_point(receiver, Vec2(30.0, 34.0), Vec2(15.0, 0.0), BALL_FRICTION_PER_S)
+    point = meeting_point(receiver, Vec2(30.0, 34.0), Vec2(15.0, 0.0))
     assert abs(point.y - 34.0) < 1e-9  # sur la trajectoire réelle du ballon
     assert 30.0 < point.x < 45.0  # il coupe le ballon avant qu'il n'arrive à sa hauteur
+
+
+
+def test_meeting_point_searches_the_whole_path_until_the_ball_stops() -> None:
+    """Ticket v2-realisme/14a2a : la recherche suit la trajectoire jusqu'à l'arrêt réel (plus de 8 s pour un ballon à
+    30 m/s), et non plus 4 s. Receveur au bord du terrain, à 34 m de la ligne : il ne la rejoint qu'après 4 s, avant l'arrêt."""
+    from v2engine import freinage
+    start, velocity = Vec2(10.0, 34.0), Vec2(30.0, 0.0)
+    stop = freinage.stop_position(start, velocity)
+    receiver = _player("Receveur", position=Vec2(85.0, 68.0))
+    point = meeting_point(receiver, start, velocity)
+    assert abs(point.y - 34.0) < 1e-9
+    reached = freinage.position_after(start, velocity, 4.0)
+    assert reached.x < point.x < stop.x - 0.5  # coupé sur la trajectoire, après 4 s et avant le point d'arrêt
 
 
 def test_receiver_runs_to_meet_the_pass_instead_of_his_space() -> None:

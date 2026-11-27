@@ -14,6 +14,8 @@
 
 **Status:** à faire (constantes à proposer avant le code)
 
+**Note du 26/11/2026 (`v2-hauteur-ballon/02a2`)** : réserve A2 du `v2-collectif/28b` (ballon claqué qui franchit la ligne entre les poteaux, environ 39 %, lu comme claqué au-dessus de la barre) **non reprise** au 02a2 : le tir a sa hauteur, pas la parade (il faudrait une loi verticale de la parade, donc des constantes). Un ballon repoussé ou claqué repart du sol (`match._keeper_save`). Renvoyée ici avec la parade (le `03a`, livré, ne la couvre pas).
+
 ## Estimation
 
 | Poste | Durée |

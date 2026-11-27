@@ -137,7 +137,7 @@ from v2engine.bloc import POSITIONING_REDRAW_S, Bloc
 from v2engine.flux import DEFENSE
 from v2engine.geometry import PENALTY_AREA_WIDTH_M, PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2, clamp_to_pitch
 from v2engine.movement import PlayerState, accel_tau_s, max_speed_mps
-from v2engine.possession import BALL_FRICTION_PER_S, MISS_RETRY_S
+from v2engine.possession import MISS_RETRY_S
 from v2engine.situation import DEFENSE_PLACEE, TRANSITION_DEFENSIVE
 
 if TYPE_CHECKING:
@@ -491,7 +491,7 @@ class DefensiveRoles:
             if receiver is None or ball.last_pass_team != receiver.team:
                 self.zones_held = {}  # ballon libre : plus de zone active à garder (10f, réserve A2)
                 return
-            point = clamp_to_pitch(meeting_point(receiver, ball.position, ball.velocity, BALL_FRICTION_PER_S))
+            point = clamp_to_pitch(meeting_point(receiver, ball.position, ball.velocity))
             holder = replace(receiver, position=point, velocity=Vec2(0.0, 0.0))
             # titulaires du passeur gardés : il peut récupérer le ballon (passe coupée, rendue) ; ceux des
             # compensations sont réécrits à chaque tick par `_compensate`, qui lit `previous`

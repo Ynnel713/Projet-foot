@@ -1,0 +1,44 @@
+indicateurs comparés : 2473
+référence A contre B hors bruit (attendu environ 5 % par hasard) : 64 (2.6%)
+après contre A hors bruit : 79 (3.2%)
+Plus gros écarts (en multiples du bruit) :
+  réceptions contrôlées, origine : centre par match : A 2.9 | B 3.32 | après 11.38 | écart +8.48 | bruit ±0.817 | 10.4× le bruit
+  calibration xG neutre, tireurs moyens, xG [0 ; 0.03[ : buts moins xG, par match : A -0.01116 | B -0.01648 | après 0.01014 | écart +0.0213 | bruit ±0.00656 | 3.2× le bruit
+  rendement par tranche de 15 min : AG : 45 et plus : autres contacts ratés pour 90 min : A 0 | B 0.225 | après 1.2 | écart +1.2 | bruit ±0.441 | 2.7× le bruit
+  rendement par tranche de 15 min : MC : 60-75 : tirs pour 90 min : A 0.024 | B 0.084 | après 0.27 | écart +0.246 | bruit ±0.134 | 1.8× le bruit
+  rendement par tranche de 15 min : Stamina 40-55 : 30-45 : buts marqués par l'équipe pour 90 min : A 0.6857 | B 1.5 | après 2.914 | écart +2.229 | bruit ±1.22 | 1.8× le bruit
+  ballon libre : changements de chasseur en moins de 1 s (part des désignations) : A 0.1707 | B 0.163 | après 0.1571 | écart -0.0136 | bruit ±0.00772 | 1.8× le bruit
+  rendement par tranche de 15 min : RB : 45-60 : passes réussies (part) : A 0.863 | B 0.818 | après 0.799 | écart -0.06408 | bruit ±0.0371 | 1.7× le bruit
+  calibration conduite, Dribbling [55 ; 70[ : écart évalué / avec tacle (points) : A -1.715 | B -1.469 | après -1.301 | écart +0.4137 | bruit ±0.249 | 1.7× le bruit
+  calibration conduite, Dribbling [55 ; 70[ : perte avec tacle gagné (part) : A 0.0264 | B 0.02867 | après 0.03072 | écart +0.004319 | bruit ±0.0026 | 1.7× le bruit
+  rendement par tranche de 15 min : BU : 60-75 : contrôles ratés pour 100 passes visées : A 1.066 | B 2.338 | après 2.768 | écart +1.702 | bruit ±1.05 | 1.6× le bruit
+  grosses occasions, issue : danger retombé (part) : A 0.4582 | B 0.4664 | après 0.4836 | écart +0.0254 | bruit ±0.0163 | 1.6× le bruit
+  calibration conduite, Dribbling [55 ; 70[ : écart évalué / tirée (points) : A -1.773 | B -1.558 | après -1.399 | écart +0.3736 | bruit ±0.243 | 1.5× le bruit
+  calibration conduite, Dribbling [55 ; 70[ : perte tirée (part) : A 0.02582 | B 0.02778 | après 0.02974 | écart +0.003918 | bruit ±0.00255 | 1.5× le bruit
+  rendement par tranche de 15 min : Stamina 40-55 : 90 et plus : tirs pour 90 min : A 0.4286 | B 0 | après 1.714 | écart +1.286 | bruit ±0.84 | 1.5× le bruit
+  rendement par tranche de 15 min : MDC : 15-30 : contrôles ratés pour 100 passes visées : A 2.437 | B 2.696 | après 4.914 | écart +2.476 | bruit ±1.64 | 1.5× le bruit
+  rendement par tranche de 15 min : DC : 90 et plus : autres contacts ratés pour 90 min : A 0.4883 | B 0.4862 | après 1.215 | écart +0.7272 | bruit ±0.492 | 1.5× le bruit
+  ballon libre : changements de chasseur par match : A 120.6 | B 116.1 | après 112.5 | écart -8.14 | bruit ±5.65 | 1.4× le bruit
+  rendement par tranche de 15 min : 45-60 : passes réussies (part) : A 0.8284 | B 0.825 | après 0.814 | écart -0.01433 | bruit ±0.0101 | 1.4× le bruit
+  rendement par tranche de 15 min : AD : 45 et plus : buts encaissés par l'équipe pour 90 min : A 0.6 | B 1.59 | après 2.5 | écart +1.9 | bruit ±1.37 | 1.4× le bruit
+  rendement par tranche de 15 min : DC : 60-75 : tacles gagnés (part) : A 0.1485 | B 0.2437 | après 0.3656 | écart +0.2171 | bruit ±0.157 | 1.4× le bruit
+  duels d'épaule gagnés par le plus fort (part, notes différentes) : A 0.6624 | B 0.6818 | après 0.7199 | écart +0.05752 | bruit ±0.0417 | 1.4× le bruit
+  rendement par tranche de 15 min : MDC : 45 et plus : passes réussies (part) : A 0.7873 | B 0.8092 | après 0.8977 | écart +0.1104 | bruit ±0.0805 | 1.4× le bruit
+  calibration xG neutre, tous les tireurs, xG [0.5 ; +[ : étage exécution, par match : A -0.1033 | B 0.03073 | après 0.0286 | écart +0.1319 | bruit ±0.0967 | 1.4× le bruit
+  calibration xG neutre, tous les tireurs, xG [0 ; 0.03[ : taux de buts, IC95 bas : A 0.001085 | B 0.0005972 | après 0.004369 | écart +0.003284 | bruit ±0.00243 | 1.4× le bruit
+  calibration xG neutre, tous les tireurs, xG [0.5 ; +[ : buts moins xG, par match : A -0.1469 | B 0.03397 | après 0.01294 | écart +0.1598 | bruit ±0.12 | 1.3× le bruit
+  rendement par tranche de 15 min : MC : 30-45 : tacles gagnés (part) : A 0.4086 | B 0.1711 | après 0.1972 | écart -0.2114 | bruit ±0.161 | 1.3× le bruit
+  calibration xG neutre, tous les tireurs, xG [0 ; 0.03[ : taux de buts : A 0.005952 | B 0.003322 | après 0.02348 | écart +0.01753 | bruit ±0.0134 | 1.3× le bruit
+  rendement par tranche de 15 min : BU : 0-15 : tirs pour 90 min : A 10 | B 9.42 | après 7.62 | écart -2.38 | bruit ±1.83 | 1.3× le bruit
+  face-à-face : gardien au tir, écart à la profondeur visée (m) : A 1.258 | B 1.412 | après 1.644 | écart +0.3864 | bruit ±0.3 | 1.3× le bruit
+  rendement par tranche de 15 min : LB : 75-90 : autres contacts ratés pour 90 min : A 0.24 | B 0.6 | après 0.84 | écart +0.6 | bruit ±0.47 | 1.3× le bruit
+  rendement par tranche de 15 min : AG : 75-90 : buts personnels pour 90 min : A 0 | B 0.12 | après 0.3 | écart +0.3 | bruit ±0.235 | 1.3× le bruit
+  calibration conduite, gêne [0.1 ; 0.3[ : écart évalué / avec tacle (points) : A -0.4554 | B -0.2181 | après 0.3776 | écart +0.833 | bruit ±0.654 | 1.3× le bruit
+  calibration conduite, gêne [0.1 ; 0.3[ : écart évalué / tirée (points) : A -0.4554 | B -0.2181 | après 0.3776 | écart +0.833 | bruit ±0.654 | 1.3× le bruit
+  calibration passe, chance évaluée [0.1 ; 0.2[ : non perdue (part) : A 0.19 | B 0.1736 | après 0.162 | écart -0.02798 | bruit ±0.022 | 1.3× le bruit
+  rendement par tranche de 15 min : LB : autres contacts ratés pour 90 min, 75-90 - 0-15 : A -0.24 | B 0.42 | après 0.6 | écart +0.84 | bruit ±0.669 | 1.3× le bruit
+  rendement par tranche de 15 min : Stamina 55-70 : 45 et plus : buts personnels pour 90 min : A 0 | B 0.16 | après 0.24 | écart +0.24 | bruit ±0.191 | 1.3× le bruit
+  calibration conduite, gêne [0.1 ; 0.3[ : perte avec tacle gagné (part) : A 0.009933 | B 0.01226 | après 0.01826 | écart +0.008324 | bruit ±0.0067 | 1.2× le bruit
+  calibration conduite, gêne [0.1 ; 0.3[ : perte tirée (part) : A 0.009933 | B 0.01226 | après 0.01826 | écart +0.008324 | bruit ±0.0067 | 1.2× le bruit
+  passes longues réussies (part) : A 0.732 | B 0.7189 | après 0.6978 | écart -0.03416 | bruit ±0.0276 | 1.2× le bruit
+  rendement par tranche de 15 min : Stamina 70 et plus : 90 et plus : autres contacts ratés pour 90 min : A 0.394 | B 0.3329 | après 0.7148 | écart +0.3208 | bruit ±0.261 | 1.2× le bruit

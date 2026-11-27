@@ -14,7 +14,7 @@
 
 **Bloque :** 02b, 03 ; `v2-attributs-restants/10b` (ajouté le 10/11/2026, audit de la roadmap).
 
-**Status:** à faire (constantes à proposer avant le code)
+**Status:** découpé (26/11/2026, décision du propriétaire) en 02a1 (`02a1-vol-et-rebonds.md` : état, vol, rebonds, mode calculé, trace) et 02a2 (`02a2-hauteur-des-tirs.md` : tirs). Ticket chapeau : ne pas l'implémenter tel quel. Une référence à ce ticket sans lettre vaut pour tous ses morceaux. Constantes validées le 26/11/2026 (voir 02a1) ; convention : `z` = hauteur du bas du ballon.
 
 ## Acceptance criteria
 

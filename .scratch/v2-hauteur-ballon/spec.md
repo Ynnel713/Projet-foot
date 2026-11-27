@@ -20,6 +20,8 @@ Décisions prises en séance de questions avec le propriétaire le 03/11/2026 ; 
 | `02` | Hauteur du ballon dans le moteur | `01`, `v2-collectif/28`, `v2-collectif/29` | après `v2-attributs-restants/07`, avant `v2-collectif/32` |
 | `03` | Interception selon la hauteur | `02` | juste après `02`, avant `v2-collectif/32` |
 
+Découpages : `02` en `02a` (moteur) et `02b` (écran), le 04/11/2026 ; `02a` en `02a1` (vol et rebonds) et `02a2` (tirs), le 26/11/2026 ; `02c` (réception « centre » réservée au ballon reçu en l'air) ouvert le 26/11/2026 après la clôture du `02a1`. Convention du 26/11/2026 : `z` est la hauteur du bas du ballon. Le freinage du ballon (traînée quadratique, roulement) reste au ticket `v2-realisme/14a`.
+
 Tickets existants qui en dépendent ensuite : `v2-collectif/32` (passe lobée), `v2-attributs-restants/01` (duel
 aérien, sauts), puis `v2-attributs-restants/11` (centres variés). Tout est livré avant la calibration
 `v2-collectif/22`.

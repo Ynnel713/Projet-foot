@@ -1,0 +1,11 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/tmp/claude-0/-home-user-Projet-foot/acfaa570-45d2-51a4-b5fa-c6e7e570abc7/scratchpad/ref/scripts/bench_series.py", line 293, in <module>
+    main()
+  File "/tmp/claude-0/-home-user-Projet-foot/acfaa570-45d2-51a4-b5fa-c6e7e570abc7/scratchpad/ref/scripts/bench_series.py", line 265, in main
+    for key, s in sorted(compare(before, after).items()):
+                         ^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/claude-0/-home-user-Projet-foot/acfaa570-45d2-51a4-b5fa-c6e7e570abc7/scratchpad/ref/scripts/bench_series.py", line 216, in compare
+    raise ValueError("séries non appariées : les deux séries doivent porter sur les mêmes matchs")
+ValueError: séries non appariées : les deux séries doivent porter sur les mêmes matchs

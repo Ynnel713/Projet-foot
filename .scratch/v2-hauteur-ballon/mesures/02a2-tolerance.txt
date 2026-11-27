@@ -1,0 +1,307 @@
+indicateurs comparés : 2820
+A contre B hors bruit : 91 (3.2%)
+02a2 contre 02a1 hors bruit : 8 (0.3%)
+
+-- issues et tirs --
+appelants simultanés au-dessus du plafond du moteur, part des instants : possession installée : avant 0.04866 | après 0.04847 | écart -0.0001896 | bruit ±0.00259 | 0.1×
+appelants simultanés d'une équipe en possession, moyenne : dernier tiers : avant 1.265 | après 1.257 | écart -0.008987 | bruit ±0.0727 | 0.1×
+appelants simultanés d'une équipe en possession, moyenne : défense placée : avant 0.005147 | après 0.005085 | écart -6.243e-05 | bruit ±0.00051 | 0.1×
+appelants simultanés d'une équipe en possession, moyenne : possession installée : avant 1.596 | après 1.594 | écart -0.001916 | bruit ±0.0292 | 0.1×
+appelants simultanés d'une équipe en possession, moyenne : transition offensive : avant 2.436 | après 2.433 | écart -0.002411 | bruit ±0.0266 | 0.1×
+appelants simultanés d'une équipe, maximum de la série : possession installée : avant 3 | après 3 | écart +0 | bruit ±0 | 0.0×
+appelants simultanés d'une équipe, maximum du match : possession installée : avant 3 | après 3 | écart +0 | bruit ±0 | 0.0×
+appels arrêtés dans une possession, en moins de 1,5 s (part des APPEL qui se terminent par TENIR) : avant 0.402 | après 0.4004 | écart -0.001572 | bruit ±0.00829 | 0.2×
+buts dans la surface (part) : avant 0.8335 | après 0.8488 | écart +0.01529 | bruit ±0.0839 | 0.2×
+buts encaissés dans les 15 s après un renoncement, par match : avant 0.42 | après 0.42 | écart +0 | bruit ±0.221 | 0.0×
+buts par match : avant 4.14 | après 4.36 | écart +0.22 | bruit ±0.88 | 0.3×
+calibration xG après frappe, tirs cadrés jugés : xG après frappe moins buts à l'étalement 0.05 m, par match : avant 0.03363 | après 0.07613 | écart +0.0425 | bruit ±0.124 | 0.3×
+calibration xG après frappe, tirs cadrés jugés : xG après frappe moins buts à l'étalement 0.1 m, par match : avant 0.08522 | après 0.1203 | écart +0.03505 | bruit ±0.173 | 0.2×
+calibration xG après frappe, tirs cadrés jugés : xG après frappe moins buts à l'étalement 0.15 m, par match : avant 0.1292 | après 0.1551 | écart +0.02595 | bruit ±0.211 | 0.1×
+calibration xG après frappe, tirs cadrés jugés : xG après frappe moins buts à l'étalement 0.2 m, par match : avant 0.1743 | après 0.1939 | écart +0.01961 | bruit ±0.241 | 0.1×
+calibration xG après frappe, tirs cadrés jugés : xG après frappe moins buts à l'étalement 0.3 m, par match : avant 0.2686 | après 0.2795 | écart +0.01084 | bruit ±0.286 | 0.0×
+calibration xG après frappe, tirs cadrés jugés : xG après frappe moins buts, par match : avant 0.1292 | après 0.1551 | écart +0.02595 | bruit ±0.211 | 0.1×
+calibration xG neutre, tireurs moyens, xG [0 ; 0.03[ : buts moins xG, par match : avant 0.01014 | après 0.009901 | écart -0.0002353 | bruit ±0.00656 | 0.0×
+calibration xG neutre, tireurs moyens, xG [0 ; 0.03[ : taux de buts : avant 0.01111 | après 0.0119 | écart +0.0007937 | bruit ±0 | inf×
+calibration xG neutre, tireurs moyens, xG [0 ; 0.03[ : taux de buts, IC95 bas : avant 0.00205 | après 0.002196 | écart +0.0001464 | bruit ±0 | inf×
+calibration xG neutre, tireurs moyens, xG [0 ; 0.03[ : taux de buts, IC95 haut : avant 0.7217 | après 0.7215 | écart -0.0002713 | bruit ±0.0464 | 0.0×
+calibration xG neutre, tireurs moyens, xG [0 ; 0.03[ : tirs (effectif) : avant 1.633 | après 1.643 | écart +0.009524 | bruit ±0.43 | 0.0×
+calibration xG neutre, tireurs moyens, xG [0 ; 0.03[ : xG neutre moyen : avant 0.01059 | après 0.01155 | écart +0.0009689 | bruit ±0.0046 | 0.2×
+calibration xG neutre, tireurs moyens, xG [0 ; 0.03[ : étage contre, par match : avant 0.00239 | après 0.001451 | écart -0.0009393 | bruit ±0.00731 | 0.1×
+calibration xG neutre, tireurs moyens, xG [0 ; 0.03[ : étage exécution, par match : avant 0.01733 | après 0.01243 | écart -0.004899 | bruit ±0.0175 | 0.3×
+calibration xG neutre, tireurs moyens, xG [0 ; 0.03[ : étage gardien, par match : avant -0.009585 | après -0.003982 | écart +0.005603 | bruit ±0.0156 | 0.4×
+calibration xG neutre, tireurs moyens, xG [0.03 ; 0.06[ : buts moins xG, par match : avant -0.03112 | après -0.009278 | écart +0.02184 | bruit ±0.0983 | 0.2×
+calibration xG neutre, tireurs moyens, xG [0.03 ; 0.06[ : taux de buts : avant 0.01705 | après 0.02907 | écart +0.01202 | bruit ±0.066 | 0.2×
+calibration xG neutre, tireurs moyens, xG [0.03 ; 0.06[ : taux de buts, IC95 bas : avant 0.003184 | après 0.005457 | écart +0.002272 | bruit ±0.013 | 0.2×
+calibration xG neutre, tireurs moyens, xG [0.03 ; 0.06[ : taux de buts, IC95 haut : avant 0.7096 | après 0.7165 | écart +0.006972 | bruit ±0.0505 | 0.1×
+calibration xG neutre, tireurs moyens, xG [0.03 ; 0.06[ : tirs (effectif) : avant 1.795 | après 1.791 | écart -0.004757 | bruit ±0.437 | 0.0×
+calibration xG neutre, tireurs moyens, xG [0.03 ; 0.06[ : xG neutre moyen : avant 0.04506 | après 0.04518 | écart +0.0001172 | bruit ±0.00295 | 0.0×
+calibration xG neutre, tireurs moyens, xG [0.03 ; 0.06[ : étage contre, par match : avant 0.004331 | après 0.00158 | écart -0.002752 | bruit ±0.0184 | 0.1×
+calibration xG neutre, tireurs moyens, xG [0.03 ; 0.06[ : étage exécution, par match : avant -0.01053 | après 0.003562 | écart +0.01409 | bruit ±0.0881 | 0.2×
+calibration xG neutre, tireurs moyens, xG [0.03 ; 0.06[ : étage gardien, par match : avant -0.02492 | après -0.01442 | écart +0.0105 | bruit ±0.0335 | 0.3×
+calibration xG neutre, tireurs moyens, xG [0.06 ; 0.1[ : buts moins xG, par match : avant 0.004905 | après -0.03344 | écart -0.03834 | bruit ±0.148 | 0.3×
+calibration xG neutre, tireurs moyens, xG [0.06 ; 0.1[ : taux de buts : avant 0.1437 | après 0.1118 | écart -0.03191 | bruit ±0.0759 | 0.4×
+calibration xG neutre, tireurs moyens, xG [0.06 ; 0.1[ : taux de buts, IC95 bas : avant 0.02888 | après 0.02248 | écart -0.006403 | bruit ±0.0147 | 0.4×
+calibration xG neutre, tireurs moyens, xG [0.06 ; 0.1[ : taux de buts, IC95 haut : avant 0.6834 | après 0.6667 | écart -0.01671 | bruit ±0.067 | 0.2×
+calibration xG neutre, tireurs moyens, xG [0.06 ; 0.1[ : tirs (effectif) : avant 2.475 | après 2.553 | écart +0.07763 | bruit ±0.658 | 0.1×
+calibration xG neutre, tireurs moyens, xG [0.06 ; 0.1[ : xG neutre moyen : avant 0.07722 | après 0.07888 | écart +0.001664 | bruit ±0.00348 | 0.5×
+calibration xG neutre, tireurs moyens, xG [0.06 ; 0.1[ : étage contre, par match : avant -0.003606 | après -0.002369 | écart +0.001238 | bruit ±0.0333 | 0.0×
+calibration xG neutre, tireurs moyens, xG [0.06 ; 0.1[ : étage exécution, par match : avant 0.005116 | après -0.01776 | écart -0.02287 | bruit ±0.133 | 0.2×
+calibration xG neutre, tireurs moyens, xG [0.06 ; 0.1[ : étage gardien, par match : avant 0.003396 | après -0.01331 | écart -0.0167 | bruit ±0.0551 | 0.3×
+calibration xG neutre, tireurs moyens, xG [0.1 ; 0.2[ : buts moins xG, par match : avant -0.01011 | après -0.07697 | écart -0.06686 | bruit ±0.268 | 0.2×
+calibration xG neutre, tireurs moyens, xG [0.1 ; 0.2[ : taux de buts : avant 0.1296 | après 0.1209 | écart -0.008746 | bruit ±0.0755 | 0.1×
+calibration xG neutre, tireurs moyens, xG [0.1 ; 0.2[ : taux de buts, IC95 bas : avant 0.02883 | après 0.02581 | écart -0.003023 | bruit ±0.0185 | 0.2×
+calibration xG neutre, tireurs moyens, xG [0.1 ; 0.2[ : taux de buts, IC95 haut : avant 0.656 | après 0.6476 | écart -0.008411 | bruit ±0.0608 | 0.1×
+calibration xG neutre, tireurs moyens, xG [0.1 ; 0.2[ : tirs (effectif) : avant 3.367 | après 3.408 | écart +0.04082 | bruit ±0.924 | 0.0×
+calibration xG neutre, tireurs moyens, xG [0.1 ; 0.2[ : xG neutre moyen : avant 0.141 | après 0.1422 | écart +0.001175 | bruit ±0.00629 | 0.2×
+calibration xG neutre, tireurs moyens, xG [0.1 ; 0.2[ : étage contre, par match : avant -0.03262 | après -0.03331 | écart -0.0006903 | bruit ±0.0635 | 0.0×
+calibration xG neutre, tireurs moyens, xG [0.1 ; 0.2[ : étage exécution, par match : avant 0.06088 | après -0.006985 | écart -0.06786 | bruit ±0.247 | 0.3×
+calibration xG neutre, tireurs moyens, xG [0.1 ; 0.2[ : étage gardien, par match : avant -0.03837 | après -0.03668 | écart +0.001693 | bruit ±0.0667 | 0.0×
+calibration xG neutre, tireurs moyens, xG [0.2 ; 0.35[ : buts moins xG, par match : avant 0.08573 | après 0.05299 | écart -0.03274 | bruit ±0.225 | 0.1×
+calibration xG neutre, tireurs moyens, xG [0.2 ; 0.35[ : taux de buts : avant 0.3311 | après 0.3057 | écart -0.02544 | bruit ±0.169 | 0.2×
+calibration xG neutre, tireurs moyens, xG [0.2 ; 0.35[ : taux de buts, IC95 bas : avant 0.07829 | après 0.07083 | écart -0.007459 | bruit ±0.0443 | 0.2×
+calibration xG neutre, tireurs moyens, xG [0.2 ; 0.35[ : taux de buts, IC95 haut : avant 0.7938 | après 0.7855 | écart -0.008222 | bruit ±0.0635 | 0.1×
+calibration xG neutre, tireurs moyens, xG [0.2 ; 0.35[ : tirs (effectif) : avant 2.211 | après 2.263 | écart +0.05263 | bruit ±0.526 | 0.1×
+calibration xG neutre, tireurs moyens, xG [0.2 ; 0.35[ : xG neutre moyen : avant 0.2613 | après 0.2638 | écart +0.002432 | bruit ±0.0141 | 0.2×
+calibration xG neutre, tireurs moyens, xG [0.2 ; 0.35[ : étage contre, par match : avant -0.02844 | après -0.02793 | écart +0.0005172 | bruit ±0.0531 | 0.0×
+calibration xG neutre, tireurs moyens, xG [0.2 ; 0.35[ : étage exécution, par match : avant 0.08732 | après 0.07033 | écart -0.01699 | bruit ±0.181 | 0.1×
+calibration xG neutre, tireurs moyens, xG [0.2 ; 0.35[ : étage gardien, par match : avant 0.02685 | après 0.01058 | écart -0.01627 | bruit ±0.0539 | 0.3×
+calibration xG neutre, tireurs moyens, xG [0.35 ; 0.5[ : buts moins xG, par match : avant 0.01467 | après 0.02217 | écart +0.007496 | bruit ±0.108 | 0.1×
+calibration xG neutre, tireurs moyens, xG [0.35 ; 0.5[ : taux de buts : avant 0.5 | après 0.5 | écart +0 | bruit ±0.36 | 0.0×
+calibration xG neutre, tireurs moyens, xG [0.35 ; 0.5[ : taux de buts, IC95 bas : avant 0.1033 | après 0.1026 | écart -0.0006725 | bruit ±0.0754 | 0.0×
+calibration xG neutre, tireurs moyens, xG [0.35 ; 0.5[ : taux de buts, IC95 haut : avant 0.8967 | après 0.8974 | écart +0.0006725 | bruit ±0.0928 | 0.0×
+calibration xG neutre, tireurs moyens, xG [0.35 ; 0.5[ : tirs (effectif) : avant 1 | après 1.077 | écart +0.07692 | bruit ±0.413 | 0.2×
+calibration xG neutre, tireurs moyens, xG [0.35 ; 0.5[ : xG neutre moyen : avant 0.4266 | après 0.4237 | écart -0.002899 | bruit ±0.0356 | 0.1×
+calibration xG neutre, tireurs moyens, xG [0.35 ; 0.5[ : étage contre, par match : avant 0 | après 0 | écart +0 | bruit ±0.0374 | 0.0×
+calibration xG neutre, tireurs moyens, xG [0.35 ; 0.5[ : étage exécution, par match : avant 0.004812 | après 0.005383 | écart +0.0005711 | bruit ±0.0898 | 0.0×
+calibration xG neutre, tireurs moyens, xG [0.35 ; 0.5[ : étage gardien, par match : avant 0.009861 | après 0.01679 | écart +0.006925 | bruit ±0.0354 | 0.2×
+calibration xG neutre, tireurs moyens, xG [0.5 ; +[ : buts moins xG, par match : avant 0.01304 | après 0.01304 | écart +0 | bruit ±0.0666 | 0.0×
+calibration xG neutre, tireurs moyens, xG [0.5 ; +[ : taux de buts : avant 0.8333 | après 0.8333 | écart +0 | bruit ±0.547 | 0.0×
+calibration xG neutre, tireurs moyens, xG [0.5 ; +[ : taux de buts, IC95 bas : avant 0.1948 | après 0.1948 | écart +0 | bruit ±0.113 | 0.0×
+calibration xG neutre, tireurs moyens, xG [0.5 ; +[ : taux de buts, IC95 haut : avant 0.9656 | après 0.9656 | écart +0 | bruit ±0.113 | 0.0×
+calibration xG neutre, tireurs moyens, xG [0.5 ; +[ : tirs (effectif) : avant 1.167 | après 1.167 | écart +0 | bruit ±0 | 0.0×
+calibration xG neutre, tireurs moyens, xG [0.5 ; +[ : xG neutre moyen : avant 0.7709 | après 0.7709 | écart +0 | bruit ±0.14 | 0.0×
+calibration xG neutre, tireurs moyens, xG [0.5 ; +[ : étage contre, par match : avant 0 | après 0 | écart +0 | bruit ±0.0426 | 0.0×
+calibration xG neutre, tireurs moyens, xG [0.5 ; +[ : étage exécution, par match : avant 0.002133 | après 0.002133 | écart +0 | bruit ±0.0526 | 0.0×
+calibration xG neutre, tireurs moyens, xG [0.5 ; +[ : étage gardien, par match : avant 0.01091 | après 0.01091 | écart +0 | bruit ±0.0082 | 0.0×
+calibration xG neutre, tous les tireurs, xG [0 ; 0.03[ : buts moins xG, par match : avant 0.03872 | après 0.03804 | écart -0.0006798 | bruit ±0.0528 | 0.0×
+calibration xG neutre, tous les tireurs, xG [0 ; 0.03[ : taux de buts : avant 0.02348 | après 0.02403 | écart +0.0005462 | bruit ±0.0134 | 0.0×
+calibration xG neutre, tous les tireurs, xG [0 ; 0.03[ : taux de buts, IC95 bas : avant 0.004369 | après 0.004471 | écart +0.0001016 | bruit ±0.00243 | 0.0×
+calibration xG neutre, tous les tireurs, xG [0 ; 0.03[ : taux de buts, IC95 haut : avant 0.6399 | après 0.6474 | écart +0.00749 | bruit ±0.0543 | 0.1×
+calibration xG neutre, tous les tireurs, xG [0 ; 0.03[ : tirs (effectif) : avant 2.545 | après 2.512 | écart -0.03383 | bruit ±0.627 | 0.1×
+calibration xG neutre, tous les tireurs, xG [0 ; 0.03[ : xG neutre moyen : avant 0.009682 | après 0.01027 | écart +0.0005871 | bruit ±0.00344 | 0.2×
+calibration xG neutre, tous les tireurs, xG [0 ; 0.03[ : étage contre, par match : avant 0.002272 | après 0.001579 | écart -0.0006929 | bruit ±0.0128 | 0.1×
+calibration xG neutre, tous les tireurs, xG [0 ; 0.03[ : étage exécution, par match : avant 0.05121 | après 0.04562 | écart -0.00559 | bruit ±0.0466 | 0.1×
+calibration xG neutre, tous les tireurs, xG [0 ; 0.03[ : étage gardien, par match : avant -0.01476 | après -0.009159 | écart +0.005603 | bruit ±0.0225 | 0.2×
+calibration xG neutre, tous les tireurs, xG [0.03 ; 0.06[ : buts moins xG, par match : avant -0.0641 | après -0.01698 | écart +0.04712 | bruit ±0.146 | 0.3×
+calibration xG neutre, tous les tireurs, xG [0.03 ; 0.06[ : taux de buts : avant 0.01706 | après 0.02867 | écart +0.01161 | bruit ±0.0489 | 0.2×
+calibration xG neutre, tous les tireurs, xG [0.03 ; 0.06[ : taux de buts, IC95 bas : avant 0.00372 | après 0.005871 | écart +0.002152 | bruit ±0.00988 | 0.2×
+calibration xG neutre, tous les tireurs, xG [0.03 ; 0.06[ : taux de buts, IC95 haut : avant 0.5512 | après 0.5614 | écart +0.01022 | bruit ±0.0552 | 0.2×
+calibration xG neutre, tous les tireurs, xG [0.03 ; 0.06[ : tirs (effectif) : avant 3.688 | après 3.696 | écart +0.008152 | bruit ±0.614 | 0.0×
+calibration xG neutre, tous les tireurs, xG [0.03 ; 0.06[ : xG neutre moyen : avant 0.04615 | après 0.04585 | écart -0.0002934 | bruit ±0.00242 | 0.1×
+calibration xG neutre, tous les tireurs, xG [0.03 ; 0.06[ : étage contre, par match : avant 0.006661 | après 0.00578 | écart -0.0008813 | bruit ±0.0267 | 0.0×
+calibration xG neutre, tous les tireurs, xG [0.03 ; 0.06[ : étage exécution, par match : avant -0.03062 | après 0.01105 | écart +0.04167 | bruit ±0.127 | 0.3×
+calibration xG neutre, tous les tireurs, xG [0.03 ; 0.06[ : étage gardien, par match : avant -0.04014 | après -0.03381 | écart +0.006328 | bruit ±0.0455 | 0.1×
+calibration xG neutre, tous les tireurs, xG [0.06 ; 0.1[ : buts moins xG, par match : avant 0.06732 | après 0.02653 | écart -0.04079 | bruit ±0.288 | 0.1×
+calibration xG neutre, tous les tireurs, xG [0.06 ; 0.1[ : taux de buts : avant 0.08745 | après 0.07745 | écart -0.01 | bruit ±0.0504 | 0.2×
+calibration xG neutre, tous les tireurs, xG [0.06 ; 0.1[ : taux de buts, IC95 bas : avant 0.01852 | après 0.01712 | écart -0.001394 | bruit ±0.0146 | 0.1×
+calibration xG neutre, tous les tireurs, xG [0.06 ; 0.1[ : taux de buts, IC95 haut : avant 0.5294 | après 0.5233 | écart -0.006053 | bruit ±0.0583 | 0.1×
+calibration xG neutre, tous les tireurs, xG [0.06 ; 0.1[ : tirs (effectif) : avant 5.38 | après 5.4 | écart +0.02 | bruit ±0.922 | 0.0×
+calibration xG neutre, tous les tireurs, xG [0.06 ; 0.1[ : xG neutre moyen : avant 0.08051 | après 0.08066 | écart +0.0001478 | bruit ±0.00217 | 0.1×
+calibration xG neutre, tous les tireurs, xG [0.06 ; 0.1[ : étage contre, par match : avant -0.02157 | après -0.01883 | écart +0.002742 | bruit ±0.0562 | 0.0×
+calibration xG neutre, tous les tireurs, xG [0.06 ; 0.1[ : étage exécution, par match : avant 0.07913 | après 0.05635 | écart -0.02278 | bruit ±0.243 | 0.1×
+calibration xG neutre, tous les tireurs, xG [0.06 ; 0.1[ : étage gardien, par match : avant 0.009762 | après -0.01099 | écart -0.02076 | bruit ±0.0857 | 0.2×
+calibration xG neutre, tous les tireurs, xG [0.1 ; 0.2[ : buts moins xG, par match : avant -0.1201 | après -0.07282 | écart +0.04725 | bruit ±0.479 | 0.1×
+calibration xG neutre, tous les tireurs, xG [0.1 ; 0.2[ : taux de buts : avant 0.1203 | après 0.1291 | écart +0.008799 | bruit ±0.0451 | 0.2×
+calibration xG neutre, tous les tireurs, xG [0.1 ; 0.2[ : taux de buts, IC95 bas : avant 0.03388 | après 0.03691 | écart +0.003033 | bruit ±0.0199 | 0.2×
+calibration xG neutre, tous les tireurs, xG [0.1 ; 0.2[ : taux de buts, IC95 haut : avant 0.4363 | après 0.4424 | écart +0.00604 | bruit ±0.05 | 0.1×
+calibration xG neutre, tous les tireurs, xG [0.1 ; 0.2[ : tirs (effectif) : avant 10.12 | après 10.22 | écart +0.1 | bruit ±1.34 | 0.1×
+calibration xG neutre, tous les tireurs, xG [0.1 ; 0.2[ : xG neutre moyen : avant 0.144 | après 0.1441 | écart +2.723e-05 | bruit ±0.003 | 0.0×
+calibration xG neutre, tous les tireurs, xG [0.1 ; 0.2[ : étage contre, par match : avant -0.02463 | après -0.01171 | écart +0.01292 | bruit ±0.128 | 0.1×
+calibration xG neutre, tous les tireurs, xG [0.1 ; 0.2[ : étage exécution, par match : avant 0.005374 | après 0.04451 | écart +0.03913 | bruit ±0.412 | 0.1×
+calibration xG neutre, tous les tireurs, xG [0.1 ; 0.2[ : étage gardien, par match : avant -0.1008 | après -0.1056 | écart -0.004799 | bruit ±0.129 | 0.0×
+calibration xG neutre, tous les tireurs, xG [0.2 ; 0.35[ : buts moins xG, par match : avant 0.04868 | après 0.09331 | écart +0.04463 | bruit ±0.401 | 0.1×
+calibration xG neutre, tous les tireurs, xG [0.2 ; 0.35[ : taux de buts : avant 0.2525 | après 0.2566 | écart +0.004074 | bruit ±0.0948 | 0.0×
+calibration xG neutre, tous les tireurs, xG [0.2 ; 0.35[ : taux de buts, IC95 bas : avant 0.08178 | après 0.08381 | écart +0.002034 | bruit ±0.035 | 0.1×
+calibration xG neutre, tous les tireurs, xG [0.2 ; 0.35[ : taux de buts, IC95 haut : avant 0.6626 | après 0.6613 | écart -0.00136 | bruit ±0.0621 | 0.0×
+calibration xG neutre, tous les tireurs, xG [0.2 ; 0.35[ : tirs (effectif) : avant 5.02 | après 5.347 | écart +0.3265 | bruit ±0.92 | 0.4×
+calibration xG neutre, tous les tireurs, xG [0.2 ; 0.35[ : xG neutre moyen : avant 0.2538 | après 0.2566 | écart +0.002773 | bruit ±0.00911 | 0.3×
+calibration xG neutre, tous les tireurs, xG [0.2 ; 0.35[ : étage contre, par match : avant -0.08753 | après -0.08022 | écart +0.007307 | bruit ±0.096 | 0.1×
+calibration xG neutre, tous les tireurs, xG [0.2 ; 0.35[ : étage exécution, par match : avant 0.164 | après 0.2063 | écart +0.04226 | bruit ±0.34 | 0.1×
+calibration xG neutre, tous les tireurs, xG [0.2 ; 0.35[ : étage gardien, par match : avant -0.02783 | après -0.03277 | écart -0.004943 | bruit ±0.109 | 0.0×
+calibration xG neutre, tous les tireurs, xG [0.35 ; 0.5[ : buts moins xG, par match : avant -0.02307 | après -0.02725 | écart -0.004187 | bruit ±0.212 | 0.0×
+calibration xG neutre, tous les tireurs, xG [0.35 ; 0.5[ : taux de buts : avant 0.4 | après 0.3889 | écart -0.01111 | bruit ±0.225 | 0.0×
+calibration xG neutre, tous les tireurs, xG [0.35 ; 0.5[ : taux de buts, IC95 bas : avant 0.08735 | après 0.08438 | écart -0.002969 | bruit ±0.0676 | 0.0×
+calibration xG neutre, tous les tireurs, xG [0.35 ; 0.5[ : taux de buts, IC95 haut : avant 0.8605 | après 0.8597 | écart -0.0008156 | bruit ±0.0676 | 0.0×
+calibration xG neutre, tous les tireurs, xG [0.35 ; 0.5[ : tirs (effectif) : avant 1.24 | après 1.259 | écart +0.01926 | bruit ±0.443 | 0.0×
+calibration xG neutre, tous les tireurs, xG [0.35 ; 0.5[ : xG neutre moyen : avant 0.4219 | après 0.4212 | écart -0.0006443 | bruit ±0.0224 | 0.0×
+calibration xG neutre, tous les tireurs, xG [0.35 ; 0.5[ : étage contre, par match : avant -0.01408 | après -0.0217 | écart -0.007625 | bruit ±0.0743 | 0.1×
+calibration xG neutre, tous les tireurs, xG [0.35 ; 0.5[ : étage exécution, par match : avant -0.02488 | après -0.02326 | écart +0.001613 | bruit ±0.163 | 0.0×
+calibration xG neutre, tous les tireurs, xG [0.35 ; 0.5[ : étage gardien, par match : avant 0.01589 | après 0.01771 | écart +0.001825 | bruit ±0.112 | 0.0×
+calibration xG neutre, tous les tireurs, xG [0.5 ; +[ : buts moins xG, par match : avant 0.01294 | après -0.03041 | écart -0.04335 | bruit ±0.12 | 0.4×
+calibration xG neutre, tous les tireurs, xG [0.5 ; +[ : taux de buts : avant 0.75 | après 0.7029 | écart -0.0471 | bruit ±0.259 | 0.2×
+calibration xG neutre, tous les tireurs, xG [0.5 ; +[ : taux de buts, IC95 bas : avant 0.1926 | après 0.1827 | écart -0.009955 | bruit ±0.0613 | 0.2×
+calibration xG neutre, tous les tireurs, xG [0.5 ; +[ : taux de buts, IC95 haut : avant 0.9384 | après 0.9281 | écart -0.01032 | bruit ±0.0563 | 0.2×
+calibration xG neutre, tous les tireurs, xG [0.5 ; +[ : tirs (effectif) : avant 1.52 | après 1.739 | écart +0.2191 | bruit ±0.274 | 0.8×
+calibration xG neutre, tous les tireurs, xG [0.5 ; +[ : xG neutre moyen : avant 0.7215 | après 0.7185 | écart -0.002995 | bruit ±0.0904 | 0.0×
+calibration xG neutre, tous les tireurs, xG [0.5 ; +[ : étage contre, par match : avant -0.04435 | après -0.0577 | écart -0.01335 | bruit ±0.0731 | 0.2×
+calibration xG neutre, tous les tireurs, xG [0.5 ; +[ : étage exécution, par match : avant 0.0286 | après 0.007805 | écart -0.0208 | bruit ±0.0967 | 0.2×
+calibration xG neutre, tous les tireurs, xG [0.5 ; +[ : étage gardien, par match : avant 0.02869 | après 0.01949 | écart -0.009206 | bruit ±0.0419 | 0.2×
+conduite : part des pertes par dépossession : avant 0.5967 | après 0.5981 | écart +0.00142 | bruit ±0.0349 | 0.0×
+conduite : pertes par dépossession par match : avant 20.16 | après 20.1 | écart -0.06 | bruit ±2.04 | 0.0×
+conversion des tirs (part) : avant 0.146 | après 0.1526 | écart +0.006522 | bruit ±0.028 | 0.2×
+corners joués long (part) : avant 0.8793 | après 0.8755 | écart -0.003857 | bruit ±0.0722 | 0.1×
+corners par match : avant 3.82 | après 3.72 | écart -0.1 | bruit ±0.88 | 0.1×
+décomposition du tir, Composure sous pression [40 ; 55[ : occasion, xG neutre moyen par tir : avant 0.06255 | après 0.0634 | écart +0.0008504 | bruit ±0.0481 | 0.0×
+décomposition du tir, Composure sous pression [40 ; 55[ : tirs (effectif) : avant 1.929 | après 1.846 | écart -0.08242 | bruit ±0.496 | 0.2×
+décomposition du tir, Composure sous pression [40 ; 55[ : tirs non contrés (effectif) : avant 1.5 | après 1.462 | écart -0.03846 | bruit ±0.556 | 0.1×
+décomposition du tir, Composure sous pression [55 ; 70[ : occasion, xG neutre moyen par tir : avant 0.1228 | après 0.1288 | écart +0.006054 | bruit ±0.0137 | 0.4×
+décomposition du tir, Composure sous pression [55 ; 70[ : tirs (effectif) : avant 13.34 | après 13.56 | écart +0.22 | bruit ±3.01 | 0.1×
+décomposition du tir, Composure sous pression [55 ; 70[ : tirs non contrés (effectif) : avant 10.02 | après 10.18 | écart +0.16 | bruit ±2.13 | 0.1×
+décomposition du tir, Composure sous pression [70 ; +[ : occasion, xG neutre moyen par tir : avant 0.1399 | après 0.1446 | écart +0.004686 | bruit ±0.0172 | 0.3×
+décomposition du tir, Composure sous pression [70 ; +[ : tirs (effectif) : avant 11.81 | après 11.88 | écart +0.06977 | bruit ±2.88 | 0.0×
+décomposition du tir, Composure sous pression [70 ; +[ : tirs non contrés (effectif) : avant 8.721 | après 8.93 | écart +0.2093 | bruit ±2.16 | 0.1×
+décomposition du tir, Finishing (surface) [0 ; 40[ : occasion, xG neutre moyen par tir : avant 0.126 | après 0.1387 | écart +0.01262 | bruit ±0.0907 | 0.1×
+décomposition du tir, Finishing (surface) [0 ; 40[ : tirs (effectif) : avant 1.636 | après 1.7 | écart +0.06364 | bruit ±1.5 | 0.0×
+décomposition du tir, Finishing (surface) [0 ; 40[ : tirs non contrés (effectif) : avant 1.455 | après 1.5 | écart +0.04545 | bruit ±1.33 | 0.0×
+décomposition du tir, Finishing (surface) [40 ; 55[ : occasion, xG neutre moyen par tir : avant 0.1407 | après 0.15 | écart +0.009321 | bruit ±0.0428 | 0.2×
+décomposition du tir, Finishing (surface) [40 ; 55[ : tirs (effectif) : avant 2.708 | après 3 | écart +0.2917 | bruit ±1.04 | 0.3×
+décomposition du tir, Finishing (surface) [40 ; 55[ : tirs non contrés (effectif) : avant 2.083 | après 2.435 | écart +0.3514 | bruit ±0.758 | 0.5×
+décomposition du tir, Finishing (surface) [55 ; 70[ : occasion, xG neutre moyen par tir : avant 0.1556 | après 0.1588 | écart +0.003188 | bruit ±0.0178 | 0.2×
+décomposition du tir, Finishing (surface) [55 ; 70[ : tirs (effectif) : avant 7.333 | après 7.122 | écart -0.2109 | bruit ±1.41 | 0.1×
+décomposition du tir, Finishing (surface) [55 ; 70[ : tirs non contrés (effectif) : avant 5.208 | après 5.041 | écart -0.1675 | bruit ±1.12 | 0.1×
+décomposition du tir, Finishing (surface) [70 ; +[ : occasion, xG neutre moyen par tir : avant 0.1766 | après 0.178 | écart +0.001354 | bruit ±0.0126 | 0.1×
+décomposition du tir, Finishing (surface) [70 ; +[ : tirs (effectif) : avant 13.74 | après 13.96 | écart +0.22 | bruit ±2.06 | 0.1×
+décomposition du tir, Finishing (surface) [70 ; +[ : tirs non contrés (effectif) : avant 10.18 | après 10.46 | écart +0.28 | bruit ±1.63 | 0.2×
+décomposition du tir, Long Shots (hors surface) [40 ; 55[ : occasion, xG neutre moyen par tir : avant 0.07047 | après 0.068 | écart -0.002468 | bruit ±0.0349 | 0.1×
+décomposition du tir, Long Shots (hors surface) [40 ; 55[ : tirs (effectif) : avant 1.793 | après 1.733 | écart -0.05977 | bruit ±0.528 | 0.1×
+décomposition du tir, Long Shots (hors surface) [40 ; 55[ : tirs non contrés (effectif) : avant 1.517 | après 1.467 | écart -0.05057 | bruit ±0.562 | 0.1×
+décomposition du tir, Long Shots (hors surface) [55 ; 70[ : occasion, xG neutre moyen par tir : avant 0.08151 | après 0.09366 | écart +0.01214 | bruit ±0.0195 | 0.6×
+décomposition du tir, Long Shots (hors surface) [55 ; 70[ : tirs (effectif) : avant 3 | après 3.021 | écart +0.02083 | bruit ±0.855 | 0.0×
+décomposition du tir, Long Shots (hors surface) [55 ; 70[ : tirs non contrés (effectif) : avant 2.766 | après 2.771 | écart +0.004876 | bruit ±0.795 | 0.0×
+décomposition du tir, Long Shots (hors surface) [70 ; +[ : occasion, xG neutre moyen par tir : avant 0.07125 | après 0.07882 | écart +0.007573 | bruit ±0.0218 | 0.3×
+décomposition du tir, Long Shots (hors surface) [70 ; +[ : tirs (effectif) : avant 2.067 | après 2.138 | écart +0.07126 | bruit ±0.716 | 0.1×
+décomposition du tir, Long Shots (hors surface) [70 ; +[ : tirs non contrés (effectif) : avant 1.767 | après 1.862 | écart +0.0954 | bruit ±0.732 | 0.1×
+décomposition du tir, Reflexes du gardien [55 ; 70[ : occasion, xG neutre moyen par tir : avant 0.1549 | après 0.1603 | écart +0.005425 | bruit ±0.0163 | 0.3×
+décomposition du tir, Reflexes du gardien [55 ; 70[ : tirs (effectif) : avant 17.57 | après 18.17 | écart +0.6087 | bruit ±3.4 | 0.2×
+décomposition du tir, Reflexes du gardien [55 ; 70[ : tirs non contrés (effectif) : avant 14.13 | après 14.39 | écart +0.2609 | bruit ±2.95 | 0.1×
+décomposition du tir, Reflexes du gardien [70 ; +[ : occasion, xG neutre moyen par tir : avant 0.1435 | après 0.1476 | écart +0.004152 | bruit ±0.0131 | 0.3×
+décomposition du tir, Reflexes du gardien [70 ; +[ : tirs (effectif) : avant 19.5 | après 19.54 | écart +0.04 | bruit ±3.98 | 0.0×
+décomposition du tir, Reflexes du gardien [70 ; +[ : tirs non contrés (effectif) : avant 14.56 | après 14.86 | écart +0.3 | bruit ±3.06 | 0.1×
+décomposition du tir, tous : occasion, xG neutre moyen par tir : avant 0.1499 | après 0.1533 | écart +0.003429 | bruit ±0.00929 | 0.4×
+décomposition du tir, tous : tirs (effectif) : avant 27.58 | après 27.9 | écart +0.32 | bruit ±2.45 | 0.1×
+décomposition du tir, tous : tirs non contrés (effectif) : avant 21.06 | après 21.48 | écart +0.42 | bruit ±2 | 0.2×
+engagement : distance au coéquipier le plus proche, équipe sans possession (m) : avant 12.9 | après 12.86 | écart -0.03397 | bruit ±0.214 | 0.2×
+engagement : joueurs de champ à moins de 10 m du ballon, équipe sans possession : avant 0.8141 | après 0.8197 | écart +0.005631 | bruit ±0.0501 | 0.1×
+engagement : joueurs de champ à moins de 10 m du ballon, équipe sans possession (quartiles) : mediane : avant 0.98 | après 0.99 | écart +0.01 | bruit ±0.0901 | 0.1×
+engagement : joueurs de champ à moins de 10 m du ballon, équipe sans possession (quartiles) : n : avant 35.88 | après 37.44 | écart +1.56 | bruit ±7.73 | 0.2×
+engagement : joueurs de champ à moins de 10 m du ballon, équipe sans possession (quartiles) : q1 : avant 0.05 | après 0.05 | écart +0 | bruit ±0.0661 | 0.0×
+engagement : joueurs de champ à moins de 10 m du ballon, équipe sans possession (quartiles) : q3 : avant 1.235 | après 1.245 | écart +0.01 | bruit ±0.121 | 0.1×
+engagement : joueurs de champ à moins de 15 m du ballon, équipe sans possession : avant 1.375 | après 1.378 | écart +0.002582 | bruit ±0.0854 | 0.0×
+engagement : joueurs de champ à moins de 15 m du ballon, équipe sans possession (quartiles) : mediane : avant 1.16 | après 1.14 | écart -0.02 | bruit ±0.0945 | 0.2×
+engagement : joueurs de champ à moins de 15 m du ballon, équipe sans possession (quartiles) : n : avant 35.88 | après 37.44 | écart +1.56 | bruit ±7.73 | 0.2×
+engagement : joueurs de champ à moins de 15 m du ballon, équipe sans possession (quartiles) : q1 : avant 0.45 | après 0.425 | écart -0.025 | bruit ±0.179 | 0.1×
+engagement : joueurs de champ à moins de 15 m du ballon, équipe sans possession (quartiles) : q3 : avant 2.085 | après 2.07 | écart -0.015 | bruit ±0.172 | 0.1×
+engagement : joueurs de champ à moins de 20 m du ballon, équipe sans possession : avant 2.225 | après 2.23 | écart +0.00541 | bruit ±0.11 | 0.0×
+engagement : joueurs de champ à moins de 20 m du ballon, équipe sans possession (quartiles) : mediane : avant 1.95 | après 1.96 | écart +0.01 | bruit ±0.114 | 0.1×
+engagement : joueurs de champ à moins de 20 m du ballon, équipe sans possession (quartiles) : n : avant 35.88 | après 37.44 | écart +1.56 | bruit ±7.73 | 0.2×
+engagement : joueurs de champ à moins de 20 m du ballon, équipe sans possession (quartiles) : q1 : avant 1.015 | après 1.015 | écart +0 | bruit ±0.165 | 0.0×
+engagement : joueurs de champ à moins de 20 m du ballon, équipe sans possession (quartiles) : q3 : avant 3.25 | après 3.27 | écart +0.02 | bruit ±0.279 | 0.1×
+face-à-face : tirs par match : avant 10.48 | après 10.64 | écart +0.16 | bruit ±1.47 | 0.1×
+gardien par écart à la portée, écart (m) [-0.15 ; 0[ : taux de buts : avant 0 | après 0 | écart +0 | bruit ±0 | 0.0×
+gardien par écart à la portée, écart (m) [-0.15 ; 0[ : tirs (effectif) : avant 1.467 | après 1.484 | écart +0.0172 | bruit ±0.358 | 0.0×
+gardien par écart à la portée, écart (m) [-0.15 ; 0[ : xG après frappe moins buts, par match : avant 0.3303 | après 0.3525 | écart +0.02218 | bruit ±0.128 | 0.2×
+gardien par écart à la portée, écart (m) [-0.15 ; 0[ : xG après frappe moyen : avant 0.3721 | après 0.3805 | écart +0.008445 | bruit ±0.0351 | 0.2×
+gardien par écart à la portée, écart (m) [-0.3 ; -0.15[ : taux de buts : avant 0 | après 0 | écart +0 | bruit ±0 | 0.0×
+gardien par écart à la portée, écart (m) [-0.3 ; -0.15[ : tirs (effectif) : avant 1.478 | après 1.478 | écart +0 | bruit ±0.409 | 0.0×
+gardien par écart à la portée, écart (m) [-0.3 ; -0.15[ : xG après frappe moins buts, par match : avant 0.1266 | après 0.1263 | écart -0.0002725 | bruit ±0.0599 | 0.0×
+gardien par écart à la portée, écart (m) [-0.3 ; -0.15[ : xG après frappe moyen : avant 0.1857 | après 0.1854 | écart -0.0002962 | bruit ±0.0257 | 0.0×
+gardien par écart à la portée, écart (m) [-inf ; -0.3[ : taux de buts : avant 0 | après 0 | écart +0 | bruit ±0 | 0.0×
+gardien par écart à la portée, écart (m) [-inf ; -0.3[ : tirs (effectif) : avant 5.12 | après 5.12 | écart +0 | bruit ±0.879 | 0.0×
+gardien par écart à la portée, écart (m) [-inf ; -0.3[ : xG après frappe moins buts, par match : avant 0.08469 | après 0.08773 | écart +0.003042 | bruit ±0.0258 | 0.1×
+gardien par écart à la portée, écart (m) [-inf ; -0.3[ : xG après frappe moyen : avant 0.01651 | après 0.01738 | écart +0.0008703 | bruit ±0.00484 | 0.2×
+gardien par écart à la portée, écart (m) [0 ; 0.15[ : taux de buts : avant 1 | après 1 | écart +0 | bruit ±0 | 0.0×
+gardien par écart à la portée, écart (m) [0 ; 0.15[ : tirs (effectif) : avant 1.273 | après 1.182 | écart -0.09091 | bruit ±0.267 | 0.3×
+gardien par écart à la portée, écart (m) [0 ; 0.15[ : xG après frappe moins buts, par match : avant -0.2274 | après -0.2065 | écart +0.0209 | bruit ±0.117 | 0.2×
+gardien par écart à la portée, écart (m) [0 ; 0.15[ : xG après frappe moyen : avant 0.5944 | après 0.6045 | écart +0.01014 | bruit ±0.0318 | 0.3×
+gardien par écart à la portée, écart (m) [0.15 ; 0.3[ : taux de buts : avant 1 | après 1 | écart +0 | bruit ±0 | 0.0×
+gardien par écart à la portée, écart (m) [0.15 ; 0.3[ : tirs (effectif) : avant 1.269 | après 1.423 | écart +0.1538 | bruit ±0.392 | 0.4×
+gardien par écart à la portée, écart (m) [0.15 ; 0.3[ : xG après frappe moins buts, par match : avant -0.1244 | après -0.1389 | écart -0.01449 | bruit ±0.0663 | 0.2×
+gardien par écart à la portée, écart (m) [0.15 ; 0.3[ : xG après frappe moyen : avant 0.8112 | après 0.8103 | écart -0.0009052 | bruit ±0.0216 | 0.0×
+gardien par écart à la portée, écart (m) [0.3 ; +[ : taux de buts : avant 1 | après 1 | écart +0 | bruit ±0 | 0.0×
+gardien par écart à la portée, écart (m) [0.3 ; +[ : tirs (effectif) : avant 3.349 | après 3.535 | écart +0.186 | bruit ±0.673 | 0.3×
+gardien par écart à la portée, écart (m) [0.3 ; +[ : xG après frappe moins buts, par match : avant -0.06058 | après -0.06599 | écart -0.005403 | bruit ±0.0249 | 0.2×
+gardien par écart à la portée, écart (m) [0.3 ; +[ : xG après frappe moyen : avant 0.9785 | après 0.9771 | écart -0.001406 | bruit ±0.00717 | 0.2×
+part des tirs de près (16 m) : avant 0.6671 | après 0.6684 | écart +0.001269 | bruit ±0.0375 | 0.0×
+part du temps en possession installée (deux équipes) : avant 0.2743 | après 0.276 | écart +0.001629 | bruit ±0.00523 | 0.3×
+passages APPEL / TENIR dans une possession : état de moins de 1,5 s (part) : avant 0.4748 | après 0.4738 | écart -0.001021 | bruit ±0.00759 | 0.1×
+passages APPEL / TENIR dans une possession par joueur et par match : avant 118.6 | après 118.7 | écart +0.128 | bruit ±4.92 | 0.0×
+passages APPEL / TENIR dans une possession par match : avant 2372 | après 2374 | écart +2.56 | bruit ±98.5 | 0.0×
+passes par possession : avant 5.081 | après 5.082 | écart +0.0008542 | bruit ±0.124 | 0.0×
+possession d'équipe (s) : avant 21.92 | après 21.95 | écart +0.03062 | bruit ±0.567 | 0.1×
+possession installée : au moins 1 joueur derrière le ballon (part) : avant 0.9563 | après 0.9556 | écart -0.0007426 | bruit ±0.00529 | 0.1×
+rotation : tirs décidés avec rotation (part) : avant 0.1821 | après 0.1793 | écart -0.002801 | bruit ±0.0287 | 0.1×
+temps par possession de joueur (s) : avant 2.095 | après 2.093 | écart -0.002359 | bruit ±0.027 | 0.1×
+temps par possession de joueur, réception de face (s) : avant 2.457 | après 2.456 | écart -0.001118 | bruit ±0.0292 | 0.0×
+temps par possession de joueur, réception de face, non orienté (s) : avant 3.421 | après 3.413 | écart -0.007906 | bruit ±0.028 | 0.3×
+temps par possession de joueur, réception de face, orienté (s) : avant 1.669 | après 1.673 | écart +0.004078 | bruit ±0.0204 | 0.2×
+temps par possession de joueur, réception de profil (s) : avant 2.16 | après 2.154 | écart -0.006058 | bruit ±0.0469 | 0.1×
+temps par possession de joueur, réception de profil, non orienté (s) : avant 2.933 | après 2.928 | écart -0.005023 | bruit ±0.0616 | 0.1×
+temps par possession de joueur, réception de profil, orienté (s) : avant 1.547 | après 1.542 | écart -0.004488 | bruit ±0.0411 | 0.1×
+temps par possession de joueur, réception dos au jeu (s) : avant 2.399 | après 2.386 | écart -0.01337 | bruit ±0.0523 | 0.3×
+temps par possession de joueur, réception dos au jeu, non orienté (s) : avant 3.554 | après 3.541 | écart -0.01248 | bruit ±0.0571 | 0.2×
+temps par possession de joueur, réception dos au jeu, orienté (s) : avant 1.437 | après 1.438 | écart +0.0004588 | bruit ±0.0373 | 0.0×
+temps par possession de joueur, réception à l'aveugle (s) : avant 2.765 | après 2.75 | écart -0.01553 | bruit ±0.0469 | 0.3×
+temps par possession de joueur, réception à l'aveugle, non orienté (s) : avant 4.194 | après 4.189 | écart -0.004456 | bruit ±0.0535 | 0.1×
+temps par possession de joueur, réception à l'aveugle, orienté (s) : avant 1.681 | après 1.676 | écart -0.005338 | bruit ±0.0384 | 0.1×
+temps par possession par réception : contrôles appariés (part) : avant 0.9995 | après 0.9996 | écart +4.759e-05 | bruit ±0.000253 | 0.2×
+tirs au-dessus (part) : avant 0.1412 | après 0.1432 | écart +0.002028 | bruit ±0.0297 | 0.1×
+tirs cadrés (part) : avant 0.3887 | après 0.3937 | écart +0.004938 | bruit ±0.038 | 0.1×
+tirs cadrés jugés, distance 11-18 m (effectif) : avant 6.7 | après 6.84 | écart +0.14 | bruit ±0.999 | 0.1×
+tirs cadrés jugés, distance 18-25 m (effectif) : avant 1.645 | après 1.645 | écart +0 | bruit ±0.423 | 0.0×
+tirs cadrés jugés, distance 25 m et plus (effectif) : avant 1 | après 1 | écart +0 | bruit ±0.276 | 0.0×
+tirs cadrés jugés, distance moins de 11 m (effectif) : avant 3.174 | après 3.17 | écart -0.0037 | bruit ±0.64 | 0.0×
+tirs cadrés jugés, vitesse 18-24 m/s (effectif) : avant 1.469 | après 1.516 | écart +0.04738 | bruit ±0.449 | 0.1×
+tirs cadrés jugés, vitesse 24 m/s et plus (effectif) : avant 9.84 | après 10.08 | écart +0.24 | bruit ±1.34 | 0.2×
+tirs contrés (part) : avant 0.2399 | après 0.2328 | écart -0.00702 | bruit ±0.0324 | 0.2×
+tirs contrés, sortie 0-45° (part) : avant 0.2609 | après 0.2542 | écart -0.00675 | bruit ±0.0539 | 0.1×
+tirs contrés, sortie 135-180° (part) : avant 0.2662 | après 0.2607 | écart -0.005456 | bruit ±0.0557 | 0.1×
+tirs contrés, sortie 45-90° (part) : avant 0.3831 | après 0.4043 | écart +0.02116 | bruit ±0.0714 | 0.3×
+tirs contrés, sortie 90-135° (part) : avant 0.3554 | après 0.3653 | écart +0.009899 | bruit ±0.0704 | 0.1×
+tirs de contre par match (récupération dans le camp adverse) : avant 7.48 | après 7.64 | écart +0.16 | bruit ±1.16 | 0.1×
+tirs de contre par match (récupération dans son camp) : avant 0.82 | après 0.82 | écart +0 | bruit ±0.352 | 0.0×
+tirs de près (16 m) par équipe : avant 9.23 | après 9.35 | écart +0.12 | bruit ±0.996 | 0.1×
+tirs dévissés (part) : avant 0.02605 | après 0.02491 | écart -0.00114 | bruit ±0.0121 | 0.1×
+tirs par équipe : avant 13.79 | après 13.95 | écart +0.16 | bruit ±1.23 | 0.1×
+tirs tracés par équipe : avant 13.82 | après 13.99 | écart +0.17 | bruit ±1.23 | 0.1×
+tirs à côté (part) : avant 0.2036 | après 0.2048 | écart +0.001194 | bruit ±0.0286 | 0.0×
+xG après frappe moyen par tir non contré : avant 0.1975 | après 0.204 | écart +0.006462 | bruit ±0.0333 | 0.2×
+xG après frappe par match : avant 4.229 | après 4.455 | écart +0.2259 | bruit ±0.853 | 0.3×
+xG neutre moyen par tir : avant 0.1499 | après 0.1533 | écart +0.003429 | bruit ±0.00929 | 0.4×
+xG neutre par match : avant 4.14 | après 4.29 | écart +0.15 | bruit ±0.467 | 0.3×
+
+-- 25 plus gros écarts --
+inf× rendement par tranche de 15 min : RB : 90 et plus : tirs pour 90 min : 0 -> 0.1061 (±0)
+inf× rendement par tranche de 15 min : LB : 30-45 : tirs pour 90 min : 0.06 -> 0 (±0)
+inf× gardien : ballons avec sortie, état : tir : contré, ballon à 3 s, à l'adversaire (part) : 0.05882 -> 0.0625 (±0)
+inf× gardien : ballons avec sortie, état : tir : contré, ballon à 3 s, sortie de but (part) : 0.02941 -> 0.03125 (±0)
+inf× gardien : ballons avec sortie, état : tir : contré, ballon à 3 s, encore libre (part) : 0.1176 -> 0.1875 (±0)
+inf× gardien : ballons avec sortie, état : tir : contré, ballon à 3 s, au gardien (part) : 0.02941 -> 0.03125 (±0)
+inf× calibration xG neutre, tireurs moyens, xG [0 ; 0.03[ : taux de buts, IC95 bas : 0.00205 -> 0.002196 (±0)
+inf× calibration xG neutre, tireurs moyens, xG [0 ; 0.03[ : taux de buts : 0.01111 -> 0.0119 (±0)
+0.8× calibration xG neutre, tous les tireurs, xG [0.5 ; +[ : tirs (effectif) : 1.52 -> 1.739 (±0.274)
+0.7× rendement par tranche de 15 min : AG : 90 et plus : contrôles ratés pour 100 passes visées : 4.725 -> 2.594 (±2.9)
+0.7× rendement par tranche de 15 min : AG : 45 et plus : autres contacts ratés pour 90 min : 1.2 -> 0.9 (±0.441)
+0.7× rendement par tranche de 15 min : Stamina 0-40 : 90 et plus : contrôles ratés pour 100 passes visées : 6.667 -> 16.67 (±15)
+0.6× décomposition du tir, Long Shots (hors surface) [55 ; 70[ : occasion, xG neutre moyen par tir : 0.08151 -> 0.09366 (±0.0195)
+0.6× rendement par tranche de 15 min : AD : 30-45 : buts personnels pour 90 min : 0.06 -> 0.18 (±0.216)
+0.5× rendement par tranche de 15 min : MC : 75-90 : tirs pour 90 min : 0.12 -> 0.3 (±0.345)
+0.5× rendement par tranche de 15 min : Stamina 0-40 : 90 et plus : autres contacts ratés pour 90 min : 0 -> 6 (±11.8)
+0.5× rendement par tranche de 15 min : RB : 60-75 : tirs pour 90 min : 0 -> 0.06 (±0.118)
+0.5× rendement par tranche de 15 min : 90 et plus : tirs par match : 1.44 -> 1.66 (±0.442)
+0.5× rendement par tranche de 15 min : MDC : 90 et plus : au-dessus de 25 km/h (m/min) : 1.353 -> 1.053 (±0.608)
+0.5× calibration xG neutre, tireurs moyens, xG [0.06 ; 0.1[ : xG neutre moyen : 0.07722 -> 0.07888 (±0.00348)
+0.5× rendement par tranche de 15 min : Stamina 40-55 : 75-90 : autres contacts ratés pour 90 min : 2.914 -> 1.886 (±2.19)
+0.5× rendement par tranche de 15 min : MC : tirs pour 90 min, 75-90 - 0-15 : -0.12 -> 0.06 (±0.384)
+0.5× calibration passe, chance évaluée [0.3 ; 0.4[ : écart évaluée / non perdue (points) : -6.128 -> -10.57 (±9.54)
+0.5× calibration passe, chance évaluée [0.3 ; 0.4[ : non perdue (part) : 0.419 -> 0.4632 (±0.0951)
+0.5× décomposition du tir, Finishing (surface) [40 ; 55[ : tirs non contrés (effectif) : 2.083 -> 2.435 (±0.758)

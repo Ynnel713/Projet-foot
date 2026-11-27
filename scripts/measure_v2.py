@@ -912,6 +912,16 @@ def report(c: Collector, detail: bool = False) -> dict:
     for key, v in sorted(k.items()):  # origine des tirs (ticket v2-collectif/28b)
         if key.startswith("tirs, origine : "):
             out[f"{key} (part)"] = v / max(1, k["tirs tracés"])
+    out["hauteur : ticks z négatif"] = k["hauteur : ticks z négatif"]  # v2-hauteur-ballon/02a1
+    out["hauteur : ticks mode incohérent"] = k["hauteur : ticks mode incohérent"]
+    out["hauteur : part des ticks en l'air"] = k["hauteur : ticks en l'air"] / max(1, k["hauteur : ticks"])
+    out["hauteur : ticks au-dessus du plafond de vol (24,9 m)"] = k["hauteur : ticks au-dessus du plafond de vol (24,9 m)"]
+    for key, v in sorted(k.items()):  # tirs et buts par tranche d'xG et origine (réserve A3, v2-hauteur-ballon/02a1)
+        if key.startswith("tirs par tranche d'xG : "):
+            out[f"{key} par match"] = v / n
+    for key, v in sorted(k.items()):  # réceptions contrôlées par origine, dont « centre » en l'air (v2-hauteur-ballon/02a1)
+        if key.startswith("réceptions contrôlées, origine : "):
+            out[f"{key} par match"] = v / n
     for key, v in sorted(k.items()):  # issue et origine des grosses occasions (ticket v2-collectif/28c)
         if key.startswith(("grosses occasions, issue : ", "grosses occasions, origine : ")):
             out[f"{key} (part)"] = v / max(1, k["grosses occasions"])

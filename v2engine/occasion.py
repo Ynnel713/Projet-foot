@@ -17,13 +17,14 @@ import math
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 
+from v2engine import freinage, hauteur
 from v2engine.condition import effective_rating
 from v2engine.ball_state import BallState
 from v2engine.cerveau import OPPONENT_GOAL
 from v2engine.geometry import Vec2
 from v2engine.movement import PlayerState, max_speed_mps
 from v2engine.offside import offside_at_pass
-from v2engine.possession import BALL_FRICTION_PER_S, BALL_STOPPED_MPS, pass_success_probability
+from v2engine.possession import BALL_STOPPED_MPS, pass_success_probability
 from v2engine.shooting import FLYING, SHOOTING_RANGE_M, occasion_quality
 from v2engine.trace import ChanceEvent, ShotEvent
 
@@ -44,13 +45,12 @@ _TEAMS = ("home", "away")
 
 def _ball_path(ball: BallState) -> list[tuple[float, float, Vec2]]:
     """Points (instant, distance parcourue, position) de la trajectoire freinée du ballon ; arrêté : sa position."""
-    log_f = math.log(BALL_FRICTION_PER_S)
     if ball.velocity.length() < BALL_STOPPED_MPS:
         return [(0.0, 0.0, ball.position)]
     path, t = [], 0.0
     while t <= REACH_HORIZON_S + 1e-9:
-        travelled = (BALL_FRICTION_PER_S ** t - 1.0) / log_f
-        path.append((t, travelled * ball.velocity.length(), ball.position + ball.velocity * travelled))
+        path.append((t, freinage.distance_after(ball.velocity.length(), t),
+                     freinage.position_after(ball.position, ball.velocity, t)))
         t += REACH_STEP_S
     return path
 
@@ -64,9 +64,10 @@ def reach_probability(player: PlayerState, ball: BallState, opponents: list[Play
     """Chance que `player` touche le ballon libre avant un adversaire, et le point de contact. 1 s'il peut être sur sa
     trajectoire à temps avant le premier adversaire qui le peut (premier point atteint) ; sinon exp(-retard /
     `REACH_LATE_S`), au point de plus petit retard sur la portion de trajectoire que le ballon parcourt avant ce premier
-    adversaire. Ballon en l'air : seulement après son point de chute. Ballon arrêté : course au ballon, l'adversaire le
+    adversaire. Ballon en l'air : seulement aux instants où il passe sous le seuil « aérien ». Ballon arrêté : course au ballon, l'adversaire le
     plus rapide fixe l'échéance."""
-    path = [(t, point) for t, travelled, point in _ball_path(ball) if travelled >= ball.aerial_left_m]
+    path = [(t, point) for t, _, point in _ball_path(ball)  # sous le seuil « aérien » (v2-hauteur-ballon/02a1)
+            if not hauteur.is_aerial(hauteur.step_height(ball.z, ball.vz, t).z)]
     if not path:
         return 0.0, None
     if len(path) == 1:
