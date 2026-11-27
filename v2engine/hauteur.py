@@ -33,7 +33,7 @@ MAX_STRIKE_MPS = 35.0
 # Angle de départ maximal d'une frappe (décision du propriétaire du 26/11/2026, ticket 14a2b) : `vz ≤ vh·tan θ`. Sans lui,
 # une passe aérienne frappée trop mollement (vh 13 à 16 m/s, erreur de dosage) vers un coéquipier à 45-50 m montait à
 # plus de 50 m (50 matchs : 32 passes au-dessus de 25 m de sommet) ; à 45° (angle de portée maximale), elle retombe
-# court. 136 passes aériennes sur 902 touchées, sommet maximal 28,6 m.
+# court. 157 passes aériennes sur 913 touchées, sommet maximal 29,7 m (série finale).
 MAX_LAUNCH_ANGLE_DEG = 45.0
 _MAX_LAUNCH_SLOPE = math.tan(math.radians(MAX_LAUNCH_ANGLE_DEG))
 
