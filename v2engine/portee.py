@@ -15,8 +15,12 @@ sans élan des footballeurs professionnels 0,35 à 0,45 m (Haugen et al. 2013), 
 Jumping Reach ne sert qu'ici, à la hauteur atteinte : le duel aérien (`v2-attributs-restants/01`) ne départage que les
 joueurs éligibles, sans le relire (`docs/CARTE_ATTRIBUTS_V2.md`, règle anti double comptage).
 
-Ce module ne connaît pas le gardien : la tranche « mains » (gardien dans sa surface) est au ticket 03b, isolée des
-tranches de champ ; jusque-là le gardien suit les tranches de champ sur le ballon libre.
+Mains du gardien (ticket v2-hauteur-ballon/03b) : dans sa surface, le gardien joue le ballon bras levés, jusqu'à
+`z + r ≤ 1,258 H + détente` (épaule 0,818 + bras 0,186 + avant-bras 0,146 + main 0,108, Winter) ; hors de sa surface, il
+suit les tranches de champ (Lois du jeu, loi 12). Les tranches de champ (`field_band`, `field_ceiling_m`) ne lisent pas
+le poste ; la tranche « mains » (`keeper_hands_ceiling`) n'est lue que par l'aiguillage `player_ceiling_m` /
+`player_band`, le seul endroit où le poste et la surface comptent. Un seul modèle de portée pour les deux chemins où le
+gardien joue le ballon : tir en vol (`match._keeper_reaches`) et ballon libre (`match._step_loose_ball`).
 """
 
 from __future__ import annotations
@@ -24,16 +28,19 @@ from __future__ import annotations
 import math
 
 from v2engine.condition import effective_rating
+from v2engine.geometry import in_penalty_area
 from v2engine.hauteur import GRAVITY_M_S2, height_at
 
 BALL_RADIUS_M = 0.11  # le même que `match.BALL_RADIUS_M` (test)
 
 HIP_SHARE = 0.530  # hanche (grand trochanter) / taille, Winter
 SHOULDER_SHARE = 0.818  # épaule / taille, Winter
+# bras levé : épaule 0,818 + bras 0,186 + avant-bras 0,146 + main 0,108 (Winter), validé le 27/11/2026 (03a, 03b)
+HANDS_SHARE = SHOULDER_SHARE + 0.186 + 0.146 + 0.108
 JUMP_MIN_M = 0.35  # détente à Jumping Reach 1
 JUMP_MAX_M = 0.75  # détente à Jumping Reach 99
 
-PIED, CORPS, TETE = "pied", "corps", "tête"
+PIED, CORPS, TETE, MAINS = "pied", "corps", "tête", "mains"
 
 # Taille absente de la fiche (`Player.taille_fm`, 335 joueurs sur 7 473) : médiane du poste dans `data/joueurs.xlsx`
 # (premier poste de la colonne « Poste », 27/11/2026) ; autre poste : médiane de la base (1,83 m).
@@ -70,6 +77,35 @@ def field_band(height_m: float, jump: float, z: float) -> str | None:
     return None
 
 
+def keeper_hands_ceiling(height_m: float, jump: float) -> float:
+    """Plus haut bas de ballon que le gardien capte dans sa surface, bras levés en saut (`z + r ≤ 1,258 H + détente`)."""
+    return HANDS_SHARE * height_m + jump - BALL_RADIUS_M
+
+
+def keeper_band(height_m: float, jump: float, z: float) -> str | None:
+    """Tranche du gardien dans sa surface : pied sous la hanche (comme un joueur de champ), mains au-dessus jusqu'à
+    `keeper_hands_ceiling`, sinon `None` (le ballon passe au-dessus de ses mains)."""
+    if z <= HIP_SHARE * height_m:
+        return PIED
+    if z <= keeper_hands_ceiling(height_m, jump):
+        return MAINS
+    return None
+
+
+NEUTRAL_JUMPING_REACH = 60  # note par défaut de `attributes.player_attribute` (égalité gardée par un test)
+
+
+def neutral_keeper_ceiling_m() -> float:
+    """Plafond des mains d'un gardien neutre dans sa surface (taille médiane du poste, Jumping Reach neutre) : repli de
+    l'estimateur de tir sans gardien identifiable (`shooting._goal_angles`, gardien placé dans sa surface)."""
+    return keeper_hands_ceiling(neutral_height_m("GK"), jump_m(NEUTRAL_JUMPING_REACH))
+
+
+def uses_hands(player) -> bool:
+    """Aiguillage du ticket 03b : gardien dans sa propre surface (celle que l'adversaire attaque)."""
+    return player.poste == "GK" and in_penalty_area("away" if player.team == "home" else "home", player.position)
+
+
 def player_jump_m(player) -> float:
     """Détente du joueur, par sa note exprimée de Jumping Reach (façade `effective_rating`)."""
     return jump_m(effective_rating(player, "Jumping Reach"))
@@ -81,12 +117,17 @@ def player_height_m(player) -> float:
 
 
 def player_ceiling_m(player) -> float:
-    """Plafond de jeu d'un joueur de champ (`field_ceiling_m` à sa taille et à sa détente)."""
+    """Plafond de jeu du joueur à sa taille et à sa détente : mains du gardien dans sa surface (`keeper_hands_ceiling`),
+    sinon tête en saut (`field_ceiling_m`). Seul aiguillage entre les deux (03b)."""
+    if uses_hands(player):
+        return keeper_hands_ceiling(player_height_m(player), player_jump_m(player))
     return field_ceiling_m(player_height_m(player), player_jump_m(player))
 
 
 def player_band(player, z: float) -> str | None:
-    """`field_band` à la taille et à la détente du joueur."""
+    """Tranche touchée par le joueur, même aiguillage que `player_ceiling_m` (`keeper_band` ou `field_band`)."""
+    if uses_hands(player):
+        return keeper_band(player_height_m(player), player_jump_m(player), z)
     return field_band(player_height_m(player), player_jump_m(player), z)
 
 
@@ -104,5 +145,6 @@ def first_reachable_s(z0: float, vz0: float, ceiling: float, t_in: float, t_out:
     return t_down if t_in <= t_down <= t_out else None
 
 
-__all__ = ["CORPS", "PIED", "TETE", "field_band", "field_ceiling_m", "first_reachable_s", "jump_m", "neutral_height_m",
-           "player_band", "player_ceiling_m", "player_height_m", "player_jump_m"]
+__all__ = ["CORPS", "MAINS", "PIED", "TETE", "field_band", "field_ceiling_m", "first_reachable_s", "jump_m",
+           "keeper_band", "keeper_hands_ceiling", "neutral_height_m", "neutral_keeper_ceiling_m", "player_band", "player_ceiling_m", "player_height_m",
+           "player_jump_m", "uses_hands"]

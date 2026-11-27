@@ -444,8 +444,10 @@ def _shank(ball: BallState, shooter: PlayerState, goal: Vec2, now_s: float) -> N
 def _keeper_reaches(ball: BallState, flight: ShotFlight, start: Vec2, end: Vec2, dt: float, players: list[PlayerState],
                     now_s: float, shots: list[ShotEvent] | None) -> bool:
     """Arrêt par portée (ticket v2-realisme/05b) : quand le ballon passe au plus près du gardien pendant ce pas, il
-    l'atteint si l'écart tient dans sa portée à cet instant (`shooting.keeper_reach_m`). Jugé une fois par tir ; le temps
-    de vol et l'écart sont tracés. Atteint : arrêt avec l'issue du ticket 28b. Retourne vrai si le gardien a touché."""
+    l'atteint si l'écart tient dans sa portée à cet instant (`shooting.keeper_reach_m`) et si le bas du ballon passe sous
+    son plafond (`portee.player_ceiling_m` : mains dans sa surface, tranches de champ hors de sa surface, ticket
+    v2-hauteur-ballon/03b ; même modèle que sur le ballon libre). Jugé une fois par tir ; le temps de vol et l'écart sont
+    tracés. Atteint : arrêt avec l'issue du ticket 28b. Retourne vrai si le gardien a touché."""
     done = flight.origin.distance_to(start)
     step = start.distance_to(end)
     if done + step < flight.keeper_at_m:
@@ -458,12 +460,15 @@ def _keeper_reaches(ball: BallState, flight: ShotFlight, start: Vec2, end: Vec2,
     if keeper is None:
         return False
     gap = keeper.position.distance_to(point)
+    # au-dessus de ses mains (03b) : il ne l'atteint pas, quel que soit l'écart ; xG après frappe 1 (tir cadré qu'il ne
+    # peut pas toucher, même règle que sans gardien)
+    above = hauteur.step_height(ball.z, ball.vz, share * dt).z > portee.player_ceiling_m(keeper)
     rank = flight.rank if shots is not None else -1
     if rank >= 0:
         shots[rank] = replace(shots[rank], keeper_time_s=elapsed, keeper_gap_m=gap,
                               keeper_speed_mps=ball.velocity.length(),  # vitesse au début du pas (réserve A4, 05h)
-                              post_shot_xg=post_shot_xg(gap, elapsed))  # ticket 06a
-    if gap > keeper_reach_m(elapsed):
+                              post_shot_xg=1.0 if above else post_shot_xg(gap, elapsed))  # ticket 06a
+    if above or gap > keeper_reach_m(elapsed):
         return False
     goal = _OPPONENT_GOAL[flight.team]
     outcome = save_outcome(flight.chance, flight.origin, goal)
@@ -1080,9 +1085,9 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
                              and (height.first_contact_s is None or contact_s < height.first_contact_s)
                              and hauteur.height_at(z0, vz0, contact_s)[1] < 0.0)
         # tranche touchée ; au plafond exact (instant calculé par `_reach_instant`), l'arrondi peut le laisser un rien
-        # au-dessus : c'est la tête
-        band = (portee.player_band(player, hauteur.step_height(z0, vz0, contact_s).z) or portee.TETE) if airborne \
-            else portee.PIED
+        # au-dessus : ramené au plafond (tête, ou mains du gardien dans sa surface, 03b)
+        band = portee.player_band(player, min(hauteur.step_height(z0, vz0, contact_s).z,
+                                              portee.player_ceiling_m(player))) if airborne else portee.PIED
         received = _received_as(ball, player, caught_first_drop)
         _ground(ball)  # touché : le ballon repart du sol (02a1)
         intended = ball.receiver == player.name

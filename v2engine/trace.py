@@ -197,7 +197,7 @@ class ReceptionEvent:
     facing_run: bool = False  # corps tourné vers sa course au contact (07b), mesure seule (ticket v2-realisme/07g)
     x: float = 0.0  # place du receveur au contrôle (ticket v2-realisme/10d : passes reçues dans l'axe devant la surface)
     y: float = 0.0
-    band: str = "pied"  # tranche du corps qui touche le ballon : pied, corps, tête (ticket v2-hauteur-ballon/03a)
+    band: str = "pied"  # tranche du corps qui touche le ballon : pied, corps, tête (03a), mains du gardien (03b)
 
 
 @dataclass(frozen=True)

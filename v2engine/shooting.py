@@ -517,18 +517,32 @@ def _block_covers(shooter: PlayerState, goal: Vec2, opponents: list[PlayerState]
     return covers
 
 
-def _goal_angles(shooter: PlayerState, goal: Vec2, keeper: PlayerState | None) -> list[tuple[float, float]]:
+def _goal_angles(shooter: PlayerState, goal: Vec2, keeper: PlayerState | None,
+                 sigma: float) -> tuple[list[tuple[float, float]], list[tuple[float, float]], float]:
     """Écarts de tir qui donnent un but en largeur : l'angle du but privé de l'angle que couvre le gardien
     (`_keeper_cover`). Sans gardien identifiable (effectif synthétique), repli neutre comme `keeper_position_factor` :
-    gardien bien placé, à `KEEPER_REFERENCE_M` de sa ligne sur l'axe du tir."""
+    gardien bien placé, à `KEEPER_REFERENCE_M` de sa ligne sur l'axe du tir. Rend aussi les écarts du but que le
+    gardien couvre en largeur, et la part des tirs sous la barre qui y passent au-dessus de son plafond (mains dans sa
+    surface, tranches de champ hors de sa surface : `portee.player_ceiling_m`, ticket v2-hauteur-ballon/03b, comme
+    `match._keeper_reaches`) au temps de vol jusqu'à sa hauteur sur l'axe, hauteur par la loi du moteur
+    (`_under_error`) ; indépendante de la largeur, comme pour le contre (`_block_covers`). Tireur dans sa portée : aucun
+    tir ne passe au-dessus (ballon encore au ras du sol)."""
     low, high, axis = _goal_angle(shooter.position, goal)
     keeper_at = keeper.position if keeper is not None else goal + (shooter.position - goal).normalized() * KEEPER_REFERENCE_M
     covered = _keeper_cover(shooter.position, goal, axis, keeper_at)
     if covered is None:
-        return []  # le ballon passe forcément à sa portée
+        return [], [], 0.0  # le ballon passe forcément à sa portée
     if not covered or covered[1] <= low or covered[0] >= high:
-        return [(low, high)]
-    return [(lo, hi) for lo, hi in ((low, covered[0]), (covered[1], high)) if hi > lo]
+        return [(low, high)], [], 0.0
+    to_goal = shooter.position.distance_to(goal)
+    along = (keeper_at.x - shooter.position.x) * axis.x + (keeper_at.y - shooter.position.y) * axis.y
+    ceiling = portee.player_ceiling_m(keeper) if keeper is not None else portee.neutral_keeper_ceiling_m()
+    limit = _under_error(sigma, to_goal, _flight_time_s(min(max(along, 0.0), to_goal)), ceiling)
+    bar = math.atan2(GOAL_HEIGHT_M - SHOT_AIM_HEIGHT_M, to_goal)  # écart limite sous la barre (`on_target_axes`)
+    over_hands = max(0.0, _STANDARD_NORMAL.cdf(bar / sigma) - _STANDARD_NORMAL.cdf(limit / sigma)) \
+        / _STANDARD_NORMAL.cdf(bar / sigma)
+    return ([(lo, hi) for lo, hi in ((low, covered[0]), (covered[1], high)) if hi > lo],
+            [(max(low, covered[0]), min(high, covered[1]))], over_hands)
 
 
 def _flight_shares(shooter: PlayerState, goal: Vec2, keeper: PlayerState | None,
@@ -536,19 +550,25 @@ def _flight_shares(shooter: PlayerState, goal: Vec2, keeper: PlayerState | None,
     """Tir en vol (non dévissé), écart en largeur gaussien (`shot_error_sigma`) : (chance de but sans les contres, chance
     d'être contré, chance de but et de ne pas être contré). Les écarts sont découpés aux bords du but, de la portée du
     gardien et de celle de chaque défenseur ; sur chaque tranche, un ballon contré par l'un n'atteint pas les suivants
-    (`BLOCK_CHANCE` par défenseur touché). La hauteur (sous la barre) ne joue que sur le but. Visée au centre du but ;
-    avec `aims` (rad, ticket v2-realisme/05l), la liste des trois parts pour chaque visée, découpes calculées une fois."""
+    (`BLOCK_CHANCE` par défenseur touché). La hauteur (sous la barre) ne joue que sur le but ; dans la portée du
+    gardien, marquent les tirs qui passent au-dessus de ses mains (ticket v2-hauteur-ballon/03b, `_goal_angles`). Visée
+    au centre du but ; avec `aims` (rad, ticket v2-realisme/05l), la liste des trois parts pour chaque visée, découpes calculées une fois."""
     sigma = shot_error_sigma(shooter, goal, opponents)
     _, under = on_target_axes(shooter, goal, opponents)
-    scoring, covers = _goal_angles(shooter, goal, keeper), _block_covers(shooter, goal, opponents, sigma)
-    cuts = sorted({-math.inf, math.inf, *(c for span in scoring for c in span),
+    scoring, kept_out, over_hands = _goal_angles(shooter, goal, keeper, sigma)
+    covers = _block_covers(shooter, goal, opponents, sigma)
+    cuts = sorted({-math.inf, math.inf, *(c for span in scoring + kept_out for c in span),
                    *(c for c_lo, c_hi, _, _ in covers for c in (c_lo, c_hi))})
     slices = []
     for lo, hi in zip(cuts, cuts[1:]):
         here = [(chance, scoring_chance) for c_lo, c_hi, chance, scoring_chance in covers if c_lo <= lo and hi <= c_hi]
         through = math.prod(1.0 - chance for chance, _ in here)  # tous les tirs (03a)
         through_scoring = math.prod(1.0 - chance for _, chance in here)  # tirs sous la barre
-        slices.append((lo, hi, through, through_scoring, any(g_lo <= lo and hi <= g_hi for g_lo, g_hi in scoring)))
+        # part des tirs sous la barre qui marquent : tous hors de la portée du gardien, ceux qui passent au-dessus de
+        # ses mains dans sa portée (03b ; ponytail : hauteur au-dessus du gardien indépendante de celle des contres)
+        scores = 1.0 if any(g_lo <= lo and hi <= g_hi for g_lo, g_hi in scoring) else \
+            over_hands if any(k_lo <= lo and hi <= k_hi for k_lo, k_hi in kept_out) else 0.0
+        slices.append((lo, hi, through, through_scoring, scores))
 
     def shares(aim: float) -> tuple[float, float, float]:
         def below(angle: float) -> float:
@@ -559,8 +579,8 @@ def _flight_shares(shooter: PlayerState, goal: Vec2, keeper: PlayerState | None,
             mass = below(hi) - below(lo)
             blocked += mass * (1.0 - through)
             if scores:
-                goal_share += mass * under
-                goal_unblocked += mass * under * through_scoring
+                goal_share += mass * under * scores
+                goal_unblocked += mass * under * through_scoring * scores
         return goal_share, blocked, goal_unblocked
 
     if aims is None:
@@ -573,7 +593,8 @@ def physical_shot_chance(shooter: PlayerState, goal: Vec2, keeper: PlayerState |
     """Chance de but d'un tir non contré, calculée avec les lois de sa résolution (ticket v2-realisme/05e) : écart du
     ballon gaussien (`shot_error_sigma`, note, pression et Composure comprises), dévissé (`draw_shot_error`), cadre
     (entre les poteaux, sous la barre), arrêt si le ballon passe à la portée du gardien (`keeper_reach_m`) au temps de
-    vol jusqu'à lui ; gardien immobile pendant le vol (réserve A1 du 05h). Quelques `erf`, aucune constante nouvelle.
+    vol jusqu'à lui et si le ballon passe sous son plafond (mains dans sa surface, ticket v2-hauteur-ballon/03b) ;
+    gardien immobile pendant le vol (réserve A1 du 05h). Quelques `erf`, aucune constante nouvelle.
     Approximation : largeur et hauteur supposées indépendantes, comme au 35b. Toute modification de la résolution
     (gardien, cadrage, contre, vitesse du tir) se reporte ici ; contrôle : `scripts/shot_calibration.py`."""
     kept, (goal_share, _, _), _ = _aimed(shooter, goal, keeper, opponents)
