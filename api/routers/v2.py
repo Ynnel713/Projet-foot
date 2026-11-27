@@ -55,6 +55,7 @@ class BallSnapshotOut(BaseModel):
     holder: str | None = None  # porteur du ballon : son nom s'affiche sous son rond
     mode: str = "sol"  # "sol" ou "aérien" (ticket v2-collectif/29) : l'écran dessine un ballon aérien plus gros, avec son ombre
     dead: bool = False  # ballon mort, en attente d'une remise en jeu : l'écran l'atténue
+    z: float = 0.0  # hauteur du bas du ballon (m, au centimètre ; ticket v2-hauteur-ballon/02b1) : taille et ombre à l'écran
 
 
 class BallPointOut(BaseModel):
@@ -66,6 +67,7 @@ class BallPointOut(BaseModel):
     mode: str = "sol"
     holder: str | None = None
     dead: bool = False  # ballon mort : l'écran ne lisse pas la piste à travers une remise en jeu (ticket v2-correctifs-ecran/04b)
+    z: float = 0.0  # hauteur du bas du ballon (m, au centimètre ; ticket v2-hauteur-ballon/02b1)
 
 
 class TickOut(BaseModel):
@@ -273,13 +275,13 @@ def _tick_out(tick) -> TickOut:
                                    facing=round(math.degrees(math.atan2(p.facing.y, p.facing.x)), 1))
                  for p in tick.players],
         ball=BallSnapshotOut(x=round(tick.ball.position.x, 2), y=round(tick.ball.position.y, 2), holder=tick.ball.holder,
-                             mode=tick.ball.mode, dead=tick.ball.dead),
+                             mode=tick.ball.mode, dead=tick.ball.dead, z=round(tick.ball.z, 2)),
     )
 
 
 def _ball_track_out(points) -> list[BallPointOut]:
     return [BallPointOut(minute=round(b.minute, 5), x=round(b.position.x, 2), y=round(b.position.y, 2), mode=b.mode,
-                         holder=b.holder, dead=b.dead) for b in points]
+                         holder=b.holder, dead=b.dead, z=round(b.z, 2)) for b in points]
 
 
 def _events_out(trace: MatchTrace, first: int = 0) -> list[TraceEventOut]:

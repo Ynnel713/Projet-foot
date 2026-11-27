@@ -13,7 +13,7 @@
 
 **Bloque :** aucun.
 
-**Status:** à faire
+**Status:** découpé (27/11/2026, décision du propriétaire) en `02b1-hauteur-transmise-et-dessinee.md` (API et dessin : taille et ombre selon la hauteur) et `02b2-fluidite-et-verifications-a-l-ecran.md` (fluidité, ordre de dessin, vérifications à l'écran). Ticket chapeau : ne pas l'implémenter tel quel.
 
 ## Acceptance criteria
 

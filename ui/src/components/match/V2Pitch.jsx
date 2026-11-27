@@ -5,6 +5,7 @@ import { PITCH_COLORS } from "../../utils/teamColors";
 import PlayerMarker, { PLAYER_R, PlayerNumber, ReliefDefs } from "./PlayerMarker";
 import BallMarker from "./BallMarker";
 import { WAVE_AMPLITUDE_M, WAVE_CORNER_M } from "../../utils/v2NetWave";
+import { ballRadius, ballShadow } from "../../utils/v2BallHeight";
 
 // Terrain simple, réutilise seulement les COTES réelles de la V1 (pitchGeometry.json, dérivé de
 // ligue1sim.pitch_geometry) -- pas le composant PitchField.jsx lui-même, dont l'orientation est
@@ -129,9 +130,8 @@ const PLAYER_LIFT = 1.8;
 const SHADOW_K = 0.8; // ombre d'un joueur : ovale de rayon 0,8 × celui du rond (validé le 04/11/2026)
 const SHADOW_OPACITY = 0.25;
 const CROSSBAR = 2.44; // hauteur de la barre transversale (m)
-const BALL_R = 0.5; // ballon au sol (m ; 0,4 avant le ticket v2-ecran-match/07, validé par le propriétaire le 18/11/2026)
-const BALL_AIR_R = 0.6;
-const BALL_AIR_Z = 1; // hauteur fixe d'un ballon aérien, jusqu'au ticket 02b (vraie hauteur à l'écran)
+// Ballon : rayon et ombre selon sa hauteur (ticket v2-hauteur-ballon/02b1, `utils/v2BallHeight.js`) ; ils remplacent la
+// hauteur fixe d'un mètre et le rayon fixe de 0,6 m du ballon aérien (ticket 01).
 
 // But en volume (`x` : ligne de but, `out` : -1 côté x = 0, 1 côté x = L), tout par la projection.
 // La caméra ne tourne qu'autour de l'axe x : le plan du cadre (x constant) est vu par la tranche, poteaux et barre
@@ -237,9 +237,10 @@ export default function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, 
       };
     });
   const holder = players.find((p) => p.name === tick.ball.holder);
-  const air = tick.ball.mode === "aérien";
+  const ballZ = Math.max(0, tick.ball.z ?? 0);
   const ballGround = project(tick.ball.x, tick.ball.y);
-  const ballR = air ? BALL_AIR_R : BALL_R;
+  const ballR = ballRadius(ballZ);
+  const shadow = ballShadow(ballZ);
   // bancs : immobiles avant l'échauffement, inutile de leur passer le temps qui court
   const benchSeconds = seconds >= warmUpFromS ? seconds : 0;
   return (
@@ -265,14 +266,15 @@ export default function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, 
           style={{ pointerEvents: "none" }}
         />
       ))}
-      {air && (
+      {shadow && (
         <ellipse
+          data-ball-shadow=""
           cx={ballGround.x}
           cy={ballGround.y}
-          rx={ballR}
-          ry={ballR * COS}
+          rx={shadow.r}
+          ry={shadow.r * COS}
           fill="black"
-          opacity={0.3}
+          opacity={shadow.opacity}
           style={{ pointerEvents: "none" }}
         />
       )}
@@ -286,11 +288,11 @@ export default function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, 
       <GoalFrame x={0} out={-1} {...bulge(wave, 0)} />
       <GoalFrame x={L} out={1} {...bulge(wave, L)} />
 
-      {/* 5. ballon : plus gros et remonté s'il est aérien (hauteur fixe d'un mètre, provisoire) ; atténué s'il est mort ;
+      {/* 5. ballon : à sa vraie hauteur, plus gros en montant (ticket v2-hauteur-ballon/02b1) ; atténué s'il est mort ;
           motif qui roule et traînée de vitesse (ticket v2-ecran-match/21a) */}
       <BallMarker
         ground={tick.ball}
-        z={air ? BALL_AIR_Z : 0}
+        z={ballZ}
         r={ballR}
         dead={tick.ball.dead}
         dir={ballLook?.dir ?? null}

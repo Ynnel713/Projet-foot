@@ -39,8 +39,10 @@ export function interpolatedTick(trace, seconds) {
   const scored = goalBall(a, b, minute, trace.goals, dims.pitch_length_m, dims.pitch_width_m);
   // mode (« sol » / « aérien ») et ballon mort : ceux de l'image de départ (ticket v2-hauteur-ballon/01)
   const state = { mode: a.ball.mode, dead: a.ball.dead };
-  if (scored) return { minute, players, ball: { ...scored, holder: null, ...state } };
-  const linear = { x: mix(a.ball.x, b.ball.x), y: mix(a.ball.y, b.ball.y) };
+  // hauteur entre deux images (ticket v2-hauteur-ballon/02b1) : linéaire, 0 pour une trace qui n'en porte pas
+  const z = Math.max(0, mix(a.ball.z ?? 0, b.ball.z ?? 0));
+  if (scored) return { minute, players, ball: { ...scored, z, holder: null, ...state } };
+  const linear = { x: mix(a.ball.x, b.ball.x), y: mix(a.ball.y, b.ball.y), z };
   const ball = displayBall(trace.ball_track, minute, half, players, linear, a.ball.holder);
   return { minute, players, ball: { ...ball, ...state } };
 }
