@@ -6,6 +6,7 @@ import PlayerMarker, { PLAYER_R, PlayerNumber, ReliefDefs } from "./PlayerMarker
 import BallMarker from "./BallMarker";
 import { WAVE_AMPLITUDE_M, WAVE_CORNER_M } from "../../utils/v2NetWave";
 import { ballRadius, ballShadow } from "../../utils/v2BallHeight";
+import { ballInsideGoal, goalPartsOverBall, playerUnderGoal } from "../../utils/v2DrawOrder";
 
 // Terrain simple, réutilise seulement les COTES réelles de la V1 (pitchGeometry.json, dérivé de
 // ligue1sim.pitch_geometry) -- pas le composant PitchField.jsx lui-même, dont l'orientation est
@@ -140,7 +141,10 @@ const CROSSBAR = 2.44; // hauteur de la barre transversale (m)
 // `mid`, `corner` : recul du fond du filet (m) au milieu et aux coins, pendant l'ondulation d'un but (ticket
 // v2-ecran-match/21b) ; 0 le reste du temps (valeurs simples : la mémoïsation tient tant que le filet est immobile).
 // Le toit devient un pentagone dont le milieu du fond recule davantage ; filets latéraux et toit suivent le fond.
-const GoalFrame = memo(function GoalFrame({ x, out, mid = 0, corner = 0 }) {
+// `far`, `roof`, `near`, `frame` : parties à dessiner (filet latéral du fond, toit, filet latéral de devant, poteaux et
+// barre) ; le but est dessiné en deux passes autour d'un ballon qui est dedans (ticket v2-hauteur-ballon/02b2).
+const ALL_PARTS = { far: true, roof: true, near: true, frame: true };
+const GoalFrame = memo(function GoalFrame({ x, out, mid = 0, corner = 0, far, roof, near, frame }) {
   const ys = [W / 2 - GOAL_WIDTH / 2, W / 2 + GOAL_WIDTH / 2];
   const back = x + out * (NET + corner);
   const backMid = x + out * (NET + mid);
@@ -152,12 +156,12 @@ const GoalFrame = memo(function GoalFrame({ x, out, mid = 0, corner = 0 }) {
   return (
     <g style={{ pointerEvents: "none" }}>
       {/* filet latéral du fond, toit, filet latéral de devant (vers la caméra), du plus lointain au plus proche */}
-      <polygon points={pts([x, ys[0], 0], [back, ys[0], 0], [back, ys[0], CROSSBAR], [x, ys[0], CROSSBAR])} {...net} />
-      <polygon points={pts([x, ys[0], CROSSBAR], [back, ys[0], CROSSBAR], [backMid, W / 2, CROSSBAR], [back, ys[1], CROSSBAR], [x, ys[1], CROSSBAR])} {...net} />
-      <polygon points={pts([x, ys[1], 0], [back, ys[1], 0], [back, ys[1], CROSSBAR], [x, ys[1], CROSSBAR])} {...net} />
-      <line x1={foot0.x} y1={foot0.y} x2={top0.x} y2={top0.y} {...stroke} />
-      <line x1={foot1.x} y1={foot1.y} x2={top1.x} y2={top1.y} {...stroke} />
-      <line x1={top0.x} y1={top0.y} x2={top1.x} y2={top1.y} {...stroke} />
+      {far && <polygon points={pts([x, ys[0], 0], [back, ys[0], 0], [back, ys[0], CROSSBAR], [x, ys[0], CROSSBAR])} {...net} />}
+      {roof && <polygon points={pts([x, ys[0], CROSSBAR], [back, ys[0], CROSSBAR], [backMid, W / 2, CROSSBAR], [back, ys[1], CROSSBAR], [x, ys[1], CROSSBAR])} {...net} />}
+      {near && <polygon points={pts([x, ys[1], 0], [back, ys[1], 0], [back, ys[1], CROSSBAR], [x, ys[1], CROSSBAR])} {...net} />}
+      {frame && <line x1={foot0.x} y1={foot0.y} x2={top0.x} y2={top0.y} {...stroke} />}
+      {frame && <line x1={foot1.x} y1={foot1.y} x2={top1.x} y2={top1.y} {...stroke} />}
+      {frame && <line x1={top0.x} y1={top0.y} x2={top1.x} y2={top1.y} {...stroke} />}
     </g>
   );
 });
@@ -241,6 +245,28 @@ export default function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, 
   const ballGround = project(tick.ball.x, tick.ball.y);
   const ballR = ballRadius(ballZ);
   const shadow = ballShadow(ballZ);
+  // ordre de dessin autour des buts (ticket v2-hauteur-ballon/02b2) : parties de chaque but qui couvrent le ballon ;
+  // joueurs entrés dans un filet dessinés sous les buts, les autres par-dessus (gardien sur sa ligne)
+  const posts = [W / 2 - GOAL_WIDTH / 2, W / 2 + GOAL_WIDTH / 2];
+  const over0 = goalPartsOverBall({ ...tick.ball, z: ballZ }, 0, -1, posts, CROSSBAR);
+  const overL = goalPartsOverBall({ ...tick.ball, z: ballZ }, L, 1, posts, CROSSBAR);
+  const ballInGoal = ballInsideGoal(over0, overL);
+  const inNet = (p) => playerUnderGoal(p, 0, -1, posts) || playerUnderGoal(p, L, 1, posts);
+  const under = (o) => ({ far: !o.far, roof: !o.roof, near: !o.near, frame: !o.frame });
+  // ballon : à sa vraie hauteur, plus gros en montant (ticket v2-hauteur-ballon/02b1) ; atténué s'il est mort ; motif
+  // qui roule et traînée de vitesse (ticket v2-ecran-match/21a)
+  const ball = (
+    <BallMarker
+      ground={tick.ball}
+      z={ballZ}
+      r={ballR}
+      dead={tick.ball.dead}
+      dir={ballLook?.dir ?? null}
+      speed={ballLook?.speed ?? Infinity}
+      playbackSpeed={ballLook?.playbackSpeed ?? 1}
+      trail={ballLook?.trail ?? 0}
+    />
+  );
   // bancs : immobiles avant l'échauffement, inutile de leur passer le temps qui court
   const benchSeconds = seconds >= warmUpFromS ? seconds : 0;
   return (
@@ -279,29 +305,29 @@ export default function V2Pitch({ tick, seconds, warmUpFromS, numbers, lineups, 
         />
       )}
 
-      {/* 3. joueurs, triés du fond vers l'avant : vrais cercles, avec le trait de leur cap (ticket v2-realisme/07a) */}
-      {players.map((p) => (
+      {/* 3. joueurs entrés dans un filet (derrière une ligne de but, pas au-delà du poteau proche) : sous les buts */}
+      {players.filter(inNet).map((p) => (
         <PlayerMarker key={p.name} player={p} number={numbers[p.name]} selected={p.name === selected} onSelect={onSelect} />
       ))}
 
-      {/* 4. buts en hauteur */}
-      <GoalFrame x={0} out={-1} {...bulge(wave, 0)} />
-      <GoalFrame x={L} out={1} {...bulge(wave, L)} />
+      {/* 4. buts en hauteur ; un ballon dans un but est dessiné entre ses parties du fond et celles qui le couvrent
+          (ticket v2-hauteur-ballon/02b2) */}
+      <GoalFrame x={0} out={-1} {...bulge(wave, 0)} {...(ballInGoal ? under(over0) : ALL_PARTS)} />
+      <GoalFrame x={L} out={1} {...bulge(wave, L)} {...(ballInGoal ? under(overL) : ALL_PARTS)} />
+      {ballInGoal && ball}
+      {ballInGoal && <GoalFrame x={0} out={-1} {...bulge(wave, 0)} {...over0} />}
+      {ballInGoal && <GoalFrame x={L} out={1} {...bulge(wave, L)} {...overL} />}
 
-      {/* 5. ballon : à sa vraie hauteur, plus gros en montant (ticket v2-hauteur-ballon/02b1) ; atténué s'il est mort ;
-          motif qui roule et traînée de vitesse (ticket v2-ecran-match/21a) */}
-      <BallMarker
-        ground={tick.ball}
-        z={ballZ}
-        r={ballR}
-        dead={tick.ball.dead}
-        dir={ballLook?.dir ?? null}
-        speed={ballLook?.speed ?? Infinity}
-        playbackSpeed={ballLook?.playbackSpeed ?? 1}
-        trail={ballLook?.trail ?? 0}
-      />
+      {/* 5. joueurs sur le terrain, triés du fond vers l'avant : vrais cercles, avec le trait de leur cap (ticket
+          v2-realisme/07a) ; par-dessus les filets (le rond d'un gardien collé à sa ligne n'est pas vu à travers le filet) */}
+      {players.filter((p) => !inNet(p)).map((p) => (
+        <PlayerMarker key={p.name} player={p} number={numbers[p.name]} selected={p.name === selected} onSelect={onSelect} />
+      ))}
 
-      {/* 6. nom du porteur, sous son rond ; le contour sombre le garde lisible sur la pelouse comme sur les lignes */}
+      {/* 6. ballon hors des buts : par-dessus tout */}
+      {!ballInGoal && ball}
+
+      {/* 7. nom du porteur, sous son rond ; le contour sombre le garde lisible sur la pelouse comme sur les lignes */}
       {holder && (
         <text
           x={holder.body.x}
