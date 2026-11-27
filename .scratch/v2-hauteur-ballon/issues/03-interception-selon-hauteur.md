@@ -22,7 +22,7 @@ sinon) et à proposer avant le code.
 
 **Bloque :** `v2-collectif/32b` (et son chapeau `32`, découpé), `v2-attributs-restants/01`, `v2-attributs-restants/03a`, `v2-realisme/15a` ; `v2-collectif/15d` par le 32b (ligne ajoutée le 21/11/2026, audit de réalisme : réciproque des tickets qui citent ce ticket).
 
-**Status:** à faire (constantes à proposer avant le code)
+**Status:** découpé le 27/11/2026 en `03a` (tranches des joueurs de champ) et `03b` (mains du gardien, un seul modèle de portée pour les tirs et le ballon libre) ; constantes validées par le propriétaire le 27/11/2026 (voir `03a`)
 
 ## Acceptance criteria
 

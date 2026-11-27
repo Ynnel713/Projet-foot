@@ -10,8 +10,8 @@ Constantes validées le 03/11/2026 (chiffres réels sourcés dans le ticket) :
 - `RESTART_DISTANCE_M` : Lois du jeu (9,15 m ; 2 m sur une touche) ;
 - `THROW_MAX_M` : portée d'une touche lancée à la main (la touche longue de Long Throws : `v2-attributs-restants/02`) ;
 - `LONG_RESTART_M` : au-delà, la remise est jouée long et le ballon est aérien ;
-- ballon aérien : il ne se touche que sous le seuil de hauteur `hauteur.AERIAL_THRESHOLD_M` (ticket v2-hauteur-ballon/02a1,
-  qui remplace l'ancien `AERIAL_LANDING_M` du moteur à plat) ;
+- ballon aérien : il ne se touche que sous le plafond de chaque joueur (`portee`, ticket v2-hauteur-ballon/03a ; avant :
+  seuil de 0,5 m du ticket 02a1, qui remplaçait l'ancien `AERIAL_LANDING_M` du moteur à plat) ;
 - `REPLACING_INTENSITY` : on se replace en trottinant (moitié de la vitesse max).
 
 Pas de vitesse propre à la touche : le ballon suit la loi de passe (`possession.pass_velocity`), comme toute passe."""

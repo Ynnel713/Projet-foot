@@ -51,7 +51,7 @@ from v2engine.possession import (BALL_STOPPED_MPS, MAX_PASS_MPS, MISS_RETRY_S, a
                                  orients_control, reception_delay_s)
 from v2engine.added_time import GRACE_S, HARD_STOP_S, added_minutes, played_minute
 from v2engine.roles import role_of
-from v2engine import freinage, hauteur
+from v2engine import freinage, hauteur, portee
 from v2engine.restart import (AERIEN, CORNER, FREE_KICK, KICKOFF, LONG_RESTART_M, PENALTY, PENALTY_CONVERSION, SOL,
                               award, exit_point, foul_restart, is_aerial, kickoff, restart_target)
 from v2engine.shooting import (BLOCK_CHANCE, BLOCK_WIDTH_M, FLYING, HELD, OVER, PARRIED, SHANKED, SHOT_AIM_HEIGHT_M, WIDE,
@@ -138,6 +138,7 @@ def _build_players(lineup: Lineup, team: str, positions: dict[str, Vec2]) -> lis
                 attributes=player.attributes,
                 role=role_of(player.poste, player.categorie),
                 facing=_facing_at_kickoff(pos, team),
+                height_m=player.taille_fm / 100.0 if player.taille_fm is not None else None,  # 03a
             )
         )
     return states
@@ -487,6 +488,8 @@ def _blocked(ball: BallState, flight: ShotFlight, start: Vec2, end: Vec2, dt: fl
     for entry, gap, player in _contacts(start, end, dt, defenders, radius=BLOCK_WIDTH_M):
         if gap > block_reach_m(flight.elapsed_s + entry * dt):
             continue  # pas encore à sa portée : il peut encore le toucher plus loin
+        if hauteur.step_height(ball.z, ball.vz, entry * dt).z > portee.player_ceiling_m(player):
+            continue  # tir au-dessus de sa tête (ticket v2-hauteur-ballon/03a ; ponytail : instant d'entrée seul)
         flight.tried.add(player.name)
         if TIR.random() >= BLOCK_CHANCE:
             continue  # au contact, le ballon passe quand même
@@ -606,7 +609,7 @@ def _play_restart(ball: BallState, players: list[PlayerState], now_s: float,
     ball.receiver = target.name
     ball.plan = None
     _clear_offside(ball)
-    if is_aerial(r.kind, taker, target):  # ballon en l'air : touchable seulement sous le seuil « aérien » (02a1)
+    if is_aerial(r.kind, taker, target):  # ballon en l'air : touchable sous le plafond de chaque joueur (03a)
         ball.readers = {}
         _launch_aerial(ball, taker.position.distance_to(target.position))
     else:
@@ -1014,20 +1017,18 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
     if flight is not None:
         flight.elapsed_s += dt
     # Hauteur (ticket v2-hauteur-ballon/02a1) : chute exacte sur le pas, rebonds (vitesse horizontale × 0,85 chacun)
-    airborne = z0 > 0.0 or vz0 != 0.0  # ballon en vol ou qui rebondit : filtre de contact en hauteur ci-dessous
+    airborne = z0 > 0.0 or vz0 != 0.0  # ballon en vol ou qui rebondit : plafond de chaque joueur ci-dessous (03a)
     in_first_flight = airborne and not ball.landed  # pas encore touché le sol depuis son lancement (02c)
     height = hauteur.step_height(z0, vz0, dt)
     if height.first_contact_s is not None:
         ball.landed = True  # premier contact au sol pendant ce pas (02c)
     ball.z, ball.vz = height.z, height.vz
     ball.velocity = ball.velocity * height.horizontal_keep
-    ball.mode = AERIEN if hauteur.is_aerial(ball.z) else SOL
+    ball.mode = AERIEN if hauteur.is_aerial(ball.z) else SOL  # pour l'API seulement ; contacts : plafonds (03a)
     if ball.velocity.length() < BALL_STOPPED_MPS:
         ball.receiver = None  # passe morte : ballon libre pour tous, plus de receveur désigné
         ball.readers = {}  # plus de passe à couper (ticket v2-collectif/25)
         _clear_offside(ball)  # plus de passe en cours : plus de hors-jeu à siffler
-    if height.first_contact_s is None and hauteur.is_aerial(min(z0, ball.z)):
-        return None  # au-dessus du seuil pendant tout le pas : personne ne le touche sur son trajet
     if ball.shot_flight is not None:
         if ball.velocity.length() >= BALL_STOPPED_MPS:
             return None  # tir en vol : personne ne le touche avant la ligne (05b et 05c)
@@ -1038,11 +1039,23 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
     # Contact sur le trajet (ticket v2-collectif/25) : le ballon touche tout joueur qu'il frôle PENDANT le pas, pas
     # seulement au point d'arrivée ; le premier atteint tente le premier, quelle que soit son équipe. Le receveur visé
     # d'une passe l'attend et tend la jambe : il la touche à `RECEIVER_REACH_M` (ticket v2-realisme/18i).
-    for entry, _, player in _ball_contacts(start, ball.position, dt, players, ball):
+    # Ballon en vol (ticket v2-hauteur-ballon/03a) : chacun le touche au premier instant de son passage à portée où le
+    # ballon est sous son plafond (`portee`), sinon il passe au-dessus ; le premier qui l'atteint tente le premier. Au
+    # sol, instant d'entrée et ordre de `_ball_contacts` inchangés.
+    reachable = []
+    for entry, gap, player in _ball_contacts(start, ball.position, dt, players, ball):
+        contact_s = entry * dt
+        if airborne:
+            contact_s = _reach_instant(z0, vz0, portee.player_ceiling_m(player), entry * dt,
+                                       _exit_share(start, ball.position, dt, player, _reach_radius(player, ball)) * dt,
+                                       height.first_contact_s)
+            if contact_s is None:
+                continue  # le ballon passe au-dessus de lui
+        reachable.append((contact_s, gap, player))
+    reachable.sort(key=lambda hit: (hit[0], hit[1]))  # tri stable : au sol, l'ordre de `_ball_contacts`
+    for contact_s, _, player in reachable:
         if now_s < ball.offside_out_until.get(player.name, 0.0):
             continue  # écarté de l'action après un coup franc : il recule, il ne joue pas ce ballon
-        if airborne and hauteur.is_aerial(hauteur.step_height(z0, vz0, entry * dt).z):
-            continue  # ballon au-dessus du seuil « aérien » quand il entre à sa portée (ponytail : instant d'entrée seul)
         if now_s < ball.control_ban_until_s.get(player.name, 0.0):
             continue  # il vient de rater son contrôle : le ballon lui échappe
         if now_s < ball.unsettled_until_s.get(player.name, 0.0):
@@ -1060,11 +1073,16 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
         if last is not None and last.kind in _LOST_BY and last.team != player.team:  # perte de balle (ticket 19b)
             _log(ball, now_s, PERTE, last.team, last.player, _LOST_BY[last.kind], player.name)
         ball.last_toucher = player.name  # contrôlé ou non, il l'a touché (ticket v2-collectif/29)
-        # reçu à sa première retombée (02c) : il entre à sa portée avant l'impact du pas, ballon qui redescend (en
-        # montée : passe ordinaire, décision du propriétaire du 27/11/2026) ; lu avant `_ground`
+        # reçu à sa première retombée (02c) : il touche le ballon avant l'impact du pas, ballon qui redescend (en
+        # montée : passe ordinaire, décision du propriétaire du 27/11/2026) ; lu avant `_ground`. Instant du contact
+        # (03a) à la place de l'instant d'entrée à sa portée.
         caught_first_drop = (in_first_flight
-                             and (height.first_contact_s is None or entry * dt < height.first_contact_s)
-                             and hauteur.height_at(z0, vz0, entry * dt)[1] < 0.0)
+                             and (height.first_contact_s is None or contact_s < height.first_contact_s)
+                             and hauteur.height_at(z0, vz0, contact_s)[1] < 0.0)
+        # tranche touchée ; au plafond exact (instant calculé par `_reach_instant`), l'arrondi peut le laisser un rien
+        # au-dessus : c'est la tête
+        band = (portee.player_band(player, hauteur.step_height(z0, vz0, contact_s).z) or portee.TETE) if airborne \
+            else portee.PIED
         received = _received_as(ball, player, caught_first_drop)
         _ground(ball)  # touché : le ballon repart du sol (02a1)
         intended = ball.receiver == player.name
@@ -1094,7 +1112,7 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
                     origin=received, intended=intended, memory_age_s=seen_back.age_mean_s,
                     memory_error_mean_m=seen_back.error_mean_m, memory_error_max_m=seen_back.error_max_m,
                     oriented=oriented, first_time=first_time, ball_speed_mps=ball.velocity.length(), blind=blind,
-                    facing_run=player.facing_run, x=player.position.x, y=player.position.y))  # 07g, 10d
+                    facing_run=player.facing_run, x=player.position.x, y=player.position.y, band=band))  # 07g, 10d, 03a
             ball.holder = player.name
             ball.came_from = (player.name, received, player.position)
             ball.hesitation.pop(player.name, None)  # il a le ballon : il joue, il n'attend plus
@@ -1134,6 +1152,43 @@ def _ball_facing_deg(facing: Vec2, ball_velocity: Vec2) -> float:
     coming_from = ball_velocity * -1.0
     return math.degrees(math.acos(max(-1.0, min(1.0, (facing.x * coming_from.x + facing.y * coming_from.y)
                                                  / coming_from.length()))))
+
+
+def _reach_instant(z0: float, vz0: float, ceiling: float, t_in: float, t_out: float,
+                   ground_s: float | None) -> float | None:
+    """Premier instant de [`t_in`, `t_out`] où le bas du ballon (`z0`, `vz0` au début du pas) est sous `ceiling`, ou
+    `None` (ticket v2-hauteur-ballon/03a). Après le premier rebond du pas, seul l'instant d'entrée compte : un ballon qui
+    rebondit au-dessus d'un plafond ne redescend pas dessous dans le même pas."""
+    if hauteur.step_height(z0, vz0, t_in).z <= ceiling:
+        return t_in
+    if ground_s is not None and t_in >= ground_s:
+        return None
+    return portee.first_reachable_s(z0, vz0, ceiling, t_in, t_out if ground_s is None else min(t_out, ground_s))
+
+
+def _reach_radius(player: PlayerState, ball: BallState) -> float:
+    """Rayon de contact de `player` avec le ballon en jeu (même règle que `_ball_contacts`)."""
+    if player.name == ball.receiver:
+        return RECEIVER_REACH_M
+    if player.name in ball.readers:
+        return READER_REACH_M
+    return CONTROL_RADIUS_M
+
+
+def _exit_share(start: Vec2, end: Vec2, dt: float, player: PlayerState, radius: float) -> float:
+    """Part du pas (0 à 1) où le ballon sort du rayon `radius` du joueur, en mouvement relatif comme `_contacts` ; 1
+    s'il y est encore en fin de pas (ticket v2-hauteur-ballon/03a)."""
+    r0 = start - (player.position - player.velocity * dt)
+    seg = (end - player.position) - r0
+    a = seg.x * seg.x + seg.y * seg.y
+    if a < 1e-12:
+        return 1.0
+    b = 2.0 * (r0.x * seg.x + r0.y * seg.y)
+    c = r0.x * r0.x + r0.y * r0.y - radius * radius
+    disc = b * b - 4.0 * a * c
+    if disc < 0.0:
+        return 1.0
+    return min(1.0, max(0.0, (-b + math.sqrt(disc)) / (2.0 * a)))
 
 
 def _ball_contacts(start: Vec2, end: Vec2, dt: float, players: list[PlayerState],

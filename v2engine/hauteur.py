@@ -11,7 +11,8 @@ Euler semi-implicite sous-estimerait le sommet de 10 % pour `vz0 = 10 m/s`.
 Constantes validées par le propriétaire le 26/11/2026, reprises de la V1 (`src/ligue1sim/animation/ball.py`, Phase 6,
 bloc B2) : g, restitution au sol 0,70 (le rebond suivant monte à 0,49 × la hauteur du précédent), vitesse horizontale
 × 0,85 par rebond, rebonds arrêtés quand le sommet suivant passerait sous 0,15 m (le ballon roule). Seuil « aérien »
-de 0,5 m (hauteur du genou), **provisoire** jusqu'aux tranches de hauteur du ticket v2-hauteur-ballon/03."""
+de 0,5 m (hauteur du genou) : depuis le ticket v2-hauteur-ballon/03a, il ne règle plus que le `mode` transmis à
+l'API ; les contacts suivent les tranches de hauteur de chaque joueur (`portee`)."""
 
 from __future__ import annotations
 
@@ -22,7 +23,7 @@ GRAVITY_M_S2 = 9.81
 GROUND_RESTITUTION = 0.70
 GROUND_HORIZONTAL_KEEP = 0.85  # vitesse horizontale gardée à chaque rebond au sol
 REBOUND_MIN_APEX_M = 0.15  # sous ce sommet, le rebond est supprimé : le ballon roule
-AERIAL_THRESHOLD_M = 0.5  # bas du ballon au-dessus : mode « aérien » (provisoire, ticket 03)
+AERIAL_THRESHOLD_M = 0.5  # bas du ballon au-dessus : mode « aérien » (API ; contacts : `portee`, ticket 03a)
 # Vitesse totale de frappe √(vh² + vz²) maximale des passes et relances aériennes (ticket v2-realisme/14a2b, repère réel
 # 18 à 35 m/s, constats du 02a1 ; les tirs n'y sont pas soumis, voir `launch_vz_to`).
 # Méthode choisie par le propriétaire le 26/11/2026 : vh gardé, `vz` réduit ; le vol est plus court, le ballon retombe

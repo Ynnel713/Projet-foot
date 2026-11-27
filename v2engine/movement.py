@@ -253,6 +253,9 @@ class PlayerState:
     # tenus par `match._step_player` (`step` ne les lit pas)
     avoid_side: int = 0
     avoid_side_until_s: float = 0.0
+    # taille (m) de la fiche (`Player.taille_fm`), `None` si inconnue : repli sur la médiane du poste
+    # (`portee.neutral_height_m`, ticket v2-hauteur-ballon/03a)
+    height_m: float | None = None
 
 
 def turn_toward(facing: Vec2, desired: Vec2, max_angle_rad: float) -> Vec2:
@@ -354,4 +357,5 @@ def step(state: PlayerState, dt: float, target: Vec2, minute: float, speed_facto
         facing=turn_toward(state.facing, desired_facing(new_position, run_direction, look_at, turning, facing_run),
                             turn_rate_rad_s(agility) * dt),
         facing_run=facing_run,
+        height_m=state.height_m,  # taille de la fiche (ticket v2-hauteur-ballon/03a)
     )

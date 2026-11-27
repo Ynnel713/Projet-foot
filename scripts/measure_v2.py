@@ -920,7 +920,7 @@ def report(c: Collector, detail: bool = False) -> dict:
         if key.startswith("tirs par tranche d'xG : "):
             out[f"{key} par match"] = v / n
     for key, v in sorted(k.items()):  # réceptions contrôlées par origine, dont « centre » en l'air (v2-hauteur-ballon/02a1)
-        if key.startswith("réceptions contrôlées, origine : "):
+        if key.startswith(("réceptions contrôlées, origine : ", "réceptions contrôlées, tranche : ")):  # tranche : 03a
             out[f"{key} par match"] = v / n
     for key, v in sorted(k.items()):  # issue et origine des grosses occasions (ticket v2-collectif/28c)
         if key.startswith(("grosses occasions, issue : ", "grosses occasions, origine : ")):

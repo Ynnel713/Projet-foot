@@ -9,10 +9,9 @@ from v2engine.anticipation import loose_ball_target, meeting_point
 from v2engine.ball_state import BallState
 from v2engine.cerveau import think
 from v2engine.geometry import PITCH_LENGTH_M, PITCH_WIDTH_M, Vec2
-from v2engine.freinage import travel_time_s as flight_time_s
-from v2engine.hauteur import launch_vz
 from v2engine.match import _step_ball
 from v2engine.movement import PlayerState
+from v2engine.portee import player_ceiling_m
 from v2engine.restart import (AERIEN, CORNER, DEAD_S, GOAL_KICK, KICKOFF, LONG_RESTART_M, RESTART_DISTANCE_M,
                               THROW_IN, Restart, award, exit_point, kickoff, place, restart_target)
 from v2engine.trace import RestartEvent
@@ -98,15 +97,30 @@ def test_opponents_stand_at_the_regulation_distance() -> None:
     assert place(mate, restart, mate.position) == mate.position
 
 
-def test_ground_player_does_not_touch_an_aerial_ball_except_at_its_landing_point() -> None:
-    under, catcher = _p("Sous", 20, 34.0, team="away"), _p("Cible", 40, 34.0)
-    flight = flight_time_s(30.0, 25.0, airborne=True)  # retombe sur la cible, 30 m plus loin (02a1, en vol : 14a2b)
-    ball = BallState(position=Vec2(10, 34), velocity=Vec2(25, 0), mode=AERIEN, vz=launch_vz(flight, 25.0))
+def test_ground_player_does_not_touch_an_aerial_ball_above_his_ceiling() -> None:
+    # depuis le ticket v2-hauteur-ballon/03a : un joueur sous un ballon aérien ne le touche que s'il passe sous son
+    # plafond (tête en saut) ; une passe longue qui passe haut au-dessus de lui (sommet vers 6 m) continue
+    under, catcher = _p("Sous", 20, 34.0, team="away"), _p("Cible", 55, 34.0)
+    ball = BallState(position=Vec2(10, 34), velocity=Vec2(25, 0), mode=AERIEN, vz=11.0)
+    heights = []
     for i in range(30):
         _step_ball(ball, DT, [under, catcher], i * DT)
+        heights.append((ball.position.x, ball.z))
         if ball.holder is not None:
             break
     assert ball.holder != "Sous" and ball.position.x > 20.0
+    assert min(z for x, z in heights if 18.0 <= x <= 22.0) > player_ceiling_m(under)  # passé au-dessus de lui
+
+
+def test_ground_player_touches_an_aerial_ball_under_his_ceiling() -> None:
+    # même passe, plus basse (sommet vers 1,3 m) : elle passe à hauteur de poitrine, il la touche (avant le 03a : non)
+    under = _p("Sous", 20, 34.0, team="away")
+    ball = BallState(position=Vec2(10, 34), velocity=Vec2(25, 0), mode=AERIEN, vz=5.0)
+    for i in range(30):
+        _step_ball(ball, DT, [under], i * DT)
+        if ball.holder is not None or ball.last_toucher == "Sous":
+            break
+    assert ball.last_toucher == "Sous"
 
 
 def test_loose_ball_targets_stay_on_the_pitch() -> None:

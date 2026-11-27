@@ -1154,6 +1154,7 @@ class Collector:
         qui les voit tous ne compte pas (âge nul)."""
         for r in receptions:
             self.count["réceptions contrôlées, origine : " + r.origin] += 1  # ballons aériens (v2-hauteur-ballon/02a1)
+            self.count["réceptions contrôlées, tranche : " + r.band] += 1  # pied, corps, tête (v2-hauteur-ballon/03a)
             if r.origin in RECEIVED_PASSES:  # passes reçues dans l'axe devant la surface (ticket v2-realisme/10d)
                 self.count["passes reçues"] += 1
                 self.count["passes reçues en zone 14"] += in_zone_14(r.team, r.x, r.y)

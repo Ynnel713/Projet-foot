@@ -16,7 +16,7 @@ import ast
 import pathlib
 import re
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import pytest
 
@@ -35,6 +35,9 @@ ENGINE = ROOT / "v2engine"
 READERS = {"player_attribute", "effective_rating", "intrinsic_rating"}
 WITHOUT_EFFECT = ("à créer", "non branché")
 LOW, HIGH = 11, 99
+# Caractéristiques hors des notes FM, portées par un champ de `PlayerState` (ticket v2-hauteur-ballon/03a) : lues quand
+# le moteur lit ce champ ; profils bas et haut de la scène d'effet (tailles extrêmes de la base : 1,60 à 2,06 m).
+FIELD_CHARACTERISTICS = {"Taille": ("height_m", 1.60, 2.00)}
 
 
 # --- carte -------------------------------------------------------------------------------------------------------
@@ -55,10 +58,14 @@ def announced_with_effect(states: dict[str, str]) -> set[str]:
 
 
 def engine_reads(engine: pathlib.Path = ENGINE) -> set[str]:
-    """Noms littéraux lus par `player_attribute`, `effective_rating` ou `intrinsic_rating` dans le moteur (ast)."""
+    """Noms littéraux lus par `player_attribute`, `effective_rating` ou `intrinsic_rating` dans le moteur (ast), et
+    caractéristiques dont le champ est lu (`FIELD_CHARACTERISTICS`)."""
     names = set()
+    fields = {field: name for name, (field, _, _) in FIELD_CHARACTERISTICS.items()}
     for path in sorted(engine.rglob("*.py")):
         for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if isinstance(node, ast.Attribute) and node.attr in fields and isinstance(node.ctx, ast.Load):
+                names.add(fields[node.attr])
             if isinstance(node, ast.Call) and getattr(node.func, "id", getattr(node.func, "attr", None)) in READERS:
                 arg = node.args[1] if len(node.args) > 1 else next((k.value for k in node.keywords if k.arg == "name"), None)
                 if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
@@ -80,10 +87,10 @@ ANNOUNCED = sorted(announced_with_effect(STATES))
 
 def test_the_carte_is_read_with_its_announced_attributes() -> None:
     # 52 lignes d'attributs le 14/11/2026, dont 27 annoncées avec effet (23 « branché », Dribbling, Finishing,
-    # Balance et Handling)
+    # Balance et Handling) ; Jumping Reach et Taille branchés le 27/11/2026 (ticket v2-hauteur-ballon/03a)
     assert len(STATES) >= 50
-    assert {"Pace", "Dribbling", "Finishing", "Balance", "Handling"} <= set(ANNOUNCED)
-    assert {"Natural Fitness", "Heading", "Jumping Reach"}.isdisjoint(ANNOUNCED)
+    assert {"Pace", "Dribbling", "Finishing", "Balance", "Handling", "Jumping Reach", "Taille"} <= set(ANNOUNCED)
+    assert {"Natural Fitness", "Heading"}.isdisjoint(ANNOUNCED)
 
 
 def test_every_attribute_announced_with_effect_is_read_by_the_engine() -> None:
@@ -154,6 +161,11 @@ PLANS = {
     # avec ballon (ticket v2-realisme/09j), première divergence à la graine 21 en 60 s, à la graine 2 (67 s de jeu) en
     # 120 s : scène de 120 s
     "Stamina": Plan(mini_match, 120.0, 10),
+    # n'agissent que sur un ballon qui passe entre les plafonds des deux profils (tête en saut, ticket
+    # v2-hauteur-ballon/03a) ou sur la chance de contre évaluée : rare en 60 s (aucune divergence sur 3 graines),
+    # première divergence de l'un et de l'autre à la graine 2 en 120 s, pas 881 (27/11/2026)
+    "Jumping Reach": Plan(mini_match, 120.0, 10),
+    "Taille": Plan(mini_match, 120.0, 10),
 }
 
 
@@ -167,10 +179,19 @@ def _play(players: list[PlayerState], holder: str, seconds: float, seed: int,
     return scene.log
 
 
+def _profile(players: list[PlayerState], attribute: str, level: int) -> list[PlayerState]:
+    """Tous les joueurs à la note `level` (`LOW` ou `HIGH`) ; caractéristique portée par un champ : sa valeur basse ou
+    haute (`FIELD_CHARACTERISTICS`)."""
+    if attribute not in FIELD_CHARACTERISTICS:
+        return with_attribute(players, attribute, level)
+    field, low, high = FIELD_CHARACTERISTICS[attribute]
+    return [replace(p, **{field: low if level == LOW else high}) for p in with_attribute(players, attribute, level)]
+
+
 def first_divergence(attribute: str, plan: Plan) -> tuple[int, int] | None:
     """(graine, pas) de la première divergence entre l'attribut à 11 et à 99, ou None sur toutes les graines."""
     players, holder = plan.build()
-    low, high = with_attribute(players, attribute, LOW), with_attribute(players, attribute, HIGH)
+    low, high = _profile(players, attribute, LOW), _profile(players, attribute, HIGH)
     for seed in range(1, plan.max_seeds + 1):
         reference = _play(low, holder, plan.seconds, seed)
         other = _play(high, holder, plan.seconds, seed, reference)
@@ -191,7 +212,7 @@ def test_every_attribute_announced_with_effect_changes_a_scene(attribute: str) -
     players, holder = plan.build()
     seconds = (step + 1) * Scene.dt
     for value in (LOW, HIGH):
-        profile = with_attribute(players, attribute, value)
+        profile = _profile(players, attribute, value)
         assert _play(profile, holder, seconds, seed) == _play(profile, holder, seconds, seed)
 
 

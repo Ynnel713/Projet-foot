@@ -17,7 +17,7 @@ from ligue1sim.pitch_geometry import GOAL_HEIGHT_M, GOAL_WIDTH_M
 
 from v2engine.attributes import duel_probability, success_probability
 from v2engine.condition import effective_rating
-from v2engine import freinage
+from v2engine import freinage, hauteur, portee
 from v2engine.flux import TIR
 from v2engine.geometry import Vec2, in_penalty_area
 from v2engine.movement import PlayerState
@@ -432,11 +432,54 @@ def _aimed(shooter: PlayerState, goal: Vec2, keeper: PlayerState | None,
     return 1.0, (mean[0], mean[1], mean[2]), aims
 
 
-def _block_covers(shooter: PlayerState, goal: Vec2, opponents: list[PlayerState]) -> list[tuple[float, float]]:
+def _height_at_s(error: float, sigma: float, to_line: float, elapsed: float) -> float:
+    """Hauteur du bas d'un tir (écart en hauteur `error`, rad) `elapsed` secondes après la frappe, par la loi du moteur
+    (`match._step_holder`, tickets 02a2 et 14a2b) : hauteur à la ligne `line_height_m`, point de chute `ground_strike_m`,
+    vitesse verticale `launch_vz_to` au temps de trajet du moteur ; après le point de chute, au sol (rebond ignoré :
+    plus bas que la frappe)."""
+    at_line = line_height_m(math.tan(error), sigma, to_line, 2.0 * portee.BALL_RADIUS_M)
+    landing = freinage.stepped_travel_time_s(ground_strike_m(at_line, to_line), MAX_PASS_MPS, _ENGINE_TICK_S,
+                                             airborne=True)
+    if landing is not None and elapsed >= landing:
+        return 0.0
+    return hauteur.height_at(0.0, hauteur.launch_vz_to(max(0.0, at_line), landing), elapsed)[0]
+
+
+def _under_error(sigma: float, to_line: float, elapsed: float, ceiling: float) -> float:
+    """Plus grand écart en hauteur (rad, tiré comme `draw_shot_error`) d'un tir dont le bas passe encore sous `ceiling`
+    `elapsed` secondes après la frappe (ticket v2-hauteur-ballon/03a : un défenseur ne contre que sous son plafond) ;
+    ±inf si tous ou aucun. La hauteur croît avec l'écart : dichotomie."""
+    if to_line <= 0.0 or sigma <= 0.0:
+        return math.inf
+    low, high = -_MAX_HEIGHT_ERROR_RAD, _MAX_HEIGHT_ERROR_RAD
+    if _height_at_s(high, sigma, to_line, elapsed) <= ceiling:
+        return math.inf
+    if _height_at_s(low, sigma, to_line, elapsed) > ceiling:
+        return -math.inf
+    for _ in range(_BISECTION_STEPS):
+        mid = 0.5 * (low + high)
+        if _height_at_s(mid, sigma, to_line, elapsed) <= ceiling:
+            low = mid
+        else:
+            high = mid
+    return 0.5 * (low + high)
+
+
+# Bornes de la dichotomie de `_under_error` (pas des constantes produit) : écart en hauteur au-delà de ±60°, part
+# négligeable des tirs ; 16 pas, écart limite à 0,002° près.
+_MAX_HEIGHT_ERROR_RAD = math.pi / 3.0
+_BISECTION_STEPS = 16
+
+
+def _block_covers(shooter: PlayerState, goal: Vec2, opponents: list[PlayerState],
+                  sigma: float) -> list[tuple[float, float, float, float]]:
     """Écarts de tir (angles relatifs à l'axe vers le centre du but) qui passent à la portée de chaque défenseur de champ
     devant le tireur (contre physique, `match._blocked`) : à sa place quand le ballon arrive à lui (il garde sa vitesse),
     portée `block_reach_m` au temps de vol ; tout l'angle s'il est déjà au contact du tireur. Approximation : la portée
-    est prise sur la ligne joueur-tireur."""
+    est prise sur la ligne joueur-tireur. Troisième et quatrième termes : chance de contre de ce défenseur sur ces écarts,
+    `BLOCK_CHANCE` × part des tirs qui passent sous son plafond (ticket v2-hauteur-ballon/03a), sur tous les tirs puis
+    sur les seuls tirs sous la barre (ceux qui peuvent marquer) ; hauteur indépendante de la largeur, distance à la
+    ligne prise au centre du but, comme pour le cadre (`on_target_axes`)."""
     axis = (goal - shooter.position).normalized()
     to_goal = shooter.position.distance_to(goal)
     covers = []
@@ -455,8 +498,12 @@ def _block_covers(shooter: PlayerState, goal: Vec2, opponents: list[PlayerState]
         offset = at - shooter.position
         along, gap = offset.x * axis.x + offset.y * axis.y, offset.length()
         reach = block_reach_m(elapsed)
+        limit = _under_error(sigma, to_goal, elapsed, portee.player_ceiling_m(opponent))
+        bar = math.atan2(GOAL_HEIGHT_M - SHOT_AIM_HEIGHT_M, to_goal)  # écart limite sous la barre (`on_target_axes`)
+        chance = BLOCK_CHANCE * _STANDARD_NORMAL.cdf(limit / sigma)
+        chance_scoring = BLOCK_CHANCE * _STANDARD_NORMAL.cdf(min(limit, bar) / sigma) / _STANDARD_NORMAL.cdf(bar / sigma)
         if gap <= reach:
-            covers.append((-math.inf, math.inf))
+            covers.append((-math.inf, math.inf, chance, chance_scoring))
         elif 0.0 < along <= to_goal:  # devant le tireur, avant le but
             centre, half = _relative(shooter.position, axis, at), math.asin(reach / gap)
             if elapsed < BLOCK_REACTION_S:
@@ -466,7 +513,7 @@ def _block_covers(shooter: PlayerState, goal: Vec2, opponents: list[PlayerState]
                 cosine = (ready * ready + gap * gap - BLOCK_WIDTH_M * BLOCK_WIDTH_M) / (2.0 * ready * gap)
                 if cosine < 1.0:
                     half = max(half, math.acos(max(-1.0, cosine)))
-            covers.append((centre - half, centre + half))
+            covers.append((centre - half, centre + half, chance, chance_scoring))
     return covers
 
 
@@ -493,24 +540,27 @@ def _flight_shares(shooter: PlayerState, goal: Vec2, keeper: PlayerState | None,
     avec `aims` (rad, ticket v2-realisme/05l), la liste des trois parts pour chaque visée, découpes calculées une fois."""
     sigma = shot_error_sigma(shooter, goal, opponents)
     _, under = on_target_axes(shooter, goal, opponents)
-    scoring, covers = _goal_angles(shooter, goal, keeper), _block_covers(shooter, goal, opponents)
-    cuts = sorted({-math.inf, math.inf, *(c for span in scoring + covers for c in span)})
+    scoring, covers = _goal_angles(shooter, goal, keeper), _block_covers(shooter, goal, opponents, sigma)
+    cuts = sorted({-math.inf, math.inf, *(c for span in scoring for c in span),
+                   *(c for c_lo, c_hi, _, _ in covers for c in (c_lo, c_hi))})
     slices = []
     for lo, hi in zip(cuts, cuts[1:]):
-        through = (1.0 - BLOCK_CHANCE) ** sum(1 for c_lo, c_hi in covers if c_lo <= lo and hi <= c_hi)
-        slices.append((lo, hi, through, any(g_lo <= lo and hi <= g_hi for g_lo, g_hi in scoring)))
+        here = [(chance, scoring_chance) for c_lo, c_hi, chance, scoring_chance in covers if c_lo <= lo and hi <= c_hi]
+        through = math.prod(1.0 - chance for chance, _ in here)  # tous les tirs (03a)
+        through_scoring = math.prod(1.0 - chance for _, chance in here)  # tirs sous la barre
+        slices.append((lo, hi, through, through_scoring, any(g_lo <= lo and hi <= g_hi for g_lo, g_hi in scoring)))
 
     def shares(aim: float) -> tuple[float, float, float]:
         def below(angle: float) -> float:
             return 0.5 * (1.0 + math.erf((angle - aim) / (sigma * math.sqrt(2.0))))
 
         goal_share = blocked = goal_unblocked = 0.0
-        for lo, hi, through, scores in slices:
+        for lo, hi, through, through_scoring, scores in slices:
             mass = below(hi) - below(lo)
             blocked += mass * (1.0 - through)
             if scores:
                 goal_share += mass * under
-                goal_unblocked += mass * under * through
+                goal_unblocked += mass * under * through_scoring
         return goal_share, blocked, goal_unblocked
 
     if aims is None:

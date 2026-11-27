@@ -1,6 +1,6 @@
 """Réception « centre » réservée au ballon reçu à sa première retombée (ticket v2-hauteur-ballon/02c) : un ballon en vol
 qui n'a pas encore touché le sol depuis son lancement est reçu comme un centre ; après un rebond, comme une passe
-ordinaire. Le filtre de contact en hauteur (bas du ballon au-dessus de 0,5 m : pas touché) est inchangé."""
+ordinaire. Le filtre de contact en hauteur suit, depuis le ticket 03a, le plafond de chaque joueur (au 02c : 0,5 m)."""
 
 from __future__ import annotations
 
@@ -8,9 +8,10 @@ import pytest
 
 from v2engine.ball_state import BallState
 from v2engine.geometry import Vec2
-from v2engine.hauteur import AERIAL_THRESHOLD_M, step_height
+from v2engine.hauteur import step_height
 from v2engine.match import (RECEIVER_REACH_M, TICK_SECONDS, _danger_origin, _ground, _ball_contacts, _launch_aerial,
                            _step_ball)
+from v2engine.portee import player_ceiling_m
 from tests.scenes import player
 
 DT = 0.1
@@ -85,16 +86,22 @@ def test_danger_origin_meme_regle(landed: bool, expected: str) -> None:
     assert _danger_origin(ball, mate) == "passe au sol"  # en montée : pas « centre »
 
 
-def test_ballon_qui_remonte_au_dessus_du_seuil_n_est_pas_touche(monkeypatch) -> None:
-    """Filtre de contact préservé (réserve A1 du ticket) : après un rebond, un ballon dont le bas reste au-dessus de
-    0,5 m sur tout le pas passe au-dessus du joueur."""
+def test_ballon_qui_remonte_au_dessus_du_plafond_n_est_pas_touche(monkeypatch) -> None:
+    """Filtre de contact préservé (réserve A1 du ticket) : après un rebond, un ballon qui reste au-dessus du plafond du
+    joueur (sa tête en saut, ticket 03a ; au 02c : 0,5 m) sur tout le pas passe au-dessus de lui ; sous son plafond, il
+    le touche (de la poitrine : ballon à 0,6 m, touché depuis le 03a)."""
     monkeypatch.setattr("v2engine.match.attempt_control", lambda *a, **k: True)
-    z0, vz0 = 0.6, 2.0
-    assert step_height(z0, vz0, DT).z > AERIAL_THRESHOLD_M
+    receiver = player("R", x=AT.x, y=AT.y)
+    z0, vz0 = player_ceiling_m(receiver) + 0.3, 2.0
+    assert step_height(z0, vz0, DT).z > player_ceiling_m(receiver)
     ball = BallState(position=Vec2(AT.x - 0.5, AT.y), velocity=Vec2(SPEED, 0.0), receiver="R", last_pass_team="home",
                      pass_from=PASS_FROM, z=z0, vz=vz0, landed=True)
-    _step_ball(ball, DT, [player("R", x=AT.x, y=AT.y)], 0.0)
+    _step_ball(ball, DT, [receiver], 0.0)
     assert ball.holder is None
+    ball = BallState(position=Vec2(AT.x - 0.5, AT.y), velocity=Vec2(SPEED, 0.0), receiver="R", last_pass_team="home",
+                     pass_from=PASS_FROM, z=0.6, vz=2.0, landed=True)
+    _step_ball(ball, DT, [player("R", x=AT.x, y=AT.y)], 0.0)
+    assert ball.holder == "R"
 
 
 def test_etat_touche_le_sol_au_lancement_au_rebond_et_pose() -> None:

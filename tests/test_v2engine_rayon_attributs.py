@@ -74,6 +74,8 @@ TRANSITION = {
     "Balance": ("17/11/2026", "v2-attributs-contextes/06"),
     "Vision": ("17/11/2026", _REST),
     "Reflexes": ("17/11/2026", "v2-attributs-restants/03b"),
+    # Jumping Reach : lu pour la hauteur atteinte en saut (ticket v2-hauteur-ballon/03a) ; second contexte au duel aérien
+    "Jumping Reach": ("27/11/2026", "v2-realisme/15b"),
     "One on Ones": ("17/11/2026", "v2-attributs-restants/03b"),
     "Handling": ("17/11/2026", "v2-attributs-restants/03b"),
     **{attribute: ("17/11/2026", _REST) for attribute in (
@@ -407,8 +409,6 @@ COVERAGE_EXCEPTIONS = {
     "Determination": "v2-collectif/21 ; v2-coach-et-gestion-de-match/02 et 04",
     "Bravery": "v2-realisme/17b",
     "Leadership": "v2-realisme/17c",
-    "Jumping Reach": "v2-realisme/15b",
-    "Taille FM (cm)": "v2-realisme/15b",
     "Heading": "v2-realisme/15c",
     "Crossing": "v2-attributs-restants/01 et 11",
     "Corners": "v2-realisme/16d",
