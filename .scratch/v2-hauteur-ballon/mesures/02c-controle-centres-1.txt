@@ -1,0 +1,9 @@
+warning: The `UV_NATIVE_TLS` environment variable is deprecated and will be removed in a future release. Use `UV_SYSTEM_CERTS` instead.
+graine 11 : 1 réceptions « centre » dans la trace, 1 relues
+graine 19 : 1 réceptions « centre » dans la trace, 1 relues
+graine 20 : 1 réceptions « centre » dans la trace, 1 relues
+t= 1979.9s   1.7s après la frappe (vol prévu 1.76s)  z= 0.52m vz= -8.03  sol touché avant : False  impact dans le pas : 0.063  Aron Dønnum visé
+t= 3596.8s   2.0s après la frappe (vol prévu 2.01s)  z= 0.07m vz= -9.77  sol touché avant : False  impact dans le pas : 0.008  Jérémy Le Douaron visé
+t= 4532.8s   0.0s après la frappe (vol prévu 2.22s)  z= 0.00m vz=+10.89  sol touché avant : False  impact dans le pas : -  Aron Dønnum non visé
+
+3 sur 3 reçues avant le premier contact au sol (avant le pas du contact) ; 3 « centre » au total

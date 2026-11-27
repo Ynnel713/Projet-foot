@@ -1,0 +1,9 @@
+warning: The `UV_NATIVE_TLS` environment variable is deprecated and will be removed in a future release. Use `UV_SYSTEM_CERTS` instead.
+graine 24 : 1 réceptions « centre » dans la trace, 1 relues
+graine 45 : 1 réceptions « centre » dans la trace, 1 relues
+graine 49 : 1 réceptions « centre » dans la trace, 1 relues
+t= 4087.6s   2.3s après la frappe (vol prévu 2.34s)  z= 0.47m vz=-11.08  sol touché avant : False  impact dans le pas : 0.041  Jonathan Ikoné visé
+t= 1221.5s   2.0s après la frappe (vol prévu 2.04s)  z= 0.44m vz= -9.59  sol touché avant : False  impact dans le pas : 0.045  Cameron Archer visé
+t= 1315.0s   0.0s après la frappe (vol prévu 1.90s)  z= 0.00m vz= +9.33  sol touché avant : False  impact dans le pas : -  Axel Witsel non visé
+
+3 sur 3 reçues avant le premier contact au sol (avant le pas du contact) ; 3 « centre » au total

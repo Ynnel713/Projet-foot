@@ -1,0 +1,6 @@
+warning: The `UV_NATIVE_TLS` environment variable is deprecated and will be removed in a future release. Use `UV_SYSTEM_CERTS` instead.
+graine 0 : 0 réceptions « centre » dans la trace, 0 relues
+graine 1 : 0 réceptions « centre » dans la trace, 0 relues
+graine 2 : 0 réceptions « centre » dans la trace, 0 relues
+
+0 sur 0 reçues avant le premier contact au sol (avant le pas du contact) ; 0 « centre » au total sur 3 matchs

@@ -1,0 +1,71 @@
+indicateurs comparés : 2821
+A contre B hors bruit : 91 (3.2%)
+02c contre avant (14a2a-apres) hors bruit : 108 (3.8%)
+secondes par match avant : 156.04474986852003
+secondes par match apres : 180.67588152428004
+
+-- indicateurs choisis --
+buts par match : avant 4.22 | après 4.98 | écart +0.76 | bruit ±0.88 | 0.9×
+face-à-face : tirs par match : avant 10.06 | après 10.94 | écart +0.88 | bruit ±1.47 | 0.6×
+grosses occasions, origine : centre (part) : avant 0.02297 | après 0.01596 | écart -0.007013 | bruit ±0.00746 | 0.9×
+grosses occasions, origine : dribble (part) : avant 0.03728 | après 0.04087 | écart +0.003594 | bruit ±0.00786 | 0.5×
+grosses occasions, origine : passe au sol (part) : avant 0.3552 | après 0.352 | écart -0.003204 | bruit ±0.0194 | 0.2×
+grosses occasions, origine : passe en profondeur (part) : avant 0.355 | après 0.3533 | écart -0.001719 | bruit ±0.0238 | 0.1×
+grosses occasions, origine : passe en retrait (part) : avant 0.1678 | après 0.176 | écart +0.008203 | bruit ±0.0177 | 0.5×
+grosses occasions, origine : penalty (part) : avant 0.006237 | après 0.009516 | écart +0.003279 | bruit ±0.0016 | 2.0×
+grosses occasions, origine : rebond (part) : avant 0.03023 | après 0.0317 | écart +0.001476 | bruit ±0.0069 | 0.2×
+grosses occasions, origine : récupération (part) : avant 0.0368 | après 0.03685 | écart +5.089e-05 | bruit ±0.00657 | 0.0×
+passes de première (part des passes décidées) : avant 0.1333 | après 0.1355 | écart +0.002236 | bruit ±0.00602 | 0.4×
+passes de première : chance évaluée (part) : avant 0.8855 | après 0.8871 | écart +0.001622 | bruit ±0.00375 | 0.4×
+passes de première : non perdues (part) : avant 0.8761 | après 0.8708 | écart -0.005313 | bruit ±0.00939 | 0.6×
+passes de première par match : avant 178.3 | après 178.6 | écart +0.26 | bruit ±10 | 0.0×
+passes réussies (part) : avant 0.8234 | après 0.8217 | écart -0.001678 | bruit ±0.0044 | 0.4×
+possession d'équipe (s) : avant 20.48 | après 20.46 | écart -0.02802 | bruit ±0.567 | 0.0×
+retours au passeur en 3 s (part des passes réussies) : avant 0.06155 | après 0.06103 | écart -0.0005226 | bruit ±0.00298 | 0.2×
+réceptions contrôlées, origine : centre par match : avant 10.3 | après 0.08 | écart -10.22 | bruit ±0.817 | 12.5×
+réceptions contrôlées, origine : passe au sol par match : avant 359 | après 349.9 | écart -9.1 | bruit ±11.8 | 0.8×
+réceptions contrôlées, origine : passe en profondeur par match : avant 150.2 | après 157.1 | écart +6.9 | bruit ±10.2 | 0.7×
+réceptions contrôlées, origine : passe en retrait par match : avant 558.4 | après 556.3 | écart -2.16 | bruit ±17.3 | 0.1×
+réceptions contrôlées, origine : rebond par match : avant 4.12 | après 4.76 | écart +0.64 | bruit ±0.948 | 0.7×
+réceptions contrôlées, origine : récupération par match : avant 260.3 | après 258.6 | écart -1.66 | bruit ±7.53 | 0.2×
+tirs par équipe : avant 13.26 | après 13.86 | écart +0.6 | bruit ±1.23 | 0.5×
+tirs, origine : coup franc (part) : avant 0.01818 | après 0.01302 | écart -0.005164 | bruit ±0.00945 | 0.5×
+tirs, origine : dribble (part) : avant 0.6594 | après 0.6542 | écart -0.005254 | bruit ±0.0391 | 0.1×
+tirs, origine : passe au sol (part) : avant 0.1086 | après 0.1009 | écart -0.007677 | bruit ±0.0235 | 0.3×
+tirs, origine : passe en profondeur (part) : avant 0.0442 | après 0.04794 | écart +0.003738 | bruit ±0.0187 | 0.2×
+tirs, origine : passe en retrait (part) : avant 0.05811 | après 0.06844 | écart +0.01033 | bruit ±0.0203 | 0.5×
+tirs, origine : penalty (part) : avant 0.002502 | après 0.002886 | écart +0.0003833 | bruit ±0.00311 | 0.1×
+tirs, origine : rebond (part) : avant 0.01312 | après 0.01809 | écart +0.004966 | bruit ±0.00964 | 0.5×
+tirs, origine : récupération (part) : avant 0.08416 | après 0.09453 | écart +0.01036 | bruit ±0.0185 | 0.6×
+
+-- 30 plus gros écarts --
+inf× rendement par tranche de 15 min : Stamina 40-55 : 75-90 : buts personnels pour 90 min : 0 -> 0.1714 (±0)
+inf× rendement par tranche de 15 min : Stamina 40-55 : 45 et plus : tirs pour 90 min : 2.571 -> 0.5143 (±0)
+inf× rendement par tranche de 15 min : Stamina 40-55 : 45 et plus : buts marqués par l'équipe pour 90 min : 0 -> 0.75 (±0)
+inf× rendement par tranche de 15 min : Stamina 40-55 : 15-30 : tirs cadrés (part des non contrés) : 0 -> 0.3333 (±0)
+inf× rendement par tranche de 15 min : Stamina 40-55 : 15-30 : buts personnels pour 90 min : 0 -> 0.1714 (±0)
+inf× rendement par tranche de 15 min : Stamina 0-40 : 90 et plus : buts encaissés par l'équipe pour 90 min : 9.75 -> 5.625 (±0)
+inf× rendement par tranche de 15 min : Stamina 0-40 : 60-75 : tirs pour 90 min : 1 -> 0 (±0)
+inf× rendement par tranche de 15 min : Stamina 0-40 : 45 et plus : passes réussies (part) : 0.25 -> 1 (±0)
+inf× rendement par tranche de 15 min : Stamina 0-40 : 45 et plus : contrôles ratés pour 100 passes visées : 0 -> 8.333 (±0)
+inf× rendement par tranche de 15 min : Stamina 0-40 : 45 et plus : buts marqués par l'équipe pour 90 min : 0 -> 1.875 (±0)
+inf× rendement par tranche de 15 min : RB : 90 et plus : tirs pour 90 min : 0.18 -> 0 (±0)
+inf× rendement par tranche de 15 min : RB : 60-75 : buts personnels pour 90 min : 0.06 -> 0 (±0)
+inf× rendement par tranche de 15 min : RB : 45 et plus : autres contacts ratés pour 90 min : 0.855 -> 0.9495 (±0)
+inf× rendement par tranche de 15 min : MC : 60-75 : buts personnels pour 90 min : 0 -> 0.06 (±0)
+inf× rendement par tranche de 15 min : MC : 45 et plus : tirs pour 90 min : 0 -> 0.27 (±0)
+inf× rendement par tranche de 15 min : MC : 0-15 : buts personnels pour 90 min : 0 -> 0.06 (±0)
+inf× rendement par tranche de 15 min : LB : 90 et plus : tirs pour 90 min : 0 -> 0.225 (±0)
+inf× rendement par tranche de 15 min : AD : 90 et plus : buts personnels pour 90 min : 0 -> 0.06667 (±0)
+inf× gardien : ballons avec sortie, état : tir : contré, ballon à 3 s, à l'adversaire (part) : 0 -> 0.0625 (±0)
+inf× gardien : ballons avec sortie, état : tir : contré, ballon à 3 s, sortie de but (part) : 0 -> 0.03125 (±0)
+inf× gardien : ballons avec sortie, ballon à 3 s, autre arrêt de jeu (part) : 0.005 -> 0.01 (±0)
+inf× engagement : joueurs de champ à moins de 20 m du ballon, équipe avec ballon (quartiles) : q3 : 6.02 -> 6 (±0)
+inf× engagement : joueurs de champ à moins de 15 m du ballon (quartiles) : q1 : 6.14 -> 6.06 (±0)
+inf× engagement : joueurs de champ à moins de 10 m du ballon, équipe avec ballon (quartiles) : q1 : 1.08 -> 1.06 (±0)
+inf× calibration xG neutre, tireurs moyens, xG [0.5 ; +[ : tirs (effectif) : 1.25 -> 1.286 (±0)
+inf× calibration xG neutre, tireurs moyens, xG [0 ; 0.03[ : taux de buts, IC95 bas : 0 -> 0.00278 (±0)
+inf× calibration xG neutre, tireurs moyens, xG [0 ; 0.03[ : taux de buts : 0 -> 0.01471 (±0)
+12.5× réceptions contrôlées, origine : centre par match : 10.3 -> 0.08 (±0.817)
+3.6× calibration xG neutre, tireurs moyens, xG [0 ; 0.03[ : buts moins xG, par match : -0.01332 -> 0.0102 (±0.00656)
+2.5× calibration xG neutre, tous les tireurs, xG [0 ; 0.03[ : taux de buts, IC95 bas : 0 -> 0.006118 (±0.00243)

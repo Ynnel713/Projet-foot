@@ -415,7 +415,7 @@ def _danger_origin(ball: BallState, player: PlayerState) -> str:
         return _shot_origin(ball, player, ball.set_piece is not None and ball.set_piece.taker == player.name)
     if ball.holder is not None:
         return _pass_kind(ball.position, player)
-    return _received_as(ball, player, ball.z > 0.0 or ball.vz != 0.0)
+    return _received_as(ball, player, ball.first_drop)  # même règle qu'au contact (ticket v2-hauteur-ballon/02c)
 
 
 def _shot_origin(ball: BallState, shooter: PlayerState, set_piece: bool) -> str:
@@ -615,7 +615,7 @@ def _play_restart(ball: BallState, players: list[PlayerState], now_s: float,
 
 def _ground(ball: BallState) -> None:
     """Ballon posé au sol (ticket v2-hauteur-ballon/02a1) : hauteur et vitesse verticale nulles, mode « sol »."""
-    ball.mode, ball.z, ball.vz = SOL, 0.0, 0.0
+    ball.mode, ball.z, ball.vz, ball.landed = SOL, 0.0, 0.0, False
 
 
 def _launch_aerial(ball: BallState, distance_m: float) -> None:
@@ -624,7 +624,7 @@ def _launch_aerial(ball: BallState, distance_m: float) -> None:
     `hauteur.MAX_FLIGHT_S`, ou ballon trop lent pour arriver : vol plafonné, il retombe avant le point visé."""
     # pas du produit : les remises et les passes ne connaissent pas le pas de la simulation (`--pas` d'un banc le change)
     flight = freinage.travel_time_s(distance_m, ball.velocity.length(), TICK_SECONDS)
-    ball.mode, ball.z, ball.vz = SOL, 0.0, hauteur.launch_vz(flight)
+    ball.mode, ball.z, ball.vz, ball.landed = SOL, 0.0, hauteur.launch_vz(flight), False
 
 
 def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: float = 0.0,
@@ -1009,8 +1009,11 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
         flight.elapsed_s += dt
     # Hauteur (ticket v2-hauteur-ballon/02a1) : chute exacte sur le pas, rebonds (vitesse horizontale × 0,85 chacun)
     z0, vz0 = ball.z, ball.vz
-    airborne = z0 > 0.0 or vz0 != 0.0  # ballon en vol ou qui rebondit : reçu comme un centre (origine d'un tir)
+    airborne = z0 > 0.0 or vz0 != 0.0  # ballon en vol ou qui rebondit : filtre de contact en hauteur ci-dessous
+    in_first_flight = airborne and not ball.landed  # pas encore touché le sol depuis son lancement (02c)
     height = hauteur.step_height(z0, vz0, dt)
+    if height.first_contact_s is not None:
+        ball.landed = True  # premier contact au sol pendant ce pas (02c)
     ball.z, ball.vz = height.z, height.vz
     ball.velocity = ball.velocity * height.horizontal_keep
     ball.mode = AERIEN if hauteur.is_aerial(ball.z) else SOL
@@ -1052,7 +1055,12 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
         if last is not None and last.kind in _LOST_BY and last.team != player.team:  # perte de balle (ticket 19b)
             _log(ball, now_s, PERTE, last.team, last.player, _LOST_BY[last.kind], player.name)
         ball.last_toucher = player.name  # contrôlé ou non, il l'a touché (ticket v2-collectif/29)
-        received = _received_as(ball, player, airborne)
+        # reçu à sa première retombée (02c) : il entre à sa portée avant l'impact du pas, ballon qui redescend (en
+        # montée : passe ordinaire, décision du propriétaire du 27/11/2026) ; lu avant `_ground`
+        caught_first_drop = (in_first_flight
+                             and (height.first_contact_s is None or entry * dt < height.first_contact_s)
+                             and hauteur.height_at(z0, vz0, entry * dt)[1] < 0.0)
+        received = _received_as(ball, player, caught_first_drop)
         _ground(ball)  # touché : le ballon repart du sol (02a1)
         intended = ball.receiver == player.name
         ball.pass_from, ball.rebound, ball.shot_wide = None, False, False
@@ -1064,7 +1072,7 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
         if attempt_control(player, ball.velocity, opponents):
             # jeu à une touche (ticket v2-collectif/31a) : passe au sol qui lui est destinée, joueur de champ ; il décide
             # dès le tick suivant, et contrôle comme avant si son choix n'est pas une passe sans rotation
-            first_time = intended and not airborne and player.poste != "GK" and thinks_one_touch(player, opponents)
+            first_time = intended and not caught_first_drop and player.poste != "GK" and thinks_one_touch(player, opponents)
             # contrôle orienté (ticket v2-collectif/31b), tiré à la réception ; appliqué s'il contrôle (pas de première)
             oriented = orients_control(player, ball.velocity)  # ballon dur : moins souvent orienté (31c)
             kind = reception_type(player.facing, player.position, player.team)  # au contact, avant d'orienter (07d)

@@ -107,6 +107,16 @@ class BallState:
     # Hauteur du bas du ballon (m) et vitesse verticale (m/s), ticket v2-hauteur-ballon/02a1 (`v2engine/hauteur.py`).
     z: float = 0.0
     vz: float = 0.0
+    # Le ballon a touché le sol depuis son lancement (ticket v2-hauteur-ballon/02c) : remis à faux à chaque lancement ou
+    # ballon posé (`_launch_aerial`, `_ground`), vrai au premier contact au sol. Un ballon qui redescend sans avoir encore
+    # touché le sol est reçu « en l'air » (centre) ; en montée ou après un rebond, comme une passe ordinaire.
+    landed: bool = False
+
+    @property
+    def first_drop(self) -> bool:
+        """Ballon qui redescend et n'a pas encore touché le sol depuis son lancement (première retombée, ticket 02c ;
+        en montée, il est reçu comme une passe ordinaire, décision du propriétaire du 27/11/2026)."""
+        return self.vz < 0.0 and not self.landed
     # Faute (ticket v2-collectif/30) : avantage en cours (faute, instant où il est acquis) ; coup franc dont le preneur
     # a le ballon et n'a pas encore joué (il frappe ou passe, jamais ne conduit).
     advantage: tuple[FoulEvent, float] | None = None
