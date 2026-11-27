@@ -158,8 +158,8 @@ def test_lofted_pass_flies_like_a_long_restart_and_is_traced() -> None:
     _execute(ball, keeper, action, players, rivals, GOAL, None, 0.0, False, None, None, lost=False)
     assert ball.readers == {} and ball.receiver == "BU"
     flight = flight_time_s(keeper.position.distance_to(action.target.position), ball.velocity.length(),
-                           TICK_SECONDS)
-    assert ball.z == 0.0 and ball.vz == pytest.approx(launch_vz(flight))  # vol vers la cible (v2-hauteur-ballon/02a1)
+                           TICK_SECONDS, airborne=True)  # en vol : traînée seule (ticket v2-realisme/14a2b)
+    assert ball.z == 0.0 and ball.vz == pytest.approx(launch_vz(flight, ball.velocity.length()))  # vol vers la cible (v2-hauteur-ballon/02a1)
     event = events[-1]
     assert event.kind == PASSE and event.detail == RELANCE_LONGUE
     decisions: list = []

@@ -620,11 +620,14 @@ def _ground(ball: BallState) -> None:
 
 def _launch_aerial(ball: BallState, distance_m: float) -> None:
     """Ballon frappé en l'air vers un point à `distance_m` (ticket v2-hauteur-ballon/02a1) : durée de vol tirée du freinage
-    horizontal (`freinage.travel_time_s`), vitesse verticale `g·T / 2`, il retombe sur le point visé. Vol plus long que
-    `hauteur.MAX_FLIGHT_S`, ou ballon trop lent pour arriver : vol plafonné, il retombe avant le point visé."""
+    horizontal en vol (`freinage.travel_time_s`, traînée seule, ticket v2-realisme/14a2b), vitesse verticale `g·T / 2`, il
+    retombe sur le point visé. Vitesse totale au-delà de `hauteur.MAX_STRIKE_MPS` (passe de plus de ~67 m) ou angle de
+    départ au-delà de `hauteur.MAX_LAUNCH_ANGLE_DEG` (passe trop molle) : `vz` réduit, vol plus court, il retombe avant le
+    point visé et rebondit ou roule vers lui."""
     # pas du produit : les remises et les passes ne connaissent pas le pas de la simulation (`--pas` d'un banc le change)
-    flight = freinage.travel_time_s(distance_m, ball.velocity.length(), TICK_SECONDS)
-    ball.mode, ball.z, ball.vz = SOL, 0.0, hauteur.launch_vz(flight)
+    speed = ball.velocity.length()
+    flight = freinage.travel_time_s(distance_m, speed, TICK_SECONDS, airborne=True)
+    ball.mode, ball.z, ball.vz = SOL, 0.0, hauteur.launch_vz(flight, speed)
 
 
 def _step_ball(ball: BallState, dt: float, players: list[PlayerState], now_s: float = 0.0,
@@ -885,16 +888,17 @@ def _execute(ball: BallState, holder: PlayerState, action, players: list[PlayerS
             along = (keeper.position.x - shot_at.x) * heading.x + (keeper.position.y - shot_at.y) * heading.y
             flight.keeper_at_m = min(max(along, 0.0), to_line)
         # Hauteur (ticket v2-hauteur-ballon/02a2) : frappé du sol, le ballon passe la ligne avec le bas à la hauteur tirée
-        # (`line_height_m`, cohérente avec l'issue) ; vitesse verticale au temps de trajet exact du moteur (ponytail :
-        # `TICK_SECONDS`, comme `_launch_aerial`). Tir parti trop bas (hauteur négative) : il retombe où la droite visée
-        # touche le sol (`ground_strike_m`), puis rebondit ou roule jusqu'à la ligne (02a1). Tir qui ne va pas vers la
-        # ligne : à plat.
+        # (`line_height_m`, cohérente avec l'issue) ; vitesse verticale au temps de trajet exact du moteur, en vol (traînée
+        # seule, ticket v2-realisme/14a2b ; ponytail : `TICK_SECONDS`, comme `_launch_aerial`). Tir parti trop bas
+        # (hauteur négative) : il retombe où la droite visée touche le sol (`ground_strike_m`), puis rebondit ou roule
+        # jusqu'à la ligne (02a1). Tir qui ne va pas vers la ligne : à plat. Pas de borne de vitesse de frappe sur un tir
+        # (décision du propriétaire du 27/11/2026) : la hauteur à la ligne décide de l'issue.
         _ground(ball)
         if to_line > 0.0:
             at_line = line_height_m(flight.slope, shot_error_sigma(holder, goal, opponents), to_line, 2.0 * BALL_RADIUS_M)
             landing = ground_strike_m(at_line, to_line)
             ball.vz = hauteur.launch_vz_to(max(0.0, at_line), freinage.stepped_travel_time_s(
-                landing, SHOT_SPEED_MPS, TICK_SECONDS))
+                landing, SHOT_SPEED_MPS, TICK_SECONDS, airborne=True))
         ball.shot_flight = flight
         ball.shot_wide = not flight.on_target  # hors du cadre (ticket v2-realisme/03k)
         ball.last_toucher = ball.released_by = holder.name
@@ -1004,11 +1008,12 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
         _clear_offside(ball)
         return None
     ball.position = end
-    ball.velocity = freinage.step_velocity(ball.velocity, dt)
+    z0, vz0 = ball.z, ball.vz
+    # en vol au début du pas (en l'air ou qui monte) : traînée seule, pas de roulement (ticket v2-realisme/14a2b)
+    ball.velocity = freinage.step_velocity(ball.velocity, dt, z0 > 0.0 or vz0 > 0.0)
     if flight is not None:
         flight.elapsed_s += dt
     # Hauteur (ticket v2-hauteur-ballon/02a1) : chute exacte sur le pas, rebonds (vitesse horizontale × 0,85 chacun)
-    z0, vz0 = ball.z, ball.vz
     airborne = z0 > 0.0 or vz0 != 0.0  # ballon en vol ou qui rebondit : reçu comme un centre (origine d'un tir)
     height = hauteur.step_height(z0, vz0, dt)
     ball.z, ball.vz = height.z, height.vz
@@ -1023,7 +1028,7 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
     if ball.shot_flight is not None:
         if ball.velocity.length() >= BALL_STOPPED_MPS:
             return None  # tir en vol : personne ne le touche avant la ligne (05b et 05c)
-        # ponytail : tir mort avant la ligne (60 m de course à 30 m/s), rendu au jeu, issue « en vol » ; plus un tir à côté
+        # ponytail : tir mort avant la ligne (77 m de roulement à 30 m/s, davantage en vol), rendu au jeu, issue « en vol » ; plus un tir à côté
         # en vol non plus (réserve A5 de l'expert, 05h)
         ball.shot_flight, ball.shot_wide = None, False
 

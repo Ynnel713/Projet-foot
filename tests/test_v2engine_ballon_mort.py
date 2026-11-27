@@ -100,8 +100,8 @@ def test_opponents_stand_at_the_regulation_distance() -> None:
 
 def test_ground_player_does_not_touch_an_aerial_ball_except_at_its_landing_point() -> None:
     under, catcher = _p("Sous", 20, 34.0, team="away"), _p("Cible", 40, 34.0)
-    flight = flight_time_s(30.0, 25.0)  # retombe sur la cible, 30 m plus loin (02a1)
-    ball = BallState(position=Vec2(10, 34), velocity=Vec2(25, 0), mode=AERIEN, vz=launch_vz(flight))
+    flight = flight_time_s(30.0, 25.0, airborne=True)  # retombe sur la cible, 30 m plus loin (02a1, en vol : 14a2b)
+    ball = BallState(position=Vec2(10, 34), velocity=Vec2(25, 0), mode=AERIEN, vz=launch_vz(flight, 25.0))
     for i in range(30):
         _step_ball(ball, DT, [under, catcher], i * DT)
         if ball.holder is not None:

@@ -5,8 +5,8 @@ from __future__ import annotations
 
 import pytest
 
-from v2engine.hauteur import (AERIAL_THRESHOLD_M, GRAVITY_M_S2, GROUND_HORIZONTAL_KEEP, MAX_FLIGHT_S, REBOUND_MIN_APEX_M, apex_m,
-                              is_aerial, launch_vz, step_height, time_to_ground)
+from v2engine.hauteur import (AERIAL_THRESHOLD_M, GRAVITY_M_S2, GROUND_HORIZONTAL_KEEP, MAX_LAUNCH_ANGLE_DEG,
+                              MAX_STRIKE_MPS, REBOUND_MIN_APEX_M, apex_m, is_aerial, launch_vz, max_launch_vz, step_height, time_to_ground)
 from v2engine.freinage import distance_after, distance_to_slow
 from v2engine.freinage import travel_time_s as flight_time_s
 
@@ -96,12 +96,13 @@ def test_ballon_au_repos_inchange() -> None:
 
 
 def test_point_de_chute_a_la_cible() -> None:
-    """Passe aérienne de 35 m à 20 m/s : durée de vol tirée du freinage (`freinage`), point de chute à ± 1 m de la cible."""
+    """Passe aérienne de 35 m à 20 m/s : durée de vol tirée du freinage en vol (`freinage`, traînée seule, 14a2b), point
+    de chute à ± 1 m de la cible."""
     distance, v0 = 35.0, 20.0
-    flight = flight_time_s(distance, v0)
+    flight = flight_time_s(distance, v0, airborne=True)
     assert flight is not None
-    vz0 = launch_vz(flight)
-    travelled = distance_after(v0, time_to_ground(0.0, vz0))
+    vz0 = launch_vz(flight, v0)
+    travelled = distance_after(v0, time_to_ground(0.0, vz0), airborne=True)
     assert abs(travelled - distance) < 1.0
 
 
@@ -112,8 +113,8 @@ def test_ballon_qui_n_arrive_pas() -> None:
     assert flight_time_s(stop, 10.0) is None  # limite exacte
     assert flight_time_s(10.0, 0.0) is None
     assert flight_time_s(0.0, 5.0) == 0.0
-    assert launch_vz(0.0) == 0.0
-    assert launch_vz(None) == pytest.approx(0.5 * GRAVITY_M_S2 * MAX_FLIGHT_S)  # vol plafonné
+    assert launch_vz(0.0, 20.0) == 0.0
+    assert launch_vz(None, 30.0) == pytest.approx(max_launch_vz(30.0))  # n'arrive pas : la plus haute frappe permise
 
 
 def test_mode_aerien_au_dessus_du_genou() -> None:
@@ -122,16 +123,50 @@ def test_mode_aerien_au_dessus_du_genou() -> None:
     assert is_aerial(AERIAL_THRESHOLD_M + 0.01)
 
 
-def test_vol_plafonne() -> None:
-    """Ballon long freiné (70 m à 30 m/s : 5,2 s de vol sans plafond, loi du 14a2a) : vol plafonné à `MAX_FLIGHT_S`,
-    sommet sous 25 m, il retombe avant sa cible et à moins de 5 m d'elle."""
+def test_vol_borne_par_la_vitesse_de_frappe() -> None:
+    """Ballon long (70 m à 30 m/s : 4,05 s de vol en l'air, traînée seule, ticket 14a2b) : `vz` borné à 18,03 m/s pour
+    une vitesse totale de 35 m/s (choix du propriétaire : vz réduit) ; vol plus court, il retombe avant sa cible."""
     distance, v0 = 70.0, 30.0
-    flight = flight_time_s(distance, v0)
-    assert flight is not None and flight > MAX_FLIGHT_S
-    vz0 = launch_vz(flight)
-    assert apex_m(0.0, vz0) < 25.0
-    landing = distance_after(v0, time_to_ground(0.0, vz0))
-    assert distance - 5.0 < landing < distance
+    flight = flight_time_s(distance, v0, airborne=True)
+    assert flight == pytest.approx(4.05, abs=0.01)
+    vz0 = launch_vz(flight, v0)
+    assert vz0 == pytest.approx(18.03, abs=0.01) and (v0 * v0 + vz0 * vz0) ** 0.5 == pytest.approx(MAX_STRIKE_MPS)
+    assert apex_m(0.0, vz0) < 17.0
+    landing = distance_after(v0, time_to_ground(0.0, vz0), airborne=True)
+    assert distance - 10.0 < landing < distance
+
+
+def test_passe_trop_molle_bornee_a_45_degres() -> None:
+    """Passe aérienne de 48 m frappée à 13,9 m/s (cas relevé sur 50 matchs : sommet 52,6 m sans borne d'angle) : `vz`
+    borné à vh·tan 45° = 13,9 m/s, sommet sous 10 m, il retombe court (choix du propriétaire du 26/11/2026)."""
+    assert MAX_LAUNCH_ANGLE_DEG == 45.0
+    flight = flight_time_s(48.0, 13.9, airborne=True)
+    assert 0.5 * GRAVITY_M_S2 * flight > 30.0  # sans borne d'angle : vz > 30 m/s
+    vz0 = launch_vz(flight, 13.9)
+    assert vz0 == pytest.approx(13.9) and apex_m(0.0, vz0) < 10.0
+    assert distance_after(13.9, time_to_ground(0.0, vz0), airborne=True) < 48.0 - 10.0
+    assert max_launch_vz(0.0) == 0.0
+
+
+def test_la_borne_ne_touche_pas_les_passes_moyennes() -> None:
+    """Passe aérienne de 50 m (23,4 m/s) : `vz = g·T / 2` intact, vitesse totale sous 35 m/s."""
+    flight = flight_time_s(50.0, 23.4, airborne=True)
+    vz = launch_vz(flight, 23.4)
+    assert vz == pytest.approx(0.5 * GRAVITY_M_S2 * flight) and vz < max_launch_vz(23.4)
+
+
+def test_duree_de_vol_finie_pour_toute_passe_aerienne() -> None:
+    """Traînée seule en vol : de 1 à 120 m, toute passe aérienne à la vitesse du jeu (`possession`, arrivée 6 m/s,
+    plafond 30 m/s) a une durée de vol finie, en continu et au pas du moteur (`MAX_FLIGHT_S` supprimé)."""
+    import v2engine.hauteur as hauteur
+    from v2engine.freinage import launch_speed
+    from v2engine.possession import IDEAL_ARRIVAL_MPS, MAX_PASS_MPS
+
+    assert not hasattr(hauteur, "MAX_FLIGHT_S")
+    for distance in range(1, 121):
+        speed = min(MAX_PASS_MPS, launch_speed(distance, IDEAL_ARRIVAL_MPS))
+        assert flight_time_s(distance, speed, airborne=True) is not None
+        assert flight_time_s(distance, speed, TICK, airborne=True) is not None
 
 
 @pytest.mark.parametrize("distance, speed", [(25.0, 20.0), (35.0, 25.0), (45.0, 30.0)])
@@ -145,7 +180,7 @@ def test_point_de_chute_dans_le_moteur(distance: float, speed: float) -> None:
     start = Vec2(10.0, 34.0)
     ball = BallState(position=start, velocity=Vec2(speed, 0.0))
     _launch_aerial(ball, distance)
-    assert ball.vz > 0.0
+    assert ball.vz > 0.0 and ball.velocity.length() ** 2 + ball.vz ** 2 <= MAX_STRIKE_MPS ** 2 + 1e-9
     for i in range(200):
         before, z0, vz0 = ball.position, ball.z, ball.vz
         _step_ball(ball, TICK_SECONDS, [], i * TICK_SECONDS)
