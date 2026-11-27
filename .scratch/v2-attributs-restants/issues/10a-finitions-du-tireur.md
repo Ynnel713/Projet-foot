@@ -21,3 +21,7 @@
 - [ ] Type de finition tracé et rejoué par le rendu, sans changer l'issue
 - [ ] Rayon des attributs conforme à `docs/CARTE_ATTRIBUTS_V2.md`, sans double comptage
 - [ ] Déterminisme à graine fixée ; suite V2 verte ; V1 inchangée
+
+## Limite d'angle du 14a2b (27/11/2026)
+
+**Limite d'angle de départ héritée du `v2-realisme/14a2b` (note du propriétaire, 27/11/2026)** : La limite de 45° (vz <= vh * tan(45°)) imposée au 14a2b est un garde-fou moteur contre les trajectoires aberrantes. Elle interdit les lobs verticaux. Lors de l'implémentation des gestes spécifiques (Lob au 10a, centres au 11), cette limite devra être contournée. Un geste explicitement identifié comme 'Lob' ou 'Chandelle' devra avoir l'autorisation de dépasser cette limite d'angle pour reproduire la réalité du terrain. Ici : le lob (ou piqué) au-dessus d'un gardien avancé est un geste de finition ; il doit pouvoir partir au-delà de 45°. Au 14a2b, la borne ne s'applique qu'aux passes et relances aériennes (`hauteur.max_launch_vz` dans `launch_vz`), pas aux tirs (`launch_vz_to`) : vérifier à l'ouverture du 10a par quel chemin le lob est frappé avant de prévoir le contournement.
