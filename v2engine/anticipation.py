@@ -6,12 +6,13 @@ ballon va s'arrêter plutôt que sa position actuelle. L'interception elle-même
 
 from __future__ import annotations
 
-from v2engine import freinage
+from v2engine import freinage, hauteur
 from v2engine.attributes import success_probability
 from v2engine.condition import effective_rating
 from v2engine.flux import PERCEPTION
 from v2engine.geometry import Vec2, clamp_to_pitch
 from v2engine.movement import PlayerState, max_speed_mps
+from v2engine.portee import first_reachable_s, player_body_ceiling_m, player_ceiling_m
 
 # Constantes produit validées par le propriétaire (24/10/2026), courbe partagée du guide.
 _READ_PASS = (0.40, 0.40, 0.10, 0.80)  # baseline, amplitude, min, max : 99 -> 80 %, 55 -> 40 %, 11 -> 10 %
@@ -90,3 +91,50 @@ def meeting_point(player: PlayerState, ball_position: Vec2, ball_velocity: Vec2)
             return clamp_to_pitch(point)  # borné au terrain (ticket v2-collectif/29)
         t += 0.1
     return clamp_to_pitch(freinage.stop_position(ball_position, ball_velocity))
+
+
+# Point d'attaque d'un ballon aérien (ticket v2-realisme/15a1). Constantes validées au ticket 15a (27/11/2026) : marge
+# d'arrivée 0 s, critère strict comme `pass_readers` ; `ARRIVAL_EPSILON_S` est une tolérance de calcul flottant, pas une
+# constante produit.
+AERIAL_SAMPLE_S = 0.1  # pas d'échantillonnage de la trajectoire, celui de `meeting_point`
+ARRIVAL_EPSILON_S = 1e-6
+
+
+def aerial_attack_point(player: PlayerState, position: Vec2, velocity: Vec2, z: float, vz: float,
+                        ceiling: float | None = None) -> Vec2:
+    """Point du premier vol d'un ballon en l'air (`z`, `vz`, convention de `hauteur`) où `player` peut le jouer : le
+    premier instant où le bas du ballon passe sous `ceiling` (par défaut son plafond, la tête en saut :
+    `portee.player_ceiling_m`) et où il peut être, à sa vitesse de pointe, au plus tard quand le ballon y passe. Horizontal : traînée seule (`freinage.distance_after(...,
+    airborne=True)`, ticket 14a2b) ; vertical : chute libre jusqu'au sol. Aucun point atteignable : le point de chute."""
+    flight = hauteur.time_to_ground(z, vz)
+    speed, direction = velocity.length(), velocity.normalized()
+    ceiling = player_ceiling_m(player) if ceiling is None else ceiling
+    pace = max_speed_mps(effective_rating(player, "Pace"))
+
+    def at(t: float) -> Vec2:
+        return position + direction * freinage.distance_after(speed, t, airborne=True)
+
+    times = [i * AERIAL_SAMPLE_S for i in range(int(flight / AERIAL_SAMPLE_S) + 1)]
+    back_under = first_reachable_s(z, vz, ceiling, 0.0, flight)  # instant exact où il repasse sous le plafond
+    times = sorted(set(times + ([back_under] if back_under is not None else []) + [flight]))
+    for t in times:
+        if hauteur.height_at(z, vz, t)[0] > ceiling:
+            continue  # au-dessus de lui : le ballon passe
+        point = at(t)
+        if player.position.distance_to(point) / pace <= t + ARRIVAL_EPSILON_S:
+            return clamp_to_pitch(point)  # borné au terrain (ticket v2-collectif/29)
+    return clamp_to_pitch(at(flight))
+
+
+def receiving_point(player: PlayerState, ball) -> Vec2:
+    """Point où le receveur va chercher la passe : sur le premier vol d'un ballon en l'air, son point d'attaque aérien
+    (`aerial_attack_point`, ticket v2-realisme/15a1) à hauteur de poitrine (`portee.player_body_ceiling_m` : le receveur
+    que personne ne conteste amortit le ballon plutôt que de le jouer de la tête, décision du propriétaire du
+    27/11/2026 ; le point sous la tête sert au ballon disputé, ticket 15a2 ; centre de coup de pied arrêté dans la
+    surface, `ball.set_piece_cross` : sous la tête, option 2 du propriétaire du 28/11/2026) ; sinon `meeting_point`
+    (ballon au sol, ou après son premier contact au sol : `ball.landed`, ticket v2-hauteur-ballon/02c). Lu par le
+    receveur et par la défense."""
+    if not ball.landed and hauteur.time_to_ground(ball.z, ball.vz) > 0.0:
+        ceiling = player_ceiling_m(player) if ball.set_piece_cross else player_body_ceiling_m(player)
+        return aerial_attack_point(player, ball.position, ball.velocity, ball.z, ball.vz, ceiling)
+    return meeting_point(player, ball.position, ball.velocity)

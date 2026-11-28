@@ -84,7 +84,7 @@
 |---|---|---|
 | **Weak foot** | Précision et fréquence d'usage du mauvais pied : toute action du côté faible est plus difficile | à créer (`v2-attributs-restants/04a` ; 526 valeurs manquantes) |
 | **Pieds** (fort) | Côté naturel de frappe, de centre et de course | à créer (`v2-attributs-restants/04a` ; vide pour 61 % des lignes, données `06`) |
-| **Taille** | S'ajoute à Jumping Reach et Aerial Reach dans le jeu aérien | **branché depuis le ticket `v2-hauteur-ballon/03a`** (`PlayerState.height_m`, `portee`) : tranches de hauteur pied (sous 0,530 × taille), corps (0,818 ×), tête (taille + détente) ; repli : médiane du poste (`portee.NEUTRAL_HEIGHT_M`) ; mains du gardien dans sa surface depuis le `03b` (1,258 × taille + détente, tirs et ballon libre) ; Aerial Reach `v2-attributs-restants/03a` |
+| **Taille** | S'ajoute à Jumping Reach et Aerial Reach dans le jeu aérien | **branché depuis le ticket `v2-hauteur-ballon/03a`** (`PlayerState.height_m`, `portee`) : tranches de hauteur pied (sous 0,530 × taille), corps (0,818 ×), tête (taille + détente) ; repli : médiane du poste (`portee.NEUTRAL_HEIGHT_M`) ; mains du gardien dans sa surface depuis le `03b` (1,258 × taille + détente, tirs et ballon libre) ; receveur visé d'une passe aérienne depuis le `v2-realisme/15a1` : point visé et contact sous sa poitrine (0,818 × taille, `portee.player_body_ceiling_m`) sur le premier vol (même tranche « corps », pas de nouveau rôle) ; Aerial Reach `v2-attributs-restants/03a` |
 | **Preferred moves** | Habitudes qui biaisent le choix d'action (« Runs With Ball Often »…), indépendamment des notes | à créer (`v2-attributs-restants/05`) |
 | **Postes naturels** | Hors de son poste : pénalité sur Positioning, Decisions et Marking | à créer (`v2-attributs-restants/04b`) |
 

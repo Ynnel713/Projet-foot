@@ -128,7 +128,7 @@ import math
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING
 
-from v2engine.anticipation import meeting_point, reaction_delay_s
+from v2engine.anticipation import reaction_delay_s, receiving_point
 from v2engine.attributes import success_probability
 from v2engine.condition import effective_rating
 from v2engine.contextes import REPLI_APRES_LA_PERTE, contextual_rating
@@ -491,7 +491,7 @@ class DefensiveRoles:
             if receiver is None or ball.last_pass_team != receiver.team:
                 self.zones_held = {}  # ballon libre : plus de zone active à garder (10f, réserve A2)
                 return
-            point = clamp_to_pitch(meeting_point(receiver, ball.position, ball.velocity))
+            point = clamp_to_pitch(receiving_point(receiver, ball))  # même point que le receveur (ticket v2-realisme/15a1)
             holder = replace(receiver, position=point, velocity=Vec2(0.0, 0.0))
             # titulaires du passeur gardés : il peut récupérer le ballon (passe coupée, rendue) ; ceux des
             # compensations sont réécrits à chaque tick par `_compensate`, qui lit `previous`

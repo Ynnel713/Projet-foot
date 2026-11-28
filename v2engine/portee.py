@@ -124,6 +124,15 @@ def player_ceiling_m(player) -> float:
     return field_ceiling_m(player_height_m(player), player_jump_m(player))
 
 
+def player_body_ceiling_m(player) -> float:
+    """Plus haut bas de ballon que le joueur contrôle du corps (poitrine, sous l'épaule : 0,818 × taille), ticket
+    v2-realisme/15a1 : là où le receveur que personne ne conteste va chercher un ballon aérien (décision du propriétaire du
+    27/11/2026). Gardien dans sa surface : ses mains (`player_ceiling_m`, même aiguillage)."""
+    if uses_hands(player):
+        return player_ceiling_m(player)
+    return SHOULDER_SHARE * player_height_m(player)
+
+
 def player_band(player, z: float) -> str | None:
     """Tranche touchée par le joueur, même aiguillage que `player_ceiling_m` (`keeper_band` ou `field_band`)."""
     if uses_hands(player):
@@ -146,5 +155,5 @@ def first_reachable_s(z0: float, vz0: float, ceiling: float, t_in: float, t_out:
 
 
 __all__ = ["CORPS", "MAINS", "PIED", "TETE", "field_band", "field_ceiling_m", "first_reachable_s", "jump_m",
-           "keeper_band", "keeper_hands_ceiling", "neutral_height_m", "neutral_keeper_ceiling_m", "player_band", "player_ceiling_m", "player_height_m",
+           "keeper_band", "keeper_hands_ceiling", "neutral_height_m", "neutral_keeper_ceiling_m", "player_band", "player_body_ceiling_m", "player_ceiling_m", "player_height_m",
            "player_jump_m", "uses_hands"]

@@ -617,6 +617,7 @@ def _play_restart(ball: BallState, players: list[PlayerState], now_s: float,
     if is_aerial(r.kind, taker, target):  # ballon en l'air : touchable sous le plafond de chaque joueur (03a)
         ball.readers = {}
         _launch_aerial(ball, taker.position.distance_to(target.position))
+        ball.set_piece_cross = r.kind == CORNER and in_penalty_area(taker.team, target.position)  # 15a1
     else:
         ball.readers = pass_readers(taker.position, ball.velocity, target.position, opponents)
 
@@ -624,6 +625,7 @@ def _play_restart(ball: BallState, players: list[PlayerState], now_s: float,
 def _ground(ball: BallState) -> None:
     """Ballon posé au sol (ticket v2-hauteur-ballon/02a1) : hauteur et vitesse verticale nulles, mode « sol »."""
     ball.mode, ball.z, ball.vz, ball.landed = SOL, 0.0, 0.0, False
+    ball.set_piece_cross = False
 
 
 def _launch_aerial(ball: BallState, distance_m: float) -> None:
@@ -931,6 +933,8 @@ def _execute(ball: BallState, holder: PlayerState, action, players: list[PlayerS
         if lofted:  # vol aérien (ticket v2-collectif/29) : touchable seulement sous le seuil « aérien » (02a1)
             ball.readers = {}
             _launch_aerial(ball, holder.position.distance_to(action.target.position))
+            # coup franc lobé vers la surface : centre de coup de pied arrêté (ticket v2-realisme/15a1)
+            ball.set_piece_cross = set_piece and in_penalty_area(holder.team, action.target.position)
         else:
             ball.readers = pass_readers(holder.position, ball.velocity, action.target.position, opponents)
         # Hors-jeu (ticket v2-collectif/23) : jugement AU DÉPART, sur les positions réelles. Le signalement ne
@@ -1051,7 +1055,7 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
     for entry, gap, player in _ball_contacts(start, ball.position, dt, players, ball):
         contact_s = entry * dt
         if airborne:
-            contact_s = _reach_instant(z0, vz0, portee.player_ceiling_m(player), entry * dt,
+            contact_s = _reach_instant(z0, vz0, _contact_ceiling(player, ball, in_first_flight), entry * dt,
                                        _exit_share(start, ball.position, dt, player, _reach_radius(player, ball)) * dt,
                                        height.first_contact_s)
             if contact_s is None:
@@ -1087,7 +1091,7 @@ def _step_loose_ball(ball: BallState, dt: float, players: list[PlayerState], now
         # tranche touchée ; au plafond exact (instant calculé par `_reach_instant`), l'arrondi peut le laisser un rien
         # au-dessus : ramené au plafond (tête, ou mains du gardien dans sa surface, 03b)
         band = portee.player_band(player, min(hauteur.step_height(z0, vz0, contact_s).z,
-                                              portee.player_ceiling_m(player))) if airborne else portee.PIED
+                                              _contact_ceiling(player, ball, in_first_flight))) if airborne else portee.PIED
         received = _received_as(ball, player, caught_first_drop)
         _ground(ball)  # touché : le ballon repart du sol (02a1)
         intended = ball.receiver == player.name
@@ -1169,6 +1173,18 @@ def _reach_instant(z0: float, vz0: float, ceiling: float, t_in: float, t_out: fl
     if ground_s is not None and t_in >= ground_s:
         return None
     return portee.first_reachable_s(z0, vz0, ceiling, t_in, t_out if ground_s is None else min(t_out, ground_s))
+
+
+def _contact_ceiling(player: PlayerState, ball: BallState, in_first_flight: bool) -> float:
+    """Plafond de contact de `player` sur le ballon en vol (ticket v2-hauteur-ballon/03a) : sa tête en saut (mains du
+    gardien dans sa surface, 03b), sauf pour le receveur visé sur le premier vol de la passe, qui laisse descendre le
+    ballon jusqu'à sa poitrine (`portee.player_body_ceiling_m`) : personne ne le lui conteste encore (ticket
+    v2-realisme/15a1, option A du propriétaire du 27/11/2026 ; le ballon disputé reprend la tête au 15a2). Centre de
+    coup de pied arrêté dans la surface (`ball.set_piece_cross`, corner ou coup franc, option 2 du propriétaire du
+    28/11/2026, réserve A1 de l'expert) : le receveur garde sa tête. Après le premier contact au sol, plafond ordinaire."""
+    if in_first_flight and player.name == ball.receiver and not ball.set_piece_cross:
+        return portee.player_body_ceiling_m(player)
+    return portee.player_ceiling_m(player)
 
 
 def _reach_radius(player: PlayerState, ball: BallState) -> float:

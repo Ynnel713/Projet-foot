@@ -1,0 +1,50 @@
+indicateurs comparés : 2823
+A contre B hors bruit : 91 (3.2%)
+15a1 contre avant hors bruit : 151 (5.3%)
+secondes par match avant : 192.99787561991997
+secondes par match apres : 189.47268647885994
+
+-- indicateurs choisis --
+arrêts par match : avant 6.46 | après 6.44 | écart -0.02 | bruit ±0.974 | 0.0×
+buts par match : avant 3.98 | après 4.64 | écart +0.66 | bruit ±0.88 | 0.8×
+engagement : distance au coéquipier le plus proche, équipe sans ballon (m) : avant 8.808 | après 8.803 | écart -0.005545 | bruit ±0.115 | 0.0×
+engagement : distance au coéquipier le plus proche, équipe sans possession (m) : avant 12.76 | après 13.19 | écart +0.4301 | bruit ±0.214 | 2.0×
+passes longues (part) : avant 0.03519 | après 0.03389 | écart -0.001298 | bruit ±0.00391 | 0.3×
+passes longues réussies (part) : avant 0.623 | après 0.6996 | écart +0.07656 | bruit ±0.0276 | 2.8×
+passes réussies (part) : avant 0.819 | après 0.8242 | écart +0.005185 | bruit ±0.0044 | 1.2×
+pertes de balle par match : avant 279 | après 283 | écart +3.96 | bruit ±7.07 | 0.6×
+possession d'équipe (s) : avant 20.37 | après 20.23 | écart -0.1385 | bruit ±0.567 | 0.2×
+retours au passeur en 3 s (part des passes réussies) : avant 0.06032 | après 0.06262 | écart +0.002306 | bruit ±0.00298 | 0.8×
+tirs par équipe : avant 13.5 | après 14.93 | écart +1.43 | bruit ±1.23 | 1.2×
+
+-- 30 plus gros écarts --
+inf× rendement par tranche de 15 min : Stamina 40-55 : 45 et plus : tirs pour 90 min : 0.8571 -> 0 (±0)
+inf× rendement par tranche de 15 min : Stamina 40-55 : 45 et plus : buts marqués par l'équipe pour 90 min : 0.8571 -> 2.571 (±0)
+inf× rendement par tranche de 15 min : Stamina 40-55 : 15-30 : tirs cadrés (part des non contrés) : 0.3333 -> 0.5 (±0)
+inf× rendement par tranche de 15 min : Stamina 0-40 : 90 et plus : buts encaissés par l'équipe pour 90 min : 2.5 -> 0 (±0)
+inf× rendement par tranche de 15 min : Stamina 0-40 : 60-75 : buts marqués par l'équipe pour 90 min : 1 -> 0 (±0)
+inf× rendement par tranche de 15 min : Stamina 0-40 : 45 et plus : passes réussies (part) : 0.875 -> 0.7667 (±0)
+inf× rendement par tranche de 15 min : Stamina 0-40 : 45 et plus : contrôles ratés pour 100 passes visées : 10 -> 25 (±0)
+inf× rendement par tranche de 15 min : RB : 45 et plus : autres contacts ratés pour 90 min : 0.4674 -> 0 (±0)
+inf× rendement par tranche de 15 min : MC : 60-75 : buts personnels pour 90 min : 0.09 -> 0 (±0)
+inf× rendement par tranche de 15 min : MC : 45 et plus : tirs pour 90 min : 0 -> 0.2014 (±0)
+inf× rendement par tranche de 15 min : MC : 45 et plus : buts personnels pour 90 min : 0 -> 0.05143 (±0)
+inf× rendement par tranche de 15 min : MC : 15-30 : buts personnels pour 90 min : 0 -> 0.06 (±0)
+inf× rendement par tranche de 15 min : LB : 75-90 : tirs pour 90 min : 0 -> 0.06 (±0)
+inf× rendement par tranche de 15 min : LB : 75-90 : buts personnels pour 90 min : 0 -> 0.06 (±0)
+inf× rendement par tranche de 15 min : DC : tirs pour 90 min, 75-90 - 0-15 : 0 -> -0.03 (±0)
+inf× rendement par tranche de 15 min : DC : 0-15 : tirs pour 90 min : 0 -> 0.03 (±0)
+inf× gardien : ballons avec sortie, état : tir : contré, ballon à 3 s, à l'adversaire (part) : 0.125 -> 0 (±0)
+inf× gardien : ballons avec sortie, état : tir : contré, ballon à 3 s, sortie de but (part) : 0 -> 0.1111 (±0)
+inf× gardien : ballons avec sortie, état : tir : contré, ballon à 3 s, encore libre (part) : 0.125 -> 0.1111 (±0)
+inf× gardien : ballons avec sortie, état : tir : contré, ballon à 3 s, au gardien (part) : 0 -> 0.02778 (±0)
+inf× gardien : ballons avec sortie, ballon à 3 s, autre arrêt de jeu (part) : 0.01 -> 0.006667 (±0)
+inf× engagement : joueurs de champ à moins de 15 m du ballon (quartiles) : q1 : 6.04 -> 6.1 (±0)
+inf× engagement : joueurs de champ à moins de 10 m du ballon, équipe avec ballon (quartiles) : q1 : 1.05 -> 1.08 (±0)
+15.4× réceptions contrôlées, origine : centre par match : 1.02 -> 13.58 (±0.817)
+3.5× rendement par tranche de 15 min : Stamina 0-40 : 90 et plus : passes réussies (part) : 0.5 -> 1 (±0.142)
+2.8× passes longues réussies (part) : 0.623 -> 0.6996 (±0.0276)
+2.7× engagement : joueurs de champ à moins de 10 m du ballon, équipe sans possession : 0.8177 -> 0.6823 (±0.0501)
+2.6× touches par match : 16.16 -> 12.02 (±1.59)
+2.3× appelants simultanés d'une équipe en possession, moyenne : défense placée : 0.005467 -> 0.004319 (±0.00051)
+2.2× engagement : joueurs de champ à moins de 15 m du ballon, équipe sans possession : 1.438 -> 1.247 (±0.0854)

@@ -1,0 +1,122 @@
+indicateurs comparés : 2821
+A contre B hors bruit : 90 (3.2%)
+15a1 contre avant hors bruit : 152 (5.4%)
+secondes par match avant : 192.99787561991997
+secondes par match apres : 187.35809767566002
+
+-- indicateurs choisis --
+appelants simultanés au-dessus du plafond du moteur, part des instants : possession installée : avant 0.05109 | après 0.04956 | écart -0.001532 | bruit ±0.00259 | 0.6×
+appelants simultanés d'une équipe en possession, moyenne : dernier tiers : avant 1.296 | après 1.307 | écart +0.01159 | bruit ±0.0727 | 0.2×
+appelants simultanés d'une équipe en possession, moyenne : défense placée : avant 0.005467 | après 0.004823 | écart -0.0006439 | bruit ±0.00051 | 1.3×
+appelants simultanés d'une équipe en possession, moyenne : possession installée : avant 1.585 | après 1.594 | écart +0.009073 | bruit ±0.0292 | 0.3×
+appelants simultanés d'une équipe en possession, moyenne : transition offensive : avant 2.431 | après 2.44 | écart +0.009274 | bruit ±0.0266 | 0.3×
+appelants simultanés d'une équipe, maximum de la série : possession installée : avant 3 | après 3 | écart +0 | bruit ±0 | 0.0×
+appelants simultanés d'une équipe, maximum du match : possession installée : avant 3 | après 3 | écart +0 | bruit ±0 | 0.0×
+appels arrêtés dans une possession, en moins de 1,5 s (part des APPEL qui se terminent par TENIR) : avant 0.3926 | après 0.3921 | écart -0.0004541 | bruit ±0.00829 | 0.1×
+arrêts captés (part) : avant 0.5872 | après 0.6552 | écart +0.06795 | bruit ±0.0885 | 0.8×
+arrêts claqués (part) : avant 0.1438 | après 0.0944 | écart -0.04941 | bruit ±0.071 | 0.7×
+arrêts par match : avant 6.46 | après 6.58 | écart +0.12 | bruit ±0.974 | 0.1×
+arrêts repoussés (part) : avant 0.269 | après 0.2504 | écart -0.01854 | bruit ±0.0797 | 0.2×
+buts par match : avant 3.98 | après 4.34 | écart +0.36 | bruit ±0.88 | 0.4×
+conduite : part des pertes par dépossession : avant 0.5759 | après 0.6173 | écart +0.0414 | bruit ±0.0349 | 1.2×
+conduite : pertes par dépossession par match : avant 19.38 | après 20.82 | écart +1.44 | bruit ±2.04 | 0.7×
+conduite : pertes par match : avant 33.62 | après 34 | écart +0.38 | bruit ±2.93 | 0.1×
+conduite : pertes par touche trop longue par match : avant 14.24 | après 13.18 | écart -1.06 | bruit ±1.63 | 0.7×
+engagement : distance au coéquipier le plus proche, équipe sans possession (m) : avant 12.76 | après 13.17 | écart +0.4018 | bruit ±0.214 | 1.9×
+engagement : joueurs de champ à moins de 10 m du ballon, équipe sans possession : avant 0.8177 | après 0.7022 | écart -0.1156 | bruit ±0.0501 | 2.3×
+engagement : joueurs de champ à moins de 10 m du ballon, équipe sans possession (quartiles) : mediane : avant 0.88 | après 0.72 | écart -0.16 | bruit ±0.0901 | 1.8×
+engagement : joueurs de champ à moins de 10 m du ballon, équipe sans possession (quartiles) : n : avant 36.48 | après 23.2 | écart -13.28 | bruit ±7.73 | 1.7×
+engagement : joueurs de champ à moins de 10 m du ballon, équipe sans possession (quartiles) : q1 : avant 0.035 | après 0.04 | écart +0.005 | bruit ±0.0661 | 0.1×
+engagement : joueurs de champ à moins de 10 m du ballon, équipe sans possession (quartiles) : q3 : avant 1.22 | après 1.065 | écart -0.155 | bruit ±0.121 | 1.3×
+engagement : joueurs de champ à moins de 15 m du ballon, équipe sans possession : avant 1.438 | après 1.309 | écart -0.129 | bruit ±0.0854 | 1.5×
+engagement : joueurs de champ à moins de 15 m du ballon, équipe sans possession (quartiles) : mediane : avant 1.15 | après 1.09 | écart -0.06 | bruit ±0.0945 | 0.6×
+engagement : joueurs de champ à moins de 15 m du ballon, équipe sans possession (quartiles) : n : avant 36.48 | après 23.2 | écart -13.28 | bruit ±7.73 | 1.7×
+engagement : joueurs de champ à moins de 15 m du ballon, équipe sans possession (quartiles) : q1 : avant 0.605 | après 0.46 | écart -0.145 | bruit ±0.179 | 0.8×
+engagement : joueurs de champ à moins de 15 m du ballon, équipe sans possession (quartiles) : q3 : avant 2.01 | après 1.945 | écart -0.065 | bruit ±0.172 | 0.4×
+engagement : joueurs de champ à moins de 20 m du ballon, équipe sans possession : avant 2.294 | après 2.147 | écart -0.1465 | bruit ±0.11 | 1.3×
+engagement : joueurs de champ à moins de 20 m du ballon, équipe sans possession (quartiles) : mediane : avant 1.99 | après 1.85 | écart -0.14 | bruit ±0.114 | 1.2×
+engagement : joueurs de champ à moins de 20 m du ballon, équipe sans possession (quartiles) : n : avant 36.48 | après 23.2 | écart -13.28 | bruit ±7.73 | 1.7×
+engagement : joueurs de champ à moins de 20 m du ballon, équipe sans possession (quartiles) : q1 : avant 1.005 | après 1.095 | écart +0.09 | bruit ±0.165 | 0.5×
+engagement : joueurs de champ à moins de 20 m du ballon, équipe sans possession (quartiles) : q3 : avant 3.26 | après 3.175 | écart -0.085 | bruit ±0.279 | 0.3×
+gardien : ballons avec sortie hors tir du 03i, état : passe ou centre (par match) : avant 1.1 | après 0.9 | écart -0.2 | bruit ±0.447 | 0.4×
+gardien : ballons avec sortie hors tir du 03i, état : passe ou centre, corner (par match) : avant 0 | après 0.02 | écart +0.02 | bruit ±0.0554 | 0.4×
+gardien : ballons avec sortie, état : passe ou centre (par match) : avant 1.1 | après 0.9 | écart -0.2 | bruit ±0.447 | 0.4×
+gardien : ballons avec sortie, état : passe ou centre, ballon à 3 s, au gardien (part) : avant 0.005556 | après 0.03704 | écart +0.03148 | bruit ±0.123 | 0.3×
+gardien : ballons avec sortie, état : passe ou centre, ballon à 3 s, corner (part) : avant 0 | après 0.009259 | écart +0.009259 | bruit ±0.0377 | 0.2×
+gardien : ballons avec sortie, état : passe ou centre, ballon à 3 s, encore libre (part) : avant 0.3222 | après 0.5216 | écart +0.1994 | bruit ±0.179 | 1.1×
+gardien : ballons avec sortie, état : passe ou centre, ballon à 3 s, engagement (part) : avant 0 | après 0 | écart +0 | bruit ±0.0767 | 0.0×
+gardien : ballons avec sortie, état : passe ou centre, ballon à 3 s, sortie de but (part) : avant 0.1222 | après 0.03704 | écart -0.08519 | bruit ±0.123 | 0.7×
+gardien : ballons avec sortie, état : passe ou centre, ballon à 3 s, à l'adversaire (part) : avant 0.4333 | après 0.3549 | écart -0.0784 | bruit ±0.206 | 0.4×
+gardien : ballons avec sortie, état : passe ou centre, ballon à 3 s, à un coéquipier (part) : avant 0.08333 | après 0.04012 | écart -0.04321 | bruit ±0.124 | 0.3×
+grosses occasions, issue : interception (part) : avant 0.01527 | après 0.01303 | écart -0.002238 | bruit ±0.00376 | 0.6×
+grosses occasions, origine : centre (part) : avant 0.01553 | après 0.01233 | écart -0.003193 | bruit ±0.00746 | 0.4×
+part du temps en possession installée (deux équipes) : avant 0.2669 | après 0.2675 | écart +0.00055 | bruit ±0.00523 | 0.1×
+passages APPEL / TENIR dans une possession : état de moins de 1,5 s (part) : avant 0.4696 | après 0.4674 | écart -0.002265 | bruit ±0.00759 | 0.3×
+passages APPEL / TENIR dans une possession par joueur et par match : avant 115 | après 116.5 | écart +1.533 | bruit ±4.92 | 0.3×
+passages APPEL / TENIR dans une possession par match : avant 2300 | après 2330 | écart +30.66 | bruit ±98.5 | 0.3×
+passes longues (part) : avant 0.03519 | après 0.0337 | écart -0.001487 | bruit ±0.00391 | 0.4×
+passes longues réussies (part) : avant 0.623 | après 0.7129 | écart +0.08989 | bruit ±0.0276 | 3.3×
+passes par possession : avant 4.657 | après 4.674 | écart +0.01726 | bruit ±0.124 | 0.1×
+passes réussies (part) : avant 0.819 | après 0.826 | écart +0.00696 | bruit ±0.0044 | 1.6×
+pertes au contact : conduite, par match : avant 16.22 | après 17 | écart +0.78 | bruit ±1.89 | 0.4×
+pertes au contact : conduite, sur adversaire non vu (part) : avant 0.3117 | après 0.317 | écart +0.005328 | bruit ±0.0425 | 0.1×
+pertes au contact : rotation, par match : avant 3.16 | après 3.82 | écart +0.66 | bruit ±0.736 | 0.9×
+pertes au contact : rotation, sur adversaire non vu (part) : avant 0.4431 | après 0.4359 | écart -0.007246 | bruit ±0.132 | 0.1×
+pertes au contact : tacle, par match : avant 8.78 | après 8.76 | écart -0.02 | bruit ±1.1 | 0.0×
+pertes au contact : tacle, sur adversaire non vu (part) : avant 0.115 | après 0.1239 | écart +0.008932 | bruit ±0.0481 | 0.2×
+pertes au contact sur adversaire non vu (part des pertes au contact) : avant 0.2626 | après 0.2734 | écart +0.01083 | bruit ±0.0295 | 0.4×
+pertes de balle au contact par match (tacle, conduite, rotation) : avant 28.16 | après 29.58 | écart +1.42 | bruit ±2.1 | 0.7×
+pertes de balle par match : avant 279 | après 282.6 | écart +3.6 | bruit ±7.07 | 0.5×
+pertes en transition (part des récupérations) : avant 0.1741 | après 0.1742 | écart +4.96e-05 | bruit ±0.00764 | 0.0×
+pertes en transition par match : avant 48.72 | après 49.38 | écart +0.66 | bruit ±2.6 | 0.3×
+possession d'équipe (s) : avant 20.37 | après 20.16 | écart -0.2135 | bruit ±0.567 | 0.4×
+possession installée : au moins 1 joueur derrière le ballon (part) : avant 0.9548 | après 0.9547 | écart -0.0001284 | bruit ±0.00529 | 0.0×
+retours au passeur en 3 s (part des passes réussies) : avant 0.06032 | après 0.0588 | écart -0.001514 | bruit ±0.00298 | 0.5×
+réceptions contrôlées, origine : centre par match : avant 1.02 | après 12.8 | écart +11.78 | bruit ±0.817 | 14.4×
+temps par possession de joueur (s) : avant 2.069 | après 2.077 | écart +0.008321 | bruit ±0.027 | 0.3×
+temps par possession de joueur, réception de face (s) : avant 2.44 | après 2.447 | écart +0.006824 | bruit ±0.0292 | 0.2×
+temps par possession de joueur, réception de face, non orienté (s) : avant 3.394 | après 3.397 | écart +0.003069 | bruit ±0.028 | 0.1×
+temps par possession de joueur, réception de face, orienté (s) : avant 1.672 | après 1.673 | écart +0.001042 | bruit ±0.0204 | 0.1×
+temps par possession de joueur, réception de profil (s) : avant 2.134 | après 2.12 | écart -0.01397 | bruit ±0.0469 | 0.3×
+temps par possession de joueur, réception de profil, non orienté (s) : avant 2.901 | après 2.882 | écart -0.01971 | bruit ±0.0616 | 0.3×
+temps par possession de joueur, réception de profil, orienté (s) : avant 1.52 | après 1.534 | écart +0.01398 | bruit ±0.0411 | 0.3×
+temps par possession de joueur, réception dos au jeu (s) : avant 2.344 | après 2.36 | écart +0.01633 | bruit ±0.0523 | 0.3×
+temps par possession de joueur, réception dos au jeu, non orienté (s) : avant 3.5 | après 3.531 | écart +0.03045 | bruit ±0.0571 | 0.5×
+temps par possession de joueur, réception dos au jeu, orienté (s) : avant 1.414 | après 1.392 | écart -0.02283 | bruit ±0.0373 | 0.6×
+temps par possession de joueur, réception à l'aveugle (s) : avant 2.695 | après 2.705 | écart +0.009876 | bruit ±0.0469 | 0.2×
+temps par possession de joueur, réception à l'aveugle, non orienté (s) : avant 4.088 | après 4.119 | écart +0.0312 | bruit ±0.0535 | 0.6×
+temps par possession de joueur, réception à l'aveugle, orienté (s) : avant 1.65 | après 1.653 | écart +0.003721 | bruit ±0.0384 | 0.1×
+temps par possession par réception : contrôles appariés (part) : avant 0.9997 | après 0.9993 | écart -0.00034 | bruit ±0.000253 | 1.3×
+tirs par équipe : avant 13.5 | après 14.57 | écart +1.07 | bruit ±1.23 | 0.9×
+
+-- 30 plus gros écarts --
+inf× rendement par tranche de 15 min : Stamina 40-55 : 75-90 : buts personnels pour 90 min : 0.1714 -> 0 (±0)
+inf× rendement par tranche de 15 min : Stamina 40-55 : 45 et plus : tirs pour 90 min : 0.8571 -> 0 (±0)
+inf× rendement par tranche de 15 min : Stamina 40-55 : 45 et plus : buts marqués par l'équipe pour 90 min : 0.8571 -> 0.5143 (±0)
+inf× rendement par tranche de 15 min : Stamina 40-55 : 30-45 : buts personnels pour 90 min : 0 -> 0.1714 (±0)
+inf× rendement par tranche de 15 min : Stamina 40-55 : 15-30 : tirs cadrés (part des non contrés) : 0.3333 -> 0.1667 (±0)
+inf× rendement par tranche de 15 min : Stamina 0-40 : 90 et plus : buts encaissés par l'équipe pour 90 min : 2.5 -> 2.143 (±0)
+inf× rendement par tranche de 15 min : Stamina 0-40 : 60-75 : buts marqués par l'équipe pour 90 min : 1 -> 0 (±0)
+inf× rendement par tranche de 15 min : Stamina 0-40 : 45 et plus : passes réussies (part) : 0.875 -> 0.8334 (±0)
+inf× rendement par tranche de 15 min : Stamina 0-40 : 45 et plus : contrôles ratés pour 100 passes visées : 10 -> 0 (±0)
+inf× rendement par tranche de 15 min : RB : 90 et plus : tirs pour 90 min : 0 -> 0.1286 (±0)
+inf× rendement par tranche de 15 min : RB : 45 et plus : autres contacts ratés pour 90 min : 0.4674 -> 0.45 (±0)
+inf× rendement par tranche de 15 min : MDC : 45 et plus : tirs pour 90 min : 0 -> 0.2308 (±0)
+inf× rendement par tranche de 15 min : MDC : 45 et plus : buts personnels pour 90 min : 0 -> 0.2308 (±0)
+inf× rendement par tranche de 15 min : MC : 60-75 : buts personnels pour 90 min : 0.09 -> 0 (±0)
+inf× rendement par tranche de 15 min : MC : 15-30 : buts personnels pour 90 min : 0 -> 0.06 (±0)
+inf× rendement par tranche de 15 min : MC : 0-15 : buts personnels pour 90 min : 0 -> 0.09 (±0)
+inf× rendement par tranche de 15 min : LB : 90 et plus : tirs pour 90 min : 0 -> 0.1286 (±0)
+inf× rendement par tranche de 15 min : LB : 60-75 : tirs pour 90 min : 0 -> 0.12 (±0)
+inf× rendement par tranche de 15 min : LB : 30-45 : tirs pour 90 min : 0.06 -> 0 (±0)
+inf× rendement par tranche de 15 min : AD : 90 et plus : buts personnels pour 90 min : 0 -> 0.18 (±0)
+inf× gardien : ballons avec sortie, état : tir : dévissé (par match) : 0.02 -> 0 (±0)
+inf× gardien : ballons avec sortie, état : tir : contré, ballon à 3 s, à l'adversaire (part) : 0.125 -> 0.08333 (±0)
+inf× gardien : ballons avec sortie, état : tir : contré, ballon à 3 s, encore libre (part) : 0.125 -> 0.08333 (±0)
+inf× gardien : ballons avec sortie, état : tir : contré, ballon à 3 s, au gardien (part) : 0 -> 0.08333 (±0)
+inf× gardien : ballons avec sortie, ballon à 3 s, autre arrêt de jeu (part) : 0.01 -> 0 (±0)
+inf× engagement : joueurs de champ à moins de 20 m du ballon, équipe avec ballon (quartiles) : q3 : 6 -> 6.02 (±0)
+inf× engagement : joueurs de champ à moins de 15 m du ballon, équipe sans ballon (quartiles) : q3 : 5 -> 5.04 (±0)
+inf× engagement : joueurs de champ à moins de 15 m du ballon (quartiles) : q1 : 6.04 -> 6.12 (±0)
+inf× engagement : joueurs de champ à moins de 10 m du ballon, équipe avec ballon (quartiles) : q1 : 1.05 -> 1.1 (±0)
+inf× calibration xG neutre, tireurs moyens, xG [0.5 ; +[ : tirs (effectif) : 1 -> 1.111 (±0)

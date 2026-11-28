@@ -111,6 +111,10 @@ class BallState:
     # ballon posé (`_launch_aerial`, `_ground`), vrai au premier contact au sol. Un ballon qui redescend sans avoir encore
     # touché le sol est reçu « en l'air » (centre) ; en montée ou après un rebond, comme une passe ordinaire.
     landed: bool = False
+    # Centre de coup de pied arrêté dans la surface (corner, coup franc lobé vers la surface), ticket v2-realisme/15a1 :
+    # le receveur visé attaque le ballon de la tête, sans le laisser descendre à sa poitrine. Posé au lancement, remis à
+    # faux au ballon posé (`_ground`).
+    set_piece_cross: bool = False
 
     @property
     def first_drop(self) -> bool:

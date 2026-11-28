@@ -12,7 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from functools import partial
 
-from v2engine.anticipation import loose_ball_target, meeting_point
+from v2engine.anticipation import loose_ball_target, receiving_point
 from v2engine.ball_state import BallState
 from v2engine.bloc import Bloc
 from v2engine.decision import CONTRE_ATTAQUE, dribble_speed_factor
@@ -330,7 +330,7 @@ def decide(player: PlayerState, role: str, ball: BallState, seen: Perception, pl
                     reason=f"en possession, il rejoint sa place dans le bloc{phase}",
                     distance_m=player.position.distance_to(place))
     if role == RECEVEUR:
-        point = meeting_point(player, ball.position, ball.velocity)
+        point = receiving_point(player, ball)  # point d'attaque aérien sur le premier vol (ticket v2-realisme/15a1)
         return make(role, "venir au ballon", point, reason="passe pour lui, il va à sa rencontre")
     if role == LECTURE:
         return make(role, "couper la passe", seen.read_point, reason="passe lue, il court l'intercepter",

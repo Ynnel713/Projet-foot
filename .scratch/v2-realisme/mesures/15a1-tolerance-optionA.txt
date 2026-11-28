@@ -1,0 +1,49 @@
+indicateurs comparés : 2820
+A contre B hors bruit : 90 (3.2%)
+15a1 contre avant hors bruit : 152 (5.4%)
+secondes par match avant : 192.99787561991997
+secondes par match apres : 212.882362794
+
+-- indicateurs choisis --
+arrêts par match : avant 6.46 | après 6.68 | écart +0.22 | bruit ±0.974 | 0.2×
+buts par match : avant 3.98 | après 4.48 | écart +0.5 | bruit ±0.88 | 0.6×
+engagement : distance au coéquipier le plus proche, équipe sans possession (m) : avant 12.76 | après 13.17 | écart +0.4038 | bruit ±0.214 | 1.9×
+passes longues (part) : avant 0.03519 | après 0.0345 | écart -0.000687 | bruit ±0.00391 | 0.2×
+passes longues réussies (part) : avant 0.623 | après 0.6904 | écart +0.06739 | bruit ±0.0276 | 2.4×
+passes réussies (part) : avant 0.819 | après 0.824 | écart +0.005055 | bruit ±0.0044 | 1.1×
+pertes de balle par match : avant 279 | après 283 | écart +4 | bruit ±7.07 | 0.6×
+possession d'équipe (s) : avant 20.37 | après 20.14 | écart -0.2295 | bruit ±0.567 | 0.4×
+retours au passeur en 3 s (part des passes réussies) : avant 0.06032 | après 0.06106 | écart +0.0007413 | bruit ±0.00298 | 0.2×
+tirs par équipe : avant 13.5 | après 14.08 | écart +0.58 | bruit ±1.23 | 0.5×
+
+-- 30 plus gros écarts --
+inf× rendement par tranche de 15 min : Stamina 40-55 : 75-90 : buts personnels pour 90 min : 0.1714 -> 0 (±0)
+inf× rendement par tranche de 15 min : Stamina 40-55 : 45 et plus : tirs pour 90 min : 0.8571 -> 0 (±0)
+inf× rendement par tranche de 15 min : Stamina 40-55 : 45 et plus : buts marqués par l'équipe pour 90 min : 0.8571 -> 3.086 (±0)
+inf× rendement par tranche de 15 min : Stamina 40-55 : 15-30 : tirs cadrés (part des non contrés) : 0.3333 -> 0.6667 (±0)
+inf× rendement par tranche de 15 min : Stamina 0-40 : 90 et plus : buts encaissés par l'équipe pour 90 min : 2.5 -> 0 (±0)
+inf× rendement par tranche de 15 min : Stamina 0-40 : 60-75 : buts marqués par l'équipe pour 90 min : 1 -> 0 (±0)
+inf× rendement par tranche de 15 min : Stamina 0-40 : 45 et plus : passes réussies (part) : 0.875 -> 0.5 (±0)
+inf× rendement par tranche de 15 min : Stamina 0-40 : 45 et plus : contrôles ratés pour 100 passes visées : 10 -> 0 (±0)
+inf× rendement par tranche de 15 min : RB : 45 et plus : autres contacts ratés pour 90 min : 0.4674 -> 0.225 (±0)
+inf× rendement par tranche de 15 min : MC : 60-75 : buts personnels pour 90 min : 0.09 -> 0 (±0)
+inf× rendement par tranche de 15 min : MC : 15-30 : buts personnels pour 90 min : 0 -> 0.03 (±0)
+inf× rendement par tranche de 15 min : LB : 60-75 : tirs pour 90 min : 0 -> 0.06 (±0)
+inf× rendement par tranche de 15 min : LB : 30-45 : tirs pour 90 min : 0.06 -> 0 (±0)
+inf× gardien par écart à la portée, écart (m) [-inf ; -0.3[ : taux de buts : 0 -> 0.005 (±0)
+inf× gardien : ballons avec sortie, état : tir : dévissé (par match) : 0.02 -> 0 (±0)
+inf× gardien : ballons avec sortie, état : tir : contré, ballon à 3 s, à l'adversaire (part) : 0.125 -> 0 (±0)
+inf× gardien : ballons avec sortie, état : tir : contré, ballon à 3 s, sortie de but (part) : 0 -> 0.1111 (±0)
+inf× gardien : ballons avec sortie, état : tir : contré, ballon à 3 s, encore libre (part) : 0.125 -> 0.1111 (±0)
+inf× gardien : ballons avec sortie, état : tir : contré, ballon à 3 s, au gardien (part) : 0 -> 0.1111 (±0)
+inf× engagement : joueurs de champ à moins de 15 m du ballon (quartiles) : q1 : 6.04 -> 6.08 (±0)
+inf× engagement : joueurs de champ à moins de 10 m du ballon, équipe avec ballon (quartiles) : q1 : 1.05 -> 1.08 (±0)
+inf× contacts francs, écart de Strength 40+ : part du contact du plus fort (moyenne) : 0.75 -> 0.735 (±0)
+inf× calibration xG neutre, tireurs moyens, xG [0 ; 0.03[ : taux de buts, IC95 bas : 0 -> 0.01276 (±0)
+inf× calibration xG neutre, tireurs moyens, xG [0 ; 0.03[ : taux de buts : 0 -> 0.06452 (±0)
+14.4× réceptions contrôlées, origine : centre par match : 1.02 -> 12.82 (±0.817)
+8.8× calibration xG neutre, tireurs moyens, xG [0 ; 0.03[ : buts moins xG, par match : -0.01241 -> 0.04537 (±0.00656)
+3.3× rendement par tranche de 15 min : DC : au-dessus de 25 km/h (m/min), 75-90 / 0-15 : 1.063 -> 2.36 (±0.391)
+3.1× calibration xG neutre, tous les tireurs, xG [0 ; 0.03[ : taux de buts, IC95 bas : 0 -> 0.007535 (±0.00243)
+3.0× rendement par tranche de 15 min : Stamina 0-40 : 90 et plus : passes réussies (part) : 0.5 -> 0.9333 (±0.142)
+2.5× taux d'arrêt, vitesse 18-24 m/s : 1 -> 0.5833 (±0.166)

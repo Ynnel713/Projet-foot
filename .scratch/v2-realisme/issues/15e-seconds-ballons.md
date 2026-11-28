@@ -8,7 +8,9 @@
 
 **Attributs :** aucun
 
-**Blocked by:** 15a (Qui attaque la trajectoire aérienne); 05d (Déviation du ballon au contact d'un corps).
+**Note du 27/11/2026** : le placement des joueurs non retenus par le 15a pour le second ballon est fait ici, pas au 15a (décision du propriétaire, découpage du 15a).
+
+**Blocked by:** 15a (Qui attaque la trajectoire aérienne, par le `15a2`); 05d (Déviation du ballon au contact d'un corps).
 
 **Bloque :** 15f.
 
